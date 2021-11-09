@@ -1428,6 +1428,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
       <option name="ionospherefloat"		/>
       <option name="linetied"			/>
       <option name="buffergrid"			/>
+      <option name="body2orbit"			/>
       <option name="user"			/>
     </parameter>
   </if>
@@ -1481,7 +1482,10 @@ Possible values for TypeBcBody are:
                     or apply values read from the #POLARWIND command
 'buffergrid'      - IH(OH) component obtains inner boundary from the SC(IH)
 		    component, through a buffer grid. The buffer grid is set
-		    by the #BUFFERGRID or #HELIOBUFFERGRID commands.
+		    by the #BUFFERGRID or #HELIOBUFFERGRID commands. In
+		    SC/GM coipling the second body BC is implemented via the
+		    buffer grid filled in from GM, for exoplanet orbiting in
+		    the stellar corona.
 'user'            - user defined
 \end{verbatim}
 For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
@@ -1626,6 +1630,60 @@ grid resolution should be similar to the grid resolution of the
 coarser of the two component grids.  This command can only be used in
 the first session by the IH(OH) component.  The buffer grid will only
 be used if 'buffergrid' is chosen for TypeBcBody in the
+#INNERBOUNDARY command of the target component.  Default values are
+shown above.
+
+</command>
+
+<command name="BUFFERBODY2">
+  <parameter name="nRBuff" type="integer" min="2"        default="2" />
+  <parameter name="nLonBuff" type="integer" min="2"      default="90" />
+  <parameter name="nLatBuff" type="integer" min="2"      default="45" />
+  <parameter name="RBuffMin" type="real" min="0"         default="19" />
+  <parameter name="RBuffMax" type="real" min="$rBuffMin" default="21" />
+  <parameter name="LonBuffMin" type="real"               default="0"
+	     min="0" max="360" />
+  <parameter name="LonBuffMax" type="real"               default="360"
+	     min="$PhiBuffMin" max="360" />
+  <parameter name="LatBuffMin" type="real"               default="-90"
+	      min="-90" max="90" />
+  <parameter name="LatBuffMax" type="real"               default="90"
+	     min="$LatBuffMin" max="90" />
+
+#BUFFERBODY2
+2	nRBuff
+90	nLonBuff
+45	nLatBuff
+19.0	rBuffMin
+21	rBuffMax
+0.0	LonBuffMin
+360.0	LonBuffMax
+-90.0	LatBuffMin
+90.0	LatBuffMax
+
+Define the radius, angular extent and the grid resolution of the
+uniform spherical buffer grid used to pass information between two
+coupled components running BATSRUS. In contrast with the #BUFFERGRID
+command, the grid is concetric with the second body, not heliocentric.
+
+The parameters nRBuff, nPhiBuff and nThetaBuff determine the number of
+points in the radial, azimuthal and latitudinal directions,
+respectively.
+
+The parameters rBuffMin and rBuffMax determine the inner and outer
+radii of the spherical shell.
+
+PhiBuffMin, PhiBuffMax, LatBuffMin and LatBuffMax determine the
+limits (in degrees) of the buffer grid in the azimuthal and
+latitudinal directions.
+
+When used to pass information from the GM component to the SC component,
+the entire shperical shell should be used. The buffer should be placed in
+a region where the two components
+overlap, and the grid resolution should be similar to the grid resolution
+of the coarser of the two component grids.  This command can only be used in
+the first session by the SC component.  The buffer grid will only
+be used if 'buffergrid' is chosen for TypeBcBody2 in the
 #INNERBOUNDARY command of the target component.  Default values are
 shown above.
 

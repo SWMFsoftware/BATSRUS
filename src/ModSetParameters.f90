@@ -2517,7 +2517,8 @@ contains
           if(iProc==0)write(*,*) NameSub, ' WARNING: ',&
                ' #HELIOROTATION / #INERTIAL command is obsolete and ignored'
 
-       case("#HELIOBUFFERGRID", "#BUFFERGRID", "#RESTARTBUFFERGRID")
+       case("#HELIOBUFFERGRID", "#BUFFERGRID", "#BUFFERBODY2", &
+            "#RESTARTBUFFERGRID")
           if(is_first_session())call read_buffer_grid_param(NameCommand)
 
        case("#THINCURRENTSHEET")

@@ -1,0 +1,430 @@
+For a two-temperature solar wind simulation, configure SWMF with
+./Config.pl -v=Empty,SC/BATSRUS,GM/BATSRUS
+./Config.pl -o=SC:u=Awsom,e=Awsom,g=4,4,4,ng=2
+./Config.pl -o=GM:g=4,4,4,ng=2
+
+Begin session: 1
+
+#COMPONENTMAP
+SC  0 -1  1		CompMap
+GM  0 -1  1		CompMap
+
+#DESCRIPTION
+Param/PARAM.in.test.SCIH_threadbc: create steady state solar corona with Threaded-Field-Lines		StringDescription
+
+INCLUDE
+RESTART.in
+
+
+#COMPONENT
+GM			NameComp
+F			UseComp
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+! Start time should be the time of the middle of the Carrington Rotation
+! and the time of the EIT image
+
+#STARTTIME
+2000			iYear
+1			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
+0.0			FracSecond
+
+#SAVERESTART
+T			DoSaveRestart
+10000			DnSaveRestart
+-1			DtSaveRestart
+
+INCLUDE
+SC/restartIN/restart.H
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-275.0			xMin
+ 275.0			xMax
+-275.0			yMin
+ 275.0			yMax
+-275.0			zMin
+ 275.0			zMax
+
+#LIMITRADIUS
+1.05			rMin
+275.0			rMax
+
+#GRIDLEVEL
+8			nLevel
+initial			StringShape
+
+#GRIDLEVEL
+4			nLevel
+shell0			StringShape
+1.05			RadiusInner
+30.			Radius
+
+#GRIDLEVEL
+8			nLevel
+ringz0			StringShape
+1.			Height
+9.4			RadiusInner
+10.6			Radius
+
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#COORDSYSTEM
+HGR			TypeCoordSystem
+
+#GRIDBLOCKALL
+90000			MaxBlock
+
+#FIELDLINETHREAD
+T			UseFieldLineThreads
+180			nPointThreadMax
+1.0e-3			DsThreadMin
+
+#BODY
+T			UseBody
+1.0			rBody
+1.5e8			BodyNDim
+1.5e6			BodyTDim
+
+#BODY
+F			UseBody
+
+#STAR
+0.8			RadiusStar
+0.84			MassStar
+11.25			RotationPeriodStar
+
+#SECONDBODY
+T			UseBody2 ! Rest of the parameters read if .true.
+0.2			rBody2
+10.			xBody2
+0.			yBody2
+0.			zBody2
+0.2			rCurrents2 !This is unused currently
+1.e7			RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
+10000.0			tDimBody2 (K) temperature for fixed BC for P_BLK
+F			UseOrbit
+2.			OrbitPeriod [days]
+
+#DIPOLEBODY2
+0.0			BdpDimBody2x [nT]
+0.0			BdpDimBody2y [nT]
+0.1			BdpDimBody2z [nT]
+
+
+#HARMONICSFILE
+HD189733_2006.dat		NameHarmonicsFile
+
+#HARMONICSGRID
+1.0			rMagnetogram
+10			rSourceSurface
+F			IsLogRadius
+90			MaxOrder
+30			nR
+90			nLon
+90			nLat
+
+#FACTORB0
+1.			FactorB0
+
+#CURLB0
+T			UseCurlB0
+10.			rCurrentFreeB0
+F			UseB0MomentumFlux
+
+#USERSWITCH
++init +ic		StringSwitch
+
+#POYNTINGFLUX
+1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection (read for turbulentcascade only)
+1.5e5			LperpTimesSqrtBSi (read for turbulentcascade only)
+1.2			rMinWaveReflection (read if UseWaveReflection is true)
+T			UseSurfaceWaveRefl (read if UseWaveReflection is true)
+
+#HEATCONDUCTION
+T			UseHeatConduction
+spitzer			TypeHeatConduction
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#SEMIIMPLICIT
+T			UseSemiImplicit
+parcond			TypeSemiImplicit
+
+#SEMIKRYLOV
+GMRES			TypeKrylov
+1.0e-5			ErrorMaxKrylov
+10			MaxMatvecKrylov
+
+#RADIATIVECOOLING
+T			UseRadCooling
+
+#USERINPUTBEGIN
+
+#RADIOEMISSION
+bremsstrahlung
+
+#USERINPUTEND -------------------------------------
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+RadCoolCorona.dat		NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+TR			NameTable
+load			NameCommand
+TR.dat			NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+AiaXrt			NameTable
+load			NameCommand
+los_tbl.dat		NameFile
+ascii			TypeFile
+
+
+LOOKUPTABLE
+EuviA			NameTable
+load			TypeAction
+SC/Param/los_EuviA.dat		NameFile
+ascii			TypeFile
+
+LOOKUPTABLE
+EuviB			NameTable
+load			TypeAction
+SC/Param/los_EuviB.dat		NameFIle
+ascii			TypeFIle
+
+#LOOKUPTABLE
+euv			NameTable
+load			NameCommand
+SC/Param/los_Eit_cor.dat		NameFile
+ascii			TypeFile
+
+
+
+
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			PeMinDim
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
+
+MINIMUMRADIALSPEED
+T			UseSpeedMin
+10			rSpeedMin
+250			SpeedMinDim
+10 h			TauSpeedMinDim
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#MESSAGEPASS
+all			TypeMessagePass
+
+#RESCHANGE
+T			UseAccurateReschange
+
+TVDRESCHANGE
+T			UseTvdReschange
+
+#RESTARTOUTFILE
+one			StringRestartOutFile
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+100			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#COARSEAXIS
+T			UseCoarseAxis
+2			nCoarseLayer
+
+#OUTERBOUNDARY
+fieldlinethreads		TypeBc1   user for spherical and user_outerbcs
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+
+#INNERBOUNDARY
+user			TypeBcBody
+fixed			TypeBcBody2
+
+
+#SAVEPLOT
+1			nPlotFile
+z=0 MHD tcp		StringPlot
+-1			DnSavePlot
+7200.			DtSavePlot
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#END_COMP SC -----------------------------------------------------------------
+
+
+#STOP
+20000			MaxIter
+-1.0			TimeMax
+
+End session: 1
+#RUN ##########################################################################
+Begin session: 2
+
+#COMPONENT
+GM			NameComp
+T			UseComp
+
+#COUPLE1
+SC			NameSource
+GM			NameTarget
+1000			DnCouple
+-1.0			DtCouple
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#COORDSYSTEM
+GSE			TypeCoordSystem
+
+
+PLANET
+New			NamePlanet
+24764.0e+3		RadiusPlanet [m]
+1.024e+26		MassPlanet   [kg]
+0.0			OmegaPlanet  [radian/s]
+0.0			TiltRotation [degree]
+DIPOLE			TypeBField
+0.0			MagAxisThetaGeo [degree]
+0.0			MagAxisPhiGeo   [degree]
+0.0			DipoleStrength  [T]
+
+DIPOLE
+-0.3e-4
+
+#BODY
+T			UseBody
+1.2			rBody     (in planet radius)
+1.5			rCurrents (in planet radius)
+28.0			BodyNDim  (/cc)
+25000.0			BodyTDim  (K)
+
+#GRIDRESOLUTION
+2.0			Resolution
+initial			StringShape
+
+#DOAMR
+T			DoAmr
+60			DnAmr
+-1.0			DtAmr
+T			IsStrictAmr
+
+#GRIDBLOCKALL
+30000			MaxBlock
+
+#GRID
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-224.			xMin
+ 32.			xMax
+-128.			yMin
+ 128.			yMax
+-128.			zMin
+ 128.			zMax
+
+
+#OUTERBOUNDARY
+outflow			TypeBc1
+coupled			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#INNERBOUNDARY
+polarwind		TypeBcBody
+
+#POLARBOUNDARY
+3.0e+7			PolarNDim [amu/cc] for fluid 1
+10000.0			PolarTDim [K]      for fluid 1
+0.0			PolarUDim [km/s]   for fluid 1
+0.0			PolarLatitude [deg]
+
+#RESCHANGE
+T			UseAccurateReschange
+
+
+
+#SCHEME
+2			nOrder
+Sokolov			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+
+
+#SAVEPLOT
+1			nPlotFile
+3d MHD tcp		StringPlot
+8000 			DnSavePlot
+-1.			DtSavePlot
+			DxSavePlot
+#END_COMP GM -----------------------------------------------------------------
+
+
+#STOP
+28000			MaxIter
+-1.			TimeMax
+
+End session: 2
+#END ##########################################################################

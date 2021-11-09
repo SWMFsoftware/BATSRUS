@@ -12,8 +12,9 @@ module GM_couple_ih
 
   private ! except
 
-  public:: GM_put_from_mh         ! coupling toolkit based coupler
-  public:: GM_put_from_ih_buffer  ! buffer grid based coupler
+  public:: GM_put_from_mh           ! coupling toolkit based coupler
+  public:: GM_put_from_ih_buffer    ! buffer grid based coupler
+  public:: GM_get_for_global_buffer ! buffer grid based coupler
   character(len=3),  public:: NameCoord
   integer,           public:: nY, nZ
   real,              public:: yMin, yMax, zMin, zMax
@@ -149,6 +150,215 @@ contains
     end do; end do
 
   end subroutine GM_put_from_ih_buffer
+  !============================================================================
+  subroutine GM_get_for_global_buffer(&
+       nR, nLon, nLat, BufferMinMax_DI, Buffer_VG)
+
+    ! DESCRIPTION
+
+    ! This subroutines fills a buffer grid by interpolating from a source
+    ! GM_BATSRUS grid using second-order trilinear interpolation.
+
+    ! The buffer grid can be a spherical shell, or a segment of such a shell.
+
+    ! All state variables in the source grid are interpolated, but only those
+    ! needed for coupling (as determined by CON_coupler) are actually passed.
+
+    ! The filled buffer state vector is converted to SI units and vector
+    ! quantities are rotated to the target component coordinate system.
+
+    ! INPUT:
+
+    ! nR, nLon, nLat: grid spacing for the buffer grid
+    ! BufferMinMAx_DI : Buffer grid minimum and maximum coordinates, in all
+    ! dimensions.
+
+    ! OUTPUT:
+
+    ! Buffer_VG : defined for all coupling variables and all buffer grid points
+    ! (including buffer ghost cells).
+
+    use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModMain, ONLY: UseB0, rUpperModel
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure
+    use ModB0, ONLY: B0_DGB
+    use ModPhysics, ONLY: &
+         No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, UnitEnergyDens_, UnitU_
+    use ModVarIndexes,     ONLY: &
+         Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
+         Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar, &
+         ChargeStateFirst_, ChargeStateLast_, SignB_
+    use CON_coupler,       ONLY: &
+         RhoCouple_, RhoUxCouple_,&
+         RhoUzCouple_, PCouple_, BxCouple_, BzCouple_,  &
+         PeCouple_, PparCouple_, WaveFirstCouple_,  &
+         WaveLastCouple_, Bfield_, Wave_, EhotCouple_, &
+         AnisoPressure_, ElectronPressure_,&
+         CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
+         ChargeStateLastCouple_, ChargeState_, iVar_V, &
+         DoCoupleVar_V, nVarCouple, ChGL_, ChGLCouple_
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
+    use ModInterpolate,    ONLY: trilinear
+    use BATL_lib,       ONLY: iProc, &
+         find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB
+
+    ! Buffer size and limits
+    integer,intent(in) :: nR, nLon, nLat
+    real, intent(in)   :: BufferMinMax_DI(3,2)
+
+    ! OUTPUT ARGUMENTS
+    ! State variables to be fiiled in all buffer grid points
+    real,dimension(nVarCouple, nR, nLon, nLat), intent(out):: &
+         Buffer_VG
+
+    ! variables for defining the buffer grid
+
+    integer :: nCell_D(3)
+    real    :: SphMin_D(3), SphMax_D(3), dSph_D(3), Sph_D(3)
+
+    ! Variables for interpolating from a grid block to a buffer grid point
+
+    ! Store complete interpolated state vector
+    real :: StateInPoint_V(nVar)
+
+    ! Store interpolated state variables needed for coupling
+    real :: Buffer_V(nVarCouple), B0_D(3)
+
+    ! Buffer grid cell center coordinates
+    real :: CoordBuffer_D(3), XyzBuffer_D(3)
+
+    ! Buffer grid cell center position  normalized by grid spacing
+    ! (in GM_BATSRUS grid generalized coordinates)
+    real :: BufferNorm_D(3)
+
+    ! variable indices in buffer
+    integer   :: &
+         iRhoCouple,              &
+         iRhoUxCouple,            &
+         iRhoUzCouple,            &
+         iPCouple,                &
+         iPeCouple,               &
+         iPparCouple,             &
+         iBxCouple,               &
+         iBzCouple,               &
+         iWaveFirstCouple,        &
+         iWaveLastCouple,         &
+         iChargeStateFirstCouple, &
+         iChargeStateLastCouple,  &
+         iEhotCouple
+
+    integer   :: iBlock, iPe, iR, iLon, iLat
+    logical   :: DoTest, DoTestMe
+
+    character(len=*), parameter:: NameSub = 'GM_get_for_global_buffer'
+    !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    Buffer_VG = 0.0
+
+    ! get variable indices in buffer
+    iRhoCouple              = iVar_V(RhoCouple_)
+    iRhoUxCouple            = iVar_V(RhoUxCouple_)
+    iRhoUzCouple            = iVar_V(RhoUzCouple_)
+    iPCouple                = iVar_V(PCouple_)
+    iPeCouple               = iVar_V(PeCouple_)
+    iPparCouple             = iVar_V(PparCouple_)
+    iBxCouple               = iVar_V(BxCouple_)
+    iBzCouple               = iVar_V(BzCouple_)
+    iWaveFirstCouple        = iVar_V(WaveFirstCouple_)
+    iWaveLastCouple         = iVar_V(WaveLastCouple_)
+    iEhotCouple             = iVar_V(EhotCouple_)
+    iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
+    iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
+
+    ! Calculate buffer grid spacing
+    nCell_D  = [nR, nLon, nLat]
+    SphMin_D = BufferMinMax_DI(:,1)
+    SphMax_D = BufferMinMax_DI(:,2)
+
+    ! Save the upper boundary radius as the limit for LOS integration span
+    rUpperModel = SphMax_D(1)
+
+    dSph_D     = (SphMax_D - SphMin_D)/real(nCell_D)
+    dSph_D(1) = (SphMax_D(1) - SphMin_D(1))/(nCell_D(1) - 1)
+
+    ! Loop over buffer grid points
+    do iLat = 1, nLat ; do iLon = 1, nLon ; do iR = 1, nR
+
+       ! Find the coordinates of the current buffer grid point,
+       Sph_D = SphMin_D + [real(iR - 1), real(iLon)-0.5, real(iLat)-0.5]*dSph_D
+       ! Find Xyz coordinates of the grid point
+       call rlonlat_to_xyz(Sph_D, XyzBuffer_D)
+
+       ! Find the block and PE in the GM_BATSRUS grid
+       call find_grid_block(XyzBuffer_D, iPe, iBlock)
+
+       ! Check if this block belongs to this processor
+       if (iProc /= iPe) CYCLE
+
+       ! Convert buffer grid point Xyz to GM_BATSRUS generalized coords
+       call xyz_to_coord(XyzBuffer_D, CoordBuffer_D)
+
+       ! Buffer grid point gen coords normalized by the block grid spacing
+       BufferNorm_D = (CoordBuffer_D - CoordMin_DB(:,iBlock)) &
+            /CellSize_DB(:,iBlock) + 0.5
+
+       ! Interpolate from the true solution block to the buffer grid point
+       StateInPoint_V = trilinear(State_VGB(:,:,:,:,iBlock),      &
+            nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, BufferNorm_D)
+
+       ! Fill in the coupled state variables, convert to SI units
+
+       Buffer_V(iRhoCouple)= StateInPoint_V(rho_)*No2Si_V(UnitRho_)
+       Buffer_V(iRhoUxCouple:iRhoUzCouple) = &
+            StateInPoint_V(rhoUx_:rhoUz_)*No2Si_V(UnitRhoU_)
+
+       if(DoCoupleVar_V(Bfield_)) then
+          if(UseB0)then
+             B0_D = &
+                  trilinear(B0_DGB(:,:,:,:,iBlock), &
+                  3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+                  BufferNorm_D, DoExtrapolate = .TRUE.)
+             Buffer_V(iBxCouple:iBzCouple) = &
+                  (StateInPoint_V(Bx_:Bz_) + B0_D)*No2Si_V(UnitB_)
+          else
+             Buffer_V(iBxCouple:iBzCouple) = &
+                  StateInPoint_V(Bx_:Bz_)*No2Si_V(UnitB_)
+          end if
+       end if
+
+       Buffer_V(iPCouple)  = StateInPoint_V(p_)*No2Si_V(UnitP_)
+
+       if(DoCoupleVar_V(Wave_)) &
+            Buffer_V(iWaveFirstCouple:iWaveLastCouple) = &
+            StateInPoint_V(WaveFirst_:WaveLast_)&
+            * No2Si_V(UnitEnergyDens_)
+
+       if(DoCoupleVar_V(ChargeState_)) &
+            Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
+            StateInPoint_V(ChargeStateFirst_:ChargeStateLast_)&
+            * No2Si_V(UnitRho_)
+
+       if(DoCoupleVar_V(ElectronPressure_))then
+          Buffer_V(iPeCouple) = StateInPoint_V(Pe_)*No2Si_V(UnitP_)
+       else if(UseElectronPressure)then
+          Buffer_V(iPCouple) = Buffer_V(iPCouple) + StateInPoint_V(Pe_)&
+               *No2Si_V(UnitP_)
+       end if
+
+       if(DoCoupleVar_V(AnisoPressure_)) Buffer_V(iPparCouple) = &
+            StateInPoint_V(Ppar_)*No2Si_V(UnitP_)
+
+       if(DoCoupleVar_V(CollisionlessHeatFlux_)) Buffer_V(iEhotCouple) = &
+            StateInPoint_V(Ehot_)*No2Si_V(UnitEnergyDens_)
+       if(DoCoupleVar_V(ChGL_))Buffer_V(iVar_V(ChGLCouple_)) = &
+            StateInPoint_V(SignB_)*No2Si_V(UnitB_)/No2Si_V(UnitU_)
+
+       ! DONE - fill the buffer grid
+       Buffer_VG(:,iR, iLon,iLat) = Buffer_V
+
+    end do; end do; end do
+  end subroutine GM_get_for_global_buffer
   !============================================================================
 
 end module GM_couple_ih

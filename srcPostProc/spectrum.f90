@@ -131,6 +131,23 @@ program spectrum
   logical                     :: UseTion = .false.
   real                        :: Tion
 
+  ! Variables for using equilibrium ionization despite having charge states
+  ! To use non-equilibrium ions set it to false
+  logical                     :: UseEquilIon = .true.
+  integer, parameter          :: nElement = 30
+  character(len=2)            :: NameElement_I(1:nElement) = ['h ','he','li',&
+       'be','b ','c ','n ','o ','f ','ne','na','mg','al','si','p ','s ','cl',&
+       'ar','k ','ca','sc','ti','v ','cr','mn','fe','co','ni','cu','zn']
+  integer                     :: nIonFracMax = 500
+
+  !----------------------------------------------------------------------------
+  type IonFracTableType
+     character(len=6)         :: NameIonFrac
+     real,allocatable         :: IonFraction_III(:,:,:)
+  end type IonFracTableType
+
+  type(IonFracTableType), allocatable :: IonFracTable_I(:)
+
   ! Derived type to read tabulated G values
   !----------------------------------------------------------------------------
   type LineTableType
@@ -143,6 +160,7 @@ program spectrum
      real                     :: LineWavelength
      real, allocatable        :: g_II(:,:)
      real                     :: StartLogT
+     real, allocatable        :: IonFrac_II(:,:)
   end type LineTableType
 
   type(LineTableType), allocatable :: LineTable_I(:)
@@ -554,12 +572,11 @@ contains
 
   end subroutine save_all
   !============================================================================
-
   subroutine calc_flux
 
     use ModInterpolate, ONLY: bilinear
 
-    integer                        :: i, iInterval, iBin, iCenter
+    integer                        :: i,iInterval, iBin, iCenter, iIon
     integer                        :: iNMin, jTMin, iNMax, jTMax
 
     real                           :: FluxMono
@@ -572,11 +589,22 @@ contains
     real                           :: Gint, LogNe, LogTe, Rho
     real                           :: Tlos
     real                           :: Aion
-    real                           :: TShift
+    real                           :: TShift, EquilIonFrac
+    logical                        :: IsFound = .false.
+
     character(len=*), parameter:: NameSub = 'calc_flux'
     !--------------------------------------------------------------------------
 
     Aion     = LineTable_I(iLine)%Aion
+    IsFound = .false.
+    if(.not. UseEquilIon)then
+       do iIon=1,nIonFracMax
+          if(LineTable_I(iLine)%NameIon == IonFracTable_I(iIon)%NameIonFrac)then
+             IsFound = .true.
+             EXIT
+          end if
+       enddo
+    endif
 
     if(IsOnePixel)write(*,*)'n1 n2 n3 i j k =',n1,n2,n3,i,jPixel,kPixel
 
@@ -687,6 +715,13 @@ contains
              Gint = bilinear(LineTable_I(iLine)%g_II(:,:), &
                   iNMin, iNMax, jTMin, jTMax, &
                   [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
+
+             if(.not. UseEquilIon .and. IsFound)then
+                EquilIonFrac = bilinear(LineTable_I(iLine)%IonFrac_II(:,:), &
+                     iNMin, iNMax, jTMin, jTMax, &
+                     [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
+                Gint = Gint/EquilIonFrac * IonFracTable_I(iIon)%IonFraction_III(i,jPixel,kPixel)
+             end if
 
              ! When Gint becomes negative due to extrapolation -> move to next
              if(Gint<=0)CYCLE
@@ -1000,6 +1035,10 @@ contains
           call read_var('UseTion',UseTion)
           call read_var('Tion',Tion)
 
+       ! if false, then non-equilibrium charge states are used
+       case("#IONEQUIL")
+          call read_var('UseEquilIon',UseEquilIon)
+
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
@@ -1040,6 +1079,12 @@ contains
     real                        :: Param_I(9)
     real,allocatable            :: VarIn_VIII(:,:,:,:)
     real                        :: Coord, Dz1, Dz2
+
+    integer                     :: iElement, iCharge, nCharge, iIonFrac = 0
+    character(len=4)            :: NameChargestate
+    character(len=6)            :: NameChiantiChargestate
+    real                        :: IonFracSum
+    logical                     :: IsFound = .false.
 
     character(len=*), parameter:: NameSub = 'read_data'
     !--------------------------------------------------------------------------
@@ -1115,6 +1160,8 @@ contains
        allocate(LOSimage_II(n2,n3))
        LOSImage_II = 0.0
     end if
+
+    if(.not. UseEquilIon)allocate(IonFracTable_I(nIonFracMax))
 
     if (IsUniData) then
        ! cm^-3 --> kg/m^3
@@ -1199,11 +1246,74 @@ contains
           case('i02')
              Var_VIII(I02_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e-1
+
           case default
-             write(*,*) NameSub // ' unused NameVar = '&
+             IsFound = .false.
+             ! In case charge states are used in the output file
+             if(.not. UseEquilIon)then
+                iIonFrac = 0
+                ELEMENTLOOP: do iElement = 1, nElement
+                   nCharge = iElement+1
+                   do iCharge = 1, nCharge
+                      iIonFrac = iIonFrac+1
+                      if(nCharge < 10) then
+                         write(NameChargestate,'(a,i1.1)')&
+                              trim(NameElement_I(iElement)),iCharge
+                      else
+                         write(NameChargestate,'(a,i2.2)')&
+                              trim(NameElement_I(iElement)),iCharge
+                      end if
+
+                      if(NameVar_V(iVar+nDim) == NameChargestate)then
+                         IonFracTable_I(iIonFrac)%NameIonFrac = &
+                              NameChiantiChargestate
+                         allocate(IonFracTable_I(iIonFrac)%IonFraction_III(1:n1,1:n2,1:n3))
+                         IonFracTable_I(iIonFrac)%IonFraction_III(:,:,:)&
+                              = VarIn_VIII(iVar,:,:,:)
+
+                         if(iCharge < 10) then
+                            write(NameChiantiChargestate,'(a,i1.1)')&
+                                 trim(NameElement_I(iElement))//'_',iCharge
+                         else
+                            write(NameChiantiChargestate,'(a,i2.2)')&
+                                 trim(NameElement_I(iElement))//'_',iCharge
+                         end if
+
+                         IsFound = .true.
+                         EXIT ELEMENTLOOP
+                      end if
+                   enddo
+                enddo ELEMENTLOOP
+             endif
+
+             if(.not.IsFound) write(*,*) NameSub // ' unused NameVar = '&
                   // NameVar_V(iVar+nDim)
           end select
        end do
+
+       ! Normalize charge states to get fractions
+       if(.not. UseEquilIon)then
+          iIonFrac = 1
+          do iElement = 1, nElement
+             nCharge = iElement+1
+             if(allocated(IonFracTable_I(iIonFrac)%IonFraction_III))then
+                do k = 1, n3 ; do j = 1, n2 ; do i = 1, n1
+                   IonFracSum = 0
+                   do iCharge = iIonFrac, iIonFrac+iElement
+                      IonFracSum = IonFracSum + &
+                           IonFracTable_I(iCharge)%IonFraction_III(i,j,k)
+                   end do
+                   IonFracSum=max(IonFracSum,1e-99)
+                   do iCharge = iIonFrac, iIonFrac+iElement
+                      IonFracTable_I(iCharge)%IonFraction_III(i,j,k)=&
+                           IonFracTable_I(iCharge)%IonFraction_III(i,j,k)&
+                           /IonFracSum
+                   end do
+                end do; end do; end do
+             end if
+             iIonFrac = iIonFrac + nCharge
+          end do
+       end if
 
        if(IsDebug)then
           write(*,*)'ux_,uz_,bx_,bz_=', ux_,uz_,bx_,bz_
@@ -1280,13 +1390,13 @@ contains
     integer                     :: nLevelFrom, nLevelTo
     integer                     :: nFirstLevelFrom, nFirstLevelTo
     real                        :: LineWavelength, FirstLineWavelength
-    real                        :: LogN, LogT, LogG, Aion
+    real                        :: LogN, LogT, LogG, Aion, LogIonFrac
 
     ! End of file indicated by iError /= 0
     integer                     :: iError
 
     ! Intensity table sized to the maximum
-    real, allocatable           :: g_II(:,:)
+    real, allocatable           :: g_II(:,:), IonFrac_II(:,:)
 
     ! Size of table for a given wave
     integer                     :: iMin, jMin, iMax, jMax
@@ -1338,7 +1448,7 @@ contains
     MaxI = nint(MaxLogN/DLogN)
     MinJ = nint(MinLogT/DLogT)
     MaxJ = nint(MaxLogT/DLogT)
-    allocate(g_II(MinI:MaxI,MinJ:MaxJ))
+    allocate(g_II(MinI:MaxI,MinJ:MaxJ),IonFrac_II(MinI:MaxI,MinJ:MaxJ))
 
     ! Read remaining portion of table file
     READLOOP: do
@@ -1357,12 +1467,12 @@ contains
        ! Read data line
        read(UnitTmp_,*,iostat=iError) &
             NameIon, Aion, nLevelFrom, nLevelTo, LineWavelength, &
-            LogN, LogT, LogG
+            LogN, LogT, LogG, LogIonFrac
 
        if(iError  /= 0 .and. iError /= -1)then
           write(*,*)'iError = ',iError
           write(*,*)'last line = ',NameIon, Aion, nLevelFrom, nLevelTo, &
-               LineWavelength, LogN, LogT, LogG
+               LineWavelength, LogN, LogT, LogG, LogIonFrac
           call CON_stop('failed reading chianti table')
        end if
 
@@ -1383,6 +1493,7 @@ contains
           iN = nint(LogN/DLogN)
           iT = nint(LogT/DLogT)
           g_II(iN,iT) = 10.0**LogG
+          IonFrac_II(iN,iT) = 10.0**LogIonFrac
           CYCLE READLOOP
        end if
 
@@ -1401,9 +1512,16 @@ contains
           allocate(LineTable_I(iLine)%g_II(iMin:iMax,jMin:jMax))
           LineTable_I(iLine)%g_II = g_II(iMin:iMax,jMin:jMax)
 
+          ! Create equilibrium ionization fractions table
+          allocate(LineTable_I(iLine)%IonFrac_II(iMin:iMax,jMin:jMax))
+          LineTable_I(iLine)%IonFrac_II = IonFrac_II(iMin:iMax,jMin:jMax)
+
           ! Storage is done
           DoStore = .false.
        end if
+
+       ! When reached end of file, exit loop
+       if(iError /= 0) EXIT READLOOP
 
        ! If wavelength is different than previous line
        ! pass only if wavelength is inside of wavelengthintervals of interest
@@ -1456,22 +1574,21 @@ contains
 
           ! Initially zero out the input array
           g_II = 0.0
+          IonFrac_II = 0.0
 
           ! Store first element
           g_II(iN,iT) = 10.0**LogG
+          IonFrac_II(iN,iT) = 10.0**LogIonFrac
 
           ! Go on reading the lines corresponding to the wavelength above
           EXIT
 
        end do
 
-       ! When reached end of file, exit loop
-       if(iError /= 0) EXIT READLOOP
-
     end do READLOOP
     call close_file
 
-    deallocate(g_II)
+    deallocate(g_II, IonFrac_II)
 
     if(IsVerbose)write(*,*)'nLineFound = ',nLineFound
     if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
