@@ -133,7 +133,7 @@ program spectrum
 
   ! Variables for using equilibrium ionization despite having charge states
   ! To use non-equilibrium ions set it to false
-  logical                     :: UseEquilIon = .true.
+  logical                     :: UseIonFrac = .false.
   integer, parameter          :: nElement = 30
   character(len=2)            :: NameElement_I(1:nElement) = ['h ','he','li',&
        'be','b ','c ','n ','o ','f ','ne','na','mg','al','si','p ','s ','cl',&
@@ -597,10 +597,15 @@ contains
 
     Aion     = LineTable_I(iLine)%Aion
     IsFound = .false.
-    if(.not. UseEquilIon)then
+    if(UseIonFrac)then
        do iIon=1,nIonFracMax
-          if(LineTable_I(iLine)%NameIon == IonFracTable_I(iIon)%NameIonFrac)then
+          if(LineTable_I(iLine)%NameIon==IonFracTable_I(iIon)%NameIonFrac)then
              IsFound = .true.
+             if(IsVerbose) then
+                write(*,*)"  NON-EQUILIBRIUM IONIZATION USED for"
+                write(*,*)"  Ion : ",LineTable_I(iLine)%NameIon
+                write(*,*)" Line : ",LineTable_I(iLine)%LineWavelength
+             end if
              EXIT
           end if
        enddo
@@ -716,7 +721,7 @@ contains
                   iNMin, iNMax, jTMin, jTMax, &
                   [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
 
-             if(.not. UseEquilIon .and. IsFound)then
+             if(UseIonFrac .and. IsFound)then
                 EquilIonFrac = bilinear(LineTable_I(iLine)%IonFrac_II(:,:), &
                      iNMin, iNMax, jTMin, jTMax, &
                      [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
@@ -1036,8 +1041,8 @@ contains
           call read_var('Tion',Tion)
 
        ! if false, then non-equilibrium charge states are used
-       case("#IONEQUIL")
-          call read_var('UseEquilIon',UseEquilIon)
+       case("#IONFRAC")
+          call read_var('UseIonFrac',UseIonFrac)
 
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
@@ -1161,7 +1166,7 @@ contains
        LOSImage_II = 0.0
     end if
 
-    if(.not. UseEquilIon)allocate(IonFracTable_I(nIonFracMax))
+    if(UseIonFrac)allocate(IonFracTable_I(nIonFracMax))
 
     if (IsUniData) then
        ! cm^-3 --> kg/m^3
@@ -1250,7 +1255,7 @@ contains
           case default
              IsFound = .false.
              ! In case charge states are used in the output file
-             if(.not. UseEquilIon)then
+             if(UseIonFrac)then
                 iIonFrac = 0
                 ELEMENTLOOP: do iElement = 1, nElement
                    nCharge = iElement+1
@@ -1292,7 +1297,7 @@ contains
        end do
 
        ! Normalize charge states to get fractions
-       if(.not. UseEquilIon)then
+       if(UseIonFrac)then
           iIonFrac = 1
           do iElement = 1, nElement
              nCharge = iElement+1
