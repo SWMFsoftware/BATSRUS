@@ -864,6 +864,40 @@ test_graydiffusion_check:
 
 ### STANDALONE SOLAR CORONA TESTS ###
 
+
+test_awsom_gpu:
+	@echo "test_awsom_gpu_compile..." > test_awsom_gpu.diff
+	$(MAKE) test_awsom_gpu_compile
+	@echo "test_awsom_gpu_rundir..." >> test_awsom_gpu.diff
+	$(MAKE) test_awsom_gpu_rundir
+	@echo "test_awsom_gpu_run..." >> test_awsom_gpu.diff
+	$(MAKE) test_awsom_gpu_run
+	@echo "test_awsom_gpu_check..." >> test_awsom_gpu.diff
+	$(MAKE) test_awsom_gpu_check
+
+# Fails on Pleiades with OpenMP
+test_awsom_gpu_compile:
+	./Config.pl -noopenmp -u=Awsom -e=Mhd -ng=2 -g=6,4,4
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_awsom_gpu_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.Awsom.GPU PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_awsom_gpu_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	
+test_awsom_gpu_check:
+	-@(${DIFFNUM} -t \
+		${TESTDIR}/RESULTS/SC/log_n000010.log \
+		Param/CORONA/TestOutput/log_n000010.sc.awsom_gpu \
+		> test_awsom_gpu.diff)
+	ls -l test_awsom_gpu.diff
+
 # TEST 1D CORONA WITH AWSOM-MULTIFLUID SETTING
 
 test_awsomfluids:
