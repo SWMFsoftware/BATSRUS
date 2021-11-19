@@ -3170,7 +3170,7 @@ contains
            ' at I=',iFace,' J=',jFace,' K=',kFace
       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
       write(*,*)'Un =',sum(0.5*(StateLeft_V(Ux_:Uz_) &
-           +                   StateRight_V(Ux_:Uz_))*Normal_D) 
+           +                   StateRight_V(Ux_:Uz_))*Normal_D)
       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_))
       if(UseB)then
          write(*,*)'B  =', 0.5*(StateLeft_V(Bx_:Bz_) &
