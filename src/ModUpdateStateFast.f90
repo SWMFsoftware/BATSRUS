@@ -494,10 +494,10 @@ contains
                .and. iBlock == iBlockTest)then
              DivF = Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
                   - Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-             if(nDim > 1) DivF = DivF + &
+             if(nDim > 1) DivF = DivF  &
                   +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
                   -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-             if(nDim > 2) DivF = DivF + &
+             if(nDim > 2) DivF = DivF  &
                   +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
                   -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
              DivF = DivF/CellVolume_GB(iTest,jTest,kTest,iBlockTest)
