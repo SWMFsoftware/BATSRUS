@@ -213,7 +213,7 @@ contains
     integer:: iVar
 
 !    logical:: DoTest
-!!!    !$acc declare create (DoTest)
+!!!    !$ acc declare create (DoTest)
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -342,10 +342,8 @@ contains
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
           end if
 
-
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
-
 
           Change_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
                -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
@@ -501,7 +499,7 @@ contains
                   -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
              if(nDim > 2) DivF = DivF + &
                   +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
-                  -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) 
+                  -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
              DivF = DivF/CellVolume_GB(iTest,jTest,kTest,iBlockTest)
              write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
              write(*,*)'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
@@ -561,7 +559,7 @@ contains
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
-    
+
     if(DoTest .and. (i==iTest .or. i==iTest+1) &
          .and. j==jTest .and. k==kTest .and. iBlock == iBlockTest &
          .and. (iDimTest == 0 .or. iDimTest == 1))then
@@ -798,8 +796,8 @@ contains
              if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest)then
                 write(*,*)'iStage    =', iStage
-                !write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-                !write(*,*)'Change_V  =', Change_VC(:,i,j,k)
+                ! write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
+                ! write(*,*)'Change_V  =', Change_VC(:,i,j,k)
                 write(*,*)'DtPerDv   =', DtPerDv
              end if
 
@@ -1272,7 +1270,6 @@ contains
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
           end if
 
-
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
 
@@ -1400,8 +1397,8 @@ contains
                .and. iBlock == iBlockTest
           if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest)then
-             !write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-             !write(*,*)'Change_V  =', Change_V
+             ! write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
+             ! write(*,*)'Change_V  =', Change_V
              write(*,*)'DtPerDv   =', DtPerDv
           end if
 
