@@ -137,7 +137,6 @@ contains
        if(iTypeUpdate >= UpdateFast_)then
           call update_state_fast
        else
-#ifndef _OPENACC
           ! CPU compatible code
           !$omp parallel do
           do iBlock = 1,nBlock
@@ -229,7 +228,6 @@ contains
 
           end do ! Multi-block solution update loop.
           !$omp end parallel do
-#endif
        end if
 
        if(DoTest)write(*,*)NameSub,' done update blocks'
