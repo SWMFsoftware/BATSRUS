@@ -393,24 +393,24 @@ contains
 
              if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest)then
-                write(*,*) '!!! Enx =', Flux_VXI(En_,i:i+1,j,k,iGang)
-                write(*,*) '!!! Eny =', Flux_VYI(En_,i,j:j+1,k,iGang)
-                write(*,*) '!!! Enz =', Flux_VZI(En_,i,j,k:k+1,iGang)
+!!!                write(*,*) '!!! Enx =', Flux_VXI(En_,i:i+1,j,k,iGang)
+!!!                write(*,*) '!!! Eny =', Flux_VYI(En_,i,j:j+1,k,iGang)
+!!!                write(*,*) '!!! Enz =', Flux_VZI(En_,i,j,k:k+1,iGang)
                 divE = divE/CellVolume_GB(i,j,k,iBlock) &
                      *State_VGB(Rho_,i,j,k,iBlock)
                 write(*,*)'!!! Coef   =', (ClightFactor**2 - 1)*InvClight2
                 write(*,*)'divE*Coef  =', divE
                 if(UseB0)then
-                   write(*,*) '!!! e_D=', cross_prod( &
-                        B0_DGB(:,i,j,k,iBlock) &
-                        + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
-                        /State_VGB(Rho_,i,j,k,iBlock)
+!!!                   write(*,*) '!!! e_D=', cross_prod( &
+!!!                        B0_DGB(:,i,j,k,iBlock) &
+!!!                        + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+!!!                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
+!!!                        /State_VGB(Rho_,i,j,k,iBlock)
                 else
-                   write(*,*) '!!! e_D=', DivE*cross_prod( &
-                        State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
-                        /State_VGB(Rho_,i,j,k,iBlock)
+!!!                   write(*,*) '!!! e_D=', DivE*cross_prod( &
+!!!                        State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+!!!                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
+!!!                        /State_VGB(Rho_,i,j,k,iBlock)
                 end if
              end if
 
@@ -867,8 +867,8 @@ contains
              if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest)then
                 write(*,*)'iStage    =', iStage
-                write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-                write(*,*)'Change_V  =', Change_VC(:,i,j,k)
+!!!                write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
+!!!                write(*,*)'Change_V  =', Change_VC(:,i,j,k)
                 write(*,*)'DtPerDv   =', DtPerDv
              end if
 

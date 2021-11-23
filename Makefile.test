@@ -48,9 +48,9 @@ test_help:
 	@echo "    test_partsteady            (run part steady test)"
 	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_shockramp             (run shockramp test)"
-	@echo "    test_shocktbeube             (run shocktube test)"
+	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shocktube_1d          (run 1D shocktube test)"
-	@echo "    test_fast_wave             (run 3D fast wave test)"
+	@echo "    test_fastwave              (run 3D fast wave test)"
 	@echo "    test_fastwave_2d           (run 2D fast wave test)"
 	@echo "    test_bx0                   (run 3D bx0 isosurface plot test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"
@@ -99,7 +99,7 @@ test:
 	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
-	-@($(MAKE) test_fast_wave TESTDIR=run_test_fast_wave)
+	-@($(MAKE) test_fastwave TESTDIR=run_test_fastwave)
 	-@($(MAKE) test_earth TESTDIR=run_test_earth)
 	-@($(MAKE) test_fastwave_2d TESTDIR=run_test_fastwave_2d)
 	cd ${DIR}; ./Config.pl -noacc
@@ -257,13 +257,13 @@ test_shocktube_check:
 ### 1D SHOCK TUBE TEST ###
 
 test_shocktube_1d:
-	@echo "test_shocktube_1d_compile..." > test_shocktube_1d.diff
+	@echo "test_shocktube_1d_compile..." > test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_compile
-	@echo "test_shocktube_1d_rundir..." >> test_shocktube_1d.diff
+	@echo "test_shocktube_1d_rundir..." >> test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_rundir
-	@echo "test_shocktube_1d_run..." >> test_shocktube_1d.diff
+	@echo "test_shocktube_1d_run..." >> test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_run NP=1
-	@echo "test_shocktube_1d_check..." >> test_shocktube_1d.diff
+	@echo "test_shocktube_1d_check..." >> test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_check
 
 test_shocktube_1d_compile:
@@ -285,20 +285,20 @@ test_shocktube_1d_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
 		${TESTDIR}/RESULT/GM/1d_*t25.6*.out \
 		Param/SHOCKTUBE/TestOutput/mhdhyp_1d_ref.out \
-		> test_shocktube_1d.diff)
-	ls -l test_shocktube_1d.diff
+		> test_shocktube_1d_gpu.diff)
+	ls -l test_shocktube_1d_gpu.diff
 
 
 ### FASTWAVE TEST SIMPLIFIED ###
 
 test_fastwave_2d:
-	@echo "test_fastwave_2d_compile..." > test_fastwave_2d.diff
+	@echo "test_fastwave_2d_compile..." > test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_compile
-	@echo "test_fastwave_2d_rundir..." >> test_fastwave_2d.diff
+	@echo "test_fastwave_2d_rundir..." >> test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_rundir
-	@echo "test_fastwave_2d_run..." >> test_fastwave_2d.diff
+	@echo "test_fastwave_2d_run..." >> test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_run
-	@echo "test_fastwave_2d_check..." >> test_fastwave_2d.diff
+	@echo "test_fastwave_2d_check..." >> test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_check
 
 test_fastwave_2d_compile:
@@ -320,8 +320,8 @@ test_fastwave_2d_check:
 	-@(${DIFFNUM} -t -r=1e-3 -a=1e-6 \
                 ${TESTDIR}/RESULT/GM/z=0_mhd_1_t00000500_n00000060.out \
                 Param/SHOCKTUBE/TestOutput/fastwave_2d_ref.out \
-                > test_fastwave_2d.diff)
-	ls -l test_fastwave_2d.diff
+                > test_fastwave_2d_gpu.diff)
+	ls -l test_fastwave_2d_gpu.diff
 
 ### SHOCKRAMP TEST ###
 
@@ -357,37 +357,37 @@ test_shockramp_check:
 
 ### 3D FAST WAVE TEST ###
 
-test_fast_wave:
-	@echo "test_fast_wave_compile..." > test_fast_wave.diff
-	$(MAKE) test_fast_wave_compile
-	@echo "test_fast_wave_rundir..." >> test_fast_wave.diff
-	$(MAKE) test_fast_wave_rundir
-	@echo "test_fast_wave_run..." >> test_fast_wave.diff
-	$(MAKE) test_fast_wave_run NP=1
-	@echo "test_fast_wave_check..." >> test_fast_wave.diff
-	$(MAKE) test_fast_wave_check
+test_fastwave:
+	@echo "test_fastwave_compile..." > test_fastwave_gpu.diff
+	$(MAKE) test_fastwave_compile
+	@echo "test_fastwave_rundir..." >> test_fastwave_gpu.diff
+	$(MAKE) test_fastwave_rundir
+	@echo "test_fastwave_run..." >> test_fastwave_gpu.diff
+	$(MAKE) test_fastwave_run NP=1
+	@echo "test_fastwave_check..." >> test_fastwave_gpu.diff
+	$(MAKE) test_fastwave_check
 
-test_fast_wave_compile:
+test_fastwave_compile:
 	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
 	./Config.pl -u=Waves -e=Mhd -g=10,10,10
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave
 	$(MAKE) BATSRUS
 	make PIDL
 
-test_fast_wave_rundir: test_rundir
+test_fastwave_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.fast_wave PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
-test_fast_wave_run:
+test_fastwave_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe | tee runlog
 	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
 
-test_fast_wave_check:
+test_fastwave_check:
 	-@(${DIFFNUM} -t -r=1e-3 -a=1e-6 \
 		${TESTDIR}/RESULT/GM/z*_n00000600.out \
 		Param/SHOCKTUBE/TestOutput/fast_wave_ref.out \
-		> test_fast_wave.diff)
-	ls -l test_fast_wave.diff
+		> test_fastwave_gpu.diff)
+	ls -l test_fastwave_gpu.diff
 
 ### 3D BX0 TEST ###
 

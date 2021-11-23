@@ -1446,9 +1446,9 @@ contains
                ! the full face field. Accordingly, -B1 div B1 source is
                ! not added later if UseDivFullBSource=.true.
                SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
                     -(B0_DZ(:,i,j,k) + RightState_VZ(Bx_:Bz_,i,j,k))*B1nJumpL &
-                    -(B0_DZ(:,i,j,k+1) + LeftState_VZ(Bx_:Bz_,i,j,k+1))*B1nJumpR
+                    -(B0_DZ(:,i,j,k+1)+ LeftState_VZ(Bx_:Bz_,i,j,k+1))*B1nJumpR
             else
                SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                     SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
@@ -1466,7 +1466,8 @@ contains
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
               /CellVolume_GB(i,j,k,iBlock)
-         DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + DivBInternal_C(i,j,k)
+         DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
+              + DivBInternal_C(i,j,k)
       end do; end do; end do
 
       if(DoTest)write(*,*)NameSub,' final divb1=', &
