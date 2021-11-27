@@ -3650,6 +3650,8 @@ contains
       end if
 
       select case(TypeUpdate)
+      case('orig')
+         iTypeUpdate = UpdateOrig_
       case('slow')
          iTypeUpdate = UpdateSlow_
       case('fast', 'fast1', 'cpuupdate')

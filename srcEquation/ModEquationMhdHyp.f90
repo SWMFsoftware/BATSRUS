@@ -71,7 +71,9 @@ module ModVarIndexes
        'Bz ', & ! Bz_
        'Hyp', & ! Hyp_
        'p  ', & ! p_
-       'e  ' ] ! Energy_
+       'e  ' ]  ! Energy_
+
+  !$acc declare create (NameVar_V)
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
