@@ -835,7 +835,7 @@ contains
                   .and. iBlock == iBlockTest)then
                 write(*,*)'iStage, DtPerDv=', iStage, DtPerDv
                 do iVar = 1, nVar
-                   write(*,*) NameVar_V,', Change=', &
+                   write(*,*) NameVar_V(iVar),', Change=', &
                         State_VGB(iVar,i,j,k,iBlock), Change_VC(iVar,i,j,k)
                 end do
              end if
@@ -905,7 +905,7 @@ contains
                   .and. iBlock == iBlockTest)then
                 write(*,*)'iStage, DtPerDv=', iStage, DtPerDv
                 do iVar = 1, nVar
-                   write(*,*) NameVar_V,', Change=', &
+                   write(*,*) NameVar_V(iVar),', Change=', &
                         State_VGB(iVar,i,j,k,iBlock), Change_VC(iVar,i,j,k)
                 end do
              end if
@@ -969,7 +969,7 @@ contains
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
-         Flux_V, B0_D)
+         Flux_V, B0_D, -1)
 
     ! Change due to fluxes through this face
     Change_V(1:nFlux) = Change_V(1:nFlux) + Flux_V(1:nFlux)
@@ -1411,7 +1411,7 @@ contains
                .and. iBlock == iBlockTest)then
              write(*,*)'iStage, DtPerDv=', iStage, DtPerDv
              do iVar = 1, nVar
-                write(*,*) NameVar_V,', Change=', &
+                write(*,*) NameVar_V(iVar),', Change=', &
                      State_VGB(iVar,i,j,k,iBlock), Change_V(iVar)
              end do
           end if
@@ -1444,7 +1444,7 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, x_)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, B0_D)
+         StateLeft_V, StateRight_V, Flux_V, B0_D, -1)
 
   end subroutine get_flux_x_prim
   !============================================================================
@@ -1466,7 +1466,7 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, B0_D)
+         StateLeft_V, StateRight_V, Flux_V, B0_D, -1)
 
   end subroutine get_flux_y_prim
   !============================================================================
@@ -1488,7 +1488,7 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, z_)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, B0_D)
+         StateLeft_V, StateRight_V, Flux_V, B0_D, -1)
 
   end subroutine get_flux_z_prim
   !============================================================================
@@ -1668,7 +1668,7 @@ contains
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
-         Flux_V, B0_D)
+         Flux_V, B0_D, -1)
 
     ! Change due to fluxes through this face
     Change_V(1:nFlux) = Change_V(1:nFlux) + Flux_V(1:nFlux)
@@ -2499,27 +2499,27 @@ contains
 
   end subroutine get_boris_flux
   !============================================================================
-  subroutine get_speed_max(State_V, Normal_D, &
-       Un, B0_D, Cmax, Cleft, Cright, iTestSide)
+  subroutine get_speed_max(iTestSide, State_V, Normal_D, &
+       Un, B0_D, Cmax, Cleft, Cright)
     !$acc routine seq
 
     ! Using primitive variable State_V and normal direction get
     ! normal velocity and wave speeds.
 
+    integer, intent(in):: iTestSide
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: Un              ! normal velocity (signed)
     real, intent(in) :: B0_D(3)         ! B0 field on the face
     real, intent(out), optional:: Cmax  ! maximum speed (positive)
     real, intent(out), optional:: Cleft ! fastest left wave (usually negative)
     real, intent(out), optional:: Cright! fastest right wave (usually positive)
-    integer, intent(in), optional:: iTestSide
     
     real:: InvRho, Bn, B2
     real:: Sound2, Fast2, Discr, Fast
     !--------------------------------------------------------------------------
     if(UseBorisCorrection)then
-       call get_boris_speed(State_V, Normal_D, Un, B0_D, Cmax, Cleft, Cright, &
-            iTestSide)
+       call get_boris_speed(iTestSide, State_V, Normal_D, Un, B0_D, &
+            Cmax, Cleft, Cright)
        RETURN
     end if
 
@@ -2542,8 +2542,6 @@ contains
     if(present(Cleft))  Cleft  = Un - Fast
     if(present(Cright)) Cright = Un + Fast
 
-    if(.not.present(iTestSide)) RETURN
-    
     if(iTestSide > 0)then
        write(*,*) ' iFluid, rho, p(face)   =', &
             1, State_V(Rho_), State_V(p_), iTestSide
@@ -2573,20 +2571,20 @@ contains
 
   end subroutine get_speed_max
   !============================================================================
-  subroutine get_boris_speed(State_V, Normal_D, Un, B0_D, Cmax, Cleft, Cright,&
-       iTestSide)
+  subroutine get_boris_speed(iTestSide, State_V, Normal_D, Un, B0_D, &
+       Cmax, Cleft, Cright)
     !$acc routine seq
 
     ! Using primitive variable State_V and normal direction get
     ! normal velocity and wave speeds with semi-relativistic Boris correction
 
+    integer, intent(in):: iTestSide ! side of cell being tested
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: Un              ! normal velocity (signed)
     real, intent(in) :: B0_D(3)         ! B0 field on the face
     real, intent(out), optional:: Cmax  ! maximum speed (positive)
     real, intent(out), optional:: Cleft ! fastest left wave (usually negative)
     real, intent(out), optional:: Cright! fastest right wave (usually positive)
-    integer, intent(in), optional:: iTestSide ! side of cell being tested
     
     real :: InvRho, Sound2, FullB_D(3), FullBn, FullB2
     real :: p  ! , Ppar, Pperp, BnInvB2, GammaPe
@@ -2685,11 +2683,10 @@ contains
     if(present(Cleft))  Cleft  = min(UnBoris - Fast, Un - Slow)
     if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
 
-    if(.not.present(iTestSide)) RETURN
-    
     if(iTestSide > 0)then
        write(*,*) ' InvRho, p      =', InvRho, p, iTestSide
-       write(*,*) ' FullB, FullBn  =', FullB_D, FullBn, iTestSide
+       write(*,*) ' FullB, FullBn  =', FullB_D(1), FullB_D(2), FullB_D(3), &
+            FullBn, iTestSide
        write(*,*) ' Sound2,Alfven2 =', Sound2, Alfven2, iTestSide
        write(*,*) ' GammaA2,GammaU2=', GammaA2, GammaU2, iTestSide
        write(*,*) ' Sound2Boris,Alfven2Boris,Normal=', &
@@ -2713,7 +2710,7 @@ contains
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out)  :: Flux_V(nFaceValue)
     real, intent(in)   :: B0_D(3)
-    integer, intent(in), optional:: iTestSide
+    integer, intent(in):: iTestSide
     
     ! Average state
     real:: State_V(nVar)
@@ -2737,8 +2734,7 @@ contains
        ! average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
 
-       call get_speed_max(State_V, Normal_D, Un, B0_D, Cmax, &
-            iTestSide=iTestSide)
+       call get_speed_max(iTestSide, State_V, Normal_D, Un, B0_D, Cmax)
        call get_physical_flux(StateLeft_V, Normal_D, &
             StateLeftCons_V, FluxLeft_V, B0_D)
        call get_physical_flux(StateRight_V, Normal_D, &
@@ -2782,17 +2778,17 @@ contains
 
        ! This implementation is for non-relativistic MHD only
        ! Left speed of left state
-       call get_speed_max(StateLeft_V, Normal_D, Un, B0_D, Cleft=Cleft, &
-            iTestSide=iTestSide)
+       call get_speed_max(iTestSide, StateLeft_V, Normal_D, Un, B0_D, &
+            Cleft=Cleft)
 
        ! Right speed of right state
-       call get_speed_max(StateRight_V, Normal_D, Un, B0_D, Cright=Cright, &
-            iTestSide=iTestSide)
+       call get_speed_max(iTestSide, StateRight_V, Normal_D, Un, B0_D, &
+            Cright=Cright)
 
        ! Speeds of average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
-       call get_speed_max(State_V, Normal_D, &
-            Un, B0_D, Cmax, CleftAverage, CrightAverage, iTestSide=iTestSide)
+       call get_speed_max(iTestSide, State_V, Normal_D, &
+            Un, B0_D, Cmax, CleftAverage, CrightAverage)
 
        ! Limited left and right speeds
        Cleft  = min(0.0, Cleft,  CleftAverage)
@@ -2863,20 +2859,25 @@ contains
     ! Store time step constraint (to be generalized for multifluid)
     Flux_V(Vdt_) = abs(Area)*Cmax
 
-    if(.not.present(iTestSide)) RETURN
-    
     if(iTestSide > 0)then
-       write(*,*)'Hat state for Normal_D=',Normal_D, iTestSide
+       write(*,*)'Hat state for Normal_D=', &
+            Normal_D(1), Normal_D(2), Normal_D(3), iTestSide
        write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_)), iTestSide
        write(*,*)'Un =',Un, iTestSide
        write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_)), iTestSide
        if(UseB)then
           if(UseB0)then
-             write(*,*)'B  =', 0.5*(StateLeft_V(Bx_:Bz_) &
-                  +                 StateRight_V(Bx_:Bz_)) + B0_D, iTestSide
+             write(*,*)'B  =', &
+                  0.5*(StateLeft_V(Bx_)+ StateRight_V(Bx_)) + B0_D(1),  &
+                  0.5*(StateLeft_V(By_)+ StateRight_V(By_)) + B0_D(2),  &
+                  0.5*(StateLeft_V(Bz_)+ StateRight_V(Bz_)) + B0_D(3),  &
+                  iTestSide
           else
-             write(*,*)'B  =', 0.5*(StateLeft_V(Bx_:Bz_) &
-                  +                 StateRight_V(Bx_:Bz_)), iTestSide
+             write(*,*)'B  =', &
+                  0.5*(StateLeft_V(Bx_)+ StateRight_V(Bx_)),  &
+                  0.5*(StateLeft_V(By_)+ StateRight_V(By_)),  &
+                  0.5*(StateLeft_V(Bz_)+ StateRight_V(Bz_)),  &
+                  iTestSide
           end if
           write(*,*)'BB =', &
                sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)))**2), &
