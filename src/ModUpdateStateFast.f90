@@ -298,7 +298,7 @@ contains
        if(DoTestUpdate .and. iBlock==iBlockTest)then
           write(*,*)NameSub,' nStep=', nStep,' iStage=', iStage,     &
                ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl
-          if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
+          if(nConservCrit > 0) write(*,*)NameSub,' IsConserv=', &
                IsConserv_CB(iTest,jTest,kTest,iBlock)
           write(*,*)
           do iVar=1,nVar
