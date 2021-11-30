@@ -570,7 +570,7 @@ contains
             Flux_VXI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
-         
+
          iTestSide = -1; DoTestCell = .false.
          if(DoTest .and. jFace == jTest .and. kFace == kTest .and. &
               (iDimTest == 0 .or. iDimTest == 1))then

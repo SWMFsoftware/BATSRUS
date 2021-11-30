@@ -190,7 +190,6 @@ contains
 
     !$acc update device(DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
 
-    
     call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
     call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
 
@@ -222,7 +221,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
-
     if(DoTestAny)then
        write(*,*)'==========================================================='
        write(*,*) NameSub, ' started with DoResChangeOnly=F of course'
@@ -376,18 +374,18 @@ contains
                      *State_VGB(Rho_,i,j,k,iBlock)
                 write(*,*)'Coef   =', (ClightFactor**2 - 1)*InvClight2
                 write(*,*)'divE*Coef  =', divE
-                !if(UseB0)then
+                ! if(UseB0)then
                 !   write(*,*) '!!! e_D=', cross_prod( &
                 !        B0_DGB(:,i,j,k,iBlock) &
                 !        + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                 !        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
                 !        /State_VGB(Rho_,i,j,k,iBlock)
-                !else
+                ! else
                 !   write(*,*) '!!! e_D=', DivE*cross_prod( &
                 !        State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                 !        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
                 !        /State_VGB(Rho_,i,j,k,iBlock)
-                !end if
+                ! end if
              end if
 
           end if
@@ -541,8 +539,8 @@ contains
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang, iVar, iTestSide
-    !--------------------------------------------------------------------------
 #ifndef _OPENACC
+    !--------------------------------------------------------------------------
     iGang = 1
 #else
     iGang = iBlock
@@ -601,8 +599,8 @@ contains
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang, iVar, iTestSide
-    !--------------------------------------------------------------------------
 #ifndef _OPENACC
+    !--------------------------------------------------------------------------
     iGang = 1
 #else
     iGang = iBlock
@@ -661,8 +659,8 @@ contains
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang, iVar, iTestSide
-    !--------------------------------------------------------------------------
 #ifndef _OPENACC
+    !--------------------------------------------------------------------------
     iGang = 1
 #else
     iGang = iBlock
@@ -721,11 +719,10 @@ contains
     real:: Change_V(nFlux+nDim), Change_VC(nFlux+1,nI,nJ,nK)
     !$acc declare create (Change_V, Change_VC)
 
-    character(len=*), parameter:: NameSub = 'update_state_gpu'
-    !--------------------------------------------------------------------------
-
     !$acc parallel
     !$acc loop gang private(Change_VC, IsBodyBlock) independent
+    character(len=*), parameter:: NameSub = 'update_state_gpu'
+    !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -2513,7 +2510,7 @@ contains
     real, intent(out), optional:: Cmax  ! maximum speed (positive)
     real, intent(out), optional:: Cleft ! fastest left wave (usually negative)
     real, intent(out), optional:: Cright! fastest right wave (usually positive)
-    
+
     real:: InvRho, Bn, B2
     real:: Sound2, Fast2, Discr, Fast
     !--------------------------------------------------------------------------
@@ -2585,7 +2582,7 @@ contains
     real, intent(out), optional:: Cmax  ! maximum speed (positive)
     real, intent(out), optional:: Cleft ! fastest left wave (usually negative)
     real, intent(out), optional:: Cright! fastest right wave (usually positive)
-    
+
     real :: InvRho, Sound2, FullB_D(3), FullBn, FullB2
     real :: p  ! , Ppar, Pperp, BnInvB2, GammaPe
     real :: Alfven2, Alfven2Normal, Fast2, Discr, Fast, Slow
@@ -2711,7 +2708,7 @@ contains
     real, intent(out)  :: Flux_V(nFaceValue)
     real, intent(in)   :: B0_D(3)
     integer, intent(in):: iTestSide
-    
+
     ! Average state
     real:: State_V(nVar)
 
