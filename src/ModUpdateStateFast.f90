@@ -719,10 +719,10 @@ contains
     real:: Change_V(nFlux+nDim), Change_VC(nFlux+1,nI,nJ,nK)
     !$acc declare create (Change_V, Change_VC)
 
-    !$acc parallel
-    !$acc loop gang private(Change_VC, IsBodyBlock) independent
     character(len=*), parameter:: NameSub = 'update_state_gpu'
     !--------------------------------------------------------------------------
+    !$acc parallel
+    !$acc loop gang private(Change_VC, IsBodyBlock) independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -1874,9 +1874,8 @@ contains
     integer, intent(in):: iBlock
 
     integer:: i, j, k
-
-    !$acc loop vector collapse(3) independent
     !--------------------------------------------------------------------------
+    !$acc loop vector collapse(3) independent
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        StateOld_VGB(:,i,j,k,iBlock)  = State_VGB(:,i,j,k,iBlock)
     end do; end do; end do
