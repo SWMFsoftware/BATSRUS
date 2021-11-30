@@ -415,17 +415,21 @@ contains
     use ModB0,         ONLY: B0_DGB
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
-    use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, UnitX_
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_
-    use BATL_lib,      ONLY: integrate_grid
+    use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, &
+         UnitX_, UnitT_, GammaWave
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_, WaveLast_, WaveFirst_, &
+         Rho_, RhoUx_, RhoUz_
+    use BATL_lib,      ONLY: integrate_grid, Xyz_DGB
+    use ModGeometry,   ONLY: R_BLK
+    use ModWriteLogSatFile, ONLY: calc_sphere
 
     real, intent(out) :: VarValue
     character(len=10), intent(in) :: TypeVar
     real, optional, intent(in) :: Radius
 
-    integer :: iBlock
-    real :: unit_energy
-
+    integer :: iBlock, i, j, k
+    real :: unit_energy,Wmajor,Wminor
+    real :: FullB_D(3), SignBr, rUnit_D(3), Rho, Ur, Var
     logical:: DoTest
 
     character(len=*), parameter:: NameSub = 'user_get_log_var'
@@ -470,6 +474,99 @@ contains
           tmp1_BLK(:,:,:,iBlock) = 1.0
        end do
        VarValue = integrate_grid(tmp1_BLK)
+
+    case('neteflx')
+       do iBlock=1,nBlock
+          if(Unused_B(iBlock))CYCLE
+          do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
+             FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+             SignBr = sign(1.0, sum(Xyz_DGB(:,i,j,k,iBlock)*FullB_D))
+             if(SignBr < 0.0)then
+                Wmajor=State_VGB(WaveLast_,i,j,k,iBlock)
+                Wminor=State_VGB(WaveFirst_,i,j,k,iBlock)
+             else
+                Wmajor=State_VGB(WaveFirst_,i,j,k,iBlock)
+                Wminor=State_VGB(WaveLast_,i,j,k,iBlock)
+             end if
+             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
+             Var = abs(sum(rUnit_D*FullB_D)/sqrt(Rho))
+             Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
+                        Rho
+
+             tmp1_BLK(i,j,k,iBlock) =               &
+                  Wmajor*(GammaWave*Ur + Var)     &
+               +  Wminor*(GammaWave*Ur - Var) 
+          end do; end do; end do
+       end do
+       VarValue = calc_sphere('integrate',360, Radius, tmp1_BLK) &
+            *unit_energy/No2Io_V(UnitT_)
+
+    case('peflx')
+       do iBlock=1,nBlock
+          if(Unused_B(iBlock))CYCLE
+          do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
+             FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+             SignBr = sign(1.0, sum(Xyz_DGB(:,i,j,k,iBlock)*FullB_D))
+             if(SignBr < 0.0)then
+                Wmajor=State_VGB(WaveLast_,i,j,k,iBlock)
+                Wminor=State_VGB(WaveFirst_,i,j,k,iBlock)
+             else
+                Wmajor=State_VGB(WaveFirst_,i,j,k,iBlock)
+                Wminor=State_VGB(WaveLast_,i,j,k,iBlock)
+             end if
+             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
+             Var = abs(sum(rUnit_D*FullB_D)/sqrt(Rho))
+             Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
+                        Rho
+
+             tmp1_BLK(i,j,k,iBlock) = Wmajor*(GammaWave*Ur + Var)
+
+          end do; end do; end do
+       end do
+       VarValue = calc_sphere('integrate',360, Radius, tmp1_BLK) &
+            *unit_energy/No2Io_V(UnitT_)
+
+    case('meflx')
+       do iBlock=1,nBlock
+          if(Unused_B(iBlock))CYCLE
+          do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
+             FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+             SignBr = sign(1.0, sum(Xyz_DGB(:,i,j,k,iBlock)*FullB_D))
+             if(SignBr < 0.0)then
+                Wmajor=State_VGB(WaveLast_,i,j,k,iBlock)
+                Wminor=State_VGB(WaveFirst_,i,j,k,iBlock)
+             else
+                Wmajor=State_VGB(WaveFirst_,i,j,k,iBlock)
+                Wminor=State_VGB(WaveLast_,i,j,k,iBlock)
+             end if
+             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
+             Var = abs(sum(rUnit_D*FullB_D)/sqrt(Rho))
+             Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
+                        Rho
+
+             tmp1_BLK(i,j,k,iBlock) = Wminor*(GammaWave*Ur - Var)
+          end do; end do; end do
+       end do
+       VarValue = calc_sphere('integrate',360, Radius, tmp1_BLK) &
+            *unit_energy/No2Io_V(UnitT_)
+
+    case('keflx')
+       do iBlock=1,nBlock
+          if(Unused_B(iBlock))CYCLE
+          do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
+             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
+             Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
+                        Rho
+
+             tmp1_BLK(i,j,k,iBlock) = Rho*Ur**3./2.
+          end do; end do; end do
+       end do
+       VarValue = calc_sphere('integrate',360, Radius, tmp1_BLK) &
+            *unit_energy/No2Io_V(UnitT_)
 
     case default
        VarValue = -7777.
@@ -660,11 +757,11 @@ contains
           kMax = nK
           select case(iDir)
           case(1)
-            iMax = nI + 1
+             iMax = nI + 1
           case(2)
-            jMax = nJ + 1
+             jMax = nJ + 1
           case(3)
-            kMax = nK + 1
+             kMax = nK + 1
           end select
 
           do kFace = 1, kMax; do jFace = 1, jMax; do iFace = 1, iMax
@@ -751,29 +848,29 @@ contains
        NameTecUnit = 'J/m^3/s'
 
     case('advpe')
-      ! Calculate div(u*Pe/(gamma-1))
-      allocate(PeU_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-      do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-         if (Ehot_>1 .and. UseHeatFluxCollisionless) then
-            call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
-            InvGammaM1 = 1./(GammaTmp-1)
-         else
-            InvGammaM1 = InvGammaMinus1
-         end if
-         PeU_DG(:,i,j,k) = &
-              InvGammaM1 * State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) / &
-              State_VGB(Rho_,i,j,k,iBlock) * State_VGB(Pe_,i,j,k,iBlock)
-      end do; end do; end do
-      call calc_divergence(iBlock, PeU_DG, nG, PlotVar_G, UseBodyCellIn=.true.)
-      deallocate(PeU_DG)
+       ! Calculate div(u*Pe/(gamma-1))
+       allocate(PeU_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          if (Ehot_>1 .and. UseHeatFluxCollisionless) then
+             call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
+             InvGammaM1 = 1./(GammaTmp-1)
+          else
+             InvGammaM1 = InvGammaMinus1
+          end if
+          PeU_DG(:,i,j,k) = &
+               InvGammaM1 * State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) / &
+               State_VGB(Rho_,i,j,k,iBlock) * State_VGB(Pe_,i,j,k,iBlock)
+       end do; end do; end do
+       call calc_divergence(iBlock, PeU_DG, nG, PlotVar_G, UseBodyCellIn=.true.)
+       deallocate(PeU_DG)
 
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * &
-             No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_)
-      end do; end do; end do
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * &
+               No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_)
+       end do; end do; end do
 
-      NameIdlUnit = 'J/m^3/s'
-      NameTecUnit = 'J/m^3/s'
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
 
     case default
        IsFound = .false.
@@ -1445,399 +1542,399 @@ contains
        end if
     end if
 
-    end associate
-  end subroutine user_set_face_boundary
-  !============================================================================
-  subroutine user_set_resistivity(iBlock, Eta_G)
+  end associate
+end subroutine user_set_face_boundary
+!============================================================================
+subroutine user_set_resistivity(iBlock, Eta_G)
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitX_, UnitT_
-    use ModVarIndexes, ONLY: Rho_, Pe_
+  use ModAdvance,    ONLY: State_VGB
+  use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitX_, UnitT_
+  use ModVarIndexes, ONLY: Rho_, Pe_
 
-    integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+  integer, intent(in) :: iBlock
+  real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    integer :: i, j, k
-    real :: Te, TeSi
+  integer :: i, j, k
+  real :: Te, TeSi
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_set_resistivity'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
-       Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-       TeSi = Te*No2Si_V(UnitTemperature_)
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'user_set_resistivity'
+  !--------------------------------------------------------------------------
+  call test_start(NameSub, DoTest, iBlock)
+  do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
+     Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+     TeSi = Te*No2Si_V(UnitTemperature_)
 
-       Eta_G(i,j,k) = EtaPerpSi/TeSi**1.5 *Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
-    end do; end do; end do
+     Eta_G(i,j,k) = EtaPerpSi/TeSi**1.5 *Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
+  end do; end do; end do
 
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_set_resistivity
-  !============================================================================
-  subroutine user_initial_perturbation
+  call test_stop(NameSub, DoTest, iBlock)
+end subroutine user_set_resistivity
+!============================================================================
+subroutine user_initial_perturbation
 
-    use EEE_ModCommonVariables, ONLY: XyzCmeCenterSi_D, XyzCmeApexSi_D, &
-         bAmbientCenterSi_D, bAmbientApexSi_D
-    use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again
-    use ModB0, ONLY: get_b0
-    use ModMain, ONLY: n_step, iteration_number, UseFieldLineThreads
-    use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
-    use ModPhysics,   ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, No2Si_V
-    use ModGeometry,  ONLY: Xyz_DGB
-    use BATL_lib,     ONLY: nI, nJ, nK, nBlock, Unused_B, nDim, MaxDim, &
-         iComm, CellVolume_GB, message_pass_cell, interpolate_state_vector
-    use ModMpi
-    integer :: i, j, k, iBlock, iError
-    real :: x_D(nDim), Rho, B_D(MaxDim), B0_D(MaxDim), p
-    real :: Mass, MassDim, MassTotal
-    ! -------------------------------------------------------------------------
-    logical:: DoTest, IsFound
-    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+  use EEE_ModCommonVariables, ONLY: XyzCmeCenterSi_D, XyzCmeApexSi_D, &
+       bAmbientCenterSi_D, bAmbientApexSi_D
+  use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again
+  use ModB0, ONLY: get_b0
+  use ModMain, ONLY: n_step, iteration_number, UseFieldLineThreads
+  use ModVarIndexes
+  use ModAdvance,   ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
+  use ModPhysics,   ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, No2Si_V
+  use ModGeometry,  ONLY: Xyz_DGB
+  use BATL_lib,     ONLY: nI, nJ, nK, nBlock, Unused_B, nDim, MaxDim, &
+       iComm, CellVolume_GB, message_pass_cell, interpolate_state_vector
+  use ModMpi
+  integer :: i, j, k, iBlock, iError
+  real :: x_D(nDim), Rho, B_D(MaxDim), B0_D(MaxDim), p
+  real :: Mass, MassDim, MassTotal
+  ! -------------------------------------------------------------------------
+  logical:: DoTest, IsFound
+  character(len=*), parameter:: NameSub = 'user_initial_perturbation'
+  !--------------------------------------------------------------------------
+  call test_start(NameSub, DoTest)
 
-    if(UseAwsom)then
+  if(UseAwsom)then
 
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock))CYCLE
+     do iBlock = 1, nBlock
+        if(Unused_B(iBlock))CYCLE
 
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-             x_D = Xyz_DGB(:,i,j,k,iBlock)
+           x_D = Xyz_DGB(:,i,j,k,iBlock)
 
-             call EEE_get_state_init(x_D, &
-                  Rho, B_D, p, n_step, iteration_number)
+           call EEE_get_state_init(x_D, &
+                Rho, B_D, p, n_step, iteration_number)
 
-             Rho = Rho*Si2No_V(UnitRho_)
-             B_D = B_D*Si2No_V(UnitB_)
-             p = p*Si2No_V(UnitP_)
+           Rho = Rho*Si2No_V(UnitRho_)
+           B_D = B_D*Si2No_V(UnitB_)
+           p = p*Si2No_V(UnitP_)
 
-             ! Add the eruptive event state to the solar wind
-             ! Convert momentum density to velocity
-             State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
-                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  State_VGB(Rho_,i,j,k,iBlock)
+           ! Add the eruptive event state to the solar wind
+           ! Convert momentum density to velocity
+           State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+                State_VGB(Rho_,i,j,k,iBlock)
 
-             State_VGB(Rho_,i,j,k,iBlock) = &
-                  max(0.25*State_VGB(Rho_,i,j,k,iBlock), &
-                  State_VGB(Rho_,i,j,k,iBlock) + Rho)
+           State_VGB(Rho_,i,j,k,iBlock) = &
+                max(0.25*State_VGB(Rho_,i,j,k,iBlock), &
+                State_VGB(Rho_,i,j,k,iBlock) + Rho)
 
-             ! Fix momentum density to correspond to the modified mass density
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                  State_VGB(Ux_:Uz_,i,j,k,iBlock)*State_VGB(Rho_,i,j,k,iBlock)
+           ! Fix momentum density to correspond to the modified mass density
+           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                State_VGB(Ux_:Uz_,i,j,k,iBlock)*State_VGB(Rho_,i,j,k,iBlock)
 
-             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-                  State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
+           State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
 
-             if(UseElectronPressure)then
-                State_VGB(Pe_,i,j,k,iBlock) = &
-                     max(0.25*State_VGB(Pe_,i,j,k,iBlock), &
-                     State_VGB(Pe_,i,j,k,iBlock) + 0.5*p)
-                State_VGB(p_,i,j,k,iBlock) = &
-                     max(0.25*State_VGB(p_,i,j,k,iBlock), &
-                     State_VGB(p_,i,j,k,iBlock) + 0.5*p)
-                if(UseAnisoPressure) State_VGB(Ppar_,i,j,k,iBlock) = &
-                     max(0.25*State_VGB(Ppar_,i,j,k,iBlock), &
-                     State_VGB(Ppar_,i,j,k,iBlock) + 0.5*p)
-             else
-                State_VGB(p_,i,j,k,iBlock) = &
-                     max(0.25*State_VGB(p_,i,j,k,iBlock), &
-                     State_VGB(p_,i,j,k,iBlock) + p)
-             endif
+           if(UseElectronPressure)then
+              State_VGB(Pe_,i,j,k,iBlock) = &
+                   max(0.25*State_VGB(Pe_,i,j,k,iBlock), &
+                   State_VGB(Pe_,i,j,k,iBlock) + 0.5*p)
+              State_VGB(p_,i,j,k,iBlock) = &
+                   max(0.25*State_VGB(p_,i,j,k,iBlock), &
+                   State_VGB(p_,i,j,k,iBlock) + 0.5*p)
+              if(UseAnisoPressure) State_VGB(Ppar_,i,j,k,iBlock) = &
+                   max(0.25*State_VGB(Ppar_,i,j,k,iBlock), &
+                   State_VGB(Ppar_,i,j,k,iBlock) + 0.5*p)
+           else
+              State_VGB(p_,i,j,k,iBlock) = &
+                   max(0.25*State_VGB(p_,i,j,k,iBlock), &
+                   State_VGB(p_,i,j,k,iBlock) + p)
+           endif
 
-          end do; end do; end do
-       end do
-       ! End of UseAwsom
-    else
-       Mass = 0.0
-       ! Bstrap_D should be B0_D+B1_D instead of B0_D
-       ! if(DoAddTD14) call get_b0(XyzApex_D, Bstrap_D)
-       !
-       ! Since the ghost cells may not be filled in, call message_pass first
-       if(UseFieldLineThreads)&
-            call message_pass_cell(3, State_VGB(Bx_:Bz_,:,:,:,:),&
-            nProlongOrderIn=1)
-       x_D = XyzCmeCenterSi_D*Si2No_V(UnitX_)
-       call interpolate_state_vector(x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:),&
-            B_D, IsFound)
-       if(IsFound)then
-          call get_b0(x_D, B0_D)
-          bAmbientCenterSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
-          if(iProc==0)then
-             write(*,'(a,3es12.4)')'EEE: At the CME center at Xyz=', x_D
-             write(*,'(a,3es12.4,a)')&
-                  'EEE: An ambient magnetic field (prior to CME) is: ',&
-                  bAmbientCenterSi_D*1e4,' [Gs]'
-          end if
-       end if
-       x_D = XyzCmeApexSi_D*Si2No_V(UnitX_)
-       call interpolate_state_vector(x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:),&
-            B_D, IsFound)
-       if(IsFound)then
-          call get_b0(x_D, B0_D)
-          bAmbientApexSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
-          if(iProc==0)then
-             write(*,'(a,3es12.4)')'EEE: At the CME apex at Xyz=', x_D
-             write(*,'(a,3es12.4,a)')&
-                  'EEE: An ambient magnetic field (prior to CME) is: ',&
-                  bAmbientApexSi_D*1e4,' [Gs]'
-          end if
-       end if
+        end do; end do; end do
+     end do
+     ! End of UseAwsom
+  else
+     Mass = 0.0
+     ! Bstrap_D should be B0_D+B1_D instead of B0_D
+     ! if(DoAddTD14) call get_b0(XyzApex_D, Bstrap_D)
+     !
+     ! Since the ghost cells may not be filled in, call message_pass first
+     if(UseFieldLineThreads)&
+          call message_pass_cell(3, State_VGB(Bx_:Bz_,:,:,:,:),&
+          nProlongOrderIn=1)
+     x_D = XyzCmeCenterSi_D*Si2No_V(UnitX_)
+     call interpolate_state_vector(x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:),&
+          B_D, IsFound)
+     if(IsFound)then
+        call get_b0(x_D, B0_D)
+        bAmbientCenterSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
+        if(iProc==0)then
+           write(*,'(a,3es12.4)')'EEE: At the CME center at Xyz=', x_D
+           write(*,'(a,3es12.4,a)')&
+                'EEE: An ambient magnetic field (prior to CME) is: ',&
+                bAmbientCenterSi_D*1e4,' [Gs]'
+        end if
+     end if
+     x_D = XyzCmeApexSi_D*Si2No_V(UnitX_)
+     call interpolate_state_vector(x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:),&
+          B_D, IsFound)
+     if(IsFound)then
+        call get_b0(x_D, B0_D)
+        bAmbientApexSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
+        if(iProc==0)then
+           write(*,'(a,3es12.4)')'EEE: At the CME apex at Xyz=', x_D
+           write(*,'(a,3es12.4,a)')&
+                'EEE: An ambient magnetic field (prior to CME) is: ',&
+                bAmbientApexSi_D*1e4,' [Gs]'
+        end if
+     end if
 
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock))CYCLE
+     do iBlock = 1, nBlock
+        if(Unused_B(iBlock))CYCLE
 
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-             x_D = Xyz_DGB(:,i,j,k,iBlock)
+           x_D = Xyz_DGB(:,i,j,k,iBlock)
 
-             call EEE_get_state_init(x_D, &
-                  Rho, B_D, p, n_step, iteration_number)
+           call EEE_get_state_init(x_D, &
+                Rho, B_D, p, n_step, iteration_number)
 
-             Rho = Rho*Si2No_V(UnitRho_)
-             B_D = B_D*Si2No_V(UnitB_)
-             p = p*Si2No_V(UnitP_)
+           Rho = Rho*Si2No_V(UnitRho_)
+           B_D = B_D*Si2No_V(UnitB_)
+           p = p*Si2No_V(UnitP_)
 
-             ! Add the eruptive event state to the solar wind
+           ! Add the eruptive event state to the solar wind
 
-             ! Convert momentum density to velocity
-             State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
-                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  State_VGB(Rho_,i,j,k,iBlock)
-             if(State_VGB(Rho_,i,j,k,iBlock) + Rho &
-                  < 0.25*State_VGB(Rho_,i,j,k,iBlock))then
-                State_VGB(Rho_,i,j,k,iBlock) = &
-                     0.25*State_VGB(Rho_,i,j,k,iBlock)
+           ! Convert momentum density to velocity
+           State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+                State_VGB(Rho_,i,j,k,iBlock)
+           if(State_VGB(Rho_,i,j,k,iBlock) + Rho &
+                < 0.25*State_VGB(Rho_,i,j,k,iBlock))then
+              State_VGB(Rho_,i,j,k,iBlock) = &
+                   0.25*State_VGB(Rho_,i,j,k,iBlock)
 
-                ! Calculate the mass added to the eruptive event
-                Mass = Mass - 3*CellVolume_GB(i,j,k,iBlock)*&
-                     State_VGB(Rho_,i,j,k,iBlock)
-             else
+              ! Calculate the mass added to the eruptive event
+              Mass = Mass - 3*CellVolume_GB(i,j,k,iBlock)*&
+                   State_VGB(Rho_,i,j,k,iBlock)
+           else
 
-                ! Calculate the mass added to the eruptive event
-                Mass = Mass + Rho*CellVolume_GB(i,j,k,iBlock)
-                State_VGB(Rho_,i,j,k,iBlock) = &
-                     State_VGB(Rho_,i,j,k,iBlock) + Rho
-             endif
+              ! Calculate the mass added to the eruptive event
+              Mass = Mass + Rho*CellVolume_GB(i,j,k,iBlock)
+              State_VGB(Rho_,i,j,k,iBlock) = &
+                   State_VGB(Rho_,i,j,k,iBlock) + Rho
+           endif
 
-             ! Fix momentum density to correspond to the modified mass density
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                  State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
-                  State_VGB(Rho_,i,j,k,iBlock)
+           ! Fix momentum density to correspond to the modified mass density
+           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
+                State_VGB(Rho_,i,j,k,iBlock)
 
-             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-                  State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
+           State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
 
-             if(UseElectronPressure)then
-                if(State_VGB(Pe_,i,j,k,iBlock) &
-                     + 0.5*p < 0.25*State_VGB(Pe_,i,j,k,iBlock))then
-                   State_VGB(Pe_,i,j,k,iBlock) = &
-                        0.25*State_VGB(Pe_,i,j,k,iBlock)
-                else
-                   State_VGB(Pe_,i,j,k,iBlock) = &
-                        State_VGB(Pe_,i,j,k,iBlock) + 0.5*p
-                endif
+           if(UseElectronPressure)then
+              if(State_VGB(Pe_,i,j,k,iBlock) &
+                   + 0.5*p < 0.25*State_VGB(Pe_,i,j,k,iBlock))then
+                 State_VGB(Pe_,i,j,k,iBlock) = &
+                      0.25*State_VGB(Pe_,i,j,k,iBlock)
+              else
+                 State_VGB(Pe_,i,j,k,iBlock) = &
+                      State_VGB(Pe_,i,j,k,iBlock) + 0.5*p
+              endif
 
-                if(State_VGB(p_,i,j,k,iBlock)  + 0.5*p &
-                     < 0.25*State_VGB(p_,i,j,k,iBlock))then
-                   State_VGB(p_,i,j,k,iBlock) = 0.25*State_VGB(p_,i,j,k,iBlock)
-                else
-                   State_VGB(p_,i,j,k,iBlock) = &
-                        State_VGB(p_,i,j,k,iBlock) + 0.5*p
-                endif
+              if(State_VGB(p_,i,j,k,iBlock)  + 0.5*p &
+                   < 0.25*State_VGB(p_,i,j,k,iBlock))then
+                 State_VGB(p_,i,j,k,iBlock) = 0.25*State_VGB(p_,i,j,k,iBlock)
+              else
+                 State_VGB(p_,i,j,k,iBlock) = &
+                      State_VGB(p_,i,j,k,iBlock) + 0.5*p
+              endif
 
-             else
-                if(State_VGB(p_,i,j,k,iBlock) + p &
-                     < 0.25*State_VGB(p_,i,j,k,iBlock))then
-                   State_VGB(p_,i,j,k,iBlock) = 0.25*State_VGB(p_,i,j,k,iBlock)
-                else
-                   State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + p
-                endif
-             end if
-          end do; end do; end do
+           else
+              if(State_VGB(p_,i,j,k,iBlock) + p &
+                   < 0.25*State_VGB(p_,i,j,k,iBlock))then
+                 State_VGB(p_,i,j,k,iBlock) = 0.25*State_VGB(p_,i,j,k,iBlock)
+              else
+                 State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + p
+              endif
+           end if
+        end do; end do; end do
 
-       end do
-       call MPI_reduce(Mass, MassTotal, 1, MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc==0)then
-          MassDim = MassTotal*No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3 & ! in Si
-               *1000                                                 ! in g
-          write(*,'(a,es13.5,a)')'EEE: CME is initiated, Ejected mass=', &
-               MassDim,' g'
-       end if
-       call EEE_do_not_add_cme_again
+     end do
+     call MPI_reduce(Mass, MassTotal, 1, MPI_REAL, MPI_SUM, 0, iComm, iError)
+     if(iProc==0)then
+        MassDim = MassTotal*No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3 & ! in Si
+             *1000                                                 ! in g
+        write(*,'(a,es13.5,a)')'EEE: CME is initiated, Ejected mass=', &
+             MassDim,' g'
+     end if
+     call EEE_do_not_add_cme_again
 
-    end if
-    call test_stop(NameSub, DoTest)
-  end subroutine user_initial_perturbation
-  !============================================================================
+  end if
+  call test_stop(NameSub, DoTest)
+end subroutine user_initial_perturbation
+!============================================================================
 
-  subroutine user_update_states(iBlock)
+subroutine user_update_states(iBlock)
 
-    use ModUpdateState, ONLY: update_state_normal
+  use ModUpdateState, ONLY: update_state_normal
 
-    use ModGeometry, ONLY: true_cell, R_BLK, true_BLK
+  use ModGeometry, ONLY: true_cell, R_BLK, true_BLK
 
-    integer,intent(in):: iBlock
-    logical:: DoTest
+  integer,intent(in):: iBlock
+  logical:: DoTest
 
-    character(len=*), parameter:: NameSub = 'user_update_states'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
+  character(len=*), parameter:: NameSub = 'user_update_states'
+  !--------------------------------------------------------------------------
+  call test_start(NameSub, DoTest, iBlock)
 
-    if(UseSteady)then
-       if(minval(R_BLK(1:nI,1:nJ,1:nK,iBlock)) <= rSteady)then
-          true_cell(1:nI,1:nJ,1:nK,iBlock) = .false.
-          true_BLK(iBlock) = .false.
-       end if
-    end if
-    call update_state_normal(iBlock)
+  if(UseSteady)then
+     if(minval(R_BLK(1:nI,1:nJ,1:nK,iBlock)) <= rSteady)then
+        true_cell(1:nI,1:nJ,1:nK,iBlock) = .false.
+        true_BLK(iBlock) = .false.
+     end if
+  end if
+  call update_state_normal(iBlock)
 
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_update_states
-  !============================================================================
+  call test_stop(NameSub, DoTest, iBlock)
+end subroutine user_update_states
+!============================================================================
 
-  subroutine user_get_b0(x, y, z, B0_D)
-    use ModMain, ONLY: TimeSimulation=>Time_Simulation, UseUserB0
-    use EEE_ModGetB0,   ONLY: EEE_get_B0
-    use EEE_ModCommonVariables, ONLY: UseTD
-    use ModPhysics,     ONLY:Si2No_V,UnitB_
-    use ModPhysics, ONLY: MonopoleStrength
+subroutine user_get_b0(x, y, z, B0_D)
+  use ModMain, ONLY: TimeSimulation=>Time_Simulation, UseUserB0
+  use EEE_ModGetB0,   ONLY: EEE_get_B0
+  use EEE_ModCommonVariables, ONLY: UseTD
+  use ModPhysics,     ONLY:Si2No_V,UnitB_
+  use ModPhysics, ONLY: MonopoleStrength
 
-    real, intent(in) :: x, y, z
-    real, intent(inout):: B0_D(3)
+  real, intent(in) :: x, y, z
+  real, intent(inout):: B0_D(3)
 
-    real :: r,Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3), B_D(3)
-    real :: B0_Dm(3)
+  real :: r,Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3), B_D(3)
+  real :: B0_Dm(3)
 
-    character(len=*), parameter:: NameSub = 'user_get_b0'
-    !--------------------------------------------------------------------------
-    Xyz_D = [x, y, z]
-    if(UseTD)then
-       call EEE_get_B0(Xyz_D,B_D, TimeSimulation)
-       B0_D = B0_D + B_D*Si2No_V(UnitB_)
-       RETURN
-    end if
+  character(len=*), parameter:: NameSub = 'user_get_b0'
+  !--------------------------------------------------------------------------
+  Xyz_D = [x, y, z]
+  if(UseTD)then
+     call EEE_get_B0(Xyz_D,B_D, TimeSimulation)
+     B0_D = B0_D + B_D*Si2No_V(UnitB_)
+     RETURN
+  end if
 
-    if(UserDipoleStrength == 0.0)then
-       UseUserB0 = .false.
-       RETURN
-    end if
+  if(UserDipoleStrength == 0.0)then
+     UseUserB0 = .false.
+     RETURN
+  end if
 
-    r = sqrt(sum(Xyz_D**2))
-    B0_Dm = MonopoleStrength*Xyz_D/r**3
-    ! shifted Xyz_D upwards to center of the user-dipole
+  r = sqrt(sum(Xyz_D**2))
+  B0_Dm = MonopoleStrength*Xyz_D/r**3
+  ! shifted Xyz_D upwards to center of the user-dipole
 
-    Xyz_D = [x, y-1.0+UserDipoleDepth, z]
-    ! Determine radial distance and powers of it
-    rInv  = 1.0/sqrt(sum(Xyz_D**2))
-    r2Inv = rInv**2
-    r3Inv = rInv*r2Inv
+  Xyz_D = [x, y-1.0+UserDipoleDepth, z]
+  ! Determine radial distance and powers of it
+  rInv  = 1.0/sqrt(sum(Xyz_D**2))
+  r2Inv = rInv**2
+  r3Inv = rInv*r2Inv
 
-    ! Compute dipole moment of the intrinsic magnetic field B0.
-    Dipole_D = [0.0, UserDipoleStrength, 0.0 ]
-    Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
+  ! Compute dipole moment of the intrinsic magnetic field B0.
+  Dipole_D = [0.0, UserDipoleStrength, 0.0 ]
+  Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
-    B0_D = B0_Dm + (Dp*Xyz_D - Dipole_D)*r3Inv
+  B0_D = B0_Dm + (Dp*Xyz_D - Dipole_D)*r3Inv
 
-  end subroutine user_get_b0
-  !============================================================================
-  subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
-       EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
-       EinternalOut, TeOut, PressureOut, &
-       CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut,         &
-       OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W,    &
-       PlanckOut_W)
-    use ModConst, ONLY : cBoltzmann, cPlanckH, cElectronMass, cTwoPi, cPi, &
-         cLightSpeed, cElectronCharge, cElectronChargeSquaredJm
-    use ModVarIndexes, ONLY: Pe_, Rho_
-    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitTemperature_, UnitN_
+end subroutine user_get_b0
+!============================================================================
+subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
+     EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
+     EinternalOut, TeOut, PressureOut, &
+     CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut,         &
+     OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W,    &
+     PlanckOut_W)
+  use ModConst, ONLY : cBoltzmann, cPlanckH, cElectronMass, cTwoPi, cPi, &
+       cLightSpeed, cElectronCharge, cElectronChargeSquaredJm
+  use ModVarIndexes, ONLY: Pe_, Rho_
+  use ModPhysics, ONLY: No2Si_V, UnitX_, UnitTemperature_, UnitN_
 
-    ! The State_V vector is in normalized units, all other physical
-    ! quantities are in SI.
-    !
-    ! If the electron energy is used, then EinternalIn, EinternalOut,
-    ! PressureOut, CvOut refer to the electron internal energies,
-    ! electron pressure, and electron specific heat, respectively.
-    ! Otherwise they refer to the total (electron + ion) internal energies,
-    ! total (electron + ion) pressure, and the total specific heat.
+  ! The State_V vector is in normalized units, all other physical
+  ! quantities are in SI.
+  !
+  ! If the electron energy is used, then EinternalIn, EinternalOut,
+  ! PressureOut, CvOut refer to the electron internal energies,
+  ! electron pressure, and electron specific heat, respectively.
+  ! Otherwise they refer to the total (electron + ion) internal energies,
+  ! total (electron + ion) pressure, and the total specific heat.
 
-    use ModMain,       ONLY: nI, UseERadInput
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitP_, &
-         InvGammaMinus1, UnitEnergyDens_, UnitX_
-    use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
-         WaveFirst_,WaveLast_, &
-         Pe_, ExtraEint_
-    use ModConst
-    use ModWaves,      ONLY: FrequencySi_W
+  use ModMain,       ONLY: nI, UseERadInput
+  use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+  use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitP_, &
+       InvGammaMinus1, UnitEnergyDens_, UnitX_
+  use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
+       WaveFirst_,WaveLast_, &
+       Pe_, ExtraEint_
+  use ModConst
+  use ModWaves,      ONLY: FrequencySi_W
 
-    real, intent(in) :: State_V(nVar)
-    integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
-    real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeIn                    ! [K]
-    real, optional, intent(out) :: NatomicOut              ! [1/m^3]
-    real, optional, intent(out) :: AverageIonChargeOut     ! dimensionless
-    real, optional, intent(out) :: EinternalOut            ! [J/m^3]
-    real, optional, intent(out) :: TeOut                   ! [K]
-    real, optional, intent(out) :: PressureOut             ! [Pa]
-    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: GammaOut                ! dimensionless
-    real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
-    real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
-    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
-    real, optional, intent(out) :: &
-         OpacityPlanckOut_W(nWave)                         ! [1/m]
-    real, optional, intent(out) :: &
-         OpacityEmissionOut_W(nWave)                       ! [1/m]
-    real, optional, intent(out) :: &
-         OpacityRosselandOut_W(nWave)                      ! [1/m]
+  real, intent(in) :: State_V(nVar)
+  integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
+  real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
+  real, optional, intent(in)  :: TeIn                    ! [K]
+  real, optional, intent(out) :: NatomicOut              ! [1/m^3]
+  real, optional, intent(out) :: AverageIonChargeOut     ! dimensionless
+  real, optional, intent(out) :: EinternalOut            ! [J/m^3]
+  real, optional, intent(out) :: TeOut                   ! [K]
+  real, optional, intent(out) :: PressureOut             ! [Pa]
+  real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
+  real, optional, intent(out) :: GammaOut                ! dimensionless
+  real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
+  real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
+  real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
+  real, optional, intent(out) :: &
+       OpacityPlanckOut_W(nWave)                         ! [1/m]
+  real, optional, intent(out) :: &
+       OpacityEmissionOut_W(nWave)                       ! [1/m]
+  real, optional, intent(out) :: &
+       OpacityRosselandOut_W(nWave)                      ! [1/m]
 
-    ! Multi-group specific interface. The variables are respectively:
-    !  Group Planckian spectral energy density
-    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
-    real :: FrequencySi, ElectronTemperatureSi, ElectronDensitySi
-    real :: ElectronDensitySiCr, Dens2DensCr
-    real, parameter :: GauntFactor = 10.0
-    !--------------------------------------------------------------------------
-    ! Assign frequency of radioemission
-    FrequencySi = FrequencySi_W(WaveFirst_)
-    !
-    OpacityEmissionOut_W = 0.0
-    PlanckOut_W = 0.0
-    ElectronDensitySi = State_V(Rho_)*No2Si_V(UnitN_)
-    ElectronTemperatureSi = State_V(Pe_)/State_V(Rho_)*&
-         No2Si_V(UnitTemperature_)
-    select case( trim(TypeRadioEmission) )
-    case('simplistic')
+  ! Multi-group specific interface. The variables are respectively:
+  !  Group Planckian spectral energy density
+  real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
+  real :: FrequencySi, ElectronTemperatureSi, ElectronDensitySi
+  real :: ElectronDensitySiCr, Dens2DensCr
+  real, parameter :: GauntFactor = 10.0
+  !--------------------------------------------------------------------------
+  ! Assign frequency of radioemission
+  FrequencySi = FrequencySi_W(WaveFirst_)
+  !
+  OpacityEmissionOut_W = 0.0
+  PlanckOut_W = 0.0
+  ElectronDensitySi = State_V(Rho_)*No2Si_V(UnitN_)
+  ElectronTemperatureSi = State_V(Pe_)/State_V(Rho_)*&
+       No2Si_V(UnitTemperature_)
+  select case( trim(TypeRadioEmission) )
+  case('simplistic')
 
-       ! Calculate the critical density from the frequency
-       ElectronDensitySiCr = cPi*cElectronMass&
-            *FrequencySi**2/cElectronChargeSquaredJm
-       Dens2DensCr = ElectronDensitySi/ElectronDensitySiCr
-       PlanckOut_W = 1.0  ! Just a proxy
-       OpacityEmissionOut_W(1) = (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
-    case('bremsstrahlung')
+     ! Calculate the critical density from the frequency
+     ElectronDensitySiCr = cPi*cElectronMass&
+          *FrequencySi**2/cElectronChargeSquaredJm
+     Dens2DensCr = ElectronDensitySi/ElectronDensitySiCr
+     PlanckOut_W = 1.0  ! Just a proxy
+     OpacityEmissionOut_W(1) = (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
+  case('bremsstrahlung')
 
-       ! Bremsstrahlung spectrum for Radio satisfies well the condition:
-       ! hv<<k_BT. So the B(v,T), which is indicated here are PlanckOut_W,
-       ! can be written after Taylor expansion as follows.
-       PlanckOut_W = 2.0*FrequencySi**2*cBoltzmann*&
-               ElectronTemperatureSi/cLightSpeed**2 ! [W m^-2 sr^-1 Hz^-1]
+     ! Bremsstrahlung spectrum for Radio satisfies well the condition:
+     ! hv<<k_BT. So the B(v,T), which is indicated here are PlanckOut_W,
+     ! can be written after Taylor expansion as follows.
+     PlanckOut_W = 2.0*FrequencySi**2*cBoltzmann*&
+          ElectronTemperatureSi/cLightSpeed**2 ! [W m^-2 sr^-1 Hz^-1]
 
-       ! We choose absorption coefficient which is [1/m]  to be dimensionless
-       ! and thus multiply it by length of segment.
-       OpacityEmissionOut_W = 4.0/3.0*sqrt(2.0*cPi/3.0)*&
-            (  cElectronChargeSquaredJm/&
-            sqrt(cBoltzmann*ElectronTemperatureSi*cElectronMass) )**3*&
-            ( ElectronDensitySi/FrequencySi  )**2&
-            /cLightSpeed*GauntFactor&  ! [1/m]
-            /Si2No_V(UnitX_)           ! [dimensionless]
-    case default
-       call CON_stop('Unknown radio emission mechanism ='&
-            //TypeRadioEmission)
-    end select
-  end subroutine user_material_properties
-  !============================================================================
+     ! We choose absorption coefficient which is [1/m]  to be dimensionless
+     ! and thus multiply it by length of segment.
+     OpacityEmissionOut_W = 4.0/3.0*sqrt(2.0*cPi/3.0)*&
+          (  cElectronChargeSquaredJm/&
+          sqrt(cBoltzmann*ElectronTemperatureSi*cElectronMass) )**3*&
+          ( ElectronDensitySi/FrequencySi  )**2&
+          /cLightSpeed*GauntFactor&  ! [1/m]
+          /Si2No_V(UnitX_)           ! [dimensionless]
+  case default
+     call CON_stop('Unknown radio emission mechanism ='&
+          //TypeRadioEmission)
+  end select
+end subroutine user_material_properties
+!============================================================================
 end module ModUser
 !==============================================================================
