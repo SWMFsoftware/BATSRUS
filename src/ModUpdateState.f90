@@ -45,7 +45,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
-       write(*,*)NameSub,' n_step=', n_step,' iStage=', iStage,     &
+       write(*,*)NameSub,' nStep=', n_step,' iStage=', iStage,     &
             ' dt=',time_BLK(iTest,jTest,kTest,iBlock)*Cfl
        if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
             IsConserv_CB(iTest,jTest,kTest,iBlock)
@@ -54,7 +54,7 @@ contains
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
        end do
-       write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
+       write(*,*)'Fluxes and sources for ', NameVar_V(iVarTest)
        write(*,'(2x,a,2es23.15)') &
             'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang) ,&
             Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
@@ -95,7 +95,7 @@ contains
     end if
     if(SignB_ > 1.and.UseChGL)call update_chgl(iBlock, iStage)
     if(DoTest)then
-       write(*,*)NameSub,' final for n_step =', n_step
+       write(*,*)NameSub,' final for nStep =', n_step
        do iVar=1,nVar
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar),'(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)

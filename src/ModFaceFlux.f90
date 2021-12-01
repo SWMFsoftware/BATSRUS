@@ -246,7 +246,8 @@ module ModFaceFlux
   !$omp threadprivate( InvClightFace, InvClight2Face )
 
   logical, public :: DoTestCell = .false.
-  !$omp threadprivate( DoTestCell )
+  integer, public :: iTestSide = -1
+  !$omp threadprivate( DoTestCell, iTestSide )
 
   ! Logicals for computation once per block
   logical :: IsNewBlockVisco = .true.
@@ -274,20 +275,20 @@ contains
             'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
 
        do iVar=1,nVar
-          write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
+          write(*,'(2a,4es13.5)')NameVar_V(iVar),'=',&
                LeftState_VX(iVar,iTest,jTest,kTest),&
                RightState_VX(iVar,iTest,jTest,kTest),&
                LeftState_VX(iVar,iTest+1,jTest,kTest),&
                RightState_VX(iVar,iTest+1,jTest,kTest)
        end do
        if(UseB0)then
-          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+          write(*,'(a,es13.5,a13,es13.5)')'B0x:',&
                B0_DX(x_,iTest,jTest,kTest),' ',&
                B0_DX(x_,iTest+1,jTest,kTest)
-          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+          write(*,'(a,es13.5,a13,es13.5)')'B0y:',&
                B0_DX(y_,iTest,jTest,kTest),' ',&
                B0_DX(y_,iTest+1,jTest,kTest)
-          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+          write(*,'(a,es13.5,a13,es13.5)')'B0z:',&
                B0_DX(z_,iTest,jTest,kTest),' ',&
                B0_DX(z_,iTest+1,jTest,kTest)
        end if
@@ -298,20 +299,20 @@ contains
             'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
 
        do iVar=1,nVar
-          write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
+          write(*,'(2a,4es13.5)')NameVar_V(iVar),'=',&
                LeftState_VY(iVar,iTest,jTest,kTest),&
                RightState_VY(iVar,iTest,  jTest,kTest),&
                LeftState_VY(iVar,iTest,jTest+1,kTest),&
                RightState_VY(iVar,iTest,jTest+1,kTest)
        end do
        if(UseB0)then
-          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+          write(*,'(a,es13.5,a13,es13.5)')'B0x:',&
                B0_DY(x_,iTest,jTest,kTest),' ',&
                B0_DY(x_,iTest,jTest+1,kTest)
-          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+          write(*,'(a,es13.5,a13,es13.5)')'B0y:',&
                B0_DY(y_,iTest,jTest,kTest),' ',&
                B0_DY(y_,iTest,jTest+1,kTest)
-          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+          write(*,'(a,es13.5,a13,es13.5)')'B0z:',&
                B0_DY(z_,iTest,jTest,kTest),' ',&
                B0_DY(z_,iTest,jTest+1,kTest)
        end if
@@ -321,20 +322,20 @@ contains
        write(*,*)&
             'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
        do iVar=1,nVar
-          write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
+          write(*,'(2a,4es13.5)')NameVar_V(iVar),'=',&
                LeftState_VZ(iVar,iTest,jTest,kTest),&
-               RightState_VZ(iVar,iTest,  jTest,kTest),&
+               RightState_VZ(iVar,iTest,jTest,kTest),&
                LeftState_VZ(iVar,iTest,jTest,kTest+1),&
                RightState_VZ(iVar,iTest,jTest,kTest+1)
        end do
        if(UseB0)then
-          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+          write(*,'(a,es13.5,a13,es13.5)')'B0x:',&
                B0_DZ(x_,iTest,jTest,kTest),' ',&
                B0_DZ(x_,iTest,jTest,kTest+1)
-          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+          write(*,'(a,es13.5,a13,es13.5)')'B0y:',&
                B0_DZ(y_,iTest,jTest,kTest),' ',&
                B0_DZ(y_,iTest,jTest,kTest+1)
-          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+          write(*,'(a,es13.5,a13,es13.5)')'B0z:',&
                B0_DZ(z_,iTest,jTest,kTest),' ',&
                B0_DZ(z_,iTest,jTest,kTest+1)
        end if
@@ -564,15 +565,21 @@ contains
       do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
          call set_cell_values_x
 
-         DoTestCell = DoTest .and. (iFace == iTest .or. iFace == iTest+1) &
-              .and. jFace == jTest .and. kFace == kTest &
-              .and. (iDimTest == 0 .or. iDimTest == 1)
-
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
             Flux_VXI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
+
+         iTestSide = -1; DoTestCell = .false.
+         if(DoTest .and. jFace == jTest .and. kFace == kTest .and. &
+              (iDimTest == 0 .or. iDimTest == 1))then
+            if(iFace == iTest)then
+               iTestSide = 1; DoTestCell = .true.
+            elseif(iFace == iTest+1)then
+               iTestSide = 2; DoTestCell = .true.
+            end if
+         end if
 
          if(UseB0)then
             B0x = B0_DX(x_,iFace,jFace,kFace)
@@ -664,15 +671,21 @@ contains
       do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
          call set_cell_values_y
 
-         DoTestCell = DoTest .and. iFace == iTest .and. &
-              (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest &
-              .and. (iDimTest == 0 .or. iDimTest == 2)
-
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
             Flux_VYI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
+
+         iTestSide = -1; DoTestCell = .false.
+         if(DoTest .and. iFace == iTest .and. kFace == kTest .and. &
+              (iDimTest == 0 .or. iDimTest == 2))then
+            if(jFace == jTest)then
+               iTestSide = 3; DoTestCell = .true.
+            elseif(jFace == jTest+1)then
+               iTestSide = 4; DoTestCell = .true.
+            end if
+         end if
 
          if(UseB0)then
             B0x = B0_DY(x_,iFace,jFace,kFace)
@@ -765,15 +778,21 @@ contains
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
          call set_cell_values_z
 
-         DoTestCell = DoTest .and. iFace == iTest .and. &
-              jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1) &
-              .and. (iDimTest == 0 .or. iDimTest == 3)
-
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
             Flux_VZI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
+
+         iTestSide = -1; DoTestCell = .false.
+         if(DoTest .and. iFace == iTest .and. jFace == jTest .and. &
+              (iDimTest == 0 .or. iDimTest == 3))then
+            if(kFace == kTest)then
+               iTestSide = 5; DoTestCell = .true.
+            elseif(kFace == kTest+1)then
+               iTestSide = 6; DoTestCell = .true.
+            end if
+         end if
 
          if(UseB0)then
             B0x = B0_DZ(x_,iFace,jFace,kFace)
@@ -1040,10 +1059,6 @@ contains
        Normal_D = [AreaX, AreaY, AreaZ]/Area
     end if
 
-    ! if(DoTestCell .and. .not.IsCartesian) &
-    !      write(*,*)NameSub,': Area2,AreaX,AreaY,AreaZ,Normal_D=', &
-    !      Area2, AreaX, AreaY, AreaZ, Normal_D
-
     iRight = iFace; jRight = jFace; kRight = kFace
 
     IsBoundary = true_cell(iLeft, jLeft, kLeft, iBlockFace) &
@@ -1111,7 +1126,6 @@ contains
           Climit = -1.0
        end if
 
-       ! if(DoTestCell)write(*,*) NameSub,': Climit=', Climit
     end if
 
   end subroutine set_cell_values_common
@@ -1550,7 +1564,7 @@ contains
 
       if(DoTestCell)then
          write(*,*)'ChargeDens_I,InvElectronDens,InvRho=', &
-              ChargeDens_I, InvElectronDens,InvRho
+              ChargeDens_I, InvElectronDens, InvRho
          write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
          if(HallCoeff > 0.0) write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
          write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
@@ -3166,35 +3180,33 @@ contains
       !------------------------------------------------------------------------
       if(iDimFace /= iDimTest .and. iDimTest /= 0) RETURN
 
-      write(*,'(1x,4(a,i4))')'Hat state for dir=',iDimFace,&
-           ' at I=',iFace,' J=',jFace,' K=',kFace
-      write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
+      write(*,*)'Hat state for Normal_D=', Normal_D, iTestSide
+      write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_)), iTestSide
       write(*,*)'Un =',sum(0.5*(StateLeft_V(Ux_:Uz_) &
-           +                   StateRight_V(Ux_:Uz_))*Normal_D)
-      write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_))
+           +                   StateRight_V(Ux_:Uz_))*Normal_D), iTestSide
+      write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_)), iTestSide
       if(UseB)then
          write(*,*)'B  =', 0.5*(StateLeft_V(Bx_:Bz_) &
-              +                StateRight_V(Bx_:Bz_)) + [B0x,B0y,B0z]
+              + StateRight_V(Bx_:Bz_)) + [B0x,B0y,B0z], iTestSide
          write(*,*)'BB =', &
               sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))&
-              + [B0x,B0y,B0z])**2)
+              + [B0x,B0y,B0z])**2), iTestSide
       end if
       write(*,'(1x,4(a,i4))') 'Fluxes for dir    =',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
 
-      write(*,'(1x,4(a,i4),a,es13.5)') 'Flux*Area for dir =',iDimFace,&
-           ' at I=',iFace,' J=',jFace,' K=',kFace,' Area=',Area
-
-      write(*,*)'Eigenvalue_maxabs=', Cmax
-      write(*,*)'CmaxDt           =', CmaxDt
+      write(*,*)'Area=', Area, iTestSide
+      write(*,*)'Eigenvalue_maxabs=', Cmax,   iTestSide
+      write(*,*)'CmaxDt           =', CmaxDt, iTestSide
       do iVar = 1, nFlux
-         write(*,'(a,a8,5es13.5)') 'Var,F,F_L,F_R,dU,c*dU/2=',&
+         write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=',&
               NameVar_V(iVar),&
               Flux_V(iVar), &
               FluxLeft_V(iVar)*Area, &
               FluxRight_V(iVar)*Area,&
               StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
-              0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area
+              0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area, &
+              iTestSide
       end do
 
     end subroutine write_test_info
@@ -3848,30 +3860,33 @@ contains
 
       if(DoTestCell .or. Fast2 + Discr < 0.0)then
          write(*,*) &
-              ' iFluid, rho, p(face)   =', iFluid, Rho, State_V(p_)
+              ' iFluid, rho, p(face)   =', iFluid, Rho, State_V(p_), iTestSide
          if(UseAnisoPressure) write(*,*) &
-              ' Ppar, Perp             =', Ppar, Pperp
+              ' Ppar, Perp             =', Ppar, Pperp, iTestSide
          if(UseElectronPressure) write(*,*) &
-              ' State_V(Pe_)           =', State_V(Pe_)
+              ' State_V(Pe_)           =', State_V(Pe_), iTestSide
          if(UseAnisoPe) write(*,*) &
-              ' State_V(Pepar_)        =', State_V(Pepar_)
+              ' State_V(Pepar_)        =', State_V(Pepar_), iTestSide
          if(UseWavePressure) write(*,*) &
               ' GammaWave, State(Waves)=', &
-              GammaWave, State_V(WaveFirst_:WaveLast_)
+              GammaWave, State_V(WaveFirst_:WaveLast_), iTestSide
          write(*,*) &
-              ' Fast2, Discr          =', Fast2, Discr
+              ' Fast2, Discr          =', Fast2, Discr, iTestSide
          write(*,*) &
-              ' Sound2, Alfven2       =', Sound2, Alfven2
+              ' Sound2, Alfven2       =', Sound2, Alfven2, iTestSide
          write(*,*) &
-              ' FullBn, Alfven2Normal =', FullBn, Alfven2Normal
-         write(*,*) &
-              ' FullBx, FullBy, FullBz=', FullBx, FullBy, FullBz
+              ' FullBn, Alfven2Normal =', FullBn, Alfven2Normal, iTestSide
+         if(UseB0)then
+            write(*,*) ' FullB=', FullBx, FullBy, FullBz, iTestSide
+         else
+            write(*,*) ' B=', FullBx, FullBy, FullBz, iTestSide
+         end if
          write(*,*) &
               ' State_VGB(left)       =', &
-              State_VGB(:,iLeft,jLeft,kLeft,iBlockFace)
+              State_VGB(:,iLeft,jLeft,kLeft,iBlockFace), iTestSide
          write(*,*) &
               ' State_VGB(right)      =', &
-              State_VGB(:,iRight,jRight,kRight,iBlockFace)
+              State_VGB(:,iRight,jRight,kRight,iBlockFace), iTestSide
       end if
       if(Fast2 + Discr < 0.0)then
          write(*,*) &
