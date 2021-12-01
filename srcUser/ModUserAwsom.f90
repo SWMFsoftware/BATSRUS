@@ -496,7 +496,7 @@ contains
 
              tmp1_BLK(i,j,k,iBlock) =               &
                   Wmajor*(GammaWave*Ur + Var)     &
-               +  Wminor*(GammaWave*Ur - Var) 
+               +  Wminor*(GammaWave*Ur - Var)
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate',360, Radius, tmp1_BLK) &
@@ -1544,7 +1544,7 @@ contains
 
   end associate
 end subroutine user_set_face_boundary
-!============================================================================
+  !============================================================================
 subroutine user_set_resistivity(iBlock, Eta_G)
 
   use ModAdvance,    ONLY: State_VGB
@@ -1558,8 +1558,8 @@ subroutine user_set_resistivity(iBlock, Eta_G)
   real :: Te, TeSi
 
   logical:: DoTest
-  character(len=*), parameter:: NameSub = 'user_set_resistivity'
-  !--------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_set_resistivity'
+    !--------------------------------------------------------------------------
   call test_start(NameSub, DoTest, iBlock)
   do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
      Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
@@ -1570,7 +1570,7 @@ subroutine user_set_resistivity(iBlock, Eta_G)
 
   call test_stop(NameSub, DoTest, iBlock)
 end subroutine user_set_resistivity
-!============================================================================
+  !============================================================================
 subroutine user_initial_perturbation
 
   use EEE_ModCommonVariables, ONLY: XyzCmeCenterSi_D, XyzCmeApexSi_D, &
@@ -1590,8 +1590,8 @@ subroutine user_initial_perturbation
   real :: Mass, MassDim, MassTotal
   ! -------------------------------------------------------------------------
   logical:: DoTest, IsFound
-  character(len=*), parameter:: NameSub = 'user_initial_perturbation'
-  !--------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
+    !--------------------------------------------------------------------------
   call test_start(NameSub, DoTest)
 
   if(UseAwsom)then
@@ -1767,7 +1767,7 @@ subroutine user_initial_perturbation
   end if
   call test_stop(NameSub, DoTest)
 end subroutine user_initial_perturbation
-!============================================================================
+  !============================================================================
 
 subroutine user_update_states(iBlock)
 
@@ -1778,8 +1778,8 @@ subroutine user_update_states(iBlock)
   integer,intent(in):: iBlock
   logical:: DoTest
 
-  character(len=*), parameter:: NameSub = 'user_update_states'
-  !--------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
   call test_start(NameSub, DoTest, iBlock)
 
   if(UseSteady)then
@@ -1792,7 +1792,7 @@ subroutine user_update_states(iBlock)
 
   call test_stop(NameSub, DoTest, iBlock)
 end subroutine user_update_states
-!============================================================================
+  !============================================================================
 
 subroutine user_get_b0(x, y, z, B0_D)
   use ModMain, ONLY: TimeSimulation=>Time_Simulation, UseUserB0
@@ -1807,8 +1807,8 @@ subroutine user_get_b0(x, y, z, B0_D)
   real :: r,Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3), B_D(3)
   real :: B0_Dm(3)
 
-  character(len=*), parameter:: NameSub = 'user_get_b0'
-  !--------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_get_b0'
+    !--------------------------------------------------------------------------
   Xyz_D = [x, y, z]
   if(UseTD)then
      call EEE_get_B0(Xyz_D,B_D, TimeSimulation)
@@ -1838,7 +1838,7 @@ subroutine user_get_b0(x, y, z, B0_D)
   B0_D = B0_Dm + (Dp*Xyz_D - Dipole_D)*r3Inv
 
 end subroutine user_get_b0
-!============================================================================
+  !============================================================================
 subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
      EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
      EinternalOut, TeOut, PressureOut, &
@@ -1896,7 +1896,7 @@ subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
   real :: FrequencySi, ElectronTemperatureSi, ElectronDensitySi
   real :: ElectronDensitySiCr, Dens2DensCr
   real, parameter :: GauntFactor = 10.0
-  !--------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
   ! Assign frequency of radioemission
   FrequencySi = FrequencySi_W(WaveFirst_)
   !
@@ -1935,6 +1935,6 @@ subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
           //TypeRadioEmission)
   end select
 end subroutine user_material_properties
-!============================================================================
+  !============================================================================
 end module ModUser
 !==============================================================================
