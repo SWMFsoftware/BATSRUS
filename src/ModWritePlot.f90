@@ -1276,6 +1276,11 @@ contains
           call calc_divergence(iBlock, u_DG, &
                nG, PlotVar(:,:,:,iVar), UseBodyCellIn=.true.)
           deallocate(u_DG)
+       case('gradlogp')
+          ! Log of pressure gradient
+          Var_G = log10(State_VGB(P_,:,:,:,iBlock))
+          call calc_gradient(iBlock, Var_G, nG, GradPe_DG)
+          PlotVar(:,:,:,iVar) = sqrt(sum(GradPe_DG**2, DIM=1))
        case('b1x')
           PlotVar(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBlock)
        case('b1y')

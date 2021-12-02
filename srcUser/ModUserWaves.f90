@@ -1055,12 +1055,9 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    associate( TimeBc => FBC%TimeBc, &
-               iBlockBc => FBC%iBlockBc )
+    call test_start(NameSub, DoTest, FBC%iBlockBc)
 
-    call test_start(NameSub, DoTest, iBlockBc)
-
-    Dx = Velocity*TimeBc
+    Dx = Velocity*FBC%TimeBc
 
     do iVar=1,nVar
        ! Both of these are primitive variables
@@ -1071,9 +1068,8 @@ contains
             + KzWave_V(iVar)*FBC%FaceCoords_D(z_))
     end do
 
-    call test_stop(NameSub, DoTest, iBlockBc)
+    call test_stop(NameSub, DoTest, FBC%iBlockBc)
 
-    end associate
   end subroutine user_set_face_boundary
   !============================================================================
 
