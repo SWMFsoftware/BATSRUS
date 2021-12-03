@@ -1277,6 +1277,8 @@ contains
                nG, PlotVar(:,:,:,iVar), UseBodyCellIn=.true.)
           deallocate(u_DG)
        case('gradlogp')
+          if(.not. allocated(GradPe_DG)) allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          if(.not. allocated(Var_G)) allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           ! Log of pressure gradient
           Var_G = log10(State_VGB(P_,:,:,:,iBlock))
           call calc_gradient(iBlock, Var_G, nG, GradPe_DG)
@@ -1761,6 +1763,8 @@ contains
     end do ! iVar
 
     if(allocated(J_DC)) deallocate(J_DC)
+    if(allocated(Var_G)) deallocate(Var_G)
+    if(allocated(GradPe_DG)) deallocate(GradPe_DG)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_plotvar
