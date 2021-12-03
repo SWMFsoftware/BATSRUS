@@ -486,7 +486,7 @@ contains
              write(*,*) &
                   'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
                   Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-             write(*,*)'source=', Change_V(iVarTest) & 
+             write(*,*)'source=', Change_V(iVarTest) &
                   /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
              write(*,*)'fluxes=', DivF
 #else
@@ -499,7 +499,7 @@ contains
              write(*,'(2x,a,2es23.15)') &
                   'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
                   Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-             write(*,'(2x,a,es23.15)')'source=', Change_V(iVarTest) & 
+             write(*,'(2x,a,es23.15)')'source=', Change_V(iVarTest) &
                   /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
              write(*,'(2x,a,es23.15)')'fluxes=', DivF
 #endif
