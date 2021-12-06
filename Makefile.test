@@ -297,7 +297,7 @@ test_fastwave_2d:
 	@echo "test_fastwave_2d_rundir..." >> test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_rundir
 	@echo "test_fastwave_2d_run..." >> test_fastwave_2d_gpu.diff
-	$(MAKE) test_fastwave_2d_run
+	$(MAKE) test_fastwave_2d_run NP=1
 	@echo "test_fastwave_2d_check..." >> test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_check
 
