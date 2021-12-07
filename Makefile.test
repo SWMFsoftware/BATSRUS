@@ -29,9 +29,10 @@ test_help:
 	@echo "    test_2bodyplot             (run 2 Body Plot test)"  
 	@echo "    test_amr                   (run Cartesian AMR test)"
 	@echo "    test_amrsph                (run spherical AMR test)"
+	@echo "    test_awsom                 (run AWSoM corona test)"
+	@echo "    test_awsom_gpu             (run AWSoM corona test on GPU)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
 	@echo "    test_bvector               (run Bvector Solar Corona test)"
-	@echo "    test_chromo                (run Chromo - Solar Corona test)"
 	@echo "    test_earth                 (run Cartesian Earth test)"	
 	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
@@ -49,9 +50,9 @@ test_help:
 	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_shockramp             (run shockramp test)"
 	@echo "    test_shocktube             (run shocktube test)"
-	@echo "    test_shocktube_1d          (run 1D shocktube test)"
-	@echo "    test_fastwave              (run 3D fast wave test)"
-	@echo "    test_fastwave_2d           (run 2D fast wave test)"
+	@echo "    test_shocktube_1d          (run 1D shocktube test on GPU)"
+	@echo "    test_fastwave              (run 3D fast wave test on GPU)"
+	@echo "    test_fastwave_2d           (run 2D rotated fast wave test on GPU)"
 	@echo "    test_bx0                   (run 3D bx0 isosurface plot test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"
 	@echo "    test_spectrum2             (run spectrum2 post-processing test)"
@@ -100,8 +101,9 @@ test:
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
 	-@($(MAKE) test_fastwave TESTDIR=run_test_fastwave)
-	-@($(MAKE) test_earth TESTDIR=run_test_earth)
 	-@($(MAKE) test_fastwave_2d TESTDIR=run_test_fastwave_2d)
+	-@($(MAKE) test_earth TESTDIR=run_test_earth)
+	-@($(MAKE) test_awsom TESTDIR=run_test_awsom)
 	cd ${DIR}; ./Config.pl -noacc
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
@@ -114,7 +116,7 @@ test:
 	-@($(MAKE) test_mhdions TESTDIR=run_test_mhdions)
 	-@($(MAKE) test_mhdnoncons TESTDIR=run_test_mhdnoncons)
 	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
-	-@($(MAKE) test_chromo TESTDIR=run_test_chromo)
+	-@($(MAKE) test_awsom TESTDIR=run_test_awsom)
 	-@($(MAKE) test_earthsph TESTDIR=run_test_earthsph)
 	-@($(MAKE) test_2bodyplot TESTDIR=run_test_2bodyplot)
 	-@($(MAKE) test_magnetometer TESTDIR=run_test_magnetometer)
@@ -262,7 +264,7 @@ test_shocktube_1d:
 	@echo "test_shocktube_1d_rundir..." >> test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_rundir
 	@echo "test_shocktube_1d_run..." >> test_shocktube_1d_gpu.diff
-	$(MAKE) test_shocktube_1d_run NP=1
+	$(MAKE) test_shocktube_1d_run
 	@echo "test_shocktube_1d_check..." >> test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_check
 
@@ -278,7 +280,7 @@ test_shocktube_1d_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_shocktube_1d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shocktube_1d_check:
@@ -297,7 +299,7 @@ test_fastwave_2d:
 	@echo "test_fastwave_2d_rundir..." >> test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_rundir
 	@echo "test_fastwave_2d_run..." >> test_fastwave_2d_gpu.diff
-	$(MAKE) test_fastwave_2d_run NP=1
+	$(MAKE) test_fastwave_2d_run
 	@echo "test_fastwave_2d_check..." >> test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_check
 
@@ -313,7 +315,7 @@ test_fastwave_2d_rundir:test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fastwave_2d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe | tee runlog
+	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe | tee runlog
 	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
 
 test_fastwave_2d_check:
@@ -363,7 +365,7 @@ test_fastwave:
 	@echo "test_fastwave_rundir..." >> test_fastwave_gpu.diff
 	$(MAKE) test_fastwave_rundir
 	@echo "test_fastwave_run..." >> test_fastwave_gpu.diff
-	$(MAKE) test_fastwave_run NP=1
+	$(MAKE) test_fastwave_run
 	@echo "test_fastwave_check..." >> test_fastwave_gpu.diff
 	$(MAKE) test_fastwave_check
 
@@ -379,7 +381,7 @@ test_fastwave_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fastwave_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe | tee runlog
+	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe | tee runlog
 	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
 
 test_fastwave_check:
@@ -397,7 +399,7 @@ test_bx0:
 	@echo "test_bx0_rundir..." >> test_bx0.diff
 	$(MAKE) test_bx0_rundir
 	@echo "test_bx0_run..." >> test_bx0.diff
-	$(MAKE) test_bx0_run NP=1
+	$(MAKE) test_bx0_run
 	@echo "test_bx0_check..." >> test_bx0.diff
 	$(MAKE) test_bx0_check
 
@@ -888,11 +890,11 @@ test_awsom_gpu_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsom_gpu_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_awsom_gpu_check:
-	-@(${DIFFNUM} -t \
+	-@(${DIFFNUM} -a=1e-20 -t \
 		${TESTDIR}/RESULTS/SC/log_n000010.log \
 		Param/CORONA/TestOutput/log_n000010.sc.awsom_gpu \
 		> test_awsom_gpu.diff)
@@ -1009,42 +1011,41 @@ test_bvector_check:
 	ls -l test_bvector.diff
 
 
-### STANDALONE CHROMOSPHERE SOLAR CORONA TESTS ###
+### STANDALONE AWSOM SOLAR CORONA TESTS ###
 
-test_chromo:
-	@echo "test_chromo_compile..." > test_chromo.diff
-	$(MAKE) test_chromo_compile
-	@echo "test_chromo_rundir..." >> test_chromo.diff
-	$(MAKE) test_chromo_rundir
-	@echo "test_chromo_run..." >> test_chromo.diff
-	$(MAKE) test_chromo_run
-	@echo "test_chromo_check..." >> test_chromo.diff
-	$(MAKE) test_chromo_check
+test_awsom:
+	@echo "test_awsom_compile..." > test_awsom.diff
+	$(MAKE) test_awsom_compile
+	@echo "test_awsom_rundir..." >> test_awsom.diff
+	$(MAKE) test_awsom_rundir
+	@echo "test_awsom_run..." >> test_awsom.diff
+	$(MAKE) test_awsom_run
+	@echo "test_awsom_check..." >> test_awsom.diff
+	$(MAKE) test_awsom_check
 
 # Fails on Pleiades with OpenMP
-test_chromo_compile:
+test_awsom_compile:
 	./Config.pl -noopenmp -u=Awsom -e=MhdWaves -ng=2 -g=6,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
-test_chromo_rundir:
+test_awsom_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
-	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo PARAM.in
-	cd ${TESTDIR}; cp Param/CORONA/GridChromo GridChromo
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.Awsom PARAM.in
 	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
-test_chromo_run:
+test_awsom_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
-test_chromo_check:
+test_awsom_check:
 	-@(${DIFFNUM} -t -a=1e-27 -r=2e-5 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
-		Param/CORONA/TestOutput/log_n000000.sc.chromo \
-		> test_chromo.diff)
-	ls -l test_chromo.diff
+		Param/CORONA/TestOutput/log_n000000.sc.awsom \
+		> test_awsom.diff)
+	ls -l test_awsom.diff
 
 
 ### STANDALONE 2D OUTER HELIOSPHERE TEST ###
@@ -1801,13 +1802,13 @@ test_earth:
 	-@($(MAKE) test_earth_start)
 
 test_earth_start:
-	@echo "test_earth_compile..." > test_earth.diff
+	@echo "test_earth_compile..." > test_earth_gpu.diff
 	$(MAKE) test_earth_compile
-	@echo "test_earth_rundir..." >> test_earth.diff
+	@echo "test_earth_rundir..." >> test_earth_gpu.diff
 	$(MAKE) test_earth_rundir
-	@echo "test_earth_run..." >> test_earth.diff
-	$(MAKE) test_earth_run NP=1
-	@echo "test_earth_check..." >> test_earth.diff
+	@echo "test_earth_run..." >> test_earth_gpu.diff
+	$(MAKE) test_earth_run
+	@echo "test_earth_check..." >> test_earth_gpu.diff
 	$(MAKE) test_earth_check
 
 test_earth_compile:
@@ -1823,23 +1824,23 @@ test_earth_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_earth_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_earth_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-13 \
 		${TESTDIR}/RESULTS/GM/log*.log \
 		Param/EARTH/TestOutput/earth_cartesian_ref.log \
-		> test_earth.diff)
+		> test_earth_gpu.diff)
 	-@(${DIFFNUM} -t -r=1e-8 -a=1e-13 \
 		${TESTDIR}/RESULTS/GM/y=0_var_2_t00000004*.out \
 		Param/EARTH/TestOutput/earth_cartesian_ref.out \
-		>> test_earth.diff)
+		>> test_earth_gpu.diff)
 	-@(${DIFFNUM} -t -r=2e-4 -a=1e-4 \
 		${TESTDIR}/RESULTS/GM/mag_grid_n00000097.out \
 		Param/EARTH/TestOutput/earth_cartesian_mag_grid.out.gz \
-		>> test_earth.diff)
-	ls -l test_earth.diff
+		>> test_earth_gpu.diff)
+	ls -l test_earth_gpu.diff
 	
 ### TESTS FOR MODELING EARTH WITH SPHERICAL GRID ###
 
