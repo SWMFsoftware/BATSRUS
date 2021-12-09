@@ -103,7 +103,7 @@ test:
 	-@($(MAKE) test_fastwave TESTDIR=run_test_fastwave)
 	-@($(MAKE) test_fastwave_2d TESTDIR=run_test_fastwave_2d)
 	-@($(MAKE) test_earth TESTDIR=run_test_earth)
-	-@($(MAKE) test_awsom TESTDIR=run_test_awsom)
+	-@($(MAKE) test_awsom_gpu TESTDIR=run_test_awsom_gpu)
 	cd ${DIR}; ./Config.pl -noacc
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
