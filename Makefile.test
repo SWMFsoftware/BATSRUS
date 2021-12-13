@@ -305,7 +305,7 @@ test_fastwave_2d:
 
 test_fastwave_2d_compile:
 	cd ${DIR}; ./Config.pl ${OPENACC}
-	./Config.pl -u=Waves -e=Mhd -g=6,6,1
+	./Config.pl -u=Waves -e=Mhd -ng=2 -g=6,6,1
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave_2d
 	$(MAKE) BATSRUS
 	make PIDL
@@ -371,7 +371,7 @@ test_fastwave:
 
 test_fastwave_compile:
 	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
-	./Config.pl -u=Waves -e=Mhd -g=10,10,10
+	./Config.pl -u=Waves -e=Mhd -ng=2 -g=10,10,10
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave
 	$(MAKE) BATSRUS
 	make PIDL
@@ -879,7 +879,9 @@ test_awsom_gpu:
 
 # Fails on Pleiades with OpenMP
 test_awsom_gpu_compile:
-	./Config.pl -noopenmp -u=Awsom -e=Mhd -ng=2 -g=6,4,4
+	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -u=Awsom -e=Mhd -ng=2 -g=6,4,4
+	./Config.pl -opt=Param/CORONA/PARAM.in.Awsom.GPU
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1813,7 +1815,7 @@ test_earth_start:
 
 test_earth_compile:
 	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
-	./Config.pl -e=Mhd -u=Default -g=10,10,10
+	./Config.pl -e=Mhd -u=Default -ng=2 -g=10,10,10
 	./Config.pl -opt=Param/EARTH/PARAM.in.GPU.dev
 	${MAKE} BATSRUS
 	make PIDL
