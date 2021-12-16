@@ -901,7 +901,7 @@ contains
               FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsTrueFace_V(Bx_:Bz_) &
                    - Brefl_D
            end if
-           
+
         case('absorb')
            ! for inflow float everything
            FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
@@ -949,7 +949,6 @@ contains
            ! stop with an error
            if(IsFullyCoupledFluid .and. nFluid > 1) call stop_mpi( &
                 NameSub//': BCs for multifluid must be specified.')
-
 
            ! Only variable associated with the main MHD plasma are passed
            ! through the buffer grid. BC's for fluids must be specified
