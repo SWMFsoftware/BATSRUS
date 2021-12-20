@@ -47,8 +47,8 @@ T			UseBody
 F			UseBody
 
 #HELIODIPOLE
-2.8e-4                  HelioDipoleStrengthSi
-0.0                     HelioDipoleTilt
+2.8e-4			HelioDipoleStrength
+0.0			HelioDipoleTilt
 
 #GAMMA
 1.5			Gamma for fluid 1
@@ -90,27 +90,27 @@ shell0			StringShape
 1.7			Radius
 
 #AMRCRITERIARESOLUTION
-2                       nRefineCrit
-dphi                    StringRefine
-3.0                     RefineTo
-1.5                     CoarsenFrom
-dphi Innershell         StringRefine
-1.5                     RefineTo
-0.75                    CoarsenFrom
-currentsheet            StringRefine
-0.5                     CoarsenLimit
-0.5                     RefineLimit
-1.5                     MaxResolution
+2			nRefineCrit
+dphi			StringRefine
+3.0			RefineTo
+1.5			CoarsenFrom
+dphi Innershell		StringRefine
+1.5			RefineTo
+0.75			CoarsenFrom
+currentsheet		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+1.5			MaxResolution
 
 #GRIDRESOLUTION
-6.0                     Resolution
-initial                 StringShape
+6.0			Resolution
+initial			StringShape
 
 #DOAMR
-F                       DoAmr
-40                      DnAmr
--1.0                    DtAmr
-T                       IsStrictAmr
+F			DoAmr
+40			DnAmr
+-1.0			DtAmr
+T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage

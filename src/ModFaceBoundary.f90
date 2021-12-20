@@ -223,225 +223,225 @@ contains
     character(len=*), parameter:: NameSub = 'set_face_bc'
     !--------------------------------------------------------------------------
     associate( iSide => FBC%iSide, DoResChangeOnly => FBC%DoResChangeOnly, &
-               iBlockBc => FBC%iBlockBc )
+         iBlockBc => FBC%iBlockBc )
 
-    call test_start(NameSub, DoTest, iBlockBc)
+      call test_start(NameSub, DoTest, iBlockBc)
 
-    if(TypeFaceBc_I(body1_) == 'polarwind') then
-       GmToSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
-       Cos2PolarTheta = cos(PolarTheta)**2
-    end if
+      if(TypeFaceBc_I(body1_) == 'polarwind') then
+         GmToSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
+         Cos2PolarTheta = cos(PolarTheta)**2
+      end if
 
-    ! Use Young et al. 1982 empirical relationship to set
-    ! inner boundary density based on expected composition.
-    if(UseYoungBc .and. UseIe)then
-       ! Use species fractions to obtain the total mass density.
-       if (UseMultiSpecies) then
-          if (nIonDensity /= 2) call stop_mpi(NameSub// &
-               ': MUST be two species for Young BC.')
+      ! Use Young et al. 1982 empirical relationship to set
+      ! inner boundary density based on expected composition.
+      if(UseYoungBc .and. UseIe)then
+         ! Use species fractions to obtain the total mass density.
+         if (UseMultiSpecies) then
+            if (nIonDensity /= 2) call stop_mpi(NameSub// &
+                 ': MUST be two species for Young BC.')
 
-          if (UseCpcpBc) then
-             ! assuming the first species/fluid is H+ and is determined by
-             ! #CPCPBOUNDARY
-             RhoCpcp_I(1) = Io2No_V(UnitRho_)*(Rho0Cpcp_I(1)           &
-                  + RhoPerCpcp_I(1)*0.5*( logvar_ionosphere('cpcpn')   &
-                  + logvar_ionosphere('cpcps') )                       &
-                  * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
+            if (UseCpcpBc) then
+               ! assuming the first species/fluid is H+ and is determined by
+               ! #CPCPBOUNDARY
+               RhoCpcp_I(1) = Io2No_V(UnitRho_)*(Rho0Cpcp_I(1)           &
+                    + RhoPerCpcp_I(1)*0.5*( logvar_ionosphere('cpcpn')   &
+                    + logvar_ionosphere('cpcps') )                       &
+                    * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
 
-             ! THe first species/fluid is H+, so the number density is the
-             ! same as mass density in NO units. assuming the second
-             ! species/fluid is O+, Mass is taken to be 16.
-             ! use nIonDensity instead of 2 to avoid index out of range.
-             RhoCpcp_I(nIonDensity) = RhoCpcp_I(1)*RatioOH*16
-          else
-             ! assuming the first species/fluid is H+ and determined by #BODY
-             RhoCpcp_I(1) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)
+               ! THe first species/fluid is H+, so the number density is the
+               ! same as mass density in NO units. assuming the second
+               ! species/fluid is O+, Mass is taken to be 16.
+               ! use nIonDensity instead of 2 to avoid index out of range.
+               RhoCpcp_I(nIonDensity) = RhoCpcp_I(1)*RatioOH*16
+            else
+               ! assuming the first species/fluid is H+ and determined by #BODY
+               RhoCpcp_I(1) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)
 
-             ! assuming the second species/fluid is O+, Mass is taken to be 16
-             ! use nIonDensity instead of 2 to avoid index out of range
-             RhoCpcp_I(nIonDensity) = &
-                  Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
-          end if
-       else if (UseMultiIon) then
-          if (IsMhd) call stop_mpi(NameSub//': no total fluid is supported!')
-          if (UseCpcpBc) call stop_mpi(NameSub//': CPCP should not be used '//&
-               'in combination with Young in multifluid ')
-          if (nIonFluid /= 2) call stop_mpi(NameSub// &
-               ': MUST be two fluids for Young BC.')
+               ! assuming the second species/fluid is O+, Mass is taken to be 16
+               ! use nIonDensity instead of 2 to avoid index out of range
+               RhoCpcp_I(nIonDensity) = &
+                    Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
+            end if
+         else if (UseMultiIon) then
+            if (IsMhd) call stop_mpi(NameSub//': no total fluid is supported!')
+            if (UseCpcpBc) call stop_mpi(NameSub//': CPCP should not be used '//&
+                 'in combination with Young in multifluid ')
+            if (nIonFluid /= 2) call stop_mpi(NameSub// &
+                 ': MUST be two fluids for Young BC.')
 
-          RhoCpcp_I(1)         = BodyNDim_I(IonFirst_)*Io2No_V(UnitRho_)
-          RhoCpcp_I(nIonFluid) = BodyNDim_I(IonFirst_)*RatioOH*16        &
-               *Io2No_V(UnitRho_)
-       else
-          ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
-          ! is both light and very minor.
-          FracH = 1.0 / (1.0 + RatioOH)
-          FracO = RatioOH  * FracH
-          ! fixed total number density
-          ! RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
+            RhoCpcp_I(1)         = BodyNDim_I(IonFirst_)*Io2No_V(UnitRho_)
+            RhoCpcp_I(nIonFluid) = BodyNDim_I(IonFirst_)*RatioOH*16        &
+                 *Io2No_V(UnitRho_)
+         else
+            ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
+            ! is both light and very minor.
+            FracH = 1.0 / (1.0 + RatioOH)
+            FracO = RatioOH  * FracH
+            ! fixed total number density
+            ! RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
 
-          ! fixed H+ density
-          RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(1+16*ratioOH)
-       end if
+            ! fixed H+ density
+            RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(1+16*ratioOH)
+         end if
 
-    endif
+      endif
 
-    ! Apply face boundary conditions as required.
-    FBC%B0Face_D = 0.0
+      ! Apply face boundary conditions as required.
+      FBC%B0Face_D = 0.0
 
-    do k = kMinFace, kMaxFace
-       do j = jMinFace, jMaxFace
-          do i = 1, nIFace
-             ! Apply BCs at X-direction faces as necessary.
-             !         NUMBERING!
-             !
-             !     C     F     C  B  F     C
-             !     +     |     +  !  |     +
-             !
-             !     i-1   i     i     i+1   i+1
-             !
-             if (IsTrueCell_G(i-1,j,k) .and. &
-                  IsBodyCell_G(i,j,k) .and. &
-                  (.not.DoResChangeOnly .or. &
-                  ((i == nIFace .and. neiLwest(iBlockBc)==+1) .or. &
-                  (i == 1       .and. neiLeast(iBlockBc)==+1)) )) then
+      do k = kMinFace, kMaxFace
+         do j = jMinFace, jMaxFace
+            do i = 1, nIFace
+               ! Apply BCs at X-direction faces as necessary.
+               !         NUMBERING!
+               !
+               !     C     F     C  B  F     C
+               !     +     |     +  !  |     +
+               !
+               !     i-1   i     i     i+1   i+1
+               !
+               if (IsTrueCell_G(i-1,j,k) .and. &
+                    IsBodyCell_G(i,j,k) .and. &
+                    (.not.DoResChangeOnly .or. &
+                    ((i == nIFace .and. neiLwest(iBlockBc)==+1) .or. &
+                    (i == 1       .and. neiLeast(iBlockBc)==+1)) )) then
 
-                iSide = 2
+                  iSide = 2
 
-                FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i-1,j,k,iBlockBc) &
-                     +              Xyz_DGB(:,i  ,j,k,iBlockBc))
+                  FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i-1,j,k,iBlockBc) &
+                       +              Xyz_DGB(:,i  ,j,k,iBlockBc))
 
-                if(UseB0)FBC%B0Face_D = B0_DX(:,i,j,k)
+                  if(UseB0)FBC%B0Face_D = B0_DX(:,i,j,k)
 
-                FBC%VarsTrueFace_V= LeftState_VX(:,i,j,k)
+                  FBC%VarsTrueFace_V= LeftState_VX(:,i,j,k)
 
-                call set_face(i-1,j,k,i,j,k)
+                  call set_face(i-1,j,k,i,j,k)
 
-                RightState_VX(:,i,j,k) = FBC%VarsGhostFace_V
+                  RightState_VX(:,i,j,k) = FBC%VarsGhostFace_V
 
-             end if
+               end if
 
-             if (IsTrueCell_G(i,j,k) .and. &
-                  IsBodyCell_G(i-1,j,k)  .and. &
-                  (.not.DoResChangeOnly .or. &
-                  (i == 1         .and. neiLeast(iBlockBc)==+1) .or. &
-                  (i == nIFace    .and. neiLwest(iBlockBc)==+1)  )) then
+               if (IsTrueCell_G(i,j,k) .and. &
+                    IsBodyCell_G(i-1,j,k)  .and. &
+                    (.not.DoResChangeOnly .or. &
+                    (i == 1         .and. neiLeast(iBlockBc)==+1) .or. &
+                    (i == nIFace    .and. neiLwest(iBlockBc)==+1)  )) then
 
-                iSide = 1
+                  iSide = 1
 
-                FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i-1,j,k,iBlockBc) &
-                     +              Xyz_DGB(:,i  ,j,k,iBlockBc))
+                  FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i-1,j,k,iBlockBc) &
+                       +              Xyz_DGB(:,i  ,j,k,iBlockBc))
 
-                if(UseB0)FBC%B0Face_D = B0_DX(:,i,j,k)
+                  if(UseB0)FBC%B0Face_D = B0_DX(:,i,j,k)
 
-                FBC%VarsTrueFace_V = RightState_VX(:,i,j,k)
+                  FBC%VarsTrueFace_V = RightState_VX(:,i,j,k)
 
-                call set_face(i,j,k,i-1,j,k)
+                  call set_face(i,j,k,i-1,j,k)
 
-                LeftState_VX(:,i,j,k) = FBC%VarsGhostFace_V
-             end if
-          end do ! end i loop
-       end do ! end j loop
-    end do ! end k loop
+                  LeftState_VX(:,i,j,k) = FBC%VarsGhostFace_V
+               end if
+            end do ! end i loop
+         end do ! end j loop
+      end do ! end k loop
 
-    if(nDim == 1) RETURN
-    do k = kMinFace, kMaxFace
-       do j = 1 , nJFace
-          do i = iMinFace, iMaxFace
-             ! Apply BCs at Y-direction faces as necessary.
-             if (IsTrueCell_G(i,j-1,k) .and. &
-                  IsBodyCell_G(i,j,k)  .and. &
-                  ( .not.DoResChangeOnly .or. &
-                  (j == nJFace .and. neiLnorth(iBlockBc)==+1) .or. &
-                  (j == 1      .and. neiLsouth(iBlockBc)==+1) )) then
+      if(nDim == 1) RETURN
+      do k = kMinFace, kMaxFace
+         do j = 1 , nJFace
+            do i = iMinFace, iMaxFace
+               ! Apply BCs at Y-direction faces as necessary.
+               if (IsTrueCell_G(i,j-1,k) .and. &
+                    IsBodyCell_G(i,j,k)  .and. &
+                    ( .not.DoResChangeOnly .or. &
+                    (j == nJFace .and. neiLnorth(iBlockBc)==+1) .or. &
+                    (j == 1      .and. neiLsouth(iBlockBc)==+1) )) then
 
-                iSide = 4
+                  iSide = 4
 
-                FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i,j-1,k,iBlockBc) &
-                     +              Xyz_DGB(:,i,j  ,k,iBlockBc))
+                  FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i,j-1,k,iBlockBc) &
+                       +              Xyz_DGB(:,i,j  ,k,iBlockBc))
 
-                if(UseB0)FBC%B0Face_D = B0_DY(:,i,j,k)
+                  if(UseB0)FBC%B0Face_D = B0_DY(:,i,j,k)
 
-                FBC%VarsTrueFace_V = LeftState_VY(:,i,j,k)
+                  FBC%VarsTrueFace_V = LeftState_VY(:,i,j,k)
 
-                call set_face(i,j-1,k,i,j,k)
+                  call set_face(i,j-1,k,i,j,k)
 
-                RightState_VY(:,i,j,k) = FBC%VarsGhostFace_V
-             end if
+                  RightState_VY(:,i,j,k) = FBC%VarsGhostFace_V
+               end if
 
-             if (IsTrueCell_G(i,j,k) .and. &
-                  IsBodyCell_G(i,j-1,k)  .and. &
-                  (.not.DoResChangeOnly .or. &
-                  (j ==1       .and. neiLsouth(iBlockBc)==+1) .or. &
-                  (j == nJFace .and. neiLnorth(iBlockBc)==+1) )) then
+               if (IsTrueCell_G(i,j,k) .and. &
+                    IsBodyCell_G(i,j-1,k)  .and. &
+                    (.not.DoResChangeOnly .or. &
+                    (j ==1       .and. neiLsouth(iBlockBc)==+1) .or. &
+                    (j == nJFace .and. neiLnorth(iBlockBc)==+1) )) then
 
-                iSide = 3
+                  iSide = 3
 
-                FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i,j-1,k,iBlockBc) &
-                     +              Xyz_DGB(:,i,j  ,k,iBlockBc))
+                  FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i,j-1,k,iBlockBc) &
+                       +              Xyz_DGB(:,i,j  ,k,iBlockBc))
 
-                if(UseB0)FBC%B0Face_D = B0_DY(:,i,j,k)
+                  if(UseB0)FBC%B0Face_D = B0_DY(:,i,j,k)
 
-                FBC%VarsTrueFace_V = RightState_VY(:,i,j,k)
+                  FBC%VarsTrueFace_V = RightState_VY(:,i,j,k)
 
-                call set_face(i,j,k,i,j-1,k)
+                  call set_face(i,j,k,i,j-1,k)
 
-                LeftState_VY(:,i,j,k) = FBC%VarsGhostFace_V
-             end if
-          end do ! end j loop
-       end do ! end i loop
-    end do ! end k loop
+                  LeftState_VY(:,i,j,k) = FBC%VarsGhostFace_V
+               end if
+            end do ! end j loop
+         end do ! end i loop
+      end do ! end k loop
 
-    if(nDim == 2) RETURN
-    do k = 1, nKFace
-       do j = jMinFace, jMaxFace
-          do i = iMinFace, iMaxFace
-             ! Apply BCs at Z-direction faces as necessary.
-             if (IsTrueCell_G(i,j,k-1) .and. &
-                  IsBodyCell_G(i,j,k) .and. &
-                  (.not.DoResChangeOnly .or. &
-                  (k == nKFace .and. neiLtop(iBlockBc)==+1) .or. &
-                  (k == 1      .and. neiLbot(iBlockBc)==+1)) ) then
+      if(nDim == 2) RETURN
+      do k = 1, nKFace
+         do j = jMinFace, jMaxFace
+            do i = iMinFace, iMaxFace
+               ! Apply BCs at Z-direction faces as necessary.
+               if (IsTrueCell_G(i,j,k-1) .and. &
+                    IsBodyCell_G(i,j,k) .and. &
+                    (.not.DoResChangeOnly .or. &
+                    (k == nKFace .and. neiLtop(iBlockBc)==+1) .or. &
+                    (k == 1      .and. neiLbot(iBlockBc)==+1)) ) then
 
-                iSide = 6
+                  iSide = 6
 
-                FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i,j,k-1,iBlockBc) &
-                     +              Xyz_DGB(:,i,j,k  ,iBlockBc))
+                  FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i,j,k-1,iBlockBc) &
+                       +              Xyz_DGB(:,i,j,k  ,iBlockBc))
 
-                if(UseB0)FBC%B0Face_D = B0_DZ(:,i,j,k)
+                  if(UseB0)FBC%B0Face_D = B0_DZ(:,i,j,k)
 
-                FBC%VarsTrueFace_V =  LeftState_VZ(:,i,j,k)
+                  FBC%VarsTrueFace_V =  LeftState_VZ(:,i,j,k)
 
-                call set_face(i,j,k-1,i,j,k)
+                  call set_face(i,j,k-1,i,j,k)
 
-                RightState_VZ(:,i,j,k) = FBC%VarsGhostFace_V
-             end if
+                  RightState_VZ(:,i,j,k) = FBC%VarsGhostFace_V
+               end if
 
-             if (IsTrueCell_G(i,j,k).and. &
-                  IsBodyCell_G(i,j,k-1).and. &
-                  (.not.DoResChangeOnly .or. &
-                  (k == 1      .and. neiLbot(iBlockBc)==+1) .or. &
-                  (k == nKFace .and. neiLtop(iBlockBc)==+1))  ) then
+               if (IsTrueCell_G(i,j,k).and. &
+                    IsBodyCell_G(i,j,k-1).and. &
+                    (.not.DoResChangeOnly .or. &
+                    (k == 1      .and. neiLbot(iBlockBc)==+1) .or. &
+                    (k == nKFace .and. neiLtop(iBlockBc)==+1))  ) then
 
-                iSide = 5
+                  iSide = 5
 
-                FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i,j,k-1,iBlockBc) &
-                     +              Xyz_DGB(:,i,j,k  ,iBlockBc))
+                  FBC%FaceCoords_D = 0.5*(Xyz_DGB(:,i,j,k-1,iBlockBc) &
+                       +              Xyz_DGB(:,i,j,k  ,iBlockBc))
 
-                if(UseB0)FBC%B0Face_D = B0_DZ(:,i,j,k)
+                  if(UseB0)FBC%B0Face_D = B0_DZ(:,i,j,k)
 
-                FBC%VarsTrueFace_V =  RightState_VZ(:,i,j,k)
+                  FBC%VarsTrueFace_V =  RightState_VZ(:,i,j,k)
 
-                call set_face(i,j,k,i,j,k-1)
+                  call set_face(i,j,k,i,j,k-1)
 
-                LeftState_VZ(:,i,j,k) = FBC%VarsGhostFace_V
+                  LeftState_VZ(:,i,j,k) = FBC%VarsGhostFace_V
 
-             end if
-          end do ! end i loop
-       end do ! end j loop
-    end do ! end k loop
+               end if
+            end do ! end i loop
+         end do ! end j loop
+      end do ! end k loop
 
-    call test_stop(NameSub, DoTest, iBlockBc)
+      call test_stop(NameSub, DoTest, iBlockBc)
     end associate
   contains
     !==========================================================================
@@ -494,551 +494,557 @@ contains
       character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
       associate( iBoundary => FBC%iBoundary, TypeBc => FBC%TypeBc, &
-                 iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
-                 TimeBc => FBC%TimeBc, iBlockBc => FBC%iBlockBc, &
-                 iSide => FBC%iSide)
+           iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
+           TimeBc => FBC%TimeBc, iBlockBc => FBC%iBlockBc, &
+           iSide => FBC%iSide)
 
-      iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
-      TypeBc = TypeFaceBc_I(iBoundary)
+        iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
+        TypeBc = TypeFaceBc_I(iBoundary)
 
-      ! User defined boundary conditions
-      if( FBC%TypeBc(1:4)=='user' )then
-         iFace = i; jFace = j; kFace = k
-         call user_set_face_boundary(FBC)
-         RETURN
-      end if
+        ! User defined boundary conditions
+        if( FBC%TypeBc(1:4)=='user' )then
+           iFace = i; jFace = j; kFace = k
+           call user_set_face_boundary(FBC)
+           RETURN
+        end if
 
-      if(iBoundary==body2_)then
-         FBC%FaceCoords_D(x_)= FBC%FaceCoords_D(x_) - xBody2
-         FBC%FaceCoords_D(y_)= FBC%FaceCoords_D(y_) - yBody2
-         FBC%FaceCoords_D(z_)= FBC%FaceCoords_D(z_) - zBody2
-      end if
+        if(iBoundary==body2_)then
+           FBC%FaceCoords_D(x_)= FBC%FaceCoords_D(x_) - xBody2
+           FBC%FaceCoords_D(y_)= FBC%FaceCoords_D(y_) - yBody2
+           FBC%FaceCoords_D(z_)= FBC%FaceCoords_D(z_) - zBody2
+        end if
 
-      ! Default fixed/initial state for this boundary
-      FaceState_V = FaceState_VI(:, iBoundary)
+        ! Default fixed/initial state for this boundary
+        FaceState_V = FaceState_VI(:, iBoundary)
 
-      select case(TypeBc)
-      case('linetied','ionospherefloat')
-         FBC%VarsGhostFace_V        =  FBC%VarsTrueFace_V
-         FBC%VarsGhostFace_V(iUx_I) = -FBC%VarsTrueFace_V(iUx_I)
-         FBC%VarsGhostFace_V(iUy_I) = -FBC%VarsTrueFace_V(iUy_I)
-         FBC%VarsGhostFace_V(iUz_I) = -FBC%VarsTrueFace_V(iUz_I)
+        select case(TypeBc)
+        case('linetied','ionospherefloat')
+           FBC%VarsGhostFace_V        =  FBC%VarsTrueFace_V
+           FBC%VarsGhostFace_V(iUx_I) = -FBC%VarsTrueFace_V(iUx_I)
+           FBC%VarsGhostFace_V(iUy_I) = -FBC%VarsTrueFace_V(iUy_I)
+           FBC%VarsGhostFace_V(iUz_I) = -FBC%VarsTrueFace_V(iUz_I)
 
-      case('float')
-         FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
+        case('float')
+           FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
 
-      case('outflow')
-         FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
-         if(UseOutflowPressure) FBC%VarsGhostFace_V(p_) = pOutflow
+        case('outflow')
+           FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
+           if(UseOutflowPressure) FBC%VarsGhostFace_V(p_) = pOutflow
 
-      case('fixedB1')
-         FBC%VarsGhostFace_V = FaceState_V
+        case('fixedB1')
+           FBC%VarsGhostFace_V = FaceState_V
 
-      case('zeroB1')
-         FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
-         FBC%VarsGhostFace_V(Bx_:Bz_) = -FBC%VarsTrueFace_V(Bx_:Bz_)
+        case('zeroB1')
+           FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
+           FBC%VarsGhostFace_V(Bx_:Bz_) = -FBC%VarsTrueFace_V(Bx_:Bz_)
 
-      case('fixed')
-         FBC%VarsGhostFace_V = FaceState_V
-         FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
+        case('fixed')
+           FBC%VarsGhostFace_V = FaceState_V
+           FBC%VarsGhostFace_V(Bx_:Bz_) = &
+                FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
 
-      case('inflow','vary')
+        case('inflow','vary')
 
-         call get_solar_wind_point(TimeBc, FBC%FaceCoords_D, FBC%VarsGhostFace_V)
-         FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
+           call get_solar_wind_point(TimeBc, FBC%FaceCoords_D, &
+                FBC%VarsGhostFace_V)
+           FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) &
+                - FBC%B0Face_D
 
-      case('reflect','reflectb','reflectall')
-         ! reflect the normal component of B1 (reflect/reflectall)
-         ! or full B (reflectb)
-         ! reflect the normal component of the velocities for reflectall
-         ! reflect the full velocity vectors for reflect and reflectb
+        case('reflect','reflectb','reflectall')
+           ! reflect the normal component of B1 (reflect/reflectall)
+           ! or full B (reflectb)
+           ! reflect the normal component of the velocities for reflectall
+           ! reflect the full velocity vectors for reflect and reflectb
 
-         ! Apply floating condition on densities and pressures
-         FBC%VarsGhostFace_V          =  FBC%VarsTrueFace_V
+           ! Apply floating condition on densities and pressures
+           FBC%VarsGhostFace_V          =  FBC%VarsTrueFace_V
 
-         if(UseB)then
-            Borig_D = FBC%VarsTrueFace_V(Bx_:Bz_)
-            if(TypeBc == 'reflectb') Borig_D = Borig_D + FBC%B0Face_D
+           if(UseB)then
+              Borig_D = FBC%VarsTrueFace_V(Bx_:Bz_)
+              if(TypeBc == 'reflectb') Borig_D = Borig_D + FBC%B0Face_D
 
-            select case(iBoundary)
-            case(body1_, body2_)
-               bDotR   = 2*sum(Borig_D*FBC%FaceCoords_D)/sum(FBC%FaceCoords_D**2)
-               Brefl_D = FBC%FaceCoords_D*bDotR
-            case default
-               if(IsCartesianGrid)then
-                  select case(iSide)
-                  case(1, 2)
-                     Brefl_D = [ 2*Borig_D(x_), 0.0, 0.0 ]
-                  case(3, 4)
-                     Brefl_D = [ 0.0, 2*Borig_D(y_), 0.0 ]
-                  case(5, 6)
-                     Brefl_D = [ 0.0, 0.0, 2*Borig_D(z_) ]
-                  end select
-               else
-                  iDir = (iSide+1)/2
-                  Normal_D = 0.0
-                  Normal_D(1:nDim) = FaceNormal_DDFB(:,iDir,i,j,k,iBlockBc) &
-                       / max(CellFace_DFB(iDir,i,j,k,iBlockBc), 1e-30)
-                  Brefl_D = 2*sum(Normal_D*Borig_D)*Normal_D
-               end if
-            end select
-            ! Reflect B1 or full B
-            FBC%VarsGhostFace_V(Bx_:Bz_) =  FBC%VarsTrueFace_V(Bx_:Bz_) - BRefl_D
-         end if
+              select case(iBoundary)
+              case(body1_, body2_)
+                 bDotR   = 2*sum(Borig_D*FBC%FaceCoords_D) &
+                      /sum(FBC%FaceCoords_D**2)
+                 Brefl_D = FBC%FaceCoords_D*bDotR
+              case default
+                 if(IsCartesianGrid)then
+                    select case(iSide)
+                    case(1, 2)
+                       Brefl_D = [ 2*Borig_D(x_), 0.0, 0.0 ]
+                    case(3, 4)
+                       Brefl_D = [ 0.0, 2*Borig_D(y_), 0.0 ]
+                    case(5, 6)
+                       Brefl_D = [ 0.0, 0.0, 2*Borig_D(z_) ]
+                    end select
+                 else
+                    iDir = (iSide+1)/2
+                    Normal_D = 0.0
+                    Normal_D(1:nDim) = FaceNormal_DDFB(:,iDir,i,j,k,iBlockBc) &
+                         / max(CellFace_DFB(iDir,i,j,k,iBlockBc), 1e-30)
+                    Brefl_D = 2*sum(Normal_D*Borig_D)*Normal_D
+                 end if
+              end select
+              ! Reflect B1 or full B
+              FBC%VarsGhostFace_V(Bx_:Bz_) =  FBC%VarsTrueFace_V(Bx_:Bz_) - BRefl_D
+           end if
 
-         if(TypeBc == 'reflectall')then
-            ! Reflect the normal component of the velocity
-            if(IsCartesianGrid)then
-               select case(iSide)
-               case(1, 2)
-                  FBC%VarsGhostFace_V(iUx_I) = -FBC%VarsGhostFace_V(iUx_I)
-               case(3, 4)
-                  FBC%VarsGhostFace_V(iUy_I) = -FBC%VarsGhostFace_V(iUy_I)
-               case(5, 6)
-                  FBC%VarsGhostFace_V(iUz_I) = -FBC%VarsGhostFace_V(iUz_I)
-               end select
-            else
-               iDir = (iSide+1)/2
-               Normal_D = 0.0
-               Normal_D(1:nDim) = FaceNormal_DDFB(:,iDir,i,j,k,iBlockBc) &
-                    / max(CellFace_DFB(iDir,i,j,k,iBlockBc), 1e-30)
-               do iFluid = 1, nFluid
-                  iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
-                  FBC%VarsGhostFace_V(iUx:iUz) = FBC%VarsTrueFace_V(iUx:iUz) &
-                       - 2*sum(FBC%VarsTrueFace_V(iUx:iUz)*Normal_D)*Normal_D
-               end do
-            end if
-         else
-            ! Reflect all components of velocities (linetied)
-            FBC%VarsGhostFace_V(iUx_I) = -FBC%VarsGhostFace_V(iUx_I)
-            FBC%VarsGhostFace_V(iUy_I) = -FBC%VarsGhostFace_V(iUy_I)
-            FBC%VarsGhostFace_V(iUz_I) = -FBC%VarsGhostFace_V(iUz_I)
-         end if
-      case('ionosphere', 'polarwind','ionosphereoutflow')
+           if(TypeBc == 'reflectall')then
+              ! Reflect the normal component of the velocity
+              if(IsCartesianGrid)then
+                 select case(iSide)
+                 case(1, 2)
+                    FBC%VarsGhostFace_V(iUx_I) = -FBC%VarsGhostFace_V(iUx_I)
+                 case(3, 4)
+                    FBC%VarsGhostFace_V(iUy_I) = -FBC%VarsGhostFace_V(iUy_I)
+                 case(5, 6)
+                    FBC%VarsGhostFace_V(iUz_I) = -FBC%VarsGhostFace_V(iUz_I)
+                 end select
+              else
+                 iDir = (iSide+1)/2
+                 Normal_D = 0.0
+                 Normal_D(1:nDim) = FaceNormal_DDFB(:,iDir,i,j,k,iBlockBc) &
+                      / max(CellFace_DFB(iDir,i,j,k,iBlockBc), 1e-30)
+                 do iFluid = 1, nFluid
+                    iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
+                    FBC%VarsGhostFace_V(iUx:iUz) = FBC%VarsTrueFace_V(iUx:iUz) &
+                         - 2*sum(FBC%VarsTrueFace_V(iUx:iUz)*Normal_D)*Normal_D
+                 end do
+              end if
+           else
+              ! Reflect all components of velocities (linetied)
+              FBC%VarsGhostFace_V(iUx_I) = -FBC%VarsGhostFace_V(iUx_I)
+              FBC%VarsGhostFace_V(iUy_I) = -FBC%VarsGhostFace_V(iUy_I)
+              FBC%VarsGhostFace_V(iUz_I) = -FBC%VarsGhostFace_V(iUz_I)
+           end if
+        case('ionosphere', 'polarwind','ionosphereoutflow')
 
-         ! By default apply floating condition
-         FBC%VarsGhostFace_V =  FBC%VarsTrueFace_V
+           ! Ionosphere type boundary conditions
 
-         if(TypeBc == 'polarwind')then
-            CoordSm_D = matmul(GmToSmg_DD, FBC%FaceCoords_D)
-            IsPolarFace = CoordSm_D(z_)**2/sum(CoordSm_D**2) > Cos2PolarTheta
-         else
-            IsPolarFace = .false.
-         end if
+           ! By default apply floating condition
+           FBC%VarsGhostFace_V =  FBC%VarsTrueFace_V
 
-         if(IsPolarFace)then
-            ! polarwind type conditions
-            if(UsePw)then
-               ! Get density/ies and velocity from polarwind code
-               call read_pw_buffer(FBC%FaceCoords_D,nVar,FaceState_V) ! ^CMP IF PW
-               FBC%VarsGhostFace_V = FaceState_V
+           ! Use body densities but limit jump
+           ! Pressure gets set too. It will be overwritten below
+           where(DefaultState_V(1:nVar) > 0.0)
+              FBC%VarsGhostFace_V = FBC%VarsTrueFace_V + &
+                   sign(1.0, FaceState_V - FBC%VarsTrueFace_V)*   &
+                   min( abs(FaceState_V - FBC%VarsTrueFace_V)     &
+                   ,    DensityJumpLimit*FBC%VarsTrueFace_V   )
+           end where
 
-               ! Reapply floating conditions on P and B
-               FBC%VarsGhostFace_V(iP_I)    = FBC%VarsTrueFace_V(iP_I)
-               FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsTrueFace_V(Bx_:Bz_)
-            else
-               ! Use variables set in the #POLARBOUNDARY command
-               FBC%VarsGhostFace_V(iRho_I) = PolarRho_I
+           ! Apply CPCP dependent density if required
+           if( (UseYoungBc .or. UseCpcpBc) .and. UseIe)then
+              if(UseMultiSpecies)then
+                 FBC%VarsGhostFace_V(SpeciesFirst_:SpeciesLast_) = &
+                      RhoCpcp_I(1:nSpecies)
+                 FBC%VarsGhostFace_V(Rho_) = sum(RhoCpcp_I(1:nSpecies))
+              else
+                 FBC%VarsGhostFace_V(iRhoIon_I) = RhoCpcp_I(1:nIonFluid)
+              end if
+           end if
 
-               ! Align flow with the magnetic field
-               bUnit_D = FBC%B0Face_D / norm2(FBC%B0Face_D)
-               ! Make sure it points outward
-               if(sum(bUnit_D*FBC%FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
-               FBC%VarsGhostFace_V(iUx_I)  = PolarU_I*bUnit_D(x_)
-               FBC%VarsGhostFace_V(iUy_I)  = PolarU_I*bUnit_D(y_)
-               FBC%VarsGhostFace_V(iUz_I)  = PolarU_I*bUnit_D(z_)
-               FBC%VarsGhostFace_V(iP_I)   = PolarP_I
-            end if
-         else
-            ! Ionosphere type conditions
+           ! Set pressures, including electron pressure, to float.
+           FBC%VarsGhostFace_V(iP_I) = FBC%VarsTrueFace_V(iP_I)
+           if(UseAnisoPressure) FBC%VarsGhostFace_V(iPparIon_I) = &
+                FBC%VarsTrueFace_V(iPparIon_I)
+           if(UseElectronPressure) FBC%VarsGhostFace_V(Pe_) = &
+                max(FBC%VarsTrueFace_V(Pe_), &
+                RatioPe2P*FBC%VarsTrueFace_V(iP_I(1)))
+           if(UseAnisoPe) FBC%VarsGhostFace_V(Pepar_)      = &
+                FBC%VarsTrueFace_V(Pepar_)
 
-            ! Use body densities but limit jump
-            ! Pressure gets set too (! ). It will be overwritten below
-            where(DefaultState_V(1:nVar) > 0.0)
-               FBC%VarsGhostFace_V = FBC%VarsTrueFace_V + &
-                    sign(1.0, FaceState_V - FBC%VarsTrueFace_V)*   &
-                    min( abs(FaceState_V - FBC%VarsTrueFace_V)     &
-                    ,    DensityJumpLimit*FBC%VarsTrueFace_V   )
-            end where
+           ! Change sign for velocities (plasma frozen into dipole field)
+           FBC%VarsGhostFace_V(iUx_I) = -FBC%VarsTrueFace_V(iUx_I)
+           FBC%VarsGhostFace_V(iUy_I) = -FBC%VarsTrueFace_V(iUy_I)
+           FBC%VarsGhostFace_V(iUz_I) = -FBC%VarsTrueFace_V(iUz_I)
 
-            ! Apply CPCP dependent density if required
-            if( (UseYoungBc .or. UseCpcpBc) .and. UseIe)then
-               if(UseMultiSpecies)then
-                  FBC%VarsGhostFace_V(SpeciesFirst_:SpeciesLast_) = &
-                       RhoCpcp_I(1:nSpecies)
-                  FBC%VarsGhostFace_V(Rho_) = sum(RhoCpcp_I(1:nSpecies))
-               else
-                  FBC%VarsGhostFace_V(iRhoIon_I) = RhoCpcp_I(1:nIonFluid)
-               end if
-            end if
+           !---------------------------------------------------
+           ! Ionosphere outflow in multifluids  --- Yiqun 2008
+           ! This should be a subroutine !!!
+           !---------------------------------------------------
 
-            ! Set pressures, including electron pressure, to float.
-            FBC%VarsGhostFace_V(iP_I) = FBC%VarsTrueFace_V(iP_I)
-            if(UseAnisoPressure) FBC%VarsGhostFace_V(iPparIon_I) = &
-                 FBC%VarsTrueFace_V(iPparIon_I)
-            if(UseElectronPressure) FBC%VarsGhostFace_V(Pe_) = &
-                 max(FBC%VarsTrueFace_V(Pe_), RatioPe2P*FBC%VarsTrueFace_V(iP_I(1)))
-            if(UseAnisoPe) FBC%VarsGhostFace_V(Pepar_)      = &
-                 FBC%VarsTrueFace_V(Pepar_)
+           if(TypeBc == 'ionosphereoutflow')then
 
-            ! Change sign for velocities (plasma frozen into dipole field)
-            FBC%VarsGhostFace_V(iUx_I) = -FBC%VarsTrueFace_V(iUx_I)
-            FBC%VarsGhostFace_V(iUy_I) = -FBC%VarsTrueFace_V(iUy_I)
-            FBC%VarsGhostFace_V(iUz_I) = -FBC%VarsTrueFace_V(iUz_I)
+              if(.not. (UseIe .and. UseMultiIon)) call stop_mpi( &
+                   'ionosphereoutflow should have IE coupled and multifluid')
 
-            !---------------------------------------------------
-            ! Ionosphere outflow in multifluids  --- Yiqun 2008
-            !---------------------------------------------------
+              iIonSecond = min(IonFirst_ + 1, IonLast_)
 
-            if(TypeBc == 'ionosphereoutflow')then
+              if (TypeCoordSystem /= 'SMG') then
+                 SmgFaceCoords_D = matmul(transform_matrix(TimeBc, &
+                      TypeCoordSystem, 'SMG'), FBC%FaceCoords_D)
+              else
+                 SmgFaceCoords_D = FBC%FaceCoords_D
+              endif
 
-               iIonSecond = min(IonFirst_ + 1, IonLast_)
+              SinLatitudeCap = sin(LatitudeCap * cDegToRad)
+              zCap = norm2(SmgFaceCoords_D)*SinLatitudeCap
 
-               if (TypeCoordSystem /= 'SMG') then
-                  SmgFaceCoords_D = matmul(transform_matrix(TimeBc, &
-                       TypeCoordSystem, 'SMG'), FBC%FaceCoords_D)
-               else
-                  SmgFaceCoords_D = FBC%FaceCoords_D
-               endif
+              if(abs(SmgFaceCoords_D(z_)) > zCap)then
+                 ! for the polar region
 
-               SinLatitudeCap = sin(LatitudeCap * cDegToRad)
-               zCap = norm2(SmgFaceCoords_D)*SinLatitudeCap
+                 if (TypeCoordSystem /= 'GEO') then
+                    GeoFaceCoords_D = matmul(transform_matrix(TimeBc, &
+                         TypeCoordSystem, 'GEO'), FBC%FaceCoords_D)
+                 else
+                    GeoFaceCoords_D = FBC%FaceCoords_D
+                 endif
+                 GseToGeo_D = matmul(transform_matrix(TimeBc,'GSE','GEO'),&
+                      [0,0,1])
 
-               if(abs(SmgFaceCoords_D(z_)) > zCap)then
-                  ! for the polar region
-                  if(UseIe .and. UseMultiIon) then
+                 ! For the cap region (refer to Tom Moore 2003?)
+                 ! Get the Op flux from IE calculation
+                 ! Get the Hp flux from fluxpw,
+                 ! which is constant for certain solar zenith angle
+                 ! Fix the velocities(V), thermal energies
+                 ! Get the densities(rho), thermal pressure(P)
 
-                     if (TypeCoordSystem /= 'GEO') then
-                        GeoFaceCoords_D = matmul(transform_matrix(TimeBc, &
-                             TypeCoordSystem, 'GEO'), FBC%FaceCoords_D)
-                     else
-                        GeoFaceCoords_D = FBC%FaceCoords_D
-                     endif
-                     GseToGeo_D = matmul(transform_matrix(TimeBc,'GSE','GEO'),&
-                          [0,0,1])
+                 ! get the magnetic field
+                 call get_planet_field(TimeBc, FBC%FaceCoords_D,&
+                      TypeCoordSystem//'NORM', bFace_D)
+                 b =  norm2(bFace_D)
+                 bUnit_D = bFace_D / B
 
-                     ! For the cap region (refer to Tom Moore 2003?)
-                     ! Get the Op flux from IE calculation
-                     ! Get the Hp flux from fluxpw,
-                     ! which is constant for certain solar zenith angle
-                     ! Fix the velocities(V), thermal energies
-                     ! Get the densities(rho), thermal pressure(P)
+                 ! get the magnetic field at 4000km = 4e6m
+                 call map_planet_field(TimeBc, FBC%FaceCoords_D, &
+                      TypeCoordSystem//'NORM', &
+                      (4e6 + rPlanet_I(Earth_))/rPlanet_I(Earth_), &
+                      XyzMap_D, iHemisphere)
+                 call get_planet_field(TimeBc, XyzMap_D, &
+                      TypeCoordSystem//'NORM', bFace_D)
 
-                     ! get the magnetic field
-                     call get_planet_field(TimeBc, FBC%FaceCoords_D,&
-                          TypeCoordSystem//'NORM', bFace_D)
-                     b =  norm2(bFace_D)
-                     bUnit_D = bFace_D / B
+                 b4 =  norm2(bFace_D)
 
-                     ! get the magnetic field at 4000km = 4e6m
-                     call map_planet_field(TimeBc, FBC%FaceCoords_D, &
-                          TypeCoordSystem//'NORM', &
-                          (4e6 + rPlanet_I(Earth_))/rPlanet_I(Earth_), &
-                          XyzMap_D, iHemisphere)
-                     call get_planet_field(TimeBc, XyzMap_D, &
-                          TypeCoordSystem//'NORM', bFace_D)
+                 ! get the joule heating mapped from the ionosphere
+                 ! (already in nomalized unit)
+                 call get_inner_bc_jouleheating(SmgFaceCoords_D, &
+                      JouleHeating)
 
-                     b4 =  norm2(bFace_D)
+                 ! get the O+ flux based on Strangeway's formula,
+                 ! and scale it
+                 FluxIono = FluxAlpha*(JouleHeating*No2Si_V(UnitPoynting_)&
+                      * 1.0e3)**FluxBeta * 1.0e4 &
+                      * Si2No_V(UnitU_) * Si2No_V(UnitN_) * (b4/b)**0.265
 
-                     ! get the joule heating mapped from the ionosphere
-                     ! (already in nomalized unit)
-                     call get_inner_bc_jouleheating(SmgFaceCoords_D, &
-                          JouleHeating)
+                 ! thermal energy = 0.1 + 1.6 * S^1.26
+                 ! (S is joule heating in mW/m^2 at inner boundary)
+                 ! to specify the O+ temperature
+                 eCap = 0.1 + 9.2 * &
+                      ((b4/b)* JouleHeating*No2Si_V(UnitPoynting_) &
+                      * 1.0e3)**0.35    ! eV
 
-                     ! get the O+ flux based on Strangeway's formula,
-                     ! and scale it
-                     FluxIono = FluxAlpha*(JouleHeating*No2Si_V(UnitPoynting_)&
-                          * 1.0e3)**FluxBeta * 1.0e4 &
-                          * Si2No_V(UnitU_) * Si2No_V(UnitN_) * (b4/b)**0.265
+                 ! Get the field aligned current at this location,
+                 ! so comes the parallel energy
+                 call get_point_data(1.0, FBC%FaceCoords_D, 1, nBlock, Bx_,&
+                      nVar+3, State_V)
 
-                     ! thermal energy = 0.1 + 1.6 * S^1.26
-                     ! (S is joule heating in mW/m^2 at inner boundary)
-                     ! to specify the O+ temperature
-                     eCap = 0.1 + 9.2 * &
-                          ((b4/b)* JouleHeating*No2Si_V(UnitPoynting_) &
-                          * 1.0e3)**0.35    ! eV
+                 Jlocal_D = State_V(nVar+1:nVar+3)
+                 Jpar = sum(bUnit_D * Jlocal_D)  ! in normalized unit
 
-                     ! Get the field aligned current at this location,
-                     ! so comes the parallel energy
-                     call get_point_data(1.0, FBC%FaceCoords_D, 1, nBlock, Bx_, &
-                          nVar+3, State_V)
+                 ! parallel energy
+                 ! (ePar = eV=e*(1500[V/mmA/m^2] * (J//-0.33)^2 [mmA/m^2]))
+                 if(abs(Jpar*No2Si_V(UnitJ_))*1.0e6 > 0.33)then
+                    ePar = 1500 * (abs(Jpar*No2Si_V(UnitJ_))*1.0e6 &
+                         - 0.33)**2 ! eV
+                 else
+                    ePar = 0.
+                 end if
 
-                     Jlocal_D = State_V(nVar+1:nVar+3)
-                     Jpar = sum(bUnit_D * Jlocal_D)  ! in normalized unit
+                 if(OutflowVelocity < 0)then
+                    ! If outflowvelocity <0,
+                    ! get the velocity along B, superpose the parallel
+                    ! velocity and the thermal velocity
+                    Ub_V(1) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
+                         (MassFluid_I(IonFirst_)*cProtonMass))) &
+                         * Si2No_V(UnitU_)
+                    Ub_V(2) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
+                         (MassFluid_I(iIonSecond)*cProtonMass))) &
+                         * Si2No_V(UnitU_)
+                 else
+                    ! .OR. Pick the constant velocities and thermal energy
+                    Ub_V(2) = OutflowVelocity*Io2No_V(UnitU_)
+                    Ub_V(1) = OutflowVelocity*Io2No_V(UnitU_)
+                 end if
 
-                     ! parallel energy
-                     ! (ePar = eV=e*(1500[V/mmA/m^2] * (J//-0.33)^2 [mmA/m^2]))
-                     if(abs(Jpar*No2Si_V(UnitJ_))*1.0e6 > 0.33)then
-                        ePar = 1500 * (abs(Jpar*No2Si_V(UnitJ_))*1.0e6 &
-                             - 0.33)**2 ! eV
-                     else
-                        ePar = 0.
-                     end if
+                 ! SZA x is determind by
+                 ! cosx = sin(the)sin(da)+cos(the)cos(da)cos(dt)
+                 ! where, the is the latitude, da is solar declination(
+                 ! angle between solar ray and equatorial plane),
+                 ! dt is local time angle
+                 TheTmp = asin(GeoFaceCoords_D(z_)/ &
+                      norm2(GeoFaceCoords_D))      ! latitutde
+                 DaTmp = acos(GseToGeo_D(z_))               ! declination
+                 DtTmp = acos(SmgFaceCoords_D(x_)/ &
+                      sqrt(SmgFaceCoords_D(x_)**2 + &
+                      SmgFaceCoords_D(y_)**2))        ! local time angle
 
-                     if(OutflowVelocity < 0)then
-                        ! If outflowvelocity <0,
-                        ! get the velocity along B, superpose the parallel
-                        ! velocity and the thermal velocity
-                        Ub_V(1) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
-                             (MassFluid_I(IonFirst_)*cProtonMass))) &
-                             * Si2No_V(UnitU_)
-                        Ub_V(2) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
-                             (MassFluid_I(iIonSecond)*cProtonMass))) &
-                             * Si2No_V(UnitU_)
-                     else
-                     ! .OR. Pick the constant velocities and thermal energy
-                        Ub_V(2) = OutflowVelocity*Io2No_V(UnitU_)
-                        Ub_V(1) = OutflowVelocity*Io2No_V(UnitU_)
-                     end if
+                 if(SmgFaceCoords_D(y_)<0.0) DtTmp =  cTwoPi - DtTmp
+                 Cosx = sin(TheTmp)*sin(DaTmp) + &
+                      cos(TheTmp)*cos(DaTmp)*cos(DtTmp)
 
-                     ! SZA x is determind by
-                     ! cosx = sin(the)sin(da)+cos(the)cos(da)cos(dt)
-                     ! where, the is the latitude, da is solar declination(
-                     ! angle between solar ray and equatorial plane),
-                     ! dt is local time angle
-                     TheTmp = asin(GeoFaceCoords_D(z_)/ &
-                          norm2(GeoFaceCoords_D))      ! latitutde
-                     DaTmp = acos(GseToGeo_D(z_))               ! declination
-                     DtTmp = acos(SmgFaceCoords_D(x_)/ &
-                          sqrt(SmgFaceCoords_D(x_)**2 + &
-                          SmgFaceCoords_D(y_)**2))        ! local time angle
+                 ! get the magnetic field at 1000km = 1e6m
+                 call map_planet_field(TimeBc, FBC%FaceCoords_D, &
+                      TypeCoordSystem//'NORM', &
+                      (1e6 + rPlanet_I(Earth_))/rPlanet_I(Earth_), &
+                      XyzMap_d, iHemisphere)
+                 call get_planet_field(TimeBc, XyzMap_D, &
+                      TypeCoordSystem//'NORM', bFace_D)
+                 b1 =  norm2(bFace_D)
 
-                     if(SmgFaceCoords_D(y_)<0.0) DtTmp =  cTwoPi - DtTmp
-                     Cosx = sin(TheTmp)*sin(DaTmp) + &
-                          cos(TheTmp)*cos(DaTmp)*cos(DtTmp)
+                 ! get the Hp flux by mapping the flux at 1000km
+                 ! into the inner boudnary
+                 if (acos(Cosx)*cRadToDeg < 90 .and. &
+                      acos(Cosx)*cRadToDeg > 0.) then
+                    FluxPw = 2.0e8 * 1.0e4 * (b/b1) &
+                         * Si2No_V(UnitU_) * Si2No_V(UnitN_)
+                 elseif(acos(Cosx)*cRadToDeg < 110) then
+                    FluxPw = 2.0*10.**(8-(acos(Cosx)*cRadToDeg &
+                         - 90.)/20.*2.5) * 1.0e4 * (b/b1) * &
+                         Si2No_V(UnitU_) * Si2No_V(UnitN_)
+                 else
+                    FluxPw = 2.0*10.**5.5 * 1.0e4 * (b/b1) * &
+                         Si2No_V(UnitU_) * Si2No_V(UnitN_)
+                 endif
 
-                     ! get the magnetic field at 1000km = 1e6m
-                     call map_planet_field(TimeBc, FBC%FaceCoords_D, &
-                          TypeCoordSystem//'NORM', &
-                          (1e6 + rPlanet_I(Earth_))/rPlanet_I(Earth_), &
-                          XyzMap_d, iHemisphere)
-                     call get_planet_field(TimeBc, XyzMap_D, &
-                          TypeCoordSystem//'NORM', bFace_D)
-                     b1 =  norm2(bFace_D)
+                 ! get the densities
+                 FBC%VarsGhostFace_V(iRho_I(IonFirst_))  = &
+                      FluxPw/Ub_V(1)* MassFluid_I(IonFirst_)
+                 FBC%VarsGhostFace_V(iRho_I(iIonSecond)) = &
+                      FluxIono/Ub_V(2) * MassFluid_I(iIonSecond)
 
-                     ! get the Hp flux by mapping the flux at 1000km
-                     ! into the inner boudnary
-                     if (acos(Cosx)*cRadToDeg < 90 .and. &
-                          acos(Cosx)*cRadToDeg > 0.) then
-                        FluxPw = 2.0e8 * 1.0e4 * (b/b1) &
-                             * Si2No_V(UnitU_) * Si2No_V(UnitN_)
-                     elseif(acos(Cosx)*cRadToDeg < 110) then
-                        FluxPw = 2.0*10.**(8-(acos(Cosx)*cRadToDeg &
-                             - 90.)/20.*2.5) * 1.0e4 * (b/b1) * &
-                             Si2No_V(UnitU_) * Si2No_V(UnitN_)
-                     else
-                        FluxPw = 2.0*10.**5.5 * 1.0e4 * (b/b1) * &
-                             Si2No_V(UnitU_) * Si2No_V(UnitN_)
-                     endif
+                 ! Make sure it points outward
+                 if(sum(bUnit_D*FBC%FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
 
-                     ! get the densities
-                     FBC%VarsGhostFace_V(iRho_I(IonFirst_))  = FluxPw/Ub_V(1)   * &
-                          MassFluid_I(IonFirst_)
-                     FBC%VarsGhostFace_V(iRho_I(iIonSecond)) = FluxIono/Ub_V(2) * &
-                          MassFluid_I(iIonSecond)
+                 FBC%VarsGhostFace_V(iUx_I(IonFirst_)) = Ub_V(1)*bUnit_D(x_)
+                 FBC%VarsGhostFace_V(iUy_I(IonFirst_)) = Ub_V(1)*bUnit_D(y_)
+                 FBC%VarsGhostFace_V(iUz_I(IonFirst_)) = Ub_V(1)*bUnit_D(z_)
 
-                     ! Make sure it points outward
-                     if(sum(bUnit_D*FBC%FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
+                 FBC%VarsGhostFace_V(iUx_I(iIonSecond))= Ub_V(2)*bUnit_D(x_)
+                 FBC%VarsGhostFace_V(iUy_I(iIonSecond))= Ub_V(2)*bUnit_D(y_)
+                 FBC%VarsGhostFace_V(iUz_I(iIonSecond))= Ub_V(2)*bUnit_D(z_)
 
-                     FBC%VarsGhostFace_V(iUx_I(IonFirst_)) = Ub_V(1) * bUnit_D(x_)
-                     FBC%VarsGhostFace_V(iUy_I(IonFirst_)) = Ub_V(1) * bUnit_D(y_)
-                     FBC%VarsGhostFace_V(iUz_I(IonFirst_)) = Ub_V(1) * bUnit_D(z_)
+                 ! get the pressure
+                 FBC%VarsGhostFace_V(iP_I(iIonSecond))   =  2./3.*eCap*&
+                      cElectronCharge / cBoltzmann &
+                      * Si2No_V(UnitTemperature_)  &
+                      * FBC%VarsGhostFace_V(iRho_I(iIonSecond)) &
+                      /MassFluid_I(iIonSecond)
+                 FBC%VarsGhostFace_V(iP_I(IonFirst_))   =  2./3.*eCap*&
+                      cElectronCharge / cBoltzmann &
+                      * Si2No_V(UnitTemperature_)  &
+                      * FBC%VarsGhostFace_V(iRho_I(IonFirst_)) &
+                      /MassFluid_I(IonFirst_)
 
-                     FBC%VarsGhostFace_V(iUx_I(iIonSecond)) = Ub_V(2) * bUnit_D(x_)
-                     FBC%VarsGhostFace_V(iUy_I(iIonSecond)) = Ub_V(2) * bUnit_D(y_)
-                     FBC%VarsGhostFace_V(iUz_I(iIonSecond)) = Ub_V(2) * bUnit_D(z_)
+                 ! for the 'all' fluid
+                 FBC%VarsGhostFace_V(Rho_) = sum(FBC%VarsGhostFace_V( &
+                      iRho_I(IonFirst_:iIonSecond)))
+                 FBC%VarsGhostFace_V(iUx_I(1))  = sum(FBC%VarsGhostFace_V( &
+                      iRho_I(IonFirst_:iIonSecond)) &
+                      * FBC%VarsGhostFace_V(iUx_I(IonFirst_:iIonSecond)))&
+                      /sum(FBC%VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
+                 FBC%VarsGhostFace_V(iUy_I(1))  = sum(FBC%VarsGhostFace_V( &
+                      iRho_I(IonFirst_:iIonSecond)) &
+                      * FBC%VarsGhostFace_V(iUy_I(IonFirst_:iIonSecond)))&
+                      /sum(FBC%VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
+                 FBC%VarsGhostFace_V(iUz_I(1))  = sum(FBC%VarsGhostFace_V( &
+                      iRho_I(IonFirst_:iIonSecond)) &
+                      * FBC%VarsGhostFace_V(iUz_I(IonFirst_:iIonSecond)))&
+                      /sum(FBC%VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
+                 FBC%VarsGhostFace_V(P_)        = sum(FBC%VarsGhostFace_V( &
+                      iP_I(IonFirst_:iIonSecond)))
 
-                     ! get the pressure
-                     FBC%VarsGhostFace_V(iP_I(iIonSecond))   =  2./3. * eCap * &
-                          cElectronCharge / cBoltzmann &
-                          * Si2No_V(UnitTemperature_)  &
-                          * FBC%VarsGhostFace_V(iRho_I(iIonSecond)) &
-                          /MassFluid_I(iIonSecond)
-                     FBC%VarsGhostFace_V(iP_I(IonFirst_))   =  2./3. * eCap * &
-                          cElectronCharge / cBoltzmann &
-                          * Si2No_V(UnitTemperature_)  &
-                          * FBC%VarsGhostFace_V(iRho_I(IonFirst_)) &
-                          /MassFluid_I(IonFirst_)
+              end if ! polar cap region
+           end if ! ionosphereoutflow type of innerboundary
 
-                     ! for the 'all' fluid
-                     FBC%VarsGhostFace_V(Rho_) = sum(FBC%VarsGhostFace_V( &
-                          iRho_I(IonFirst_:iIonSecond)))
-                     FBC%VarsGhostFace_V(iUx_I(1))  = sum(FBC%VarsGhostFace_V( &
-                          iRho_I(IonFirst_:iIonSecond)) &
-                          * FBC%VarsGhostFace_V(iUx_I(IonFirst_:iIonSecond)))&
-                          /sum(FBC%VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
-                     FBC%VarsGhostFace_V(iUy_I(1))  = sum(FBC%VarsGhostFace_V( &
-                          iRho_I(IonFirst_:iIonSecond)) &
-                          * FBC%VarsGhostFace_V(iUy_I(IonFirst_:iIonSecond)))&
-                          /sum(FBC%VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
-                     FBC%VarsGhostFace_V(iUz_I(1))  = sum(FBC%VarsGhostFace_V( &
-                          iRho_I(IonFirst_:iIonSecond)) &
-                          * FBC%VarsGhostFace_V(iUz_I(IonFirst_:iIonSecond)))&
-                          /sum(FBC%VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
-                     FBC%VarsGhostFace_V(P_)        = sum(FBC%VarsGhostFace_V( &
-                          iP_I(IonFirst_:iIonSecond)))
+           ! Overwrite faces in the polar region either using the
+           ! parameters from the #POLARBOUNDARY command or from the coupled PW
+           if(TypeBc == 'polarwind')then
+              CoordSm_D = matmul(GmToSmg_DD, FBC%FaceCoords_D)
+              IsPolarFace = CoordSm_D(z_)**2/sum(CoordSm_D**2) > Cos2PolarTheta
+           else
+              IsPolarFace = .false.
+           end if
 
-                  else
-                     call stop_mpi('ionosphereoutflow should have IE '// &
-                          'coupled and multifluids')
-                  end if
-               end if ! polar cap region
-            end if ! ionosphereoutflow type of innerboundary
+           if(IsPolarFace)then
+              ! polarwind type conditions
+              if(UsePw)then
+                 ! Get density/ies and velocity from polarwind code
+                 call read_pw_buffer(FBC%FaceCoords_D, nVar, &  !^CMP IF PW
+                      FBC%VarsGhostFace_V)                      !^CMP IF PW
 
-         end if
+                 ! Reapply floating conditions on P and B
+                 FBC%VarsGhostFace_V(iP_I)    = FBC%VarsTrueFace_V(iP_I)
+                 FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsTrueFace_V(Bx_:Bz_)
+              else
+                 ! Use variables set in the #POLARBOUNDARY command
+                 FBC%VarsGhostFace_V(iRho_I) = PolarRho_I
 
-         if(B1rCoef /= 1.0)then
-            ! Change B_ghost so that the radial component of Bghost + Btrue = 0
-            ! Brefl = (1-B1rCoef)*r*(B.r)/r^2, so Bghost = Btrue - Brefl
-            Brefl_D = (1-B1rCoef) &
-                 *FBC%FaceCoords_D*sum(FBC%VarsTrueFace_V(Bx_:Bz_)*FBC%FaceCoords_D)&
-                 /sum(FBC%FaceCoords_D**2)
-            FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsTrueFace_V(Bx_:Bz_) - Brefl_D
-         end if
+                 ! Align flow with the magnetic field
+                 bUnit_D = FBC%B0Face_D / norm2(FBC%B0Face_D)
+                 ! Make sure it points outward
+                 if(sum(bUnit_D*FBC%FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
+                 FBC%VarsGhostFace_V(iUx_I)  = PolarU_I*bUnit_D(x_)
+                 FBC%VarsGhostFace_V(iUy_I)  = PolarU_I*bUnit_D(y_)
+                 FBC%VarsGhostFace_V(iUz_I)  = PolarU_I*bUnit_D(z_)
+                 FBC%VarsGhostFace_V(iP_I)   = PolarP_I
+              end if
+           end if ! IsPolarFace
 
-      case('absorb')
-         ! for inflow float everything
-         FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
-
-         ! Calculate 1/r^2
-         r2Inv = 1.0/sum(FBC%FaceCoords_D**2)
-
-         ! for outflow reflect radial velocity: uG = u - 2*(u.r)*r/r^2
-         do iFluid = 1, nFluid
-            iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
-            UdotR = sum(FBC%VarsTrueFace_V(iUx:iUz)*FBC%FaceCoords_D)
-            if(UdotR > 0.0) &
-                 FBC%VarsGhostFace_V(iUx:iUz) = FBC%VarsTrueFace_V(iUx:iUz) &
-                 - 2*UdotR*r2Inv*FBC%FaceCoords_D
-         end do
-
-         ! Set B1rGhost according to B1rCoef
-         if(B1rCoef /= 1.0) &
+           ! Apply boundary condition on B (radial component of B1)
+           if(B1rCoef /= 1.0)then
+              ! Change B_ghost so that radial component of Bghost + Btrue = 0
+              ! Brefl = (1-B1rCoef)*r*(B.r)/r^2, so Bghost = Btrue - Brefl
+              Brefl_D = (1-B1rCoef)*FBC%FaceCoords_D/sum(FBC%FaceCoords_D**2) &
+                   *sum(FBC%VarsTrueFace_V(Bx_:Bz_)*FBC%FaceCoords_D)
               FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsTrueFace_V(Bx_:Bz_) &
-              - (1-B1rCoef) &
-              *sum(FBC%VarsTrueFace_V(Bx_:Bz_)*FBC%FaceCoords_D)*r2Inv*FBC%FaceCoords_D
+                   - Brefl_D
+           end if
 
-      case('buffergrid')
-         ! REVISION: June  2011 - R. Oran - generalized.
-         ! Inner boundary conditions based on coupling to another BATSRUS
-         ! component through a buffer grid.
+        case('absorb')
+           ! for inflow float everything
+           FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
 
-         ! Allows specifying boundary conditions for additional variables
-         ! that were not passed through the buffer.
-         ! Coupling flags for these options are set in CON_couple_all.f90.
+           ! Calculate 1/r^2
+           r2Inv = 1.0/sum(FBC%FaceCoords_D**2)
 
-         ! Note: the older case 'coronatoih' is redirected to here for
-         ! backwards compatability.
+           ! for outflow reflect radial velocity: uG = u - 2*(u.r)*r/r^2
+           do iFluid = 1, nFluid
+              iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
+              UdotR = sum(FBC%VarsTrueFace_V(iUx:iUz)*FBC%FaceCoords_D)
+              if(UdotR > 0.0) &
+                   FBC%VarsGhostFace_V(iUx:iUz) = FBC%VarsTrueFace_V(iUx:iUz) &
+                   - 2*UdotR*r2Inv*FBC%FaceCoords_D
+           end do
 
-         ! Get interpolated values from buffer grid:
-         call get_from_spher_buffer_grid(&
-              FBC%FaceCoords_D,nVar,FaceState_V)
+           ! Set B1rGhost according to B1rCoef
+           if(B1rCoef /= 1.0) &
+                FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsTrueFace_V(Bx_:Bz_) &
+                - (1-B1rCoef) &
+                *sum(FBC%VarsTrueFace_V(Bx_:Bz_)*FBC%FaceCoords_D) &
+                *r2Inv*FBC%FaceCoords_D
 
-         FBC%VarsGhostFace_V = FaceState_V
-         if(UseB0)FBC%VarsGhostFace_V(Bx_:Bz_)=FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
+        case('buffergrid')
+           ! REVISION: June  2011 - R. Oran - generalized.
+           ! Inner boundary conditions based on coupling to another BATSRUS
+           ! component through a buffer grid.
 
-         if(.not. IsFullyCoupledFluid .and. nFluid > 1) then
-            ! Only variable associated with the main MHD plasma are passed
-            ! through the buffer grid. BC's for fluids must be specified
-            ! somehow.
+           ! Allows specifying boundary conditions for additional variables
+           ! that were not passed through the buffer.
+           ! Coupling flags for these options are set in CON_couple_all.f90.
 
-            if (DoOhNeutralBc) then
-               ! Get face BCs for neutrals in the outerheliosphere
-               ! (based on M. Opher)
-               ! Pop I is going through the inner BCs
+           ! Note: the older case 'coronatoih' is redirected to here for
+           ! backwards compatability.
 
-               ! PopII leaves the domain at a supersonic velocity
-               ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
-               ! For the transient case of inward flow, use a fraction of ions
+           ! Get interpolated values from buffer grid:
+           call get_from_spher_buffer_grid( &
+                FBC%FaceCoords_D, nVar, FaceState_V)
 
-               ! Pop III has the velocity and temperature of the ions at inner
-               ! boundary,  the density is taken to be a fraction of the ions
+           FBC%VarsGhostFace_V = FaceState_V
+           if(UseB0)FBC%VarsGhostFace_V(Bx_:Bz_) = &
+                FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
 
-               FBC%VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
-                    FBC%VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
+           ! If this component is multifluid and coupled to single-fluid,
+           ! stop with an error
+           if(IsFullyCoupledFluid .and. nFluid > 1) call stop_mpi( &
+                NameSub//': BCs for multifluid must be specified.')
 
-               do iFluid = IonLast_+2, nFluid
-                  if(sum(FBC%VarsTrueFace_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid)) * &
-                       FBC%FaceCoords_D) <= 0.0)then
-                     FBC%VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
-                          FBC%VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
-                  else
-                     FBC%VarsGhostFace_V(iRho_I(iFluid)) = FBC%VarsGhostFace_V(Rho_)* &
-                          RhoBcFactor_I(iFluid)
-                     FBC%VarsGhostFace_V(iP_I(iFluid)) = FBC%VarsGhostFace_V(p_) *  &
-                          RhoBcFactor_I(iFluid)
-                     FBC%VarsGhostFace_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid)) = &
-                          FBC%VarsGhostFace_V(Ux_:Uz_) *uBcFactor_I(iFluid)
-                  end if
-               end do
+           ! Only variable associated with the main MHD plasma are passed
+           ! through the buffer grid. BC's for fluids must be specified
+           ! somehow.
 
-            else
-               ! If this component is multyfluid and coupled to a single-fluid,
-               ! stop with an error
-               call stop_mpi( &
-                    NameSub//': BCs for multifluid must be specified.')
-            end if
-         end if
+           if (DoOhNeutralBc) then
+              ! Get face BCs for neutrals in the outerheliosphere
+              ! (based on M. Opher)
+              ! Pop I is going through the inner BCs
 
-      case('body2orbit')
-         FBC%VarsGhostFace_V = FaceState_V
+              ! PopII leaves the domain at a supersonic velocity
+              ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
+              ! For the transient case of inward flow, use fraction of ions
 
-         ! Setting velocity BCs to be the second body orbital velocity:
-         ! Ux = -( \omega_SI y_SI)-> NoDim
-         FBC%VarsGhostFace_V(Ux_) = FaceState_V(Ux_) &
-              - (cTwoPi/OrbitPeriod)*(yBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
-         ! Uy = ( \omega_SI x_SI)-> NoDim
-         FBC%VarsGhostFace_V(Uy_) = FaceState_V(Uy_) &
-              + (cTwoPi/OrbitPeriod)*(xBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
+              ! Pop III has the velocity and temperature of ions at inner
+              ! boundary, the density is taken to be a fraction of the ions
 
-      case default
-         write(*,*) NameSub,': iTrue, jTrue, kTrue, iBlockBc =', &
-              iTrue, jTrue, kTrue, iBlockBc
-         write(*,*) NameSub,': iGhost,jGhost,kGhost,iBoundary=',&
-              iGhost, jGhost, kGhost, iBoundary
-         write(*,*) NameSub,': FBC%FaceCoords_D=', FBC%FaceCoords_D
-         call stop_mpi(NameSub//': incorrect TypeFaceBc_I='//TypeBc)
-      end select
+              FBC%VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
+                   FBC%VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
 
-      if (UseIe .and. iBoundary == Body1_)then
-         ! Get the E x B / B^2 velocity
-         call calc_inner_bc_velocity(TimeBc, FBC%FaceCoords_D, &
-              FBC%VarsTrueFace_V(Bx_:Bz_) + FBC%B0Face_D, uIono_D)
+              do iFluid = IonLast_+2, nFluid
+                 if(sum(FBC%VarsTrueFace_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid))*&
+                      FBC%FaceCoords_D) <= 0.0)then
+                    FBC%VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
+                         FBC%VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
+                 else
+                    FBC%VarsGhostFace_V(iRho_I(iFluid)) = &
+                         FBC%VarsGhostFace_V(Rho_)*RhoBcFactor_I(iFluid)
+                    FBC%VarsGhostFace_V(iP_I(iFluid)) = &
+                         FBC%VarsGhostFace_V(p_)*RhoBcFactor_I(iFluid)
+                    FBC%VarsGhostFace_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid))=&
+                         FBC%VarsGhostFace_V(Ux_:Uz_)*uBcFactor_I(iFluid)
+                 end if
+              end do
 
-         ! Subtract the radial component of the velocity (no outflow/inflow)
-         uIono_D = uIono_D &
-              - FBC%FaceCoords_D * sum(FBC%FaceCoords_D*uIono_D) / sum(FBC%FaceCoords_D**2)
+           end if
 
-         select case(TypeBc)
-         case('reflect','linetied','polarwind','ionosphere', &
-              'ionospherefloat', 'ionosphereoutflow')
-            FBC%VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) + FBC%VarsGhostFace_V(iUx_I)
-            FBC%VarsGhostFace_V(iUy_I) = 2*uIono_D(y_) + FBC%VarsGhostFace_V(iUy_I)
-            FBC%VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) + FBC%VarsGhostFace_V(iUz_I)
+        case('body2orbit')
+           FBC%VarsGhostFace_V = FaceState_V
 
-         case default
-            call stop_mpi(NameSub// &
-                 ': Coupling with IE is not compatible with TypeFaceBc_I=' &
-                 //TypeBc)
-         end select
-      end if
+           ! Setting velocity BCs to be the second body orbital velocity:
+           ! Ux = -( \omega_SI y_SI)-> NoDim
+           FBC%VarsGhostFace_V(Ux_) = FaceState_V(Ux_) &
+                - (cTwoPi/OrbitPeriod)*(yBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
+           ! Uy = ( \omega_SI x_SI)-> NoDim
+           FBC%VarsGhostFace_V(Uy_) = FaceState_V(Uy_) &
+                + (cTwoPi/OrbitPeriod)*(xBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
 
-      if (UseRotatingBc .and. iBoundary==Body1_) then
+        case default
+           write(*,*) NameSub,': iTrue, jTrue, kTrue, iBlockBc =', &
+                iTrue, jTrue, kTrue, iBlockBc
+           write(*,*) NameSub,': iGhost,jGhost,kGhost,iBoundary=',&
+                iGhost, jGhost, kGhost, iBoundary
+           write(*,*) NameSub,': FBC%FaceCoords_D=', FBC%FaceCoords_D
+           call stop_mpi(NameSub//': incorrect TypeFaceBc_I='//TypeBc)
+        end select
 
-         ! Calculate corotation velocity uRot_D at position FaceCoords
-         uRot_D = cross_product(OmegaBody_D, FBC%FaceCoords_D)
+        if (UseIe .and. iBoundary == Body1_)then
+           ! Get the E x B / B^2 velocity
+           call calc_inner_bc_velocity(TimeBc, FBC%FaceCoords_D, &
+                FBC%VarsTrueFace_V(Bx_:Bz_) + FBC%B0Face_D, uIono_D)
 
-         select case(TypeBc)
-         case('reflect','linetied', &
-              'ionosphere','ionospherefloat','polarwind','ionosphereoutflow')
-            FBC%VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) + FBC%VarsGhostFace_V(iUx_I)
-            FBC%VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) + FBC%VarsGhostFace_V(iUy_I)
-            FBC%VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) + FBC%VarsGhostFace_V(iUz_I)
-         case default
-            call stop_mpi('UseRotatingBc is not compatible with TypeFaceBc_I='&
-                 //TypeBc)
-         end select
-      end if
+           ! Subtract the radial component of the velocity (no outflow/inflow)
+           uIono_D = uIono_D &
+                - FBC%FaceCoords_D * sum(FBC%FaceCoords_D*uIono_D) / sum(FBC%FaceCoords_D**2)
+
+           select case(TypeBc)
+           case('reflect','linetied','polarwind','ionosphere', &
+                'ionospherefloat', 'ionosphereoutflow')
+              FBC%VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) + FBC%VarsGhostFace_V(iUx_I)
+              FBC%VarsGhostFace_V(iUy_I) = 2*uIono_D(y_) + FBC%VarsGhostFace_V(iUy_I)
+              FBC%VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) + FBC%VarsGhostFace_V(iUz_I)
+
+           case default
+              call stop_mpi(NameSub// &
+                   ': Coupling with IE is not compatible with TypeFaceBc_I=' &
+                   //TypeBc)
+           end select
+        end if
+
+        if (UseRotatingBc .and. iBoundary==Body1_) then
+
+           ! Calculate corotation velocity uRot_D at position FaceCoords
+           uRot_D = cross_product(OmegaBody_D, FBC%FaceCoords_D)
+
+           select case(TypeBc)
+           case('reflect','linetied', &
+                'ionosphere','ionospherefloat','polarwind','ionosphereoutflow')
+              FBC%VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) + FBC%VarsGhostFace_V(iUx_I)
+              FBC%VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) + FBC%VarsGhostFace_V(iUy_I)
+              FBC%VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) + FBC%VarsGhostFace_V(iUz_I)
+           case default
+              call stop_mpi('UseRotatingBc is not compatible with TypeFaceBc_I='&
+                   //TypeBc)
+           end select
+        end if
 
       end associate
     end subroutine set_face
