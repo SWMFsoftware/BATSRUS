@@ -9,6 +9,7 @@ module ModUserEmpty
 
   ! These constants are provided for convenience
   use BATL_lib, ONLY: iProc, x_, y_, z_, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  use ModBatsrusUtility, ONLY: stop_mpi, get_iVar
   use ModMain, ONLY: &
        UseUserInitSession, UseUserPerturbation, UseUserICs, UseUserB0, &
        UseUserSourceExpl, UseUserSourceImpl, UseUserUpdateStates

@@ -6,6 +6,7 @@
 module GM_couple_ie
 
   use BATL_lib, ONLY: iProc
+  use ModBatsrusUtility, ONLY: stop_mpi
   use ModIeCoupling, ONLY: rIonosphere, &
        nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I,&
        IonoPotential_II, IonoJouleHeating_II, &

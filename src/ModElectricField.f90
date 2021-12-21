@@ -6,6 +6,7 @@ module ModElectricField
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   ! Calculate electric field Efield_DGB from MHD quantities.
   !

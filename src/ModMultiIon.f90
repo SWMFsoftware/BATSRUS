@@ -6,6 +6,7 @@ module ModMultiIon
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iVarTest, iProc
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   ! !! "resistive terms" = ion-electron collisions to be added
   ! !! RZ geometry terms are missing

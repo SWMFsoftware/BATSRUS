@@ -5,6 +5,7 @@ module ModCellBoundary
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iDimTest
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
 

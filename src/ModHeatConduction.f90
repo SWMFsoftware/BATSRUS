@@ -5,6 +5,7 @@
 module ModHeatConduction
 
   use BATL_lib,     ONLY: test_start, test_stop
+  use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif

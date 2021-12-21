@@ -3,6 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModRadioWaveImage
 
+  use ModBatsrusUtility, ONLY: stop_mpi
   use ModConst, ONLY: cPi, cElectronMass, cElectronChargeSquaredJm
   use BATL_lib, ONLY: iProc, nProc, iComm, MaxDim, nDim, x_, y_, z_
   use ModParticles, ONLY: allocate_particles,&

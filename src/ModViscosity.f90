@@ -5,6 +5,7 @@ module ModViscosity
 
   use BATL_lib, ONLY: &
        test_start, test_stop
+  use ModBatsrusUtility, ONLY: stop_mpi
   use omp_lib
 
   implicit none

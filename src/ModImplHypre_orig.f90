@@ -5,6 +5,7 @@ module ModImplHypre
 
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModKind,   ONLY: Int8_
   use BATL_size, ONLY: nDim, nI, nJ, nK, nIJK, nIJK_D, iRatio, jRatio, kRatio

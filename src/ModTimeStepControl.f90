@@ -6,6 +6,7 @@ module ModTimeStepControl
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
        iProc, nProc, iComm
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
 

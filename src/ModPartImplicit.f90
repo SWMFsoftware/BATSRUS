@@ -7,6 +7,7 @@ module ModPartImplicit
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, &
        iProcTest, iVarTest, iProc, nProc, iComm
+  use ModBatsrusUtility, ONLY: error_report, stop_mpi
 
   use ModImplicit
   use ModFaceFluxParameters

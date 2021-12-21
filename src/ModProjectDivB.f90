@@ -7,6 +7,7 @@ module ModProjectDivB
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
        iProc, nProc, iComm, minval_grid, maxval_grid
+  use ModBatsrusUtility, ONLY: error_report, stop_mpi
 
   ! Parameters for projection scheme:
   !
@@ -330,11 +331,14 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              proj_divb(i,j,k,iBlock) = &
                   DxInvHalf* &
-                  (State_VGB(Bx_,i+1,j,k,iBlock)-State_VGB(Bx_,i-1,j,k,iBlock)) + &
+                  (State_VGB(Bx_,i+1,j,k,iBlock) &
+                  -State_VGB(Bx_,i-1,j,k,iBlock)) + &
                   DyInvHalf* &
-                  (State_VGB(By_,i,j+1,k,iBlock)-State_VGB(By_,i,j-1,k,iBlock)) + &
+                  (State_VGB(By_,i,j+1,k,iBlock) &
+                  -State_VGB(By_,i,j-1,k,iBlock)) + &
                   DzInvHalf* &
-                  (State_VGB(Bz_,i,j,k+1,iBlock)-State_VGB(Bz_,i,j,k-1,iBlock))
+                  (State_VGB(Bz_,i,j,k+1,iBlock) &
+                  -State_VGB(Bz_,i,j,k-1,iBlock))
           end do; end do; end do
        end do
     end if
@@ -347,11 +351,11 @@ contains
   ! Solve grad div phi = rhs
   subroutine proj_poisson(rhs,tolerance,typestop,matvecmax,&
        info,nmatvec,resid,phi)
-    use ModMain, ONLY:MaxBlock
+    use ModMain, ONLY: MaxBlock
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(inout):: rhs
+    real, intent(inout):: rhs(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     !    on input: the right hand side of the Poisson equation
     !    on output: the residual
 

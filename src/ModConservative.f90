@@ -9,6 +9,7 @@ module ModConservative
   use BATL_lib, ONLY: &
        iProc, iTest, jTest, kTest, iBlockTest, iProcTest, &
        test_start, test_stop
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
 

@@ -9,11 +9,12 @@ module ModFieldTrace
        iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm, &
        IsNeighbor_P, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        MaxBlock, x_, y_, z_, IsCartesianGrid
-  use ModMain, ONLY: TypeCoordSystem
-  use ModPhysics, ONLY: rBody
+  use ModBatsrusUtility, ONLY: get_time_string, stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
+  use ModMain, ONLY: TypeCoordSystem
+  use ModPhysics, ONLY: rBody
   use ModNumConst, ONLY: i_DD
   use ModKind, ONLY: Real8_
   use ModIO,   ONLY: iUnitOut, write_prefix

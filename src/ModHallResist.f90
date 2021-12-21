@@ -5,6 +5,7 @@ module ModHallResist
 
   use BATL_lib, ONLY: &
        test_start, test_stop
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModSize, ONLY: nI, nJ, nK, MaxDim, j0_, nJp1_, k0_, nKp1_
   use omp_lib

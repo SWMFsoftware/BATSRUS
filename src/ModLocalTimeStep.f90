@@ -6,6 +6,7 @@ module ModLocalTimeStep
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest,&
        iComm
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModSize, ONLY: nDim, nBlock, MaxBlock, nI, nJ, nK, nG, x_, y_, z_
   use ModMain, ONLY: UseLocalTimeStep, UseLocalTimeStepNew, DtLimitDim

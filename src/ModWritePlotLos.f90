@@ -7,6 +7,8 @@ module ModWritePlotLos
 #endif
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, nProc, iComm
+  use ModBatsrusUtility, ONLY: &
+       barrier_mpi, stop_mpi, get_date_time, get_time_string
 
   implicit none
 
@@ -305,7 +307,8 @@ contains
        if(.not.allocated(InterpValues_I)) &
             allocate(InterpValues_I(nPlotVar))
 
-       if(DoTest .and. iProc==0) write(*,*) 'NameVar: ', Table_I(iTableGen)%NameVar
+       if(DoTest .and. iProc==0) write(*,*) 'NameVar: ', &
+            Table_I(iTableGen)%NameVar
     endif
 
     allnames='x y '//trim(plot_vars1)//' '//plot_pars(iFile)

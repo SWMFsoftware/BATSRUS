@@ -9,6 +9,7 @@ module ModSatelliteFile
   use ModUtilities, ONLY: norm2
 #endif
   use ModUtilities, ONLY: open_file, close_file
+  use ModBatsrusUtility, ONLY: get_time_string, stop_mpi
   use ModMain, ONLY: StartTime
   use ModTimeConvert,   ONLY: time_int_to_real
 

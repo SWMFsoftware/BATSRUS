@@ -180,8 +180,8 @@ contains
 
     ! Put the extracted data into BufferLine_I
     call line_get(nVarExtract, nPoint)
-    if(nPoint /= nPointLine)call stop_mpi(NameSub//': nPointLine error')
-    if(nVarExtract < nVarLine)call stop_mpi(NameSub//': nVarLine error')
+    if(nPoint /= nPointLine)call CON_stop(NameSub//': nPointLine error')
+    if(nVarExtract < nVarLine)call CON_stop(NameSub//': nVarLine error')
     allocate(Buffer_VI(0:nVarExtract, nPoint))
     call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
 
@@ -450,8 +450,6 @@ contains
   subroutine GM_get_for_im_line(nRadius, nLon, MapOut_DSII, &
        nVarLine, nPointLine, BufferLine_VI)
 
-    ! call stop_mpi('RAYTRACE is OFF')
-
     use ModFieldTrace, ONLY: RayMap_DSII
 
     integer, intent(in) :: nRadius, nLon
@@ -675,8 +673,6 @@ contains
   !============================================================================
 
   subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
-
-    ! call stop_mpi('RCM is OFF')
 
     use CON_coupler
     use CON_world,      ONLY: get_comp_info

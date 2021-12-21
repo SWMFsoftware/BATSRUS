@@ -274,8 +274,8 @@ contains
 
     ! Put the extracted data into BufferLine_VI
     call line_get(nVarExtract, nPoint)
-    if(nPoint /= nPointLine)call stop_mpi(NameSub//': nPointLine error')
-    if(nVarExtract < nVarLine)call stop_mpi(NameSub//': nVarLine error')
+    if(nPoint /= nPointLine)call CON_stop(NameSub//': nPointLine error')
+    if(nVarExtract < nVarLine)call CON_stop(NameSub//': nVarLine error')
     allocate(Buffer_VI(0:nVarExtract, nPoint))
     call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
 

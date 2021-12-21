@@ -2,6 +2,7 @@ module ModIonElectron
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iVarTest
+  use ModBatsrusUtility, ONLY: stop_mpi, get_iVar
 
   ! methods related to the ion-electron fluid closures following Uri Schumlak
 

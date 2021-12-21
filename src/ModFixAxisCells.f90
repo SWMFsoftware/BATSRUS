@@ -6,6 +6,7 @@ module ModFixAxisCells
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
 

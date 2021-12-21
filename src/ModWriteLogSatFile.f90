@@ -7,7 +7,9 @@ module ModWriteLogSatFile
        test_start, test_stop, StringTest, XyzTestCell_D, &
        iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest, &
        iProc, nProc, iComm
+  use ModBatsrusUtility, ONLY: get_date_time, stop_mpi
   use,intrinsic :: ieee_arithmetic
+
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif

@@ -6,6 +6,7 @@ module ModWriteTecplot
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose, iProc, nProc, iComm
+    use ModBatsrusUtility, ONLY: get_date_time, get_time_string, stop_mpi
 
   ! Save cell centered data into Tecplot files
   !

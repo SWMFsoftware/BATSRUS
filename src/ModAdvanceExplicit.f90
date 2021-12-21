@@ -6,6 +6,7 @@ module ModAdvanceExplicit
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iThread, StringTest
+  use ModBatsrusUtility, ONLY: barrier_mpi2, stop_mpi
 
   implicit none
   private ! except
@@ -409,7 +410,7 @@ contains
                       ! Skip cells which were inside second body
                       if(IsBody2Old_GB(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
                       ! Skip other non-true cells
-                      if( .not.true_cell(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
+                      if(.not.true_cell(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
                       ! Collect good state to the counter
                       StateCounter_V = StateCounter_V + &
                            State_VGB(:,i+iNei,j+jNei,k+kNei,iBlock)

@@ -1,5 +1,6 @@
 ! This as a testing and stand alone Spectrum main program.
 program spectrum
+
   use BATL_size, ONLY: &
        nDim, MaxBlock, nBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use BATL_lib, ONLY: &
@@ -9,6 +10,7 @@ program spectrum
   use ModNodes, ONLY: clean_mod_nodes
   use ModMpi
   use ModAdvance, ONLY: State_VGB, iTypeAdvance_BP, iTypeAdvance_B
+  use ModUtilities, ONLY: CON_stop
 
   ! use ModSpectrum
   use ModSpectrumLos, ONLY: init_los_spectrum, get_los_data_cube
@@ -315,7 +317,7 @@ contains
         case('HGI')
         case('SAT')
         case default
-           call stop_mpi('Observer coordinate system '//trim(TypeObsCoord)// &
+           call CON_stop('Observer coordinate system '//trim(TypeObsCoord)// &
                 ' not supported.')
         end select
         call read_var('DoObsRotate', DoObsRotate)
@@ -340,10 +342,10 @@ contains
     end do READPARAM
 
     if (any(nPixel_I <= 0)) then
-      call stop_mpi('Number of image pixels less than zero!')
+      call CON_stop('Number of image pixels less than zero!')
     endif
     if (any(ImageSize_I <= 0)) then
-      call stop_mpi('Size of image less than zero!')
+      call CON_stop('Size of image less than zero!')
     endif
 
   end subroutine read_param_file
@@ -378,7 +380,7 @@ contains
       case('#NDIM')
         call read_var('nDimSim', nDimSim)
         if (nDimSim /= 3) then
-          call stop_mpi(NameSub//': Needs a 3D simulation data file')
+          call CON_stop(NameSub//': Needs a 3D simulation data file')
         endif
 
       case('#GRIDBLOCKSIZE')
@@ -388,7 +390,7 @@ contains
         if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
           write(*,'(A,3I3)')'Code  compiled with nI,nJ,nK =', nIJK_D
           write(*,'(A,3I3)')'Data generated with nI,nJ,nK =', nIJKRead_D
-          call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
+          call CON_stop('Change nI,nJ,nK with Config.pl -g and recompile!')
         end if
 
       case('#ROOTBLOCK')
@@ -430,7 +432,7 @@ contains
           write(*,'(A)')'Not enough grid blocks allocated for root blocks'
           write(*,'(A,3I8)') 'nCellPlot, nIJK, nBlockPlot =', nCellPlot, nIJK, nCellPlot/nIJK
           write(*,'(A,3I8)')'MaxBlock, nProc, MaxBlock*nProc=', MaxBlock, nProc, MaxBlock*nProc
-          call stop_mpi(NameSub//': insufficient number of grid blocks')
+          call CON_stop(NameSub//': insufficient number of grid blocks')
         end if
         if (MaxBlock>100 .and. nCellPlot/nIJK*1.1<MaxBlock*nProc) then
           if (iProc==0) then
@@ -491,7 +493,7 @@ contains
       case('#PLOTVARIABLE')
         call read_var('nPlotVar', nPlotVar)
         if (nPlotVar /= nVar) then
-          call stop_mpi(NameSub//': number of plot variables not correct; ' // &
+          call CON_stop(NameSub//': number of plot variables not correct; ' // &
             'configure Spectrum encironment the same as Batsrus/Awsom.')
         endif
         call read_var('',NameVarInput)
@@ -548,7 +550,7 @@ contains
         nOut_D = n_D, ParamOut_I = Param_I, NameVarOut = NameVar)
 
     if (nDimOld /= 3 .or. n_D(2) /= 1 .or. n_D(3) /= 1) then
-      call stop_mpi('Currently only support 3d unstructured grid. Write data with dx=-1')
+      call CON_stop('Currently only support 3d unstructured grid. Write data with dx=-1')
     endif
 
     allocate(iVar_I(nVar))
@@ -575,7 +577,7 @@ contains
       if(iBlock <= 0)then
         CYCLE
         write(*,*) 'ERROR for iCell, Xyz_D=', iCell, Xyz_D
-        call stop_mpi(NameSub//': could not find cell on the grid')
+        call CON_stop(NameSub//': could not find cell on the grid')
       end if
       if (iProcFound /= iProc) CYCLE
       i = iCell_D(1)
@@ -585,7 +587,7 @@ contains
         write(*,*)NameSub,' ERROR at iCell,i,j,k,iBlock,iProc=', iCell, i, j, k, iBlock, iProc
         write(*,*)NameSub,' Xyz_D  =', Xyz_D
         write(*,*)NameSub,' Xyz_DGB=', Xyz_DGB(:,i,j,k,iBlock)
-        call stop_mpi(NameSub//': incorrect coordinates')
+        call CON_stop(NameSub//': incorrect coordinates')
       endif
       State_VGB(:,i,j,k,iBlock) = State_V
     enddo
@@ -884,7 +886,7 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   integer,intent(in)::nVar
   real,dimension(nVar)::State_V
   !----------------------------------------------------------------------------
-  call stop_mpi( &
+  call CON_stop( &
        'ERROR: get_from_spher_buffer_grid is for SWMF')
 end subroutine get_from_spher_buffer_grid
 !==============================================================================
@@ -892,14 +894,14 @@ subroutine plot_buffer(iFile)
   implicit none
   integer, intent(in)::iFile
   !----------------------------------------------------------------------------
-  call stop_mpi( &
+  call CON_stop( &
        'ERROR: plot_buffer is for SWMF')
 end subroutine plot_buffer
 !==============================================================================
 subroutine read_ih_buffer(y,z,State_V)
   real :: y, z, State_V(8)
   !----------------------------------------------------------------------------
-  call stop_mpi('ERROR: read_ih_buffer is for SWMF')
+  call CON_stop('ERROR: read_ih_buffer is for SWMF')
 end subroutine read_ih_buffer
 !==============================================================================
 subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
@@ -907,7 +909,7 @@ subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
   integer, intent(in) :: nVar
   real, intent(inout) :: FaceState_V(nVar)
   !----------------------------------------------------------------------------
-  call stop_mpi('ERROR: read_pw_buffer is for SWMF')
+  call CON_stop('ERROR: read_pw_buffer is for SWMF')
 end subroutine read_pw_buffer
 !==============================================================================
 

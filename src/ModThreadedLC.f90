@@ -2,10 +2,12 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
+
+  use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use BATL_lib,            ONLY: test_start, test_stop, iProc
+  use BATL_lib, ONLY: test_start, test_stop, iProc, Xyz_DGB
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
        HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
@@ -17,13 +19,13 @@ module ModThreadedLC
   use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
        QeRatio, MaxImbalance
-  use ModPhysics,        ONLY: Z => AverageIonCharge
-  use ModConst,          ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
-  use ModGeometry,       ONLY: Xyz_DGB
+  use ModPhysics, ONLY: Z => AverageIonCharge
+  use ModConst, ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModCoordTransform, ONLY: determinant, inverse_matrix
   use ModLinearAdvection, ONLY:  &
        lin_advection_source_plus, lin_advection_source_minus
   use omp_lib
+
   !   Hydrostatic equilibrium in an isothermal corona:
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
   ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r))
@@ -31,23 +33,27 @@ module ModThreadedLC
   ! effect of gravity on the hydrostatic equilibrium
   use ModFieldLineThread, ONLY:  &
        GravHydroStat != cGravPot*MassIon_I(1)/(Z + 1)
+
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
   ! Te = TeFraction*State_V(iP)/State_V(Rho_)
   ! Pe = PeFraction*State_V(iP)
   ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
-  !
   use ModFieldLineThread, ONLY:  &
        TeFraction, TiFraction,  iP, PeFraction
+
   implicit none
   SAVE
+
   ! energy flux needed to raise the mass flux rho*u to the heliocentric
   ! distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
   !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
   real :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
+
   ! Temperature 3D array
   real,allocatable :: Te_G(:,:,:)
   !$omp threadprivate( Te_G )
+
   ! Arrays for 1D distributions
   real,allocatable,dimension(:):: ReflCoef_I, AMajor_I, AMinor_I,            &
        TeSi_I, TeSiStart_I, PSi_I, Xi_I, Cons_I,                             &
@@ -55,6 +61,7 @@ module ModThreadedLC
        VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I,   &
        ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I,&
        ExchangeRate_I
+
   ! We apply ADI to solve state vector, the components of the state
   ! being temperature and log pressure.
   ! The heating at constant pressure is characterized by the
@@ -63,22 +70,29 @@ module ModThreadedLC
   integer, parameter:: Cons_ = 1, Ti_=2, LogP_ = 3
   real, allocatable, dimension(:,:):: Res_VI, DCons_VI
   real, allocatable, dimension(:,:,:) :: M_VVI, L_VVI, U_VVI
+
   ! Two logicals with self-explained names
   logical        :: UseAlignedVelocity = .true.
   logical        :: DoConvergenceCheck = .false.
+
   ! Two parameters controling the choise of the order for density and
   ! pressure: first order (LimMin=LimMax=0), second order (LimMin=LimMax=1)
   ! or limited second order as a default
   real:: LimMin = 0.0, LimMax = 1
+
   ! Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
   real           ::  RhoNoDimCoef
+
   ! Misc
   real:: TeMin, ConsMin, ConsMax, TeSiMax
+
   ! For transforming conservative to TeSi and back
   real, parameter:: cTwoSevenths = 2.0/7.0
+
   ! Gravitation potential in K
   real, parameter:: cGravPot = cGravitation*mSun*cAtomicMass/&
        (cBoltzmann*rSun)
+
   ! In hydrogen palsma, the electron-ion heat exchange is described by
   ! the equation as follows:
   ! dTe/dt = -(Te-Ti)/(tau_{ei})
@@ -102,6 +116,7 @@ module ModThreadedLC
   ! re-usable and can be also applied to calculate the resistivity:
   ! \eta = m \nu_{ei}/(e**2 Ne)
   real :: cExchangeRateSi
+
   ! See above about usage of the latter constant
   integer, parameter:: Impl_=4
 
