@@ -7,7 +7,7 @@ module ModImplHypre
   ! This module is needed when HYPRE is not configured/available.
 
   use ModBatsrusUtility, ONLY: stop_mpi
-  
+
   implicit none
 
   private

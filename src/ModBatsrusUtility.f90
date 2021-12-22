@@ -6,7 +6,7 @@ module ModBatsrusUtility
 
   ! Some simple BATSRUS specific utilities
   implicit none
-  
+
 contains
   !============================================================================
   subroutine barrier_mpi
@@ -27,7 +27,7 @@ contains
 
     use BATL_lib, ONLY: iComm
     use ModMpi
-    
+
     character (len=*), intent(in) :: str
 
     ! Local variables:
