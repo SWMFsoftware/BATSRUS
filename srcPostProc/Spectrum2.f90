@@ -881,6 +881,7 @@ end program spectrum
 ! The subroutines and functions below are defined in srcInterface for SWMF,
 ! but they still need to get compiled in stand-alone mode.
 subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
+  use ModUtilities, ONLY: CON_stop
   implicit none
   real,dimension(3),intent(in)::Xyz_D
   integer,intent(in)::nVar
@@ -891,6 +892,7 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
 end subroutine get_from_spher_buffer_grid
 !==============================================================================
 subroutine plot_buffer(iFile)
+  use ModUtilities, ONLY: CON_stop
   implicit none
   integer, intent(in)::iFile
   !----------------------------------------------------------------------------
@@ -899,12 +901,14 @@ subroutine plot_buffer(iFile)
 end subroutine plot_buffer
 !==============================================================================
 subroutine read_ih_buffer(y,z,State_V)
+  use ModUtilities, ONLY: CON_stop
   real :: y, z, State_V(8)
   !----------------------------------------------------------------------------
   call CON_stop('ERROR: read_ih_buffer is for SWMF')
 end subroutine read_ih_buffer
 !==============================================================================
 subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+  use ModUtilities, ONLY: CON_stop
   real, intent(in) :: FaceCoords_D(3)
   integer, intent(in) :: nVar
   real, intent(inout) :: FaceState_V(nVar)
