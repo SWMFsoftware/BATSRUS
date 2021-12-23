@@ -719,7 +719,7 @@ contains
             end if
          end do
          LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
-         
+
       case('jin','jout','jinmax','joutmax')
 
          if(index(optimize_message_pass,'opt')>0) &
