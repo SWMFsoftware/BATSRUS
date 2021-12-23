@@ -7,6 +7,7 @@ module ModFaceValue
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest, &
        iDimTest
+  use ModBatsrusUtility, ONLY: stop_mpi
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_, MaxDim
   use ModVarIndexes

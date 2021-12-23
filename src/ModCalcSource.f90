@@ -6,6 +6,7 @@ module ModCalcSource
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iTest, jTest, kTest, &
        iBlockTest, iVarTest
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
   SAVE

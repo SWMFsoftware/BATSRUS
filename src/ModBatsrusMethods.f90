@@ -8,6 +8,7 @@ module ModBatsrusMethods
 
   use BATL_lib, ONLY: test_start, test_stop, lVerbose
   use ModUpdateStateFast, ONLY: sync_cpu_gpu
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
 
@@ -1234,6 +1235,7 @@ contains
     use ModPointImplicit,   ONLY: clean_mod_point_impl
     use ModSemiImplicit,    ONLY: clean_mod_semi_impl
     use ModUserInterface,   ONLY: user_action
+    use ModBatsrusUtility,  ONLY: error_report
 
     integer:: iError
     logical:: DoTest

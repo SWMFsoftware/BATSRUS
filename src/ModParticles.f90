@@ -6,6 +6,7 @@ module ModParticles
 
   use BATL_lib, ONLY: &
        test_start, test_stop
+  use ModBatsrusUtility, ONLY: stop_mpi
   use BATL_particles, ONLY: &
        Particle_I, BATL_message_pass=>message_pass_particles, remove_undefined_particles, &
        mark_undefined, check_particle_location, put_particles, trace_particles

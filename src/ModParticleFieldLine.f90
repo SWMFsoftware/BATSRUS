@@ -6,6 +6,7 @@ module ModParticleFieldLine
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, nProc, iComm
+  use ModBatsrusUtility, ONLY: get_time_string, stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif

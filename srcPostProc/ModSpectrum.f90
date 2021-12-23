@@ -269,7 +269,7 @@ contains
     ! Currently nLineFound is always less than nMaxLine
     ! Potentially in future can automatically pick only the strongest nMaxLine lines
     nLineAll = min(nMaxLine,nLineFound)
-    if (nLineAll==0) call stop_mpi('No Chianti lines found.')
+    if (nLineAll==0) call CON_stop('No Chianti lines found.')
     if (iProc==0) write(*,'(A,I0,A)') 'A total of ', nLineAll, ' Chianti lines found.'
 
     ! automatic wavelength interval selection based on selected lines
@@ -399,7 +399,7 @@ contains
 
         call read_var('nWavelengthInterval',nWavelengthInterval)
         if (nWavelengthInterval<=0) then
-          call stop_mpi('Error: Please specify a wavelength interval; or use #INSTRUMENT; ' &
+          call CON_stop('Error: Please specify a wavelength interval; or use #INSTRUMENT; ' &
               // 'or use #SELECTLINES and drop this tag to automatically select interval.')
         endif
         if(IsInstrument)then
@@ -562,7 +562,7 @@ contains
         call read_var('NameSelectLine',NameSelectLine)
         call split_string(NameSelectLine,NameSelectLineTmp_I,nStrParts,' ')
         if (nStrParts<2) then
-          call stop_mpi("Error: wrong input for select line: use format e.g., fe_8 186.598")
+          call CON_stop("Error: wrong input for select line: use format e.g., fe_8 186.598")
         endif
         call lower_case(NameSelectLineTmp_I(1))
         IsUnderScore = .false.
@@ -574,7 +574,7 @@ contains
             IsUnderScore = .true.
           else if (iC>=ichar('0') .and. iC<=ichar('9')) then
             if (j==1) then
-              call stop_mpi("Error: need ion name in front of wavelength: use format e.g., fe_8 186.598")
+              call CON_stop("Error: need ion name in front of wavelength: use format e.g., fe_8 186.598")
             endif
             if (.not.IsUnderScore) then
               NameSelectLineTmp_I(1)(j+1:nStrLen+1) = NameSelectLineTmp_I(1)(j:nStrLen)

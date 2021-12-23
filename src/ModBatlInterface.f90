@@ -11,6 +11,7 @@ module ModBatlInterface
   use ModUtilities, ONLY: norm2
 #endif
   use BATL_grid, ONLY: BATL_interpolate => interpolate_grid_amr_gc
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
 

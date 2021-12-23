@@ -5,6 +5,7 @@ module ModPlotShell
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iBlockTest, iProc, nProc, iComm
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModIO
   use ModNumConst,        ONLY: cRadtoDeg, cDegToRad, cTiny

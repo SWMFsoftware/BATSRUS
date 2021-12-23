@@ -13,6 +13,7 @@
 module ModSpectrumLos
   use BATL_lib, ONLY: test_start, test_stop, iProc, nProc, iComm
   use ModVarIndexes, ONLY: nVar
+  use ModUtilities, ONLY: CON_stop
   use ModMpi
 
   implicit none
@@ -311,7 +312,7 @@ contains
     LOOPLINE: do
       if (Ds <= 0.0) then
         write(*,*)'ds=', Ds
-        call stop_mpi(NameSub//': Algorithm failed: zero integration step')
+        call CON_stop(NameSub//': Algorithm failed: zero integration step')
       end if
 
       ! Total length integrated so far

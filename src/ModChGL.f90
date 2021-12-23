@@ -1,6 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 module ModChGL
   ! In steady state MHD the magnetic field and mass density flux are
   ! related, according to the Chew-Golberger-Low theory  with the scalar
@@ -11,6 +12,8 @@ module ModChGL
   ! \partial (\rho s)/\partial t + \nabla\cdot(\rho s  \mathbf{U}) = 0
   ! Once \rho s is solved, the magnetic field may be found locally as
   ! \mathbf{B} = (\rho s)\mathbf{U}
+
+  use ModBatsrusUtility, ONLY: stop_mpi
   use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, SignB_, Rho_, &
        nVar, Ux_, Uz_
   use BATL_lib, ONLY: MaxDim

@@ -5,6 +5,7 @@ module ModGroundMagPerturb
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose, iProc, nProc, iComm
+  use ModBatsrusUtility, ONLY: get_date_time, stop_mpi
 
   use ModKind,           ONLY: Real4_
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_

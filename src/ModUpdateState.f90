@@ -655,6 +655,7 @@ contains
     use ModMpi
     use ModMultiFluid, ONLY: IsMhd
     use ModMultiIon,   ONLY: DoRestrictMultiIon, IsMultiIon_CB
+    use ModBatsrusUtility, ONLY: error_report
 
     integer, parameter :: max_checks=25
     integer :: i,j,k, iVar, iBlock, num_checks, iError

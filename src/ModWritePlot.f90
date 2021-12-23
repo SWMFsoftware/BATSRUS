@@ -6,6 +6,7 @@ module ModWritePlot
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, nProc, iComm
   use ModNumConst, ONLY: cRadToDeg
+  use ModBatsrusUtility, ONLY: get_date_time, get_time_string
 
   implicit none
 

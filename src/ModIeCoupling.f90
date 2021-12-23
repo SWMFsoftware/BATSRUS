@@ -5,6 +5,7 @@
 module ModIeCoupling
 
   use BATL_lib,      ONLY: test_start, test_stop, iProc, nProc
+  use ModBatsrusUtility, ONLY: stop_mpi
   use ModAdvance,    ONLY: nSpecies
   use ModMultiFluid, ONLY: nIonFluid
   use ModCoordTransform, ONLY: xyz_to_dir, sph_to_xyz, cross_product

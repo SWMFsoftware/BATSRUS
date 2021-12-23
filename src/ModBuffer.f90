@@ -6,6 +6,7 @@ module ModBuffer
   use BATL_lib,     ONLY: test_start, test_stop
   use ModNumConst,  ONLY: cHalfPi, cTwoPi
   use BATL_lib,     ONLY: MaxDim
+  use ModBatsrusUtility, ONLY: stop_mpi
   implicit none
 
   SAVE

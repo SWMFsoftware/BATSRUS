@@ -5,6 +5,7 @@ module ModPhysics
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModNumConst, ONLY: cDegToRad
   use ModConst, ONLY: rSun, mSun, RotationPeriodSun, cSecondPerDay, &

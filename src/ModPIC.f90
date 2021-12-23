@@ -6,6 +6,7 @@ module ModPIC
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, iComm
+  use ModBatsrusUtility, ONLY: stop_mpi
   use ModGridInfo,  ONLY: iPicOn_, iPicOff_, &
        get_point_status, &
        set_point_status

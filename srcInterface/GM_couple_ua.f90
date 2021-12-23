@@ -5,6 +5,8 @@
 
 module GM_couple_ua
 
+  use ModBatsrusUtility, ONLY: stop_mpi
+
   implicit none
 
   private ! except

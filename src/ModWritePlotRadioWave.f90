@@ -6,6 +6,7 @@ module ModWritePlotRadiowave
        Intensity_I, check_allocate,  rIntegration2, StateIn_VI,&
        SlopeX_, SlopeZ_
   use BATL_lib, ONLY: test_start, test_stop, x_, y_, z_, iProc
+  use ModBatsrusUtility, ONLY: get_time_string
   implicit none
   SAVE
 

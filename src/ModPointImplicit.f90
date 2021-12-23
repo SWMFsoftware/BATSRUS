@@ -7,6 +7,7 @@ module ModPointImplicit
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, &
        iProc
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   ! This module implements a point implicit scheme for the implicit
   ! part of the right hand side Rimp = R - Rexp that contributes to the

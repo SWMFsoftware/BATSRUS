@@ -7,7 +7,9 @@ module ModWriteLogSatFile
        test_start, test_stop, StringTest, XyzTestCell_D, &
        iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest, &
        iProc, nProc, iComm
+  use ModBatsrusUtility, ONLY: get_date_time, stop_mpi
   use,intrinsic :: ieee_arithmetic
+
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -387,7 +389,7 @@ contains
     use ModMain, ONLY: n_step, Dt, Cfl, optimize_message_pass, &
          UseRotatingFrame,UseB0, NameVarLower_V
     use ModPhysics, ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
-         ElectronPressureRatio
+         ElectronPressureRatio, InvGammaElectronMinus1
     use ModVarIndexes
     use ModAdvance,  ONLY: tmp1_BLK, tmp2_BLK, State_VGB, DivB1_GB
     use ModCurrent,  ONLY: get_point_data
@@ -683,6 +685,38 @@ contains
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)**2+&
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2)&
                  /State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
+         end do
+         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+      case('eth')
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)
+         end do
+         LogVar_I(iVarTot) = InvGammaMinus1_I(iFluid)*integrate_grid(tmp1_BLK)/DomainVolume
+      case('eeth')
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = State_VGB(Pe_,1:nI,1:nJ,1:nK,iBlock)
+         end do
+         LogVar_I(iVarTot) = InvGammaElectronMinus1*integrate_grid(tmp1_BLK)/DomainVolume
+      case('eb')
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            if(UseB0)then
+               do k = 1, nK; do j=1, nJ; do i=1, nI
+                  tmp1_BLK(i,j,k,iBlock) = &
+                    ( (State_VGB(Bx_,i,j,k,iBlock) + B0_DGB(1,i,j,k,iBlock))**2 &
+                    + (State_VGB(By_,i,j,k,iBlock) + B0_DGB(2,i,j,k,iBlock))**2 &
+                    + (State_VGB(Bz_,i,j,k,iBlock) + B0_DGB(3,i,j,k,iBlock))**2 )
+               end do; end do; end do
+            else
+               do k = 1, nK; do j=1, nJ; do i=1, nI
+                  tmp1_BLK(i,j,k,iBlock) = &
+                       ( State_VGB(Bx_,i,j,k,iBlock)**2 &
+                       + State_VGB(By_,i,j,k,iBlock)**2 &
+                       + State_VGB(Bz_,i,j,k,iBlock)**2 )
+               end do; end do; end do
+            end if
          end do
          LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
 
@@ -1288,15 +1322,12 @@ contains
        case('bx','by','bz','bxpnt','bypnt','bzpnt','b1xpnt','b1ypnt','b1zpnt',&
             'b1x','b1y','b1z','b0x','b0y','b0z','dst','dstdivb','dst_sm')
           LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitB_)
-       case('e','epnt','ew','erad')
+       case('e','epnt','ew','erad','ekinx','ekiny','ekinz','ekin','eth','eeth','eb')
           LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitEnergyDens_)
        case('p','ppnt','pmin','pmax','pperp')
           LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitP_)
        case('ux','uy','uz','uxpnt','uypnt','uzpnt','urmin','urmax')
           LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitU_)
-       case('ekinx','ekiny','ekinz','ekin')
-          LogVar_I(iVarTot)= LogVar_I(iVarTot) &
-               *No2Io_V(UnitRho_)*No2Io_V(UnitU_)**2
        case('jx','jy','jz','jxpnt','jypnt','jzpnt',&
             'jin','jout','jinmax','joutmax')
           LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitJ_)

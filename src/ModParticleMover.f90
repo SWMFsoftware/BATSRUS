@@ -2,11 +2,13 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModParticleMover
+
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest
   use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, &
        nI, nJ, nK, Unused_B, CoordMin_DB, CellSize_DB, &
        coord_to_xyz, CellVolume_GB, jDim_, kDim_
+  use ModBatsrusUtility, ONLY: stop_mpi
   use ModMain,         ONLY: NameThisComp, UseB0
   use ModB0,           ONLY: get_b0, B0_DGB
   use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB, &

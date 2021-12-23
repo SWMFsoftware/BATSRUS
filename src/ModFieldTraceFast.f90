@@ -9,7 +9,6 @@ module ModFieldTraceFast
   use ModMain, ONLY: UseB0, TypeCoordSystem, Time_Simulation
   use ModB0, ONLY: B0_DGB, get_b0, get_b0_dipole
   use ModAdvance, ONLY: State_VGB, Bx_, Bz_, iTypeUpdate, UpdateSlow_
-
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
        iTest, jTest, kTest, iBlockTest, iProc, iComm, nProc, &
@@ -17,6 +16,7 @@ module ModFieldTraceFast
        nBlock, MaxBlock, Unused_B, IsCartesianGrid, x_, y_, z_, &
        iNode_B, iTree_IA, Coord0_,  Xyz_DGB, CellSize_DB, &
        message_pass_cell, message_pass_node
+  use ModBatsrusUtility, ONLY: barrier_mpi, error_report, stop_mpi
 
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2

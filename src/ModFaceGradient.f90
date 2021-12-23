@@ -5,6 +5,7 @@ module ModFaceGradient
 
   use BATL_lib, ONLY: &
        test_start, test_stop
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModSize, ONLY: MaxDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_, &

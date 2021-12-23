@@ -141,6 +141,7 @@ contains
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
          rRound0, rRound1, StringTest
+    use ModBatsrusUtility, ONLY: get_iVar
 
     use ModOptimizeParam, ONLY: check_optimize_param
 
@@ -280,7 +281,8 @@ contains
                 write(*,*)NameSub,': WARNING! #STARTTIME in PARAM.in '// &
                      'differs from Carrington Rotation of Central Meridian '//&
                      'of Input Map !!!'
-                if(UseStrict) call stop_mpi('Fix #STARTTIME or use CORRECT Magnetogram')
+                if(UseStrict) call stop_mpi( &
+                     'Fix #STARTTIME or use CORRECT Magnetogram')
              endif
           endif
        endif

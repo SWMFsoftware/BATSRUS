@@ -5,6 +5,7 @@ module ModSolarwind
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose, iProc
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModKind
   use ModVarIndexes

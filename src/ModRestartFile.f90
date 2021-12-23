@@ -7,6 +7,7 @@ module ModRestartFile
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, &
        iProc, nProc, iComm
+  use ModBatsrusUtility, ONLY: stop_mpi
   use ModIO,         ONLY: nFile, Dt_Output, Dn_Output, Restart_, &
        restart, save_restart_file
   use ModMain,       ONLY: &
@@ -20,8 +21,7 @@ module ModRestartFile
   use ModConstrainDivB, ONLY: BxFace_BLK, ByFace_BLK, BzFace_BLK
   use ModMain,       ONLY: UseConstrainB
   use ModPIC,        ONLY: write_pic_status_file, &
-       read_pic_status_file, DoRestartPicStatus, &
-       AdaptPic
+       read_pic_status_file, DoRestartPicStatus, AdaptPic
   use ModImplicit, ONLY: UseImplicit, &
        n_prev, ImplOld_VCB, dt_prev
   use ModKind,       ONLY: Real4_, Real8_, Int8_

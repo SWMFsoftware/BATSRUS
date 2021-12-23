@@ -6,6 +6,7 @@ module ModRadDiffusion
 
   use BATL_lib, ONLY: &
        test_start, test_stop
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   ! Solve for gray or multigroup radiation diffusion and/or isotropic electron
   ! heat conduction in the non-relativistic fluid velocity limit.

@@ -7,6 +7,7 @@ module ModSemiImplicit
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, &
        iBlockTest, iProcTest, iVarTest, iProc, iComm
+  use ModBatsrusUtility, ONLY: error_report, stop_mpi
 
   use ModSemiImplVar
   use ModImplicit, ONLY: nStencil
