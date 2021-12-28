@@ -244,7 +244,7 @@ contains
   subroutine get_los_segments(XyzStartIn_D, ObsDirUnit_D, LengthMax, &
       iProcRecv, iPixelProcLoc, StatePixelSegProc_VII, &
       nLosSeg_I, DoTestIn)
-    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
+    use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
     use BATL_size, ONLY: nDim, nIJK_D, MaxDim, MinIJK_D, MaxIJK_D
     use BATL_geometry, ONLY: r_
     use BATL_lib, ONLY: xyz_to_coord, find_grid_block, get_tree_position, &
