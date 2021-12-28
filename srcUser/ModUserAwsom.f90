@@ -411,7 +411,7 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModAdvance,    ONLY: State_VGB, tmp1_BLK, UseElectronPressure
+    use ModAdvance,    ONLY: State_VGB, Tmp1_GB, UseElectronPressure
     use ModB0,         ONLY: B0_DGB
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
@@ -443,37 +443,37 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           if(UseElectronPressure)then
-             tmp1_BLK(:,:,:,iBlock) = &
+             Tmp1_GB(:,:,:,iBlock) = &
                   State_VGB(p_,:,:,:,iBlock) + State_VGB(Pe_,:,:,:,iBlock)
           else
-             tmp1_BLK(:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)
+             Tmp1_GB(:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)
           end if
        end do
-       VarValue = unit_energy*InvGammaMinus1*integrate_grid(tmp1_BLK)
+       VarValue = unit_energy*InvGammaMinus1*integrate_grid(Tmp1_GB)
 
     case('emag')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           if(UseB0)then
-             tmp1_BLK(:,:,:,iBlock) = &
+             Tmp1_GB(:,:,:,iBlock) = &
                   ( B0_DGB(x_,:,:,:,iBlock) + State_VGB(Bx_,:,:,:,iBlock))**2 &
                   +(B0_DGB(y_,:,:,:,iBlock) + State_VGB(By_,:,:,:,iBlock))**2 &
                   +(B0_DGB(z_,:,:,:,iBlock) + State_VGB(Bz_,:,:,:,iBlock))**2
           else
-             tmp1_BLK(:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)**2 &
+             Tmp1_GB(:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)**2 &
                   + State_VGB(By_,:,:,:,iBlock)**2 &
                   + State_VGB(Bz_,:,:,:,iBlock)**2
           end if
        end do
-       VarValue = unit_energy*0.5*integrate_grid(tmp1_BLK)
+       VarValue = unit_energy*0.5*integrate_grid(Tmp1_GB)
 
     case('vol')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
-          tmp1_BLK(:,:,:,iBlock) = 1.0
+          Tmp1_GB(:,:,:,iBlock) = 1.0
        end do
-       VarValue = integrate_grid(tmp1_BLK)
+       VarValue = integrate_grid(Tmp1_GB)
 
     case('neteflx')
        do iBlock=1,nBlock
@@ -494,12 +494,12 @@ contains
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
                         Rho
 
-             tmp1_BLK(i,j,k,iBlock) =               &
+             Tmp1_GB(i,j,k,iBlock) =               &
                   Wmajor*(GammaWave*Ur + Var)     &
                +  Wminor*(GammaWave*Ur - Var)
           end do; end do; end do
        end do
-       VarValue = calc_sphere('integrate',360, Radius, tmp1_BLK) &
+       VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
             *unit_energy/No2Io_V(UnitT_)
 
     case('peflx')
@@ -521,11 +521,11 @@ contains
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
                         Rho
 
-             tmp1_BLK(i,j,k,iBlock) = Wmajor*(GammaWave*Ur + Var)
+             Tmp1_GB(i,j,k,iBlock) = Wmajor*(GammaWave*Ur + Var)
 
           end do; end do; end do
        end do
-       VarValue = calc_sphere('integrate',360, Radius, tmp1_BLK) &
+       VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
             *unit_energy/No2Io_V(UnitT_)
 
     case('meflx')
@@ -547,10 +547,10 @@ contains
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
                         Rho
 
-             tmp1_BLK(i,j,k,iBlock) = Wminor*(GammaWave*Ur - Var)
+             Tmp1_GB(i,j,k,iBlock) = Wminor*(GammaWave*Ur - Var)
           end do; end do; end do
        end do
-       VarValue = calc_sphere('integrate',360, Radius, tmp1_BLK) &
+       VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
             *unit_energy/No2Io_V(UnitT_)
 
     case('keflx')
@@ -562,10 +562,10 @@ contains
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
                         Rho
 
-             tmp1_BLK(i,j,k,iBlock) = Rho*Ur**3./2.
+             Tmp1_GB(i,j,k,iBlock) = Rho*Ur**3./2.
           end do; end do; end do
        end do
-       VarValue = calc_sphere('integrate',360, Radius, tmp1_BLK) &
+       VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
             *unit_energy/No2Io_V(UnitT_)
 
     case default

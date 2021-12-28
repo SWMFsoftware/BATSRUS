@@ -398,7 +398,7 @@ contains
     use ModVarIndexes, ONLY: Rho_
     use ModMultifluid, ONLY: select_fluid, nFluid, iP
     use ModAdvance, ONLY : State_VGB, StateOld_VGB, &
-         time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
+         DtMax_CB, Tmp1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModCoarseAxis, ONLY:UseCoarseAxis, coarsen_axis_cells
@@ -740,7 +740,7 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           ! Check p and rho
-          tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) =&
+          Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) =&
                min(State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) / &
                StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock), &
                State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) / &
@@ -749,7 +749,7 @@ contains
        !$omp end parallel do
 
        if(index(StringTest, 'updatecheck') > 0)then
-          pRhoRelativeMin = minval_grid(tmp1_BLK, iLoc_I=iLoc_I)
+          pRhoRelativeMin = minval_grid(Tmp1_GB, iLoc_I=iLoc_I)
           if(iLoc_I(5) == iProc)then
              i = iLoc_I(1); j = iLoc_I(2); k = iLoc_I(3); iBlock = iLoc_I(4)
              write(*,*) 'pRhoRelativeMin is at i,j,k,iBlock,iProc = ',iLoc_I
@@ -759,7 +759,7 @@ contains
              write(*,*) 'pRhoRelativeMin=', pRhoRelativeMin
           end if
        else
-          pRhoRelativeMin = minval_grid(tmp1_BLK)
+          pRhoRelativeMin = minval_grid(Tmp1_GB)
        end if
        if(pRhoRelativeMin < RejectStepLevel .or. ImplParam%iError /= 0)then
           ! Redo step if pressure decreased below RejectStepLevel
@@ -767,13 +767,13 @@ contains
           Dt = 0.0
           ! Do not use previous step in BDF2 scheme
           n_prev = -1
-          ! Reset the state variable, the energy and set time_BLK variable to 0
+          ! Reset the state variable, the energy and set DtMax_CB variable to 0
           !$omp parallel do
           do iBlock = 1,nBlock
              if(Unused_B(iBlock)) CYCLE
              State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
                   = StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock)
-             time_BLK(1:nI,1:nJ,1:nK,iBlock)    = 0.0
+             DtMax_CB(1:nI,1:nJ,1:nK,iBlock)    = 0.0
           end do
           !$omp end parallel do
           ! Reduce next time step
@@ -821,7 +821,7 @@ contains
 
     use ModMain, ONLY : nStep,dt,nOrder, &
          UseRadDiffusion
-    use ModAdvance, ONLY : FluxType
+    use ModAdvance, ONLY : TypeFlux
     use ModMpi
     use ModRadDiffusion, ONLY: IsNewTimestepRadDiffusion
 
@@ -844,7 +844,7 @@ contains
 
     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .false.
 
-    if (nOrder==nOrderImpl .and. FluxType==FluxTypeImpl) then
+    if (nOrder==nOrderImpl .and. TypeFlux==FluxTypeImpl) then
        ! If R_low=R then ResImpl_VCB = ResExpl_VCB
        ResImpl_VCB(:,:,:,:,1:nBlockImpl) = ResExpl_VCB(:,:,:,:,1:nBlockImpl)
     else
@@ -1310,7 +1310,7 @@ contains
     use ModMain
     use ModNumConst, ONLY: i_DD
     use ModvarIndexes
-    use ModAdvance, ONLY: time_BLK
+    use ModAdvance, ONLY: DtMax_CB
     use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, set_b0_face
     use ModRadDiffusion, ONLY: add_jacobian_rad_diff
     use ModResistivity, ONLY: UseResistivity, add_jacobian_resistivity, &
@@ -1593,12 +1593,12 @@ contains
           end if
        end do; end do; end do; end do
     else
-       ! Local time stepping has time_BLK=0.0 inside the body
+       ! Local time stepping has DtMax_CB=0.0 inside the body
        do iStencil=1,nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
           do jVar=1,nVar; do iVar=1,nVar
              Jac_VVCI(iVar,jVar,i,j,k,iStencil) = &
                   -Jac_VVCI(iVar,jVar,i,j,k,iStencil) &
-                  *time_BLK(i,j,k,iBlock)*CflImpl*ImplCoeff &
+                  *DtMax_CB(i,j,k,iBlock)*CflImpl*ImplCoeff &
                   *Norm_V(jVar)/Norm_V(iVar)
           end do; end do;
        end do; end do; end do; end do
@@ -2088,7 +2088,7 @@ contains
     ! otherwise return              Res_VCB = Var_VCB(t+DtExpl)
 
     use ModMain
-    use ModAdvance, ONLY : FluxType, time_BLK
+    use ModAdvance, ONLY : TypeFlux, DtMax_CB
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModMessagePass, ONLY: exchange_messages
     use ModMpi
@@ -2122,16 +2122,16 @@ contains
     if(IsLowOrder)then
        nOrderTmp    = nOrder
        nOrder       = nOrderImpl
-       TypeFluxTmp  = FluxType
-       FluxType     = FluxTypeImpl
+       TypeFluxTmp  = TypeFlux
+       TypeFlux     = FluxTypeImpl
     endif
     if(UseDtFixed)then
        !$omp parallel do private( iBlock )
        do iBlockImpl=1,nBlockImpl
           iBlock = iBlockFromImpl_B(iBlockImpl)
-          time_BLK(:,:,:,iBlock) = 0.0
+          DtMax_CB(:,:,:,iBlock) = 0.0
           where(IsImplCell_CB(1:nI,1:nJ,1:nK,iBlock)) &
-               time_BLK(1:nI,1:nJ,1:nK,iBlock) = DtExpl
+               DtMax_CB(1:nI,1:nJ,1:nK,iBlock) = DtExpl
        end do
        !$omp end parallel do
     else
@@ -2167,7 +2167,7 @@ contains
     nStage      = nStageTmp
     if(IsLowOrder)then
        nOrder   = nOrderTmp
-       FluxType = TypeFluxTmp
+       TypeFlux = TypeFluxTmp
     end if
     if(.not.UseDtFixed) Cfl = CflTmp
 

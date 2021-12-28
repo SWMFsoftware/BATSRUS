@@ -1174,7 +1174,7 @@ contains
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModVarIndexes
-    use ModAdvance, ONLY : time_BLK, UseElectronPressure, &
+    use ModAdvance, ONLY : DtMax_CB, UseElectronPressure, &
          UseMultiSpecies
     use ModGeometry
     use ModPhysics,       ONLY: BodyRho_I, BodyP_I, OmegaBody,  &
@@ -1425,7 +1425,7 @@ contains
        case('dz')
           PlotVar_V(iVar) = CellSize_DB(z_,iBlock)
        case('dtblk')
-          PlotVar_V(iVar) = Dt_B(iBlock)
+          PlotVar_V(iVar) = DtMax_B(iBlock)
        case('proc')
           PlotVar_V(iVar) = iProc
        case('blk','block')

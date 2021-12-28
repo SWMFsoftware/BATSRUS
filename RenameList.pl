@@ -18,7 +18,8 @@
     ### ModMain
     #n_step => nStep,
     #iteration_number => nIteration,
-    #Dt_BLK => Dt_B,
+    #Dt_BLK => DtMax_B,
+    
     #time_accurate => IsTimeAccurate,
     #time_loop => IsTimeLoop,
     #Body1 => UseBody,
@@ -53,8 +54,16 @@
     #true_cell => Used_GB,
 
     ### ModParallel: Replace *east...*west with array vars
-    neiLEV => DiLevel_EB,
-    neiBLK => jBlock_IEB,
-    neiPE  => jProc_IEB,
-    NOBLK  => Unset_,
+    #neiLEV => DiLevel_EB,
+    #neiBLK => jBlock_IEB,
+    #neiPE  => jProc_IEB,
+    #NOBLK  => Unset_,
+
+    ### ModAdvance
+    FluxType => TypeFlux,
+    percent_max_rho => PercentRhoLimit_I,
+    precent_max_p => PercentPLimit_I,
+    tmp1_BLK => Tmp1_GB,
+    tmp2_BLK => Tmp2_GB,
+    time_BLK => DtMax_CB
     );

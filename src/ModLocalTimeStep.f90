@@ -60,7 +60,7 @@ contains
   !============================================================================
   subroutine advance_localstep(TimeSimulationLimit)
 
-    use ModMain,       ONLY: tSimulation, Dt, Dt_B, Cfl, iStage, nStage,&
+    use ModMain,       ONLY: tSimulation, Dt, DtMax_B, Cfl, iStage, nStage,&
          nOrder, nOrderProlong
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
@@ -254,7 +254,7 @@ contains
 
              call store_face_flux(iBlock, nFlux, &
                   Flux_VFD, Flux_VXB, Flux_VYB, Flux_VZB, &
-                  DtIn = Dt_B(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.,&
+                  DtIn = DtMax_B(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.,&
                   DoReschangeOnlyIn = .not.UseMaxTimeStep)
 
              if(DoTest .and. iBlock == iBlockTest) &
@@ -265,7 +265,7 @@ contains
           ! Update block time
           TimeOld_B(iBlock) = Time_B(iBlock)
           Time_B(iBlock)    = Time_B(iBlock) &
-               + Cfl*Dt_B(iBlock)*No2Si_V(UnitT_)/nStage
+               + Cfl*DtMax_B(iBlock)*No2Si_V(UnitT_)/nStage
 
           ! Swap between iStage = 1 and 2 for this block
           if(nStage==2) iStage_B(iBlock) = 3 - iStage
@@ -319,8 +319,8 @@ contains
   subroutine set_local_time_step(TimeSimulationLimit)
 
     use ModGeometry,   ONLY: Used_GB, IsNoBody_B, CellSize1Min, CellSize1Max
-    use ModMain,       ONLY: tSimulation, Cfl, Dt_B
-    use ModAdvance,    ONLY: time_BLK
+    use ModMain,       ONLY: tSimulation, Cfl, DtMax_B
+    use ModAdvance,    ONLY: DtMax_CB
     use BATL_lib,      ONLY: CellSize_DB, Unused_B
     use ModPhysics,    ONLY: No2Si_V, UnitT_, Si2No_V
     use ModMpi
@@ -340,7 +340,7 @@ contains
          TimeSimulationLimit
 
     ! Find the smallest value of Dt_stable/Dx in the whole domain
-    DtDxMinPe = minval(Dt_B(1:nBlock)/CellSize_DB(1,1:nBlock), &
+    DtDxMinPe = minval(DtMax_B(1:nBlock)/CellSize_DB(1,1:nBlock), &
          MASK=.not.Unused_B(1:nBlock))
 
     call MPI_allreduce(DtDxMinPe, DtDxMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
@@ -359,24 +359,24 @@ contains
        DtMaxSi = DtMinSi
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          Dt_B(iBlock) = DtMinSi/Cfl * Si2No_V(UnitT_)
+          DtMax_B(iBlock) = DtMinSi/Cfl * Si2No_V(UnitT_)
        enddo
     else
        ! Set the block time step (without Cfl) proportional to refinement level
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          Dt_B(iBlock) = CellSize_DB(1,iBlock)*DtDxMin
+          DtMax_B(iBlock) = CellSize_DB(1,iBlock)*DtDxMin
        enddo
     end if
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       time_BLK(:,:,:,iBlock) = Dt_B(iBlock)
+       DtMax_CB(:,:,:,iBlock) = DtMax_B(iBlock)
 
        ! Reset time step to zero inside body.
        if(.not.IsNoBody_B(iBlock))then
           where(.not.Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
-               time_BLK(:,:,:,iBlock) = 0.0
+               DtMax_CB(:,:,:,iBlock) = 0.0
        end if
     enddo
 

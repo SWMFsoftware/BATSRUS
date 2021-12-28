@@ -85,7 +85,7 @@ contains
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModIO,        ONLY: iUnitOut, write_prefix
     use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
-    use ModAdvance,   ONLY: FluxType, UseEfield, iTypeUpdate
+    use ModAdvance,   ONLY: TypeFlux, UseEfield, iTypeUpdate
     use ModGeometry,  ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, CellSizeMin, CellSizeMax, &
          nUsedCell, count_true_cells
     use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, &
@@ -266,7 +266,7 @@ contains
     end if
 
     call write_prefix
-    write(iUnitOut,'(10X,a,a)') trim(FluxType),' flux function'
+    write(iUnitOut,'(10X,a,a)') trim(TypeFlux),' flux function'
     if(UseNeutralFluid)then
        call write_prefix
        write(iUnitOut,'(10X,a,a)') trim(TypeFluxNeutral), &

@@ -51,7 +51,7 @@ contains
     iGang = iBlock
 #endif
 
-    time_BLK(:,:,:,iBlock) = 0.0
+    DtMax_CB(:,:,:,iBlock) = 0.0
 
     Flux_VXI(:,:,:,:,iGang) = 0.0
     Flux_VYI(:,:,:,:,iGang) = 0.0

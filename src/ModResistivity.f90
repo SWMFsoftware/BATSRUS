@@ -495,7 +495,7 @@ contains
     use ModGeometry,   ONLY: Used_GB
     use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
-    use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure, UseAnisoPe
+    use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, UseAnisoPe
 
     real :: DtLocal
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
@@ -523,7 +523,7 @@ contains
           DoTestCell = DoTest .and. iBlock == iBlockTest .and. &
                i == iTest .and. j == jTest .and. k == kTest
 
-          DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+          DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
 
           ! For single ion fluid the ion-electron collision results in a
           ! heat exchange term for the electron pressure

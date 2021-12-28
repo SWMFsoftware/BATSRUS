@@ -1568,12 +1568,12 @@ contains
           if(nOrder > 4) nStage = 3
           UseHalfStep = nStage <= 2
 
-          call read_var('TypeFlux',FluxType, IsUpperCase=.true.)
+          call read_var('TypeFlux',TypeFlux, IsUpperCase=.true.)
           ! For 5-moment equation all schemes are equivalent with Rusanov
-          if(UseEfield) FluxType = 'RUSANOV'
+          if(UseEfield) TypeFlux = 'RUSANOV'
 
           BetaLimiter = 1.0
-          if(nOrder > 1 .and. FluxType /= "SIMPLE")then
+          if(nOrder > 1 .and. TypeFlux /= "SIMPLE")then
              call read_var('TypeLimiter', TypeLimiter)
              if(TypeLimiter /= 'minmod') &
                   call read_var('LimiterBeta', BetaLimiter)
@@ -1646,8 +1646,8 @@ contains
        case("#UPDATECHECK")
           call read_var("UseUpdateCheck",UseUpdateCheck)
           if(UseUpdateCheck)then
-             call read_var("RhoMinPercent", percent_max_rho(1))
-             call read_var("RhoMaxPercent", percent_max_rho(2))
+             call read_var("RhoMinPercent", PercentRhoLimit_I(1))
+             call read_var("RhoMaxPercent", PercentRhoLimit_I(2))
              call read_var("pMinPercent",   percent_max_p(1))
              call read_var("pMaxPercent",   percent_max_p(2))
           end if
@@ -2920,7 +2920,7 @@ contains
       dt            = 0.0
 
       nOrder = 2
-      FluxType = 'RUSANOV'
+      TypeFlux = 'RUSANOV'
 
       ! Default implicit parameters
       UseImplicit      = .false.
@@ -3135,39 +3135,39 @@ contains
       end if
 
       ! Check flux type selection
-      select case(FluxType)
+      select case(TypeFlux)
       case('SIMPLE','Simple')
-         FluxType='Simple'
+         TypeFlux='Simple'
       case('ROE','Roe')
-         FluxType='Roe'
+         TypeFlux='Roe'
       case('ROEOLD','RoeOld')
-         FluxType='RoeOld'
+         TypeFlux='RoeOld'
       case('RUSANOV','TVDLF','Rusanov')
-         FluxType='Rusanov'
+         TypeFlux='Rusanov'
       case('LINDE','HLLEL','Linde')
-         FluxType='Linde'
+         TypeFlux='Linde'
       case('SOKOLOV','AW','Sokolov')
-         FluxType='Sokolov'
+         TypeFlux='Sokolov'
       case('GODUNOV','Godunov')
-         FluxType='Godunov'
+         TypeFlux='Godunov'
       case('HLLD', 'HLLDW', 'LFDW', 'HLLC')
       case default
          if(iProc==0)then
             write(*,'(a)')NameSub // &
-                 'WARNING: unknown value for FluxType=' // trim(FluxType)
+                 'WARNING: unknown value for TypeFlux=' // trim(TypeFlux)
             if(UseStrict) &
                  call stop_mpi('Correct PARAM.in!')
-            write(*,*)'setting FluxType=Rusanov'
+            write(*,*)'setting TypeFlux=Rusanov'
          end if
-         FluxType='Rusanov'
+         TypeFlux='Rusanov'
       end select
 
       ! Set flux type for neutral fluids
       select case(TypeFluxNeutral)
       case('default')
-         select case(FluxType)
+         select case(TypeFlux)
          case('Rusanov','Linde','Sokolov','Godunov','HLLDW','LFDW','HLLC')
-            TypeFluxNeutral = FluxType
+            TypeFluxNeutral = TypeFlux
          case default
             TypeFluxNeutral = 'Linde'
          end select
@@ -3194,7 +3194,7 @@ contains
       ! Check flux type selection for implicit
       select case(FluxTypeImpl)
       case('default')
-         FluxTypeImpl = FluxType
+         FluxTypeImpl = TypeFlux
       case('ROE','Roe')
          FluxTypeImpl='Roe'
       case('ROEOLD','RoeOld')
@@ -3214,14 +3214,14 @@ contains
                  ' WARNING: Unknown value for FluxTypeImpl='// &
                  trim(FluxTypeImpl)//' !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
-            write(*,*)NameSub//' setting FluxTypeImpl=',trim(FluxType)
+            write(*,*)NameSub//' setting FluxTypeImpl=',trim(TypeFlux)
          end if
-         FluxTypeImpl=FluxType
+         FluxTypeImpl=TypeFlux
       end select
 
       ! Check flux types
-      if( (FluxType(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe' .or. &
-           FluxType=='HLLD' .or.  FluxTypeImpl=='HLLD') .and. &
+      if( (TypeFlux(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe' .or. &
+           TypeFlux=='HLLD' .or.  FluxTypeImpl=='HLLD') .and. &
            (UseMultiIon .or. UseAlfvenWaves .or. UseWavePressure &
            .or. .not.UseB) )then
          if (iProc == 0) then
@@ -3230,13 +3230,13 @@ contains
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
             write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
          end if
-         if(FluxType(1:3)=='Roe' .or. FluxType=='HLLD') &
-              FluxType     = 'Linde'
+         if(TypeFlux(1:3)=='Roe' .or. TypeFlux=='HLLD') &
+              TypeFlux     = 'Linde'
          if(FluxTypeImpl(1:3)=='Roe' .or. FluxTypeImpl=='HLLD') &
               FluxTypeImpl = 'Linde'
       end if
 
-      if((FluxType=='Godunov' .or. FluxTypeImpl=='Godunov') &
+      if((TypeFlux=='Godunov' .or. FluxTypeImpl=='Godunov') &
            .and. UseB)then
          if (iProc == 0) then
             write(*,'(a)')NameSub//&
@@ -3244,7 +3244,7 @@ contains
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
             write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
          end if
-         if(FluxType=='Godunov')     FluxType     = 'Linde'
+         if(TypeFlux=='Godunov')     TypeFlux     = 'Linde'
          if(FluxTypeImpl=='Godunov') FluxTypeImpl = 'Linde'
       end if
 
@@ -3375,7 +3375,7 @@ contains
       end if
 
       ! Boris correction checks
-      if((FluxType(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe') &
+      if((TypeFlux(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe') &
            .and. UseBorisCorrection)then
          if (iProc == 0) then
             write(*,'(a)')NameSub//&

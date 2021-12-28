@@ -12,7 +12,7 @@ module ModRestartFile
        restart, save_restart_file
   use ModMain,       ONLY: &
        nBlockAll,      &
-       nStep, tSimulation, Dt_B, Cfl, CodeVersion, nByteReal, &
+       nStep, tSimulation, DtMax_B, Cfl, CodeVersion, nByteReal, &
        NameThisComp, nIteration, DoThinCurrentSheet, NameVarCouple
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
   use ModAdvance,    ONLY: State_VGB
@@ -203,7 +203,7 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    !$acc update host(Dt_B)
+    !$acc update host(DtMax_B)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
@@ -265,7 +265,7 @@ contains
 
     if(DoTest .and. iProc==iProcTest)then
        write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
-       write(*,*)NameSub,': dt, TrueCell   =',Dt_B(iBlockTest), &
+       write(*,*)NameSub,': dt, TrueCell   =',DtMax_B(iBlockTest), &
             Used_GB(iTest,jTest,kTest,iBlockTest)
        write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
        write(*,*)NameSub,': Coord111_DB   =',Coord111_DB(:,iBlockTest)
@@ -356,7 +356,7 @@ contains
 
     if(DoTest .and. iProc==iProcTest)then
        write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
-       write(*,*)NameSub,': dt             =',Dt_B(iBlockTest)
+       write(*,*)NameSub,': dt             =',DtMax_B(iBlockTest)
        write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
        write(*,*)NameSub,': Coord111_DB   =',Coord111_DB(:,iBlockTest)
        write(*,*)NameSub,': State_VGB      =', &
@@ -364,7 +364,7 @@ contains
        write(*,*)NameSub,' finished'
     end if
 
-    !$acc update device(Dt_B)
+    !$acc update device(DtMax_B)
 
     call test_stop(NameSub, DoTest)
   end subroutine read_restart_files
@@ -719,7 +719,7 @@ contains
     ! Do not overwrite tSimulation which is read from header file
     if(nByteRealRead == 8)then
        read(UnitTmp_, iostat = iError) Dt8, Time8
-       Dt_B(iBlock) = Dt8
+       DtMax_B(iBlock) = Dt8
        tSimulationRead   = Time8
 
        read(UnitTmp_, iostat = iError) Dxyz8_D, Xyz8_D
@@ -746,7 +746,7 @@ contains
        end if
     else
        read(UnitTmp_, iostat = iError) Dt4, Time4
-       Dt_B(iBlock) = Dt4
+       DtMax_B(iBlock) = Dt4
        tSimulationRead   = Time4
 
        read(UnitTmp_, iostat = iError) Dxyz4_D, Xyz4_D
@@ -778,14 +778,14 @@ contains
     call close_file
 
     if(CodeVersion>5.60 .and. CodeVersion <7.00) &
-         Dt_B(iBlock)=Dt_B(iBlock)/cfl
+         DtMax_B(iBlock)=DtMax_B(iBlock)/cfl
 
     if(any(CellSize_DB(:,iBlock) < 0  &
-         .or. Dt_B(iBlock) < 0 .or. tSimulationRead < 0))then
+         .or. DtMax_B(iBlock) < 0 .or. tSimulationRead < 0))then
        write(*,*)NameSub,': corrupt restart data!!!'
        write(*,*)'iBlock  =', iBlock
        write(*,*)'Dxyz    =', CellSize_DB(:,iBlock)
-       write(*,*)'Dt,tSim =', Dt_B(iBlock), tSimulationRead
+       write(*,*)'Dt,tSim =', DtMax_B(iBlock), tSimulationRead
        write(*,*)'XyzStart=', Coord111_DB(:,iBlock)
        write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
        call stop_mpi(NameSub//': corrupt restart data!!!')
@@ -793,7 +793,7 @@ contains
 
     if(DoTest)then
        write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
-       write(*,*)NameSub,': dt,tSimRead =',Dt_B(iBlock),tSimulationRead
+       write(*,*)NameSub,': dt,tSimRead =',DtMax_B(iBlock),tSimulationRead
        write(*,*)NameSub,': dx,dy,dz_BLK=', CellSize_DB(:,iBlock)
        write(*,*)NameSub,': Coord111_DB=',Coord111_DB(:,iBlock)
        write(*,*)NameSub,': StateRead_VCB   =', &
@@ -828,7 +828,7 @@ contains
 
     call open_file(file=NameFile, form='UNFORMATTED', NameCaller=NameSub)
 
-    write(UnitTmp_) Dt_B(iBlock),tSimulation
+    write(UnitTmp_) DtMax_B(iBlock),tSimulation
     write(UnitTmp_) CellSize_DB(:,iBlock), Coord111_DB(:,iBlock)
     write(UnitTmp_) &
          ( State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock), iVar=1,nVar)
@@ -866,11 +866,11 @@ contains
     ! Calculate the record length for the first block
     if (DoRead) then
        inquire (IOLENGTH = lRecord ) &
-            Dt_B(1), CellSize_DB(:,1), Coord111_DB(:,1), &
+            DtMax_B(1), CellSize_DB(:,1), Coord111_DB(:,1), &
             StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,1)
     else
        inquire (IOLENGTH = lRecord ) &
-            Dt_B(1), CellSize_DB(:,1), Coord111_DB(:,1), &
+            DtMax_B(1), CellSize_DB(:,1), Coord111_DB(:,1), &
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,1)
     end if
 
@@ -997,7 +997,7 @@ contains
           if(.not.IsRead) &
                read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC
 
-          Dt_B(iBlock) = Dt4
+          DtMax_B(iBlock) = Dt4
           CellSize_DB(:,iBlock)  = Dxyz4_D
           Coord111_DB(:,iBlock) = Xyz4_D
           StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,iBlock) = State4_VC
@@ -1028,17 +1028,17 @@ contains
           if(.not.IsRead) &
                read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC
 
-          Dt_B(iBlock) = Dt8
+          DtMax_B(iBlock) = Dt8
           CellSize_DB(:,iBLock) = Dxyz8_D
           Coord111_DB(:,iBlock) = Xyz8_D
           StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,iBlock) = State8_VC
        end if
 
-       if(any(CellSize_DB(:,iBLock) < 0) .or. Dt_B(iBlock) < 0)then
+       if(any(CellSize_DB(:,iBLock) < 0) .or. DtMax_B(iBlock) < 0)then
           write(*,*)NameSub,': corrupt restart data!!!'
           write(*,*)'iBlock  =', iBlock
           write(*,*)'Dxyz    =', CellSize_DB(:,iBLock)
-          write(*,*)'Dt      =', Dt_B(iBlock)
+          write(*,*)'Dt      =', DtMax_B(iBlock)
           write(*,*)'XyzStart=', Coord111_DB(:,iBlock)
           write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
           call stop_mpi(NameSub//': corrupt restart data!!!')
@@ -1088,7 +1088,7 @@ contains
 
        if(UseConstrainB)then
           ! Save face centered magnetic field
-          write(UnitTmp_, rec=iRec)  Dt_B(iBlock),&
+          write(UnitTmp_, rec=iRec)  DtMax_B(iBlock),&
                CellSize_DB(:,iBLock), &
                Coord111_DB(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
@@ -1100,7 +1100,7 @@ contains
        if(n_prev==nStep)then
           ! Save previous time step for sake of BDF2 scheme
           write(UnitTmp_, rec=iRec) &
-               Dt_B(iBlock), &
+               DtMax_B(iBlock), &
                CellSize_DB(:,iBLock), &
                Coord111_DB(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
@@ -1109,7 +1109,7 @@ contains
        endif
 
        write(UnitTmp_, rec=iRec) &
-            Dt_B(iBlock), &
+            DtMax_B(iBlock), &
             CellSize_DB(:,iBLock), &
             Coord111_DB(:,iBlock), &
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)

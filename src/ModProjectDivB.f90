@@ -767,7 +767,7 @@ contains
   !
   subroutine proj_cg(rhs,qx,iter,tol,typestop,info)
     use ModMain, ONLY:MaxBlock
-    use ModAdvance, ONLY: tmp1_BLK, tmp2_BLK
+    use ModAdvance, ONLY: Tmp1_GB, Tmp2_GB
 
     ! Arguments
 
@@ -849,28 +849,28 @@ contains
     if (res0<divbmin .or. (typestop/='rel'.and.res0<=tol)) then
        info = 3
     else
-       ! Initialize rho and tmp1_BLK=Z
+       ! Initialize rho and Tmp1_GB=Z
        rho=rho*rho
-       call eq_BLK(tmp1_BLK,rhs)
+       call eq_BLK(Tmp1_GB,rhs)
 
        ! Do iteration
        do
           ! AZ=A.Z
-          call proj_matvec(tmp1_BLK,tmp2_BLK)
+          call proj_matvec(Tmp1_GB,Tmp2_GB)
           matv=matv+1
 
           ! Debug
-          ! write(*,*)'Z =tmp1_BLK=',tmp1_BLK(:,:,:,1:2)
-          ! write(*,*)'AZ=tmp2_BLK=',tmp2_BLK(:,:,:,1:2)
+          ! write(*,*)'Z =Tmp1_GB=',Tmp1_GB(:,:,:,1:2)
+          ! write(*,*)'AZ=Tmp2_GB=',Tmp2_GB(:,:,:,1:2)
           ! call stop_mpi('Debug')
 
           ! alf=A.AZ
-          alf=dot_product_BLK(tmp1_BLK,tmp2_BLK)
+          alf=dot_product_BLK(Tmp1_GB,Tmp2_GB)
 
           if(DoTest)write(*,*)'alf=',alf
           ! Debug
-          ! call show_BLK('Z',tmp1_BLK)
-          ! call show_BLK('AZ',tmp2_BLK)
+          ! call show_BLK('Z',Tmp1_GB)
+          ! call show_BLK('AZ',Tmp2_GB)
           ! call stop_mpi('Debug')
           if (abs(alf)<=assumedzero**2) then
              info = 1
@@ -879,8 +879,8 @@ contains
           alf=rho/alf
           if(DoTest)write(*,*)'alf=',alf
 
-          call add_times_BLK(qx,alf,tmp1_BLK)
-          call add_times_BLK(rhs,-alf,tmp2_BLK)
+          call add_times_BLK(qx,alf,Tmp1_GB)
+          call add_times_BLK(rhs,-alf,Tmp2_GB)
 
           ! rhonew=||rhs||
           rhonew=sqrt(dot_product_BLK(rhs,rhs))
@@ -918,7 +918,7 @@ contains
           bet=rhonew/rho
           if(DoTest)write(*,*)'bet=',bet
 
-          call eq_plus_times_BLK(tmp1_BLK,rhs,bet,tmp1_BLK)
+          call eq_plus_times_BLK(Tmp1_GB,rhs,bet,Tmp1_GB)
 
           if (DoTest) write(*,*)'alf,bet,rho,rhonew:',alf,bet,rho,rhonew
           rho=rhonew
@@ -986,7 +986,7 @@ contains
   !
   subroutine proj_bicgstab(rhs,qx,iter,tol,typestop,info)
     use ModMain, ONLY:MaxBlock
-    use ModAdvance, ONLY : tmp1_BLK,tmp2_BLK
+    use ModAdvance, ONLY : Tmp1_GB,Tmp2_GB
 
     ! Arguments
 
@@ -1036,7 +1036,7 @@ contains
 
     integer, parameter :: qz_=1,zz_=3,y0_=5,yl_=6,qy_=7
 
-    ! Local variables (2 vectors are needed in addition to tmp1_BLK=r and tmp2_BLK=u:
+    ! Local variables (2 vectors are needed in addition to Tmp1_GB=r and Tmp2_GB=u:
 
     real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock):: &
          bicg_r1, bicg_u1
@@ -1066,7 +1066,7 @@ contains
     !     --- Initialize first residual
     !
     assumedzero = 1.e-16
-    call eq_BLK(tmp1_BLK,rhs)
+    call eq_BLK(Tmp1_GB,rhs)
     call set_BLK(qx,0.0)
 
     nmv = 0
@@ -1074,7 +1074,7 @@ contains
     !     --- Initialize iteration loop
     !
 
-    rnrm0 = sqrt( dot_product_BLK(tmp1_BLK,tmp1_BLK))
+    rnrm0 = sqrt( dot_product_BLK(Tmp1_GB,Tmp1_GB))
 
     rnrm = rnrm0
     if(DoTest) print *,'initial rnrm:',rnrm
@@ -1105,7 +1105,7 @@ contains
        rnrmMax0 = 0
 
     case('max')
-       rnrmMax0 = maxval_grid(tmp1_BLK, UseAbs=.true.)
+       rnrmMax0 = maxval_grid(Tmp1_GB, UseAbs=.true.)
        rnrmMax  = rnrmMax0
        if(DoTest) print *,'initial rnrmMax:',rnrmMax
        GoOn = rnrmMax>tol    .and. nmv<iter
@@ -1129,7 +1129,7 @@ contains
        !
        rho0 = -omega*rho0
 
-       rho1 = dot_product_BLK(rhs,tmp1_BLK)
+       rho1 = dot_product_BLK(rhs,Tmp1_GB)
 
        if (abs(rho0)<assumedzero**2) then
           info = 1
@@ -1137,13 +1137,13 @@ contains
        endif
        beta = alpha*(rho1/rho0)
        rho0 = rho1
-       call eq_plus_times_BLK(tmp2_BLK,tmp1_BLK,-beta,tmp2_BLK)
+       call eq_plus_times_BLK(Tmp2_GB,Tmp1_GB,-beta,Tmp2_GB)
 
-       call proj_matvec(tmp2_BLK,bicg_u1)
+       call proj_matvec(Tmp2_GB,bicg_u1)
        nmv = nmv+1
 
        ! DEBUG
-       ! write(*,*)'u =',tmp2_BLK(1:nI,1:nJ,1:nK,iBlockTest)
+       ! write(*,*)'u =',Tmp2_GB(1:nI,1:nJ,1:nK,iBlockTest)
        ! write(*,*)'u1=',bicg_u1(1:nI,1:nJ,1:nK,iBlockTest)
 
        sigma=dot_product_BLK(rhs,bicg_u1)
@@ -1154,14 +1154,14 @@ contains
        endif
 
        alpha = rho1/sigma
-       call add_times_BLK(qx,alpha,tmp2_BLK)
+       call add_times_BLK(qx,alpha,Tmp2_GB)
 
-       call add_times_BLK(tmp1_BLK,-alpha,bicg_u1)
+       call add_times_BLK(Tmp1_GB,-alpha,bicg_u1)
 
-       call proj_matvec(tmp1_BLK,bicg_r1)
+       call proj_matvec(Tmp1_GB,bicg_r1)
        nmv = nmv+1
 
-       rnrm = sqrt( dot_product_BLK(tmp1_BLK,tmp1_BLK) )
+       rnrm = sqrt( dot_product_BLK(Tmp1_GB,Tmp1_GB) )
 
        mxnrmx = max (mxnrmx, rnrm)
        mxnrmr = max (mxnrmr, rnrm)
@@ -1177,10 +1177,10 @@ contains
        !
        !    --- Z = R'R a 2 by 2 matrix
        ! i=1,j=0
-       rwork(1,1) = dot_product_BLK(tmp1_BLK,tmp1_BLK)
+       rwork(1,1) = dot_product_BLK(Tmp1_GB,Tmp1_GB)
 
        ! i=1,j=1
-       rwork(2,1) = dot_product_BLK(bicg_r1,tmp1_BLK)
+       rwork(2,1) = dot_product_BLK(bicg_r1,Tmp1_GB)
        rwork(1,2) = rwork(2,1)
 
        ! i=2,j=1
@@ -1220,11 +1220,11 @@ contains
        !
        omega = rwork(2,y0_)
 
-       call add_times_BLK(tmp2_BLK,-omega,bicg_u1)
+       call add_times_BLK(Tmp2_GB,-omega,bicg_u1)
 
-       call add_times_BLK(qx,omega,tmp1_BLK)
+       call add_times_BLK(qx,omega,Tmp1_GB)
 
-       call add_times_BLK(tmp1_BLK,-omega,bicg_r1)
+       call add_times_BLK(Tmp1_GB,-omega,bicg_r1)
 
        rwork(1:2,qy_) = rwork(1,y0_)*rwork(1:2,qz_) + &
             rwork(2,y0_)*rwork(1:2,qz_+1)
@@ -1241,7 +1241,7 @@ contains
           if(DoTest) print *, nmv,' matvecs, ||rn|| =',rnrm
 
        case('max')
-          rnrmMax = maxval_grid(tmp1_BLK, UseAbs=.true.)
+          rnrmMax = maxval_grid(Tmp1_GB, UseAbs=.true.)
           GoOn = rnrmMax > tol  .and. nmv < iter
           if(DoTest) print *, nmv,' matvecs, max(rn) =',rnrmMax
        end select

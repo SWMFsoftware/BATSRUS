@@ -770,7 +770,7 @@ contains
     use ModGeometry,   ONLY: Used_GB
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
-    use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure, &
+    use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, &
                              UseIdealEos
     use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon
     use ModUserInterface ! user_material_properties
@@ -817,7 +817,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-          DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+          DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
           ! We apply the energy exchange rate for temperature,
           ! Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
           ! For a hydrogen only, for ideal EOS only
@@ -862,7 +862,7 @@ contains
 
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
-         UseAnisoPressure, time_BLK, Source_VCB
+         UseAnisoPressure, DtMax_CB, Source_VCB
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
     use ModImplicit,     ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
          iTeImpl
@@ -1030,7 +1030,7 @@ contains
                   CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           end if
 
-          if(.not.IsTimeAccurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+          if(.not.IsTimeAccurate) DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
 
           if(UseElectronPressure .and. .not.UseMultiIon)then
              Cvi = InvGammaElectronMinus1*Natomic
@@ -1481,7 +1481,7 @@ contains
     ! of the extremely advanced PGF90 12.9 compiler
 
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
-         UseAnisoPressure, time_BLK
+         UseAnisoPressure, DtMax_CB
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, ExtraEint_, Ehot_
     use ModGeometry, ONLY: Used_GB
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
@@ -1564,7 +1564,7 @@ contains
 
        ! update ion pressure for energy exchange between ions and electrons
        if(UseElectronPressure .and. .not.UseMultiIon)then
-          if(.not.IsTimeAccurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+          if(.not.IsTimeAccurate) DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
           Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
                + DtLocal*PointCoef_CB(i,j,k,iBlock) &
                *(NewSemiAll_VC(iTeImpl,i,j,k) - PointImpl_VCB(1,i,j,k,iBlock))

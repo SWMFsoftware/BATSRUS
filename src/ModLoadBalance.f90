@@ -458,13 +458,13 @@ contains
                 ! for the other block type criteria.
                 iType = iType + iSubCycleBlock*iTimeLevel_A(iNode_B(iBlock))
 
-                if(Dt_B(iBlock) < DtMin .or. iType > iTypeMax)then
+                if(DtMax_B(iBlock) < DtMin .or. iType > iTypeMax)then
                    write(*,*) NameSub,' ERROR for iBlock, iProc=', &
                         iBlock, iProc
                    write(*,*) NameSub,'iType, iTypeMax =', iType, iTypeMax
                    write(*,*) NameSub,' iSubCycleBlock =', iSubCycleBlock
                    write(*,*) NameSub,' DtMin, DtMax   =', DtMin, DtMax
-                   write(*,*) NameSub,' Dt_B         =', Dt_B(iBlock)
+                   write(*,*) NameSub,' DtMax_B         =', DtMax_B(iBlock)
                    write(*,*) NameSub,' time level     =', &
                         iTimeLevel_A(iNode_B(iBlock))
                 end if
@@ -524,7 +524,7 @@ contains
        if(DoMoveData)then
           call init_load_balance
 
-          call regrid_batl(nVar, State_VGB, Dt_B,  &
+          call regrid_batl(nVar, State_VGB, DtMax_B,  &
                DoBalanceEachLevelIn= &
                (UseLocalTimeStep .and. .not.UseMaxTimeStep), &
                iTypeBalance_A=iTypeBalance_A,        &
@@ -538,7 +538,7 @@ contains
           call set_batsrus_grid
           call set_batsrus_state
        else
-          call regrid_batl(nVar, State_VGB, Dt_B, Used_GB=Used_GB, &
+          call regrid_batl(nVar, State_VGB, DtMax_B, Used_GB=Used_GB, &
                iTypeBalance_A=iTypeBalance_A, iTypeNode_A=iTypeAdvance_A,&
                DoTestIn=DoTest)
           call set_batsrus_grid
@@ -685,8 +685,8 @@ contains
 
              ! Obtain the time step based on CFL condition
 
-             ! For first iteration calculate Dt_B when inside time loop,
-             ! otherwise use the available Dt_B from previous time step,
+             ! For first iteration calculate DtMax_B when inside time loop,
+             ! otherwise use the available DtMax_B from previous time step,
              ! or from the restart file, or simply 0 set in read_inputs.
              ! The latter two choices will be overruled later anyways.
              if(nStep==1 .and. IsTimeLoop)then
@@ -700,13 +700,13 @@ contains
 
              ! If the smallest allowed timestep is below the fixed DtFixed
              ! then only implicit scheme will work
-             if(Dt_B(iBlock)*explCFL <= DtFixed) &
+             if(DtMax_B(iBlock)*explCFL <= DtFixed) &
                   iTypeAdvance_B(iBlock) = ImplBlock_
           end do
 
           if(DoTest)write(*,*)&
-               'SELECT: advancetype,Dt_B,explCFL,dt=',&
-               iTypeAdvance_B(iBlockTest),Dt_B(iBlockTest),explCFL,dt
+               'SELECT: advancetype,DtMax_B,explCFL,dt=',&
+               iTypeAdvance_B(iBlockTest),DtMax_B(iBlockTest),explCFL,dt
 
        case('r','R')
           ! implicitly treated blocks are within rImplicit and not Unused

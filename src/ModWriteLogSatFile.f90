@@ -31,7 +31,7 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY: State_VGB, tmp1_BLK
+    use ModAdvance, ONLY: State_VGB, Tmp1_GB
     use ModPhysics, ONLY: Si2Io_V, Si2No_V, UnitT_
     use ModIO
     use ModIoUnit, ONLY   : io_unit_new
@@ -103,17 +103,17 @@ contains
     if(iSatIn == 0 .and. ( index(StringTest,'show_pmin')>0 .or. &
          index(StringTest,'show_pmax')>0 ) ) then
 
-       tmp1_BLK(1:nI,1:nJ,1:nK,1:nBlock) &
+       Tmp1_GB(1:nI,1:nJ,1:nK,1:nBlock) &
             = State_VGB(P_,1:nI,1:nJ,1:nK,1:nBlock)
 
        if(index(StringTest,'show_pmin')>0)then
-          pMin = minval_grid(tmp1_BLK, iLoc_I=loc)
+          pMin = minval_grid(Tmp1_GB, iLoc_I=loc)
           if(loc(5)==iProc)write(*,*)'pmin, loc, x, y, z=',pmin,loc, &
                Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
        end if
 
        if(index(StringTest,'show_pmax')>0)then
-          pMax = maxval_grid(tmp1_BLK, iLoc_I=loc)
+          pMax = maxval_grid(Tmp1_GB, iLoc_I=loc)
           if(loc(5)==iProc)write(*,*)'pmax, loc, x, y, z=',pmax,loc, &
                Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
 
@@ -391,7 +391,7 @@ contains
     use ModPhysics, ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
          ElectronPressureRatio, InvGammaElectronMinus1
     use ModVarIndexes
-    use ModAdvance,  ONLY: tmp1_BLK, tmp2_BLK, State_VGB, DivB1_GB
+    use ModAdvance,  ONLY: Tmp1_GB, Tmp2_GB, State_VGB, DivB1_GB
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
     use ModGeometry, ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, DomainVolume
@@ -446,8 +446,8 @@ contains
     end if
 
     LogVar_I = 0.0
-    tmp1_BLK = 1.0
-    DomainVolume  =integrate_grid(tmp1_BLK, UseGlobal=.true.)
+    Tmp1_GB = 1.0
+    DomainVolume  =integrate_grid(Tmp1_GB, UseGlobal=.true.)
 
     ! Obtain data to calculate log variables
     if(iSat>=1)then
@@ -486,7 +486,7 @@ contains
           call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
           select case(NameLogVar)
           case('rho','rhoux','rhouy','rhouz','bx','by','bz','p','pmin','pmax')
-             call integrate_domain(StateIntegral_V, tmp2_BLK)
+             call integrate_domain(StateIntegral_V, Tmp2_GB)
              EXIT
           end select
        end do
@@ -582,19 +582,19 @@ contains
       case('e')
          do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
-            call get_fluid_energy_block(iBlock, iFluid, tmp1_BLK(:,:,:,iBlock))
+            call get_fluid_energy_block(iBlock, iFluid, Tmp1_GB(:,:,:,iBlock))
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('pmin')
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = minval_grid(tmp2_BLK)/nProc
+         LogVar_I(iVarTot) = minval_grid(Tmp2_GB)/nProc
       case('pmax')
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = maxval_grid(tmp2_BLK)/nProc
+         LogVar_I(iVarTot) = maxval_grid(Tmp2_GB)/nProc
       case('urmin')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  ( State_VGB(iRhoUx, 1:nI,1:nJ,1:nK,iBlock)   &
                  * Xyz_DGB(       x_,1:nI,1:nJ,1:nK,iBlock)   &
                  + State_VGB(iRhoUy, 1:nI,1:nJ,1:nK,iBlock)   &
@@ -605,11 +605,11 @@ contains
                  / r_GB(1:nI,1:nJ,1:nK,iBlock)
          end do
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = minval_grid(tmp1_BLK)/nProc
+         LogVar_I(iVarTot) = minval_grid(Tmp1_GB)/nProc
       case('urmax')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  ( State_VGB(iRhoUx, 1:nI,1:nJ,1:nK,iBlock)   &
                  * Xyz_DGB(       x_,1:nI,1:nJ,1:nK,iBlock)   &
                  + State_VGB(iRhoUy, 1:nI,1:nJ,1:nK,iBlock)   &
@@ -620,105 +620,105 @@ contains
                  / r_GB(1:nI,1:nJ,1:nK,iBlock)
          end do
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = maxval_grid(tmp1_BLK)/nProc
+         LogVar_I(iVarTot) = maxval_grid(Tmp1_GB)/nProc
       case('ux')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock) / &
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('uy')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock) / &
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('uz')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock) / &
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('pperp')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  ( 3*State_VGB(iP,1:nI,1:nJ,1:nK,iBlock) &
                  -State_VGB(iPpar,1:nI,1:nJ,1:nK,iBlock) )/2
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('ekinx')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)**2/&
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('ekiny')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)**2/&
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('ekinz')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2/&
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('ekin')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  (State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)**2+&
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)**2+&
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2)&
                  /State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('eth')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = InvGammaMinus1_I(iFluid)*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = InvGammaMinus1_I(iFluid)*integrate_grid(Tmp1_GB)/DomainVolume
       case('eeth')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = State_VGB(Pe_,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(Pe_,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = InvGammaElectronMinus1*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = InvGammaElectronMinus1*integrate_grid(Tmp1_GB)/DomainVolume
       case('eb')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
             if(UseB0)then
                do k = 1, nK; do j=1, nJ; do i=1, nI
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                     ( (State_VGB(Bx_,i,j,k,iBlock) + B0_DGB(1,i,j,k,iBlock))**2 &
                     + (State_VGB(By_,i,j,k,iBlock) + B0_DGB(2,i,j,k,iBlock))**2 &
                     + (State_VGB(Bz_,i,j,k,iBlock) + B0_DGB(3,i,j,k,iBlock))**2 )
                end do; end do; end do
             else
                do k = 1, nK; do j=1, nJ; do i=1, nI
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        ( State_VGB(Bx_,i,j,k,iBlock)**2 &
                        + State_VGB(By_,i,j,k,iBlock)**2 &
                        + State_VGB(Bz_,i,j,k,iBlock)**2 )
                end do; end do; end do
             end if
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
 
       case('jin','jout','jinmax','joutmax')
 
@@ -733,37 +733,37 @@ contains
             do k=1,nK; do j=1,nJ; do i=1,nI
                ! Calculate radial current
                call get_current(i,j,k,iBlock,Current_D)
-               tmp1_BLK(i,j,k,iBlock) = &
+               Tmp1_GB(i,j,k,iBlock) = &
                     sum(Current_D*Xyz_DGB(:,i,j,k,iBlock))/r_GB(i,j,k,iBlock)
             end do; end do; end do
          end do
 
-         call message_pass_cell(tmp1_BLK, nWidthIn=1)
+         call message_pass_cell(Tmp1_GB, nWidthIn=1)
 
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             ! now modify tmp1 according to the case we want
             select case(NameLogVar)
             case('jin')
-               tmp1_BLK(:,:,:,iBlock) = min(tmp1_BLK(:,:,:,iBlock), 0.0)
+               Tmp1_GB(:,:,:,iBlock) = min(Tmp1_GB(:,:,:,iBlock), 0.0)
             case('jout')
-               tmp1_BLK(:,:,:,iBlock) = max(tmp1_BLK(:,:,:,iBlock), 0.0)
+               Tmp1_GB(:,:,:,iBlock) = max(Tmp1_GB(:,:,:,iBlock), 0.0)
             end select
          end do
          select case(NameLogVar)
          case('jin','jout')
             LogVar_I(iVarTot) = &
-                 calc_sphere('integrate', 180, rCurrents, tmp1_BLK) &
+                 calc_sphere('integrate', 180, rCurrents, Tmp1_GB) &
                  /(4*cPi*rCurrents**2)
          case('jinmax')
-            Value = calc_sphere('minval',180,rCurrents,tmp1_BLK)
+            Value = calc_sphere('minval',180,rCurrents,Tmp1_GB)
             if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Value, 1, MPI_REAL, &
                  MPI_MIN, iComm, iError)
             ! Divide by nProc so that adding up the processors can work
             LogVar_I(iVarTot) = Value/nProc
 
          case('joutmax')
-            Value = calc_sphere('maxval',180,rCurrents,tmp1_BLK)
+            Value = calc_sphere('maxval',180,rCurrents,Tmp1_GB)
             if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Value, 1, MPI_REAL, &
                  MPI_MAX, iComm, iError)
             ! Divide by nProc so that adding up the processors can work
@@ -789,18 +789,18 @@ contains
                     Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or.      &
                     Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or.      &
                     Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox ) then
-                  tmp1_BLK(i,j,k,iBlock) = 0.0
+                  Tmp1_GB(i,j,k,iBlock) = 0.0
                   CYCLE
                end if
                call get_current(i,j,k,iBlock,Current_D)
-               tmp1_BLK(i,j,k,iBlock) = ( &
+               Tmp1_GB(i,j,k,iBlock) = ( &
                     -Current_D(x_)*Xyz_DGB(y_,i,j,k,iBlock) &
                     +Current_D(y_)*Xyz_DGB(x_,i,j,k,iBlock) ) &
                     / r_GB(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB) / (4*cPi)
 
       case('dst_sm')
          ! Calculate the Biot-Savart formula for the center of the Earth:
@@ -825,18 +825,18 @@ contains
                     Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or.      &
                     Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or.      &
                     Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox ) then
-                  tmp1_BLK(i,j,k,iBlock)=0.0
+                  Tmp1_GB(i,j,k,iBlock)=0.0
                   CYCLE
                end if
                call get_current(i,j,k,iBlock,Current_D)
-               tmp1_BLK(i,j,k,iBlock) = &
+               Tmp1_GB(i,j,k,iBlock) = &
                     -sum(Convert_DD(3,:) &
                     *cross_product(Current_D, Xyz_DGB(:,i,j,k,iBlock))) &
                     / r_GB(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB) / (4*cPi)
 
       case('dstdivb')
          ! Calculate the contribution of Div B to the surface integral of DST
@@ -855,16 +855,16 @@ contains
                     Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or.      &
                     Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or.      &
                     Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox ) then
-                  tmp1_BLK(i,j,k,iBlock)=0.0
+                  Tmp1_GB(i,j,k,iBlock)=0.0
                   CYCLE
                end if
-               tmp1_BLK(i,j,k,iBlock) = &
+               Tmp1_GB(i,j,k,iBlock) = &
                     Xyz_DGB(z_,i,j,k,iBlock) * DivB1_GB(i,j,k,iBlock) &
                     / r_GB(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The 4*pi is part of the Biot-Savart formula
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB) / (4*cPi)
 
          ! MHD variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('rhopnt')
@@ -960,9 +960,9 @@ contains
          end select
          do iBlock = 1, nBlock
             if(Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = ray(i,j,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = ray(i,j,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
          ! RAYTRACE variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('theta1pnt')
          if(iProc == iProcTest) &
@@ -994,8 +994,8 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = 1.0
-            LogVar_I(iVarTot) = calc_sphere('integrate',50, r, tmp1_BLK)
+            Tmp1_GB(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = 1.0
+            LogVar_I(iVarTot) = calc_sphere('integrate',50, r, Tmp1_GB)
          end do
       case('rhoflx')
          ! rho*U_R
@@ -1006,13 +1006,13 @@ contains
             do iBlock=1,nBlock
                if(Unused_B(iBlock)) CYCLE
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                        *Xyz_DGB(:,i,j,k,iBlock)) &
                        /r_GB(i,j,k,iBlock)
                end do; end do; end do
             end do
-            LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
+            LogVar_I(iVarTot) = calc_sphere('integrate',360, r, Tmp1_GB)
          end do
       case('dstflx')
          ! B1z
@@ -1020,9 +1020,9 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = &
+            Tmp1_GB(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = &
                  State_VGB(Bz_,0:nI+1,0:nJ+1,0:nK+1,1:nBlock)
-            LogVar_I(iVarTot) = calc_sphere('integrate',180, r, tmp1_BLK) / &
+            LogVar_I(iVarTot) = calc_sphere('integrate',180, r, Tmp1_GB) / &
                  (4*cPi*r**2)
          end do
       case('bflx')
@@ -1037,13 +1037,13 @@ contains
                if(UseB0)FullB_DG = FullB_DG &
                     +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        sum(FullB_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
                        / r_GB(i,j,k,iBlock)
                end do; end do; end do
             end do
 
-            LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
+            LogVar_I(iVarTot) = calc_sphere('integrate',360, r, Tmp1_GB)
          end do
       case('b2flx')
          ! B^2*u_R
@@ -1057,15 +1057,15 @@ contains
                if(UseB0)FullB_DG = FullB_DG &
                     +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        sum(FullB_DG(:,i,j,k)**2)
-                  tmp1_BLK(i,j,k,iBlock) = 0.5*tmp1_BLK(i,j,k,iBlock)* &
+                  Tmp1_GB(i,j,k,iBlock) = 0.5*Tmp1_GB(i,j,k,iBlock)* &
                        sum( State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                        *Xyz_DGB(:,i,j,k,iBlock)) &
                        / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
                end do; end do; end do
             end do
-            LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
+            LogVar_I(iVarTot) = calc_sphere('integrate',360, r,Tmp1_GB)
          end do
       case('pvecflx')
          iVarTot = iVarTot - 1
@@ -1081,13 +1081,13 @@ contains
                   bDotb = sum(FullB_DG(:,i,j,k)**2)
                   bDotU = sum(&
                        FullB_DG(:,i,j,k)*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock))
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        sum( (bDotb*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                        -     bDotU*FullB_DG(:,i,j,k))*Xyz_DGB(:,i,j,k,iBlock) &
                        ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
                end do; end do; end do
             end do
-            LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
+            LogVar_I(iVarTot) = calc_sphere('integrate',360, r,Tmp1_GB)
          end do
 
          ! simple circular integrals
@@ -1111,13 +1111,13 @@ contains
                   RhoUx = State_VGB(iRhoUx,i,j,k,iBlock)
                   RhoUy = State_VGB(iRhoUy,i,j,k,iBlock)
                   RhoUz = State_VGB(iRhoUz,i,j,k,iBlock)
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        ( (RhoUy*Bz-RhoUz*By)*Xyz_DGB(y_,i,j,k,iBlock) &
                        - (RhoUz*Bx-RhoUx*Bz)*Xyz_DGB(x_,i,j,k,iBlock) &
                        ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
                end do; end do; end do
             end do
-            LogVar_I(iVarTot) = integrate_circle(r, 0.0, tmp1_BLK)
+            LogVar_I(iVarTot) = integrate_circle(r, 0.0, Tmp1_GB)
          end do
 
          ! OTHER VALUES

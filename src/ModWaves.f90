@@ -287,7 +287,7 @@ contains
   !============================================================================
 
   subroutine update_wave_group_advection(iBlock)
-    use ModAdvance,           ONLY: State_VGB, time_blk
+    use ModAdvance,           ONLY: State_VGB, DtMax_CB
     use ModGeometry,          ONLY: Used_GB
     use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
@@ -322,7 +322,7 @@ contains
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
           CFL2_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
-               DeltaLogFrequency * CFL * time_blk(i,j,k, iBlock)
+               DeltaLogFrequency * CFL * DtMax_CB(i,j,k, iBlock)
           ! Boundary conditions
           F2_I(0) = 0.0 ; F2_I(nWaveHalf+1) = 0.0
           if(DivU_C(i,j,k)>0.0)then
@@ -382,7 +382,7 @@ contains
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
           CFL_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
-               DeltaLogFrequency * CFL * time_blk(i,j,k,iBlock)
+               DeltaLogFrequency * CFL * DtMax_CB(i,j,k,iBlock)
 
           F_I(1:nWave) = &
                max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 1e-30)

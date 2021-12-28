@@ -46,7 +46,7 @@ contains
 
     if(DoTest)then
        write(*,*)NameSub,' nStep=', nStep,' iStage=', iStage,     &
-            ' dt=',time_BLK(iTest,jTest,kTest,iBlock)*Cfl
+            ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl
        if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
             IsConserv_CB(iTest,jTest,kTest,iBlock)
        write(*,*)
@@ -186,7 +186,7 @@ contains
     end if
 
     do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar+nFluid
-       DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
+       DtLocal = DtFactor*DtMax_CB(i,j,k,iBlock)
        Source_VC(iVar,i,j,k) = &
             DtLocal* (Source_VC(iVar,i,j,k) + &
             ( Flux_VXI(iVar,i,j,k,iGang)  - Flux_VXI(iVar,i+1,j,k,iGang)  &
@@ -261,7 +261,7 @@ contains
                 ! the point implicit update is more stable than putting
                 ! the source terms in ModCalcSource.
                 do k=1,nK; do j=1,nJ; do i=1,nI
-                   DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
+                   DtLocal = DtFactor*DtMax_CB(i,j,k,iBlock)
 
                    SourceIonEnergy_I = ChargePerMass_I* (         &
                         State_VGB(Ex_,i,j,k,iBlock)               &
@@ -591,7 +591,7 @@ contains
       endif
 
       do k=1,nK; do j=1,nJ; do i=1,nI
-         ! DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+         ! DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
 
          ! For the first iteration, dt = 0;
          ! if(DtLocal < 1e-15) CYCLE
@@ -791,7 +791,7 @@ contains
                          CYCLE
                       end if
 
-                      if(RhoChangeMax_I(1) > percent_max_rho(1) .and. &
+                      if(RhoChangeMax_I(1) > PercentRhoLimit_I(1) .and. &
                            1e-4 > abs(RhoChangeMax_I(1) - 100*abs( &
                            (State_VGB(iVar,i,j,k,iBlock)- &
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
@@ -802,7 +802,7 @@ contains
                            '% at x,y,z=',&
                            Xyz_DGB(:,i,j,k,iBlock)
 
-                      if(RhoChangeMax_I(2) > percent_max_rho(2) .and. &
+                      if(RhoChangeMax_I(2) > PercentRhoLimit_I(2) .and. &
                            1e-4 > abs(RhoChangeMax_I(2) - 100*abs( &
                            (State_VGB(iVar,i,j,k,iBlock)- &
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
@@ -817,7 +817,7 @@ contains
              end do
              !$omp end parallel do
           end if ! DoTest
-          time_fraction_rho = 1.0 / maxval(percent_chg_rho/percent_max_rho)
+          time_fraction_rho = 1.0 / maxval(percent_chg_rho/PercentRhoLimit_I)
           call MPI_allreduce(time_fraction_rho, min_time_fraction_rho, 1, &
                MPI_REAL, MPI_MIN, iComm, iError)
           time_fraction_p   = 1.0 / maxval(percent_chg_p  /percent_max_p  )
@@ -914,7 +914,7 @@ contains
                      (State_VGB(P_,i,j,k,iBlock)-&
                      StateOld_VGB(P_,i,j,k,iBlock)) &
                      /StateOld_VGB(P_,i,j,k,iBlock) ) )
-                time_fraction_rho = 1/maxval(percent_chg_rho/percent_max_rho)
+                time_fraction_rho = 1/maxval(percent_chg_rho/PercentRhoLimit_I)
                 time_fraction_p   = 1/maxval(percent_chg_p  /percent_max_p  )
                 if (time_fraction_rho < 1. .or. time_fraction_p < 1.) then
                    if(num_checks == 1) then
@@ -1106,7 +1106,7 @@ contains
            (    time_fraction) *    State_VGB(:,i,j,k,iBlock) + &
            (1.0-time_fraction) * StateOld_VGB(:,i,j,k,iBlock)
 
-      time_BLK(i,j,k,iBlock) = time_BLK(i,j,k,iBlock)*time_fraction
+      DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*time_fraction
 
       if(DoTestCell)write(*,*)NameSub,' final state=',State_VGB(:,i,j,k,iBlock)
 
@@ -1131,7 +1131,7 @@ contains
     use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0, &
          IsTimeAccurate, Cfl, dt
     use ModB0,      ONLY: B0_DGB
-    use ModAdvance, ONLY: State_VGB, time_BLK
+    use ModAdvance, ONLY: State_VGB, DtMax_CB
     use ModPhysics, ONLY: UseConstantTau_I, TauInstability_I, &
          IonMassPerCharge, TauGlobal_I
     use ModMultiFluid, ONLY: select_fluid, iP, iPpar
@@ -1177,7 +1177,7 @@ contains
              p = State_VGB(ip,i,j,k,iBlock)
              Pperp  = (3*p - Ppar)/2.
              if(.not. IsTimeAccurate)then
-                DtCell = Cfl*time_BLK(i,j,k,iBlock)
+                DtCell = Cfl*DtMax_CB(i,j,k,iBlock)
              else
                 DtCell = dt
              end if

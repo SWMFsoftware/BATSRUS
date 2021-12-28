@@ -125,7 +125,7 @@ contains
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
          nBlock, Xyz_DGB, CellSize_DB, x_, y_, z_, &
          CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
-    use ModAdvance, ONLY: time_BLK
+    use ModAdvance, ONLY: DtMax_CB
     use ModUserInterface ! user_set_boundary_cells
 
     integer, intent(in) :: iBlock
@@ -183,13 +183,13 @@ contains
              where( r_GB(:,:,:,iBlock) < rSolid)&
                   iBoundary_GB(:,:,:,iBlock) = solidBc_
              where( r_GB(1:nI,1:nJ,1:nK,iBlock) < rSolid)&
-                  time_BLK(:,:,:,iBlock) = 0.0
+                  DtMax_CB(:,:,:,iBlock) = 0.0
           end select
        else ! DoSolveSolid=.TRUE.
           select case(TypeSolidGeometry)
           case('sphere')
              where( r_GB(1:nI,1:nJ,1:nK,iBlock) < rSolid)&
-                  time_BLK(:,:,:,iBlock) = SolidLimitDt
+                  DtMax_CB(:,:,:,iBlock) = SolidLimitDt
           end select
        end if
     end if

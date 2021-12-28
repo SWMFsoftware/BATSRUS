@@ -268,7 +268,7 @@ contains
 
     use ModMain,    ONLY: &
          nI, nJ, nK, nIJK, Cfl, iStage, nStage, IsTimeAccurate
-    use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
+    use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, DtMax_CB, &
          DoReplaceDensity, UseMultiSpecies
     use ModMultiFluid, ONLY: iRho_I, nFluid
     use ModGeometry, ONLY: IsNoBody_B, Used_GB
@@ -421,7 +421,7 @@ contains
        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        ! call timing_start('pointimplmatrix')
-       DtCell = Cfl*time_BLK(i,j,k,iBlock)*iStage/real(nStage)
+       DtCell = Cfl*DtMax_CB(i,j,k,iBlock)*iStage/real(nStage)
 
        ! The right hand side is Uexpl - Uold + Sold
        do iIVar = 1, nVarPointImpl

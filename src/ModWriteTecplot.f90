@@ -695,7 +695,7 @@ contains
     use ModPhysics, ONLY : &
          ThetaTilt, Rbody, ClightFactor, BodyNDim_I, Gamma_I
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
-    use ModAdvance, ONLY : FluxType
+    use ModAdvance, ONLY : TypeFlux
     use ModMultiFluid, ONLY: IonFirst_
     use ModIoUnit, ONLY: UnitTmp_
     use ModIO, ONLY: StringDateOrTime, DoSaveTecBinary
@@ -778,8 +778,8 @@ contains
           write(iUnitHere) 'AUXDATA COROTATION="F"',Newline
        end if
 
-       ! FLUXTYPE
-       write(iUnitHere) 'AUXDATA FLUXTYPE="',FluxType,'"',Newline
+       ! TypeFlux
+       write(iUnitHere) 'AUXDATA TypeFlux="',TypeFlux,'"',Newline
 
        ! GAMMA
        write(tmp, '(a,(f14.6),2a)') 'AUXDATA GAMMA="',Gamma_I(1),'"',Newline
@@ -882,8 +882,8 @@ contains
           write(iUnitHere,'(a)') 'AUXDATA COROTATION="F"'
        end if
 
-       ! FLUXTYPE
-       write(iUnitHere,'(a,a,a)') 'AUXDATA FLUXTYPE="',FluxType,'"'
+       ! TypeFlux
+       write(iUnitHere,'(a,a,a)') 'AUXDATA TypeFlux="',TypeFlux,'"'
 
        ! GAMMA
        write(iUnitHere,'(a,f14.6,a)') 'AUXDATA GAMMA="',Gamma_I(1),'"'

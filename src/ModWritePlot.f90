@@ -998,7 +998,7 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY : time_BLK, State_VGB, DivB1_GB, &
+    use ModAdvance, ONLY : DtMax_CB, State_VGB, DivB1_GB, &
          ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure, &
          UseMultiSpecies, LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
     use ModConservative, ONLY: IsConserv_CB, UseNonconservative
@@ -1613,9 +1613,9 @@ contains
        case('dz','dlat')
           PlotVar(:,:,:,iVar) = CellSize_DB(z_,iBlock)
        case('dt')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = time_BLK(1:nI,1:nJ,1:nK,iBlock)
+          PlotVar(1:nI,1:nJ,1:nK,iVar) = DtMax_CB(1:nI,1:nJ,1:nK,iBlock)
        case('dtblk')
-          PlotVar(:,:,:,iVar) = Dt_B(iBlock)
+          PlotVar(:,:,:,iVar) = DtMax_B(iBlock)
           ! if(.not.IsNoBody_B(iBlock))then
           !   if(.not.any(Used_GB(:,:,:,iBlock)))&
           !        PlotVar(:,:,:,iVar) = 0.0

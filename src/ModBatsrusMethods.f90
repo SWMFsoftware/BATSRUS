@@ -704,7 +704,7 @@ contains
     use ModConstrainDivB, ONLY: DoInitConstrainB, Bcenter2Bface
     use ModProjectDivB, ONLY: proj_get_divb, project_divb
     use ModNumConst, ONLY: cTiny
-    use ModAdvance, ONLY : Bx_, Bz_, State_VGB, tmp1_BLK
+    use ModAdvance, ONLY : Bx_, Bz_, State_VGB, Tmp1_GB
     use ModIO, ONLY: write_prefix, iUnitOut
     use BATL_lib, ONLY: iProc, Xyz_DGB, x_,y_,z_, nBlock, message_pass_cell, &
          maxval_grid
@@ -730,9 +730,9 @@ contains
        ! !! call calc_energy(iBlock)
     end do
 
-    call proj_get_divb(tmp1_BLK)
+    call proj_get_divb(Tmp1_GB)
     DivBMax = &
-         maxval_grid(tmp1_BLK, UseAbs=.true., iLoc_I=iLoc_I)
+         maxval_grid(Tmp1_GB, UseAbs=.true., iLoc_I=iLoc_I)
     if(iProc == 0.and.lVerbose>0)then
        call write_prefix; write(iUnitOut,*)
        call write_prefix; write(iUnitOut,*) NameSub, &
@@ -756,9 +756,9 @@ contains
        call project_divb
 
        ! Check and report the accuracy of the projection
-       call proj_get_divb(tmp1_BLK)
+       call proj_get_divb(Tmp1_GB)
        DivBMax = &
-            maxval_grid(tmp1_BLK, UseAbs=.true., iLoc_I=iLoc_I)
+            maxval_grid(Tmp1_GB, UseAbs=.true., iLoc_I=iLoc_I)
        if(iProc == 0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*)
           call write_prefix; write(iUnitOut,*) NameSub, &

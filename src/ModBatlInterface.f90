@@ -291,12 +291,12 @@ contains
   !============================================================================
   subroutine calc_other_vars(iBlock)
 
-    use ModAdvance,  ONLY: State_VGB, nVar, time_BLK
+    use ModAdvance,  ONLY: State_VGB, nVar, DtMax_CB
     use ModB0,       ONLY: set_b0_cell
     use ModPhysics,  ONLY: FaceState_VI, rBody2
     use ModGeometry, ONLY: IsBody_B, IsNoBody_B, Used_GB, rBody2_GB
     use ModMain,     ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
-         Dt_B, IsTimeAccurate, UseDtFixed, Dt
+         DtMax_B, IsTimeAccurate, UseDtFixed, Dt
     use ModParallel, ONLY: DiLevel_EB, Unset_
     use ModMultiFluid
 
@@ -357,15 +357,15 @@ contains
 
     if(IsTimeAccurate)then
        if(UseDtFixed)then
-          time_BLK(:,:,:,iBlock) = Dt
+          DtMax_CB(:,:,:,iBlock) = Dt
        else
-          time_BLK(:,:,:,iBlock) = Dt_B(iBlock)
+          DtMax_CB(:,:,:,iBlock) = DtMax_B(iBlock)
        end if
 
        ! Reset time step to zero inside body.
        if(.not.IsNoBody_B(iBlock))then
           where(.not.Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
-               time_BLK(:,:,:,iBlock) = 0.0
+               DtMax_CB(:,:,:,iBlock) = 0.0
        end if
     end if
 

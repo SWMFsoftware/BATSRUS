@@ -537,7 +537,7 @@ contains
     subroutine advance_thread(IsTimeAccurateThread)
       
       use ModMain,     ONLY: cfl, Dt, IsTimeAccurate
-      use ModAdvance,  ONLY: time_BLK, nJ, nK
+      use ModAdvance,  ONLY: DtMax_CB, nJ, nK
       use ModPhysics,  ONLY: UnitT_, No2Si_V
       use ModMultiFluid,      ONLY: MassIon_I
 
@@ -565,7 +565,7 @@ contains
             DtLocal = Dt*No2Si_V(UnitT_)
          else
             DtLocal = cfl*No2Si_V(UnitT_)*&
-                 time_BLK(1,max(min(j,nJ),1),max(min(k,nK),1),iBlock)
+                 DtMax_CB(1,max(min(j,nJ),1),max(min(k,nK),1),iBlock)
          end if
          if(DtLocal==0.0)RETURN ! No time-accurate advance is needed
          DtInv = 1/DtLocal

@@ -374,7 +374,7 @@ contains
     ! the logicals of diffusion, conduction and induction.
 
     use ModMain, ONLY: UseHyperbolicDivb
-    use ModAdvance, ONLY: TypeFlux => FluxType
+    use ModAdvance, ONLY: TypeFlux => TypeFlux
     use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
     !--------------------------------------------------------------------------
 

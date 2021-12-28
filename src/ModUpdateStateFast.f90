@@ -17,7 +17,7 @@ module ModUpdateStateFast
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
-       DtMax_CB => time_BLK, Vdt_, iTypeUpdate, UpdateOrig_
+       DtMax_CB, Vdt_, iTypeUpdate, UpdateOrig_
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -25,12 +25,12 @@ module ModUpdateStateFast
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
        iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, Unset_, &
        test_start, test_stop
-  use ModParallel, ONLY: DiLevelNei_EB => DiLevel_EB
+  use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
        OmegaBody_D, set_dipole
-  use ModMain, ONLY: Dt, DtMax_B => Dt_B, Cfl, nStep, tSimulation, &
+  use ModMain, ONLY: Dt, DtMax_B, Cfl, nStep, tSimulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe
   use ModB0, ONLY: B0_DGB, get_b0_dipole
   use ModNumConst, ONLY: cUnit_DD
@@ -1981,19 +1981,19 @@ contains
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           ! Apply boundary conditions to external ghost cells
-          if(i == 1 .and. DiLevelNei_EB(1,iBlock) == Unset_)then
+          if(i == 1 .and. DiLevel_EB(1,iBlock) == Unset_)then
              call set_boundary1(j,k,iBlock)
-          elseif(i == nI .and. DiLevelNei_EB(2,iBlock) == Unset_)then
+          elseif(i == nI .and. DiLevel_EB(2,iBlock) == Unset_)then
              call set_boundary2(j,k,iBlock)
           end if
-          if(j == 1 .and. DiLevelNei_EB(3,iBlock) == Unset_)then
+          if(j == 1 .and. DiLevel_EB(3,iBlock) == Unset_)then
              call set_boundary3(i, k, iBlock)
-          elseif(j == nJ .and. DiLevelNei_EB(4,iBlock) == Unset_)then
+          elseif(j == nJ .and. DiLevel_EB(4,iBlock) == Unset_)then
              call set_boundary4(i, k, iBlock)
           end if
-          if(k == 1 .and. DiLevelNei_EB(5,iBlock) == Unset_)then
+          if(k == 1 .and. DiLevel_EB(5,iBlock) == Unset_)then
              call set_boundary5(i, j, iBlock)
-          elseif(k == nK .and. DiLevelNei_EB(6,iBlock) == Unset_)then
+          elseif(k == nK .and. DiLevel_EB(6,iBlock) == Unset_)then
              call set_boundary6(i, j, iBlock)
           end if
        end do; end do; end do
@@ -2295,7 +2295,7 @@ contains
        end do; end do; end do
        DtMax_B(iBlock) = DtMin
     else
-       ! If the block has no true cells, set Dt_B=1.0E20
+       ! If the block has no true cells, set DtMax_B=1.0E20
        DtMin = 1e20
        !$acc loop vector independent collapse(3) reduction(min:DtMin)
        do k=1,nK; do j=1,nJ; do i=1,nI

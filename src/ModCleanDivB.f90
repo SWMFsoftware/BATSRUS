@@ -27,8 +27,8 @@ contains
 
     use ModNumConst, ONLY: cTiny
     use ModMain, ONLY: iNewGrid, iNewDecomposition
-    use ModAdvance, ONLY: nVar,State_VGB, Bx_, By_, Bz_,tmp1_BLK,tmp2_BLK,&
-         Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
+    use ModAdvance, ONLY: nVar,State_VGB, Bx_, By_, Bz_,Tmp1_GB,Tmp2_GB,&
+         Residual_GB=>Tmp1_GB,Dir_GB=>Tmp2_GB
     use ModAdvance, ONLY:tmp3_blk=>divB1_GB
     use ModGeometry, ONLY: IsNoBody_B, IsBody_B, Used_GB
     use ModParallel, ONLY : Unset_, DiLevel_EB
@@ -153,21 +153,21 @@ contains
           else
              do k=1,nK;do j=1,nJ;do i=1,nI
                 if(.not.Used_GB(i,j,k,iBlock))CYCLE
-                tmp2_blk(i,j,k,iBlock)=tmp2_blk(i,j,k,iBlock)+&
-                     DivBInt(ResDotM1DotRes_)*(tmp1_blk(i,j,k,iBlock)+&
+                Tmp2_GB(i,j,k,iBlock)=Tmp2_GB(i,j,k,iBlock)+&
+                     DivBInt(ResDotM1DotRes_)*(Tmp1_GB(i,j,k,iBlock)+&
                      DivBInt(ResDotOne_))
              end do;end do;end do
           end if
        end do
 
-       call message_pass_cell(tmp2_blk, nWidthIn=1, DoSendCornerIn=.false. ,&
+       call message_pass_cell(Tmp2_GB, nWidthIn=1, DoSendCornerIn=.false. ,&
             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
        ! Calculate Dir.A.Dir
        DirDotDir = 0.0
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
-          call v_grad_phi(tmp2_blk,iBlock)
+          call v_grad_phi(Tmp2_GB,iBlock)
           DirDotDir = DirDotDir + &
                sum( (VDotGrad_DC(1,:,:,:)**2 + &
                VDotGrad_DC(2,:,:,:)**2 + &
@@ -214,16 +214,16 @@ contains
       real::EstimateForMAMNorm,OneDotMDotOne
       real:: divb_diffcoeff, VInvHalf
       !------------------------------------------------------------------------
-      tmp1_blk = 0.0; Prec_CB = 0.0
+      Tmp1_GB = 0.0; Prec_CB = 0.0
 
       do iBlock=1,nBlock
          if(Unused_B(iBlock))CYCLE
-         tmp1_blk(1:nI,1:nJ,1:nK,iBlock) = &
+         Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
               1/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
       end do
 
       ! tmp1 is equal to the inverse of the volume, including the ghostcells
-      call message_pass_cell(tmp1_blk, DoSendCornerIn=.false. ,&
+      call message_pass_cell(Tmp1_GB, DoSendCornerIn=.false. ,&
            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
       do iBlock=1,nBlock
@@ -233,7 +233,7 @@ contains
 
          if(any(DiLevel_EB(:,iBlock)/=0))then
             if(DiLevel_EB(1,iBlock)==Unset_)then
-               tmp1_blk(0,1:nJ,1:nK,iBlock) = &
+               Tmp1_GB(0,1:nJ,1:nK,iBlock) = &
                     1.0/CellVolume_GB(1,1:nJ,1:nK,iBlock)
                ! to define somehow tmp1 in the outer ghostcells
 
@@ -245,45 +245,45 @@ contains
                !  the input from FA^2  should be multiplied by 1/4
             end if
             if(DiLevel_EB(2,iBlock)==Unset_)then
-               tmp1_blk(nI+1,1:nJ,1:nK,iBlock) = &
+               Tmp1_GB(nI+1,1:nJ,1:nK,iBlock) = &
                     1.0/CellVolume_GB(nI,1:nJ,1:nK,iBlock)
             elseif(abs(DiLevel_EB(2,iBlock))==1)then
                Q_G(nI+1,:,:)=4.0**DiLevel_EB(2,iBlock)
             end if
             if(DiLevel_EB(3,iBlock)==Unset_)then
-               tmp1_blk(1:nI,0,1:nK,iBlock) = &
+               Tmp1_GB(1:nI,0,1:nK,iBlock) = &
                     1.0/CellVolume_GB(1:nI,1,1:nK,iBlock)
             elseif(abs(DiLevel_EB(3,iBlock))==1)then
                Q_G(:,0,:)=4.0**DiLevel_EB(3,iBlock)
             end if
             if(DiLevel_EB(4,iBlock)==Unset_)then
-               tmp1_blk(1:nI,nJ+1,1:nK,iBlock) = &
+               Tmp1_GB(1:nI,nJ+1,1:nK,iBlock) = &
                     1.0/CellVolume_GB(1:nI,nJ,1:nK,iBlock)
             elseif(abs(DiLevel_EB(4,iBlock))==1)then
                Q_G(:,nJ+1,:)=4.0**DiLevel_EB(4,iBlock)
             end if
             if(DiLevel_EB(5,iBlock)==Unset_)then
-               tmp1_blk(1:nI,1:nJ,0,iBlock) = &
+               Tmp1_GB(1:nI,1:nJ,0,iBlock) = &
                     1.0/CellVolume_GB(1:nI,1:nJ,1,iBlock)
             elseif(abs(DiLevel_EB(5,iBlock))==1)then
                Q_G(:,:,0)=4.0**DiLevel_EB(5,iBlock)
             end if
             if(DiLevel_EB(6,iBlock)==Unset_)then
-               tmp1_blk(1:nI,1:nJ,nK+1,iBlock) = &
+               Tmp1_GB(1:nI,1:nJ,nK+1,iBlock) = &
                     1.0/CellVolume_GB(1:nI,1:nJ,nK,iBlock)
             elseif(abs(DiLevel_EB(6,iBlock))==1)then
                Q_G(:,:,nK+1)=4.0**DiLevel_EB(6,iBlock)
             end if
          end if
          Prec_CB(:,:,:,iBlock)=4.0/(&
-              (Q_G(2:nI+1,1:nJ,1:nK)*tmp1_blk(2:nI+1,1:nJ,1:nK,iBlock)+&
-              Q_G(0:nI-1,1:nJ,1:nK)*tmp1_blk(0:nI-1,1:nJ,1:nK,iBlock))&
+              (Q_G(2:nI+1,1:nJ,1:nK)*Tmp1_GB(2:nI+1,1:nJ,1:nK,iBlock)+&
+              Q_G(0:nI-1,1:nJ,1:nK)*Tmp1_GB(0:nI-1,1:nJ,1:nK,iBlock))&
               *CellFace_DB(x_,iBlock)**2+&
-              (Q_G(1:nI,2:nJ+1,1:nK)*tmp1_blk(1:nI,2:nJ+1,1:nK,iBlock)+&
-              Q_G(1:nI,0:nJ-1,1:nK)*tmp1_blk(1:nI,0:nJ-1,1:nK,iBlock))&
+              (Q_G(1:nI,2:nJ+1,1:nK)*Tmp1_GB(1:nI,2:nJ+1,1:nK,iBlock)+&
+              Q_G(1:nI,0:nJ-1,1:nK)*Tmp1_GB(1:nI,0:nJ-1,1:nK,iBlock))&
               *CellFace_DB(y_,iBlock)**2+&
-              (Q_G(1:nI,1:nJ,2:nK+1)*tmp1_blk(1:nI,1:nJ,2:nK+1,iBlock)+&
-              Q_G(1:nI,1:nJ,0:nK-1)*tmp1_blk(1:nI,1:nJ,0:nK-1,iBlock))&
+              (Q_G(1:nI,1:nJ,2:nK+1)*Tmp1_GB(1:nI,1:nJ,2:nK+1,iBlock)+&
+              Q_G(1:nI,1:nJ,0:nK-1)*Tmp1_GB(1:nI,1:nJ,0:nK-1,iBlock))&
               *CellFace_DB(z_,iBlock)**2)
       end do
       do iLimit = 1, 2
@@ -291,22 +291,22 @@ contains
             if(Unused_B(iBlock))CYCLE
             if(any(DiLevel_EB(:,iBlock)==Unset_))then
                if(DiLevel_EB(1,iBlock)==Unset_)&
-                    tmp1_blk(0,1:nJ,1:nK,iBlock)=Prec_CB(1,:,:,iBlock)
+                    Tmp1_GB(0,1:nJ,1:nK,iBlock)=Prec_CB(1,:,:,iBlock)
                if(DiLevel_EB(2,iBlock)==Unset_)&
-                    tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=Prec_CB(nI,:,:,iBlock)
+                    Tmp1_GB(nI+1,1:nJ,1:nK,iBlock)=Prec_CB(nI,:,:,iBlock)
                if(DiLevel_EB(3,iBlock)==Unset_)&
-                    tmp1_blk(1:nI,0,1:nK,iBlock)=Prec_CB(:,1,:,iBlock)
+                    Tmp1_GB(1:nI,0,1:nK,iBlock)=Prec_CB(:,1,:,iBlock)
                if(DiLevel_EB(4,iBlock)==Unset_)&
-                    tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=Prec_CB(:,nJ,:,iBlock)
+                    Tmp1_GB(1:nI,nJ+1,1:nK,iBlock)=Prec_CB(:,nJ,:,iBlock)
                if(DiLevel_EB(5,iBlock)==Unset_)&
-                    tmp1_blk(1:nI,1:nJ,0,iBlock)=Prec_CB(:,:,1,iBlock)
+                    Tmp1_GB(1:nI,1:nJ,0,iBlock)=Prec_CB(:,:,1,iBlock)
                if(DiLevel_EB(6,iBlock)==Unset_)&
-                    tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=Prec_CB(:,:,nK,iBlock)
+                    Tmp1_GB(1:nI,1:nJ,nK+1,iBlock)=Prec_CB(:,:,nK,iBlock)
             end if
-            tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=Prec_CB(:,:,:,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock)=Prec_CB(:,:,:,iBlock)
          end do
 
-         call message_pass_cell(tmp1_blk,DoSendCornerIn=.false. ,&
+         call message_pass_cell(Tmp1_GB,DoSendCornerIn=.false. ,&
               nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
          do iBlock=1,nBlock
@@ -314,9 +314,9 @@ contains
 
             do k=1,nK;do j=1,nJ;do i=1,nI
                Prec_CB(i,j,k,iBlock)=min(&
-                    minval(tmp1_blk(i-1:i+1,j,k,iBlock)),&
-                    minval(tmp1_blk(i,j-1:j+1:2,k,iBlock)),&
-                    minval(tmp1_blk(i,j,k-1:k+1:2,iBlock)))
+                    minval(Tmp1_GB(i-1:i+1,j,k,iBlock)),&
+                    minval(Tmp1_GB(i,j-1:j+1:2,k,iBlock)),&
+                    minval(Tmp1_GB(i,j,k-1:k+1:2,iBlock)))
             end do;end do; end do
          end do
       end do
@@ -333,42 +333,42 @@ contains
          if (Unused_B(iBlock)) CYCLE
          if(any(DiLevel_EB(:,iBlock)==Unset_))then
             if(DiLevel_EB(1,iBlock)==Unset_)&
-                 tmp1_blk(0,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(1,:,:,iBlock))
+                 Tmp1_GB(0,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(1,:,:,iBlock))
             if(DiLevel_EB(2,iBlock)==Unset_)&
-                 tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(nI,:,:,iBlock))
+                 Tmp1_GB(nI+1,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(nI,:,:,iBlock))
             if(DiLevel_EB(3,iBlock)==Unset_)&
-                 tmp1_blk(1:nI,0,1:nK,iBlock)=sqrt(Prec_CB(:,1,:,iBlock))
+                 Tmp1_GB(1:nI,0,1:nK,iBlock)=sqrt(Prec_CB(:,1,:,iBlock))
             if(DiLevel_EB(4,iBlock)==Unset_)&
-                 tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=sqrt(Prec_CB(:,nJ,:,iBlock))
+                 Tmp1_GB(1:nI,nJ+1,1:nK,iBlock)=sqrt(Prec_CB(:,nJ,:,iBlock))
             if(DiLevel_EB(5,iBlock)==Unset_)&
-                 tmp1_blk(1:nI,1:nJ,0,iBlock)=sqrt(Prec_CB(:,:,1,iBlock))
+                 Tmp1_GB(1:nI,1:nJ,0,iBlock)=sqrt(Prec_CB(:,:,1,iBlock))
             if(DiLevel_EB(6,iBlock)==Unset_)&
-                 tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=sqrt(Prec_CB(:,:,nK,iBlock))
+                 Tmp1_GB(1:nI,1:nJ,nK+1,iBlock)=sqrt(Prec_CB(:,:,nK,iBlock))
          end if
-         tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(:,:,:,iBlock))
+         Tmp1_GB(1:nI,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(:,:,:,iBlock))
       end do
       !    if(iProc==0)write(*,*)' Cleanup Initialization second message pass'
 
-      call message_pass_cell(tmp1_blk,DoSendCornerIn=.false. ,&
+      call message_pass_cell(Tmp1_GB,DoSendCornerIn=.false. ,&
            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
-      ! Now the elements of diag(Prec_CB)^{1/2} are in tmp1_blk
+      ! Now the elements of diag(Prec_CB)^{1/2} are in Tmp1_GB
 
       do iBlock=1,nBlock
          if (Unused_B(iBlock)) CYCLE
 
-         Q_G=tmp1_blk(0:nI+1,0:nJ+1,0:nK+1,iBlock)
-         tmp1_BLK(:,:,:,iBlock) = 0.0
-         tmp2_BLK(:,:,:,iBlock) = 0.0
+         Q_G=Tmp1_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock)
+         Tmp1_GB(:,:,:,iBlock) = 0.0
+         Tmp2_GB(:,:,:,iBlock) = 0.0
          tmp3_BLK(:,:,:,iBlock) = 0.0
 
          do k=1,nK;do j=1,nJ;do i=1,nI
             VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
-            tmp1_BLK(i,j,k,iBlock) = &
+            Tmp1_GB(i,j,k,iBlock) = &
                  CellFace_DB(x_,iBlock)*VInvHalf*(&
                  Q_G(i+1,j,k)+&
                  Q_G(i-1,j,k))
-            tmp2_BLK(i,j,k,iBlock) = &
+            Tmp2_GB(i,j,k,iBlock) = &
                  CellFace_DB(y_,iBlock)*VInvHalf*(&
                  Q_G(i,j+1,k)+&
                  Q_G(i,j-1,k))
@@ -381,9 +381,9 @@ contains
       ! In tmp1,tmp2 and divB1 are the estimates of gradX, gradY,gradZ
       ! correspondenyly
 
-      call message_pass_cell(tmp1_blk,DoSendCornerIn=.false. ,&
+      call message_pass_cell(Tmp1_GB,DoSendCornerIn=.false. ,&
            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-      call message_pass_cell(tmp2_blk,DoSendCornerIn=.false. ,&
+      call message_pass_cell(Tmp2_GB,DoSendCornerIn=.false. ,&
            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
       call message_pass_cell(tmp3_blk,DoSendCornerIn=.false. ,&
            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
@@ -395,11 +395,11 @@ contains
               maxval(sqrt(Prec_CB(:,:,:,iBlock))*&
               0.5*( &
               CellFace_DB(x_,iBlock)*&
-              (tmp1_blk(2:nI+1, 1:nJ, 1:nK,iBlock)+&
-              tmp1_blk(0:nI-1, 1:nJ, 1:nK,iBlock))&
+              (Tmp1_GB(2:nI+1, 1:nJ, 1:nK,iBlock)+&
+              Tmp1_GB(0:nI-1, 1:nJ, 1:nK,iBlock))&
               +CellFace_DB(y_,iBlock)*&
-              (tmp2_blk(1:nI, 2:nJ+1, 1:nK,iBlock)+&
-              tmp2_blk(1:nI, 0:nJ-1, 1:nK,iBlock))&
+              (Tmp2_GB(1:nI, 2:nJ+1, 1:nK,iBlock)+&
+              Tmp2_GB(1:nI, 0:nJ-1, 1:nK,iBlock))&
               +CellFace_DB(z_,iBlock)*&
               (tmp3_blk(1:nI, 1:nJ, 2:nK+1,iBlock)+&
               tmp3_blk(1:nI, 1:nJ, 0:nK-1,iBlock)) ) ))
