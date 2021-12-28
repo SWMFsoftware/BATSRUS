@@ -60,10 +60,14 @@
     #NOBLK  => Unset_,
 
     ### ModAdvance
-    FluxType => TypeFlux,
-    percent_max_rho => PercentRhoLimit_I,
-    precent_max_p => PercentPLimit_I,
-    tmp1_BLK => Tmp1_GB,
-    tmp2_BLK => Tmp2_GB,
-    time_BLK => DtMax_CB
+    #FluxType => TypeFlux,
+    #percent_max_rho => PercentRhoLimit_I,
+    #precent_max_p => PercentPLimit_I,
+    #tmp1_BLK => Tmp1_GB,
+    #tmp2_BLK => Tmp2_GB,
+    #time_BLK => DtMax_CB
+
+    # ModBatsrusMethods
+    SaveThreads4Plot => DoPlotThread,
+    
     );

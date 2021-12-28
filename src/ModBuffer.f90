@@ -217,7 +217,7 @@ contains
     ! SphSource_D is associated with a point in the target component, and it
     ! is assumed that is was already converted to the source coordinate system.
 
-    ! nVar is the number of state variables used in coupling the two components.
+    ! nVar is the number of state variables used coupling the two components.
 
     ! Implicit inputs to this subroutine are the buffer grid size, points
     ! and the state vector at each point (USEd from BATSRUS).
