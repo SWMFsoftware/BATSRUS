@@ -94,7 +94,7 @@ contains
   !============================================================================
   subroutine read_solar_wind_file
 
-    use ModMain, ONLY: StartTime, Time_Simulation, &
+    use ModMain, ONLY: StartTime, tSimulation, &
          UseStrict, TypeCoordSystem, NameVarLower_V
     use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &
          SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim, &
@@ -326,7 +326,7 @@ contains
              Transform_DD = HgiGse_DD
           else
              Transform_DD = transform_matrix( &
-                  Time_Simulation, TypeCoordSystem, NameInputCoord)
+                  tSimulation, TypeCoordSystem, NameInputCoord)
           end if
 
           do iVectorVar = 1, nVectorVar
@@ -342,7 +342,7 @@ contains
     call close_file
 
     ! Check if the start time is within 1 day of the input data
-    if( StartTime + Time_Simulation < Time_I(1) - cDay .or. &
+    if( StartTime + tSimulation < Time_I(1) - cDay .or. &
          StartTime > Time_I(nData)+cDay) then
        write(*,*) "**********************************************************"
        write(*,*) "*                                                        *"

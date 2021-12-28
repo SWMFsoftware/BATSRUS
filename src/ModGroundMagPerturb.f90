@@ -297,7 +297,7 @@ contains
     ! Initialize variables, arrays, and output file.
     use ModNumConst,  ONLY: cDegToRad, cTwoPi
     use ModUtilities, ONLY: flush_unit, open_file
-    use ModMain,      ONLY: n_step
+    use ModMain,      ONLY: nStep
     use ModIoUnit,    ONLY: io_unit_new
     use ModIO,        ONLY: NamePlotDir, IsLogName_e
 
@@ -363,7 +363,7 @@ contains
                trim(NamePlotDir), 'geoindex_e', iTime_I(1:6), '.log'
        else
           write(NameFile, '(a, a, i8.8, a)') &
-               trim(NamePlotDir), 'geoindex_n', n_step, '.log'
+               trim(NamePlotDir), 'geoindex_n', nStep, '.log'
        end if
        iUnitIndices = io_unit_new()
        call open_file(iUnitIndices, file=NameFile, status='replace')
@@ -392,7 +392,7 @@ contains
     use ModSize,           ONLY: nI, nJ, nK
     use ModGeometry,       ONLY: R_BLK, x1, x2, y1, y2, z1, z2
     use ModMain,           ONLY: &
-         Unused_B, nBlock, Time_Simulation, TypeCoordSystem
+         Unused_B, nBlock, tSimulation, TypeCoordSystem
     use ModNumConst,       ONLY: cPi
     use ModCurrent,        ONLY: get_current
     use CON_axes,          ONLY: transform_matrix
@@ -413,7 +413,7 @@ contains
 
     ! Calculate the magnetic perturbations in cartesian coordinates
 
-    GmtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
+    GmtoSmg_DD = transform_matrix(tSimulation, TypeCoordSystem, 'SMG')
 
     do iMag = 1, nMag
        Xyz_D = Xyz_DI(:,iMag)
@@ -473,7 +473,7 @@ contains
     !
     ! NOTE: The surface integral includes the external (IMF) field as well.
 
-    use ModMain,            ONLY: Time_Simulation, n_Step
+    use ModMain,            ONLY: tSimulation, nStep
     use CON_planet_field,   ONLY: get_planet_field, map_planet_field, &
          map_planet_field_fast
     use ModB0,              ONLY: get_b0_dipole
@@ -538,7 +538,7 @@ contains
 
     DoConvertCoord = TypeCoordFacGrid == 'MAG'
     if(DoConvertCoord) &
-         SmToFacGrid_DD   = transform_matrix(Time_Simulation, 'SMG', 'MAG')
+         SmToFacGrid_DD   = transform_matrix(tSimulation, 'SMG', 'MAG')
 
     MagPerturbFac_DI= 0.0
 
@@ -548,8 +548,8 @@ contains
 
     if(UseSurfaceIntegral) MagPerturbMhd_DI = 0.0
 
-    if(n_Step /= nStepLast)then
-       nStepLast = n_Step
+    if(nStep /= nStepLast)then
+       nStepLast = nStep
        ! Get the radial component of the field aligned current
        ! and the magnetic field vector (for surface integral) at rCurrents
        call timing_start('ground_calc_fac')
@@ -804,9 +804,9 @@ contains
                 ! get next position and field along the field line
 #ifndef _OPENACC
                 if(iTypeUpdate <= UpdateSlow_)then
-                   call map_planet_field(Time_Simulation, XyzRcurrents_D, &
+                   call map_planet_field(tSimulation, XyzRcurrents_D, &
                         TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
-                   call get_planet_field(Time_Simulation, XyzMid_D, &
+                   call get_planet_field(tSimulation, XyzMid_D, &
                         TypeCoordFacGrid//' NORM', b_D)
                    b_D = b_D*Si2No_V(UnitB_)
                 else
@@ -894,7 +894,7 @@ contains
 
     use CON_axes,      ONLY: transform_matrix
     use ModPhysics,    ONLY: No2Io_V, UnitB_
-    use ModMain,       ONLY: time_simulation,TypeCoordSystem
+    use ModMain,       ONLY: tSimulation,TypeCoordSystem
     use ModIeCoupling, ONLY: calc_ie_mag_perturb
     use ModMpi
 
@@ -912,9 +912,9 @@ contains
     call timing_start(NameSub)
 
     ! Coordinate transformations
-    IndexToGm_DD = transform_matrix(Time_simulation, &
+    IndexToGm_DD = transform_matrix(tSimulation, &
          TypeCoordIndex, TypeCoordSystem)
-    IndexToSm_DD = transform_matrix(Time_simulation, &
+    IndexToSm_DD = transform_matrix(tSimulation, &
          TypeCoordIndex, 'SMG')
 
     ! Obtain geomagnetic pertubations dB*_DI in SMG coordinates
@@ -1021,7 +1021,7 @@ contains
 
     use CON_axes,      ONLY: transform_matrix
     use ModPhysics,    ONLY: No2Io_V, UnitB_
-    use ModMain,       ONLY: time_simulation,TypeCoordSystem
+    use ModMain,       ONLY: tSimulation,TypeCoordSystem
     use ModIeCoupling, ONLY: calc_ie_mag_perturb
     use ModMpi
 
@@ -1037,9 +1037,9 @@ contains
     call timing_start(NameSub)
 
     ! Coordinate transformations
-    IndexToGm_DD = transform_matrix(Time_simulation, &
+    IndexToGm_DD = transform_matrix(tSimulation, &
          TypeCoordIndex, TypeCoordSystem)
-    IndexToSm_DD = transform_matrix(Time_simulation, &
+    IndexToSm_DD = transform_matrix(tSimulation, &
          TypeCoordIndex, 'SMG')
 
     ! Obtain geomagnetic pertubations dB*_DI in SMG coordinates
@@ -1246,7 +1246,7 @@ contains
     ! Open and initialize the magnetometer output file.  A new IO logical unit
     ! is created and saved for future writes to this file.
 
-    use ModMain,   ONLY: n_step
+    use ModMain,   ONLY: nStep
     use ModIoUnit, ONLY: io_unit_new
     use ModIO,     ONLY: NamePlotDir, IsLogName_e
     use ModUtilities, ONLY: flush_unit, open_file
@@ -1291,7 +1291,7 @@ contains
             trim(NamePlotDir), trim(StringPrefix),'_e', iTime_I(1:6), '.mag'
     else
        write(NameFile,'(3a, i8.8, a)') &
-            trim(NamePlotDir), trim(StringPrefix), '_n', n_step, '.mag'
+            trim(NamePlotDir), trim(StringPrefix), '_n', nStep, '.mag'
     end if
     if(DoTest) then
        write(*,*) 'open_magnetometer_output_files: NameFile:', NameFile
@@ -1325,7 +1325,7 @@ contains
   !============================================================================
   subroutine write_geoindices
 
-    use ModMain,  ONLY: n_step
+    use ModMain,  ONLY: nStep
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
@@ -1346,7 +1346,7 @@ contains
     ! Write date and time.
     call get_date_time(iTime_I)
     write(iUnitIndices, '(i7.7, i5.4, 5(i3.2), i4.3)', ADVANCE='NO') &
-         n_step, iTime_I
+         nStep, iTime_I
 
     ! if(DoCalcDst) write(..., ADVANCE='NO') dst
 
@@ -1372,7 +1372,7 @@ contains
 
     use ModIeCoupling, ONLY: calc_ie_mag_perturb
     use CON_axes, ONLY: transform_matrix
-    use ModMain,  ONLY: n_step, time_simulation, TypeCoordSystem
+    use ModMain,  ONLY: nStep, tSimulation, TypeCoordSystem
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
@@ -1433,9 +1433,9 @@ contains
          dBTotal_DI(3,nMagNow))
 
     ! Matrix between coordinate systems
-    MagtoGm_DD = transform_matrix(Time_Simulation, &
+    MagtoGm_DD = transform_matrix(tSimulation, &
          TypeCoordNow, TypeCoordSystem)
-    GmtoSm_DD  = transform_matrix(Time_Simulation, &
+    GmtoSm_DD  = transform_matrix(tSimulation, &
          TypeCoordSystem, 'SMG')
 
     ! Transform the Radius position into cartesian coordinates.
@@ -1581,13 +1581,13 @@ contains
               trim(NamePlotDir)//'mag_grid_e', iTime_I(1:6), '.out'
       else
          write(NameFile,'(a, i8.8, a)') &
-              trim(NamePlotDir)//'mag_grid_n', n_step, '.out'
+              trim(NamePlotDir)//'mag_grid_n', nStep, '.out'
       end if
 
       call save_plot_file(NameFile, TypeFileIn=TypeFileNow, &
            StringHeaderIn = "Magnetometer grid ("//TypeCoordNow//") [deg] "// &
            "dB (North-East-Down) [nT]", &
-           TimeIn = time_simulation, &
+           TimeIn = tSimulation, &
            NameVarIn = NameVar, &
            CoordMinIn_D = [ GridLonMin, GridLatMin ], &
            CoordMaxIn_D = [ GridLonMax, GridLatMax ], &
@@ -1606,7 +1606,7 @@ contains
       ! Write data to file.
       do iMag=1, nMagNow
          ! Write time and magnetometer number to file:
-         write(iUnitOut,'(i8)',ADVANCE='NO') n_step
+         write(iUnitOut,'(i8)',ADVANCE='NO') nStep
          write(iUnitOut,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
          write(iUnitOut,'(1X,i4)', ADVANCE='NO')  iMag
 
@@ -1650,7 +1650,7 @@ contains
               trim(NamePlotDir), trim(StringPrefix),'_e', iTime_I(1:6), '.mag'
       else
          write(NameFile,'(3a, i8.8, a)') &
-              trim(NamePlotDir), trim(StringPrefix),'_n', n_step, '.mag'
+              trim(NamePlotDir), trim(StringPrefix),'_n', nStep, '.mag'
       end if
 
       ! Open file for output:
@@ -1670,7 +1670,7 @@ contains
       ! Write data to file.
       do iMag=1, nMagNow
          ! Write time and magnetometer number to file:
-         write(UnitTmp_,'(i8)',ADVANCE='NO') n_step
+         write(UnitTmp_,'(i8)',ADVANCE='NO') nStep
          write(UnitTmp_,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
          write(UnitTmp_,'(1X,i4)', ADVANCE='NO')  iMag
 

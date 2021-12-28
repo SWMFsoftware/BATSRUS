@@ -687,7 +687,7 @@ contains
   subroutine write_tecplot_auxdata(iUnitIn)
 
     use ModMain, ONLY : nI,nJ,nK, &
-         nBlockALL, time_accurate,n_step, &
+         nBlockALL, IsTimeAccurate,nStep, &
          nOrder, UseRotatingBc,           &
          TypeCoordSystem, CodeVersion
     use ModGeometry, ONLY: nTrueCells
@@ -787,7 +787,7 @@ contains
        write(iUnitHere) str
 
        ! ITER
-       write(iUnitHere) 'AUXDATA ITER="',int2str(n_step),'"',Newline
+       write(iUnitHere) 'AUXDATA ITER="',int2str(nStep),'"',Newline
 
        ! NPROC
        write(iUnitHere) 'AUXDATA NPROC="',int2str(nProc),'"',Newline
@@ -823,7 +823,7 @@ contains
        write(iUnitHere) 'AUXDATA TIMEEVENTSTART="',textDateTime0,'"',Newline
 
        ! TIMESIM
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           write(iUnitHere) 'AUXDATA TIMESIM="T=',&
                StringDateOrTime(1:4)//":"// &
                StringDateOrTime(5:6)//":"// &
@@ -834,7 +834,7 @@ contains
        end if
 
        ! TIMESIMSHORT
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           write(iUnitHere) 'AUXDATA TIMESIMSHORT="T=',&
                StringDateOrTime(1:4)//":"// &
                StringDateOrTime(5:6),'"',Newline
@@ -889,7 +889,7 @@ contains
        write(iUnitHere,'(a,f14.6,a)') 'AUXDATA GAMMA="',Gamma_I(1),'"'
 
        ! ITER
-       write(iUnitHere,'(a,i12,a)') 'AUXDATA ITER="',n_step,'"'
+       write(iUnitHere,'(a,i12,a)') 'AUXDATA ITER="',nStep,'"'
 
        ! NPROC
        write(iUnitHere,'(a,i12,a)') 'AUXDATA NPROC="',nProc,'"'
@@ -920,7 +920,7 @@ contains
             'AUXDATA TIMEEVENTSTART="',textDateTime0,'"'
 
        ! TIMESIM
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           write(iUnitHere,'(a,a,a)') 'AUXDATA TIMESIM="',&
                'T='// &
                StringDateOrTime(1:4)//":"// &
@@ -931,7 +931,7 @@ contains
        end if
 
        ! TIMESIMSHORT
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           write(iUnitHere,'(a,a,a)') &
                'AUXDATA TIMESIMSHORT="',&
                'T='// &
@@ -947,7 +947,7 @@ contains
   !============================================================================
   subroutine write_tecplot_setinfo
 
-    use ModMain, ONLY: n_step, time_accurate, iStartTime_I
+    use ModMain, ONLY: nStep, IsTimeAccurate, iStartTime_I
     use ModIO, ONLY: StringDateOrTime
     use ModGeometry, ONLY: count_true_cells
 
@@ -962,15 +962,15 @@ contains
     if(iProc /= 0) RETURN
 
     ! Create text string for zone name like 'N=0002000 T=0000:05:00'
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        call get_time_string
-       write(textNandT,'(a,i7.7,a)') "N=",n_step," T="// &
+       write(textNandT,'(a,i7.7,a)') "N=",nStep," T="// &
             StringDateOrTime(1:4)//":"// &
             StringDateOrTime(5:6)//":"// &
             StringDateOrTime(7:8)
     else
        write(textNandT,'(a,i7.7)') &
-            "N=",n_step
+            "N=",nStep
     end if
 
     format='(i4.4,"/",i2.2,"/",i2.2," ",i2.2,":",i2.2,":",i2.2,".",i3.3)'
@@ -1113,7 +1113,7 @@ contains
     integer::ic1,ic2,jc1,jc2,kc1,kc2, nCuts, nCutsTotal
     real :: XarbP,YarbP,ZarbP, XarbNormal,YarbNormal,ZarbNormal, Xp,Yp,Zp
     real(Real4_), dimension(3,1:nI+1,1:nJ+1,1:nK+1) :: NodeXYZ_DN
-    logical :: okdebug
+    logical :: DoDebug
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_tecplot_node_data'
@@ -1690,7 +1690,7 @@ contains
        deallocate(BlockCut)
     case('slc','dpl')
        !================================ arbitrary slices ===============
-       okdebug=.false.
+       DoDebug=.false.
 
        ! XarbP,YarbP,ZarbP                    point on plane
        ! XarbNormal,YarbNormal,ZarbNormal     normal for cut
@@ -1810,7 +1810,7 @@ contains
                  - (YarbNormal*(Yp-YarbP) + ZarbNormal*(Zp-ZarbP))/XarbNormal
             if ( Xp> PlotXYZNodes_DNB(1,ic1,jc,kc,iBlock) .and. &
                  Xp<=PlotXYZNodes_DNB(1,ic2,jc,kc,iBlock) )then
-               if(okdebug)write(*,*)'x-cut:',iopt,Xp,Yp,Zp
+               if(DoDebug)write(*,*)'x-cut:',iopt,Xp,Yp,Zp
                if(iopt==-1)then
                   nCuts=1; RETURN
                end if
@@ -1829,7 +1829,7 @@ contains
                        factor2*NodeXYZ_DN(:, ic2,jc,kc)), &
                        (factor1*PlotVarNodes_VNB(1:nPlotVar,ic1,jc,kc,iBlock)+ &
                        factor2*PlotVarNodes_VNB(1:nPlotVar,ic2,jc,kc,iBlock))
-                  if(okdebug)write(*,*)'  i=',ic1,'-',ic2,' j=',jc,' k=',kc
+                  if(DoDebug)write(*,*)'  i=',ic1,'-',ic2,' j=',jc,' k=',kc
                end if
             end if
          end do; end do
@@ -1846,7 +1846,7 @@ contains
                  - (XarbNormal*(Xp-XarbP) + ZarbNormal*(Zp-ZarbP))/YarbNormal
             if ( Yp> PlotXYZNodes_DNB(2,ic,jc1,kc,iBlock) .and. &
                  Yp<=PlotXYZNodes_DNB(2,ic,jc2,kc,iBlock) )then
-               if(okdebug)write(*,*)'y-cut:',iopt,Xp,Yp,Zp
+               if(DoDebug)write(*,*)'y-cut:',iopt,Xp,Yp,Zp
                if(iopt==-1)then
                   nCuts=1; RETURN
                end if
@@ -1865,7 +1865,7 @@ contains
                        factor2*NodeXYZ_DN(:, ic,jc2,kc)), &
                        (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc1,kc,iBlock)+ &
                        factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc2,kc,iBlock))
-                  if(okdebug)write(*,*)'  i=',ic,' j=',jc1,'-',jc2,' k=',kc
+                  if(DoDebug)write(*,*)'  i=',ic,' j=',jc1,'-',jc2,' k=',kc
                end if
             end if
          end do; end do
@@ -1882,7 +1882,7 @@ contains
                  - (XarbNormal*(Xp-XarbP) + YarbNormal*(Yp-YarbP))/ZarbNormal
             if ( Zp> PlotXYZNodes_DNB(3,ic,jc,kc1,iBlock) .and. &
                  Zp<=PlotXYZNodes_DNB(3,ic,jc,kc2,iBlock) )then
-               if(okdebug)write(*,*)'z-cut:',iopt,Xp,Yp,Zp
+               if(DoDebug)write(*,*)'z-cut:',iopt,Xp,Yp,Zp
                if(iopt==-1)then
                   nCuts=1; RETURN
                end if
@@ -1901,7 +1901,7 @@ contains
                        factor2*NodeXYZ_DN(:, ic,jc,kc2)), &
                        (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc1,iBlock)+ &
                        factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc2,iBlock))
-                  if(okdebug)write(*,*)'  i=',ic,' j=',jc,' k=',kc1,'-',kc2
+                  if(DoDebug)write(*,*)'  i=',ic,' j=',jc,' k=',kc1,'-',kc2
                end if
             end if
          end do; end do

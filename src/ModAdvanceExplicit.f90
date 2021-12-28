@@ -107,7 +107,7 @@ contains
              call timing_stop('calc_face_bfo')
 
              if(body_BLK(iBlock)) &
-                  call set_face_boundary(iBlock, Time_Simulation, .true.)
+                  call set_face_boundary(iBlock, tSimulation, .true.)
 
              ! Compute interface fluxes for each fine grid cell face at
              ! block edges with resolution changes.
@@ -159,7 +159,7 @@ contains
                   DoMonotoneRestrict=.true.)
              call timing_stop('calc_facevalues')
              if(body_BLK(iBlock)) &
-                  call set_face_boundary(iBlock, Time_Simulation,.false.)
+                  call set_face_boundary(iBlock, tSimulation,.false.)
 
              if(.not.DoInterpolateFlux)then
                 ! Compute interface fluxes for each cell.
@@ -196,7 +196,7 @@ contains
              ! for the block) used in multi-stage update
              ! for steady state calculations.
              ! Also calculate time step when UseDtLimit is true.
-             if((.not.time_accurate .or. UseDtLimit).and. iStage == 1 &
+             if((.not.IsTimeAccurate .or. UseDtLimit).and. iStage == 1 &
                   .and. DoCalcTimestep) call calc_timestep(iBlock)
 
              ! Update solution state in each cell.
@@ -219,7 +219,7 @@ contains
              ! for time accurate calculations.
              ! For time accurate with UseDtLimit, do not
              ! calculate time step.
-             if( time_accurate .and. .not.UseDtLimit.and. &
+             if( IsTimeAccurate .and. .not.UseDtLimit.and. &
                   iStage == nStage .and. DoCalcTimestep)&
                   call calc_timestep(iBlock)
 
@@ -267,18 +267,18 @@ contains
           ! The final Dt is determined by the second stage if Dt changed by
           ! update_check subroutine.
           if(UseUpdateCheck .and. iStage==1) &
-               Time_SimulationOld = Time_Simulation
+               tSimulationOld = tSimulation
           if(UseFlic)then
              ! Staging Dt/2; Dt/2; Dt
-             if(iStage/=2)Time_Simulation = Time_Simulation + &
+             if(iStage/=2)tSimulation = tSimulation + &
                   Dt*No2Si_V(UnitT_)/2
           else
-             Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
+             tSimulation = tSimulation + Dt*No2Si_V(UnitT_)/nStage
           end if
           if(UseUpdateCheck .and. iStage==nStage) &
-               Time_Simulation = Time_SimulationOld + Dt*No2Si_V(UnitT_)
+               tSimulation = tSimulationOld + Dt*No2Si_V(UnitT_)
        endif
-       !$acc update device(Time_Simulation)
+       !$acc update device(tSimulation)
 
        ! If we have particle to move in the electromagnetic field,
        ! test or hybrid ones
@@ -325,7 +325,7 @@ contains
   end subroutine advance_explicit
   !============================================================================
   subroutine update_secondbody
-    use ModMain,     ONLY: time_simulation, nBlock, Unused_B, body2_, iNewGrid
+    use ModMain,     ONLY: tSimulation, nBlock, Unused_B, body2_, iNewGrid
     use ModConst,    ONLY: cTwoPi
     use ModPhysics,  ONLY: xBody2, yBody2, zBody2, rBody2, DistanceBody2, &
          OrbitPeriod, PhaseBody2
@@ -360,8 +360,8 @@ contains
     ! Update second body coordinates for a circular orbit with orbital period
     ! OrbitPeriod (specified in days in the PARAM.in file) and initial phase
     ! PhaseBody2=atan(ybody/xbody) at the initial position
-    xBody2 = DistanceBody2*cos(cTwoPi*Time_Simulation/OrbitPeriod + PhaseBody2)
-    yBody2 = DistanceBody2*sin(cTwoPi*Time_Simulation/OrbitPeriod + PhaseBody2)
+    xBody2 = DistanceBody2*cos(cTwoPi*tSimulation/OrbitPeriod + PhaseBody2)
+    yBody2 = DistanceBody2*sin(cTwoPi*tSimulation/OrbitPeriod + PhaseBody2)
 
     ! Updating the grid structure for the new second body position
     do iBlock = 1, nBlock

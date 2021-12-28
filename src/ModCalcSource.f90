@@ -86,7 +86,7 @@ contains
   !              cleans either div B1 or dib (B1 + B0)
   !          2d. other variables are cell-centered
   subroutine calc_source(iBlock)
-    use ModMain,          ONLY: GravityDir, UseBody2, TypeCoordSystem, &
+    use ModMain,          ONLY: iDirGravity, UseBody2, TypeCoordSystem, &
          UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
          UseUserSourceExpl, UseUserSourceImpl
     use ModAdvance
@@ -809,7 +809,7 @@ contains
        if(nFluid > 1) call select_fluid(iFluid)
        if(UseGravity)then
           ! Add gravitational force
-          if(GravityDir == 0)then
+          if(iDirGravity == 0)then
              ! Force is toward the body at the origin
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -836,7 +836,7 @@ contains
                 end do; end do; end do
              end if
           else
-             iRhoUGrav = iRhoUx - 1 + GravityDir
+             iRhoUGrav = iRhoUx - 1 + iDirGravity
              do k=1,nK; do j=1,nJ; do i=1,nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
                 Source_VC(iRhoUGrav,i,j,k) = Source_VC(iRhoUGrav,i,j,k) &

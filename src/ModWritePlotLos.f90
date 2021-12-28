@@ -65,9 +65,9 @@ contains
     !               also added EUV (3-filters)
     !               and Soft-Xray synthesis capability
 
-    use ModMain,    ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
-         time_accurate, nBlock, NameThisComp, TypeCoordSystem,            &
-         Body1, StartTime, iStartTime_I, rLowerModel, rUpperModel
+    use ModMain,    ONLY : nI, nJ, nK, nStep, tSimulation, Unused_B, &
+         IsTimeAccurate, nBlock, NameThisComp, TypeCoordSystem,            &
+         UseBody, StartTime, iStartTime_I, rLowerModel, rUpperModel
     use ModGeometry, ONLY: &
          XyzStart_BLK, nMirror_D, RadiusMin, rMin_BLK
     use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
@@ -198,7 +198,7 @@ contains
        FromObs_DD = cUnit_DD
     else
        ! Convert to HGI
-       FromObs_DD = transform_matrix(Time_Simulation,'HGI', TypeCoordSystem)
+       FromObs_DD = transform_matrix(tSimulation,'HGI', TypeCoordSystem)
     end if
 
     iSat = 0
@@ -230,7 +230,7 @@ contains
        ! XyzSat_DI is in the current coordinate system, need to convert
        ! back to HGI
        ObsPos_DI(:, iFile) = matmul(                                   &
-            transform_matrix(Time_Simulation, TypeCoordSystem, 'HGI'), &
+            transform_matrix(tSimulation, TypeCoordSystem, 'HGI'), &
             ObsPos_DI(:,iFile) )
 
     case('none')
@@ -464,16 +464,16 @@ contains
        ! the plot time is stored in the hdf5 files and displayed in VisIt.
        ! if you don not include it in the filename VisIt will automacially
        ! group all the los files.
-       if(time_accurate .and. plot_form(ifile) /= 'hdf')then
+       if(IsTimeAccurate .and. plot_form(ifile) /= 'hdf')then
           call get_time_string
           write(filename,file_format) &
                trim(plot_type1)//"_",&
-               ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,&
+               ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
                file_extension
        else
           write(filename,file_format) &
                trim(plot_type1)//"_",&
-               ifile-plot_,"_n",n_step,file_extension
+               ifile-plot_,"_n",nStep,file_extension
        end if
 
        ! write header file
@@ -505,12 +505,12 @@ contains
 
           ! TIMESECONDSABSOLUTE
           ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-          write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+          write(StringTmp,'(E20.13)')StartTime+tSimulation
           write(UnitTmp_,'(a,a,a)') &
                'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
 
           ! ITER
-          write(StringTmp,'(i12)')n_step
+          write(StringTmp,'(i12)')nStep
           write(UnitTmp_,'(a,a,a)') &
                'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
 
@@ -562,7 +562,7 @@ contains
 
           ! TIMESECONDSABSOLUTE
           ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-          ! write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+          ! write(StringTmp,'(E20.13)')StartTime+tSimulation
           ! StringHeadLine = trim(StringHeadLine)//&
           !      '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
 
@@ -581,8 +581,8 @@ contains
              call save_plot_file(filename, &
                   TypeFileIn = TypeFile_I(iFile), &
                   StringHeaderIn = StringHeadLine, &
-                  nStepIn = n_step, &
-                  TimeIn = time_simulation, &
+                  nStepIn = nStep, &
+                  TimeIn = tSimulation, &
                   ParamIn_I = eqpar(1:neqpar), &
                   NameVarIn = allnames, &
                   nDimIn = 2, &
@@ -593,8 +593,8 @@ contains
              call save_plot_file(filename, &
                   TypeFileIn = 'hdf5', &
                   StringHeaderIn = StringHeadLine, &
-                  nStepIn = n_step, &
-                  TimeIn = time_simulation, &
+                  nStepIn = nStep, &
+                  TimeIn = tSimulation, &
                   ParamIn_I = eqpar(1:neqpar), &
                   NameVarIn_I = PlotVarNames, &
                   NameUnitsIn = unitstr_IDL,&
@@ -1270,7 +1270,7 @@ contains
 
          rInner = max(rBody, RadiusMin)
 
-         if(body1 .and. rMin_BLK(iBlock) < rBody ) &
+         if(UseBody .and. rMin_BLK(iBlock) < rBody ) &
               rInner = rBody + norm2(CellSize_D)
       end if
 

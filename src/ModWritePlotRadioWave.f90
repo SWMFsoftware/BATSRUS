@@ -24,7 +24,7 @@ contains
     ! Written by Leonid Benkevitch.
     !
     use ModCoordTransform, ONLY: cross_product
-    use ModMain, ONLY: time_accurate, n_Step, time_simulation
+    use ModMain, ONLY: IsTimeAccurate, nStep, tSimulation
     use ModIO, ONLY: StringRadioFrequency_I, plot_type1, &
          plot_type, plot_form, plot_, ObsPos_DI, &
          n_Pix_X, n_Pix_Y, X_Size_Image, Y_Size_Image, &
@@ -223,16 +223,16 @@ contains
           NameFileFormat='(a,i1,a,i7.7,a)'
        end if
 
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           call get_time_string
           write(NameFile,NameFileFormat) &
                trim(NamePlotDir)//trim(plot_type1)//"_",&
-               ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,&
+               ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
                NameFileExtension
        else
           write(NameFile,NameFileFormat) &
                trim(NamePlotDir)//trim(plot_type1)//"_",&
-               ifile-plot_,"_n",n_step,NameFileExtension
+               ifile-plot_,"_n",nStep,NameFileExtension
        end if
 
        write(*,*) 'filename = ', NameFile
@@ -245,7 +245,7 @@ contains
           call save_plot_file(NameFile=NameFile,          &
                TypeFileIn = 'tec',                        &
                StringHeaderIn='BATSRUS: Radiotelescope Image', &
-               nStepIn=n_step, TimeIn=Time_Simulation,    &
+               nStepIn=nStep, TimeIn=tSimulation,    &
                NameVarIn='  X  Y '//trim(NameVarAll),     &
                CoordMinIn_D=&
                [XLower + 0.5*DxPixel, YLower + 0.5*DyPixel],&
@@ -256,7 +256,7 @@ contains
           ! description of file contains units, physics and dimension
           call save_plot_file(NameFile=NameFile,          &
                StringHeaderIn='RFR Radiorelescope Image', &
-               nStepIn=n_step, TimeIn=Time_Simulation,    &
+               nStepIn=nStep, TimeIn=tSimulation,    &
                NameVarIn='  X  Y '//trim(NameVarAll),     &
                CoordMinIn_D=&
                [XLower + 0.5*DxPixel, YLower + 0.5*DyPixel],&

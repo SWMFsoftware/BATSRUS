@@ -391,7 +391,7 @@ contains
   subroutine apply_im_pressure
 
     use ModMain, ONLY: iNewGrid, iNewDecomposition, TauCoupleIm, &
-         time_accurate, Dt, RhoMinDimIm
+         IsTimeAccurate, Dt, RhoMinDimIm
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: Ppar_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
@@ -455,7 +455,7 @@ contains
     ! Determining which field lines are closed is done by using the ray
     ! tracing.
 
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        ! Ramp up is based on physical time: p' = p + min(1,dt/tau) * (pIM - p)
        ! A typical value might be 5, to get close to the IM pressure
        ! in 10 seconds. Dt/Tau is limited to 1, when p' = pIM is set
@@ -497,7 +497,7 @@ contains
           end do; end do; end do
        end if
 
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           if(DoCoupleImPressure)then
              !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI

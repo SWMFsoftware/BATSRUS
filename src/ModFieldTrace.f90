@@ -1111,7 +1111,7 @@ contains
     real :: InvBDl, RhoP_V(nExtraIntegral)
 
     ! Debugging
-    logical :: okdebug=.false.
+    logical :: DoDebug=.false.
 
     logical :: IsWall
 
@@ -1254,7 +1254,7 @@ contains
           ! and take ratio relative to dxOpt
           dxRel = abs(dl) * maxval(abs(bNormMid_D-bNormIni_D)) / dxOpt
 
-          if(DoTestRay.and.okdebug)&
+          if(DoTestRay.and.DoDebug)&
                write(*,*)'me,iBlock,IjkMid_D,bNormMid_D,dxRel=', &
                iProc,iBlock,IjkMid_D,bNormMid_D,dxRel
 
@@ -1319,14 +1319,14 @@ contains
                 end do HALF2
              end if
 
-             if(DoTestRay.and.okdebug) write(*,*) &
+             if(DoTestRay.and.DoDebug) write(*,*) &
                   'new decreased dl: me,iBlock,dl=',iProc,iBlock,dl
           else
              ! Too accurate, increase dl if possible
              if(abs(dl) < dlMax - dlTiny)then
                 dlNext = sign(min(dlMax, abs(dl)/sqrt(dxRel)), dl)
 
-                if(DoTestRay.and.okdebug) write(*,*) &
+                if(DoTestRay.and.DoDebug) write(*,*) &
                      'new increased dlNext: me,iBlock,dlNext=', &
                      iProc, iBlock, dlNext
              end if
@@ -1399,7 +1399,7 @@ contains
 
        end if
 
-       if(DoTestRay.and.okdebug)&
+       if(DoTestRay.and.DoDebug)&
             write(*,*)'me,iBlock,nSegment,IjkCur_D=', &
             iProc,iBlock,nSegment,IjkCur_D
 
@@ -1698,7 +1698,7 @@ contains
 
       use CON_planet_field, ONLY: map_planet_field
       use CON_planet,       ONLY: get_planet
-      use ModMain, ONLY: Time_Simulation
+      use ModMain, ONLY: tSimulation
 
       integer :: iHemisphere
       real    :: x_D(3), DipoleStrength=0.0
@@ -1706,7 +1706,7 @@ contains
       !------------------------------------------------------------------------
       if(DipoleStrength==0)call get_planet(DipoleStrengthOut=DipoleStrength)
 
-      call map_planet_field(Time_Simulation, XyzCur_D, TypeCoordSystem//' NORM',&
+      call map_planet_field(tSimulation, XyzCur_D, TypeCoordSystem//' NORM',&
            rIonosphere, x_D, iHemisphere)
 
       if(iHemisphere==0)then
@@ -1970,7 +1970,7 @@ contains
     use CON_ray_trace, ONLY: ray_init
     use CON_planet_field, ONLY: map_planet_field
     use CON_axes, ONLY: transform_matrix
-    use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, UseB0
+    use ModMain,    ONLY: nBlock, Unused_B, tSimulation, UseB0
     use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, UseMultiSpecies, nSpecies
     use ModB0,      ONLY: B0_DGB
     use ModMpi
@@ -2091,7 +2091,7 @@ contains
     end if
 
     ! Transformation matrix between the SM and GM coordinates
-    GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+    GmSm_DD = transform_matrix(tSimulation,'SMG',TypeCoordSystem)
 
     ! Integrate rays starting from the latitude-longitude pairs defined
     ! by the arrays Lat_I, Lon_I
@@ -2110,7 +2110,7 @@ contains
           call sph_to_xyz(Radius, Theta, Phi, XyzIono_D)
 
           ! Map from the ionosphere to rBody
-          call map_planet_field(time_simulation, XyzIono_D, 'SMG NORM', &
+          call map_planet_field(tSimulation, XyzIono_D, 'SMG NORM', &
                rBody+cTiny, Xyz_D, iHemisphere)
 
           ! Figure out direction of tracing outward
@@ -2180,7 +2180,7 @@ contains
     use CON_ray_trace,     ONLY: ray_init
     use CON_axes,          ONLY: transform_matrix
     use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-    use ModMain,           ONLY: nBlock, Time_Simulation, UseB0, Unused_B
+    use ModMain,           ONLY: nBlock, tSimulation, UseB0, Unused_B
     use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_, &
          UseMultiSpecies, nSpecies
     use ModB0,             ONLY: B0_DGB
@@ -2286,7 +2286,7 @@ contains
     end if
 
     ! Transformation matrix between the SM and GM coordinates
-    if(UseSmg) GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+    if(UseSmg) GmSm_DD = transform_matrix(tSimulation,'SMG',TypeCoordSystem)
 
     ! Integrate rays
     CpuTimeStartRay = MPI_WTIME()
@@ -2321,7 +2321,7 @@ contains
   !============================================================================
   subroutine write_plot_equator(iFile)
 
-    use ModMain, ONLY: n_step, time_accurate, Time_Simulation, NamePrimitive_V
+    use ModMain, ONLY: nStep, IsTimeAccurate, tSimulation, NamePrimitive_V
     use ModIo, ONLY: &
          StringDateOrTime, NamePlotDir, plot_range, plot_type, TypeFile_I
     use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
@@ -2417,11 +2417,11 @@ contains
     end if
 
     NameFileEnd = ""
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        call get_time_string
        NameFileEnd = "_t"//StringDateOrTime
     end if
-    write(NameFileEnd,'(a,i7.7)') trim(NameFileEnd) // '_n',n_step
+    write(NameFileEnd,'(a,i7.7)') trim(NameFileEnd) // '_n',nStep
     if(TypeFile_I(iFile) == 'tec')then
        NameFileEnd = trim(NameFileEnd)//'.dat'
     else
@@ -2438,7 +2438,7 @@ contains
     call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
     ! Convert vectors from BATSRUS coords to SM coords.
-    if(UseSmg) SmGm_DD = transform_matrix(time_simulation, TypeCoordSystem, 'SMG')
+    if(UseSmg) SmGm_DD = transform_matrix(tSimulation, TypeCoordSystem, 'SMG')
 
     if(.not.IsMinB)then
 
@@ -2571,8 +2571,8 @@ contains
             NameFile, &
             TypeFileIn=TypeFile_I(iFile), &
             StringHeaderIn = 'Values at minimum B', &
-            TimeIn  = time_simulation, &
-            nStepIn = n_step, &
+            TimeIn  = tSimulation, &
+            nStepIn = nStep, &
             NameVarIn_I= Name_I, &
             IsCartesianIn= .false., &
             CoordIn_DII  = StateMinB_VII(1:2,:,:), &
@@ -2591,8 +2591,8 @@ contains
          NameFile, &
          TypeFileIn=TypeFile_I(iFile), &
          StringHeaderIn = 'Mapping to northern ionosphere', &
-         TimeIn       = time_simulation, &
-         nStepIn      = n_step, &
+         TimeIn       = tSimulation, &
+         nStepIn      = nStep, &
          NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
          CoordMinIn_D = [rMin,   0.0], &
          CoordMaxIn_D = [rMax, 360.0], &
@@ -2603,8 +2603,8 @@ contains
          NameFile, &
          TypeFileIn=TypeFile_I(iFile), &
          StringHeaderIn = 'Mapping to southern ionosphere', &
-         TimeIn       = time_simulation, &
-         nStepIn      = n_step, &
+         TimeIn       = tSimulation, &
+         nStepIn      = nStep, &
          NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
          CoordMinIn_D = [rMin,   0.0], &
          CoordMaxIn_D = [rMax, 360.0], &
@@ -2621,7 +2621,7 @@ contains
     use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, Unused_B
     use CON_ray_trace, ONLY: ray_init
     use CON_axes,      ONLY: transform_matrix
-    use ModMain,       ONLY: nBlock, Time_Simulation, UseB0
+    use ModMain,       ONLY: nBlock, tSimulation, UseB0
     use ModAdvance,    ONLY: nVar, State_VGB, Bx_, Bz_
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,       ONLY: CellSize_DB
@@ -2769,7 +2769,7 @@ contains
     end do
 
     ! Transformation matrix between the SM and GM coordinates
-    if(UseSmg) GmSm_DD = transform_matrix(time_simulation, 'SMG', TypeCoordSystem)
+    if(UseSmg) GmSm_DD = transform_matrix(tSimulation, 'SMG', TypeCoordSystem)
 
     ! Integrate rays starting from the latitude-longitude pairs defined
     ! by the arrays Lat_I, Lon_I
@@ -2970,7 +2970,7 @@ contains
          IsSingleLine_I
     use ModWriteTecplot, ONLY: set_tecplot_var_string
     use ModMain,     ONLY: &
-         n_step, time_accurate, time_simulation, NamePrimitive_V
+         nStep, IsTimeAccurate, tSimulation, NamePrimitive_V
     use ModIoUnit,   ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file, join_string
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
@@ -3057,7 +3057,7 @@ contains
     end if
     NameStart = trim(NameStart)//'_'//NameLine_I(iPlotFile)
 
-    if(time_accurate)call get_time_string
+    if(IsTimeAccurate)call get_time_string
 
     ! Set the title
     if(IsSingleLine)then
@@ -3121,8 +3121,8 @@ contains
              write(NameFile,'(a,i2)') trim(NameFile),iLine
           end if
        end if
-       if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
-       write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step
+       if(IsTimeAccurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
+       write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',nStep
 
        if(IsIdl)then
           NameFile = trim(NameFile) // '.out'
@@ -3137,7 +3137,7 @@ contains
        if(IsIdl)then
           write(UnitTmp_,'(a79)') trim(StringTitle)//'_var11'
           write(UnitTmp_,'(i7,1pe13.5,3i3)') &
-               n_step,time_simulation,1,1,nPlotVar
+               nStep,tSimulation,1,1,nPlotVar
           if(IsSingleLine)then
              write(UnitTmp_,'(i6)') nPoint1
              write(UnitTmp_,'(es13.5)') real(iLine)
@@ -3263,7 +3263,7 @@ contains
     use ModIoUnit,         ONLY: UnitTmp_
     use ModUtilities,      ONLY: open_file, close_file
     use ModAdvance,        ONLY: nVar
-    use ModMain,           ONLY: Time_Simulation, time_accurate, n_step
+    use ModMain,           ONLY: tSimulation, IsTimeAccurate, nStep
     use ModNumConst,       ONLY: cDegToRad
     use ModPhysics,        ONLY: &
          Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_
@@ -3310,17 +3310,17 @@ contains
     if(.not.allocated(XyzPt_DI)) allocate(XyzPt_DI(3,nPts), zPt_I(nPts))
 
     ! Transformation matrix from default (GM) to SM coordinates
-    if(UseSmg) Smg2Gsm_DD = transform_matrix(time_simulation,'SMG','GSM')
+    if(UseSmg) Smg2Gsm_DD = transform_matrix(tSimulation,'SMG','GSM')
 
     if(iProc == 0)then
        FileName=trim(NamePlotDir)//'LCB-GM'
        if(iFile <  10) write(FileName, '(a,i1)') trim(FileName)//"_",iFile
        if(iFile >= 10) write(FileName, '(a,i2)') trim(FileName)//"_",iFile
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           call get_time_string
           FileName = trim(FileName) // "_t" // StringDateOrTime
        end if
-       if(IsPlotName_n) write(FileName,'(a,i7.7)') trim(FileName)//"_n",n_step
+       if(IsPlotName_n) write(FileName,'(a,i7.7)') trim(FileName)//"_n",nStep
        FileName = trim(FileName)//".dat"
 
        call open_file(FILE=trim(FileName), STATUS="replace")
@@ -3451,7 +3451,7 @@ contains
                       Xyz_D = PlotVar_VI(2:4,jMid-1) * Si2No_V(UnitX_)
                       do i=0,nTP-1
                          ! Map from the ionosphere to first point
-                         call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
+                         call map_planet_field(tSimulation, Xyz_D, 'GSM NORM', &
                               RadiusIono+i*.1, XyzIono_D, iHemisphere)
                          if(SaveIntegrals)then
                             write(UnitTmp_, *) XyzIono_D,Integrals
@@ -3479,7 +3479,7 @@ contains
                       end do
                       do i=nTP-1,0,-1
                          ! Map from last point to the ionosphere
-                         call map_planet_field(time_simulation, Xyz_D, 'GSM NORM', &
+                         call map_planet_field(tSimulation, Xyz_D, 'GSM NORM', &
                               RadiusIono+i*.1, XyzIono_D, iHemisphere)
                          if(SaveIntegrals)then
                             write(UnitTmp_, *) XyzIono_D,Integrals
@@ -3529,7 +3529,7 @@ contains
     use ModIoUnit,         ONLY: UnitTmp_
     use ModUtilities,      ONLY: open_file, close_file
     use ModAdvance,        ONLY: nVar
-    use ModMain,           ONLY: Time_Simulation, time_accurate, n_step
+    use ModMain,           ONLY: tSimulation, IsTimeAccurate, nStep
     use ModNumConst,       ONLY: cDegToRad
     use ModPhysics,        ONLY: Si2No_V, UnitX_
     use ModCoordTransform, ONLY: sph_to_xyz
@@ -3578,8 +3578,8 @@ contains
     if(iProc == 0)then
 
        ! Transformation matrix from default (GM) to SM coordinates
-       Gsm2Smg_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
-       Smg2Gsm_DD = transform_matrix(time_simulation,'SMG','GSM')
+       Gsm2Smg_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
+       Smg2Gsm_DD = transform_matrix(tSimulation,'SMG','GSM')
 
        call line_get(nVarOut, nPoint)
        if(nPoint>0)then
@@ -3599,11 +3599,11 @@ contains
                 Coord = 'GM';  NS = 'S'
              end if
              FileName=trim(NamePlotDir)//'IEB-'//trim(Coord)//'-'//trim(NS)
-             if(time_accurate)then
+             if(IsTimeAccurate)then
                 call get_time_string
                 FileName = trim(FileName) // "_t" // StringDateOrTime
              end if
-             write(FileName,'(a,i7.7,a)') trim(FileName)//"_n", n_step,".dat"
+             write(FileName,'(a,i7.7,a)') trim(FileName)//"_n", nStep,".dat"
 
              call open_file(FILE=FileName)
              if(Coord == 'GM')then
@@ -3647,7 +3647,7 @@ contains
                       write(UnitTmp_, *) Xyz_D,Lat,Lon,OC
                       do i=1,nTP
                          ! Map from the ionosphere to rBody
-                         call map_planet_field(time_simulation, XyzIono_D, &
+                         call map_planet_field(tSimulation, XyzIono_D, &
                               'SMG NORM', &
                               Radius+i*.1, Xyz_D, iHemisphere)
                          if(Coord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
@@ -3666,7 +3666,7 @@ contains
                          Xyz_D=PlotVar_V(2:4)
                          do i=nTP,0,-1
                             ! Map from rBody to the ionosphere
-                            call map_planet_field(time_simulation, Xyz_D, &
+                            call map_planet_field(tSimulation, Xyz_D, &
                                  'SMG NORM', &
                                  Radius+i*.1, XyzIono_D, iHemisphere)
                             if(Coord == 'GM') &
@@ -3723,7 +3723,7 @@ contains
                 write(UnitTmp_, *) Xyz_D,Lat,Lon,OC
                 do i=1,nTP
                    ! Map from the ionosphere to rBody
-                   call map_planet_field(time_simulation, XyzIono_D, &
+                   call map_planet_field(tSimulation, XyzIono_D, &
                         'SMG NORM', &
                         Radius+i*.1, Xyz_D, iHemisphere)
                    if(Coord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
@@ -3742,7 +3742,7 @@ contains
                    Xyz_D=PlotVar_V(2:4)
                    do i=nTP,0,-1
                       ! Map from the ionosphere to rBody
-                      call map_planet_field(time_simulation, Xyz_D, &
+                      call map_planet_field(tSimulation, Xyz_D, &
                            'SMG NORM', &
                            Radius+i*.1, XyzIono_D, iHemisphere)
                       if(Coord == 'GM') XyzIono_D = &

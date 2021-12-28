@@ -892,7 +892,7 @@ contains
        NameRestartDir, UseRestartSeries, NameBlockFile)
 
     use BATL_lib, ONLY: iMortonNode_A, iNode_B
-    use ModMain,  ONLY: iteration_number
+    use ModMain,  ONLY: nIteration
 
     integer, intent(in) :: iBlock
     logical, intent(in) :: UseRestartSeries
@@ -916,7 +916,7 @@ contains
     if (UseRestartSeries) then
        write(NameBlockFile, &
             '(a,i8.8,a,i'//StringDigit//'.'//StringDigit//',a)') &
-            trim(NameRestartDir)//'n', iteration_number,         &
+            trim(NameRestartDir)//'n', nIteration,         &
             '_'//NameStart,iBlockRestart,StringRestartExt
     else
        write(NameBlockFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &

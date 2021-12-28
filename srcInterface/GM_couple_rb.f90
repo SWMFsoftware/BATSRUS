@@ -9,7 +9,7 @@ module GM_couple_rb
   use BATL_lib, ONLY: iProc
   use ModMpi
   use CON_coupler, ONLY: Grid_C, ncell_id
-  use ModMain, ONLY: n_step
+  use ModMain, ONLY: nStep
   use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitRho_, UnitTemperature_
 
   implicit none
@@ -121,7 +121,7 @@ contains
     nCall=nCall+1
 
     ! write values to plot file
-    write(filename,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",n_step,"_",nCall,".dat"
+    write(filename,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",nStep,"_",nCall,".dat"
 
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
     write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
@@ -159,20 +159,20 @@ contains
   subroutine write_integrated_data_idl
     use ModPhysics, ONLY: No2Si_V, UnitB_
     use ModIoUnit, ONLY: UNITTMP_
-    use ModMain,   ONLY: time_simulation
+    use ModMain,   ONLY: tSimulation
     CHARACTER (LEN=100) :: filename
     integer :: nCall = 0
 
     ! write values to plot file
     !--------------------------------------------------------------------------
     nCall = nCall+1
-    write(filename,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",n_step,"_",nCall,".out"
+    write(filename,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",nStep,"_",nCall,".out"
 
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
          iostat =iError)
     if (iError /= 0) call CON_stop("Can not open raytrace File "//filename)
     write(UNITTMP_,'(a79)')            'Raytrace Values_var22'
-    write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,6
+    write(UNITTMP_,'(i7,1pe13.5,3i3)') nStep,tSimulation,2,1,6
     write(UNITTMP_,'(3i4)')            jSize,iSize
     write(UNITTMP_,'(100(1pe13.5))')   0.0
     write(UNITTMP_,'(a79)')            'Lon Lat Xeq Yeq vol rho p Beq nothing'
@@ -231,7 +231,7 @@ contains
        BufferLine_VI, nVarLine, nPointLine, NameVar)
 
     use ModGeometry, ONLY: x2
-    use ModMain, ONLY: Time_Simulation,TypeCoordSystem
+    use ModMain, ONLY: tSimulation,TypeCoordSystem
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
          MassFluid_I, IonFirst_, nVar
 
@@ -280,7 +280,7 @@ contains
     call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
 
     ! Transformation matrix between CRCM(SM) and GM coordinates
-    SmGm_DD = transform_matrix(Time_Simulation,TypeCoordSystem,'SMG')
+    SmGm_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
 
     ! The first field line starts from iPoint = 1
     iStartPoint = 1
@@ -341,7 +341,7 @@ contains
     ! Send solar wind values in the array of the extra integral
     ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
 
-    call get_solar_wind_point(Time_Simulation, [x2, 0.0, 0.0], SolarWind_V)
+    call get_solar_wind_point(tSimulation, [x2, 0.0, 0.0], SolarWind_V)
 
     Buffer_IIV(1,:,6) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_) &
          *No2Si_V(UnitN_)

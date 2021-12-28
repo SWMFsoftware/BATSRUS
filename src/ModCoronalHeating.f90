@@ -131,7 +131,7 @@ contains
     use ModAdvance,     ONLY: State_VGB, Bz_
     use ModGeometry,    ONLY: true_BLK, true_cell, TypeGeometry
     use ModMagnetogram, ONLY: get_magnetogram_field
-    use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, Time_Simulation,z_
+    use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, tSimulation,z_
     use ModMpi,         ONLY: MPI_REAL, MPI_SUM
     use ModNumConst,    ONLY: cHalfPi, cTwoPi
     use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
@@ -196,7 +196,7 @@ contains
        DoFirst = .false.
 
     elseif( DtUpdateFlux > 0.0 .and. &
-         Time_Simulation - TimeUpdateLast > DtUpdateFlux ) then
+         tSimulation - TimeUpdateLast > DtUpdateFlux ) then
 
        UnsignedFluxCgs = 0.0
        if(TypeGeometry == 'spherical')then
@@ -232,7 +232,7 @@ contains
 
        TotalCoronalHeating = TotalCoronalHeatingCgs*1e-7 &
             *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
-       TimeUpdateLast = Time_Simulation
+       TimeUpdateLast = tSimulation
 
     end if
 

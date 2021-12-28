@@ -30,8 +30,7 @@ module ModUpdateStateFast
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
        OmegaBody_D, set_dipole
-  use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
-       TimeSimulation => time_simulation, &
+  use ModMain, ONLY: Dt, DtMax_B => Dt_B, Cfl, nStep, tSimulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe
   use ModB0, ONLY: B0_DGB, get_b0_dipole
   use ModNumConst, ONLY: cUnit_DD
@@ -1967,7 +1966,7 @@ contains
     !--------------------------------------------------------------------------
 
     if (IsTimeAccurate .and. iTypeCellBc_I(2) == VaryBC_)then
-       call get_solar_wind_point(TimeSimulation, [x2, 0., 0.], &
+       call get_solar_wind_point(tSimulation, [x2, 0., 0.], &
             CellState_VI(:,2))
        ! Convert velocity to momentum
        CellState_VI(RhoUx_:RhoUz_,2) = &
@@ -2232,7 +2231,7 @@ contains
             0.5*(B0_DGB(:,i,j,k,iBlock) + B0_DGB(:,iBody,jBody,kBody,iBlock))
 
        ! Get the E x B / B^2 velocity
-       call calc_inner_bc_velocity(TimeSimulation, XyzFace_D, b_D, u_D)
+       call calc_inner_bc_velocity(tSimulation, XyzFace_D, b_D, u_D)
 
        ! Subtract the radial component of the velocity (no outflow/inflow)
        u_D = u_D &
@@ -2297,7 +2296,7 @@ contains
        end do; end do; end do
        DtMax_B(iBlock) = DtMin
     else
-       ! If the block has no true cells, set Dt_BLK=1.0E20
+       ! If the block has no true cells, set Dt_B=1.0E20
        DtMin = 1e20
        !$acc loop vector independent collapse(3) reduction(min:DtMin)
        do k=1,nK; do j=1,nJ; do i=1,nI

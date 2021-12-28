@@ -160,7 +160,7 @@ contains
 
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,   ONLY: EEE_initialize
-    use ModMain,       ONLY: Time_Simulation, TypeCellBc_I, TypeFaceBc_I, &
+    use ModMain,       ONLY: tSimulation, TypeCellBc_I, TypeFaceBc_I, &
          Body1_
     use ModIO,         ONLY: write_prefix, iUnitOut
     use ModWaves,      ONLY: UseWavePressure, UseAlfvenWaves
@@ -228,7 +228,7 @@ contains
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
 
     if(UseCme) call EEE_initialize(BodyNDim_I(1), BodyTDim_I(1), Gamma,&
-         TimeNow = Time_Simulation)
+         TimeNow = tSimulation)
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -900,8 +900,8 @@ contains
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModPhysics,    ONLY: AverageIonCharge, UnitRho_, UnitB_, UnitP_, &
          Si2No_V, rBody, GBody, UnitU_, InvGammaMinus1
-    use ModMain,       ONLY: n_step, iteration_number, time_simulation, &
-         time_accurate
+    use ModMain,       ONLY: nStep, nIteration, tSimulation, &
+         IsTimeAccurate
     use ModB0,         ONLY: B0_DGB
     use BATL_lib,      ONLY: CellSize_DB, Phi_, Theta_, x_, y_
     use ModCoordTransform, ONLY: rot_xyz_sph
@@ -1082,7 +1082,7 @@ contains
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
 
              call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-                  time_simulation, n_step, iteration_number)
+                  tSimulation, nStep, nIteration)
 
              RhoCme = RhoCme*Si2No_V(UnitRho_)
              Bcme_D = Bcme_D*Si2No_V(UnitB_)
@@ -1128,13 +1128,13 @@ contains
        if(TypeBc == 'usersurfacerot')then
 
           ! Check if time accurate is set.
-          if(time_accurate)then
-             if(time_simulation<tBeginJet)then
+          if(IsTimeAccurate)then
+             if(tSimulation<tBeginJet)then
                 Framp = 0.0
-             elseif(time_simulation>tEndJet)then
+             elseif(tSimulation>tEndJet)then
                 Framp = 1.0
              else
-                Framp = 0.5 * (1 - cos(cPi*(time_simulation-tBeginJet) / &
+                Framp = 0.5 * (1 - cos(cPi*(tSimulation-tBeginJet) / &
                      (tEndJet-tBeginJet)))
              endif
           else
@@ -1221,7 +1221,7 @@ contains
                 end if
 
                 ! Set density and pressure in ghost cells once (does not change)
-                if(iteration_number < 2)then
+                if(nIteration < 2)then
                    ! update with Parker solution
                    if(UpdateWithParker)then
 
@@ -1277,7 +1277,7 @@ contains
                         .or. Rho/State_VGB(Rho_,i,j,k,iBlock)>(1.0+DiffDelta) &
                         .or. Rho/State_VGB(Rho_,i,j,k,iBlock)<(1.0-DiffDelta)))&
                         then
-                      write(*,*)'n_step=',n_step
+                      write(*,*)'nStep=',nStep
                       write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
                       write(*,*)'x,y,z=',Xyz1_D
                       write(*,*)'Rho,ParkerRho=',&
@@ -1304,10 +1304,10 @@ contains
 
           end do; end do
 
-          if(UpdateWithParker .and. iProc==0 .and. n_step <1)then
+          if(UpdateWithParker .and. iProc==0 .and. nStep <1)then
              write(*,*)'Update with Parkers solutions'
           endif
-          if(.not.UpdateWithParker .and. iProc==0 .and. n_step < 1)then
+          if(.not.UpdateWithParker .and. iProc==0 .and. nStep < 1)then
              write(*,*)'Update with scaleheight calculation solution'
           endif
 
@@ -1360,7 +1360,7 @@ contains
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
 
              call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-                  time_simulation, n_step, iteration_number)
+                  tSimulation, nStep, nIteration)
 
              RhoCme = RhoCme*Si2No_V(UnitRho_)
              Bcme_D = Bcme_D*Si2No_V(UnitB_)
@@ -1393,8 +1393,8 @@ contains
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
-    use ModMain,         ONLY: x_, y_, UseRotatingFrame, n_step, &
-         iteration_number, FaceBCType
+    use ModMain,         ONLY: x_, y_, UseRotatingFrame, nStep, &
+         nIteration, FaceBCType
     use ModMultiFluid,   ONLY: MassIon_I
     use ModPhysics,      ONLY: OmegaBody, AverageIonCharge, UnitRho_, &
          UnitP_, UnitB_, UnitU_, Si2No_V, &
@@ -1473,7 +1473,7 @@ contains
     ! If the CME is applied, we modify: density, temperature, magnetic field
     if(UseCme)then
        call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, FBC%TimeBc, &
-            n_step, iteration_number)
+            nStep, nIteration)
 
        RhoCme = RhoCme*Si2No_V(UnitRho_)
        Ucme_D = Ucme_D*Si2No_V(UnitU_)
@@ -1575,7 +1575,7 @@ contains
          bAmbientCenterSi_D, bAmbientApexSi_D
     use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again
     use ModB0, ONLY: get_b0
-    use ModMain, ONLY: n_step, iteration_number, UseFieldLineThreads
+    use ModMain, ONLY: nStep, nIteration, UseFieldLineThreads
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModPhysics,   ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, No2Si_V
@@ -1602,7 +1602,7 @@ contains
              x_D = Xyz_DGB(:,i,j,k,iBlock)
 
              call EEE_get_state_init(x_D, &
-                  Rho, B_D, p, n_step, iteration_number)
+                  Rho, B_D, p, nStep, nIteration)
 
              Rho = Rho*Si2No_V(UnitRho_)
              B_D = B_D*Si2No_V(UnitB_)
@@ -1688,7 +1688,7 @@ contains
              x_D = Xyz_DGB(:,i,j,k,iBlock)
 
              call EEE_get_state_init(x_D, &
-                  Rho, B_D, p, n_step, iteration_number)
+                  Rho, B_D, p, nStep, nIteration)
 
              Rho = Rho*Si2No_V(UnitRho_)
              B_D = B_D*Si2No_V(UnitB_)
@@ -1793,7 +1793,7 @@ contains
   !============================================================================
 
   subroutine user_get_b0(x, y, z, B0_D)
-    use ModMain, ONLY: TimeSimulation=>Time_Simulation, UseUserB0
+    use ModMain, ONLY: TimeSimulation=>tSimulation, UseUserB0
     use EEE_ModGetB0,   ONLY: EEE_get_B0
     use EEE_ModCommonVariables, ONLY: UseTD
     use ModPhysics,     ONLY:Si2No_V,UnitB_

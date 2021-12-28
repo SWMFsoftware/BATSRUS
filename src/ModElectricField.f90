@@ -28,7 +28,7 @@ module ModElectricField
        iProc, iComm, message_pass_cell
 
   use ModAdvance,      ONLY: Efield_DGB
-  use ModMain,         ONLY: n_step, UseB
+  use ModMain,         ONLY: nStep, UseB
   use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
   use ModCellBoundary, ONLY: set_cell_boundary, FloatBC_, GradPotBC_
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
@@ -107,8 +107,8 @@ contains
     character(len=*), parameter:: NameSub = 'get_electric_field'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(nStepLast == n_step) RETURN
-    nStepLast = n_step
+    if(nStepLast == nStep) RETURN
+    nStepLast = nStep
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -378,8 +378,8 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub, ' starting'
 
-    if(nStepLast == n_step) RETURN
-    nStepLast = n_step
+    if(nStepLast == nStep) RETURN
+    nStepLast = nStep
 
     nBlockUsed = nBlock - count(Unused_B(1:nBlock))
     nVarAll    = nBlockUsed*nIJK
@@ -433,8 +433,8 @@ contains
     character(len=*), parameter:: NameSub = 'calc_div_e'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(nStepLast == n_step) RETURN
-    nStepLast = n_step
+    if(nStepLast == nStep) RETURN
+    nStepLast = nStep
 
     if(allocated(DivE_CB)) deallocate(DivE_CB)
     allocate(DivE_CB(nI,nJ,nK,nBlock))
@@ -462,11 +462,11 @@ contains
     character(len=*), parameter:: NameSub = 'calc_potential'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(DoTest)write(*,*) NameSub,' starting at n_step, nStepLast=', &
-         n_step, nStepLast
+    if(DoTest)write(*,*) NameSub,' starting at nStep, nStepLast=', &
+         nStep, nStepLast
 
-    if(nStepLast == n_step) RETURN
-    nStepLast = n_step
+    if(nStepLast == nStep) RETURN
+    nStepLast = nStep
 
     if(.not.allocated(Potential_GB)) &
          allocate(Potential_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))

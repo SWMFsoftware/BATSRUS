@@ -229,7 +229,7 @@ contains
       call test_start(NameSub, DoTest, iBlockBc)
 
       if(TypeFaceBc_I(body1_) == 'polarwind') then
-         GmToSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
+         GmToSmg_DD = transform_matrix(tSimulation, TypeCoordSystem, 'SMG')
          Cos2PolarTheta = cos(PolarTheta)**2
       end if
 

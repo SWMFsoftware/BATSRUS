@@ -267,7 +267,7 @@ contains
   subroutine update_point_implicit(iBlock, calc_point_impl_source)
 
     use ModMain,    ONLY: &
-         nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate
+         nI, nJ, nK, nIJK, Cfl, iStage, nStage, IsTimeAccurate
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
          DoReplaceDensity, UseMultiSpecies
     use ModMultiFluid, ONLY: iRho_I, nFluid
@@ -298,7 +298,7 @@ contains
     call timing_start(NameSub)
 
     ! The beta parameter is always one in the first stage
-    if(iStage == 1 .or. .not. time_accurate)then
+    if(iStage == 1 .or. .not. IsTimeAccurate)then
        BetaStage = 1.0
     else
        BetaStage = BetaPointImpl

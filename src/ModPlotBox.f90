@@ -52,7 +52,7 @@ contains
 
     ! Set up the box grid for this plot file
 
-    use ModMain,           ONLY: time_simulation, TypeCoordSystem
+    use ModMain,           ONLY: tSimulation, TypeCoordSystem
     use CON_axes,          ONLY: transform_matrix
     use ModCoordTransform, ONLY: show_rot_matrix, cross_product, &
          rot_matrix_x, rot_matrix_y, rot_matrix_z
@@ -93,7 +93,7 @@ contains
     zMax   = plot_range(3,iFile) + zLen/2
 
     ! Get coordinate transformation matrix:
-    PlotToGm_DD = transform_matrix(Time_Simulation, &
+    PlotToGm_DD = transform_matrix(tSimulation, &
          TypeCoordPlot_I(iFile), TypeCoordSystem)
 
     ! Check if box center is given in "observer" frame or in TypeCoordPlot
@@ -167,7 +167,7 @@ contains
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK, r_
     use ModPhysics,     ONLY: rBody
-    use ModMain,        ONLY: body1
+    use ModMain,        ONLY: UseBody
     use ModFieldLineThread, ONLY: interpolate_thread_state, &
          set_thread_plotvar, DoPlotThreads, rChromo=>rBody
     use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
@@ -232,7 +232,7 @@ contains
              end if
 
              ! When inside Body keep default plot values
-             if(r < rBody .and. body1)CYCLE
+             if(r < rBody .and. UseBody)CYCLE
 
              ! Get generalized coordinates
              call xyz_to_coord(XyzGm_D, Coord_D)
@@ -280,7 +280,7 @@ contains
 
     ! Collect results from all blocks and write to single output file.
     use ModMpi
-    use ModMain,     ONLY: time_simulation, n_step
+    use ModMain,     ONLY: tSimulation, nStep
     use ModPlotFile, ONLY: save_plot_file
 
     integer,          intent(in) :: iFile, nPlotvar
@@ -328,8 +328,8 @@ contains
        call save_plot_file(NameFile, &
             TypeFileIn=TypeFile_I(iFile), &
             StringHeaderIn=NameUnit, &
-            nStepIn=n_step, &
-            TimeIn=time_simulation, &
+            nStepIn=nStep, &
+            TimeIn=tSimulation, &
             ParamIn_I = [ ((Rot_DD(i,j), i=1,3), j=1,3) ], &
             NameVarIn = NameVar, &
             CoordMinIn_D = [ xMin, yMin, zMin ], &

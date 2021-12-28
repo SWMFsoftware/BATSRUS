@@ -163,7 +163,7 @@ contains
   !============================================================================
   subroutine get_ie_potential(Xyz_D, Potential)
 
-    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
+    use ModMain,           ONLY: tSimulation, TypeCoordSystem
     use ModInterpolate,    ONLY: bilinear
     use CON_planet_field,  ONLY: map_planet_field
 
@@ -192,7 +192,7 @@ contains
     end if
 
     ! Map down to the ionosphere at radius rIonosphere. Result is in SMG.
-    call map_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM', &
+    call map_planet_field(tSimulation, Xyz_D, TypeCoordSystem//' NORM', &
          rIonosphere, XyzIono_D, iHemisphere, DoNotConvertBack=.true.)
 
     ! Calculate angular coordinates
@@ -423,7 +423,7 @@ contains
   !============================================================================
   subroutine map_jouleheating_to_inner_bc
 
-    use ModMain,    ONLY: Time_Simulation
+    use ModMain,    ONLY: tSimulation
     use ModPhysics, ONLY: rBody
     use CON_planet_field, ONLY: get_planet_field, map_planet_field
 
@@ -436,12 +436,12 @@ contains
     call test_start(NameSub, DoTest)
     do j = 1, nPhiIono; do i = 1, nThetaIono
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
-       call get_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', bIono_D)
+       call get_planet_field(tSimulation,XyzIono_D, 'SMG NORM', bIono_D)
        bIono = norm2(bIono_D)
 
        ! map out to GM (caution! , not like map down to the ionosphere,
        ! there is always a corresponding position.)
-       call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
+       call map_planet_field(tSimulation, XyzIono_D, 'SMG NORM', &
             rBody, Xyz_tmp, iHemisphere)
 
        if (iHemisphere == 0) then
@@ -449,7 +449,7 @@ contains
           ! assume no outflow to GM inner boundary
           IonoJouleHeating_II(i,j) = 0
        else
-          call get_planet_field(Time_Simulation, Xyz_tmp, 'SMG NORM', B_D)
+          call get_planet_field(tSimulation, Xyz_tmp, 'SMG NORM', B_D)
           b = norm2(B_D)
 
           ! scale the jouleheating
@@ -466,7 +466,7 @@ contains
     ! Get the Joule heating at the position XyzSm_D (given in SMG)
     ! at the inner boundary.
 
-    use ModMain,           ONLY: Time_Simulation
+    use ModMain,           ONLY: tSimulation
     use CON_planet_field,  ONLY: map_planet_field
 
     real, intent(in)    :: XyzSm_D(3) ! Position vector in SMG
@@ -485,7 +485,7 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Map down to the ionosphere at radius rIonosphere
-    call map_planet_field(Time_Simulation, XyzSm_D, 'SMG NORM', rIonosphere, &
+    call map_planet_field(tSimulation, XyzSm_D, 'SMG NORM', rIonosphere, &
          XyzIono_D, iHemisphere)
 
     ! Calculate angular coordinates
@@ -513,7 +513,7 @@ contains
   subroutine calc_ie_currents
 
     use CON_planet_field,  ONLY: get_planet_field
-    use ModMain,           ONLY: Time_Simulation
+    use ModMain,           ONLY: tSimulation
 
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitElectric_, UnitJ_
 
@@ -546,7 +546,7 @@ contains
 
        ! Calculate magnetic field direction for the Hall current
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
-       call get_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', bUnit_D)
+       call get_planet_field(tSimulation, XyzIono_D, 'SMG NORM', bUnit_D)
        bUnit_D = bUnit_D/norm2(bUnit_D)
 
        ! Calculate spherical components of the electric field from the
@@ -609,7 +609,7 @@ contains
 
     use ModNumConst, ONLY: cPi
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitX_
-    use ModMain,    ONLY: Time_Simulation
+    use ModMain,    ONLY: tSimulation
 
     integer,intent(in) :: nMag
     real,   intent(in) :: XyzSm_DI(3,nMag)
@@ -683,7 +683,7 @@ contains
 
 #ifndef _OPENACC
           if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug.and.iMag==1)then
-             write(*,*)NameSub,': Time=', Time_Simulation
+             write(*,*)NameSub,': Time=', tSimulation
              write(*,*)NameSub,': XyzSm,XyzIono=', &
                   XyzSm_DI(:,iMag)*No2Si_V(UnitX_), XyzIono_D*No2Si_V(UnitX_)
              write(*,*)NameSub,': rIono**2, dTheta, dPhi, sinTheta=', &
@@ -735,7 +735,7 @@ contains
   !============================================================================
   subroutine apply_ie_velocity
 
-    use ModMain,    ONLY: nI, nJ, nK, nBlock, time_accurate, time_simulation, &
+    use ModMain,    ONLY: nI, nJ, nK, nBlock, IsTimeAccurate, tSimulation, &
          Dt, Unused_B, UseB0, UseRotatingBc
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use ModGeometry, ONLY: r_BLK, Rmin_BLK
@@ -753,7 +753,7 @@ contains
     call test_start(NameSub, DoTest)
     if(.not.UseIonoVelocity) RETURN
 
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        ! Ramp up is based on physical time: u' = u + dt/tau * (uIE - u)
        ! A typical value might be 10 sec, to get close to the IE velocity
        ! in 20 seconds
@@ -785,7 +785,7 @@ contains
           if(UseB0)b_D = b_D + b0_DGB(:,i,j,k,iBlock)
 
           ! Calculate E x B velocity
-          call calc_inner_bc_velocity(Time_Simulation, Xyz_D, b_D, uIono_D)
+          call calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, uIono_D)
 
           ! Add rotational velocity if required
           if (UseRotatingBc) &

@@ -927,7 +927,7 @@ contains
     !==========================================================================
     subroutine calc_analytic_sln_sphere(iBlock,RhoExact_G,RhoError_G)
 
-      use ModMain,       ONLY: time_simulation, TypeCoordSystem
+      use ModMain,       ONLY: tSimulation, TypeCoordSystem
       use ModGeometry,   ONLY: Xyz_DGB
       use ModNumConst,   ONLY: cHalfPi, cTwoPi
       use ModConst,      ONLY: RotationPeriodSun
@@ -948,7 +948,7 @@ contains
       character(len=*), parameter:: NameSub = 'calc_analytic_sln_sphere'
       !------------------------------------------------------------------------
       ! Find current location of sphere center
-      t = time_simulation*Si2No_V(UnitT_)
+      t = tSimulation*Si2No_V(UnitT_)
       xSphereCenter = xSphereCenterInit + UxNo*t
       ySphereCenter = ySphereCenterInit + UyNo*t
       zSphereCenter = zSphereCenterInit + UzNo*t
@@ -958,7 +958,7 @@ contains
          rSphereCenter = sqrt(xSphereCenter**2 + ySphereCenter**2)
          PhiSphereCenterInertial = atan2(ySphereCenter, xSphereCenter)
          PhiSphereCenterRotating = PhiSphereCenterInertial - &
-              time_simulation*cTwoPi/RotationPeriodSun
+              tSimulation*cTwoPi/RotationPeriodSun
          xSphereCenter = rSphereCenter*cos(PhiSphereCenterRotating)
          ySphereCenter = rSphereCenter*sin(PhiSphereCenterRotating)
       end if
@@ -1083,7 +1083,7 @@ contains
          ShockSlope, ShockPosition
     use ModNumconst, ONLY: cTwoPi, cDegToRad
     use ModConst,    ONLY: cProtonMass, RotationPeriodSun
-    use ModMain,     ONLY: Time_Simulation, TypeCoordSystem
+    use ModMain,     ONLY: tSimulation, TypeCoordSystem
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB,p_
     use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
@@ -1151,7 +1151,7 @@ contains
        case(4)
           ! x0 is the shock position at y=1 at the current simulation time.
           ! The analytic shock speed is 20 along X.
-          x0 = ShockPosition - ShockSlope*(1 + 20*time_simulation)
+          x0 = ShockPosition - ShockSlope*(1 + 20*tSimulation)
           do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
              if (Xyz_DGB(x_,i,j,k,iBlock) <= x0) then
                 ! Upstream condition
@@ -1182,7 +1182,7 @@ contains
        RETURN
     end if
 
-    Dx = Velocity*Time_Simulation
+    Dx = Velocity*tSimulation
 
     ! Cartesian only code
     !    do i = imin1g,imax2g,sign(1,imax2g-imin1g)
@@ -1291,7 +1291,7 @@ contains
 
        if(TypeCoordSystem =='HGC')then
           OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
-          phi = OmegaSun*Time_Simulation*Si2No_V(UnitT_)
+          phi = OmegaSun*tSimulation*Si2No_V(UnitT_)
           ! calculate the uniform flow in a fixed frame that is aligned with
           ! the HGC frame at this time
           UxAligned =  UxNo*cos(phi) + UyNo*sin(phi)
@@ -1403,7 +1403,7 @@ contains
   subroutine get_gaussian_field(i, j, k, iBlock, B_D)
 
     use ModGeometry,    ONLY: Xyz_DGB
-    use ModMain,        ONLY: Time_Simulation
+    use ModMain,        ONLY: tSimulation
     use ModNumConst,    ONLY: cPi
     use ModResistivity, ONLY: Eta0
 
@@ -1417,7 +1417,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    Spread = 4.0*Eta0*Time_Simulation
+    Spread = 4.0*Eta0*tSimulation
     Field = AmplitudeGaussian/(sqrt(cPi*Spread)) &
          *exp(-Xyz_DGB(y_,i,j,k,iBlock)**2/Spread)
 

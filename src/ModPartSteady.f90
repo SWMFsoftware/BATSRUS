@@ -16,7 +16,7 @@ module ModPartSteady
   use ModVarIndexes, ONLY: nVar
   use ModSize,       ONLY: MaxBlock, nI, nJ, nK, x_
   use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, &
-       time_accurate, n_step
+       IsTimeAccurate, nStep
   use ModGeometry,   ONLY: CellSize_DB, CellSize1Min
   use ModParallel,   ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
   use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
@@ -129,7 +129,7 @@ contains
           end do
        end do; end do; end do
 
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           ! Take into account the cell size difference between blocks
           ! so that the same FLUX has the same effect (dU/dt=dF/dx)
           dStateLimit = CellSize1Min / CellSize_DB(x_,iBlock)
@@ -164,7 +164,7 @@ contains
     ! In time accurate runs the explicit blocks should not be modified
     ! to steady state, because the blocks may change slowly for long time.
     ! In steady state runs, the blocks become all steady state in the end..
-    DoPreserveExpl = time_accurate
+    DoPreserveExpl = IsTimeAccurate
 
     ! If no new evolving blocks were found, simply skip the following part.
     if(IsNewSteadySelect) then
@@ -211,12 +211,12 @@ contains
             iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
        ! Check for full steady state
-       if(.not.time_accurate) &
+       if(.not.IsTimeAccurate) &
             IsSteadyState = all(iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_)
 
        if(iProc==0 .and. lVerbose>0) &
             write(*,*)'part_steady finished:',&
-            ' nStep,nSkipped,Steady,Bound,ExplALL=',n_step, &
+            ' nStep,nSkipped,Steady,Bound,ExplALL=',nStep, &
             count(iTypeAdvance_BP == SkippedBlock_), &
             count(iTypeAdvance_BP == SteadyBlock_), &
             count(iTypeAdvance_BP == SteadyBoundBlock_), &

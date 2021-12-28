@@ -768,14 +768,14 @@ contains
 
   subroutine advect_particle_line
     ! advect particles with the local plasma velocity
-    use ModMain, ONLY: time_accurate
+    use ModMain, ONLY: IsTimeAccurate
 
     ! particles can be advected only in the time accurate run
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'advect_particle_line'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(.not.time_accurate) &
+    if(.not.IsTimeAccurate) &
          RETURN
 
     ! reset particle's stage
@@ -968,7 +968,7 @@ contains
 
     ! Save particle data
 
-    use ModMain,    ONLY: n_step, time_accurate, time_simulation
+    use ModMain,    ONLY: nStep, IsTimeAccurate, tSimulation
     use ModIO,      ONLY: &
          StringDateOrTime, NamePlotDir, &
          TypeFile_I, plot_type, plot_form, Plot_
@@ -1014,11 +1014,11 @@ contains
 
     NameFile = NameStart
 
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        call get_time_string
        NameFile = trim(NameFile)// "_t"//StringDateOrTime
     end if
-    write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step
+    write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',nStep
 
     ! String containing the processor index
     if(nProc < 10000) then
@@ -1046,8 +1046,8 @@ contains
          NameFile, &
          TypeFileIn     = TypeFile_I(iFile), &
          StringHeaderIn = "TEMPORARY", &
-         TimeIn         = time_simulation, &
-         nStepIn        = n_step, &
+         TimeIn         = tSimulation, &
+         nStepIn        = nStep, &
          NameVarIn      = 'X Y Z FieldLine Index', &
          IsCartesianIn  = .false., &
          CoordIn_I      = PlotVar_VI(1, :), &

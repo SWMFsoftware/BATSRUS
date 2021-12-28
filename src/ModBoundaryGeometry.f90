@@ -112,7 +112,7 @@ contains
 
   subroutine fix_block_geometry(iBlock, DoSolveSolidIn)
 
-    use ModMain, ONLY: Body1, body1_, body2_, &
+    use ModMain, ONLY: UseBody, body1_, body2_, &
          UseBody2, UseExtraBoundary, UseSolidState, &
               TypeFaceBc_I, &
          xMinBc_, xMaxBc_, yMinBc_, yMaxBc_, zMinBc_, zMaxBc_, solidBc_
@@ -194,12 +194,12 @@ contains
        end if
     end if
 
-    ! Set iBoundary_GB for body1 and body2 (always face boundary)
+    ! Set iBoundary_GB for UseBody and body2 (always face boundary)
     if(UseBody2) then
        where( R2_BLK(:,:,:,iBlock) < rbody2) &
             iBoundary_GB(:,:,:,iBlock) = body2_
     end if
-    if(body1) then
+    if(UseBody) then
        where( R_BLK(:,:,:,iBlock) < rbody ) &
             iBoundary_GB(:,:,:,iBlock) = body1_
     end if
@@ -273,7 +273,7 @@ contains
     ! Recalculate true_cell information in ghost cells if grid changed.
 
     use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
-             iteration_number, nOrderProlong
+             nIteration, nOrderProlong
     use ModGeometry, ONLY: true_cell, body_BLK
     use BATL_lib, ONLY: message_pass_cell
 
@@ -295,16 +295,16 @@ contains
     ! away from resolution changes. This usually holds, but not if the
     ! boundary cells are set based on the state variables read from a restart
     ! file that has no ghost cell information saved. This can only happen
-    ! at the very beginning of a run when iteration_number == 0.
+    ! at the very beginning of a run when nIteration == 0.
 
     if(nOrderProlong > 1)then
        call message_pass_cell(iBoundary_GB, &
-            DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
+            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
     else
        call message_pass_cell(iBoundary_GB, &
             nProlongOrderIn=1, nCoarseLayerIn=2, &
             DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-            DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
+            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
     end if
 
     if(DoTest) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &

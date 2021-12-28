@@ -114,8 +114,8 @@ contains
     !$acc routine vector
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
-    use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
-             UseDtLimit, DtLimit, time_accurate
+    use ModMain, ONLY: UseDtFixed, DtFixed, Dt_B, Cfl, &
+             UseDtLimit, DtLimit, IsTimeAccurate
     use ModAdvance, ONLY : time_BLK, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
@@ -284,28 +284,28 @@ contains
        do k=1,nK; do j=1,nJ; do i=1,nI
           dt_min = min(dt_min, time_BLK(i,j,k,iBlock))
        end do; end do; end do
-       Dt_BLK(iBlock)=dt_min
+       Dt_B(iBlock)=dt_min
     else
-       ! If the block has no true cells, set Dt_BLK=1.0E20
+       ! If the block has no true cells, set Dt_B=1.0E20
        dt_min = 1e20
        !$acc loop vector independent collapse(3) reduction(min:dt_min)
        do k=1,nK; do j=1,nJ; do i=1,nI
           if (true_cell(i,j,k,iBlock)) dt_min = min(dt_min, time_BLK(i,j,k,iBlock))
        end do; end do; end do
-       Dt_BLK(iBlock)=dt_min
+       Dt_B(iBlock)=dt_min
 
-       if(DoTest)write(*,*) NameSub,' minval(time_BLK,MASK), Dt_BLK=',&
+       if(DoTest)write(*,*) NameSub,' minval(time_BLK,MASK), Dt_B=',&
             minval(time_BLK(:,:,:,iBlock), &
-            MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)), Dt_BLK(iBlock)
+            MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)), Dt_B(iBlock)
     end if
 
 #ifndef _OPENACC
-    if(DoTest)write(*,*)NameSub,' Dt_BLK, loc=',Dt_BLK(iBlock),&
+    if(DoTest)write(*,*)NameSub,' Dt_B, loc=',Dt_B(iBlock),&
          minloc(time_BLK(:,:,:,iBlock),&
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 #endif
 
-    ! Reset time_BLK for fixed time step (but Dt_BLK is kept! )
+    ! Reset time_BLK for fixed time step (but Dt_B is kept! )
     if(UseDtFixed) then
        !$acc loop vector collapse(3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -368,8 +368,8 @@ contains
     call test_start(NameSub, DoTest)
 
     if(DoTest)write(*,*) NameSub, &
-         ' starting with TimeSimulationLimit, dt_BLK, time_BLK=', &
-         TimeSimulationLimit, dt_BLK(iBlockTest), &
+         ' starting with TimeSimulationLimit, Dt_B, time_BLK=', &
+         TimeSimulationLimit, Dt_B(iBlockTest), &
          time_BLK(iTest,jTest,kTest,iBlockTest)
 
     if(UseMaxTimeStep)then
@@ -380,7 +380,7 @@ contains
 
     if(UseDtFixed)then
        Dt = DtFixed
-    elseif(n_step < 1 .or. n_step == 1 .and. TimeSimulationLimit > 0.0)then
+    elseif(nStep < 1 .or. nStep == 1 .and. TimeSimulationLimit > 0.0)then
        Dt    = 0.0
        DtMin = 0.0
        DtMax = 0.0
@@ -389,33 +389,33 @@ contains
        if(UsePartImplicit)then
           ! Implicit blocks are not taken into account for partially implicit
           ! run
-          DtMinPE = huge(Dt_BLK(1))
+          DtMinPE = huge(Dt_B(1))
           !$acc parallel loop independent reduction(min:DtMinPE)
           do iBlock=1,nBlock
              if (iTypeAdvance_B(iBlock) == ExplBlock_) &
-                  DtMinPE = min(DtMinPE, Dt_BLK(iBlock))
+                  DtMinPE = min(DtMinPE, Dt_B(iBlock))
           end do
           if(UseMaxTimeStep) then
-             DtMax = -huge(Dt_BLK(1))
+             DtMax = -huge(Dt_B(1))
              !$acc parallel loop independent reduction(max:DtMax)
              do iBlock=1,nBlock
                 if (iTypeAdvance_B(iBlock) == ExplBlock_) &
-                     DtMax = max(DtMax, Dt_BLK(iBlock))
+                     DtMax = max(DtMax, Dt_B(iBlock))
              end do
           end if
        else
-          DtMinPE = huge(Dt_BLK(1))
+          DtMinPE = huge(Dt_B(1))
           !$acc parallel loop independent reduction(min:DtMinPE)
           do iBlock=1,nBlock
              if (.not.Unused_B(iBlock)) &
-                  DtMinPE = min(DtMinPE, Dt_BLK(iBlock))
+                  DtMinPE = min(DtMinPE, Dt_B(iBlock))
           end do
 
           if(UseMaxTimeStep) then
-             DtMax = -huge(Dt_BLK(1))
+             DtMax = -huge(Dt_B(1))
              !$acc parallel loop independent reduction(max:DtMax)
              do iBlock=1,nBlock
-                if (.not.Unused_B(iBlock)) DtMax = max(DtMax, Dt_BLK(iBlock))
+                if (.not.Unused_B(iBlock)) DtMax = max(DtMax, Dt_B(iBlock))
              end do
              DtMax = min(DtMax, DtLimit/Cfl)
           end if
@@ -434,7 +434,7 @@ contains
        if(DoTest .and. DtMinPE == Dt)then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
-             if(Dt_BLK(iBlock) /= Dt) CYCLE
+             if(Dt_B(iBlock) /= Dt) CYCLE
              write(*,*) NameSub, ' Dt=',Dt,'=', Dt*No2Si_V(UnitT_),&
                   ' s  is controlled by block with ',&
                   'iProc, iBlock, true_BLK, true_cell =', &
@@ -498,8 +498,8 @@ contains
     ! Limit Dt such that the simulation time cannot exceed TimeSimulationLimit.
     ! If statement avoids real overflow when TimeSimulationLimit = Huge(0.0)
     if(TimeSimulationLimit > 0.0 .and. &
-         Time_Simulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit)then
-       Dt = (TimeSimulationLimit - Time_Simulation)*Si2No_V(UnitT_)/Cfl
+         tSimulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit)then
+       Dt = (TimeSimulationLimit - tSimulation)*Si2No_V(UnitT_)/Cfl
        if(UseMaxTimeStep)then
           DtMax = Dt
           DtMin = min(DtMin, Dt)
@@ -513,19 +513,19 @@ contains
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 
-       if(UseMaxTimeStep .and. Dt_BLK(iBlock) > 0)then
-          ! Make block time step power of 2 multiple of DtMin that is < Dt_BLK
+       if(UseMaxTimeStep .and. Dt_B(iBlock) > 0)then
+          ! Make block time step power of 2 multiple of DtMin that is < Dt_B
           ! Limit by DtMax in case DtMax was limited by TimeSimulationLimit
-          if(Dt_BLK(iBlock) >= DtMax)then
-             Dt_BLK(iBlock) = DtMax
+          if(Dt_B(iBlock) >= DtMax)then
+             Dt_B(iBlock) = DtMax
           else
              ! Time level of this block
              iTimeLevel_A(iNode_B(iBlock)) = &
-                  ceiling(log(DtMax/Dt_BLK(iBlock))/log(2.0))
+                  ceiling(log(DtMax/Dt_B(iBlock))/log(2.0))
              ! Time step rounded to power of 2 fraction of DtMax
-             Dt_BLK(iBlock) = DtMax / 2**iTimeLevel_A(iNode_B(iBlock))
+             Dt_B(iBlock) = DtMax / 2**iTimeLevel_A(iNode_B(iBlock))
           end if
-          time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
+          time_BLK(:,:,:,iBlock) = Dt_B(iBlock)
        else
           !$acc loop collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -552,8 +552,8 @@ contains
     Dt = Cfl*Dt
     !$acc update device(Dt)
 
-    if(DoTest)write(*,*) NameSub,' finished with Dt, dt_BLK, time_BLK=', &
-         Dt, dt_BLK(iBlockTest), time_BLK(iTest,jTest,kTest,iBlockTest)
+    if(DoTest)write(*,*) NameSub,' finished with Dt, Dt_B, time_BLK=', &
+         Dt, Dt_B(iBlockTest), time_BLK(iTest,jTest,kTest,iBlockTest)
 
     call test_stop(NameSub, DoTest)
   end subroutine set_global_timestep
@@ -562,7 +562,7 @@ contains
   subroutine control_time_step
 
     use ModMain,     ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
-         DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation, &
+         DtFixed, DtFixedOrig, UseDtFixed, tSimulation, &
          DtLimit, DtLimitOrig, UseDtLimit, UseLocalTimeStep
     use ModAdvance,  ONLY: Rho_, p_, &
          State_VGB, StateOld_VGB, time_BLK
@@ -615,7 +615,7 @@ contains
     if(       RelativeChangeMin < RejectStepLevel1  &
          .or. RelativeChangeMax > RejectStepLevel2 )then
        ! Redo step if change is outside [RejectStepLevel1, RejectStepLevel2]
-       Time_Simulation = Time_Simulation - Dt*No2Si_V(UnitT_)
+       tSimulation = tSimulation - Dt*No2Si_V(UnitT_)
        Dt = 0.0
        ! Do not use previous step in BDF2 scheme
        ! !! n_prev = -1

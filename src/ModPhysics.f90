@@ -265,7 +265,7 @@ contains
   !============================================================================
   subroutine set_dipole
 
-    use ModMain,  ONLY: Time_Simulation
+    use ModMain,  ONLY: tSimulation
     use CON_axes, ONLY: get_axes
 
     logical:: DoTest
@@ -276,9 +276,9 @@ contains
     if(Bdp == 0.0) RETURN
 
     if(TypeCoordSystem == 'GSM')then
-       call get_axes(Time_Simulation, MagAxisGsmOut_D=Dipole_D)
+       call get_axes(tSimulation, MagAxisGsmOut_D=Dipole_D)
     elseif(TypeCoordSystem == 'GSE')then
-       call get_axes(Time_Simulation, MagAxisGseOut_D=Dipole_D)
+       call get_axes(tSimulation, MagAxisGseOut_D=Dipole_D)
     else
        Dipole_D = [-SinThetaTilt, 0.0, CosThetaTilt]
     end if
@@ -419,7 +419,7 @@ contains
     end if
 
     ! Convert gravity to non-dimensional values
-    if(GravityDir == 0)then
+    if(iDirGravity == 0)then
        ! Note: The mass of the body is in SI units
        Gbody  = -cGravitation*MassBodySi*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
     else
@@ -1224,7 +1224,7 @@ contains
     ! Update the angular velocity OmegaBody_D
 
     use CON_axes,          ONLY: get_axes
-    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
+    use ModMain,           ONLY: tSimulation, TypeCoordSystem
 
     real:: RotAxis_D(3) ! Avoid race condition in OpenMP
 
@@ -1235,11 +1235,11 @@ contains
        ! In the HGI system the Solar angular velocity vector points towards +Z
        OmegaBody_D = [ 0., 0., OmegaBody ]
     case('GSE')
-       call get_axes(Time_Simulation, RotAxisGseOut_D=RotAxis_D)
+       call get_axes(tSimulation, RotAxisGseOut_D=RotAxis_D)
        OmegaBody_D = OmegaBody * RotAxis_D
     case('GSM')
        ! GSM system, Omega_D may be changing
-       call get_axes(Time_Simulation, RotAxisGsmOut_D=RotAxis_D)
+       call get_axes(tSimulation, RotAxisGsmOut_D=RotAxis_D)
        OmegaBody_D = OmegaBody * RotAxis_D
     end select
 

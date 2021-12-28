@@ -663,12 +663,12 @@ contains
 
     ! Get B0 at location Xyz_D
 
-    use ModMain,           ONLY : Time_Simulation, NameThisComp, &
+    use ModMain,           ONLY : tSimulation, NameThisComp, &
          TypeCoordSystem
     use ModPhysics,        ONLY: Si2No_V, UnitB_, DipoleStrengthSi, &
          MonopoleStrength
     use CON_planet_field,  ONLY: get_planet_field
-    use ModMain,           ONLY: UseBody2, UseUserB0, time_accurate, StartTime
+    use ModMain,           ONLY: UseBody2, UseUserB0, IsTimeAccurate, StartTime
     use ModMagnetogram,    ONLY: iTableB0, iTableB0New, get_magnetogram_field
     use ModConst, ONLY: CarringtonSynodicPeriod, tStartCarringtonRotation
 
@@ -680,10 +680,10 @@ contains
     character(len=*), parameter:: NameSub = 'get_b0'
     !--------------------------------------------------------------------------
     if(iTableB0 > 0)then
-       if(iTableB0New > 0 .and. time_accurate)then
+       if(iTableB0New > 0 .and. IsTimeAccurate)then
           ! Interpolate to the current time expressed as CarringtonNumber
           CarringtonNumber = &
-               (StartTime + time_simulation - tStartCarringtonRotation) &
+               (StartTime + tSimulation - tStartCarringtonRotation) &
                /CarringtonSynodicPeriod
           call get_magnetogram_field(Xyz_D, B0_D, CarringtonNumber)
        else
@@ -699,7 +699,7 @@ contains
     elseif(DipoleStrengthSi==0.0)then
        B0_D = 0.0
     elseif(NameThisComp=='GM' .and. nDim == 3)then
-       call get_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM',&
+       call get_planet_field(tSimulation, Xyz_D, TypeCoordSystem//' NORM',&
             B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
     else

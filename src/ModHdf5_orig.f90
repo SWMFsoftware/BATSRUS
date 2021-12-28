@@ -996,7 +996,7 @@ contains
 
   subroutine write_real_plot_metadata(FileID,plot_dimensional, isXZero)
 
-    use ModMain, only : Time_Simulation, CodeVersion
+    use ModMain, only : tSimulation, CodeVersion
     use BATL_lib, only : nLevelMax, nDim
     use ModGeometry, only : x1,x2,y1,y2,z1,z2
     use ModPhysics, ONLY : No2Io_V, UnitX_
@@ -1015,7 +1015,7 @@ contains
 
     iData = 1
     !    attName(1) = 'Simulation Time'
-    RealMetaData(iData) = Time_Simulation
+    RealMetaData(iData) = tSimulation
     iData = iData + 1
     if (isXZero) then
        RealMetaData(iData) = y1
@@ -1075,7 +1075,7 @@ contains
 
   subroutine write_real_sim_metadata(FileID,plot_dimensional)
 
-    use ModMain, only : Time_Simulation, CodeVersion
+    use ModMain, only : tSimulation, CodeVersion
     use BATL_lib, only : nLevelMax, nDim
     use ModGeometry, only : x1,x2,y1,y2,z1,z2
     use ModPhysics, ONLY : No2Io_V, UnitX_
@@ -1096,7 +1096,7 @@ contains
 
     iData = 1
     !    attName(1) = 'Simulation Time'
-    RealMetaData(iData) = Time_Simulation
+    RealMetaData(iData) = tSimulation
     iData = iData + 1
     !    attName(2) = 'xmin'
 
@@ -1150,7 +1150,7 @@ contains
   subroutine write_integer_plot_metadata(fileID,nPlotVar,isCutFile)
 
     use BATL_lib, only : nDimAmr, nLevelMax, IsPeriodic_D
-    use ModMain, only : n_step
+    use ModMain, only : nStep
     use ModGeometry, ONLY : TypeGeometry
     integer (HID_T), intent(in) :: fileID, nPlotVar
     logical, intent(in) :: isCutFile
@@ -1170,7 +1170,7 @@ contains
     IntegerMetaData(iData) = FFV
     !    attName(1) = 'File Format Version'
     iData = iData + 1
-    IntegerMetaData(iData) = n_step
+    IntegerMetaData(iData) = nStep
     !    attName(2) = "Time Step"
     iData = iData + 1
     IntegerMetaData(iData) = nPlotDim
@@ -1262,7 +1262,7 @@ contains
     ! the file may know something about the simulation that created it
 
     use BATL_lib, only : nDim, nDimAmr, nLevelMax
-    use ModMain, only : n_step, nI, nJ, nK
+    use ModMain, only : nStep, nI, nJ, nK
     integer (HID_T), intent(in) :: fileID, nPlotVar
 
     integer(HSIZE_T) :: iData
@@ -1298,7 +1298,7 @@ contains
     !    attName(7) = 'nLevelMax'
     iData = iData + 1
 
-    IntegerMetaData(iData) = n_step
+    IntegerMetaData(iData) = nStep
     !    attName(2) = "Time Step"
     !    iData = iData + 1
 

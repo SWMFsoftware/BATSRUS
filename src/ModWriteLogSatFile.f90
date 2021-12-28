@@ -95,7 +95,7 @@ contains
     if(present(TimeSatHeaderIn)) then
        TimeSatHeader = TimeSatHeaderIn
     else
-       TimeSatHeader = time_simulation
+       TimeSatHeader = tSimulation
     end if
 
     DoWritePosition = .false.
@@ -146,7 +146,7 @@ contains
        StringTime = TimeSat_I(iSat)
        DoWritePosition = .true.
     elseif (iSatIn<0) then
-       if (time_accurate)then
+       if (IsTimeAccurate)then
           StringTime = 'step time'
        else
           StringTime = 'step'
@@ -203,7 +203,7 @@ contains
        end if
     end do
 
-    if(DoTest .and. n_step <= 1)then
+    if(DoTest .and. nStep <= 1)then
        write(*,*)'nLogVar,nFluxVar,nLogR,nLogTot:',  &
             nLogVar,nFluxVar,nLogR,nLogTot
        write(*,*)'NameLogVar_I:',NameLogVar_I(1:nLogVar)
@@ -225,10 +225,10 @@ contains
                 write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
                 filename = trim(filename) // '_e' // trim(eventDateTime)
              else
-                if(n_step < 1000000)then
-                   write(filename,'(a,i6.6)') trim(filename)//'_n',n_step
+                if(nStep < 1000000)then
+                   write(filename,'(a,i6.6)') trim(filename)//'_n',nStep
                 else
-                   write(filename,'(a,i8.8)') trim(filename)//'_n',n_step
+                   write(filename,'(a,i8.8)') trim(filename)//'_n',nStep
                 end if
              end if
 
@@ -257,7 +257,7 @@ contains
        elseif (iSatIn >= 1) then
           iUnit = iUnitSat_I(iSat)
           if (IsFirstWriteSat_I(iSat)) then
-             if (time_accurate) then
+             if (IsTimeAccurate) then
                 write(iUnit,'(a, es13.5)')  &
                      'Satellite data for Satellite: ' // &
                      trim(FilenameSat_I(isat))        // &
@@ -279,15 +279,15 @@ contains
              iUnit = iUnitParcel_I(iParcel)
              write(ParcelFile, '(i2.2)') iParcel
              filename = trim(NamePlotDir) // 'pcl'//'_'//ParcelFile//'_'
-             if (time_accurate) then
+             if (IsTimeAccurate) then
                 call get_date_time(iTime_I)
                 write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
                 filename = trim(filename)//'_t' //trim(eventDateTime)
              else
-                if(n_step < 1000000)then
-                   write(filename,'(a,i6.6)') trim(filename)//'_n',n_step
+                if(nStep < 1000000)then
+                   write(filename,'(a,i6.6)') trim(filename)//'_n',nStep
                 else
-                   write(filename,'(a,i8.8)') trim(filename)//'_n',n_step
+                   write(filename,'(a,i8.8)') trim(filename)//'_n',nStep
                 end if
              end if
              filename = trim(filename) // '.pcl'
@@ -321,20 +321,20 @@ contains
           ! do nothing
        else
           if(index(StringTime,'step')>0) &
-               write(iUnit,'(i7)',ADVANCE='NO') n_step
+               write(iUnit,'(i7)',ADVANCE='NO') nStep
           if(index(StringTime,'date')>0) then
              call get_date_time(iTime_I)
              write(iUnit,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') &
                   iTime_I
           end if
           if(index(StringTime,'time')>0) then
-             ! note that Time_Simulation is in SI units.
+             ! note that tSimulation is in SI units.
              if(plot_dimensional(iFile)) then
                 write(iUnit,'(es13.5)',ADVANCE='NO') &
-                     Time_Simulation*Si2Io_V(UnitT_)
+                     tSimulation*Si2Io_V(UnitT_)
              else
                 write(iUnit,'(es13.5)',ADVANCE='NO') &
-                     Time_Simulation*Si2No_V(UnitT_)
+                     tSimulation*Si2No_V(UnitT_)
              end if
           end if
        end if
@@ -342,7 +342,7 @@ contains
        if(TypeCoordPlot_I(iFile) /= '???' &
             .and. TypeCoordPlot_I(iFile) /= TypeCoordSystem)then
 
-          Convert_DD = transform_matrix(Time_Simulation, &
+          Convert_DD = transform_matrix(tSimulation, &
                TypeCoordSystem, TypeCoordPlot_I(iFile))
 
           if(DoWritePosition) Xyz_D = matmul(Convert_DD, Xyz_D)
@@ -386,7 +386,7 @@ contains
        nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I, iSat)
 
     use ModNumConst, ONLY: cPi
-    use ModMain, ONLY: n_step, Dt, Cfl, optimize_message_pass, &
+    use ModMain, ONLY: nStep, Dt, Cfl, TypeMessagePass, &
          UseRotatingFrame,UseB0, NameVarLower_V
     use ModPhysics, ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
          ElectronPressureRatio, InvGammaElectronMinus1
@@ -439,7 +439,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(DoTest.and.n_step==1)then
+    if(DoTest.and.nStep==1)then
        write(*,*)'nLogVar,nLogR,nLogTot:',nLogVar,nLogR,nLogTot
        write(*,*)'NameLogVar_I:',NameLogVar_I(1:nLogVar)
        write(*,*)'LogR_I:',LogR_I(1:nLogR)
@@ -550,7 +550,7 @@ contains
     !==========================================================================
     subroutine set_log_var
 
-      use ModMain,      ONLY: x_, y_, z_, TypeCoordSystem, Time_Simulation
+      use ModMain,      ONLY: x_, y_, z_, TypeCoordSystem, tSimulation
       use ModUtilities, ONLY: lower_case
       use ModCurrent,   ONLY: get_current
       use ModEnergy,    ONLY: get_fluid_energy_block, energy_i
@@ -722,7 +722,7 @@ contains
 
       case('jin','jout','jinmax','joutmax')
 
-         if(index(optimize_message_pass,'opt')>0) &
+         if(index(TypeMessagePass,'opt')>0) &
               call stop_mpi('Spherical integral of J requires '// &
               'message passing edges and corners. Fix PARAM.in!')
 
@@ -811,7 +811,7 @@ contains
          !   (J x R)_z = Sum_i GMtoSM_z,i * (curl B x R)_i
 
          ! Conversion from GM coordinate system to SMG
-         Convert_DD = transform_matrix(Time_Simulation, &
+         Convert_DD = transform_matrix(tSimulation, &
               TypeCoordSystem, 'SMG')
 
          ! Calculate
@@ -1399,7 +1399,7 @@ contains
     ! over the surface of a sphere centered at the origin radius Radius.
     ! The resolution in the colatitude is determined by the nTheta parameter.
 
-    use ModMain,           ONLY: optimize_message_pass
+    use ModMain,           ONLY: TypeMessagePass
     use ModGeometry,       ONLY: r_BLK, XyzStart_Blk, TypeGeometry
     use BATL_lib,  ONLY: nI, nJ, nK, Unused_B, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK, nBlock, MaxBlock, &
@@ -1569,7 +1569,7 @@ contains
           ! Fill in edges and corners for the first layer so that bilinear
           ! interpolation can be used without message passing these values
 
-          if(index(optimize_message_pass,'opt')>0) &
+          if(index(TypeMessagePass,'opt')>0) &
                call fill_edge_corner(Array_G)
 
           do i = 1, nTheta
@@ -1663,7 +1663,7 @@ contains
     ! for the z axis is defined by the radius Radius and the z position is
     ! is given by z.
 
-    use ModMain,  ONLY: optimize_message_pass
+    use ModMain,  ONLY: TypeMessagePass
     use ModGeometry, ONLY: XyzStart_Blk
     use ModNumConst, ONLY: cTwoPi
     use ModInterpolate, ONLY: trilinear
@@ -1722,7 +1722,7 @@ contains
 
        Array_G = Array_GB(0:nI+1,j0_:nJp1_,k0_:nKp1_,iBlock)
 
-       if(index(optimize_message_pass,'opt')>0) call fill_edge_corner(Array_G)
+       if(index(TypeMessagePass,'opt')>0) call fill_edge_corner(Array_G)
 
        InvDxyz_D = 1 / CellSize_DB(:,iBlock)
 

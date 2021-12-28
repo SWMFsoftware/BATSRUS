@@ -227,7 +227,7 @@ contains
   subroutine do_amr
 
     use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
-         UseB, Dt_BLK, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
+         UseB, Dt_B, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
          UseLocalTimeStep
     use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell, nTrueCells, &
          count_true_cells
@@ -262,10 +262,10 @@ contains
 
     if(DoProfileAmr) call timing_start('amr::regrid_batl')
     if(UsePartSteady)then
-       call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTest, &
+       call regrid_batl(nVar, State_VGB, Dt_B, DoTestIn=DoTest, &
             Used_GB=true_cell, iTypeNode_A=iTypeAdvance_A)
     else
-       call regrid_batl(nVar, State_VGB, Dt_BLK, &
+       call regrid_batl(nVar, State_VGB, Dt_B, &
             DoBalanceEachLevelIn=UseLocalTimeStep, DoTestIn=DoTest, &
             Used_GB=true_cell, UseHighOrderAMRIn=UseHighOrderAMR, &
             DefaultStateIn_V=DefaultState_V)

@@ -329,7 +329,7 @@ contains
     use ModPhysics,  ONLY: FaceState_VI, rBody2
     use ModGeometry, ONLY: body_BLK, true_blk, true_cell, R2_BLK
     use ModMain,     ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
-         dt_BLK, time_accurate, UseDtFixed, Dt
+         Dt_B, IsTimeAccurate, UseDtFixed, Dt
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModMultiFluid
 
@@ -388,11 +388,11 @@ contains
        State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
     endif
 
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        if(UseDtFixed)then
           time_BLK(:,:,:,iBlock) = Dt
        else
-          time_BLK(:,:,:,iBlock) = dt_BLK(iBlock)
+          time_BLK(:,:,:,iBlock) = Dt_B(iBlock)
        end if
 
        ! Reset time step to zero inside body.

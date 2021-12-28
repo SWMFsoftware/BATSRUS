@@ -1542,7 +1542,7 @@ contains
 
     use ModSize, ONLY: nI, nJ, nK
     use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
-    use ModMain, ONLY: Time_Simulation, dt, nBlock, Unused_B
+    use ModMain, ONLY: tSimulation, dt, nBlock, Unused_B
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseElectronPressure, UseIdealEos
     use ModConservative, ONLY: UseNonConservative
@@ -1580,7 +1580,7 @@ contains
        end do
     end if
 
-    Irradiance = irradiance_t(Time_Simulation) * &
+    Irradiance = irradiance_t(tSimulation) * &
          Si2No_V(UnitEnergydens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_) * dt
 
     ! Make sure that the density is up-to-date in the ghost cells

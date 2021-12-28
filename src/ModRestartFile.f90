@@ -12,8 +12,8 @@ module ModRestartFile
        restart, save_restart_file
   use ModMain,       ONLY: &
        nBlockAll,      &
-       n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
-       NameThisComp, iteration_number, DoThinCurrentSheet, NameVarCouple
+       nStep, tSimulation, Dt_B, Cfl, CodeVersion, nByteReal, &
+       NameThisComp, nIteration, DoThinCurrentSheet, NameVarCouple
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: CellSize_DB, xyzStart_BLK, NameGridFile
@@ -203,7 +203,7 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    !$acc update host(dt_BLK)
+    !$acc update host(Dt_B)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
@@ -220,7 +220,7 @@ contains
 
     write(NameFile,'(a)') trim(NameRestartOutDir)//'octree.rst'
     if (UseRestartOutSeries) &
-         call string_append_iter(NameFile,iteration_number)
+         call string_append_iter(NameFile,nIteration)
     call write_tree_file(NameFile)
     ! Save the solution on threads if present
     if(UseFieldLineThreads)call save_thread_restart
@@ -247,7 +247,7 @@ contains
     end select
     if(DoWriteIndices .and. iProc==0)call write_geoind_restart
 
-    if(DoWriteBlockData .and. n_step > 0) &
+    if(DoWriteBlockData .and. nStep > 0) &
          call write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
@@ -265,7 +265,7 @@ contains
 
     if(DoTest .and. iProc==iProcTest)then
        write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
-       write(*,*)NameSub,': dt, TrueCell   =',dt_BLK(iBlockTest), &
+       write(*,*)NameSub,': dt, TrueCell   =',Dt_B(iBlockTest), &
             true_cell(iTest,jTest,kTest,iBlockTest)
        write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
        write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,iBlockTest)
@@ -296,7 +296,7 @@ contains
     allocate(State4_CV(nI,nJ,nK,nVarRestart))
     allocate(State4_VC(nVarRestart,nI,nJ,nK))
     allocate(StateRead_VCB(nVarRestart,nI,nJ,nK,nBlock))
-    if(UseImplicit .or. n_prev == n_step) &
+    if(UseImplicit .or. n_prev == nStep) &
          allocate(ImplOldRead_VCB(nVarRestart,nI,nJ,nK,nBlock))
 
     select case(TypeRestartInFile)
@@ -356,7 +356,7 @@ contains
 
     if(DoTest .and. iProc==iProcTest)then
        write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
-       write(*,*)NameSub,': dt             =',dt_BLK(iBlockTest)
+       write(*,*)NameSub,': dt             =',Dt_B(iBlockTest)
        write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
        write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,iBlockTest)
        write(*,*)NameSub,': State_VGB      =', &
@@ -364,7 +364,7 @@ contains
        write(*,*)NameSub,' finished'
     end if
 
-    !$acc update device(dt_BLK)
+    !$acc update device(Dt_B)
 
     call test_stop(NameSub, DoTest)
   end subroutine read_restart_files
@@ -373,7 +373,7 @@ contains
   subroutine write_restart_header
 
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem, nBlockAll, &
-         Body1, UseBody2, Time_Accurate, iStartTime_I, IsStandAlone,       &
+         UseBody, UseBody2, IsTimeAccurate, iStartTime_I, IsStandAlone,       &
          UseBufferGrid, NameUserModule, VersionUserModule
     use ModPhysics,    ONLY: &
          sw_n_dim, sw_t_dim, sw_ux_dim, sw_uy_dim, &
@@ -412,7 +412,7 @@ contains
     if (iProc/=0) RETURN
 
     NameFile = trim(NameRestartOutDir)//NameHeaderFile
-    if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
+    if (UseRestartOutSeries) call string_append_iter(NameFile,nIteration)
 
     call open_file(file=NameFile, NameCaller=NameSub)
 
@@ -464,9 +464,9 @@ contains
     call write_string_tabs_name(TypeRestartOutFile, 'StringRestartInFile')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#NSTEP'
-    write(UnitTmp_,'(i8,a)')n_step, cTab//cTab//'nStep'
+    write(UnitTmp_,'(i8,a)')nStep, cTab//cTab//'nStep'
     write(UnitTmp_,*)
-    if(n_prev == n_step)then
+    if(n_prev == nStep)then
        write(UnitTmp_,'(a)')'#NPREVIOUS'
        write(UnitTmp_,'(i8,a)')      n_prev, cTab//cTab//'nPrev'
        write(UnitTmp_,'(es22.15,a)') dt_prev, cTab//cTab//'DtPrev'
@@ -481,7 +481,7 @@ contains
     write(UnitTmp_,'(i8,a)')iStartTime_I(6), cTab//cTab//'iSecond'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#TIMESIMULATION'
-    write(UnitTmp_,'(es22.15,a)') time_simulation, cTab//cTab//'tSimulation'
+    write(UnitTmp_,'(es22.15,a)') tSimulation, cTab//cTab//'tSimulation'
     write(UnitTmp_,*)
     if(.not.IsCartesian)then
        IsLimitedGeometry = CoordDimMin_D(1) < CoordDimMax_D(1)
@@ -556,7 +556,7 @@ contains
     call write_string_tabs_name(NameMaxTimeUnit, 'NameMaxTimeUnit')
     write(UnitTmp_,*)
 
-    if(body1)then
+    if(UseBody)then
        write(UnitTmp_,'(a)')'#BODY'
        write(UnitTmp_,'(a)') 'T'//cTab//cTab//cTab//'UseBody'
        write(UnitTmp_,'(es22.15,a)') rBody, cTab//cTab//'rBody'
@@ -610,10 +610,10 @@ contains
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'Additional info'
     write(UnitTmp_,*)
-    write(UnitTmp_,'(l8,a)') time_accurate,   ' time_accurate'
+    write(UnitTmp_,'(l8,a)') IsTimeAccurate,   ' IsTimeAccurate'
     write(UnitTmp_,*)
-    if(time_accurate)write(UnitTmp_,'(2es13.5,a)')&
-         time_simulation, dt, ' time_simulation, dt'
+    if(IsTimeAccurate)write(UnitTmp_,'(2es13.5,a)')&
+         tSimulation, dt, ' tSimulation, dt'
 
     write(UnitTmp_,'(a)')'Io2Si_V='
     write(UnitTmp_,'(100es13.5)') Io2Si_V
@@ -653,7 +653,7 @@ contains
 
     ! Save index file
     NameFile = trim(NameRestartOutDir)//NameIndexFile
-    if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
+    if (UseRestartOutSeries) call string_append_iter(NameFile,nIteration)
     call open_file(FILE=NameFile, NameCaller=NameSub)
     write(UnitTmp_,*) nBlockAll
     do iMorton = 1, nBlockAll
@@ -673,7 +673,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     NameFile = trim(NameRestartInDir)//NameIndexFile
-    if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
+    if (UseRestartInSeries) call string_append_iter(NameFile,nIteration)
     call open_file(FILE=NameFile, STATUS='old', NameCaller=NameSub)
     read(UnitTmp_,*) nBlockAllRead
 
@@ -706,7 +706,7 @@ contains
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
          trim(NameRestartInDir)//NameBlkFile,iBlockRestart,StringRestartExt
-    if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
+    if (UseRestartInSeries) call string_append_iter(NameFile,nIteration)
 
     call open_file(file=NameFile, status='old', form='UNFORMATTED', &
          NameCaller=NameSub)
@@ -716,10 +716,10 @@ contains
        State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
     end do;end do;end do
 
-    ! Do not overwrite time_simulation which is read from header file
+    ! Do not overwrite tSimulation which is read from header file
     if(nByteRealRead == 8)then
        read(UnitTmp_, iostat = iError) Dt8, Time8
-       dt_BLK(iBlock) = Dt8
+       Dt_B(iBlock) = Dt8
        tSimulationRead   = Time8
 
        read(UnitTmp_, iostat = iError) Dxyz8_D, Xyz8_D
@@ -738,7 +738,7 @@ contains
           ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b8_Y
           BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b8_Z
        end if
-       if(n_prev==n_step) then
+       if(n_prev==nStep) then
           read(UnitTmp_, iostat = iError) State8_CV
           do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
@@ -746,7 +746,7 @@ contains
        end if
     else
        read(UnitTmp_, iostat = iError) Dt4, Time4
-       dt_BLK(iBlock) = Dt4
+       Dt_B(iBlock) = Dt4
        tSimulationRead   = Time4
 
        read(UnitTmp_, iostat = iError) Dxyz4_D, Xyz4_D
@@ -764,7 +764,7 @@ contains
           ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b4_Y
           BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b4_Z
        end if
-       if(n_prev==n_step) then
+       if(n_prev==nStep) then
           read(UnitTmp_, iostat = iError) State4_CV
           do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
@@ -778,14 +778,14 @@ contains
     call close_file
 
     if(CodeVersion>5.60 .and. CodeVersion <7.00) &
-         dt_BLK(iBlock)=dt_BLK(iBlock)/cfl
+         Dt_B(iBlock)=Dt_B(iBlock)/cfl
 
     if(any(CellSize_DB(:,iBlock) < 0  &
-         .or. Dt_BLK(iBlock) < 0 .or. tSimulationRead < 0))then
+         .or. Dt_B(iBlock) < 0 .or. tSimulationRead < 0))then
        write(*,*)NameSub,': corrupt restart data!!!'
        write(*,*)'iBlock  =', iBlock
        write(*,*)'Dxyz    =', CellSize_DB(:,iBlock)
-       write(*,*)'Dt,tSim =', Dt_BLK(iBlock), tSimulationRead
+       write(*,*)'Dt,tSim =', Dt_B(iBlock), tSimulationRead
        write(*,*)'XyzStart=', XyzStart_BLK(:,iBlock)
        write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
        call stop_mpi(NameSub//': corrupt restart data!!!')
@@ -793,7 +793,7 @@ contains
 
     if(DoTest)then
        write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
-       write(*,*)NameSub,': dt,tSimRead =',dt_BLK(iBlock),tSimulationRead
+       write(*,*)NameSub,': dt,tSimRead =',Dt_B(iBlock),tSimulationRead
        write(*,*)NameSub,': dx,dy,dz_BLK=', CellSize_DB(:,iBlock)
        write(*,*)NameSub,': xyzStart_BLK=',xyzStart_BLK(:,iBlock)
        write(*,*)NameSub,': StateRead_VCB   =', &
@@ -824,11 +824,11 @@ contains
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
          trim(NameRestartOutDir)//NameBlkFile,iBlockRestart,StringRestartExt
 
-    if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
+    if (UseRestartOutSeries) call string_append_iter(NameFile,nIteration)
 
     call open_file(file=NameFile, form='UNFORMATTED', NameCaller=NameSub)
 
-    write(UnitTmp_) dt_BLK(iBlock),time_Simulation
+    write(UnitTmp_) Dt_B(iBlock),tSimulation
     write(UnitTmp_) CellSize_DB(:,iBlock), xyzStart_BLK(:,iBlock)
     write(UnitTmp_) &
          ( State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock), iVar=1,nVar)
@@ -838,7 +838,7 @@ contains
             ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock),&
             BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock)
     end if
-    if(n_prev==n_step) write(UnitTmp_) &
+    if(n_prev==nStep) write(UnitTmp_) &
          (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)
     call close_file
 
@@ -866,11 +866,11 @@ contains
     ! Calculate the record length for the first block
     if (DoRead) then
        inquire (IOLENGTH = lRecord ) &
-            Dt_BLK(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
+            Dt_B(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
             StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,1)
     else
        inquire (IOLENGTH = lRecord ) &
-            Dt_BLK(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
+            Dt_B(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,1)
     end if
 
@@ -879,7 +879,7 @@ contains
        l = lReal*((nI+1)*nJ*nK + nI*(nJ+1)*nK + nI*nJ*(nK+1))
        lRecord = lRecord + l
     end if
-    if(n_prev==n_step)then
+    if(n_prev==nStep)then
        if(DoRead) then
           l = lReal*nVarRestart*nI*nJ*nK
        else
@@ -899,7 +899,7 @@ contains
        if (present(iFile)) &
             write(NameFile, '(a,i6.6)') trim(NameFile)//'_p', iFile
        if (UseRestartInSeries) &
-            call string_append_iter(NameFile, iteration_number)
+            call string_append_iter(NameFile, nIteration)
 
        call open_file(FILE=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
@@ -909,7 +909,7 @@ contains
        if (present(iFile)) &
             write(NameFile, '(a,i6.6)') trim(NameFile)//'_p', iFile
        if (UseRestartOutSeries) &
-            call string_append_iter(NameFile,iteration_number)
+            call string_append_iter(NameFile,nIteration)
 
        ! Delete and open restart files
        if(TypeRestartOutFile == 'proc') &
@@ -983,7 +983,7 @@ contains
              end if
              IsRead = .true.
           endif
-          if(n_prev==n_step)then
+          if(n_prev==nStep)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   State4_CV
@@ -997,7 +997,7 @@ contains
           if(.not.IsRead) &
                read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC
 
-          Dt_BLK(iBlock) = Dt4
+          Dt_B(iBlock) = Dt4
           CellSize_DB(:,iBlock)  = Dxyz4_D
           XyzStart_BLK(:,iBlock) = Xyz4_D
           StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,iBlock) = State4_VC
@@ -1014,7 +1014,7 @@ contains
              end if
              IsRead = .true.
           endif
-          if(n_prev==n_step)then
+          if(n_prev==nStep)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
@@ -1028,17 +1028,17 @@ contains
           if(.not.IsRead) &
                read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC
 
-          Dt_BLK(iBlock) = Dt8
+          Dt_B(iBlock) = Dt8
           CellSize_DB(:,iBLock) = Dxyz8_D
           XyzStart_BLK(:,iBlock) = Xyz8_D
           StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,iBlock) = State8_VC
        end if
 
-       if(any(CellSize_DB(:,iBLock) < 0) .or. Dt_BLK(iBlock) < 0)then
+       if(any(CellSize_DB(:,iBLock) < 0) .or. Dt_B(iBlock) < 0)then
           write(*,*)NameSub,': corrupt restart data!!!'
           write(*,*)'iBlock  =', iBlock
           write(*,*)'Dxyz    =', CellSize_DB(:,iBLock)
-          write(*,*)'Dt      =', Dt_BLK(iBlock)
+          write(*,*)'Dt      =', Dt_B(iBlock)
           write(*,*)'XyzStart=', XyzStart_BLK(:,iBlock)
           write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
           call stop_mpi(NameSub//': corrupt restart data!!!')
@@ -1088,7 +1088,7 @@ contains
 
        if(UseConstrainB)then
           ! Save face centered magnetic field
-          write(UnitTmp_, rec=iRec)  Dt_BLK(iBlock),&
+          write(UnitTmp_, rec=iRec)  Dt_B(iBlock),&
                CellSize_DB(:,iBLock), &
                XyzStart_BLK(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
@@ -1097,10 +1097,10 @@ contains
                BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock)
           CYCLE
        endif
-       if(n_prev==n_step)then
+       if(n_prev==nStep)then
           ! Save previous time step for sake of BDF2 scheme
           write(UnitTmp_, rec=iRec) &
-               Dt_BLK(iBlock), &
+               Dt_B(iBlock), &
                CellSize_DB(:,iBLock), &
                XyzStart_BLK(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
@@ -1109,7 +1109,7 @@ contains
        endif
 
        write(UnitTmp_, rec=iRec) &
-            Dt_BLK(iBlock), &
+            Dt_B(iBlock), &
             CellSize_DB(:,iBLock), &
             XyzStart_BLK(:,iBlock), &
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
@@ -1296,7 +1296,7 @@ contains
        do iBlock = 1,nBlock
           State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
                StateRead_VCB(:,1:nI,1:nJ,1:nK,iBlock)
-          if (n_prev == n_step) &
+          if (n_prev == nStep) &
                ImplOld_VCB(:,1:nI,1:nJ,1:nK,iBlock) = &
                ImplOldRead_VCB(:,1:nI,1:nJ,1:nK,iBlock)
        end do
@@ -1451,7 +1451,7 @@ contains
     ! Note this will affect the accuracy of the solution in the
     ! next iteration, but this should be a small effect compared to
     ! the change of state variables
-    if (n_prev == n_step) then
+    if (n_prev == nStep) then
        do iBlock = 1,nBlock
           do i =1,nI ; do j=1,nJ; do k=1,nK
              ImplOld_VCB(:,i,j,k,iBlock) = &

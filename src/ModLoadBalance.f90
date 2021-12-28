@@ -458,13 +458,13 @@ contains
                 ! for the other block type criteria.
                 iType = iType + iSubCycleBlock*iTimeLevel_A(iNode_B(iBlock))
 
-                if(dt_BLK(iBlock) < DtMin .or. iType > iTypeMax)then
+                if(Dt_B(iBlock) < DtMin .or. iType > iTypeMax)then
                    write(*,*) NameSub,' ERROR for iBlock, iProc=', &
                         iBlock, iProc
                    write(*,*) NameSub,'iType, iTypeMax =', iType, iTypeMax
                    write(*,*) NameSub,' iSubCycleBlock =', iSubCycleBlock
                    write(*,*) NameSub,' DtMin, DtMax   =', DtMin, DtMax
-                   write(*,*) NameSub,' dt_BLK         =', dt_BLK(iBlock)
+                   write(*,*) NameSub,' Dt_B         =', Dt_B(iBlock)
                    write(*,*) NameSub,' time level     =', &
                         iTimeLevel_A(iNode_B(iBlock))
                 end if
@@ -524,7 +524,7 @@ contains
        if(DoMoveData)then
           call init_load_balance
 
-          call regrid_batl(nVar, State_VGB, Dt_BLK,  &
+          call regrid_batl(nVar, State_VGB, Dt_B,  &
                DoBalanceEachLevelIn= &
                (UseLocalTimeStep .and. .not.UseMaxTimeStep), &
                iTypeBalance_A=iTypeBalance_A,        &
@@ -538,7 +538,7 @@ contains
           call set_batsrus_grid
           call set_batsrus_state
        else
-          call regrid_batl(nVar, State_VGB, Dt_BLK, Used_GB=true_cell, &
+          call regrid_batl(nVar, State_VGB, Dt_B, Used_GB=true_cell, &
                iTypeBalance_A=iTypeBalance_A, iTypeNode_A=iTypeAdvance_A,&
                DoTestIn=DoTest)
           call set_batsrus_grid
@@ -676,8 +676,8 @@ contains
        select case(ImplCritType)
        case('dt')
           ! Just checking
-          if(.not.time_accurate)call stop_mpi(&
-               'ImplCritType=dt is only valid in time_accurate mode')
+          if(.not.IsTimeAccurate)call stop_mpi(&
+               'ImplCritType=dt is only valid in IsTimeAccurate mode')
 
           ! Set implicitBLK based on the time step.
           do iBlock=1,nBlockMax
@@ -685,11 +685,11 @@ contains
 
              ! Obtain the time step based on CFL condition
 
-             ! For first iteration calculate dt_BLK when inside time loop,
-             ! otherwise use the available dt_BLK from previous time step,
+             ! For first iteration calculate Dt_B when inside time loop,
+             ! otherwise use the available Dt_B from previous time step,
              ! or from the restart file, or simply 0 set in read_inputs.
              ! The latter two choices will be overruled later anyways.
-             if(n_step==1 .and. time_loop)then
+             if(nStep==1 .and. IsTimeLoop)then
                 ! For first iteration in the time loop
                 ! calculate stable time step
                 call set_b0_face(iBlock)
@@ -700,13 +700,13 @@ contains
 
              ! If the smallest allowed timestep is below the fixed DtFixed
              ! then only implicit scheme will work
-             if(dt_BLK(iBlock)*explCFL <= DtFixed) &
+             if(Dt_B(iBlock)*explCFL <= DtFixed) &
                   iTypeAdvance_B(iBlock) = ImplBlock_
           end do
 
           if(DoTest)write(*,*)&
-               'SELECT: advancetype,dt_BLK,explCFL,dt=',&
-               iTypeAdvance_B(iBlockTest),dt_BLK(iBlockTest),explCFL,dt
+               'SELECT: advancetype,Dt_B,explCFL,dt=',&
+               iTypeAdvance_B(iBlockTest),Dt_B(iBlockTest),explCFL,dt
 
        case('r','R')
           ! implicitly treated blocks are within rImplicit and not Unused
@@ -759,7 +759,7 @@ contains
   !============================================================================
   subroutine load_balance_blocks
 
-    use ModMain, ONLY: iteration_number
+    use ModMain, ONLY: nIteration
     use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
     use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
     use ModTimeStepControl, ONLY: UseMaxTimeStep
@@ -777,7 +777,7 @@ contains
          UsePartImplicit .or.                             &! part implicit
          UsePartSteady .and. IsNewSteadySelect .or.       &! part steady scheme
          nBlockSemi >= 0 .and. DoBalanceSemiImpl .or.     &! semi-implicit
-         DoBalancePointImplicit .and. iteration_number>1  &! point-implicit
+         DoBalancePointImplicit .and. nIteration>1  &! point-implicit
          ) then ! semi-implicit scheme
 
        ! Redo load balancing

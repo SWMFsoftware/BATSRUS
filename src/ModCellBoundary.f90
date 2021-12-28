@@ -79,7 +79,7 @@ contains
     use ModAdvance, ONLY: UseEfield
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
-         UseHyperbolicDivb, time_accurate, time_loop, &
+         UseHyperbolicDivb, IsTimeAccurate, IsTimeLoop, &
          TypeCellBc_I, iTypeCellBc_I
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
@@ -377,10 +377,10 @@ contains
                kMin, kMax, nVarState, State_VG)
 
        case(FixedBC_, InFlowBC_, VaryBC_, IHBufferBC_)
-          if(time_accurate &
+          if(IsTimeAccurate &
                .and.(iTypeBc == VaryBC_ .or. iTypeBc == InFlowBC_))then
              call set_solar_wind_bc
-          else if(iTypeBc == IHBufferBC_ .and. time_loop)then
+          else if(iTypeBc == IHBufferBC_ .and. IsTimeLoop)then
              call set_solar_wind_bc_buffer
           else
              call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), &
@@ -392,7 +392,7 @@ contains
           if (IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
           else
-             if(time_accurate &
+             if(IsTimeAccurate &
                   .and.(iTypeBc == VaryBC_ .or. iTypeBc == InFlowBC_))then
                 call set_solar_wind_bc
              else
@@ -853,7 +853,7 @@ contains
       use ModMultiFluid,  ONLY: iRho_I, iRhoIon_I, iUx_I, iUy_I, iUz_I, &
            iPion_I, UseMultiIon, ChargeIon_I, MassIon_I
       use ModSolarwind,   ONLY: get_solar_wind_point
-      use ModMain,        ONLY: time_simulation
+      use ModMain,        ONLY: tSimulation
       use BATL_lib,       ONLY: Xyz_DGB, IsCartesianGrid
       use ModSemiImplVar, ONLY: UseSemiHallResist, UseSemiResistivity, iTeImpl
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal, &
@@ -892,7 +892,7 @@ contains
                Xyz_D(z_) = z2
             end select
          end if
-         call get_solar_wind_point(time_simulation, Xyz_D, SolarWind_V)
+         call get_solar_wind_point(tSimulation, Xyz_D, SolarWind_V)
 
          if(present(iImplBlock))then
             if(UseSemiHallResist .or. UseSemiResistivity)then

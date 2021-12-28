@@ -191,9 +191,9 @@ contains
        write(NameSnapshot, '(a,i2)') trim(NameSnapshot), iFile - Plot_
     end if
 
-    if(.not.time_accurate)then
+    if(.not.IsTimeAccurate)then
        ! Add time step information
-       write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", n_step
+       write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", nStep
     else
        if(IsPlotName_e)then
           ! Event date
@@ -209,7 +209,7 @@ contains
        end if
        if(IsPlotName_n)then
           ! Add time step information
-          write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", n_step
+          write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", nStep
        end if
     end if
 
@@ -611,8 +611,8 @@ contains
        case('tec','tcp')
           write(UnitTmp_,'(a)')filename
           write(UnitTmp_,'(i8,a)')nProc,' nProc'
-          write(UnitTmp_,'(i8,a)')n_step,' n_step'
-          write(UnitTmp_,'(1pe18.10,a)')time_simulation,' t'
+          write(UnitTmp_,'(i8,a)')nStep,' nStep'
+          write(UnitTmp_,'(1pe18.10,a)')tSimulation,' t'
           write(UnitTmp_,'(a)')trim(unitstr_TEC)
           call get_date_time(iTime_I)
           write(UnitTmp_,*) iTime_I(1:7),' year mo dy hr mn sc msc'
@@ -668,11 +668,11 @@ contains
           write(UnitTmp_,*)
 
           write(UnitTmp_,'(a)') '#NSTEP'
-          write(UnitTmp_,'(i8,16x,a)')n_step, 'nStep'
+          write(UnitTmp_,'(i8,16x,a)')nStep, 'nStep'
           write(UnitTmp_,*)
 
           write(UnitTmp_,'(a)') '#TIMESIMULATION'
-          write(UnitTmp_,'(1pe18.10,6x,a)')time_simulation, 'TimeSimulation'
+          write(UnitTmp_,'(1pe18.10,6x,a)')tSimulation, 'TimeSimulation'
           write(UnitTmp_,*)
 
           write(UnitTmp_,'(a)') '#NCELL'
@@ -783,12 +783,12 @@ contains
          end do
       end do; end do; end do
 
-      if(body1) r2Min = (0.51*min(1.0, Rbody))**2
+      if(UseBody) r2Min = (0.51*min(1.0, Rbody))**2
 
       ! Store PlotVar_NV (per block info) into PlotVarNodes_VNB
       do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1  ! Node loop
 
-         if(body1) r2 = sum(Xyz_DNB(:,i,j,k,iBlock)**2)
+         if(UseBody) r2 = sum(Xyz_DNB(:,i,j,k,iBlock)**2)
 
          do iVar = 1, nplotvar
             if (nCell_NV(i,j,k,iVar) > 0) then
@@ -800,7 +800,7 @@ contains
                ! body with values for plotting. However, when allowed to go all
                ! the way to the origin, B traces will continuously loop through
                ! the body and out. Setting the values to 0 inside 0.51 fixes it.
-               if(plotvar_useBody(iVar) .and. body1)then
+               if(plotvar_useBody(iVar) .and. UseBody)then
                   if(r2 < r2Min) PlotVarNodes_VNB(iVar,i,j,k,iBlock) = 0.0
                end if
             else
@@ -1615,7 +1615,7 @@ contains
        case('dt')
           PlotVar(1:nI,1:nJ,1:nK,iVar) = time_BLK(1:nI,1:nJ,1:nK,iBlock)
        case('dtblk')
-          PlotVar(:,:,:,iVar) = dt_BLK(iBlock)
+          PlotVar(:,:,:,iVar) = Dt_B(iBlock)
           ! if(.not.true_BLK(iBlock))then
           !   if(.not.any(true_cell(:,:,:,iBlock)))&
           !        PlotVar(:,:,:,iVar) = 0.0

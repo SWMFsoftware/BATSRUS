@@ -1339,7 +1339,7 @@ contains
   !   call set_oktest('correct_vxb',DoTest, DoTest)
   !   if(DoTest)write(*,*)'correct_VxB me=',iProc
   !
-  !   select case(optimize_message_pass)
+  !   select case(TypeMessagePass)
   !   case('dir')
   !      ! Send messages for two faces together
   !      do isweep=1,3
@@ -1368,7 +1368,7 @@ contains
   !          'VxB_pass_faces:me,ifacemin,ifacemax=',iProc,ifacemin,ifacemax
   !
   !     ! Debug
-  !     if(okdebug)then
+  !     if(DoDebug)then
   !        rbuf1  =0.; rbuf2=0.; rbuf3=0.
   !     end if
   !
@@ -1380,7 +1380,7 @@ contains
   !        ! Set index ranges for the face
   !        call setranges
   !
-  !        if(okdebug.and.DoTest)then
+  !        if(DoDebug.and.DoTest)then
   !           write(*,*)'setranges for receive done'
   !           write(*,*)'me,iface,nxface,nyface,isize1,isize2,isize3',&
   !                iProc,iface,nxface,nyface,isize1,isize2,isize3
@@ -1428,7 +1428,7 @@ contains
   !              ! Remote receive
   !              neiB=neiBLK(isubface,rface,iBlock)
   !              itag = 100*neiB+10*iface
-  !              if(DoTest.and.okdebug)write(*,*)&
+  !              if(DoTest.and.DoDebug)write(*,*)&
   !                   'Remote recv,me,iBlock,itag,neiP,neiB,isubface=',&
   !                   iProc,iBlock,itag,neiP,neiB,isubface
   !
@@ -1462,12 +1462,12 @@ contains
   !        ! Set index ranges for the face
   !        call setranges
   !
-  !        if(okdebug.and.DoTest)write(*,*)&
+  !        if(DoDebug.and.DoTest)write(*,*)&
   !             'setranges for send done: me, iface=',iProc, iface
   !
   !        allocate(sbuf1(nxface,nyface+1),sbuf2(nxface+1,nyface),sbuf3(isize3))
   !
-  !        if(okdebug.and.DoTest)write(*,*)'allocation done, me,iface=',&
+  !        if(DoDebug.and.DoTest)write(*,*)'allocation done, me,iface=',&
   !             iProc,iface
   !
   !        do iBlock=1,nBlockMax
@@ -1477,7 +1477,7 @@ contains
   !           neiL=neiLEV(iface,iBlock)
   !           if(neiL/=1)CYCLE
   !
-  !           if(okdebug.and.DoTest)write(*,*)&
+  !           if(DoDebug.and.DoTest)write(*,*)&
   !                'sending: me, iface,iBlock,neiL=',iProc,iface,iBlock,neiL
   !
   !           ! Restrict VxB
@@ -1555,7 +1555,7 @@ contains
   !              ! Remote send of face
   !              itag = 100*iBlock+10*iface
   !
-  !              if(DoTest.and.okdebug)write(*,*)&
+  !              if(DoTest.and.DoDebug)write(*,*)&
   !                   'Remote send,me,iBlock,itag,neiP,neiB=',&
   !                   iProc,iBlock,itag,neiP,neiB
   !
@@ -1622,7 +1622,7 @@ contains
   !              if(neiPE(isubface,rface,iBlock)==iProc) CYCLE
   !
   !              neiB=neiBLK(isubface,rface,iBlock)
-  !              if(okdebug.and.DoTest)&
+  !              if(DoDebug.and.DoTest)&
   !                   write(*,*)'buf2subface: me, isubface, iBlock, neiB=',&
   !                   iProc,isubface,iBlock,neiB
   !

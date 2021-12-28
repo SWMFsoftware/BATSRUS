@@ -48,7 +48,7 @@ contains
 
     ! set up the shell grid for this plot file
 
-    use ModMain,           ONLY: time_simulation, TypeCoordSystem
+    use ModMain,           ONLY: tSimulation, TypeCoordSystem
     use CON_axes,          ONLY: transform_matrix
     use ModCoordTransform, ONLY: show_rot_matrix
     use ModUtilities,      ONLY: split_string
@@ -97,7 +97,7 @@ contains
     PlotVar_VIII = 0.0
 
     ! Get coordinate transformation matrix:
-    PlotToGm_DD = transform_matrix(Time_Simulation, &
+    PlotToGm_DD = transform_matrix(tSimulation, &
          TypeCoordPlot_I(iFile), TypeCoordSystem)
 
     if (DoTest) then
@@ -231,7 +231,7 @@ contains
 
     ! Collect results from all blocks and write to single output file.
     use ModMpi
-    use ModMain,     ONLY: time_simulation, n_step
+    use ModMain,     ONLY: tSimulation, nStep
     use ModPlotFile, ONLY: save_plot_file
 
     integer,          intent(in) :: iFile, nPlotvar
@@ -281,8 +281,8 @@ contains
           call save_plot_file(NameFile, &
                TypeFileIn=TypeFile_I(iFile), &
                StringHeaderIn=NameUnit, &
-               nStepIn=n_step, &
-               TimeIn=time_simulation, &
+               nStepIn=nStep, &
+               TimeIn=tSimulation, &
                NameVarIn = NameVar, &
                CoordMinIn_D = [cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
                CoordMaxIn_D = [cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
@@ -291,8 +291,8 @@ contains
           call save_plot_file(NameFile, &
                TypeFileIn=TypeFile_I(iFile), &
                StringHeaderIn=NameUnit, &
-               nStepIn=n_step, &
-               TimeIn=time_simulation, &
+               nStepIn=nStep, &
+               TimeIn=tSimulation, &
                NameVarIn = NameVar, &
                CoordMinIn_D = [rMin, cRadtoDeg*LatMin], &
                CoordMaxIn_D = [rMax, cRadtoDeg*LatMax], &
@@ -301,8 +301,8 @@ contains
           call save_plot_file(NameFile, &
                TypeFileIn=TypeFile_I(iFile), &
                StringHeaderIn=NameUnit, &
-               nStepIn=n_step, &
-               TimeIn=time_simulation, &
+               nStepIn=nStep, &
+               TimeIn=tSimulation, &
                NameVarIn = NameVar, &
                CoordMinIn_D = [rMin, cRadtoDeg*LonMin], &
                CoordMaxIn_D = [rMax, cRadtoDeg*LonMax], &
@@ -311,8 +311,8 @@ contains
           call save_plot_file(NameFile, &
                TypeFileIn=TypeFile_I(iFile), &
                StringHeaderIn=NameUnit, &
-               nStepIn=n_step, &
-               TimeIn=time_simulation, &
+               nStepIn=nStep, &
+               TimeIn=tSimulation, &
                NameVarIn = NameVar, &
                CoordMinIn_D = [rMin, cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
                CoordMaxIn_D = [rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax], &

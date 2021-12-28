@@ -6,7 +6,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   use CON_coupler,       ONLY: PW_, Grid_C
   use CON_axes,          ONLY: transform_matrix
-  use ModMain,           ONLY: TypeCoordSystem, Time_Simulation
+  use ModMain,           ONLY: TypeCoordSystem, tSimulation
   use ModVarIndexes,     ONLY: Rho_, Ux_, Uy_, Uz_, &
        SpeciesFirst_, SpeciesLast_, IsMhd
   use ModAdvance,        ONLY: UseMultiSpecies
@@ -79,18 +79,18 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   if(TypeCoordSystem == NamePwCoord)then
      XyzPw_D = CoordIn_D
   else
-     if(abs(Time_Simulation - TimeSimLast) > dTimeMax)then
+     if(abs(tSimulation - TimeSimLast) > dTimeMax)then
         ! Update GM to PW transformation if necessary
         PwGm_DD = &
-             transform_matrix(Time_Simulation, TypeCoordSystem, NamePwCoord)
-        TimeSimLast = Time_Simulation
+             transform_matrix(tSimulation, TypeCoordSystem, NamePwCoord)
+        TimeSimLast = tSimulation
      end if
      ! Convert from GM coordinates to buffer coordinates
      XyzPw_D = matmul( PwGm_DD, CoordIn_D)
   end if
 
   ! Map down to radius 1.0 where the PW fieldline positions are defined
-  call map_planet_field(Time_Simulation, XyzPw_D, 'SMG NORM', &
+  call map_planet_field(tSimulation, XyzPw_D, 'SMG NORM', &
        1.0, Xyz_D, iHemisphere)
 
   ! Find triangle containing point Xyz_D

@@ -73,7 +73,7 @@ contains
       use ModRestartFile, ONLY: NameRestartInDir, &
            UseRestartInSeries, string_append_iter
 
-      use ModMain, ONLY: iteration_number
+      use ModMain, ONLY: nIteration
       use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
            set_amr_geometry, nBlock, Unused_B, init_amr_criteria, &
            nInitialAmrLevel
@@ -122,7 +122,7 @@ contains
 
          NameFile = trim(NameRestartInDir)//'octree.rst'
          if (UseRestartInSeries) &
-              call string_append_iter(NameFile,iteration_number)
+              call string_append_iter(NameFile,nIteration)
          call read_tree_file(NameFile)
          call init_grid_batl
          call set_batsrus_grid
@@ -280,8 +280,8 @@ contains
       if(restart)then
          if(iProc==0)then
             call write_prefix; write(iUnitOut,*)&
-                 NameSub,' restarts at n_step,Time_Simulation=',&
-                 n_step,Time_Simulation
+                 NameSub,' restarts at nStep,tSimulation=',&
+                 nStep,tSimulation
          end if
          ! Load balance for the inner blocks:
          call load_balance(DoMoveCoord=.true., DoMoveData=.true., &
@@ -490,12 +490,12 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     ! Check if time limit is reached (to be safe)
-    if(Time_Simulation >= TimeSimulationLimit) RETURN
+    if(tSimulation >= TimeSimulationLimit) RETURN
 
     ! Check if steady state is achieved
-    if(.not.time_accurate .and. UsePartSteady .and. IsSteadyState)then
+    if(.not.IsTimeAccurate .and. UsePartSteady .and. IsSteadyState)then
        ! Create stop condition for stand alone mode
-       nIter = iteration_number
+       nIter = nIteration
        ! There is nothing to do, simply return
        RETURN
     end if
@@ -503,8 +503,8 @@ contains
     call timing_start('advance')
 
     ! We are advancing in time.
-    time_loop = .true.
-    !$acc update device(time_loop)
+    IsTimeLoop = .true.
+    !$acc update device(IsTimeLoop)
 
     ! Exchange messages if some information was received
     ! from another SWMF component, for example.
@@ -513,23 +513,23 @@ contains
     ! Some files should be saved at the beginning of the time step
     call BATS_save_files('BEGINSTEP')
 
-    n_step = n_step + 1
-    iteration_number = iteration_number+1
+    nStep = nStep + 1
+    nIteration = nIteration+1
 
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        if(UseSolidState) call fix_geometry(DoSolveSolidIn=.false.)
 
        call set_global_timestep(TimeSimulationLimit)
 
-       if (DoCheckTimeStep .and. mod(n_step, DnCheckTimeStep) == 0)then
-          if (time_simulation - TimeSimulationOldCheck <             &
+       if (DoCheckTimeStep .and. mod(nStep, DnCheckTimeStep) == 0)then
+          if (tSimulation - TimeSimulationOldCheck <             &
                TimeStepMin*DnCheckTimeStep*Io2SI_V(UnitT_) ) then
              if (iProc ==0) write(*,*) NameSub,                      &
-                  ': TimeSimulationOldCheck, time_simulation =',     &
-                  TimeSimulationOldCheck, time_simulation
+                  ': TimeSimulationOldCheck, tSimulation =',     &
+                  TimeSimulationOldCheck, tSimulation
              call stop_mpi(NameSub//': advance too slow in time')
           end if
-          TimeSimulationOldCheck = time_simulation
+          TimeSimulationOldCheck = tSimulation
        end if
 
        if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
@@ -548,25 +548,25 @@ contains
 
     if(UseImplicit.and.nBlockImplALL>0)then
        call advance_part_impl
-    elseif(UseLocalTimeStep .and. n_step > 1 .and. time_accurate)then
+    elseif(UseLocalTimeStep .and. nStep > 1 .and. IsTimeAccurate)then
        call advance_localstep(TimeSimulationLimit)
     else
        call advance_explicit(DoCalcTimestep=.true.)
     endif
 
-    ! Adjust Time_Simulation to match TimeSimulationLimit if it is very close
-    if(time_accurate .and. &
-         Time_Simulation < TimeSimulationLimit .and. &
-         TimeSimulationLimit - Time_Simulation <= 1e-3*Dt*No2Si_V(UnitT_))then
+    ! Adjust tSimulation to match TimeSimulationLimit if it is very close
+    if(IsTimeAccurate .and. &
+         tSimulation < TimeSimulationLimit .and. &
+         TimeSimulationLimit - tSimulation <= 1e-3*Dt*No2Si_V(UnitT_))then
 
        if(iProc == 0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
-               ': adjusting Time_Simulation=', Time_Simulation,&
+               ': adjusting tSimulation=', tSimulation,&
                ' to TimeSimulationLimit=', TimeSimulationLimit,&
                ' with Dt=', Dt*No2Si_V(UnitT_)
        end if
 
-       Time_Simulation = TimeSimulationLimit
+       tSimulation = TimeSimulationLimit
     end if
 
     if(UseIM)call apply_im_pressure
@@ -596,10 +596,10 @@ contains
     if(UseFieldLineThreads)call advance_threads(Enthalpy_)
     call exchange_messages
 
-    if(UseSemiImplicit .and. (Dt>0 .or. .not.time_accurate)) &
+    if(UseSemiImplicit .and. (Dt>0 .or. .not.IsTimeAccurate)) &
          call advance_semi_impl
 
-    if(UseTimeStepControl .and. time_accurate .and. Dt>0)then
+    if(UseTimeStepControl .and. IsTimeAccurate .and. Dt>0)then
        if(UseSolidState) call fix_geometry(DoSolveSolidIn=.false.)
 
        call control_time_step
@@ -609,7 +609,7 @@ contains
 
     if(UsePartSteady)then
        ! Select steady and unsteady blocks
-       if(.not. (Time_Accurate .and. Time_Simulation == 0.0)) &
+       if(.not. (IsTimeAccurate .and. tSimulation == 0.0)) &
             call part_steady_select
 
        ! Switch on steady blocks to be included in AMR, plotting, etc.
@@ -626,26 +626,26 @@ contains
 
     ! Re-calculate the active PIC regions
     if(AdaptPic % DoThis) then
-       if(is_time_to(AdaptPic, n_step, Time_Simulation, time_accurate) &
+       if(is_time_to(AdaptPic, nStep, tSimulation, IsTimeAccurate) &
             .or. iPicGrid /= iNewGrid &
             .or. iPicDecomposition /= iNewDecomposition) then
           if(iProc==0 .and. lVerbose > 0)then
              call write_prefix; write(iUnitOut,*) NameSub, &
-                  " adapt PIC region at simulation time=", Time_Simulation
+                  " adapt PIC region at simulation time=", tSimulation
           end if
           call calc_pic_criteria
           call pic_set_cell_status
        end if
     end if
 
-    if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
-         iProc,n_step,Time_Simulation
+    if(DoTest)write(*,*)NameSub,' iProc,new nStep,tSimulation=',&
+         iProc,nStep,tSimulation
 
     if(DoUpdateB0)then
        ! dB0/dt term is added at the DtUpdateB0 frequency
 
-       if(int(Time_Simulation/DtUpdateB0) >  &
-            int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
+       if(int(tSimulation/DtUpdateB0) >  &
+            int((tSimulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
             call update_b0
     end if
     if(UseBody2Orbit) then
@@ -656,12 +656,12 @@ contains
     if(UseProjection) call project_divb
 
     ! Adapt grid
-    if(is_time_to(AdaptGrid, n_step, Time_Simulation, time_accurate)) then
+    if(is_time_to(AdaptGrid, nStep, tSimulation, IsTimeAccurate)) then
        call timing_start(NameThisComp//'_amr')
        if(iProc==0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) &
-               '----------------- AMR START at nStep=', n_step
-          if(time_accurate) call write_timeaccurate
+               '----------------- AMR START at nStep=', nStep
+          if(IsTimeAccurate) call write_timeaccurate
        end if
 
        ! Increase refinement level if geometric refinement is done
@@ -672,7 +672,7 @@ contains
 
        ! Do AMR without full initial message passing
        call prepare_amr(DoFullMessagePass=.false., TypeAmr='all')
-       if(time_loop) call BATS_save_files('BEFOREAMR')
+       if(IsTimeLoop) call BATS_save_files('BEFOREAMR')
        call do_amr
 
        ! Output timing after AMR.
@@ -802,14 +802,14 @@ contains
     select case(TypeSave)
     case('INITIAL')
        ! Do not save current step or time
-       n_output_last = n_step
+       n_output_last = nStep
 
        ! Initialize last save times
        where(dt_output>0.) &
-            t_output_last=int(time_simulation/dt_output)
+            t_output_last=int(tSimulation/dt_output)
 
        ! DoSaveInitial may be set to true in the #SAVEINITIAL command
-       if(DoSaveInitial .or. (time_accurate .and. time_simulation == 0.0))then
+       if(DoSaveInitial .or. (IsTimeAccurate .and. tSimulation == 0.0))then
           if(DoSaveInitial)then
              ! Save all (except restart files)
              n_output_last = -1
@@ -822,7 +822,7 @@ contains
              end where
           end if
           ! Do not save restart file in any case
-          n_output_last(restart_) = n_step
+          n_output_last(restart_) = nStep
           call save_files
        end if
        ! Set back to default value (for next session)
@@ -872,7 +872,7 @@ contains
                   SaveThreads4Plot = .false.
                end if
                call save_file
-            else if(mod(n_step,dn_output(iFile)) == 0)then
+            else if(mod(nStep,dn_output(iFile)) == 0)then
                if(SaveThreads4Plot.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
                   call save_threads_for_plot
@@ -880,9 +880,9 @@ contains
                end if
                call save_file
             end if
-         else if(time_accurate .and. dt_output(iFile) > 0.)then
-            if(int(time_simulation/dt_output(iFile))>t_output_last(iFile))then
-               t_output_last(iFile) = int(time_simulation/dt_output(iFile))
+         else if(IsTimeAccurate .and. dt_output(iFile) > 0.)then
+            if(int(tSimulation/dt_output(iFile))>t_output_last(iFile))then
+               t_output_last(iFile) = int(tSimulation/dt_output(iFile))
                if(SaveThreads4Plot.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
                   call save_threads_for_plot
@@ -933,16 +933,16 @@ contains
 
       integer :: iSat, iPointSat, iParcel
 
-      ! Backup location for the Time_Simulation variable.
-      ! Time_Simulation is used in steady-state runs as a loop parameter
+      ! Backup location for the tSimulation variable.
+      ! tSimulation is used in steady-state runs as a loop parameter
       ! in the save_files subroutine, where set_satellite_flags and
-      ! write_logfile are called with different Time_Simulation values
-      ! spanning all the satellite trajectory cut. Old Time_Simulation value
+      ! write_logfile are called with different tSimulation values
+      ! spanning all the satellite trajectory cut. Old tSimulation value
       ! is saved here before and it is restored after the loop.
 
       real :: tSimulationBackup = 0.0
       !------------------------------------------------------------------------
-      if(n_step<=n_output_last(iFile) .and. dn_output(iFile)/=0) RETURN
+      if(nStep<=n_output_last(iFile) .and. dn_output(iFile)/=0) RETURN
 
       call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
@@ -1070,18 +1070,18 @@ contains
             ! need this to write the header
             IsFirstWriteSat_I(iSat) = .true.
 
-            tSimulationBackup = Time_Simulation
-            Time_Simulation = StartTimeTraj_I(iSat)
+            tSimulationBackup = tSimulation
+            tSimulation = StartTimeTraj_I(iSat)
 
-            do while (Time_Simulation <= EndTimeTraj_I(iSat))
+            do while (tSimulation <= EndTimeTraj_I(iSat))
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
                call write_logfile(iSat,iFile, &
                     TimeSatHeaderIn=tSimulationBackup)
-               Time_Simulation = Time_Simulation + DtTraj_I(iSat)
+               tSimulation = tSimulation + DtTraj_I(iSat)
             end do
 
-            Time_Simulation = tSimulationBackup    ! ... Restore
+            tSimulation = tSimulationBackup    ! ... Restore
             icurrent_satellite_position(iSat) = 1
 
             if(iProc==0)call set_satellite_file_status(iSat,'close')
@@ -1091,26 +1091,26 @@ contains
             ! need this to write the header
             IsFirstWriteSat_I(iSat) = .true.
 
-            tSimulationBackup = Time_Simulation
-            Time_Simulation = StartTimeTraj_I(iSat)
+            tSimulationBackup = tSimulation
+            tSimulation = StartTimeTraj_I(iSat)
 
             do iPointSat = 1, nPointTraj_I(iSat)
-               Time_Simulation = TimeSat_II(iSat, iPointSat)
+               tSimulation = TimeSat_II(iSat, iPointSat)
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
                call write_logfile(iSat,iFile, &
                     TimeSatHeaderIn=tSimulationBackup)
             end do
 
-            Time_Simulation = tSimulationBackup    ! ... Restore
+            tSimulation = tSimulationBackup    ! ... Restore
             icurrent_satellite_position(iSat) = 1
 
             if(iProc==0)call set_satellite_file_status(iSat,'close')
          else if (TypeTrajTimeRange_I(iSat) == 'orig') then
             !
-            ! Distinguish between time_accurate and .not. time_accurate:
+            ! Distinguish between IsTimeAccurate and .not. IsTimeAccurate:
             !
-            if (time_accurate) then
+            if (IsTimeAccurate) then
                if(iProc==0)call set_satellite_file_status(iSat,'append')
 
                call set_satellite_flags(iSat)
@@ -1122,15 +1122,15 @@ contains
                ! need this to write the header
                IsFirstWriteSat_I(iSat) = .true.
 
-               tSimulationBackup = Time_Simulation    ! Save ...
-               Time_Simulation = TimeSatStart_I(iSat)
-               do while (Time_Simulation <= TimeSatEnd_I(iSat))
+               tSimulationBackup = tSimulation    ! Save ...
+               tSimulation = TimeSatStart_I(iSat)
+               do while (tSimulation <= TimeSatEnd_I(iSat))
                   call set_satellite_flags(iSat)
                   ! write for ALL the points of trajectory cut
                   call write_logfile(iSat,iFile)
-                  Time_Simulation = Time_Simulation+dt_output(iSat+Satellite_)
+                  tSimulation = tSimulation+dt_output(iSat+Satellite_)
                end do
-               Time_Simulation = tSimulationBackup    ! ... Restore
+               tSimulation = tSimulationBackup    ! ... Restore
                icurrent_satellite_position(iSat) = 1
 
                if(iProc==0)call set_satellite_file_status(iSat,'close')
@@ -1145,7 +1145,7 @@ contains
       elseif(iFile == magfile_) then
          ! Cases for magnetometer files
          if(.not.DoSaveMags) RETURN
-         if(time_accurate) then
+         if(IsTimeAccurate) then
             call timing_start('save_magnetometer')
             call write_magnetometers('stat')
             call timing_stop('save_magnetometer')
@@ -1154,7 +1154,7 @@ contains
       elseif(iFile == maggridfile_) then
          ! Case for grid magnetometer files
          if(.not. DoSaveGridmag) RETURN
-         if(time_accurate) then
+         if(IsTimeAccurate) then
             call timing_start('grid_magnetometer')
             call write_magnetometers('grid')
             call timing_stop('grid_magnetometer')
@@ -1162,29 +1162,29 @@ contains
 
       elseif(iFile == indexfile_) then
          ! Write geomagnetic index file.
-         if(time_accurate .and. DoWriteIndices) call write_geoindices
+         if(IsTimeAccurate .and. DoWriteIndices) call write_geoindices
       end if
 
-      n_output_last(iFile) = n_step
+      n_output_last(iFile) = nStep
 
       if(iProc==0 .and. lVerbose>0 .and. &
            iFile /= logfile_ .and. iFile /= magfile_ &
            .and. iFile /= indexfile_ .and. iFile /= maggridfile_ &
            .and. (iFile <= satellite_ .or. iFile > satellite_+nSatellite))then
-         if(time_accurate)then
+         if(IsTimeAccurate)then
             call write_prefix;
             write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
                  'saved iFile=',iFile,' type=',plot_type(iFile),&
-                 ' at n_step=',n_step,' time=', &
-                 int(                            Time_Simulation/3600.),':', &
-                 int((Time_Simulation &
-                 -(3600.*int(Time_Simulation/3600.)))/60.),':', &
-                 int( Time_Simulation-(  60.*int(Time_Simulation/  60.))), &
+                 ' at nStep=',nStep,' time=', &
+                 int(                            tSimulation/3600.),':', &
+                 int((tSimulation &
+                 -(3600.*int(tSimulation/3600.)))/60.),':', &
+                 int( tSimulation-(  60.*int(tSimulation/  60.))), &
                  ' h:m:s'
          else
             call write_prefix; write(iUnitOut,'(a,i2,a,a,a,i7)') &
                  'saved iFile=',iFile,' type=',plot_type(iFile), &
-                 ' at n_step=',n_step
+                 ' at nStep=',nStep
          end if
       end if
 

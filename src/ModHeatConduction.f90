@@ -866,7 +866,7 @@ contains
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
     use ModImplicit,     ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
          iTeImpl
-    use ModMain,         ONLY: Dt, time_accurate, Cfl
+    use ModMain,         ONLY: Dt, IsTimeAccurate, Cfl
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
@@ -1030,7 +1030,7 @@ contains
                   CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           end if
 
-          if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+          if(.not.IsTimeAccurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
 
           if(UseElectronPressure .and. .not.UseMultiIon)then
              Cvi = InvGammaElectronMinus1*Natomic
@@ -1485,7 +1485,7 @@ contains
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, ExtraEint_, Ehot_
     use ModGeometry, ONLY: true_cell
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
-    use ModMain,     ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
+    use ModMain,     ONLY: nI, nJ, nK, Dt, IsTimeAccurate, Cfl
     use ModPhysics,  ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
          InvGammaMinus1, GammaMinus1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin, pMin_I, PeMin
@@ -1564,7 +1564,7 @@ contains
 
        ! update ion pressure for energy exchange between ions and electrons
        if(UseElectronPressure .and. .not.UseMultiIon)then
-          if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+          if(.not.IsTimeAccurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
           Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
                + DtLocal*PointCoef_CB(i,j,k,iBlock) &
                *(NewSemiAll_VC(iTeImpl,i,j,k) - PointImpl_VCB(1,i,j,k,iBlock))

@@ -72,13 +72,13 @@ module ModSatelliteFile
   character(len=5), public :: TypeTrajTimeRange_I(MaxSatellite) = 'orig'
 
   ! Time limits (in seconds) for satellite trajectory cut
-  ! for .not. time_accurate session.
+  ! for .not. IsTimeAccurate session.
   ! If a steady-state simulation is run for a specific moment of time
   ! (set in  StartTime), the TimeSatStart_I determines the starting point of
   ! the satellite trajectory, while TimeSatEnd_I determines the trajectory
   ! ending point.
   ! Both determine the considered trajectory cut.
-  ! Unlike in time_accurate sessions, after each dn_output simulation
+  ! Unlike in IsTimeAccurate sessions, after each dn_output simulation
   ! steps the satellite variables for ALL the trajectory cut are
   ! saved in file.
 
@@ -285,7 +285,7 @@ contains
   end subroutine set_satellite_file_status
   !============================================================================
   subroutine set_NameFile(iSat)
-    use ModMain,   ONLY: n_step, time_accurate
+    use ModMain,   ONLY: nStep, IsTimeAccurate
     use ModIO,     ONLY: NamePlotDir, StringDateOrTime
 
     integer, intent(in) :: iSat
@@ -314,17 +314,17 @@ contains
             TypeTrajTimeRange_I(iSat))
     end select
 
-    if (time_accurate .and. ( TypeTrajTimeRange_I(iSat) == 'range' .or. &
+    if (IsTimeAccurate .and. ( TypeTrajTimeRange_I(iSat) == 'range' .or. &
          TypeTrajTimeRange_I(iSat) == 'full') ) then
        call get_time_string
        write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir) // &
             trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2) // &
-            '_t'//trim(StringDateOrTime)//'_n',n_step,'.sat'
+            '_t'//trim(StringDateOrTime)//'_n',nStep,'.sat'
 
     else
        write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
             trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2)//&
-            '_n',n_step,'.sat'
+            '_n',nStep,'.sat'
     endif
 
     IsNameFileSet_I(iSat) = .true.
@@ -533,7 +533,7 @@ contains
   end subroutine set_satellite_flags
   !============================================================================
   subroutine set_satellite_positions(iSat)
-    use ModMain, ONLY:time_simulation
+    use ModMain, ONLY:tSimulation
     use ModNumConst
 
     integer, intent(in) :: iSat
@@ -553,9 +553,9 @@ contains
           i = icurrent_satellite_position(iSat)
 
           if(DoTest)write(*,*) NameSub,' nPoint, iPoint, TimeSim, TimeSat=',&
-               nPoint, i, Time_Simulation, TimeSat_II(iSat,i)
+               nPoint, i, tSimulation, TimeSat_II(iSat,i)
 
-          do while (i < nPoint .and. TimeSat_II(iSat,i) <= Time_Simulation)
+          do while (i < nPoint .and. TimeSat_II(iSat,i) <= tSimulation)
              i = i + 1
           enddo
 
@@ -563,7 +563,7 @@ contains
 
           if(DoTest)write(*,*) NameSub,' final iPoint=', i
 
-          if ( (i == nPoint .and. Time_Simulation > TimeSat_II(iSat,i)) .or. &
+          if ( (i == nPoint .and. tSimulation > TimeSat_II(iSat,i)) .or. &
                i == 1 ) then
 
              DoTrackSatellite_I(iSat) = .false.
@@ -572,7 +572,7 @@ contains
           else
              DoTrackSatellite_I(iSat) = .true.
 
-             dTime = 1.0 - (TimeSat_II(iSat,i) - Time_Simulation) / &
+             dTime = 1.0 - (TimeSat_II(iSat,i) - tSimulation) / &
                   max((TimeSat_II(iSat,i) - TimeSat_II(iSat,i-1)), cTiny)
 
              XyzSat_DI(:,iSat) = dTime * XyzSat_DII(:,iSat,i) + &
@@ -771,7 +771,7 @@ contains
     use ModFieldTrace,  ONLY: DoExtractState, DoExtractUnitSi, &
          extract_field_lines, rIonosphere
     use ModVarIndexes, ONLY: nVar
-    use ModMain,      ONLY:time_simulation,TypeCoordSystem
+    use ModMain,      ONLY:tSimulation,TypeCoordSystem
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
     use ModNumConst,  ONLY: cRadToDeg
     use CON_axes,     ONLY: transform_matrix
@@ -876,11 +876,11 @@ contains
        endif
 
        if (.not. IsOpen) then
-          call map_planet_field(Time_Simulation, SatXyzEnd_D, &
+          call map_planet_field(tSimulation, SatXyzEnd_D, &
                TypeCoordSystem//' NORM', rIonosphere, SatXyzIono_D, iHemisphere)
 
           ! Transformation matrix between the SM(G) and GM coordinates
-          GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+          GmSm_DD = transform_matrix(tSimulation,'SMG',TypeCoordSystem)
           ! Convert GM position into RB position
           SatXyzIono_D = matmul(SatXyzIono_D, GmSm_DD)
 

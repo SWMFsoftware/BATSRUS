@@ -48,7 +48,8 @@ contains
   end subroutine read_chgl_param
   !============================================================================
   subroutine init_chgl(iBlock)
-    use ModMain, ONLY: Dt, IsTimeAccurate=>time_accurate
+
+
     integer, intent(in) :: iBlock
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim)
@@ -71,7 +72,6 @@ contains
   !============================================================================
   subroutine update_chgl(iBlock, iStage)
     use ModMain,     ONLY: nStage
-    use ModAdvance,  ONLY: StateOld_VGB
     integer, intent(in) :: iBlock, iStage
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim), Rho, B2
@@ -176,7 +176,6 @@ contains
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModParallel, ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
-    use BATL_lib,      ONLY: IsCartesian, Xyz_DGB, FaceNormal_DDFB
 
     integer, intent(in) :: iBlock
     logical, intent(in) :: DoResChangeOnly

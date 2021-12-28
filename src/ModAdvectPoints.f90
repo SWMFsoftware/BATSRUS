@@ -47,7 +47,7 @@ contains
 
   subroutine advect_points(nPoint, Xyz_DI)
 
-    use ModMain, ONLY: time_accurate, Dt, nStage
+    use ModMain, ONLY: IsTimeAccurate, Dt, nStage
 
     integer, intent(in)    :: nPoint
     real,    intent(inout) :: Xyz_DI(3,nPoint)
@@ -59,7 +59,7 @@ contains
     character(len=*), parameter:: NameSub = 'advect_points'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(.not.time_accurate) RETURN
+    if(.not.IsTimeAccurate) RETURN
     call timing_start(NameSub)
     if(nStage == 1)then
        ! Full step uses StateOld

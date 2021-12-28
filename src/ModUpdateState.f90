@@ -45,7 +45,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
-       write(*,*)NameSub,' nStep=', n_step,' iStage=', iStage,     &
+       write(*,*)NameSub,' nStep=', nStep,' iStage=', iStage,     &
             ' dt=',time_BLK(iTest,jTest,kTest,iBlock)*Cfl
        if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
             IsConserv_CB(iTest,jTest,kTest,iBlock)
@@ -95,7 +95,7 @@ contains
     end if
     if(SignB_ > 1.and.UseChGL)call update_chgl(iBlock, iStage)
     if(DoTest)then
-       write(*,*)NameSub,' final for nStep =', n_step
+       write(*,*)NameSub,' final for nStep =', nStep
        do iVar=1,nVar
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar),'(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
@@ -141,7 +141,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     ! Nothing to do if time step is zero
-    if(time_accurate .and. Dt == 0.0) RETURN
+    if(IsTimeAccurate .and. Dt == 0.0) RETURN
 
     ! Add Joule heating: dPe/dt or dP/dt += (gamma-1)*eta*j**2
     ! also dE/dt += eta*j**2 for semi-implicit scheme (UseResistiveFlux=F)
@@ -531,7 +531,7 @@ contains
       end if
 
       if(UseDbTrickNow .and. (nStage==2 .and. iStage==1 &
-           .or.               nStage==1 .and. .not.time_accurate)) then
+           .or.               nStage==1 .and. .not.IsTimeAccurate)) then
 
          ! A desparate attempt to maintain positivity by adding dB^2/2 to the
          ! energy. This is fine for steady state, and is 2nd order accurate
@@ -688,7 +688,7 @@ contains
     call test_start('locations',           DoTest3)
 
     ! Check for allowable percentage changed from update
-    if(time_accurate) then
+    if(IsTimeAccurate) then
        report_tf = 1.
        do num_checks = 1,max_checks
           percent_chg_rho = 0.1
@@ -772,7 +772,7 @@ contains
                               (   State_VGB(P_,i,j,k,iBlock)- &
                               StateOld_VGB (P_,i,j,k,iBlock)) &
                               /StateOld_VGB(P_,i,j,k,iBlock) ))) &
-                              write(*,format)NameSub//' nStep=',n_step,&
+                              write(*,format)NameSub//' nStep=',nStep,&
                               ' max p drop=',pChangeMax_I(1),&
                               '% at x,y,z=',&
                               Xyz_DGB(:,i,j,k,iBlock)
@@ -782,7 +782,7 @@ contains
                               (   State_VGB(P_,i,j,k,iBlock)- &
                               StateOld_VGB (P_,i,j,k,iBlock)) &
                               /StateOld_VGB(P_,i,j,k,iBlock)  ))) &
-                              write(*,format)NameSub//' nStep=',n_step,&
+                              write(*,format)NameSub//' nStep=',nStep,&
                               ' max p increase=',&
                               pChangeMax_I(2), &
                               '% at x,y,z=',&
@@ -796,7 +796,7 @@ contains
                            (State_VGB(iVar,i,j,k,iBlock)- &
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
                            /StateOld_VGB(iVar,i,j,k,iBlock) ))) &
-                           write(*,format)NameSub//' nStep=',n_step,&
+                           write(*,format)NameSub//' nStep=',nStep,&
                            ' max '//trim(NameVar_V(iVar))//' drop=', &
                            RhoChangeMax_I(1), &
                            '% at x,y,z=',&
@@ -807,7 +807,7 @@ contains
                            (State_VGB(iVar,i,j,k,iBlock)- &
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
                            /StateOld_VGB(iVar,i,j,k,iBlock) ))) &
-                           write(*,format)NameSub//' nStep=',n_step,&
+                           write(*,format)NameSub//' nStep=',nStep,&
                            ' max '//trim(NameVar_V(iVar))//' increase=',&
                            RhoChangeMax_I(2), &
                            '% at x,y,z=',&
@@ -861,7 +861,7 @@ contains
        if(DoTest) then
           if (iProc == 0 .and. report_tf < 1.) &
                write(*,'(a,a,i6,a,f12.8,a,f12.8)') 'update_check TA:', &
-               ' nStep=',n_step,'     dt reduction=',report_tf,' dt=',dt
+               ' nStep=',nStep,'     dt reduction=',report_tf,' dt=',dt
        end if
     else
        ! LOCAL TIMESTEPPING
@@ -968,7 +968,7 @@ contains
        if(DoTest) then
           if (iProc == 0 .and. report_tf < 1.) &
                write(*,'(a,a,i6,a,f12.8)') 'update_check LT:', &
-               ' nStep=',n_step,' max dt reduction=',report_tf
+               ' nStep=',nStep,' max dt reduction=',report_tf
        end if
     end if
 
@@ -1071,15 +1071,15 @@ contains
     end do
     !$omp end parallel do
     if(IsNegative)then
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8)') &
                'Negative updated value: PE=',iProc, &
-               'update_check TA:',' nStep=',n_step, &
+               'update_check TA:',' nStep=',nStep, &
                '     dt reduction=',report_tf,' dt=',dt
        else
           write(*,'(a,i4,a,a,i6,a,f12.8)') &
                'Negative updated value: PE=',iProc, &
-               'update_check LT:',' nStep=',n_step, &
+               'update_check LT:',' nStep=',nStep, &
                ' max dt reduction=',report_tf
        end if
     end if
@@ -1129,7 +1129,7 @@ contains
 
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0, &
-         time_accurate, Cfl, dt
+         IsTimeAccurate, Cfl, dt
     use ModB0,      ONLY: B0_DGB
     use ModAdvance, ONLY: State_VGB, time_BLK
     use ModPhysics, ONLY: UseConstantTau_I, TauInstability_I, &
@@ -1176,7 +1176,7 @@ contains
              Ppar   = State_VGB(iPpar,i,j,k,iBlock)
              p = State_VGB(ip,i,j,k,iBlock)
              Pperp  = (3*p - Ppar)/2.
-             if(.not. time_accurate)then
+             if(.not. IsTimeAccurate)then
                 DtCell = Cfl*time_BLK(i,j,k,iBlock)
              else
                 DtCell = dt
@@ -1258,7 +1258,7 @@ contains
   subroutine update_b0
 
     use ModMain,          ONLY: nBlock, Unused_B,      &
-         time_simulation, NameThisComp, time_accurate, DoThreads_B
+         tSimulation, NameThisComp, IsTimeAccurate, DoThreads_B
     use ModPhysics,       ONLY: ThetaTilt, UseBody2Orbit
     use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
          iTypeUpdate, UpdateFast_
@@ -1278,7 +1278,7 @@ contains
     !--------------------------------------------------------------------------
     if(iTypeUpdate >= UpdateFast_)then
        call update_b0_fast
-       if (time_accurate) call exchange_messages(DoResChangeOnlyIn=.true.)
+       if (IsTimeAccurate) call exchange_messages(DoResChangeOnlyIn=.true.)
        RETURN
     endif
 
@@ -1287,16 +1287,16 @@ contains
 
     ! Update ThetaTilt
     if(NameThisComp=='GM') &
-         call get_axes(Time_Simulation, MagAxisTiltGsmOut=ThetaTilt)
+         call get_axes(tSimulation, MagAxisTiltGsmOut=ThetaTilt)
 
     if (DoTest) then
        if(NameThisComp=='GM')then
           call write_prefix; write(iUnitOut,*) &
                "update_b0 at tSimulation, TiltGsm=", &
-               Time_Simulation, ThetaTilt*cRadToDeg
+               tSimulation, ThetaTilt*cRadToDeg
        else
           call write_prefix; write(iUnitOut,*) &
-               "update_b0 at tSimulation=",Time_Simulation
+               "update_b0 at tSimulation=",tSimulation
        end if
     end if
 
@@ -1314,7 +1314,7 @@ contains
             - B0_DGB(:,:,:,:,iBlock)
     end do
 
-    if (time_accurate) call exchange_messages(DoResChangeOnlyIn=.true.)
+    if (IsTimeAccurate) call exchange_messages(DoResChangeOnlyIn=.true.)
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE

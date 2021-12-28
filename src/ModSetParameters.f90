@@ -288,13 +288,13 @@ contains
        endif
 
        if(StartTimeCheck > 0.0 .and. tSimulationCheck > 0.0)then
-          if(abs(StartTime+time_simulation - StartTimeCheck-tSimulationCheck)&
+          if(abs(StartTime+tSimulation - StartTimeCheck-tSimulationCheck)&
                > 0.001)then
              write(*,*)NameSub//' WARNING: '// &
                   NameThisComp//'::StartTimeCheck+tSimulationCheck=', &
                   StartTimeCheck + tSimulationCheck, &
                   ' differs from CON::StartTime+tSimulation=', &
-                  StartTime + time_simulation,' !!!'
+                  StartTime + tSimulation,' !!!'
              if(UseStrict)then
                 call stop_mpi('Fix #STARTTIME command in PARAM.in')
              else
@@ -306,10 +306,10 @@ contains
           tSimulationCheck = -1.0
        end if
        if(UseEndTime)then
-          t_max = EndTime - StartTime
+          tSimulationMax = EndTime - StartTime
           nIter = -1
           if(IsStandAlone)then
-             if(.not.time_accurate)call stop_mpi( &
+             if(.not.IsTimeAccurate)call stop_mpi( &
                   '#ENDTIME command cannot be used in steady-state mode')
              if(.not.IsLastRead) call stop_mpi(&
                   '#ENDTIME command can be used in the last session only')
@@ -318,14 +318,14 @@ contains
 
        ! Adjust frequencies
        call adjust_freq(AdaptGrid, &
-            n_step+1, time_simulation+1e-6, time_accurate)
+            nStep+1, tSimulation+1e-6, IsTimeAccurate)
        call adjust_freq(AdaptPic, &
-            n_step+1, time_simulation+1e-6, time_accurate)
+            nStep+1, tSimulation+1e-6, IsTimeAccurate)
 
        ! Planet NONE in GM means that we do not use a body
        if (NameThisComp=='GM' .and. NamePlanet == 'NONE' &
             .and. IsFirstSession)then
-          body1 = .false.
+          UseBody = .false.
           rBody = 0.0
        end if
 
@@ -334,7 +334,7 @@ contains
 
        if(NameThisComp == 'GM') then
           ! Set and obtain GM specific parameters from CON_planet and CON_axes
-          call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
+          call get_axes(tSimulation, MagAxisTiltGsmOut = ThetaTilt)
           call get_planet(DipoleStrengthOut = DipoleStrengthSi)
        end if
 
@@ -346,9 +346,9 @@ contains
           DtUpdateB0  = -1.0
        elseif(IsStandAlone .and. NameThisComp=='GM') then
           ! Check and set some planet variables (e.g. DoUpdateB0)
-          call check_planet_var(iProc==0, time_accurate)
+          call check_planet_var(iProc==0, IsTimeAccurate)
 
-          if(body1)then
+          if(UseBody)then
              call get_planet(UseRotationOut = UseRotatingBc)
           else
              UseRotatingBc = .false.
@@ -424,7 +424,7 @@ contains
        call user_action("initialize module")
 
        if(UseChargedParticles)then
-          if(.not.time_accurate)then
+          if(.not.IsTimeAccurate)then
              if(iProc==0)write(*,*)'To trace particles, use time-accurate!'
              call stop_mpi('Correct parameter file!!')
           end if
@@ -549,15 +549,15 @@ contains
        case("#STOP")
           call check_stand_alone
           call read_var('MaxIteration',nIter)
-          call read_var('tSimulationMax',t_max)
+          call read_var('tSimulationMax',tSimulationMax)
 
        case("#CPUTIMEMAX")
           call check_stand_alone
-          call read_var('CpuTimeMax',cputime_max)
+          call read_var('CpuTimeMax',CpuTimeMax)
 
        case("#CHECKSTOPFILE")
           call check_stand_alone
-          call read_var('DoCheckStopfile',check_stopfile)
+          call read_var('DoCheckStopfile',DoCheckStopFile)
 
        case("#PROGRESS")
           call check_stand_alone
@@ -566,7 +566,7 @@ contains
 
        case("#TIMEACCURATE")
           call check_stand_alone
-          call read_var('DoTimeAccurate',time_accurate)
+          call read_var('DoTimeAccurate',IsTimeAccurate)
 
        case("#ECHO")
           call check_stand_alone
@@ -590,13 +590,13 @@ contains
           call read_var('UseStrict',UseStrict)
 
        case("#DEBUG")
-          call read_var('DoDebug',okdebug)
-          call read_var('DoDebugGhost',ShowGhostCells)
+          call read_var('DoDebug',DoDebug)
+          call read_var('DoDebugGhost',DoShowGhostCells)
 
        case("#TIMING")
           call read_var('UseTiming',UseTiming)
           if(UseTiming)then
-             call read_var('DnTiming',dn_timing)
+             call read_var('DnTiming',DnTiming)
              call read_var('nDepthTiming',TimingDepth)
              call read_var('TypeTimingReport',TimingStyle)
              UseTimingAll = index(TimingStyle,'all') > 0
@@ -1661,7 +1661,7 @@ contains
           call read_var('TypeUpdate', TypeUpdate, IsLowerCase=.true.)
 
        case("#MESSAGEPASS","#OPTIMIZE")
-          call read_var('TypeMessagePass', optimize_message_pass)
+          call read_var('TypeMessagePass', TypeMessagePass)
 
        case('#CLIMIT', '#CLIGHTWARNING')
           call face_flux_set_parameters(NameCommand)
@@ -2250,8 +2250,8 @@ contains
 
        case("#MAGNETOSPHERE","#BODY")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('UseBody',body1)
-          if(body1)then
+          call read_var('UseBody',UseBody)
+          if(UseBody)then
              call read_var('rBody', rBody)
              if(NameThisComp=='GM')&
                   call read_var('rCurrents' ,Rcurrents)
@@ -2277,8 +2277,8 @@ contains
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('UseGravity',UseGravity)
           if(UseGravity)then
-             call read_var('iDirGravity',GravityDir)
-             if(GravityDir /= 0) call read_var('GravitySi', GravitySi)
+             call read_var('iDirGravity',iDirGravity)
+             if(iDirGravity /= 0) call read_var('GravitySi', GravitySi)
           end if
 
        case("#SECONDBODY")
@@ -2461,7 +2461,7 @@ contains
 
        case("#NSTEP")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nStep',n_step)
+          call read_var('nStep',nStep)
 
        case("#NPREVIOUS")
           if(.not.is_first_session())CYCLE READPARAM
@@ -2498,7 +2498,7 @@ contains
        case("#TIMESIMULATION")
           if(.not.is_first_session())CYCLE READPARAM
           if(IsStandAlone)then
-             call read_var('tSimulation', time_simulation)
+             call read_var('tSimulation', tSimulation)
           else
              call read_var('tSimulation', tSimulationCheck)
           end if
@@ -2933,7 +2933,7 @@ contains
 
       UseB0Source     = UseB0 .and. nDim > 1
 
-      optimize_message_pass = 'all'
+      TypeMessagePass = 'all'
 
       plot_dimensional      = .true.
 
@@ -2959,14 +2959,14 @@ contains
 
       ! Set component dependent defaults
 
-      GravityDir=0
+      iDirGravity=0
 
       select case(NameThisComp)
       case('SC','IH','OH','EE')
          ! Body parameters
          UseGravity = .true.
-         body1      = .true.
-         if(NameThisComp == 'EE') body1 = .false.
+         UseBody      = .true.
+         if(NameThisComp == 'EE') UseBody = .false.
          Rbody      = 1.0
          Rcurrents  =-1.0
 
@@ -3028,7 +3028,7 @@ contains
       case('GM')
          ! Body Parameters
          UseGravity = .false.
-         body1      = .true.
+         UseBody      = .true.
          Rbody      = 3.0
          Rcurrents  = 4.0
 
@@ -3249,7 +3249,7 @@ contains
       end if
 
       if(i_line_command("#IMPLSTEP") < 0) &
-           UseBdf2 = nStage > 1 .and. time_accurate
+           UseBdf2 = nStage > 1 .and. IsTimeAccurate
 
       ! Make sure periodic boundary conditions are symmetric
       do i=Coord1MinBc_,Coord3MinBc_,2
@@ -3271,7 +3271,7 @@ contains
       ! Set UseBufferGrid logical
       UseBufferGrid = any(TypeFaceBc_I=='buffergrid')
 
-      if(UseConstrainB .and. .not.time_accurate)then
+      if(UseConstrainB .and. .not.IsTimeAccurate)then
          if(iProc==0)then
             write(*,'(a)')NameSub//&
                  ' WARNING: constrain_B works for time accurate run only !!!'
@@ -3291,7 +3291,7 @@ contains
          UseTvdReschange      = .false.
          UseAccurateResChange = .false.
       end if
-      if (UseConstrainB) optimize_message_pass = 'all'
+      if (UseConstrainB) TypeMessagePass = 'all'
       if (UseConstrainB .and. AdaptGrid % DoThis)then
          if(iProc==0)write(*,'(a)')NameSub//&
               ' WARNING: cannot use AMR with constrained transport'
@@ -3301,10 +3301,10 @@ contains
       end if
 
       if (UseHallResist .or. UseResistivity .or. UseViscosity) &
-           optimize_message_pass = 'all'
+           TypeMessagePass = 'all'
 
       if (UseRadDiffusion .and. (UseFullImplicit .or. UseSemiImplicit)) &
-           optimize_message_pass = 'all'
+           TypeMessagePass = 'all'
 
       ! Check for magnetogram
 
@@ -3324,7 +3324,7 @@ contains
       ! Accurate res change algorithm and 4th order finite volume scheme
       ! both need corners and edges
       if (UseAccurateResChange .or. nOrder == 4) &
-           optimize_message_pass = 'all'
+           TypeMessagePass = 'all'
 
       if(IsRzGeometry .and. UseB)then
          if(UseMultiIon) &
@@ -3356,7 +3356,7 @@ contains
       end if
 
       ! Check CFL number
-      if(.not.time_accurate .and. iProc==0)then
+      if(.not.IsTimeAccurate .and. iProc==0)then
          if(UseBorisCorrection)then
             if(Cfl > 0.65) then
                write(*,'(a)')NameSub// &
@@ -3419,7 +3419,7 @@ contains
       end if
 
       if(UsePartImplicit .and. ImplCritType=='dt' .and.&
-           (.not.time_accurate .or. .not.UseDtFixed))then
+           (.not.IsTimeAccurate .or. .not.UseDtFixed))then
          if(iProc==0)then
             write(*,'(a)')'Part implicit scheme with ImplCritType=dt'
             write(*,'(a)')'requires time accurate run with fixed time step'
@@ -3427,7 +3427,7 @@ contains
          end if
       end if
 
-      if(.not.time_accurate .and. UseDtFixed)then
+      if(.not.IsTimeAccurate .and. UseDtFixed)then
          if(iProc==0)then
             write(*,'(a)')'Steady state Run can not use fixed time step'
             write(*,'(a)')'Use limited time step instead'
@@ -3443,7 +3443,7 @@ contains
          end if
       end if
 
-      if(.not.time_accurate.and.UseBDF2)then
+      if(.not.IsTimeAccurate.and.UseBDF2)then
          if(iProc==0)then
             write(*,'(a)') NameSub//&
                  ' WARNING: BDF2 is only available for time accurate run !!!'
@@ -3516,7 +3516,7 @@ contains
       end if
 
       if(TypeCoordSystem == 'HGI' .and. NameThisComp /= 'OH' &
-           .and. .not.time_accurate)then
+           .and. .not.IsTimeAccurate)then
          if(iProc == 0)then
             write(*,'(a)') NameSub//&
                  ' WARNING: there is no steady state solution in HGI system!'
@@ -3531,7 +3531,7 @@ contains
       ! Get the integer representation of the coordinate system
       do i = 1, nCoordSystem
          if(TypeCoordSystem == trim(NameCoordSystem_I(i))) then
-            TypeCoordSystemInt = i
+            iTypeCoordSystem = i
          endif
       end do
 
@@ -3690,14 +3690,14 @@ contains
 
       UseDbTrickNow = UseDbTrick
       if(.not.IsMhd .or. (UseNonConservative .and. nConservCrit == 0) .or. &
-           (nStage == 1 .and. time_accurate) .or. .not.UseHalfStep) &
+           (nStage == 1 .and. IsTimeAccurate) .or. .not.UseHalfStep) &
            UseDbTrickNow = .false.
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
 
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, nOrderProlong)
-      !$acc update device(UseHalfStep, time_accurate, UseDtFixed)
+      !$acc update device(UseHalfStep, IsTimeAccurate, UseDtFixed)
       !$acc update device(DoCorrectFace, UseFDFaceFlux)
 
       !$acc update device(UseTvdResChange, UseAccurateResChange)
@@ -3724,11 +3724,11 @@ contains
       !$acc update device(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
       !$acc update device(Gamma, GammaMinus1, InvGammaMinus1)
 
-      !$acc update device(Body1, B1rCoef)
+      !$acc update device(UseBody, B1rCoef)
 
       !$acc update device(UseRotatingBc)
 
-      !$acc update device(TypeCoordSystemInt)
+      !$acc update device(iTypeCoordSystem)
 
       !$acc update device(DipoleStrengthSi)
 
@@ -3819,7 +3819,7 @@ contains
             if(TypeGeometry == 'roundcube' .and. rRound1 > rRound0) &
                  XyzMax_D = RadiusMax/sqrt(real(nDim))
          else
-            if(Body1 .and. rBody > 0.0)then
+            if(UseBody .and. rBody > 0.0)then
                ! Set inner boundary to match rBody for spherical coordinates
                if(TypeGeometry(1:3)=='sph' .or. TypeGeometry(1:3)=='cyl') &
                     XyzMin_D(1) = rBody
@@ -4077,7 +4077,7 @@ contains
          ! Store the initial setting
          DtLimitOrig = DtLimit
          ! Dt = 0 in steady state
-         if(time_accurate .and. UseDtLimit) Dt  = DtLimit
+         if(IsTimeAccurate .and. UseDtLimit) Dt  = DtLimit
       end if
 
       if(UseTimeStepControl)then

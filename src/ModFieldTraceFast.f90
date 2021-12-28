@@ -6,7 +6,7 @@ module ModFieldTraceFast
 
   use ModKind
   use ModFieldTrace
-  use ModMain, ONLY: UseB0, TypeCoordSystem, Time_Simulation
+  use ModMain, ONLY: UseB0, TypeCoordSystem, tSimulation
   use ModB0, ONLY: B0_DGB, get_b0, get_b0_dipole
   use ModAdvance, ONLY: State_VGB, Bx_, Bz_, iTypeUpdate, UpdateSlow_
   use BATL_lib, ONLY: &
@@ -111,7 +111,7 @@ contains
     !
     ! Details of the algorithm are to be published later
 
-    use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, time_simulation
+    use ModMain,     ONLY: nStep, iNewGrid, iNewDecomposition, tSimulation
     use ModPhysics,  ONLY: set_dipole
     use CON_axes,    ONLY: transform_matrix
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
@@ -129,18 +129,18 @@ contains
     call init_mod_trace_fast
 
     if(DoTest)then
-       write(*,*)'GM ray_trace: nStepLast,n_step         =',nStepLast,n_step
+       write(*,*)'GM ray_trace: nStepLast,nStep         =',nStepLast,nStep
        write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
        write(*,*)'GM ray_trace: iLastDecomp,iNewDecomp=',&
             iLastDecomposition,iNewDecomposition
     end if
 
-    if(  nStepLast + DnRaytrace > n_step   .and. &
+    if(  nStepLast + DnRaytrace > nStep   .and. &
          iLastGrid          == iNewGrid .and. &
          iLastDecomposition == iNewDecomposition) RETURN
 
     ! Remember this call
-    nStepLast = n_step
+    nStepLast = nStep
     iLastGrid = iNewGrid
     iLastDecomposition = iNewDecomposition
 
@@ -152,7 +152,7 @@ contains
 
     ! Transformation matrix between the SM(G) and GM coordinates
     if(UseSmg) &
-         GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+         GmSm_DD = transform_matrix(tSimulation,'SMG',TypeCoordSystem)
     !$acc update device(GmSm_DD)
 
     if(UseAccurateTrace .or. .not.IsCartesianGrid)then
@@ -798,7 +798,7 @@ contains
       !------------------------------------------------------------------------
 #ifndef _OPENACC
       if(iTypeUpdate <= UpdateSlow_)then
-         call map_planet_field(Time_Simulation, Xyz_D, &
+         call map_planet_field(tSimulation, Xyz_D, &
               TypeCoordSystem//' NORM', rIonosphere, x_D, iHemisphere)
       else
 #endif

@@ -384,7 +384,7 @@ contains
        ! Get waves from boundary conditions
        AMajor_I(0:nPoint) = 1.0
        AMinor_I(0:nPoint) = AMinorIn
-       call advance_thread(IsTimeAccurate=.false.)
+       call advance_thread(IsTimeAccurateThread=.false.)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
@@ -400,7 +400,7 @@ contains
        ! Do not store temperature
        !
     case(Impl_)
-       call advance_thread(IsTimeAccurate=.true.)
+       call advance_thread(IsTimeAccurateThread=.true.)
        AMajorOut = AMajor_I(nPoint)
        ! Output for temperature gradient, all the other outputs
        ! are meaningless
@@ -411,7 +411,7 @@ contains
        call timing_stop(NameTiming)
        RETURN
     case(Heat_)
-       call advance_thread(IsTimeAccurate=.true.)
+       call advance_thread(IsTimeAccurateThread=.true.)
        ! Calculate AWaves and store pressure and temperature
        call get_res_heating(nIterIn=nIterHere)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
@@ -534,29 +534,34 @@ contains
       end do
     end subroutine set_pressure
     !==========================================================================
-    subroutine advance_thread(IsTimeAccurate)
-      use ModMain,     ONLY: cfl, Dt, time_accurate
+    subroutine advance_thread(IsTimeAccurateThread)
+      
+      use ModMain,     ONLY: cfl, Dt, IsTimeAccurate
       use ModAdvance,  ONLY: time_BLK, nJ, nK
       use ModPhysics,  ONLY: UnitT_, No2Si_V
       use ModMultiFluid,      ONLY: MassIon_I
+
       ! Advances the thread solution
-      ! If IsTimeAccurate, the solution is advanced through the time
+      ! If IsTimeAccurateThread, the solution is advanced through the time
       ! interval, DtLocal. Otherwise, it looks for the steady-state solution
       ! with the advanced boundary condition
-      logical, intent(in) :: IsTimeAccurate
+      logical, intent(in) :: IsTimeAccurateThread
+
       ! Time step in the physical cell from which the thread originates
       real    :: DtLocal,DtInv
-      ! Loop variable
 
+      ! Loop variable
       integer :: iPoint, iIter
+
       ! Enthalpy correction coefficients
       real    :: EnthalpyFlux, FluxConst
       real    :: ElectronEnthalpyFlux, IonEnthalpyFlux
+
       ! Correction accounting for the Enthlpy flux from the TR
       real    :: PressureTRCoef
       !------------------------------------------------------------------------
-      if(IsTimeAccurate)then
-         if(time_accurate)then
+      if(IsTimeAccurateThread)then
+         if(IsTimeAccurate)then
             DtLocal = Dt*No2Si_V(UnitT_)
          else
             DtLocal = cfl*No2Si_V(UnitT_)*&
@@ -1086,7 +1091,7 @@ contains
 
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
-    use ModMain,       ONLY: n_step, iteration_number, time_simulation
+    use ModMain,       ONLY: nStep, nIteration, tSimulation
     use ModAdvance,      ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nJ, nK
     use BATL_size, ONLY:  nJ, nK
@@ -1238,7 +1243,7 @@ contains
              ! CME magnetic configuration
              call EEE_get_state_BC(Xyz_DGB(:,i,j,k,iBlock), &
                   RhoCme, Ucme_D, Bcme_D, pCme, &
-                  time_simulation, n_step, iteration_number)
+                  tSimulation, nStep, nIteration)
              Bcme_D = Bcme_D*Si2No_V(UnitB_)
              State_VG(Bx_:Bz_, i, j, k) = &
                   State_VG(Bx_:Bz_, i, j, k) + DirR_D*sum(DirR_D*Bcme_D)

@@ -369,7 +369,7 @@ contains
     use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock
     use ModParallel, ONLY: NeiLev, NOBLK
     use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
-    use ModMain,     ONLY: n_step
+    use ModMain,     ONLY: nStep
     use ModMpi
     character(len=*), intent(in) :: NameCaller
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
@@ -492,7 +492,7 @@ contains
     end if
     if(nBlockSetAll > 0.and.iProc==0)then
        write(*,*)'Set threads in ',nBlockSetAll,' blocks on iteration ', &
-            n_step, ' is called from '//NameCaller
+            nStep, ' is called from '//NameCaller
        write(*,*)'nPointMin = ',nPointMinAll
        if(IsUniformGrid)then
           write(*,*)'dCoord1Uniform =', dCoord1Uniform
@@ -538,7 +538,7 @@ contains
   subroutine set_threads_b(iBlock)
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
-    use ModMain,       ONLY: n_step, iteration_number, time_simulation, &
+    use ModMain,       ONLY: nStep, nIteration, tSimulation, &
          DoThreadRestart
     use ModGeometry, ONLY: Xyz_DGB
     use ModPhysics,  ONLY: Si2No_V, No2Si_V,&
@@ -597,7 +597,7 @@ contains
        call get_b0(XyzStart_D, B0Start_D)
        if(UseCME)then
           call EEE_get_state_BC(XyzStart_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-               time_simulation, n_step, iteration_number)
+               tSimulation, nStep, nIteration)
           Bcme_D = Bcme_D*Si2No_V(UnitB_)
           B0Start_D = B0Start_D + Bcme_D
        end if
@@ -644,7 +644,7 @@ contains
              call get_b0(XyzAux_D, B0Aux_D)
              if(UseCME)then
                 call EEE_get_state_BC(XyzAux_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-                     time_simulation, n_step, iteration_number)
+                     tSimulation, nStep, nIteration)
                 Bcme_D = Bcme_D*Si2No_V(UnitB_)
                 B0Aux_D = B0Aux_D + Bcme_D
              end if
@@ -663,7 +663,7 @@ contains
              call get_b0(Xyz_D, B0_D)
              if(UseCME)then
                 call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-                     time_simulation, n_step, iteration_number)
+                     tSimulation, nStep, nIteration)
                 Bcme_D = Bcme_D*Si2No_V(UnitB_)
                 B0_D = B0_D + Bcme_D
              end if
@@ -1221,7 +1221,7 @@ contains
     if(UseB0)call get_b0(Xyz_D, B0_D)
     if(UseCME)then
        call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-            time_simulation, n_step, iteration_number)
+            tSimulation, nStep, nIteration)
        Bcme_D = Bcme_D*Si2No_V(UnitB_)
        B0_D = B0_D + Bcme_D
     end if
@@ -1425,7 +1425,7 @@ contains
        case('dz')
           PlotVar_V(iVar) = CellSize_DB(z_,iBlock)
        case('dtblk')
-          PlotVar_V(iVar) = dt_BLK(iBlock)
+          PlotVar_V(iVar) = Dt_B(iBlock)
        case('proc')
           PlotVar_V(iVar) = iProc
        case('blk','block')

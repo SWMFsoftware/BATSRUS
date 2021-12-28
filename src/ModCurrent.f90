@@ -560,7 +560,7 @@ contains
        Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, FacMin)
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
-    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
+    use ModMain,           ONLY: tSimulation, TypeCoordSystem, nBlock
     use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V, set_dipole
     use ModB0,             ONLY: get_b0_dipole
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field, &
@@ -650,7 +650,7 @@ contains
 
     Fac_II = 0.0
 
-    GmFac_DD = transform_matrix(Time_Simulation, TypeCoordFac, TypeCoordSystem)
+    GmFac_DD = transform_matrix(tSimulation, TypeCoordFac, TypeCoordSystem)
     !$acc update device(GmFac_DD)
 
     if (abs(rIn - rCurrents) < 1.0e-3)then
@@ -697,7 +697,7 @@ contains
           call map_planet_field_fast(XyzIn_D, rCurrents, Xyz_D, &
                iHemisphere, UseGsmIn=UseGsm)
 #else
-          call map_planet_field(Time_Simulation, XyzIn_D, &
+          call map_planet_field(tSimulation, XyzIn_D, &
                TypeCoordFac//' NORM', rCurrents, Xyz_D, iHemisphere)
 #endif
 
@@ -718,7 +718,7 @@ contains
        call get_b0_dipole(Xyz_D, B0_D)
 #else
        ! Get the B0 field at the mapped position
-       call get_planet_field(Time_Simulation, Xyz_D, &
+       call get_planet_field(tSimulation, Xyz_D, &
             TypeCoordSystem//' NORM', B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
 #endif
@@ -792,7 +792,7 @@ contains
 #ifdef _OPENACC
                 call get_b0_dipole(XyzIn_D, bIn_D)
 #else
-                call get_planet_field(Time_Simulation, XyzIn_D, &
+                call get_planet_field(tSimulation, XyzIn_D, &
                      TypeCoordSystem//' NORM', bIn_D)
 
                 ! Convert to normalized units

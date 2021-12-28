@@ -392,8 +392,8 @@ contains
     ! We use get_residual(.false.,...) to calculate R_expl
     ! and    get_residual(.true.,....) to calculate R_impl
 
-    use ModMain, ONLY: nBlockMax, nBlockExplAll, time_accurate, &
-         n_step, time_simulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
+    use ModMain, ONLY: nBlockMax, nBlockExplAll, IsTimeAccurate, &
+         nStep, tSimulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
          iNewDecomposition
     use ModVarIndexes, ONLY: Rho_
     use ModMultifluid, ONLY: select_fluid, nFluid, iP
@@ -439,7 +439,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(DoTest) write(*,*)NameSub,' starting at step=',n_step
+    if(DoTest) write(*,*)NameSub,' starting at step=',nStep
 
     call timing_start(NameSub)
 
@@ -468,7 +468,7 @@ contains
 
     if(DoTest)write(*,*)NameSub,': nImpltot, Norm_V=',nImplTotal_r,Norm_V
 
-    TimeSimulationOrig = Time_Simulation
+    TimeSimulationOrig = tSimulation
     UseUpdateCheckOrig = UseUpdateCheck
     UseUpdateCheck     = .false.
 
@@ -560,7 +560,7 @@ contains
        DtCoeff = CflImpl/0.5
     endif
 
-    if(UseBDF2.and.n_step==n_prev+1)then
+    if(UseBDF2.and.nStep==n_prev+1)then
        ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
        ImplCoeff = (dt+dt_prev)/(2*dt+dt_prev)
     else
@@ -571,9 +571,9 @@ contains
     !   R(U^n+1,t^n+1) = R(U^n,t^n+1) + dR/dU(U^n,t^n+1).(U^n+1 - U^n)
     ! so the Jacobian should be evaluated at t^n+1
 
-    Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
+    tSimulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
-    if(DoTest.and.time_accurate)&
+    if(DoTest.and.IsTimeAccurate)&
          write(*,*)NameSub,': DtCoeff,DtExpl,dt=',DtCoeff,DtExpl,dt
     if(DoTest.and.UseBDF2)write(*,*)NameSub,': n_prev,dt_prev,ImplCoeff=',&
          n_prev,dt_prev,ImplCoeff
@@ -595,7 +595,7 @@ contains
 
     ! Save previous timestep for 3 level scheme
     if(UseBDF2)then
-       n_prev  = n_step
+       n_prev  = nStep
        dt_prev = dt
 
        ! Save the current state into ImplOld_VCB so that StateOld_VGB
@@ -618,7 +618,7 @@ contains
        if(nIterNewton > MaxIterNewton)then
           write(*,*)'Newton-Raphson failed to converge nIterNewton=', &
                nIterNewton
-          if(time_accurate)call stop_mpi('Newton-Raphson failed to converge')
+          if(IsTimeAccurate)call stop_mpi('Newton-Raphson failed to converge')
           EXIT
        endif
 
@@ -674,7 +674,7 @@ contains
        if(DoTest .and. nBlockImpl>0)&
             write(*,*)NameSub,': final     x_I(test)=',x_I(nTest)
 
-       if(ImplParam%iError /= 0 .and. iProc == 0 .and. time_accurate) &
+       if(ImplParam%iError /= 0 .and. iProc == 0 .and. IsTimeAccurate) &
             call error_report(NameSub// &
             ': Krylov solver failure, Krylov error', &
             ImplParam%Error, iError1, .true.)
@@ -733,7 +733,7 @@ contains
     end do
     !$omp end parallel do
 
-    if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
+    if(UseUpdateCheckOrig .and. IsTimeAccurate .and. UseDtFixed)then
 
        ! Calculate the largest relative drop in density or pressure
        !$omp parallel do
@@ -799,7 +799,7 @@ contains
     endif
 
     ! Advance time by Dt
-    Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
+    tSimulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
     ! Restore logicals
     UseUpdateCheck   = UseUpdateCheckOrig
@@ -819,7 +819,7 @@ contains
 
     ! Initialization for NR
 
-    use ModMain, ONLY : n_step,dt,nOrder, &
+    use ModMain, ONLY : nStep,dt,nOrder, &
          UseRadDiffusion
     use ModAdvance, ONLY : FluxType
     use ModMpi
@@ -859,7 +859,7 @@ contains
          ResImpl_VCB(iVarTest,iTest,jTest,kTest,iBlockImplTest)
 
     ! Calculate rhs used for nIterNewton=1
-    if(UseBDF2 .and. n_step==n_prev+1)then
+    if(UseBDF2 .and. nStep==n_prev+1)then
        ! Collect RHS terms from Eq 8 in Paper implvac
        ! Newton-Raphson iteration. The BDF2 scheme implies
        ! beta+alpha=1 and beta=(dt_n+dt_n-1)/(2*dt_n+dt_n-1)
@@ -1579,7 +1579,7 @@ contains
          call add_jacobian_rad_diff(iBlock, nVar, Jac_VVCI)
 
     ! Multiply JAC by the implicit timestep dt, ImplCoeff, Norm_V, and -1
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        do iStencil=1,nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
           if(IsImplCell_CB(i,j,k,iBlock))then
              do jVar=1,nVar; do iVar=1,nVar

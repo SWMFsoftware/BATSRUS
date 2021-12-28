@@ -41,13 +41,13 @@ contains
   !============================================================================
   subroutine stop_mpi(String)
 
-    use ModMain, ONLY : iteration_number, time_simulation, NameThisComp
+    use ModMain, ONLY : nIteration, tSimulation, NameThisComp
     use ModUtilities, ONLY: CON_stop
 
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
     write(*,*) trim(NameThisComp),' BATSRUS stopping at iteration=', &
-         iteration_number,' simulation time=', time_simulation
+         nIteration,' simulation time=', tSimulation
 
     call CON_stop(String)
 
@@ -56,7 +56,7 @@ contains
   subroutine error_report(str,value,iErrorIn,show_first)
 
     use BATL_lib, ONLY: iComm, iProc, nProc
-    use ModMain, ONLY : iteration_number
+    use ModMain, ONLY : nIteration
     use ModIO, ONLY: write_myname
     use ModMpi
 
@@ -242,17 +242,17 @@ contains
 
     error_count(i)=error_count(i)+1
 
-    iter_last(i)=iteration_number
+    iter_last(i)=nIteration
     error_last(i)=value
 
     if(error_count(i)==1)then
        if(show_first)then
           call write_myname;
           write(*,*)'First error for ',str,' (PE=',iProc,&
-               ') at iter=',iteration_number,' with value=',value
+               ') at iter=',nIteration,' with value=',value
        end if
        error_message(i)=str
-       iter_first(i)=iteration_number
+       iter_first(i)=nIteration
        error_min(i)=value
        error_max(i)=value
        error_mean(i)=value
@@ -267,7 +267,7 @@ contains
   subroutine test_error_report
 
     use BATL_lib, ONLY: iProc
-    use ModMain, ONLY : iteration_number
+    use ModMain, ONLY : nIteration
 
     integer:: ierr1=-1, ierr2=-1, ierr3=-1
 
@@ -275,23 +275,23 @@ contains
     !--------------------------------------------------------------------------
     select case(iProc)
     case(0)
-       iteration_number=1
+       nIteration=1
        call error_report('negative pressure',-1.,ierr1,.true.)
        call error_report('negative pressure',-2.,ierr1,.true.)
        call error_report('energy correction',0.1,ierr2,.false.)
-       iteration_number=2
+       nIteration=2
        call error_report('energy correction',0.2,ierr2,.false.)
-       iteration_number=3
+       nIteration=3
        call error_report('negative pressure',-6.,ierr1,.true.)
        call error_report('only PE 0',100.,ierr3,.true.)
        call error_report('energy correction',0.6,ierr2,.false.)
     case(1)
-       iteration_number=1
+       nIteration=1
        call error_report('only PE 1',200.,ierr3,.true.)
        call error_report('energy correction',0.01,ierr2,.false.)
-       iteration_number=2
+       nIteration=2
        call error_report('energy correction',0.02,ierr2,.false.)
-       iteration_number=3
+       nIteration=3
        call error_report('energy correction',0.06,ierr2,.false.)
     end select
 
@@ -301,19 +301,19 @@ contains
   !============================================================================
   subroutine get_date_time(iTime_I)
 
-    use ModMain,        ONLY : StartTime, Time_Simulation
+    use ModMain,        ONLY : StartTime, tSimulation
     use ModTimeConvert, ONLY : time_real_to_int
 
     integer, intent(out) :: iTime_I(7)
     !--------------------------------------------------------------------------
-    call time_real_to_int(StartTime+Time_Simulation,iTime_I)
+    call time_real_to_int(StartTime+tSimulation,iTime_I)
 
   end subroutine get_date_time
   !============================================================================
   subroutine get_time_string
 
     use ModIO,   ONLY: StringDateOrTime, NameMaxTimeUnit
-    use ModMain, ONLY: StartTime, Time_Simulation
+    use ModMain, ONLY: StartTime, tSimulation
     use ModTimeConvert, ONLY: TimeType, time_real_to_int
 
     integer:: i
@@ -325,34 +325,34 @@ contains
     StringDateOrTime = '99999999'
     select case(NameMaxTimeUnit)
     case('hour')
-       if(Time_Simulation < 10000.0*3600) &
+       if(tSimulation < 10000.0*3600) &
             write(StringDateOrTime,'(i4.4,i2.2,i2.2)') &
-            int(                            Time_Simulation/3600.), &
-            int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
-            int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
+            int(                            tSimulation/3600.), &
+            int((tSimulation-(3600.*int(tSimulation/3600.)))/60.), &
+            int( tSimulation-(  60.*int(tSimulation/  60.)))
     case('hr')
-       if(Time_Simulation < 100.0*3600) &
+       if(tSimulation < 100.0*3600) &
             write(StringDateOrTime,'(i2.2,i2.2,f4.1)') &
-            int(                            Time_Simulation/3600.), &
-            int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
-            Time_Simulation-(  60.*int(Time_Simulation/  60.))
+            int(                            tSimulation/3600.), &
+            int((tSimulation-(3600.*int(tSimulation/3600.)))/60.), &
+            tSimulation-(  60.*int(tSimulation/  60.))
     case('minute')
-       if(Time_Simulation < 100.0*60) &
+       if(tSimulation < 100.0*60) &
             write(StringDateOrTime,'(i2.2,f6.3)') &
-            int(Time_Simulation/60.), &
-            Time_Simulation-(60.*int(Time_Simulation/60.))
+            int(tSimulation/60.), &
+            tSimulation-(60.*int(tSimulation/60.))
     case('second')
-       if(Time_Simulation < 100.0) &
-            write(StringDateOrTime,'(f8.5)') Time_Simulation
+       if(tSimulation < 100.0) &
+            write(StringDateOrTime,'(f8.5)') tSimulation
     case('millisecond')
-       if(Time_Simulation < 1.0) &
-            write(StringDateOrTime,'(f8.4)') Time_Simulation*1e3
+       if(tSimulation < 1.0) &
+            write(StringDateOrTime,'(f8.4)') tSimulation*1e3
     case('microsecond')
-       if(Time_Simulation < 1e-3) &
-            write(StringDateOrTime,'(f8.4)') Time_Simulation*1e6
+       if(tSimulation < 1e-3) &
+            write(StringDateOrTime,'(f8.4)') tSimulation*1e6
     case('nanosecond')
-       if(Time_Simulation < 1e-6) &
-            write(StringDateOrTime,'(f8.4)') Time_Simulation*1e9
+       if(tSimulation < 1e-6) &
+            write(StringDateOrTime,'(f8.4)') tSimulation*1e9
     case default
        ! Could not find unit
        StringDateOrTime = ''
@@ -368,7 +368,7 @@ contains
     end if
 
     ! Convert current date and time into string Time % String
-    Time % Time = StartTime + Time_Simulation
+    Time % Time = StartTime + tSimulation
     call time_real_to_int(Time)
 
     ! Select part of the string
