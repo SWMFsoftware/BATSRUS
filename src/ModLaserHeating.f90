@@ -950,7 +950,7 @@ contains
 
     use BATL_lib,    ONLY: IsRzGeometry
     use ModConst,    ONLY: cDegToRad
-    use ModGeometry, ONLY: y1, y2, z1, z2
+    use ModGeometry, ONLY: yMinBox, yMaxBox, zMinBox, zMaxBox
 
     real:: CosTheta, SinTheta, CosPhi, SinPhi
     real:: rCr, PhiCr, yCrStart, zCrStart, yStart, zStart
@@ -1046,17 +1046,17 @@ contains
           zStart = zCrStart + yDistance*SinPhi/CosTheta + zDistance*CosPhi
 
           if(nDim == 3)then
-             IsInside = yStart >= y1 .and. yStart <= y2 &
-                  .and. zStart >= z1 .and. zStart <= z2
+             IsInside = yStart >= yMinBox .and. yStart <= yMaxBox &
+                  .and. zStart >= zMinBox .and. zStart <= zMaxBox
           elseif(IsRzGeometry)then
-             IsInside = yStart**2 + zStart**2 <= y2**2
+             IsInside = yStart**2 + zStart**2 <= yMaxBox**2
           elseif(Is3DBeamInXy)then
-             IsInside = yStart >= y1 .and. yStart <= y2 &
-                  .and. zStart >= y1 .and. zStart <= y2
+             IsInside = yStart >= yMinBox .and. yStart <= yMaxBox &
+                  .and. zStart >= yMinBox .and. zStart <= yMaxBox
           elseif(Is3DBeamIn1D)then
              IsInside = .true.
-!             IsInside = yStart >= y1 .and. yStart <= y2 &
-!                  .and. zStart >= z1 .and. zStart <= z2
+!             IsInside = yStart >= yMinBox .and. yStart <= yMaxBox &
+!                  .and. zStart >= zMinBox .and. zStart <= zMaxBox
           end if
 
           if(rDistance > 1.5*rBeam .and. .not.DoLaserRayTest)then
@@ -1095,7 +1095,7 @@ contains
 
   subroutine init_beam_rz
 
-    use ModGeometry, ONLY: TypeGeometry, y2
+    use ModGeometry, ONLY: TypeGeometry, yMaxBox
     use ModConst,    ONLY: cDegToRad
 
     real:: CosTheta, SinTheta
@@ -1140,7 +1140,7 @@ contains
 
           yStart = yCrStart + rDistance/CosTheta
 
-          IsInside = abs(yStart) <= y2
+          IsInside = abs(yStart) <= yMaxBox
 
           if(IsInside)then
              nRayInside = nRayInside + 1
@@ -1178,7 +1178,7 @@ contains
 
   subroutine init_beam_rz2
 
-    use ModGeometry, ONLY: TypeGeometry, y2, CellSize1Min
+    use ModGeometry, ONLY: TypeGeometry, yMaxBox, CellSize1Min
     use ModConst,    ONLY: cDegToRad
 
     real:: CosTheta, SinTheta,  yCrCentral, yPlane, xPlane
@@ -1236,13 +1236,13 @@ contains
           yPlane = yCrCentral + (rDistance + xStart*sinTheta/(cosTheta))
 
           ! Dealing with rays starting outside the computational domain on laser-entry plane:
-          ! Substracting CellSize1Min from y2 so that the rays do not start on domain boundary
-          if((yPlane) >= y2)then
+          ! Substracting CellSize1Min from yMaxBox so that the rays do not start on domain boundary
+          if((yPlane) >= yMaxBox)then
              ! Do not let rays begin in target past drive surface
              if(sinTheta < 0.0 .and. &
-                  (xPlane + (abs(yPlane)-(y2-CellSize1Min))*(cosTheta)/(-sinTheta) < 0.0))then
-                xPlane = xPlane + (abs(yPlane)-(y2-CellSize1Min))*cosTheta/(-sinTheta)
-                yPlane = y2 - (CellSize1Min)
+                  (xPlane + (abs(yPlane)-(yMaxBox-CellSize1Min))*(cosTheta)/(-sinTheta) < 0.0))then
+                xPlane = xPlane + (abs(yPlane)-(yMaxBox-CellSize1Min))*cosTheta/(-sinTheta)
+                yPlane = yMaxBox - (CellSize1Min)
              else
                 IsInside=.false.
              endif
@@ -1549,7 +1549,7 @@ contains
     use ModPhysics,  ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
          No2Si_V, UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModVarIndexes, ONLY: Pe_
-    use ModGeometry, ONLY: x1
+    use ModGeometry, ONLY: xMinBox
     use ModUserInterface ! user_material_properties
     use BATL_lib, ONLY: message_pass_cell, CellVolume_GB, CoordMin_D, &
          CoordMax_D, IsRzGeometry, Xyz_DGB, x_
@@ -1574,7 +1574,7 @@ contains
              ! The beryllium is initially weakly ionized (Z=1), so that
              ! the electron density is like the mass density a linear profile.
              State_VGB(Rho_,i,j,k,iBlock) = &
-                  (Xyz_DGB(x_,i,j,k,iBlock) - x1)/50.0 &
+                  (Xyz_DGB(x_,i,j,k,iBlock) - xMinBox)/50.0 &
                   *DensityCrSI*cAtomicMass*9.0121823*Si2No_V(UnitRho_)
           end do; end do; end do
        end do

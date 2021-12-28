@@ -317,7 +317,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModMain,     ONLY: TypeCoordSystem, GravitySi
-    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, Xyz_DGB
+    use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, Xyz_DGB
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, &
          Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
          UseElectronPressure, UseAnisoPressure, UseEfield, UseAnisoPe
@@ -387,25 +387,25 @@ contains
 
        ! rho      = Rholeft for x < 0
        !          = Rhoright for x > 0
-       ! pressure = pLeft + integral_x1^x2 rho*Gamma dx
-       !          = pLeft + (x-x1)*RhoLeft*Gamma                for x < 0
-       !          = pLeft - x1*RhoLeft*Gamma + x*RhoRight*Gamma     for x > 0
+       ! pressure = pLeft + integral_x1^xMaxBox rho*Gamma dx
+       !          = pLeft + (x-xMinBox)*RhoLeft*Gamma                for x < 0
+       !          = pLeft - xMinBox*RhoLeft*Gamma + x*RhoRight*Gamma     for x > 0
 
        RhoLeft  = ShockLeftState_V(Rho_)
        RhoRight = ShockRightState_V(Rho_)
        pLeft    = ShockLeftState_V(p_)
        where(Xyz_DGB(x_,:,:,:,iBlock) <= 0.0)
           State_VGB(p_,:,:,:,iBlock) = pLeft &
-               + (Xyz_DGB(x_,:,:,:,iBlock) - x1)*RhoLeft*GravitySi
+               + (Xyz_DGB(x_,:,:,:,iBlock) - xMinBox)*RhoLeft*GravitySi
        elsewhere
           State_VGB(p_,:,:,:,iBlock) = pLeft &
-               + (Xyz_DGB(x_,:,:,:,iBlock)*RhoRight - x1*RhoLeft)*GravitySi
+               + (Xyz_DGB(x_,:,:,:,iBlock)*RhoRight - xMinBox*RhoLeft)*GravitySi
        end where
        ! Perturb velocity
        where(abs(Xyz_DGB(x_,:,:,:,iBlock)) < Width)
           State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(Rho_,:,:,:,iBlock) &
                * Amplitude * cos(cHalfPi*Xyz_DGB(x_,:,:,:,iBlock)/Width)**2 &
-               * sin(cTwoPi*(Xyz_DGB(y_,:,:,:,iBlock))/(y2-y1))
+               * sin(cTwoPi*(Xyz_DGB(y_,:,:,:,iBlock))/(yMaxBox-yMinBox))
        endwhere
 
     case('AdvectSphere')
@@ -589,16 +589,16 @@ contains
                 y = Xyz_DGB(y_,i,j,k,iBlock) - y_V(iVar)
                 z = Xyz_DGB(z_,i,j,k,iBlock) - z_V(iVar)
                 if(IsPeriodic_D(1))then
-                   if(x > +(x2-x1)/2) x = x - (x2-x1)
-                   if(x < -(x2-x1)/2) x = x + (x2-x1)
+                   if(x > +(xMaxBox-xMinBox)/2) x = x - (xMaxBox-xMinBox)
+                   if(x < -(xMaxBox-xMinBox)/2) x = x + (xMaxBox-xMinBox)
                 end if
                 if(IsPeriodic_D(2))then
-                   if(y > +(y2-y1)/2) y = y - (y2-y1)
-                   if(y < -(y2-y1)/2) y = y + (y2-y1)
+                   if(y > +(yMaxBox-yMinBox)/2) y = y - (yMaxBox-yMinBox)
+                   if(y < -(yMaxBox-yMinBox)/2) y = y + (yMaxBox-yMinBox)
                 end if
                 if(IsPeriodic_D(3))then
-                   if(z > +(z2-z1)/2) z = z - (z2-z1)
-                   if(z < -(z2-z1)/2) z = z + (z2-z1)
+                   if(z > +(zMaxBox-zMinBox)/2) z = z - (zMaxBox-zMinBox)
+                   if(z < -(zMaxBox-zMinBox)/2) z = z + (zMaxBox-zMinBox)
                 end if
                 r2 =   (KxWave_V(iVar)*x)**2 + (KyWave_V(iVar)*y)**2 &
                      + (KzWave_V(iVar)*z)**2
@@ -718,14 +718,14 @@ contains
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
 
        ! Size of the box
-       Lx = x2 - x1
-       Ly = y2 - y1
+       Lx = xMaxBox - xMinBox
+       Ly = yMaxBox - yMinBox
        ! set intial perturbation
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           x = Xyz_DGB(x_,i,j,k,iBlock)
           y = Xyz_DGB(y_,i,j,k,iBlock)
           ! Apply perturbation on x
-          x = x + GemEps*(x-x1)*(x-x2)
+          x = x + GemEps*(x-xMinBox)*(x-xMaxBox)
           State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) &
                - Az* cPi/Ly *cos(cTwoPi*x/Lx) * sin(cPi*y/Ly) * (1+2*GemEps*x)
           State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) &
@@ -991,7 +991,7 @@ contains
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B
     use ModAdvance,  ONLY: By_, State_VGB
-    use ModGeometry, ONLY: z2, z1
+    use ModGeometry, ONLY: zMaxBox, zMinBox
     use BATL_lib,    ONLY: CellFace_DB, CellSize_DB, Xyz_DGB
 
     real, intent(out)            :: VarValue
@@ -1001,22 +1001,22 @@ contains
     character (len=*), parameter :: Name='user_get_log_var'
 
     integer :: k1, k2, iBlock
-    real:: y1, y2, dy1, dy2, HalfInvWidth, Flux
+    real:: yMinBox, yMaxBox, dy1, dy2, HalfInvWidth, Flux
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    HalfInvWidth = 0.5/(z2-z1)
+    HalfInvWidth = 0.5/(zMaxBox-zMinBox)
     VarValue=0.0
     select case(TypeVar)
     case('byflux')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          y1 = Xyz_DGB(y_,1,0,1,iBlock)
-          y2 = Xyz_DGB(y_,1,nJ+1,1,iBlock)
+          yMinBox = Xyz_DGB(y_,1,0,1,iBlock)
+          yMaxBox = Xyz_DGB(y_,1,nJ+1,1,iBlock)
 
-          if(y1*y2 > 0) CYCLE
-          k1 = -y1/CellSize_DB(y_,iBlock)
+          if(yMinBox*yMaxBox > 0) CYCLE
+          k1 = -yMinBox/CellSize_DB(y_,iBlock)
           k2 = k1 + 1
           dy1 = abs(Xyz_DGB(y_,1,k1,1,iBlock))/CellSize_DB(y_,iBlock)
           dy2 = 1.0 - dy1
@@ -1085,8 +1085,8 @@ contains
     use ModConst,    ONLY: cProtonMass, RotationPeriodSun
     use ModMain,     ONLY: tSimulation, TypeCoordSystem
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB,p_
-    use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
-         r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
+    use ModGeometry, ONLY: Xyz_DGB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
+         r_GB, XyzMin_D, XyzMax_D, TypeGeometry
     use ModVarIndexes
     use BATL_lib,    ONLY: CoordMax_D, CoordMin_D
 
@@ -1202,11 +1202,11 @@ contains
                 x = Xyz_DGB(x_,i,j,k,iBlock)
                 y = Xyz_DGB(y_,i,j,k,iBlock)
                 z = Xyz_DGB(z_,i,j,k,iBlock)
-                r = r_BLK(i,j,k,iBlock)
+                r = r_GB(i,j,k,iBlock)
                 r = alog(r)
 
-                if( x1<x .and. x<x2 .and. y1<y .and. y<y2 .and. z1<z .and. &
-                     z<z2 .and. r > rMin .and. r < rMax) CYCLE
+                if( xMinBox<x .and. x<xMaxBox .and. yMinBox<y .and. y<yMaxBox .and. zMinBox<z .and. &
+                     z<zMaxBox .and. r > rMin .and. r < rMax) CYCLE
 
                 do iVar=1,nVar
                    ! Both of these are primitive variables

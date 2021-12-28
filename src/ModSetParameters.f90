@@ -26,7 +26,7 @@ contains
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
          read_b0_param, init_mod_b0
     use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
-         x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
+         xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
          CoordDimMin_D, CoordDimMax_D, &
          read_gen_radial_grid, set_gen_radial_grid, NameGridFile
     use ModNodes, ONLY: init_mod_nodes
@@ -2095,12 +2095,12 @@ contains
           call read_var('nRootBlockY', nRootRead_D(2))
           call read_var('nRootBlockZ', nRootRead_D(3))
 
-          call read_var('xMin',x1)
-          call read_var('xMax',x2)
-          call read_var('yMin',y1)
-          call read_var('yMax',y2)
-          call read_var('zMin',z1)
-          call read_var('zMax',z2)
+          call read_var('xMin', xMinBox)
+          call read_var('xMax', xMaxBox)
+          call read_var('yMin', yMinBox)
+          call read_var('yMax', yMaxBox)
+          call read_var('zMin', zMinBox)
+          call read_var('zMax', zMaxBox)
 
        case("#GRIDBLOCK", "#GRIDBLOCKALL")
           if(.not.is_first_session())CYCLE READPARAM
@@ -3776,35 +3776,35 @@ contains
            iSessionIn=iSessionFirst) > 0) then
          select case(TypeGeometry)
          case('cartesian' ,'rotatedcartesian')
-            XyzMin_D = [x1, y1, z1]
-            XyzMax_D = [x2, y2, z2]
+            XyzMin_D = [xMinBox, yMinBox, zMinBox]
+            XyzMax_D = [xMaxBox, yMaxBox, zMaxBox]
          case('rz')
-            z1 = -0.5
-            z2 = +0.5
-            XyzMin_D = [x1, y1, z1]
-            XyzMax_D = [x2, y2, z2]
+            zMinBox = -0.5
+            zMaxBox = +0.5
+            XyzMin_D = [xMinBox, yMinBox, zMinBox]
+            XyzMax_D = [xMaxBox, yMaxBox, zMaxBox]
          case('spherical', 'spherical_lnr', 'spherical_genr')
             !             R,   Phi, Latitude
             XyzMin_D = [ 0.0, 0.0, -cHalfPi]
             XyzMax_D = [ &
-                 sqrt(max(x1**2,x2**2)+max(y1**2,y2**2) + max(z1**2,z2**2)), &
+                 sqrt(max(xMinBox**2,xMaxBox**2)+max(yMinBox**2,yMaxBox**2) + max(zMinBox**2,zMaxBox**2)), &
                  cTwoPi, cHalfPi ]
          case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
             !            R,   Phi, Z
-            XyzMin_D = [0.0, 0.0, z1]
-            XyzMax_D = [sqrt(max(x1**2,x2**2)+max(y1**2,y2**2)), cTwoPi, z2]
+            XyzMin_D = [0.0, 0.0, zMinBox]
+            XyzMax_D = [sqrt(max(xMinBox**2,xMaxBox**2)+max(yMinBox**2,yMaxBox**2)), cTwoPi, zMaxBox]
          case('roundcube')
             if(rRound0 > rRound1)then
-               ! Cartesian outside, so use x1..z2
-               XyzMin_D = [x1, y1, z1]
-               XyzMax_D = [x2, y2, z2]
+               ! Cartesian outside, so use xMinBox..zMaxBox
+               XyzMin_D = [xMinBox, yMinBox, zMinBox]
+               XyzMax_D = [xMaxBox, yMaxBox, zMaxBox]
             else
-               ! Round outside, so fit this inside x1..z2
+               ! Round outside, so fit this inside xMinBox..zMaxBox
                if(nDim==2) XyzMax_D = &
-                    min(abs(x1), abs(x2), abs(y1), abs(y2)) &
+                    min(abs(xMinBox), abs(xMaxBox), abs(yMinBox), abs(yMaxBox)) &
                     /sqrt(2.0)
                if(nDim==3) XyzMax_D = &
-                    min(abs(x1), abs(x2), abs(y1), abs(y2), abs(z1), abs(z2)) &
+                    min(abs(xMinBox), abs(xMaxBox), abs(yMinBox), abs(yMaxBox), abs(zMinBox), abs(zMaxBox)) &
                     /sqrt(3.0)
                XyzMin_D = -XyzMax_D
             end if
@@ -3848,9 +3848,9 @@ contains
            UseFDFaceFluxIn=UseFDFaceFlux, iVectorVarIn_I=iVectorVar_I)
 
       if(IsRotatedCartesian)then
-         ! Fix x1, x2 .. z2 to include the full rotated domain
-         x2 = sum(abs(CoordMin_D)) + sum(abs(CoordMax_D)); y2 = x2; z2 = x2
-         x1 = -x2; y1 = x1; z1 = x1
+         ! Fix xMinBox, xMaxBox .. zMaxBox to include the full rotated domain
+         xMaxBox = sum(abs(CoordMin_D)) + sum(abs(CoordMax_D)); yMaxBox = xMaxBox; zMaxBox = xMaxBox
+         xMinBox = -xMaxBox; yMinBox = xMinBox; zMinBox = xMinBox
       end if
 
       if(IsLogRadius .or. IsGenRadius)then
@@ -3861,12 +3861,12 @@ contains
 
       ! Fix grid size in ignored directions
       if(nDim == 1)then
-         y1 = -0.5; XyzMin_D(2) = -0.5
-         y2 = +0.5; XyzMax_D(2) = +0.5
+         yMinBox = -0.5; XyzMin_D(2) = -0.5
+         yMaxBox = +0.5; XyzMax_D(2) = +0.5
       end if
       if(nDim < 3)then
-         z1 = -0.5; XyzMin_D(3) = -0.5
-         z2 = +0.5; XyzMax_D(3) = +0.5
+         zMinBox = -0.5; XyzMin_D(3) = -0.5
+         zMaxBox = +0.5; XyzMax_D(3) = +0.5
       end if
 
     end subroutine correct_grid_geometry

@@ -343,7 +343,7 @@ contains
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
     use ModMain,         ONLY: UseFieldLineThreads, nDim, nIJK_D
-    use ModGeometry,     ONLY: far_field_BCs_BLK
+    use ModGeometry,     ONLY: IsBoundary_B
     use ModParallel,     ONLY: NOBLK, NeiLev
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
@@ -374,7 +374,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
     if(UseFieldLineThreads)then
-       UseFirstOrderBc = far_field_BCs_BLK(iBlock)
+       UseFirstOrderBc = IsBoundary_B(iBlock)
     else
        UseFirstOrderBc = .false.
     end if
@@ -767,7 +767,7 @@ contains
     ! Non-split operator, (almost) explicit ei heat energy exchange
 
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
-    use ModGeometry,   ONLY: true_cell
+    use ModGeometry,   ONLY: Used_GB
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure, &
@@ -815,7 +815,7 @@ contains
             'No explicit ei heat exchange for non-idealized plasmas')
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           DtLocal = Cfl*time_BLK(i,j,k,iBlock)
           ! We apply the energy exchange rate for temperature,
@@ -882,7 +882,7 @@ contains
          get_gamma_collisionless
     use ModUserInterface ! user_material_properties
     use ModMain,         ONLY: UseFieldLineThreads
-    use ModGeometry,     ONLY: far_field_BCs_BLK
+    use ModGeometry,     ONLY: IsBoundary_B
     use ModParallel,     ONLY: NOBLK, NeiLev
 
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
@@ -1066,7 +1066,7 @@ contains
           call get_heat_cond_tensor(State2_VG(:,i,j,k), i, j, k, iBlock)
        end do; end do; end do
 
-       if(UseFieldLineThreads.and.far_field_BCs_BLK(iBlock))then
+       if(UseFieldLineThreads.and.IsBoundary_B(iBlock))then
           ! First order BC at the outer boundaries
           if(NeiLev(1,iBlock)==NOBLK)then
              HeatCoef_G(0,:,:) = HeatCoef_G(1,:,:)
@@ -1152,7 +1152,7 @@ contains
 
       use ModB0,         ONLY: B0_DGB
       use ModConst,      ONLY: cBoltzmann, cElectronmass
-      use ModGeometry,   ONLY: r_BLK
+      use ModGeometry,   ONLY: r_GB
       use ModMain,       ONLY: UseB0
       use ModNumConst,   ONLY: cTolerance
       use ModPhysics,    ONLY: UnitTemperature_, AverageIonCharge, &
@@ -1229,7 +1229,7 @@ contains
       if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
 
       if(UseHeatFluxRegion)then
-         r = r_BLK(i,j,k,iBlock)
+         r = r_GB(i,j,k,iBlock)
          if(rCollisionless < 0.0)then
             Factor = 1.0/((r/rCollisional)**2 + 1)
          elseif(r <= rCollisional)then
@@ -1302,7 +1302,7 @@ contains
     use ModNumConst,     ONLY: i_DD
     use ModMultiFluid,   ONLY: UseMultiIon
     use ModMain,         ONLY: UseFieldLineThreads
-    use ModGeometry,     ONLY: far_field_BCs_BLK
+    use ModGeometry,     ONLY: IsBoundary_B
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1319,7 +1319,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     IsNewBlockHeatCond = .true.
-    UseFirstOrderBc = UseFieldLineThreads.and.far_field_BCs_BLK(iBlock)
+    UseFirstOrderBc = UseFieldLineThreads.and.IsBoundary_B(iBlock)
 
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
@@ -1483,7 +1483,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, time_BLK
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, ExtraEint_, Ehot_
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, Dt, IsTimeAccurate, Cfl
     use ModPhysics,  ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
@@ -1521,7 +1521,7 @@ contains
     DtLocal = Dt
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        DeltaEinternal = DconsDsemiAll_VC(iTeImpl,i,j,k) &
             *(NewSemiAll_VC(iTeImpl,i,j,k) - OldSemiAll_VC(iTeImpl,i,j,k))

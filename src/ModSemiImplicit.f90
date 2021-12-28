@@ -264,7 +264,7 @@ contains
     use ModAdvance, ONLY: DoFixAxis, State_VGB
     use ModB0, ONLY: B0_DGB
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModImplHypre, ONLY: hypre_initialize, hypre_preconditioner
     use ModLinearSolver, ONLY: solve_linear_multiblock
     use ModMessagePass, ONLY: exchange_messages
@@ -380,7 +380,7 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              do iVar = iVarSemiMin, iVarSemiMax
                 n = n + 1
-                if(true_cell(i,j,k,iBlockFromSemi_B(iBlockSemi)))then
+                if(Used_GB(i,j,k,iBlockFromSemi_B(iBlockSemi)))then
                    NewSemiAll_VCB(iVar,i,j,k,iBlockSemi) = &
                         SemiAll_VCB(iVar,i,j,k,iBlockSemi) + x_I(n)
                 else
@@ -483,7 +483,7 @@ contains
 
     use ModAdvance,        ONLY: time_BLK
     use ModMain,           ONLY: IsTimeAccurate, dt, Cfl, UseDtLimit
-    use ModGeometry,       ONLY: far_field_BCs_BLK, Xyz_DGB, true_cell
+    use ModGeometry,       ONLY: IsBoundary_B, Xyz_DGB, Used_GB
     use ModSize,           ONLY: nI, nJ, nK
     use ModCellBoundary,   ONLY: set_cell_boundary
     use BATL_lib,          ONLY: message_pass_cell, message_pass_face, &
@@ -536,7 +536,7 @@ contains
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
        ! Apply boundary conditions (1 layer of outer ghost cells)
-       if(far_field_BCs_BLK(iBlock))&
+       if(IsBoundary_B(iBlock))&
             call set_cell_boundary(1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
 
@@ -595,7 +595,7 @@ contains
              do k=1,nK; do j=1,nJ; do i=1,nI
                 write(*,*) NameSub, &
                      ' i,j,k,True,Xyz,Rhs=', &
-                     i,j,k, true_cell(i,j,k,iBlock), Xyz_DGB(:,i,j,k,iBlock), &
+                     i,j,k, Used_GB(i,j,k,iBlock), Xyz_DGB(:,i,j,k,iBlock), &
                      RhsSemi_VCB(:,i,j,k,iBlockSemi)
              end do; end do; end do
           end if
@@ -610,7 +610,7 @@ contains
     ! Calculate y_I = A.x_I where A is the linearized semi-implicit operator
 
     use ModAdvance,  ONLY: time_BLK
-    use ModGeometry, ONLY: far_field_BCs_BLK
+    use ModGeometry, ONLY: IsBoundary_B
     use ModMain, ONLY: dt, IsTimeAccurate, Cfl, UseDtLimit
     use ModSize, ONLY: nI, nJ, nK
     use ModLinearSolver,   ONLY: UsePDotADotP, pDotADotPPe
@@ -675,7 +675,7 @@ contains
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
-       if(far_field_BCs_BLK(iBlock)) &
+       if(IsBoundary_B(iBlock)) &
             call set_cell_boundary( 1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.true.)
 
@@ -1012,7 +1012,7 @@ contains
 
     use ModAdvance, ONLY: time_BLK
     use ModMain,    ONLY: nI, nJ, nK, Dt, IsTimeAccurate, Cfl, UseDtLimit
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModImplicit, ONLY: UseNoOverlap
     use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix
     use BATL_lib, ONLY: CellVolume_GB
@@ -1042,7 +1042,7 @@ contains
        ! Form A = Volume*(1/dt - SemiImplCoeff*dR/dU)
        !    symmetrized for sake of CG
        do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           Coeff = -SemiImplCoeff*CellVolume_GB(i,j,k,iBlock)
           JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi) = &
                Coeff * JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi)

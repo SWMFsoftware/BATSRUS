@@ -394,7 +394,7 @@ contains
     use ModAdvance,  ONLY: tmp1_BLK, tmp2_BLK, State_VGB, DivB1_GB
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
-    use ModGeometry, ONLY: R_BLK, x1, x2, y1, y2, z1, z2, DomainVolume
+    use ModGeometry, ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, DomainVolume
     use ModFieldTrace, ONLY: ray
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
@@ -556,7 +556,7 @@ contains
       use ModEnergy,    ONLY: get_fluid_energy_block, energy_i
       use ModWaves,     ONLY: UseWavePressure
       use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
-      use ModGeometry,  ONLY: r_BLK
+      use ModGeometry,  ONLY: r_GB
       use ModIO,        ONLY: lNameLogVar
       use ModIeCoupling, ONLY: logvar_ionosphere
       use ModCoordTransform, ONLY: cross_product
@@ -602,7 +602,7 @@ contains
                  + State_VGB(iRhoUz, 1:nI,1:nJ,1:nK,iBlock)   &
                  * Xyz_DGB(       z_,1:nI,1:nJ,1:nK,iBlock) ) &
                  / State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)      &
-                 / r_BLK(1:nI,1:nJ,1:nK,iBlock)
+                 / r_GB(1:nI,1:nJ,1:nK,iBlock)
          end do
          ! Divide by nProc so that adding up the processors can work
          LogVar_I(iVarTot) = minval_grid(tmp1_BLK)/nProc
@@ -617,7 +617,7 @@ contains
                  + State_VGB(iRhoUz, 1:nI,1:nJ,1:nK,iBlock)   &
                  * Xyz_DGB(       z_,1:nI,1:nJ,1:nK,iBlock) ) &
                  / State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)      &
-                 / r_BLK(1:nI,1:nJ,1:nK,iBlock)
+                 / r_GB(1:nI,1:nJ,1:nK,iBlock)
          end do
          ! Divide by nProc so that adding up the processors can work
          LogVar_I(iVarTot) = maxval_grid(tmp1_BLK)/nProc
@@ -734,7 +734,7 @@ contains
                ! Calculate radial current
                call get_current(i,j,k,iBlock,Current_D)
                tmp1_BLK(i,j,k,iBlock) = &
-                    sum(Current_D*Xyz_DGB(:,i,j,k,iBlock))/r_BLK(i,j,k,iBlock)
+                    sum(Current_D*Xyz_DGB(:,i,j,k,iBlock))/r_GB(i,j,k,iBlock)
             end do; end do; end do
          end do
 
@@ -782,13 +782,13 @@ contains
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
-                    Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
-                    Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
-                    Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
-                    Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
-                    Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
-                    Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
+               if ( r_GB(i,j,k,iBlock) < rCurrents .or. &
+                    Xyz_DGB(x_,i+1,j,k,iBlock) > xMaxBox .or.      &
+                    Xyz_DGB(x_,i-1,j,k,iBlock) < xMinBox .or.      &
+                    Xyz_DGB(y_,i,j+1,k,iBlock) > yMaxBox .or.      &
+                    Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or.      &
+                    Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or.      &
+                    Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox ) then
                   tmp1_BLK(i,j,k,iBlock) = 0.0
                   CYCLE
                end if
@@ -796,7 +796,7 @@ contains
                tmp1_BLK(i,j,k,iBlock) = ( &
                     -Current_D(x_)*Xyz_DGB(y_,i,j,k,iBlock) &
                     +Current_D(y_)*Xyz_DGB(x_,i,j,k,iBlock) ) &
-                    / r_BLK(i,j,k,iBlock)**3
+                    / r_GB(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
@@ -818,13 +818,13 @@ contains
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
-                    Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
-                    Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
-                    Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
-                    Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
-                    Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
-                    Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
+               if ( r_GB(i,j,k,iBlock) < rCurrents .or. &
+                    Xyz_DGB(x_,i+1,j,k,iBlock) > xMaxBox .or.      &
+                    Xyz_DGB(x_,i-1,j,k,iBlock) < xMinBox .or.      &
+                    Xyz_DGB(y_,i,j+1,k,iBlock) > yMaxBox .or.      &
+                    Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or.      &
+                    Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or.      &
+                    Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox ) then
                   tmp1_BLK(i,j,k,iBlock)=0.0
                   CYCLE
                end if
@@ -832,7 +832,7 @@ contains
                tmp1_BLK(i,j,k,iBlock) = &
                     -sum(Convert_DD(3,:) &
                     *cross_product(Current_D, Xyz_DGB(:,i,j,k,iBlock))) &
-                    / r_BLK(i,j,k,iBlock)**3
+                    / r_GB(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
@@ -848,19 +848,19 @@ contains
          do iBlock=1,nBlock
             if(Unused_B(iBlock))CYCLE
             do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-               if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
-                    Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
-                    Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
-                    Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
-                    Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
-                    Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
-                    Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
+               if ( r_GB(i,j,k,iBlock) < rCurrents .or. &
+                    Xyz_DGB(x_,i+1,j,k,iBlock) > xMaxBox .or.      &
+                    Xyz_DGB(x_,i-1,j,k,iBlock) < xMinBox .or.      &
+                    Xyz_DGB(y_,i,j+1,k,iBlock) > yMaxBox .or.      &
+                    Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or.      &
+                    Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or.      &
+                    Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox ) then
                   tmp1_BLK(i,j,k,iBlock)=0.0
                   CYCLE
                end if
                tmp1_BLK(i,j,k,iBlock) = &
                     Xyz_DGB(z_,i,j,k,iBlock) * DivB1_GB(i,j,k,iBlock) &
-                    / r_BLK(i,j,k,iBlock)**3
+                    / r_GB(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The 4*pi is part of the Biot-Savart formula
@@ -1009,7 +1009,7 @@ contains
                   tmp1_BLK(i,j,k,iBlock) = &
                        sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                        *Xyz_DGB(:,i,j,k,iBlock)) &
-                       /r_BLK(i,j,k,iBlock)
+                       /r_GB(i,j,k,iBlock)
                end do; end do; end do
             end do
             LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
@@ -1039,7 +1039,7 @@ contains
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                   tmp1_BLK(i,j,k,iBlock) = &
                        sum(FullB_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
-                       / R_BLK(i,j,k,iBlock)
+                       / r_GB(i,j,k,iBlock)
                end do; end do; end do
             end do
 
@@ -1062,7 +1062,7 @@ contains
                   tmp1_BLK(i,j,k,iBlock) = 0.5*tmp1_BLK(i,j,k,iBlock)* &
                        sum( State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                        *Xyz_DGB(:,i,j,k,iBlock)) &
-                       / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
+                       / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
                end do; end do; end do
             end do
             LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
@@ -1084,7 +1084,7 @@ contains
                   tmp1_BLK(i,j,k,iBlock) = &
                        sum( (bDotb*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                        -     bDotU*FullB_DG(:,i,j,k))*Xyz_DGB(:,i,j,k,iBlock) &
-                       ) / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
+                       ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
                end do; end do; end do
             end do
             LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
@@ -1114,7 +1114,7 @@ contains
                   tmp1_BLK(i,j,k,iBlock) = &
                        ( (RhoUy*Bz-RhoUz*By)*Xyz_DGB(y_,i,j,k,iBlock) &
                        - (RhoUz*Bx-RhoUx*Bz)*Xyz_DGB(x_,i,j,k,iBlock) &
-                       ) / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
+                       ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
                end do; end do; end do
             end do
             LogVar_I(iVarTot) = integrate_circle(r, 0.0, tmp1_BLK)
@@ -1400,7 +1400,7 @@ contains
     ! The resolution in the colatitude is determined by the nTheta parameter.
 
     use ModMain,           ONLY: TypeMessagePass
-    use ModGeometry,       ONLY: r_BLK, XyzStart_Blk, TypeGeometry
+    use ModGeometry,       ONLY: r_GB, Coord111_DB, TypeGeometry
     use BATL_lib,  ONLY: nI, nJ, nK, Unused_B, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK, nBlock, MaxBlock, &
          IsCartesianGrid, IsRLonLat, Xyz_DGB, x_, y_, z_, &
@@ -1457,9 +1457,9 @@ contains
 
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
-          rMin = 0.5*(R_BLK( 0,1,1,iBlock) + R_BLK( 1, 1, 1,iBlock))
+          rMin = 0.5*(r_GB( 0,1,1,iBlock) + r_GB( 1, 1, 1,iBlock))
           if(rMin > Radius) CYCLE
-          rMax = 0.5*(R_BLK(nI,1,1,iBlock) + R_BLK(nI+1,1,1,iBlock))
+          rMax = 0.5*(r_GB(nI,1,1,iBlock) + r_GB(nI+1,1,1,iBlock))
           if(rMax <= Radius) CYCLE
 
           ! Set temporary array
@@ -1470,13 +1470,13 @@ contains
 
           ! Find the radial index just after Radius
           i2=0
-          do while ( Radius > R_BLK(i2,1,1,iBlock))
+          do while ( Radius > r_GB(i2,1,1,iBlock))
              i2 = i2+1
           end do
           i1=i2-1
 
-          Dr = (Radius - R_BLK(i1, 1, 1, iBlock)) &
-               /(R_BLK(i2, 1, 1, iBlock) - R_BLK(i1, 1, 1, iBlock))
+          Dr = (Radius - r_GB(i1, 1, 1, iBlock)) &
+               /(r_GB(i2, 1, 1, iBlock) - r_GB(i1, 1, 1, iBlock))
           if(Dr<0.or.Dr>1)call stop_mpi('wrong index in calc_sphere')
 
           select case(TypeAction)
@@ -1484,7 +1484,7 @@ contains
              ! Integrate in theta
              do k = 1, nK
                 SinTheta = norm2(Xyz_DGB(x_:y_,1,1,k,iBlock)) &
-                     / r_BLK(1,1,k,iBlock)
+                     / r_GB(1,1,k,iBlock)
                 ! Integrate in Phi by adding up 1..nJ and interpolate in R
                 Average = Dr * sum( Array_G(i2, 1:nJ, k)) + &
                      (1-Dr)  * sum( Array_G(i1, 1:nJ, k))
@@ -1607,7 +1607,7 @@ contains
                 ! to the index.
 
                 Average = trilinear( Array_G, 0,nI+1, 0,nJ+1, 0,nK+1, &
-                     1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)) )
+                     1 + InvDxyz_D*([ x, y, z ] - Coord111_DB(:,iBlock)) )
 
                 select case(TypeAction)
                 case('integrate')
@@ -1620,7 +1620,7 @@ contains
                 ! if(iBlock==222.and.i==22.and.j==76)then
                 !   write(*,*)'j, Result=',j, Result
                 !   write(*,*)'x,y,z=',x,y,z
-                !   write(*,*)'XyzStart_Blk=',XyzStart_Blk(:,iBlock)
+                !   write(*,*)'Coord111_DB=',Coord111_DB(:,iBlock)
                 !   write(*,*)'InvDxyz_D=',InvDxyz_D
                 ! end if
              end do
@@ -1664,7 +1664,7 @@ contains
     ! is given by z.
 
     use ModMain,  ONLY: TypeMessagePass
-    use ModGeometry, ONLY: XyzStart_Blk
+    use ModGeometry, ONLY: Coord111_DB
     use ModNumConst, ONLY: cTwoPi
     use ModInterpolate, ONLY: trilinear
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
@@ -1741,7 +1741,7 @@ contains
           ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
 
           Average = trilinear( Array_GB(:,:,:,iBlock),0,nI+1,0,nJ+1,0,nK+1, &
-               1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)))
+               1 + InvDxyz_D*([ x, y, z ] - Coord111_DB(:,iBlock)))
 
           Integral = Integral + Average
        end do
@@ -1907,7 +1907,7 @@ contains
     ! for the processor only.
 
     use ModAdvance,   ONLY: nVar, State_VGB, P_
-    use ModGeometry,  ONLY: true_BLK, true_cell
+    use ModGeometry,  ONLY: IsNoBody_B, Used_GB
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
          nI, nJ, nK, nBlock, MaxBlock, Unused_B, &
          IsCartesian, CellVolume_B, CellVolume_GB
@@ -1931,7 +1931,7 @@ contains
     if(IsCartesian)then
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          if(true_BLK(iBlock)) then
+          if(IsNoBody_B(iBlock)) then
              do iVar=1,nVar
                 Sum_V(iVar) = Sum_V(iVar) + CellVolume_B(iBlock)* &
                      sum(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock))
@@ -1940,7 +1940,7 @@ contains
              do iVar=1,nVar
                 Sum_V(iVar) = Sum_V(iVar) + CellVolume_B(iBlock)* &
                      sum(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock),&
-                     MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+                     MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
              end do
           end if
           Pressure_GB(1:nI,1:nJ,1:nK,iBlock) = &
@@ -1949,7 +1949,7 @@ contains
     else
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          if(true_BLK(iBlock)) then
+          if(IsNoBody_B(iBlock)) then
              do k=1,nK; do j=1,nJ; do i=1,nI
                 CellVolume = CellVolume_GB(i,j,k,iBlock)
                 Sum_V = Sum_V + CellVolume_GB(i,j,k,iBlock)* &
@@ -1957,7 +1957,7 @@ contains
              end do; end do; end do
           else
              do k=1,nK; do j=1,nJ; do i=1,nI
-                if(.not.true_cell(i,j,k,iBlock))CYCLE
+                if(.not.Used_GB(i,j,k,iBlock))CYCLE
                 Sum_V = Sum_V + CellVolume_GB(i,j,k,iBlock)* &
                      State_VGB(:,i,j,k,iBlock)
              end do; end do; end do

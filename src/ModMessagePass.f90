@@ -38,7 +38,7 @@ contains
          UseHighResChange, UseBufferGrid, UseResistivePlanet
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB, iTypeUpdate, UpdateOrig_, UpdateFast_
-    use ModGeometry, ONLY: far_field_BCs_BLK
+    use ModGeometry, ONLY: IsBoundary_B
     use ModPhysics,  ONLY: ShockSlope, nVectorVar, iVectorVar_I
     use ModFaceValue, ONLY: UseAccurateResChange
     use ModEnergy,   ONLY: limit_pressure
@@ -135,7 +135,7 @@ contains
        else
           do iBlock = 1, nBlock
              if (Unused_B(iBlock)) CYCLE
-             if (far_field_BCs_BLK(iBlock) .and. &
+             if (IsBoundary_B(iBlock) .and. &
                   (nOrderProlong==2 .or. UseHighResChangeNow)) then
                 call set_cell_boundary&
                      (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
@@ -229,7 +229,7 @@ contains
           if (Unused_B(iBlock)) CYCLE
           if(.not.DoResChangeOnly &
                .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
-             if (far_field_BCs_BLK(iBlock)) then
+             if (IsBoundary_B(iBlock)) then
                 call set_cell_boundary( &
                      nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
 

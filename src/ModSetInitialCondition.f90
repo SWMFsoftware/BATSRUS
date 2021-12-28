@@ -22,7 +22,7 @@ contains
     use ModMain
     use ModAdvance
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModIO, ONLY : restart
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, &
          UseShockTube, UnitUser_V, ShockLeftState_V, ShockRightState_V, &
@@ -94,7 +94,7 @@ contains
 
           ! Loop through all the cells
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             if(.not.true_cell(i,j,k,iBlock))then
+             if(.not.Used_GB(i,j,k,iBlock))then
                 iBoundary = iBoundary_GB(i,j,k,iBlock)
 
                 State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,iBoundary)
@@ -176,7 +176,7 @@ contains
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, x_, y_
     use ModMain,     ONLY: Unused_B, NameThisComp
     use ModAdvance,  ONLY: State_VGB
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModPhysics,  ONLY: OmegaBody
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I
     use BATL_lib,    ONLY: Xyz_DGB, iProc
@@ -210,7 +210,7 @@ contains
     do iBlock = iBlockFirst, iBlockLast
        if(Unused_B(iBlock))CYCLE
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          if(.not.true_Cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           State_VGB(iRhoUx_I,i,j,k,iBlock) = State_VGB(iRhoUx_I,i,j,k,iBlock) &
                - iSign*State_VGB(iRho_I,i,j,k,iBlock) &
 	       *OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)

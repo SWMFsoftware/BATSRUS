@@ -390,7 +390,7 @@ contains
     ! from currents in GM cells.  The result is returned as MagPerturb_DI.
 
     use ModSize,           ONLY: nI, nJ, nK
-    use ModGeometry,       ONLY: R_BLK, x1, x2, y1, y2, z1, z2
+    use ModGeometry,       ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
     use ModMain,           ONLY: &
          Unused_B, nBlock, tSimulation, TypeCoordSystem
     use ModNumConst,       ONLY: cPi
@@ -422,13 +422,13 @@ contains
           if (Unused_B(iBlock))CYCLE
           do k=1, nK; do j=1, nJ; do i=1, nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-             if(r_BLK(i,j,k,iBlock) < rCurrents   .or. &
-                  Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or. &
-                  Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or. &
-                  Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or. &
-                  Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or. &
-                  Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or. &
-                  Xyz_DGB(z_,i,j,k-1,iBlock) < z1)   CYCLE
+             if(r_GB(i,j,k,iBlock) < rCurrents   .or. &
+                  Xyz_DGB(x_,i+1,j,k,iBlock) > xMaxBox .or. &
+                  Xyz_DGB(x_,i-1,j,k,iBlock) < xMinBox .or. &
+                  Xyz_DGB(y_,i,j+1,k,iBlock) > yMaxBox .or. &
+                  Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or. &
+                  Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or. &
+                  Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox)   CYCLE
 
              call get_current(i,j,k,iBlock,Current_D)
 

@@ -11,7 +11,7 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_, MaxDim
   use ModVarIndexes
-  use ModGeometry, ONLY: true_cell, body_BLK
+  use ModGeometry, ONLY: Used_GB, IsBody_B
   use ModAdvance, ONLY: nFlux, UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder, &
        State_VGB, Primitive_VGI,  &
@@ -422,8 +422,8 @@ contains
     case(1)
        !!! acc loop vector collapse(2)
        do k=1,nK,2; do j=1,nJ,2
-          if(  all(true_cell(-1:2,j:j+1,k:k+1,iBlock)) .and. &
-               all(true_cell(0,j-2:j+3,k-2:k+3,iBlock)) ) then
+          if(  all(Used_GB(-1:2,j:j+1,k:k+1,iBlock)) .and. &
+               all(Used_GB(0,j-2:j+3,k-2:k+3,iBlock)) ) then
              call accurate_reschange3d(&
                   Coarse2_V    = Primitive_VGI(:,-1,j,k,iGang)            ,&
                   Coarse1_VII  = Primitive_VGI(:, 0,j-2:j+3,k-2:k+3,iGang),&
@@ -441,17 +441,17 @@ contains
                   CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
                   FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
                   FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1)   ,&
-                  IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
-                  IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
-                  IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
-                  IsTrueFine2_II   = true_cell( 2,j:j+1,k:k+1,iBlock))
+                  IsTrueCoarse2    = Used_GB(-1,j,k,iBlock)        ,&
+                  IsTrueCoarse1    = Used_GB( 0,j,k,iBlock)        ,&
+                  IsTrueFine1  =all(Used_GB( 1,j:j+1,k:k+1,iBlock)),&
+                  IsTrueFine2_II   = Used_GB( 2,j:j+1,k:k+1,iBlock))
           end if
        end do; end do
     case(2)
        !!! acc loop vector collapse(2)
        do k=1,nK,2; do j=1,nJ,2
-          if(  all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
-               all(true_cell(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
+          if(  all(Used_GB(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
+               all(Used_GB(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
              call accurate_reschange3d(&
                   Coarse2_V    = Primitive_VGI(:,nI+2,j,k,iGang)            ,&
                   Coarse1_VII  = Primitive_VGI(:,nI+1,j-2:j+3,k-2:k+3,iGang),&
@@ -469,17 +469,17 @@ contains
                   CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
                   FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
                   FineF_VII        =RightState_VX(:,nI,j:j+1,k:k+1)  ,&
-                  IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
-                  IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
-                  IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
-                  IsTrueFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
+                  IsTrueCoarse2    = Used_GB(nI+2,j,k,iBlock)      ,&
+                  IsTrueCoarse1    = Used_GB(nI+1,j,k,iBlock)      ,&
+                  IsTrueFine1  =all(Used_GB(nI,j:j+1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =Used_GB(nI-1,j:j+1,k:k+1,iBlock))
           end if
        end do; end do
     case(3)
        !!! acc loop vector collapse(2)
        do k=1,nK,2; do i=1,nI,2
-          if(  all(true_cell(i:i+1,-1:2,k:k+1,iBlock)) .and. &
-               all(true_cell(i-2:i+3,0,k-2:k+3,iBlock)) ) then
+          if(  all(Used_GB(i:i+1,-1:2,k:k+1,iBlock)) .and. &
+               all(Used_GB(i-2:i+3,0,k-2:k+3,iBlock)) ) then
              call accurate_reschange3d(&
                   Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
                   Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,0,k-2:k+3,iGang),&
@@ -497,17 +497,17 @@ contains
                   CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
                   FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
                   FineF_VII        = LeftState_VY(:,i:i+1,2,k:k+1)   ,&
-                  IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
-                  IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
-                  IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
-                  IsTrueFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
+                  IsTrueCoarse2    = Used_GB(i,-1,k,iBlock)        ,&
+                  IsTrueCoarse1    = Used_GB(i, 0,k,iBlock)        ,&
+                  IsTrueFine1  =all(Used_GB(i:i+1, 1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =Used_GB(i:i+1, 2,k:k+1,iBlock))
           end if
        end do; end do
     case(4)
        !!! acc loop vector collapse(2)
        do k=1,nK,2; do i=1,nI,2
-          if(  all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
-               all(true_cell(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
+          if(  all(Used_GB(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
+               all(Used_GB(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
              call accurate_reschange3d(&
                   Coarse2_V    = Primitive_VGI(:,i,nJ+2,k,iGang)            ,&
                   Coarse1_VII  = Primitive_VGI(:,i-2:i+3,nJ+1,k-2:k+3,iGang),&
@@ -525,17 +525,17 @@ contains
                   CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
                   FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
                   FineF_VII        = RightState_VY(:,i:i+1,nJ,k:k+1) ,&
-                  IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
-                  IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
-                  IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
-                  IsTrueFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
+                  IsTrueCoarse2    = Used_GB(i,nJ+2,k,iBlock)      ,&
+                  IsTrueCoarse1    = Used_GB(i,nJ+1,k,iBlock)      ,&
+                  IsTrueFine1  =all(Used_GB(i:i+1,nJ,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =Used_GB(i:i+1,nJ-1,k:k+1,iBlock))
           end if
        end do; end do
     case(5)
        !!! acc loop vector collapse(2)
        do j=1,nJ,2; do i=1,nI,2
-          if(  all(true_cell(i:i+1,j:j+1,-1:2,iBlock)) .and. &
-               all(true_cell(i-2:i+3,j-2:j+3,0,iBlock)) ) then
+          if(  all(Used_GB(i:i+1,j:j+1,-1:2,iBlock)) .and. &
+               all(Used_GB(i-2:i+3,j-2:j+3,0,iBlock)) ) then
              call accurate_reschange3d(&
                   Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
                   Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,j-2:j+3,0,iGang),&
@@ -553,17 +553,17 @@ contains
                   CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
                   FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
                   FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2)   ,&
-                  IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
-                  IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
-                  IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
-                  IsTrueFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
+                  IsTrueCoarse2    = Used_GB(i,j,-1,iBlock)        ,&
+                  IsTrueCoarse1    = Used_GB(i,j, 0,iBlock)        ,&
+                  IsTrueFine1 =all(Used_GB(i:i+1,j:j+1, 1,iBlock)),&
+                  IsTrueFine2_II      =Used_GB(i:i+1,j:j+1, 2,iBlock))
           end if
        end do; end do
     case(6)
        !!! acc loop vector collapse(2)
        do j=1,nJ,2; do i=1,nI,2
-          if(  all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
-               all(true_cell(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
+          if(  all(Used_GB(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
+               all(Used_GB(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
              call accurate_reschange3d(&
                   Coarse2_V    = Primitive_VGI(:,i,j,nK+2,iGang)         ,   &
                   Coarse1_VII  = Primitive_VGI(:,i-2:i+3,j-2:j+3,nK+1,iGang),&
@@ -581,10 +581,10 @@ contains
                   CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
                   FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
                   FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)  ,&
-                  IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
-                  IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
-                  IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
-                  IsTrueFine2_II  =true_cell(i:i+1,j:j+1,nK-1,iBlock))
+                  IsTrueCoarse2    =Used_GB(i,j,nK+2,iBlock)       ,&
+                  IsTrueCoarse1    =Used_GB(i,j,nK+1,iBlock)       ,&
+                  IsTrueFine1  =all(Used_GB(i:i+1,j:j+1,nK,iBlock)),&
+                  IsTrueFine2_II  =Used_GB(i:i+1,j:j+1,nK-1,iBlock))
           end if
        end do; end do
     end select
@@ -692,7 +692,7 @@ contains
     case(1)
        !!! acc loop vector collapse(2)
        do k=1,nK,2; do j=1,nJ,2
-          if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
+          if(.not.all(Used_GB(-1:2,j:j+1,k:k+1,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
                   Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
@@ -701,10 +701,10 @@ contains
                   CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
                   FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
                   FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1)   ,&
-                  IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
-                  IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
-                  IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
-                  IsTrueFine2_II      =true_cell( 2,j:j+1,k:k+1,iBlock))
+                  IsTrueCoarse2    = Used_GB(-1,j,k,iBlock)        ,&
+                  IsTrueCoarse1    = Used_GB( 0,j,k,iBlock)        ,&
+                  IsTrueFine1  =all(Used_GB( 1,j:j+1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =Used_GB( 2,j:j+1,k:k+1,iBlock))
           else
              call tvd_reschange(&
                   Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
@@ -719,7 +719,7 @@ contains
     case(2)
        !!! acc loop vector collapse(2)
        do k=1,nK,2; do j=1,nJ,2
-          if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
+          if(.not.all(Used_GB(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,nI+2,j,k,iGang)         ,&
                   Coarse1_V    =    Primitive_VGI(:, nI+1,j,k,iGang)        ,&
@@ -728,10 +728,10 @@ contains
                   CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
                   FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
                   FineF_VII        =RightState_VX(:,nI,j:j+1,k:k+1)  ,&
-                  IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
-                  IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
-                  IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
-                  IsTrueFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
+                  IsTrueCoarse2    = Used_GB(nI+2,j,k,iBlock)      ,&
+                  IsTrueCoarse1    = Used_GB(nI+1,j,k,iBlock)      ,&
+                  IsTrueFine1  =all(Used_GB(nI,j:j+1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =Used_GB(nI-1,j:j+1,k:k+1,iBlock))
           else
              call tvd_reschange(&
                   Coarse2_V    =    Primitive_VGI(:,nI+2,j,k,iGang)         ,&
@@ -746,7 +746,7 @@ contains
     case(3)
        !!! acc loop vector collapse(2)
        do k=1,nK,2; do i=1,nI,2
-          if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
+          if(.not.all(Used_GB(i:i+1,-1:2,k:k+1,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
                   Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
@@ -755,10 +755,10 @@ contains
                   CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
                   FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
                   FineF_VII        = LeftState_VY(:,i:i+1,2,k:k+1)   ,&
-                  IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
-                  IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
-                  IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
-                  IsTrueFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
+                  IsTrueCoarse2    = Used_GB(i,-1,k,iBlock)        ,&
+                  IsTrueCoarse1    = Used_GB(i, 0,k,iBlock)        ,&
+                  IsTrueFine1  =all(Used_GB(i:i+1, 1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =Used_GB(i:i+1, 2,k:k+1,iBlock))
           else
              call tvd_reschange(&
                   Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
@@ -773,7 +773,7 @@ contains
     case(4)
        !!! acc loop vector collapse(2)
        do k=1,nK,2; do i=1,nI,2
-          if(.not.all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
+          if(.not.all(Used_GB(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
                   Coarse1_V    =    Primitive_VGI(:,i,nJ+1,k,iGang)         ,&
@@ -782,10 +782,10 @@ contains
                   CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
                   FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
                   FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)  ,&
-                  IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
-                  IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
-                  IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
-                  IsTrueFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
+                  IsTrueCoarse2    = Used_GB(i,nJ+2,k,iBlock)      ,&
+                  IsTrueCoarse1    = Used_GB(i,nJ+1,k,iBlock)      ,&
+                  IsTrueFine1  =all(Used_GB(i:i+1,nJ,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =Used_GB(i:i+1,nJ-1,k:k+1,iBlock))
           else
              call tvd_reschange(&
                   Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
@@ -800,7 +800,7 @@ contains
     case(5)
        !!! acc loop vector collapse(2)
        do j=1,nJ,2; do i=1,nI,2
-          if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
+          if(.not.all(Used_GB(i:i+1,j:j+1,-1:2,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
                   Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
@@ -809,10 +809,10 @@ contains
                   CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
                   FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
                   FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2)   ,&
-                  IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
-                  IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
-                  IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
-                  IsTrueFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
+                  IsTrueCoarse2    = Used_GB(i,j,-1,iBlock)        ,&
+                  IsTrueCoarse1    = Used_GB(i,j, 0,iBlock)        ,&
+                  IsTrueFine1 =all(Used_GB(i:i+1,j:j+1, 1,iBlock)),&
+                  IsTrueFine2_II      =Used_GB(i:i+1,j:j+1, 2,iBlock))
           else
              call tvd_reschange(&
                   Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
@@ -827,7 +827,7 @@ contains
     case(6)
        !!! acc loop vector collapse(2)
        do j=1,nJ,2; do i=1,nI,2
-          if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
+          if(.not.all(Used_GB(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
                   Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
@@ -836,10 +836,10 @@ contains
                   CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
                   FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
                   FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)  ,&
-                  IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
-                  IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
-                  IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
-                  IsTrueFine2_II  =true_cell(i:i+1,j:j+1,nK-1,iBlock))
+                  IsTrueCoarse2    =Used_GB(i,j,nK+2,iBlock)       ,&
+                  IsTrueCoarse1    =Used_GB(i,j,nK+1,iBlock)       ,&
+                  IsTrueFine1  =all(Used_GB(i:i+1,j:j+1,nK,iBlock)),&
+                  IsTrueFine2_II  =Used_GB(i:i+1,j:j+1,nK-1,iBlock))
           else
              call tvd_reschange(&
                   Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
@@ -921,23 +921,23 @@ contains
        if(iDimTest==0 .or. iDimTest==1)then
           write(*,*)'TestVar(iTest-nG:iTest+nG)=', &
                State_VGB(iVarTest,iTest-nG:iTest+nG,jTest,kTest,iBlockTest)
-          if(.not.all(true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlockTest))) &
-               write(*,*)'true_cell(iTest-nG:iTest+nG)=',&
-               true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlockTest)
+          if(.not.all(Used_GB(iTest-nG:iTest+nG,jTest,kTest,iBlockTest))) &
+               write(*,*)'Used_GB(iTest-nG:iTest+nG)=',&
+               Used_GB(iTest-nG:iTest+nG,jTest,kTest,iBlockTest)
        end if
        if(nDim > 1 .and. (iDimTest==0 .or. iDimTest==2))then
           write(*,*)'TestVar(jTest-nG:jTest+nG)=', &
                State_VGB(iVarTest,iTest,jTest-nG:jTest+nG,kTest,iBlockTest)
-          if(.not.all(true_cell(iTest,jTest-nG:jTest+nG,kTest,iBlockTest))) &
-               write(*,*)'true_cell(jTest-nG:jTest+nG)=',&
-               true_cell(iTest,jTest-nG:jTest+nG,kTest,iBlockTest)
+          if(.not.all(Used_GB(iTest,jTest-nG:jTest+nG,kTest,iBlockTest))) &
+               write(*,*)'Used_GB(jTest-nG:jTest+nG)=',&
+               Used_GB(iTest,jTest-nG:jTest+nG,kTest,iBlockTest)
        end if
        if(nDim > 2 .and. (iDimTest==0 .or. iDimTest==3)) then
           write(*,*)'TestVar(kTest-nG:kTest+nG)=', &
                State_VGB(iVarTest,iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
-          if(.not.all(true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest))) &
-               write(*,*)'true_cell(kTest-nG:kTest+nG)=', &
-               true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
+          if(.not.all(Used_GB(iTest,jTest,kTest-nG:kTest+nG,iBlockTest))) &
+               write(*,*)'Used_GB(kTest-nG:kTest+nG)=', &
+               Used_GB(iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
        end if
     end if
 
@@ -948,7 +948,7 @@ contains
        allocate(WeightR_II(-2:2,0:MaxIJK+1))
     endif
 
-    UseTrueCell = body_BLK(iBlock)
+    UseTrueCell = IsBody_B(iBlock)
 
     UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
     UseLogLimiter_V = .false.
@@ -1616,7 +1616,7 @@ contains
                if(nLowOrder==2) then
                   ! IsTrueCell needed by limiter_body
                   IsTrueCell_I(iMin-nG:iMax-1+nG) = &
-                       true_cell(iMin-nG:iMax-1+nG,j,k,iBlock)
+                       Used_GB(iMin-nG:iMax-1+nG,j,k,iBlock)
                   ! Get 2nd order limited slopes
                   if(UseTrueCell)then
                      call limiter_body(iMin, iMax, BetaLimiter,&
@@ -1752,7 +1752,7 @@ contains
 
                if(nLowOrder==2) then
                   IsTrueCell_I(jMin-nG:jMax-1+nG) = &
-                       true_cell(i,jMin-nG:jMax-1+nG,k,iBlock)
+                       Used_GB(i,jMin-nG:jMax-1+nG,k,iBlock)
                   if(UseTrueCell)then
                      call limiter_body(jMin, jMax, BetaLimiter,&
                           Primitive_VI,dVarLimL_VI,dVarLimR_VI)
@@ -1890,7 +1890,7 @@ contains
 
                if(nLowOrder==2) then
                   IsTrueCell_I(kMin-nG:kMax-1+nG) = &
-                       true_cell(i,j,kMin-nG:kMax-1+nG,iBlock)
+                       Used_GB(i,j,kMin-nG:kMax-1+nG,iBlock)
                   if(UseTrueCell)then
                      call limiter_body(kMin, kMax, BetaLimiter,&
                           Primitive_VI,dVarLimL_VI,dVarLimR_VI)
@@ -2069,7 +2069,7 @@ contains
          Primitive_VI(:,iMin-2:iMax+1) &
               = Primitive_VGI(:,iMin-2:iMax+1,j,k,iGang)
          if(UseTrueCell)then
-            IsTrueCell_I(iMin-2:iMax+1) = true_cell(iMin-2:iMax+1,j,k,iBlock)
+            IsTrueCell_I(iMin-2:iMax+1) = Used_GB(iMin-2:iMax+1,j,k,iBlock)
             if(iMinSharp <= iMaxSharp) &
                  call limiter_body(iMinSharp, iMaxSharp, BetaLimiter,&
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
@@ -2128,7 +2128,7 @@ contains
          Primitive_VI(:,jMin-2:jMax+1) &
               = Primitive_VGI(:,i,jMin-2:jMax+1,k,iGang)
          if(UseTrueCell)then
-            IsTrueCell_I(jMin-2:jMax+1) = true_cell(i,jMin-2:jMax+1,k,iBlock)
+            IsTrueCell_I(jMin-2:jMax+1) = Used_GB(i,jMin-2:jMax+1,k,iBlock)
             if(jMinSharp <= jMaxSharp) &
                  call limiter_body(jMinSharp, jMaxSharp, BetaLimiter,&
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
@@ -2187,7 +2187,7 @@ contains
          Primitive_VI(:,kMin-2:kMax+1) &
               = Primitive_VGI(:,i,j,kMin-2:kMax+1,iGang)
          if(UseTrueCell)then
-            IsTrueCell_I(kMin-2:kMax+1) = true_cell(i,j,kMin-2:kMax+1,iBlock)
+            IsTrueCell_I(kMin-2:kMax+1) = Used_GB(i,j,kMin-2:kMax+1,iBlock)
             if(kMinSharp <= kMaxSharp) &
                  call limiter_body(kMinSharp, kMaxSharp, BetaLimiter,&
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
@@ -2856,18 +2856,18 @@ contains
              else if(UseTrueCell)then
                 ! The 5th order schemes need 3 cells on both sides of the face
                 do k=1, nK; do j=1, nJ; do i = 1, nI+1
-                   if(.not.all(true_cell(i-3:i+2,j,k,iBlock))) &
+                   if(.not.all(Used_GB(i-3:i+2,j,k,iBlock))) &
                         LowOrderCrit_XB(i,j,k,iBlock) = cLowOrder
                 end do; end do; end do
                 if(nDim > 1)then
                    do k=1, nK; do j=1, nJ+1; do i = 1, nI
-                      if(.not.all(true_cell(i,j-3:j+2,j,iBlock))) &
+                      if(.not.all(Used_GB(i,j-3:j+2,j,iBlock))) &
                            LowOrderCrit_YB(i,j,k,iBlock) = cLowOrder
                    end do; end do; end do
                 end if
                 if(nDim > 2)then
                    do k=1, nK+1; do j=1, nJ; do i = 1, nI
-                      if(.not.all(true_cell(i,j,k-3:k+2,iBlock))) &
+                      if(.not.all(Used_GB(i,j,k-3:k+2,iBlock))) &
                            LowOrderCrit_ZB(i,j,k,iBlock) = cLowOrder
                    end do; end do; end do
                 end if

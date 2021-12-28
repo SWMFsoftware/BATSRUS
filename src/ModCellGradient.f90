@@ -9,7 +9,7 @@ module ModCellGradient
        CellSize_DB,  CellFace_DB, FaceNormal_DDFB, CellVolume_GB, &
        IsCartesian, IsCartesianGrid, Unused_B, nBlock, MaxBlock,&
        nDim, jDim_, kDim_, x_, y_, z_, Dim1_, Dim2_, Dim3_
-  use ModGeometry, ONLY: body_blk, true_cell
+  use ModGeometry, ONLY: IsBody_B, Used_GB
   use omp_lib
 
   implicit none
@@ -43,7 +43,7 @@ contains
     ! nG ghost cells.
     ! Body (false) cells are ignored unless UseBodyCellIn is set to true.
 
-    use ModGeometry, ONLY: body_blk, true_cell
+    use ModGeometry, ONLY: IsBody_B, Used_GB
 
     ! Calculate divergence Div_G of Var_DG on a Cartesian grid
 
@@ -67,7 +67,7 @@ contains
     UseBodyCell = .false.
     if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
 
-    if(UseBodyCell .or. .not. body_blk(iBlock)) then
+    if(UseBodyCell .or. .not. IsBody_B(iBlock)) then
        if(IsCartesian)then
 
           ! Simple central differencing
@@ -108,16 +108,16 @@ contains
 
        ! Set iTrue_G to 1 in used cells and 0 in non-used cells
        if(.not.allocated(iTrue_G)) allocate(iTrue_G(0:nI+1,0:nJ+1,0:nK+1))
-       where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock))
+       where(Used_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock))
           iTrue_G = 1
        elsewhere
           iTrue_G = 0
        end where
 
        if(IsCartesian)then
-          ! Where .not.true_cell, all the gradients are zero
-          ! In true_cell the input to gradient from the face neighbor
-          ! is ignored, if the face neighbor is .not.true_cell, the input
+          ! Where .not.Used_GB, all the gradients are zero
+          ! In Used_GB the input to gradient from the face neighbor
+          ! is ignored, if the face neighbor is .not.Used_GB, the input
           ! from the opposite cell is doubled in this case
 
           InvDx = 1/CellSize_DB(1,iBlock)
@@ -126,7 +126,7 @@ contains
 
           do k=1,nK; do j=1,nJ; do i=1,nI
              Div_G(i,j,k) = 0.0
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              ! Shift to left and right if the neighbor is a true cell
              iL = i - iTrue_G(i-1,j,k); iR = i + iTrue_G(i+1,j,k)
@@ -157,7 +157,7 @@ contains
 
           do k=1,nK; do j=1,nJ; do i=1,nI
              Div_G(i,j,k) = 0.0
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              ! Shift to left and right if the neighbor is a true cell
              iL = i - iTrue_G(i-1,j,k); iR = i + iTrue_G(i+1,j,k)
@@ -222,7 +222,7 @@ contains
     UseBodyCell = .false.
     if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
 
-    if(UseBodyCell .or. .not. body_blk(iBlock)) then
+    if(UseBodyCell .or. .not. IsBody_B(iBlock)) then
        if(IsCartesian)then
 
           ! Simple central differencing
@@ -262,7 +262,7 @@ contains
 
        ! Set iTrue_G to 1 in used cells and 0 in non-used cells
        if(.not.allocated(iTrue_G)) allocate(iTrue_G(0:nI+1,0:nJ+1,0:nK+1))
-       where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock))
+       where(Used_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock))
           iTrue_G = 1
        elsewhere
           iTrue_G = 0
@@ -275,7 +275,7 @@ contains
 
           do k=1,nK; do j=1,nJ; do i=1,nI
              Grad_DG(:,i,j,k) = 0.0
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              ! Shift to left and right if the neighbor is a true cell
              ! If at least one neighbor is true, calculate derivative
@@ -305,7 +305,7 @@ contains
 
           do k=1,nK; do j=1,nJ; do i=1,nI
              Grad_DG(:,i,j,k) = 0.0
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              ! Shift to left and right if the neighbor is a true cell
              iL = i - iTrue_G(i-1,j,k); iR = i + iTrue_G(i+1,j,k)
@@ -363,7 +363,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     if(IsCartesianGrid)then
-       if(.not.body_blk(iBlock)) then
+       if(.not.IsBody_B(iBlock)) then
           do k=1,nK; do j=1,nJ; do i=1,nI
              VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
 
@@ -383,15 +383,15 @@ contains
              end if
           end do; end do; end do
        else
-          where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock))
+          where(Used_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock))
              OneTrue_G = 1.0
           elsewhere
              OneTrue_G = 0.0
           end where
           !
-          ! Where .not.true_cell, all the gradients are zero
-          ! In true_cell the input to gradient from the face neighbor
-          ! is ignored, if the face neighbor is .not.true_cell, the input
+          ! Where .not.Used_GB, all the gradients are zero
+          ! In Used_GB the input to gradient from the face neighbor
+          ! is ignored, if the face neighbor is .not.Used_GB, the input
           ! from the opposite cell is doubled in this case
           !
           do k=1,nK; do j=1,nJ; do i=1,nI
@@ -433,7 +433,7 @@ contains
           end do; end do; end do
        end if
     else
-       if(.not.body_BLK(iBlock)) then
+       if(.not.IsBody_B(iBlock)) then
           do k=1,nK; do j=1,nJ; do i=1,nI
              VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
 
@@ -453,13 +453,13 @@ contains
              GradZ_C(i,j,k) = sum(FaceArea_DS(z_,:)*Difference_S)*VInvHalf
           end do; end do; end do
        else
-          where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock))
+          where(Used_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock))
              OneTrue_G = 1.0
           elsewhere
              OneTrue_G = 0.0
           end where
           do k=1,nK;  do j=1,nJ; do i=1,nI
-             if(.not.true_cell(i,j,k,iBlock))then
+             if(.not.Used_GB(i,j,k,iBlock))then
                 GradX_C(i,j,k) = 0.0
                 GradY_C(i,j,k) = 0.0
                 GradZ_C(i,j,k) = 0.0
@@ -598,7 +598,7 @@ contains
 !    ! Calculate curl of Var_DG on a Cartesian grid.
 !    ! Need to include general coordinates calculation in the future.
 !
-!    use ModGeometry, ONLY: body_blk, true_cell
+!    use ModGeometry, ONLY: IsBody_B, Used_GB
 !    ! hyzhou test
 !    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
 !
@@ -622,7 +622,7 @@ contains
 !    UseBodyCell = .false.
 !    if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
 !
-!    if(UseBodyCell .or. .not. body_blk(iBlock)) then
+!    if(UseBodyCell .or. .not. IsBody_B(iBlock)) then
 !       if(IsCartesian)then
 !
 !          ! For test comparison with get_current
@@ -663,7 +663,7 @@ contains
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
-    use ModGeometry, ONLY: True_Cell, true_BLK
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(in) :: Vector_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -673,7 +673,7 @@ contains
     real   :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     real   :: InvDx2, InvDy2, InvDz2
 
-!    if(.not.True_Cell(i,j,k,iBlock))then
+!    if(.not.Used_GB(i,j,k,iBlock))then
 !       Curl_D = 0.0
 !       RETURN
 !    endif

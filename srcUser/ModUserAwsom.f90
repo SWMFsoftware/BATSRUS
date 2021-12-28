@@ -246,7 +246,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModB0,         ONLY: B0_DGB
     use ModCoronalHeating, ONLY: UseTurbulentCascade
-    use ModGeometry,   ONLY: Xyz_DGB, r_Blk
+    use ModGeometry,   ONLY: Xyz_DGB, r_GB
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: rBody, GBody, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
@@ -305,7 +305,7 @@ contains
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
        z = Xyz_DGB(z_,i,j,k,iBlock)
-       r = r_BLK(i,j,k,iBlock)
+       r = r_GB(i,j,k,iBlock)
        r_D = [x,y,z]
 
        if(r < rParker .and. UseAwsom)then
@@ -420,7 +420,7 @@ contains
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_, WaveLast_, WaveFirst_, &
          Rho_, RhoUx_, RhoUz_
     use BATL_lib,      ONLY: integrate_grid, Xyz_DGB
-    use ModGeometry,   ONLY: R_BLK
+    use ModGeometry,   ONLY: r_GB
     use ModWriteLogSatFile, ONLY: calc_sphere
 
     real, intent(out) :: VarValue
@@ -488,7 +488,7 @@ contains
                 Wmajor=State_VGB(WaveFirst_,i,j,k,iBlock)
                 Wminor=State_VGB(WaveLast_,i,j,k,iBlock)
              end if
-             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
              Rho = State_VGB(Rho_,i,j,k,iBlock)
              Var = abs(sum(rUnit_D*FullB_D)/sqrt(Rho))
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
@@ -515,7 +515,7 @@ contains
                 Wmajor=State_VGB(WaveFirst_,i,j,k,iBlock)
                 Wminor=State_VGB(WaveLast_,i,j,k,iBlock)
              end if
-             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
              Rho = State_VGB(Rho_,i,j,k,iBlock)
              Var = abs(sum(rUnit_D*FullB_D)/sqrt(Rho))
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
@@ -541,7 +541,7 @@ contains
                 Wmajor=State_VGB(WaveFirst_,i,j,k,iBlock)
                 Wminor=State_VGB(WaveLast_,i,j,k,iBlock)
              end if
-             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
              Rho = State_VGB(Rho_,i,j,k,iBlock)
              Var = abs(sum(rUnit_D*FullB_D)/sqrt(Rho))
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
@@ -557,7 +557,7 @@ contains
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
           do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
-             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
              Rho = State_VGB(Rho_,i,j,k,iBlock)
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
                         Rho
@@ -604,7 +604,7 @@ contains
     use ModUtilities, ONLY: norm2
     use ModConst, ONLY: cBoltzmann, cElectronMass, cProtonMass, cTwoPi, &
          cElectronCharge, cEps
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModCellGradient, ONLY: calc_divergence
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
@@ -826,7 +826,7 @@ contains
        ! see ModHeatConduction for more explanations of the coefficients
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           if (Ehot_>1 .and. UseHeatFluxCollisionless) then
              call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
              InvGammaM1 = 1./(GammaTmp-1)
@@ -890,7 +890,7 @@ contains
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
-    use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
+    use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, Ehot_, &
@@ -983,7 +983,7 @@ contains
 
        do k = MinK, MaxK; do j = MinJ, MaxJ
 
-          Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
+          Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
           Br1_D = sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
           Bt1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) - Br1_D
@@ -1001,7 +1001,7 @@ contains
                 State_VGB(iRho,i,j,k,iBlock) = &
                      Nchromo*MassFluid_I(iFluid)*exp(-GBody/rBody &
                      *MassFluid_I(iFluid)/Tchromo &
-                     *(rBody/r_BLK(i,j,k,iBlock) - 1.0))
+                     *(rBody/r_GB(i,j,k,iBlock) - 1.0))
 
                 ! Fix ion temperature T_s
                 State_VGB(iP_I(iFluid),i,j,k,iBlock) = Tchromo &
@@ -1079,7 +1079,7 @@ contains
        ! start of CME part
        if(UseCme)then
           do k = MinK, MaxK; do j = MinJ, MaxJ
-             Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
+             Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
              call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                   tSimulation, nStep, nIteration)
@@ -1149,7 +1149,7 @@ contains
           !
           do k = MinK, MaxK; do j = MinJ, MaxJ
 
-             r1 = r_BLK(1,j,k,iBlock)
+             r1 = r_GB(1,j,k,iBlock)
              r2Inv = r1**(-2)
              bFace_D = 0.5*(B0_DGB(:,0,j,k,iBlock) &
                   +         B0_DGB(:,1,j,k,iBlock))
@@ -1162,7 +1162,7 @@ contains
              ! Latitude = arccos(z/r)
              ! Longitude = arctg(y/x)
              !
-             r1 = r_BLK(1,j,k,iBlock)
+             r1 = r_GB(1,j,k,iBlock)
              Xyz1_D = Xyz_DGB(:,1,j,k,iBlock)
              rCosLat = sqrt(Xyz1_D(x_)**2 + Xyz1_D(y_)**2)
              ! GradBr = (0 ,
@@ -1203,7 +1203,7 @@ contains
 
              do i = MinI, iBcMax
 
-                r = r_BLK(i,j,k,iBlock)
+                r = r_GB(i,j,k,iBlock)
                 ! Convert to Cartesian components
                 XyzSph_DD = rot_xyz_sph(Xyz1_D)
 
@@ -1344,7 +1344,7 @@ contains
        ! which averages the cell centered heat conduction coefficient towards
        ! the face
        do k = MinK,MaxK; do j = MinJ,MaxJ
-          Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
+          Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
           Br1_D = sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
           Bt1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) - Br1_D
@@ -1357,7 +1357,7 @@ contains
 
        if(UseCme)then
           do k = MinK, MaxK; do j = MinJ, MaxJ
-             Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
+             Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
              call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                   tSimulation, nStep, nIteration)
@@ -1771,7 +1771,7 @@ contains
 
     use ModUpdateState, ONLY: update_state_normal
 
-    use ModGeometry, ONLY: true_cell, R_BLK, true_BLK
+    use ModGeometry, ONLY: Used_GB, r_GB, IsNoBody_B
 
     integer,intent(in):: iBlock
     logical:: DoTest
@@ -1781,9 +1781,9 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseSteady)then
-       if(minval(R_BLK(1:nI,1:nJ,1:nK,iBlock)) <= rSteady)then
-          true_cell(1:nI,1:nJ,1:nK,iBlock) = .false.
-          true_BLK(iBlock) = .false.
+       if(minval(r_GB(1:nI,1:nJ,1:nK,iBlock)) <= rSteady)then
+          Used_GB(1:nI,1:nJ,1:nK,iBlock) = .false.
+          IsNoBody_B(iBlock) = .false.
        end if
     end if
     call update_state_normal(iBlock)

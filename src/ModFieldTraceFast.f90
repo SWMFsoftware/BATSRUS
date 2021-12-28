@@ -172,7 +172,7 @@ contains
   subroutine trace_grid_fast
 
     use ModParallel, ONLY: NOBLK, neiLEV
-    use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
+    use ModGeometry, ONLY: r_GB, rMin_B, Used_GB
     use ModMpi
 
     ! Iteration parameters
@@ -189,7 +189,7 @@ contains
     ! Minimum value of B for which integration of field lines makes any sense
     real, parameter :: SmallB = 1e-8
 
-    ! True if Rmin_BLK < rTrace
+    ! True if rMin_B < rTrace
     logical :: DoCheckInside
 
     ! Face index for the final point of the ray
@@ -343,7 +343,7 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           ! Flag cells inside the ionosphere if necessary
-          DoCheckInside=Rmin_BLK(iBlock)<rTrace
+          DoCheckInside=rMin_B(iBlock)<rTrace
 
           !$acc loop vector collapse(3) independent &
           !$acc private(Gen_D, GenIni_D, Weight_I, Trace_DI, &
@@ -536,7 +536,7 @@ contains
        if(Unused_B(iBlock))CYCLE
 
        ! Set flag if checking on the ionosphere is necessary
-       DoCheckInside = Rmin_BLK(iBlock) < rTrace
+       DoCheckInside = rMin_B(iBlock) < rTrace
 
        do iRay=1,2
 #ifndef _OPENACC
@@ -552,8 +552,8 @@ contains
           do iZ=1,nK; do iY=1,nJ; do iX=1,nI
 
              ! Shortcuts for inner and false cells
-             if(R_BLK(iX,iY,iZ,iBlock) < rInner .or. &
-                  .not.true_cell(iX,iY,iZ,iBlock))then
+             if(r_GB(iX,iY,iZ,iBlock) < rInner .or. &
+                  .not.Used_GB(iX,iY,iZ,iBlock))then
                 ray(:,iRay,iX,iY,iZ,iBlock)=BODYRAY
 
                 if(DoTestRay)write(*,*)'BODYRAY'

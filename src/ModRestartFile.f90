@@ -16,7 +16,7 @@ module ModRestartFile
        NameThisComp, nIteration, DoThinCurrentSheet, NameVarCouple
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
   use ModAdvance,    ONLY: State_VGB
-  use ModGeometry,   ONLY: CellSize_DB, xyzStart_BLK, NameGridFile
+  use ModGeometry,   ONLY: CellSize_DB, Coord111_DB, NameGridFile
   use ModIO,         ONLY: Restart_Bface
   use ModConstrainDivB, ONLY: BxFace_BLK, ByFace_BLK, BzFace_BLK
   use ModMain,       ONLY: UseConstrainB
@@ -191,7 +191,7 @@ contains
   subroutine write_restart_files
 
     use ModB0,       ONLY: UseB0, add_b0, subtract_b0, B0_DGB
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModMain,     ONLY: UseFieldLineThreads, UseBufferGrid
     use ModFieldLineThread, ONLY: save_thread_restart
     use ModBuffer,   ONLY: save_buffer_restart
@@ -266,9 +266,9 @@ contains
     if(DoTest .and. iProc==iProcTest)then
        write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
        write(*,*)NameSub,': dt, TrueCell   =',Dt_B(iBlockTest), &
-            true_cell(iTest,jTest,kTest,iBlockTest)
+            Used_GB(iTest,jTest,kTest,iBlockTest)
        write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
-       write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,iBlockTest)
+       write(*,*)NameSub,': Coord111_DB   =',Coord111_DB(:,iBlockTest)
        write(*,*)NameSub,': State_VGB      =', &
             State_VGB(:,iTest,jTest,kTest,iBlockTest)
        write(*,*)NameSub,' finished'
@@ -358,7 +358,7 @@ contains
        write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
        write(*,*)NameSub,': dt             =',Dt_B(iBlockTest)
        write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
-       write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,iBlockTest)
+       write(*,*)NameSub,': Coord111_DB   =',Coord111_DB(:,iBlockTest)
        write(*,*)NameSub,': State_VGB      =', &
             State_VGB(:,iTest,jTest,kTest,iBlockTest)
        write(*,*)NameSub,' finished'
@@ -391,7 +391,7 @@ contains
     use ModVarIndexes, ONLY: NameEquation
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
 
-    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, &
+    use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
     use CON_planet,  ONLY: NamePlanet
     use ModReadParam, ONLY: i_line_command
@@ -511,12 +511,12 @@ contains
     write(UnitTmp_,'(i8,a)') nRoot_D(1), cTab//cTab//'nRootBlock1'
     write(UnitTmp_,'(i8,a)') nRoot_D(2), cTab//cTab//'nRootBlock2'
     write(UnitTmp_,'(i8,a)') nRoot_D(3), cTab//cTab//'nRootBlock3'
-    write(UnitTmp_,'(es22.15,a)') x1,    cTab//cTab//'xMin'
-    write(UnitTmp_,'(es22.15,a)') x2,    cTab//cTab//'xMax'
-    write(UnitTmp_,'(es22.15,a)') y1,    cTab//cTab//'yMin'
-    write(UnitTmp_,'(es22.15,a)') y2,    cTab//cTab//'yMax'
-    write(UnitTmp_,'(es22.15,a)') z1,    cTab//cTab//'zMin'
-    write(UnitTmp_,'(es22.15,a)') z2,    cTab//cTab//'zMax'
+    write(UnitTmp_,'(es22.15,a)') xMinBox,    cTab//cTab//'xMin'
+    write(UnitTmp_,'(es22.15,a)') xMaxBox,    cTab//cTab//'xMax'
+    write(UnitTmp_,'(es22.15,a)') yMinBox,    cTab//cTab//'yMin'
+    write(UnitTmp_,'(es22.15,a)') yMaxBox,    cTab//cTab//'yMax'
+    write(UnitTmp_,'(es22.15,a)') zMinBox,    cTab//cTab//'zMin'
+    write(UnitTmp_,'(es22.15,a)') zMaxBox,    cTab//cTab//'zMax'
     write(UnitTmp_,*)
     if(.not.IsCartesianGrid .and.  RadiusMin >= 0.0 .and. RadiusMax > 0.0 &
          .and. .not.IsLimitedGeometry)then
@@ -724,7 +724,7 @@ contains
 
        read(UnitTmp_, iostat = iError) Dxyz8_D, Xyz8_D
        CellSize_DB(:,iBlock) = Dxyz8_D
-       XyzStart_BLK(:,iBlock) = Xyz8_D
+       Coord111_DB(:,iBlock) = Xyz8_D
 
        read(UnitTmp_, iostat = iError) State8_CV
 
@@ -751,7 +751,7 @@ contains
 
        read(UnitTmp_, iostat = iError) Dxyz4_D, Xyz4_D
        CellSize_DB(:,iBlock) = Dxyz4_D
-       XyzStart_BLK(:,iBlock) = Xyz4_D
+       Coord111_DB(:,iBlock) = Xyz4_D
 
        read(UnitTmp_, iostat = iError) State4_CV
        do iVar = 1, nVarRestart
@@ -786,7 +786,7 @@ contains
        write(*,*)'iBlock  =', iBlock
        write(*,*)'Dxyz    =', CellSize_DB(:,iBlock)
        write(*,*)'Dt,tSim =', Dt_B(iBlock), tSimulationRead
-       write(*,*)'XyzStart=', XyzStart_BLK(:,iBlock)
+       write(*,*)'XyzStart=', Coord111_DB(:,iBlock)
        write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
        call stop_mpi(NameSub//': corrupt restart data!!!')
     end if
@@ -795,7 +795,7 @@ contains
        write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
        write(*,*)NameSub,': dt,tSimRead =',Dt_B(iBlock),tSimulationRead
        write(*,*)NameSub,': dx,dy,dz_BLK=', CellSize_DB(:,iBlock)
-       write(*,*)NameSub,': xyzStart_BLK=',xyzStart_BLK(:,iBlock)
+       write(*,*)NameSub,': Coord111_DB=',Coord111_DB(:,iBlock)
        write(*,*)NameSub,': StateRead_VCB   =', &
             StateRead_VCB(:,iTest,jTest,kTest,iBlock)
        write(*,*)NameSub,' finished'
@@ -829,7 +829,7 @@ contains
     call open_file(file=NameFile, form='UNFORMATTED', NameCaller=NameSub)
 
     write(UnitTmp_) Dt_B(iBlock),tSimulation
-    write(UnitTmp_) CellSize_DB(:,iBlock), xyzStart_BLK(:,iBlock)
+    write(UnitTmp_) CellSize_DB(:,iBlock), Coord111_DB(:,iBlock)
     write(UnitTmp_) &
          ( State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock), iVar=1,nVar)
     if(UseConstrainB)then
@@ -866,11 +866,11 @@ contains
     ! Calculate the record length for the first block
     if (DoRead) then
        inquire (IOLENGTH = lRecord ) &
-            Dt_B(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
+            Dt_B(1), CellSize_DB(:,1), Coord111_DB(:,1), &
             StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,1)
     else
        inquire (IOLENGTH = lRecord ) &
-            Dt_B(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
+            Dt_B(1), CellSize_DB(:,1), Coord111_DB(:,1), &
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,1)
     end if
 
@@ -999,7 +999,7 @@ contains
 
           Dt_B(iBlock) = Dt4
           CellSize_DB(:,iBlock)  = Dxyz4_D
-          XyzStart_BLK(:,iBlock) = Xyz4_D
+          Coord111_DB(:,iBlock) = Xyz4_D
           StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,iBlock) = State4_VC
 
        else
@@ -1030,7 +1030,7 @@ contains
 
           Dt_B(iBlock) = Dt8
           CellSize_DB(:,iBLock) = Dxyz8_D
-          XyzStart_BLK(:,iBlock) = Xyz8_D
+          Coord111_DB(:,iBlock) = Xyz8_D
           StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,iBlock) = State8_VC
        end if
 
@@ -1039,7 +1039,7 @@ contains
           write(*,*)'iBlock  =', iBlock
           write(*,*)'Dxyz    =', CellSize_DB(:,iBLock)
           write(*,*)'Dt      =', Dt_B(iBlock)
-          write(*,*)'XyzStart=', XyzStart_BLK(:,iBlock)
+          write(*,*)'XyzStart=', Coord111_DB(:,iBlock)
           write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
           call stop_mpi(NameSub//': corrupt restart data!!!')
        end if
@@ -1090,7 +1090,7 @@ contains
           ! Save face centered magnetic field
           write(UnitTmp_, rec=iRec)  Dt_B(iBlock),&
                CellSize_DB(:,iBLock), &
-               XyzStart_BLK(:,iBlock), &
+               Coord111_DB(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
                BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock),&
                ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock),&
@@ -1102,7 +1102,7 @@ contains
           write(UnitTmp_, rec=iRec) &
                Dt_B(iBlock), &
                CellSize_DB(:,iBLock), &
-               XyzStart_BLK(:,iBlock), &
+               Coord111_DB(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
                (ImplOld_VCB(iVar,:,:,:,iBlock), iVar = 1, nVar)
           CYCLE
@@ -1111,7 +1111,7 @@ contains
        write(UnitTmp_, rec=iRec) &
             Dt_B(iBlock), &
             CellSize_DB(:,iBLock), &
-            XyzStart_BLK(:,iBlock), &
+            Coord111_DB(:,iBlock), &
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
     end do
 

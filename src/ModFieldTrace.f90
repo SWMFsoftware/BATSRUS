@@ -487,7 +487,7 @@ contains
     use ModMain
     use ModAdvance,       ONLY: State_VGB, Bx_, Bz_
     use ModB0,            ONLY: B0_DGB
-    use ModGeometry,      ONLY: r_BLK, true_cell
+    use ModGeometry,      ONLY: r_GB, Used_GB
     use BATL_lib,         ONLY: Xyz_DGB, message_pass_cell
     use ModMpi
 
@@ -552,8 +552,8 @@ contains
 
           do iRay = 1,2
              ! Short cut for inner and false cells
-             if(R_BLK(i,j,k,iBlock) < rInner .or. &
-                  .not.true_cell(i,j,k,iBlock))then
+             if(r_GB(i,j,k,iBlock) < rInner .or. &
+                  .not.Used_GB(i,j,k,iBlock))then
                 ray(:,:,i,j,k,iBlock)=BODYRAY
                 if(DoTestRay)write(*,*)'Shortcut BODYRAY iProc,iRay=',iProc,iRay
                 CYCLE
@@ -1039,8 +1039,8 @@ contains
     ! Return ray_open_    if the ray goes outside the computational box
 
     use ModMain, ONLY: nI, nJ, nK
-    use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
-         rMin_BLK, x1,x2,y1,y2,z1,z2
+    use ModGeometry, ONLY: Coord111_DB, XyzMax_D, XyzMin_D, &
+         rMin_B, xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
     use CON_planet, ONLY: DipoleStrength
     use ModMultiFLuid
     use BATL_lib, ONLY: xyz_to_coord, Xyz_DGB, CellSize_DB
@@ -1089,7 +1089,7 @@ contains
     integer :: nSegment
     integer :: nSegmentMax=10*(nI+nJ+nK)
 
-    ! True if Rmin_BLK < rTrace
+    ! True if rMin_B < rTrace
     logical :: DoCheckInnerBc
 
     ! True if the block already containes open rays
@@ -1127,13 +1127,13 @@ contains
     ! Convert initial position to block coordinates
     XyzCur_D = XyzInOut_D
     call xyz_to_ijk(XyzCur_D, IjkCur_D, iBlock, &
-         XyzCur_D, XyzStart_BLK(:,iBlock), Dxyz_D)
+         XyzCur_D, Coord111_DB(:,iBlock), Dxyz_D)
 
     ! Set flag if checking on the ionosphere is necessary
     if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
-       DoCheckInnerBc = Rmin_BLK(iBlock) < rTrace + sum(Dxyz_D)
+       DoCheckInnerBc = rMin_B(iBlock) < rTrace + sum(Dxyz_D)
     else
-       DoCheckInnerBc = Rmin_BLK(iBlock) < 1.2*rTrace
+       DoCheckInnerBc = rMin_B(iBlock) < 1.2*rTrace
     end if
 
     ! Set flag if checking for open rays is useful
@@ -1147,8 +1147,8 @@ contains
     GenMax_D = [nI+1.0, nJ+1.0, nK+1.0]
 
     ! Go out to the block interface at the edges of the computational domain
-    where(XyzStart_BLK(:,iBlock)+Dxyz_D*(GenMax_D-1.0) > XyzMax_D)GenMax_D = GenMax_D - 0.5
-    where(XyzStart_BLK(:,iBlock)+Dxyz_D*(GenMin_D-1.0) < XyzMin_D)GenMin_D = GenMin_D + 0.5
+    where(Coord111_DB(:,iBlock)+Dxyz_D*(GenMax_D-1.0) > XyzMax_D)GenMax_D = GenMax_D - 0.5
+    where(Coord111_DB(:,iBlock)+Dxyz_D*(GenMin_D-1.0) < XyzMin_D)GenMin_D = GenMin_D + 0.5
     if(.not.IsCartesianGrid)then
        GenMin_D(2)=0.0;  GenMax_D(2)=nJ+1.0
        GenMin_D(3)=0.0;  GenMax_D(3)=nK+1.0
@@ -1197,13 +1197,13 @@ contains
        end if
        if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
           IjkMid_D = IjkIni_D + 0.5*dl*bNormIni_D
-          XyzMid_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(IjkMid_D - 1.)
+          XyzMid_D = Coord111_DB(:,iBlock) + Dxyz_D*(IjkMid_D - 1.)
        else
           HALF: do
              ! Try a half step in XYZ space (and get IJK from it)
              XyzMid_D = XyzIni_D + 0.5*dl*bNormIni_D
              call xyz_to_ijk(XyzMid_D, IjkMid_D, iBlock, &
-                  XyzIni_D, XyzStart_BLK(:,iBlock), Dxyz_D)
+                  XyzIni_D, Coord111_DB(:,iBlock), Dxyz_D)
 
              ! Check if it stepped too far, cut step if needed
              if(any(IjkMid_D<(GenMin_D-0.5)) .or. any(IjkMid_D>(GenMax_D+0.5)))then
@@ -1275,13 +1275,13 @@ contains
              ! New mid point using the reduced dl
              if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
                 IjkMid_D = IjkIni_D + 0.5*dl*bNormIni_D
-                XyzMid_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(IjkMid_D - 1.)
+                XyzMid_D = Coord111_DB(:,iBlock) + Dxyz_D*(IjkMid_D - 1.)
              else
                 HALF2: do
                    ! Try new half step in XYZ space (and get IJK from it)
                    XyzMid_D = XyzIni_D + 0.5*dl*bNormIni_D
                    call xyz_to_ijk(XyzMid_D, IjkMid_D, iBlock, &
-                        XyzIni_D, XyzStart_BLK(:,iBlock), Dxyz_D)
+                        XyzIni_D, Coord111_DB(:,iBlock), Dxyz_D)
 
                    ! Check if it stepped too far, cut step if needed
                    if(any(IjkMid_D<(GenMin_D-0.5)) .or. any(IjkMid_D>(GenMax_D+0.5)))then
@@ -1338,11 +1338,11 @@ contains
        if(.not.IsWall)then
           if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
              IjkCur_D = IjkIni_D + bNormMid_D*dl
-             XyzCur_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(IjkCur_D - 1.)
+             XyzCur_D = Coord111_DB(:,iBlock) + Dxyz_D*(IjkCur_D - 1.)
           else
              XyzCur_D = XyzIni_D + dl*bNormMid_D
              call xyz_to_ijk(XyzCur_D, IjkCur_D, iBlock, &
-                  XyzIni_D, XyzStart_BLK(:,iBlock), Dxyz_D)
+                  XyzIni_D, Coord111_DB(:,iBlock), Dxyz_D)
 
              ! Check if it stepped too far, use midpoint if it did
              if(any(IjkCur_D < (GenMin_D-0.5)) .or. any(IjkCur_D > (GenMax_D+0.5)))then
@@ -1503,8 +1503,8 @@ contains
 
        if(.not.IsCartesianGrid)then
           ! Can also hit wall if spherical before reaching GenMin_D,GenMax_D
-          if(  XyzCur_D(1)<x1 .or. XyzCur_D(2)<y1 .or. XyzCur_D(3)<z1 .or. &
-               XyzCur_D(1)>x2 .or. XyzCur_D(2)>y2 .or. XyzCur_D(3)>z2 )then
+          if(  XyzCur_D(1)<xMinBox .or. XyzCur_D(2)<yMinBox .or. XyzCur_D(3)<zMinBox .or. &
+               XyzCur_D(1)>xMaxBox .or. XyzCur_D(2)>yMaxBox .or. XyzCur_D(3)>zMaxBox )then
 
              XyzInOut_D = XyzCur_D
              iFace = ray_open_
@@ -1868,7 +1868,7 @@ contains
 
     use ModMain, ONLY: MaxBlock, nBlock, nI, nJ, nK, Unused_B
     use ModPhysics, ONLY: SW_Bx, SW_By, SW_Bz
-    use ModGeometry, ONLY: XyzMin_D, XyzMax_D, XyzStart_BLK
+    use ModGeometry, ONLY: XyzMin_D, XyzMax_D, Coord111_DB
     use ModSort, ONLY: sort_quick
     use ModMpi, ONLY: MPI_WTIME
 
@@ -1911,7 +1911,7 @@ contains
           SortFunc_B(iBlock) = -10000.0
        else
           SortFunc_B(iBlock) = sum(Weight_D*&
-               (XyzStart_BLK(:,iBlock) - XyzMin_D)/(XyzMax_D - XyzMin_D))
+               (Coord111_DB(:,iBlock) - XyzMin_D)/(XyzMax_D - XyzMin_D))
        end if
     end do
 

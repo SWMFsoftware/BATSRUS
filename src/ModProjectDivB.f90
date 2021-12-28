@@ -36,7 +36,7 @@ module ModProjectDivB
   use ModSize, ONLY: nI, nJ, nK, nBlock, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
   use ModMain, ONLY: Unused_B
-  use ModGeometry, ONLY: true_BLK, true_cell
+  use ModGeometry, ONLY: IsNoBody_B, Used_GB
   use ModMpi
 
   implicit none
@@ -102,7 +102,7 @@ contains
 
     use ModVarIndexes, ONLY: Bx_,Bz_,P_
     use ModAdvance, ONLY: State_VGB
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModMain, ONLY: UseConstrainB
     use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
     use ModMessagePass, ONLY: exchange_messages
@@ -136,25 +136,25 @@ contains
     if(DoTest)then
        write(*,*) NameSub, ': old B:', &
             State_VGB(Bx_:Bz_,iTest,jTest,kTest,iBlockTest),  &
-            true_cell(iTest,jTest,kTest,iBlockTest)
+            Used_GB(iTest,jTest,kTest,iBlockTest)
        if(UseConstrainB)then
-          write(*,*) NameSub, ': Bxface,true_cell:',    &
+          write(*,*) NameSub, ': Bxface,Used_GB:',    &
                Bxface_BLK(iTest,jTest,kTest,iBlockTest),  &
                Bxface_BLK(iTest+1,jTest,kTest,iBlockTest),&
-               true_cell(iTest-1,jTest,kTest,iBlockTest), &
-               true_cell(iTest+1,jTest,kTest,iBlockTest)
+               Used_GB(iTest-1,jTest,kTest,iBlockTest), &
+               Used_GB(iTest+1,jTest,kTest,iBlockTest)
 
-          write(*,*) NameSub, ': Byface,true_cell:',    &
+          write(*,*) NameSub, ': Byface,Used_GB:',    &
                Byface_BLK(iTest,jTest,kTest,iBlockTest),  &
                Byface_BLK(iTest,jTest+1,kTest,iBlockTest),&
-               true_cell(iTest,jTest-1,kTest,iBlockTest), &
-               true_cell(iTest,jTest+1,kTest,iBlockTest)
+               Used_GB(iTest,jTest-1,kTest,iBlockTest), &
+               Used_GB(iTest,jTest+1,kTest,iBlockTest)
 
-          write(*,*) NameSub, ': Bzface,true_cell:',    &
+          write(*,*) NameSub, ': Bzface,Used_GB:',    &
                Bzface_BLK(iTest,jTest,kTest,iBlockTest),  &
                Bzface_BLK(iTest,jTest,kTest+1,iBlockTest),&
-               true_cell(iTest,jTest,kTest-1,iBlockTest), &
-               true_cell(iTest,jTest,kTest+1,iBlockTest)
+               Used_GB(iTest,jTest,kTest-1,iBlockTest), &
+               Used_GB(iTest,jTest,kTest+1,iBlockTest)
 
        end if
     end if
@@ -248,27 +248,27 @@ contains
        endif
 
        if(DoTest)then
-          write(*,*) NameSub, ': new B, true_cell:', &
+          write(*,*) NameSub, ': new B, Used_GB:', &
                State_VGB(Bx_:Bz_,iTest,jTest,kTest,iBlockTest),  &
-               true_cell(iTest,jTest,kTest,iBlockTest)
+               Used_GB(iTest,jTest,kTest,iBlockTest)
           if(UseConstrainB)then
-             write(*,*) NameSub, ': Bxface,true_cell:',    &
+             write(*,*) NameSub, ': Bxface,Used_GB:',    &
                   Bxface_BLK(iTest,jTest,kTest,iBlockTest),  &
                   Bxface_BLK(iTest+1,jTest,kTest,iBlockTest),&
-                  true_cell(iTest-1,jTest,kTest,iBlockTest), &
-                  true_cell(iTest+1,jTest,kTest,iBlockTest)
+                  Used_GB(iTest-1,jTest,kTest,iBlockTest), &
+                  Used_GB(iTest+1,jTest,kTest,iBlockTest)
 
-             write(*,*) NameSub, ': Byface,true_cell:',    &
+             write(*,*) NameSub, ': Byface,Used_GB:',    &
                   Byface_BLK(iTest,jTest,kTest,iBlockTest),  &
                   Byface_BLK(iTest,jTest+1,kTest,iBlockTest),&
-                  true_cell(iTest,jTest-1,kTest,iBlockTest), &
-                  true_cell(iTest,jTest+1,kTest,iBlockTest)
+                  Used_GB(iTest,jTest-1,kTest,iBlockTest), &
+                  Used_GB(iTest,jTest+1,kTest,iBlockTest)
 
-             write(*,*) NameSub, ': Bzface,true_cell:',    &
+             write(*,*) NameSub, ': Bzface,Used_GB:',    &
                   Bzface_BLK(iTest,jTest,kTest,iBlockTest),  &
                   Bzface_BLK(iTest,jTest,kTest+1,iBlockTest),&
-                  true_cell(iTest,jTest,kTest-1,iBlockTest), &
-                  true_cell(iTest,jTest,kTest+1,iBlockTest)
+                  Used_GB(iTest,jTest,kTest-1,iBlockTest), &
+                  Used_GB(iTest,jTest,kTest+1,iBlockTest)
 
           end if
        end if
@@ -441,7 +441,7 @@ contains
   ! Calculate Laplace phi
   subroutine proj_matvec(phi,laplace_phi)
     use ModMain, ONLY : MaxBlock,nBlock,Unused_B,nI,nJ,nK, x_, y_, z_
-    use ModGeometry, ONLY : true_cell,body_BLK
+    use ModGeometry, ONLY : Used_GB,IsBody_B
     use ModMain, ONLY : UseConstrainB
     use BATL_lib, ONLY: CellSize_DB
 
@@ -467,15 +467,15 @@ contains
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
 
-          if(body_BLK(iBlock))then
+          if(IsBody_B(iBlock))then
              ! If some cells are inside the body, phi should have zero gradient
              ! accross the face between the body and the physical cell so that
              ! there is correction done for Bface on that face
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-                where(true_cell(i-1:i+1,j-1:j+1,k-1:k+1,iBlock))
+                where(Used_GB(i-1:i+1,j-1:j+1,k-1:k+1,iBlock))
                    phiC=phi(i-1:i+1,j-1:j+1,k-1:k+1,iBlock)
                 elsewhere
                    phiC=phi(i,j,k,iBlock)
@@ -593,7 +593,7 @@ contains
     ! Calculate boundary values for phi for dimensions
 
     use ModMain, ONLY : MaxBlock, nBlock, Unused_B
-    use ModGeometry, ONLY : body_BLK, true_cell
+    use ModGeometry, ONLY : IsBody_B, Used_GB
     use ModParallel, ONLY : &
          NOBLK,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
     use BATL_lib, ONLY: message_pass_cell, &
@@ -625,8 +625,8 @@ contains
           if(neiLtop(iBlock)==NOBLK) phi(:,:,nKp1_:MaxK,iBlock) = 0.0
        end if
 
-       if(body_BLK(iBlock))then
-          where(.not.true_cell(:,:,:,iBlock)) phi(:,:,:,iBlock)=0.0
+       if(IsBody_B(iBlock))then
+          where(.not.Used_GB(:,:,:,iBlock)) phi(:,:,:,iBlock)=0.0
        end if
 
        ! if(UseConstrainB)then
@@ -665,7 +665,7 @@ contains
     use ModMain, ONLY : nI,nJ,nK
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
     use ModAdvance,    ONLY : State_VGB
-    use ModGeometry,   ONLY : true_cell
+    use ModGeometry,   ONLY : Used_GB
     use ModMain, ONLY : UseConstrainB
     use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK, &
          Bface2Bcenter, bound_bface
@@ -688,8 +688,8 @@ contains
        if(DoTest)write(*,*)'proj_correction old Bzface=',&
             BzFace_BLK(iTest,jTest,kTest,iBlockTest), &
             BzFace_BLK(iTest,jTest,kTest+1,iBlockTest), &
-            true_cell(iTest,jTest,kTest-1,iBlockTest), &
-            true_cell(iTest,jTest,kTest+1,iBlockTest)
+            Used_GB(iTest,jTest,kTest-1,iBlockTest), &
+            Used_GB(iTest,jTest,kTest+1,iBlockTest)
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
@@ -737,7 +737,7 @@ contains
           DyInvHalf = 0.5/CellSize_DB(y_,iBlock);
           DzInvHalf = 0.5/CellSize_DB(z_,iBlock);
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) - &
                   DxInvHalf*(phi(i+1,j,k,iBlock)-phi(i-1,j,k,iBlock))
 
@@ -1294,10 +1294,10 @@ contains
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
-          if(true_BLK(iBlock))then
+          if(IsNoBody_B(iBlock))then
              qa(1:nI,1:nJ,1:nK,iBlock)=qb
           else
-             where(true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+             where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                   qa(1:nI,1:nJ,1:nK,iBlock)=qb
           end if
        end if
@@ -1327,10 +1327,10 @@ contains
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
-          if(true_BLK(iBlock))then
+          if(IsNoBody_B(iBlock))then
              qa(1:nI,1:nJ,1:nK,iBlock)= qb(1:nI,1:nJ,1:nK,iBlock)
           else
-             where(true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+             where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                   qa(1:nI,1:nJ,1:nK,iBlock)= qb(1:nI,1:nJ,1:nK,iBlock)
           end if
 
@@ -1361,11 +1361,11 @@ contains
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
-          if(true_BLK(iBlock))then
+          if(IsNoBody_B(iBlock))then
              qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qa(1:nI,1:nJ,1:nK,iBlock)+qb(1:nI,1:nJ,1:nK,iBlock)
           else
-             where(true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+             where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                   qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qa(1:nI,1:nJ,1:nK,iBlock)+qb(1:nI,1:nJ,1:nK,iBlock)
           end if
@@ -1396,11 +1396,11 @@ contains
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
-          if(true_BLK(iBlock))then
+          if(IsNoBody_B(iBlock))then
              qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qa(1:nI,1:nJ,1:nK,iBlock)-qb(1:nI,1:nJ,1:nK,iBlock)
           else
-             where(true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+             where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                   qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qa(1:nI,1:nJ,1:nK,iBlock)-qb(1:nI,1:nJ,1:nK,iBlock)
           end if
@@ -1431,11 +1431,11 @@ contains
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
-          if(true_BLK(iBlock))then
+          if(IsNoBody_B(iBlock))then
              qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qb(1:nI,1:nJ,1:nK,iBlock)+qc(1:nI,1:nJ,1:nK,iBlock)
           else
-             where(true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+             where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                   qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qb(1:nI,1:nJ,1:nK,iBlock)+qc(1:nI,1:nJ,1:nK,iBlock)
           end if
@@ -1467,11 +1467,11 @@ contains
     call test_start(NameSub, DoTest)
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
-          if(true_BLK(iBlock))then
+          if(IsNoBody_B(iBlock))then
              qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qa(1:nI,1:nJ,1:nK,iBlock)+qb*qc(1:nI,1:nJ,1:nK,iBlock)
           else
-             where(true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+             where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                   qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qa(1:nI,1:nJ,1:nK,iBlock)+qb*qc(1:nI,1:nJ,1:nK,iBlock)
           end if
@@ -1505,11 +1505,11 @@ contains
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
-          if(true_BLK(iBlock))then
+          if(IsNoBody_B(iBlock))then
              qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qb(1:nI,1:nJ,1:nK,iBlock)+qc*qd(1:nI,1:nJ,1:nK,iBlock)
           else
-             where(true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+             where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                   qa(1:nI,1:nJ,1:nK,iBlock)= &
                   qb(1:nI,1:nJ,1:nK,iBlock)+qc*qd(1:nI,1:nJ,1:nK,iBlock)
           end if
@@ -1541,13 +1541,13 @@ contains
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
-          if(true_BLK(iBlock)) then
+          if(IsNoBody_B(iBlock)) then
              qproduct=qproduct + &
                   sum(qa(1:nI,1:nJ,1:nK,iBlock)*qb(1:nI,1:nJ,1:nK,iBlock))
           else
              qproduct=qproduct + &
                   sum(qa(1:nI,1:nJ,1:nK,iBlock)*qb(1:nI,1:nJ,1:nK,iBlock),&
-                  MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+                  MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
           end if
        end if
     end do
@@ -1590,11 +1590,11 @@ contains
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
-          if(true_BLK(iBlock)) then
+          if(IsNoBody_B(iBlock)) then
              qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBlock))
           else
              qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBlock), &
-                  MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+                  MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
           end if
        end if
     end do

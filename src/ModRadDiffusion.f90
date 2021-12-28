@@ -384,7 +384,7 @@ contains
     use ModConst,      ONLY: cLightSpeed
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModMain,       ONLY: nI, nJ, nK
-    use ModGeometry,   ONLY: true_cell
+    use ModGeometry,   ONLY: Used_GB
     use ModVarIndexes, ONLY: Energy_
     use ModUserInterface ! user_material_properties
 
@@ -402,7 +402,7 @@ contains
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        if(IsNewTimestepRadDiffusion)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -1104,7 +1104,7 @@ contains
     use ModMain,         ONLY: nI, nJ, nK
     use ModParallel,     ONLY: NeiLev, NOBLK
     use ModNumConst,     ONLY: i_DD
-    use ModGeometry,     ONLY: true_cell
+    use ModGeometry,     ONLY: Used_GB
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1135,7 +1135,7 @@ contains
           iVar = iDiff_I(iDiff)
 
           do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              StateImpl_G(i,j,k) = StateImpl_VG(iVar,i,j,k)
           end do; end do; end do
 
@@ -1145,7 +1145,7 @@ contains
              if(IsCartesian) Area = CellFace_DB(iDim,iBlock)
              Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
              do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
                 if(.not.IsCartesian) Area = CellFace_DFB(iDim,i,j,k,iBlock)
 
                 FluxImpl_VFD(iVar,i,j,k,iDim) = &
@@ -1165,7 +1165,7 @@ contains
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 Rhs_VC(iVar,i,j,k) = Rhs_VC(iVar,i,j,k) &
@@ -1198,7 +1198,7 @@ contains
 
        if(nDim == 1)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 Rhs_VC(iVar,i,j,k) = ( &
@@ -1214,7 +1214,7 @@ contains
        elseif(nDim == 2)then
           ! No flux from Z direction
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 Rhs_VC(iVar,i,j,k) = ( &
@@ -1235,7 +1235,7 @@ contains
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 Rhs_VC(iVar,i,j,k) = ( &
@@ -1269,14 +1269,14 @@ contains
     if(nPoint > 0)then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
                   - PointCoef2_VCB(iPointSemi,i,j,k,iBlock) &
                   *StateImpl_VG(1,i,j,k)
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
                   + PointCoef_VCB(iPointSemi,i,j,k,iBlock) &
                   *PointImpl_VCB(iPointSemi,i,j,k,iBlock) &
@@ -1289,7 +1289,7 @@ contains
     if(UsePDotADotP)then
        if(nDim == 1)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 pDotADotPPe = pDotADotPPe  + 0.5 *(&
@@ -1304,7 +1304,7 @@ contains
        elseif(nDim == 2)then
           ! No flux from Z direction
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 pDotADotPPe = pDotADotPPe  + 0.5 *(&
@@ -1324,7 +1324,7 @@ contains
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
                 pDotADotPPe = pDotADotPPe + 0.5 *(&
@@ -1365,7 +1365,7 @@ contains
           if(NeiLev(6,iBlock) == NOBLK)then
              k = nK
              do j = 1, nJ; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
-                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
                 iVar = iDiff_I(iDiff)
                 pDotADotPPe = pDotADotPPe + 0.5 *&
                      DiffCoef_VFDB(iDiff,i,j,k+1,3,iBlock)* &
@@ -1378,7 +1378,7 @@ contains
        if(NeiLev(1,iBlock) == NOBLK)then
           i = 1
           do k = 1, nK; do j = 1, nJ; do iDiff = iDiffMin, iDiffMax
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              iVar = iDiff_I(iDiff)
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
@@ -1390,7 +1390,7 @@ contains
        if(NeiLev(2,iBlock) == NOBLK)then
           i = nI
           do k = 1, nK; do j = 1, nJ; do iDiff = iDiffMin, iDiffMax
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              iVar = iDiff_I(iDiff)
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)*   &
@@ -1402,7 +1402,7 @@ contains
        if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
           j = 1
           do k = 1, nK; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              iVar = iDiff_I(iDiff)
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
@@ -1414,7 +1414,7 @@ contains
        if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK)then
           j = nJ
           do k = 1, nK; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              iVar = iDiff_I(iDiff)
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
@@ -1426,7 +1426,7 @@ contains
        ! Point implicit source terms due to energy exchange
        if(nPoint > 0 .and. IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              pDotADotPPe = pDotADotPPe + &
                   PointCoef2_VCB(iPointSemi,i,j,k,iBlock) &
                   *StateImpl_VG(1,i,j,k)**2 &
@@ -1509,7 +1509,7 @@ contains
     use ModMain,     ONLY: nI, nJ, nK, TypeCellBc_I
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: InvClight
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
 
     integer, intent(in) :: iBlock
     integer, intent(in) :: nVarImpl
@@ -1528,7 +1528,7 @@ contains
        ! Point implicit for ions (or electrons with no heat-conduction)
        if(nPoint > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              ! dSvar/dVar (diagonal)
              Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                   - PointCoef2_VCB(iPointSemi,i,j,k,iBlock)
@@ -1553,7 +1553,7 @@ contains
           end if
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              if(.not.IsCartesian)then ! rz-geometry only
                 CoeffLeft  = CellFace_DFB(iDim,i,j,k,iBlock) &
@@ -1598,7 +1598,7 @@ contains
 
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
 
@@ -1641,7 +1641,7 @@ contains
           do iDiff = iDiffRadMin, iDiffRadMax
              iVar = iDiff_I(iDiff)
              do k = 1, nK; do j = 1, nJ
-                if(.not.true_cell(1,j,k,iBlock)) CYCLE
+                if(.not.Used_GB(1,j,k,iBlock)) CYCLE
                 ! Taken from ModRadDiffusion::set_rad_outflow_bc
                 Coeff = Coeff0*DiffSemiCoef_VGB(iDiff,1,j,k,iBlock)
                 Jacobian_VVCI(iVar,iVar,1,j,k,Stencil1_) = &
@@ -1660,7 +1660,7 @@ contains
           do iDiff = iDiffRadMin, iDiffRadMax
              iVar = iDiff_I(iDiff)
              do k = 1, nK; do j = 1, nJ
-                if(.not.true_cell(nI,j,k,iBlock)) CYCLE
+                if(.not.Used_GB(nI,j,k,iBlock)) CYCLE
                 ! Taken from ModRadDiffusion::set_rad_outflow_bc
                 Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,nI,j,k,iBlock)
 
@@ -1681,7 +1681,7 @@ contains
              do iDiff = iDiffRadMin, iDiffRadMax
                 iVar = iDiff_I(iDiff)
                 do k = 1, nK; do i = 1, nI
-                   if(.not.true_cell(i,1,k,iBlock)) CYCLE
+                   if(.not.Used_GB(i,1,k,iBlock)) CYCLE
                    Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,i,1,k,iBlock)
                    Jacobian_VVCI(iVar,iVar,i,1,k,Stencil1_) = &
                         Jacobian_VVCI(iVar,iVar,i,1,k,Stencil1_) &
@@ -1699,7 +1699,7 @@ contains
              do iDiff = iDiffRadMin, iDiffRadMax
                 iVar = iDiff_I(iDiff)
                 do k = 1, nK; do i = 1, nI
-                   if(.not.true_cell(i,nJ,k,iBlock)) CYCLE
+                   if(.not.Used_GB(i,nJ,k,iBlock)) CYCLE
                    Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,i,nJ,k,iBlock)
                    Jacobian_VVCI(iVar,iVar,i,nJ,k,Stencil1_) = &
                         Jacobian_VVCI(iVar,iVar,i,nJ,k,Stencil1_) &
@@ -1719,7 +1719,7 @@ contains
              do iDiff = iDiffRadMin, iDiffRadMax
                 iVar = iDiff_I(iDiff)
                 do j = 1, nJ; do i = 1, nI
-                   if(.not.true_cell(i,j,1,iBlock)) CYCLE
+                   if(.not.Used_GB(i,j,1,iBlock)) CYCLE
                    Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,i,j,1,iBlock)
                    Jacobian_VVCI(iVar,iVar,i,j,1,Stencil1_) = &
                         Jacobian_VVCI(iVar,iVar,i,j,1,Stencil1_) &
@@ -1737,7 +1737,7 @@ contains
              do iDiff = iDiffRadMin, iDiffRadMax
                 iVar = iDiff_I(iDiff)
                 do j = 1, nJ; do i = 1, nI
-                   if(.not.true_cell(i,j,nK,iBlock)) CYCLE
+                   if(.not.Used_GB(i,j,nK,iBlock)) CYCLE
                    Coeff = Coeff0*DiffSemiCoef_VGB(iDiffRadMin,i,j,nK,iBlock)
                    Jacobian_VVCI(iVar,iVar,i,j,nK,Stencil1_) = &
                         Jacobian_VVCI(iVar,iVar,i,j,nK,Stencil1_) &
@@ -1765,7 +1765,7 @@ contains
     use ModPhysics,    ONLY: InvGammaMinus1, GammaMinus1, ExtraEintMin, &
          No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, UnitRho_, UnitTemperature_, InvGammaElectronMinus1
-    use ModGeometry,   ONLY: true_cell
+    use ModGeometry,   ONLY: Used_GB
     use ModUserInterface ! user_material_properties
 
     integer, intent(in):: iBlock, iBlockSemi
@@ -1783,7 +1783,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
        if(UseRadDiffusion)then
           do iWave = 1, nWave
              iVarImpl = iErImplFirst - 1 + iWave

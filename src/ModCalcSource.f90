@@ -91,7 +91,7 @@ contains
          UseUserSourceExpl, UseUserSourceImpl
     use ModAdvance
     use ModConservative,  ONLY: UseNonConservative
-    use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
+    use ModGeometry,      ONLY: r_GB, rBody2_GB, Used_GB
     use ModPhysics
     use ModCoordTransform
     use ModElectricField, ONLY: get_efield_in_comoving_frame
@@ -198,7 +198,7 @@ contains
                 DoTestCell = DoTest .and. i==iTest .and. &
                      j==jTest .and. k==kTest
 
-                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
                 if(UseViscosity) then
                    ViscoCoeff = ViscoFactor_C(i,j,k)
@@ -279,7 +279,7 @@ contains
 
           ! Adiabatic heating: -(g-1)*P*Div(U)
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              DivU = Flux_VXI(iUn,i+1,j,k,iGang) - Flux_VXI(iUn,i,j,k,iGang)
              if(nJ > 1) DivU = DivU &
@@ -305,8 +305,8 @@ contains
     if(UseSpeedMin)then
        ! push radial ion speed above SpeedMin outside rSpeedMin
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if(r_BLK(i,j,k,iBlock) < rSpeedMin) CYCLE
-          rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
+          if(r_GB(i,j,k,iBlock) < rSpeedMin) CYCLE
+          rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
           do iFluid = 1, nIonFluid
              if(nFluid > 1) call select_fluid(iFluid)
              Rho = State_VGB(iRho,i,j,k,iBlock)
@@ -325,7 +325,7 @@ contains
 
     if(UseWavePressure)then
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           if(UseMultiIon)then
              ! The following should be Div(Uplus). For zero Hall velocity
@@ -473,7 +473,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           DivU = Flux_VXI(UnLast_,i+1,j,k,iGang) &
                - Flux_VXI(UnLast_,i,j,k,iGang)
           if(nJ > 1) DivU = DivU + Flux_VYI(UnLast_,i,j+1,k,iGang) &
@@ -553,7 +553,7 @@ contains
        ! The azimuthal direction is along the Z axis
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Source[mr] = (p+mphi**2/rho)/radius
           Source_VC(iRhoUy_I,i,j,k) = Source_VC(iRhoUy_I,i,j,k) &
@@ -615,7 +615,7 @@ contains
             .not.UseIdealEos))then
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              ! Source[Bphi] = [ 1/(q_e*n_e) * (dP_e/dZ) ] / radius
              Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
@@ -684,7 +684,7 @@ contains
 
        ! Add contributions to other source terms
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           if(UseMultiIon .or. UseEfield)then
              ! inv of electron charge density
@@ -740,7 +740,7 @@ contains
           !                     have to undo this if curl B0 is actually not 0
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                   SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) &
                   - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_C(i,j,k) &
@@ -762,8 +762,8 @@ contains
     if(UseB .and. UseCurlB0 .and. UseMhdMomentumFlux)then
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          if(R_BLK(i,j,k,iBlock) < rCurrentFreeB0)CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+          if(r_GB(i,j,k,iBlock) < rCurrentFreeB0)CYCLE
 
           ! +curl(B0) x B1    - undo source term above
           ! +curl(B0) x B1    - add this if B0MomentumFux = .true.
@@ -812,9 +812,9 @@ contains
           if(iDirGravity == 0)then
              ! Force is toward the body at the origin
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
                 ForcePerRho_D = &
-                     Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)**3
+                     Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
                 Source_VC(iRhoUx:iRhoUz,i,j,k) =Source_VC(iRhoUx:iRhoUz,i,j,k)&
                      + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
                 Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) + &
@@ -823,10 +823,10 @@ contains
 
              if(UseBody2)then
                 do k=1,nK; do j=1,nJ; do i=1,nI
-                   if(.not.true_cell(i,j,k,iBlock)) CYCLE
+                   if(.not.Used_GB(i,j,k,iBlock)) CYCLE
                    ForcePerRho_D = Gbody2 &
                         * (Xyz_DGB(:,i,j,k,iBlock)-[xBody2,yBody2,zBody2]) &
-                        / r2_BLK(i,j,k,iBlock)**3
+                        / rBody2_GB(i,j,k,iBlock)**3
                    Source_VC(iRhoUx:iRhoUz,i,j,k) = &
                         Source_VC(iRhoUx:iRhoUz,i,j,k) &
                         + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
@@ -838,7 +838,7 @@ contains
           else
              iRhoUGrav = iRhoUx - 1 + iDirGravity
              do k=1,nK; do j=1,nJ; do i=1,nI
-                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
                 Source_VC(iRhoUGrav,i,j,k) = Source_VC(iRhoUGrav,i,j,k) &
                      + Gbody*State_VGB(iRho,i,j,k,iBlock)
                 Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
@@ -859,7 +859,7 @@ contains
              ! This is a special case since Omega is parallel with the Z axis
              Omega2 = OmegaBody**2
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
                 Source_VC(iRhoUx,i,j,k) = Source_VC(iRhoUx,i,j,k) &
                      + 2*OmegaBody*State_VGB(iRhoUy,i,j,k,iBlock) &
                      + State_VGB(iRho,i,j,k,iBlock) &
@@ -898,7 +898,7 @@ contains
     if(UseEfield)then
        ! Add total charge density source term for HypE scalar: c/eps0 = c^3
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           Source_VC(HypE_,i,j,k) = Clight*C2light * &
                sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
        end do; end do; end do
@@ -922,7 +922,7 @@ contains
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Note that the velocity of the first (and only) fluid is used
           DivU =                   Flux_VXI(UnFirst_,i+1,j,k,iGang) &
@@ -1145,7 +1145,7 @@ contains
       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         if(.not.true_cell(i,j,k,iBlock)) CYCLE
+         if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
          if((UseMhdMomentumFlux.and.UseB0) .or. (.not.DoCorrectFace)) then
 
@@ -1305,7 +1305,7 @@ contains
          ! the full cell-centered field. Accordingly, -B1 div B1 source is
          ! not added later if UseDivFullBSource=.true.
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
                  - DivBInternal_C(i,j,k)*(B0_DGB(:,i,j,k,iBlock) + &
@@ -1313,7 +1313,7 @@ contains
          end do; end do; end do
       else
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
                  - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
@@ -1333,7 +1333,7 @@ contains
       character(len=*), parameter:: NameSub = 'calc_divb_source_gencoord'
       !------------------------------------------------------------------------
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         if(.not.true_cell(i,j,k,iBlock)) CYCLE
+         if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,1,i,j,k,iBlock)
@@ -1375,7 +1375,7 @@ contains
            DivB1_GB(iTest,jTest,kTest,iBlockTest)
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         if(.not.true_cell(i,j,k,iBlock)) CYCLE
+         if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,2,i,j,k,iBlock)
@@ -1419,7 +1419,7 @@ contains
 
       if(nK > 1)then
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
             VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
             FaceArea_D = FaceNormal_DDFB(:,3,i,j,k,iBlock)
@@ -1464,7 +1464,7 @@ contains
            DivB1_GB(iTest,jTest,kTest,iBlockTest)
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         if(.not.true_cell(i,j,k,iBlock)) CYCLE
+         if(.not.Used_GB(i,j,k,iBlock)) CYCLE
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
               /CellVolume_GB(i,j,k,iBlock)
          DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
@@ -1480,7 +1480,7 @@ contains
          ! the full cell-centered field. Accordingly, -B1 div B1 source is
          ! not added later if UseDivFullBSource=.true.
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
                  - DivBInternal_C(i,j,k)*(B0_DGB(:,i,j,k,iBlock) + &
@@ -1488,7 +1488,7 @@ contains
          end do; end do; end do
       else
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
                  - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)

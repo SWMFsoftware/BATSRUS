@@ -288,7 +288,7 @@ contains
 
   subroutine update_wave_group_advection(iBlock)
     use ModAdvance,           ONLY: State_VGB, time_blk
-    use ModGeometry,          ONLY: true_cell
+    use ModGeometry,          ONLY: Used_GB
     use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
     use ModMain,              ONLY: CFL
@@ -319,7 +319,7 @@ contains
     if(UseAlfvenWaves)then
 
        do k= 1, nK; do j= 1,nJ; do i= 1,nI
-          if(.not. true_cell(i,j,k,iBlock)) CYCLE
+          if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
           CFL2_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
                DeltaLogFrequency * CFL * time_blk(i,j,k, iBlock)
@@ -379,7 +379,7 @@ contains
        F_I(0) = 0.0; F_I(nWave+1) = 0.0
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not. true_cell(i,j,k,iBlock)) CYCLE
+          if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
           CFL_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
                DeltaLogFrequency * CFL * time_blk(i,j,k,iBlock)

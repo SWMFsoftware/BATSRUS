@@ -30,7 +30,7 @@ contains
     use ModAdvance, ONLY: nVar,State_VGB, Bx_, By_, Bz_,tmp1_BLK,tmp2_BLK,&
          Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
     use ModAdvance, ONLY:tmp3_blk=>divB1_GB
-    use ModGeometry, ONLY: true_blk, body_blk, true_cell
+    use ModGeometry, ONLY: IsNoBody_B, IsBody_B, Used_GB
     use ModParallel, ONLY : NOBLK, neiLEV
     use ModMpi
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -146,13 +146,13 @@ contains
        DivBInt(ResDotM1DotRes_) = 1.0/DivBInt(ResDotM1DotRes_)
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
-          if(true_blk(iBlock))then
+          if(IsNoBody_B(iBlock))then
              Dir_GB(1:nI,1:nJ,1:nK,iBlock)=Dir_GB(1:nI,1:nJ,1:nK,iBlock)+&
                   DivBInt(ResDotM1DotRes_) &
                   *(Residual_GB(1:nI,1:nJ,1:nK,iBlock) + DivBInt(ResDotOne_))
           else
              do k=1,nK;do j=1,nJ;do i=1,nI
-                if(.not.true_cell(i,j,k,iBlock))CYCLE
+                if(.not.Used_GB(i,j,k,iBlock))CYCLE
                 tmp2_blk(i,j,k,iBlock)=tmp2_blk(i,j,k,iBlock)+&
                      DivBInt(ResDotM1DotRes_)*(tmp1_blk(i,j,k,iBlock)+&
                      DivBInt(ResDotOne_))
@@ -417,11 +417,11 @@ contains
       do iBlock=1,nBlock
          if (Unused_B(iBlock)) CYCLE
          !     Prec_CB(:,:,:,iBlock)=Prec_CB(:,:,:,iBlock)*divb_diffcoeff
-         if(true_blk(iBlock))then
+         if(IsNoBody_B(iBlock))then
             OneDotMDotOne=OneDotMDotOne+sum(1.0/Prec_CB(:,:,:,iBlock))
-         elseif(any(true_cell(1:nI,1:nJ,1:nK,iBlock)))then
+         elseif(any(Used_GB(1:nI,1:nJ,1:nK,iBlock)))then
             OneDotMDotOne=OneDotMDotOne+sum(1.0/Prec_CB(:,:,:,iBlock)&
-                 ,MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+                 ,MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
          end if
       end do
       if(nProc>1) call MPI_allreduce(MPI_IN_PLACE, OneDotMDotOne, &
@@ -456,16 +456,16 @@ contains
            Phi_GB(1:nI,1:nJ,nKp1_,iBlock) = &
            -BoundaryCoef*Phi_GB(1:nI,1:nJ,nK,iBlock)
 
-      if(body_blk(iBlock))then
+      if(IsBody_B(iBlock))then
          do k = 1, nK; do j = 1, nJ;do i = 1, nI
-            if(.not.true_cell(i,j,k,iBlock))CYCLE
-            where(.not.true_cell(i-1:i+1:2,j,k,iBlock))&
+            if(.not.Used_GB(i,j,k,iBlock))CYCLE
+            where(.not.Used_GB(i-1:i+1:2,j,k,iBlock))&
                  Phi_GB(i-1:i+1:2,j,k,iBlock) = &
                  -BoundaryCoef*Phi_GB(i,j,k,iBlock)
-            where(.not.true_cell(i,j-1:j+1:2,k,iBlock))&
+            where(.not.Used_GB(i,j-1:j+1:2,k,iBlock))&
                  Phi_GB(i,j-1:j+1:2,k,iBlock) = &
                  -BoundaryCoef*Phi_GB(i,j,k,iBlock)
-            where(.not.true_cell(i,j,k-1:k+1:2,iBlock))&
+            where(.not.Used_GB(i,j,k-1:k+1:2,iBlock))&
                  Phi_GB(i,j,k-1:k+1:2,iBlock) = &
                  -BoundaryCoef*Phi_GB(i,j,k,iBlock)
             VDotGrad_DC(x_,i,j,k)=&
@@ -512,7 +512,7 @@ contains
 
     use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          x_, y_, z_
-    use ModGeometry, ONLY: body_blk, true_cell
+    use ModGeometry, ONLY: IsBody_B, Used_GB
     use ModParallel, ONLY: neilev, NOBLK
     use BATL_lib, ONLY: CellFace_DB
 
@@ -530,7 +530,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     Out_G = 0.0
-    if(.not.(body_blk(iBlock).or.any(neilev(:,iBlock)==NOBLK)))then
+    if(.not.(IsBody_B(iBlock).or.any(neilev(:,iBlock)==NOBLK)))then
        do k=1,nK; do j=1,nJ; do i=1,nI
           Out_G(i,j,k) = - 0.5*(&
                CellFace_DB(x_,iBlock)*&
@@ -541,7 +541,7 @@ contains
                (VecZ_G(i, j, k+1)-VecZ_G(i,j,k-1)) )
        end do; end do; end do
     else
-       where(true_cell(0:nI+1, 0:nJ+1, 0:nK+1,iBlock))
+       where(Used_GB(0:nI+1, 0:nJ+1, 0:nK+1,iBlock))
           OneTrue_G = 1.0
        elsewhere
           OneTrue_G = 0.0
@@ -553,9 +553,9 @@ contains
        if(neilev(5  ,iBlock)==NOBLK) OneTrue_G(:,:,0   ) = 0.0
        if(neilev(6  ,iBlock)==NOBLK) OneTrue_G(:,:,nK+1) = 0.0
 
-       ! Where .not.true_cell, all the gradients are zero
-       ! In true_cell the input to gradient from the face neighbor
-       ! is ignored, if the face neighbor is .not.true_cell
+       ! Where .not.Used_GB, all the gradients are zero
+       ! In Used_GB the input to gradient from the face neighbor
+       ! is ignored, if the face neighbor is .not.Used_GB
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           Out_G(i,j,k) = - 0.5*OneTrue_G(i,j,k)*(+&

@@ -116,7 +116,7 @@ module ModIO
 
   character(LEN=3)  :: TypeCoordPlot_I(MaxFile) = '???'
 
-  ! x1, x2, y1, y2, z1, z2 limits for plotting
+  ! xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox limits for plotting
   real, dimension(6,MaxFile) :: plot_range=0.
   ! plot range for the current file
   real :: PlotRange_I(6)

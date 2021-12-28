@@ -129,7 +129,7 @@ contains
   subroutine get_coronal_heat_factor
 
     use ModAdvance,     ONLY: State_VGB, Bz_
-    use ModGeometry,    ONLY: true_BLK, true_cell, TypeGeometry
+    use ModGeometry,    ONLY: IsNoBody_B, Used_GB, TypeGeometry
     use ModMagnetogram, ONLY: get_magnetogram_field
     use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, tSimulation,z_
     use ModMpi,         ONLY: MPI_REAL, MPI_SUM
@@ -202,14 +202,14 @@ contains
        if(TypeGeometry == 'spherical')then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
-             if(true_BLK(iBlock)) then
+             if(IsNoBody_B(iBlock)) then
                 call get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
              end if
           end do
        elseif(TypeGeometry == 'cartesian')then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
-             if(true_BLK(iBlock)) then
+             if(IsNoBody_B(iBlock)) then
                 dAreaCgs = CellFace_DB(z_,iBlock)*No2Si_V(UnitX_)**2*1e4
 
                 call get_photosphere_field(iBlock, &
@@ -240,7 +240,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-       if(true_BLK(iBlock)) then
+       if(IsNoBody_B(iBlock)) then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call get_heat_function(i, j, k, iBlock, HeatFunction)
              HeatFunctionVolume = HeatFunctionVolume &
@@ -248,7 +248,7 @@ contains
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(true_cell(i,j,k,iBlock))then
+             if(Used_GB(i,j,k,iBlock))then
                 call get_heat_function(i, j, k, iBlock, HeatFunction)
                 HeatFunctionVolume = HeatFunctionVolume &
                      + HeatFunction*CellVolume_GB(i,j,k,iBlock)
@@ -289,7 +289,7 @@ contains
     use ModMain, ONLY: UseB0, z_
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use ModB0, ONLY: B0_DGB
-    use ModGeometry, ONLY: r_BLK
+    use ModGeometry, ONLY: r_GB
     use BATL_lib, ONLY: Xyz_DGB, IsCartesian
 
     integer, intent(in) :: i, j, k, iBlock
@@ -308,7 +308,7 @@ contains
     Bmagnitude = norm2(B_D)
 
     if(DtUpdateFlux <= 0.0)then
-       HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
+       HeatFunction = Bmagnitude*exp(-(r_GB(i,j,k,iBlock)-1.0)/DecayLength)
     else
        if(IsCartesian)then
           if(Xyz_DGB(z_,i,j,k,iBlock)<UnsignedFluxHeight)then
@@ -317,11 +317,11 @@ contains
              HeatFunction = Bmagnitude
           end if
        else
-          if(r_BLK(i,j,k,iBlock)<UnsignedFluxHeight)then
+          if(r_GB(i,j,k,iBlock)<UnsignedFluxHeight)then
              HeatFunction = 0.0
           else
              HeatFunction = Bmagnitude &
-                  *exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
+                  *exp(-(r_GB(i,j,k,iBlock)-1.0)/DecayLength)
           end if
        end if
     end if
@@ -365,7 +365,7 @@ contains
   subroutine get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
 
     use ModAdvance,     ONLY: State_VGB
-    use ModGeometry,    ONLY: r_BLK
+    use ModGeometry,    ONLY: r_GB
     use ModMain,        ONLY: nJ, nK, r_
     use ModInterpolate, ONLY: find_cell
     use ModPhysics,     ONLY: No2Si_V, UnitB_, UnitX_
@@ -404,9 +404,9 @@ contains
 
     do k = 1, nK; do j = 1, nJ
        BrLeft = sum(Xyz_DGB(:,iLeft,j,k,iBlock) &
-            *State_VGB(Bx_:Bz_,iLeft,j,k,iBlock))/r_BLK(iLeft,j,k,iBlock)
+            *State_VGB(Bx_:Bz_,iLeft,j,k,iBlock))/r_GB(iLeft,j,k,iBlock)
        BrRight = sum(Xyz_DGB(:,iLeft+1,j,k,iBlock) &
-            *State_VGB(Bx_:Bz_,iLeft+1,j,k,iBlock))/r_BLK(iLeft+1,j,k,iBlock)
+            *State_VGB(Bx_:Bz_,iLeft+1,j,k,iBlock))/r_GB(iLeft+1,j,k,iBlock)
 
        BrCgs = ((1.0 - DrLeft)*BrLeft + DrLeft*BrRight)*No2Si_V(UnitB_)*1e4
 
@@ -584,7 +584,7 @@ contains
   !============================================================================
   subroutine get_block_heating(iBlock)
 
-    use ModGeometry,       ONLY: r_BLK
+    use ModGeometry,       ONLY: r_GB
     use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
          No2Io_V, UnitB_
     use ModMain,       ONLY: x_, z_, UseB0
@@ -634,7 +634,7 @@ contains
        do k=1,nK;do j=1,nJ; do i=1,nI
 
           CoronalHeating_C(i,j,k) = HeatingAmplitude &
-               *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
+               *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
 
        end do; end do; end do
     else
@@ -645,7 +645,7 @@ contains
        HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
        do k=1,nK; do j=1,nJ; do i=1,nI
           CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) + HeatCh &
-               *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
+               *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
        end do; end do; end do
     end if
 
@@ -764,7 +764,7 @@ contains
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
-    use ModGeometry, ONLY: true_cell, R_BLK
+    use ModGeometry, ONLY: Used_GB, r_GB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMultiFluid, ONLY: iRho_I, IonFirst_
@@ -793,8 +793,8 @@ contains
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if( (.not.true_cell(i,j,k,iBlock)).or.&
-            R_BLK(i,j,k, iBlock) < rMinWaveReflection)CYCLE
+       if( (.not.Used_GB(i,j,k,iBlock)).or.&
+            r_GB(i,j,k, iBlock) < rMinWaveReflection)CYCLE
 
        call get_grad_log_alfven_speed(i, j, k, iBlock, IsNewBlockAlfven, &
             GradLogAlfven_D, GradLogRho_D)

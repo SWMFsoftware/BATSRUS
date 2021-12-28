@@ -22,7 +22,7 @@ contains
           x_, y_
     use ModAdvance, ONLY: nVar, State_VGB, rFixAxis, r2FixAxis
     use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, CellSize1Min, &
-         r_BLK, rMin_BLK, far_field_bcs_blk
+         r_GB, rMin_B, IsBoundary_B
     use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
          IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, radius_to_gen, &
          Xyz_DGB, CellVolume_GB, iComm
@@ -68,9 +68,9 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
-       if(rMin_BLK(iBlock) < r2FixAxis) then
+       if(rMin_B(iBlock) < r2FixAxis) then
           nAxisCell = 2
-       elseif(rMin_BLK(iBlock) < rFixAxis) then
+       elseif(rMin_B(iBlock) < rFixAxis) then
           nAxisCell = 1
        else
           CYCLE
@@ -86,7 +86,7 @@ contains
        end if
 
        do i = 1, nI
-          r = r_Blk(i,1,1,iBlock)
+          r = r_GB(i,1,1,iBlock)
           if(IsLogRadius) r = alog(r)
           if(IsGenRadius) call radius_to_gen(r)
           iR = ceiling( (r - XyzMin_D(1))/CellSize1Min + 0.1)
@@ -134,12 +134,12 @@ contains
 
     ! Overwrite cells around the axis with a linear slope
     do iBlock = 1, nBlock
-       if(Unused_B(iBlock) .or. .not. far_field_BCs_BLK(iBlock)) CYCLE
+       if(Unused_B(iBlock) .or. .not. IsBoundary_B(iBlock)) CYCLE
 
-       if(rMin_BLK(iBlock) < r2FixAxis) then
+       if(rMin_B(iBlock) < r2FixAxis) then
           nAxisCell = 2
           Beta = 0.8
-       elseif(rMin_BLK(iBlock) < rFixAxis) then
+       elseif(rMin_B(iBlock) < rFixAxis) then
           nAxisCell = 1
           Beta = 1.5
        else
@@ -155,7 +155,7 @@ contains
        end if
 
        do i = 1, nI
-          r = r_Blk(i,1,1,iBlock)
+          r = r_GB(i,1,1,iBlock)
           if(IsLogRadius) r = alog(r)
           if(IsGenRadius) call radius_to_gen(r)
           iR = ceiling( (r - XyzMin_D(1))/CellSize1Min + 0.1)

@@ -121,7 +121,7 @@ contains
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
 
     integer, intent(in) :: iBlock
@@ -151,7 +151,7 @@ contains
     IsBodyCell_G(:,:,:) = &
          .not.(iBoundary_GB(:,:,:,FBC%iBlockBc) == domain_)
 
-    call set_face_bc(FBC, IsBodyCell_G, true_cell(:,:,:,FBC%iBlockBc) )
+    call set_face_bc(FBC, IsBodyCell_G, Used_GB(:,:,:,FBC%iBlockBc) )
 
     if(DoTest)call write_face_state('Final')
 

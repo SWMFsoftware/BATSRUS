@@ -19,7 +19,7 @@ module ModEnergy
   use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        MaxBlock, Used_GB
   use ModChGL,     ONLY: UseChGL, rMinChGL
-  use ModGeometry, ONLY: R_BLK
+  use ModGeometry, ONLY: r_GB
   implicit none
 
   private ! except
@@ -86,7 +86,7 @@ contains
 
           ! Done with all fluids except first MHD fluid
           if(iFluid > 1 .or. .not. IsMhd) CYCLE
-          if(UseChGL.and.R_BLK(i,j,k,iBlock) > rMinChGL)CYCLE
+          if(UseChGL.and.r_GB(i,j,k,iBlock) > rMinChGL)CYCLE
           ! Add magnetic energy density
           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
@@ -147,7 +147,7 @@ contains
        end if
        ! Add magnetic energy if needed
        if(IsMhd .and. iFluid == 1                                  &
-            .and..not.(UseChGL.and.R_BLK(i,j,k,iBlock) > rMinChGL) &
+            .and..not.(UseChGL.and.r_GB(i,j,k,iBlock) > rMinChGL) &
             ) Energy_G(i,j,k) = Energy_G(i,j,k) &
             + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
     end do; end do; end do
@@ -233,7 +233,7 @@ contains
           end if
 
           if(iFluid == 1 .and. IsMhd                                      &
-               .and..not.(UseChGL.and.R_BLK(i,j,k,iBlock) > rMinChGL)     &
+               .and..not.(UseChGL.and.r_GB(i,j,k,iBlock) > rMinChGL)     &
                ) then
              ! Deal with first MHD fluid
              ! Subtract the magnetic energy density
@@ -289,7 +289,7 @@ contains
 
           ! Subtract the magnetic energy density
           if(iFluid == 1 .and. IsMhd                                 &
-               .and..not.(UseChGL.and.R_BLK(i,j,k,iBlock) > rMinChGL)&
+               .and..not.(UseChGL.and.r_GB(i,j,k,iBlock) > rMinChGL)&
                ) then
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)

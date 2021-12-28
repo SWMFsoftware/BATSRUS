@@ -122,7 +122,7 @@ contains
     ! onto the spherical shell of the plot area.
     use ModMain,            ONLY: UseB0
     use ModFieldLineThread, ONLY: interpolate_thread_state, set_thread_plotvar
-    use ModGeometry,    ONLY: rMin_BLK
+    use ModGeometry,    ONLY: rMin_B
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
          xyz_to_coord, r_
@@ -171,7 +171,7 @@ contains
           if(r < rChromo) CYCLE
        else
           ! The point should be skipped, if outside the block
-          if(r < rMin_BLK(iBlock)) CYCLE
+          if(r < rMin_B(iBlock)) CYCLE
        end if
        ! if(r > rMax_B(iBlock)) CYCLE
 

@@ -393,15 +393,15 @@ contains
   end subroutine read_buffer_restart
   !============================================================================
   logical function is_buffered_point(i,j,k,iBlock)
-    use ModGeometry, ONLY: R_BLK, R2_BLK
+    use ModGeometry, ONLY: r_GB, rBody2_GB
     integer, intent(in):: i, j, k, iBlock
     !--------------------------------------------------------------------------
     if(IsBody2Buffer)then
-       is_buffered_point =   R2_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
-            .and.            R2_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+       is_buffered_point =   rBody2_GB(i,j,k,iBlock) <= BufferMax_D(1) &
+            .and.            rBody2_GB(i,j,k,iBlock) >= BufferMin_D(1)
     else
-       is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
-            .and.            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+       is_buffered_point =   r_GB(i,j,k,iBlock) <= BufferMax_D(1) &
+            .and.            r_GB(i,j,k,iBlock) >= BufferMin_D(1)
     end if
   end function is_buffered_point
   !============================================================================
@@ -466,7 +466,7 @@ contains
   !============================================================================
   subroutine match_ibc
     ! restore old values in the domain covered by the buffer grid
-    use ModGeometry, ONLY:R_BLK
+    use ModGeometry, ONLY:r_GB
     use BATL_lib,  ONLY: Xyz_DGB, iProc
     use ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B
     use ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
@@ -483,10 +483,10 @@ contains
        ! Fill in the physical cells, which are outside the buffer grid
        ! When testing, do not fill cells outside the buffer
        do k = 1, nK; do j = 1 , nJ; do i = 1, nI
-          if(R_BLK(i,j,k,iBlock) < rBuffMax)CYCLE
+          if(r_GB(i,j,k,iBlock) < rBuffMax)CYCLE
 
           ! For each grid point, get the values at the base (buffer)
-          x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/R_BLK(i,j,k,iBlock)
+          x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/r_GB(i,j,k,iBlock)
 
           ! The grid point values are extracted from the base values
           call get_from_spher_buffer_grid(&
@@ -500,7 +500,7 @@ contains
           ! Scale as (r/R)^2:
           State_VGB(:,i,j,k,iBlock)=&
                State_VGB(:,i,j,k,iBlock)*&
-               (rBuffMax/R_BLK(i,j,k,iBlock))**2
+               (rBuffMax/r_GB(i,j,k,iBlock))**2
 
        end do; end do; end do
     end do

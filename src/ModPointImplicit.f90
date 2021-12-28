@@ -271,7 +271,7 @@ contains
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
          DoReplaceDensity, UseMultiSpecies
     use ModMultiFluid, ONLY: iRho_I, nFluid
-    use ModGeometry, ONLY: True_Blk, True_Cell
+    use ModGeometry, ONLY: IsNoBody_B, Used_GB
     use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, &
          Rho_, DefaultState_V, NameVar_V
     use ModPhysics, ONLY: RhoMin_I
@@ -344,11 +344,11 @@ contains
           ! Get perturbation based on first norm of state in the block
           if(DoNormalizeCell)then
              Norm_C = abs(State0_C)
-          elseif(true_BLK(iBlock))then
+          elseif(IsNoBody_B(iBlock))then
              Norm_C = sum(abs(State0_C))/nIJK
           else
-             Norm_C = sum(abs(State0_C),MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))&
-                  /max(count(true_cell(1:nI,1:nJ,1:nK,iBlock)),1)
+             Norm_C = sum(abs(State0_C),MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))&
+                  /max(count(Used_GB(1:nI,1:nJ,1:nK,iBlock)),1)
           end if
 
           Epsilon_C = EpsPointImpl*Norm_C + EpsPointImpl_V(iVar)
@@ -418,7 +418,7 @@ contains
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
        ! Do not update body cells
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        ! call timing_start('pointimplmatrix')
        DtCell = Cfl*time_BLK(i,j,k,iBlock)*iStage/real(nStage)

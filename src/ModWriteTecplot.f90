@@ -690,7 +690,7 @@ contains
          nBlockALL, IsTimeAccurate,nStep, &
          nOrder, UseRotatingBc,           &
          TypeCoordSystem, CodeVersion
-    use ModGeometry, ONLY: nTrueCells
+    use ModGeometry, ONLY: nUsedCell
     use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
     use ModPhysics, ONLY : &
          ThetaTilt, Rbody, ClightFactor, BodyNDim_I, Gamma_I
@@ -759,7 +759,7 @@ contains
             '"', Newline
 
        ! CELLSUSED
-       write(iUnitHere) 'AUXDATA CELLSUSED="',int2str(nTrueCells),'"',Newline
+       write(iUnitHere) 'AUXDATA CELLSUSED="',int2str(nUsedCell),'"',Newline
 
        ! CODEVERSION
        write(tmp, '(a,(f5.2),2a)') &
@@ -865,7 +865,7 @@ contains
        write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLS="',nBlockALL*nIJK,'"'
 
        ! CELLSUSED
-       write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLSUSED="',nTrueCells,'"'
+       write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLSUSED="',nUsedCell,'"'
 
        ! CODEVERSION
        write(iUnitHere,'(a,f5.2,a)') &

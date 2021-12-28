@@ -35,8 +35,7 @@ module ModUpdateStateFast
   use ModB0, ONLY: B0_DGB, get_b0_dipole
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
-  use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
-       IsBoundary_B => far_field_BCs_BLK
+  use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox
   use ModSolarWind, ONLY: get_solar_wind_point
   use CON_axes, ONLY: SmgGsm_DD
   use ModUtilities, ONLY: CON_stop
@@ -1966,7 +1965,7 @@ contains
     !--------------------------------------------------------------------------
 
     if (IsTimeAccurate .and. iTypeCellBc_I(2) == VaryBC_)then
-       call get_solar_wind_point(tSimulation, [x2, 0., 0.], &
+       call get_solar_wind_point(tSimulation, [xMaxBox, 0., 0.], &
             CellState_VI(:,2))
        ! Convert velocity to momentum
        CellState_VI(RhoUx_:RhoUz_,2) = &

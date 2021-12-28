@@ -233,7 +233,7 @@ contains
   end function cooling_function_integral_si
   !============================================================================
   subroutine add_chromosphere_heating(TeSi_C,iBlock)
-    use ModGeometry, ONLY: r_BLK
+    use ModGeometry, ONLY: r_GB
     use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
     use ModPhysics,  ONLY: UnitX_, Si2No_V,UseStar,RadiusStar,MassStar
     use ModCoronalHeating, ONLY: CoronalHeating_C
@@ -249,7 +249,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'add_chromosphere_heating'
     !--------------------------------------------------------------------------
-    HeightSi_C = (r_BLK(1:nI,1:nJ,1:nK,iBlock) - 1) * Si2No_V(UnitX_)
+    HeightSi_C = (r_GB(1:nI,1:nJ,1:nK,iBlock) - 1) * Si2No_V(UnitX_)
     if(UseStar)then
        BarometricScaleSi = TeChromosphereSi *  cBarometricScalePerT*RadiusStar**2/MassStar
     else

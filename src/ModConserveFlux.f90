@@ -17,7 +17,7 @@ module ModConserveFlux
        RightState_VX, RightState_VY, RightState_VZ, &
        UseMhdMomentumFlux, MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
 
-  use ModGeometry,  ONLY: true_cell
+  use ModGeometry,  ONLY: Used_GB
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
        neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
@@ -355,8 +355,8 @@ contains
       !------------------------------------------------------------------------
       iGang = 1
       do k = 1, nK; do j = 1, nJ
-         if (.not.true_cell(lFaceTo-1, j, k, iBlock)) CYCLE
-         if (.not.true_cell(lFaceTo  , j, k, iBlock)) CYCLE
+         if (.not.Used_GB(lFaceTo-1, j, k, iBlock)) CYCLE
+         if (.not.Used_GB(lFaceTo  , j, k, iBlock)) CYCLE
 
          Flux_VXI(1:Vdt_,lFaceTo,j,k,iGang)  = &
               CorrectedFlux_VXB(1:Vdt_,j,k,lFaceFrom,iBlock)
@@ -392,8 +392,8 @@ contains
       !------------------------------------------------------------------------
       iGang = 1
       do k = 1, nK; do i = 1, nI
-         if (.not.true_cell(i, lFaceTo-1, k, iBlock))CYCLE
-         if (.not.true_cell(i, lFaceTo  , k, iBlock))CYCLE
+         if (.not.Used_GB(i, lFaceTo-1, k, iBlock))CYCLE
+         if (.not.Used_GB(i, lFaceTo  , k, iBlock))CYCLE
 
          Flux_VYI(1:Vdt_,i,lFaceTo,k,iGang)  = &
               CorrectedFlux_VYB(1:Vdt_,i,k,lFaceFrom,iBlock)
@@ -419,8 +419,8 @@ contains
       !------------------------------------------------------------------------
       iGang = 1
       do j = 1, nJ; do i = 1, nI
-         if(.not.true_cell(i, j, lFaceTo-1, iBlock)) CYCLE
-         if(.not.true_cell(i, j, lFaceTo  , iBlock)) CYCLE
+         if(.not.Used_GB(i, j, lFaceTo-1, iBlock)) CYCLE
+         if(.not.Used_GB(i, j, lFaceTo  , iBlock)) CYCLE
 
          Flux_VZI(1:Vdt_,i,j,lFaceTo,iGang)  = &
               CorrectedFlux_VZB(1:Vdt_,i,j,lFaceFrom,iBlock)
@@ -459,7 +459,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     do k=1,nK; do j=1,nJ
-       if(.not.all(true_cell(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
+       if(.not.all(Used_GB(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
 
        FaceArea_D = FaceNormal_DDFB(:,1,iFaceOut,j,k,iBlock)
        FaceArea2  = sum(FaceArea_D**2)
@@ -498,7 +498,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     do k=1,nK; do i=1,nI
-       if(.not.all(true_cell(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
+       if(.not.all(Used_GB(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
 
        FaceArea_D = FaceNormal_DDFB(:,2,i,jFaceOut,k,iBlock)
        FaceArea2  = sum(FaceArea_D**2)
@@ -538,7 +538,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     do j=1,nJ; do i=1,nI
-       if(.not.all(true_cell(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
+       if(.not.all(Used_GB(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
 
        FaceArea_D = FaceNormal_DDFB(:,3,i,j,kFaceOut,iBlock)
        FaceArea2  = sum(FaceArea_D**2)

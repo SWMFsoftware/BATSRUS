@@ -68,7 +68,7 @@ contains
          Flux_VXI, Flux_VYI, Flux_VZI
     use ModB0,         ONLY: set_b0_face
     use ModConserveFlux, ONLY: DoConserveFlux
-    use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
+    use ModGeometry,     ONLY: IsBody_B, IsBoundary_B
     use ModFaceBoundary, ONLY: set_face_boundary
     use ModCellBoundary, ONLY: set_cell_boundary
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_
@@ -215,7 +215,7 @@ contains
           iStage = iStage_B(iBlock)
 
           ! Update cell boundaries
-          if (far_field_BCs_BLK(iBlock)) call set_cell_boundary( &
+          if (IsBoundary_B(iBlock)) call set_cell_boundary( &
                nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
 
           call timing_start('calc_facevalues')
@@ -223,7 +223,7 @@ contains
           call timing_stop('calc_facevalues')
 
           ! Update face boundaries
-          if(body_BLK(iBlock)) &
+          if(IsBody_B(iBlock)) &
                call set_face_boundary(iBlock, Time_B(iBlock), .false.)
 
           ! Calculate fluxes
@@ -318,7 +318,7 @@ contains
 
   subroutine set_local_time_step(TimeSimulationLimit)
 
-    use ModGeometry,   ONLY: true_cell, true_BLK, CellSize1Min, CellSize1Max
+    use ModGeometry,   ONLY: Used_GB, IsNoBody_B, CellSize1Min, CellSize1Max
     use ModMain,       ONLY: tSimulation, Cfl, Dt_B
     use ModAdvance,    ONLY: time_BLK
     use BATL_lib,      ONLY: CellSize_DB, Unused_B
@@ -374,8 +374,8 @@ contains
        time_BLK(:,:,:,iBlock) = Dt_B(iBlock)
 
        ! Reset time step to zero inside body.
-       if(.not.true_BLK(iBlock))then
-          where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+       if(.not.IsNoBody_B(iBlock))then
+          where(.not.Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                time_BLK(:,:,:,iBlock) = 0.0
        end if
     enddo

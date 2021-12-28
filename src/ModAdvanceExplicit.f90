@@ -27,7 +27,7 @@ contains
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: neiLev
-    use ModGeometry,   ONLY: Body_BLK, true_BLK
+    use ModGeometry,   ONLY: IsBody_B, IsNoBody_B
     use ModBlockData,  ONLY: set_block_data
     use ModImplicit,   ONLY: UsePartImplicit
     use ModPhysics,    ONLY: No2Si_V, UnitT_, OmegaBody_D, &
@@ -65,8 +65,8 @@ contains
     ! Perform multi-stage update of solution for this time (iteration) step
     call timing_start(NameSub)
 
-    ! OPTIMIZE: Is there a better place to update true_BLK? --Yuxi
-    !$acc update device(true_BLK)
+    ! OPTIMIZE: Is there a better place to update IsNoBody_B? --Yuxi
+    !$acc update device(IsNoBody_B)
 
     ! if(UseBody2Orbit) call update_secondbody
 
@@ -106,7 +106,7 @@ contains
                   DoMonotoneRestrict = .true.)
              call timing_stop('calc_face_bfo')
 
-             if(body_BLK(iBlock)) &
+             if(IsBody_B(iBlock)) &
                   call set_face_boundary(iBlock, tSimulation, .true.)
 
              ! Compute interface fluxes for each fine grid cell face at
@@ -158,7 +158,7 @@ contains
              call calc_face_value(iBlock, DoResChangeOnly=.false., &
                   DoMonotoneRestrict=.true.)
              call timing_stop('calc_facevalues')
-             if(body_BLK(iBlock)) &
+             if(IsBody_B(iBlock)) &
                   call set_face_boundary(iBlock, tSimulation,.false.)
 
              if(.not.DoInterpolateFlux)then
@@ -332,8 +332,8 @@ contains
     use ModMessagePass,      ONLY: exchange_messages
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_, &
          fix_boundary_ghost_cells
-    use ModGeometry,   ONLY: Xyz_DGB, R2_BLK, body_BLK, true_cell, True_BLK, &
-         Rmin2_BLK
+    use ModGeometry,   ONLY: Xyz_DGB, rBody2_GB, IsBody_B, Used_GB, IsNoBody_B, &
+         rMinBody2_B
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModAdvance,    ONLY: State_VGB, nVar
     use BATL_lib, ONLY: nI, nJ, nK
@@ -366,25 +366,25 @@ contains
     ! Updating the grid structure for the new second body position
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-       ! Update R2_BLK array (the distance from the second body center)
+       ! Update rBody2_GB array (the distance from the second body center)
        ! with new second body location
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          R2_BLK(i,j,k,iBlock) = norm2( Xyz_DGB(:,i,j,k,iBlock) - &
+          rBody2_GB(i,j,k,iBlock) = norm2( Xyz_DGB(:,i,j,k,iBlock) - &
                [xBody2, yBody2, zBody2])
        end do; end do; end do
-       Rmin2_BLK(iBlock) = minval(R2_BLK(:,:,:,iBlock))
+       rMinBody2_B(iBlock) = minval(rBody2_GB(:,:,:,iBlock))
        ! Reset true cells. "True" are old true cells or old body2 cells
        where(IsBody2Old_GB(:,:,:,iBlock)) &
             iBoundary_GB(:,:,:,iBlock)=domain_
 
        ! Set iBoundary_GB for body2
-       where( R2_BLK(:,:,:,iBlock) < rbody2) &
+       where( rBody2_GB(:,:,:,iBlock) < rbody2) &
             iBoundary_GB(:,:,:,iBlock) = body2_
 
-       true_cell(:,:,:,iBlock) = (iBoundary_GB(:,:,:,iBlock)==domain_)
+       Used_GB(:,:,:,iBlock) = (iBoundary_GB(:,:,:,iBlock)==domain_)
 
-       ! TRUE_BLK: if all cells EXCLUDING ghost cells are outside body(ies)
-       true_BLK(iBlock) = all(true_cell(1:nI,1:nJ,1:nK,iBlock))
+       ! IsNoBody_B: if all cells EXCLUDING ghost cells are outside body(ies)
+       IsNoBody_B(iBlock) = all(Used_GB(1:nI,1:nJ,1:nK,iBlock))
     enddo
     iNewGrid = mod(iNewGrid + 1, 10000)
     call fix_boundary_ghost_cells
@@ -396,7 +396,7 @@ contains
        do k = 1,nK ; do j = 1,nJ ; do i = 1,nI
           ! Check if the cell flagged as the second body cell
           ! (hence, filled in with some garbage) becomes a physical cell
-          if(true_cell(i,j,k,iBlock).and.IsBody2Old_GB(i,j,k, iBlock)) then
+          if(Used_GB(i,j,k,iBlock).and.IsBody2Old_GB(i,j,k, iBlock)) then
              ! New true cell, which was inside the second body before.
              ! Needs to be filled in from good cells
              ! Nullify counters
@@ -410,7 +410,7 @@ contains
                       ! Skip cells which were inside second body
                       if(IsBody2Old_GB(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
                       ! Skip other non-true cells
-                      if(.not.true_cell(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
+                      if(.not.Used_GB(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
                       ! Collect good state to the counter
                       StateCounter_V = StateCounter_V + &
                            State_VGB(:,i+iNei,j+jNei,k+kNei,iBlock)

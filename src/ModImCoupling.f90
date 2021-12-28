@@ -146,7 +146,7 @@ contains
     use ModFieldTrace, ONLY : ray
     use ModPhysics,  ONLY : &
          Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
-    use ModGeometry, ONLY : R_BLK, Xyz_DGB, z_
+    use ModGeometry, ONLY : r_GB, Xyz_DGB, z_
     use ModAdvance,  ONLY : State_VGB, RhoUz_, Bx_, Bz_
     use ModB0,       ONLY: B0_DGB
 
@@ -368,7 +368,7 @@ contains
        ! and the cell is within radius rFixPolarRegion and flow points outward
        ! then nudge the pressure (and density) towards the "polarregion" values
        if(pIm_ICB(1,i,j,k,iBlock) < 0.0 .and. DoFixPolarRegion .and. &
-            R_BLK(i,j,k,iBlock) < rFixPolarRegion .and. &
+            r_GB(i,j,k,iBlock) < rFixPolarRegion .and. &
             Xyz_DGB(z_,i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0)then
 
           do iFluid = 1, nFluid

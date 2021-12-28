@@ -5,7 +5,7 @@ module ModGeometry
 
   use BATL_lib, ONLY: &
        test_start, test_stop,&
-       iProc, Xyz_DGB, CellSize_DB, true_cell => Used_GB
+       iProc, Xyz_DGB, CellSize_DB, Used_GB
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModSize
@@ -19,15 +19,14 @@ module ModGeometry
   character(len=20):: TypeGeometry = 'cartesian'
 
   ! Cartesian box limits that may be cut out of a non-Cartesian grid
-  real :: x1, x2, y1, y2, z1, z2
+  real :: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
 
   ! Total volume of used (true) cells
   real :: DomainVolume = -1.0
 
-  ! Coordinates of 1,1,1 cell. Coord111_DB would be a good name.
-  ! Same as BATL_lib::CoordMin_DB + 0.5*CellSize_DB
-  real, allocatable :: XyzStart_BLK(:,:)
-  !$acc declare create(XyzStart_BLK)
+  ! Coordinates of 1,1,1 cell. Same as BATL_lib::CoordMin_DB + 0.5*CellSize_DB
+  real, allocatable :: Coord111_DB(:,:)
+  !$acc declare create(Coord111_DB)
 
   ! Obsolete variables. Same as BATL_lib::CoordMin_D and CoordMax_D
   real :: XyzMin_D(3), XyzMax_D(3)
@@ -47,33 +46,35 @@ module ModGeometry
   real:: CellSizeMin, CellSizeMax
 
   ! Variables describing cells inside boundaries
-  ! true when at least one cell in the block (including ghost cells) is not true
-  logical, allocatable :: body_BLK(:)
-  !$acc declare create(body_BLK)
+
+  ! true when at least one cell in the block (including ghost cells)
+  ! is not used
+  logical, allocatable :: IsBody_B(:)
+  !$acc declare create(IsBody_B)
 
   ! true when all cells in block (not including ghost cells) are true_cells
-  logical, allocatable :: true_BLK(:)
-  !$acc declare create(true_BLK)
+  logical, allocatable :: IsNoBody_B(:)
+  !$acc declare create(IsNoBody_B)
 
   ! Number of true cells (collected for processor 0)
-  integer :: nTrueCells = -1
+  integer :: nUsedCell = -1
 
   ! True for blocks next to the cell based boundaries
-  logical, allocatable :: far_field_BCs_BLK(:)
-  !$acc declare create(far_field_BCs_BLK)
+  logical, allocatable :: IsBoundary_B(:)
+  !$acc declare create(IsBoundary_B)
 
   ! Radial distance from origin and second body
-  real, allocatable :: R_BLK(:,:,:,:)
-  !$acc declare create(R_BLK)
-  real, allocatable :: R2_BLK(:,:,:,:)
+  real, allocatable :: r_GB(:,:,:,:)
+  !$acc declare create(r_GB)
+  real, allocatable :: rBody2_GB(:,:,:,:)
 
-  ! Smallest value of r_BLK and r2_BLK within a block
-  real, allocatable :: Rmin_BLK(:)
-  !$acc declare create(Rmin_BLK)
-  real, allocatable :: Rmin2_BLK(:)
+  ! Smallest value of r_GB and rBody2_GB within a block
+  real, allocatable :: rMin_B(:)
+  !$acc declare create(rMin_B)
+  real, allocatable :: rMinBody2_B(:)
 
-  ! ADDED FOR general r grid in spherical geometry!
-  ! Main Idea is to have a tabulated function that maps
+  ! Added for general r grid in spherical geometry!
+  ! Main idea is to have a tabulated function that maps
   ! a general coordinate to log(r). This way, r resolution can
   ! be arbitrarily defined. Gen. coord is taken to be 0 to 1.0
   ! but will be linearly extrapolated outside of this domain
@@ -93,19 +94,19 @@ contains
     character(len=*), parameter:: NameSub = 'init_mod_geometry'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(allocated(true_cell)) RETURN
+    if(allocated(Used_GB)) RETURN
 
-    allocate(true_cell(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(body_BLK(MaxBlock))
-    allocate(true_BLK(MaxBlock))
-    allocate(far_field_BCs_BLK(MaxBlock))
-    allocate(R_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(Rmin_BLK(MaxBlock))
-    allocate(XyzStart_BLK(3,MaxBlock))
+    allocate(Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(IsBody_B(MaxBlock))
+    allocate(IsNoBody_B(MaxBlock))
+    allocate(IsBoundary_B(MaxBlock))
+    allocate(r_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(rMin_B(MaxBlock))
+    allocate(Coord111_DB(3,MaxBlock))
 
     if(UseBody2)then
-       allocate(R2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-       allocate(Rmin2_BLK(MaxBlock))
+       allocate(rBody2_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       allocate(rMinBody2_B(MaxBlock))
     end if
 
     if(iProc==0)then
@@ -123,16 +124,16 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(allocated(true_cell))         deallocate(true_cell)
-    if(allocated(body_BLK))          deallocate(body_BLK)
-    if(allocated(true_BLK))          deallocate(true_BLK)
-    if(allocated(far_field_BCs_BLK)) deallocate(far_field_BCs_BLK)
-    if(allocated(R_BLK))             deallocate(R_BLK)
-    if(allocated(R2_BLK))            deallocate(R2_BLK)
-    if(allocated(Rmin_BLK))          deallocate(Rmin_BLK)
-    if(allocated(Rmin2_BLK))         deallocate(Rmin2_BLK)
-    if(allocated(LogRGen_I))         deallocate(LogRGen_I)
-    if(allocated(XyzStart_BLK))      deallocate(XyzStart_BLK)
+    if(allocated(Used_GB))    deallocate(Used_GB)
+    if(allocated(IsBody_B))     deallocate(IsBody_B)
+    if(allocated(IsNoBody_B))   deallocate(IsNoBody_B)
+    if(allocated(IsBoundary_B)) deallocate(IsBoundary_B)
+    if(allocated(r_GB))         deallocate(r_GB)
+    if(allocated(rBody2_GB))    deallocate(rBody2_GB)
+    if(allocated(rMin_B))       deallocate(rMin_B)
+    if(allocated(rMinBody2_B))  deallocate(rMinBody2_B)
+    if(allocated(LogRGen_I))    deallocate(LogRGen_I)
+    if(allocated(Coord111_DB))  deallocate(Coord111_DB)
 
     if(iProc==0)then
        call write_prefix
@@ -260,12 +261,12 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    nTrueCells=0
+    nUsedCell=0
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       nTrueCells = nTrueCells + count(true_cell(1:nI,1:nJ,1:nK,iBlock))
+       nUsedCell = nUsedCell + count(Used_GB(1:nI,1:nJ,1:nK,iBlock))
     end do
-    call MPI_reduce_integer_scalar(nTrueCells, MPI_SUM, 0, iComm, iError)
+    call MPI_reduce_integer_scalar(nUsedCell, MPI_SUM, 0, iComm, iError)
 
     call test_stop(NameSub, DoTest)
   end subroutine count_true_cells

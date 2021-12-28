@@ -229,7 +229,7 @@ contains
     use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
          UseB, Dt_B, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
          UseLocalTimeStep
-    use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell, nTrueCells, &
+    use ModGeometry, ONLY: CellSizeMin, CellSizeMax, Used_GB, nUsedCell, &
          count_true_cells
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, &
@@ -263,11 +263,11 @@ contains
     if(DoProfileAmr) call timing_start('amr::regrid_batl')
     if(UsePartSteady)then
        call regrid_batl(nVar, State_VGB, Dt_B, DoTestIn=DoTest, &
-            Used_GB=true_cell, iTypeNode_A=iTypeAdvance_A)
+            Used_GB=Used_GB, iTypeNode_A=iTypeAdvance_A)
     else
        call regrid_batl(nVar, State_VGB, Dt_B, &
             DoBalanceEachLevelIn=UseLocalTimeStep, DoTestIn=DoTest, &
-            Used_GB=true_cell, UseHighOrderAMRIn=UseHighOrderAMR, &
+            Used_GB=Used_GB, UseHighOrderAMRIn=UseHighOrderAMR, &
             DefaultStateIn_V=DefaultState_V)
     end if
     if(DoProfileAmr) call timing_stop('amr::regrid_batl')
@@ -325,7 +325,7 @@ contains
        call write_prefix; write(iUnitOut,*) &
             '|  AMR:  Total number of cells       = ', nBlockALL*nIJK
        call write_prefix; write(iUnitOut,*) &
-            '|  AMR:  Total number of true cells  = ', nTrueCells
+            '|  AMR:  Total number of true cells  = ', nUsedCell
        call write_prefix; write(iUnitOut,*) &
             '|  AMR:  Min and max AMR levels      = ', nLevelMin, nLevelMax
        if(IsLogRadius .or. IsGenRadius)then
@@ -374,7 +374,7 @@ contains
          x_, y_, z_, MaxBlock
     use ModMain,       ONLY: nBlock, UseB0, Unused_B, DoThinCurrentSheet
     use ModChGL,       ONLY: UseChGL
-    use ModGeometry,   ONLY: r_BLK, true_cell
+    use ModGeometry,   ONLY: r_GB, Used_GB
     use ModAdvance,    ONLY: State_VGB, StateOld_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
     use ModB0,         ONLY: B0_DGB
@@ -554,9 +554,9 @@ contains
              ! The new geometric methods are better, but this is kept
              ! so that the tests keep running
              Var_G(1:nI,1:nJ,1:nK) = 1.0/((max(cTiny, &
-                  abs(Rcurrents - r_BLK(1:nI,1:nJ,1:nK,iBlock))))**2)
+                  abs(Rcurrents - r_GB(1:nI,1:nJ,1:nK,iBlock))))**2)
              Crit_IB(iCrit,iBlock) = maxval(Var_G(1:nI,1:nJ,1:nK),&
-                  MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+                  MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
 
           case('currentsheet')
              if(SignB_>1 .and. (DoThinCurrentSheet.or.UseChGL))then

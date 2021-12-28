@@ -55,7 +55,7 @@ contains
   subroutine calc_coarse_axis_timestep(iBlock,iHemisphere)
     use ModSize, ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, time_BLK
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use BATL_lib, ONLY: CellVolume_GB
     integer, intent(in):: iBlock, iHemisphere
     ! Misc
@@ -83,7 +83,7 @@ contains
        do j = 1, nJ/jMerge
           jStart = (j-1)*jMerge + 1; jLast = j*jMerge
           do i = 1,nI
-             if(any(.not. true_cell(i,jStart:jLast,k,iBlock))) then
+             if(any(.not. Used_GB(i,jStart:jLast,k,iBlock))) then
                 time_BLK(i,jStart:jLast,k,iBlock) = 0
              else
                 Vdt =  sum( &

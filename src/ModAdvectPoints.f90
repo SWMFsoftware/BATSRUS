@@ -169,7 +169,7 @@ contains
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock, Dt
     use ModAdvance,  ONLY: StateOld_VGB, State_VGB, Rho_, RhoUx_,RhoUy_,RhoUz_
-    use ModGeometry, ONLY: x2
+    use ModGeometry, ONLY: xMaxBox
     use BATL_lib,    ONLY: Xyz_DGB, x_, z_, iProc
     use ModNumConst, ONLY: cTwoPi
     use ModIoUnit,   ONLY: UnitTmp_
@@ -190,7 +190,7 @@ contains
     ! Initial positions
     Xyz_DI = 0.0
     do iPoint=1, nPoint
-       Xyz_DI(1,iPoint) = (iPoint-0.5)/nPoint*0.9*x2
+       Xyz_DI(1,iPoint) = (iPoint-0.5)/nPoint*0.9*xMaxBox
     end do
 
     ! Rotation with Omega=1 around the Z axis
@@ -208,7 +208,7 @@ contains
     if(iProc==0)then
        call open_file(FILE='advect_test.log')
        write(UnitTmp_,'(a)')'Shifted circle'
-       write(UnitTmp_,'(a)')'x1 y1 z1 xM yM zM xN yN zN'
+       write(UnitTmp_,'(a)')'xMinBox yMinBox zMinBox xM yM zM xN yN zN'
     end if
 
     do iStep = 1, nStep

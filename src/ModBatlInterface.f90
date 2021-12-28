@@ -106,7 +106,7 @@ contains
 
     use ModBoundaryGeometry, ONLY: fix_block_geometry
     use ModGeometry, ONLY: &
-         XyzStart_BLK, r_BLK, rMin_BLK
+         Coord111_DB, r_GB, rMin_B
 
     use ModParallel, ONLY: neiLEV, neiBLK, neiPE, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
@@ -251,13 +251,13 @@ contains
     neiPE(:,5,iBlock) = neiPbot(:,iBlock)
     neiPE(:,6,iBlock) = neiPtop(:,iBlock)
 
-    XyzStart_BLK(:,iBlock) = CoordMin_DB(:,iBlock) + 0.5*CellSize_DB(:,iBlock)
+    Coord111_DB(:,iBlock) = CoordMin_DB(:,iBlock) + 0.5*CellSize_DB(:,iBlock)
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       r_BLK(i,j,k,iBlock) = norm2(Xyz_DGB(1:nDim,i,j,k,iBlock))
+       r_GB(i,j,k,iBlock) = norm2(Xyz_DGB(1:nDim,i,j,k,iBlock))
     end do; end do; end do
 
-    Rmin_BLK(iBlock) = minval(r_BLK(:,:,:,iBlock))
+    rMin_B(iBlock) = minval(r_GB(:,:,:,iBlock))
 
     call fix_block_geometry(iBlock)
 
@@ -278,7 +278,7 @@ contains
        !$acc update device(neiPeast, neiPwest, neiPnorth, neiPsouth)
        !$acc update device(neiBeast, neiBwest, neiBnorth, neiBsouth)
 
-       !$acc update device(Rmin_BLK, R_BLK, XyzStart_BLK)
+       !$acc update device(rMin_B, r_GB, Coord111_DB)
     endif
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -327,7 +327,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, nVar, time_BLK
     use ModB0,       ONLY: set_b0_cell
     use ModPhysics,  ONLY: FaceState_VI, rBody2
-    use ModGeometry, ONLY: body_BLK, true_blk, true_cell, R2_BLK
+    use ModGeometry, ONLY: IsBody_B, IsNoBody_B, Used_GB, rBody2_GB
     use ModMain,     ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
          Dt_B, IsTimeAccurate, UseDtFixed, Dt
     use ModParallel, ONLY: neiLwest, NOBLK
@@ -347,9 +347,9 @@ contains
     if(UseB0) call set_b0_cell(iBlock)
 
     ! Set values inside body
-    if(body_BLK(iBlock)) then
+    if(IsBody_B(iBlock)) then
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          if(true_cell(i,j,k,iBlock)) CYCLE
+          if(Used_GB(i,j,k,iBlock)) CYCLE
           State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body1_)
           ! Convert velocity to momentum
           do iFluid = 1, nFluid
@@ -366,7 +366,7 @@ contains
 
     if(UseBody2)then
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          if(R2_Blk(i,j,k,iBlock) > rBody2) CYCLE
+          if(rBody2_GB(i,j,k,iBlock) > rBody2) CYCLE
           State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body2_)
           ! Convert velocity to momentum
           do iFluid = 1, nFluid
@@ -396,8 +396,8 @@ contains
        end if
 
        ! Reset time step to zero inside body.
-       if(.not.true_BLK(iBlock))then
-          where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+       if(.not.IsNoBody_B(iBlock))then
+          where(.not.Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                time_BLK(:,:,:,iBlock) = 0.0
        end if
     end if
@@ -410,7 +410,7 @@ contains
        nCell, iCell_II, Weight_I, IsBody)
 
     use BATL_lib, ONLY: MaxDim, nDim
-    use ModGeometry, ONLY: body_BLK, true_cell
+    use ModGeometry, ONLY: IsBody_B, Used_GB
     ! Interpolation is performed using cells (including ghost) of single block,
     ! its index, iBlock, is provided at the call;
     !
@@ -439,7 +439,7 @@ contains
     call BATL_interpolate(XyzIn_D, iBlock, nCell, iCell_II, Weight_I)
 
     ! check whether all cells in the stencil are true cells
-    if(body_BLK(iBlock))then
+    if(IsBody_B(iBlock))then
        ! number of cells in the stencil may change, reset it
        nCellNew = 0
        ! reset total weight as well
@@ -447,7 +447,7 @@ contains
        do iCell = 1, nCell
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
-          if(true_cell(i_D(1),i_D(2),i_D(3),iBlock))then
+          if(Used_GB(i_D(1),i_D(2),i_D(3),iBlock))then
              nCellNew = nCellNew + 1
              WeightTotal = WeightTotal + Weight_I(iCell)
              ! rearrange output if necessary

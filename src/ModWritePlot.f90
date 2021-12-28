@@ -26,7 +26,7 @@ contains
 
     use ModMain
     use ModGeometry, ONLY: &
-         XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, CellSize1Min
+         XyzMin_D,XyzMax_D, Used_GB, TypeGeometry, LogRGen_I, CellSize1Min
     use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, &
          set_dimensional_factor
     use ModFieldLineThread, ONLY: DoPlotThreads
@@ -772,7 +772,7 @@ contains
       ! Then message_pass_node will do the averaging at block boundaries.
       do k=1,nK; do j=1,nJ; do i=1,nI  ! Cell loop
          do iVar = 1, nPlotvar
-            if ( true_cell(i,j,k,iBlock) .or. plotvar_useBody(iVar) )then
+            if ( Used_GB(i,j,k,iBlock) .or. plotvar_useBody(iVar) )then
                do kk=0,1; do jj=0,1; do ii=0,1
                   nCell_NV(i+ii,j+jj,k+kk,iVar) = &
                        nCell_NV(i+ii,j+jj,k+kk,iVar) + 1
@@ -1128,7 +1128,7 @@ contains
        case('z')
           PlotVar(:,:,:,iVar) = Xyz_DGB(3,:,:,:,iBlock)
        case('r')
-          PlotVar(:,:,:,iVar) = r_BLK(:,:,:,iBlock)
+          PlotVar(:,:,:,iVar) = r_GB(:,:,:,iBlock)
 
           ! BASIC MHD variables
        case('rho')
@@ -1136,7 +1136,7 @@ contains
           plotvar_inBody(iVar) = BodyRho_I(iFluid)
           ! If Body2 is used, set Rho=RhoBody2 inside it
           if(UseBody2)then
-             if(rMin2_BLK(iBlock) < rBody2) plotvar_inBody(iVar) = RhoBody2
+             if(rMinBody2_B(iBlock) < rBody2) plotvar_inBody(iVar) = RhoBody2
           end if
        case('rhoux','mx')
           if (UseRotatingFrame) then
@@ -1196,7 +1196,7 @@ contains
           plotvar_inBody(iVar) = BodyP_I(iFluid)
           ! If Body2 is used, set p=pBody2 inside it
           if(UseBody2)then
-             if(rMin2_BLK(iBlock) < rBody2) plotvar_inBody(iVar) = pBody2
+             if(rMinBody2_B(iBlock) < rBody2) plotvar_inBody(iVar) = pBody2
           end if
 
           ! EXTRA MHD variables
@@ -1319,7 +1319,7 @@ contains
              do k = Mink,MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 PlotVar(i,j,k,iVar) = &
                      sum(GradPe_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
-                     / max(1e-30, r_BLK(i,j,k,iBlock))
+                     / max(1e-30, r_GB(i,j,k,iBlock))
              end do; end do; end do
           end select
 
@@ -1348,7 +1348,7 @@ contains
              do k = 1,nK; do j = 1, nJ; do i = 1, nI
                 PlotVar(i,j,k,iVar) = &
                      sum(J_DC(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
-                     / max(1e-30, r_BLK(i,j,k,iBlock))
+                     / max(1e-30, r_GB(i,j,k,iBlock))
              end do; end do; end do
           end select
 
@@ -1470,26 +1470,26 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = sum( &
                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)*Xyz_DGB(:,i,j,k,iBlock) &
-                  ) / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
+                  ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
           end do; end do; end do
        case('rhour','mr')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = sum( &
                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)*Xyz_DGB(:,i,j,k,iBlock) &
-                  ) / R_BLK(i,j,k,iBlock)
+                  ) / r_GB(i,j,k,iBlock)
           end do; end do; end do
        case('br')
           plotvar_useBody(iVar) = .true.
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = sum( &
                   FullB_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock) &
-                  ) / R_BLK(i,j,k,iBlock)
+                  ) / r_GB(i,j,k,iBlock)
           end do; end do; end do
        case('b1r')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = sum( &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock)*Xyz_DGB(:,i,j,k,iBlock) &
-                  ) / R_BLK(i,j,k,iBlock)
+                  ) / r_GB(i,j,k,iBlock)
           end do; end do; end do
        case('er')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1497,7 +1497,7 @@ contains
                   Xyz_DGB(:,i,j,k,iBlock) &
                   *cross_product(FullB_DG(:,i,j,k), &
                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock))) &
-                  / (State_VGB(iRho,i,j,k,iBlock)*r_BLK(i,j,k,iBlock))
+                  / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
           end do; end do; end do
        case('pvecr')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1508,14 +1508,14 @@ contains
                   Xyz_DGB(:,i,j,k,iBlock) &
                   *( tmp1Var*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                   -  tmp2Var*FullB_DG(:,i,j,k) ) &
-                  ) / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
+                  ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
           end do; end do; end do
        case('b2ur')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = 0.5*sum(FullB_DG(:,i,j,k)**2) &
                   *sum( State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                   *     Xyz_DGB(:,i,j,k,iBlock) &
-                  ) / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
+                  ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
           end do; end do; end do
        case('visco')
           if (UseViscosity) then
@@ -1529,7 +1529,7 @@ contains
           else
              ! Div B from face fluxes
              do k = 1, nK; do j = 1, nJ; do i =1, nI
-                if(.not. true_cell(i,j,k,iBlock)) CYCLE
+                if(.not. Used_GB(i,j,k,iBlock)) CYCLE
                 PlotVar(i,j,k,iVar) = &
                      (Bxface_BLK(i+1,j,k,iBlock)                         &
                      -Bxface_BLK(i  ,j,k,iBlock))/CellSize_DB(x_,iBlock) + &
@@ -1544,8 +1544,8 @@ contains
        case('absdivb')
           if(UseB) PlotVar(1:nI,1:nJ,1:nK,iVar) = &
                abs(DivB1_GB(1:nI,1:nJ,1:nK,iBlock))
-          if(.not.true_BLK(iBlock))then
-             where(.not.true_cell(:,:,:,iBlock)) PlotVar(:,:,:,iVar) = 0.0
+          if(.not.IsNoBody_B(iBlock))then
+             where(.not.Used_GB(:,:,:,iBlock)) PlotVar(:,:,:,iVar) = 0.0
           endif
 
        case('theta1','req1','theta2','req2','phi1','phi2','status')
@@ -1616,8 +1616,8 @@ contains
           PlotVar(1:nI,1:nJ,1:nK,iVar) = time_BLK(1:nI,1:nJ,1:nK,iBlock)
        case('dtblk')
           PlotVar(:,:,:,iVar) = Dt_B(iBlock)
-          ! if(.not.true_BLK(iBlock))then
-          !   if(.not.any(true_cell(:,:,:,iBlock)))&
+          ! if(.not.IsNoBody_B(iBlock))then
+          !   if(.not.any(Used_GB(:,:,:,iBlock)))&
           !        PlotVar(:,:,:,iVar) = 0.0
           ! end if
        case('cons')

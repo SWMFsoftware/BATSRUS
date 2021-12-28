@@ -20,7 +20,7 @@ contains
 
     ! Save all cells within plotting range, for each processor
 
-    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzStart_BLK
+    use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, Coord111_DB
     use ModIO,       ONLY: save_binary, plot_type1, plot_dx, plot_range, &
          nPlotVarMax
     use ModNumConst, ONLY: cPi, cTwoPi
@@ -128,33 +128,33 @@ contains
 
     if((IsRLonLat .or. IsCylindrical) .and. .not.DoSaveGenCoord)then
        ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
-       ySqueezed = mod(xyzStart_BLK(Phi_,iBlock),cPi)
+       ySqueezed = mod(Coord111_DB(Phi_,iBlock),cPi)
        ! Make sure that small angles are moved to Pi degrees for y=0 cut
        if(ySqueezed < 0.25*cPi .and. &
             abs(yMin+yMax-cTwoPi) < 1e-6 .and. yMax-yMin < 0.01) &
             ySqueezed = ySqueezed + cPi
     else
-       ySqueezed = xyzStart_BLK(y_,iBlock)
+       ySqueezed = Coord111_DB(y_,iBlock)
     end if
 
     if(DoTest)then
        write(*,*) NameSub, 'xMin1,xMax1,yMin1,yMax1,zMin1,zMax1=',&
             xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
-       write(*,*) NameSub, 'xyzStart_BLK=',iBlock,xyzStart_BLK(:,iBlock)
+       write(*,*) NameSub, 'Coord111_DB=',iBlock,Coord111_DB(:,iBlock)
        write(*,*) NameSub, 'ySqueezed =',ySqueezed
        write(*,*) NameSub, 'xyzEnd=', &
-            xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock),&
+            Coord111_DB(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock),&
             ySqueezed + (nJ-1)*CellSize_DB(y_,iBlock),&
-            xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock)
+            Coord111_DB(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock)
     end if
 
     ! If block is fully outside of cut then cycle
-    if(  xyzStart_BLK(x_,iBlock) > xMax1.or.&
-         xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock) < xMin1.or.&
+    if(  Coord111_DB(x_,iBlock) > xMax1.or.&
+         Coord111_DB(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock) < xMin1.or.&
          ySqueezed > yMax1.or.&
          ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock) < yMin1.or.&
-         xyzStart_BLK(z_,iBlock) > zMax1.or.&
-         xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1)&
+         Coord111_DB(z_,iBlock) > zMax1.or.&
+         Coord111_DB(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1)&
          RETURN
 
     Dx = plot_Dx(1,iFile)
@@ -163,19 +163,19 @@ contains
     DzBlock = CellSize_DB(z_,iBlock)
 
     ! Calculate index limits of cells inside cut
-    iMin = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
-    iMax = min(nI,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
+    iMin = max(1 ,floor((xMin1-Coord111_DB(x_,iBlock))/DxBlock)+2)
+    iMax = min(nI,floor((xMax1-Coord111_DB(x_,iBlock))/DxBlock)+1)
 
     jMin = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
     jMax = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
 
-    kMin = max(1 ,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-    kMax = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+    kMin = max(1 ,floor((zMin1-Coord111_DB(z_,iBlock))/DzBlock)+2)
+    kMax = min(nK,floor((zMax1-Coord111_DB(z_,iBlock))/DzBlock)+1)
 
     if(DoTest)then
        write(*,*) NameSub, 'iMin,iMax,jMin,jMax,kMin,kMax=',&
             iMin,iMax,jMin,jMax,kMin,kMax
-       write(*,*) NameSub, 'DxBlock,x1,y1,z1',DxBlock,xyzStart_BLK(:,iBlock)
+       write(*,*) NameSub, 'DxBlock,xMinBox,yMinBox,zMinBox',DxBlock,Coord111_DB(:,iBlock)
        write(*,*) NameSub, 'ySqueezed  =',ySqueezed
        write(*,*) NameSub, 'xMin1,xMax1=',xMin1,xMax1
        write(*,*) NameSub, 'yMin1,yMax1=',yMin1,yMax1
@@ -190,7 +190,7 @@ contains
           z = Xyz_DGB(z_,i,j,k,iBlock)
 
           ! Check if we are inside the Cartesian box
-          if(x<x1 .or. x>x2 .or. y<y1 .or. y>y2 .or. z<z1 .or. z>z2) CYCLE
+          if(x<xMinBox .or. x>xMaxBox .or. y<yMinBox .or. y>yMaxBox .or. z<zMinBox .or. z>zMaxBox) CYCLE
 
           ! if plot type is bx0
           if(index(plot_type1, 'bx0') > 0) then
@@ -260,7 +260,7 @@ contains
                 y =0.5*(Xyz_DGB(y_,i,j,k,iBlock) + Xyz_DGB(y_,i2,j2,k2,iBlock))
                 z =0.5*(Xyz_DGB(z_,i,j,k,iBlock) + Xyz_DGB(z_,i2,j2,k2,iBlock))
 
-                if(x<x1 .or. x>x2 .or. y<y1 .or. y>y2 .or. z<z1 .or. z>z2) &
+                if(x<xMinBox .or. x>xMaxBox .or. y<yMinBox .or. y>yMaxBox .or. z<zMinBox .or. z>zMaxBox) &
                      CYCLE
 
                 if(DoSaveGenCoord)then

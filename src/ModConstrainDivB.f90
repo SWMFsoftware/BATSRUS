@@ -179,7 +179,7 @@ contains
     use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
     use ModParallel, ONLY : NOBLK,&
          neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-    use ModGeometry, ONLY : true_cell, body_BLK
+    use ModGeometry, ONLY : Used_GB, IsBody_B
     use ModPhysics, ONLY: SW_UX,SW_UY,SW_UZ,SW_BX,SW_BY,SW_BZ
     use BATL_lib, ONLY: CellFace_DB
 
@@ -256,11 +256,11 @@ contains
     end if
 
     ! Set VxB to zero on the cell edges of the body cells
-    if(body_BLK(iBlock))then
+    if(IsBody_B(iBlock))then
        ! Apply inner boundary condition on the electric field
        ! Make sure that edges belonging to body ghost cells are also corrected
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          if(.not.true_cell(i,j,k,iBlock))then
+          if(.not.Used_GB(i,j,k,iBlock))then
              VxB_x(i,j:j+1,k:k+1,iBlock) = 0.0
              VxB_y(i:i+1,j,k:k+1,iBlock) = 0.0
              VxB_z(i:i+1,j:j+1,k,iBlock) = 0.0
@@ -352,7 +352,7 @@ contains
     use ModSize
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
     use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : true_cell,body_BLK
+    use ModGeometry, ONLY : Used_GB,IsBody_B
 
     integer, intent(in) :: iBlock
 
@@ -377,8 +377,8 @@ contains
          Bzface_BLK(1:nI,1:nJ,1:nK  ,iBlock)+ &
          Bzface_BLK(1:nI,1:nJ,2:nK+1,iBlock))
 
-    if(body_BLK(iBlock))then
-       where(.not.true_cell(:,:,:,iBlock))
+    if(IsBody_B(iBlock))then
+       where(.not.Used_GB(:,:,:,iBlock))
           State_VGB(Bx_,:,:,:,iBlock)=0.0
           State_VGB(By_,:,:,:,iBlock)=0.0
           State_VGB(Bz_,:,:,:,iBlock)=0.0
@@ -444,7 +444,7 @@ contains
     ! This may have to be generalized later
 
     use ModSize
-    use ModGeometry, ONLY: true_cell,body_BLK
+    use ModGeometry, ONLY: Used_GB,IsBody_B
 
     integer, intent(in) :: iBlock
 
@@ -460,11 +460,11 @@ contains
        DoTest=.false.; DoTest=.false.
     end if
 
-    if(DoTest)write(*,*)'bound_Bface, body_BLK=',body_BLK(iBlock)
+    if(DoTest)write(*,*)'bound_Bface, IsBody_B=',IsBody_B(iBlock)
 
-    if(body_BLK(iBlock))then
+    if(IsBody_B(iBlock))then
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          if(.not.true_cell(i,j,k,iBlock))then
+          if(.not.Used_GB(i,j,k,iBlock))then
              BxFace_BLK(i:i+1,j,k,iBlock)=0.0
              ByFace_BLK(i,j:j+1,k,iBlock)=0.0
              BzFace_BLK(i,j,k:k+1,iBlock)=0.0
@@ -1127,7 +1127,7 @@ contains
     use ModMain
     use ModVarIndexes
     use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : body_BLK, true_cell
+    use ModGeometry, ONLY : IsBody_B, Used_GB
     use ModIO, ONLY : restart
     use ModPhysics, ONLY : SW_Bx,SW_By,SW_Bz
     use BATL_lib, ONLY: Xyz_DGB
@@ -1168,8 +1168,8 @@ contains
           State_VGB(Bx_,:,:,:,iBlock)=   Xyz_DGB(x_,:,:,:,iBlock)
           State_VGB(By_,:,:,:,iBlock)=   Xyz_DGB(y_,:,:,:,iBlock)
           State_VGB(Bz_,:,:,:,iBlock)=-2*Xyz_DGB(z_,:,:,:,iBlock)
-          if(body_BLK(iBlock))then
-             where(.not.true_cell(:,:,:,iBlock))
+          if(IsBody_B(iBlock))then
+             where(.not.Used_GB(:,:,:,iBlock))
                 State_VGB(Bx_,:,:,:,iBlock)=0.
                 State_VGB(By_,:,:,:,iBlock)=0.
                 State_VGB(Bz_,:,:,:,iBlock)=0.

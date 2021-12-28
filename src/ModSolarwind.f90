@@ -609,14 +609,14 @@ contains
     !
     ! If the satellite position (where the solar wind is measured)
     ! has StatelliteXyz_D(1)=0, then it is assumed to be located at the
-    ! minimum or maximum X boundary (x1 or x2) depending on the sign
+    ! minimum or maximum X boundary (xMinBox or xMaxBox) depending on the sign
     ! of the solar wind velocity.
     !
     ! Next calculate how long it takes to propagate from the satellite
     ! position to Xyz_D using the solar wind velocity and the orientation
     ! of the normal vector Normal_D that is normal to the assumed plane of the
     ! solar wind. TimeSimulation is shifted by the propagation time to
-    ! the "propagated time". Note that when Xyz_D is at the boundary (x1 or x2)
+    ! the "propagated time". Note that when Xyz_D is at the boundary (xMinBox or xMaxBox)
     ! and the normal vector points in the +X direction, there is no time shift.
     !
     ! Finally the solar wind data is interpolated to the propagated time.
@@ -629,7 +629,7 @@ contains
     use ModPhysics, ONLY: FaceState_VI, UnitT_, No2Si_V
     use ModVarIndexes
     use ModNumConst, ONLY: cTiny
-    use ModGeometry, ONLY: x1, x2
+    use ModGeometry, ONLY: xMinBox, xMaxBox
     use ModUtilities, ONLY: sleep
     use ModInterpolate, ONLY: interpolate_vector
 
@@ -668,9 +668,9 @@ contains
        ! Assume that the satellite is at the east or west boundary
        !  Distinguish based on the sign of the first Ux component.
        if(Solarwind_VI(Ux_,1) > 0.0)then
-          SatelliteXyz_D(1) = x1
+          SatelliteXyz_D(1) = xMinBox
        else
-          SatelliteXyz_D(1) = x2
+          SatelliteXyz_D(1) = xMaxBox
        endif
     end if
     ! Calculate absolute time

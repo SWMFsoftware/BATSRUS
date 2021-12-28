@@ -738,7 +738,7 @@ contains
     use ModMain,    ONLY: nI, nJ, nK, nBlock, IsTimeAccurate, tSimulation, &
          Dt, Unused_B, UseB0, UseRotatingBc
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
-    use ModGeometry, ONLY: r_BLK, Rmin_BLK
+    use ModGeometry, ONLY: r_GB, rMin_B
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: Si2No_V, UnitT_, rBody, OmegaBody_D
     use BATL_lib,   ONLY: Xyz_DGB
@@ -771,12 +771,12 @@ contains
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       if(rMin_BLK(iBlock) > rCoupleUiono) CYCLE
+       if(rMin_B(iBlock) > rCoupleUiono) CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-          if( r_BLK(i,j,k,iBlock) > rCoupleUiono) CYCLE
-          if( r_BLK(i,j,k,iBlock) < rBody) CYCLE
+          if( r_GB(i,j,k,iBlock) > rCoupleUiono) CYCLE
+          if( r_GB(i,j,k,iBlock) < rBody) CYCLE
 
           Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
 

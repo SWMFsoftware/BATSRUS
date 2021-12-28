@@ -21,7 +21,7 @@ module ModParticleMover
   use BATL_particles,  ONLY: Particle_I, put_particles, &
        mark_undefined, check_particle_location, &
        set_pointer_to_particles
-  use ModGeometry,     ONLY: true_cell
+  use ModGeometry,     ONLY: Used_GB
   use ModNumConst
   implicit none
   SAVE
@@ -511,7 +511,7 @@ contains
     ! Transform VDF moments to State Vector Variables
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Skip not true cells
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
@@ -581,7 +581,7 @@ contains
          MaxK=nK               , &
          iBlock=iBlock         , &
          DoOnScratch=DoOnScratch,&
-         DoSkip_G=.not.true_cell(1:nI,1:nJ,1:nK,iBlock))
+         DoSkip_G=.not.Used_GB(1:nI,1:nJ,1:nK,iBlock))
   end subroutine get_vdf_from_state
   !============================================================================
   subroutine set_boundary_vdf(iBlock)

@@ -18,7 +18,7 @@ module ModChGL
        nVar, Ux_, Uz_
   use BATL_lib, ONLY: MaxDim
   use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
-  use ModGeometry, ONLY: r_BLK, true_cell
+  use ModGeometry, ONLY: r_GB, Used_GB
   use ModB0,       ONLY: UseB0, B0_DGB
   implicit none
   PRIVATE ! Except
@@ -55,7 +55,7 @@ contains
     real    :: RhoU2, B_D(MaxDim)
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock))CYCLE
+       if(.not.Used_GB(i,j,k,iBlock))CYCLE
        ! The ChGL ratio is calculated in terms of U, B
        RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
        if(RhoU2 ==0.0)then
@@ -78,8 +78,8 @@ contains
     real    :: VA2, UDotB, UPar2, GeometricFactor, U_D(3), Ut_D(3)
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock))CYCLE
-       if(R_BLK(i,j,k,iBlock) < RSourceChGL)then
+       if(.not.Used_GB(i,j,k,iBlock))CYCLE
+       if(r_GB(i,j,k,iBlock) < RSourceChGL)then
           ! The ChGL ratio is calculated in terms of U, B
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
@@ -91,7 +91,7 @@ contains
                   (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
                   sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
           end if
-       elseif(r_BLK(i,j,k,iBlock) < RMinChGL)then
+       elseif(r_GB(i,j,k,iBlock) < RMinChGL)then
           if(iStage/=nStage)CYCLE
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
@@ -116,7 +116,7 @@ contains
           B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
           ! Geometric interpolation factor
-          GeometricFactor = (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
+          GeometricFactor = (r_GB(i,j,k,iBlock) - RSourceChGL) / &
                (RMinChGL - RSourceChGL)
           B2 = max(sum(B_D**2), 1e-30)
           U_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/Rho
@@ -182,7 +182,7 @@ contains
     ! Logical is true in the points of ChGL model
     logical             :: IsChGL_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !--------------------------------------------------------------------------
-    IsChGL_G = r_BLK(:,:,:,iBlock) > rMinChGL
+    IsChGL_G = r_GB(:,:,:,iBlock) > rMinChGL
     if (.not.DoResChangeOnly)then
        call correct_faceX(&
             1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
@@ -332,12 +332,12 @@ contains
     real :: FullB_D(3), U2
     !--------------------------------------------------------------------------
     U2 = max(sum(StateLeft_V(Ux_:Uz_)**2), sum(StateRight_V(Ux_:Uz_)**2),1e-30)
-    if(r_BLK(iLeft,jLeft,kLeft,iBlockFace) < RMinChGL.and.&
-         r_BLK(iFace,jFace,kFace,iBlockFace) >= RMinChGL)then
+    if(r_GB(iLeft,jLeft,kLeft,iBlockFace) < RMinChGL.and.&
+         r_GB(iFace,jFace,kFace,iBlockFace) >= RMinChGL)then
        FullB_D  = StateLeft_V(Bx_:Bz_) + [B0x, B0y, B0z]
        StateLeft_V(SignB_) = sum(StateLeft_V(Ux_:Uz_)*FullB_D)/U2
-    elseif(r_BLK(iFace,jFace,kFace,iBlockFace) < RMinChGL.and.&
-         r_BLK(iLeft,jLeft,kLeft,iBlockFace) >= RMinChGL)then
+    elseif(r_GB(iFace,jFace,kFace,iBlockFace) < RMinChGL.and.&
+         r_GB(iLeft,jLeft,kLeft,iBlockFace) >= RMinChGL)then
        FullB_D  = StateRight_V(Bx_:Bz_) + [B0x, B0y, B0z]
        StateRight_V(SignB_) = sum(StateRight_V(Ux_:Uz_)*FullB_D)/U2
     end if

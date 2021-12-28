@@ -1263,7 +1263,7 @@ contains
     use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
          iTypeUpdate, UpdateFast_
     use ModUpdateStateFast, ONLY: update_b0_fast
-    use ModGeometry,      ONLY: body_BLK
+    use ModGeometry,      ONLY: IsBody_B
     use CON_axes,         ONLY: get_axes
     use ModNumConst,      ONLY: cRadToDeg
     use ModIO,            ONLY: iUnitOut, write_prefix
@@ -1319,7 +1319,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        ! Set B1 to 0 inside bodies
-       if(Body_BLK(iBlock))then
+       if(IsBody_B(iBlock))then
           where(.not.Used_GB(:,:,:,iBlock))
              State_VGB(Bx_,:,:,:,iBlock)=0.0
              State_VGB(By_,:,:,:,iBlock)=0.0

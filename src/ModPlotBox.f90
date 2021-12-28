@@ -173,7 +173,7 @@ contains
     use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
     use ModVarIndexes, ONLY: nVar
     use ModParallel,   ONLY: NeiLev, NOBLK
-    use ModGeometry,   ONLY: RadiusMin, rMin_BLK
+    use ModGeometry,   ONLY: RadiusMin, rMin_B
 
     ! Arguments
     integer, intent(in) :: iBlock
@@ -227,7 +227,7 @@ contains
                 iDirMin = r_ + 1
              else
                 ! The point should be skipped, if outside the block
-                if(r < rMin_BLK(iBlock)) CYCLE
+                if(r < rMin_B(iBlock)) CYCLE
                 iDirMin = 1
              end if
 

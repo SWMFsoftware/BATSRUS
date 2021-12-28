@@ -256,7 +256,7 @@ contains
          State_VGB, iTypeAdvance_B, iTypeAdvance_BP,                 &
          SkippedBlock_, ImplBlock_, SteadyBlock_, &
          UseLowOrderRegion, IsLowOrderOnly_B
-    use ModGeometry,   ONLY: True_Blk, true_cell, far_field_BCs_Blk
+    use ModGeometry,   ONLY: IsNoBody_B, Used_GB, IsBoundary_B
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
     use ModPartSteady, ONLY: UsePartSteady
     use BATL_lib,      ONLY: Unused_BP
@@ -329,7 +329,7 @@ contains
           !
 
           ! 1st  bit: NotSkippedBlock   -> 1, otherwise -> iType will be -1.
-          ! 2nd  bit: true_blk          -> 1, otherwise -> 0
+          ! 2nd  bit: IsNoBody_B          -> 1, otherwise -> 0
           iCrit = 2
 
           ! next bit: implicit          -> 1, explicit  -> 0
@@ -408,7 +408,7 @@ contains
              iType = iNotSkippedBlock
 
              ! true block has second bit set
-             if(True_Blk(iBlock)) iType = iType + iTrueBlock
+             if(IsNoBody_B(iBlock)) iType = iType + iTrueBlock
 
              if(UsePartImplicit)then
                 if(iTypeAdvance_B(iBlock)==ImplBlock_) &
@@ -426,7 +426,7 @@ contains
 
              if(UseFieldLineThreads)then
                 ! Field line threads are at the 1st boundary (minimum r)
-                if(far_field_BCs_Blk(iBlock) .and. NeiLev(1,iBlock)==NOBLK)&
+                if(IsBoundary_B(iBlock) .and. NeiLev(1,iBlock)==NOBLK)&
                      iType = iType + iFieldLineThreadBlock
              end if
 
@@ -538,7 +538,7 @@ contains
           call set_batsrus_grid
           call set_batsrus_state
        else
-          call regrid_batl(nVar, State_VGB, Dt_B, Used_GB=true_cell, &
+          call regrid_batl(nVar, State_VGB, Dt_B, Used_GB=Used_GB, &
                iTypeBalance_A=iTypeBalance_A, iTypeNode_A=iTypeAdvance_A,&
                DoTestIn=DoTest)
           call set_batsrus_grid
@@ -612,7 +612,7 @@ contains
     use ModFaceValue, ONLY : calc_face_value
     use ModAdvance,  ONLY : iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_
-    use ModGeometry, ONLY : Rmin_BLK
+    use ModGeometry, ONLY : rMin_B
     use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
          ImplCritType, ExplCFL, rImplicit
     use ModIO,       ONLY: write_prefix, iUnitOut
@@ -710,7 +710,7 @@ contains
 
        case('r','R')
           ! implicitly treated blocks are within rImplicit and not Unused
-          where(rMin_BLK(1:nBlockMax) <= rImplicit .and. &
+          where(rMin_B(1:nBlockMax) <= rImplicit .and. &
                .not.Unused_B(1:nBlockMax)) &
                iTypeAdvance_B(1:nBlockMax) = ImplBlock_
        case('test')

@@ -1877,7 +1877,7 @@ contains
 
     use ModMain
     use ModAdvance, ONLY: iTypeAdvance_B, ImplBlock_
-    use ModGeometry, ONLY: r_BLK, true_cell
+    use ModGeometry, ONLY: r_GB, Used_GB
 
     integer :: iBlock, iBlockImpl
     integer :: i, j, k
@@ -1928,12 +1928,12 @@ contains
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          IsImplCell_CB(i,j,k,iBlock) = true_cell(i,j,k,iBlock)
+          IsImplCell_CB(i,j,k,iBlock) = Used_GB(i,j,k,iBlock)
        enddo; enddo; enddo
 
        if(UseResistivePlanet)then
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(r_BLK(i,j,k,iBlock) < 1.0) &
+             if(r_GB(i,j,k,iBlock) < 1.0) &
                   IsImplCell_CB(i,j,k,iBlock) = .false.
           enddo; enddo; enddo
        endif
@@ -2403,7 +2403,7 @@ contains
 
     use ModMain
     use ModB0,  ONLY: B0_DGB
-    use ModGeometry, ONLY: true_BLK
+    use ModGeometry, ONLY: IsNoBody_B
     use ModMpi
     use ModHallResist, ONLY: UseHallResist, set_hall_factor_face
     use BATL_lib, ONLY: CellVolume_GB
@@ -2441,7 +2441,7 @@ contains
           call get_cmax_face(Impl_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlockImpl), &
                B0_DC, nI, nJ, nK, iDim, iBlock, Cmax_C)
 
-          if(.not.true_BLK(iBlock))then
+          if(.not.IsNoBody_B(iBlock))then
              where(.not.IsImplCell_CB(1:nI,1:nJ,1:nK,iBlock)) Cmax_C = 0.0
           end if
 

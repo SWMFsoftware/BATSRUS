@@ -83,7 +83,7 @@ contains
          TypeCellBc_I, iTypeCellBc_I
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
-         far_field_BCs_BLK, XyzMin_D
+         IsBoundary_B, XyzMin_D
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI, &
          nVectorVar,iVectorVar_I
     use ModSemiImplVar, ONLY: nVectorSemi, iVectorSemi_I
@@ -126,7 +126,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(.not.far_field_BCs_BLK(iBlock))then
+    if(.not.IsBoundary_B(iBlock))then
        write(*,*) NameSub,' warning: iBlock=',iBlock,' is not far_field block'
        RETURN
     end if
@@ -848,7 +848,7 @@ contains
     subroutine set_solar_wind_bc
 
       use ModAdvance,     ONLY: nVar, UseIdealEos, UseElectronPressure
-      use ModGeometry,    ONLY: x1, x2, y1, y2, z1, z2
+      use ModGeometry,    ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
       use ModB0,          ONLY: B0_DGB
       use ModMultiFluid,  ONLY: iRho_I, iRhoIon_I, iUx_I, iUy_I, iUz_I, &
            iPion_I, UseMultiIon, ChargeIon_I, MassIon_I
@@ -879,17 +879,17 @@ contains
             ! Put the solar wind to the edge of the computational domain
             select case(iSide)
             case(1)
-               Xyz_D(x_) = x1
+               Xyz_D(x_) = xMinBox
             case(2)
-               Xyz_D(x_) = x2
+               Xyz_D(x_) = xMaxBox
             case(3)
-               Xyz_D(y_) = y1
+               Xyz_D(y_) = yMinBox
             case(4)
-               Xyz_D(y_) = y2
+               Xyz_D(y_) = yMaxBox
             case(5)
-               Xyz_D(z_) = z1
+               Xyz_D(z_) = zMinBox
             case(6)
-               Xyz_D(z_) = z2
+               Xyz_D(z_) = zMaxBox
             end select
          end if
          call get_solar_wind_point(tSimulation, Xyz_D, SolarWind_V)

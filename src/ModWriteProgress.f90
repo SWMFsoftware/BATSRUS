@@ -86,8 +86,8 @@ contains
     use ModIO,        ONLY: iUnitOut, write_prefix
     use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
     use ModAdvance,   ONLY: FluxType, UseEfield, iTypeUpdate
-    use ModGeometry,  ONLY: x1, x2, y1, y2, z1, z2, CellSizeMin, CellSizeMax, &
-         nTrueCells, count_true_cells
+    use ModGeometry,  ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, CellSizeMin, CellSizeMax, &
+         nUsedCell, count_true_cells
     use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, &
          UseSplitSemiImplicit, TypeSemiImplicit
     use ModPointImplicit, ONLY: UsePointImplicit
@@ -337,7 +337,7 @@ contains
     call write_prefix; write(iUnitOut,*)'  Total number of cells       = ', &
          nNodeUsed*nIJK
     call write_prefix; write(iUnitOut,*)'  Total number of true cells  = ', &
-         nTrueCells
+         nUsedCell
     call write_prefix; write(iUnitOut,*)'  Min and max AMR levels      = ', &
          nLevelMin, nLevelMax
     if(IsLogRadius .or. IsGenRadius)then
@@ -358,11 +358,11 @@ contains
     call write_prefix
     write(iUnitOut,'(1x,a,3i8)')    'nIJK_D:      ', nIJK_D
     call write_prefix
-    write(iUnitOut,'(1x,a,2es16.8)') 'x:           ', x1, x2
+    write(iUnitOut,'(1x,a,2es16.8)') 'x:           ', xMinBox, xMaxBox
     call write_prefix
-    write(iUnitOut,'(1x,a,2es16.8)') 'y:           ', y1, y2
+    write(iUnitOut,'(1x,a,2es16.8)') 'y:           ', yMinBox, yMaxBox
     call write_prefix
-    write(iUnitOut,'(1x,a,2es16.8)') 'z:           ', z1, z2
+    write(iUnitOut,'(1x,a,2es16.8)') 'z:           ', zMinBox, zMaxBox
     call write_prefix; write(iUnitOut,*)
 
     if(UseUserWriteProgress) call user_action('write progress')

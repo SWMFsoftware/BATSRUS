@@ -87,7 +87,7 @@ contains
     use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B
     use ModAdvance, ONLY: State_VGB, StateOld_VGB
     use ModParallel, ONLY: NeiLev
-    use ModGeometry, ONLY: XyzStart_BLK
+    use ModGeometry, ONLY: Coord111_DB
     use BATL_lib, ONLY: iProc, IsCartesianGrid, CellSize_DB, xyz_to_coord
 
     ! Weight of the old state in the interpolation
@@ -168,7 +168,7 @@ contains
              DxyzLo_D(iDim) = Dxyz_D(iDim)
           end select
           ! Check if point is inside the buffer zone on the lower side
-          if(Xyz_D(iDim)<XyzStart_BLK(iDim,iBlock) - DxyzLo_D(iDim)) CYCLE BLOCK
+          if(Xyz_D(iDim)<Coord111_DB(iDim,iBlock) - DxyzLo_D(iDim)) CYCLE BLOCK
 
           ! Block at the upper index side
           select case(NeiLev(2*iDim,iBlock))
@@ -180,12 +180,12 @@ contains
              DxyzHi_D(iDim) = Dxyz_D(iDim)
           end select
           ! Check if point is inside the buffer zone on the upper side
-          if(Xyz_D(iDim) > XyzStart_BLK(iDim,iBlock) + &
+          if(Xyz_D(iDim) > Coord111_DB(iDim,iBlock) + &
                (nIJK_D(iDim)-1)*Dxyz_D(iDim) + DxyzHi_D(iDim)) CYCLE BLOCK
        end do
 
        ! Find closest cell center indexes towards the lower index direction
-       IjkLo_D = floor((Xyz_D - XyzStart_BLK(:,iBlock))/Dxyz_D)+1
+       IjkLo_D = floor((Xyz_D - Coord111_DB(:,iBlock))/Dxyz_D)+1
 
        ! Set the size of the box for bilinear interpolation
 
@@ -218,13 +218,13 @@ contains
 
        ! Loop through the physical cells to add up their contribution
        do k = kLo, kHi
-          zK = XyzStart_BLK(3,iBlock) + (k-1)*Dxyz_D(3)
+          zK = Coord111_DB(3,iBlock) + (k-1)*Dxyz_D(3)
           WeightZ = 1 - DxyzInv_D(3)*abs(z-zK)
           do j = jLo, jHi
-             yJ = XyzStart_BLK(2,iBlock) + (j-1)*Dxyz_D(2)
+             yJ = Coord111_DB(2,iBlock) + (j-1)*Dxyz_D(2)
              WeightY = 1 - DxyzInv_D(2)*abs(y-yJ)
              do i = iLo, iHi
-                xI = XyzStart_BLK(1,iBlock) + (i-1)*Dxyz_D(1)
+                xI = Coord111_DB(1,iBlock) + (i-1)*Dxyz_D(1)
                 WeightX = 1 - DxyzInv_D(1)*abs(x-xI)
 
                 WeightXyz = WeightX*WeightY*WeightZ
@@ -273,7 +273,7 @@ contains
     ! otherwise use second order scheme when possible.
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-    use ModGeometry, ONLY: True_Cell, true_BLK, r_BLK
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B, r_GB
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB, &
          nI, nJ, nK, x_, y_, z_
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
@@ -304,7 +304,7 @@ contains
     ! Exclude body cells
     character(len=*), parameter:: NameSub = 'get_current'
     !--------------------------------------------------------------------------
-    if(.not.True_Cell(i,j,k,iBlock) .and. .not.present(DoIgnoreBody))then
+    if(.not.Used_GB(i,j,k,iBlock) .and. .not.present(DoIgnoreBody))then
        Current_D = 0.0
        RETURN
     endif
@@ -383,11 +383,11 @@ contains
 
     ! Use first-order one-sided difference near the body if needed.
     ! If even first-order fails, then set the current to zero and exit.
-    if(.not.true_BLK(iBlock) .and. .not.present(DoIgnoreBody))then
-       if(.not.True_Cell(iL,j,k,iBlock).and..not.True_Cell(iR,j,k,iBlock))then
+    if(.not.IsNoBody_B(iBlock) .and. .not.present(DoIgnoreBody))then
+       if(.not.Used_GB(iL,j,k,iBlock).and..not.Used_GB(iR,j,k,iBlock))then
           Current_D = 0.0
           RETURN
-       elseif(.not.True_Cell(iL,j,k,iBlock))then
+       elseif(.not.Used_GB(iL,j,k,iBlock))then
           Ax = 0.0
           if(iR==i+2)then
              Bx =-InvDx2; Cx = InvDx2
@@ -396,7 +396,7 @@ contains
           else ! iR==i+1
              Bx =-2.0*InvDx2; Cx = 2.0*InvDx2
           end if
-       elseif(.not.True_Cell(iR,j,k,iBlock))then
+       elseif(.not.Used_GB(iR,j,k,iBlock))then
           Cx = 0.0
           if(iL==i+1)then
              Ax = 2.0*InvDx2; Bx =-2.0*InvDx2
@@ -407,11 +407,11 @@ contains
 
        if(nJ > 1)then
           ! 2D or 3D
-          if(  .not.True_Cell(i,jL,k,iBlock) .and. &
-               .not.True_Cell(i,jR,k,iBlock))then
+          if(  .not.Used_GB(i,jL,k,iBlock) .and. &
+               .not.Used_GB(i,jR,k,iBlock))then
              Current_D = 0.0
              RETURN
-          elseif(.not.True_Cell(i,jL,k,iBlock))then
+          elseif(.not.Used_GB(i,jL,k,iBlock))then
              Ay = 0.0
              if(jR==j+2)then
                 By =-InvDy2; Cy = InvDy2
@@ -420,7 +420,7 @@ contains
              else ! jR==j+1
                 By =-2.0*InvDy2; Cy = 2.0*InvDy2
              end if
-          elseif(.not.True_Cell(i,jR,k,iBlock))then
+          elseif(.not.Used_GB(i,jR,k,iBlock))then
              Cy = 0.0
              if(jL==j+1)then
                 Ay = 2.0*InvDy2; By =-2.0*InvDy2
@@ -432,11 +432,11 @@ contains
 
        if(nK > 1)then
           ! 3D
-          if(  .not.True_Cell(i,j,kL,iBlock) .and. &
-               .not.True_Cell(i,j,kR,iBlock))then
+          if(  .not.Used_GB(i,j,kL,iBlock) .and. &
+               .not.Used_GB(i,j,kR,iBlock))then
              Current_D = 0.0
              RETURN
-          elseif(.not.True_Cell(i,j,kL,iBlock))then
+          elseif(.not.Used_GB(i,j,kL,iBlock))then
              Az = 0.0
              if(kR==k+2)then
                 Bz =-InvDz2; Cz = InvDz2
@@ -445,7 +445,7 @@ contains
              else ! kR==k+1
                 Bz =-2.0*InvDz2; Cz = 2.0*InvDz2
              end if
-          elseif(.not.True_Cell(i,j,kR,iBlock))then
+          elseif(.not.Used_GB(i,j,kR,iBlock))then
              Cz = 0.0
              if(kL==k+1)then
                 Az = 2.0*InvDz2; Bz =-2.0*InvDz2
@@ -542,7 +542,7 @@ contains
     ! Add curl B0 if necessary
     if(UseCurlB0)then
        ! Curl B0 is zero inside rCurrentFreeB0
-       if(r_BLK(i,j,k,iBlock) < rCurrentFreeB0) RETURN
+       if(r_GB(i,j,k,iBlock) < rCurrentFreeB0) RETURN
        ! Curl B0 is only calculated for the physical cells
        if(i<1 .or. i>nI .or. j<1 .or. j>nJ .or. k<1 .or. k>nK)RETURN
        ! Optimize for multiple calls for the same block

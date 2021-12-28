@@ -119,7 +119,7 @@ contains
     use ModAdvance, ONLY : time_BLK, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
-    use ModGeometry, ONLY: true_cell, true_BLK, rMin_BLK
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
     use ModRadiativeCooling, ONLY: UseRadCooling, &
@@ -153,12 +153,12 @@ contains
     iGang = 1
 #endif
 
-    if(DoTest)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
+    if(DoTest)write(*,*) NameSub,' starting, IsNoBody_B=', IsNoBody_B(iBlock)
 
     ! Calculate time step limit based on maximum speeds across 6 faces
     !$acc loop vector collapse(3)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not. true_cell(i,j,k,iBlock)) then
+       if(.not. Used_GB(i,j,k,iBlock)) then
           time_BLK(i,j,k,iBlock) = 0
        else
           Vdt =  max(Flux_VXI(Vdt_,i,j,k,iGang), Flux_VXI(Vdt_,i+1,j,k,iGang))
@@ -182,8 +182,8 @@ contains
                 time_BLK(1:Di,j,k,iBlock) = time_BLK(Di+1,j,k,iBlock)
              end do; end do
           end if
-       elseif(IsLatitudeAxis .and. rMin_Blk(iBlock) < rFixAxis)then
-          Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
+       elseif(IsLatitudeAxis .and. rMin_B(iBlock) < rFixAxis)then
+          Dk = 1; if(rMin_B(iBlock) < r2FixAxis) Dk = 2
           if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
              do k = nK+1-Dk, nK
                 time_BLK(1:nI,1:nJ,k,iBlock) = time_BLK(1:nI,1:nJ,nK-Dk,iBlock)
@@ -232,7 +232,7 @@ contains
           end if
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not. true_cell(i,j,k,iBlock)) CYCLE
+             if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
              if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
                 Dt_loss = 0.5*minval( &
@@ -278,7 +278,7 @@ contains
 #endif
 
     ! Compute maximum stable time step for this solution block
-    if(true_BLK(iBlock)) then
+    if(IsNoBody_B(iBlock)) then
        dt_min=time_BLK(1,1,1,iBlock)
        !$acc loop vector independent collapse(3) reduction(min:dt_min)
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -290,19 +290,19 @@ contains
        dt_min = 1e20
        !$acc loop vector independent collapse(3) reduction(min:dt_min)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if (true_cell(i,j,k,iBlock)) dt_min = min(dt_min, time_BLK(i,j,k,iBlock))
+          if (Used_GB(i,j,k,iBlock)) dt_min = min(dt_min, time_BLK(i,j,k,iBlock))
        end do; end do; end do
        Dt_B(iBlock)=dt_min
 
        if(DoTest)write(*,*) NameSub,' minval(time_BLK,MASK), Dt_B=',&
             minval(time_BLK(:,:,:,iBlock), &
-            MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)), Dt_B(iBlock)
+            MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock)), Dt_B(iBlock)
     end if
 
 #ifndef _OPENACC
     if(DoTest)write(*,*)NameSub,' Dt_B, loc=',Dt_B(iBlock),&
          minloc(time_BLK(:,:,:,iBlock),&
-         MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+         MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
 #endif
 
     ! Reset time_BLK for fixed time step (but Dt_B is kept! )
@@ -327,8 +327,8 @@ contains
          time_BLK(iTest,jTest,kTest,iBlock)
 
     ! Set time step to zero inside body.
-    if(.not.true_BLK(iBlock)) then
-       where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&
+    if(.not.IsNoBody_B(iBlock)) then
+       where (.not.Used_GB(1:nI,1:nJ,1:nK,iBlock))&
             time_BLK(:,:,:,iBlock) = 0.0
     end if
 #endif
@@ -342,7 +342,7 @@ contains
     use ModAdvance,  ONLY: time_BLK, State_VGB, rho_, Bx_, Bz_, P_, &
          iTypeAdvance_B, ExplBlock_
     use ModB0,       ONLY: B0_DGB
-    use ModGeometry, ONLY: true_cell, true_BLK
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B
     use ModImplicit, ONLY: UsePartImplicit
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, No2Io_V, &
          UnitX_, UnitU_, UnitT_, UnitB_, UnitRho_, UnitP_, Gamma
@@ -437,10 +437,10 @@ contains
              if(Dt_B(iBlock) /= Dt) CYCLE
              write(*,*) NameSub, ' Dt=',Dt,'=', Dt*No2Si_V(UnitT_),&
                   ' s  is controlled by block with ',&
-                  'iProc, iBlock, true_BLK, true_cell =', &
-                  iProc, iBlock, true_BLK(iBlock), &
-                  all(true_cell(1:nI,1:nJ,1:nK,iBlock)), &
-		  any(true_cell(1:nI,1:nJ,1:nK,iBlock))
+                  'iProc, iBlock, IsNoBody_B, Used_GB =', &
+                  iProc, iBlock, IsNoBody_B(iBlock), &
+                  all(Used_GB(1:nI,1:nJ,1:nK,iBlock)), &
+		  any(Used_GB(1:nI,1:nJ,1:nK,iBlock))
              write(*,*) NameSub, ' X,Y,Z coordinates of (1,1,1) cell center=',&
                   Xyz_DGB(:,1,1,1,iBlock)
              write(*,*) NameSub, ' cell size in normalized and SI units:', &
@@ -460,7 +460,7 @@ contains
                 end if
                 CMax_C(i,j,k) = Cmax_C(i,j,k)/State_VGB(rho_,i,j,k,iBlock)
              end do; end do; end do
-             Ijk_D = maxloc(Cmax_C, MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+             Ijk_D = maxloc(Cmax_C, MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
              i=Ijk_D(1); j=Ijk_D(2); k=Ijk_D(3)
              Cmax = sqrt(Cmax_C(i,j,k))
              write(*,*) NameSub, ' Cmax=',Cmax*No2Si_V(UnitU_),&
@@ -534,8 +534,8 @@ contains
        end if
 
        ! Reset time step to zero inside body.
-       if(.not.true_BLK(iBlock))then
-          where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+       if(.not.IsNoBody_B(iBlock))then
+          where(.not.Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
                time_BLK(:,:,:,iBlock) = 0.0
        end if
 
@@ -567,7 +567,7 @@ contains
     use ModAdvance,  ONLY: Rho_, p_, &
          State_VGB, StateOld_VGB, time_BLK
     use ModPhysics,  ONLY: No2Si_V, UnitT_
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModMpi
 
     integer:: iBlock, i, j, k, iError
@@ -592,7 +592,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(true_cell(i,j,k,iBlock))then
+          if(Used_GB(i,j,k,iBlock))then
              VarRatio_I = State_VGB(iVarControl_I,i,j,k,iBlock) &
                   /    StateOld_VGB(iVarControl_I,i,j,k,iBlock)
              RelativeChangeMin = min(RelativeChangeMin, minval(VarRatio_I))
