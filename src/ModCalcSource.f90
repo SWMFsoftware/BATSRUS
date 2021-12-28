@@ -487,7 +487,7 @@ contains
           if (UseAnisoPe) then
              ! Calculate bDotGradparU = b dot (b matmul GradU)
 
-             call calc_grad_uPlus(GradU_DD, i, j, k, iBlock)
+             call calc_grad_uplus(GradU_DD, i, j, k, iBlock)
 
              ! Calculate unit vector parallel with full B field
              b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -846,7 +846,8 @@ contains
              end do; end do; end do
           end if
           if(DoTest.and. &
-               (iVarTest==Energy_ .or. iVarTest>=iRhoUx.and.iVarTest<=iRhoUz))then
+               (iVarTest == Energy_ .or. &
+               iVarTest >= iRhoUx .and. iVarTest <= iRhoUz))then
              call write_source('After gravity')
           end if
        end if
@@ -1041,7 +1042,7 @@ contains
 
     end subroutine calc_grad_u
     !==========================================================================
-    subroutine calc_grad_uPlus(GradU_DD, i, j, k, iBlock)
+    subroutine calc_grad_uplus(GradU_DD, i, j, k, iBlock)
 
       ! This routine calculates the gradient tensor of uPlus_D, which is used
       ! in anisotropic Pe.
@@ -1055,15 +1056,15 @@ contains
       real :: uPlusLeft_D(3),  uPlusRight_D(3)
       real :: uPlusLeft1_D(3), uPlusRight1_D(3)
 
-      character(len=*), parameter:: NameSub = 'calc_grad_uPlus'
+      character(len=*), parameter:: NameSub = 'calc_grad_uplus'
       !------------------------------------------------------------------------
       GradU_DD = 0.0
 
       ! Obtain the uPlus_D on the corresponding faces
-      call get_uPlus(LeftState_VX( :,i+1,j,k), uPlusLeft1_D )
-      call get_uPlus(LeftState_VX( :,i,  j,k), uPlusLeft_D  )
-      call get_uPlus(RightState_VX(:,i+1,j,k), uPlusRight1_D)
-      call get_uPlus(RightState_VX(:,i,  j,k), uPlusRight_D )
+      call get_uplus(LeftState_VX( :,i+1,j,k), uPlusLeft1_D )
+      call get_uplus(LeftState_VX( :,i,  j,k), uPlusLeft_D  )
+      call get_uplus(RightState_VX(:,i+1,j,k), uPlusRight1_D)
+      call get_uplus(RightState_VX(:,i,  j,k), uPlusRight_D )
 
       ! Calculate gradient tensor of u_plus
       if(IsCartesian) then
@@ -1073,10 +1074,10 @@ contains
 
          if(nJ > 1) then
             ! Obtain the uPlus_D on the corresponding faces
-            call get_uPlus(LeftState_VY( :,i,j+1,k), uPlusLeft1_D )
-            call get_uPlus(LeftState_VY( :,i,j,  k), uPlusLeft_D  )
-            call get_uPlus(RightState_VY(:,i,j+1,k), uPlusRight1_D)
-            call get_uPlus(RightState_VY(:,i,j,  k), uPlusRight_D )
+            call get_uplus(LeftState_VY( :,i,j+1,k), uPlusLeft1_D )
+            call get_uplus(LeftState_VY( :,i,j,  k), uPlusLeft_D  )
+            call get_uplus(RightState_VY(:,i,j+1,k), uPlusRight1_D)
+            call get_uplus(RightState_VY(:,i,j,  k), uPlusRight_D )
 
             GradU_DD(Dim2_,:) = &
                  (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
@@ -1085,10 +1086,10 @@ contains
 
          if(nK > 1) then
             ! Obtain the uPlus_D on the corresponding faces
-            call get_uPlus(LeftState_VZ( :,i,j,k+1), uPlusLeft1_D )
-            call get_uPlus(LeftState_VZ( :,i,j,k), uPlusLeft_D  )
-            call get_uPlus(RightState_VZ(:,i,j,k+1), uPlusRight1_D)
-            call get_uPlus(RightState_VZ(:,i,j,k), uPlusRight_D )
+            call get_uplus(LeftState_VZ( :,i,j,k+1), uPlusLeft1_D )
+            call get_uplus(LeftState_VZ( :,i,j,k), uPlusLeft_D  )
+            call get_uplus(RightState_VZ(:,i,j,k+1), uPlusRight1_D)
+            call get_uplus(RightState_VZ(:,i,j,k), uPlusRight_D )
 
             GradU_DD(Dim3_,:) = &
                  (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
@@ -1101,9 +1102,9 @@ contains
          call stop_mpi(NameSub//': spherical to be implemented')
       end if
 
-    end subroutine calc_grad_uPlus
+    end subroutine calc_grad_uplus
     !==========================================================================
-    subroutine get_uPlus(StateIn_V, uPlus_D)
+    subroutine get_uplus(StateIn_V, uPlus_D)
 
       ! This subroutine gets the uPlus_D at the corresponding face
       ! using the face state values StateIn_V
@@ -1126,7 +1127,7 @@ contains
 
       if (DoTestCell) write(*,*) 'uPlus_D =', uPlus_D
 
-    end subroutine get_uPlus
+    end subroutine get_uplus
     !==========================================================================
     subroutine calc_divb_source(iBlock)
       integer, intent(in):: iBlock
@@ -1255,7 +1256,8 @@ contains
                  State_VGB(Bx_,i-2:i+1,j,k,iBlock))
 
             BCorrect1 = correct_face_value( &
-                 0.5*(LeftState_VX(Bx_,i+1,j,k) + RightState_VX(Bx_,i+1,j,k)), &
+                 0.5*(LeftState_VX(Bx_,i+1,j,k) &
+                 +    RightState_VX(Bx_,i+1,j,k)),&
                  State_VGB(Bx_,i-1:i+2,j,k,iBlock))
 
             DivB1_GB(i,j,k,iBlock) = 2*DxInvHalf*(BCorrect1 - BCorrect0)
@@ -1266,7 +1268,8 @@ contains
                     State_VGB(By_,i,j-2:j+1,k,iBlock))
 
                BCorrect1 = correct_face_value( &
-                    0.5*(LeftState_VY(By_,i,j+1,k)+RightState_VY(By_,i,j+1,k)),&
+                    0.5*(LeftState_VY(By_,i,j+1,k) &
+                    +   RightState_VY(By_,i,j+1,k)),&
                     State_VGB(By_,i,j-1:j+2,k,iBlock))
 
                DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + &
@@ -1279,7 +1282,8 @@ contains
                     State_VGB(Bz_,i,j,k-2:k+1,iBlock))
 
                BCorrect1 = correct_face_value( &
-                    0.5*(LeftState_VZ(Bz_,i,j,k+1)+RightState_VZ(Bz_,i,j,k+1)),&
+                    0.5*(LeftState_VZ(Bz_,i,j,k+1) &
+                    +   RightState_VZ(Bz_,i,j,k+1)),&
                     State_VGB(Bz_,i,j,k-1:k+2,iBlock))
 
                DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + &
