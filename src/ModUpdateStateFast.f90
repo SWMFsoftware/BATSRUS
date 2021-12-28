@@ -25,7 +25,7 @@ module ModUpdateStateFast
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
        iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, Unset_, &
        test_start, test_stop
-  use ModParallel, ONLY: DiLevelNei_EB => NeiLev
+  use ModParallel, ONLY: DiLevelNei_EB => DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &

@@ -467,8 +467,7 @@ contains
 
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
     use ModAdvance,  ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
-    use ModParallel, ONLY: &
-         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+    use ModParallel, ONLY: DiLevel_EB
     use ModMain,     ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
@@ -511,21 +510,21 @@ contains
     if(DoCorrectFace) call calc_simple_cell_flux(iBlock)
 
     if(DoResChangeOnly)then
-       if(neiLeast(iBlock) == 1) &
+       if(DiLevel_EB(1,iBlock) == 1) &
             call get_flux_x(1,1,1,nJ,1,nK,iBlock)
-       if(neiLwest(iBlock) == 1) &
+       if(DiLevel_EB(2,iBlock) == 1) &
             call get_flux_x(nIFace,nIFace,1,nJ,1,nK,iBlock)
        if (DoTest) &
             write(*,*) '------------------------------------------------------'
-       if(nJ > 1 .and. neiLsouth(iBlock) == 1) &
+       if(nJ > 1 .and. DiLevel_EB(3,iBlock) == 1) &
             call get_flux_y(1,nI,1,1,1,nK,iBlock)
-       if(nJ > 1 .and. neiLnorth(iBlock) == 1) &
+       if(nJ > 1 .and. DiLevel_EB(4,iBlock) == 1) &
             call get_flux_y(1,nI,nJFace,nJFace,1,nK,iBlock)
        if (DoTest) &
             write(*,*) '------------------------------------------------------'
-       if(nK > 1 .and. neiLbot(iBlock)   == 1) &
+       if(nK > 1 .and. DiLevel_EB(5,iBlock)   == 1) &
             call get_flux_z(1,nI,1,nJ,1,1,iBlock)
-       if(nK > 1 .and. neiLtop(iBlock)   == 1) &
+       if(nK > 1 .and. DiLevel_EB(6,iBlock)   == 1) &
             call get_flux_z(1,nI,1,nJ,nKFace,nKFace,iBlock)
     else
        call get_flux_x( &

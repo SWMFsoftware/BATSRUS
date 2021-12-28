@@ -197,8 +197,7 @@ contains
          LeftState_VX, LeftState_VY, LeftState_VZ,    &
          RightState_VX, RightState_VY, RightState_VZ, &
          UseAnisoPe, UseMultiSpecies
-    use ModParallel,   ONLY: &
-         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+    use ModParallel,   ONLY: DiLevel_EB
     use ModNumConst
     use ModPhysics,    ONLY: PolarRho_I, PolarU_I, PolarP_I, BodyNDim_I, &
          Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_, BodyNSpeciesDim_I
@@ -304,8 +303,8 @@ contains
                if (IsTrueCell_G(i-1,j,k) .and. &
                     IsBodyCell_G(i,j,k) .and. &
                     (.not.DoResChangeOnly .or. &
-                    ((i == nIFace .and. neiLwest(iBlockBc)==+1) .or. &
-                    (i == 1       .and. neiLeast(iBlockBc)==+1)) )) then
+                    ((i == nIFace .and. DiLevel_EB(2,iBlockBc)==+1) .or. &
+                    (i == 1       .and. DiLevel_EB(1,iBlockBc)==+1)) )) then
 
                   iSide = 2
 
@@ -325,8 +324,8 @@ contains
                if (IsTrueCell_G(i,j,k) .and. &
                     IsBodyCell_G(i-1,j,k)  .and. &
                     (.not.DoResChangeOnly .or. &
-                    (i == 1         .and. neiLeast(iBlockBc)==+1) .or. &
-                    (i == nIFace    .and. neiLwest(iBlockBc)==+1)  )) then
+                    (i == 1         .and. DiLevel_EB(1,iBlockBc)==+1) .or. &
+                    (i == nIFace    .and. DiLevel_EB(2,iBlockBc)==+1)  )) then
 
                   iSide = 1
 
@@ -353,8 +352,8 @@ contains
                if (IsTrueCell_G(i,j-1,k) .and. &
                     IsBodyCell_G(i,j,k)  .and. &
                     ( .not.DoResChangeOnly .or. &
-                    (j == nJFace .and. neiLnorth(iBlockBc)==+1) .or. &
-                    (j == 1      .and. neiLsouth(iBlockBc)==+1) )) then
+                    (j == nJFace .and. DiLevel_EB(4,iBlockBc)==+1) .or. &
+                    (j == 1      .and. DiLevel_EB(3,iBlockBc)==+1) )) then
 
                   iSide = 4
 
@@ -373,8 +372,8 @@ contains
                if (IsTrueCell_G(i,j,k) .and. &
                     IsBodyCell_G(i,j-1,k)  .and. &
                     (.not.DoResChangeOnly .or. &
-                    (j ==1       .and. neiLsouth(iBlockBc)==+1) .or. &
-                    (j == nJFace .and. neiLnorth(iBlockBc)==+1) )) then
+                    (j ==1       .and. DiLevel_EB(3,iBlockBc)==+1) .or. &
+                    (j == nJFace .and. DiLevel_EB(4,iBlockBc)==+1) )) then
 
                   iSide = 3
 
@@ -401,8 +400,8 @@ contains
                if (IsTrueCell_G(i,j,k-1) .and. &
                     IsBodyCell_G(i,j,k) .and. &
                     (.not.DoResChangeOnly .or. &
-                    (k == nKFace .and. neiLtop(iBlockBc)==+1) .or. &
-                    (k == 1      .and. neiLbot(iBlockBc)==+1)) ) then
+                    (k == nKFace .and. DiLevel_EB(6,iBlockBc)==+1) .or. &
+                    (k == 1      .and. DiLevel_EB(5,iBlockBc)==+1)) ) then
 
                   iSide = 6
 
@@ -421,8 +420,8 @@ contains
                if (IsTrueCell_G(i,j,k).and. &
                     IsBodyCell_G(i,j,k-1).and. &
                     (.not.DoResChangeOnly .or. &
-                    (k == 1      .and. neiLbot(iBlockBc)==+1) .or. &
-                    (k == nKFace .and. neiLtop(iBlockBc)==+1))  ) then
+                    (k == 1      .and. DiLevel_EB(5,iBlockBc)==+1) .or. &
+                    (k == nKFace .and. DiLevel_EB(6,iBlockBc)==+1))  ) then
 
                   iSide = 5
 

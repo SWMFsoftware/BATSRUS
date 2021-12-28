@@ -461,7 +461,7 @@ contains
   end subroutine GM_use_pointer
   !============================================================================
   function GM_is_right_boundary_d(iBlock) RESULT(IsRightBoundary_D)
-    use ModParallel, ONLY: NOBLK, NeiLev
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     use BATL_size, ONLY: nDim
     integer, intent(in) :: iBlock
     logical :: IsRightBoundary_D(nDim)
@@ -469,7 +469,7 @@ contains
     character(len=*), parameter:: NameSub = 'GM_is_right_boundary_d'
     !--------------------------------------------------------------------------
     do iDir = 1, nDim
-       IsRightBoundary_D(iDir) = neiLEV(2*iDir,iBlock) == NOBLK
+       IsRightBoundary_D(iDir) = DiLevel_EB(2*iDir,iBlock) == Unset_
     end do
   end function GM_is_right_boundary_d
   !============================================================================

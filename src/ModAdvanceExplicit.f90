@@ -26,7 +26,7 @@ contains
          iTypeUpdate, UpdateFast_
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
-    use ModParallel,   ONLY: neiLev
+    use ModParallel,   ONLY: DiLevel_EB
     use ModGeometry,   ONLY: IsBody_B, IsNoBody_B
     use ModBlockData,  ONLY: set_block_data
     use ModImplicit,   ONLY: UsePartImplicit
@@ -96,7 +96,7 @@ contains
           !$omp parallel do
           do iBlock=1,nBlock
              if(Unused_B(iBlock)) CYCLE
-             if(all(neiLev(:,iBlock)/=1)) CYCLE
+             if(all(DiLevel_EB(:,iBlock)/=1)) CYCLE
              ! Calculate interface values for L/R states of each
              ! fine grid cell face at block edges with resolution changes
              ! and apply BCs for interface states as needed.

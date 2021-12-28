@@ -586,7 +586,7 @@ contains
   !============================================================================
   subroutine set_boundary_vdf(iBlock)
     use BATL_lib,    ONLY: iNode_B, IsCartesianGrid
-    use ModParallel, ONLY: NOBLK, NeiLev
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     integer, intent(in) :: iBlock
     logical :: DoSkip_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !--------------------------------------------------------------------------
@@ -594,15 +594,15 @@ contains
     ! Skip all physical cells
     DoSkip_G(1:nI,1:nJ,1:nK) = .true.
     ! Skip all cells from the side, where there is no boundary
-    if(neiLEV(1,iBlock) /= NOBLK)DoSkip_G(MinI,:,:) = .true.
-    if(neiLEV(2,iBlock) /= NOBLK)DoSkip_G(MaxI,:,:) = .true.
+    if(DiLevel_EB(1,iBlock) /= Unset_)DoSkip_G(MinI,:,:) = .true.
+    if(DiLevel_EB(2,iBlock) /= Unset_)DoSkip_G(MaxI,:,:) = .true.
     if(nDim>=2)then
-       if(neiLEV(3,iBlock) /= NOBLK)DoSkip_G(:,MinJ,:) = .true.
-       if(neiLEV(4,iBlock) /= NOBLK)DoSkip_G(:,MaxJ,:) = .true.
+       if(DiLevel_EB(3,iBlock) /= Unset_)DoSkip_G(:,MinJ,:) = .true.
+       if(DiLevel_EB(4,iBlock) /= Unset_)DoSkip_G(:,MaxJ,:) = .true.
     end if
     if(nDim==3)then
-       if(neiLEV(5,iBlock) /= NOBLK)DoSkip_G(:,:,MinK) = .true.
-       if(neiLEV(6,iBlock) /= NOBLK)DoSkip_G(:,:,MaxK) = .true.
+       if(DiLevel_EB(5,iBlock) /= Unset_)DoSkip_G(:,:,MinK) = .true.
+       if(DiLevel_EB(6,iBlock) /= Unset_)DoSkip_G(:,:,MaxK) = .true.
     end if
     call get_cell_state_from_vdf(&
          MinI=MinI    , &

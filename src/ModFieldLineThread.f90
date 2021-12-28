@@ -367,7 +367,7 @@ contains
   !============================================================================
   subroutine set_threads(NameCaller)
     use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock
-    use ModParallel, ONLY: NeiLev, NOBLK
+    use ModParallel, ONLY: DiLevel_EB, Unset_
     use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
     use ModMain,     ONLY: nStep
     use ModMpi
@@ -390,14 +390,14 @@ contains
        end if
        if(.not.DoThreads_B(iBlock))then
           if(IsAllocatedThread_B(iBlock).and.&
-               NeiLev(1,iBlock)/=NOBLK)&
+               DiLevel_EB(1,iBlock)/=Unset_)&
                call deallocate_thread_b(iBlock)
           CYCLE
        end if
        DoThreads_B(iBlock) = .false.
        ! Check if the block is at the inner boundary
        ! Otherwise CYCLE
-       if(NeiLev(1,iBlock)/=NOBLK)then
+       if(DiLevel_EB(1,iBlock)/=Unset_)then
           if(IsAllocatedThread_B(iBlock))&
                call deallocate_thread_b(iBlock)
           CYCLE
@@ -905,7 +905,7 @@ contains
   end subroutine set_threads_b
   !============================================================================
   subroutine advance_threads(iAction)
-    use ModParallel, ONLY: NeiLev, NOBLK
+    use ModParallel, ONLY: DiLevel_EB, Unset_
     use BATL_lib, ONLY: nBlock, Unused_B
 
     integer, intent(in)::iAction
@@ -917,7 +917,7 @@ contains
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-        if(NeiLev(1,iBlock)/=NOBLK)then
+        if(DiLevel_EB(1,iBlock)/=Unset_)then
            if(.not.IsAllocatedThread_B(iBlock))then
               CYCLE
            else

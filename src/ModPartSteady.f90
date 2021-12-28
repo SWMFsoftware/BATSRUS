@@ -18,7 +18,7 @@ module ModPartSteady
   use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, &
        IsTimeAccurate, nStep
   use ModGeometry,   ONLY: CellSize_DB, CellSize1Min
-  use ModParallel,   ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
+  use ModParallel,   ONLY: Unset_, DiLevel_EB, jProc_IEB, jBlock_IEB
   use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
        State_VGB, StateOld_VGB
@@ -187,16 +187,16 @@ contains
           ! Check all faces and subfaces
           FACES: do iFace = 1, 6
 
-             if(NeiLev(iFace,iBlock) == NOBLK) CYCLE FACES
-             if(NeiLev(iFace,iBlock) == -1)then
+             if(DiLevel_EB(iFace,iBlock) == Unset_) CYCLE FACES
+             if(DiLevel_EB(iFace,iBlock) == -1)then
                 nSubFace = 4
              else
                 nSubFace = 1
              end if
 
              SUBFACES: do iSubFace = 1, nSubFace
-                jProc  = NeiPE( iSubFace,iFace,iBlock)
-                jBlock = NeiBLK(iSubFace,iFace,iBlock)
+                jProc  = jProc_IEB( iSubFace,iFace,iBlock)
+                jBlock = jBlock_IEB(iSubFace,iFace,iBlock)
                 if(iTypeAdvance_BP(jBlock, jProc) >= ExplBlock_) then
                    iTypeAdvance_B(iBlock) = SteadyBoundBlock_
                    CYCLE BLOCKS

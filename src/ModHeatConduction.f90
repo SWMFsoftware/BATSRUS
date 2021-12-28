@@ -344,7 +344,7 @@ contains
     use ModUserInterface ! user_material_properties
     use ModMain,         ONLY: UseFieldLineThreads, nDim, nIJK_D
     use ModGeometry,     ONLY: IsBoundary_B
-    use ModParallel,     ONLY: NOBLK, NeiLev
+    use ModParallel,     ONLY: Unset_, DiLevel_EB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
 
@@ -381,10 +381,10 @@ contains
     if(UseFirstOrderBc)then
        iFace_D = [iFace, jFace, kFace]
        UseRightStateOnly = any(&
-            iFace_D(1:nDim)==1.and.NeiLev(1:(2*nDim-1):2,iBlock)==NOBLK)
+            iFace_D(1:nDim)==1.and.DiLevel_EB(1:(2*nDim-1):2,iBlock)==Unset_)
        UseLeftStateOnly =  any(&
             iFace_D(1:nDim)==nIJK_D(1:nDim)+1&
-            .and.NeiLev(2:2*nDim:2,iBlock)==NOBLK)
+            .and.DiLevel_EB(2:2*nDim:2,iBlock)==Unset_)
     else
        UseRightStateOnly = .false.
        UseLeftStateOnly  = .false.
@@ -883,7 +883,7 @@ contains
     use ModUserInterface ! user_material_properties
     use ModMain,         ONLY: UseFieldLineThreads
     use ModGeometry,     ONLY: IsBoundary_B
-    use ModParallel,     ONLY: NOBLK, NeiLev
+    use ModParallel,     ONLY: Unset_, DiLevel_EB
 
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
@@ -1068,30 +1068,30 @@ contains
 
        if(UseFieldLineThreads.and.IsBoundary_B(iBlock))then
           ! First order BC at the outer boundaries
-          if(NeiLev(1,iBlock)==NOBLK)then
+          if(DiLevel_EB(1,iBlock)==Unset_)then
              HeatCoef_G(0,:,:) = HeatCoef_G(1,:,:)
              bb_DDG(:,:,0,:,:) = bb_DDG(:,:,1,:,:)
           end if
-          if(NeiLev(2,iBlock)==NOBLK)then
+          if(DiLevel_EB(2,iBlock)==Unset_)then
              HeatCoef_G(nI+1,:,:) = HeatCoef_G(nI,:,:)
              bb_DDG(:,:,nI+1,:,:) = bb_DDG(:,:,nI,:,:)
           end if
           if(nDim>=2)then
-             if(NeiLev(3,iBlock)==NOBLK)then
+             if(DiLevel_EB(3,iBlock)==Unset_)then
                 HeatCoef_G(:,0,:) = HeatCoef_G(:,1,:)
                 bb_DDG(:,:,:,0,:) = bb_DDG(:,:,:,1,:)
              end if
-             if(NeiLev(4,iBlock)==NOBLK)then
+             if(DiLevel_EB(4,iBlock)==Unset_)then
                 HeatCoef_G(:,nJ+1,:) = HeatCoef_G(:,nJ,:)
                 bb_DDG(:,:,:,nJ+1,:) = bb_DDG(:,:,:,nJ,:)
              end if
           end if
           if(nDim==3)then
-             if(NeiLev(5,iBlock)==NOBLK)then
+             if(DiLevel_EB(5,iBlock)==Unset_)then
                 HeatCoef_G(:,:,0) = HeatCoef_G(:,:,1)
                 bb_DDG(:,:,:,:,0) = bb_DDG(:,:,:,:,1)
              end if
-             if(NeiLev(6,iBlock)==NOBLK)then
+             if(DiLevel_EB(6,iBlock)==Unset_)then
                 HeatCoef_G(:,:,nK+1) = HeatCoef_G(:,:,nK)
                 bb_DDG(:,:,:,:,nK+1) = bb_DDG(:,:,:,:,nK)
              end if

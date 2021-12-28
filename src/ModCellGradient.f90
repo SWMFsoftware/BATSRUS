@@ -659,11 +659,9 @@ contains
   ! idea copy from get_current
   subroutine calc_cell_curl_ghost(i,j,k,iBlock,Vector_DG,Curl_D)
 
-    use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB
-    use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot
-    use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
-    use ModGeometry, ONLY: Used_GB, IsNoBody_B
+    use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB, &
+         Used_GB, nI, nJ, nK, x_, y_, z_
+    use ModGeometry, ONLY: IsNoBody_B
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(in) :: Vector_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)

@@ -594,8 +594,7 @@ contains
 
     use ModMain, ONLY : MaxBlock, nBlock, Unused_B
     use ModGeometry, ONLY : IsBody_B, Used_GB
-    use ModParallel, ONLY : &
-         NOBLK,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
+    use ModParallel, ONLY : Unset_, DiLevel_EB
     use BATL_lib, ONLY: message_pass_cell, &
          MinI, MaxI, j0_, nJp1_, MinJ, MaxJ, k0_, nKp1_, MinK, MaxK
 
@@ -615,14 +614,14 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
-       if(neiLeast(iBlock) ==NOBLK) phi(MinI:0   ,:,:,iBlock) = 0.0
-       if(neiLwest(iBlock) ==NOBLK) phi(nI+1:MaxI,:,:,iBlock) = 0.0
-       if(neiLsouth(iBlock)==NOBLK) phi(:,MinJ :j0_ ,:,iBlock) = 0.0
-       if(neiLnorth(iBlock)==NOBLK) phi(:,nJp1_:MaxJ,:,iBlock) = 0.0
+       if(DiLevel_EB(1,iBlock) ==Unset_) phi(MinI:0   ,:,:,iBlock) = 0.0
+       if(DiLevel_EB(2,iBlock) ==Unset_) phi(nI+1:MaxI,:,:,iBlock) = 0.0
+       if(DiLevel_EB(3,iBlock)==Unset_) phi(:,MinJ :j0_ ,:,iBlock) = 0.0
+       if(DiLevel_EB(4,iBlock)==Unset_) phi(:,nJp1_:MaxJ,:,iBlock) = 0.0
 
        if(nK>1)then
-          if(neiLbot(iBlock)==NOBLK) phi(:,:,MinK :k0_ ,iBlock) = 0.0
-          if(neiLtop(iBlock)==NOBLK) phi(:,:,nKp1_:MaxK,iBlock) = 0.0
+          if(DiLevel_EB(5,iBlock)==Unset_) phi(:,:,MinK :k0_ ,iBlock) = 0.0
+          if(DiLevel_EB(6,iBlock)==Unset_) phi(:,:,nKp1_:MaxK,iBlock) = 0.0
        end if
 
        if(IsBody_B(iBlock))then
@@ -632,22 +631,22 @@ contains
        ! if(UseConstrainB)then
        !   ! Correct ghost cells at resolution changes to get consistent gradphi
        !
-       !   if(neiLeast(iBlock) ==-1) &
+       !   if(DiLevel_EB(1,iBlock) ==-1) &
        !        phi(0   ,1:nJ,1:nK,iBlock)=2*phi(0   ,1:nJ,1:nK,iBlock) &
        !        -phi(1   ,1:nJ,1:nK,iBlock)
-       !   if(neiLwest(iBlock) ==-1) &
+       !   if(DiLevel_EB(2,iBlock) ==-1) &
        !        phi(nI+1,1:nJ,1:nK,iBlock)=2*phi(nI+1,1:nJ,1:nK,iBlock) &
        !        -phi(nI  ,1:nJ,1:nK,iBlock)
-       !   if(neiLsouth(iBlock)==-1) &
+       !   if(DiLevel_EB(3,iBlock)==-1) &
        !        phi(1:nI,0   ,1:nK,iBlock)=2*phi(1:nI,0   ,1:nK,iBlock) &
        !        -phi(1:nI,1   ,1:nK,iBlock)
-       !   if(neiLnorth(iBlock)==-1) &
+       !   if(DiLevel_EB(4,iBlock)==-1) &
        !        phi(1:nI,nJ+1,1:nK,iBlock)=2*phi(1:nI,nJ+1,1:nK,iBlock) &
        !        -phi(1:nI,nJ  ,1:nK,iBlock)
-       !   if(neiLbot(iBlock)  ==-1) &
+       !   if(DiLevel_EB(5,iBlock)  ==-1) &
        !        phi(1:nI,1:nJ,0   ,iBlock)=2*phi(1:nI,1:nJ,0   ,iBlock) &
        !        -phi(1:nI,1:nJ,1   ,iBlock)
-       !   if(neiLtop(iBlock)  ==-1) &
+       !   if(DiLevel_EB(6,iBlock)  ==-1) &
        !        phi(1:nI,1:nJ,nK+1,iBlock)=2*phi(1:nI,1:nJ,nK+1,iBlock) &
        !        -phi(1:nI,1:nJ,nK  ,iBlock)
        ! end if

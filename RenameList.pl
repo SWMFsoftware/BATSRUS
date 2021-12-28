@@ -43,12 +43,18 @@
     #R2_BLK => rBody2_GB,
     #Rmin_BLK => rMin_B,
     #Rmin2_BLK => rMinBody2_B,
-    x1 => xMinBox,
-    x2 => xMaxBox,
-    y1 => yMinBox,
-    y2 => yMaxBox,
-    z1 => zMinBox,
-    z2 => zMaxBox,
-    nTrueCells => nUsedCell,
-    true_cell => Used_GB,
-	  );
+    #x1 => xMinBox,
+    #x2 => xMaxBox,
+    #y1 => yMinBox,
+    #y2 => yMaxBox,
+    #z1 => zMinBox,
+    #z2 => zMaxBox,
+    #nTrueCells => nUsedCell,
+    #true_cell => Used_GB,
+
+    ### ModParallel: Replace *east...*west with array vars
+    neiLEV => DiLevel_EB,
+    neiBLK => jBlock_IEB,
+    neiPE  => jProc_IEB,
+    NOBLK  => Unset_,
+    );

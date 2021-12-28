@@ -426,7 +426,7 @@ contains
 
              if(UseFieldLineThreads)then
                 ! Field line threads are at the 1st boundary (minimum r)
-                if(IsBoundary_B(iBlock) .and. NeiLev(1,iBlock)==NOBLK)&
+                if(IsBoundary_B(iBlock) .and. DiLevel_EB(1,iBlock)==Unset_)&
                      iType = iType + iFieldLineThreadBlock
              end if
 

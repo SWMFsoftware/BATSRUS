@@ -10,47 +10,21 @@ module ModParallel
   implicit none
   save
 
-  ! Neighbor solution block refinement levels
+  ! Neighbor block relative AMR levels
   ! ( 0=neighbors at same level,
   !  -1=neighbors at lower level,
   !  +1=neighbors at higher level,
-  !  NOBLK=no neighbors).
-  integer, parameter :: NOBLK = Unset_
+  !  Unset_=no neighbors).
+  integer, allocatable :: DiLevel_EB(:,:)
+  !$acc declare create(DiLevel_EB)
 
-  integer, allocatable :: neiLtop(:)
-  integer, allocatable :: neiLbot(:)
-  integer, allocatable :: neiLeast(:)
-  integer, allocatable :: neiLwest(:)
-  integer, allocatable :: neiLnorth(:)
-  integer, allocatable :: neiLsouth(:)
-  !$acc declare create(neiLtop, neiLbot)
-  !$acc declare create(neiLeast, neiLwest, neiLnorth, neiLsouth)
-
-  integer, allocatable :: neiLEV(:,:)
-  !$acc declare create(neiLEV)
-
-  ! Neighbor processor and block numbers (a value of NOBLK
+  ! Neighbor processor and block numbers (a value of Unset_
   ! means not used).  As only one level change is permitted
   ! between neighboring solution blocks, there are either 1 or 4
   ! neighboring blocks in each of the six directions.
-  integer, allocatable :: neiPtop(:,:)
-  integer, allocatable :: neiPbot(:,:)
-  integer, allocatable :: neiPeast(:,:)
-  integer, allocatable :: neiPwest(:,:)
-  integer, allocatable :: neiPnorth(:,:)
-  integer, allocatable :: neiPsouth(:,:)
-  integer, allocatable :: neiBtop(:,:)
-  integer, allocatable :: neiBbot(:,:)
-  integer, allocatable :: neiBeast(:,:)
-  integer, allocatable :: neiBwest(:,:)
-  integer, allocatable :: neiBnorth(:,:)
-  integer, allocatable :: neiBsouth(:,:)
-  !$acc declare create(neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth)
-  !$acc declare create(neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth)
-
-  integer, allocatable :: neiPE(:,:,:)
-  integer, allocatable :: neiBLK(:,:,:)
-  !$acc declare create(neiPE, neiBLK)
+  integer, allocatable :: jProc_IEB(:,:,:)
+  integer, allocatable :: jBlock_IEB(:,:,:)
+  !$acc declare create(jProc_IEB, jBlock_IEB)
 
   ! used by mpi_allgatherv for a more efficient replacment of mpi_allgather
   integer, allocatable :: nBlockMax_P(:), MaxBlockDisp_P(:)
@@ -75,27 +49,9 @@ contains
 
     if(allocated(nBlockMax_P)) RETURN
 
-    allocate(neiLtop(MaxBlock))
-    allocate(neiLbot(MaxBlock))
-    allocate(neiLeast(MaxBlock))
-    allocate(neiLwest(MaxBlock))
-    allocate(neiLnorth(MaxBlock))
-    allocate(neiLsouth(MaxBlock))
-    allocate(neiLEV(1:6,MaxBlock))
-    allocate(neiPtop(4,MaxBlock))
-    allocate(neiPbot(4,MaxBlock))
-    allocate(neiPeast(4,MaxBlock))
-    allocate(neiPwest(4,MaxBlock))
-    allocate(neiPnorth(4,MaxBlock))
-    allocate(neiPsouth(4,MaxBlock))
-    allocate(neiBtop(4,MaxBlock))
-    allocate(neiBbot(4,MaxBlock))
-    allocate(neiBeast(4,MaxBlock))
-    allocate(neiBwest(4,MaxBlock))
-    allocate(neiBnorth(4,MaxBlock))
-    allocate(neiBsouth(4,MaxBlock))
-    allocate(neiPE(4,1:6,MaxBlock))
-    allocate(neiBLK(4,1:6,MaxBlock))
+    allocate(DiLevel_EB(1:6,MaxBlock))
+    allocate(jProc_IEB(4,1:6,MaxBlock))
+    allocate(jBlock_IEB(4,1:6,MaxBlock))
 
     allocate(MaxBlockDisp_P(0:nProc-1))
     do jProc = 0, nProc-1
@@ -113,27 +69,9 @@ contains
     !--------------------------------------------------------------------------
     if(.not.allocated(nBlockMax_P)) RETURN
 
-    deallocate(neiLtop)
-    deallocate(neiLbot)
-    deallocate(neiLeast)
-    deallocate(neiLwest)
-    deallocate(neiLnorth)
-    deallocate(neiLsouth)
-    deallocate(neiLEV)
-    deallocate(neiPtop)
-    deallocate(neiPbot)
-    deallocate(neiPeast)
-    deallocate(neiPwest)
-    deallocate(neiPnorth)
-    deallocate(neiPsouth)
-    deallocate(neiBtop)
-    deallocate(neiBbot)
-    deallocate(neiBeast)
-    deallocate(neiBwest)
-    deallocate(neiBnorth)
-    deallocate(neiBsouth)
-    deallocate(neiPE)
-    deallocate(neiBLK)
+    deallocate(DiLevel_EB)
+    deallocate(jProc_IEB)
+    deallocate(jBlock_IEB)
     deallocate(MaxBlockDisp_P)
     deallocate(nBlockMax_P)
 

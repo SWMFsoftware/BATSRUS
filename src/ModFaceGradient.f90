@@ -6,7 +6,7 @@ module ModFaceGradient
   use BATL_lib, ONLY: &
        test_start, test_stop
   use ModBatsrusUtility, ONLY: stop_mpi
-
+  use ModParallel, ONLY: DiLevel_EB, Unset_
   use ModSize, ONLY: MaxDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_, &
        jRatio, kRatio, InvIjkRatio
@@ -33,8 +33,6 @@ contains
     ! correct the ghostcells of the given scalar/vector field on iBlock
     ! using second order interpolation
 
-    use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot, NOBLK
     use BATL_lib, ONLY: DiLevelNei_IIIB
 
     integer, intent(in) :: iBlock, nVar
@@ -91,7 +89,7 @@ contains
     end do
 
     ! Do the faces
-    if(NeiLeast(iBlock) == 1)then
+    if(DiLevel_EB(1,iBlock) == 1)then
        if(nJ == 1)then
           ! Interpolate in 1D. Fine cell center is twice further than coarse
           Field_VG(:,0,1,1) = (2*Field1_VG(:,0,1,1) + Field1_VG(:,1,1,1))/3
@@ -125,7 +123,7 @@ contains
        end if
     end if
 
-    if(NeiLwest(iBlock) == 1)then
+    if(DiLevel_EB(2,iBlock) == 1)then
        if(nJ == 1)then
           Field_VG(:,nI+1,1,1) = &
                (2*Field1_VG(:,nI+1,1,1) + Field1_VG(:,nI,1,1))/3
@@ -149,7 +147,7 @@ contains
 
     if(nJ == 1) RETURN
 
-    if(NeiLsouth(iBlock) == 1)then
+    if(DiLevel_EB(3,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2;
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              ip = 3*i2 - 2*i1 -1
@@ -166,7 +164,7 @@ contains
        end do; end do
     end if
 
-    if(NeiLnorth(iBlock) == 1)then
+    if(DiLevel_EB(4,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2;
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              ip = 3*i2 - 2*i1 -1
@@ -183,7 +181,7 @@ contains
        end do; end do
     end if
 
-    if(nK > 1 .and. NeiLbot(iBlock) == 1)then
+    if(nK > 1 .and. DiLevel_EB(5,iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           jp = 3*j2 - 2*j1 -1
@@ -197,7 +195,7 @@ contains
        end do; end do; end do; end do
     end if
 
-    if(nK > 1 .and. NeiLtop(iBlock) == 1)then
+    if(nK > 1 .and. DiLevel_EB(6,iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           jp = 3*j2 - 2*j1 -1
@@ -216,7 +214,7 @@ contains
     ! 4 Z edges
     do jSide = -1,1,2; do iSide = -1,1,2
        if(  DiLevelNei_IIIB(iSide, jSide, 0, iBlock) /= 1.and. .not. ( &
-            DiLevelNei_IIIB(iSide, jSide, 0, iBlock) == NOBLK .and. ( &
+            DiLevelNei_IIIB(iSide, jSide, 0, iBlock) == Unset_ .and. ( &
             DiLevelNei_IIIB(iSide, 0, 0, iBlock) == 1 .or. &
             DiLevelNei_IIIB(0, jSide, 0, iBlock) == 1))) CYCLE
 
@@ -244,7 +242,7 @@ contains
     ! 4 X edges
     do kSide = -1,1,2; do jSide = -1,1,2
        if(  DiLevelNei_IIIB(0, jSide, kSide, iBlock) /= 1 .and. .not. ( &
-            DiLevelNei_IIIB(0, jSide, kSide, iBlock) == NOBLK .and. ( &
+            DiLevelNei_IIIB(0, jSide, kSide, iBlock) == Unset_ .and. ( &
             DiLevelNei_IIIB(0, jSide, 0, iBlock) == 1 .or. &
             DiLevelNei_IIIB(0, 0, kSide, iBlock) == 1))) CYCLE
 
@@ -264,7 +262,7 @@ contains
     ! 4 Y edges
     do kSide = -1,1,2; do iSide = -1,1,2
        if(  DiLevelNei_IIIB(iSide, 0, kSide, iBlock) /= 1 .and. .not. ( &
-            DiLevelNei_IIIB(iSide, 0, kSide, iBlock) == NOBLK .and. ( &
+            DiLevelNei_IIIB(iSide, 0, kSide, iBlock) == Unset_ .and. ( &
             DiLevelNei_IIIB(iSide, 0, 0, iBlock) == 1 .or. &
             DiLevelNei_IIIB(0, 0, kSide, iBlock) == 1))) CYCLE
 
@@ -291,8 +289,6 @@ contains
     ! correct the ghost cells of the given scalar/vector field on iBlock
     ! using third order interpolation
 
-    use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot, NOBLK
     use BATL_lib, ONLY: DiLevelNei_IIIB
 
     integer, intent(in) :: iBlock, nVar
@@ -322,7 +318,7 @@ contains
        ! general interpolation formulas remain 2nd order
        ! accurate
        if(  DiLevelNei_IIIB(iSide,jSide,kSide,iBlock) /= 1 .and. &
-            DiLevelNei_IIIB(iSide,jSide,kSide,iBlock) /= NOBLK .and. ( &
+            DiLevelNei_IIIB(iSide,jSide,kSide,iBlock) /= Unset_ .and. ( &
             DiLevelNei_IIIB(iSide,0,0,iBlock) == 1 .or. &
             DiLevelNei_IIIB(0,jSide,0,iBlock) == 1 .or. &
             DiLevelNei_IIIB(0,0,kSide,iBlock) == 1)) then
@@ -359,7 +355,7 @@ contains
     end do; end do; end do
 
     ! Do six faces
-    if(NeiLeast(iBlock) == 1)then
+    if(DiLevel_EB(1,iBlock) == 1)then
        if(nJ == 1)then
           Field_VG(:,0,1,1) = max(min( C1*Field1_VG(:,0,1,1) &
                + F1*Field_VG(:,1,1,1) + F2*Field_VG(:,2,1,1), &
@@ -391,7 +387,7 @@ contains
        end if
     end if
 
-    if(NeiLwest(iBlock) == 1)then
+    if(DiLevel_EB(2,iBlock) == 1)then
        if(nJ == 1)then
           Field_VG(:,nI+1,1,1) = max(min( C1*Field1_VG(:,nI+1,1,1) &
                + F1*Field_VG(:,nI,1,1) + F2*Field_VG(:,nI-1,1,1), &
@@ -422,7 +418,7 @@ contains
 
     if(nJ == 1) RETURN
 
-    if(NeiLsouth(iBlock) == 1)then
+    if(DiLevel_EB(3,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
@@ -444,7 +440,7 @@ contains
        end do; end do
     end if
 
-    if(NeiLnorth(iBlock) == 1)then
+    if(DiLevel_EB(4,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
@@ -466,7 +462,7 @@ contains
        end do; end do
     end if
 
-    if(nK > 1 .and. NeiLbot(iBlock) == 1)then
+    if(nK > 1 .and. DiLevel_EB(5,iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
           jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
@@ -482,7 +478,7 @@ contains
        end do; end do; end do; end do
     end if
 
-    if(nK > 1 .and. NeiLtop(iBlock) == 1)then
+    if(nK > 1 .and. DiLevel_EB(6,iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
           jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
@@ -503,7 +499,7 @@ contains
     ! 4 Z edges
     do jSide = -1,1,2; do iSide = -1,1,2
        if(  DiLevelNei_IIIB(iSide, jSide, 0, iBlock) /= 1.and. .not. ( &
-            DiLevelNei_IIIB(iSide, jSide, 0, iBlock) == NOBLK .and. ( &
+            DiLevelNei_IIIB(iSide, jSide, 0, iBlock) == Unset_ .and. ( &
             DiLevelNei_IIIB(iSide, 0, 0, iBlock) == 1 .or. &
             DiLevelNei_IIIB(0, jSide, 0, iBlock) == 1))) CYCLE
 
@@ -533,7 +529,7 @@ contains
     ! 4 X edges
     do kSide = -1,1,2; do jSide = -1,1,2
        if(  DiLevelNei_IIIB(0, jSide, kSide, iBlock) /= 1 .and. .not. ( &
-            DiLevelNei_IIIB(0, jSide, kSide, iBlock) == NOBLK .and. ( &
+            DiLevelNei_IIIB(0, jSide, kSide, iBlock) == Unset_ .and. ( &
             DiLevelNei_IIIB(0, jSide, 0, iBlock) == 1 .or. &
             DiLevelNei_IIIB(0, 0, kSide, iBlock) == 1))) CYCLE
 
@@ -555,7 +551,7 @@ contains
     ! 4 Y edges
     do kSide = -1,1,2; do iSide = -1,1,2
        if(  DiLevelNei_IIIB(iSide, 0, kSide, iBlock) /= 1 .and. .not. ( &
-            DiLevelNei_IIIB(iSide, 0, kSide, iBlock) == NOBLK .and. ( &
+            DiLevelNei_IIIB(iSide, 0, kSide, iBlock) == Unset_ .and. ( &
             DiLevelNei_IIIB(iSide, 0, 0, iBlock) == 1 .or. &
             DiLevelNei_IIIB(0, 0, kSide, iBlock) == 1))) CYCLE
 
@@ -585,8 +581,6 @@ contains
     use ModNumConst, ONLY: i_DD
     use ModCoordTransform, ONLY: inverse_matrix
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
-    use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot, NoBlk
 
     integer, intent(in):: iBlock
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
@@ -720,14 +714,14 @@ contains
        end do; end do; end do
     end if
     if(.not.UseFirstOrderBc)RETURN
-    if(neiLEast(iBlock)==NoBlk)then
+    if(DiLevel_EB(1,iBlock)==Unset_)then
        do k=1,nK; do j=1,nJ
           Dxyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(x_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(x_,:,1,j,k,x_) = Dxyz_D
        end do; end do
     end if
-    if(neiLWest(iBlock)==NoBlk)then
+    if(DiLevel_EB(2,iBlock)==Unset_)then
        do k=1,nK; do j=1,nJ
           Dxyz_D = Xyz_DGB(:,nI + 1,j,k,iBlock) - Xyz_DGB(:,nI,j,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(x_,iBlock)/sum(Dxyz_D**2))
@@ -735,21 +729,21 @@ contains
        end do; end do
     end if
     if(nJ==1)RETURN
-    if(neiLSouth(iBlock)==NoBlk)then
+    if(DiLevel_EB(3,iBlock)==Unset_)then
        do k=1,nK; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,1,k,iBlock) - Xyz_DGB(:,i,0,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(y_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(y_,:,i,1,k,y_) = Dxyz_D
        end do; end do
     end if
-    if(neiLNorth(iBlock)==NoBlk)then
+    if(DiLevel_EB(4,iBlock)==Unset_)then
        do k=1,nK; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,nJ + 1,k,iBlock) - Xyz_DGB(:,i,nJ,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(y_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(y_,:,i,nJ+1,k,y_) = Dxyz_D
        end do; end do
     end if
-    if(neiLBot(iBlock)==NoBlk)then
+    if(DiLevel_EB(5,iBlock)==Unset_)then
        do j=1,nJ; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,j,1,iBlock) - Xyz_DGB(:,i,j,0,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(z_,iBlock)/sum(Dxyz_D**2))
@@ -757,7 +751,7 @@ contains
        end do; end do
     end if
     if(nK==1)RETURN
-    if(neiLTop(iBlock)==NoBlk)then
+    if(DiLevel_EB(6,iBlock)==Unset_)then
        do j=1,nJ; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,j,nK + 1,iBlock) - Xyz_DGB(:,i,j,nK,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(z_,iBlock)/sum(Dxyz_D**2))
@@ -775,8 +769,6 @@ contains
     ! calculate the gradient FaceGrad_DI of field Var_IG
     ! on face iDir of cell i, j, k of block iBlock
 
-    use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot
     use BATL_lib,      ONLY: IsCartesianGrid, nDim, Dim1_, Dim2_, Dim3_, &
          CellSize_DB, DiLevelNei_IIIB, x_, y_, z_, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -818,7 +810,7 @@ contains
     Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
 
     if(i==1)then
-       if(NeiLeast(iBlock)==-1 &
+       if(DiLevel_EB(1,iBlock)==-1 &
             .or. (iDir==y_ .and. &
             (j==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
             (j==nJ+1 .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1)) &
@@ -828,7 +820,7 @@ contains
             )then
           iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
        end if
-    elseif((i==nI+1 .or. i==nI.and.iDir/=Dim1_) .and. NeiLwest(iBlock)==-1 .or. &
+    elseif((i==nI+1 .or. i==nI.and.iDir/=Dim1_) .and. DiLevel_EB(2,iBlock)==-1 .or. &
          i==nI .and. ((iDir==y_ .and. &
          (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
          (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -840,7 +832,7 @@ contains
     end if
 
     if(j==1)then
-       if(NeiLsouth(iBlock)==-1 &
+       if(DiLevel_EB(3,iBlock)==-1 &
             .or. (iDir==x_ .and. &
             (i==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
             (i==nI+1 .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1)) &
@@ -850,7 +842,7 @@ contains
             )then
           jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
        end if
-    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. NeiLnorth(iBlock)==-1 .or. &
+    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 .or. &
          j==nJ .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -862,7 +854,7 @@ contains
     end if
 
     if(k==1)then
-       if(NeiLbot(iBlock)==-1 &
+       if(DiLevel_EB(5,iBlock)==-1 &
             .or. (iDir==x_ .and. &
             (i==1    .and. DiLevelNei_IIIB(-1, 0,-1,iBlock)==-1) .or. &
             (i==nI+1 .and. DiLevelNei_IIIB( 1, 0,-1,iBlock)==-1)) &
@@ -872,7 +864,7 @@ contains
             )then
           kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
        end if
-    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. NeiLtop(iBlock)==-1 .or. &
+    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 .or. &
          k==nK .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &
@@ -948,8 +940,6 @@ contains
 
     use BATL_lib,      ONLY: IsCartesianGrid
     use ModMain,       ONLY: x_, y_, z_
-    use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot, NoBlk
     use BATL_lib,      ONLY: CellSize_DB, DiLevelNei_IIIB
 
     integer, intent(in) :: iDir, i, j, k, iBlock
@@ -1012,7 +1002,7 @@ contains
     Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
 
     if(i==1)then
-       if(NeiLeast(iBlock)==-1 &
+       if(DiLevel_EB(1,iBlock)==-1 &
             .or. (iDir==y_ .and. &
             (j==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
             (j==nJ+1 .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1)) &
@@ -1021,10 +1011,10 @@ contains
             (k==nK+1 .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1)) &
             )then
           iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
-       elseif(UseFirstOrderBc.and.NeiLeast(iBlock)==NoBlk)then
+       elseif(UseFirstOrderBc.and.DiLevel_EB(1,iBlock)==Unset_)then
           iL = i; iD = i; Ax = 0.0; Bx = -0.50*InvDx; Cx = 0.50*InvDx
        end if
-    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. NeiLwest(iBlock)==-1 .or. &
+    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. DiLevel_EB(2,iBlock)==-1 .or. &
          i==nI .and. ((iDir==y_ .and. &
          (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
          (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1034,12 +1024,12 @@ contains
          )then
        iL = i-1; iR = i-2; Ax=-InvDx; Bx=0.75*InvDx; Cx=0.25*InvDx
     elseif(UseFirstOrderBc.and.(i==nI+1 .or. i==nI.and.iDir/=x_)&
-         .and. NeiLwest(iBlock)==NoBlk)then
+         .and. DiLevel_EB(2,iBlock)==Unset_)then
        iR = i; iU = i-1; Ax =-0.50*InvDx; Bx = 0.50*InvDx; Cx = 0.0
     end if
 
     if(j==1)then
-       if(NeiLsouth(iBlock)==-1 &
+       if(DiLevel_EB(3,iBlock)==-1 &
             .or. (iDir==x_ .and. &
             (i==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
             (i==nI+1 .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1)) &
@@ -1048,10 +1038,10 @@ contains
             (k==nK+1 .and. DiLevelNei_IIIB( 0,-1, 1,iBlock)==-1)) &
             )then
           jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
-       elseif(UseFirstOrderBc.and.NeiLsouth(iBlock)==NoBlk)then
+       elseif(UseFirstOrderBc.and.DiLevel_EB(3,iBlock)==Unset_)then
           jL = i; jD = j; Ay = 0.0; By = -0.50*InvDy; Cy = 0.50*InvDy
        end if
-    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. NeiLnorth(iBlock)==-1 .or. &
+    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 .or. &
          j==nJ .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1061,12 +1051,12 @@ contains
          )then
        jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
     elseif(UseFirstOrderBc.and.(j==nJ+1 .or. j==nJ.and.iDir/=y_)&
-         .and. NeiLnorth(iBlock)==NoBlk)then
+         .and. DiLevel_EB(4,iBlock)==Unset_)then
        jR = j; jU = j-1; Ay =-0.50*InvDy; By = 0.50*InvDy; Cy = 0.0
     end if
 
     if(k==1)then
-       if(NeiLbot(iBlock)==-1 &
+       if(DiLevel_EB(5,iBlock)==-1 &
             .or. (iDir==x_ .and. &
             (i==1    .and. DiLevelNei_IIIB(-1, 0,-1,iBlock)==-1) .or. &
             (i==nI+1 .and. DiLevelNei_IIIB( 1, 0,-1,iBlock)==-1)) &
@@ -1075,10 +1065,10 @@ contains
             (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1,-1,iBlock)==-1)) &
             )then
           kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
-       elseif(UseFirstOrderBc.and.NeiLbot(iBlock)==NoBlk)then
+       elseif(UseFirstOrderBc.and.DiLevel_EB(5,iBlock)==Unset_)then
           kL = k; kD = k; Az = 0.0; Bz = -0.50*InvDz; Cz = 0.50*InvDz
        end if
-    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. NeiLtop(iBlock)==-1 .or. &
+    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 .or. &
          k==nK .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &
@@ -1088,7 +1078,7 @@ contains
          )then
        kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
     elseif(UseFirstOrderBc.and.(k==nK+1 .or. k==nK.and.iDir/=z_)&
-         .and. NeiLtop(iBlock)==NoBlk)then
+         .and. DiLevel_EB(6,iBlock)==Unset_)then
        kR = k; kU = k-1; Az =-0.50*InvDz; Bz = 0.50*InvDz; Cz = 0.0
     end if
 
@@ -1153,11 +1143,8 @@ contains
   subroutine get_face_curl(iDir, i, j, k, iBlock, IsNewBlock, Vector_DG, &
        FaceCurl_D)
 
-    use ModMain,      ONLY: x_, y_, z_
-    use BATL_lib,     ONLY: IsCartesianGrid, IsRzGeometry
-    use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot
-    use BATL_lib,     ONLY: CellSize_DB, DiLevelNei_IIIB
+    use BATL_lib,     ONLY: x_, y_, z_, IsCartesianGrid, IsRzGeometry, &
+         CellSize_DB, DiLevelNei_IIIB
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     logical, intent(inout) :: IsNewBlock
@@ -1193,7 +1180,7 @@ contains
     Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
 
     if(i==1)then
-       if(NeiLeast(iBlock)==-1 &
+       if(DiLevel_EB(1,iBlock)==-1 &
             .or. (iDir==y_ .and. &
             (j==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
             (j==nJ+1 .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1)) &
@@ -1203,7 +1190,7 @@ contains
             )then
           iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
        end if
-    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. NeiLwest(iBlock)==-1 .or. &
+    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. DiLevel_EB(2,iBlock)==-1 .or. &
          i==nI .and. ((iDir==y_ .and. &
          (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
          (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1215,7 +1202,7 @@ contains
     end if
 
     if(j==1)then
-       if(NeiLsouth(iBlock)==-1 &
+       if(DiLevel_EB(3,iBlock)==-1 &
             .or. (iDir==x_ .and. &
             (i==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
             (i==nI+1 .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1)) &
@@ -1225,7 +1212,7 @@ contains
             )then
           jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
        end if
-    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. NeiLnorth(iBlock)==-1 .or. &
+    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 .or. &
          j==nJ .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1237,7 +1224,7 @@ contains
     end if
 
     if(k==1)then
-       if(NeiLbot(iBlock)==-1 &
+       if(DiLevel_EB(5,iBlock)==-1 &
             .or. (iDir==x_ .and. &
             (i==1    .and. DiLevelNei_IIIB(-1, 0,-1,iBlock)==-1) .or. &
             (i==nI+1 .and. DiLevelNei_IIIB( 1, 0,-1,iBlock)==-1)) &
@@ -1247,7 +1234,7 @@ contains
             )then
           kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
        end if
-    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. NeiLtop(iBlock)==-1 .or. &
+    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 .or. &
          k==nK .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &

@@ -458,7 +458,7 @@ contains
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
          No2Si_V
     use ModGeometry, ONLY: TypeGeometry
-    use ModParallel, ONLY: NOBLK, NeiLev
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     use ModUserInterface ! user_material_properties
     use ModVarIndexes, ONLY: nVar
 
@@ -661,37 +661,37 @@ contains
 
        end do; end do; end do
 
-       if(NeiLev(1,iBlock) == NOBLK)then
+       if(DiLevel_EB(1,iBlock) == Unset_)then
           i = 0
           do k = 1, nK; do j = 1, nJ
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(NeiLev(2,iBlock) == NOBLK)then
+       if(DiLevel_EB(2,iBlock) == Unset_)then
           i = nI + 1
           do k = 1, nK; do j = 1, nJ
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nJ > 1 .and. NeiLev(3,iBlock) == NOBLK)then
+       if(nJ > 1 .and. DiLevel_EB(3,iBlock) == Unset_)then
           j = 0
           do k = 1, nK; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nJ > 1 .and. NeiLev(4,iBlock) == NOBLK)then
+       if(nJ > 1 .and. DiLevel_EB(4,iBlock) == Unset_)then
           j = nJ + 1
           do k = 1, nK; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nK > 1 .and. NeiLev(5,iBlock) == NOBLK)then
+       if(nK > 1 .and. DiLevel_EB(5,iBlock) == Unset_)then
           k = 0
           do j = 1, nJ; do i = 1, nI
              call get_ghostcell_diffcoef
           end do; end do
        end if
-       if(nK > 1 .and. NeiLev(6,iBlock) == NOBLK)then
+       if(nK > 1 .and. DiLevel_EB(6,iBlock) == Unset_)then
           k = nK + 1
           do j = 1, nJ; do i = 1, nI
              call get_ghostcell_diffcoef
@@ -729,53 +729,53 @@ contains
        ! Calculate face averaged values. Include geometric factors.
 
        call face_equal(1,2,nI,1,nJ,1,nK)
-       if(NeiLev(1,iBlock)==0.or.NeiLev(1,iBlock)==NOBLK)then
+       if(DiLevel_EB(1,iBlock)==0.or.DiLevel_EB(1,iBlock)==Unset_)then
           call face_equal(1,1,1,1,nJ,1,nK)
-       else if(NeiLev(1,iBlock)==-1)then
+       else if(DiLevel_EB(1,iBlock)==-1)then
           call face_left_coarse2fine(1,1,1,1,nJ,1,nK)
-       else if(NeiLev(1,iBlock)==1)then
+       else if(DiLevel_EB(1,iBlock)==1)then
           call face_left_fine2coarse(1,1,1,1,nJ,1,nK)
        end if
-       if(NeiLev(2,iBlock)==0.or.NeiLev(2,iBlock)==NOBLK)then
+       if(DiLevel_EB(2,iBlock)==0.or.DiLevel_EB(2,iBlock)==Unset_)then
           call face_equal(1,nI+1,nI+1,1,nJ,1,nK)
-       else if(NeiLev(2,iBlock)==-1)then
+       else if(DiLevel_EB(2,iBlock)==-1)then
           call face_right_coarse2fine(1,nI+1,nI+1,1,nJ,1,nK)
-       else if(NeiLev(2,iBlock)==1)then
+       else if(DiLevel_EB(2,iBlock)==1)then
           call face_right_fine2coarse(1,nI+1,nI+1,1,nJ,1,nK)
        end if
 
        if(nJ > 1)then
           call face_equal(2,1,nI,2,nJ,1,nK)
-          if(NeiLev(3,iBlock)==0.or.NeiLev(3,iBlock)==NOBLK)then
+          if(DiLevel_EB(3,iBlock)==0.or.DiLevel_EB(3,iBlock)==Unset_)then
              call face_equal(2,1,nI,1,1,1,nK)
-          else if(NeiLev(3,iBlock)==-1)then
+          else if(DiLevel_EB(3,iBlock)==-1)then
              call face_left_coarse2fine(2,1,nI,1,1,1,nK)
-          else if(NeiLev(3,iBlock)==1)then
+          else if(DiLevel_EB(3,iBlock)==1)then
              call face_left_fine2coarse(2,1,nI,1,1,1,nK)
           end if
-          if(NeiLev(4,iBlock)==0.or.NeiLev(4,iBlock)==NOBLK)then
+          if(DiLevel_EB(4,iBlock)==0.or.DiLevel_EB(4,iBlock)==Unset_)then
              call face_equal(2,1,nI,nJ+1,nJ+1,1,nK)
-          else if(NeiLev(4,iBlock)==-1)then
+          else if(DiLevel_EB(4,iBlock)==-1)then
              call face_right_coarse2fine(2,1,nI,nJ+1,nJ+1,1,nK)
-          else if(NeiLev(4,iBlock)==1)then
+          else if(DiLevel_EB(4,iBlock)==1)then
              call face_right_fine2coarse(2,1,nI,nJ+1,nJ+1,1,nK)
           end if
        end if
 
        if(nK > 1)then
           call face_equal(3,1,nI,1,nJ,2,nK)
-          if(NeiLev(5,iBlock)==0.or.NeiLev(5,iBlock)==NOBLK)then
+          if(DiLevel_EB(5,iBlock)==0.or.DiLevel_EB(5,iBlock)==Unset_)then
              call face_equal(3,1,nI,1,nJ,1,1)
-          else if(NeiLev(5,iBlock)==-1)then
+          else if(DiLevel_EB(5,iBlock)==-1)then
              call face_left_coarse2fine(3,1,nI,1,nJ,1,1)
-          else if(NeiLev(5,iBlock)==1)then
+          else if(DiLevel_EB(5,iBlock)==1)then
              call face_left_fine2coarse(3,1,nI,1,nJ,1,1)
           end if
-          if(NeiLev(6,iBlock)==0.or.NeiLev(6,iBlock)==NOBLK)then
+          if(DiLevel_EB(6,iBlock)==0.or.DiLevel_EB(6,iBlock)==Unset_)then
              call face_equal(3,1,nI,1,nJ,nK+1,nK+1)
-          else if(NeiLev(6,iBlock)==-1)then
+          else if(DiLevel_EB(6,iBlock)==-1)then
              call face_right_coarse2fine(3,1,nI,1,nJ,nK+1,nK+1)
-          else if(NeiLev(6,iBlock)==1)then
+          else if(DiLevel_EB(6,iBlock)==1)then
              call face_right_fine2coarse(3,1,nI,1,nJ,nK+1,nK+1)
           end if
        end if
@@ -1102,7 +1102,7 @@ contains
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModLinearSolver, ONLY: pDotADotPPe, UsePDotADotP
     use ModMain,         ONLY: nI, nJ, nK
-    use ModParallel,     ONLY: NeiLev, NOBLK
+    use ModParallel,     ONLY: DiLevel_EB, Unset_
     use ModNumConst,     ONLY: i_DD
     use ModGeometry,     ONLY: Used_GB
 
@@ -1178,19 +1178,19 @@ contains
 
     else
 
-       if(NeiLev(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
-       if(NeiLev(2,iBlock)==1) &
+       if(DiLevel_EB(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
+       if(DiLevel_EB(2,iBlock)==1) &
             call correct_right_ghostcell(1,nI+1,nI+1,1,nJ,1,nK)
        if(nJ > 1)then
-          if(NeiLev(3,iBlock)==1) &
+          if(DiLevel_EB(3,iBlock)==1) &
                call correct_left_ghostcell(2,1,nI,0,0,1,nK)
-          if(NeiLev(4,iBlock)==1) &
+          if(DiLevel_EB(4,iBlock)==1) &
                call correct_right_ghostcell(2,1,nI,nJ+1,nJ+1,1,nK)
        end if
        if(nK > 1)then
-          if(NeiLev(5,iBlock)==1) &
+          if(DiLevel_EB(5,iBlock)==1) &
                call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
-          if(NeiLev(6,iBlock)==1) &
+          if(DiLevel_EB(6,iBlock)==1) &
                call correct_right_ghostcell(3,1,nI,1,nJ,nK+1,nK+1)
        end if
 
@@ -1351,7 +1351,7 @@ contains
 
           ! Correct the contributions to the quadratic form
           ! from the boundary faces
-          if(NeiLev(5,iBlock) == NOBLK)then
+          if(DiLevel_EB(5,iBlock) == Unset_)then
              k = 1
              do j = 1, nJ; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
@@ -1362,7 +1362,7 @@ contains
              end do; end do; end do
           end if
 
-          if(NeiLev(6,iBlock) == NOBLK)then
+          if(DiLevel_EB(6,iBlock) == Unset_)then
              k = nK
              do j = 1, nJ; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -1375,7 +1375,7 @@ contains
           end if
        end if
 
-       if(NeiLev(1,iBlock) == NOBLK)then
+       if(DiLevel_EB(1,iBlock) == Unset_)then
           i = 1
           do k = 1, nK; do j = 1, nJ; do iDiff = iDiffMin, iDiffMax
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -1387,7 +1387,7 @@ contains
           end do; end do; end do
        end if
 
-       if(NeiLev(2,iBlock) == NOBLK)then
+       if(DiLevel_EB(2,iBlock) == Unset_)then
           i = nI
           do k = 1, nK; do j = 1, nJ; do iDiff = iDiffMin, iDiffMax
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -1399,7 +1399,7 @@ contains
           end do; end do; end do
        end if
 
-       if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
+       if(nDim > 1 .and. DiLevel_EB(3,iBlock) == Unset_)then
           j = 1
           do k = 1, nK; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -1411,7 +1411,7 @@ contains
           end do; end do; end do
        end if
 
-       if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK)then
+       if(nDim > 1 .and. DiLevel_EB(4,iBlock) == Unset_)then
           j = nJ
           do k = 1, nK; do i = 1, nI; do iDiff = iDiffMin, iDiffMax
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE

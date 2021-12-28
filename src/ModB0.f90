@@ -275,7 +275,7 @@ contains
 
     ! Calculate the face centered B0 for block iBlock
 
-    use ModParallel, ONLY: NeiLev
+    use ModParallel, ONLY: DiLevel_EB
     use BATL_lib,    ONLY: nDim
 
     integer,intent(in)::iBlock
@@ -312,17 +312,17 @@ contains
 
     if(iTypeUpdate == UpdateOrig_)then
        ! Correct B0 at resolution changes
-       if(NeiLev(1,iBlock) == -1) &
+       if(DiLevel_EB(1,iBlock) == -1) &
             B0_DX(:,1   ,1:nJ,1:nK) = B0ResChange_DXSB(:,:,:,1,iBlock)
-       if(NeiLev(2,iBlock) == -1) &
+       if(DiLevel_EB(2,iBlock) == -1) &
             B0_DX(:,nI+1,1:nJ,1:nK) = B0ResChange_DXSB(:,:,:,2,iBlock)
-       if(NeiLev(3,iBlock) == -1) &
+       if(DiLevel_EB(3,iBlock) == -1) &
             B0_DY(:,1:nI,1   ,1:nK) = B0ResChange_DYSB(:,:,:,3,iBlock)
-       if(NeiLev(4,iBlock) == -1) &
+       if(DiLevel_EB(4,iBlock) == -1) &
             B0_DY(:,1:nI,1+nJ,1:nK) = B0ResChange_DYSB(:,:,:,4,iBlock)
-       if(NeiLev(5,iBlock) == -1) &
+       if(DiLevel_EB(5,iBlock) == -1) &
             B0_DZ(:,1:nI,1:nJ,1   ) = B0ResChange_DZSB(:,:,:,5,iBlock)
-       if(NeiLev(6,iBlock) == -1) &
+       if(DiLevel_EB(6,iBlock) == -1) &
             B0_DZ(:,1:nI,1:nJ,1+nK) = B0ResChange_DZSB(:,:,:,6,iBlock)
     end if
     call test_stop(NameSub, DoTest, iBlock)

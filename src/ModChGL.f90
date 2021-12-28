@@ -174,8 +174,7 @@ contains
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModMain,     ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
-    use ModParallel, ONLY: &
-         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+    use ModParallel, ONLY: DiLevel_EB
 
     integer, intent(in) :: iBlock
     logical, intent(in) :: DoResChangeOnly
@@ -191,18 +190,18 @@ contains
        if(nK > 1) call correct_faceZ(&
             iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
     else
-       if(neiLeast(iBlock)==+1)&
-            call correct_faceX(1,1,1,nJ,1,nK)
-       if(neiLwest(iBlock)==+1)&
-            call correct_faceX(nIFace,nIFace,1,nJ,1,nK)
-       if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
-            call correct_faceY(1,nI,1,1,1,nK)
-       if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-            call correct_faceY(1,nI,nJFace,nJFace,1,nK)
-       if(nK > 1 .and. neiLbot(iBlock)==+1) &
-            call correct_faceZ(1,nI,1,nJ,1,1)
-       if(nK > 1 .and. neiLtop(iBlock)==+1) &
-            call correct_faceZ(1,nI,1,nJ,nKFace,nKFace)
+       if(DiLevel_EB(1,iBlock)==+1)&
+            call correct_facex(1,1,1,nJ,1,nK)
+       if(DiLevel_EB(2,iBlock)==+1)&
+            call correct_facex(nIFace,nIFace,1,nJ,1,nK)
+       if(nJ > 1 .and. DiLevel_EB(3,iBlock)==+1) &
+            call correct_facey(1,nI,1,1,1,nK)
+       if(nJ > 1 .and. DiLevel_EB(4,iBlock)==+1) &
+            call correct_facey(1,nI,nJFace,nJFace,1,nK)
+       if(nK > 1 .and. DiLevel_EB(5,iBlock)==+1) &
+            call correct_facez(1,nI,1,nJ,1,1)
+       if(nK > 1 .and. DiLevel_EB(6,iBlock)==+1) &
+            call correct_facez(1,nI,1,nJ,nKFace,nKFace)
     end if
   contains
     !==========================================================================

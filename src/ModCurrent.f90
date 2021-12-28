@@ -86,7 +86,7 @@ contains
     use ModVarIndexes, ONLY: nVar
     use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B
     use ModAdvance, ONLY: State_VGB, StateOld_VGB
-    use ModParallel, ONLY: NeiLev
+    use ModParallel, ONLY: DiLevel_EB
     use ModGeometry, ONLY: Coord111_DB
     use BATL_lib, ONLY: iProc, IsCartesianGrid, CellSize_DB, xyz_to_coord
 
@@ -159,7 +159,7 @@ contains
        ! Set buffer zone according to relative size of neighboring block
        do iDim = 1, 3
           ! Block at the lower index side
-          select case(NeiLev(2*iDim-1,iBlock))
+          select case(DiLevel_EB(2*iDim-1,iBlock))
           case(1)
              DxyzLo_D(iDim) = 1.5*Dxyz_D(iDim)
           case(-1)
@@ -171,7 +171,7 @@ contains
           if(Xyz_D(iDim)<Coord111_DB(iDim,iBlock) - DxyzLo_D(iDim)) CYCLE BLOCK
 
           ! Block at the upper index side
-          select case(NeiLev(2*iDim,iBlock))
+          select case(DiLevel_EB(2*iDim,iBlock))
           case(1)
              DxyzHi_D(iDim) = 1.5*Dxyz_D(iDim)
           case(-1)
@@ -276,8 +276,7 @@ contains
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, r_GB
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB, &
          nI, nJ, nK, x_, y_, z_
-    use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot
+    use ModParallel, ONLY: DiLevel_EB
     use ModCoordTransform, ONLY: inverse_matrix
 #ifndef _OPENACC
     use ModB0, ONLY: UseCurlB0, rCurrentFreeB0, set_b0_source, CurlB0_DC
@@ -321,13 +320,13 @@ contains
     Ax = -InvDx2; Bx = 0.0; Cx = +InvDx2
     ! Avoid the ghost cells at resolution changes by using
     ! second-order one-sided difference
-    if(i==1 .and. abs(NeiLeast(iBlock))==1)then
+    if(i==1 .and. abs(DiLevel_EB(1,iBlock))==1)then
        if(UseFirstOrder)then
           iL = i; Ax = -2*InvDx2; Cx = 2*InvDx2
        else
           iL = i+1; iR = i+2; Ax = 4*InvDx2; Bx =-3*InvDx2; Cx =-InvDx2
        end if
-    elseif(i==nI .and. abs(NeiLwest(iBlock))==1)then
+    elseif(i==nI .and. abs(DiLevel_EB(2,iBlock))==1)then
        if(UseFirstOrder)then
           iR = i; Ax = -2*InvDx2; Cx = 2*InvDx2
        else
@@ -343,13 +342,13 @@ contains
     else
        jR = j+1; jL = j-1;
        Ay = -InvDy2; By = 0.0; Cy = +InvDy2
-       if(j==1 .and. abs(NeiLsouth(iBlock))==1)then
+       if(j==1 .and. abs(DiLevel_EB(3,iBlock))==1)then
           if(UseFirstOrder)then
              jL = j; Ay = -2*InvDy2; Cy = 2*InvDy2
           else
              jL = j+1; jR = j+2; Ay = 4*InvDy2; By = -3*InvDy2; Cy = -InvDy2
           end if
-       elseif(j==nJ .and. abs(NeiLnorth(iBlock))==1)then
+       elseif(j==nJ .and. abs(DiLevel_EB(4,iBlock))==1)then
           if(UseFirstOrder)then
              jR = j; Ay = -2*InvDy2; Cy = 2*InvDy2
           else
@@ -366,13 +365,13 @@ contains
     else
        kR = k+1; kL = k-1
        Az = -InvDz2; Bz = 0.0; Cz = +InvDz2
-       if(k==1 .and. abs(NeiLbot(iBlock))==1)then
+       if(k==1 .and. abs(DiLevel_EB(5,iBlock))==1)then
           if(UseFirstOrder)then
              kL = k; Az = -2*InvDz2; Cz = 2*InvDz2
           else
              kL = k+1; kR = k+2; Az = 4*InvDz2; Bz =-3*InvDz2; Cz =-InvDz2
           end if
-       elseif(k==nK .and. abs(NeiLtop(iBlock))==1)then
+       elseif(k==nK .and. abs(DiLevel_EB(6,iBlock))==1)then
           if(UseFirstOrder)then
              kR = k; Az = -2*InvDz2; Cz = 2*InvDz2
           else

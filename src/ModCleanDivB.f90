@@ -31,7 +31,7 @@ contains
          Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
     use ModAdvance, ONLY:tmp3_blk=>divB1_GB
     use ModGeometry, ONLY: IsNoBody_B, IsBody_B, Used_GB
-    use ModParallel, ONLY : NOBLK, neiLEV
+    use ModParallel, ONLY : Unset_, DiLevel_EB
     use ModMpi
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nBlock, MaxBlock, x_, y_, z_, k0_, j0_, nJp1_, nKp1_, &
@@ -231,48 +231,48 @@ contains
 
          Q_G = 1.0
 
-         if(any(NeiLev(:,iBlock)/=0))then
-            if(NeiLev(1,iBlock)==NoBLK)then
+         if(any(DiLevel_EB(:,iBlock)/=0))then
+            if(DiLevel_EB(1,iBlock)==Unset_)then
                tmp1_blk(0,1:nJ,1:nK,iBlock) = &
                     1.0/CellVolume_GB(1,1:nJ,1:nK,iBlock)
                ! to define somehow tmp1 in the outer ghostcells
 
-            elseif(abs(NeiLev(1,iBlock))==1)then
-               Q_G(0,:,:)=4.0**NeiLev(1,iBlock)
+            elseif(abs(DiLevel_EB(1,iBlock))==1)then
+               Q_G(0,:,:)=4.0**DiLevel_EB(1,iBlock)
                ! if the neighboring block is coarser,
                !  the input from FA^2 should be multipled by four
                ! If the neighborig block is finer,
                !  the input from FA^2  should be multiplied by 1/4
             end if
-            if(NeiLev(2,iBlock)==NoBLK)then
+            if(DiLevel_EB(2,iBlock)==Unset_)then
                tmp1_blk(nI+1,1:nJ,1:nK,iBlock) = &
                     1.0/CellVolume_GB(nI,1:nJ,1:nK,iBlock)
-            elseif(abs(NeiLev(2,iBlock))==1)then
-               Q_G(nI+1,:,:)=4.0**NeiLev(2,iBlock)
+            elseif(abs(DiLevel_EB(2,iBlock))==1)then
+               Q_G(nI+1,:,:)=4.0**DiLevel_EB(2,iBlock)
             end if
-            if(NeiLev(3,iBlock)==NoBLK)then
+            if(DiLevel_EB(3,iBlock)==Unset_)then
                tmp1_blk(1:nI,0,1:nK,iBlock) = &
                     1.0/CellVolume_GB(1:nI,1,1:nK,iBlock)
-            elseif(abs(NeiLev(3,iBlock))==1)then
-               Q_G(:,0,:)=4.0**NeiLev(3,iBlock)
+            elseif(abs(DiLevel_EB(3,iBlock))==1)then
+               Q_G(:,0,:)=4.0**DiLevel_EB(3,iBlock)
             end if
-            if(NeiLev(4,iBlock)==NoBLK)then
+            if(DiLevel_EB(4,iBlock)==Unset_)then
                tmp1_blk(1:nI,nJ+1,1:nK,iBlock) = &
                     1.0/CellVolume_GB(1:nI,nJ,1:nK,iBlock)
-            elseif(abs(NeiLev(4,iBlock))==1)then
-               Q_G(:,nJ+1,:)=4.0**NeiLev(4,iBlock)
+            elseif(abs(DiLevel_EB(4,iBlock))==1)then
+               Q_G(:,nJ+1,:)=4.0**DiLevel_EB(4,iBlock)
             end if
-            if(NeiLev(5,iBlock)==NoBLK)then
+            if(DiLevel_EB(5,iBlock)==Unset_)then
                tmp1_blk(1:nI,1:nJ,0,iBlock) = &
                     1.0/CellVolume_GB(1:nI,1:nJ,1,iBlock)
-            elseif(abs(NeiLev(5,iBlock))==1)then
-               Q_G(:,:,0)=4.0**NeiLev(5,iBlock)
+            elseif(abs(DiLevel_EB(5,iBlock))==1)then
+               Q_G(:,:,0)=4.0**DiLevel_EB(5,iBlock)
             end if
-            if(NeiLev(6,iBlock)==NoBLK)then
+            if(DiLevel_EB(6,iBlock)==Unset_)then
                tmp1_blk(1:nI,1:nJ,nK+1,iBlock) = &
                     1.0/CellVolume_GB(1:nI,1:nJ,nK,iBlock)
-            elseif(abs(NeiLev(6,iBlock))==1)then
-               Q_G(:,:,nK+1)=4.0**NeiLev(6,iBlock)
+            elseif(abs(DiLevel_EB(6,iBlock))==1)then
+               Q_G(:,:,nK+1)=4.0**DiLevel_EB(6,iBlock)
             end if
          end if
          Prec_CB(:,:,:,iBlock)=4.0/(&
@@ -289,18 +289,18 @@ contains
       do iLimit = 1, 2
          do iBlock=1,nBlock
             if(Unused_B(iBlock))CYCLE
-            if(any(NeiLev(:,iBlock)==NoBLK))then
-               if(NeiLev(1,iBlock)==NoBLK)&
+            if(any(DiLevel_EB(:,iBlock)==Unset_))then
+               if(DiLevel_EB(1,iBlock)==Unset_)&
                     tmp1_blk(0,1:nJ,1:nK,iBlock)=Prec_CB(1,:,:,iBlock)
-               if(NeiLev(2,iBlock)==NoBLK)&
+               if(DiLevel_EB(2,iBlock)==Unset_)&
                     tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=Prec_CB(nI,:,:,iBlock)
-               if(NeiLev(3,iBlock)==NoBLK)&
+               if(DiLevel_EB(3,iBlock)==Unset_)&
                     tmp1_blk(1:nI,0,1:nK,iBlock)=Prec_CB(:,1,:,iBlock)
-               if(NeiLev(4,iBlock)==NoBLK)&
+               if(DiLevel_EB(4,iBlock)==Unset_)&
                     tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=Prec_CB(:,nJ,:,iBlock)
-               if(NeiLev(5,iBlock)==NoBLK)&
+               if(DiLevel_EB(5,iBlock)==Unset_)&
                     tmp1_blk(1:nI,1:nJ,0,iBlock)=Prec_CB(:,:,1,iBlock)
-               if(NeiLev(6,iBlock)==NoBLK)&
+               if(DiLevel_EB(6,iBlock)==Unset_)&
                     tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=Prec_CB(:,:,nK,iBlock)
             end if
             tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=Prec_CB(:,:,:,iBlock)
@@ -331,18 +331,18 @@ contains
       ! this coefficient equals 1
       do iBlock=1,nBlock
          if (Unused_B(iBlock)) CYCLE
-         if(any(NeiLev(:,iBlock)==NoBLK))then
-            if(NeiLev(1,iBlock)==NoBLK)&
+         if(any(DiLevel_EB(:,iBlock)==Unset_))then
+            if(DiLevel_EB(1,iBlock)==Unset_)&
                  tmp1_blk(0,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(1,:,:,iBlock))
-            if(NeiLev(2,iBlock)==NoBLK)&
+            if(DiLevel_EB(2,iBlock)==Unset_)&
                  tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(nI,:,:,iBlock))
-            if(NeiLev(3,iBlock)==NoBLK)&
+            if(DiLevel_EB(3,iBlock)==Unset_)&
                  tmp1_blk(1:nI,0,1:nK,iBlock)=sqrt(Prec_CB(:,1,:,iBlock))
-            if(NeiLev(4,iBlock)==NoBLK)&
+            if(DiLevel_EB(4,iBlock)==Unset_)&
                  tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=sqrt(Prec_CB(:,nJ,:,iBlock))
-            if(NeiLev(5,iBlock)==NoBLK)&
+            if(DiLevel_EB(5,iBlock)==Unset_)&
                  tmp1_blk(1:nI,1:nJ,0,iBlock)=sqrt(Prec_CB(:,:,1,iBlock))
-            if(NeiLev(6,iBlock)==NoBLK)&
+            if(DiLevel_EB(6,iBlock)==Unset_)&
                  tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=sqrt(Prec_CB(:,:,nK,iBlock))
          end if
          tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(:,:,:,iBlock))
@@ -442,17 +442,17 @@ contains
       !------------------------------------------------------------------------
       VDotGrad_DC = 0.0
 
-      if (NeiLev(1,iBlock) == NOBLK) Phi_GB(0,1:nJ,1:nK,iBlock) = &
+      if (DiLevel_EB(1,iBlock) == Unset_) Phi_GB(0,1:nJ,1:nK,iBlock) = &
            -BoundaryCoef*Phi_GB(1 ,1:nJ,1:nK,iBlock)
-      if (NeiLev(2,iBlock) == NOBLK) Phi_GB(nI+1,1:nJ,1:nK,iBlock) = &
+      if (DiLevel_EB(2,iBlock) == Unset_) Phi_GB(nI+1,1:nJ,1:nK,iBlock) = &
            -BoundaryCoef*Phi_GB(nI,1:nJ,1:nK,iBlock)
-      if (NeiLev(3,iBlock) == NOBLK) Phi_GB(1:nI,j0_ ,1:nK,iBlock) = &
+      if (DiLevel_EB(3,iBlock) == Unset_) Phi_GB(1:nI,j0_ ,1:nK,iBlock) = &
            -BoundaryCoef*Phi_GB(1:nI,1 ,1:nK,iBlock)
-      if (NeiLev(4,iBlock) == NOBLK) Phi_GB(1:nI,nJp1_,1:nK,iBlock) = &
+      if (DiLevel_EB(4,iBlock) == Unset_) Phi_GB(1:nI,nJp1_,1:nK,iBlock) = &
            -BoundaryCoef*Phi_GB(1:nI,nJ,1:nK,iBlock)
-      if (NeiLev(5,iBlock) == NOBLK .and. nK>1)Phi_GB(1:nI,1:nJ,k0_,iBlock) = &
+      if (DiLevel_EB(5,iBlock) == Unset_ .and. nK>1)Phi_GB(1:nI,1:nJ,k0_,iBlock) = &
            -BoundaryCoef*Phi_GB(1:nI,1:nJ,1 ,iBlock)
-      if (NeiLev(6,iBlock) == NOBLK .and. nK>1) &
+      if (DiLevel_EB(6,iBlock) == Unset_ .and. nK>1) &
            Phi_GB(1:nI,1:nJ,nKp1_,iBlock) = &
            -BoundaryCoef*Phi_GB(1:nI,1:nJ,nK,iBlock)
 
@@ -513,7 +513,7 @@ contains
     use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          x_, y_, z_
     use ModGeometry, ONLY: IsBody_B, Used_GB
-    use ModParallel, ONLY: neilev, NOBLK
+    use ModParallel, ONLY: DiLevel_EB, Unset_
     use BATL_lib, ONLY: CellFace_DB
 
     integer,intent(in) :: iBlock
@@ -530,7 +530,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     Out_G = 0.0
-    if(.not.(IsBody_B(iBlock).or.any(neilev(:,iBlock)==NOBLK)))then
+    if(.not.(IsBody_B(iBlock).or.any(DiLevel_EB(:,iBlock)==Unset_)))then
        do k=1,nK; do j=1,nJ; do i=1,nI
           Out_G(i,j,k) = - 0.5*(&
                CellFace_DB(x_,iBlock)*&
@@ -546,12 +546,12 @@ contains
        elsewhere
           OneTrue_G = 0.0
        end where
-       if(neilev(1 ,iBlock)==NOBLK) OneTrue_G(0   ,:,:) = 0.0
-       if(neilev(2 ,iBlock)==NOBLK) OneTrue_G(nI+1,:,:) = 0.0
-       if(neilev(3,iBlock)==NOBLK) OneTrue_G(:,0   ,:) = 0.0
-       if(neilev(4,iBlock)==NOBLK) OneTrue_G(:,nJ+1,:) = 0.0
-       if(neilev(5  ,iBlock)==NOBLK) OneTrue_G(:,:,0   ) = 0.0
-       if(neilev(6  ,iBlock)==NOBLK) OneTrue_G(:,:,nK+1) = 0.0
+       if(DiLevel_EB(1 ,iBlock)==Unset_) OneTrue_G(0   ,:,:) = 0.0
+       if(DiLevel_EB(2 ,iBlock)==Unset_) OneTrue_G(nI+1,:,:) = 0.0
+       if(DiLevel_EB(3,iBlock)==Unset_) OneTrue_G(:,0   ,:) = 0.0
+       if(DiLevel_EB(4,iBlock)==Unset_) OneTrue_G(:,nJ+1,:) = 0.0
+       if(DiLevel_EB(5  ,iBlock)==Unset_) OneTrue_G(:,:,0   ) = 0.0
+       if(DiLevel_EB(6  ,iBlock)==Unset_) OneTrue_G(:,:,nK+1) = 0.0
 
        ! Where .not.Used_GB, all the gradients are zero
        ! In Used_GB the input to gradient from the face neighbor

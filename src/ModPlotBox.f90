@@ -172,7 +172,7 @@ contains
          set_thread_plotvar, DoPlotThreads, rChromo=>rBody
     use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
     use ModVarIndexes, ONLY: nVar
-    use ModParallel,   ONLY: NeiLev, NOBLK
+    use ModParallel,   ONLY: DiLevel_EB, Unset_
     use ModGeometry,   ONLY: RadiusMin, rMin_B
 
     ! Arguments
@@ -218,7 +218,7 @@ contains
              r = norm2(XyzGm_D)
 
              ! Is grid point in the threaded gap?
-             if(DoPlotThreads .and. NeiLev(1,iBlock)==NOBLK &
+             if(DoPlotThreads .and. DiLevel_EB(1,iBlock)==Unset_ &
                   .and. r < RadiusMin)then
                 ! The point should be skipped, if below the chromosphere
                 if(r < rChromo) CYCLE
@@ -247,7 +247,7 @@ contains
 
              ! Compute the interpolated values at the current location
              PlotVar_VIII(0,i,j,k) = 1.0
-             if(DoPlotThreads .and. NeiLev(1, iBlock)==NOBLK .and. &
+             if(DoPlotThreads .and. DiLevel_EB(1, iBlock)==Unset_ .and. &
                   r < RadiusMin .and. Coord_D(1) < &
                   CoordMin_DB(1,iBlock) + 0.50*CellSize_DB(1,iBlock))then
                 ! The threaded gap is used and the point is below

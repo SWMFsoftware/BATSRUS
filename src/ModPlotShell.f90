@@ -127,7 +127,7 @@ contains
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
          xyz_to_coord, r_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModParallel,       ONLY: NeiLev, NOBLK
+    use ModParallel,       ONLY: DiLevel_EB, Unset_
 
     ! Arguments
     integer, intent(in) :: iBlock
@@ -154,7 +154,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     ! Does this block include grid points in the threaded gap?
-    IsThreadedBlock = UseThreadedGap .and. NeiLev(1, iBlock)==NOBLK
+    IsThreadedBlock = UseThreadedGap .and. DiLevel_EB(1, iBlock)==Unset_
     if(IsThreadedBlock)then
        ! Don't check radial coordinate to see if the point is outside the block
        iDirMin = r_ + 1

@@ -177,8 +177,7 @@ contains
     use ModMain, ONLY : TypeCellBc_I, Coord1MaxBc_
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
     use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
-    use ModParallel, ONLY : NOBLK,&
-         neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
+    use ModParallel, ONLY : Unset_, DiLevel_EB
     use ModGeometry, ONLY : Used_GB, IsBody_B
     use ModPhysics, ONLY: SW_UX,SW_UY,SW_UZ,SW_BX,SW_BY,SW_BZ
     use BATL_lib, ONLY: CellFace_DB
@@ -197,7 +196,7 @@ contains
     iGang = iBlock
 #endif
     call test_start(NameSub, DoTest, iBlock)
-    if(neiLeast(iBlock)==NOBLK)then
+    if(DiLevel_EB(1,iBlock)==Unset_)then
        do k=1,nK+1; do j=1,nJ
           VxB_y(1,j,k,iBlock) = +Flux_VZI(Bx_,1,j,k,iGang) /CellFace_DB(3,iBlock)
        end do; end do
@@ -205,7 +204,7 @@ contains
           VxB_z(1,j,k,iBlock) = -Flux_VYI(Bx_,1,j,k,iGang) /CellFace_DB(2,iBlock)
        end do; end do
     end if
-    if(neiLwest(iBlock)==NOBLK)then
+    if(DiLevel_EB(2,iBlock)==Unset_)then
        ! fixed inflow!
        ! VxB_x(nI  ,:,:,iBlock)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
        select case(TypeCellBc_I(Coord1MaxBc_))
@@ -222,7 +221,7 @@ contains
           end do; end do
        end select
     end if
-    if(neiLsouth(iBlock)==NOBLK)then
+    if(DiLevel_EB(3,iBlock)==Unset_)then
        do k=1,nK+1; do i=1,nI
           VxB_x(i,1,k,iBlock) = -Flux_VZI(By_,i,1,k,iGang) /CellFace_DB(3,iBlock)
        end do; end do
@@ -230,7 +229,7 @@ contains
           VxB_z(i,1,k,iBlock) = +Flux_VXI(By_,i,1,k,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
-    if(neiLnorth(iBlock)==NOBLK)then
+    if(DiLevel_EB(4,iBlock)==Unset_)then
        do k=1,nK+1; do i=1,nI
           VxB_x(i,nJ+1,k,iBlock) = -Flux_VZI(By_,i,nJ,k,iGang) /CellFace_DB(3,iBlock)
        end do; end do
@@ -238,7 +237,7 @@ contains
           VxB_z(i,nJ+1,k,iBlock) = +Flux_VXI(By_,i,nJ,k,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
-    if(neiLbot(iBlock)==NOBLK)then
+    if(DiLevel_EB(5,iBlock)==Unset_)then
        do j=1,nJ+1; do i=1,nI
           VxB_x(i,j,1,iBlock) = +Flux_VYI(Bz_,i,j,1,iGang) /CellFace_DB(2,iBlock)
        end do; end do
@@ -246,7 +245,7 @@ contains
           VxB_y(i,j,1,iBlock) = -Flux_VXI(Bz_,i,j,1,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
-    if(neiLtop(iBlock)==NOBLK)then
+    if(DiLevel_EB(6,iBlock)==Unset_)then
        do j=1,nJ+1; do i=1,nI
           VxB_x(i,j,nK+1,iBlock) = +Flux_VYI(Bz_,i,j,nK,iGang) /CellFace_DB(2,iBlock)
        end do; end do
@@ -1273,7 +1272,7 @@ contains
   !   !  +---sub1---edge1-sub2---+ --> X
   !
   !   use ModMain
-  !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE, &
+  !   use ModParallel, ONLY : DiLevel_EB,jBlock_IEB,jProc_IEB, &
   !        BLKneighborPE,BLKneighborBLK,DiLevelNei_IIIB,BLKneighborCHILD
   !   use ModAMR, ONLY : child2subface,child2subedge
   !   use ModMpi
@@ -1391,7 +1390,7 @@ contains
   !           if(Unused_B(iBlock))CYCLE
   !
   !           ! Post non-blocking receive for opposite face of neighbor block
-  !           neiL=neiLEV(rface,iBlock)
+  !           neiL=DiLevel_EB(rface,iBlock)
   !
   !           if(neiL==0)then
   !              ! Check for shared edges
@@ -1422,11 +1421,11 @@ contains
   !           if(neiL/=-1)CYCLE
   !
   !           do isubface=1,4
-  !              neiP=neiPE(isubface,rface,iBlock)
+  !              neiP=jProc_IEB(isubface,rface,iBlock)
   !              if(neiP==iProc)CYCLE
   !
   !              ! Remote receive
-  !              neiB=neiBLK(isubface,rface,iBlock)
+  !              neiB=jBlock_IEB(isubface,rface,iBlock)
   !              itag = 100*neiB+10*iface
   !              if(DoTest.and.DoDebug)write(*,*)&
   !                   'Remote recv,me,iBlock,itag,neiP,neiB,isubface=',&
@@ -1474,7 +1473,7 @@ contains
   !           if(Unused_B(iBlock))CYCLE
   !
   !           ! Check if neighbouring block is coarser
-  !           neiL=neiLEV(iface,iBlock)
+  !           neiL=DiLevel_EB(iface,iBlock)
   !           if(neiL/=1)CYCLE
   !
   !           if(DoDebug.and.DoTest)write(*,*)&
@@ -1542,8 +1541,8 @@ contains
   !              end if
   !           end if
   !
-  !           neiP=neiPE(1,iface,iBlock)
-  !           neiB=neiBLK(1,iface,iBlock)
+  !           neiP=jProc_IEB(1,iface,iBlock)
+  !           neiB=jBlock_IEB(1,iface,iBlock)
   !
   !           if(neiP==iProc)then
   !              ! Local copy into appropriate subface
@@ -1591,7 +1590,7 @@ contains
   !        do iBlock = 1,nBlockMax
   !           if(Unused_B(iBlock))CYCLE
   !
-  !           neiL=neiLEV(rface,iBlock)
+  !           neiL=DiLevel_EB(rface,iBlock)
   !           if(neiL==0)then
   !              ! Check if remote edges were received
   !              do iedge=1,2
@@ -1619,9 +1618,9 @@ contains
   !           if(neiL/=-1)CYCLE
   !
   !           do isubface=1,4
-  !              if(neiPE(isubface,rface,iBlock)==iProc) CYCLE
+  !              if(jProc_IEB(isubface,rface,iBlock)==iProc) CYCLE
   !
-  !              neiB=neiBLK(isubface,rface,iBlock)
+  !              neiB=jBlock_IEB(isubface,rface,iBlock)
   !              if(DoDebug.and.DoTest)&
   !                   write(*,*)'buf2subface: me, isubface, iBlock, neiB=',&
   !                   iProc,isubface,iBlock,neiB
@@ -1901,7 +1900,7 @@ contains
   !   ! Set B*FaceFine_*SB from finer face
   !   use ModMain, ONLY : nBLock,Unused_B,iBlockTest
   !   use ModAMR, ONLY : child2subface
-  !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE,BLKneighborCHILD
+  !   use ModParallel, ONLY : DiLevel_EB,jBlock_IEB,jProc_IEB,BLKneighborCHILD
   !   use ModMpi
   !
   !   integer :: iError
@@ -1931,9 +1930,9 @@ contains
   ! !!!     if(.not.refine_list(iBlock,iProc)) CYCLE
   !
   !      do iFace=1,6
-  !         if(neiLEV(iFace,iBlock)==-1)then
+  !         if(DiLevel_EB(iFace,iBlock)==-1)then
   !            do iSubFace=1,4
-  !               iProcNei =neiPE(iSubFace,iFace,iBlock)
+  !               iProcNei =jProc_IEB(iSubFace,iFace,iBlock)
   !               if(iProcNei /= iProc)then
   !                  call recv_b_face_fine
   !               else
@@ -1956,9 +1955,9 @@ contains
   !      if(Unused_B(iBlock)) CYCLE
   !
   !      do iFace=1,6
-  !         if(neiLEV(iFace,iBlock)/=1) CYCLE
-  !         iBlockNei=neiBLK(1,iFace,iBlock)
-  !         iProcNei =neiPE(1,iFace,iBlock)
+  !         if(DiLevel_EB(iFace,iBlock)/=1) CYCLE
+  !         iBlockNei=jBlock_IEB(1,iFace,iBlock)
+  !         iProcNei =jProc_IEB(1,iFace,iBlock)
   ! !!!        if(.not.refine_list(iBlockNei,iProcNei)) CYCLE
   !         if(iProcNei==iProc) CYCLE ! local copy
   !         call send_b_face_fine
@@ -2052,7 +2051,7 @@ contains
   !
   !     ! Copy fine normal B face component from the neighboring block
   !
-  !     iBlockNei=neiBLK(iSubFace,iFace,iBlock)
+  !     iBlockNei=jBlock_IEB(iSubFace,iFace,iBlock)
   !
   !     if(DoTest.and.(iBlock==iBlockTest.or.iBlockNei==iBlockTest))&
   !          write(*,*)'copy from iBlockNei=',iBlockNei,' to iBlock=',iBlock

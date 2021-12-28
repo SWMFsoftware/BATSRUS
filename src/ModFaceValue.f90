@@ -250,10 +250,7 @@ contains
     use ModSize
     use ModVarIndexes, ONLY: DefaultState_V, nVar, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModParallel,   ONLY: neiLEV, &
-         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
-         neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth, &
-         neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth
+    use ModParallel,   ONLY: DiLevel_EB, jBlock_IEB, jProc_IEB
     use BATL_lib,  ONLY: Unused_BP
 
     ! For debugging
@@ -268,7 +265,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(all(neiLEV(:,iBlock) /= -1))RETURN
+    if(all(DiLevel_EB(:,iBlock) /= -1))RETURN
 
     if(DoTest)write(*,*)NameSub, ' state before: ',&
          State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
@@ -287,11 +284,11 @@ contains
        end do; end do; end do
     end if
 
-    if(neiLeast(iBlock) == -1)then
-       if(        .not.Unused_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)) &
-            .and. .not.Unused_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)) &
-            .and. .not.Unused_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)) &
-            .and. .not.Unused_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
+    if(DiLevel_EB(1,iBlock) == -1)then
+       if(        .not.Unused_BP(jBlock_IEB(1,1,iBlock),jProc_IEB(1,1,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(2,1,iBlock),jProc_IEB(2,1,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(3,1,iBlock),jProc_IEB(3,1,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(4,1,iBlock),jProc_IEB(4,1,iBlock)))then
           !!! acc loop vector collapse(2)
           do k=1,nK;do j=1,nJ
              State_VGB(1:nVar,0,j,k,iBlock) = &
@@ -304,11 +301,11 @@ contains
           end do; end do
        end if
     end if
-    if(neiLwest(iBlock) == -1)then
-       if(        .not.Unused_BP(neiBwest(1,iBlock),neiPwest(1,iBlock)) &
-            .and. .not.Unused_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)) &
-            .and. .not.Unused_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)) &
-            .and. .not.Unused_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
+    if(DiLevel_EB(2,iBlock) == -1)then
+       if(        .not.Unused_BP(jBlock_IEB(1,2,iBlock),jProc_IEB(1,2,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(2,2,iBlock),jProc_IEB(2,2,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(4,2,iBlock),jProc_IEB(4,2,iBlock)))then
           !!! acc loop vector collapse(2)
           do k=1,nK;do j=1,nJ
              State_VGB(1:nVar,nI+1,j,k,iBlock) = &
@@ -321,11 +318,11 @@ contains
           end do; end do
        end if
     end if
-    if(neiLsouth(iBlock) == -1 .and. nJ > 1)then
-       if(        .not.Unused_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)) &
-            .and. .not.Unused_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)) &
-            .and. .not.Unused_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)) &
-            .and. .not.Unused_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
+    if(DiLevel_EB(3,iBlock) == -1 .and. nJ > 1)then
+       if(        .not.Unused_BP(jBlock_IEB(1,3,iBlock),jProc_IEB(1,3,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(2,3,iBlock),jProc_IEB(2,3,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(3,3,iBlock),jProc_IEB(3,3,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(4,3,iBlock),jProc_IEB(4,3,iBlock)))then
           !!! acc loop vector collapse(2)
           do k=1,nK;do i=1,nI
              State_VGB(1:nVar,i,0,k,iBlock) = &
@@ -338,11 +335,11 @@ contains
           end do; end do
        end if
     end if
-    if(neiLnorth(iBlock) == -1 .and. nJ > 1)then
-       if(     .not.Unused_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)) &
-            .and. .not.Unused_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)) &
-            .and. .not.Unused_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)) &
-            .and. .not.Unused_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
+    if(DiLevel_EB(4,iBlock) == -1 .and. nJ > 1)then
+       if(        .not.Unused_BP(jBlock_IEB(1,4,iBlock),jProc_IEB(1,4,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(2,4,iBlock),jProc_IEB(2,4,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(3,4,iBlock),jProc_IEB(3,4,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(4,4,iBlock),jProc_IEB(4,4,iBlock)))then
           !!! acc loop vector collapse(2)
           do k=1,nK;do i=1,nI
              State_VGB(1:nVar,i,nJ+1,k,iBlock) =&
@@ -355,11 +352,11 @@ contains
           end do; end do
        end if
     end if
-    if(neiLbot(iBlock) == -1 .and. nK > 1)then
-       if(        .not.Unused_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)) &
-            .and. .not.Unused_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)) &
-            .and. .not.Unused_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)) &
-            .and. .not.Unused_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
+    if(DiLevel_EB(5,iBlock) == -1 .and. nK > 1)then
+       if(        .not.Unused_BP(jBlock_IEB(1,5,iBlock),jProc_IEB(1,5,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(2,5,iBlock),jProc_IEB(2,5,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(3,5,iBlock),jProc_IEB(3,5,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(4,5,iBlock),jProc_IEB(4,5,iBlock)))then
           !!! acc loop vector collapse(2)
           do j=1,nJ;do i=1,nI
              State_VGB(1:nVar,i,j,0,iBlock) = &
@@ -372,11 +369,11 @@ contains
           end do; end do
        end if
     end if
-    if(neiLtop(iBlock) == -1 .and. nK > 1)then
-       if(        .not.Unused_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)) &
-            .and. .not.Unused_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)) &
-            .and. .not.Unused_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)) &
-            .and. .not.Unused_BP(neiBtop(4,iBlock),neiPtop(4,iBlock)))then
+    if(DiLevel_EB(6,iBlock) == -1 .and. nK > 1)then
+       if(        .not.Unused_BP(jBlock_IEB(1,6,iBlock),jProc_IEB(1,6,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(2,6,iBlock),jProc_IEB(2,6,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(3,6,iBlock),jProc_IEB(3,6,iBlock)) &
+            .and. .not.Unused_BP(jBlock_IEB(4,6,iBlock),jProc_IEB(4,6,iBlock)))then
           !!! acc loop vector collapse(2)
           do j=1,nJ;do i=1,nI
              State_VGB(1:nVar,i,j,nK+1,iBlock) = &
@@ -877,8 +874,7 @@ contains
          UseElectronPressure, UseWavePressure, UseAnisoPressure, UseAnisoPe, &
          LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
 
-    use ModParallel, ONLY : &
-         neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
+    use ModParallel, ONLY : DiLevel_EB
 
     use ModViscosity, ONLY: UseArtificialVisco
 
@@ -1069,17 +1065,17 @@ contains
           if(nK > 1) call get_faceZ_first(&
                iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace,iBlock)
        else
-          if(neiLeast(iBlock)==+1)&
+          if(DiLevel_EB(1,iBlock)==+1)&
                call get_faceX_first(1,1,1,nJ,1,nK,iBlock)
-          if(neiLwest(iBlock)==+1)&
+          if(DiLevel_EB(2,iBlock)==+1)&
                call get_faceX_first(nIFace,nIFace,1,nJ,1,nK,iBlock)
-          if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+          if(nJ > 1 .and. DiLevel_EB(3,iBlock)==+1) &
                call get_faceY_first(1,nI,1,1,1,nK,iBlock)
-          if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+          if(nJ > 1 .and. DiLevel_EB(4,iBlock)==+1) &
                call get_faceY_first(1,nI,nJFace,nJFace,1,nK,iBlock)
-          if(nK > 1 .and. neiLbot(iBlock)==+1) &
+          if(nK > 1 .and. DiLevel_EB(5,iBlock)==+1) &
                call get_faceZ_first(1,nI,1,nJ,1,1,iBlock)
-          if(nK > 1 .and. neiLtop(iBlock)==+1) &
+          if(nK > 1 .and. DiLevel_EB(6,iBlock)==+1) &
                call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace,iBlock)
        end if
     case default
@@ -1112,86 +1108,86 @@ contains
 
           if(nJ == 1 .and. (UseAccurateResChange .or. UseTvdResChange))then
              do iSide = 1, 2
-                if(neiLev(iSide,iBlock) == 1) &
+                if(DiLevel_EB(iSide,iBlock) == 1) &
                      call get_face_accurate1d(iSide, iBlock)
              end do
           elseif (UseAccurateResChange)then
              if(nK == 1)then
                 do iSide = 1, 4
-                   if(neilev(iSide,iBlock) == 1) &
+                   if(DiLevel_EB(iSide,iBlock) == 1) &
                         call get_face_accurate2d(iSide, iBlock)
                 end do
              else
                 do iSide = 1, 6
-                   if(neilev(iSide,iBlock) == 1) &
+                   if(DiLevel_EB(iSide,iBlock) == 1) &
                         call get_face_accurate3d(iSide, iBlock)
                 end do
              end if
           else if(UseTvdResChange)then
              do iSide=1,6
-                if(neilev(iSide,iBlock) == +1) &
+                if(DiLevel_EB(iSide,iBlock) == +1) &
                      call get_face_tvd(iSide, iBlock)
              end do
           else
              ! First order facevalues at resolution change
-             if(neiLeast(iBlock)==+1)&
+             if(DiLevel_EB(1,iBlock)==+1)&
                   call get_faceX_first(1,1,1,nJ,1,nK,iBlock)
-             if(neiLwest(iBlock)==+1)&
+             if(DiLevel_EB(2,iBlock)==+1)&
                   call get_faceX_first(nIFace,nIFace,1,nJ,1,nK,iBlock)
-             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(3,iBlock)==+1) &
                   call get_faceY_first(1,nI,1,1,1,nK,iBlock)
-             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(4,iBlock)==+1) &
                   call get_faceY_first(1,nI,nJFace,nJFace,1,nK,iBlock)
-             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(5,iBlock)==+1) &
                   call get_faceZ_first(1,nI,1,nJ,1,1,iBlock)
-             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(6,iBlock)==+1) &
                   call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace,iBlock)
           end if
        else if(DoResChangeOnly) then
           if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
              ! Second order face values at resolution changes
-             if(neiLeast(iBlock)==+1)&
+             if(DiLevel_EB(1,iBlock)==+1)&
                   call get_faceX_second(1,1,1,nJ,1,nK,iBlock)
-             if(neiLwest(iBlock)==+1)&
+             if(DiLevel_EB(2,iBlock)==+1)&
                   call get_faceX_second(nIFace,nIFace,1,nJ,1,nK,iBlock)
-             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(3,iBlock)==+1) &
                   call get_faceY_second(1,nI,1,1,1,nK,iBlock)
-             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(4,iBlock)==+1) &
                   call get_faceY_second(1,nI,nJFace,nJFace,1,nK,iBlock)
-             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(5,iBlock)==+1) &
                   call get_faceZ_second(1,nI,1,nJ,1,1,iBlock)
-             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(6,iBlock)==+1) &
                   call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace,iBlock)
           else
              ! High order face values at resolution changes
-             if(neiLeast(iBlock)==+1)&
+             if(DiLevel_EB(1,iBlock)==+1)&
                   call get_faceX_high(1,1,1,nJ,1,nK,iBlock)
-             if(neiLwest(iBlock)==+1)&
+             if(DiLevel_EB(2,iBlock)==+1)&
                   call get_faceX_high(nIFace,nIFace,1,nJ,1,nK,iBlock)
-             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(3,iBlock)==+1) &
                   call get_faceY_high(1,nI,1,1,1,nK,iBlock)
-             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(4,iBlock)==+1) &
                   call get_faceY_high(1,nI,nJFace,nJFace,1,nK,iBlock)
-             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(5,iBlock)==+1) &
                   call get_faceZ_high(1,nI,1,nJ,1,1,iBlock)
-             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(6,iBlock)==+1) &
                   call get_faceZ_high(1,nI,1,nJ,nKFace,nKFace,iBlock)
           end if
        endif
 
        if(UseLogLimiter .and. .not.DoLimitMomentum)then
           if(DoResChangeOnly)then
-             if(neiLeast(iBlock)==+1) &
+             if(DiLevel_EB(1,iBlock)==+1) &
                   call logfaceX_to_faceX(1,1, 1,nJ, 1,nK)
-             if(neiLwest(iBlock)==+1) &
+             if(DiLevel_EB(2,iBlock)==+1) &
                   call logfaceX_to_faceX(nIFace,nIFace, 1,nJ, 1,nK)
-             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(3,iBlock)==+1) &
                   call logfaceY_to_faceY(1,nI,1,1,1,nK)
-             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(4,iBlock)==+1) &
                   call logfaceY_to_faceY(1,nI, nJFace,nJFace, 1,nK)
-             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(5,iBlock)==+1) &
                   call logfaceZ_to_faceZ(1,nI,1,nJ,1,1)
-             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(6,iBlock)==+1) &
                   call logfaceZ_to_faceZ(1,nI, 1,nJ, nKFace,nKFace)
           else
              call logfaceX_to_faceX( &
@@ -1205,17 +1201,17 @@ contains
 
        if(UseScalarToRhoRatioLtd)then
           if(DoResChangeOnly)then
-             if(neiLeast(iBlock)==+1) &
+             if(DiLevel_EB(1,iBlock)==+1) &
                   call ratio_to_scalar_faceX(1, 1, 1, nJ, 1, nK)
-             if(neiLwest(iBlock)==+1) &
+             if(DiLevel_EB(2,iBlock)==+1) &
                   call ratio_to_scalar_faceX(nIFace, nIFace, 1, nJ, 1, nK)
-             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(3,iBlock)==+1) &
                   call ratio_to_scalar_faceY(1, nI, 1, 1, 1, nK)
-             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(4,iBlock)==+1) &
                   call ratio_to_scalar_faceY(1, nI, nJFace, nJFace, 1, nK)
-             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(5,iBlock)==+1) &
                   call ratio_to_scalar_faceZ(1, nI, 1, nJ, 1, 1)
-             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(6,iBlock)==+1) &
                   call ratio_to_scalar_faceZ(1, nI, 1, nJ, nKFace, nKFace)
           else
              call ratio_to_scalar_faceX( &
@@ -1229,17 +1225,17 @@ contains
 
        if(UsePtotalLimiter)then
           if(DoResChangeOnly)then
-             if(neiLeast(iBlock)==+1) &
+             if(DiLevel_EB(1,iBlock)==+1) &
                   call ptotal_to_p_faceX(1,1,1,nJ,1,nK)
-             if(neiLwest(iBlock)==+1) &
+             if(DiLevel_EB(2,iBlock)==+1) &
                   call ptotal_to_p_faceX(nIFace,nIFace,1,nJ,1,nK)
-             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(3,iBlock)==+1) &
                   call ptotal_to_p_faceY(1,nI,1,1,1,nK)
-             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+             if(nJ > 1 .and. DiLevel_EB(4,iBlock)==+1) &
                   call ptotal_to_p_faceY(1,nI,nJFace,nJFace,1,nK)
-             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(5,iBlock)==+1) &
                   call ptotal_to_p_faceZ(1,nI,1,nJ,1,1)
-             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+             if(nK > 1 .and. DiLevel_EB(6,iBlock)==+1) &
                   call ptotal_to_p_faceZ(1,nI,1,nJ,nKFace,nKFace)
           else
              call ptotal_to_p_faceX(1,nIFace,jMinFace,jMaxFace, &
@@ -2059,9 +2055,9 @@ contains
       iMinSharp = iMin
       iMaxSharp = iMax
       if(BetaLimiter > BetaLimiterResChange)then
-         if(neiLeast(iBlock) /= 0) iMinSharp = &
+         if(DiLevel_EB(1,iBlock) /= 0) iMinSharp = &
               max(iMin, min(iMax + 1,      1 + nFaceLimiterResChange))
-         if(neiLwest(iBlock) /= 0) iMaxSharp = &
+         if(DiLevel_EB(2,iBlock) /= 0) iMaxSharp = &
               min(iMax, max(iMin - 1, nI + 1 - nFaceLimiterResChange))
       endif
 
@@ -2118,9 +2114,9 @@ contains
       jMinSharp = jMin
       jMaxSharp = jMax
       if(BetaLimiter > BetaLimiterResChange)then
-         if(neiLsouth(iBlock) /= 0) jMinSharp = &
+         if(DiLevel_EB(3,iBlock) /= 0) jMinSharp = &
               max(jMin, min(jMax + 1,      1 + nFaceLimiterResChange))
-         if(neiLnorth(iBlock) /= 0) jMaxSharp = &
+         if(DiLevel_EB(4,iBlock) /= 0) jMaxSharp = &
               min(jMax, max(jMin - 1, nJ + 1 - nFaceLimiterResChange))
       endif
 
@@ -2177,9 +2173,9 @@ contains
       kMinSharp = kMin
       kMaxSharp = kMax
       if(BetaLimiter > BetaLimiterResChange)then
-         if(neiLbot(iBlock) /= 0) kMinSharp = &
+         if(DiLevel_EB(5,iBlock) /= 0) kMinSharp = &
               max(kMin, min(kMax + 1,      1 + nFaceLimiterResChange))
-         if(neiLtop(iBlock) /= 0) kMaxSharp = &
+         if(DiLevel_EB(6,iBlock) /= 0) kMaxSharp = &
               min(kMax, max(kMin - 1, nK + 1 - nFaceLimiterResChange))
       endif
 

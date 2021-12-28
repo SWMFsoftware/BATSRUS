@@ -81,7 +81,7 @@ contains
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
          UseHyperbolicDivb, IsTimeAccurate, IsTimeLoop, &
          TypeCellBc_I, iTypeCellBc_I
-    use ModParallel, ONLY: NOBLK, NeiLev
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     use ModGeometry, ONLY: &
          IsBoundary_B, XyzMin_D
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI, &
@@ -131,8 +131,8 @@ contains
        RETURN
     end if
 
-    if(DoTest)write(*,*)NameSub,': iBlock, neiLEV=',&
-         iBlock, neiLEV(:,iBlock)
+    if(DoTest)write(*,*)NameSub,': iBlock, DiLevel_EB=',&
+         iBlock, DiLevel_EB(:,iBlock)
 
     if(DoTest)then
        Ighost =iTest; Jghost=jTest;  Kghost=kTest
@@ -192,7 +192,7 @@ contains
 
        ! Check if this side of the block is indeed an outer boundary
        ! Also skips periodic boundaries
-       if(neiLEV(iSide,iBlock) /= NOBLK) CYCLE
+       if(DiLevel_EB(iSide,iBlock) /= Unset_) CYCLE
 
        ! Apply cell BC when TypeCellBc_I(1:6) is set
        if(iTypeCellBc_I(iSide) == NoneBC_) CYCLE
@@ -212,24 +212,24 @@ contains
        case(1)
           iMax = 0
           ! Avoid using cells that are potentially not yet set
-          if(neiLEV(3,iBlock) == NOBLK) jMin = 1
-          if(neiLEV(4,iBlock) == NOBLK) jMax = nJ
-          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
-          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
+          if(DiLevel_EB(3,iBlock) == Unset_) jMin = 1
+          if(DiLevel_EB(4,iBlock) == Unset_) jMax = nJ
+          if(DiLevel_EB(5,iBlock) == Unset_) kMin = 1
+          if(DiLevel_EB(6,iBlock) == Unset_) kMax = nK
        case(2)
           iMin = nI + 1
-          if(neiLEV(3,iBlock) == NOBLK) jMin = 1
-          if(neiLEV(4,iBlock) == NOBLK) jMax = nJ
-          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
-          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
+          if(DiLevel_EB(3,iBlock) == Unset_) jMin = 1
+          if(DiLevel_EB(4,iBlock) == Unset_) jMax = nJ
+          if(DiLevel_EB(5,iBlock) == Unset_) kMin = 1
+          if(DiLevel_EB(6,iBlock) == Unset_) kMax = nK
        case(3)
           jMax = 0
-          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
-          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
+          if(DiLevel_EB(5,iBlock) == Unset_) kMin = 1
+          if(DiLevel_EB(6,iBlock) == Unset_) kMax = nK
        case(4)
           jMin = nJ + 1
-          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
-          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
+          if(DiLevel_EB(5,iBlock) == Unset_) kMin = 1
+          if(DiLevel_EB(6,iBlock) == Unset_) kMax = nK
        case(5)
           kMax = 0
        case(6)
