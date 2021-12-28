@@ -366,7 +366,8 @@ contains
     !--------------------------------------------------------------------------
     UseData_B(iBlock) = .true.
     if(DoDebug)then
-       if(iProc==iProcTest .and. iBlock==iBlockTest) write(*,*)NameSub,' called'
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
+            write(*,*)NameSub,' called'
     endif
   end subroutine set_block_data
   !============================================================================
@@ -613,7 +614,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==iProcTest .and. iBlock==iBlockTest) write(*,*)NameSub,' called'
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
+            write(*,*)NameSub,' called'
     endif
     UseData_B(iBlock) = .false.
     if(nData_B(iBlock) < 0) RETURN
