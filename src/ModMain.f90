@@ -201,7 +201,8 @@ module ModMain
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0
   real    :: HypDecay = 0.1
-  !$acc declare create(SpeedHyp, UseHyperbolicDivb, UseDivbSource, UseConstrainB)
+  !$acc declare create(UseDivbSource, UseConstrainB)
+  !$acc declare create(SpeedHyp, UseHyperbolicDivb)
 
   ! More numerical scheme parameters
   ! Prolongation order
@@ -276,10 +277,9 @@ module ModMain
   logical :: UseOptimizeMpi = .false.
 
   ! Stopping conditions. These variables are only used in stand alone mode.
-  ! The only exeption is tSimulationMax. It may be also used in the SWMF mode to control
-  ! evolving B0 field with the use of two magnetograms, one at tSimulation=0,
-  ! the other at tSimulation=tSimulationMax.
-
+  ! The only exeption is tSimulationMax. It may also be used in the SWMF mode
+  ! to control evolving B0 field with the use of two magnetograms,
+  ! one at tSimulation=0, the other at tSimulation=tSimulationMax.
   real    :: tSimulationMax = -1.0, CpuTimeMax = -1.0
   integer :: nIter = -1
   logical :: DoCheckStopFile = .true.
