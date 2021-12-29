@@ -49,7 +49,6 @@ contains
   !============================================================================
   subroutine init_chgl(iBlock)
 
-
     integer, intent(in) :: iBlock
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim)

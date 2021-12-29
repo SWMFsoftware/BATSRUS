@@ -170,7 +170,7 @@ contains
           ! State_VGB is not used in 1-stage and HalfStep schemes
           if(.not.UseHalfStep .and. nStage > 1) call mhd_to_boris_cell( &
                State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
-          
+
        end do; end do; end do
     elseif(UseBorisSimple)then
        ! Update using simplified Boris correction, i.e. update

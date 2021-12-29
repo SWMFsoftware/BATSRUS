@@ -535,7 +535,7 @@ contains
     end subroutine set_pressure
     !==========================================================================
     subroutine advance_thread(IsTimeAccurateThread)
-      
+
       use ModMain,     ONLY: cfl, Dt, IsTimeAccurate
       use ModAdvance,  ONLY: DtMax_CB, nJ, nK
       use ModPhysics,  ONLY: UnitT_, No2Si_V

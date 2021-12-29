@@ -228,7 +228,7 @@ contains
                   - Time*Ux)
           end do; end do; end do
        end do
-       
+
        ! Rotation
        call advect_points(nPoint, Xyz_DI)
 
