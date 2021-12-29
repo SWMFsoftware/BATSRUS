@@ -7,7 +7,7 @@ module ModCharacteristicMhd
   use ModUtilities, ONLY: norm2
 #endif
   use ModCoordTransform, ONLY: cross_product
-  use ModVarIndexes
+  use ModVarIndexes, nVarAll => nVar
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1
   use ModMain, ONLY: Climit
   use ModNumConst, ONLY: cTolerance
@@ -17,6 +17,8 @@ module ModCharacteristicMhd
   private
   public:: get_dissipation_flux_mhd
 
+  integer, parameter:: nVar = p_ ! last MHD variable
+  
   ! Named characteristic wave indexes
   integer, parameter:: EntropyW_=Rho_, AlfvenRW_=Ux_, AlfvenLW_=Uy_, &
        SlowRW_=Uz_, FastRW_=Bx_, SlowLW_=By_, FastLW_=Bz_, DivBW_=nVar
