@@ -5,7 +5,7 @@
 module ModAdvanceExplicit
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iThread, StringTest
+       test_start, test_stop
   use ModBatsrusUtility, ONLY: barrier_mpi2, stop_mpi
 
   implicit none
@@ -27,10 +27,9 @@ contains
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: DiLevel_EB
-    use ModGeometry,   ONLY: IsBody_B, IsNoBody_B
+    use ModGeometry,   ONLY: IsBody_B
     use ModBlockData,  ONLY: set_block_data
-    use ModImplicit,   ONLY: UsePartImplicit
-    use ModPhysics,    ONLY: No2Si_V, UnitT_, OmegaBody_D, &
+    use ModPhysics,    ONLY: No2Si_V, UnitT_, &
          update_angular_velocity
     use ModCalcSource, ONLY: calc_source
     use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
@@ -39,7 +38,7 @@ contains
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModMessagePass, ONLY: exchange_messages
     use ModTimeStepControl, ONLY: calc_timestep
-    use BATL_lib, ONLY: message_pass_face, message_pass_cell, IsAnyAxis
+    use BATL_lib, ONLY: message_pass_face, IsAnyAxis
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
@@ -333,7 +332,7 @@ contains
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_, &
          fix_boundary_ghost_cells
     use ModGeometry,   ONLY: Xyz_DGB, rBody2_GB, rMinBody2_B, &
-         IsBody_B, Used_GB, IsNoBody_B
+         Used_GB, IsNoBody_B
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModAdvance,    ONLY: State_VGB, nVar
     use BATL_lib, ONLY: nI, nJ, nK

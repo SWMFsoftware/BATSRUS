@@ -320,11 +320,9 @@ contains
     end subroutine set_initial_conditions
     !==========================================================================
     subroutine initialize_files
-      use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite, &
-           TypeTrajTimeRange_I
+      use ModSatelliteFile, ONLY: 
 
       ! Local variables
-      integer :: iSat
 
       character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
       !------------------------------------------------------------------------

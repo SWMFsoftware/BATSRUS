@@ -467,7 +467,7 @@ contains
   subroutine match_ibc
     ! restore old values in the domain covered by the buffer grid
     use ModGeometry, ONLY:r_GB
-    use BATL_lib,  ONLY: Xyz_DGB, iProc
+    use BATL_lib,  ONLY: Xyz_DGB
     use ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B
     use ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
     integer  :: iBlock
@@ -510,7 +510,7 @@ contains
     ! Fill in the buffer grid ghost cells:
     ! For longitude: using periodic BCs at 0th and 360 degrees longitude
     ! For latitude: interpolation across the pole
-    integer   :: iLonNew, iBlock, iPe, iR, iLon, iLat
+    integer   :: iLonNew, iLon
     !--------------------------------------------------------------------------
     ! Fill buffer grid ghost cells
     do iLon = 1, nLonBuff

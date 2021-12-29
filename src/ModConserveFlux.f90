@@ -8,7 +8,7 @@ module ModConserveFlux
 
   use BATL_size, ONLY: nDim
   use ModSize, ONLY: nI, nJ, nK, MaxBlock, MaxDim
-  use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_, Ex_
+  use ModVarIndexes, ONLY: Bx_, By_, Bz_,B_,U_, Ex_
 
   use ModMain, ONLY: UseB
   use ModAdvance, ONLY: &

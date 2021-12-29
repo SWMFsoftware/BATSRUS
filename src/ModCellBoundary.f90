@@ -525,7 +525,7 @@ contains
       integer, intent(in) :: iVarMin, iVarMax, iSide, nVarState, &
            iMin, iMax, jMin, jMax, kMin, kMax
       real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-      integer:: i, j, k, iVar
+      integer:: i, j, k
 
       !------------------------------------------------------------------------
       select case(iSide)
