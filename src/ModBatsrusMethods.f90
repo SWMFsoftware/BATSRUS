@@ -701,7 +701,7 @@ contains
   end subroutine BATS_advance
   !============================================================================
   subroutine BATS_init_constrain_b
-    use ModConstrainDivB, ONLY: DoInitConstrainB, Bcenter2Bface
+    use ModConstrainDivB, ONLY: DoInitConstrainB, bcenter_to_bface
     use ModProjectDivB, ONLY: proj_get_divb, project_divb
     use ModNumConst, ONLY: cTiny
     use ModAdvance, ONLY : Bx_, Bz_, State_VGB, Tmp1_GB
@@ -724,7 +724,7 @@ contains
 
     do iBlock=1, nBlock
        ! Estimate Bface from the centered B values
-       call Bcenter2Bface(iBlock)
+       call bcenter_to_bface(iBlock)
        ! Calculate energy (it is not set in set_initial_condition)
        ! because the projection scheme will need it
        ! !! call calc_energy(iBlock)

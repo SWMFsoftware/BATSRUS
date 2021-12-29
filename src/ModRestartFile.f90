@@ -18,7 +18,7 @@ module ModRestartFile
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: CellSize_DB, Coord111_DB, NameGridFile
   use ModIO,         ONLY: Restart_Bface
-  use ModConstrainDivB, ONLY: BxFace_BLK, ByFace_BLK, BzFace_BLK
+  use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
   use ModMain,       ONLY: UseConstrainB
   use ModPIC,        ONLY: write_pic_status_file, &
        read_pic_status_file, DoRestartPicStatus, AdaptPic
@@ -734,9 +734,9 @@ contains
 
        if(Restart_Bface)then
           read(UnitTmp_, iostat = iError) b8_X, b8_Y, b8_Z
-          BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = b8_X
-          ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b8_Y
-          BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b8_Z
+          BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock) = b8_X
+          ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = b8_Y
+          BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = b8_Z
        end if
        if(n_prev==nStep) then
           read(UnitTmp_, iostat = iError) State8_CV
@@ -760,9 +760,9 @@ contains
 
        if(Restart_Bface)then
           read(UnitTmp_, iostat = iError) b4_X, b4_Y, b4_Z
-          BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = b4_X
-          ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b4_Y
-          BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b4_Z
+          BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock) = b4_X
+          ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = b4_Y
+          BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = b4_Z
        end if
        if(n_prev==nStep) then
           read(UnitTmp_, iostat = iError) State4_CV
@@ -834,9 +834,9 @@ contains
          ( State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock), iVar=1,nVar)
     if(UseConstrainB)then
        write(UnitTmp_) &
-            BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock),&
-            ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock),&
-            BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock)
+            BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock),&
+            ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock),&
+            BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)
     end if
     if(n_prev==nStep) write(UnitTmp_) &
          (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)
@@ -977,9 +977,9 @@ contains
              read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   B4_X, B4_Y, B4_Z
              if(UseConstrainB)then
-                BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B4_X
-                ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = B4_Y
-                BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B4_Z
+                BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock) = B4_X
+                ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = B4_Y
+                BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = B4_Z
              end if
              IsRead = .true.
           endif
@@ -1008,9 +1008,9 @@ contains
              read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   B8_X, B8_Y, B8_Z
              if(UseConstrainB)then
-                BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B8_X
-                ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = B8_Y
-                BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B8_Z
+                BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock) = B8_X
+                ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = B8_Y
+                BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = B8_Z
              end if
              IsRead = .true.
           endif
@@ -1092,9 +1092,9 @@ contains
                CellSize_DB(:,iBLock), &
                Coord111_DB(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
-               BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock),&
-               ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock),&
-               BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock)
+               BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock),&
+               ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock),&
+               BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)
           CYCLE
        endif
        if(n_prev==nStep)then

@@ -3274,7 +3274,7 @@ contains
       if(UseConstrainB .and. .not.IsTimeAccurate)then
          if(iProc==0)then
             write(*,'(a)')NameSub//&
-                 ' WARNING: constrain_B works for time accurate run only !!!'
+                 ' WARNING: constrain_b works for time accurate run only !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
             write(*,*)NameSub//' setting UseConstrainB=F UseDivbSource=T'
          end if

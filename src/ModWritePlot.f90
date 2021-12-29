@@ -1008,7 +1008,7 @@ contains
     use ModBoundaryGeometry, ONLY: iBoundary_GB
     use ModPhysics, ONLY: BodyRho_I, BodyP_I, OmegaBody, FaceState_VI, &
          ElectronPressureRatio, RhoBody2, pBody2, rBody2
-    use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
+    use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
     use ModFieldTrace, ONLY: ray
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
@@ -1168,17 +1168,17 @@ contains
           plotvar_useBody(iVar) = NameThisComp/='SC'
           PlotVar(:,:,:,iVar) = FullB_DG(z_,:,:,:)
        case('bxl')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = BxFace_BLK(1:nI,1:nJ,1:nK,iBlock)
+          PlotVar(1:nI,1:nJ,1:nK,iVar) = BxFace_GB(1:nI,1:nJ,1:nK,iBlock)
        case('bxr')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = BxFace_BLK(2:nI+1,1:nJ,1:nK,iBlock)
+          PlotVar(1:nI,1:nJ,1:nK,iVar) = BxFace_GB(2:nI+1,1:nJ,1:nK,iBlock)
        case('byl')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = ByFace_BLK(1:nI,1:nJ,1:nK,iBlock)
+          PlotVar(1:nI,1:nJ,1:nK,iVar) = ByFace_GB(1:nI,1:nJ,1:nK,iBlock)
        case('byr')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = ByFace_BLK(1:nI,2:nJ+1,1:nK,iBlock)
+          PlotVar(1:nI,1:nJ,1:nK,iVar) = ByFace_GB(1:nI,2:nJ+1,1:nK,iBlock)
        case('bzl')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = BzFace_BLK(1:nI,1:nJ,1:nK,iBlock)
+          PlotVar(1:nI,1:nJ,1:nK,iVar) = BzFace_GB(1:nI,1:nJ,1:nK,iBlock)
        case('bzr')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = BzFace_BLK(1:nI,1:nJ,2:nK+1,iBlock)
+          PlotVar(1:nI,1:nJ,1:nK,iVar) = BzFace_GB(1:nI,1:nJ,2:nK+1,iBlock)
           !
        case('e')
           call get_fluid_energy_block(iBlock, iFluid, PlotVar(:,:,:,iVar))
@@ -1531,13 +1531,13 @@ contains
              do k = 1, nK; do j = 1, nJ; do i =1, nI
                 if(.not. Used_GB(i,j,k,iBlock)) CYCLE
                 PlotVar(i,j,k,iVar) = &
-                     (Bxface_BLK(i+1,j,k,iBlock)                         &
-                     -Bxface_BLK(i  ,j,k,iBlock))/CellSize_DB(x_,iBlock) + &
-                     (Byface_BLK(i,j+1,k,iBlock)                         &
-                     -Byface_BLK(i,j  ,k,iBlock))/CellSize_DB(y_,iBlock)
+                     (BxFace_GB(i+1,j,k,iBlock)                         &
+                     -BxFace_GB(i  ,j,k,iBlock))/CellSize_DB(x_,iBlock) + &
+                     (ByFace_GB(i,j+1,k,iBlock)                         &
+                     -ByFace_GB(i,j  ,k,iBlock))/CellSize_DB(y_,iBlock)
                 if(nK > 1) PlotVar(i,j,k,iVar) = PlotVar(i,j,k,iVar) + &
-                     (Bzface_BLK(i,j,k+1,iBlock)                         &
-                     -Bzface_BLK(i,j,k  ,iBlock))/CellSize_DB(z_,iBlock)
+                     (BzFace_GB(i,j,k+1,iBlock)                         &
+                     -BzFace_GB(i,j,k  ,iBlock))/CellSize_DB(z_,iBlock)
              end do; end do; end do
           end if
 

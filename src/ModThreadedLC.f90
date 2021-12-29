@@ -18,7 +18,7 @@ module ModThreadedLC
        kThreadMin=>kMin_, kThreadMax=>kMax_
   use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
-       QeRatio, MaxImbalance
+       QeRatio, ImbalanceMax
   use ModPhysics, ONLY: Z => AverageIonCharge
   use ModConst, ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModCoordTransform, ONLY: determinant, inverse_matrix
@@ -1068,8 +1068,8 @@ contains
       real, intent(in)         ::   AMajor, AMinor, Reflection
       !------------------------------------------------------------------------
       derivative_major = -AMinor*&
-           (max(0.0,AMajor - MaxImbalance*AMinor)      &
-           -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
+           (max(0.0,AMajor - ImbalanceMax*AMinor)      &
+           -max(0.0,AMinor - ImbalanceMax*AMajor)  )*  &
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
            - AMinor*AMajor
     end function derivative_major
@@ -1078,8 +1078,8 @@ contains
       real, intent(in)         ::   AMajor, AMinor, Reflection
       !------------------------------------------------------------------------
       derivative_minor =  -AMajor*&
-           (max(0.0,AMajor - MaxImbalance*AMinor)      &
-           -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
+           (max(0.0,AMajor - ImbalanceMax*AMinor)      &
+           -max(0.0,AMinor - ImbalanceMax*AMajor)  )*  &
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
            + AMinor*AMajor
     end function derivative_minor

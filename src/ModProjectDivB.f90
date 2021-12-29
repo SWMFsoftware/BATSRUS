@@ -104,7 +104,7 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: Used_GB
     use ModMain, ONLY: UseConstrainB
-    use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
+    use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
     use ModMessagePass, ONLY: exchange_messages
     use BATL_lib, ONLY: Xyz_DGB
 
@@ -139,20 +139,20 @@ contains
             Used_GB(iTest,jTest,kTest,iBlockTest)
        if(UseConstrainB)then
           write(*,*) NameSub, ': Bxface,Used_GB:',    &
-               Bxface_BLK(iTest,jTest,kTest,iBlockTest),  &
-               Bxface_BLK(iTest+1,jTest,kTest,iBlockTest),&
+               BxFace_GB(iTest,jTest,kTest,iBlockTest),  &
+               BxFace_GB(iTest+1,jTest,kTest,iBlockTest),&
                Used_GB(iTest-1,jTest,kTest,iBlockTest), &
                Used_GB(iTest+1,jTest,kTest,iBlockTest)
 
           write(*,*) NameSub, ': Byface,Used_GB:',    &
-               Byface_BLK(iTest,jTest,kTest,iBlockTest),  &
-               Byface_BLK(iTest,jTest+1,kTest,iBlockTest),&
+               ByFace_GB(iTest,jTest,kTest,iBlockTest),  &
+               ByFace_GB(iTest,jTest+1,kTest,iBlockTest),&
                Used_GB(iTest,jTest-1,kTest,iBlockTest), &
                Used_GB(iTest,jTest+1,kTest,iBlockTest)
 
           write(*,*) NameSub, ': Bzface,Used_GB:',    &
-               Bzface_BLK(iTest,jTest,kTest,iBlockTest),  &
-               Bzface_BLK(iTest,jTest,kTest+1,iBlockTest),&
+               BzFace_GB(iTest,jTest,kTest,iBlockTest),  &
+               BzFace_GB(iTest,jTest,kTest+1,iBlockTest),&
                Used_GB(iTest,jTest,kTest-1,iBlockTest), &
                Used_GB(iTest,jTest,kTest+1,iBlockTest)
 
@@ -253,20 +253,20 @@ contains
                Used_GB(iTest,jTest,kTest,iBlockTest)
           if(UseConstrainB)then
              write(*,*) NameSub, ': Bxface,Used_GB:',    &
-                  Bxface_BLK(iTest,jTest,kTest,iBlockTest),  &
-                  Bxface_BLK(iTest+1,jTest,kTest,iBlockTest),&
+                  BxFace_GB(iTest,jTest,kTest,iBlockTest),  &
+                  BxFace_GB(iTest+1,jTest,kTest,iBlockTest),&
                   Used_GB(iTest-1,jTest,kTest,iBlockTest), &
                   Used_GB(iTest+1,jTest,kTest,iBlockTest)
 
              write(*,*) NameSub, ': Byface,Used_GB:',    &
-                  Byface_BLK(iTest,jTest,kTest,iBlockTest),  &
-                  Byface_BLK(iTest,jTest+1,kTest,iBlockTest),&
+                  ByFace_GB(iTest,jTest,kTest,iBlockTest),  &
+                  ByFace_GB(iTest,jTest+1,kTest,iBlockTest),&
                   Used_GB(iTest,jTest-1,kTest,iBlockTest), &
                   Used_GB(iTest,jTest+1,kTest,iBlockTest)
 
              write(*,*) NameSub, ': Bzface,Used_GB:',    &
-                  Bzface_BLK(iTest,jTest,kTest,iBlockTest),  &
-                  Bzface_BLK(iTest,jTest,kTest+1,iBlockTest),&
+                  BzFace_GB(iTest,jTest,kTest,iBlockTest),  &
+                  BzFace_GB(iTest,jTest,kTest+1,iBlockTest),&
                   Used_GB(iTest,jTest,kTest-1,iBlockTest), &
                   Used_GB(iTest,jTest,kTest+1,iBlockTest)
 
@@ -291,7 +291,7 @@ contains
     use ModVarIndexes, ONLY: Bx_, By_, Bz_
     use ModAdvance, ONLY: State_VGB
     use ModMain, ONLY: UseConstrainB
-    use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
+    use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
     use BATL_lib, ONLY:  nI,nJ,nK, MaxBlock, nBlock, Unused_B, &
          x_, y_, z_, CellSize_DB
 
@@ -315,12 +315,12 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           proj_divB(1:nI,1:nJ,1:nK,iBlock)= &
-               (Bxface_BLK(2:nI+1,1:nJ  ,1:nK  ,iBlock)                      &
-               -Bxface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBlock))/CellSize_DB(x_,iBlock)&
-               +(Byface_BLK(1:nI  ,2:nJ+1,1:nK  ,iBlock)                      &
-               -Byface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBlock))/CellSize_DB(y_,iBlock)&
-               +(Bzface_BLK(1:nI  ,1:nJ  ,2:nK+1,iBlock)                      &
-               -Bzface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBlock))/CellSize_DB(z_,iBlock)
+               (BxFace_GB(2:nI+1,1:nJ  ,1:nK  ,iBlock)                      &
+               -BxFace_GB(1:nI  ,1:nJ  ,1:nK  ,iBlock))/CellSize_DB(x_,iBlock)&
+               +(ByFace_GB(1:nI  ,2:nJ+1,1:nK  ,iBlock)                      &
+               -ByFace_GB(1:nI  ,1:nJ  ,1:nK  ,iBlock))/CellSize_DB(y_,iBlock)&
+               +(BzFace_GB(1:nI  ,1:nJ  ,2:nK+1,iBlock)                      &
+               -BzFace_GB(1:nI  ,1:nJ  ,1:nK  ,iBlock))/CellSize_DB(z_,iBlock)
        end do
     else
        do iBlock=1,nBlock
@@ -666,8 +666,8 @@ contains
     use ModAdvance,    ONLY : State_VGB
     use ModGeometry,   ONLY : Used_GB
     use ModMain, ONLY : UseConstrainB
-    use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK, &
-         Bface2Bcenter, bound_bface
+    use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB, &
+         bface_to_bcenter, bound_bface
     use BATL_lib, ONLY: CellSize_DB, x_, y_, z_, nI, nJ, nK, nBlock,Unused_B
 
     ! Arguments
@@ -685,8 +685,8 @@ contains
     if(UseConstrainB)then
 
        if(DoTest)write(*,*)'proj_correction old Bzface=',&
-            BzFace_BLK(iTest,jTest,kTest,iBlockTest), &
-            BzFace_BLK(iTest,jTest,kTest+1,iBlockTest), &
+            BzFace_GB(iTest,jTest,kTest,iBlockTest), &
+            BzFace_GB(iTest,jTest,kTest+1,iBlockTest), &
             Used_GB(iTest,jTest,kTest-1,iBlockTest), &
             Used_GB(iTest,jTest,kTest+1,iBlockTest)
 
@@ -695,39 +695,39 @@ contains
 
           DxInv = 1/CellSize_DB(x_,iBlock)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-             BxFace_BLK(i,j,k,iBlock) = BxFace_BLK(i,j,k,iBlock) &
+             BxFace_GB(i,j,k,iBlock) = BxFace_GB(i,j,k,iBlock) &
                   - DxInv*(phi(i,j,k,iBlock) - phi(i-1,j,k,iBlock))
           end do; end do; end do
 
           DyInv = 1/CellSize_DB(y_,iBlock)
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-             ByFace_BLK(i,j,k,iBlock) = ByFace_BLK(i,j,k,iBlock) &
+             ByFace_GB(i,j,k,iBlock) = ByFace_GB(i,j,k,iBlock) &
                   - DyInv*(phi(i,j+1,k,iBlock) - phi(i,j-1,k,iBlock))
           end do; end do; end do
 
           if(nK > 1)then
              DzInv = 1/CellSize_DB(z_,iBlock)
              do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-                BzFace_BLK(i,j,k,iBlock) = BzFace_BLK(i,j,k,iBlock) &
+                BzFace_GB(i,j,k,iBlock) = BzFace_GB(i,j,k,iBlock) &
                      - DzInv*(phi(i,j,k+1,iBlock) - phi(i,j,k-1,iBlock))
              end do; end do; end do
           end if
 
           if(DoTest.and.iBlockTest==iBlock) &
-               write(*,*)'before bound_Bface Bzface=',&
-               BzFace_BLK(iTest,jTest,kTest,iBlockTest), &
-               BzFace_BLK(iTest,jTest,kTest+1,iBlockTest)
+               write(*,*)'before bound_bface Bzface=',&
+               BzFace_GB(iTest,jTest,kTest,iBlockTest), &
+               BzFace_GB(iTest,jTest,kTest+1,iBlockTest)
 
           ! Make sure that the correction is NOT applied to the body boundaries
-          call bound_Bface(iBlock)
+          call bound_bface(iBlock)
           ! Recalculate the cell centered B
-          call Bface2Bcenter(iBlock)
+          call bface_to_bcenter(iBlock)
 
        end do
 
        if(DoTest)write(*,*)'proj_correction new Bzface=',&
-            BzFace_BLK(iTest,jTest,kTest,iBlockTest), &
-            BzFace_BLK(iTest,jTest,kTest+1,iBlockTest)
+            BzFace_GB(iTest,jTest,kTest,iBlockTest), &
+            BzFace_GB(iTest,jTest,kTest+1,iBlockTest)
 
     else
        do iBlock = 1, nBlock

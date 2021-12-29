@@ -17,7 +17,7 @@ module ModLoadBalance
   use ModImplicit, ONLY: UseImplicit, UseBDF2, n_prev, ImplOld_VCB
   use ModPointImplicit, ONLY: UseUserPointImplicit_B, &
        DoBalancePointImplicit, IsDynamicPointImplicit
-  use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
+  use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
   use ModFieldTrace, ONLY: ray
   use ModAdvance, ONLY: nVar
   use ModB0, ONLY: B0_DGB
@@ -131,11 +131,11 @@ contains
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           iData = iData+1
-          Buffer_I(iData) = Bxface_BLK(i,j,k,iBlock)
+          Buffer_I(iData) = BxFace_GB(i,j,k,iBlock)
           iData = iData+1
-          Buffer_I(iData) = Byface_BLK(i,j,k,iBlock)
+          Buffer_I(iData) = ByFace_GB(i,j,k,iBlock)
           iData = iData+1
-          Buffer_I(iData) = Bzface_BLK(i,j,k,iBlock)
+          Buffer_I(iData) = BzFace_GB(i,j,k,iBlock)
        end do; end do; end do
 
     endif
@@ -205,11 +205,11 @@ contains
     if (UseConstrainB) then
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           iData = iData+1
-          Bxface_BLK(i,j,k,iBlock) = Buffer_I(iData)
+          BxFace_GB(i,j,k,iBlock) = Buffer_I(iData)
           iData = iData+1
-          Byface_BLK(i,j,k,iBlock) = Buffer_I(iData)
+          ByFace_GB(i,j,k,iBlock) = Buffer_I(iData)
           iData = iData+1
-          Bzface_BLK(i,j,k,iBlock) = Buffer_I(iData)
+          BzFace_GB(i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do
     end if
 

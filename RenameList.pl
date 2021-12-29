@@ -69,5 +69,20 @@
 
     # ModBatsrusMethods
     SaveThreads4Plot => DoPlotThread,
+
+    # ModConstrainB
+    BxFace_BLK => BxFace_GB, 
+    ByFace_BLK => ByFace_GB, 
+    BzFace_BLK => BzFace_GB, 
+    get_VxB => get_vxb,
+    bound_VxB => bound_vxb,
+    constrain_B => constrain_b,
+    Bface2Bcenter => bface_to_bcenter,
+    Bcenter2Bface => bcenter_to_bface,
+    bound_Bface => bound_bface,
+
+    # ModCoronalHeating
+    MaxImbalance => ImbalanceMax,
+    MaxImbalance2 => ImbalanceMax2,
     
     );

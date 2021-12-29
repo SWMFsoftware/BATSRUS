@@ -5,7 +5,7 @@ module ModCurrent
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use ModAdvance,        ONLY: iTypeUpdate, UpdateFast_, State_VGB
+  use ModAdvance,        ONLY: iTypeUpdate, UpdateFast_
   use ModCoordTransform, ONLY: sph_to_xyz
   use CON_axes,          ONLY: transform_matrix
 #ifdef _OPENACC
@@ -23,7 +23,7 @@ module ModCurrent
 contains
   !============================================================================
   include 'vector_functions.h'
-  subroutine get_point_data_fast(Xyz_D, b_D, j_D)
+  subroutine get_point_data_fast(Xyz_D, b_D, Current_D)
     !$acc routine seq
 
     ! Obtain B and J at location Xyz_D using ghost cells
@@ -32,17 +32,17 @@ contains
     use BATL_lib, ONLY: find_grid_block, iProc
 
     real, intent(in):: Xyz_D(3)
-    real, intent(out):: b_D(3), j_D(3)
+    real, intent(out):: b_D(3), Current_D(3)
 
     integer:: iProcOut, iBlock, iCell_D(3)
     integer:: i, j, k, iLo, jLo, kLo, iHi, jHi, kHi
-    real:: Dist_D(3), WeightX, WeightY, WeightZ, WeightXyz, Current_D(3)
+    real:: Dist_D(3), WeightX, WeightY, WeightZ, WeightXyz, CurrentIjk_D(3)
     !--------------------------------------------------------------------------
     call find_grid_block(Xyz_D, iProcOut, iBlock, iCell_D, Dist_D, &
          UseGhostCell=.true.)
 
     b_D = 0.0
-    j_D = 0.0
+    Current_D = 0.0
 
     if(iProc /= iProcOut) RETURN
 
@@ -61,8 +61,8 @@ contains
 
              b_D = b_D + WeightXyz * State_VGB(Bx_:Bz_,i,j,k,iBlock)
 
-             call get_current(i, j, k, iBlock, Current_D)
-             j_D = j_D + WeightXyz * Current_D
+             call get_current(i, j, k, iBlock, CurrentIjk_D)
+             Current_D = Current_D + WeightXyz*CurrentIjk_D
           end do
        end do
     end do
@@ -88,7 +88,7 @@ contains
     use ModAdvance, ONLY: State_VGB, StateOld_VGB
     use ModParallel, ONLY: DiLevel_EB
     use ModGeometry, ONLY: Coord111_DB
-    use BATL_lib, ONLY: iProc, IsCartesianGrid, CellSize_DB, xyz_to_coord
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, xyz_to_coord
 
     ! Weight of the old state in the interpolation
     real, intent(in)  :: WeightOldState
@@ -250,7 +250,7 @@ contains
                       call get_current(i, j, k, iBlock, Current_D)
                       StateCurrent_V(nState+1:nState+3) = &
                            StateCurrent_V(nState+1:nState+3) &
-                           + WeightXyz * Current_D
+                           + WeightXyz*Current_D
                    end if
 
                 end if
@@ -560,11 +560,9 @@ contains
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: tSimulation, TypeCoordSystem, nBlock
-    use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V, set_dipole
-    use ModB0,             ONLY: get_b0_dipole
-    use CON_planet_field,  ONLY: get_planet_field, map_planet_field, &
-         map_planet_field_fast
-    use ModNumConst,       ONLY: cHalfPi, cTwoPi, cPi
+    use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V
+    use CON_planet_field,  ONLY: get_planet_field, map_planet_field
+    use ModNumConst,       ONLY: cTwoPi, cPi
     use ModMpi
     use BATL_lib,          ONLY: iProc, iComm
 
@@ -623,9 +621,9 @@ contains
     real, allocatable :: bCurrent_VII(:,:,:)
     !$acc declare create(bCurrent_VII)
 
-    integer :: i, j, ii, jj, iHemisphere, iError
+    integer :: i, j, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
-    real    :: b_D(3), bRcurrents, Fac, j_D(3), bUnit_D(3), B0_D(3)
+    real    :: b_D(3), bRcurrents, Fac, Current_D(3), bUnit_D(3), B0_D(3)
     real    :: bIn_D(3), bIn, Br
     real    :: GmFac_DD(3,3)
     !$acc declare create(GmFac_DD)
@@ -674,7 +672,7 @@ contains
 #endif
 
     !$acc parallel loop vector collapse(2) &
-    !$acc private(XyzIn_D, Xyz_D, B0_D, b_D, j_D, State_V)
+    !$acc private(XyzIn_D, Xyz_D, B0_D, b_D, Current_D, State_V)
     do j = 1, nPhi; do i = 1, nTheta
 
        if(present(Phi_I))then
@@ -724,10 +722,10 @@ contains
 
        ! Extract currents and magnetic field for this position
        if(iTypeUpdate >= UpdateFast_)then
-          call get_point_data_fast(Xyz_D, b_D, j_D)
+          call get_point_data_fast(Xyz_D, b_D, Current_D)
           bCurrent_VII(0,  i,j) = 1.0          ! Weight
           bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
-          bCurrent_VII(4:6,i,j) = j_D          ! Currents
+          bCurrent_VII(4:6,i,j) = Current_D          ! Currents
        else
           call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
           bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
@@ -745,96 +743,94 @@ contains
 
     ! Map the field aligned current to rIn sphere
     if(iProc==0)then
-       !$acc parallel loop vector collapse(2) private(b_D, j_D, bUnit_D, &
-       !$acc XyzIn_D, xyz_D, bIn_D, rUnit_D)
-       do j = 1, nPhi
-          do i = 1, nTheta
+       !$acc parallel loop vector collapse(2) &
+       !$acc private(b_D, Current_D, XyzIn_D, Xyz_D, bIn_D, rUnit_D, bUnit_D)
+       do j = 1, nPhi; do i = 1, nTheta
 
-             if(present(Phi_I))then
-                Phi = Phi_I(j)
-             else
-                Phi = (j-1) * dPhi
-             end if
+          if(present(Phi_I))then
+             Phi = Phi_I(j)
+          else
+             Phi = (j-1) * dPhi
+          end if
 
-             if(present(Theta_I))then
-                Theta = Theta_I(i)
-             else
-                Theta = (i-1) * dTheta
-             end if
+          if(present(Theta_I))then
+             Theta = Theta_I(i)
+          else
+             Theta = (i-1) * dTheta
+          end if
 
-             ! Divide MHD values by the total weight if it exceeds 1.0
-             if(bCurrent_VII(0,i,j) > 1.0) bCurrent_VII(:,i,j) = &
-                  bCurrent_VII(:,i,j) / bCurrent_VII(0,i,j)
+          ! Divide MHD values by the total weight if it exceeds 1.0
+          if(bCurrent_VII(0,i,j) > 1.0) bCurrent_VII(:,i,j) = &
+               bCurrent_VII(:,i,j) / bCurrent_VII(0,i,j)
 
-             ! Extract magnetic field and current
-             b_D = bCurrent_VII(1:3,i,j)
-             j_D = bCurrent_VII(4:6,i,j)
+          ! Extract magnetic field and current
+          b_D = bCurrent_VII(1:3,i,j)
+          Current_D = bCurrent_VII(4:6,i,j)
 
-             ! The strength of the field
-             bRcurrents = norm2(b_D)
+          ! The strength of the field
+          bRcurrents = norm2(b_D)
 
-             ! Convert b_D into a unit vector
-             bUnit_D = b_D / bRcurrents
+          ! Convert b_D into a unit vector
+          bUnit_D = b_D / bRcurrents
 
-             ! get the field aligned current
-             Fac = sum(bUnit_D*j_D)
+          ! get the field aligned current
+          Fac = sum(bUnit_D*Current_D)
 
-             ! Get Cartesian coordinates
-             call sph_to_xyz(rIn, Theta, Phi, Xyz_D)
+          ! Get Cartesian coordinates
+          call sph_to_xyz(rIn, Theta, Phi, Xyz_D)
 
-             ! Convert to GM coordinates
-             XyzIn_D = matmul3_left(GmFac_DD, Xyz_D)
+          ! Convert to GM coordinates
+          XyzIn_D = matmul3_left(GmFac_DD, Xyz_D)
 
-             if(DoMap)then
-                ! Calculate magnetic field strength at the rIn grid point
+          if(DoMap)then
+             ! Calculate magnetic field strength at the rIn grid point
 
 #ifdef _OPENACC
-                call get_b0_dipole(XyzIn_D, bIn_D)
+             call get_b0_dipole(XyzIn_D, bIn_D)
 #else
-                call get_planet_field(tSimulation, XyzIn_D, &
-                     TypeCoordSystem//' NORM', bIn_D)
+             call get_planet_field(tSimulation, XyzIn_D, &
+                  TypeCoordSystem//' NORM', bIn_D)
 
-                ! Convert to normalized units
-                bIn_D = bIn_D*Si2No_V(UnitB_)
+             ! Convert to normalized units
+             bIn_D = bIn_D*Si2No_V(UnitB_)
 #endif
-                bIn   = norm2(bIn_D)
+             bIn   = norm2(bIn_D)
 
-                ! Multiply by the ratio of the magnetic field strengths
-                Fac = bIn / bRcurrents * Fac
-             else
-                bIn_D = b_D
-                bIn   = norm2(bIn_D)
-             end if
+             ! Multiply by the ratio of the magnetic field strengths
+             Fac = bIn / bRcurrents * Fac
+          else
+             bIn_D = b_D
+             bIn   = norm2(bIn_D)
+          end if
 
-             ! Zero out small Fac if requested
-             if(present(FacMin))then
-                if(abs(Fac) < FacMin) Fac = 0.0
-             end if
+          ! Zero out small Fac if requested
+          if(present(FacMin))then
+             if(abs(Fac) < FacMin) Fac = 0.0
+          end if
 
-             rUnit_D = XyzIn_D / rIn
-             Br      = sum(bIn_D*rUnit_D)
+          rUnit_D = XyzIn_D / rIn
+          Br      = sum(bIn_D*rUnit_D)
 
-             ! Get radial component of FAC: FAC_r = FAC*Br/B
-             if(present(IsRadial)) Fac = Fac * Br/bIn
+          ! Get radial component of FAC: FAC_r = FAC*Br/B
+          if(present(IsRadial)) Fac = Fac * Br/bIn
 
-             if(present(IsRadialAbs)) Fac = Fac * abs(Br) / bIn
+          if(present(IsRadialAbs)) Fac = Fac * abs(Br) / bIn
 
-             ! store the (radial component of the) field alinged current
-             Fac_II(i,j) = Fac
+          ! store the (radial component of the) field alinged current
+          Fac_II(i,j) = Fac
 
-             ! store the B field in the FAC coordinates
-             if(present(b_DII)) b_DII(:,i,j) = matmul3_right(bIn_D, GmFac_DD)
+          ! store the B field in the FAC coordinates
+          if(present(b_DII)) b_DII(:,i,j) = matmul3_right(bIn_D, GmFac_DD)
 
-             ! store radial component of B field
-             if(present(Br_II)) Br_II(i,j) = Br
+          ! store radial component of B field
+          if(present(Br_II)) Br_II(i,j) = Br
 
-             ! store tangential B field vector in FAC coordinates
-             if(present(Bt_DII))then
-                b_D = cross_prod(rUnit_D, bIn_D)
-                Bt_DII(:,i,j) = matmul3_right(b_D, GmFac_DD )
-             end if
-          end do
-       end do
+          ! store tangential B field vector in FAC coordinates
+          if(present(Bt_DII))then
+             b_D = cross_prod(rUnit_D, bIn_D)
+             Bt_DII(:,i,j) = matmul3_right(b_D, GmFac_DD )
+          end if
+       end do; end do
     end if
     deallocate(bCurrent_VII)
 
@@ -856,6 +852,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine calc_field_aligned_current
   !============================================================================
-
 end module ModCurrent
 !==============================================================================

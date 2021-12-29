@@ -272,20 +272,20 @@ contains
           call stop_mpi('The neighbors are not defined at periodic boundaries')
 
        case(FloatBC_, OutFlowBC_)
-          call set_float_bc(1, nVarState, iSide, iMin, iMax, jMin, jMax, &
-               kMin, kMax, nVarState, State_VG)
+          call set_float_bc(1, nVarState, iSide, iMin, iMax, &
+               jMin, jMax, kMin, kMax, nVarState, State_VG)
           if(UseOutflowPressure .and. iTypeBc == OutFlowBC_) &
-               call set_fixed_bc(p_, p_, [pOutflow], iMin, iMax, jMin, jMax, &
-               kMin, kMax, nVarState, State_VG)
+               call set_fixed_bc(p_, p_, [pOutflow], iMin, iMax, &
+               jMin, jMax, kMin, kMax, nVarState, State_VG)
           if(UseHyperbolicDivb) &
-               call set_fixed_bc(Hyp_, Hyp_, [0.0], iMin, iMax, jMin, jMax, &
-               kMin, kMax,  nVarState, State_VG)
+               call set_fixed_bc(Hyp_, Hyp_, [0.0], iMin, iMax, &
+               jMin, jMax, kMin, kMax,  nVarState, State_VG)
           if(UseChGL)           &
-               call set_fixed_bc(SignB_, SignB_, [0.0], iMin, iMax, jMin, jMax,&
-               kMin, kMax,  nVarState, State_VG)
+               call set_fixed_bc(SignB_, SignB_, [0.0], iMin, iMax, &
+               jMin, jMax, kMin, kMax,  nVarState, State_VG)
           if(UseEfield)         &
-               call set_fixed_bc(HypE_, HypE_, [0.0], iMin, iMax, jMin, jMax, &
-               kMin, kMax, nVarState, State_VG)
+               call set_fixed_bc(HypE_, HypE_, [0.0], iMin, iMax, &
+               jMin, jMax, kMin, kMax, nVarState, State_VG)
           if(UseRadDiffusion)   &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
        case(FloatSemiBC_, OutFlowSemiBC_)
@@ -761,7 +761,8 @@ contains
          jMin, jMax, kMin, kMax, nVarState, State_VG)
 
       ! ghost = State_V
-      integer, intent(in):: iVarMin, iVarMax, iMin, iMax, jMin, jMax, kMin, kMax
+      integer, intent(in):: iVarMin, iVarMax, iMin, iMax, &
+           jMin, jMax, kMin, kMax
       real,    intent(in):: State_V(iVarMin:iVarMax)
       integer, intent(in):: nVarState
       real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -848,7 +849,8 @@ contains
     subroutine set_solar_wind_bc
 
       use ModAdvance,     ONLY: nVar, UseIdealEos, UseElectronPressure
-      use ModGeometry,    ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
+      use ModGeometry,    ONLY: xMinBox, xMaxBox, &
+           yMinBox, yMaxBox, zMinBox, zMaxBox
       use ModB0,          ONLY: B0_DGB
       use ModMultiFluid,  ONLY: iRho_I, iRhoIon_I, iUx_I, iUy_I, iUz_I, &
            iPion_I, UseMultiIon, ChargeIon_I, MassIon_I

@@ -45,7 +45,7 @@ contains
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModUpdateStateFast, ONLY: update_state_fast
     use ModUpdateState, ONLY: update_check, update_state
-    use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
+    use ModConstrainDivB, ONLY: bface_to_bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
     use ModElectricField, ONLY: get_num_electric_field, correct_efield_block
     use ModParticleMover, ONLY: UseChargedParticles=>UseParticles, &
@@ -208,10 +208,10 @@ contains
                   call get_num_electric_field(iBlock)
 
              if(UseConstrainB .and. iStage == nStage)then
-                call timing_start('constrain_B')
-                call get_VxB(iBlock)
-                call bound_VxB(iBlock)
-                call timing_stop('constrain_B')
+                call timing_start('constrain_b')
+                call get_vxb(iBlock)
+                call bound_vxb(iBlock)
+                call timing_stop('constrain_b')
              end if
 
              ! Calculate time step (both local and global
@@ -248,17 +248,17 @@ contains
        end if
 
        if(UseConstrainB .and. iStage==nStage)then
-          call timing_start('constrain_B')
+          call timing_start('constrain_b')
           ! Correct for consistency at resolution changes
           ! call correct_VxB
 
           ! Update face centered and cell centered magnetic fields
           do iBlock = 1, nBlock
              if(Unused_B(iBlock))CYCLE
-             call constrain_B(iBlock)
-             call Bface2Bcenter(iBlock)
+             call constrain_b(iBlock)
+             call bface_to_bcenter(iBlock)
           end do
-          call timing_stop('constrain_B')
+          call timing_stop('constrain_b')
           if(DoTest)write(*,*)NameSub,' done constrain B'
        end if
 

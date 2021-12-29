@@ -33,15 +33,15 @@ contains
     real,dimension(3),intent(in) ::Normal_D
     real,dimension(3),intent(out)::Tangent1_D,Tangent2_D
 
-    integer,dimension(1)::iMinAbs
+    integer:: iMinAbs
     character(len=*), parameter:: NameSub = 'generate_tangent12'
     !--------------------------------------------------------------------------
-    iMinAbs = minloc(abs(Normal_D))
+    iMinAbs = minloc(abs(Normal_D), DIM=1)
 
     ! Construct the vector along one of the coordinate axis which is
     ! farthest from the direction of Normal_D
 
-    Tangent2_D = 0.0;Tangent2_D(iMinAbs(1))=1.0
+    Tangent2_D = 0.0; Tangent2_D(iMinAbs)=1.0
     Tangent1_D = -cross_product(Normal_D,Tangent2_D)
     Tangent1_D = Tangent1_D/norm2(Tangent1_D)
     Tangent2_D = cross_product(Normal_D,Tangent1_D)

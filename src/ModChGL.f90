@@ -20,20 +20,26 @@ module ModChGL
   use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
   use ModGeometry, ONLY: r_GB, Used_GB
   use ModB0,       ONLY: UseB0, B0_DGB
+
   implicit none
   PRIVATE ! Except
+
   logical, public :: UseChGL = .false.
+
   ! For R < RSourceChGL the ChGL ratio is calculated in terms of U, B
   real, public :: RSourceChGL = 0.0
+
   ! For R > RMinChGL the magnetic field is solved as
   ! \mathbf{B} = (\rho s)\mathbf{U}:
   real, public :: RMinChGL = -1.0
+
   public :: read_chgl_param ! Read model parameters
   public :: init_chgl
   public :: update_chgl ! Assign ChGL density or express B = (\rho s)\mathbf{U}
   public :: get_chgl_state ! Do same in a single point
   public :: correct_chgl_face_value ! Calculate magnetic field face values
   public :: aligning_bc             ! Align field and stream from the MHD side
+
 contains
   !============================================================================
   subroutine read_chgl_param
@@ -97,11 +103,12 @@ contains
              State_VGB(SignB_,i,j,k,iBlock) = 0
              CYCLE
           end if
-          ! The Leontowich BC (see L. D. Landau and E. M. Livshits,
+          ! The Leontowich BC (see L. D. Landau and E. M. Lifshits,
           ! Electrrodynamics of Continuous Media, Chapter 87 Surface impedance
-          ! of metals). Near the surface with concentrated impedance (surface of
-          ! a metal in case of pronounced skin-effect) the tangential eelectric
-          ! and magnetic field vectors are related with the boundary condition:
+          ! of metals). Near the surface with concentrated impedance
+          ! (surface of metal with pronounced skin-effect) the tangential
+          ! electric and magnetic field vectors are related with the boundary
+          ! condition:
           ! \delta B_t \propto n x E_t, where E_t = Bn n x U_t - Un n x B_t
           ! Note: the unit vetor of normal is directed toward the metal, i.e.
           ! from the MHD domain toward the ChGL domain.

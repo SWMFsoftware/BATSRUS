@@ -42,7 +42,7 @@ contains
     integer::i,j,k,iBlock
 
     real:: DivBV_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    real:: DivBInt(2),DivBTemp(2)
+    real:: DivBInt_I(2), DivBTemp_I(2)
     integer, parameter:: ResDotM1DotRes_=2, ResDotOne_=1
 
     ! Conjugated gradients algorithm, see
@@ -57,7 +57,7 @@ contains
 
     real::    Tolerance=cTiny
     integer:: iError
-    integer:: Iteration
+    integer:: nIteration
 
     real:: VDotGrad_DC(3,nI,nJ,nK)
     ! For convenience, what is stored in these arrays are the gradients
@@ -81,22 +81,22 @@ contains
     endif
     call timing_start(NameSub)
 
-    Iteration=1
+    nIteration=1
 
     do
        call message_pass_cell(nVar, State_VGB, nWidthIn=1, &
             DoSendCornerIn=.false., nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
        ! Get the ghostcell values for MF
-       DivBInt = 0.0;DivBTemp = 0.0
+       DivBInt_I = 0.0;DivBTemp_I = 0.0
        do iBlock=1,nBlock
           Residual_GB(:,:,:,iBlock) = 0.0
-          if(Iteration==1) Dir_GB(:,:,:,iBlock) = 0.0
+          if(nIteration==1) Dir_GB(:,:,:,iBlock) = 0.0
           ! Initialize the vector "Dir"
 
           if(Unused_B(iBlock))CYCLE
 
-          call div_3d_b1(iBlock,&
+          call div3d_b1(iBlock,&
                State_VGB(Bx_,:,:,:,iBlock), &
                State_VGB(By_,:,:,:,iBlock), &
                State_VGB(Bz_,:,:,:,iBlock), &
@@ -110,52 +110,52 @@ contains
           !                DivBV_G(1:nI,1:nJ,1:nK))))
 
           ! Integrate divB by the whole volume
-          DivBInt(ResDotOne_)=DivBInt(ResDotOne_)&
+          DivBInt_I(ResDotOne_)=DivBInt_I(ResDotOne_)&
                +sum(DivBV_G(1:nI,1:nJ,1:nK))
 
           ! Calculate Resudual.M.Residual
-          DivBInt(ResDotM1DotRes_)=DivBInt(ResDotM1DotRes_)&
+          DivBInt_I(ResDotM1DotRes_)=DivBInt_I(ResDotM1DotRes_)&
                +sum(DivBV_G(1:nI,1:nJ,1:nK)*Residual_GB(1:nI,1:nJ,1:nK,iBlock))
        end do
 
-       if(nProc>1) call MPI_allreduce(MPI_IN_PLACE, DivBInt, &
+       if(nProc>1) call MPI_allreduce(MPI_IN_PLACE, DivBInt_I, &
             2,  MPI_REAL, MPI_SUM, iComm, iError)
 
-       DivBTemp = DivBInt
+       DivBTemp_I = DivBInt_I
 
        ! Now evaluate the norm only for that part of the residual,
        ! which is orthogobal to 1:
        ! (Res.M^{-1}.Res)_{mod} + (Res.M^{-1}.(1/sqrt(1.M^{-1}.1)))^2
        ! = Res.M^{-1}.Res
 
-       DivBInt(ResDotM1DotRes_) = DivBTemp(ResDotM1DotRes_)&
-            -OneDotMDotOneInv*DivBTemp(ResDotOne_)**2
+       DivBInt_I(ResDotM1DotRes_) = DivBTemp_I(ResDotM1DotRes_)&
+            -OneDotMDotOneInv*DivBTemp_I(ResDotOne_)**2
 
        if(iProc==0.and.DoTest)&
-            write(*,*) NameSub,': iteration=',Iteration,&
+            write(*,*) NameSub,': iteration=',nIteration,&
             'SigmaRes,SigmaRes^2,integral error:',&
-            DivBTemp,DivBInt(ResDotM1DotRes_)
+            DivBTemp_I,DivBInt_I(ResDotM1DotRes_)
 
-       if(DivBInt(ResDotM1DotRes_) < Tolerance)EXIT
+       if(DivBInt_I(ResDotM1DotRes_) < Tolerance)EXIT
 
        ! This is what we should add to the Residual to make it ortogonal
        ! to the constant solution
-       DivBInt(ResDotOne_) = -OneDotMDotOneInv*DivBTemp(ResDotOne_)
+       DivBInt_I(ResDotOne_) = -OneDotMDotOneInv*DivBTemp_I(ResDotOne_)
 
        ! Below we divide per Res.M.Res, so now we get inverse of it
-       DivBInt(ResDotM1DotRes_) = 1.0/DivBInt(ResDotM1DotRes_)
+       DivBInt_I(ResDotM1DotRes_) = 1.0/DivBInt_I(ResDotM1DotRes_)
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
           if(IsNoBody_B(iBlock))then
              Dir_GB(1:nI,1:nJ,1:nK,iBlock)=Dir_GB(1:nI,1:nJ,1:nK,iBlock)+&
-                  DivBInt(ResDotM1DotRes_) &
-                  *(Residual_GB(1:nI,1:nJ,1:nK,iBlock) + DivBInt(ResDotOne_))
+                  DivBInt_I(ResDotM1DotRes_) &
+                  *(Residual_GB(1:nI,1:nJ,1:nK,iBlock) + DivBInt_I(ResDotOne_))
           else
              do k=1,nK;do j=1,nJ;do i=1,nI
                 if(.not.Used_GB(i,j,k,iBlock))CYCLE
                 Tmp2_GB(i,j,k,iBlock)=Tmp2_GB(i,j,k,iBlock)+&
-                     DivBInt(ResDotM1DotRes_)*(Tmp1_GB(i,j,k,iBlock)+&
-                     DivBInt(ResDotOne_))
+                     DivBInt_I(ResDotM1DotRes_)*(Tmp1_GB(i,j,k,iBlock)+&
+                     DivBInt_I(ResDotOne_))
              end do;end do;end do
           end if
        end do
@@ -181,12 +181,12 @@ contains
 
        if(DoTest .and. iProc==0) &
             write(*,*) NameSub,': effective diffusion coefficient = ',&
-            DirDotDirInv*DivBInt(ResDotM1DotRes_)
+            DirDotDirInv*DivBInt_I(ResDotM1DotRes_)
 
        ! If iterations are not used, the diffusion coefficient
        ! should be less than 1 to ensure the convergence in the r.M^{-1}.r norm
        if(nCleanDivb==0) &
-            DirDotDirInv = min(DirDotDirInv, 0.99/DivBInt(ResDotM1DotRes_))
+            DirDotDirInv = min(DirDotDirInv, 0.99/DivBInt_I(ResDotM1DotRes_))
 
        do iBlock=1,nBlock
           if (Unused_B(iBlock)) CYCLE
@@ -198,8 +198,8 @@ contains
                   CellVolume_GB(i,j,k,iBlock)
           end do; end do; end do
        end do
-       Iteration = Iteration + 1
-       if(Iteration > nCleanDivb) EXIT
+       nIteration = nIteration + 1
+       if(nIteration > nCleanDivb) EXIT
     end do
 
     call timing_stop(NameSub)
@@ -212,7 +212,7 @@ contains
       integer::i,j,k,iBlock,iError,iLimit
       real,dimension(0:nI+1,0:nJ+1,0:nK+1)::Q_G
       real::EstimateForMAMNorm,OneDotMDotOne
-      real:: divb_diffcoeff, VInvHalf
+      real:: DivBDiffCoeff, VInvHalf
       !------------------------------------------------------------------------
       Tmp1_GB = 0.0; Prec_CB = 0.0
 
@@ -408,15 +408,15 @@ contains
       if(nProc>1) call MPI_allreduce(MPI_IN_PLACE, EstimateForMAMNorm,  &
            1, MPI_REAL, MPI_MAX, iComm, iError)
 
-      divb_diffcoeff = 2/EstimateForMAMNorm
+      DivBDiffCoeff = 2/EstimateForMAMNorm
 
-      if(iProc==0)write(*,*)"Divb diffusion coefficient is: ",divb_diffcoeff
+      if(iProc==0)write(*,*)"Divb diffusion coefficient is: ",DivBDiffCoeff
 
       ! Compute 1/sum(M_i)
       OneDotMDotOne = 0.0
       do iBlock=1,nBlock
          if (Unused_B(iBlock)) CYCLE
-         !     Prec_CB(:,:,:,iBlock)=Prec_CB(:,:,:,iBlock)*divb_diffcoeff
+         !     Prec_CB(:,:,:,iBlock)=Prec_CB(:,:,:,iBlock)*DivBDiffCoeff
          if(IsNoBody_B(iBlock))then
             OneDotMDotOne=OneDotMDotOne+sum(1.0/Prec_CB(:,:,:,iBlock))
          elseif(any(Used_GB(1:nI,1:nJ,1:nK,iBlock)))then
@@ -450,7 +450,8 @@ contains
            -BoundaryCoef*Phi_GB(1:nI,1 ,1:nK,iBlock)
       if (DiLevel_EB(4,iBlock) == Unset_) Phi_GB(1:nI,nJp1_,1:nK,iBlock) = &
            -BoundaryCoef*Phi_GB(1:nI,nJ,1:nK,iBlock)
-      if (DiLevel_EB(5,iBlock) == Unset_ .and. nK>1)Phi_GB(1:nI,1:nJ,k0_,iBlock) = &
+      if (DiLevel_EB(5,iBlock) == Unset_ .and. nK>1) &
+           Phi_GB(1:nI,1:nJ,k0_,iBlock) = &
            -BoundaryCoef*Phi_GB(1:nI,1:nJ,1 ,iBlock)
       if (DiLevel_EB(6,iBlock) == Unset_ .and. nK>1) &
            Phi_GB(1:nI,1:nJ,nKp1_,iBlock) = &
@@ -503,7 +504,7 @@ contains
   end subroutine clean_divb
   !============================================================================
 
-  subroutine div_3d_b1(iBlock,VecX_G,VecY_G,VecZ_G,Out_G)
+  subroutine div3d_b1(iBlock,VecX_G,VecY_G,VecZ_G,Out_G)
 
     ! Can only be used for divB diffusion and projection scheme!!!!
     ! DivB is multiplied by -V_Cell!!!!
@@ -526,7 +527,7 @@ contains
     integer :: i, j, k
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'div_3d_b1'
+    character(len=*), parameter:: NameSub = 'div3d_b1'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     Out_G = 0.0
@@ -585,7 +586,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine div_3d_b1
+  end subroutine div3d_b1
   !============================================================================
 
 end module ModCleanDivB
