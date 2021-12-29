@@ -552,8 +552,8 @@ contains
       integer:: iGang
 
       logical:: IsFF_I(nFFLogic)
-      integer:: IFF_I(nFFInt)
-      real:: RFF_I(nFFReal)
+      integer:: iFF_I(nFFInt)
+      real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
 
       iGang = 1
@@ -615,13 +615,13 @@ contains
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,iGang),&
-                 IFF_I, RFF_I)
+                 iFF_I, rFF_I)
          endif
 
          Flux_VXI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
          ! Correct Unormal_I to make div(u) achieve 6th order.
-         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
 
          Flux_VXI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
@@ -658,8 +658,8 @@ contains
       integer:: iGang
 
       logical:: IsFF_I(nFFLogic)
-      integer:: IFF_I(nFFInt)
-      real:: RFF_I(nFFReal)
+      integer:: iFF_I(nFFInt)
+      real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
 
       iGang = 1
@@ -721,12 +721,12 @@ contains
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IY(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,iGang),&
-                 IFF_I, RFF_I)
+                 iFF_I, rFF_I)
          endif
 
          Flux_VYI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
-         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
 
          Flux_VYI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
@@ -765,8 +765,8 @@ contains
       integer:: iGang
 
       logical:: IsFF_I(nFFLogic)
-      integer:: IFF_I(nFFInt)
-      real:: RFF_I(nFFReal)
+      integer:: iFF_I(nFFInt)
+      real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
 
       iGang = 1
@@ -827,12 +827,12 @@ contains
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IZ(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,iGang),&
-                 IFF_I, RFF_I)
+                 iFF_I, rFF_I)
          endif
 
          Flux_VZI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
-         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
 
          Flux_VZI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
@@ -851,8 +851,8 @@ contains
             endif
 
             do iFlux = 1, nFlux
-               Flux_VZI(iFlux,iFace,jFace,kFace,iGang)  = &
-                    correct_face_value(Flux_VZI(iFlux,iFace,jFace,kFace,iGang) ,&
+               Flux_VZI(iFlux,iFace,jFace,kFace,iGang) = correct_face_value( &
+                    Flux_VZI(iFlux,iFace,jFace,kFace,iGang), &
                     FluxCenter_VGD(iFlux,iFace,jFace,kFace-2:kFace+1,3))
             enddo
          end do; end do; enddo
@@ -860,7 +860,7 @@ contains
 
     end subroutine get_flux_z
     !==========================================================================
-    subroutine add_artificial_viscosity(Flux_V, IFF_I, RFF_I)
+    subroutine add_artificial_viscosity(Flux_V, iFF_I, rFF_I)
 
       ! This subroutine adds artificial viscosity to the fluid
       ! density/moment/energy/pressure equations, but not the EM field
@@ -876,8 +876,8 @@ contains
 
       real, intent(inout):: Flux_V(nFlux)
 
-      integer,  intent(inout):: IFF_I(:)
-      real,     intent(inout):: RFF_I(:)
+      integer,  intent(inout):: iFF_I(:)
+      real,     intent(inout):: rFF_I(:)
 
       real :: Coef
       real :: FaceDivU, Sound3, s1, s2
@@ -3231,8 +3231,8 @@ contains
     real:: Conservative_V(nFlux)
 
     logical:: IsFF_I(nFFLogic)
-    integer:: IFF_I(nFFInt)
-    real:: RFF_I(nFFReal)
+    integer:: iFF_I(nFFInt)
+    real:: rFF_I(nFFReal)
 
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
@@ -3244,7 +3244,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_simple_cell_flux'
     !--------------------------------------------------------------------------
-    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+    call init_face_flux_arrays( IsFF_I, iFF_I, rFF_I, Unormal_I, bCrossArea_D)
 
     call test_start(NameSub, DoTest, iBlock)
 
@@ -4160,15 +4160,15 @@ contains
   end subroutine get_speed_max
   !============================================================================
 
-  subroutine correct_u_normal(IFF_I, RFF_I, Unormal_I)
+  subroutine correct_u_normal(iFF_I, rFF_I, Unormal_I)
     ! Make Unormal 6th order accuracte
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
     use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
          Xi_, Eta_, Zeta_, nDim
 
-    integer,  intent(inout):: IFF_I(:)
-    real,     intent(inout):: RFF_I(:)
+    integer,  intent(inout):: iFF_I(:)
+    real,     intent(inout):: rFF_I(:)
 
     real, intent(inout):: Unormal_I(nFluid+1)
 
@@ -4431,8 +4431,8 @@ contains
     real:: CmaxArea, CmaxAll, Cmax_I(nFluid), Conservative_V(nFlux)
 
     logical:: IsFF_I(nFFLogic)
-    integer:: IFF_I(nFFInt)
-    real:: RFF_I(nFFReal)
+    integer:: iFF_I(nFFInt)
+    real:: rFF_I(nFFReal)
 
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
@@ -4441,7 +4441,7 @@ contains
     !--------------------------------------------------------------------------
     iGang = 1
 
-    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+    call init_face_flux_arrays( IsFF_I, iFF_I, rFF_I, Unormal_I, bCrossArea_D)
 
     call test_start(NameSub, DoTest, iBlock)
 

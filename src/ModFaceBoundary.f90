@@ -257,14 +257,15 @@ contains
                ! assuming the first species/fluid is H+ and determined by #BODY
                RhoCpcp_I(1) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)
 
-               ! assuming the second species/fluid is O+, Mass is taken to be 16
+               ! assuming the 2nd species/fluid is O+, Mass is taken to be 16
                ! use nIonDensity instead of 2 to avoid index out of range
                RhoCpcp_I(nIonDensity) = &
                     Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
             end if
          else if (UseMultiIon) then
             if (IsMhd) call stop_mpi(NameSub//': no total fluid is supported!')
-            if (UseCpcpBc) call stop_mpi(NameSub//': CPCP should not be used '//&
+            if (UseCpcpBc) call stop_mpi(NameSub// &
+                 ': CPCP should not be used '//&
                  'in combination with Young in multifluid ')
             if (nIonFluid /= 2) call stop_mpi(NameSub// &
                  ': MUST be two fluids for Young BC.')
@@ -277,8 +278,6 @@ contains
             ! is both light and very minor.
             FracH = 1.0 / (1.0 + RatioOH)
             FracO = RatioOH  * FracH
-            ! fixed total number density
-            ! RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
 
             ! fixed H+ density
             RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(1+16*ratioOH)
@@ -587,7 +586,8 @@ contains
                  end if
               end select
               ! Reflect B1 or full B
-              FBC%VarsGhostFace_V(Bx_:Bz_) =  FBC%VarsTrueFace_V(Bx_:Bz_) - BRefl_D
+              FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsTrueFace_V(Bx_:Bz_) &
+                   - BRefl_D
            end if
 
            if(TypeBc == 'reflectall')then
@@ -608,7 +608,7 @@ contains
                       / max(CellFace_DFB(iDir,i,j,k,iBlockBc), 1e-30)
                  do iFluid = 1, nFluid
                     iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
-                    FBC%VarsGhostFace_V(iUx:iUz) = FBC%VarsTrueFace_V(iUx:iUz) &
+                    FBC%VarsGhostFace_V(iUx:iUz) = FBC%VarsTrueFace_V(iUx:iUz)&
                          - 2*sum(FBC%VarsTrueFace_V(iUx:iUz)*Normal_D)*Normal_D
                  end do
               end if
@@ -1013,14 +1013,18 @@ contains
 
            ! Subtract the radial component of the velocity (no outflow/inflow)
            uIono_D = uIono_D &
-                - FBC%FaceCoords_D * sum(FBC%FaceCoords_D*uIono_D) / sum(FBC%FaceCoords_D**2)
+                - FBC%FaceCoords_D * sum(FBC%FaceCoords_D*uIono_D) &
+                / sum(FBC%FaceCoords_D**2)
 
            select case(TypeBc)
            case('reflect','linetied','polarwind','ionosphere', &
                 'ionospherefloat', 'ionosphereoutflow')
-              FBC%VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) + FBC%VarsGhostFace_V(iUx_I)
-              FBC%VarsGhostFace_V(iUy_I) = 2*uIono_D(y_) + FBC%VarsGhostFace_V(iUy_I)
-              FBC%VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) + FBC%VarsGhostFace_V(iUz_I)
+              FBC%VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) &
+                   + FBC%VarsGhostFace_V(iUx_I)
+              FBC%VarsGhostFace_V(iUy_I) = 2*uIono_D(y_) &
+                   + FBC%VarsGhostFace_V(iUy_I)
+              FBC%VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) &
+                   + FBC%VarsGhostFace_V(iUz_I)
 
            case default
               call stop_mpi(NameSub// &
@@ -1037,12 +1041,15 @@ contains
            select case(TypeBc)
            case('reflect','linetied', &
                 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow')
-              FBC%VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) + FBC%VarsGhostFace_V(iUx_I)
-              FBC%VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) + FBC%VarsGhostFace_V(iUy_I)
-              FBC%VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) + FBC%VarsGhostFace_V(iUz_I)
+              FBC%VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) &
+                   + FBC%VarsGhostFace_V(iUx_I)
+              FBC%VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) &
+                   + FBC%VarsGhostFace_V(iUy_I)
+              FBC%VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) &
+                   + FBC%VarsGhostFace_V(iUz_I)
            case default
-              call stop_mpi('UseRotatingBc is not compatible with TypeFaceBc_I='&
-                   //TypeBc)
+              call stop_mpi(NameSub// &
+                   ': UseRotatingBc is not compatible with TypeBc='//TypeBc)
            end select
         end if
 
