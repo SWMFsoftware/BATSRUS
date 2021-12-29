@@ -220,7 +220,7 @@ contains
     integer, parameter :: Volume_=1, SumX_=2, SumX2_=3
     integer :: i, j, k, iBlock, iZ, nZ, iError
     integer :: iVar, nAxisCell
-    real :: MinDzValue, Beta
+    real :: DzMin, Beta
     real :: x, y, z, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
     real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
@@ -232,8 +232,8 @@ contains
     if(nK == 1)then
        nZ = 1
     else
-       MinDzValue = CellSize1Min*CellSize_DB(z_,1)/CellSize_DB(x_,1)
-       nZ = nint((XyzMax_D(3)-XyzMin_D(3))/MinDzValue)
+       DzMin = CellSize1Min*CellSize_DB(z_,1)/CellSize_DB(x_,1)
+       nZ = nint((XyzMax_D(3)-XyzMin_D(3))/DzMin)
     end if
     allocate(Buffer_VII(nVar,nZ,1:Geom_))
 
@@ -256,7 +256,7 @@ contains
              iZ = 1
           else
              z = Xyz_DGB(z_,1,1,k,iBlock)
-             iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
+             iZ = ceiling( (z - XyzMin_D(3))/DzMin + 0.1)
           end if
 
           do i=1, nAxisCell
@@ -303,7 +303,7 @@ contains
              iZ = 1
           else
              z = Xyz_DGB(z_,1,1,k,iBlock)
-             iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
+             iZ = ceiling( (z - XyzMin_D(3))/DzMin + 0.1)
           end if
 
           InvVolume = 1.0/Buffer_VII(Volume_,iZ,Geom_)
