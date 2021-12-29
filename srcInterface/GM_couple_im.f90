@@ -110,7 +110,7 @@ contains
        nDensityIn, nVarIn, BufferLine_VI, nVarLine, nPointLine, &
        BufferSolarWind_V, NameVar)
 
-    use ModGeometry, ONLY: x2
+    use ModGeometry, ONLY: xMaxBox
     use ModIoUnit, ONLY: UNITTMP_
     use ModMain, ONLY: tSimulation, TypeCoordSystem
     use ModVarIndexes, ONLY: &
@@ -260,7 +260,7 @@ contains
     ! Pass the solar wind values note that the first ion density is passed
     ! as the solar wind number density
 
-    call get_solar_wind_point(tSimulation, [x2, 0.0, 0.0], SolarWind_V)
+    call get_solar_wind_point(tSimulation, [xMaxBox, 0.0, 0.0], SolarWind_V)
 
     BufferSolarWind_V(1) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_)*No2Si_V(UnitN_)
     BufferSolarWind_V(2) = SolarWind_V(RhoUx_) * No2Si_V(UnitU_)

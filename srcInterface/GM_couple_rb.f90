@@ -230,7 +230,7 @@ contains
   subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
        BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-    use ModGeometry, ONLY: x2
+    use ModGeometry, ONLY: xMaxBox
     use ModMain, ONLY: tSimulation,TypeCoordSystem
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
          MassFluid_I, IonFirst_, nVar
@@ -341,7 +341,7 @@ contains
     ! Send solar wind values in the array of the extra integral
     ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
 
-    call get_solar_wind_point(tSimulation, [x2, 0.0, 0.0], SolarWind_V)
+    call get_solar_wind_point(tSimulation, [xMaxBox, 0.0, 0.0], SolarWind_V)
 
     Buffer_IIV(1,:,6) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_) &
          *No2Si_V(UnitN_)
