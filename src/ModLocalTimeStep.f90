@@ -60,7 +60,7 @@ contains
   !============================================================================
   subroutine advance_localstep(TimeSimulationLimit)
 
-    use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl, iStage, nStage,&
+    use ModMain,       ONLY: tSimulation, Dt, DtMax_B, Cfl, iStage, nStage,&
          nOrder, nOrderProlong
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
@@ -68,7 +68,7 @@ contains
          Flux_VXI, Flux_VYI, Flux_VZI
     use ModB0,         ONLY: set_b0_face
     use ModConserveFlux, ONLY: DoConserveFlux
-    use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
+    use ModGeometry,     ONLY: IsBody_B, IsBoundary_B
     use ModFaceBoundary, ONLY: set_face_boundary
     use ModCellBoundary, ONLY: set_cell_boundary
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_
@@ -147,18 +147,18 @@ contains
     end if
 
     ! Initialize time and stage info for all blocks
-    Time_B(1:nBlock)    = Time_Simulation
-    TimeOld_B(1:nBlock) = Time_Simulation
+    Time_B(1:nBlock)    = tSimulation
+    TimeOld_B(1:nBlock) = tSimulation
     iStage_B(1:nBlock)  = 1
 
     ! A small fraction of the smallest time step in SI units
     DtSiTiny = 1e-6*DtMinSi
 
     ! Initialize time of current stage
-    TimeStage = Time_Simulation
+    TimeStage = tSimulation
 
     ! Final simulation time
-    TimeEnd = Time_Simulation + DtMaxSi
+    TimeEnd = tSimulation + DtMaxSi
 
     ! Number of stages
     nTimeStage = nint(DtMaxSi/DtMinSi)
@@ -215,7 +215,7 @@ contains
           iStage = iStage_B(iBlock)
 
           ! Update cell boundaries
-          if (far_field_BCs_BLK(iBlock)) call set_cell_boundary( &
+          if (IsBoundary_B(iBlock)) call set_cell_boundary( &
                nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
 
           call timing_start('calc_facevalues')
@@ -223,7 +223,7 @@ contains
           call timing_stop('calc_facevalues')
 
           ! Update face boundaries
-          if(body_BLK(iBlock)) &
+          if(IsBody_B(iBlock)) &
                call set_face_boundary(iBlock, Time_B(iBlock), .false.)
 
           ! Calculate fluxes
@@ -254,7 +254,7 @@ contains
 
              call store_face_flux(iBlock, nFlux, &
                   Flux_VFD, Flux_VXB, Flux_VYB, Flux_VZB, &
-                  DtIn = Dt_BLK(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.,&
+                  DtIn = DtMax_B(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.,&
                   DoReschangeOnlyIn = .not.UseMaxTimeStep)
 
              if(DoTest .and. iBlock == iBlockTest) &
@@ -265,7 +265,7 @@ contains
           ! Update block time
           TimeOld_B(iBlock) = Time_B(iBlock)
           Time_B(iBlock)    = Time_B(iBlock) &
-               + Cfl*Dt_BLK(iBlock)*No2Si_V(UnitT_)/nStage
+               + Cfl*DtMax_B(iBlock)*No2Si_V(UnitT_)/nStage
 
           ! Swap between iStage = 1 and 2 for this block
           if(nStage==2) iStage_B(iBlock) = 3 - iStage
@@ -306,7 +306,7 @@ contains
 
     enddo ! iStageLocal
 
-    Time_Simulation = Time_Simulation + DtMaxSi
+    tSimulation = tSimulation + DtMaxSi
 
     if(DoTest)write(*,*)NameSub,' finished'
 
@@ -318,9 +318,9 @@ contains
 
   subroutine set_local_time_step(TimeSimulationLimit)
 
-    use ModGeometry,   ONLY: true_cell, true_BLK, CellSize1Min, CellSize1Max
-    use ModMain,       ONLY: Time_Simulation, Cfl, Dt_Blk
-    use ModAdvance,    ONLY: time_BLK
+    use ModGeometry,   ONLY: Used_GB, IsNoBody_B, CellSize1Min, CellSize1Max
+    use ModMain,       ONLY: tSimulation, Cfl, DtMax_B
+    use ModAdvance,    ONLY: DtMax_CB
     use BATL_lib,      ONLY: CellSize_DB, Unused_B
     use ModPhysics,    ONLY: No2Si_V, UnitT_, Si2No_V
     use ModMpi
@@ -340,7 +340,7 @@ contains
          TimeSimulationLimit
 
     ! Find the smallest value of Dt_stable/Dx in the whole domain
-    DtDxMinPe = minval(Dt_BLK(1:nBlock)/CellSize_DB(1,1:nBlock), &
+    DtDxMinPe = minval(DtMax_B(1:nBlock)/CellSize_DB(1,1:nBlock), &
          MASK=.not.Unused_B(1:nBlock))
 
     call MPI_allreduce(DtDxMinPe, DtDxMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
@@ -353,30 +353,30 @@ contains
           DtDxMin, DtMinSi, DtMaxSi
 
     ! Check if we reached the final time
-    if(Time_Simulation + DtMaxSi > TimeSimulationLimit) then
+    if(tSimulation + DtMaxSi > TimeSimulationLimit) then
        ! For the last few time steps use uniform time steps
-       DtMinSi = min(DtMinSi, TimeSimulationLimit - Time_Simulation)
+       DtMinSi = min(DtMinSi, TimeSimulationLimit - tSimulation)
        DtMaxSi = DtMinSi
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          Dt_BLK(iBlock) = DtMinSi/Cfl * Si2No_V(UnitT_)
+          DtMax_B(iBlock) = DtMinSi/Cfl * Si2No_V(UnitT_)
        enddo
     else
        ! Set the block time step (without Cfl) proportional to refinement level
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          Dt_BLK(iBlock) = CellSize_DB(1,iBlock)*DtDxMin
+          DtMax_B(iBlock) = CellSize_DB(1,iBlock)*DtDxMin
        enddo
     end if
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
+       DtMax_CB(:,:,:,iBlock) = DtMax_B(iBlock)
 
        ! Reset time step to zero inside body.
-       if(.not.true_BLK(iBlock))then
-          where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) &
-               time_BLK(:,:,:,iBlock) = 0.0
+       if(.not.IsNoBody_B(iBlock))then
+          where(.not.Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
+               DtMax_CB(:,:,:,iBlock) = 0.0
        end if
     enddo
 

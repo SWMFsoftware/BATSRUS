@@ -17,10 +17,10 @@ program BATSRUS
   use ModUtilities, ONLY: remove_file, touch_file
   use ModMain, ONLY: &
        IsStandAlone, &
-       time_accurate, time_loop, time_simulation, t_max, &
-       n_step, nIter, iteration_number, &
+       IsTimeAccurate, IsTimeLoop, tSimulation, tSimulationMax, &
+       nStep, nIter, nIteration, &
        IsLastRead, &
-       dn_timing, UseTiming, UseTimingAll, iUnitTiming
+       DnTiming, UseTiming, UseTimingAll, iUnitTiming
   use ModSetParameters, ONLY: set_parameters
   use ModWriteProgress, ONLY: write_progress, write_runtime_values
   use ModRestartFile, ONLY: NameRestartInDir
@@ -50,8 +50,8 @@ program BATSRUS
   call set_planet_defaults
 
   ! Not yet doing the computation
-  time_loop = .false.
-  !$acc update device(time_loop)
+  IsTimeLoop = .false.
+  !$acc update device(IsTimeLoop)
 
   ! Show git information
   if(iProc==0)then
@@ -92,7 +92,7 @@ program BATSRUS
         call BATS_setup
         call BATS_init_session
         call timing_stop('setup')
-        if(dn_timing > -3)call timing_report_total
+        if(DnTiming > -3)call timing_report_total
         if(iProc==0)write(*,*)'Resetting timing counters after setup.'
         call timing_reset('#all',3)
      else
@@ -105,10 +105,10 @@ program BATSRUS
         if(stop_condition_true()) EXIT TIMELOOP
         if(is_time_to_stop())     EXIT SESSIONLOOP
 
-        call timing_step(n_step+1)
+        call timing_step(nStep+1)
 
-        if(time_accurate .and. t_max > 0.0) then
-           call BATS_advance(t_max)
+        if(IsTimeAccurate .and. tSimulationMax > 0.0) then
+           call BATS_advance(tSimulationMax)
         else
            call BATS_advance(huge(0.0))
         end if
@@ -123,40 +123,40 @@ program BATSRUS
         if(iProc == 0 .and. lVerbose >= 0) &
              write(*,*)'----- End of Session   ',iSession,' ------'
         iSession=iSession+1
-        if (dn_timing > -2) call timing_report
+        if (DnTiming > -2) call timing_report
         call timing_reset_all
      end if
 
   end do SESSIONLOOP
-  time_loop = .false.
-  !$acc update device(time_loop)
+  IsTimeLoop = .false.
+  !$acc update device(IsTimeLoop)
 
   if(iProc == 0 .and. lVerbose >= 0)then
      write(*,*)
      write(*,'(a)')'    Finished Numerical Simulation'
      write(*,'(a)')'    -----------------------------'
-     if (time_accurate)then
+     if (IsTimeAccurate)then
         write(*, '(a,es13.5,a)') &
-             '    Simulated time = ', time_simulation, ' s '
-        if(time_simulation > 1e6*cSecondPerYear) then
+             '    Simulated time = ', tSimulation, ' s '
+        if(tSimulation > 1e6*cSecondPerYear) then
            write(*, '(a,es13.5,a)') &
-                time_simulation/cSecondPerYear
-        elseif(time_simulation > cSecondPerYear) then
+                tSimulation/cSecondPerYear
+        elseif(tSimulation > cSecondPerYear) then
            write(*, '(a,f13.6,a)') '    Simulated time = ', &
-                time_simulation/cSecondPerYear, ' years'
-        elseif(time_simulation > cSecondPerDay) then
+                tSimulation/cSecondPerYear, ' years'
+        elseif(tSimulation > cSecondPerDay) then
            write(*, '(a,f13.6,a)') '    Simulated time = ', &
-                time_simulation/cSecondPerDay, ' days'
-        elseif(time_simulation > cSecondPerHour) then
+                tSimulation/cSecondPerDay, ' days'
+        elseif(tSimulation > cSecondPerHour) then
            write(*, '(a,f13.6,a)') '    Simulated time = ', &
-                time_simulation/cSecondPerHour, ' hours'
-        elseif(time_simulation > cSecondPerMinute) then
+                tSimulation/cSecondPerHour, ' hours'
+        elseif(tSimulation > cSecondPerMinute) then
            write(*, '(a,f13.6,a)') '    Simulated time = ', &
-                time_simulation/cSecondPerMinute, ' mins'
+                tSimulation/cSecondPerMinute, ' mins'
         end if
      end if
   end if
-  if (dn_timing > -2) call timing_report
+  if (DnTiming > -2) call timing_report
 
   call BATS_save_files('FINALWITHRESTART')
 
@@ -168,7 +168,7 @@ program BATSRUS
 
   call timing_stop('BATSRUS')
 
-  if(dn_timing > -3)call timing_report_total
+  if(DnTiming > -3)call timing_report_total
 
   if(UseTimingAll)close(iUnitTiming)
 
@@ -189,9 +189,9 @@ contains
     !--------------------------------------------------------------------------
     StopConditionTrue = .false.
 
-    if(nIter >= 0 .and. iteration_number >= nIter) StopConditionTrue = .true.
-    if(time_accurate .and. t_max > 0.0 &
-         .and. time_simulation >= t_max) &
+    if(nIter >= 0 .and. nIteration >= nIter) StopConditionTrue = .true.
+    if(IsTimeAccurate .and. tSimulationMax > 0.0 &
+         .and. tSimulation >= tSimulationMax) &
          StopConditionTrue = .true.
 
   end function stop_condition_true
@@ -199,7 +199,7 @@ contains
 
   function is_time_to_stop() result(IsTimeToStop)
 
-    use ModMain, ONLY: cputime_max, check_stopfile
+    use ModMain, ONLY: CpuTimeMax, DoCheckStopFile
 
     logical :: IsTimeToStop
     integer :: iError
@@ -207,11 +207,11 @@ contains
     IsTimeToStop = .false.
 
     if(iProc == 0)then
-       if(cputime_max > 0.0 .and. MPI_WTIME()-CpuTimeStart >= cputime_max)then
-          write(*,*)'CPU time exceeded:',cputime_max,MPI_WTIME()-CpuTimeStart
+       if(CpuTimeMax > 0.0 .and. MPI_WTIME()-CpuTimeStart >= CpuTimeMax)then
+          write(*,*)'CPU time exceeded:',CpuTimeMax,MPI_WTIME()-CpuTimeStart
           IsTimeToStop=.true.
        end if
-       if(.not.IsTimeToStop .and. check_stopfile) then
+       if(.not.IsTimeToStop .and. DoCheckStopFile) then
           inquire(file='BATSRUS.STOP',exist=IsTimeToStop)
           if (IsTimeToStop) &
                write(*,*)'BATSRUS.STOP file exists: recieved stop signal'
@@ -226,7 +226,7 @@ contains
   subroutine show_progress
 
     use ModIo,      ONLY: dn_progress1, dn_progress2
-    use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, n_step, Dt
+    use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, nStep, Dt
     use ModPhysics, ONLY: Si2No_V, UnitT_
 
     real(Real8_), external :: timing_func_d
@@ -243,42 +243,42 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if( UseTiming .and. iProc==0 &
-         .and. dn_progress1>0 .and. mod(n_step,dn_progress1) == 0 ) then
+         .and. dn_progress1>0 .and. mod(nStep,dn_progress1) == 0 ) then
 
        CpuTimeBATSRUS=timing_func_d('sum',3,'BATSRUS','BATSRUS')
        CpuTimeAdvance=timing_func_d('sum',1,'advance','BATSRUS')
-       if (.not.time_accurate) then
+       if (.not.IsTimeAccurate) then
           write(*,'(a,f12.1,a,f9.1,a,i8)') 'Speed is',&
                nI*nJ*nK*count(.not.Unused_B(1:nBlock)) &
                /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
                CpuTimeBATSRUS,&
-               ' s at N =',n_step
+               ' s at N =',nStep
        else
           write(*,'(a,f12.1,a,f9.1,a,i8,a,1p,e11.4,a)') 'Speed is',&
                nI*nJ*nK*count(.not.Unused_B(1:nBlock)) &
                /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
                CpuTimeBATSRUS,&
-               ' s at N =',n_step, ' (', Time_Simulation,' s)'
+               ' s at N =',nStep, ' (', tSimulation,' s)'
        endif
 
     endif
 
     ! Show timing tables
-    if(dn_timing>0.and.mod(iteration_number,dn_timing)==0) then
+    if(DnTiming>0.and.mod(nIteration,DnTiming)==0) then
        call timing_report
-    else if(dn_progress2>0.and.mod(n_step,dn_progress2) == 0) then
+    else if(dn_progress2>0.and.mod(nStep,dn_progress2) == 0) then
        call timing_tree(2,2)
     end if
 
     ! Try to estimate the remaining length of the run
     if(UseTiming .and. iProc==0 &
-         .and. dn_progress2>0 .and. mod(n_step,dn_progress2) == 0)then
-       nIterExpect = nITER-iteration_number
-       if(time_accurate .and. Dt > 0.0 .and. t_max > 0.0)then
+         .and. dn_progress2>0 .and. mod(nStep,dn_progress2) == 0)then
+       nIterExpect = nITER-nIteration
+       if(IsTimeAccurate .and. Dt > 0.0 .and. tSimulationMax > 0.0)then
           nIterExpectTime = min( real(huge(1)), &
-               (t_max - time_simulation)/Dt*Si2No_V(UnitT_) )
+               (tSimulationMax - tSimulation)/Dt*Si2No_V(UnitT_) )
           if(nIterExpect < 0)then
              nIterExpect = nIterExpectTime
           else if(nIterExpectTime > 0)then
@@ -286,8 +286,8 @@ contains
           endif
        end if
        CpuTimeAdvance=timing_func_d('sum/iter',2,'advance','BATSRUS')
-       write (*,'(i6,a,i6,a,f10.2)') iteration_number,' of ', &
-            nIterExpect+iteration_number,  &
+       write (*,'(i6,a,i6,a,f10.2)') nIteration,' of ', &
+            nIterExpect+nIteration,  &
             ' iterations completed.   Expected time to completion:', &
             CpuTimeAdvance*nIterExpect
        write(*,*)

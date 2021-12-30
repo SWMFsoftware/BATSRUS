@@ -26,7 +26,7 @@ contains
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
          read_b0_param, init_mod_b0
     use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
-         x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
+         xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
          CoordDimMin_D, CoordDimMax_D, &
          read_gen_radial_grid, set_gen_radial_grid, NameGridFile
     use ModNodes, ONLY: init_mod_nodes
@@ -288,13 +288,13 @@ contains
        endif
 
        if(StartTimeCheck > 0.0 .and. tSimulationCheck > 0.0)then
-          if(abs(StartTime+time_simulation - StartTimeCheck-tSimulationCheck)&
+          if(abs(StartTime+tSimulation - StartTimeCheck-tSimulationCheck)&
                > 0.001)then
              write(*,*)NameSub//' WARNING: '// &
                   NameThisComp//'::StartTimeCheck+tSimulationCheck=', &
                   StartTimeCheck + tSimulationCheck, &
                   ' differs from CON::StartTime+tSimulation=', &
-                  StartTime + time_simulation,' !!!'
+                  StartTime + tSimulation,' !!!'
              if(UseStrict)then
                 call stop_mpi('Fix #STARTTIME command in PARAM.in')
              else
@@ -306,10 +306,10 @@ contains
           tSimulationCheck = -1.0
        end if
        if(UseEndTime)then
-          t_max = EndTime - StartTime
+          tSimulationMax = EndTime - StartTime
           nIter = -1
           if(IsStandAlone)then
-             if(.not.time_accurate)call stop_mpi( &
+             if(.not.IsTimeAccurate)call stop_mpi( &
                   '#ENDTIME command cannot be used in steady-state mode')
              if(.not.IsLastRead) call stop_mpi(&
                   '#ENDTIME command can be used in the last session only')
@@ -318,14 +318,14 @@ contains
 
        ! Adjust frequencies
        call adjust_freq(AdaptGrid, &
-            n_step+1, time_simulation+1e-6, time_accurate)
+            nStep+1, tSimulation+1e-6, IsTimeAccurate)
        call adjust_freq(AdaptPic, &
-            n_step+1, time_simulation+1e-6, time_accurate)
+            nStep+1, tSimulation+1e-6, IsTimeAccurate)
 
        ! Planet NONE in GM means that we do not use a body
        if (NameThisComp=='GM' .and. NamePlanet == 'NONE' &
             .and. IsFirstSession)then
-          body1 = .false.
+          UseBody = .false.
           rBody = 0.0
        end if
 
@@ -334,7 +334,7 @@ contains
 
        if(NameThisComp == 'GM') then
           ! Set and obtain GM specific parameters from CON_planet and CON_axes
-          call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
+          call get_axes(tSimulation, MagAxisTiltGsmOut = ThetaTilt)
           call get_planet(DipoleStrengthOut = DipoleStrengthSi)
        end if
 
@@ -346,9 +346,9 @@ contains
           DtUpdateB0  = -1.0
        elseif(IsStandAlone .and. NameThisComp=='GM') then
           ! Check and set some planet variables (e.g. DoUpdateB0)
-          call check_planet_var(iProc==0, time_accurate)
+          call check_planet_var(iProc==0, IsTimeAccurate)
 
-          if(body1)then
+          if(UseBody)then
              call get_planet(UseRotationOut = UseRotatingBc)
           else
              UseRotatingBc = .false.
@@ -424,7 +424,7 @@ contains
        call user_action("initialize module")
 
        if(UseChargedParticles)then
-          if(.not.time_accurate)then
+          if(.not.IsTimeAccurate)then
              if(iProc==0)write(*,*)'To trace particles, use time-accurate!'
              call stop_mpi('Correct parameter file!!')
           end if
@@ -549,15 +549,15 @@ contains
        case("#STOP")
           call check_stand_alone
           call read_var('MaxIteration',nIter)
-          call read_var('tSimulationMax',t_max)
+          call read_var('tSimulationMax',tSimulationMax)
 
        case("#CPUTIMEMAX")
           call check_stand_alone
-          call read_var('CpuTimeMax',cputime_max)
+          call read_var('CpuTimeMax',CpuTimeMax)
 
        case("#CHECKSTOPFILE")
           call check_stand_alone
-          call read_var('DoCheckStopfile',check_stopfile)
+          call read_var('DoCheckStopfile',DoCheckStopFile)
 
        case("#PROGRESS")
           call check_stand_alone
@@ -566,7 +566,7 @@ contains
 
        case("#TIMEACCURATE")
           call check_stand_alone
-          call read_var('DoTimeAccurate',time_accurate)
+          call read_var('DoTimeAccurate',IsTimeAccurate)
 
        case("#ECHO")
           call check_stand_alone
@@ -590,13 +590,13 @@ contains
           call read_var('UseStrict',UseStrict)
 
        case("#DEBUG")
-          call read_var('DoDebug',okdebug)
-          call read_var('DoDebugGhost',ShowGhostCells)
+          call read_var('DoDebug',DoDebug)
+          call read_var('DoDebugGhost',DoShowGhostCells)
 
        case("#TIMING")
           call read_var('UseTiming',UseTiming)
           if(UseTiming)then
-             call read_var('DnTiming',dn_timing)
+             call read_var('DnTiming',DnTiming)
              call read_var('nDepthTiming',TimingDepth)
              call read_var('TypeTimingReport',TimingStyle)
              UseTimingAll = index(TimingStyle,'all') > 0
@@ -1568,12 +1568,12 @@ contains
           if(nOrder > 4) nStage = 3
           UseHalfStep = nStage <= 2
 
-          call read_var('TypeFlux',FluxType, IsUpperCase=.true.)
+          call read_var('TypeFlux',TypeFlux, IsUpperCase=.true.)
           ! For 5-moment equation all schemes are equivalent with Rusanov
-          if(UseEfield) FluxType = 'RUSANOV'
+          if(UseEfield) TypeFlux = 'RUSANOV'
 
           BetaLimiter = 1.0
-          if(nOrder > 1 .and. FluxType /= "SIMPLE")then
+          if(nOrder > 1 .and. TypeFlux /= "SIMPLE")then
              call read_var('TypeLimiter', TypeLimiter)
              if(TypeLimiter /= 'minmod') &
                   call read_var('LimiterBeta', BetaLimiter)
@@ -1646,8 +1646,8 @@ contains
        case("#UPDATECHECK")
           call read_var("UseUpdateCheck",UseUpdateCheck)
           if(UseUpdateCheck)then
-             call read_var("RhoMinPercent", percent_max_rho(1))
-             call read_var("RhoMaxPercent", percent_max_rho(2))
+             call read_var("RhoMinPercent", PercentRhoLimit_I(1))
+             call read_var("RhoMaxPercent", PercentRhoLimit_I(2))
              call read_var("pMinPercent",   percent_max_p(1))
              call read_var("pMaxPercent",   percent_max_p(2))
           end if
@@ -1661,7 +1661,7 @@ contains
           call read_var('TypeUpdate', TypeUpdate, IsLowerCase=.true.)
 
        case("#MESSAGEPASS","#OPTIMIZE")
-          call read_var('TypeMessagePass', optimize_message_pass)
+          call read_var('TypeMessagePass', TypeMessagePass)
 
        case('#CLIMIT', '#CLIGHTWARNING')
           call face_flux_set_parameters(NameCommand)
@@ -2095,12 +2095,12 @@ contains
           call read_var('nRootBlockY', nRootRead_D(2))
           call read_var('nRootBlockZ', nRootRead_D(3))
 
-          call read_var('xMin',x1)
-          call read_var('xMax',x2)
-          call read_var('yMin',y1)
-          call read_var('yMax',y2)
-          call read_var('zMin',z1)
-          call read_var('zMax',z2)
+          call read_var('xMin', xMinBox)
+          call read_var('xMax', xMaxBox)
+          call read_var('yMin', yMinBox)
+          call read_var('yMax', yMaxBox)
+          call read_var('zMin', zMinBox)
+          call read_var('zMax', zMaxBox)
 
        case("#GRIDBLOCK", "#GRIDBLOCKALL")
           if(.not.is_first_session())CYCLE READPARAM
@@ -2250,8 +2250,8 @@ contains
 
        case("#MAGNETOSPHERE","#BODY")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('UseBody',body1)
-          if(body1)then
+          call read_var('UseBody',UseBody)
+          if(UseBody)then
              call read_var('rBody', rBody)
              if(NameThisComp=='GM')&
                   call read_var('rCurrents' ,Rcurrents)
@@ -2277,8 +2277,8 @@ contains
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('UseGravity',UseGravity)
           if(UseGravity)then
-             call read_var('iDirGravity',GravityDir)
-             if(GravityDir /= 0) call read_var('GravitySi', GravitySi)
+             call read_var('iDirGravity',iDirGravity)
+             if(iDirGravity /= 0) call read_var('GravitySi', GravitySi)
           end if
 
        case("#SECONDBODY")
@@ -2461,7 +2461,7 @@ contains
 
        case("#NSTEP")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nStep',n_step)
+          call read_var('nStep',nStep)
 
        case("#NPREVIOUS")
           if(.not.is_first_session())CYCLE READPARAM
@@ -2498,7 +2498,7 @@ contains
        case("#TIMESIMULATION")
           if(.not.is_first_session())CYCLE READPARAM
           if(IsStandAlone)then
-             call read_var('tSimulation', time_simulation)
+             call read_var('tSimulation', tSimulation)
           else
              call read_var('tSimulation', tSimulationCheck)
           end if
@@ -2920,7 +2920,7 @@ contains
       dt            = 0.0
 
       nOrder = 2
-      FluxType = 'RUSANOV'
+      TypeFlux = 'RUSANOV'
 
       ! Default implicit parameters
       UseImplicit      = .false.
@@ -2933,7 +2933,7 @@ contains
 
       UseB0Source     = UseB0 .and. nDim > 1
 
-      optimize_message_pass = 'all'
+      TypeMessagePass = 'all'
 
       plot_dimensional      = .true.
 
@@ -2959,14 +2959,14 @@ contains
 
       ! Set component dependent defaults
 
-      GravityDir=0
+      iDirGravity=0
 
       select case(NameThisComp)
       case('SC','IH','OH','EE')
          ! Body parameters
          UseGravity = .true.
-         body1      = .true.
-         if(NameThisComp == 'EE') body1 = .false.
+         UseBody      = .true.
+         if(NameThisComp == 'EE') UseBody = .false.
          Rbody      = 1.0
          Rcurrents  =-1.0
 
@@ -3028,7 +3028,7 @@ contains
       case('GM')
          ! Body Parameters
          UseGravity = .false.
-         body1      = .true.
+         UseBody      = .true.
          Rbody      = 3.0
          Rcurrents  = 4.0
 
@@ -3135,39 +3135,39 @@ contains
       end if
 
       ! Check flux type selection
-      select case(FluxType)
+      select case(TypeFlux)
       case('SIMPLE','Simple')
-         FluxType='Simple'
+         TypeFlux='Simple'
       case('ROE','Roe')
-         FluxType='Roe'
+         TypeFlux='Roe'
       case('ROEOLD','RoeOld')
-         FluxType='RoeOld'
+         TypeFlux='RoeOld'
       case('RUSANOV','TVDLF','Rusanov')
-         FluxType='Rusanov'
+         TypeFlux='Rusanov'
       case('LINDE','HLLEL','Linde')
-         FluxType='Linde'
+         TypeFlux='Linde'
       case('SOKOLOV','AW','Sokolov')
-         FluxType='Sokolov'
+         TypeFlux='Sokolov'
       case('GODUNOV','Godunov')
-         FluxType='Godunov'
+         TypeFlux='Godunov'
       case('HLLD', 'HLLDW', 'LFDW', 'HLLC')
       case default
          if(iProc==0)then
             write(*,'(a)')NameSub // &
-                 'WARNING: unknown value for FluxType=' // trim(FluxType)
+                 'WARNING: unknown value for TypeFlux=' // trim(TypeFlux)
             if(UseStrict) &
                  call stop_mpi('Correct PARAM.in!')
-            write(*,*)'setting FluxType=Rusanov'
+            write(*,*)'setting TypeFlux=Rusanov'
          end if
-         FluxType='Rusanov'
+         TypeFlux='Rusanov'
       end select
 
       ! Set flux type for neutral fluids
       select case(TypeFluxNeutral)
       case('default')
-         select case(FluxType)
+         select case(TypeFlux)
          case('Rusanov','Linde','Sokolov','Godunov','HLLDW','LFDW','HLLC')
-            TypeFluxNeutral = FluxType
+            TypeFluxNeutral = TypeFlux
          case default
             TypeFluxNeutral = 'Linde'
          end select
@@ -3194,7 +3194,7 @@ contains
       ! Check flux type selection for implicit
       select case(FluxTypeImpl)
       case('default')
-         FluxTypeImpl = FluxType
+         FluxTypeImpl = TypeFlux
       case('ROE','Roe')
          FluxTypeImpl='Roe'
       case('ROEOLD','RoeOld')
@@ -3214,14 +3214,14 @@ contains
                  ' WARNING: Unknown value for FluxTypeImpl='// &
                  trim(FluxTypeImpl)//' !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
-            write(*,*)NameSub//' setting FluxTypeImpl=',trim(FluxType)
+            write(*,*)NameSub//' setting FluxTypeImpl=',trim(TypeFlux)
          end if
-         FluxTypeImpl=FluxType
+         FluxTypeImpl=TypeFlux
       end select
 
       ! Check flux types
-      if( (FluxType(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe' .or. &
-           FluxType=='HLLD' .or.  FluxTypeImpl=='HLLD') .and. &
+      if( (TypeFlux(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe' .or. &
+           TypeFlux=='HLLD' .or.  FluxTypeImpl=='HLLD') .and. &
            (UseMultiIon .or. UseAlfvenWaves .or. UseWavePressure &
            .or. .not.UseB) )then
          if (iProc == 0) then
@@ -3230,13 +3230,13 @@ contains
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
             write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
          end if
-         if(FluxType(1:3)=='Roe' .or. FluxType=='HLLD') &
-              FluxType     = 'Linde'
+         if(TypeFlux(1:3)=='Roe' .or. TypeFlux=='HLLD') &
+              TypeFlux     = 'Linde'
          if(FluxTypeImpl(1:3)=='Roe' .or. FluxTypeImpl=='HLLD') &
               FluxTypeImpl = 'Linde'
       end if
 
-      if((FluxType=='Godunov' .or. FluxTypeImpl=='Godunov') &
+      if((TypeFlux=='Godunov' .or. FluxTypeImpl=='Godunov') &
            .and. UseB)then
          if (iProc == 0) then
             write(*,'(a)')NameSub//&
@@ -3244,12 +3244,12 @@ contains
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
             write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
          end if
-         if(FluxType=='Godunov')     FluxType     = 'Linde'
+         if(TypeFlux=='Godunov')     TypeFlux     = 'Linde'
          if(FluxTypeImpl=='Godunov') FluxTypeImpl = 'Linde'
       end if
 
       if(i_line_command("#IMPLSTEP") < 0) &
-           UseBdf2 = nStage > 1 .and. time_accurate
+           UseBdf2 = nStage > 1 .and. IsTimeAccurate
 
       ! Make sure periodic boundary conditions are symmetric
       do i=Coord1MinBc_,Coord3MinBc_,2
@@ -3271,10 +3271,10 @@ contains
       ! Set UseBufferGrid logical
       UseBufferGrid = any(TypeFaceBc_I=='buffergrid')
 
-      if(UseConstrainB .and. .not.time_accurate)then
+      if(UseConstrainB .and. .not.IsTimeAccurate)then
          if(iProc==0)then
             write(*,'(a)')NameSub//&
-                 ' WARNING: constrain_B works for time accurate run only !!!'
+                 ' WARNING: constrain_b works for time accurate run only !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
             write(*,*)NameSub//' setting UseConstrainB=F UseDivbSource=T'
          end if
@@ -3291,7 +3291,7 @@ contains
          UseTvdReschange      = .false.
          UseAccurateResChange = .false.
       end if
-      if (UseConstrainB) optimize_message_pass = 'all'
+      if (UseConstrainB) TypeMessagePass = 'all'
       if (UseConstrainB .and. AdaptGrid % DoThis)then
          if(iProc==0)write(*,'(a)')NameSub//&
               ' WARNING: cannot use AMR with constrained transport'
@@ -3301,10 +3301,10 @@ contains
       end if
 
       if (UseHallResist .or. UseResistivity .or. UseViscosity) &
-           optimize_message_pass = 'all'
+           TypeMessagePass = 'all'
 
       if (UseRadDiffusion .and. (UseFullImplicit .or. UseSemiImplicit)) &
-           optimize_message_pass = 'all'
+           TypeMessagePass = 'all'
 
       ! Check for magnetogram
 
@@ -3324,7 +3324,7 @@ contains
       ! Accurate res change algorithm and 4th order finite volume scheme
       ! both need corners and edges
       if (UseAccurateResChange .or. nOrder == 4) &
-           optimize_message_pass = 'all'
+           TypeMessagePass = 'all'
 
       if(IsRzGeometry .and. UseB)then
          if(UseMultiIon) &
@@ -3356,7 +3356,7 @@ contains
       end if
 
       ! Check CFL number
-      if(.not.time_accurate .and. iProc==0)then
+      if(.not.IsTimeAccurate .and. iProc==0)then
          if(UseBorisCorrection)then
             if(Cfl > 0.65) then
                write(*,'(a)')NameSub// &
@@ -3375,7 +3375,7 @@ contains
       end if
 
       ! Boris correction checks
-      if((FluxType(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe') &
+      if((TypeFlux(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe') &
            .and. UseBorisCorrection)then
          if (iProc == 0) then
             write(*,'(a)')NameSub//&
@@ -3419,7 +3419,7 @@ contains
       end if
 
       if(UsePartImplicit .and. ImplCritType=='dt' .and.&
-           (.not.time_accurate .or. .not.UseDtFixed))then
+           (.not.IsTimeAccurate .or. .not.UseDtFixed))then
          if(iProc==0)then
             write(*,'(a)')'Part implicit scheme with ImplCritType=dt'
             write(*,'(a)')'requires time accurate run with fixed time step'
@@ -3427,7 +3427,7 @@ contains
          end if
       end if
 
-      if(.not.time_accurate .and. UseDtFixed)then
+      if(.not.IsTimeAccurate .and. UseDtFixed)then
          if(iProc==0)then
             write(*,'(a)')'Steady state Run can not use fixed time step'
             write(*,'(a)')'Use limited time step instead'
@@ -3443,7 +3443,7 @@ contains
          end if
       end if
 
-      if(.not.time_accurate.and.UseBDF2)then
+      if(.not.IsTimeAccurate.and.UseBDF2)then
          if(iProc==0)then
             write(*,'(a)') NameSub//&
                  ' WARNING: BDF2 is only available for time accurate run !!!'
@@ -3516,7 +3516,7 @@ contains
       end if
 
       if(TypeCoordSystem == 'HGI' .and. NameThisComp /= 'OH' &
-           .and. .not.time_accurate)then
+           .and. .not.IsTimeAccurate)then
          if(iProc == 0)then
             write(*,'(a)') NameSub//&
                  ' WARNING: there is no steady state solution in HGI system!'
@@ -3531,7 +3531,7 @@ contains
       ! Get the integer representation of the coordinate system
       do i = 1, nCoordSystem
          if(TypeCoordSystem == trim(NameCoordSystem_I(i))) then
-            TypeCoordSystemInt = i
+            iTypeCoordSystem = i
          endif
       end do
 
@@ -3690,14 +3690,14 @@ contains
 
       UseDbTrickNow = UseDbTrick
       if(.not.IsMhd .or. (UseNonConservative .and. nConservCrit == 0) .or. &
-           (nStage == 1 .and. time_accurate) .or. .not.UseHalfStep) &
+           (nStage == 1 .and. IsTimeAccurate) .or. .not.UseHalfStep) &
            UseDbTrickNow = .false.
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
 
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, nOrderProlong)
-      !$acc update device(UseHalfStep, time_accurate, UseDtFixed)
+      !$acc update device(UseHalfStep, IsTimeAccurate, UseDtFixed)
       !$acc update device(DoCorrectFace, UseFDFaceFlux)
 
       !$acc update device(UseTvdResChange, UseAccurateResChange)
@@ -3724,11 +3724,11 @@ contains
       !$acc update device(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
       !$acc update device(Gamma, GammaMinus1, InvGammaMinus1)
 
-      !$acc update device(Body1, B1rCoef)
+      !$acc update device(UseBody, B1rCoef)
 
       !$acc update device(UseRotatingBc)
 
-      !$acc update device(TypeCoordSystemInt)
+      !$acc update device(iTypeCoordSystem)
 
       !$acc update device(DipoleStrengthSi)
 
@@ -3776,35 +3776,35 @@ contains
            iSessionIn=iSessionFirst) > 0) then
          select case(TypeGeometry)
          case('cartesian' ,'rotatedcartesian')
-            XyzMin_D = [x1, y1, z1]
-            XyzMax_D = [x2, y2, z2]
+            XyzMin_D = [xMinBox, yMinBox, zMinBox]
+            XyzMax_D = [xMaxBox, yMaxBox, zMaxBox]
          case('rz')
-            z1 = -0.5
-            z2 = +0.5
-            XyzMin_D = [x1, y1, z1]
-            XyzMax_D = [x2, y2, z2]
+            zMinBox = -0.5
+            zMaxBox = +0.5
+            XyzMin_D = [xMinBox, yMinBox, zMinBox]
+            XyzMax_D = [xMaxBox, yMaxBox, zMaxBox]
          case('spherical', 'spherical_lnr', 'spherical_genr')
             !             R,   Phi, Latitude
             XyzMin_D = [ 0.0, 0.0, -cHalfPi]
             XyzMax_D = [ &
-                 sqrt(max(x1**2,x2**2)+max(y1**2,y2**2) + max(z1**2,z2**2)), &
+                 sqrt(max(xMinBox**2,xMaxBox**2)+max(yMinBox**2,yMaxBox**2) + max(zMinBox**2,zMaxBox**2)), &
                  cTwoPi, cHalfPi ]
          case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
             !            R,   Phi, Z
-            XyzMin_D = [0.0, 0.0, z1]
-            XyzMax_D = [sqrt(max(x1**2,x2**2)+max(y1**2,y2**2)), cTwoPi, z2]
+            XyzMin_D = [0.0, 0.0, zMinBox]
+            XyzMax_D = [sqrt(max(xMinBox**2,xMaxBox**2)+max(yMinBox**2,yMaxBox**2)), cTwoPi, zMaxBox]
          case('roundcube')
             if(rRound0 > rRound1)then
-               ! Cartesian outside, so use x1..z2
-               XyzMin_D = [x1, y1, z1]
-               XyzMax_D = [x2, y2, z2]
+               ! Cartesian outside, so use xMinBox..zMaxBox
+               XyzMin_D = [xMinBox, yMinBox, zMinBox]
+               XyzMax_D = [xMaxBox, yMaxBox, zMaxBox]
             else
-               ! Round outside, so fit this inside x1..z2
+               ! Round outside, so fit this inside xMinBox..zMaxBox
                if(nDim==2) XyzMax_D = &
-                    min(abs(x1), abs(x2), abs(y1), abs(y2)) &
+                    min(abs(xMinBox), abs(xMaxBox), abs(yMinBox), abs(yMaxBox)) &
                     /sqrt(2.0)
                if(nDim==3) XyzMax_D = &
-                    min(abs(x1), abs(x2), abs(y1), abs(y2), abs(z1), abs(z2)) &
+                    min(abs(xMinBox), abs(xMaxBox), abs(yMinBox), abs(yMaxBox), abs(zMinBox), abs(zMaxBox)) &
                     /sqrt(3.0)
                XyzMin_D = -XyzMax_D
             end if
@@ -3819,7 +3819,7 @@ contains
             if(TypeGeometry == 'roundcube' .and. rRound1 > rRound0) &
                  XyzMax_D = RadiusMax/sqrt(real(nDim))
          else
-            if(Body1 .and. rBody > 0.0)then
+            if(UseBody .and. rBody > 0.0)then
                ! Set inner boundary to match rBody for spherical coordinates
                if(TypeGeometry(1:3)=='sph' .or. TypeGeometry(1:3)=='cyl') &
                     XyzMin_D(1) = rBody
@@ -3848,9 +3848,9 @@ contains
            UseFDFaceFluxIn=UseFDFaceFlux, iVectorVarIn_I=iVectorVar_I)
 
       if(IsRotatedCartesian)then
-         ! Fix x1, x2 .. z2 to include the full rotated domain
-         x2 = sum(abs(CoordMin_D)) + sum(abs(CoordMax_D)); y2 = x2; z2 = x2
-         x1 = -x2; y1 = x1; z1 = x1
+         ! Fix xMinBox, xMaxBox .. zMaxBox to include the full rotated domain
+         xMaxBox = sum(abs(CoordMin_D)) + sum(abs(CoordMax_D)); yMaxBox = xMaxBox; zMaxBox = xMaxBox
+         xMinBox = -xMaxBox; yMinBox = xMinBox; zMinBox = xMinBox
       end if
 
       if(IsLogRadius .or. IsGenRadius)then
@@ -3861,12 +3861,12 @@ contains
 
       ! Fix grid size in ignored directions
       if(nDim == 1)then
-         y1 = -0.5; XyzMin_D(2) = -0.5
-         y2 = +0.5; XyzMax_D(2) = +0.5
+         yMinBox = -0.5; XyzMin_D(2) = -0.5
+         yMaxBox = +0.5; XyzMax_D(2) = +0.5
       end if
       if(nDim < 3)then
-         z1 = -0.5; XyzMin_D(3) = -0.5
-         z2 = +0.5; XyzMax_D(3) = +0.5
+         zMinBox = -0.5; XyzMin_D(3) = -0.5
+         zMaxBox = +0.5; XyzMax_D(3) = +0.5
       end if
 
     end subroutine correct_grid_geometry
@@ -4077,7 +4077,7 @@ contains
          ! Store the initial setting
          DtLimitOrig = DtLimit
          ! Dt = 0 in steady state
-         if(time_accurate .and. UseDtLimit) Dt  = DtLimit
+         if(IsTimeAccurate .and. UseDtLimit) Dt  = DtLimit
       end if
 
       if(UseTimeStepControl)then

@@ -146,7 +146,7 @@ contains
     use ModFieldTrace, ONLY : ray
     use ModPhysics,  ONLY : &
          Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
-    use ModGeometry, ONLY : R_BLK, Xyz_DGB, z_
+    use ModGeometry, ONLY : r_GB, Xyz_DGB, z_
     use ModAdvance,  ONLY : State_VGB, RhoUz_, Bx_, Bz_
     use ModB0,       ONLY: B0_DGB
 
@@ -368,7 +368,7 @@ contains
        ! and the cell is within radius rFixPolarRegion and flow points outward
        ! then nudge the pressure (and density) towards the "polarregion" values
        if(pIm_ICB(1,i,j,k,iBlock) < 0.0 .and. DoFixPolarRegion .and. &
-            R_BLK(i,j,k,iBlock) < rFixPolarRegion .and. &
+            r_GB(i,j,k,iBlock) < rFixPolarRegion .and. &
             Xyz_DGB(z_,i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0)then
 
           do iFluid = 1, nFluid
@@ -391,7 +391,7 @@ contains
   subroutine apply_im_pressure
 
     use ModMain, ONLY: iNewGrid, iNewDecomposition, TauCoupleIm, &
-         time_accurate, Dt, RhoMinDimIm
+         IsTimeAccurate, Dt, RhoMinDimIm
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: Ppar_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
@@ -455,7 +455,7 @@ contains
     ! Determining which field lines are closed is done by using the ray
     ! tracing.
 
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        ! Ramp up is based on physical time: p' = p + min(1,dt/tau) * (pIM - p)
        ! A typical value might be 5, to get close to the IM pressure
        ! in 10 seconds. Dt/Tau is limited to 1, when p' = pIM is set
@@ -497,7 +497,7 @@ contains
           end do; end do; end do
        end if
 
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           if(DoCoupleImPressure)then
              !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI

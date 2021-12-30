@@ -72,7 +72,7 @@ contains
     use ModMain, ONLY: nI, nJ, nK, &
          x_, y_, z_, Phi_, nBlockMax, Unused_B
     use ModGeometry, ONLY: CellSize_DB,&
-         XyzStart_BLK
+         Coord111_DB
     use ModIO
     use BATL_lib, ONLY: Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
          CoordMax_DB, CoordMin_D, CoordMax_D, DiLevelNei_IIIB
@@ -124,21 +124,21 @@ contains
 
        if(IsRLonLat .or. IsCylindrical)then
           ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
-          ySqueezed = mod(xyzStart_BLK(Phi_,iBlock), cPi)
+          ySqueezed = mod(Coord111_DB(Phi_,iBlock), cPi)
           ! Make sure that small angles are moved to Pi degrees for y=0 cut
           if(ySqueezed < 0.25*cPi .and. &
                abs(yMin+yMax-cTwoPi) < cTiny .and. yMax-yMin < 0.01) &
                ySqueezed = ySqueezed + cPi
        else
-          ySqueezed = xyzStart_BLK(y_,iBlock)
+          ySqueezed = Coord111_DB(y_,iBlock)
        end if
 
-       if( xyzStart_BLK(x_,iBlock) > xMax1.or.&
-            xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock) < xMin1.or.&
+       if( Coord111_DB(x_,iBlock) > xMax1.or.&
+            Coord111_DB(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock) < xMin1.or.&
             ySqueezed > yMax1.or.&
             ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock) < yMin1.or.&
-            xyzStart_BLK(z_,iBlock) > zMax1.or.&
-            xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1) CYCLE
+            Coord111_DB(z_,iBlock) > zMax1.or.&
+            Coord111_DB(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1) CYCLE
        if (NotACut) then
           iMin = 1
           iMax = nI
@@ -153,23 +153,23 @@ contains
           DxBlock=CellSize_DB(x_,iBlock); DyBlock=CellSize_DB(y_,iBlock); DzBlock=CellSize_DB(z_,iBlock)
 
           ! Calculate index limits of cells inside cut
-          i = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
-          ii = min(nI,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
+          i = max(1 ,floor((xMin1-Coord111_DB(x_,iBlock))/DxBlock)+2)
+          ii = min(nI,floor((xMax1-Coord111_DB(x_,iBlock))/DxBlock)+1)
 
           j = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
           jj = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
 
-          k = max(1 ,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-          kk = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+          k = max(1 ,floor((zMin1-Coord111_DB(z_,iBlock))/DzBlock)+2)
+          kk = min(nK,floor((zMax1-Coord111_DB(z_,iBlock))/DzBlock)+1)
 
-          i1 = max(0 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
-          ii1 = min(nI+1,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
+          i1 = max(0 ,floor((xMin1-Coord111_DB(x_,iBlock))/DxBlock)+2)
+          ii1 = min(nI+1,floor((xMax1-Coord111_DB(x_,iBlock))/DxBlock)+1)
 
           j1 = max(0 ,floor((yMin1-ySqueezed)/DyBlock)+2)
           jj1 = min(nJ+1,floor((yMax1-ySqueezed)/DyBlock)+1)
 
-          k1 = max(0,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-          kk1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+          k1 = max(0,floor((zMin1-Coord111_DB(z_,iBlock))/DzBlock)+2)
+          kk1 = min(nK+1,floor((zMax1-Coord111_DB(z_,iBlock))/DzBlock)+1)
 
           !         if (i1==0 .and.  i==1 .and. ii==1) then ! Cut falls between iMinCell and iMinCell - 1
           !             if (DiLevelNei_IIIB(-1, 0, 0,iBlock) == -1) cycle
@@ -384,7 +384,7 @@ contains
     use ModMain, ONLY: nI, nJ, nK, &
          x_, y_, z_, Phi_, nBlockMax, Unused_B
     use ModGeometry, ONLY: CellSize_DB,&
-         XyzStart_BLK
+         Coord111_DB
     use ModIO
     use ModMpi
     use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
@@ -431,32 +431,32 @@ contains
     nCell = 0
     if(isNonCartesian)then
        ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
-       ySqueezed = mod(xyzStart_BLK(Phi_,iBlock),cPi)
+       ySqueezed = mod(Coord111_DB(Phi_,iBlock),cPi)
        ! Make sure that small angles are moved to Pi degrees for y=0 cut
        if(ySqueezed < 0.25*cPi .and. &
             abs(yMin+yMax-cTwoPi) < cTiny .and. yMax-yMin < 0.01) &
             ySqueezed = ySqueezed + cPi
     else
-       ySqueezed = xyzStart_BLK(y_,iBlock)
+       ySqueezed = Coord111_DB(y_,iBlock)
     end if
     !
     !   if(DoTest)then
     !      write(*,*) NameSub, 'xMin1,xMax1,yMin1,yMax1,zMin1,zMax1=',&
     !           xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
-    !      write(*,*) NameSub, 'xyzStart_BLK=',iBlock,xyzStart_BLK(:,iBlock)
+    !      write(*,*) NameSub, 'Coord111_DB=',iBlock,Coord111_DB(:,iBlock)
     !      write(*,*) NameSub, 'ySqueezed =',ySqueezed
-    !      write(*,*) NameSub, 'xyzEnd=',xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock),&
+    !      write(*,*) NameSub, 'xyzEnd=',Coord111_DB(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock),&
     !           ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock),&
-    !           xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock)
+    !           Coord111_DB(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock)
     !   end if
     !
     ! If block is fully outside of cut then cycle
-    if(  xyzStart_BLK(x_,iBlock) > xMax1.or.&
-         xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock) < xMin1.or.&
+    if(  Coord111_DB(x_,iBlock) > xMax1.or.&
+         Coord111_DB(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock) < xMin1.or.&
          ySqueezed > yMax1.or.&
          ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock) < yMin1.or.&
-         xyzStart_BLK(z_,iBlock) > zMax1.or.&
-         xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1) then
+         Coord111_DB(z_,iBlock) > zMax1.or.&
+         Coord111_DB(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1) then
        H5Advance = .false.
        RETURN
     end if
@@ -466,23 +466,23 @@ contains
 
     ! Calculate index limits of cells inside cut
 
-    iMin = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
-    iMax = min(nI,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
+    iMin = max(1 ,floor((xMin1-Coord111_DB(x_,iBlock))/DxBlock)+2)
+    iMax = min(nI,floor((xMax1-Coord111_DB(x_,iBlock))/DxBlock)+1)
 
     jMin = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
     jMax = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
 
-    kMin = max(1,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-    kMax = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+    kMin = max(1,floor((zMin1-Coord111_DB(z_,iBlock))/DzBlock)+2)
+    kMax = min(nK,floor((zMax1-Coord111_DB(z_,iBlock))/DzBlock)+1)
 
-    iMin1 = max(-1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
-    iMax1 = min(nI+1,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
+    iMin1 = max(-1 ,floor((xMin1-Coord111_DB(x_,iBlock))/DxBlock)+2)
+    iMax1 = min(nI+1,floor((xMax1-Coord111_DB(x_,iBlock))/DxBlock)+1)
 
     jMin1 = max(-1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
     jMax1 = min(nJ+1,floor((yMax1-ySqueezed)/DyBlock)+1)
 
-    kMin1 = max(-1,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-    kMax1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+    kMin1 = max(-1,floor((zMin1-Coord111_DB(z_,iBlock))/DzBlock)+2)
+    kMax1 = min(nK+1,floor((zMax1-Coord111_DB(z_,iBlock))/DzBlock)+1)
 
     !    if (iMin1==0 .and.  iMin==1 .and. iMax==1) then ! Cut falls between iMinCell and iMinCell - 1
     !         if (DiLevelNei_IIIB(-1, 0, 0,iBlock) == -1) then
@@ -543,7 +543,7 @@ contains
     !   if(DoTest)then
     !      write(*,*) NameSub, 'iMin,iMax,jMin,jMax,kMin,kMax=',&
     !           iMin,iMax,jMin,jMax,kMin,kMax
-    !      write(*,*) NameSub, 'DxBlock,x1,y1,z1',DxBlock,xyzStart_BLK(:,iBlock)
+    !      write(*,*) NameSub, 'DxBlock,xMinBox,yMinBox,zMinBox',DxBlock,Coord111_DB(:,iBlock)
     !      write(*,*) NameSub, 'ySqueezed  =',ySqueezed
     !      write(*,*) NameSub, 'xMin1,xMax1=',xMin1,xMax1
     !      write(*,*) NameSub, 'yMin1,yMax1=',yMin1,yMax1
@@ -996,9 +996,9 @@ contains
 
   subroutine write_real_plot_metadata(FileID,plot_dimensional, isXZero)
 
-    use ModMain, only : Time_Simulation, CodeVersion
+    use ModMain, only : tSimulation, CodeVersion
     use BATL_lib, only : nLevelMax, nDim
-    use ModGeometry, only : x1,x2,y1,y2,z1,z2
+    use ModGeometry, only : xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
     use ModPhysics, ONLY : No2Io_V, UnitX_
     integer(HID_T), intent(in) :: FileID
     integer(HSIZE_T) :: iData
@@ -1015,21 +1015,21 @@ contains
 
     iData = 1
     !    attName(1) = 'Simulation Time'
-    RealMetaData(iData) = Time_Simulation
+    RealMetaData(iData) = tSimulation
     iData = iData + 1
     if (isXZero) then
-       RealMetaData(iData) = y1
+       RealMetaData(iData) = yMinBox
        iData = iData + 1
-       RealMetaData(iData) = y2
+       RealMetaData(iData) = yMaxBox
        iData = iData + 1
        if (nPlotDim == 1) then
           RealMetaData(iData) = 0.0
           iData = iData + 1
           RealMetaData(iData) = 1.0
        else
-          RealMetaData(iData) = z1
+          RealMetaData(iData) = zMinBox
           iData = iData + 1
-          RealMetaData(iData) = z2
+          RealMetaData(iData) = zMaxBox
        end if
        iData = iData + 1
        RealMetaData(iData) = 0.0
@@ -1039,17 +1039,17 @@ contains
     else
        do i=1,3
           if (iPlotDim(i) == 1) then
-             RealMetaData(iData) = x1
+             RealMetaData(iData) = xMinBox
              iData = iData + 1
-             RealMetaData(iData) = x2
+             RealMetaData(iData) = xMaxBox
           else if(iPlotDim(i) == 2) then
-             RealMetaData(iData) = y1
+             RealMetaData(iData) = yMinBox
              iData = iData + 1
-             RealMetaData(iData) = y2
+             RealMetaData(iData) = yMaxBox
           else if(iPlotDim(i) == 3) then
-             RealMetaData(iData) = z1
+             RealMetaData(iData) = zMinBox
              iData = iData + 1
-             RealMetaData(iData) = z2
+             RealMetaData(iData) = zMaxBox
           else if (i == 2 .and. nPlotDim == 1) then
              RealMetaData(iData) = 0.0
              iData = iData + 1
@@ -1075,9 +1075,9 @@ contains
 
   subroutine write_real_sim_metadata(FileID,plot_dimensional)
 
-    use ModMain, only : Time_Simulation, CodeVersion
+    use ModMain, only : tSimulation, CodeVersion
     use BATL_lib, only : nLevelMax, nDim
-    use ModGeometry, only : x1,x2,y1,y2,z1,z2
+    use ModGeometry, only : xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
     use ModPhysics, ONLY : No2Io_V, UnitX_
 
     integer (HID_T), intent(in) :: fileID
@@ -1096,46 +1096,46 @@ contains
 
     iData = 1
     !    attName(1) = 'Simulation Time'
-    RealMetaData(iData) = Time_Simulation
+    RealMetaData(iData) = tSimulation
     iData = iData + 1
     !    attName(2) = 'xmin'
 
     if (plot_dimensional) then
-       RealMetaData(iData) = x1*No2Io_V(UnitX_)
+       RealMetaData(iData) = xMinBox*No2Io_V(UnitX_)
        iData = iData + 1
        !    attName(3) = 'xmax'
-       RealMetaData(iData) = x2*No2Io_V(UnitX_)
+       RealMetaData(iData) = xMaxBox*No2Io_V(UnitX_)
        iData = iData + 1
        !    attName(4) = 'ymin'
-       RealMetaData(iData) = y1*No2Io_V(UnitX_)
+       RealMetaData(iData) = yMinBox*No2Io_V(UnitX_)
        iData = iData + 1
        !    attName(3) = 'ymax'
-       RealMetaData(iData) = y2*No2Io_V(UnitX_)
+       RealMetaData(iData) = yMaxBox*No2Io_V(UnitX_)
        iData = iData + 1
        !    attName(6) = 'zmin'
-       RealMetaData(iData) = z1*No2Io_V(UnitX_)
+       RealMetaData(iData) = zMinBox*No2Io_V(UnitX_)
        iData = iData + 1
        !    attName(3) = 'zmax'
-       RealMetaData(iData) = z2*No2Io_V(UnitX_)
+       RealMetaData(iData) = zMaxBox*No2Io_V(UnitX_)
 
     else
-       !         write (*,*) "x1,x2,y1,y2,z1,z2",x1,x2,y1,y2,z1,z2
-       RealMetaData(iData) = x1
+       !         write (*,*) "xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox",xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
+       RealMetaData(iData) = xMinBox
        iData = iData + 1
        !    attName(3) = 'xmax'
-       RealMetaData(iData) = x2
+       RealMetaData(iData) = xMaxBox
        iData = iData + 1
        !    attName(4) = 'ymin'
-       RealMetaData(iData) = y1
+       RealMetaData(iData) = yMinBox
        iData = iData + 1
        !    attName(3) = 'ymax'
-       RealMetaData(iData) = y2
+       RealMetaData(iData) = yMaxBox
        iData = iData + 1
        !    attName(6) = 'zmin'
-       RealMetaData(iData) = z1
+       RealMetaData(iData) = zMinBox
        iData = iData + 1
        !    attName(3) = 'zmax'
-       RealMetaData(iData) = z2
+       RealMetaData(iData) = zMaxBox
     end if
     !-------------------------------------------------------------------
     ! write the real Metadata
@@ -1150,7 +1150,7 @@ contains
   subroutine write_integer_plot_metadata(fileID,nPlotVar,isCutFile)
 
     use BATL_lib, only : nDimAmr, nLevelMax, IsPeriodic_D
-    use ModMain, only : n_step
+    use ModMain, only : nStep
     use ModGeometry, ONLY : TypeGeometry
     integer (HID_T), intent(in) :: fileID, nPlotVar
     logical, intent(in) :: isCutFile
@@ -1170,7 +1170,7 @@ contains
     IntegerMetaData(iData) = FFV
     !    attName(1) = 'File Format Version'
     iData = iData + 1
-    IntegerMetaData(iData) = n_step
+    IntegerMetaData(iData) = nStep
     !    attName(2) = "Time Step"
     iData = iData + 1
     IntegerMetaData(iData) = nPlotDim
@@ -1262,7 +1262,7 @@ contains
     ! the file may know something about the simulation that created it
 
     use BATL_lib, only : nDim, nDimAmr, nLevelMax
-    use ModMain, only : n_step, nI, nJ, nK
+    use ModMain, only : nStep, nI, nJ, nK
     integer (HID_T), intent(in) :: fileID, nPlotVar
 
     integer(HSIZE_T) :: iData
@@ -1298,7 +1298,7 @@ contains
     !    attName(7) = 'nLevelMax'
     iData = iData + 1
 
-    IntegerMetaData(iData) = n_step
+    IntegerMetaData(iData) = nStep
     !    attName(2) = "Time Step"
     !    iData = iData + 1
 

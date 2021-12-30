@@ -74,7 +74,7 @@ contains
     !  2. field line tracing information if DoTraceIE is true
 
     use CON_axes, ONLY: transform_matrix
-    use ModMain, ONLY: Time_Simulation, TypeCoordSystem
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
     use ModCurrent,            ONLY: calc_field_aligned_current
     use ModFieldTrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
          InvB_, RhoInvB_, pInvB_, xEnd_, yEnd_, zEnd_, CLOSEDRAY, GmSm_DD,&
@@ -160,7 +160,7 @@ contains
           Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
 
           ! Transformation matrix from default (GM) to SM coordinates
-          GmSm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+          GmSm_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
 
           ! Loop to compute deltas
           do j=1,jSize

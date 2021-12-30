@@ -35,7 +35,7 @@ module ModMain
   logical, parameter:: UseB = B_ /= U_
 
   ! Time stepping parameters and values.
-  integer :: n_step=0, nOrder, iStage, nStage, iteration_number=0, nOrderOld
+  integer :: nStep=0, nOrder, iStage, nStage, nIteration=0, nOrderOld
   !$acc declare create(nOrder, iStage, nStage)
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
   !$acc declare create(UseHalfStep)
@@ -46,24 +46,29 @@ module ModMain
   logical :: UseFlic     = .false.
   !$acc declare create(UseFlic)
 
+  ! Fixed time step (only for time accurate and for implicit scheme mostly)
+  logical :: UseDtFixed
+  !$acc declare create(UseDtFixed)
+
+  ! Time step and CFL number
   real :: Dt
   real :: DtFixed
   real :: DtFixedOrig
-  real :: DtFixedDim
+  real :: DtFixedDim   ! in IO units
   real :: Cfl
   real :: CflOrig
-  real, allocatable :: Dt_BLK(:)
-  !$acc declare create(Dt_BLK, Dt, DtFixed, Cfl)
-  logical :: time_accurate = .true.,  time_loop = .false.
-  !$acc declare create(time_accurate, time_loop)
+
+  ! Maximum time step for the block
+  real, allocatable :: DtMax_B(:)
+  !$acc declare create(DtMax_B, Dt, DtFixed, Cfl)
+
+  ! Time accurate vs steady state, inside the time loop (or not yet)
+  logical :: IsTimeAccurate = .true.,  IsTimeLoop = .false.
+  !$acc declare create(IsTimeAccurate, IsTimeLoop)
 
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
   real :: Climit = -1.0
   !$acc declare create(Climit)
-
-  ! Fixed time step (only for time accurate and for implicit scheme mostly)
-  logical :: UseDtFixed
-  !$acc declare create(UseDtFixed)
 
   ! Limited time step
   logical :: UseDtLimit
@@ -73,8 +78,9 @@ module ModMain
   logical:: UseLocalTimeStep    = .false.
   logical:: UseLocalTimeStepNew = .false. ! if just switched on
 
-  ! Model Coupling variables
+  ! Model coupling variables
   logical :: UseBufferGrid    = .false.
+
   ! To split the LOS intergration span between the models
   real    :: rLowerModel = 0.0, rUpperModel = 1000.0
 
@@ -105,7 +111,7 @@ module ModMain
   !$acc declare create(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
 
   ! Single space separated NameVar string containing all the variable
-  ! names of NameVar_V (except for the fluid energies)
+  ! names of NameVar_V
   character(len=500) :: NameVarCouple
 
   ! Intrinsic field B0 may or may not be used if UseB is true.
@@ -159,8 +165,8 @@ module ModMain
   end type FaceBCType
 
   ! Logicals for bodies
-  logical:: Body1    = .false.  !!! -> UseBody1
-  !$acc declare create(Body1)
+  logical:: UseBody  = .false.
+  !$acc declare create(UseBody)
   logical:: UseBody2 = .false.
 
   ! Block AMR grid parameters
@@ -179,9 +185,9 @@ module ModMain
   integer :: nBlockExplAll, nBlockImplAll
 
   ! Index limits for the cell faces (needed for the constrained transport)
-  integer, parameter :: nIFace=nI+1
-  integer, parameter :: nJFace=nJ+1
-  integer, parameter :: nKFace=nK+1
+  integer, parameter :: nIFace = nI+1
+  integer, parameter :: nJFace = nJ+1
+  integer, parameter :: nKFace = nK+1
 
   ! Limits in the orthogonal directions. Default is no ghost cells,
   ! but this can be changed to 1 or 2 ghost cells depending on scheme
@@ -194,14 +200,14 @@ module ModMain
   !$acc declare create(kMinFace, kMaxFace, kMinFace2, kMaxFace2)
 
   ! div B control
-  logical :: UseDivbSource    = UseB
-  logical :: UseDivbDiffusion = .false.
-  logical :: UseProjection    = .false.
-  logical :: UseConstrainB    = .false.
-  logical :: UseHyperbolicDivb= .false.
-  real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0
-  real    :: HypDecay = 0.1
-  !$acc declare create(SpeedHyp, UseHyperbolicDivb, UseDivbSource, UseConstrainB)
+  logical :: UseDivbSource     = UseB
+  logical :: UseDivbDiffusion  = .false.
+  logical :: UseProjection     = .false.
+  logical :: UseConstrainB     = .false.
+  logical :: UseHyperbolicDivb = .false.
+  real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0, HypDecay = 0.1
+  !$acc declare create(UseDivbSource, UseConstrainB)
+  !$acc declare create(UseHyperbolicDivb, SpeedHyp, HypDecay)
 
   ! More numerical scheme parameters
   ! Prolongation order
@@ -209,7 +215,7 @@ module ModMain
   !$acc declare create(nOrderProlong)
 
   ! Message passing mode ('all' or 'allopt' ...)
-  character(len=10) :: optimize_message_pass = 'allopt'
+  character(len=10) :: TypeMessagePass = 'allopt'
 
   ! Source terms
 
@@ -219,22 +225,22 @@ module ModMain
   logical :: UseIonHeatConduction = .false.
 
   ! Logical and type for gravity
-  logical :: UseGravity = .false.
-  integer :: GravityDir = 0
-  real    :: GravitySi = 0.0
+  logical :: UseGravity  = .false.
+  integer :: iDirGravity = 0
+  real    :: GravitySi   = 0.0
 
   ! Logical for rotating inner boundary
-  logical          :: UseRotatingBc = .false.
+  logical :: UseRotatingBc = .false.
   !$acc declare create(UseRotatingBC)
 
   ! Coordinate system
   character(len=3) :: TypeCoordSystem = 'GSM'
-  integer :: TypeCoordSystemInt
+  integer :: iTypeCoordSystem
   integer,  parameter:: &
        GSM_ = 1, GSE_ = 2, HGR_ = 3, HGI_ = 4, HGC_ = 5, nCoordSystem = 5
   character(len=3), public, parameter :: NameCoordSystem_I(1:nCoordSystem) = &
        ['GSM', 'GSE', 'HGR', 'HGI', 'HGC']
-  !$acc declare create(TypeCoordSystemInt)
+  !$acc declare create(iTypeCoordSystem)
 
   ! Rotating frame or (at least approximately) inertial frame
   logical :: UseRotatingFrame = .false.
@@ -248,12 +254,12 @@ module ModMain
   logical :: UseStrict=.true.
 
   ! Debug logicals
-  logical :: okdebug=.false., ShowGhostCells=.true.
+  logical :: DoDebug=.false., DoShowGhostCells=.true.
 
   ! Time and timing variables
-  real :: Time_Simulation = 0.0
-  real :: Time_SimulationOld = 0.0
-  !$acc declare create(Time_Simulation)
+  real :: tSimulation = 0.0
+  real :: tSimulationOld = 0.0
+  !$acc declare create(tSimulation)
 
   ! This is the same default value as in the SWMF
   integer, dimension(7) :: iStartTime_I = [2000,3,21,10,45,0,0]
@@ -270,19 +276,18 @@ module ModMain
   logical:: UseTimingAll = .false.
   integer:: iUnitTiming = 6
   character(len=30):: NameTimingFile
-  integer:: dn_timing = -2
+  integer:: DnTiming = -2
 
   ! Optimize MPI variables
   logical :: UseOptimizeMpi = .false.
 
   ! Stopping conditions. These variables are only used in stand alone mode.
-  ! The only exeption is t_Max. It may be also used in the SWMF mode to control
-  ! evolving B0 field with the use of two magnetograms, one at tSimulation=0,
-  ! the other at tSimulation=t_Max.
-
-  real    :: t_Max = -1.0, cputime_max = -1.0
+  ! The only exeption is tSimulationMax. It may also be used in the SWMF mode
+  ! to control evolving B0 field with the use of two magnetograms,
+  ! one at tSimulation=0, the other at tSimulation=tSimulationMax.
+  real    :: tSimulationMax = -1.0, CpuTimeMax = -1.0
   integer :: nIter = -1
-  logical :: Check_Stopfile = .true.
+  logical :: DoCheckStopFile = .true.
   logical :: IsLastRead = .false.
 
   ! Controling the use of the features implemented in user files
@@ -329,10 +334,6 @@ module ModMain
   logical :: UseResistivePlanet = .false.
   !$acc declare create(UseResistivePlanet)
 
-  ! Modifies a few places so that the simulation result is the
-  ! same as that of the fast update methods
-  logical :: DoCompareFastUpdate = .false.
-
   ! Variables related to another component coupled directly with pointers
   integer           :: nVarComp2
   character(len=200):: NameVarComp2
@@ -346,16 +347,16 @@ contains
   !============================================================================
   subroutine init_mod_main
     !--------------------------------------------------------------------------
-    if(.not.allocated(dt_BLK))then
-       allocate(dt_BLK(MaxBlock))
-       dt_BLK = 0.0
-       !$acc update device(Dt_BLK)
+    if(.not.allocated(DtMax_B))then
+       allocate(DtMax_B(MaxBlock))
+       DtMax_B = 0.0
+       !$acc update device(DtMax_B)
     end if
   end subroutine init_mod_main
   !============================================================================
   subroutine clean_mod_main
     !--------------------------------------------------------------------------
-    if(allocated(dt_BLK)) deallocate(dt_BLK)
+    if(allocated(DtMax_B)) deallocate(DtMax_B)
 
   end subroutine clean_mod_main
   !============================================================================

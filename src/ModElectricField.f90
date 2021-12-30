@@ -28,8 +28,8 @@ module ModElectricField
        iProc, iComm, message_pass_cell
 
   use ModAdvance,      ONLY: Efield_DGB
-  use ModMain,         ONLY: n_step, UseB
-  use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
+  use ModMain,         ONLY: nStep, UseB
+  use ModGeometry,     ONLY: IsBoundary_B, Used_GB
   use ModCellBoundary, ONLY: set_cell_boundary, FloatBC_, GradPotBC_
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
   use ModLinearSolver, ONLY: LinearSolverParamType, solve_linear_multiblock
@@ -107,8 +107,8 @@ contains
     character(len=*), parameter:: NameSub = 'get_electric_field'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(nStepLast == n_step) RETURN
-    nStepLast = n_step
+    if(nStepLast == nStep) RETURN
+    nStepLast = nStep
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -122,7 +122,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
 
        ! Fill outer ghost cells with floating values
-       if(far_field_bcs_blk(iBlock)) &
+       if(IsBoundary_B(iBlock)) &
             call set_cell_boundary(nG, iBlock, 3, Efield_DGB(:,:,:,:,iBlock),&
             iTypeBcIn = FloatBC_)
     end do
@@ -182,7 +182,7 @@ contains
     end if
 
     do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-       if(.not. true_cell(i,j,k,iBlock))then
+       if(.not. Used_GB(i,j,k,iBlock))then
           Efield_DGB(:,i,j,k,iBlock) = 0.0
           CYCLE
        end if
@@ -242,7 +242,7 @@ contains
 
     if(UseJCrossBForce)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           DoTestCell = DoTest .and. iTest==i .and. jTest==j .and. kTest==k
 
           vInv = 1/CellVolume_GB(i,j,k,iBlock)
@@ -289,7 +289,7 @@ contains
        end do; end do; end do
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not. true_cell(i,j,k,iBlock))CYCLE
+          if(.not. Used_GB(i,j,k,iBlock))CYCLE
           Efield_DGB(:,i,j,k,iBlock) = SourceMhd_VC(:,i,j,k) +  &
                ( MhdFlux_VX(:,i,j,k)  - MhdFlux_VX(:,i+1,j,k)     &
                + MhdFlux_VY(:,i,j,k)  - MhdFlux_VY(:,i,j+1,k)     &
@@ -324,7 +324,7 @@ contains
     !--------------------------------------------------------------------------
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nK
-       if(.not. true_cell(i,j,k,iBlock))CYCLE
+       if(.not. Used_GB(i,j,k,iBlock))CYCLE
 
        b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
@@ -378,8 +378,8 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub, ' starting'
 
-    if(nStepLast == n_step) RETURN
-    nStepLast = n_step
+    if(nStepLast == nStep) RETURN
+    nStepLast = nStep
 
     nBlockUsed = nBlock - count(Unused_B(1:nBlock))
     nVarAll    = nBlockUsed*nIJK
@@ -400,7 +400,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
 
        ! Set outer boundary ghost cells with total E field
-       if(far_field_bcs_blk(iBlock)) &
+       if(IsBoundary_B(iBlock)) &
             Epot_DGB(:,:,:,:,iBlock) = Efield_DGB(:,:,:,:,iBlock)
 
        ! Epot = grad(Potential)
@@ -433,8 +433,8 @@ contains
     character(len=*), parameter:: NameSub = 'calc_div_e'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(nStepLast == n_step) RETURN
-    nStepLast = n_step
+    if(nStepLast == nStep) RETURN
+    nStepLast = nStep
 
     if(allocated(DivE_CB)) deallocate(DivE_CB)
     allocate(DivE_CB(nI,nJ,nK,nBlock))
@@ -462,11 +462,11 @@ contains
     character(len=*), parameter:: NameSub = 'calc_potential'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(DoTest)write(*,*) NameSub,' starting at n_step, nStepLast=', &
-         n_step, nStepLast
+    if(DoTest)write(*,*) NameSub,' starting at nStep, nStepLast=', &
+         nStep, nStepLast
 
-    if(nStepLast == n_step) RETURN
-    nStepLast = n_step
+    if(nStepLast == nStep) RETURN
+    nStepLast = nStep
 
     if(.not.allocated(Potential_GB)) &
          allocate(Potential_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
@@ -498,7 +498,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           n = n + 1
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           Rhs_I(n) = Rhs_I(n) + DivE_CB(i,j,k,iBlock)
        end do; end do; end do
     end do
@@ -530,7 +530,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           n = n + 1
-          if(true_cell(i,j,k,iBlock)) &
+          if(Used_GB(i,j,k,iBlock)) &
                Potential_GB(i,j,k,iBlock) = Potential_I(n)
        end do; end do; end do
     end do
@@ -550,7 +550,7 @@ contains
   !============================================================================
   subroutine bound_potential
 
-    use ModGeometry,   ONLY: body_blk, r_BLK
+    use ModGeometry,   ONLY: IsBody_B, r_GB
     use ModPhysics,    ONLY: rBody
     use ModIeCoupling, ONLY: get_ie_potential
     use BATL_lib,      ONLY: Xyz_DGB
@@ -579,7 +579,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-       if(far_field_bcs_blk(iBlock)) &
+       if(IsBoundary_B(iBlock)) &
             call set_cell_boundary(nG, iBlock, 1, Potential_GB(:,:,:,iBlock),&
             iTypeBcIn = iTypeBc)
     end do
@@ -590,10 +590,10 @@ contains
     rInside = 1.01
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       if(.not.body_BLK(iBLOCK)) CYCLE
+       if(.not.IsBody_B(iBLOCK)) CYCLE
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          if(r_BLK(i,j,k,iBlock) > rBody) CYCLE
-          if(r_BLK(i,j,k,iBlock) < rInside) CYCLE
+          if(r_GB(i,j,k,iBlock) > rBody) CYCLE
+          if(r_GB(i,j,k,iBlock) < rInside) CYCLE
           call get_ie_potential(Xyz_DGB(:,i,j,k,iBlock), &
                Potential_GB(i,j,k,iBlock))
        end do; end do; end do
@@ -624,7 +624,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           n = n + 1
-          if(true_cell(i,j,k,iBlock)) Potential_GB(i,j,k,iBlock) = x_I(n)
+          if(Used_GB(i,j,k,iBlock)) Potential_GB(i,j,k,iBlock) = x_I(n)
        end do; end do; end do
     end do
 
@@ -651,7 +651,7 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           n = n + 1
-          if(true_cell(i,j,k,iBlock))then
+          if(Used_GB(i,j,k,iBlock))then
              y_I(n) = Laplace_C(i,j,k)
           else
              y_I(n) = 0.0

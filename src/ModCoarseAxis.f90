@@ -12,7 +12,7 @@ module ModCoarseAxis
   logical:: UseCoarseAxis = .false.
   integer:: nCoarseLayer = 3
 
-  ! In case nCoarseLayer=1, then each pair of the cells near the axis are merged
+  ! If nCoarseLayer=1, then each pair of the cells near the axis are merged
   !----------a x i s---------------
   ! |   |   |          first layer "|" denote the cell boundaries
   ! | | | | |          second layer
@@ -54,8 +54,8 @@ contains
   !============================================================================
   subroutine calc_coarse_axis_timestep(iBlock,iHemisphere)
     use ModSize, ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, time_BLK
-    use ModGeometry, ONLY: true_cell
+    use ModAdvance,  ONLY: Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, DtMax_CB
+    use ModGeometry, ONLY: Used_GB
     use BATL_lib, ONLY: CellVolume_GB
     integer, intent(in):: iBlock, iHemisphere
     ! Misc
@@ -83,8 +83,8 @@ contains
        do j = 1, nJ/jMerge
           jStart = (j-1)*jMerge + 1; jLast = j*jMerge
           do i = 1,nI
-             if(any(.not. true_cell(i,jStart:jLast,k,iBlock))) then
-                time_BLK(i,jStart:jLast,k,iBlock) = 0
+             if(any(.not. Used_GB(i,jStart:jLast,k,iBlock))) then
+                DtMax_CB(i,jStart:jLast,k,iBlock) = 0
              else
                 Vdt =  sum( &
                      max(Flux_VXI(Vdt_,i,jStart:jLast,k,iGang), &
@@ -94,7 +94,7 @@ contains
                      + sum(max(Flux_VZI(Vdt_,i,jStart:jLast,k,iGang), &
                      Flux_VZI(Vdt_,i,jStart:jLast,k+1,iGang) ))
 
-                time_BLK(i,jStart:jLast,k,iBlock) = &
+                DtMax_CB(i,jStart:jLast,k,iBlock) = &
                      jMerge*CellVolume_GB(i,jStart,k,iBlock) / Vdt
           end if
           end do

@@ -64,13 +64,13 @@ contains
     case (1)
        call write_prefix; write(iUnitOut,*)
        call write_prefix
-       if(time_accurate) then
-          write(iUnitOut,*) 'Restarted run from N = ',n_step,' steps ', &
-               'and T = ',Time_Simulation, &
-               ' (',Time_Simulation/60.00, &
-               ' min, ',Time_Simulation/3600.00,' hrs).'
+       if(IsTimeAccurate) then
+          write(iUnitOut,*) 'Restarted run from N = ',nStep,' steps ', &
+               'and T = ',tSimulation, &
+               ' (',tSimulation/60.00, &
+               ' min, ',tSimulation/3600.00,' hrs).'
        else
-          write(iUnitOut,*) 'Restarted run from N = ',n_step,' steps.'
+          write(iUnitOut,*) 'Restarted run from N = ',nStep,' steps.'
        end if
     end select
 
@@ -85,9 +85,9 @@ contains
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModIO,        ONLY: iUnitOut, write_prefix
     use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
-    use ModAdvance,   ONLY: FluxType, UseEfield, iTypeUpdate
-    use ModGeometry,  ONLY: x1, x2, y1, y2, z1, z2, CellSizeMin, CellSizeMax, &
-         nTrueCells, count_true_cells
+    use ModAdvance,   ONLY: TypeFlux, UseEfield, iTypeUpdate
+    use ModGeometry,  ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, CellSizeMin, CellSizeMax, &
+         nUsedCell, count_true_cells
     use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, &
          UseSplitSemiImplicit, TypeSemiImplicit
     use ModPointImplicit, ONLY: UsePointImplicit
@@ -121,7 +121,7 @@ contains
     call write_prefix; write(iUnitOut,*)'   --------------------------'
     call write_prefix; write(iUnitOut,*)
     call write_prefix; write(iUnitOut,*)
-    if (NamePlanet /= 'NONE' .and. body1 .and. NameThisComp == 'GM') then
+    if (NamePlanet /= 'NONE' .and. UseBody .and. NameThisComp == 'GM') then
        call write_prefix; write(iUnitOut,*)'   Planetary Parameters'
        call write_prefix; write(iUnitOut,*)'   --------------------'
        call write_prefix; write(iUnitOut,*)
@@ -158,7 +158,7 @@ contains
     call write_prefix; write(iUnitOut,*)
     call write_prefix; write(iUnitOut,'(10X,a,10(f12.8))') 'Gamma:       ',Gamma_I
     call write_prefix; write(iUnitOut,*)
-    if(body1)then
+    if(UseBody)then
        call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
             'rBody:       ', rBody,      ', rPlanet:   ',rPlanetSi
        do iFluid = IonFirst_, nFluid
@@ -266,7 +266,7 @@ contains
     end if
 
     call write_prefix
-    write(iUnitOut,'(10X,a,a)') trim(FluxType),' flux function'
+    write(iUnitOut,'(10X,a,a)') trim(TypeFlux),' flux function'
     if(UseNeutralFluid)then
        call write_prefix
        write(iUnitOut,'(10X,a,a)') trim(TypeFluxNeutral), &
@@ -274,7 +274,7 @@ contains
     end if
 
     call write_prefix
-    if (time_accurate) then
+    if (IsTimeAccurate) then
        write(iUnitOut,'(10X,a)') 'Time accurate calculation'
     else
        write(iUnitOut,'(10X,a)') 'Steady state calculation'
@@ -337,7 +337,7 @@ contains
     call write_prefix; write(iUnitOut,*)'  Total number of cells       = ', &
          nNodeUsed*nIJK
     call write_prefix; write(iUnitOut,*)'  Total number of true cells  = ', &
-         nTrueCells
+         nUsedCell
     call write_prefix; write(iUnitOut,*)'  Min and max AMR levels      = ', &
          nLevelMin, nLevelMax
     if(IsLogRadius .or. IsGenRadius)then
@@ -358,11 +358,11 @@ contains
     call write_prefix
     write(iUnitOut,'(1x,a,3i8)')    'nIJK_D:      ', nIJK_D
     call write_prefix
-    write(iUnitOut,'(1x,a,2es16.8)') 'x:           ', x1, x2
+    write(iUnitOut,'(1x,a,2es16.8)') 'x:           ', xMinBox, xMaxBox
     call write_prefix
-    write(iUnitOut,'(1x,a,2es16.8)') 'y:           ', y1, y2
+    write(iUnitOut,'(1x,a,2es16.8)') 'y:           ', yMinBox, yMaxBox
     call write_prefix
-    write(iUnitOut,'(1x,a,2es16.8)') 'z:           ', z1, z2
+    write(iUnitOut,'(1x,a,2es16.8)') 'z:           ', zMinBox, zMaxBox
     call write_prefix; write(iUnitOut,*)
 
     if(UseUserWriteProgress) call user_action('write progress')
@@ -373,13 +373,13 @@ contains
 
   subroutine write_timeaccurate
 
-    use ModMain, ONLY : Time_Simulation
+    use ModMain, ONLY : tSimulation
 
     !--------------------------------------------------------------------------
     write(*, '(a,e13.5,a,f12.6,a,f12.6,a)') &
-         '   Simulated Time T = ',Time_Simulation, &
-         ' (',Time_Simulation/60.00, &
-         ' min, ',Time_Simulation/3600.00,' hrs)'
+         '   Simulated Time T = ',tSimulation, &
+         ' (',tSimulation/60.00, &
+         ' min, ',tSimulation/3600.00,' hrs)'
 
   end subroutine write_timeaccurate
   !============================================================================

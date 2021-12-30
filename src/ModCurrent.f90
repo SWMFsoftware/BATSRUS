@@ -5,7 +5,7 @@ module ModCurrent
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use ModAdvance,        ONLY: iTypeUpdate, UpdateFast_, State_VGB
+  use ModAdvance,        ONLY: iTypeUpdate, UpdateFast_
   use ModCoordTransform, ONLY: sph_to_xyz
   use CON_axes,          ONLY: transform_matrix
 #ifdef _OPENACC
@@ -23,7 +23,7 @@ module ModCurrent
 contains
   !============================================================================
   include 'vector_functions.h'
-  subroutine get_point_data_fast(Xyz_D, b_D, j_D)
+  subroutine get_point_data_fast(Xyz_D, b_D, Current_D)
     !$acc routine seq
 
     ! Obtain B and J at location Xyz_D using ghost cells
@@ -32,17 +32,17 @@ contains
     use BATL_lib, ONLY: find_grid_block, iProc
 
     real, intent(in):: Xyz_D(3)
-    real, intent(out):: b_D(3), j_D(3)
+    real, intent(out):: b_D(3), Current_D(3)
 
     integer:: iProcOut, iBlock, iCell_D(3)
     integer:: i, j, k, iLo, jLo, kLo, iHi, jHi, kHi
-    real:: Dist_D(3), WeightX, WeightY, WeightZ, WeightXyz, Current_D(3)
+    real:: Dist_D(3), WeightX, WeightY, WeightZ, WeightXyz, CurrentIjk_D(3)
     !--------------------------------------------------------------------------
     call find_grid_block(Xyz_D, iProcOut, iBlock, iCell_D, Dist_D, &
          UseGhostCell=.true.)
 
     b_D = 0.0
-    j_D = 0.0
+    Current_D = 0.0
 
     if(iProc /= iProcOut) RETURN
 
@@ -61,8 +61,8 @@ contains
 
              b_D = b_D + WeightXyz * State_VGB(Bx_:Bz_,i,j,k,iBlock)
 
-             call get_current(i, j, k, iBlock, Current_D)
-             j_D = j_D + WeightXyz * Current_D
+             call get_current(i, j, k, iBlock, CurrentIjk_D)
+             Current_D = Current_D + WeightXyz*CurrentIjk_D
           end do
        end do
     end do
@@ -86,9 +86,9 @@ contains
     use ModVarIndexes, ONLY: nVar
     use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B
     use ModAdvance, ONLY: State_VGB, StateOld_VGB
-    use ModParallel, ONLY: NeiLev
-    use ModGeometry, ONLY: XyzStart_BLK
-    use BATL_lib, ONLY: iProc, IsCartesianGrid, CellSize_DB, xyz_to_coord
+    use ModParallel, ONLY: DiLevel_EB
+    use ModGeometry, ONLY: Coord111_DB
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, xyz_to_coord
 
     ! Weight of the old state in the interpolation
     real, intent(in)  :: WeightOldState
@@ -159,7 +159,7 @@ contains
        ! Set buffer zone according to relative size of neighboring block
        do iDim = 1, 3
           ! Block at the lower index side
-          select case(NeiLev(2*iDim-1,iBlock))
+          select case(DiLevel_EB(2*iDim-1,iBlock))
           case(1)
              DxyzLo_D(iDim) = 1.5*Dxyz_D(iDim)
           case(-1)
@@ -168,10 +168,10 @@ contains
              DxyzLo_D(iDim) = Dxyz_D(iDim)
           end select
           ! Check if point is inside the buffer zone on the lower side
-          if(Xyz_D(iDim)<XyzStart_BLK(iDim,iBlock) - DxyzLo_D(iDim)) CYCLE BLOCK
+          if(Xyz_D(iDim)<Coord111_DB(iDim,iBlock) - DxyzLo_D(iDim)) CYCLE BLOCK
 
           ! Block at the upper index side
-          select case(NeiLev(2*iDim,iBlock))
+          select case(DiLevel_EB(2*iDim,iBlock))
           case(1)
              DxyzHi_D(iDim) = 1.5*Dxyz_D(iDim)
           case(-1)
@@ -180,12 +180,12 @@ contains
              DxyzHi_D(iDim) = Dxyz_D(iDim)
           end select
           ! Check if point is inside the buffer zone on the upper side
-          if(Xyz_D(iDim) > XyzStart_BLK(iDim,iBlock) + &
+          if(Xyz_D(iDim) > Coord111_DB(iDim,iBlock) + &
                (nIJK_D(iDim)-1)*Dxyz_D(iDim) + DxyzHi_D(iDim)) CYCLE BLOCK
        end do
 
        ! Find closest cell center indexes towards the lower index direction
-       IjkLo_D = floor((Xyz_D - XyzStart_BLK(:,iBlock))/Dxyz_D)+1
+       IjkLo_D = floor((Xyz_D - Coord111_DB(:,iBlock))/Dxyz_D)+1
 
        ! Set the size of the box for bilinear interpolation
 
@@ -218,13 +218,13 @@ contains
 
        ! Loop through the physical cells to add up their contribution
        do k = kLo, kHi
-          zK = XyzStart_BLK(3,iBlock) + (k-1)*Dxyz_D(3)
+          zK = Coord111_DB(3,iBlock) + (k-1)*Dxyz_D(3)
           WeightZ = 1 - DxyzInv_D(3)*abs(z-zK)
           do j = jLo, jHi
-             yJ = XyzStart_BLK(2,iBlock) + (j-1)*Dxyz_D(2)
+             yJ = Coord111_DB(2,iBlock) + (j-1)*Dxyz_D(2)
              WeightY = 1 - DxyzInv_D(2)*abs(y-yJ)
              do i = iLo, iHi
-                xI = XyzStart_BLK(1,iBlock) + (i-1)*Dxyz_D(1)
+                xI = Coord111_DB(1,iBlock) + (i-1)*Dxyz_D(1)
                 WeightX = 1 - DxyzInv_D(1)*abs(x-xI)
 
                 WeightXyz = WeightX*WeightY*WeightZ
@@ -250,7 +250,7 @@ contains
                       call get_current(i, j, k, iBlock, Current_D)
                       StateCurrent_V(nState+1:nState+3) = &
                            StateCurrent_V(nState+1:nState+3) &
-                           + WeightXyz * Current_D
+                           + WeightXyz*Current_D
                    end if
 
                 end if
@@ -273,11 +273,10 @@ contains
     ! otherwise use second order scheme when possible.
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-    use ModGeometry, ONLY: True_Cell, true_BLK, r_BLK
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B, r_GB
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB, &
          nI, nJ, nK, x_, y_, z_
-    use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot
+    use ModParallel, ONLY: DiLevel_EB
     use ModCoordTransform, ONLY: inverse_matrix
 #ifndef _OPENACC
     use ModB0, ONLY: UseCurlB0, rCurrentFreeB0, set_b0_source, CurlB0_DC
@@ -304,7 +303,7 @@ contains
     ! Exclude body cells
     character(len=*), parameter:: NameSub = 'get_current'
     !--------------------------------------------------------------------------
-    if(.not.True_Cell(i,j,k,iBlock) .and. .not.present(DoIgnoreBody))then
+    if(.not.Used_GB(i,j,k,iBlock) .and. .not.present(DoIgnoreBody))then
        Current_D = 0.0
        RETURN
     endif
@@ -321,13 +320,13 @@ contains
     Ax = -InvDx2; Bx = 0.0; Cx = +InvDx2
     ! Avoid the ghost cells at resolution changes by using
     ! second-order one-sided difference
-    if(i==1 .and. abs(NeiLeast(iBlock))==1)then
+    if(i==1 .and. abs(DiLevel_EB(1,iBlock))==1)then
        if(UseFirstOrder)then
           iL = i; Ax = -2*InvDx2; Cx = 2*InvDx2
        else
           iL = i+1; iR = i+2; Ax = 4*InvDx2; Bx =-3*InvDx2; Cx =-InvDx2
        end if
-    elseif(i==nI .and. abs(NeiLwest(iBlock))==1)then
+    elseif(i==nI .and. abs(DiLevel_EB(2,iBlock))==1)then
        if(UseFirstOrder)then
           iR = i; Ax = -2*InvDx2; Cx = 2*InvDx2
        else
@@ -343,13 +342,13 @@ contains
     else
        jR = j+1; jL = j-1;
        Ay = -InvDy2; By = 0.0; Cy = +InvDy2
-       if(j==1 .and. abs(NeiLsouth(iBlock))==1)then
+       if(j==1 .and. abs(DiLevel_EB(3,iBlock))==1)then
           if(UseFirstOrder)then
              jL = j; Ay = -2*InvDy2; Cy = 2*InvDy2
           else
              jL = j+1; jR = j+2; Ay = 4*InvDy2; By = -3*InvDy2; Cy = -InvDy2
           end if
-       elseif(j==nJ .and. abs(NeiLnorth(iBlock))==1)then
+       elseif(j==nJ .and. abs(DiLevel_EB(4,iBlock))==1)then
           if(UseFirstOrder)then
              jR = j; Ay = -2*InvDy2; Cy = 2*InvDy2
           else
@@ -366,13 +365,13 @@ contains
     else
        kR = k+1; kL = k-1
        Az = -InvDz2; Bz = 0.0; Cz = +InvDz2
-       if(k==1 .and. abs(NeiLbot(iBlock))==1)then
+       if(k==1 .and. abs(DiLevel_EB(5,iBlock))==1)then
           if(UseFirstOrder)then
              kL = k; Az = -2*InvDz2; Cz = 2*InvDz2
           else
              kL = k+1; kR = k+2; Az = 4*InvDz2; Bz =-3*InvDz2; Cz =-InvDz2
           end if
-       elseif(k==nK .and. abs(NeiLtop(iBlock))==1)then
+       elseif(k==nK .and. abs(DiLevel_EB(6,iBlock))==1)then
           if(UseFirstOrder)then
              kR = k; Az = -2*InvDz2; Cz = 2*InvDz2
           else
@@ -383,11 +382,11 @@ contains
 
     ! Use first-order one-sided difference near the body if needed.
     ! If even first-order fails, then set the current to zero and exit.
-    if(.not.true_BLK(iBlock) .and. .not.present(DoIgnoreBody))then
-       if(.not.True_Cell(iL,j,k,iBlock).and..not.True_Cell(iR,j,k,iBlock))then
+    if(.not.IsNoBody_B(iBlock) .and. .not.present(DoIgnoreBody))then
+       if(.not.Used_GB(iL,j,k,iBlock).and..not.Used_GB(iR,j,k,iBlock))then
           Current_D = 0.0
           RETURN
-       elseif(.not.True_Cell(iL,j,k,iBlock))then
+       elseif(.not.Used_GB(iL,j,k,iBlock))then
           Ax = 0.0
           if(iR==i+2)then
              Bx =-InvDx2; Cx = InvDx2
@@ -396,7 +395,7 @@ contains
           else ! iR==i+1
              Bx =-2.0*InvDx2; Cx = 2.0*InvDx2
           end if
-       elseif(.not.True_Cell(iR,j,k,iBlock))then
+       elseif(.not.Used_GB(iR,j,k,iBlock))then
           Cx = 0.0
           if(iL==i+1)then
              Ax = 2.0*InvDx2; Bx =-2.0*InvDx2
@@ -407,11 +406,11 @@ contains
 
        if(nJ > 1)then
           ! 2D or 3D
-          if(  .not.True_Cell(i,jL,k,iBlock) .and. &
-               .not.True_Cell(i,jR,k,iBlock))then
+          if(  .not.Used_GB(i,jL,k,iBlock) .and. &
+               .not.Used_GB(i,jR,k,iBlock))then
              Current_D = 0.0
              RETURN
-          elseif(.not.True_Cell(i,jL,k,iBlock))then
+          elseif(.not.Used_GB(i,jL,k,iBlock))then
              Ay = 0.0
              if(jR==j+2)then
                 By =-InvDy2; Cy = InvDy2
@@ -420,7 +419,7 @@ contains
              else ! jR==j+1
                 By =-2.0*InvDy2; Cy = 2.0*InvDy2
              end if
-          elseif(.not.True_Cell(i,jR,k,iBlock))then
+          elseif(.not.Used_GB(i,jR,k,iBlock))then
              Cy = 0.0
              if(jL==j+1)then
                 Ay = 2.0*InvDy2; By =-2.0*InvDy2
@@ -432,11 +431,11 @@ contains
 
        if(nK > 1)then
           ! 3D
-          if(  .not.True_Cell(i,j,kL,iBlock) .and. &
-               .not.True_Cell(i,j,kR,iBlock))then
+          if(  .not.Used_GB(i,j,kL,iBlock) .and. &
+               .not.Used_GB(i,j,kR,iBlock))then
              Current_D = 0.0
              RETURN
-          elseif(.not.True_Cell(i,j,kL,iBlock))then
+          elseif(.not.Used_GB(i,j,kL,iBlock))then
              Az = 0.0
              if(kR==k+2)then
                 Bz =-InvDz2; Cz = InvDz2
@@ -445,7 +444,7 @@ contains
              else ! kR==k+1
                 Bz =-2.0*InvDz2; Cz = 2.0*InvDz2
              end if
-          elseif(.not.True_Cell(i,j,kR,iBlock))then
+          elseif(.not.Used_GB(i,j,kR,iBlock))then
              Cz = 0.0
              if(kL==k+1)then
                 Az = 2.0*InvDz2; Bz =-2.0*InvDz2
@@ -542,7 +541,7 @@ contains
     ! Add curl B0 if necessary
     if(UseCurlB0)then
        ! Curl B0 is zero inside rCurrentFreeB0
-       if(r_BLK(i,j,k,iBlock) < rCurrentFreeB0) RETURN
+       if(r_GB(i,j,k,iBlock) < rCurrentFreeB0) RETURN
        ! Curl B0 is only calculated for the physical cells
        if(i<1 .or. i>nI .or. j<1 .or. j>nJ .or. k<1 .or. k>nK)RETURN
        ! Optimize for multiple calls for the same block
@@ -560,12 +559,10 @@ contains
        Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, FacMin)
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
-    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
-    use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V, set_dipole
-    use ModB0,             ONLY: get_b0_dipole
-    use CON_planet_field,  ONLY: get_planet_field, map_planet_field, &
-         map_planet_field_fast
-    use ModNumConst,       ONLY: cHalfPi, cTwoPi, cPi
+    use ModMain,           ONLY: tSimulation, TypeCoordSystem, nBlock
+    use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V
+    use CON_planet_field,  ONLY: get_planet_field, map_planet_field
+    use ModNumConst,       ONLY: cTwoPi, cPi
     use ModMpi
     use BATL_lib,          ONLY: iProc, iComm
 
@@ -624,9 +621,9 @@ contains
     real, allocatable :: bCurrent_VII(:,:,:)
     !$acc declare create(bCurrent_VII)
 
-    integer :: i, j, ii, jj, iHemisphere, iError
+    integer :: i, j, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
-    real    :: b_D(3), bRcurrents, Fac, j_D(3), bUnit_D(3), B0_D(3)
+    real    :: b_D(3), bRcurrents, Fac, Current_D(3), bUnit_D(3), B0_D(3)
     real    :: bIn_D(3), bIn, Br
     real    :: GmFac_DD(3,3)
     !$acc declare create(GmFac_DD)
@@ -650,7 +647,7 @@ contains
 
     Fac_II = 0.0
 
-    GmFac_DD = transform_matrix(Time_Simulation, TypeCoordFac, TypeCoordSystem)
+    GmFac_DD = transform_matrix(tSimulation, TypeCoordFac, TypeCoordSystem)
     !$acc update device(GmFac_DD)
 
     if (abs(rIn - rCurrents) < 1.0e-3)then
@@ -675,7 +672,7 @@ contains
 #endif
 
     !$acc parallel loop vector collapse(2) &
-    !$acc private(XyzIn_D, Xyz_D, B0_D, b_D, j_D, State_V)
+    !$acc private(XyzIn_D, Xyz_D, B0_D, b_D, Current_D, State_V)
     do j = 1, nPhi; do i = 1, nTheta
 
        if(present(Phi_I))then
@@ -697,7 +694,7 @@ contains
           call map_planet_field_fast(XyzIn_D, rCurrents, Xyz_D, &
                iHemisphere, UseGsmIn=UseGsm)
 #else
-          call map_planet_field(Time_Simulation, XyzIn_D, &
+          call map_planet_field(tSimulation, XyzIn_D, &
                TypeCoordFac//' NORM', rCurrents, Xyz_D, iHemisphere)
 #endif
 
@@ -718,17 +715,17 @@ contains
        call get_b0_dipole(Xyz_D, B0_D)
 #else
        ! Get the B0 field at the mapped position
-       call get_planet_field(Time_Simulation, Xyz_D, &
+       call get_planet_field(tSimulation, Xyz_D, &
             TypeCoordSystem//' NORM', B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
 #endif
 
        ! Extract currents and magnetic field for this position
        if(iTypeUpdate >= UpdateFast_)then
-          call get_point_data_fast(Xyz_D, b_D, j_D)
+          call get_point_data_fast(Xyz_D, b_D, Current_D)
           bCurrent_VII(0,  i,j) = 1.0          ! Weight
           bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
-          bCurrent_VII(4:6,i,j) = j_D          ! Currents
+          bCurrent_VII(4:6,i,j) = Current_D          ! Currents
        else
           call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
           bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
@@ -746,96 +743,94 @@ contains
 
     ! Map the field aligned current to rIn sphere
     if(iProc==0)then
-       !$acc parallel loop vector collapse(2) private(b_D, j_D, bUnit_D, &
-       !$acc XyzIn_D, xyz_D, bIn_D, rUnit_D)
-       do j = 1, nPhi
-          do i = 1, nTheta
+       !$acc parallel loop vector collapse(2) &
+       !$acc private(b_D, Current_D, XyzIn_D, Xyz_D, bIn_D, rUnit_D, bUnit_D)
+       do j = 1, nPhi; do i = 1, nTheta
 
-             if(present(Phi_I))then
-                Phi = Phi_I(j)
-             else
-                Phi = (j-1) * dPhi
-             end if
+          if(present(Phi_I))then
+             Phi = Phi_I(j)
+          else
+             Phi = (j-1) * dPhi
+          end if
 
-             if(present(Theta_I))then
-                Theta = Theta_I(i)
-             else
-                Theta = (i-1) * dTheta
-             end if
+          if(present(Theta_I))then
+             Theta = Theta_I(i)
+          else
+             Theta = (i-1) * dTheta
+          end if
 
-             ! Divide MHD values by the total weight if it exceeds 1.0
-             if(bCurrent_VII(0,i,j) > 1.0) bCurrent_VII(:,i,j) = &
-                  bCurrent_VII(:,i,j) / bCurrent_VII(0,i,j)
+          ! Divide MHD values by the total weight if it exceeds 1.0
+          if(bCurrent_VII(0,i,j) > 1.0) bCurrent_VII(:,i,j) = &
+               bCurrent_VII(:,i,j) / bCurrent_VII(0,i,j)
 
-             ! Extract magnetic field and current
-             b_D = bCurrent_VII(1:3,i,j)
-             j_D = bCurrent_VII(4:6,i,j)
+          ! Extract magnetic field and current
+          b_D = bCurrent_VII(1:3,i,j)
+          Current_D = bCurrent_VII(4:6,i,j)
 
-             ! The strength of the field
-             bRcurrents = norm2(b_D)
+          ! The strength of the field
+          bRcurrents = norm2(b_D)
 
-             ! Convert b_D into a unit vector
-             bUnit_D = b_D / bRcurrents
+          ! Convert b_D into a unit vector
+          bUnit_D = b_D / bRcurrents
 
-             ! get the field aligned current
-             Fac = sum(bUnit_D*j_D)
+          ! get the field aligned current
+          Fac = sum(bUnit_D*Current_D)
 
-             ! Get Cartesian coordinates
-             call sph_to_xyz(rIn, Theta, Phi, Xyz_D)
+          ! Get Cartesian coordinates
+          call sph_to_xyz(rIn, Theta, Phi, Xyz_D)
 
-             ! Convert to GM coordinates
-             XyzIn_D = matmul3_left(GmFac_DD, Xyz_D)
+          ! Convert to GM coordinates
+          XyzIn_D = matmul3_left(GmFac_DD, Xyz_D)
 
-             if(DoMap)then
-                ! Calculate magnetic field strength at the rIn grid point
+          if(DoMap)then
+             ! Calculate magnetic field strength at the rIn grid point
 
 #ifdef _OPENACC
-                call get_b0_dipole(XyzIn_D, bIn_D)
+             call get_b0_dipole(XyzIn_D, bIn_D)
 #else
-                call get_planet_field(Time_Simulation, XyzIn_D, &
-                     TypeCoordSystem//' NORM', bIn_D)
+             call get_planet_field(tSimulation, XyzIn_D, &
+                  TypeCoordSystem//' NORM', bIn_D)
 
-                ! Convert to normalized units
-                bIn_D = bIn_D*Si2No_V(UnitB_)
+             ! Convert to normalized units
+             bIn_D = bIn_D*Si2No_V(UnitB_)
 #endif
-                bIn   = norm2(bIn_D)
+             bIn   = norm2(bIn_D)
 
-                ! Multiply by the ratio of the magnetic field strengths
-                Fac = bIn / bRcurrents * Fac
-             else
-                bIn_D = b_D
-                bIn   = norm2(bIn_D)
-             end if
+             ! Multiply by the ratio of the magnetic field strengths
+             Fac = bIn / bRcurrents * Fac
+          else
+             bIn_D = b_D
+             bIn   = norm2(bIn_D)
+          end if
 
-             ! Zero out small Fac if requested
-             if(present(FacMin))then
-                if(abs(Fac) < FacMin) Fac = 0.0
-             end if
+          ! Zero out small Fac if requested
+          if(present(FacMin))then
+             if(abs(Fac) < FacMin) Fac = 0.0
+          end if
 
-             rUnit_D = XyzIn_D / rIn
-             Br      = sum(bIn_D*rUnit_D)
+          rUnit_D = XyzIn_D / rIn
+          Br      = sum(bIn_D*rUnit_D)
 
-             ! Get radial component of FAC: FAC_r = FAC*Br/B
-             if(present(IsRadial)) Fac = Fac * Br/bIn
+          ! Get radial component of FAC: FAC_r = FAC*Br/B
+          if(present(IsRadial)) Fac = Fac * Br/bIn
 
-             if(present(IsRadialAbs)) Fac = Fac * abs(Br) / bIn
+          if(present(IsRadialAbs)) Fac = Fac * abs(Br) / bIn
 
-             ! store the (radial component of the) field alinged current
-             Fac_II(i,j) = Fac
+          ! store the (radial component of the) field alinged current
+          Fac_II(i,j) = Fac
 
-             ! store the B field in the FAC coordinates
-             if(present(b_DII)) b_DII(:,i,j) = matmul3_right(bIn_D, GmFac_DD)
+          ! store the B field in the FAC coordinates
+          if(present(b_DII)) b_DII(:,i,j) = matmul3_right(bIn_D, GmFac_DD)
 
-             ! store radial component of B field
-             if(present(Br_II)) Br_II(i,j) = Br
+          ! store radial component of B field
+          if(present(Br_II)) Br_II(i,j) = Br
 
-             ! store tangential B field vector in FAC coordinates
-             if(present(Bt_DII))then
-                b_D = cross_prod(rUnit_D, bIn_D)
-                Bt_DII(:,i,j) = matmul3_right(b_D, GmFac_DD )
-             end if
-          end do
-       end do
+          ! store tangential B field vector in FAC coordinates
+          if(present(Bt_DII))then
+             b_D = cross_prod(rUnit_D, bIn_D)
+             Bt_DII(:,i,j) = matmul3_right(b_D, GmFac_DD )
+          end if
+       end do; end do
     end if
     deallocate(bCurrent_VII)
 
@@ -857,6 +852,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine calc_field_aligned_current
   !============================================================================
-
 end module ModCurrent
 !==============================================================================

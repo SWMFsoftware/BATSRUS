@@ -10,7 +10,7 @@ module ModIonElectron
   use ModMain, ONLY:  UseUserSourceImpl
   use ModAdvance, ONLY: State_VGB, Source_VC
   use ModPhysics, ONLY: C2light
-  use ModGeometry, ONLY: true_cell
+  use ModGeometry, ONLY: Used_GB
   use ModB0,       ONLY: UseB0, B0_DGB
   use ModMultiFluid, ONLY: nIonFluid, nTrueIon, ElectronFirst_, &
        iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I,   &
@@ -124,7 +124,7 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        State_V = State_VGB(:,i,j,k,iBlock)
 
@@ -338,7 +338,7 @@ contains
     do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
        DoTestCell = DoTest .and. i == iTest .and. j == jTest .and. k == kTest
 
-       if (DoHallCurrent .and. true_cell(i,j,k,iBlock)) then
+       if (DoHallCurrent .and. Used_GB(i,j,k,iBlock)) then
           call get_current(i,j,k,iBlock,Current_D)
        else
           Current_D = 0.0

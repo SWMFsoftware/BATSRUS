@@ -32,13 +32,13 @@ contains
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
     use ModMain, ONLY : nBlock, Unused_B, &
-         time_loop, &
+         IsTimeLoop, &
          UseConstrainB, UseProjection, &
-         nOrder, nOrderProlong, optimize_message_pass, &
+         nOrder, nOrderProlong, TypeMessagePass, &
          UseHighResChange, UseBufferGrid, UseResistivePlanet
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB, iTypeUpdate, UpdateOrig_, UpdateFast_
-    use ModGeometry, ONLY: far_field_BCs_BLK
+    use ModGeometry, ONLY: IsBoundary_B
     use ModPhysics,  ONLY: ShockSlope, nVectorVar, iVectorVar_I
     use ModFaceValue, ONLY: UseAccurateResChange
     use ModEnergy,   ONLY: limit_pressure
@@ -108,7 +108,7 @@ contains
     UseOrder2=.false.
     if(present(UseOrder2In)) UseOrder2 = UseOrder2In
 
-    UseBuffer = time_loop.and.UseBufferGrid
+    UseBuffer = IsTimeLoop.and.UseBufferGrid
     if(present(UseBufferIn)) UseBuffer = UseBufferIn
 
     DoRestrictFace = nOrderProlong==1
@@ -135,7 +135,7 @@ contains
        else
           do iBlock = 1, nBlock
              if (Unused_B(iBlock)) CYCLE
-             if (far_field_BCs_BLK(iBlock) .and. &
+             if (IsBoundary_B(iBlock) .and. &
                   (nOrderProlong==2 .or. UseHighResChangeNow)) then
                 call set_cell_boundary&
                      (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
@@ -168,7 +168,7 @@ contains
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseOpenACCIn=.true.)
-    elseif (optimize_message_pass=='all') then
+    elseif (TypeMessagePass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
        nWidth = nG; if(nOrder == 1 .and. ShockSlope == 0.0)  nWidth = 1
@@ -229,7 +229,7 @@ contains
           if (Unused_B(iBlock)) CYCLE
           if(.not.DoResChangeOnly &
                .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
-             if (far_field_BCs_BLK(iBlock)) then
+             if (IsBoundary_B(iBlock)) then
                 call set_cell_boundary( &
                      nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
 

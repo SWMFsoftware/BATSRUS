@@ -111,7 +111,7 @@ contains
     use ModSetParameters, ONLY: set_parameters
     use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use ModMain, ONLY : CodeVersion, NameThisComp, &
-         time_accurate, time_simulation, StartTime, iStartTime_I, UseRotatingBc
+         IsTimeAccurate, tSimulation, StartTime, iStartTime_I, UseRotatingBc
     use ModB0, ONLY: DtUpdateB0, DoUpdateB0
     use CON_physics, ONLY: get_time, get_planet
     use ModTimeConvert, ONLY: time_real_to_int
@@ -145,8 +145,8 @@ contains
        call set_parameters('READ')
     case('CHECK')
        call get_time( &
-            DoTimeAccurateOut = time_accurate, &
-            tSimulationOut    = time_simulation, &
+            DoTimeAccurateOut = IsTimeAccurate, &
+            tSimulationOut    = tSimulation, &
             tStartOut         = StartTime)
        call get_planet( &
             DtUpdateB0Out  = DtUpdateB0,    &
@@ -368,14 +368,14 @@ contains
 
   subroutine GM_finalize(TimeSimulation)
 
-    use ModMain, ONLY: time_loop
+    use ModMain, ONLY: IsTimeLoop
 
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter:: NameSub = 'GM_finalize'
     !--------------------------------------------------------------------------
     ! We are not advancing in time any longer
-    time_loop = .false.
+    IsTimeLoop = .false.
 
     call BATS_save_files('FINAL')
 
@@ -402,7 +402,7 @@ contains
 
   subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 
-    use ModMain,   ONLY: Time_Simulation
+    use ModMain,   ONLY: tSimulation
 
     real, intent(inout) :: TimeSimulation   ! current time of component
 
@@ -416,8 +416,8 @@ contains
     if(DoTestMe)write(*,*)NameSub,' called with tSim, tSimLimit=',&
          TimeSimulation, TimeSimulationLimit
 
-    if(abs(Time_Simulation - TimeSimulation)>0.0001) then
-       write(*,*)NameSub,' GM time=', Time_Simulation, &
+    if(abs(tSimulation - TimeSimulation)>0.0001) then
+       write(*,*)NameSub,' GM time=', tSimulation, &
             ' SWMF time=', TimeSimulation
        call CON_stop(NameSub// &
             ' SWMF_ERROR: GM and SWMF simulation times differ')
@@ -426,7 +426,7 @@ contains
     call BATS_advance(TimeSimulationLimit)
 
     ! Return time after the time step
-    TimeSimulation = Time_Simulation
+    TimeSimulation = tSimulation
 
     if(DoTestMe)write(*,*)NameSub,' finished with tSim=', TimeSimulation
 
@@ -461,7 +461,7 @@ contains
   end subroutine GM_use_pointer
   !============================================================================
   function GM_is_right_boundary_d(iBlock) RESULT(IsRightBoundary_D)
-    use ModParallel, ONLY: NOBLK, NeiLev
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     use BATL_size, ONLY: nDim
     integer, intent(in) :: iBlock
     logical :: IsRightBoundary_D(nDim)
@@ -469,7 +469,7 @@ contains
     character(len=*), parameter:: NameSub = 'GM_is_right_boundary_d'
     !--------------------------------------------------------------------------
     do iDir = 1, nDim
-       IsRightBoundary_D(iDir) = neiLEV(2*iDir,iBlock) == NOBLK
+       IsRightBoundary_D(iDir) = DiLevel_EB(2*iDir,iBlock) == Unset_
     end do
   end function GM_is_right_boundary_d
   !============================================================================

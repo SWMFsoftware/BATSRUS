@@ -6,7 +6,7 @@ module ModFieldTraceFast
 
   use ModKind
   use ModFieldTrace
-  use ModMain, ONLY: UseB0, TypeCoordSystem, Time_Simulation
+  use ModMain, ONLY: UseB0, TypeCoordSystem, tSimulation
   use ModB0, ONLY: B0_DGB, get_b0, get_b0_dipole
   use ModAdvance, ONLY: State_VGB, Bx_, Bz_, iTypeUpdate, UpdateSlow_
   use BATL_lib, ONLY: &
@@ -111,7 +111,7 @@ contains
     !
     ! Details of the algorithm are to be published later
 
-    use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, time_simulation
+    use ModMain,     ONLY: nStep, iNewGrid, iNewDecomposition, tSimulation
     use ModPhysics,  ONLY: set_dipole
     use CON_axes,    ONLY: transform_matrix
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
@@ -129,18 +129,18 @@ contains
     call init_mod_trace_fast
 
     if(DoTest)then
-       write(*,*)'GM ray_trace: nStepLast,n_step         =',nStepLast,n_step
+       write(*,*)'GM ray_trace: nStepLast,nStep         =',nStepLast,nStep
        write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
        write(*,*)'GM ray_trace: iLastDecomp,iNewDecomp=',&
             iLastDecomposition,iNewDecomposition
     end if
 
-    if(  nStepLast + DnRaytrace > n_step   .and. &
+    if(  nStepLast + DnRaytrace > nStep   .and. &
          iLastGrid          == iNewGrid .and. &
          iLastDecomposition == iNewDecomposition) RETURN
 
     ! Remember this call
-    nStepLast = n_step
+    nStepLast = nStep
     iLastGrid = iNewGrid
     iLastDecomposition = iNewDecomposition
 
@@ -152,7 +152,7 @@ contains
 
     ! Transformation matrix between the SM(G) and GM coordinates
     if(UseSmg) &
-         GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+         GmSm_DD = transform_matrix(tSimulation,'SMG',TypeCoordSystem)
     !$acc update device(GmSm_DD)
 
     if(UseAccurateTrace .or. .not.IsCartesianGrid)then
@@ -171,8 +171,8 @@ contains
   !============================================================================
   subroutine trace_grid_fast
 
-    use ModParallel, ONLY: NOBLK, neiLEV
-    use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
+    use ModParallel, ONLY: Unset_, DiLevel_EB
+    use ModGeometry, ONLY: r_GB, rMin_B, Used_GB
     use ModMpi
 
     ! Iteration parameters
@@ -189,7 +189,7 @@ contains
     ! Minimum value of B for which integration of field lines makes any sense
     real, parameter :: SmallB = 1e-8
 
-    ! True if Rmin_BLK < rTrace
+    ! True if rMin_B < rTrace
     logical :: DoCheckInside
 
     ! Face index for the final point of the ray
@@ -272,12 +272,12 @@ contains
        Trace_DINB(:,:,2:nI,2:nJ,2:nK,iBlock)=OPENRAY
 
        ! Set Trace_DINB=OPENRAY at outer boundaries
-       if(neiLEV(1,iBlock)==NOBLK) Trace_DINB(:,:,   1,:,:,iBlock) = OPENRAY
-       if(neiLEV(2,iBlock)==NOBLK) Trace_DINB(:,:,nI+1,:,:,iBlock) = OPENRAY
-       if(neiLEV(3,iBlock)==NOBLK) Trace_DINB(:,:,:,   1,:,iBlock) = OPENRAY
-       if(neiLEV(4,iBlock)==NOBLK) Trace_DINB(:,:,:,nJ+1,:,iBlock) = OPENRAY
-       if(neiLEV(5,iBlock)==NOBLK) Trace_DINB(:,:,:,:,   1,iBlock) = OPENRAY
-       if(neiLEV(6,iBlock)==NOBLK) Trace_DINB(:,:,:,:,nK+1,iBlock) = OPENRAY
+       if(DiLevel_EB(1,iBlock)==Unset_) Trace_DINB(:,:,   1,:,:,iBlock) = OPENRAY
+       if(DiLevel_EB(2,iBlock)==Unset_) Trace_DINB(:,:,nI+1,:,:,iBlock) = OPENRAY
+       if(DiLevel_EB(3,iBlock)==Unset_) Trace_DINB(:,:,:,   1,:,iBlock) = OPENRAY
+       if(DiLevel_EB(4,iBlock)==Unset_) Trace_DINB(:,:,:,nJ+1,:,iBlock) = OPENRAY
+       if(DiLevel_EB(5,iBlock)==Unset_) Trace_DINB(:,:,:,:,   1,iBlock) = OPENRAY
+       if(DiLevel_EB(6,iBlock)==Unset_) Trace_DINB(:,:,:,:,nK+1,iBlock) = OPENRAY
 
     end do
 
@@ -343,7 +343,7 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           ! Flag cells inside the ionosphere if necessary
-          DoCheckInside=Rmin_BLK(iBlock)<rTrace
+          DoCheckInside=rMin_B(iBlock)<rTrace
 
           !$acc loop vector collapse(3) independent &
           !$acc private(Gen_D, GenIni_D, Weight_I, Trace_DI, &
@@ -354,12 +354,12 @@ contains
                   .and. iZ>1 .and. iZ<=nK ) CYCLE
 
              ! Exclude outer boundaries
-             if(neiLEV(1,iBlock)==NOBLK .and. iX==   1) CYCLE
-             if(neiLEV(2,iBlock)==NOBLK .and. iX==nI+1) CYCLE
-             if(neiLEV(5,iBlock)==NOBLK .and. iZ==   1) CYCLE
-             if(neiLEV(6,iBlock)==NOBLK .and. iZ==nK+1) CYCLE
-             if(neiLEV(3,iBlock)==NOBLK .and. iY==   1) CYCLE
-             if(neiLEV(4,iBlock)==NOBLK .and. iY==nJ+1) CYCLE
+             if(DiLevel_EB(1,iBlock)==Unset_ .and. iX==   1) CYCLE
+             if(DiLevel_EB(2,iBlock)==Unset_ .and. iX==nI+1) CYCLE
+             if(DiLevel_EB(5,iBlock)==Unset_ .and. iZ==   1) CYCLE
+             if(DiLevel_EB(6,iBlock)==Unset_ .and. iZ==nK+1) CYCLE
+             if(DiLevel_EB(3,iBlock)==Unset_ .and. iY==   1) CYCLE
+             if(DiLevel_EB(4,iBlock)==Unset_ .and. iY==nJ+1) CYCLE
 
              if(DoTestRay)write(*,*)'TESTING RAY: me,iBlock,iX,iY,iZ,Xyz_D',&
                   iProc,iBlock,iX,iY,iZ,&
@@ -536,7 +536,7 @@ contains
        if(Unused_B(iBlock))CYCLE
 
        ! Set flag if checking on the ionosphere is necessary
-       DoCheckInside = Rmin_BLK(iBlock) < rTrace
+       DoCheckInside = rMin_B(iBlock) < rTrace
 
        do iRay=1,2
 #ifndef _OPENACC
@@ -552,8 +552,8 @@ contains
           do iZ=1,nK; do iY=1,nJ; do iX=1,nI
 
              ! Shortcuts for inner and false cells
-             if(R_BLK(iX,iY,iZ,iBlock) < rInner .or. &
-                  .not.true_cell(iX,iY,iZ,iBlock))then
+             if(r_GB(iX,iY,iZ,iBlock) < rInner .or. &
+                  .not.Used_GB(iX,iY,iZ,iBlock))then
                 ray(:,iRay,iX,iY,iZ,iBlock)=BODYRAY
 
                 if(DoTestRay)write(*,*)'BODYRAY'
@@ -798,7 +798,7 @@ contains
       !------------------------------------------------------------------------
 #ifndef _OPENACC
       if(iTypeUpdate <= UpdateSlow_)then
-         call map_planet_field(Time_Simulation, Xyz_D, &
+         call map_planet_field(tSimulation, Xyz_D, &
               TypeCoordSystem//' NORM', rIonosphere, x_D, iHemisphere)
       else
 #endif
@@ -1425,7 +1425,7 @@ contains
   !============================================================================
   subroutine ray_pass_new
 
-    use ModParallel, ONLY : neiLEV
+    use ModParallel, ONLY : DiLevel_EB
     use BATL_lib, ONLY: message_pass_node
 
     integer :: iBlock, iFace
@@ -1445,7 +1445,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        do iFace = 1, 6
-          if(neiLEV(iFace,iBlock)==1)call prolong_ray_after_pass(iFace,iBlock)
+          if(DiLevel_EB(iFace,iBlock)==1)call prolong_ray_after_pass(iFace,iBlock)
        end do
     end do
 
@@ -1595,7 +1595,7 @@ contains
     !           S subface    (one quarter of a face)
 
     use ModMain, ONLY: Unused_B
-    use ModParallel, ONLY: neiLEV
+    use ModParallel, ONLY: DiLevel_EB
 
     ! Local variables
 
@@ -1629,7 +1629,7 @@ contains
        if(Unused_B(iBlock))CYCLE
 
        do iFace = 1, 6
-          if(neiLEV(iFace,iBlock)==1)call prolong_ray(iFace, iBlock)
+          if(DiLevel_EB(iFace,iBlock)==1)call prolong_ray(iFace, iBlock)
        end do
     end do
 
@@ -1797,7 +1797,7 @@ contains
     subroutine ray_pass_faces(&
          iDir, iFaceMin, iFaceMax, DoEqual, DoRestrict, DoProlong)
 
-      use ModParallel, ONLY : NOBLK, neiLEV, neiBLK, neiPE
+      use ModParallel, ONLY : Unset_, DiLevel_EB, jBlock_IEB, jProc_IEB
       use ModMpi
 
       integer, intent(in):: iDir, iFaceMin,iFaceMax
@@ -1851,7 +1851,7 @@ contains
          !$acc parallel loop gang
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
-            DiLevel = neiLEV(iFace,iBlock)
+            DiLevel = DiLevel_EB(iFace,iBlock)
 
             call setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
                  iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
@@ -1862,8 +1862,8 @@ contains
             case(0)
                if(.not.DoEqual)CYCLE
 
-               jProc=neiPE(1,iFace,iBlock)
-               jBlock=neiBLK(1,iFace,iBlock)
+               jProc=jProc_IEB(1,iFace,iBlock)
+               jBlock=jBlock_IEB(1,iFace,iBlock)
                if(jProc==iProc)then
                   ! Local copy
 
@@ -1883,8 +1883,8 @@ contains
             case(1)
                if(.not.DoRestrict)CYCLE
 
-               jProc=neiPE(1,iFace,iBlock)
-               jBlock=neiBLK(1,iFace,iBlock)
+               jProc=jProc_IEB(1,iFace,iBlock)
+               jBlock=jBlock_IEB(1,iFace,iBlock)
                ! Subface index =1,2,3, or 4 with respect to the coarse neighbor
 
                ! iSubFace = iSubFace_IA(iFace,iNode_B(iBlock))
@@ -1939,8 +1939,8 @@ contains
                if(.not.DoProlong)CYCLE
 
                do iSubFace = 1, 4
-                  jProc = neiPE(iSubFace,iFace,iBlock)
-                  jBlock = neiBLK(iSubFace,iFace,iBlock)
+                  jProc = jProc_IEB(iSubFace,iFace,iBlock)
+                  jBlock = jBlock_IEB(iSubFace,iFace,iBlock)
 
                   call setsubrange_ray(.true., iFace, iSubFace, &
                        iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
@@ -1967,7 +1967,7 @@ contains
                   end if
                end do ! iSubFace
 
-            case(NOBLK)
+            case(Unset_)
                ! There is no neighbor, do nothing
                CYCLE
             case default
@@ -2010,7 +2010,7 @@ contains
                  iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
 
             ! Post non-blocking receive for opposite face of neighbor block
-            DiLevel = neiLEV(jFace,iBlock)
+            DiLevel = DiLevel_EB(jFace,iBlock)
             select case(DiLevel)
             case(0)
                if(.not.DoEqual)CYCLE
@@ -2024,14 +2024,14 @@ contains
                if(.not.DoRestrict)CYCLE
                nSubFace=4
                iSize1=iSizeR
-            case(NOBLK)
+            case(Unset_)
                ! Do nothing
                CYCLE
             case default
                write(*,*)'me,iBlock,jFace,DiLevel=',&
                     iProc, iBlock, jFace, DiLevel
                call stop_mpi(&
-                    'Error in message pass: Invalid value for neiLEV')
+                    'Error in message pass: Invalid value for DiLevel_EB')
             end select
 
             if(DoDebug.and.DoTest)write(*,*)&
@@ -2039,7 +2039,7 @@ contains
                  iProc, DiLevel, nSubFace, iSize1
 
             do iSubFace=1,nSubFace
-               jProc = neiPE(iSubFace,jFace,iBlock)
+               jProc = jProc_IEB(iSubFace,jFace,iBlock)
                if(jProc /= iProc)then
                   ! Remote receive
                   iTag = 100*iBlock+10*iFace+iSubFace
@@ -2085,7 +2085,7 @@ contains
 
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
-            DiLevel = neiLEV(iFace,iBlock)
+            DiLevel = DiLevel_EB(iFace,iBlock)
 
             if(DoDebug.and.DoTest)write(*,*)&
                  'sending: me, iFace,iBlock,DiLevel=', &
@@ -2095,8 +2095,8 @@ contains
             case(0)
                if(.not.DoEqual)CYCLE
 
-               jProc=neiPE(1,iFace,iBlock)
-               jBlock=neiBLK(1,iFace,iBlock)
+               jProc=jProc_IEB(1,iFace,iBlock)
+               jBlock=jBlock_IEB(1,iFace,iBlock)
                if(jProc==iProc)then
                   ! Local copy
                   if(DoDebug.and.DoTest)write(*,*)&
@@ -2140,8 +2140,8 @@ contains
                     Trace_DINB(:,:,iMinO:iMaxO:2,jMinO:jMaxO:2,kMinO:kMaxO:2, &
                     iBlock)
 
-               jProc=neiPE(1,iFace,iBlock)
-               jBlock=neiBLK(1,iFace,iBlock)
+               jProc=jProc_IEB(1,iFace,iBlock)
+               jBlock=jBlock_IEB(1,iFace,iBlock)
                ! Subface index =1,2,3, or 4 with respect to the coarse neighbor
 
                ! iSubFace = iSubFace_IA(iFace,iNode_B(iBlock))
@@ -2199,8 +2199,8 @@ contains
                if(.not.DoProlong)CYCLE
 
                do iSubFace = 1, 4
-                  jProc = neiPE(iSubFace,iFace,iBlock)
-                  jBlock = neiBLK(iSubFace,iFace,iBlock)
+                  jProc = jProc_IEB(iSubFace,iFace,iBlock)
+                  jBlock = jBlock_IEB(iSubFace,iFace,iBlock)
 
                   call setsubrange_ray(.true., iFace, iSubFace, &
                        iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
@@ -2239,13 +2239,13 @@ contains
                   end if
                end do ! iSubFace
 
-            case(NOBLK)
+            case(Unset_)
                ! There is no neighbor, do nothing
                CYCLE
             case default
                write(*,*)'me,iBlock,iFace,DiLevel=',&
                     iProc, iBlock, iFace, DiLevel
-               call stop_mpi('Error in message pass: Invalid value for neiLEV')
+               call stop_mpi('Error in message pass: Invalid value for DiLevel_EB')
             end select ! DiLevel
          end do ! iBlock
 
@@ -2277,17 +2277,17 @@ contains
 
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
-            select case(neiLEV(jFace,iBlock))
+            select case(DiLevel_EB(jFace,iBlock))
             case(0)
                if(DoDebug.and.DoTest)&
                     write(*,*)'buf2rayface: me, iBlock=',iProc,iBlock
-               if(DoEqual.and.neiPE(1,jFace,iBlock)/=iProc)&
+               if(DoEqual.and.jProc_IEB(1,jFace,iBlock)/=iProc)&
                     call buf2rayface(Buffer_IIBI(1,1,iBlock,iSide),&
                     iMinG,iMaxG,jMinG,jMaxG,kMinG,kMaxG)
             case(1)
                if(DoDebug.and.DoTest)&
                     write(*,*)'buf2sparserayface: me, iBlock=',iProc,iBlock
-               if(DoProlong.and.neiPE(1,jFace,iBlock)/=iProc)&
+               if(DoProlong.and.jProc_IEB(1,jFace,iBlock)/=iProc)&
                     call buf2sparserayface(Buffer_IIBI(1,1,iBlock,iSide),&
                     iMinR,iMaxR,jMinR,jMaxR,kMinR,kMaxR)
             case(-1)
@@ -2296,7 +2296,7 @@ contains
                      if(DoDebug.and.DoTest)&
                           write(*,*)'buf2subrayface: me, iSubFace, iBlock=',&
                           iProc,iSubFace,iBlock
-                     if(neiPE(iSubFace,jFace,iBlock)/=iProc)&
+                     if(jProc_IEB(iSubFace,jFace,iBlock)/=iProc)&
                           call buf2subrayface(&
                           Buffer_IIBI(1,iSubFace,iBlock,iSide),&
                           iFace,iSubFace,iMinR,iMaxR,jMinR,jMaxR,kMinR,kMaxR)

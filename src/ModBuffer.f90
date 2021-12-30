@@ -126,7 +126,7 @@ contains
   !============================================================================
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
     use ModMain,       ONLY: TypeCoordTarget=>TypeCoordSystem,  &
-         Time_Simulation, DoThinCurrentSheet
+         tSimulation, DoThinCurrentSheet
     use ModChGL,       ONLY: UseChGL, get_chgl_state
     use CON_axes,      ONLY: transform_matrix, transform_velocity
     use ModAdvance,    ONLY: UseB
@@ -154,10 +154,10 @@ contains
     if(TypeCoordSource /= TypeCoordTarget) then
        ! Convert target coordinates to the coordiante system of the model
 
-       if(Time_Simulation > TimeSimulationLast)then
-          SourceTarget_DD = transform_matrix(TimeSim=Time_Simulation,&
+       if(tSimulation > TimeSimulationLast)then
+          SourceTarget_DD = transform_matrix(TimeSim=tSimulation,&
                TypeCoordIn = TypeCoordTarget, TypeCoordOut = TypeCoordSource)
-          TimeSimulationLast = Time_Simulation
+          TimeSimulationLast = tSimulation
        end if
        XyzSource_D = matmul(SourceTarget_DD, Xyz_D)
     else
@@ -174,7 +174,7 @@ contains
 
     ! Transform vector variables from source coordinate frame to target
     if(TypeCoordSource /= TypeCoordTarget)then
-       State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,              &
+       State_V(Ux_:Uz_) = transform_velocity(tSimulation,              &
             State_V(Ux_:Uz_)*No2Si_V(UnitU_), XyzSource_D*No2Si_V(UnitX_), &
             TypeCoordSource, TypeCoordTarget)*Si2No_V(UnitU_)
        if(UseB) State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
@@ -217,7 +217,7 @@ contains
     ! SphSource_D is associated with a point in the target component, and it
     ! is assumed that is was already converted to the source coordinate system.
 
-    ! nVar is the number of state variables used in coupling the two components.
+    ! nVar is the number of state variables used coupling the two components.
 
     ! Implicit inputs to this subroutine are the buffer grid size, points
     ! and the state vector at each point (USEd from BATSRUS).
@@ -254,7 +254,7 @@ contains
     use ModIO,            ONLY: NamePrimitiveVarOrig, NamePlotDir
     use ModTimeConvert,   ONLY: time_real_to_int
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModMain,          ONLY: StartTime, Time_Simulation, x_, z_, n_step
+    use ModMain,          ONLY: StartTime, tSimulation, x_, z_, nStep
     use ModPhysics,       ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitX_,   &
          UnitP_, UnitEnergyDens_
     use BATL_lib,     ONLY: iProc
@@ -270,7 +270,7 @@ contains
     !--------------------------------------------------------------------------
     if(iProc/=0)RETURN ! May be improved
     ! Convert time to integers:
-    call time_real_to_int(StartTime + Time_Simulation, iTimePlot_I)
+    call time_real_to_int(StartTime + tSimulation, iTimePlot_I)
     ! Independing on nRBuff, plot only two 2D files for spherical surfaces
     ! of radius of BufferMin_D(BuffR_) and BufferMax_D(BuffR_)
     do iR = 1, nRBuff, nRBuff - 1
@@ -329,7 +329,7 @@ contains
             NameVarIn    = &
             'Long Lat x y z '//NamePrimitiveVarOrig//' R',&
             nDimIn=2,      &
-            nStepIn=n_step, TimeIn=Time_Simulation,&
+            nStepIn=nStep, TimeIn=tSimulation,&
             ParamIn_I=[R*No2Si_V(UnitX_)], &
             CoordIn_DII=Coord_DII, &
             VarIn_VII=State_VII)
@@ -393,15 +393,15 @@ contains
   end subroutine read_buffer_restart
   !============================================================================
   logical function is_buffered_point(i,j,k,iBlock)
-    use ModGeometry, ONLY: R_BLK, R2_BLK
+    use ModGeometry, ONLY: r_GB, rBody2_GB
     integer, intent(in):: i, j, k, iBlock
     !--------------------------------------------------------------------------
     if(IsBody2Buffer)then
-       is_buffered_point =   R2_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
-            .and.            R2_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+       is_buffered_point =   rBody2_GB(i,j,k,iBlock) <= BufferMax_D(1) &
+            .and.            rBody2_GB(i,j,k,iBlock) >= BufferMin_D(1)
     else
-       is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
-            .and.            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+       is_buffered_point =   r_GB(i,j,k,iBlock) <= BufferMax_D(1) &
+            .and.            r_GB(i,j,k,iBlock) >= BufferMin_D(1)
     end if
   end function is_buffered_point
   !============================================================================
@@ -466,8 +466,8 @@ contains
   !============================================================================
   subroutine match_ibc
     ! restore old values in the domain covered by the buffer grid
-    use ModGeometry, ONLY:R_BLK
-    use BATL_lib,  ONLY: Xyz_DGB, iProc
+    use ModGeometry, ONLY:r_GB
+    use BATL_lib,  ONLY: Xyz_DGB
     use ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B
     use ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
     integer  :: iBlock
@@ -483,10 +483,10 @@ contains
        ! Fill in the physical cells, which are outside the buffer grid
        ! When testing, do not fill cells outside the buffer
        do k = 1, nK; do j = 1 , nJ; do i = 1, nI
-          if(R_BLK(i,j,k,iBlock) < rBuffMax)CYCLE
+          if(r_GB(i,j,k,iBlock) < rBuffMax)CYCLE
 
           ! For each grid point, get the values at the base (buffer)
-          x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/R_BLK(i,j,k,iBlock)
+          x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/r_GB(i,j,k,iBlock)
 
           ! The grid point values are extracted from the base values
           call get_from_spher_buffer_grid(&
@@ -500,7 +500,7 @@ contains
           ! Scale as (r/R)^2:
           State_VGB(:,i,j,k,iBlock)=&
                State_VGB(:,i,j,k,iBlock)*&
-               (rBuffMax/R_BLK(i,j,k,iBlock))**2
+               (rBuffMax/r_GB(i,j,k,iBlock))**2
 
        end do; end do; end do
     end do
@@ -510,7 +510,7 @@ contains
     ! Fill in the buffer grid ghost cells:
     ! For longitude: using periodic BCs at 0th and 360 degrees longitude
     ! For latitude: interpolation across the pole
-    integer   :: iLonNew, iBlock, iPe, iR, iLon, iLat
+    integer   :: iLonNew, iLon
     !--------------------------------------------------------------------------
     ! Fill buffer grid ghost cells
     do iLon = 1, nLonBuff

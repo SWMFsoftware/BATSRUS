@@ -2,7 +2,7 @@ subroutine read_ih_buffer(yIn,zIn,State_V)
 
   use ModVarIndexes, ONLY: nVar, RhoUy_, RhoUz_, By_, Bz_
   use GM_couple_ih, ONLY: NameCoord, nY, nZ, yMin, yMax, zMin, zMax, State_VII
-  use ModMain, ONLY: TypeCoordSystem, Time_Simulation
+  use ModMain, ONLY: TypeCoordSystem, tSimulation
   use CON_axes, ONLY: transform_matrix
 
   implicit none
@@ -23,12 +23,12 @@ subroutine read_ih_buffer(yIn,zIn,State_V)
         y = yIn
         z = zIn
      else
-        if(Time_Simulation /= TimeSimLast)then
+        if(tSimulation /= TimeSimLast)then
            ! Update GSM-GSE transformation if necessary
-           GmIh_DD = transform_matrix(Time_Simulation, &
+           GmIh_DD = transform_matrix(tSimulation, &
                 NameCoord, TypeCoordSystem)
            GmIh_II = GmIh_DD(2:3,2:3)
-           TimeSimLast = Time_Simulation
+           TimeSimLast = tSimulation
         end if
         ! Convert from GM coordinates to buffer coordinates
         Yz_D    = matmul( [yIn, zIn], GmIh_II )

@@ -79,11 +79,11 @@ contains
     use ModAdvance, ONLY: UseEfield
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
-         UseHyperbolicDivb, time_accurate, time_loop, &
+         UseHyperbolicDivb, IsTimeAccurate, IsTimeLoop, &
          TypeCellBc_I, iTypeCellBc_I
-    use ModParallel, ONLY: NOBLK, NeiLev
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     use ModGeometry, ONLY: &
-         far_field_BCs_BLK, XyzMin_D
+         IsBoundary_B, XyzMin_D
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI, &
          nVectorVar,iVectorVar_I
     use ModSemiImplVar, ONLY: nVectorSemi, iVectorSemi_I
@@ -126,13 +126,13 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(.not.far_field_BCs_BLK(iBlock))then
+    if(.not.IsBoundary_B(iBlock))then
        write(*,*) NameSub,' warning: iBlock=',iBlock,' is not far_field block'
        RETURN
     end if
 
-    if(DoTest)write(*,*)NameSub,': iBlock, neiLEV=',&
-         iBlock, neiLEV(:,iBlock)
+    if(DoTest)write(*,*)NameSub,': iBlock, DiLevel_EB=',&
+         iBlock, DiLevel_EB(:,iBlock)
 
     if(DoTest)then
        Ighost =iTest; Jghost=jTest;  Kghost=kTest
@@ -192,7 +192,7 @@ contains
 
        ! Check if this side of the block is indeed an outer boundary
        ! Also skips periodic boundaries
-       if(neiLEV(iSide,iBlock) /= NOBLK) CYCLE
+       if(DiLevel_EB(iSide,iBlock) /= Unset_) CYCLE
 
        ! Apply cell BC when TypeCellBc_I(1:6) is set
        if(iTypeCellBc_I(iSide) == NoneBC_) CYCLE
@@ -212,24 +212,24 @@ contains
        case(1)
           iMax = 0
           ! Avoid using cells that are potentially not yet set
-          if(neiLEV(3,iBlock) == NOBLK) jMin = 1
-          if(neiLEV(4,iBlock) == NOBLK) jMax = nJ
-          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
-          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
+          if(DiLevel_EB(3,iBlock) == Unset_) jMin = 1
+          if(DiLevel_EB(4,iBlock) == Unset_) jMax = nJ
+          if(DiLevel_EB(5,iBlock) == Unset_) kMin = 1
+          if(DiLevel_EB(6,iBlock) == Unset_) kMax = nK
        case(2)
           iMin = nI + 1
-          if(neiLEV(3,iBlock) == NOBLK) jMin = 1
-          if(neiLEV(4,iBlock) == NOBLK) jMax = nJ
-          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
-          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
+          if(DiLevel_EB(3,iBlock) == Unset_) jMin = 1
+          if(DiLevel_EB(4,iBlock) == Unset_) jMax = nJ
+          if(DiLevel_EB(5,iBlock) == Unset_) kMin = 1
+          if(DiLevel_EB(6,iBlock) == Unset_) kMax = nK
        case(3)
           jMax = 0
-          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
-          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
+          if(DiLevel_EB(5,iBlock) == Unset_) kMin = 1
+          if(DiLevel_EB(6,iBlock) == Unset_) kMax = nK
        case(4)
           jMin = nJ + 1
-          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
-          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
+          if(DiLevel_EB(5,iBlock) == Unset_) kMin = 1
+          if(DiLevel_EB(6,iBlock) == Unset_) kMax = nK
        case(5)
           kMax = 0
        case(6)
@@ -272,20 +272,20 @@ contains
           call stop_mpi('The neighbors are not defined at periodic boundaries')
 
        case(FloatBC_, OutFlowBC_)
-          call set_float_bc(1, nVarState, iSide, iMin, iMax, jMin, jMax, &
-               kMin, kMax, nVarState, State_VG)
+          call set_float_bc(1, nVarState, iSide, iMin, iMax, &
+               jMin, jMax, kMin, kMax, nVarState, State_VG)
           if(UseOutflowPressure .and. iTypeBc == OutFlowBC_) &
-               call set_fixed_bc(p_, p_, [pOutflow], iMin, iMax, jMin, jMax, &
-               kMin, kMax, nVarState, State_VG)
+               call set_fixed_bc(p_, p_, [pOutflow], iMin, iMax, &
+               jMin, jMax, kMin, kMax, nVarState, State_VG)
           if(UseHyperbolicDivb) &
-               call set_fixed_bc(Hyp_, Hyp_, [0.0], iMin, iMax, jMin, jMax, &
-               kMin, kMax,  nVarState, State_VG)
+               call set_fixed_bc(Hyp_, Hyp_, [0.0], iMin, iMax, &
+               jMin, jMax, kMin, kMax,  nVarState, State_VG)
           if(UseChGL)           &
-               call set_fixed_bc(SignB_, SignB_, [0.0], iMin, iMax, jMin, jMax,&
-               kMin, kMax,  nVarState, State_VG)
+               call set_fixed_bc(SignB_, SignB_, [0.0], iMin, iMax, &
+               jMin, jMax, kMin, kMax,  nVarState, State_VG)
           if(UseEfield)         &
-               call set_fixed_bc(HypE_, HypE_, [0.0], iMin, iMax, jMin, jMax, &
-               kMin, kMax, nVarState, State_VG)
+               call set_fixed_bc(HypE_, HypE_, [0.0], iMin, iMax, &
+               jMin, jMax, kMin, kMax, nVarState, State_VG)
           if(UseRadDiffusion)   &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
        case(FloatSemiBC_, OutFlowSemiBC_)
@@ -377,10 +377,10 @@ contains
                kMin, kMax, nVarState, State_VG)
 
        case(FixedBC_, InFlowBC_, VaryBC_, IHBufferBC_)
-          if(time_accurate &
+          if(IsTimeAccurate &
                .and.(iTypeBc == VaryBC_ .or. iTypeBc == InFlowBC_))then
              call set_solar_wind_bc
-          else if(iTypeBc == IHBufferBC_ .and. time_loop)then
+          else if(iTypeBc == IHBufferBC_ .and. IsTimeLoop)then
              call set_solar_wind_bc_buffer
           else
              call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), &
@@ -392,7 +392,7 @@ contains
           if (IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
           else
-             if(time_accurate &
+             if(IsTimeAccurate &
                   .and.(iTypeBc == VaryBC_ .or. iTypeBc == InFlowBC_))then
                 call set_solar_wind_bc
              else
@@ -525,7 +525,7 @@ contains
       integer, intent(in) :: iVarMin, iVarMax, iSide, nVarState, &
            iMin, iMax, jMin, jMax, kMin, kMax
       real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-      integer:: i, j, k, iVar
+      integer:: i, j, k
 
       !------------------------------------------------------------------------
       select case(iSide)
@@ -761,7 +761,8 @@ contains
          jMin, jMax, kMin, kMax, nVarState, State_VG)
 
       ! ghost = State_V
-      integer, intent(in):: iVarMin, iVarMax, iMin, iMax, jMin, jMax, kMin, kMax
+      integer, intent(in):: iVarMin, iVarMax, iMin, iMax, &
+           jMin, jMax, kMin, kMax
       real,    intent(in):: State_V(iVarMin:iVarMax)
       integer, intent(in):: nVarState
       real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -848,12 +849,13 @@ contains
     subroutine set_solar_wind_bc
 
       use ModAdvance,     ONLY: nVar, UseIdealEos, UseElectronPressure
-      use ModGeometry,    ONLY: x1, x2, y1, y2, z1, z2
+      use ModGeometry,    ONLY: xMinBox, xMaxBox, &
+           yMinBox, yMaxBox, zMinBox, zMaxBox
       use ModB0,          ONLY: B0_DGB
       use ModMultiFluid,  ONLY: iRho_I, iRhoIon_I, iUx_I, iUy_I, iUz_I, &
            iPion_I, UseMultiIon, ChargeIon_I, MassIon_I
       use ModSolarwind,   ONLY: get_solar_wind_point
-      use ModMain,        ONLY: time_simulation
+      use ModMain,        ONLY: tSimulation
       use BATL_lib,       ONLY: Xyz_DGB, IsCartesianGrid
       use ModSemiImplVar, ONLY: UseSemiHallResist, UseSemiResistivity, iTeImpl
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal, &
@@ -869,30 +871,30 @@ contains
       real :: Ne, Pe
 
       ! logical :: DoTest, DoTestMe
-      character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
-      !------------------------------------------------------------------------
       ! call set_oktest(NameSub, DoTest, DoTestMe)
 
+      character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
+      !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          Xyz_D =  Xyz_DGB(:,i,j,k,iBlock)
          if(IsCartesianGrid)then
             ! Put the solar wind to the edge of the computational domain
             select case(iSide)
             case(1)
-               Xyz_D(x_) = x1
+               Xyz_D(x_) = xMinBox
             case(2)
-               Xyz_D(x_) = x2
+               Xyz_D(x_) = xMaxBox
             case(3)
-               Xyz_D(y_) = y1
+               Xyz_D(y_) = yMinBox
             case(4)
-               Xyz_D(y_) = y2
+               Xyz_D(y_) = yMaxBox
             case(5)
-               Xyz_D(z_) = z1
+               Xyz_D(z_) = zMinBox
             case(6)
-               Xyz_D(z_) = z2
+               Xyz_D(z_) = zMaxBox
             end select
          end if
-         call get_solar_wind_point(time_simulation, Xyz_D, SolarWind_V)
+         call get_solar_wind_point(tSimulation, Xyz_D, SolarWind_V)
 
          if(present(iImplBlock))then
             if(UseSemiHallResist .or. UseSemiResistivity)then

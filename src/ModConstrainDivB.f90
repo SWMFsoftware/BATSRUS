@@ -27,8 +27,8 @@ module ModConstrainDivB
   public:: clean_mod_ct
   public:: constrain_b
   public:: constrain_ics
-  public:: Bcenter2Bface
-  public:: Bface2Bcenter
+  public:: bcenter_to_bface
+  public:: bface_to_bcenter
   public:: get_vxb
   public:: bound_vxb
   public:: bound_bface
@@ -37,24 +37,23 @@ module ModConstrainDivB
   logical, public :: DoInitConstrainB = .true.
 
   ! Face centered magnetic field components, Bxface is centered on face X etc.
-  real, public, allocatable :: Bxface_BLK(:,:,:,:)
-  real, public, allocatable :: Byface_BLK(:,:,:,:)
-  real, public, allocatable :: Bzface_BLK(:,:,:,:)
+  real, public, allocatable :: BxFace_GB(:,:,:,:)
+  real, public, allocatable :: ByFace_GB(:,:,:,:)
+  real, public, allocatable :: BzFace_GB(:,:,:,:)
 
   ! Local variables --------------
 
   ! Face centered normal magnetic field from the 4 finer neighbors
   ! on the two sides of the block (1=east/south/bot, 2=west/north/top)
 
-  real, allocatable :: BxFaceFine_XQSB(:,:,:,:,:)
-  real, allocatable :: ByFaceFine_YQSB(:,:,:,:,:)
-  real, allocatable :: BzFaceFine_ZQSB(:,:,:,:,:)
+  real, allocatable :: BxFaceFine_IIQSB(:,:,:,:,:)
+  real, allocatable :: ByFaceFine_IIQSB(:,:,:,:,:)
+  real, allocatable :: BzFaceFine_IIQSB(:,:,:,:,:)
 
   ! VxB stored at edges
-
-  real, allocatable :: VxB_x(:,:,:,:)
-  real, allocatable :: VxB_y(:,:,:,:)
-  real, allocatable :: VxB_z(:,:,:,:)
+  real, allocatable :: VxBX_GB(:,:,:,:)
+  real, allocatable :: VxBY_GB(:,:,:,:)
+  real, allocatable :: VxBZ_GB(:,:,:,:)
 
 contains
   !============================================================================
@@ -64,17 +63,17 @@ contains
     character(len=*), parameter:: NameSub = 'init_mod_ct'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(allocated(Bxface_BLK)) RETURN
+    if(allocated(BxFace_GB)) RETURN
 
-    allocate(Bxface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(Byface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(Bzface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(BxFaceFine_XQSB(nJ,nK,4,2,MaxBlock))
-    allocate(ByFaceFine_YQSB(nI,nK,4,2,MaxBlock))
-    allocate(BzFaceFine_ZQSB(nI,nJ,4,2,MaxBlock))
-    allocate(VxB_x(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(VxB_y(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(VxB_z(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(BxFace_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(ByFace_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(BzFace_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(BxFaceFine_IIQSB(nJ,nK,4,2,MaxBlock))
+    allocate(ByFaceFine_IIQSB(nI,nK,4,2,MaxBlock))
+    allocate(BzFaceFine_IIQSB(nI,nJ,4,2,MaxBlock))
+    allocate(VxBX_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(VxBY_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(VxBZ_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_ct allocated arrays'
@@ -89,17 +88,17 @@ contains
     character(len=*), parameter:: NameSub = 'clean_mod_ct'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(.not.allocated(Bxface_BLK)) RETURN
+    if(.not.allocated(BxFace_GB)) RETURN
 
-    deallocate(Bxface_BLK)
-    deallocate(Byface_BLK)
-    deallocate(Bzface_BLK)
-    deallocate(BxFaceFine_XQSB)
-    deallocate(ByFaceFine_YQSB)
-    deallocate(BzFaceFine_ZQSB)
-    deallocate(VxB_x)
-    deallocate(VxB_y)
-    deallocate(VxB_z)
+    deallocate(BxFace_GB)
+    deallocate(ByFace_GB)
+    deallocate(BzFace_GB)
+    deallocate(BxFaceFine_IIQSB)
+    deallocate(ByFaceFine_IIQSB)
+    deallocate(BzFaceFine_IIQSB)
+    deallocate(VxBX_GB)
+    deallocate(VxBY_GB)
+    deallocate(VxBZ_GB)
 
     if(iProc==0)then
        call write_prefix
@@ -110,7 +109,7 @@ contains
   end subroutine clean_mod_ct
   !============================================================================
 
-  subroutine get_VxB(iBlock)
+  subroutine get_vxb(iBlock)
 
     ! Calculate VxB from fluxes following Balsara and Spicer
 
@@ -122,7 +121,7 @@ contains
     integer, intent(in) :: iBlock
     integer:: iGang
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'get_VxB'
+    character(len=*), parameter:: NameSub = 'get_vxb'
     !--------------------------------------------------------------------------
     iGang = 1
 #ifdef _OPENACC
@@ -134,22 +133,22 @@ contains
        DoTest=.false.; DoTest=.false.
     end if
 
-    ! VxB_x=(fy+fy-fz-fz)/4
-    VxB_x(1:nI,1:nJ+1,1:nK+1,iBlock)= 0.25*(                        &
+    ! VxBX_GB=(fy+fy-fz-fz)/4
+    VxBX_GB(1:nI,1:nJ+1,1:nK+1,iBlock)= 0.25*(                        &
          (Flux_VYI(Bz_,1:nI,1:nJ+1,0:nK  ,iGang)                         &
          +Flux_VYI(Bz_,1:nI,1:nJ+1,1:nK+1,iGang) )/CellFace_DB(2,iBlock) &
          -(Flux_VZI(By_,1:nI,0:nJ  ,1:nK+1,iGang)                         &
          +Flux_VZI(By_,1:nI,1:nJ+1,1:nK+1,iGang) )/CellFace_DB(3,iBlock))
 
-    ! VxB_y=(fz+fz-fx-fx)/4
-    VxB_y(1:nI+1,1:nJ,1:nK+1,iBlock)= 0.25*(                        &
+    ! VxBY_GB=(fz+fz-fx-fx)/4
+    VxBY_GB(1:nI+1,1:nJ,1:nK+1,iBlock)= 0.25*(                        &
          (Flux_VZI(Bx_,0:nI  ,1:nJ,1:nK+1,iGang)                         &
          +Flux_VZI(Bx_,1:nI+1,1:nJ,1:nK+1,iGang) )/CellFace_DB(3,iBlock) &
          -(Flux_VXI(Bz_,1:nI+1,1:nJ,0:nK  ,iGang)                         &
          +Flux_VXI(Bz_,1:nI+1,1:nJ,1:nK+1,iGang) )/CellFace_DB(1,iBlock))
 
-    ! VxB_z=(fx+fx-fy-fy)/4
-    VxB_z(1:nI+1,1:nJ+1,1:nK,iBlock)= 0.25*(                        &
+    ! VxBZ_GB=(fx+fx-fy-fy)/4
+    VxBZ_GB(1:nI+1,1:nJ+1,1:nK,iBlock)= 0.25*(                        &
          (Flux_VXI(By_,1:nI+1,0:nJ  ,1:nK,iGang)                         &
          +Flux_VXI(By_,1:nI+1,1:nJ+1,1:nK,iGang) )/CellFace_DB(1,iBlock) &
          -(Flux_VYI(Bx_,0:nI  ,1:nJ+1,1:nK,iGang)                         &
@@ -157,19 +156,19 @@ contains
 
     if(DoTest)then
        write(*,*)'get_vxb: final VxB (edge centered)'
-       write(*,*)'VxB_xLL,LR,RL,RR=',&
-            VxB_x(iTest,jTest:jTest+1,kTest:kTest+1,iBlockTest)
-       write(*,*)'VxB_yLL,LR,RL,RR=',&
-            VxB_y(iTest:iTest+1,jTest,kTest:kTest+1,iBlockTest)
-       write(*,*)'VxB_zLL,LR,RL,RR=',&
-            VxB_z(iTest:iTest+1,jTest:jTest+1,kTest,iBlockTest)
+       write(*,*)'VxBX_GBLL,LR,RL,RR=',&
+            VxBX_GB(iTest,jTest:jTest+1,kTest:kTest+1,iBlockTest)
+       write(*,*)'VxBY_GBLL,LR,RL,RR=',&
+            VxBY_GB(iTest:iTest+1,jTest,kTest:kTest+1,iBlockTest)
+       write(*,*)'VxBZ_GBLL,LR,RL,RR=',&
+            VxBZ_GB(iTest:iTest+1,jTest:jTest+1,kTest,iBlockTest)
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine get_VxB
+  end subroutine get_vxb
   !============================================================================
 
-  subroutine bound_VxB(iBlock)
+  subroutine bound_vxb(iBlock)
 
     ! Apply boundary conditions on VxB
 
@@ -177,9 +176,8 @@ contains
     use ModMain, ONLY : TypeCellBc_I, Coord1MaxBc_
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
     use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
-    use ModParallel, ONLY : NOBLK,&
-         neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-    use ModGeometry, ONLY : true_cell, body_BLK
+    use ModParallel, ONLY : Unset_, DiLevel_EB
+    use ModGeometry, ONLY : Used_GB, IsBody_B
     use ModPhysics, ONLY: SW_UX,SW_UY,SW_UZ,SW_BX,SW_BY,SW_BZ
     use BATL_lib, ONLY: CellFace_DB
 
@@ -190,89 +188,101 @@ contains
 
     ! Apply continuous or fixed boundary conditions at outer boundaries
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'bound_VxB'
+    character(len=*), parameter:: NameSub = 'bound_vxb'
     !--------------------------------------------------------------------------
     iGang = 1
 #ifdef _OPENACC
     iGang = iBlock
 #endif
     call test_start(NameSub, DoTest, iBlock)
-    if(neiLeast(iBlock)==NOBLK)then
+    if(DiLevel_EB(1,iBlock)==Unset_)then
        do k=1,nK+1; do j=1,nJ
-          VxB_y(1,j,k,iBlock) = +Flux_VZI(Bx_,1,j,k,iGang) /CellFace_DB(3,iBlock)
+          VxBY_GB(1,j,k,iBlock) = &
+               +Flux_VZI(Bx_,1,j,k,iGang)/CellFace_DB(3,iBlock)
        end do; end do
        do k=1,nK; do j=1,nJ+1
-          VxB_z(1,j,k,iBlock) = -Flux_VYI(Bx_,1,j,k,iGang) /CellFace_DB(2,iBlock)
+          VxBZ_GB(1,j,k,iBlock) = &
+               -Flux_VYI(Bx_,1,j,k,iGang)/CellFace_DB(2,iBlock)
        end do; end do
     end if
-    if(neiLwest(iBlock)==NOBLK)then
+    if(DiLevel_EB(2,iBlock)==Unset_)then
        ! fixed inflow!
-       ! VxB_x(nI  ,:,:,iBlock)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
+       ! VxBX_GB(nI  ,:,:,iBlock)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
        select case(TypeCellBc_I(Coord1MaxBc_))
        case('inflow','vary','fixed')
-          VxB_y(nI+1,:,:,iBlock)=SW_Uz*SW_Bx-SW_Ux*SW_Bz
-          VxB_z(nI+1,:,:,iBlock)=SW_Ux*SW_By-SW_Uy*SW_Bx
+          VxBY_GB(nI+1,:,:,iBlock)=SW_Uz*SW_Bx-SW_Ux*SW_Bz
+          VxBZ_GB(nI+1,:,:,iBlock)=SW_Ux*SW_By-SW_Uy*SW_Bx
        case default
           ! continuous
           do k=1,nK+1; do j=1,nJ
-             VxB_y(nI+1,j,k,iBlock) = +Flux_VZI(Bx_,nI,j,k,iGang) /CellFace_DB(3,iBlock)
+             VxBY_GB(nI+1,j,k,iBlock) = &
+                  +Flux_VZI(Bx_,nI,j,k,iGang)/CellFace_DB(3,iBlock)
           end do; end do
           do k=1,nK; do j=1,nJ+1
-             VxB_z(nI+1,j,k,iBlock) = -Flux_VYI(Bx_,nI,j,k,iGang) /CellFace_DB(2,iBlock)
+             VxBZ_GB(nI+1,j,k,iBlock) = &
+                  -Flux_VYI(Bx_,nI,j,k,iGang)/CellFace_DB(2,iBlock)
           end do; end do
        end select
     end if
-    if(neiLsouth(iBlock)==NOBLK)then
+    if(DiLevel_EB(3,iBlock)==Unset_)then
        do k=1,nK+1; do i=1,nI
-          VxB_x(i,1,k,iBlock) = -Flux_VZI(By_,i,1,k,iGang) /CellFace_DB(3,iBlock)
+          VxBX_GB(i,1,k,iBlock) = &
+               -Flux_VZI(By_,i,1,k,iGang)/CellFace_DB(3,iBlock)
        end do; end do
        do k=1,nK; do i=1,nI+1
-          VxB_z(i,1,k,iBlock) = +Flux_VXI(By_,i,1,k,iGang) /CellFace_DB(1,iBlock)
+          VxBZ_GB(i,1,k,iBlock) = &
+               +Flux_VXI(By_,i,1,k,iGang)/CellFace_DB(1,iBlock)
        end do; end do
     end if
-    if(neiLnorth(iBlock)==NOBLK)then
+    if(DiLevel_EB(4,iBlock)==Unset_)then
        do k=1,nK+1; do i=1,nI
-          VxB_x(i,nJ+1,k,iBlock) = -Flux_VZI(By_,i,nJ,k,iGang) /CellFace_DB(3,iBlock)
+          VxBX_GB(i,nJ+1,k,iBlock) = &
+               -Flux_VZI(By_,i,nJ,k,iGang) /CellFace_DB(3,iBlock)
        end do; end do
        do k=1,nK; do i=1,nI+1
-          VxB_z(i,nJ+1,k,iBlock) = +Flux_VXI(By_,i,nJ,k,iGang) /CellFace_DB(1,iBlock)
+          VxBZ_GB(i,nJ+1,k,iBlock) = &
+               +Flux_VXI(By_,i,nJ,k,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
-    if(neiLbot(iBlock)==NOBLK)then
+    if(DiLevel_EB(5,iBlock)==Unset_)then
        do j=1,nJ+1; do i=1,nI
-          VxB_x(i,j,1,iBlock) = +Flux_VYI(Bz_,i,j,1,iGang) /CellFace_DB(2,iBlock)
+          VxBX_GB(i,j,1,iBlock) = &
+               +Flux_VYI(Bz_,i,j,1,iGang) /CellFace_DB(2,iBlock)
        end do; end do
        do j=1,nJ; do i=1,nI+1
-          VxB_y(i,j,1,iBlock) = -Flux_VXI(Bz_,i,j,1,iGang) /CellFace_DB(1,iBlock)
+          VxBY_GB(i,j,1,iBlock) = &
+               -Flux_VXI(Bz_,i,j,1,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
-    if(neiLtop(iBlock)==NOBLK)then
+    if(DiLevel_EB(6,iBlock)==Unset_)then
        do j=1,nJ+1; do i=1,nI
-          VxB_x(i,j,nK+1,iBlock) = +Flux_VYI(Bz_,i,j,nK,iGang) /CellFace_DB(2,iBlock)
+          VxBX_GB(i,j,nK+1,iBlock) = &
+               +Flux_VYI(Bz_,i,j,nK,iGang) /CellFace_DB(2,iBlock)
        end do; end do
        do j=1,nJ; do i=1,nI+1
-          VxB_y(i,j,nK+1,iBlock) = -Flux_VXI(Bz_,i,j,nK,iGang) /CellFace_DB(1,iBlock)
+          VxBY_GB(i,j,nK+1,iBlock) = &
+               -Flux_VXI(Bz_,i,j,nK,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
 
     ! Set VxB to zero on the cell edges of the body cells
-    if(body_BLK(iBlock))then
+    if(IsBody_B(iBlock))then
        ! Apply inner boundary condition on the electric field
        ! Make sure that edges belonging to body ghost cells are also corrected
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          if(.not.true_cell(i,j,k,iBlock))then
-             VxB_x(i,j:j+1,k:k+1,iBlock) = 0.0
-             VxB_y(i:i+1,j,k:k+1,iBlock) = 0.0
-             VxB_z(i:i+1,j:j+1,k,iBlock) = 0.0
+          if(.not.Used_GB(i,j,k,iBlock))then
+             VxBX_GB(i,j:j+1,k:k+1,iBlock) = 0.0
+             VxBY_GB(i:i+1,j,k:k+1,iBlock) = 0.0
+             VxBZ_GB(i:i+1,j:j+1,k,iBlock) = 0.0
           end if
        end do; end do; end do
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine bound_VxB
+  end subroutine bound_vxb
   !============================================================================
 
-  subroutine constrain_B(iBlock)
+  subroutine constrain_b(iBlock)
 
     ! Use CT scheme for updating the B field so that div B is conserved
 
@@ -282,9 +292,8 @@ contains
 
     integer, intent(in) :: iBlock
 
-    real :: qdt
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'constrain_B'
+    character(len=*), parameter:: NameSub = 'constrain_b'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     if(iBlock==iBlockTest)then
@@ -292,93 +301,90 @@ contains
        DoTest=.false.; DoTest=.false.
     end if
 
-    ! Calculate physical time step
-    qdt=dt
-
     if(DoTest)then
        write(*,*)'constrain_b: initial face centered B'
        write(*,*)'BxfaceL,R=',&
-            BxFace_BLK(iTest:iTest+1,jTest,kTest,iBlockTest)
+            BxFace_GB(iTest:iTest+1,jTest,kTest,iBlockTest)
        write(*,*)'ByfaceL,R=',&
-            ByFace_BLK(iTest,jTest:jTest+1,kTest,iBlockTest)
+            ByFace_GB(iTest,jTest:jTest+1,kTest,iBlockTest)
        write(*,*)'BzfaceL,BzfaceR=',&
-            BzFace_BLK(iTest,jTest,kTest:kTest+1,iBlockTest)
+            BzFace_GB(iTest,jTest,kTest:kTest+1,iBlockTest)
     end if
 
-    ! dBx/dt=d(VxB_z)/dy-d(VxB_y)/dz
-    Bxface_BLK(1:nI+1,1:nJ,1:nK,iBlock)=                &
-         Bxface_BLK(1:nI+1,1:nJ,1:nK,iBlock) + qdt*(    &
-         +(VxB_z(1:nI+1,2:nJ+1,1:nK  ,iBlock)           &
-         -VxB_z(1:nI+1,1:nJ  ,1:nK  ,iBlock))          &
+    ! dBx/dt=d(VxBZ_GB)/dy-d(VxBY_GB)/dz
+    BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock)=                &
+         BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock) + Dt*(     &
+         +(VxBZ_GB(1:nI+1,2:nJ+1,1:nK  ,iBlock)           &
+         -VxBZ_GB(1:nI+1,1:nJ  ,1:nK  ,iBlock))           &
          /CellSize_DB(y_,iBlock)  &
-         -(VxB_y(1:nI+1,1:nJ  ,2:nK+1,iBlock)           &
-         -VxB_y(1:nI+1,1:nJ  ,1:nK  ,iBlock))          &
+         -(VxBY_GB(1:nI+1,1:nJ  ,2:nK+1,iBlock)           &
+         -VxBY_GB(1:nI+1,1:nJ  ,1:nK  ,iBlock))           &
          /CellSize_DB(z_,iBlock))
-    ! dBy/dt=d(VxB_x)/dz-d(VxB_z)/dx
-    Byface_BLK(1:nI,1:nJ+1,1:nK,iBlock)=                &
-         Byface_BLK(1:nI,1:nJ+1,1:nK,iBlock) + qdt*(    &
-         +(VxB_x(1:nI  ,1:nJ+1,2:nK+1,iBlock)           &
-         -VxB_x(1:nI  ,1:nJ+1,1:nK  ,iBlock))          &
+    ! dBy/dt=d(VxBX_GB)/dz-d(VxBZ_GB)/dx
+    ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock)=                &
+         ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) + Dt*(     &
+         +(VxBX_GB(1:nI  ,1:nJ+1,2:nK+1,iBlock)           &
+         -VxBX_GB(1:nI  ,1:nJ+1,1:nK  ,iBlock))           &
          /CellSize_DB(z_,iBlock)  &
-         -(VxB_z(2:nI+1,1:nJ+1,1:nK  ,iBlock)           &
-         -VxB_z(1:nI  ,1:nJ+1,1:nK  ,iBlock))          &
+         -(VxBZ_GB(2:nI+1,1:nJ+1,1:nK  ,iBlock)           &
+         -VxBZ_GB(1:nI  ,1:nJ+1,1:nK  ,iBlock))           &
          /CellSize_DB(x_,iBlock))
 
-    ! dBz/dt=d(VxB_y)/dx-d(VxB_x)/dy
-    Bzface_BLK(1:nI,1:nJ,1:nK+1,iBlock)=                &
-         Bzface_BLK(1:nI,1:nJ,1:nK+1,iBlock) + qdt*(    &
-         +(VxB_y(2:nI+1,1:nJ  ,1:nK+1,iBlock)           &
-         -VxB_y(1:nI  ,1:nJ  ,1:nK+1,iBlock))          &
+    ! dBz/dt=d(VxBY_GB)/dx-d(VxBX_GB)/dy
+    BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)=                &
+         BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) + Dt*(     &
+         +(VxBY_GB(2:nI+1,1:nJ  ,1:nK+1,iBlock)           &
+         -VxBY_GB(1:nI  ,1:nJ  ,1:nK+1,iBlock))           &
          /CellSize_DB(x_,iBlock)  &
-         -(VxB_x(1:nI  ,2:nJ+1,1:nK+1,iBlock)           &
-         -VxB_x(1:nI  ,1:nJ  ,1:nK+1,iBlock))          &
+         -(VxBX_GB(1:nI  ,2:nJ+1,1:nK+1,iBlock)           &
+         -VxBX_GB(1:nI  ,1:nJ  ,1:nK+1,iBlock))           &
          /CellSize_DB(y_,iBlock))
     if(DoTest)then
        write(*,*)'constrain_b: final face centered B'
        write(*,*)'BxfaceL,R=',&
-            BxFace_BLK(iTest:iTest+1,jTest,kTest,iBlockTest)
+            BxFace_GB(iTest:iTest+1,jTest,kTest,iBlockTest)
        write(*,*)'ByfaceL,R=',&
-            ByFace_BLK(iTest,jTest:jTest+1,kTest,iBlockTest)
+            ByFace_GB(iTest,jTest:jTest+1,kTest,iBlockTest)
        write(*,*)'BzfaceL,BzfaceR=',&
-            BzFace_BLK(iTest,jTest,kTest:kTest+1,iBlockTest)
+            BzFace_GB(iTest,jTest,kTest:kTest+1,iBlockTest)
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine constrain_B
+  end subroutine constrain_b
   !============================================================================
 
-  subroutine Bface2Bcenter(iBlock)
+  subroutine bface_to_bcenter(iBlock)
 
     use ModSize
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
     use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : true_cell,body_BLK
+    use ModGeometry, ONLY : Used_GB,IsBody_B
 
     integer, intent(in) :: iBlock
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'Bface2Bcenter'
+    character(len=*), parameter:: NameSub = 'bface_to_bcenter'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     State_VGB(Bx_:Bz_,:,:,:,iBlock) = -777.0
 
     ! average in direction x (b->B)
     State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)= 0.5*(      &
-         Bxface_BLK(1:nI  ,1:nJ,1:nK,iBlock)+ &
-         Bxface_BLK(2:nI+1,1:nJ,1:nK,iBlock))
+         BxFace_GB(1:nI  ,1:nJ,1:nK,iBlock)+ &
+         BxFace_GB(2:nI+1,1:nJ,1:nK,iBlock))
 
     ! average in direction y (b->B)
     State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)= 0.5*(      &
-         Byface_BLK(1:nI,1:nJ  ,1:nK,iBlock)+ &
-         Byface_BLK(1:nI,2:nJ+1,1:nK,iBlock))
+         ByFace_GB(1:nI,1:nJ  ,1:nK,iBlock)+ &
+         ByFace_GB(1:nI,2:nJ+1,1:nK,iBlock))
 
     ! average in direction z (b->B)
     State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)= 0.5*(      &
-         Bzface_BLK(1:nI,1:nJ,1:nK  ,iBlock)+ &
-         Bzface_BLK(1:nI,1:nJ,2:nK+1,iBlock))
+         BzFace_GB(1:nI,1:nJ,1:nK  ,iBlock)+ &
+         BzFace_GB(1:nI,1:nJ,2:nK+1,iBlock))
 
-    if(body_BLK(iBlock))then
-       where(.not.true_cell(:,:,:,iBlock))
+    if(IsBody_B(iBlock))then
+       where(.not.Used_GB(:,:,:,iBlock))
           State_VGB(Bx_,:,:,:,iBlock)=0.0
           State_VGB(By_,:,:,:,iBlock)=0.0
           State_VGB(Bz_,:,:,:,iBlock)=0.0
@@ -386,10 +392,10 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine Bface2Bcenter
+  end subroutine bface_to_bcenter
   !============================================================================
 
-  subroutine Bcenter2Bface(iBlock)
+  subroutine bcenter_to_bface(iBlock)
 
     use ModSize
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
@@ -401,7 +407,7 @@ contains
     integer:: i,j,k
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'Bcenter2Bface'
+    character(len=*), parameter:: NameSub = 'bcenter_to_bface'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
@@ -413,45 +419,45 @@ contains
     ! when UseConstrainB is true
 
     do k=1,nK; do j=1,nJ; do i=1,nI+1
-       BxFace_BLK(i,j,k,iBlock)= 0.5*( &
+       BxFace_GB(i,j,k,iBlock)= 0.5*( &
             State_VGB(Bx_,i-1,j,k,iBlock)+ &
             State_VGB(Bx_,i  ,j,k,iBlock))
        if(.not.UseConstrainB)write(*,*)'!!!'
     end do; end do; end do
     do k=1,nK; do j=1,nJ+1; do i=1,nI
-       ByFace_BLK(i,j,k,iBlock)= 0.5*( &
+       ByFace_GB(i,j,k,iBlock)= 0.5*( &
             State_VGB(By_,i,j-1,k,iBlock)+ &
             State_VGB(By_,i,j  ,k,iBlock))
        if(.not.UseConstrainB)write(*,*)'!!!'
     end do; end do; end do
     do k=1,nK+1; do j=1,nJ; do i=1,nI
-       BzFace_BLK(i,j,k,iBlock)= 0.5*( &
+       BzFace_GB(i,j,k,iBlock)= 0.5*( &
             State_VGB(Bz_,i,j,k-1,iBlock)+ &
             State_VGB(Bz_,i,j,k  ,iBlock))
        if(.not.UseConstrainB)write(*,*)'!!!'
     end do; end do; end do
 
-    call bound_Bface(iBlock)
+    call bound_bface(iBlock)
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine Bcenter2Bface
+  end subroutine bcenter_to_bface
   !============================================================================
 
-  subroutine bound_Bface(iBlock)
+  subroutine bound_bface(iBlock)
 
     ! Set Bface to zero on the cell faces of the body cells
     ! Make sure that ghost cells inside the body are taken into account
     ! This may have to be generalized later
 
     use ModSize
-    use ModGeometry, ONLY: true_cell,body_BLK
+    use ModGeometry, ONLY: Used_GB,IsBody_B
 
     integer, intent(in) :: iBlock
 
     integer :: i,j,k
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'bound_Bface'
+    character(len=*), parameter:: NameSub = 'bound_bface'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
@@ -460,20 +466,20 @@ contains
        DoTest=.false.; DoTest=.false.
     end if
 
-    if(DoTest)write(*,*)'bound_Bface, body_BLK=',body_BLK(iBlock)
+    if(DoTest)write(*,*)'bound_bface, IsBody_B=',IsBody_B(iBlock)
 
-    if(body_BLK(iBlock))then
+    if(IsBody_B(iBlock))then
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          if(.not.true_cell(i,j,k,iBlock))then
-             BxFace_BLK(i:i+1,j,k,iBlock)=0.0
-             ByFace_BLK(i,j:j+1,k,iBlock)=0.0
-             BzFace_BLK(i,j,k:k+1,iBlock)=0.0
+          if(.not.Used_GB(i,j,k,iBlock))then
+             BxFace_GB(i:i+1,j,k,iBlock)=0.0
+             ByFace_GB(i,j:j+1,k,iBlock)=0.0
+             BzFace_GB(i,j,k:k+1,iBlock)=0.0
           end if
        end do; end do; end do
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine bound_Bface
+  end subroutine bound_bface
   !============================================================================
 
   ! subroutine prolong1_Bface(coarse_sol, iVar, iBlock, fine_sol)
@@ -489,7 +495,7 @@ contains
   !        coarse_sol,fine_sol
   !
   !   integer :: i,j,k,i1,j1,k1,ishift,jshift,kshift
-  !   !--------------------------------------------------------------------------
+  !   !------------------------------------------------------------------------
   !
   ! !!!  call get_shifts(iBlock,ishift,jshift,kshift)
   !
@@ -553,7 +559,7 @@ contains
   !
   ! end subroutine prolong1_Bface
   !
-  ! !=============================================================================
+  ! !==========================================================================
   !
   ! subroutine prolong_b_face(Bxf_c,Byf_c,Bzf_c,&
   !      BxFaceFine_XQS,ByFaceFine_YQS,BzFaceFine_ZQS,&
@@ -1120,14 +1126,14 @@ contains
   !
   ! end subroutine assign_restricted_Bface
 
-  subroutine constrain_ICs(iBlock)
+  subroutine constrain_ics(iBlock)
 
     ! Initialize B field, Bface, and Bcenter for Constrained Transport
 
     use ModMain
     use ModVarIndexes
     use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : body_BLK, true_cell
+    use ModGeometry, ONLY : IsBody_B, Used_GB
     use ModIO, ONLY : restart
     use ModPhysics, ONLY : SW_Bx,SW_By,SW_Bz
     use BATL_lib, ONLY: Xyz_DGB
@@ -1135,13 +1141,13 @@ contains
     integer, intent(in) :: iBlock
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'constrain_ICs'
+    character(len=*), parameter:: NameSub = 'constrain_ics'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     if(Unused_B(iBlock))then
-       BxFace_BLK(:,:,:,iBlock)=0.0
-       ByFace_BLK(:,:,:,iBlock)=0.0
-       BzFace_BLK(:,:,:,iBlock)=0.0
+       BxFace_GB(:,:,:,iBlock)=0.0
+       ByFace_GB(:,:,:,iBlock)=0.0
+       BzFace_GB(:,:,:,iBlock)=0.0
     else
 
        if(.not.restart)then
@@ -1168,8 +1174,8 @@ contains
           State_VGB(Bx_,:,:,:,iBlock)=   Xyz_DGB(x_,:,:,:,iBlock)
           State_VGB(By_,:,:,:,iBlock)=   Xyz_DGB(y_,:,:,:,iBlock)
           State_VGB(Bz_,:,:,:,iBlock)=-2*Xyz_DGB(z_,:,:,:,iBlock)
-          if(body_BLK(iBlock))then
-             where(.not.true_cell(:,:,:,iBlock))
+          if(IsBody_B(iBlock))then
+             where(.not.Used_GB(:,:,:,iBlock))
                 State_VGB(Bx_,:,:,:,iBlock)=0.
                 State_VGB(By_,:,:,:,iBlock)=0.
                 State_VGB(Bz_,:,:,:,iBlock)=0.
@@ -1180,7 +1186,7 @@ contains
     endif
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine constrain_ICs
+  end subroutine constrain_ics
   !============================================================================
 
   ! subroutine correct_VxB
@@ -1273,7 +1279,7 @@ contains
   !   !  +---sub1---edge1-sub2---+ --> X
   !
   !   use ModMain
-  !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE, &
+  !   use ModParallel, ONLY : DiLevel_EB,jBlock_IEB,jProc_IEB, &
   !        BLKneighborPE,BLKneighborBLK,DiLevelNei_IIIB,BLKneighborCHILD
   !   use ModAMR, ONLY : child2subface,child2subedge
   !   use ModMpi
@@ -1339,7 +1345,7 @@ contains
   !   call set_oktest('correct_vxb',DoTest, DoTest)
   !   if(DoTest)write(*,*)'correct_VxB me=',iProc
   !
-  !   select case(optimize_message_pass)
+  !   select case(TypeMessagePass)
   !   case('dir')
   !      ! Send messages for two faces together
   !      do isweep=1,3
@@ -1368,7 +1374,7 @@ contains
   !          'VxB_pass_faces:me,ifacemin,ifacemax=',iProc,ifacemin,ifacemax
   !
   !     ! Debug
-  !     if(okdebug)then
+  !     if(DoDebug)then
   !        rbuf1  =0.; rbuf2=0.; rbuf3=0.
   !     end if
   !
@@ -1380,7 +1386,7 @@ contains
   !        ! Set index ranges for the face
   !        call setranges
   !
-  !        if(okdebug.and.DoTest)then
+  !        if(DoDebug.and.DoTest)then
   !           write(*,*)'setranges for receive done'
   !           write(*,*)'me,iface,nxface,nyface,isize1,isize2,isize3',&
   !                iProc,iface,nxface,nyface,isize1,isize2,isize3
@@ -1391,7 +1397,7 @@ contains
   !           if(Unused_B(iBlock))CYCLE
   !
   !           ! Post non-blocking receive for opposite face of neighbor block
-  !           neiL=neiLEV(rface,iBlock)
+  !           neiL=DiLevel_EB(rface,iBlock)
   !
   !           if(neiL==0)then
   !              ! Check for shared edges
@@ -1422,13 +1428,13 @@ contains
   !           if(neiL/=-1)CYCLE
   !
   !           do isubface=1,4
-  !              neiP=neiPE(isubface,rface,iBlock)
+  !              neiP=jProc_IEB(isubface,rface,iBlock)
   !              if(neiP==iProc)CYCLE
   !
   !              ! Remote receive
-  !              neiB=neiBLK(isubface,rface,iBlock)
+  !              neiB=jBlock_IEB(isubface,rface,iBlock)
   !              itag = 100*neiB+10*iface
-  !              if(DoTest.and.okdebug)write(*,*)&
+  !              if(DoTest.and.DoDebug)write(*,*)&
   !                   'Remote recv,me,iBlock,itag,neiP,neiB,isubface=',&
   !                   iProc,iBlock,itag,neiP,neiB,isubface
   !
@@ -1462,42 +1468,42 @@ contains
   !        ! Set index ranges for the face
   !        call setranges
   !
-  !        if(okdebug.and.DoTest)write(*,*)&
+  !        if(DoDebug.and.DoTest)write(*,*)&
   !             'setranges for send done: me, iface=',iProc, iface
   !
   !        allocate(sbuf1(nxface,nyface+1),sbuf2(nxface+1,nyface),sbuf3(isize3))
   !
-  !        if(okdebug.and.DoTest)write(*,*)'allocation done, me,iface=',&
+  !        if(DoDebug.and.DoTest)write(*,*)'allocation done, me,iface=',&
   !             iProc,iface
   !
   !        do iBlock=1,nBlockMax
   !           if(Unused_B(iBlock))CYCLE
   !
   !           ! Check if neighbouring block is coarser
-  !           neiL=neiLEV(iface,iBlock)
+  !           neiL=DiLevel_EB(iface,iBlock)
   !           if(neiL/=1)CYCLE
   !
-  !           if(okdebug.and.DoTest)write(*,*)&
+  !           if(DoDebug.and.DoTest)write(*,*)&
   !                'sending: me, iface,iBlock,neiL=',iProc,iface,iBlock,neiL
   !
   !           ! Restrict VxB
   !           select case(facedir)
   !           case(1)
-  !              sbuf1=0.5*(VxB_y(isface,1:nJ-1:2,1:nK+1:2,iBlock)+&
-  !                         VxB_y(isface,2:nJ  :2,1:nK+1:2,iBlock))
-  !              sbuf2=0.5*(VxB_z(isface,1:nJ+1:2,1:nK-1:2,iBlock)+&
-  !                         VxB_z(isface,1:nJ+1:2,2:nK  :2,iBlock))
+  !              sbuf1=0.5*(VxBY_GB(isface,1:nJ-1:2,1:nK+1:2,iBlock)+&
+  !                         VxBY_GB(isface,2:nJ  :2,1:nK+1:2,iBlock))
+  !              sbuf2=0.5*(VxBZ_GB(isface,1:nJ+1:2,1:nK-1:2,iBlock)+&
+  !                         VxBZ_GB(isface,1:nJ+1:2,2:nK  :2,iBlock))
   !           case(2)
-  !              sbuf1=0.5*(VxB_x(1:nI-1:2,isface,1:nK+1:2,iBlock)+&
-  !                         VxB_x(2:nI  :2,isface,1:nK+1:2,iBlock))
+  !              sbuf1=0.5*(VxBX_GB(1:nI-1:2,isface,1:nK+1:2,iBlock)+&
+  !                         VxBX_GB(2:nI  :2,isface,1:nK+1:2,iBlock))
   !
-  !              sbuf2=0.5*(VxB_z(1:nI+1:2,isface,1:nK-1:2,iBlock)+&
-  !                         VxB_z(1:nI+1:2,isface,2:nK  :2,iBlock))
+  !              sbuf2=0.5*(VxBZ_GB(1:nI+1:2,isface,1:nK-1:2,iBlock)+&
+  !                         VxBZ_GB(1:nI+1:2,isface,2:nK  :2,iBlock))
   !           case(3)
-  !              sbuf1=0.5*(VxB_x(1:nI-1:2,1:nJ+1:2,isface,iBlock)+&
-  !                         VxB_x(2:nI  :2,1:nJ+1:2,isface,iBlock))
-  !              sbuf2=0.5*(VxB_y(1:nI+1:2,1:nJ-1:2,isface,iBlock)+&
-  !                         VxB_y(1:nI+1:2,2:nJ  :2,isface,iBlock))
+  !              sbuf1=0.5*(VxBX_GB(1:nI-1:2,1:nJ+1:2,isface,iBlock)+&
+  !                         VxBX_GB(2:nI  :2,1:nJ+1:2,isface,iBlock))
+  !              sbuf2=0.5*(VxBY_GB(1:nI+1:2,1:nJ-1:2,isface,iBlock)+&
+  !                         VxBY_GB(1:nI+1:2,2:nJ  :2,isface,iBlock))
   !
   !           end select
   !
@@ -1542,8 +1548,8 @@ contains
   !              end if
   !           end if
   !
-  !           neiP=neiPE(1,iface,iBlock)
-  !           neiB=neiBLK(1,iface,iBlock)
+  !           neiP=jProc_IEB(1,iface,iBlock)
+  !           neiB=jBlock_IEB(1,iface,iBlock)
   !
   !           if(neiP==iProc)then
   !              ! Local copy into appropriate subface
@@ -1555,7 +1561,7 @@ contains
   !              ! Remote send of face
   !              itag = 100*iBlock+10*iface
   !
-  !              if(DoTest.and.okdebug)write(*,*)&
+  !              if(DoTest.and.DoDebug)write(*,*)&
   !                   'Remote send,me,iBlock,itag,neiP,neiB=',&
   !                   iProc,iBlock,itag,neiP,neiB
   !
@@ -1591,7 +1597,7 @@ contains
   !        do iBlock = 1,nBlockMax
   !           if(Unused_B(iBlock))CYCLE
   !
-  !           neiL=neiLEV(rface,iBlock)
+  !           neiL=DiLevel_EB(rface,iBlock)
   !           if(neiL==0)then
   !              ! Check if remote edges were received
   !              do iedge=1,2
@@ -1619,10 +1625,10 @@ contains
   !           if(neiL/=-1)CYCLE
   !
   !           do isubface=1,4
-  !              if(neiPE(isubface,rface,iBlock)==iProc) CYCLE
+  !              if(jProc_IEB(isubface,rface,iBlock)==iProc) CYCLE
   !
-  !              neiB=neiBLK(isubface,rface,iBlock)
-  !              if(okdebug.and.DoTest)&
+  !              neiB=jBlock_IEB(isubface,rface,iBlock)
+  !              if(DoDebug.and.DoTest)&
   !                   write(*,*)'buf2subface: me, isubface, iBlock, neiB=',&
   !                   iProc,isubface,iBlock,neiB
   !
@@ -1682,50 +1688,50 @@ contains
   !        select case(isubface)
   !           ! Beware, case(2) and case(3) are swapped
   !        case(1)
-  !           VxB_y(irface, 1:nJ/2  , 1:nK/2+1, qBLK)=qbuf1
-  !           VxB_z(irface, 1:nJ/2+1, 1:nK/2  , qBLK)=qbuf2
+  !           VxBY_GB(irface, 1:nJ/2  , 1:nK/2+1, qBLK)=qbuf1
+  !           VxBZ_GB(irface, 1:nJ/2+1, 1:nK/2  , qBLK)=qbuf2
   !        case(3)
-  !           VxB_y(irface, nJ/2+1:nJ  , 1:nK/2+1, qBLK)=qbuf1
-  !           VxB_z(irface, nJ/2+1:nJ+1, 1:nK/2  , qBLK)=qbuf2
+  !           VxBY_GB(irface, nJ/2+1:nJ  , 1:nK/2+1, qBLK)=qbuf1
+  !           VxBZ_GB(irface, nJ/2+1:nJ+1, 1:nK/2  , qBLK)=qbuf2
   !        case(2)
-  !           VxB_y(irface, 1:nJ/2   ,nK/2+1:nK+1, qBLK)=qbuf1
-  !           VxB_z(irface, 1:nJ/2+1 ,nK/2+1:nK  , qBLK)=qbuf2
+  !           VxBY_GB(irface, 1:nJ/2   ,nK/2+1:nK+1, qBLK)=qbuf1
+  !           VxBZ_GB(irface, 1:nJ/2+1 ,nK/2+1:nK  , qBLK)=qbuf2
   !        case(4)
-  !           VxB_y(irface,nJ/2+1:nJ  ,nK/2+1:nK+1,qBLK)=qbuf1
-  !           VxB_z(irface,nJ/2+1:nJ+1,nK/2+1:nK  ,qBLK)=qbuf2
+  !           VxBY_GB(irface,nJ/2+1:nJ  ,nK/2+1:nK+1,qBLK)=qbuf1
+  !           VxBZ_GB(irface,nJ/2+1:nJ+1,nK/2+1:nK  ,qBLK)=qbuf2
   !        end select
   !     case(2)
   !        select case(isubface)
   !           ! Beware, case(2) and case(3) are swapped
   !        case(1)
-  !           VxB_x(1:nI/2  , irface, 1:nK/2+1, qBLK)=qbuf1
-  !           VxB_z(1:nI/2+1, irface, 1:nK/2  , qBLK)=qbuf2
+  !           VxBX_GB(1:nI/2  , irface, 1:nK/2+1, qBLK)=qbuf1
+  !           VxBZ_GB(1:nI/2+1, irface, 1:nK/2  , qBLK)=qbuf2
   !        case(3)
-  !           VxB_x(nI/2+1:nI   ,irface, 1:nK/2+1, qBLK)=qbuf1
-  !           VxB_z(nI/2+1:nI+1 ,irface, 1:nK/2  , qBLK)=qbuf2
+  !           VxBX_GB(nI/2+1:nI   ,irface, 1:nK/2+1, qBLK)=qbuf1
+  !           VxBZ_GB(nI/2+1:nI+1 ,irface, 1:nK/2  , qBLK)=qbuf2
   !        case(2)
-  !           VxB_x(1:nI/2  , irface, nK/2+1:nK+1, qBLK)=qbuf1
-  !           VxB_z(1:nI/2+1, irface, nK/2+1:nK  , qBLK)=qbuf2
+  !           VxBX_GB(1:nI/2  , irface, nK/2+1:nK+1, qBLK)=qbuf1
+  !           VxBZ_GB(1:nI/2+1, irface, nK/2+1:nK  , qBLK)=qbuf2
   !        case(4)
-  !           VxB_x(nI/2+1:nI  ,irface,nK/2+1:nK+1,qBLK)=qbuf1
-  !           VxB_z(nI/2+1:nI+1,irface,nK/2+1:nK  ,qBLK)=qbuf2
+  !           VxBX_GB(nI/2+1:nI  ,irface,nK/2+1:nK+1,qBLK)=qbuf1
+  !           VxBZ_GB(nI/2+1:nI+1,irface,nK/2+1:nK  ,qBLK)=qbuf2
   !        end select
   !     case(3)
   !
   !        select case(isubface)
   !           ! Beware, case(2) and case(3) are not swapped
   !        case(1)
-  !           VxB_x(1:nI/2  , 1:nJ/2+1, irface,qBLK)=qbuf1
-  !           VxB_y(1:nI/2+1, 1:nJ/2  , irface,qBLK)=qbuf2
+  !           VxBX_GB(1:nI/2  , 1:nJ/2+1, irface,qBLK)=qbuf1
+  !           VxBY_GB(1:nI/2+1, 1:nJ/2  , irface,qBLK)=qbuf2
   !        case(2)
-  !           VxB_x(nI/2+1:nI  , 1:nJ/2+1 ,irface, qBLK)=qbuf1
-  !           VxB_y(nI/2+1:nI+1, 1:nJ/2   ,irface, qBLK)=qbuf2
+  !           VxBX_GB(nI/2+1:nI  , 1:nJ/2+1 ,irface, qBLK)=qbuf1
+  !           VxBY_GB(nI/2+1:nI+1, 1:nJ/2   ,irface, qBLK)=qbuf2
   !        case(3)
-  !           VxB_x(1:nI/2  , nJ/2+1:nJ+1, irface, qBLK)=qbuf1
-  !           VxB_y(1:nI/2+1, nJ/2+1:nJ  , irface, qBLK)=qbuf2
+  !           VxBX_GB(1:nI/2  , nJ/2+1:nJ+1, irface, qBLK)=qbuf1
+  !           VxBY_GB(1:nI/2+1, nJ/2+1:nJ  , irface, qBLK)=qbuf2
   !        case(4)
-  !           VxB_x(nI/2+1:nI  ,nJ/2+1:nJ+1,irface,qBLK)=qbuf1
-  !           VxB_y(nI/2+1:nI+1,nJ/2+1:nJ  ,irface,qBLK)=qbuf2
+  !           VxBX_GB(nI/2+1:nI  ,nJ/2+1:nJ+1,irface,qBLK)=qbuf1
+  !           VxBY_GB(nI/2+1:nI+1,nJ/2+1:nJ  ,irface,qBLK)=qbuf2
   !        end select
   !
   !     end select
@@ -1744,21 +1750,21 @@ contains
   !     select case(facedir)
   !     case(1)
   !        if(isubedge==1)then
-  !           VxB_y(irface,1:nJ/2        ,iredge,qBLK)=qbuf
+  !           VxBY_GB(irface,1:nJ/2        ,iredge,qBLK)=qbuf
   !        else
-  !           VxB_y(irface,nJ/2+1:nJ,iredge,qBLK)=qbuf
+  !           VxBY_GB(irface,nJ/2+1:nJ,iredge,qBLK)=qbuf
   !        endif
   !     case(2)
   !        if(isubedge==1)then
-  !           VxB_z(iredge,irface,1:nK/2        ,qBLK)=qbuf
+  !           VxBZ_GB(iredge,irface,1:nK/2        ,qBLK)=qbuf
   !        else
-  !           VxB_z(iredge,irface,nK/2+1:nK,qBLK)=qbuf
+  !           VxBZ_GB(iredge,irface,nK/2+1:nK,qBLK)=qbuf
   !        end if
   !     case(3)
   !        if(isubedge==1)then
-  !           VxB_x(1:nI/2        ,iredge,irface,qBLK)=qbuf
+  !           VxBX_GB(1:nI/2        ,iredge,irface,qBLK)=qbuf
   !        else
-  !           VxB_x(nI/2+1:nI,iredge,irface,qBLK)=qbuf
+  !           VxBX_GB(nI/2+1:nI,iredge,irface,qBLK)=qbuf
   !        end if
   !     end select
   !
@@ -1901,7 +1907,7 @@ contains
   !   ! Set B*FaceFine_*SB from finer face
   !   use ModMain, ONLY : nBLock,Unused_B,iBlockTest
   !   use ModAMR, ONLY : child2subface
-  !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE,BLKneighborCHILD
+  !   use ModParallel, ONLY : DiLevel_EB,jBlock_IEB,jProc_IEB,BLKneighborCHILD
   !   use ModMpi
   !
   !   integer :: iError
@@ -1931,9 +1937,9 @@ contains
   ! !!!     if(.not.refine_list(iBlock,iProc)) CYCLE
   !
   !      do iFace=1,6
-  !         if(neiLEV(iFace,iBlock)==-1)then
+  !         if(DiLevel_EB(iFace,iBlock)==-1)then
   !            do iSubFace=1,4
-  !               iProcNei =neiPE(iSubFace,iFace,iBlock)
+  !               iProcNei =jProc_IEB(iSubFace,iFace,iBlock)
   !               if(iProcNei /= iProc)then
   !                  call recv_b_face_fine
   !               else
@@ -1956,9 +1962,9 @@ contains
   !      if(Unused_B(iBlock)) CYCLE
   !
   !      do iFace=1,6
-  !         if(neiLEV(iFace,iBlock)/=1) CYCLE
-  !         iBlockNei=neiBLK(1,iFace,iBlock)
-  !         iProcNei =neiPE(1,iFace,iBlock)
+  !         if(DiLevel_EB(iFace,iBlock)/=1) CYCLE
+  !         iBlockNei=jBlock_IEB(1,iFace,iBlock)
+  !         iProcNei =jProc_IEB(1,iFace,iBlock)
   ! !!!        if(.not.refine_list(iBlockNei,iProcNei)) CYCLE
   !         if(iProcNei==iProc) CYCLE ! local copy
   !         call send_b_face_fine
@@ -1983,17 +1989,17 @@ contains
   !     case(1,2)
   !        iSize=nJ*nK
   !        iSide=iFace-1+1
-  !        call MPI_irecv(BxFaceFine_XQSB(1,1,iSubFace,iSide,iBlock), iSize, &
+  !        call MPI_irecv(BxFaceFine_IIQSB(1,1,iSubFace,iSide,iBlock), iSize, &
   !             MPI_REAL, iProcNei, iTag, iComm, request, iError)
   !     case(3,4)
   !        iSize=nI*nK
   !        iSide=iFace-3+1
-  !        call MPI_irecv(ByFaceFine_YQSB(1,1,iSubFace,iSide,iBlock), iSize, &
+  !        call MPI_irecv(ByFaceFine_IIQSB(1,1,iSubFace,iSide,iBlock), iSize, &
   !             MPI_REAL, iProcNei, iTag, iComm, request, iError)
   !     case(5,6)
   !        iSize=nI*nJ
   !        iSide=iFace-5+1
-  !        call MPI_irecv(BzFaceFine_ZQSB(1,1,iSubFace,iSide,iBlock), iSize, &
+  !        call MPI_irecv(BzFaceFine_IIQSB(1,1,iSubFace,iSide,iBlock), iSize, &
   !             MPI_REAL, iProcNei, iTag, iComm, request, iError)
   !     end select
   !     number_receive_requests = number_receive_requests + 1
@@ -2010,32 +2016,32 @@ contains
   !        iSize=nJ*nK
   !        allocate(Buffer(nJ,nK))
   !        iFaceOther=2
-  !        Buffer=BxFace_BLK(1,1:nJ,1:nK,iBlock)
+  !        Buffer=BxFace_GB(1,1:nJ,1:nK,iBlock)
   !     case(2)
   !        iSize=nJ*nK
   !        allocate(Buffer(nJ,nK))
   !        iFaceOther=1
-  !        Buffer=BxFace_BLK(nI+1,1:nJ,1:nK,iBlock)
+  !        Buffer=BxFace_GB(nI+1,1:nJ,1:nK,iBlock)
   !     case(3)
   !        iSize=nI*nK
   !        allocate(Buffer(nI,nK))
   !        iFaceOther=4
-  !        Buffer=ByFace_BLK(1:nI,1,1:nK,iBlock)
+  !        Buffer=ByFace_GB(1:nI,1,1:nK,iBlock)
   !     case(4)
   !        iSize=nI*nK
   !        allocate(Buffer(nI,nK))
   !        iFaceOther=3
-  !        Buffer=ByFace_BLK(1:nI,nJ+1,1:nK,iBlock)
+  !        Buffer=ByFace_GB(1:nI,nJ+1,1:nK,iBlock)
   !     case(5)
   !        iSize=nI*nJ
   !        allocate(Buffer(nI,nJ))
   !        iFaceOther=6
-  !        Buffer=BzFace_BLK(1:nI,1:nJ,1,iBlock)
+  !        Buffer=BzFace_GB(1:nI,1:nJ,1,iBlock)
   !     case(6)
   !        iSize=nI*nJ
   !        allocate(Buffer(nI,nJ))
   !        iFaceOther=5
-  !        Buffer=BzFace_BLK(1:nI,1:nJ,nK+1,iBlock)
+  !        Buffer=BzFace_GB(1:nI,1:nJ,nK+1,iBlock)
   !     end select
   !
   !     iChild=BLKneighborCHILD(0,0,0,1,iBlock)
@@ -2052,30 +2058,30 @@ contains
   !
   !     ! Copy fine normal B face component from the neighboring block
   !
-  !     iBlockNei=neiBLK(iSubFace,iFace,iBlock)
+  !     iBlockNei=jBlock_IEB(iSubFace,iFace,iBlock)
   !
   !     if(DoTest.and.(iBlock==iBlockTest.or.iBlockNei==iBlockTest))&
   !          write(*,*)'copy from iBlockNei=',iBlockNei,' to iBlock=',iBlock
   !
   !     select case(iFace)
   !     case(1)
-  !        BxFaceFine_XQSB(:,:,iSubFace,1,iBlock)=&
-  !             BxFace_BLK(nI+1,1:nJ,1:nK,iBlockNei)
+  !        BxFaceFine_IIQSB(:,:,iSubFace,1,iBlock)=&
+  !             BxFace_GB(nI+1,1:nJ,1:nK,iBlockNei)
   !     case(2)
-  !        BxFaceFine_XQSB(:,:,iSubFace,2,iBlock)=&
-  !             BxFace_BLK(   1,1:nJ,1:nK,iBlockNei)
+  !        BxFaceFine_IIQSB(:,:,iSubFace,2,iBlock)=&
+  !             BxFace_GB(   1,1:nJ,1:nK,iBlockNei)
   !     case(3)
-  !        ByFaceFine_YQSB(:,:,iSubFace,1,iBlock)=&
-  !             ByFace_BLK(1:nI,nJ+1,1:nK,iBlockNei)
+  !        ByFaceFine_IIQSB(:,:,iSubFace,1,iBlock)=&
+  !             ByFace_GB(1:nI,nJ+1,1:nK,iBlockNei)
   !     case(4)
-  !        ByFaceFine_YQSB(:,:,iSubFace,2,iBlock)=&
-  !             ByFace_BLK(1:nI,   1,1:nK,iBlockNei)
+  !        ByFaceFine_IIQSB(:,:,iSubFace,2,iBlock)=&
+  !             ByFace_GB(1:nI,   1,1:nK,iBlockNei)
   !     case(5)
-  !        BzFaceFine_ZQSB(:,:,iSubFace,1,iBlock)=&
-  !             BzFace_BLK(1:nI,1:nJ,nK+1,iBlockNei)
+  !        BzFaceFine_IIQSB(:,:,iSubFace,1,iBlock)=&
+  !             BzFace_GB(1:nI,1:nJ,nK+1,iBlockNei)
   !     case(6)
-  !        BzFaceFine_ZQSB(:,:,iSubFace,2,iBlock)=&
-  !             BzFace_BLK(1:nI,1:nJ,   1,iBlockNei)
+  !        BzFaceFine_IIQSB(:,:,iSubFace,2,iBlock)=&
+  !             BzFace_GB(1:nI,1:nJ,   1,iBlockNei)
   !     end select
   !
   !   end subroutine copy_b_face_fine

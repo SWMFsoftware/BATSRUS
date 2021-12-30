@@ -87,9 +87,9 @@ module ModB0
   ! Local variables
 
   ! B0 field at the resolution change interfaces
-  real, public, allocatable :: B0ResChange_DXSB(:,:,:,:,:)
-  real, public, allocatable :: B0ResChange_DYSB(:,:,:,:,:)
-  real, public, allocatable :: B0ResChange_DZSB(:,:,:,:,:)
+  real, public, allocatable :: B0ResChangeX_DIIEB(:,:,:,:,:)
+  real, public, allocatable :: B0ResChangeY_DIIEB(:,:,:,:,:)
+  real, public, allocatable :: B0ResChangeZ_DIIEB(:,:,:,:,:)
 
 contains
   !============================================================================
@@ -161,12 +161,12 @@ contains
        B0_DGB = 0.0
        if(iTypeUpdate == UpdateOrig_)then
           allocate( &
-               B0ResChange_DXSB(MaxDim,nJ,nK,1:2,MaxBlock),    &
-               B0ResChange_DYSB(MaxDim,nI,nK,3:4,MaxBlock),    &
-               B0ResChange_DZSB(MaxDim,nI,nJ,5:6,MaxBlock))
-          B0ResChange_DXSB = 0.0
-          B0ResChange_DYSB = 0.0
-          B0ResChange_DZSB = 0.0
+               B0ResChangeX_DIIEB(MaxDim,nJ,nK,1:2,MaxBlock),    &
+               B0ResChangeY_DIIEB(MaxDim,nI,nK,3:4,MaxBlock),    &
+               B0ResChangeZ_DIIEB(MaxDim,nI,nJ,5:6,MaxBlock))
+          B0ResChangeX_DIIEB = 0.0
+          B0ResChangeY_DIIEB = 0.0
+          B0ResChangeZ_DIIEB = 0.0
        end if
     end if
     !$omp end single
@@ -228,7 +228,7 @@ contains
 
     !--------------------------------------------------------------------------
     if(allocated(B0_DGB)) deallocate(B0_DGB, &
-         B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
+         B0ResChangeX_DIIEB, B0ResChangeY_DIIEB, B0ResChangeZ_DIIEB)
 
     !$omp parallel
     if(allocated(DivB0_C))   deallocate(DivB0_C)
@@ -275,7 +275,7 @@ contains
 
     ! Calculate the face centered B0 for block iBlock
 
-    use ModParallel, ONLY: NeiLev
+    use ModParallel, ONLY: DiLevel_EB
     use BATL_lib,    ONLY: nDim
 
     integer,intent(in)::iBlock
@@ -312,18 +312,18 @@ contains
 
     if(iTypeUpdate == UpdateOrig_)then
        ! Correct B0 at resolution changes
-       if(NeiLev(1,iBlock) == -1) &
-            B0_DX(:,1   ,1:nJ,1:nK) = B0ResChange_DXSB(:,:,:,1,iBlock)
-       if(NeiLev(2,iBlock) == -1) &
-            B0_DX(:,nI+1,1:nJ,1:nK) = B0ResChange_DXSB(:,:,:,2,iBlock)
-       if(NeiLev(3,iBlock) == -1) &
-            B0_DY(:,1:nI,1   ,1:nK) = B0ResChange_DYSB(:,:,:,3,iBlock)
-       if(NeiLev(4,iBlock) == -1) &
-            B0_DY(:,1:nI,1+nJ,1:nK) = B0ResChange_DYSB(:,:,:,4,iBlock)
-       if(NeiLev(5,iBlock) == -1) &
-            B0_DZ(:,1:nI,1:nJ,1   ) = B0ResChange_DZSB(:,:,:,5,iBlock)
-       if(NeiLev(6,iBlock) == -1) &
-            B0_DZ(:,1:nI,1:nJ,1+nK) = B0ResChange_DZSB(:,:,:,6,iBlock)
+       if(DiLevel_EB(1,iBlock) == -1) &
+            B0_DX(:,1   ,1:nJ,1:nK) = B0ResChangeX_DIIEB(:,:,:,1,iBlock)
+       if(DiLevel_EB(2,iBlock) == -1) &
+            B0_DX(:,nI+1,1:nJ,1:nK) = B0ResChangeX_DIIEB(:,:,:,2,iBlock)
+       if(DiLevel_EB(3,iBlock) == -1) &
+            B0_DY(:,1:nI,1   ,1:nK) = B0ResChangeY_DIIEB(:,:,:,3,iBlock)
+       if(DiLevel_EB(4,iBlock) == -1) &
+            B0_DY(:,1:nI,1+nJ,1:nK) = B0ResChangeY_DIIEB(:,:,:,4,iBlock)
+       if(DiLevel_EB(5,iBlock) == -1) &
+            B0_DZ(:,1:nI,1:nJ,1   ) = B0ResChangeZ_DIIEB(:,:,:,5,iBlock)
+       if(DiLevel_EB(6,iBlock) == -1) &
+            B0_DZ(:,1:nI,1:nJ,1+nK) = B0ResChangeZ_DIIEB(:,:,:,6,iBlock)
     end if
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_face
@@ -364,7 +364,7 @@ contains
        if(DiLevelNei_IIIB(-1,0,0,iBlock) == +1) then
           do k = 1, nK; do j = 1, nJ
              if(.not.IsCartesian) Coef = 0.5*CellFace_DFB(1,1,j,k,iBlock)
-             B0ResChange_DXSB(:,j,k,1,iBlock) =     &
+             B0ResChangeX_DIIEB(:,j,k,1,iBlock) =     &
                   Coef*( B0_DGB(:,0,j,k,iBlock) &
                   +      B0_DGB(:,1,j,k,iBlock) )
           end do; end do
@@ -373,7 +373,7 @@ contains
        if(DiLevelNei_IIIB(+1,0,0,iBlock) == +1) then
           do k = 1, nK; do j = 1, nJ
              if(.not.IsCartesian) Coef = 0.5*CellFace_DFB(1,nI+1,j,k,iBlock)
-             B0ResChange_DXSB(:,j,k,2,iBlock) =    &
+             B0ResChangeX_DIIEB(:,j,k,2,iBlock) =    &
                   Coef*( B0_DGB(:,nI  ,j,k,iBlock) &
                   +      B0_DGB(:,nI+1,j,k,iBlock) )
           end do; end do
@@ -382,7 +382,7 @@ contains
        if(DiLevelNei_IIIB(0,-1,0,iBlock) == +1) then
           do k = 1, nK; do i = 1, nI
              if(.not.IsCartesian) Coef = 0.5*CellFace_DFB(2,i,1,k,iBlock)
-             B0ResChange_DYSB(:,i,k,3,iBlock) = &
+             B0ResChangeY_DIIEB(:,i,k,3,iBlock) = &
                   Coef*( B0_DGB(:,i,0,k,iBlock) &
                   +      B0_DGB(:,i,1,k,iBlock) )
           end do; end do
@@ -391,7 +391,7 @@ contains
        if(DiLevelNei_IIIB(0,+1,0,iBlock) == +1) then
           do k = 1, nK; do i = 1, nI
              if(.not.IsCartesian) Coef = 0.5*CellFace_DFB(2,i,nJ+1,k,iBlock)
-             B0ResChange_DYSB(:,i,k,4,iBlock) =    &
+             B0ResChangeY_DIIEB(:,i,k,4,iBlock) =    &
                   Coef*( B0_DGB(:,i,nJ  ,k,iBlock) &
                   +      B0_DGB(:,i,nJ+1,k,iBlock) )
           end do; end do
@@ -402,7 +402,7 @@ contains
        if(DiLevelNei_IIIB(0,0,-1,iBlock) == +1) then
           do j = 1, nJ; do i = 1, nI
              if(.not.IsCartesian) Coef = 0.5*CellFace_DFB(3,i,j,1,iBlock)
-             B0ResChange_DZSB(:,i,j,5,iBlock) = &
+             B0ResChangeZ_DIIEB(:,i,j,5,iBlock) = &
                   Coef*( B0_DGB(:,i,j,0,iBlock) &
                   +      B0_DGB(:,i,j,1,iBlock) )
           end do; end do
@@ -411,7 +411,7 @@ contains
        if(DiLevelNei_IIIB(0,0,+1,iBlock) == +1)  then
           do j = 1, nJ; do i = 1, nI
              if(.not.IsCartesian) Coef = 0.5*CellFace_DFB(3,i,j,nK+1,iBlock)
-             B0ResChange_DZSB(:,i,j,6,iBlock) =    &
+             B0ResChangeZ_DIIEB(:,i,j,6,iBlock) =    &
                   Coef*( B0_DGB(:,i,j,nK  ,iBlock) &
                   +      B0_DGB(:,i,j,nK+1,iBlock) )
           end do; end do
@@ -419,7 +419,7 @@ contains
     end do
 
     call message_pass_face(                                       &
-         3, B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB, &
+         3, B0ResChangeX_DIIEB, B0ResChangeY_DIIEB, B0ResChangeZ_DIIEB, &
          DoSubtractIn=.false.)
 
     if(.not. IsCartesian) then
@@ -428,32 +428,32 @@ contains
           if(Unused_B(iBlock)) CYCLE
           if(DiLevelNei_IIIB(-1,0,0,iBlock) == -1) then
              do k = 1, nK; do j = 1, nJ
-                B0ResChange_DXSB(:,j,k,1,iBlock) =    &
-                     B0ResChange_DXSB(:,j,k,1,iBlock) &
+                B0ResChangeX_DIIEB(:,j,k,1,iBlock) =    &
+                     B0ResChangeX_DIIEB(:,j,k,1,iBlock) &
                      /max(1e-30, CellFace_DFB(1,1,j,k,iBlock))
              end do; end do
           end if
 
           if(DiLevelNei_IIIB(+1,0,0,iBlock) == -1) then
              do k = 1, nK; do j = 1, nJ
-                B0ResChange_DXSB(:,j,k,2,iBlock) =    &
-                     B0ResChange_DXSB(:,j,k,2,iBlock) &
+                B0ResChangeX_DIIEB(:,j,k,2,iBlock) =    &
+                     B0ResChangeX_DIIEB(:,j,k,2,iBlock) &
                      /max(1e-30, CellFace_DFB(1,nI+1,j,k,iBlock))
              end do; end do
           end if
 
           if(DiLevelNei_IIIB(0,-1,0,iBlock) == -1) then
              do k = 1, nK; do i = 1, nI
-                B0ResChange_DYSB(:,i,k,3,iBlock) =    &
-                     B0ResChange_DYSB(:,i,k,3,iBlock) &
+                B0ResChangeY_DIIEB(:,i,k,3,iBlock) =    &
+                     B0ResChangeY_DIIEB(:,i,k,3,iBlock) &
                      /max(1e-30, CellFace_DFB(2,i,1,k,iBlock))
              end do; end do
           end if
 
           if(DiLevelNei_IIIB(0,+1,0,iBlock) == -1) then
              do k = 1, nK; do i = 1, nI
-                B0ResChange_DYSB(:,i,k,4,iBlock) =    &
-                     B0ResChange_DYSB(:,i,k,4,iBlock) &
+                B0ResChangeY_DIIEB(:,i,k,4,iBlock) =    &
+                     B0ResChangeY_DIIEB(:,i,k,4,iBlock) &
                      /max(1e-30, CellFace_DFB(2,i,nJ+1,k,iBlock))
              end do; end do
           end if
@@ -462,16 +462,16 @@ contains
 
           if(DiLevelNei_IIIB(0,0,-1,iBlock) == -1) then
              do j = 1, nJ; do i = 1, nI
-                B0ResChange_DZSB(:,i,j,5,iBlock) =    &
-                     B0ResChange_DZSB(:,i,j,5,iBlock) &
+                B0ResChangeZ_DIIEB(:,i,j,5,iBlock) =    &
+                     B0ResChangeZ_DIIEB(:,i,j,5,iBlock) &
                      /max(1e-30, CellFace_DFB(3,i,j,1,iBlock))
              end do; end do
           end if
 
           if(DiLevelNei_IIIB(0,0,+1,iBlock) == -1) then
              do j = 1, nJ; do i = 1, nI
-                B0ResChange_DZSB(:,i,j,6,iBlock) =    &
-                     B0ResChange_DZSB(:,i,j,6,iBlock) &
+                B0ResChangeZ_DIIEB(:,i,j,6,iBlock) =    &
+                     B0ResChangeZ_DIIEB(:,i,j,6,iBlock) &
                      /max(1e-30, CellFace_DFB(3,i,j,nK+1,iBlock))
              end do; end do
           end if
@@ -663,12 +663,12 @@ contains
 
     ! Get B0 at location Xyz_D
 
-    use ModMain,           ONLY : Time_Simulation, NameThisComp, &
+    use ModMain,           ONLY : tSimulation, NameThisComp, &
          TypeCoordSystem
     use ModPhysics,        ONLY: Si2No_V, UnitB_, DipoleStrengthSi, &
          MonopoleStrength
     use CON_planet_field,  ONLY: get_planet_field
-    use ModMain,           ONLY: UseBody2, UseUserB0, time_accurate, StartTime
+    use ModMain,           ONLY: UseBody2, UseUserB0, IsTimeAccurate, StartTime
     use ModMagnetogram,    ONLY: iTableB0, iTableB0New, get_magnetogram_field
     use ModConst, ONLY: CarringtonSynodicPeriod, tStartCarringtonRotation
 
@@ -680,10 +680,10 @@ contains
     character(len=*), parameter:: NameSub = 'get_b0'
     !--------------------------------------------------------------------------
     if(iTableB0 > 0)then
-       if(iTableB0New > 0 .and. time_accurate)then
+       if(iTableB0New > 0 .and. IsTimeAccurate)then
           ! Interpolate to the current time expressed as CarringtonNumber
           CarringtonNumber = &
-               (StartTime + time_simulation - tStartCarringtonRotation) &
+               (StartTime + tSimulation - tStartCarringtonRotation) &
                /CarringtonSynodicPeriod
           call get_magnetogram_field(Xyz_D, B0_D, CarringtonNumber)
        else
@@ -699,7 +699,7 @@ contains
     elseif(DipoleStrengthSi==0.0)then
        B0_D = 0.0
     elseif(NameThisComp=='GM' .and. nDim == 3)then
-       call get_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM',&
+       call get_planet_field(tSimulation, Xyz_D, TypeCoordSystem//' NORM',&
             B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
     else

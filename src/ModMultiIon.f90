@@ -19,7 +19,7 @@ module ModMultiIon
   use ModMultiFluid
   use ModMain, ONLY: UseUserSourceImpl
   use ModSize, ONLY: nI, nJ, nK
-  use ModGeometry, ONLY: true_cell
+  use ModGeometry, ONLY: Used_GB
 
   use ModUserInterface ! user_calc_sources_impl, user_init_point_implicit
 
@@ -130,7 +130,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
        ! Check if we are in the solar wind
        Rho   = State_VGB(Rho_,i,j,k,iBlock)
        p     = State_VGB(p_,i,j,k,iBlock)
@@ -211,7 +211,7 @@ contains
     end if
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        DoTestCell = DoTest .and. i == iTest .and. j == jTest .and. k == kTest
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
        State_V = State_VGB(:,i,j,k,iBlock)
        ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
        InvElectronDens = 1.0/sum(ChargeDens_I)
@@ -362,7 +362,7 @@ contains
     end if
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
@@ -723,7 +723,7 @@ contains
     InvTeRatio1 = 1 / TeRatio1
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 

@@ -12,7 +12,7 @@ module ModFaceFlux
   use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction
   use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection, &
        EDotFA_X, EDotFA_Y, EDotFA_Z                     ! out: E.Area
-  use ModGeometry,   ONLY: true_cell
+  use ModGeometry,   ONLY: Used_GB
   use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
        Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
        UseHighFDGeometry, correct_face_value
@@ -374,7 +374,7 @@ contains
     ! the logicals of diffusion, conduction and induction.
 
     use ModMain, ONLY: UseHyperbolicDivb
-    use ModAdvance, ONLY: TypeFlux => FluxType
+    use ModAdvance, ONLY: TypeFlux => TypeFlux
     use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
     !--------------------------------------------------------------------------
 
@@ -467,8 +467,7 @@ contains
 
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
     use ModAdvance,  ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
-    use ModParallel, ONLY: &
-         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+    use ModParallel, ONLY: DiLevel_EB
     use ModMain,     ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
@@ -511,21 +510,21 @@ contains
     if(DoCorrectFace) call calc_simple_cell_flux(iBlock)
 
     if(DoResChangeOnly)then
-       if(neiLeast(iBlock) == 1) &
+       if(DiLevel_EB(1,iBlock) == 1) &
             call get_flux_x(1,1,1,nJ,1,nK,iBlock)
-       if(neiLwest(iBlock) == 1) &
+       if(DiLevel_EB(2,iBlock) == 1) &
             call get_flux_x(nIFace,nIFace,1,nJ,1,nK,iBlock)
        if (DoTest) &
             write(*,*) '------------------------------------------------------'
-       if(nJ > 1 .and. neiLsouth(iBlock) == 1) &
+       if(nJ > 1 .and. DiLevel_EB(3,iBlock) == 1) &
             call get_flux_y(1,nI,1,1,1,nK,iBlock)
-       if(nJ > 1 .and. neiLnorth(iBlock) == 1) &
+       if(nJ > 1 .and. DiLevel_EB(4,iBlock) == 1) &
             call get_flux_y(1,nI,nJFace,nJFace,1,nK,iBlock)
        if (DoTest) &
             write(*,*) '------------------------------------------------------'
-       if(nK > 1 .and. neiLbot(iBlock)   == 1) &
+       if(nK > 1 .and. DiLevel_EB(5,iBlock)   == 1) &
             call get_flux_z(1,nI,1,nJ,1,1,iBlock)
-       if(nK > 1 .and. neiLtop(iBlock)   == 1) &
+       if(nK > 1 .and. DiLevel_EB(6,iBlock)   == 1) &
             call get_flux_z(1,nI,1,nJ,nKFace,nKFace,iBlock)
     else
        call get_flux_x( &
@@ -553,8 +552,8 @@ contains
       integer:: iGang
 
       logical:: IsFF_I(nFFLogic)
-      integer:: IFF_I(nFFInt)
-      real:: RFF_I(nFFReal)
+      integer:: iFF_I(nFFInt)
+      real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
 
       iGang = 1
@@ -566,8 +565,8 @@ contains
       do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
          call set_cell_values_x
 
-         if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-              .not. true_cell(iRight,jRight,kRight,iBlock)) then
+         if(  .not. Used_GB(iLeft,jLeft,kLeft,iBlock) .and. &
+              .not. Used_GB(iRight,jRight,kRight,iBlock)) then
             Flux_VXI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
@@ -616,13 +615,13 @@ contains
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,iGang),&
-                 IFF_I, RFF_I)
+                 iFF_I, rFF_I)
          endif
 
          Flux_VXI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
          ! Correct Unormal_I to make div(u) achieve 6th order.
-         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
 
          Flux_VXI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
@@ -659,8 +658,8 @@ contains
       integer:: iGang
 
       logical:: IsFF_I(nFFLogic)
-      integer:: IFF_I(nFFInt)
-      real:: RFF_I(nFFReal)
+      integer:: iFF_I(nFFInt)
+      real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
 
       iGang = 1
@@ -672,8 +671,8 @@ contains
       do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
          call set_cell_values_y
 
-         if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-              .not. true_cell(iRight,jRight,kRight,iBlock)) then
+         if(  .not. Used_GB(iLeft,jLeft,kLeft,iBlock) .and. &
+              .not. Used_GB(iRight,jRight,kRight,iBlock)) then
             Flux_VYI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
@@ -722,12 +721,12 @@ contains
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IY(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,iGang),&
-                 IFF_I, RFF_I)
+                 iFF_I, rFF_I)
          endif
 
          Flux_VYI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
-         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
 
          Flux_VYI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
@@ -766,8 +765,8 @@ contains
       integer:: iGang
 
       logical:: IsFF_I(nFFLogic)
-      integer:: IFF_I(nFFInt)
-      real:: RFF_I(nFFReal)
+      integer:: iFF_I(nFFInt)
+      real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
 
       iGang = 1
@@ -779,8 +778,8 @@ contains
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
          call set_cell_values_z
 
-         if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-              .not. true_cell(iRight,jRight,kRight,iBlock)) then
+         if(  .not. Used_GB(iLeft,jLeft,kLeft,iBlock) .and. &
+              .not. Used_GB(iRight,jRight,kRight,iBlock)) then
             Flux_VZI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
@@ -828,12 +827,12 @@ contains
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IZ(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,iGang),&
-                 IFF_I, RFF_I)
+                 iFF_I, rFF_I)
          endif
 
          Flux_VZI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
-         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
 
          Flux_VZI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
@@ -852,8 +851,8 @@ contains
             endif
 
             do iFlux = 1, nFlux
-               Flux_VZI(iFlux,iFace,jFace,kFace,iGang)  = &
-                    correct_face_value(Flux_VZI(iFlux,iFace,jFace,kFace,iGang) ,&
+               Flux_VZI(iFlux,iFace,jFace,kFace,iGang) = correct_face_value( &
+                    Flux_VZI(iFlux,iFace,jFace,kFace,iGang), &
                     FluxCenter_VGD(iFlux,iFace,jFace,kFace-2:kFace+1,3))
             enddo
          end do; end do; enddo
@@ -861,7 +860,7 @@ contains
 
     end subroutine get_flux_z
     !==========================================================================
-    subroutine add_artificial_viscosity(Flux_V, IFF_I, RFF_I)
+    subroutine add_artificial_viscosity(Flux_V, iFF_I, rFF_I)
 
       ! This subroutine adds artificial viscosity to the fluid
       ! density/moment/energy/pressure equations, but not the EM field
@@ -877,8 +876,8 @@ contains
 
       real, intent(inout):: Flux_V(nFlux)
 
-      integer,  intent(inout):: IFF_I(:)
-      real,     intent(inout):: RFF_I(:)
+      integer,  intent(inout):: iFF_I(:)
+      real,     intent(inout):: rFF_I(:)
 
       real :: Coef
       real :: FaceDivU, Sound3, s1, s2
@@ -887,7 +886,7 @@ contains
       character(len=*), parameter:: NameSub = 'add_artificial_viscosity'
       !------------------------------------------------------------------------
       if(.not. &
-           all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace)))&
+           all(Used_GB(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace)))&
            RETURN
 
       do iFluid = 1, nFluid
@@ -1026,7 +1025,7 @@ contains
 
   subroutine set_cell_values_common
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
-    use ModGeometry, ONLY: r_BLK
+    use ModGeometry, ONLY: r_GB
     use ModChGL,     ONLY: UseChGL, rMinChGL
 
     real :: r
@@ -1039,11 +1038,11 @@ contains
 
     if(UseChGL)then
        ! Check if this face is in the ChGL  domain
-       IsChGLDomain = rMinChGL < max(r_BLK(&
-            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))
+       IsChGLDomain = rMinChGL < max(r_GB(&
+            iFace,jFace,kFace,iBlockFace),r_GB(iLeft,jLeft,kLeft,iBlockFace))
        ! Check if this face is the part of ChGL  domain boundary
-       IsChGLInterface = IsChGLDomain.and.rMinChGL>=min(r_BLK(&
-            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))
+       IsChGLInterface = IsChGLDomain.and.rMinChGL>=min(r_GB(&
+            iFace,jFace,kFace,iBlockFace),r_GB(iLeft,jLeft,kLeft,iBlockFace))
     else
        IsChGLInterface = .false.; IsChGLDomain = .false.
     end if
@@ -1062,8 +1061,8 @@ contains
 
     iRight = iFace; jRight = jFace; kRight = kFace
 
-    IsBoundary = true_cell(iLeft, jLeft, kLeft, iBlockFace) &
-         .neqv.  true_cell(iRight,jRight,kRight,iBlockFace)
+    IsBoundary = Used_GB(iLeft, jLeft, kLeft, iBlockFace) &
+         .neqv.  Used_GB(iRight,jRight,kRight,iBlockFace)
 
     HallCoeff     = -1.0
     BiermannCoeff = -1.0
@@ -1119,8 +1118,8 @@ contains
     end if
 
     if(UseClimit)then
-       r = 0.5*(r_BLK(iLeft,  jLeft,  kLeft,  iBlockFace) &
-            +   r_BLK(iRight, jRight, kRight, iBlockFace))
+       r = 0.5*(r_GB(iLeft,  jLeft,  kLeft,  iBlockFace) &
+            +   r_GB(iRight, jRight, kRight, iBlockFace))
        if(r < rClimit)then
           Climit = Io2No_V(UnitU_)*ClimitDim
        else
@@ -1146,7 +1145,7 @@ contains
          iRho, iRhoUx, iRhoUy, iRhoUz, iUx, iUy, iUz, iEnergy, iP, &
          IsIon_I, nIonFluid, UseMultiIon, ChargePerMass_I, select_fluid
     use BATL_size,   ONLY: nDim
-    use ModGeometry, ONLY: r_BLK
+    use ModGeometry, ONLY: r_GB
 
     real, intent(in) :: State_V(nVar)      ! input primitive state
 
@@ -1248,8 +1247,8 @@ contains
 
        if(UseResistivePlanet .and. iFluid == 1)then
           ! Do not evolve magnetic field inside the body
-          if(r_BLK(iLeft,jLeft,kLeft,iBlockFace) < 1.0 .and. &
-               r_BLK(iRight,jRight,kRight,iBlockFace) < 1.0) &
+          if(r_GB(iLeft,jLeft,kLeft,iBlockFace) < 1.0 .and. &
+               r_GB(iRight,jRight,kRight,iBlockFace) < 1.0) &
                Flux_V(Bx_:Bz_) = 0.0
        end if
 
@@ -3232,8 +3231,8 @@ contains
     real:: Conservative_V(nFlux)
 
     logical:: IsFF_I(nFFLogic)
-    integer:: IFF_I(nFFInt)
-    real:: RFF_I(nFFReal)
+    integer:: iFF_I(nFFInt)
+    real:: rFF_I(nFFReal)
 
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
@@ -3245,7 +3244,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_simple_cell_flux'
     !--------------------------------------------------------------------------
-    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+    call init_face_flux_arrays( IsFF_I, iFF_I, rFF_I, Unormal_I, bCrossArea_D)
 
     call test_start(NameSub, DoTest, iBlock)
 
@@ -4161,15 +4160,15 @@ contains
   end subroutine get_speed_max
   !============================================================================
 
-  subroutine correct_u_normal(IFF_I, RFF_I, Unormal_I)
+  subroutine correct_u_normal(iFF_I, rFF_I, Unormal_I)
     ! Make Unormal 6th order accuracte
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
     use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
          Xi_, Eta_, Zeta_, nDim
 
-    integer,  intent(inout):: IFF_I(:)
-    real,     intent(inout):: RFF_I(:)
+    integer,  intent(inout):: iFF_I(:)
+    real,     intent(inout):: rFF_I(:)
 
     real, intent(inout):: Unormal_I(nFluid+1)
 
@@ -4432,8 +4431,8 @@ contains
     real:: CmaxArea, CmaxAll, Cmax_I(nFluid), Conservative_V(nFlux)
 
     logical:: IsFF_I(nFFLogic)
-    integer:: IFF_I(nFFInt)
-    real:: RFF_I(nFFReal)
+    integer:: iFF_I(nFFInt)
+    real:: rFF_I(nFFReal)
 
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
@@ -4442,7 +4441,7 @@ contains
     !--------------------------------------------------------------------------
     iGang = 1
 
-    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+    call init_face_flux_arrays( IsFF_I, iFF_I, rFF_I, Unormal_I, bCrossArea_D)
 
     call test_start(NameSub, DoTest, iBlock)
 

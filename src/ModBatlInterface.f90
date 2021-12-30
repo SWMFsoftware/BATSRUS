@@ -106,12 +106,9 @@ contains
 
     use ModBoundaryGeometry, ONLY: fix_block_geometry
     use ModGeometry, ONLY: &
-         XyzStart_BLK, r_BLK, rMin_BLK
+         Coord111_DB, r_GB, rMin_B
 
-    use ModParallel, ONLY: neiLEV, neiBLK, neiPE, &
-         neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
-         neiBeast, neiBwest, neiBsouth, neiBnorth, neiBbot, neiBtop, &
-         neiPeast, neiPwest, neiPsouth, neiPnorth, neiPbot, neiPtop
+    use ModParallel, ONLY: DiLevel_EB, jBlock_IEB, jProc_IEB
 
     use ModConservative, ONLY: IsStaticConservCrit, select_conservative
 
@@ -126,19 +123,13 @@ contains
     character(len=*), parameter:: NameSub = 'set_batsrus_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    neiLeast(iBlock)  = DiLevelNei_IIIB(-1,0,0,iBlock)
-    neiLwest(iBlock)  = DiLevelNei_IIIB(+1,0,0,iBlock)
-    neiLsouth(iBlock) = DiLevelNei_IIIB(0,-1,0,iBlock)
-    neiLnorth(iBlock) = DiLevelNei_IIIB(0,+1,0,iBlock)
-    neiLbot(iBlock)   = DiLevelNei_IIIB(0,0,-1,iBlock)
-    neiLtop(iBlock)   = DiLevelNei_IIIB(0,0,+1,iBlock)
 
-    neiLEV(1,iBlock)  = neiLeast(iBlock)
-    neiLEV(2,iBlock)  = neiLwest(iBlock)
-    neiLEV(3,iBlock)  = neiLsouth(iBlock)
-    neiLEV(4,iBlock)  = neiLnorth(iBlock)
-    neiLEV(5,iBlock)  = neiLbot(iBlock)
-    neiLEV(6,iBlock)  = neiLtop(iBlock)
+    DiLevel_EB(1,iBlock)  = DiLevelNei_IIIB(-1,0,0,iBlock)
+    DiLevel_EB(2,iBlock)  = DiLevelNei_IIIB(+1,0,0,iBlock)
+    DiLevel_EB(3,iBlock)  = DiLevelNei_IIIB(0,-1,0,iBlock)
+    DiLevel_EB(4,iBlock)  = DiLevelNei_IIIB(0,+1,0,iBlock)
+    DiLevel_EB(5,iBlock)  = DiLevelNei_IIIB(0,0,-1,iBlock)
+    DiLevel_EB(6,iBlock)  = DiLevelNei_IIIB(0,0,+1,iBlock)
 
     ! neiBeast ... neiPbot are used in
     ! ModFaceValue::correct_monotone_restrict and
@@ -146,118 +137,103 @@ contains
 
     select case(DiLevelNei_IIIB(-1,0,0,iBlock))
     case(Unset_)
-       neiBeast(:,iBlock)  = Unset_
-       neiPeast(:,iBlock)  = Unset_
+       jBlock_IEB(:,1,iBlock)  = Unset_
+       jProc_IEB(:,1,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(0,1:2,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
        if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
-       neiBeast(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPeast(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+       jBlock_IEB(:,1,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jProc_IEB(:,1,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(0,1,1,iBlock)
-       neiBeast(:,iBlock)  = iTree_IA(Block_,iNodeNei)
-       neiPeast(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+       jBlock_IEB(:,1,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jProc_IEB(:,1,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
     select case(DiLevelNei_IIIB(+1,0,0,iBlock))
     case(Unset_)
-       neiBwest(:,iBlock)  = Unset_
-       neiPwest(:,iBlock)  = Unset_
+       jBlock_IEB(:,2,iBlock)  = Unset_
+       jProc_IEB(:,2,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(3,1:2,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
        if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
-       neiBwest(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPwest(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+       jBlock_IEB(:,2,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jProc_IEB(:,2,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(3,1,1,iBlock)
-       neiBwest(:,iBlock)  = iTree_IA(Block_,iNodeNei)
-       neiPwest(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+       jBlock_IEB(:,2,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jProc_IEB(:,2,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
     select case(DiLevelNei_IIIB(0,-1,0,iBlock))
     case(Unset_)
-       neiBsouth(:,iBlock)  = Unset_
-       neiPsouth(:,iBlock)  = Unset_
+       jBlock_IEB(:,3,iBlock)  = Unset_
+       jProc_IEB(:,3,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,0,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
        if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
-       neiBsouth(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPsouth(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+       jBlock_IEB(:,3,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jProc_IEB(:,3,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(1,0,1,iBlock)
-       neiBsouth(:,iBlock)  = iTree_IA(Block_,iNodeNei)
-       neiPsouth(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+       jBlock_IEB(:,3,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jProc_IEB(:,3,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
     select case(DiLevelNei_IIIB(0,+1,0,iBlock))
     case(Unset_)
-       neiBnorth(:,iBlock)  = Unset_
-       neiPnorth(:,iBlock)  = Unset_
+       jBlock_IEB(:,4,iBlock)  = Unset_
+       jProc_IEB(:,4,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,3,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
        if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
-       neiBnorth(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPnorth(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+       jBlock_IEB(:,4,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jProc_IEB(:,4,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(1,3,1,iBlock)
-       neiBnorth(:,iBlock)  = iTree_IA(Block_,iNodeNei)
-       neiPnorth(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+       jBlock_IEB(:,4,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jProc_IEB(:,4,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
     select case(DiLevelNei_IIIB(0,0,-1,iBlock))
     case(Unset_ )
-       neiBbot(:,iBlock)  = Unset_
-       neiPbot(:,iBlock)  = Unset_
+       jBlock_IEB(:,5,iBlock)  = Unset_
+       jProc_IEB(:,5,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,1:2,0,iBlock),.true.)
-       neiBbot(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPbot(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+       jBlock_IEB(:,5,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jProc_IEB(:,5,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(1,1,0,iBlock)
-       neiBbot(:,iBlock)  = iTree_IA(Block_,iNodeNei)
-       neiPbot(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+       jBlock_IEB(:,5,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jProc_IEB(:,5,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
     select case(DiLevelNei_IIIB(0,0,+1,iBlock))
     case(Unset_)
-       neiBtop(:,iBlock)  = Unset_
-       neiPtop(:,iBlock)  = Unset_
+       jBlock_IEB(:,6,iBlock)  = Unset_
+       jProc_IEB(:,6,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,1:2,3,iBlock),.true.)
-       neiBtop(:,iBlock)  = iTree_IA(Block_,iNodeNei_I)
-       neiPtop(:,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
+       jBlock_IEB(:,6,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jProc_IEB(:,6,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(1,1,3,iBlock)
-       neiBtop(:,iBlock)  = iTree_IA(Block_,iNodeNei)
-       neiPtop(:,iBlock)  = iTree_IA(Proc_,iNodeNei)
+       jBlock_IEB(:,6,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jProc_IEB(:,6,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
-    ! neiBLK and neiPE are used in ray_pass, constrain_B, ModPartSteady
-    neiBLK(:,1,iBlock) = neiBeast(:,iBlock)
-    neiBLK(:,2,iBlock) = neiBwest(:,iBlock)
-    neiBLK(:,3,iBlock) = neiBsouth(:,iBlock)
-    neiBLK(:,4,iBlock) = neiBnorth(:,iBlock)
-    neiBLK(:,5,iBlock) = neiBbot(:,iBlock)
-    neiBLK(:,6,iBlock) = neiBtop(:,iBlock)
-
-    neiPE(:,1,iBlock) = neiPeast(:,iBlock)
-    neiPE(:,2,iBlock) = neiPwest(:,iBlock)
-    neiPE(:,3,iBlock) = neiPsouth(:,iBlock)
-    neiPE(:,4,iBlock) = neiPnorth(:,iBlock)
-    neiPE(:,5,iBlock) = neiPbot(:,iBlock)
-    neiPE(:,6,iBlock) = neiPtop(:,iBlock)
-
-    XyzStart_BLK(:,iBlock) = CoordMin_DB(:,iBlock) + 0.5*CellSize_DB(:,iBlock)
+    Coord111_DB(:,iBlock) = CoordMin_DB(:,iBlock) + 0.5*CellSize_DB(:,iBlock)
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       r_BLK(i,j,k,iBlock) = norm2(Xyz_DGB(1:nDim,i,j,k,iBlock))
+       r_GB(i,j,k,iBlock) = norm2(Xyz_DGB(1:nDim,i,j,k,iBlock))
     end do; end do; end do
 
-    Rmin_BLK(iBlock) = minval(r_BLK(:,:,:,iBlock))
+    rMin_B(iBlock) = minval(r_GB(:,:,:,iBlock))
 
     call fix_block_geometry(iBlock)
 
@@ -268,17 +244,8 @@ contains
        ! Set purely geometry based conservative criteria for all blocks
        if(IsStaticConservCrit) call select_conservative
 
-       !$acc update device(neiLtop, neiLbot)
-       !$acc update device(neiLeast, neiLwest, neiLnorth, neiLsouth)
-       !$acc update device(neiLEV)
-
-       !$acc update device(neiPE, neiBLK)
-       !$acc update device(neiPtop, neiPbot)
-       !$acc update device(neiBtop, neiBbot)
-       !$acc update device(neiPeast, neiPwest, neiPnorth, neiPsouth)
-       !$acc update device(neiBeast, neiBwest, neiBnorth, neiBsouth)
-
-       !$acc update device(Rmin_BLK, R_BLK, XyzStart_BLK)
+       !$acc update device(jProc_IEB, jBlock_IEB, DiLevel_EB)
+       !$acc update device(rMin_B, r_GB, Coord111_DB)
     endif
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -324,13 +291,13 @@ contains
   !============================================================================
   subroutine calc_other_vars(iBlock)
 
-    use ModAdvance,  ONLY: State_VGB, nVar, time_BLK
+    use ModAdvance,  ONLY: State_VGB, nVar, DtMax_CB
     use ModB0,       ONLY: set_b0_cell
     use ModPhysics,  ONLY: FaceState_VI, rBody2
-    use ModGeometry, ONLY: body_BLK, true_blk, true_cell, R2_BLK
+    use ModGeometry, ONLY: IsBody_B, IsNoBody_B, Used_GB, rBody2_GB
     use ModMain,     ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
-         dt_BLK, time_accurate, UseDtFixed, Dt
-    use ModParallel, ONLY: neiLwest, NOBLK
+         DtMax_B, IsTimeAccurate, UseDtFixed, Dt
+    use ModParallel, ONLY: DiLevel_EB, Unset_
     use ModMultiFluid
 
     use BATL_size, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -347,9 +314,9 @@ contains
     if(UseB0) call set_b0_cell(iBlock)
 
     ! Set values inside body
-    if(body_BLK(iBlock)) then
+    if(IsBody_B(iBlock)) then
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          if(true_cell(i,j,k,iBlock)) CYCLE
+          if(Used_GB(i,j,k,iBlock)) CYCLE
           State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body1_)
           ! Convert velocity to momentum
           do iFluid = 1, nFluid
@@ -366,7 +333,7 @@ contains
 
     if(UseBody2)then
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          if(R2_Blk(i,j,k,iBlock) > rBody2) CYCLE
+          if(rBody2_GB(i,j,k,iBlock) > rBody2) CYCLE
           State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body2_)
           ! Convert velocity to momentum
           do iFluid = 1, nFluid
@@ -383,22 +350,22 @@ contains
 
     ! For coupled (IH->GM) boundary condition fill in ghost cells
     ! with the first physical cell, because IH may not couple after AMR
-    if(TypeCellBc_I(2)=='coupled' .and. neiLwest(iBlock)==NOBLK)then
+    if(TypeCellBc_I(2)=='coupled' .and. DiLevel_EB(2,iBlock)==Unset_)then
        State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
        State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
     endif
 
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        if(UseDtFixed)then
-          time_BLK(:,:,:,iBlock) = Dt
+          DtMax_CB(:,:,:,iBlock) = Dt
        else
-          time_BLK(:,:,:,iBlock) = dt_BLK(iBlock)
+          DtMax_CB(:,:,:,iBlock) = DtMax_B(iBlock)
        end if
 
        ! Reset time step to zero inside body.
-       if(.not.true_BLK(iBlock))then
-          where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) &
-               time_BLK(:,:,:,iBlock) = 0.0
+       if(.not.IsNoBody_B(iBlock))then
+          where(.not.Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
+               DtMax_CB(:,:,:,iBlock) = 0.0
        end if
     end if
 
@@ -410,7 +377,7 @@ contains
        nCell, iCell_II, Weight_I, IsBody)
 
     use BATL_lib, ONLY: MaxDim, nDim
-    use ModGeometry, ONLY: body_BLK, true_cell
+    use ModGeometry, ONLY: IsBody_B, Used_GB
     ! Interpolation is performed using cells (including ghost) of single block,
     ! its index, iBlock, is provided at the call;
     !
@@ -439,7 +406,7 @@ contains
     call BATL_interpolate(XyzIn_D, iBlock, nCell, iCell_II, Weight_I)
 
     ! check whether all cells in the stencil are true cells
-    if(body_BLK(iBlock))then
+    if(IsBody_B(iBlock))then
        ! number of cells in the stencil may change, reset it
        nCellNew = 0
        ! reset total weight as well
@@ -447,7 +414,7 @@ contains
        do iCell = 1, nCell
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
-          if(true_cell(i_D(1),i_D(2),i_D(3),iBlock))then
+          if(Used_GB(i_D(1),i_D(2),i_D(3),iBlock))then
              nCellNew = nCellNew + 1
              WeightTotal = WeightTotal + Weight_I(iCell)
              ! rearrange output if necessary

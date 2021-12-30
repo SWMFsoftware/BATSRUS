@@ -86,7 +86,7 @@ contains
   subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
     use CON_coupler, ONLY: PW_, Grid_C
-    use ModMain, ONLY: x_, y_,z_, TypeCoordSystem, Time_Simulation
+    use ModMain, ONLY: x_, y_,z_, TypeCoordSystem, tSimulation
     use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, NameVar_V
     use ModAdvance,    ONLY: UseMultiSpecies
     use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
@@ -133,7 +133,7 @@ contains
           Theta = Buffer_VI(Theta_, iLine)
           Phi   = Buffer_VI(Phi_,   iLine)
           call dir_to_xyz(Theta, Phi, XyzPw_D)
-          call map_planet_field(Time_Simulation, XyzPw_D, 'SMG NORM', &
+          call map_planet_field(tSimulation, XyzPw_D, 'SMG NORM', &
                rCurrents,  CoordXyzPw_DI(:,iLine), iHemisphere)
           if(iHemisphere == 0) CoordXyzPw_DI(:,iLine) = 0.0
        end do
@@ -142,7 +142,7 @@ contains
        NamePwCoord = Grid_C(PW_) % TypeCoord
        if(TypeCoordSystem /= NamePwCoord) then
           GmPw_DD = &
-               transform_matrix(Time_Simulation, NamePwCoord, TypeCoordSystem)
+               transform_matrix(tSimulation, NamePwCoord, TypeCoordSystem)
           do iLine = 1, nFieldLine
              CoordXyzPw_DI(:,iLine) = matmul( GmPw_DD, CoordXyzPw_DI(:,iLine))
           end do

@@ -16,9 +16,9 @@ module ModPartSteady
   use ModVarIndexes, ONLY: nVar
   use ModSize,       ONLY: MaxBlock, nI, nJ, nK, x_
   use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, &
-       time_accurate, n_step
+       IsTimeAccurate, nStep
   use ModGeometry,   ONLY: CellSize_DB, CellSize1Min
-  use ModParallel,   ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
+  use ModParallel,   ONLY: Unset_, DiLevel_EB, jProc_IEB, jBlock_IEB
   use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
        State_VGB, StateOld_VGB
@@ -129,7 +129,7 @@ contains
           end do
        end do; end do; end do
 
-       if(time_accurate)then
+       if(IsTimeAccurate)then
           ! Take into account the cell size difference between blocks
           ! so that the same FLUX has the same effect (dU/dt=dF/dx)
           dStateLimit = CellSize1Min / CellSize_DB(x_,iBlock)
@@ -164,7 +164,7 @@ contains
     ! In time accurate runs the explicit blocks should not be modified
     ! to steady state, because the blocks may change slowly for long time.
     ! In steady state runs, the blocks become all steady state in the end..
-    DoPreserveExpl = time_accurate
+    DoPreserveExpl = IsTimeAccurate
 
     ! If no new evolving blocks were found, simply skip the following part.
     if(IsNewSteadySelect) then
@@ -187,16 +187,16 @@ contains
           ! Check all faces and subfaces
           FACES: do iFace = 1, 6
 
-             if(NeiLev(iFace,iBlock) == NOBLK) CYCLE FACES
-             if(NeiLev(iFace,iBlock) == -1)then
+             if(DiLevel_EB(iFace,iBlock) == Unset_) CYCLE FACES
+             if(DiLevel_EB(iFace,iBlock) == -1)then
                 nSubFace = 4
              else
                 nSubFace = 1
              end if
 
              SUBFACES: do iSubFace = 1, nSubFace
-                jProc  = NeiPE( iSubFace,iFace,iBlock)
-                jBlock = NeiBLK(iSubFace,iFace,iBlock)
+                jProc  = jProc_IEB( iSubFace,iFace,iBlock)
+                jBlock = jBlock_IEB(iSubFace,iFace,iBlock)
                 if(iTypeAdvance_BP(jBlock, jProc) >= ExplBlock_) then
                    iTypeAdvance_B(iBlock) = SteadyBoundBlock_
                    CYCLE BLOCKS
@@ -211,12 +211,12 @@ contains
             iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
        ! Check for full steady state
-       if(.not.time_accurate) &
+       if(.not.IsTimeAccurate) &
             IsSteadyState = all(iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_)
 
        if(iProc==0 .and. lVerbose>0) &
             write(*,*)'part_steady finished:',&
-            ' nStep,nSkipped,Steady,Bound,ExplALL=',n_step, &
+            ' nStep,nSkipped,Steady,Bound,ExplALL=',nStep, &
             count(iTypeAdvance_BP == SkippedBlock_), &
             count(iTypeAdvance_BP == SteadyBlock_), &
             count(iTypeAdvance_BP == SteadyBoundBlock_), &

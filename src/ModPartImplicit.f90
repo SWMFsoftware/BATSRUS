@@ -392,13 +392,13 @@ contains
     ! We use get_residual(.false.,...) to calculate R_expl
     ! and    get_residual(.true.,....) to calculate R_impl
 
-    use ModMain, ONLY: nBlockMax, nBlockExplAll, time_accurate, &
-         n_step, time_simulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
+    use ModMain, ONLY: nBlockMax, nBlockExplAll, IsTimeAccurate, &
+         nStep, tSimulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
          iNewDecomposition
     use ModVarIndexes, ONLY: Rho_
     use ModMultifluid, ONLY: select_fluid, nFluid, iP
     use ModAdvance, ONLY : State_VGB, StateOld_VGB, &
-         time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
+         DtMax_CB, Tmp1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModCoarseAxis, ONLY:UseCoarseAxis, coarsen_axis_cells
@@ -439,7 +439,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(DoTest) write(*,*)NameSub,' starting at step=',n_step
+    if(DoTest) write(*,*)NameSub,' starting at step=',nStep
 
     call timing_start(NameSub)
 
@@ -468,7 +468,7 @@ contains
 
     if(DoTest)write(*,*)NameSub,': nImpltot, Norm_V=',nImplTotal_r,Norm_V
 
-    TimeSimulationOrig = Time_Simulation
+    TimeSimulationOrig = tSimulation
     UseUpdateCheckOrig = UseUpdateCheck
     UseUpdateCheck     = .false.
 
@@ -560,7 +560,7 @@ contains
        DtCoeff = CflImpl/0.5
     endif
 
-    if(UseBDF2.and.n_step==n_prev+1)then
+    if(UseBDF2.and.nStep==n_prev+1)then
        ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
        ImplCoeff = (dt+dt_prev)/(2*dt+dt_prev)
     else
@@ -571,9 +571,9 @@ contains
     !   R(U^n+1,t^n+1) = R(U^n,t^n+1) + dR/dU(U^n,t^n+1).(U^n+1 - U^n)
     ! so the Jacobian should be evaluated at t^n+1
 
-    Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
+    tSimulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
-    if(DoTest.and.time_accurate)&
+    if(DoTest.and.IsTimeAccurate)&
          write(*,*)NameSub,': DtCoeff,DtExpl,dt=',DtCoeff,DtExpl,dt
     if(DoTest.and.UseBDF2)write(*,*)NameSub,': n_prev,dt_prev,ImplCoeff=',&
          n_prev,dt_prev,ImplCoeff
@@ -595,7 +595,7 @@ contains
 
     ! Save previous timestep for 3 level scheme
     if(UseBDF2)then
-       n_prev  = n_step
+       n_prev  = nStep
        dt_prev = dt
 
        ! Save the current state into ImplOld_VCB so that StateOld_VGB
@@ -618,7 +618,7 @@ contains
        if(nIterNewton > MaxIterNewton)then
           write(*,*)'Newton-Raphson failed to converge nIterNewton=', &
                nIterNewton
-          if(time_accurate)call stop_mpi('Newton-Raphson failed to converge')
+          if(IsTimeAccurate)call stop_mpi('Newton-Raphson failed to converge')
           EXIT
        endif
 
@@ -674,7 +674,7 @@ contains
        if(DoTest .and. nBlockImpl>0)&
             write(*,*)NameSub,': final     x_I(test)=',x_I(nTest)
 
-       if(ImplParam%iError /= 0 .and. iProc == 0 .and. time_accurate) &
+       if(ImplParam%iError /= 0 .and. iProc == 0 .and. IsTimeAccurate) &
             call error_report(NameSub// &
             ': Krylov solver failure, Krylov error', &
             ImplParam%Error, iError1, .true.)
@@ -733,14 +733,14 @@ contains
     end do
     !$omp end parallel do
 
-    if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
+    if(UseUpdateCheckOrig .and. IsTimeAccurate .and. UseDtFixed)then
 
        ! Calculate the largest relative drop in density or pressure
        !$omp parallel do
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           ! Check p and rho
-          tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) =&
+          Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) =&
                min(State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) / &
                StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock), &
                State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) / &
@@ -749,7 +749,7 @@ contains
        !$omp end parallel do
 
        if(index(StringTest, 'updatecheck') > 0)then
-          pRhoRelativeMin = minval_grid(tmp1_BLK, iLoc_I=iLoc_I)
+          pRhoRelativeMin = minval_grid(Tmp1_GB, iLoc_I=iLoc_I)
           if(iLoc_I(5) == iProc)then
              i = iLoc_I(1); j = iLoc_I(2); k = iLoc_I(3); iBlock = iLoc_I(4)
              write(*,*) 'pRhoRelativeMin is at i,j,k,iBlock,iProc = ',iLoc_I
@@ -759,7 +759,7 @@ contains
              write(*,*) 'pRhoRelativeMin=', pRhoRelativeMin
           end if
        else
-          pRhoRelativeMin = minval_grid(tmp1_BLK)
+          pRhoRelativeMin = minval_grid(Tmp1_GB)
        end if
        if(pRhoRelativeMin < RejectStepLevel .or. ImplParam%iError /= 0)then
           ! Redo step if pressure decreased below RejectStepLevel
@@ -767,13 +767,13 @@ contains
           Dt = 0.0
           ! Do not use previous step in BDF2 scheme
           n_prev = -1
-          ! Reset the state variable, the energy and set time_BLK variable to 0
+          ! Reset the state variable, the energy and set DtMax_CB variable to 0
           !$omp parallel do
           do iBlock = 1,nBlock
              if(Unused_B(iBlock)) CYCLE
              State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
                   = StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock)
-             time_BLK(1:nI,1:nJ,1:nK,iBlock)    = 0.0
+             DtMax_CB(1:nI,1:nJ,1:nK,iBlock)    = 0.0
           end do
           !$omp end parallel do
           ! Reduce next time step
@@ -799,7 +799,7 @@ contains
     endif
 
     ! Advance time by Dt
-    Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
+    tSimulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
     ! Restore logicals
     UseUpdateCheck   = UseUpdateCheckOrig
@@ -819,9 +819,9 @@ contains
 
     ! Initialization for NR
 
-    use ModMain, ONLY : n_step,dt,nOrder, &
+    use ModMain, ONLY : nStep,dt,nOrder, &
          UseRadDiffusion
-    use ModAdvance, ONLY : FluxType
+    use ModAdvance, ONLY : TypeFlux
     use ModMpi
     use ModRadDiffusion, ONLY: IsNewTimestepRadDiffusion
 
@@ -844,7 +844,7 @@ contains
 
     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .false.
 
-    if (nOrder==nOrderImpl .and. FluxType==FluxTypeImpl) then
+    if (nOrder==nOrderImpl .and. TypeFlux==FluxTypeImpl) then
        ! If R_low=R then ResImpl_VCB = ResExpl_VCB
        ResImpl_VCB(:,:,:,:,1:nBlockImpl) = ResExpl_VCB(:,:,:,:,1:nBlockImpl)
     else
@@ -859,7 +859,7 @@ contains
          ResImpl_VCB(iVarTest,iTest,jTest,kTest,iBlockImplTest)
 
     ! Calculate rhs used for nIterNewton=1
-    if(UseBDF2 .and. n_step==n_prev+1)then
+    if(UseBDF2 .and. nStep==n_prev+1)then
        ! Collect RHS terms from Eq 8 in Paper implvac
        ! Newton-Raphson iteration. The BDF2 scheme implies
        ! beta+alpha=1 and beta=(dt_n+dt_n-1)/(2*dt_n+dt_n-1)
@@ -1310,7 +1310,7 @@ contains
     use ModMain
     use ModNumConst, ONLY: i_DD
     use ModvarIndexes
-    use ModAdvance, ONLY: time_BLK
+    use ModAdvance, ONLY: DtMax_CB
     use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, set_b0_face
     use ModRadDiffusion, ONLY: add_jacobian_rad_diff
     use ModResistivity, ONLY: UseResistivity, add_jacobian_resistivity, &
@@ -1579,7 +1579,7 @@ contains
          call add_jacobian_rad_diff(iBlock, nVar, Jac_VVCI)
 
     ! Multiply JAC by the implicit timestep dt, ImplCoeff, Norm_V, and -1
-    if(time_accurate)then
+    if(IsTimeAccurate)then
        do iStencil=1,nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
           if(IsImplCell_CB(i,j,k,iBlock))then
              do jVar=1,nVar; do iVar=1,nVar
@@ -1593,12 +1593,12 @@ contains
           end if
        end do; end do; end do; end do
     else
-       ! Local time stepping has time_BLK=0.0 inside the body
+       ! Local time stepping has DtMax_CB=0.0 inside the body
        do iStencil=1,nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
           do jVar=1,nVar; do iVar=1,nVar
              Jac_VVCI(iVar,jVar,i,j,k,iStencil) = &
                   -Jac_VVCI(iVar,jVar,i,j,k,iStencil) &
-                  *time_BLK(i,j,k,iBlock)*CflImpl*ImplCoeff &
+                  *DtMax_CB(i,j,k,iBlock)*CflImpl*ImplCoeff &
                   *Norm_V(jVar)/Norm_V(iVar)
           end do; end do;
        end do; end do; end do; end do
@@ -1877,7 +1877,7 @@ contains
 
     use ModMain
     use ModAdvance, ONLY: iTypeAdvance_B, ImplBlock_
-    use ModGeometry, ONLY: r_BLK, true_cell
+    use ModGeometry, ONLY: r_GB, Used_GB
 
     integer :: iBlock, iBlockImpl
     integer :: i, j, k
@@ -1928,12 +1928,12 @@ contains
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          IsImplCell_CB(i,j,k,iBlock) = true_cell(i,j,k,iBlock)
+          IsImplCell_CB(i,j,k,iBlock) = Used_GB(i,j,k,iBlock)
        enddo; enddo; enddo
 
        if(UseResistivePlanet)then
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(r_BLK(i,j,k,iBlock) < 1.0) &
+             if(r_GB(i,j,k,iBlock) < 1.0) &
                   IsImplCell_CB(i,j,k,iBlock) = .false.
           enddo; enddo; enddo
        endif
@@ -2088,7 +2088,7 @@ contains
     ! otherwise return              Res_VCB = Var_VCB(t+DtExpl)
 
     use ModMain
-    use ModAdvance, ONLY : FluxType, time_BLK
+    use ModAdvance, ONLY : TypeFlux, DtMax_CB
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModMessagePass, ONLY: exchange_messages
     use ModMpi
@@ -2122,16 +2122,16 @@ contains
     if(IsLowOrder)then
        nOrderTmp    = nOrder
        nOrder       = nOrderImpl
-       TypeFluxTmp  = FluxType
-       FluxType     = FluxTypeImpl
+       TypeFluxTmp  = TypeFlux
+       TypeFlux     = FluxTypeImpl
     endif
     if(UseDtFixed)then
        !$omp parallel do private( iBlock )
        do iBlockImpl=1,nBlockImpl
           iBlock = iBlockFromImpl_B(iBlockImpl)
-          time_BLK(:,:,:,iBlock) = 0.0
+          DtMax_CB(:,:,:,iBlock) = 0.0
           where(IsImplCell_CB(1:nI,1:nJ,1:nK,iBlock)) &
-               time_BLK(1:nI,1:nJ,1:nK,iBlock) = DtExpl
+               DtMax_CB(1:nI,1:nJ,1:nK,iBlock) = DtExpl
        end do
        !$omp end parallel do
     else
@@ -2167,7 +2167,7 @@ contains
     nStage      = nStageTmp
     if(IsLowOrder)then
        nOrder   = nOrderTmp
-       FluxType = TypeFluxTmp
+       TypeFlux = TypeFluxTmp
     end if
     if(.not.UseDtFixed) Cfl = CflTmp
 
@@ -2403,7 +2403,7 @@ contains
 
     use ModMain
     use ModB0,  ONLY: B0_DGB
-    use ModGeometry, ONLY: true_BLK
+    use ModGeometry, ONLY: IsNoBody_B
     use ModMpi
     use ModHallResist, ONLY: UseHallResist, set_hall_factor_face
     use BATL_lib, ONLY: CellVolume_GB
@@ -2441,7 +2441,7 @@ contains
           call get_cmax_face(Impl_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlockImpl), &
                B0_DC, nI, nJ, nK, iDim, iBlock, Cmax_C)
 
-          if(.not.true_BLK(iBlock))then
+          if(.not.IsNoBody_B(iBlock))then
              where(.not.IsImplCell_CB(1:nI,1:nJ,1:nK,iBlock)) Cmax_C = 0.0
           end if
 

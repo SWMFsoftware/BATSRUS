@@ -31,7 +31,7 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY: State_VGB, tmp1_BLK
+    use ModAdvance, ONLY: State_VGB, Tmp1_GB
     use ModPhysics, ONLY: Si2Io_V, Si2No_V, UnitT_
     use ModIO
     use ModIoUnit, ONLY   : io_unit_new
@@ -95,7 +95,7 @@ contains
     if(present(TimeSatHeaderIn)) then
        TimeSatHeader = TimeSatHeaderIn
     else
-       TimeSatHeader = time_simulation
+       TimeSatHeader = tSimulation
     end if
 
     DoWritePosition = .false.
@@ -103,17 +103,17 @@ contains
     if(iSatIn == 0 .and. ( index(StringTest,'show_pmin')>0 .or. &
          index(StringTest,'show_pmax')>0 ) ) then
 
-       tmp1_BLK(1:nI,1:nJ,1:nK,1:nBlock) &
+       Tmp1_GB(1:nI,1:nJ,1:nK,1:nBlock) &
             = State_VGB(P_,1:nI,1:nJ,1:nK,1:nBlock)
 
        if(index(StringTest,'show_pmin')>0)then
-          pMin = minval_grid(tmp1_BLK, iLoc_I=loc)
+          pMin = minval_grid(Tmp1_GB, iLoc_I=loc)
           if(loc(5)==iProc)write(*,*)'pmin, loc, x, y, z=',pmin,loc, &
                Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
        end if
 
        if(index(StringTest,'show_pmax')>0)then
-          pMax = maxval_grid(tmp1_BLK, iLoc_I=loc)
+          pMax = maxval_grid(Tmp1_GB, iLoc_I=loc)
           if(loc(5)==iProc)write(*,*)'pmax, loc, x, y, z=',pmax,loc, &
                Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
 
@@ -146,7 +146,7 @@ contains
        StringTime = TimeSat_I(iSat)
        DoWritePosition = .true.
     elseif (iSatIn<0) then
-       if (time_accurate)then
+       if (IsTimeAccurate)then
           StringTime = 'step time'
        else
           StringTime = 'step'
@@ -203,7 +203,7 @@ contains
        end if
     end do
 
-    if(DoTest .and. n_step <= 1)then
+    if(DoTest .and. nStep <= 1)then
        write(*,*)'nLogVar,nFluxVar,nLogR,nLogTot:',  &
             nLogVar,nFluxVar,nLogR,nLogTot
        write(*,*)'NameLogVar_I:',NameLogVar_I(1:nLogVar)
@@ -225,10 +225,10 @@ contains
                 write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
                 filename = trim(filename) // '_e' // trim(eventDateTime)
              else
-                if(n_step < 1000000)then
-                   write(filename,'(a,i6.6)') trim(filename)//'_n',n_step
+                if(nStep < 1000000)then
+                   write(filename,'(a,i6.6)') trim(filename)//'_n',nStep
                 else
-                   write(filename,'(a,i8.8)') trim(filename)//'_n',n_step
+                   write(filename,'(a,i8.8)') trim(filename)//'_n',nStep
                 end if
              end if
 
@@ -257,7 +257,7 @@ contains
        elseif (iSatIn >= 1) then
           iUnit = iUnitSat_I(iSat)
           if (IsFirstWriteSat_I(iSat)) then
-             if (time_accurate) then
+             if (IsTimeAccurate) then
                 write(iUnit,'(a, es13.5)')  &
                      'Satellite data for Satellite: ' // &
                      trim(FilenameSat_I(isat))        // &
@@ -279,15 +279,15 @@ contains
              iUnit = iUnitParcel_I(iParcel)
              write(ParcelFile, '(i2.2)') iParcel
              filename = trim(NamePlotDir) // 'pcl'//'_'//ParcelFile//'_'
-             if (time_accurate) then
+             if (IsTimeAccurate) then
                 call get_date_time(iTime_I)
                 write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
                 filename = trim(filename)//'_t' //trim(eventDateTime)
              else
-                if(n_step < 1000000)then
-                   write(filename,'(a,i6.6)') trim(filename)//'_n',n_step
+                if(nStep < 1000000)then
+                   write(filename,'(a,i6.6)') trim(filename)//'_n',nStep
                 else
-                   write(filename,'(a,i8.8)') trim(filename)//'_n',n_step
+                   write(filename,'(a,i8.8)') trim(filename)//'_n',nStep
                 end if
              end if
              filename = trim(filename) // '.pcl'
@@ -321,20 +321,20 @@ contains
           ! do nothing
        else
           if(index(StringTime,'step')>0) &
-               write(iUnit,'(i7)',ADVANCE='NO') n_step
+               write(iUnit,'(i7)',ADVANCE='NO') nStep
           if(index(StringTime,'date')>0) then
              call get_date_time(iTime_I)
              write(iUnit,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') &
                   iTime_I
           end if
           if(index(StringTime,'time')>0) then
-             ! note that Time_Simulation is in SI units.
+             ! note that tSimulation is in SI units.
              if(plot_dimensional(iFile)) then
                 write(iUnit,'(es13.5)',ADVANCE='NO') &
-                     Time_Simulation*Si2Io_V(UnitT_)
+                     tSimulation*Si2Io_V(UnitT_)
              else
                 write(iUnit,'(es13.5)',ADVANCE='NO') &
-                     Time_Simulation*Si2No_V(UnitT_)
+                     tSimulation*Si2No_V(UnitT_)
              end if
           end if
        end if
@@ -342,7 +342,7 @@ contains
        if(TypeCoordPlot_I(iFile) /= '???' &
             .and. TypeCoordPlot_I(iFile) /= TypeCoordSystem)then
 
-          Convert_DD = transform_matrix(Time_Simulation, &
+          Convert_DD = transform_matrix(tSimulation, &
                TypeCoordSystem, TypeCoordPlot_I(iFile))
 
           if(DoWritePosition) Xyz_D = matmul(Convert_DD, Xyz_D)
@@ -386,15 +386,15 @@ contains
        nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I, iSat)
 
     use ModNumConst, ONLY: cPi
-    use ModMain, ONLY: n_step, Dt, Cfl, optimize_message_pass, &
+    use ModMain, ONLY: nStep, Dt, Cfl, TypeMessagePass, &
          UseRotatingFrame,UseB0, NameVarLower_V
     use ModPhysics, ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
          ElectronPressureRatio, InvGammaElectronMinus1
     use ModVarIndexes
-    use ModAdvance,  ONLY: tmp1_BLK, tmp2_BLK, State_VGB, DivB1_GB
+    use ModAdvance,  ONLY: Tmp1_GB, Tmp2_GB, State_VGB, DivB1_GB
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
-    use ModGeometry, ONLY: R_BLK, x1, x2, y1, y2, z1, z2, DomainVolume
+    use ModGeometry, ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, DomainVolume
     use ModFieldTrace, ONLY: ray
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
@@ -439,15 +439,15 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(DoTest.and.n_step==1)then
+    if(DoTest.and.nStep==1)then
        write(*,*)'nLogVar,nLogR,nLogTot:',nLogVar,nLogR,nLogTot
        write(*,*)'NameLogVar_I:',NameLogVar_I(1:nLogVar)
        write(*,*)'LogR_I:',LogR_I(1:nLogR)
     end if
 
     LogVar_I = 0.0
-    tmp1_BLK = 1.0
-    DomainVolume  =integrate_grid(tmp1_BLK, UseGlobal=.true.)
+    Tmp1_GB = 1.0
+    DomainVolume  =integrate_grid(Tmp1_GB, UseGlobal=.true.)
 
     ! Obtain data to calculate log variables
     if(iSat>=1)then
@@ -486,7 +486,7 @@ contains
           call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
           select case(NameLogVar)
           case('rho','rhoux','rhouy','rhouz','bx','by','bz','p','pmin','pmax')
-             call integrate_domain(StateIntegral_V, tmp2_BLK)
+             call integrate_domain(StateIntegral_V, Tmp2_GB)
              EXIT
           end select
        end do
@@ -550,13 +550,13 @@ contains
     !==========================================================================
     subroutine set_log_var
 
-      use ModMain,      ONLY: x_, y_, z_, TypeCoordSystem, Time_Simulation
+      use ModMain,      ONLY: x_, y_, z_, TypeCoordSystem, tSimulation
       use ModUtilities, ONLY: lower_case
       use ModCurrent,   ONLY: get_current
       use ModEnergy,    ONLY: get_fluid_energy_block, energy_i
       use ModWaves,     ONLY: UseWavePressure
       use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
-      use ModGeometry,  ONLY: r_BLK
+      use ModGeometry,  ONLY: r_GB
       use ModIO,        ONLY: lNameLogVar
       use ModIeCoupling, ONLY: logvar_ionosphere
       use ModCoordTransform, ONLY: cross_product
@@ -582,19 +582,19 @@ contains
       case('e')
          do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
-            call get_fluid_energy_block(iBlock, iFluid, tmp1_BLK(:,:,:,iBlock))
+            call get_fluid_energy_block(iBlock, iFluid, Tmp1_GB(:,:,:,iBlock))
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('pmin')
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = minval_grid(tmp2_BLK)/nProc
+         LogVar_I(iVarTot) = minval_grid(Tmp2_GB)/nProc
       case('pmax')
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = maxval_grid(tmp2_BLK)/nProc
+         LogVar_I(iVarTot) = maxval_grid(Tmp2_GB)/nProc
       case('urmin')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  ( State_VGB(iRhoUx, 1:nI,1:nJ,1:nK,iBlock)   &
                  * Xyz_DGB(       x_,1:nI,1:nJ,1:nK,iBlock)   &
                  + State_VGB(iRhoUy, 1:nI,1:nJ,1:nK,iBlock)   &
@@ -602,14 +602,14 @@ contains
                  + State_VGB(iRhoUz, 1:nI,1:nJ,1:nK,iBlock)   &
                  * Xyz_DGB(       z_,1:nI,1:nJ,1:nK,iBlock) ) &
                  / State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)      &
-                 / r_BLK(1:nI,1:nJ,1:nK,iBlock)
+                 / r_GB(1:nI,1:nJ,1:nK,iBlock)
          end do
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = minval_grid(tmp1_BLK)/nProc
+         LogVar_I(iVarTot) = minval_grid(Tmp1_GB)/nProc
       case('urmax')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  ( State_VGB(iRhoUx, 1:nI,1:nJ,1:nK,iBlock)   &
                  * Xyz_DGB(       x_,1:nI,1:nJ,1:nK,iBlock)   &
                  + State_VGB(iRhoUy, 1:nI,1:nJ,1:nK,iBlock)   &
@@ -617,112 +617,112 @@ contains
                  + State_VGB(iRhoUz, 1:nI,1:nJ,1:nK,iBlock)   &
                  * Xyz_DGB(       z_,1:nI,1:nJ,1:nK,iBlock) ) &
                  / State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)      &
-                 / r_BLK(1:nI,1:nJ,1:nK,iBlock)
+                 / r_GB(1:nI,1:nJ,1:nK,iBlock)
          end do
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = maxval_grid(tmp1_BLK)/nProc
+         LogVar_I(iVarTot) = maxval_grid(Tmp1_GB)/nProc
       case('ux')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock) / &
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('uy')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock) / &
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('uz')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock) / &
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('pperp')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  ( 3*State_VGB(iP,1:nI,1:nJ,1:nK,iBlock) &
                  -State_VGB(iPpar,1:nI,1:nJ,1:nK,iBlock) )/2
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('ekinx')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)**2/&
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('ekiny')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)**2/&
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('ekinz')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2/&
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('ekin')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  (State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)**2+&
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)**2+&
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2)&
                  /State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('eth')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = InvGammaMinus1_I(iFluid)*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = InvGammaMinus1_I(iFluid)*integrate_grid(Tmp1_GB)/DomainVolume
       case('eeth')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = State_VGB(Pe_,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(Pe_,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = InvGammaElectronMinus1*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = InvGammaElectronMinus1*integrate_grid(Tmp1_GB)/DomainVolume
       case('eb')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
             if(UseB0)then
                do k = 1, nK; do j=1, nJ; do i=1, nI
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                     ( (State_VGB(Bx_,i,j,k,iBlock) + B0_DGB(1,i,j,k,iBlock))**2 &
                     + (State_VGB(By_,i,j,k,iBlock) + B0_DGB(2,i,j,k,iBlock))**2 &
                     + (State_VGB(Bz_,i,j,k,iBlock) + B0_DGB(3,i,j,k,iBlock))**2 )
                end do; end do; end do
             else
                do k = 1, nK; do j=1, nJ; do i=1, nI
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        ( State_VGB(Bx_,i,j,k,iBlock)**2 &
                        + State_VGB(By_,i,j,k,iBlock)**2 &
                        + State_VGB(Bz_,i,j,k,iBlock)**2 )
                end do; end do; end do
             end if
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
 
       case('jin','jout','jinmax','joutmax')
 
-         if(index(optimize_message_pass,'opt')>0) &
+         if(index(TypeMessagePass,'opt')>0) &
               call stop_mpi('Spherical integral of J requires '// &
               'message passing edges and corners. Fix PARAM.in!')
 
@@ -733,37 +733,37 @@ contains
             do k=1,nK; do j=1,nJ; do i=1,nI
                ! Calculate radial current
                call get_current(i,j,k,iBlock,Current_D)
-               tmp1_BLK(i,j,k,iBlock) = &
-                    sum(Current_D*Xyz_DGB(:,i,j,k,iBlock))/r_BLK(i,j,k,iBlock)
+               Tmp1_GB(i,j,k,iBlock) = &
+                    sum(Current_D*Xyz_DGB(:,i,j,k,iBlock))/r_GB(i,j,k,iBlock)
             end do; end do; end do
          end do
 
-         call message_pass_cell(tmp1_BLK, nWidthIn=1)
+         call message_pass_cell(Tmp1_GB, nWidthIn=1)
 
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             ! now modify tmp1 according to the case we want
             select case(NameLogVar)
             case('jin')
-               tmp1_BLK(:,:,:,iBlock) = min(tmp1_BLK(:,:,:,iBlock), 0.0)
+               Tmp1_GB(:,:,:,iBlock) = min(Tmp1_GB(:,:,:,iBlock), 0.0)
             case('jout')
-               tmp1_BLK(:,:,:,iBlock) = max(tmp1_BLK(:,:,:,iBlock), 0.0)
+               Tmp1_GB(:,:,:,iBlock) = max(Tmp1_GB(:,:,:,iBlock), 0.0)
             end select
          end do
          select case(NameLogVar)
          case('jin','jout')
             LogVar_I(iVarTot) = &
-                 calc_sphere('integrate', 180, rCurrents, tmp1_BLK) &
+                 calc_sphere('integrate', 180, rCurrents, Tmp1_GB) &
                  /(4*cPi*rCurrents**2)
          case('jinmax')
-            Value = calc_sphere('minval',180,rCurrents,tmp1_BLK)
+            Value = calc_sphere('minval',180,rCurrents,Tmp1_GB)
             if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Value, 1, MPI_REAL, &
                  MPI_MIN, iComm, iError)
             ! Divide by nProc so that adding up the processors can work
             LogVar_I(iVarTot) = Value/nProc
 
          case('joutmax')
-            Value = calc_sphere('maxval',180,rCurrents,tmp1_BLK)
+            Value = calc_sphere('maxval',180,rCurrents,Tmp1_GB)
             if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Value, 1, MPI_REAL, &
                  MPI_MAX, iComm, iError)
             ! Divide by nProc so that adding up the processors can work
@@ -782,25 +782,25 @@ contains
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
-                    Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
-                    Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
-                    Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
-                    Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
-                    Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
-                    Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
-                  tmp1_BLK(i,j,k,iBlock) = 0.0
+               if ( r_GB(i,j,k,iBlock) < rCurrents .or. &
+                    Xyz_DGB(x_,i+1,j,k,iBlock) > xMaxBox .or.      &
+                    Xyz_DGB(x_,i-1,j,k,iBlock) < xMinBox .or.      &
+                    Xyz_DGB(y_,i,j+1,k,iBlock) > yMaxBox .or.      &
+                    Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or.      &
+                    Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or.      &
+                    Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox ) then
+                  Tmp1_GB(i,j,k,iBlock) = 0.0
                   CYCLE
                end if
                call get_current(i,j,k,iBlock,Current_D)
-               tmp1_BLK(i,j,k,iBlock) = ( &
+               Tmp1_GB(i,j,k,iBlock) = ( &
                     -Current_D(x_)*Xyz_DGB(y_,i,j,k,iBlock) &
                     +Current_D(y_)*Xyz_DGB(x_,i,j,k,iBlock) ) &
-                    / r_BLK(i,j,k,iBlock)**3
+                    / r_GB(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB) / (4*cPi)
 
       case('dst_sm')
          ! Calculate the Biot-Savart formula for the center of the Earth:
@@ -811,32 +811,32 @@ contains
          !   (J x R)_z = Sum_i GMtoSM_z,i * (curl B x R)_i
 
          ! Conversion from GM coordinate system to SMG
-         Convert_DD = transform_matrix(Time_Simulation, &
+         Convert_DD = transform_matrix(tSimulation, &
               TypeCoordSystem, 'SMG')
 
          ! Calculate
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
-                    Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
-                    Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
-                    Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
-                    Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
-                    Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
-                    Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
-                  tmp1_BLK(i,j,k,iBlock)=0.0
+               if ( r_GB(i,j,k,iBlock) < rCurrents .or. &
+                    Xyz_DGB(x_,i+1,j,k,iBlock) > xMaxBox .or.      &
+                    Xyz_DGB(x_,i-1,j,k,iBlock) < xMinBox .or.      &
+                    Xyz_DGB(y_,i,j+1,k,iBlock) > yMaxBox .or.      &
+                    Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or.      &
+                    Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or.      &
+                    Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox ) then
+                  Tmp1_GB(i,j,k,iBlock)=0.0
                   CYCLE
                end if
                call get_current(i,j,k,iBlock,Current_D)
-               tmp1_BLK(i,j,k,iBlock) = &
+               Tmp1_GB(i,j,k,iBlock) = &
                     -sum(Convert_DD(3,:) &
                     *cross_product(Current_D, Xyz_DGB(:,i,j,k,iBlock))) &
-                    / r_BLK(i,j,k,iBlock)**3
+                    / r_GB(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB) / (4*cPi)
 
       case('dstdivb')
          ! Calculate the contribution of Div B to the surface integral of DST
@@ -848,23 +848,23 @@ contains
          do iBlock=1,nBlock
             if(Unused_B(iBlock))CYCLE
             do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-               if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
-                    Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
-                    Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
-                    Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
-                    Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
-                    Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
-                    Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
-                  tmp1_BLK(i,j,k,iBlock)=0.0
+               if ( r_GB(i,j,k,iBlock) < rCurrents .or. &
+                    Xyz_DGB(x_,i+1,j,k,iBlock) > xMaxBox .or.      &
+                    Xyz_DGB(x_,i-1,j,k,iBlock) < xMinBox .or.      &
+                    Xyz_DGB(y_,i,j+1,k,iBlock) > yMaxBox .or.      &
+                    Xyz_DGB(y_,i,j-1,k,iBlock) < yMinBox .or.      &
+                    Xyz_DGB(z_,i,j,k+1,iBlock) > zMaxBox .or.      &
+                    Xyz_DGB(z_,i,j,k-1,iBlock) < zMinBox ) then
+                  Tmp1_GB(i,j,k,iBlock)=0.0
                   CYCLE
                end if
-               tmp1_BLK(i,j,k,iBlock) = &
+               Tmp1_GB(i,j,k,iBlock) = &
                     Xyz_DGB(z_,i,j,k,iBlock) * DivB1_GB(i,j,k,iBlock) &
-                    / r_BLK(i,j,k,iBlock)**3
+                    / r_GB(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The 4*pi is part of the Biot-Savart formula
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB) / (4*cPi)
 
          ! MHD variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('rhopnt')
@@ -960,9 +960,9 @@ contains
          end select
          do iBlock = 1, nBlock
             if(Unused_B(iBlock)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = ray(i,j,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = ray(i,j,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
          ! RAYTRACE variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('theta1pnt')
          if(iProc == iProcTest) &
@@ -994,8 +994,8 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = 1.0
-            LogVar_I(iVarTot) = calc_sphere('integrate',50, r, tmp1_BLK)
+            Tmp1_GB(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = 1.0
+            LogVar_I(iVarTot) = calc_sphere('integrate',50, r, Tmp1_GB)
          end do
       case('rhoflx')
          ! rho*U_R
@@ -1006,13 +1006,13 @@ contains
             do iBlock=1,nBlock
                if(Unused_B(iBlock)) CYCLE
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                        *Xyz_DGB(:,i,j,k,iBlock)) &
-                       /r_BLK(i,j,k,iBlock)
+                       /r_GB(i,j,k,iBlock)
                end do; end do; end do
             end do
-            LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
+            LogVar_I(iVarTot) = calc_sphere('integrate',360, r, Tmp1_GB)
          end do
       case('dstflx')
          ! B1z
@@ -1020,9 +1020,9 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = &
+            Tmp1_GB(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = &
                  State_VGB(Bz_,0:nI+1,0:nJ+1,0:nK+1,1:nBlock)
-            LogVar_I(iVarTot) = calc_sphere('integrate',180, r, tmp1_BLK) / &
+            LogVar_I(iVarTot) = calc_sphere('integrate',180, r, Tmp1_GB) / &
                  (4*cPi*r**2)
          end do
       case('bflx')
@@ -1037,13 +1037,13 @@ contains
                if(UseB0)FullB_DG = FullB_DG &
                     +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        sum(FullB_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
-                       / R_BLK(i,j,k,iBlock)
+                       / r_GB(i,j,k,iBlock)
                end do; end do; end do
             end do
 
-            LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
+            LogVar_I(iVarTot) = calc_sphere('integrate',360, r, Tmp1_GB)
          end do
       case('b2flx')
          ! B^2*u_R
@@ -1057,15 +1057,15 @@ contains
                if(UseB0)FullB_DG = FullB_DG &
                     +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        sum(FullB_DG(:,i,j,k)**2)
-                  tmp1_BLK(i,j,k,iBlock) = 0.5*tmp1_BLK(i,j,k,iBlock)* &
+                  Tmp1_GB(i,j,k,iBlock) = 0.5*Tmp1_GB(i,j,k,iBlock)* &
                        sum( State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                        *Xyz_DGB(:,i,j,k,iBlock)) &
-                       / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
+                       / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
                end do; end do; end do
             end do
-            LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
+            LogVar_I(iVarTot) = calc_sphere('integrate',360, r,Tmp1_GB)
          end do
       case('pvecflx')
          iVarTot = iVarTot - 1
@@ -1081,13 +1081,13 @@ contains
                   bDotb = sum(FullB_DG(:,i,j,k)**2)
                   bDotU = sum(&
                        FullB_DG(:,i,j,k)*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock))
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        sum( (bDotb*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                        -     bDotU*FullB_DG(:,i,j,k))*Xyz_DGB(:,i,j,k,iBlock) &
-                       ) / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
+                       ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
                end do; end do; end do
             end do
-            LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
+            LogVar_I(iVarTot) = calc_sphere('integrate',360, r,Tmp1_GB)
          end do
 
          ! simple circular integrals
@@ -1111,13 +1111,13 @@ contains
                   RhoUx = State_VGB(iRhoUx,i,j,k,iBlock)
                   RhoUy = State_VGB(iRhoUy,i,j,k,iBlock)
                   RhoUz = State_VGB(iRhoUz,i,j,k,iBlock)
-                  tmp1_BLK(i,j,k,iBlock) = &
+                  Tmp1_GB(i,j,k,iBlock) = &
                        ( (RhoUy*Bz-RhoUz*By)*Xyz_DGB(y_,i,j,k,iBlock) &
                        - (RhoUz*Bx-RhoUx*Bz)*Xyz_DGB(x_,i,j,k,iBlock) &
-                       ) / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
+                       ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
                end do; end do; end do
             end do
-            LogVar_I(iVarTot) = integrate_circle(r, 0.0, tmp1_BLK)
+            LogVar_I(iVarTot) = integrate_circle(r, 0.0, Tmp1_GB)
          end do
 
          ! OTHER VALUES
@@ -1399,8 +1399,8 @@ contains
     ! over the surface of a sphere centered at the origin radius Radius.
     ! The resolution in the colatitude is determined by the nTheta parameter.
 
-    use ModMain,           ONLY: optimize_message_pass
-    use ModGeometry,       ONLY: r_BLK, XyzStart_Blk, TypeGeometry
+    use ModMain,           ONLY: TypeMessagePass
+    use ModGeometry,       ONLY: r_GB, Coord111_DB, TypeGeometry
     use BATL_lib,  ONLY: nI, nJ, nK, Unused_B, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK, nBlock, MaxBlock, &
          IsCartesianGrid, IsRLonLat, Xyz_DGB, x_, y_, z_, &
@@ -1457,9 +1457,9 @@ contains
 
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
-          rMin = 0.5*(R_BLK( 0,1,1,iBlock) + R_BLK( 1, 1, 1,iBlock))
+          rMin = 0.5*(r_GB( 0,1,1,iBlock) + r_GB( 1, 1, 1,iBlock))
           if(rMin > Radius) CYCLE
-          rMax = 0.5*(R_BLK(nI,1,1,iBlock) + R_BLK(nI+1,1,1,iBlock))
+          rMax = 0.5*(r_GB(nI,1,1,iBlock) + r_GB(nI+1,1,1,iBlock))
           if(rMax <= Radius) CYCLE
 
           ! Set temporary array
@@ -1470,13 +1470,13 @@ contains
 
           ! Find the radial index just after Radius
           i2=0
-          do while ( Radius > R_BLK(i2,1,1,iBlock))
+          do while ( Radius > r_GB(i2,1,1,iBlock))
              i2 = i2+1
           end do
           i1=i2-1
 
-          Dr = (Radius - R_BLK(i1, 1, 1, iBlock)) &
-               /(R_BLK(i2, 1, 1, iBlock) - R_BLK(i1, 1, 1, iBlock))
+          Dr = (Radius - r_GB(i1, 1, 1, iBlock)) &
+               /(r_GB(i2, 1, 1, iBlock) - r_GB(i1, 1, 1, iBlock))
           if(Dr<0.or.Dr>1)call stop_mpi('wrong index in calc_sphere')
 
           select case(TypeAction)
@@ -1484,7 +1484,7 @@ contains
              ! Integrate in theta
              do k = 1, nK
                 SinTheta = norm2(Xyz_DGB(x_:y_,1,1,k,iBlock)) &
-                     / r_BLK(1,1,k,iBlock)
+                     / r_GB(1,1,k,iBlock)
                 ! Integrate in Phi by adding up 1..nJ and interpolate in R
                 Average = Dr * sum( Array_G(i2, 1:nJ, k)) + &
                      (1-Dr)  * sum( Array_G(i1, 1:nJ, k))
@@ -1569,7 +1569,7 @@ contains
           ! Fill in edges and corners for the first layer so that bilinear
           ! interpolation can be used without message passing these values
 
-          if(index(optimize_message_pass,'opt')>0) &
+          if(index(TypeMessagePass,'opt')>0) &
                call fill_edge_corner(Array_G)
 
           do i = 1, nTheta
@@ -1607,7 +1607,7 @@ contains
                 ! to the index.
 
                 Average = trilinear( Array_G, 0,nI+1, 0,nJ+1, 0,nK+1, &
-                     1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)) )
+                     1 + InvDxyz_D*([ x, y, z ] - Coord111_DB(:,iBlock)) )
 
                 select case(TypeAction)
                 case('integrate')
@@ -1620,7 +1620,7 @@ contains
                 ! if(iBlock==222.and.i==22.and.j==76)then
                 !   write(*,*)'j, Result=',j, Result
                 !   write(*,*)'x,y,z=',x,y,z
-                !   write(*,*)'XyzStart_Blk=',XyzStart_Blk(:,iBlock)
+                !   write(*,*)'Coord111_DB=',Coord111_DB(:,iBlock)
                 !   write(*,*)'InvDxyz_D=',InvDxyz_D
                 ! end if
              end do
@@ -1663,8 +1663,8 @@ contains
     ! for the z axis is defined by the radius Radius and the z position is
     ! is given by z.
 
-    use ModMain,  ONLY: optimize_message_pass
-    use ModGeometry, ONLY: XyzStart_Blk
+    use ModMain,  ONLY: TypeMessagePass
+    use ModGeometry, ONLY: Coord111_DB
     use ModNumConst, ONLY: cTwoPi
     use ModInterpolate, ONLY: trilinear
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
@@ -1722,7 +1722,7 @@ contains
 
        Array_G = Array_GB(0:nI+1,j0_:nJp1_,k0_:nKp1_,iBlock)
 
-       if(index(optimize_message_pass,'opt')>0) call fill_edge_corner(Array_G)
+       if(index(TypeMessagePass,'opt')>0) call fill_edge_corner(Array_G)
 
        InvDxyz_D = 1 / CellSize_DB(:,iBlock)
 
@@ -1741,7 +1741,7 @@ contains
           ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
 
           Average = trilinear( Array_GB(:,:,:,iBlock),0,nI+1,0,nJ+1,0,nK+1, &
-               1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)))
+               1 + InvDxyz_D*([ x, y, z ] - Coord111_DB(:,iBlock)))
 
           Integral = Integral + Average
        end do
@@ -1907,7 +1907,7 @@ contains
     ! for the processor only.
 
     use ModAdvance,   ONLY: nVar, State_VGB, P_
-    use ModGeometry,  ONLY: true_BLK, true_cell
+    use ModGeometry,  ONLY: IsNoBody_B, Used_GB
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
          nI, nJ, nK, nBlock, MaxBlock, Unused_B, &
          IsCartesian, CellVolume_B, CellVolume_GB
@@ -1931,7 +1931,7 @@ contains
     if(IsCartesian)then
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          if(true_BLK(iBlock)) then
+          if(IsNoBody_B(iBlock)) then
              do iVar=1,nVar
                 Sum_V(iVar) = Sum_V(iVar) + CellVolume_B(iBlock)* &
                      sum(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock))
@@ -1940,7 +1940,7 @@ contains
              do iVar=1,nVar
                 Sum_V(iVar) = Sum_V(iVar) + CellVolume_B(iBlock)* &
                      sum(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock),&
-                     MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+                     MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
              end do
           end if
           Pressure_GB(1:nI,1:nJ,1:nK,iBlock) = &
@@ -1949,7 +1949,7 @@ contains
     else
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          if(true_BLK(iBlock)) then
+          if(IsNoBody_B(iBlock)) then
              do k=1,nK; do j=1,nJ; do i=1,nI
                 CellVolume = CellVolume_GB(i,j,k,iBlock)
                 Sum_V = Sum_V + CellVolume_GB(i,j,k,iBlock)* &
@@ -1957,7 +1957,7 @@ contains
              end do; end do; end do
           else
              do k=1,nK; do j=1,nJ; do i=1,nI
-                if(.not.true_cell(i,j,k,iBlock))CYCLE
+                if(.not.Used_GB(i,j,k,iBlock))CYCLE
                 Sum_V = Sum_V + CellVolume_GB(i,j,k,iBlock)* &
                      State_VGB(:,i,j,k,iBlock)
              end do; end do; end do

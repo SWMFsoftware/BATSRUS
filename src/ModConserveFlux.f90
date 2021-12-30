@@ -8,7 +8,7 @@ module ModConserveFlux
 
   use BATL_size, ONLY: nDim
   use ModSize, ONLY: nI, nJ, nK, MaxBlock, MaxDim
-  use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_, Ex_
+  use ModVarIndexes, ONLY: Bx_, By_, Bz_,B_,U_, Ex_
 
   use ModMain, ONLY: UseB
   use ModAdvance, ONLY: &
@@ -17,11 +17,8 @@ module ModConserveFlux
        RightState_VX, RightState_VY, RightState_VZ, &
        UseMhdMomentumFlux, MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
 
-  use ModGeometry,  ONLY: true_cell
-  use ModParallel, ONLY : &
-       neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
-       neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
-       neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth
+  use ModGeometry,  ONLY: Used_GB
+  use ModParallel, ONLY : DiLevel_EB, jBlock_IEB, jProc_IEB
   use BATL_lib, ONLY: &
        IsCartesianGrid, IsCartesian, IsRzGeometry, &
        CellFace_DFB, FaceNormal_DDFB, Unused_BP
@@ -89,37 +86,37 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if (neiLeast(iBlock)==+1) then
+    if (DiLevel_EB(1,iBlock)==+1) then
        lFaceFrom=1
        lFaceTo=1
        call save_corrected_flux_x
     end if
 
-    if (neiLwest(iBlock)==+1) then
+    if (DiLevel_EB(2,iBlock)==+1) then
        lFaceFrom=1+nI
        lFaceTo=2
        call save_corrected_flux_x
     end if
 
-    if (nDim > 1 .and. neiLsouth(iBlock)==+1) then
+    if (nDim > 1 .and. DiLevel_EB(3,iBlock)==+1) then
        lFaceFrom=1
        lFaceTo=1
        call save_corrected_flux_y
     end if
 
-    if (nDim > 1 .and. neiLnorth(iBlock)==+1) then
+    if (nDim > 1 .and. DiLevel_EB(4,iBlock)==+1) then
        lFaceFrom=1+nJ
        lFaceTo=2
        call save_corrected_flux_y
     end if
 
-    if (nDim > 2 .and. neiLbot(iBlock)==+1) then
+    if (nDim > 2 .and. DiLevel_EB(5,iBlock)==+1) then
        lFaceFrom=1
        lFaceTo=1
        call save_corrected_flux_z
     end if
 
-    if (nDim > 2 .and. neiLtop(iBlock)==+1) then
+    if (nDim > 2 .and. DiLevel_EB(6,iBlock)==+1) then
        lFaceFrom=nK+1
        lFaceTo=2
        call save_corrected_flux_z
@@ -280,66 +277,66 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if (neiLeast(iBlock)==-1)then
-       if ( .not.Unused_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)).and.&
-            .not.Unused_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)).and.&
-            .not.Unused_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)).and.&
-            .not.Unused_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
+    if (DiLevel_EB(1,iBlock)==-1)then
+       if ( .not.Unused_BP(jBlock_IEB(1,1,iBlock),jProc_IEB(1,1,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(2,1,iBlock),jProc_IEB(2,1,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(3,1,iBlock),jProc_IEB(3,1,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(4,1,iBlock),jProc_IEB(4,1,iBlock)))then
           lFaceTo=1
           lFaceFrom=1
           call apply_corrected_flux_x
        end if
     end if
 
-    if (neiLwest(iBlock)==-1) then
-       if ( .not.Unused_BP(neiBwest(1,iBlock),neiPwest(1,iBlock)).and.&
-            .not.Unused_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)).and.&
-            .not.Unused_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)).and.&
-            .not.Unused_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
+    if (DiLevel_EB(2,iBlock)==-1) then
+       if ( .not.Unused_BP(jBlock_IEB(1,2,iBlock),jProc_IEB(1,2,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(2,2,iBlock),jProc_IEB(2,2,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(4,2,iBlock),jProc_IEB(4,2,iBlock)))then
           lFaceTo=nI+1
           lFaceFrom=2
           call apply_corrected_flux_x
        end if
     end if
 
-    if (nDim > 1 .and. neiLsouth(iBlock)==-1) then
-       if(.not.Unused_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)).and.&
-            .not.Unused_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)).and.&
-            .not.Unused_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)).and.&
-            .not.Unused_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
+    if (nDim > 1 .and. DiLevel_EB(3,iBlock)==-1) then
+       if(  .not.Unused_BP(jBlock_IEB(1,3,iBlock),jProc_IEB(1,3,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(2,3,iBlock),jProc_IEB(2,3,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(3,3,iBlock),jProc_IEB(3,3,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(4,3,iBlock),jProc_IEB(4,3,iBlock)))then
           lFaceTo=1
           lFaceFrom=1
           call apply_corrected_flux_y
        end if
     end if
 
-    if (nDim > 1 .and. neiLnorth(iBlock)==-1) then
-       if ( .not.Unused_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)).and.&
-            .not.Unused_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)).and.&
-            .not.Unused_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)).and.&
-            .not.Unused_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
+    if (nDim > 1 .and. DiLevel_EB(4,iBlock)==-1) then
+       if ( .not.Unused_BP(jBlock_IEB(1,4,iBlock),jProc_IEB(1,4,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(2,4,iBlock),jProc_IEB(2,4,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(3,4,iBlock),jProc_IEB(3,4,iBlock)).and.&
+            .not.Unused_BP(jBlock_IEB(4,4,iBlock),jProc_IEB(4,4,iBlock)))then
           lFaceTo=nJ+1
           lFaceFrom=2
           call apply_corrected_flux_y
        end if
     end if
 
-    if (nDim > 2 .and. neiLbot(iBlock)==-1) then
-       if ( .not.Unused_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)).and. &
-            .not.Unused_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)).and. &
-            .not.Unused_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)).and. &
-            .not.Unused_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
+    if (nDim > 2 .and. DiLevel_EB(5,iBlock)==-1) then
+       if ( .not.Unused_BP(jBlock_IEB(1,5,iBlock),jProc_IEB(1,5,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(2,5,iBlock),jProc_IEB(2,5,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(3,5,iBlock),jProc_IEB(3,5,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(4,5,iBlock),jProc_IEB(4,5,iBlock)))then
           lFaceTo=1
           lFaceFrom=1
           call apply_corrected_flux_z
        end if
     end if
 
-    if (nDim > 2 .and. neiLtop(iBlock)==-1) then
-       if ( .not.Unused_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)).and. &
-            .not.Unused_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)).and. &
-            .not.Unused_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)).and. &
-            .not.Unused_BP(neiBtop(4,iBlock),neiPtop(4,iBlock))) then
+    if (nDim > 2 .and. DiLevel_EB(6,iBlock)==-1) then
+       if ( .not.Unused_BP(jBlock_IEB(1,6,iBlock),jProc_IEB(1,6,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(2,6,iBlock),jProc_IEB(2,6,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(3,6,iBlock),jProc_IEB(3,6,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(4,6,iBlock),jProc_IEB(4,6,iBlock))) then
           lFaceTo=nK+1
           lFaceFrom=2
           call apply_corrected_flux_z
@@ -355,8 +352,8 @@ contains
       !------------------------------------------------------------------------
       iGang = 1
       do k = 1, nK; do j = 1, nJ
-         if (.not.true_cell(lFaceTo-1, j, k, iBlock)) CYCLE
-         if (.not.true_cell(lFaceTo  , j, k, iBlock)) CYCLE
+         if (.not.Used_GB(lFaceTo-1, j, k, iBlock)) CYCLE
+         if (.not.Used_GB(lFaceTo  , j, k, iBlock)) CYCLE
 
          Flux_VXI(1:Vdt_,lFaceTo,j,k,iGang)  = &
               CorrectedFlux_VXB(1:Vdt_,j,k,lFaceFrom,iBlock)
@@ -392,8 +389,8 @@ contains
       !------------------------------------------------------------------------
       iGang = 1
       do k = 1, nK; do i = 1, nI
-         if (.not.true_cell(i, lFaceTo-1, k, iBlock))CYCLE
-         if (.not.true_cell(i, lFaceTo  , k, iBlock))CYCLE
+         if (.not.Used_GB(i, lFaceTo-1, k, iBlock))CYCLE
+         if (.not.Used_GB(i, lFaceTo  , k, iBlock))CYCLE
 
          Flux_VYI(1:Vdt_,i,lFaceTo,k,iGang)  = &
               CorrectedFlux_VYB(1:Vdt_,i,k,lFaceFrom,iBlock)
@@ -419,8 +416,8 @@ contains
       !------------------------------------------------------------------------
       iGang = 1
       do j = 1, nJ; do i = 1, nI
-         if(.not.true_cell(i, j, lFaceTo-1, iBlock)) CYCLE
-         if(.not.true_cell(i, j, lFaceTo  , iBlock)) CYCLE
+         if(.not.Used_GB(i, j, lFaceTo-1, iBlock)) CYCLE
+         if(.not.Used_GB(i, j, lFaceTo  , iBlock)) CYCLE
 
          Flux_VZI(1:Vdt_,i,j,lFaceTo,iGang)  = &
               CorrectedFlux_VZB(1:Vdt_,i,j,lFaceFrom,iBlock)
@@ -459,7 +456,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     do k=1,nK; do j=1,nJ
-       if(.not.all(true_cell(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
+       if(.not.all(Used_GB(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
 
        FaceArea_D = FaceNormal_DDFB(:,1,iFaceOut,j,k,iBlock)
        FaceArea2  = sum(FaceArea_D**2)
@@ -498,7 +495,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     do k=1,nK; do i=1,nI
-       if(.not.all(true_cell(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
+       if(.not.all(Used_GB(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
 
        FaceArea_D = FaceNormal_DDFB(:,2,i,jFaceOut,k,iBlock)
        FaceArea2  = sum(FaceArea_D**2)
@@ -538,7 +535,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     do j=1,nJ; do i=1,nI
-       if(.not.all(true_cell(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
+       if(.not.all(Used_GB(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
 
        FaceArea_D = FaceNormal_DDFB(:,3,i,j,kFaceOut,iBlock)
        FaceArea2  = sum(FaceArea_D**2)

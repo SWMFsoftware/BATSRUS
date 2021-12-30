@@ -20,7 +20,7 @@ module ModBoundaryGeometry
   public:: read_boundary_geometry_param! read parameters
   public:: fix_geometry                ! set geometry variables
   public:: fix_block_geometry          ! set geometry variables for a block
-  public:: fix_boundary_ghost_cells    ! recalculate "true_cell" in ghost cells
+  public:: fix_boundary_ghost_cells    ! recalculate "Used_GB" in ghost cells
 
   ! iBoundary_GB contains the index of the boundary that the cell belongs to.
   integer, allocatable, public :: iBoundary_GB(:,:,:,:)
@@ -112,20 +112,20 @@ contains
 
   subroutine fix_block_geometry(iBlock, DoSolveSolidIn)
 
-    use ModMain, ONLY: Body1, body1_, body2_, &
+    use ModMain, ONLY: UseBody, body1_, body2_, &
          UseBody2, UseExtraBoundary, UseSolidState, &
               TypeFaceBc_I, &
          xMinBc_, xMaxBc_, yMinBc_, yMaxBc_, zMinBc_, zMaxBc_, solidBc_
     use ModGeometry, ONLY: &
-         R_BLK, R2_BLK, Rmin2_BLK, Body_BLK, &
-         far_field_BCs_BLK, true_blk, true_cell,&
-         x1, x2, y1, y2, z1, z2
+         r_GB, rBody2_GB, rMinBody2_B, IsBody_B, &
+         IsBoundary_B, IsNoBody_B, Used_GB,&
+         xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
     use ModPhysics, ONLY : xBody2,yBody2,zBody2, rbody, rBody2
     use BATL_lib, ONLY: &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
          nBlock, Xyz_DGB, CellSize_DB, x_, y_, z_, &
          CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
-    use ModAdvance, ONLY: time_BLK
+    use ModAdvance, ONLY: DtMax_CB
     use ModUserInterface ! user_set_boundary_cells
 
     integer, intent(in) :: iBlock
@@ -146,27 +146,27 @@ contains
        ! calculate the radius as measured from the second body
        ! Note that the second body can move
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          R2_BLK(i,j,k,iBlock) = norm2( Xyz_DGB(:,i,j,k,iBlock) - &
+          rBody2_GB(i,j,k,iBlock) = norm2( Xyz_DGB(:,i,j,k,iBlock) - &
                [xBody2, yBody2, zBody2])
        end do; end do; end do
-       Rmin2_BLK(iBlock) = minval(R2_BLK(:,:,:,iBlock))
+       rMinBody2_B(iBlock) = minval(rBody2_GB(:,:,:,iBlock))
     end if
 
-    far_field_BCs_BLK(iBlock) = any( .not. IsPeriodic_D .and.   &
+    IsBoundary_B(iBlock) = any( .not. IsPeriodic_D .and.   &
          (    CoordMin_DB(:,iBlock) <= CoordMin_D + 1e-12       &
          .or. CoordMax_DB(:,iBlock) >= CoordMax_D - 1e-12) )
 
     if(DoTest)then
-       write(*,*)NameSub,': far_field_bcs_blk=',far_field_bcs_BLK(iBlock)
+       write(*,*)NameSub,': IsBoundary_B=',IsBoundary_B(iBlock)
        write(*,*)NameSub,': CoordMin_DB=', CoordMin_DB(:,iBlock)
        write(*,*)NameSub,': CellSize_D = ',CellSize_DB(:,iBlock)
        write(*,*)NameSub,': CoordMin_D =', CoordMin_D
        write(*,*)NameSub,': CoordMax_D =', CoordMax_D
     end if
 
-    ! TRUE_CELL: if not inside a body or outside the outer face boundary
+    ! Used_GB: if not inside a body or outside the outer face boundary
     ! so true cells are those where iBoundary_GB==domain_
-    true_cell(:,:,:,iBlock)=.true.
+    Used_GB(:,:,:,iBlock)=.true.
 
     ! Reset for every level of refinement
     iBoundary_GB(:,:,:,iBlock) = domain_
@@ -180,53 +180,53 @@ contains
        if(.not. DoSolveSolid) then
           select case(TypeSolidGeometry)
           case('sphere')
-             where( R_BLK(:,:,:,iBlock) < rSolid)&
+             where( r_GB(:,:,:,iBlock) < rSolid)&
                   iBoundary_GB(:,:,:,iBlock) = solidBc_
-             where( R_BLK(1:nI,1:nJ,1:nK,iBlock) < rSolid)&
-                  time_BLK(:,:,:,iBlock) = 0.0
+             where( r_GB(1:nI,1:nJ,1:nK,iBlock) < rSolid)&
+                  DtMax_CB(:,:,:,iBlock) = 0.0
           end select
        else ! DoSolveSolid=.TRUE.
           select case(TypeSolidGeometry)
           case('sphere')
-             where( R_BLK(1:nI,1:nJ,1:nK,iBlock) < rSolid)&
-                  time_BLK(:,:,:,iBlock) = SolidLimitDt
+             where( r_GB(1:nI,1:nJ,1:nK,iBlock) < rSolid)&
+                  DtMax_CB(:,:,:,iBlock) = SolidLimitDt
           end select
        end if
     end if
 
-    ! Set iBoundary_GB for body1 and body2 (always face boundary)
+    ! Set iBoundary_GB for UseBody and body2 (always face boundary)
     if(UseBody2) then
-       where( R2_BLK(:,:,:,iBlock) < rbody2) &
+       where( rBody2_GB(:,:,:,iBlock) < rbody2) &
             iBoundary_GB(:,:,:,iBlock) = body2_
     end if
-    if(body1) then
-       where( R_BLK(:,:,:,iBlock) < rbody ) &
+    if(UseBody) then
+       where( r_GB(:,:,:,iBlock) < rbody ) &
             iBoundary_GB(:,:,:,iBlock) = body1_
     end if
 
     ! No face BC is applied for TypeFaceBc_I(1:6) if not set in PARAM.in
     if(.not. all(TypeFaceBc_I(xMinBc_:zMaxBc_)=='none') )then
-       where( Xyz_DGB(x_,:,:,:,iBlock) < x1 ) &
+       where( Xyz_DGB(x_,:,:,:,iBlock) < xMinBox ) &
             iBoundary_GB(:,:,:,iBlock) = xMinBc_
-       where( Xyz_DGB(x_,:,:,:,iBlock) > x2 ) &
+       where( Xyz_DGB(x_,:,:,:,iBlock) > xMaxBox ) &
             iBoundary_GB(:,:,:,iBlock) = xMaxBc_
-       where( Xyz_DGB(y_,:,:,:,iBlock) < y1 ) &
+       where( Xyz_DGB(y_,:,:,:,iBlock) < yMinBox ) &
             iBoundary_GB(:,:,:,iBlock) = yMinBc_
-       where( Xyz_DGB(y_,:,:,:,iBlock) > y2 ) &
+       where( Xyz_DGB(y_,:,:,:,iBlock) > yMaxBox ) &
             iBoundary_GB(:,:,:,iBlock) = yMaxBc_
-       where( Xyz_DGB(z_,:,:,:,iBlock) < z1 ) &
+       where( Xyz_DGB(z_,:,:,:,iBlock) < zMinBox ) &
             iBoundary_GB(:,:,:,iBlock) = zMinBc_
-       where( Xyz_DGB(z_,:,:,:,iBlock) > z2 ) &
+       where( Xyz_DGB(z_,:,:,:,iBlock) > zMaxBox ) &
             iBoundary_GB(:,:,:,iBlock) = zMaxBc_
     end if
 
-    true_cell(:,:,:,iBlock) = (iBoundary_GB(:,:,:,iBlock)==domain_)
+    Used_GB(:,:,:,iBlock) = (iBoundary_GB(:,:,:,iBlock)==domain_)
 
-    ! body_BLK: if any cell INCLUDING ghost cells is inside body(ies)
-    body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
+    ! IsBody_B: if any cell INCLUDING ghost cells is inside body(ies)
+    IsBody_B(iBlock) = .not. all(Used_GB(:,:,:,iBlock))
 
-    ! TRUE_BLK: if all cells EXCLUDING ghost cells are outside body(ies)
-    true_BLK(iBlock) = all(true_cell(1:nI,1:nJ,1:nK,iBlock))
+    ! IsNoBody_B: if all cells EXCLUDING ghost cells are outside body(ies)
+    IsNoBody_B(iBlock) = all(Used_GB(1:nI,1:nJ,1:nK,iBlock))
 
     if(DoTest)then
        write(*,*) NameSub,&
@@ -234,13 +234,13 @@ contains
             iBoundary_GB(iTest-nG:iTest+nG,jTest,kTest,iBlock)
 
        write(*,*) NameSub,&
-            ' finished with true_cell(iTest-nG:iTest+nG)=',&
-            true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlock)
+            ' finished with Used_GB(iTest-nG:iTest+nG)=',&
+            Used_GB(iTest-nG:iTest+nG,jTest,kTest,iBlock)
     end if
 
     if(iBlock == nBlock) then
-       !$acc update device(true_cell, body_BLK, iBoundary_GB)
-       !$acc update device(far_field_BCs_BLK)
+       !$acc update device(Used_GB, IsBody_B, iBoundary_GB)
+       !$acc update device(IsBoundary_B)
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -270,11 +270,11 @@ contains
 
   subroutine fix_boundary_ghost_cells
 
-    ! Recalculate true_cell information in ghost cells if grid changed.
+    ! Recalculate Used_GB information in ghost cells if grid changed.
 
     use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
-             iteration_number, nOrderProlong
-    use ModGeometry, ONLY: true_cell, body_BLK
+             nIteration, nOrderProlong
+    use ModGeometry, ONLY: Used_GB, IsBody_B
     use BATL_lib, ONLY: message_pass_cell
 
     integer:: iBlock
@@ -288,23 +288,23 @@ contains
 
     iGridHere = iNewGrid; iDecompositionHere = iNewDecomposition
 
-    if(DoTest) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
-         true_cell(iTest-2:iTest+2,jTest,kTest,iBlockTest)
+    if(DoTest) write(*,*)NameSub,' starting with Used_GB(i-2:i+2)=', &
+         Used_GB(iTest-2:iTest+2,jTest,kTest,iBlockTest)
 
     ! DoResChangeOnly=true works as long as the ghost cells are correctly set
     ! away from resolution changes. This usually holds, but not if the
     ! boundary cells are set based on the state variables read from a restart
     ! file that has no ghost cell information saved. This can only happen
-    ! at the very beginning of a run when iteration_number == 0.
+    ! at the very beginning of a run when nIteration == 0.
 
     if(nOrderProlong > 1)then
        call message_pass_cell(iBoundary_GB, &
-            DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
+            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
     else
        call message_pass_cell(iBoundary_GB, &
             nProlongOrderIn=1, nCoarseLayerIn=2, &
             DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-            DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
+            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
     end if
 
     if(DoTest) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
@@ -313,14 +313,14 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-       true_cell(:,:,:,iBlock) = true_cell(:,:,:,iBlock)  &
+       Used_GB(:,:,:,iBlock) = Used_GB(:,:,:,iBlock)  &
             .and. (iBoundary_GB(:,:,:,iBlock) == domain_)
 
-       body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
+       IsBody_B(iBlock) = .not. all(Used_GB(:,:,:,iBlock))
     end do
 
-    if(DoTest) write(*,*) NameSub,' finished with true_cell(i-2:i+2)=', &
-         true_cell(iTest-2:iTest+2,jTest,kTest,iBlockTest)
+    if(DoTest) write(*,*) NameSub,' finished with Used_GB(i-2:i+2)=', &
+         Used_GB(iTest-2:iTest+2,jTest,kTest,iBlockTest)
 
     call test_stop(NameSub, DoTest)
   end subroutine fix_boundary_ghost_cells

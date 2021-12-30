@@ -122,7 +122,7 @@ contains
     use BATL_lib,     ONLY: Xyz_DGB, nBlock, Unused_B, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          CoordMin_D, CoordMax_D, CoordMin_DB, CellSize_DB
-    use ModGeometry,  ONLY: far_field_bcs_blk, r_BLK
+    use ModGeometry,  ONLY: IsBoundary_B, r_GB
     use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
     use ModMain,      ONLY: UseB0
     use ModB0,        ONLY: B0_DGB
@@ -248,7 +248,7 @@ contains
           if (tempalt > (300e3)*Si2No_V(UnitX_)) CYCLE
 
           ! Exclude points below the GM bottom boundary
-          ! if(r_BLK(i,j,k,iBlock) < rMinGm) CYCLE
+          ! if(r_GB(i,j,k,iBlock) < rMinGm) CYCLE
 
           ! Found a point to be set by GM
           iPoint = iPoint + 1

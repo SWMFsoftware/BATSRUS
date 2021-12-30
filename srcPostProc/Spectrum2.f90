@@ -525,7 +525,7 @@ contains
     use ModPlotFile, ONLY: read_plot_file
     use ModIoUnit, ONLY: io_unit_new
     use ModAdvance, ONLY: State_VGB
-    use ModGeometry, ONLY: far_field_BCs_BLK
+    use ModGeometry, ONLY: IsBoundary_B
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
 
@@ -597,7 +597,7 @@ contains
 
     do iBlock = 1, nBlock
       if (Unused_B(iBlock)) CYCLE
-      if (far_field_BCs_BLK(iBlock)) then
+      if (IsBoundary_B(iBlock)) then
         call set_cell_boundary(nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
       endif
     enddo
@@ -605,7 +605,7 @@ contains
     call fix_boundary_ghost_cells
     do iBlock = 1, nBlock
       if (Unused_B(iBlock)) CYCLE
-      if (far_field_BCs_BLK(iBlock)) then
+      if (IsBoundary_B(iBlock)) then
         call set_cell_boundary(nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
         ! call set_edge_corner_ghost(nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
       endif

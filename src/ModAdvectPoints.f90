@@ -47,7 +47,7 @@ contains
 
   subroutine advect_points(nPoint, Xyz_DI)
 
-    use ModMain, ONLY: time_accurate, Dt, nStage
+    use ModMain, ONLY: IsTimeAccurate, Dt, nStage
 
     integer, intent(in)    :: nPoint
     real,    intent(inout) :: Xyz_DI(3,nPoint)
@@ -59,7 +59,7 @@ contains
     character(len=*), parameter:: NameSub = 'advect_points'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(.not.time_accurate) RETURN
+    if(.not.IsTimeAccurate) RETURN
     call timing_start(NameSub)
     if(nStage == 1)then
        ! Full step uses StateOld
@@ -82,7 +82,7 @@ contains
   subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
     use ModAdvance, ONLY: Rho_, RhoUz_, Ux_, Uz_, &
-         iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
+         iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, nFluid
     use ModCurrent, ONLY: get_point_data
     use BATL_lib,   ONLY: nBlock, nProc, iComm
     use ModMpi
@@ -100,7 +100,7 @@ contains
     real, dimension(:,:), allocatable :: State_VI
 
     ! Temporary variables
-    real    :: Weight
+    real    :: Weight, InvRho_I(nFluid)
     integer :: iPoint, iError
 
     logical:: DoTest
@@ -139,9 +139,10 @@ contains
        end if
 
        ! Convert momenta to velocity
-       State_VI(iRhoUx_I,iPoint) = State_VI(iRhoUx_I,iPoint)/State_VI(iRho_I,iPoint)
-       State_VI(iRhoUy_I,iPoint) = State_VI(iRhoUy_I,iPoint)/State_VI(iRho_I,iPoint)
-       State_VI(iRhoUz_I,iPoint) = State_VI(iRhoUz_I,iPoint)/State_VI(iRho_I,iPoint)
+       InvRho_I = 1/State_VI(iRho_I,iPoint)
+       State_VI(iRhoUx_I,iPoint) = InvRho_I*State_VI(iRhoUx_I,iPoint)
+       State_VI(iRhoUy_I,iPoint) = InvRho_I*State_VI(iRhoUy_I,iPoint)
+       State_VI(iRhoUz_I,iPoint) = InvRho_I*State_VI(iRhoUz_I,iPoint)
 
     end do
 
@@ -169,15 +170,16 @@ contains
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock, Dt
     use ModAdvance,  ONLY: StateOld_VGB, State_VGB, Rho_, RhoUx_,RhoUy_,RhoUz_
-    use ModGeometry, ONLY: x2
-    use BATL_lib,    ONLY: Xyz_DGB, x_, z_, iProc
+    use ModGeometry, ONLY: xMaxBox
+    use BATL_lib,    ONLY: Xyz_DGB, x_, z_, iProc, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModNumConst, ONLY: cTwoPi
     use ModIoUnit,   ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
 
     integer, parameter :: nStep=100, nPoint = 1000
     real,    parameter :: Ux = 1.0/cTwoPi, Uz = -2.0/cTwoPi
-    integer :: iPoint, iStep
+    integer :: iPoint, iStep, i, j, k, iBlock
     real :: Xyz_DI(3,nPoint)
     real :: Time
 
@@ -190,7 +192,7 @@ contains
     ! Initial positions
     Xyz_DI = 0.0
     do iPoint=1, nPoint
-       Xyz_DI(1,iPoint) = (iPoint-0.5)/nPoint*0.9*x2
+       Xyz_DI(1,iPoint) = (iPoint-0.5)/nPoint*0.9*xMaxBox
     end do
 
     ! Rotation with Omega=1 around the Z axis
@@ -208,7 +210,7 @@ contains
     if(iProc==0)then
        call open_file(FILE='advect_test.log')
        write(UnitTmp_,'(a)')'Shifted circle'
-       write(UnitTmp_,'(a)')'x1 y1 z1 xM yM zM xN yN zN'
+       write(UnitTmp_,'(a)')'xMinBox yMinBox zMinBox xM yM zM xN yN zN'
     end if
 
     do iStep = 1, nStep
@@ -218,8 +220,14 @@ contains
        StateOld_VGB(Rho_:RhoUz_,1:nI,1:nJ,1:nK,1:nBlock) = &
             State_VGB(Rho_:RhoUz_,1:nI,1:nJ,1:nK,1:nBlock)
 
-       State_VGB(RhoUx_,:,:,:,1:nBlock) = -(Xyz_DGB(z_,:,:,:,1:nBlock) - Time*Uz)
-       State_VGB(RhoUz_,:,:,:,1:nBlock) = +(Xyz_DGB(x_,:,:,:,1:nBlock) - Time*Ux)
+       do iBlock = 1, nBlock
+          do k=MinK, MaxK; do j=MinJ, MaxJ; do i=MinI, MaxI
+             State_VGB(RhoUx_,i,j,k,iBlock) = -(Xyz_DGB(z_,i,j,k,iBlock) &
+                  - Time*Uz)
+             State_VGB(RhoUz_,i,j,k,iBlock) = +(Xyz_DGB(x_,i,j,k,iBlock) &
+                  - Time*Ux)
+          end do; end do; end do
+       end do
 
        ! Rotation
        call advect_points(nPoint, Xyz_DI)

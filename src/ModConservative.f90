@@ -162,7 +162,7 @@ contains
     use ModVarIndexes, ONLY: Rho_, p_, pe_, RhoUx_, RhoUz_, Bx_, Bz_
     use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModB0, ONLY: B0_DGB
-    use ModGeometry, ONLY: r_BLK
+    use ModGeometry, ONLY: r_GB
     use ModPhysics, ONLY: InvGammaMinus1
     use BATL_lib, ONLY: &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, &
@@ -312,7 +312,7 @@ contains
           case('r')
              ! Switch to non-conservative inside radius rConserv
              IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .and. &
-                  R_BLK(1:nI,1:nJ,1:nK,iBlock) > rConserv
+                  r_GB(1:nI,1:nJ,1:nK,iBlock) > rConserv
           case('parabola')
              ! Switch to non-conservative behind parabola inside the bow shock
              IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .and. &

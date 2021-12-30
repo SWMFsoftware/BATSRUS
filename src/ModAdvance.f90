@@ -33,7 +33,7 @@ module ModAdvance
   logical:: UseDbTrick = .true., UseDbTrickNow = .true.
 
   ! Numerical flux type
-  character(len=10) :: FluxType
+  character(len=10) :: TypeFlux
 
   ! Total number of fluxes and sources: nVar state variables + nFluid energies
   integer, parameter:: nFlux = nVar + nFluid, nSource = nVar + nFluid
@@ -84,7 +84,7 @@ module ModAdvance
 
   ! Update check parameters
   logical :: UseUpdateCheck = .false.
-  real :: percent_max_rho(2), percent_max_p(2)
+  real :: PercentRhoLimit_I(2), percent_max_p(2)
 
   ! The percentage limit for species to be checked in update check
   real :: SpeciesPercentCheck = 1.0
@@ -106,12 +106,13 @@ module ModAdvance
   real, allocatable :: StateOld_VGB(:,:,:,:,:)
   !$acc declare create(StateOld_VGB)
 
-  ! Block cell-centered intrinsic magnetic field, time, and temporary storage
-  real, allocatable :: tmp1_BLK(:,:,:,:)
-  real, allocatable :: tmp2_BLK(:,:,:,:)
+  ! Temporary storage on cell centers
+  real, allocatable :: Tmp1_GB(:,:,:,:)
+  real, allocatable :: Tmp2_GB(:,:,:,:)
 
-  real, allocatable :: time_BLK(:,:,:,:)
-  !$acc declare create(time_BLK)
+  ! Time step without the Cfl coefficient
+  real, allocatable :: DtMax_CB(:,:,:,:)
+  !$acc declare create(DtMax_CB)
 
   ! Electric field including numerical flux
   real, allocatable :: ExNum_CB(:,:,:,:)
@@ -281,9 +282,9 @@ contains
     end if
     allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(StateOld_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(tmp1_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(tmp2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(time_BLK(nI,nJ,nK,MaxBlock))
+    allocate(Tmp1_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(Tmp2_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(DtMax_CB(nI,nJ,nK,MaxBlock))
     allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
     allocate(iTypeAdvance_B(MaxBlock))
 
@@ -357,9 +358,9 @@ contains
     call test_start(NameSub, DoTest)
     if(allocated(State_VGB))       deallocate(State_VGB)
     if(allocated(StateOld_VGB))    deallocate(StateOld_VGB)
-    if(allocated(tmp1_BLK))        deallocate(tmp1_BLK)
-    if(allocated(tmp2_BLK))        deallocate(tmp2_BLK)
-    if(allocated(time_BLK))        deallocate(time_BLK)
+    if(allocated(Tmp1_GB))        deallocate(Tmp1_GB)
+    if(allocated(Tmp2_GB))        deallocate(Tmp2_GB)
+    if(allocated(DtMax_CB))        deallocate(DtMax_CB)
     if(allocated(DivB1_GB))        deallocate(DivB1_GB)
     if(allocated(iTypeAdvance_BP)) deallocate(iTypeAdvance_BP)
     if(allocated(iTypeAdvance_B))  deallocate(iTypeAdvance_B)

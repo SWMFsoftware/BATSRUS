@@ -114,12 +114,12 @@ contains
     !$acc routine vector
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
-    use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
-             UseDtLimit, DtLimit, time_accurate
-    use ModAdvance, ONLY : time_BLK, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
+    use ModMain, ONLY: UseDtFixed, DtFixed, DtMax_B, Cfl, &
+             UseDtLimit, DtLimit, IsTimeAccurate
+    use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
-    use ModGeometry, ONLY: true_cell, true_BLK, rMin_BLK
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
     use ModRadiativeCooling, ONLY: UseRadCooling, &
@@ -153,20 +153,20 @@ contains
     iGang = 1
 #endif
 
-    if(DoTest)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
+    if(DoTest)write(*,*) NameSub,' starting, IsNoBody_B=', IsNoBody_B(iBlock)
 
     ! Calculate time step limit based on maximum speeds across 6 faces
     !$acc loop vector collapse(3)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not. true_cell(i,j,k,iBlock)) then
-          time_BLK(i,j,k,iBlock) = 0
+       if(.not. Used_GB(i,j,k,iBlock)) then
+          DtMax_CB(i,j,k,iBlock) = 0
        else
           Vdt =  max(Flux_VXI(Vdt_,i,j,k,iGang), Flux_VXI(Vdt_,i+1,j,k,iGang))
           if(nJ > 1) Vdt = Vdt &
                + max(Flux_VYI(Vdt_,i,j,k,iGang), Flux_VYI(Vdt_,i,j+1,k,iGang))
           if(nK > 1) Vdt = Vdt &
                + max(Flux_VZI(Vdt_,i,j,k,iGang), Flux_VZI(Vdt_,i,j,k+1,iGang))
-          time_BLK(i,j,k,iBlock) = CellVolume_GB(i,j,k,iBlock) / Vdt
+          DtMax_CB(i,j,k,iBlock) = CellVolume_GB(i,j,k,iBlock) / Vdt
        end if
     end do; end do; end do
 
@@ -179,19 +179,19 @@ contains
           if(CoordMin_DB(r_,iBlock) <= 0.0)then
              Di = 1; if(r2FixAxis > 0.0) Di = 2
              do j = 1, nJ; do i = 1, nI
-                time_BLK(1:Di,j,k,iBlock) = time_BLK(Di+1,j,k,iBlock)
+                DtMax_CB(1:Di,j,k,iBlock) = DtMax_CB(Di+1,j,k,iBlock)
              end do; end do
           end if
-       elseif(IsLatitudeAxis .and. rMin_Blk(iBlock) < rFixAxis)then
-          Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
+       elseif(IsLatitudeAxis .and. rMin_B(iBlock) < rFixAxis)then
+          Dk = 1; if(rMin_B(iBlock) < r2FixAxis) Dk = 2
           if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
              do k = nK+1-Dk, nK
-                time_BLK(1:nI,1:nJ,k,iBlock) = time_BLK(1:nI,1:nJ,nK-Dk,iBlock)
+                DtMax_CB(1:nI,1:nJ,k,iBlock) = DtMax_CB(1:nI,1:nJ,nK-Dk,iBlock)
              end do
           end if
           if(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
              do k = 1, Dk
-                time_BLK(1:nI,1:nJ,k,iBlock) = time_BLK(1:nI,1:nJ,Dk+1,iBlock)
+                DtMax_CB(1:nI,1:nJ,k,iBlock) = DtMax_CB(1:nI,1:nJ,Dk+1,iBlock)
              end do
           end if
        end if
@@ -232,7 +232,7 @@ contains
           end if
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not. true_cell(i,j,k,iBlock)) CYCLE
+             if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
              if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
                 Dt_loss = 0.5*minval( &
@@ -240,7 +240,7 @@ contains
                      /WaveDissipation_VC(:,i,j,k))
                 ! The following prevents the wave energies from becoming
                 ! negative due to too large loss terms.
-                time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
+                DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), Dt_loss)
              end if
           end do; end do; end do
        end if
@@ -261,7 +261,7 @@ contains
              Dt_loss = 0.5*Einternal/abs(Source)
              ! The following prevents the pressure from becoming negative
              ! due to too large loss terms.
-             time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
+             DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), Dt_loss)
           end do; end do; end do
        end if
     end if
@@ -273,63 +273,63 @@ contains
             Flux_VYI(Vdt_,iTest,jTest:jTest+1,kTest,iGang)
        if(nK>1) write(*,*) NameSub,' Vdt_Z(kTest:kTest+1)=', &
             Flux_VZI(Vdt_,iTest,jTest,kTest:kTest+1,iGang)
-       write(*,*) NameSub,' time_BLK=',time_BLK(iTest,jTest,kTest,iBlock)
+       write(*,*) NameSub,' DtMax_CB=',DtMax_CB(iTest,jTest,kTest,iBlock)
     end if
 #endif
 
     ! Compute maximum stable time step for this solution block
-    if(true_BLK(iBlock)) then
-       dt_min=time_BLK(1,1,1,iBlock)
+    if(IsNoBody_B(iBlock)) then
+       dt_min=DtMax_CB(1,1,1,iBlock)
        !$acc loop vector independent collapse(3) reduction(min:dt_min)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          dt_min = min(dt_min, time_BLK(i,j,k,iBlock))
+          dt_min = min(dt_min, DtMax_CB(i,j,k,iBlock))
        end do; end do; end do
-       Dt_BLK(iBlock)=dt_min
+       DtMax_B(iBlock)=dt_min
     else
-       ! If the block has no true cells, set Dt_BLK=1.0E20
+       ! If the block has no true cells, set DtMax_B=1.0E20
        dt_min = 1e20
        !$acc loop vector independent collapse(3) reduction(min:dt_min)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if (true_cell(i,j,k,iBlock)) dt_min = min(dt_min, time_BLK(i,j,k,iBlock))
+          if (Used_GB(i,j,k,iBlock)) dt_min = min(dt_min, DtMax_CB(i,j,k,iBlock))
        end do; end do; end do
-       Dt_BLK(iBlock)=dt_min
+       DtMax_B(iBlock)=dt_min
 
-       if(DoTest)write(*,*) NameSub,' minval(time_BLK,MASK), Dt_BLK=',&
-            minval(time_BLK(:,:,:,iBlock), &
-            MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)), Dt_BLK(iBlock)
+       if(DoTest)write(*,*) NameSub,' minval(DtMax_CB,MASK), DtMax_B=',&
+            minval(DtMax_CB(:,:,:,iBlock), &
+            MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock)), DtMax_B(iBlock)
     end if
 
 #ifndef _OPENACC
-    if(DoTest)write(*,*)NameSub,' Dt_BLK, loc=',Dt_BLK(iBlock),&
-         minloc(time_BLK(:,:,:,iBlock),&
-         MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+    if(DoTest)write(*,*)NameSub,' DtMax_B, loc=',DtMax_B(iBlock),&
+         minloc(DtMax_CB(:,:,:,iBlock),&
+         MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
 #endif
 
-    ! Reset time_BLK for fixed time step (but Dt_BLK is kept! )
+    ! Reset DtMax_CB for fixed time step (but DtMax_B is kept! )
     if(UseDtFixed) then
        !$acc loop vector collapse(3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          time_BLK(i,j,k,iBlock) = DtFixed
+          DtMax_CB(i,j,k,iBlock) = DtFixed
        end do; end do; end do
     endif
 
 #ifndef _OPENACC
-    ! Limit local time step so that Cfl*time_BLK <= DtLimit,
+    ! Limit local time step so that Cfl*DtMax_CB <= DtLimit,
     if(UseDtLimit) &
-         time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
+         DtMax_CB(:,:,:,iBlock) = min(DtLimit/Cfl, DtMax_CB(:,:,:,iBlock))
 
     if(DoTest .and. UseDtFixed) &
-         write(*,*) NameSub,' after UseDtFixed, time_BLK =', &
-         time_BLK(iTest,jTest,kTest,iBlock)
+         write(*,*) NameSub,' after UseDtFixed, DtMax_CB =', &
+         DtMax_CB(iTest,jTest,kTest,iBlock)
 
     if(DoTest .and. UseDtLimit) &
-         write(*,*) NameSub,' after limiting, time_BLK =', &
-         time_BLK(iTest,jTest,kTest,iBlock)
+         write(*,*) NameSub,' after limiting, DtMax_CB =', &
+         DtMax_CB(iTest,jTest,kTest,iBlock)
 
     ! Set time step to zero inside body.
-    if(.not.true_BLK(iBlock)) then
-       where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&
-            time_BLK(:,:,:,iBlock) = 0.0
+    if(.not.IsNoBody_B(iBlock)) then
+       where (.not.Used_GB(1:nI,1:nJ,1:nK,iBlock))&
+            DtMax_CB(:,:,:,iBlock) = 0.0
     end if
 #endif
     call test_stop(NameSub, DoTest, iBlock)
@@ -339,10 +339,10 @@ contains
   subroutine set_global_timestep(TimeSimulationLimit)
 
     use ModMain
-    use ModAdvance,  ONLY: time_BLK, State_VGB, rho_, Bx_, Bz_, P_, &
+    use ModAdvance,  ONLY: DtMax_CB, State_VGB, rho_, Bx_, Bz_, P_, &
          iTypeAdvance_B, ExplBlock_
     use ModB0,       ONLY: B0_DGB
-    use ModGeometry, ONLY: true_cell, true_BLK
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B
     use ModImplicit, ONLY: UsePartImplicit
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, No2Io_V, &
          UnitX_, UnitU_, UnitT_, UnitB_, UnitRho_, UnitP_, Gamma
@@ -359,7 +359,7 @@ contains
 
     real :: DtDim
 
-    ! time_BLK is already set in calc_timestep,
+    ! DtMax_CB is already set in calc_timestep,
     ! and Dt=DtLimit is set in set_parameters
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_global_timestep'
@@ -368,9 +368,9 @@ contains
     call test_start(NameSub, DoTest)
 
     if(DoTest)write(*,*) NameSub, &
-         ' starting with TimeSimulationLimit, dt_BLK, time_BLK=', &
-         TimeSimulationLimit, dt_BLK(iBlockTest), &
-         time_BLK(iTest,jTest,kTest,iBlockTest)
+         ' starting with TimeSimulationLimit, DtMax_B, DtMax_CB=', &
+         TimeSimulationLimit, DtMax_B(iBlockTest), &
+         DtMax_CB(iTest,jTest,kTest,iBlockTest)
 
     if(UseMaxTimeStep)then
        if(.not.allocated(iTimeLevel_A)) allocate(iTimeLevel_A(MaxNode))
@@ -380,7 +380,7 @@ contains
 
     if(UseDtFixed)then
        Dt = DtFixed
-    elseif(n_step < 1 .or. n_step == 1 .and. TimeSimulationLimit > 0.0)then
+    elseif(nStep < 1 .or. nStep == 1 .and. TimeSimulationLimit > 0.0)then
        Dt    = 0.0
        DtMin = 0.0
        DtMax = 0.0
@@ -389,33 +389,33 @@ contains
        if(UsePartImplicit)then
           ! Implicit blocks are not taken into account for partially implicit
           ! run
-          DtMinPE = huge(Dt_BLK(1))
+          DtMinPE = huge(DtMax_B(1))
           !$acc parallel loop independent reduction(min:DtMinPE)
           do iBlock=1,nBlock
              if (iTypeAdvance_B(iBlock) == ExplBlock_) &
-                  DtMinPE = min(DtMinPE, Dt_BLK(iBlock))
+                  DtMinPE = min(DtMinPE, DtMax_B(iBlock))
           end do
           if(UseMaxTimeStep) then
-             DtMax = -huge(Dt_BLK(1))
+             DtMax = -huge(DtMax_B(1))
              !$acc parallel loop independent reduction(max:DtMax)
              do iBlock=1,nBlock
                 if (iTypeAdvance_B(iBlock) == ExplBlock_) &
-                     DtMax = max(DtMax, Dt_BLK(iBlock))
+                     DtMax = max(DtMax, DtMax_B(iBlock))
              end do
           end if
        else
-          DtMinPE = huge(Dt_BLK(1))
+          DtMinPE = huge(DtMax_B(1))
           !$acc parallel loop independent reduction(min:DtMinPE)
           do iBlock=1,nBlock
              if (.not.Unused_B(iBlock)) &
-                  DtMinPE = min(DtMinPE, Dt_BLK(iBlock))
+                  DtMinPE = min(DtMinPE, DtMax_B(iBlock))
           end do
 
           if(UseMaxTimeStep) then
-             DtMax = -huge(Dt_BLK(1))
+             DtMax = -huge(DtMax_B(1))
              !$acc parallel loop independent reduction(max:DtMax)
              do iBlock=1,nBlock
-                if (.not.Unused_B(iBlock)) DtMax = max(DtMax, Dt_BLK(iBlock))
+                if (.not.Unused_B(iBlock)) DtMax = max(DtMax, DtMax_B(iBlock))
              end do
              DtMax = min(DtMax, DtLimit/Cfl)
           end if
@@ -434,13 +434,13 @@ contains
        if(DoTest .and. DtMinPE == Dt)then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
-             if(Dt_BLK(iBlock) /= Dt) CYCLE
+             if(DtMax_B(iBlock) /= Dt) CYCLE
              write(*,*) NameSub, ' Dt=',Dt,'=', Dt*No2Si_V(UnitT_),&
                   ' s  is controlled by block with ',&
-                  'iProc, iBlock, true_BLK, true_cell =', &
-                  iProc, iBlock, true_BLK(iBlock), &
-                  all(true_cell(1:nI,1:nJ,1:nK,iBlock)), &
-		  any(true_cell(1:nI,1:nJ,1:nK,iBlock))
+                  'iProc, iBlock, IsNoBody_B, Used_GB =', &
+                  iProc, iBlock, IsNoBody_B(iBlock), &
+                  all(Used_GB(1:nI,1:nJ,1:nK,iBlock)), &
+		  any(Used_GB(1:nI,1:nJ,1:nK,iBlock))
              write(*,*) NameSub, ' X,Y,Z coordinates of (1,1,1) cell center=',&
                   Xyz_DGB(:,1,1,1,iBlock)
              write(*,*) NameSub, ' cell size in normalized and SI units:', &
@@ -460,7 +460,7 @@ contains
                 end if
                 CMax_C(i,j,k) = Cmax_C(i,j,k)/State_VGB(rho_,i,j,k,iBlock)
              end do; end do; end do
-             Ijk_D = maxloc(Cmax_C, MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+             Ijk_D = maxloc(Cmax_C, MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
              i=Ijk_D(1); j=Ijk_D(2); k=Ijk_D(3)
              Cmax = sqrt(Cmax_C(i,j,k))
              write(*,*) NameSub, ' Cmax=',Cmax*No2Si_V(UnitU_),&
@@ -498,8 +498,8 @@ contains
     ! Limit Dt such that the simulation time cannot exceed TimeSimulationLimit.
     ! If statement avoids real overflow when TimeSimulationLimit = Huge(0.0)
     if(TimeSimulationLimit > 0.0 .and. &
-         Time_Simulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit)then
-       Dt = (TimeSimulationLimit - Time_Simulation)*Si2No_V(UnitT_)/Cfl
+         tSimulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit)then
+       Dt = (TimeSimulationLimit - tSimulation)*Si2No_V(UnitT_)/Cfl
        if(UseMaxTimeStep)then
           DtMax = Dt
           DtMin = min(DtMin, Dt)
@@ -513,30 +513,30 @@ contains
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 
-       if(UseMaxTimeStep .and. Dt_BLK(iBlock) > 0)then
-          ! Make block time step power of 2 multiple of DtMin that is < Dt_BLK
+       if(UseMaxTimeStep .and. DtMax_B(iBlock) > 0)then
+          ! Make block time step power of 2 multiple of DtMin that is < DtMax_B
           ! Limit by DtMax in case DtMax was limited by TimeSimulationLimit
-          if(Dt_BLK(iBlock) >= DtMax)then
-             Dt_BLK(iBlock) = DtMax
+          if(DtMax_B(iBlock) >= DtMax)then
+             DtMax_B(iBlock) = DtMax
           else
              ! Time level of this block
              iTimeLevel_A(iNode_B(iBlock)) = &
-                  ceiling(log(DtMax/Dt_BLK(iBlock))/log(2.0))
+                  ceiling(log(DtMax/DtMax_B(iBlock))/log(2.0))
              ! Time step rounded to power of 2 fraction of DtMax
-             Dt_BLK(iBlock) = DtMax / 2**iTimeLevel_A(iNode_B(iBlock))
+             DtMax_B(iBlock) = DtMax / 2**iTimeLevel_A(iNode_B(iBlock))
           end if
-          time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
+          DtMax_CB(:,:,:,iBlock) = DtMax_B(iBlock)
        else
           !$acc loop collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             time_BLK(i,j,k,iBlock) = Dt
+             DtMax_CB(i,j,k,iBlock) = Dt
           end do; end do; end do
        end if
 
        ! Reset time step to zero inside body.
-       if(.not.true_BLK(iBlock))then
-          where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) &
-               time_BLK(:,:,:,iBlock) = 0.0
+       if(.not.IsNoBody_B(iBlock))then
+          where(.not.Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
+               DtMax_CB(:,:,:,iBlock) = 0.0
        end if
 
     end do
@@ -552,8 +552,8 @@ contains
     Dt = Cfl*Dt
     !$acc update device(Dt)
 
-    if(DoTest)write(*,*) NameSub,' finished with Dt, dt_BLK, time_BLK=', &
-         Dt, dt_BLK(iBlockTest), time_BLK(iTest,jTest,kTest,iBlockTest)
+    if(DoTest)write(*,*) NameSub,' finished with Dt, DtMax_B, DtMax_CB=', &
+         Dt, DtMax_B(iBlockTest), DtMax_CB(iTest,jTest,kTest,iBlockTest)
 
     call test_stop(NameSub, DoTest)
   end subroutine set_global_timestep
@@ -562,12 +562,12 @@ contains
   subroutine control_time_step
 
     use ModMain,     ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
-         DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation, &
+         DtFixed, DtFixedOrig, UseDtFixed, tSimulation, &
          DtLimit, DtLimitOrig, UseDtLimit, UseLocalTimeStep
     use ModAdvance,  ONLY: Rho_, p_, &
-         State_VGB, StateOld_VGB, time_BLK
+         State_VGB, StateOld_VGB, DtMax_CB
     use ModPhysics,  ONLY: No2Si_V, UnitT_
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModMpi
 
     integer:: iBlock, i, j, k, iError
@@ -592,7 +592,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(true_cell(i,j,k,iBlock))then
+          if(Used_GB(i,j,k,iBlock))then
              VarRatio_I = State_VGB(iVarControl_I,i,j,k,iBlock) &
                   /    StateOld_VGB(iVarControl_I,i,j,k,iBlock)
              RelativeChangeMin = min(RelativeChangeMin, minval(VarRatio_I))
@@ -615,16 +615,16 @@ contains
     if(       RelativeChangeMin < RejectStepLevel1  &
          .or. RelativeChangeMax > RejectStepLevel2 )then
        ! Redo step if change is outside [RejectStepLevel1, RejectStepLevel2]
-       Time_Simulation = Time_Simulation - Dt*No2Si_V(UnitT_)
+       tSimulation = tSimulation - Dt*No2Si_V(UnitT_)
        Dt = 0.0
        ! Do not use previous step in BDF2 scheme
        ! !! n_prev = -1
-       ! Reset the state variable, the energy and set time_BLK variable to 0
+       ! Reset the state variable, the energy and set DtMax_CB variable to 0
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           State_VGB(:,1:nI,1:nJ,1:nK,iBlock)  &
                = StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock)
-          time_BLK(1:nI,1:nJ,1:nK,iBlock)     = 0.0
+          DtMax_CB(1:nI,1:nJ,1:nK,iBlock)     = 0.0
        end do
        ! Reduce next time step
        Factor = RejectStepFactor

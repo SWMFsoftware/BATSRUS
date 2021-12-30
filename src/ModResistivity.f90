@@ -382,7 +382,7 @@ contains
   subroutine calc_resistivity_source(iBlock)
 
     use ModMain,       ONLY: x_
-    use ModGeometry,   ONLY: true_cell
+    use ModGeometry,   ONLY: Used_GB
     use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB
     use ModCurrent,    ONLY: get_current
     use ModPhysics,    ONLY: GammaElectronMinus1, InvGammaElectronMinus1
@@ -408,7 +408,7 @@ contains
     JouleHeating = 0.0
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. &
             i == iTest .and. j == jTest .and. k == kTest
@@ -492,10 +492,10 @@ contains
   subroutine calc_heat_exchange
 
     use ModMain,       ONLY: Cfl, nBlock, Unused_B
-    use ModGeometry,   ONLY: true_cell
+    use ModGeometry,   ONLY: Used_GB
     use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
-    use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure, UseAnisoPe
+    use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, UseAnisoPe
 
     real :: DtLocal
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
@@ -518,12 +518,12 @@ contains
        if(Unused_B(iBlock)) CYCLE
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           DoTestCell = DoTest .and. iBlock == iBlockTest .and. &
                i == iTest .and. j == jTest .and. k == kTest
 
-          DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+          DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
 
           ! For single ion fluid the ion-electron collision results in a
           ! heat exchange term for the electron pressure
@@ -821,7 +821,7 @@ contains
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModNumConst,     ONLY: i_DD
     use ModSize,         ONLY: x_, y_, z_
-    use ModGeometry,     ONLY: true_cell, true_BLK
+    use ModGeometry,     ONLY: Used_GB, IsNoBody_B
     use ModHallResist,   ONLY: HallCmaxFactor
     use ModCellGradient, ONLY: calc_cell_curl_ghost
     use ModCoordTransform, ONLY: determinant
@@ -849,13 +849,13 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     if(DoTest) write(*,*) NameSub,' true cell=',&
-         true_cell(iTest,jTest,kTest,iBlockTest)
+         Used_GB(iTest,jTest,kTest,iBlockTest)
 
     IsNewBlock = .true.
     Rhs_VC = 0.0
 
     ! Should we keep this or not?
-    ! if(.not. true_BLK(iblock)) RETURN
+    ! if(.not. IsNoBody_B(iblock)) RETURN
 
     if(.not.UseCentralDifference)then
        ! Loop over face directions
@@ -868,8 +868,8 @@ contains
 
           ! Loop over cell faces orthogonal to iDim
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-             if(  .not.true_cell(i,j,k,iBlock) .and. &
-                  .not.true_cell(i-Di,j-Dj,k-Dk,iBlock)) CYCLE
+             if(  .not.Used_GB(i,j,k,iBlock) .and. &
+                  .not.Used_GB(i-Di,j-Dj,k-Dk,iBlock)) CYCLE
 
              call get_face_curl(iDim, i, j, k, iBlock, &
                   IsNewBlock, StateImpl_VG, Current_D)
@@ -943,7 +943,7 @@ contains
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              ! RHS_i += -(Flux_i+1/2 - Flux_i-1/2)
              Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) &
@@ -967,8 +967,8 @@ contains
 
              ! Loop over cell faces orthogonal to iDim
              do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-                if(  .not.true_cell(i,j,k,iBlock) .and. &
-                     .not.true_cell(i-Di,j-Dj,k-Dk,iBlock)) CYCLE
+                if(  .not.Used_GB(i,j,k,iBlock) .and. &
+                     .not.Used_GB(i-Di,j-Dj,k-Dk,iBlock)) CYCLE
 
                 call get_face_curl(iDim, i, j, k, iBlock, &
                      IsNewBlock, StateImpl_VG, Current_D)
@@ -1020,7 +1020,7 @@ contains
        ! Calc E
        if(IsCartesian)then ! Cartesian coord.
           do k=k0_,nKp1_; do j=j0_,nJp1_; do i=i0_,nIp1_
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              ! Get current from curl B
              call calc_cell_curl_ghost(i,j,k,iBlock,StateImpl_VG,Current_D)
@@ -1029,7 +1029,7 @@ contains
           end do; end do; end do
        else ! Generalized coord.
           do k=k0_,nKp1_; do j=j0_,nJp1_; do i=i0_,nIp1_
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              ! Calculate inv. jacobian matrix from Cartesian to general Coord.
              InvJac_DD = get_InvJacobian(i,j,k,iBlock)
 
@@ -1045,7 +1045,7 @@ contains
        ! Central difference update of RHS of induction equation
        if(IsCartesian)then
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              Rhs_VC(BxImpl_,i,j,k) = &
                   (Egen_DG(y_,i,j,k+1) - Egen_DG(y_,i,j,k-1)) * InvDzHalf - &
@@ -1061,7 +1061,7 @@ contains
           end do; end do; end do
        else
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              InvJac_DD = get_InvJacobian(i,j,k,iBlock)
 
@@ -1093,7 +1093,7 @@ contains
        InvDy2 = 0.5/CellSize_DB(y_,iBlock)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           ! Jx = Dbz/Dy - Dby/Dz (Jz = Dbphi/Dr in rz-geometry)
           ! Note that set_block_field3 has already been called so that we can
           ! use central difference.
@@ -1145,7 +1145,7 @@ contains
     use ModFaceGradient, ONLY: set_block_jacobian_face
     use ModImplicit,     ONLY: UseNoOverlap, nStencil
     use ModNumConst,     ONLY: i_DD
-    use ModGeometry,     ONLY: true_cell
+    use ModGeometry,     ONLY: Used_GB
     use ModAdvance,      ONLY: B_
 
     integer, intent(in):: iBlock
@@ -1176,7 +1176,7 @@ contains
        do iDim = 1, nDim
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
 
              do iDir = 1, MaxDim
@@ -1213,7 +1213,7 @@ contains
        do iDim = 1, nDim
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
 
              do iDir = 1, MaxDim; do jDir = 1, nDim
@@ -1286,7 +1286,7 @@ contains
     use ModFaceGradient, ONLY: set_block_jacobian_face
     use ModImplicit,     ONLY: nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD, iLeviCivita_III
-    use ModGeometry,     ONLY: true_cell
+    use ModGeometry,     ONLY: Used_GB
     use ModAdvance,      ONLY: B_
     use ModHallResist,   ONLY: HallCmaxFactor
 
@@ -1322,7 +1322,7 @@ contains
           iSup = iSub + 1  ! stencil index of superdiagonal elements
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              ! Index of the "right" cell face
              i2 = i + i_DD(1,iDim)
@@ -1374,7 +1374,7 @@ contains
 
           ! Loop over cell centers
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              ! Index for the 'right' face of the cell
              i2 = i + i_DD(1,iDim)
@@ -1459,7 +1459,7 @@ contains
                    iSup = iSub + 1  ! stencil index of superdiagonal elements
 
                    do k=1,nK; do j=1,nJ; do i=1,nI
-                      if(.not.true_cell(i,j,k,iBlock)) CYCLE
+                      if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
                       ! Index for the opposite face of the cell
                       i2 = i + i_DD(1,iFace)
@@ -1523,7 +1523,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModImplicit,   ONLY: nVarSemiAll
     use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModGeometry,   ONLY: true_cell
+    use ModGeometry,   ONLY: Used_GB
 
     integer, intent(in):: iBlock
     real,    intent(in):: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
@@ -1536,7 +1536,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = NewSemiAll_VC(BxImpl_:BzImpl_,i,j,k)
     end do; end do; end do
 

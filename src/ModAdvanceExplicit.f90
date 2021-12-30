@@ -5,7 +5,7 @@
 module ModAdvanceExplicit
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iThread, StringTest
+       test_start, test_stop
   use ModBatsrusUtility, ONLY: barrier_mpi2, stop_mpi
 
   implicit none
@@ -26,11 +26,10 @@ contains
          iTypeUpdate, UpdateFast_
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
-    use ModParallel,   ONLY: neiLev
-    use ModGeometry,   ONLY: Body_BLK, true_BLK
+    use ModParallel,   ONLY: DiLevel_EB
+    use ModGeometry,   ONLY: IsBody_B
     use ModBlockData,  ONLY: set_block_data
-    use ModImplicit,   ONLY: UsePartImplicit
-    use ModPhysics,    ONLY: No2Si_V, UnitT_, OmegaBody_D, &
+    use ModPhysics,    ONLY: No2Si_V, UnitT_, &
          update_angular_velocity
     use ModCalcSource, ONLY: calc_source
     use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
@@ -39,13 +38,13 @@ contains
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModMessagePass, ONLY: exchange_messages
     use ModTimeStepControl, ONLY: calc_timestep
-    use BATL_lib, ONLY: message_pass_face, message_pass_cell, IsAnyAxis
+    use BATL_lib, ONLY: message_pass_face, IsAnyAxis
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModUpdateStateFast, ONLY: update_state_fast
     use ModUpdateState, ONLY: update_check, update_state
-    use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
+    use ModConstrainDivB, ONLY: bface_to_bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
     use ModElectricField, ONLY: get_num_electric_field, correct_efield_block
     use ModParticleMover, ONLY: UseChargedParticles=>UseParticles, &
@@ -65,8 +64,8 @@ contains
     ! Perform multi-stage update of solution for this time (iteration) step
     call timing_start(NameSub)
 
-    ! OPTIMIZE: Is there a better place to update true_BLK? --Yuxi
-    !$acc update device(true_BLK)
+    ! OPTIMIZE: Is there a better place to update IsNoBody_B? --Yuxi
+    !$acc update device(IsNoBody_B)
 
     ! if(UseBody2Orbit) call update_secondbody
 
@@ -96,7 +95,7 @@ contains
           !$omp parallel do
           do iBlock=1,nBlock
              if(Unused_B(iBlock)) CYCLE
-             if(all(neiLev(:,iBlock)/=1)) CYCLE
+             if(all(DiLevel_EB(:,iBlock)/=1)) CYCLE
              ! Calculate interface values for L/R states of each
              ! fine grid cell face at block edges with resolution changes
              ! and apply BCs for interface states as needed.
@@ -106,8 +105,8 @@ contains
                   DoMonotoneRestrict = .true.)
              call timing_stop('calc_face_bfo')
 
-             if(body_BLK(iBlock)) &
-                  call set_face_boundary(iBlock, Time_Simulation, .true.)
+             if(IsBody_B(iBlock)) &
+                  call set_face_boundary(iBlock, tSimulation, .true.)
 
              ! Compute interface fluxes for each fine grid cell face at
              ! block edges with resolution changes.
@@ -158,8 +157,8 @@ contains
              call calc_face_value(iBlock, DoResChangeOnly=.false., &
                   DoMonotoneRestrict=.true.)
              call timing_stop('calc_facevalues')
-             if(body_BLK(iBlock)) &
-                  call set_face_boundary(iBlock, Time_Simulation,.false.)
+             if(IsBody_B(iBlock)) &
+                  call set_face_boundary(iBlock, tSimulation,.false.)
 
              if(.not.DoInterpolateFlux)then
                 ! Compute interface fluxes for each cell.
@@ -196,7 +195,7 @@ contains
              ! for the block) used in multi-stage update
              ! for steady state calculations.
              ! Also calculate time step when UseDtLimit is true.
-             if((.not.time_accurate .or. UseDtLimit).and. iStage == 1 &
+             if((.not.IsTimeAccurate .or. UseDtLimit).and. iStage == 1 &
                   .and. DoCalcTimestep) call calc_timestep(iBlock)
 
              ! Update solution state in each cell.
@@ -208,10 +207,10 @@ contains
                   call get_num_electric_field(iBlock)
 
              if(UseConstrainB .and. iStage == nStage)then
-                call timing_start('constrain_B')
-                call get_VxB(iBlock)
-                call bound_VxB(iBlock)
-                call timing_stop('constrain_B')
+                call timing_start('constrain_b')
+                call get_vxb(iBlock)
+                call bound_vxb(iBlock)
+                call timing_stop('constrain_b')
              end if
 
              ! Calculate time step (both local and global
@@ -219,7 +218,7 @@ contains
              ! for time accurate calculations.
              ! For time accurate with UseDtLimit, do not
              ! calculate time step.
-             if( time_accurate .and. .not.UseDtLimit.and. &
+             if( IsTimeAccurate .and. .not.UseDtLimit.and. &
                   iStage == nStage .and. DoCalcTimestep)&
                   call calc_timestep(iBlock)
 
@@ -248,17 +247,17 @@ contains
        end if
 
        if(UseConstrainB .and. iStage==nStage)then
-          call timing_start('constrain_B')
+          call timing_start('constrain_b')
           ! Correct for consistency at resolution changes
           ! call correct_VxB
 
           ! Update face centered and cell centered magnetic fields
           do iBlock = 1, nBlock
              if(Unused_B(iBlock))CYCLE
-             call constrain_B(iBlock)
-             call Bface2Bcenter(iBlock)
+             call constrain_b(iBlock)
+             call bface_to_bcenter(iBlock)
           end do
-          call timing_stop('constrain_B')
+          call timing_stop('constrain_b')
           if(DoTest)write(*,*)NameSub,' done constrain B'
        end if
 
@@ -267,18 +266,18 @@ contains
           ! The final Dt is determined by the second stage if Dt changed by
           ! update_check subroutine.
           if(UseUpdateCheck .and. iStage==1) &
-               Time_SimulationOld = Time_Simulation
+               tSimulationOld = tSimulation
           if(UseFlic)then
              ! Staging Dt/2; Dt/2; Dt
-             if(iStage/=2)Time_Simulation = Time_Simulation + &
+             if(iStage/=2)tSimulation = tSimulation + &
                   Dt*No2Si_V(UnitT_)/2
           else
-             Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
+             tSimulation = tSimulation + Dt*No2Si_V(UnitT_)/nStage
           end if
           if(UseUpdateCheck .and. iStage==nStage) &
-               Time_Simulation = Time_SimulationOld + Dt*No2Si_V(UnitT_)
+               tSimulation = tSimulationOld + Dt*No2Si_V(UnitT_)
        endif
-       !$acc update device(Time_Simulation)
+       !$acc update device(tSimulation)
 
        ! If we have particle to move in the electromagnetic field,
        ! test or hybrid ones
@@ -325,15 +324,15 @@ contains
   end subroutine advance_explicit
   !============================================================================
   subroutine update_secondbody
-    use ModMain,     ONLY: time_simulation, nBlock, Unused_B, body2_, iNewGrid
+    use ModMain,     ONLY: tSimulation, nBlock, Unused_B, body2_, iNewGrid
     use ModConst,    ONLY: cTwoPi
     use ModPhysics,  ONLY: xBody2, yBody2, zBody2, rBody2, DistanceBody2, &
          OrbitPeriod, PhaseBody2
     use ModMessagePass,      ONLY: exchange_messages
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_, &
          fix_boundary_ghost_cells
-    use ModGeometry,   ONLY: Xyz_DGB, R2_BLK, body_BLK, true_cell, True_BLK, &
-         Rmin2_BLK
+    use ModGeometry,   ONLY: Xyz_DGB, rBody2_GB, rMinBody2_B, &
+         Used_GB, IsNoBody_B
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModAdvance,    ONLY: State_VGB, nVar
     use BATL_lib, ONLY: nI, nJ, nK
@@ -360,31 +359,31 @@ contains
     ! Update second body coordinates for a circular orbit with orbital period
     ! OrbitPeriod (specified in days in the PARAM.in file) and initial phase
     ! PhaseBody2=atan(ybody/xbody) at the initial position
-    xBody2 = DistanceBody2*cos(cTwoPi*Time_Simulation/OrbitPeriod + PhaseBody2)
-    yBody2 = DistanceBody2*sin(cTwoPi*Time_Simulation/OrbitPeriod + PhaseBody2)
+    xBody2 = DistanceBody2*cos(cTwoPi*tSimulation/OrbitPeriod + PhaseBody2)
+    yBody2 = DistanceBody2*sin(cTwoPi*tSimulation/OrbitPeriod + PhaseBody2)
 
     ! Updating the grid structure for the new second body position
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-       ! Update R2_BLK array (the distance from the second body center)
+       ! Update rBody2_GB array (the distance from the second body center)
        ! with new second body location
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          R2_BLK(i,j,k,iBlock) = norm2( Xyz_DGB(:,i,j,k,iBlock) - &
+          rBody2_GB(i,j,k,iBlock) = norm2( Xyz_DGB(:,i,j,k,iBlock) - &
                [xBody2, yBody2, zBody2])
        end do; end do; end do
-       Rmin2_BLK(iBlock) = minval(R2_BLK(:,:,:,iBlock))
+       rMinBody2_B(iBlock) = minval(rBody2_GB(:,:,:,iBlock))
        ! Reset true cells. "True" are old true cells or old body2 cells
        where(IsBody2Old_GB(:,:,:,iBlock)) &
             iBoundary_GB(:,:,:,iBlock)=domain_
 
        ! Set iBoundary_GB for body2
-       where( R2_BLK(:,:,:,iBlock) < rbody2) &
+       where( rBody2_GB(:,:,:,iBlock) < rbody2) &
             iBoundary_GB(:,:,:,iBlock) = body2_
 
-       true_cell(:,:,:,iBlock) = (iBoundary_GB(:,:,:,iBlock)==domain_)
+       Used_GB(:,:,:,iBlock) = (iBoundary_GB(:,:,:,iBlock)==domain_)
 
-       ! TRUE_BLK: if all cells EXCLUDING ghost cells are outside body(ies)
-       true_BLK(iBlock) = all(true_cell(1:nI,1:nJ,1:nK,iBlock))
+       ! IsNoBody_B: if all cells EXCLUDING ghost cells are outside body(ies)
+       IsNoBody_B(iBlock) = all(Used_GB(1:nI,1:nJ,1:nK,iBlock))
     enddo
     iNewGrid = mod(iNewGrid + 1, 10000)
     call fix_boundary_ghost_cells
@@ -396,7 +395,7 @@ contains
        do k = 1,nK ; do j = 1,nJ ; do i = 1,nI
           ! Check if the cell flagged as the second body cell
           ! (hence, filled in with some garbage) becomes a physical cell
-          if(true_cell(i,j,k,iBlock).and.IsBody2Old_GB(i,j,k, iBlock)) then
+          if(Used_GB(i,j,k,iBlock).and.IsBody2Old_GB(i,j,k, iBlock)) then
              ! New true cell, which was inside the second body before.
              ! Needs to be filled in from good cells
              ! Nullify counters
@@ -410,7 +409,7 @@ contains
                       ! Skip cells which were inside second body
                       if(IsBody2Old_GB(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
                       ! Skip other non-true cells
-                      if(.not.true_cell(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
+                      if(.not.Used_GB(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
                       ! Collect good state to the counter
                       StateCounter_V = StateCounter_V + &
                            State_VGB(:,i+iNei,j+jNei,k+kNei,iBlock)

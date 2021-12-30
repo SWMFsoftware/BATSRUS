@@ -19,14 +19,14 @@ module ModOptimizeParam
   use ModFaceValue, ONLY: &
        LimiterBeta => BetaLimiter
   use ModMain, ONLY: &
-       IsTimeAccurate => time_accurate, &
+       IsTimeAccurate => IsTimeAccurate, &
        nStage => nStage, &
        iStage => iStage, &
        nOrder => nOrder, &
        UseDivbSource => UseDivbSource, &
        UseHyperbolicDivB => UseHyperBolicDivB, &
        UseDtFixed => UseDtFixed, &
-       UseBody => Body1
+       UseBody => UseBody
   use ModBorisCorrection, ONLY: &
        UseBorisCorrection => UseBorisCorrection
   use ModPhysics, ONLY: &

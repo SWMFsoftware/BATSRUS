@@ -18,22 +18,28 @@ module ModChGL
        nVar, Ux_, Uz_
   use BATL_lib, ONLY: MaxDim
   use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
-  use ModGeometry, ONLY: r_BLK, true_cell
+  use ModGeometry, ONLY: r_GB, Used_GB
   use ModB0,       ONLY: UseB0, B0_DGB
+
   implicit none
   PRIVATE ! Except
+
   logical, public :: UseChGL = .false.
+
   ! For R < RSourceChGL the ChGL ratio is calculated in terms of U, B
   real, public :: RSourceChGL = 0.0
+
   ! For R > RMinChGL the magnetic field is solved as
   ! \mathbf{B} = (\rho s)\mathbf{U}:
   real, public :: RMinChGL = -1.0
+
   public :: read_chgl_param ! Read model parameters
   public :: init_chgl
   public :: update_chgl ! Assign ChGL density or express B = (\rho s)\mathbf{U}
   public :: get_chgl_state ! Do same in a single point
   public :: correct_chgl_face_value ! Calculate magnetic field face values
   public :: aligning_bc             ! Align field and stream from the MHD side
+
 contains
   !============================================================================
   subroutine read_chgl_param
@@ -48,13 +54,13 @@ contains
   end subroutine read_chgl_param
   !============================================================================
   subroutine init_chgl(iBlock)
-    use ModMain, ONLY: Dt, IsTimeAccurate=>time_accurate
+
     integer, intent(in) :: iBlock
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim)
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock))CYCLE
+       if(.not.Used_GB(i,j,k,iBlock))CYCLE
        ! The ChGL ratio is calculated in terms of U, B
        RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
        if(RhoU2 ==0.0)then
@@ -71,15 +77,14 @@ contains
   !============================================================================
   subroutine update_chgl(iBlock, iStage)
     use ModMain,     ONLY: nStage
-    use ModAdvance,  ONLY: StateOld_VGB
     integer, intent(in) :: iBlock, iStage
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim), Rho, B2
     real    :: VA2, UDotB, UPar2, GeometricFactor, U_D(3), Ut_D(3)
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock))CYCLE
-       if(R_BLK(i,j,k,iBlock) < RSourceChGL)then
+       if(.not.Used_GB(i,j,k,iBlock))CYCLE
+       if(r_GB(i,j,k,iBlock) < RSourceChGL)then
           ! The ChGL ratio is calculated in terms of U, B
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
@@ -91,18 +96,19 @@ contains
                   (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
                   sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
           end if
-       elseif(r_BLK(i,j,k,iBlock) < RMinChGL)then
+       elseif(r_GB(i,j,k,iBlock) < RMinChGL)then
           if(iStage/=nStage)CYCLE
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
              State_VGB(SignB_,i,j,k,iBlock) = 0
              CYCLE
           end if
-          ! The Leontowich BC (see L. D. Landau and E. M. Livshits,
+          ! The Leontowich BC (see L. D. Landau and E. M. Lifshits,
           ! Electrrodynamics of Continuous Media, Chapter 87 Surface impedance
-          ! of metals). Near the surface with concentrated impedance (surface of
-          ! a metal in case of pronounced skin-effect) the tangential eelectric
-          ! and magnetic field vectors are related with the boundary condition:
+          ! of metals). Near the surface with concentrated impedance
+          ! (surface of metal with pronounced skin-effect) the tangential
+          ! electric and magnetic field vectors are related with the boundary
+          ! condition:
           ! \delta B_t \propto n x E_t, where E_t = Bn n x U_t - Un n x B_t
           ! Note: the unit vetor of normal is directed toward the metal, i.e.
           ! from the MHD domain toward the ChGL domain.
@@ -116,7 +122,7 @@ contains
           B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
           ! Geometric interpolation factor
-          GeometricFactor = (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
+          GeometricFactor = (r_GB(i,j,k,iBlock) - RSourceChGL) / &
                (RMinChGL - RSourceChGL)
           B2 = max(sum(B_D**2), 1e-30)
           U_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/Rho
@@ -174,16 +180,14 @@ contains
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModMain,     ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
-    use ModParallel, ONLY: &
-         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
-    use BATL_lib,      ONLY: IsCartesian, Xyz_DGB, FaceNormal_DDFB
+    use ModParallel, ONLY: DiLevel_EB
 
     integer, intent(in) :: iBlock
     logical, intent(in) :: DoResChangeOnly
     ! Logical is true in the points of ChGL model
     logical             :: IsChGL_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !--------------------------------------------------------------------------
-    IsChGL_G = r_BLK(:,:,:,iBlock) > rMinChGL
+    IsChGL_G = r_GB(:,:,:,iBlock) > rMinChGL
     if (.not.DoResChangeOnly)then
        call correct_faceX(&
             1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
@@ -192,18 +196,18 @@ contains
        if(nK > 1) call correct_faceZ(&
             iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
     else
-       if(neiLeast(iBlock)==+1)&
-            call correct_faceX(1,1,1,nJ,1,nK)
-       if(neiLwest(iBlock)==+1)&
-            call correct_faceX(nIFace,nIFace,1,nJ,1,nK)
-       if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
-            call correct_faceY(1,nI,1,1,1,nK)
-       if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-            call correct_faceY(1,nI,nJFace,nJFace,1,nK)
-       if(nK > 1 .and. neiLbot(iBlock)==+1) &
-            call correct_faceZ(1,nI,1,nJ,1,1)
-       if(nK > 1 .and. neiLtop(iBlock)==+1) &
-            call correct_faceZ(1,nI,1,nJ,nKFace,nKFace)
+       if(DiLevel_EB(1,iBlock)==+1)&
+            call correct_facex(1,1,1,nJ,1,nK)
+       if(DiLevel_EB(2,iBlock)==+1)&
+            call correct_facex(nIFace,nIFace,1,nJ,1,nK)
+       if(nJ > 1 .and. DiLevel_EB(3,iBlock)==+1) &
+            call correct_facey(1,nI,1,1,1,nK)
+       if(nJ > 1 .and. DiLevel_EB(4,iBlock)==+1) &
+            call correct_facey(1,nI,nJFace,nJFace,1,nK)
+       if(nK > 1 .and. DiLevel_EB(5,iBlock)==+1) &
+            call correct_facez(1,nI,1,nJ,1,1)
+       if(nK > 1 .and. DiLevel_EB(6,iBlock)==+1) &
+            call correct_facez(1,nI,1,nJ,nKFace,nKFace)
     end if
   contains
     !==========================================================================
@@ -333,12 +337,12 @@ contains
     real :: FullB_D(3), U2
     !--------------------------------------------------------------------------
     U2 = max(sum(StateLeft_V(Ux_:Uz_)**2), sum(StateRight_V(Ux_:Uz_)**2),1e-30)
-    if(r_BLK(iLeft,jLeft,kLeft,iBlockFace) < RMinChGL.and.&
-         r_BLK(iFace,jFace,kFace,iBlockFace) >= RMinChGL)then
+    if(r_GB(iLeft,jLeft,kLeft,iBlockFace) < RMinChGL.and.&
+         r_GB(iFace,jFace,kFace,iBlockFace) >= RMinChGL)then
        FullB_D  = StateLeft_V(Bx_:Bz_) + [B0x, B0y, B0z]
        StateLeft_V(SignB_) = sum(StateLeft_V(Ux_:Uz_)*FullB_D)/U2
-    elseif(r_BLK(iFace,jFace,kFace,iBlockFace) < RMinChGL.and.&
-         r_BLK(iLeft,jLeft,kLeft,iBlockFace) >= RMinChGL)then
+    elseif(r_GB(iFace,jFace,kFace,iBlockFace) < RMinChGL.and.&
+         r_GB(iLeft,jLeft,kLeft,iBlockFace) >= RMinChGL)then
        FullB_D  = StateRight_V(Bx_:Bz_) + [B0x, B0y, B0z]
        StateRight_V(SignB_) = sum(StateRight_V(Ux_:Uz_)*FullB_D)/U2
     end if

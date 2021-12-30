@@ -7,6 +7,16 @@ module ModBatsrusUtility
   ! Some simple BATSRUS specific utilities
   implicit none
 
+  private ! except
+
+  public:: barrier_mpi     ! Apply and time MPI barrier
+  public:: barrier_mpi2    ! Apply and time MPI barrier with a name
+  public:: stop_mpi        ! Stop BATSRUS. Report time and time step.
+  public:: error_report    ! Report various errors. Provide final statistics.
+  public:: get_date_time   ! get integer date+time for current simulation time
+  public:: get_time_string ! create date+time string based on NameMaxTimeUnit
+  public:: get_ivar        ! calculate variable index based on its name
+
 contains
   !============================================================================
   subroutine barrier_mpi
@@ -23,243 +33,244 @@ contains
 
   end subroutine barrier_mpi
   !============================================================================
-  subroutine barrier_mpi2(str)
+  subroutine barrier_mpi2(String)
 
     use BATL_lib, ONLY: iComm
     use ModMpi
 
-    character (len=*), intent(in) :: str
+    character (len=*), intent(in) :: String
 
     ! Local variables:
     integer :: iError
     !--------------------------------------------------------------------------
-    call timing_start('barrier-'//str)
+    call timing_start('barrier-'//String)
     call MPI_barrier(iComm, iError)
-    call timing_stop('barrier-'//str)
+    call timing_stop('barrier-'//String)
 
   end subroutine barrier_mpi2
   !============================================================================
   subroutine stop_mpi(String)
 
-    use ModMain, ONLY : iteration_number, time_simulation, NameThisComp
+    use ModMain, ONLY : nIteration, tSimulation, NameThisComp
     use ModUtilities, ONLY: CON_stop
 
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
     write(*,*) trim(NameThisComp),' BATSRUS stopping at iteration=', &
-         iteration_number,' simulation time=', time_simulation
+         nIteration,' simulation time=', tSimulation
 
     call CON_stop(String)
 
   end subroutine stop_mpi
   !============================================================================
-  subroutine error_report(str,value,iErrorIn,show_first)
+  subroutine error_report(String, Value, iErrorIn, DoShowFirst)
 
     use BATL_lib, ONLY: iComm, iProc, nProc
-    use ModMain, ONLY : iteration_number
+    use ModMain, ONLY : nIteration
     use ModIO, ONLY: write_myname
     use ModMpi
 
     ! Collect global error reports
-    ! Reports are identified by an individual string str if iErrorIn<1
-    !    and iErrorIn is set to a value > 1 for later use.
+    ! Reports are identified by an individual string String if iErrorIn<1
+    !    and iErrorIn is set to a Value > 1 for later use.
     ! If iErrorIn is > 1 to start with, it is used for error identification.
-    ! Make statistics of errors based on value
-    ! print statistics if str='PRINT'
+    ! Make statistics of errors based on Value
+    ! print statistics if String='PRINT'
 
     ! Parameters:
 
     ! Maximum number of different types of errors
-    integer, parameter :: maxerror=20
+    integer, parameter :: MaxError=20
 
     ! Arguments:
 
-    character (LEN=*), intent(in) :: str
-    real, intent(in)              :: value
+    character (LEN=*), intent(in) :: String
+    real, intent(in)              :: Value
     integer, intent(inout)        :: iErrorIn
-    logical, intent(in)           :: show_first
+    logical, intent(in)           :: DoShowFirst
 
     ! Local variables:
 
     integer :: iError
 
     ! Current number of different types of errors
-    integer :: nErrors=0
+    integer :: nError = 0
+
+    ! Error message
+    character(LEN=60):: StringError
 
     ! Message, number, occurance, and statistics of errors
-    character (LEN=60), dimension(maxerror), save :: error_message
-    integer, dimension(maxerror):: &
-         error_count=0, error_count_sum, error_count_max,&
-         iter_first=100000, iter_last=-1
-    real,    dimension(maxerror):: &
-         error_min=1e30, error_max=-1e30, &
-         error_mean=0., error_last=0., error_last_sum
+    character(len=60), save :: StringError_I(MaxError)
+    integer, dimension(MaxError):: &
+         nErrorCount_I=0, nErrorSum_I, MaxError_I,&
+         nIterFirst_I=100000, nIterLast_I=-1
+    real, dimension(MaxError):: &
+         ErrorMin_I=1e30, ErrorMax_I=-1e30, &
+         ErrorMean_I=0., ErrorLast_I=0., ErrorLastSum_I
 
-    character (LEN=60) :: msg
+    integer, allocatable :: nError_P(:)
+    character(len=60), allocatable :: StringError_IP(:,:)
+    integer, allocatable:: nErrorCount_IP(:,:), nIterFirst_IP(:,:), &
+         nIterLast_IP(:,:)
+    real, allocatable :: ErrorMin_IP(:,:), ErrorMax_IP(:,:), &
+         ErrorMean_IP(:,:), ErrorLast_IP(:,:)
 
-    integer,            dimension(:),   allocatable :: nErrors_all
-    character (LEN=60), dimension(:,:), allocatable :: error_message_all
-    integer,            dimension(:,:), allocatable :: &
-         error_count_all, iter_first_all, iter_last_all
-    real,               dimension(:,:), allocatable :: &
-         error_min_all, error_max_all, error_mean_all, error_last_all
-
-    integer :: i,i0,ip
+    integer :: i,i0,jProc
     !--------------------------------------------------------------------------
-    if(str=='PRINT')then
+    if(String=='PRINT')then
        ! Allocate memory in PROC 0
        allocate(&
-            nErrors_all(nProc),&
-            error_message_all(maxerror,nProc),&
-            error_count_all(maxerror,nProc),&
-            iter_first_all(maxerror,nProc),&
-            iter_last_all(maxerror,nProc),&
-            error_min_all(maxerror,nProc),&
-            error_max_all(maxerror,nProc),&
-            error_mean_all(maxerror,nProc),&
-            error_last_all(maxerror,nProc))
+            nError_P(nProc),&
+            StringError_IP(MaxError,nProc),&
+            nErrorCount_IP(MaxError,nProc),&
+            nIterFirst_IP(MaxError,nProc),&
+            nIterLast_IP(MaxError,nProc),&
+            ErrorMin_IP(MaxError,nProc),&
+            ErrorMax_IP(MaxError,nProc),&
+            ErrorMean_IP(MaxError,nProc),&
+            ErrorLast_IP(MaxError,nProc))
 
        ! Collect the error reports
-       call MPI_gather(nErrors, 1, MPI_INTEGER, &
-            nErrors_all, 1, MPI_INTEGER, 0, iComm, iError)
-       call MPI_gather(error_message, 60*maxerror, MPI_CHARACTER, &
-            error_message_all, 60*maxerror, MPI_CHARACTER, 0, iComm,iError)
-       call MPI_gather(error_count, maxerror, MPI_INTEGER, &
-            error_count_all, maxerror, MPI_INTEGER, 0, iComm, iError)
-       call MPI_gather(iter_first, maxerror, MPI_INTEGER, &
-            iter_first_all, maxerror, MPI_INTEGER, 0, iComm, iError)
-       call MPI_gather(iter_last, maxerror, MPI_INTEGER, &
-            iter_last_all, maxerror, MPI_INTEGER, 0, iComm, iError)
-       call MPI_gather(error_min, maxerror, MPI_REAL, &
-            error_min_all, maxerror, MPI_REAL, 0, iComm, iError)
-       call MPI_gather(error_max, maxerror, MPI_REAL, &
-            error_max_all, maxerror, MPI_REAL, 0, iComm, iError)
-       call MPI_gather(error_mean, maxerror, MPI_REAL, &
-            error_mean_all, maxerror, MPI_REAL, 0, iComm, iError)
-       call MPI_gather(error_last, maxerror, MPI_REAL, &
-            error_last_all, maxerror, MPI_REAL, 0, iComm, iError)
+       call MPI_gather(nError, 1, MPI_INTEGER, &
+            nError_P, 1, MPI_INTEGER, 0, iComm, iError)
+       call MPI_gather(StringError_I, 60*MaxError, MPI_CHARACTER, &
+            StringError_IP, 60*MaxError, MPI_CHARACTER, 0, iComm,iError)
+       call MPI_gather(nErrorCount_I, MaxError, MPI_INTEGER, &
+            nErrorCount_IP, MaxError, MPI_INTEGER, 0, iComm, iError)
+       call MPI_gather(nIterFirst_I, MaxError, MPI_INTEGER, &
+            nIterFirst_IP, MaxError, MPI_INTEGER, 0, iComm, iError)
+       call MPI_gather(nIterLast_I, MaxError, MPI_INTEGER, &
+            nIterLast_IP, MaxError, MPI_INTEGER, 0, iComm, iError)
+       call MPI_gather(ErrorMin_I, MaxError, MPI_REAL, &
+            ErrorMin_IP, MaxError, MPI_REAL, 0, iComm, iError)
+       call MPI_gather(ErrorMax_I, MaxError, MPI_REAL, &
+            ErrorMax_IP, MaxError, MPI_REAL, 0, iComm, iError)
+       call MPI_gather(ErrorMean_I, MaxError, MPI_REAL, &
+            ErrorMean_IP, MaxError, MPI_REAL, 0, iComm, iError)
+       call MPI_gather(ErrorLast_I, MaxError, MPI_REAL, &
+            ErrorLast_IP, MaxError, MPI_REAL, 0, iComm, iError)
 
        ! Analyze errors in PROC 0
        if(iProc==0)then
-          nErrors=0
-          do ip=1,nProc
-             do i=1,nErrors_all(ip)
-                msg=error_message_all(i,ip)
-                i0=1
+          nError=0
+          do jProc = 1, nProc
+             do i = 1, nError_P(jProc)
+                StringError = StringError_IP(i,jProc)
+                i0 = 1
                 do
-                   if(i0>nErrors)then
-                      nErrors=i0
-                      error_message(i0)=msg
-                      error_count_max(i0)=error_count_all(i,ip)
-                      error_count_sum(i0)=error_count_all(i,ip)
-                      iter_first(i0)=iter_first_all(i,ip)
-                      iter_last(i0)=iter_last_all(i,ip)
-                      error_min(i0)=error_min_all(i,ip)
-                      error_max(i0)=error_max_all(i,ip)
-                      error_mean(i0)=error_mean_all(i,ip)
-                      error_last(i0)=error_last_all(i,ip)
-                      error_last_sum(i0)=error_last_all(i,ip)
+                   if(i0 > nError)then
+                      nError = i0
+                      StringError_I(i0) = StringError
+                      MaxError_I(i0)    = nErrorCount_IP(i,jProc)
+                      nErrorSum_I(i0)   = nErrorCount_IP(i,jProc)
+                      nIterFirst_I(i0)  = nIterFirst_IP(i,jProc)
+                      nIterLast_I(i0)   = nIterLast_IP(i,jProc)
+                      ErrorMin_I(i0)    = ErrorMin_IP(i,jProc)
+                      ErrorMax_I(i0)    = ErrorMax_IP(i,jProc)
+                      ErrorMean_I(i0)   = ErrorMean_IP(i,jProc)
+                      ErrorLast_I(i0)   = ErrorLast_IP(i,jProc)
+                      ErrorLast_I(i0)   = ErrorLast_IP(i,jProc)
                       EXIT
                    end if
-                   if(error_message(i0)==msg)then
+                   if(StringError_I(i0) == StringError)then
 
-                      error_mean(i0)=&
-                           (error_mean_all(i,ip)*error_count_all(i,ip)+&
-                           error_mean(i0)*error_count_sum(i0)) &
-                           /(error_count_all(i,ip)+error_count_sum(i0))
+                      ErrorMean_I(i0) = &
+                           (ErrorMean_IP(i,jProc)*nErrorCount_IP(i,jProc)+&
+                           ErrorMean_I(i0)*nErrorSum_I(i0)) &
+                           /(nErrorCount_IP(i,jProc)+nErrorSum_I(i0))
 
-                      if(iter_last(i0)<iter_last_all(i,ip))then
-                         error_last(i0)=error_last_all(i,ip)
-                         error_last_sum(i0)=error_last_all(i,ip)
-                         iter_last(i0)=iter_last_all(i,ip)
-                      elseif(iter_last(i0)==iter_last_all(i,ip))then
-                         error_last_sum(i0)=error_last_sum(i0)+&
-                              error_last_all(i,ip)
+                      if(nIterLast_I(i0) < nIterLast_IP(i,jProc))then
+                         ErrorLast_I(i0) = ErrorLast_IP(i,jProc)
+                         ErrorLast_I(i0) = ErrorLast_IP(i,jProc)
+                         nIterLast_I(i0) = nIterLast_IP(i,jProc)
+                      elseif(nIterLast_I(i0) == nIterLast_IP(i,jProc))then
+                         ErrorLastSum_I(i0) = ErrorLastSum_I(i0) &
+                              + ErrorLast_IP(i,jProc)
                       end if
 
-                      error_count_sum(i0)=&
-                           error_count_all(i,ip)+error_count_sum(i0)
-                      error_count_max(i0)=&
-                           max(error_count_all(i,ip),error_count_max(i0))
-                      iter_first(i0)=&
-                           min(iter_first_all(i,ip),iter_first(i0))
-                      error_min(i0)=&
-                           min(error_min_all(i,ip),error_min(i0))
-                      error_max(i0)=&
-                           max(error_max_all(i,ip),error_min(i0))
+                      nErrorSum_I(i0)=&
+                           nErrorCount_IP(i,jProc) + nErrorSum_I(i0)
+                      MaxError_I(i0)=&
+                           max(nErrorCount_IP(i,jProc), MaxError_I(i0))
+                      nIterFirst_I(i0)=&
+                           min(nIterFirst_IP(i,jProc), nIterFirst_I(i0))
+                      ErrorMin_I(i0)=&
+                           min(ErrorMin_IP(i,jProc), ErrorMin_I(i0))
+                      ErrorMax_I(i0)=&
+                           max(ErrorMax_IP(i,jProc), ErrorMax_I(i0))
                       EXIT
                    end if
-                   i0=i0+1
+                   i0 = i0 + 1
                 end do ! i0
              end do ! error types
           end do ! processors
 
           ! Report errors
-          if(nErrors==0)then
+          if(nError==0)then
              call write_myname; write(*,*)'Error report: no errors...'
           else
-             do i=1,nErrors
+             do i = 1, nError
                 call write_myname
-                write(*,'(a,a)')'Error report for ',trim(error_message(i))
+                write(*,'(a,a)')'Error report for ',trim(StringError_I(i))
                 call write_myname
-                write(*,*)'OCCURED first=',iter_first(i),&
-                     ' last=',iter_last(i),&
-                     ' count_max=',error_count_max(i),&
-                     ' count_sum=',error_count_sum(i)
+                write(*,*)'OCCURED nIterFirst=', nIterFirst_I(i),&
+                     ' Last=', nIterLast_I(i),&
+                     ' MaxError=', MaxError_I(i),&
+                     ' nErrorSum=', nErrorSum_I(i)
                 call write_myname
-                write(*,*)'VALUES min=',error_min(i),' max=',error_max(i),&
-                     ' mean=',error_mean(i),' last=',error_last(i),&
-                     ' last_sum=',error_last_sum(i)
+                write(*,*)'VALUES Min=',ErrorMin_I(i),' Max=', ErrorMax_I(i),&
+                     ' Mean=', ErrorMean_I(i),' Last=', ErrorLast_I(i),&
+                     ' LastSum=', ErrorLastSum_I(i)
                 call write_myname; write(*,*)
              end do
           end if
 
        end if ! iProc==0
 
-       deallocate(nErrors_all,error_message_all,error_count_all,&
-            iter_first_all,iter_last_all,error_min_all,error_max_all,&
-            error_mean_all,error_last_all)
+       deallocate(nError_P, StringError_IP, nErrorCount_IP,&
+            nIterFirst_IP, nIterLast_IP, ErrorMin_IP, ErrorMax_IP,&
+            ErrorMean_IP, ErrorLast_IP)
 
        RETURN
 
     end if ! PRINT
 
-    if(iErrorIn<1 .or. iErrorIn>nErrors) then
-       ! Determine iErrorIn based on str
+    if(iErrorIn < 1 .or. iErrorIn > nError) then
+       ! Determine iErrorIn based on String
        iErrorIn=1
        do
-          if(iErrorIn>nErrors)then
+          if(iErrorIn > nError)then
              ! First occurance of this error type
-             nErrors=iErrorIn
+             nError = iErrorIn
              EXIT
           end if
-          if(error_message(iErrorIn)==str)EXIT
-          iErrorIn=iErrorIn+1
+          if(StringError_I(iErrorIn) == String) EXIT
+          iErrorIn = iErrorIn + 1
        end do
     end if
 
     i=iErrorIn
 
-    error_count(i)=error_count(i)+1
+    nErrorCount_I(i) = nErrorCount_I(i) + 1
+    nIterLast_I(i)   = nIteration
+    ErrorLast_I(i)   = Value
 
-    iter_last(i)=iteration_number
-    error_last(i)=value
-
-    if(error_count(i)==1)then
-       if(show_first)then
+    if(nErrorCount_I(i) == 1)then
+       if(DoShowFirst)then
           call write_myname;
-          write(*,*)'First error for ',str,' (PE=',iProc,&
-               ') at iter=',iteration_number,' with value=',value
+          write(*,*)'First error for ',String,' (PE=',iProc,&
+               ') at iter=',nIteration,' with value=',Value
        end if
-       error_message(i)=str
-       iter_first(i)=iteration_number
-       error_min(i)=value
-       error_max(i)=value
-       error_mean(i)=value
+       StringError_I(i) = String
+       nIterFirst_I(i)  = nIteration
+       ErrorMin_I(i)    = Value
+       ErrorMax_I(i)    = Value
+       ErrorMean_I(i)   = Value
     else
-       error_min(i)=min(error_min(i),value)
-       error_max(i)=max(error_max(i),value)
-       error_mean(i)=(error_mean(i)*(error_count(i)-1)+value)/error_count(i)
+       ErrorMin_I(i) = min(ErrorMin_I(i),Value)
+       ErrorMax_I(i) = max(ErrorMax_I(i),Value)
+       ErrorMean_I(i) = &
+            (ErrorMean_I(i)*(nErrorCount_I(i)-1) + Value)/nErrorCount_I(i)
     end if
 
   end subroutine error_report
@@ -267,92 +278,90 @@ contains
   subroutine test_error_report
 
     use BATL_lib, ONLY: iProc
-    use ModMain, ONLY : iteration_number
+    use ModMain, ONLY : nIteration
 
-    integer:: ierr1=-1, ierr2=-1, ierr3=-1
+    integer:: iError1 = -1, iError2 = -1, iError3 = -1
 
     ! Test error_report
     !--------------------------------------------------------------------------
     select case(iProc)
     case(0)
-       iteration_number=1
-       call error_report('negative pressure',-1.,ierr1,.true.)
-       call error_report('negative pressure',-2.,ierr1,.true.)
-       call error_report('energy correction',0.1,ierr2,.false.)
-       iteration_number=2
-       call error_report('energy correction',0.2,ierr2,.false.)
-       iteration_number=3
-       call error_report('negative pressure',-6.,ierr1,.true.)
-       call error_report('only PE 0',100.,ierr3,.true.)
-       call error_report('energy correction',0.6,ierr2,.false.)
+       nIteration=1
+       call error_report('negative pressure', -1., iError1, .true.)
+       call error_report('negative pressure', -2., iError1, .true.)
+       call error_report('energy correction', 0.1, iError2, .false.)
+       nIteration=2
+       call error_report('energy correction', 0.2, iError2, .false.)
+       nIteration=3
+       call error_report('negative pressure', -6., iError1, .true.)
+       call error_report('only PE 0', 100., iError3, .true.)
+       call error_report('energy correction', 0.6, iError2, .false.)
     case(1)
-       iteration_number=1
-       call error_report('only PE 1',200.,ierr3,.true.)
-       call error_report('energy correction',0.01,ierr2,.false.)
-       iteration_number=2
-       call error_report('energy correction',0.02,ierr2,.false.)
-       iteration_number=3
-       call error_report('energy correction',0.06,ierr2,.false.)
+       nIteration=1
+       call error_report('only PE 1',200., iError3, .true.)
+       call error_report('energy correction',0.01, iError2, .false.)
+       nIteration=2
+       call error_report('energy correction', 0.02, iError2, .false.)
+       nIteration=3
+       call error_report('energy correction', 0.06, iError2, .false.)
     end select
 
-    call error_report('PRINT',0.,iErr1,.true.)
+    call error_report('PRINT', 0., iError1, .true.)
 
   end subroutine test_error_report
   !============================================================================
   subroutine get_date_time(iTime_I)
 
-    use ModMain,        ONLY : StartTime, Time_Simulation
+    use ModMain,        ONLY : StartTime, tSimulation
     use ModTimeConvert, ONLY : time_real_to_int
 
     integer, intent(out) :: iTime_I(7)
     !--------------------------------------------------------------------------
-    call time_real_to_int(StartTime+Time_Simulation,iTime_I)
+    call time_real_to_int(StartTime + tSimulation, iTime_I)
 
   end subroutine get_date_time
   !============================================================================
   subroutine get_time_string
 
     use ModIO,   ONLY: StringDateOrTime, NameMaxTimeUnit
-    use ModMain, ONLY: StartTime, Time_Simulation
+    use ModMain, ONLY: StartTime, tSimulation
     use ModTimeConvert, ONLY: TimeType, time_real_to_int
 
     integer:: i
     type(TimeType):: Time
-
-    ! This is the value if the time is too large
-
     !--------------------------------------------------------------------------
-    StringDateOrTime = '99999999'
+    StringDateOrTime = '99999999'  ! This is the value if the time is too large
+
     select case(NameMaxTimeUnit)
     case('hour')
-       if(Time_Simulation < 10000.0*3600) &
+       if(tSimulation < 10000.0*3600) &
             write(StringDateOrTime,'(i4.4,i2.2,i2.2)') &
-            int(                            Time_Simulation/3600.), &
-            int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
-            int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
+            int(                            tSimulation/3600.), &
+            int((tSimulation-(3600.*int(tSimulation/3600.)))/60.), &
+            int( tSimulation-(  60.*int(tSimulation/  60.)))
     case('hr')
-       if(Time_Simulation < 100.0*3600) &
+       if(tSimulation < 100.0*3600) &
             write(StringDateOrTime,'(i2.2,i2.2,f4.1)') &
-            int(                            Time_Simulation/3600.), &
-            int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
-            Time_Simulation-(  60.*int(Time_Simulation/  60.))
+            int(                            tSimulation/3600.), &
+            int((tSimulation-(3600.*int(tSimulation/3600.)))/60.), &
+            tSimulation-(  60.*int(tSimulation/  60.))
     case('minute')
-       if(Time_Simulation < 100.0*60) &
+       if(tSimulation < 100.0*60) &
             write(StringDateOrTime,'(i2.2,f6.3)') &
-            int(Time_Simulation/60.), &
-            Time_Simulation-(60.*int(Time_Simulation/60.))
+            int(tSimulation/60.), &
+            tSimulation-(60.*int(tSimulation/60.))
     case('second')
-       if(Time_Simulation < 100.0) &
-            write(StringDateOrTime,'(f8.5)') Time_Simulation
+       if(tSimulation < 100.0) &
+            write(StringDateOrTime,'(f8.5)') tSimulation
     case('millisecond')
-       if(Time_Simulation < 1.0) &
-            write(StringDateOrTime,'(f8.4)') Time_Simulation*1e3
+       if(tSimulation < 1.0) &
+            write(StringDateOrTime,'(f8.4)') tSimulation*1e3
     case('microsecond')
-       if(Time_Simulation < 1e-3) &
-            write(StringDateOrTime,'(f8.4)') Time_Simulation*1e6
+       if(tSimulation < 1e-3) &
+            write(StringDateOrTime,'(f8.4)') tSimulation*1e6
     case('nanosecond')
-       if(Time_Simulation < 1e-6) &
-            write(StringDateOrTime,'(f8.4)') Time_Simulation*1e9
+       if(tSimulation < 1e-6) &
+            write(StringDateOrTime,'(f8.4)') tSimulation*1e9
     case default
        ! Could not find unit
        StringDateOrTime = ''
@@ -368,7 +377,7 @@ contains
     end if
 
     ! Convert current date and time into string Time % String
-    Time % Time = StartTime + Time_Simulation
+    Time % Time = StartTime + tSimulation
     call time_real_to_int(Time)
 
     ! Select part of the string
@@ -390,7 +399,7 @@ contains
 
   end subroutine get_time_string
   !============================================================================
-  subroutine get_iVar(NameVar, iVar)
+  subroutine get_ivar(NameVar, iVar)
 
     use ModMain,       ONLY: NameVarLower_V
     use ModVarIndexes, ONLY: NameFluid_I, nVar
@@ -404,7 +413,7 @@ contains
 
     ! Initialize iVar
 
-    character(len=*), parameter:: NameSub = 'get_iVar'
+    character(len=*), parameter:: NameSub = 'get_ivar'
     !--------------------------------------------------------------------------
     iVar = -1
 
@@ -450,7 +459,7 @@ contains
     if(iVar < 0 .or. iVar > nVar) call stop_mpi(NameSub//': check NameVar, ' &
          //'iVar is not within 1 and nVar???')
 
-  end subroutine get_iVar
+  end subroutine get_ivar
   !============================================================================
 end module ModBatsrusUtility
 !==============================================================================

@@ -2,7 +2,6 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!==============================! Master module!================================
 module ModCoronalHeating
 
   use BATL_lib, ONLY: &
@@ -33,7 +32,7 @@ module ModCoronalHeating
   ! The Poynting flux to magnetic field ratio (one of the input parameters
   ! in SI unins and diminsionless:
   real, public :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
-  real, public :: MaxImbalance = 2.0, MaxImbalance2 = 4.0
+  real, public :: ImbalanceMax = 2.0, ImbalanceMax2 = 4.0
 
   logical, public :: UseCoronalHeating = .false.
   character(len=lStringLine) :: NameModel, TypeCoronalHeating
@@ -125,13 +124,12 @@ module ModCoronalHeating
 
 contains
   !============================================================================
-
   subroutine get_coronal_heat_factor
 
     use ModAdvance,     ONLY: State_VGB, Bz_
-    use ModGeometry,    ONLY: true_BLK, true_cell, TypeGeometry
+    use ModGeometry,    ONLY: IsNoBody_B, Used_GB, TypeGeometry
     use ModMagnetogram, ONLY: get_magnetogram_field
-    use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, Time_Simulation,z_
+    use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, tSimulation,z_
     use ModMpi,         ONLY: MPI_REAL, MPI_SUM
     use ModNumConst,    ONLY: cHalfPi, cTwoPi
     use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
@@ -196,20 +194,20 @@ contains
        DoFirst = .false.
 
     elseif( DtUpdateFlux > 0.0 .and. &
-         Time_Simulation - TimeUpdateLast > DtUpdateFlux ) then
+         tSimulation - TimeUpdateLast > DtUpdateFlux ) then
 
        UnsignedFluxCgs = 0.0
        if(TypeGeometry == 'spherical')then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
-             if(true_BLK(iBlock)) then
+             if(IsNoBody_B(iBlock)) then
                 call get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
              end if
           end do
        elseif(TypeGeometry == 'cartesian')then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
-             if(true_BLK(iBlock)) then
+             if(IsNoBody_B(iBlock)) then
                 dAreaCgs = CellFace_DB(z_,iBlock)*No2Si_V(UnitX_)**2*1e4
 
                 call get_photosphere_field(iBlock, &
@@ -232,7 +230,7 @@ contains
 
        TotalCoronalHeating = TotalCoronalHeatingCgs*1e-7 &
             *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
-       TimeUpdateLast = Time_Simulation
+       TimeUpdateLast = tSimulation
 
     end if
 
@@ -240,7 +238,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-       if(true_BLK(iBlock)) then
+       if(IsNoBody_B(iBlock)) then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call get_heat_function(i, j, k, iBlock, HeatFunction)
              HeatFunctionVolume = HeatFunctionVolume &
@@ -248,7 +246,7 @@ contains
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(true_cell(i,j,k,iBlock))then
+             if(Used_GB(i,j,k,iBlock))then
                 call get_heat_function(i, j, k, iBlock, HeatFunction)
                 HeatFunctionVolume = HeatFunctionVolume &
                      + HeatFunction*CellVolume_GB(i,j,k,iBlock)
@@ -268,7 +266,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_coronal_heat_factor
   !============================================================================
-
   subroutine get_coronal_heating(i, j, k, iBlock, CoronalHeating)
 
     integer, intent(in) :: i, j, k, iBlock
@@ -283,13 +280,12 @@ contains
 
   end subroutine get_coronal_heating
   !============================================================================
-
   subroutine get_heat_function(i, j, k, iBlock, HeatFunction)
 
     use ModMain, ONLY: UseB0, z_
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use ModB0, ONLY: B0_DGB
-    use ModGeometry, ONLY: r_BLK
+    use ModGeometry, ONLY: r_GB
     use BATL_lib, ONLY: Xyz_DGB, IsCartesian
 
     integer, intent(in) :: i, j, k, iBlock
@@ -308,7 +304,7 @@ contains
     Bmagnitude = norm2(B_D)
 
     if(DtUpdateFlux <= 0.0)then
-       HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
+       HeatFunction = Bmagnitude*exp(-(r_GB(i,j,k,iBlock)-1.0)/DecayLength)
     else
        if(IsCartesian)then
           if(Xyz_DGB(z_,i,j,k,iBlock)<UnsignedFluxHeight)then
@@ -317,19 +313,18 @@ contains
              HeatFunction = Bmagnitude
           end if
        else
-          if(r_BLK(i,j,k,iBlock)<UnsignedFluxHeight)then
+          if(r_GB(i,j,k,iBlock)<UnsignedFluxHeight)then
              HeatFunction = 0.0
           else
              HeatFunction = Bmagnitude &
-                  *exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
+                  *exp(-(r_GB(i,j,k,iBlock)-1.0)/DecayLength)
           end if
        end if
     end if
 
   end subroutine get_heat_function
   !============================================================================
-
-  subroutine get_photosphere_field(iBlock, Bz_V, BzCgs_II)
+  subroutine get_photosphere_field(iBlock, Bz_C, BzCgs_II)
 
     use ModMain,      ONLY: nI, nJ, nK, z_
     use ModInterpolate, ONLY: find_cell
@@ -337,9 +332,9 @@ contains
     use BATL_lib,     ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB
 
     integer, intent(in) :: iBlock
-    real, intent(in)    :: Bz_V(1:nI, 1:nJ, 0:nK+1) ! temporary array created
+    real, intent(in)    :: Bz_C(1:nI, 1:nJ, 0:nK+1) ! temporary array created
     real, intent(out)   :: BzCgs_II(1:nI, 1:nJ)
-    real :: MinZ, MaxZ, DxLeft, z
+    real :: zMin, zMax, DxLeft, z
     integer :: iLeft
 
     logical:: DoTest
@@ -347,25 +342,26 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    MinZ = CoordMin_DB(z_,iBlock)
-    MaxZ = CoordMax_DB(z_,iBlock)
+    zMin = CoordMin_DB(z_,iBlock)
+    zMax = CoordMax_DB(z_,iBlock)
 
     BzCgs_II = 0.0
-    if((UnsignedFluxHeight > MaxZ) .or. (UnsignedFluxHeight < MinZ)) RETURN
+    if((UnsignedFluxHeight > zMax) .or. (UnsignedFluxHeight < zMin)) RETURN
 
-    z = (UnsignedFluxHeight - MinZ)/CellSize_DB(z_,iBlock) + 0.5
+    z = (UnsignedFluxHeight - zMin)/CellSize_DB(z_,iBlock) + 0.5
     call find_cell(0, nK+1, z, iLeft, DxLeft)
 
-    BzCgs_II = ((1.0 - DxLeft)*Bz_V(1:nI, 1:nJ, iLeft) + &
-         DxLeft*Bz_V(1:nI, 1:nJ, iLeft+1))*No2Si_V(UnitB_)*1e4
+    BzCgs_II = ((1.0 - DxLeft)*Bz_C(1:nI, 1:nJ, iLeft) + &
+         DxLeft*Bz_C(1:nI, 1:nJ, iLeft+1))*No2Si_V(UnitB_)*1e4
 
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine get_photosphere_field
   !============================================================================
   subroutine get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
 
     use ModAdvance,     ONLY: State_VGB
-    use ModGeometry,    ONLY: r_BLK
+    use ModGeometry,    ONLY: r_GB
     use ModMain,        ONLY: nJ, nK, r_
     use ModInterpolate, ONLY: find_cell
     use ModPhysics,     ONLY: No2Si_V, UnitB_, UnitX_
@@ -376,20 +372,20 @@ contains
     integer, intent(in) :: iBlock
     real, intent(inout) :: UnsignedFluxCgs
 
-    real :: MinR, MaxR, r, DrLeft, BrLeft, BrRight, BrCgs, DrL, dAreaCgs
+    real :: rMin, rMax, r, DrLeft, BrLeft, BrRight, BrCgs, DrL, dAreaCgs
     integer :: iLeft, j, k, iL
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_photosphere_unsignedflux'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    MinR = CoordMin_DB(r_,iBlock)
-    MaxR = CoordMax_DB(r_,iBlock)
+    rMin = CoordMin_DB(r_,iBlock)
+    rMax = CoordMax_DB(r_,iBlock)
 
-    if((UnsignedFluxHeight > MaxR) .or. (UnsignedFluxHeight < MinR)) RETURN
+    if((UnsignedFluxHeight > rMax) .or. (UnsignedFluxHeight < rMin)) RETURN
 
     ! Cells used to interpolate Br
-    r = (UnsignedFluxHeight - MinR)/CellSize_DB(r_,iBlock) + 0.5
+    r = (UnsignedFluxHeight - rMin)/CellSize_DB(r_,iBlock) + 0.5
     call find_cell(0, nI+1, r, iLeft, DrLeft)
 
     ! Cells used to interpolate face area
@@ -404,9 +400,9 @@ contains
 
     do k = 1, nK; do j = 1, nJ
        BrLeft = sum(Xyz_DGB(:,iLeft,j,k,iBlock) &
-            *State_VGB(Bx_:Bz_,iLeft,j,k,iBlock))/r_BLK(iLeft,j,k,iBlock)
+            *State_VGB(Bx_:Bz_,iLeft,j,k,iBlock))/r_GB(iLeft,j,k,iBlock)
        BrRight = sum(Xyz_DGB(:,iLeft+1,j,k,iBlock) &
-            *State_VGB(Bx_:Bz_,iLeft+1,j,k,iBlock))/r_BLK(iLeft+1,j,k,iBlock)
+            *State_VGB(Bx_:Bz_,iLeft+1,j,k,iBlock))/r_GB(iLeft+1,j,k,iBlock)
 
        BrCgs = ((1.0 - DrLeft)*BrLeft + DrLeft*BrRight)*No2Si_V(UnitB_)*1e4
 
@@ -475,8 +471,8 @@ contains
                // TypeCoronalHeating)
        end select
     case('#LIMITIMBALANCE')
-       call read_var('MaxImbalance',MaxImbalance)
-       MaxImbalance2 = MaxImbalance**2
+       call read_var('ImbalanceMax',ImbalanceMax)
+       ImbalanceMax2 = ImbalanceMax**2
 
     case("#POYNTINGFLUX")
        DoInit = .true.
@@ -541,7 +537,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_coronal_heating_param
   !============================================================================
-
   subroutine init_coronal_heating
 
     use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, &
@@ -584,7 +579,7 @@ contains
   !============================================================================
   subroutine get_block_heating(iBlock)
 
-    use ModGeometry,       ONLY: r_BLK
+    use ModGeometry,       ONLY: r_GB
     use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
          No2Io_V, UnitB_
     use ModMain,       ONLY: x_, z_, UseB0
@@ -634,7 +629,7 @@ contains
        do k=1,nK;do j=1,nJ; do i=1,nI
 
           CoronalHeating_C(i,j,k) = HeatingAmplitude &
-               *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
+               *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
 
        end do; end do; end do
     else
@@ -645,7 +640,7 @@ contains
        HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
        do k=1,nK; do j=1,nJ; do i=1,nI
           CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) + HeatCh &
-               *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
+               *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
        end do; end do; end do
     end if
 
@@ -670,7 +665,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_block_heating
   !============================================================================
-
   subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, WaveDissipation_V, &
        CoronalHeating)
 
@@ -708,7 +702,6 @@ contains
 
   end subroutine calc_alfven_wave_dissipation
   !============================================================================
-
   subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
        CoronalHeating)
 
@@ -756,7 +749,6 @@ contains
 
   end subroutine turbulent_cascade
   !============================================================================
-
   subroutine get_wave_reflection(iBlock, IsNewBlock)
 
     use BATL_size, ONLY: nDim, nI, nJ, nK
@@ -764,7 +756,7 @@ contains
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
-    use ModGeometry, ONLY: true_cell, R_BLK
+    use ModGeometry, ONLY: Used_GB, r_GB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMultiFluid, ONLY: iRho_I, IonFirst_
@@ -793,8 +785,8 @@ contains
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if( (.not.true_cell(i,j,k,iBlock)).or.&
-            R_BLK(i,j,k, iBlock) < rMinWaveReflection)CYCLE
+       if( (.not.Used_GB(i,j,k,iBlock)).or.&
+            r_GB(i,j,k, iBlock) < rMinWaveReflection)CYCLE
 
        call get_grad_log_alfven_speed(i, j, k, iBlock, IsNewBlockAlfven, &
             GradLogAlfven_D, GradLogRho_D)
@@ -842,12 +834,12 @@ contains
 
        ! No reflection when turbulence is balanced (waves are then
        ! assumed to be uncorrelated)
-       if(MaxImbalance2*EwaveMinus <= EwavePlus)then
+       if(ImbalanceMax2*EwaveMinus <= EwavePlus)then
           ReflectionRate = ReflectionRate*&
-               (1.0 - MaxImbalance*sqrt(EwaveMinus/EwavePlus))
-       elseif(MaxImbalance2*EwavePlus <= EwaveMinus)then
+               (1.0 - ImbalanceMax*sqrt(EwaveMinus/EwavePlus))
+       elseif(ImbalanceMax2*EwavePlus <= EwaveMinus)then
           ReflectionRate = ReflectionRate*&
-               (MaxImbalance*sqrt(EwavePlus/EwaveMinus)-1.0)
+               (ImbalanceMax*sqrt(EwavePlus/EwaveMinus)-1.0)
        else
           ReflectionRate = 0.0
        end if
@@ -867,7 +859,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_wave_reflection
   !============================================================================
-
   subroutine get_grad_log_alfven_speed(i, j, k, iBlock, IsNewBlockAlfven, &
        GradLogAlfven_D, GradLogRho_D)
 
@@ -910,26 +901,36 @@ contains
        end if
     else
        GradLogAlfven_D = &
-            LogAlfven_FD(i+1,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
-            - LogAlfven_FD(i,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
+            LogAlfven_FD(i+1,j,k,Dim1_) &
+            *FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
+            - LogAlfven_FD(i,j,k,Dim1_) &
+            *FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
        GradLogRho_D = &
             LogRho_FD(i+1,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
             - LogRho_FD(i,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
        if(nJ > 1)then
           GradLogAlfven_D = GradLogAlfven_D + &
-               LogAlfven_FD(i,j+1,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
-               - LogAlfven_FD(i,j,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
+               LogAlfven_FD(i,j+1,k,Dim2_) &
+               *FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
+               - LogAlfven_FD(i,j,k,Dim2_) &
+               *FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
           GradLogRho_D = GradLogRho_D + &
-               LogRho_FD(i,j+1,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
-               - LogRho_FD(i,j,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
+               LogRho_FD(i,j+1,k,Dim2_) &
+               *FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
+               - LogRho_FD(i,j,k,Dim2_)&
+               *FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
        end if
        if(nK > 1) then
           GradLogAlfven_D = GradLogAlfven_D + &
-               LogAlfven_FD(i,j,k+1,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
-               - LogAlfven_FD(i,j,k,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
+               LogAlfven_FD(i,j,k+1,Dim3_) &
+               *FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
+               - LogAlfven_FD(i,j,k,Dim3_) &
+               *FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
           GradLogRho_D = GradLogRho_D + &
-               LogRho_FD(i,j,k+1,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
-               - LogRho_FD(i,j,k,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
+               LogRho_FD(i,j,k+1,Dim3_) &
+               *FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
+               - LogRho_FD(i,j,k,Dim3_) &
+               *FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
        end if
 
        GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
@@ -938,7 +939,6 @@ contains
 
   contains
     !==========================================================================
-
     subroutine get_log_alfven_speed
 
       use ModAdvance, ONLY: &
@@ -990,10 +990,8 @@ contains
 
     end subroutine get_log_alfven_speed
     !==========================================================================
-
   end subroutine get_grad_log_alfven_speed
   !============================================================================
-
   subroutine get_curl_u(i, j, k, iBlock, CurlU_D)
 
     use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
@@ -1071,7 +1069,6 @@ contains
 
   end subroutine get_curl_u
   !============================================================================
-
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
        WaveDissipation_V, CoronalHeating, &
        QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
@@ -1353,6 +1350,5 @@ contains
 
   end subroutine apportion_coronal_heating
   !============================================================================
-
 end module ModCoronalHeating
 !==============================================================================

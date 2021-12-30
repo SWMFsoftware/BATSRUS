@@ -121,7 +121,7 @@ contains
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: Used_GB
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
 
     integer, intent(in) :: iBlock
@@ -151,7 +151,7 @@ contains
     IsBodyCell_G(:,:,:) = &
          .not.(iBoundary_GB(:,:,:,FBC%iBlockBc) == domain_)
 
-    call set_face_bc(FBC, IsBodyCell_G, true_cell(:,:,:,FBC%iBlockBc) )
+    call set_face_bc(FBC, IsBodyCell_G, Used_GB(:,:,:,FBC%iBlockBc) )
 
     if(DoTest)call write_face_state('Final')
 
@@ -197,8 +197,7 @@ contains
          LeftState_VX, LeftState_VY, LeftState_VZ,    &
          RightState_VX, RightState_VY, RightState_VZ, &
          UseAnisoPe, UseMultiSpecies
-    use ModParallel,   ONLY: &
-         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+    use ModParallel,   ONLY: DiLevel_EB
     use ModNumConst
     use ModPhysics,    ONLY: PolarRho_I, PolarU_I, PolarP_I, BodyNDim_I, &
          Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_, BodyNSpeciesDim_I
@@ -229,7 +228,7 @@ contains
       call test_start(NameSub, DoTest, iBlockBc)
 
       if(TypeFaceBc_I(body1_) == 'polarwind') then
-         GmToSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
+         GmToSmg_DD = transform_matrix(tSimulation, TypeCoordSystem, 'SMG')
          Cos2PolarTheta = cos(PolarTheta)**2
       end if
 
@@ -258,14 +257,15 @@ contains
                ! assuming the first species/fluid is H+ and determined by #BODY
                RhoCpcp_I(1) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)
 
-               ! assuming the second species/fluid is O+, Mass is taken to be 16
+               ! assuming the 2nd species/fluid is O+, Mass is taken to be 16
                ! use nIonDensity instead of 2 to avoid index out of range
                RhoCpcp_I(nIonDensity) = &
                     Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
             end if
          else if (UseMultiIon) then
             if (IsMhd) call stop_mpi(NameSub//': no total fluid is supported!')
-            if (UseCpcpBc) call stop_mpi(NameSub//': CPCP should not be used '//&
+            if (UseCpcpBc) call stop_mpi(NameSub// &
+                 ': CPCP should not be used '//&
                  'in combination with Young in multifluid ')
             if (nIonFluid /= 2) call stop_mpi(NameSub// &
                  ': MUST be two fluids for Young BC.')
@@ -278,8 +278,6 @@ contains
             ! is both light and very minor.
             FracH = 1.0 / (1.0 + RatioOH)
             FracO = RatioOH  * FracH
-            ! fixed total number density
-            ! RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
 
             ! fixed H+ density
             RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(1+16*ratioOH)
@@ -304,8 +302,8 @@ contains
                if (IsTrueCell_G(i-1,j,k) .and. &
                     IsBodyCell_G(i,j,k) .and. &
                     (.not.DoResChangeOnly .or. &
-                    ((i == nIFace .and. neiLwest(iBlockBc)==+1) .or. &
-                    (i == 1       .and. neiLeast(iBlockBc)==+1)) )) then
+                    ((i == nIFace .and. DiLevel_EB(2,iBlockBc)==+1) .or. &
+                    (i == 1       .and. DiLevel_EB(1,iBlockBc)==+1)) )) then
 
                   iSide = 2
 
@@ -325,8 +323,8 @@ contains
                if (IsTrueCell_G(i,j,k) .and. &
                     IsBodyCell_G(i-1,j,k)  .and. &
                     (.not.DoResChangeOnly .or. &
-                    (i == 1         .and. neiLeast(iBlockBc)==+1) .or. &
-                    (i == nIFace    .and. neiLwest(iBlockBc)==+1)  )) then
+                    (i == 1         .and. DiLevel_EB(1,iBlockBc)==+1) .or. &
+                    (i == nIFace    .and. DiLevel_EB(2,iBlockBc)==+1)  )) then
 
                   iSide = 1
 
@@ -353,8 +351,8 @@ contains
                if (IsTrueCell_G(i,j-1,k) .and. &
                     IsBodyCell_G(i,j,k)  .and. &
                     ( .not.DoResChangeOnly .or. &
-                    (j == nJFace .and. neiLnorth(iBlockBc)==+1) .or. &
-                    (j == 1      .and. neiLsouth(iBlockBc)==+1) )) then
+                    (j == nJFace .and. DiLevel_EB(4,iBlockBc)==+1) .or. &
+                    (j == 1      .and. DiLevel_EB(3,iBlockBc)==+1) )) then
 
                   iSide = 4
 
@@ -373,8 +371,8 @@ contains
                if (IsTrueCell_G(i,j,k) .and. &
                     IsBodyCell_G(i,j-1,k)  .and. &
                     (.not.DoResChangeOnly .or. &
-                    (j ==1       .and. neiLsouth(iBlockBc)==+1) .or. &
-                    (j == nJFace .and. neiLnorth(iBlockBc)==+1) )) then
+                    (j ==1       .and. DiLevel_EB(3,iBlockBc)==+1) .or. &
+                    (j == nJFace .and. DiLevel_EB(4,iBlockBc)==+1) )) then
 
                   iSide = 3
 
@@ -401,8 +399,8 @@ contains
                if (IsTrueCell_G(i,j,k-1) .and. &
                     IsBodyCell_G(i,j,k) .and. &
                     (.not.DoResChangeOnly .or. &
-                    (k == nKFace .and. neiLtop(iBlockBc)==+1) .or. &
-                    (k == 1      .and. neiLbot(iBlockBc)==+1)) ) then
+                    (k == nKFace .and. DiLevel_EB(6,iBlockBc)==+1) .or. &
+                    (k == 1      .and. DiLevel_EB(5,iBlockBc)==+1)) ) then
 
                   iSide = 6
 
@@ -421,8 +419,8 @@ contains
                if (IsTrueCell_G(i,j,k).and. &
                     IsBodyCell_G(i,j,k-1).and. &
                     (.not.DoResChangeOnly .or. &
-                    (k == 1      .and. neiLbot(iBlockBc)==+1) .or. &
-                    (k == nKFace .and. neiLtop(iBlockBc)==+1))  ) then
+                    (k == 1      .and. DiLevel_EB(5,iBlockBc)==+1) .or. &
+                    (k == nKFace .and. DiLevel_EB(6,iBlockBc)==+1))  ) then
 
                   iSide = 5
 
@@ -588,7 +586,8 @@ contains
                  end if
               end select
               ! Reflect B1 or full B
-              FBC%VarsGhostFace_V(Bx_:Bz_) =  FBC%VarsTrueFace_V(Bx_:Bz_) - BRefl_D
+              FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsTrueFace_V(Bx_:Bz_) &
+                   - BRefl_D
            end if
 
            if(TypeBc == 'reflectall')then
@@ -609,7 +608,7 @@ contains
                       / max(CellFace_DFB(iDir,i,j,k,iBlockBc), 1e-30)
                  do iFluid = 1, nFluid
                     iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
-                    FBC%VarsGhostFace_V(iUx:iUz) = FBC%VarsTrueFace_V(iUx:iUz) &
+                    FBC%VarsGhostFace_V(iUx:iUz) = FBC%VarsTrueFace_V(iUx:iUz)&
                          - 2*sum(FBC%VarsTrueFace_V(iUx:iUz)*Normal_D)*Normal_D
                  end do
               end if
@@ -1014,14 +1013,18 @@ contains
 
            ! Subtract the radial component of the velocity (no outflow/inflow)
            uIono_D = uIono_D &
-                - FBC%FaceCoords_D * sum(FBC%FaceCoords_D*uIono_D) / sum(FBC%FaceCoords_D**2)
+                - FBC%FaceCoords_D * sum(FBC%FaceCoords_D*uIono_D) &
+                / sum(FBC%FaceCoords_D**2)
 
            select case(TypeBc)
            case('reflect','linetied','polarwind','ionosphere', &
                 'ionospherefloat', 'ionosphereoutflow')
-              FBC%VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) + FBC%VarsGhostFace_V(iUx_I)
-              FBC%VarsGhostFace_V(iUy_I) = 2*uIono_D(y_) + FBC%VarsGhostFace_V(iUy_I)
-              FBC%VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) + FBC%VarsGhostFace_V(iUz_I)
+              FBC%VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) &
+                   + FBC%VarsGhostFace_V(iUx_I)
+              FBC%VarsGhostFace_V(iUy_I) = 2*uIono_D(y_) &
+                   + FBC%VarsGhostFace_V(iUy_I)
+              FBC%VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) &
+                   + FBC%VarsGhostFace_V(iUz_I)
 
            case default
               call stop_mpi(NameSub// &
@@ -1038,12 +1041,15 @@ contains
            select case(TypeBc)
            case('reflect','linetied', &
                 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow')
-              FBC%VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) + FBC%VarsGhostFace_V(iUx_I)
-              FBC%VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) + FBC%VarsGhostFace_V(iUy_I)
-              FBC%VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) + FBC%VarsGhostFace_V(iUz_I)
+              FBC%VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) &
+                   + FBC%VarsGhostFace_V(iUx_I)
+              FBC%VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) &
+                   + FBC%VarsGhostFace_V(iUy_I)
+              FBC%VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) &
+                   + FBC%VarsGhostFace_V(iUz_I)
            case default
-              call stop_mpi('UseRotatingBc is not compatible with TypeFaceBc_I='&
-                   //TypeBc)
+              call stop_mpi(NameSub// &
+                   ': UseRotatingBc is not compatible with TypeBc='//TypeBc)
            end select
         end if
 

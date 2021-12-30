@@ -65,11 +65,11 @@ contains
     !               also added EUV (3-filters)
     !               and Soft-Xray synthesis capability
 
-    use ModMain,    ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
-         time_accurate, nBlock, NameThisComp, TypeCoordSystem,            &
-         Body1, StartTime, iStartTime_I, rLowerModel, rUpperModel
+    use ModMain,    ONLY : nI, nJ, nK, nStep, tSimulation, Unused_B, &
+         IsTimeAccurate, nBlock, NameThisComp, TypeCoordSystem,            &
+         UseBody, StartTime, iStartTime_I, rLowerModel, rUpperModel
     use ModGeometry, ONLY: &
-         XyzStart_BLK, nMirror_D, RadiusMin, rMin_BLK
+         Coord111_DB, nMirror_D, RadiusMin, rMin_B
     use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
          UnitTemperature_
     use ModIO
@@ -198,7 +198,7 @@ contains
        FromObs_DD = cUnit_DD
     else
        ! Convert to HGI
-       FromObs_DD = transform_matrix(Time_Simulation,'HGI', TypeCoordSystem)
+       FromObs_DD = transform_matrix(tSimulation,'HGI', TypeCoordSystem)
     end if
 
     iSat = 0
@@ -230,7 +230,7 @@ contains
        ! XyzSat_DI is in the current coordinate system, need to convert
        ! back to HGI
        ObsPos_DI(:, iFile) = matmul(                                   &
-            transform_matrix(Time_Simulation, TypeCoordSystem, 'HGI'), &
+            transform_matrix(tSimulation, TypeCoordSystem, 'HGI'), &
             ObsPos_DI(:,iFile) )
 
     case('none')
@@ -464,16 +464,16 @@ contains
        ! the plot time is stored in the hdf5 files and displayed in VisIt.
        ! if you don not include it in the filename VisIt will automacially
        ! group all the los files.
-       if(time_accurate .and. plot_form(ifile) /= 'hdf')then
+       if(IsTimeAccurate .and. plot_form(ifile) /= 'hdf')then
           call get_time_string
           write(filename,file_format) &
                trim(plot_type1)//"_",&
-               ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,&
+               ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
                file_extension
        else
           write(filename,file_format) &
                trim(plot_type1)//"_",&
-               ifile-plot_,"_n",n_step,file_extension
+               ifile-plot_,"_n",nStep,file_extension
        end if
 
        ! write header file
@@ -505,12 +505,12 @@ contains
 
           ! TIMESECONDSABSOLUTE
           ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-          write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+          write(StringTmp,'(E20.13)')StartTime+tSimulation
           write(UnitTmp_,'(a,a,a)') &
                'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
 
           ! ITER
-          write(StringTmp,'(i12)')n_step
+          write(StringTmp,'(i12)')nStep
           write(UnitTmp_,'(a,a,a)') &
                'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
 
@@ -562,7 +562,7 @@ contains
 
           ! TIMESECONDSABSOLUTE
           ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-          ! write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+          ! write(StringTmp,'(E20.13)')StartTime+tSimulation
           ! StringHeadLine = trim(StringHeadLine)//&
           !      '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
 
@@ -581,8 +581,8 @@ contains
              call save_plot_file(filename, &
                   TypeFileIn = TypeFile_I(iFile), &
                   StringHeaderIn = StringHeadLine, &
-                  nStepIn = n_step, &
-                  TimeIn = time_simulation, &
+                  nStepIn = nStep, &
+                  TimeIn = tSimulation, &
                   ParamIn_I = eqpar(1:neqpar), &
                   NameVarIn = allnames, &
                   nDimIn = 2, &
@@ -593,8 +593,8 @@ contains
              call save_plot_file(filename, &
                   TypeFileIn = 'hdf5', &
                   StringHeaderIn = StringHeadLine, &
-                  nStepIn = n_step, &
-                  TimeIn = time_simulation, &
+                  nStepIn = nStep, &
+                  TimeIn = tSimulation, &
                   ParamIn_I = eqpar(1:neqpar), &
                   NameVarIn_I = PlotVarNames, &
                   NameUnitsIn = unitstr_IDL,&
@@ -745,7 +745,7 @@ contains
 
       ! Integrate variables from XyzStartIn_D in the direction LosPix_D
 
-      use ModGeometry,        ONLY: x1, x2, y1, y2, z1, z2
+      use ModGeometry,        ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
       use ModFieldLineThread, ONLY: &
            IsUniformGrid, dCoord1Uniform, rChromo=>rBody
       use BATL_lib,           ONLY: xyz_to_coord, &
@@ -795,7 +795,7 @@ contains
       end if
 
       CoordSize_D = CoordMax_D - CoordMin_D
-      DsTiny = cTiny*(x2-x1 + y2 - y1 + z2 - z1)
+      DsTiny = cTiny*(xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
 
       XyzStart_D = XyzStartIn_D
 
@@ -1270,7 +1270,7 @@ contains
 
          rInner = max(rBody, RadiusMin)
 
-         if(body1 .and. rMin_BLK(iBlock) < rBody ) &
+         if(UseBody .and. rMin_B(iBlock) < rBody ) &
               rInner = rBody + norm2(CellSize_D)
       end if
 
@@ -1307,7 +1307,7 @@ contains
       end if
 
       ! Store cell 1,1,1 coordinates
-      XyzBlockStart_D = XyzStart_BLK(:,iBlock)
+      XyzBlockStart_D = Coord111_DB(:,iBlock)
 
       ! Loop over pixels
       do jPix = 1, nPix
@@ -1368,8 +1368,8 @@ contains
       !    and r_S to the inner and outer Y faces of the block.
       !
       ! 1. Calculate the Y and Z coordinates of the LOS intersecting x_S
-      !    x1 = xMin and x2 = xMax and obtain the corresponding
-      !    radial distances r1 = sqrt(y1^2+z1^2) and r2=sqrt(y^2 + z^2)
+      !    xMinBox = xMin and xMaxBox = xMax and obtain the corresponding
+      !    radial distances r1 = sqrt(yMinBox^2+zMinBox^2) and r2=sqrt(y^2 + z^2)
       !    and keep them if R1 or R2 is within the [rMin, rMax] interval.
       !
       ! 2. Calculate the intersection of the line with a circular ring of width
@@ -1520,7 +1520,7 @@ contains
       ! x_los, y_los, z_los, r_los give the position of the point on the los
       ! mu_los parameter related to the limb darkening
       ! face_location give the locations of the faces of the block
-      ! face_location(2,3) = x1, y1, z1---x2, y2, z2
+      ! face_location(2,3) = xMinBox, yMinBox, zMinBox---xMaxBox, yMaxBox, zMaxBox
 
       ! Determine the location of the block faces
       xx1 = 0.5*(Xyz_DGB(x_, 0, 0, 0,iBlock)+Xyz_DGB(x_,   1,   1  , 1,iBlock))

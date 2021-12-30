@@ -17,7 +17,7 @@ module ModLoadBalance
   use ModImplicit, ONLY: UseImplicit, UseBDF2, n_prev, ImplOld_VCB
   use ModPointImplicit, ONLY: UseUserPointImplicit_B, &
        DoBalancePointImplicit, IsDynamicPointImplicit
-  use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
+  use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
   use ModFieldTrace, ONLY: ray
   use ModAdvance, ONLY: nVar
   use ModB0, ONLY: B0_DGB
@@ -131,11 +131,11 @@ contains
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           iData = iData+1
-          Buffer_I(iData) = Bxface_BLK(i,j,k,iBlock)
+          Buffer_I(iData) = BxFace_GB(i,j,k,iBlock)
           iData = iData+1
-          Buffer_I(iData) = Byface_BLK(i,j,k,iBlock)
+          Buffer_I(iData) = ByFace_GB(i,j,k,iBlock)
           iData = iData+1
-          Buffer_I(iData) = Bzface_BLK(i,j,k,iBlock)
+          Buffer_I(iData) = BzFace_GB(i,j,k,iBlock)
        end do; end do; end do
 
     endif
@@ -205,11 +205,11 @@ contains
     if (UseConstrainB) then
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           iData = iData+1
-          Bxface_BLK(i,j,k,iBlock) = Buffer_I(iData)
+          BxFace_GB(i,j,k,iBlock) = Buffer_I(iData)
           iData = iData+1
-          Byface_BLK(i,j,k,iBlock) = Buffer_I(iData)
+          ByFace_GB(i,j,k,iBlock) = Buffer_I(iData)
           iData = iData+1
-          Bzface_BLK(i,j,k,iBlock) = Buffer_I(iData)
+          BzFace_GB(i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do
     end if
 
@@ -256,7 +256,7 @@ contains
          State_VGB, iTypeAdvance_B, iTypeAdvance_BP,                 &
          SkippedBlock_, ImplBlock_, SteadyBlock_, &
          UseLowOrderRegion, IsLowOrderOnly_B
-    use ModGeometry,   ONLY: True_Blk, true_cell, far_field_BCs_Blk
+    use ModGeometry,   ONLY: IsNoBody_B, Used_GB, IsBoundary_B
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
     use ModPartSteady, ONLY: UsePartSteady
     use BATL_lib,      ONLY: Unused_BP
@@ -329,7 +329,7 @@ contains
           !
 
           ! 1st  bit: NotSkippedBlock   -> 1, otherwise -> iType will be -1.
-          ! 2nd  bit: true_blk          -> 1, otherwise -> 0
+          ! 2nd  bit: IsNoBody_B          -> 1, otherwise -> 0
           iCrit = 2
 
           ! next bit: implicit          -> 1, explicit  -> 0
@@ -408,7 +408,7 @@ contains
              iType = iNotSkippedBlock
 
              ! true block has second bit set
-             if(True_Blk(iBlock)) iType = iType + iTrueBlock
+             if(IsNoBody_B(iBlock)) iType = iType + iTrueBlock
 
              if(UsePartImplicit)then
                 if(iTypeAdvance_B(iBlock)==ImplBlock_) &
@@ -426,7 +426,7 @@ contains
 
              if(UseFieldLineThreads)then
                 ! Field line threads are at the 1st boundary (minimum r)
-                if(far_field_BCs_Blk(iBlock) .and. NeiLev(1,iBlock)==NOBLK)&
+                if(IsBoundary_B(iBlock) .and. DiLevel_EB(1,iBlock)==Unset_)&
                      iType = iType + iFieldLineThreadBlock
              end if
 
@@ -458,13 +458,13 @@ contains
                 ! for the other block type criteria.
                 iType = iType + iSubCycleBlock*iTimeLevel_A(iNode_B(iBlock))
 
-                if(dt_BLK(iBlock) < DtMin .or. iType > iTypeMax)then
+                if(DtMax_B(iBlock) < DtMin .or. iType > iTypeMax)then
                    write(*,*) NameSub,' ERROR for iBlock, iProc=', &
                         iBlock, iProc
                    write(*,*) NameSub,'iType, iTypeMax =', iType, iTypeMax
                    write(*,*) NameSub,' iSubCycleBlock =', iSubCycleBlock
                    write(*,*) NameSub,' DtMin, DtMax   =', DtMin, DtMax
-                   write(*,*) NameSub,' dt_BLK         =', dt_BLK(iBlock)
+                   write(*,*) NameSub,' DtMax_B         =', DtMax_B(iBlock)
                    write(*,*) NameSub,' time level     =', &
                         iTimeLevel_A(iNode_B(iBlock))
                 end if
@@ -524,7 +524,7 @@ contains
        if(DoMoveData)then
           call init_load_balance
 
-          call regrid_batl(nVar, State_VGB, Dt_BLK,  &
+          call regrid_batl(nVar, State_VGB, DtMax_B,  &
                DoBalanceEachLevelIn= &
                (UseLocalTimeStep .and. .not.UseMaxTimeStep), &
                iTypeBalance_A=iTypeBalance_A,        &
@@ -538,7 +538,7 @@ contains
           call set_batsrus_grid
           call set_batsrus_state
        else
-          call regrid_batl(nVar, State_VGB, Dt_BLK, Used_GB=true_cell, &
+          call regrid_batl(nVar, State_VGB, DtMax_B, Used_GB=Used_GB, &
                iTypeBalance_A=iTypeBalance_A, iTypeNode_A=iTypeAdvance_A,&
                DoTestIn=DoTest)
           call set_batsrus_grid
@@ -612,7 +612,7 @@ contains
     use ModFaceValue, ONLY : calc_face_value
     use ModAdvance,  ONLY : iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_
-    use ModGeometry, ONLY : Rmin_BLK
+    use ModGeometry, ONLY : rMin_B
     use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
          ImplCritType, ExplCFL, rImplicit
     use ModIO,       ONLY: write_prefix, iUnitOut
@@ -676,8 +676,8 @@ contains
        select case(ImplCritType)
        case('dt')
           ! Just checking
-          if(.not.time_accurate)call stop_mpi(&
-               'ImplCritType=dt is only valid in time_accurate mode')
+          if(.not.IsTimeAccurate)call stop_mpi(&
+               'ImplCritType=dt is only valid in IsTimeAccurate mode')
 
           ! Set implicitBLK based on the time step.
           do iBlock=1,nBlockMax
@@ -685,11 +685,11 @@ contains
 
              ! Obtain the time step based on CFL condition
 
-             ! For first iteration calculate dt_BLK when inside time loop,
-             ! otherwise use the available dt_BLK from previous time step,
+             ! For first iteration calculate DtMax_B when inside time loop,
+             ! otherwise use the available DtMax_B from previous time step,
              ! or from the restart file, or simply 0 set in read_inputs.
              ! The latter two choices will be overruled later anyways.
-             if(n_step==1 .and. time_loop)then
+             if(nStep==1 .and. IsTimeLoop)then
                 ! For first iteration in the time loop
                 ! calculate stable time step
                 call set_b0_face(iBlock)
@@ -700,17 +700,17 @@ contains
 
              ! If the smallest allowed timestep is below the fixed DtFixed
              ! then only implicit scheme will work
-             if(dt_BLK(iBlock)*explCFL <= DtFixed) &
+             if(DtMax_B(iBlock)*explCFL <= DtFixed) &
                   iTypeAdvance_B(iBlock) = ImplBlock_
           end do
 
           if(DoTest)write(*,*)&
-               'SELECT: advancetype,dt_BLK,explCFL,dt=',&
-               iTypeAdvance_B(iBlockTest),dt_BLK(iBlockTest),explCFL,dt
+               'SELECT: advancetype,DtMax_B,explCFL,dt=',&
+               iTypeAdvance_B(iBlockTest),DtMax_B(iBlockTest),explCFL,dt
 
        case('r','R')
           ! implicitly treated blocks are within rImplicit and not Unused
-          where(rMin_BLK(1:nBlockMax) <= rImplicit .and. &
+          where(rMin_B(1:nBlockMax) <= rImplicit .and. &
                .not.Unused_B(1:nBlockMax)) &
                iTypeAdvance_B(1:nBlockMax) = ImplBlock_
        case('test')
@@ -759,7 +759,7 @@ contains
   !============================================================================
   subroutine load_balance_blocks
 
-    use ModMain, ONLY: iteration_number
+    use ModMain, ONLY: nIteration
     use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
     use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
     use ModTimeStepControl, ONLY: UseMaxTimeStep
@@ -777,7 +777,7 @@ contains
          UsePartImplicit .or.                             &! part implicit
          UsePartSteady .and. IsNewSteadySelect .or.       &! part steady scheme
          nBlockSemi >= 0 .and. DoBalanceSemiImpl .or.     &! semi-implicit
-         DoBalancePointImplicit .and. iteration_number>1  &! point-implicit
+         DoBalancePointImplicit .and. nIteration>1  &! point-implicit
          ) then ! semi-implicit scheme
 
        ! Redo load balancing

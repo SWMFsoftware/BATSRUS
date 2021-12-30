@@ -21,7 +21,7 @@ module ModParticleMover
   use BATL_particles,  ONLY: Particle_I, put_particles, &
        mark_undefined, check_particle_location, &
        set_pointer_to_particles
-  use ModGeometry,     ONLY: true_cell
+  use ModGeometry,     ONLY: Used_GB
   use ModNumConst
   implicit none
   SAVE
@@ -511,7 +511,7 @@ contains
     ! Transform VDF moments to State Vector Variables
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Skip not true cells
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
@@ -581,12 +581,12 @@ contains
          MaxK=nK               , &
          iBlock=iBlock         , &
          DoOnScratch=DoOnScratch,&
-         DoSkip_G=.not.true_cell(1:nI,1:nJ,1:nK,iBlock))
+         DoSkip_G=.not.Used_GB(1:nI,1:nJ,1:nK,iBlock))
   end subroutine get_vdf_from_state
   !============================================================================
   subroutine set_boundary_vdf(iBlock)
     use BATL_lib,    ONLY: iNode_B, IsCartesianGrid
-    use ModParallel, ONLY: NOBLK, NeiLev
+    use ModParallel, ONLY: Unset_, DiLevel_EB
     integer, intent(in) :: iBlock
     logical :: DoSkip_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !--------------------------------------------------------------------------
@@ -594,15 +594,15 @@ contains
     ! Skip all physical cells
     DoSkip_G(1:nI,1:nJ,1:nK) = .true.
     ! Skip all cells from the side, where there is no boundary
-    if(neiLEV(1,iBlock) /= NOBLK)DoSkip_G(MinI,:,:) = .true.
-    if(neiLEV(2,iBlock) /= NOBLK)DoSkip_G(MaxI,:,:) = .true.
+    if(DiLevel_EB(1,iBlock) /= Unset_)DoSkip_G(MinI,:,:) = .true.
+    if(DiLevel_EB(2,iBlock) /= Unset_)DoSkip_G(MaxI,:,:) = .true.
     if(nDim>=2)then
-       if(neiLEV(3,iBlock) /= NOBLK)DoSkip_G(:,MinJ,:) = .true.
-       if(neiLEV(4,iBlock) /= NOBLK)DoSkip_G(:,MaxJ,:) = .true.
+       if(DiLevel_EB(3,iBlock) /= Unset_)DoSkip_G(:,MinJ,:) = .true.
+       if(DiLevel_EB(4,iBlock) /= Unset_)DoSkip_G(:,MaxJ,:) = .true.
     end if
     if(nDim==3)then
-       if(neiLEV(5,iBlock) /= NOBLK)DoSkip_G(:,:,MinK) = .true.
-       if(neiLEV(6,iBlock) /= NOBLK)DoSkip_G(:,:,MaxK) = .true.
+       if(DiLevel_EB(5,iBlock) /= Unset_)DoSkip_G(:,:,MinK) = .true.
+       if(DiLevel_EB(6,iBlock) /= Unset_)DoSkip_G(:,:,MaxK) = .true.
     end if
     call get_cell_state_from_vdf(&
          MinI=MinI    , &
