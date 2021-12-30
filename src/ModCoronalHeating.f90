@@ -2,7 +2,6 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!==============================================================================
 module ModCoronalHeating
 
   use BATL_lib, ONLY: &

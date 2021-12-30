@@ -18,7 +18,7 @@ module ModCharacteristicMhd
   public:: get_dissipation_flux_mhd
 
   integer, parameter:: nVar = p_ ! last MHD variable
-  
+
   ! Named characteristic wave indexes
   integer, parameter:: EntropyW_=Rho_, AlfvenRW_=Ux_, AlfvenLW_=Uy_, &
        SlowRW_=Uz_, FastRW_=Bx_, SlowLW_=By_, FastLW_=Bz_, DivBW_=nVar

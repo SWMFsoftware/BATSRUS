@@ -871,10 +871,10 @@ contains
       real :: Ne, Pe
 
       ! logical :: DoTest, DoTestMe
-      character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
-      !------------------------------------------------------------------------
       ! call set_oktest(NameSub, DoTest, DoTestMe)
 
+      character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
+      !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          Xyz_D =  Xyz_DGB(:,i,j,k,iBlock)
          if(IsCartesianGrid)then

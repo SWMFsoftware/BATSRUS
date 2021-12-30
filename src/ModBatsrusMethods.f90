@@ -320,7 +320,7 @@ contains
     end subroutine set_initial_conditions
     !==========================================================================
     subroutine initialize_files
-      use ModSatelliteFile, ONLY: 
+      use ModSatelliteFile, ONLY:
 
       ! Local variables
 
