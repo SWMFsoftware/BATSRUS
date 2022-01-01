@@ -27,7 +27,6 @@ module ModFaceGradient
 
 contains
   !============================================================================
-
   subroutine set_block_field2(iBlock, nVar, Field1_VG, Field_VG)
 
     ! correct the ghostcells of the given scalar/vector field on iBlock
@@ -43,7 +42,7 @@ contains
 
     integer :: i1, j1, k1, i2, j2, k2, iC, jC, kC, iSide, jSide, kSide
     integer :: iL, iR, jL, jR, kL, kR
-    integer :: ip, jp, kp
+    integer :: iP, jP, kP
 
     logical :: IsEqualLevel_G(0:nI+1,0:nJ+1,0:nK+1)
 
@@ -98,25 +97,25 @@ contains
           ! 0,j2,k2 is the fine ghost cell to be filled in,
           !         originally it is the coarse cell (1st order prolongation)
           ! 1,j2,k2 is the fine physical cell next to the ghost cell
-          ! 0,jp,kp is a fine/coarse nearby ghost cell chosen in the same plane
+          ! 0,jP,kP is a fine/coarse nearby ghost cell chosen in the same plane
           !
-          ! When 0,jp,kp is a fine cell they are interpolated to the corner
-          ! with weights 1/2, when 0,jp,kp is coarse, it is interpolated with
+          ! When 0,jP,kP is a fine cell they are interpolated to the corner
+          ! with weights 1/2, when 0,jP,kP is coarse, it is interpolated with
           ! weights 1/3 and 2/3.
           !
           ! The corner and coarse cell center are then interpolated
 
           do k1=1, nK, 2; do j1=1, nJ, 2;
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
-                jp = 3*j2 - 2*j1 -1
-                if(nK == 1) kp = 1
-                if(nK >  1) kp = 3*k2 - 2*k1 -1
-                if(IsEqualLevel_G(0,jp,kp))then
+                jP = 3*j2 - 2*j1 -1
+                if(nK == 1) kP = 1
+                if(nK >  1) kP = 3*k2 - 2*k1 -1
+                if(IsEqualLevel_G(0,jP,kP))then
                    Field_VG(:,0,j2,k2) = c0*Field1_VG(:,0,j2,k2) &
-                        + 0.25*(Field1_VG(:,0,jp,kp) + Field_VG(:,1,j2,k2))
+                        + 0.25*(Field1_VG(:,0,jP,kP) + Field_VG(:,1,j2,k2))
                 else
                    Field_VG(:,0,j2,k2) = c0*Field1_VG(:,0,j2,k2) &
-                        + p0*Field1_VG(:,0,jp,kp) + F1*Field_VG(:,1,j2,k2)
+                        + p0*Field1_VG(:,0,jP,kP) + F1*Field_VG(:,1,j2,k2)
                 end if
              end do; end do;
           end do; end do
@@ -130,15 +129,15 @@ contains
        else
           do k1=1, nK, 2; do j1=1, nJ, 2;
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
-                jp = 3*j2 - 2*j1 -1
-                if(nK == 1) kp = 1
-                if(nK >  1) kp = 3*k2 - 2*k1 -1
-                if(IsEqualLevel_G(nI+1,jp,kp))then
+                jP = 3*j2 - 2*j1 -1
+                if(nK == 1) kP = 1
+                if(nK >  1) kP = 3*k2 - 2*k1 -1
+                if(IsEqualLevel_G(nI+1,jP,kP))then
                    Field_VG(:,nI+1,j2,k2) = c0*Field1_VG(:,nI+1,j2,k2) &
-                        + 0.25*(Field1_VG(:,nI+1,jp,kp) + Field_VG(:,nI,j2,k2))
+                        + 0.25*(Field1_VG(:,nI+1,jP,kP) + Field_VG(:,nI,j2,k2))
                 else
                    Field_VG(:,nI+1,j2,k2) = c0*Field1_VG(:,nI+1,j2,k2) &
-                        + p0*Field1_VG(:,nI+1,jp,kp) + F1*Field_VG(:,nI,j2,k2)
+                        + p0*Field1_VG(:,nI+1,jP,kP) + F1*Field_VG(:,nI,j2,k2)
                 end if
              end do; end do;
           end do; end do
@@ -150,15 +149,15 @@ contains
     if(DiLevel_EB(3,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2;
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
-             ip = 3*i2 - 2*i1 -1
-             if(nK == 1) kp = 1
-             if(nK >  1) kp = 3*k2 - 2*k1 -1
-             if(IsEqualLevel_G(ip,j0_,kp))then
+             iP = 3*i2 - 2*i1 -1
+             if(nK == 1) kP = 1
+             if(nK >  1) kP = 3*k2 - 2*k1 -1
+             if(IsEqualLevel_G(iP,j0_,kP))then
                 Field_VG(:,i2,j0_,k2) = c0*Field1_VG(:,i2,j0_,k2) &
-                     + 0.25*(Field1_VG(:,ip,j0_,kp) + Field_VG(:,i2,1,k2))
+                     + 0.25*(Field1_VG(:,iP,j0_,kP) + Field_VG(:,i2,1,k2))
              else
                 Field_VG(:,i2,j0_,k2) = c0*Field1_VG(:,i2,j0_,k2) &
-                     + p0*Field1_VG(:,ip,j0_,kp) + F1*Field_VG(:,i2,1,k2)
+                     + p0*Field1_VG(:,iP,j0_,kP) + F1*Field_VG(:,i2,1,k2)
              end if
           end do; end do;
        end do; end do
@@ -167,15 +166,15 @@ contains
     if(DiLevel_EB(4,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2;
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
-             ip = 3*i2 - 2*i1 -1
-             if(nK == 1) kp = 1
-             if(nK >  1) kp = 3*k2 - 2*k1 -1
-             if(IsEqualLevel_G(ip,nJp1_,kp))then
+             iP = 3*i2 - 2*i1 -1
+             if(nK == 1) kP = 1
+             if(nK >  1) kP = 3*k2 - 2*k1 -1
+             if(IsEqualLevel_G(iP,nJp1_,kP))then
                 Field_VG(:,i2,nJp1_,k2) = c0*Field1_VG(:,i2,nJp1_,k2) &
-                     + 0.25*(Field1_VG(:,ip,nJp1_,kp) + Field_VG(:,i2,nJ,k2))
+                     + 0.25*(Field1_VG(:,iP,nJp1_,kP) + Field_VG(:,i2,nJ,k2))
              else
                 Field_VG(:,i2,nJp1_,k2) = c0*Field1_VG(:,i2,nJp1_,k2) &
-                     + p0*Field1_VG(:,ip,nJp1_,kp) + F1*Field_VG(:,i2,nJ,k2)
+                     + p0*Field1_VG(:,iP,nJp1_,kP) + F1*Field_VG(:,i2,nJ,k2)
              end if
           end do; end do;
        end do; end do
@@ -183,28 +182,28 @@ contains
 
     if(nK > 1 .and. DiLevel_EB(5,iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1
-          jp = 3*j2 - 2*j1 -1
-          if(IsEqualLevel_G(ip,jp,k0_))then
+          iP = 3*i2 - 2*i1 -1
+          jP = 3*j2 - 2*j1 -1
+          if(IsEqualLevel_G(iP,jP,k0_))then
              Field_VG(:,i2,j2,k0_) = c0*Field1_VG(:,i2,j2,k0_) &
-                  + 0.25*Field1_VG(:,ip,jp,k0_) + 0.25*Field_VG(:,i2,j2,1)
+                  + 0.25*Field1_VG(:,iP,jP,k0_) + 0.25*Field_VG(:,i2,j2,1)
           else
              Field_VG(:,i2,j2,k0_) = c0*Field1_VG(:,i2,j2,k0_) &
-                  + p0*Field1_VG(:,ip,jp,k0_) + F1*Field_VG(:,i2,j2,1)
+                  + p0*Field1_VG(:,iP,jP,k0_) + F1*Field_VG(:,i2,j2,1)
           end if
        end do; end do; end do; end do
     end if
 
     if(nK > 1 .and. DiLevel_EB(6,iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1
-          jp = 3*j2 - 2*j1 -1
-          if(IsEqualLevel_G(ip,jp,nKp1_))then
+          iP = 3*i2 - 2*i1 -1
+          jP = 3*j2 - 2*j1 -1
+          if(IsEqualLevel_G(iP,jP,nKp1_))then
              Field_VG(:,i2,j2,nKp1_) = c0*Field1_VG(:,i2,j2,nKp1_) &
-                  + 0.25*Field1_VG(:,ip,jp,nKp1_) + 0.25*Field_VG(:,i2,j2,nK)
+                  + 0.25*Field1_VG(:,iP,jP,nKp1_) + 0.25*Field_VG(:,i2,j2,nK)
           else
              Field_VG(:,i2,j2,nKp1_) = c0*Field1_VG(:,i2,j2,nKp1_) &
-                  + p0*Field1_VG(:,ip,jp,nKp1_) + F1*Field_VG(:,i2,j2,nK)
+                  + p0*Field1_VG(:,iP,jP,nKp1_) + F1*Field_VG(:,i2,j2,nK)
           end if
        end do; end do; end do; end do
     end if
@@ -222,16 +221,16 @@ contains
        j1=1; if(jSide==1) j1=nJ; jC = j1+jSide
        do k1 = 1, nK, 2 ; do k2 = k1, k1 + min(nK-1,1)
           if(nK == 1) then
-             kp = 1
+             kP = 1
           else
-             kp = 3*k2 - 2*k1 -1
+             kP = 3*k2 - 2*k1 -1
           end if
-          if(IsEqualLevel_G(iC,jC,kp))then
+          if(IsEqualLevel_G(iC,jC,kP))then
              Field_VG(:,iC,jC,k2) = c0*Field1_VG(:,iC,jC,k2) &
-                  + 0.25*Field1_VG(:,iC,jC,kp) + 0.25*Field_VG(:,i1,j1,k2)
+                  + 0.25*Field1_VG(:,iC,jC,kP) + 0.25*Field_VG(:,i1,j1,k2)
           else
              Field_VG(:,iC,jC,k2) = c0*Field1_VG(:,iC,jC,k2) &
-                  + p0*Field1_VG(:,iC,jC,kp) + F1*Field_VG(:,i1,j1,k2)
+                  + p0*Field1_VG(:,iC,jC,kP) + F1*Field_VG(:,i1,j1,k2)
           end if
        end do; end do
     end do; end do
@@ -249,13 +248,13 @@ contains
        j1=1; if(jSide==1) j1=nJ; jC = j1+jSide
        k1=1; if(kSide==1) k1=nK; kC = k1+kSide
        do i1 = 1,nI,2; do i2 = i1, i1+1
-          ip = 3*i2 - 2*i1 -1
-          if(IsEqualLevel_G(ip,jC,kC))then
+          iP = 3*i2 - 2*i1 -1
+          if(IsEqualLevel_G(iP,jC,kC))then
              Field_VG(:,i2,jC,kC) = c0*Field1_VG(:,i2,jC,kC) &
-                  + 0.25*Field1_VG(:,ip,jC,kC) + 0.25*Field_VG(:,i2,j1,k1)
+                  + 0.25*Field1_VG(:,iP,jC,kC) + 0.25*Field_VG(:,i2,j1,k1)
           else
              Field_VG(:,i2,jC,kC) = c0*Field1_VG(:,i2,jC,kC) &
-                  + p0*Field1_VG(:,ip,jC,kC) + F1*Field_VG(:,i2,j1,k1)
+                  + p0*Field1_VG(:,iP,jC,kC) + F1*Field_VG(:,i2,j1,k1)
           end if
        end do; end do
     end do; end do
@@ -269,13 +268,13 @@ contains
        i1=1; if(iSide==1) i1=nI; iC = i1+iSide
        k1=1; if(kSide==1) k1=nK; kC = k1+kSide
        do j1 = 1, nJ, 2; do j2 = j1, j1+1
-          jp = 3*j2 - 2*j1 -1
-          if(IsEqualLevel_G(iC,jp,kC))then
+          jP = 3*j2 - 2*j1 -1
+          if(IsEqualLevel_G(iC,jP,kC))then
              Field_VG(:,iC,j2,kC) = c0*Field1_VG(:,iC,j2,kC) &
-                  + 0.25*Field1_VG(:,iC,jp,kC) + 0.25*Field_VG(:,i1,j2,k1)
+                  + 0.25*Field1_VG(:,iC,jP,kC) + 0.25*Field_VG(:,i1,j2,k1)
           else
              Field_VG(:,iC,j2,kC) = c0*Field1_VG(:,iC,j2,kC) &
-                  + p0*Field1_VG(:,iC,jp,kC) + F1*Field_VG(:,i1,j2,k1)
+                  + p0*Field1_VG(:,iC,jP,kC) + F1*Field_VG(:,i1,j2,k1)
           end if
        end do; end do
     end do; end do
@@ -283,7 +282,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_field2
   !============================================================================
-
   subroutine set_block_field3(iBlock, nVar, Field1_VG, Field_VG)
 
     ! correct the ghost cells of the given scalar/vector field on iBlock
@@ -295,12 +293,12 @@ contains
     real, intent(inout) :: Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(inout) :: Field_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    real,parameter :: C1 = 8./15., F1 = 2./3., F2 = -1./5.
-    real,parameter :: p0 = 5./32., m0 =-3./32., c0= 15./16.
+    real, parameter :: C1 = 8./15., F1 = 2./3., F2 = -1./5.
+    real, parameter :: p0 = 5./32., q0 =-3./32., c0= 15./16.
 
     integer :: i1, j1, k1, i2, j2, k2, iC, jC, kC, iSide, jSide, kSide
     integer :: iL, iR, jL, jR, kL, kR
-    integer :: ip, im, jp, jm, kp, km, iVar
+    integer :: iP, iM, jP, jM, kP, kM, iVar
 
     real :: Fc_V(nVar) ! interpolated coarse cell value
 
@@ -364,24 +362,24 @@ contains
        else
           do k1=1, nK, 2; do j1=1, nJ, 2;
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
-                jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+                jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
                 if(nK == 1)then
-                   kp = 1; km = 1
+                   kP = 1; kM = 1
                 else
-                   kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+                   kP = 3*k2 - 2*k1 -1 ; kM = 4*k1 -3*k2 +2
                 end if
                 Fc_V = c0*Field1_VG(:,0,j2,k2) &
-                     + p0*Field1_VG(:,0,jp,kp) &
-                     + m0*Field1_VG(:,0,jm,km)
+                     + p0*Field1_VG(:,0,jP,kP) &
+                     + q0*Field1_VG(:,0,jM,kM)
 
                 ! Limit the interpolation formula with the max and min
                 ! of the 3 points surrounding the interpolated point
                 Field_VG(:,0,j2,k2) = max(min( C1*Fc_V &
                      + F1*Field_VG(:,1,j2,k2) + F2*Field_VG(:,2,j2,k2),&
                      max(Field1_VG(:,0,j2,k2), &
-                     Field1_VG(:,0,jp,kp), Field_VG(:,1,j2,k2))), &
+                     Field1_VG(:,0,jP,kP), Field_VG(:,1,j2,k2))), &
                      min(Field1_VG(:,0,j2,k2), &
-                     Field1_VG(:,0,jp,kp), Field_VG(:,1,j2,k2)))
+                     Field1_VG(:,0,jP,kP), Field_VG(:,1,j2,k2)))
              end do; end do
           end do; end do
        end if
@@ -396,21 +394,21 @@ contains
        else
           do k1=1, nK, 2; do j1=1, nJ, 2
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
-                jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+                jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
                 if(nK == 1)then
-                   kp = 1; km = 1
+                   kP = 1; kM = 1
                 else
-                   kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+                   kP = 3*k2 - 2*k1 -1 ; kM = 4*k1 -3*k2 +2
                 end if
                 Fc_V = c0*Field1_VG(:,nI+1,j2,k2) &
-                     + p0*Field1_VG(:,nI+1,jp,kp) &
-                     + m0*Field1_VG(:,nI+1,jm,km)
+                     + p0*Field1_VG(:,nI+1,jP,kP) &
+                     + q0*Field1_VG(:,nI+1,jM,kM)
                 Field_VG(:,nI+1,j2,k2) = max(min( C1*Fc_V &
                      + F1*Field_VG(:,nI,j2,k2) + F2*Field_VG(:,nI-1,j2,k2), &
                      max(Field1_VG(:,nI+1,j2,k2), &
-                     Field1_VG(:,nI+1,jp,kp), Field_VG(:,nI,j2,k2))), &
+                     Field1_VG(:,nI+1,jP,kP), Field_VG(:,nI,j2,k2))), &
                      min(Field1_VG(:,nI+1,j2,k2), &
-                     Field1_VG(:,nI+1,jp,kp), Field_VG(:,nI,j2,k2)))
+                     Field1_VG(:,nI+1,jP,kP), Field_VG(:,nI,j2,k2)))
              end do; end do
           end do; end do
        end if
@@ -421,21 +419,21 @@ contains
     if(DiLevel_EB(3,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
-             ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+             iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
              if(nK == 1)then
-                kp = 1; km = 1
+                kP = 1; kM = 1
              else
-                kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+                kP = 3*k2 - 2*k1 -1 ; kM = 4*k1 -3*k2 +2
              end if
              Fc_V = c0*Field1_VG(:,i2,j0_,k2) &
-                  + p0*Field1_VG(:,ip,j0_,kp) &
-                  + m0*Field1_VG(:,im,j0_,km)
+                  + p0*Field1_VG(:,iP,j0_,kP) &
+                  + q0*Field1_VG(:,iM,j0_,kM)
              Field_VG(:,i2,j0_,k2) = max(min( &
-                  C1*Fc_V + F1*Field_VG(:,i2,1,k2) + F2*Field_VG(:,i2,j2_,k2), &
+                  C1*Fc_V + F1*Field_VG(:,i2,1,k2) + F2*Field_VG(:,i2,j2_,k2),&
                   max(Field1_VG(:,i2,j0_,k2), &
-                  Field1_VG(:,ip,j0_,kp), Field_VG(:,i2,1,k2))), &
+                  Field1_VG(:,iP,j0_,kP), Field_VG(:,i2,1,k2))), &
                   min(Field1_VG(:,i2,j0_,k2), &
-                  Field1_VG(:,ip,j0_,kp), Field_VG(:,i2,1,k2)))
+                  Field1_VG(:,iP,j0_,kP), Field_VG(:,i2,1,k2)))
           end do; end do
        end do; end do
     end if
@@ -443,54 +441,54 @@ contains
     if(DiLevel_EB(4,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
-             ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+             iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
              if(nK == 1)then
-                kp = 1; km = 1
+                kP = 1; kM = 1
              else
-                kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+                kP = 3*k2 - 2*k1 -1 ; kM = 4*k1 -3*k2 +2
              end if
              Fc_V = c0*Field1_VG(:,i2,nJp1_,k2) &
-                  + p0*Field1_VG(:,ip,nJp1_,kp) &
-                  + m0*Field1_VG(:,im,nJp1_,km)
+                  + p0*Field1_VG(:,iP,nJp1_,kP) &
+                  + q0*Field1_VG(:,iM,nJp1_,kM)
              Field_VG(:,i2,nJp1_,k2) = max(min( C1*Fc_V &
                   + F1*Field_VG(:,i2,nJ,k2) + F2*Field_VG(:,i2,nJm1_,k2), &
                   max(Field1_VG(:,i2,nJp1_,k2), &
-                  Field1_VG(:,ip,nJp1_,kp), Field_VG(:,i2,nJ,k2))), &
+                  Field1_VG(:,iP,nJp1_,kP), Field_VG(:,i2,nJ,k2))), &
                   min(Field1_VG(:,i2,nJp1_,k2), &
-                  Field1_VG(:,ip,nJp1_,kp), Field_VG(:,i2,nJ,k2)))
+                  Field1_VG(:,iP,nJp1_,kP), Field_VG(:,i2,nJ,k2)))
           end do; end do
        end do; end do
     end if
 
     if(nK > 1 .and. DiLevel_EB(5,iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+          iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
+          jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
           Fc_V = c0*Field1_VG(:,i2,j2,k0_) &
-               + p0*Field1_VG(:,ip,jp,k0_) &
-               + m0*Field1_VG(:,im,jm,k0_)
+               + p0*Field1_VG(:,iP,jP,k0_) &
+               + q0*Field1_VG(:,iM,jM,k0_)
           Field_VG(:,i2,j2,k0_) = max(min( &
                C1*Fc_V + F1*Field_VG(:,i2,j2,1) + F2*Field_VG(:,i2,j2,k2_), &
                max(Field1_VG(:,i2,j2,k0_), &
-               Field1_VG(:,ip,jp,k0_), Field_VG(:,i2,j2,1))), &
+               Field1_VG(:,iP,jP,k0_), Field_VG(:,i2,j2,1))), &
                min(Field1_VG(:,i2,j2,k0_), &
-               Field1_VG(:,ip,jp,k0_), Field_VG(:,i2,j2,1)))
+               Field1_VG(:,iP,jP,k0_), Field_VG(:,i2,j2,1)))
        end do; end do; end do; end do
     end if
 
     if(nK > 1 .and. DiLevel_EB(6,iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+          iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
+          jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
           Fc_V = c0*Field1_VG(:,i2,j2,nKp1_) &
-               + p0*Field1_VG(:,ip,jp,nKp1_) &
-               + m0*Field1_VG(:,im,jm,nKp1_)
+               + p0*Field1_VG(:,iP,jP,nKp1_) &
+               + q0*Field1_VG(:,iM,jM,nKp1_)
           Field_VG(:,i2,j2,nKp1_) = max(min( &
-               C1*Fc_V + F1*Field_VG(:,i2,j2,nK) + F2*Field_VG(:,i2,j2,nKm1_), &
+               C1*Fc_V + F1*Field_VG(:,i2,j2,nK) + F2*Field_VG(:,i2,j2,nKm1_),&
                max(Field1_VG(:,i2,j2,nKp1_), &
-               Field1_VG(:,ip,jp,nKp1_), Field_VG(:,i2,j2,nK))), &
+               Field1_VG(:,iP,jP,nKp1_), Field_VG(:,i2,j2,nK))), &
                min(Field1_VG(:,i2,j2,nKp1_), &
-               Field1_VG(:,ip,jp,nKp1_), Field_VG(:,i2,j2,nK)))
+               Field1_VG(:,iP,jP,nKp1_), Field_VG(:,i2,j2,nK)))
        end do; end do; end do; end do
     end if
 
@@ -507,19 +505,19 @@ contains
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
        do k1 = 1, nK, 2 ; do k2 = k1, k1 + min(1,nK-1)
           if(nK == 1)then
-             kp = 1; km = 1
+             kP = 1; kM = 1
           else
-             kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+             kP = 3*k2 - 2*k1 -1 ; kM = 4*k1 -3*k2 +2
           end if
           Fc_V = c0*Field1_VG(:,iC,jC,k2) &
-               + p0*Field1_VG(:,iC,jC,kp) &
-               + m0*Field1_VG(:,iC,jC,km)
+               + p0*Field1_VG(:,iC,jC,kP) &
+               + q0*Field1_VG(:,iC,jC,kM)
           Field_VG(:,iC,jC,k2) = max(min( &
                C1*Fc_V + F1*Field_VG(:,i1,j1,k2) + F2*Field_VG(:,i2,j2,k2), &
                max(Field1_VG(:,iC,jC,k2), &
-               Field1_VG(:,iC,jC,kp), Field_VG(:,i1,j1,k2))), &
+               Field1_VG(:,iC,jC,kP), Field_VG(:,i1,j1,k2))), &
                min(Field1_VG(:,iC,jC,k2), &
-               Field1_VG(:,iC,jC,kp), Field_VG(:,i1,j1,k2)))
+               Field1_VG(:,iC,jC,kP), Field_VG(:,i1,j1,k2)))
        end do;end do
     end do;end do
 
@@ -536,16 +534,16 @@ contains
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do i1 = 1,nI,2; do i2 = i1, i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+          iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
           Fc_V = c0*Field1_VG(:,i2,jC,kC) &
-               + p0*Field1_VG(:,ip,jC,kC) &
-               + m0*Field1_VG(:,im,jC,kC)
+               + p0*Field1_VG(:,iP,jC,kC) &
+               + q0*Field1_VG(:,iM,jC,kC)
           Field_VG(:,i2,jC,kC) = max(min( &
                C1* Fc_V + F1*Field_VG(:,i2,j1,k1) + F2*Field_VG(:,i2,j2,k2), &
                max(Field1_VG(:,i2,jC,kC), &
-               Field1_VG(:,ip,jC,kC), Field_VG(:,i2,j1,k1))), &
+               Field1_VG(:,iP,jC,kC), Field_VG(:,i2,j1,k1))), &
                min(Field1_VG(:,i2,jC,kC), &
-               Field1_VG(:,ip,jC,kC), Field_VG(:,i2,j1,k1)))
+               Field1_VG(:,iP,jC,kC), Field_VG(:,i2,j1,k1)))
        end do;end do
     end do;end do
     ! 4 Y edges
@@ -558,24 +556,24 @@ contains
        i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do j1 = 1, nJ, 2; do j2 = j1, j1+1
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+          jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
           Fc_V = c0*Field1_VG(:,iC,j2,kC) &
-               + p0*Field1_VG(:,iC,jp,kC) &
-               + m0*Field1_VG(:,iC,jm,kC)
+               + p0*Field1_VG(:,iC,jP,kC) &
+               + q0*Field1_VG(:,iC,jM,kC)
           Field_VG(:,iC,j2,kC) = max(min( &
                C1*Fc_V + F1*Field_VG(:,i1,j2,k1) + F2*Field_VG(:,i2,j2,k2), &
                max(Field1_VG(:,iC,j2,kC), &
-               Field1_VG(:,iC,jp,kC), Field_VG(:,i1,j2,k1))), &
+               Field1_VG(:,iC,jP,kC), Field_VG(:,i1,j2,k1))), &
                min(Field1_VG(:,iC,j2,kC), &
-               Field1_VG(:,iC,jp,kC), Field_VG(:,i1,j2,k1)))
+               Field1_VG(:,iC,jP,kC), Field_VG(:,i1,j2,k1)))
        end do;end do
     end do;end do
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_field3
   !============================================================================
-
-  subroutine set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, UseFirstOrderBcIn)
+  subroutine set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, &
+       UseFirstOrderBcIn)
 
     use ModMain, ONLY: x_, y_, z_
     use ModNumConst, ONLY: i_DD
@@ -601,11 +599,11 @@ contains
     integer:: i, j, k
 
     ! coeff of Ui+2 and Ui+1 to get normal derivative
-    real, parameter:: fp2 = -1./24.0, fp1 = 9.0/8.0
+    real, parameter:: fP2 = -1./24.0, fP1 = 9.0/8.0
     ! coeff of Ui+2 and Ui+1 for transverse derivatives
-    real, parameter:: dp2 = -1./12.0, dp1 = 2.0/3.0
+    real, parameter:: dP2 = -1./12.0, dP1 = 2.0/3.0
     ! coeff to average transverse derivatives
-    real, parameter:: ap2 = -1./16.0, ap1 = 9.0/16.
+    real, parameter:: aP2 = -1./16.0, aP1 = 9.0/16.
     real :: Dxyz_D(MaxDim)
 
     logical :: UseFirstOrderBc
@@ -628,23 +626,23 @@ contains
 
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=1,nI
        TransGrad_DDG(:,1,i,j,k)=  &
-            ( dp1* (Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)) &
-            + dp2* (Xyz_DGB(:,i+2,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)))
+            ( dP1* (Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)) &
+            + dP2* (Xyz_DGB(:,i+2,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)))
     end do; end do; end do
 
     if(nJ > 1)then
        do k=MinK,MaxK; do j=1,nJ; do i=MinI,MaxI
           TransGrad_DDG(:,2,i,j,k)=  &
-               ( dp1* (Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
-               + dp2* (Xyz_DGB(:,i,j+2,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
+               ( dP1* (Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
+               + dP2* (Xyz_DGB(:,i,j+2,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
        end do; end do; end do
     end if
 
     if(nK > 1)then
        do k=1,nK; do j=MinJ,MaxJ; do i=MinI,MaxI
           TransGrad_DDG(:,3,i,j,k)=  &
-               ( dp1* (Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
-               + dp2* (Xyz_DGB(:,i,j,k+2,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
+               ( dP1* (Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
+               + dP2* (Xyz_DGB(:,i,j,k+2,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
        end do; end do; end do
     end if
 
@@ -652,19 +650,19 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI+1
        ! DxyzDcoord along coord1 face
        DxyzDcoord_DD(:,1) = InvDx* &
-            (  fp1*(Xyz_DGB(:,i  ,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)) &
-            +  fp2*(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)))
+            (  fP1*(Xyz_DGB(:,i  ,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)) &
+            +  fP2*(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)))
        if(nJ > 1)then
           DxyzDcoord_DD(:,2) = InvDy* &
-               ( ap1*( TransGrad_DDG(:,2,i  ,j,k)+TransGrad_DDG(:,2,i-1,j,k)) &
-               + ap2*( TransGrad_DDG(:,2,i+1,j,k)+TransGrad_DDG(:,2,i-2,j,k)))
+               ( aP1*( TransGrad_DDG(:,2,i  ,j,k)+TransGrad_DDG(:,2,i-1,j,k)) &
+               + aP2*( TransGrad_DDG(:,2,i+1,j,k)+TransGrad_DDG(:,2,i-2,j,k)))
        else
           DxyzDcoord_DD(:,2) = i_DD(:,2)
        end if
        if(nK > 1)then
           DxyzDcoord_DD(:,3) = InvDz* &
-               ( ap1*( TransGrad_DDG(:,3,i  ,j,k)+TransGrad_DDG(:,3,i-1,j,k)) &
-               + ap2*( TransGrad_DDG(:,3,i+1,j,k)+TransGrad_DDG(:,3,i-2,j,k)))
+               ( aP1*( TransGrad_DDG(:,3,i  ,j,k)+TransGrad_DDG(:,3,i-1,j,k)) &
+               + aP2*( TransGrad_DDG(:,3,i+1,j,k)+TransGrad_DDG(:,3,i-2,j,k)))
        else
           DxyzDcoord_DD(:,3) = i_DD(:,3)
        end if
@@ -677,16 +675,16 @@ contains
        do k=1,nK; do j=1,nJ+1; do i=1,nI
           ! DxyzDcoord along coord2 face
           DxyzDcoord_DD(:,1) = InvDx* &
-               ( ap1*( TransGrad_DDG(:,1,i,j  ,k)+TransGrad_DDG(:,1,i,j-1,k)) &
-               + ap2*( TransGrad_DDG(:,1,i,j+1,k)+TransGrad_DDG(:,1,i,j-2,k)))
+               ( aP1*( TransGrad_DDG(:,1,i,j  ,k)+TransGrad_DDG(:,1,i,j-1,k)) &
+               + aP2*( TransGrad_DDG(:,1,i,j+1,k)+TransGrad_DDG(:,1,i,j-2,k)))
           DxyzDcoord_DD(:,2) = InvDy* &
-               (  fp1*(Xyz_DGB(:,i,j  ,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
-               +  fp2*(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
+               (  fP1*(Xyz_DGB(:,i,j  ,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
+               +  fP2*(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
           if(nK > 1)then
              DxyzDcoord_DD(:,3) = InvDz* &
-                  ( ap1*( TransGrad_DDG(:,3,i,j  ,k)  &
+                  ( aP1*( TransGrad_DDG(:,3,i,j  ,k)  &
                   +       TransGrad_DDG(:,3,i,j-1,k)) &
-                  + ap2*( TransGrad_DDG(:,3,i,j+1,k)  &
+                  + aP2*( TransGrad_DDG(:,3,i,j+1,k)  &
                   +       TransGrad_DDG(:,3,i,j-2,k)))
           else
              DxyzDcoord_DD(:,3) = i_DD(:,3)
@@ -701,14 +699,14 @@ contains
        do k=1,nK+1; do j=1,nJ; do i=1,nI
           ! DxyzDcoord along coord3 face
           DxyzDcoord_DD(:,1) = InvDx* &
-               ( ap1*( TransGrad_DDG(:,1,i,j,k  )+TransGrad_DDG(:,1,i,j,k-1)) &
-               + ap2*( TransGrad_DDG(:,1,i,j,k+1)+TransGrad_DDG(:,1,i,j,k-2)))
+               ( aP1*( TransGrad_DDG(:,1,i,j,k  )+TransGrad_DDG(:,1,i,j,k-1)) &
+               + aP2*( TransGrad_DDG(:,1,i,j,k+1)+TransGrad_DDG(:,1,i,j,k-2)))
           DxyzDcoord_DD(:,2) = InvDy* &
-               ( ap1*( TransGrad_DDG(:,2,i,j,k  )+TransGrad_DDG(:,2,i,j,k-1)) &
-               + ap2*( TransGrad_DDG(:,2,i,j,k+1)+TransGrad_DDG(:,2,i,j,k-2)))
+               ( aP1*( TransGrad_DDG(:,2,i,j,k  )+TransGrad_DDG(:,2,i,j,k-1)) &
+               + aP2*( TransGrad_DDG(:,2,i,j,k+1)+TransGrad_DDG(:,2,i,j,k-2)))
           DxyzDcoord_DD(:,3) = InvDz* &
-               (  fp1*(Xyz_DGB(:,i,j,k  ,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
-               +  fp2*(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
+               (  fP1*(Xyz_DGB(:,i,j,k  ,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
+               +  fP2*(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
           DcoordDxyz_DDFD(:,:,i,j,k,3) = &
                inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
        end do; end do; end do
@@ -762,7 +760,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_jacobian_face
   !============================================================================
-
   subroutine get_face_gradient_field(iDir, i, j, k, iBlock, nField, &
        IsNewBlock, Var_IG, FaceGrad_DI)
 
@@ -820,7 +817,8 @@ contains
             )then
           iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
        end if
-    elseif((i==nI+1 .or. i==nI.and.iDir/=Dim1_) .and. DiLevel_EB(2,iBlock)==-1 .or. &
+    elseif((i==nI+1 .or. i==nI.and.iDir/=Dim1_) .and. DiLevel_EB(2,iBlock)==-1&
+         .or. &
          i==nI .and. ((iDir==y_ .and. &
          (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
          (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -842,8 +840,8 @@ contains
             )then
           jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
        end if
-    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 .or. &
-         j==nJ .and. ((iDir==x_ .and. &
+    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 &
+         .or. j==nJ .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
          .or.         (iDir==z_ .and. &
@@ -864,8 +862,8 @@ contains
             )then
           kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
        end if
-    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 .or. &
-         k==nK .and. ((iDir==x_ .and. &
+    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 &
+         .or. k==nK .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &
          .or.         (iDir==y_ .and. &
@@ -932,7 +930,6 @@ contains
 
   end subroutine get_face_gradient_field
   !============================================================================
-
   subroutine get_face_gradient(iDir, i, j, k, iBlock, IsNewBlock, Scalar_G,  &
        FaceGrad_D, UseFirstOrderBcIn)
 
@@ -1014,7 +1011,8 @@ contains
        elseif(UseFirstOrderBc.and.DiLevel_EB(1,iBlock)==Unset_)then
           iL = i; iD = i; Ax = 0.0; Bx = -0.50*InvDx; Cx = 0.50*InvDx
        end if
-    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. DiLevel_EB(2,iBlock)==-1 .or. &
+    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. DiLevel_EB(2,iBlock)==-1 &
+         .or. &
          i==nI .and. ((iDir==y_ .and. &
          (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
          (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1041,7 +1039,8 @@ contains
        elseif(UseFirstOrderBc.and.DiLevel_EB(3,iBlock)==Unset_)then
           jL = i; jD = j; Ay = 0.0; By = -0.50*InvDy; Cy = 0.50*InvDy
        end if
-    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 .or. &
+    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 &
+         .or. &
          j==nJ .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1068,7 +1067,8 @@ contains
        elseif(UseFirstOrderBc.and.DiLevel_EB(5,iBlock)==Unset_)then
           kL = k; kD = k; Az = 0.0; Bz = -0.50*InvDz; Cz = 0.50*InvDz
        end if
-    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 .or. &
+    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 &
+         .or. &
          k==nK .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &
@@ -1139,7 +1139,6 @@ contains
 
   end subroutine get_face_gradient
   !============================================================================
-
   subroutine get_face_curl(iDir, i, j, k, iBlock, IsNewBlock, Vector_DG, &
        FaceCurl_D)
 
@@ -1190,7 +1189,8 @@ contains
             )then
           iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
        end if
-    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. DiLevel_EB(2,iBlock)==-1 .or. &
+    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. DiLevel_EB(2,iBlock)==-1 &
+         .or. &
          i==nI .and. ((iDir==y_ .and. &
          (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
          (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1212,7 +1212,8 @@ contains
             )then
           jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
        end if
-    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 .or. &
+    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 &
+         .or. &
          j==nJ .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1234,7 +1235,8 @@ contains
             )then
           kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
        end if
-    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 .or. &
+    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 &
+         .or. &
          k==nK .and. ((iDir==x_ .and. &
          (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
          (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &
@@ -1253,7 +1255,6 @@ contains
 
   contains
     !==========================================================================
-
     subroutine calc_cartesian_curl
 
       use BATL_lib, ONLY: Xyz_DGB
@@ -1354,7 +1355,6 @@ contains
 
     end subroutine calc_cartesian_curl
     !==========================================================================
-
     subroutine calc_gencoord_curl
 
       real :: DvectorDcoord_DD(MaxDim,MaxDim)
@@ -1428,9 +1428,7 @@ contains
 
     end subroutine calc_gencoord_curl
     !==========================================================================
-
   end subroutine get_face_curl
   !============================================================================
-
 end module ModFaceGradient
 !==============================================================================

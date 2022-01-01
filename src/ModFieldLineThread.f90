@@ -320,23 +320,23 @@ contains
     character(len=*), parameter:: NameSub = 'nullify_thread_b'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    nullify(BoundaryThreads_B(iBlock) % LengthSi_III)
-    nullify(BoundaryThreads_B(iBlock) % BDsFaceInvSi_III)
-    nullify(BoundaryThreads_B(iBlock) % DsCellOverBSi_III)
-    nullify(BoundaryThreads_B(iBlock) % TMax_II)
-    nullify(BoundaryThreads_B(iBlock) % Xi_III)
-    nullify(BoundaryThreads_B(iBlock) % B_III)
-    nullify(BoundaryThreads_B(iBlock) % RInv_III)
-    nullify(BoundaryThreads_B(iBlock) % Coord_DIII)
-    nullify(BoundaryThreads_B(iBlock) % TGrav_III)
-    nullify(BoundaryThreads_B(iBlock) % State_VIII)
-    nullify(BoundaryThreads_B(iBlock) % nPoint_II)
-    nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
-    nullify(BoundaryThreads_B(iBlock) % SignB_II)
-    nullify(BoundaryThreads_B(iBlock) % State_VG)
-    BoundaryThreads_B(iBlock) % iAction    = Done_
-    BoundaryThreads_B(iBlock) % iMin       = 0
-    BoundaryThreads_B(iBlock) % DCoord1Inv = 0.0
+    nullify(BoundaryThreads_B(iBlock)%LengthSi_III)
+    nullify(BoundaryThreads_B(iBlock)%BDsFaceInvSi_III)
+    nullify(BoundaryThreads_B(iBlock)%DsCellOverBSi_III)
+    nullify(BoundaryThreads_B(iBlock)%TMax_II)
+    nullify(BoundaryThreads_B(iBlock)%Xi_III)
+    nullify(BoundaryThreads_B(iBlock)%B_III)
+    nullify(BoundaryThreads_B(iBlock)%RInv_III)
+    nullify(BoundaryThreads_B(iBlock)%Coord_DIII)
+    nullify(BoundaryThreads_B(iBlock)%TGrav_III)
+    nullify(BoundaryThreads_B(iBlock)%State_VIII)
+    nullify(BoundaryThreads_B(iBlock)%nPoint_II)
+    nullify(BoundaryThreads_B(iBlock)%DeltaR_II)
+    nullify(BoundaryThreads_B(iBlock)%SignB_II)
+    nullify(BoundaryThreads_B(iBlock)%State_VG)
+    BoundaryThreads_B(iBlock)%iAction    = Done_
+    BoundaryThreads_B(iBlock)%iMin       = 0
+    BoundaryThreads_B(iBlock)%DCoord1Inv = 0.0
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine nullify_thread_b
   !============================================================================
@@ -346,20 +346,20 @@ contains
     character(len=*), parameter:: NameSub = 'deallocate_thread_b'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    deallocate(BoundaryThreads_B(iBlock) % LengthSi_III)
-    deallocate(BoundaryThreads_B(iBlock) % BDsFaceInvSi_III)
-    deallocate(BoundaryThreads_B(iBlock) % DsCellOverBSi_III)
-    deallocate(BoundaryThreads_B(iBlock) % TMax_II)
-    deallocate(BoundaryThreads_B(iBlock) % Xi_III)
-    deallocate(BoundaryThreads_B(iBlock) % B_III)
-    deallocate(BoundaryThreads_B(iBlock) % RInv_III)
-    deallocate(BoundaryThreads_B(iBlock) % Coord_DIII)
-    deallocate(BoundaryThreads_B(iBlock) % TGrav_III)
-    deallocate(BoundaryThreads_B(iBlock) % State_VIII)
-    deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
-    deallocate(BoundaryThreads_B(iBlock) % DeltaR_II)
-    deallocate(BoundaryThreads_B(iBlock) % SignB_II)
-    deallocate(BoundaryThreads_B(iBlock) % State_VG)
+    deallocate(BoundaryThreads_B(iBlock)%LengthSi_III)
+    deallocate(BoundaryThreads_B(iBlock)%BDsFaceInvSi_III)
+    deallocate(BoundaryThreads_B(iBlock)%DsCellOverBSi_III)
+    deallocate(BoundaryThreads_B(iBlock)%TMax_II)
+    deallocate(BoundaryThreads_B(iBlock)%Xi_III)
+    deallocate(BoundaryThreads_B(iBlock)%B_III)
+    deallocate(BoundaryThreads_B(iBlock)%RInv_III)
+    deallocate(BoundaryThreads_B(iBlock)%Coord_DIII)
+    deallocate(BoundaryThreads_B(iBlock)%TGrav_III)
+    deallocate(BoundaryThreads_B(iBlock)%State_VIII)
+    deallocate(BoundaryThreads_B(iBlock)%nPoint_II)
+    deallocate(BoundaryThreads_B(iBlock)%DeltaR_II)
+    deallocate(BoundaryThreads_B(iBlock)%SignB_II)
+    deallocate(BoundaryThreads_B(iBlock)%State_VG)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
     call test_stop(NameSub, DoTest, iBlock)
@@ -404,66 +404,66 @@ contains
        end if
        ! Allocate threads if needed
        if(.not.IsAllocatedThread_B(iBlock))then
-          allocate(BoundaryThreads_B(iBlock) % LengthSi_III(&
+          allocate(BoundaryThreads_B(iBlock)%LengthSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % LengthSi_III = 0.0
+          BoundaryThreads_B(iBlock)%LengthSi_III = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % BDsFaceInvSi_III(&
+          allocate(BoundaryThreads_B(iBlock)%BDsFaceInvSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % BDsFaceInvSi_III = 0.0
+          BoundaryThreads_B(iBlock)%BDsFaceInvSi_III = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % DsCellOverBSi_III(&
+          allocate(BoundaryThreads_B(iBlock)%DsCellOverBSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % DsCellOverBSi_III = 0.0
+          BoundaryThreads_B(iBlock)%DsCellOverBSi_III = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % TMax_II(&
+          allocate(BoundaryThreads_B(iBlock)%TMax_II(&
                jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % TMax_II = &
+          BoundaryThreads_B(iBlock)%TMax_II = &
                1.0e8*Si2No_V(UnitTemperature_)
 
-          allocate(BoundaryThreads_B(iBlock) % Xi_III(&
+          allocate(BoundaryThreads_B(iBlock)%Xi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % Xi_III = 0.0
+          BoundaryThreads_B(iBlock)%Xi_III = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % B_III(&
+          allocate(BoundaryThreads_B(iBlock)%B_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % B_III = 0.0
+          BoundaryThreads_B(iBlock)%B_III = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % RInv_III(&
+          allocate(BoundaryThreads_B(iBlock)%RInv_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % RInv_III = 0.0
+          BoundaryThreads_B(iBlock)%RInv_III = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % Coord_DIII(3,&
+          allocate(BoundaryThreads_B(iBlock)%Coord_DIII(3,&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % Coord_DIII = 0.0
+          BoundaryThreads_B(iBlock)%Coord_DIII = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
+          allocate(BoundaryThreads_B(iBlock)%TGrav_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % TGrav_III = 0.0
+          BoundaryThreads_B(iBlock)%TGrav_III = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % State_VIII(PSi_:TiSi_,&
+          allocate(BoundaryThreads_B(iBlock)%State_VIII(PSi_:TiSi_,&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % State_VIII(TeSi_:TiSi_,:,:,:) = -1
-          BoundaryThreads_B(iBlock) % State_VIII(PSi_:A2Minor_,:,:,:) = 0.0
+          BoundaryThreads_B(iBlock)%State_VIII(TeSi_:TiSi_,:,:,:) = -1
+          BoundaryThreads_B(iBlock)%State_VIII(PSi_:A2Minor_,:,:,:) = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
+          allocate(BoundaryThreads_B(iBlock)%nPoint_II(&
                jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % nPoint_II = -1
+          BoundaryThreads_B(iBlock)%nPoint_II = -1
 
-          allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
+          allocate(BoundaryThreads_B(iBlock)%DeltaR_II(&
                jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % DeltaR_II = 0.0
+          BoundaryThreads_B(iBlock)%DeltaR_II = 0.0
 
-          allocate(BoundaryThreads_B(iBlock) % SignB_II(&
+          allocate(BoundaryThreads_B(iBlock)%SignB_II(&
                jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % SignB_II = 0.0
+          BoundaryThreads_B(iBlock)%SignB_II = 0.0
 
-          call set_gc_grid(iBlock, BoundaryThreads_B(iBlock) % iMin,&
-               BoundaryThreads_B(iBlock) % dCoord1Inv)
-          allocate(BoundaryThreads_B(iBlock) % State_VG(&
-               PSi_:TiSi_, BoundaryThreads_B(iBlock) % iMin:1,&
+          call set_gc_grid(iBlock, BoundaryThreads_B(iBlock)%iMin,&
+               BoundaryThreads_B(iBlock)%dCoord1Inv)
+          allocate(BoundaryThreads_B(iBlock)%State_VG(&
+               PSi_:TiSi_, BoundaryThreads_B(iBlock)%iMin:1,&
                jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % State_VG = 0.0
+          BoundaryThreads_B(iBlock)%State_VG = 0.0
 
           IsAllocatedThread_B(iBlock) = .true.
        end if
@@ -582,10 +582,10 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     ! Initialize threads
-    BoundaryThreads_B(iBlock) % iAction = DoInit_
-    BoundaryThreads_B(iBlock) % Xi_III = 0.0
-    BoundaryThreads_B(iBlock) % nPoint_II = 0
-    BoundaryThreads_B(iBlock) % DeltaR_II = 1.0
+    BoundaryThreads_B(iBlock)%iAction = DoInit_
+    BoundaryThreads_B(iBlock)%Xi_III = 0.0
+    BoundaryThreads_B(iBlock)%nPoint_II = 0
+    BoundaryThreads_B(iBlock)%DeltaR_II = 1.0
 
     ! Loop over the thread starting points
     do k = kMin_, kMax_; do j = jMin_, jMax_
@@ -603,14 +603,14 @@ contains
        end if
 
        SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
-       BoundaryThreads_B(iBlock) % SignB_II(j, k) = SignBr
+       BoundaryThreads_B(iBlock)%SignB_II(j, k) = SignBr
        B0Start = norm2(B0Start_D)
-       BoundaryThreads_B(iBlock) % B_III(0, j, k) = B0Start
+       BoundaryThreads_B(iBlock)%B_III(0, j, k) = B0Start
 
        RStart = norm2(XyzStart_D)
-       BoundaryThreads_B(iBlock) % RInv_III(0, j, k) = 1/RStart
+       BoundaryThreads_B(iBlock)%RInv_III(0, j, k) = 1/RStart
        call xyz_to_coord(XyzStart_D, Coord_D)
-       BoundaryThreads_B(iBlock) % Coord_DIII(:,0, j, k) = Coord_D
+       BoundaryThreads_B(iBlock)%Coord_DIII(:,0, j, k) = Coord_D
 
        Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
        COARSEN: do nTrial=1,nCoarseMax ! Ds is increased to 0.002 or 0.016
@@ -657,9 +657,9 @@ contains
              if(R > RStart)CYCLE COARSEN
              ! Store a point
              XyzOld_D = Xyz_D
-             BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/R
+             BoundaryThreads_B(iBlock)%RInv_III(-iPoint, j, k) = 1/R
              call xyz_to_coord(Xyz_D, Coord_D)
-             BoundaryThreads_B(iBlock) % Coord_DIII(:,-iPoint, j, k) = Coord_D
+             BoundaryThreads_B(iBlock)%Coord_DIII(:,-iPoint, j, k) = Coord_D
              call get_b0(Xyz_D, B0_D)
              if(UseCME)then
                 call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
@@ -668,7 +668,7 @@ contains
                 B0_D = B0_D + Bcme_D
              end if
              B0 = norm2(B0_D)
-             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
+             BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k) = B0
           end do POINTS
        end do COARSEN
        if(R > rBody)then
@@ -716,42 +716,42 @@ contains
 
        ! Calculate more accurately the intersection point
        ! with the photosphere surface
-       ROld = 1/BoundaryThreads_B(iBlock) % RInv_III(1-iPoint, j, k)
+       ROld = 1/BoundaryThreads_B(iBlock)%RInv_III(1-iPoint, j, k)
        Aux = (ROld - RBody) / (ROld -R)
        Xyz_D = (1 - Aux)*XyzOld_D +  Aux*Xyz_D
        ! Store the last point
-       BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/RBody
+       BoundaryThreads_B(iBlock)%RInv_III(-iPoint, j, k) = 1/RBody
        call get_b0(Xyz_D, B0_D)
        B0 = norm2(B0_D)
-       BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
+       BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k) = B0
        ! Store the number of points. This will be the number of temperature
        ! nodes such that the first one is on the top of the TR, the last
        ! one is in the center of physical cell
        nPoint = iPoint + 1 - nIntervalTR
-       BoundaryThreads_B(iBlock) % nPoint_II(j,k) = nPoint
+       BoundaryThreads_B(iBlock)%nPoint_II(j,k) = nPoint
        BoundaryThreads_B(iBlock)%TGrav_III(2-nPoint:0,j,k) = &
             GravHydroStat*&
             (-BoundaryThreads_B(iBlock)%RInv_III(2-nPoint:0,j,k) + &
             BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-1,j,k))
 
        ! Store the lengths
-       BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) = &
+       BoundaryThreads_B(iBlock)%LengthSi_III(1-iPoint, j, k) = &
             Ds*Aux*No2Si_V(UnitX_)
        IntegralBdS = &
             Ds*Aux*0.50*(                                         &
-            BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +    &
-            BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
+            BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k) +    &
+            BoundaryThreads_B(iBlock)%B_III(1-iPoint, j, k) )
        iPoint = iPoint - 1
        !     |           |
        !-iPoint-1      -iPoint
        iInterval = 1
        do while(iInterval < nIntervalTR)
-          BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) =     &
-               BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k) + &
+          BoundaryThreads_B(iBlock)%LengthSi_III(1-iPoint, j, k) =     &
+               BoundaryThreads_B(iBlock)%LengthSi_III(-iPoint, j, k) + &
                Ds*No2Si_V(UnitX_)
           IntegralBdS = IntegralBdS + Ds*0.50*(&
-               BoundaryThreads_B(iBlock) % B_III( -iPoint, j, k) +       &
-               BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
+               BoundaryThreads_B(iBlock)%B_III( -iPoint, j, k) +       &
+               BoundaryThreads_B(iBlock)%B_III(1-iPoint, j, k) )
           iPoint = iPoint - 1
           iInterval = iInterval + 1
        end do
@@ -765,34 +765,34 @@ contains
        ! dimensionless and not inverted integral of Bds over the first
        ! intervals.
 
-       BoundaryThreads_B(iBlock) % BDsFaceInvSi_III(-1-iPoint, j, k) = 1/  &
-            (BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k)*  &
-            BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)*          &
+       BoundaryThreads_B(iBlock)%BDsFaceInvSi_III(-1-iPoint, j, k) = 1/  &
+            (BoundaryThreads_B(iBlock)%LengthSi_III(-iPoint, j, k)*  &
+            BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k)*          &
             No2Si_V(UnitB_)*PoyntingFluxPerBSi)
 
        ! The flux node -iPoint-1=-nPoint is placed to the same position
        ! as the temperature node with the same number
-       BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k) =             &
+       BoundaryThreads_B(iBlock)%Xi_III(-iPoint, j, k) =             &
             0.50*Ds*sqrt(CoefXi/                                       &
-            BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k))
+            BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k))
        ! As long as the flux node is placed as discussed above, the
        ! first computational cell is twice shorter
-       BoundaryThreads_B(iBlock) % DsCellOverBSi_III(-iPoint, j, k) =      &
+       BoundaryThreads_B(iBlock)%DsCellOverBSi_III(-iPoint, j, k) =      &
             0.50*Ds*No2Si_V(UnitX_)/                                   &
-            ( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)&
+            ( BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k)&
             *PoyntingFluxPerBSi*No2Si_V(UnitB_) )
 
        do while(iPoint>0)
           ! Just the length of Thread in meters
-          BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) =      &
-               BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k ) + &
+          BoundaryThreads_B(iBlock)%LengthSi_III(1-iPoint, j, k) =      &
+               BoundaryThreads_B(iBlock)%LengthSi_III(-iPoint, j, k ) + &
                Ds*No2Si_V(UnitX_)
           !
           ! Sum up the integral of Bds, dimensionless, to calculate TMax
           !
           BdS = Ds*0.50*(&
-               BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) + &
-               BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
+               BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k) + &
+               BoundaryThreads_B(iBlock)%B_III(1-iPoint, j, k) )
           IntegralBdS = IntegralBdS + BdS
           !
           ! 1/(ds*B*Poynting-flux-over-field ratio)
@@ -800,24 +800,24 @@ contains
           ! is used. Calculated in SI units. While multiplied by the difference
           ! in the conservative variable, 2/7*kappa*\Delta T^{7/2} gives the
           ! ratio of the heat flux to the effective Poynting flux.
-          BoundaryThreads_B(iBlock) % BDsFaceInvSi_III(-iPoint, j, k) =   1/  &
+          BoundaryThreads_B(iBlock)%BDsFaceInvSi_III(-iPoint, j, k) =   1/  &
                (PoyntingFluxPerBSi*No2Si_V(UnitB_)*No2Si_V(UnitX_)*BdS)
           ! The distance between the flux points (as well as the AW amplitude
           ! nodes multiplied by the coefficient to find dimensionless
           ! wave damping per the unit of length. Calculated in terms of
           ! the magnetic field in the midpoint. Should be multiplied by the
           ! dimensionless density powered 1/4. Dimensionless.
-          BoundaryThreads_B(iBlock) % Xi_III(1-iPoint, j, k) =            &
-               BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)        + &
+          BoundaryThreads_B(iBlock)%Xi_III(1-iPoint, j, k) =            &
+               BoundaryThreads_B(iBlock)%Xi_III(-iPoint, j, k)        + &
                Ds*sqrt(CoefXi/               &
-               BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k))
+               BoundaryThreads_B(iBlock)%B_III(1-iPoint, j, k))
           ! Distance between the flux points (faces) divided by
           ! the magnetic field in the temperature point (or, same,
           ! multiplied by the crosssection of the flux tube)
           ! and divided by the Poynting-flux-to-field ratio.
-          BoundaryThreads_B(iBlock) % DsCellOverBSi_III(1-iPoint, j, k) =     &
+          BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-iPoint, j, k) =     &
                Ds*No2Si_V(UnitX_)/                                        &
-               (BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)         &
+               (BoundaryThreads_B(iBlock)%B_III(1-iPoint, j, k)         &
                *PoyntingFluxPerBSi*No2Si_V(UnitB_))
           iPoint = iPoint - 1
        end do
@@ -831,12 +831,12 @@ contains
        !         -1       0
        !              x   <---x       Flux nodes
        !             -1       0
-       BoundaryThreads_B(iBlock) % Xi_III(0, j, k) =         &
-            BoundaryThreads_B(iBlock) % Xi_III(0, j, k) -    &
+       BoundaryThreads_B(iBlock)%Xi_III(0, j, k) =         &
+            BoundaryThreads_B(iBlock)%Xi_III(0, j, k) -    &
             0.50*Ds*sqrt(CoefXi/                             &
-            BoundaryThreads_B(iBlock) % B_III(0, j, k))
+            BoundaryThreads_B(iBlock)%B_III(0, j, k))
 
-       BoundaryThreads_B(iBlock) % DeltaR_II(j,k) = &
+       BoundaryThreads_B(iBlock)%DeltaR_II(j,k) = &
             norm2(Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock) )
 
        call limit_temperature(&
@@ -849,20 +849,20 @@ contains
        write(*,'(a,3es18.10)')'Thread starting at the point  ',&
             Xyz_DGB(:,1,jTest,kTest,iBlock)
        write(*,'(a,3es18.10)')'DeltaR=  ',&
-            BoundaryThreads_B(iBlock) % DeltaR_II(jTest,kTest)
+            BoundaryThreads_B(iBlock)%DeltaR_II(jTest,kTest)
        write(*,'(a)')&
             'B[NoDim] RInv[NoDim] LengthSi BDsFaceInvSi Xi[NoDim]'
-       do iPoint = 0, -BoundaryThreads_B(iBlock) % nPoint_II(jTest,kTest),-1
+       do iPoint = 0, -BoundaryThreads_B(iBlock)%nPoint_II(jTest,kTest),-1
           write(*,'(5es18.10)')&
-               BoundaryThreads_B(iBlock) % B_III(&
+               BoundaryThreads_B(iBlock)%B_III(&
                iPoint, jTest,kTest),&
-               BoundaryThreads_B(iBlock) % RInv_III(&
+               BoundaryThreads_B(iBlock)%RInv_III(&
                iPoint, jTest,kTest),&
-               BoundaryThreads_B(iBlock) % LengthSi_III(&
+               BoundaryThreads_B(iBlock)%LengthSi_III(&
                iPoint, jTest, kTest),&
-               BoundaryThreads_B(iBlock) % BDsFaceInvSi_III(&
+               BoundaryThreads_B(iBlock)%BDsFaceInvSi_III(&
                iPoint, jTest, kTest),&
-               BoundaryThreads_B(iBlock) % Xi_III(&
+               BoundaryThreads_B(iBlock)%Xi_III(&
                iPoint, jTest, kTest)
        end do
     end if
@@ -960,20 +960,20 @@ contains
           RETURN
        end if
        nPoint = nint(RealNPoint)
-       if(BoundaryThreads_B(iBlock) % nPoint_II(j,k)/=nPoint)then
+       if(BoundaryThreads_B(iBlock)%nPoint_II(j,k)/=nPoint)then
           write(*,*)'Incorrect nPoint in Block=', iBlock
           call close_file
           RETURN
        end if
        read(UnitTmp_, iostat = iError) &
-            BoundaryThreads_B(iBlock) % State_VIII(TeSi_,1-nPoint:0,j,k), &
-            BoundaryThreads_B(iBlock) % State_VIII(TiSi_,1-nPoint:0,j,k), &
-            BoundaryThreads_B(iBlock) % State_VIII(PSi_,1-nPoint:0,j,k),  &
-            BoundaryThreads_B(iBlock) % State_VIII(AMajor_,-nPoint:0,j,k),&
-            BoundaryThreads_B(iBlock) % State_VIII(AMinor_,-nPoint:0,j,k)
+            BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k), &
+            BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k), &
+            BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k),  &
+            BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k),&
+            BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k)
     end do; end do
     call close_file
-    BoundaryThreads_B(iBlock) % iAction = Restart_
+    BoundaryThreads_B(iBlock)%iAction = Restart_
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine read_thread_restart
@@ -999,46 +999,44 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        if(.not.IsAllocatedThread_B(iBlock))CYCLE
-       do k = kMin_, kMax_
-          do j = jMin_, jMax_
-             nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
-             ! Fill in an array with NeSi and TeSi values
-             State_VI(PSi_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % State_VIII(PSi_,1-nPoint:0,j,k)
-             !  Use geometric average of the face value for
-             !  the wave amplitude to get the cell-centered aplitude squared
-             State_VI(A2Major_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % State_VIII(A2Major_,1-nPoint:0,j,k) *&
-                  BoundaryThreads_B(iBlock) % State_VIII(A2Major_,-nPoint:-1,j,k)
-             State_VI(A2Minor_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % State_VIII(A2Minor_,1-nPoint:0,j,k) *&
-                  BoundaryThreads_B(iBlock) % State_VIII(A2Minor_,-nPoint:-1,j,k)
-             State_VI(TeSi_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % State_VIII(TeSi_,1-nPoint:0,j,k)
-             if(UseElectronPressure)then
-                State_VI(TiSi_, 1 - nPoint:0) = &
-                     BoundaryThreads_B(iBlock) % State_VIII(TiSi_,1-nPoint:0,j,k)
-             end if
+       do k = kMin_, kMax_; do j = jMin_, jMax_
+          nPoint = BoundaryThreads_B(iBlock)%nPoint_II(j,k)
+          ! Fill in an array with NeSi and TeSi values
+          State_VI(PSi_, 1 - nPoint:0) = &
+               BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)
+          !  Use geometric average of the face value for
+          !  the wave amplitude to get the cell-centered aplitude squared
+          State_VI(A2Major_, 1 - nPoint:0) = &
+               BoundaryThreads_B(iBlock)%State_VIII(A2Major_,1-nPoint:0,j,k) *&
+               BoundaryThreads_B(iBlock)%State_VIII(A2Major_,-nPoint:-1,j,k)
+          State_VI(A2Minor_, 1 - nPoint:0) = &
+               BoundaryThreads_B(iBlock)%State_VIII(A2Minor_,1-nPoint:0,j,k) *&
+               BoundaryThreads_B(iBlock)%State_VIII(A2Minor_,-nPoint:-1,j,k)
+          State_VI(TeSi_, 1 - nPoint:0) = &
+               BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k)
+          if(UseElectronPressure)then
+             State_VI(TiSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k)
+          end if
 
-             do i = BoundaryThreads_B(iBlock) % iMin, iMax
-                ! Generalized radial coordinate of the grid point
-                Coord1 = CoordMin_DB(r_, iBlock) + &
-                     (real(i) + Coord1Norm0)/&
-                     BoundaryThreads_B(iBlock) % dCoord1Inv
-                ! interpolate Te and Ne to the ghost cell center:
-                BoundaryThreads_B(iBlock) % State_VG(:, i, j, k)  = &
-                     linear(&
-                     a_VI = State_VI(:, 1 - nPoint:0),            &
-                     nVar = TiSi_,                                &
-                     iMin = 1 - nPoint,                           &
-                     iMax = 0,                                    &
-                     x = Coord1,                                  &
-                     x_I = BoundaryThreads_B(iBlock) % Coord_DIII(r_,&
-                     1 - nPoint:0, j, k),                         &
-                     DoExtrapolate = .false.)
-             end do
+          do i = BoundaryThreads_B(iBlock)%iMin, iMax
+             ! Generalized radial coordinate of the grid point
+             Coord1 = CoordMin_DB(r_, iBlock) + &
+                  (real(i) + Coord1Norm0)/&
+                  BoundaryThreads_B(iBlock)%dCoord1Inv
+             ! interpolate Te and Ne to the ghost cell center:
+             BoundaryThreads_B(iBlock)%State_VG(:, i, j, k)  = &
+                  linear(&
+                  a_VI = State_VI(:, 1 - nPoint:0),            &
+                  nVar = TiSi_,                                &
+                  iMin = 1 - nPoint,                           &
+                  iMax = 0,                                    &
+                  x = Coord1,                                  &
+                  x_I = BoundaryThreads_B(iBlock)%Coord_DIII(r_,&
+                  1 - nPoint:0, j, k),                         &
+                  DoExtrapolate = .false.)
           end do
-       end do
+       end do; end do
     end do
 
   end subroutine save_threads_for_plot
@@ -1078,7 +1076,7 @@ contains
        ! Along radial coordinate the resolution and location of the grid
        ! may be different for uniform or non-uniform grid
        CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*&
-            BoundaryThreads_B(iBlock) % dCoord1Inv - Coord1Norm0
+            BoundaryThreads_B(iBlock)%dCoord1Inv - Coord1Norm0
        ! Interpolate the state on threads to the given location
        StateThread_V = interpolate_vector(                        &
             a_VC=BoundaryThreads_B(iBlock)%State_VG(:,            &
@@ -1203,14 +1201,14 @@ contains
     real :: B0_D(3) = 0.0, FullB_D(3)
     character (len=10)  :: String, NamePlotVar
 
-    real:: tmp1Var, tmp2Var
+    real:: Tmp1Var, Tmp2Var
 
     integer :: iVar, jVar, iIon, iFluid
     ! CME parameters, if needed
     real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
     ! Conversion coefficients from the squared Alfven wave amplitude to
     ! energy densities
-    real :: SignBr, I0, I1
+    real :: SignBr, Wave0, Wave1
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_thread_plotvar'
@@ -1234,8 +1232,8 @@ contains
        ! In this case WaveLast dominates over WaveFirst
        ! Currently, in the state vector WaveFirst is dominant
        ! Reorder this array
-       I0 = State_V(WaveLast_); I1 = State_V(WaveFirst_)
-       State_V(WaveFirst_) = I0; State_V(WaveLast_) = I1
+       Wave0 = State_V(WaveLast_); Wave1 = State_V(WaveFirst_)
+       State_V(WaveFirst_) = Wave0; State_V(WaveLast_) = Wave1
     end if
     ! Convert to the energy density
     State_V(WaveFirst_:WaveLast_) = State_V(WaveFirst_:WaveLast_)*&
@@ -1245,7 +1243,8 @@ contains
     do iVar = 1, nPlotVar
        NamePlotVar = NamePlotVar_V(iVar)
 
-       ! Default values for TecPlot variable name and TecPlot and IDL unit names
+       ! Default values for TecPlot variable name and
+       ! TecPlot and IDL unit names
        NameVarUserTec_I(iVar)  = NamePlotVar
        NameUnitUserTec_I(iVar) = ' '
        NameUnitUserIdl_I(iVar) = '?'
@@ -1316,12 +1315,12 @@ contains
              PlotVar_V(iVar) = State_V(iRho)/MassFluid_I(iFluid)
           end if
 
-          ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
+          ! Calculate temperature from
+          !   P = n*k*T + ne*k*Te = n*k*T*(1 + ne/n*Te/T)
           if(String /= 'n')then
              ! t = p/n
              PlotVar_V(iVar) = State_V(iPFluid) / PlotVar_V(iVar)
 
-             !
              if(nFluid==1 .and. .not.UseElectronPressure &
                   .and. ElectronPressureRatio > 0.0) &
                   PlotVar_V(iVar) = PlotVar_V(iVar)&
@@ -1408,11 +1407,11 @@ contains
                Xyz_D*cross_product(FullB_D, State_V(iRhoUx:iRhoUz))) &
                / (State_V(iRho)*norm2(Xyz_D))
        case('pvecr')
-          tmp1Var = sum(FullB_D**2)
-          tmp2Var = sum(FullB_D*State_V(iRhoUx:iRhoUz))
+          Tmp1Var = sum(FullB_D**2)
+          Tmp2Var = sum(FullB_D*State_V(iRhoUx:iRhoUz))
           PlotVar_V(iVar) = sum ( &
-               Xyz_D*( tmp1Var*State_V(iRhoUx:iRhoUz) &
-               -  tmp2Var*FullB_D ) &
+               Xyz_D*( Tmp1Var*State_V(iRhoUx:iRhoUz) &
+               -  Tmp2Var*FullB_D ) &
                ) / (State_V(iRho)*norm2(Xyz_D))
        case('b2ur')
           PlotVar_V(iVar) = 0.5*sum(FullB_D(:)**2) &
@@ -1470,14 +1469,14 @@ contains
        call open_file(file=NameRestartFile, form='UNFORMATTED',&
             NameCaller=NameSub)
        do k = kMin_,kMax_; do j = jMin_, jMax_
-          nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
+          nPoint = BoundaryThreads_B(iBlock)%nPoint_II(j,k)
           write(UnitTmp_)real(nPoint)
           write(UnitTmp_)&
-               BoundaryThreads_B(iBlock) % State_VIII(TeSi_, 1-nPoint:0,j,k),&
-               BoundaryThreads_B(iBlock) % State_VIII(TiSi_, 1-nPoint:0,j,k),&
-               BoundaryThreads_B(iBlock) % State_VIII(PSi_,  1-nPoint:0,j,k),&
-               BoundaryThreads_B(iBlock) % State_VIII(AMajor_,-nPoint:0,j,k),&
-               BoundaryThreads_B(iBlock) % State_VIII(AMinor_,-nPoint:0,j,k)
+               BoundaryThreads_B(iBlock)%State_VIII(TeSi_, 1-nPoint:0,j,k),&
+               BoundaryThreads_B(iBlock)%State_VIII(TiSi_, 1-nPoint:0,j,k),&
+               BoundaryThreads_B(iBlock)%State_VIII(PSi_,  1-nPoint:0,j,k),&
+               BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k),&
+               BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k)
        end do; end do
        call close_file
     end do
@@ -1556,22 +1555,22 @@ contains
        do k = 1, nK
           do j = 1, nJ
              iBuff = iBuff + 1
-             nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
+             nPoint = BoundaryThreads_B(iBlock)%nPoint_II(j,k)
              ! Fill in an array for this thread with lon,lat values
              ! of the grid points on the thread
              StateThread_VI(Lon_:Lat_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % Coord_DIII(2:,1-nPoint:0,j,k)
+                  BoundaryThreads_B(iBlock)%Coord_DIII(2:,1-nPoint:0,j,k)
              ! Fill in an array with NeSi and TeSi values
              StateThread_VI(2+PSi_:2+TiSi_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % State_VIII(:,1-nPoint:0,j,k)
+                  BoundaryThreads_B(iBlock)%State_VIII(:,1-nPoint:0,j,k)
              !  Use geometric average of the face value for
              !  the wave amplitude to get the cell-centered aplitude squared
              StateThread_VI(2+A2Major_, 1 - nPoint:0) = &
                   StateThread_VI(2+AMajor_, 1 - nPoint:0)*&
-                  BoundaryThreads_B(iBlock) % State_VIII(AMajor_,-nPoint:-1,j,k)
+                  BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:-1,j,k)
              StateThread_VI(2+A2Minor_, 1 - nPoint:0) = &
                   StateThread_VI(2+AMinor_, 1 - nPoint:0)*&
-                  BoundaryThreads_B(iBlock) % State_VIII(AMinor_,-nPoint:-1,j,k)
+                  BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:-1,j,k)
              ! Now we find the intersection point of the thread with the
              ! spherical surface at given radial gen coordinate, Coord1
              ! and interpolate the state vector to this point
@@ -1582,7 +1581,7 @@ contains
                      iMin = 1 - nPoint,                           &
                      iMax = 0,                                    &
                      x = Coord1,                                  &
-                     x_I = BoundaryThreads_B(iBlock) % Coord_DIII(r_,&
+                     x_I = BoundaryThreads_B(iBlock)%Coord_DIII(r_,&
                      1 - nPoint:0, j, k),                         &
                      DoExtrapolate = .false.)
           end do
@@ -1601,21 +1600,27 @@ contains
          find_triangle_orig, fix_state
     use ModCoordTransform,      ONLY: rlonlat_to_xyz
     use ModConst,               ONLY: cTiny, cRadToDeg, cPi
+
     real    :: Coord1
     integer :: i, j, k, iBlock, nPoint
+
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
     integer, parameter :: Lon_ = 1, Lat_=2
     real    :: State_VI(Lat_+TiSi_,nThread+2), State_V(TiSi_), &
          Coord_D(Lon_:Lat_)
     real    :: Xyz_DI(3,nThread+2), Xyz_D(3)
+
     ! Data for interpolation: stencil and weights
     real    :: Weight_I(3)
     integer :: iStencil_I(3), iError
+
     ! Triangulation data
-    integer, allocatable :: list(:), lptr(:), lend(:)
+    integer, allocatable :: iList_I(:), iPointer_I(:), iEnd_I(:)
+
     ! Local Ligicals
     logical :: IsTriangleFound = .false.
+
     ! Add two triangulation nodes at the poles:
     real, parameter :: North_D(3)   = [0.0, 0.0, +1.0]
     real, parameter :: South_D(3)   = [0.0, 0.0, -1.0]
@@ -1625,11 +1630,11 @@ contains
     if(.not.IsUniformGrid)call stop_mpi(&
          'Triangulation does dot work for non-uniform grid in threaded gap')
     call test_start(NameSub, DoTest)
-    allocate(list(6*nThread), lptr(6*nThread), lend(nThread+2))
+    allocate(iList_I(6*nThread), iPointer_I(6*nThread), iEnd_I(nThread+2))
     do i = -nGUniform, 0
+
        ! Generalized radial coordinate of the grid points
-       !  This is the SC low boundary
-       !/           V
+       ! Coord1TopThread is the SC low boundary
        Coord1 = Coord1TopThread + real(i)*dCoord1Uniform
 
        call get_thread_point(Coord1, State_VI(:,2:nThread+1))
@@ -1641,52 +1646,57 @@ contains
             x= Xyz_DI(x_,2:nThread+1), &
             y= Xyz_DI(y_,2:nThread+1), &
             z=Xyz_DI(z_,2:nThread+1))
+
        ! Add two grid nodes at the poles:
        Xyz_DI(:,1)             = South_D     ! = [0.0, 0.0, -1.0]
        Xyz_DI(:,    nThread+2) = North_D     ! = [0.0, 0.0, +1.0]
+
        ! Triangulate
        call trmesh(nThread+2, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
-            list, lptr, lend, iError)
+            iList_I, iPointer_I, iEnd_I, iError)
        if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
+
        ! Fix states at the polar nodes:
        ! North:
-       call fix_state(iNodeToFix =         1,&
-                      nNode      = nThread+2,&
-                      iList_I    =      list,&
-                      iPointer_I =      lptr,&
-                      iEnd_I     =      lend,&
-                      Xyz_DI     =    Xyz_DI,&
-                      nVar       =     TiSi_,&
+       call fix_state(iNodeToFix =          1,&
+                      nNode      =  nThread+2,&
+                      iList_I    =    iList_I,&
+                      iPointer_I = iPointer_I,&
+                      iEnd_I     =     iEnd_I,&
+                      Xyz_DI     =     Xyz_DI,&
+                      nVar       =      TiSi_,&
                       State_VI   = State_VI(3:,:))
        ! South:
-       call fix_state(iNodeToFix = nThread+2,&
-                      nNode      = nThread+2,&
-                      iList_I    =      list,&
-                      iPointer_I =      lptr,&
-                      iEnd_I     =      lend,&
-                      Xyz_DI     =    Xyz_DI,&
-                      nVar       =     TiSi_,&
+       call fix_state(iNodeToFix =  nThread+2,&
+                      nNode      =  nThread+2,&
+                      iList_I    =    iList_I,&
+                      iPointer_I = iPointer_I,&
+                      iEnd_I     =     iEnd_I,&
+                      Xyz_DI     =     Xyz_DI,&
+                      nVar       =      TiSi_,&
                       State_VI   = State_VI(3:,:))
+
        ! Now, interpolate state vector to the points of a grid used for
        ! plotting
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
           if(.not.IsAllocatedThread_B(iBlock))CYCLE
+
           do k = kMin_, kMax_; do j = jMin_, jMax_
              Coord_D = CoordMin_DB(2:,iBlock) + &
                   CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
              ! Transform longitude and latitude to the unit vector
-             call rlonlat_to_xyz(1.0, Coord_D(Lon_), Coord_D(Lat_),&
-                  Xyz_D)
+             call rlonlat_to_xyz(1.0, Coord_D(Lon_), Coord_D(Lat_), Xyz_D)
+
              ! Find a triangle into which this vector falls and the
              ! interpolation weights
              if(UsePlanarTriangles)then
-                call find_triangle_orig(Xyz_D, nThread+2, Xyz_DI ,&
-                     list, lptr, lend,                            &
+                call find_triangle_orig(Xyz_D, nThread+2, Xyz_DI, &
+                     iList_I, iPointer_I, iEnd_I,                 &
                      Weight_I, IsTriangleFound, iStencil_I)
              else
-                call find_triangle_sph( Xyz_D, nThread+2, Xyz_DI ,&
-                     list, lptr, lend,                            &
+                call find_triangle_sph( Xyz_D, nThread+2, Xyz_DI, &
+                     iList_I, iPointer_I, iEnd_I,                 &
                      Weight_I(1), Weight_I(2), Weight_I(3),       &
                      IsTriangleFound,                             &
                      iStencil_I(1), iStencil_I(2), iStencil_I(3))
@@ -1695,15 +1705,17 @@ contains
                 write(*,*)'At the location x,y,z=', Xyz_D
                 call stop_mpi('Interpolation on triangulated sphere fails')
              end if
+
              ! interpolate  state vector to a grid point of a uniform grid
-             BoundaryThreads_B(iBlock) % State_VG(:, i, j, k)  = &
+             BoundaryThreads_B(iBlock)%State_VG(:, i, j, k)  = &
                   State_VI(3:, iStencil_I(1))*Weight_I(1) + &
                   State_VI(3:, iStencil_I(2))*Weight_I(2) + &
                   State_VI(3:, iStencil_I(3))*Weight_I(3)
           end do; end do    ! j,k
        end do       ! iBlock
     end do          ! i
-    deallocate(list, lptr, lend)
+    deallocate(iList_I, iPointer_I, iEnd_I)
+
     ! One extra layer passing through physical cell centers (i=1)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -1714,58 +1726,76 @@ contains
                Xyz_D         = Xyz_DGB(  :, 1, j, k, iBlock), &
                B0_D          = B0_DGB(   :, 1, j, k, iBlock), &
                StateThread_V = &
-               BoundaryThreads_B(iBlock) % State_VG(:, 1, j, k))
+               BoundaryThreads_B(iBlock)%State_VG(:, 1, j, k))
        end do; end do
     end do
     call test_stop(NameSub, DoTest)
+
   end subroutine triangulate_thread_for_plot
   !============================================================================
-  subroutine get_tr_los_image(Xyz_D, DirLos_D, iBlock, nPlotVar, NamePlotVar_V,&
-       iTableEuv, iTableSxr, iTableGen, PixIntensity_V)
+  subroutine get_tr_los_image(Xyz_D, DirLos_D, iBlock, nPlotVar, &
+       NamePlotVar_V, iTableEuv, iTableSxr, iTableGen, PixIntensity_V)
+
     ! Using a tabulated analytical solution for the Transition Region (TR),
     ! the contribution to the LOS image from the TR is calculated.
-    !INPUTS:
+
     ! An intersection point of the LOS with the chromosphere top:
     real, intent(in)    :: Xyz_D(3)
+
     ! A unit vector in direction of the LOS:
     real, intent(in)    :: DirLos_D(3)
     !(Extended) block ID
     integer, intent(in) :: iBlock
+
     ! Number of the variables to plot:
     integer, intent(in) :: nPlotVar
+
     ! Names of the variables to plot
     character(len=20), intent(in) :: NamePlotVar_V(nPlotVar)
+
     ! Tables, in which the emissivity in different ion lines
     ! is tabulated:
     integer, intent(in) :: iTableEuv, iTableSxr, iTableGen
+
     ! Logicals specifying the use of tables
     logical :: UseEuv, UseSxr, UseGenTable
+
     ! Pixel intensity to be corrected
     real, intent(inout) :: PixIntensity_V(nPlotVar)
-    !LOCALS:
+
+    ! Local variables
     ! Magnetic field at the point XYZ_D, and its direction vector:
     real :: B0_D(3), DirB_D(3)
+
     ! Radial direction:
     real :: DirR_D(3)
+
     ! cosine of angles between the radial direction and the directions of
     ! LOS and magnetic field:
     real :: CosRLos, CosRB
+
     ! Euv intensities:
     real :: EuvValue_V(3)
+
     ! Sxr intensities:
     real :: SxrValue_V(2)
+
     ! Plasma parameters at the top of TR
     real :: TeSi, PTotSi, PeSi
+
     ! Contribution to the image
     real :: PlotVar_V(nPlotVar)
     !--------------------------------------------------------------------------
     ! Radial direction:
     DirR_D = Xyz_D/norm2(Xyz_D)
+
     ! Cosine of angle between DirR and DirLos:
     CosRLos = abs(sum(DirR_D*DirLos_D))
+
     ! If the line is tangent to the solar surface, the intensity is too large
     ! to be corrected
     if(CosRLos <= 0.01)RETURN
+
     ! Magnetic field vector and its angle with the radial direction:
     call get_b0(Xyz_D, B0_D)
     DirB_D = B0_D/norm2(B0_D)
@@ -1773,18 +1803,23 @@ contains
     UseEuv = iTableEuv > 0
     UseSxr = iTableSxr > 0
     UseGenTable = iTableGen > 0
+
     call get_te_ptot(TeSi, PTotSi)
+
     ! Assiming equal electron and ion temperature
     ! Pe = Z Pi, pTotal = (Z+1)Pi
     ! So that Pi = pTotal/(Z+1) and
     PeSi = Z*PTotSi/(1 + Z)
 
     PlotVar_V = 0
+
     ! Integrate plot variables
     call set_plot_var
+
     ! Add contribution to the pixel intensity, account for
     ! the geometric factor
     PixIntensity_V = PixIntensity_V + PlotVar_V *(CosRB/CosRLos)
+
   contains
     !==========================================================================
     subroutine get_te_ptot(TeSi, PTotSi)
@@ -1795,7 +1830,6 @@ contains
       ! Coords of the point in which to interpolate
       real :: Coord_D(3), CoordNorm_D(2)
       real :: StateThread_V(PSi_:TiSi_)
-
       !------------------------------------------------------------------------
       call xyz_to_coord(Xyz_D, Coord_D)
       CoordNorm_D = (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock))/&
@@ -1815,17 +1849,20 @@ contains
            x_D=CoordNorm_D)
       PTotSi = StateThread_V( PSi_)
       TeSi   = StateThread_V(TeSi_)
+
     end subroutine get_te_ptot
     !==========================================================================
     subroutine set_plot_var
+
       use ModConst, ONLY: cBoltzmann
+
       integer ::  i, iVar ! Loop variables
+
       ! Electron density in particles per cm3:
       real    :: NeCgs
       !------------------------------------------------------------------------
       if(UseGenTable)then
-         call integrate_emission(TeSi, PeSi, iTableGen, nPlotVar, &
-              PlotVar_V)
+         call integrate_emission(TeSi, PeSi, iTableGen, nPlotVar, PlotVar_V)
       else
          if (UseEuv) then
             ! now integrate EUV response values from a lookup table
@@ -1860,6 +1897,7 @@ contains
             end select
          end do
       end if
+
     end subroutine set_plot_var
     !==========================================================================
   end subroutine get_tr_los_image

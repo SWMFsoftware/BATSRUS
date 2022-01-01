@@ -100,11 +100,12 @@ module ModFaceFluxParameters
 
 contains
   !============================================================================
-  subroutine init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+  subroutine init_face_flux_arrays( IsFF_I, iFF_I, rFF_I, &
+       Unormal_I, bCrossArea_D)
 
     logical,  intent(inout):: IsFF_I(nFFLogic)
-    integer,  intent(inout):: IFF_I(nFFInt)
-    real,  intent(inout):: RFF_I(nFFReal)
+    integer,  intent(inout):: iFF_I(nFFInt)
+    real,  intent(inout):: rFF_I(nFFReal)
     real, intent(inout):: Unormal_I(nFluid+1)
     real, intent(inout):: bCrossArea_D(MaxDim)
 
@@ -114,19 +115,19 @@ contains
 
 #ifdef _OPENACC
     !--------------------------------------------------------------------------
-    IFF_I(iFluidMin_) = 1
-    IFF_I(iFluidMax_) = nFluid
-    IFF_I(iVarMin_) = 1
-    IFF_I(iVarMax_) = nVar
-    IFF_I(iEnergyMin_) = nVar + 1
-    IFF_I(iEnergyMax_) = nVar + nFluid
+    iFF_I(iFluidMin_) = 1
+    iFF_I(iFluidMax_) = nFluid
+    iFF_I(iVarMin_) = 1
+    iFF_I(iVarMax_) = nVar
+    iFF_I(iEnergyMin_) = nVar + 1
+    iFF_I(iEnergyMax_) = nVar + nFluid
 
     Unormal_I = 0.0
-    RFF_I(EradFlux_) = 0.0
+    rFF_I(EradFlux_) = 0.0
     bCrossArea_D = 0.0
-    RFF_I(B0x_) = 0.0
-    RFF_I(B0y_) = 0.0
-    RFF_I(B0z_) = 0.0
+    rFF_I(B0x_) = 0.0
+    rFF_I(B0y_) = 0.0
+    rFF_I(B0z_) = 0.0
 
     IsFF_I(UseHallGradPe_) = .false.
 

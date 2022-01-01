@@ -67,22 +67,37 @@
     #tmp2_BLK => Tmp2_GB,
     #time_BLK => DtMax_CB
 
-    # ModBatsrusMethods
-    SaveThreads4Plot => DoPlotThread,
-
-    # ModConstrainB
-    BxFace_BLK => BxFace_GB, 
-    ByFace_BLK => ByFace_GB, 
-    BzFace_BLK => BzFace_GB, 
-    get_VxB => get_vxb,
-    bound_VxB => bound_vxb,
-    constrain_B => constrain_b,
-    Bface2Bcenter => bface_to_bcenter,
-    Bcenter2Bface => bcenter_to_bface,
-    bound_Bface => bound_bface,
-
-    # ModCoronalHeating
-    MaxImbalance => ImbalanceMax,
-    MaxImbalance2 => ImbalanceMax2,
+    ### ModBatsrusMethods
+    #SaveThreads4Plot => DoPlotThread,
+    #
+    ### ModConstrainB
+    #BxFace_BLK => BxFace_GB, 
+    #ByFace_BLK => ByFace_GB, 
+    #BzFace_BLK => BzFace_GB, 
+    #get_VxB => get_vxb,
+    #bound_VxB => bound_vxb,
+    #constrain_B => constrain_b,
+    #Bface2Bcenter => bface_to_bcenter,
+    #Bcenter2Bface => bcenter_to_bface,
+    #bound_Bface => bound_bface,
+    #
+    ### ModCoronalHeating
+    #MaxImbalance => ImbalanceMax,
+    #MaxImbalance2 => ImbalanceMax2,
+    #
+    ## ModFaceValue
+    
+    ip => iP,
+    jp => jP,
+    kp => kP,
+    im => iM,
+    jm => jM,
+    km => kM,
+    fp1 => fP1,
+    fp2 => fP2,
+    dp1 => dP1,
+    dp2 => dP2,
+    ap1 => aP1,
+    ap2 => aP2,
     
     );
