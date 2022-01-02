@@ -235,7 +235,7 @@ contains
          nVar, State_VGB, &
          SkippedBlock_
     use ModLoadBalance, ONLY: load_balance
-    use ModFieldTrace, ONLY: ray
+    use ModFieldTrace, ONLY: Trace_DSNB
     use ModBlockData, ONLY: clean_block_data
     use ModIO, ONLY : write_prefix, iUnitOut
     use ModMpi
@@ -300,10 +300,10 @@ contains
        RETURN
     end if
 
-    ! write_log_file may use ray array before another ray tracing
-    ! only needs to zero ray() out if the grid changed
-    if(UseB .and. allocated(ray) .and. iNewGrid/=iLastGrid) &
-         ray(:,:,:,:,:,1:nBlock) = 0.0
+    ! write_log_file may use Trace_DSNB array before another Trace_DSNB tracing
+    ! only needs to zero Trace_DSNB() out if the grid changed
+    if(UseB .and. allocated(Trace_DSNB) .and. iNewGrid/=iLastGrid) &
+         Trace_DSNB(:,:,:,:,:,1:nBlock) = 0.0
 
     iLastGrid          = iNewGrid
     iLastDecomposition = iNewDecomposition
@@ -700,7 +700,7 @@ contains
          RefineCrit = RefineCrit*maxval(Tmp_C)
 
       case('Rho_2nd_1')
-         ! (|d2Rho/dx2| + |d2Rho/dy2| + |d2Rho/dz2|)/rho
+         ! (|d2Rho/Dx2| + |d2Rho/Dy2| + |d2Rho/Dz2|)/rho
          Tmp_C = ( &
               abs(Rho_G(0:nI-1,1:nJ,1:nK) + Rho_G(2:nI+1,1:nJ,1:nK) - &
               2 * Rho_G(1:nI,1:nJ,1:nK))                            + &
@@ -712,7 +712,7 @@ contains
          RefineCrit = maxval(Tmp_C)
 
       case('Rho_2nd_2')
-         ! (|d2Rho/dx2  +  d2Rho/dy2  +  d2Rho/dz2|)/rho
+         ! (|d2Rho/Dx2  +  d2Rho/Dy2  +  d2Rho/Dz2|)/rho
          Tmp_C = abs( &
               (Rho_G(0:nI-1,1:nJ,1:nK) + Rho_G(2:nI+1,1:nJ,1:nK) - &
               2 * Rho_G(1:nI,1:nJ,1:nK))                         + &

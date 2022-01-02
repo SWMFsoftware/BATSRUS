@@ -36,7 +36,7 @@ module ModIO
   character (len=100) :: NamePlotDir="GM/IO2/"
 
   ! Generic file name variable
-  character (len=80) :: filename
+  character (len=80) :: NameFile
 
   ! The largest time unit used in the plot file names in time-accurate runs
   character (len=20) :: NameMaxTimeUnit = 'hour'

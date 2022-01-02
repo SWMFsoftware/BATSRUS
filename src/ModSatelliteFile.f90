@@ -196,9 +196,9 @@ contains
           end if
 
           ! Change by DTW, July 2007
-          ! Add ray-tracing variables if 'ray' is present.
-          if (index(StringSatellite,'ray')>0 .or. &
-               index(StringSatellite,'RAY')>0) then
+          ! Add Trace_DSNB-tracing variables if 'Trace_DSNB' is present.
+          if (index(StringSatellite,'Trace_DSNB')>0 .or. &
+               index(StringSatellite,'Trace_DSNB')>0) then
              StringSatVar_I(iSat) = trim(StringSatVar_I(iSat)) // &
                   ' theta1 phi1 status theta2 phi2'
           endif
@@ -637,7 +637,7 @@ contains
   !============================================================================
   subroutine get_satellite_ray(iSatIn, SatRayVar_I)
 
-    use ModFieldTrace, ONLY: ray
+    use ModFieldTrace, ONLY: Trace_DSNB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use BATL_size, ONLY:
     use BATL_lib, ONLY: iProc, nI, nJ, nK, IsCartesianGrid, &
@@ -658,7 +658,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    call sync_cpu_gpu('update on CPU', NameSub, Trace_DICB=ray)
+    call sync_cpu_gpu('update on CPU', NameSub, Trace_DICB=Trace_DSNB)
 
     ! Initialize to zero
     SatRayVar_I = 0.0
@@ -703,13 +703,13 @@ contains
     jNear = min( nJ, max(nint(Coord_D(2)),1) )
     kNear = min( nK, max(nint(Coord_D(3)),1) )
 
-    ! Copy ray tracing values to new array so allow changing of values.
-    RayVars = ray(1:3,1:2,1:nI,1:nJ,1:nK,iBlock)
+    ! Copy Trace_DSNB tracing values to new array so allow changing of values.
+    RayVars = Trace_DSNB(1:3,1:2,1:nI,1:nJ,1:nK,iBlock)
 
-    ! Use the ray status of the nearest point to the satellite.
+    ! Use the Trace_DSNB status of the nearest point to the satellite.
     SatRayVar_I(3) = RayVars(3, 1, iNear,jNear,kNear)
 
-    ! For each direction along the ray, determine if all lines surrounding
+    ! For each direction along the Trace_DSNB, determine if all lines surrounding
     ! point are open or closed, then set SatRayVar_I accordingly.
     do iDir=1,2
 

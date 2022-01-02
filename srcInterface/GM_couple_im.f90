@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!^CMP FILE IM
+!^CMP FILE iM
 
 module GM_couple_im
 
@@ -24,23 +24,23 @@ module GM_couple_im
 
   private ! except
 
-  public:: GM_get_for_im_trace_crcm ! for IM/CRCM
-  public:: GM_get_for_im_crcm       ! for IM/CRCM
-  public:: GM_get_sat_for_im_crcm   ! for IM/CRCM
-  public:: GM_get_for_im_trace      ! for IM/RAM
-  public:: GM_get_for_im_line       ! for IM/RAM
-  public:: GM_get_for_im            ! for IM/RCM
+  public:: GM_get_for_im_trace_crcm ! for iM/CRCM
+  public:: GM_get_for_im_crcm       ! for iM/CRCM
+  public:: GM_get_sat_for_im_crcm   ! for iM/CRCM
+  public:: GM_get_for_im_trace      ! for iM/RAM
+  public:: GM_get_for_im_line       ! for iM/RAM
+  public:: GM_get_for_im            ! for iM/RCM
   public:: GM_satinit_for_im        ! initialize satellite
   public:: GM_get_sat_for_im        ! get satellite info
-  public:: GM_put_from_im           ! from IM
-  public:: GM_put_from_im_cimi           ! from IM
+  public:: GM_put_from_im           ! from iM
+  public:: GM_put_from_im_cimi           ! from iM
 
   character(len=*), parameter :: NameMod='GM_couple_im'
 
-  ! IM Grid size
+  ! iM Grid size
   integer :: nCells_D(2), iSize,jSize
 
-  ! Information about the IM grid: 2D non-uniform regular grid
+  ! Information about the iM grid: 2D non-uniform regular grid
   real, allocatable, dimension(:) :: IM_lat, IM_lon
 
   integer :: i,j, i0
@@ -63,7 +63,7 @@ module GM_couple_im
 
   logical :: DoTestTec, DoTestIdl
 
-  ! This is for the GM-IM/RAM coupling
+  ! This is for the GM-iM/RAM coupling
   real, allocatable :: StateLine_VI(:,:)
 
 contains
@@ -72,9 +72,9 @@ contains
   subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, nDensityIn, &
        NameVar, nVarLine, nPointLine)
 
-    ! Do field tracing for IM.
+    ! Do field tracing for iM.
     ! Provide total number of points along rays
-    ! and the number of variables to pass to IM
+    ! and the number of variables to pass to iM
     use ModFieldTrace, ONLY: DoExtractUnitSi, integrate_field_from_sphere
     use CON_line_extract, ONLY: line_get
     use CON_planet, ONLY: RadiusPlanet, IonosphereHeight
@@ -101,7 +101,7 @@ contains
 
     call line_get(nVarLine, nPointLine)
 
-    nVarLine = 4 ! We only pass line index, length, B and radial distance to IM
+    nVarLine = 4 ! We only pass line index, length, B and radial distance to iM
 
   end subroutine GM_get_for_im_trace_crcm
   !============================================================================
@@ -121,7 +121,7 @@ contains
     use ModSolarwind, ONLY: get_solar_wind_point
     use ModConst, ONLY: cProtonMass
     use ModNumConst, ONLY: cRadToDeg
-    use ModGroundMagPerturb, ONLY: DoCalcKp, Kp, DoCalcAe, AeIndex_I
+    use ModGroundMagPerturb, ONLY: DoCalcKp, kP, DoCalcAe, AeIndex_I
     use CON_planet_field,  ONLY: map_planet_field
 
     use CON_line_extract, ONLY: line_get, line_clean
@@ -158,9 +158,9 @@ contains
     ! The CRCM ionosphere radius in normalized units
     RadiusIono = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
 
-    ! If Kp is being calculated, share it.  Otherwise, share -1.
+    ! If kP is being calculated, share it.  Otherwise, share -1.
     if(DoCalcKp) then
-       KpOut = Kp
+       KpOut = kP
     else
        KpOut = -1
     endif
@@ -292,7 +292,7 @@ contains
 
   subroutine GM_get_sat_for_im_crcm(Buffer_III, Name_I, nSats)
 
-    ! Subroutine to update and collect satellite locations for IM tracing
+    ! Subroutine to update and collect satellite locations for iM tracing
 
     ! Modules
     use ModSatelliteFile, ONLY: FilenameSat_I, XyzSat_DI, gm_trace_sat
@@ -345,9 +345,9 @@ contains
 
   subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
-    ! Do ray tracing for IM/RAM_SCB.
+    ! Do Trace_DSNB tracing for iM/RAM_SCB.
     ! Provide total number of points along rays
-    ! and the number of variables to pass to IM
+    ! and the number of variables to pass to iM
 
     use ModMain,       ONLY: tSimulation, TypeCoordSystem
     use ModVarIndexes, ONLY: Bx_, Bz_, nVar
@@ -386,7 +386,7 @@ contains
        LongitudeIm_I = Grid_C(IM_) % Coord2_I
     end if
 
-    ! Trace field lines starting from IM equatorial grid (do message pass)
+    ! Trace field lines starting from iM equatorial grid (do message pass)
     ! Include BGradB1 only if needed:
     call get_comp_info(IM_, NameVersion=NameVersionIm)
     if(NameVersionIm(1:7) == 'RAM-SCB')then
@@ -481,9 +481,9 @@ contains
 
     use ModFieldTrace, ONLY: RayResult_VII, RayIntegral_VII, &
          InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
-         HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, xEnd_, CLOSEDRAY, &
+         HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, iXEnd, CLOSEDRAY, &
          integrate_field_from_sphere
-    use ModGroundMagPerturb, ONLY: DoCalcKp, Kp
+    use ModGroundMagPerturb, ONLY: DoCalcKp, kP
 
     integer,          intent(in) :: iSizeIn, jSizeIn, nVar
     real,             intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVar), KpOut
@@ -519,7 +519,7 @@ contains
        call integrate_field_from_sphere(&
             iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,HpRhoInvB,OpRhoInvB,HppInvB,OppInvB')
-       ! but not pass Rhoinvb, Pinvb to IM
+       ! but not pass Rhoinvb, Pinvb to iM
     end if
 
     if(iProc==0)then
@@ -537,9 +537,9 @@ contains
           MHD_HpP= RayResult_VII(HpPInvB_,:,:)
           MHD_OpP= RayResult_VII(OpPInvB_,:,:)
        end if
-       ! Put impossible values if the ray is not closed
+       ! Put impossible values if the Trace_DSNB is not closed
        if(.not.DoMultiFluidIMCoupling)then
-          where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+          where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
              MHD_Xeq     = NoValue
              MHD_Yeq     = NoValue
              MHD_SUM_vol = 0.0
@@ -548,7 +548,7 @@ contains
              MHD_Beq     = NoValue
           end where
        else
-          where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+          where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
              MHD_Xeq     = NoValue
              MHD_Yeq     = NoValue
              MHD_SUM_vol = 0.0
@@ -564,9 +564,9 @@ contains
 
     deallocate(RayIntegral_VII, RayResult_VII)
 
-    ! If Kp is being calculated, share it.  Otherwise, share -1.
+    ! If kP is being calculated, share it.  Otherwise, share -1.
     if(DoCalcKp) then
-       KpOut = Kp
+       KpOut = kP
     else
        KpOut = -1
     endif
@@ -608,7 +608,7 @@ contains
   subroutine GM_satinit_for_im(nSats)
 
     ! This subroutine collects the number of satellite files for use in
-    ! SWMF GM and IM coupling.
+    ! SWMF GM and iM coupling.
 
     ! Module variables to use:
     use ModMain,   ONLY: DoImSatTrace
@@ -618,8 +618,8 @@ contains
     integer,           intent(out) :: nSats
     !--------------------------------------------------------------------------
 
-    ! If IM sat tracing is on, collect the number of satellites to trace.
-    ! If IM sat tracing is off, set nSats to zero.
+    ! If iM sat tracing is on, collect the number of satellites to trace.
+    ! If iM sat tracing is off, set nSats to zero.
     if (DoImSatTrace) then
        nSats = nSatellite
     else
@@ -631,7 +631,7 @@ contains
 
   subroutine GM_get_sat_for_im(Buffer_III, Name_I, nSats)
 
-    ! Subroutine to update and collect satellite locations for IM tracing
+    ! Subroutine to update and collect satellite locations for iM tracing
 
     ! Modules
     use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, &
@@ -677,7 +677,7 @@ contains
     use CON_coupler
     use CON_world,      ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
-    use ModImCoupling                              ! Storage for IM pressure
+    use ModImCoupling                              ! Storage for iM pressure
     use ModMain, ONLY : nStep,tSimulation
     use ModIoUnit, ONLY: UNITTMP_
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
@@ -685,7 +685,7 @@ contains
          SpeciesLast_
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
 
-    character(len=80):: filename
+    character(len=80):: NameFile
 
     integer, intent(in) :: iSizeIn,jSizeIn,nVar
     real, intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVar)
@@ -723,10 +723,10 @@ contains
     if(.not.allocated(IM_lat))then
        ! Allocate IM_lat, IM_lon, IM_p, IM_dens
        call im_pressure_init(iSizeIn, jSizeIn)
-       ! Set up IM ionospheric grid and store.
+       ! Set up iM ionospheric grid and store.
        ! Latitude specification is module specific, we must set it up
-       ! according to the IM module we have selected.
-       ! Determine version of IM:
+       ! according to the iM module we have selected.
+       ! Determine version of iM:
        call get_comp_info(IM_, NameVersion=NameVersionIm)
        if(NameVersionIm(1:3) == 'RAM')then
           ! HEIDI and RAM-SCB have similar equatorial grids.
@@ -749,7 +749,7 @@ contains
     IsImP_I(:)    = .false.
     IsImPpar_I(:) = .false.
 
-    ! Store IM variable for internal use
+    ! Store iM variable for internal use
     ImP_CV     (:,:,1) = Buffer_IIV(:,:,pres_)
  !   IM_p    = Buffer_IIV(:,:,pres_)
 
@@ -812,20 +812,20 @@ contains
 !      if(iProc /= 0)RETURN
 !
 !      ! write values to plot file
-!      write(filename,'(a,i6.6,a)')"IMp_n=",nStep,".dat"
-!      OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
+!      write(NameFile,'(a,i6.6,a)')"IMp_n=",nStep,".dat"
+!      OPEN (UNIT=UNITTMP_, FILE=NameFile, STATUS='unknown')
 !      write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
 !      if(DoMultiFluidIMCoupling)then
 !         write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&
-!              &"IM pressure", "IM density", &
-!              &"IM Hp pressure", "IM Hp density", &
-!              &"IM Op pressure", "IM Op density"'
+!              &"iM pressure", "iM density", &
+!              &"iM Hp pressure", "iM Hp density", &
+!              &"iM Op pressure", "iM Op density"'
 !      else
 !         write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&
-!              &"IM pressure", "IM density"'
+!              &"iM pressure", "iM density"'
 !      end if
 !      write(UNITTMP_,'(a,i4,a,i4,a)') &
-!           'ZONE T="IM Pressure", I=',jSizeIn+1,', J=',iSizeIn,', K=1, F=POINT'
+!           'ZONE T="iM Pressure", I=',jSizeIn+1,', J=',iSizeIn,', K=1, F=POINT'
 !      do i=1,iSizeIn
 !         do j2=1,jSizeIn+1
 !            j=j2; if(j2==jSizeIn+1) j=1
@@ -849,11 +849,11 @@ contains
 !      if(iProc /= 0)RETURN
 !
 !      ! write values to plot file
-!      write(filename,'(a,i6.6,a)')"IMp_n=",nStep,".out"
-!      OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
+!      write(NameFile,'(a,i6.6,a)')"IMp_n=",nStep,".out"
+!      OPEN (UNIT=UNITTMP_, FILE=NameFile, STATUS='unknown', &
 !           iostat =iError)
-!      if (iError /= 0) call CON_stop("Can not open file "//filename)
-!      write(UNITTMP_,'(a79)')            'IM pressure'
+!      if (iError /= 0) call CON_stop("Can not open file "//NameFile)
+!      write(UNITTMP_,'(a79)')            'iM pressure'
 !      write(UNITTMP_,'(i7,1pe13.5,3i3)') nStep,tSimulation,2,0,2
 !      write(UNITTMP_,'(3i4)')            jSizeIn,iSizeIn
 !      if(DoMultiFluidIMCoupling)then
@@ -885,7 +885,7 @@ contains
     use CON_coupler
     use CON_world,      ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
-    use ModImCoupling                              ! Storage for IM pressure
+    use ModImCoupling                              ! Storage for iM pressure
     use ModMain, ONLY : nStep,tSimulation
     use ModIoUnit, ONLY: UNITTMP_
     use BATL_lib, ONLY: iProc
@@ -894,13 +894,13 @@ contains
          SpeciesLast_,NameVar_V
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
     use ModUtilities,       ONLY: split_string
-    character(len=80):: filename
+    character(len=80):: NameFile
 
     integer, intent(in) :: iSizeIn,jSizeIn,nVarIm
     real, intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIm)
 
     integer :: iFluid, iVarIm
-    ! list of first nVarIm-1 variables provided by IM
+    ! list of first nVarIm-1 variables provided by iM
     character(len=*), intent(in) :: NameVarIm
 
     character(len=lNameVersion) :: NameVersionIm
@@ -931,10 +931,10 @@ contains
     if(.not.allocated(IM_lat))then
        ! Allocate IM_lat, IM_lon, IM_p, IM_dens
        call im_pressure_init(iSizeIn, jSizeIn)
-       ! Set up IM ionospheric grid and store.
+       ! Set up iM ionospheric grid and store.
        ! Latitude specification is module specific, we must set it up
-       ! according to the IM module we have selected.
-       ! Determine version of IM:
+       ! according to the iM module we have selected.
+       ! Determine version of iM:
        call get_comp_info(IM_, NameVersion=NameVersionIm)
        if(NameVersionIm(1:3) == 'RAM')then
           ! HEIDI and RAM-SCB have similar equatorial grids.
@@ -955,7 +955,7 @@ contains
     allocate(NameVarIm_V(nVarIm-1))
     call split_string(NameVarIm, NameVarIm_V)
 
-    ! loop over GM fluid densities to find IM buffer variable location
+    ! loop over GM fluid densities to find iM buffer variable location
     ! only on first call
     if (IsFirstCall) then
        ! Set array of density indexes:
@@ -990,7 +990,7 @@ contains
              ! get Density index for buffer
              if(trim(string_to_lower(NameVar_V(iDens_I(iDensity)))) &
                   == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
-                ! found a match. set im fluid index
+                ! found a match. set iM fluid index
                 iRhoIm_I(iDensity)  = iVarIm
                 IsImRho_I(iDensity) = .true.
              elseif(iVarIm == nVarIm) then
@@ -1006,7 +1006,7 @@ contains
              ! get Pressure index for Buffer
              if(trim(string_to_lower(NameVar_V(iP_I(iFluid)))) &
                   == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
-                ! found a match. set im fluid index
+                ! found a match. set iM fluid index
                 iPIm_I(iFluid)  = iVarIm
                 IsImP_I(iFluid) = .true.
              elseif(iVarIm == nVarIm) then
@@ -1019,7 +1019,7 @@ contains
                 ! get Par Pressure index for Buffer
                 if(trim(string_to_lower(NameVar_V(iPparIon_I(iFluid)))) &
                      == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
-                   ! found a match. set im fluid index
+                   ! found a match. set iM fluid index
                    iPparIm_I(iFluid)  = iVarIm
                    IsImPpar_I(iFluid) = .true.
                 elseif(iVarIm == nVarIm) then
@@ -1099,20 +1099,20 @@ contains
       if(iProc /= 0)RETURN
 
       ! write values to plot file
-      write(filename,'(a,i6.6,a)')"IMp_n=",nStep,".dat"
-      OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
+      write(NameFile,'(a,i6.6,a)')"IMp_n=",nStep,".dat"
+      OPEN (UNIT=UNITTMP_, FILE=NameFile, STATUS='unknown')
       write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
       if(DoMultiFluidIMCoupling)then
          write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&
-              &"IM pressure", "IM density", &
-              &"IM Hp pressure", "IM Hp density", &
-              &"IM Op pressure", "IM Op density"'
+              &"iM pressure", "iM density", &
+              &"iM Hp pressure", "iM Hp density", &
+              &"iM Op pressure", "iM Op density"'
       else
          write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&
-              &"IM pressure", "IM density"'
+              &"iM pressure", "iM density"'
       end if
       write(UNITTMP_,'(a,i4,a,i4,a)') &
-           'ZONE T="IM Pressure", I=',jSizeIn+1,', J=',iSizeIn,', K=1, F=POINT'
+           'ZONE T="iM Pressure", I=',jSizeIn+1,', J=',iSizeIn,', K=1, F=POINT'
       do i=1,iSizeIn
          do j2=1,jSizeIn+1
             j=j2; if(j2==jSizeIn+1) j=1
@@ -1137,11 +1137,11 @@ contains
       if(iProc /= 0)RETURN
 
       ! write values to plot file
-      write(filename,'(a,i6.6,a)')"IMp_n=",nStep,".out"
-      OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
+      write(NameFile,'(a,i6.6,a)')"IMp_n=",nStep,".out"
+      OPEN (UNIT=UNITTMP_, FILE=NameFile, STATUS='unknown', &
            iostat =iError)
-      if (iError /= 0) call CON_stop("Can not open file "//filename)
-      write(UNITTMP_,'(a79)')            'IM pressure'
+      if (iError /= 0) call CON_stop("Can not open file "//NameFile)
+      write(UNITTMP_,'(a79)')            'iM pressure'
       write(UNITTMP_,'(i7,1pe13.5,3i3)') nStep,tSimulation,2,0,2
       write(UNITTMP_,'(3i4)')            jSizeIn,iSizeIn
       if(DoMultiFluidIMCoupling)then
@@ -1211,7 +1211,7 @@ contains
        IM_lon =        Grid_C(IM_) % Coord2_I * cRadToDeg
     end if
 
-    ! Arrays needed for the field line integrals
+    ! Arrays needed for the field line Integral_I
     allocate( MHD_SUM_vol(isize,jsize))
     MHD_SUM_vol = 0.
 
@@ -1251,7 +1251,7 @@ contains
 
   subroutine write_integrated_data_tec
     use ModIoUnit, ONLY: UNITTMP_
-    CHARACTER (LEN=80) :: filename
+    CHARACTER (LEN=80) :: NameFile
     integer :: j2, nCall=0
     real :: tmpT, tmpV1,tmpV2, lonShift,tmpHpT,tmpOpT
     !--------------------------------------------------------------------------
@@ -1259,9 +1259,9 @@ contains
     nCall=nCall+1
 
     ! write values to plot file
-    write(filename,'(a,i6.6,a,i4.4,a)')"rayValues_n=",nStep,"_",nCall,".dat"
+    write(NameFile,'(a,i6.6,a,i4.4,a)')"rayValues_n=",nStep,"_",nCall,".dat"
 
-    OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
+    OPEN (UNIT=UNITTMP_, FILE=NameFile, STATUS='unknown')
     write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
     if(DoMultiFluidIMCoupling)then
        write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
@@ -1327,17 +1327,17 @@ contains
 
     use ModIoUnit, ONLY: UNITTMP_
     use ModMain,   ONLY: tSimulation
-    CHARACTER (LEN=100) :: filename
+    CHARACTER (LEN=100) :: NameFile
     integer :: nCall = 0
     !--------------------------------------------------------------------------
 
     ! write values to plot file
     nCall = nCall+1
-    write(filename,'(a,i6.6,a,i4.4,a)')"rayValues_n=",nStep,"_",nCall,".out"
+    write(NameFile,'(a,i6.6,a,i4.4,a)')"rayValues_n=",nStep,"_",nCall,".out"
 
-    OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
+    OPEN (UNIT=UNITTMP_, FILE=NameFile, STATUS='unknown', &
          iostat =iError)
-    if (iError /= 0) call CON_stop("Can not open raytrace File "//filename)
+    if (iError /= 0) call CON_stop("Can not open raytrace File "//NameFile)
     write(UNITTMP_,'(a79)')            'Raytrace Values_var22'
     write(UNITTMP_,'(i7,1pe13.5,3i3)') nStep,tSimulation,2,1,7
     write(UNITTMP_,'(3i4)')            jSize+1,iSize
@@ -1607,7 +1607,7 @@ contains
        end if
     end if
 
-    ! Assume GM -> IM direction in CON_couple_gm_im.f90
+    ! Assume GM -> iM direction in CON_couple_gm_im.f90
     allocate(iVarCouple_V(nVarCouple))
     iVarCouple_V = iVarSource_VCC(1:nVarCouple,iGm,iIm)
   end subroutine set_buffer_indexes

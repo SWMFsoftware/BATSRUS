@@ -392,7 +392,7 @@ contains
          .or.       any(plotvarnames(1:nPlotVar) == 'euv195') &
          .or.       any(plotvarnames(1:nPlotVar) == 'euv284')
 
-    ! Do we need to calc Soft X-Ray response?
+    ! Do we need to calc Soft X-Trace_DSNB response?
     UseSxr = any(plotvarnames(1:nPlotVar) == 'sxr')
 
     ! if EUV or SXR calc, then get lookup table info
@@ -462,16 +462,16 @@ contains
        end if
 
        ! the plot time is stored in the hdf5 files and displayed in VisIt.
-       ! if you don not include it in the filename VisIt will automacially
+       ! if you don not include it in the NameFile VisIt will automacially
        ! group all the los files.
        if(IsTimeAccurate .and. plot_form(ifile) /= 'hdf')then
           call get_time_string
-          write(filename,file_format) &
+          write(NameFile,file_format) &
                trim(plot_type1)//"_",&
                ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
                file_extension
        else
-          write(filename,file_format) &
+          write(NameFile,file_format) &
                trim(plot_type1)//"_",&
                ifile-plot_,"_n",nStep,file_extension
        end if
@@ -479,7 +479,7 @@ contains
        ! write header file
 
        if(plot_form(ifile)=='tec') then
-          call open_file(FILE=filename)
+          call open_file(FILE=NameFile)
 
           write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
           write(UnitTmp_,'(a)')trim(unitstr_TEC)
@@ -542,7 +542,7 @@ contains
           call close_file
        else
           ! description of file contains units, physics and dimension
-          StringHeadLine = 'LOS integrals'
+          StringHeadLine = 'LOS Integral_I'
           ! Write Auxilliary header info, which is useful for EUV images.
           ! Makes it easier to identify, and automatically process synthetic
           ! images from different instruments/locations
@@ -578,7 +578,7 @@ contains
 
           select case(plot_form(ifile))
           case('idl')
-             call save_plot_file(filename, &
+             call save_plot_file(NameFile, &
                   TypeFileIn = TypeFile_I(iFile), &
                   StringHeaderIn = StringHeadLine, &
                   nStepIn = nStep, &
@@ -590,7 +590,7 @@ contains
                   CoordMaxIn_D = [+aPix, +aPix], &
                   VarIn_VII = Image_VII)
           case('hdf')
-             call save_plot_file(filename, &
+             call save_plot_file(NameFile, &
                   TypeFileIn = 'hdf5', &
                   StringHeaderIn = StringHeadLine, &
                   nStepIn = nStep, &
@@ -778,12 +778,12 @@ contains
       iDimMin = r_
       if(present(UseThreads))then
          ! Integration through the threaded gap
-         ! The part of ray passing through the threaded gap does not
+         ! The part of Trace_DSNB passing through the threaded gap does not
          ! contribute to the integral if UseThreads = .false.
          if(.not.UseThreads)RETURN
          ! In the threaded gap, the radial coordinate is allowed to go beyond
          ! the block boundary and the domain boundary. The criterion for the
-         ! ray pass to a new block should ignore this coordinate.
+         ! Trace_DSNB pass to a new block should ignore this coordinate.
          iDimMin = r_ + 1
       end if
       if(DoTest .and. iProc == 0) then
@@ -1035,7 +1035,7 @@ contains
          CoordNorm_D = &
               (XyzBlockSign_D*XyzLos_D - CoordMinBlock_D)/CellSize_D + 0.5
       else
-         ! get gen coord of center point
+         ! get gen StringCoord of center point
          call xyz_to_coord(XyzBlockSign_D*XyzLos_D, GenLos_D)
 
          ! Normalized coordinates (to cell index)
@@ -1166,7 +1166,7 @@ contains
             Value = EuvResponse(3)*ResponseFactor
 
          case('sxr')
-            ! Soft X-Ray (Only one channel for now, can add others later)
+            ! Soft X-Trace_DSNB (Only one channel for now, can add others later)
             Value = SxrResponse(1)*ResponseFactor
 
          case('rho')
@@ -1669,7 +1669,7 @@ contains
             if(R2Point2 < rInner2) Point2_D = Solution1_D
             ! Weird case: the segment cuts the inner sphere
             if(IsGoodSolution1 .and. IsGoodSolution2)then
-               ! Need to do two integrals:
+               ! Need to do two Integral_I:
                ! from point1 to solution1 and
                ! from point2 to solution2
                if(Discr > 0.0)then

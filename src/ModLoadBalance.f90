@@ -18,7 +18,7 @@ module ModLoadBalance
   use ModPointImplicit, ONLY: UseUserPointImplicit_B, &
        DoBalancePointImplicit, IsDynamicPointImplicit
   use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
-  use ModFieldTrace, ONLY: ray
+  use ModFieldTrace, ONLY: Trace_DSNB
   use ModAdvance, ONLY: nVar
   use ModB0, ONLY: B0_DGB
   use ModIo, ONLY: log_vars
@@ -160,7 +160,7 @@ contains
     if(DoSendRay)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
           iData = iData+1
-          Buffer_I(iData) = ray(i1,i2,i,j,k,iBlock)
+          Buffer_I(iData) = Trace_DSNB(i1,i2,i,j,k,iBlock)
        end do; end do; end do; end do; end do
     end if
 
@@ -233,7 +233,7 @@ contains
     if(DoSendRay)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
           iData = iData+1
-          ray(i1,i2,i,j,k,iBlock) = Buffer_I(iData)
+          Trace_DSNB(i1,i2,i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do; end do; end do
     end if
 

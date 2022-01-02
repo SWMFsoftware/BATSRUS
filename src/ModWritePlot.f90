@@ -112,7 +112,7 @@ contains
 
     character (len=10) :: NamePlotVar
 
-    ! Event date for filename
+    ! Event date for NameFile
     character (len=3)  :: NameExt
     character (len=19) :: StringDateTime
 
@@ -329,12 +329,12 @@ contains
        end if
     elseif(plot_form(iFile)=='hdf') then
        ! Only one plotfile will be generated, so do not include PE number
-       ! in filename. ModHdf5 will handle opening the file.
-       filename = trim(NameSnapshot)//".batl"
+       ! in NameFile. ModHdf5 will handle opening the file.
+       NameFile = trim(NameSnapshot)//".batl"
     else
        ! For IDL just open one file
-       filename = trim(NameSnapshot)//trim(NameProc)
-       call open_file(FILE=filename, form=TypeForm)
+       NameFile = trim(NameSnapshot)//trim(NameProc)
+       call open_file(FILE=NameFile, form=TypeForm)
     end if
 
     IsNonCartesianPlot = .not.IsCartesianGrid
@@ -496,7 +496,7 @@ contains
 
        call get_idl_units(iFile, nplotvar,plotvarnames, NamePlotUnit_V, &
             unitstr_IDL)
-       call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
+       call write_plot_hdf5(NameFile, plot_type1(1:3), plotVarNames, &
             NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
             .false., plot_dimensional(iFile), &
             xmin, xmax, ymin, ymax, zmin, zmax)
@@ -600,16 +600,16 @@ contains
 
        select case(plot_form(iFile))
        case('tec','tcp')
-          filename = trim(NameSnapshot) // ".T"
+          NameFile = trim(NameSnapshot) // ".T"
        case('idl')
-          filename = trim(NameSnapshot) // ".h"
+          NameFile = trim(NameSnapshot) // ".h"
        end select
 
-       call open_file(FILE=filename)
+       call open_file(FILE=NameFile)
 
        select case(plot_form(iFile))
        case('tec','tcp')
-          write(UnitTmp_,'(a)')filename
+          write(UnitTmp_,'(a)')NameFile
           write(UnitTmp_,'(i8,a)')nProc,' nProc'
           write(UnitTmp_,'(i8,a)')nStep,' nStep'
           write(UnitTmp_,'(1pe18.10,a)')tSimulation,' t'
@@ -620,7 +620,7 @@ contains
                ' thetatilt[deg] phitilt[deg]'
        case('idl')
           write(UnitTmp_,'(a)') '#HEADFILE'
-          write(UnitTmp_,'(a)') filename
+          write(UnitTmp_,'(a)') NameFile
           write(UnitTmp_,'(i8,16x,a)') nProc, 'nProc'
           write(UnitTmp_,'(l8,16x,a)') IsBinary, 'IsBinary'
           if(IsBinary) &
@@ -743,8 +743,8 @@ contains
          (    plot_type1(1:3) == '3d_'               &
          .or. plot_type1(1:3) == '2d_' .and. nDim<=2 &
          .or. plot_type1(1:3) == '1d_' .and. nDim==1 ) )then
-       filename = trim(NameSnapshot)//'.tree'
-       call write_tree_file(filename)
+       NameFile = trim(NameSnapshot)//'.tree'
+       call write_tree_file(NameFile)
     end if
 
     if(DoTest)write(*,*) NameSub,' finished'
@@ -1009,7 +1009,7 @@ contains
     use ModPhysics, ONLY: BodyRho_I, BodyP_I, OmegaBody, FaceState_VI, &
          ElectronPressureRatio, RhoBody2, pBody2, rBody2
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
-    use ModFieldTrace, ONLY: ray
+    use ModFieldTrace, ONLY: Trace_DSNB
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
          plot_dimensional, Plot_
@@ -1563,12 +1563,12 @@ contains
              itmp = 3 ; jtmp = 1
           end select
 
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = ray(itmp,jtmp,1:nI,1:nJ,1:nK,iBlock)
+          PlotVar(1:nI,1:nJ,1:nK,iVar) = Trace_DSNB(itmp,jtmp,1:nI,1:nJ,1:nK,iBlock)
           ! Now load the face ghost cells with the first computation
           ! cell on each face.  This is a bad approximation but is
           ! needed for Tecplot.  It will be fixed later using message
           ! passing
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = ray(itmp,jtmp,1:nI,1:nJ,1:nK,iBlock)
+          PlotVar(1:nI,1:nJ,1:nK,iVar) = Trace_DSNB(itmp,jtmp,1:nI,1:nJ,1:nK,iBlock)
 
           ! GRID INFORMATION
        case('crit1')
@@ -2086,7 +2086,7 @@ contains
     do iDim = 1, nDim
        iMin = 2*iDim - 1; iMax = iMin+1
 
-       ! Skip ignored dimensions of 2D and 1D cuts
+       ! DoSkip ignored dimensions of 2D and 1D cuts
        if(PlotRange_I(iMax) - PlotRange_I(iMin) <= 1.5*PlotRes_D(iDim)) CYCLE
 
        ! Shift plot range slightly outward

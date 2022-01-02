@@ -77,7 +77,7 @@ contains
     real:: Convert_DD(3,3)
     integer:: iVar, iBlock
 
-    ! Event date for filename
+    ! Event date for NameFile
     character(len=19) :: EventDateTime
 
     ! Header for the sat file in time accurate
@@ -217,24 +217,24 @@ contains
 
           if(unit_log < 0)then
              unit_log = io_unit_new()
-             filename = trim(NamePlotDir) // 'log'
+             NameFile = trim(NamePlotDir) // 'log'
 
              if(IsLogName_e)then
                 ! Event date added to log file name
                 call get_date_time(iTime_I)
                 write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
-                filename = trim(filename) // '_e' // trim(eventDateTime)
+                NameFile = trim(NameFile) // '_e' // trim(eventDateTime)
              else
                 if(nStep < 1000000)then
-                   write(filename,'(a,i6.6)') trim(filename)//'_n',nStep
+                   write(NameFile,'(a,i6.6)') trim(NameFile)//'_n',nStep
                 else
-                   write(filename,'(a,i8.8)') trim(filename)//'_n',nStep
+                   write(NameFile,'(a,i8.8)') trim(NameFile)//'_n',nStep
                 end if
              end if
 
-             filename = trim(filename) // '.log'
+             NameFile = trim(NameFile) // '.log'
 
-             call open_file(unit_log, FILE=filename)
+             call open_file(unit_log, FILE=NameFile)
              if (index(NameAll,'pnt')>0 .or. index(NameAll,'PNT')>0 &
                   .or. index(NameAll,'test')>0) then
                 if (UseTestXyz) then
@@ -278,21 +278,21 @@ contains
              iUnitParcel_I(iParcel) = io_unit_new()
              iUnit = iUnitParcel_I(iParcel)
              write(ParcelFile, '(i2.2)') iParcel
-             filename = trim(NamePlotDir) // 'pcl'//'_'//ParcelFile//'_'
+             NameFile = trim(NamePlotDir) // 'pcl'//'_'//ParcelFile//'_'
              if (IsTimeAccurate) then
                 call get_date_time(iTime_I)
                 write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
-                filename = trim(filename)//'_t' //trim(eventDateTime)
+                NameFile = trim(NameFile)//'_t' //trim(eventDateTime)
              else
                 if(nStep < 1000000)then
-                   write(filename,'(a,i6.6)') trim(filename)//'_n',nStep
+                   write(NameFile,'(a,i6.6)') trim(NameFile)//'_n',nStep
                 else
-                   write(filename,'(a,i8.8)') trim(filename)//'_n',nStep
+                   write(NameFile,'(a,i8.8)') trim(NameFile)//'_n',nStep
                 end if
              end if
-             filename = trim(filename) // '.pcl'
+             NameFile = trim(NameFile) // '.pcl'
 
-             call open_file(iUnit, FILE=filename)
+             call open_file(iUnit, FILE=NameFile)
              write(iUnit,'(a)')'Lagrangian parcel path'
              write(iUnit,'(a)') trim(NameAll)
           endif
@@ -395,7 +395,7 @@ contains
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
     use ModGeometry, ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, DomainVolume
-    use ModFieldTrace, ONLY: ray
+    use ModFieldTrace, ONLY: Trace_DSNB
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
     use ModIO, ONLY: write_myname, lNameLogVar,Parcel_DI
@@ -468,7 +468,7 @@ contains
                + StateSat_V(rho_)*OmegaBody*XyzSat_DI(x_,iSat)
        end if
 
-       ! If any ray tracing satellite variables are present, collect ray data
+       ! If any Trace_DSNB tracing satellite variables are present, collect Trace_DSNB data
        do iVar=1, nLogVar
           select case(NameLogVar_I(iVar))
           case('theta1','theta2','phi1','phi2','status')
@@ -960,25 +960,25 @@ contains
          end select
          do iBlock = 1, nBlock
             if(Unused_B(iBlock)) CYCLE
-            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = ray(i,j,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = Trace_DSNB(i,j,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
          ! RAYTRACE variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('theta1pnt')
          if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = ray(1,1,iTest,jTest,kTest,iBlockTest)
+              LogVar_I(iVarTot) = Trace_DSNB(1,1,iTest,jTest,kTest,iBlockTest)
       case('theta2pnt')
          if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = ray(1,2,iTest,jTest,kTest,iBlockTest)
+              LogVar_I(iVarTot) = Trace_DSNB(1,2,iTest,jTest,kTest,iBlockTest)
       case('phi1pnt')
          if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = ray(2,1,iTest,jTest,kTest,iBlockTest)
+              LogVar_I(iVarTot) = Trace_DSNB(2,1,iTest,jTest,kTest,iBlockTest)
       case('phi2pnt')
          if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = ray(2,2,iTest,jTest,kTest,iBlockTest)
+              LogVar_I(iVarTot) = Trace_DSNB(2,2,iTest,jTest,kTest,iBlockTest)
       case('statuspnt')
          if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = ray(3,1,iTest,jTest,kTest,iBlockTest)
+              LogVar_I(iVarTot) = Trace_DSNB(3,1,iTest,jTest,kTest,iBlockTest)
       case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&
            'cpcps','cpcp_s','cpcp_south','cpcpsouth')
          ! It is sufficient to calculate it on processor 0
@@ -1090,7 +1090,7 @@ contains
             LogVar_I(iVarTot) = calc_sphere('integrate',360, r,Tmp1_GB)
          end do
 
-         ! simple circular integrals
+         ! simple circular Integral_I
       case('e2dflx')
          ! this is the azimuthal component of the electric field
          ! integrated around a circle

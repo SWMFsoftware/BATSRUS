@@ -923,7 +923,7 @@ contains
       use ModWriteTecplot,      ONLY: assign_node_numbers
       use ModFieldTrace,        ONLY: &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
-      use ModFieldTraceFast,    ONLY: trace_field_grid, ray
+      use ModFieldTraceFast,    ONLY: trace_field_grid, Trace_DSNB
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
       use ModAdvance,           ONLY: State_VGB
@@ -1041,10 +1041,10 @@ contains
                DoAssignNodeNumbers = .false.
             end if
 
-            if(  index(plot_type(iFile),'ray')>0 .or. &
+            if(  index(plot_type(iFile),'Trace_DSNB')>0 .or. &
                  index(plot_vars(iFile),'status')>0)then
                call trace_field_grid
-               call sync_cpu_gpu('update on CPU', NameSub, Trace_DICB=ray)
+               call sync_cpu_gpu('update on CPU', NameSub, Trace_DICB=Trace_DSNB)
             end if
 
             call timing_start('save_plot')

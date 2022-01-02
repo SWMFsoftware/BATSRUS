@@ -25,7 +25,7 @@ module ModImCoupling
   public:: im_pressure_init
   public:: apply_im_pressure
 
-  ! The number of IM pressures obtained so far
+  ! The number of iM pressures obtained so far
   integer, public :: iNewPIm = 0
 
   real, public, allocatable   :: IM_lat(:), IM_lon(:)
@@ -48,7 +48,7 @@ module ModImCoupling
 
   integer :: iLastPIm = -1, iLastGrid = -1, iLastDecomposition = -1
 
-  ! The size of the IM grid
+  ! The size of the iM grid
   integer :: iSize, jSize
   !$acc declare create(iSize, jSize)
 
@@ -71,7 +71,7 @@ contains
     use ModVarIndexes, ONLY: Rho_, SpeciesFirst_
     use ModMultiFluid, ONLY: iRho_I
 
-    integer, intent(in):: iSizeIn, jSizeIn ! size of IM grid
+    integer, intent(in):: iSizeIn, jSizeIn ! size of iM grid
 
     integer:: iDensity
 
@@ -143,7 +143,7 @@ contains
 
     use ModMain,     ONLY : DoFixPolarRegion, rFixPolarRegion, &
          dLatSmoothIm, UseB0
-    use ModFieldTrace, ONLY : ray
+    use ModFieldTrace, ONLY : Trace_DSNB
     use ModPhysics,  ONLY : &
          Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
     use ModGeometry, ONLY : r_GB, Xyz_DGB, z_
@@ -161,7 +161,7 @@ contains
     ! variables for anisotropic pressure coupling
     real :: Pperp, PperpInvPpar, Coeff
 
-    ! Keep track if IM grid is defined in the northern of southern hemisphere
+    ! Keep track if iM grid is defined in the northern of southern hemisphere
     logical :: IsSouthImGrid = .false.
 
     ! integer :: iIonSecond, nIons
@@ -179,11 +179,11 @@ contains
     !   nIons = 1
     ! end if
 
-    ! Maximum latitude (ascending or descending) of the IM grid
+    ! Maximum latitude (ascending or descending) of the iM grid
     LatMaxIm = max(IM_lat(1), IM_lat(iSize))
     LatMinIm = min(IM_lat(1), IM_lat(iSize))
 
-    ! Determine if IM grid is defined in the north or south
+    ! Determine if iM grid is defined in the north or south
     if (LatMaxIm < 0.0) then
        IsSouthImGrid = .true.
     else
@@ -204,26 +204,26 @@ contains
        if(UseAnisoPressure) &
             PparIm_ICB(:,i,j,k,iBlock)   = -1.0
 
-       ! For closed field lines nudge towards IM pressure/density
-       if(nint(ray(3,1,i,j,k,iBlock)) == 3) then
+       ! For closed field lines nudge towards iM pressure/density
+       if(nint(Trace_DSNB(3,1,i,j,k,iBlock)) == 3) then
 
-          ! Map the point down to the IM grid
-          ! Note: ray values are in SM coordinates!
+          ! Map the point down to the iM grid
+          ! Note: Trace_DSNB values are in SM coordinates!
           if (IsSouthImGrid) then
-             Lat = ray(1,2,i,j,k,iBlock)
+             Lat = Trace_DSNB(1,2,i,j,k,iBlock)
           else
-             Lat = ray(1,1,i,j,k,iBlock)
+             Lat = Trace_DSNB(1,1,i,j,k,iBlock)
           endif
 
           ! write(*,*) i,j,k,iBlock,Xyz_DGB(1:3,i,j,k,iBlock),
-          !    Lat,ray(1,2,i,j,k,iBlock),LatMaxIm
-          ! Do not modify pressure along field lines outside the IM grid
+          !    Lat,Trace_DSNB(1,2,i,j,k,iBlock),LatMaxIm
+          ! Do not modify pressure along field lines outside the iM grid
           if(Lat > LatMaxIm .or. Lat < LatMinIm) CYCLE
 
           if (IsSouthImGrid) then
-             Lon = ray(2,2,i,j,k,iBlock)
+             Lon = Trace_DSNB(2,2,i,j,k,iBlock)
           else
-             Lon = ray(2,1,i,j,k,iBlock)
+             Lon = Trace_DSNB(2,1,i,j,k,iBlock)
           endif
 
           if (IM_lat(1) > IM_lat(2)) then
@@ -235,7 +235,7 @@ contains
              LatWeight1 = (Lat - IM_lat(iLat2))/(IM_lat(iLat1) - IM_lat(iLat2))
              LatWeight2 = 1 - LatWeight1
           else
-             ! IM lat is in ascending order
+             ! iM lat is in ascending order
              do iLat1 = 2, iSize
                 if(Lat < IM_lat(iLat1)) EXIT
              end do
@@ -270,7 +270,7 @@ contains
 
           if(DoCoupleImDensity) then
              DENSITY: do iDensity=1,nDensity
-                ! check if density is available from IM, if not cycle to next
+                ! check if density is available from iM, if not cycle to next
                 if (.not. IsImRho_I(iDensity)) CYCLE DENSITY
                 if(  ImRho_CV(iLat1,iLon1,iDensity) > 0.0 .and. &
                      ImRho_CV(iLat2,iLon1,iDensity) > 0.0 .and. &
@@ -286,7 +286,7 @@ contains
           endif
 
           FLUID: do iFluid=1,nFluid
-             ! check if fluid is available from IM, if not cycle to next
+             ! check if fluid is available from iM, if not cycle to next
              if (.not. IsImP_I(iFluid)) CYCLE FLUID
              if(  ImP_CV(iLat1,iLon1,iFluid) > 0.0 .and. &
                   ImP_CV(iLat2,iLon1,iFluid) > 0.0 .and. &
@@ -364,7 +364,7 @@ contains
           end do FLUID
        end if
 
-       ! If the pressure is not set by IM, and DoFixPolarRegion is true
+       ! If the pressure is not set by iM, and DoFixPolarRegion is true
        ! and the cell is within radius rFixPolarRegion and flow points outward
        ! then nudge the pressure (and density) towards the "polarregion" values
        if(pIm_ICB(1,i,j,k,iBlock) < 0.0 .and. DoFixPolarRegion .and. &
@@ -397,7 +397,7 @@ contains
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModFieldTraceFast, ONLY: trace_field_grid, ray
+    use ModFieldTraceFast, ONLY: trace_field_grid, Trace_DSNB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
     real :: Factor
@@ -413,7 +413,7 @@ contains
     character(len=*), parameter:: NameSub = 'apply_im_pressure'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(iNewPIm < 1) RETURN ! No IM pressure has been obtained yet
+    if(iNewPIm < 1) RETURN ! No iM pressure has been obtained yet
 
     ! Are we coupled at all?
     if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN
@@ -425,14 +425,14 @@ contains
     ! Set density floor in normalized units
     if(DoCoupleImDensity) RhoMinIm = Io2No_V(UnitRho_)*RhoMinDimIm
 
-    ! redo ray tracing if necessary
+    ! redo Trace_DSNB tracing if necessary
     ! (load_balance takes care of new decomposition)
     if(iNewPIm > iLastPIm .or. iNewGrid > iLastGrid) then
        if(DoTest)write(*,*)'GM_apply_im_pressure: call trace_field_grid ',&
             'iNewPIm,iLastPIm,iNewGrid,iLastGrid=',&
             iNewPIm,iLastPIm,iNewGrid,iLastGrid
        call trace_field_grid
-       call sync_cpu_gpu('update on GPU', NameSub, Trace_DICB=ray)
+       call sync_cpu_gpu('update on GPU', NameSub, Trace_DICB=Trace_DSNB)
     end if
 
     if(iNewPIm > iLastPIm .or. iNewDecomposition > iLastDecomposition)then
@@ -450,21 +450,21 @@ contains
     iLastGrid          = iNewGrid;
     iLastDecomposition = iNewDecomposition
 
-    ! Now use the pressure from the IM to nudge the pressure in the MHD code.
+    ! Now use the pressure from the iM to nudge the pressure in the MHD code.
     ! This will happen only on closed magnetic field lines.
-    ! Determining which field lines are closed is done by using the ray
+    ! Determining which field lines are closed is done by using the Trace_DSNB
     ! tracing.
 
     if(IsTimeAccurate)then
        ! Ramp up is based on physical time: p' = p + min(1,dt/tau) * (pIM - p)
-       ! A typical value might be 5, to get close to the IM pressure
+       ! A typical value might be 5, to get close to the iM pressure
        ! in 10 seconds. Dt/Tau is limited to 1, when p' = pIM is set
 
        Factor = min(1.0, Dt/(TauCoupleIM*Io2No_V(UnitT_)))
 
     else
        ! Ramp up is based on number of iterations: p' = (ntau*p + pIm)/(1+ntau)
-       ! A typical value might be 20, to get close to the IM pressure
+       ! A typical value might be 20, to get close to the iM pressure
        ! in 20 iterations
 
        Factor = 1.0/(1 + TauCoupleIM)
@@ -528,7 +528,7 @@ contains
              end if
           end if
           if(DoCoupleImDensity)then
-             ! Negative first fluid density signals cells not covered by IM
+             ! Negative first fluid density signals cells not covered by iM
              ! APPLY_DENS:
              !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI

@@ -28,14 +28,14 @@ module ModFieldTraceFast
 
   private ! except
   public:: trace_field_grid           ! trace field from 3D MHD grid cells
-  public:: ray                        ! inherited from ModFieldTrace
+  public:: Trace_DSNB                        ! inherited from ModFieldTrace
 
   ! Local variables
   logical, parameter:: DoDebug = .false.
 
   ! Trace_DINB contains the x,y,z coordinates for the foot point of a given
   ! field line for both directions, eg.
-  ! Trace_DINB(2,1,i,j,k,iBlock) is the y coord for direction 1
+  ! Trace_DINB(2,1,i,j,k,iBlock) is the y StringCoord for direction 1
   ! trace for node i,j,k of block iBlock.
 
   real, allocatable :: Trace_DINB(:,:,:,:,:,:)
@@ -82,9 +82,9 @@ contains
          allocate(b_DNB(3,nI+1,nJ+1,nK+1,MaxBlock))
     if(.not.allocated(b_DGB)) &
          allocate(b_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    if(.not.allocated(ray))then
-       allocate(ray(3,2,nI+1,nJ+1,nK+1,MaxBlock))
-       ray = 0.0
+    if(.not.allocated(Trace_DSNB))then
+       allocate(Trace_DSNB(3,2,nI+1,nJ+1,nK+1,MaxBlock))
+       Trace_DSNB = 0.0
     end if
 
   end subroutine init_mod_trace_fast
@@ -96,13 +96,13 @@ contains
     if(allocated(WeightTrace_DINB)) deallocate(WeightTrace_DINB)
     if(allocated(b_DNB))            deallocate(b_DNB)
     if(allocated(b_DGB))            deallocate(b_DGB)
-    if(allocated(ray))              deallocate(ray)
+    if(allocated(Trace_DSNB))              deallocate(Trace_DSNB)
 
   end subroutine clean_mod_trace_fast
   !============================================================================
   subroutine trace_field_grid
 
-    ! This parallel ray tracing algorithm was developed at the U.of M.
+    ! This parallel Trace_DSNB tracing algorithm was developed at the U.of M.
     ! by G. Toth and D. De Zeeuw. An overview of the scheme can be found in
     !
     ! D. L. De Zeeuw, S. Sazykin, R. A. Wolf, T. I. Gombosi,
@@ -157,10 +157,10 @@ contains
 
     if(UseAccurateTrace .or. .not.IsCartesianGrid)then
        call trace_grid_accurate
-       call sync_cpu_gpu('change on CPU', NameSub, Trace_DICB=ray)
+       call sync_cpu_gpu('change on CPU', NameSub, Trace_DICB=Trace_DSNB)
     else
        call trace_grid_fast
-       call sync_cpu_gpu('change on GPU', NameSub, Trace_DICB=ray)
+       call sync_cpu_gpu('change on GPU', NameSub, Trace_DICB=Trace_DSNB)
     end if
 
     call timing_stop(NameSub)
@@ -192,10 +192,10 @@ contains
     ! True if rMin_B < rTrace
     logical :: DoCheckInside
 
-    ! Face index for the final point of the ray
+    ! Face index for the final point of the Trace_DSNB
     integer :: iFace
 
-    ! Current position of ray in normalized and physical coordinates
+    ! Current position of Trace_DSNB in normalized and physical coordinates
     real :: Gen_D(3)
 
     ! Cell indices corresponding to current or final Gen_D position
@@ -208,9 +208,9 @@ contains
     real :: Weight_I(4)
 
     ! Cell indices
-    integer :: i, j, k, ii, jj, kk, iCount
+    integer :: i, j, k, i0, j0, k0, iCount
 
-    ! Indices corresponding to the starting point of the ray
+    ! Indices corresponding to the starting point of the Trace_DSNB
     integer :: iX, iY, iZ
 
     ! Current block and direction indices
@@ -259,30 +259,36 @@ contains
        ! A: Since this kernel is already short and fast, replacing the
        !    following array operations with loops does not improve speed.
        if(Unused_B(iBlock))then
-          ! Trace_DINB in unused blocks is assigned to NORAY-1.
-          Trace_DINB(:,:,:,:,:,iBlock) = NORAY-1.
+          ! Trace_DINB in unused blocks is assigned to NoRay-1.
+          Trace_DINB(:,:,:,:,:,iBlock) = NoRay-1.
           CYCLE
        else
-          ! Initial values !!! Maybe LOOPRAY would be better??
-          Trace_DINB(:,:,:,:,:,iBlock) = NORAY
-          ray(:,:,:,:,:,iBlock) = NORAY
+          ! Initial values !!! Maybe LoopRay would be better??
+          Trace_DINB(:,:,:,:,:,iBlock) = NoRay
+          Trace_DSNB(:,:,:,:,:,iBlock) = NoRay
        endif
        ! Inner points of Trace_DINB should never be used, assign them to OPEN
        ! so that checking for blocks with fully open rays becomes easy
        Trace_DINB(:,:,2:nI,2:nJ,2:nK,iBlock)=OPENRAY
 
        ! Set Trace_DINB=OPENRAY at outer boundaries
-       if(DiLevel_EB(1,iBlock)==Unset_) Trace_DINB(:,:,   1,:,:,iBlock) = OPENRAY
-       if(DiLevel_EB(2,iBlock)==Unset_) Trace_DINB(:,:,nI+1,:,:,iBlock) = OPENRAY
-       if(DiLevel_EB(3,iBlock)==Unset_) Trace_DINB(:,:,:,   1,:,iBlock) = OPENRAY
-       if(DiLevel_EB(4,iBlock)==Unset_) Trace_DINB(:,:,:,nJ+1,:,iBlock) = OPENRAY
-       if(DiLevel_EB(5,iBlock)==Unset_) Trace_DINB(:,:,:,:,   1,iBlock) = OPENRAY
-       if(DiLevel_EB(6,iBlock)==Unset_) Trace_DINB(:,:,:,:,nK+1,iBlock) = OPENRAY
+       if(DiLevel_EB(1,iBlock)==Unset_) &
+            Trace_DINB(:,:,   1,:,:,iBlock) = OPENRAY
+       if(DiLevel_EB(2,iBlock)==Unset_) &
+            Trace_DINB(:,:,nI+1,:,:,iBlock) = OPENRAY
+       if(DiLevel_EB(3,iBlock)==Unset_) &
+            Trace_DINB(:,:,:,   1,:,iBlock) = OPENRAY
+       if(DiLevel_EB(4,iBlock)==Unset_) &
+            Trace_DINB(:,:,:,nJ+1,:,iBlock) = OPENRAY
+       if(DiLevel_EB(5,iBlock)==Unset_) &
+            Trace_DINB(:,:,:,:,   1,iBlock) = OPENRAY
+       if(DiLevel_EB(6,iBlock)==Unset_) &
+            Trace_DINB(:,:,:,:,nK+1,iBlock) = OPENRAY
 
     end do
 
 #ifndef _OPENACC
-    if(DoTest)write(*,*)NameSub,' initialized ray and Trace_DINB arrays'
+    if(DoTest)write(*,*)NameSub,' initialized Trace_DSNB and Trace_DINB arrays'
 #endif
 
     ! Interpolate the B1 field to the nodes
@@ -336,8 +342,9 @@ contains
 
           !$acc loop vector collapse(3)
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
-             ! Store Trace_DINB into ray so we can see if there is any change
-             ray(:,:,iX,iY,iZ,iBlock) = Trace_DINB(:,:,iX,iY,iZ,iBlock)
+             ! Store Trace_DINB into Trace_DSNB
+             ! so we can see if there is any change
+             Trace_DSNB(:,:,iX,iY,iZ,iBlock) = Trace_DINB(:,:,iX,iY,iZ,iBlock)
           end do; end do; end do
 
           if(Unused_B(iBlock)) CYCLE
@@ -347,7 +354,7 @@ contains
 
           !$acc loop vector collapse(3) independent &
           !$acc private(Gen_D, GenIni_D, Weight_I, Trace_DI, &
-          !$acc         ii, jj, kk, iCount)
+          !$acc         i0, j0, k0, iCount)
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
              ! Exclude inside points
              if(iX>1 .and. iX<=nI .and. iY>1 .and. iY<=nJ &
@@ -361,16 +368,17 @@ contains
              if(DiLevel_EB(3,iBlock)==Unset_ .and. iY==   1) CYCLE
              if(DiLevel_EB(4,iBlock)==Unset_ .and. iY==nJ+1) CYCLE
 
-             if(DoTestRay)write(*,*)'TESTING RAY: me,iBlock,iX,iY,iZ,Xyz_D',&
+             if(DoTestRay)write(*,*) &
+                  'TESTING Trace_DSNB: me,iBlock,iX,iY,iZ,Xyz_D',&
                   iProc,iBlock,iX,iY,iZ,&
                   Xyz_DGB(:,iX,iY,iZ,iBlock)-0.5*CellSize_DB(:,iBlock)
 
              if(nIterTrace==0)then
                 do iRay = 1, 2
-                   ! Follow ray in direction iRay
+                   ! Follow Trace_DSNB in direction iRay
                    GenIni_D = [iX-0.5, iY-0.5, iZ-0.5]
-                   iFace = follow_fast(.true., Gen_D, GenIni_D, DoCheckInside,&
-                        iRay, iBlock)
+                   iFace = follow_fast(.true., Gen_D, GenIni_D, &
+                        DoCheckInside, iRay, iBlock)
 
                    ! Assign value to Trace_DINB
                    call assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
@@ -378,7 +386,7 @@ contains
                         .true.,Trace_DINB(:,iRay,iX,iY,iZ,iBlock), Gen_D,&
                         Weight_I, .true.)
 
-                   ! Memorize ray integration results
+                   ! Memorize Trace_DSNB integration results
                    I_DINB(1,iRay,iX,iY,iZ,iBlock) = iFace
                    if(iFace>0)then
                       select case(iFace)
@@ -426,8 +434,9 @@ contains
 
                       ! Put interpolation values into a small array
                       iCount = 1
-                      do kk = k1, k2; do jj = j1, j2; do ii = i1, i2
-                         Trace_DI(:,iCount) = ray(:,iRay,ii,jj,kk,iBlock)
+                      do k0 = k1, k2; do j0 = j1, j2; do i0 = i1, i2
+                         Trace_DI(:,iCount) = &
+                              Trace_DSNB(:,iRay,i0,j0,k0,iBlock)
                          iCount = iCount + 1
                       end do; end do; end do
                       call rayface_interpolate(Trace_DI, &
@@ -464,11 +473,11 @@ contains
           !$acc loop vector collapse(3) reduction(.and.:DoneChange,DoneLoop)
           do k = 1,nK+1; do j = 1,nJ+1; do i = 1,nI+1
              DoneChange = DoneChange .and. &
-                  all(abs(ray(:,:,i,j,k,iBlock) &
+                  all(abs(Trace_DSNB(:,:,i,j,k,iBlock) &
                   -       Trace_DINB(:,:,i,j,k,iBlock)) < dTraceMin)
              DoneLoop = DoneLoop .and. &
-                  Trace_DINB(1,1,i,j,k,iBlock) > LOOPRAY .and. &
-                  Trace_DINB(1,2,i,j,k,iBlock) > LOOPRAY
+                  Trace_DINB(1,1,i,j,k,iBlock) > LoopRay .and. &
+                  Trace_DINB(1,2,i,j,k,iBlock) > LoopRay
           end do; end do; end do
        end do
 
@@ -486,7 +495,7 @@ contains
           ! Check for loops
           if(DoneLoop) EXIT
           if(UsePreferredInterpolation)then
-             if(iProc==0)call error_report('ray tracing, nIterTrace=',&
+             if(iProc==0)call error_report('Trace_DSNB tracing, nIterTrace=',&
                   nIterTrace+0.0,iError1,.true.)
              EXIT
           endif
@@ -495,7 +504,7 @@ contains
           !$acc update device(UsePreferredInterpolation)
        end if
 
-    end do ! ray iteration
+    end do ! Trace_DSNB iteration
 
     call timing_stop("trace_iter")
 
@@ -507,7 +516,7 @@ contains
           if(Unused_B(iBlock))CYCLE
           do iRay=1,2
              if(any(Trace_DINB(1,iRay,1:nI,1:nJ,1:nK,iBlock)<BODYRAY))then
-                Ijk_D=minloc(Trace_DINB(1,iRay,1:nI,1:nJ,1:nK,iBlock))
+                Ijk_D = minloc(Trace_DINB(1,iRay,1:nI,1:nJ,1:nK,iBlock))
                 write(*,*)'LOOPRAYFACE: iRay,me,Ijk_D,value,Xyz_D=',&
                      iRay,iProc,Ijk_D,iBlock,&
                      minval(Trace_DINB(1,iRay,1:nI,1:nJ,1:nK,iBlock)),&
@@ -530,7 +539,7 @@ contains
 
     call timing_start('trace_grid_fast2')
 
-    ! Assign face ray values to cell centers
+    ! Assign face Trace_DSNB values to cell centers
     !$acc parallel loop gang
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -543,7 +552,7 @@ contains
           ! Some optimization for fully open blocks
           if(.not.DoCheckInside)then
              if(all(Trace_DINB(1,iRay,:,:,:,iBlock)==OPENRAY))then
-                ray(:,iRay,:,:,:,iBlock)=OPENRAY
+                Trace_DSNB(:,iRay,:,:,:,iBlock)=OPENRAY
                 CYCLE
              end if
           end if
@@ -554,7 +563,7 @@ contains
              ! Shortcuts for inner and false cells
              if(r_GB(iX,iY,iZ,iBlock) < rInner .or. &
                   .not.Used_GB(iX,iY,iZ,iBlock))then
-                ray(:,iRay,iX,iY,iZ,iBlock)=BODYRAY
+                Trace_DSNB(:,iRay,iX,iY,iZ,iBlock)=BODYRAY
 
                 if(DoTestRay)write(*,*)'BODYRAY'
 
@@ -563,17 +572,17 @@ contains
 
              if(DoTestRay)write(*,*)'calling follow_fast'
 
-             ! Follow ray in direction iRay
+             ! Follow Trace_DSNB in direction iRay
              GenIni_D = [real(iX), real(iY), real(iZ)]
              iFace = follow_fast(.false., Gen_D, GenIni_D, DoCheckInside, &
                   iRay, iBlock)
 
              if(DoTestRay)write(*,*)'calling assign_ray'
 
-             ! Assign value to ray
+             ! Assign value to Trace_DSNB
              call assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
                   i1, j1, k1, i2, j2, k2, &
-                  .false., ray(:,iRay,iX,iY,iZ,iBlock), Gen_D, Weight_I)
+                  .false., Trace_DSNB(:,iRay,iX,iY,iZ,iBlock), Gen_D, Weight_I)
 
           end do; end do; end do ! iX, iY, iZ
        end do ! iRay
@@ -581,19 +590,19 @@ contains
 
     call timing_stop('trace_grid_fast2')
 
-    if(DoTest)write(*,*)NameSub,' finished with ray=',&
-         ray(:,:,iTest,jTest,kTest,iBlockTest)
+    if(DoTest)write(*,*)NameSub,' finished with Trace_DSNB=',&
+         Trace_DSNB(:,:,iTest,jTest,kTest,iBlockTest)
 
     if(DoTest)then
        ! Check for unassigned cell centers
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
           do iRay=1,2
-             if(any(ray(1,iRay,1:nI,1:nJ,1:nK,iBlock)<BODYRAY))then
-                Ijk_D=minloc(ray(1,iRay,1:nI,1:nJ,1:nK,iBlock))
-                write(*,*)'LOOPRAY: iRay,me,Ijk_D,value,Xyz_D=',&
+             if(any(Trace_DSNB(1,iRay,1:nI,1:nJ,1:nK,iBlock)<BODYRAY))then
+                Ijk_D = minloc(Trace_DSNB(1,iRay,1:nI,1:nJ,1:nK,iBlock))
+                write(*,*)'LoopRay: iRay,me,Ijk_D,value,Xyz_D=',&
                      iRay,iProc,Ijk_D,iBlock,&
-                     minval(ray(1,iRay,1:nI,1:nJ,1:nK,iBlock)),&
+                     minval(Trace_DSNB(1,iRay,1:nI,1:nJ,1:nK,iBlock)),&
                      Xyz_DGB(:,Ijk_D(1),Ijk_D(2),Ijk_D(3),iBlock)
              end if
           end do
@@ -610,14 +619,14 @@ contains
        if(Unused_B(iBlock)) CYCLE
        !$acc loop vector collapse(3)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          call xyz_to_latlonstatus(ray(:,:,i,j,k,iBlock))
+          call xyz_to_latlonstatus(Trace_DSNB(:,:,i,j,k,iBlock))
        end do; end do; end do
     end do
 
     call timing_stop('trace_grid_fast3')
 
     if(DoTime.and.iProc==0)then
-       write(*,'(a)',ADVANCE='NO') 'Total ray tracing time:'
+       write(*,'(a)',ADVANCE='NO') 'Total Trace_DSNB tracing time:'
        call timing_show('ray_trace',1)
     end if
     call barrier_mpi
@@ -780,11 +789,11 @@ contains
     logical function do_follow_iono(Xyz_D, iRay)
       !$acc routine seq
 
-      ! Follow ray inside ionosphere starting from Xyz_D which is given in
-      ! real coordinates and use analytic mapping.
+      ! Follow Trace_DSNB inside ionosphere starting from Xyz_D which
+      ! is given in real coordinates and use analytic mapping.
       ! On return Xyz_D contains the final coordinates.
       ! Return true if it was successfully integrated down to rIonosphere,
-      ! return false if the ray exited rTrace or too many integration
+      ! return false if the Trace_DSNB exited rTrace or too many integration
       ! steps were Done
 
       use ModPhysics,  ONLY: DipoleStrengthSi ! only the sign is needed
@@ -828,13 +837,13 @@ contains
          iRay, iBlock) result(iFaceOut)
       !$acc routine seq
 
-      ! Follow ray starting at initial position GenIn_D in direction iRay
-      ! until we hit the wall of the control volume or the ionosphere.
-      ! Return 1,2,3,4,5,6 if the ray hit the block faces
-      ! Return ray_iono_   if the ray hit the ionosphere
-      ! Return ray_loop_   if the ray did not hit anything
-      ! Return ray_out_    if the ray goes out of the box immediately
-      ! Return ray_body_   if the ray goes into or is inside a body
+      ! Follow Trace_DSNB starting at initial position GenIn_D in direction
+      ! iRay until we hit the wall of the control volume or the ionosphere.
+      ! Return 1,2,3,4,5,6 if the Trace_DSNB hit the block faces
+      ! Return RayIono_   if the Trace_DSNB hit the ionosphere
+      ! Return RayLoop_   if the Trace_DSNB did not hit anything
+      ! Return RayOut_    if the Trace_DSNB goes out of the box immediately
+      ! Return RayBody_   if the Trace_DSNB goes into or is inside a body
 
       ! Arguments
 
@@ -866,7 +875,7 @@ contains
       ! Line length, max, step size, limits, next step size, back to surface
       real :: s, sMax, Ds, DsMax, DsMin, DsNext, DsTiny, DsBack
 
-      ! counter for ray integration
+      ! counter for Trace_DSNB integration
       integer :: nSegment
       integer, parameter:: MaxSegment = 10*(nI+nJ+nK)
 
@@ -890,7 +899,7 @@ contains
       ! Accuracy in terms of Gen_D in normalized coordinates
       DxOpt=0.01
 
-      ! Length and maximum length of ray within control volume
+      ! Length and maximum length of Trace_DSNB within control volume
       s = 0
       sMax = 10*maxval(GenMax_D - GenMin_D)
       nSegment = 0
@@ -923,7 +932,7 @@ contains
                if((.not. IsBVectorField) .or. r2 <= rInner2)then
 
                   if(nSegment==0)then
-                     iFaceOut = ray_body_
+                     iFaceOut = RayBody_
 
                      if(DoTestRay)write(*,*)&
                           'Initial point inside rInner at me,iBlock,Xyz_D=',&
@@ -940,7 +949,7 @@ contains
                      ! Normalize Xyz_D in radial direction
                      Xyz_D = rInner*Xyz_D/norm2(Xyz_D)
                      Gen_D = Xyz_D
-                     iFaceOut = ray_iono_
+                     iFaceOut = RayIono_
                   end if
                   EXIT
                end if
@@ -949,7 +958,7 @@ contains
                if(nIono<1)then
                   if(do_follow_iono(Xyz_D, iRay))then
                      Gen_D=Xyz_D
-                     iFaceOut=ray_iono_
+                     iFaceOut=RayIono_
                      EXIT
                   else
                      ! We did not hit the surface of the ionosphere
@@ -968,17 +977,17 @@ contains
          call interpolate_bb_node(GenIni_D, bIni_D, iBlock)
          GenMid_D = GenIni_D + 0.5*Ds*bIni_D
 
-         ! Check if the ray is pointing outwards
+         ! Check if the Trace_DSNB is pointing outwards
          if(nSegment==0.and.IsSurfacePoint)then
             if(DoTestRay)write(*,*)'me,iBlock,GenIni_D,bIni_D=', &
                  iProc, iBlock, GenIni_D, bIni_D
 
             if(any(GenMid_D < GenMin_D) .or. any(GenMid_D > GenMax_D))then
-               iFaceOut = ray_out_
+               iFaceOut = RayOut_
 
                if(DoTestRay)then
                   write(*,*)'me,iBlock,GenMid_D=', iProc, iBlock, GenMid_D
-                  write(*,*)'ray points outwards: me,iBlock,Ds,Xyz_D=', &
+                  write(*,*)'Trace_DSNB points outwards: me,iBlock,Ds,Xyz_D=',&
                        iProc, iBlock, Ds,&
                        Xyz_DGB(:,1,1,1,iBlock) &
                        + CellSize_DB(:,iBlock)*(GenMid_D - 1)
@@ -1046,7 +1055,7 @@ contains
               write(*,*)'me,iBlock,nSegment,s,Gen_D=', &
               iProc, iBlock, nSegment, s, Gen_D
 
-         ! Check if the ray hit the wall of the control volume
+         ! Check if the Trace_DSNB hit the wall of the control volume
          if(any(Gen_D < GenMin_D) .or. any(Gen_D > GenMax_D))then
 
             ! Hit the wall, backup so that Gen_D is almost exactly on the wall
@@ -1057,7 +1066,7 @@ contains
                Gen_D = Gen_D - DsBack*bMid_D
             end if
 
-            ! Find out which wall the ray hit
+            ! Find out which wall the Trace_DSNB hit
             if    (Gen_D(1)<=GenMin_D(1))then; iFaceOut=1
             elseif(Gen_D(2)<=GenMin_D(2))then; iFaceOut=3
             elseif(Gen_D(3)<=GenMin_D(3))then; iFaceOut=5
@@ -1091,7 +1100,7 @@ contains
                     Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
             end if
 
-            iFaceOut=ray_loop_
+            iFaceOut=RayLoop_
             EXIT
          end if
 
@@ -1104,21 +1113,22 @@ contains
 
     end function follow_fast
     !==========================================================================
-    subroutine assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
-         i1, j1, k1, i2, j2, k2, IsSurfacePoint, Trace_D, Gen_D, Weight_I, UseRay)
+    subroutine assign_ray(iFace, iRay, iBlock, iX, iY, iZ, i1, j1, k1, &
+         i2, j2, k2, IsSurfacePoint, Trace_D, Gen_D, Weight_I, UseRay)
       !$acc routine seq
 
-      ! Assign value to Trace_D(3) based on ray intersection
+      ! Assign value to Trace_D(3) based on Trace_DSNB intersection
       ! given by the global variables iFace and position Gen_D(3)
       !
-      ! iRay is 1 if ray points in positive B direction and 2 otherwise
+      ! iRay is 1 if Trace_DSNB points in positive B direction and 2 otherwise
       !
-      ! IsSurfacePoint is true if the ray was started from the block face
-      ! and false if it was started from a cell center
+      ! IsSurfacePoint is true if the Trace_DSNB was started from the block
+      ! face and false if it was started from a cell center
 
       integer, intent(in)    :: iFace, iRay, iBlock, iX, iY, iZ
       integer, intent(inout) :: i1,j1,k1,i2,j2,k2
       logical, intent(in)    :: IsSurfacePoint
+
       ! Called with a segment of Trace_DINB array and it is used here
       ! to get Trace_D
       real, intent(inout)    :: Trace_D(3), Gen_D(3)
@@ -1126,7 +1136,7 @@ contains
       logical, optional, intent(in):: UseRay
 
       real :: Trace_DI(3,4)
-      integer :: iCount, ii, jj, kk
+      integer :: iCount, i0, j0, k0
 
       ! Distances between Gen_D and the 4 grid points used for interpolation
       real :: d1, e1, d2, e2
@@ -1138,29 +1148,29 @@ contains
            IsSurfacePoint,iRay,iFace
 
       select case(iFace)
-      case(ray_out_)
-         ! The ray points outward
+      case(RayOut_)
+         ! The Trace_DSNB points outward
          Trace_D = OUTRAY
 
          if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=OUTRAY'
 
          RETURN
-      case(ray_loop_)
-         ! The ray did not hit the wall of the block
-         Trace_D = LOOPRAY
+      case(RayLoop_)
+         ! The Trace_DSNB did not hit the wall of the block
+         Trace_D = LoopRay
 
-         if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=LOOPRAY'
+         if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=LoopRay'
 
          RETURN
-      case(ray_body_)
-         ! The ray hit a body
+      case(RayBody_)
+         ! The Trace_DSNB hit a body
          Trace_D = BODYRAY
 
          if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=BODYRAY'
 
          RETURN
-      case(ray_iono_)
-         ! The ray hit the ionosphere
+      case(RayIono_)
+         ! The Trace_DSNB hit the ionosphere
          Trace_D = Gen_D
 
          if(DoTestRay)write(*,*)&
@@ -1192,7 +1202,7 @@ contains
          e1 = Gen_D(3) - k1 + 0.5
 
       case(5, 6)
-         ! The ray hit the bot or top wall
+         ! The Trace_DSNB hit the bot or top wall
          if(iFace == 5)then
             k1 = 1
          else
@@ -1246,13 +1256,13 @@ contains
            i1, j1, k1, i2, j2, k2, d1, e1
 
       iCount = 1
-      do kk = k1, k2; do jj = j1, j2; do ii = i1, i2
+      do k0 = k1, k2; do j0 = j1, j2; do i0 = i1, i2
          if(present(UseRay)) then
-            ! Use ray instead of Trace_DINB to avoid GPU race condition
+            ! Use Trace_DSNB instead of Trace_DINB to avoid GPU race condition
             if(UseRay) &
-                 Trace_DI(:,iCount) = ray(:,iRay,ii,jj,kk,iBlock)
+                 Trace_DI(:,iCount) = Trace_DSNB(:,iRay,i0,j0,k0,iBlock)
          else
-            Trace_DI(:,iCount) = Trace_DINB(:,iRay,ii,jj,kk,iBlock)
+            Trace_DI(:,iCount) = Trace_DINB(:,iRay,i0,j0,k0,iBlock)
          endif
          iCount = iCount + 1
       end do; end do; end do
@@ -1335,10 +1345,10 @@ contains
        RETURN
     end if
 
-    if(all(Trace_DI(1,:)==NORAY))then
+    if(all(Trace_DI(1,:)==NoRay))then
        ! all surrounding rays are unknown
-       Trace_D=NORAY
-       if(DoTestRay)write(*,*) NameSub,' finished with fully NORAY'
+       Trace_D=NoRay
+       if(DoTestRay)write(*,*) NameSub,' finished with fully NoRay'
        RETURN
     end if
 
@@ -1348,7 +1358,7 @@ contains
        i=1
        do iCount = 1, 9999999
           if(i>n)then
-             ! New type of ray
+             ! New type of Trace_DSNB
              n=i
              TraceFirst_DI(:,i)=Trace_DI(:,j)
              WeightSum_I(i) =WeightTmp_I(j)
@@ -1361,7 +1371,7 @@ contains
           dTrace=sum(abs(Trace_DI(:,j)-TraceFirst_DI(:,i)))
 
           if(dTrace<dTraceMax)then
-             ! Same type of ray, cummulate it
+             ! Same type of Trace_DSNB, cummulate it
 
              WeightSum_I(i)=WeightSum_I(i)+WeightTmp_I(j)
              if(TraceFirst_DI(1,i)>CLOSEDRAY)&
@@ -1379,7 +1389,7 @@ contains
     end do ! j
 
     if(n == 1)then
-       ! Only one type of ray is interpolated
+       ! Only one type of Trace_DSNB is interpolated
        if(TraceFirst_DI(1,1)>CLOSEDRAY)then
           ! get result (WeightSum_I can be less than 1! )
           Trace_D=TraceSum_DI(:,1)/WeightSum_I(1)
@@ -1445,7 +1455,8 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        do iFace = 1, 6
-          if(DiLevel_EB(iFace,iBlock)==1)call prolong_ray_after_pass(iFace,iBlock)
+          if(DiLevel_EB(iFace,iBlock) == 1) &
+               call prolong_ray_after_pass(iFace,iBlock)
        end do
     end do
 
@@ -1455,11 +1466,11 @@ contains
   subroutine prolong_ray_after_pass(iFace,iBlock)
     !! acc routine vector
 
-    ! For faces that are shared with a coarser neighbor, interpolate
-    ! for all points which are not coinciding and where the ray is going out.
+    ! For faces that are shared with a coarser neighbor, interpolate for all
+    ! points which are not coinciding and where the Trace_DSNB is going out.
     !
-    ! a at odd  j and even k requires interpolation in direction k
-    ! b at even j and odd  k requires interpolation in direction j
+    ! a at IsOdd  j and even k requires interpolation in direction k
+    ! b at even j and IsOdd  k requires interpolation in direction j
     ! c at even j and even k requires interpolation in both directions
 
     ! (1,5)           (5,5)
@@ -1534,9 +1545,9 @@ contains
        do k=1,nfaceK
           if(mod(k,2)==1)then
              do j=2,nfaceJ,2
-                ! Case b: even j and odd k
+                ! Case b: even j and IsOdd k
 
-                if(IjkTrace_DII(iRay,j,k) /= ray_out_) CYCLE
+                if(IjkTrace_DII(iRay,j,k) /= RayOut_) CYCLE
 
                 call rayface_interpolate(&
                      Trace_DIII(:,iRay,j-1:j+1:2,k), Weight2_I, 2,&
@@ -1544,9 +1555,9 @@ contains
              end do
           else
              do j=1,nJ+1,2
-                ! Case a: odd j and even k
+                ! Case a: IsOdd j and even k
 
-                if(IjkTrace_DII(iRay,j,k) /= ray_out_) CYCLE
+                if(IjkTrace_DII(iRay,j,k) /= RayOut_) CYCLE
 
                 call rayface_interpolate(&
                      Trace_DIII(:,iRay,j,k-1:k+1:2), Weight2_I, 2,&
@@ -1555,7 +1566,7 @@ contains
              do j=2,nJ,2
                 ! Case c: even j and even k
 
-                if(IjkTrace_DII(iRay,j,k) /= ray_out_) CYCLE
+                if(IjkTrace_DII(iRay,j,k) /= RayOut_) CYCLE
 
                 call rayface_interpolate(&
                      Trace_DIII(:,iRay,j-1:j+1:2,k-1:k+1:2), Weight4_I, 4,&
@@ -1806,7 +1817,7 @@ contains
       ! Face, neighbor's face and side indexes
       integer :: iFace, jFace, iSide
 
-      ! number of subfaces (1 or 4), subface (1..nSubFace) and child (1..8) index
+      ! number of subfaces (1 or 4), subface (1..nSubFace)
       integer ::  nSubFace, iSubFace
 
 #ifdef _OPENACC
@@ -1825,7 +1836,7 @@ contains
       integer :: iTag, iRequest, nRecvRequest, iRecvRequest_I(MaxBlock*6), iError
 
       ! Maximum size of the RESTRICTED Trace_DINB layer to be received
-      ! for the 6 ray variables (3 coord*2 ray dir.)
+      ! for the 6 Trace_DSNB variables (3 StringCoord*2 Trace_DSNB dir.)
       integer, parameter :: MaxSizeR = &
            6*max((nI/2+1)*(nJ/2+1),(nI/2+1)*(nK/2+1),(nJ/2+1)*(nK/2+1))
 
@@ -1868,7 +1879,7 @@ contains
                   ! Local copy
 
                   !$acc loop vector collapse(3)
-                  do kR = kMinG, kMaxG; do jR = jMinG, jMaxG; do iR = iMinG,iMaxG
+                  do kR = kMinG,kMaxG; do jR = jMinG,jMaxG; do iR = iMinG,iMaxG
                      iS = iR - iMinG + iMinO
                      jS = jR - jMinG + jMinO
                      kS = kR - kMinG + kMinO
@@ -1918,7 +1929,7 @@ contains
                        iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
 
                   !$acc loop vector collapse(3)
-                  do kR = kMinS, kMaxS; do jR = jMinS, jMaxS; do iR = iMinS,iMaxS
+                  do kR = kMinS,kMaxS; do jR = jMinS,jMaxS; do iR = iMinS,iMaxS
                      iS = 2*(iR - iMinS) + iMinO
                      jS = 2*(jR - jMinS) + jMinO
                      kS = 2*(kR - kMinS) + kMinO
@@ -1952,15 +1963,19 @@ contains
                      ! Local copy of appropriate subface
 
                      !$acc loop vector collapse(3)
-                     do kR=kMinG,kMaxG,2; do jR=jMinG,jMaxG,2; do iR=iMinG,iMaxG,2
-                        iS = 0.5*(iR - iMinG) + iMinS
-                        jS = 0.5*(jR - jMinG) + jMinS
-                        kS = 0.5*(kR - kMinG) + kMinS
+                     do kR=kMinG,kMaxG,2
+                        do jR=jMinG,jMaxG,2
+                           do iR=iMinG,iMaxG,2
+                              iS = 0.5*(iR - iMinG) + iMinS
+                              jS = 0.5*(jR - jMinG) + jMinS
+                              kS = 0.5*(kR - kMinG) + kMinS
 
-                        Trace_DINB(:,:,iR,jR,kR,jBlock)=max(&
-                             Trace_DINB(:,:,iR,jR,kR,jBlock),&
-                             Trace_DINB(:,:,iS,jS,kS,iBlock))
-                     end do; end do; end do
+                              Trace_DINB(:,:,iR,jR,kR,jBlock)=max(&
+                                   Trace_DINB(:,:,iR,jR,kR,jBlock),&
+                                   Trace_DINB(:,:,iS,jS,kS,iBlock))
+                           end do
+                        end do
+                     end do
 
                   else
                      ! To be implemented
@@ -1976,7 +1991,7 @@ contains
          end do ! iBlock
       end do ! iFace
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #else
       ! CPU version
 
@@ -2184,8 +2199,8 @@ contains
                else
                   ! Restrict Trace_DINB in _o range into _r
                   BufRestrict_DIC=&
-                       Trace_DINB(:,:,iMinO:iMaxO:2,jMinO:jMaxO:2,kMinO:kMaxO:2, &
-                       iBlock)
+                       Trace_DINB(:,:,iMinO:iMaxO:2,jMinO:jMaxO:2, &
+                       kMinO:kMaxO:2,iBlock)
 
                   ! Remote send
                   iTag = 100*jBlock+10*iFace+iSubFace
@@ -2245,7 +2260,7 @@ contains
             case default
                write(*,*)'me,iBlock,iFace,DiLevel=',&
                     iProc, iBlock, iFace, DiLevel
-               call stop_mpi('Error in message pass: Invalid value for DiLevel_EB')
+               call stop_mpi(NameSub//': Invalid value for DiLevel_EB')
             end select ! DiLevel
          end do ! iBlock
 
@@ -2342,7 +2357,8 @@ contains
 
     end subroutine buf2sparserayface
     !==========================================================================
-    subroutine buf2subrayface(Buffer_DIN, iFace, iSubFace, iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine buf2subrayface(Buffer_DIN, iFace, iSubFace, &
+         iMin, iMax, jMin, jMax, kMin, kMax)
 
       integer, intent(in) :: iFace, iSubFace, iMin,iMax,jMin,jMax,kMin,kMax
       real, intent(inout) :: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
@@ -2368,11 +2384,11 @@ contains
     subroutine prolong_ray(iFace,iBlock)
       !$acc routine vector
 
-      ! For faces that are shared with a coarser neighbor, interpolate
-      ! for all points which are not coinciding and where the ray is going out.
+      ! For faces that are shared with a coarser neighbor, interpolate for all
+      ! points which are not coinciding and where the Trace_DSNB is going out.
       !
-      ! a at odd  j and even k requires interpolation in direction k
-      ! b at even j and odd  k requires interpolation in direction j
+      ! a at IsOdd  j and even k requires interpolation in direction k
+      ! b at even j and IsOdd  k requires interpolation in direction j
       ! c at even j and even k requires interpolation in both directions
 
       ! (1,5)           (5,5)
@@ -2409,7 +2425,6 @@ contains
       real :: Weight2_I(2) != 0.5
 
       real :: Trace_DI(3,2), Trace4_DI(3,4)
-      real :: tmp(3)
 
 #ifndef _OPENACC
       character(len=*), parameter:: NameSub = 'prolong_ray'
@@ -2484,9 +2499,9 @@ contains
 
             if(mod(k,2)==1)then
                do j=2,nfaceJ,2
-                  ! Case b: even j and odd k
+                  ! Case b: even j and IsOdd k
 
-                  if(IjkTrace_DII(iRay,j,k)/=ray_out_)CYCLE
+                  if(IjkTrace_DII(iRay,j,k)/=RayOut_)CYCLE
 
                   Trace_DI(:,1) = Trace_DIII(:,iRay,j-1,k)
                   Trace_DI(:,2) = Trace_DIII(:,iRay,j+1,k)
@@ -2496,9 +2511,9 @@ contains
                end do
             else
                do j=1,nJ+1,2
-                  ! Case a: odd j and even k
+                  ! Case a: IsOdd j and even k
 
-                  if(IjkTrace_DII(iRay,j,k)/=ray_out_)CYCLE
+                  if(IjkTrace_DII(iRay,j,k)/=RayOut_)CYCLE
 
                   Trace_DI(:,1) = Trace_DIII(:,iRay,j,k-1)
                   Trace_DI(:,2) = Trace_DIII(:,iRay,j,k+1)
@@ -2508,7 +2523,7 @@ contains
                do j=2,nJ,2
                   ! Case c: even j and even k
 
-                  if(IjkTrace_DII(iRay,j,k)/=ray_out_)CYCLE
+                  if(IjkTrace_DII(iRay,j,k)/=RayOut_)CYCLE
 
                   Trace4_DI(:,1) = Trace_DIII(:,iRay,j-1,k-1)
                   Trace4_DI(:,2) = Trace_DIII(:,iRay,j+1,k-1)

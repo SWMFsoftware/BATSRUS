@@ -77,7 +77,7 @@ contains
     use ModMain, ONLY: tSimulation, TypeCoordSystem
     use ModCurrent,            ONLY: calc_field_aligned_current
     use ModFieldTrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
-         InvB_, RhoInvB_, pInvB_, xEnd_, yEnd_, zEnd_, CLOSEDRAY, GmSm_DD,&
+         InvB_, RhoInvB_, pInvB_, iXEnd, iYEnd, iZEnd, CLOSEDRAY, GmSm_DD,&
          integrate_field_from_sphere
     use ModNumConst, ONLY: cRadToDeg
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
@@ -93,7 +93,7 @@ contains
     integer :: i, j
     real :: Radius, Phi, Theta
     real, allocatable:: FieldAlignedCurrent_II(:,:)
-    real, allocatable:: IE_lat(:), IE_lon(:)
+    real, allocatable:: IeLat_I(:), IeLon_I(:)
     real :: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
     logical :: DoTest, DoTestMe
 
@@ -131,16 +131,16 @@ contains
     deallocate(FieldAlignedCurrent_II)
 
     if(DoTraceIE) then
-       allocate(IE_lat(iSize), IE_lon(jSize))
+       allocate(IeLat_I(iSize), IeLon_I(jSize))
 
        ! Load grid and convert to lat-lon in degrees
-       IE_lat = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
-       IE_lon =        cRadToDeg * PhiIono_I
+       IeLat_I = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
+       IeLon_I =        cRadToDeg * PhiIono_I
        Radius = (6378.+100.)/6378.
-       call integrate_field_from_sphere(iSize, jSize, IE_lat, IE_lon, Radius, &
+       call integrate_field_from_sphere(iSize, jSize, IeLat_I, IeLon_I, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
 
-       ! Only processor 0 has the resulting integrals,
+       ! Only processor 0 has the resulting Integral_I,
        !   the others do not participate in the coupling
        if(iProc == 0)then
           where(RayResult_VII(InvB_,:,:) > 0.)
@@ -149,7 +149,7 @@ contains
              RayResult_VII(pInvB_,:,:)   = RayResult_VII(pInvB_,:,:) &
                   /RayResult_VII(InvB_,:,:)
           end where
-          where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+          where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
              RayResult_VII(   InvB_,:,:) = -1.
              RayResult_VII(rhoInvB_,:,:) = 0.
              RayResult_VII(  pInvB_,:,:) = 0.
@@ -165,12 +165,12 @@ contains
           ! Loop to compute deltas
           do j=1,jSize
              do i=1,iSize
-                Lat = -IE_Lat(i)
-                Lon =  IE_Lon(j)
+                Lat = -IeLat_I(i)
+                Lon =  IeLon_I(j)
                 if(RayResult_VII(InvB_,i,j)>1.e-10)then
-                   XyzIono_D(1)=RayResult_VII(xEnd_,i,j)
-                   XyzIono_D(2)=RayResult_VII(yEnd_,i,j)
-                   XyzIono_D(3)=RayResult_VII(zEnd_,i,j)
+                   XyzIono_D(1)=RayResult_VII(iXEnd,i,j)
+                   XyzIono_D(2)=RayResult_VII(iYEnd,i,j)
+                   XyzIono_D(3)=RayResult_VII(iZEnd,i,j)
                    XyzIono_D = matmul(GmSm_DD,XyzIono_D)
                    call xyz_to_sph(XyzIono_D, RtpIono_D)
                    Lat=90.-RtpIono_D(2)*cRadToDeg
@@ -178,12 +178,12 @@ contains
                 end if
 
                 ! Shift to closer to local value, even if outside 0-360
-                if( (IE_Lon(j)-Lon)<-180. ) Lon = Lon-360.
-                if( (IE_Lon(j)-Lon)> 180. ) Lon = Lon+360.
+                if( (IeLon_I(j)-Lon)<-180. ) Lon = Lon-360.
+                if( (IeLon_I(j)-Lon)> 180. ) Lon = Lon+360.
 
                 ! Compute deltas
-                dLat = abs(Lat) - abs(IE_Lat(i))
-                dLon =     Lon  -     IE_Lon(j)
+                dLat = abs(Lat) - abs(IeLat_I(i))
+                dLon =     Lon  -     IeLon_I(j)
 
                 ! Put into exchange buffer
                 Buffer_IIV(i,j,5) = dLat
@@ -191,7 +191,7 @@ contains
              end do
           end do
        end if
-       deallocate(IE_lat, IE_lon, RayIntegral_VII, RayResult_VII)
+       deallocate(IeLat_I, IeLon_I, RayIntegral_VII, RayResult_VII)
     end if
 
     if(DoTest)write(*,*)NameSub,': finished'
