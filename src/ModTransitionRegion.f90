@@ -83,7 +83,7 @@ contains
     ! of DoTest, test_start and test_stop
     ! 2. Add init_tr identifier to the #TEST command for SC component in
     !    Param/PARAM.in.test.SCIH_threadbc
-    !    Param/PARAM.in.test.IsRestart.SCIH_threadbc
+    !    Param/PARAM.in.test.restart.SCIH_threadbc
     ! 3. run test8
     ! In run_test there will be files test_tr.out and test_tr_AiaXrt.out
     ! if(DoTest.and.iProc==0)then

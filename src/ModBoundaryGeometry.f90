@@ -293,7 +293,7 @@ contains
 
     ! DoResChangeOnly=true works as long as the ghost cells are correctly set
     ! away from resolution changes. This usually holds, but not if the
-    ! boundary cells are set based on the state variables read from a IsRestart
+    ! boundary cells are set based on the state variables read from a restart
     ! file that has no ghost cell information saved. This can only happen
     ! at the very beginning of a run when nIteration == 0.
 

@@ -273,7 +273,7 @@ contains
     ! Load balance grid using space filling (Morton) ordering of blocks
     ! Coordinates are moved if DoMoveCoord is true.
     ! Data is moved with the blocks if DoMoveData is true.
-    ! There are new blocks (due to initial refinement, IsRestart or AMR)
+    ! There are new blocks (due to initial refinement, restart or AMR)
     ! when IsNewBlock is true (so update neighbors etc).
 
     logical, optional, intent(in) :: DoMoveCoord, DoMoveData, IsNewBlock
@@ -687,7 +687,7 @@ contains
 
              ! For first iteration calculate DtMax_B when inside time loop,
              ! otherwise use the available DtMax_B from previous time step,
-             ! or from the IsRestart file, or simply 0 set in read_inputs.
+             ! or from the restart file, or simply 0 set in read_inputs.
              ! The latter two choices will be overruled later anyways.
              if(nStep==1 .and. IsTimeLoop)then
                 ! For first iteration in the time loop

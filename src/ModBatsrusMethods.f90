@@ -17,7 +17,7 @@ module ModBatsrusMethods
   public:: BATS_init_session
   public:: BATS_setup
   public:: BATS_advance      ! advance solution by one time step
-  public:: BATS_save_files   ! save output and/or IsRestart files
+  public:: BATS_save_files   ! save output and/or restart files
   public:: BATS_finalize     ! final save, close files, deallocate
 
 contains
@@ -47,9 +47,9 @@ contains
 
     if(.not.IsStandAlone)call write_progress(0)
 
-    call grid_setup   ! IsRestart reads info integer only
+    call grid_setup   ! restart reads info integer only
 
-    call set_initial_conditions ! IsRestart reads all real data
+    call set_initial_conditions ! restart reads all real data
 
     call find_test_cell
 
@@ -118,7 +118,7 @@ contains
             end do
          end do
       else
-         ! Read initial solution block geometry from octree IsRestart file.
+         ! Read initial solution block geometry from octree restart file.
 
          NameFile = trim(NameRestartInDir)//'octree.rst'
          if (UseRestartInSeries) &
@@ -137,7 +137,7 @@ contains
       call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
            iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
-      ! Move coordinates around except for IsRestart because the
+      ! Move coordinates around except for restart because the
       ! coordinate info is in the .rst files and not in the octree (1st).
       ! Do not move the data, it is not yet set. There are new blocks.
       call load_balance(DoMoveCoord=.not.IsRestart, DoMoveData=.false., &
@@ -228,7 +228,7 @@ contains
       ! nRefineLevelIC has done its work, reset to zero
       nRefineLevelIC = 0
 
-      ! Read initial data from IsRestart files as necessary.
+      ! Read initial data from restart files as necessary.
       if(IsRestart)then
          call user_action('reading IsRestart files')
          call read_restart_files
@@ -250,7 +250,7 @@ contains
 !!$ omp end parallel do
 
       ! If iSignRotationIC was non-zero, the rotational velocity has been
-      ! added either in applying IsRestart, or in set_initial conditions.
+      ! added either in applying restart, or in set_initial conditions.
       ! Therefore iSignRotation is set to true for the rotational velocity
       ! not to be double-counted in init_session
       iSignRotationIC = 0
@@ -326,7 +326,7 @@ contains
 
       character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
       !------------------------------------------------------------------------
-      TypePlot_I(restart_)='IsRestart'
+      TypePlot_I(restart_)='restart'
       TypePlot_I(logfile_)='logfile'
 
     end subroutine initialize_files
@@ -424,8 +424,8 @@ contains
 
     call BATS_save_files('INITIAL')
 
-    ! save initial IsRestart series
-    if (UseRestartOutSeries) call BATS_save_files('IsRestart')
+    ! save initial restart series
+    if (UseRestartOutSeries) call BATS_save_files('restart')
 
     ! Set all arrays for AMR
     call init_amr_criteria
@@ -809,7 +809,7 @@ contains
        ! DoSaveInitial may be set to true in the #SAVEINITIAL command
        if(DoSaveInitial .or. (IsTimeAccurate .and. tSimulation == 0.0))then
           if(DoSaveInitial)then
-             ! Save all (except IsRestart files)
+             ! Save all (except restart files)
              nStepOutputLast_I = -1
              iTimeOutputLast_I = -1.0
           else
@@ -819,7 +819,7 @@ contains
                 iTimeOutputLast_I = -1.0
              end where
           end if
-          ! Do not save IsRestart file in any case
+          ! Do not save restart file in any case
           nStepOutputLast_I(restart_) = nStep
           call save_files
        end if
@@ -945,7 +945,7 @@ contains
       call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
       if(iFile==restart_) then
-         ! Case for IsRestart file
+         ! Case for restart file
          if(.not.DoSaveRestart)RETURN
          call write_restart_files
 

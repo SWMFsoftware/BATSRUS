@@ -65,7 +65,7 @@ contains
        ! If used, initialize solution variables and parameters.
        if(UseB0) call set_b0_cell(iBlock)
 
-       ! Subtract B0 from Full B0+B1 from IsRestart to obtain B1
+       ! Subtract B0 from Full B0+B1 from restart to obtain B1
        if(UseB0 .and. IsRestart .and. UseRestartWithFullB) &
             call subtract_b0(iBlock)
 

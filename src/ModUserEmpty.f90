@@ -70,7 +70,7 @@ contains
     ! Apply initial perturbation. 
     ! The routine is called once and should be applied for all blocks, the
     ! do-loop should be present. Another distinction from user_set_ics is that
-    ! user_initial_perturbation can be applied after IsRestart, while
+    ! user_initial_perturbation can be applied after restart, while
     ! user_set_ICs cannot.
 
     use ModMain, ONLY: nBlockMax
@@ -125,7 +125,7 @@ contains
     !
     ! case('clean module')
     !  
-    ! case('reading IsRestart files')
+    ! case('reading restart files')
     !
     ! case('initial condition done')
     !

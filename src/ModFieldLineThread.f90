@@ -168,7 +168,7 @@ module ModFieldLineThread
   public :: interpolate_thread_state  ! Interpolate state from State_VG
   public :: set_thread_plotvar        ! Plot variables for "shell" plots
   public :: get_tr_los_image          ! Correction for TR on LOS images
-  ! Saves IsRestart
+  ! Saves restart
   public :: save_thread_restart
 
   ! The number of grid spaces which are covered by the TR model

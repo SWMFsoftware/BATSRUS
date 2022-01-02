@@ -70,8 +70,8 @@ program BATSRUS
      call remove_file('BATSRUS.STOP')
   end if
 
-  ! Read input parameter file. Provide the default IsRestart file for #IsRestart
-  call read_file('PARAM.in', iComm, trim(NameRestartInDir)//'IsRestart.H')
+  ! Read input parameter file. Provide the default restart file name
+  call read_file('PARAM.in', iComm, trim(NameRestartInDir)//'restart.H')
 
   SESSIONLOOP: do
      call read_init('  ', iSessionIn=iSession)

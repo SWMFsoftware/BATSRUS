@@ -43,8 +43,8 @@ module ModIO
   ! Simulation time or physical date and time used in file names
   character (len=14) :: StringDateOrTime
 
-  logical :: IsRestart=.false.        ! read IsRestart file
-  logical :: DoRestartBface =.false. ! Bface restarted ^CFG IF CONSTRAINB
+  logical :: IsRestart=.false.        ! read restart file
+  logical :: DoRestartBface =.false.  ! Bface restarted
   logical :: IsRestartCoupler=.false. ! Informs coupler if restarted
 
   logical :: DoSaveInitial = .false.

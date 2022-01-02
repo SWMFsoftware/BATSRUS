@@ -31,7 +31,7 @@ module ModGeometry
   ! Obsolete variables. Same as BATL_lib::CoordMin_D and CoordMax_D
   real :: XyzMin_D(3), XyzMax_D(3)
 
-  ! Coodinate limits in true radius and degrees (used in IsRestart.H)
+  ! Coodinate limits in true radius and degrees (used in restart.H)
   real :: CoordDimMin_D(3) = 0.0, CoordDimMax_D(3) = 0.0
   real :: RadiusMin = -1.0, RadiusMax = -1.0
 

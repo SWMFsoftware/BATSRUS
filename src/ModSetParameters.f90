@@ -251,7 +251,7 @@ contains
        IsUninitialized=.false.
     end if
 
-    ! IsRestart in first session only
+    ! restart in first session only
     if(.not.IsFirstSession) IsRestart=.false.
 
     select case(TypeAction)
@@ -1400,7 +1400,7 @@ contains
                 StringPlotVar_I(iFile) = NamePrimitiveVarPlot
                 StringPlotParam_I(iFile) = '{default}'
              elseif(index(plot_string,'ALL')>0.or.index(plot_string,'all')>0)then
-                ! This is intended for IsRestart with a different dimensionality
+                ! This is intended for restart with a different dimensionality
                 plot_var='all'
                 IsDimensionalPlot_I(iFile) = index(plot_string,'ALL')>0
                 call join_string(nVar, NameVar_V(1:nVar), StringPlotVar_I(iFile))
@@ -1924,7 +1924,7 @@ contains
           if (DoChangeRestartVariables) UseStrict = .false.
 
        case("#SPECIFYRESTARTVARMAPPING")
-          ! If user sets IsRestart variables mapping, DoChangeRestartVariables
+          ! If user sets restart variables mapping, DoChangeRestartVariables
           ! should be set to true.
           call read_var('DoSpecifyRestartVarMapping', &
                DoSpecifyRestartVarMapping)
@@ -1988,7 +1988,7 @@ contains
 
        case("#RESTARTVARIABLES")
           ! This reads the names of the variables saved in the input
-          ! IsRestart file.
+          ! restart file.
           call read_var('NameVarRestartRead', NameVarRestartRead, &
                IsLowerCase=.true.)
           IsReadNameVarRestart = .true.
@@ -2864,11 +2864,11 @@ contains
       use ModResistivity, ONLY: UseResistivity, TypeResistivity, Eta0Si, &
            DoResistiveFlux, UseJouleHeating, UseHeatExchange
 
-      ! Default plot and IsRestart directories depend on NameThisComp
+      ! Default plot and restart directories depend on NameThisComp
       !------------------------------------------------------------------------
       NamePlotDir(1:2) = NameThisComp
 
-      ! Set defaults for IsRestart files
+      ! Set defaults for restart files
       call init_mod_restart_file
 
       CodeVersionRead = -1.
@@ -3538,14 +3538,14 @@ contains
       if(UseHighResChange) nOrderProlong = 1
 
       ! If the state variables are changed when restarting, the names of the
-      ! state variables saved in the IsRestart file must be specified, so they
+      ! state variables saved in the restart file must be specified, so they
       ! can be properly copied into State_VGB.
       if(DoChangeRestartVariables .and. .not. IsReadNameVarRestart &
            .and. NameEquationRead /= NameEquation) then
          if(iProc == 0)then
             write(*,'(a)') NameSub//&
                  ' : Could not find  #RESTARTVARIABLES command, needed '// &
-                 'when changing state variables at IsRestart.'
+                 'when changing state variables at restart.'
          end if
          call stop_mpi('Correct PARAM.in')
       end if
@@ -3553,7 +3553,7 @@ contains
       ! Check that the number of variables listed in #RESTARTVARIABLES
       ! matches the number appearing in the #EQUATION command
       ! (this check is useful if the #RESTARTVARIABLES command is added
-      ! manually to older IsRestart header files, but might become redundant
+      ! manually to older restart header files, but might become redundant
       ! in the future).
       if(IsReadNameVarRestart) then
          call split_string(NameVarRestartRead, NameVarTemp_V, nVarRestart)
