@@ -1031,7 +1031,7 @@ contains
           do k=k0_,nKp1_; do j=j0_,nJp1_; do i=i0_,nIp1_
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              ! Calculate inv. jacobian matrix from Cartesian to general Coord.
-             InvJac_DD = get_InvJacobian(i,j,k,iBlock)
+             InvJac_DD = inv_jac_dd(i,j,k,iBlock)
 
              ! Get current from curl B
              call calc_cell_curl_ghost(i,j,k,iBlock,StateImpl_VG,Current_D)
@@ -1063,7 +1063,7 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-             InvJac_DD = get_InvJacobian(i,j,k,iBlock)
+             InvJac_DD = inv_jac_dd(i,j,k,iBlock)
 
              ! Calculate determinant of Jacobian = 1/det(InvJac)
              DetJ = 1 / determinant(InvJac_DD)
@@ -1116,7 +1116,7 @@ contains
 
   contains
     !==========================================================================
-    function get_InvJacobian(i,j,k,iBlock) RESULT(InvJac_DD)
+    function inv_jac_dd(i,j,k,iBlock) RESULT(InvJac_DD)
 
       integer, intent(in) :: i,j,k,iBlock
       real :: InvJac_DD(3,3)
@@ -1130,7 +1130,7 @@ contains
            (Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock))
       InvJac_DD(:,3) = InvDzHalf *&
            (Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
-    end function get_InvJacobian
+    end function inv_jac_dd
     !==========================================================================
 
   end subroutine get_resistivity_rhs

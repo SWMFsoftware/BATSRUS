@@ -9,9 +9,13 @@ module ModRadioWaveImage
   use ModParticles, ONLY: allocate_particles,&
        mark_undefined, Particle_I, check_particle_location,&
        put_particles, trace_particles, interpolate_grid_amr_gc
+
   implicit none
+
   SAVE
+
   PRIVATE! Except
+
   ! Public members
   public :: ray_bunch_intensity, check_allocate
   ! Intensity_I:    the intensities of each ray calculated as the integral
@@ -20,48 +24,61 @@ module ModRadioWaveImage
   !     the step DeltaS_I. Set all the elements of Intensity_I to 0.0 before
   !     the first call to the ray_path().
   public:: Intensity_I, StateIn_VI
+  public:: SlopeX_, SlopeZ_
+  integer, public :: nRay !=nXPixelX*nYPixel
+  public:: rIntegration2
+
+
   real, allocatable :: Intensity_I(:)
   real, allocatable :: StateIn_VI(:,:)
 
-  public:: nRay, SlopeX_, SlopeZ_
-  integer :: nRay !=nXPixelX*nYPixel
   ! Frequency related:
-  real :: NElectronSiCr = -1.0, NElectronSiCrInv = -1.0
+  real :: NelectronSiCr = -1.0, NelectronSiCrInv = -1.0
   ! Tolerance parameters::
   !  minimum 100 points between a vacuum and a critical surface and
   !  minimum 100 points over 1 rad of the curvature
   real, parameter :: Tolerance =  1.0e-2, Tolerance2   =  1.0e-4
+
   ! Initial step size
   real,parameter  :: DeltaS = 1.0
+
   ! One  hundredth of average step
   real, parameter :: StepMin = 1.0e-2
-  public:: rIntegration2
+
   ! Radius squared of a "soft boundary". If the ray goes beyond
   ! this boundary, the integration for this ray stops.
   real :: rIntegration2 !=rIntegration**2 + Eps
+
   ! Kind of particles used to integrate emissivity over rays
-  integer :: KindRay_ = -1
+  integer :: iKindRay = -1
+
   ! Pointers to the arrays
   real,    pointer  :: State_VI(:,:)
   integer, pointer  :: iIndex_II(:,:)
+
   ! Components of the ray vector
   ! Cartesian coordinates: x_ = 1, y_ = 2, z_ = 3
   ! Unity slope vectors for all the line-of-sights pointing at
   ! the pixels
   integer, parameter :: SlopeX_ = 4, SlopeZ_ = 6
+
   ! Integration step
   integer, parameter :: Ds_ = 7
+
   ! Distance to a critical surface, at which Density = DensityCr
   integer, parameter :: Dist2Cr_ = 8
   integer, parameter :: nVar = Dist2Cr_
+
   ! Indices
   integer, parameter :: Ray_ = 1, Steepness_ = 2, OK_ = 0, Bad_ = 1
   integer, parameter :: Status_ = 3, Predictor_ = 1
   integer, parameter :: nIndex = Status_
+
 contains
   !============================================================================
   subroutine check_allocate
     logical, save   :: DoAllocate = .true.
+
     ! Initial allocation of the global vector of ray positions
     ! and other dynamic arrays
     !--------------------------------------------------------------------------
@@ -75,17 +92,19 @@ contains
        allocate(Intensity_I(nRay),StateIn_VI(x_:SlopeZ_,1:nRay))
     end if
     call allocate_particles(&
-         iKindParticle = KindRay_, &
+         iKindParticle = iKindRay, &
          nVar          = nVar    , &
          nIndex        = nIndex  , &
          nParticleMax  = nRay      )
-    State_VI  => Particle_I(KindRay_)%State_VI
-    iIndex_II => Particle_I(KindRay_)%iIndex_II
+    State_VI  => Particle_I(iKindRay)%State_VI
+    iIndex_II => Particle_I(iKindRay)%iIndex_II
+
   end subroutine check_allocate
   !============================================================================
   subroutine ray_bunch_intensity(RadioFrequency)
+
     use ModMpi
-    !
+
     !   The subroutine ray_bunch_intensity() is an interface to the radiowave
     ! raytracer and emissivity integrator ray_path() from the
     ! ModRadioWaveRaytracing module. It calculates the initial slopes of the
@@ -119,35 +138,36 @@ contains
     !     The intencity of an individual pixel is calculated as the integral
     !     of the plasma emissivity along the corresponding ray trajectory.
     ! Written by Leonid Benkevitch.
-    !
-    !
+
     real, intent(in) :: RadioFrequency
     integer :: iError
     !--------------------------------------------------------------------------
-    !
     ! Calculate the critical density from the frequency
-    !
-    NElectronSiCr = cPi*cElectronMass&
+    NelectronSiCr = cPi*cElectronMass&
          *RadioFrequency**2/cElectronChargeSquaredJm
-    NElectronSiCrInv = 1.0/NElectronSiCr
+    NelectronSiCrInv = 1.0/NelectronSiCr
 
-    call put_particles(KindRay_ ,         &
+    call put_particles(iKindRay ,         &
          StateIn_VI         = StateIn_VI, &
          DoReplace          = .true.)
+
     ! Do emissivity integration inside of the integration sphere
     Intensity_I = 0
     State_VI(Ds_,:     )    = DeltaS
     State_VI(Dist2Cr_,:)    = 0.0
     iIndex_II(Steepness_:Status_,:) = OK_
-    call trace_particles(KindRay_, ray_path)
+    call trace_particles(iKindRay, ray_path)
     if(nProc > 1) call MPI_reduce_real_array(Intensity_I(1), nRay, MPI_SUM, &
          0, iComm, iError)
+
   end subroutine ray_bunch_intensity
   !============================================================================
   subroutine ray_path(iParticle, IsEndOfSegment)
+
     use ModVarIndexes, ONLY: nVar, Rho_
     use ModPhysics,    ONLY: No2Si_V, UnitN_
     use ModIO,         ONLY: UseNoRefraction
+
     !   The subroutine ray_path() makes raytracing and emissivity integration
     ! along ray paths. It works on a group of rays (a beam). Each ray is
     ! specified by its Cartesian Xyz_DI and its direction cosines
@@ -199,30 +219,38 @@ contains
     ! DensityCr: the plasma density at which its dielectric permittivity
     !     becomes zero for chosen wave frequency.
     ! Written by Leonid Benkevitch.
-    !
-    !
+
     integer, intent(in)   :: iParticle
     logical, intent(out)  :: IsEndOfSegment
     ! State vector interpolated to the mid point of the new ray segment
     real ::   State_V(nVar)
+
     ! Density, its gradient and the grid size interpolated to the same
     ! point
-    real ::   GradNElectronSi_D(MaxDim), NElectronSi, DeltaSNew
+    real ::   GradNelectronSi_D(MaxDim), NelectronSi, DeltaSNew
+
     ! Predictor
     real :: HalfDeltaS
+
     ! Coordinates at the begining of stage
     real  ::  PositionHalfBack_D(MaxDim)
+
     ! Density/Density_cr
     real  ::  Dens2DensCr
+
     ! Dielectric permeability, 1 - Dens2DensCr
     real  ::  DielPerm
+
     ! Gradient of dielectric permeability
     real  ::  GradDielPerm_D(MaxDim)
+
     ! Gradient of dielectric permeability squared
     real  ::  GradDielPerm2
+
     ! Misc
     real :: DielPermHalfBack
     real :: GradEpsDotSlope
+
     ! Output from check_step program. If true, the integration step
     ! should be repeated with reduced timestep
     logical :: DoReturn, IsGone, DoMove
@@ -237,7 +265,7 @@ contains
             *0.50*State_VI(Ds_,iParticle)
        ! Now Xyz_DI moved by 1/2 DeltaS !!!
        ! Check if at half step the ray escaped the domain
-       call check_particle_location(KindRay_, iParticle,&
+       call check_particle_location(iKindRay, iParticle,&
             DoMove=DoMove, IsGone = IsGone)
        if(IsGone)then
           IsEndOfSegment = .true.
@@ -252,14 +280,14 @@ contains
     end if
     ! The following routine calculates density, gradient and
     ! step size
-    call get_local_density(State_V, GradNElectronSi_D, DeltaSNew,&
+    call get_local_density(State_V, GradNelectronSi_D, DeltaSNew,&
          IsEndOfSegment)
     nElectronSi = State_V(Rho_)*No2Si_V(UnitN_)
     ! In making radio images the ray accidentally reachig the overdense plasma
     ! region  should not be further processed
-    if(IsEndOfSegment.or.  NElectronSi >= NElectronSiCr)then
+    if(IsEndOfSegment.or.  NelectronSi >= NelectronSiCr)then
        IsEndOfSegment = .true.
-       call mark_undefined(KindRay_,iParticle)
+       call mark_undefined(iKindRay,iParticle)
        RETURN
     end if
     ! Do not process the rays that are done
@@ -267,10 +295,10 @@ contains
     ! Original Position (at an integer point):
     PositionHalfBack_D = State_VI(x_:z_,iParticle) - &
          State_VI(SlopeX_:SlopeZ_,iParticle)*HalfDeltaS
-    Dens2DensCr = NElectronSi*NElectronSiCrInv
+    Dens2DensCr = NelectronSi*NelectronSiCrInv
 
     DielPerm       = 1.0 - Dens2DensCr
-    GradDielPerm_D = -GradNElectronSi_D*NElectronSiCrInv
+    GradDielPerm_D = -GradNelectronSi_D*NelectronSiCrInv
     GradDielPerm2  = sum(GradDielPerm_D**2)
 
     GradEpsDotSlope = sum(GradDielPerm_D*&
@@ -281,7 +309,7 @@ contains
     ! Check positivity:
     if( DielPermHalfBack<=0.0)then
        IsEndOfSegment = .true.
-       call mark_undefined(KindRay_,iParticle)
+       call mark_undefined(iKindRay,iParticle)
        RETURN
     end if
 
@@ -293,26 +321,27 @@ contains
     ! Either switch to opposite pranch of parabola
     ! or make a Boris step
     call advance_ray
-    call check_particle_location(KindRay_, iParticle,&
+    call check_particle_location(iKindRay, iParticle,&
          IsGone = IsEndOfSegment)
     ! Exclude rays which are out the integration sphere
     if(IsEndOfSegment.or.&
          sum(State_VI(x_:z_,iParticle)**2) > rIntegration2)then
        IsEndOfSegment = .true.
-       call mark_undefined(KindRay_,iParticle)
+       call mark_undefined(iKindRay,iParticle)
        RETURN
     end if
     call get_new_step_size(DeltaSNew)
+
   contains
     !==========================================================================
     subroutine check_step(DoReturn)
       logical, intent(out):: DoReturn
       ! Misc
       real :: Curv
-
       !------------------------------------------------------------------------
       DoReturn = .false.
       if(UseNoRefraction)RETURN
+
       ! The curvature squared characterizes the magnitude of
       ! the tranverse gradient of the dielectric permittivity
       Curv = (0.50*HalfDeltaS/DielPermHalfBack)**2* &
@@ -351,6 +380,7 @@ contains
          State_VI(x_:z_,iParticle) = PositionHalfBack_D
          DoReturn = .true.
       end if
+
     end subroutine check_step
     !==========================================================================
     subroutine advance_ray
@@ -364,21 +394,28 @@ contains
       ! equation for the particle gyration
 
       real  ::  Omega_D(MaxDim)
+
       ! Slope at the stage of predictor
       real  ::  Slope1_D(MaxDim)
 
       real :: ProjSlopeOnMinusGradEps_D(MaxDim)
       real :: StepX_D(MaxDim),  StepY_D(MaxDim)
+
       ! Below, L is inverse grad of \epsilon, Alpha is the incidence angle
-      real :: LCosAl ! L*cos(Alpha)
+      real :: LtimesCosAlpha ! L*cos(Alpha)
+
       ! Length of parabola
       real :: ParabLen
+
       ! grad(n)/n, with n=\sqrt(\varepsilon)
       real  ::  RelGradRefrInx_D(MaxDim)
+
       ! Misc
       real :: Coef, Curv
+
       ! Ray ID
       integer :: iRay
+
       ! Realistic emission
       real, dimension(nWave):: PlanckSpectrum_W, AbsorptionCoef_W
       !------------------------------------------------------------------------
@@ -428,11 +465,10 @@ contains
          ! with the symmetric point at the opposite branch of parabola, and
          ! changing the "incident" direction Slope_DI to the "departing" ray
          ! direction according to Snell law.
-         !
-         LCosAl = -GradEpsDotSlope/GradDielPerm2
-         ProjSlopeOnMinusGradEps_D = -LCosAl*GradDielPerm_D
-         ! Here v_proj
+         LtimesCosAlpha = -GradEpsDotSlope/GradDielPerm2
+         ProjSlopeOnMinusGradEps_D = -LtimesCosAlpha*GradDielPerm_D
 
+         ! Here v_proj
          StepY_D = State_VI(SlopeX_:SlopeZ_,iParticle) &
               - ProjSlopeOnMinusGradEps_D
          ! Here c; |c| = sin \alpha
@@ -449,7 +485,7 @@ contains
          ! Multiply it by L*Cos(\alpha)*DielPermHalfBack
          !
 
-         StepY_D = 4*StepY_D*LCosAl*DielPermHalfBack
+         StepY_D = 4*StepY_D*LtimesCosAlpha*DielPermHalfBack
 
          State_VI(x_:z_,iParticle) = &
               PositionHalfBack_D + StepY_D
@@ -460,7 +496,7 @@ contains
          ! Thus,
          !
 
-         StepX_D = (DielPermHalfBack*LCosAl**2)*GradDielPerm_D
+         StepX_D = (DielPermHalfBack*LtimesCosAlpha**2)*GradDielPerm_D
 
          ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
          ! Above we got state vector at the mid point of the newly
@@ -519,10 +555,13 @@ contains
               AbsorptionCoef_W(1)*PlanckSpectrum_W(1)&
               *FrequencySi_W(WaveLast_) ! Multiply by a spectral width
       end if
+
     end subroutine advance_ray
     !==========================================================================
     subroutine get_new_step_size(StepSizeNew)
+
       real, intent(in) :: StepSizeNew
+
       !   The code below makes gradual increases of the DeltaS up to the value
       ! specified in DeltaSNew. The smooth step increase is required so as
       ! not to get into the space behind the critical surface, stepping with
@@ -568,23 +607,27 @@ contains
               max(2 - State_VI(Ds_,iParticle)/StepSizeNew, 1.0)*&
               min(StepSizeNew, State_VI(Ds_,iParticle))
       end if
+
     end subroutine get_new_step_size
     !==========================================================================
     subroutine get_local_density(&
-         State_V, GradNElectronSi_D, DeltaSNew, IsBody)
+         State_V, GradNelectronSi_D, DeltaSNew, IsBody)
+
       use ModAdvance, ONLY: State_VGB
       use ModVarIndexes, ONLY: nVar
       use ModCellGradient, ONLY: GradDensity_DGB => GradVar_DGB
       use ModGeometry, ONLY: CellSize_DB
       use ModPhysics, ONLY: No2Si_V, UnitN_
       real,    intent(out):: State_V(nVar)
-      real,    intent(out):: GradNElectronSi_D(MaxDim)
+      real,    intent(out):: GradNelectronSi_D(MaxDim)
       real,    intent(out):: DeltaSNew
       logical, optional, intent(out):: IsBody
       real :: GradDensity_D(MaxDim)
+
       ! Coordinates and block #
       real     :: Xyz_D(MaxDim)
       integer  :: iBlock
+
       ! interpolation data: number of cells, cell indices, weights
       integer:: nCell, iCell_II(0:nDim, 2**nDim)
       real   :: Weight_I(2**nDim)
@@ -598,7 +641,7 @@ contains
       call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I,&
            IsBody)
       if(IsBody)then
-         call mark_undefined(KindRay_,iParticle);RETURN
+         call mark_undefined(iKindRay,iParticle);RETURN
       end if
       State_V = 0.0; GradDensity_D = 0.0; DeltaSNew = 0.0
       if(nCell<1)then
@@ -616,7 +659,8 @@ contains
          DeltaSNew = DeltaSNew + &
               Weight_I(iCell)*minval(CellSize_DB(:,iBlock))
       end do
-      GradNElectronSi_D = GradDensity_D*No2Si_V(UnitN_)
+      GradNelectronSi_D = GradDensity_D*No2Si_V(UnitN_)
+
     end subroutine get_local_density
     !==========================================================================
   end subroutine ray_path

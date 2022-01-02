@@ -46,19 +46,19 @@ module ModRestartFile
   public :: init_mod_restart_file
   public :: string_append_iter
 
-  ! Directories for input and output IsRestart files
+  ! Directories for input and output restart files
   character(len=100), public :: NameRestartInDir ="GM/restartIN/"
   character(len=100), public :: NameRestartOutDir="GM/restartOUT/"
 
-  ! Flags to include iteration number in IsRestart files
+  ! Flags to include iteration number in restart files
   logical, public :: UseRestartInSeries=.false.
   logical, public :: UseRestartOutSeries=.false.
 
-  ! simulation time read in upon IsRestart
+  ! simulation time read in upon restart
   real, public    :: tSimulationRead
 
   ! Variables for allowing the user to use a different set of state variables
-  ! from those saved in an existing IsRestart file.
+  ! from those saved in an existing restart file.
   logical, public :: DoChangeRestartVariables = .false.
   integer, public :: nVarRestart = nVar
   ! Length is set to exceed the variable names in the current equation module
@@ -73,27 +73,27 @@ module ModRestartFile
   ! Local variables
   character(len=*), parameter :: StringRestartExt  = ".rst"
   character(len=*), parameter :: NameBlkFile       = "blk"
-  character(len=*), parameter :: NameHeaderFile    = "IsRestart.H"
+  character(len=*), parameter :: NameHeaderFile    = "restart.H"
   character(len=*), parameter :: NameDataFile      = "data.rst"
   character(len=*), parameter :: NameIndexFile     = "index.rst"
   character(len=*), parameter :: NameGeoindFile    = "geoindex.rst"
 
-  integer :: nByteRealRead = 8     ! Real precision in IsRestart files
+  integer :: nByteRealRead = 8     ! Real precision in restart files
 
   ! One can use 'block', 'proc' or 'one' format for input and output
-  ! IsRestart files.
+  ! restart files.
   ! The input format is set to 'block' for backwards compatibility
   character (len=20)  :: TypeRestartInFile ='block'
 
   ! 'proc' should work fine on all machines, so it is the default
   character (len=20)  :: TypeRestartOutFile='proc'
 
-  ! Variables for file and record index for 'proc' type IsRestart files
+  ! Variables for file and record index for 'proc' type restart files
   integer, allocatable:: iFileMorton_I(:), iRecMorton_I(:)
 
   character(len=100) :: NameFile
 
-  ! Logical variable for saving block data in the IsRestart
+  ! Logical variable for saving block data in the restart
   logical :: DoWriteBlockData = .false.
   logical :: DoReadBlockData  = .false.
 
@@ -105,12 +105,12 @@ module ModRestartFile
   real (Real8_),allocatable :: State8_CV(:,:,:,:), State8_VC(:,:,:,:)
   real (Real4_),allocatable :: State4_CV(:,:,:,:), State4_VC(:,:,:,:)
 
-  ! Temporary array to store the complete state read from the IsRestart file.
+  ! Temporary array to store the complete state read from the restart file.
   ! Allows loading only a subset of the variables into current run, if needed.
   real,allocatable :: StateRead_VCB(:,:,:,:,:)
   real,allocatable :: ImplOldRead_VCB(:,:,:,:,:)
 
-  ! Logical variable if FullB is saved in IsRestart
+  ! Logical variable if FullB is saved in restart
   logical, public :: UseRestartWithFullB = .false.
 
 contains
@@ -289,7 +289,7 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    ! Allocate temporary array for reading IsRestart data
+    ! Allocate temporary array for reading restart data
     ! with arbitrary percision and number of state variables.
     allocate(State8_CV(nI,nJ,nK,nVarRestart))
     allocate(State8_VC(nVarRestart,nI,nJ,nK))
@@ -315,10 +315,10 @@ contains
        call stop_mpi('Unknown TypeRestartInFile='//TypeRestartinFile)
     end select
 
-    ! Copy IsRestart data into State_VGB as needed.
+    ! Copy restart data into State_VGB as needed.
     call match_copy_restart_variables
 
-    ! IsRestart buffer grid if present
+    ! restart buffer grid if present
     if(DoRestartBuffer)call read_buffer_restart
     ! Deallocate temporary arrays
     deallocate(State8_CV)
@@ -346,7 +346,7 @@ contains
     ! The subtraction of B0 from full B0+B1 to obtain B1 is in set_ICs
     ! after B0 is set
 
-    ! Try reading geoIndices IsRestart file if needed
+    ! Try reading geoIndices restart file if needed
     if(DoWriteIndices .and. iProc==0)call read_geoind_restart
 
     if(DoReadBlockData)  &
@@ -391,7 +391,8 @@ contains
     use ModVarIndexes, ONLY: NameEquation
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
 
-    use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
+    use ModGeometry, ONLY: &
+         xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
     use CON_planet,  ONLY: NamePlanet
     use ModReadParam, ONLY: i_line_command
@@ -460,7 +461,7 @@ contains
     write(UnitTmp_,'(l1,a)')UseConstrainB, cTab//cTab//cTab//'DoRestartBFace'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#RESTARTINFILE'
-    ! Note that the output file format is saved as the input for next IsRestart
+    ! Note that the output file format is saved as the input for next restart
     call write_string_tabs_name(TypeRestartOutFile, 'StringRestartInFile')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#NSTEP'
@@ -782,13 +783,13 @@ contains
 
     if(any(CellSize_DB(:,iBlock) < 0  &
          .or. DtMax_B(iBlock) < 0 .or. tSimulationRead < 0))then
-       write(*,*)NameSub,': corrupt IsRestart data!!!'
+       write(*,*)NameSub,': corrupt restart data!!!'
        write(*,*)'iBlock  =', iBlock
        write(*,*)'Dxyz    =', CellSize_DB(:,iBlock)
        write(*,*)'Dt,tSim =', DtMax_B(iBlock), tSimulationRead
        write(*,*)'XyzStart=', Coord111_DB(:,iBlock)
        write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
-       call stop_mpi(NameSub//': corrupt IsRestart data!!!')
+       call stop_mpi(NameSub//': corrupt restart data!!!')
     end if
 
     if(DoTest)then
@@ -911,7 +912,7 @@ contains
        if (UseRestartOutSeries) &
             call string_append_iter(NameFile,nIteration)
 
-       ! Delete and open IsRestart files
+       ! Delete and open restart files
        if(TypeRestartOutFile == 'proc') &
             call open_file(FILE=NameFile, FORM='unformatted', &
             RECL = lRecord, ACCESS = 'direct',                &
@@ -950,7 +951,7 @@ contains
        iMorton = iMortonNode_A(iNode_B(iBlock))
 
        if(TypeRestartInFile == 'proc')then
-          ! Find the appropriate 'proc' IsRestart file and the record number
+          ! Find the appropriate 'proc' restart file and the record number
           iFile = iFileMorton_I(iMorton)
           iRec  = iRecMorton_I(iMorton)
           if(iFile /= iFileLast) then
@@ -959,7 +960,7 @@ contains
              iFileLast = iFile
           end if
        else
-          ! For 'one' IsRestart file record index is given by Morton index
+          ! For 'one' restart file record index is given by Morton index
           iRec = iMorton
        end if
 
@@ -1035,13 +1036,13 @@ contains
        end if
 
        if(any(CellSize_DB(:,iBLock) < 0) .or. DtMax_B(iBlock) < 0)then
-          write(*,*)NameSub,': corrupt IsRestart data!!!'
+          write(*,*)NameSub,': corrupt restart data!!!'
           write(*,*)'iBlock  =', iBlock
           write(*,*)'Dxyz    =', CellSize_DB(:,iBLock)
           write(*,*)'Dt      =', DtMax_B(iBlock)
           write(*,*)'XyzStart=', Coord111_DB(:,iBlock)
           write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
-          call stop_mpi(NameSub//': corrupt IsRestart data!!!')
+          call stop_mpi(NameSub//': corrupt restart data!!!')
        end if
     end do
 
@@ -1082,7 +1083,7 @@ contains
           iFileMorton_I(iMorton) = iProc
           iRecMorton_I(iMorton)  = iRec
        else
-          ! For 'one' IsRestart file record index is given by Morton index
+          ! For 'one' restart file record index is given by Morton index
           iRec = iMorton
        end if
 
@@ -1149,25 +1150,25 @@ contains
 
   subroutine write_geoind_restart
 
-    ! Save ModGroundMagPerturb::MagHistory_II to a IsRestart file on proc 0
+    ! Save ModGroundMagPerturb::MagHistory_II to a restart file on proc 0
 
     use ModGroundMagPerturb, ONLY: nKpMag, iSizeKpWindow, MagHistory_DII
 
     integer            :: i, j, iDim
     character(len=100) :: NameFile
-    character(len=1)   :: NameDim(2) = ['x', 'y']
+    character, parameter:: NameDim_I(2) = ['x', 'y']
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_geoind_restart'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! Ensure that IsRestart files are only written from head node.
+    ! Ensure that restart files are only written from head node.
     if(iProc/=0) RETURN
 
     do iDim=1, 2
-       ! Open IsRestart file.
-       NameFile = trim(NameRestartOutDir)//NameDim(iDim)//'_'//NameGeoIndFile
+       ! Open restart file.
+       NameFile = trim(NameRestartOutDir)//NameDim_I(iDim)//'_'//NameGeoIndFile
        call open_file(file=NameFile, NameCaller=NameSub)
 
        ! Size of array:
@@ -1187,7 +1188,7 @@ contains
 
   subroutine read_geoind_restart
 
-    ! Read MagHistory_II from IsRestart file on processor 0
+    ! Read MagHistory_II from restart file on processor 0
 
     use ModGroundMagPerturb, ONLY: nKpMag, iSizeKpWindow, MagHistory_DII, &
          IsFirstCalc, IsSecondCalc
@@ -1195,7 +1196,7 @@ contains
     integer            :: i, j, iDim, nMagTmp, iSizeTmp
     logical            :: DoRestart
     character(len=100) :: NameFile
-    character(len=1)   :: NameDim(2) = ['x', 'y']
+    character, parameter:: NameDim_I(2) = ['x', 'y']
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_geoind_restart'
@@ -1204,13 +1205,13 @@ contains
 
     do iDim=1, 2
 
-       NameFile = trim(NameRestartInDir)//NameDim(iDim)//'_'//NameGeoindFile
+       NameFile = trim(NameRestartInDir)//NameDim_I(iDim)//'_'//NameGeoindFile
 
-       ! Check for IsRestart file.  If one exists, use it.
+       ! Check for restart file.  If one exists, use it.
        inquire(file=NameFile, exist=DoRestart)
        if(.not. DoRestart) then
           write(*,*) NameSub, &
-               ": WARNING did not find geoindices IsRestart file ", &
+               ": WARNING did not find geoindices restart file ", &
                trim(NameFile)
           MagHistory_DII(iDim,:,:) = 0.0
           CYCLE
@@ -1221,16 +1222,16 @@ contains
        call open_file(file=NameFile, status='OLD', NameCaller=NameSub)
 
        ! Read size of array, ensure that it matches expected.
-       ! If not, it means that the IsRestart is incompatible and cannot be used.
+       ! If not, it means that the restart is incompatible and cannot be used.
        read(UnitTmp_, *) nMagTmp, iSizeTmp
 
        if( nMagTmp /= nKpMag .or. iSizeTmp /= iSizeKpWindow ) then
           write(*,*)'ERROR: in file ',trim(NameFile)
-          write(*,*)'IsRestart file contains  nMagTmp, iSizeTmp=', &
+          write(*,*)'restart file contains  nMagTmp, iSizeTmp=', &
                nMagTmp, iSizeTmp
           write(*,*)'PARAM.in contains nKpMag, iSizeKpWindow =', &
                nKpMag, iSizeKpWindow
-          call stop_mpi(NameSub//' IsRestart does not match Kp settings!')
+          call stop_mpi(NameSub//' restart does not match Kp settings!')
        end if
 
        do j = 1, iSizeKpWindow
@@ -1253,21 +1254,21 @@ contains
   subroutine match_copy_restart_variables
 
     ! This subroutine allows to use the state stored in an existing
-    ! IsRestart file even if the variables or their order as defined in
+    ! restart file even if the variables or their order as defined in
     ! the present equation file has changed.
 
     ! PROCEDURE:
     ! 1. Locate the current state variable in the array read from the
-    ! IsRestart file (by matching their name strings).
-    ! 2. Copy the IsRestart data into the correct position in State_VGB.
+    ! restart file (by matching their name strings).
+    ! 2. Copy the restart data into the correct position in State_VGB.
     ! 3. Apply specific rules for handling non-matching state variables.
 
     ! IMPORTANT NOTES!!
-    ! 1. If the IsRestart file includes additional variables which are not part
+    ! 1. If the restart file includes additional variables which are not part
     !    of the current equation module, they will be ignored, unless a
     !    a specific rule is implemented here.
     ! 2. If the current equation module includes variables not present
-    !    in the IsRestart file, they will be assigned values according to
+    !    in the restart file, they will be assigned values according to
     !    specific rules implemented here. If no rule is defined, the default
     !    state will be used for these variables (unless UseStrict=T, in which
     !    case the code will stop excution).
@@ -1305,8 +1306,8 @@ contains
 
     ! Change of state variables!!
     if(iProc==0) then
-       write(*,*) 'Changing state variables from IsRestart file'
-       write(*,*) 'IsRestart file variables: ', NameVarRestart_V
+       write(*,*) 'Changing state variables from restart file'
+       write(*,*) 'Restart file variables: ', NameVarRestart_V
        write(*,*) 'Current variables:      ', NameVar_V
        write(*,*) 'DoSpecifyRestartVarMapping =', DoSpecifyRestartVarMapping
        if (DoSpecifyRestartVarMapping) &
@@ -1314,7 +1315,7 @@ contains
     end if
 
     ! Loop over the current state variables, and locate the index of
-    ! the corresponding variable in the IsRestart file
+    ! the corresponding variable in the restart file
     MATCHLOOP: do iVar = 1,nVar
        do iVarRead = 1, nVarRestart
           if (NameVarLower_V(iVar) == NameVarRestart_V(iVarRead)) then
@@ -1368,7 +1369,7 @@ contains
        end do
     end if
 
-    ! Copy IsRestart data into State_VGB as needed
+    ! Copy restart data into State_VGB as needed
     do iVar = 1,nVar
        if (iVarMatch_V(iVar) > 0) then
           do iBlock = 1,nBlock
@@ -1379,14 +1380,14 @@ contains
           end do
        else
           ! Rules for initializing state variables that are not present
-          ! in the IsRestart file
+          ! in the restart file
           select case(NameVar_V(iVar))
           case('Bx','By','Bz','Hyp')
              State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = 0.0
 
           case('Pe')
-             ! When electron pressure is used but is not present in the IsRestart
-             ! file, divide pressure from IsRestart state between ions and
+             ! When electron pressure is used but is not present in the restart
+             ! file, divide pressure from restart state between ions and
              ! electrons
              do iBlock = 1,nBlock
                 do i =1,nI ; do j=1,nJ; do k=1,nK
@@ -1406,11 +1407,11 @@ contains
              if(iProc==0) &
                   write(*,*) 'WARNING!!! : the state variable ', &
                   NameVar_V(iVar) //                            &
-                  'is not present in the IsRestart file and no rule is'//&
+                  'is not present in the restart file and no rule is'//&
                   ' implemented to define its value.'
              if(UseStrict) then
                 call stop_mpi(NameSub// &
-                     ' ERROR: State after IsRestart not well defined!')
+                     ' ERROR: State after restart not well defined!')
              else
                 if(iProc==0) write(*,*) 'Using default values instead.'
                 State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = DefaultState_V(iVar)
@@ -1419,9 +1420,9 @@ contains
        end if
     end do
 
-    ! Check if IsRestart file contains certain additional variables
+    ! Check if restart file contains certain additional variables
     if(.not. UseElectronPressure) then
-       ! Check if the IsRestart file containes electron pressure
+       ! Check if the restart file containes electron pressure
        do iVarRead = 1, nVarRestart
           if (NameVarRestart_V(iVarRead) == 'Pe') then
              UseElectronPressureRestart = .true.
@@ -1431,14 +1432,14 @@ contains
        end do
     end if
 
-    ! Implement rules for using additional variables present in the IsRestart
+    ! Implement rules for using additional variables present in the restart
     ! file but not in the equation module
 
     ! PRESSURE
     if(.not. UseElectronPressure .and. UseElectronPressureRestart) then
        do iBlock = 1,nBlock
           do i =1,nI ; do j=1,nJ; do k=1,nK
-             ! Add the IsRestart file electron pressure to the total pressure.
+             ! Add the restart file electron pressure to the total pressure.
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + &
                   StateRead_VCB(iVarPeRestart,i,j,k,iBlock)
           end do; end do; end do

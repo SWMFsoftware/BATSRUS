@@ -251,9 +251,10 @@ contains
     !--------------------------------------------------------------------------
     HeightSi_C = (r_GB(1:nI,1:nJ,1:nK,iBlock) - 1) * Si2No_V(UnitX_)
     if(UseStar)then
-       BarometricScaleSi = TeChromosphereSi *  cBarometricScalePerT*RadiusStar**2/MassStar
+       BarometricScaleSi = TeChromosphereSi &
+            * cBarometricScalePerT*RadiusStar**2/MassStar
     else
-       BarometricScaleSi = TeChromosphereSi *  cBarometricScalePerT
+       BarometricScaleSi = TeChromosphereSi * cBarometricScalePerT
     endif
     Amplitude = radiative_cooling(TeChromosphereSi, NumberDensChromosphereCgs)
 
