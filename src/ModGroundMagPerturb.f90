@@ -390,7 +390,8 @@ contains
     ! from currents in GM cells.  The result is returned as MagPerturb_DI.
 
     use ModSize,           ONLY: nI, nJ, nK
-    use ModGeometry,       ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
+    use ModGeometry,       ONLY: &
+         r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
     use ModMain,           ONLY: &
          Unused_B, nBlock, tSimulation, TypeCoordSystem
     use ModNumConst,       ONLY: cPi
