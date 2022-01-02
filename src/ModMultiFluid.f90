@@ -43,9 +43,9 @@ module ModMultiFluid
   integer, parameter:: iUzIon_I(nIonFluid)    = iRhoUz_I(IonFirst_:IonLast_)
   integer, parameter:: iPIon_I(nIonFluid)     = iP_I(IonFirst_:IonLast_)
 
-  integer, private:: i_
+  integer, private:: iF
   logical, parameter:: IsIon_I(nFluid) = &
-       [ (i_ >= IonFirst_ .and. i_ <=IonLast_, i_=1, nFluid) ]
+       [ (iF >= IonFirst_ .and. iF <=IonLast_, iF=1, nFluid) ]
 
   ! The ion masses (adjustable)
   real :: MassIon_I(nIonFluid)
@@ -78,13 +78,13 @@ module ModMultiFluid
   logical :: IsFullyCoupledfluid = .true. , DoOhNeutralBc = .false.
   real    :: RhoBcFactor_I(nFluid) = 1.0, uBcFactor_I(nFluid) = 1.
 
-  real    :: RhoNeutralsISW=0.0, RhoNeutralsISW_dim=0.0 , &
-       PNeutralsISW=0.0  , PNeutralsISW_dim=0.0  , &
-       UxNeutralsISW=0.0 , UxNeutralsISW_dim=0.0 , &
-       UyNeutralsISW=0.0 , UyNeutralsISW_dim=0.0 , &
-       UzNeutralsISW=0.0 , UzNeutralsISW_dim=0.0 , &
-       TNeutralsISW=0.0  , TNeutralsISW_dim=0.0  , &
-       mProtonMass=1.0
+  real    :: RhoNeutralsISW=0.0, RhoNeuWindDim=0.0 , &
+       PNeutralsISW=0.0  , pNeuWindDim=0.0  , &
+       UxNeutralsISW=0.0 , UxNeuWindDim=0.0 , &
+       UyNeutralsISW=0.0 , UyNeuWindDim=0.0 , &
+       UzNeutralsISW=0.0 , UzNeuWindDim=0.0 , &
+       TNeutralsISW=0.0  , TempNeuWindDim=0.0  , &
+       MassNeutralDim=1.0
 
 contains
   !============================================================================
@@ -123,7 +123,7 @@ contains
     integer, optional, intent(out) :: iFluidOut
 
     integer :: i, l, iFluid
-    character(:), allocatable :: SubString
+    character(:), allocatable :: StringEnd
 
     character(len=*), parameter:: NameSub = 'extract_fluid_name'
     !--------------------------------------------------------------------------
@@ -138,8 +138,8 @@ contains
        if(String(1:l) == NameFluid)then
           ! Found fluid name, remove it from s
           iFluid = i
-          SubString = String(l+1:len(String))
-          String = SubString
+          StringEnd = String(l+1:len(String))
+          String = StringEnd
           EXIT
        end if
     end do

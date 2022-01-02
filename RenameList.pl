@@ -273,7 +273,14 @@
     dt_prev => DtPrev,
     FluxTypeImpl => TypeFluxImpl,
     
-    ### ModIonElectron
-    
+    ### ModMultiFluid
+    RhoNeutralsISW_dim => RhoNeuWindDim,
+    PNeutralsISW_dim => pNeuWindDim,
+    UxNeutralsISW_dim => UxNeuWindDim,
+    UyNeutralsISW_dim => UyNeuWindDim,
+    UzNeutralsISW_dim => UzNeuWindDim,
+    TNeutralsISW_dim => TempNeuWindDim,
+    mProtonMass => MassNeutralDim,
+    SubString => StringEnd,
     
     );

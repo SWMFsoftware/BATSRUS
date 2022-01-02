@@ -89,9 +89,9 @@ contains
          read_resistivity_param, init_mod_resistivity
     use ModMultiFluid, ONLY: MassIon_I,ChargeIon_I,nIonFluid, &
          DoConserveNeutrals, DoOhNeutralBc, &
-         uBcFactor_I, RhoBcFactor_I, RhoNeutralsISW_dim, &
-         UxNeutralsISW_dim, UyNeutralsISW_dim, UzNeutralsISW_dim, &
-         TNeutralsISW_dim, mProtonMass
+         uBcFactor_I, RhoBcFactor_I, RhoNeuWindDim, &
+         UxNeuWindDim, UyNeuWindDim, UzNeuWindDim, &
+         TempNeuWindDim, MassNeutralDim
     use ModMultiIon, ONLY: multi_ion_set_parameters, &
          multi_ion_init_point_impl
     use ModSolarwind, ONLY: UseSolarwindFile, read_solar_wind_param, &
@@ -2530,12 +2530,12 @@ contains
           ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 
        case("#OHNEUTRALS")
-          call read_var('RhoNeutralsISW_dim' ,RhoNeutralsISW_dim)
-          call read_var('TNeutralsISW_dim' ,TNeutralsISW_dim)
-          call read_var('UxNeutralsISW_dim' ,UxNeutralsISW_dim)
-          call read_var('UyNeutralsISW_dim' ,UyNeutralsISW_dim)
-          call read_var('UzNeutralsISW_dim' ,UzNeutralsISW_dim)
-          call read_var('mProtonMass',mProtonMass)
+          call read_var('RhoNeuWindDim' ,RhoNeuWindDim)
+          call read_var('TempNeuWindDim' ,TempNeuWindDim)
+          call read_var('UxNeuWindDim' ,UxNeuWindDim)
+          call read_var('UyNeuWindDim' ,UyNeuWindDim)
+          call read_var('UzNeuWindDim' ,UzNeuWindDim)
+          call read_var('MassNeutralDim',MassNeutralDim)
 
        case("#OHBOUNDARY")
           call read_var('DoOhNeutralBc',DoOhNeutralBc)
