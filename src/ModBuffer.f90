@@ -72,7 +72,7 @@ contains
   !============================================================================
   subroutine read_buffer_grid_param(NameCommand)
 
-    ! Read all parameters from the parameter file and/or restart header file
+    ! Read all parameters from the parameter file and/or IsRestart header file
     ! The longitude and latitude range are read in degrees and then converted
     ! to radians
 

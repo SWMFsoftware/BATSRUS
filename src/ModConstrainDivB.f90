@@ -1134,7 +1134,7 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY : State_VGB
     use ModGeometry, ONLY : IsBody_B, Used_GB
-    use ModIO, ONLY : restart
+    use ModIO, ONLY : IsRestart
     use ModPhysics, ONLY : SW_Bx,SW_By,SW_Bz
     use BATL_lib, ONLY: Xyz_DGB
 
@@ -1150,7 +1150,7 @@ contains
        BzFace_GB(:,:,:,iBlock)=0.0
     else
 
-       if(.not.restart)then
+       if(.not.IsRestart)then
           where(Xyz_DGB(x_,:,:,:,iBlock)<16.)
              ! Cancel B field at x<16Re to avoid non-zero initial divB
              ! x=16 is a good choice because it is a power of 2 so it is

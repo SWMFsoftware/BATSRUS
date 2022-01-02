@@ -142,7 +142,7 @@ contains
           nBlocksUsed = nBlocksUsed + 1
        else
 
-          Dx = plot_Dx(1,iFile)
+          Dx = PlotDx_DI(1,iFile)
           DxBlock = CellSize_DB(x_,iBlock)
           DyBlock = CellSize_DB(y_,iBlock)
           DzBlock = CellSize_DB(z_,iBlock)
@@ -462,7 +462,7 @@ contains
        RETURN
     end if
 
-    Dx = plot_Dx(1,iFile)
+    Dx = PlotDx_DI(1,iFile)
     DxBlock = CellSize_DB(x_,iBlock)
     DyBlock = CellSize_DB(y_,iBlock)
     DzBlock = CellSize_DB(z_,iBlock)

@@ -25,9 +25,9 @@ contains
     !
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: IsTimeAccurate, nStep, tSimulation
-    use ModIO, ONLY: StringRadioFrequency_I, plot_type1, &
-         plot_type, plot_form, plot_, ObsPos_DI, &
-         n_Pix_X, n_Pix_Y, X_Size_Image, Y_Size_Image, &
+    use ModIO, ONLY: StringRadioFrequency_I, TypePlot, &
+         TypePlot_I, TypePlotFormat_I, plot_, ObsPos_DI, &
+         nPixelX_I, nPixelY_I, xSizeImage_I, ySizeImage_I, &
          NamePlotDir, StringDateOrTime, nPlotRfrFreqMax
     use ModUtilities, ONLY: open_file, close_file
     use ModIoUnit, ONLY: UnitTmp_
@@ -101,8 +101,8 @@ contains
     ! Set file specific parameters
     !
     XyzObserver_D = ObsPos_DI(:,iFile)
-    nXPixel = n_Pix_X(iFile)
-    nYPixel = n_Pix_Y(iFile)
+    nXPixel = nPixelX_I(iFile)
+    nYPixel = nPixelY_I(iFile)
     !
     ! Total number of rays and pixels in the raster
     !
@@ -111,10 +111,10 @@ contains
     !
     ! Determine the image plane inner coordinates of pixel centers
     !
-    XLower = -0.50*X_Size_Image(iFile)
-    YLower = -0.50*Y_Size_Image(iFile)
-    XUpper =  0.50*X_Size_Image(iFile)
-    YUpper =  0.50*Y_Size_Image(iFile)
+    XLower = -0.50*xSizeImage_I(iFile)
+    YLower = -0.50*ySizeImage_I(iFile)
+    XUpper =  0.50*xSizeImage_I(iFile)
+    YUpper =  0.50*ySizeImage_I(iFile)
     DxPixel = (XUpper - XLower)/nXPixel
     DyPixel = (YUpper - YLower)/nYPixel
 
@@ -174,7 +174,7 @@ contains
           write(*,*) 'nXPixel        =', nXPixel
           write(*,*) 'nYPixel        =', nYPixel
        end if
-       select case(plot_form(ifile))
+       select case(TypePlotFormat_I(ifile))
        case('tec')
           NameFileExtension='.dat'
        case('idl')
@@ -182,7 +182,7 @@ contains
        end select
        call join_string(NameVar_I(1:nFreq), NameVarAll)
 
-       plot_type1=plot_type(ifile)
+       TypePlot=TypePlot_I(ifile)
 
        write(*,*) 'iFile = ', iFile
        write(*,*) 'nFreq = ', nFreq
@@ -226,12 +226,12 @@ contains
        if(IsTimeAccurate)then
           call get_time_string
           write(NameFile,NameFileFormat) &
-               trim(NamePlotDir)//trim(plot_type1)//"_",&
+               trim(NamePlotDir)//trim(TypePlot)//"_",&
                ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
                NameFileExtension
        else
           write(NameFile,NameFileFormat) &
-               trim(NamePlotDir)//trim(plot_type1)//"_",&
+               trim(NamePlotDir)//trim(TypePlot)//"_",&
                ifile-plot_,"_n",nStep,NameFileExtension
        end if
 
@@ -239,7 +239,7 @@ contains
        !
        ! Write the file header
        !
-       select case(plot_form(ifile))
+       select case(TypePlotFormat_I(ifile))
        case('tec')
          ! description of file contains units, physics and dimension
           call save_plot_file(NameFile=NameFile,          &

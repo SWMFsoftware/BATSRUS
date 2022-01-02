@@ -42,7 +42,7 @@ contains
     ! January  2004 fixed declaration for norm_los(3), XyzPix_D(3)
     ! February 2004 fix integration and make 2nd order accurate
     !               fix save_file in main.f90 update ghost cells
-    !               include forgotten plot_pars1=plot_pars(ifile)
+    !               include forgotten StringPlotParam=StringPlotParam_I(ifile)
     !               flags for PB and LW and limb darkening parameter
     !               improved block-line distance calculation
     !               fix IDL output and plot filenames
@@ -56,7 +56,7 @@ contains
     !               rotation of the coordinates to HGI
     !               wide-angle line-of-sight (for STEREO)
     !               change in the parameters: satellite_position,
-    !               offset_angle
+    !               OffsetAngle_I
     !               Cartesian grid and circular image centered
     !               at the Sun (no offset angle)
     ! March    2009 Allow integration of functions different from rho
@@ -204,14 +204,14 @@ contains
     iSat = 0
 
     ! Set file specific parameters
-    nPix       = n_pix_r(iFile)
-    aOffset    = xOffset(iFile)
-    bOffset    = yOffset(iFile)
-    rSizeImage = r_size_image(iFile)
+    nPix       = nPixel_I(iFile)
+    aOffset    = xOffset_I(iFile)
+    bOffset    = yOffset_I(iFile)
+    rSizeImage = rSizeImage_I(iFile)
     rSizeImage2= rSizeImage**2
-    rOccult    = radius_occult(iFile)
+    rOccult    = rOccult_I(iFile)
     rOccult2   = rOccult**2
-    OffsetAngle= offset_angle(iFile)
+    OffsetAngle= OffsetAngle_I(iFile)
 
     select case(TypeSatPos_I(iFile))
     case('sta', 'stb', 'earth')
@@ -267,14 +267,14 @@ contains
     unitstr_TEC = ''
     unitstr_IDL = ''
 
-    plot_type1=plot_type(ifile)
-    plot_vars1=plot_vars(ifile)
+    TypePlot=TypePlot_I(ifile)
+    StringPlotVar=StringPlotVar_I(ifile)
 
-    if(DoTest)write(*,*)'ifile=',ifile,' plot_type=',plot_type1, &
-         ' form = ',plot_form(ifile)
+    if(DoTest)write(*,*)'ifile=',ifile,' TypePlot_I=',TypePlot, &
+         ' form = ',TypePlotFormat_I(ifile)
 
-    call lower_case(plot_vars1)
-    call split_string(plot_vars1, nPlotVarLosMax, plotvarnames, nPlotVar)
+    call lower_case(StringPlotVar)
+    call split_string(StringPlotVar, nPlotVarLosMax, plotvarnames, nPlotVar)
     call set_plot_scalars(iFile,nEqparMax, nEqpar,eqparnames, Eqpar)
     ! Initialize table IDs. In this case automatically
     ! UseTableGen = (iTableGen >=0) and analogously for other table
@@ -284,7 +284,7 @@ contains
     UseTableGen = any(PlotVarNames(1:nPlotVar)== 'tbl')
 
     if(UseTableGen) then
-       iTableGen = i_lookup_table(trim(NameLosTable(iFile)))
+       iTableGen = i_lookup_table(trim(NameLosTable_I(iFile)))
        if (iTableGen <=0) &
             call stop_mpi('Need to load #LOOKUPTABLE for TBL response!')
        ! split the variable list string read in the table
@@ -294,11 +294,11 @@ contains
        nPlotVar=nTableVar-2
        PlotVarNames(1:nPlotVar)=TableVarNames(3:nTableVar)
 
-       ! redefine plot_vars1 with correct table info
-       call join_string(nPlotVar, PlotVarNames, plot_vars1)
+       ! redefine StringPlotVar with correct table info
+       call join_string(nPlotVar, PlotVarNames, StringPlotVar)
 
        if(DoTest .and. iProc==0) then
-          write(*,*) 'plot variables, UseRho=', trim(plot_vars1), UseRho
+          write(*,*) 'plot variables, UseRho=', trim(StringPlotVar), UseRho
           write(*,*) 'nPlotVar, PlotVarNames_V=', &
                nPlotVar,plotvarnames(1:nPlotVar)
        end if
@@ -311,17 +311,17 @@ contains
             Table_I(iTableGen)%NameVar
     endif
 
-    allnames='x y '//trim(plot_vars1)//' '//plot_pars(iFile)
+    allnames='x y '//trim(StringPlotVar)//' '//StringPlotParam_I(iFile)
     if(DoTest .and. iProc==0) write(*,*) 'AllNames: ', AllNames
 
     if(DoTest .and. iProc==0) then
-       write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
+       write(*,*) 'plot variables, UseRho=', StringPlotVar, UseRho
        write(*,*) 'nPlotVar, PlotVarNames_V=', &
             nPlotVar,plotvarnames(1:nPlotVar)
     end if
 
     ! Get the headers that contain variables names and units
-    select case(plot_form(ifile))
+    select case(TypePlotFormat_I(ifile))
     case('tec')
        call get_TEC_los_variables(ifile,nPlotVar,plotvarnames,unitstr_TEC)
        if(DoTest .and. iProc==0) write(*,*)unitstr_TEC
@@ -340,9 +340,9 @@ contains
        enddo
        if(DoTest .and. iProc==0) write(*,*)'unitstr_TEC: ',unitstr_TEC
 
-       if(plot_form(ifile) /= 'hdf') then
-          call join_string(nPlotVar, PlotVarNames, plot_vars1)
-          unitstr_IDL = 'x y '//plot_vars1
+       if(TypePlotFormat_I(ifile) /= 'hdf') then
+          call join_string(nPlotVar, PlotVarNames, StringPlotVar)
+          unitstr_IDL = 'x y '//StringPlotVar
           if(DoTest .and. iProc==0) write(*,*)'unitstr_IDL: ',unitstr_IDL
        end if
     endif
@@ -431,7 +431,7 @@ contains
     end if
 
     if(DoTiming)call timing_stop('los_block_loop')
-    !   if(plot_form(iFile) /= 'hdf') then
+    !   if(TypePlotFormat_I(iFile) /= 'hdf') then
     !       ! add up the pixels from all PE-s to root proc
     if(nProc > 1)then
        call MPI_REDUCE(ImagePe_VII, Image_VII, nPix*nPix*nPlotVar, &
@@ -442,11 +442,11 @@ contains
 
     if(iProc==0) then
 
-       if(plot_dimensional(iFile)) call dimensionalize_plotvar_los
+       if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar_los
 
        if(DoTiming)call timing_start('los_save_plot')
 
-       select case(plot_form(ifile))
+       select case(TypePlotFormat_I(ifile))
        case('tec')
           file_extension='.dat'
        case('idl')
@@ -464,21 +464,21 @@ contains
        ! the plot time is stored in the hdf5 files and displayed in VisIt.
        ! if you don not include it in the NameFile VisIt will automacially
        ! group all the los files.
-       if(IsTimeAccurate .and. plot_form(ifile) /= 'hdf')then
+       if(IsTimeAccurate .and. TypePlotFormat_I(ifile) /= 'hdf')then
           call get_time_string
           write(NameFile,file_format) &
-               trim(plot_type1)//"_",&
+               trim(TypePlot)//"_",&
                ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
                file_extension
        else
           write(NameFile,file_format) &
-               trim(plot_type1)//"_",&
+               trim(TypePlot)//"_",&
                ifile-plot_,"_n",nStep,file_extension
        end if
 
        ! write header file
 
-       if(plot_form(ifile)=='tec') then
+       if(TypePlotFormat_I(ifile)=='tec') then
           call open_file(FILE=NameFile)
 
           write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
@@ -514,9 +514,9 @@ contains
           write(UnitTmp_,'(a,a,a)') &
                'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
 
-          ! NAMELOSTABLE
+          ! NameLosTable_I
           if (UseTableGen) write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA NAMELOSTABLE="',trim(NameLosTable(iFile)),'"'
+               'AUXDATA NameLosTable_I="',trim(NameLosTable_I(iFile)),'"'
 
           ! HGIXYZ
           write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
@@ -529,7 +529,7 @@ contains
              do jPix = 1, nPix
                 bPix = (jPix - 1) * SizePix - rSizeImage
 
-                if (plot_dimensional(ifile)) then
+                if (IsDimensionalPlot_I(ifile)) then
                    write(UnitTmp_,fmt="(30(E14.6))") aPix*No2Io_V(UnitX_), &
                         bPix*No2Io_V(UnitX_), Image_VII(1:nPlotVar,iPix,jPix)
                 else
@@ -567,16 +567,16 @@ contains
           !      '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
 
           if (UseTableGen) then
-             ! NAMELOSTABLE
-             StringHeadLine = trim(StringHeadLine)//' NAMELOSTABLE='//&
-                  NameLosTable(iFile)
+             ! NameLosTable_I
+             StringHeadLine = trim(StringHeadLine)//' NameLosTable_I='//&
+                  NameLosTable_I(iFile)
           endif
 
           ! Set image size and dimensionalize if necessary
           aPix = rSizeImage
-          if (plot_dimensional(ifile)) aPix = aPix * No2Io_V(UnitX_)
+          if (IsDimensionalPlot_I(ifile)) aPix = aPix * No2Io_V(UnitX_)
 
-          select case(plot_form(ifile))
+          select case(TypePlotFormat_I(ifile))
           case('idl')
              call save_plot_file(NameFile, &
                   TypeFileIn = TypeFile_I(iFile), &
@@ -1120,7 +1120,7 @@ contains
          if (UseTableGen) then
             if(iTableGen <= 0) &
                  call stop_mpi('Need to load #LOOKUPTABLE for ' &
-                 //NameLosTable(iFile)//' response!')
+                 //NameLosTable_I(iFile)//' response!')
             ! now interpolate the entire table
             call interpolate_lookup_table(iTableGen, TeSi, Ne, &
                  InterpValues_I, DoExtrapolate=.true.)
@@ -1145,13 +1145,13 @@ contains
          case('wl')
             ! White light with limb darkening
             if(rLos2 > 1.0) Value = Rho*( &
-                 (1 - mu_los)*(2*c_los - a_los*Cos2Theta) &
-                 + mu_los*(2*d_los - b_los*Cos2Theta) )
+                 (1 - MuLimbDarkening)*(2*c_los - a_los*Cos2Theta) &
+                 + MuLimbDarkening*(2*d_los - b_los*Cos2Theta) )
 
          case('pb')
             ! Polarization brightness
             if(rLos2 > 1.0) Value = &
-                 Rho*( (1.0 - mu_los)*a_los + mu_los*b_los)*Cos2Theta
+                 Rho*( (1.0 - MuLimbDarkening)*a_los + MuLimbDarkening*b_los)*Cos2Theta
 
          case('euv171')
             ! EUV 171
@@ -1207,7 +1207,7 @@ contains
                   if(.not.allocated(PlotVar_GV)) allocate( &
                        PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar))
                   call user_set_plot_var(iBlock, NameVar, &
-                       plot_dimensional(iFile), PlotVar_GV(:,:,:,iVar), &
+                       IsDimensionalPlot_I(iFile), PlotVar_GV(:,:,:,iVar), &
                        ValueBody, UseBody, NameTecVar, NameTecUnit, &
                        NameIdlUnit, IsFound)
                   if(.not. IsFound)then
@@ -1518,7 +1518,7 @@ contains
       ! if(DoTiming)call timing_start('los_set_plotvar')
 
       ! x_los, y_los, z_los, r_los give the position of the point on the los
-      ! mu_los parameter related to the limb darkening
+      ! MuLimbDarkening parameter related to the limb darkening
       ! face_location give the locations of the faces of the block
       ! face_location(2,3) = xMinBox, yMinBox, zMinBox---xMaxBox, yMaxBox, zMaxBox
 
@@ -1814,7 +1814,7 @@ contains
     ! Using plot var information set the units for Tecplot files
 
     use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
-    use ModIO, ONLY: plot_dimensional
+    use ModIO, ONLY: IsDimensionalPlot_I
 
     ! Arguments
 
@@ -1829,7 +1829,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if (plot_dimensional(ifile)) then
+    if (IsDimensionalPlot_I(ifile)) then
        write(unitstr_TEC,'(a)') 'VARIABLES = '
        write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
             trim(NameTecUnit_V(UnitX_))
@@ -1845,7 +1845,7 @@ contains
 
        s=plotvarnames(iVar)
 
-       if (plot_dimensional(ifile)) then
+       if (IsDimensionalPlot_I(ifile)) then
 
           select case(s)
           case ('len')
@@ -1939,7 +1939,7 @@ contains
     ! Based on plot_var information set the header string with unit names
 
     use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
-    use ModIO, ONLY : plot_dimensional
+    use ModIO, ONLY : IsDimensionalPlot_I
 
     ! Arguments
 
@@ -1955,7 +1955,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_IDL_los_units'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if (plot_dimensional(ifile)) then
+    if (IsDimensionalPlot_I(ifile)) then
        write(unitstr_IDL,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
             trim(NameIdlUnit_V(UnitX_))//' '//&
             trim(NameIdlUnit_V(UnitX_))
@@ -1972,7 +1972,7 @@ contains
 
     end if
 
-    if (plot_dimensional(ifile)) then
+    if (IsDimensionalPlot_I(ifile)) then
 
        do iVar = 1, nPlotVar
 

@@ -43,27 +43,27 @@ module ModIO
   ! Simulation time or physical date and time used in file names
   character (len=14) :: StringDateOrTime
 
-  logical :: restart=.false.        ! read restart file
-  logical :: restart_Bface =.false. ! Bface restarted ^CFG IF CONSTRAINB
+  logical :: IsRestart=.false.        ! read IsRestart file
+  logical :: DoRestartBface =.false. ! Bface restarted ^CFG IF CONSTRAINB
   logical :: IsRestartCoupler=.false. ! Informs coupler if restarted
 
   logical :: DoSaveInitial = .false.
 
-  logical :: save_restart_file=.true., &
-       save_plots_amr=.false.,save_logfile=.false.,save_binary=.true., &
+  logical :: DoSaveRestart=.true., &
+       DoSavePlotsAmr=.false.,DoSaveLogfile=.false.,DoSaveBinary=.true., &
        DoSaveTecBinary=.false.
 
   ! Unit numbers for the log file
-  integer :: unit_log = -1
+  integer :: iUnitLogfile = -1
 
   ! variables for the line of sight integration plots
   character (LEN=10) :: TypeLosImage
-  integer :: n_pix_r(MaxFile)
-  real :: r_size_image(MaxFile), xoffset(MaxFile), yoffset(MaxFile)
-  real :: radius_occult(MaxFile), mu_los
-  real :: offset_angle(MaxFile)
+  integer :: nPixel_I(MaxFile)
+  real :: rSizeImage_I(MaxFile), xOffset_I(MaxFile), yOffset_I(MaxFile)
+  real :: rOccult_I(MaxFile), MuLimbDarkening
+  real :: OffsetAngle_I(MaxFile)
   real, dimension(3,MaxFile) :: ObsPos_DI
-  character (LEN=20) :: NameLosTable(MaxFile)
+  character (LEN=20) :: NameLosTable_I(MaxFile)
   logical:: UseLosSimple = .false. !!! experiment with simple LOS algorithm
 
   ! variables for the line of sight plots using the instrument names
@@ -74,8 +74,8 @@ module ModIO
 
   ! Variables for radiowave image
   ! ObsPos_DI is borrowed from the LOS plot
-  integer, dimension(MaxFile) :: n_Pix_X, n_Pix_Y
-  real,    dimension(MaxFile) :: X_Size_Image, Y_Size_Image
+  integer, dimension(MaxFile) :: nPixelX_I, nPixelY_I
+  real,    dimension(MaxFile) :: xSizeImage_I, ySizeImage_I
   ! String read from PARAM.in, like '1500kHz, 11MHz, 42.7MHz, 1.08GHz':
   character(len=100), dimension(MaxFile) :: StringRadioFrequency_I
   real, dimension(MaxFile,nPlotRfrFreqMax) :: RadioFrequency_II
@@ -102,46 +102,46 @@ module ModIO
   integer :: nFile=0, nPlotFile=0
 
   ! Saving frequencies and the last saved time step and snapshot number
-  real,    dimension(MaxFile) :: dt_output=-1.
-  integer, dimension(MaxFile) :: dn_output=-1, &
-       n_output_last=-1, t_output_last=-1
+  real,    dimension(MaxFile) :: DtOutput_I=-1.
+  integer, dimension(MaxFile) :: DnOutput_I=-1, &
+       nStepOutputLast_I=-1, iTimeOutputLast_I=-1
 
   ! Frequency of writing progress reports in terms of time steps
-  integer :: dn_progress1=10, dn_progress2=100
+  integer :: DnProgressShort=10, DnProgressLong=100
 
-  character(LEN=20) :: plot_type(MaxFile), plot_type1
-  character(LEN=3)  :: plot_form(MaxFile)
-  character(LEN=3)  :: log_form
+  character(LEN=20) :: TypePlot_I(MaxFile), TypePlot
+  character(LEN=3)  :: TypePlotFormat_I(MaxFile)
+  character(LEN=3)  :: TypeLogFormat
   character(LEN=10) :: TypeFile_I(MaxFile)
 
   character(LEN=3)  :: TypeCoordPlot_I(MaxFile) = '???'
 
   ! xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox limits for plotting
-  real, dimension(6,MaxFile) :: plot_range=0.
+  real, dimension(6,MaxFile) :: PlotRange_EI=0.
   ! plot range for the current file
   real :: PlotRange_I(6)
 
   ! x, y, z point for arbitrary slice plotting
-  real, dimension(3,MaxFile) :: plot_point=-99999.
+  real, dimension(3,MaxFile) :: PlotPointXyz_DI=-99999.
 
   ! x, y, z normal vector for arbitrary slice plotting
-  real, dimension(3,MaxFile) :: plot_normal
+  real, dimension(3,MaxFile) :: PlotNormal_DI
 
   ! dx resolution for equidistant plotting
-  real, dimension(3,MaxFile) :: plot_dx
+  real, dimension(3,MaxFile) :: PlotDx_DI
 
   ! variables to plot
-  character (len=500) :: plot_vars(MaxFile), plot_vars1
-  character (len=500) :: plot_pars(MaxFile), plot_pars1
+  character (len=500) :: StringPlotVar_I(MaxFile), StringPlotVar
+  character (len=500) :: StringPlotParam_I(MaxFile), StringPlotParam
 
   ! variables to put in log file
-  character (len=500) :: log_vars, log_R_str
+  character (len=500) :: StringLogVar, StringLogRadius
 
   ! variables to control time output format
-  character (len=100) :: log_time
+  character (len=100) :: TypeLogTime
 
   ! dimensionalize the output
-  logical :: plot_dimensional(MaxFile)
+  logical :: IsDimensionalPlot_I(MaxFile)
 
   ! Plot variable names and units defined in the user module
   character(len=20), dimension(nPlotVarMax) :: &
@@ -153,16 +153,16 @@ module ModIO
   ! Plot file name string logicals.
   !  One of the three must be true
   !  Time accurate flag can override
-  logical :: IsPlotName_n = .true.   !  true if time accurate false
-  logical :: IsPlotName_t = .true.   ! false if time accurate false
-  logical :: IsPlotName_e = .false.  ! false if time accurate false
+  logical :: IsPlotNameN = .true.   !  true if time accurate false
+  logical :: IsPlotNameT = .true.   ! false if time accurate false
+  logical :: IsPlotNameE = .false.  ! false if time accurate false
 
   ! Log file name string logicals.
   !  One of the two must be true
-  !  Time accurate flag false will automatically set IsLogName_n true
+  !  Time accurate flag false will automatically set IsLogNameN true
   !     when file is opened.
-  logical :: IsLogName_n = .true.
-  logical :: IsLogName_e = .false.
+  logical :: IsLogNameN = .true.
+  logical :: IsLogNameE = .false.
 
   logical :: DoSaveOneTecFileOrig = .false., DoSaveOneTecFile
 
@@ -170,7 +170,8 @@ module ModIO
   character(len=:), allocatable :: NamePrimitiveVarOrig
 
   ! The space separated list of primitive/conservative variables for plotting
-  character(len=:), allocatable :: NamePrimitiveVarPlot, NameConservativeVarPlot
+  character(len=:), allocatable:: NamePrimitiveVarPlot, NameConservativeVarPlot
+
 contains
   !============================================================================
 

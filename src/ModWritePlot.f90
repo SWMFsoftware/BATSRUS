@@ -135,32 +135,32 @@ contains
     unitstr_TEC = ''
     unitstr_IDL = ''
 
-    plot_type1 = plot_type(iFile)
-    plot_vars1 = plot_vars(iFile)
-    PlotRange_I = plot_range(:,iFile)
+    TypePlot = TypePlot_I(iFile)
+    StringPlotVar = StringPlotVar_I(iFile)
+    PlotRange_I = PlotRange_EI(:,iFile)
 
     ! DoSaveOneTecFile = T only works for 3D tecplot file right now
     DoSaveOneTecFile = DoSaveOneTecFileOrig .and. &
-         (plot_type1(1:3)=='3d_' .and. plot_form(iFile)=='tec' &
-         .or. plot_form(iFile)=='tcp')
+         (TypePlot(1:3)=='3d_' .and. TypePlotFormat_I(iFile)=='tec' &
+         .or. TypePlotFormat_I(iFile)=='tcp')
 
-    call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar,    &
+    call split_string(StringPlotVar, nplotvarmax, plotvarnames, nplotvar,    &
          UseArraySyntaxIn=.true.)
 
     call set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
 
     call join_string(plotvarnames(1:nplotvar), allnames)
-    allnames=trim(allnames)//' '//trim(plot_pars(iFile))
+    allnames=trim(allnames)//' '//trim(StringPlotParam_I(iFile))
 
-    if(plot_form(iFile) == 'idl')then
+    if(TypePlotFormat_I(iFile) == 'idl')then
        ! Adjust plotting range with unspecified plot resolution
        ! so that it is aligned with the current grid resolution
-       if(plot_type1(1:3) == 'cut' .and. plot_dx(1,iFile) <= 0.0) &
+       if(TypePlot(1:3) == 'cut' .and. PlotDx_DI(1,iFile) <= 0.0) &
             call adjust_plot_range(CellSize1Min, PlotRange_I)
 
        ! Save generalized coordinates for cuts out of non-Cartesian grids
-       DoSaveGenCoord = plot_type1(1:3) == 'cut' .and. .not. IsCartesianGrid
-       if(DoSaveGenCoord .or. .not.plot_dimensional(iFile))then
+       DoSaveGenCoord = TypePlot(1:3) == 'cut' .and. .not. IsCartesianGrid
+       if(DoSaveGenCoord .or. .not.IsDimensionalPlot_I(iFile))then
           CoordUnit = 1.0
        else
           CoordUnit = No2Io_V(UnitX_)
@@ -170,19 +170,19 @@ contains
     if(DoTest) then
        write(*,*) NameSub
        write(*,*) 'iFile =', iFile
-       write(*,*) 'plot_var =', plot_vars1
+       write(*,*) 'plot_var =', StringPlotVar
        write(*,*) 'nplotvar = ', nplotvar
        write(*,*) 'varnames = ', plotvarnames(1:nplotvar)
-       write(*,*) 'plot_dx = ', plot_dx(:,iFile)
-       write(*,*) 'plot_range = ', PlotRange_I
-       write(*,*) 'plot_type =  ', plot_type1
-       write(*,*) 'form =  ', plot_form(iFile)
+       write(*,*) 'PlotDx_DI = ', PlotDx_DI(:,iFile)
+       write(*,*) 'PlotRange_EI = ', PlotRange_I
+       write(*,*) 'TypePlot_I =  ', TypePlot
+       write(*,*) 'form =  ', TypePlotFormat_I(iFile)
        write(*,*) 'DoSaveOneTecFile =', DoSaveOneTecFile
     end if
 
     ! Construct the file name
     ! Plotfile names start with the plot directory and the type infor
-    NameSnapshot = trim(NamePlotDir) // trim(plot_type1) // "_"
+    NameSnapshot = trim(NamePlotDir) // trim(TypePlot) // "_"
 
     ! add index of the plot file
     if (iFile-Plot_ < 10) then
@@ -195,26 +195,26 @@ contains
        ! Add time step information
        write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", nStep
     else
-       if(IsPlotName_e)then
+       if(IsPlotNameE)then
           ! Event date
           call get_date_time(iTime_I)
           write(StringDateTime, '(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)')&
                iTime_I
           NameSnapshot = trim(NameSnapshot) // "_e" // trim(StringDateTime)
        end if
-       if(IsPlotName_t)then
+       if(IsPlotNameT)then
           ! The file name will contain the StringDateOrTime
           call get_time_string
           NameSnapshot = trim(NameSnapshot) // "_t" // StringDateOrTime
        end if
-       if(IsPlotName_n)then
+       if(IsPlotNameN)then
           ! Add time step information
           write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", nStep
        end if
     end if
 
     ! String containing the processor index and file extension
-    NameExt = plot_form(iFile)
+    NameExt = TypePlotFormat_I(iFile)
     if(NameExt == 'tcp') NameExt = 'tec'
     if (DoSaveOneTecFile) then
        write(NameProc, '(a)') "."//NameExt
@@ -227,7 +227,7 @@ contains
     end if
 
     ! Determine if output file is formatted or unformatted
-    IsBinary = save_binary .and. plot_form(iFile)=='idl'
+    IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
     if(IsBinary)then
        TypeForm = "unformatted"
@@ -236,13 +236,13 @@ contains
     end if
 
     ! Spherical slices are special cases:
-    DoPlotShell = plot_type1(1:3) == 'shl'
-    DoPlotBox   = plot_type1(1:3) == 'box'
+    DoPlotShell = TypePlot(1:3) == 'shl'
+    DoPlotBox   = TypePlot(1:3) == 'box'
 
     ! If threaded gap is used, the dimensional factors should be calculated,
     ! which are needed to convert a point state vector to a dimensional form
     if(DoPlotThreads .and. (DoPlotShell .or. DoPlotBox))then
-       if(plot_dimensional(iFile))then
+       if(IsDimensionalPlot_I(iFile))then
           call set_dimensional_factor(nPlotVar, plotvarnames(1:nPlotVar), &
                DimFactor_V(1:nPlotVar) , DimFactorBody_V(1:nPlotVar))
        else
@@ -261,7 +261,7 @@ contains
     ! (nDim + nPlotvar)*14 data, plus a new line character
     lRecData = (nDim + nPlotvar)*14 + 1
 
-    if(plot_form(iFile)=='tcp')then
+    if(TypePlotFormat_I(iFile)=='tcp')then
        ! Calculate and write connectivity file
        call write_tecplot_connect(iFile, &
             trim(NameSnapshot)//"_2"//trim(NameProc))
@@ -313,7 +313,7 @@ contains
     elseif(DoPlotShell)then
        ! Initialize the shell grid for this file
        call init_plot_shell(iFile, nPlotVar)
-    elseif(plot_form(iFile)=='tec')then
+    elseif(TypePlotFormat_I(iFile)=='tec')then
        ! Open two files for connectivity and data
        filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
        filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
@@ -327,7 +327,7 @@ contains
           call open_file(UnitTmp2_, FILE=filename_s, &
                access='stream', form='unformatted')
        end if
-    elseif(plot_form(iFile)=='hdf') then
+    elseif(TypePlotFormat_I(iFile)=='hdf') then
        ! Only one plotfile will be generated, so do not include PE number
        ! in NameFile. ModHdf5 will handle opening the file.
        NameFile = trim(NameSnapshot)//".batl"
@@ -343,9 +343,9 @@ contains
     if (DoPlotBox) IsNonCartesianPlot = .false.
 
     ! Logical for hdf plots
-    NotACut = plot_type1(1:3)=='3d_' .or. nDim == 1 .or. &
-         (nDim==2 .and. (plot_type1(1:3) == '2d_' &
-         .or.            plot_type1(1:3) == 'z=0'))
+    NotACut = TypePlot(1:3)=='3d_' .or. nDim == 1 .or. &
+         (nDim==2 .and. (TypePlot(1:3) == '2d_' &
+         .or.            TypePlot(1:3) == 'z=0'))
 
     ! START IDL
     ! initialize values used in the plotting
@@ -381,11 +381,11 @@ contains
     PlotVarBlk=0
 
     ! Find the processor and block indexes for the 'blk' plot
-    if(plot_type1(1:3)=='blk') &
-         call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
+    if(TypePlot(1:3)=='blk') &
+         call find_grid_block(PlotPointXyz_DI(:,iFile), iProcFound, iBlockFound)
 
-    if(plot_form(iFile) == 'hdf') then
-       call init_hdf5_plot(iFile, plot_type1(1:3),  &
+    if(TypePlotFormat_I(iFile) == 'hdf') then
+       call init_hdf5_plot(iFile, TypePlot(1:3),  &
             nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
             dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
     end if
@@ -393,7 +393,7 @@ contains
     ! True if message passing is needed for interpolating non-primitive
     ! variables using the ghost cells.
     DoPassPlotVar = DoPlotShell .or. DoPlotBox .or. &
-         plot_form(iFile)=='tcp' .and. nPlotDim < nDim
+         TypePlotFormat_I(iFile)=='tcp' .and. nPlotDim < nDim
 
     if(DoPassPlotVar)then
        ! Calculate plot variables for all blocks and store them into
@@ -411,7 +411,7 @@ contains
           call set_plotvar(iBlock, iFile - plot_, nPlotVar, plotvarnames, PlotVar,&
                plotvar_inBody,plotvar_useBody)
 
-          if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBlock, &
+          if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
                iFile-plot_,nplotvar,plotvarnames,PlotVar,plotvar_inBody)
 
           ! Copy plotvar for each block into a single array for message passing
@@ -442,7 +442,7 @@ contains
                plotvar_inBody,plotvar_useBody)
 
           ! Dimensionalize plot variables
-          if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBlock, &
+          if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
                iFile-plot_,nplotvar,plotvarnames,PlotVar,plotvar_inBody)
        end if
 
@@ -451,10 +451,10 @@ contains
        else if (DoPlotBox) then
           call set_plot_box(iBlock, nPlotvar, PlotVar)
        else
-          select case(plot_form(iFile))
+          select case(TypePlotFormat_I(iFile))
           case('tec')
              call plotvar_to_plotvarnodes
-             if(plot_type1(1:3)=='blk' &
+             if(TypePlot(1:3)=='blk' &
                   .and. iProc == iProcFound .and. iBlock==iBlockFound) &
                   PlotVarBlk = PlotVar
           case('tcp')
@@ -465,7 +465,7 @@ contains
                   xMin, xMax, yMin, yMax, zMin, zMax,&
                   dxblk, dyblk, dzblk, nBLKcells)
           case('hdf')
-             call write_var_hdf5(iFile, plot_type1(1:3), iBlock, H5Index, &
+             call write_var_hdf5(iFile, TypePlot(1:3), iBlock, H5Index, &
                   nplotvar, PlotVar, xmin, xmax, ymin, ymax, zmin, zmax, &
                   dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut, &
                   nBLKcells, H5Advance)
@@ -473,7 +473,7 @@ contains
           end select
        end if
 
-       if (plot_form(iFile)=='idl' .and. &
+       if (TypePlotFormat_I(iFile)=='idl' .and. &
             .not.DoPlotShell .and. .not.DoPlotBox) then
           ! Update number of cells per processor
           nPEcells = nPEcells + nBLKcells
@@ -491,14 +491,14 @@ contains
     if(allocated(PlotVar_VGB)) deallocate(PlotVar_VGB)
 
     ! Write the HDF5 output file and return
-    select case(plot_form(iFile))
+    select case(TypePlotFormat_I(iFile))
     case('hdf')
 
        call get_idl_units(iFile, nplotvar,plotvarnames, NamePlotUnit_V, &
             unitstr_IDL)
-       call write_plot_hdf5(NameFile, plot_type1(1:3), plotVarNames, &
+       call write_plot_hdf5(NameFile, TypePlot(1:3), plotVarNames, &
             NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
-            .false., plot_dimensional(iFile), &
+            .false., IsDimensionalPlot_I(iFile), &
             xmin, xmax, ymin, ymax, zmin, zmax)
 
        RETURN
@@ -525,7 +525,7 @@ contains
     if(DoPlotBox) RETURN
 
     ! Write files for tecplot format
-    if(plot_form(iFile)=='tec')then
+    if(TypePlotFormat_I(iFile)=='tec')then
 
        if(.not.allocated(PlotVarNodes_VNB)) then
           allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBlock))
@@ -570,22 +570,22 @@ contains
        deallocate(PlotVarNodes_VNB)
     end if
 
-    if(plot_form(iFile) == 'idl' .and. nPeCells == 0) then
+    if(TypePlotFormat_I(iFile) == 'idl' .and. nPeCells == 0) then
        call close_file(status = 'DELETE')
     else
        call close_file
     end if
 
     ! Write out header file for tcp format
-    if(plot_form(iFile)=='tcp') &
+    if(TypePlotFormat_I(iFile)=='tcp') &
          call write_tecplot_head(trim(NameSnapshot)//"_0.tec", unitstr_TEC)
 
-    if(plot_form(iFile)=='tec') call close_file(UnitTmp2_)
+    if(TypePlotFormat_I(iFile)=='tec') call close_file(UnitTmp2_)
 
     if(DoSaveOneTecFile) call close_file(iUnit)
 
     ! START IDL
-    if (plot_form(iFile)=='idl')then
+    if (TypePlotFormat_I(iFile)=='idl')then
        ! Find smallest cell size and total number of cells
        call MPI_reduce(dxPEmin,dxGLOBALmin,3,MPI_REAL,MPI_MIN,0,iComm,iError)
        call MPI_reduce(nPEcells,nGLOBALcells,1,MPI_INTEGER,MPI_SUM,0, &
@@ -598,7 +598,7 @@ contains
     ! write header file
     if(iProc==0)then
 
-       select case(plot_form(iFile))
+       select case(TypePlotFormat_I(iFile))
        case('tec','tcp')
           NameFile = trim(NameSnapshot) // ".T"
        case('idl')
@@ -607,7 +607,7 @@ contains
 
        call open_file(FILE=NameFile)
 
-       select case(plot_form(iFile))
+       select case(TypePlotFormat_I(iFile))
        case('tec','tcp')
           write(UnitTmp_,'(a)')NameFile
           write(UnitTmp_,'(i8,a)')nProc,' nProc'
@@ -698,7 +698,7 @@ contains
           write(UnitTmp_,'(a)') '#PLOTRESOLUTION'
           do iDim = 1, nDim
              write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
-                  plot_dx(iDim,iFile)*CoordUnit, 'DxSavePlot', iDim
+                  PlotDx_DI(iDim,iFile)*CoordUnit, 'DxSavePlot', iDim
           enddo
           write(UnitTmp_,*)
 
@@ -739,10 +739,10 @@ contains
     end if
 
     ! Save tree information for nDim dimensional IDL file
-    if(plot_form(iFile) == 'idl' .and.               &
-         (    plot_type1(1:3) == '3d_'               &
-         .or. plot_type1(1:3) == '2d_' .and. nDim<=2 &
-         .or. plot_type1(1:3) == '1d_' .and. nDim==1 ) )then
+    if(TypePlotFormat_I(iFile) == 'idl' .and.               &
+         (    TypePlot(1:3) == '3d_'               &
+         .or. TypePlot(1:3) == '2d_' .and. nDim<=2 &
+         .or. TypePlot(1:3) == '1d_' .and. nDim==1 ) )then
        NameFile = trim(NameSnapshot)//'.tree'
        call write_tree_file(NameFile)
     end if
@@ -844,7 +844,7 @@ contains
     character(len=*), parameter:: NameSub = 'set_plot_scalars'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    NameParam = plot_pars(iFile)
+    NameParam = StringPlotParam_I(iFile)
 
     call lower_case(NameParam)
     call split_string(NameParam, MaxParam, NameParam_I, nParam, &
@@ -873,14 +873,14 @@ contains
        case('ge')
           Param_I(iPar) = GammaElectron
        case('c','clight')
-          if(plot_dimensional(iFile)) then
+          if(IsDimensionalPlot_I(iFile)) then
              Param_I(iPar) = Clight*No2Io_V(UnitU_)
           else
              Param_I(iPar) = Clight
           end if
        case('r','rbody')
           Param_I(iPar) = rBody
-          if(plot_dimensional(iFile))&
+          if(IsDimensionalPlot_I(iFile))&
                Param_I(iPar) = Param_I(iPar)*No2Io_V(UnitX_)
           ! BEGIN CCMC REQUESTED PARAMETERS to describe block structure
        case('p1')
@@ -904,7 +904,7 @@ contains
        case('eta')
           Param_I(iPar) = Eta0Si
        case('mu')
-          Param_I(iPar) = mu_los
+          Param_I(iPar) = MuLimbDarkening
        case('obsx')
           Param_I(iPar) = ObsPos_DI(1,iFile)
        case('obsy')
@@ -914,31 +914,31 @@ contains
        case('rTrace')
           Param_I(iPar) = rTrace
        case('dt')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = dt*No2Io_V(UnitT_)
           else
              Param_I(iPar) = dt
           end if
        case('xsi')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = Io2Si_V(UnitX_)
           else
              Param_I(iPar) = No2Si_V(UnitX_)
           end if
        case('tsi')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = Io2Si_V(UnitT_)
           else
              Param_I(iPar) = No2Si_V(UnitT_)
           end if
        case('usi')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = Io2Si_V(UnitU_)
           else
              Param_I(iPar) = No2Si_V(UnitU_)
           end if
        case('rhosi')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = Io2Si_V(UnitRho_)
           else
              Param_I(iPar) = No2Si_V(UnitRho_)
@@ -1012,7 +1012,7 @@ contains
     use ModFieldTrace, ONLY: Trace_DSNB
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
-         plot_dimensional, Plot_
+         IsDimensionalPlot_I, Plot_
     use ModHallResist, ONLY: UseHallResist, &
          set_hall_factor_cell, HallFactor_C, IsHallBlock
     use ModResistivity, ONLY: Eta_GB, Eta0
@@ -1748,7 +1748,7 @@ contains
           end do
           if(jVar > nVar) then
              call user_set_plot_var(iBlock, &
-                  NamePlotVar, plot_dimensional(Plot_+iPlotFile), &
+                  NamePlotVar, IsDimensionalPlot_I(Plot_+iPlotFile), &
                   PlotVar(:,:,:,iVar), &
                   plotvar_inBody(iVar), plotvar_useBody(iVar), &
                   NameVarUserTec_I(iVar), NameUnitUserTec_I(iVar), &
@@ -1903,7 +1903,7 @@ contains
        UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &
        NameIdlUnit_V, NameUnitUserIdl_V, UnitAngle_, NameVarLower_V
     use ModUtilities,  ONLY: lower_case
-    use ModIO,         ONLY: plot_type1, plot_dimensional, NameUnitUserIdl_I
+    use ModIO,         ONLY: TypePlot, IsDimensionalPlot_I, NameUnitUserIdl_I
     use ModMultiFluid, ONLY: extract_fluid_name
     use BATL_lib,      ONLY: IsRLonLat, IsCylindrical
 
@@ -1924,16 +1924,16 @@ contains
     character(len=*), parameter:: NameSub = 'get_idl_units'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(.not.plot_dimensional(iFile))then
+    if(.not.IsDimensionalPlot_I(iFile))then
        NamePlotUnit_V = 'normalized'
        StringUnitIdl = 'normalized variables'
        RETURN
     end if
 
-    if(plot_type1(1:3) == 'shl' .or. &
-         (plot_type1(1:3) == 'cut' .and. IsRLonLat)) then
+    if(TypePlot(1:3) == 'shl' .or. &
+         (TypePlot(1:3) == 'cut' .and. IsRLonLat)) then
        StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
-    elseif(plot_type1(1:3) == 'cut' .and. IsCylindrical)then
+    elseif(TypePlot(1:3) == 'cut' .and. IsCylindrical)then
           StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' deg'
     else

@@ -213,7 +213,7 @@ contains
 
     use ModAdvance,   ONLY: iTypeAdvance_BP, SkippedBlock_
     use ModIO,        ONLY: DoSaveOneTecFile, DoSaveTecBinary, &
-         plot_type1, plot_range
+         TypePlot, PlotRange_EI
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
     use ModMain,      ONLY: nBlockMax
@@ -257,7 +257,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    DoCut = nDim == 3 .and. plot_type1(1:2) /= '3d'
+    DoCut = nDim == 3 .and. TypePlot(1:2) /= '3d'
 
     ! Set iPlotDim_D to 0 in ignored dimensions
     iPlot_D = 0
@@ -275,8 +275,8 @@ contains
          iCell_G(0:nI+1,0:nJ+1,k0_:nKp1_))
 
     if(DoCut)then
-       CutMin_D = plot_range(1:5:2,iFile)
-       CutMax_D = plot_range(2:6:2,iFile)
+       CutMin_D = PlotRange_EI(1:5:2,iFile)
+       CutMax_D = PlotRange_EI(2:6:2,iFile)
 
        ! Set iPlot_D to 0 in 0 width cut direction
        where(CutMin_D == CutMax_D) iPlot_D = 0
@@ -1119,13 +1119,13 @@ contains
     character(len=*), parameter:: NameSub = 'write_tecplot_node_data'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(DoTest)write(*,*) plot_type1,plot_type1(1:3)
+    if(DoTest)write(*,*) TypePlot,TypePlot(1:3)
 
     call write_tecplot_setinfo
 
-    select case(plot_type1(1:3))
+    select case(TypePlot(1:3))
     case('blk')
-       call find_grid_block(plot_point(:,iFile), iPE, iBlock)
+       call find_grid_block(PlotPointXyz_DI(:,iFile), iPE, iBlock)
        if(iPE /= iProc) RETURN
 
        write(UnitTmp_,'(a)')'TITLE="BATSRUS: BLK Only, '//textDateTime//'"'
@@ -1142,7 +1142,7 @@ contains
        write(UnitTmp_,'(a,a,a)') 'AUXDATA DEBUGPROC="',trim(adjustl(stmp)),'"'
        ! Write cell values
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          if (plot_dimensional(ifile)) then
+          if (IsDimensionalPlot_I(ifile)) then
              write(UnitTmp_,fmt="(50(ES14.6))") &
                   Xyz_DGB(:,i,j,k,iBlock)*No2Io_V(UnitX_), &
                   PlotVarBlk(i,j,k,1:nPlotVar)
@@ -1305,7 +1305,7 @@ contains
        if((xmax-xmin)<(ymax-ymin) .and. (xmax-xmin)<(zmax-zmin))then
           ! X Slice
           CutValue = 0.5*(xmin+xmax)
-          if(plot_type1(1:3) == 'x=0') CutValue = 0.
+          if(TypePlot(1:3) == 'x=0') CutValue = 0.
           if(IsCartesianGrid)then
              ! First loop to count nodes and cells
              do iBlockAll = 1, nNodeUsed
@@ -1458,7 +1458,7 @@ contains
        elseif((ymax-ymin)<(zmax-zmin))then
           ! Y Slice
           CutValue = 0.5*(ymin+ymax)
-          if(plot_type1(1:3) == 'y=0') CutValue = 0.
+          if(TypePlot(1:3) == 'y=0') CutValue = 0.
           if(IsCartesianGrid)then
              ! First loop to count nodes and cells
              do iBlockAll = 1, nNodeUsed
@@ -1612,7 +1612,7 @@ contains
        else
           ! Z Slice
           CutValue = 0.5*(zmin+zmax)
-          if(plot_type1(1:3) == 'z=0') CutValue = 0.
+          if(TypePlot(1:3) == 'z=0') CutValue = 0.
           ! First loop to count nodes and cells
           do iBlockAll = 1, nNodeUsed
              iNode = iNodeMorton_I(iBlockAll)
@@ -1696,11 +1696,11 @@ contains
        ! XarbNormal,YarbNormal,ZarbNormal     normal for cut
        ! ic1,jc1,kc1,ic2,jc2,kc2              two opposite corner indices
 
-       if (plot_type1(1:3)=='slc')then
+       if (TypePlot(1:3)=='slc')then
           ! Point-Normal cut plot
-          XarbP=plot_point(1,ifile); XarbNormal=plot_normal(1,ifile)
-          YarbP=plot_point(2,ifile); YarbNormal=plot_normal(2,ifile)
-          ZarbP=plot_point(3,ifile); ZarbNormal=plot_normal(3,ifile)
+          XarbP=PlotPointXyz_DI(1,ifile); XarbNormal=PlotNormal_DI(1,ifile)
+          YarbP=PlotPointXyz_DI(2,ifile); YarbNormal=PlotNormal_DI(2,ifile)
+          ZarbP=PlotPointXyz_DI(3,ifile); ZarbNormal=PlotNormal_DI(3,ifile)
        else
           ! Dipole cut plot
           XarbP=0.; XarbNormal=-sin(ThetaTilt)
@@ -1732,7 +1732,7 @@ contains
 
        ! Write file header
        if(iProc==0)then
-          if (plot_type1(1:3)=='slc')then
+          if (TypePlot(1:3)=='slc')then
              write(UnitTmp_,'(a)')'TITLE="BATSRUS: Slice, '//textDateTime//'"'
              write(UnitTmp_,'(a)')trim(unitstr_TEC)
              write(UnitTmp_,'(a,i8,a)') &
@@ -1768,7 +1768,7 @@ contains
           end if
        end do
     case default
-       write(*,*) NameSub,': ERROR: Unknown plot_type='//plot_type1
+       write(*,*) NameSub,': ERROR: Unknown TypePlot_I='//TypePlot
     end select
 
     call test_stop(NameSub, DoTest)
@@ -1779,7 +1779,7 @@ contains
     subroutine fill_nodeXYZ
       ! Fill array with position (optionally dimensioned)
       !------------------------------------------------------------------------
-      if (plot_dimensional(ifile)) then
+      if (IsDimensionalPlot_I(ifile)) then
          NodeXYZ_DN(1:3,:,:,:)=PlotXYZNodes_DNB(1:3,:,:,:,iBlock)*No2Io_V(UnitX_)
       else
          NodeXYZ_DN(1:3,:,:,:)=PlotXYZNodes_DNB(1:3,:,:,:,iBlock)
@@ -2085,7 +2085,7 @@ contains
 
     use ModPhysics
     use ModUtilities,  ONLY: lower_case
-    use ModIO,         ONLY: plot_dimensional, plot_type1
+    use ModIO,         ONLY: IsDimensionalPlot_I, TypePlot
     use ModVarIndexes, ONLY: IsMhd
     use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
     use ModMultiFluid, ONLY: extract_fluid_name, NameFluid
@@ -2106,8 +2106,8 @@ contains
     character(len=*), parameter:: NameSub = 'set_tecplot_var_string'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(plot_type1(1:3) == 'box')then
-       if (plot_dimensional(iFile)) then
+    if(TypePlot(1:3) == 'box')then
+       if (IsDimensionalPlot_I(iFile)) then
           StringVarTec = 'VARIABLES ="x '// trim(NameTecUnit_V(UnitX_)) // &
                '", " y '                // trim(NameTecUnit_V(UnitX_)) // &
                '", " z '               // trim(NameTecUnit_V(UnitX_))
@@ -2115,8 +2115,8 @@ contains
           StringVarTec = 'VARIABLES ="x", "y", "z'
        end if
 
-    elseif(plot_type1(1:3) == 'shl')then
-       if (plot_dimensional(iFile)) then
+    elseif(TypePlot(1:3) == 'shl')then
+       if (IsDimensionalPlot_I(iFile)) then
           StringVarTec = 'VARIABLES ="R '// trim(NameTecUnit_V(UnitX_)) &
                // '", "Lon [deg]", "Lat [deg]'
        else
@@ -2124,7 +2124,7 @@ contains
        end if
 
     else
-       if (plot_dimensional(iFile)) then
+       if (IsDimensionalPlot_I(iFile)) then
           StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
                // '", "Y ' // trim(NameTecUnit_V(UnitX_))
           if(nDim==3) StringVarTec = trim(StringVarTec) &
@@ -2393,7 +2393,7 @@ contains
 
        StringVarTec = trim(StringVarTec) // '", "' // NameTecVar
 
-       if (plot_dimensional(iFile)) &
+       if (IsDimensionalPlot_I(iFile)) &
             StringVarTec = trim(StringVarTec) // ' ' //NameUnit
 
     end do

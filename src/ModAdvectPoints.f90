@@ -21,7 +21,7 @@ contains
 
   subroutine advect_all_points
 
-    use ModIO, ONLY: Plot_Type, nFile, Plot_, &
+    use ModIO, ONLY: TypePlot_I, nFile, Plot_, &
          NameLine_I, nLine_I, XyzStartLine_DII
 
     integer :: iFile, iPlotFile, nLine
@@ -32,7 +32,7 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
     do iFile = Plot_, nFile
-       if (index(Plot_Type(iFile),'lin') /= 1) CYCLE
+       if (index(TypePlot_I(iFile),'lin') /= 1) CYCLE
        iPlotFile = iFile - Plot_
        if (NameLine_I(iPlotFile) /= 'A') CYCLE
        nLine = nLine_I(iPlotFile)

@@ -119,7 +119,7 @@ contains
     ! Handle params for all magnetometer-related commands.
 
     use ModIO,        ONLY: magfile_, maggridfile_, indexfile_, &
-         dn_output,dt_output
+         DnOutput_I,DtOutput_I
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -151,8 +151,8 @@ contains
        DoSaveMags = .true.
        call read_var('NameMagInputFile', NameMagInputFile)
        call read_var('TypeMagFileOut', TypeMagFileOut)
-       call read_var('DnOutput', dn_output(magfile_))
-       call read_var('DtOutput', dt_output(magfile_))
+       call read_var('DnOutput', DnOutput_I(magfile_))
+       call read_var('DtOutput', DtOutput_I(magfile_))
        DoReadMagnetometerFile = .true.
 
     case("#MAGNETOMETERGRID")
@@ -165,8 +165,8 @@ contains
        call read_var('LonMaxMagGrid',   GridLonMax)
        call read_var('LatMinMagGrid',   GridLatMin)
        call read_var('LatMaxMagGrid',   GridLatMax)
-       call read_var('DnSaveMagGrid',   dn_output(maggridfile_))
-       call read_var('DtSaveMagGrid',   dt_output(maggridfile_))
+       call read_var('DnSaveMagGrid',   DnOutput_I(maggridfile_))
+       call read_var('DtSaveMagGrid',   DtOutput_I(maggridfile_))
 
     case('#GEOMAGINDICES')
        DoWriteIndices = .true. ! Activate geoindices output file.
@@ -174,8 +174,8 @@ contains
        DoCalcAe = .true.       ! Ae calculated (always on with Kp).
        call read_var('nKpWindow', nKpMins)
        call read_var('DtOutput' , DtWriteIndices)
-       dt_output(indexfile_) = DtWriteIndices
-       dn_output(indexfile_) = -1  ! Indices are function of physical time.
+       DtOutput_I(indexfile_) = DtWriteIndices
+       DnOutput_I(indexfile_) = -1  ! Indices are function of physical time.
 
     case default
        call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
@@ -299,7 +299,7 @@ contains
     use ModUtilities, ONLY: flush_unit, open_file
     use ModMain,      ONLY: nStep
     use ModIoUnit,    ONLY: io_unit_new
-    use ModIO,        ONLY: NamePlotDir, IsLogName_e
+    use ModIO,        ONLY: NamePlotDir, IsLogNameE
 
     integer            :: i, iTime_I(7)
     real               :: RadXY, Phi
@@ -356,7 +356,7 @@ contains
        allocate(MagHistory_DII(2, nKpMag, iSizeKpWindow))
        MagHistory_DII = 0.0
 
-       if(IsLogName_e)then
+       if(IsLogNameE)then
           ! Event date added to geoindex file name
           call get_date_time(iTime_I)
           write(NameFile, '(a, a, i4.4, 2i2.2, "-", 3i2.2, a)') &
@@ -1249,7 +1249,7 @@ contains
 
     use ModMain,   ONLY: nStep
     use ModIoUnit, ONLY: io_unit_new
-    use ModIO,     ONLY: NamePlotDir, IsLogName_e
+    use ModIO,     ONLY: NamePlotDir, IsLogNameE
     use ModUtilities, ONLY: flush_unit, open_file
 
     character(len=4), intent(in) :: NameGroup
@@ -1285,7 +1285,7 @@ contains
     ! If writing new files every time, no initialization needed.
     if(TypeFileNow /= 'single') RETURN
 
-    if(IsLogName_e)then
+    if(IsLogNameE)then
        ! Event date added to magnetic perturbation file name
        call get_date_time(iTime_I)
        write(NameFile, '(3a, i4.4, 2i2.2, "-", 3i2.2, a)') &
@@ -1539,7 +1539,7 @@ contains
     subroutine write_mag_grid
 
       use ModPlotFile, ONLY: save_plot_file
-      use ModIO, ONLY: NamePlotDir, IsLogName_e
+      use ModIO, ONLY: NamePlotDir, IsLogNameE
 
       integer, parameter:: nVar = 17
       character(len=*), parameter:: NameVar = &
@@ -1575,7 +1575,7 @@ contains
          end do
       end do
 
-      if(IsLogName_e)then
+      if(IsLogNameE)then
          ! Event date added to magnetic perturbation grid file name
          call get_date_time(iTime_I)
          write(NameFile, '(a, i4.4, 2i2.2, "-", 3i2.2, a)') &
@@ -1630,7 +1630,7 @@ contains
 
       use ModIoUnit,    ONLY: UnitTmp_
       use ModUtilities, ONLY: open_file, close_file
-      use ModIO,        ONLY: NamePlotDir, IsLogName_e
+      use ModIO,        ONLY: NamePlotDir, IsLogNameE
 
       integer ::  iTime_I(7), iMag
 
@@ -1645,7 +1645,7 @@ contains
          StringPrefix='gridMags'
       endif
 
-      if(IsLogName_e)then
+      if(IsLogNameE)then
          ! Event date added to magnetic perturbation file name
          write(NameFile, '(3a, i4.4, 2i2.2, "-", 3i2.2, a)') &
               trim(NamePlotDir), trim(StringPrefix),'_e', iTime_I(1:6), '.mag'

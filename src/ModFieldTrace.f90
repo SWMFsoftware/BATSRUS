@@ -2365,7 +2365,7 @@ contains
 
     use ModMain, ONLY: nStep, IsTimeAccurate, tSimulation, NamePrimitive_V
     use ModIo, ONLY: &
-         StringDateOrTime, NamePlotDir, plot_range, plot_type, TypeFile_I
+         StringDateOrTime, NamePlotDir, PlotRange_EI, TypePlot_I, TypeFile_I
     use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
     use ModIoUnit,         ONLY: UnitTmp_
     use ModPlotFile,       ONLY: save_plot_file
@@ -2422,18 +2422,18 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    IsMinB = plot_type(iFile)(1:3) == 'eqb'
+    IsMinB = TypePlot_I(iFile)(1:3) == 'eqb'
 
     DoExtractCurvatureB = IsMinB
 
-    ! Extract grid info from plot_range
-    ! See MH_set_parameters for plot_type eqr and eqb
-    nRadius = nint(plot_range(1,iFile))
-    nLon    = nint(plot_range(2,iFile))
-    rMin    = plot_range(3,iFile)
-    rMax    = plot_range(4,iFile)
-    LonMin  = cDegToRad*plot_range(5,iFile)
-    LonMax  = cDegToRad*plot_range(6,iFile)
+    ! Extract grid info from PlotRange_EI
+    ! See MH_set_parameters for TypePlot_I eqr and eqb
+    nRadius = nint(PlotRange_EI(1,iFile))
+    nLon    = nint(PlotRange_EI(2,iFile))
+    rMin    = PlotRange_EI(3,iFile)
+    rMax    = PlotRange_EI(4,iFile)
+    LonMin  = cDegToRad*PlotRange_EI(5,iFile)
+    LonMax  = cDegToRad*PlotRange_EI(6,iFile)
 
     allocate(Radius_I(nRadius), Longitude_I(nLon))
     do iR = 1, nRadius
@@ -2706,7 +2706,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! Extract grid info from plot_range (see set_parameters for plot_type eqr)
+    ! Extract grid info from PlotRange_EI (see set_parameters for TypePlot_I eqr)
     if(DoTest)then
        write(*,*)NameSub,' starting on iProc=',iProc,&
             ' with nRadius, nLon=', nRadius, nLon
@@ -3010,7 +3010,7 @@ contains
 
     use ModVarIndexes, ONLY: nVar
     use ModIO,       ONLY: StringDateOrTime,            &
-         NamePlotDir, plot_type, plot_form, plot_dimensional, Plot_, &
+         NamePlotDir, TypePlot_I, TypePlotFormat_I, IsDimensionalPlot_I, Plot_, &
          NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, &
          IsSingleLine_I
     use ModWriteTecplot, ONLY: set_tecplot_var_string
@@ -3050,8 +3050,8 @@ contains
             NameVectorField//' for iPlotFile=',iPlotFile
        RETURN
     end select
-    DoExtractState = index(plot_type(iFile),'pos')<1
-    DoExtractUnitSi= plot_dimensional(iFile)
+    DoExtractState = index(TypePlot_I(iFile),'pos')<1
+    DoExtractUnitSi= IsDimensionalPlot_I(iFile)
 
     ! Set the number lines and variables to be extracted
     nLine     = nLine_I(iPlotFile)
@@ -3095,10 +3095,10 @@ contains
 
     if(iPlotFile < 10)then
        write(NameStart,'(a,i1,a)') &
-            trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile
+            trim(NamePlotDir)//trim(TypePlot_I(iFile))//'_',iPlotFile
     else
        write(NameStart,'(a,i2,a)') &
-            trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile
+            trim(NamePlotDir)//trim(TypePlot_I(iFile))//'_',iPlotFile
     end if
     NameStart = trim(NameStart)//'_'//NameLine_I(iPlotFile)
 
@@ -3125,7 +3125,7 @@ contains
     if(.not. IsSingleLine)nPlotVar = nPlotVar + 1
 
     ! Set the name of the variables
-    select case(plot_form(iFile))
+    select case(TypePlotFormat_I(iFile))
     case('idl')
        IsIdl = .true.
        NameVar = 'Length x y z'
@@ -3148,7 +3148,7 @@ contains
        if(.not.IsSingleLine)NameVar = trim(NameVar)//', "Index"'
        NameVar = trim(NameVar)//', "Length"'
     case default
-       call stop_mpi(NameSub//' ERROR invalid plot form='//plot_form(iFile))
+       call stop_mpi(NameSub//' ERROR invalid plot form='//TypePlotFormat_I(iFile))
     end select
 
     ! Write out plot files
@@ -3314,7 +3314,7 @@ contains
     use ModPhysics,        ONLY: &
          Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_
     use ModIO,             ONLY: &
-         StringDateOrTime, NamePlotDir, plot_range, plot_type, IsPlotName_n
+         StringDateOrTime, NamePlotDir, PlotRange_EI, TypePlot_I, IsPlotNameN
     use ModNumConst,       ONLY: i_DD
     use ModMpi
 
@@ -3337,14 +3337,14 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*)NameSub, &
-         ': starting for iFile=', iFile,' type=',plot_type(iFile)
+         ': starting for iFile=', iFile,' type=',TypePlot_I(iFile)
 
-    ! Extract grid info from plot_range (see set_parameters for lcb plots)
-    Radius = plot_range(1,iFile)
-    nLon   = plot_range(2,iFile)
+    ! Extract grid info from PlotRange_EI (see set_parameters for lcb plots)
+    Radius = PlotRange_EI(1,iFile)
+    nLon   = PlotRange_EI(2,iFile)
 
     DoSaveIntegral=.false.
-    if(index(plot_type(iFile),'int')>0) DoSaveIntegral=.true.
+    if(index(TypePlot_I(iFile),'int')>0) DoSaveIntegral=.true.
 
     if(DoTest)write(*,*)NameSub, 'Radius, nLon, DoSaveIntegral=', &
          Radius, nLon, DoSaveIntegral
@@ -3366,7 +3366,7 @@ contains
           call get_time_string
           NameFile = trim(NameFile) // "_t" // StringDateOrTime
        end if
-       if(IsPlotName_n) write(NameFile,'(a,i7.7)') trim(NameFile)//"_n",nStep
+       if(IsPlotNameN) write(NameFile,'(a,i7.7)') trim(NameFile)//"_n",nStep
        NameFile = trim(NameFile)//".dat"
 
        call open_file(FILE=trim(NameFile), STATUS="replace")

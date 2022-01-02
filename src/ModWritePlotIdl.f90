@@ -21,7 +21,7 @@ contains
     ! Save all cells within plotting range, for each processor
 
     use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, Coord111_DB
-    use ModIO,       ONLY: save_binary, plot_type1, plot_dx, plot_range, &
+    use ModIO,       ONLY: DoSaveBinary, TypePlot, PlotDx_DI, PlotRange_EI, &
          nPlotVarMax
     use ModNumConst, ONLY: cPi, cTwoPi
     use ModKind,     ONLY: nByteReal
@@ -69,7 +69,7 @@ contains
        cHalfMinusTiny = 0.5*(1.0 - 1e-6)
     end if
 
-    IsBinary = save_binary .and. plot_type1 /= 'cut_pic'
+    IsBinary = DoSaveBinary .and. TypePlot /= 'cut_pic'
 
     ! Initialize number of cells saved from this block
     ! Note that if this is moved inside the if statement
@@ -83,15 +83,15 @@ contains
        DyBlock = CellSize_DB(y_,iBlock)
        DzBlock = CellSize_DB(z_,iBlock)
 
-       plot_range(1,iFile) = CoordMin_D(1) - nGI*DxBlock
-       plot_range(2,iFile) = CoordMax_D(1) + nGI*DxBlock
-       plot_range(3,iFile) = CoordMin_D(2) - nGJ*DyBlock
-       plot_range(4,iFile) = CoordMax_D(2) + nGJ*DyBlock
-       plot_range(5,iFile) = CoordMin_D(3) - nGK*DzBlock
-       plot_range(6,iFile) = CoordMax_D(3) + nGK*DzBlock
-       plot_Dx(1,iFile) = DxBlock
-       plot_Dx(2,iFile) = DyBlock
-       plot_Dx(3,iFile) = DzBlock
+       PlotRange_EI(1,iFile) = CoordMin_D(1) - nGI*DxBlock
+       PlotRange_EI(2,iFile) = CoordMax_D(1) + nGI*DxBlock
+       PlotRange_EI(3,iFile) = CoordMin_D(2) - nGJ*DyBlock
+       PlotRange_EI(4,iFile) = CoordMax_D(2) + nGJ*DyBlock
+       PlotRange_EI(5,iFile) = CoordMin_D(3) - nGK*DzBlock
+       PlotRange_EI(6,iFile) = CoordMax_D(3) + nGK*DzBlock
+       PlotDx_DI(1,iFile) = DxBlock
+       PlotDx_DI(2,iFile) = DyBlock
+       PlotDx_DI(3,iFile) = DzBlock
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           nCell = nCell + 1
@@ -157,7 +157,7 @@ contains
          Coord111_DB(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1)&
          RETURN
 
-    Dx = plot_Dx(1,iFile)
+    Dx = PlotDx_DI(1,iFile)
     DxBlock = CellSize_DB(x_,iBlock)
     DyBlock = CellSize_DB(y_,iBlock)
     DzBlock = CellSize_DB(z_,iBlock)
@@ -193,7 +193,7 @@ contains
           if(x<xMinBox .or. x>xMaxBox .or. y<yMinBox .or. y>yMaxBox .or. z<zMinBox .or. z>zMaxBox) CYCLE
 
           ! if plot type is bx0
-          if(index(plot_type1, 'bx0') > 0) then
+          if(index(TypePlot, 'bx0') > 0) then
              ! check if bx are the same sign in this block
              if(UseB0) then
                 if( all(B0_DGB(x_,i,j,k-1:k+1,iBlock)+State_VGB(Bx_,i,j,k-1:k+1,iBlock)>0) .or.&
@@ -203,8 +203,8 @@ contains
                      all(State_VGB(Bx_,i,j,k-1:k+1,iBlock)<0)) CYCLE
              end if
              ! exclude the edge points at the plot range boundary
-             if( abs(Xyz_DGB(z_,i,j,k,iBlock) - plot_range(5,iFile))/DzBlock <= 3 .or.&
-                  abs(Xyz_DGB(z_,i,j,k,iBlock) - plot_range(6,iFile))/DzBlock <= 3) CYCLE
+             if( abs(Xyz_DGB(z_,i,j,k,iBlock) - PlotRange_EI(5,iFile))/DzBlock <= 3 .or.&
+                  abs(Xyz_DGB(z_,i,j,k,iBlock) - PlotRange_EI(6,iFile))/DzBlock <= 3) CYCLE
           end if
 
           if(DoSaveGenCoord)then

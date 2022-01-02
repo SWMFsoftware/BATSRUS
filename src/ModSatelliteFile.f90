@@ -78,7 +78,7 @@ module ModSatelliteFile
   ! the satellite trajectory, while TimeSatEnd_I determines the trajectory
   ! ending point.
   ! Both determine the considered trajectory cut.
-  ! Unlike in IsTimeAccurate sessions, after each dn_output simulation
+  ! Unlike in IsTimeAccurate sessions, after each DnOutput_I simulation
   ! steps the satellite variables for ALL the trajectory cut are
   ! saved in file.
 
@@ -86,8 +86,8 @@ contains
   !============================================================================
   subroutine read_satellite_parameters(NameCommand)
 
-    use ModIO,        ONLY: nFile, MaxFile, Satellite_, plot_dimensional, &
-         Dn_Output, Dt_Output, plot_type, NamePlotDir, TypeCoordPlot_I
+    use ModIO,        ONLY: nFile, MaxFile, Satellite_, IsDimensionalPlot_I, &
+         DnOutput_I, DtOutput_I, TypePlot_I, NamePlotDir, TypeCoordPlot_I
     use ModUtilities, ONLY: check_dir
     use ModReadParam, ONLY: read_var
     use ModIO,        ONLY: NamePrimitiveVarPlot
@@ -125,10 +125,10 @@ contains
           call read_var('StringSatellite', StringSatellite)
           ! Satellite output frequency
           ! Note that we broke with tradition here so that the
-          ! dt_output will always we read!  This may be changed
+          ! DtOutput_I will always we read!  This may be changed
           ! in later distributions
-          call read_var('DnOutput', dn_output(iFile))
-          call read_var('DtOutput', dt_output(iFile))
+          call read_var('DnOutput', DnOutput_I(iFile))
+          call read_var('DtOutput', DtOutput_I(iFile))
 
           ! Satellite inputfile name or the satellite name
           call read_var('NameTrajectoryFile',&
@@ -173,19 +173,19 @@ contains
           if(index(StringSatellite,'VAR')>0 .or. &
                index(StringSatellite,'var')>0 )then
              satellite_var='var'
-             plot_dimensional(iFile) = index(StringSatellite,'VAR')>0
+             IsDimensionalPlot_I(iFile) = index(StringSatellite,'VAR')>0
              TimeSat_I(iSat) = 'step date'
              call read_var('NameSatelliteVars',StringSatVar_I(iSat))
           elseif(index(StringSatellite,'MHD')>0 .or. &
                index(StringSatellite,'mhd')>0)then
              satellite_var='mhd'
-             plot_dimensional(iFile)= index(StringSatellite,'MHD')>0
+             IsDimensionalPlot_I(iFile)= index(StringSatellite,'MHD')>0
              TimeSat_I(iSat) = 'step date'
              StringSatVar_I(iSat)=NamePrimitiveVarPlot//' jx jy jz'
           elseif(index(StringSatellite,'FUL')>0 .or. &
                index(StringSatellite,'ful')>0)then
              satellite_var='ful'
-             plot_dimensional(ifile)= index(StringSatellite,'FUL')>0
+             IsDimensionalPlot_I(ifile)= index(StringSatellite,'FUL')>0
              TimeSat_I(iSat) = 'step date'
              StringSatVar_I(iSat)=&
                   NamePrimitiveVarPlot//' b1x b1y b1z e jx jy jz'
@@ -203,7 +203,7 @@ contains
                   ' theta1 phi1 status theta2 phi2'
           endif
 
-          plot_type(iFile) = "satellite"
+          TypePlot_I(iFile) = "satellite"
 
           ! Determine the time output format to use in the
           ! satellite files.  This is loaded by default above,

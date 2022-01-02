@@ -21,7 +21,7 @@ module ModLoadBalance
   use ModFieldTrace, ONLY: Trace_DSNB
   use ModAdvance, ONLY: nVar
   use ModB0, ONLY: B0_DGB
-  use ModIo, ONLY: log_vars
+  use ModIo, ONLY: StringLogVar
 
   implicit none
 
@@ -75,7 +75,7 @@ contains
     character(len=*), parameter:: NameSub = 'init_load_balance'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    DoSendRay = UseIM .or. index(log_vars, 'status') > 0  ! to be improved
+    DoSendRay = UseIM .or. index(StringLogVar, 'status') > 0  ! to be improved
 
     nBuffer = nScalarData
 
@@ -273,7 +273,7 @@ contains
     ! Load balance grid using space filling (Morton) ordering of blocks
     ! Coordinates are moved if DoMoveCoord is true.
     ! Data is moved with the blocks if DoMoveData is true.
-    ! There are new blocks (due to initial refinement, restart or AMR)
+    ! There are new blocks (due to initial refinement, IsRestart or AMR)
     ! when IsNewBlock is true (so update neighbors etc).
 
     logical, optional, intent(in) :: DoMoveCoord, DoMoveData, IsNewBlock
@@ -687,7 +687,7 @@ contains
 
              ! For first iteration calculate DtMax_B when inside time loop,
              ! otherwise use the available DtMax_B from previous time step,
-             ! or from the restart file, or simply 0 set in read_inputs.
+             ! or from the IsRestart file, or simply 0 set in read_inputs.
              ! The latter two choices will be overruled later anyways.
              if(nStep==1 .and. IsTimeLoop)then
                 ! For first iteration in the time loop

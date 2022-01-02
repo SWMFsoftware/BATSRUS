@@ -124,7 +124,7 @@ contains
     nLogR    = 0
     LogR_I   = 0.0
     if (iSatIn == 0) then
-       call split_string(log_vars, MaxLogVar, NameLogVar_I, nLogVar, &
+       call split_string(StringLogVar, MaxLogVar, NameLogVar_I, nLogVar, &
             UseArraySyntaxIn=.true.)
        do i=1,nLogVar
           if(index(NameLogVar_I(i),'flx')>0) nFluxVar = nFluxVar + 1
@@ -132,12 +132,12 @@ contains
                index(NameLogVar_I(i),'test')>0)  DoWritePosition = .true.
        end do
        if (nFluxVar >0) then
-          call split_string(log_R_str, MaxLogR, NameLogR_I, nLogR)
+          call split_string(StringLogRadius, MaxLogR, NameLogR_I, nLogR)
           do i=1,nLogR
              read(NameLogR_I(i),*) LogR_I(i)
           end do
        end if
-       StringTime = log_time
+       StringTime = TypeLogTime
     elseif (iSatIn>=1) then
        iSat = iSatIn
        if (.not. DoTrackSatellite_I(iSat)) RETURN
@@ -215,11 +215,11 @@ contains
     if(iProc==0) then
        if (iSatIn==0) then
 
-          if(unit_log < 0)then
-             unit_log = io_unit_new()
+          if(iUnitLogfile < 0)then
+             iUnitLogfile = io_unit_new()
              NameFile = trim(NamePlotDir) // 'log'
 
-             if(IsLogName_e)then
+             if(IsLogNameE)then
                 ! Event date added to log file name
                 call get_date_time(iTime_I)
                 write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
@@ -234,26 +234,26 @@ contains
 
              NameFile = trim(NameFile) // '.log'
 
-             call open_file(unit_log, FILE=NameFile)
+             call open_file(iUnitLogfile, FILE=NameFile)
              if (index(NameAll,'pnt')>0 .or. index(NameAll,'PNT')>0 &
                   .or. index(NameAll,'test')>0) then
                 if (UseTestXyz) then
-                   write(unit_log,'(a,3es13.5)')  &
+                   write(iUnitLogfile,'(a,3es13.5)')  &
                         'test point (X,Y,Z): ',xTest,yTest,zTest
                 else
-                   write(unit_log,'(a,5(i6))')  &
+                   write(iUnitLogfile,'(a,5(i6))')  &
                         'test point(I,J,K,BLK,PROC): ', &
                         iTest,jTest,kTest,iBlockTest,iProcTest
                 end if
              else
-                write(unit_log,'(a)')'Volume averages, fluxes, etc'
+                write(iUnitLogfile,'(a)')'Volume averages, fluxes, etc'
              end if
-             write(unit_log,'(a)') trim(NameAll)
+             write(iUnitLogfile,'(a)') trim(NameAll)
              ! Add #START line if variables contain PNT (capitalized)
              ! so that the file can be read as IMF/satellite input file.
-             if (index(NameAll,'PNT')>0) write(unit_log,'(a)') '#START'
+             if (index(NameAll,'PNT')>0) write(iUnitLogfile,'(a)') '#START'
           endif
-          iUnit = unit_log
+          iUnit = iUnitLogfile
        elseif (iSatIn >= 1) then
           iUnit = iUnitSat_I(iSat)
           if (IsFirstWriteSat_I(iSat)) then
@@ -312,7 +312,7 @@ contains
     ! WRITE OUT THE LINE INTO THE LOGFILE OR THE SATELLITE FILE
     if(iProc==0) then
 
-       if (plot_dimensional(iFile))  &
+       if (IsDimensionalPlot_I(iFile))  &
             call normalize_logvar(nLogVar,NameLogVar_I, nLogR, LogR_I, &
             nLogTot, LogVar_I)
 
@@ -329,7 +329,7 @@ contains
           end if
           if(index(StringTime,'time')>0) then
              ! note that tSimulation is in SI units.
-             if(plot_dimensional(iFile)) then
+             if(IsDimensionalPlot_I(iFile)) then
                 write(iUnit,'(es13.5)',ADVANCE='NO') &
                      tSimulation*Si2Io_V(UnitT_)
              else

@@ -971,7 +971,7 @@ contains
     use ModMain,    ONLY: nStep, IsTimeAccurate, tSimulation
     use ModIO,      ONLY: &
          StringDateOrTime, NamePlotDir, &
-         TypeFile_I, plot_type, plot_form, Plot_
+         TypeFile_I, TypePlot_I, TypePlotFormat_I, Plot_
     use ModPlotFile, ONLY: save_plot_file
 
     integer, intent(in):: iFile
@@ -992,7 +992,7 @@ contains
     iPlotFile = iFile - Plot_
 
     ! Set the name of the variables based on plot form
-    select case(plot_form(iFile))
+    select case(TypePlotFormat_I(iFile))
     case('tec')
        IsIdl = .false.
        NameVar = '"X", "Y", "Z"'
@@ -1000,16 +1000,16 @@ contains
     case default
        call stop_mpi(&
             NameThisComp//':'//NameSub//' ERROR invalid plot form='//&
-            plot_form(iFile))
+            TypePlotFormat_I(iFile))
     end select
 
     ! name of output files
     if(iPlotFile < 10)then
        write(NameStart,'(a,i1,a)') &
-            trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile
+            trim(NamePlotDir)//trim(TypePlot_I(iFile))//'_',iPlotFile
     else
        write(NameStart,'(a,i2,a)') &
-            trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile
+            trim(NamePlotDir)//trim(TypePlot_I(iFile))//'_',iPlotFile
     end if
 
     NameFile = NameStart

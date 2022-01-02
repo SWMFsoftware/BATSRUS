@@ -23,7 +23,7 @@ contains
     use ModAdvance
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
     use ModGeometry, ONLY: Used_GB
-    use ModIO, ONLY : restart
+    use ModIO, ONLY : IsRestart
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, &
          UseShockTube, UnitUser_V, ShockLeftState_V, ShockRightState_V, &
          ShockPosition, UnitU_, Io2No_V
@@ -65,11 +65,11 @@ contains
        ! If used, initialize solution variables and parameters.
        if(UseB0) call set_b0_cell(iBlock)
 
-       ! Subtract B0 from Full B0+B1 from restart to obtain B1
-       if(UseB0 .and. restart .and. UseRestartWithFullB) &
+       ! Subtract B0 from Full B0+B1 from IsRestart to obtain B1
+       if(UseB0 .and. IsRestart .and. UseRestartWithFullB) &
             call subtract_b0(iBlock)
 
-       if(.not.restart)then
+       if(.not.IsRestart)then
 
           if(UseShockTube)then
              ! Calculate sin and cos from the tangent = ShockSlope
@@ -160,7 +160,7 @@ contains
                call add_rotational_velocity(iSignRotationIC, iBlock)
 
           if(UseChGL)call init_chgl(iBlock)
-       end if ! not restart
+       end if ! not IsRestart
 
     end if ! Unused_B
 
