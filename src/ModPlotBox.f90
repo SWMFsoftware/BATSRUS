@@ -10,8 +10,8 @@ module ModPlotBox
   use ModUtilities, ONLY: norm2
 #endif
   use ModIO, ONLY: PlotDx_DI, PlotRange_EI, PlotNormal_DI, TypeCoordPlot_I, &
-       TypePlotFormat_I, TypeFile_I, TypePlot_I, ObsPos_DI, IsObsBox_I, nPlotVarMax, &
-       StringPlotVar, DimFactor_V, StringPlotVar_I
+       TypePlotFormat_I, TypeFile_I, TypePlot_I, ObsPos_DI, IsObsBox_I, &
+       nPlotVarMax, StringPlotVar, DimFactor_V, StringPlotVar_I
   use ModNumConst,        ONLY: cDegToRad, cTwoPi
   use ModCoordTransform,  ONLY: xyz_to_lonlat
 

@@ -376,8 +376,8 @@ contains
          UseBody, UseBody2, IsTimeAccurate, iStartTime_I, IsStandAlone,       &
          UseBufferGrid, NameUserModule, VersionUserModule
     use ModPhysics,    ONLY: &
-         sw_n_dim, sw_t_dim, sw_ux_dim, sw_uy_dim, &
-         sw_uz_dim, sw_bx_dim, sw_by_dim, sw_bz_dim, &
+         SolarWindNDim, SolarWindTempDim, SolarWindUxDim, SolarWindUyDim, &
+         SolarWindUzDim, SolarWindBxDim, SolarWindByDim, SolarWindBzDim, &
          TypeIoUnit, TypeNormalization, No2Si_V, Io2Si_V, No2Io_V, &
          UnitX_, UnitU_, UnitRho_, &
          rBody, rCurrents, BodyNDim_I, BodyNSpeciesDim_I, BodyTDim_I, &
@@ -529,14 +529,14 @@ contains
     call write_string_tabs_name(TypeCoordSystem,'TypeCoordSystem')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#SOLARWIND'
-    write(UnitTmp_,'(es22.15,a)')SW_n_dim,  cTab//cTab//'SwNDim'
-    write(UnitTmp_,'(es22.15,a)')SW_T_dim,  cTab//cTab//'SwTDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Ux_dim, cTab//cTab//'SwUxDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Uy_dim, cTab//cTab//'SwUyDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Uz_dim, cTab//cTab//'SwUzDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Bx_dim, cTab//cTab//'SwBxDim'
-    write(UnitTmp_,'(es22.15,a)')SW_By_dim, cTab//cTab//'SwByDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Bz_dim, cTab//cTab//'SwBzDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindNDim,  cTab//cTab//'SwNDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindTempDim,  cTab//cTab//'SwTDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindUxDim, cTab//cTab//'SwUxDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindUyDim, cTab//cTab//'SwUyDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindUzDim, cTab//cTab//'SwUzDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindBxDim, cTab//cTab//'SwBxDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindByDim, cTab//cTab//'SwByDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindBzDim, cTab//cTab//'SwBzDim'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#IOUNITS'
     call write_string_tabs_name(TypeIoUnit, 'TypeIoUnit')

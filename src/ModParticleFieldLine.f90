@@ -10,11 +10,13 @@ module ModParticleFieldLine
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
+
   ! This module contains subroutine for extracting magnetic field lines
   ! for passing to other codes;
   ! field line intergration is performed with use of BATL library including
   ! - continuous AMR interpolation
   ! - particle methods
+
   use BATL_lib, ONLY: &
        MaxDim, nDim, MaxBlock, nI, nJ, nK, nBlock,     &
        Xyz_DGB, CellVolume_GB, Unused_B, &
@@ -25,7 +27,9 @@ module ModParticleFieldLine
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: NameThisComp
+
   implicit none
+
   SAVE
   private ! except
 
@@ -40,7 +44,7 @@ module ModParticleFieldLine
   ! use particles in the simulation
   logical, public :: UseParticles = .false.
   ! kinds of particles used to generate a magnetic field line
-  integer :: KindEnd_ = -1, KindReg_ = -1
+  integer :: iKindEnd = -1, iKindReg = -1
 
   ! variable in the state vector of a particle
   integer, parameter:: &
@@ -129,7 +133,8 @@ module ModParticleFieldLine
   ! state and indexes for particles:
   real,    pointer::  StateEnd_VI(:,:), StateReg_VI(:,:)
   integer, pointer:: iIndexEnd_II(:,:),iIndexReg_II(:,:)
-  public :: KindReg_, x_,y_, z_, fl_, id_, RSoftBoundary
+  public :: iKindReg, x_,y_, z_, fl_, id_, RSoftBoundary
+
 contains
   !============================================================================
   subroutine read_particle_line_param(NameCommand)
@@ -224,20 +229,20 @@ contains
     if(.not.DoInit) RETURN
     DoInit = .false.
     call allocate_particles(&
-         iKindParticle = KindReg_,  &
+         iKindParticle = iKindReg,  &
          nVar   = nVarParticleReg,  &
          nIndex = nIndexParticleReg,&
          nParticleMax = nParticlePerLine * nFieldLineMax)
     call allocate_particles(&
-         iKindParticle = KindEnd_  ,&
+         iKindParticle = iKindEnd  ,&
          nVar   = nVarParticleEnd  ,&
          nIndex = nIndexParticleEnd,&
          nParticleMax = nFieldLineMax)
     ! set pointers to parameters of end particles
-    StateEnd_VI  => Particle_I(KindEnd_)%State_VI
-    iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
-    StateReg_VI  => Particle_I(KindReg_)%State_VI
-    iIndexReg_II => Particle_I(KindReg_)%iIndex_II
+    StateEnd_VI  => Particle_I(iKindEnd)%State_VI
+    iIndexEnd_II => Particle_I(iKindEnd)%iIndex_II
+    StateReg_VI  => Particle_I(iKindReg)%State_VI
+    iIndexReg_II => Particle_I(iKindReg)%iIndex_II
     if(nLineInit > 0)&
          ! extract initial field lines
          call extract_particle_line(XyzLineInit_DI)
@@ -282,7 +287,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call  put_particles(&
-         iKindParticle      = KindEnd_,          &
+         iKindParticle      = iKindEnd,          &
          StateIn_VI         = Xyz_DI,            &
          iLastIdIn          = nFieldLine,        &
          iIndexIn_II        = iIndex_II,         &
@@ -300,8 +305,10 @@ contains
     nFieldLine    = nFieldLine + nLineAllProc
     if(nFieldLine > nFieldLineMax) call stop_mpi(NameThisComp//':'//NameSub//&
          ': Limit for number of particle field lines exceeded')
+
     ! Save number of regular particles
-    nParticleOld  = Particle_I(KindReg_)%nParticle
+    nParticleOld  = Particle_I(iKindReg)%nParticle
+
     ! Copy end points to regular points. Note, that new regular points
     ! have numbers nParticleOld+1:nParticleOld+nLineThisProc
     call copy_end_to_regular
@@ -327,19 +334,19 @@ contains
 
        ! fix alignment of particle indexing with B field direction
        ! and pass mode
-       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+       do iParticle = 1, Particle_I(iKindEnd)%nParticle
           iIndexEnd_II(Pass_, iParticle) = DoneFromScratch_
           call get_b_dir(iParticle, DirB_D)
           iIndexEnd_II(Alignment_, iParticle) = &
                nint( SIGN(1.0, sum(DirB_D*StateEnd_VI(x_:z_, iParticle)) ))
        end do
 
-       call trace_particles(KindEnd_, particle_line)
+       call trace_particles(iKindEnd, particle_line)
 
        ! if just finished backward tracing and need to trace in both dirs
        ! => return to initial particles
        if(iDirTrace < 0 .and. iTraceMode == 0)then
-          ! copy initial points to KindEnd_:
+          ! copy initial points to iKindEnd:
           ! the initial particles are currently right after the particles,
           ! that were in the list before the start of this subroutine,
           ! i.e. occupy positions from (nParticleOld+1)
@@ -347,7 +354,7 @@ contains
                StateReg_VI(x_:z_, nParticleOld+1:nParticleOld+nLineThisProc)
           iIndexEnd_II(0:id_,1:nLineThisProc) = iIndexReg_II(&
                0:id_,nParticleOld+1:nParticleOld+nLineThisProc)
-          Particle_I(KindEnd_)%nParticle = nLineThisProc
+          Particle_I(iKindEnd)%nParticle = nLineThisProc
        end if
     end do
     ! Offset in id_
@@ -366,7 +373,7 @@ contains
       iOffsetLocal_I = 0; iOffset_I = 0
 
       ! set a pointer to parameters of regular particles
-      nParticle = Particle_I(KindReg_)%nParticle
+      nParticle = Particle_I(iKindReg)%nParticle
       do iParticle = 1, nParticle
          iLine = iIndexReg_II(fl_,iParticle)
 
@@ -397,7 +404,7 @@ contains
   !============================================================================
   subroutine particle_line(iParticle, IsEndOfSegment)
     ! the subroutine is the tracing loop;
-    ! tracing starts at KindEnd_ particles and proceeds in a given direction
+    ! tracing starts at iKindEnd particles and proceeds in a given direction
 
     integer, intent(in) :: iParticle
     logical, intent(out):: IsEndOfSegment
@@ -464,7 +471,7 @@ contains
       if(RSoftBoundary > 0.0)then
          if(norm2(StateEnd_VI(1:nDim,iParticle)) &
               > RSoftBoundary)then
-            call mark_undefined(KindEnd_, iParticle)
+            call mark_undefined(iKindEnd, iParticle)
             IsEndOfSegment = .true.
             RETURN
          end if
@@ -504,7 +511,7 @@ contains
 
       ! check location, schedule for message pass, if needed
       call check_particle_location(  &
-           iKindParticle = KindEnd_ ,&
+           iKindParticle = iKindEnd ,&
            iParticle     = iParticle,&
            DoMove        = DoMove   ,&
            IsGone        = IsGone    )
@@ -537,7 +544,7 @@ contains
       ! check whether direction reverses in a sharp turn:
       ! this is an indicator of a problem, break tracing of the line
       if(sum(StateEnd_VI(DirX_:DirZ_,iParticle)*DirLine_D) < 0)then
-         call mark_undefined(KindEnd_, iParticle)
+         call mark_undefined(iKindEnd, iParticle)
          IsEndOfSegment = .true.
          RETURN
       end if
@@ -552,7 +559,7 @@ contains
 
       ! update location and schedule for message pass
       call check_particle_location(  &
-           iKindParticle = KindEnd_ ,&
+           iKindParticle = iKindEnd ,&
            iParticle     = iParticle,&
            DoMove        = DoMove   ,&
            IsGone        = IsGone    )
@@ -653,16 +660,16 @@ contains
        iParticleEnd   = iParticleIn
     else
        iParticleStart = 1
-       iParticleEnd   = Particle_I(KindEnd_)%nParticle
+       iParticleEnd   = Particle_I(iKindEnd)%nParticle
     end if
     do iParticle = iParticleStart, iParticleEnd
-       if(Particle_I(KindReg_)%nParticle == nParticlePerLine*nFieldLineMax)&
+       if(Particle_I(iKindReg)%nParticle == nParticlePerLine*nFieldLineMax)&
             call stop_mpi(&
             NameThisComp//':'//NameSub//': max number of particles exceeded')
-       Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle + 1
-       StateReg_VI(iVarCopy_I, Particle_I(KindReg_)%nParticle) =&
+       Particle_I(iKindReg)%nParticle = Particle_I(iKindReg)%nParticle + 1
+       StateReg_VI(iVarCopy_I, Particle_I(iKindReg)%nParticle) =&
             StateEnd_VI(iVarCopy_I, iParticle)
-       iIndexReg_II(iIndexCopy_I, Particle_I(KindReg_)%nParticle) =&
+       iIndexReg_II(iIndexCopy_I, Particle_I(iKindReg)%nParticle) =&
             iIndexEnd_II(iIndexCopy_I, iParticle)
     end do
     call test_stop(NameSub, DoTest)
@@ -705,7 +712,7 @@ contains
          IsBody)
     if(present(IsBody))then
        if(IsBody)then
-          call mark_undefined(KindEnd_,iParticle);RETURN
+          call mark_undefined(iKindEnd,iParticle);RETURN
        end if
     end if
     ! get potential part of the magnetic field at the current location
@@ -779,9 +786,9 @@ contains
          RETURN
 
     ! reset particle's stage
-    iIndexReg_II(Pass_,1:Particle_I(KindReg_)%nParticle) = DoneFromScratch_
+    iIndexReg_II(Pass_,1:Particle_I(iKindReg)%nParticle) = DoneFromScratch_
 
-    call trace_particles(KindReg_, advect_particle, check_done_advect)
+    call trace_particles(iKindReg, advect_particle, check_done_advect)
     call test_stop(NameSub, DoTest)
   end subroutine advect_particle_line
   !============================================================================
@@ -818,7 +825,7 @@ contains
 
        ! check location, schedule for message pass, if needed
        call check_particle_location(  &
-            iKindParticle = KindReg_ ,&
+            iKindParticle = iKindReg ,&
             iParticle     = iParticle,&
             DoMove        = DoMove   ,&
             IsGone        = IsGone    )
@@ -840,7 +847,7 @@ contains
 
        ! update location and schedule for message pass
        call check_particle_location( &
-            iKindParticle = KindReg_,&
+            iKindParticle = iKindReg,&
             iParticle     = iParticle)
        ! Integration is done
        !
@@ -876,7 +883,7 @@ contains
       call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I, &
            IsEndOfSegment)
       if(IsEndOfSegment)then
-         call mark_undefined(KindReg_,iParticle);RETURN
+         call mark_undefined(iKindReg,iParticle);RETURN
       end if
       ! interpolate the local density and momentum
       do iCell = 1, nCell
@@ -899,16 +906,19 @@ contains
     ! check whether all paritcles have been advected full time step
     logical, intent(out):: Done
     !--------------------------------------------------------------------------
-    Done = all(iIndexReg_II(Pass_,1:Particle_I(KindReg_)%nParticle)==Normal_)
+    Done = all(iIndexReg_II(Pass_,1:Particle_I(iKindReg)%nParticle)==Normal_)
   end subroutine check_done_advect
   !============================================================================
   !===================ACCESS TO THE PARTICLE DATA==============================
   subroutine get_particle_data(nSize, NameVar, DataOut_VI)
+
     use ModUtilities, ONLY: split=>split_string
+
     ! the subroutine gets variables specified in the string StringVar
     ! and writes them into DataOut_VI; data is for all particles otherwise
+
     integer, intent(in) :: nSize
-    real,    intent(out):: DataOut_VI(nSize,Particle_I(KindReg_)%nParticle)
+    real,    intent(out):: DataOut_VI(nSize,Particle_I(iKindReg)%nParticle)
     character(len=*),intent(in) :: NameVar
 
     ! order of requested variables/indexes
@@ -956,11 +966,11 @@ contains
     ! store variables
     if(nVarOut   > 0) DataOut_VI(iOrder_I(1:nVarOut),:)                   = &
          StateReg_VI(iOrderVar_V(   1:nVarOut  ),&
-         1:Particle_I(KindReg_)%nParticle)
+         1:Particle_I(iKindReg)%nParticle)
     ! store indexes
     if(nIndexOut > 0) DataOut_VI(iOrder_I(nVarOut+1:nVarOut+nIndexOut),:) = &
          iIndexReg_II(iOrderIndex_I(1:nIndexOut),&
-         1:Particle_I(KindReg_)%nParticle)
+         1:Particle_I(iKindReg)%nParticle)
     call test_stop(NameSub, DoTest)
   end subroutine get_particle_data
   !============================================================================
@@ -1039,7 +1049,7 @@ contains
 
     ! get the data on this processor
     if(allocated(PlotVar_VI)) deallocate(PlotVar_VI)
-    allocate(PlotVar_VI(5,Particle_I(KindReg_)%nParticle))
+    allocate(PlotVar_VI(5,Particle_I(iKindReg)%nParticle))
     call get_particle_data(5, 'xx yy zz fl id', PlotVar_VI)
 
     call save_plot_file(&

@@ -96,8 +96,8 @@ contains
 
     use ModMain, ONLY: StartTime, tSimulation, &
          UseStrict, TypeCoordSystem, NameVarLower_V
-    use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &
-         SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim, &
+    use ModPhysics, ONLY: SolarWindBxDim, SolarWindByDim, SolarWindBzDim, &
+         SolarWindUxDim, SolarWindUyDim, SolarWindUzDim, SolarWindNDim, SolarWindTempDim, &
          nVectorVar, iVectorVar_I
     use ModAdvance, ONLY: UseMultiSpecies
     use ModIoUnit, ONLY: UnitTmp_
@@ -367,7 +367,7 @@ contains
 
     ! This part is only needed for solar wind normalization based on
     ! the input file. This should be eliminated.
-    if (SW_T_dim <= 0.0) then
+    if (SolarWindTempDim <= 0.0) then
 
        if (nData == 1) then
           Solarwind_V = Solarwind_VI(:, 1)
@@ -399,14 +399,14 @@ contains
             Solarwind_V(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
 
        ! These scalars should be removed eventually
-       SW_Bx_dim  = Solarwind_V(Bx_)
-       SW_By_dim  = Solarwind_V(By_)
-       SW_Bz_dim  = Solarwind_V(Bz_)
-       SW_Ux_dim  = Solarwind_V(Ux_)
-       SW_Uy_dim  = Solarwind_V(Uy_)
-       SW_Uz_dim  = Solarwind_V(Uz_)
-       SW_n_dim   = Solarwind_V(rho_)
-       SW_T_dim   = Solarwind_V(p_)
+       SolarWindBxDim  = Solarwind_V(Bx_)
+       SolarWindByDim  = Solarwind_V(By_)
+       SolarWindBzDim  = Solarwind_V(Bz_)
+       SolarWindUxDim  = Solarwind_V(Ux_)
+       SolarWindUyDim  = Solarwind_V(Uy_)
+       SolarWindUzDim  = Solarwind_V(Uz_)
+       SolarWindNDim   = Solarwind_V(rho_)
+       SolarWindTempDim   = Solarwind_V(p_)
     endif
 
     call test_stop(NameSub, DoTest)

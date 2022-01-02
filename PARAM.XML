@@ -7416,31 +7416,6 @@ rel			TypeProjStop
 
 </command>
 
-<command name="CORRECTP">
-  <parameter name="pRatioLow" type="real" min="0" max="1"
-	     default="0.01"/>
-  <parameter name="pRatioHigh" type="real" min="$pRatioLow" max="1"
-	     default="0.1"/>
-#CORRECTP
-0.01			pRatioLow
-0.1			pRatioHigh
-
-Default values are shown.
-
-The purpose of the correctP subroutine is to remove any discrepancies between
-pressure stored as the primitive variable P and the pressure calculated
-from the total energy E. Such discrepancies can be caused by the
-constrained transport scheme and by the projection scheme which modify
-the magnetic energy. The algorithm is the following:
-\begin{verbatim}
-Define the rato of thermal and total energies q = eThermal/e and
-
-If              q &lt; pRatioLow   then E is recalculated from P
-If pRatioLow  &lt; q &lt; pRatioHigh  then both P and E are modified depending on q
-If pratioHigh &lt; q               then P is recalculated from E
-\end{verbatim}
-The second case is a linear interpolation between the first and third cases.
-</command>
 </commandgroup>
 
 <commandgroup name="COUPLING PARAMATERS">

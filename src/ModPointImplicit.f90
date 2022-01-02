@@ -525,7 +525,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_point_implicit
   !============================================================================
-
   subroutine linear_equation_solver(nVar, Matrix_VV, Rhs_V)
 
     integer, intent(in) :: nVar
@@ -545,93 +544,92 @@ contains
     ! Crout's method with partial implicit pivoting is used to perform
     ! the decompostion.
 
-    integer, parameter :: MAXVAR = 100
+    integer, parameter :: MaxVar = 100
+    real, parameter :: cTiny=1.0E-20
 
-    integer :: IL, II, ILMAX, JL, KL, LL, INDX(MAXVAR)
-    real    :: SCALING(MAXVAR), LHSMAX, LHSTEMP, TOTALSUM
-    real, parameter :: TINY=1.0E-20
+    integer :: iL, iI, iLMax, jL, kL, lL, i_I(MaxVar)
+    real    :: Scaling_I(MaxVar), LhsMax, LhsTemp, TotalSum
 
     character(len=*), parameter:: NameSub = 'linear_equation_solver'
     !--------------------------------------------------------------------------
-    if(nVar > MAXVAR) call stop_mpi(&
+    if(nVar > MaxVar) call stop_mpi(&
          'ERROR in ModPointImplicit linear solver: MaxVar is too small')
 
-    ! Loop through each row to get implicit scaling
+    ! Loop through each row to get implicit Scaling_I
     ! information.
-    DO IL=1,nVar
-       LHSMAX=0.00
-       DO JL=1,nVar
-          IF (ABS(Matrix_VV(IL,JL)) > LHSMAX) LHSMAX=ABS(Matrix_VV(IL,JL))
-       END DO
-       SCALING(IL)=1.00/LHSMAX
-    END DO
+    do iL = 1, nVar
+       LhsMax = 0.0
+       do jL = 1, nVar
+          if (abs(Matrix_VV(iL,jL)) > LhsMax) LhsMax = abs(Matrix_VV(iL,jL))
+       end do
+       Scaling_I(iL) = 1.0/LhsMax
+    end do
 
     ! Peform the LU decompostion using Crout's method.
-    DO JL=1,nVar
-       DO IL=1,JL-1
-          TOTALSUM=Matrix_VV(IL,JL)
-          DO KL=1,IL-1
-             TOTALSUM=TOTALSUM-Matrix_VV(IL,KL)*Matrix_VV(KL,JL)
-          END DO
-          Matrix_VV(IL,JL)=TOTALSUM
-       END DO
-       LHSMAX=0.00
-       DO IL=JL,nVar
-          TOTALSUM=Matrix_VV(IL,JL)
-          DO KL=1,JL-1
-             TOTALSUM=TOTALSUM-Matrix_VV(IL,KL)*Matrix_VV(KL,JL)
-          END DO
-          Matrix_VV(IL,JL)=TOTALSUM
-          LHSTEMP=SCALING(IL)*ABS(TOTALSUM)
-          IF (LHSTEMP >= LHSMAX) THEN
-             ILMAX=IL
-             LHSMAX=LHSTEMP
-          END IF
-       END DO
-       IF (JL /= ILMAX) THEN
-          DO KL=1,nVar
-             LHSTEMP=Matrix_VV(ILMAX,KL)
-             Matrix_VV(ILMAX,KL)=Matrix_VV(JL,KL)
-             Matrix_VV(JL,KL)=LHSTEMP
-          END DO
-          SCALING(ILMAX)=SCALING(JL)
-       END IF
-       INDX(JL)=ILMAX
-       IF (abs(Matrix_VV(JL,JL)) == 0.00) Matrix_VV(JL,JL)=TINY
-       IF (JL /= nVar) THEN
-          LHSTEMP=1.00/Matrix_VV(JL,JL)
-          DO IL=JL+1,nVar
-             Matrix_VV(IL,JL)=Matrix_VV(IL,JL)*LHSTEMP
-          END DO
-       END IF
-    END DO
+    do jL = 1, nVar
+       do iL = 1, jL-1
+          TotalSum = Matrix_VV(iL,jL)
+          do kL = 1, iL-1
+             TotalSum = TotalSum-Matrix_VV(iL,kL)*Matrix_VV(kL,jL)
+          end do
+          Matrix_VV(iL,jL) = TotalSum
+       end do
+       LhsMax = 0.0
+       do iL = jL, nVar
+          TotalSum = Matrix_VV(iL,jL)
+          do kL = 1, jL-1
+             TotalSum = TotalSum-Matrix_VV(iL,kL)*Matrix_VV(kL,jL)
+          end do
+          Matrix_VV(iL,jL) = TotalSum
+          LhsTemp = Scaling_I(iL)*abs(TotalSum)
+          if (LhsTemp >=  LhsMax) then
+             iLMax = iL
+             LhsMax = LhsTemp
+          end if
+       end do
+       if (jL /=  iLMax) then
+          do kL = 1, nVar
+             LhsTemp = Matrix_VV(iLMax,kL)
+             Matrix_VV(iLMax,kL) = Matrix_VV(jL,kL)
+             Matrix_VV(jL,kL) = LhsTemp
+          end do
+          Scaling_I(iLMax) = Scaling_I(jL)
+       end if
+       i_I(jL) = iLMax
+       if (abs(Matrix_VV(jL,jL)) == 0.0) Matrix_VV(jL,jL) = cTiny
+       if (jL /=  nVar) then
+          LhsTemp = 1.0/Matrix_VV(jL,jL)
+          do iL = jL+1, nVar
+             Matrix_VV(iL,jL) = Matrix_VV(iL,jL)*LhsTemp
+          end do
+       end if
+    end do
 
     ! Peform the forward and back substitution to obtain
     ! the solution vector.
-    II=0
-    DO IL=1,nVar
-       LL=INDX(IL)
-       TOTALSUM=Rhs_V(LL)
-       Rhs_V(LL)=Rhs_V(IL)
-       IF (II /= 0) THEN
-          DO JL=II,IL-1
-             TOTALSUM=TOTALSUM-Matrix_VV(IL,JL)*Rhs_V(JL)
-          END DO
-       ELSE IF (TOTALSUM /= 0.00) THEN
-          II=IL
-       END IF
-       Rhs_V(IL)=TOTALSUM
-    END DO
-    DO IL=nVar,1,-1
-       TOTALSUM=Rhs_V(IL)
-       DO JL=IL+1,nVar
-          TOTALSUM=TOTALSUM-Matrix_VV(IL,JL)*Rhs_V(JL)
-       END DO
-       Rhs_V(IL)=TOTALSUM/Matrix_VV(IL,IL)
-    END DO
+    iI = 0
+    do iL = 1, nVar
+       lL = i_I(iL)
+       TotalSum = Rhs_V(lL)
+       Rhs_V(lL) = Rhs_V(iL)
+       if (iI /=  0) then
+          do jL = iI, iL-1
+             TotalSum = TotalSum-Matrix_VV(iL,jL)*Rhs_V(jL)
+          end do
+       else if (TotalSum /=  0.0) then
+          iI = iL
+       end if
+       Rhs_V(iL) = TotalSum
+    end do
+    do iL = nVar, 1, -1
+       TotalSum = Rhs_V(iL)
+       do jL = iL+1, nVar
+          TotalSum = TotalSum-Matrix_VV(iL,jL)*Rhs_V(jL)
+       end do
+       Rhs_V(iL) = TotalSum/Matrix_VV(iL,iL)
+    end do
 
   end subroutine linear_equation_solver
   !============================================================================
-
 end module ModPointImplicit
 !==============================================================================

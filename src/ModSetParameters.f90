@@ -1739,12 +1739,6 @@ contains
           if(.not.UseB)CYCLE READPARAM
           call read_project_divb_param(NameCommand)
 
-       case("#CORRECTP")
-          call read_var('pRatioLow',Pratio_lo)
-          call read_var('pRatioHigh',Pratio_hi)
-          if(Pratio_lo>=Pratio_hi)&
-               call stop_mpi(NameSub//' ERROR: Pratio_lo>=Pratio_hi')
-
        case("#IOUNITS")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('TypeIoUnit', TypeIoUnit, IsUpperCase=.true.)
@@ -2235,14 +2229,14 @@ contains
 
        case("#SOLARWIND")
           ! if(.not.is_first_session())CYCLE READPARAM
-          call read_var('SwNDim',  SW_n_dim)
-          call read_var('SwTDim'  ,SW_T_dim)
-          call read_var('SwUxDim' ,SW_Ux_dim)
-          call read_var('SwUyDim' ,SW_Uy_dim)
-          call read_var('SwUzDim' ,SW_Uz_dim)
-          call read_var('SwBxDim' ,SW_Bx_dim)
-          call read_var('SwByDim' ,SW_By_dim)
-          call read_var('SwBzDim' ,SW_Bz_dim)
+          call read_var('SwNDim',  SolarWindNDim)
+          call read_var('SwTDim'  ,SolarWindTempDim)
+          call read_var('SwUxDim' ,SolarWindUxDim)
+          call read_var('SwUyDim' ,SolarWindUyDim)
+          call read_var('SwUzDim' ,SolarWindUzDim)
+          call read_var('SwBxDim' ,SolarWindBxDim)
+          call read_var('SwByDim' ,SolarWindByDim)
+          call read_var('SwBzDim' ,SolarWindBzDim)
 
        case("#OUTFLOWPRESSURE")
           call read_var('UseOutflowPressure', UseOutflowPressure)

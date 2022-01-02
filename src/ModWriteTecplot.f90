@@ -1080,7 +1080,7 @@ contains
     use ModAdvance, ONLY : iTypeAdvance_B, SkippedBlock_
     use ModIO
     use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
-    use ModNodes, ONLY: nNodeAll, NodeNumberGlobal_NB, NodeUniqueGlobal_NB
+    use ModNodes, ONLY: nNodeAll, iNodeGlobal_NB, IsNodeUnique_NB
     use BATL_lib, ONLY: IsCartesianGrid, IsRLonLat,                    &
          nNodeUsed, iNodeMorton_I, iTree_IA, Block_, Proc_,            &
          Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,                  &
@@ -1216,8 +1216,8 @@ contains
 
              ! Write point values
              do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-                if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
-                   iRec = NodeNumberGlobal_NB(i,j,k,iBlock)
+                if(IsNodeUnique_NB(i,j,k,iBlock))then
+                   iRec = iNodeGlobal_NB(i,j,k,iBlock)
                    write(UnitTmp_, FMT=formatData, REC=iRec) &
                         NodeXYZ_DN(1:3,i,j,k),                  &
                         PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock),&
@@ -1231,14 +1231,14 @@ contains
              do k=1,nK; do j=1,nJ; do i=1,nI
                 iRec = iRec + 1
                 write(UnitTmp2_,'(8i11,a)', REC=iRec) &
-                     NodeNumberGlobal_NB(i  ,j  ,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j  ,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j+1,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i  ,j+1,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i  ,j  ,k+1,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j  ,k+1,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j+1,k+1,iBlock), &
-                     NodeNumberGlobal_NB(i  ,j+1,k+1,iBlock), CharNewLine
+                     iNodeGlobal_NB(i  ,j  ,k  ,iBlock), &
+                     iNodeGlobal_NB(i+1,j  ,k  ,iBlock), &
+                     iNodeGlobal_NB(i+1,j+1,k  ,iBlock), &
+                     iNodeGlobal_NB(i  ,j+1,k  ,iBlock), &
+                     iNodeGlobal_NB(i  ,j  ,k+1,iBlock), &
+                     iNodeGlobal_NB(i+1,j  ,k+1,iBlock), &
+                     iNodeGlobal_NB(i+1,j+1,k+1,iBlock), &
+                     iNodeGlobal_NB(i  ,j+1,k+1,iBlock), CharNewLine
              end do; end do; end do
           end do
        else
@@ -1248,7 +1248,7 @@ contains
                 ! Write point values
                 call fill_NodeXYZ
                 do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-                   if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
+                   if(IsNodeUnique_NB(i,j,k,iBlock))then
                       write(UnitTmp_) &
                            NodeXYZ_DN(1:3,i,j,k),       &
                            real(PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock),&
@@ -1258,14 +1258,14 @@ contains
                 ! Write point connectivity
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    write(UnitTmp2_) &
-                        NodeNumberGlobal_NB(i  ,j  ,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j  ,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j+1,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j+1,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j  ,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j  ,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j+1,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j+1,k+1,iBlock)
+                        iNodeGlobal_NB(i  ,j  ,k  ,iBlock), &
+                        iNodeGlobal_NB(i+1,j  ,k  ,iBlock), &
+                        iNodeGlobal_NB(i+1,j+1,k  ,iBlock), &
+                        iNodeGlobal_NB(i  ,j+1,k  ,iBlock), &
+                        iNodeGlobal_NB(i  ,j  ,k+1,iBlock), &
+                        iNodeGlobal_NB(i+1,j  ,k+1,iBlock), &
+                        iNodeGlobal_NB(i+1,j+1,k+1,iBlock), &
+                        iNodeGlobal_NB(i  ,j+1,k+1,iBlock)
                 end do; end do; end do
              end do
           else
@@ -1274,7 +1274,7 @@ contains
                 ! Write point values
                 call fill_NodeXYZ
                 do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-                   if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
+                   if(IsNodeUnique_NB(i,j,k,iBlock))then
                       write(UnitTmp_,fmt="(50(ES14.6))") &
                            NodeXYZ_DN(1:3,i,j,k),       &
                            PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock)
@@ -1283,14 +1283,14 @@ contains
                 ! Write point connectivity
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    write(UnitTmp2_,'(8i11)') &
-                        NodeNumberGlobal_NB(i  ,j  ,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j  ,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j+1,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j+1,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j  ,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j  ,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j+1,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j+1,k+1,iBlock)
+                        iNodeGlobal_NB(i  ,j  ,k  ,iBlock), &
+                        iNodeGlobal_NB(i+1,j  ,k  ,iBlock), &
+                        iNodeGlobal_NB(i+1,j+1,k  ,iBlock), &
+                        iNodeGlobal_NB(i  ,j+1,k  ,iBlock), &
+                        iNodeGlobal_NB(i  ,j  ,k+1,iBlock), &
+                        iNodeGlobal_NB(i+1,j  ,k+1,iBlock), &
+                        iNodeGlobal_NB(i+1,j+1,k+1,iBlock), &
+                        iNodeGlobal_NB(i  ,j+1,k+1,iBlock)
                 end do; end do; end do
              end do
           end if
@@ -1942,7 +1942,7 @@ contains
     end if
 
     ! Initialize all node numbers to zero
-    NodeNumberLocal_NB=0
+    iNodeLocal_NB=0
 
     ! Number of nodes on each block (maximum)
     nNodeALL=nBlockALL*NodesPerBlock
@@ -1959,23 +1959,23 @@ contains
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
           iNode = iNode+1
-          NodeNumberLocal_NB(i,j,k,iBlock)= iNode
+          iNodeLocal_NB(i,j,k,iBlock)= iNode
        end do; end do; end do
     end do TREE1
-    NodeNumberGlobal_NB = NodeNumberLocal_NB
+    iNodeGlobal_NB = iNodeLocal_NB
 
     ! Set logical array
-    NodeUniqueGlobal_NB = NodeNumberGlobal_NB>0
+    IsNodeUnique_NB = iNodeGlobal_NB>0
 
     ! Assign value to internal passing variable and do message pass
     !  NOTE: convert integer to real for message pass first
 
     ! Done a evel one, with allocate and dealocate. NEED to be fixed
     allocate(IndexNode_VNB(1,nI+1,nJ+1,nK+1,nBlock))
-    IndexNode_VNB(1,:,:,:,:) = real(NodeNumberGlobal_NB(:,:,:,1:nBlock))
+    IndexNode_VNB(1,:,:,:,:) = real(iNodeGlobal_NB(:,:,:,1:nBlock))
     call message_pass_node(1,IndexNode_VNB, &
          NameOperatorIn='Min', UsePeriodicCoordIn = .true.)
-    NodeNumberGlobal_NB(:,:,:,1:nBlock) = nint(IndexNode_VNB(1,:,:,:,:))
+    iNodeGlobal_NB(:,:,:,1:nBlock) = nint(IndexNode_VNB(1,:,:,:,:))
     deallocate(IndexNode_VNB)
 
     ! Allocate memory for storing the node offsets
@@ -1988,12 +1988,12 @@ contains
     TREE2: do iBlock  = 1, nBlock
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-          if(  NodeNumberLocal_NB(i,j,k,iBlock) > &
-               NodeNumberGlobal_NB(i,j,k,iBlock))then
+          if(  iNodeLocal_NB(i,j,k,iBlock) > &
+               iNodeGlobal_NB(i,j,k,iBlock))then
              nOffset = nOffset+1
-             NodeUniqueGlobal_NB(i,j,k,iBlock) = .false.
+             IsNodeUnique_NB(i,j,k,iBlock) = .false.
           end if
-          NodeOffset(NodeNumberLocal_NB(i,j,k,iBlock)) = nOffset
+          NodeOffset(iNodeLocal_NB(i,j,k,iBlock)) = nOffset
        end do; end do; end do
     end do TREE2
 
@@ -2010,7 +2010,7 @@ contains
     do iBlock  = 1, nBlock
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-          iNode = NodeNumberLocal_NB(i,j,k,iBlock)
+          iNode = iNodeLocal_NB(i,j,k,iBlock)
           NodeOffset(iNode) = NodeOffset(iNode) + nOffsetPrevious
        end do; end do; end do
     end do
@@ -2039,21 +2039,21 @@ contains
             iComm, iError)
     end if
 
-    ! Loop to fix NodeNumberGlobal_NB for offset
+    ! Loop to fix iNodeGlobal_NB for offset
     TREE3: do iBlock  = 1, nBlock
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-          NodeNumberGlobal_NB(i,j,k,iBlock) = NodeNumberGlobal_NB(i,j,k,iBlock) &
-               - NodeOffset(NodeNumberGlobal_NB(i,j,k,iBlock))
-          if(NodeNumberGlobal_NB(i,j,k,iBlock)>nNodeALL &
-               .or. NodeNumberGlobal_NB(i,j,k,iBlock)<1)then
+          iNodeGlobal_NB(i,j,k,iBlock) = iNodeGlobal_NB(i,j,k,iBlock) &
+               - NodeOffset(iNodeGlobal_NB(i,j,k,iBlock))
+          if(iNodeGlobal_NB(i,j,k,iBlock)>nNodeALL &
+               .or. iNodeGlobal_NB(i,j,k,iBlock)<1)then
              ! Error in numbering, report values and stop.
              write(*,*)'ERROR: Global node numbering problem.', &
                   ' PE=',iProc,' BLK=',iBlock,' ijk=',i,j,k
-             write(*,*)'  NodeNumberGlobal_NB=',&
-                  NodeNumberGlobal_NB(i,j,k,iBlock)
+             write(*,*)'  iNodeGlobal_NB=',&
+                  iNodeGlobal_NB(i,j,k,iBlock)
              write(*,*)'  NodeOffset           =',&
-                  NodeOffset(NodeNumberGlobal_NB(i,j,k,iBlock))
+                  NodeOffset(iNodeGlobal_NB(i,j,k,iBlock))
              write(*,*)'  nBlockALL=',nBlockALL,&
                   ' NodesPerBlock=',NodesPerBlock,&
                   ' unreduced total=',nBlockALL*NodesPerBlock,&

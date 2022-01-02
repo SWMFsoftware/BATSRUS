@@ -1909,7 +1909,7 @@ contains
     ! but it does not seem to improve the performance for realistic grids
 
     use ModMain, ONLY: MaxBlock, nBlock, nI, nJ, nK, Unused_B
-    use ModPhysics, ONLY: SW_Bx, SW_By, SW_Bz
+    use ModPhysics, ONLY: SolarWindBx, SolarWindBy, SolarWindBz
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, Coord111_DB
     use ModSort, ONLY: sort_quick
     use ModMpi, ONLY: MPI_WTIME
@@ -1935,17 +1935,17 @@ contains
     ! Sort blocks according to the direction of the solar wind magnetic field
     ! so that open rays are found fast from already calculated trace values.
 
-    ! Weight X, Y and Z according to the SW_Bx, SW_By, SW_Bz components
-    ! The Y and Z directions are preferred to X (usually SW_Bx=0 anyways).
-    Weight_D(1) = sign(1.0,SW_Bx)
+    ! Weight X, Y and Z according to the SolarWindBx, SolarWindBy, SolarWindBz components
+    ! The Y and Z directions are preferred to X (usually SolarWindBx=0 anyways).
+    Weight_D(1) = sign(1.0,SolarWindBx)
     ! Select Y or Z direction to be the slowest changing value
     ! to maximize overlap
-    if(abs(SW_By) > abs(SW_Bz))then
-       Weight_D(2) = sign(100.0,SW_By)
-       Weight_D(3) = sign( 10.0,SW_Bz)
+    if(abs(SolarWindBy) > abs(SolarWindBz))then
+       Weight_D(2) = sign(100.0,SolarWindBy)
+       Weight_D(3) = sign( 10.0,SolarWindBz)
     else
-       Weight_D(2) = sign( 10.0,SW_By)
-       Weight_D(3) = sign(100.0,SW_Bz)
+       Weight_D(2) = sign( 10.0,SolarWindBy)
+       Weight_D(3) = sign(100.0,SolarWindBz)
     end if
 
     do iBlock=1,nBlock
@@ -1971,19 +1971,19 @@ contains
           iSortStart=1; iSortEnd=nBlock; iSortStride=1
        end if
 
-       if(iRay==1 .eqv. SW_Bx >= 0.0)then
+       if(iRay==1 .eqv. SolarWindBx >= 0.0)then
           iStart = nI; iEnd=1; iStride=-1
        else
           iStart = 1; iEnd=nK; iStride= 1
        end if
 
-       if(iRay==1 .eqv. SW_By >= 0.0)then
+       if(iRay==1 .eqv. SolarWindBy >= 0.0)then
           jStart = nJ; jEnd=1; jStride=-1
        else
           jStart = 1; jEnd=nJ; jStride= 1
        end if
 
-       if(iRay==1 .eqv. SW_Bz >= 0.0)then
+       if(iRay==1 .eqv. SolarWindBz >= 0.0)then
           kStart = nK; kEnd=1; kStride=-1
        else
           kStart = 1; kEnd=nK; kStride= 1

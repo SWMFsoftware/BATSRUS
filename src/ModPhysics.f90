@@ -75,9 +75,6 @@ module ModPhysics
   ! Ion charge for multi-species.
   real :: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
 
-  ! thermal/total energy ratio limits for correctP
-  real :: Pratio_lo=0.01, Pratio_hi=0.1
-
   ! Artificial speed of light set by #LIGHTSPEED
   real :: ClightDim = -1.0
 
@@ -107,16 +104,16 @@ module ModPhysics
   !$acc declare create(SinThetaTilt, CosThetaTilt)
 
   ! Far field solar wind solution variables.
-  real :: SW_T_dim=0.0, &
-       SW_rho=0.0, SW_rho_dim=0.0, &
-       SW_n=0.0,   SW_n_dim=0.0  , &
-       SW_p=0.0  , SW_p_dim=0.0  , &
-       SW_Ux=0.0 , SW_Ux_dim=0.0 , &
-       SW_Uy=0.0 , SW_Uy_dim=0.0 , &
-       SW_Uz=0.0 , SW_Uz_dim=0.0 , &
-       SW_Bx=0.0 , SW_Bx_dim=0.0 , &
-       SW_By=0.0 , SW_By_dim=0.0 , &
-       SW_Bz=0.0 , SW_Bz_dim=0.0
+  real :: SolarWindTempDim=0.0, &
+       SolarWindRho=0.0, SolarWindRhoDim=0.0, &
+       SolarWindN=0.0,   SolarWindNDim=0.0  , &
+       SolarWindP=0.0  , SolarWindPDim=0.0  , &
+       SolarWindUx=0.0 , SolarWindUxDim=0.0 , &
+       SolarWindUy=0.0 , SolarWindUyDim=0.0 , &
+       SolarWindUz=0.0 , SolarWindUzDim=0.0 , &
+       SolarWindBx=0.0 , SolarWindBxDim=0.0 , &
+       SolarWindBy=0.0 , SolarWindByDim=0.0 , &
+       SolarWindBz=0.0 , SolarWindBzDim=0.0
 
   real :: SwTminDim = -1.0
 
@@ -336,8 +333,8 @@ contains
           MassBodySi  = mSun
           RotPeriodSi = RotationPeriodSun
        endif
-       SW_n_dim = BodyNDim_I(IonFirst_)  ! for SOLARWIND normalization only
-       SW_T_dim = BodyTDim_I(IonFirst_)  ! for SOLARWIND normalization only
+       SolarWindNDim = BodyNDim_I(IonFirst_)    ! SOLARWIND normalization only
+       SolarWindTempDim = BodyTDim_I(IonFirst_) ! SOLARWIND normalization only
        if(NameThisComp == 'EE' .and. IsCartesian)then
           rPlanetSi = 1000.0  ! 1 km
           NamePlanetRadius = 'km'
@@ -430,22 +427,23 @@ contains
     GBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
 
     ! Normalize solar wind values. Note: the solarwind is in I/O units
-    SW_n   = SW_n_dim*Io2No_V(UnitN_)
-    SW_rho = SW_n * MassIon_I(1)
-    SW_p   = SW_n * max(SW_T_dim, SwTminDim)*Io2No_V(UnitTemperature_)
-    SW_Ux  = SW_Ux_dim*Io2No_V(UnitU_)
-    SW_Uy  = SW_Uy_dim*Io2No_V(UnitU_)
-    SW_Uz  = SW_Uz_dim*Io2No_V(UnitU_)
-    SW_Bx  = SW_Bx_dim*Io2No_V(UnitB_)
-    SW_By  = SW_By_dim*Io2No_V(UnitB_)
-    SW_Bz  = SW_Bz_dim*Io2No_V(UnitB_)
+    SolarWindN   = SolarWindNDim*Io2No_V(UnitN_)
+    SolarWindRho = SolarWindN * MassIon_I(1)
+    SolarWindP   = SolarWindN * &
+         max(SolarWindTempDim, SwTminDim)*Io2No_V(UnitTemperature_)
+    SolarWindUx  = SolarWindUxDim*Io2No_V(UnitU_)
+    SolarWindUy  = SolarWindUyDim*Io2No_V(UnitU_)
+    SolarWindUz  = SolarWindUzDim*Io2No_V(UnitU_)
+    SolarWindBx  = SolarWindBxDim*Io2No_V(UnitB_)
+    SolarWindBy  = SolarWindByDim*Io2No_V(UnitB_)
+    SolarWindBz  = SolarWindBzDim*Io2No_V(UnitB_)
 
     if(.not.UseElectronPressure .and. IsMhd) &
-         SW_p = SW_p*(1 + ElectronPressureRatio)
+         SolarWindP = SolarWindP*(1 + ElectronPressureRatio)
 
     ! These are useful for printing out values
-    SW_rho_dim = SW_rho*No2Io_V(UnitRho_)
-    SW_p_dim   = SW_p*No2Io_V(UnitP_)
+    SolarWindRhoDim = SolarWindRho*No2Io_V(UnitRho_)
+    SolarWindPDim   = SolarWindP*No2Io_V(UnitP_)
 
     if(UseMultiSpecies)then
        ! Species body densities
@@ -528,30 +526,30 @@ contains
     FaceState_VI(P_,body2_)   = pBody2
 
     ! For Outer Boundaries (if SW_* are set)
-    if(SW_rho > 0.0)then
+    if(SolarWindRho > 0.0)then
 
-       FaceState_VI(Rho_, xMinBc_:zMaxBc_) = SW_rho
-       FaceState_VI(Ux_,  xMinBc_:zMaxBc_) = SW_Ux
-       FaceState_VI(Uy_,  xMinBc_:zMaxBc_) = SW_Uy
-       FaceState_VI(Uz_,  xMinBc_:zMaxBc_) = SW_Uz
-       FaceState_VI(Bx_,  xMinBc_:zMaxBc_) = SW_Bx
-       FaceState_VI(By_,  xMinBc_:zMaxBc_) = SW_By
-       FaceState_VI(Bz_,  xMinBc_:zMaxBc_) = SW_Bz
-       FaceState_VI(P_,   xMinBc_:zMaxBc_) = SW_p
+       FaceState_VI(Rho_, xMinBc_:zMaxBc_) = SolarWindRho
+       FaceState_VI(Ux_,  xMinBc_:zMaxBc_) = SolarWindUx
+       FaceState_VI(Uy_,  xMinBc_:zMaxBc_) = SolarWindUy
+       FaceState_VI(Uz_,  xMinBc_:zMaxBc_) = SolarWindUz
+       FaceState_VI(Bx_,  xMinBc_:zMaxBc_) = SolarWindBx
+       FaceState_VI(By_,  xMinBc_:zMaxBc_) = SolarWindBy
+       FaceState_VI(Bz_,  xMinBc_:zMaxBc_) = SolarWindBz
+       FaceState_VI(P_,   xMinBc_:zMaxBc_) = SolarWindP
 
-       if(UseElectronPressure) &
-            FaceState_VI(Pe_, xMinBc_:zMaxBc_) = SW_p*ElectronPressureRatio
+       if(UseElectronPressure) FaceState_VI(Pe_,xMinBc_:zMaxBc_) &
+            = SolarWindP*ElectronPressureRatio
 
-       if(UseAnisoPe) FaceState_VI(Pepar_, xMinBc_:zMaxBc_) = &
-            SW_p*ElectronPressureRatio
+       if(UseAnisoPe) FaceState_VI(Pepar_,xMinBc_:zMaxBc_) &
+            = SolarWindP*ElectronPressureRatio
 
-       if(UseAnisoPressure) FaceState_VI(Ppar_, xMinBc_:zMaxBc_) = SW_p
+       if(UseAnisoPressure) FaceState_VI(Ppar_,xMinBc_:zMaxBc_) = SolarWindP
 
-       if (UseMultiSpecies) then
-          FaceState_VI(SpeciesFirst_, xMinBc_:zMaxBc_) = &
-               SW_rho*(1 - LowDensityRatio*(nSpecies - 1))
-          FaceState_VI(SpeciesFirst_+1:SpeciesLast_, xMinBc_:zMaxBc_) = &
-               LowDensityRatio*Sw_rho
+       if(UseMultiSpecies) then
+          FaceState_VI(SpeciesFirst_, xMinBc_:zMaxBc_) &
+               = SolarWindRho*(1 - LowDensityRatio*(nSpecies - 1))
+          FaceState_VI(SpeciesFirst_+1:SpeciesLast_, xMinBc_:zMaxBc_) &
+               = LowDensityRatio*SolarWindRho
        endif
 
        if(nFluid > 1)then
@@ -567,22 +565,22 @@ contains
           iFluid = IonFirst_
           call select_fluid(iFluid)
           FaceState_VI(iRho,xMinBc_:zMaxBc_) = &
-               SW_Rho*(1 - LowDensityRatio*(nIonFluid - 1))
-          FaceState_VI( iUx,xMinBc_:zMaxBc_) = SW_Ux
-          FaceState_VI( iUy,xMinBc_:zMaxBc_) = SW_Uy
-          FaceState_VI( iUz,xMinBc_:zMaxBc_) = SW_Uz
+               SolarWindRho*(1 - LowDensityRatio*(nIonFluid - 1))
+          FaceState_VI( iUx,xMinBc_:zMaxBc_) = SolarWindUx
+          FaceState_VI( iUy,xMinBc_:zMaxBc_) = SolarWindUy
+          FaceState_VI( iUz,xMinBc_:zMaxBc_) = SolarWindUz
           ! Use solar wind temperature and reduced density to get pressure
-          FaceState_VI( iP,xMinBc_:zMaxBc_) = SW_p/pCoef &
+          FaceState_VI( iP,xMinBc_:zMaxBc_) = SolarWindP/pCoef &
                *(1.0 - LowDensityRatio*(nIonFluid-1))
 
           do iFluid = IonFirst_+1, nFluid
              call select_fluid(iFluid)
-             FaceState_VI(iRho,xMinBc_:zMaxBc_) = SW_Rho*LowDensityRatio
-             FaceState_VI( iUx,xMinBc_:zMaxBc_) = SW_Ux
-             FaceState_VI( iUy,xMinBc_:zMaxBc_) = SW_Uy
-             FaceState_VI( iUz,xMinBc_:zMaxBc_) = SW_Uz
+             FaceState_VI(iRho,xMinBc_:zMaxBc_) = SolarWindRho*LowDensityRatio
+             FaceState_VI( iUx,xMinBc_:zMaxBc_) = SolarWindUx
+             FaceState_VI( iUy,xMinBc_:zMaxBc_) = SolarWindUy
+             FaceState_VI( iUz,xMinBc_:zMaxBc_) = SolarWindUz
              ! Use solar wind temperature and reduced density to get pressure
-             FaceState_VI( iP,xMinBc_:zMaxBc_) = SW_p/pCoef &
+             FaceState_VI( iP,xMinBc_:zMaxBc_) = SolarWindP/pCoef &
                   *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
           end do
           ! Fix total pressure if necessary (density and temperature are kept)
@@ -784,8 +782,8 @@ contains
        No2Si_V(UnitX_)   = rPlanetSi
        if(NameThisComp=='OH')No2Si_V(UnitX_)=cAU
        No2Si_V(UnitU_)   = &
-            sqrt(Gamma*cBoltzmann*SW_T_dim/cProtonMass/MassIon_I(1))
-       No2Si_V(UnitRho_) = 1000000*cProtonMass*MassIon_I(1)*SW_n_dim
+            sqrt(Gamma*cBoltzmann*SolarWindTempDim/cProtonMass/MassIon_I(1))
+       No2Si_V(UnitRho_) = 1000000*cProtonMass*MassIon_I(1)*SolarWindNDim
     case("NONE", "READ")
        ! Already set in set_parameters
     case("USER")
@@ -1101,7 +1099,7 @@ contains
     end if
 
     if(HypE_ > 1) then
-       ! Set the scalar field Psi used in hyperbolic constraint of electric field
+       ! Scalar field Psi used in hyperbolic constraint of electric field
        UnitUser_V(HypE_)          = No2Io_V(UnitElectric_)
        NameUnitUserTec_V(HypE_)   = NameTecUnit_V(UnitElectric_)
        NameUnitUserIdl_V(HypE_)   = NameIdlUnit_V(UnitElectric_)
@@ -1125,7 +1123,7 @@ contains
        NameUnitUserIdl_V(iEnergy)       = NameIdlUnit_V(UnitEnergyDens_)
     end do
 
-    ! By default the scalar advected variables are assumed to behave like density
+    ! By default the scalar advected variables are assumed to be like density
     do iVar = ScalarFirst_, ScalarLast_
        UnitUser_V(iVar)        = No2Io_V(UnitRho_)
        NameUnitUserTec_V(iVar) = NameTecUnit_V(UnitRho_)

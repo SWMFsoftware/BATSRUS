@@ -38,7 +38,7 @@ module ModPartImplicit
 
   ! Actual number of implicit variables (unknowns) per processor, total
   integer :: nImpl=0
-  real :: nImplTotal_r=0.0 ! define real to avoid overfloating
+  real :: NimplTotal=0.0 ! define real to avoid overfloating
 
   ! Test variables
   integer :: iBlockImplTest=1, nTest=1
@@ -453,7 +453,7 @@ contains
     if(DoTest.and.nBlockImpl>0)write(*,*)NameSub,': Impl_VGB=',&
          Impl_VGB(:,iTest,jTest,kTest,iBlockImplTest)
 
-    call MPI_allreduce(real(nImpl), nImplTotal_r, 1, MPI_REAL, MPI_SUM, &
+    call MPI_allreduce(real(nImpl), NimplTotal, 1, MPI_REAL, MPI_SUM, &
          iComm, iError)
     Norm_V = -1.0
     ! Global norm of current w_(k=0) = w_n
@@ -463,10 +463,10 @@ contains
     call MPI_allreduce(NormLocal_V, Norm_V, nVar, MPI_REAL, MPI_SUM, &
          iComm,iError)
 
-    Norm_V = sqrt(Norm_V/(nImplTotal_r/nVar))
+    Norm_V = sqrt(Norm_V/(NimplTotal/nVar))
     where(Norm_V < SmallDouble) Norm_V =1.0
 
-    if(DoTest)write(*,*)NameSub,': nImpltot, Norm_V=',nImplTotal_r,Norm_V
+    if(DoTest)write(*,*)NameSub,': nImpltot, Norm_V=',NimplTotal,Norm_V
 
     TimeSimulationOrig = tSimulation
     UseUpdateCheckOrig = UseUpdateCheck
@@ -988,7 +988,7 @@ contains
        call MPI_allreduce(sum(Rhs_I(1:nImpl)**2),q1,1,MPI_REAL,MPI_SUM,&
             iComm,iError)
        if(DoTest)then
-          write(*,*)'norm of rhs:',sqrt(q1/nImplTotal_r)
+          write(*,*)'norm of rhs:',sqrt(q1/NimplTotal)
           if(nBlockImpl>0)write(*,*)'rhs,rhs0,ResImpl_VCB,Impl_VGB(test)=',&
                Rhs_I(nTest),Rhs0_I(nTest),               &
                ResImpl_VCB(kTest,iVarTest,iTest,jTest,iBlockImplTest),  &
@@ -1026,7 +1026,7 @@ contains
        NormXLocal = sum(x_I(1:nImpl)**2)
        call MPI_allreduce(NormXLocal, NormX, 1, MPI_REAL, MPI_SUM, &
             iComm, iError)
-       NormX = sqrt(NormX/nImplTotal_r)
+       NormX = sqrt(NormX/NimplTotal)
        IsConverged = NormX < NewtonErrorMax
        if(DoTest)write(*,*)'NormX:',NormX
     else
@@ -1196,7 +1196,7 @@ contains
     if(DoTest)write(*,*) NameSub,': initial n,sum(x**2),xNormTotal=', &
          nImpl, xNorm, xNormTotal
 
-    xNorm = sqrt(xNormTotal/nImplTotal_r)
+    xNorm = sqrt(xNormTotal/NimplTotal)
 
     if(xNorm < SmallDouble) xNorm = 1.0
 
@@ -2311,10 +2311,10 @@ contains
     use ModAdvance,  ONLY: eFluid_
     use ModMultiFluid, ONLY: nFluid
 
-    integer, intent(in):: nFaceI,nFaceJ,nFaceK,iDim,iBlock
-    real, intent(in) :: Var_VF(:,:,:,:) ! dimension(nVar,nFaceI,nFaceJ,nFaceK)
-    real, intent(in) :: B0_DF(:,:,:,:)  ! dimension(MaxDim,nFaceI,nFaceJ,nFaceK)
-    real, intent(out):: Cmax_F(:,:,:)   ! dimension(nFaceI,nFaceJ,nFaceK)
+    integer, intent(in) :: nFaceI,nFaceJ,nFaceK,iDim,iBlock
+    real,    intent(in) :: Var_VF(:,:,:,:) ! (nVar,nFaceI,nFaceJ,nFaceK)
+    real,    intent(in) :: B0_DF(:,:,:,:)  ! (MaxDim,nFaceI,nFaceJ,nFaceK)
+    real,    intent(out):: Cmax_F(:,:,:)   ! (nFaceI,nFaceJ,nFaceK)
 
     real :: Primitive_V(nVar), Cmax_I(nFluid)
     logical:: DoTest

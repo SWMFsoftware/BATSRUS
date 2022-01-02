@@ -11,27 +11,24 @@ module ModProjectDivB
 
   ! Parameters for projection scheme:
   !
-  ! proj_method determines the iterative scheme to be used
-  ! if proj_method='cg'       then Conjugate Gradient method is used
+  ! TypeProjectIter determines the iterative scheme to be used
+  ! if TypeProjectIter='cg'       then Conjugate Gradient method is used
   !                           (this is only good for symmetric matrices! )
-  !    proj_method='bicgstab' then BiConjugate Gradient method is used
+  !    TypeProjectIter='bicgstab' then BiConjugate Gradient method is used
   !
-  ! proj_typestop determines the stopping condition for the iterations.
-  ! if proj_typestop='rel' then sum((div B)**2) is reduced by a factor
-  !    proj_divbcoeff
-  ! if proj_typestop='max' then |div B| is kept below a limit determeined by
-  !    proj_divbcoeff and
-  !    proj_divbconst
-  !    if proj_divbcoeff>0 then
-  !       |div B|< proj_divbcoeff * divbmax_0
+  ! TypeProjectStop determines the stopping condition for the iterations.
+  ! if TypeProjectStop='rel' then sum((div B)**2) is reduced by a factor
+  !    RelativeLimit
+  ! if TypeProjectStop='max' then |div B| is kept below a limit determeined by
+  !    RelativeLimit and
+  !    AbsoluteLimit
+  !    if RelativeLimit>0 then
+  !       |div B|< RelativeLimit * divbmax_0
   !          where divbmax_0 is the max(|div B|) after the first time step
   !    otherwise
-  !       |div B|< proj_divbconst
+  !       |div B|< AbsoluteLimit
   !
-  ! proj_matvecmax is an upper limit on matrix-vector products for iterations
-  !
-  ! proj_boundtype determines the boundary conditions for the Poisson equation
-  ! if proj_boundtype='zero' : phi=0 in ghost cells outside of comput. domain
+  ! MaxMatvec is an upper limit on matrix-vector products for iterations
 
   use ModSize, ONLY: nI, nJ, nK, nBlock, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
@@ -52,18 +49,14 @@ module ModProjectDivB
   real, public :: DivbMax = -1.0
 
   ! Local variables
-
-  character (len=10):: proj_method   ='cg        '
-  character (len=3)::  proj_typestop ='rel'
-  real ::              proj_divbcoeff=0.1
-  real ::              proj_divbconst=0.0
-  integer ::           proj_matvecmax=50
-
-  ! Counter for matrix vector multiplications, and for errors of solver
+  character (len=10):: TypeProjectIter   ='cg        '
+  character (len=3)::  TypeProjectStop ='rel'
+  real ::              RelativeLimit=0.1
+  real ::              AbsoluteLimit=0.0
+  integer ::           MaxMatvec=50
 
   ! Minimum value for divB (a small number)
-
-  real, parameter :: divbmin=1E-10
+  real, parameter :: DivBTiny=1E-10
 
 contains
   !============================================================================
@@ -79,11 +72,11 @@ contains
     call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#PROJECTION")
-       call read_var('TypeProjectIter' ,proj_method)
-       call read_var('TypeProjectStop' ,proj_typestop)
-       call read_var('RelativeLimit'   ,proj_divbcoeff)
-       call read_var('AbsoluteLimit'   ,proj_divbconst)
-       call read_var('MaxMatvec'       ,proj_matvecmax)
+       call read_var('TypeProjectIter' ,TypeProjectIter)
+       call read_var('TypeProjectStop' ,TypeProjectStop)
+       call read_var('RelativeLimit'   ,RelativeLimit)
+       call read_var('AbsoluteLimit'   ,AbsoluteLimit)
+       call read_var('MaxMatvec'       ,MaxMatvec)
        ! Make sure that DivbMax is recalculated
        DivbMax = -1.0
     case default
@@ -95,7 +88,7 @@ contains
   !============================================================================
   subroutine project_divb
 
-    ! Project B according to B'=B-grad phi, where Laplace phi=div B
+    ! Project B according to B'=B-grad Phi_GB, where Laplace Phi_GB=div B
     ! Solve the Poisson equation with an iterative scheme
     !
     ! See G. Toth, 2000, Journal of Computational Physics, 161, 605-652
@@ -109,18 +102,18 @@ contains
     use BATL_lib, ONLY: Xyz_DGB
 
     ! Local variables
-    ! proj_divb: original error to be projected out
-    ! phi:       Scalar field in the Poisson problem
-    real, allocatable, save:: proj_divb(:,:,:,:), phi(:,:,:,:)
+    ! DivB_GB: original error to be projected out
+    ! Phi_GB:       Scalar field in the Poisson problem
+    real, allocatable, save:: DivB_GB(:,:,:,:), Phi_GB(:,:,:,:)
 
-    integer :: info      ! error status of the iterative scheme
-    integer :: nmatvec   ! number of matvex operations performed
-    real ::    resid     ! residual after iterative solver stopped
+    integer :: iInfo      ! error status of the iterative scheme
+    integer :: nMatvec   ! number of matvex operations performed
+    real ::    Resid     ! residual after iterative solver stopped
 
-    real :: divbmax_now  ! current value of max(|div B|)
-    real :: pmin_old, pmin_new     ! original and projected value of min(p)
+    real :: DivBMaxNow  ! current value of max(|div B|)
+    real :: pMinOld, pMinNew     ! original and projected value of min(p)
 
-    integer :: loc(5)
+    integer :: iLoc_I(5)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'project_divb'
@@ -129,9 +122,9 @@ contains
 
     call timing_start(NameSub)
 
-    if(.not.allocated(proj_divb)) allocate( &
-         proj_divb(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
-         phi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(.not.allocated(DivB_GB)) allocate( &
+         DivB_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
+         Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
     if(DoTest)then
        write(*,*) NameSub, ': old B:', &
@@ -160,91 +153,93 @@ contains
     end if
 
     ! Determine the div B error
-    call proj_get_divb(proj_divB)
+    call proj_get_divb(DivB_GB)
 
-    if(DoTest)write(*,*)'proj_divb=',proj_divb(iTest,jTest,kTest,iBlockTest)
+    if(DoTest)write(*,*)'DivB_GB=',DivB_GB(iTest,jTest,kTest,iBlockTest)
 
     ! DEBUG
-    ! call proj_bound(proj_divb)
-    ! call show_BLK('divb',proj_divb)
+    ! call proj_bound(DivB_GB)
+    ! call show_BLK('divb',DivB_GB)
     ! DEBUG
     ! call stop_mpi('debug')
 
     if(DoTest)then
-       pmin_old = minval_grid(State_VGB(P_,:,:,:,:))
-       divbmax_now = maxval_grid(proj_divB, UseAbs=.true.)
+       pMinOld = minval_grid(State_VGB(P_,:,:,:,:))
+       DivBMaxNow = maxval_grid(DivB_GB, UseAbs=.true.)
        if(DoTest) write(*,*) NameSub, &
-            ': old max(abs(divB)), min(p)=',divbmax_now,pmin_old
+            ': old max(abs(divB)), min(p)=',DivBMaxNow,pMinOld
     endif
 
     ! Calculate and save divbmax, the maximum div B allowed
-    if(divbmax < divbmin)then
+    if(divbmax < DivBTiny)then
        ! Default values if projection parameters were not set
-       if(proj_divbcoeff<0.0)  proj_divbcoeff=0.1
-       if(proj_divbconst<0.0)  proj_divbconst=0.0
-       if(proj_matvecmax<0)proj_matvecmax=1000
-       select case(proj_typestop)
+       if(RelativeLimit<0.0)  RelativeLimit=0.1
+       if(AbsoluteLimit<0.0)  AbsoluteLimit=0.0
+       if(MaxMatvec<0)MaxMatvec=1000
+       select case(TypeProjectStop)
        case('rel')
-          divbmax=proj_divbcoeff
+          divbmax=RelativeLimit
        case('max')
-          if(proj_divbcoeff > 0.0)then
-             divbmax = proj_divbcoeff &
-                  *maxval_grid(proj_divb, UseAbs=.true.)
+          if(RelativeLimit > 0.0)then
+             divbmax = RelativeLimit &
+                  *maxval_grid(DivB_GB, UseAbs=.true.)
           else
-             divbmax = proj_divbconst
+             divbmax = AbsoluteLimit
           endif
        end select
        if(DoTest)write(*,*)'Allowed maximum for div B:',divbmax
-       if(divbmax<divbmin)&
+       if(divbmax<DivBTiny)&
             call stop_mpi(NameSub//': Too small value for divbmax')
     endif
 
-    ! Solve the Poisson equation Laplace phi = div B
-    call proj_poisson(proj_divb,divbmax,proj_typestop,proj_matvecmax, &
-         info,nmatvec,resid,phi)
+    ! Solve the Poisson equation Laplace Phi_GB = div B
+    call proj_poisson(DivB_GB,divbmax,TypeProjectStop,MaxMatvec, &
+         iInfo,nMatvec,Resid,Phi_GB)
 
-    if(DoTest)write(*,*) NameSub, ': Poisson solver info, nmatvec, resid:',&
-         info, nmatvec, resid
+    if(DoTest)write(*,*) NameSub, ': Poisson solver iInfo, nMatvec, Resid:',&
+         iInfo, nMatvec, Resid
 
     ! Do not do anything if the initial guess satisfied the stopping criterion
-    if(info==3)GOTO 100
+    if(iInfo==3)GOTO 100
 
-    ! Do not subtract grad(phi) from B if the iterations did not reduce error
-    if(info<0)GOTO 100
+    ! Do not subtract grad(Phi_GB) from B if the iterations
+    ! did not reduce the error
+    if (iInfo < 0) GOTO 100
 
-    ! Get the ghost cell values for the solution phi
-    call proj_boundphi(phi)
+    ! Get the ghost cell values for the solution Phi_GB
+    call proj_boundphi(Phi_GB)
 
-    ! Correct B field: B'=B-dB where dB=grad(phi)
-    call proj_correction(phi)
+    ! Correct B field: B'=B-dB where dB=grad(Phi_GB)
+    call proj_correction(Phi_GB)
 
     ! Recalculate boundary conditions
     call exchange_messages
 
     ! Testing div B'=0
     if(DoTest)then
-       call proj_get_divb(proj_divB)
+       call proj_get_divb(DivB_GB)
 
-       if(DoTest)write(*,*)'after proj_divb=',&
-            proj_divb(iTest,jTest,kTest,iBlockTest)
+       if(DoTest)write(*,*)'after DivB_GB=',&
+            DivB_GB(iTest,jTest,kTest,iBlockTest)
 
-       divbmax_now = &
-            maxval_grid(proj_divB, UseAbs=.true., iLoc_I=loc)
-       if(abs(resid-divbmax_now)/(divbmax_now+1.e-12) > 0.1)then
-          if(iProc==loc(5))write(*,*)&
-                NameSub, ': resid,max(abs(divB)),loc,X,Y,Z=',&
-               resid, divbmax_now, loc, &
-               Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
+       DivBMaxNow = &
+            maxval_grid(DivB_GB, UseAbs=.true., iLoc_I=iLoc_I)
+       if(abs(Resid-DivBMaxNow)/(DivBMaxNow+1.e-12) > 0.1)then
+          if(iProc==iLoc_I(5))write(*,*)&
+                NameSub, ': Resid,max(abs(divB)),iLoc_I,X,Y,Z=',&
+               Resid, DivBMaxNow, iLoc_I, &
+               Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
        else
-          if(DoTest)write(*,*) NameSub, ': resid,max(abs(divB))',&
-               resid, divbmax_now
+          if(DoTest)write(*,*) NameSub, ': Resid,max(abs(divB))',&
+               Resid, DivBMaxNow
        end if
-       pmin_new = minval_grid(State_VGB(P_,:,:,:,:), iLoc_I=loc)
-       if(pmin_new<0.5*pmin_old)then
-          if(iProc==loc(5))write(*,*) NameSub, ': min(p),loc,X,Y,Z=',&
-               pmin_new,loc,Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
+       pMinNew = minval_grid(State_VGB(P_,:,:,:,:), iLoc_I=iLoc_I)
+       if(pMinNew<0.5*pMinOld)then
+          if(iProc==iLoc_I(5))write(*,*) NameSub, ': min(p),iLoc_I,X,Y,Z=',&
+               pMinNew, iLoc_I, &
+               Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
        else
-          if(DoTest)write(*,*) NameSub, ': new min(p)',pmin_new
+          if(DoTest)write(*,*) NameSub, ': new min(p)',pMinNew
        endif
 
        if(DoTest)then
@@ -274,8 +269,8 @@ contains
        end if
     endif
 
-    ! if(DoTest)write(*,*)'final proj_divb=',&
-    !        proj_divb(iTest,jTest,kTest,iBlockTest)
+    ! if(DoTest)write(*,*)'final DivB_GB=',&
+    !        DivB_GB(iTest,jTest,kTest,iBlockTest)
 
 100 call timing_stop(NameSub)
 
@@ -283,7 +278,7 @@ contains
   end subroutine project_divb
   !============================================================================
 
-  subroutine proj_get_divb(proj_divB)
+  subroutine proj_get_divb(DivB_GB)
 
     ! Calculate div B using simple finite differences
     ! Do corrections for mesh refinement
@@ -297,7 +292,7 @@ contains
 
     ! Argument
 
-    real, intent(out) :: proj_divb(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(out) :: DivB_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
     integer :: iBlock, i, j, k
@@ -308,13 +303,13 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    proj_divB=0.0
+    DivB_GB=0.0
 
     if(UseConstrainB)then
        do iBlock=1,nBlock
           if(Unused_B(iBlock)) CYCLE
 
-          proj_divB(1:nI,1:nJ,1:nK,iBlock)= &
+          DivB_GB(1:nI,1:nJ,1:nK,iBlock)= &
                (BxFace_GB(2:nI+1,1:nJ  ,1:nK  ,iBlock)                      &
                -BxFace_GB(1:nI  ,1:nJ  ,1:nK  ,iBlock))/CellSize_DB(x_,iBlock)&
                +(ByFace_GB(1:nI  ,2:nJ+1,1:nK  ,iBlock)                      &
@@ -329,7 +324,7 @@ contains
           DyInvHalf = 0.5/CellSize_DB(y_,iBlock);
           DzInvHalf = 0.5/CellSize_DB(z_,iBlock);
           do k=1,nK; do j=1,nJ; do i=1,nI
-             proj_divb(i,j,k,iBlock) = &
+             DivB_GB(i,j,k,iBlock) = &
                   DxInvHalf* &
                   (State_VGB(Bx_,i+1,j,k,iBlock) &
                   -State_VGB(Bx_,i-1,j,k,iBlock)) + &
@@ -348,89 +343,89 @@ contains
   !============================================================================
 
   ! This is just an interface to the various iterative schemes to
-  ! Solve grad div phi = rhs
-  subroutine proj_poisson(rhs,tolerance,typestop,matvecmax,&
-       info,nmatvec,resid,phi)
+  ! Solve grad div Phi_GB = Rhs_GB
+  subroutine proj_poisson(Rhs_GB,Tolerance,TypeStop,MaxMatvec,&
+       iInfo,nMatvec,Resid,Phi_GB)
     use ModMain, ONLY: MaxBlock
 
     ! Arguments
 
-    real, intent(inout):: rhs(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(inout):: Rhs_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     !    on input: the right hand side of the Poisson equation
     !    on output: the residual
 
-    character (len=3), intent(in) :: typestop
-    real, intent(in) :: tolerance
-    ! The required accuracy of the solution is given by tolerance and typestop:
-    !    typestop='max': resid=max(abs(Laplace(phi)-rhs)) < tolerance
-    !    typestop='abs': resid=sum((Laplace(phi)-rhs)**2) < tolerance
-    !    typestop='rel': resid=sum((Laplace(phi)-rhs)**2) < tolerance*resid_0
-    !       where resid_0 is the initial residuum, which is simply sum(rhs**2)
+    character (len=3), intent(in) :: TypeStop
+    real, intent(in) :: Tolerance
+    ! The required accuracy of the solution is given by Tolerance and TypeStop:
+    !    TypeStop='max': Resid=max(abs(Laplace(Phi)-Rhs)) < Tolerance
+    !    TypeStop='abs': Resid=sum((Laplace(Phs)-Rhs)**2) < Tolerance
+    !    TypeStop='rel': Resid=sum((Laplace(Phi)-Rhs)**2) < Tolerance*Resid0
+    !       where Resid0 = sum(Rhs**2) is the initial residual
 
-    integer, intent(in) :: matvecmax
-    ! At most matvecmax matrix vector multiplications can be performed
+    integer, intent(in) :: MaxMatvec
+    ! At most MaxMatvec matrix vector multiplications can be performed
 
-    integer, intent(out) :: info
-    ! The success of the iteration is given by returned value of info:
-    !     abs(info)=  0 - solution found satisfying given tolerance.
-    !                 1 - iteration aborted due to division by very small value.
+    integer, intent(out) :: iInfo
+    ! The success of the iteration is given by returned value of iInfo:
+    !     abs(iInfo)= 0 - solution found satisfying given Tolerance.
+    !                 1 - iteration aborted due to division by very small value
     !                 2 - no convergence within maximum number of iterations.
     !                 3 - initial guess satisfies the stopping criterion.
-    !    sign(info)=  + - residual decreased
+    !    sign(iInfo)= + - residual decreased
     !                 - - residual did not reduce
 
-    integer, intent(out) :: nmatvec
+    integer, intent(out) :: nMatvec
     ! The total number of matvec operations done during the iterations
 
-    real, intent(out)    :: resid
+    real, intent(out)    :: Resid
     ! The residual after the iterations
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(out):: phi
+    real, intent(out):: Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     !    The solution
 
     ! Local variables
 
-    integer :: ierror=-1
+    integer :: iError=-1
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_poisson'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(DoTest)write(*,*)'Proj_Poisson solver called with ',proj_method
+    if(DoTest)write(*,*)'Proj_Poisson solver called with ',TypeProjectIter
 
-    ! Initialize parameters and phi for the iterative solvers
-    nmatvec =matvecmax
-    resid=tolerance
+    ! Initialize parameters and Phi_GB for the iterative solvers
+    nMatvec =MaxMatvec
+    Resid=Tolerance
 
     ! Solve the Poisson equation
-    select case(proj_method)
+    select case(TypeProjectIter)
     case('cg')
-       call       proj_cg(rhs,phi,nmatvec,resid,typestop,info)
+       call       proj_cg(Rhs_GB,Phi_GB,nMatvec,Resid,TypeStop,iInfo)
 
     case('bicgstab')
-       call proj_bicgstab(rhs,phi,nmatvec,resid,typestop,info)
+       call proj_bicgstab(Rhs_GB,Phi_GB,nMatvec,Resid,TypeStop,iInfo)
     case default
        call stop_mpi('Error in Proj_Poisson: Unknown type of iterative method')
     end select
 
-    if(DoTest)write(*,*)'Poisson info,nmatvec,resid',info,nmatvec,resid
+    if(DoTest)write(*,*)'Poisson iInfo,nMatvec,Resid',iInfo,nMatvec,Resid
 
-    if(info/=0.and.info/=3)then
+    if(iInfo/=0.and.iInfo/=3)then
        if(iProc==0)then
-          if(ierror<1)then
+          if(iError<1)then
              ! Print additional information
-             write(*,"(a,i2,a,i5)")'info=',info,' nmatvec=',nmatvec
-             select case(abs(info))
+             write(*,"(a,i2,a,i5)")'iInfo=',iInfo,' nMatvec=',nMatvec
+             select case(abs(iInfo))
              case(1)
                 write(*,*)'Breakdown due to division by a small value'
              case(2)
                 write(*,*)'No convergence within maximum number of iterations'
              end select
-             if(info>0)write(*,*)'The residual decreased'
-             if(info<0)write(*,*)'The residual did not decrease'
+             if(iInfo>0)write(*,*)'The residual decreased'
+             if(iInfo<0)write(*,*)'The residual did not decrease'
           end if
-          call error_report('Poisson solver failed, resid',resid,ierror,.true.)
+          call error_report('Poisson solver failed, Resid',Resid,iError,.true.)
        end if
     end if
 
@@ -438,8 +433,8 @@ contains
   end subroutine proj_poisson
   !============================================================================
 
-  ! Calculate Laplace phi
-  subroutine proj_matvec(phi,laplace_phi)
+  ! Calculate Laplace Phi_GB
+  subroutine proj_matvec(Phi_GB,LaplacePhi_GB)
     use ModMain, ONLY : MaxBlock,nBlock,Unused_B,nI,nJ,nK, x_, y_, z_
     use ModGeometry, ONLY : Used_GB,IsBody_B
     use ModMain, ONLY : UseConstrainB
@@ -447,28 +442,26 @@ contains
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(inout) :: phi
-
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(out) :: laplace_phi
+    real, intent(inout) :: Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(out) :: LaplacePhi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-
-    integer :: idim, iBlock
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: dphi,ddphi
+    integer :: iDim, iBlock
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock):: dPhi_GB, DdPhi_GB
     integer :: i,j,k
-    real :: phiC(-1:1,-1:1,-1:1), InvDx2, InvDy2, InvDz2
+    real :: Phi_III(-1:1,-1:1,-1:1), InvDx2, InvDy2, InvDz2
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_matvec'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call proj_boundphi(phi)
+    call proj_boundphi(Phi_GB)
 
     if(UseConstrainB)then
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
 
           if(IsBody_B(iBlock))then
-             ! If some cells are inside the body, phi should have zero gradient
+             ! If some cells are inside the body, Phi_GB should have 0 gradient
              ! accross the face between the body and the physical cell so that
              ! there is correction done for Bface on that face
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -476,17 +469,17 @@ contains
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
                 where(Used_GB(i-1:i+1,j-1:j+1,k-1:k+1,iBlock))
-                   phiC=phi(i-1:i+1,j-1:j+1,k-1:k+1,iBlock)
+                   Phi_III=Phi_GB(i-1:i+1,j-1:j+1,k-1:k+1,iBlock)
                 elsewhere
-                   phiC=phi(i,j,k,iBlock)
+                   Phi_III=Phi_GB(i,j,k,iBlock)
                 end where
 
-                laplace_phi(i,j,k,iBlock)= &
-                     (phiC(1,0,0)+phiC(-1,0,0)-2*phiC(0,0,0)) &
+                LaplacePhi_GB(i,j,k,iBlock)= &
+                     (Phi_III(1,0,0)+Phi_III(-1,0,0)-2*Phi_III(0,0,0)) &
                      /CellSize_DB(x_,iBlock)**2 + &
-                     (phiC(0,1,0)+phiC(0,-1,0)-2*phiC(0,0,0)) &
+                     (Phi_III(0,1,0)+Phi_III(0,-1,0)-2*Phi_III(0,0,0)) &
                      /CellSize_DB(y_,iBlock)**2 + &
-                     (phiC(0,0,1)+phiC(0,0,-1)-2*phiC(0,0,0)) &
+                     (Phi_III(0,0,1)+Phi_III(0,0,-1)-2*Phi_III(0,0,0)) &
                      /CellSize_DB(z_,iBlock)**2
              end do; end do; end do
           else
@@ -494,13 +487,13 @@ contains
              InvDy2 = 1/CellSize_DB(y_,iBlock)**2
              InvDz2 = 1/CellSize_DB(z_,iBlock)**2
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                laplace_phi(i,j,k,iBlock)= &
-                     (phi(i+1,j,k,iBlock) + phi(i-1,j,k,iBlock) &
-                     -2*phi(i,j,k,iBlock))*InvDx2 + &
-                     (phi(i,j+1,k,iBlock) + phi(i,j-1,k,iBlock) &
-                     -2*phi(i,j,k,iBlock))*InvDy2 + &
-                     (phi(i,j,k+1,iBlock) + phi(i,j,k-1,iBlock) &
-                     -2*phi(i,j,k,iBlock))*InvDz2
+                LaplacePhi_GB(i,j,k,iBlock)= &
+                     (Phi_GB(i+1,j,k,iBlock) + Phi_GB(i-1,j,k,iBlock) &
+                     -2*Phi_GB(i,j,k,iBlock))*InvDx2 + &
+                     (Phi_GB(i,j+1,k,iBlock) + Phi_GB(i,j-1,k,iBlock) &
+                     -2*Phi_GB(i,j,k,iBlock))*InvDy2 + &
+                     (Phi_GB(i,j,k+1,iBlock) + Phi_GB(i,j,k-1,iBlock) &
+                     -2*Phi_GB(i,j,k,iBlock))*InvDz2
              end do; end do; end do
           endif
 
@@ -509,20 +502,20 @@ contains
        RETURN
     end if
 
-    call proj_gradient(1,phi,dphi)
+    call proj_gradient(1,Phi_GB,dPhi_GB)
 
-    call proj_boundphi(dphi)
+    call proj_boundphi(dPhi_GB)
 
-    call proj_gradient(1,dphi,laplace_phi)
+    call proj_gradient(1,dPhi_GB,LaplacePhi_GB)
 
-    do idim=2,3
-       call proj_gradient(idim,phi,dphi)
+    do iDim=2,3
+       call proj_gradient(iDim,Phi_GB,dPhi_GB)
 
-       call proj_boundphi(dphi)
+       call proj_boundphi(dPhi_GB)
 
-       call proj_gradient(idim,dphi,ddphi)
+       call proj_gradient(iDim,dPhi_GB,DdPhi_GB)
 
-       call add_BLK(laplace_phi,ddphi)
+       call add_block(LaplacePhi_GB,DdPhi_GB)
 
     end do
 
@@ -530,9 +523,9 @@ contains
   end subroutine proj_matvec
   !============================================================================
 
-  subroutine proj_gradient(idim,phi,dphi)
+  subroutine proj_gradient(iDim,Phi_GB,dPhi_GB)
 
-    ! Calculate gradient of phi in direction idim
+    ! Calculate gradient of Phi_GB in direction iDim
 
     use ModSize, ONLY: x_, y_, z_, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nBlock, MaxBlock
@@ -540,10 +533,10 @@ contains
     use BATL_lib, ONLY: CellSize_DB
 
     ! Arguments
-    integer, intent(in) :: idim
-    real, intent(in) :: phi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    integer, intent(in) :: iDim
+    real, intent(in) :: Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
-    real, intent(out) :: dphi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(out) :: dPhi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
     integer :: i, j, k, iBlock
@@ -554,43 +547,46 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(DoTest)write(*,*)'Gradient, idim=',idim
-    ! call show_BLK('phi',phi)
+    if(DoTest)write(*,*)'Gradient, iDim=',iDim
+    ! call show_BLK('Phi_GB',Phi_GB)
 
-    ! dphi=0.0
+    ! dPhi_GB=0.0
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-       select case(idim)
+       select case(iDim)
        case(1)
           Coef = 0.5/CellSize_DB(x_,iBlock)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             dphi(i,j,k,iBlock) = Coef*(phi(i+1,j,k,iBlock) - phi(i-1,j,k,iBlock))
+             dPhi_GB(i,j,k,iBlock) = &
+                  Coef*(Phi_GB(i+1,j,k,iBlock) - Phi_GB(i-1,j,k,iBlock))
           end do; end do; end do
        case(2)
           Coef = 0.5/CellSize_DB(y_,iBlock)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             dphi(i,j,k,iBlock) = Coef*(phi(i,j+1,k,iBlock) - phi(i,j-1,k,iBlock))
+             dPhi_GB(i,j,k,iBlock) = &
+                  Coef*(Phi_GB(i,j+1,k,iBlock) - Phi_GB(i,j-1,k,iBlock))
           end do; end do; end do
        case(3)
           Coef = 0.5/CellSize_DB(z_,iBlock)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             dphi(i,j,k,iBlock) = Coef*(phi(i,j,k+1,iBlock) - phi(i,j,k-1,iBlock))
+             dPhi_GB(i,j,k,iBlock) = &
+                  Coef*(Phi_GB(i,j,k+1,iBlock) - Phi_GB(i,j,k-1,iBlock))
           end do; end do; end do
        end select
     end do ! All blocks are done
 
-    ! call show_BLK('dphi',dphi)
+    ! call show_BLK('dPhi_GB',dPhi_GB)
 
-    ! !! CORRECT dphi FOR MESH REFINEMENT EFFECTS
+    ! !! CORRECT dPhi_GB FOR MESH REFINEMENT EFFECTS
 
     call test_stop(NameSub, DoTest)
   end subroutine proj_gradient
   !============================================================================
 
-  subroutine proj_boundphi(phi)
+  subroutine proj_boundphi(Phi_GB)
 
-    ! Calculate boundary values for phi for dimensions
+    ! Calculate boundary values for Phi_GB for dimensions
 
     use ModMain, ONLY : MaxBlock, nBlock, Unused_B
     use ModGeometry, ONLY : IsBody_B, Used_GB
@@ -599,7 +595,7 @@ contains
          MinI, MaxI, j0_, nJp1_, MinJ, MaxJ, k0_, nKp1_, MinK, MaxK
 
     ! Arguments
-    real,    intent(inout) :: phi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real,    intent(inout) :: Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
     integer :: iBlock
@@ -608,47 +604,46 @@ contains
     character(len=*), parameter:: NameSub = 'proj_boundphi'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call message_pass_cell(Phi, nWidthIn=1, nProlongOrderIn=1, &
+    call message_pass_cell(Phi_GB, nWidthIn=1, nProlongOrderIn=1, &
          DoSendCornerIn=.false., DoRestrictFaceIn = .true.)
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
-       if(DiLevel_EB(1,iBlock) ==Unset_) phi(MinI:0   ,:,:,iBlock) = 0.0
-       if(DiLevel_EB(2,iBlock) ==Unset_) phi(nI+1:MaxI,:,:,iBlock) = 0.0
-       if(DiLevel_EB(3,iBlock)==Unset_) phi(:,MinJ :j0_ ,:,iBlock) = 0.0
-       if(DiLevel_EB(4,iBlock)==Unset_) phi(:,nJp1_:MaxJ,:,iBlock) = 0.0
+       if(DiLevel_EB(1,iBlock) ==Unset_) Phi_GB(MinI:0   ,:,:,iBlock) = 0.0
+       if(DiLevel_EB(2,iBlock) ==Unset_) Phi_GB(nI+1:MaxI,:,:,iBlock) = 0.0
+       if(DiLevel_EB(3,iBlock)==Unset_) Phi_GB(:,MinJ :j0_ ,:,iBlock) = 0.0
+       if(DiLevel_EB(4,iBlock)==Unset_) Phi_GB(:,nJp1_:MaxJ,:,iBlock) = 0.0
 
        if(nK>1)then
-          if(DiLevel_EB(5,iBlock)==Unset_) phi(:,:,MinK :k0_ ,iBlock) = 0.0
-          if(DiLevel_EB(6,iBlock)==Unset_) phi(:,:,nKp1_:MaxK,iBlock) = 0.0
+          if(DiLevel_EB(5,iBlock)==Unset_) Phi_GB(:,:,MinK :k0_ ,iBlock) = 0.0
+          if(DiLevel_EB(6,iBlock)==Unset_) Phi_GB(:,:,nKp1_:MaxK,iBlock) = 0.0
        end if
 
        if(IsBody_B(iBlock))then
-          where(.not.Used_GB(:,:,:,iBlock)) phi(:,:,:,iBlock)=0.0
+          where(.not.Used_GB(:,:,:,iBlock)) Phi_GB(:,:,:,iBlock)=0.0
        end if
 
        ! if(UseConstrainB)then
-       !   ! Correct ghost cells at resolution changes to get consistent gradphi
-       !
+       !   ! Correct ghost cells at Res. changes to get consistent gradphi
        !   if(DiLevel_EB(1,iBlock) ==-1) &
-       !        phi(0   ,1:nJ,1:nK,iBlock)=2*phi(0   ,1:nJ,1:nK,iBlock) &
-       !        -phi(1   ,1:nJ,1:nK,iBlock)
+       !        Phi_GB(0   ,1:nJ,1:nK,iBlock)=2*Phi_GB(0   ,1:nJ,1:nK,iBlock) &
+       !        -Phi_GB(1   ,1:nJ,1:nK,iBlock)
        !   if(DiLevel_EB(2,iBlock) ==-1) &
-       !        phi(nI+1,1:nJ,1:nK,iBlock)=2*phi(nI+1,1:nJ,1:nK,iBlock) &
-       !        -phi(nI  ,1:nJ,1:nK,iBlock)
+       !        Phi_GB(nI+1,1:nJ,1:nK,iBlock)=2*Phi_GB(nI+1,1:nJ,1:nK,iBlock) &
+       !        -Phi_GB(nI  ,1:nJ,1:nK,iBlock)
        !   if(DiLevel_EB(3,iBlock)==-1) &
-       !        phi(1:nI,0   ,1:nK,iBlock)=2*phi(1:nI,0   ,1:nK,iBlock) &
-       !        -phi(1:nI,1   ,1:nK,iBlock)
+       !        Phi_GB(1:nI,0   ,1:nK,iBlock)=2*Phi_GB(1:nI,0   ,1:nK,iBlock) &
+       !        -Phi_GB(1:nI,1   ,1:nK,iBlock)
        !   if(DiLevel_EB(4,iBlock)==-1) &
-       !        phi(1:nI,nJ+1,1:nK,iBlock)=2*phi(1:nI,nJ+1,1:nK,iBlock) &
-       !        -phi(1:nI,nJ  ,1:nK,iBlock)
+       !        Phi_GB(1:nI,nJ+1,1:nK,iBlock)=2*Phi_GB(1:nI,nJ+1,1:nK,iBlock) &
+       !        -Phi_GB(1:nI,nJ  ,1:nK,iBlock)
        !   if(DiLevel_EB(5,iBlock)  ==-1) &
-       !        phi(1:nI,1:nJ,0   ,iBlock)=2*phi(1:nI,1:nJ,0   ,iBlock) &
-       !        -phi(1:nI,1:nJ,1   ,iBlock)
+       !        Phi_GB(1:nI,1:nJ,0   ,iBlock)=2*Phi_GB(1:nI,1:nJ,0   ,iBlock) &
+       !        -Phi_GB(1:nI,1:nJ,1   ,iBlock)
        !   if(DiLevel_EB(6,iBlock)  ==-1) &
-       !        phi(1:nI,1:nJ,nK+1,iBlock)=2*phi(1:nI,1:nJ,nK+1,iBlock) &
-       !        -phi(1:nI,1:nJ,nK  ,iBlock)
+       !        Phi_GB(1:nI,1:nJ,nK+1,iBlock)=2*Phi_GB(1:nI,1:nJ,nK+1,iBlock) &
+       !        -Phi_GB(1:nI,1:nJ,nK  ,iBlock)
        ! end if
 
     end do
@@ -657,9 +652,9 @@ contains
   end subroutine proj_boundphi
   !============================================================================
 
-  subroutine proj_correction(phi)
+  subroutine proj_correction(Phi_GB)
 
-    ! Correct B field by gradient of phi
+    ! Correct B field by gradient of Phi_GB
 
     use ModMain, ONLY : nI,nJ,nK
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
@@ -671,7 +666,7 @@ contains
     use BATL_lib, ONLY: CellSize_DB, x_, y_, z_, nI, nJ, nK, nBlock,Unused_B
 
     ! Arguments
-    real, intent(inout) :: phi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(inout) :: Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
     integer :: iBlock, i, j, k
@@ -696,20 +691,20 @@ contains
           DxInv = 1/CellSize_DB(x_,iBlock)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
              BxFace_GB(i,j,k,iBlock) = BxFace_GB(i,j,k,iBlock) &
-                  - DxInv*(phi(i,j,k,iBlock) - phi(i-1,j,k,iBlock))
+                  - DxInv*(Phi_GB(i,j,k,iBlock) - Phi_GB(i-1,j,k,iBlock))
           end do; end do; end do
 
           DyInv = 1/CellSize_DB(y_,iBlock)
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
              ByFace_GB(i,j,k,iBlock) = ByFace_GB(i,j,k,iBlock) &
-                  - DyInv*(phi(i,j+1,k,iBlock) - phi(i,j-1,k,iBlock))
+                  - DyInv*(Phi_GB(i,j+1,k,iBlock) - Phi_GB(i,j-1,k,iBlock))
           end do; end do; end do
 
           if(nK > 1)then
              DzInv = 1/CellSize_DB(z_,iBlock)
              do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
                 BzFace_GB(i,j,k,iBlock) = BzFace_GB(i,j,k,iBlock) &
-                     - DzInv*(phi(i,j,k+1,iBlock) - phi(i,j,k-1,iBlock))
+                     - DzInv*(Phi_GB(i,j,k+1,iBlock) - Phi_GB(i,j,k-1,iBlock))
              end do; end do; end do
           end if
 
@@ -738,13 +733,13 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) - &
-                  DxInvHalf*(phi(i+1,j,k,iBlock)-phi(i-1,j,k,iBlock))
+                  DxInvHalf*(Phi_GB(i+1,j,k,iBlock)-Phi_GB(i-1,j,k,iBlock))
 
              State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) - &
-                  DyInvHalf*(phi(i,j+1,k,iBlock)-phi(i,j-1,k,iBlock))
+                  DyInvHalf*(Phi_GB(i,j+1,k,iBlock)-Phi_GB(i,j-1,k,iBlock))
 
              State_VGB(Bz_,i,j,k,iBlock) = State_VGB(Bz_,i,j,k,iBlock) - &
-                  DzInvHalf*(phi(i,j,k+1,iBlock)-phi(i,j,k-1,iBlock))
+                  DzInvHalf*(Phi_GB(i,j,k+1,iBlock)-Phi_GB(i,j,k-1,iBlock))
           end do; end do; end do
        end do
     end if
@@ -759,184 +754,185 @@ contains
   ! Rewritten to F90 by G. Toth based on the F77 subroutine in src/conjgrad.f
   ! Rewritten by G. Toth for BATS-R-US code to be used with MPI, 2000.
   !
-  ! This subroutine determines the solution of A.QX=RHS, where
+  ! This subroutine determines the solution of A.X=Rhs_GB, where
   ! the matrix-vector multiplication with A is performed by
   ! the subroutine 'proj_matvec'.
   !
   ! !! If the matrix is not symmetric positive definite, CG is likely to fail.
   !
-  subroutine proj_cg(rhs,qx,iter,tol,typestop,info)
+  subroutine proj_cg(Rhs_GB,x_GB,nIter,Tol,TypeStop,iInfo)
     use ModMain, ONLY:MaxBlock
     use ModAdvance, ONLY: Tmp1_GB, Tmp2_GB
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(inout) :: rhs
+    real, intent(inout) :: Rhs_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     !        on input:  right-hand side vector.
     !        on output: residual vector.
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(out):: qx
+    real, intent(out):: x_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     !        on output: solution vector.
 
-    integer, intent(inout) :: iter
+    integer, intent(inout) :: nIter
     !       on input:  maximum number of iterations to be performed.
     !       on output: actual  number of iterations done.
 
-    real, intent(inout) :: tol
+    real, intent(inout) :: Tol
     !       on input:  required (relative) 2-norm or maximum norm of residual
     !       on output: achieved (relative) 2-norm or maximum norm of residual
 
-    character (len=3), intent(in) :: typestop
+    character (len=3), intent(in) :: TypeStop
     !       Determine stopping criterion (||.|| denotes the 2-norm):
-    !       typestop='rel'    -- relative stopping crit.: ||res|| <= tol*||res0||
-    !       typestop='abs'    -- absolute stopping crit.: ||res|| <= tol
-    !       typestop='max'    -- maximum  stopping crit.: max(abs(res)) <= tol
+    !       TypeStop='rel'    -- relative stop crit.: ||Res|| <= Tol*||Res0||
+    !       TypeStop='abs'    -- absolute stop crit.: ||Res|| <= Tol
+    !       TypeStop='max'    -- maximum  stop crit.: max(abs(Res)) <= Tol
 
-    integer, intent(out)   :: info
+    integer, intent(out)   :: iInfo
     !       Gives reason for returning:
-    !     abs(info)=  0 - solution found satisfying given tolerance.
-    !                 1 - iteration aborted due to division by very small value.
+    !     abs(iInfo)= 0 - solution found satisfying given Tolerance.
+    !                 1 - aborted due to division by very small value.
     !                 2 - no convergence within maximum number of iterations.
     !                 3 - initial guess satisfies the stopping criterion.
-    !    sign(info)=  + - residual decreased
+    !    sign(iInfo)= + - residual decreased
     !                 - - residual did not reduce
 
     ! Local variables
 
-    integer ::itr,matv
-    real :: rho,rhonew,res,res0,bet,alf,assumedzero
+    integer ::iIter,nMatvec
+    real :: Rho,RhoNew,Res,Res0,Bet,Alf,AssumedZero
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_cg'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(DoTest)write(*,*)'Proj_CG: tol, iter=',tol,iter
+    if(DoTest)write(*,*)'Proj_CG: Tol, nIter=',Tol,nIter
 
     ! Debug
-    ! call show_BLK('rhs',rhs)
+    ! call show_BLK('Rhs_GB',Rhs_GB)
 
-    assumedzero=1.E-16; itr=0; matv=0
-    call set_BLK(qx,0.0)
+    AssumedZero=1.E-16; iIter=0; nMatvec=0
+    call set_block_scalar(x_GB,0.0)
 
-    if (typestop/='rel'.and.typestop/='abs'.and.typestop/='max') &
-         call stop_mpi('Error in CG: typestop='//typestop// &
+    if (TypeStop/='rel'.and.TypeStop/='abs'.and.TypeStop/='max') &
+         call stop_mpi('Error in CG: TypeStop='//TypeStop// &
          ' should be one of rel/abs/max.')
 
     if(DoTest) write(*,*)'n gives the number of CG-iterations.'
 
-    ! rho=||rhs||
-    rho=sqrt(dot_product_BLK(rhs,rhs))
+    ! Rho=||Rhs_GB||
+    Rho=sqrt(dot_product_block(Rhs_GB,Rhs_GB))
 
-    res0=rho
-    if (typestop=='max') res0 = maxval_grid(Rhs, UseAbs=.true.)
+    Res0=Rho
+    if (TypeStop=='max') Res0 = maxval_grid(Rhs_GB, UseAbs=.true.)
 
     ! DEBUG
-    ! write(*,*)'res0:',res0,' rhs:',rhs
+    ! write(*,*)'Res0:',Res0,' Rhs_GB:',Rhs_GB
 
-    res=res0
+    Res=Res0
 
-    assumedzero = assumedzero*res0
+    AssumedZero = AssumedZero*Res0
 
     if (DoTest) then
-       if (typestop=='max') then
-          write(*,*)'n:',itr,' Maximum norm initial residual:',res0
+       if (TypeStop=='max') then
+          write(*,*)'n:',iIter,' Maximum norm initial residual:',Res0
        else
-          write(*,*)'n:',itr,' 2-norm initial residual:',res0
+          write(*,*)'n:',iIter,' 2-norm initial residual:',Res0
        end IF
     end if
 
-    if (res0<divbmin .or. (typestop/='rel'.and.res0<=tol)) then
-       info = 3
+    if (Res0<DivBTiny .or. (TypeStop/='rel'.and.Res0<=Tol)) then
+       iInfo = 3
     else
-       ! Initialize rho and Tmp1_GB=Z
-       rho=rho*rho
-       call eq_BLK(Tmp1_GB,rhs)
+       ! Initialize Rho and Tmp1_GB=Z
+       Rho=Rho*Rho
+       call set_block_array(Tmp1_GB,Rhs_GB)
 
        ! Do iteration
        do
           ! AZ=A.Z
           call proj_matvec(Tmp1_GB,Tmp2_GB)
-          matv=matv+1
+          nMatvec=nMatvec+1
 
           ! Debug
           ! write(*,*)'Z =Tmp1_GB=',Tmp1_GB(:,:,:,1:2)
           ! write(*,*)'AZ=Tmp2_GB=',Tmp2_GB(:,:,:,1:2)
           ! call stop_mpi('Debug')
 
-          ! alf=A.AZ
-          alf=dot_product_BLK(Tmp1_GB,Tmp2_GB)
+          ! Alf=A.AZ
+          Alf=dot_product_block(Tmp1_GB,Tmp2_GB)
 
-          if(DoTest)write(*,*)'alf=',alf
+          if(DoTest)write(*,*)'Alf=',Alf
           ! Debug
           ! call show_BLK('Z',Tmp1_GB)
           ! call show_BLK('AZ',Tmp2_GB)
           ! call stop_mpi('Debug')
-          if (abs(alf)<=assumedzero**2) then
-             info = 1
+          if (abs(Alf)<=AssumedZero**2) then
+             iInfo = 1
              EXIT
           end if
-          alf=rho/alf
-          if(DoTest)write(*,*)'alf=',alf
+          Alf=Rho/Alf
+          if(DoTest)write(*,*)'Alf=',Alf
 
-          call add_times_BLK(qx,alf,Tmp1_GB)
-          call add_times_BLK(rhs,-alf,Tmp2_GB)
+          call add_times_block(x_GB,Alf,Tmp1_GB)
+          call add_times_block(Rhs_GB,-Alf,Tmp2_GB)
 
-          ! rhonew=||rhs||
-          rhonew=sqrt(dot_product_BLK(rhs,rhs))
-          if(DoTest)write(*,*)'rhonew=',rhonew
+          ! RhoNew=||Rhs_GB||
+          RhoNew=sqrt(dot_product_block(Rhs_GB,Rhs_GB))
+          if(DoTest)write(*,*)'RhoNew=',RhoNew
 
-          select case(typestop)
+          select case(TypeStop)
           case('max')
-             res = maxval_grid(Rhs, UseAbs=.true.)
+             Res = maxval_grid(Rhs_GB, UseAbs=.true.)
 
           case('rel')
-             res = rhonew/res0
+             Res = RhoNew/Res0
 
           case('abs')
-             res=rhonew
+             Res=RhoNew
           end select
-          rhonew=rhonew*rhonew
+          RhoNew=RhoNew*RhoNew
 
-          itr=itr+1
+          iIter=iIter+1
           if (DoTest) &
-               write(*,*)'n:',itr,' ',typestop,'. norm of residual:',res
+               write(*,*)'n:',iIter,' ',TypeStop,'. norm of residual:',Res
 
-          if (res<=tol) then
-             info = 0
+          if (Res<=Tol) then
+             iInfo = 0
              EXIT
           end if
-          if (itr>=iter) then
-             info = 2
+          if (iIter>=nIter) then
+             iInfo = 2
              EXIT
           end if
-          if (rho<=assumedzero**2) then
-             info = 1
+          if (Rho<=AssumedZero**2) then
+             iInfo = 1
              EXIT
           end if
 
-          bet=rhonew/rho
-          if(DoTest)write(*,*)'bet=',bet
+          Bet=RhoNew/Rho
+          if(DoTest)write(*,*)'Bet=',Bet
 
-          call eq_plus_times_BLK(Tmp1_GB,rhs,bet,Tmp1_GB)
+          call add2_times_block(Tmp1_GB,Rhs_GB,Bet,Tmp1_GB)
 
-          if (DoTest) write(*,*)'alf,bet,rho,rhonew:',alf,bet,rho,rhonew
-          rho=rhonew
+          if (DoTest) write(*,*)'Alf,Bet,Rho,RhoNew:',Alf,Bet,Rho,RhoNew
+          Rho=RhoNew
        end do
     end if
 
     ! return number of iterations and achieved residual
-    iter=itr
-    tol =res
-    if((typestop=='rel'.and.res>1.0).or.(typestop/='rel'.and.res>res0))info=-info
+    nIter=iIter
+    Tol =Res
+    if((TypeStop == 'rel' .and. Res > 1.0) &
+         .or. (TypeStop /= 'rel' .and. Res > Res0)) iInfo = -iInfo
 
     ! report results
     if(DoTest)then
-       write(*,*)'Total Number of CG-iterations:',itr
-       write(*,*)'Number of matrix-vector mult.:',matv
-       select case(abs(info))
+       write(*,*)'Total Number of CG-iterations:',iIter
+       write(*,*)'Number of matrix-vector mult.:',nMatvec
+       select case(abs(iInfo))
        case(0)
-          write(*,*)'Successful iteration, norm of res. is:',tol
+          write(*,*)'Successful iteration, norm of Res. is:',Tol
        case(1)
           write(*,*)'Iteration aborted due to division by a'
           write(*,*)'very small value.'
@@ -947,9 +943,9 @@ contains
           write(*,*)'Initial guess for the solution satisfies'
           write(*,*)'given stopping criterion.'
        case default
-          write(*,*)'Impossible value for info:',info
+          write(*,*)'Impossible value for iInfo:',iInfo
        end select
-       if(info<0)write(*,*)'The residual did not reduce'
+       if(iInfo<0)write(*,*)'The residual did not reduce'
     endif
 
     call test_stop(NameSub, DoTest)
@@ -979,196 +975,187 @@ contains
   ! for resale, and that the copyright notice and this
   ! notice are retained.  }}
   !
-  ! This subroutine determines the solution of A.QX=RHS, where
+  ! This subroutine determines the solution of A.x_GB=Rhs_GB, where
   ! the matrix-vector multiplication with A is performed by
   ! the subroutine 'proj_matvec'. For symmetric matrix use the more efficient
   ! proj_cg algorithm!
   !
-  subroutine proj_bicgstab(rhs,qx,iter,tol,typestop,info)
+  subroutine proj_bicgstab(Rhs_GB,x_GB,nIter,Tol,TypeStop,iInfo)
     use ModMain, ONLY:MaxBlock
     use ModAdvance, ONLY : Tmp1_GB,Tmp2_GB
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(inout) :: rhs
+    real, intent(inout) :: Rhs_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     !        on input:  right-hand side vector.
     !        on output: residual vector.
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(out):: qx
+    real, intent(out):: x_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     !       on output: solution vector.
 
-    integer, intent(inout) :: iter
+    integer, intent(inout) :: nIter
     !       on input:  maximum number of iterations to be performed.
     !       on output: actual  number of iterations done.
 
-    real, intent(inout) :: tol
+    real, intent(inout) :: Tol
     !       on input:  required (relative) 2-norm or maximum norm of residual
     !       on output: achieved (relative) 2-norm or maximum norm of residual
 
-    character (len=3), intent(in) :: typestop
+    character (len=3), intent(in) :: TypeStop
     !      Determine stopping criterion (||.|| denotes the 2-norm):
-    !      typestop='rel'    -- relative stopping crit.: ||res|| <= tol*||res0||
-    !      typestop='abs'    -- absolute stopping crit.: ||res|| <= tol
-    !      typestop='max'    -- maximum  stopping crit.: max(abs(res)) <= tol
+    !      TypeStop='rel'    -- relative stop crit.: ||Res|| <= Tol*||Res0||
+    !      TypeStop='abs'    -- absolute stop crit.: ||Res|| <= Tol
+    !      TypeStop='max'    -- maximum  stop crit.: max(abs(Res)) <= Tol
 
-    ! NOTE for typestop='rel' and 'abs':
+    ! NOTE for TypeStop='rel' and 'abs':
     !            To save computational work, the value of
     !            residual norm used to check the convergence inside the main
-    !            iterative loop is computed from
-    !            projections, i.e. it can be smaller than the true residual norm
+    !            iterative loop is computed from projections,
+    !            i.e. it can be smaller than the true residual norm
     !            (it may happen when e.g. the 'matrix-free' approach is used).
     !            Thus, it is possible that the true residual does NOT satisfy
     !            the stopping criterion ('rel' or 'abs').
     !            The true residual norm (or residual reduction) is reported on
-    !            output in parameter TOL -- this can be changed to save 1 MATVEC
+    !            output in parameter Tol (this can be changed to save 1 MATVEC)
     !            (see comments at the end of the subroutine)
 
-    integer, intent(out)   :: info
+    integer, intent(out)   :: iInfo
     !       Gives reason for returning:
-    !     abs(info)=  0 - solution found satisfying given tolerance.
-    !                 1 - iteration aborted due to division by very small value.
-    !                 2 - no convergence within maximum number of iterations.
-    !                 3 - initial guess satisfies the stopping criterion.
-    !    sign(info)=  + - residual decreased
-    !                 - - residual did not reduce
+    !     abs(iInfo)=  0 - solution found satisfying given Tolerance.
+    !                  1 - aborted due to division by very small value.
+    !                  2 - no convergence within maximum number of iterations.
+    !                  3 - initial guess satisfies the stopping criterion.
+    !    sign(iInfo)=  + - residual decreased
+    !                  - - residual did not reduce
 
     ! Local parameters
 
     integer, parameter :: qz_=1,zz_=3,y0_=5,yl_=6,qy_=7
 
-    ! Local variables (2 vectors are needed in addition to Tmp1_GB=r and Tmp2_GB=u:
+    ! Local variables (2 vectors are needed in addition to
+    ! Tmp1_GB=r and Tmp2_GB=u:
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock):: r1_GB, u1_GB
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock):: &
-         bicg_r1, bicg_u1
+    real :: Work_II(2,7)
 
-    real :: rwork(2,7)
-
-    logical:: GoOn, rcmp, xpdt
-    integer:: nmv
-    real::    alpha, beta, omega, rho0, rho1, sigma
-    real::    varrho, hatgamma
-    real::    assumedzero, rnrm0, rnrm, rnrmMax0, rnrmMax
-    real::    mxnrmx, mxnrmr, kappa0, kappal
+    logical:: DoGoOn
+    integer:: nMv
+    real::    Alpha, Beta, Omega, Rho0, Rho1, Sigma
+    real::    VarRho, HatGamma
+    real::    AssumedZero, rNorm0, rNorm, rNormMax0, rNormMax
+    real::    Kappa0, KappaL
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_bicgstab'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(DoTest)write(*,*)'Proj_BiCGSTAB tol,iter:',tol,iter
+    if(DoTest)write(*,*)'Proj_BiCGSTAB Tol,nIter:',Tol,nIter
 
-    info = 0
+    iInfo = 0
 
-    if (tol<=0.0) call stop_mpi('Error in Proj_BiCGSTAB: tolerance < 0')
-    if (iter<=1)  call stop_mpi('Error in Proj_BiCGSTAB: maxmatvec < 2')
+    if (Tol<=0.0) call stop_mpi('Error in Proj_BiCGSTAB: Tolerance < 0')
+    if (nIter<=1)  call stop_mpi('Error in Proj_BiCGSTAB: maxmatvec < 2')
 
     !
     !     --- Initialize first residual
     !
-    assumedzero = 1.e-16
-    call eq_BLK(Tmp1_GB,rhs)
-    call set_BLK(qx,0.0)
+    AssumedZero = 1.e-16
+    call set_block_array(Tmp1_GB,Rhs_GB)
+    call set_block_scalar(x_GB,0.0)
 
-    nmv = 0
+    nMv = 0
     !
     !     --- Initialize iteration loop
     !
 
-    rnrm0 = sqrt( dot_product_BLK(Tmp1_GB,Tmp1_GB))
+    rNorm0 = sqrt( dot_product_block(Tmp1_GB,Tmp1_GB))
 
-    rnrm = rnrm0
-    if(DoTest) print *,'initial rnrm:',rnrm
-
-    mxnrmx = rnrm0
-    mxnrmr = rnrm0
-    rcmp = .false.
-    xpdt = .false.
-
-    alpha = 0.0
-    omega = 1.0
-    sigma = 1.0
-    rho0 =  1.0
+    rNorm = rNorm0
+    if(DoTest) print *,'initial rNorm:',rNorm
+ 
+    Alpha = 0.0
+    Omega = 1.0
+    Sigma = 1.0
+    Rho0 =  1.0
     !
     !     --- Iterate
     !
-    select case(typestop)
+    select case(TypeStop)
     case('rel')
-       GoOn = rnrm>tol*rnrm0 .and. nmv<iter
-       assumedzero = assumedzero*rnrm0
-       rnrmMax = 0
-       rnrmMax0 = 0
+       DoGoOn = rNorm > Tol*rNorm0 .and. nMv < nIter
+       AssumedZero = AssumedZero*rNorm0
+       rNormMax = 0
+       rNormMax0 = 0
 
     case('abs')
-       GoOn = rnrm>tol       .and. nmv<iter
-       assumedzero = assumedzero*rnrm0
-       rnrmMax = 0
-       rnrmMax0 = 0
+       DoGoOn = rNorm > Tol .and. nMv < nIter
+       AssumedZero = AssumedZero*rNorm0
+       rNormMax = 0
+       rNormMax0 = 0
 
     case('max')
-       rnrmMax0 = maxval_grid(Tmp1_GB, UseAbs=.true.)
-       rnrmMax  = rnrmMax0
-       if(DoTest) print *,'initial rnrmMax:',rnrmMax
-       GoOn = rnrmMax>tol    .and. nmv<iter
-       assumedzero = assumedzero*rnrmMax
+       rNormMax0 = maxval_grid(Tmp1_GB, UseAbs=.true.)
+       rNormMax  = rNormMax0
+       if(DoTest) print *,'initial rNormMax:',rNormMax
+       DoGoOn = rNormMax>Tol .and. nMv < nIter
+       AssumedZero = AssumedZero*rNormMax
     case default
-       call stop_mpi('Error in Proj_BiCGSTAB: unknown typestop value')
+       call stop_mpi('Error in Proj_BiCGSTAB: unknown TypeStop value')
     end select
 
-    if (.not.GoOn) then
-       if(DoTest) print *,'Proj_BiCGSTAB: nothing to do. info = ',info
-       iter = nmv
-       info = 3
+    if (.not.DoGoOn) then
+       if(DoTest) print *,'Proj_BiCGSTAB: nothing to do. iInfo = ',iInfo
+       nIter = nMv
+       iInfo = 3
        RETURN
     end if
 
-    do while (GoOn)
+    do while (DoGoOn)
        !
        !     =====================
        !     --- The BiCG part ---
        !     =====================
        !
-       rho0 = -omega*rho0
+       Rho0 = -Omega*Rho0
 
-       rho1 = dot_product_BLK(rhs,Tmp1_GB)
+       Rho1 = dot_product_block(Rhs_GB,Tmp1_GB)
 
-       if (abs(rho0)<assumedzero**2) then
-          info = 1
+       if (abs(Rho0)<AssumedZero**2) then
+          iInfo = 1
           RETURN
        endif
-       beta = alpha*(rho1/rho0)
-       rho0 = rho1
-       call eq_plus_times_BLK(Tmp2_GB,Tmp1_GB,-beta,Tmp2_GB)
+       Beta = Alpha*(Rho1/Rho0)
+       Rho0 = Rho1
+       call add2_times_block(Tmp2_GB,Tmp1_GB,-Beta,Tmp2_GB)
 
-       call proj_matvec(Tmp2_GB,bicg_u1)
-       nmv = nmv+1
+       call proj_matvec(Tmp2_GB,u1_GB)
+       nMv = nMv + 1
 
        ! DEBUG
        ! write(*,*)'u =',Tmp2_GB(1:nI,1:nJ,1:nK,iBlockTest)
-       ! write(*,*)'u1=',bicg_u1(1:nI,1:nJ,1:nK,iBlockTest)
+       ! write(*,*)'u1=',u1_GB(1:nI,1:nJ,1:nK,iBlockTest)
 
-       sigma=dot_product_BLK(rhs,bicg_u1)
+       Sigma=dot_product_block(Rhs_GB,u1_GB)
 
-       if (abs(sigma)<assumedzero**2) then
-          info = 1
+       if (abs(Sigma)<AssumedZero**2) then
+          iInfo = 1
           RETURN
        endif
 
-       alpha = rho1/sigma
-       call add_times_BLK(qx,alpha,Tmp2_GB)
+       Alpha = Rho1/Sigma
+       call add_times_block(x_GB,Alpha,Tmp2_GB)
 
-       call add_times_BLK(Tmp1_GB,-alpha,bicg_u1)
+       call add_times_block(Tmp1_GB,-Alpha,u1_GB)
 
-       call proj_matvec(Tmp1_GB,bicg_r1)
-       nmv = nmv+1
+       call proj_matvec(Tmp1_GB,r1_GB)
+       nMv = nMv + 1
 
-       rnrm = sqrt( dot_product_BLK(Tmp1_GB,Tmp1_GB) )
-
-       mxnrmx = max (mxnrmx, rnrm)
-       mxnrmr = max (mxnrmr, rnrm)
+       rNorm = sqrt( dot_product_block(Tmp1_GB,Tmp1_GB) )
 
        ! DEBUG
-       ! write(*,*)'rho0, rho1, beta, sigma, alpha, rnrm:',&
-       !     rho0, rho1, beta, sigma, alpha, rnrm
+       ! write(*,*)'Rho0, Rho1, Beta, Sigma, Alpha, rNorm:',&
+       !     Rho0, Rho1, Beta, Sigma, Alpha, rNorm
 
        !
        !  ==================================
@@ -1177,73 +1164,73 @@ contains
        !
        !    --- Z = R'R a 2 by 2 matrix
        ! i=1,j=0
-       rwork(1,1) = dot_product_BLK(Tmp1_GB,Tmp1_GB)
+       Work_II(1,1) = dot_product_block(Tmp1_GB,Tmp1_GB)
 
        ! i=1,j=1
-       rwork(2,1) = dot_product_BLK(bicg_r1,Tmp1_GB)
-       rwork(1,2) = rwork(2,1)
+       Work_II(2,1) = dot_product_block(r1_GB,Tmp1_GB)
+       Work_II(1,2) = Work_II(2,1)
 
        ! i=2,j=1
-       rwork(2,2) = dot_product_BLK(bicg_r1,bicg_r1)
+       Work_II(2,2) = dot_product_block(r1_GB,r1_GB)
 
        !
        !   --- tilde r0 and tilde rl (small vectors)
        !
-       rwork(1:2,zz_:zz_+1)   = rwork(1:2,qz_:qz_+1)
-       rwork(1,y0_) = -1.0
-       rwork(2,y0_) = 0.0
+       Work_II(1:2,zz_:zz_+1)   = Work_II(1:2,qz_:qz_+1)
+       Work_II(1,y0_) = -1.0
+       Work_II(2,y0_) = 0.0
 
-       rwork(1,yl_) = 0.0
-       rwork(2,yl_) = -1.0
+       Work_II(1,yl_) = 0.0
+       Work_II(2,yl_) = -1.0
        !
        !   --- Convex combination
        !
-       rwork(1:2,qy_) = rwork(1,yl_)*rwork(1:2,qz_) + &
-            rwork(2,yl_)*rwork(1:2,qz_+1)
+       Work_II(1:2,qy_) = Work_II(1,yl_)*Work_II(1:2,qz_) + &
+            Work_II(2,yl_)*Work_II(1:2,qz_+1)
 
-       kappal = sqrt( sum( rwork(1:2,yl_)*rwork(1:2,qy_) ) )
+       KappaL = sqrt( sum( Work_II(1:2,yl_)*Work_II(1:2,qy_) ) )
 
-       rwork(1:2,qy_) = rwork(1,y0_)*rwork(1:2,qz_) + &
-            rwork(2,y0_)*rwork(1:2,qz_+1)
+       Work_II(1:2,qy_) = Work_II(1,y0_)*Work_II(1:2,qz_) + &
+            Work_II(2,y0_)*Work_II(1:2,qz_+1)
 
-       kappa0 = sqrt( sum( rwork(1:2,y0_)*rwork(1:2,qy_) ) )
+       Kappa0 = sqrt( sum( Work_II(1:2,y0_)*Work_II(1:2,qy_) ) )
 
-       varrho = sum( rwork(1:2,yl_)*rwork(1:2,qy_) )
-       varrho = varrho / (kappa0*kappal)
+       VarRho = sum( Work_II(1:2,yl_)*Work_II(1:2,qy_) )
+       VarRho = VarRho / (Kappa0*KappaL)
 
-       hatgamma = sign(1.0,varrho)*max(abs(varrho),0.7) * (kappa0/kappal)
+       HatGamma = sign(1.0,VarRho)*max(abs(VarRho),0.7) * (Kappa0/KappaL)
 
-       rwork(1:2,y0_) = -hatgamma*rwork(1:2,yl_) + rwork(1:2,y0_)
+       Work_II(1:2,y0_) = -HatGamma*Work_II(1:2,yl_) + Work_II(1:2,y0_)
 
        !
        !    --- Update
        !
-       omega = rwork(2,y0_)
+       Omega = Work_II(2,y0_)
 
-       call add_times_BLK(Tmp2_GB,-omega,bicg_u1)
+       call add_times_block(Tmp2_GB,-Omega,u1_GB)
 
-       call add_times_BLK(qx,omega,Tmp1_GB)
+       call add_times_block(x_GB,Omega,Tmp1_GB)
 
-       call add_times_BLK(Tmp1_GB,-omega,bicg_r1)
+       call add_times_block(Tmp1_GB,-Omega,r1_GB)
 
-       rwork(1:2,qy_) = rwork(1,y0_)*rwork(1:2,qz_) + &
-            rwork(2,y0_)*rwork(1:2,qz_+1)
+       Work_II(1:2,qy_) = Work_II(1,y0_)*Work_II(1:2,qz_) + &
+            Work_II(2,y0_)*Work_II(1:2,qz_+1)
 
-       rnrm = sqrt( sum( rwork(1:2,y0_)*rwork(1:2,qy_) ) )
+       rNorm = sqrt( sum( Work_II(1:2,y0_)*Work_II(1:2,qy_) ) )
 
-       select case(typestop)
+       select case(TypeStop)
        case('rel')
-          GoOn = rnrm>tol*rnrm0 .and. nmv<iter
-          if(DoTest) print *, nmv,' matvecs, ', ' ||rn||/||r0|| =',rnrm/rnrm0
+          DoGoOn = rNorm>Tol*rNorm0 .and. nMv < nIter
+          if(DoTest) print *, nMv,' matvecs, ', ' ||rn||/||r0|| =',rNorm/rNorm0
 
        case('abs')
-          GoOn = rnrm>tol       .and. nmv<iter
-          if(DoTest) print *, nmv,' matvecs, ||rn|| =',rnrm
+          DoGoOn = rNorm>Tol       .and. nMv < nIter
+          if(DoTest) print *, nMv,' matvecs, ||rn|| =',rNorm
 
        case('max')
-          rnrmMax = maxval_grid(Tmp1_GB, UseAbs=.true.)
-          GoOn = rnrmMax > tol  .and. nmv < iter
-          if(DoTest) print *, nmv,' matvecs, max(rn) =',rnrmMax
+          rNormMax = maxval_grid(Tmp1_GB, UseAbs=.true.)
+          DoGoOn = rNormMax > Tol  .and. nMv < nIter
+          if(DoTest) print *, nMv,' matvecs, max(rn) =',rNormMax
        end select
 
     end do
@@ -1252,365 +1239,337 @@ contains
     !     --- End of iterations ---
     !     =========================
 
-    select case(typestop)
+    select case(TypeStop)
     case('rel')
-       if (rnrm>tol*rnrm0) info = 2
-       tol = rnrm/rnrm0
+       if (rNorm>Tol*rNorm0) iInfo = 2
+       Tol = rNorm/rNorm0
 
     case('abs')
-       if (rnrm>tol) info = 2
-       tol = rnrm
+       if (rNorm>Tol) iInfo = 2
+       Tol = rNorm
 
     case('max')
-       if (rnrmMax>tol) info = 2
-       tol = rnrmMax
+       if (rNormMax>Tol) iInfo = 2
+       Tol = rNormMax
     end select
 
-    if((typestop/='max'.and.rnrm>rnrm0).or.(typestop=='max'.and.rnrmMax&
-         >rnrmMax0)) info=-info
+    if((TypeStop/='max'.and.rNorm>rNorm0).or.(TypeStop=='max'.and.rNormMax&
+         >rNormMax0)) iInfo=-iInfo
 
-    iter = nmv
+    nIter = nMv
 
     call test_stop(NameSub, DoTest)
   end subroutine proj_bicgstab
   !============================================================================
-  subroutine set_BLK(qa,qb)
+  subroutine set_block_scalar(a_GB, b)
 
-    ! Set qa=qb for all used blocks, where qb is a scalar
+    ! Set a_GB = b for all used blocks, where b is a scalar
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(out) :: qa
-    real, intent(in) :: qb
+    real, intent(out):: a_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in) :: b
 
     ! Local variables:
     integer:: iBlock
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_BLK'
+    character(len=*), parameter:: NameSub = 'set_block_scalar'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
           if(IsNoBody_B(iBlock))then
-             qa(1:nI,1:nJ,1:nK,iBlock)=qb
+             a_GB(1:nI,1:nJ,1:nK,iBlock)=b
           else
              where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
-                  qa(1:nI,1:nJ,1:nK,iBlock)=qb
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)=b
           end if
        end if
     end do
 
     call test_stop(NameSub, DoTest)
-  end subroutine set_BLK
+  end subroutine set_block_scalar
   !============================================================================
+  subroutine set_block_array(a_GB, b_GB)
 
-  subroutine eq_BLK(qa,qb)
-
-    ! Do qa=qb for all used blocks
+    ! Do a_GB=b_GB for all used blocks
 
     ! Arguments
-
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock):: qa,qb
-    intent(out) :: qa
-    intent(in)  :: qb
+    real, intent(out) :: a_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in)  :: b_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables:
     integer:: iBlock
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'eq_BLK'
+    character(len=*), parameter:: NameSub = 'set_block_array'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
           if(IsNoBody_B(iBlock))then
-             qa(1:nI,1:nJ,1:nK,iBlock)= qb(1:nI,1:nJ,1:nK,iBlock)
+             a_GB(1:nI,1:nJ,1:nK,iBlock)= b_GB(1:nI,1:nJ,1:nK,iBlock)
           else
              where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
-                  qa(1:nI,1:nJ,1:nK,iBlock)= qb(1:nI,1:nJ,1:nK,iBlock)
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)= b_GB(1:nI,1:nJ,1:nK,iBlock)
           end if
 
        end if
     end do
 
     call test_stop(NameSub, DoTest)
-  end subroutine eq_BLK
+  end subroutine set_block_array
   !============================================================================
+  subroutine add_block(a_GB, b_GB)
 
-  subroutine add_BLK(qa,qb)
-
-    ! Do qa=qa+qb for all used blocks
+    ! Do a_GB=a_GB+b_GB for all used blocks
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa, qb
-    intent(inout) :: qa
-    intent(in)    :: qb
+    real, intent(inout) :: a_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in)    :: b_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables:
     integer:: iBlock
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'add_BLK'
+    character(len=*), parameter:: NameSub = 'add_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
           if(IsNoBody_B(iBlock))then
-             qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qa(1:nI,1:nJ,1:nK,iBlock)+qb(1:nI,1:nJ,1:nK,iBlock)
+             a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)+b_GB(1:nI,1:nJ,1:nK,iBlock)
           else
              where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
-                  qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qa(1:nI,1:nJ,1:nK,iBlock)+qb(1:nI,1:nJ,1:nK,iBlock)
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)+b_GB(1:nI,1:nJ,1:nK,iBlock)
           end if
        end if
     end do
 
     call test_stop(NameSub, DoTest)
-  end subroutine add_BLK
+  end subroutine add_block
   !============================================================================
+  subroutine sub_block(a_GB, b_GB)
 
-  subroutine sub_BLK(qa,qb)
-
-    ! Do qa=qa-qb for all used blocks
+    ! Do a_GB=a_GB-b_GB for all used blocks
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa, qb
-    intent(inout) :: qa
-    intent(in)    :: qb
+    real, intent(inout):: a_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in)   :: b_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables:
     integer:: iBlock
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'sub_BLK'
+    character(len=*), parameter:: NameSub = 'sub_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
           if(IsNoBody_B(iBlock))then
-             qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qa(1:nI,1:nJ,1:nK,iBlock)-qb(1:nI,1:nJ,1:nK,iBlock)
+             a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)-b_GB(1:nI,1:nJ,1:nK,iBlock)
           else
              where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
-                  qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qa(1:nI,1:nJ,1:nK,iBlock)-qb(1:nI,1:nJ,1:nK,iBlock)
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)-b_GB(1:nI,1:nJ,1:nK,iBlock)
           end if
        end if
     end do
 
     call test_stop(NameSub, DoTest)
-  end subroutine sub_BLK
+  end subroutine sub_block
   !============================================================================
+  subroutine add2_block(a_GB, b_GB, c_GB)
 
-  subroutine eq_plus_BLK(qa,qb,qc)
-
-    ! Do qa=qb+qc for all used blocks
+    ! Do a_GB=b_GB+c_GB for all used blocks
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa,qb,qc
-    intent(out) :: qa
-    intent(in)  :: qb,qc
+    real, intent(out):: a_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in) :: b_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in) :: c_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables:
     integer:: iBlock
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'eq_plus_BLK'
+    character(len=*), parameter:: NameSub = 'add2_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
           if(IsNoBody_B(iBlock))then
-             qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qb(1:nI,1:nJ,1:nK,iBlock)+qc(1:nI,1:nJ,1:nK,iBlock)
+             a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  b_GB(1:nI,1:nJ,1:nK,iBlock)+c_GB(1:nI,1:nJ,1:nK,iBlock)
           else
              where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
-                  qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qb(1:nI,1:nJ,1:nK,iBlock)+qc(1:nI,1:nJ,1:nK,iBlock)
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  b_GB(1:nI,1:nJ,1:nK,iBlock)+c_GB(1:nI,1:nJ,1:nK,iBlock)
           end if
        end if
     end do
 
     call test_stop(NameSub, DoTest)
-  end subroutine eq_plus_BLK
+  end subroutine add2_block
   !============================================================================
+  subroutine add_times_block(a_GB, b, c_GB)
 
-  subroutine add_times_BLK(qa,qb,qc)
-
-    ! Do qa=qa+qb*qc for all used blocks, where qb is a scalar
+    ! a_GB = a_GB + b_GB*c_GB for all used blocks, where b_GB is a scalar
 
     ! Arguments
-
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa,qc
-    intent(inout) :: qa
-    intent(in)    :: qc
-
-    real, intent(in) :: qb
+    real, intent(inout):: a_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in)   :: c_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in)   :: b
 
     ! Local variables:
     integer:: iBlock
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'add_times_BLK'
+    character(len=*), parameter:: NameSub = 'add_times_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
           if(IsNoBody_B(iBlock))then
-             qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qa(1:nI,1:nJ,1:nK,iBlock)+qb*qc(1:nI,1:nJ,1:nK,iBlock)
+             a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)+b*c_GB(1:nI,1:nJ,1:nK,iBlock)
           else
              where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
-                  qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qa(1:nI,1:nJ,1:nK,iBlock)+qb*qc(1:nI,1:nJ,1:nK,iBlock)
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)+b*c_GB(1:nI,1:nJ,1:nK,iBlock)
           end if
        end if
     end do
 
     call test_stop(NameSub, DoTest)
-  end subroutine add_times_BLK
+  end subroutine add_times_block
   !============================================================================
+  subroutine add2_times_block(a_GB, b_GB, c, d_GB)
 
-  subroutine eq_plus_times_BLK(qa,qb,qc,qd)
-
-    ! Do qa=qb+qc*qd for all used blocks, where qc is a scalar
+    ! a_GB = b_GB + c*d_GB for all used blocks, where c is a scalar
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa,qb,qd
-    intent(inout) :: qa
-    intent(in)    :: qb
-    intent(inout) :: qd
-
-    real, intent(in) :: qc
+    real, intent(inout):: a_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in)   :: b_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(inout):: d_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in)   :: c
 
     ! Local variables:
     integer:: iBlock
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'eq_plus_times_BLK'
+    character(len=*), parameter:: NameSub = 'add2_times_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
           if(IsNoBody_B(iBlock))then
-             qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qb(1:nI,1:nJ,1:nK,iBlock)+qc*qd(1:nI,1:nJ,1:nK,iBlock)
+             a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  b_GB(1:nI,1:nJ,1:nK,iBlock) + c*d_GB(1:nI,1:nJ,1:nK,iBlock)
           else
              where(Used_GB(1:nI,1:nJ,1:nK,iBlock)) &
-                  qa(1:nI,1:nJ,1:nK,iBlock)= &
-                  qb(1:nI,1:nJ,1:nK,iBlock)+qc*qd(1:nI,1:nJ,1:nK,iBlock)
+                  a_GB(1:nI,1:nJ,1:nK,iBlock)= &
+                  b_GB(1:nI,1:nJ,1:nK,iBlock) + c*d_GB(1:nI,1:nJ,1:nK,iBlock)
           end if
        end if
     end do
 
     call test_stop(NameSub, DoTest)
-  end subroutine eq_plus_times_BLK
+  end subroutine add2_times_block
   !============================================================================
+  real function dot_product_block(a_GB, b_GB)
 
-  real function dot_product_BLK(qa,qb)
-
-    ! Return qa.qb=sum(qa*qb) for all used blocks
+    ! Return a_GB.b_GB = sum(a_GB*b_GB) for all used blocks
 
     ! Arguments
-
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(in) :: qa,qb
+    real, intent(in):: a_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in):: b_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables:
-    real    :: qproduct, qproduct_all
+    real    :: BlockProduct
     integer :: iBlock, iError
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'dot_product_BLK'
+    character(len=*), parameter:: NameSub = 'dot_product_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    qproduct=0.0
+    BlockProduct=0.0
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
           if(IsNoBody_B(iBlock)) then
-             qproduct=qproduct + &
-                  sum(qa(1:nI,1:nJ,1:nK,iBlock)*qb(1:nI,1:nJ,1:nK,iBlock))
+             BlockProduct=BlockProduct + &
+                  sum(a_GB(1:nI,1:nJ,1:nK,iBlock)*b_GB(1:nI,1:nJ,1:nK,iBlock))
           else
-             qproduct=qproduct + &
-                  sum(qa(1:nI,1:nJ,1:nK,iBlock)*qb(1:nI,1:nJ,1:nK,iBlock),&
+             BlockProduct=BlockProduct + &
+                  sum(a_GB(1:nI,1:nJ,1:nK,iBlock)*b_GB(1:nI,1:nJ,1:nK,iBlock),&
                   MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
           end if
        end if
     end do
 
-    if(nProc>1)then
-       call MPI_allreduce(qproduct, qproduct_all, 1,  MPI_REAL, MPI_SUM, &
-            iComm, iError)
-       dot_product_BLK=qproduct_all
-       if(DoTest)write(*,*)'me,product,product_all:',&
-            iProc,qproduct,qproduct_all
-    else
-       dot_product_BLK=qproduct
-       if(DoTest)write(*,*)'me,qproduct:',iProc,qproduct
-    end if
+    if(nProc>1) call MPI_allreduce(MPI_IN_PLACE, BlockProduct, &
+         1,  MPI_REAL, MPI_SUM, iComm, iError)
+
+    dot_product_block = BlockProduct
+    if(DoTest)write(*,*) NameSub,': me, product=', iProc, BlockProduct
 
     call test_stop(NameSub, DoTest)
-  end function dot_product_BLK
+  end function dot_product_block
   !============================================================================
+  real function sum_block(nPe, a_GB)
 
-  real function sum_BLK(qnum,qa)
-
-    ! Return sum(qa) for all used blocks and true cells
-    ! Do for each processor separately if qnum=1, otherwise add them all
+    ! Return sum(a_GB) for all used blocks and true cells
+    ! Do for each processor separately if nPe=1, otherwise add them all
 
     ! Arguments
 
-    integer, intent(in) :: qnum
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(in) :: qa
+    integer, intent(in) :: nPe
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(in) :: a_GB
 
     ! Local variables:
-    real    :: qsum, qsum_all
+    real    :: BlockSum
     integer :: iBlock, iError
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'sum_BLK'
+    character(len=*), parameter:: NameSub = 'sum_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    qsum=0.0
+    BlockSum=0.0
 
     do iBlock=1,nBlock
        if(.not.Unused_B(iBlock)) then
           if(IsNoBody_B(iBlock)) then
-             qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBlock))
+             BlockSum=BlockSum + sum(a_GB(1:nI,1:nJ,1:nK,iBlock))
           else
-             qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBlock), &
+             BlockSum=BlockSum + sum(a_GB(1:nI,1:nJ,1:nK,iBlock), &
                   MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
           end if
        end if
     end do
 
-    if(qnum>1)then
-       call MPI_allreduce(qsum, qsum_all, 1,  MPI_REAL, MPI_SUM, &
-            iComm, iError)
-       sum_BLK=qsum_all
-       if(DoTest)write(*,*)'me,sum,sum_all:',iProc,qsum,qsum_all
-    else
-       sum_BLK=qsum
-       if(DoTest)write(*,*)'me,qsum:',iProc,qsum
-    end if
+    if(nPe > 1) call MPI_allreduce(MPI_IN_PLACE, BlockSum, &
+         1,  MPI_REAL, MPI_SUM, iComm, iError)
+    sum_block=BlockSum
+    if(DoTest)write(*,*) NameSub,': me,BlockSum=',iProc,BlockSum
 
     call test_stop(NameSub, DoTest)
-  end function sum_BLK
+  end function sum_block
   !============================================================================
-
 end module ModProjectDivB
 !==============================================================================

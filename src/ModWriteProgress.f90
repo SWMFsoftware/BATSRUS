@@ -210,31 +210,31 @@ contains
          'ClightFactor:', ClightFactor,', Clight:    ',Clight
     call write_prefix; write(iUnitOut,*)
 
-    if(NameThisComp == 'GM' .and. SW_n > 0.0)then
+    if(NameThisComp == 'GM' .and. SolarWindN > 0.0)then
        call write_prefix; write(iUnitOut,*)
        StringFormat = '(10X,A17,"]: ",es15.6,A10,es15.6)'
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_n_dim   ['//NameIdlUnit_V(UnitN_),SW_n_dim,  ',  SW_n:  ',SW_n
+            'SolarWindNDim   ['//NameIdlUnit_V(UnitN_),SolarWindNDim,  ',  SolarWindN:  ',SolarWindN
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_Rho_dim ['//NameIdlUnit_V(UnitRho_),SW_Rho_dim,',  SW_Rho:',&
-            SW_Rho
+            'SolarWindRhoDim ['//NameIdlUnit_V(UnitRho_),SolarWindRhoDim,',  SolarWindRho:',&
+            SolarWindRho
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_Ux_dim  ['//NameIdlUnit_V(UnitU_),SW_Ux_dim, ',  SW_Ux: ',SW_Ux
+            'SolarWindUxDim  ['//NameIdlUnit_V(UnitU_),SolarWindUxDim, ',  SolarWindUx: ',SolarWindUx
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_Uy_dim  ['//NameIdlUnit_V(UnitU_),SW_Uy_dim, ',  SW_Uy: ',SW_Uy
+            'SolarWindUyDim  ['//NameIdlUnit_V(UnitU_),SolarWindUyDim, ',  SolarWindUy: ',SolarWindUy
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_Uz_dim  ['//NameIdlUnit_V(UnitU_),SW_Uz_dim, ',  SW_Uz: ',SW_Uz
+            'SolarWindUzDim  ['//NameIdlUnit_V(UnitU_),SolarWindUzDim, ',  SolarWindUz: ',SolarWindUz
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_p_dim   ['//NameIdlUnit_V(UnitP_),SW_p_dim,  ',  SW_p:  ',SW_p
+            'SolarWindPDim   ['//NameIdlUnit_V(UnitP_),SolarWindPDim,  ',  SolarWindP:  ',SolarWindP
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_Bx_dim  ['//NameIdlUnit_V(UnitB_),SW_Bx_dim, ',  SW_Bx: ',SW_Bx
+            'SolarWindBxDim  ['//NameIdlUnit_V(UnitB_),SolarWindBxDim, ',  SolarWindBx: ',SolarWindBx
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_By_dim  ['//NameIdlUnit_V(UnitB_),SW_By_dim, ',  SW_By: ',SW_By
+            'SolarWindByDim  ['//NameIdlUnit_V(UnitB_),SolarWindByDim, ',  SolarWindBy: ',SolarWindBy
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_Bz_dim  ['//NameIdlUnit_V(UnitB_),SW_Bz_dim, ',  SW_Bz: ',SW_Bz
+            'SolarWindBzDim  ['//NameIdlUnit_V(UnitB_),SolarWindBzDim, ',  SolarWindBz: ',SolarWindBz
        StringFormat = '(10X,A17,"]: ",F15.6)'
        call write_prefix; write(iUnitOut,StringFormat) &
-            'SW_T_dim   ['//NameIdlUnit_V(UnitTemperature_),SW_T_dim
+            'SolarWindTempDim   ['//NameIdlUnit_V(UnitTemperature_),SolarWindTempDim
     end if
     call write_prefix; write(iUnitOut,*)
     call write_prefix; write(iUnitOut,*)'   MHD Numerical Solution Parameters'
