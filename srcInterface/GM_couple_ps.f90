@@ -78,19 +78,19 @@ contains
     end if
 
     ! Initialize PS-GM coupling use IM infrastructure.
-    if(.not.allocated(IM_lat))then
-       ! Allocate IM_lat, IM_lon, IM_p, IM_dens
+    if(.not.allocated(ImLat_I))then
+       ! Allocate ImLat_I, ImLon_I, IM_p, IM_dens
        call im_pressure_init(iSizeIn, jSizeIn)
        ! Set up PS ionospheric grid and store.
        ! PS uses an equatorial cylindrical grid, similar to RAM-SCB:
-       IM_lat = Grid_C(PS_) % Coord1_I
-       IM_lon = Grid_C(PS_) % Coord2_I * cRadToDeg
+       ImLat_I = Grid_C(PS_) % Coord1_I
+       ImLon_I = Grid_C(PS_) % Coord2_I * cRadToDeg
 
        if(DoTestMe) then
           write(*,*)NameSub//': PS grid information:'
           write(*,*)'     isize, jsize = ', iSizeIn, jSizeIn
-          write(*,*)'     PS_lat max/min = ', maxval(IM_lat), minval(IM_lat)
-          write(*,*)'     PS_lon max/min = ', maxval(IM_lon), minval(IM_lon)
+          write(*,*)'     PS_lat max/min = ', maxval(ImLat_I), minval(ImLat_I)
+          write(*,*)'     PS_lon max/min = ', maxval(ImLon_I), minval(ImLon_I)
        end if
 
        ! Coupling requires accurate raytrace that stops at the equator
@@ -104,8 +104,8 @@ contains
     IsImPpar_I(:) = .false.
 
         ! Store IM variable for internal use
-    ImP_CV     (:,:,1) = Buffer_IIV(:,:,pres_)
-    ImRho_CV     (:,:,1) = Buffer_IIV(:,:,dens_)
+    ImP_III     (:,:,1) = Buffer_IIV(:,:,pres_)
+    ImRho_III     (:,:,1) = Buffer_IIV(:,:,dens_)
 
     iNewPIm  = iNewPIm + 1
 
@@ -129,13 +129,13 @@ contains
 
     ! for multifluid
     if(DoMultiFluidPsCoupling)then
-       ImP_CV(:,:,2)= Buffer_IIV(:,:,Hpres_)
+       ImP_III(:,:,2)= Buffer_IIV(:,:,Hpres_)
 !       IM_Hpp = Buffer_IIV(:,:,Hpres_)
-       ImP_CV(:,:,3)= Buffer_IIV(:,:,Opres_)
+       ImP_III(:,:,3)= Buffer_IIV(:,:,Opres_)
 !       IM_Opp = Buffer_IIV(:,:,Opres_)
-       ImRho_CV(:,:,2)= Buffer_IIV(:,:,Hdens_)
+       ImRho_III(:,:,2)= Buffer_IIV(:,:,Hdens_)
 !       IM_Hpdens = Buffer_IIV(:,:,Hdens_)
-       ImRho_CV(:,:,3)= Buffer_IIV(:,:,Odens_)
+       ImRho_III(:,:,3)= Buffer_IIV(:,:,Odens_)
 !       IM_Opdens = Buffer_IIV(:,:,Odens_)
        IsImRho_I(:)  = .true.
        IsImP_I(:)    = .true.
@@ -144,16 +144,16 @@ contains
        if(DoTestMe) then
           write(*,*)NameSub//': Max/Min values received from PS:'
           write(*,'(a,2e12.3)')'   Hp Density [cm-3] = ', &
-               maxval(ImRho_CV(:,:,2))/1e6/cProtonMass, &
-               minval(ImRho_CV(:,:,2))/1e6/cProtonMass
+               maxval(ImRho_III(:,:,2))/1e6/cProtonMass, &
+               minval(ImRho_III(:,:,2))/1e6/cProtonMass
           write(*,'(a,2e12.3)')'   Hp Pressure [Pa]  = ', &
-               maxval(ImP_CV(:,:,2)), minval(ImP_CV(:,:,2))
+               maxval(ImP_III(:,:,2)), minval(ImP_III(:,:,2))
           write(*,*)NameSub//': Max/Min values received from PS:'
           write(*,'(a,2e12.3)')'   Op Density [cm-3] = ', &
-               maxval(ImRho_CV(:,:,3))/1e6/cProtonMass, &
-               minval(ImRho_CV(:,:,3))/1e6/cProtonMass
+               maxval(ImRho_III(:,:,3))/1e6/cProtonMass, &
+               minval(ImRho_III(:,:,3))/1e6/cProtonMass
           write(*,'(a,2e12.3)')'   Op Pressure [Pa]  = ', &
-               maxval(ImP_CV(:,:,3)), minval(ImP_CV(:,:,3))
+               maxval(ImP_III(:,:,3)), minval(ImP_III(:,:,3))
        end if
 
     endif

@@ -184,7 +184,7 @@ contains
     use CON_comp_param,  ONLY: GM_
     use ModGeometry,     ONLY: TypeGeometry, RadiusMin, RadiusMax
     use BATL_lib,        ONLY: CoordMin_D, CoordMax_D, Particle_I
-    use ModParticleFieldLine, ONLY: KindReg_, UseParticles
+    use ModParticleFieldLine, ONLY: iKindReg, UseParticles
 
     logical:: UseParticleLine = .false.
     integer:: nParticle = 0, iError = 0
@@ -237,7 +237,7 @@ contains
        call init_decomposition_dd(&
        MH_LineDecomposition, GM_, nDim=1)
        if(is_proc0(GM_))then
-          nParticle = Particle_I(KindReg_)%nParticle
+          nParticle = Particle_I(iKindReg)%nParticle
           call get_root_decomposition_dd(&
                MH_LineDecomposition, &
                [n_proc(GM_)],      &
