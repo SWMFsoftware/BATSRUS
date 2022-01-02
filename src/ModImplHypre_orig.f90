@@ -37,12 +37,6 @@ module ModImplHypre
   integer, parameter:: CoordLast_ = Coord0_+nDim
   integer, parameter:: nCell_D(nDim) = nIjk_D(1:nDim)
 
-  ! This is defined in HYPREf.h (Fortran header file)
-  integer, parameter:: HYPRE_PARCSR = 5555
-
-  ! This is defined in HYPRE_sstruct_mv.h (a C header file)
-  integer, parameter:: HYPRE_SSTRUCT_VARIABLE_CELL = 0
-
   ! Hypre uses C type 8-byte integers for pointers
   integer(Int8_):: i8Grid, i8Graph, i8Stencil, i8Precond
   integer(Int8_):: i8A, i8B, i8X, i8ParA, i8ParB, i8ParX
@@ -53,7 +47,9 @@ module ModImplHypre
   integer:: nPart = 1 ! grid consists of one or more parts
   integer:: nVar  = 1 ! there is only one variable per grid cell
   integer:: iVar  = 0 ! index of the variable
-  integer:: iVarType_I(1) = [ HYPRE_SSTRUCT_VARIABLE_CELL ]
+
+  ! This is defined as HYPRE_SSTRUCT_VARIABLE_CELL in HYPRE_sstruct_mv.h
+  integer:: iVarType_I(1) = [ 0 ]
   integer:: iLower_D(nDim), iUpper_D(nDim) ! index limits for each box
 
   integer:: iLowerBc_D(nDim), iUpperBc_D(nDim) ! index limit for ghost cells
@@ -69,7 +65,8 @@ module ModImplHypre
   integer:: iStencil_I(nStencil) = [ (iStencil, iStencil=0,nStencil-1) ]
   integer:: DiStencil_DI(nDim,nStencil)
 
-  integer:: iObjectType = HYPRE_PARCSR
+  ! This is defined as HYPRE_PARCSR in HYPREf.h (Fortran header file)
+  integer:: iObjectType = 5555
 
   real, allocatable:: Value_I(:) ! matrix elements for 1 block
 
@@ -133,7 +130,7 @@ contains
     if(iLastDecomposition == -1)then
        allocate(Value_I(nStencil*nIJK))
     else
-       ! This is not the first call, so destroy previously created HYPRE objects
+       ! This is not the first call: destroy previously created HYPRE objects
        call hypre_clean
     end if
     iLastDecomposition = iNewDecomposition

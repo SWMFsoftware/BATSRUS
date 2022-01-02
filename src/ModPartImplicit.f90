@@ -146,19 +146,19 @@ contains
        if(UseImplicit)call read_var('CflImpl',CflImpl)
 
     case('#IMPLCRITERIA', '#IMPLICITCRITERIA', '#STEPPINGCRITERIA')
-       call read_var('TypeImplCrit', ImplCritType, IsLowerCase=.true.)
-       select case(ImplCritType)
+       call read_var('TypeImplCrit', TypeImplCrit, IsLowerCase=.true.)
+       select case(TypeImplCrit)
        case('r')
           call read_var('rImplicit', rImplicit)
        case('test','dt')
        case default
           if(iProc==0)then
              write(*,'(a)')NameSub// &
-                  ' WARNING: invalid ImplCritType='//trim(ImplCritType)// &
+                  ' WARNING: invalid TypeImplCrit='//trim(TypeImplCrit)// &
                   ' !!!'
-             write(*,*)NameSub//' Setting ImplCritType=dt'
+             write(*,*)NameSub//' Setting TypeImplCrit=dt'
           end if
-          ImplCritType = 'dt'
+          TypeImplCrit = 'dt'
        end select
 
     case('#PARTIMPL', '#PARTIMPLICIT')
@@ -169,9 +169,9 @@ contains
 
     case('#IMPLSCHEME', '#IMPLICITSCHEME')
        call read_var('nOrderImpl', nOrderImpl)
-       call read_var('TypeFluxImpl', FluxTypeImpl, IsUpperCase=.true.)
+       call read_var('TypeFluxImpl', TypeFluxImpl, IsUpperCase=.true.)
        ! For 5-moment equation all schemes are equivalent with Rusanov
-       if(UseEField) FluxTypeImpl = 'RUSANOV'
+       if(UseEField) TypeFluxImpl = 'RUSANOV'
 
     case('#IMPLSTEP', '#IMPLICITSTEP')
        call read_var('ImplCoeff ', ImplCoeff0)
@@ -560,9 +560,9 @@ contains
        DtCoeff = CflImpl/0.5
     endif
 
-    if(UseBDF2.and.nStep==n_prev+1)then
+    if(UseBDF2.and.nStep==nStepPrev+1)then
        ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
-       ImplCoeff = (dt+dt_prev)/(2*dt+dt_prev)
+       ImplCoeff = (dt+DtPrev)/(2*dt+DtPrev)
     else
        ImplCoeff = ImplCoeff0
     end if
@@ -575,8 +575,8 @@ contains
 
     if(DoTest.and.IsTimeAccurate)&
          write(*,*)NameSub,': DtCoeff,DtExpl,dt=',DtCoeff,DtExpl,dt
-    if(DoTest.and.UseBDF2)write(*,*)NameSub,': n_prev,dt_prev,ImplCoeff=',&
-         n_prev,dt_prev,ImplCoeff
+    if(DoTest.and.UseBDF2)write(*,*)NameSub,': nStepPrev,DtPrev,ImplCoeff=',&
+         nStepPrev,DtPrev,ImplCoeff
 
     if(.not.UseBDF2)then
        ! Save the current state into ImplOld_VCB so that StateOld_VGB
@@ -595,8 +595,8 @@ contains
 
     ! Save previous timestep for 3 level scheme
     if(UseBDF2)then
-       n_prev  = nStep
-       dt_prev = dt
+       nStepPrev  = nStep
+       DtPrev = dt
 
        ! Save the current state into ImplOld_VCB so that StateOld_VGB
        ! can be restored.
@@ -766,7 +766,7 @@ contains
           ! or the Krylov iteration failed.
           Dt = 0.0
           ! Do not use previous step in BDF2 scheme
-          n_prev = -1
+          nStepPrev = -1
           ! Reset the state variable, the energy and set DtMax_CB variable to 0
           !$omp parallel do
           do iBlock = 1,nBlock
@@ -844,7 +844,7 @@ contains
 
     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .false.
 
-    if (nOrder==nOrderImpl .and. TypeFlux==FluxTypeImpl) then
+    if (nOrder==nOrderImpl .and. TypeFlux==TypeFluxImpl) then
        ! If R_low=R then ResImpl_VCB = ResExpl_VCB
        ResImpl_VCB(:,:,:,:,1:nBlockImpl) = ResExpl_VCB(:,:,:,:,1:nBlockImpl)
     else
@@ -859,12 +859,12 @@ contains
          ResImpl_VCB(iVarTest,iTest,jTest,kTest,iBlockImplTest)
 
     ! Calculate rhs used for nIterNewton=1
-    if(UseBDF2 .and. nStep==n_prev+1)then
+    if(UseBDF2 .and. nStep==nStepPrev+1)then
        ! Collect RHS terms from Eq 8 in Paper implvac
        ! Newton-Raphson iteration. The BDF2 scheme implies
        ! beta+alpha=1 and beta=(dt_n+dt_n-1)/(2*dt_n+dt_n-1)
        Coef1 = ImplCoeff*DtCoeff
-       Coef2 = (1-ImplCoeff)*dt/dt_prev
+       Coef2 = (1-ImplCoeff)*dt/DtPrev
 
        !$omp parallel do private(iBlock, n)
        do iBlockImpl=1,nBlockImpl
@@ -2123,7 +2123,7 @@ contains
        nOrderTmp    = nOrder
        nOrder       = nOrderImpl
        TypeFluxTmp  = TypeFlux
-       TypeFlux     = FluxTypeImpl
+       TypeFlux     = TypeFluxImpl
     endif
     if(UseDtFixed)then
        !$omp parallel do private( iBlock )

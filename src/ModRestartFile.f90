@@ -23,7 +23,7 @@ module ModRestartFile
   use ModPIC,        ONLY: write_pic_status_file, &
        read_pic_status_file, DoRestartPicStatus, AdaptPic
   use ModImplicit, ONLY: UseImplicit, &
-       n_prev, ImplOld_VCB, dt_prev
+       nStepPrev, ImplOld_VCB, DtPrev
   use ModKind,       ONLY: Real4_, Real8_, Int8_
   use ModIoUnit,     ONLY: UnitTmp_
   use ModUtilities,  ONLY: open_file, close_file
@@ -296,7 +296,7 @@ contains
     allocate(State4_CV(nI,nJ,nK,nVarRestart))
     allocate(State4_VC(nVarRestart,nI,nJ,nK))
     allocate(StateRead_VCB(nVarRestart,nI,nJ,nK,nBlock))
-    if(UseImplicit .or. n_prev == nStep) &
+    if(UseImplicit .or. nStepPrev == nStep) &
          allocate(ImplOldRead_VCB(nVarRestart,nI,nJ,nK,nBlock))
 
     select case(TypeRestartInFile)
@@ -466,10 +466,10 @@ contains
     write(UnitTmp_,'(a)')'#NSTEP'
     write(UnitTmp_,'(i8,a)')nStep, cTab//cTab//'nStep'
     write(UnitTmp_,*)
-    if(n_prev == nStep)then
+    if(nStepPrev == nStep)then
        write(UnitTmp_,'(a)')'#NPREVIOUS'
-       write(UnitTmp_,'(i8,a)')      n_prev, cTab//cTab//'nPrev'
-       write(UnitTmp_,'(es22.15,a)') dt_prev, cTab//cTab//'DtPrev'
+       write(UnitTmp_,'(i8,a)')      nStepPrev, cTab//cTab//'nPrev'
+       write(UnitTmp_,'(es22.15,a)') DtPrev, cTab//cTab//'DtPrev'
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#STARTTIME'
@@ -738,7 +738,7 @@ contains
           ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = b8_Y
           BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = b8_Z
        end if
-       if(n_prev==nStep) then
+       if(nStepPrev==nStep) then
           read(UnitTmp_, iostat = iError) State8_CV
           do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
@@ -764,7 +764,7 @@ contains
           ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = b4_Y
           BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = b4_Z
        end if
-       if(n_prev==nStep) then
+       if(nStepPrev==nStep) then
           read(UnitTmp_, iostat = iError) State4_CV
           do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
@@ -838,7 +838,7 @@ contains
             ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock),&
             BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)
     end if
-    if(n_prev==nStep) write(UnitTmp_) &
+    if(nStepPrev==nStep) write(UnitTmp_) &
          (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)
     call close_file
 
@@ -879,7 +879,7 @@ contains
        l = lReal*((nI+1)*nJ*nK + nI*(nJ+1)*nK + nI*nJ*(nK+1))
        lRecord = lRecord + l
     end if
-    if(n_prev==nStep)then
+    if(nStepPrev==nStep)then
        if(DoRead) then
           l = lReal*nVarRestart*nI*nJ*nK
        else
@@ -983,7 +983,7 @@ contains
              end if
              IsRead = .true.
           endif
-          if(n_prev==nStep)then
+          if(nStepPrev==nStep)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   State4_CV
@@ -1014,7 +1014,7 @@ contains
              end if
              IsRead = .true.
           endif
-          if(n_prev==nStep)then
+          if(nStepPrev==nStep)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
@@ -1097,7 +1097,7 @@ contains
                BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)
           CYCLE
        endif
-       if(n_prev==nStep)then
+       if(nStepPrev==nStep)then
           ! Save previous time step for sake of BDF2 scheme
           write(UnitTmp_, rec=iRec) &
                DtMax_B(iBlock), &
@@ -1296,7 +1296,7 @@ contains
        do iBlock = 1,nBlock
           State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
                StateRead_VCB(:,1:nI,1:nJ,1:nK,iBlock)
-          if (n_prev == nStep) &
+          if (nStepPrev == nStep) &
                ImplOld_VCB(:,1:nI,1:nJ,1:nK,iBlock) = &
                ImplOldRead_VCB(:,1:nI,1:nJ,1:nK,iBlock)
        end do
@@ -1451,7 +1451,7 @@ contains
     ! Note this will affect the accuracy of the solution in the
     ! next iteration, but this should be a small effect compared to
     ! the change of state variables
-    if (n_prev == nStep) then
+    if (nStepPrev == nStep) then
        do iBlock = 1,nBlock
           do i =1,nI ; do j=1,nJ; do k=1,nK
              ImplOld_VCB(:,i,j,k,iBlock) = &

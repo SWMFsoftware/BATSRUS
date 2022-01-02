@@ -10,7 +10,7 @@ module GM_couple_ie
   use ModIeCoupling, ONLY: rIonosphere, &
        nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I,&
        IonoPotential_II, IonoJouleHeating_II, &
-       SigmaHall_II, SigmaPedersen_II, jHall_DII, jPedersen_DII, &
+       SigmaHall_II, SigmaPedersen_II, HallJ_DII, PedersenJ_DII, &
        init_ie_grid, calc_grad_ie_potential, map_jouleheating_to_inner_bc
 
   implicit none
@@ -252,7 +252,7 @@ contains
                *Si2No_V(UnitJ_)*Si2No_V(UnitX_)/Si2No_V(UnitElectric_)
 
           ! The ionosphere currents will need recalculation, so deallocate them
-          if(allocated(jHall_DII)) deallocate(jHall_DII)
+          if(allocated(HallJ_DII)) deallocate(HallJ_DII)
 
        case('sigmapedersen')
           if(.not. allocated(SigmaPedersen_II)) &
@@ -263,7 +263,7 @@ contains
                *Si2No_V(UnitJ_)*Si2No_V(UnitX_)/Si2No_V(UnitElectric_)
 
           ! The ionosphere currents will need recalculation, so deallocate them
-          if(allocated(jPedersen_DII)) deallocate(jPedersen_DII)
+          if(allocated(PedersenJ_DII)) deallocate(PedersenJ_DII)
        case default
           call stop_mpi(NameSub//' unknown variable='//NameVar_I(iVar))
        end select

@@ -449,7 +449,7 @@ contains
     use ModAdvectPoints, ONLY: advect_all_points, advect_points
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
          part_steady_select, part_steady_switch
-    use ModImplicit, ONLY: UseImplicit, n_prev, UseSemiImplicit
+    use ModImplicit, ONLY: UseImplicit, nStepPrev, UseSemiImplicit
     use ModSemiImplicit, ONLY: advance_semi_impl
     use ModIeCoupling, ONLY: apply_ie_velocity
     use ModImCoupling, ONLY: apply_im_pressure
@@ -666,7 +666,7 @@ contains
        if(.not.DoAutoRefine) nRefineLevel = nRefineLevel + 1
 
        ! BDF2 scheme should not use previous step after AMR
-       n_prev = -100
+       nStepPrev = -100
 
        ! Do AMR without full initial message passing
        call prepare_amr(DoFullMessagePass=.false., TypeAmr='all')

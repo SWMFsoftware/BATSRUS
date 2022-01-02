@@ -28,12 +28,13 @@ module ModImCoupling
   ! The number of iM pressures obtained so far
   integer, public :: iNewPIm = 0
 
-  real, public, allocatable   :: IM_lat(:), IM_lon(:)
-  !$acc declare create(IM_lat, IM_lon)
-  real, public, allocatable :: ImP_CV(:,:,:), ImRho_CV(:,:,:), ImPpar_CV(:,:,:)
-  !$acc declare create(ImP_CV, ImRho_CV, ImPpar_CV)
-  real, public, allocatable :: IM_bmin(:,:)
-  !$acc declare create(IM_bmin)
+  real, public, allocatable :: ImLat_I(:), ImLon_I(:)
+  !$acc declare create(ImLat_I, ImLon_I)
+  real, public, allocatable :: &
+       ImP_III(:,:,:), ImRho_III(:,:,:), ImPpar_III(:,:,:)
+  !$acc declare create(ImP_III, ImRho_III, ImPpar_III)
+  real, public, allocatable :: ImBmin_II(:,:)
+  !$acc declare create(ImBmin_II)
 
   logical, public, allocatable :: IsImRho_I(:), IsImP_I(:), IsImPpar_I(:)
   !$acc declare create(IsImRho_I, IsImP_I, IsImPpar_I)
@@ -73,7 +74,7 @@ contains
 
     integer, intent(in):: iSizeIn, jSizeIn ! size of iM grid
 
-    integer:: iDensity
+    integer:: iDens
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'im_pressure_init'
@@ -82,19 +83,19 @@ contains
     iSize = iSizeIn
     jSize = jSizeIn
     allocate(&
-         IM_lat(iSize), &
-         IM_lon(jSize), &
-         ImP_CV(iSize,jSize,nFluid), &
+         ImLat_I(iSize), &
+         ImLon_I(jSize), &
+         ImP_III(iSize,jSize,nFluid), &
          IsImP_I(nFluid), IsImPpar_I(nFluid))
 
     if (UseMultiSpecies) then
-       allocate(ImRho_CV(iSize,jSize,nSpecies+1), IsImRho_I(nSpecies+1))
+       allocate(ImRho_III(iSize,jSize,nSpecies+1), IsImRho_I(nSpecies+1))
     else
-       allocate(ImRho_CV(iSize,jSize,nFluid), IsImRho_I(nFluid))
+       allocate(ImRho_III(iSize,jSize,nFluid), IsImRho_I(nFluid))
     endif
 
-    allocate(ImPpar_CV(iSize,jSize,nFluid), &
-         IM_bmin(iSize,jSize))
+    allocate(ImPpar_III(iSize,jSize,nFluid), &
+         ImBmin_II(iSize,jSize))
 
     ! Set array of density indexes:
     ! nSpecies for multispecies, nFluid for multifluid
@@ -104,8 +105,8 @@ contains
        ! first density with multispecies is the total
        iDens_I(1) = Rho_
        ! subsequent densities are the species
-       do iDensity = 2, nDensity
-          iDens_I(iDensity) = SpeciesFirst_+iDensity-2
+       do iDens = 2, nDensity
+          iDens_I(iDens) = SpeciesFirst_+iDens-2
        enddo
     else
        nDensity = nFluid ! nIons
@@ -154,7 +155,7 @@ contains
 
     real    :: BminIm_C(1:nI, 1:nJ, 1:nK), b_D(3)
 
-    integer :: i,j,k, iFluid, n, iLat1,iLat2, iLon1,iLon2, iDensity
+    integer :: i,j,k, iFluid, n, iLat1,iLat2, iLon1,iLon2, iDens
 
     real :: Lat,Lon, LatWeight1,LatWeight2, LonWeight1,LonWeight2
     real :: LatMaxIm, LatMinIm
@@ -180,8 +181,8 @@ contains
     ! end if
 
     ! Maximum latitude (ascending or descending) of the iM grid
-    LatMaxIm = max(IM_lat(1), IM_lat(iSize))
-    LatMinIm = min(IM_lat(1), IM_lat(iSize))
+    LatMaxIm = max(ImLat_I(1), ImLat_I(iSize))
+    LatMinIm = min(ImLat_I(1), ImLat_I(iSize))
 
     ! Determine if iM grid is defined in the north or south
     if (LatMaxIm < 0.0) then
@@ -226,61 +227,62 @@ contains
              Lon = Trace_DSNB(2,1,i,j,k,iBlock)
           endif
 
-          if (IM_lat(1) > IM_lat(2)) then
-             ! IM_lat is in descending order
+          if (ImLat_I(1) > ImLat_I(2)) then
+             ! ImLat_I is in descending order
              do iLat1 = 2, iSize
-                if(Lat > IM_lat(iLat1)) EXIT
+                if(Lat > ImLat_I(iLat1)) EXIT
              end do
              iLat2 = iLat1-1
-             LatWeight1 = (Lat - IM_lat(iLat2))/(IM_lat(iLat1) - IM_lat(iLat2))
+             LatWeight1 = &
+                  (Lat - ImLat_I(iLat2))/(ImLat_I(iLat1) - ImLat_I(iLat2))
              LatWeight2 = 1 - LatWeight1
           else
              ! iM lat is in ascending order
              do iLat1 = 2, iSize
-                if(Lat < IM_lat(iLat1)) EXIT
+                if(Lat < ImLat_I(iLat1)) EXIT
              end do
              iLat2 = iLat1-1
              LatWeight1 = &
-                  (Lat - IM_lat(iLat2))/(IM_lat(iLat1) - IM_lat(iLat2))
+                  (Lat - ImLat_I(iLat2))/(ImLat_I(iLat1) - ImLat_I(iLat2))
              LatWeight2 = 1 - LatWeight1
           endif
 
-          ! Note: IM_lon is in ascending order
-          if(Lon < IM_lon(1)) then
+          ! Note: ImLon_I is in ascending order
+          if(Lon < ImLon_I(1)) then
              ! periodic before 1
              iLon1 = 1
              iLon2 = jSize
-             LonWeight1 =     (Lon           + 360 - IM_lon(iLon2)) &
-                  /           (IM_lon(iLon1) + 360 - IM_lon(iLon2))
-          elseif(Lon > IM_lon(jSize)) then
+             LonWeight1 =     (Lon           + 360 - ImLon_I(iLon2)) &
+                  /           (ImLon_I(iLon1) + 360 - ImLon_I(iLon2))
+          elseif(Lon > ImLon_I(jSize)) then
              ! periodic after jSize
              iLon1 = 1
              iLon2 = jSize
-             LonWeight1 = (Lon                 - IM_lon(iLon2)) &
-                  /       (IM_lon(iLon1) + 360 - IM_lon(iLon2))
+             LonWeight1 = (Lon                 - ImLon_I(iLon2)) &
+                  /       (ImLon_I(iLon1) + 360 - ImLon_I(iLon2))
           else
              do iLon1 = 2, jSize
-                if(Lon < IM_lon(iLon1)) EXIT
+                if(Lon < ImLon_I(iLon1)) EXIT
              end do
              iLon2 = iLon1-1
-             LonWeight1 = (Lon           - IM_lon(iLon2)) &
-                  /       (IM_lon(iLon1) - IM_lon(iLon2))
+             LonWeight1 = (Lon           - ImLon_I(iLon2)) &
+                  /       (ImLon_I(iLon1) - ImLon_I(iLon2))
           end if
           LonWeight2 = 1 - LonWeight1
 
           if(DoCoupleImDensity) then
-             DENSITY: do iDensity=1,nDensity
+             DENSITY: do iDens = 1, nDensity
                 ! check if density is available from iM, if not cycle to next
-                if (.not. IsImRho_I(iDensity)) CYCLE DENSITY
-                if(  ImRho_CV(iLat1,iLon1,iDensity) > 0.0 .and. &
-                     ImRho_CV(iLat2,iLon1,iDensity) > 0.0 .and. &
-                     ImRho_CV(iLat1,iLon2,iDensity) > 0.0 .and. &
-                     ImRho_CV(iLat2,iLon2,iDensity) > 0.0) then
-                   RhoIm_ICB(iDensity,i,j,k,iBlock) = Si2No_V(UnitRho_)*( &
-                        LonWeight1*(LatWeight1*ImRho_CV(iLat1,iLon1,iDensity) &
-                        +           LatWeight2*ImRho_CV(iLat2,iLon1,iDensity))&
-                        +LonWeight2*(LatWeight1*ImRho_CV(iLat1,iLon2,iDensity)&
-                        +           LatWeight2*ImRho_CV(iLat2,iLon2,iDensity)))
+                if (.not. IsImRho_I(iDens)) CYCLE DENSITY
+                if(  ImRho_III(iLat1,iLon1,iDens) > 0.0 .and. &
+                     ImRho_III(iLat2,iLon1,iDens) > 0.0 .and. &
+                     ImRho_III(iLat1,iLon2,iDens) > 0.0 .and. &
+                     ImRho_III(iLat2,iLon2,iDens) > 0.0) then
+                   RhoIm_ICB(iDens,i,j,k,iBlock) = Si2No_V(UnitRho_)*( &
+                        LonWeight1*(LatWeight1*ImRho_III(iLat1,iLon1,iDens) &
+                        +           LatWeight2*ImRho_III(iLat2,iLon1,iDens))&
+                        +LonWeight2*(LatWeight1*ImRho_III(iLat1,iLon2,iDens)&
+                        +           LatWeight2*ImRho_III(iLat2,iLon2,iDens)))
                 end if
              end do DENSITY
           endif
@@ -288,32 +290,32 @@ contains
           FLUID: do iFluid=1,nFluid
              ! check if fluid is available from iM, if not cycle to next
              if (.not. IsImP_I(iFluid)) CYCLE FLUID
-             if(  ImP_CV(iLat1,iLon1,iFluid) > 0.0 .and. &
-                  ImP_CV(iLat2,iLon1,iFluid) > 0.0 .and. &
-                  ImP_CV(iLat1,iLon2,iFluid) > 0.0 .and. &
-                  ImP_CV(iLat2,iLon2,iFluid) > 0.0) then
+             if(  ImP_III(iLat1,iLon1,iFluid) > 0.0 .and. &
+                  ImP_III(iLat2,iLon1,iFluid) > 0.0 .and. &
+                  ImP_III(iLat1,iLon2,iFluid) > 0.0 .and. &
+                  ImP_III(iLat2,iLon2,iFluid) > 0.0) then
 
                 pIm_ICB(iFluid,i,j,k,iBlock) = Si2No_V(UnitP_)*( &
-                     LonWeight1*( LatWeight1*ImP_CV(iLat1,iLon1,iFluid) &
-                     +            LatWeight2*ImP_CV(iLat2,iLon1,iFluid) ) + &
-                     LonWeight2*( LatWeight1*ImP_CV(iLat1,iLon2,iFluid) &
-                     +            LatWeight2*ImP_CV(iLat2,iLon2,iFluid) ) )
+                     LonWeight1*( LatWeight1*ImP_III(iLat1,iLon1,iFluid) &
+                     +            LatWeight2*ImP_III(iLat2,iLon1,iFluid) ) + &
+                     LonWeight2*( LatWeight1*ImP_III(iLat1,iLon2,iFluid) &
+                     +            LatWeight2*ImP_III(iLat2,iLon2,iFluid) ) )
 
                 if(UseAnisoPressure) then
                    ! Parallel pressure at minimum B
                    if(DoAnisoPressureIMCoupling .and. IsImPpar_I(iFluid) )then
                       PparIm_ICB(iFluid,i,j,k,iBlock) = Si2No_V(UnitP_)*( &
                            LonWeight1* &
-                           ( LatWeight1*ImPpar_CV(iLat1,iLon1,iFluid) &
-                           + LatWeight2*ImPpar_CV(iLat2,iLon1,iFluid) ) + &
+                           ( LatWeight1*ImPpar_III(iLat1,iLon1,iFluid) &
+                           + LatWeight2*ImPpar_III(iLat2,iLon1,iFluid) ) + &
                            LonWeight2* &
-                           ( LatWeight1*ImPpar_CV(iLat1,iLon2,iFluid) &
-                           + LatWeight2*ImPpar_CV(iLat2,iLon2,iFluid) ))
+                           ( LatWeight1*ImPpar_III(iLat1,iLon2,iFluid) &
+                           + LatWeight2*ImPpar_III(iLat2,iLon2,iFluid) ))
                       BminIm_C(i,j,k) = Si2No_V(UnitB_)*( &
-                           LonWeight1*(LatWeight1*IM_bmin(iLat1,iLon1) &
-                           +           LatWeight2*IM_bmin(iLat2,iLon1) ) + &
-                           LonWeight2*(LatWeight1*IM_bmin(iLat1,iLon2) &
-                           +           LatWeight2*IM_bmin(iLat2,iLon2) ) )
+                           LonWeight1*(LatWeight1*ImBmin_II(iLat1,iLon1) &
+                           +           LatWeight2*ImBmin_II(iLat2,iLon1) ) + &
+                           LonWeight2*(LatWeight1*ImBmin_II(iLat1,iLon2) &
+                           +           LatWeight2*ImBmin_II(iLat2,iLon2) ) )
                    end if
 
                    if(.not. DoAnisoPressureIMCoupling &
@@ -350,7 +352,7 @@ contains
                    ! Go from low to high lat and find first unset field line
                    ! !! WHAT ABOUT ASCENDING VS DESCENDING ORDER FOR LAT???
                    do n = iSize,1,-1
-                      if(ImP_CV(n,iLon1,iFluid) < 0.0) EXIT
+                      if(ImP_III(n,iLon1,iFluid) < 0.0) EXIT
                    enddo
                    ! Make sure n does not go below 1
                    n = max(1, n)
@@ -358,7 +360,7 @@ contains
                    ! No adjustment at the unset line, full adjustment
                    ! if latitude difference exceeds dLatSmoothIm
                    TauCoeffIm_CB(i,j,k,iBlock) = min( 1.0, &
-                        abs(IM_lat(n) - IM_lat(iLat1))/dLatSmoothIm)
+                        abs(ImLat_I(n) - ImLat_I(iLat1))/dLatSmoothIm)
                 end if
              end if
           end do FLUID
@@ -376,8 +378,8 @@ contains
           end do
 
           if(DoCoupleImDensity) then
-             do iDensity = 1, nDensity
-                RhoIm_ICB(iDensity,i,j,k,iBlock) = PolarRho_I(iDensity)
+             do iDens = 1, nDensity
+                RhoIm_ICB(iDens,i,j,k,iBlock) = PolarRho_I(iDens)
              end do
           end if
        end if
@@ -407,7 +409,7 @@ contains
     real :: InvRho, Rho
 
     ! integer :: iIonSecond, nIons
-    integer :: i, j, k, iBlock, iFluid, iDensity
+    integer :: i, j, k, iBlock, iFluid, iDens
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'apply_im_pressure'
@@ -532,15 +534,15 @@ contains
              ! APPLY_DENS:
              !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                do iDensity = 1,nDensity
-                   if (.not. IsImRho_I(iDensity)) CYCLE
-                   if(RhoIm_ICB(iDensity,i,j,k,iBlock) <= 0.0 ) CYCLE
+                do iDens = 1,nDensity
+                   if (.not. IsImRho_I(iDens)) CYCLE
+                   if(RhoIm_ICB(iDens,i,j,k,iBlock) <= 0.0 ) CYCLE
                    ! Here iDens_I can index multiple species or fluids
-                   State_VGB(iDens_I(iDensity),i,j,k,iBlock) = max( RhoMinIm, &
-                        State_VGB(iDens_I(iDensity),i,j,k,iBlock) &
+                   State_VGB(iDens_I(iDens),i,j,k,iBlock) = max( RhoMinIm, &
+                        State_VGB(iDens_I(iDens),i,j,k,iBlock) &
                         + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
-                        * (RhoIm_ICB(iDensity,i,j,k,iBlock) &
-                        - State_VGB(iDens_I(iDensity),i,j,k,iBlock)))
+                        * (RhoIm_ICB(iDens,i,j,k,iBlock) &
+                        - State_VGB(iDens_I(iDens),i,j,k,iBlock)))
                 end do
              end do; end do; end do
           end if
@@ -575,14 +577,14 @@ contains
           if(DoCoupleImDensity)then
              !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1,nI ! APPLY_DENS2
-                do iDensity = 1,nDensity
-                   if (.not. IsImRho_I(iDensity)) CYCLE
-                   if(RhoIm_ICB(iDensity,i,j,k,iBlock) <= 0.0) CYCLE
+                do iDens = 1,nDensity
+                   if (.not. IsImRho_I(iDens)) CYCLE
+                   if(RhoIm_ICB(iDens,i,j,k,iBlock) <= 0.0) CYCLE
 
-                   State_VGB(iDens_I(iDensity),i,j,k,iBlock) = &
+                   State_VGB(iDens_I(iDens),i,j,k,iBlock) = &
                         max(RhoMinIm, Factor*( &
-                        TauCoupleIM*State_VGB(iDens_I(iDensity),i,j,k,iBlock)&
-                        + RhoIm_ICB(iDensity,i,j,k,iBlock)))
+                        TauCoupleIM*State_VGB(iDens_I(iDens),i,j,k,iBlock)&
+                        + RhoIm_ICB(iDens,i,j,k,iBlock)))
                 end do
              end do; end do; end do
 

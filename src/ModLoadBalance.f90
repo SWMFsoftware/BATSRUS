@@ -14,7 +14,7 @@ module ModLoadBalance
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxIJK
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data, clean_block_data
-  use ModImplicit, ONLY: UseImplicit, UseBDF2, n_prev, ImplOld_VCB
+  use ModImplicit, ONLY: UseImplicit, UseBDF2, nStepPrev, ImplOld_VCB
   use ModPointImplicit, ONLY: UseUserPointImplicit_B, &
        DoBalancePointImplicit, IsDynamicPointImplicit
   use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
@@ -82,7 +82,7 @@ contains
     if(UseConstrainB) nBuffer = nBuffer + 3*MaxIJK
     if(DoSendRay) &
          nBuffer = nBuffer + 6*nIJK
-    if(UseImplicit .and. UseBDF2 .and. n_prev > 0) &
+    if(UseImplicit .and. UseBDF2 .and. nStepPrev > 0) &
          nBuffer = nBuffer + nVar*nIJK
     if(DoMoveExtraData)then
        if(UseB0) nBuffer = nBuffer + 3*MaxIJK
@@ -151,7 +151,7 @@ contains
 
     end if ! DoMoveExtraData
 
-    if(UseImplicit .and. UseBDF2 .and. n_prev > 0)then
+    if(UseImplicit .and. UseBDF2 .and. nStepPrev > 0)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar; iData = iData+1
           Buffer_I(iData) = ImplOld_VCB(iVar,i,j,k,iBlock)
        end do; end do; end do; end do
@@ -223,7 +223,7 @@ contains
        end if
     end if ! DoMoveExtraData
 
-    if(UseImplicit .and. UseBDF2 .and. n_prev > 0)then
+    if(UseImplicit .and. UseBDF2 .and. nStepPrev > 0)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
           iData = iData+1
           ImplOld_VCB(iVar,i,j,k,iBlock) = Buffer_I(iData)
@@ -614,7 +614,7 @@ contains
          SkippedBlock_, ExplBlock_, ImplBlock_
     use ModGeometry, ONLY : rMin_B
     use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
-         ImplCritType, ExplCFL, rImplicit
+         TypeImplCrit, ExplCFL, rImplicit
     use ModIO,       ONLY: write_prefix, iUnitOut
     use ModB0,       ONLY: set_b0_face
     use ModMpi
@@ -673,11 +673,11 @@ contains
             iTypeAdvance_B(1:nBlockMax) = ExplBlock_
 
        ! Select implicitly treated blocks
-       select case(ImplCritType)
+       select case(TypeImplCrit)
        case('dt')
           ! Just checking
           if(.not.IsTimeAccurate)call stop_mpi(&
-               'ImplCritType=dt is only valid in IsTimeAccurate mode')
+               'TypeImplCrit=dt is only valid in IsTimeAccurate mode')
 
           ! Set implicitBLK based on the time step.
           do iBlock=1,nBlockMax

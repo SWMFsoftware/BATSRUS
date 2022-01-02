@@ -41,7 +41,7 @@ module GM_couple_im
   integer :: nCells_D(2), iSize,jSize
 
   ! Information about the iM grid: 2D non-uniform regular grid
-  real, allocatable, dimension(:) :: IM_lat, IM_lon
+  real, allocatable, dimension(:) :: ImLat_I, ImLon_I
 
   integer :: i,j, i0
 
@@ -97,7 +97,7 @@ contains
     DoExtractUnitSi = .true.
 
     call integrate_field_from_sphere(&
-         iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, NameVar)
+         iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, NameVar)
 
     call line_get(nVarLine, nPointLine)
 
@@ -513,11 +513,11 @@ contains
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
     if(.not. DoMultiFluidIMCoupling)then
        call integrate_field_from_sphere(&
-            iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
+            iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
     else
        call integrate_field_from_sphere(&
-            iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
+            iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,HpRhoInvB,OpRhoInvB,HppInvB,OppInvB')
        ! but not pass Rhoinvb, Pinvb to iM
     end if
@@ -720,8 +720,8 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR')
     end if
 
-    if(.not.allocated(IM_lat))then
-       ! Allocate IM_lat, IM_lon, IM_p, IM_dens
+    if(.not.allocated(ImLat_I))then
+       ! Allocate ImLat_I, ImLon_I, IM_p, IM_dens
        call im_pressure_init(iSizeIn, jSizeIn)
        ! Set up iM ionospheric grid and store.
        ! Latitude specification is module specific, we must set it up
@@ -730,7 +730,7 @@ contains
        call get_comp_info(IM_, NameVersion=NameVersionIm)
        if(NameVersionIm(1:3) == 'RAM')then
           ! HEIDI and RAM-SCB have similar equatorial grids.
-          IM_lat = Grid_C(IM_) % Coord1_I
+          ImLat_I = Grid_C(IM_) % Coord1_I
 
           ! Coupling with RAM/HEIDI grid requires accurate raytrace
           ! that stops at the equator
@@ -739,9 +739,9 @@ contains
        else
           ! RCM uses a CoLat based grid, information is stored in
           ! module grid information.
-          IM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
+          ImLat_I = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
        end if
-       IM_lon = Grid_C(IM_)% Coord2_I * cRadToDeg
+       ImLon_I = Grid_C(IM_)% Coord2_I * cRadToDeg
     end if
 
     ! initialize
@@ -750,10 +750,10 @@ contains
     IsImPpar_I(:) = .false.
 
     ! Store iM variable for internal use
-    ImP_CV     (:,:,1) = Buffer_IIV(:,:,pres_)
+    ImP_III     (:,:,1) = Buffer_IIV(:,:,pres_)
  !   IM_p    = Buffer_IIV(:,:,pres_)
 
-    ImRho_CV     (:,:,1) = Buffer_IIV(:,:,dens_)
+    ImRho_III     (:,:,1) = Buffer_IIV(:,:,dens_)
 !    IM_dens = Buffer_IIV(:,:,dens_)
     iNewPIm  = iNewPIm + 1
 
@@ -764,20 +764,20 @@ contains
     ! for multifluid
     if(DoMultiFluidIMCoupling)then
        if (UseMultiSpecies) then
-          ImRho_CV(:,:,2)= Buffer_IIV(:,:,Hdens_)
+          ImRho_III(:,:,2)= Buffer_IIV(:,:,Hdens_)
           !       IM_Hpdens = Buffer_IIV(:,:,Hdens_)
-          ImRho_CV(:,:,3)= Buffer_IIV(:,:,Odens_)
+          ImRho_III(:,:,3)= Buffer_IIV(:,:,Odens_)
           !       IM_Opdens = Buffer_IIV(:,:,Odens_)
           IsImRho_I(:)  = .true.
           ! IsImRho_I(1)  = .false.
        else
-          ImP_CV(:,:,1)= Buffer_IIV(:,:,Hpres_)
+          ImP_III(:,:,1)= Buffer_IIV(:,:,Hpres_)
           !       IM_Hpp = Buffer_IIV(:,:,Hpres_)
-          ImP_CV(:,:,2)= Buffer_IIV(:,:,Opres_)
+          ImP_III(:,:,2)= Buffer_IIV(:,:,Opres_)
           !       IM_Opp = Buffer_IIV(:,:,Opres_)
-          ImRho_CV(:,:,1)= Buffer_IIV(:,:,Hdens_)
+          ImRho_III(:,:,1)= Buffer_IIV(:,:,Hdens_)
           !       IM_Hpdens = Buffer_IIV(:,:,Hdens_)
-          ImRho_CV(:,:,2)= Buffer_IIV(:,:,Odens_)
+          ImRho_III(:,:,2)= Buffer_IIV(:,:,Odens_)
           !       IM_Opdens = Buffer_IIV(:,:,Odens_)
           IsImRho_I(:)  = .true.
           IsImP_I(:)    = .true.
@@ -787,15 +787,15 @@ contains
 
     ! for anisotropic pressure
     if(DoAnisoPressureIMCoupling)then
-       ImPpar_CV(:,:,1)= Buffer_IIV(:,:,Opres_)
+       ImPpar_III(:,:,1)= Buffer_IIV(:,:,Opres_)
 !       IM_ppar = Buffer_IIV(:,:,parpres_)
-       IM_bmin = Buffer_IIV(:,:,bmin_)
+       ImBmin_II = Buffer_IIV(:,:,bmin_)
        IsImPpar_I(1) = .true.
     end if
 
-    !$acc update device(IM_lat, IM_lon)
-    !$acc update device(ImP_CV, ImRho_CV, ImPpar_CV)
-    !$acc update device(IM_bmin)
+    !$acc update device(ImLat_I, ImLon_I)
+    !$acc update device(ImP_III, ImRho_III, ImPpar_III)
+    !$acc update device(ImBmin_II)
     !$acc update device(IsImRho_I, IsImP_I, IsImPpar_I)
 
 !    if(DoTest)call write_IMvars_tec  ! TecPlot output
@@ -831,11 +831,11 @@ contains
 !            j=j2; if(j2==jSizeIn+1) j=1
 !            lonShift=0.; if(j2==jSizeIn+1) lonShift=360.
 !            if(DoMultiFluidIMCoupling)then
-!               write(UNITTMP_,'(2i4,8G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
+!               write(UNITTMP_,'(2i4,8G14.6)') j2,i,ImLon_I(j)+lonShift,ImLat_I(i), &
 !                    IM_p(i,j),IM_dens(i,j), &
 !                    IM_Hpp(i,j),IM_Hpdens(i,j),IM_Opp(i,j), IM_Opdens(i,j)
 !            else
-!               write(UNITTMP_,'(2i4,4G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
+!               write(UNITTMP_,'(2i4,4G14.6)') j2,i,ImLon_I(j)+lonShift,ImLat_I(i), &
 !                    IM_p(i,j),IM_dens(i,j)
 !            endif
 !         end do
@@ -865,11 +865,11 @@ contains
 !         do j=1,jSizeIn
 !            if(DoMultiFluidIMCoupling)then
 !               write(UNITTMP_,'(100(1pe18.10))') &
-!                    IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j), &
+!                    ImLon_I(j),ImLat_I(i),IM_p(i,j),IM_dens(i,j), &
 !                    IM_Hpp(i,j), IM_Hpdens(i,j), IM_Opp(i,j), IM_Opdens(i,j)
 !            else
 !               write(UNITTMP_,'(100(1pe18.10))') &
-!                    IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j)
+!                    ImLon_I(j),ImLat_I(i),IM_p(i,j),IM_dens(i,j)
 !            endif
 !         end do
 !      end do
@@ -928,8 +928,8 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR')
     end if
 
-    if(.not.allocated(IM_lat))then
-       ! Allocate IM_lat, IM_lon, IM_p, IM_dens
+    if(.not.allocated(ImLat_I))then
+       ! Allocate ImLat_I, ImLon_I, IM_p, IM_dens
        call im_pressure_init(iSizeIn, jSizeIn)
        ! Set up iM ionospheric grid and store.
        ! Latitude specification is module specific, we must set it up
@@ -938,7 +938,7 @@ contains
        call get_comp_info(IM_, NameVersion=NameVersionIm)
        if(NameVersionIm(1:3) == 'RAM')then
           ! HEIDI and RAM-SCB have similar equatorial grids.
-          IM_lat = Grid_C(IM_) % Coord1_I
+          ImLat_I = Grid_C(IM_) % Coord1_I
 
           ! Coupling with RAM/HEIDI grid requires accurate raytrace
           ! that stops at the equator
@@ -947,9 +947,9 @@ contains
        else
           ! RCM uses a CoLat based grid, information is stored in
           ! module grid information.
-          IM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
+          ImLat_I = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
        end if
-       IM_lon = Grid_C(IM_)% Coord2_I * cRadToDeg
+       ImLon_I = Grid_C(IM_)% Coord2_I * cRadToDeg
     end if
 
     allocate(NameVarIm_V(nVarIm-1))
@@ -1038,33 +1038,33 @@ contains
 
     do iDensity=1,nDensity
        if (IsImRho_I(iDensity)) then
-          ImRho_CV     (:,:,iDensity) = Buffer_IIV(:,:,iRhoIm_I(iDensity))
+          ImRho_III     (:,:,iDensity) = Buffer_IIV(:,:,iRhoIm_I(iDensity))
        else
-          ImRho_CV     (:,:,iDensity) = -1.0
+          ImRho_III     (:,:,iDensity) = -1.0
        endif
     enddo
 
     do iFluid=1,nFluid
        if (IsImP_I(iFluid)) then
-          ImP_CV     (:,:,iFluid) = Buffer_IIV(:,:,iPIm_I(iFluid))
+          ImP_III     (:,:,iFluid) = Buffer_IIV(:,:,iPIm_I(iFluid))
           iNewPIm  = iNewPIm + 1
        else
-          ImP_CV     (:,:,iFluid) = -1.0
+          ImP_III     (:,:,iFluid) = -1.0
        endif
 
        if (IsImPpar_I(iFluid) .and. DoAnisoPressureIMCoupling) then
-          ImPpar_CV     (:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
+          ImPpar_III     (:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
        else
-          ImPpar_CV     (:,:,iFluid) = -1.0
+          ImPpar_III     (:,:,iFluid) = -1.0
        endif
 
     enddo
     ! for anisotropic pressure
     if(DoAnisoPressureIMCoupling)then
-       IM_bmin = Buffer_IIV(:,:,nVarIm)
+       ImBmin_II = Buffer_IIV(:,:,nVarIm)
     end if
-!    write(*,*) 'GM max min ppar',maxval(ImPpar_CV),minval(ImPpar_CV)
-!    write(*,*) 'GM max min p',maxval(ImP_CV),minval(ImP_CV)
+!    write(*,*) 'GM max min ppar',maxval(ImPpar_III),minval(ImPpar_III)
+!    write(*,*) 'GM max min p',maxval(ImP_III),minval(ImP_III)
 
     if(DoTest)call write_IMvars_tec  ! TecPlot output
     if(DoTest)call write_IMvars_idl  ! IDL     output
@@ -1118,12 +1118,12 @@ contains
             j=j2; if(j2==jSizeIn+1) j=1
             lonShift=0.; if(j2==jSizeIn+1) lonShift=360.
             if(DoMultiFluidIMCoupling)then
-               write(UNITTMP_,'(2i4,8G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
-                    ImP_CV(i,j,1),ImRho_CV(i,j,1), &
-                    ImP_CV(i,j,2),ImRho_CV(i,j,2),ImP_CV(i,j,3), ImRho_CV(i,j,3)
+               write(UNITTMP_,'(2i4,8G14.6)') j2,i,ImLon_I(j)+lonShift,ImLat_I(i), &
+                    ImP_III(i,j,1),ImRho_III(i,j,1), &
+                    ImP_III(i,j,2),ImRho_III(i,j,2),ImP_III(i,j,3), ImRho_III(i,j,3)
             else
-               write(UNITTMP_,'(2i4,4G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
-                    ImP_CV(i,j,1),ImRho_CV(i,j,1)
+               write(UNITTMP_,'(2i4,4G14.6)') j2,i,ImLon_I(j)+lonShift,ImLat_I(i), &
+                    ImP_III(i,j,1),ImRho_III(i,j,1)
             endif
          end do
       end do
@@ -1153,11 +1153,11 @@ contains
          do j=1,jSizeIn
             if(DoMultiFluidIMCoupling)then
                write(UNITTMP_,'(100(1pe18.10))') &
-                    IM_lon(j),IM_lat(i),ImP_CV(i,j,1),ImRho_CV(i,j,1), &
-                    ImP_CV(i,j,2), ImRho_CV(i,j,2),ImP_CV(i,j,3),ImRho_CV(i,j,3)
+                    ImLon_I(j),ImLat_I(i),ImP_III(i,j,1),ImRho_III(i,j,1), &
+                    ImP_III(i,j,2), ImRho_III(i,j,2),ImP_III(i,j,3),ImRho_III(i,j,3)
             else
                write(UNITTMP_,'(100(1pe18.10))') &
-                    IM_lon(j),IM_lat(i),ImP_CV(i,j,1),ImRho_CV(i,j,1)
+                    ImLon_I(j),ImLat_I(i),ImP_III(i,j,1),ImRho_III(i,j,1)
             endif
          end do
       end do
@@ -1197,7 +1197,7 @@ contains
     iSize = iSizeIn
     jSize = jSizeIn
 
-    if(.not.allocated(IM_lat))then
+    if(.not.allocated(ImLat_I))then
        nCells_D=ncell_id(IM_)
        if(  iSize /= nCells_D(1) .or. &
             jSize /= nCells_D(2) ) then
@@ -1205,10 +1205,10 @@ contains
                iSize,jSize, nCells_D(1:2)
           call CON_stop(NameSub//' ERROR')
        end if
-       allocate(IM_lat(iSize), IM_lon(jSize))
+       allocate(ImLat_I(iSize), ImLon_I(jSize))
        ! Convert colat, lon to lat-lon in degrees
-       IM_lat = 90.0 - Grid_C(IM_) % Coord1_I * cRadToDeg
-       IM_lon =        Grid_C(IM_) % Coord2_I * cRadToDeg
+       ImLat_I = 90.0 - Grid_C(IM_) % Coord1_I * cRadToDeg
+       ImLon_I =        Grid_C(IM_) % Coord2_I * cRadToDeg
     end if
 
     ! Arrays needed for the field line Integral_I
@@ -1301,7 +1301,7 @@ contains
           tmpV2=0.; if(MHD_SUM_vol(i,j)>0.) &
                tmpV2 = (MHD_SUM_vol(i,j)/1.e9)**(-2./3.)
           if(DoMultiFluidIMCoupling)then
-             write(UNITTMP_,'(2i4,18G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i),&
+             write(UNITTMP_,'(2i4,18G14.6)') j2,i,ImLon_I(j)+lonShift,ImLat_I(i),&
                   MHD_lat_boundary(j), &
                   MHD_Xeq(i,j),MHD_Yeq(i,j), &
                   tmpV1,tmpV2, &
@@ -1309,7 +1309,7 @@ contains
                   MHD_Oprho(i,j), MHD_Opp(i,j), tmpOpT,MHD_Beq(i,j), &
                   MHD_Fluxerror(i,j)
           else
-             write(UNITTMP_,'(2i4,12G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i),&
+             write(UNITTMP_,'(2i4,12G14.6)') j2,i,ImLon_I(j)+lonShift,ImLat_I(i),&
                   MHD_lat_boundary(j), &
                   MHD_Xeq(i,j),MHD_Yeq(i,j), &
                   tmpV1,tmpV2, &
@@ -1346,8 +1346,8 @@ contains
     do i=isize,1,-1
        do j=1,jsize
           write(UNITTMP_,'(100(1pe18.10))') &
-               IM_lon(j),       &
-               IM_lat(i),       &
+               ImLon_I(j),       &
+               ImLat_I(i),       &
                MHD_Xeq(i,j),     &
                MHD_Yeq(i,j),     &
                MHD_SUM_vol(i,j), &
@@ -1357,8 +1357,8 @@ contains
                MHD_FluxError(i,j)
        end do
        write(UNITTMP_,'(100(1pe18.10))') &
-            IM_lon(1)+360.0, &
-            IM_lat(i),       &
+            ImLon_I(1)+360.0, &
+            ImLat_I(i),       &
             MHD_Xeq(i,1),     &
             MHD_Yeq(i,1),     &
             MHD_SUM_vol(i,1), &
@@ -1401,7 +1401,7 @@ contains
     Ri=(6378.+100.)/6378.
     Factor = 2. * (Ri**4) / abs(Bdp)
     do i=1,isize
-       Colat = (90.0 - IM_lat(i))*cDegToRad
+       Colat = (90.0 - ImLat_I(i))*cDegToRad
        s2    = sin(colat)**2
        s6    = s2**3
        s8    = s6*s2
@@ -1444,8 +1444,8 @@ contains
              MHD_SUM_vol(i,:)=Vol
 
              ! Fix the grid inside Rbody
-             MHD_Xeq(i,:) = (Ri/s2)*cos(IM_lon(:)*cDegToRad)
-             MHD_Yeq(i,:) = (Ri/s2)*sin(IM_lon(:)*cDegToRad)
+             MHD_Xeq(i,:) = (Ri/s2)*cos(ImLon_I(:)*cDegToRad)
+             MHD_Yeq(i,:) = (Ri/s2)*sin(ImLon_I(:)*cDegToRad)
 
              ! Fix the equatorial B value
              MHD_Beq(i,:) = eqB
@@ -1469,11 +1469,11 @@ contains
     end do
 
     ! find index for latitude closest to equator
-    iLoc_I   = minloc(abs(IM_lat))
+    iLoc_I   = minloc(abs(ImLat_I))
     iEquator = iLoc_I(1)
 
     ! find index for latitude closest to north pole
-    iLoc_I = maxloc(IM_lat)
+    iLoc_I = maxloc(ImLat_I)
     iNorthPole = iLoc_I(1)
 
     iEquator = iEquator + sign(1, iNorthPole - iEquator)
@@ -1575,9 +1575,9 @@ contains
                   *(MHD_Yeq(i,j+1)-MHD_Yeq(i+1,j+1)) &
                   -(MHD_Yeq(i+1,j)-MHD_Yeq(i+1,j+1)) &
                   *(MHD_Xeq(i,j+1)-MHD_Xeq(i+1,j+1))))/&
-                  (ABS(DipoleStrengthSi)*(SIN(Im_lat(i)*cDegToRad)**2 &
-                  -SIN(Im_lat(i+1)*cDegToRad)**2)* &
-                  (IM_lon(j+1)-IM_lon(j))*cDegToRad )- 1.0
+                  (ABS(DipoleStrengthSi)*(SIN(ImLat_I(i)*cDegToRad)**2 &
+                  -SIN(ImLat_I(i+1)*cDegToRad)**2)* &
+                  (ImLon_I(j+1)-ImLon_I(j))*cDegToRad )- 1.0
           ELSE
              MHD_Fluxerror (i,j) = 0.0
           END IF

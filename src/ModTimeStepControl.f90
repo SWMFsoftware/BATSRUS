@@ -618,7 +618,7 @@ contains
        tSimulation = tSimulation - Dt*No2Si_V(UnitT_)
        Dt = 0.0
        ! Do not use previous step in BDF2 scheme
-       ! !! n_prev = -1
+       ! !! nStepPrev = -1
        ! Reset the state variable, the energy and set DtMax_CB variable to 0
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE

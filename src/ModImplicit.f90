@@ -107,26 +107,26 @@ module ModImplicit
   logical :: IsImplicitUpdate = .false.
 
   ! Parameters for selecting implicit blocks
-  character (len=10) :: ImplCritType = 'dt'
+  character (len=10) :: TypeImplCrit = 'dt'
   real               :: Rimplicit
 
   ! Second order in time implicit scheme (uses previous time step)
   logical:: UseBDF2 = .false.
 
   ! Time step when the previous state was stored
-  integer :: n_prev=-100
+  integer :: nStepPrev=-100
 
   ! Previous (n-1) state
   real, allocatable :: ImplOld_VCB(:,:,:,:,:)
 
   ! Previous time step
-  real ::  dt_prev = -1.0
+  real ::  DtPrev = -1.0
 
   ! CFL number for explicit scheme
   real :: ExplCfl = 0.8
 
   ! Implicit scheme
-  character(len=10) :: FluxTypeImpl = 'default' ! same as explicit
+  character(len=10) :: TypeFluxImpl = 'default' ! same as explicit
 
 end module ModImplicit
 !==============================================================================

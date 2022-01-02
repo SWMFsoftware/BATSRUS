@@ -2465,8 +2465,8 @@ contains
 
        case("#NPREVIOUS")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nPrev',n_prev)
-          call read_var('DtPrev',dt_prev)
+          call read_var('nPrev',nStepPrev)
+          call read_var('DtPrev',DtPrev)
 
        case("#STARTTIME", "#SETREALTIME")
           if(.not.is_first_session())CYCLE READPARAM
@@ -2924,7 +2924,7 @@ contains
 
       ! Default implicit parameters
       UseImplicit      = .false.
-      ImplCritType     = 'dt'
+      TypeImplCrit     = 'dt'
 
       UseDivbSource   =  UseB .and. nDim > 1
       UseDivbDiffusion= .false.
@@ -3192,36 +3192,36 @@ contains
       end select
 
       ! Check flux type selection for implicit
-      select case(FluxTypeImpl)
+      select case(TypeFluxImpl)
       case('default')
-         FluxTypeImpl = TypeFlux
+         TypeFluxImpl = TypeFlux
       case('ROE','Roe')
-         FluxTypeImpl='Roe'
+         TypeFluxImpl='Roe'
       case('ROEOLD','RoeOld')
-         FluxTypeImpl='RoeOld'
+         TypeFluxImpl='RoeOld'
       case('RUSANOV','TVDLF','Rusanov')
-         FluxTypeImpl='Rusanov'
+         TypeFluxImpl='Rusanov'
       case('LINDE','HLLEL','Linde')
-         FluxTypeImpl='Linde'
+         TypeFluxImpl='Linde'
       case('SOKOLOV','AW','Sokolov')
-         FluxTypeImpl='Sokolov'
+         TypeFluxImpl='Sokolov'
       case('GODUNOV','Godunov')
-         FluxTypeImpl='Godunov'
+         TypeFluxImpl='Godunov'
       case('HLLD', 'HLLDW', 'LFDW', 'HLLC')
       case default
          if(iProc==0)then
             write(*,'(a)')NameSub// &
-                 ' WARNING: Unknown value for FluxTypeImpl='// &
-                 trim(FluxTypeImpl)//' !!!'
+                 ' WARNING: Unknown value for TypeFluxImpl='// &
+                 trim(TypeFluxImpl)//' !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
-            write(*,*)NameSub//' setting FluxTypeImpl=',trim(TypeFlux)
+            write(*,*)NameSub//' setting TypeFluxImpl=',trim(TypeFlux)
          end if
-         FluxTypeImpl=TypeFlux
+         TypeFluxImpl=TypeFlux
       end select
 
       ! Check flux types
-      if( (TypeFlux(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe' .or. &
-           TypeFlux=='HLLD' .or.  FluxTypeImpl=='HLLD') .and. &
+      if( (TypeFlux(1:3)=='Roe' .or. TypeFluxImpl(1:3)=='Roe' .or. &
+           TypeFlux=='HLLD' .or.  TypeFluxImpl=='HLLD') .and. &
            (UseMultiIon .or. UseAlfvenWaves .or. UseWavePressure &
            .or. .not.UseB) )then
          if (iProc == 0) then
@@ -3232,11 +3232,11 @@ contains
          end if
          if(TypeFlux(1:3)=='Roe' .or. TypeFlux=='HLLD') &
               TypeFlux     = 'Linde'
-         if(FluxTypeImpl(1:3)=='Roe' .or. FluxTypeImpl=='HLLD') &
-              FluxTypeImpl = 'Linde'
+         if(TypeFluxImpl(1:3)=='Roe' .or. TypeFluxImpl=='HLLD') &
+              TypeFluxImpl = 'Linde'
       end if
 
-      if((TypeFlux=='Godunov' .or. FluxTypeImpl=='Godunov') &
+      if((TypeFlux=='Godunov' .or. TypeFluxImpl=='Godunov') &
            .and. UseB)then
          if (iProc == 0) then
             write(*,'(a)')NameSub//&
@@ -3245,7 +3245,7 @@ contains
             write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
          end if
          if(TypeFlux=='Godunov')     TypeFlux     = 'Linde'
-         if(FluxTypeImpl=='Godunov') FluxTypeImpl = 'Linde'
+         if(TypeFluxImpl=='Godunov') TypeFluxImpl = 'Linde'
       end if
 
       if(i_line_command("#IMPLSTEP") < 0) &
@@ -3375,7 +3375,7 @@ contains
       end if
 
       ! Boris correction checks
-      if((TypeFlux(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe') &
+      if((TypeFlux(1:3)=='Roe' .or. TypeFluxImpl(1:3)=='Roe') &
            .and. UseBorisCorrection)then
          if (iProc == 0) then
             write(*,'(a)')NameSub//&
@@ -3418,10 +3418,10 @@ contains
          end if
       end if
 
-      if(UsePartImplicit .and. ImplCritType=='dt' .and.&
+      if(UsePartImplicit .and. TypeImplCrit=='dt' .and.&
            (.not.IsTimeAccurate .or. .not.UseDtFixed))then
          if(iProc==0)then
-            write(*,'(a)')'Part implicit scheme with ImplCritType=dt'
+            write(*,'(a)')'Part implicit scheme with TypeImplCrit=dt'
             write(*,'(a)')'requires time accurate run with fixed time step'
             call stop_mpi('Correct PARAM.in')
          end if
