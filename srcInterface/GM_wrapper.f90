@@ -395,7 +395,7 @@ contains
     !--------------------------------------------------------------------------
     if( NameRestartOutDirComp /= '') NameRestartOutDir = NameRestartOutDirComp
 
-    call BATS_save_files('IsRestart')
+    call BATS_save_files('RESTART')
 
   end subroutine GM_save_restart
   !============================================================================

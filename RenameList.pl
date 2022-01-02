@@ -260,12 +260,12 @@
     #Xyz_tmp => Xyz_D,
 
     ### ModImCoupling
-    #IM_lat => ImLat_I,
-    #IM_lon => ImLon_I,
-    #IM_bmin => ImBmin_II,
-    #ImP_CV => ImP_III,
-    #ImRho_CV => ImRho_III,
-    #ImPpar_CV => ImPpar_III,
+    IM_lat => ImLat_I,
+    IM_lon => ImLon_I,
+    IM_bmin => ImBmin_II,
+    ImP_CV => ImP_III,
+    ImRho_CV => ImRho_III,
+    ImPpar_CV => ImPpar_III,
 
     ### ModImplicit
     #ImplCritType => TypeImplCrit,

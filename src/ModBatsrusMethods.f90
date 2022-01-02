@@ -230,7 +230,7 @@ contains
 
       ! Read initial data from restart files as necessary.
       if(IsRestart)then
-         call user_action('reading IsRestart files')
+         call user_action('reading restart files')
          call read_restart_files
          ! Transform velocities from a rotating system to the HGI system
          ! if required: add/subtract rho*(omega x r) to/from the momentum
