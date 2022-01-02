@@ -3706,7 +3706,7 @@ contains
   end subroutine limiter_body
   !============================================================================
   subroutine limiter(lMin, lMax, Beta, Primitive_VI,dVarLimL_VI,dVarLimR_VI)
-    
+
     integer, intent(in):: lMin, lMax
     real,    intent(in):: Beta
     real, intent(inout):: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
