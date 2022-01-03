@@ -420,11 +420,24 @@
     #RayVars => Trace_DSC,
 
     ### ModSetParameters
-    plot_string => StringPlot,
-    log_string => StringLog,
-    plot_area => TypePlotArea,
-    plot_var => TypePlotVar,
-    TimingDepth => nDepthTiming,
-    TimingStyle => TypeTiming,
-    iVarSmoothReal_V => RealIVarSmooth_V,
+    #plot_string => StringPlot,
+    #log_string => StringLog,
+    #plot_area => TypePlotArea,
+    #plot_var => TypePlotVar,
+    #TimingDepth => nDepthTiming,
+    #TimingStyle => TypeTiming,
+    #iVarSmoothReal_V => RealIVarSmooth_V,
+
+    ### ModThreadedLC
+    #M_VVI => Main_VVI,
+    #L_VVI => Lower_VVI,
+    #U_VVI => Upper_VVI,
+    #R_VI => Res_VI,
+    #W_VI => Weight_VI,
+    #Major_ => iMajor,
+    #Minor_ => iMinor,
+    #tridiag_3by3_block => tridiag_block33,
+
+    
+    
     );
