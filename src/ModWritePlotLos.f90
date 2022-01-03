@@ -514,9 +514,9 @@ contains
           write(UnitTmp_,'(a,a,a)') &
                'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
 
-          ! NameLosTable_I
+          ! NAMELOSTABLE
           if (UseTableGen) write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA NameLosTable_I="',trim(NameLosTable_I(iFile)),'"'
+               'AUXDATA NAMELOSTABLE="',trim(NameLosTable_I(iFile)),'"'
 
           ! HGIXYZ
           write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
@@ -542,7 +542,7 @@ contains
           call close_file
        else
           ! description of file contains units, physics and dimension
-          StringHeadLine = 'LOS Integral_I'
+          StringHeadLine = 'LOS integrals'
           ! Write Auxilliary header info, which is useful for EUV images.
           ! Makes it easier to identify, and automatically process synthetic
           ! images from different instruments/locations
@@ -567,8 +567,8 @@ contains
           !      '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
 
           if (UseTableGen) then
-             ! NameLosTable_I
-             StringHeadLine = trim(StringHeadLine)//' NameLosTable_I='//&
+             ! NAMELOSTABLE_I
+             StringHeadLine = trim(StringHeadLine)//' NAMELOSTABLE='//&
                   NameLosTable_I(iFile)
           endif
 
@@ -1669,7 +1669,7 @@ contains
             if(R2Point2 < rInner2) Point2_D = Solution1_D
             ! Weird case: the segment cuts the inner sphere
             if(IsGoodSolution1 .and. IsGoodSolution2)then
-               ! Need to do two Integral_I:
+               ! Need to do two integrals:
                ! from point1 to solution1 and
                ! from point2 to solution2
                if(Discr > 0.0)then
