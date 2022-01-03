@@ -31,7 +31,7 @@ module ModPlotShell
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
   ! Same, but for a single grid point
-  real :: PlotVar_V(nPlotVarMax)
+  real :: PlotVar_V(MaxPlotvar)
 
   ! Coordinate conversion matrix
   real:: PlotToGm_DD(3,3)
@@ -40,7 +40,7 @@ module ModPlotShell
   logical :: UseThreadedGap = .false.
   !
 
-  character (len=20) :: NamePlotVar_V(nPlotVarMax) = ''
+  character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
 contains
   !============================================================================
@@ -64,7 +64,7 @@ contains
     if(allocated(PlotVar_VIII)) RETURN
 
     StringPlotVar = StringPlotVar_I(iFile)
-    call split_string(StringPlotVar, nPlotVarMax, NamePlotVar_V, nPlotVar, &
+    call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar, &
          UseArraySyntaxIn=.true.)
 
     ! Get plot area info from ModIO arrays:

@@ -106,7 +106,7 @@ contains
 
     real ::     eqpar(neqparmax)
     character (len=20) :: eqparnames(neqparmax)
-    character (len=20) :: plotvarnames(nPlotVarLosMax)
+    character (len=20) :: plotvarnames(MaxPlotvarLos)
     character (len=20) :: NameVar
 
     integer :: nEqpar, nPlotVar
@@ -162,7 +162,7 @@ contains
     ! variables for reading in a generalized table
     logical :: UseTableGen = .false.
     integer :: iTableGen = -1
-    character (len=20) :: TableVarNames(nPlotVarLosMax)
+    character (len=20) :: TableVarNames(MaxPlotvarLos)
     integer :: nTableVar
     real, allocatable :: InterpValues_I(:)
 
@@ -274,7 +274,7 @@ contains
          ' form = ',TypePlotFormat_I(ifile)
 
     call lower_case(StringPlotVar)
-    call split_string(StringPlotVar, nPlotVarLosMax, plotvarnames, nPlotVar)
+    call split_string(StringPlotVar, MaxPlotvarLos, plotvarnames, nPlotVar)
     call set_plot_scalars(iFile,nEqparMax, nEqpar,eqparnames, Eqpar)
     ! Initialize table IDs. In this case automatically
     ! UseTableGen = (iTableGen >=0) and analogously for other table
@@ -288,7 +288,7 @@ contains
        if (iTableGen <=0) &
             call stop_mpi('Need to load #LOOKUPTABLE for TBL response!')
        ! split the variable list string read in the table
-       call split_string(Table_I(iTableGen)%NameVar, nPlotVarLosMax, &
+       call split_string(Table_I(iTableGen)%NameVar, MaxPlotvarLos, &
             TableVarNames, nTableVar)
        ! don't count the x and y table labels as plot variables
        nPlotVar=nTableVar-2

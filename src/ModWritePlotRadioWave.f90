@@ -28,7 +28,7 @@ contains
     use ModIO, ONLY: StringRadioFrequency_I, TypePlot, &
          TypePlot_I, TypePlotFormat_I, plot_, ObsPos_DI, &
          nPixelX_I, nPixelY_I, xSizeImage_I, ySizeImage_I, &
-         NamePlotDir, StringDateOrTime, nPlotRfrFreqMax
+         NamePlotDir, StringDateOrTime, MaxPlotRadioFreq
     use ModUtilities, ONLY: open_file, close_file
     use ModIoUnit, ONLY: UnitTmp_
     use ModPlotFile, ONLY: save_plot_file
@@ -74,9 +74,9 @@ contains
     !  Number of frequencies read from StringRadioFrequency_I(iFile)
     integer :: nFreq
     ! Frequencies in Hertz:
-    real               :: RadioFrequency_I(nPlotRfrFreqMax)
+    real               :: RadioFrequency_I(MaxPlotRadioFreq)
 
-    character (LEN=20) :: NameVar_I(nPlotRfrFreqMax)
+    character (LEN=20) :: NameVar_I(MaxPlotRadioFreq)
     ! The result of the emissivity integration
     real, allocatable, dimension(:,:,:) :: Intensity_IIV
     ! Loop variables
@@ -279,15 +279,15 @@ contains
 
   subroutine parse_freq_string(NameVarAll, Frequency_I, NameVar_I, nFreq)
 
-    use ModIO, ONLY: nPlotRfrFreqMax
+    use ModIO, ONLY: MaxPlotRadioFreq
 
     ! INPUT
     ! String read from PARAM.in, like '1500kHz, 11MHz, 42.7MHz, 1.08GHz'
 
     character(len=*), intent(in) :: NameVarAll
-    real,    intent(out) :: Frequency_I(nPlotRfrFreqMax)
+    real,    intent(out) :: Frequency_I(MaxPlotRadioFreq)
     integer, intent(out) :: nFreq
-    character(len=*), intent(out) :: NameVar_I(nPlotRfrFreqMax)
+    character(len=*), intent(out) :: NameVar_I(MaxPlotRadioFreq)
     character(len=50) :: cTmp, NameFreqUnit
     integer :: iFreq, lNameVarAll, iChar, iTmp
     logical:: DoTest

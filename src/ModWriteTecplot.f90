@@ -88,12 +88,12 @@ contains
          r_, Phi_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
     use ModNumConst, ONLY: cPi, cHalfPi
-    use ModIO,     ONLY: nPlotVarMax, DoSaveOneTecFile, DoSaveTecBinary
+    use ModIO,     ONLY: MaxPlotvar, DoSaveOneTecFile, DoSaveTecBinary
     use ModIoUnit, ONLY: UnitTmp_
     use ModKind, ONLY: Real4_
 
     integer, intent(in):: iBlock, nPlotVar
-    real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotvarMax)
+    real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
 
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     integer:: iRecData
@@ -1091,8 +1091,8 @@ contains
     ! Arguments
     integer, intent(in) :: ifile, nPlotVar
     character (LEN=1000), intent(in) :: unitstr_TEC
-    real, intent(in) :: PlotVarBLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVarMax)
-    real, intent(in) :: PlotVarNodes_VNB(nPlotVarMax,nI+1,nJ+1,nK+1,nBlock)
+    real, intent(in) :: PlotVarBLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real, intent(in) :: PlotVarNodes_VNB(MaxPlotvar,nI+1,nJ+1,nK+1,nBlock)
     real, intent(in) :: PlotXYZNodes_DNB(3,nI+1,nJ+1,nK+1,nBlock)
     real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
     integer, intent(in) :: iUnit

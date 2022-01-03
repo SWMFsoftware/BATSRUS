@@ -11,7 +11,7 @@ module ModPlotBox
 #endif
   use ModIO, ONLY: PlotDx_DI, PlotRange_EI, PlotNormal_DI, TypeCoordPlot_I, &
        TypePlotFormat_I, TypeFile_I, TypePlot_I, ObsPos_DI, IsObsBox_I, &
-       nPlotVarMax, StringPlotVar, DimFactor_V, StringPlotVar_I
+       MaxPlotvar, StringPlotVar, DimFactor_V, StringPlotVar_I
   use ModNumConst,        ONLY: cDegToRad, cTwoPi
   use ModCoordTransform,  ONLY: xyz_to_lonlat
 
@@ -38,13 +38,13 @@ module ModPlotBox
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
   ! Same, but for a single grid point
-  real :: PlotVar_V(nPlotVarMax)
+  real :: PlotVar_V(MaxPlotvar)
 
   ! Coordinate conversion matrix
   real :: PlotToGm_DD(3,3)
   real :: Rot_DD(3,3)
 
-  character (len=20) :: NamePlotVar_V(nPlotVarMax) = ''
+  character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
 contains
   !============================================================================
@@ -73,7 +73,7 @@ contains
     if(allocated(PlotVar_VIII)) RETURN
 
     StringPlotVar = StringPlotVar_I(iFile)
-    call split_string(StringPlotVar, nPlotVarMax, NamePlotVar_V, nPlotVar, &
+    call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar, &
          UseArraySyntaxIn=.true.)
 
     ! Get box resolution, center and size from ModIO arrays:

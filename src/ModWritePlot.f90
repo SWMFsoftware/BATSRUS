@@ -61,17 +61,17 @@ contains
     integer, parameter:: lNameVar = 10
 
     ! Plot variables
-    real :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nplotvarmax)
-    real :: PlotVarBlk(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nplotvarmax)
-    real :: PlotVar_inBody(nplotvarmax)
-    logical :: PlotVar_useBody(nplotvarmax)
+    real :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real :: PlotVarBlk(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real :: PlotVar_inBody(MaxPlotvar)
+    logical :: PlotVar_useBody(MaxPlotvar)
     real, allocatable :: PlotVarNodes_VNB(:,:,:,:,:)
     real, allocatable :: PlotXYZNodes_DNB(:,:,:,:,:)
     real, allocatable :: PlotVar_VGB(:,:,:,:,:)
 
-    character (len=lNameVar) :: plotvarnames(nplotvarmax) = ''
+    character (len=lNameVar) :: plotvarnames(MaxPlotvar) = ''
     integer :: nplotvar
-    character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
+    character(len=lNameVar) :: NamePlotUnit_V(MaxPlotvar)
 
     ! True for shell / box plots and tcp cuts
     logical:: DoPlotShell, DoPlotBox, DoPassPlotVar
@@ -144,7 +144,7 @@ contains
          (TypePlot(1:3)=='3d_' .and. TypePlotFormat_I(iFile)=='tec' &
          .or. TypePlotFormat_I(iFile)=='tcp')
 
-    call split_string(StringPlotVar, nplotvarmax, plotvarnames, nplotvar,    &
+    call split_string(StringPlotVar, MaxPlotvar, plotvarnames, nplotvar,    &
          UseArraySyntaxIn=.true.)
 
     call set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
@@ -528,17 +528,17 @@ contains
     if(TypePlotFormat_I(iFile)=='tec')then
 
        if(.not.allocated(PlotVarNodes_VNB)) then
-          allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBlock))
+          allocate(PlotVarNodes_VNB(MaxPlotvar,nI+1,nJ+1,nK+1,nBlock))
           PlotVarNodes_VNB = 0.0
        end if
 
        ! Pass and average the plot variables
        ! Do not average at pseudo-periodic boundaries
-       call message_pass_node(nPlotvarMax, PlotVarNodes_VNB, &
+       call message_pass_node(MaxPlotvar, PlotVarNodes_VNB, &
             NameOperatorIn='Mean', UsePeriodicCoordIn = .not.IsCartesianGrid)
 
        do iBlock = 1, nBlock; if(Unused_B(iBlock)) CYCLE
-          call average_grid_node(iBlock, nPlotvarMax, &
+          call average_grid_node(iBlock, MaxPlotvar, &
                PlotVarNodes_VNB(:,:,:,:,iBlock))
        end do
 
@@ -755,12 +755,12 @@ contains
     subroutine plotvar_to_plotvarnodes
 
       integer :: ii,jj,kk
-      integer :: nCell_NV(nI+1,nJ+1,nK+1,nPlotvarMax)
-      real    :: PlotVar_NV(nI+1,nJ+1,nK+1,nPlotvarMax)
+      integer :: nCell_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
+      real    :: PlotVar_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
       real    :: r2, r2Min
       !------------------------------------------------------------------------
       if(.not.allocated(PlotVarNodes_VNB)) then
-         allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBlock))
+         allocate(PlotVarNodes_VNB(MaxPlotvar,nI+1,nJ+1,nK+1,nBlock))
          PlotVarNodes_VNB = 0.0
       end if
 

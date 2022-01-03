@@ -206,7 +206,10 @@
     #IntegerMetaData => IntMetaData_I,
     #FFV => Ffv_,
 
-    ### MODIO
+    ### ModIO
+    nPlotvarLosMax => MaxPlotvarLos,
+    nPlotRfrFreqMax => MaxPlotRadioFreq,
+    nPlotvarMax => MaxPlotvar,
     #restart => IsRestart,
     #restart_Bface => DoRestartBface,
     #save_plots_amr => DoSavePlotsAmr,

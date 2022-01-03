@@ -22,7 +22,7 @@ contains
 
     use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, Coord111_DB
     use ModIO,       ONLY: DoSaveBinary, TypePlot, PlotDx_DI, PlotRange_EI, &
-         nPlotVarMax
+         MaxPlotvar
     use ModNumConst, ONLY: cPi, cTwoPi
     use ModKind,     ONLY: nByteReal
     use ModIoUnit,   ONLY: UnitTmp_
