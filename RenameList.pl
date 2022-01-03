@@ -409,14 +409,22 @@
     #qd => d_GB,
 
     ### ModSatellite
-    FilenameSat_I => NameFileSat_I,
-    TimeSat_I => TypeTimeSat_I,
-    iCurrent_satellite_position => iPointCurrentSat_I,
-    satellite_var => NameSatVar,
-    set_NameFile => set_name_file,
-    FilenameOutSat => NameFileOutSat,
-    dtime => dTime,
-    Xvect => XyzSat_D,
-    RayVars => Trace_DSC,
-    
+    #FilenameSat_I => NameFileSat_I,
+    #TimeSat_I => TypeTimeSat_I,
+    #iCurrent_satellite_position => iPointCurrentSat_I,
+    #satellite_var => NameSatVar,
+    #set_NameFile => set_name_file,
+    #FilenameOutSat => NameFileOutSat,
+    #dtime => dTime,
+    #Xvect => XyzSat_D,
+    #RayVars => Trace_DSC,
+
+    ### ModSetParameters
+    plot_string => StringPlot,
+    log_string => StringLog,
+    plot_area => TypePlotArea,
+    plot_var => TypePlotVar,
+    TimingDepth => nDepthTiming,
+    TimingStyle => TypeTiming,
+    iVarSmoothReal_V => RealIVarSmooth_V,
     );

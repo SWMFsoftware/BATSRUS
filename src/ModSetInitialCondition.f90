@@ -103,11 +103,14 @@ contains
                 do iFluid = 1, nFluid
                    if(nFluid > 1) call select_fluid(iFluid)
                    State_VGB(iRhoUx,i,j,k,iBlock) = &
-                        FaceState_VI(iUx,iBoundary)*FaceState_VI(iRho,iBoundary)
+                        FaceState_VI(iUx,iBoundary) &
+                        *FaceState_VI(iRho,iBoundary)
                    State_VGB(iRhoUy,i,j,k,iBlock) = &
-                        FaceState_VI(iUy,iBoundary)*FaceState_VI(iRho,iBoundary)
+                        FaceState_VI(iUy,iBoundary) &
+                        *FaceState_VI(iRho,iBoundary)
                    State_VGB(iRhoUz,i,j,k,iBlock) = &
-                        FaceState_VI(iUz,iBoundary)*FaceState_VI(iRho,iBoundary)
+                        FaceState_VI(iUz,iBoundary) &
+                        *FaceState_VI(iRho,iBoundary)
                 end do
 
              elseif(.not.UseShockTube)then
