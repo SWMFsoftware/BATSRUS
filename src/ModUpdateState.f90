@@ -6,7 +6,7 @@ module ModUpdateState
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
-       iProcTest, iVarTest, iProc, iComm, Used_GB, CellVolume_GB, Xyz_DGB
+       iVarTest, iComm, Used_GB, CellVolume_GB, Xyz_DGB
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
 
   implicit none
@@ -36,7 +36,7 @@ contains
     use ModBuffer,     ONLY: fix_buffer_grid
 
     integer, intent(in) :: iBlock
-    integer :: iVar, iFluid, i, j, k
+    integer :: iVar, i, j, k
     integer, parameter:: iGang=1
 
     logical:: DoTest
@@ -67,12 +67,12 @@ contains
        write(*,'(2x,a,es23.15)')'source=',&
             Source_VC(iVarTest,iTest,jTest,kTest)
        write(*,'(2x,a,es23.15)')'fluxes=', &
-            +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)  &
-            -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)                         &
-            +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)                           &
-            -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)                         &
-            +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)                           &
-            -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)  )                      &
+            +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
+            -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
+            +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
+            -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)   &
+            +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
+            -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) ) &
             /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
     end if
 
@@ -112,7 +112,7 @@ contains
     use ModVarIndexes, ONLY: pe_, p_
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
          IsDynamicPointImplicit, update_point_implicit
-    use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
+    use ModMultiIon, ONLY: multi_ion_source_impl, &
          multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
     use ModEnergy, ONLY: energy_to_pressure, pressure_to_energy, limit_pressure
     use ModWaves, ONLY: nWave, WaveFirst_,WaveLast_, &
@@ -123,7 +123,7 @@ contains
     use ModUserInterface
     use ModBuffer,      ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, &
-         ion_electron_init_point_impl, HypEDecay
+         HypEDecay
     use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoUxIon_I, iRhoUyIon_I, &
          iRhoUzIon_I, iPIon_I, nIonFluid, UseNeutralFluid, DoConserveNeutrals
 
@@ -133,7 +133,7 @@ contains
     integer, parameter:: iGang=1
 
     ! These variables have to be double precision for accurate Boris scheme
-    real:: DtLocal, DtFactor, Coeff, SourceIonEnergy_I(nIonFluid)
+    real:: DtLocal, DtFactor, SourceIonEnergy_I(nIonFluid)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
@@ -207,7 +207,6 @@ contains
          (UseSingleIonVelocity .or. UseSingleIonTemperature)) then
 
        call fix_multi_ion_update(iBlock)
-       ! write(*,*) NameSub,' !!! call limit_pressure after fix_multi_ion_update'
        call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
 
        if(DoTest)write(*,'(2x,2a,15es20.12)') &
@@ -580,14 +579,14 @@ contains
     end subroutine update_explicit
     !==========================================================================
     subroutine deduct_expl_source()
-      integer:: iVarSemi_
+      integer:: iVarSemi
 
       character(len=*), parameter:: NameSub = 'deduct_expl_source'
       !------------------------------------------------------------------------
       if(UseElectronPressure) then
-         iVarSemi_  = pe_
+         iVarSemi  = pe_
       else
-         iVarSemi_ = p_
+         iVarSemi = p_
       endif
 
       do k=1,nK; do j=1,nJ; do i=1,nI
@@ -595,11 +594,11 @@ contains
 
          ! For the first iteration, dt = 0;
          ! if(DtLocal < 1e-15) CYCLE
-         Source_VCB(iVarSemi_,i,j,k,iBlock) = &
-              State_VGB(iVarSemi_,i,j,k,iBlock) - &
-              StateOld_VGB(iVarSemi_,i,j,k,iBlock)
-         State_VGB(iVarSemi_,i,j,k,iBlock) = &
-              StateOld_VGB(iVarSemi_,i,j,k,iBlock)
+         Source_VCB(iVarSemi,i,j,k,iBlock) = &
+              State_VGB(iVarSemi,i,j,k,iBlock) - &
+              StateOld_VGB(iVarSemi,i,j,k,iBlock)
+         State_VGB(iVarSemi,i,j,k,iBlock) = &
+              StateOld_VGB(iVarSemi,i,j,k,iBlock)
       end do; end do; end do
 
     end subroutine deduct_expl_source
@@ -646,35 +645,31 @@ contains
     ! Check updated values for allowed change in density or pressure
 
     use ModMain
-    use ModBorisCorrection, ONLY: UseBorisCorrection
     use ModImplicit, ONLY: UsePartImplicit
     use ModAdvance
-    use ModB0, ONLY: B0_DGB
     use ModPhysics
     use ModNumConst, ONLY: cTiny
     use ModMpi
-    use ModMultiFluid, ONLY: IsMhd
     use ModMultiIon,   ONLY: DoRestrictMultiIon, IsMultiIon_CB
     use ModBatsrusUtility, ONLY: error_report
 
-    integer, parameter :: max_checks=25
-    integer :: i,j,k, iVar, iBlock, num_checks, iError
-    real :: time_fraction_rho, min_time_fraction_rho
-    real :: time_fraction_p,   min_time_fraction_p
-    real :: time_fraction, cell_time_fraction, report_tf, report_tf_all
-    real, dimension(2) :: percent_chg_rho
-    real, dimension(2) :: percent_chg_p
-    real, dimension(4) :: PercentChangePE, PercentChangeMax
+    integer, parameter :: MaxCheck=25, RhoDn_=1, RhoUp_=2, pDn_=3, pUp_=4
+    integer :: i,j,k, iVar, iBlock, nCheck, iError
+    real :: TimeFractionRho, TimeFractionRhoMin
+    real :: TimeFractionP,   TimeFractionPMin
+    real :: TimeFraction, TimeFractionCell, TimeFractionReport
+    real :: RhoChangeLimit_S(RhoDn_:RhoUp_)
+    real :: pChangeLimit_S(pDn_:pUp_), ChangeLimit_I(RhoDn_:pUp_)
 
     real :: Value
     integer :: i_D(3)
-    logical :: update_check_done, IsNegative, DoStop
+    logical :: DoneUpdateCheck, IsNegative, DoStop
     logical :: DoTest1
     logical :: DoTest2
     logical :: DoTest3
 
     real    :: RhoChangeMax_I(2), pChangeMax_I(2)
-    character(len=*), parameter:: format="(a,i5,a,f6.1,a,3es11.3)"
+    character(len=*), parameter:: StringFormat="(a,i5,a,f6.1,a,3es11.3)"
 
     integer :: iError1=-1
 
@@ -689,15 +684,15 @@ contains
 
     ! Check for allowable percentage changed from update
     if(IsTimeAccurate) then
-       report_tf = 1.
-       do num_checks = 1,max_checks
-          percent_chg_rho = 0.1
-          percent_chg_p   = 0.1
+       TimeFractionReport = 1.
+       do nCheck = 1,MaxCheck
+          RhoChangeLimit_S = 0.1
+          pChangeLimit_S   = 0.1
           !$omp parallel do private(iVar, i, j, k) &
-          !$omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
+          !$omp reduction(max:RhoChangeLimit_S) reduction(max:pChangeLimit_S)
           do iBlock = 1, nBlockMax
              if (Unused_B(iBlock)) CYCLE
-             if (num_checks == 1) then
+             if (nCheck == 1) then
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    do iVar = 1, nVar
                       if(DefaultState_V(iVar) == 0.0) CYCLE
@@ -719,26 +714,26 @@ contains
                            < SpeciesPercentCheck*0.01*&
                            StateOld_VGB(Rho_,i,j,k,iBlock)) CYCLE
 
-                      percent_chg_rho(1) = &
-                           max(percent_chg_rho(1), 100*abs( min(0.,&
+                      RhoChangeLimit_S(RhoDn_) = &
+                           max(RhoChangeLimit_S(RhoDn_), 100*abs( min(0.,&
                            (State_VGB(iVar,i,j,k,iBlock)- &
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
                            /StateOld_VGB(iVar,i,j,k,iBlock) ) ) )
-                      percent_chg_rho(2) = &
-                           max(percent_chg_rho(2), 100*abs( max(0.,&
+                      RhoChangeLimit_S(RhoUp_) = &
+                           max(RhoChangeLimit_S(RhoUp_), 100*abs( max(0.,&
                            (State_VGB(iVar,i,j,k,iBlock)- &
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
                            /StateOld_VGB(iVar,i,j,k,iBlock) ) ) )
                    end do
                 end do; end do; end do
              end if
-             percent_chg_p(1) = &
-                  max(percent_chg_p(1), 100. * abs( min( 0., minval( &
+             pChangeLimit_S(pDn_) = &
+                  max(pChangeLimit_S(pDn_), 100. * abs( min( 0., minval( &
                   (State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)- &
                   StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock)) &
                   /StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
-             percent_chg_p(2) = &
-                  max(percent_chg_p(2), 100. * abs( max( 0., maxval( &
+             pChangeLimit_S(pUp_) = &
+                  max(pChangeLimit_S(pUp_), 100. * abs( max( 0., maxval( &
                   (State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)- &
                   StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock)) &
                   /StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
@@ -747,13 +742,14 @@ contains
 
           if(DoTest)then
              ! Find location of maximum change
-             call MPI_allreduce(percent_chg_rho, RhoChangeMax_I, 2, &
+             call MPI_allreduce(RhoChangeLimit_S, RhoChangeMax_I, 2, &
                   MPI_REAL, MPI_MAX, iComm, iError)
-             call MPI_allreduce(percent_chg_p, pChangeMax_I, 2, &
+             call MPI_allreduce(pChangeLimit_S, pChangeMax_I, 2, &
                   MPI_REAL, MPI_MAX, iComm, iError)
 
              !$omp parallel do &
-             !$omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
+             !$omp      reduction(max:RhoChangeLimit_S) &
+             !$omp      reduction(max:pChangeLimit_S)
              do iBlock = 1, nBlockMax
                 if(Unused_B(iBlock)) CYCLE
                 do k=1,nK; do j=1,nJ; do i=1,nI
@@ -772,7 +768,7 @@ contains
                               (   State_VGB(P_,i,j,k,iBlock)- &
                               StateOld_VGB (P_,i,j,k,iBlock)) &
                               /StateOld_VGB(P_,i,j,k,iBlock) ))) &
-                              write(*,format)NameSub//' nStep=',nStep,&
+                              write(*,StringFormat) NameSub//' nStep=',nStep,&
                               ' max p drop=',pChangeMax_I(1),&
                               '% at x,y,z=',&
                               Xyz_DGB(:,i,j,k,iBlock)
@@ -782,7 +778,7 @@ contains
                               (   State_VGB(P_,i,j,k,iBlock)- &
                               StateOld_VGB (P_,i,j,k,iBlock)) &
                               /StateOld_VGB(P_,i,j,k,iBlock)  ))) &
-                              write(*,format)NameSub//' nStep=',nStep,&
+                              write(*,StringFormat) NameSub//' nStep=',nStep,&
                               ' max p increase=',&
                               pChangeMax_I(2), &
                               '% at x,y,z=',&
@@ -796,7 +792,7 @@ contains
                            (State_VGB(iVar,i,j,k,iBlock)- &
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
                            /StateOld_VGB(iVar,i,j,k,iBlock) ))) &
-                           write(*,format)NameSub//' nStep=',nStep,&
+                           write(*,StringFormat) NameSub//' nStep=',nStep,&
                            ' max '//trim(NameVar_V(iVar))//' drop=', &
                            RhoChangeMax_I(1), &
                            '% at x,y,z=',&
@@ -807,7 +803,7 @@ contains
                            (State_VGB(iVar,i,j,k,iBlock)- &
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
                            /StateOld_VGB(iVar,i,j,k,iBlock) ))) &
-                           write(*,format)NameSub//' nStep=',nStep,&
+                           write(*,StringFormat) NameSub//' nStep=',nStep,&
                            ' max '//trim(NameVar_V(iVar))//' increase=',&
                            RhoChangeMax_I(2), &
                            '% at x,y,z=',&
@@ -817,25 +813,25 @@ contains
              end do
              !$omp end parallel do
           end if ! DoTest
-          time_fraction_rho = 1.0 / maxval(percent_chg_rho/PercentRhoLimit_I)
-          call MPI_allreduce(time_fraction_rho, min_time_fraction_rho, 1, &
+          TimeFractionRho = 1.0 / maxval(RhoChangeLimit_S/PercentRhoLimit_I)
+          call MPI_allreduce(TimeFractionRho, TimeFractionRhoMin, 1, &
                MPI_REAL, MPI_MIN, iComm, iError)
-          time_fraction_p   = 1.0 / maxval(percent_chg_p  /percent_max_p  )
-          call MPI_allreduce(time_fraction_p, min_time_fraction_p, 1, &
+          TimeFractionP   = 1.0 / maxval(pChangeLimit_S/percent_max_p  )
+          call MPI_allreduce(TimeFractionP, TimeFractionPMin, 1, &
                MPI_REAL, MPI_MIN, iComm, iError)
-          if(min_time_fraction_rho >= 1. .and. min_time_fraction_p >= 1.) EXIT
+          if(TimeFractionRhoMin >= 1. .and. TimeFractionPMin >= 1.) EXIT
 
-          if(num_checks == 1)then
-             time_fraction = 1.
-             if (min_time_fraction_rho < 1.) &
-                  time_fraction = 0.9*min_time_fraction_rho
-             if (min_time_fraction_p   < 1.) &
-                  time_fraction = min(time_fraction, 0.75)
+          if(nCheck == 1)then
+             TimeFraction = 1.
+             if (TimeFractionRhoMin < 1.) &
+                  TimeFraction = 0.9*TimeFractionRhoMin
+             if (TimeFractionPMin   < 1.) &
+                  TimeFraction = min(TimeFraction, 0.75)
           else
-             time_fraction = 0.5
+             TimeFraction = 0.5
           end if
-          dt = dt * time_fraction
-          report_tf = report_tf*time_fraction
+          dt = dt * TimeFraction
+          TimeFractionReport = TimeFractionReport*TimeFraction
 
           !$omp parallel do private(i,j,k)
           do iBlock = 1, nBlockMax
@@ -843,14 +839,14 @@ contains
 
              ! Fix the update in the cells
              do k=1,nK; do j=1,nJ; do i=1,nI
-                call fix_update(i,j,k,iBlock,time_fraction)
+                call fix_update(i,j,k,iBlock,TimeFraction)
              end do; end do; end do
           end do
           !$omp end parallel do
        end do
 
-       PercentChangePE(1:2) =  percent_chg_rho(1:2) - 0.1
-       PercentChangePE(3:4) =  percent_chg_p(1:2) - 0.1
+       ChangeLimit_I(RhoDn_:RhoUp_) =  RhoChangeLimit_S - 0.1
+       ChangeLimit_I(pDn_:pUp_) =  pChangeLimit_S   - 0.1
 
        ! The part implicit scheme can get here if all blocks become explicit
        ! due to time step reductions. To be able to recover the time step,
@@ -859,28 +855,29 @@ contains
             DtFixed = min(DtFixedOrig, DtFixed*1.05)
 
        if(DoTest) then
-          if (iProc == 0 .and. report_tf < 1.) &
-               write(*,'(a,a,i6,a,f12.8,a,f12.8)') 'update_check TA:', &
-               ' nStep=',nStep,'     dt reduction=',report_tf,' dt=',dt
+          if (iProc == 0 .and. TimeFractionReport < 1.) &
+               write(*,'(a,a,i6,a,f12.8,a,f12.8)') NameSub//' TA:', &
+               ' nStep=', nStep,'     dt reduction=', TimeFractionReport, &
+               ' dt=', dt
        end if
     else
        ! LOCAL TIMESTEPPING
-       report_tf = 1.
-       PercentChangePE = 0.
-       !$omp parallel do private(i,j,k,num_checks,iVar,update_check_done) &
-       !$omp private(time_fraction_rho,time_fraction_p,cell_time_fraction) &
-       !$omp private(time_fraction, percent_chg_rho, percent_chg_p) &
-       !$omp reduction(max:PercentChangePE) &
-       !$omp reduction(min:report_tf)
+       TimeFractionReport = 1.
+       ChangeLimit_I = 0.
+       !$omp parallel do private(i,j,k,nCheck,iVar,DoneUpdateCheck) &
+       !$omp private(TimeFractionRho,TimeFractionP,TimeFractionCell) &
+       !$omp private(TimeFraction, RhoChangeLimit_S, pChangeLimit_S) &
+       !$omp reduction(max:ChangeLimit_I) &
+       !$omp reduction(min:TimeFractionReport)
        do iBlock = 1, nBlockMax
           if(Unused_B(iBlock)) CYCLE
           do k=1,nK; do j=1,nJ; do i=1,nI
-             cell_time_fraction = 1.
-             do num_checks = 1, max_checks
-                update_check_done = .true.
-                percent_chg_rho = 0.1
-                percent_chg_p   = 0.1
-                if (num_checks == 1) then
+             TimeFractionCell = 1.
+             do nCheck = 1, MaxCheck
+                DoneUpdateCheck = .true.
+                RhoChangeLimit_S = 0.1
+                pChangeLimit_S   = 0.1
+                if (nCheck == 1) then
                    do iVar = 1, nVar
                       if (DefaultState_V(iVar) == 0.0) CYCLE
 
@@ -893,46 +890,48 @@ contains
                            SpeciesPercentCheck*0.01*&
                            StateOld_VGB(Rho_,i,j,k,iBlock)) CYCLE
 
-                      percent_chg_rho(1) = max(percent_chg_rho(1), &
+                      RhoChangeLimit_S(RhoDn_) = &
+                           max(RhoChangeLimit_S(RhoDn_), &
                            0.1 + 100. * abs( min( 0., &
                            (State_VGB(iVar,i,j,k,iBlock)-&
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
                            /StateOld_VGB(iVar,i,j,k,iBlock) ) ) )
 
-                      percent_chg_rho(2) = max(percent_chg_rho(2), &
+                      RhoChangeLimit_S(RhoUp_) = &
+                           max(RhoChangeLimit_S(RhoUp_), &
                            0.1 + 100. * abs( max( 0., &
                            (State_VGB(iVar,i,j,k,iBlock)-&
                            StateOld_VGB(iVar,i,j,k,iBlock)) &
                            /StateOld_VGB(iVar,i,j,k,iBlock) ) ) )
                    end do
                 end if
-                percent_chg_p(1) = 0.1 + 100. * abs( min( 0., &
+                pChangeLimit_S(pDn_) = 0.1 + 100. * abs( min( 0., &
                      (State_VGB(P_,i,j,k,iBlock)-&
                      StateOld_VGB(P_,i,j,k,iBlock)) &
                      /StateOld_VGB(P_,i,j,k,iBlock) ) )
-                percent_chg_p(2) = 0.1 + 100. * abs( max( 0., &
+                pChangeLimit_S(pUp_) = 0.1 + 100. * abs( max( 0., &
                      (State_VGB(P_,i,j,k,iBlock)-&
                      StateOld_VGB(P_,i,j,k,iBlock)) &
                      /StateOld_VGB(P_,i,j,k,iBlock) ) )
-                time_fraction_rho = 1/maxval(percent_chg_rho/PercentRhoLimit_I)
-                time_fraction_p   = 1/maxval(percent_chg_p  /percent_max_p  )
-                if (time_fraction_rho < 1. .or. time_fraction_p < 1.) then
-                   if(num_checks == 1) then
-                      time_fraction = 1.
-                      if (time_fraction_rho < 1.) &
-                           time_fraction = 0.9*time_fraction_rho
-                      if (time_fraction_p   < 1.) &
-                           time_fraction = min(time_fraction, 0.75)
+                TimeFractionRho = 1/maxval(RhoChangeLimit_S/PercentRhoLimit_I)
+                TimeFractionP   = 1/maxval(pChangeLimit_S  /percent_max_p  )
+                if (TimeFractionRho < 1. .or. TimeFractionP < 1.) then
+                   if(nCheck == 1) then
+                      TimeFraction = 1.
+                      if (TimeFractionRho < 1.) &
+                           TimeFraction = 0.9*TimeFractionRho
+                      if (TimeFractionP   < 1.) &
+                           TimeFraction = min(TimeFraction, 0.75)
                    else
-                      time_fraction = 0.5
+                      TimeFraction = 0.5
                    end if
-                   update_check_done = .false.
-                   cell_time_fraction = cell_time_fraction * time_fraction
+                   DoneUpdateCheck = .false.
+                   TimeFractionCell = TimeFractionCell * TimeFraction
                    if(DoTest2) then
                       write(*,*) &
-                           'update_check LT: changing cell value, PE=',iProc, &
+                           NameSub,' LT: changing cell value, PE=',iProc, &
                            ' BLK=',iBlock,' i,j,k=',i,' ',j,' ',k, &
-                           '  time_fraction=',time_fraction
+                           '  TimeFraction=',TimeFraction
                       write(*,*) &
                            iProc,' ',iBlock,' ',i,' ',j,' ',k,' OLD:  ', &
                            NameVar_V(1),'=',StateOld_VGB(1,i,j,k,iBlock),&
@@ -943,7 +942,7 @@ contains
                            NameVar_V(1),'=',State_VGB(1,i,j,k,iBlock), &
                            '   ', NameVar_V(nVar),State_VGB(nVar,i,j,k,iBlock)
                    end if
-                   call fix_update(i,j,k,iblock,time_fraction)
+                   call fix_update(i,j,k,iblock,TimeFraction)
                    if(DoTest2) then
                       write(*,*) &
                            iProc,' ',iBlock,' ',i,' ',j,' ',k,' NEW: ', &
@@ -951,35 +950,37 @@ contains
                            '   ',NameVar_V(p_),'=', State_VGB(p_,i,j,k,iBlock)
                    end if
                 end if
-                if(update_check_done) EXIT
+                if(DoneUpdateCheck) EXIT
              end do
-             PercentChangePE(1:2) = &
-                  max(percent_chg_rho(1:2)-0.1, PercentChangePE(1:2))
-             PercentChangePE(3:4) = &
-                  max(percent_chg_p(1:2)-0.1, PercentChangePE(3:4))
-             report_tf = min(report_tf, cell_time_fraction)
+             ChangeLimit_I(RhoDn_:RhoUp_) = &
+                  max(RhoChangeLimit_S(1:2) - 0.1, &
+                  ChangeLimit_I(RhoDn_:RhoUp_))
+             ChangeLimit_I(pDn_:pUp_) = &
+                  max(pChangeLimit_S(pDn_:pUp_) - 0.1, &
+                  ChangeLimit_I(pDn_:pUp_))
+             TimeFractionReport = min(TimeFractionReport, TimeFractionCell)
           end do; end do; end do
        end do
        !$omp end parallel do
 
-       call MPI_allreduce(report_tf, report_tf_all, 1, &
+       if(nProc > 1) call MPI_allreduce(MPI_IN_PLACE, TimeFractionReport, 1, &
             MPI_REAL, MPI_MIN, iComm, iError)
-       report_tf = report_tf_all
+
        if(DoTest) then
-          if (iProc == 0 .and. report_tf < 1.) &
-               write(*,'(a,a,i6,a,f12.8)') 'update_check LT:', &
-               ' nStep=',nStep,' max dt reduction=',report_tf
+          if (iProc == 0 .and. TimeFractionReport < 1.) &
+               write(*,'(a,a,i6,a,f12.8)') NameSub//' LT:', &
+               ' nStep=',nStep,' max dt reduction=',TimeFractionReport
        end if
     end if
 
     if(DoTest1 .and. iStage == nStage) then
-       call MPI_allreduce(PercentChangePE,  PercentChangeMax, 4, &
-            MPI_REAL, MPI_MAX, iComm, iError)
+       if(nProc > 1) call MPI_allreduce(MPI_IN_PLACE, ChangeLimit_I, &
+            4, MPI_REAL, MPI_MAX, iComm, iError)
        if(iProc == 0) then
           write(*,*)'Maximum change in pressure on proc 0:',&
-               - PercentChangeMax(3),' %,   ',  PercentChangeMax(4),' %'
+               - ChangeLimit_I(pDn_),' %,   ',  ChangeLimit_I(pUp_),' %'
           write(*,*) 'Maximum change in other positive variables:', &
-               - PercentChangeMax(1),' %,   ',  PercentChangeMax(2),' %'
+               - ChangeLimit_I(RhoDn_),' %,   ',  ChangeLimit_I(RhoUp_),' %'
        end if
 
        if(DoTest3)then
@@ -992,7 +993,7 @@ contains
                      (State_VGB(Rho_,i,j,k,iBlock)-&
                      StateOld_VGB(Rho_,i,j,k,iBlock)) &
                      /StateOld_VGB(Rho_,i,j,k,iBlock) ) )-&
-                     PercentChangeMax(1)) < cTiny*PercentChangeMax(1))&
+                     ChangeLimit_I(RhoDn_)) < cTiny*ChangeLimit_I(RhoDn_))&
                      write(*,*)'Maximum decrease in density at X Y Z=',&
                      Xyz_DGB(:,i,j,k,iBlock),&
                      ': rho_old = ',StateOld_VGB(Rho_,i,j,k,iBlock),&
@@ -1002,7 +1003,7 @@ contains
                      (State_VGB(Rho_,i,j,k,iBlock)-&
                      StateOld_VGB(Rho_,i,j,k,iBlock)) &
                      /StateOld_VGB(Rho_,i,j,k,iBlock) ) )-&
-                     PercentChangeMax(2)) < cTiny*PercentChangeMax(2))&
+                     ChangeLimit_I(RhoUp_)) < cTiny*ChangeLimit_I(RhoUp_))&
                      write(*,*)'Maximum increase in density at the point',&
                      Xyz_DGB(:,i,j,k,iBlock),&
                      'is: rho_old = ',&
@@ -1013,7 +1014,7 @@ contains
                      (State_VGB(p_,i,j,k,iBlock)-&
                      StateOld_VGB(p_,i,j,k,iBlock)) &
                      /StateOld_VGB(p_,i,j,k,iBlock) ) )-&
-                     PercentChangeMax(3)) < cTiny*PercentChangeMax(3))&
+                     ChangeLimit_I(pDn_)) < cTiny*ChangeLimit_I(pDn_))&
                      write(*,*)'Maximum decrease in',NameVar_V(p_), &
                      'at the point',&
                      Xyz_DGB(:,i,j,k,iBlock),&
@@ -1023,8 +1024,8 @@ contains
                      (State_VGB(p_,i,j,k,iBlock)-&
                      StateOld_VGB(p_,i,j,k,iBlock)) &
                      /StateOld_VGB(p_,i,j,k,iBlock) ) )-&
-                     PercentChangeMax(4)) < cTiny*PercentChangeMax(4))&
-                     write(*,*)'Maximum increase in',NameVar_V(p_), &
+                     ChangeLimit_I(pUp_)) < cTiny*ChangeLimit_I(pUp_))&
+                     write(*,*)'Maximum increase in', NameVar_V(p_), &
                      'at the point',&
                      Xyz_DGB(:,i,j,k,iBlock),&
                      'is: value_old = ',StateOld_VGB(p_,i,j,k,iBlock),&
@@ -1035,9 +1036,9 @@ contains
        end if
     end if
 
-    if(iProc == 0 .and. report_tf < 1.0)&
+    if(iProc == 0 .and. TimeFractionReport < 1.0)&
          call error_report('Time step reduction, min(factor)',&
-         report_tf,iError1,.true.)
+         TimeFractionReport,iError1,.true.)
 
     ! Check for positivity of variables
     IsNegative = .false.
@@ -1073,14 +1074,14 @@ contains
     if(IsNegative)then
        if(IsTimeAccurate)then
           write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8)') &
-               'Negative updated value: PE=',iProc, &
-               'update_check TA:',' nStep=',nStep, &
-               '     dt reduction=',report_tf,' dt=',dt
+               'Negative updated value: PE=', iProc, &
+               NameSub//' TA:',' nStep=', nStep, &
+               '     dt reduction=',TimeFractionReport,' dt=',dt
        else
           write(*,'(a,i4,a,a,i6,a,f12.8)') &
-               'Negative updated value: PE=',iProc, &
-               'update_check LT:',' nStep=',nStep, &
-               ' max dt reduction=',report_tf
+               'Negative updated value: PE=', iProc, &
+               NameSub//' LT:',' nStep=', nStep, &
+               ' max dt reduction=', TimeFractionReport
        end if
     end if
 
@@ -1090,10 +1091,10 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-    subroutine fix_update(i,j,k,iBlock,time_fraction)
+    subroutine fix_update(i,j,k,iBlock,TimeFraction)
 
       integer, intent(in):: i,j,k,iBlock
-      real,    intent(in):: time_fraction
+      real,    intent(in):: TimeFraction
 
       logical, parameter :: DoTestCell = .false.
 
@@ -1103,10 +1104,10 @@ contains
       character(len=*), parameter:: NameSub = 'fix_update'
       !------------------------------------------------------------------------
       State_VGB(:,i,j,k,iBlock) = &
-           (    time_fraction) *    State_VGB(:,i,j,k,iBlock) + &
-           (1.0-time_fraction) * StateOld_VGB(:,i,j,k,iBlock)
+           (    TimeFraction) *    State_VGB(:,i,j,k,iBlock) + &
+           (1.0-TimeFraction) * StateOld_VGB(:,i,j,k,iBlock)
 
-      DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*time_fraction
+      DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*TimeFraction
 
       if(DoTestCell)write(*,*)NameSub,' final state=',State_VGB(:,i,j,k,iBlock)
 

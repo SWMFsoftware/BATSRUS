@@ -196,10 +196,10 @@ module ModUserInterface
 
      end subroutine user_material_properties
 
-     integer function user_block_type(iBlock)
+     integer function i_type_block_user(iBlock)
 
        integer, intent(in), optional:: iBlock
-     end function user_block_type
+     end function i_type_block_user
 
   end interface
 

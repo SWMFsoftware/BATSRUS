@@ -268,7 +268,7 @@ contains
          Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl, find_test_cell
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModTimeStepControl, ONLY: UseMaxTimeStep, DtMax, DtMin
-    use ModUserInterface ! user_action, user_block_type
+    use ModUserInterface ! user_action, i_type_block_user
 
     ! Load balance grid using space filling (Morton) ordering of blocks
     ! Coordinates are moved if DoMoveCoord is true.
@@ -376,7 +376,7 @@ contains
           end if
 
           ! Set number of user defined block types (no iBlock argument)
-          nTypeUser = user_block_type()
+          nTypeUser = i_type_block_user()
           if(nTypeUser > 0)then
              ! User defined block types
              iUserTypeBlock = 2*iCrit    ! first bit of the user types
@@ -447,7 +447,7 @@ contains
 
              if(nTypeUser > 0)then
                 ! Add user type bit(s)
-                iType = iType + iUserTypeBlock*user_block_type(iBlock)
+                iType = iType + iUserTypeBlock*i_type_block_user(iBlock)
              end if
 
              if(UseMaxTimeStep .and. DtMax > DtMin .and. DtMin > 0)then

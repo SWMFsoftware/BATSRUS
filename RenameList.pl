@@ -438,6 +438,7 @@
     #Minor_ => iMinor,
     #tridiag_3by3_block => tridiag_block33,
 
-    
+    ### ModUserEmpty
+    user_block_type => i_type_block_user,
     
     );
