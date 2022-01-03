@@ -1259,7 +1259,7 @@ contains
           if(IsWall)EXIT STEP
 
           ! Full step
-          
+
           bNormMid_D = bNormIni_D
           ! In case interpolation would give zero vector
           call interpolate_b(IndMid_D, b_D, bNormMid_D)

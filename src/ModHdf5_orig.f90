@@ -41,7 +41,7 @@ module ModHdf5
   integer(HSIZE_T) :: nNodeBlock_D(3)
 
   ! one comunicator for each plot
-  integer :: iCommPlot, nProcPlot, iProcPlot 
+  integer :: iCommPlot, nProcPlot, iProcPlot
 
 contains
   !============================================================================
@@ -168,7 +168,7 @@ contains
 
           !         ! Cut falls between iMinCell and iMinCell - 1
           !         if (i1==0 .and.  i==1 .and. i2==1) then
-          !             
+          !
           !             if (DiLevelNei_IIIB(-1, 0, 0,iBlock) == -1) cycle
           !             ! Neighbor is more refined so it writes
           !         end if
@@ -184,7 +184,7 @@ contains
           !         end if
           !
           !         ! Cut falls between iMaxCell and iMaxCell 1
-          !         if (i3==nI+1 .and.  i2==nI .and. i == nI) then 
+          !         if (i3==nI+1 .and.  i2==nI .and. i == nI) then
           !             if (DiLevelNei_IIIB(1, 0, 0,iBlock) == -1) then
           !                 cycle
           !             else if (CoordMax_DB(1, iBlock) /= CoordMax_D(1)) then
@@ -488,7 +488,7 @@ contains
     kMax1 = min(nK+1,floor((zMax1-Coord111_DB(z_,iBlock))/DzBlock)+1)
 
     !    ! Cut falls between iMinCell and iMinCell - 1
-    !    if (iMin1==0 .and.  iMin==1 .and. iMax==1) then 
+    !    if (iMin1==0 .and.  iMin==1 .and. iMax==1) then
     !         if (DiLevelNei_IIIB(-1, 0, 0,iBlock) == -1) then
     !             DoH5Advance = .false.
     !             return
@@ -511,7 +511,7 @@ contains
     !         end if
     !     end if
     !     ! Cut falls between iMaxCell and iMaxCell 1
-    !     if (iMax1==nI+1 .and.  iMax==nI .and. iMin == nI) then 
+    !     if (iMax1==nI+1 .and.  iMax==nI .and. iMin == nI) then
     !         if (DiLevelNei_IIIB(1, 0, 0,iBlock) == -1) then
     !             DoH5Advance = .false.
     !             return

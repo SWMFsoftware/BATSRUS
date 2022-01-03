@@ -28,7 +28,6 @@ module ModRadioWaveImage
   integer, public :: nRay !=nXPixelX*nYPixel
   public:: rIntegration2
 
-
   real, allocatable :: Intensity_I(:)
   real, allocatable :: StateIn_VI(:,:)
 

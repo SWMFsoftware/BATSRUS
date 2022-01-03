@@ -1073,7 +1073,7 @@ contains
 
     rNorm = rNorm0
     if(DoTest) print *,'initial rNorm:',rNorm
- 
+
     Alpha = 0.0
     Omega = 1.0
     Sigma = 1.0

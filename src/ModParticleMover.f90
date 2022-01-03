@@ -347,7 +347,7 @@ contains
   end subroutine trace_particles
   !============================================================================
   subroutine boris_scheme(iParticle, IsEndOfSegment)
-    
+
     ! In this routine we follow the formulation described in the
     ! Book: Plasma Physics via Computer Simulation,
     ! Editors: Birdsall, C. K.; Langdon, A. B.,
