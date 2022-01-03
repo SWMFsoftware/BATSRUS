@@ -36,7 +36,7 @@ module ModSatelliteFile
 
   ! These variables are public for write_logfile only !!! Should be improved
   ! Names and unit numbers for satellite files
-  character(len=50), public:: FilenameSat_I(MaxSatellite)
+  character(len=50), public:: NameFileSat_I(MaxSatellite)
   character(len=10), public:: NameSat_I(MaxSatellite)
   integer, public:: iUnitSat_I(MaxSatellite) = -1
   logical, public:: IsFirstWriteSat_I(MaxSatellite) = .true.
@@ -45,14 +45,14 @@ module ModSatelliteFile
   real, public:: XyzSat_DI(3,MaxSatellite)
 
   ! variables to control time output format
-  character(len=100), public :: TimeSat_I(MaxSatellite)
+  character(len=100), public :: TypeTimeSat_I(MaxSatellite)
 
   ! variables to write to the satellite files
   character(len=500), public :: StringSatVar_I(MaxSatellite)
 
   logical, public:: DoTrackSatellite_I(MaxSatellite) = .false.
 
-  integer,public:: iCurrent_satellite_position(MaxSatellite)=1
+  integer,public:: iPointCurrentSat_I(MaxSatellite)=1
 
   ! Local variables
   character(len=100) :: NameFile_I(MaxSatellite)
@@ -96,7 +96,7 @@ contains
 
     integer :: iSat, iFile
     character(len=100):: StringSatellite
-    character (len=3) :: satellite_var
+    character (len=3) :: NameSatVar
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_satellite_parameters'
@@ -132,7 +132,7 @@ contains
 
           ! Satellite inputfile name or the satellite name
           call read_var('NameTrajectoryFile',&
-               FilenameSat_I(iSat))
+               NameFileSat_I(iSat))
           if(index(StringSatellite,'eqn')>0 &
                .or. index(StringSatellite,'Eqn')>0 .or. &
                index(StringSatellite,'EQN')>0 ) then
@@ -146,14 +146,16 @@ contains
              if (index(StringSatellite,'range') >0) then
                 TypeTrajTimeRange_I(iSat) = 'range'
 
-                call read_var('StartTimeTraj',StartTimeTraj_I(iSat),StartTimeIn=StartTime)
-                call read_var('EndTimeTraj',  EndTimeTraj_I(iSat),  StartTimeIn=StartTime)
-                call read_var('DtTraj',       DtTraj_I(iSat))
+                call read_var('StartTimeTraj', StartTimeTraj_I(iSat), &
+                     StartTimeIn=StartTime)
+                call read_var('EndTimeTraj',   EndTimeTraj_I(iSat), &
+                     StartTimeIn=StartTime)
+                call read_var('DtTraj',        DtTraj_I(iSat))
 
                 ! EndTimeTraj should not be smaller then StartTimeTraj
                 if (EndTimeTraj_I(iSat) < StartTimeTraj_I(iSat) .or. &
-                     (EndTimeTraj_I(iSat)-StartTimeTraj_I(iSat))/DtTraj_I(iSat) &
-                     > 1e6 .or. DtTraj_I(iSat) <= 0) then
+                     (EndTimeTraj_I(iSat)-StartTimeTraj_I(iSat)) &
+                     /DtTraj_I(iSat) > 1e6 .or. DtTraj_I(iSat) <= 0) then
                    write(*,*) ' StartTimeTraj_I =', StartTimeTraj_I(iSat)
                    write(*,*) ' EndTimeTraj_I   =', EndTimeTraj_I(iSat)
 
@@ -172,21 +174,21 @@ contains
           ! Satellite variables
           if(index(StringSatellite,'VAR')>0 .or. &
                index(StringSatellite,'var')>0 )then
-             satellite_var='var'
+             NameSatVar='var'
              IsDimensionalPlot_I(iFile) = index(StringSatellite,'VAR')>0
-             TimeSat_I(iSat) = 'step date'
+             TypeTimeSat_I(iSat) = 'step date'
              call read_var('NameSatelliteVars',StringSatVar_I(iSat))
           elseif(index(StringSatellite,'MHD')>0 .or. &
                index(StringSatellite,'mhd')>0)then
-             satellite_var='mhd'
+             NameSatVar='mhd'
              IsDimensionalPlot_I(iFile)= index(StringSatellite,'MHD')>0
-             TimeSat_I(iSat) = 'step date'
+             TypeTimeSat_I(iSat) = 'step date'
              StringSatVar_I(iSat)=NamePrimitiveVarPlot//' jx jy jz'
           elseif(index(StringSatellite,'FUL')>0 .or. &
                index(StringSatellite,'ful')>0)then
-             satellite_var='ful'
+             NameSatVar='ful'
              IsDimensionalPlot_I(ifile)= index(StringSatellite,'FUL')>0
-             TimeSat_I(iSat) = 'step date'
+             TypeTimeSat_I(iSat) = 'step date'
              StringSatVar_I(iSat)=&
                   NamePrimitiveVarPlot//' b1x b1y b1z e jx jy jz'
           else
@@ -209,17 +211,17 @@ contains
           ! satellite files.  This is loaded by default above,
           ! but can be input in the log_string line.
           if(index(StringSatellite,'none')>0) then
-             TimeSat_I(iSat) = 'none'
+             TypeTimeSat_I(iSat) = 'none'
           elseif((index(StringSatellite,'step')>0) .or. &
                (index(StringSatellite,'date')>0) .or. &
                (index(StringSatellite,'time')>0)) then
-             TimeSat_I(iSat) = ''
+             TypeTimeSat_I(iSat) = ''
              if(index(StringSatellite,'step')>0) &
-                  TimeSat_I(iSat) = 'step'
+                  TypeTimeSat_I(iSat) = 'step'
              if(index(StringSatellite,'date')>0) &
-                  TimeSat_I(iSat) = trim(TimeSat_I(iSat))//' date'
+                  TypeTimeSat_I(iSat) = trim(TypeTimeSat_I(iSat))//' date'
              if(index(StringSatellite,'time')>0) &
-                  TimeSat_I(iSat) = trim(TimeSat_I(iSat))//' time'
+                  TypeTimeSat_I(iSat) = trim(TypeTimeSat_I(iSat))//' time'
           end if
 
           ! Recognize coordinate system name if present
@@ -256,7 +258,7 @@ contains
     select case(TypeStatus)
     case('open')
 
-       call set_NameFile(iSat)
+       call set_name_file(iSat)
 
        iUnitSat_I(iSat) = io_unit_new()
        call open_file(iUnitSat_I(iSat), file=NameFile_I(iSat))
@@ -264,7 +266,7 @@ contains
        IsOpen_I(iSat) = .true.
     case('append')
        if(.not.IsNameFileSet_I(iSat)) then
-          call set_NameFile(iSat)
+          call set_name_file(iSat)
           iUnitSat_I(iSat) = io_unit_new()
           call open_file(iUnitSat_I(iSat), file=NameFile_I(iSat))
           IsOpen_I(iSat) = .true.
@@ -284,31 +286,31 @@ contains
     end select
   end subroutine set_satellite_file_status
   !============================================================================
-  subroutine set_NameFile(iSat)
+  subroutine set_name_file(iSat)
     use ModMain,   ONLY: nStep, IsTimeAccurate
     use ModIO,     ONLY: NamePlotDir, StringDateOrTime
 
     integer, intent(in) :: iSat
 
-    character(LEN=50) :: FilenameOutSat
+    character(LEN=50) :: NameFileOutSat
     integer :: l1, l2
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_NameFile'
+    character(len=*), parameter:: NameSub = 'set_name_file'
     !--------------------------------------------------------------------------
 
     call test_start(NameSub, DoTest)
 
-    l1 = index(FilenameSat_I(iSat), '/', back=.true.) + 1
-    l2 = index(FilenameSat_I(iSat), '.') - 1
+    l1 = index(NameFileSat_I(iSat), '/', back=.true.) + 1
+    l2 = index(NameFileSat_I(iSat), '.') - 1
     if (l1-1 <= 0) l1 = 1
-    if (l2+1 <= 0) l2 = len_trim(FilenameSat_I(iSat))
+    if (l2+1 <= 0) l2 = len_trim(NameFileSat_I(iSat))
 
     select case(TypeTrajTimeRange_I(iSat))
     case('orig')
-       FilenameOutSat = 'sat_'
+       NameFileOutSat = 'sat_'
     case('range', 'full')
-       FilenameOutSat = 'trj_'
+       NameFileOutSat = 'trj_'
     case default
        call stop_mpi(NameSub//': unknown TypeTraj= '// &
             TypeTrajTimeRange_I(iSat))
@@ -318,12 +320,12 @@ contains
          TypeTrajTimeRange_I(iSat) == 'full') ) then
        call get_time_string
        write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir) // &
-            trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2) // &
+            trim(NameFileOutSat)//NameFileSat_I(iSat)(l1:l2) // &
             '_t'//trim(StringDateOrTime)//'_n',nStep,'.sat'
 
     else
        write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
-            trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2)//&
+            trim(NameFileOutSat)//NameFileSat_I(iSat)(l1:l2)//&
             '_n',nStep,'.sat'
     endif
 
@@ -331,13 +333,13 @@ contains
 
     if(DoTest) then
        write(*,*) NameSub,': satellitename:', &
-            FilenameSat_I(iSat)
+            NameFileSat_I(iSat)
        write(*,*) 'iSat,l1,l2: ', iSat, l1, l2
        write(*,*) NameSub,': NameFile_I(iSat):', trim(NameFile_I(iSat))
     end if
 
     call test_stop(NameSub, DoTest)
-  end subroutine set_NameFile
+  end subroutine set_name_file
   !============================================================================
   subroutine read_satellite_input_files
 
@@ -352,7 +354,7 @@ contains
     integer :: iError, i, iSat , nPoint
 
     ! One line of input
-    character (len=100) :: line
+    character(len=100) :: StringLine
 
     integer      :: iTime_I(7)
     real         :: Xyz_D(MaxDim)
@@ -371,15 +373,15 @@ contains
     if(iProc == 0)then
        SATELLITES1: do iSat=1, nSatellite
           if(.not.UseSatFile_I(iSat)) CYCLE SATELLITES1
-          NameFile = FilenameSat_I(iSat)
+          NameFile = NameFileSat_I(iSat)
           call open_file(file=NameFile, status="old")
           nPoint = 0
 
           TypeSatCoord_I(iSat) = TypeCoordSystem
           READFILE1: do
-             read(UnitTmp_,'(a)', iostat = iError ) line
+             read(UnitTmp_,'(a)', iostat = iError ) StringLine
              if (iError /= 0) EXIT READFILE1
-             if(index(line,'#START')>0)then
+             if(index(StringLine,'#START')>0)then
                 READPOINTS1: do
                    read(UnitTmp_,*, iostat=iError) iTime_I, Xyz_D
                    if (iError /= 0) EXIT READFILE1
@@ -409,7 +411,7 @@ contains
        ! Read file on the root processor
        if (iProc == 0) then
 
-          NameFile = FilenameSat_I(iSat)
+          NameFile = NameFileSat_I(iSat)
 
           if(lVerbose>0)then
              call write_prefix; write(iUnitOut,*) NameSub, &
@@ -424,14 +426,14 @@ contains
           TypeSatCoord_I(iSat) = TypeCoordSystem
           READFILE: do
 
-             read(UnitTmp_,'(a)', iostat = iError ) line
+             read(UnitTmp_,'(a)', iostat = iError ) StringLine
 
              if (iError /= 0) EXIT READFILE
 
-             if(index(line,'#COOR')>0) &
+             if(index(StringLine,'#COOR')>0) &
                   read(UnitTmp_,'(a)') TypeSatCoord_I(iSat)
 
-             if(index(line,'#START')>0)then
+             if(index(StringLine,'#START')>0)then
 
                 READPOINTS: do
 
@@ -538,7 +540,7 @@ contains
 
     integer, intent(in) :: iSat
     integer :: i, nPoint
-    real    :: dtime
+    real    :: dTime
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_satellite_positions'
@@ -550,7 +552,7 @@ contains
        nPoint = nPointTraj_I(iSat)
        if (nPoint > 0) then
 
-          i = icurrent_satellite_position(iSat)
+          i = iPointCurrentSat_I(iSat)
 
           if(DoTest)write(*,*) NameSub,' nPoint, iPoint, TimeSim, TimeSat=',&
                nPoint, i, tSimulation, TimeSat_II(iSat,i)
@@ -559,7 +561,7 @@ contains
              i = i + 1
           enddo
 
-          icurrent_satellite_position(iSat) = i
+          iPointCurrentSat_I(iSat) = i
 
           if(DoTest)write(*,*) NameSub,' final iPoint=', i
 
@@ -595,15 +597,14 @@ contains
   subroutine satellite_trajectory_formula(iSat)
 
     integer, intent(in) :: iSat
-    character (len=100) :: name_string
-    real :: Xvect(3)
+    real :: XyzSat_D(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'satellite_trajectory_formula'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    name_string = trim(FilenameSat_I(iSat))
-    Xvect(:) = XyzSat_DI(:,iSat)
+
+    XyzSat_D(:) = XyzSat_DI(:,iSat)
 
     ! Case should be for a specific satellite.  The trajectories can depend
     ! on the 'real' time so that the satellite knows where it is at.  For
@@ -614,21 +615,21 @@ contains
     ! the satellite is at a useless position the time should return a
     ! do not track flag (DoTrackSatellite_I(iSat) = .false.).
 
-    select case(name_string)
+    select case(NameFileSat_I(iSat))
     case ('earth')
-       Xvect(1) = 5.0
-       Xvect(2) = 5.0
-       Xvect(3) = 5.0
+       XyzSat_D(1) = 5.0
+       XyzSat_D(2) = 5.0
+       XyzSat_D(3) = 5.0
        DoTrackSatellite_I(iSat) = .true.
     case ('cassini')
-       Xvect(1) = 5.0
-       Xvect(2) = 5.0
-       Xvect(3) = 5.0
+       XyzSat_D(1) = 5.0
+       XyzSat_D(2) = 5.0
+       XyzSat_D(3) = 5.0
        DoTrackSatellite_I(iSat) = .true.
     case default
-       Xvect(1) = 1.0
-       Xvect(2) = 1.0
-       Xvect(3) = 1.0
+       XyzSat_D(1) = 1.0
+       XyzSat_D(2) = 1.0
+       XyzSat_D(3) = 1.0
        DoTrackSatellite_I(iSat) = .false.
     end select
 
@@ -648,7 +649,7 @@ contains
     real,    intent(out):: SatRayVar_I(5)
 
     integer  :: iDir, iBlock, iDim
-    real     :: Coord_D(3), RayVars(3,2,nI,nJ,nK)
+    real     :: Coord_D(3), Trace_DSC(3,2,nI,nJ,nK)
     real     :: Dx1, Dx2, Dy1, Dy2, Dz1, Dz2
     integer  :: i1, i2, j1, j2, k1, k2, iNear, jNear, kNear
     integer  :: i, j, k
@@ -704,21 +705,21 @@ contains
     kNear = min( nK, max(nint(Coord_D(3)),1) )
 
     ! Copy Trace_DSNB tracing values to new array so allow changing of values.
-    RayVars = Trace_DSNB(1:3,1:2,1:nI,1:nJ,1:nK,iBlock)
+    Trace_DSC = Trace_DSNB(1:3,1:2,1:nI,1:nJ,1:nK,iBlock)
 
     ! Use the Trace_DSNB status of the nearest point to the satellite.
-    SatRayVar_I(3) = RayVars(3, 1, iNear,jNear,kNear)
+    SatRayVar_I(3) = Trace_DSC(3, 1, iNear,jNear,kNear)
 
-    ! For each direction along the Trace_DSNB, determine if all lines surrounding
-    ! point are open or closed, then set SatRayVar_I accordingly.
-    do iDir=1,2
+    ! For each direction along the Trace_DSNB, determine if all lines
+    ! surrounding point are open or closed, then set SatRayVar_I accordingly.
+    do iDir = 1, 2
 
-       if ( any(RayVars(3,1,i1:i2,j1:j2,k1:k2) < 1) .or. &
-            any(RayVars(3,1,i1:i2,j1:j2,k1:k2) == iDir) ) then
+       if ( any(Trace_DSC(3,1,i1:i2,j1:j2,k1:k2) < 1) .or. &
+            any(Trace_DSC(3,1,i1:i2,j1:j2,k1:k2) == iDir) ) then
           ! One or more lines is open in direction iDir, must use nearest point
           do iDim=1,2
              SatRayVar_I(iDim + 3*(iDir-1)) = &
-                  RayVars(iDim,iDir,iNear,jNear,kNear)
+                  Trace_DSC(iDim,iDir,iNear,jNear,kNear)
           end do
 
        else   ! All lines closed in direction iDir, interpolate.
@@ -726,32 +727,33 @@ contains
           ! If the satellite is near the 0/360 degree boundary in longitude,
           ! the result of the interpolation will be incorrect.  Adjust
           ! longitudes accordingly.
-          if (any(RayVars(2,iDir,i1:i2,j1:j2,k1:k2)>330.0) .AND. &
-               any(RayVars(2,iDir,i1:i2,j1:j2,k1:k2)<30.0)) then
+          if (any(Trace_DSC(2,iDir,i1:i2,j1:j2,k1:k2)>330.0) .AND. &
+               any(Trace_DSC(2,iDir,i1:i2,j1:j2,k1:k2)<30.0)) then
 
              do i=i1,i2
                 do j=j1,j2
                    do k=k1,k2
-                      if (RayVars(2,iDir,i,j,k) < 30.0) &
-                           RayVars(2,iDir,i,j,k) = RayVars(2,iDir,i,j,k) + 360
+                      if (Trace_DSC(2,iDir,i,j,k) < 30.0) &
+                           Trace_DSC(2,iDir,i,j,k) &
+                           = Trace_DSC(2,iDir,i,j,k) + 360
                    enddo
                 enddo
              enddo
-             ! forall(i=i1:i2,j=j1:j2,k=k1:k2,RayVars(2,iDir,i,j,k)<30.0)
-             !   RayVars(2,iDir,i,j,k) = RayVars(2,iDir,i,j,k) + 360.0
+             ! forall(i=i1:i2,j=j1:j2,k=k1:k2,Trace_DSC(2,iDir,i,j,k)<30.0)
+             !   Trace_DSC(2,iDir,i,j,k) = Trace_DSC(2,iDir,i,j,k) + 360.0
              ! end forall
           endif
 
           do iDim=1,2
              SatRayVar_I(iDim + 3*(iDir-1)) =                         &
-                  Dz2*(   Dy2*(   Dx2*RayVars(iDim,iDir,i1,j1,k1)   &
-                  +                Dx1*RayVars(iDim,iDir,i2,j1,k1))  &
-                  +        Dy1*(   Dx2*RayVars(iDim,iDir,i1,j2,k1)   &
-                  +                Dx1*RayVars(iDim,iDir,i2,j2,k1))) &
-                  +Dz1*(   Dy2*(   Dx2*RayVars(iDim,iDir,i1,j1,k2)   &
-                  +                Dx1*RayVars(iDim,iDir,i2,j1,k2))  &
-                  +        Dy1*(   Dx2*RayVars(iDim,iDir,i1,j2,k2)   &
-                  +                Dx1*RayVars(iDim,iDir,i2,j2,k2)))
+                  Dz2*(   Dy2*(   Dx2*Trace_DSC(iDim,iDir,i1,j1,k1)   &
+                  +                Dx1*Trace_DSC(iDim,iDir,i2,j1,k1))  &
+                  +        Dy1*(   Dx2*Trace_DSC(iDim,iDir,i1,j2,k1)   &
+                  +                Dx1*Trace_DSC(iDim,iDir,i2,j2,k1))) &
+                  +Dz1*(   Dy2*(   Dx2*Trace_DSC(iDim,iDir,i1,j1,k2)   &
+                  +                Dx1*Trace_DSC(iDim,iDir,i2,j1,k2))  &
+                  +        Dy1*(   Dx2*Trace_DSC(iDim,iDir,i1,j2,k2)   &
+                  +                Dx1*Trace_DSC(iDim,iDir,i2,j2,k2)))
           end do
        endif
 
@@ -791,7 +793,7 @@ contains
 
     logical :: IsParallel = .true., IsOpen=.true.
 
-    real    :: L, Rsat, Rxy2
+    real    :: Rsat, Rxy2
     ! Conversion matrix between SM and GM coordinates
     ! (to be safe initialized to unit matrix)
     real :: GmSm_DD(3,3) = reshape( [ &
@@ -877,7 +879,8 @@ contains
 
        if (.not. IsOpen) then
           call map_planet_field(tSimulation, SatXyzEnd_D, &
-               TypeCoordSystem//' NORM', rIonosphere, SatXyzIono_D, iHemisphere)
+               TypeCoordSystem//' NORM', rIonosphere, SatXyzIono_D, &
+               iHemisphere)
 
           ! Transformation matrix between the SM(G) and GM coordinates
           GmSm_DD = transform_matrix(tSimulation,'SMG',TypeCoordSystem)
@@ -904,8 +907,7 @@ contains
        Rsat = norm2(SatXyz_D(1:3))
        Rxy2 = sum(SatXyz_D(1:2)**2)
        if(Rxy2 > 0.0)then
-          L = Rsat**3.0/Rxy2
-          SatRay_D(1) = acos(1/sqrt(L))*cRadToDeg
+          SatRay_D(1) = acos(1/sqrt(Rsat**3.0/Rxy2))*cRadToDeg
        else
           SatRay_D(1) = 90.0
        endif

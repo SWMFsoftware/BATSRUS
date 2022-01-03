@@ -909,7 +909,7 @@ contains
       use ModRestartFile, ONLY: write_restart_files
       use ModSatelliteFile, ONLY: IsFirstWriteSat_I,                   &
            nSatellite, set_satellite_file_status, set_satellite_flags, &
-           TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position,  &
+           TimeSatStart_I, TimeSatEnd_I, iPointCurrentSat_I,  &
            TypeTrajTimeRange_I, StartTimeTraj_I, EndTimeTraj_I, DtTraj_I, &
            nPointTraj_I, TimeSat_II
       use ModWriteLogSatFile,   ONLY: write_logfile
@@ -1080,7 +1080,7 @@ contains
             end do
 
             tSimulation = tSimulationBackup    ! ... Restore
-            icurrent_satellite_position(iSat) = 1
+            iPointCurrentSat_I(iSat) = 1
 
             if(iProc==0)call set_satellite_file_status(iSat,'close')
          else if (TypeTrajTimeRange_I(iSat) == 'full') then
@@ -1101,7 +1101,7 @@ contains
             end do
 
             tSimulation = tSimulationBackup    ! ... Restore
-            icurrent_satellite_position(iSat) = 1
+            iPointCurrentSat_I(iSat) = 1
 
             if(iProc==0)call set_satellite_file_status(iSat,'close')
          else if (TypeTrajTimeRange_I(iSat) == 'orig') then
@@ -1129,7 +1129,7 @@ contains
                   tSimulation = tSimulation+DtOutput_I(iSat+Satellite_)
                end do
                tSimulation = tSimulationBackup    ! ... Restore
-               icurrent_satellite_position(iSat) = 1
+               iPointCurrentSat_I(iSat) = 1
 
                if(iProc==0)call set_satellite_file_status(iSat,'close')
             end if

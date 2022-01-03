@@ -96,7 +96,7 @@ contains
          multi_ion_init_point_impl
     use ModSolarwind, ONLY: UseSolarwindFile, read_solar_wind_param, &
          read_solar_wind_file, normalize_solar_wind_data
-    use ModSatelliteFile, ONLY: nSatellite, FilenameSat_I, NameSat_I, &
+    use ModSatelliteFile, ONLY: nSatellite, NameFileSat_I, NameSat_I, &
          read_satellite_parameters, read_satellite_input_files
     use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
     use ModFaceFlux, ONLY: face_flux_set_parameters, init_mod_face_flux, &
@@ -3603,13 +3603,13 @@ contains
       ! Fix NameSat_I if needed
       NameSat_I = 'none'
       do iSat = 1, nSatellite
-         if (index(FilenameSat_I(iSat), 'sta') > 0 .or.  &
-              index(FilenameSat_I(iSat), 'stereoa') > 0) &
+         if (index(NameFileSat_I(iSat), 'sta') > 0 .or.  &
+              index(NameFileSat_I(iSat), 'stereoa') > 0) &
               NameSat_I(iSat) = 'sta'
-         if (index(FilenameSat_I(iSat), 'stb') > 0 .or.  &
-              index(FilenameSat_I(iSat), 'stereob') > 0) &
+         if (index(NameFileSat_I(iSat), 'stb') > 0 .or.  &
+              index(NameFileSat_I(iSat), 'stereob') > 0) &
               NameSat_I(iSat) = 'stb'
-         if (index(FilenameSat_I(iSat), 'earth') > 0)    &
+         if (index(NameFileSat_I(iSat), 'earth') > 0)    &
               NameSat_I(iSat) = 'earth'
       end do
 

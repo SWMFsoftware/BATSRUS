@@ -295,7 +295,7 @@ contains
     ! Subroutine to update and collect satellite locations for iM tracing
 
     ! Modules
-    use ModSatelliteFile, ONLY: FilenameSat_I, XyzSat_DI, gm_trace_sat
+    use ModSatelliteFile, ONLY: NameFileSat_I, XyzSat_DI, gm_trace_sat
     use ModWriteLogSatFile, ONLY: collect_satellite_data
     use ModMain,          ONLY: UseB0, nBlock
     use ModPhysics,       ONLY: No2Si_V, UnitB_
@@ -317,7 +317,7 @@ contains
     character(len=*), parameter:: NameSub = 'GM_get_sat_for_im_crcm'
     !--------------------------------------------------------------------------
     ! Store satellite names in Buffer_I (known on all processors)
-    Name_I = FilenameSat_I(1:nSats)
+    Name_I = NameFileSat_I(1:nSats)
 
     do iSat = 1, nSats
        ! Update satellite position.

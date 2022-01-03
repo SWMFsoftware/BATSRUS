@@ -36,8 +36,8 @@ contains
     use ModIO
     use ModIoUnit, ONLY   : io_unit_new
     use ModUtilities, ONLY: flush_unit, split_string, open_file
-    use ModSatelliteFile, ONLY: FilenameSat_I, IsFirstWriteSat_I, &
-         iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
+    use ModSatelliteFile, ONLY: NameFileSat_I, IsFirstWriteSat_I, &
+         iUnitSat_I, TypeTimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
     use CON_axes, ONLY: transform_matrix
     use BATL_lib, ONLY: Xyz_DGB, UseTestXyz, maxval_grid, minval_grid
     use ModMpi
@@ -143,7 +143,7 @@ contains
        if (.not. DoTrackSatellite_I(iSat)) RETURN
        call split_string(StringSatVar_I(iSat), MaxLogVar, &
             NameLogVar_I, nLogVar, UseArraySyntaxIn=.true.)
-       StringTime = TimeSat_I(iSat)
+       StringTime = TypeTimeSat_I(iSat)
        DoWritePosition = .true.
     elseif (iSatIn<0) then
        if (IsTimeAccurate)then
@@ -260,12 +260,12 @@ contains
              if (IsTimeAccurate) then
                 write(iUnit,'(a, es13.5)')  &
                      'Satellite data for Satellite: ' // &
-                     trim(FilenameSat_I(isat))        // &
+                     trim(NameFileSat_I(isat))        // &
                      ' at simulation time =', TimeSatHeader
              else
                 write(iUnit,'(a)')  &
                      'Satellite data for Satellite: '//  &
-                     trim(FilenameSat_I(isat))
+                     trim(NameFileSat_I(isat))
              end if
              write(iUnit,'(a)')trim(NameAll)
              IsFirstWriteSat_I(iSat)=.false.

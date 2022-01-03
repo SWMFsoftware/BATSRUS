@@ -1,4 +1,5 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan,
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 ##################################################################
 #          Add variable name replacement rules as                #
@@ -406,4 +407,16 @@
     #qb => b_GB,
     #qc => c_GB,
     #qd => d_GB,
+
+    ### ModSatellite
+    FilenameSat_I => NameFileSat_I,
+    TimeSat_I => TypeTimeSat_I,
+    iCurrent_satellite_position => iPointCurrentSat_I,
+    satellite_var => NameSatVar,
+    set_NameFile => set_name_file,
+    FilenameOutSat => NameFileOutSat,
+    dtime => dTime,
+    Xvect => XyzSat_D,
+    RayVars => Trace_DSC,
+    
     );
