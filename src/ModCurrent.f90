@@ -562,6 +562,7 @@ contains
     use ModMain,           ONLY: tSimulation, TypeCoordSystem, nBlock
     use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V
 #ifdef _OPENACC
+    use ModPhysics,        ONLY: set_dipole
     use CON_planet_field,  ONLY: map_planet_field_fast
     use ModB0,             ONLY: get_b0_dipole
 #else

@@ -27,10 +27,10 @@ contains
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: DiLevel_EB
-    use ModGeometry,   ONLY: IsBody_B
+    use ModGeometry,   ONLY: IsBody_B, IsNoBody_B
     use ModBlockData,  ONLY: set_block_data
     use ModPhysics,    ONLY: No2Si_V, UnitT_, &
-         update_angular_velocity
+         update_angular_velocity, OmegaBody_D
     use ModCalcSource, ONLY: calc_source
     use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
          nCorrectedFaceValues, CorrectedFlux_VXB, &
