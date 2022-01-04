@@ -242,13 +242,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
     !--------------------------------------------------------------------------
-    ! associate( &
-    !   iDimFace => IFF_I(iDimFace_), iBlockFace => IFF_I(iBlockFace_), &
-    !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
-    !   iFluidMin => IFF_I(iFluidMin_), iFluidMax => IFF_I(iFluidMax_), &
-    !   ViscoCoeff => RFF_I(ViscoCoeff_), &
-    !   IsNewBlockVisco => IsFF_I(IsNewBlockVisco_) )
-
     ! Get velocity vector for the block, only done once per block
     if(IsNewBlockVisco) then
        do iFluid = iFluidMin, iFluidMax
@@ -305,7 +298,6 @@ contains
        Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)
     end do
 
-    ! end associate
   end subroutine get_viscosity_tensor
   !============================================================================
 
