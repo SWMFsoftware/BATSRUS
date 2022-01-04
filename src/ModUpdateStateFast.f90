@@ -17,7 +17,7 @@ module ModUpdateStateFast
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
-       DtMax_CB, Vdt_, iTypeUpdate, UpdateOrig_
+       DtMax_CB, Vdt_, iTypeUpdate, UpdateOrig_, UseRotatingFrame
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -29,7 +29,7 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
-       OmegaBody_D, set_dipole, Gbody
+       OmegaBody_D, set_dipole, Gbody, OmegaBody
   use ModMain, ONLY: Dt, DtMax_B, Cfl, nStep, tSimulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
        UseGravity
@@ -211,10 +211,11 @@ contains
 
     ! optimal for CPU (face value and face flux calculated only once)
 
-    integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn, iUx, iUz, iRho, iEnergy
+    integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn, iUx, iUy, iUz, iRho, &
+         iEnergy
     logical:: IsBodyBlock, IsConserv
     real:: DivU, DivB, DivE, DivF, DtPerDv, Change_V(nFlux), &
-         ForcePerRho_D(3)
+         ForcePerRho_D(3), Omega2
     !$acc declare create (Change_V)
 
     integer:: iVar
@@ -404,20 +405,38 @@ contains
              end do
           end if
 
-          if(UseGravity)then
-             do iFluid = 1, nFluid
-                iRho = iRho_I(iFluid)
-                iUx = iUx_I(iFluid)
-                iUz = iUz_I(iFluid)
-                iEnergy = nVar + iFluid
+          do iFluid = 1, nFluid
+             iRho = iRho_I(iFluid)
+             iUx = iUx_I(iFluid)
+             iUy = iUy_I(iFluid)
+             iUz = iUz_I(iFluid)
+             iEnergy = nVar + iFluid
+
+             if(UseGravity)then
                 ForcePerRho_D = &
                      Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
                 Change_V(iUx:iUz) = Change_V(iUx:iUz) &
                      + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
                 Change_V(iEnergy) = Change_V(iEnergy) &
                      + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*ForcePerRho_D)
-             end do
-          end if
+             end if
+
+             if(UseRotatingFrame)then
+                Omega2 = OmegaBody**2
+                Change_V(iUx) = Change_V(iUx) &
+                     + 2*OmegaBody*State_VGB(iUy,i,j,k,iBlock) &
+                     + State_VGB(iRho,i,j,k,iBlock) &
+                     *Omega2 * Xyz_DGB(x_,i,j,k,iBlock)
+                Change_V(iUy) = Change_V(iUy) &
+                     - 2*OmegaBody*State_VGB(iUx,i,j,k,iBlock) &
+                     + State_VGB(iRho,i,j,k,iBlock) &
+                     *Omega2 * Xyz_DGB(y_,i,j,k,iBlock)
+                Change_V(iEnergy) = Change_V(iEnergy) &
+                     + Omega2 * sum(State_VGB(iUx:iUy,i,j,k,iBlock) &
+                     *Xyz_DGB(x_:y_,i,j,k,iBlock))
+             end if
+          end do
+
 
           ! Time step divided by cell volume
           if(IsTimeAccurate)then
