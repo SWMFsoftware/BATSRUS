@@ -7,7 +7,7 @@ module ModTransitionRegion
        test_start, test_stop
 
   implicit none
-  
+
   ! Normalization as used in the radcool table
   real, private, parameter :: RadNorm = 1.0E+22
 
@@ -330,7 +330,6 @@ contains
     ! intensity across the transition region, which is tabulated in the
     ! lookup table. In this routine we can visualize the integrand
     integer, optional, intent(in)  :: iTable
-
 
     ! The model is parameterized in terms of PAvr=sqrt(Pi*Pe) at Ti=Te
     ! In terms of SqrtZ: PAvr = Pi*SqrtZ = Pe/SqrtZ

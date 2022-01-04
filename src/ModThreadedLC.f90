@@ -655,7 +655,7 @@ contains
          end if
 
          ! Add Gravity Source
-         
+
          ! cGravPot = cGravitation*mSun*cAtomicMass/(cBoltzmann*rSun)
          ! GravHydroDyn = cGravPot*MassIon_I(1)/Z
          ! energy flux needed to raise the mass flux rho*u to the
@@ -1064,7 +1064,7 @@ contains
           ADiffMax = max(ADiffMax, &
                abs(AOld - AMajor_I(iStep))/max(AOld,AMajor_I(iStep)))
        end do
-       
+
        ! Go backward, integrate AMinor_I with given AMajor_I
        ! We integrate equation,
        ! 2da_-/d\xi=

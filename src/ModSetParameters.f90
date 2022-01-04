@@ -1449,7 +1449,7 @@ contains
                 TypePlotVar='tbl'
                 IsDimensionalPlot_I(iFile) = index(StringPlot,'TBL')>0
                 ! will read a table in write_plot_los
-                StringPlotVar_I(iFile)='tbl' 
+                StringPlotVar_I(iFile)='tbl'
                 StringPlotParam_I(iFile)='mu'
              elseif(   index(StringPlot,'RWI') > 0 &
                   .or. index(StringPlot,'rwi') > 0)then
