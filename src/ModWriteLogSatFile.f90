@@ -36,8 +36,8 @@ contains
     use ModIO
     use ModIoUnit, ONLY   : io_unit_new
     use ModUtilities, ONLY: flush_unit, split_string, open_file
-    use ModSatelliteFile, ONLY: NameFileSat_I, IsFirstWriteSat_I, &
-         iUnitSat_I, TypeTimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
+    use ModSatelliteFile, ONLY: NameFileSat_I, IsFirstWriteSat_I, iUnitSat_I, &
+         TypeTimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
     use CON_axes, ONLY: transform_matrix
     use BATL_lib, ONLY: Xyz_DGB, UseTestXyz, maxval_grid, minval_grid
     use ModMpi
@@ -68,8 +68,8 @@ contains
     character (LEN=100) :: StringTime
 
     logical :: DoWritePosition
-    real :: pmin, pmax
-    integer :: loc(5)
+    real :: pMin, pMax
+    integer :: iLoc_I(5)
     integer :: iTime_I(7) ! integer time: year,month,day,hour,minute,sec,msec
     integer :: iError
 
@@ -78,14 +78,14 @@ contains
     integer:: iVar, iBlock
 
     ! Event date for NameFile
-    character(len=19) :: EventDateTime
+    character(len=19) :: StringDateTime
 
     ! Header for the sat file in time accurate
     real:: TimeSatHeader
 
     ! Parcel variables
-    integer                     :: iParcel, iUnitParcel_I(MaxParcel)=-1
-    character(len=2)            :: ParcelFile
+    integer         :: iParcel, iUnitParcel_I(MaxParcel)=-1
+    character(len=2):: StringIParcel
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
@@ -107,15 +107,15 @@ contains
             = State_VGB(P_,1:nI,1:nJ,1:nK,1:nBlock)
 
        if(index(StringTest,'show_pmin')>0)then
-          pMin = minval_grid(Tmp1_GB, iLoc_I=loc)
-          if(loc(5)==iProc)write(*,*)'pmin, loc, x, y, z=',pmin,loc, &
-               Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
+          pMin = minval_grid(Tmp1_GB, iLoc_I=iLoc_I)
+          if(iLoc_I(5)==iProc)write(*,*)'pMin, loc, x, y, z=', pMin, iLoc_I, &
+               Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
        end if
 
        if(index(StringTest,'show_pmax')>0)then
-          pMax = maxval_grid(Tmp1_GB, iLoc_I=loc)
-          if(loc(5)==iProc)write(*,*)'pmax, loc, x, y, z=',pmax,loc, &
-               Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
+          pMax = maxval_grid(Tmp1_GB, iLoc_I=iLoc_I)
+          if(iLoc_I(5)==iProc)write(*,*)'pMax, loc, x, y, z=', pMax, iLoc_I, &
+               Xyz_DGB(:,iLoc_I(1),iLoc_I(2),iLoc_I(3),iLoc_I(4))
 
        end if
     end if
@@ -160,9 +160,8 @@ contains
     ! than MaxLogVar.  If it is not write a warning message and truncate the
     ! list.
     if (nLogVar + nFluxVar*nLogR > MaxLogVar) then
-       write(*,*)'Warning in ', NameSub, ': Number of logfile variables exceeds '
-       write(*,*)'the array dimensions.  Truncating list - recompile with larger'
-       write(*,*)'array dimensions'
+       write(*,*)'WARNING !!! ', NameSub, &
+            ': Number of logfile variables exceeds MaxLogVar.'
        if (nLogVar >= MaxLogVar) then
           nLogVar = MaxLogVar
           nLogR = 1
@@ -222,8 +221,8 @@ contains
              if(IsLogNameE)then
                 ! Event date added to log file name
                 call get_date_time(iTime_I)
-                write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
-                NameFile = trim(NameFile) // '_e' // trim(eventDateTime)
+                write(StringDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
+                NameFile = trim(NameFile) // '_e' // trim(StringDateTime)
              else
                 if(nStep < 1000000)then
                    write(NameFile,'(a,i6.6)') trim(NameFile)//'_n',nStep
@@ -277,12 +276,12 @@ contains
           if(iUnit < 0)then
              iUnitParcel_I(iParcel) = io_unit_new()
              iUnit = iUnitParcel_I(iParcel)
-             write(ParcelFile, '(i2.2)') iParcel
-             NameFile = trim(NamePlotDir) // 'pcl'//'_'//ParcelFile//'_'
+             write(StringIParcel, '(i2.2)') iParcel
+             NameFile = trim(NamePlotDir) // 'pcl'//'_'//StringIParcel//'_'
              if (IsTimeAccurate) then
                 call get_date_time(iTime_I)
-                write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
-                NameFile = trim(NameFile)//'_t' //trim(eventDateTime)
+                write(StringDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
+                NameFile = trim(NameFile)//'_t' //trim(StringDateTime)
              else
                 if(nStep < 1000000)then
                    write(NameFile,'(a,i6.6)') trim(NameFile)//'_n',nStep
@@ -394,7 +393,8 @@ contains
     use ModAdvance,  ONLY: Tmp1_GB, Tmp2_GB, State_VGB, DivB1_GB
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
-    use ModGeometry, ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, DomainVolume
+    use ModGeometry, ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, &
+         zMinBox, zMaxBox, DomainVolume
     use ModFieldTrace, ONLY: Trace_DSNB
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
@@ -419,8 +419,8 @@ contains
     real :: StateIntegral_V(nVar)
     real :: SatRayVar_I(5)
 
-    integer :: iVar,iR,iVarTot, iBlock
-    integer :: i,j,k
+    integer :: iVar, iR, iVarTot, iBlock
+    integer :: i, j, k
     integer :: iError
     real :: r
 
@@ -468,7 +468,7 @@ contains
                + StateSat_V(rho_)*OmegaBody*XyzSat_DI(x_,iSat)
        end if
 
-       ! If any Trace_DSNB tracing satellite variables are present, collect Trace_DSNB data
+       ! If any tracing satellite variables are present, collect trace data
        do iVar=1, nLogVar
           select case(NameLogVar_I(iVar))
           case('theta1','theta2','phi1','phi2','status')
@@ -481,7 +481,7 @@ contains
 
     elseif(iSat==0)then
        ! The logfile may need the integral of conservative variables
-       ! Also extract the pressure into a variable for pmin and pmax
+       ! Also extract the pressure into a variable for pMin and pMax
        do iVar = 1, nLogVar
           call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
           select case(NameLogVar)
@@ -690,24 +690,28 @@ contains
       case('eth')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) &
+                 = State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = InvGammaMinus1_I(iFluid)*integrate_grid(Tmp1_GB)/DomainVolume
+         LogVar_I(iVarTot) &
+              = InvGammaMinus1_I(iFluid)*integrate_grid(Tmp1_GB)/DomainVolume
       case('eeth')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
-            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(Pe_,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) &
+                 = State_VGB(Pe_,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = InvGammaElectronMinus1*integrate_grid(Tmp1_GB)/DomainVolume
+         LogVar_I(iVarTot) &
+              = InvGammaElectronMinus1*integrate_grid(Tmp1_GB)/DomainVolume
       case('eb')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
             if(UseB0)then
                do k = 1, nK; do j=1, nJ; do i=1, nI
                   Tmp1_GB(i,j,k,iBlock) = &
-                    ( (State_VGB(Bx_,i,j,k,iBlock) + B0_DGB(1,i,j,k,iBlock))**2 &
-                    + (State_VGB(By_,i,j,k,iBlock) + B0_DGB(2,i,j,k,iBlock))**2 &
-                    + (State_VGB(Bz_,i,j,k,iBlock) + B0_DGB(3,i,j,k,iBlock))**2 )
+                    ((State_VGB(Bx_,i,j,k,iBlock) + B0_DGB(1,i,j,k,iBlock))**2&
+                    +(State_VGB(By_,i,j,k,iBlock) + B0_DGB(2,i,j,k,iBlock))**2&
+                    +(State_VGB(Bz_,i,j,k,iBlock) + B0_DGB(3,i,j,k,iBlock))**2)
                end do; end do; end do
             else
                do k = 1, nK; do j=1, nJ; do i=1, nI
@@ -960,7 +964,8 @@ contains
          end select
          do iBlock = 1, nBlock
             if(Unused_B(iBlock)) CYCLE
-            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = Trace_DSNB(i,j,1:nI,1:nJ,1:nK,iBlock)
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) &
+                 = Trace_DSNB(i,j,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
          ! RAYTRACE variables at iTest, jTest, kTest, iBlockTest, iProcTest
@@ -1322,7 +1327,8 @@ contains
        case('bx','by','bz','bxpnt','bypnt','bzpnt','b1xpnt','b1ypnt','b1zpnt',&
             'b1x','b1y','b1z','b0x','b0y','b0z','dst','dstdivb','dst_sm')
           LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitB_)
-       case('e','epnt','ew','erad','ekinx','ekiny','ekinz','ekin','eth','eeth','eb')
+       case('e','epnt','ew','erad','ekinx','ekiny','ekinz','ekin','eth', &
+            'eeth','eb')
           LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitEnergyDens_)
        case('p','ppnt','pmin','pmax','pperp')
           LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitP_)

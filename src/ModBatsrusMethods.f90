@@ -45,7 +45,7 @@ contains
     ! Allocate and initialize variables dependent on number of PEs
     call init_mod_parallel
 
-    if(.not.IsStandAlone)call write_progress(0)
+    if(.not.IsStandAlone)call write_progress
 
     call grid_setup   ! restart reads info integer only
 

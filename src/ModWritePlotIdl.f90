@@ -14,15 +14,16 @@ module ModWritePlotIdl
 
 contains
   !============================================================================
-  subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
+  subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar_GV, &
        DoSaveGenCoord, xUnit, xMin, xMax, yMin, yMax, zMin, zMax, &
-       DxBlock, DyBlock, DzBlock, nCell)
+       CellSize1, CellSize2, CellSize3, nCell)
 
     ! Save all cells within plotting range, for each processor
 
-    use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, Coord111_DB
-    use ModIO,       ONLY: DoSaveBinary, TypePlot, PlotDx_DI, PlotRange_EI, &
-         MaxPlotvar
+    use ModGeometry, ONLY: &
+         xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, Coord111_DB
+    use ModIO,       ONLY: &
+         DoSaveBinary, TypePlot, PlotDx_DI, PlotRange_EI, MaxPlotvar
     use ModNumConst, ONLY: cPi, cTwoPi
     use ModKind,     ONLY: nByteReal
     use ModIoUnit,   ONLY: UnitTmp_
@@ -40,11 +41,11 @@ contains
 
     integer, intent(in)   :: iFile, iBlock
     integer, intent(in)   :: nPlotVar
-    real,    intent(in)   :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
+    real,    intent(in)   :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
     logical, intent(in)   :: DoSaveGenCoord      ! save gen. or x,y,z coords
     real,    intent(in)   :: xUnit               ! unit for coordinates
     real,    intent(in)   :: xMin, xMax, yMin, yMax, zMin, zMax
-    real,    intent(inout):: DxBlock, DyBlock, DzBlock
+    real,    intent(inout):: CellSize1, CellSize2, CellSize3
     integer, intent(out)  :: nCell
 
     ! Local variables
@@ -79,19 +80,19 @@ contains
     if(index(StringTest,'SAVEPLOTALL')>0)then
 
        ! Save all cells of block including ghost cells
-       DxBlock = CellSize_DB(x_,iBlock)
-       DyBlock = CellSize_DB(y_,iBlock)
-       DzBlock = CellSize_DB(z_,iBlock)
+       CellSize1 = CellSize_DB(x_,iBlock)
+       CellSize2 = CellSize_DB(y_,iBlock)
+       CellSize3 = CellSize_DB(z_,iBlock)
 
-       PlotRange_EI(1,iFile) = CoordMin_D(1) - nGI*DxBlock
-       PlotRange_EI(2,iFile) = CoordMax_D(1) + nGI*DxBlock
-       PlotRange_EI(3,iFile) = CoordMin_D(2) - nGJ*DyBlock
-       PlotRange_EI(4,iFile) = CoordMax_D(2) + nGJ*DyBlock
-       PlotRange_EI(5,iFile) = CoordMin_D(3) - nGK*DzBlock
-       PlotRange_EI(6,iFile) = CoordMax_D(3) + nGK*DzBlock
-       PlotDx_DI(1,iFile) = DxBlock
-       PlotDx_DI(2,iFile) = DyBlock
-       PlotDx_DI(3,iFile) = DzBlock
+       PlotRange_EI(1,iFile) = CoordMin_D(1) - nGI*CellSize1
+       PlotRange_EI(2,iFile) = CoordMax_D(1) + nGI*CellSize1
+       PlotRange_EI(3,iFile) = CoordMin_D(2) - nGJ*CellSize2
+       PlotRange_EI(4,iFile) = CoordMax_D(2) + nGJ*CellSize2
+       PlotRange_EI(5,iFile) = CoordMin_D(3) - nGK*CellSize3
+       PlotRange_EI(6,iFile) = CoordMax_D(3) + nGK*CellSize3
+       PlotDx_DI(1,iFile) = CellSize1
+       PlotDx_DI(2,iFile) = CellSize2
+       PlotDx_DI(3,iFile) = CellSize3
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           nCell = nCell + 1
@@ -102,15 +103,15 @@ contains
              Coord_D = Xyz_DGB(:,i,j,k,iBlock)*xUnit
           end if
           if(IsBinary)then
-             Plot_V = PlotVar(i,j,k,1:nPlotVar)
-             write(UnitTmp_) DxBlock*xUnit, Coord_D, Plot_V
+             Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
+             write(UnitTmp_) CellSize1*xUnit, Coord_D, Plot_V
           else
              do iVar=1,nPlotVar
-                Plot_V(iVar) = PlotVar(i,j,k,iVar)
+                Plot_V(iVar) = PlotVar_GV(i,j,k,iVar)
                 if(abs(Plot_V(iVar))<1.0d-99)Plot_V(iVar)=0.0
              end do
              write(UnitTmp_,'(50(1pe13.5))') &
-                  DxBlock*xUnit, Coord_D, Plot_V(1:nPlotVar)
+                  CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
           endif
        end do; end do; end do
 
@@ -158,31 +159,32 @@ contains
          RETURN
 
     Dx = PlotDx_DI(1,iFile)
-    DxBlock = CellSize_DB(x_,iBlock)
-    DyBlock = CellSize_DB(y_,iBlock)
-    DzBlock = CellSize_DB(z_,iBlock)
+    CellSize1 = CellSize_DB(x_,iBlock)
+    CellSize2 = CellSize_DB(y_,iBlock)
+    CellSize3 = CellSize_DB(z_,iBlock)
 
     ! Calculate index limits of cells inside cut
-    iMin = max(1 ,floor((xMin1-Coord111_DB(x_,iBlock))/DxBlock)+2)
-    iMax = min(nI,floor((xMax1-Coord111_DB(x_,iBlock))/DxBlock)+1)
+    iMin = max(1 ,floor((xMin1-Coord111_DB(x_,iBlock))/CellSize1)+2)
+    iMax = min(nI,floor((xMax1-Coord111_DB(x_,iBlock))/CellSize1)+1)
 
-    jMin = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
-    jMax = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
+    jMin = max(1 ,floor((yMin1-ySqueezed)/CellSize2)+2)
+    jMax = min(nJ,floor((yMax1-ySqueezed)/CellSize2)+1)
 
-    kMin = max(1 ,floor((zMin1-Coord111_DB(z_,iBlock))/DzBlock)+2)
-    kMax = min(nK,floor((zMax1-Coord111_DB(z_,iBlock))/DzBlock)+1)
+    kMin = max(1 ,floor((zMin1-Coord111_DB(z_,iBlock))/CellSize3)+2)
+    kMax = min(nK,floor((zMax1-Coord111_DB(z_,iBlock))/CellSize3)+1)
 
     if(DoTest)then
        write(*,*) NameSub, 'iMin,iMax,jMin,jMax,kMin,kMax=',&
             iMin,iMax,jMin,jMax,kMin,kMax
-       write(*,*) NameSub, 'DxBlock,xMinBox,yMinBox,zMinBox',DxBlock,Coord111_DB(:,iBlock)
+       write(*,*) NameSub, 'CellSize1, Coord111=', &
+            CellSize1, Coord111_DB(:,iBlock)
        write(*,*) NameSub, 'ySqueezed  =',ySqueezed
        write(*,*) NameSub, 'xMin1,xMax1=',xMin1,xMax1
        write(*,*) NameSub, 'yMin1,yMax1=',yMin1,yMax1
        write(*,*) NameSub, 'zMin1,zMax1=',zMin1,zMax1
     end if
 
-    if(DxBlock >= Dx)then
+    if(CellSize1 >= Dx)then
        ! Cell is equal or coarser than Dx, save all cells in cut
        do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
           x = Xyz_DGB(x_,i,j,k,iBlock)
@@ -190,21 +192,26 @@ contains
           z = Xyz_DGB(z_,i,j,k,iBlock)
 
           ! Check if we are inside the Cartesian box
-          if(x<xMinBox .or. x>xMaxBox .or. y<yMinBox .or. y>yMaxBox .or. z<zMinBox .or. z>zMaxBox) CYCLE
+          if(x < xMinBox .or. x > xMaxBox .or. y < yMinBox .or. y > yMaxBox &
+               .or. z < zMinBox .or. z > zMaxBox) CYCLE
 
           ! if plot type is bx0
           if(index(TypePlot, 'bx0') > 0) then
              ! check if bx are the same sign in this block
              if(UseB0) then
-                if( all(B0_DGB(x_,i,j,k-1:k+1,iBlock)+State_VGB(Bx_,i,j,k-1:k+1,iBlock)>0) .or.&
-                     all(B0_DGB(x_,i,j,k-1:k+1,iBlock)+State_VGB(Bx_,i,j,k-1:k+1,iBlock)<0)) CYCLE
+                if( all(B0_DGB(x_,i,j,k-1:k+1,iBlock) &
+                     +  State_VGB(Bx_,i,j,k-1:k+1,iBlock)>0) .or. &
+                     all(B0_DGB(x_,i,j,k-1:k+1,iBlock) &
+                     +   State_VGB(Bx_,i,j,k-1:k+1,iBlock)<0)) CYCLE
              else
                 if( all(State_VGB(Bx_,i,j,k-1:k+1,iBlock)>0) .or.&
                      all(State_VGB(Bx_,i,j,k-1:k+1,iBlock)<0)) CYCLE
              end if
              ! exclude the edge points at the plot range boundary
-             if( abs(Xyz_DGB(z_,i,j,k,iBlock) - PlotRange_EI(5,iFile))/DzBlock <= 3 .or.&
-                  abs(Xyz_DGB(z_,i,j,k,iBlock) - PlotRange_EI(6,iFile))/DzBlock <= 3) CYCLE
+             if( abs(Xyz_DGB(z_,i,j,k,iBlock) - PlotRange_EI(5,iFile)) &
+                  /CellSize3 <= 3 .or.&
+                  abs(Xyz_DGB(z_,i,j,k,iBlock) - PlotRange_EI(6,iFile)) &
+                  /CellSize3 <= 3) CYCLE
           end if
 
           if(DoSaveGenCoord)then
@@ -215,22 +222,22 @@ contains
           end if
 
           if(IsBinary)then
-             Plot_V = PlotVar(i,j,k,1:nPlotVar)
-             write(UnitTmp_) DxBlock*xUnit, Coord_D, Plot_V
+             Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
+             write(UnitTmp_) CellSize1*xUnit, Coord_D, Plot_V
           else
              do iVar=1, nPlotVar
-                Plot_V(iVar) = PlotVar(i,j,k,iVar)
+                Plot_V(iVar) = PlotVar_GV(i,j,k,iVar)
                 if(abs(Plot_V(iVar)) < 1.0d-99) Plot_V(iVar) = 0.0
              end do
              write(UnitTmp_,'(50es13.5)') &
-                  DxBlock*xUnit, Coord_D, Plot_V(1:nPlotVar)
+                  CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
           endif
           nCell = nCell + 1
        end do; end do; end do
     else
        ! Block is finer then required resolution
        ! Calculate restriction factor
-       nRestrict = greatest_common_divisor(nint(Dx/DxBlock), iMax-iMin+1)
+       nRestrict = greatest_common_divisor(nint(Dx/CellSize1), iMax-iMin+1)
        if(nDim > 1) nRestrict = greatest_common_divisor(nRestrict, jMax-jMin+1)
        if(nDim > 2) nRestrict = greatest_common_divisor(nRestrict, kMax-kMin+1)
 
@@ -239,9 +246,9 @@ contains
        nRestrictZ = 1; if(nDim > 2) nRestrictZ = nRestrict
 
        ! Calculate restricted cell size
-       DxBlock    = nRestrictX*DxBlock
-       DyBlock    = nRestrictY*DyBlock
-       DzBlock    = nRestrictZ*DzBlock
+       CellSize1    = nRestrictX*CellSize1
+       CellSize2    = nRestrictY*CellSize2
+       CellSize3    = nRestrictZ*CellSize3
 
        ! Factor for taking the average
        Restrict = 1./(nRestrict**nDim)
@@ -260,7 +267,9 @@ contains
                 y =0.5*(Xyz_DGB(y_,i,j,k,iBlock) + Xyz_DGB(y_,i2,j2,k2,iBlock))
                 z =0.5*(Xyz_DGB(z_,i,j,k,iBlock) + Xyz_DGB(z_,i2,j2,k2,iBlock))
 
-                if(x<xMinBox .or. x>xMaxBox .or. y<yMinBox .or. y>yMaxBox .or. z<zMinBox .or. z>zMaxBox) &
+                if(       x < xMinBox .or. x > xMaxBox   &
+                     .or. y < yMinBox .or. y > yMaxBox   &
+                     .or. z < zMinBox .or. z > zMaxBox ) &
                      CYCLE
 
                 if(DoSaveGenCoord)then
@@ -271,16 +280,16 @@ contains
                 end if
 
                 do iVar=1,nPlotVar
-                   Plot_V(iVar) = Restrict*sum(PlotVar(i:i2,j:j2,k:k2,iVar))
+                   Plot_V(iVar) = Restrict*sum(PlotVar_GV(i:i2,j:j2,k:k2,iVar))
                 end do
                 if(IsBinary)then
-                   write(UnitTmp_)DxBlock*xUnit, Coord_D, Plot_V(1:nPlotVar)
+                   write(UnitTmp_)CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
                 else
                    do iVar = 1, nPlotVar
                       if(abs(Plot_V(iVar)) < 1.0d-99)Plot_V(iVar)=0.0
                    end do
                    write(UnitTmp_,'(50es13.5)') &
-                        DxBlock*xUnit, Coord_D, Plot_V(1:nPlotVar)
+                        CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
                 endif
                 nCell = nCell + 1
              end do

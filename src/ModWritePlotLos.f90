@@ -37,12 +37,12 @@ contains
     !
     ! July     2001
     ! January  2002 modified for improved image plane
-    ! December 2003 fixed sign error in scattering coefficient b_los
+    ! December 2003 fixed sign error in scattering coefficient bLos
     ! January  2004 fix to accept 0 in LOS vector
     ! January  2004 fixed declaration for norm_los(3), XyzPix_D(3)
     ! February 2004 fix integration and make 2nd order accurate
     !               fix save_file in main.f90 update ghost cells
-    !               include forgotten StringPlotParam=StringPlotParam_I(ifile)
+    !               include forgotten StringPlotParam=StringPlotParam_I(iFile)
     !               flags for PB and LW and limb darkening parameter
     !               improved block-line distance calculation
     !               fix IDL output and plot filenames
@@ -101,12 +101,12 @@ contains
          OffsetAngle
 
     ! Plot variables
-    integer, parameter :: neqparmax=10
+    integer, parameter :: MaxParam=10
     real, allocatable :: ImagePe_VII(:,:,:), Image_VII(:,:,:)
 
-    real ::     eqpar(neqparmax)
-    character (len=20) :: eqparnames(neqparmax)
-    character (len=20) :: plotvarnames(MaxPlotvarLos)
+    real :: Param_I(MaxParam)
+    character (len=20) :: NameParam_I(MaxParam)
+    character (len=20) :: NamePlotVar_V(MaxPlotvarLos)
     character (len=20) :: NameVar
 
     integer :: nEqpar, nPlotVar
@@ -131,15 +131,15 @@ contains
     ! rOuter in SC should be smaller than the size of the domain
     real :: rInner, rInner2, rOuter, rOuter2
 
-    character(len=500) :: allnames, StringHeadLine
-    character(len=500) :: unitstr_TEC, unitstr_IDL
-    character(len=5)   :: file_extension
-    character(len=40)  :: file_format
+    character(len=500) :: NameAllVar, StringHeadLine
+    character(len=500) :: StringUnitTec, StringUnitIdl
+    character(len=5)   :: StringExtension
+    character(len=40)  :: StringFormat
 
     ! extra variables needed for auxiliarry data writing with tec output
     ! (style copied from write_plot_tec)
-    character(len=23) :: TextDateTime0, TextDateTime
-    character(len=80) :: FormatTime
+    character(len=23) :: StringDateTime0, StringDateTime
+    character(len=80) :: StringFormatTime
     character(len=80) :: StringTmp
     integer           :: iTime_I(7)
 
@@ -155,14 +155,14 @@ contains
     ! XyzBlockcenter changes, so need fixed one
     real :: FixedXyzBlockCenter_D(3)
 
-    logical :: AlignedZ = .false.
+    logical :: IsAlignedZ = .false.
 
     integer :: iTableEUV = -1, iTableSXR= -1
 
     ! variables for reading in a generalized table
     logical :: UseTableGen = .false.
     integer :: iTableGen = -1
-    character (len=20) :: TableVarNames(MaxPlotvarLos)
+    character (len=20) :: NameTableVar_V(MaxPlotvarLos)
     integer :: nTableVar
     real, allocatable :: InterpValues_I(:)
 
@@ -264,24 +264,24 @@ contains
        write(*,*) 'nPix           =', nPix
     end if
 
-    unitstr_TEC = ''
-    unitstr_IDL = ''
+    StringUnitTec = ''
+    StringUnitIdl = ''
 
-    TypePlot=TypePlot_I(ifile)
-    StringPlotVar=StringPlotVar_I(ifile)
+    TypePlot=TypePlot_I(iFile)
+    StringPlotVar=StringPlotVar_I(iFile)
 
-    if(DoTest)write(*,*)'ifile=',ifile,' TypePlot_I=',TypePlot, &
-         ' form = ',TypePlotFormat_I(ifile)
+    if(DoTest)write(*,*)'iFile=',iFile,' TypePlot_I=',TypePlot, &
+         ' form = ',TypePlotFormat_I(iFile)
 
     call lower_case(StringPlotVar)
-    call split_string(StringPlotVar, MaxPlotvarLos, plotvarnames, nPlotVar)
-    call set_plot_scalars(iFile,nEqparMax, nEqpar,eqparnames, Eqpar)
+    call split_string(StringPlotVar, MaxPlotvarLos, NamePlotVar_V, nPlotVar)
+    call set_plot_scalars(iFile,MaxParam, nEqpar,NameParam_I, Param_I)
     ! Initialize table IDs. In this case automatically
     ! UseTableGen = (iTableGen >=0) and analogously for other table
     ! related logicals.
     iTableEuv = -1; iTableSxr = -1; iTableGen =  -1
-    ! For generalized Los Table check PlotVarNames for string 'tbl'
-    UseTableGen = any(PlotVarNames(1:nPlotVar)== 'tbl')
+    ! For generalized Los Table check NamePlotVar_V for string 'tbl'
+    UseTableGen = any(NamePlotVar_V(1:nPlotVar)== 'tbl')
 
     if(UseTableGen) then
        iTableGen = i_lookup_table(trim(NameLosTable_I(iFile)))
@@ -289,18 +289,18 @@ contains
             call stop_mpi('Need to load #LOOKUPTABLE for TBL response!')
        ! split the variable list string read in the table
        call split_string(Table_I(iTableGen)%NameVar, MaxPlotvarLos, &
-            TableVarNames, nTableVar)
+            NameTableVar_V, nTableVar)
        ! don't count the x and y table labels as plot variables
        nPlotVar=nTableVar-2
-       PlotVarNames(1:nPlotVar)=TableVarNames(3:nTableVar)
+       NamePlotVar_V(1:nPlotVar)=NameTableVar_V(3:nTableVar)
 
        ! redefine StringPlotVar with correct table info
-       call join_string(nPlotVar, PlotVarNames, StringPlotVar)
+       call join_string(nPlotVar, NamePlotVar_V, StringPlotVar)
 
        if(DoTest .and. iProc==0) then
           write(*,*) 'plot variables, UseRho=', trim(StringPlotVar), UseRho
           write(*,*) 'nPlotVar, PlotVarNames_V=', &
-               nPlotVar,plotvarnames(1:nPlotVar)
+               nPlotVar,NamePlotVar_V(1:nPlotVar)
        end if
 
        ! allocate the vector that will contain the interpolated values
@@ -311,39 +311,42 @@ contains
             Table_I(iTableGen)%NameVar
     endif
 
-    allnames='x y '//trim(StringPlotVar)//' '//StringPlotParam_I(iFile)
-    if(DoTest .and. iProc==0) write(*,*) 'AllNames: ', AllNames
+    NameAllVar='x y '//trim(StringPlotVar)//' '//StringPlotParam_I(iFile)
+    if(DoTest .and. iProc==0) write(*,*) 'NameAllVar: ', NameAllVar
 
     if(DoTest .and. iProc==0) then
        write(*,*) 'plot variables, UseRho=', StringPlotVar, UseRho
        write(*,*) 'nPlotVar, PlotVarNames_V=', &
-            nPlotVar,plotvarnames(1:nPlotVar)
+            nPlotVar,NamePlotVar_V(1:nPlotVar)
     end if
 
     ! Get the headers that contain variables names and units
-    select case(TypePlotFormat_I(ifile))
+    select case(TypePlotFormat_I(iFile))
     case('tec')
-       call get_TEC_los_variables(ifile,nPlotVar,plotvarnames,unitstr_TEC)
-       if(DoTest .and. iProc==0) write(*,*)unitstr_TEC
+       call get_los_variable_tec(iFile,nPlotVar,NamePlotVar_V,StringUnitTec)
+       if(DoTest .and. iProc==0) write(*,*)StringUnitTec
     case('idl')
-       call get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL, .false.)
-       if(DoTest .and. iProc==0) write(*,*)unitstr_IDL
+       call get_los_unit_idl(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, &
+            .false.)
+       if(DoTest .and. iProc==0) write(*,*)StringUnitIdl
     case('hdf')
-       call get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL, .true.)
-       if(DoTest .and. iProc==0) write(*,*)unitStr_IDL
+       call get_los_unit_idl(iFile,nPlotVar,NamePlotVar_V,StringUnitIdl, &
+            .true.)
+       if(DoTest .and. iProc==0) write(*,*)StringUnitIdl
     end select
 
     if(UseTableGen) then
-       unitstr_TEC = 'VARIABLES = "X", "Y"'
+       StringUnitTec = 'VARIABLES = "X", "Y"'
        do iVar=1, nPlotVar
-          unitstr_TEC = trim(unitstr_TEC)//', "'//trim(PlotVarNames(iVar))//'"'
+          StringUnitTec = trim(StringUnitTec) &
+               //', "'//trim(NamePlotVar_V(iVar))//'"'
        enddo
-       if(DoTest .and. iProc==0) write(*,*)'unitstr_TEC: ',unitstr_TEC
+       if(DoTest .and. iProc==0) write(*,*)'StringUnitTec: ',StringUnitTec
 
-       if(TypePlotFormat_I(ifile) /= 'hdf') then
-          call join_string(nPlotVar, PlotVarNames, StringPlotVar)
-          unitstr_IDL = 'x y '//StringPlotVar
-          if(DoTest .and. iProc==0) write(*,*)'unitstr_IDL: ',unitstr_IDL
+       if(TypePlotFormat_I(iFile) /= 'hdf') then
+          call join_string(nPlotVar, NamePlotVar_V, StringPlotVar)
+          StringUnitIdl = 'x y '//StringPlotVar
+          if(DoTest .and. iProc==0) write(*,*)'StringUnitIdl: ',StringUnitIdl
        end if
     endif
 
@@ -358,7 +361,7 @@ contains
     ! a = LOS x (0,1,0), b = a x LOS ensures that b is roughly aligned with +Y
     if(abs(Los_D(3)) < maxval(abs(Los_D(1:2))))then
        aUnit_D = cross_product(Los_D, [0.,0.,1.])
-       AlignedZ = .true.
+       IsAlignedZ = .true.
     else
        ! Viewing along the Z axis more or less
        aUnit_D = cross_product(Los_D, [0.,1.,0.])
@@ -384,23 +387,23 @@ contains
     ImagePe_VII = 0.0
 
     ! Do we need to apply scattering
-    UseScattering = any(plotvarnames(1:nPlotVar) == 'wl') &
-         .or.       any(plotvarnames(1:nPlotVar) == 'pb')
+    UseScattering = any(NamePlotVar_V(1:nPlotVar) == 'wl') &
+         .or.       any(NamePlotVar_V(1:nPlotVar) == 'pb')
 
     ! Do we need to calc EUV response?
-    UseEuv = any(plotvarnames(1:nPlotVar) == 'euv171') &
-         .or.       any(plotvarnames(1:nPlotVar) == 'euv195') &
-         .or.       any(plotvarnames(1:nPlotVar) == 'euv284')
+    UseEuv = any(NamePlotVar_V(1:nPlotVar) == 'euv171') &
+         .or.       any(NamePlotVar_V(1:nPlotVar) == 'euv195') &
+         .or.       any(NamePlotVar_V(1:nPlotVar) == 'euv284')
 
     ! Do we need to calc Soft X-Trace_DSNB response?
-    UseSxr = any(plotvarnames(1:nPlotVar) == 'sxr')
+    UseSxr = any(NamePlotVar_V(1:nPlotVar) == 'sxr')
 
     ! if EUV or SXR calc, then get lookup table info
     if (UseEuv) iTableEUV  = i_lookup_table('euv')
     if (UseSxr) iTableSXR  = i_lookup_table('sxr')
 
     ! Do we need to calculate density (also for white light and polarization)
-    UseRho = UseScattering .or. any(plotvarnames(1:nPlotVar) == 'rho') &
+    UseRho = UseScattering .or. any(NamePlotVar_V(1:nPlotVar) == 'rho') &
          .or. UseEuv .or. UseSxr .or. UseTableGen
 
     if(DoTiming)call timing_start('los_block_loop')
@@ -446,62 +449,62 @@ contains
 
        if(DoTiming)call timing_start('los_save_plot')
 
-       select case(TypePlotFormat_I(ifile))
+       select case(TypePlotFormat_I(iFile))
        case('tec')
-          file_extension='.dat'
+          StringExtension='.dat'
        case('idl')
-          file_extension='.out'
+          StringExtension='.out'
        case('hdf')
-          file_extension='.batl'
+          StringExtension='.batl'
        end select
 
-       if (ifile-plot_ > 9) then
-          file_format='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
+       if (iFile-plot_ > 9) then
+          StringFormat='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
        else
-          file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
+          StringFormat='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
        end if
 
        ! the plot time is stored in the hdf5 files and displayed in VisIt.
        ! if you don not include it in the NameFile VisIt will automacially
        ! group all the los files.
-       if(IsTimeAccurate .and. TypePlotFormat_I(ifile) /= 'hdf')then
+       if(IsTimeAccurate .and. TypePlotFormat_I(iFile) /= 'hdf')then
           call get_time_string
-          write(NameFile,file_format) &
+          write(NameFile,StringFormat) &
                trim(TypePlot)//"_",&
-               ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
-               file_extension
+               iFile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
+               StringExtension
        else
-          write(NameFile,file_format) &
+          write(NameFile,StringFormat) &
                trim(TypePlot)//"_",&
-               ifile-plot_,"_n",nStep,file_extension
+               iFile-plot_,"_n",nStep,StringExtension
        end if
 
        ! write header file
 
-       if(TypePlotFormat_I(ifile)=='tec') then
+       if(TypePlotFormat_I(iFile)=='tec') then
           call open_file(FILE=NameFile)
 
           write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
-          write(UnitTmp_,'(a)')trim(unitstr_TEC)
+          write(UnitTmp_,'(a)')trim(StringUnitTec)
           write(UnitTmp_,*) 'ZONE T="LOS Image"', &
                ', I=',nPix,', J=',nPix,', K=1, F=POINT'
 
           ! Write Auxilliary header info, which is useful for EUV images.
           ! Makes it easier to identify, and automatically process synthetic
           ! images from different instruments/locations
-          FormatTime = &
+          StringFormatTime = &
                '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
           call get_date_time(iTime_I)
-          write(TextDateTime0,FormatTime) iStartTime_I
-          write(TextDateTime ,FormatTime) iTime_I
+          write(StringDateTime0,StringFormatTime) iStartTime_I
+          write(StringDateTime ,StringFormatTime) iTime_I
 
           ! TIMEEVENT
           write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA TIMEEVENT="',trim(TextDateTime),'"'
+               'AUXDATA TIMEEVENT="',trim(StringDateTime),'"'
 
           ! TIMEEVENTSTART
           write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA TIMEEVENTSTART="',trim(TextDateTime0),'"'
+               'AUXDATA TIMEEVENTSTART="',trim(StringDateTime0),'"'
 
           ! TIMESECONDSABSOLUTE
           ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
@@ -529,7 +532,7 @@ contains
              do jPix = 1, nPix
                 bPix = (jPix - 1) * SizePix - rSizeImage
 
-                if (IsDimensionalPlot_I(ifile)) then
+                if (IsDimensionalPlot_I(iFile)) then
                    write(UnitTmp_,fmt="(30(E14.6))") aPix*No2Io_V(UnitX_), &
                         bPix*No2Io_V(UnitX_), Image_VII(1:nPlotVar,iPix,jPix)
                 else
@@ -547,18 +550,18 @@ contains
           ! Makes it easier to identify, and automatically process synthetic
           ! images from different instruments/locations
 
-          write(FormatTime,*)&
+          write(StringFormatTime,*)&
                '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
           call get_date_time(iTime_I)
-          write(TextDateTime0,FormatTime) iStartTime_I
-          write(TextDateTime ,FormatTime) iTime_I
+          write(StringDateTime0,StringFormatTime) iStartTime_I
+          write(StringDateTime ,StringFormatTime) iTime_I
 
           ! Optimize the amount of information required in the header
 
           ! TIMEEVENT and TIMEEVENTSTART
           StringHeadLine = trim(StringHeadline)// &
-               ' TIMEEVENT='//trim(TextDateTime)// &
-               ' TIMEEVENTSTART='//TextDateTime0
+               ' TIMEEVENT='//trim(StringDateTime)// &
+               ' TIMEEVENTSTART='//StringDateTime0
 
           ! TIMESECONDSABSOLUTE
           ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
@@ -574,17 +577,17 @@ contains
 
           ! Set image size and dimensionalize if necessary
           aPix = rSizeImage
-          if (IsDimensionalPlot_I(ifile)) aPix = aPix * No2Io_V(UnitX_)
+          if (IsDimensionalPlot_I(iFile)) aPix = aPix * No2Io_V(UnitX_)
 
-          select case(TypePlotFormat_I(ifile))
+          select case(TypePlotFormat_I(iFile))
           case('idl')
              call save_plot_file(NameFile, &
                   TypeFileIn = TypeFile_I(iFile), &
                   StringHeaderIn = StringHeadLine, &
                   nStepIn = nStep, &
                   TimeIn = tSimulation, &
-                  ParamIn_I = eqpar(1:neqpar), &
-                  NameVarIn = allnames, &
+                  ParamIn_I = Param_I(1:neqpar), &
+                  NameVarIn = NameAllVar, &
                   nDimIn = 2, &
                   CoordMinIn_D = [-aPix, -aPix], &
                   CoordMaxIn_D = [+aPix, +aPix], &
@@ -595,9 +598,9 @@ contains
                   StringHeaderIn = StringHeadLine, &
                   nStepIn = nStep, &
                   TimeIn = tSimulation, &
-                  ParamIn_I = eqpar(1:neqpar), &
-                  NameVarIn_I = PlotVarNames, &
-                  NameUnitsIn = unitstr_IDL,&
+                  ParamIn_I = Param_I(1:neqpar), &
+                  NameVarIn_I = NamePlotVar_V, &
+                  NameUnitsIn = StringUnitIdl,&
                   nDimIn = 2, &
                   CoordMinIn_D = [-aPix, -aPix], &
                   CoordMaxIn_D = [+aPix, +aPix], &
@@ -627,9 +630,7 @@ contains
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, SgrtDiscr, DiscrChromo = -1.0, SqrtDiscr
       real:: XyzIntersect_D(3), XyzTR_D(3)
-
       !------------------------------------------------------------------------
-
       ! Loop over pixels
       do jPix = 1, nPix
 
@@ -700,21 +701,21 @@ contains
                      call integrate_line(XyzIntersect_D, d - dChromo, &
                           UseThreads = DoPlotThreads)
                      ! LOS ntersection with the top of Transition Region
-                     if(UseTRCorrection.and.DoPlotThreads.and.                &
+                     if(UseTRCorrection.and.DoPlotThreads.and.          &
                           (UseEuv .or. UseSxr .or. UseTableGen))then
                          XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
-                        call find_grid_block((rInner + cTiny)*XyzTR_D/        &
+                        call find_grid_block((rInner + cTiny)*XyzTR_D/  &
                              norm2(XyzTR_D),iProcFound, iBlock)
                         if( iProc==iProcFound)call get_tr_los_image(&
                              Xyz_D = XyzTR_D ,&
-                             DirLos_D = LosPix_D,                             &
-                             iBlock = iBlock,                                 &
-                             nPlotVar = nPlotVar,                             &
-                             NamePlotVar_V = plotvarnames(1:nPlotVar),        &
-                             iTableEuv = iTableEuv,                           &
-                             iTableSxr = iTableSxr,                           &
-                             iTableGen = iTableGen,                           &
-                             PixIntensity_V  = ImagePe_VII(1:nPlotVar,        &
+                             DirLos_D = LosPix_D,                       &
+                             iBlock = iBlock,                           &
+                             nPlotVar = nPlotVar,                       &
+                             NamePlotVar_V = NamePlotVar_V(1:nPlotVar), &
+                             iTableEuv = iTableEuv,                     &
+                             iTableSxr = iTableSxr,                     &
+                             iTableGen = iTableGen,                     &
+                             PixIntensity_V  = ImagePe_VII(1:nPlotVar,  &
                              iPix, jPix))
                      end if
                   else
@@ -745,7 +746,8 @@ contains
 
       ! Integrate variables from XyzStartIn_D in the direction LosPix_D
 
-      use ModGeometry,        ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
+      use ModGeometry, ONLY: &
+           xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
       use ModFieldLineThread, ONLY: &
            IsUniformGrid, dCoord1Uniform, rChromo=>rBody
       use BATL_lib,           ONLY: xyz_to_coord, &
@@ -936,7 +938,6 @@ contains
 
     end subroutine integrate_line
     !==========================================================================
-
     subroutine add_segment(Ds, XyzLos_D, UseThreads)
 
       use ModMain,        ONLY: NameVarLower_V
@@ -954,8 +955,8 @@ contains
       real, intent(in):: XyzLos_D(3) ! location of center of line segment
       logical, optional, intent(in) :: UseThreads
 
-      real :: x_q, y_q, z_q
-      real :: a_los, b_los, c_los, d_los
+      real :: x, y, z
+      real :: aLos, bLos, cLos, dLos
       real :: SinOmega, CosOmega, Cos2Theta, Sin2Omega, Cos2Omega, Logarithm
 
       real :: xLos, yLos, zLos, rLos2 ! Coordinates and radial distance squared
@@ -973,12 +974,12 @@ contains
       character(len=1):: NameTecVar, NameTecUnit, NameIdlUnit
       real    :: ValueBody
       real, allocatable, save:: PlotVar_GV(:,:,:,:)
-      logical :: StateInterpolateDone = .false.
+      logical :: DoneStateInterpolate = .false.
       integer :: jVar
 
       ! Added for EUV synth and sph geometry
       real :: GenLos_D(3)
-      real :: ResponseFactor, EuvResponse(3), SxrResponse(2)
+      real :: ResponseFactor, EuvResponse_W(3), SxrResponse_W(2)
 
       ! parameters for temperature cuttoff of EUV/SXR response
       ! idea is to neglect most of the broadened transition region
@@ -1010,18 +1011,18 @@ contains
          Logarithm = log((1.0 + SinOmega)/CosOmega)
 
          ! omega and functions of omega are unique to a given line of sight
-         a_los = CosOmega*Sin2Omega
-         b_los = -0.125*( 1.0 - 3.0*Sin2Omega - (Cos2Omega/SinOmega)* &
+         aLos = CosOmega*Sin2Omega
+         bLos = -0.125*( 1.0 - 3.0*Sin2Omega - (Cos2Omega/SinOmega)* &
               (1.0 + 3.0*Sin2Omega)*Logarithm )
-         c_los = 4.0/3.0 - CosOmega - (1.0/3.0)*CosOmega*Cos2Omega
-         d_los = 0.125*( 5.0 + Sin2Omega - (Cos2omega/SinOmega) * &
+         cLos = 4.0/3.0 - CosOmega - (1.0/3.0)*CosOmega*Cos2Omega
+         dLos = 0.125*( 5.0 + Sin2Omega - (Cos2omega/SinOmega) * &
               (5.0 - Sin2Omega)*Logarithm )
 
-         z_q =   (LosPix_D(1)**2 + LosPix_D(2)**2)*zLos            &
+         z =   (LosPix_D(1)**2 + LosPix_D(2)**2)*zLos            &
               - LosPix_D(3)*(LosPix_D(1)*xLos + LosPix_D(2)*yLos)
-         x_q = xLos + (LosPix_D(1)/LosPix_D(3)) * (z_q - zLos)
-         y_q = yLos + (LosPix_D(2)/LosPix_D(3)) * (z_q - zLos)
-         Cos2Theta = (x_q**2 + y_q**2 + z_q**2)/rLos2
+         x = xLos + (LosPix_D(1)/LosPix_D(3)) * (z - zLos)
+         y = yLos + (LosPix_D(2)/LosPix_D(3)) * (z - zLos)
+         Cos2Theta = (x**2 + y**2 + z**2)/rLos2
       end if
 
       ! Calculate normalized position
@@ -1043,7 +1044,7 @@ contains
       end if
 
       ! Interpolate state if it is needed by any of the plot variables
-      StateInterpolateDone = .false.
+      DoneStateInterpolate = .false.
       if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
          !`Interpolate state vector in the point with gen coords
          ! equal to GenLos_D
@@ -1058,7 +1059,7 @@ contains
             State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
                  nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
          end if
-         StateInterpolateDone = .true.
+         DoneStateInterpolate = .true.
          Rho = State_V(Rho_)
       end if
 
@@ -1104,8 +1105,8 @@ contains
             if (iTableEUV <=0) &
                  call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
             call interpolate_lookup_table(iTableEUV, TeSi, Ne, &
-                 EuvResponse, DoExtrapolate=.true.)
-            EuvResponse = EuvResponse * FractionTrue
+                 EuvResponse_W, DoExtrapolate=.true.)
+            EuvResponse_W = EuvResponse_W * FractionTrue
          end if
 
          if (UseSxr) then
@@ -1113,8 +1114,8 @@ contains
             if (iTableSXR <=0) &
                  call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
             call interpolate_lookup_table(iTableSXR, TeSi, Ne, &
-                 SxrResponse, DoExtrapolate=.true.)
-            SxrResponse = SxrResponse * FractionTrue
+                 SxrResponse_W, DoExtrapolate=.true.)
+            SxrResponse_W = SxrResponse_W * FractionTrue
          end if
 
          if (UseTableGen) then
@@ -1136,7 +1137,7 @@ contains
 
       do iVar = 1, nPlotVar
          Value = 0.0 ! initialize to 0 so that if statements below work right
-         NameVar = plotvarnames(iVar)
+         NameVar = NamePlotVar_V(iVar)
          select case(NameVar)
          case ('len')
             ! Integrate the length of the integration lines
@@ -1145,29 +1146,30 @@ contains
          case('wl')
             ! White light with limb darkening
             if(rLos2 > 1.0) Value = Rho*( &
-                 (1 - MuLimbDarkening)*(2*c_los - a_los*Cos2Theta) &
-                 + MuLimbDarkening*(2*d_los - b_los*Cos2Theta) )
+                 (1 - MuLimbDarkening)*(2*cLos - aLos*Cos2Theta) &
+                 + MuLimbDarkening*(2*dLos - bLos*Cos2Theta) )
 
          case('pb')
             ! Polarization brightness
             if(rLos2 > 1.0) Value = &
-                 Rho*( (1.0 - MuLimbDarkening)*a_los + MuLimbDarkening*b_los)*Cos2Theta
+                 Rho*( (1.0 - MuLimbDarkening)*aLos &
+                 + MuLimbDarkening*bLos)*Cos2Theta
 
          case('euv171')
             ! EUV 171
-            Value = EuvResponse(1)*ResponseFactor
+            Value = EuvResponse_W(1)*ResponseFactor
 
          case('euv195')
             ! EUV 195
-            Value = EuvResponse(2)*ResponseFactor
+            Value = EuvResponse_W(2)*ResponseFactor
 
          case('euv284')
             ! EUV 284
-            Value = EuvResponse(3)*ResponseFactor
+            Value = EuvResponse_W(3)*ResponseFactor
 
          case('sxr')
-            ! Soft X-Trace_DSNB (Only one channel for now, can add others later)
-            Value = SxrResponse(1)*ResponseFactor
+            ! Soft X-ray (Only one channel for now, can add others later)
+            Value = SxrResponse_W(1)*ResponseFactor
 
          case('rho')
             ! Simple density integral
@@ -1187,10 +1189,10 @@ contains
             do jVar = 1, nVar
                if(NameVarLower_V(jVar) /= NameVar) CYCLE
 
-               if (.not. StateInterpolateDone) then
+               if (.not. DoneStateInterpolate) then
                   State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
                        nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
-                  StateInterpolateDone = .true.
+                  DoneStateInterpolate = .true.
                end if
 
                Value = State_V(jVar)
@@ -1361,7 +1363,6 @@ contains
 
     end subroutine integrate_block
     !==========================================================================
-
     subroutine integrate_los_block_rz
 
       ! 0. Set x_S to the left and right X faces,
@@ -1369,7 +1370,7 @@ contains
       !
       ! 1. Calculate the Y and Z coordinates of the LOS intersecting x_S
       !    xMinBox = xMin and xMaxBox = xMax and obtain the corresponding
-      !    radial distances r1 = sqrt(yMinBox^2+zMinBox^2) and r2=sqrt(y^2 + z^2)
+      !    radial distances r1 = sqrt(y1^2+z1^2) and r2=sqrt(y^2 + z^2)
       !    and keep them if R1 or R2 is within the [rMin, rMax] interval.
       !
       ! 2. Calculate the intersection of the line with a circular ring of width
@@ -1381,7 +1382,7 @@ contains
       !    (making sure that we integrate inside the ring! ) to get the length
       !    of the line segment.
 
-      use ModSort,        ONLY: sort_quick
+      use ModSort, ONLY: sort_quick
 
       ! maximum number of intersections between LOS and
       ! the ring formed by rotating the block around the X axis
@@ -1410,9 +1411,11 @@ contains
       ! Normalize the Y-Z components of the LOS vector to unity
       Ratio     = 1/sqrt(sum(LosPix_D(2:3)**2))
       UnitYZ_D  = Ratio*LosPix_D(2:3)
+
       ! Distance to the closest approach is the projection of the pixel
       ! location to the line pointing in the LOS direction
       DistRMin = -sum(UnitYZ_D*XyzPix_D(2:3))
+
       ! The min distance squared can be obtained from the Pythagorian theorem
       r2Min        = sum(XyzPix_D(2:3)**2) - DistRmin**2
 
@@ -1499,88 +1502,89 @@ contains
 
     end subroutine integrate_los_block_rz
     !==========================================================================
-
     subroutine integrate_los_block
 
       ! Local variables
-      integer :: i, j, k, counter
-      real :: intrsct(2,3,3), face_location(2,3)
-      real :: xx1, xx2, yy1, yy2, zz1, zz2
+      integer :: i, j, k, nCount
+
+      real :: IntersectXyz_SDD(2,3,3) ! intersection coords of LOS for 6 faces
+      real :: FaceXyz_SD(2,3) ! locations of the faces of the block
+      real :: x1, x2, y1, y2, z1, z2
       real :: Point1_D(3), Point2_D(3)
-      real :: R2Point1, R2Point2,rLine_D(3),rLine2
-      real :: coeff1,coeff2,coeff3
+      real :: R2Point1, R2Point2, rLine_D(3), rLine2
+      real :: Coef1, Coef2, Coef3 ! Coefficients of quadratic equation
       real :: Discr
       real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
-      logical :: IsOuter, IsGoodSolution1, IsGoodSolution2 , IsAllBehind
+      logical :: IsOuter, IsGoodSolution1, IsGoodSolution2, IsAllBehind
 
       real :: Tmp
       !------------------------------------------------------------------------
       ! if(DoTiming)call timing_start('los_set_plotvar')
 
-      ! x_los, y_los, z_los, r_los give the position of the point on the los
-      ! MuLimbDarkening parameter related to the limb darkening
-      ! face_location give the locations of the faces of the block
-      ! face_location(2,3) = xMinBox, yMinBox, zMinBox---xMaxBox, yMaxBox, zMaxBox
-
       ! Determine the location of the block faces
-      xx1 = 0.5*(Xyz_DGB(x_, 0, 0, 0,iBlock)+Xyz_DGB(x_,   1,   1  , 1,iBlock))
-      xx2 = 0.5*(Xyz_DGB(x_,nI,nJ,nK,iBlock)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBlock))
-      yy1 = 0.5*(Xyz_DGB(y_, 0, 0, 0,iBlock)+Xyz_DGB(y_,   1,   1,   1,iBlock))
-      yy2 = 0.5*(Xyz_DGB(y_,nI,nJ,nK,iBlock)+Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBlock))
-      zz1 = 0.5*(Xyz_DGB(z_, 0, 0, 0,iBlock)+Xyz_DGB(z_,   1,   1,   1,iBlock))
-      zz2 = 0.5*(Xyz_DGB(z_,nI,nJ,nK,iBlock)+Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBlock))
+      x1 = 0.5*(Xyz_DGB(x_, 0, 0, 0,iBlock)+Xyz_DGB(x_,   1,   1  , 1,iBlock))
+      x2 = 0.5*(Xyz_DGB(x_,nI,nJ,nK,iBlock)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBlock))
+      y1 = 0.5*(Xyz_DGB(y_, 0, 0, 0,iBlock)+Xyz_DGB(y_,   1,   1,   1,iBlock))
+      y2 = 0.5*(Xyz_DGB(y_,nI,nJ,nK,iBlock)+Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBlock))
+      z1 = 0.5*(Xyz_DGB(z_, 0, 0, 0,iBlock)+Xyz_DGB(z_,   1,   1,   1,iBlock))
+      z2 = 0.5*(Xyz_DGB(z_,nI,nJ,nK,iBlock)+Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBlock))
 
       ! Swap signs and order of faces for mirror images
       if(iMirror == 2) then
-         Tmp = xx2; xx2 = -xx1; xx1 = -Tmp
+         Tmp = x2; x2 = -x1; x1 = -Tmp
       end if
       if(jMirror == 2) then
-         Tmp = yy2; yy2 = -yy1; yy1 = -Tmp
+         Tmp = y2; y2 = -y1; y1 = -Tmp
       end if
       if(kMirror == 2) then
-         Tmp = zz2; zz2 = -zz1; zz1 = -Tmp
+         Tmp = z2; z2 = -z1; z1 = -Tmp
       end if
 
-      face_location(1,1) = xx1
-      face_location(1,2) = yy1
-      face_location(1,3) = zz1
-      face_location(2,1) = xx2
-      face_location(2,2) = yy2
-      face_location(2,3) = zz2
+      FaceXyz_SD(1,1) = x1
+      FaceXyz_SD(1,2) = y1
+      FaceXyz_SD(1,3) = z1
+      FaceXyz_SD(2,1) = x2
+      FaceXyz_SD(2,2) = y2
+      FaceXyz_SD(2,3) = z2
 
-      ! Determine where the line of sight enters and exits the block
-      ! loop over the number of block face pairs, face directions and coordinates
-      do i=1,2       ! face loop
-         intrsct(i,1,1) = face_location(i,1)
-         intrsct(i,2,2) = face_location(i,2)
-         intrsct(i,3,3) = face_location(i,3)
+      ! Determine where the line of sight enters and exits the block.
+      ! Loop over the number of block face pairs, face directions
+      ! and coordinates
+      do i = 1, 2       ! face loop
+         IntersectXyz_SDD(i,1,1) = FaceXyz_SD(i,1)
+         IntersectXyz_SDD(i,2,2) = FaceXyz_SD(i,2)
+         IntersectXyz_SDD(i,3,3) = FaceXyz_SD(i,3)
 
          do j=1,3     ! direction loop
             do k=1,3   ! coordinate loop
                if (j /= k) then
-                  intrsct(i,j,k) = XyzPix_D(k) + &
+                  IntersectXyz_SDD(i,j,k) = XyzPix_D(k) + &
                        (LosPix_D(k)/LosPix_D(j)) &
-                       *(face_location(i,j) - XyzPix_D(j))
+                       *(FaceXyz_SD(i,j) - XyzPix_D(j))
                end if
             end do
          end do
       end do
 
       ! which of the 6 points are on the block?
-      counter = 0
+      nCount = 0
       CHECK: do i=1,2
          do j=1,3
-            if( (intrsct(i,j,1) >= xx1) .and. (intrsct(i,j,1) <= xx2)) then
-               if( (intrsct(i,j,2) >= yy1) .and. (intrsct(i,j,2) <= yy2)) then
-                  if( (intrsct(i,j,3) >= zz1) .and. (intrsct(i,j,3) <= zz2)) then
-                     counter = counter + 1
-                     if(counter == 1) Point1_D = intrsct(i,j,:)
-                     if(counter == 2) then
-                        Point2_D = intrsct(i,j,:)
+            if(        IntersectXyz_SDD(i,j,1) >= x1 &
+                 .and. IntersectXyz_SDD(i,j,1) <= x2 ) then
+               if(        IntersectXyz_SDD(i,j,2) >= y1 &
+                    .and. IntersectXyz_SDD(i,j,2) <= y2 ) then
+                  if(        IntersectXyz_SDD(i,j,3) >= z1 &
+                       .and. IntersectXyz_SDD(i,j,3) <= z2 ) then
+                     nCount = nCount + 1
+                     if(nCount == 1) Point1_D = IntersectXyz_SDD(i,j,:)
+                     if(nCount == 2) then
+                        Point2_D = IntersectXyz_SDD(i,j,:)
                         ! If point 2 is different from point 1, we are done
-                        if(sum(abs(Point1_D - Point2_D)) > cTolerance) EXIT CHECK
+                        if(sum(abs(Point1_D - Point2_D)) > cTolerance) &
+                             EXIT CHECK
                         ! Ignore the second point, keep checking
-                        counter = 1
+                        nCount = 1
                      end if
                   end if
                end if
@@ -1589,7 +1593,7 @@ contains
       end do CHECK
 
       ! Check if the los cuts through the block
-      if(counter /= 2) RETURN
+      if(nCount /= 2) RETURN
 
       R2Point1 = sum(Point1_D**2)
       R2Point2 = sum(Point2_D**2)
@@ -1611,16 +1615,16 @@ contains
       if( IsOuter .or. &
            (rLine2 < rInner2 .and. rBlockCenter < rInner+rBlockSize) ) then
 
-         coeff1 = sum((Point2_D - Point1_D)**2)
-         coeff2 = 2*dot_product(Point1_D, Point2_D - Point1_D)
+         Coef1 = sum((Point2_D - Point1_D)**2)
+         Coef2 = 2*dot_product(Point1_D, Point2_D - Point1_D)
 
          if( IsOuter ) then
-            coeff3 = R2Point1 - rOuter2
+            Coef3 = R2Point1 - rOuter2
          else
-            coeff3 = R2Point1 - rInner2
+            Coef3 = R2Point1 - rInner2
          end if
 
-         Discr = coeff2**2-4*coeff1*coeff3
+         Discr = Coef2**2 - 4*Coef1*Coef3
 
          if(Discr < 0.0)then
             write(*,*)'Warning: Discr=',Discr
@@ -1633,8 +1637,8 @@ contains
 
          ! Find the two intersections (distance from point1 towards point2)
          Discr = sqrt(Discr)
-         Solution1 = (-coeff2-Discr)/(2*coeff1)
-         Solution2 = (-coeff2+Discr)/(2*coeff1)
+         Solution1 = (-Coef2-Discr)/(2*Coef1)
+         Solution2 = (-Coef2+Discr)/(2*Coef1)
 
          Solution1_D = Point1_D + (Point2_D - Point1_D) * Solution1
          Solution2_D = Point1_D + (Point2_D - Point1_D) * Solution2
@@ -1695,7 +1699,6 @@ contains
 
     end subroutine integrate_los_block
     !==========================================================================
-
     subroutine integrate_segment(XyzStart_D, XyzEnd_D)
 
       ! Integrate variables from XyzStart_D to XyzEnd_D
@@ -1709,10 +1712,9 @@ contains
 
       real :: Ds             ! Length of line segment
       real :: XyzLos_D(3)    ! Coordinate of center of line segment
+      !------------------------------------------------------------------------
 
       ! Number of segments for an accurate integral
-
-      !------------------------------------------------------------------------
       if (IsRzGeometry) then
          ! In RZ geometry Delta Y is representative for the radial resolution
          nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D) &
@@ -1737,15 +1739,13 @@ contains
 
     end subroutine integrate_segment
     !==========================================================================
-
     subroutine dimensionalize_plotvar_los
 
       use ModConst,   ONLY : cSigmaThomson
       use ModPhysics, ONLY : No2Si_V, UnitX_, UnitRho_
-
       !------------------------------------------------------------------------
       do iVar = 1, nPlotVar
-         NameVar = plotvarnames(iVar)
+         NameVar = NamePlotVar_V(iVar)
 
          select case(NameVar)
          case('len')
@@ -1774,13 +1774,11 @@ contains
 
     end subroutine dimensionalize_plotvar_los
     !==========================================================================
-
     subroutine los_cut_backside(Xyz1_D,Xyz2_D,IsAllBehind)
 
       real, dimension(3), intent(inOut) :: Xyz1_D,Xyz2_D
       logical, intent(out) :: IsAllBehind
       logical :: IsBehind1, IsBehind2
-
       !------------------------------------------------------------------------
       IsAllBehind = .false.
 
@@ -1805,11 +1803,10 @@ contains
 
     end subroutine los_cut_backside
     !==========================================================================
-
   end subroutine write_plot_los
   !============================================================================
-
-  subroutine get_TEC_los_variables(iFile, nPlotVar, plotvarnames, unitstr_TEC)
+  subroutine get_los_variable_tec(iFile, nPlotVar, NamePlotVar_V, &
+       StringUnitTec)
 
     ! Using plot var information set the units for Tecplot files
 
@@ -1819,107 +1816,107 @@ contains
     ! Arguments
 
     integer, intent(in) :: NPlotVar,iFile
-    character (len=20), intent(in) :: plotvarnames(NPlotVar)
-    character (len=500), intent(out) :: unitstr_TEC
-    character (len=20) :: s
+    character (len=20), intent(in) :: NamePlotVar_V(NPlotVar)
+    character (len=500), intent(out) :: StringUnitTec
+    character (len=20) :: NamePlotVar
 
     integer :: iVar
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'get_TEC_los_variables'
+    character(len=*), parameter:: NameSub = 'get_los_variable_tec'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if (IsDimensionalPlot_I(ifile)) then
-       write(unitstr_TEC,'(a)') 'VARIABLES = '
-       write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
+    if (IsDimensionalPlot_I(iFile)) then
+       write(StringUnitTec,'(a)') 'VARIABLES = '
+       write(StringUnitTec,'(a)') trim(StringUnitTec)//'"X '//&
             trim(NameTecUnit_V(UnitX_))
-       write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
+       write(StringUnitTec,'(a)') trim(StringUnitTec)//'", "Y '//&
             trim(NameTecUnit_V(UnitX_))
     else
-       write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y'
+       write(StringUnitTec,'(a)') 'VARIABLES = "X", "Y'
     end if
 
     do iVar = 1, nPlotVar
 
-       write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
+       write(StringUnitTec,'(a)') trim(StringUnitTec)//'", "'
 
-       s=plotvarnames(iVar)
+       NamePlotVar = NamePlotVar_V(iVar)
 
-       if (IsDimensionalPlot_I(ifile)) then
+       if (IsDimensionalPlot_I(iFile)) then
 
-          select case(s)
-          case ('len')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'len'//' '//&
+          select case(NamePlotVar)
+          case('len')
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'len'//' '//&
                   trim(NameTecUnit_V(UnitX_))
           case('rho')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'`r [m^-^2]'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'`r [m^-^2]'
           case('vlos','Vlos','ulos','Ulos')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'u.s'//' '//&
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'u.s'//' '//&
                   trim(NameTecUnit_V(UnitU_))
           case('wl')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'`wl [m^-^2]'//' '
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'`wl [m^-^2]'//' '
           case('pb')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'`pb [m^-^2]'//' '
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'`pb [m^-^2]'//' '
           case('euv171')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'`euv171 [DN/S]'//' '
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'`euv171 [DN/S]'//' '
           case('euv195')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'`euv195 [DN/S]'//' '
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'`euv195 [DN/S]'//' '
           case('euv284')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'`euv284 [DN/S]'//' '
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'`euv284 [DN/S]'//' '
           case('sxr')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'`sxr [DN/S]'//' '
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'`sxr [DN/S]'//' '
 
              ! DEFAULT FOR A BAD SELECTION
           case default
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'Default'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'Default'
 
           end select
 
-       else
+       else ! normalized plot variables
 
-          select case(s)
+          select case(NamePlotVar)
           case ('len')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'len'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'len'
           case('rho')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'`r'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'`r'
           case('vlos','Vlos','ulos','Ulos')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'u.s'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'u.s'
           case('wl')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'wl'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'wl'
           case('pb')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'pb'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'pb'
           case('euv171')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'euv171'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'euv171'
           case('euv195')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'euv195'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'euv195'
           case('euv284')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'euv284'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'euv284'
           case('sxr')
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'sxr'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'sxr'
 
              ! DEFAULT FOR A BAD SELECTION
           case default
-             write(unitstr_TEC,'(a)') &
-                  trim(unitstr_TEC)//'Default'
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//'Default'
 
           end select
 
@@ -1927,14 +1924,13 @@ contains
 
     end do
 
-    write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
+    write(StringUnitTec,'(a)') trim(StringUnitTec)//'"'
 
     call test_stop(NameSub, DoTest)
-  end subroutine get_TEC_los_variables
+  end subroutine get_los_variable_tec
   !============================================================================
-
-  subroutine get_IDL_los_units(iFile, nPlotVar, plotvarnames, &
-       unitstr_IDL, UnitForAllnVars)
+  subroutine get_los_unit_idl(iFile, nPlotVar, NamePlotVar_V, &
+       StringUnitIdl, IsDimensional)
 
     ! Based on plot_var information set the header string with unit names
 
@@ -1944,74 +1940,73 @@ contains
     ! Arguments
 
     integer, intent(in) :: iFile,NPlotVar
-    logical, intent(in) :: UnitForALlNvars
-    character (len=20), intent(in) :: plotvarnames(NPlotVar)
-    character (len=79), intent(out) :: unitstr_IDL
-    character (len=20) :: s
+    logical, intent(in) :: IsDimensional
+    character (len=20), intent(in) :: NamePlotVar_V(NPlotVar)
+    character (len=79), intent(out) :: StringUnitIdl
+    character (len=20) :: NamePlotVar
 
     integer :: iVar
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'get_IDL_los_units'
+    character(len=*), parameter:: NameSub = 'get_los_unit_idl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if (IsDimensionalPlot_I(ifile)) then
-       write(unitstr_IDL,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
+    if (IsDimensionalPlot_I(iFile)) then
+       write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
             trim(NameIdlUnit_V(UnitX_))//' '//&
             trim(NameIdlUnit_V(UnitX_))
     else
-       if (UnitForAllnVars) then
+       if (IsDimensional) then
           do iVar = 1, nPlotVar
-             write(unitstr_IDL,'(a)') trim(unitstr_IDL)//' '//'normalized'
-
+             write(StringUnitIdl,'(a)') trim(StringUnitIdl)//' '//'normalized'
           end do
-          unitstr_IDL=adJustl(trim(unitstr_IDL))
+          StringUnitIdl=adJustl(trim(StringUnitIdl))
        else
-          write(unitstr_IDL,'(a)') 'normalized variables'
+          write(StringUnitIdl,'(a)') 'normalized variables'
        end if
 
     end if
 
-    if (IsDimensionalPlot_I(ifile)) then
+    if (IsDimensionalPlot_I(iFile)) then
 
        do iVar = 1, nPlotVar
 
-          s=plotvarnames(iVar)
+          NamePlotVar = NamePlotVar_V(iVar)
 
-          select case(s)
-          case ('len')
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//' '//&
+          select case(NamePlotVar)
+          case('len')
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//&
                   trim(NameIdlUnit_V(UnitX_))
           case('rho')
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//' '//'[m^-^2]'
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[m^-^2]'
           case('vlos','Vlos','ulos','Ulos')
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//' '//&
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//&
                   trim(NameIdlUnit_V(UnitU_))
           case('wl')
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//' '//'[m^-^2]'
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[m^-^2]'
           case('pb')
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//' '//'[m^-^2]'
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[m^-^2]'
           case('euv171')
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//' '//'euv171 [DN/S]'
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'euv171 [DN/S]'
           case('euv195')
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//' '//'euv195 [dn/s]'
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'euv195 [dn/s]'
           case('euv284')
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//' '//'euv284 [DN/S]'
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'euv284 [DN/S]'
           case('sxr')
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//' '//'sxr [DN/S]'
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'sxr [DN/S]'
              ! DEFAULT FOR A BAD SELECTION
           case default
-             write(unitstr_IDL,'(a)') &
-                  trim(unitstr_IDL)//'" Dflt"'
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//'" Dflt"'
           end select
 
        end do
@@ -2019,8 +2014,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
-  end subroutine get_IDL_los_units
+  end subroutine get_los_unit_idl
   !============================================================================
-
 end module ModWritePlotLos
 !==============================================================================

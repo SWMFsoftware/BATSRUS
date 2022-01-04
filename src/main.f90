@@ -59,7 +59,7 @@ program BATSRUS
   endif
 
   ! Announce BATSRUS
-  call write_progress(0)
+  call write_progress
 
   ! Initialize time which is used to check CPU time
   CpuTimeStart = MPI_WTIME()

@@ -27,11 +27,11 @@ module ModWaves
 
   integer, private, parameter :: nWaveHalf = max(nWave/2, 1)
 
-  integer, parameter :: AlfvenWavePlusFirst_ = WaveFirst_
-  integer, parameter :: AlfvenWavePlusLast_  = WaveFirst_ - 1 + nWaveHalf
+  integer, parameter :: AlfvenPlusFirst_ = WaveFirst_
+  integer, parameter :: AlfvenPlusLast_  = WaveFirst_ - 1 + nWaveHalf
 
-  integer, parameter :: AlfvenWaveMinusFirst_ = WaveLast_ + 1 - nWaveHalf
-  integer, parameter :: AlfvenWaveMinusLast_  = WaveLast_
+  integer, parameter :: AlfvenMinusFirst_ = WaveLast_ + 1 - nWaveHalf
+  integer, parameter :: AlfvenMinusLast_  = WaveLast_
 
   real :: FreqMinSI = -1.0
   real :: FreqMaxSI = -1.0
@@ -164,16 +164,16 @@ contains
 
        if(UseAlfvenWaves)then
 
-          FrequencySi_W(AlfvenWavePlusFirst_) = &
+          FrequencySi_W(AlfvenPlusFirst_) = &
                FreqMinSi * exp( 0.50 * DeltaLogFrequency)
 
-          do iWave = AlfvenWavePlusFirst_+ 1, AlfvenWavePlusLast_
+          do iWave = AlfvenPlusFirst_+ 1, AlfvenPlusLast_
              FrequencySi_W(iWave) = FrequencySi_W(iWave - 1) * &
                   exp( DeltaLogFrequency )
           end do
 
-          FrequencySi_W(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) = &
-               FrequencySi_W(AlfvenWavePlusFirst_:AlfvenWavePlusLast_)
+          FrequencySi_W(AlfvenMinusFirst_:AlfvenMinusLast_) = &
+               FrequencySi_W(AlfvenPlusFirst_:AlfvenPlusLast_)
        else
 
           FrequencySi_W(WaveFirst_) = FreqMinSi * exp(0.5*DeltaLogFrequency)
@@ -194,16 +194,16 @@ contains
        Spectrum_W = 1.0/nWave
 
        if(UseAlfvenWaves)then
-          SpectrumPlus_W(AlfvenWavePlusFirst_:AlfvenWavePlusLast_) &
+          SpectrumPlus_W(AlfvenPlusFirst_:AlfvenPlusLast_) &
                = 1.0/nWaveHalf
-          SpectrumMinus_W(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) &
+          SpectrumMinus_W(AlfvenMinusFirst_:AlfvenMinusLast_) &
                = 1.0/nWaveHalf
        end if
     case('powerlaw')
        if(any(FrequencySi_W <= 0.0))call stop_mpi(&
             'Power law spectrum cannot be set for not-positive frequencies')
        if(all(FrequencySi_W < FreqStartSi))call stop_mpi(&
-            'All bin-centered frequencies are below the start frequency for spectrum')
+            'All bin-centered frequencies are below the start frequency')
 
        where(FrequencySi_W >= FreqStartSi)&
             Spectrum_W = 1.0 / FrequencySi_W**(PowerIndex - 1.0)
@@ -214,18 +214,18 @@ contains
        if(UseAlfvenWaves)then
 
           where(FrequencySi_W(&
-               AlfvenWavePlusFirst_:AlfvenWavePlusLast_) >= FreqStartSi)&
+               AlfvenPlusFirst_:AlfvenPlusLast_) >= FreqStartSi)&
                SpectrumPlus_W(&
-               AlfvenWavePlusFirst_:AlfvenWavePlusLast_) = 1.0 / &
+               AlfvenPlusFirst_:AlfvenPlusLast_) = 1.0 / &
                FrequencySi_W(&
-               AlfvenWavePlusFirst_:AlfvenWavePlusLast_)**(PowerIndex - 1.0)
+               AlfvenPlusFirst_:AlfvenPlusLast_)**(PowerIndex - 1.0)
 
           where(FrequencySi_W(&
-               AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) >= FreqStartSi)&
+               AlfvenMinusFirst_:AlfvenMinusLast_) >= FreqStartSi)&
                SpectrumMinus_W(&
-               AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_) = 1.0 / &
+               AlfvenMinusFirst_:AlfvenMinusLast_) = 1.0 / &
                FrequencySi_W(&
-               AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_)**(PowerIndex - 1.0)
+               AlfvenMinusFirst_:AlfvenMinusLast_)**(PowerIndex - 1.0)
 
           ! Normalize by unity:
           SpectrumPlus_W  = SpectrumPlus_W  /sum(SpectrumPlus_W)
@@ -250,9 +250,8 @@ contains
     ! WaveFirst_:WaveLast_ components of this vector are to be filled in:
     real, intent(inout) :: State_V(nVar)
 
-    ! If UseAlfvenWaves, the Plus or Minus waves are intialized, depending on
-    ! the sign of {\bf B}\cdot{\bf r}, therefore, we need the following optional
-    ! parameters:
+    ! If UseAlfvenWaves, the Plus or Minus waves are intialized depending on
+    ! the sign of B.r, therefore, we need the following optional parameters:
     real, intent(in), optional:: Xyz_D(MaxDim), B0_D(MaxDim)
 
     real:: BTotal_D(MaxDim)
@@ -301,7 +300,7 @@ contains
     real:: F_I(0:nWave+1), F2_I( 0: nWaveHalf+1)
 
     ! Auxiiary vector of CFL numbers:
-    real:: CFL_I(1:nWave), CFL2_I(1:nWaveHalf)
+    real:: Cfl_I(1:nWave), CFL2_I(1:nWaveHalf)
 
     ! Loop variables:
     integer :: i,j,k
@@ -328,46 +327,46 @@ contains
           if(DivU_C(i,j,k)>0.0)then
 
              F2_I( 1:nWaveHalf) = &
-                  State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_,i,j,k,iBlock)
+                  State_VGB(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k,iBlock)
              F2_I(nWaveHalf+1)=F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   UseConservativeBC=.true., IsNegativeEnergy=IsNegativeEnergy)
              if(IsNegativeEnergy)call write_and_stop
 
-             State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
+             State_VGB(AlfvenPlusFirst_:AlfvenPlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
              F2_I( 1:nWaveHalf) = &
-                  State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock)
+                  State_VGB(AlfvenMinusFirst_:AlfvenMinusLast_, i,j,k, iBlock)
 
              F2_I(nWaveHalf+1) = F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   UseConservativeBC=.true., IsNegativeEnergy=IsNegativeEnergy)
              if(IsNegativeEnergy)call write_and_stop
 
-             State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
+             State_VGB(AlfvenMinusFirst_:AlfvenMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           else
 
              F2_I( 1:nWaveHalf) = &
-                  State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock)
+                  State_VGB(AlfvenPlusFirst_:AlfvenPlusLast_, i,j,k, iBlock)
              F2_I(0) = F2_I(1)
 
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   UseConservativeBC=.true., IsNegativeEnergy=IsNegativeEnergy)
              if(IsNegativeEnergy) call write_and_stop
 
-             State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
+             State_VGB(AlfvenPlusFirst_:AlfvenPlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
              F2_I( 1:nWaveHalf) = &
-                  State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_,i,j,k,iBlock)
+                  State_VGB(AlfvenMinusFirst_:AlfvenMinusLast_,i,j,k,iBlock)
              F2_I(0) = F2_I(1)
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
                   UseConservativeBC=.true., IsNegativeEnergy=IsNegativeEnergy)
              if(IsNegativeEnergy) call write_and_stop
 
-             State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
+             State_VGB(AlfvenMinusFirst_:AlfvenMinusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
           end if
 
@@ -381,7 +380,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
-          CFL_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
+          Cfl_I = abs( DivU_C(i,j,k) ) * (GammaWave - 1.0)/&
                DeltaLogFrequency * CFL * DtMax_CB(i,j,k,iBlock)
 
           F_I(1:nWave) = &
@@ -389,11 +388,11 @@ contains
 
           if(DivU_C(i,j,k) > 0.0)then
              F_I(nWave + 1)=F_I(nWave)
-             call advance_lin_advection_minus( CFL_I, nWave, 1, 1, F_I, &
+             call advance_lin_advection_minus( Cfl_I, nWave, 1, 1, F_I, &
                   UseConservativeBC= .true.)
           else
              F_I(0) = F_I(1)
-             call advance_lin_advection_plus( CFL_I, nWave, 1, 1, F_I, &
+             call advance_lin_advection_plus( Cfl_I, nWave, 1, 1, F_I, &
                   UseConservativeBC= .true.)
           end if
 

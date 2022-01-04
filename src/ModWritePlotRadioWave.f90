@@ -2,6 +2,7 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModWritePlotRadiowave
+
   use ModRadioWaveImage, ONLY: ray_bunch_intensity, nRay,      &
        Intensity_I, check_allocate,  rIntegration2, StateIn_VI,&
        SlopeX_, SlopeZ_
@@ -12,17 +13,18 @@ module ModWritePlotRadiowave
 
   private ! Except
   public:: write_plot_radiowave
+
 contains
   !============================================================================
   subroutine write_plot_radiowave(iFile)
-    !
+
     ! Purpose:  creates radio telescope images of the radiowaves at several
     !     frequencies by inegrating the plasma emissivity along the refracting
     !     rays.
     !     The plasma emissivity is considered here a function or the plasma
     !     density only.
     ! Written by Leonid Benkevitch.
-    !
+
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: IsTimeAccurate, nStep, tSimulation
     use ModIO, ONLY: StringRadioFrequency_I, TypePlot, &
@@ -288,7 +290,7 @@ contains
     real,    intent(out) :: Frequency_I(MaxPlotRadioFreq)
     integer, intent(out) :: nFreq
     character(len=*), intent(out) :: NameVar_I(MaxPlotRadioFreq)
-    character(len=50) :: cTmp, NameFreqUnit
+    character(len=50) :: StringTmp, NameFreqUnit
     integer :: iFreq, lNameVarAll, iChar, iTmp
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'parse_freq_string'
@@ -313,11 +315,11 @@ contains
        do while(is_num(NameVarAll(iChar:iChar)) &
             .and. (iChar <= lNameVarAll))
           iTmp = iTmp + 1
-          cTmp(iTmp:iTmp) = NameVarAll(iChar:iChar)
+          StringTmp(iTmp:iTmp) = NameVarAll(iChar:iChar)
           iChar = iChar + 1
        end do
 
-       read(cTmp(1:iTmp),*) Frequency_I(nFreq)
+       read(StringTmp(1:iTmp),*) Frequency_I(nFreq)
 
        do while(is_delim(NameVarAll(iChar:iChar)) &
             .and. (iChar <= lNameVarAll))
@@ -328,11 +330,11 @@ contains
        do while((.not. is_delim(NameVarAll(iChar:iChar))) &
             .and. (iChar <= lNameVarAll))
           iTmp = iTmp + 1
-          cTmp(iTmp:iTmp) = NameVarAll(iChar:iChar)
+          StringTmp(iTmp:iTmp) = NameVarAll(iChar:iChar)
           iChar = iChar + 1
        end do
 
-       read(cTmp(1:iTmp),*) NameFreqUnit
+       read(StringTmp(1:iTmp),*) NameFreqUnit
 
        select case(trim(NameFreqUnit))
        case('Hz', 'HZ', 'hz')
@@ -393,22 +395,22 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-    logical function is_num(c)
-      character, intent(in) :: c
+    logical function is_num(String)
 
+      character, intent(in) :: String
       !------------------------------------------------------------------------
-      is_num = (lge(c, '0') .and. lle(c, '9')) .or. (c == '.') &
-           .or. (c == 'e') .or. (c == 'E') &
-           .or. (c == 'd') .or. (c == 'D') &
-           .or. (c == '+') .or. (c == '-')
+      is_num = (lge(String, '0') .and. lle(String, '9')) .or. (String == '.') &
+           .or. (String == 'e') .or. (String == 'E') &
+           .or. (String == 'd') .or. (String == 'D') &
+           .or. (String == '+') .or. (String == '-')
 
     end function is_num
     !==========================================================================
-    logical function is_delim(c)
-      character, intent(in) :: c
+    logical function is_delim(String)
 
+      character, intent(in) :: String
       !------------------------------------------------------------------------
-      is_delim = (c == ' ') .or. (c == ',') .or. (c == ';')
+      is_delim = (String == ' ') .or. (String == ',') .or. (String == ';')
 
     end function is_delim
     !==========================================================================
