@@ -29,13 +29,14 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
-       OmegaBody_D, set_dipole
+       OmegaBody_D, set_dipole, Gbody
   use ModMain, ONLY: Dt, DtMax_B, Cfl, nStep, tSimulation, &
-       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe
+       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
+       UseGravity
   use ModB0, ONLY: B0_DGB, get_b0_dipole
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
-  use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox
+  use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB
   use ModSolarWind, ONLY: get_solar_wind_point
   use CON_axes, ONLY: SmgGsm_DD
   use ModUtilities, ONLY: CON_stop
@@ -210,9 +211,10 @@ contains
 
     ! optimal for CPU (face value and face flux calculated only once)
 
-    integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
+    integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn, iUx, iUz, iRho, iEnergy
     logical:: IsBodyBlock, IsConserv
-    real:: DivU, DivB, DivE, DivF, DtPerDv, Change_V(nFlux)
+    real:: DivU, DivB, DivE, DivF, DtPerDv, Change_V(nFlux), &
+         ForcePerRho_D(3)
     !$acc declare create (Change_V)
 
     integer:: iVar
@@ -303,7 +305,7 @@ contains
 #ifdef _OPENACC
              write(*,*)' ',NameVar_V(iVar), '(TestCell)  =',&
 #else
-             write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+                  write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
 #endif
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
           end do
@@ -399,6 +401,21 @@ contains
                      + Flux_VZI(iUn,i,j,k+1,iGang) - Flux_VZI(iUn,i,j,k,iGang)
                 Change_V(iP) = Change_V(iP) &
                      - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
+             end do
+          end if
+
+          if(UseGravity)then
+             do iFluid = 1, nFluid
+                iRho = iRho_I(iFluid)
+                iUx = iUx_I(iFluid)
+                iUz = iUz_I(iFluid)
+                iEnergy = nVar + iFluid
+                ForcePerRho_D = &
+                     Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
+                Change_V(iUx:iUz) = Change_V(iUx:iUz) &
+                     + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
+                Change_V(iEnergy) = Change_V(iEnergy) &
+                     + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*ForcePerRho_D)
              end do
           end if
 
