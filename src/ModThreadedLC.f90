@@ -219,7 +219,7 @@ contains
     ! Dimensionless temperature floor
     TeMin = TeSiMin*Si2No_V(UnitTemperature_)
 
-    ConsMin = cTwoSevenths*HeatCondParSi*TeSiMin**3.50
+    ConsMin = cTwoSevenths*HeatCondParSi*TeSiMin**3.5
 
     !   Hydrostatic equilibrium in an isothermal corona:
     !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
@@ -342,7 +342,7 @@ contains
     AMajorOut      = 1.0
     TeSiMax        = &
          BoundaryThreads_B(iBlock) % TMax_II(j,k)*No2Si_V(UnitTemperature_)
-    ConsMax = cTwoSevenths*HeatCondParSi*TeSiMax**3.50
+    ConsMax = cTwoSevenths*HeatCondParSi*TeSiMax**3.5
 
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
     if(iAction/=DoInit_)then
@@ -591,7 +591,7 @@ contains
       ! Initialization
       TeSiStart_I(1:nPoint) = TeSi_I(1:nPoint)
       TiSiStart_I(1:nPoint) = TiSi_I(1:nPoint)
-      Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
+      Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.5
       SpecHeat_I(1:nPoint-1) = InvGammaMinus1*Z*                     &
            BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
            PSi_I(1:nPoint-1)/(Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))
@@ -680,7 +680,7 @@ contains
          Main_VVI(Cons_,Cons_,1:nPoint-1) &
               = Main_VVI(Cons_,Cons_,1:nPoint-1) + &
               DtInv*SpecHeat_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/   &
-              (3.0*Cons_I(1:nPoint-1))
+              (3.5*Cons_I(1:nPoint-1))
          Main_VVI(Ti_,Ti_,1:nPoint-1) = Main_VVI(Ti_,Ti_,1:nPoint-1) + &
               DtInv*SpecIonHeat_I(1:nPoint-1)
          PressureTRCoef = sqrt(max(&
@@ -724,7 +724,7 @@ contains
               ExchangeRate_I(1:nPoint-1)
          Main_VVI(Ti_,Cons_,1:nPoint-1) = Main_VVI(Ti_,Cons_,1:nPoint-1) -&
               ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
-              (3.50*Cons_I(1:nPoint-1))
+              (3.5*Cons_I(1:nPoint-1))
          call tridiag_block33(n=nPoint-1,  &
               Lower_VVI=Lower_VVI(:,:,1:nPoint-1),&
               Main_VVI=Main_VVI(:,:,1:nPoint-1),&
@@ -742,7 +742,7 @@ contains
          Cons_I(1:nPoint-1) = Cons_I(1:nPoint-1) + DCons_VI(Cons_,1:nPoint-1)
          ! Recover temperature
          TeSi_I(1:nPoint-1) = &
-              (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
+              (3.5*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
          TiSi_I(1:nPoint-1) = TiSi_I(1:nPoint-1) + DCons_VI(Ti_,1:nPoint-1)
          ! Eliminate jump in ion temperature, to avoid an unphysical
          ! jump in the alfven speed resulting in peak reflection
@@ -902,7 +902,7 @@ contains
       Main_VVI(LogP_,Cons_,2:nPoint-1) = -(Z + 1)*Z*&
            BoundaryThreads_B(iBlock)% TGrav_III(2-nPoint:-1,j,k)/&
            (Z*TeSi_I(2:nPoint-1) + TiSi_I(2:nPoint-1))**2*&
-           TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
+           TeSi_I(2:nPoint-1)/(3.5*Cons_I(2:nPoint-1))
       Main_VVI(LogP_,Ti_,2:nPoint-1)   = -(Z + 1)*&
            BoundaryThreads_B(iBlock)% TGrav_III(2-nPoint:-1,j,k)/&
            (Z*TeSi_I(2:nPoint-1) + TiSi_I(2:nPoint-1))**2
@@ -919,7 +919,7 @@ contains
       Main_VVI(Cons_,Cons_,1:nPoint-1) = Main_VVI(Cons_,Cons_,1:nPoint-1) + &
            (-DResCoolingOverDLogT_I(1:nPoint-1) + 2*ResCooling_I(1:nPoint-1)/&
            (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*TeSi_I(1:nPoint-1))/&
-           (3.50*Cons_I(1:nPoint-1))   !=-dCooling/dCons
+           (3.5*Cons_I(1:nPoint-1))   !=-dCooling/dCons
       Main_VVI(Cons_,Ti_,1:nPoint-1) = Main_VVI(Cons_,Ti_,1:nPoint-1) + &
            2*ResCooling_I(1:nPoint-1)/&
            (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/d log Ti
