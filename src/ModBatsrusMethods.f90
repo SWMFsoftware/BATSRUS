@@ -45,11 +45,11 @@ contains
     ! Allocate and initialize variables dependent on number of PEs
     call init_mod_parallel
 
-    if(.not.IsStandAlone)call write_progress(0)
+    if(.not.IsStandAlone)call write_progress
 
-    call grid_setup   ! Restart reads info integer only
+    call grid_setup   ! restart reads info integer only
 
-    call set_initial_conditions ! Restart reads all real data
+    call set_initial_conditions ! restart reads all real data
 
     call find_test_cell
 
@@ -59,8 +59,8 @@ contains
 
     call write_runtime_values
 
-    IsRestartCoupler = restart
-    restart = .false.
+    IsRestartCoupler = IsRestart
+    IsRestart = .false.
     DoThreadRestart = .false.
     call test_stop(NameSub, DoTest)
   contains
@@ -69,7 +69,7 @@ contains
 
       ! Set up problem geometry, blocks, and grid structure.
 
-      use ModIO, ONLY: restart
+      use ModIO, ONLY: IsRestart
       use ModRestartFile, ONLY: NameRestartInDir, &
            UseRestartInSeries, string_append_iter
 
@@ -94,7 +94,7 @@ contains
       !------------------------------------------------------------------------
       call set_batsrus_grid
 
-      if (.not.restart) then
+      if (.not.IsRestart) then
          ! Create initial solution block geometry.
          ! Set all arrays for AMR
          call init_amr_criteria
@@ -140,7 +140,7 @@ contains
       ! Move coordinates around except for restart because the
       ! coordinate info is in the .rst files and not in the octree (1st).
       ! Do not move the data, it is not yet set. There are new blocks.
-      call load_balance(DoMoveCoord=.not.restart, DoMoveData=.false., &
+      call load_balance(DoMoveCoord=.not.IsRestart, DoMoveData=.false., &
            IsNewBlock=.true.)
       do iBlock = 1, nBlock
          if(Unused_B(iBlock)) CYCLE
@@ -160,7 +160,7 @@ contains
 
       use ModSetInitialCondition, ONLY: set_initial_condition, &
            add_rotational_velocity
-      use ModIO,                  ONLY: restart, restart_Bface
+      use ModIO,                  ONLY: IsRestart, DoRestartBface
       use ModRestartFile,         ONLY: read_restart_files
       use ModMessagePass,         ONLY: exchange_messages
       use ModMain,                ONLY: UseB0, iSignRotationIC
@@ -185,7 +185,7 @@ contains
       character(len=*), parameter :: NameSubSub = &
            NameSub//'::set_initial_conditions'
       !------------------------------------------------------------------------
-      if(.not.restart .and. nRefineLevelIC > 0)then
+      if(.not.IsRestart .and. nRefineLevelIC > 0)then
          call timing_start('amr_ics')
          do iLevel=1, nRefineLevelIC
             call timing_start('amr_ics_set')
@@ -229,7 +229,7 @@ contains
       nRefineLevelIC = 0
 
       ! Read initial data from restart files as necessary.
-      if(restart)then
+      if(IsRestart)then
          call user_action('reading restart files')
          call read_restart_files
          ! Transform velocities from a rotating system to the HGI system
@@ -277,7 +277,7 @@ contains
 
       end if
 
-      if(restart)then
+      if(IsRestart)then
          if(iProc==0)then
             call write_prefix; write(iUnitOut,*)&
                  NameSub,' restarts at nStep,tSimulation=',&
@@ -298,7 +298,7 @@ contains
 
       ! Ensure zero divergence for the CT scheme
       if(UseConstrainB)then
-         if(restart_Bface)then
+         if(DoRestartBface)then
             DoInitConstrainB = .false.
          else
             call BATS_init_constrain_b
@@ -326,8 +326,8 @@ contains
 
       character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
       !------------------------------------------------------------------------
-      plot_type(restart_)='restart'
-      plot_type(logfile_)='logfile'
+      TypePlot_I(restart_)='restart'
+      TypePlot_I(logfile_)='logfile'
 
     end subroutine initialize_files
     !==========================================================================
@@ -425,7 +425,7 @@ contains
     call BATS_save_files('INITIAL')
 
     ! save initial restart series
-    if (UseRestartOutSeries) call BATS_save_files('RESTART')
+    if (UseRestartOutSeries) call BATS_save_files('restart')
 
     ! Set all arrays for AMR
     call init_amr_criteria
@@ -440,7 +440,7 @@ contains
 
     use ModKind
     use ModMain
-    use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr, UseParcel, &
+    use ModIO, ONLY: iUnitOut, write_prefix, DoSavePlotsAmr, UseParcel, &
          Parcel_DI, nParcel
     use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
@@ -449,7 +449,7 @@ contains
     use ModAdvectPoints, ONLY: advect_all_points, advect_points
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
          part_steady_select, part_steady_switch
-    use ModImplicit, ONLY: UseImplicit, n_prev, UseSemiImplicit
+    use ModImplicit, ONLY: UseImplicit, nStepPrev, UseSemiImplicit
     use ModSemiImplicit, ONLY: advance_semi_impl
     use ModIeCoupling, ONLY: apply_ie_velocity
     use ModImCoupling, ONLY: apply_im_pressure
@@ -666,7 +666,7 @@ contains
        if(.not.DoAutoRefine) nRefineLevel = nRefineLevel + 1
 
        ! BDF2 scheme should not use previous step after AMR
-       n_prev = -100
+       nStepPrev = -100
 
        ! Do AMR without full initial message passing
        call prepare_amr(DoFullMessagePass=.false., TypeAmr='all')
@@ -685,7 +685,7 @@ contains
        if(UseProjection) call project_divb
 
        ! Write plotfiles after AMR if required
-       if(save_plots_amr)call BATS_save_files('AMRPLOTS')
+       if(DoSavePlotsAmr)call BATS_save_files('AMRPLOTS')
 
     else
        ! If AMR is done, then the plotting of BATS_save_files('NORMAL')
@@ -800,33 +800,33 @@ contains
     select case(TypeSave)
     case('INITIAL')
        ! Do not save current step or time
-       n_output_last = nStep
+       nStepOutputLast_I = nStep
 
        ! Initialize last save times
-       where(dt_output>0.) &
-            t_output_last=int(tSimulation/dt_output)
+       where(DtOutput_I>0.) &
+            iTimeOutputLast_I=int(tSimulation/DtOutput_I)
 
        ! DoSaveInitial may be set to true in the #SAVEINITIAL command
        if(DoSaveInitial .or. (IsTimeAccurate .and. tSimulation == 0.0))then
           if(DoSaveInitial)then
              ! Save all (except restart files)
-             n_output_last = -1
-             t_output_last = -1.0
+             nStepOutputLast_I = -1
+             iTimeOutputLast_I = -1.0
           else
              ! Save only those with a positive time frequency
-             where(dt_output>0.)
-                n_output_last = -1
-                t_output_last = -1.0
+             where(DtOutput_I>0.)
+                nStepOutputLast_I = -1
+                iTimeOutputLast_I = -1.0
              end where
           end if
           ! Do not save restart file in any case
-          n_output_last(restart_) = nStep
+          nStepOutputLast_I(restart_) = nStep
           call save_files
        end if
        ! Set back to default value (for next session)
        DoSaveInitial = .false.
     case('FINAL')
-       save_restart_file = .false.
+       DoSaveRestart = .false.
        call save_files_final
     case('FINALWITHRESTART')
        call save_files_final
@@ -839,11 +839,11 @@ contains
        if(DoExchangeAgain) &
             call exchange_messages(DoResChangeOnlyIn=.true.)
     case('RESTART')
-       DoSaveRestartTmp = save_restart_file
-       save_restart_file = .true.
+       DoSaveRestartTmp = DoSaveRestart
+       DoSaveRestart = .true.
        iFile = restart_
        call save_file
-       save_restart_file = DoSaveRestartTmp
+       DoSaveRestart = DoSaveRestartTmp
     case default
        call stop_mpi(NameSub//' ERROR incorrect TypeSave='//TypeSave)
     end select
@@ -862,15 +862,15 @@ contains
          if( (iFile == magfile_ .or. iFile == maggridfile_) &
               .neqv. TypeSave == 'BEGINSTEP') CYCLE
 
-         if(dn_output(iFile) >= 0)then
-            if(dn_output(iFile) == 0)then
+         if(DnOutput_I(iFile) >= 0)then
+            if(DnOutput_I(iFile) == 0)then
                if(DoPlotThread.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
                   call save_threads_for_plot
                   DoPlotThread = .false.
                end if
                call save_file
-            else if(mod(nStep,dn_output(iFile)) == 0)then
+            else if(mod(nStep,DnOutput_I(iFile)) == 0)then
                if(DoPlotThread.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
                   call save_threads_for_plot
@@ -878,9 +878,9 @@ contains
                end if
                call save_file
             end if
-         else if(IsTimeAccurate .and. dt_output(iFile) > 0.)then
-            if(int(tSimulation/dt_output(iFile))>t_output_last(iFile))then
-               t_output_last(iFile) = int(tSimulation/dt_output(iFile))
+         else if(IsTimeAccurate .and. DtOutput_I(iFile) > 0.)then
+            if(int(tSimulation/DtOutput_I(iFile))>iTimeOutputLast_I(iFile))then
+               iTimeOutputLast_I(iFile) = int(tSimulation/DtOutput_I(iFile))
                if(DoPlotThread.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
                   call save_threads_for_plot
@@ -909,7 +909,7 @@ contains
       use ModRestartFile, ONLY: write_restart_files
       use ModSatelliteFile, ONLY: IsFirstWriteSat_I,                   &
            nSatellite, set_satellite_file_status, set_satellite_flags, &
-           TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position,  &
+           TimeSatStart_I, TimeSatEnd_I, iPointCurrentSat_I,  &
            TypeTrajTimeRange_I, StartTimeTraj_I, EndTimeTraj_I, DtTraj_I, &
            nPointTraj_I, TimeSat_II
       use ModWriteLogSatFile,   ONLY: write_logfile
@@ -923,7 +923,7 @@ contains
       use ModWriteTecplot,      ONLY: assign_node_numbers
       use ModFieldTrace,        ONLY: &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
-      use ModFieldTraceFast,    ONLY: trace_field_grid, ray
+      use ModFieldTraceFast,    ONLY: trace_field_grid, Trace_DSNB
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
       use ModAdvance,           ONLY: State_VGB
@@ -940,31 +940,31 @@ contains
 
       real :: tSimulationBackup = 0.0
       !------------------------------------------------------------------------
-      if(nStep<=n_output_last(iFile) .and. dn_output(iFile)/=0) RETURN
+      if(nStep<=nStepOutputLast_I(iFile) .and. DnOutput_I(iFile)/=0) RETURN
 
       call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
       if(iFile==restart_) then
          ! Case for restart file
-         if(.not.save_restart_file)RETURN
+         if(.not.DoSaveRestart)RETURN
          call write_restart_files
 
       elseif(iFile==logfile_) then
          ! Case for logfile
 
-         if(.not.save_logfile)RETURN
+         if(.not.DoSaveLogfile)RETURN
 
-         call timing_start('save_logfile')
+         call timing_start('DoSaveLogfile')
          call write_logfile(0, iFile)
-         call timing_stop('save_logfile')
+         call timing_stop('DoSaveLogfile')
 
       elseif(iFile>plot_ .and. iFile<=plot_+nplotfile) then
          ! Case for plot files
          IsFound=.false.
 
          if(DoExchangeAgain.and.(                  &
-              index(plot_type(iFile),'rfr')==1 .or.&
-              index(plot_type(iFile),'pnt')==1))then
+              index(TypePlot_I(iFile),'rfr')==1 .or.&
+              index(TypePlot_I(iFile),'pnt')==1))then
             if(iProc==0.and.lVerbose>0)then
                call write_prefix; write(iUnitOut,*)&
                     'Calling exchange_messages to reset ghost cells ...'
@@ -973,17 +973,17 @@ contains
             DoExchangeAgain = .false.
          end if
          if(TypeSave /= 'BEFOREAMR' .and. .not.DoExchangeAgain .and. ( &
-              index(plot_type(iFile),'lin')==1 .or. &
-              index(plot_type(iFile),'pnt')==1 .or. &
-              index(plot_type(iFile),'eqr')==1 .or. &
-              index(plot_type(iFile),'eqb')==1 .or. &
-              index(plot_type(iFile),'ieb')==1 .or. &
-              index(plot_type(iFile),'lcb')==1 .or. &
-              index(plot_type(iFile),'los')==1 .or. &
-              index(plot_type(iFile),'sph')==1 .or. &
-              (plot_form(iFile) == 'tec'      .and. &
-              index(plot_type(iFile),'rfr')/=1.and. &
-              index(plot_type(iFile),'pnt')/=1     )))then
+              index(TypePlot_I(iFile),'lin')==1 .or. &
+              index(TypePlot_I(iFile),'pnt')==1 .or. &
+              index(TypePlot_I(iFile),'eqr')==1 .or. &
+              index(TypePlot_I(iFile),'eqb')==1 .or. &
+              index(TypePlot_I(iFile),'ieb')==1 .or. &
+              index(TypePlot_I(iFile),'lcb')==1 .or. &
+              index(TypePlot_I(iFile),'los')==1 .or. &
+              index(TypePlot_I(iFile),'sph')==1 .or. &
+              (TypePlotFormat_I(iFile) == 'tec'      .and. &
+              index(TypePlot_I(iFile),'rfr')/=1.and. &
+              index(TypePlot_I(iFile),'pnt')/=1     )))then
 
             if(iProc==0.and.lVerbose>0)then
                call write_prefix; write(iUnitOut,*)&
@@ -993,58 +993,58 @@ contains
             DoExchangeAgain = .true.
          end if
 
-         if(index(plot_type(iFile),'los')>0) then
+         if(index(TypePlot_I(iFile),'los')>0) then
             IsFound = .true.
             call write_plot_los(iFile)
          end if
 
-         if(index(plot_type(iFile),'pnt')>0) then
+         if(index(TypePlot_I(iFile),'pnt')>0) then
             IsFound = .true.
             call write_plot_particle(iFile)
          end if
 
-         if(index(plot_type(iFile),'rfr')>0) then
+         if(index(TypePlot_I(iFile),'rfr')>0) then
             IsFound = .true.
             call write_plot_radiowave(iFile)
          end if
 
-         if(index(plot_type(iFile),'lin')>0) then
+         if(index(TypePlot_I(iFile),'lin')>0) then
             IsFound = .true.
             call write_plot_line(iFile)
          end if
 
-         if(  index(plot_type(iFile),'eqr')>0 .or. &
-              index(plot_type(iFile),'eqb')>0) then
+         if(  index(TypePlot_I(iFile),'eqr')>0 .or. &
+              index(TypePlot_I(iFile),'eqb')>0) then
             IsFound = .true.
             call write_plot_equator(iFile)
          end if
 
-         if(index(plot_type(iFile),'ieb')>0) then
+         if(index(TypePlot_I(iFile),'ieb')>0) then
             IsFound = .true.
             call write_plot_ieb(iFile)
          end if
 
-         if(index(plot_type(iFile),'lcb')>0) then
+         if(index(TypePlot_I(iFile),'lcb')>0) then
             IsFound = .true.
             call write_plot_lcb(iFile)
          end if
 
-         if(index(plot_type(iFile),'buf')>0)then
+         if(index(TypePlot_I(iFile),'buf')>0)then
             IsFound = .true.
             if(TypeSaveIn/='INITIAL')call plot_buffer(iFile)
          end if
 
-         if(plot_type(iFile)/='nul' .and. .not.IsFound ) then
+         if(TypePlot_I(iFile)/='nul' .and. .not.IsFound ) then
             ! Assign node numbers for tec plots
-            if( index(plot_form(iFile),'tec')>0 .and. DoAssignNodeNumbers)then
+            if( index(TypePlotFormat_I(iFile),'tec')>0 .and. DoAssignNodeNumbers)then
                call assign_node_numbers
                DoAssignNodeNumbers = .false.
             end if
 
-            if(  index(plot_type(iFile),'ray')>0 .or. &
-                 index(plot_vars(iFile),'status')>0)then
+            if(  index(TypePlot_I(iFile),'Trace_DSNB')>0 .or. &
+                 index(StringPlotVar_I(iFile),'status')>0)then
                call trace_field_grid
-               call sync_cpu_gpu('update on CPU', NameSub, Trace_DICB=ray)
+               call sync_cpu_gpu('update on CPU', NameSub, Trace_DICB=Trace_DSNB)
             end if
 
             call timing_start('save_plot')
@@ -1080,7 +1080,7 @@ contains
             end do
 
             tSimulation = tSimulationBackup    ! ... Restore
-            icurrent_satellite_position(iSat) = 1
+            iPointCurrentSat_I(iSat) = 1
 
             if(iProc==0)call set_satellite_file_status(iSat,'close')
          else if (TypeTrajTimeRange_I(iSat) == 'full') then
@@ -1101,7 +1101,7 @@ contains
             end do
 
             tSimulation = tSimulationBackup    ! ... Restore
-            icurrent_satellite_position(iSat) = 1
+            iPointCurrentSat_I(iSat) = 1
 
             if(iProc==0)call set_satellite_file_status(iSat,'close')
          else if (TypeTrajTimeRange_I(iSat) == 'orig') then
@@ -1126,10 +1126,10 @@ contains
                   call set_satellite_flags(iSat)
                   ! write for ALL the points of trajectory cut
                   call write_logfile(iSat,iFile)
-                  tSimulation = tSimulation+dt_output(iSat+Satellite_)
+                  tSimulation = tSimulation+DtOutput_I(iSat+Satellite_)
                end do
                tSimulation = tSimulationBackup    ! ... Restore
-               icurrent_satellite_position(iSat) = 1
+               iPointCurrentSat_I(iSat) = 1
 
                if(iProc==0)call set_satellite_file_status(iSat,'close')
             end if
@@ -1163,7 +1163,7 @@ contains
          if(IsTimeAccurate .and. DoWriteIndices) call write_geoindices
       end if
 
-      n_output_last(iFile) = nStep
+      nStepOutputLast_I(iFile) = nStep
 
       if(iProc==0 .and. lVerbose>0 .and. &
            iFile /= logfile_ .and. iFile /= magfile_ &
@@ -1172,7 +1172,7 @@ contains
          if(IsTimeAccurate)then
             call write_prefix;
             write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
-                 'saved iFile=',iFile,' type=',plot_type(iFile),&
+                 'saved iFile=',iFile,' type=',TypePlot_I(iFile),&
                  ' at nStep=',nStep,' time=', &
                  int(                            tSimulation/3600.),':', &
                  int((tSimulation &
@@ -1181,7 +1181,7 @@ contains
                  ' h:m:s'
          else
             call write_prefix; write(iUnitOut,'(a,i2,a,a,a,i7)') &
-                 'saved iFile=',iFile,' type=',plot_type(iFile), &
+                 'saved iFile=',iFile,' type=',TypePlot_I(iFile), &
                  ' at nStep=',nStep
          end if
       end if
@@ -1208,7 +1208,7 @@ contains
 
       call finalize_magnetometer
 
-      if (save_logfile.and.iProc==0.and.unit_log>0) close(unit_log)
+      if (DoSaveLogfile.and.iProc==0.and.iUnitLogfile>0) close(iUnitLogfile)
 
     end subroutine save_files_final
     !==========================================================================

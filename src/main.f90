@@ -59,7 +59,7 @@ program BATSRUS
   endif
 
   ! Announce BATSRUS
-  call write_progress(0)
+  call write_progress
 
   ! Initialize time which is used to check CPU time
   CpuTimeStart = MPI_WTIME()
@@ -70,7 +70,7 @@ program BATSRUS
      call remove_file('BATSRUS.STOP')
   end if
 
-  ! Read input parameter file. Provide the default restart file for #RESTART
+  ! Read input parameter file. Provide the default restart file name
   call read_file('PARAM.in', iComm, trim(NameRestartInDir)//'restart.H')
 
   SESSIONLOOP: do
@@ -225,7 +225,7 @@ contains
 
   subroutine show_progress
 
-    use ModIo,      ONLY: dn_progress1, dn_progress2
+    use ModIo,      ONLY: DnProgressShort, DnProgressLong
     use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, nStep, Dt
     use ModPhysics, ONLY: Si2No_V, UnitT_
 
@@ -243,7 +243,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if( UseTiming .and. iProc==0 &
-         .and. dn_progress1>0 .and. mod(nStep,dn_progress1) == 0 ) then
+         .and. DnProgressShort>0 .and. mod(nStep,DnProgressShort) == 0 ) then
 
        CpuTimeBATSRUS=timing_func_d('sum',3,'BATSRUS','BATSRUS')
        CpuTimeAdvance=timing_func_d('sum',1,'advance','BATSRUS')
@@ -268,13 +268,13 @@ contains
     ! Show timing tables
     if(DnTiming>0.and.mod(nIteration,DnTiming)==0) then
        call timing_report
-    else if(dn_progress2>0.and.mod(nStep,dn_progress2) == 0) then
+    else if(DnProgressLong>0.and.mod(nStep,DnProgressLong) == 0) then
        call timing_tree(2,2)
     end if
 
     ! Try to estimate the remaining length of the run
     if(UseTiming .and. iProc==0 &
-         .and. dn_progress2>0 .and. mod(nStep,dn_progress2) == 0)then
+         .and. DnProgressLong>0 .and. mod(nStep,DnProgressLong) == 0)then
        nIterExpect = nITER-nIteration
        if(IsTimeAccurate .and. Dt > 0.0 .and. tSimulationMax > 0.0)then
           nIterExpectTime = min( real(huge(1)), &

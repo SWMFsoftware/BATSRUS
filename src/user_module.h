@@ -33,4 +33,4 @@
   public :: user_set_resistivity
   public :: user_material_properties
   public :: user_action
-  public :: user_block_type
+  public :: i_type_block_user

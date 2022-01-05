@@ -135,13 +135,11 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer :: i, j, k, Di, Dk
-    integer:: iGang
-    real:: Vdt
-    real:: dt_min
+    integer:: i, j, k, Di, Dk, iGang
+    real:: Vdt, DtBlock
 
     ! Variables for time step control due to loss terms
-    real :: Einternal, Source, Dt_loss, Coef
+    real :: Einternal, Source, DtLoss, Coef
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_timestep'
@@ -235,12 +233,12 @@ contains
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
              if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
-                Dt_loss = 0.5*minval( &
+                DtLoss = 0.5*minval( &
                      State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
                      /WaveDissipation_VC(:,i,j,k))
                 ! The following prevents the wave energies from becoming
                 ! negative due to too large loss terms.
-                DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), Dt_loss)
+                DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), DtLoss)
              end if
           end do; end do; end do
        end if
@@ -248,8 +246,8 @@ contains
        ! No time step restriction yet if the electron pressure is used
        if(UseRadCooling .and. .not.UseElectronPressure)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), Source,&
-                  NameCaller=NameSub)
+             call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
+                  Source, NameCaller=NameSub)
 
              if(UseCoronalHeating) Source = Source + CoronalHeating_C(i,j,k)
 
@@ -258,10 +256,10 @@ contains
 
              Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock)
 
-             Dt_loss = 0.5*Einternal/abs(Source)
+             DtLoss = 0.5*Einternal/abs(Source)
              ! The following prevents the pressure from becoming negative
              ! due to too large loss terms.
-             DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), Dt_loss)
+             DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), DtLoss)
           end do; end do; end do
        end if
     end if
@@ -279,20 +277,21 @@ contains
 
     ! Compute maximum stable time step for this solution block
     if(IsNoBody_B(iBlock)) then
-       dt_min=DtMax_CB(1,1,1,iBlock)
-       !$acc loop vector independent collapse(3) reduction(min:dt_min)
+       DtBlock = DtMax_CB(1,1,1,iBlock)
+       !$acc loop vector independent collapse(3) reduction(min:DtBlock)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          dt_min = min(dt_min, DtMax_CB(i,j,k,iBlock))
+          DtBlock = min(DtBlock, DtMax_CB(i,j,k,iBlock))
        end do; end do; end do
-       DtMax_B(iBlock)=dt_min
+       DtMax_B(iBlock) = DtBlock
     else
        ! If the block has no true cells, set DtMax_B=1.0E20
-       dt_min = 1e20
-       !$acc loop vector independent collapse(3) reduction(min:dt_min)
+       DtBlock = 1e20
+       !$acc loop vector independent collapse(3) reduction(min:DtBlock)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if (Used_GB(i,j,k,iBlock)) dt_min = min(dt_min, DtMax_CB(i,j,k,iBlock))
+          if (Used_GB(i,j,k,iBlock)) &
+               DtBlock = min(DtBlock, DtMax_CB(i,j,k,iBlock))
        end do; end do; end do
-       DtMax_B(iBlock)=dt_min
+       DtMax_B(iBlock) = DtBlock
 
        if(DoTest)write(*,*) NameSub,' minval(DtMax_CB,MASK), DtMax_B=',&
             minval(DtMax_CB(:,:,:,iBlock), &
@@ -618,7 +617,7 @@ contains
        tSimulation = tSimulation - Dt*No2Si_V(UnitT_)
        Dt = 0.0
        ! Do not use previous step in BDF2 scheme
-       ! !! n_prev = -1
+       ! !! nStepPrev = -1
        ! Reset the state variable, the energy and set DtMax_CB variable to 0
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE

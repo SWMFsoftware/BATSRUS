@@ -127,12 +127,12 @@ module ModLaserHeating
 
 contains
   !============================================================================
-  subroutine calc_absorption(NAtomicSI, ZAverage, TeSI, NeSI, Absorption)
+  subroutine calc_absorption(NatomicSI, ZAverage, TeSI, NeSI, Absorption)
     ! The subroutine calculates the absorption coefficient, Absorption [m-1],
     ! at the circular frequency, omega and convert then to the dimensionless
     ! form
 
-    real,intent(in):: NAtomicSI, ZAverage, TeSI, NeSI
+    real,intent(in):: NatomicSI, ZAverage, TeSI, NeSI
     real, intent(out):: Absorption  ! The absorption coefficient, [m-1]
 
     real:: AveragedElectronSpeed, CollisionCrossSection
@@ -173,7 +173,6 @@ contains
 
   end subroutine calc_absorption
   !============================================================================
-
   subroutine get_density_and_absorption(nRay)
 
     ! Calculates plasma density, Density_I, and its gradient,
@@ -245,7 +244,7 @@ contains
           call user_material_properties( &
                State_VGB(:,i,j,k,iBlock),         &
                i, j, k, iBlock,                   &
-               NAtomicOut=NAtomicSI,              &
+               NAtomicOut=NatomicSI,              &
                TeOut=TeSI,                        &
                AverageIonChargeOut=zAverage)
 
@@ -257,7 +256,7 @@ contains
 
           ! Calculate the absorption rate
           call calc_absorption(&
-               NAtomicSI = NAtomicSI, &
+               NatomicSI = NatomicSI, &
                ZAverage  = ZAverage, &
                TeSI      = TeSi, &
                NeSI      = NeSi,&
@@ -361,7 +360,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_density_and_absorption
   !============================================================================
-
   subroutine ray_path(get_plasma_density, nRay, UnusedRay_I, Slope_DI, &
        DeltaS_I, ToleranceInit, DensityCr, Intensity_I, IsBehindCr_I)
 
@@ -432,12 +430,12 @@ contains
     !     internally reduced to 0.1 anyway.
     ! DensityCr: the plasma density at which its dielectric permittivity
     !     becomes zero for chosen wave frequency.
-    ! Intensity_I:    the intensities of each ray calculated as the integral
+    ! Intensity_I: the intensities of each ray calculated as the integral
     !     of emissivity along the ray path. During each call to ray_path(),
     !     each element of the Intensity_I is incremented by the integral along
     !     the step DeltaS_I. Set all the elements of Intensity_I to 0.0 before
     !     the first call to the ray_path().
-    ! IsBehindCr_I:      the .true. elements of this logical array indicate that
+    ! IsBehindCr_I: the .true. elements of this logical array indicate that
     !     the corresponding rays penetrated into the "prohibited" region of
     !     space with the plasma density above its critical value. Normally, it
     !     should never happen. However, in case the algorithm made such an
@@ -482,7 +480,7 @@ contains
     real :: HalfDeltaS                        ! DeltaS halved
     real :: DielPerm, DielPermHalfBack, Dens2DensCr
     real :: Coef, Curv, Curv1
-    real :: LCosAl ! L*cos(Alpha),
+    real :: LtimesCosAlpha ! L*cos(Alpha),
     ! where L is inverse grad of \epsilon, Alpha is the incidence angle
     real :: GradDielPermSqr, GradEpsDotSlope
     real :: ParabLen
@@ -545,8 +543,8 @@ contains
 
     call get_plasma_density(nRay)
 
-    ! In making radio images this is a bad pixel which should be further processed
-    IsBehindCr_I = Density_I>= DensityCr.and..not.UnusedRay_I
+    ! In making radio images this is a bad pixel that needs further processing
+    IsBehindCr_I = Density_I >= DensityCr .and. .not.UnusedRay_I
     UnusedRay_I = UnusedRay_I .or. IsBehindCr_I ! "bad rays" are done
 
     ! In solving the laser deposition energy the total remnant energy
@@ -680,8 +678,8 @@ contains
           ! direction according to Snell law.
           !
 
-          LCosAl = -GradEpsDotSlope/GradDielPermSqr
-          ProjSlopeOnMinusGradEps_D = -LCosAl*GradDielPerm_D
+          LtimesCosAlpha = -GradEpsDotSlope/GradDielPermSqr
+          ProjSlopeOnMinusGradEps_D = -LtimesCosAlpha*GradDielPerm_D
           ! Here v_proj
 
           StepY_D = Slope_DI(:,iRay) - ProjSlopeOnMinusGradEps_D
@@ -697,7 +695,7 @@ contains
           ! Multiply it by L*Cos(\alpha)*DielPermHalfBack
           !
 
-          StepY_D = 4*StepY_D*LCosAl*DielPermHalfBack
+          StepY_D = 4*StepY_D*LtimesCosAlpha*DielPermHalfBack
 
           Position_DI(:,iRay) = PositionHalfBack_D + StepY_D
 
@@ -708,7 +706,7 @@ contains
           ! Thus,
           !
 
-          StepX_D = (DielPermHalfBack*LCosAl**2)*GradDielPerm_D
+          StepX_D = (DielPermHalfBack*LtimesCosAlpha**2)*GradDielPerm_D
 
           ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
           if(.not.UseLaserHeating)then
@@ -840,7 +838,6 @@ contains
 
       integer::iDim
       real:: Radius, Runit_D(2:3)
-
       !------------------------------------------------------------------------
       do iDim = 1, nDim
          if(Is3DBeamInRz .and. iDim == 2)then
@@ -882,10 +879,9 @@ contains
     !==========================================================================
   end subroutine ray_path
   !============================================================================
-
   real function irradiance_t(TimeSi)
 
-    real,intent(in)::TimeSi
+    real, intent(in)::TimeSi
     !--------------------------------------------------------------------------
 
     if (TimeSi > tPulse) UseLaserHeating = .false.
@@ -903,7 +899,6 @@ contains
 
   end function irradiance_t
   !============================================================================
-
   subroutine get_rays
 
     use BATL_lib,    ONLY: IsRzGeometry
@@ -930,7 +925,7 @@ contains
 
     select case(TypeBeam)
     case('3d','xy', '1d')
-       call init_beam_3d
+       call init_beam3d
     case('rz')
        call init_beam_rz
     case('rz2')
@@ -945,8 +940,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_rays
   !============================================================================
-
-  subroutine init_beam_3d
+  subroutine init_beam3d
 
     use BATL_lib,    ONLY: IsRzGeometry
     use ModConst,    ONLY: cDegToRad
@@ -960,17 +954,17 @@ contains
     integer:: iRayR, iRayPhi, iRayY, iRayZ, iRayRPrev
     real:: PhiRay, Amplitude, RandomPhase
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'init_beam_3d'
+    character(len=*), parameter:: NameSub = 'init_beam3d'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     do iBeam = 1, nBeam
-       cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
+       CosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
        ! Positive direction of the slope is taken for the beams
        ! converging to the axis:
 
-       sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
+       SinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
        ! The central ray position (polar coordinates) in the x=0 plane
        rCr   = BeamParam_II(rCr_,iBeam)
@@ -1055,8 +1049,8 @@ contains
                   .and. zStart >= yMinBox .and. zStart <= yMaxBox
           elseif(Is3DBeamIn1D)then
              IsInside = .true.
-!             IsInside = yStart >= yMinBox .and. yStart <= yMaxBox &
-!                  .and. zStart >= zMinBox .and. zStart <= zMaxBox
+             ! IsInside = yStart >= yMinBox .and. yStart <= yMaxBox &
+             !     .and. zStart >= zMinBox .and. zStart <= zMaxBox
           end if
 
           if(rDistance > 1.5*rBeam .and. .not.DoLaserRayTest)then
@@ -1090,9 +1084,9 @@ contains
     end do ! iBeam
 
     call test_stop(NameSub, DoTest)
-  end subroutine init_beam_3d
-  !============================================================================
 
+  end subroutine init_beam3d
+  !============================================================================
   subroutine init_beam_rz
 
     use ModGeometry, ONLY: TypeGeometry, yMaxBox
@@ -1112,12 +1106,12 @@ contains
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
 
     do iBeam = 1, nBeam
-       cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
+       CosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
        ! Positive direction of the slope is taken for the beams
        ! converging to the axis:
 
-       sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
+       SinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
        ! The central ray position (polar coordinates) in the x=0 plane
        rCr = BeamParam_II(rCr_,iBeam)
@@ -1175,7 +1169,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_beam_rz
   !============================================================================
-
   subroutine init_beam_rz2
 
     use ModGeometry, ONLY: TypeGeometry, yMaxBox, CellSize1Min
@@ -1199,23 +1192,22 @@ contains
     if(TypeGeometry/='rz')call stop_mpi(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
 
-!    nRayPerHalfBeam = (nRayPerBeam - 1)/2
-
-!    nRayInside = 0
+    ! nRayPerHalfBeam = (nRayPerBeam - 1)/2
+    ! nRayInside = 0
     do iBeam = 1, nBeam
-       cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
+       CosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
 
        ! Positive direction of the slope is taken for the beams
        ! converging to the axis:
 
-       sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
+       SinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
 
        ! Transform yCr to dimensionless
        yCrCentral =  BeamParam_II(rCr_, iBeam)
 
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
 
-!       do iRay = -nRayPerHalfBeam, nRayPerHalfBeam
+       ! do iRay = -nRayPerHalfBeam, nRayPerHalfBeam
        ! The following is conform the H2D strategy for following rays
        do iRay = 1, nRayPerBeam  ! just for beams pointed at the symmetry axix
 
@@ -1233,15 +1225,19 @@ contains
 
           ! Maps rDistance to laser-entry plane, applies shift set
           ! by yBeam in the PARAM.in file
-          yPlane = yCrCentral + (rDistance + xStart*sinTheta/(cosTheta))
+          yPlane = yCrCentral + (rDistance + xStart*SinTheta/(CosTheta))
 
-          ! Dealing with rays starting outside the computational domain on laser-entry plane:
-          ! Substracting CellSize1Min from yMaxBox so that the rays do not start on domain boundary
+          ! Dealing with rays starting outside the computational domain
+          ! on laser-entry plane:
+          ! Substracting CellSize1Min from yMaxBox
+          ! so that the rays do not start on domain boundary
           if((yPlane) >= yMaxBox)then
              ! Do not let rays begin in target past drive surface
-             if(sinTheta < 0.0 .and. &
-                  (xPlane + (abs(yPlane)-(yMaxBox-CellSize1Min))*(cosTheta)/(-sinTheta) < 0.0))then
-                xPlane = xPlane + (abs(yPlane)-(yMaxBox-CellSize1Min))*cosTheta/(-sinTheta)
+             if(SinTheta < 0.0 .and. &
+                  (xPlane + (abs(yPlane)-(yMaxBox-CellSize1Min)) &
+                  *(CosTheta)/(-SinTheta) < 0.0))then
+                xPlane = xPlane + (abs(yPlane)-(yMaxBox-CellSize1Min)) &
+                     *CosTheta/(-SinTheta)
                 yPlane = yMaxBox - (CellSize1Min)
              else
                 IsInside=.false.
@@ -1250,8 +1246,8 @@ contains
 
           if(yPlane <= 0.0)then
              ! Do not let rays begin in target past drive surface
-             if(xPlane + (yPlane+CellSize1Min)*cosTheta/(-sinTheta) < 0.0)then
-                xPlane = xPlane + (yPlane+CellSize1Min)*cosTheta/(-sinTheta)
+             if(xPlane + (yPlane+CellSize1Min)*CosTheta/(-SinTheta) < 0.0)then
+                xPlane = xPlane + (yPlane+CellSize1Min)*CosTheta/(-SinTheta)
                 yPlane = CellSize1Min
              else
                 IsInside=.false.
@@ -1286,7 +1282,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_beam_rz2
   !============================================================================
-
   subroutine read_laser_heating_param(NameCommand)
 
     use ModReadParam
@@ -1359,7 +1354,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_laser_heating_param
   !============================================================================
-
   subroutine init_laser_package
 
     use ModSize, ONLY: MaxBlock, nI, nJ, nK
@@ -1517,7 +1511,7 @@ contains
 
        ! for a linear density profile the absorbed energy is
        ! = 1 - exp[-(32.0/15.0 * EffectiveCollisionRate at the critical density
-       ! * L * costheta**5)/cLightSpeed]
+       ! * L * CosTheta**5)/cLightSpeed]
        SumLaserHeatingRef = 1.0-exp(-32.0/15.0*50.0e-6*(2e12/cLightSpeed) &
             *cos(cDegToRad*BeamParam_II(SlopeDeg_,1))**5)
 
@@ -1535,7 +1529,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_energy_source
   !============================================================================
-
   subroutine add_laser_heating
 
     ! Calculate the source terms due to laser heating
@@ -1668,6 +1661,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine add_laser_heating
   !============================================================================
-
 end module ModLaserHeating
 !==============================================================================

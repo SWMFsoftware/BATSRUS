@@ -31,7 +31,7 @@ module ModPlotShell
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
   ! Same, but for a single grid point
-  real :: PlotVar_V(nPlotVarMax)
+  real :: PlotVar_V(MaxPlotvar)
 
   ! Coordinate conversion matrix
   real:: PlotToGm_DD(3,3)
@@ -40,7 +40,7 @@ module ModPlotShell
   logical :: UseThreadedGap = .false.
   !
 
-  character (len=20) :: NamePlotVar_V(nPlotVarMax) = ''
+  character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
 contains
   !============================================================================
@@ -63,20 +63,20 @@ contains
     ! Allocate results array and set up all the spherical shell
     if(allocated(PlotVar_VIII)) RETURN
 
-    plot_vars1 = plot_vars(iFile)
-    call split_string(plot_vars1, nPlotVarMax, NamePlotVar_V, nPlotVar, &
+    StringPlotVar = StringPlotVar_I(iFile)
+    call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar, &
          UseArraySyntaxIn=.true.)
 
     ! Get plot area info from ModIO arrays:
-    dR     = abs(plot_dx(1, iFile))
-    dLon   = plot_dx(2, iFile) * cDegtoRad
-    dLat   = plot_dx(3, iFile) * cDegtoRad
-    rMin   = plot_range(1, iFile)
-    rMax   = plot_range(2, iFile)
-    LonMin = plot_range(3, iFile) * cDegtoRad
-    LonMax = plot_range(4, iFile) * cDegtoRad
-    LatMin = plot_range(5, iFile) * cDegtoRad
-    LatMax = plot_range(6, iFile) * cDegtoRad
+    dR     = abs(PlotDx_DI(1, iFile))
+    dLon   = PlotDx_DI(2, iFile) * cDegtoRad
+    dLat   = PlotDx_DI(3, iFile) * cDegtoRad
+    rMin   = PlotRange_EI(1, iFile)
+    rMax   = PlotRange_EI(2, iFile)
+    LonMin = PlotRange_EI(3, iFile) * cDegtoRad
+    LonMax = PlotRange_EI(4, iFile) * cDegtoRad
+    LatMin = PlotRange_EI(5, iFile) * cDegtoRad
+    LatMax = PlotRange_EI(6, iFile) * cDegtoRad
 
     ! Set number of points:
     nR   = nint((rMax - rMin)/dR)       + 1
@@ -102,8 +102,8 @@ contains
 
     if (DoTest) then
        write(*,*) NameSub//' iFile, nPlotVar=      ', iFile, nPlotVar
-       write(*,*) NameSub//' Raw plot_dx=          ', plot_dx(:,iFile)
-       write(*,*) NameSub//' Raw plot_range=       ', plot_range(:,iFile)
+       write(*,*) NameSub//' Raw PlotDx_DI=          ', PlotDx_DI(:,iFile)
+       write(*,*) NameSub//' Raw PlotRange_EI=       ', PlotRange_EI(:,iFile)
        write(*,*) NameSub//' dR, dLon, dLat =      ', dR, dLon, dLat
        write(*,*) NameSub//' r, Lon, Lat range = ',  &
             rMin, rMax, LonMin,LonMax,LatMin,LatMax
@@ -246,7 +246,7 @@ contains
     call test_start(NameSub, DoTest)
 
     ! This subroutine does not support HDF output.
-    if(plot_form(iFile) == 'hdf') call stop_mpi(NameSub// &
+    if(TypePlotFormat_I(iFile) == 'hdf') call stop_mpi(NameSub// &
          ': HDF file type not supported for Geo Sphere output.')
 
     ! Collect results to head node

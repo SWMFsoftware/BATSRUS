@@ -76,8 +76,8 @@ module ModHeatConduction
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
   ! Arrays to build the Heat conduction dyad
-  real, allocatable :: HeatCoef_G(:,:,:), bb_DDG(:,:,:,:,:)
-  !$omp threadprivate( HeatCoef_G, bb_DDG )
+  real, allocatable :: HeatCoef_G(:,:,:), Bb_DDG(:,:,:,:,:)
+  !$omp threadprivate( HeatCoef_G, Bb_DDG )
   ! Arrays needed for the heat flux limiter
   real, allocatable :: FreeStreamFlux_G(:,:,:)
   !$omp threadprivate( FreeStreamFlux_G )
@@ -291,7 +291,7 @@ contains
             State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             HeatCoef_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
-            bb_DDG(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
+            Bb_DDG(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
             Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
 
        if(UseHeatFluxLimiter) &
@@ -366,7 +366,8 @@ contains
     ! threaded-field-line-model
     ! associate( &
     !   iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
-    !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
+    !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_),
+    !   kFace => IFF_I(kFace_), &
     !   HeatCondCoefNormal => RFF_I(HeatCondCoefNormal_), &
     !   HeatFlux => RFF_I(HeatFlux_), &
     !   IsNewBlockHeatCond => IsFF_I(IsNewBlockHeatCond_) )
@@ -627,7 +628,8 @@ contains
     !--------------------------------------------------------------------------
     ! associate( &
     !   iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
-    !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
+    !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), &
+    !   kFace => IFF_I(kFace_), &
     !   HeatCondCoefNormal => RFF_I(HeatCondCoefNormal_), &
     !   HeatFlux => RFF_I(HeatFlux_), &
     !   IsNewBlockIonHeatCond => IsFF_I(IsNewBlockIonHeatCond_) )
@@ -903,7 +905,7 @@ contains
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
     real, parameter:: TeEpsilonSi = 1.0
     real :: TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
-    real :: bb_DD(nDim,nDim)
+    real :: Bb_DD(nDim,nDim)
     logical :: IsNewBlockTe
 
     logical:: DoTest
@@ -997,10 +999,11 @@ contains
              end if
              if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
                 call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
-                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi)=NumDens/(GammaTmp-1)
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) &
+                     = NumDens/(GammaTmp - 1)
              else
-                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi)= &
-                     InvGammaElectronMinus1*NumDens
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) &
+                     = InvGammaElectronMinus1*NumDens
              end if
 
              if(UseElectronPressure .and. .not.UseMultiIon)then
@@ -1070,30 +1073,30 @@ contains
           ! First order BC at the outer boundaries
           if(DiLevel_EB(1,iBlock)==Unset_)then
              HeatCoef_G(0,:,:) = HeatCoef_G(1,:,:)
-             bb_DDG(:,:,0,:,:) = bb_DDG(:,:,1,:,:)
+             Bb_DDG(:,:,0,:,:) = Bb_DDG(:,:,1,:,:)
           end if
           if(DiLevel_EB(2,iBlock)==Unset_)then
              HeatCoef_G(nI+1,:,:) = HeatCoef_G(nI,:,:)
-             bb_DDG(:,:,nI+1,:,:) = bb_DDG(:,:,nI,:,:)
+             Bb_DDG(:,:,nI+1,:,:) = Bb_DDG(:,:,nI,:,:)
           end if
           if(nDim>=2)then
              if(DiLevel_EB(3,iBlock)==Unset_)then
                 HeatCoef_G(:,0,:) = HeatCoef_G(:,1,:)
-                bb_DDG(:,:,:,0,:) = bb_DDG(:,:,:,1,:)
+                Bb_DDG(:,:,:,0,:) = Bb_DDG(:,:,:,1,:)
              end if
              if(DiLevel_EB(4,iBlock)==Unset_)then
                 HeatCoef_G(:,nJ+1,:) = HeatCoef_G(:,nJ,:)
-                bb_DDG(:,:,:,nJ+1,:) = bb_DDG(:,:,:,nJ,:)
+                Bb_DDG(:,:,:,nJ+1,:) = Bb_DDG(:,:,:,nJ,:)
              end if
           end if
           if(nDim==3)then
              if(DiLevel_EB(5,iBlock)==Unset_)then
                 HeatCoef_G(:,:,0) = HeatCoef_G(:,:,1)
-                bb_DDG(:,:,:,:,0) = bb_DDG(:,:,:,:,1)
+                Bb_DDG(:,:,:,:,0) = Bb_DDG(:,:,:,:,1)
              end if
              if(DiLevel_EB(6,iBlock)==Unset_)then
                 HeatCoef_G(:,:,nK+1) = HeatCoef_G(:,:,nK)
-                bb_DDG(:,:,:,:,nK+1) = bb_DDG(:,:,:,:,nK)
+                Bb_DDG(:,:,:,:,nK+1) = Bb_DDG(:,:,:,:,nK)
              end if
           end if
        end if
@@ -1103,8 +1106,8 @@ contains
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-             bb_DD = 0.5*(bb_DDG(:nDim,:nDim,i,j,k) &
-                  +       bb_DDG(:nDim,:nDim,i-Di,j-Dj,k-Dk))
+             Bb_DD = 0.5*(Bb_DDG(:nDim,:nDim,i,j,k) &
+                  +       Bb_DDG(:nDim,:nDim,i-Di,j-Dj,k-Dk))
 
              HeatCoef = 0.5*(HeatCoef_G(i,j,k) + HeatCoef_G(i-Di,j-Dj,k-Dk))
 
@@ -1114,7 +1117,7 @@ contains
 
                 GradTe = 0.0
                 do iDir = 1, nDim
-                   GradTe = GradTe + sum(bb_DD(iDir,:)*GradTe_D(:nDim)) &
+                   GradTe = GradTe + sum(Bb_DD(iDir,:)*GradTe_D(:nDim)) &
                         *GradTe_D(iDir)
                 end do
                 GradTe = sqrt(GradTe)
@@ -1129,15 +1132,15 @@ contains
 
              if(IsCartesian)then
                 HeatCond_DFDB(:nDim,i,j,k,iDim,iBlock) = &
-                     CellFace_DB(iDim,iBlock)*HeatCoef*bb_DD(iDim,:)
+                     CellFace_DB(iDim,iBlock)*HeatCoef*Bb_DD(iDim,:)
              elseif(IsRzGeometry)then
                 HeatCond_DFDB(:nDim,i,j,k,iDim,iBlock) = &
-                     CellFace_DFB(iDim,i,j,k,iBlock)*HeatCoef*bb_DD(iDim,:)
+                     CellFace_DFB(iDim,i,j,k,iBlock)*HeatCoef*Bb_DD(iDim,:)
              else
                 do iDir = 1, nDim
                    HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = HeatCoef &
                         *sum( FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
-                        *bb_DD(:,iDir) )
+                        *Bb_DD(:,iDir) )
                 end do
              end if
           end do; end do; end do
@@ -1166,12 +1169,12 @@ contains
       real, intent(in) :: State_V(nVar)
       integer, intent(in) :: i, j, k, iBlock
 
-      ! Set HeatCoef_G(i,j,k) and bb_DDG(:,iDim,i,j,k) tensor and optionally
+      ! Set HeatCoef_G(i,j,k) and Bb_DDG(:,iDim,i,j,k) tensor and optionally
       ! the free stream flux FreeStreamFlux_G(i,j,k) for the cell center
       ! indexed by i,j,k of block iBlock based on its state State_V.
       ! The actual heat conduction tensor is
-      ! HeatCoef_G(i,j,k)*bb_DDG(:,iDim,i,j,k)
-      ! so in general bb_DDG(:,iDim,i,j,k) is the sum of the bb tensor AND
+      ! HeatCoef_G(i,j,k)*Bb_DDG(:,iDim,i,j,k)
+      ! so in general Bb_DDG(:,iDim,i,j,k) is the sum of the bb tensor AND
       ! an isotropic part. The isotropic part can be set as a fraction
       ! of the field aligned heat conduction.
 
@@ -1274,13 +1277,13 @@ contains
                  1/(1 + ElectronCollisionRate/(Bnorm*ElectronGyroFreqCoef))
          end if
          do iDim = 1, 3
-            bb_DDG(:,iDim,i,j,k) = ( &
+            Bb_DDG(:,iDim,i,j,k) = ( &
                  FractionFieldAligned*Bunit_D*Bunit_D(iDim) &
                  + (1.0 - FractionFieldAligned)*i_DD(:,iDim) )
          end do
       else
          do iDim = 1, 3
-            bb_DDG(:,iDim,i,j,k) = Bunit_D*Bunit_D(iDim)
+            Bb_DDG(:,iDim,i,j,k) = Bunit_D*Bunit_D(iDim)
          end do
       end if
 

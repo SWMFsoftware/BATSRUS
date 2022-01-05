@@ -38,7 +38,7 @@ contains
     use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_
     use ModMpi
-    use ModIO, ONLY: restart
+    use ModIO, ONLY: IsRestart
 
     integer:: iBlock, iError
     real   :: CellSize1Root
@@ -53,10 +53,10 @@ contains
     if(IsNewTree) iNewGrid = mod( iNewGrid+1, 10000)
 
     if(DoTest)write(*,*) NameSub, &
-         ' starting with IsNewDecomposition, IsNewTree, restart=', &
-         IsNewDecomposition, IsNewTree, restart
+         ' starting with IsNewDecomposition, IsNewTree, IsRestart=', &
+         IsNewDecomposition, IsNewTree, IsRestart
 
-    if( IsNewDecomposition .or. IsNewTree .or. restart) then
+    if( IsNewDecomposition .or. IsNewTree .or. IsRestart) then
 
        ! If regrid_batl is not called in each time step, we say that the
        ! grid/tree is not changed from the view of BATL

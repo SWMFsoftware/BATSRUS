@@ -67,7 +67,6 @@ module ModMultiIon
 
 contains
   !============================================================================
-
   subroutine multi_ion_set_parameters(NameCommand)
 
     use ModSize, ONLY: nI, nJ, nK, MaxBlock
@@ -110,7 +109,6 @@ contains
 
   end subroutine multi_ion_set_parameters
   !============================================================================
-
   subroutine multi_ion_set_restrict(iBlock)
 
     ! Identify regions where only one ion fluid is present.
@@ -156,7 +154,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine multi_ion_set_restrict
   !============================================================================
-
   subroutine multi_ion_source_expl(iBlock)
 
     ! Add non-stiff source terms specific to multi-ion MHD
@@ -268,7 +265,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine multi_ion_source_expl
   !============================================================================
-
   subroutine multi_ion_source_impl(iBlock)
 
     ! Add 'stiff' source terms specific to multi-ion MHD:
@@ -456,9 +452,12 @@ contains
                 write(*,'(2a,i2)') NameSub,' iIon            =', iIon
                 write(*,'(2a,15es16.8)') NameSub,' uIon_D          =', uIon_D
                 write(*,'(2a,15es16.8)') NameSub,' u_D             =', u_D
-                write(*,'(2a,15es16.8)') NameSub,' ForceCoeff      =', ForceCoeff
-                write(*,'(2a,15es16.8)') NameSub,' ChargeDensBoris =', ChargeDensBoris_I(iIon)
-                write(*,'(2a,15es16.8)') NameSub,' Force_D         =', Force_D
+                write(*,'(2a,15es16.8)') NameSub,' ForceCoeff      =', &
+                     ForceCoeff
+                write(*,'(2a,15es16.8)') NameSub,' ChargeDensBoris =', &
+                     ChargeDensBoris_I(iIon)
+                write(*,'(2a,15es16.8)') NameSub,' Force_D         =', &
+                     Force_D
              end if
 
              ! Set corresponding matrix element
@@ -470,9 +469,10 @@ contains
                       jDim = 6 - kDim - iDim
                       SignedB = iLeviCivita_III(iDim, jDim, kDim)*FullB_D(jDim)
 
-                      ! This Jacobian term occurs with respect to the same fluid
+                      ! Jacobian term occurs with respect to the same fluid
                       iUi = iUxIon_I(iIon) + iDim - 1
-                      DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) &
+                      DsDu_VVC(iUk, iUi, i, j, k) = &
+                           DsDu_VVC(iUk, iUi, i, j, k) &
                            + ForceCoeff*SignedB*InvRho_I(iIon)
 
                       Coeff = ForceCoeff*SignedB*InvElectronDens
@@ -549,20 +549,25 @@ contains
                 Force_D = Force_D + CollisionRate * (uIon2_D - uIon_D)
 
                 if(DoTestCell)then
-                   write(*,'(2a,15es16.8)') NameSub,' CollisionCoef=',CollisionCoef
-                   write(*,'(2a,15es16.8)') NameSub,' AverageTemp  =',AverageTemp
-                   write(*,'(2a,15es16.8)') NameSub,' AverageTempDim=', &
+                   write(*,'(2a,es16.8)') &
+                        NameSub,' CollisionCoef=', CollisionCoef
+                   write(*,'(2a,es16.8)') &
+                        NameSub,' AverageTemp  =',AverageTemp
+                   write(*,'(2a,es16.8)') &
+                        NameSub,' AverageTempDim=', &
                         AverageTemp*No2Si_V(UnitTemperature_)
                    write(*,'(2a,i2)') &
                         NameSub,' after collision, iIon            =', iIon
-                   write(*,'(2a,15es16.8)') &
+                   write(*,'(2a,3es16.8)') &
                         NameSub,' after collision, Force_D         =', Force_D
                 end if
 
                 ! !! No heating for now
-! If heating is added as below, adjust update_states_MHD to make sure that
-! the execution passes through here even if UseUniformIonVelocity is true
-! (fluids can have different temperatures)
+                ! If heating is added as below,
+                ! adjust update_states_MHD to make sure that
+                ! the execution passes through here even
+                ! if UseUniformIonVelocity is true
+                ! (fluids can have different temperatures)
                 ! Heating = Heating + CollisionRate* &
                 !     ( 2*(Temp_I(jIon) - Temp_I(iIon)) &
                 !     + gm1*sum((uIon2_D - uIon_D)**2) )
@@ -690,7 +695,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine multi_ion_init_point_impl
   !============================================================================
-
   subroutine multi_ion_update(iBlock, IsFinal)
 
     ! Resolve the update of total fluid vs. ion fluids:
@@ -857,6 +861,5 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine multi_ion_update
   !============================================================================
-
 end module ModMultiIon
 !==============================================================================

@@ -416,14 +416,14 @@ contains
 
   end subroutine user_material_properties
   !============================================================================
-  integer function user_block_type(iBlock)
+  integer function i_type_block_user(iBlock)
 
     ! Define block type for load balancing
 
     integer, intent(in), optional:: iBlock
     !--------------------------------------------------------------------------
-    user_block_type = 0
-  end function user_block_type
+    i_type_block_user = 0
+  end function i_type_block_user
   !============================================================================
   subroutine stop_user(NameSub)
     ! Note that this routine is not a user routine but just a routine

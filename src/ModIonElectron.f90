@@ -99,7 +99,7 @@ contains
     integer:: iIon, iRhoUx, iRhoUy, iRhoUz
     real:: ChargePerMass
 
-    logical :: DotestCell
+    logical:: DoTestCell
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ion_electron_source_impl'
     !--------------------------------------------------------------------------
@@ -373,7 +373,8 @@ contains
     logical, intent(in)    :: DoTest
 
     integer :: iVar
-    real    :: nElec, InvElectronDens, uElec_D(3), Bfield_D(3), Efield_D(3)
+    real    :: NumDensElec, InvElectronDens
+    real    :: uElec_D(3), Bfield_D(3), Efield_D(3)
     real    :: uPlus_D(3), Te
     real    :: StateOld_V(nVar)
 
@@ -395,7 +396,7 @@ contains
          ChargePerMass_I(1:nTrueIon)*State_V(iRhoIon_I(1:nTrueIon)) )
 
     ! electron number density
-    nElec = 1/(ElectronCharge*InvElectronDens)
+    NumDensElec = 1/(ElectronCharge*InvElectronDens)
 
     ! charge average ion velocity
     uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I(1:nTrueIon) &
@@ -413,11 +414,11 @@ contains
     Efield_D = -cross_product(uElec_D,Bfield_D) - GradPe_D*InvElectronDens
 
     ! correct the electron mass density and velocity
-    State_V(iRhoIon_I(ElectronFirst_))  = nElec*MassFluid_I(ElectronFirst_)
-    State_V(ElecUx_:ElecUz_)       = State_V(iRhoIon_I(ElectronFirst_))*uElec_D
+    State_V(iRhoIon_I(ElectronFirst_))= NumDensElec*MassFluid_I(ElectronFirst_)
+    State_V(ElecUx_:ElecUz_) = State_V(iRhoIon_I(ElectronFirst_))*uElec_D
 
     ! correct the electron pressure based on the original Te if needed
-    if (DoCorrectPe) State_V(iPIon_I(ElectronFirst_)) = nElec*Te
+    if (DoCorrectPe) State_V(iPIon_I(ElectronFirst_)) = NumDensElec*Te
 
     ! correct the electric field
     if (DoCorrectEfield) State_V(Ex_:Ez_) = Efield_D
@@ -428,7 +429,7 @@ contains
        write(*,'(1x,2a,10es13.5)')  NameSub, ' ChargeIon_I =', ChargeIon_I
        write(*,'(1x,2a,10es13.5)')  NameSub, ' nIon_I      =', &
             State_V(iRhoIon_I(1:nTrueIon))/MassIon_I(1:nTrueIon)
-       write(*,'(1x,2a,3es20.12)')  NameSub, ' nElec       =', nElec
+       write(*,'(1x,2a,3es20.12)')  NameSub, ' NumDensElec =', NumDensElec
        write(*,'(1x,2a,3es20.12)')  NameSub, ' uPlus_D     =', uPlus_D
        write(*,'(1x,2a,3es20.12)')  NameSub, ' Current_D   =', Current_D
        write(*,'(1x,2a,3es20.12)')  NameSub, ' uElec_D     =', uElec_D

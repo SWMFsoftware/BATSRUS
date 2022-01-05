@@ -315,9 +315,9 @@ subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
 
 end subroutine user_material_properties
 !============================================================================
-integer function user_block_type(iBlock)
+integer function i_type_block_user(iBlock)
 
-  use ModUser, ONLY: user_func => user_block_type
+  use ModUser, ONLY: user_func => i_type_block_user
   implicit none
 
   integer, intent(in), optional:: iBlock
@@ -326,12 +326,12 @@ integer function user_block_type(iBlock)
   ! for load balancing.
   ! If iBlock is present, returnt the combined type for this particular block.
   ! Example: 2 user block types are present due to expensive boundary and source terms
-  ! calculations. Then return 2 for user_block_type(), and for user_block_type(iBlock)
+  ! calculations. Then return 2 for i_type_block_user(), and for i_type_block_user(iBlock)
   ! return 0 for a block that uses neither boundary nor source,
   ! return 1 for a block that uses boundary but not source,
   ! return 2 for a block that uses source but not boundary,
   ! return 3 for a block that uses both source and boundary.
 
-  user_block_type = user_func(iBlock)
+  i_type_block_user = user_func(iBlock)
 
-end function user_block_type
+end function i_type_block_user

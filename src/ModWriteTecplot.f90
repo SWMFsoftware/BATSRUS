@@ -88,12 +88,12 @@ contains
          r_, Phi_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
     use ModNumConst, ONLY: cPi, cHalfPi
-    use ModIO,     ONLY: nPlotVarMax, DoSaveOneTecFile, DoSaveTecBinary
+    use ModIO,     ONLY: MaxPlotvar, DoSaveOneTecFile, DoSaveTecBinary
     use ModIoUnit, ONLY: UnitTmp_
     use ModKind, ONLY: Real4_
 
     integer, intent(in):: iBlock, nPlotVar
-    real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotvarMax)
+    real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
 
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     integer:: iRecData
@@ -213,7 +213,7 @@ contains
 
     use ModAdvance,   ONLY: iTypeAdvance_BP, SkippedBlock_
     use ModIO,        ONLY: DoSaveOneTecFile, DoSaveTecBinary, &
-         plot_type1, plot_range
+         TypePlot, PlotRange_EI
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
     use ModMain,      ONLY: nBlockMax
@@ -257,7 +257,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    DoCut = nDim == 3 .and. plot_type1(1:2) /= '3d'
+    DoCut = nDim == 3 .and. TypePlot(1:2) /= '3d'
 
     ! Set iPlotDim_D to 0 in ignored dimensions
     iPlot_D = 0
@@ -275,8 +275,8 @@ contains
          iCell_G(0:nI+1,0:nJ+1,k0_:nKp1_))
 
     if(DoCut)then
-       CutMin_D = plot_range(1:5:2,iFile)
-       CutMax_D = plot_range(2:6:2,iFile)
+       CutMin_D = PlotRange_EI(1:5:2,iFile)
+       CutMax_D = PlotRange_EI(2:6:2,iFile)
 
        ! Set iPlot_D to 0 in 0 width cut direction
        where(CutMin_D == CutMax_D) iPlot_D = 0
@@ -1080,7 +1080,7 @@ contains
     use ModAdvance, ONLY : iTypeAdvance_B, SkippedBlock_
     use ModIO
     use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
-    use ModNodes, ONLY: nNodeAll, NodeNumberGlobal_NB, NodeUniqueGlobal_NB
+    use ModNodes, ONLY: nNodeAll, iNodeGlobal_NB, IsNodeUnique_NB
     use BATL_lib, ONLY: IsCartesianGrid, IsRLonLat,                    &
          nNodeUsed, iNodeMorton_I, iTree_IA, Block_, Proc_,            &
          Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,                  &
@@ -1091,8 +1091,8 @@ contains
     ! Arguments
     integer, intent(in) :: ifile, nPlotVar
     character (LEN=1000), intent(in) :: unitstr_TEC
-    real, intent(in) :: PlotVarBLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVarMax)
-    real, intent(in) :: PlotVarNodes_VNB(nPlotVarMax,nI+1,nJ+1,nK+1,nBlock)
+    real, intent(in) :: PlotVarBLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real, intent(in) :: PlotVarNodes_VNB(MaxPlotvar,nI+1,nJ+1,nK+1,nBlock)
     real, intent(in) :: PlotXYZNodes_DNB(3,nI+1,nJ+1,nK+1,nBlock)
     real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
     integer, intent(in) :: iUnit
@@ -1119,13 +1119,13 @@ contains
     character(len=*), parameter:: NameSub = 'write_tecplot_node_data'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(DoTest)write(*,*) plot_type1,plot_type1(1:3)
+    if(DoTest)write(*,*) TypePlot,TypePlot(1:3)
 
     call write_tecplot_setinfo
 
-    select case(plot_type1(1:3))
+    select case(TypePlot(1:3))
     case('blk')
-       call find_grid_block(plot_point(:,iFile), iPE, iBlock)
+       call find_grid_block(PlotPointXyz_DI(:,iFile), iPE, iBlock)
        if(iPE /= iProc) RETURN
 
        write(UnitTmp_,'(a)')'TITLE="BATSRUS: BLK Only, '//textDateTime//'"'
@@ -1142,7 +1142,7 @@ contains
        write(UnitTmp_,'(a,a,a)') 'AUXDATA DEBUGPROC="',trim(adjustl(stmp)),'"'
        ! Write cell values
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          if (plot_dimensional(ifile)) then
+          if (IsDimensionalPlot_I(ifile)) then
              write(UnitTmp_,fmt="(50(ES14.6))") &
                   Xyz_DGB(:,i,j,k,iBlock)*No2Io_V(UnitX_), &
                   PlotVarBlk(i,j,k,1:nPlotVar)
@@ -1216,8 +1216,8 @@ contains
 
              ! Write point values
              do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-                if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
-                   iRec = NodeNumberGlobal_NB(i,j,k,iBlock)
+                if(IsNodeUnique_NB(i,j,k,iBlock))then
+                   iRec = iNodeGlobal_NB(i,j,k,iBlock)
                    write(UnitTmp_, FMT=formatData, REC=iRec) &
                         NodeXYZ_DN(1:3,i,j,k),                  &
                         PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock),&
@@ -1231,14 +1231,14 @@ contains
              do k=1,nK; do j=1,nJ; do i=1,nI
                 iRec = iRec + 1
                 write(UnitTmp2_,'(8i11,a)', REC=iRec) &
-                     NodeNumberGlobal_NB(i  ,j  ,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j  ,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j+1,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i  ,j+1,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i  ,j  ,k+1,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j  ,k+1,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j+1,k+1,iBlock), &
-                     NodeNumberGlobal_NB(i  ,j+1,k+1,iBlock), CharNewLine
+                     iNodeGlobal_NB(i  ,j  ,k  ,iBlock), &
+                     iNodeGlobal_NB(i+1,j  ,k  ,iBlock), &
+                     iNodeGlobal_NB(i+1,j+1,k  ,iBlock), &
+                     iNodeGlobal_NB(i  ,j+1,k  ,iBlock), &
+                     iNodeGlobal_NB(i  ,j  ,k+1,iBlock), &
+                     iNodeGlobal_NB(i+1,j  ,k+1,iBlock), &
+                     iNodeGlobal_NB(i+1,j+1,k+1,iBlock), &
+                     iNodeGlobal_NB(i  ,j+1,k+1,iBlock), CharNewLine
              end do; end do; end do
           end do
        else
@@ -1248,7 +1248,7 @@ contains
                 ! Write point values
                 call fill_NodeXYZ
                 do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-                   if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
+                   if(IsNodeUnique_NB(i,j,k,iBlock))then
                       write(UnitTmp_) &
                            NodeXYZ_DN(1:3,i,j,k),       &
                            real(PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock),&
@@ -1258,14 +1258,14 @@ contains
                 ! Write point connectivity
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    write(UnitTmp2_) &
-                        NodeNumberGlobal_NB(i  ,j  ,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j  ,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j+1,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j+1,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j  ,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j  ,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j+1,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j+1,k+1,iBlock)
+                        iNodeGlobal_NB(i  ,j  ,k  ,iBlock), &
+                        iNodeGlobal_NB(i+1,j  ,k  ,iBlock), &
+                        iNodeGlobal_NB(i+1,j+1,k  ,iBlock), &
+                        iNodeGlobal_NB(i  ,j+1,k  ,iBlock), &
+                        iNodeGlobal_NB(i  ,j  ,k+1,iBlock), &
+                        iNodeGlobal_NB(i+1,j  ,k+1,iBlock), &
+                        iNodeGlobal_NB(i+1,j+1,k+1,iBlock), &
+                        iNodeGlobal_NB(i  ,j+1,k+1,iBlock)
                 end do; end do; end do
              end do
           else
@@ -1274,7 +1274,7 @@ contains
                 ! Write point values
                 call fill_NodeXYZ
                 do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-                   if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
+                   if(IsNodeUnique_NB(i,j,k,iBlock))then
                       write(UnitTmp_,fmt="(50(ES14.6))") &
                            NodeXYZ_DN(1:3,i,j,k),       &
                            PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock)
@@ -1283,14 +1283,14 @@ contains
                 ! Write point connectivity
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    write(UnitTmp2_,'(8i11)') &
-                        NodeNumberGlobal_NB(i  ,j  ,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j  ,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j+1,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j+1,k  ,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j  ,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j  ,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i+1,j+1,k+1,iBlock), &
-                        NodeNumberGlobal_NB(i  ,j+1,k+1,iBlock)
+                        iNodeGlobal_NB(i  ,j  ,k  ,iBlock), &
+                        iNodeGlobal_NB(i+1,j  ,k  ,iBlock), &
+                        iNodeGlobal_NB(i+1,j+1,k  ,iBlock), &
+                        iNodeGlobal_NB(i  ,j+1,k  ,iBlock), &
+                        iNodeGlobal_NB(i  ,j  ,k+1,iBlock), &
+                        iNodeGlobal_NB(i+1,j  ,k+1,iBlock), &
+                        iNodeGlobal_NB(i+1,j+1,k+1,iBlock), &
+                        iNodeGlobal_NB(i  ,j+1,k+1,iBlock)
                 end do; end do; end do
              end do
           end if
@@ -1305,7 +1305,7 @@ contains
        if((xmax-xmin)<(ymax-ymin) .and. (xmax-xmin)<(zmax-zmin))then
           ! X Slice
           CutValue = 0.5*(xmin+xmax)
-          if(plot_type1(1:3) == 'x=0') CutValue = 0.
+          if(TypePlot(1:3) == 'x=0') CutValue = 0.
           if(IsCartesianGrid)then
              ! First loop to count nodes and cells
              do iBlockAll = 1, nNodeUsed
@@ -1458,7 +1458,7 @@ contains
        elseif((ymax-ymin)<(zmax-zmin))then
           ! Y Slice
           CutValue = 0.5*(ymin+ymax)
-          if(plot_type1(1:3) == 'y=0') CutValue = 0.
+          if(TypePlot(1:3) == 'y=0') CutValue = 0.
           if(IsCartesianGrid)then
              ! First loop to count nodes and cells
              do iBlockAll = 1, nNodeUsed
@@ -1612,7 +1612,7 @@ contains
        else
           ! Z Slice
           CutValue = 0.5*(zmin+zmax)
-          if(plot_type1(1:3) == 'z=0') CutValue = 0.
+          if(TypePlot(1:3) == 'z=0') CutValue = 0.
           ! First loop to count nodes and cells
           do iBlockAll = 1, nNodeUsed
              iNode = iNodeMorton_I(iBlockAll)
@@ -1696,11 +1696,11 @@ contains
        ! XarbNormal,YarbNormal,ZarbNormal     normal for cut
        ! ic1,jc1,kc1,ic2,jc2,kc2              two opposite corner indices
 
-       if (plot_type1(1:3)=='slc')then
+       if (TypePlot(1:3)=='slc')then
           ! Point-Normal cut plot
-          XarbP=plot_point(1,ifile); XarbNormal=plot_normal(1,ifile)
-          YarbP=plot_point(2,ifile); YarbNormal=plot_normal(2,ifile)
-          ZarbP=plot_point(3,ifile); ZarbNormal=plot_normal(3,ifile)
+          XarbP=PlotPointXyz_DI(1,ifile); XarbNormal=PlotNormal_DI(1,ifile)
+          YarbP=PlotPointXyz_DI(2,ifile); YarbNormal=PlotNormal_DI(2,ifile)
+          ZarbP=PlotPointXyz_DI(3,ifile); ZarbNormal=PlotNormal_DI(3,ifile)
        else
           ! Dipole cut plot
           XarbP=0.; XarbNormal=-sin(ThetaTilt)
@@ -1732,7 +1732,7 @@ contains
 
        ! Write file header
        if(iProc==0)then
-          if (plot_type1(1:3)=='slc')then
+          if (TypePlot(1:3)=='slc')then
              write(UnitTmp_,'(a)')'TITLE="BATSRUS: Slice, '//textDateTime//'"'
              write(UnitTmp_,'(a)')trim(unitstr_TEC)
              write(UnitTmp_,'(a,i8,a)') &
@@ -1768,7 +1768,7 @@ contains
           end if
        end do
     case default
-       write(*,*) NameSub,': ERROR: Unknown plot_type='//plot_type1
+       write(*,*) NameSub,': ERROR: Unknown TypePlot_I='//TypePlot
     end select
 
     call test_stop(NameSub, DoTest)
@@ -1779,7 +1779,7 @@ contains
     subroutine fill_nodeXYZ
       ! Fill array with position (optionally dimensioned)
       !------------------------------------------------------------------------
-      if (plot_dimensional(ifile)) then
+      if (IsDimensionalPlot_I(ifile)) then
          NodeXYZ_DN(1:3,:,:,:)=PlotXYZNodes_DNB(1:3,:,:,:,iBlock)*No2Io_V(UnitX_)
       else
          NodeXYZ_DN(1:3,:,:,:)=PlotXYZNodes_DNB(1:3,:,:,:,iBlock)
@@ -1942,7 +1942,7 @@ contains
     end if
 
     ! Initialize all node numbers to zero
-    NodeNumberLocal_NB=0
+    iNodeLocal_NB=0
 
     ! Number of nodes on each block (maximum)
     nNodeALL=nBlockALL*NodesPerBlock
@@ -1959,23 +1959,23 @@ contains
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
           iNode = iNode+1
-          NodeNumberLocal_NB(i,j,k,iBlock)= iNode
+          iNodeLocal_NB(i,j,k,iBlock)= iNode
        end do; end do; end do
     end do TREE1
-    NodeNumberGlobal_NB = NodeNumberLocal_NB
+    iNodeGlobal_NB = iNodeLocal_NB
 
     ! Set logical array
-    NodeUniqueGlobal_NB = NodeNumberGlobal_NB>0
+    IsNodeUnique_NB = iNodeGlobal_NB>0
 
     ! Assign value to internal passing variable and do message pass
     !  NOTE: convert integer to real for message pass first
 
     ! Done a evel one, with allocate and dealocate. NEED to be fixed
     allocate(IndexNode_VNB(1,nI+1,nJ+1,nK+1,nBlock))
-    IndexNode_VNB(1,:,:,:,:) = real(NodeNumberGlobal_NB(:,:,:,1:nBlock))
+    IndexNode_VNB(1,:,:,:,:) = real(iNodeGlobal_NB(:,:,:,1:nBlock))
     call message_pass_node(1,IndexNode_VNB, &
          NameOperatorIn='Min', UsePeriodicCoordIn = .true.)
-    NodeNumberGlobal_NB(:,:,:,1:nBlock) = nint(IndexNode_VNB(1,:,:,:,:))
+    iNodeGlobal_NB(:,:,:,1:nBlock) = nint(IndexNode_VNB(1,:,:,:,:))
     deallocate(IndexNode_VNB)
 
     ! Allocate memory for storing the node offsets
@@ -1988,12 +1988,12 @@ contains
     TREE2: do iBlock  = 1, nBlock
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-          if(  NodeNumberLocal_NB(i,j,k,iBlock) > &
-               NodeNumberGlobal_NB(i,j,k,iBlock))then
+          if(  iNodeLocal_NB(i,j,k,iBlock) > &
+               iNodeGlobal_NB(i,j,k,iBlock))then
              nOffset = nOffset+1
-             NodeUniqueGlobal_NB(i,j,k,iBlock) = .false.
+             IsNodeUnique_NB(i,j,k,iBlock) = .false.
           end if
-          NodeOffset(NodeNumberLocal_NB(i,j,k,iBlock)) = nOffset
+          NodeOffset(iNodeLocal_NB(i,j,k,iBlock)) = nOffset
        end do; end do; end do
     end do TREE2
 
@@ -2010,7 +2010,7 @@ contains
     do iBlock  = 1, nBlock
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-          iNode = NodeNumberLocal_NB(i,j,k,iBlock)
+          iNode = iNodeLocal_NB(i,j,k,iBlock)
           NodeOffset(iNode) = NodeOffset(iNode) + nOffsetPrevious
        end do; end do; end do
     end do
@@ -2039,21 +2039,21 @@ contains
             iComm, iError)
     end if
 
-    ! Loop to fix NodeNumberGlobal_NB for offset
+    ! Loop to fix iNodeGlobal_NB for offset
     TREE3: do iBlock  = 1, nBlock
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-          NodeNumberGlobal_NB(i,j,k,iBlock) = NodeNumberGlobal_NB(i,j,k,iBlock) &
-               - NodeOffset(NodeNumberGlobal_NB(i,j,k,iBlock))
-          if(NodeNumberGlobal_NB(i,j,k,iBlock)>nNodeALL &
-               .or. NodeNumberGlobal_NB(i,j,k,iBlock)<1)then
+          iNodeGlobal_NB(i,j,k,iBlock) = iNodeGlobal_NB(i,j,k,iBlock) &
+               - NodeOffset(iNodeGlobal_NB(i,j,k,iBlock))
+          if(iNodeGlobal_NB(i,j,k,iBlock)>nNodeALL &
+               .or. iNodeGlobal_NB(i,j,k,iBlock)<1)then
              ! Error in numbering, report values and stop.
              write(*,*)'ERROR: Global node numbering problem.', &
                   ' PE=',iProc,' BLK=',iBlock,' ijk=',i,j,k
-             write(*,*)'  NodeNumberGlobal_NB=',&
-                  NodeNumberGlobal_NB(i,j,k,iBlock)
+             write(*,*)'  iNodeGlobal_NB=',&
+                  iNodeGlobal_NB(i,j,k,iBlock)
              write(*,*)'  NodeOffset           =',&
-                  NodeOffset(NodeNumberGlobal_NB(i,j,k,iBlock))
+                  NodeOffset(iNodeGlobal_NB(i,j,k,iBlock))
              write(*,*)'  nBlockALL=',nBlockALL,&
                   ' NodesPerBlock=',NodesPerBlock,&
                   ' unreduced total=',nBlockALL*NodesPerBlock,&
@@ -2085,7 +2085,7 @@ contains
 
     use ModPhysics
     use ModUtilities,  ONLY: lower_case
-    use ModIO,         ONLY: plot_dimensional, plot_type1
+    use ModIO,         ONLY: IsDimensionalPlot_I, TypePlot
     use ModVarIndexes, ONLY: IsMhd
     use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
     use ModMultiFluid, ONLY: extract_fluid_name, NameFluid
@@ -2106,8 +2106,8 @@ contains
     character(len=*), parameter:: NameSub = 'set_tecplot_var_string'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(plot_type1(1:3) == 'box')then
-       if (plot_dimensional(iFile)) then
+    if(TypePlot(1:3) == 'box')then
+       if (IsDimensionalPlot_I(iFile)) then
           StringVarTec = 'VARIABLES ="x '// trim(NameTecUnit_V(UnitX_)) // &
                '", " y '                // trim(NameTecUnit_V(UnitX_)) // &
                '", " z '               // trim(NameTecUnit_V(UnitX_))
@@ -2115,8 +2115,8 @@ contains
           StringVarTec = 'VARIABLES ="x", "y", "z'
        end if
 
-    elseif(plot_type1(1:3) == 'shl')then
-       if (plot_dimensional(iFile)) then
+    elseif(TypePlot(1:3) == 'shl')then
+       if (IsDimensionalPlot_I(iFile)) then
           StringVarTec = 'VARIABLES ="R '// trim(NameTecUnit_V(UnitX_)) &
                // '", "Lon [deg]", "Lat [deg]'
        else
@@ -2124,7 +2124,7 @@ contains
        end if
 
     else
-       if (plot_dimensional(iFile)) then
+       if (IsDimensionalPlot_I(iFile)) then
           StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
                // '", "Y ' // trim(NameTecUnit_V(UnitX_))
           if(nDim==3) StringVarTec = trim(StringVarTec) &
@@ -2393,7 +2393,7 @@ contains
 
        StringVarTec = trim(StringVarTec) // '", "' // NameTecVar
 
-       if (plot_dimensional(iFile)) &
+       if (IsDimensionalPlot_I(iFile)) &
             StringVarTec = trim(StringVarTec) // ' ' //NameUnit
 
     end do

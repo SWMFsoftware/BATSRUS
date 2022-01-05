@@ -26,7 +26,8 @@ contains
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
          read_b0_param, init_mod_b0
     use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
-         xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
+         xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
+         XyzMin_D, XyzMax_D, RadiusMin, RadiusMax, &
          CoordDimMin_D, CoordDimMax_D, &
          read_gen_radial_grid, set_gen_radial_grid, NameGridFile
     use ModNodes, ONLY: init_mod_nodes
@@ -89,14 +90,14 @@ contains
          read_resistivity_param, init_mod_resistivity
     use ModMultiFluid, ONLY: MassIon_I,ChargeIon_I,nIonFluid, &
          DoConserveNeutrals, DoOhNeutralBc, &
-         uBcFactor_I, RhoBcFactor_I, RhoNeutralsISW_dim, &
-         UxNeutralsISW_dim, UyNeutralsISW_dim, UzNeutralsISW_dim, &
-         TNeutralsISW_dim, mProtonMass
+         uBcFactor_I, RhoBcFactor_I, RhoNeuWindDim, &
+         UxNeuWindDim, UyNeuWindDim, UzNeuWindDim, &
+         TempNeuWindDim, MassNeutralDim
     use ModMultiIon, ONLY: multi_ion_set_parameters, &
          multi_ion_init_point_impl
     use ModSolarwind, ONLY: UseSolarwindFile, read_solar_wind_param, &
          read_solar_wind_file, normalize_solar_wind_data
-    use ModSatelliteFile, ONLY: nSatellite, FilenameSat_I, NameSat_I, &
+    use ModSatelliteFile, ONLY: nSatellite, NameFileSat_I, NameSat_I, &
          read_satellite_parameters, read_satellite_input_files
     use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
     use ModFaceFlux, ONLY: face_flux_set_parameters, init_mod_face_flux, &
@@ -158,7 +159,7 @@ contains
     integer :: iTmp, iFileStart, iFileRead, iFileInstrument, nPlotFileRead
     integer :: iInstrument, nInstrument, iSat
     character(LEN=10)  :: NameSat, NameInstrument, StringInstrument_I(20) = ''
-    character(LEN=200) :: StringsInstrument
+    character(LEN=200) :: StringInstrument
 
     !  logical :: HdfUninitialized      = .true.
     logical :: DoReadSolarwindFile  = .false.
@@ -178,16 +179,16 @@ contains
     character(len=lStringLine) :: NameVarsRestartTo   =''
     integer :: nVarRestartMappingFrom, nVarRestartMappingTo
 
-    character(len=50) :: plot_string,log_string, TypeCoordObs
-    character(len=3)  :: plot_area, plot_var
+    character(len=50) :: StringPlot,StringLog, TypeCoordObs
+    character(len=3)  :: TypePlotArea, TypePlotVar
     character(len=2)  :: NameCompRead="??"
     integer :: MinBlockAll, nIJKRead_D(3), nRootRead_D(3)=1
 
     character(len=50) :: StringParcel
     integer           :: iParcel
 
-    integer           :: TimingDepth=-1
-    character(len=10) :: TimingStyle='cumu'
+    integer           :: nDepthTiming=-1
+    character(len=10) :: TypeTiming='cumu'
 
     ! Variables for checking/reading #STARTTIME command
     real(Real8_)       :: StartTimeCheck   = -1.0_Real8_
@@ -215,7 +216,7 @@ contains
 
     ! Variables for #SAVEPLOT command, to replace some common used variables
     ! in VAR string
-    character(len(plot_vars1)+2) :: NamePlotVar
+    character(len(StringPlotVar)+2) :: StringPlotVarExt
     integer :: l1, l2
 
     ! Variables for #BOUNDARYSTATE command
@@ -252,7 +253,7 @@ contains
     end if
 
     ! restart in first session only
-    if(.not.IsFirstSession) restart=.false.
+    if(.not.IsFirstSession) IsRestart=.false.
 
     select case(TypeAction)
     case('CHECK')
@@ -260,8 +261,8 @@ contains
 
        ! Make output and check input directories
        if(iProc==0) call make_dir(NamePlotDir)
-       if(iProc==0 .and. save_restart_file) call make_dir(NameRestartOutDir)
-       if(iProc==0 .and. restart) call check_dir(NameRestartInDir)
+       if(iProc==0 .and. DoSaveRestart) call make_dir(NameRestartOutDir)
+       if(iProc==0 .and. IsRestart) call check_dir(NameRestartInDir)
 
        ! Check if StartTime from PARAM.in and Carrington Map Time match
        iTableB0 = i_lookup_table('B0')
@@ -482,8 +483,8 @@ contains
                 call timing_comp_proc("  ",iProc)
              end if
           end if
-          call timing_depth(TimingDepth)
-          call timing_report_style(TimingStyle)
+          call timing_depth(nDepthTiming)
+          call timing_report_style(TypeTiming)
        end if
 
        if(iTypeUpdate >= UpdateFast_ .and. iProc == 0) &
@@ -557,16 +558,16 @@ contains
 
        case("#CHECKSTOPFILE")
           call check_stand_alone
-          call read_var('DoCheckStopfile',DoCheckStopFile)
+          call read_var('DoCheckStopfile', DoCheckStopFile)
 
        case("#PROGRESS")
           call check_stand_alone
-          call read_var('DnProgressShort',dn_progress1)
-          call read_var('DnProgressLong',dn_progress2)
+          call read_var('DnProgressShort', DnProgressShort)
+          call read_var('DnProgressLong', DnProgressLong)
 
        case("#TIMEACCURATE")
           call check_stand_alone
-          call read_var('DoTimeAccurate',IsTimeAccurate)
+          call read_var('IsTimeAccurate', IsTimeAccurate)
 
        case("#ECHO")
           call check_stand_alone
@@ -597,10 +598,10 @@ contains
           call read_var('UseTiming',UseTiming)
           if(UseTiming)then
              call read_var('DnTiming',DnTiming)
-             call read_var('nDepthTiming',TimingDepth)
-             call read_var('TypeTimingReport',TimingStyle)
-             UseTimingAll = index(TimingStyle,'all') > 0
-             TimingStyle  = TimingStyle(1:4)
+             call read_var('nDepthTiming',nDepthTiming)
+             call read_var('TypeTimingReport',TypeTiming)
+             UseTimingAll = index(TypeTiming,'all') > 0
+             TypeTiming  = TypeTiming(1:4)
           end if
 
        case("#OPTIMIZEMPI")
@@ -757,11 +758,11 @@ contains
                 end do
              end if
              call read_var('StringParcel', StringParcel)
-             call read_var('DnParcel',dn_output(parcel_+1))
-             dn_output(parcel_+1:parcel_+nParcel)=dn_output(parcel_+1)
-             call read_var('DtParcel',dt_output(parcel_+1))
-             dt_output(parcel_+1:parcel_+nParcel)=dt_output(parcel_+1)
-             if(dn_output(parcel_+1) > 0)then
+             call read_var('DnParcel',DnOutput_I(parcel_+1))
+             DnOutput_I(parcel_+1:parcel_+nParcel)=DnOutput_I(parcel_+1)
+             call read_var('DtParcel',DtOutput_I(parcel_+1))
+             DtOutput_I(parcel_+1:parcel_+nParcel)=DtOutput_I(parcel_+1)
+             if(DnOutput_I(parcel_+1) > 0)then
                 call read_var('nStartParcel',nStartParcel)
                 call read_var('nEndParcel',nEndParcel)
                 if(nEndParcel < nStartParcel)then
@@ -770,11 +771,11 @@ contains
                    call stop_mpi(NameSub//' correct #PARCEL: '// &
                         'nEndParcel<nStartParcel')
                 end if
-             elseif(dt_output(parcel_+1) > 0)then
+             elseif(DtOutput_I(parcel_+1) > 0)then
                 call read_var('StartTimeParcel',StartTimeParcel)
                 call read_var('EndTimeParcel',EndTimeParcel)
                 if (EndTimeParcel < StartTimeParcel .or. &
-                     (EndTimeParcel-StartTimeParcel)/dt_output(parcel_+1) >&
+                     (EndTimeParcel-StartTimeParcel)/DtOutput_I(parcel_+1) >&
                      1e6) then
                    write(*,*) ' StartTimeParcel =', StartTimeParcel
                    write(*,*) ' EndTimeParcel   =', EndTimeParcel
@@ -788,20 +789,20 @@ contains
 
              if(index(StringParcel,'VAR')>0 .or. &
                   index(StringParcel,'var')>0 )then
-                plot_var='var'
-                plot_dimensional(parcel_+1:parcel_+nParcel) = &
+                TypePlotVar='var'
+                IsDimensionalPlot_I(parcel_+1:parcel_+nParcel) = &
                      index(StringParcel,'VAR')>0
                 call read_var('NameParcelVars',StringParcelVar)
              elseif(index(StringParcel,'MHD')>0 .or. &
                   index(StringParcel,'mhd')>0)then
-                plot_var='mhd'
-                plot_dimensional(parcel_+1:parcel_+nParcel) = &
+                TypePlotVar='mhd'
+                IsDimensionalPlot_I(parcel_+1:parcel_+nParcel) = &
                      index(StringParcel,'MHD')>0
                 StringParcelVar=NamePrimitiveVarPlot//' jx jy jz'
              elseif(index(StringParcel,'FUL')>0 .or. &
                   index(StringParcel,'ful')>0)then
-                plot_var='ful'
-                plot_dimensional(parcel_+1:parcel_+nParcel) = &
+                TypePlotVar='ful'
+                IsDimensionalPlot_I(parcel_+1:parcel_+nParcel) = &
                      index(StringParcel,'FUL')>0
                 StringParcelVar=&
                      NamePrimitiveVarPlot//' b1x b1y b1z e jx jy jz'
@@ -813,74 +814,74 @@ contains
           endif
 
        case("#SAVELOGFILE")
-          call read_var('DoSaveLogfile',save_logfile)
-          if(save_logfile)then
+          call read_var('DoSaveLogfile',DoSaveLogfile)
+          if(DoSaveLogfile)then
              nfile=max(nfile,logfile_)
-             call read_var('StringLog',log_string)
-             call read_var('DnSaveLogfile',dn_output(logfile_))
-             call read_var('DtSaveLogfile',dt_output(logfile_))
+             call read_var('StringLog',StringLog)
+             call read_var('DnSaveLogfile',DnOutput_I(logfile_))
+             call read_var('DtSaveLogfile',DtOutput_I(logfile_))
 
              ! Log variables
-             if(index(log_string,'VAR')>0 .or. index(log_string,'var')>0)then
-                plot_dimensional(logfile_) = index(log_string,'VAR')>0
-                log_time='step time'
-                call read_var('log_vars',log_vars)
-             elseif(index(log_string,'RAW')>0 &
-                  .or. index(log_string,'raw')>0)then
-                plot_dimensional(logfile_) = index(log_string,'RAW')>0
-                log_time='step time'
-                log_vars='dt '//NameConservativeVarPlot//' Pmin Pmax'
-             elseif(index(log_string,'MHD')>0 &
-                  .or. index(log_string,'mhd')>0)then
-                plot_dimensional(logfile_) = index(log_string,'MHD')>0
-                log_time='step date time'
-                log_vars=NameConservativeVarPlot//' Pmin Pmax'
-             elseif(index(log_string,'FLX')>0 &
-                  .or. index(log_string,'flx')>0)then
-                plot_dimensional(logfile_) = index(log_string,'FLX')>0
-                log_time='step date time'
-                log_vars='rho pmin pmax rhoflx pvecflx e2dflx'
+             if(index(StringLog,'VAR')>0 .or. index(StringLog,'var')>0)then
+                IsDimensionalPlot_I(logfile_) = index(StringLog,'VAR')>0
+                TypeLogTime='step time'
+                call read_var('StringLogVar',StringLogVar)
+             elseif(index(StringLog,'RAW')>0 &
+                  .or. index(StringLog,'raw')>0)then
+                IsDimensionalPlot_I(logfile_) = index(StringLog,'RAW')>0
+                TypeLogTime='step time'
+                StringLogVar='dt '//NameConservativeVarPlot//' Pmin Pmax'
+             elseif(index(StringLog,'MHD')>0 &
+                  .or. index(StringLog,'mhd')>0)then
+                IsDimensionalPlot_I(logfile_) = index(StringLog,'MHD')>0
+                TypeLogTime='step date time'
+                StringLogVar=NameConservativeVarPlot//' Pmin Pmax'
+             elseif(index(StringLog,'FLX')>0 &
+                  .or. index(StringLog,'flx')>0)then
+                IsDimensionalPlot_I(logfile_) = index(StringLog,'FLX')>0
+                TypeLogTime='step date time'
+                StringLogVar='rho pmin pmax rhoflx pvecflx e2dflx'
              else
                 call stop_mpi('Log variables (mhd,MHD,var,VAR,flx) missing'&
-                     //' from log_string='//log_string)
+                     //' from StringLog='//StringLog)
              end if
 
              ! Determine the time output format to use in the logfile.
              ! This is loaded by default above, but can be input in the
-             ! log_string line.
-             if(index(log_string,'none')>0) then
-                log_time = 'none'
-             elseif((index(log_string,'step')>0) .or. &
-                  (index(log_string,'date')>0) .or. &
-                  (index(log_string,'time')>0)) then
-                log_time = ''
-                if(index(log_string,'step')>0) log_time = 'step'
-                if(index(log_string,'date')>0) &
-                     write(log_time,'(a)') log_time(1:len_trim(log_time))&
-                     //' date'
-                if(index(log_string,'time')>0) &
-                     write(log_time,'(a)') log_time(1:len_trim(log_time))&
-                     //' time'
+             ! StringLog line.
+             if(index(StringLog,'none')>0) then
+                TypeLogTime = 'none'
+             elseif((index(StringLog,'step')>0) .or. &
+                  (index(StringLog,'date')>0) .or. &
+                  (index(StringLog,'time')>0)) then
+                TypeLogTime = ''
+                if(index(StringLog,'step')>0) TypeLogTime = 'step'
+                if(index(StringLog,'date')>0) &
+                     write(TypeLogTime,'(a)') &
+                     TypeLogTime(1:len_trim(TypeLogTime))//' date'
+                if(index(StringLog,'time')>0) &
+                     write(TypeLogTime,'(a)') &
+                     TypeLogTime(1:len_trim(TypeLogTime))//' time'
              end if
 
              ! Recognize coordinate system names
-             if (index(log_string,'GEO') > 0) TypeCoordPlot_I(logfile_) = 'GEO'
-             if (index(log_string,'GSE') > 0) TypeCoordPlot_I(logfile_) = 'GSE'
-             if (index(log_string,'GSM') > 0) TypeCoordPlot_I(logfile_) = 'GSM'
-             if (index(log_string,'MAG') > 0) TypeCoordPlot_I(logfile_) = 'MAG'
-             if (index(log_string,'SMG') > 0) TypeCoordPlot_I(logfile_) = 'SMG'
-             if (index(log_string,'HGR') > 0) TypeCoordPlot_I(logfile_) = 'HGR'
-             if (index(log_string,'HGI') > 0) TypeCoordPlot_I(logfile_) = 'HGI'
-             if (index(log_string,'HGC') > 0) TypeCoordPlot_I(logfile_) = 'HGC'
+             if (index(StringLog,'GEO') > 0) TypeCoordPlot_I(logfile_) = 'GEO'
+             if (index(StringLog,'GSE') > 0) TypeCoordPlot_I(logfile_) = 'GSE'
+             if (index(StringLog,'GSM') > 0) TypeCoordPlot_I(logfile_) = 'GSM'
+             if (index(StringLog,'MAG') > 0) TypeCoordPlot_I(logfile_) = 'MAG'
+             if (index(StringLog,'SMG') > 0) TypeCoordPlot_I(logfile_) = 'SMG'
+             if (index(StringLog,'HGR') > 0) TypeCoordPlot_I(logfile_) = 'HGR'
+             if (index(StringLog,'HGI') > 0) TypeCoordPlot_I(logfile_) = 'HGI'
+             if (index(StringLog,'HGC') > 0) TypeCoordPlot_I(logfile_) = 'HGC'
 
-             if (index(log_string,'hgr') > 0) TypeCoordPlot_I(logfile_) = 'hgr'
-             if (index(log_string,'hgi') > 0) TypeCoordPlot_I(logfile_) = 'hgi'
-             if (index(log_string,'hgc') > 0) TypeCoordPlot_I(logfile_) = 'hgc'
+             if (index(StringLog,'hgr') > 0) TypeCoordPlot_I(logfile_) = 'hgr'
+             if (index(StringLog,'hgi') > 0) TypeCoordPlot_I(logfile_) = 'hgi'
+             if (index(StringLog,'hgc') > 0) TypeCoordPlot_I(logfile_) = 'hgc'
 
              ! If any flux variables are used - input a list of radii
              ! at which to calculate the flux
-             if (index(log_vars,'flx')>0) &
-                  call read_var('log_R_str',log_R_str)
+             if (index(StringLogVar,'flx')>0) &
+                  call read_var('StringLogRadius',StringLogRadius)
 
           end if
 
@@ -908,64 +909,64 @@ contains
 
              iFile = iFileStart + iFileRead
 
-             call read_var('StringPlot',plot_string)
+             call read_var('StringPlot',StringPlot)
 
              ! Plotting frequency
-             call read_var('DnSavePlot',dn_output(iFile))
-             call read_var('DtSavePlot',dt_output(iFile))
+             call read_var('DnSavePlot',DnOutput_I(iFile))
+             call read_var('DtSavePlot',DtOutput_I(iFile))
 
              ! Default resolution (original AMR grid)
-             plot_dx(:,iFile) = -1.0
+             PlotDx_DI(:,iFile) = -1.0
 
              ! Plotting area
-             if(index(plot_string,'cut')>0)then
-                plot_area='cut'
-                call read_var('xMinCut',plot_range(1,iFile))
-                call read_var('xMaxCut',plot_range(2,iFile))
-                call read_var('yMinCut',plot_range(3,iFile))
-                call read_var('yMaxCut',plot_range(4,iFile))
-                call read_var('zMinCut',plot_range(5,iFile))
-                call read_var('zMaxCut',plot_range(6,iFile))
-             elseif(index(plot_string,'bx0')>0)then
-                plot_area='bx0'
-                call read_var('xMinCut',plot_range(1,iFile))
-                call read_var('xMaxCut',plot_range(2,iFile))
-                call read_var('yMinCut',plot_range(3,iFile))
-                call read_var('yMaxCut',plot_range(4,iFile))
-                call read_var('zMinCut',plot_range(5,iFile))
-                call read_var('zMaxCut',plot_range(6,iFile))
-             elseif(index(plot_string,'slc')>0)then
-                plot_area='slc'
-                call read_var('xMinCut',plot_range(1,iFile))
-                call read_var('xMaxCut',plot_range(2,iFile))
-                call read_var('yMinCut',plot_range(3,iFile))
-                call read_var('yMaxCut',plot_range(4,iFile))
-                call read_var('zMinCut',plot_range(5,iFile))
-                call read_var('zMaxCut',plot_range(6,iFile))
-                call read_var('xPoint',plot_point(1,iFile))
-                call read_var('yPoint',plot_point(2,iFile))
-                call read_var('zPoint',plot_point(3,iFile))
-                call read_var('xNormal',plot_normal(1,iFile))
-                call read_var('yNormal',plot_normal(2,iFile))
-                call read_var('zNormal',plot_normal(3,iFile))
-             elseif(index(plot_string,'dpl')>0)then
-                plot_area='dpl'
-                call read_var('xMinCut',plot_range(1,iFile))
-                call read_var('xMaxCut',plot_range(2,iFile))
-                call read_var('yMinCut',plot_range(3,iFile))
-                call read_var('yMaxCut',plot_range(4,iFile))
-                call read_var('zMinCut',plot_range(5,iFile))
-                call read_var('zMaxCut',plot_range(6,iFile))
-             elseif (index(plot_string,'blk')>0) then
-                plot_area='blk'
-                call read_var('xPoint',plot_point(1,iFile))
-                call read_var('yPoint',plot_point(2,iFile))
-                call read_var('zPoint',plot_point(3,iFile))
-             elseif (index(plot_string,'pnt')>0) then
-                plot_area='pnt'
-             elseif(index(plot_string,'lin')>0)then
+             if(index(StringPlot,'cut')>0)then
+                TypePlotArea='cut'
+                call read_var('xMinCut',PlotRange_EI(1,iFile))
+                call read_var('xMaxCut',PlotRange_EI(2,iFile))
+                call read_var('yMinCut',PlotRange_EI(3,iFile))
+                call read_var('yMaxCut',PlotRange_EI(4,iFile))
+                call read_var('zMinCut',PlotRange_EI(5,iFile))
+                call read_var('zMaxCut',PlotRange_EI(6,iFile))
+             elseif(index(StringPlot,'bx0')>0)then
+                TypePlotArea='bx0'
+                call read_var('xMinCut',PlotRange_EI(1,iFile))
+                call read_var('xMaxCut',PlotRange_EI(2,iFile))
+                call read_var('yMinCut',PlotRange_EI(3,iFile))
+                call read_var('yMaxCut',PlotRange_EI(4,iFile))
+                call read_var('zMinCut',PlotRange_EI(5,iFile))
+                call read_var('zMaxCut',PlotRange_EI(6,iFile))
+             elseif(index(StringPlot,'slc')>0)then
+                TypePlotArea='slc'
+                call read_var('xMinCut',PlotRange_EI(1,iFile))
+                call read_var('xMaxCut',PlotRange_EI(2,iFile))
+                call read_var('yMinCut',PlotRange_EI(3,iFile))
+                call read_var('yMaxCut',PlotRange_EI(4,iFile))
+                call read_var('zMinCut',PlotRange_EI(5,iFile))
+                call read_var('zMaxCut',PlotRange_EI(6,iFile))
+                call read_var('xPoint',PlotPointXyz_DI(1,iFile))
+                call read_var('yPoint',PlotPointXyz_DI(2,iFile))
+                call read_var('zPoint',PlotPointXyz_DI(3,iFile))
+                call read_var('xNormal',PlotNormal_DI(1,iFile))
+                call read_var('yNormal',PlotNormal_DI(2,iFile))
+                call read_var('zNormal',PlotNormal_DI(3,iFile))
+             elseif(index(StringPlot,'dpl')>0)then
+                TypePlotArea='dpl'
+                call read_var('xMinCut',PlotRange_EI(1,iFile))
+                call read_var('xMaxCut',PlotRange_EI(2,iFile))
+                call read_var('yMinCut',PlotRange_EI(3,iFile))
+                call read_var('yMaxCut',PlotRange_EI(4,iFile))
+                call read_var('zMinCut',PlotRange_EI(5,iFile))
+                call read_var('zMaxCut',PlotRange_EI(6,iFile))
+             elseif (index(StringPlot,'blk')>0) then
+                TypePlotArea='blk'
+                call read_var('xPoint',PlotPointXyz_DI(1,iFile))
+                call read_var('yPoint',PlotPointXyz_DI(2,iFile))
+                call read_var('zPoint',PlotPointXyz_DI(3,iFile))
+             elseif (index(StringPlot,'pnt')>0) then
+                TypePlotArea='pnt'
+             elseif(index(StringPlot,'lin')>0)then
                 iPlotFile = iFile - Plot_
-                plot_area='lin'
+                TypePlotArea='lin'
                 call read_var('NameLine', NameLine_I(iPlotFile), &
                      IsUpperCase=.true.)
                 call read_var('IsSingleLine',IsSingleLine_I(iPlotFile))
@@ -985,79 +986,79 @@ contains
                    call read_var('zStartLine',XyzStartLine_DII(3,i,iPlotFile))
                    call read_var('IsParallel',IsParallelLine_II(i,iPlotFile))
                 end do
-             elseif (index(plot_string,'eqr')>0)then
-                plot_area='eqr'
-                call read_var('nRadius',   plot_range(1,iFile))
-                call read_var('nLon',      plot_range(2,iFile))
-                call read_var('RadiusMin', plot_range(3,iFile))
-                call read_var('RadiusMax', plot_range(4,iFile))
-                plot_range(5,iFile) =   0.0
-                plot_range(6,iFile) = 360.0
-             elseif (index(plot_string,'eqb')>0)then
-                plot_area='eqb'
-                call read_var('nRadius',   plot_range(1,iFile))
-                call read_var('nLon',      plot_range(2,iFile))
-                call read_var('RadiusMin', plot_range(3,iFile))
-                call read_var('RadiusMax', plot_range(4,iFile))
-                call read_var('LongitudeMin', plot_range(5,iFile))
-                call read_var('LongitudeMax', plot_range(6,iFile))
-             elseif (index(plot_string,'ieb')>0)then
-                plot_area='ieb'
-             elseif (index(plot_string,'lcb')>0)then
-                plot_area='lcb'
-                call read_var('Radius', plot_range(1,iFile))
-                call read_var('nLon',   plot_range(2,iFile))
-             elseif (index(plot_string,'sph')>0)then
-                plot_area='sph'
-                call read_var('Radius',plot_range(1,iFile))
-             elseif (index(plot_string, 'shl')>0)then
-                plot_area = 'shl'
+             elseif (index(StringPlot,'eqr')>0)then
+                TypePlotArea='eqr'
+                call read_var('nRadius',   PlotRange_EI(1,iFile))
+                call read_var('nLon',      PlotRange_EI(2,iFile))
+                call read_var('RadiusMin', PlotRange_EI(3,iFile))
+                call read_var('RadiusMax', PlotRange_EI(4,iFile))
+                PlotRange_EI(5,iFile) =   0.0
+                PlotRange_EI(6,iFile) = 360.0
+             elseif (index(StringPlot,'eqb')>0)then
+                TypePlotArea='eqb'
+                call read_var('nRadius',   PlotRange_EI(1,iFile))
+                call read_var('nLon',      PlotRange_EI(2,iFile))
+                call read_var('RadiusMin', PlotRange_EI(3,iFile))
+                call read_var('RadiusMax', PlotRange_EI(4,iFile))
+                call read_var('LongitudeMin', PlotRange_EI(5,iFile))
+                call read_var('LongitudeMax', PlotRange_EI(6,iFile))
+             elseif (index(StringPlot,'ieb')>0)then
+                TypePlotArea='ieb'
+             elseif (index(StringPlot,'lcb')>0)then
+                TypePlotArea='lcb'
+                call read_var('Radius', PlotRange_EI(1,iFile))
+                call read_var('nLon',   PlotRange_EI(2,iFile))
+             elseif (index(StringPlot,'sph')>0)then
+                TypePlotArea='sph'
+                call read_var('Radius',PlotRange_EI(1,iFile))
+             elseif (index(StringPlot, 'shl')>0)then
+                TypePlotArea = 'shl'
                 call read_var('TypeCoord', TypeCoordPlot_I(iFile))
-                call read_var('rMin',   plot_range(1,iFile))
-                call read_var('rMax',   plot_range(2,iFile))
-                if (plot_range(1, iFile) /= plot_range(2,iFile)) &
-                     call read_var('dR',   plot_dx(1,iFile))
-                call read_var('LonMin', plot_range(3,iFile))
-                call read_var('LonMax', plot_range(4,iFile))
-                if (plot_range(3, iFile) /= plot_range(4,iFile)) &
-                     call read_var('dLon', plot_dx(2,iFile))
-                call read_var('LatMin', plot_range(5,iFile))
-                call read_var('LatMax', plot_range(6,iFile))
-                if (plot_range(5, iFile) /= plot_range(6,iFile)) &
-                     call read_var('dLat', plot_dx(3,iFile))
-             elseif (index(plot_string, 'box')>0)then
-                plot_area = 'box'
+                call read_var('rMin',   PlotRange_EI(1,iFile))
+                call read_var('rMax',   PlotRange_EI(2,iFile))
+                if (PlotRange_EI(1, iFile) /= PlotRange_EI(2,iFile)) &
+                     call read_var('dR',   PlotDx_DI(1,iFile))
+                call read_var('LonMin', PlotRange_EI(3,iFile))
+                call read_var('LonMax', PlotRange_EI(4,iFile))
+                if (PlotRange_EI(3, iFile) /= PlotRange_EI(4,iFile)) &
+                     call read_var('dLon', PlotDx_DI(2,iFile))
+                call read_var('LatMin', PlotRange_EI(5,iFile))
+                call read_var('LatMax', PlotRange_EI(6,iFile))
+                if (PlotRange_EI(5, iFile) /= PlotRange_EI(6,iFile)) &
+                     call read_var('dLat', PlotDx_DI(3,iFile))
+             elseif (index(StringPlot, 'box')>0)then
+                TypePlotArea = 'box'
                 call read_var('TypeCoord', TypeCoordObs)
                 TypeCoordPlot_I(iFile) = TypeCoordObs(1:3)
                 IsObsBox_I(iFile) = index(TypeCoordObs,'OBS')>0
-                call read_var('x0',   plot_range(1,iFile))
-                call read_var('y0',   plot_range(2,iFile))
-                call read_var('z0',   plot_range(3,iFile))
-                call read_var('xLen',   plot_range(4,iFile))
-                if (plot_range(4, iFile) /= 0) &
-                     call read_var('dX',   plot_dx(1,iFile))
-                call read_var('yLen', plot_range(5,iFile))
-                if (plot_range(5, iFile) /= 0) &
-                     call read_var('dY', plot_dx(2,iFile))
-                call read_var('zLen', plot_range(6,iFile))
-                if (plot_range(6, iFile) /= 0) &
-                     call read_var('dZ', plot_dx(3,iFile))
+                call read_var('x0',   PlotRange_EI(1,iFile))
+                call read_var('y0',   PlotRange_EI(2,iFile))
+                call read_var('z0',   PlotRange_EI(3,iFile))
+                call read_var('xLen',   PlotRange_EI(4,iFile))
+                if (PlotRange_EI(4, iFile) /= 0) &
+                     call read_var('dX',   PlotDx_DI(1,iFile))
+                call read_var('yLen', PlotRange_EI(5,iFile))
+                if (PlotRange_EI(5, iFile) /= 0) &
+                     call read_var('dY', PlotDx_DI(2,iFile))
+                call read_var('zLen', PlotRange_EI(6,iFile))
+                if (PlotRange_EI(6, iFile) /= 0) &
+                     call read_var('dZ', PlotDx_DI(3,iFile))
                 if(IsObsBox_I(iFile)) then
-                   call read_var('TiltAngle', plot_normal(1,iFile))
+                   call read_var('TiltAngle', PlotNormal_DI(1,iFile))
                    call read_var('ObsPosX_HGI',ObsPos_DI(1,iFile))
                    call read_var('ObsPosY_HGI',ObsPos_DI(2,iFile))
                    call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
                 else
-                   call read_var('xAngle', plot_normal(1,iFile))
-                   call read_var('yAngle', plot_normal(2,iFile))
-                   call read_var('zAngle', plot_normal(3,iFile))
+                   call read_var('xAngle', PlotNormal_DI(1,iFile))
+                   call read_var('yAngle', PlotNormal_DI(2,iFile))
+                   call read_var('zAngle', PlotNormal_DI(3,iFile))
                 end if
-             elseif (index(plot_string,'los')>0) then
-                plot_area='los'
+             elseif (index(StringPlot,'los')>0) then
+                TypePlotArea='los'
                 ! Line of sight vector
 
-                if(index(plot_string,'ins') == 0 .and.                      &
-                     index(plot_string,'INS') == 0) then
+                if(index(StringPlot,'ins') == 0 .and.                      &
+                     index(StringPlot,'INS') == 0) then
 
                    ! original code witout 'ins' or 'INS'
 
@@ -1074,31 +1075,31 @@ contains
                       call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
                    end if
                    ! Offset angle
-                   call read_var('OffsetAngle',offset_angle(iFile))
-                   offset_angle(iFile) = offset_angle(iFile)*cDegToRad
+                   call read_var('OffsetAngle',OffsetAngle_I(iFile))
+                   OffsetAngle_I(iFile) = OffsetAngle_I(iFile)*cDegToRad
                    ! read max dimensions of the 2d image plane
-                   call read_var('rSizeImage',r_size_image(iFile))
+                   call read_var('rSizeImage',rSizeImage_I(iFile))
                    ! read the position of image origin relative to grid origin
-                   call read_var('xOffset',xoffset(iFile))
-                   call read_var('yOffset',yoffset(iFile))
+                   call read_var('xOffset_I',xOffset_I(iFile))
+                   call read_var('yOffset_I',yOffset_I(iFile))
                    ! read the occulting radius
-                   call read_var('rOccult',radius_occult(iFile))
+                   call read_var('rOccult',rOccult_I(iFile))
                    ! read the limb darkening parameter
-                   call read_var('MuLimbDarkening',mu_los)
+                   call read_var('MuLimbDarkening',MuLimbDarkening)
                    ! read the number of pixels
-                   call read_var('nPix',n_pix_r(iFile))
+                   call read_var('nPix',nPixel_I(iFile))
                    ! if it is an EUV plot using a long table then read in the
                    ! name of the specific lookup table (will be matched to the
                    ! name read in by the lookuptable command).
-                   if (index(plot_string,'TBL')>0&
-                        .or.index(plot_string,'tbl')>0) &
-                        call read_var('NameLosTable',NameLosTable(iFile))
+                   if (index(StringPlot,'TBL')>0&
+                        .or.index(StringPlot,'tbl')>0) &
+                        call read_var('NameLosTable_I',NameLosTable_I(iFile))
                 else
                    ! if 'ins' or 'INS' exists
-                   call read_var('StringsInstrument',  StringsInstrument, &
+                   call read_var('StringsInstrument',  StringInstrument, &
                         IsLowerCase=.true.)
 
-                   call split_string(StringsInstrument, StringInstrument_I,   &
+                   call split_string(StringInstrument, StringInstrument_I,   &
                         nInstrument)
 
                    ! each instrument adds another plot file
@@ -1122,28 +1123,28 @@ contains
                       NameInstrument = StringInstrument_I(iInstrument)(iTmp+1:)
 
                       ! plotting frequency is the same as iFile
-                      dn_output(iFileInstrument) = dn_output(iFile)
-                      dt_output(iFileInstrument) = dt_output(iFile)
-                      plot_type(iFileInstrument) = plot_area//'_'//          &
+                      DnOutput_I(iFileInstrument) = DnOutput_I(iFile)
+                      DtOutput_I(iFileInstrument) = DtOutput_I(iFile)
+                      TypePlot_I(iFileInstrument) = TypePlotArea//'_'// &
                            trim(NameSat)//'_'//trim(NameInstrument)
-                      plot_dx(:,iFileInstrument) = -1
+                      PlotDx_DI(:,iFileInstrument) = -1
 
                       ! default values, which may be overwritten below
                       ObsPos_DI(:,iFileInstrument)   = [200.0, 0.0, 0.0]
-                      offset_angle(iFileInstrument)  = 0.
-                      r_size_image(iFileInstrument)  = 1.98
-                      xoffset(iFileInstrument)       = 0.
-                      yoffset(iFileInstrument)       = 0.
-                      radius_occult(iFileInstrument) = 0.
-                      mu_los                         = 0.
-                      n_pix_r(iFileInstrument)       = 512
-                      NameLosTable(iFileInstrument)  = ''
+                      OffsetAngle_I(iFileInstrument)  = 0.
+                      rSizeImage_I(iFileInstrument)  = 1.98
+                      xOffset_I(iFileInstrument)       = 0.
+                      yOffset_I(iFileInstrument)       = 0.
+                      rOccult_I(iFileInstrument) = 0.
+                      MuLimbDarkening                         = 0.
+                      nPixel_I(iFileInstrument)       = 512
+                      NameLosTable_I(iFileInstrument)  = ''
 
-                      ! setting plot variables, which may be overwritten below
-                      plot_dimensional(iFileInstrument) =                    &
-                           index(plot_string,'INS')>0
-                      plot_vars(iFileInstrument) = 'wl pb'
-                      plot_pars(iFileInstrument) = 'obsx obsy obsz'
+                      ! setting plot variables that may be overwritten below
+                      IsDimensionalPlot_I(iFileInstrument) = &
+                           index(StringPlot,'INS')>0
+                      StringPlotVar_I(iFileInstrument) = 'wl pb'
+                      StringPlotParam_I(iFileInstrument) = 'obsx obsy obsz'
 
                       select case(trim(NameSat))
                       case('sta')
@@ -1151,20 +1152,20 @@ contains
 
                          select case(trim(NameInstrument))
                          case('euvi')
-                            NameLosTable(iFileInstrument)  = 'EuviA'
-                            plot_vars(iFileInstrument)     = 'tbl'
+                            NameLosTable_I(iFileInstrument)  = 'EuviA'
+                            StringPlotVar_I(iFileInstrument) = 'tbl'
                          case('cor1')
-                            r_size_image(iFileInstrument)  = 4.0
-                            radius_occult(iFileInstrument) = 1.3
-                            mu_los                         = 0.5
-                            n_pix_r(iFileInstrument)       = 300
+                            rSizeImage_I(iFileInstrument) = 4.0
+                            rOccult_I(iFileInstrument)    = 1.3
+                            MuLimbDarkening               = 0.5
+                            nPixel_I(iFileInstrument)     = 300
                          case('cor2')
-                            r_size_image(iFileInstrument)  = 15.0
-                            radius_occult(iFileInstrument) = 2.0
-                            mu_los                         = 0.5
-                            n_pix_r(iFileInstrument)       = 300
+                            rSizeImage_I(iFileInstrument) = 15.0
+                            rOccult_I(iFileInstrument)    = 2.0
+                            MuLimbDarkening               = 0.5
+                            nPixel_I(iFileInstrument)     = 300
                          case default
-                            call stop_mpi(NameSub//': unknown INS: '//       &
+                            call stop_mpi(NameSub//': unknown INS: '// &
                                  StringInstrument_I(iInstrument))
                          end select
                       case('stb')
@@ -1172,18 +1173,18 @@ contains
 
                          select case(trim(NameInstrument))
                          case('euvi')
-                            NameLosTable(iFileInstrument)  = 'EuviB'
-                            plot_vars(iFileInstrument)     = 'tbl'
+                            NameLosTable_I(iFileInstrument)  = 'EuviB'
+                            StringPlotVar_I(iFileInstrument) = 'tbl'
                          case('cor1')
-                            r_size_image(iFileInstrument)  = 4.0
-                            radius_occult(iFileInstrument) = 1.3
-                            mu_los                         = 0.5
-                            n_pix_r(iFileInstrument)       = 300
+                            rSizeImage_I(iFileInstrument)    = 4.0
+                            rOccult_I(iFileInstrument)       = 1.3
+                            MuLimbDarkening                  = 0.5
+                            nPixel_I(iFileInstrument)        = 300
                          case('cor2')
-                            r_size_image(iFileInstrument)  = 15.0
-                            radius_occult(iFileInstrument) = 2.0
-                            mu_los                         = 0.5
-                            n_pix_r(iFileInstrument)       = 300
+                            rSizeImage_I(iFileInstrument)    = 15.0
+                            rOccult_I(iFileInstrument)       = 2.0
+                            MuLimbDarkening                  = 0.5
+                            nPixel_I(iFileInstrument)        = 300
                          case default
                             call stop_mpi(NameSub//': unknown INS: '// &
                                  StringInstrument_I(iInstrument))
@@ -1193,8 +1194,8 @@ contains
 
                          select case(trim(NameInstrument))
                          case('aia')
-                            NameLosTable(iFileInstrument)  = 'AiaXrt'
-                            plot_vars(iFileInstrument)     = 'tbl'
+                            NameLosTable_I(iFileInstrument)  = 'AiaXrt'
+                            StringPlotVar_I(iFileInstrument) = 'tbl'
                          case default
                             call stop_mpi(NameSub//': unknown INS: '// &
                                  StringInstrument_I(iInstrument))
@@ -1204,8 +1205,8 @@ contains
 
                          select case(trim(NameInstrument))
                          case('xrt')
-                            NameLosTable(iFileInstrument)  = 'AiaXrt'
-                            plot_vars(iFileInstrument)     = 'tbl'
+                            NameLosTable_I(iFileInstrument)  = 'AiaXrt'
+                            StringPlotVar_I(iFileInstrument) = 'tbl'
                          case default
                             call stop_mpi(NameSub//': unknown INS: '// &
                                  StringInstrument_I(iInstrument))
@@ -1213,18 +1214,18 @@ contains
                       case('soho')
                          TypeSatPos_I(iFileInstrument) = 'earth'
 
-                         n_pix_r(iFileInstrument)       = 300
-                         mu_los                         = 0.5
+                         nPixel_I(iFileInstrument)         = 300
+                         MuLimbDarkening                   = 0.5
 
                          select case(trim(NameInstrument))
                          case('c2')
-                            r_size_image(iFileInstrument)  = 6.0
-                            radius_occult(iFileInstrument) = 2.0
+                            rSizeImage_I(iFileInstrument)  = 6.0
+                            rOccult_I(iFileInstrument)     = 2.0
                          case('c3')
-                            r_size_image(iFileInstrument)  = 32.0
-                            radius_occult(iFileInstrument) = 2.5
+                            rSizeImage_I(iFileInstrument)  = 32.0
+                            rOccult_I(iFileInstrument)     = 2.5
                          case default
-                            call stop_mpi(NameSub//': unknown INS: '//    &
+                            call stop_mpi(NameSub//': unknown INS: '//  &
                                  StringInstrument_I(iInstrument))
                          end select
                       case default
@@ -1233,22 +1234,22 @@ contains
                       end select
 
                       ! setting plot file format
-                      if(index(plot_string,'idl') > 0)then
-                         plot_form(iFileInstrument)='idl'
+                      if(index(StringPlot,'idl') > 0)then
+                         TypePlotFormat_I(iFileInstrument)='idl'
 
                          TypeFile_I(iFileInstrument) = 'real4'
-                         if(index(plot_string,'idl_real8') > 0)      &
+                         if(index(StringPlot,'idl_real8') > 0)      &
                               TypeFile_I(iFileInstrument) = 'real8'
-                         if(index(plot_string,'idl_ascii') > 0)      &
+                         if(index(StringPlot,'idl_ascii') > 0)      &
                               TypeFile_I(iFileInstrument) = 'ascii'
-                         if(index(plot_string,'idl_tec') > 0)        &
+                         if(index(StringPlot,'idl_tec') > 0)        &
                               TypeFile_I(iFileInstrument) = 'tec'
-                      elseif(index(plot_string,'tec')>0) then
-                         plot_form(iFileInstrument)  = 'tec'
+                      elseif(index(StringPlot,'tec')>0) then
+                         TypePlotFormat_I(iFileInstrument)  = 'tec'
                          TypeFile_I(iFileInstrument) = 'tec'
                       else
                          call stop_mpi(NameSub//' for ins/INS type, only '// &
-                              'idl or tec is supported.'//plot_string)
+                              'idl or tec is supported.'//StringPlot)
                       end if
                    end do
 
@@ -1258,9 +1259,9 @@ contains
                    ! adjust iFileStart
                    iFileStart = iFileStart + nInstrument - 1
                 endif
-             elseif (index(plot_string,'rfr')>0) then
+             elseif (index(StringPlot,'rfr')>0) then
                 ! Refractive radiowave image
-                plot_area='rfr'
+                TypePlotArea='rfr'
                 ! Observer position
                 call read_var('ObsPosX', ObsPos_DI(1,iFile))
                 call read_var('ObsPosY', ObsPos_DI(2,iFile))
@@ -1269,216 +1270,238 @@ contains
                 ! call read_var('nRadioFrequency', nRadioFrequency)
                 call read_var('StringRadioFrequency', &
                      StringRadioFrequency_I(iFile))
-                call read_var('xSizeImage', X_Size_Image(iFile))
-                call read_var('ySizeImage', Y_Size_Image(iFile))
+                call read_var('xSizeImage', xSizeImage_I(iFile))
+                call read_var('ySizeImage', ySizeImage_I(iFile))
                 ! read the number of pixels
-                call read_var('nPixX', n_Pix_X(iFile))
-                call read_var('nPixY', n_Pix_Y(iFile))
-             elseif(index(plot_string,'buf')>0)then
-                plot_area='buf'
-             elseif(index(plot_string,'1d')>0)then
-                plot_area='1d_'
-             elseif(index(plot_string,'2d')>0)then
-                plot_area='2d_'
-             elseif(index(plot_string,'3d')>0)then
-                plot_area='3d_'
-             elseif(index(plot_string,'x=0') > 0)then
-                plot_area = 'x=0'
-             elseif(index(plot_string,'y=0') > 0)then
-                plot_area = 'y=0'
-             elseif(index(plot_string,'z=0') > 0)then
-                plot_area = 'z=0'
+                call read_var('nPixX', nPixelX_I(iFile))
+                call read_var('nPixY', nPixelY_I(iFile))
+             elseif(index(StringPlot,'buf')>0)then
+                TypePlotArea='buf'
+             elseif(index(StringPlot,'1d')>0)then
+                TypePlotArea='1d_'
+             elseif(index(StringPlot,'2d')>0)then
+                TypePlotArea='2d_'
+             elseif(index(StringPlot,'3d')>0)then
+                TypePlotArea='3d_'
+             elseif(index(StringPlot,'x=0') > 0)then
+                TypePlotArea = 'x=0'
+             elseif(index(StringPlot,'y=0') > 0)then
+                TypePlotArea = 'y=0'
+             elseif(index(StringPlot,'z=0') > 0)then
+                TypePlotArea = 'z=0'
              else
                 call stop_mpi('Area (1d,2d,3d,x=0,y=0,z=0,cut,sph...) missing'&
-                     //' from plot_string='//plot_string)
+                     //' from StringPlot='//StringPlot)
              end if
 
              ! Plot file format
-             if(index(plot_string,'idl') > 0)then
-                plot_form(iFile)='idl'
-                if (       plot_area /= 'sph' &
-                     .and. plot_area /= 'shl' &
-                     .and. plot_area /= 'box' &
-                     .and. plot_area /= 'los' &
-                     .and. plot_area /= 'rfr' &
-                     .and. plot_area /= 'lin' &
-                     .and. plot_area /= 'eqr' &
-                     .and. plot_area /= 'eqb' &
-                     .and. plot_area /= 'buf' &
-                     ) call read_var('DxSavePlot',plot_dx(1,iFile))
+             if(index(StringPlot,'idl') > 0)then
+                TypePlotFormat_I(iFile)='idl'
+                if (       TypePlotArea /= 'sph' &
+                     .and. TypePlotArea /= 'shl' &
+                     .and. TypePlotArea /= 'box' &
+                     .and. TypePlotArea /= 'los' &
+                     .and. TypePlotArea /= 'rfr' &
+                     .and. TypePlotArea /= 'lin' &
+                     .and. TypePlotArea /= 'eqr' &
+                     .and. TypePlotArea /= 'eqb' &
+                     .and. TypePlotArea /= 'buf' &
+                     ) call read_var('DxSavePlot',PlotDx_DI(1,iFile))
 
                 ! Extract the type of idl plot file: default is real4
                 TypeFile_I(iFile) = 'real4'
-                if(index(plot_string,'idl_real8') > 0) &
+                if(index(StringPlot,'idl_real8') > 0) &
                      TypeFile_I(iFile) = 'real8'
-                if(index(plot_string,'idl_ascii') > 0) &
+                if(index(StringPlot,'idl_ascii') > 0) &
                      TypeFile_I(iFile) = 'ascii'
-                if(index(plot_string,'idl_tec') > 0) &
+                if(index(StringPlot,'idl_tec') > 0) &
                      TypeFile_I(iFile) = 'tec'
-             elseif(index(plot_string, 'hdf') > 0) then
+             elseif(index(StringPlot, 'hdf') > 0) then
                 ! With these values VisIt recognises the files as timesteps
                 ! with the general defaults it does not.
-                IsPlotName_n = .true.
-                IsPlotName_t = .false.
-                IsPlotName_e = .false.
-                plot_form(iFile)='hdf'
+                IsPlotNameN = .true.
+                IsPlotNameT = .false.
+                IsPlotNameE = .false.
+                TypePlotFormat_I(iFile)='hdf'
                 TypeFile_I(iFile) = 'hdf5'
-             elseif(index(plot_string,'tec')>0)then
-                plot_form(iFile)  = 'tec'
+             elseif(index(StringPlot,'tec')>0)then
+                TypePlotFormat_I(iFile)  = 'tec'
                 TypeFile_I(iFile) = 'tec'
-             elseif(index(plot_string,'tcp')>0)then
+             elseif(index(StringPlot,'tcp')>0)then
                 if(nDim == 1)then
-                   plot_form(iFile)  = 'idl'
+                   TypePlotFormat_I(iFile)  = 'idl'
                    TypeFile_I(iFile) = 'tec'
-                   plot_dx(1,iFile)  = -1.0
+                   PlotDx_DI(1,iFile)  = -1.0
                 else
-                   plot_form(iFile)  = 'tcp'
+                   TypePlotFormat_I(iFile)  = 'tcp'
                    TypeFile_I(iFile) = 'tcp'
                 end if
              else
-                call stop_mpi('Format (idl,tec) missing from plot_string='&
-                     //plot_string)
+                call stop_mpi('Format (idl,tec) missing from StringPlot='&
+                     //StringPlot)
              end if
 
              ! Plot variables
-             if(index(plot_string,'VAR')>0 .or. index(plot_string,'var')>0 )then
-                plot_var='var'
-                plot_dimensional(iFile) = index(plot_string,'VAR')>0
-                call read_var('NameVars', NamePlotVar)
-                call read_var('NamePars', plot_pars(iFile))
-                l1 = index(NamePlotVar, '{')
+             if(       index(StringPlot,'VAR') > 0 &
+                  .or. index(StringPlot,'var') > 0)then
+                TypePlotVar='var'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'VAR')>0
+                call read_var('NameVars', StringPlotVarExt)
+                call read_var('NamePars', StringPlotParam_I(iFile))
+                l1 = index(StringPlotVarExt, '{')
                 if (l1 > 0) then
-                   l2 = index(NamePlotVar, '}')
+                   l2 = index(StringPlotVarExt, '}')
                    if (l2 == 0) call stop_mpi(NameSub// &
-                        ': error in #SAVEPLOT, missing } in NamePlotVar='//&
-                        NamePlotVar)
+                        ': error in #SAVEPLOT missing } in StringPlotVar='//&
+                        StringPlotVarExt)
 
-                   select case(NamePlotVar(l1+1:l2-1))
+                   select case(StringPlotVarExt(l1+1:l2-1))
                    case('MHD', 'mhd')
-                      NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVarPlot//&
-                           ' jx jy jz ' //trim(NamePlotVar(l2+1:))
+                      StringPlotVarExt = &
+                           StringPlotVarExt(:l1-1)//NamePrimitiveVarPlot//&
+                           ' jx jy jz ' //trim(StringPlotVarExt(l2+1:))
                    case('HD', 'hd')
-                      NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVarPlot//&
-                           trim(NamePlotVar(l2+1:))
+                      StringPlotVarExt = &
+                           StringPlotVarExt(:l1-1)//NamePrimitiveVarPlot//&
+                           trim(StringPlotVarExt(l2+1:))
                    case default
                       call stop_mpi(NameSub// &
-                           ': unknown {name} ='//NamePlotVar(l1:l2))
+                           ': unknown {name} ='//StringPlotVarExt(l1:l2))
                    end select
-                   if(len_trim(NamePlotVar) > len(plot_vars1)) &
+                   if(len_trim(StringPlotVarExt) > len(StringPlotVar)) &
                         call stop_mpi(NameSub// &
-                        ': too long expanded variable list='//NamePlotVar)
+                        ': too long expanded variable list='//StringPlotVarExt)
                 end if
-                plot_vars(iFile) = NamePlotVar
+                StringPlotVar_I(iFile) = StringPlotVarExt
 
-             elseif(index(plot_string,'RAY')>0 &
-                  .or.index(plot_string,'ray')>0)then
-                plot_var = 'ray'
-                plot_dimensional(iFile) = index(plot_string,'RAY')>0
+             elseif(   index(StringPlot,'RAY') > 0 &
+                  .or. index(StringPlot,'ray') > 0)then
+                TypePlotVar = 'ray'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'RAY')>0
                 if(DoMapEquatorRay)then
-                   plot_vars(iFile) = &
+                   StringPlotVar_I(iFile) = &
                         'bx by bz req1 phi1 req2 phi2 status blk'
                 else
-                   plot_vars(iFile) = &
+                   StringPlotVar_I(iFile) = &
                         'bx by bz theta1 phi1 theta2 phi2 status blk'
                 end if
-                plot_pars(iFile)='rbody'
-             elseif(index(plot_string,'RAW')>0 .or. &
-                  index(plot_string,'raw')>0)then
-                plot_var='raw'
-                plot_dimensional(iFile)=index(plot_string,'RAW')>0
-                plot_vars(iFile) = NameConservativeVarPlot//  &
+                StringPlotParam_I(iFile)='rbody'
+             elseif(   index(StringPlot,'RAW') > 0 &
+                  .or. index(StringPlot,'raw') > 0)then
+                TypePlotVar='raw'
+                IsDimensionalPlot_I(iFile)=index(StringPlot,'RAW')>0
+                StringPlotVar_I(iFile) = NameConservativeVarPlot//  &
                      ' p b1x b1y b1z absdivB'
-                plot_pars(iFile) = '{default}'
-             elseif(index(plot_string,'MHD')>0.or.index(plot_string,'mhd')>0)then
-                plot_var='mhd'
-                plot_dimensional(iFile) = index(plot_string,'MHD')>0
-                plot_vars(iFile) = NamePrimitiveVarPlot//' jx jy jz'
-                plot_pars(iFile) = '{default}'
-             elseif(index(plot_string,'HD')>0.or.index(plot_string,'hd')>0)then
-                plot_var='hd'
-                plot_dimensional(iFile) = index(plot_string,'HD')>0
-                plot_vars(iFile) = NamePrimitiveVarPlot
-                plot_pars(iFile) = '{default}'
-             elseif(index(plot_string,'ALL')>0.or.index(plot_string,'all')>0)then
+                StringPlotParam_I(iFile) = '{default}'
+             elseif(   index(StringPlot,'MHD') > 0 &
+                  .or. index(StringPlot,'mhd') > 0)then
+                TypePlotVar='mhd'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'MHD')>0
+                StringPlotVar_I(iFile) = NamePrimitiveVarPlot//' jx jy jz'
+                StringPlotParam_I(iFile) = '{default}'
+             elseif(   index(StringPlot,'HD') > 0 &
+                  .or. index(StringPlot,'hd') > 0)then
+                TypePlotVar='hd'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'HD')>0
+                StringPlotVar_I(iFile) = NamePrimitiveVarPlot
+                StringPlotParam_I(iFile) = '{default}'
+             elseif(   index(StringPlot,'ALL') > 0 &
+                  .or. index(StringPlot,'all') > 0)then
                 ! This is intended for restart with a different dimensionality
-                plot_var='all'
-                plot_dimensional(iFile) = index(plot_string,'ALL')>0
-                call join_string(nVar, NameVar_V(1:nVar), plot_vars(iFile))
-                plot_pars(iFile)='g'
-             elseif(index(plot_string,'FUL')>0.or.index(plot_string,'ful')>0)then
-                plot_var='ful'
-                plot_dimensional(iFile) = index(plot_string,'FUL')>0
-                plot_vars(iFile) = NamePrimitiveVarPlot//' b1x b1y b1z e jx jy jz'
-                plot_pars(iFile) = '{default}'
-             elseif(index(plot_string,'FLX')>0.or.index(plot_string,'flx')>0)then
-                plot_var='flx'
-                plot_dimensional(iFile) = index(plot_string,'FLX')>0
-                plot_vars(iFile) = 'rho mr br p jr pvecr'
-                plot_pars(iFile) = '{default}'
-             elseif(index(plot_string,'SOL')>0.or.index(plot_string,'sol')>0)then
-                plot_var='sol'
-                plot_dimensional(iFile) = index(plot_string,'SOL')>0
-                plot_vars(iFile)='wl pb' ! white light
-                plot_pars(iFile)='mu'
-             elseif(index(plot_string,'EUV')>0.or.index(plot_string,'euv')>0)then
-                plot_var='euv'
-                plot_dimensional(iFile) = index(plot_string,'EUV')>0
-                plot_vars(iFile)='euv171 euv195 euv284' ! main euv bands
-                plot_pars(iFile)='mu'
-             elseif(index(plot_string,'SXR')>0.or.index(plot_string,'sxr')>0)then
-                plot_var='sxr'
-                plot_dimensional(iFile) = index(plot_string,'SXR')>0
-                plot_vars(iFile)='sxr' ! soft x-ray band
-                plot_pars(iFile)='mu'
-             elseif(index(plot_string,'TBL')>0.or.index(plot_string,'tbl')>0)then
-                plot_var='tbl'
-                plot_dimensional(iFile) = index(plot_string,'TBL')>0
-                plot_vars(iFile)='tbl' ! will read a table in write_plot_los
-                plot_pars(iFile)='mu'
-             elseif(index(plot_string,'RWI')>0.or.index(plot_string,'rwi')>0)then
-                plot_var='rwi'
-                plot_dimensional(iFile) = .false.
-                plot_vars(iFile)='' ! Intensity
-                plot_pars(iFile)=''
-             elseif(index(plot_string,'pos')>0.or.index(plot_string,'POS')>0)then
-                plot_var='pos'
-                plot_dimensional(iFile) = index(plot_string,'POS')>0
-                if(plot_area /= 'lin')call stop_mpi(&
+                TypePlotVar='all'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'ALL')>0
+                call join_string(nVar, NameVar_V(1:nVar), &
+                     StringPlotVar_I(iFile))
+                StringPlotParam_I(iFile)='g'
+             elseif(   index(StringPlot,'FUL') > 0 &
+                  .or. index(StringPlot,'ful') > 0)then
+                TypePlotVar='ful'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'FUL')>0
+                StringPlotVar_I(iFile) = &
+                     NamePrimitiveVarPlot//' b1x b1y b1z e jx jy jz'
+                StringPlotParam_I(iFile) = '{default}'
+             elseif(   index(StringPlot,'FLX') > 0 &
+                  .or. index(StringPlot,'flx') > 0)then
+                TypePlotVar='flx'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'FLX')>0
+                StringPlotVar_I(iFile) = 'rho mr br p jr pvecr'
+                StringPlotParam_I(iFile) = '{default}'
+             elseif(   index(StringPlot,'SOL') > 0 &
+                  .or. index(StringPlot,'sol') > 0)then
+                TypePlotVar='sol'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'SOL')>0
+                StringPlotVar_I(iFile)='wl pb' ! white light
+                StringPlotParam_I(iFile)='mu'
+             elseif(   index(StringPlot,'EUV') > 0 &
+                  .or. index(StringPlot,'euv') > 0)then
+                TypePlotVar='euv'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'EUV')>0
+                StringPlotVar_I(iFile)='euv171 euv195 euv284' ! main euv bands
+                StringPlotParam_I(iFile)='mu'
+             elseif(   index(StringPlot,'SXR') > 0 &
+                  .or. index(StringPlot,'sxr') > 0)then
+                TypePlotVar='sxr'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'SXR')>0
+                StringPlotVar_I(iFile)='sxr' ! soft x-ray band
+                StringPlotParam_I(iFile)='mu'
+             elseif(   index(StringPlot,'TBL') > 0 &
+                  .or. index(StringPlot,'tbl') > 0)then
+                TypePlotVar='tbl'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'TBL')>0
+                ! will read a table in write_plot_los
+                StringPlotVar_I(iFile)='tbl'
+                StringPlotParam_I(iFile)='mu'
+             elseif(   index(StringPlot,'RWI') > 0 &
+                  .or. index(StringPlot,'rwi') > 0)then
+                TypePlotVar='rwi'
+                IsDimensionalPlot_I(iFile) = .false.
+                StringPlotVar_I(iFile)='' ! Intensity
+                StringPlotParam_I(iFile)=''
+             elseif(   index(StringPlot,'pos') > 0 &
+                  .or. index(StringPlot,'POS') > 0)then
+                TypePlotVar='pos'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'POS')>0
+                if(TypePlotArea /= 'lin')call stop_mpi(&
                      'Variable "pos" can only be used with area "lin" !')
-             elseif(index(plot_string,'eqr')>0)then
-                plot_var ='eqr'
-                plot_dimensional(iFile) = .true.
-             elseif(index(plot_string,'eqb')>0)then
-                plot_var ='eqb'
-                plot_dimensional(iFile) = .true.
-             elseif(index(plot_string,'NUL')>0.or.index(plot_string,'nul')>0)then
-                plot_var ='nul'
-                plot_dimensional(iFile) = .true.
-                plot_vars(iFile)=''
-                plot_pars(iFile)=''
-             elseif(index(plot_string,'INT')>0.or.index(plot_string,'int')>0)then
-                plot_var ='int'
-                plot_dimensional(iFile) = index(plot_string,'INT')>0
-                plot_vars(iFile)=''
-                plot_pars(iFile)=''
-             elseif(index(plot_string,'BBK')>0.or.index(plot_string,'bbk')>0)then
-                plot_var='blk'
-                plot_dimensional(iFile) = index(plot_string,'BBK')>0
-                plot_vars(iFile)='dx pe blk blkall'
-             elseif(index(plot_string,'INS')>0.or.index(plot_string,'ins')>0)then
+             elseif(index(StringPlot,'eqr')>0)then
+                TypePlotVar ='eqr'
+                IsDimensionalPlot_I(iFile) = .true.
+             elseif(index(StringPlot,'eqb') > 0)then
+                TypePlotVar ='eqb'
+                IsDimensionalPlot_I(iFile) = .true.
+             elseif(   index(StringPlot,'NUL') > 0 &
+                  .or. index(StringPlot,'nul') > 0)then
+                TypePlotVar ='nul'
+                IsDimensionalPlot_I(iFile) = .true.
+                StringPlotVar_I(iFile)=''
+                StringPlotParam_I(iFile)=''
+             elseif(   index(StringPlot,'INT') > 0 &
+                  .or. index(StringPlot,'int') > 0)then
+                TypePlotVar ='int'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'INT')>0
+                StringPlotVar_I(iFile)=''
+                StringPlotParam_I(iFile)=''
+             elseif(   index(StringPlot,'BBK') > 0 &
+                  .or. index(StringPlot,'bbk') > 0)then
+                TypePlotVar='blk'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'BBK')>0
+                StringPlotVar_I(iFile)='dx pe blk blkall'
+             elseif(   index(StringPlot,'INS') > 0 &
+                  .or. index(StringPlot,'ins') > 0)then
                 ! do nothing
              else
-                call stop_mpi('Variable definition missing from plot_string=' &
-                     //plot_string)
+                call stop_mpi('Variable definition missing from StringPlot=' &
+                     //StringPlot)
              end if
 
              ! Set equation parameters for 3D unstructured IDL files
              ! to describe block structure and the dipole. Needed by CCMC.
-             if(plot_area == '3d_' .and. plot_form(iFile) == 'idl' &
-                  .and. plot_dx(1, iFile) < 0.0) &
-                  plot_pars(iFile) = 'g c th p1 p2 p3 NX NY NZ R'
+             if(TypePlotArea == '3d_' .and. TypePlotFormat_I(iFile) == 'idl' &
+                  .and. PlotDx_DI(1, iFile) < 0.0) &
+                  StringPlotParam_I(iFile) = 'g c th p1 p2 p3 NX NY NZ R'
 
-             if(nInstrument < 1) plot_type(iFile) = plot_area//'_'//plot_var
+             if(nInstrument < 1) &
+                  TypePlot_I(iFile) = TypePlotArea//'_'//TypePlotVar
           end do
 
           ! write out the change if ins/INS is found
@@ -1492,23 +1515,25 @@ contains
              do iFile = Plot_+ 1, Plot_+ nPlotFile
                 write(*,*) '----------------------------------------'
                 write(*,*) ' iFile        =', iFile
-                write(*,*) ' dn_output    =', dn_output(iFile)
-                write(*,*) ' dt_output    =', dt_output(iFile)
-                write(*,*) ' plot_type    =', plot_type(iFile)
-                write(*,*) ' plot_form    =', plot_form(iFile)
+                write(*,*) ' DnOutput_I    =', DnOutput_I(iFile)
+                write(*,*) ' DtOutput_I    =', DtOutput_I(iFile)
+                write(*,*) ' TypePlot_I    =', TypePlot_I(iFile)
+                write(*,*) ' TypePlotFormat_I    =', TypePlotFormat_I(iFile)
                 write(*,*) ' TypeFile     =', TypeFile_I(iFile)
-                write(*,*) ' dimensional  =', plot_dimensional(iFile)
-                write(*,*) ' plot_vars    =', trim(plot_vars(iFile))
-                write(*,*) ' plot_pars    =', trim(plot_pars(iFile))
-                if (index(plot_type(iFile), 'los') >0) then
-                   write(*,*) ' offset_angle =', offset_angle(iFile)
-                   write(*,*) ' r_size_image =', r_size_image(iFile)
-                   write(*,*) ' xoffset      =', xoffset(iFile)
-                   write(*,*) ' yoffset      =', yoffset(iFile)
-                   write(*,*) ' radius_occult=', radius_occult(iFile)
-                   write(*,*) ' mu_los       =', mu_los
-                   write(*,*) ' n_pix_r      =', n_pix_r(iFile)
-                   write(*,*) ' NameLosTable =', NameLosTable(iFile)
+                write(*,*) ' dimensional  =', IsDimensionalPlot_I(iFile)
+                write(*,*) ' StringPlotVar_I   =', &
+                     trim(StringPlotVar_I(iFile))
+                write(*,*) ' StringPlotParam_I =', &
+                     trim(StringPlotParam_I(iFile))
+                if (index(TypePlot_I(iFile), 'los') >0) then
+                   write(*,*) ' OffsetAngle_I =', OffsetAngle_I(iFile)
+                   write(*,*) ' rSizeImage_I =', rSizeImage_I(iFile)
+                   write(*,*) ' xOffset_I      =', xOffset_I(iFile)
+                   write(*,*) ' yOffset_I      =', yOffset_I(iFile)
+                   write(*,*) ' rOccult_I=', rOccult_I(iFile)
+                   write(*,*) ' MuLimbDarkening       =', MuLimbDarkening
+                   write(*,*) ' nPixel_I      =', nPixel_I(iFile)
+                   write(*,*) ' NameLosTable_I =', NameLosTable_I(iFile)
                 end if
              end do
              write(*,*) '----------------------------------------'
@@ -1518,9 +1543,9 @@ contains
           call read_var('UseNoRefraction', UseNoRefraction)
 
        case("#SAVEPLOTNAME")
-          call read_var('IsPlotName_n',IsPlotName_n)
-          call read_var('IsPlotName_t',IsPlotName_t)
-          call read_var('IsPlotName_e',IsPlotName_e)
+          call read_var('IsPlotNameN',IsPlotNameN)
+          call read_var('IsPlotNameT',IsPlotNameT)
+          call read_var('IsPlotNameE',IsPlotNameE)
 
        case("#PLOTFILENAME")
           call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
@@ -1529,16 +1554,16 @@ contains
           call read_var('UseLosSimple', UseLosSimple)
 
        case("#SAVELOGNAME")
-          call read_var('IsLogName_n',IsLogName_n)
-          call read_var('IsLogName_e',IsLogName_e)
+          call read_var('IsLogNameN',IsLogNameN)
+          call read_var('IsLogNameE',IsLogNameE)
           ! Set _n true if _e is false.
-          if(.not.IsLogName_e) IsLogName_n=.true.
+          if(.not.IsLogNameE) IsLogNameN=.true.
 
        case("#SAVEPLOTSAMR")
-          call read_var('DoSavePlotsAmr',save_plots_amr)
+          call read_var('DoSavePlotsAmr',DoSavePlotsAmr)
 
        case("#SAVEBINARY")
-          call read_var('DoSaveBinary',save_binary)
+          call read_var('DoSaveBinary',DoSaveBinary)
 
        case("#SAVETECBINARY")
           call read_var('DoSaveTecBinary',DoSaveTecBinary)
@@ -1738,12 +1763,6 @@ contains
        case("#PROJECTION")
           if(.not.UseB)CYCLE READPARAM
           call read_project_divb_param(NameCommand)
-
-       case("#CORRECTP")
-          call read_var('pRatioLow',Pratio_lo)
-          call read_var('pRatioHigh',Pratio_hi)
-          if(Pratio_lo>=Pratio_hi)&
-               call stop_mpi(NameSub//' ERROR: Pratio_lo>=Pratio_hi')
 
        case("#IOUNITS")
           if(.not.is_first_session())CYCLE READPARAM
@@ -2118,7 +2137,8 @@ contains
              call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
           end if
           call read_var('MinBlockAll', MinBlockAll)
-          ! Set MaxBlock large enough. Add 1 extra block for possible load balancing
+          ! Set MaxBlock large enough.
+          ! Add 1 extra block for possible load balancing
           MaxBlock = max(MaxBlock, 2 + (MinBlockAll-1)/nProc)
 
        case("#USERMODULE")
@@ -2235,14 +2255,14 @@ contains
 
        case("#SOLARWIND")
           ! if(.not.is_first_session())CYCLE READPARAM
-          call read_var('SwNDim',  SW_n_dim)
-          call read_var('SwTDim'  ,SW_T_dim)
-          call read_var('SwUxDim' ,SW_Ux_dim)
-          call read_var('SwUyDim' ,SW_Uy_dim)
-          call read_var('SwUzDim' ,SW_Uz_dim)
-          call read_var('SwBxDim' ,SW_Bx_dim)
-          call read_var('SwByDim' ,SW_By_dim)
-          call read_var('SwBzDim' ,SW_Bz_dim)
+          call read_var('SwNDim',  SolarWindNDim)
+          call read_var('SwTDim'  ,SolarWindTempDim)
+          call read_var('SwUxDim' ,SolarWindUxDim)
+          call read_var('SwUyDim' ,SolarWindUyDim)
+          call read_var('SwUzDim' ,SolarWindUzDim)
+          call read_var('SwBxDim' ,SolarWindBxDim)
+          call read_var('SwByDim' ,SolarWindByDim)
+          call read_var('SwBzDim' ,SolarWindBzDim)
 
        case("#OUTFLOWPRESSURE")
           call read_var('UseOutflowPressure', UseOutflowPressure)
@@ -2465,8 +2485,8 @@ contains
 
        case("#NPREVIOUS")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nPrev',n_prev)
-          call read_var('DtPrev',dt_prev)
+          call read_var('nPrev',nStepPrev)
+          call read_var('DtPrev',DtPrev)
 
        case("#STARTTIME", "#SETREALTIME")
           if(.not.is_first_session())CYCLE READPARAM
@@ -2530,12 +2550,12 @@ contains
           ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 
        case("#OHNEUTRALS")
-          call read_var('RhoNeutralsISW_dim' ,RhoNeutralsISW_dim)
-          call read_var('TNeutralsISW_dim' ,TNeutralsISW_dim)
-          call read_var('UxNeutralsISW_dim' ,UxNeutralsISW_dim)
-          call read_var('UyNeutralsISW_dim' ,UyNeutralsISW_dim)
-          call read_var('UzNeutralsISW_dim' ,UzNeutralsISW_dim)
-          call read_var('mProtonMass',mProtonMass)
+          call read_var('RhoNeuWindDim' ,RhoNeuWindDim)
+          call read_var('TempNeuWindDim' ,TempNeuWindDim)
+          call read_var('UxNeuWindDim' ,UxNeuWindDim)
+          call read_var('UyNeuWindDim' ,UyNeuWindDim)
+          call read_var('UzNeuWindDim' ,UzNeuWindDim)
+          call read_var('MassNeutralDim',MassNeutralDim)
 
        case("#OHBOUNDARY")
           call read_var('DoOhNeutralBc',DoOhNeutralBc)
@@ -2924,7 +2944,7 @@ contains
 
       ! Default implicit parameters
       UseImplicit      = .false.
-      ImplCritType     = 'dt'
+      TypeImplCrit     = 'dt'
 
       UseDivbSource   =  UseB .and. nDim > 1
       UseDivbDiffusion= .false.
@@ -2935,9 +2955,9 @@ contains
 
       TypeMessagePass = 'all'
 
-      plot_dimensional      = .true.
+      IsDimensionalPlot_I      = .true.
 
-      restart           = .false.
+      IsRestart           = .false.
 
       ! Give some "reasonable" default values
 
@@ -3192,36 +3212,36 @@ contains
       end select
 
       ! Check flux type selection for implicit
-      select case(FluxTypeImpl)
+      select case(TypeFluxImpl)
       case('default')
-         FluxTypeImpl = TypeFlux
+         TypeFluxImpl = TypeFlux
       case('ROE','Roe')
-         FluxTypeImpl='Roe'
+         TypeFluxImpl='Roe'
       case('ROEOLD','RoeOld')
-         FluxTypeImpl='RoeOld'
+         TypeFluxImpl='RoeOld'
       case('RUSANOV','TVDLF','Rusanov')
-         FluxTypeImpl='Rusanov'
+         TypeFluxImpl='Rusanov'
       case('LINDE','HLLEL','Linde')
-         FluxTypeImpl='Linde'
+         TypeFluxImpl='Linde'
       case('SOKOLOV','AW','Sokolov')
-         FluxTypeImpl='Sokolov'
+         TypeFluxImpl='Sokolov'
       case('GODUNOV','Godunov')
-         FluxTypeImpl='Godunov'
+         TypeFluxImpl='Godunov'
       case('HLLD', 'HLLDW', 'LFDW', 'HLLC')
       case default
          if(iProc==0)then
             write(*,'(a)')NameSub// &
-                 ' WARNING: Unknown value for FluxTypeImpl='// &
-                 trim(FluxTypeImpl)//' !!!'
+                 ' WARNING: Unknown value for TypeFluxImpl='// &
+                 trim(TypeFluxImpl)//' !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
-            write(*,*)NameSub//' setting FluxTypeImpl=',trim(TypeFlux)
+            write(*,*)NameSub//' setting TypeFluxImpl=',trim(TypeFlux)
          end if
-         FluxTypeImpl=TypeFlux
+         TypeFluxImpl=TypeFlux
       end select
 
       ! Check flux types
-      if( (TypeFlux(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe' .or. &
-           TypeFlux=='HLLD' .or.  FluxTypeImpl=='HLLD') .and. &
+      if( (TypeFlux(1:3)=='Roe' .or. TypeFluxImpl(1:3)=='Roe' .or. &
+           TypeFlux=='HLLD' .or.  TypeFluxImpl=='HLLD') .and. &
            (UseMultiIon .or. UseAlfvenWaves .or. UseWavePressure &
            .or. .not.UseB) )then
          if (iProc == 0) then
@@ -3232,11 +3252,11 @@ contains
          end if
          if(TypeFlux(1:3)=='Roe' .or. TypeFlux=='HLLD') &
               TypeFlux     = 'Linde'
-         if(FluxTypeImpl(1:3)=='Roe' .or. FluxTypeImpl=='HLLD') &
-              FluxTypeImpl = 'Linde'
+         if(TypeFluxImpl(1:3)=='Roe' .or. TypeFluxImpl=='HLLD') &
+              TypeFluxImpl = 'Linde'
       end if
 
-      if((TypeFlux=='Godunov' .or. FluxTypeImpl=='Godunov') &
+      if((TypeFlux=='Godunov' .or. TypeFluxImpl=='Godunov') &
            .and. UseB)then
          if (iProc == 0) then
             write(*,'(a)')NameSub//&
@@ -3245,7 +3265,7 @@ contains
             write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
          end if
          if(TypeFlux=='Godunov')     TypeFlux     = 'Linde'
-         if(FluxTypeImpl=='Godunov') FluxTypeImpl = 'Linde'
+         if(TypeFluxImpl=='Godunov') TypeFluxImpl = 'Linde'
       end if
 
       if(i_line_command("#IMPLSTEP") < 0) &
@@ -3375,7 +3395,7 @@ contains
       end if
 
       ! Boris correction checks
-      if((TypeFlux(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe') &
+      if((TypeFlux(1:3)=='Roe' .or. TypeFluxImpl(1:3)=='Roe') &
            .and. UseBorisCorrection)then
          if (iProc == 0) then
             write(*,'(a)')NameSub//&
@@ -3418,10 +3438,10 @@ contains
          end if
       end if
 
-      if(UsePartImplicit .and. ImplCritType=='dt' .and.&
+      if(UsePartImplicit .and. TypeImplCrit=='dt' .and.&
            (.not.IsTimeAccurate .or. .not.UseDtFixed))then
          if(iProc==0)then
-            write(*,'(a)')'Part implicit scheme with ImplCritType=dt'
+            write(*,'(a)')'Part implicit scheme with TypeImplCrit=dt'
             write(*,'(a)')'requires time accurate run with fixed time step'
             call stop_mpi('Correct PARAM.in')
          end if
@@ -3609,13 +3629,13 @@ contains
       ! Fix NameSat_I if needed
       NameSat_I = 'none'
       do iSat = 1, nSatellite
-         if (index(FilenameSat_I(iSat), 'sta') > 0 .or.  &
-              index(FilenameSat_I(iSat), 'stereoa') > 0) &
+         if (index(NameFileSat_I(iSat), 'sta') > 0 .or.  &
+              index(NameFileSat_I(iSat), 'stereoa') > 0) &
               NameSat_I(iSat) = 'sta'
-         if (index(FilenameSat_I(iSat), 'stb') > 0 .or.  &
-              index(FilenameSat_I(iSat), 'stereob') > 0) &
+         if (index(NameFileSat_I(iSat), 'stb') > 0 .or.  &
+              index(NameFileSat_I(iSat), 'stereob') > 0) &
               NameSat_I(iSat) = 'stb'
-         if (index(FilenameSat_I(iSat), 'earth') > 0)    &
+         if (index(NameFileSat_I(iSat), 'earth') > 0)    &
               NameSat_I(iSat) = 'earth'
       end do
 
@@ -3787,12 +3807,15 @@ contains
             !             R,   Phi, Latitude
             XyzMin_D = [ 0.0, 0.0, -cHalfPi]
             XyzMax_D = [ &
-                 sqrt(max(xMinBox**2,xMaxBox**2)+max(yMinBox**2,yMaxBox**2) + max(zMinBox**2,zMaxBox**2)), &
+                 sqrt(max(xMinBox**2,xMaxBox**2)   &
+                 +    max(yMinBox**2,yMaxBox**2)   &
+                 +    max(zMinBox**2,zMaxBox**2)), &
                  cTwoPi, cHalfPi ]
          case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
             !            R,   Phi, Z
             XyzMin_D = [0.0, 0.0, zMinBox]
-            XyzMax_D = [sqrt(max(xMinBox**2,xMaxBox**2)+max(yMinBox**2,yMaxBox**2)), cTwoPi, zMaxBox]
+            XyzMax_D = [sqrt(max(xMinBox**2,xMaxBox**2) &
+                 +           max(yMinBox**2,yMaxBox**2)), cTwoPi, zMaxBox]
          case('roundcube')
             if(rRound0 > rRound1)then
                ! Cartesian outside, so use xMinBox..zMaxBox
@@ -3800,11 +3823,14 @@ contains
                XyzMax_D = [xMaxBox, yMaxBox, zMaxBox]
             else
                ! Round outside, so fit this inside xMinBox..zMaxBox
-               if(nDim==2) XyzMax_D = &
-                    min(abs(xMinBox), abs(xMaxBox), abs(yMinBox), abs(yMaxBox)) &
+               if(nDim==2) XyzMax_D = min( &
+                    abs(xMinBox), abs(xMaxBox), &
+                    abs(yMinBox), abs(yMaxBox)) &
                     /sqrt(2.0)
-               if(nDim==3) XyzMax_D = &
-                    min(abs(xMinBox), abs(xMaxBox), abs(yMinBox), abs(yMaxBox), abs(zMinBox), abs(zMaxBox)) &
+               if(nDim==3) XyzMax_D = min( &
+                    abs(xMinBox), abs(xMaxBox), &
+                    abs(yMinBox), abs(yMaxBox), &
+                    abs(zMinBox), abs(zMaxBox)) &
                     /sqrt(3.0)
                XyzMin_D = -XyzMax_D
             end if
@@ -3838,7 +3864,8 @@ contains
          TypeGeometryBatl = TypeGeometry
       end if
 
-      ! PGI can not handle "TypeCellBc_I(1:2*nDim-1:2) == 'periodic' " correctly.
+      ! PGI can not handle passing
+      ! "TypeCellBc_I(1:2*nDim-1:2) == 'periodic' " as an argument.
       TypeCellBcTmp_D = TypeCellBc_I(1:2*nDim-1:2)
 
       call init_batl(XyzMin_D(1:nDim), XyzMax_D(1:nDim), MaxBlock, &
@@ -3849,8 +3876,12 @@ contains
 
       if(IsRotatedCartesian)then
          ! Fix xMinBox, xMaxBox .. zMaxBox to include the full rotated domain
-         xMaxBox = sum(abs(CoordMin_D)) + sum(abs(CoordMax_D)); yMaxBox = xMaxBox; zMaxBox = xMaxBox
-         xMinBox = -xMaxBox; yMinBox = xMinBox; zMinBox = xMinBox
+         xMaxBox = sum(abs(CoordMin_D)) + sum(abs(CoordMax_D))
+         yMaxBox = xMaxBox
+         zMaxBox = xMaxBox
+         xMinBox = -xMaxBox
+         yMinBox = xMinBox
+         zMinBox = xMinBox
       end if
 
       if(IsLogRadius .or. IsGenRadius)then
@@ -3901,9 +3932,9 @@ contains
 
       PLOTFILELOOP: do iFile = Plot_+1, Plot_ + nPlotFile
 
-         plot_area = plot_type(iFile)(1:3)
+         TypePlotArea = TypePlot_I(iFile)(1:3)
 
-         if(plot_form(iFile) == 'tcp')then
+         if(TypePlotFormat_I(iFile) == 'tcp')then
             SmallSize_D = 0.0
          elseif(nByteReal == 8)then
             SmallSize_D   = 1e-9*CellSizeMax_D
@@ -3911,49 +3942,53 @@ contains
             SmallSize_D   = 1e-6*CellSizeMax_D
          end if
 
-         if(DoTest)write(*,*)'iFile, plot_form, plot_area=',&
-              iFile, plot_form(iFile), plot_area
+         if(DoTest)write(*,*)'iFile, TypePlotFormat_I, TypePlotArea=',&
+              iFile, TypePlotFormat_I(iFile), TypePlotArea
 
          ! Fix plot range for various plot areas
-         select case(plot_area)
+         select case(TypePlotArea)
          case('shl', 'box', 'eqb', 'eqr', 'lcb')
             ! These plot areas read all ranges from PARAM.in
             CYCLE PLOTFILELOOP
          case('cut')
-            if(IsLogRadius) plot_range(1:2,iFile) = log(plot_range(1:2,iFile))
+            if(IsLogRadius) PlotRange_EI(1:2,iFile) = &
+                 log(PlotRange_EI(1:2,iFile))
             if(IsGenRadius) then
-               call radius_to_gen(plot_range(1,iFile))
-               call radius_to_gen(plot_range(2,iFile))
+               call radius_to_gen(PlotRange_EI(1,iFile))
+               call radius_to_gen(PlotRange_EI(2,iFile))
             end if
-            if(Phi_ > 0) plot_range(2*Phi_-1:2*Phi_,iFile) = &
-                 cDegToRad*plot_range(2*Phi_-1:2*Phi_,iFile)
-            if(Theta_ > 0) plot_range(2*Theta_-1:2*Theta_,iFile) = &
-                 cDegToRad*plot_range(2*Theta_-1:2*Theta_,iFile)
+            if(Phi_ > 0) PlotRange_EI(2*Phi_-1:2*Phi_,iFile) = &
+                 cDegToRad*PlotRange_EI(2*Phi_-1:2*Phi_,iFile)
+            if(Theta_ > 0) PlotRange_EI(2*Theta_-1:2*Theta_,iFile) = &
+                 cDegToRad*PlotRange_EI(2*Theta_-1:2*Theta_,iFile)
             do iDim = 1, nDim
-               if(plot_range(2*iDim-1,iFile) < plot_range(2*iDim,iFile)) CYCLE
-               Cut =0.5*(plot_range(2*iDim-1,iFile) + plot_range(2*iDim,iFile))
-               plot_range(2*iDim-1,iFile) = Cut - SmallSize_D(iDim)
-               plot_range(2*iDim,iFile)   = Cut + SmallSize_D(iDim)
+               if(  PlotRange_EI(2*iDim-1,iFile) &
+                    < PlotRange_EI(2*iDim,iFile)) CYCLE
+               Cut =0.5*(PlotRange_EI(2*iDim-1,iFile) &
+                    +    PlotRange_EI(2*iDim,iFile))
+               PlotRange_EI(2*iDim-1,iFile) = Cut - SmallSize_D(iDim)
+               PlotRange_EI(2*iDim,iFile)   = Cut + SmallSize_D(iDim)
             end do
          case('sph')
             if(IsCartesianGrid)then
-               plot_dx(1,iFile) = 1.0    ! set to match write_plot_sph
-               plot_dx(2:3,iFile) = 1.0  ! angular resolution in degrees
-               plot_range(2,iFile)= plot_range(1,iFile) + 1.e-4 ! so that R/=0
-               plot_range(3,iFile)= 0.   - 0.5*plot_dx(2,iFile)
-               plot_range(4,iFile)= 90.0 + 0.5*plot_dx(2,iFile)
-               plot_range(5,iFile)= 0.   - 0.5*plot_dx(3,iFile)
-               plot_range(6,iFile)= 360.0- 0.5*plot_dx(3,iFile)
+               PlotDx_DI(1,iFile) = 1.0    ! set to match write_plot_sph
+               PlotDx_DI(2:3,iFile) = 1.0  ! angular resolution in degrees
+               PlotRange_EI(2,iFile) = PlotRange_EI(1,iFile) + 1.e-4 ! so R/=0
+               PlotRange_EI(3,iFile)= 0.   - 0.5*PlotDx_DI(2,iFile)
+               PlotRange_EI(4,iFile)= 90.0 + 0.5*PlotDx_DI(2,iFile)
+               PlotRange_EI(5,iFile)= 0.   - 0.5*PlotDx_DI(3,iFile)
+               PlotRange_EI(6,iFile)= 360.0- 0.5*PlotDx_DI(3,iFile)
             elseif(IsRLonLat)then
-               plot_dx(1,iFile) = -1.0
-               if(IsLogRadius) plot_range(1,iFile) = log(plot_range(1,iFile))
-               if(IsGenRadius) call radius_to_gen(plot_range(1,iFile))
-               plot_range(2,iFile)= plot_range(1,iFile) + 1.e-4 ! so that R/=0
+               PlotDx_DI(1,iFile) = -1.0
+               if(IsLogRadius) &
+                    PlotRange_EI(1,iFile) = log(PlotRange_EI(1,iFile))
+               if(IsGenRadius) call radius_to_gen(PlotRange_EI(1,iFile))
+               PlotRange_EI(2,iFile)= PlotRange_EI(1,iFile) + 1.e-4 ! so R/=0
                do i=Phi_,Theta_
-                  plot_range(2*i-1,iFile) = CoordMin_D(i)
-                  plot_range(2*i,iFile)   = CoordMax_D(i)
+                  PlotRange_EI(2*i-1,iFile) = CoordMin_D(i)
+                  PlotRange_EI(2*i,iFile)   = CoordMax_D(i)
                end do
-               plot_area='r=r' ! to disable the write_plot_sph routine
+               TypePlotArea='r=r' ! to disable the write_plot_sph routine
             else
                call stop_mpi(NameSub// &
                     ' Sph-plot is not implemented for geometry= '&
@@ -3964,91 +3999,95 @@ contains
             CYCLE PLOTFILELOOP
 
          case('x=0')
-            plot_range(1:5:2, iFile) = CoordMin_D
-            plot_range(2:6:2, iFile) = CoordMax_D
-            if( plot_form(iFile)=='tec' .or. IsCartesianGrid )then
+            PlotRange_EI(1:5:2, iFile) = CoordMin_D
+            PlotRange_EI(2:6:2, iFile) = CoordMax_D
+            if( TypePlotFormat_I(iFile)=='tec' .or. IsCartesianGrid )then
                ! Limit plot range along x direction to be very small
-               plot_range(1, iFile) = -SmallSize_D(x_)
-               plot_range(2, iFile) = +SmallSize_D(x_)
+               PlotRange_EI(1, iFile) = -SmallSize_D(x_)
+               PlotRange_EI(2, iFile) = +SmallSize_D(x_)
                if(IsRlonLat) then
-                  plot_range(1, iFile) = CoordMin_D(x_)
-                  plot_range(2, iFile) = CoordMin_D(x_)+SmallSize_D(x_)
+                  PlotRange_EI(1, iFile) = CoordMin_D(x_)
+                  PlotRange_EI(2, iFile) = CoordMin_D(x_)+SmallSize_D(x_)
                end if
             else
                ! Limit Phi direction around cHalfPi
-               plot_range(3, iFile) = cHalfPi - SmallSize_D(Phi_)
-               plot_range(4, iFile) = cHalfPi + SmallSize_D(Phi_)
+               PlotRange_EI(3, iFile) = cHalfPi - SmallSize_D(Phi_)
+               PlotRange_EI(4, iFile) = cHalfPi + SmallSize_D(Phi_)
             end if
 
          case('y=0')
-            plot_range(1:5:2, iFile) = CoordMin_D
-            plot_range(2:6:2, iFile) = CoordMax_D
-            if((plot_form(iFile) == 'idl' .or. plot_form(iFile) == 'tcp') &
+            PlotRange_EI(1:5:2, iFile) = CoordMin_D
+            PlotRange_EI(2:6:2, iFile) = CoordMax_D
+            if( (TypePlotFormat_I(iFile) == 'idl' .or. &
+                 TypePlotFormat_I(iFile) == 'tcp') &
                  .and. (IsRLonLat .or. IsCylindrical) &
                  .and. CoordMin_D(2) < cPi .and. CoordMax_D(2) > cPi) then
+
                ! Limit plot range in Phi direction to be small around 180 degs
-               plot_range(3, iFile) = cPi - SmallSize_D(y_)
-               plot_range(4, iFile) = cPi + SmallSize_D(y_)
+               PlotRange_EI(3, iFile) = cPi - SmallSize_D(y_)
+               PlotRange_EI(4, iFile) = cPi + SmallSize_D(y_)
             else
                ! Limit plot range along y (or Phi) direction to be very small
-               plot_range(3, iFile) = -SmallSize_D(y_)
-               plot_range(4, iFile) = +SmallSize_D(y_)
+               PlotRange_EI(3, iFile) = -SmallSize_D(y_)
+               PlotRange_EI(4, iFile) = +SmallSize_D(y_)
             end if
 
          case('z=0', '2d_')
             ! Limit plot range along z direction to be very small
-            plot_range(1:5:2, iFile) = CoordMin_D
-            plot_range(2:6:2, iFile) = CoordMax_D
-            plot_range(5, iFile) = -SmallSize_D(z_)
-            plot_range(6, iFile) = +SmallSize_D(z_)
+            PlotRange_EI(1:5:2, iFile) = CoordMin_D
+            PlotRange_EI(2:6:2, iFile) = CoordMax_D
+            PlotRange_EI(5, iFile) = -SmallSize_D(z_)
+            PlotRange_EI(6, iFile) = +SmallSize_D(z_)
 
          case('1d_')
             ! Limit plot range along 2nd and 3rd directions to be very small
-            plot_range(1, iFile) = CoordMin_D(1)
-            plot_range(2, iFile) = CoordMax_D(1)
-            plot_range(3:5:2, iFile) = -SmallSize_D(y_:z_)
-            plot_range(4:6:2, iFile) = +SmallSize_D(y_:z_)
+            PlotRange_EI(1, iFile) = CoordMin_D(1)
+            PlotRange_EI(2, iFile) = CoordMax_D(1)
+            PlotRange_EI(3:5:2, iFile) = -SmallSize_D(y_:z_)
+            PlotRange_EI(4:6:2, iFile) = +SmallSize_D(y_:z_)
 
          case('3d_')
-            plot_range(1:5:2, iFile) = CoordMin_D
-            plot_range(2:6:2, iFile) = CoordMax_D
+            PlotRange_EI(1:5:2, iFile) = CoordMin_D
+            PlotRange_EI(2:6:2, iFile) = CoordMax_D
 
          end select
 
          ! Reduce plot range in ignored dimensions
-         if(nJ == 1) plot_range(3,iFile) = -SmallSize_D(y_)
-         if(nJ == 1) plot_range(4,iFile) = +SmallSize_D(y_)
-         if(nK == 1) plot_range(5,iFile) = -SmallSize_D(z_)
-         if(nK == 1) plot_range(6,iFile) = +SmallSize_D(z_)
+         if(nJ == 1) PlotRange_EI(3,iFile) = -SmallSize_D(y_)
+         if(nJ == 1) PlotRange_EI(4,iFile) = +SmallSize_D(y_)
+         if(nK == 1) PlotRange_EI(5,iFile) = -SmallSize_D(z_)
+         if(nK == 1) PlotRange_EI(6,iFile) = +SmallSize_D(z_)
 
          if(DoTest)write(*,*)'For file ',iFile-plot_,&
-              ' original range   =',plot_range(:,iFile)
+              ' original range   =',PlotRange_EI(:,iFile)
 
-         plot_range(1:5:2, iFile) = max(plot_range(1:5:2, iFile), CoordMin_D)
-         plot_range(2:6:2, iFile) = min(plot_range(2:6:2, iFile), CoordMax_D)
+         PlotRange_EI(1:5:2, iFile) = &
+              max(PlotRange_EI(1:5:2, iFile), CoordMin_D)
+         PlotRange_EI(2:6:2, iFile) = &
+              min(PlotRange_EI(2:6:2, iFile), CoordMax_D)
 
          if(DoTest)write(*,*)'For file ',iFile-plot_,&
-              ' limited range   =',plot_range(:,iFile)
+              ' limited range   =',PlotRange_EI(:,iFile)
 
-         ! For plot_dx = 0.0 or -1.0 there is no need to adjust cut range
-         if(plot_dx(1, iFile) <= cTiny)then
+         ! For PlotDx_DI = 0.0 or -1.0 there is no need to adjust cut range
+         if(PlotDx_DI(1, iFile) <= cTiny)then
 
-            plot_dx(:, iFile) = plot_dx(1, iFile) ! Define y and z
+            PlotDx_DI(:, iFile) = PlotDx_DI(1, iFile) ! Define y and z
 
             CYCLE PLOTFILELOOP
 
          end if
 
          ! Make sure that plot resolution is a power of 2 fraction of cell size
-         Ratio     = CellSizeMax_D(x_)/plot_dx(1, iFile)
+         Ratio     = CellSizeMax_D(x_)/PlotDx_DI(1, iFile)
          Ratio     = 2.0**nint(log(Ratio)/log(2.0))
          PlotRes_D = CellSizeMax_D / Ratio
-         plot_dx(1:3, iFile) = PlotRes_D
+         PlotDx_DI(1:3, iFile) = PlotRes_D
 
          ! Make sure that plotting range is placed at an integer multiple of dx
-         call adjust_plot_range(PlotRes_D(1), plot_range(:,iFile))
+         call adjust_plot_range(PlotRes_D(1), PlotRange_EI(:,iFile))
          if(DoTest)write(*,*)'For file ',iFile-plot_,&
-              ' adjusted range   =',plot_range(:,iFile)
+              ' adjusted range   =',PlotRange_EI(:,iFile)
 
       end do PLOTFILELOOP
 
@@ -4114,12 +4153,12 @@ contains
 
       ! Set default scalar parameters for plot files
       do iFile = plot_+1, plot_+nPlotFile
-         l = index(plot_pars(iFile), '{default}')
+         l = index(StringPlotParam_I(iFile), '{default}')
          if(l < 1) CYCLE
 
          ! Set the name of default scalar parameters for plotting
          StringParam = ''
-         if(plot_dimensional(iFile))then
+         if(IsDimensionalPlot_I(iFile))then
             if(Io2Si_V(UnitX_)   /= 1)StringParam = 'xSI'
             if(Io2Si_V(UnitT_)   /= 1)StringParam = trim(StringParam)//' tSI'
          else
@@ -4163,9 +4202,10 @@ contains
               StringParam = trim(StringParam)//' clight'
 
          ! Replace '{default}' with StringParam
-         plot_pars1 = plot_pars(iFile)
-         plot_pars(iFile) = plot_pars1(1:l-1)//trim(adjustl(StringParam))// &
-              plot_pars1(l+9:len_trim(plot_pars1))
+         StringPlotParam = StringPlotParam_I(iFile)
+         StringPlotParam_I(iFile) = &
+              StringPlotParam(1:l-1)//trim(adjustl(StringParam))// &
+              StringPlotParam(l+9:len_trim(StringPlotParam))
       end do
 
       !$acc update device(Dt, DtFixed, Cfl)
@@ -4179,19 +4219,19 @@ contains
       ! itself is calculated first.
       ! iVarSmoothIndex_I is the calculation order.
 
-      real:: iVarSmoothReal_V(nVar)
+      real:: RealIVarSmooth_V(nVar)
       integer:: iVar
 
       !------------------------------------------------------------------------
       do iVar = 1, nVar
          if(iVarSmooth_V(iVar) == iVar) then
-            iVarSmoothReal_V(iVar) = real(iVar) - 0.5
+            RealIVarSmooth_V(iVar) = real(iVar) - 0.5
          else
-            iVarSmoothReal_V(iVar) = real(iVarSmooth_V(iVar))
+            RealIVarSmooth_V(iVar) = real(iVarSmooth_V(iVar))
          endif
       enddo
 
-      call sort_quick(nVar,iVarSmoothReal_V,iVarSmoothIndex_I)
+      call sort_quick(nVar,RealIVarSmooth_V,iVarSmoothIndex_I)
 
     end subroutine sort_smooth_indicator
     !==========================================================================

@@ -23,7 +23,7 @@ contains
     use ModAdvance
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
     use ModGeometry, ONLY: Used_GB
-    use ModIO, ONLY : restart
+    use ModIO, ONLY : IsRestart
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, &
          UseShockTube, UnitUser_V, ShockLeftState_V, ShockRightState_V, &
          ShockPosition, UnitU_, Io2No_V
@@ -66,10 +66,10 @@ contains
        if(UseB0) call set_b0_cell(iBlock)
 
        ! Subtract B0 from Full B0+B1 from restart to obtain B1
-       if(UseB0 .and. restart .and. UseRestartWithFullB) &
+       if(UseB0 .and. IsRestart .and. UseRestartWithFullB) &
             call subtract_b0(iBlock)
 
-       if(.not.restart)then
+       if(.not.IsRestart)then
 
           if(UseShockTube)then
              ! Calculate sin and cos from the tangent = ShockSlope
@@ -103,11 +103,14 @@ contains
                 do iFluid = 1, nFluid
                    if(nFluid > 1) call select_fluid(iFluid)
                    State_VGB(iRhoUx,i,j,k,iBlock) = &
-                        FaceState_VI(iUx,iBoundary)*FaceState_VI(iRho,iBoundary)
+                        FaceState_VI(iUx,iBoundary) &
+                        *FaceState_VI(iRho,iBoundary)
                    State_VGB(iRhoUy,i,j,k,iBlock) = &
-                        FaceState_VI(iUy,iBoundary)*FaceState_VI(iRho,iBoundary)
+                        FaceState_VI(iUy,iBoundary) &
+                        *FaceState_VI(iRho,iBoundary)
                    State_VGB(iRhoUz,i,j,k,iBlock) = &
-                        FaceState_VI(iUz,iBoundary)*FaceState_VI(iRho,iBoundary)
+                        FaceState_VI(iUz,iBoundary) &
+                        *FaceState_VI(iRho,iBoundary)
                 end do
 
              elseif(.not.UseShockTube)then
@@ -160,7 +163,7 @@ contains
                call add_rotational_velocity(iSignRotationIC, iBlock)
 
           if(UseChGL)call init_chgl(iBlock)
-       end if ! not restart
+       end if ! not IsRestart
 
     end if ! Unused_B
 

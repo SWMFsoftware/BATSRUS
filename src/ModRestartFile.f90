@@ -8,8 +8,8 @@ module ModRestartFile
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, &
        iProc, nProc, iComm
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModIO,         ONLY: nFile, Dt_Output, Dn_Output, Restart_, &
-       restart, save_restart_file
+  use ModIO,         ONLY: nFile, DtOutput_I, DnOutput_I, Restart_, &
+       IsRestart, DoSaveRestart
   use ModMain,       ONLY: &
        nBlockAll,      &
        nStep, tSimulation, DtMax_B, Cfl, CodeVersion, nByteReal, &
@@ -17,13 +17,13 @@ module ModRestartFile
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: CellSize_DB, Coord111_DB, NameGridFile
-  use ModIO,         ONLY: Restart_Bface
+  use ModIO,         ONLY: DoRestartBface
   use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
   use ModMain,       ONLY: UseConstrainB
   use ModPIC,        ONLY: write_pic_status_file, &
        read_pic_status_file, DoRestartPicStatus, AdaptPic
   use ModImplicit, ONLY: UseImplicit, &
-       n_prev, ImplOld_VCB, dt_prev
+       nStepPrev, ImplOld_VCB, DtPrev
   use ModKind,       ONLY: Real4_, Real8_, Int8_
   use ModIoUnit,     ONLY: UnitTmp_
   use ModUtilities,  ONLY: open_file, close_file
@@ -140,15 +140,15 @@ contains
 
     select case(NameCommand)
     case("#SAVERESTART")
-       call read_var('DoSaveRestart', save_restart_file)
-       if(save_restart_file)then
-          call read_var('DnSaveRestart', dn_output(restart_))
-          call read_var('DtSaveRestart', dt_output(restart_))
+       call read_var('DoSaveRestart', DoSaveRestart)
+       if(DoSaveRestart)then
+          call read_var('DnSaveRestart', DnOutput_I(restart_))
+          call read_var('DtSaveRestart', DtOutput_I(restart_))
           nFile = max(nFile, restart_)
        end if
     case("#NEWRESTART")
-       restart = .true.
-       call read_var('DoRestartBFace', Restart_Bface)
+       IsRestart = .true.
+       call read_var('DoRestartBFace', DoRestartBface)
     case("#PRECISION")
        call read_var('nByteReal',nByteRealRead)
        if(nByteReal/=nByteRealRead)then
@@ -296,7 +296,7 @@ contains
     allocate(State4_CV(nI,nJ,nK,nVarRestart))
     allocate(State4_VC(nVarRestart,nI,nJ,nK))
     allocate(StateRead_VCB(nVarRestart,nI,nJ,nK,nBlock))
-    if(UseImplicit .or. n_prev == nStep) &
+    if(UseImplicit .or. nStepPrev == nStep) &
          allocate(ImplOldRead_VCB(nVarRestart,nI,nJ,nK,nBlock))
 
     select case(TypeRestartInFile)
@@ -318,7 +318,7 @@ contains
     ! Copy restart data into State_VGB as needed.
     call match_copy_restart_variables
 
-    ! Restart buffer grid if present
+    ! restart buffer grid if present
     if(DoRestartBuffer)call read_buffer_restart
     ! Deallocate temporary arrays
     deallocate(State8_CV)
@@ -376,8 +376,8 @@ contains
          UseBody, UseBody2, IsTimeAccurate, iStartTime_I, IsStandAlone,       &
          UseBufferGrid, NameUserModule, VersionUserModule
     use ModPhysics,    ONLY: &
-         sw_n_dim, sw_t_dim, sw_ux_dim, sw_uy_dim, &
-         sw_uz_dim, sw_bx_dim, sw_by_dim, sw_bz_dim, &
+         SolarWindNDim, SolarWindTempDim, SolarWindUxDim, SolarWindUyDim, &
+         SolarWindUzDim, SolarWindBxDim, SolarWindByDim, SolarWindBzDim, &
          TypeIoUnit, TypeNormalization, No2Si_V, Io2Si_V, No2Io_V, &
          UnitX_, UnitU_, UnitRho_, &
          rBody, rCurrents, BodyNDim_I, BodyNSpeciesDim_I, BodyTDim_I, &
@@ -391,7 +391,8 @@ contains
     use ModVarIndexes, ONLY: NameEquation
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
 
-    use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
+    use ModGeometry, ONLY: &
+         xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
     use CON_planet,  ONLY: NamePlanet
     use ModReadParam, ONLY: i_line_command
@@ -466,10 +467,10 @@ contains
     write(UnitTmp_,'(a)')'#NSTEP'
     write(UnitTmp_,'(i8,a)')nStep, cTab//cTab//'nStep'
     write(UnitTmp_,*)
-    if(n_prev == nStep)then
+    if(nStepPrev == nStep)then
        write(UnitTmp_,'(a)')'#NPREVIOUS'
-       write(UnitTmp_,'(i8,a)')      n_prev, cTab//cTab//'nPrev'
-       write(UnitTmp_,'(es22.15,a)') dt_prev, cTab//cTab//'DtPrev'
+       write(UnitTmp_,'(i8,a)')      nStepPrev, cTab//cTab//'nPrev'
+       write(UnitTmp_,'(es22.15,a)') DtPrev, cTab//cTab//'DtPrev'
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#STARTTIME'
@@ -529,14 +530,14 @@ contains
     call write_string_tabs_name(TypeCoordSystem,'TypeCoordSystem')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#SOLARWIND'
-    write(UnitTmp_,'(es22.15,a)')SW_n_dim,  cTab//cTab//'SwNDim'
-    write(UnitTmp_,'(es22.15,a)')SW_T_dim,  cTab//cTab//'SwTDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Ux_dim, cTab//cTab//'SwUxDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Uy_dim, cTab//cTab//'SwUyDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Uz_dim, cTab//cTab//'SwUzDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Bx_dim, cTab//cTab//'SwBxDim'
-    write(UnitTmp_,'(es22.15,a)')SW_By_dim, cTab//cTab//'SwByDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Bz_dim, cTab//cTab//'SwBzDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindNDim,  cTab//cTab//'SwNDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindTempDim,  cTab//cTab//'SwTDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindUxDim, cTab//cTab//'SwUxDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindUyDim, cTab//cTab//'SwUyDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindUzDim, cTab//cTab//'SwUzDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindBxDim, cTab//cTab//'SwBxDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindByDim, cTab//cTab//'SwByDim'
+    write(UnitTmp_,'(es22.15,a)')SolarWindBzDim, cTab//cTab//'SwBzDim'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#IOUNITS'
     call write_string_tabs_name(TypeIoUnit, 'TypeIoUnit')
@@ -732,13 +733,13 @@ contains
           StateRead_VCB(iVar,1:nI,1:nJ,1:nK,iBlock) = State8_CV(:,:,:,iVar)
        end do
 
-       if(Restart_Bface)then
+       if(DoRestartBface)then
           read(UnitTmp_, iostat = iError) b8_X, b8_Y, b8_Z
           BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock) = b8_X
           ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = b8_Y
           BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = b8_Z
        end if
-       if(n_prev==nStep) then
+       if(nStepPrev==nStep) then
           read(UnitTmp_, iostat = iError) State8_CV
           do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
@@ -758,13 +759,13 @@ contains
           StateRead_VCB(iVar,1:nI,1:nJ,1:nK,iBlock) = State4_CV(:,:,:,iVar)
        end do
 
-       if(Restart_Bface)then
+       if(DoRestartBface)then
           read(UnitTmp_, iostat = iError) b4_X, b4_Y, b4_Z
           BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock) = b4_X
           ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = b4_Y
           BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = b4_Z
        end if
-       if(n_prev==nStep) then
+       if(nStepPrev==nStep) then
           read(UnitTmp_, iostat = iError) State4_CV
           do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
@@ -838,7 +839,7 @@ contains
             ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock),&
             BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)
     end if
-    if(n_prev==nStep) write(UnitTmp_) &
+    if(nStepPrev==nStep) write(UnitTmp_) &
          (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)
     call close_file
 
@@ -874,12 +875,12 @@ contains
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,1)
     end if
 
-    if(DoRead .and. Restart_Bface .or. &
+    if(DoRead .and. DoRestartBface .or. &
          .not.DoRead .and. UseConstrainB)then
        l = lReal*((nI+1)*nJ*nK + nI*(nJ+1)*nK + nI*nJ*(nK+1))
        lRecord = lRecord + l
     end if
-    if(n_prev==nStep)then
+    if(nStepPrev==nStep)then
        if(DoRead) then
           l = lReal*nVarRestart*nI*nJ*nK
        else
@@ -972,7 +973,7 @@ contains
 
        IsRead = .false.
        if(nByteRealRead == 4)then
-          if(Restart_Bface)then
+          if(DoRestartBface)then
              ! Read with face centered magnetic field for constrained transport
              read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   B4_X, B4_Y, B4_Z
@@ -983,7 +984,7 @@ contains
              end if
              IsRead = .true.
           endif
-          if(n_prev==nStep)then
+          if(nStepPrev==nStep)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   State4_CV
@@ -1003,7 +1004,7 @@ contains
           StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,iBlock) = State4_VC
 
        else
-          if(Restart_Bface)then
+          if(DoRestartBface)then
              ! Read with face centered magnetic field for constrained transport
              read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   B8_X, B8_Y, B8_Z
@@ -1014,7 +1015,7 @@ contains
              end if
              IsRead = .true.
           endif
-          if(n_prev==nStep)then
+          if(nStepPrev==nStep)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
@@ -1097,7 +1098,7 @@ contains
                BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)
           CYCLE
        endif
-       if(n_prev==nStep)then
+       if(nStepPrev==nStep)then
           ! Save previous time step for sake of BDF2 scheme
           write(UnitTmp_, rec=iRec) &
                DtMax_B(iBlock), &
@@ -1155,7 +1156,7 @@ contains
 
     integer            :: i, j, iDim
     character(len=100) :: NameFile
-    character(len=1)   :: NameDim(2) = ['x', 'y']
+    character, parameter:: NameDim_I(2) = ['x', 'y']
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_geoind_restart'
@@ -1167,7 +1168,7 @@ contains
 
     do iDim=1, 2
        ! Open restart file.
-       NameFile = trim(NameRestartOutDir)//NameDim(iDim)//'_'//NameGeoIndFile
+       NameFile = trim(NameRestartOutDir)//NameDim_I(iDim)//'_'//NameGeoIndFile
        call open_file(file=NameFile, NameCaller=NameSub)
 
        ! Size of array:
@@ -1195,7 +1196,7 @@ contains
     integer            :: i, j, iDim, nMagTmp, iSizeTmp
     logical            :: DoRestart
     character(len=100) :: NameFile
-    character(len=1)   :: NameDim(2) = ['x', 'y']
+    character, parameter:: NameDim_I(2) = ['x', 'y']
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_geoind_restart'
@@ -1204,7 +1205,7 @@ contains
 
     do iDim=1, 2
 
-       NameFile = trim(NameRestartInDir)//NameDim(iDim)//'_'//NameGeoindFile
+       NameFile = trim(NameRestartInDir)//NameDim_I(iDim)//'_'//NameGeoindFile
 
        ! Check for restart file.  If one exists, use it.
        inquire(file=NameFile, exist=DoRestart)
@@ -1226,7 +1227,7 @@ contains
 
        if( nMagTmp /= nKpMag .or. iSizeTmp /= iSizeKpWindow ) then
           write(*,*)'ERROR: in file ',trim(NameFile)
-          write(*,*)'Restart file contains  nMagTmp, iSizeTmp=', &
+          write(*,*)'restart file contains  nMagTmp, iSizeTmp=', &
                nMagTmp, iSizeTmp
           write(*,*)'PARAM.in contains nKpMag, iSizeKpWindow =', &
                nKpMag, iSizeKpWindow
@@ -1296,7 +1297,7 @@ contains
        do iBlock = 1,nBlock
           State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
                StateRead_VCB(:,1:nI,1:nJ,1:nK,iBlock)
-          if (n_prev == nStep) &
+          if (nStepPrev == nStep) &
                ImplOld_VCB(:,1:nI,1:nJ,1:nK,iBlock) = &
                ImplOldRead_VCB(:,1:nI,1:nJ,1:nK,iBlock)
        end do
@@ -1451,7 +1452,7 @@ contains
     ! Note this will affect the accuracy of the solution in the
     ! next iteration, but this should be a small effect compared to
     ! the change of state variables
-    if (n_prev == nStep) then
+    if (nStepPrev == nStep) then
        do iBlock = 1,nBlock
           do i =1,nI ; do j=1,nJ; do k=1,nK
              ImplOld_VCB(:,i,j,k,iBlock) = &

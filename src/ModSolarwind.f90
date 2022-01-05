@@ -96,9 +96,9 @@ contains
 
     use ModMain, ONLY: StartTime, tSimulation, &
          UseStrict, TypeCoordSystem, NameVarLower_V
-    use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &
-         SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim, &
-         nVectorVar, iVectorVar_I
+    use ModPhysics, ONLY: SolarWindBxDim, SolarWindByDim, SolarWindBzDim, &
+         SolarWindUxDim, SolarWindUyDim, SolarWindUzDim, SolarWindNDim, &
+         SolarWindTempDim, nVectorVar, iVectorVar_I
     use ModAdvance, ONLY: UseMultiSpecies
     use ModIoUnit, ONLY: UnitTmp_
     use ModNumConst, ONLY: cDegToRad, cHalfPi
@@ -117,7 +117,7 @@ contains
     logical :: UseZeroBx
 
     ! One line of input
-    character (len=100) :: line
+    character (len=100) :: StringLine
     character (len=20) :: String
 
     real    :: TmpData_V(nVar)
@@ -156,18 +156,18 @@ contains
 
     ! Read header information
     do
-       read(UnitTmp_,'(a)', iostat = iError ) line
+       read(UnitTmp_,'(a)', iostat = iError ) StringLine
        if (iError /= 0) call stop_mpi(NameSub// &
             ': could not find #START in '//trim(NameSolarwindFile))
 
-       if(index(line,'#REREAD')>0) read(UnitTmp_,*) DoReadAgain
+       if(index(StringLine,'#REREAD')>0) read(UnitTmp_,*) DoReadAgain
 
-       if(index(line,'#COOR')>0)then
+       if(index(StringLine,'#COOR')>0)then
           read(UnitTmp_,'(a)') NameInputCoord
           call upper_case(NameInputCoord)
        endif
 
-       if(index(line,'#PLANE')>0)then
+       if(index(StringLine,'#PLANE')>0)then
           read(UnitTmp_,*) PlaneAngleXY
           read(UnitTmp_,*) PlaneAngleXZ
           PlaneAngleXY = PlaneAngleXY * cDegToRad
@@ -186,7 +186,7 @@ contains
           if(DoTest)write(*,*)'Normal propagation direction is',Normal_D
        endif
 
-       if(index(line,'#VAR')>0)then
+       if(index(StringLine,'#VAR')>0)then
           read(UnitTmp_,'(a)', iostat = iError) StringInputVar
           call split_string(StringInputVar, nVar, NameInputVar_I, nVarInput)
           UseNumberDensity = .false.
@@ -232,22 +232,22 @@ contains
           end do
        end if
 
-       if(index(line,'#POSITION')>0)then
+       if(index(StringLine,'#POSITION')>0)then
           read(UnitTmp_,*) SatelliteXyz_D(2)
           read(UnitTmp_,*) SatelliteXyz_D(3)
        endif
 
-       if(index(line,'#SATELLITEXYZ')>0)then
+       if(index(StringLine,'#SATELLITEXYZ')>0)then
           read(UnitTmp_,*) SatelliteXyz_D(1)
           read(UnitTmp_,*) SatelliteXyz_D(2)
           read(UnitTmp_,*) SatelliteXyz_D(3)
        endif
 
-       if(index(line,'#ZEROBX')>0)    read(UnitTmp_,*) UseZeroBx
+       if(index(StringLine,'#ZEROBX')>0)    read(UnitTmp_,*) UseZeroBx
 
-       if(index(line,'#TIMEDELAY')>0) read(UnitTmp_,*) TimeDelay
+       if(index(StringLine,'#TIMEDELAY')>0) read(UnitTmp_,*) TimeDelay
 
-       if(index(line,'#START')>0) EXIT
+       if(index(StringLine,'#START')>0) EXIT
     end do
 
     ! Set logicals telling if a variable is read from the input file
@@ -273,8 +273,8 @@ contains
     ! Rewind to the end of #START line
     Rewind UnitTmp_
     do
-       read(UnitTmp_,'(a)', iostat = iError ) line
-       if(index(line,'#START')>0) EXIT
+       read(UnitTmp_,'(a)', iostat = iError ) StringLine
+       if(index(StringLine,'#START')>0) EXIT
     enddo
 
     ! Read the data
@@ -367,7 +367,7 @@ contains
 
     ! This part is only needed for solar wind normalization based on
     ! the input file. This should be eliminated.
-    if (SW_T_dim <= 0.0) then
+    if (SolarWindTempDim <= 0.0) then
 
        if (nData == 1) then
           Solarwind_V = Solarwind_VI(:, 1)
@@ -399,14 +399,14 @@ contains
             Solarwind_V(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
 
        ! These scalars should be removed eventually
-       SW_Bx_dim  = Solarwind_V(Bx_)
-       SW_By_dim  = Solarwind_V(By_)
-       SW_Bz_dim  = Solarwind_V(Bz_)
-       SW_Ux_dim  = Solarwind_V(Ux_)
-       SW_Uy_dim  = Solarwind_V(Uy_)
-       SW_Uz_dim  = Solarwind_V(Uz_)
-       SW_n_dim   = Solarwind_V(rho_)
-       SW_T_dim   = Solarwind_V(p_)
+       SolarWindBxDim  = Solarwind_V(Bx_)
+       SolarWindByDim  = Solarwind_V(By_)
+       SolarWindBzDim  = Solarwind_V(Bz_)
+       SolarWindUxDim  = Solarwind_V(Ux_)
+       SolarWindUyDim  = Solarwind_V(Uy_)
+       SolarWindUzDim  = Solarwind_V(Uz_)
+       SolarWindNDim   = Solarwind_V(rho_)
+       SolarWindTempDim   = Solarwind_V(p_)
     endif
 
     call test_stop(NameSub, DoTest)
@@ -426,8 +426,9 @@ contains
     use ModConst
     use ModMPI
 
+    integer, parameter:: T_= p_
+
     integer:: iData, iFluid
-    integer:: T_= p_
     real :: Solarwind_V(nVar)
 
     logical:: DoTest
@@ -616,7 +617,8 @@ contains
     ! position to Xyz_D using the solar wind velocity and the orientation
     ! of the normal vector Normal_D that is normal to the assumed plane of the
     ! solar wind. TimeSimulation is shifted by the propagation time to
-    ! the "propagated time". Note that when Xyz_D is at the boundary (xMinBox or xMaxBox)
+    ! the "propagated time". Note that when Xyz_D is at the boundary
+    ! (xMinBox or xMaxBox)
     ! and the normal vector points in the +X direction, there is no time shift.
     !
     ! Finally the solar wind data is interpolated to the propagated time.

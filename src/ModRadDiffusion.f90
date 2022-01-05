@@ -464,7 +464,8 @@ contains
 
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    real,optional,intent(out)::DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    real, optional, intent(out):: &
+         DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     logical, optional, intent(in):: DoCalcDeltaIn
 
     logical :: DoCalcDelta
@@ -497,7 +498,7 @@ contains
     logical :: IsNewBlockRadDiffusion
 
     real :: State_V(nVar)
-    integer :: iVarSemi_
+    integer :: iVarSemi
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_rad_diff_state'
@@ -525,14 +526,14 @@ contains
        IsNewBlockTe = .true.
 
        if(DoCalcDelta) then
-          iVarSemi_ = p_
+          iVarSemi = p_
           if(iTeImpl > 0)then
              ! The ghost cells in Te_G are only needed for the electron heat
              ! flux limiter.
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 State_V = State_VGB(:,i,j,k,iBlock)
-                State_V(iVarSemi_) = State_V(iVarSemi_) &
-                     + Source_VCB(iVarSemi_,i,j,k,iBlock)
+                State_V(iVarSemi) = State_V(iVarSemi) &
+                     + Source_VCB(iVarSemi,i,j,k,iBlock)
                 call user_material_properties(&
                      State_V, &
                      i, j, k, iBlock, TeOut = TeSi)

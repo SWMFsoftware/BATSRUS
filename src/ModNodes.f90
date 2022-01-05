@@ -14,9 +14,9 @@ module ModNodes
 
   ! Block node-centered MHD numberings
   integer :: nNodeALL
-  integer, allocatable :: NodeNumberLocal_NB(:,:,:,:)
-  integer, allocatable :: NodeNumberGlobal_NB(:,:,:,:)
-  logical, allocatable :: NodeUniqueGlobal_NB(:,:,:,:)
+  integer, allocatable :: iNodeLocal_NB(:,:,:,:)
+  integer, allocatable :: iNodeGlobal_NB(:,:,:,:)
+  logical, allocatable :: IsNodeUnique_NB(:,:,:,:)
 
 contains
   !============================================================================
@@ -26,10 +26,10 @@ contains
     character(len=*), parameter:: NameSub = 'init_mod_nodes'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(allocated(NodeNumberLocal_NB)) RETURN
-    allocate(NodeNumberLocal_NB(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
-    allocate(NodeNumberGlobal_NB(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
-    allocate(NodeUniqueGlobal_NB(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+    if(allocated(iNodeLocal_NB)) RETURN
+    allocate(iNodeLocal_NB(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+    allocate(iNodeGlobal_NB(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+    allocate(IsNodeUnique_NB(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_nodes allocated arrays'
@@ -44,10 +44,10 @@ contains
     character(len=*), parameter:: NameSub = 'clean_mod_nodes'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(.not.allocated(NodeNumberLocal_NB)) RETURN
-    deallocate(NodeNumberLocal_NB)
-    deallocate(NodeNumberGlobal_NB)
-    deallocate(NodeUniqueGlobal_NB)
+    if(.not.allocated(iNodeLocal_NB)) RETURN
+    deallocate(iNodeLocal_NB)
+    deallocate(iNodeGlobal_NB)
+    deallocate(IsNodeUnique_NB)
 
     if(iProc==0)then
        call write_prefix

@@ -14,14 +14,14 @@ module ModLoadBalance
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxIJK
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data, clean_block_data
-  use ModImplicit, ONLY: UseImplicit, UseBDF2, n_prev, ImplOld_VCB
+  use ModImplicit, ONLY: UseImplicit, UseBDF2, nStepPrev, ImplOld_VCB
   use ModPointImplicit, ONLY: UseUserPointImplicit_B, &
        DoBalancePointImplicit, IsDynamicPointImplicit
   use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
-  use ModFieldTrace, ONLY: ray
+  use ModFieldTrace, ONLY: Trace_DSNB
   use ModAdvance, ONLY: nVar
   use ModB0, ONLY: B0_DGB
-  use ModIo, ONLY: log_vars
+  use ModIo, ONLY: StringLogVar
 
   implicit none
 
@@ -75,14 +75,14 @@ contains
     character(len=*), parameter:: NameSub = 'init_load_balance'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    DoSendRay = UseIM .or. index(log_vars, 'status') > 0  ! to be improved
+    DoSendRay = UseIM .or. index(StringLogVar, 'status') > 0  ! to be improved
 
     nBuffer = nScalarData
 
     if(UseConstrainB) nBuffer = nBuffer + 3*MaxIJK
     if(DoSendRay) &
          nBuffer = nBuffer + 6*nIJK
-    if(UseImplicit .and. UseBDF2 .and. n_prev > 0) &
+    if(UseImplicit .and. UseBDF2 .and. nStepPrev > 0) &
          nBuffer = nBuffer + nVar*nIJK
     if(DoMoveExtraData)then
        if(UseB0) nBuffer = nBuffer + 3*MaxIJK
@@ -151,7 +151,7 @@ contains
 
     end if ! DoMoveExtraData
 
-    if(UseImplicit .and. UseBDF2 .and. n_prev > 0)then
+    if(UseImplicit .and. UseBDF2 .and. nStepPrev > 0)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar; iData = iData+1
           Buffer_I(iData) = ImplOld_VCB(iVar,i,j,k,iBlock)
        end do; end do; end do; end do
@@ -160,7 +160,7 @@ contains
     if(DoSendRay)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
           iData = iData+1
-          Buffer_I(iData) = ray(i1,i2,i,j,k,iBlock)
+          Buffer_I(iData) = Trace_DSNB(i1,i2,i,j,k,iBlock)
        end do; end do; end do; end do; end do
     end if
 
@@ -223,7 +223,7 @@ contains
        end if
     end if ! DoMoveExtraData
 
-    if(UseImplicit .and. UseBDF2 .and. n_prev > 0)then
+    if(UseImplicit .and. UseBDF2 .and. nStepPrev > 0)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
           iData = iData+1
           ImplOld_VCB(iVar,i,j,k,iBlock) = Buffer_I(iData)
@@ -233,7 +233,7 @@ contains
     if(DoSendRay)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
           iData = iData+1
-          ray(i1,i2,i,j,k,iBlock) = Buffer_I(iData)
+          Trace_DSNB(i1,i2,i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do; end do; end do
     end if
 
@@ -268,7 +268,7 @@ contains
          Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl, find_test_cell
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModTimeStepControl, ONLY: UseMaxTimeStep, DtMax, DtMin
-    use ModUserInterface ! user_action, user_block_type
+    use ModUserInterface ! user_action, i_type_block_user
 
     ! Load balance grid using space filling (Morton) ordering of blocks
     ! Coordinates are moved if DoMoveCoord is true.
@@ -376,7 +376,7 @@ contains
           end if
 
           ! Set number of user defined block types (no iBlock argument)
-          nTypeUser = user_block_type()
+          nTypeUser = i_type_block_user()
           if(nTypeUser > 0)then
              ! User defined block types
              iUserTypeBlock = 2*iCrit    ! first bit of the user types
@@ -447,7 +447,7 @@ contains
 
              if(nTypeUser > 0)then
                 ! Add user type bit(s)
-                iType = iType + iUserTypeBlock*user_block_type(iBlock)
+                iType = iType + iUserTypeBlock*i_type_block_user(iBlock)
              end if
 
              if(UseMaxTimeStep .and. DtMax > DtMin .and. DtMin > 0)then
@@ -614,7 +614,7 @@ contains
          SkippedBlock_, ExplBlock_, ImplBlock_
     use ModGeometry, ONLY : rMin_B
     use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
-         ImplCritType, ExplCFL, rImplicit
+         TypeImplCrit, ExplCFL, rImplicit
     use ModIO,       ONLY: write_prefix, iUnitOut
     use ModB0,       ONLY: set_b0_face
     use ModMpi
@@ -673,11 +673,11 @@ contains
             iTypeAdvance_B(1:nBlockMax) = ExplBlock_
 
        ! Select implicitly treated blocks
-       select case(ImplCritType)
+       select case(TypeImplCrit)
        case('dt')
           ! Just checking
           if(.not.IsTimeAccurate)call stop_mpi(&
-               'ImplCritType=dt is only valid in IsTimeAccurate mode')
+               'TypeImplCrit=dt is only valid in IsTimeAccurate mode')
 
           ! Set implicitBLK based on the time step.
           do iBlock=1,nBlockMax
@@ -693,7 +693,8 @@ contains
                 ! For first iteration in the time loop
                 ! calculate stable time step
                 call set_b0_face(iBlock)
-                call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .true.)
+                call calc_face_value(iBlock, DoResChangeOnly=.false., &
+                     DoMonotoneRestrict=.true.)
                 call calc_face_flux(.false., iBlock)
                 call calc_timestep(iBlock)
              end if

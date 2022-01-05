@@ -9,9 +9,9 @@ module ModPlotBox
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
-       plot_form, TypeFile_I, plot_type, ObsPos_DI, IsObsBox_I, nPlotVarMax, &
-       plot_vars1, DimFactor_V, plot_vars
+  use ModIO, ONLY: PlotDx_DI, PlotRange_EI, PlotNormal_DI, TypeCoordPlot_I, &
+       TypePlotFormat_I, TypeFile_I, TypePlot_I, ObsPos_DI, IsObsBox_I, &
+       MaxPlotvar, StringPlotVar, DimFactor_V, StringPlotVar_I
   use ModNumConst,        ONLY: cDegToRad, cTwoPi
   use ModCoordTransform,  ONLY: xyz_to_lonlat
 
@@ -38,13 +38,13 @@ module ModPlotBox
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
   ! Same, but for a single grid point
-  real :: PlotVar_V(nPlotVarMax)
+  real :: PlotVar_V(MaxPlotvar)
 
   ! Coordinate conversion matrix
   real :: PlotToGm_DD(3,3)
   real :: Rot_DD(3,3)
 
-  character (len=20) :: NamePlotVar_V(nPlotVarMax) = ''
+  character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
 contains
   !============================================================================
@@ -72,25 +72,25 @@ contains
     ! Allocate results array and set up the box
     if(allocated(PlotVar_VIII)) RETURN
 
-    plot_vars1 = plot_vars(iFile)
-    call split_string(plot_vars1, nPlotVarMax, NamePlotVar_V, nPlotVar, &
+    StringPlotVar = StringPlotVar_I(iFile)
+    call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar, &
          UseArraySyntaxIn=.true.)
 
     ! Get box resolution, center and size from ModIO arrays:
-    dX     = abs(plot_dx(1,iFile))
-    dY     = abs(plot_dx(2,iFile))
-    dZ     = abs(plot_dx(3,iFile))
-    Xyz0_D = plot_range(1:3,iFile) ! either in LOS or Plot coordinates
-    xLen   = plot_range(4,iFile)
-    yLen   = plot_range(5,iFile)
-    zLen   = plot_range(6,iFile)
+    dX     = abs(PlotDx_DI(1,iFile))
+    dY     = abs(PlotDx_DI(2,iFile))
+    dZ     = abs(PlotDx_DI(3,iFile))
+    Xyz0_D = PlotRange_EI(1:3,iFile) ! either in LOS or Plot coordinates
+    xLen   = PlotRange_EI(4,iFile)
+    yLen   = PlotRange_EI(5,iFile)
+    zLen   = PlotRange_EI(6,iFile)
 
-    xMin   = plot_range(1,iFile) - xLen/2
-    xMax   = plot_range(1,iFile) + xLen/2
-    yMin   = plot_range(2,iFile) - yLen/2
-    yMax   = plot_range(2,iFile) + yLen/2
-    zMin   = plot_range(3,iFile) - zLen/2
-    zMax   = plot_range(3,iFile) + zLen/2
+    xMin   = PlotRange_EI(1,iFile) - xLen/2
+    xMax   = PlotRange_EI(1,iFile) + xLen/2
+    yMin   = PlotRange_EI(2,iFile) - yLen/2
+    yMax   = PlotRange_EI(2,iFile) + yLen/2
+    zMin   = PlotRange_EI(3,iFile) - zLen/2
+    zMax   = PlotRange_EI(3,iFile) + zLen/2
 
     ! Get coordinate transformation matrix:
     PlotToGm_DD = transform_matrix(tSimulation, &
@@ -99,7 +99,7 @@ contains
     ! Check if box center is given in "observer" frame or in TypeCoordPlot
     if(IsObsBox_I(iFile))then
        ! This is the tilt (roll)
-       xAngle = plot_normal(1,iFile) * cDegtoRad
+       xAngle = PlotNormal_DI(1,iFile) * cDegtoRad
 
        ! Translate image center from LOS coordinates to TypeCoordPlot_I(iFile)
        ObsPos_D   = ObsPos_DI(:,iFile)
@@ -117,9 +117,9 @@ contains
        zAngle = cTwoPi - zAngle
     else
        ! Get box orientation from ModIO arrays:
-       xAngle = plot_normal(1,iFile) * cDegtoRad
-       yAngle = plot_normal(2,iFile) * cDegtoRad
-       zAngle = plot_normal(3,iFile) * cDegtoRad
+       xAngle = PlotNormal_DI(1,iFile) * cDegtoRad
+       yAngle = PlotNormal_DI(2,iFile) * cDegtoRad
+       zAngle = PlotNormal_DI(3,iFile) * cDegtoRad
        ! Center of box in this case is given in TypeCoordPlot
        Xyz0Plot_D = Xyz0_D
     end if
@@ -144,8 +144,8 @@ contains
 
     if (DoTest) then
        write(*,*) NameSub//' iFile, nPlotVar=      ', iFile, nPlotVar
-       write(*,*) NameSub//' Raw plot_dx=          ', plot_dx(:,iFile)
-       write(*,*) NameSub//' Raw plot_range=       ', plot_range(:,iFile)
+       write(*,*) NameSub//' Raw PlotDx_DI=          ', PlotDx_DI(:,iFile)
+       write(*,*) NameSub//' Raw PlotRange_EI=       ', PlotRange_EI(:,iFile)
        write(*,*) NameSub//' dX, dY, dZ =      ', dX, dY, dZ
        write(*,*) NameSub//' x, y, z range = ',  &
             xMin, xMax, yMin,yMax,zMin,zMax
@@ -295,7 +295,7 @@ contains
     call test_start(NameSub, DoTest)
 
     ! This subroutine does not support HDF output.
-    if(plot_form(iFile) == 'hdf') call stop_mpi(NameSub// &
+    if(TypePlotFormat_I(iFile) == 'hdf') call stop_mpi(NameSub// &
          ': HDF file type is not supported for BOX output.')
 
     ! Collect results to head node

@@ -49,7 +49,7 @@ module ModIeCoupling
   real, public, allocatable :: SigmaHall_II(:,:), SigmaPedersen_II(:,:)
 
   ! Hall and Pedersen currents
-  real, public, allocatable :: jHall_DII(:,:,:), jPedersen_DII(:,:,:)
+  real, public, allocatable :: HallJ_DII(:,:,:), PedersenJ_DII(:,:,:)
 
   ! Cross polar cap potentials
   real, public:: CpcpNorth = 0.0, CpcpSouth = 0.0
@@ -428,7 +428,7 @@ contains
     use CON_planet_field, ONLY: get_planet_field, map_planet_field
 
     integer :: i, j, iHemisphere
-    real, dimension(3) :: XyzIono_D, bIono_D, B_D, Xyz_tmp
+    real, dimension(3) :: XyzIono_D, bIono_D, B_D, Xyz_D
     real    :: bIono, b
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'map_jouleheating_to_inner_bc'
@@ -442,14 +442,14 @@ contains
        ! map out to GM (caution! , not like map down to the ionosphere,
        ! there is always a corresponding position.)
        call map_planet_field(tSimulation, XyzIono_D, 'SMG NORM', &
-            rBody, Xyz_tmp, iHemisphere)
+            rBody, Xyz_D, iHemisphere)
 
        if (iHemisphere == 0) then
           ! not a mapping in the dipole, but to the equator
           ! assume no outflow to GM inner boundary
           IonoJouleHeating_II(i,j) = 0
        else
-          call get_planet_field(tSimulation, Xyz_tmp, 'SMG NORM', B_D)
+          call get_planet_field(tSimulation, Xyz_D, 'SMG NORM', B_D)
           b = norm2(B_D)
 
           ! scale the jouleheating
@@ -529,7 +529,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     ! If the current arrays are allocated it means they are already calculated
-    if(allocated(jHall_DII)) RETURN
+    if(allocated(HallJ_DII)) RETURN
 
     ! check if iono grid is defined
     if(.not.allocated(ThetaIono_I)) RETURN
@@ -539,8 +539,8 @@ contains
     if(.not.allocated(SigmaHall_II)) RETURN
 
     allocate( &
-         jHall_DII(3,nThetaIono,nPhiIono), &
-         jPedersen_DII(3,nThetaIono,nPhiIono))
+         HallJ_DII(3,nThetaIono,nPhiIono), &
+         PedersenJ_DII(3,nThetaIono,nPhiIono))
 
     do j =1, nPhiIono; do i = 2, nThetaIono-1
 
@@ -560,10 +560,10 @@ contains
        eIono_D(3) = -eTheta*SinTheta_I(i)
 
        ! Hall current for negative charge carriers: jH = -sigmaH*(E x B)
-       jHall_DII(:,i,j) = -SigmaHall_II(i,j)*cross_product(eIono_D, bUnit_D)
+       HallJ_DII(:,i,j) = -SigmaHall_II(i,j)*cross_product(eIono_D, bUnit_D)
 
        ! Perdersen current: jP = sigmaP*E
-       jPedersen_DII(:,i,j) = SigmaPedersen_II(i,j)*eIono_D
+       PedersenJ_DII(:,i,j) = SigmaPedersen_II(i,j)*eIono_D
 
        if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug)then
           write(*,*)NameSub,': i,j,Theta,Phi=', &
@@ -589,9 +589,9 @@ contains
           write(*,*)NameSub,': bUnit_D unit =', bUnit_D
           write(*,*)NameSub,': eIono_D      =', eIono_D*No2Si_V(UnitElectric_)
           ! These are height integrated currents in SI units of A/m
-          write(*,*)NameSub,': Jhall        =', jHall_DII(:,i,j) &
+          write(*,*)NameSub,': Jhall        =', HallJ_DII(:,i,j) &
                *No2Si_V(UnitJ_)*No2Si_V(UnitX_)
-          write(*,*)NameSub,': JPedersen    =', jPedersen_DII(:,i,j) &
+          write(*,*)NameSub,': JPedersen    =', PedersenJ_DII(:,i,j) &
                *No2Si_V(UnitJ_)*No2Si_V(UnitX_)
        end if
 
@@ -648,7 +648,7 @@ contains
     iLine = 0
 
     !$acc parallel copyin(ThetaIono_I, PhiIono_I, SinTheta_I, &
-    !$acc   rIonosphere, dThetaIono, dPhiIono, jHall_DII, jPedersen_DII) &
+    !$acc   rIonosphere, dThetaIono, dPhiIono, HallJ_DII, PedersenJ_DII) &
     !$acc   copy(dBHall_DI, dBPedersen_DI)
     do j = 1, nPhiIono-1; do i = 2, nThetaIono-1
 
@@ -677,9 +677,9 @@ contains
 
           ! Do Biot-Savart integral: dB = j x d/(4pi|d|^3) dA  (mu0=1)
           dBHall_DI(:,iMag)     = dBHall_DI(:,iMag) + &
-               Coef*cross_prod(jHall_DII(:,i,j), dXyz_D)
+               Coef*cross_prod(HallJ_DII(:,i,j), dXyz_D)
           dBPedersen_DI(:,iMag) = dBPedersen_DI(:,iMag) + &
-               Coef*cross_prod(jPedersen_DII(:,i,j), dXyz_D)
+               Coef*cross_prod(PedersenJ_DII(:,i,j), dXyz_D)
 
 #ifndef _OPENACC
           if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug.and.iMag==1)then
@@ -694,10 +694,10 @@ contains
                   *No2Si_V(UnitX_)**2, &
                   norm2(dXyz_D)**3*No2Si_V(UnitX_)**3
              write(*,*)NameSub,': dBHall,  sum =', &
-                  Coef*cross_product(jHall_DII(:,i,j), dXyz_D) &
+                  Coef*cross_product(HallJ_DII(:,i,j), dXyz_D) &
                   *No2Si_V(UnitB_), dBHall_DI(:,iMag)*No2Si_V(UnitB_)
              write(*,*)NameSub,': dBPeders,sum=', &
-                  Coef*cross_product(jPedersen_DII(:,i,j), dXyz_D) &
+                  Coef*cross_product(PedersenJ_DII(:,i,j), dXyz_D) &
                   *No2Si_V(UnitB_), dBPedersen_DI(:,iMag)*No2Si_V(UnitB_)
           end if
 #endif

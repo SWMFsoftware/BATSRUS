@@ -26,7 +26,7 @@ contains
 
     use ModMain
     use ModGeometry, ONLY: &
-         XyzMin_D,XyzMax_D, Used_GB, TypeGeometry, LogRGen_I, CellSize1Min
+         XyzMin_D, XyzMax_D, Used_GB, TypeGeometry, LogRGen_I, CellSize1Min
     use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, &
          set_dimensional_factor
     use ModFieldLineThread, ONLY: DoPlotThreads
@@ -61,17 +61,17 @@ contains
     integer, parameter:: lNameVar = 10
 
     ! Plot variables
-    real :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nplotvarmax)
-    real :: PlotVarBlk(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nplotvarmax)
-    real :: PlotVar_inBody(nplotvarmax)
-    logical :: PlotVar_useBody(nplotvarmax)
+    real :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real :: PlotVarTec_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real :: PlotVarBody_V(MaxPlotvar)
+    logical :: UsePlotVarBody_V(MaxPlotvar)
     real, allocatable :: PlotVarNodes_VNB(:,:,:,:,:)
     real, allocatable :: PlotXYZNodes_DNB(:,:,:,:,:)
     real, allocatable :: PlotVar_VGB(:,:,:,:,:)
 
-    character (len=lNameVar) :: plotvarnames(nplotvarmax) = ''
-    integer :: nplotvar
-    character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
+    character (len=lNameVar) :: NamePlotVar_V(MaxPlotvar) = ''
+    integer :: nPlotVar
+    character(len=lNameVar) :: NamePlotUnit_V(MaxPlotvar)
 
     ! True for shell / box plots and tcp cuts
     logical:: DoPlotShell, DoPlotBox, DoPassPlotVar
@@ -82,10 +82,10 @@ contains
     character (len=10) :: NameParam_I(MaxParam)
     integer :: nParam
 
-    character (Len=500)  :: allnames
-    character (Len=1500) :: unitstr_TEC
-    character (Len=500)  :: unitstr_IDL
-    character (len=80)   :: filename_n, filename_s, filename_h
+    character (Len=500)  :: NameAllVar
+    character (Len=1500) :: StringUnitTec
+    character (Len=500)  :: StringUnitIdl
+    character (len=80)   :: NameFileNorth, NameFileSouth, NameFileHeader
     character (len=80)   :: NameSnapshot, NameProc
     character (len=20)   :: TypeForm
 
@@ -99,20 +99,19 @@ contains
     real   :: CoordUnit
 
     ! Indices and coordinates
-    integer :: iBlock,i,j,k,iVar, H5Index, iProcFound, iBlockFound
-    real :: xmin,xmax,ymin,ymax,zmin,zmax
-    real :: dxblk,dyblk,dzblk
+    integer :: iBlock, i, j, k, iVar, iH5Index, iProcFound, iBlockFound
+    real :: Coord1Min, Coord1Max, Coord2Min, Coord2Max, Coord3Min, Coord3Max
+    real :: CellSize1, CellSize2, CellSize3
 
-    real :: dxPEmin(3),dxGLOBALmin(3)
-    integer :: nPEcells, nBLKcells, nGLOBALcells
-    integer :: nPEcellsN,nPEcellsS,nBLKcellsN, nBLKcellsS
+    real :: CellSizeMin_D(3)
+    integer :: nCellProc, nCellBlock, nCellAll
 
     integer :: iTime_I(7), iDim, iParam
     integer :: iDefaultStartTime_I(7) = [2000,3,21,10,45,0,0]
 
     character (len=10) :: NamePlotVar
 
-    ! Event date for filename
+    ! Event date for NameFile
     character (len=3)  :: NameExt
     character (len=19) :: StringDateTime
 
@@ -120,7 +119,7 @@ contains
     integer :: lRecData
     integer :: iUnit
 
-    logical :: NotACut, H5Advance,IsNonCartesianPlot
+    logical :: IsNotCut, DoH5Advance,IsNonCartesianPlot
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot'
@@ -129,38 +128,38 @@ contains
 
     ! Initialize stuff
 
-    plotvar_inBody = 0.0
-    plotvar_useBody = .false.
+    PlotVarBody_V = 0.0
+    UsePlotVarBody_V = .false.
 
-    unitstr_TEC = ''
-    unitstr_IDL = ''
+    StringUnitTec = ''
+    StringUnitIdl = ''
 
-    plot_type1 = plot_type(iFile)
-    plot_vars1 = plot_vars(iFile)
-    PlotRange_I = plot_range(:,iFile)
+    TypePlot = TypePlot_I(iFile)
+    StringPlotVar = StringPlotVar_I(iFile)
+    PlotRange_I = PlotRange_EI(:,iFile)
 
     ! DoSaveOneTecFile = T only works for 3D tecplot file right now
     DoSaveOneTecFile = DoSaveOneTecFileOrig .and. &
-         (plot_type1(1:3)=='3d_' .and. plot_form(iFile)=='tec' &
-         .or. plot_form(iFile)=='tcp')
+         (TypePlot(1:3)=='3d_' .and. TypePlotFormat_I(iFile)=='tec' &
+         .or. TypePlotFormat_I(iFile)=='tcp')
 
-    call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar,    &
+    call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar,    &
          UseArraySyntaxIn=.true.)
 
     call set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
 
-    call join_string(plotvarnames(1:nplotvar), allnames)
-    allnames=trim(allnames)//' '//trim(plot_pars(iFile))
+    call join_string(NamePlotVar_V(1:nPlotVar), NameAllVar)
+    NameAllVar=trim(NameAllVar)//' '//trim(StringPlotParam_I(iFile))
 
-    if(plot_form(iFile) == 'idl')then
+    if(TypePlotFormat_I(iFile) == 'idl')then
        ! Adjust plotting range with unspecified plot resolution
        ! so that it is aligned with the current grid resolution
-       if(plot_type1(1:3) == 'cut' .and. plot_dx(1,iFile) <= 0.0) &
+       if(TypePlot(1:3) == 'cut' .and. PlotDx_DI(1,iFile) <= 0.0) &
             call adjust_plot_range(CellSize1Min, PlotRange_I)
 
        ! Save generalized coordinates for cuts out of non-Cartesian grids
-       DoSaveGenCoord = plot_type1(1:3) == 'cut' .and. .not. IsCartesianGrid
-       if(DoSaveGenCoord .or. .not.plot_dimensional(iFile))then
+       DoSaveGenCoord = TypePlot(1:3) == 'cut' .and. .not. IsCartesianGrid
+       if(DoSaveGenCoord .or. .not.IsDimensionalPlot_I(iFile))then
           CoordUnit = 1.0
        else
           CoordUnit = No2Io_V(UnitX_)
@@ -170,19 +169,19 @@ contains
     if(DoTest) then
        write(*,*) NameSub
        write(*,*) 'iFile =', iFile
-       write(*,*) 'plot_var =', plot_vars1
-       write(*,*) 'nplotvar = ', nplotvar
-       write(*,*) 'varnames = ', plotvarnames(1:nplotvar)
-       write(*,*) 'plot_dx = ', plot_dx(:,iFile)
-       write(*,*) 'plot_range = ', PlotRange_I
-       write(*,*) 'plot_type =  ', plot_type1
-       write(*,*) 'form =  ', plot_form(iFile)
+       write(*,*) 'plot_var =', StringPlotVar
+       write(*,*) 'nPlotVar = ', nPlotVar
+       write(*,*) 'varnames = ', NamePlotVar_V(1:nPlotVar)
+       write(*,*) 'PlotDx_DI = ', PlotDx_DI(:,iFile)
+       write(*,*) 'PlotRange_EI = ', PlotRange_I
+       write(*,*) 'TypePlot_I =  ', TypePlot
+       write(*,*) 'form =  ', TypePlotFormat_I(iFile)
        write(*,*) 'DoSaveOneTecFile =', DoSaveOneTecFile
     end if
 
     ! Construct the file name
     ! Plotfile names start with the plot directory and the type infor
-    NameSnapshot = trim(NamePlotDir) // trim(plot_type1) // "_"
+    NameSnapshot = trim(NamePlotDir) // trim(TypePlot) // "_"
 
     ! add index of the plot file
     if (iFile-Plot_ < 10) then
@@ -195,26 +194,26 @@ contains
        ! Add time step information
        write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", nStep
     else
-       if(IsPlotName_e)then
+       if(IsPlotNameE)then
           ! Event date
           call get_date_time(iTime_I)
-          write(StringDateTime, '(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)')&
-               iTime_I
+          write(StringDateTime, &
+               '(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)') iTime_I
           NameSnapshot = trim(NameSnapshot) // "_e" // trim(StringDateTime)
        end if
-       if(IsPlotName_t)then
+       if(IsPlotNameT)then
           ! The file name will contain the StringDateOrTime
           call get_time_string
           NameSnapshot = trim(NameSnapshot) // "_t" // StringDateOrTime
        end if
-       if(IsPlotName_n)then
+       if(IsPlotNameN)then
           ! Add time step information
           write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", nStep
        end if
     end if
 
     ! String containing the processor index and file extension
-    NameExt = plot_form(iFile)
+    NameExt = TypePlotFormat_I(iFile)
     if(NameExt == 'tcp') NameExt = 'tec'
     if (DoSaveOneTecFile) then
        write(NameProc, '(a)') "."//NameExt
@@ -227,7 +226,7 @@ contains
     end if
 
     ! Determine if output file is formatted or unformatted
-    IsBinary = save_binary .and. plot_form(iFile)=='idl'
+    IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
     if(IsBinary)then
        TypeForm = "unformatted"
@@ -236,14 +235,14 @@ contains
     end if
 
     ! Spherical slices are special cases:
-    DoPlotShell = plot_type1(1:3) == 'shl'
-    DoPlotBox   = plot_type1(1:3) == 'box'
+    DoPlotShell = TypePlot(1:3) == 'shl'
+    DoPlotBox   = TypePlot(1:3) == 'box'
 
     ! If threaded gap is used, the dimensional factors should be calculated,
     ! which are needed to convert a point state vector to a dimensional form
     if(DoPlotThreads .and. (DoPlotShell .or. DoPlotBox))then
-       if(plot_dimensional(iFile))then
-          call set_dimensional_factor(nPlotVar, plotvarnames(1:nPlotVar), &
+       if(IsDimensionalPlot_I(iFile))then
+          call set_dimensional_factor(nPlotVar, NamePlotVar_V(1:nPlotVar), &
                DimFactor_V(1:nPlotVar) , DimFactorBody_V(1:nPlotVar))
        else
           DimFactor_V = 1.0;  DimFactorBody_V = 1.0
@@ -258,40 +257,42 @@ contains
 
     ! Calculate the record length for direct access data files
     ! The output format for data is ES14.6, so each cell has
-    ! (nDim + nPlotvar)*14 data, plus a new line character
-    lRecData = (nDim + nPlotvar)*14 + 1
+    ! (nDim + nPlotVar)*14 data, plus a new line character
+    lRecData = (nDim + nPlotVar)*14 + 1
 
-    if(plot_form(iFile)=='tcp')then
+    if(TypePlotFormat_I(iFile)=='tcp')then
        ! Calculate and write connectivity file
        call write_tecplot_connect(iFile, &
             trim(NameSnapshot)//"_2"//trim(NameProc))
        ! Open one file for data
-       filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
+       NameFileNorth = trim(NameSnapshot)//"_1"//trim(NameProc)
 
        if(DoSaveOneTecFile)then
           call open_file(&
-               FILE=filename_n, ACCESS='DIRECT', RECL=lRecData, iComm=iComm,&
-               NameCaller=NameSub//'_tcp_direct_data')
+               FILE=NameFileNorth, ACCESS='DIRECT', RECL=lRecData, &
+               iComm=iComm, NameCaller=NameSub//'_tcp_direct_data')
        else
           if(DoSaveTecBinary) then
-             call open_file(FILE=filename_n, NameCaller=NameSub//&
-                  '_tcp_data',access='stream', form='unformatted')
+             call open_file(FILE=NameFileNorth, &
+                  NameCaller=NameSub//'_tcp_data', &
+                  access='stream', form='unformatted')
           else
-             call open_file(FILE=filename_n, NameCaller=NameSub//'_tcp_data')
+             call open_file(FILE=NameFileNorth, &
+                  NameCaller=NameSub//'_tcp_data')
           end if
        end if
     elseif(DoSaveOneTecFile) then
-       ! filename_h stores the header, filename_n stores the data and
-       ! filename_s stores the connectivity
-       filename_h = trim(NameSnapshot)//"_0.tec"
-       filename_n = trim(NameSnapshot)//"_1.tec"
-       filename_s = trim(NameSnapshot)//"_2.tec"
+       ! NameFileHeader stores the header, NameFileNorth stores the data and
+       ! NameFileSouth stores the connectivity
+       NameFileHeader = trim(NameSnapshot)//"_0.tec"
+       NameFileNorth = trim(NameSnapshot)//"_1.tec"
+       NameFileSouth = trim(NameSnapshot)//"_2.tec"
 
        if(DoTest) then
-          write(*,*) 'filename_h =', filename_h
-          write(*,*) 'filename_n =', filename_n
-          write(*,*) 'filename_s =', filename_s
-          write(*,*) 'nplotvar, nI, nJ, nK       =', nPlotvar, nI, nJ, nK
+          write(*,*) 'NameFileHeader =', NameFileHeader
+          write(*,*) 'NameFileNorth =', NameFileNorth
+          write(*,*) 'NameFileSouth =', NameFileSouth
+          write(*,*) 'nPlotVar, nI, nJ, nK       =', nPlotVar, nI, nJ, nK
           write(*,*) 'lRecData, lRecConnect      =', lRecData, lRecConnect
           write(*,*) 'UnitTmp_, UnitTmp2_, iUnit =', &
                UnitTmp_, UnitTmp2_, iUnit
@@ -299,12 +300,12 @@ contains
 
        ! only iProc == 0 opens the header file
        ! we should do this at the end (?)
-       if(iProc == 0) call open_file(iUnit, FILE=filename_h, &
+       if(iProc == 0) call open_file(iUnit, FILE=NameFileHeader, &
             NameCaller=NameSub//'_tec_head')
-       call open_file(FILE=filename_n, &
+       call open_file(FILE=NameFileNorth, &
             ACCESS='DIRECT', RECL=lRecData, iComm=iComm, &
             NameCaller=NameSub//'_tec_direct_data')
-       call open_file(UnitTmp2_, FILE=filename_s, &
+       call open_file(UnitTmp2_, FILE=NameFileSouth, &
             ACCESS='DIRECT', RECL=lRecConnect, iComm=iComm, &
             NameCaller=NameSub//'_tec_direct_connect')
     elseif(DoPlotBox)then
@@ -313,28 +314,28 @@ contains
     elseif(DoPlotShell)then
        ! Initialize the shell grid for this file
        call init_plot_shell(iFile, nPlotVar)
-    elseif(plot_form(iFile)=='tec')then
+    elseif(TypePlotFormat_I(iFile)=='tec')then
        ! Open two files for connectivity and data
-       filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
-       filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
+       NameFileNorth = trim(NameSnapshot)//"_1"//trim(NameProc)
+       NameFileSouth = trim(NameSnapshot)//"_2"//trim(NameProc)
 
        if(.not.DoSaveTecBinary) then
-          call open_file(UnitTmp_,  FILE=filename_n)
-          call open_file(UnitTmp2_, FILE=filename_s)
+          call open_file(UnitTmp_,  FILE=NameFileNorth)
+          call open_file(UnitTmp2_, FILE=NameFileSouth)
        else
-          call open_file(UnitTmp_,  FILE=filename_n, &
+          call open_file(UnitTmp_,  FILE=NameFileNorth, &
                access='stream', form='unformatted')
-          call open_file(UnitTmp2_, FILE=filename_s, &
+          call open_file(UnitTmp2_, FILE=NameFileSouth, &
                access='stream', form='unformatted')
        end if
-    elseif(plot_form(iFile)=='hdf') then
+    elseif(TypePlotFormat_I(iFile)=='hdf') then
        ! Only one plotfile will be generated, so do not include PE number
-       ! in filename. ModHdf5 will handle opening the file.
-       filename = trim(NameSnapshot)//".batl"
+       ! in NameFile. ModHdf5 will handle opening the file.
+       NameFile = trim(NameSnapshot)//".batl"
     else
        ! For IDL just open one file
-       filename = trim(NameSnapshot)//trim(NameProc)
-       call open_file(FILE=filename, form=TypeForm)
+       NameFile = trim(NameSnapshot)//trim(NameProc)
+       call open_file(FILE=NameFile, form=TypeForm)
     end if
 
     IsNonCartesianPlot = .not.IsCartesianGrid
@@ -343,32 +344,32 @@ contains
     if (DoPlotBox) IsNonCartesianPlot = .false.
 
     ! Logical for hdf plots
-    NotACut = plot_type1(1:3)=='3d_' .or. nDim == 1 .or. &
-         (nDim==2 .and. (plot_type1(1:3) == '2d_' &
-         .or.            plot_type1(1:3) == 'z=0'))
+    IsNotCut = TypePlot(1:3)=='3d_' .or. nDim == 1 .or. &
+         (nDim==2 .and. (TypePlot(1:3) == '2d_' &
+         .or.            TypePlot(1:3) == 'z=0'))
 
     ! START IDL
     ! initialize values used in the plotting
-    xmin = PlotRange_I(1)
-    xmax = PlotRange_I(2)
-    ymin = PlotRange_I(3)
-    ymax = PlotRange_I(4)
-    zmin = PlotRange_I(5)
-    zmax = PlotRange_I(6)
+    Coord1Min = PlotRange_I(1)
+    Coord1Max = PlotRange_I(2)
+    Coord2Min = PlotRange_I(3)
+    Coord2Max = PlotRange_I(4)
+    Coord3Min = PlotRange_I(5)
+    Coord3Max = PlotRange_I(6)
 
-    dxPEmin(:)=XyzMax_D(:)-XyzMin_D(:)
+    CellSizeMin_D(:) = XyzMax_D(:) - XyzMin_D(:)
 
-    dxblk=XyzMax_D(1)-XyzMin_D(1)
-    dyblk=XyzMax_D(2)-XyzMin_D(2)
-    dzblk=XyzMax_D(3)-XyzMin_D(3)
-    nPEcells=0; nPEcellsN=0; nPEcellsS=0
-    nBLKcells=0; nBLKcellsN=0; nBLKcellsS=0
+    CellSize1 = XyzMax_D(1) - XyzMin_D(1)
+    CellSize2 = XyzMax_D(2) - XyzMin_D(2)
+    CellSize3 = XyzMax_D(3) - XyzMin_D(3)
+    nCellProc = 0
+    nCellBlock = 0
     ! END IDL
 
     ! To plot the criteria used for AMR we need to
     ! recalulate them for the existing grid.
     do iVar = 1, nPlotVar
-       NamePlotVar = plotvarnames(iVar)
+       NamePlotVar = NamePlotVar_V(iVar)
        if(NamePlotVar(1:4) == 'crit') then
           call calc_error_amr_criteria(nVar, State_VGB)
           EXIT
@@ -376,31 +377,32 @@ contains
     end do
 
     ! plot index for hdf5 plots
-    H5Index = 1
+    iH5Index = 1
     ! Compute the plot variables and write them to the disk
-    PlotVarBlk=0
+    PlotVarTec_GV=0
 
     ! Find the processor and block indexes for the 'blk' plot
-    if(plot_type1(1:3)=='blk') &
-         call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
+    if(TypePlot(1:3) == 'blk') call find_grid_block( &
+         PlotPointXyz_DI(:,iFile), iProcFound, iBlockFound)
 
-    if(plot_form(iFile) == 'hdf') then
-       call init_hdf5_plot(iFile, plot_type1(1:3),  &
-            nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
-            dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
+    if(TypePlotFormat_I(iFile) == 'hdf') then
+       call init_hdf5_plot(iFile, TypePlot(1:3), nPlotVar, &
+            Coord1Min, Coord1Max, Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
+            CellSize1, CellSize2, CellSize3, IsNonCartesianPlot, IsNotCut)
     end if
 
     ! True if message passing is needed for interpolating non-primitive
     ! variables using the ghost cells.
     DoPassPlotVar = DoPlotShell .or. DoPlotBox .or. &
-         plot_form(iFile)=='tcp' .and. nPlotDim < nDim
+         TypePlotFormat_I(iFile)=='tcp' .and. nPlotDim < nDim
 
     if(DoPassPlotVar)then
        ! Calculate plot variables for all blocks and store them into
        ! PlotVar_VGB which will be message passed to fill in ghost cells.
        allocate(PlotVar_VGB(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
-       ! Block loop stage I: copy plotvar to plotvar_VGB and do message pass to
+       ! Block loop stage I:
+       ! copy PlotVar_GV to Plotvar_VGB and do message pass to
        ! fill in the ghost cell values
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
@@ -408,21 +410,22 @@ contains
           ! Use true signed magnetic field in plots
           if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
-          call set_plotvar(iBlock, iFile - plot_, nPlotVar, plotvarnames, PlotVar,&
-               plotvar_inBody,plotvar_useBody)
+          call set_plotvar(iBlock, iFile - plot_, nPlotVar, NamePlotVar_V, &
+               PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
 
-          if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBlock, &
-               iFile-plot_,nplotvar,plotvarnames,PlotVar,plotvar_inBody)
+          if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
+               iFile-plot_,nPlotVar,NamePlotVar_V,PlotVar_GV,PlotVarBody_V)
 
-          ! Copy plotvar for each block into a single array for message passing
+          ! Copy PlotVar_GV for each block into a single array
+          ! for message passing
           do iVar = 1 , nPlotVar
-             PlotVar_VGB(iVar,:,:,:,iBlock) = PlotVar(:,:,:,iVar)
+             PlotVar_VGB(iVar,:,:,:,iBlock) = PlotVar_GV(:,:,:,iVar)
           end do
 
        end do
 
        ! Pass plotting variables to fill ghost cell values
-       call message_pass_cell(nPlotvar, PlotVar_VGB)
+       call message_pass_cell(nPlotVar, PlotVar_VGB)
     end if
 
     do iBlock = 1, nBlock
@@ -431,93 +434,95 @@ contains
        if(DoPassPlotVar) then
           ! Copy precalculated plot variables including ghost cells
           do iVar = 1, nPlotVar
-             PlotVar(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBlock)
+             PlotVar_GV(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBlock)
           end do
        else
           ! Use signed magnetic field in plots
           if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
           ! Set plot variable for this block
-          call set_plotvar(iBlock, iFile-plot_, nPlotVar, plotvarnames, PlotVar,&
-               plotvar_inBody,plotvar_useBody)
+          call set_plotvar(iBlock, iFile-plot_, nPlotVar, NamePlotVar_V, &
+               PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
 
           ! Dimensionalize plot variables
-          if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBlock, &
-               iFile-plot_,nplotvar,plotvarnames,PlotVar,plotvar_inBody)
+          if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
+               iFile-plot_, nPlotVar, NamePlotVar_V, PlotVar_GV, PlotVarBody_V)
        end if
 
        if(DoPlotShell) then
-          call set_plot_shell(iBlock, nPlotvar, PlotVar)
+          call set_plot_shell(iBlock, nPlotVar, PlotVar_GV)
        else if (DoPlotBox) then
-          call set_plot_box(iBlock, nPlotvar, PlotVar)
+          call set_plot_box(iBlock, nPlotVar, PlotVar_GV)
        else
-          select case(plot_form(iFile))
+          select case(TypePlotFormat_I(iFile))
           case('tec')
              call plotvar_to_plotvarnodes
-             if(plot_type1(1:3)=='blk' &
+             if(TypePlot(1:3)=='blk' &
                   .and. iProc == iProcFound .and. iBlock==iBlockFound) &
-                  PlotVarBlk = PlotVar
+                  PlotVarTec_GV = PlotVar_GV
           case('tcp')
-             call write_tecplot_data(iBlock, nPlotvar, PlotVar)
+             call write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
           case('idl')
-             call write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
-                  DoSaveGenCoord, CoordUnit, &
-                  xMin, xMax, yMin, yMax, zMin, zMax,&
-                  dxblk, dyblk, dzblk, nBLKcells)
+             call write_plot_idl(iFile, iBlock, nPlotVar, PlotVar_GV, &
+                  DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
+                  Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
+                  CellSize1, CellSize2, CellSize3, nCellBlock)
           case('hdf')
-             call write_var_hdf5(iFile, plot_type1(1:3), iBlock, H5Index, &
-                  nplotvar, PlotVar, xmin, xmax, ymin, ymax, zmin, zmax, &
-                  dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut, &
-                  nBLKcells, H5Advance)
-             if (H5Advance) H5Index = H5Index + 1
+             call write_var_hdf5(iFile, TypePlot(1:3), iBlock, iH5Index, &
+                  nPlotVar, PlotVar_GV, Coord1Min, Coord1Max, &
+                  Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
+                  CellSize1, CellSize2, CellSize3, IsNonCartesianPlot, &
+                  IsNotCut, nCellBlock, DoH5Advance)
+             if (DoH5Advance) iH5Index = iH5Index + 1
           end select
        end if
 
-       if (plot_form(iFile)=='idl' .and. &
+       if (TypePlotFormat_I(iFile) == 'idl' .and. &
             .not.DoPlotShell .and. .not.DoPlotBox) then
           ! Update number of cells per processor
-          nPEcells = nPEcells + nBLKcells
+          nCellProc = nCellProc + nCellBlock
 
           ! Find smallest cell size in the plotting region
-          dxPEmin(1)=min(dxPEmin(1),dxblk)
-          dxPEmin(2)=min(dxPEmin(2),dyblk)
-          dxPEmin(3)=min(dxPEmin(3),dzblk)
+          CellSizeMin_D(1) = min(CellSizeMin_D(1), CellSize1)
+          CellSizeMin_D(2) = min(CellSizeMin_D(2), CellSize2)
+          CellSizeMin_D(3) = min(CellSizeMin_D(3), CellSize3)
        end if
 
-       if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
+       if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
-    end do ! Block loop stage II
+    end do ! Block loop stage i2
 
     if(allocated(PlotVar_VGB)) deallocate(PlotVar_VGB)
 
     ! Write the HDF5 output file and return
-    select case(plot_form(iFile))
+    select case(TypePlotFormat_I(iFile))
     case('hdf')
 
-       call get_idl_units(iFile, nplotvar,plotvarnames, NamePlotUnit_V, &
-            unitstr_IDL)
-       call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
-            NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
-            .false., plot_dimensional(iFile), &
-            xmin, xmax, ymin, ymax, zmin, zmax)
+       call get_idl_units(iFile, nPlotVar,NamePlotVar_V, NamePlotUnit_V, &
+            StringUnitIdl)
+       call write_plot_hdf5(NameFile, TypePlot(1:3), NamePlotVar_V, &
+            NamePlotUnit_V, nPlotVar, IsNotCut, IsNonCartesianPlot, &
+            .false., IsDimensionalPlot_I(iFile), &
+            Coord1Min, Coord1Max, Coord2Min, Coord2Max, Coord3Min, Coord3Max)
 
        RETURN
     case('tec','tcp')
-       call set_tecplot_var_string(iFile, nPlotVar, plotvarnames, unitstr_TEC)
-       if(DoTest .and. iProc==0) write(*,*) NameSub,' unitstr_TEC:', &
-            trim(unitstr_TEC)
+       call set_tecplot_var_string(iFile, nPlotVar, NamePlotVar_V, &
+            StringUnitTec)
+       if(DoTest .and. iProc==0) write(*,*) NameSub,' StringUnitTec:', &
+            trim(StringUnitTec)
        if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
-            plotvarnames, unitstr_TEC, trim(NameSnapshot)//'.dat')
+            NamePlotVar_V, StringUnitTec, trim(NameSnapshot)//'.dat')
        if(DoPlotBox) call write_plot_box(iFile, nPlotVar, &
-            plotvarnames, unitstr_TEC, trim(NameSnapshot)//'.dat')
+            NamePlotVar_V, StringUnitTec, trim(NameSnapshot)//'.dat')
     case('idl')
-       call get_idl_units(iFile, nplotvar, plotvarnames, NamePlotUnit_V, &
-            unitstr_IDL)
-       if(DoTest .and. iProc==0) write(*,*) unitstr_IDL
+       call get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
+            StringUnitIdl)
+       if(DoTest .and. iProc==0) write(*,*) StringUnitIdl
        if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
-            plotvarnames, unitstr_IDL, trim(NameSnapshot)//'.out')
+            NamePlotVar_V, StringUnitIdl, trim(NameSnapshot)//'.out')
        if(DoPlotBox) call write_plot_box(iFile, nPlotVar, &
-            plotvarnames, unitstr_IDL, trim(NameSnapshot)//'.out')
+            NamePlotVar_V, StringUnitIdl, trim(NameSnapshot)//'.out')
     end select
 
     ! Done writing shell plot
@@ -525,27 +530,28 @@ contains
     if(DoPlotBox) RETURN
 
     ! Write files for tecplot format
-    if(plot_form(iFile)=='tec')then
+    if(TypePlotFormat_I(iFile)=='tec')then
 
        if(.not.allocated(PlotVarNodes_VNB)) then
-          allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBlock))
+          allocate(PlotVarNodes_VNB(MaxPlotvar,nI+1,nJ+1,nK+1,nBlock))
           PlotVarNodes_VNB = 0.0
        end if
 
        ! Pass and average the plot variables
        ! Do not average at pseudo-periodic boundaries
-       call message_pass_node(nPlotvarMax, PlotVarNodes_VNB, &
+       call message_pass_node(MaxPlotvar, PlotVarNodes_VNB, &
             NameOperatorIn='Mean', UsePeriodicCoordIn = .not.IsCartesianGrid)
 
        do iBlock = 1, nBlock; if(Unused_B(iBlock)) CYCLE
-          call average_grid_node(iBlock, nPlotvarMax, &
+          call average_grid_node(iBlock, MaxPlotvar, &
                PlotVarNodes_VNB(:,:,:,:,iBlock))
        end do
 
        if(IsCartesianGrid)then
           call write_tecplot_node_data(&
-               iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
-               Xyz_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax, iUnit)
+               iFile, nPlotVar, PlotVarTec_GV, PlotVarNodes_VNB, &
+               Xyz_DNB, StringUnitTec, Coord1Min, Coord1Max, &
+               Coord2Min, Coord2Max, Coord3Min, Coord3Max, iUnit)
        else
           ! Fix "hanging" nodes so they lie precisely on the same plane
           ! as "non-hanging" nodes. This is needed for non-Cartesian grids.
@@ -555,14 +561,16 @@ contains
 
           do iBlock = 1, nBlock; if(Unused_B(iBlock)) CYCLE
              ! Fixing hanging nodes at resolution change
-             call  average_grid_node(iBlock, 3, PlotXYZNodes_DNB(:,:,:,:,iBlock))
+             call  average_grid_node(iBlock, 3, &
+                  PlotXYZNodes_DNB(:,:,:,:,iBlock))
              ! Make near zero values exactly zero
              where(abs(PlotXYZNodes_DNB(:,:,:,:,iBlock)) < 1e-10) &
                   PlotXYZNodes_DNB(:,:,:,:,iBlock) = 0.
           end do
-          call write_tecplot_node_data(&
-               iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, PlotXYZNodes_DNB, &
-               unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax, iUnit)
+          call write_tecplot_node_data(iFile, nPlotVar, PlotVarTec_GV, &
+               PlotVarNodes_VNB, PlotXYZNodes_DNB, &
+               StringUnitTec, Coord1Min, Coord1Max, Coord2Min, Coord2Max, &
+               Coord3Min, Coord3Max, iUnit)
 
           deallocate(PlotXYZNodes_DNB)
        end if
@@ -570,57 +578,62 @@ contains
        deallocate(PlotVarNodes_VNB)
     end if
 
-    if(plot_form(iFile) == 'idl' .and. nPeCells == 0) then
+    if(TypePlotFormat_I(iFile) == 'idl' .and. nCellProc == 0) then
        call close_file(status = 'DELETE')
     else
        call close_file
     end if
 
     ! Write out header file for tcp format
-    if(plot_form(iFile)=='tcp') &
-         call write_tecplot_head(trim(NameSnapshot)//"_0.tec", unitstr_TEC)
+    if(TypePlotFormat_I(iFile)=='tcp') &
+         call write_tecplot_head(trim(NameSnapshot)//"_0.tec", StringUnitTec)
 
-    if(plot_form(iFile)=='tec') call close_file(UnitTmp2_)
+    if(TypePlotFormat_I(iFile)=='tec') call close_file(UnitTmp2_)
 
     if(DoSaveOneTecFile) call close_file(iUnit)
 
     ! START IDL
-    if (plot_form(iFile)=='idl')then
+    if (TypePlotFormat_I(iFile)=='idl')then
        ! Find smallest cell size and total number of cells
-       call MPI_reduce(dxPEmin,dxGLOBALmin,3,MPI_REAL,MPI_MIN,0,iComm,iError)
-       call MPI_reduce(nPEcells,nGLOBALcells,1,MPI_INTEGER,MPI_SUM,0, &
-            iComm,iError)
+       nCellAll = nCellProc
+       if(nProc > 1)then
+          call MPI_reduce_real_array(CellSizeMin_D, 3, MPI_MIN, 0, &
+               iComm, iError)
+          call MPI_reduce_integer_scalar(nCellAll, MPI_SUM, 0, &
+               iComm, iError)
+       end if
 
-       if(DoTest) write(*,*)NameSub,' dxPEmin,nPEcells=',dxPEmin,nPEcells
+       if(DoTest) write(*,*)NameSub,' DxyzMin_D, nCellProc=', &
+            CellSizeMin_D, nCellProc
     end if
     ! END IDL
 
     ! write header file
     if(iProc==0)then
 
-       select case(plot_form(iFile))
+       select case(TypePlotFormat_I(iFile))
        case('tec','tcp')
-          filename = trim(NameSnapshot) // ".T"
+          NameFile = trim(NameSnapshot) // ".T"
        case('idl')
-          filename = trim(NameSnapshot) // ".h"
+          NameFile = trim(NameSnapshot) // ".h"
        end select
 
-       call open_file(FILE=filename)
+       call open_file(FILE=NameFile)
 
-       select case(plot_form(iFile))
+       select case(TypePlotFormat_I(iFile))
        case('tec','tcp')
-          write(UnitTmp_,'(a)')filename
+          write(UnitTmp_,'(a)')NameFile
           write(UnitTmp_,'(i8,a)')nProc,' nProc'
           write(UnitTmp_,'(i8,a)')nStep,' nStep'
           write(UnitTmp_,'(1pe18.10,a)')tSimulation,' t'
-          write(UnitTmp_,'(a)')trim(unitstr_TEC)
+          write(UnitTmp_,'(a)')trim(StringUnitTec)
           call get_date_time(iTime_I)
           write(UnitTmp_,*) iTime_I(1:7),' year mo dy hr mn sc msc'
           write(UnitTmp_,'(2(1pe13.5),a)') thetaTilt*cRadToDeg, 0.0,  &
                ' thetatilt[deg] phitilt[deg]'
        case('idl')
           write(UnitTmp_,'(a)') '#HEADFILE'
-          write(UnitTmp_,'(a)') filename
+          write(UnitTmp_,'(a)') NameFile
           write(UnitTmp_,'(i8,16x,a)') nProc, 'nProc'
           write(UnitTmp_,'(l8,16x,a)') IsBinary, 'IsBinary'
           if(IsBinary) &
@@ -676,13 +689,13 @@ contains
           write(UnitTmp_,*)
 
           write(UnitTmp_,'(a)') '#NCELL'
-          write(UnitTmp_,'(i10,14x,a)') nGLOBALcells, 'nCellPlot'
+          write(UnitTmp_,'(i10,14x,a)') nCellAll, 'nCellPlot'
           write(UnitTmp_,*)
 
           write(UnitTmp_,'(a)') '#CELLSIZE'
           do iDim = 1, nDim
              write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
-                  DxGlobalMin(iDim)*CoordUnit, 'CellSizeMin',iDim
+                  CellSizeMin_D(iDim)*CoordUnit, 'CellSizeMin',iDim
           enddo
           write(UnitTmp_,*)
 
@@ -698,7 +711,7 @@ contains
           write(UnitTmp_,'(a)') '#PLOTRESOLUTION'
           do iDim = 1, nDim
              write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
-                  plot_dx(iDim,iFile)*CoordUnit, 'DxSavePlot', iDim
+                  PlotDx_DI(iDim,iFile)*CoordUnit, 'DxSavePlot', iDim
           enddo
           write(UnitTmp_,*)
 
@@ -711,21 +724,22 @@ contains
           write(UnitTmp_,*)
 
           write(UnitTmp_,'(a)') '#PLOTVARIABLE'
-          write(UnitTmp_,'(i8,16x,a)') nplotvar, 'nPlotVar'
-          write(UnitTmp_,'(a)')trim(allnames)
+          write(UnitTmp_,'(i8,16x,a)') nPlotVar, 'nPlotVar'
+          write(UnitTmp_,'(a)')trim(NameAllVar)
           if(TypeFile_I(iFile) == 'tec' .or. TypeFile_I(iFile) == 'tcp')then
-             call set_tecplot_var_string(iFile, nPlotVar, plotvarnames, &
-                  unitstr_TEC)
-             write(UnitTmp_,'(a)')trim(unitstr_TEC)
-          elseif( unitstr_IDL == '') then
+             call set_tecplot_var_string(iFile, nPlotVar, NamePlotVar_V, &
+                  StringUnitTec)
+             write(UnitTmp_,'(a)')trim(StringUnitTec)
+          elseif( StringUnitIdl == '') then
              write(UnitTmp_,'(a)')'normalized units'
           elseif(all(iDefaultStartTime_I == iStartTime_I))then
-             write(UnitTmp_,'(a)')trim(unitstr_IDL)
+             write(UnitTmp_,'(a)')trim(StringUnitIdl)
           else
              call get_date_time(iTime_I)
-             write(StringDateTime, '(i4.4,"-",i2.2,"-",i2.2,"T",i2.2,":",i2.2,":",i2.2)')&
+             write(StringDateTime, &
+                  '(i4.4,"-",i2.2,"-",i2.2,"T",i2.2,":",i2.2,":",i2.2)')&
                   iTime_I(1:6)
-             write(UnitTmp_,'(a)')StringDateTime//'; '//trim(unitstr_IDL)
+             write(UnitTmp_,'(a)')StringDateTime//'; '//trim(StringUnitIdl)
           endif
           write(UnitTmp_,*)
 
@@ -739,12 +753,12 @@ contains
     end if
 
     ! Save tree information for nDim dimensional IDL file
-    if(plot_form(iFile) == 'idl' .and.               &
-         (    plot_type1(1:3) == '3d_'               &
-         .or. plot_type1(1:3) == '2d_' .and. nDim<=2 &
-         .or. plot_type1(1:3) == '1d_' .and. nDim==1 ) )then
-       filename = trim(NameSnapshot)//'.tree'
-       call write_tree_file(filename)
+    if(TypePlotFormat_I(iFile) == 'idl' .and.               &
+         (    TypePlot(1:3) == '3d_'               &
+         .or. TypePlot(1:3) == '2d_' .and. nDim<=2 &
+         .or. TypePlot(1:3) == '1d_' .and. nDim==1 ) )then
+       NameFile = trim(NameSnapshot)//'.tree'
+       call write_tree_file(NameFile)
     end if
 
     if(DoTest)write(*,*) NameSub,' finished'
@@ -754,13 +768,13 @@ contains
     !==========================================================================
     subroutine plotvar_to_plotvarnodes
 
-      integer :: ii,jj,kk
-      integer :: nCell_NV(nI+1,nJ+1,nK+1,nPlotvarMax)
-      real    :: PlotVar_NV(nI+1,nJ+1,nK+1,nPlotvarMax)
+      integer :: i2,j2,k2
+      integer :: nCell_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
+      real    :: PlotVar_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
       real    :: r2, r2Min
       !------------------------------------------------------------------------
       if(.not.allocated(PlotVarNodes_VNB)) then
-         allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBlock))
+         allocate(PlotVarNodes_VNB(MaxPlotvar,nI+1,nJ+1,nK+1,nBlock))
          PlotVarNodes_VNB = 0.0
       end if
 
@@ -771,13 +785,13 @@ contains
       ! Count the number of cells contributing to the node value.
       ! Then message_pass_node will do the averaging at block boundaries.
       do k=1,nK; do j=1,nJ; do i=1,nI  ! Cell loop
-         do iVar = 1, nPlotvar
-            if ( Used_GB(i,j,k,iBlock) .or. plotvar_useBody(iVar) )then
-               do kk=0,1; do jj=0,1; do ii=0,1
-                  nCell_NV(i+ii,j+jj,k+kk,iVar) = &
-                       nCell_NV(i+ii,j+jj,k+kk,iVar) + 1
-                  PlotVar_NV(i+ii,j+jj,k+kk,iVar) = &
-                       PlotVar_NV(i+ii,j+jj,k+kk,iVar)     + plotvar(i,j,k,iVar)
+         do iVar = 1, nPlotVar
+            if ( Used_GB(i,j,k,iBlock) .or. UsePlotVarBody_V(iVar) )then
+               do k2=0,1; do j2=0,1; do i2=0,1
+                  nCell_NV(i+i2,j+j2,k+k2,iVar) = &
+                       nCell_NV(i+i2,j+j2,k+k2,iVar) + 1
+                  PlotVar_NV(i+i2,j+j2,k+k2,iVar) = &
+                       PlotVar_NV(i+i2,j+j2,k+k2,iVar) + PlotVar_GV(i,j,k,iVar)
                end do; end do; end do
             end if
          end do
@@ -790,21 +804,21 @@ contains
 
          if(UseBody) r2 = sum(Xyz_DNB(:,i,j,k,iBlock)**2)
 
-         do iVar = 1, nplotvar
+         do iVar = 1, nPlotVar
             if (nCell_NV(i,j,k,iVar) > 0) then
                PlotVarNodes_VNB(iVar,i,j,k,iBlock) = &
                     PlotVar_NV(i,j,k,iVar)/nCell_NV(i,j,k,iVar)
 
-               ! This will zero out values otherwise true with plotvar_useBody
-               ! The intent of plotvar_useBody is to fill nodes inside of the
+               ! This will zero out values otherwise true with UsePlotVarBody_V
+               ! The intent of UsePlotVarBody_V is to fill nodes inside of the
                ! body with values for plotting. However, when allowed to go all
                ! the way to the origin, B traces will continuously loop through
-               ! the body and out. Setting the values to 0 inside 0.51 fixes it.
-               if(plotvar_useBody(iVar) .and. UseBody)then
+               ! the body and out. Setting the values to 0 inside 0.51 fixes it
+               if(UsePlotVarBody_V(iVar) .and. UseBody)then
                   if(r2 < r2Min) PlotVarNodes_VNB(iVar,i,j,k,iBlock) = 0.0
                end if
             else
-               PlotVarNodes_VNB(iVar,i,j,k,iBlock) = plotvar_inBody(iVar)
+               PlotVarNodes_VNB(iVar,i,j,k,iBlock) = PlotVarBody_V(iVar)
             end if
          end do
       end do; end do; end do
@@ -844,7 +858,7 @@ contains
     character(len=*), parameter:: NameSub = 'set_plot_scalars'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    NameParam = plot_pars(iFile)
+    NameParam = StringPlotParam_I(iFile)
 
     call lower_case(NameParam)
     call split_string(NameParam, MaxParam, NameParam_I, nParam, &
@@ -873,14 +887,14 @@ contains
        case('ge')
           Param_I(iPar) = GammaElectron
        case('c','clight')
-          if(plot_dimensional(iFile)) then
+          if(IsDimensionalPlot_I(iFile)) then
              Param_I(iPar) = Clight*No2Io_V(UnitU_)
           else
              Param_I(iPar) = Clight
           end if
        case('r','rbody')
           Param_I(iPar) = rBody
-          if(plot_dimensional(iFile))&
+          if(IsDimensionalPlot_I(iFile)) &
                Param_I(iPar) = Param_I(iPar)*No2Io_V(UnitX_)
           ! BEGIN CCMC REQUESTED PARAMETERS to describe block structure
        case('p1')
@@ -904,7 +918,7 @@ contains
        case('eta')
           Param_I(iPar) = Eta0Si
        case('mu')
-          Param_I(iPar) = mu_los
+          Param_I(iPar) = MuLimbDarkening
        case('obsx')
           Param_I(iPar) = ObsPos_DI(1,iFile)
        case('obsy')
@@ -914,31 +928,31 @@ contains
        case('rTrace')
           Param_I(iPar) = rTrace
        case('dt')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = dt*No2Io_V(UnitT_)
           else
              Param_I(iPar) = dt
           end if
        case('xsi')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = Io2Si_V(UnitX_)
           else
              Param_I(iPar) = No2Si_V(UnitX_)
           end if
        case('tsi')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = Io2Si_V(UnitT_)
           else
              Param_I(iPar) = No2Si_V(UnitT_)
           end if
        case('usi')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = Io2Si_V(UnitU_)
           else
              Param_I(iPar) = No2Si_V(UnitU_)
           end if
        case('rhosi')
-          if(plot_dimensional(iFile))then
+          if(IsDimensionalPlot_I(iFile))then
              Param_I(iPar) = Io2Si_V(UnitRho_)
           else
              Param_I(iPar) = No2Si_V(UnitRho_)
@@ -993,8 +1007,8 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_plot_scalars
   !============================================================================
-  subroutine set_plotvar(iBlock, iPlotFile, nPlotvar, plotvarnames, Plotvar,&
-       plotvar_inBody, plotvar_useBody)
+  subroutine set_plotvar(iBlock, iPlotFile, nPlotVar, NamePlotVar_V, &
+       PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
 
     use ModMain
     use ModVarIndexes
@@ -1009,10 +1023,10 @@ contains
     use ModPhysics, ONLY: BodyRho_I, BodyP_I, OmegaBody, FaceState_VI, &
          ElectronPressureRatio, RhoBody2, pBody2, rBody2
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
-    use ModFieldTrace, ONLY: ray
+    use ModFieldTrace, ONLY: Trace_DSNB
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
-         plot_dimensional, Plot_
+         IsDimensionalPlot_I, Plot_
     use ModHallResist, ONLY: UseHallResist, &
          set_hall_factor_cell, HallFactor_C, IsHallBlock
     use ModResistivity, ONLY: Eta_GB, Eta0
@@ -1044,19 +1058,19 @@ contains
 
     use ModUserInterface ! user_set_plot_var
 
-    integer, intent(in) :: iBlock,iPlotFile,Nplotvar
-    character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-    real, intent(out)   :: plotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
-    real, intent(out)   :: plotvar_inBody(nPlotVar)
-    logical, intent(out):: plotvar_useBody(nPlotVar)
+    integer, intent(in) :: iBlock,iPlotFile,nPlotVar
+    character (LEN=10), intent(in) :: NamePlotVar_V(nPlotVar)
+    real, intent(out)   :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
+    real, intent(out)   :: PlotVarBody_V(nPlotVar)
+    logical, intent(out):: UsePlotVarBody_V(nPlotVar)
 
     character (len=10)  :: String, NamePlotVar
 
-    real:: tmp1Var, tmp2Var
-    real, allocatable :: J_DC(:,:,:,:)
+    real:: FullB2, FullBRhoU
+    real, allocatable :: Current_DC(:,:,:,:)
     real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:), u_DG(:,:,:,:)
 
-    integer :: iVar, itmp, jtmp, jVar, iIon, iFluid
+    integer :: iVar, i3, j3, jVar, iIon, iFluid
     integer :: i,j,k
 
     integer:: iDir, Di, Dj, Dk
@@ -1066,8 +1080,8 @@ contains
     logical :: IsFound
 
     ! ModCurrent with get_current calculate jx,jy and jz at the same time,
-    ! but we write them separately. DoCurrent used to make sure we only calculate
-    ! the currents ones per block
+    ! but we write them separately.
+    ! DoCurrent used to make sure we only calculate the currents once per block
     logical :: DoCurrent
 
     ! Passed to and set by get_face_curl
@@ -1080,7 +1094,8 @@ contains
     if(.not.UseB)then
        FullB_DG = 0.00
     elseif(UseB0)then
-       FullB_DG(:,:,:,:) = State_VGB(Bx_:Bz_,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+       FullB_DG(:,:,:,:) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
+            + B0_DGB(:,:,:,:,iBlock)
     else
        FullB_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
     end if
@@ -1092,12 +1107,13 @@ contains
     IsNewBlockCurrent = .true.
 
     ! Set default value to zero
-    PlotVar = 0.0
+    PlotVar_GV = 0.0
 
     do iVar = 1, nPlotVar
-       NamePlotVar = plotvarnames(iVar)
+       NamePlotVar = NamePlotVar_V(iVar)
 
-       ! Default values for TecPlot variable name and TecPlot and IDL unit names
+       ! Default values for TecPlot variable name
+       ! and TecPlot and IDL unit names
        NameVarUserTec_I(iVar)  = NamePlotVar
        NameUnitUserTec_I(iVar) = ' '
        NameUnitUserIdl_I(iVar) = '?'
@@ -1106,166 +1122,171 @@ contains
        String = NamePlotVar
        call extract_fluid_name(String,iFluid)
 
-       ! Set plotvar_inBody to something reasonable for inside the body.
-       ! Load zeros (0) for most values - load something better for rho, p, and T
-       ! We know that U,B,J are okay with zeroes, others should be changed if
-       ! necessary.  Note that all variables not set to 0 should be loaded below.
-       ! Note that this is used for tecplot corner extrapolation and for nothing
-       ! else.
-       plotvar_inBody(iVar) = 0.0
+       ! Set PlotVarBody_V to something reasonable for inside the body.
+       ! Load zeros (0) for most values - load something better for
+       ! rho, p, and T. We know that U, B, J are okay with zeroes,
+       ! others should be changed if necessary.
+       ! Note that all variables not set to 0 should be loaded below.
+       ! Note that this is used for tecplot corner extrapolation only.
+       PlotVarBody_V(iVar) = 0.0
 
-       ! Set plotvar_useBody to false unless cell values inside of the body are
-       ! to be used for plotting.
-       plotvar_useBody(iVar) = .false.
+       ! Set UsePlotVarBody_V to false unless cell values inside of the body
+       ! are to be used for plotting.
+       UsePlotVarBody_V(iVar) = .false.
 
        select case(String)
 
           ! Cartesian coordinates for non-Cartesian plots
        case('x')
-          PlotVar(:,:,:,iVar) = Xyz_DGB(1,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Xyz_DGB(1,:,:,:,iBlock)
        case('y')
-          PlotVar(:,:,:,iVar) = Xyz_DGB(2,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Xyz_DGB(2,:,:,:,iBlock)
        case('z')
-          PlotVar(:,:,:,iVar) = Xyz_DGB(3,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Xyz_DGB(3,:,:,:,iBlock)
        case('r')
-          PlotVar(:,:,:,iVar) = r_GB(:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = r_GB(:,:,:,iBlock)
 
           ! BASIC MHD variables
        case('rho')
-          PlotVar(:,:,:,iVar) = State_VGB(iRho,:,:,:,iBlock)
-          plotvar_inBody(iVar) = BodyRho_I(iFluid)
+          PlotVar_GV(:,:,:,iVar) = State_VGB(iRho,:,:,:,iBlock)
+          PlotVarBody_V(iVar) = BodyRho_I(iFluid)
           ! If Body2 is used, set Rho=RhoBody2 inside it
           if(UseBody2)then
-             if(rMinBody2_B(iBlock) < rBody2) plotvar_inBody(iVar) = RhoBody2
+             if(rMinBody2_B(iBlock) < rBody2) PlotVarBody_V(iVar) = RhoBody2
           end if
        case('rhoux','mx')
           if (UseRotatingFrame) then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar(i,j,k,iVar) = State_VGB(iRhoUx,i,j,k,iBlock) &
-                     -State_VGB(iRho,i,j,k,iBlock)*OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
+                PlotVar_GV(i,j,k,iVar) = State_VGB(iRhoUx,i,j,k,iBlock) &
+                     - State_VGB(iRho,i,j,k,iBlock) &
+                     *OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
              end do; end do; end do
           else
-             PlotVar(:,:,:,iVar) = State_VGB(iRhoUx,:,:,:,iBlock)
+             PlotVar_GV(:,:,:,iVar) = State_VGB(iRhoUx,:,:,:,iBlock)
           end if
        case('rhouy','my')
           if (UseRotatingFrame) then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar(i,j,k,iVar) = State_VGB(iRhoUy,i,j,k,iBlock) &
-                     +State_VGB(iRho,i,j,k,iBlock)*OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
+                PlotVar_GV(i,j,k,iVar) = State_VGB(iRhoUy,i,j,k,iBlock) &
+                     +State_VGB(iRho,i,j,k,iBlock) &
+                     *OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
              end do; end do; end do
           else
-             PlotVar(:,:,:,iVar) = State_VGB(iRhoUy,:,:,:,iBlock)
+             PlotVar_GV(:,:,:,iVar) = State_VGB(iRhoUy,:,:,:,iBlock)
           end if
        case('rhouz','mz')
-          PlotVar(:,:,:,iVar) = State_VGB(iRhoUz,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = State_VGB(iRhoUz,:,:,:,iBlock)
        case('bx')
-          plotvar_useBody(iVar) = NameThisComp/='SC'
-          PlotVar(:,:,:,iVar) = FullB_DG(x_,:,:,:)
+          UsePlotVarBody_V(iVar) = NameThisComp/='SC'
+          PlotVar_GV(:,:,:,iVar) = FullB_DG(x_,:,:,:)
        case('by')
-          plotvar_useBody(iVar) = NameThisComp/='SC'
-          PlotVar(:,:,:,iVar) = FullB_DG(y_,:,:,:)
+          UsePlotVarBody_V(iVar) = NameThisComp/='SC'
+          PlotVar_GV(:,:,:,iVar) = FullB_DG(y_,:,:,:)
        case('bz')
-          plotvar_useBody(iVar) = NameThisComp/='SC'
-          PlotVar(:,:,:,iVar) = FullB_DG(z_,:,:,:)
+          UsePlotVarBody_V(iVar) = NameThisComp/='SC'
+          PlotVar_GV(:,:,:,iVar) = FullB_DG(z_,:,:,:)
        case('bxl')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = BxFace_GB(1:nI,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = BxFace_GB(1:nI,1:nJ,1:nK,iBlock)
        case('bxr')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = BxFace_GB(2:nI+1,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = BxFace_GB(2:nI+1,1:nJ,1:nK,iBlock)
        case('byl')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = ByFace_GB(1:nI,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = ByFace_GB(1:nI,1:nJ,1:nK,iBlock)
        case('byr')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = ByFace_GB(1:nI,2:nJ+1,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = ByFace_GB(1:nI,2:nJ+1,1:nK,iBlock)
        case('bzl')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = BzFace_GB(1:nI,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = BzFace_GB(1:nI,1:nJ,1:nK,iBlock)
        case('bzr')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = BzFace_GB(1:nI,1:nJ,2:nK+1,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = BzFace_GB(1:nI,1:nJ,2:nK+1,iBlock)
           !
        case('e')
-          call get_fluid_energy_block(iBlock, iFluid, PlotVar(:,:,:,iVar))
+          call get_fluid_energy_block(iBlock, iFluid, PlotVar_GV(:,:,:,iVar))
           ! Add 0.5*( (B0+B1)^2 - B1^2 ) so the energy contains B0
           if(iFluid == 1 .and. IsMhd .and. UseB0)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar(i,j,k,iVar) = PlotVar(i,j,k,iVar) + 0.5*( &
+                PlotVar_GV(i,j,k,iVar) = PlotVar_GV(i,j,k,iVar) + 0.5*( &
                      sum(( State_VGB(Bx_:Bz_,i,j,k,iBlock)      &
                      +     B0_DGB(:,i,j,k,iBlock))**2      ) -  &
                      sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)    )
              end do; end do; end do
           end if
        case('p','pth')
-          PlotVar(:,:,:,iVar) = State_VGB(iP,:,:,:,iBlock)
-          plotvar_inBody(iVar) = BodyP_I(iFluid)
+          PlotVar_GV(:,:,:,iVar) = State_VGB(iP,:,:,:,iBlock)
+          PlotVarBody_V(iVar) = BodyP_I(iFluid)
           ! If Body2 is used, set p=pBody2 inside it
           if(UseBody2)then
-             if(rMinBody2_B(iBlock) < rBody2) plotvar_inBody(iVar) = pBody2
+             if(rMinBody2_B(iBlock) < rBody2) PlotVarBody_V(iVar) = pBody2
           end if
 
           ! EXTRA MHD variables
        case('eta')
           if(allocated(Eta_GB))then
-             PlotVar(:,:,:,iVar) = Eta_GB(:,:,:,iBlock)
+             PlotVar_GV(:,:,:,iVar) = Eta_GB(:,:,:,iBlock)
           else
-             PlotVar(:,:,:,iVar) = Eta0
+             PlotVar_GV(:,:,:,iVar) = Eta0
           end if
        case('n','t','temp')
           ! Calculate the number density
           if(UseMultiSpecies)then
              do jVar = SpeciesFirst_, SpeciesLast_
-                PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
+                PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) + &
                      State_VGB(jVar,:,:,:,iBlock)/MassSpecies_V(jVar)
              end do
           else if(iFluid == 1 .and. UseMultiIon)then
              ! Add up ion number densities
              do iIon = 1, nIonFluid
-                PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
+                PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) + &
                      State_VGB(iRhoIon_I(iIon),:,:,:,iBlock)/MassIon_I(iIon)
              end do
           else
-             PlotVar(:,:,:,iVar) = State_VGB(iRho,:,:,:,iBlock)/MassFluid_I(iFluid)
+             PlotVar_GV(:,:,:,iVar) &
+                  = State_VGB(iRho,:,:,:,iBlock)/MassFluid_I(iFluid)
           end if
 
-          ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
+          ! Calculate temperature from P= n*k*T+ne*k*Te = n*k*T*(1+ne/n*Te/T)
           if(String /= 'n')then
              ! t = p/n
-             PlotVar(:,:,:,iVar) = &
-                  State_VGB(iP,:,:,:,iBlock) / PlotVar(:,:,:,iVar)
+             PlotVar_GV(:,:,:,iVar) = &
+                  State_VGB(iP,:,:,:,iBlock) / PlotVar_GV(:,:,:,iVar)
 
              !
              if(nFluid==1 .and. .not.UseElectronPressure &
                   .and. ElectronPressureRatio > 0.0) &
-                  PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)&
+                  PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar)&
                   /(1 + ElectronPressureRatio)
           end if
        case('ux')
           if (UseRotatingFrame) then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar(i,j,k,iVar) = &
-                     State_VGB(iRhoUx,i,j,k,iBlock)/State_VGB(iRho,i,j,k,iBlock) &
+                PlotVar_GV(i,j,k,iVar) = &
+                     State_VGB(iRhoUx,i,j,k,iBlock) &
+                     /State_VGB(iRho,i,j,k,iBlock) &
                      - OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
              end do; end do; end do
           else
-             PlotVar(:,:,:,iVar) = &
+             PlotVar_GV(:,:,:,iVar) = &
                   State_VGB(iRhoUx,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
           end if
        case('uy')
           if (UseRotatingFrame) then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar(i,j,k,iVar) = &
-                     State_VGB(iRhoUy,i,j,k,iBlock)/State_VGB(iRho,i,j,k,iBlock) &
+                PlotVar_GV(i,j,k,iVar) = &
+                     State_VGB(iRhoUy,i,j,k,iBlock) &
+                     /State_VGB(iRho,i,j,k,iBlock) &
                      + OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
              end do; end do; end do
           else
-             PlotVar(:,:,:,iVar) = &
-                  State_VGB(iRhoUy,:,:,:,iBlock) / State_VGB(iRho,:,:,:,iBlock)
+             PlotVar_GV(:,:,:,iVar) = &
+                  State_VGB(iRhoUy,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
           end if
        case('uxrot')
-          PlotVar(:,:,:,iVar) = &
+          PlotVar_GV(:,:,:,iVar) = &
                State_VGB(iRhoUx,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
        case('uyrot')
-          PlotVar(:,:,:,iVar) = &
-               State_VGB(iRhoUy,:,:,:,iBlock) / State_VGB(iRho,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = &
+               State_VGB(iRhoUy,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
        case('uz','uzrot')
-          PlotVar(:,:,:,iVar) = &
-               State_VGB(iRhoUz,:,:,:,iBlock) / State_VGB(iRho,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = &
+               State_VGB(iRhoUz,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
        case('divu')
           allocate(u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           ! Calculate velocity
@@ -1275,32 +1296,36 @@ contains
           end do; end do; end do
           ! Calculate div(u)
           call calc_divergence(iBlock, u_DG, &
-               nG, PlotVar(:,:,:,iVar), UseBodyCellIn=.true.)
+               nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
           deallocate(u_DG)
        case('gradlogp')
-          if(.not. allocated(GradPe_DG)) allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-          if(.not. allocated(Var_G)) allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          if(.not. allocated(GradPe_DG)) &
+               allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          if(.not. allocated(Var_G)) &
+               allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           ! Log of pressure gradient
           Var_G = log10(State_VGB(P_,:,:,:,iBlock))
           call calc_gradient(iBlock, Var_G, nG, GradPe_DG)
-          PlotVar(:,:,:,iVar) = sqrt(sum(GradPe_DG**2, DIM=1))
+          PlotVar_GV(:,:,:,iVar) = sqrt(sum(GradPe_DG**2, DIM=1))
        case('b1x')
-          PlotVar(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBlock)
        case('b1y')
-          PlotVar(:,:,:,iVar) = State_VGB(By_,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = State_VGB(By_,:,:,:,iBlock)
        case('b1z')
-          PlotVar(:,:,:,iVar) = State_VGB(Bz_,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = State_VGB(Bz_,:,:,:,iBlock)
        case('pperp')
-          PlotVar(:,:,:,iVar) = (3*State_VGB(iP,:,:,:,iBlock) &
+          PlotVar_GV(:,:,:,iVar) = (3*State_VGB(iP,:,:,:,iBlock) &
                -State_VGB(iPpar,:,:,:,iBlock))/2.0
        case('peperp')
-          PlotVar(:,:,:,iVar) = (3*State_VGB(Pe_,:,:,:,iBlock) &
+          PlotVar_GV(:,:,:,iVar) = (3*State_VGB(Pe_,:,:,:,iBlock) &
                -State_VGB(Pepar_,:,:,:,iBlock))/2.0
 
        case('gradpex','gradpey', 'gradpez', 'gradper')
 
-          if(.not. allocated(GradPe_DG)) allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-          if(.not. allocated(Var_G)) allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          if(.not. allocated(GradPe_DG)) &
+               allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          if(.not. allocated(Var_G)) &
+               allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           if(UseElectronPressure)then
              Var_G= State_VGB(Pe_,:,:,:,iBlock)
           else
@@ -1310,44 +1335,44 @@ contains
 
           select case(String)
           case('gradpex')
-             PlotVar(:,:,:,iVar) = GradPe_DG(1,:,:,:)
+             PlotVar_GV(:,:,:,iVar) = GradPe_DG(1,:,:,:)
           case('gradpey')
-             PlotVar(:,:,:,iVar) = GradPe_DG(2,:,:,:)
+             PlotVar_GV(:,:,:,iVar) = GradPe_DG(2,:,:,:)
           case('gradpez')
-             PlotVar(:,:,:,iVar) = GradPe_DG(3,:,:,:)
+             PlotVar_GV(:,:,:,iVar) = GradPe_DG(3,:,:,:)
           case('gradper')
              do k = Mink,MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                PlotVar(i,j,k,iVar) = &
+                PlotVar_GV(i,j,k,iVar) = &
                      sum(GradPe_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
                      / max(1e-30, r_GB(i,j,k,iBlock))
              end do; end do; end do
           end select
 
-       case('jx','jy', 'jz', 'jr')
+       case('jx', 'jy', 'jz', 'jr')
 
-          if(.not. allocated(J_DC)) allocate(J_DC(3,nI,nJ,nK))
+          if(.not. allocated(Current_DC)) allocate(Current_DC(3,nI,nJ,nK))
 
           ! Calculationg all the currents only once per block
           if(DoCurrent) then
              ! Note that the current in the ghost cells are not
              ! needed for Tecplot output. Maybe needed for HDF (! ).
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                call  get_current(i, j, k, iBlock, J_DC(:,i,j,k))
+                call  get_current(i, j, k, iBlock, Current_DC(:,i,j,k))
              end do; end do; end do
              DoCurrent = .false.
           end if
 
           select case(String)
           case('jx')
-             PlotVar(1:nI,1:nJ,1:nK,iVar) = J_DC(1,:,:,:)
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = Current_DC(1,:,:,:)
           case('jy')
-             PlotVar(1:nI,1:nJ,1:nK,iVar) = J_DC(2,:,:,:)
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = Current_DC(2,:,:,:)
           case('jz')
-             PlotVar(1:nI,1:nJ,1:nK,iVar) = J_DC(3,:,:,:)
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = Current_DC(3,:,:,:)
           case('jr')
              do k = 1,nK; do j = 1, nJ; do i = 1, nI
-                PlotVar(i,j,k,iVar) = &
-                     sum(J_DC(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
+                PlotVar_GV(i,j,k,iVar) = &
+                     sum(Current_DC(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
                      / max(1e-30, r_GB(i,j,k,iBlock))
              end do; end do; end do
           end select
@@ -1376,53 +1401,53 @@ contains
                   FullB_DG, Current_D)
              select case(String(2:2))
              case('x')
-                PlotVar(i,j,k,iVar) = Current_D(x_)
+                PlotVar_GV(i,j,k,iVar) = Current_D(x_)
              case('y')
-                PlotVar(i,j,k,iVar) = Current_D(y_)
+                PlotVar_GV(i,j,k,iVar) = Current_D(y_)
              case('z')
-                PlotVar(i,j,k,iVar) = Current_D(z_)
+                PlotVar_GV(i,j,k,iVar) = Current_D(z_)
              end select
           end do; end do; end do
        case('enumx')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) =  ExNum_CB(:,:,:,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) =  ExNum_CB(:,:,:,iBlock)
        case('enumy')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) =  EyNum_CB(:,:,:,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) =  EyNum_CB(:,:,:,iBlock)
        case('enumz')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) =  EzNum_CB(:,:,:,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) =  EzNum_CB(:,:,:,iBlock)
        case('ex')
           call get_electric_field_block(iBlock, DoHallCurrentIn = .true.)
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(1,1:nI,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(1,1:nI,1:nJ,1:nK,iBlock)
        case('ey')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(2,1:nI,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(2,1:nI,1:nJ,1:nK,iBlock)
        case('ez')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(3,1:nI,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(3,1:nI,1:nJ,1:nK,iBlock)
        case('dive')
           call get_electric_field
           call calc_div_e
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = DivE_CB(:,:,:,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = DivE_CB(:,:,:,iBlock)
        case('pote')
           call calc_inductive_e
-          PlotVar(:,:,:,iVar) = Potential_GB(:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Potential_GB(:,:,:,iBlock)
        case('expot')
           call calc_inductive_e
-          PlotVar(:,:,:,iVar) = Epot_DGB(1,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Epot_DGB(1,:,:,:,iBlock)
        case('eypot')
           call calc_inductive_e
-          PlotVar(:,:,:,iVar) = Epot_DGB(2,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Epot_DGB(2,:,:,:,iBlock)
        case('ezpot')
           call calc_inductive_e
-          PlotVar(:,:,:,iVar) = Epot_DGB(3,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Epot_DGB(3,:,:,:,iBlock)
        case('exind')
           call calc_inductive_e
-          PlotVar(:,:,:,iVar) = Eind_DGB(1,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Eind_DGB(1,:,:,:,iBlock)
        case('eyind')
           call calc_inductive_e
-          PlotVar(:,:,:,iVar) = Eind_DGB(2,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Eind_DGB(2,:,:,:,iBlock)
        case('ezind')
           call calc_inductive_e
-          PlotVar(:,:,:,iVar) = Eind_DGB(3,:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = Eind_DGB(3,:,:,:,iBlock)
        case('pvecx')
-          PlotVar(:,:,:,iVar) = ( &
+          PlotVar_GV(:,:,:,iVar) = ( &
                ( FullB_DG(x_,:,:,:)**2  &
                + FullB_DG(y_,:,:,:)**2  &
                + FullB_DG(z_,:,:,:)**2) * &
@@ -1436,7 +1461,7 @@ contains
                FullB_DG(x_,:,:,:) ) &
                / State_VGB(iRho,:,:,:,iBlock)
        case('pvecy')
-          PlotVar(:,:,:,iVar) = ( &
+          PlotVar_GV(:,:,:,iVar) = ( &
                (FullB_DG(x_,:,:,:)**2 + &
                FullB_DG(y_,:,:,:)**2 + &
                FullB_DG(z_,:,:,:)**2) * &
@@ -1450,7 +1475,7 @@ contains
                FullB_DG(y_,:,:,:) ) &
                / State_VGB(iRho,:,:,:,iBlock)
        case('pvecz')
-          PlotVar(:,:,:,iVar) = ( &
+          PlotVar_GV(:,:,:,iVar) = ( &
                (FullB_DG(x_,:,:,:)**2 + &
                FullB_DG(y_,:,:,:)**2 + &
                FullB_DG(z_,:,:,:)**2) * &
@@ -1468,32 +1493,33 @@ contains
 
        case('ur')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = sum( &
-                  State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)*Xyz_DGB(:,i,j,k,iBlock) &
-                  ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
+             PlotVar_GV(i,j,k,iVar) = sum( &
+                  State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
+                  *Xyz_DGB(:,i,j,k,iBlock)) &
+                  / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
           end do; end do; end do
        case('rhour','mr')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = sum( &
-                  State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)*Xyz_DGB(:,i,j,k,iBlock) &
-                  ) / r_GB(i,j,k,iBlock)
+             PlotVar_GV(i,j,k,iVar) = sum( &
+                  State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
+                  *Xyz_DGB(:,i,j,k,iBlock)) / r_GB(i,j,k,iBlock)
           end do; end do; end do
        case('br')
-          plotvar_useBody(iVar) = .true.
+          UsePlotVarBody_V(iVar) = .true.
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = sum( &
+             PlotVar_GV(i,j,k,iVar) = sum( &
                   FullB_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock) &
                   ) / r_GB(i,j,k,iBlock)
           end do; end do; end do
        case('b1r')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = sum( &
+             PlotVar_GV(i,j,k,iVar) = sum( &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock)*Xyz_DGB(:,i,j,k,iBlock) &
                   ) / r_GB(i,j,k,iBlock)
           end do; end do; end do
        case('er')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) =  sum( &
+             PlotVar_GV(i,j,k,iVar) =  sum( &
                   Xyz_DGB(:,i,j,k,iBlock) &
                   *cross_product(FullB_DG(:,i,j,k), &
                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock))) &
@@ -1501,18 +1527,18 @@ contains
           end do; end do; end do
        case('pvecr')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             tmp1Var = sum(FullB_DG(:,i,j,k)**2)
-             tmp2Var = sum(FullB_DG(:,i,j,k)* &
+             FullB2 = sum(FullB_DG(:,i,j,k)**2)
+             FullBRhoU = sum(FullB_DG(:,i,j,k)* &
                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock))
-             PlotVar(i,j,k,iVar) = sum ( &
+             PlotVar_GV(i,j,k,iVar) = sum ( &
                   Xyz_DGB(:,i,j,k,iBlock) &
-                  *( tmp1Var*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
-                  -  tmp2Var*FullB_DG(:,i,j,k) ) &
+                  *( FullB2*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
+                  -  FullBRhoU*FullB_DG(:,i,j,k) ) &
                   ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
           end do; end do; end do
        case('b2ur')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = 0.5*sum(FullB_DG(:,i,j,k)**2) &
+             PlotVar_GV(i,j,k,iVar) = 0.5*sum(FullB_DG(:,i,j,k)**2) &
                   *sum( State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                   *     Xyz_DGB(:,i,j,k,iBlock) &
                   ) / (State_VGB(iRho,i,j,k,iBlock)*r_GB(i,j,k,iBlock))
@@ -1520,220 +1546,225 @@ contains
        case('visco')
           if (UseViscosity) then
              call set_visco_factor_cell(iBlock)
-             PlotVar(1:nI,1:nJ,1:nK,iVar) = ViscoFactor_C
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = ViscoFactor_C
           end if
        case('divb')
           if(.not.UseConstrainB)then
              call calc_divergence(iBlock, State_VGB(Bx_:Bz_,:,:,:,iBlock), &
-                  nG, PlotVar(:,:,:,iVar), UseBodyCellIn=.true.)
+                  nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
           else
              ! Div B from face fluxes
              do k = 1, nK; do j = 1, nJ; do i =1, nI
                 if(.not. Used_GB(i,j,k,iBlock)) CYCLE
-                PlotVar(i,j,k,iVar) = &
+                PlotVar_GV(i,j,k,iVar) = &
                      (BxFace_GB(i+1,j,k,iBlock)                         &
                      -BxFace_GB(i  ,j,k,iBlock))/CellSize_DB(x_,iBlock) + &
                      (ByFace_GB(i,j+1,k,iBlock)                         &
                      -ByFace_GB(i,j  ,k,iBlock))/CellSize_DB(y_,iBlock)
-                if(nK > 1) PlotVar(i,j,k,iVar) = PlotVar(i,j,k,iVar) + &
+                if(nK > 1) PlotVar_GV(i,j,k,iVar) = PlotVar_GV(i,j,k,iVar) + &
                      (BzFace_GB(i,j,k+1,iBlock)                         &
                      -BzFace_GB(i,j,k  ,iBlock))/CellSize_DB(z_,iBlock)
              end do; end do; end do
           end if
 
        case('absdivb')
-          if(UseB) PlotVar(1:nI,1:nJ,1:nK,iVar) = &
+          if(UseB) PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
                abs(DivB1_GB(1:nI,1:nJ,1:nK,iBlock))
           if(.not.IsNoBody_B(iBlock))then
-             where(.not.Used_GB(:,:,:,iBlock)) PlotVar(:,:,:,iVar) = 0.0
+             where(.not.Used_GB(:,:,:,iBlock)) PlotVar_GV(:,:,:,iVar) = 0.0
           endif
 
        case('theta1','req1','theta2','req2','phi1','phi2','status')
           ! BASIC RAYTRACE variables
           select case(String)
           case ('theta1', 'req1')
-             itmp = 1 ; jtmp = 1
+             i3 = 1 ; j3 = 1
           case ('theta2', 'req2')
-             itmp = 1 ; jtmp = 2
+             i3 = 1 ; j3 = 2
           case ('phi1')
-             itmp = 2 ; jtmp = 1
+             i3 = 2 ; j3 = 1
           case ('phi2')
-             itmp = 2 ; jtmp = 2
+             i3 = 2 ; j3 = 2
           case ('status')
-             itmp = 3 ; jtmp = 1
+             i3 = 3 ; j3 = 1
           end select
 
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = ray(itmp,jtmp,1:nI,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) &
+               = Trace_DSNB(i3,j3,1:nI,1:nJ,1:nK,iBlock)
+
           ! Now load the face ghost cells with the first computation
           ! cell on each face.  This is a bad approximation but is
           ! needed for Tecplot.  It will be fixed later using message
           ! passing
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = ray(itmp,jtmp,1:nI,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) &
+               = Trace_DSNB(i3,j3,1:nI,1:nJ,1:nK,iBlock)
 
           ! GRID INFORMATION
        case('crit1')
           ! call calc_error_amr_criteria(nVar, State_VGB)
           if(allocated(AmrCrit_IB) .and. nAmrCrit >= 1) &
-               PlotVar(:,:,:,iVar) = AmrCrit_IB(1,iBlock)
+               PlotVar_GV(:,:,:,iVar) = AmrCrit_IB(1,iBlock)
        case('crit2')
           if(allocated(AmrCrit_IB) .and. nAmrCrit >= 2) &
-               PlotVar(:,:,:,iVar) = AmrCrit_IB(2,iBlock)
+               PlotVar_GV(:,:,:,iVar) = AmrCrit_IB(2,iBlock)
        case('crit3')
           if(allocated(AmrCrit_IB) .and. nAmrCrit >= 3) &
-               PlotVar(:,:,:,iVar) = AmrCrit_IB(3,iBlock)
+               PlotVar_GV(:,:,:,iVar) = AmrCrit_IB(3,iBlock)
        case('crit4')
           if(allocated(AmrCrit_IB) .and. nAmrCrit >= 4) &
-               PlotVar(:,:,:,iVar) = AmrCrit_IB(4,iBlock)
+               PlotVar_GV(:,:,:,iVar) = AmrCrit_IB(4,iBlock)
        case('crit5')
           if(allocated(AmrCrit_IB) .and. nAmrCrit >= 5) &
-               PlotVar(:,:,:,iVar) = AmrCrit_IB(5,iBlock)
+               PlotVar_GV(:,:,:,iVar) = AmrCrit_IB(5,iBlock)
        case('crit6')
           if(allocated(AmrCrit_IB) .and. nAmrCrit >= 6) &
-               PlotVar(:,:,:,iVar) = AmrCrit_IB(6,iBlock)
+               PlotVar_GV(:,:,:,iVar) = AmrCrit_IB(6,iBlock)
        case('crit7')
           if(allocated(AmrCrit_IB) .and. nAmrCrit >= 7) &
-               PlotVar(:,:,:,iVar) = AmrCrit_IB(7,iBlock)
+               PlotVar_GV(:,:,:,iVar) = AmrCrit_IB(7,iBlock)
        case('crit8')
           if(allocated(AmrCrit_IB) .and. nAmrCrit >= 8) &
-               PlotVar(:,:,:,iVar) = AmrCrit_IB(8,iBlock)
+               PlotVar_GV(:,:,:,iVar) = AmrCrit_IB(8,iBlock)
        case('crit9')
           if(allocated(AmrCrit_IB) .and. nAmrCrit >= 9) &
-               PlotVar(:,:,:,iVar) = AmrCrit_IB(9,iBlock)
+               PlotVar_GV(:,:,:,iVar) = AmrCrit_IB(9,iBlock)
        case('amrlevel')
-          PlotVar(:,:,:,iVar) = iTree_IA(Level_,iNode_B(iBlock))
+          PlotVar_GV(:,:,:,iVar) = iTree_IA(Level_,iNode_B(iBlock))
        case('timelevel')
           if(allocated(iTimeLevel_A)) &
-               PlotVar(:,:,:,iVar) = iTimeLevel_A(iNode_B(iBlock))
+               PlotVar_GV(:,:,:,iVar) = iTimeLevel_A(iNode_B(iBlock))
        case('dvol')
-          PlotVar(:,:,:,iVar) = CellVolume_GB(:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = CellVolume_GB(:,:,:,iBlock)
        case('dx','dr')
-          PlotVar(:,:,:,iVar) = CellSize_DB(x_,iBlock)
+          PlotVar_GV(:,:,:,iVar) = CellSize_DB(x_,iBlock)
        case('dy','dphi','dlon')
-          PlotVar(:,:,:,iVar) = CellSize_DB(y_,iBlock)
+          PlotVar_GV(:,:,:,iVar) = CellSize_DB(y_,iBlock)
        case('dz','dlat')
-          PlotVar(:,:,:,iVar) = CellSize_DB(z_,iBlock)
+          PlotVar_GV(:,:,:,iVar) = CellSize_DB(z_,iBlock)
        case('dt')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = DtMax_CB(1:nI,1:nJ,1:nK,iBlock)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = DtMax_CB(1:nI,1:nJ,1:nK,iBlock)
        case('dtblk')
-          PlotVar(:,:,:,iVar) = DtMax_B(iBlock)
+          PlotVar_GV(:,:,:,iVar) = DtMax_B(iBlock)
           ! if(.not.IsNoBody_B(iBlock))then
           !   if(.not.any(Used_GB(:,:,:,iBlock)))&
-          !        PlotVar(:,:,:,iVar) = 0.0
+          !        PlotVar_GV(:,:,:,iVar) = 0.0
           ! end if
        case('cons')
           if(allocated(IsConserv_CB))then
-             where(IsConserv_CB(:,:,:,iBlock)) PlotVar(1:nI,1:nJ,1:nK,iVar) = 1
+             where(IsConserv_CB(:,:,:,iBlock)) &
+                  PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = 1
           else if(.not.UseNonConservative)then
-             PlotVar(1:nI,1:nJ,1:nK,iVar) = 1.
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = 1.
           end if
        case('ibound')
-          PlotVar(:,:,:,iVar) = iBoundary_GB(:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = iBoundary_GB(:,:,:,iBlock)
        case('evolve','impl')
-          PlotVar(:,:,:,iVar) = iTypeAdvance_B(iBlock)
+          PlotVar_GV(:,:,:,iVar) = iTypeAdvance_B(iBlock)
           if(UsePointImplicit)then
              if(UseUserPointImplicit_B(iBlock))&
-                  PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5
+                  PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar)+0.5
           end if
        case('balance')
           if(allocated(iTypeBalance_A)) &
-               PlotVar(:,:,:,iVar) = iTypeBalance_A(iNode_B(iBlock))
+               PlotVar_GV(:,:,:,iVar) = iTypeBalance_A(iNode_B(iBlock))
        case('clight')
           call set_clight_cell(iBlock)
-          PlotVar(:,:,:,iVar) = Clight_G
+          PlotVar_GV(:,:,:,iVar) = Clight_G
        case('loworder')
           if(allocated(iRegionLowOrder_I)) call block_inside_regions( &
-               iRegionLowOrder_I, iBlock, size(PlotVar(:,:,:,iVar)), 'ghost', &
-               Value_I=PlotVar(MinI,MinJ,MinK,iVar))
+               iRegionLowOrder_I, iBlock, size(PlotVar_GV(:,:,:,iVar)), &
+               'ghost', Value_I=PlotVar_GV(MinI,MinJ,MinK,iVar))
        case('lowcritx')
-          PlotVar(:,:,:,iVar) = 0
+          PlotVar_GV(:,:,:,iVar) = 0
           ! LowOrderCrit_XB is actually face based.
           if(allocated(LowOrderCrit_XB)) &
-               PlotVar(1:nI,1:nJ,1:nK,iVar) = &
+               PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
                LowOrderCrit_XB(1:nI,1:nJ,1:nK,iBlock)
        case('lowcrity')
-          PlotVar(:,:,:,iVar) = 0
+          PlotVar_GV(:,:,:,iVar) = 0
           if(allocated(LowOrderCrit_YB)) &
-               PlotVar(1:nI,1:nJ,1:nK,iVar) = &
+               PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
                LowOrderCrit_YB(1:nI,1:nJ,1:nK,iBlock)
        case('lowcritz')
-          PlotVar(:,:,:,iVar) = 0
+          PlotVar_GV(:,:,:,iVar) = 0
           if(allocated(LowOrderCrit_ZB)) &
-               PlotVar(1:nI,1:nJ,1:nK,iVar) = &
+               PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
                LowOrderCrit_ZB(1:nI,1:nJ,1:nK,iBlock)
        case('proc')
-          PlotVar(:,:,:,iVar) = iProc
+          PlotVar_GV(:,:,:,iVar) = iProc
        case('blk','block')
-          PlotVar(:,:,:,iVar) = iBlock
+          PlotVar_GV(:,:,:,iVar) = iBlock
        case('node')
-          PlotVar(:,:,:,iVar) = iNode_B(iBlock)
+          PlotVar_GV(:,:,:,iVar) = iNode_B(iBlock)
        case('hall')
           if(UseHallResist)then
              call set_hall_factor_cell(iBlock)
-             PlotVar(1:nI,1:nJ,1:nK,iVar) = HallFactor_C
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = HallFactor_C
           end if
        case('hallfactor')
           if(UseHallResist)then
              call set_hall_factor_cell(iBlock, .false.)
-             PlotVar(1:nI,1:nJ,1:nK,iVar) = HallFactor_C
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = HallFactor_C
           end if
        case('hallblock')
           if(UseHallResist)then
              call set_hall_factor_cell(iBlock, .false.)
-             if(IsHallBlock)PlotVar(1:nI,1:nJ,1:nK,iVar) = 1.0
+             if(IsHallBlock)PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = 1.0
           end if
        case('elaser')
           if(UseLaserHeating)then
-             if(allocated(LaserHeating_CB)) &
-                  PlotVar(1:nI,1:nJ,1:nK,iVar) = LaserHeating_CB(:,:,:,iBlock)
+             if(allocated(LaserHeating_CB)) PlotVar_GV(1:nI,1:nJ,1:nK,iVar) &
+                  = LaserHeating_CB(:,:,:,iBlock)
           end if
        case('ew','erad')
           if(Ew_ == 1)then
              if(UseWavePressure)then
                 do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                   PlotVar(i,j,k,iVar) = &
+                   PlotVar_GV(i,j,k,iVar) = &
                         sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
                 end do; end do; end do
              end if
           else
-             PlotVar(:,:,:,iVar) = State_VGB(Ew_,:,:,:,iBlock)
+             PlotVar_GV(:,:,:,iVar) = State_VGB(Ew_,:,:,:,iBlock)
           end if
        case('pic')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = pic_find_region(iBlock,i,j,k)
+             PlotVar_GV(i,j,k,iVar) = pic_find_region(iBlock,i,j,k)
           end do; end do; end do
        case('pic_active')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = pic_find_region_active(iBlock,i,j,k)
+             PlotVar_GV(i,j,k,iVar) = pic_find_region_active(iBlock,i,j,k)
           end do; end do; end do
        case('pic_crit')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = IsPicCrit_CB(i,j,k,iBlock)
+             PlotVar_GV(i,j,k,iVar) = IsPicCrit_CB(i,j,k,iBlock)
           end do; end do; end do
        case('jb')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_crit_jb(i, j, k, iBlock, FullB_DG,&
-                  CriteriaB1, PlotVar(i,j,k,iVar))
+                  CriteriaB1, PlotVar_GV(i,j,k,iVar))
           end do; end do; end do
        case('jbperp')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_crit_jbperp(i, j, k, iBlock, FullB_DG,&
-                  CriteriaB1, PlotVar(i,j,k,iVar))
+                  CriteriaB1, PlotVar_GV(i,j,k,iVar))
           end do; end do; end do
        case('divcurv')
           if(allocated(DivCurvature_CB)) then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar(i,j,k,iVar) = DivCurvature_CB(i,j,k,iBlock)
+                PlotVar_GV(i,j,k,iVar) = DivCurvature_CB(i,j,k,iBlock)
              end do; end do; end do
           else
-             PlotVar(:,:,:,iVar) = -777.0
+             PlotVar_GV(:,:,:,iVar) = -777.0
           end if
        case('entropy')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             call calc_crit_entropy(i, j, k, iBlock, State_VGB, PlotVar(i,j,k,iVar))
+             call calc_crit_entropy(i, j, k, iBlock, State_VGB, &
+                  PlotVar_GV(i,j,k,iVar))
           end do; end do; end do
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = &
+             PlotVar_GV(i,j,k,iVar) = &
                   sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
           end do; end do; end do
 
@@ -1741,38 +1772,37 @@ contains
           ! Check if the name is one of the state variable names
           do jVar = 1, nVar
              if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
-             PlotVar(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBlock)
+             PlotVar_GV(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBlock)
              if(DefaultState_V(jVar) > 0.0) &
-                  plotvar_inBody(iVar) = FaceState_VI(jVar,body1_)
+                  PlotVarBody_V(iVar) = FaceState_VI(jVar,body1_)
              EXIT
           end do
           if(jVar > nVar) then
              call user_set_plot_var(iBlock, &
-                  NamePlotVar, plot_dimensional(Plot_+iPlotFile), &
-                  PlotVar(:,:,:,iVar), &
-                  plotvar_inBody(iVar), plotvar_useBody(iVar), &
+                  NamePlotVar, IsDimensionalPlot_I(Plot_+iPlotFile), &
+                  PlotVar_GV(:,:,:,iVar), &
+                  PlotVarBody_V(iVar), UsePlotVarBody_V(iVar), &
                   NameVarUserTec_I(iVar), NameUnitUserTec_I(iVar), &
                   NameUnitUserIdl_I(iVar), IsFound)
              if(.not. IsFound) then
-                PlotVar(:,:,:,iVar) = -7777.
+                PlotVar_GV(:,:,:,iVar) = -7777.
                 if(iProc==0 .and. iBlock==1)write(*,*) &
                      'Warning in set_plotvar: unknown plotvarname=',&
-                     plotvarnames(iVar),' for iPlotFile=',iPlotFile
+                     NamePlotVar_V(iVar),' for iPlotFile=',iPlotFile
              end if
           end if
        end select
     end do ! iVar
 
-    if(allocated(J_DC)) deallocate(J_DC)
+    if(allocated(Current_DC)) deallocate(Current_DC)
     if(allocated(Var_G)) deallocate(Var_G)
     if(allocated(GradPe_DG)) deallocate(GradPe_DG)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_plotvar
   !============================================================================
-
-  subroutine dimensionalize_plotvar(iBlock, iPlotFile, nPlotVar, plotvarnames,&
-       plotvar, plotvar_inBody)
+  subroutine dimensionalize_plotvar(iBlock, iPlotFile, nPlotVar, &
+       NamePlotVar_V, PlotVar_GV, PlotVarBody_V)
 
     use ModPhysics, ONLY: nVar, UnitX_, UnitTemperature_, UnitN_, UnitRho_, &
        UnitP_, UnitU_, UnitB_, UnitT_, UnitMass_, UnitDivB_, UnitRhoU_, &
@@ -1783,10 +1813,10 @@ contains
     use ModMultiFluid, ONLY: extract_fluid_name
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
-    integer, intent(in) :: iBlock,iPlotFile,Nplotvar
-    character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-    real, intent(inout) :: plotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
-    real, intent(inout) :: plotVar_inBody(nPlotVar)
+    integer, intent(in) :: iBlock,iPlotFile,nPlotVar
+    character (LEN=10), intent(in) :: NamePlotVar_V(nPlotVar)
+    real, intent(inout) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
+    real, intent(inout) :: PlotVarBody_V(nPlotVar)
 
     character (len=10)  :: String, NamePlotVar
 
@@ -1797,12 +1827,12 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     do iVar=1,nPlotVar
-       NamePlotVar = plotvarnames(iVar)
+       NamePlotVar = NamePlotVar_V(iVar)
        call lower_case(NamePlotVar)
        String = NamePlotVar
        call extract_fluid_name(String)
 
-       ! Set plotvar_inBody to something reasonable for inside the body.
+       ! Set PlotVarBody_V to something reasonable for inside the body.
        ! Load zeros for most values - load something better for rho, p, and T
        ! We know that U,B,J are okay with zeroes, others should be changed if
        ! necessary.
@@ -1815,75 +1845,92 @@ contains
           ! BASIC MHD variables
 
        case('rho')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitRho_)
-          plotvar_inBody(iVar) = plotvar_inBody(iVar)*No2Io_V(UnitRho_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitRho_)
+          PlotVarBody_V(iVar) = PlotVarBody_V(iVar) &
+               *No2Io_V(UnitRho_)
        case('rhoux','mx','rhouy','my','rhouz','mz','rhour','mr' )
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitRhoU_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitRhoU_)
        case('bx','by','bz','br','b1x','b1y','b1z','b1r' &
             ,'bxl','bxr','byl','byr','bzl','bzr' &
             )
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitB_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitB_)
        case('elaser')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
        case('e','e1','ew','erad')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitEnergyDens_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitEnergyDens_)
        case('p','pth','pperp','peperp')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitP_)
-          plotvar_inBody(iVar) = plotvar_inBody(iVar)*No2Io_V(UnitP_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitP_)
+          PlotVarBody_V(iVar) = PlotVarBody_V(iVar) &
+               *No2Io_V(UnitP_)
 
           ! EXTRA MHD variables
        case('n', 'qtot')
           ! Number and charge densities
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitN_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitN_)
        case('t','temp')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitTemperature_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitTemperature_)
        case('eta','visco')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *(No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
        case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitU_)
        case('divu')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)/No2Io_V(UnitT_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               /No2Io_V(UnitT_)
        case('gradpex','gradpey','gradpez','gradper')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitP_)/No2Si_V(UnitX_)
        case('jx','jy','jz','jr',&
             'jx1','jy1','jz1','jx2','jy2','jz2', &
             'jx3','jy3','jz3','jx4','jy4','jz4', &
             'jx5','jy5','jz5','jx6','jy6','jz6')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitJ_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitJ_)
        case('ex','ey','ez','er','enumx','enumy','enumz', &
             'expot','eypot','ezpot','exind','eyind','ezind')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitElectric_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitElectric_)
        case('pote')
           ! Electric potential has SI units of V
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Si_V(UnitElectric_)*No2Si_V(UnitX_)
        case('dive')
           ! Divergence of electric field has SI units of V/m^2
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Si_V(UnitElectric_)/No2Si_V(UnitX_)
        case('pvecx','pvecy','pvecz','pvecr','b2ur')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitPoynting_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitPoynting_)
        case('divb','divb_cd','divb_ct','absdivb')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitDivB_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitDivB_)
 
           ! GRID INFORMATION
        case('dt','dtblk')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitT_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitT_)
        case('x','y','z','r','dx','dr','dy','dz','req1','req2')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitX_)
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitX_)
        case('dphi','dlon','dlat')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*cRadToDeg
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar)*cRadToDeg
 
           ! DEFAULT CASE
        case default
           do jVar = 1, nVar
              if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
-             PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*UnitUser_V(jVar)
+             PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar)*UnitUser_V(jVar)
              if(DefaultState_V(jVar) > 0.0)&
-                  plotvar_inBody(iVar) = plotvar_inBody(iVar)*UnitUser_V(jVar)
+                  PlotVarBody_V(iVar) = PlotVarBody_V(iVar)*UnitUser_V(jVar)
              EXIT
           end do
           ! no normalization
@@ -1903,7 +1950,7 @@ contains
        UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &
        NameIdlUnit_V, NameUnitUserIdl_V, UnitAngle_, NameVarLower_V
     use ModUtilities,  ONLY: lower_case
-    use ModIO,         ONLY: plot_type1, plot_dimensional, NameUnitUserIdl_I
+    use ModIO,         ONLY: TypePlot, IsDimensionalPlot_I, NameUnitUserIdl_I
     use ModMultiFluid, ONLY: extract_fluid_name
     use BATL_lib,      ONLY: IsRLonLat, IsCylindrical
 
@@ -1924,16 +1971,16 @@ contains
     character(len=*), parameter:: NameSub = 'get_idl_units'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(.not.plot_dimensional(iFile))then
+    if(.not.IsDimensionalPlot_I(iFile))then
        NamePlotUnit_V = 'normalized'
        StringUnitIdl = 'normalized variables'
        RETURN
     end if
 
-    if(plot_type1(1:3) == 'shl' .or. &
-         (plot_type1(1:3) == 'cut' .and. IsRLonLat)) then
+    if(TypePlot(1:3) == 'shl' .or. &
+         (TypePlot(1:3) == 'cut' .and. IsRLonLat)) then
        StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
-    elseif(plot_type1(1:3) == 'cut' .and. IsCylindrical)then
+    elseif(TypePlot(1:3) == 'cut' .and. IsCylindrical)then
           StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' deg'
     else
@@ -2086,7 +2133,7 @@ contains
     do iDim = 1, nDim
        iMin = 2*iDim - 1; iMax = iMin+1
 
-       ! Skip ignored dimensions of 2D and 1D cuts
+       ! DoSkip ignored dimensions of 2D and 1D cuts
        if(PlotRange_I(iMax) - PlotRange_I(iMin) <= 1.5*PlotRes_D(iDim)) CYCLE
 
        ! Shift plot range slightly outward

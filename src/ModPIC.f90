@@ -459,7 +459,7 @@ contains
     end do
 
     if(.not. DoRestartPicStatus .and. UseAdaptivePic) then
-       ! if DoRestartPicStatus, the arrays are allocated in Restart Part
+       ! if DoRestartPicStatus, the arrays are allocated in restart part
        if(allocated(StatusMin_I)) deallocate(StatusMin_I)
        allocate(StatusMin_I(nRegionPic))
        StatusMin_I = 0

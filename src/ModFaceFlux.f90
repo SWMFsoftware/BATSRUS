@@ -1136,8 +1136,8 @@ contains
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1, GammaElectron
     use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy, UseAnisoPe
-    use ModWaves,    ONLY: AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_,&
-         AlfvenWavePlusFirst_, AlfvenWavePlusLast_, &
+    use ModWaves,    ONLY: AlfvenMinusFirst_, AlfvenMinusLast_,&
+         AlfvenPlusFirst_, AlfvenPlusLast_, &
          GammaWave, UseAlfvenWaves, UseWavePressure, &
          UseWavePressureLtd
     use ModMultiFluid, ONLY: &
@@ -1283,11 +1283,11 @@ contains
     if(UseAlfvenWaves)then
        AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
 
-       do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
+       do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
           Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
        end do
 
-       do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
+       do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
           Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
        end do
     end if

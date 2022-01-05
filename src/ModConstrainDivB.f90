@@ -178,7 +178,7 @@ contains
     use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
     use ModParallel, ONLY : Unset_, DiLevel_EB
     use ModGeometry, ONLY : Used_GB, IsBody_B
-    use ModPhysics, ONLY: SW_UX,SW_UY,SW_UZ,SW_BX,SW_BY,SW_BZ
+    use ModPhysics, ONLY: SolarWindUx,SolarWindUy,SolarWindUz,SolarWindBx,SolarWindBy,SolarWindBz
     use BATL_lib, ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
@@ -207,11 +207,11 @@ contains
     end if
     if(DiLevel_EB(2,iBlock)==Unset_)then
        ! fixed inflow!
-       ! VxBX_GB(nI  ,:,:,iBlock)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
+       ! VxBX_GB(nI  ,:,:,iBlock)=SolarWindUy*SolarWindBz-SolarWindUz*SolarWindUy
        select case(TypeCellBc_I(Coord1MaxBc_))
        case('inflow','vary','fixed')
-          VxBY_GB(nI+1,:,:,iBlock)=SW_Uz*SW_Bx-SW_Ux*SW_Bz
-          VxBZ_GB(nI+1,:,:,iBlock)=SW_Ux*SW_By-SW_Uy*SW_Bx
+          VxBY_GB(nI+1,:,:,iBlock)=SolarWindUz*SolarWindBx-SolarWindUx*SolarWindBz
+          VxBZ_GB(nI+1,:,:,iBlock)=SolarWindUx*SolarWindBy-SolarWindUy*SolarWindBx
        case default
           ! continuous
           do k=1,nK+1; do j=1,nJ
@@ -1134,8 +1134,8 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY : State_VGB
     use ModGeometry, ONLY : IsBody_B, Used_GB
-    use ModIO, ONLY : restart
-    use ModPhysics, ONLY : SW_Bx,SW_By,SW_Bz
+    use ModIO, ONLY : IsRestart
+    use ModPhysics, ONLY : SolarWindBx,SolarWindBy,SolarWindBz
     use BATL_lib, ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
@@ -1150,7 +1150,7 @@ contains
        BzFace_GB(:,:,:,iBlock)=0.0
     else
 
-       if(.not.restart)then
+       if(.not.IsRestart)then
           where(Xyz_DGB(x_,:,:,:,iBlock)<16.)
              ! Cancel B field at x<16Re to avoid non-zero initial divB
              ! x=16 is a good choice because it is a power of 2 so it is
@@ -1161,12 +1161,12 @@ contains
              State_VGB(Bz_,:,:,:,iBlock)=0.0
              ! Balance total pressure
              State_VGB(P_,:,:,:,iBlock)=State_VGB(P_,:,:,:,iBlock)+ &
-                  0.5*(SW_Bx**2+SW_By**2+SW_Bz**2)
+                  0.5*(SolarWindBx**2+SolarWindBy**2+SolarWindBz**2)
           elsewhere
              ! Use solar wind values ahead of the Earth
-             State_VGB(Bx_,:,:,:,iBlock)=SW_Bx
-             State_VGB(By_,:,:,:,iBlock)=SW_By
-             State_VGB(Bz_,:,:,:,iBlock)=SW_Bz
+             State_VGB(Bx_,:,:,:,iBlock)=SolarWindBx
+             State_VGB(By_,:,:,:,iBlock)=SolarWindBy
+             State_VGB(Bz_,:,:,:,iBlock)=SolarWindBz
           end where
        end if
 

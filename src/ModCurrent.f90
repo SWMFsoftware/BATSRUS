@@ -561,10 +561,16 @@ contains
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: tSimulation, TypeCoordSystem, nBlock
     use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V
-    use CON_planet_field,  ONLY: get_planet_field, map_planet_field
+#ifdef _OPENACC
+    use ModPhysics,        ONLY: set_dipole
+    use CON_planet_field,  ONLY: map_planet_field_fast
+    use ModB0,             ONLY: get_b0_dipole
+#else
+    use CON_planet_field,  ONLY: map_planet_field, get_planet_field
+#endif
     use ModNumConst,       ONLY: cTwoPi, cPi
     use ModMpi
-    use BATL_lib,          ONLY: iProc, iComm
+    use BATL_lib,          ONLY: iProc, nProc, iComm
 
     ! Map the 2D spherical grid points from the rIn radius to rCurrents.
     ! The grid is in the TypeCoordFacGrid system (default is SMG).
@@ -725,11 +731,11 @@ contains
           call get_point_data_fast(Xyz_D, b_D, Current_D)
           bCurrent_VII(0,  i,j) = 1.0          ! Weight
           bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
-          bCurrent_VII(4:6,i,j) = Current_D          ! Currents
+          bCurrent_VII(4:6,i,j) = Current_D    ! Currents
        else
           call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
-          bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
-          bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
+          bCurrent_VII(0,  i,j) = State_V(Bx_-1)         ! Weight
+          bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &   ! B1 + Weight*B0
                State_V(Bx_-1)*B0_D
           bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
        end if
@@ -737,8 +743,8 @@ contains
     end do; end do
 
 #ifndef _OPENACC
-    call MPI_reduce_real_array(bCurrent_VII, size(bCurrent_VII), MPI_SUM, 0, &
-         iComm, iError)
+    if(nProc > 1) call MPI_reduce_real_array(bCurrent_VII, &
+         size(bCurrent_VII), MPI_SUM, 0, iComm, iError)
 #endif
 
     ! Map the field aligned current to rIn sphere

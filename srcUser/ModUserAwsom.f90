@@ -906,7 +906,7 @@ contains
     use BATL_lib,      ONLY: CellSize_DB, Phi_, Theta_, x_, y_
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModNumConst,   ONLY: cPi
-    use ModIO,         ONLY : restart
+    use ModIO,         ONLY : IsRestart
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -1271,7 +1271,7 @@ contains
                    end if
 
                    ! Check for differences relative to the initial solution.
-                   if(.not.restart .and. &
+                   if(.not.IsRestart .and. &
                         ( p/State_VGB(p_,i,j,k,iBlock)>(1.0+DiffDelta) &
                         .or. p/State_VGB(p_,i,j,k,iBlock)<(1.0-DiffDelta) &
                         .or. Rho/State_VGB(Rho_,i,j,k,iBlock)>(1.0+DiffDelta) &

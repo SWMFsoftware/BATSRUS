@@ -23,17 +23,24 @@ module ModParticleMover
        set_pointer_to_particles
   use ModGeometry,     ONLY: Used_GB
   use ModNumConst
+
   implicit none
+
   SAVE
+
   PRIVATE! Except
+
   ! If true, the particles are allocated and may be traced
   logical, public         :: UseParticles = .false.
   logical :: DoNormalize = .false.
+
   ! If true, one or more ion fluids are solved using hybrid scheme
   logical, public         :: UseHybrid = .false.
+
   ! If true, at the outer boundary the VDF is set in the
   ! ghost cells
   logical, public         :: UseBoundaryVdf
+
   ! Public members
   public :: read_param         ! Particle parameters
   public :: normalize_param    ! To use Batsrus unit for charge
@@ -45,9 +52,11 @@ module ModParticleMover
 
   ! Parameters
   integer :: nHybridParticleSort = 0
+
   ! number of all sorts of charged particles including hybrid and test
   ! particles: nParticleSort = nHybridParticleSort + nTestParticles
   integer :: nParticleSort = 0
+
   ! The order number of this sort of particle in the whole
   ! BATL_particle repository. Allocated in the range 1:nParticleSort
   ! Set by a generic procedure ModParticles:allocate_particles. By
@@ -65,67 +74,79 @@ module ModParticleMover
 
   ! Maximum number of particles to be considered for each ion.
   integer, allocatable :: nParticleMax_I(:)
+
   ! Number of particles in each cell to be considered for each hybrid fluid.
   integer, allocatable :: nHybridParticlePerCell_I(:)
+
   ! Charge to mass ratio, same for all particles of a given sort.
   ! Allocated with the  index range 1:nParticleSort
   !
   real,    allocatable :: Charge2Mass_I(:)
+
   ! Named indexes
   ! Indexes in coordinate-velocity-mass array
   integer, parameter :: x_ = 1, y_ = 2, z_=3, U_ = nDim,       &
        Ux_= U_ + x_, Uy_= U_ + y_, Uz_ = U_ + z_, Mass_= Uz_ +1,&
        nVar = Mass_
+
   ! Indexes in the index array
   integer, parameter :: &
        Status_ = 1, DoAll_ = 1, DoCollect_ = 2, Done_= 3
   logical :: DoInit = .true.
+
   ! For conveniently address to coordinates and
   ! indexes of a particular sort of particle
   real,    pointer :: Coord_DI(:,:)
-  integer, pointer :: Index_II(:,:)
+  integer, pointer :: Int_II(:,:)
+
   ! Redefine MinI:...:MaxK for a single ghost cell layer
   ! We need this to properly apply message pass routines to
   ! the moments array
   integer, parameter:: nG = 1, MinI = 1-nG, MaxI = nI+nG, &
        MinJ = 1-nG*jDim_, MaxJ = nJ+nG*jDim_,             &
        MinK = 1-nG*kDim_, MaxK = nK+nG*kDim_
+
   ! Indexes in the array to collect particle VDF moments
   integer, parameter :: Rho_ = 1, RhoU_ = 1, RhoUx_ = RhoU_ + x_, &
        RhoUy_ = RhoU_ + y_, RhoUz_ = RhoU_ + z_, P_ = RhoUz_, &
        Px_ = P_ + x_, Py_ = P_ + y_, Pz_ = P_ + z_, &
        P12_ = Pz_ + 1, P13_ = Pz_ + 2, P23_  = Pz_ + 3
+
   ! Moments of the particle VDFs
   real,    allocatable :: Moments_VGBI(:,:,:,:,:,:)
+
   ! Global variables to be shared by more than one routine
   real    :: Dt          ! Time step
   integer :: iKind       ! Sort of particles
+
   ! True if we make boris algorithm and then advance coordinate
   ! through a time halfstep. False, if we only advance coordinates
   logical :: DoBorisStep
+
   ! (Dt/2)*Zq/(Am_p), to convert field to force
   real:: QDtPerM      ! For a given sort of particles
+
   character(len=*), parameter:: NameMod = 'ModParticleMover:'
 contains
   !============================================================================
-  !=============read_param=============================!
-  ! subroutine read the following paramaters from the PARAM.in file:
-  ! #CHARGEDPARTICLES
-  ! 3                      nHybridParticleSort
-  ! 2                      iHybridIon_I(1)
-  ! 1000000                nHybridParticleMax_I(1)
-  ! 5                      nHybridParticlePerCell_I(1)
-  ! 3                      iHybridIon_I(2)
-  ! 50000                  nHybridParticleMax_I(2)
-  ! 5                      nHybridParticlePerCell_I(2)
-  ! 4                      iHybridIon_I(3)
-  ! 150000                 nHybridParticleMax_I(3)
-  ! 5                      nHybridParticlePerCell_I(3)
-  ! 1                      nTestParticles
-  ! 4.0                    Mass_I
-  ! 2.0                    Charge_I
-  !--------------------------------------------------------------------------
   subroutine read_param(NameCommand)
+
+    ! reads the following paramaters from the PARAM.in file:
+    ! #CHARGEDPARTICLES
+    ! 3                      nHybridParticleSort
+    ! 2                      iHybridIon_I(1)
+    ! 1000000                nHybridParticleMax_I(1)
+    ! 5                      nHybridParticlePerCell_I(1)
+    ! 3                      iHybridIon_I(2)
+    ! 50000                  nHybridParticleMax_I(2)
+    ! 5                      nHybridParticlePerCell_I(2)
+    ! 4                      iHybridIon_I(3)
+    ! 150000                 nHybridParticleMax_I(3)
+    ! 5                      nHybridParticlePerCell_I(3)
+    ! 1                      nTestParticles
+    ! 4.0                    Mass_I
+    ! 2.0                    Charge_I
+
     use ModMultiFluid,   ONLY: nTrueIon
     use ModReadParam, ONLY: read_var
 
@@ -169,7 +190,7 @@ contains
              if(nHybridParticleMax_I(iLoop)<= 0) call stop_mpi(&
                   NameThisComp//':'//NameSub//&
                   ': invalid number of charged particles for ikind')
-             ! Read the number of particles of the specific hybrid particle sort
+             ! Read number of particles of the specific hybrid particle sort
              ! to be allocated at each cell of the computational domain.
              call read_var('nHybridParticlePerCell_I', &
                      nHybridParticlePerCell_I(iLoop))
@@ -228,10 +249,11 @@ contains
     ! Deallocate all the allocated arays.
     deallocate(Mass_I, Charge_I, nParticleMax_I)
     call test_stop(NameSub, DoTest)
+
   end subroutine read_param
   !============================================================================
-  !===================== NORMALIZE ====================
   subroutine normalize_param
+
     use ModPhysics,    ONLY: ElectronCharge
     use ModMultiFluid, ONLY: ChargePerMass_I
     integer :: iLoop
@@ -250,9 +272,11 @@ contains
          Charge2Mass_I(1+nHybridParticleSort:nParticleSort) =&
          Charge2Mass_I(1+nHybridParticleSort:nParticleSort)* &
          ElectronCharge
+
   end subroutine normalize_param
   !============================================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
+
     real,    intent(in)    :: Mass_I(nParticleSort)
     real,    intent(in)    :: Charge_I(nParticleSort)
     integer, intent(in)    :: nParticleMax_I(nParticleSort)
@@ -285,9 +309,11 @@ contains
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          iKindParticle_I(1):iKindParticle_I(nParticleSort)))
     call test_stop(NameSub, DoTest)
+
   end subroutine allocate_particles
   !============================================================================
   subroutine trace_particles(Dt, DoBorisStepIn)
+
     use ModMain,    ONLY: nI, nJ, nK
     use BATL_particles, ONLY: &
          batl_trace_particles=>trace_particles
@@ -306,10 +332,10 @@ contains
     do iLoop = 1, nParticleSort
        iKind = iKindParticle_I(iLoop)
        call set_pointer_to_particles(&
-            iKind, Coord_DI, Index_II, nParticle=nParticle)
+            iKind, Coord_DI, Int_II, nParticle=nParticle)
        ! (Dt/2)*Zq/(Am_p), to convert field to force
        QDtPerM = 0.5*Dt*Charge2Mass_I(iLoop)
-       Index_II(Status_,1:nParticle) = DoAll_
+       Int_II(Status_,1:nParticle) = DoAll_
 
        call batl_trace_particles(iKind, boris_scheme, check_done)
        ! For particles near the block boundary, contributions
@@ -317,9 +343,11 @@ contains
        call add_ghost_cell_field(P23_, 1, &
             Moments_VGBI(:,:,:,:,:,iKind))
     end do
+
   end subroutine trace_particles
   !============================================================================
-  subroutine boris_scheme(iParticle, EndOfSegment)
+  subroutine boris_scheme(iParticle, IsEndOfSegment)
+
     ! In this routine we follow the formulation described in the
     ! Book: Plasma Physics via Computer Simulation,
     ! Editors: Birdsall, C. K.; Langdon, A. B.,
@@ -349,7 +377,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in)  :: iParticle
-    logical, intent(out) :: EndOfSegment
+    logical, intent(out) :: IsEndOfSegment
     ! Coords
     real :: Xyz_D(MaxDim)
     ! Velocity vectors at different stages
@@ -376,25 +404,29 @@ contains
     ! In both situation the external batl_trace_particles routine
     ! does not need to call routine boris_scheme again immediately.
     ! Therefore,
-    EndOfSegment = .true.
-    if(Index_II(Status_, iParticle) == Done_ )RETURN
-    if(Index_II(Status_, iParticle) == DoAll_)then
+    IsEndOfSegment = .true.
+    if(Int_II(Status_, iParticle) == Done_ )RETURN
+    if(Int_II(Status_, iParticle) == DoAll_)then
        if(DoBorisStep)then
           ! Interpolate particle coordinates into BATSRUS grid
           ! Coordinates and block #
           Xyz_D   = 0.0
           Xyz_D(1:nDim)   = Coord_DI(x_:nDim, iParticle)
-          iBlock          = Index_II(0,iParticle)
+          iBlock          = Int_II(0,iParticle)
           call interpolate_grid_amr_gc(&
                Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+
           ! Coordinates and block #
           U_D =  Coord_DI(Ux_:Uz_, iParticle)
+
           ! Interpolate fields with obtained weight coefficients
-          ! This step corresponds to Equation 20 in Moschou, Sokolov et al. 2019
-          ! Hybrid paper of ASTRONUM
+          ! This step corresponds to Equation 20 in
+          ! Moschou, Sokolov et al. 2019, Hybrid paper of ASTRONUM
           B_D = 0.0;   E_D = 0.0
+
           ! get potential part of the magnetic field at given location
           if(UseB0)call get_b0(Xyz_D, B_D)
+
           ! Interpolate electric field and the remaining non-potential
           ! part  of the magnetic field
           do iCell = 1, nCell
@@ -411,28 +443,36 @@ contains
           ! Electric field force, divided by particle mass
           ! and multiplied by \Delta t/2
           Eforce_D = QDtPerM*E_D
+
           ! Get the velocity, add
           ! acceleration from the electric field, for the
           ! first half of the time step:
           U_D = U_D  + Eforce_D
+
           ! Get magnetic force divided by particle mass
           ! and multiplied by \Delta t/2
           BForce_D = QDtPerM*B_D
+
           ! Add a half of the magnetic rotation:
           U12_D = U_D + cross_product(U_D,BForce_D)
+
           ! Multiply the magnetic force by 2 to take a whole
           ! rotation and reduce its magnitude not to perturb energy
           BForce_D = (2.0/(1.0 + sum(BForce_D**2))) * BForce_D
+
           ! Update velocity
           U_D = U_D + cross_product(U12_D,BForce_D) + Eforce_D
+
           ! Save updated velocity (tree components
           Coord_DI(Ux_:Uz_,iParticle) = U_D
        end if    ! End of Boris step advancing the velocity
+
        ! Advance coordinates through a half step
        ! This step corresponds to Equation 16 of Moschou, Sokolov et al. 2019
        ! Hybrid paper of ASTRONUM
        Coord_DI(x_:nDim, iParticle) = Coord_DI(x_:nDim, iParticle) + &
             0.5*Dt*Coord_DI(Ux_:U_+nDim,iParticle)
+
        ! check location, schedule for message pass, if needed
        call check_particle_location(       &
             iKindParticle = iKind         ,&
@@ -445,21 +485,23 @@ contains
           call mark_undefined(iKind, iParticle)
           ! Mark as done for not calling the routine for
           ! this particle any longer
-          Index_II(Status_,iParticle) = Done_
+          Int_II(Status_,iParticle) = Done_
           RETURN
        elseif(DoMove)then
           ! Particle will be send to other processor, the current
           ! will be collected there
-          Index_II(Status_,iParticle) = DoCollect_
+          Int_II(Status_,iParticle) = DoCollect_
           RETURN
        end if ! Particle stays at the same PE
     end if    ! All operations preceeding the current collection are done
+
     ! Coordinates and block #
     Xyz_D   = 0.0
     Xyz_D(1:nDim)   = Coord_DI(x_:nDim, iParticle)
-    iBlock          = Index_II(0,iParticle)
+    iBlock          = Int_II(0,iParticle)
     call interpolate_grid_amr_gc(&
          Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+
     ! Get the contribution to moments of VDF,
     ! from a given particle with coordinates at half time step
     ! after velocity.
@@ -467,14 +509,18 @@ contains
     ! Hybrid paper of ASTRONUM
     ! Zero moment
     Moments_V(Rho_)          =  Coord_DI(Mass_, iParticle)
+
     ! First moments
     U_D = Coord_DI(Ux_:Uz_,iParticle)
     Moments_V(RhoUx_:RhoUz_) = Moments_V(Rho_)*U_D(x_:z_)
+
     ! Second moments: diagonal
     Moments_V(Px_:Pz_)   =  Moments_V(Rho_)*U_D(x_:z_)**2
+
     ! Second moments: off-diagonal
     Moments_V(P12_:P13_) =  Moments_V(Rho_)*U_D(x_)*U_D(y_:z_)
     Moments_V(P23_)      =  Moments_V(Rho_)*U_D(y_)*U_D(z_)
+
     ! Collect Contribution with updated weight coefficients
     ! Note, that the last index of array is not iLoop (since it
     ! is not a global variable), but iKind
@@ -485,19 +531,23 @@ contains
             Moments_VGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
             Moments_V*Weight_I(iCell)
     end do
-    Index_II(Status_, iParticle) = Done_
+    Int_II(Status_, iParticle) = Done_
+
   end subroutine boris_scheme
   !============================================================================
   subroutine check_done(Done)
+
     ! check whether all paritcles have been advanced through
     ! full time step
     logical, intent(out):: Done
     !--------------------------------------------------------------------------
     Done = &
-         all(Index_II(Status_,1:Particle_I(iKind)%nParticle)==Done_)
+         all(Int_II(Status_,1:Particle_I(iKind)%nParticle)==Done_)
+
   end subroutine check_done
   !============================================================================
   subroutine get_state_from_vdf_block(iBlock)
+
     integer, intent(in) :: iBlock
 
     logical :: DoTestCell
@@ -544,9 +594,11 @@ contains
        end do SORTS
     end do; end do; end do
     call test_stop(NameSub, DoTest)
+
   end subroutine get_state_from_vdf_block
   !============================================================================
   subroutine get_state_from_vdf
+
     integer :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_state_from_vdf'
@@ -558,9 +610,11 @@ contains
     end do
     UseBoundaryVdf = .true.
     call test_stop(NameSub, DoTest)
+
   end subroutine get_state_from_vdf
   !============================================================================
   subroutine get_vdf_from_state(iBlock, DoOnScratch)
+
     integer, intent(in) :: iBlock
     ! If the distribution function is initialized for the
     ! first time, one can miss the check. If there are already
@@ -570,7 +624,6 @@ contains
 
     ! In this subroutine we obtain the VDF for each particle species
     ! stemming from the state vector variables.
-
     !--------------------------------------------------------------------------
     call get_cell_state_from_vdf(&
          MinI=1                , &
@@ -582,9 +635,11 @@ contains
          iBlock=iBlock         , &
          DoOnScratch=DoOnScratch,&
          DoSkip_G=.not.Used_GB(1:nI,1:nJ,1:nK,iBlock))
+
   end subroutine get_vdf_from_state
   !============================================================================
   subroutine set_boundary_vdf(iBlock)
+
     use BATL_lib,    ONLY: iNode_B, IsCartesianGrid
     use ModParallel, ONLY: Unset_, DiLevel_EB
     integer, intent(in) :: iBlock
@@ -614,6 +669,7 @@ contains
          iBlock=iBlock, &
          DoOnScratch=.true.,& ! In the boundary cells the particles
          DoSkip_G=DoSkip_G )
+
   end subroutine set_boundary_vdf
   !============================================================================
   subroutine get_cell_state_from_vdf(&
@@ -666,15 +722,15 @@ contains
     SORTS:do iLoop = 1, nHybridParticleSort
        iKind = iKindParticle_I(iLoop); iIon = iHybridIon_I(iLoop)
        call set_pointer_to_particles(&
-            iKind, Coord_DI, Index_II, &
+            iKind, Coord_DI, Int_II, &
             nParticle=nParticle, nParticleMax=nParticleMax)
        ! Number of particles per Block = nHybridParticlePerCell_I
        nPPerCell = nHybridParticlePerCell_I(iLoop)
        if(.not.DoOnScratch.and.nParticle>0) then
           ! The particles already present in the block need to be
           ! removed, not to contribute to the VDF moments
-          where(Index_II(0,1:nParticle)==iBlock)&
-               Index_II(0,1:nParticle) = -Index_II(0,1:nParticle)
+          where(Int_II(0,1:nParticle)==iBlock)&
+               Int_II(0,1:nParticle) = -Int_II(0,1:nParticle)
        end if
        ! Loop over physical cells:
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -691,7 +747,7 @@ contains
 
           PARTICLES:do iParticle = nParticle + 1, nParticle + nPPerCell
              ! Assign indexes
-             Index_II(0:Status_, iParticle)   = [iBlock,Done_]
+             Int_II(0:Status_, iParticle)   = [iBlock,Done_]
              Coord_DI(Mass_,iParticle)    = Mass
              ! Use random generator to assign coordinates for particles in
              ! each block.
@@ -771,14 +827,16 @@ contains
        Particle_I(iKind)%nParticle = nParticle
     end do SORTS
     call test_stop(NameSub, DoTest)
+
   end subroutine get_cell_state_from_vdf
   !============================================================================
   subroutine advance_ion_current(iBlock)
+
     use ModMain, ONLY: iStage
     integer, intent(in) :: iBlock
-
     !--------------------------------------------------------------------------
     call stop_mpi('The subroutine is under development')
+
   end subroutine advance_ion_current
   !============================================================================
 end module ModParticleMover
