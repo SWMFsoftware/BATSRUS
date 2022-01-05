@@ -405,6 +405,13 @@ contains
              end do
           end if
 
+          ! Below we add sources that do not need to be divided by cell volume
+          if(IsCartesian)then
+             Change_V = Change_V/CellVolume_B(iBlock)
+          else
+             Change_V = Change_V/CellVolume_GB(i,j,k,iBlock)
+          end if
+
           if(UseGravity .or. UseRotatingFrame)then
              do iFluid = 1, nFluid
                 iRho = iRho_I(iFluid)
@@ -441,14 +448,9 @@ contains
 
           ! Time step divided by cell volume
           if(IsTimeAccurate)then
-             DtPerDv = iStage*Dt
+             DtPerDv = iStage*Dt/nStage
           else
-             DtPerDv = iStage*Cfl*DtMax_CB(i,j,k,iBlock)
-          end if
-          if(IsCartesian)then
-             DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
-          else
-             DtPerDv = DtPerDv/(nStage*CellVolume_GB(i,j,k,iBlock))
+             DtPerDv = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
           end if
 
           ! Update state
