@@ -1518,10 +1518,10 @@ contains
       logical :: IsOuter, IsGoodSolution1, IsGoodSolution2, IsAllBehind
 
       real :: Tmp
-      !------------------------------------------------------------------------
       ! if(DoTiming)call timing_start('los_set_plotvar')
 
       ! Determine the location of the block faces
+      !------------------------------------------------------------------------
       x1 = 0.5*(Xyz_DGB(x_, 0, 0, 0,iBlock)+Xyz_DGB(x_,   1,   1  , 1,iBlock))
       x2 = 0.5*(Xyz_DGB(x_,nI,nJ,nK,iBlock)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBlock))
       y1 = 0.5*(Xyz_DGB(y_, 0, 0, 0,iBlock)+Xyz_DGB(y_,   1,   1,   1,iBlock))
@@ -1712,9 +1712,9 @@ contains
 
       real :: Ds             ! Length of line segment
       real :: XyzLos_D(3)    ! Coordinate of center of line segment
-      !------------------------------------------------------------------------
 
       ! Number of segments for an accurate integral
+      !------------------------------------------------------------------------
       if (IsRzGeometry) then
          ! In RZ geometry Delta Y is representative for the radial resolution
          nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D) &
