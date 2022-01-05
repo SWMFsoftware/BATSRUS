@@ -897,8 +897,8 @@ test_awsom_gpu_run:
 	
 test_awsom_gpu_check:
 	-@(${DIFFNUM} -a=1e-20 -t \
-		${TESTDIR}/RESULTS/SC/log_n000010.log \
-		Param/CORONA/TestOutput/log_n000010.sc.awsom_gpu \
+		${TESTDIR}/RESULTS/SC/log_n000001.log \
+		Param/CORONA/TestOutput/log_n000001.sc.awsom_gpu \
 		> test_awsom_gpu.diff)
 	ls -l test_awsom_gpu.diff
 

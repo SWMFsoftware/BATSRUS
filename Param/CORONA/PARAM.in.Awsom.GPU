@@ -134,11 +134,11 @@ T			UseAccurateReschange
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLog
-10			DnSaveLogfile
+1			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #OUTERBOUNDARY
-fixed			TypeBc1
+float			TypeBc1
 float			TypeBc2
 float			TypeBc3
 float			TypeBc4
