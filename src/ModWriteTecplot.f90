@@ -202,10 +202,10 @@ contains
   function int2str(i) result(String)
 
     ! Convert integer to string of the same length
-    
+
     integer, intent(in) :: i
     character(:), allocatable :: String ! return value
-    
+
     character(40) :: StringTmp
     !--------------------------------------------------------------------------
     write(StringTmp,'(i0)') i
@@ -217,12 +217,12 @@ contains
 
     ! Convert real to string using StringFormat.
     ! StringFormat should not contain the outside parentheses.
-    
+
     real, intent(in) :: r
     character(len=*):: StringFormat
 
     character(:), allocatable :: String ! return value
-    
+
     character(40) :: StringTmp
     !--------------------------------------------------------------------------
     write(StringTmp, "("//StringFormat//")") r
@@ -813,7 +813,6 @@ contains
        ! RBODY
        write(iUnitHere) 'AUXDATA RBODY="', real2str(rBody, "f12.2"), &
             '"', CharNewLine
-       
 
        ! SAVEDATE
        call Date_and_time(StringDate, StringTime)
@@ -1082,7 +1081,7 @@ contains
     ! block number, ie blocks 1 to n on PE 0, blocks n+1 to n+m on PE 1,
     ! etc.
 
-    use ModMain, ONLY : 
+    use ModMain, ONLY :
     use ModPhysics, ONLY : No2Io_V, UnitX_, &
          ThetaTilt
     use ModAdvance, ONLY : iTypeAdvance_B, SkippedBlock_
