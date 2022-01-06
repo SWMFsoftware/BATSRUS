@@ -214,7 +214,7 @@ contains
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn, iUx, iUy, iUz, iRho, &
          iEnergy
     logical:: IsBodyBlock, IsConserv
-    real:: DivU, DivB, DivE, DivF, DtPerDv, Change_V(nFlux), &
+    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), &
          ForcePerRho_D(3), Omega2
     !$acc declare create (Change_V)
 
@@ -311,7 +311,7 @@ contains
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
           end do
        end if
-       !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
+       !$acc loop vector collapse(3) private(Change_V, DtLocal) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseBody .and. IsBodyBlock) then
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
@@ -446,11 +446,11 @@ contains
              end do
           end if
 
-          ! Time step divided by cell volume
+          ! Time step for iStage
           if(IsTimeAccurate)then
-             DtPerDv = iStage*Dt/nStage
+             DtLocal = iStage*Dt/nStage
           else
-             DtPerDv = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
+             DtLocal = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
           end if
 
           ! Update state
@@ -468,7 +468,7 @@ contains
                   IsConserv)
 
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
-                  + DtPerDv*Change_V(1:nVar)
+                  + DtLocal*Change_V(1:nVar)
           else
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite old pressure and change with energy
@@ -482,7 +482,7 @@ contains
                   IsConserv)
 
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
-                  + DtPerDv*Change_V(1:nVar)
+                  + DtLocal*Change_V(1:nVar)
           end if
           ! Maybe we should put State_VGB(:,i,j,k) and B0_DGB(:,i,j,k) into
           ! local private arrays...
