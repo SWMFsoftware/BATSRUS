@@ -63,10 +63,10 @@ contains
     ! Save all cells within plotting range, for each processor
 
     use ModMain, ONLY: nI, nJ, nK, &
-         x_, y_, z_, Phi_, nBlockMax, Unused_B
+         x_, y_, z_, Phi_, nBlockMax, Unused_B, nBlock
     use ModGeometry, ONLY: CellSize_DB,&
          Coord111_DB
-    use ModIO
+    use ModIO, ONLY: PlotDx_DI
     use BATL_lib, ONLY: Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
          CoordMax_DB, CoordMin_D, CoordMax_D, DiLevelNei_IIIB
 
@@ -385,7 +385,7 @@ contains
          x_, y_, z_, Phi_, nBlockMax, Unused_B
     use ModGeometry, ONLY: CellSize_DB,&
          Coord111_DB
-    use ModIO
+    use ModIO, ONLY: PlotDx_DI
     use ModMpi
     use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
          CoordMax_DB, CoordMin_D,CoordMax_D,DiLevelNei_IIIB
