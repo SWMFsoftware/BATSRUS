@@ -408,7 +408,7 @@ contains
     use BATL_geometry,   ONLY: CoordMin_D, DomainSize_D
     use ModInterpolate,  ONLY: interpolate_vector
     use ModMPI
-
+    
     integer, intent(in)                     :: nLogVar, nLogR, nLogTot, iSat
     character (len=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
     real, intent(in)                        :: LogR_I(nLogR)
@@ -563,7 +563,10 @@ contains
       use CON_axes,     ONLY: transform_matrix
       use ModUserInterface ! user_get_log_var
       use ModFaceBoundary, ONLY: ratioOH
-
+      use ModPhysics,     ONLY: Gbody
+      use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
+      use ModChromosphere, ONLY: get_tesi_c, TeSi_C
+      
       ! Local variables
       real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, Value
       real :: Current_D(3)
@@ -723,7 +726,25 @@ contains
             end if
          end do
          LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
-
+      case('egrav')
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) &
+                 = State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock) &
+                 *Gbody/r_GB(1:nI,1:nJ,1:nK,iBlock)
+         end do
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
+      case('radcool')
+         do iBlock=1,nBlock
+            if (UnUsed_B(iBlock))CYCLE
+            call get_tesi_c(iBlock, TeSi_C)
+            do k = 1, nK; do j=1,nJ; do i=1, nI
+               call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
+                    RadCooling_C(i,j,k))
+               Tmp1_GB(i,j,k,iBlock) = RadCooling_C(i,j,k)
+            end do; end do; end do
+         end do
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('jin','jout','jinmax','joutmax')
 
          if(index(TypeMessagePass,'opt')>0) &
@@ -1328,7 +1349,7 @@ contains
             'b1x','b1y','b1z','b0x','b0y','b0z','dst','dstdivb','dst_sm')
           LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitB_)
        case('e','epnt','ew','erad','ekinx','ekiny','ekinz','ekin','eth', &
-            'eeth','eb')
+            'eeth','eb','egrav')
           LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitEnergyDens_)
        case('p','ppnt','pmin','pmax','pperp')
           LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitP_)
@@ -1341,7 +1362,10 @@ contains
           LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitN_)
        case('t','temp','tpnt','temppnt')
           LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitTemperature_)
-
+       case('radcool')
+          LogVar_I(iVarTot)=LogVar_I(iVarTot)&
+               *No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
+          
           ! Ionosphere values
 
        case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&

@@ -475,7 +475,7 @@ contains
        end do
        VarValue = integrate_grid(Tmp1_GB)
 
-    case('neteflx')
+    case('wflx')
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
           do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
@@ -502,7 +502,7 @@ contains
        VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
             *unit_energy/No2Io_V(UnitT_)
 
-    case('peflx')
+    case('wplusflx')
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
           do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
@@ -528,7 +528,7 @@ contains
        VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
             *unit_energy/No2Io_V(UnitT_)
 
-    case('meflx')
+    case('wminusflx')
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
           do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
@@ -562,7 +562,7 @@ contains
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
                         Rho
 
-             Tmp1_GB(i,j,k,iBlock) = Rho*Ur**3./2.
+             Tmp1_GB(i,j,k,iBlock) = Rho*Ur**3 / 2.0
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
