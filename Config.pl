@@ -203,7 +203,7 @@ sub set_optimization{
 	# Extract adjustables: NAME => ... lines without Orig
 	$Opt{$1} = 'any' if /^\s+(\w+)\s*\=\>/ and not /Orig/;
 	# Extract fixed params: parameter:: NAME = VALUE
-	$Opt{$1} = $2    if /parameter\s*::\s*(\w+)\s*=\s*(\S+)/;
+	$Opt{$1} = $2    if /parameter\s*::\s*(\w+)\s*=\s*(.+)/;
 	last if /^\s*contains\s*$/;
     }
     close(FILE);
@@ -371,13 +371,18 @@ sub set_optimization{
 
 	foreach $name (sort keys %Set){
 	    if($Set{$name} ne $Opt{$name}){
-		$Opt{$name} = $Set{$name};
 		$Change = 1;
+		last;
 	    }
 	}
 	if($Change){
 	    foreach $name (sort keys %Opt){
-		printf "%-30s = %s\n", $name, $Opt{$name};
+		if($Set{$name} eq $Opt{$name}){
+		    printf("%-30s = %s\n", $name, $Opt{$name});
+		}else{
+		    printf("%-30s = %-17s -> %s\n", $name, $Opt{$name}, $Set{$name});
+		    $Opt{$name} = $Set{$name};
+		}
 	    }
 	}
     }else{
@@ -385,7 +390,7 @@ sub set_optimization{
 	if($Opt =~ s/^(any|none),?//i){
 	    foreach $name (sort keys %Opt){
 		next if $Opt{$name} eq 'any';
-		printf "%-20s%9s -> any\n", "$name:", $Opt{$name};
+		printf "%-30s = %-17s -> any\n", "$name:", $Opt{$name};
 		$Opt{$name} = 'any';
 		$Change = 1;
 	    }
@@ -407,7 +412,7 @@ sub set_optimization{
 	    if($newvalue ne $oldvalue){
 		$Change = 1;
 		# Print out modified value
-		printf "%-20s%9s -> %s\n", "$_:", $oldvalue, $newvalue;
+		printf "%-30s = %-17s -> %s\n", $_, $oldvalue, $newvalue;
 		$Opt{$_} = $newvalue;
 	    }
 	}
@@ -417,6 +422,7 @@ sub set_optimization{
 	print "No changes in $OptFile\n";
 	return;
     }
+    
     # Edit the file
     print "Modifying $OptFile\n";
     my $parameters; # true inside setting parameters part
