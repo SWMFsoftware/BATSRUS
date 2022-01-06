@@ -23,10 +23,12 @@ module ModOptimizeParam
        nStage => nStage, &
        iStage => iStage, &
        nOrder => nOrder, &
+       UseBody => UseBody, &
        UseDivbSource => UseDivbSource, &
-       UseHyperbolicDivB => UseHyperBolicDivB, &
        UseDtFixed => UseDtFixed, &
-       UseBody => UseBody
+       UseGravity => UseGravity, &
+       UseHyperbolicDivB => UseHyperBolicDivB, &
+       UseRotatingFrame => UseRotatingFrame
   use ModBorisCorrection, ONLY: &
        UseBorisCorrection => UseBorisCorrection
   use ModPhysics, ONLY: &
