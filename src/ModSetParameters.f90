@@ -2457,7 +2457,7 @@ contains
              case('HGR', 'HGC', 'hgr', 'hgc')
                 UseRotatingFrame = .true.
                 if(iProc==0) &
-                     write(*,*)NameSub//' setting .UseRotatingFrame = T'
+                     write(*,*)NameSub//' setting UseRotatingFrame = T'
              case default
                 call stop_mpi(NameSub// &
                      ' ERROR: cannot handle coordinate system '&
@@ -2985,7 +2985,7 @@ contains
       case('SC','IH','OH','EE')
          ! Body parameters
          UseGravity = .true.
-         UseBody      = .true.
+         UseBody    = .true.
          if(NameThisComp == 'EE') UseBody = .false.
          Rbody      = 1.0
          Rcurrents  =-1.0
