@@ -1,16 +1,13 @@
 #DESCRIPTION
 Param/FIVEMOMENT/PARAM.in.alfven: Five-moment test with Alfven waves		StringDescription
 
+USERMODULE: Waves
 
 #POINTIMPLICIT
 T			UsePointImplicit
 0.5			BetaPointImplicit
 F			IsAsymmetric
 F			DoNormalizeCell
-
-#USERMODULE
-Waves and GEM, Yingjuan Ma		NameUserModule
-1.40			VersionUserModule
 
 #CHECKGRIDSIZE
      100		nI
