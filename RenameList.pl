@@ -571,5 +571,22 @@
     #NodeOffset => nNodeOffset_P,
     #NodeOffsetMax => MaxNodeOffset_P,
     #iStatus => iStatus_I,
-    
+
+    ### ModUserAwsom
+    #PeakFlowSpeedFixerSi => FlowSpeedJetSi,
+    #nChromoSi => ChromoNSi,
+    #nChromo => ChromoN,
+    #nCoronaSi => CoronaN,
+    #kbJet => CoefBJet,
+    #FrampStart => DoRampUpJet,
+    #UrZero => IsUr0Jet,
+    #UpdateWithParker => DoUpdateParkerJet,
+    #Bramp => BrampJet,
+    #IterCount => nIterParker,
+    #del => dUr,
+    #unit_energy => UnitEnergy,
+    #Major_ => iMajor,
+    #Minor_ => iMinor,
+    PeakFlowSpeedFixer => FlowSpeedJet,
+       
     );

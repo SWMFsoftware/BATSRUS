@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-program BATSRUS
+program batsrus
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose
@@ -296,8 +296,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine show_progress
   !============================================================================
-
-end program BATSRUS
+end program batsrus
 !==============================================================================
 subroutine read_ih_buffer(y,z,State_V)
   use ModBatsrusUtility, ONLY: stop_mpi
