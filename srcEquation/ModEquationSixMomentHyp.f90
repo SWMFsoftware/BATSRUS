@@ -13,7 +13,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationSixMomentHyp.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationSixMomentHyp.f90"
 
   ! This equation module contains six-moment equations with
   ! anisotropic ion pressure and hyperbolic cleaning.

@@ -12,11 +12,13 @@ module ModVarIndexes
 
   save
 
-  character(*),parameter:: NameEquationFile="ModEquationMhdEuropa2FluidsPe.f90"
+  character(*),parameter:: &
+       NameEquationFile = "ModEquationMhdEuropa2FluidsPe.f90"
 
   ! This equation module contains multi-ion equations with 2 fluids
   ! with electron pressure
-  character (len=*), parameter :: NameEquation= &
+  character (len=*), parameter :: &
+       NameEquation = &
        'Two-Ion-fluid Pe MHD for Europa'
 
   integer, parameter :: nVar = 14

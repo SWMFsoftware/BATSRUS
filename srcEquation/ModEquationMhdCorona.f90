@@ -10,11 +10,13 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdCorona.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdCorona.f90"
 
   ! This equation module contains the standard MHD equations plus one
   ! extra wave energy variable Ew that carries the extra energy.
-  character (len=*), parameter :: NameEquation='Solar Corona MHD'
+  character (len=*), parameter :: &
+       NameEquation = 'Solar Corona MHD'
 
   ! Number of variables without energy:
   integer, parameter :: nVar = 9

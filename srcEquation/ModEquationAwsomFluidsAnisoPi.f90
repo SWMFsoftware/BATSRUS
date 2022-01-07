@@ -22,7 +22,8 @@ module ModVarIndexes
 
   ! This equation module contains the multi-ion anisotropic ion
   ! pressure equations with wave energy and electron pressure
-  character (len=*), parameter :: NameEquation = &
+  character (len=*), parameter :: &
+       NameEquation = &
        'Multi-fluid MHD + Alfven waves + isotropic Pe + anisotropic Pi'
 
   ! loop variable for implied do-loop over spectrum

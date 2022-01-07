@@ -21,7 +21,8 @@ module ModVarIndexes
   ! within the terrestrial magnetosphere.  Solar wind values default to
   ! first fluid; user must specify inner boundary densities using
   ! #MAGNETOSPHERE command.
-  character (len=*), parameter :: NameEquation = &
+  character (len=*), parameter :: &
+       NameEquation = &
        'MHD with SW and Iono H+, Iono O+, Plasmasphere and electron pressure'
 
   integer, parameter :: nVar = 24

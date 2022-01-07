@@ -10,11 +10,13 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdPe.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdPe.f90"
 
   ! This equation module contains the standard MHD equations
   ! with electron pressure
-  character (len=*), parameter :: NameEquation= &
+  character (len=*), parameter :: &
+       NameEquation = &
        'MHD with electron pressure'
 
   ! Number of variables without energy:

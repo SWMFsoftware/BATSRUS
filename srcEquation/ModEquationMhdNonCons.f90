@@ -10,10 +10,12 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdNonCons.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdNonCons.f90"
 
   ! This equation module solves the MHD equations in a non-conservative form
-  character (len=*), parameter :: NameEquation='Non-conservative MHD'
+  character (len=*), parameter :: &
+       NameEquation = 'Non-conservative MHD'
 
   ! This is non-standard, so that we solve the non-conservative equations.
   logical,           parameter :: IsMhd = .false.

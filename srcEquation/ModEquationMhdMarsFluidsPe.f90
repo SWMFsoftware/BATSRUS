@@ -11,9 +11,11 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdMarsFluidsPe.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdMarsFluidsPe.f90"
 
-  character (len=*), parameter :: NameEquation='Multi-fluid Pe MHD for Mars'
+  character (len=*), parameter :: &
+       NameEquation = 'Multi-fluid Pe MHD for Mars'
 
   integer, parameter :: nVar = 29
 

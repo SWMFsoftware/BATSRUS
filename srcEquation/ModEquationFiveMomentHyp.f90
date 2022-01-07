@@ -17,7 +17,8 @@ module ModVarIndexes
 
   ! This equation module contains the five-moment equations with
   ! hyperbolic div B cleaning.
-  character (len=*), parameter :: NameEquation= &
+  character (len=*), parameter :: &
+       NameEquation = &
        'Five Moment Closure with hyperbolic div B cleaning'
 
   integer, parameter :: nVar = 18

@@ -17,7 +17,8 @@ module ModVarIndexes
 
   ! This equation module contains the multi-ion MHD equations for 3 fluids
   ! with electron pressure
-  character(len=*), parameter :: NameEquation= &
+  character(len=*), parameter :: &
+       NameEquation = &
        '3-fluid + Pe MHD for Comets'
 
   integer, parameter :: nVar = 24

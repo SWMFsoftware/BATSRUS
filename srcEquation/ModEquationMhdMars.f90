@@ -13,10 +13,12 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdMars.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdMars.f90"
 
   ! This equation module contains the MHD equations with species for Mars
-  character (len=*), parameter :: NameEquation='Mars MHD'
+  character (len=*), parameter :: &
+       NameEquation = 'Mars MHD'
 
   ! Number of variables without energy:
   integer, parameter :: nVar = 12

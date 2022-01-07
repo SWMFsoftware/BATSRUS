@@ -9,9 +9,11 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdHd.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdHd.f90"
 
-  character (len=*), parameter :: NameEquation='MHD and HD'
+  character (len=*), parameter :: &
+       NameEquation = 'MHD and HD'
 
   ! Number of variables without energy:
   integer, parameter :: nVar = 13

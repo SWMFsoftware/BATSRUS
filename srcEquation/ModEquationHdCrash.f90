@@ -16,9 +16,11 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationHdCrash.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationHdCrash.f90"
 
-  character (len=*), parameter :: NameEquation='HD+Ionization+Levels'
+  character (len=*), parameter :: &
+       NameEquation = 'HD+Ionization+Levels'
 
   ! loop variable for implied do-loop over material levels
   integer, private :: iMaterial

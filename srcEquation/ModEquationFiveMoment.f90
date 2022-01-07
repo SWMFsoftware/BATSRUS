@@ -16,7 +16,8 @@ module ModVarIndexes
        NameEquationFile = "ModEquationFiveMoment.f90"
 
   ! This equation module contains the five-moment equations.
-  character (len=*), parameter :: NameEquation='Five Moment Closure'
+  character (len=*), parameter :: &
+       NameEquation = 'Five Moment Closure'
 
   integer, parameter :: nVar = 17
 

@@ -13,10 +13,12 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdComet.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdComet.f90"
 
   ! This equation module contains the MHD equations with species for Comets
-  character (len=*), parameter :: NameEquation='Cometary MHD'
+  character (len=*), parameter :: &
+       NameEquation = 'Cometary MHD'
 
   ! Number of variables without energy:
   integer, parameter :: nVar = 14  ! 8 + 6 ion species

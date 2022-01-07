@@ -11,11 +11,13 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdEos.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdEos.f90"
 
   ! This equation module contains the standard MHD equations with
   ! extra internal energy
-  character (len=*), parameter :: NameEquation='MHD+eos'
+  character (len=*), parameter :: &
+       NameEquation = 'MHD+eos'
 
   ! Number of variables without energy:
   integer, parameter :: nVar = 9
