@@ -1396,9 +1396,9 @@ contains
              iDir=3; nShiftK=1
           end select
           do k=1,nK; do j=1,nJ; do i=1,nI
-             call get_face_curl(iDir, i+nShiftI, j+nShiftJ, k+nShiftK, iBlock, &
-                  IsNewBlockCurrent, &
-                  FullB_DG, Current_D)
+             call get_face_curl( &
+                  iDir, i+nShiftI, j+nShiftJ, k+nShiftK, iBlock, &
+                  IsNewBlockCurrent, FullB_DG, Current_D)
              select case(String(2:2))
              case('x')
                 PlotVar_GV(i,j,k,iVar) = Current_D(x_)
