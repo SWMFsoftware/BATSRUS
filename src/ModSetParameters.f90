@@ -1673,8 +1673,8 @@ contains
           if(UseUpdateCheck)then
              call read_var("RhoMinPercent", PercentRhoLimit_I(1))
              call read_var("RhoMaxPercent", PercentRhoLimit_I(2))
-             call read_var("pMinPercent",   percent_max_p(1))
-             call read_var("pMaxPercent",   percent_max_p(2))
+             call read_var("pMinPercent",   PercentPLimit_I(1))
+             call read_var("pMaxPercent",   PercentPLimit_I(2))
           end if
 
        case("#PROLONGATION")
