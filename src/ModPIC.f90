@@ -108,8 +108,8 @@ module ModPIC
 
   ! Each patch uses 1 bit to record its status, on or off. The second
   ! index is the region number.
-  integer, public, allocatable:: iStatus_I(:)
-  integer, public, allocatable:: iStatusMin_I(:), iStatusMax_I(:)
+  integer, public, allocatable:: iPicStatus_I(:)
+  integer, public, allocatable:: iPicStatusMin_I(:), iPicStatusMax_I(:)
   integer, public::  nSizeStatus
 
   integer, public:: nCellPerPatch = 4
@@ -460,30 +460,30 @@ contains
 
     if(.not. DoRestartPicStatus .and. UseAdaptivePic) then
        ! if DoRestartPicStatus, the arrays are allocated in restart part
-       if(allocated(iStatusMin_I)) deallocate(iStatusMin_I)
-       allocate(iStatusMin_I(nRegionPic))
-       iStatusMin_I = 0
+       if(allocated(iPicStatusMin_I)) deallocate(iPicStatusMin_I)
+       allocate(iPicStatusMin_I(nRegionPic))
+       iPicStatusMin_I = 0
 
-       if(allocated(iStatusMax_I)) deallocate(iStatusMax_I)
-       allocate(iStatusMax_I(nRegionPic))
-       iStatusMax_I = 0
+       if(allocated(iPicStatusMax_I)) deallocate(iPicStatusMax_I)
+       allocate(iPicStatusMax_I(nRegionPic))
+       iPicStatusMax_I = 0
 
-       ! Calculate the size nSizeStatus and allocate integer array iStatus_I
+       ! Calculate the size nSizeStatus and allocate integer array iPicStatus_I
        ! to store the status of the patches for all PIC grids.
        nSizeStatus = 0
        do iRegion = 1, nRegionPic
-          iStatusMin_I(iRegion) = nSizeStatus + 1
+          iPicStatusMin_I(iRegion) = nSizeStatus + 1
 
-          iStatusMax_I(iRegion) = iStatusMin_I(iRegion) -1 + &
+          iPicStatusMax_I(iRegion) = iPicStatusMin_I(iRegion) -1 + &
                ceiling(real(product(nPatchCell_DI(1:nDim,iRegion))) &
                /storage_size(nSizeStatus))
 
           ! The number of integers needed to store the patch status information
-          nSizeStatus = iStatusMax_I(iRegion)
+          nSizeStatus = iPicStatusMax_I(iRegion)
        enddo
 
-       if(allocated(iStatus_I)) deallocate(iStatus_I)
-       allocate(iStatus_I(nSizeStatus))
+       if(allocated(iPicStatus_I)) deallocate(iPicStatus_I)
+       allocate(iPicStatus_I(nSizeStatus))
        call set_status_all(iPicOff_)
 
     endif
@@ -590,16 +590,16 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! iStatus_I exists in every proc, use only the first one
+    ! iPicStatus_I exists in every proc, use only the first one
     if(iProc /= 0) RETURN
 
     NameFile = trim('GM/restartOUT/')//NamePicStatusFile
     call open_file(FILE=NameFile, form='UNFORMATTED', NameCaller=NameSub)
     write(UnitTmp_) nSizeStatus
-    write(UnitTmp_) iStatus_I
+    write(UnitTmp_) iPicStatus_I
     write(UnitTmp_) nRegionPic
-    write(UnitTmp_) iStatusMin_I
-    write(UnitTmp_) iStatusMax_I
+    write(UnitTmp_) iPicStatusMin_I
+    write(UnitTmp_) iPicStatusMax_I
 
     call close_file
 
@@ -623,16 +623,16 @@ contains
     call open_file(FILE=NameFile, status='old', form='UNFORMATTED', &
          NameCaller=NameSub)
     read(UnitTmp_, iostat = iError) nSizeStatus
-    if(allocated(iStatus_I)) deallocate(iStatus_I)
-    allocate(iStatus_I(nSizeStatus))
-    read(UnitTmp_, iostat = iError) iStatus_I
+    if(allocated(iPicStatus_I)) deallocate(iPicStatus_I)
+    allocate(iPicStatus_I(nSizeStatus))
+    read(UnitTmp_, iostat = iError) iPicStatus_I
     read(UnitTmp_, iostat = iError) nRegionPic
-    if(allocated(iStatusMin_I)) deallocate(iStatusMin_I)
-    allocate(iStatusMin_I(nRegionPic))
-    if(allocated(iStatusMax_I)) deallocate(iStatusMax_I)
-    allocate(iStatusMax_I(nRegionPic))
-    read(UnitTmp_, iostat = iError) iStatusMin_I
-    read(UnitTmp_, iostat = iError) iStatusMax_I
+    if(allocated(iPicStatusMin_I)) deallocate(iPicStatusMin_I)
+    allocate(iPicStatusMin_I(nRegionPic))
+    if(allocated(iPicStatusMax_I)) deallocate(iPicStatusMax_I)
+    allocate(iPicStatusMax_I(nRegionPic))
+    read(UnitTmp_, iostat = iError) iPicStatusMin_I
+    read(UnitTmp_, iostat = iError) iPicStatusMax_I
     call close_file
 
     if(iError /= 0) call stop_mpi(NameSub// &
@@ -798,8 +798,9 @@ contains
                       if(allocated(iRegionPic_I)) then
                          if(is_point_inside_regions(iRegionPic_I,&
                               XyzMhd_D)) then
-                            call set_point_status(iStatus_I(&
-                                 iStatusMin_I(iRegion):iStatusMax_I(iRegion)),&
+                            call set_point_status(iPicStatus_I(&
+                                 iPicStatusMin_I(iRegion):&
+                                 iPicStatusMax_I(iRegion)),&
                                  nX, nY, nZ, iP, jP, kP, iPicOn_)
                             CYCLE
                          endif
@@ -835,9 +836,9 @@ contains
                             do kPExt = max(kP - nPatchExtend_D(z_), 0), &
                                  min(kP + nPatchExtend_D(z_), nZ-1)
 
-                               call set_point_status(iStatus_I(&
-                                    iStatusMin_I(iRegion):&
-                                    iStatusMax_I(iRegion)),&
+                               call set_point_status(iPicStatus_I(&
+                                    iPicStatusMin_I(iRegion):&
+                                    iPicStatusMax_I(iRegion)),&
                                     nX, nY, nZ, iPExt, jPExt, kPExt, iPicOn_)
 
                             enddo
@@ -851,8 +852,8 @@ contains
        end do ! end loop blocks
     end do ! end loop thorugh regions
 
-    ! Global MPI reduction for iStatus_I array
-    call MPI_Allreduce(MPI_IN_PLACE, iStatus_I, nSizeStatus,&
+    ! Global MPI reduction for iPicStatus_I array
+    call MPI_Allreduce(MPI_IN_PLACE, iPicStatus_I, nSizeStatus,&
          MPI_INT, MPI_BOR, iComm, iError)
 
   end subroutine pic_set_cell_status
@@ -874,7 +875,7 @@ contains
   !============================================================================
   subroutine set_status_all(iStatusDest)
 
-    ! The subroutine that set entire iStatus_I to iStatusDest
+    ! The subroutine that set entire iPicStatus_I to iStatusDest
 
     use BATL_lib, ONLY: x_, y_, z_
     integer, intent(in) :: iStatusDest
@@ -892,8 +893,8 @@ contains
        nY = nPatchCell_DI(y_, iRegion)
        nZ = nPatchCell_DI(z_, iRegion)
        do i = 0, nX-1; do j = 0, nY-1; do k = 0, nZ-1
-          call set_point_status(iStatus_I(&
-               iStatusMin_I(iRegion):iStatusMax_I(iRegion)),&
+          call set_point_status(iPicStatus_I(&
+               iPicStatusMin_I(iRegion):iPicStatusMax_I(iRegion)),&
                nX, nY, nZ, i, j, k, iStatusDest)
        enddo; enddo; enddo
     enddo
@@ -942,7 +943,8 @@ contains
                (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
 
           call get_point_status(&
-               iStatus_I(iStatusMin_I(iRegion):iStatusMax_I(iRegion)), &
+               iPicStatus_I(iPicStatusMin_I(iRegion):&
+               iPicStatusMax_I(iRegion)),&
                nx, ny, nz, iCellInPatch_D(x_), iCellInPatch_D(y_),&
                iCellInPatch_D(z_), iStatus)
 
@@ -1218,7 +1220,7 @@ contains
     use ModMain,         ONLY: iNewGrid, iNewDecomposition
 
     integer :: iBlock, i, j, k, iCriteria
-    integer, allocatable :: iStatus_CBI(:,:,:,:,:)
+    integer, allocatable :: iPicStatus_CBI(:,:,:,:,:)
     real :: CritJB, CritJBperp, CritEntropy, CriteriaValue
     real, allocatable :: Current_D(:), Ufield_DGB(:,:,:,:,:),&
          DivU_CB(:,:,:,:), CurrentCrossB_D(:)
@@ -1242,8 +1244,8 @@ contains
     iPicDecomposition = iNewDecomposition
 
     ! if pic criteria exists in PARAM.in
-    if(.not. allocated(iStatus_CBI)) &
-         allocate(iStatus_CBI(nI,nJ,nK,MaxBlock,nCriteriaPic))
+    if(.not. allocated(iPicStatus_CBI)) &
+         allocate(iPicStatus_CBI(nI,nJ,nK,MaxBlock,nCriteriaPic))
 
     do iCriteria=1,nCriteriaPic
        select case(trim(NameCriteriaPic_I(iCriteria)))
@@ -1278,7 +1280,7 @@ contains
     end do
 
     iStatusPicCrit_CB = iPicOff_
-    iStatus_CBI = iPicOff_
+    iPicStatus_CBI = iPicOff_
 
     ! Full B Field is a useful variable
     allocate(FullB_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
@@ -1408,7 +1410,7 @@ contains
 
              if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
                   CriteriaValue < CriteriaMaxPic_I(iCriteria)) then
-                iStatus_CBI(i,j,k,iBlock,iCriteria) = iPicOn_
+                iPicStatus_CBI(i,j,k,iBlock,iCriteria) = iPicOn_
              end if
 
           end do ! end loop criteria
@@ -1420,7 +1422,7 @@ contains
        do iBlock=1,nBlock
           IsSatisfyAllCrit = .true.
           do iCriteria=1, nCriteriaPic
-             if(iStatus_CBI(i,j,k,iBlock,iCriteria)==iPicOff_) &
+             if(iPicStatus_CBI(i,j,k,iBlock,iCriteria)==iPicOff_) &
                   IsSatisfyAllCrit = .false.
           end do
           if(IsSatisfyAllCrit) iStatusPicCrit_CB(i,j,k,iBlock) = iPicOn_

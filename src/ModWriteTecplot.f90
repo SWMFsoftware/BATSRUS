@@ -1948,7 +1948,7 @@ contains
     integer, allocatable:: nNodeOffset_P(:), MaxNodeOffset_P(:), nOffset_P(:)
     real,    allocatable:: IndexNode_VNB(:,:,:,:,:)
     logical :: DoAllReduce=.true.
-    integer :: iStatus_I(MPI_STATUS_SIZE)
+    integer :: iPicStatus_I(MPI_STATUS_SIZE)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'assign_node_numbers'
@@ -2046,7 +2046,7 @@ contains
           do iPE=1,nProc-1
              iTag = iPE
              call MPI_recv(MaxNodeOffset_P,nNodeUsed*nNodeBlock, &
-                  MPI_INTEGER,iPE,itag,iComm,iStatus_I,iError)
+                  MPI_INTEGER,iPE,itag,iComm,iPicStatus_I,iError)
              nNodeOffset_P = max(nNodeOffset_P,MaxNodeOffset_P)
           end do
        else

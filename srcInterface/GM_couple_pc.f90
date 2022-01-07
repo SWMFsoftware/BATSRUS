@@ -39,8 +39,8 @@ contains
   !============================================================================
 
   subroutine GM_get_for_pc_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
-    use ModPIC, ONLY: nSizeStatus, Status_I, UseAdaptivePic, &
-         pic_set_cell_status, nRegionPic, StatusMax_I
+    use ModPIC, ONLY: nSizeStatus, iPicStatus_I, UseAdaptivePic, &
+         pic_set_cell_status, nRegionPic, iPicStatusMax_I
 
     use ModPIC,      ONLY:DoRestartPicStatus
 
@@ -53,8 +53,8 @@ contains
     else
        if(.not. DoRestartPicStatus .and. UseAdaptivePic) &
             call pic_set_cell_status
-       Int_I = Status_I
-       AccumulatedSize_I = StatusMax_I
+       Int_I = iPicStatus_I
+       AccumulatedSize_I = iPicStatusMax_I
     endif
 
   end subroutine GM_get_for_pc_grid_info
@@ -69,7 +69,7 @@ contains
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
     use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal, rPlanetSi
     use ModPIC,        ONLY: XyzMinPic_DI, nRegionPiC, &
-         DxyzPic_DI, xUnitPicSi_I, uUnitPicSi_I, mUnitPicSi_I, LenPic_DI, &
+         DxyzPic_DI, xUnitPicSi_I, uUnitPicSi_I, MassUnitPicSi_I, LenPic_DI, &
          R_DDI, nCellPerPatch
     use BATL_lib,      ONLY: x_, y_, z_, nDim
 
@@ -150,7 +150,7 @@ contains
        ! Units
        Param_I(n) = xUnitPicSi_I(iRegion); n = n+1
        Param_I(n) = uUnitPicSi_I(iRegion); n = n+1
-       Param_I(n) = mUnitPicSi_I(iRegion); n = n+1
+       Param_I(n) = MassUnitPicSi_I(iRegion); n = n+1
     end do ! iRegion
 
     ! Send charge and mass of each species/fluids
