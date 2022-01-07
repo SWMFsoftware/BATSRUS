@@ -22,9 +22,9 @@ module ModPIC
   public:: pic_read_param
   public:: pic_init_region
   public:: pic_find_node
-  public:: pic_find_region
-  public:: pic_find_region_active
-  public:: pic_find_region_criteria
+  public:: i_status_pic_region
+  public:: i_status_pic_active
+  public:: i_status_pic_criteria
   public:: pic_set_cell_status
   public:: mhd_to_pic_vec
   public:: is_inside_active_pic_region
@@ -71,12 +71,12 @@ module ModPIC
   character(len=*), parameter :: NamePicStatusFile = "picstatus.rst"
 
   type(FreqType), public :: &
-       AdaptPic = FreqType(.false.,100000,huge(1.0),-1,-1.0)
+       AdaptPic = FreqType(.false.,100000,1e30,-1,-1.0)
 
   logical, public:: DoBalancePicBlock=.true.
 
   ! The cell status related to get PIC involved, -1 is the default
-  integer, public, allocatable:: IsPicCrit_CB(:, :, :, :)
+  integer, public, allocatable:: iStatusPicCrit_CB(:, :, :, :)
 
   ! Vars of regions defined with the #REGION commands
   integer, allocatable:: iRegionPic_I(:)
@@ -89,9 +89,9 @@ module ModPIC
   ! Conversion to PIC units
   ! If UseSamePicUnit is true, use the same units for all PIC regions.
   logical, public:: UseSamePicUnit = .true.
-  real, public :: xUnitPicSi = 1, uUnitPicSi = 1, mUnitPicSi = 1
+  real, public :: xUnitPicSi = 1, uUnitPicSi = 1, MassUnitPicSi = 1
   real, public, allocatable  :: xUnitPicSi_I(:), uUnitPicSi_I(:), &
-       mUnitPicSi_I(:), ScalingFactor_I(:)
+       MassUnitPicSi_I(:), ScalingFactor_I(:)
 
   ! File sent by the PIC code
 
@@ -104,12 +104,12 @@ module ModPIC
        LenPic_DI(:,:), DxyzPic_DI(:,:), r_DDI(:,:,:)
 
   ! The number of patches of each region
-  integer, public, allocatable:: PatchSize_DI(:,:)
+  integer, public, allocatable:: nPatchCell_DI(:,:)
 
   ! Each patch uses 1 bit to record its status, on or off. The second
   ! index is the region number.
-  integer, public, allocatable:: Status_I(:)
-  integer, public, allocatable:: StatusMin_I(:), StatusMax_I(:)
+  integer, public, allocatable:: iStatus_I(:)
+  integer, public, allocatable:: iStatusMin_I(:), iStatusMax_I(:)
   integer, public::  nSizeStatus
 
   integer, public:: nCellPerPatch = 4
@@ -161,10 +161,10 @@ contains
        call read_var('PatchSize', nCellPerPatch)
 
     case ('#PICCRITERIA')
-       if(allocated(IsPicCrit_CB)) deallocate(IsPicCrit_CB)
-       allocate(IsPicCrit_CB(nI,nJ,nK,MaxBlock))
+       if(allocated(iStatusPicCrit_CB)) deallocate(iStatusPicCrit_CB)
+       allocate(iStatusPicCrit_CB(nI,nJ,nK,MaxBlock))
 
-       IsPicCrit_CB = iPicOff_
+       iStatusPicCrit_CB = iPicOff_
 
        call read_var('nCriteriaPic', nCriteriaPic)
        if(.not. allocated(NameCriteriaPic_I)) &
@@ -223,11 +223,11 @@ contains
        nRegionPic = nRegionPicTmp
 
        if(allocated(xUnitPicSi_I)) deallocate( &
-            xUnitPicSi_I, uUnitPicSi_I, mUnitPicSi_I, ScalingFactor_I)
+            xUnitPicSi_I, uUnitPicSi_I, MassUnitPicSi_I, ScalingFactor_I)
        allocate( &
             xUnitPicSi_I(nRegionPic),       &
             uUnitPicSi_I(nRegionPic),       &
-            mUnitPicSi_I(nRegionPic),       &
+            MassUnitPicSi_I(nRegionPic),       &
             ScalingFactor_I(nRegionPic)     )
 
        do iRegion = 1, nRegionPic
@@ -249,15 +249,15 @@ contains
 
        UsePic = nRegionPic > 0
        if(allocated(XyzMinPic_DI)) deallocate( &
-            XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI, PatchSize_DI)
+            XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI, nPatchCell_DI)
        allocate( &
             XyzMinPic_DI(nDim,nRegionPic), &
             XyzMaxPic_DI(nDim,nRegionPic), &
             LenPic_DI(nDim,nRegionPic), &
             r_DDI(3,3,nRegionPic),       &
             DxyzPic_DI(nDim,nRegionPic), &
-            PatchSize_DI(3, nRegionPic))
-       PatchSize_DI = 1
+            nPatchCell_DI(3, nRegionPic))
+       nPatchCell_DI = 1
        do iRegion = 1, nRegionPic
           call              read_var('xMinPic', XyzMinPic_DI(x_,iRegion))
           call              read_var('xMaxPic', XyzMaxPic_DI(x_,iRegion))
@@ -425,11 +425,11 @@ contains
 
     if(UseSamePicUnit) then
        if(allocated(xUnitPicSi_I)) deallocate( &
-            xUnitPicSi_I, uUnitPicSi_I, mUnitPicSi_I, ScalingFactor_I)
+            xUnitPicSi_I, uUnitPicSi_I, MassUnitPicSi_I, ScalingFactor_I)
        allocate( &
             xUnitPicSi_I(nRegionPic),       &
             uUnitPicSi_I(nRegionPic),       &
-            mUnitPicSi_I(nRegionPic),       &
+            MassUnitPicSi_I(nRegionPic),       &
             ScalingFactor_I(nRegionPic)     )
        xUnitPicSi_I = xUnitPicSi
        uUnitPicSi_I = uUnitPicSi
@@ -446,7 +446,7 @@ contains
           nCell = nint(LenPic_DI(i,iRegion)/DxyzPic_DI(i,iRegion))
           LenPic_DI(i,iRegion) =  nCell*DxyzPic_DI(i,iRegion)
           if(UseAdaptivePic) then
-             PatchSize_DI(i,iRegion) = nCell/nCellPerPatch
+             nPatchCell_DI(i,iRegion) = nCell/nCellPerPatch
 
              if(iProc == 0 .and. mod(nCell, nCellPerPatch) /= 0)&
                   call stop_mpi(&
@@ -460,30 +460,30 @@ contains
 
     if(.not. DoRestartPicStatus .and. UseAdaptivePic) then
        ! if DoRestartPicStatus, the arrays are allocated in restart part
-       if(allocated(StatusMin_I)) deallocate(StatusMin_I)
-       allocate(StatusMin_I(nRegionPic))
-       StatusMin_I = 0
+       if(allocated(iStatusMin_I)) deallocate(iStatusMin_I)
+       allocate(iStatusMin_I(nRegionPic))
+       iStatusMin_I = 0
 
-       if(allocated(StatusMax_I)) deallocate(StatusMax_I)
-       allocate(StatusMax_I(nRegionPic))
-       StatusMax_I = 0
+       if(allocated(iStatusMax_I)) deallocate(iStatusMax_I)
+       allocate(iStatusMax_I(nRegionPic))
+       iStatusMax_I = 0
 
-       ! Calculate the size nSizeStatus and allocate integer array Status_I
+       ! Calculate the size nSizeStatus and allocate integer array iStatus_I
        ! to store the status of the patches for all PIC grids.
        nSizeStatus = 0
        do iRegion = 1, nRegionPic
-          StatusMin_I(iRegion) = nSizeStatus + 1
+          iStatusMin_I(iRegion) = nSizeStatus + 1
 
-          StatusMax_I(iRegion) = StatusMin_I(iRegion) -1 + &
-               ceiling(real(product(PatchSize_DI(1:nDim,iRegion))) &
+          iStatusMax_I(iRegion) = iStatusMin_I(iRegion) -1 + &
+               ceiling(real(product(nPatchCell_DI(1:nDim,iRegion))) &
                /storage_size(nSizeStatus))
 
           ! The number of integers needed to store the patch status information
-          nSizeStatus = StatusMax_I(iRegion)
+          nSizeStatus = iStatusMax_I(iRegion)
        enddo
 
-       if(allocated(Status_I)) deallocate(Status_I)
-       allocate(Status_I(nSizeStatus))
+       if(allocated(iStatus_I)) deallocate(iStatus_I)
+       allocate(iStatus_I(nSizeStatus))
        call set_status_all(iPicOff_)
 
     endif
@@ -522,17 +522,17 @@ contains
                iProcPic,iComm,iError)
        endif
 
-       mUnitPicSi = 1e7*xUnitPicSi_I(iRegion) * &
+       MassUnitPicSi = 1e7*xUnitPicSi_I(iRegion) * &
             (IonMassPerChargeSi*ScalingFactor_I(iRegion))**2
-       mUnitPicSi_I(iRegion) = mUnitPicSi
+       MassUnitPicSi_I(iRegion) = MassUnitPicSi
 
        if(iProc==0)then
-          write(*,*) NameSub,': iRegion            = ', iRegion
-          write(*,*) NameSub,': IonMassPerChargeSi = ', IonMassPerChargeSi
-          write(*,*) NameSub,': xUnitPicSi         = ', xUnitPicSi_I(iRegion)
-          write(*,*) NameSub,': uUnitPicSi         = ', uUnitPicSi_I(iRegion)
+          write(*,*) NameSub,': iRegion            = ',iRegion
+          write(*,*) NameSub,': IonMassPerChargeSi = ',IonMassPerChargeSi
+          write(*,*) NameSub,': xUnitPicSi         = ',xUnitPicSi_I(iRegion)
+          write(*,*) NameSub,': uUnitPicSi         = ',uUnitPicSi_I(iRegion)
           write(*,*) NameSub,': ScalingFactor      = ',ScalingFactor_I(iRegion)
-          write(*,*) NameSub,': mUnitPicSi         = ', mUnitPicSi_I(iRegion)
+          write(*,*) NameSub,': MassUnitPicSi      = ',MassUnitPicSi_I(iRegion)
        end if
     end do
 
@@ -550,7 +550,7 @@ contains
        ! Calculate the pic region criteria
 
        if(.not. DoRestartPicStatus) then
-          if(allocated(IsPicCrit_CB)) then
+          if(allocated(iStatusPicCrit_CB)) then
              call calc_pic_criteria
           end if
           call pic_set_cell_status
@@ -590,16 +590,16 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! Status_I exists in every proc, use only the first one
+    ! iStatus_I exists in every proc, use only the first one
     if(iProc /= 0) RETURN
 
     NameFile = trim('GM/restartOUT/')//NamePicStatusFile
     call open_file(FILE=NameFile, form='UNFORMATTED', NameCaller=NameSub)
     write(UnitTmp_) nSizeStatus
-    write(UnitTmp_) Status_I
+    write(UnitTmp_) iStatus_I
     write(UnitTmp_) nRegionPic
-    write(UnitTmp_) StatusMin_I
-    write(UnitTmp_) StatusMax_I
+    write(UnitTmp_) iStatusMin_I
+    write(UnitTmp_) iStatusMax_I
 
     call close_file
 
@@ -623,16 +623,16 @@ contains
     call open_file(FILE=NameFile, status='old', form='UNFORMATTED', &
          NameCaller=NameSub)
     read(UnitTmp_, iostat = iError) nSizeStatus
-    if(allocated(Status_I)) deallocate(Status_I)
-    allocate(Status_I(nSizeStatus))
-    read(UnitTmp_, iostat = iError) Status_I
+    if(allocated(iStatus_I)) deallocate(iStatus_I)
+    allocate(iStatus_I(nSizeStatus))
+    read(UnitTmp_, iostat = iError) iStatus_I
     read(UnitTmp_, iostat = iError) nRegionPic
-    if(allocated(StatusMin_I)) deallocate(StatusMin_I)
-    allocate(StatusMin_I(nRegionPic))
-    if(allocated(StatusMax_I)) deallocate(StatusMax_I)
-    allocate(StatusMax_I(nRegionPic))
-    read(UnitTmp_, iostat = iError) StatusMin_I
-    read(UnitTmp_, iostat = iError) StatusMax_I
+    if(allocated(iStatusMin_I)) deallocate(iStatusMin_I)
+    allocate(iStatusMin_I(nRegionPic))
+    if(allocated(iStatusMax_I)) deallocate(iStatusMax_I)
+    allocate(iStatusMax_I(nRegionPic))
+    read(UnitTmp_, iostat = iError) iStatusMin_I
+    read(UnitTmp_, iostat = iError) iStatusMax_I
     call close_file
 
     if(iError /= 0) call stop_mpi(NameSub// &
@@ -713,9 +713,8 @@ contains
          XyzPatchMhd_D(MaxDim)=0.0, XyzMhdExtend_D(nDim)=0.0,&
          Coord_D(MaxDim)
     integer:: iBlock, iBlockFound, iProcFound, iCell_D(MaxDim)
-    integer:: IndexPatch_D(3) = 0, IndexCenterPatch_D(3) = 0
     integer:: iPatch_D(3) = 0, iPatchCell_D(3) = 0,&
-         IndPatchMin_D(3) = 0, IndPatchMax_D(3) = 0
+         iPatchMin_D(3) = 0, iPatchMax_D(3) = 0
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_set_cell_status'
@@ -737,9 +736,9 @@ contains
 
     do iRegion = 1, nRegionPic
 
-       nX = PatchSize_DI(x_, iRegion)
-       nY = PatchSize_DI(y_, iRegion)
-       nZ = PatchSize_DI(z_, iRegion)
+       nX = nPatchCell_DI(x_, iRegion)
+       nY = nPatchCell_DI(y_, iRegion)
+       nZ = nPatchCell_DI(z_, iRegion)
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
@@ -769,55 +768,63 @@ contains
                XyzMaxPic_D(1:nDim))
           ! Then convert to patch indices
           call coord_to_patch_index(iRegion, XyzMinPic_D(1:nDim),&
-               IndPatchMin_D(1:nDim))
+               iPatchMin_D(1:nDim))
           call coord_to_patch_index(iRegion, XyzMaxPic_D(1:nDim),&
-               IndPatchMax_D(1:nDim))
+               iPatchMax_D(1:nDim))
 
           ! loop through FLEKS patches in this MHD block
-          do iP = max(IndPatchMin_D(x_), 0), min(IndPatchMax_D(x_), nX - 1)
-             do jP = max(IndPatchMin_D(y_), 0), min(IndPatchMax_D(y_), nY - 1)
-                do kP = max(IndPatchMin_D(z_), 0), min(IndPatchMax_D(z_), nZ - 1)
+          do iP = max(iPatchMin_D(x_), 0), min(iPatchMax_D(x_), nX - 1)
+             do jP = max(iPatchMin_D(y_), 0), min(iPatchMax_D(y_), nY - 1)
+                do kP = max(iPatchMin_D(z_), 0), min(iPatchMax_D(z_), nZ - 1)
 
                    ! current patch
                    iPatch_D = [iP, jP, kP]
-                   call patch_index_to_coord(iRegion, iPatch_D, "Mhd", XyzPatchMhd_D)
+                   call patch_index_to_coord(iRegion, iPatch_D, "Mhd",&
+                        XyzPatchMhd_D)
 
                    ! loop through cells in this patch
-                   do i = 0, nCellPerPatch - 1; do j = 0, nCellPerPatch - 1; do k = 0, nCellPerPatch - 1
+                   do i=0,nCellPerPatch-1;do j=0,nCellPerPatch-1;&
+                        do k=0,nCellPerPatch-1
 
                       ! cell coordinate of i,j,k
                       iPatchCell_D = [i, j, k]
                       ! get cell coordinate in the patch
                       XyzMhd_D(1:nDim) = XyzPatchMhd_D(1:nDim)+&
-                           (iPatchCell_D(1:nDim)+0.5)*DxyzPic_DI(1:nDim, iRegion)
+                           (iPatchCell_D(1:nDim)+0.5)*&
+                           DxyzPic_DI(1:nDim, iRegion)
 
-                      ! first check if #PICREGIONMIN is defined and turn on cell inside it
+                      ! first check if #PICREGIONMIN is defined
+                      ! and turn on cell inside it
                       if(allocated(iRegionPic_I)) then
-                         if(is_point_inside_regions(iRegionPic_I, XyzMhd_D)) then
-                            call set_point_status(Status_I(&
-                                 StatusMin_I(iRegion):StatusMax_I(iRegion)),&
+                         if(is_point_inside_regions(iRegionPic_I,&
+                              XyzMhd_D)) then
+                            call set_point_status(iStatus_I(&
+                                 iStatusMin_I(iRegion):iStatusMax_I(iRegion)),&
                                  nX, nY, nZ, iP, jP, kP, iPicOn_)
                             CYCLE
                          endif
                       end if ! end check #PICREGIONMIN
 
                       if(allocated(iRegionPicLimit_I)) then
-                         if(.not. is_point_inside_regions(iRegionPicLimit_I, XyzMhd_D)) CYCLE
+                         if(.not. is_point_inside_regions(iRegionPicLimit_I,&
+                              XyzMhd_D)) CYCLE
                       end if
 
                       ! The non-cartersian case is considered in xyz_to_coord
                       call xyz_to_coord(XyzMhd_D, Coord_D)
-                      iCell_D = 1 + (Coord_D - CoordMin_DB(:, iBlock)) / CellSize_DB(:, iBlock)
+                      iCell_D = 1 + (Coord_D - CoordMin_DB(:, iBlock))/&
+                           CellSize_DB(:, iBlock)
 
                       ! in case point outside block
                       if( any(iCell_D>nIJK_D) .or. any(iCell_D<1) ) CYCLE
 
                       ! In case just use #PICREGIONMIN to control the PIC shape
-                      if(.not. allocated(IsPicCrit_CB)) CYCLE
+                      if(.not. allocated(iStatusPicCrit_CB)) CYCLE
 
-                      if(allocated(IsPicCrit_CB)) then
-                         if(IsPicCrit_CB(iCell_D(x_),iCell_D(y_),iCell_D(z_), iBlock)/=iPicOn_)&
-                              CYCLE
+                      if(allocated(iStatusPicCrit_CB)) then
+                         if(iStatusPicCrit_CB(&
+                              iCell_D(x_),iCell_D(y_),iCell_D(z_),iBlock)&
+                              /=iPicOn_) CYCLE
                       end if
 
                       ! Also switching on the surrounding patches.
@@ -828,8 +835,9 @@ contains
                             do kPExt = max(kP - nPatchExtend_D(z_), 0), &
                                  min(kP + nPatchExtend_D(z_), nZ-1)
 
-                               call set_point_status(Status_I(&
-                                    StatusMin_I(iRegion):StatusMax_I(iRegion)),&
+                               call set_point_status(iStatus_I(&
+                                    iStatusMin_I(iRegion):&
+                                    iStatusMax_I(iRegion)),&
                                     nX, nY, nZ, iPExt, jPExt, kPExt, iPicOn_)
 
                             enddo
@@ -843,20 +851,20 @@ contains
        end do ! end loop blocks
     end do ! end loop thorugh regions
 
-    ! Global MPI reduction for Status_I array
-    call MPI_Allreduce(MPI_IN_PLACE, Status_I, nSizeStatus, MPI_INT, MPI_BOR, &
-         iComm, iError)
+    ! Global MPI reduction for iStatus_I array
+    call MPI_Allreduce(MPI_IN_PLACE, iStatus_I, nSizeStatus,&
+         MPI_INT, MPI_BOR, iComm, iError)
 
   end subroutine pic_set_cell_status
   !============================================================================
-  logical function is_inside_pic_grid(IndexPatch_D, iRegion)
+  logical function is_inside_pic_grid(iPatchIn_D, iRegion)
 
-    integer, intent(in) :: IndexPatch_D(3)
+    integer, intent(in) :: iPatchIn_D(3)
     integer, intent(in) :: iRegion
 
     !--------------------------------------------------------------------------
-    if(any(IndexPatch_D < 0) .or. &
-         any(IndexPatch_D >= PatchSize_DI(:, iRegion))) then
+    if(any(iPatchIn_D < 0) .or. &
+         any(iPatchIn_D >= nPatchCell_DI(:, iRegion))) then
        is_inside_pic_grid = .false.
     else
        is_inside_pic_grid = .true.
@@ -864,14 +872,14 @@ contains
 
   end function is_inside_pic_grid
   !============================================================================
-  subroutine set_status_all(DstValue)
+  subroutine set_status_all(iStatusDest)
 
-    ! The subroutine that set entire Status_I to DstValue
+    ! The subroutine that set entire iStatus_I to iStatusDest
 
     use BATL_lib, ONLY: x_, y_, z_
-    integer, intent(in) :: DstValue
+    integer, intent(in) :: iStatusDest
 
-    integer :: iRegion, nx, ny, nz, i, j, k
+    integer :: iRegion, nX, nY, nZ, i, j, k
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_status_all'
@@ -880,13 +888,13 @@ contains
     if(DoTest)write(*,*) NameSub,' is called'
 
     do iRegion = 1, nRegionPic
-       nx = PatchSize_DI(x_, iRegion)
-       ny = PatchSize_DI(y_, iRegion)
-       nz = PatchSize_DI(z_, iRegion)
-       do i = 0, nx-1; do j = 0, ny-1; do k = 0, nz-1
-          call set_point_status(Status_I(&
-               StatusMin_I(iRegion):StatusMax_I(iRegion)),&
-               nx, ny, nz, i, j, k, DstValue)
+       nX = nPatchCell_DI(x_, iRegion)
+       nY = nPatchCell_DI(y_, iRegion)
+       nZ = nPatchCell_DI(z_, iRegion)
+       do i = 0, nX-1; do j = 0, nY-1; do k = 0, nZ-1
+          call set_point_status(iStatus_I(&
+               iStatusMin_I(iRegion):iStatusMax_I(iRegion)),&
+               nX, nY, nZ, i, j, k, iStatusDest)
        enddo; enddo; enddo
     enddo
 
@@ -900,11 +908,11 @@ contains
 
     real, intent(in) :: Xyz_D(nDim)
     logical, intent(out):: IsInside
-    real:: dshift_D(3)
+    integer:: nShift_D(3)
 
     integer:: iRegion, iStatus, nX, nY, nZ
-    integer:: Index_D(3) = 0
-    integer:: dI = 0, dJ = 0, dK = 0
+    integer:: iCellInPatch_D(3) = 0
+    integer:: nShiftI = 0, nShiftJ = 0, nShiftK = 0
     !--------------------------------------------------------------------------
 
     IsInside = .false.
@@ -917,25 +925,26 @@ contains
        if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - &
             0.9*DxyzPic_DI(:,iRegion) )) CYCLE
 
-       nX = PatchSize_DI(x_, iRegion)
-       nY = PatchSize_DI(y_, iRegion)
-       nZ = PatchSize_DI(z_, iRegion)
+       nX = nPatchCell_DI(x_, iRegion)
+       nY = nPatchCell_DI(y_, iRegion)
+       nZ = nPatchCell_DI(z_, iRegion)
 
-       do dI = -1, 1; do dJ = -1, 1; do dK = -1, 1
+       do nShiftI = -1, 1; do nShiftJ = -1, 1; do nShiftK = -1, 1
 
-          dshift_D(x_) = dI
-          dshift_D(y_) = dJ
-          dshift_D(z_) = dK
+          nShift_D(x_) = nShiftI
+          nShift_D(y_) = nShiftJ
+          nShift_D(z_) = nShiftK
 
           ! Patch cell index
-          Index_D(1:nDim) = floor((Xyz_D + &
-               dshift_D(1:nDim)*DxyzPic_DI(1:nDim, iRegion) - &
+          iCellInPatch_D(1:nDim) = floor((Xyz_D + &
+               nShift_D(1:nDim)*DxyzPic_DI(1:nDim, iRegion) - &
                XyzMinPic_DI(1:nDim,iRegion))/ &
                (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
 
           call get_point_status(&
-               Status_I(StatusMin_I(iRegion):StatusMax_I(iRegion)), &
-               nx, ny, nz, Index_D(x_), Index_D(y_), Index_D(z_), iStatus)
+               iStatus_I(iStatusMin_I(iRegion):iStatusMax_I(iRegion)), &
+               nx, ny, nz, iCellInPatch_D(x_), iCellInPatch_D(y_),&
+               iCellInPatch_D(z_), iStatus)
 
           if(iStatus==iPicOff_) RETURN
 
@@ -948,7 +957,7 @@ contains
     end do
   end subroutine is_inside_active_pic_region
   !============================================================================
-  integer function pic_find_region(iBlock,i,j,k)
+  integer function i_status_pic_region(iBlock,i,j,k)
 
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
@@ -961,7 +970,7 @@ contains
     integer:: iRegion
     real:: Xyz_D(nDim), Pic_D(nDim)
 
-    character(len=*), parameter:: NameSub = 'pic_find_region'
+    character(len=*), parameter:: NameSub = 'i_status_pic_region'
     !--------------------------------------------------------------------------
     Xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
 
@@ -974,10 +983,10 @@ contains
             iStatus = 1
     enddo
 
-    pic_find_region=iStatus
-  end function pic_find_region
+    i_status_pic_region=iStatus
+  end function i_status_pic_region
   !============================================================================
-  integer function pic_find_region_active(iBlock,i,j,k)
+  integer function i_status_pic_active(iBlock,i,j,k)
 
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
@@ -991,7 +1000,7 @@ contains
     real:: Xyz_D(nDim)
     logical :: IsInside
 
-    character(len=*), parameter:: NameSub = 'pic_find_region_active'
+    character(len=*), parameter:: NameSub = 'i_status_pic_active'
     !--------------------------------------------------------------------------
 
     iStatus=0
@@ -1001,11 +1010,11 @@ contains
     call is_inside_active_pic_region(Xyz_D, IsInside)
 
     if (IsInside) iStatus=1
-    pic_find_region_active=iStatus
+    i_status_pic_active=iStatus
 
-  end function pic_find_region_active
+  end function i_status_pic_active
   !============================================================================
-  integer function pic_find_region_criteria(iBlock,i,j,k)
+  integer function i_status_pic_criteria(iBlock,i,j,k)
 
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
@@ -1019,16 +1028,16 @@ contains
     real:: Xyz_D(nDim)
     logical :: IsInside
 
-    character(len=*), parameter:: NameSub = 'pic_find_region_criteria'
+    character(len=*), parameter:: NameSub = 'i_status_pic_criteria'
     !--------------------------------------------------------------------------
 
     iStatus=0
 
-    if (IsPicCrit_CB(i, j, k, iBlock) >= iPicOn_) iStatus = 1
+    if (iStatusPicCrit_CB(i, j, k, iBlock) >= iPicOn_) iStatus = 1
 
-    pic_find_region_criteria=iStatus
+    i_status_pic_criteria=iStatus
 
-  end function pic_find_region_criteria
+  end function i_status_pic_criteria
   !============================================================================
   subroutine pic_to_mhd_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
 
@@ -1125,16 +1134,16 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine mhd_to_pic_vec
   !============================================================================
-  subroutine coord_to_patch_index(iRegion, CoordPicIn_D, IndexPatchOut_D)
+  subroutine coord_to_patch_index(iRegion, CoordPicIn_D, iPatchOut_D)
 
     ! This subroutine takes the PIC xyz coordinate and output
-    ! the patch index in IndexPatchOut_D
+    ! the patch index in iPatchOut_D
 
     use BATL_lib, ONLY: nDim
 
     integer, intent(in) :: iRegion
     real, intent(in) :: CoordPicIn_D(nDim) ! xyz in PIC coordinates
-    integer:: IndexPatchOut_D(nDim)
+    integer:: iPatchOut_D(nDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'coord_to_patch_index'
@@ -1142,7 +1151,7 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
 
-    IndexPatchOut_D(1:nDim) = floor(&
+    iPatchOut_D(1:nDim) = floor(&
          CoordPicIn_D/&
          (DxyzPic_DI(1:nDim, iRegion) * nCellPerPatch)&
          )
@@ -1150,7 +1159,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine coord_to_patch_index
   !============================================================================
-  subroutine patch_index_to_coord(iRegion, IndexPatchIn_D, NameCoord, &
+  subroutine patch_index_to_coord(iRegion, iPatchIn_D, NameCoord, &
        CoordOut_D)
 
     ! This subroutine takes the adaptive PIC patch index as input, and
@@ -1159,7 +1168,7 @@ contains
     use BATL_lib, ONLY: nDim
 
     integer, intent(in) :: iRegion
-    integer, intent(in) :: IndexPatchIn_D(nDim)
+    integer, intent(in) :: iPatchIn_D(nDim)
     character(len=3), intent(in) :: NameCoord
     real, intent(out) :: CoordOut_D(nDim)
 
@@ -1172,7 +1181,7 @@ contains
     if(DoTest)write(*,*) NameSub,' is called'
 
     CoordMhd_D(1:nDim) = &
-         IndexPatchIn_D(1:nDim)*(DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch) &
+         iPatchIn_D(1:nDim)*(DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch) &
          + XyzMinPic_DI(1:nDim,iRegion)
 
     if(NameCoord=='Mhd') then
@@ -1191,7 +1200,7 @@ contains
   subroutine calc_pic_criteria
 
     ! This subroutine takes the PIC xyz coordinate and output
-    ! the patch index in IndexPatchOut_D
+    ! the patch index in iPatchOut_D
 
     use BATL_lib,        ONLY: nDim, nI, nJ, nK, nG, nBlock, MaxBlock, &
          x_, y_, z_, iNode_B, Unused_B, iProc, MaxNode, &
@@ -1209,12 +1218,12 @@ contains
     use ModMain,         ONLY: iNewGrid, iNewDecomposition
 
     integer :: iBlock, i, j, k, iCriteria
-    integer, allocatable :: PicCritInfo_CBI(:,:,:,:,:)
+    integer, allocatable :: iStatus_CBI(:,:,:,:,:)
     real :: CritJB, CritJBperp, CritEntropy, CriteriaValue
     real, allocatable :: Current_D(:), Ufield_DGB(:,:,:,:,:),&
          DivU_CB(:,:,:,:), CurrentCrossB_D(:)
-    real :: current, bNorm
-    logical:: SatisfyAll
+    real :: Current, bNorm
+    logical:: IsSatisfyAllCrit
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_pic_criteria'
@@ -1222,10 +1231,10 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
 
-    if(.not. allocated(IsPicCrit_CB)) RETURN
+    if(.not. allocated(iStatusPicCrit_CB)) RETURN
 
     if(nCriteriaPic==0) then
-       IsPicCrit_CB = iPicOn_
+       iStatusPicCrit_CB = iPicOn_
        RETURN
     end if
 
@@ -1233,8 +1242,8 @@ contains
     iPicDecomposition = iNewDecomposition
 
     ! if pic criteria exists in PARAM.in
-    if(.not. allocated(PicCritInfo_CBI)) &
-         allocate(PicCritInfo_CBI(nI,nJ,nK,MaxBlock,nCriteriaPic))
+    if(.not. allocated(iStatus_CBI)) &
+         allocate(iStatus_CBI(nI,nJ,nK,MaxBlock,nCriteriaPic))
 
     do iCriteria=1,nCriteriaPic
        select case(trim(NameCriteriaPic_I(iCriteria)))
@@ -1268,8 +1277,8 @@ contains
        end select
     end do
 
-    IsPicCrit_CB = iPicOff_
-    PicCritInfo_CBI = iPicOff_
+    iStatusPicCrit_CB = iPicOff_
+    iStatus_CBI = iPicOff_
 
     ! Full B Field is a useful variable
     allocate(FullB_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
@@ -1399,7 +1408,7 @@ contains
 
              if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
                   CriteriaValue < CriteriaMaxPic_I(iCriteria)) then
-                PicCritInfo_CBI(i,j,k,iBlock,iCriteria) = iPicOn_
+                iStatus_CBI(i,j,k,iBlock,iCriteria) = iPicOn_
              end if
 
           end do ! end loop criteria
@@ -1409,12 +1418,12 @@ contains
     ! collect pic crit info
     do k=1,nK; do j=1,nJ; do i=1,nI
        do iBlock=1,nBlock
-          SatisfyAll = .true.
+          IsSatisfyAllCrit = .true.
           do iCriteria=1, nCriteriaPic
-             if(PicCritInfo_CBI(i,j,k,iBlock,iCriteria)==iPicOff_) &
-                  SatisfyAll = .false.
+             if(iStatus_CBI(i,j,k,iBlock,iCriteria)==iPicOff_) &
+                  IsSatisfyAllCrit = .false.
           end do
-          if(SatisfyAll) IsPicCrit_CB(i,j,k,iBlock) = iPicOn_
+          if(IsSatisfyAllCrit) iStatusPicCrit_CB(i,j,k,iBlock) = iPicOn_
        end do
     end do; end do; end do
 
@@ -1446,7 +1455,7 @@ contains
     real, intent(in) :: CriteriaB1
     real, intent(in):: FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    real :: current, current_D(3)
+    real :: Current, Current_D(3)
 
     real, intent(out) :: CritJB
 
@@ -1457,8 +1466,8 @@ contains
     if(DoTest)write(*,*) NameSub,' is called'
 
     call get_current(i, j, k, iBlock, Current_D)
-    current = norm2(Current_D)
-    CritJB = current/(norm2(FullB_DG(:,i,j,k))+CriteriaB1)*&
+    Current = norm2(Current_D)
+    CritJB = Current/(norm2(FullB_DG(:,i,j,k))+CriteriaB1)*&
          CellSize_DB(1, iBlock)
 
   end subroutine calc_crit_jb
@@ -1475,7 +1484,7 @@ contains
     real, intent(in) :: CriteriaB1
     real, intent(in):: FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    real :: current, current_D(3), CurrentCrossB_D(3)
+    real :: Current, Current_D(3), CurrentCrossB_D(3)
 
     real, intent(out) :: CritJBperp
 
@@ -1486,9 +1495,9 @@ contains
     if(DoTest)write(*,*) NameSub,' is called'
 
     call get_current(i, j, k, iBlock, Current_D)
-    current = norm2(Current_D)
+    Current = norm2(Current_D)
     CurrentCrossB_D = cross_product(Current_D, FullB_DG(:,i,j,k))
-    CritJBperp = current**2 / (norm2(CurrentCrossB_D) + current*CriteriaB1)&
+    CritJBperp = Current**2 / (norm2(CurrentCrossB_D) + Current*CriteriaB1)&
          *CellSize_DB(1, iBlock)
 
   end subroutine calc_crit_jbperp
@@ -1500,7 +1509,8 @@ contains
     use ModPhysics, ONLY: Gamma
 
     integer, intent(in) :: i, j, k, iBlock
-    real,    intent(in) :: State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real,    intent(in) :: State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,&
+         MaxBlock)
 
     real, intent(out) :: CritEntropy
     !--------------------------------------------------------------------------
