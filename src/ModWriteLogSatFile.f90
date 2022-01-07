@@ -408,7 +408,7 @@ contains
     use BATL_geometry,   ONLY: CoordMin_D, DomainSize_D
     use ModInterpolate,  ONLY: interpolate_vector
     use ModMPI
-    
+
     integer, intent(in)                     :: nLogVar, nLogR, nLogTot, iSat
     character (len=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
     real, intent(in)                        :: LogR_I(nLogR)
@@ -566,7 +566,7 @@ contains
       use ModPhysics,     ONLY: Gbody
       use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
       use ModChromosphere, ONLY: get_tesi_c, TeSi_C
-      
+
       ! Local variables
       real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, Value
       real :: Current_D(3)
@@ -1365,7 +1365,7 @@ contains
        case('radcool')
           LogVar_I(iVarTot)=LogVar_I(iVarTot)&
                *No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
-          
+
           ! Ionosphere values
 
        case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&
