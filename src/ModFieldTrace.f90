@@ -1935,9 +1935,10 @@ contains
     ! Sort blocks according to the direction of the solar wind magnetic field
     ! so that open rays are found fast from already calculated trace values.
 
-    ! Weight X, Y and Z according to the SolarWindBx, SolarWindBy, SolarWindBz components
-    ! The Y and Z directions are preferred to X (usually SolarWindBx=0 anyways).
+    ! Weight X, Y and Z according to the solar wind Bx, By, Bz components
+    ! The Y and Z directions are preferred to X
     Weight_D(1) = sign(1.0,SolarWindBx)
+
     ! Select Y or Z direction to be the slowest changing value
     ! to maximize overlap
     if(abs(SolarWindBy) > abs(SolarWindBz))then
@@ -2706,7 +2707,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! Extract grid info from PlotRange_EI (see set_parameters for TypePlot_I eqr)
     if(DoTest)then
        write(*,*)NameSub,' starting on iProc=',iProc,&
             ' with nRadius, nLon=', nRadius, nLon
@@ -3009,14 +3009,15 @@ contains
   subroutine write_plot_line(iFile)
 
     use ModVarIndexes, ONLY: nVar
-    use ModIO,       ONLY: StringDateOrTime,            &
-         NamePlotDir, TypePlot_I, TypePlotFormat_I, IsDimensionalPlot_I, Plot_, &
+    use ModIO, ONLY: &
+         StringDateOrTime, NamePlotDir, TypePlot_I, &
+         TypePlotFormat_I, IsDimensionalPlot_I, Plot_, &
          NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, &
          IsSingleLine_I
     use ModWriteTecplot, ONLY: set_tecplot_var_string
-    use ModMain,     ONLY: &
+    use ModMain, ONLY: &
          nStep, IsTimeAccurate, tSimulation, NamePrimitive_V
-    use ModIoUnit,   ONLY: UnitTmp_
+    use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file, join_string
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
 
@@ -3148,7 +3149,8 @@ contains
        if(.not.IsSingleLine)NameVar = trim(NameVar)//', "Index"'
        NameVar = trim(NameVar)//', "Length"'
     case default
-       call stop_mpi(NameSub//' ERROR invalid plot form='//TypePlotFormat_I(iFile))
+       call stop_mpi(NameSub// &
+            ' ERROR invalid plot form='//TypePlotFormat_I(iFile))
     end select
 
     ! Write out plot files

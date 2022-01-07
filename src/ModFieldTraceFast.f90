@@ -1833,7 +1833,8 @@ contains
 
 #ifndef _OPENACC
       ! MPI variables
-      integer :: iTag, iRequest, nRecvRequest, iRecvRequest_I(MaxBlock*6), iError
+      integer :: iTag, iRequest, nRecvRequest, iRecvRequest_I(MaxBlock*6), &
+           iError
 
       ! Maximum size of the RESTRICTED Trace_DINB layer to be received
       ! for the 6 Trace_DSNB variables (3 StringCoord*2 Trace_DSNB dir.)

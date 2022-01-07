@@ -44,7 +44,8 @@ contains
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModUpdateStateFast, ONLY: update_state_fast
     use ModUpdateState, ONLY: update_check, update_state
-    use ModConstrainDivB, ONLY: bface_to_bcenter, get_vxb, bound_vxb, constrain_b
+    use ModConstrainDivB, ONLY: &
+         bface_to_bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
     use ModElectricField, ONLY: get_num_electric_field, correct_efield_block
     use ModParticleMover, ONLY: UseChargedParticles=>UseParticles, &

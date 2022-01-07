@@ -974,7 +974,8 @@ contains
                 if(nLine_I(iPlotFile)==1)IsSingleLine_I(iPlotFile)=.true.
                 if(nLine_I(iPlotFile) > MaxLine)then
                    if(iProc==0)then
-                      write(*,*)NameSub,' WARNING: nLine=', nLine_I(iPlotFile),&
+                      write(*,*)NameSub, &
+                           ' WARNING: nLine=', nLine_I(iPlotFile),&
                            ' exceeds MaxLine=', MaxLine
                       write(*,*)NameSub,' WARNING reducing nLine to MaxLine'
                    end if
@@ -1996,7 +1997,7 @@ contains
                .not. DoChangeRestartVariables)then
              write(*,'(a,i2,a,i2)')&
                   'BATSRUS was compiled with nVar=', nVar, &
-                  ' which is different from nVarEquationRead=', nVarEquationRead
+                  ' that is different from nVarEquationRead=', nVarEquationRead
              call stop_mpi(NameSub//' ERROR: Incompatible number of variables')
           end if
 
@@ -3186,7 +3187,8 @@ contains
       select case(TypeFluxNeutral)
       case('default')
          select case(TypeFlux)
-         case('Rusanov', 'Linde', 'Sokolov', 'Godunov', 'HLLDW', 'LFDW', 'HLLC')
+         case('Rusanov', 'Linde', 'Sokolov', 'Godunov', 'HLLDW', 'LFDW', &
+              'HLLC')
             TypeFluxNeutral = TypeFlux
          case default
             TypeFluxNeutral = 'Linde'
