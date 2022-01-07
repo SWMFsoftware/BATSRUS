@@ -136,9 +136,9 @@ module ModVarIndexes
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"r^O^+", "U_x^O^+", "U_y^O^+", "U_z^O^+", "B_x", "B_y", "B_z", "p_e", "P^O^+"'// &
-       '"r^O2^+", "U_x^O2^+", "U_y^O2^+", "U_z^O2^+", "P^O2^+"'// &
-       '"r^OX^+", "U_x^OX^+", "U_y^OX^+", "U_z^OX^+", "P^OX^+"'
+       '"r^O^+", "U_x^O^+", "U_y^O^+", "U_z^O^+", "B_x", "B_y", "B_z", "p_e", &
+       &"P^O^+", "r^O2^+", "U_x^O2^+", "U_y^O2^+", "U_z^O2^+", "P^O2^+", &
+       &"r^OX^+", "U_x^OX^+", "U_y^OX^+", "U_z^OX^+", "P^OX^+"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &

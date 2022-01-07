@@ -12,7 +12,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationFiveMoment.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationFiveMoment.f90"
 
   ! This equation module contains the five-moment equations.
   character (len=*), parameter :: NameEquation='Five Moment Closure'

@@ -17,7 +17,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationAwsomAnisoPi.f90"
+  character(len=*), parameter:: &
+       NameEquationFile = "ModEquationAwsomAnisoPi.f90"
 
   ! This equation module contains the anisotropic ion pressure MHD equations
   ! with wave energy and electron pressure

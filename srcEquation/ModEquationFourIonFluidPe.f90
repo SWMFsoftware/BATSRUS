@@ -11,7 +11,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationFourIonFluidPe.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationFourIonFluidPe.f90"
 
   ! This equation file declares four ion fluids: solar wind H+, ionospheric
   ! H+, and ionospheric O+, and plasmasphere,  along with ion
@@ -21,7 +22,7 @@ module ModVarIndexes
   ! first fluid; user must specify inner boundary densities using
   ! #MAGNETOSPHERE command.
   character (len=*), parameter :: NameEquation = &
-       'MHD with SW and Iono H+, Iono O+, Plasmasohere and electron pressure'
+       'MHD with SW and Iono H+, Iono O+, Plasmasphere and electron pressure'
 
   integer, parameter :: nVar = 24
 

@@ -12,7 +12,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationFiveMomentHyp.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationFiveMomentHyp.f90"
 
   ! This equation module contains the five-moment equations with
   ! hyperbolic div B cleaning.

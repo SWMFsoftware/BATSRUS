@@ -20,10 +20,12 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationHdRadCrash.f90"
+  character(len=*), parameter :: &
+       NameEquationFile = "ModEquationHdRadCrash.f90"
 
   ! This equation module contains the CRASH equations.
-  character (len=*), parameter :: NameEquation='HD+Ionization+Levels+Radiation'
+  character(len=*), parameter :: &
+       NameEquation = 'HD+Ionization+Levels+Radiation'
 
   logical, parameter :: IsMhd = .false.
 
