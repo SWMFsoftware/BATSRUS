@@ -665,11 +665,18 @@
     #kp3 => kP3,
 
     ### BATL_pass_cell
-    is => iS,
-    js => jS,
-    ks => kS,
-    ir => iR,
-    jr => jR,
-    kr => kR,
-    
+    #is => iS,
+    #js => jS,
+    #ks => kS,
+    #ir => iR,
+    #jr => jR,
+    #kr => kR,
+
+    ### BATL_geometry (to avoid the impression of constant value)
+    r_ => iDimR,
+    Lon_ => iDimLon,
+    Lat_ => iDimLat,
+    Phi_ => iDimPhi,
+    Theta_ => iDimTheta,
+        
     );
