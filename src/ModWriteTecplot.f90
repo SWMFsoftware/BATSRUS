@@ -712,7 +712,7 @@ contains
     use ModMain, ONLY : IsTimeAccurate, nStep, nOrder, UseRotatingBc, &
          TypeCoordSystem, CodeVersion
     use ModGeometry, ONLY: nUsedCell
-    use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
+    use ModFaceValue, ONLY: TypeLimiter, LimiterBeta
     use ModPhysics, ONLY : &
          ThetaTilt, Rbody, ClightFactor, BodyNDim_I, Gamma_I
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
@@ -804,7 +804,7 @@ contains
        ! ORDER
        if(nOrder > 1)then
           write(iUnitHere) 'AUXDATA ORDER="', int2str(nOrder),' ', &
-               trim(TypeLimiter),', beta=', real2str(BetaLimiter, "f8.5"), &
+               trim(TypeLimiter),', beta=', real2str(LimiterBeta, "f8.5"), &
                '"', CharNewLine
        else
           write(iUnitHere) 'AUXDATA ORDER="',int2str(nOrder),'"', CharNewLine
@@ -904,7 +904,7 @@ contains
        ! ORDER
        if(nOrder > 1)then
           write(iUnitHere,'(a,i12,a,f8.5,a)') 'AUXDATA ORDER="', nOrder,&
-               ' '//trim(TypeLimiter)//', beta=',BetaLimiter,'"'
+               ' '//trim(TypeLimiter)//', beta=',LimiterBeta,'"'
        else
           write(iUnitHere,'(a,i12,a)') 'AUXDATA ORDER="',nOrder,'"'
        end if

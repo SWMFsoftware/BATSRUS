@@ -48,10 +48,10 @@ module ModFaceValue
   !$acc declare create(UseAccurateResChange, DoLimitMomentum)
   !$acc declare create(UseTvdResChange)
 
-  real,             public :: BetaLimiter = 1.0
+  real,             public :: LimiterBeta = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
   character(len=6), public :: TypeLimiter5= 'mp'
-  !$acc declare create(BetaLimiter, TypeLimiter)
+  !$acc declare create(LimiterBeta, TypeLimiter)
 
   logical, public :: UseAccurateExtremum = .true.
   integer:: nLowOrder = 2
@@ -71,7 +71,7 @@ module ModFaceValue
   ! Local variables -----------------
 
   ! Parameters for the limiter applied near resolution changes
-  ! Scheme has no effect if BetaLimierReschange is larger than BetaLimiter
+  ! Scheme has no effect if BetaLimierReschange is larger than LimiterBeta
   real    :: BetaLimiterResChange  = 2.0
   integer :: nFaceLimiterResChange = 2
   !$acc declare create(BetaLimiterResChange, nFaceLimiterResChange)
@@ -1614,10 +1614,10 @@ contains
                        Used_GB(iMin-nG:iMax-1+nG,j,k,iBlock)
                   ! Get 2nd order limited slopes
                   if(UseTrueCell)then
-                     call limiter_body(iMin, iMax, BetaLimiter,&
+                     call limiter_body(iMin, iMax, LimiterBeta,&
                           Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   else
-                     call limiter(iMin, iMax, BetaLimiter,&
+                     call limiter(iMin, iMax, LimiterBeta,&
                           Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   end if
                else
@@ -1749,10 +1749,10 @@ contains
                   IsTrueCell_I(jMin-nG:jMax-1+nG) = &
                        Used_GB(i,jMin-nG:jMax-1+nG,k,iBlock)
                   if(UseTrueCell)then
-                     call limiter_body(jMin, jMax, BetaLimiter,&
+                     call limiter_body(jMin, jMax, LimiterBeta,&
                           Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   else
-                     call limiter(jMin, jMax, BetaLimiter,&
+                     call limiter(jMin, jMax, LimiterBeta,&
                           Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   end if
                else
@@ -1887,10 +1887,10 @@ contains
                   IsTrueCell_I(kMin-nG:kMax-1+nG) = &
                        Used_GB(i,j,kMin-nG:kMax-1+nG,iBlock)
                   if(UseTrueCell)then
-                     call limiter_body(kMin, kMax, BetaLimiter,&
+                     call limiter_body(kMin, kMax, LimiterBeta,&
                           Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   else
-                     call limiter(kMin, kMax, BetaLimiter,&
+                     call limiter(kMin, kMax, LimiterBeta,&
                           Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   end if
                else
@@ -2052,7 +2052,7 @@ contains
 
       iMinSharp = iMin
       iMaxSharp = iMax
-      if(BetaLimiter > BetaLimiterResChange)then
+      if(LimiterBeta > BetaLimiterResChange)then
          if(DiLevel_EB(1,iBlock) /= 0) iMinSharp = &
               max(iMin, min(iMax + 1,      1 + nFaceLimiterResChange))
          if(DiLevel_EB(2,iBlock) /= 0) iMaxSharp = &
@@ -2065,7 +2065,7 @@ contains
          if(UseTrueCell)then
             IsTrueCell_I(iMin-2:iMax+1) = Used_GB(iMin-2:iMax+1,j,k,iBlock)
             if(iMinSharp <= iMaxSharp) &
-                 call limiter_body(iMinSharp, iMaxSharp, BetaLimiter,&
+                 call limiter_body(iMinSharp, iMaxSharp, LimiterBeta,&
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(iMin < iMinSharp) &
                  call limiter_body(iMin, iMinSharp-1, BetaLimiterResChange,&
@@ -2075,7 +2075,7 @@ contains
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
          else
             if(iMinSharp <= iMaxSharp) &
-                 call limiter(iMinSharp, iMaxSharp, BetaLimiter,&
+                 call limiter(iMinSharp, iMaxSharp, LimiterBeta,&
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(iMin < iMinSharp) &
                  call limiter(iMin, iMinSharp-1, BetaLimiterResChange,&
@@ -2111,7 +2111,7 @@ contains
 
       jMinSharp = jMin
       jMaxSharp = jMax
-      if(BetaLimiter > BetaLimiterResChange)then
+      if(LimiterBeta > BetaLimiterResChange)then
          if(DiLevel_EB(3,iBlock) /= 0) jMinSharp = &
               max(jMin, min(jMax + 1,      1 + nFaceLimiterResChange))
          if(DiLevel_EB(4,iBlock) /= 0) jMaxSharp = &
@@ -2124,7 +2124,7 @@ contains
          if(UseTrueCell)then
             IsTrueCell_I(jMin-2:jMax+1) = Used_GB(i,jMin-2:jMax+1,k,iBlock)
             if(jMinSharp <= jMaxSharp) &
-                 call limiter_body(jMinSharp, jMaxSharp, BetaLimiter,&
+                 call limiter_body(jMinSharp, jMaxSharp, LimiterBeta,&
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(jMin < jMinSharp) &
                  call limiter_body(jMin, jMinSharp-1, BetaLimiterResChange,&
@@ -2134,7 +2134,7 @@ contains
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
          else
             if(jMinSharp <= jMaxSharp) &
-                 call limiter(jMinSharp, jMaxSharp, BetaLimiter,&
+                 call limiter(jMinSharp, jMaxSharp, LimiterBeta,&
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(jMin < jMinSharp) &
                  call limiter(jMin, jMinSharp-1, BetaLimiterResChange,&
@@ -2170,7 +2170,7 @@ contains
 
       kMinSharp = kMin
       kMaxSharp = kMax
-      if(BetaLimiter > BetaLimiterResChange)then
+      if(LimiterBeta > BetaLimiterResChange)then
          if(DiLevel_EB(5,iBlock) /= 0) kMinSharp = &
               max(kMin, min(kMax + 1,      1 + nFaceLimiterResChange))
          if(DiLevel_EB(6,iBlock) /= 0) kMaxSharp = &
@@ -2183,7 +2183,7 @@ contains
          if(UseTrueCell)then
             IsTrueCell_I(kMin-2:kMax+1) = Used_GB(i,j,kMin-2:kMax+1,iBlock)
             if(kMinSharp <= kMaxSharp) &
-                 call limiter_body(kMinSharp, kMaxSharp, BetaLimiter,&
+                 call limiter_body(kMinSharp, kMaxSharp, LimiterBeta,&
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(kMin < kMinSharp) &
                  call limiter_body(kMin, kMinSharp-1, BetaLimiterResChange,&
@@ -2193,7 +2193,7 @@ contains
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
          else
             if(kMinSharp <= kMaxSharp) &
-                 call limiter(kMinSharp, kMaxSharp, BetaLimiter,&
+                 call limiter(kMinSharp, kMaxSharp, LimiterBeta,&
                  Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(kMin < kMinSharp) &
                  call limiter(kMin, kMinSharp-1, BetaLimiterResChange,&
@@ -2265,7 +2265,7 @@ contains
     ! Save gradients squared
     SignGradNormal_V = sign(1.0,GradNormal_V)
 
-    Beta = min(BetaLimiterResChange, BetaLimiter)
+    Beta = min(BetaLimiterResChange, LimiterBeta)
 
     if(IsTrueCoarse2.and.IsTrueCoarse1.and.IsTrueFine1)then
        ! Limit gradient in the first coarser cell
@@ -2359,7 +2359,7 @@ contains
     ! Save gradients squared
     SignGradNormal_V = sign(1.0,GradNormal_V)
 
-    Beta = min(BetaLimiterResChange, BetaLimiter)
+    Beta = min(BetaLimiterResChange, LimiterBeta)
 
     ! Limit gradient in the first coarser cell
     GradNormalLtd_V = SignGradNormal_V*max(0.0, min( &
@@ -2449,7 +2449,7 @@ contains
     Slope1_V = cTwoThird*abs(GradNormal_V)
     Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VII(:,3,3) - Coarse2_V)
 
-    Beta = min(BetaLimiterResChange, BetaLimiter)
+    Beta = min(BetaLimiterResChange, LimiterBeta)
 
     GradNormalLtd_V= SignGradNormal_V*max(0.0,min( &
          Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
@@ -2596,7 +2596,7 @@ contains
     Slope1_V = cTwoThird*abs(GradNormal_V)
     Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VI(:,3) - Coarse2_V)
 
-    Beta = min(BetaLimiterResChange, BetaLimiter)
+    Beta = min(BetaLimiterResChange, LimiterBeta)
 
     GradNormalLtd_V= SignGradNormal_V*max(0.0,min( &
          Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
@@ -2725,7 +2725,7 @@ contains
     Slope1_V = cTwoThird*abs(GradNormal_V)
     Slope2_V = 0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V)
 
-    Beta = min(BetaLimiterResChange, BetaLimiter)
+    Beta = min(BetaLimiterResChange, LimiterBeta)
 
     GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
          Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))

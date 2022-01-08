@@ -63,7 +63,7 @@ contains
     use ModMessagePass,   ONLY: DoOneCoarserLayer
     use ModFaceValue,     ONLY: &
          UseTvdResChange, UseAccurateResChange, nGUsed, &
-         DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
+         DoLimitMomentum, LimiterBeta, TypeLimiter, read_face_value_param, &
          TypeLimiter5, UseCweno, &
          iVarSmooth_V, iVarSmoothIndex_I, &
          StringLowOrderRegion, iRegionLowOrder_I
@@ -1598,11 +1598,11 @@ contains
           ! For 5-moment equation all schemes are equivalent with Rusanov
           if(UseEfield) TypeFlux = 'RUSANOV'
 
-          BetaLimiter = 1.0
+          LimiterBeta = 1.0
           if(nOrder > 1 .and. TypeFlux /= "SIMPLE")then
              call read_var('TypeLimiter', TypeLimiter)
              if(TypeLimiter /= 'minmod') &
-                  call read_var('LimiterBeta', BetaLimiter)
+                  call read_var('LimiterBeta', LimiterBeta)
           else
              TypeLimiter = "no"
           end if
@@ -3724,7 +3724,7 @@ contains
 
       !$acc update device(UseTvdResChange, UseAccurateResChange)
 
-      !$acc update device(TypeLimiter, BetaLimiter)
+      !$acc update device(TypeLimiter, LimiterBeta)
       !$acc update device(nOrderProlong)
       !$acc update device(UseHighResChange)
 

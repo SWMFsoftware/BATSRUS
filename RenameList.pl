@@ -86,8 +86,8 @@
     #MaxImbalance => ImbalanceMax,
     #MaxImbalance2 => ImbalanceMax2,
     #
-    ## ModFaceValue
-    
+    ### ModFaceValue
+    BetaLimiter => LimiterBeta,
     #ip => iP,
     #jp => jP,
     #kp => kP,
@@ -678,8 +678,8 @@
     #Lat_ => iDimLat,
     #Phi_ => iDimPhi,
     #Theta_ => iDimTheta,
-    prolongation_high_order_for_face_ghost => prolong_high_order_face_ghost,
-    restriction_high_order_reschange => restrict_high_order_reschange,
-    prolongation_high_order_amr => prolong_high_order_amr,
-    restriction_high_order_amr => restrict_high_order_amr,
+    #prolongation_high_order_for_face_ghost => prolong_high_order_face_ghost,
+    #restriction_high_order_reschange => restrict_high_order_reschange,
+    #prolongation_high_order_amr => prolong_high_order_amr,
+    #restriction_high_order_amr => restrict_high_order_amr,
     );

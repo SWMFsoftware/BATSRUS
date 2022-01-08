@@ -17,7 +17,7 @@ module ModOptimizeParam
   use ModFaceFlux, ONLY: &
        DoLf => DoLf
   use ModFaceValue, ONLY: &
-       LimiterBeta => BetaLimiter
+       LimiterBeta => LimiterBeta
   use ModMain, ONLY: &
        IsTimeAccurate => IsTimeAccurate, &
        nStage => nStage, &
