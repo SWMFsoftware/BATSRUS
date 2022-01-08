@@ -241,12 +241,11 @@ sub set_optimization{
 	# Default settings
 	my %Set = (
 	    ClightFactor        => 1,
-	    nOrder              => 1,
-	    nConservCrit        => 0,
             DoLf                => ".true.",
             IsCartesian         => ".true.",
             IsCartesianGrid     => ".true.",
 	    IsTimeAccurate      => ".true.",
+	    LimiterBeta         => 1,
 	    UseB0               => "UseB"  ,
 	    UseBody             => ".true.",
             UseBorisCorrection  => ".false.",
@@ -260,7 +259,8 @@ sub set_optimization{
 	    UseRotatingFrame    => ".false.",
             iStage              => 1,
             nStage              => 1,
-            nOrder              => 1,
+	    nConservCrit        => 0,
+	    nOrder              => 1,
 	    );
 
 	# Component dependent defaults (from ModSetParameters)
