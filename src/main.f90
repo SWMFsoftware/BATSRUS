@@ -217,7 +217,7 @@ contains
     call MPI_BCAST(IsTimeToStop, 1, MPI_LOGICAL, 0, iComm, iError)
 
     do_stop_run = IsTimeToStop
-    
+
   end function do_stop_run
   !============================================================================
   subroutine show_progress
@@ -228,7 +228,7 @@ contains
 
     ! Show timing results if required
     ! Show speed as cells/second/PE/step
-    
+
     real(Real8_), external :: timing_func_d
     real(Real8_):: CpuTimeBATSRUS, CpuTimeAdvance
 

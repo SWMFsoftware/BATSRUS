@@ -947,9 +947,9 @@ contains
       real    :: PhiSphereCenterInertial, PhiSphereCenterRotating
       integer :: i, j, k
 
+      ! Find current location of sphere center
       character(len=*), parameter:: NameSub = 'calc_analytic_sln_sphere'
       !------------------------------------------------------------------------
-      ! Find current location of sphere center
       t = tSimulation*Si2No_V(UnitT_)
       xSphereCenter = xSphereCenterInit + UxNo*t
       ySphereCenter = ySphereCenterInit + UyNo*t

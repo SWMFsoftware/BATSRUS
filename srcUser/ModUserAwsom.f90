@@ -610,7 +610,7 @@ contains
 #ifdef _OPENACC
     use ModUtilities, ONLY: norm2
 #endif
-    
+
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
