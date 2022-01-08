@@ -165,7 +165,7 @@ contains
 
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, &
-         MinI, MaxI, MinJ, MaxJ, Mink, MaxK, r_
+         MinI, MaxI, MinJ, MaxJ, Mink, MaxK, iDimR
     use ModPhysics,     ONLY: rBody
     use ModMain,        ONLY: UseBody
     use ModFieldLineThread, ONLY: interpolate_thread_state, &
@@ -224,7 +224,7 @@ contains
                 if(r < rChromo) CYCLE
                 ! Don't check radial coordinate to see if the point is
                 ! outside the block
-                iDirMin = r_ + 1
+                iDirMin = iDimR + 1
              else
                 ! The point should be skipped, if outside the block
                 if(r < rMin_B(iBlock)) CYCLE

@@ -1434,7 +1434,7 @@ contains
     use BATL_lib,  ONLY: nI, nJ, nK, Unused_B, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK, nBlock, MaxBlock, &
          IsCartesianGrid, IsRLonLat, Xyz_DGB, x_, y_, z_, &
-         CellSize_DB, Theta_, Phi_, j0_, k0_, nJp1_, nKp1_
+         CellSize_DB, iDimTheta, iDimPhi, j0_, k0_, nJp1_, nKp1_
     use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
     use ModInterpolate, ONLY: trilinear
 
@@ -1495,7 +1495,8 @@ contains
           ! Set temporary array
           Array_G = Array_GB(0:nI+1,j0_:nJp1_,k0_:nKp1_,iBlock)
 
-          dTheta = CellSize_DB(Theta_,iBlock); dPhi=CellSize_DB(Phi_,iBlock)
+          dTheta = CellSize_DB(iDimTheta,iBlock)
+          dPhi   = CellSize_DB(iDimPhi,iBlock)
           dArea0 = Radius**2 *dPhi *dTheta
 
           ! Find the radial index just after Radius

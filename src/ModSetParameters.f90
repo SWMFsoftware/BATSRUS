@@ -3907,7 +3907,7 @@ contains
 
     subroutine correct_plot_range
 
-      use BATL_lib,     ONLY: radius_to_gen, Phi_, Theta_, nRoot_D, &
+      use BATL_lib,     ONLY: radius_to_gen, iDimPhi, iDimTheta, nRoot_D, &
            CoordMin_D, CoordMax_D, nIJK_D
       use ModKind,      ONLY: nByteReal
       use ModWritePlot, ONLY: adjust_plot_range
@@ -3959,10 +3959,10 @@ contains
                call radius_to_gen(PlotRange_EI(1,iFile))
                call radius_to_gen(PlotRange_EI(2,iFile))
             end if
-            if(Phi_ > 0) PlotRange_EI(2*Phi_-1:2*Phi_,iFile) = &
-                 cDegToRad*PlotRange_EI(2*Phi_-1:2*Phi_,iFile)
-            if(Theta_ > 0) PlotRange_EI(2*Theta_-1:2*Theta_,iFile) = &
-                 cDegToRad*PlotRange_EI(2*Theta_-1:2*Theta_,iFile)
+            if(iDimPhi > 0) PlotRange_EI(2*iDimPhi-1:2*iDimPhi,iFile) = &
+                 cDegToRad*PlotRange_EI(2*iDimPhi-1:2*iDimPhi,iFile)
+            if(iDimTheta > 0) PlotRange_EI(2*iDimTheta-1:2*iDimTheta,iFile) = &
+                 cDegToRad*PlotRange_EI(2*iDimTheta-1:2*iDimTheta,iFile)
             do iDim = 1, nDim
                if(  PlotRange_EI(2*iDim-1,iFile) &
                     < PlotRange_EI(2*iDim,iFile)) CYCLE
@@ -3986,7 +3986,7 @@ contains
                     PlotRange_EI(1,iFile) = log(PlotRange_EI(1,iFile))
                if(IsGenRadius) call radius_to_gen(PlotRange_EI(1,iFile))
                PlotRange_EI(2,iFile)= PlotRange_EI(1,iFile) + 1.e-4 ! so R/=0
-               do i=Phi_,Theta_
+               do i=iDimPhi,iDimTheta
                   PlotRange_EI(2*i-1,iFile) = CoordMin_D(i)
                   PlotRange_EI(2*i,iFile)   = CoordMax_D(i)
                end do
@@ -4013,8 +4013,8 @@ contains
                end if
             else
                ! Limit Phi direction around cHalfPi
-               PlotRange_EI(3, iFile) = cHalfPi - SmallSize_D(Phi_)
-               PlotRange_EI(4, iFile) = cHalfPi + SmallSize_D(Phi_)
+               PlotRange_EI(3, iFile) = cHalfPi - SmallSize_D(iDimPhi)
+               PlotRange_EI(4, iFile) = cHalfPi + SmallSize_D(iDimPhi)
             end if
 
          case('y=0')

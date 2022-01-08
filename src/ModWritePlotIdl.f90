@@ -34,7 +34,7 @@ contains
     use BATL_lib,    ONLY: IsRLonLat, IsCylindrical, &
          CoordMin_D, CoordMax_D, CoordMin_DB, CellSize_DB, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         Xyz_DGB, x_, y_, z_, Phi_
+         Xyz_DGB, x_, y_, z_, iDimPhi
     use ModUtilities, ONLY: greatest_common_divisor
 
     ! Arguments
@@ -129,7 +129,7 @@ contains
 
     if((IsRLonLat .or. IsCylindrical) .and. .not.DoSaveGenCoord)then
        ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
-       ySqueezed = mod(Coord111_DB(Phi_,iBlock),cPi)
+       ySqueezed = mod(Coord111_DB(iDimPhi,iBlock),cPi)
        ! Make sure that small angles are moved to Pi degrees for y=0 cut
        if(ySqueezed < 0.25*cPi .and. &
             abs(yMin+yMax-cTwoPi) < 1e-6 .and. yMax-yMin < 0.01) &

@@ -673,10 +673,13 @@
     #kr => kR,
 
     ### BATL_geometry (to avoid the impression of constant value)
-    r_ => iDimR,
-    Lon_ => iDimLon,
-    Lat_ => iDimLat,
-    Phi_ => iDimPhi,
-    Theta_ => iDimTheta,
-        
+    #r_ => iDimR,
+    #Lon_ => iDimLon,
+    #Lat_ => iDimLat,
+    #Phi_ => iDimPhi,
+    #Theta_ => iDimTheta,
+    prolongation_high_order_for_face_ghost => prolong_high_order_face_ghost,
+    restriction_high_order_reschange => restrict_high_order_reschange,
+    prolongation_high_order_amr => prolong_high_order_amr,
+    restriction_high_order_amr => restrict_high_order_amr,
     );

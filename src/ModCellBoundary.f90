@@ -93,7 +93,7 @@ contains
     use ModResistivity, ONLY: BxImpl_, ByImpl_, BzImpl_
     use ModRadDiffusion, ONLY: set_rad_outflow_bc
     use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsSphericalAxis, &
-         Theta_, nRoot_D, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+         iDimTheta, nRoot_D, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModUserInterface ! user_set_cell_boundary
     use ModThreadedLC, ONLY: set_field_line_thread_bc
     use BATL_lib, ONLY: IsCartesianGrid
@@ -202,7 +202,7 @@ contains
        if(IsCylindricalAxis .and. iSide == 1) CYCLE
 
        ! Skip spherical Theta/Latitude boundaries if they reach the poles
-       if(IsSphericalAxis .and. (iSide + 1)/2 == Theta_) CYCLE
+       if(IsSphericalAxis .and. (iSide + 1)/2 == iDimTheta) CYCLE
 
        ! Set index limits for the ghost cell range
        iMin = 1 - nGhost; iMax = nI + nGhost

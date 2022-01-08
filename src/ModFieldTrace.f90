@@ -3245,7 +3245,7 @@ contains
   subroutine xyz_to_ijk(XyzIn_D, IndOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
 
     use ModNumConst,  ONLY: cPi, cTwoPi
-    use BATL_lib,     ONLY: Phi_, Theta_, x_, y_, &
+    use BATL_lib,     ONLY: iDimPhi, iDimTheta, x_, y_, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsPeriodicCoord_D, &
          CoordMin_D, CoordMax_D, xyz_to_coord
 
@@ -3265,35 +3265,35 @@ contains
           ! Shift Phi by +/-pi (tricky, but works)
           ! E.g. PhiRef=  5deg, Phi=186deg -->   6deg
           ! or   PhiRef=185deg, Phi=  6deg --> 186deg
-          Gen_D(Phi_) = Gen_D(Phi_) &
-               + GenRef_D(Phi_) - modulo((cPi + GenRef_D(Phi_)), cTwoPi)
+          Gen_D(iDimPhi) = Gen_D(iDimPhi) &
+               + GenRef_D(iDimPhi) - modulo((cPi + GenRef_D(iDimPhi)), cTwoPi)
 
           if(IsLatitudeAxis .or. IsSphericalAxis)then
-             if(Gen_D(Theta_) > &
-                  0.5*(CoordMax_D(Theta_) + CoordMin_D(Theta_)))then
+             if(Gen_D(iDimTheta) > &
+                  0.5*(CoordMax_D(iDimTheta) + CoordMin_D(iDimTheta)))then
                 ! Mirror theta/latitude to maximum coordinate
                 ! E.g. Lat=85 deg --> 95 deg, Theta=175 deg --> 185 deg
-                Gen_D(Theta_) = 2*CoordMax_D(Theta_) - Gen_D(Theta_)
+                Gen_D(iDimTheta) = 2*CoordMax_D(iDimTheta) - Gen_D(iDimTheta)
              else
                 ! Mirror theta/latitude to minimum coordinate
                 ! E.g. Lat=-85 deg --> -95 deg, Theta = 5 deg --> -5 deg
-                Gen_D(Theta_) = 2*CoordMin_D(Theta_) - Gen_D(Theta_)
+                Gen_D(iDimTheta) = 2*CoordMin_D(iDimTheta) - Gen_D(iDimTheta)
              end if
           end if
        end if
     end if
 
     ! Did the trace cross the periodic Phi boundary?
-    if(Phi_ > 1)then
-       if(IsPeriodicCoord_D(Phi_))then
-          if    (Gen_D(Phi_) - GenRef_D(Phi_) > cPi)then
+    if(iDimPhi > 1)then
+       if(IsPeriodicCoord_D(iDimPhi))then
+          if    (Gen_D(iDimPhi) - GenRef_D(iDimPhi) > cPi)then
              ! Crossed from small phi direction, make Gen_D negative
              ! E.g. PhiRef=5deg Phi=355deg -> -5deg
-             Gen_D(Phi_) = Gen_D(Phi_) - cTwoPi
-          elseif(GenRef_D(Phi_) - Gen_D(Phi_) > cPi)then
+             Gen_D(iDimPhi) = Gen_D(iDimPhi) - cTwoPi
+          elseif(GenRef_D(iDimPhi) - Gen_D(iDimPhi) > cPi)then
              ! Crossed from phi~2pi direction, make Gen_D larger than 2pi
              ! E.g. PhiRef=355deg Phi=5deg -> 365deg
-             Gen_D(Phi_) = Gen_D(Phi_) + cTwoPi
+             Gen_D(iDimPhi) = Gen_D(iDimPhi) + cTwoPi
           end if
        end if
     end if

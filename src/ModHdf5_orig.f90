@@ -63,7 +63,7 @@ contains
     ! Save all cells within plotting range, for each processor
 
     use ModMain, ONLY: nI, nJ, nK, &
-         x_, y_, z_, Phi_, nBlockMax, Unused_B, nBlock
+         x_, y_, z_, iDimPhi, nBlockMax, Unused_B, nBlock
     use ModGeometry, ONLY: CellSize_DB,&
          Coord111_DB
     use ModIO, ONLY: PlotDx_DI
@@ -117,7 +117,7 @@ contains
 
        if(IsRLonLat .or. IsCylindrical)then
           ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
-          ySqueezed = mod(Coord111_DB(Phi_,iBlock), cPi)
+          ySqueezed = mod(Coord111_DB(iDimPhi,iBlock), cPi)
           ! Make sure that small angles are moved to Pi degrees for y=0 cut
           if(ySqueezed < 0.25*cPi .and. &
                abs(yMin+yMax-cTwoPi) < cTiny .and. yMax-yMin < 0.01) &
@@ -382,7 +382,7 @@ contains
     ! Save all cells within plotting range, for each processor
 
     use ModMain, ONLY: nI, nJ, nK, &
-         x_, y_, z_, Phi_, nBlockMax, Unused_B
+         x_, y_, z_, iDimPhi, nBlockMax, Unused_B
     use ModGeometry, ONLY: CellSize_DB,&
          Coord111_DB
     use ModIO, ONLY: PlotDx_DI
@@ -431,7 +431,7 @@ contains
     nCell = 0
     if(IsNonCartesian)then
        ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
-       ySqueezed = mod(Coord111_DB(Phi_,iBlock),cPi)
+       ySqueezed = mod(Coord111_DB(iDimPhi,iBlock),cPi)
        ! Make sure that small angles are moved to Pi degrees for y=0 cut
        if(ySqueezed < 0.25*cPi .and. &
             abs(yMin+yMax-cTwoPi) < cTiny .and. yMax-yMin < 0.01) &
