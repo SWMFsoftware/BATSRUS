@@ -85,7 +85,7 @@ contains
 
     use BATL_lib,  ONLY: MaxDim, nDim, nJ, nK, nIjk_D, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
-         iDimR, iDimPhi, iDimTheta, iDimLat, CoordMin_DB, CoordMax_DB, &
+         r_, Phi_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
     use ModNumConst, ONLY: cPi, cHalfPi
     use ModIO,     ONLY: MaxPlotvar, DoSaveOneTecFile, DoSaveTecBinary
@@ -180,18 +180,18 @@ contains
 
       ! No need to push points to the pole if there is no axis
       ! or the 2D cut is along the Phi direction
-      if(.not.IsAnyAxis .or. iCutDim == iDimPhi) RETURN
+      if(.not.IsAnyAxis .or. iCutDim == Phi_) RETURN
 
       if(IsLatitudeAxis)then
-         if(  k==1  .and. CoordMin_DB(iDimLat,iBlock) <= -cHalfPi .or. &
-              k==nK .and. CoordMax_DB(iDimLat,iBlock) >= +cHalfPi) &
+         if(  k==1  .and. CoordMin_DB(Lat_,iBlock) <= -cHalfPi .or. &
+              k==nK .and. CoordMax_DB(Lat_,iBlock) >= +cHalfPi) &
               Xyz_D(1:2) = 0.0
       elseif(IsSphericalAxis)then
-         if(  j==1  .and. CoordMin_DB(iDimTheta,iBlock) <= 0.0 .or. &
-              j==nJ .and. CoordMax_DB(iDimTheta,iBlock) >= cPi) &
+         if(  j==1  .and. CoordMin_DB(Theta_,iBlock) <= 0.0 .or. &
+              j==nJ .and. CoordMax_DB(Theta_,iBlock) >= cPi) &
               Xyz_D(1:2) = 0.0
       elseif(IsCylindricalAxis)then
-         if(  i==1 .and. CoordMin_DB(iDimR,iBlock) <= 0.0) &
+         if(  i==1 .and. CoordMin_DB(r_,iBlock) <= 0.0) &
               Xyz_D(1:2) = 0.0
       end if
     end subroutine set_xyz_state
@@ -246,7 +246,7 @@ contains
          MaxBlock, nBlock, Unused_B, nNodeUsed, &
          CoordMin_DB, CoordMax_DB, Xyz_DGB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis, &
-         iDimR, iDimPhi, iDimTheta, iDimLat, &
+         r_, Phi_, Theta_, Lat_, &
          DiLevelNei_IIIB, message_pass_cell, set_tree_periodic
 
     ! Write out connectivity file
@@ -455,16 +455,16 @@ contains
           ! Both sides are at either minimum or maximum so we use the
           ! Y coordinate to select which side takes care of the connection
           ! We assume no resolution change across the poles for simplicity
-          if(iCutDim == iDimPhi .and. IsAnyAxis &
+          if(iCutDim == Phi_ .and. IsAnyAxis &
                .and. Xyz_DGB(2,1,1,1,iBlock) > 0.0)then
              if(IsLatitudeAxis)then
-                if(CoordMin_DB(iDimLat,iBlock) <= -cHalfPi) k0 = 0
-                if(CoordMax_DB(iDimLat,iBlock) >= +cHalfPi) k1 = nK - 1
+                if(CoordMin_DB(Lat_,iBlock) <= -cHalfPi) k0 = 0
+                if(CoordMax_DB(Lat_,iBlock) >= +cHalfPi) k1 = nK - 1
              elseif(IsSphericalAxis)then
-                if(CoordMin_DB(iDimTheta,iBlock) <= 0.0) j0 = 0
-                if(CoordMax_DB(iDimTheta,iBlock) >= cPi) j1 = nJ - 1
+                if(CoordMin_DB(Theta_,iBlock) <= 0.0) j0 = 0
+                if(CoordMax_DB(Theta_,iBlock) >= cPi) j1 = nJ - 1
              elseif(IsCylindricalAxis)then
-                if(CoordMin_DB(iDimR,iBlock) <= 0.0) i0 = 0
+                if(CoordMin_DB(r_,iBlock) <= 0.0) i0 = 0
              end if
           end if
 
@@ -1000,7 +1000,7 @@ contains
     ! interpolation coefficients to interpolate onto the cut plane.
 
     use BATL_lib, ONLY: Unused_B, CoordMin_DB, CoordMax_DB, CellSize_DB, &
-         nIjk_D, iDimPhi
+         nIjk_D, Phi_
     use ModNumConst, ONLY: i_DD, cPi, cHalfPi
 
     integer, intent(in):: iBlock
@@ -1026,19 +1026,19 @@ contains
 
     ! Shift Phi coordinate for 2D cuts along the Phi coordinate
     ! e.g. x=0 and y=0 cuts of a spherical grid.
-    if(iCutDim == iDimPhi)then
+    if(iCutDim == Phi_)then
        ! Blocks "far" from the phi cut are shifted 180 degrees towards cut
        ! This will capture both sides of the sphere/cylinder and is the
        ! expected behavior for x=0 and y=0 cuts. But also works for other.
-       PhiCut = CutMin_D(iDimPhi)
-       PhiBlock = 0.5*(BlockMin_D(iDimPhi)+BlockMax_D(iDimPhi))
+       PhiCut = CutMin_D(Phi_)
+       PhiBlock = 0.5*(BlockMin_D(Phi_)+BlockMax_D(Phi_))
 
        if(PhiBlock - PhiCut > cHalfPi)then
-          BlockMin_D(iDimPhi) = BlockMin_D(iDimPhi) - cPi
-          BlockMax_D(iDimPhi) = BlockMax_D(iDimPhi) - cPi
+          BlockMin_D(Phi_) = BlockMin_D(Phi_) - cPi
+          BlockMax_D(Phi_) = BlockMax_D(Phi_) - cPi
        elseif(PhiCut - PhiBlock > cHalfPi)then
-          BlockMin_D(iDimPhi) = BlockMin_D(iDimPhi) + cPi
-          BlockMax_D(iDimPhi) = BlockMax_D(iDimPhi) + cPi
+          BlockMin_D(Phi_) = BlockMin_D(Phi_) + cPi
+          BlockMax_D(Phi_) = BlockMax_D(Phi_) + cPi
        end if
 
     end if

@@ -233,7 +233,7 @@ contains
 
     ! Calculate gradient of ionosphere potential on the IE grid
 
-    integer, parameter :: iDimTheta=1, iDimPhi=2
+    integer, parameter :: Theta_=1, Phi_=2
     integer :: i, j
 
     logical:: DoTest
@@ -245,13 +245,13 @@ contains
 
     ! Calculate the gradients for the internal points with central differences
     do j = 1, nPhiIono; do i = 2, nThetaIono-1
-       dIonoPotential_DII(iDimTheta, i, j) = &
+       dIonoPotential_DII(Theta_, i, j) = &
             (IonoPotential_II(i+1, j) - IonoPotential_II(i-1, j)) &
             / (ThetaIono_I(i+1) - ThetaIono_I(i-1))
     end do; end do
 
     do j = 2, nPhiIono-1; do i = 1, nThetaIono
-       dIonoPotential_DII(iDimPhi, i, j) = &
+       dIonoPotential_DII(Phi_, i, j) = &
             (IonoPotential_II(i, j+1) - IonoPotential_II(i, j-1)) &
             / (PhiIono_I(j+1)-PhiIono_I(j-1))
     end do; end do
@@ -260,24 +260,24 @@ contains
     ! with one sided second order approximations
 
     ! df/dx = (4f(x+dx)-3f(x)-f(x+2dx))/(2dx)
-    dIonoPotential_DII(iDimTheta, 1, :) = &
+    dIonoPotential_DII(Theta_, 1, :) = &
          ( 4*IonoPotential_II(2,:) &
          - 3*IonoPotential_II(1,:) &
          -   IonoPotential_II(3,:) ) / (ThetaIono_I(3)-ThetaIono_I(1))
 
     ! df/dx = (3f(x)-4f(x-dx)+f(x-2dx))/(2dx)
-    dIonoPotential_DII(iDimTheta, nThetaIono, :) = &
+    dIonoPotential_DII(Theta_, nThetaIono, :) = &
          ( 3*IonoPotential_II(nThetaIono  ,:) &
          - 4*IonoPotential_II(nThetaIono-1,:) &
          +   IonoPotential_II(nThetaIono-2,:) ) / &
          (ThetaIono_I(nThetaIono)-ThetaIono_I(nThetaIono-2))
 
     ! Calculate the phi gradient at the edges from the periodicity
-    dIonoPotential_DII(iDimPhi, :, 1) = &
+    dIonoPotential_DII(Phi_, :, 1) = &
          (IonoPotential_II(:, 2) - IonoPotential_II(:, nPhiIono - 1)) &
          / (2*(PhiIono_I(2)-PhiIono_I(1)))
 
-    dIonoPotential_DII(iDimPhi,:,nPhiIono) = dIonoPotential_DII(iDimPhi,:,1)
+    dIonoPotential_DII(Phi_,:,nPhiIono) = dIonoPotential_DII(Phi_,:,1)
 
     ! Calculate cross polar cap potentials and related boundary conditions
     call calc_ie_cpcp
