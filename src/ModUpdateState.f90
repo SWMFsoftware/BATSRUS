@@ -763,7 +763,7 @@ contains
                            StateOld_VGB(Rho_,i,j,k,iBlock)) CYCLE
 
                       if(iVar == p_)then
-                         if(pChangeMax_I(1) > percent_max_p(1) .and. &
+                         if(pChangeMax_I(1) > PercentPLimit_I(1) .and. &
                               1e-4 > abs(pChangeMax_I(1) - 100. * abs( &
                               (   State_VGB(P_,i,j,k,iBlock)- &
                               StateOld_VGB (P_,i,j,k,iBlock)) &
@@ -773,7 +773,7 @@ contains
                               '% at x,y,z=',&
                               Xyz_DGB(:,i,j,k,iBlock)
 
-                         if(pChangeMax_I(2) > percent_max_p(2) .and. &
+                         if(pChangeMax_I(2) > PercentPLimit_I(2) .and. &
                               1e-4 > abs(pChangeMax_I(2) - 100. * abs( &
                               (   State_VGB(P_,i,j,k,iBlock)- &
                               StateOld_VGB (P_,i,j,k,iBlock)) &
@@ -816,7 +816,7 @@ contains
           TimeFractionRho = 1.0 / maxval(RhoChangeLimit_S/PercentRhoLimit_I)
           call MPI_allreduce(TimeFractionRho, TimeFractionRhoMin, 1, &
                MPI_REAL, MPI_MIN, iComm, iError)
-          TimeFractionP   = 1.0 / maxval(pChangeLimit_S/percent_max_p  )
+          TimeFractionP   = 1.0 / maxval(pChangeLimit_S/PercentPLimit_I  )
           call MPI_allreduce(TimeFractionP, TimeFractionPMin, 1, &
                MPI_REAL, MPI_MIN, iComm, iError)
           if(TimeFractionRhoMin >= 1. .and. TimeFractionPMin >= 1.) EXIT
@@ -914,7 +914,7 @@ contains
                      StateOld_VGB(P_,i,j,k,iBlock)) &
                      /StateOld_VGB(P_,i,j,k,iBlock) ) )
                 TimeFractionRho = 1/maxval(RhoChangeLimit_S/PercentRhoLimit_I)
-                TimeFractionP   = 1/maxval(pChangeLimit_S  /percent_max_p  )
+                TimeFractionP   = 1/maxval(pChangeLimit_S  /PercentPLimit_I  )
                 if (TimeFractionRho < 1. .or. TimeFractionP < 1.) then
                    if(nCheck == 1) then
                       TimeFraction = 1.

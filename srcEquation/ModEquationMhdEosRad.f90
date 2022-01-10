@@ -15,11 +15,13 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdEosRad.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdEosRad.f90"
 
   ! This equation module contains the standard MHD equations with
   ! wave energy and extra internal energy
-  character (len=*), parameter :: NameEquation='MHD+eos+waves'
+  character (len=*), parameter :: &
+       NameEquation = 'MHD+eos+waves'
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave

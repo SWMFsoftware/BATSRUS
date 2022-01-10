@@ -1,9 +1,7 @@
 #DESCRIPTION
 Param/FIVEMOMENT/PARAM.in.langmuir: 5-moment test with Langmuir waves		StringDescription
 
-#USERMODULE
-Waves and GEM, Yingjuan Ma		NameUserModule
-1.40			VersionUserModule
+USERMODULE: Waves
 
 #CHECKGRIDSIZE
       50		nI

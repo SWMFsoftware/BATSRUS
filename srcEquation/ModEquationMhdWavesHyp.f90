@@ -14,7 +14,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdWavesHyp.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdWavesHyp.f90"
 
   ! This equation module contains the standard MHD equations plus
   ! extra wave energies

@@ -7,12 +7,10 @@ Param/SHOCKTUBE/PARAM.in.TwofluidTest: Two-fluid MHD test		StringDescription
 MHD with electron pressure and hyperbolic cleaning		NameEquation
 10			nVar
 
+USERMODULE: Waves
+
 #ELECTRONENTROPY
 F			UseElectronEntropy
-
-#USERMODULE
-Waves and GEM, Yingjuan Ma		NameUserModule
-1.40			VersionUserModule
 
 #CHECKGRIDSIZE
       64		nI

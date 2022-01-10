@@ -1,9 +1,7 @@
 #DESCRIPTION
-Param/SIXMOMENT/PARAM.in.light: 5-moment test with Langmuir waves
+Param/SIXMOMENT/PARAM.in.light: 5-moment test with Langmuir waves		StringDescription
 
-#USERMODULE
-Waves and GEM, Yingjuan Ma
-1.30			VersionUserModule
+USERMODULE: Waves
 
 #CHECKGRIDSIZE
       50                              nI

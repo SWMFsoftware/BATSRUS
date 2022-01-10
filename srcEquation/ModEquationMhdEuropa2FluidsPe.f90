@@ -12,11 +12,13 @@ module ModVarIndexes
 
   save
 
-  character(*),parameter:: NameEquationFile="ModEquationMhdEuropa2FluidsPe.f90"
+  character(*),parameter:: &
+       NameEquationFile = "ModEquationMhdEuropa2FluidsPe.f90"
 
   ! This equation module contains multi-ion equations with 2 fluids
   ! with electron pressure
-  character (len=*), parameter :: NameEquation= &
+  character (len=*), parameter :: &
+       NameEquation = &
        'Two-Ion-fluid Pe MHD for Europa'
 
   integer, parameter :: nVar = 14
@@ -116,8 +118,8 @@ module ModVarIndexes
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"r^O^+", "U_x^O^+", "U_y^O^+", "U_z^O^+", "B_x", "B_y", "B_z", "p_e", "P^O^+"'// &
-       '"r^O2^+", "U_x^O2^+", "U_y^O2^+", "U_z^O2^+", "P^O2^+"'
+       '"r^O^+", "U_x^O^+", "U_y^O^+", "U_z^O^+", "B_x", "B_y", "B_z", &
+       "p_e", "P^O^+", "r^O2^+", "U_x^O2^+", "U_y^O2^+", "U_z^O2^+", "P^O2^+"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &

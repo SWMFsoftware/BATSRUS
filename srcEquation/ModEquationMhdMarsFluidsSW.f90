@@ -10,9 +10,11 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdMarsFluidsSW.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdMarsFluidsSW.f90"
 
-  character (len=*), parameter :: NameEquation='Multi-fluid MHD for Mars with Hpsw and Hpion separate'
+  character (len=*), parameter :: &
+       NameEquation = 'Multi-fluid MHD for Mars with Hpsw and Hpion separate'
 
   integer, parameter :: nVar = 33
 
@@ -75,11 +77,16 @@ module ModVarIndexes
 
   ! These arrays are useful for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)  =[Rho_,   HpswRho_,   O2pRho_,   OpRho_,   CO2pRho_,   HpRho_ ] ,&
-       iRhoUx_I(nFluid)=[RhoUx_, HpswRhoUx_, O2pRhoUx_, OpRhoUx_, CO2pRhoUx_, HpRhoUx_],&
-       iRhoUy_I(nFluid)=[RhoUy_, HpswRhoUy_, O2pRhoUy_, OpRhoUy_, CO2pRhoUy_, HpRhoUy_],&
-       iRhoUz_I(nFluid)=[RhoUz_, HpswRhoUz_, O2pRhoUz_, OpRhoUz_, CO2pRhoUz_, HpRhoUz_],&
-       iP_I(nFluid)    =[p_,     HpswP_,     O2pP_,     OpP_ ,    CO2pP_,     HpP_ ]
+       iRho_I(nFluid)  = &
+       [Rho_,   HpswRho_,   O2pRho_,   OpRho_,   CO2pRho_,   HpRho_ ] ,&
+       iRhoUx_I(nFluid)= &
+       [RhoUx_, HpswRhoUx_, O2pRhoUx_, OpRhoUx_, CO2pRhoUx_, HpRhoUx_],&
+       iRhoUy_I(nFluid) = &
+       [RhoUy_, HpswRhoUy_, O2pRhoUy_, OpRhoUy_, CO2pRhoUy_, HpRhoUy_],&
+       iRhoUz_I(nFluid) = &
+       [RhoUz_, HpswRhoUz_, O2pRhoUz_, OpRhoUz_, CO2pRhoUz_, HpRhoUz_],&
+       iP_I(nFluid) = &
+       [p_,     HpswP_,     O2pP_,     OpP_ ,    CO2pP_,     HpP_ ]
 
   integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2,3,4,5]
 

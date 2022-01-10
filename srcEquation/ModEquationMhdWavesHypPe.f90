@@ -15,10 +15,11 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdWavesHypPe.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdWavesHypPe.f90"
 
-  ! This equation module contains the standard MHD equations, hyperbolic scalar,
-  ! extra wave energies and electron pressure
+  ! This equation module contains the standard MHD equations,
+  ! hyperbolic scalar, extra wave energies and electron pressure
   character (len=*), parameter :: &
        NameEquation ='MHD + Alfven waves + electron pressure + hyperbolic divB'
 

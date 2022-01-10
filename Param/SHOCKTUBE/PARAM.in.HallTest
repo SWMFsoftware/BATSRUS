@@ -7,9 +7,7 @@ Param/SHOCKTUBE/PARAM.in.HallTest: Fast Whistler wave test. Hall term is only ap
 MHD			NameEquation
 8			nVar
 
-#USERMODULE
-Waves and GEM, Yingjuan Ma		NameUserModule
-1.40			VersionUserModule
+USERMODULE: Waves
 
 #CHECKGRIDSIZE
 4			nI

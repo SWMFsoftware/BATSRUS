@@ -10,7 +10,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMultiSwIono.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMultiSwIono.f90"
 
   ! This equation module declares two Ions (solar wind H and ionosphere H)
   ! for the purposes of tracking plasma entry into the magnetosphere in
@@ -20,7 +21,8 @@ module ModVarIndexes
   ! Based on ModEquationMhdIons and ModEquationMhdSwIono(Hansen, 2006)
   ! Welling, 2010.
 
-  character (len=*), parameter :: NameEquation='MHD with SW and Iono Hydrogen'
+  character (len=*), parameter :: &
+       NameEquation = 'MHD with SW and Iono Hydrogen'
 
   integer, parameter :: nVar = 18
 
@@ -30,7 +32,8 @@ module ModVarIndexes
   logical, parameter :: IsMhd     = .true.
   real               :: MassFluid_I(2:3) = [ 1.0, 1.0 ]
 
-  character (len=4), parameter :: NameFluid_I(nFluid)= [ 'All ', 'Sw  ', 'Iono']
+  character (len=4), parameter :: &
+       NameFluid_I(nFluid)= [ 'All ', 'Sw  ', 'Iono']
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.

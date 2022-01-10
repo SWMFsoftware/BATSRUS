@@ -13,11 +13,13 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdHpOp.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdHpOp.f90"
 
   ! This equation module contains the standard MHD equations with
   ! two species for Earth.  1 - solar wind protons, 2 - ionospheric plasma
-  character (len=*), parameter :: NameEquation= 'MHD 2 Species (Hp+Op), Toth, 2017'
+  character (len=*), parameter :: &
+       NameEquation = 'MHD 2 Species (Hp+Op), Toth, 2017'
 
   ! Number of variables without energy:
   integer, parameter :: nVar = 10

@@ -17,16 +17,18 @@ module ModOptimizeParam
   use ModFaceFlux, ONLY: &
        DoLf => DoLf
   use ModFaceValue, ONLY: &
-       LimiterBeta => BetaLimiter
+       LimiterBeta => LimiterBeta
   use ModMain, ONLY: &
        IsTimeAccurate => IsTimeAccurate, &
        nStage => nStage, &
        iStage => iStage, &
        nOrder => nOrder, &
+       UseBody => UseBody, &
        UseDivbSource => UseDivbSource, &
-       UseHyperbolicDivB => UseHyperBolicDivB, &
        UseDtFixed => UseDtFixed, &
-       UseBody => UseBody
+       UseGravity => UseGravity, &
+       UseHyperbolicDivB => UseHyperBolicDivB, &
+       UseRotatingFrame => UseRotatingFrame
   use ModBorisCorrection, ONLY: &
        UseBorisCorrection => UseBorisCorrection
   use ModPhysics, ONLY: &

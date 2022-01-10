@@ -8,7 +8,7 @@ BLESS=NO
 
 DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
-.NOTPARALLEL: test test_extra
+.NOTPARALLEL: test test_gpu test_extra
 
 test_help:
 	@echo "    test                       (run tests with ${OMPIRUN})"
@@ -19,6 +19,9 @@ test_help:
 	@echo "    test MPIRUN=               (run tests without MPI)"
 	@echo "    test OPENMP=-noopenmp      (run tests without OpenMP)"
 	@echo "    test OPENACC=-noacc        (run tests without OpenACC)"
+	@echo ""
+	@echo "    test_gpu                   (run GPU related tests only)"
+	@echo ""
 	@echo "    test_amr_compile           (compile test_amr)"
 	@echo "    test_amr_rundir            (create run directory for test_amr)"
 	@echo "    test_amr_run NP=4          (run test_amr with 4 MPI processes)"
@@ -99,11 +102,7 @@ test:
 	@rm -f *.diff
 	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
-	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
-	-@($(MAKE) test_fastwave TESTDIR=run_test_fastwave)
-	-@($(MAKE) test_fastwave_2d TESTDIR=run_test_fastwave_2d)
-	-@($(MAKE) test_earth TESTDIR=run_test_earth)
-	-@($(MAKE) test_awsom_gpu TESTDIR=run_test_awsom_gpu)
+	-@($(MAKE) test_gpu)
 	cd ${DIR}; ./Config.pl -noacc
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
@@ -129,6 +128,13 @@ test:
 	-@(if [ -d srcUserExtra ]; then ${MAKE} test_extra; fi)
 	./Config.pl -noopenmp
 	@ls -l *.diff
+
+test_gpu:
+	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
+	-@($(MAKE) test_fastwave TESTDIR=run_test_fastwave)
+	-@($(MAKE) test_fastwave_2d TESTDIR=run_test_fastwave_2d)
+	-@($(MAKE) test_earth TESTDIR=run_test_earth)
+	-@($(MAKE) test_awsom_gpu TESTDIR=run_test_awsom_gpu)
 
 test_extra:
 	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)
@@ -896,9 +902,9 @@ test_awsom_gpu_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_awsom_gpu_check:
-	-@(${DIFFNUM} -a=1e-20 -t \
-		${TESTDIR}/RESULTS/SC/log_n000010.log \
-		Param/CORONA/TestOutput/log_n000010.sc.awsom_gpu \
+	-@(${DIFFNUM} -a=1e-19 -r=1e-5 -t \
+		${TESTDIR}/RESULTS/SC/log_n000001.log \
+		Param/CORONA/TestOutput/log_n000001.sc.awsom_gpu \
 		> test_awsom_gpu.diff)
 	ls -l test_awsom_gpu.diff
 

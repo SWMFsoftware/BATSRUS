@@ -10,14 +10,15 @@ module ModUpdateStateFast
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
-       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin
+       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
+       UseGravity, UseRotatingFrame
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
-       DtMax_CB, Vdt_, iTypeUpdate, UpdateOrig_, UseRotatingFrame
+       DtMax_CB, Vdt_, iTypeUpdate, UpdateOrig_
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -31,8 +32,7 @@ module ModUpdateStateFast
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
        OmegaBody_D, set_dipole, Gbody, OmegaBody
   use ModMain, ONLY: Dt, DtMax_B, Cfl, nStep, tSimulation, &
-       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
-       UseGravity
+       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe
   use ModB0, ONLY: B0_DGB, get_b0_dipole
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
@@ -214,7 +214,7 @@ contains
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn, iUx, iUy, iUz, iRho, &
          iEnergy
     logical:: IsBodyBlock, IsConserv
-    real:: DivU, DivB, DivE, DivF, DtPerDv, Change_V(nFlux), &
+    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), &
          ForcePerRho_D(3), Omega2
     !$acc declare create (Change_V)
 
@@ -311,7 +311,7 @@ contains
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
           end do
        end if
-       !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
+       !$acc loop vector collapse(3) private(Change_V, DtLocal) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseBody .and. IsBodyBlock) then
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
@@ -405,6 +405,13 @@ contains
              end do
           end if
 
+          ! Below we add sources that do not need to be divided by cell volume
+          if(IsCartesian)then
+             Change_V = Change_V/CellVolume_B(iBlock)
+          else
+             Change_V = Change_V/CellVolume_GB(i,j,k,iBlock)
+          end if
+
           if(UseGravity .or. UseRotatingFrame)then
              do iFluid = 1, nFluid
                 iRho = iRho_I(iFluid)
@@ -439,16 +446,11 @@ contains
              end do
           end if
 
-          ! Time step divided by cell volume
+          ! Time step for iStage
           if(IsTimeAccurate)then
-             DtPerDv = iStage*Dt
+             DtLocal = iStage*Dt/nStage
           else
-             DtPerDv = iStage*Cfl*DtMax_CB(i,j,k,iBlock)
-          end if
-          if(IsCartesian)then
-             DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
-          else
-             DtPerDv = DtPerDv/(nStage*CellVolume_GB(i,j,k,iBlock))
+             DtLocal = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
           end if
 
           ! Update state
@@ -466,7 +468,7 @@ contains
                   IsConserv)
 
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
-                  + DtPerDv*Change_V(1:nVar)
+                  + DtLocal*Change_V(1:nVar)
           else
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite old pressure and change with energy
@@ -480,7 +482,7 @@ contains
                   IsConserv)
 
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
-                  + DtPerDv*Change_V(1:nVar)
+                  + DtLocal*Change_V(1:nVar)
           end if
           ! Maybe we should put State_VGB(:,i,j,k) and B0_DGB(:,i,j,k) into
           ! local private arrays...

@@ -84,7 +84,7 @@ module ModAdvance
 
   ! Update check parameters
   logical :: UseUpdateCheck = .false.
-  real :: PercentRhoLimit_I(2), percent_max_p(2)
+  real :: PercentRhoLimit_I(2), PercentPLimit_I(2)
 
   ! The percentage limit for species to be checked in update check
   real :: SpeciesPercentCheck = 1.0

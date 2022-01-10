@@ -10,9 +10,11 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationHdEos.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationHdEos.f90"
 
-  character (len=*), parameter :: NameEquation='HD with EOS'
+  character (len=*), parameter :: &
+       NameEquation = 'HD with EOS'
 
   integer, parameter :: nVar = 6
 

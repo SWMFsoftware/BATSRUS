@@ -1036,7 +1036,8 @@ contains
 
          if(TypePlot_I(iFile)/='nul' .and. .not.IsFound ) then
             ! Assign node numbers for tec plots
-            if( index(TypePlotFormat_I(iFile),'tec')>0 .and. DoAssignNodeNumbers)then
+            if( index(TypePlotFormat_I(iFile),'tec')>0 &
+                 .and. DoAssignNodeNumbers)then
                call assign_node_numbers
                DoAssignNodeNumbers = .false.
             end if
@@ -1044,7 +1045,8 @@ contains
             if(  index(TypePlot_I(iFile),'Trace_DSNB')>0 .or. &
                  index(StringPlotVar_I(iFile),'status')>0)then
                call trace_field_grid
-               call sync_cpu_gpu('update on CPU', NameSub, Trace_DICB=Trace_DSNB)
+               call sync_cpu_gpu('update on CPU', NameSub, &
+                    Trace_DICB=Trace_DSNB)
             end if
 
             call timing_start('save_plot')

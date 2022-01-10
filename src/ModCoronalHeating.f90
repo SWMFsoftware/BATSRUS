@@ -362,7 +362,7 @@ contains
 
     use ModAdvance,     ONLY: State_VGB
     use ModGeometry,    ONLY: r_GB
-    use ModMain,        ONLY: nJ, nK, r_
+    use ModMain,        ONLY: nJ, nK, iDimR
     use ModInterpolate, ONLY: find_cell
     use ModPhysics,     ONLY: No2Si_V, UnitB_, UnitX_
     use ModVarIndexes,  ONLY: Bx_, Bz_
@@ -379,13 +379,13 @@ contains
     character(len=*), parameter:: NameSub = 'get_photosphere_unsignedflux'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    rMin = CoordMin_DB(r_,iBlock)
-    rMax = CoordMax_DB(r_,iBlock)
+    rMin = CoordMin_DB(iDimR,iBlock)
+    rMax = CoordMax_DB(iDimR,iBlock)
 
     if((UnsignedFluxHeight > rMax) .or. (UnsignedFluxHeight < rMin)) RETURN
 
     ! Cells used to interpolate Br
-    r = (UnsignedFluxHeight - rMin)/CellSize_DB(r_,iBlock) + 0.5
+    r = (UnsignedFluxHeight - rMin)/CellSize_DB(iDimR,iBlock) + 0.5
     call find_cell(0, nI+1, r, iLeft, DrLeft)
 
     ! Cells used to interpolate face area
@@ -406,8 +406,8 @@ contains
 
        BrCgs = ((1.0 - DrLeft)*BrLeft + DrLeft*BrRight)*No2Si_V(UnitB_)*1e4
 
-       dAreaCgs = ((1.0-DrL)*CellFace_DFB(r_,iL,j,k,iBlock) &
-            +            DrL*CellFace_DFB(r_,iL+1,j,k,iBlock)) &
+       dAreaCgs = ((1.0-DrL)*CellFace_DFB(iDimR,iL,j,k,iBlock) &
+            +            DrL*CellFace_DFB(iDimR,iL+1,j,k,iBlock)) &
             *No2Si_V(UnitX_)**2*1e4
 
        UnsignedFluxCgs = UnsignedFluxCgs + abs(BrCgs)*dAreaCgs

@@ -1,22 +1,18 @@
+#DESCRIPTION
+Param/SIXMOMENT/PARAM.in.shock: Six-moment test		StringDescription
+
+USERMODULE: Waves
+
 #TESTXYZ
-0.01
-0.0
-0.0
+0.01			xTest
+0.0			yTest
+0.0			zTest
 
 #TESTVAR
-2			Ux
-
-F
+Ux			NameVarTest
 
 TEST
 update_states update_states_mhd
-
-#DESCRIPTION
-Param/SIXMOMENT/PARAM.in.shock: Five-moment test	StringDescription
-
-#USERMODULE
-Waves and GEM, Yingjuan Ma
-1.30			VersionUserModule
 
 #CHECKGRIDSIZE
      100                              nI

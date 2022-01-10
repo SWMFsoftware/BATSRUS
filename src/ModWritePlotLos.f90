@@ -777,7 +777,7 @@ contains
       ! DoTest = iPix==200 .and. jPix==200
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
-      iDimMin = r_
+      iDimMin = iDimR
       if(present(UseThreads))then
          ! Integration through the threaded gap
          ! The part of Trace_DSNB passing through the threaded gap does not
@@ -786,7 +786,7 @@ contains
          ! In the threaded gap, the radial coordinate is allowed to go beyond
          ! the block boundary and the domain boundary. The criterion for the
          ! Trace_DSNB pass to a new block should ignore this coordinate.
-         iDimMin = r_ + 1
+         iDimMin = iDimR + 1
       end if
       if(DoTest .and. iProc == 0) then
          write(*,'(2a, 3f10.7, a, f10.7)')NameSub, ' XyzStartIn_D=', &
@@ -860,7 +860,7 @@ contains
             CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
             CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
             if(present(UseThreads))then
-               if(IsUniformGrid)CellSize_D(r_) = dCoord1Uniform
+               if(IsUniformGrid)CellSize_D(iDimR) = dCoord1Uniform
             end if
             if(DoTest)then
                write(*,*)NameSub,': new iBlock=', iBlock

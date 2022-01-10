@@ -63,7 +63,7 @@ contains
     use ModMessagePass,   ONLY: DoOneCoarserLayer
     use ModFaceValue,     ONLY: &
          UseTvdResChange, UseAccurateResChange, nGUsed, &
-         DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
+         DoLimitMomentum, LimiterBeta, TypeLimiter, read_face_value_param, &
          TypeLimiter5, UseCweno, &
          iVarSmooth_V, iVarSmoothIndex_I, &
          StringLowOrderRegion, iRegionLowOrder_I
@@ -549,12 +549,12 @@ contains
 
        case("#STOP")
           call check_stand_alone
-          call read_var('MaxIteration',nIter)
-          call read_var('tSimulationMax',tSimulationMax)
+          call read_var('MaxIteration', nIter)
+          call read_var('tSimulationMax', tSimulationMax)
 
        case("#CPUTIMEMAX")
           call check_stand_alone
-          call read_var('CpuTimeMax',CpuTimeMax)
+          call read_var('CpuTimeMax', CpuTimeMax)
 
        case("#CHECKSTOPFILE")
           call check_stand_alone
@@ -588,18 +588,18 @@ contains
                StringTestSwmf = StringTest
 
        case("#STRICT")
-          call read_var('UseStrict',UseStrict)
+          call read_var('UseStrict', UseStrict)
 
        case("#DEBUG")
-          call read_var('DoDebug',DoDebug)
-          call read_var('DoDebugGhost',DoShowGhostCells)
+          call read_var('DoDebug', DoDebug)
+          call read_var('DoDebugGhost', DoShowGhostCells)
 
        case("#TIMING")
-          call read_var('UseTiming',UseTiming)
+          call read_var('UseTiming', UseTiming)
           if(UseTiming)then
-             call read_var('DnTiming',DnTiming)
-             call read_var('nDepthTiming',nDepthTiming)
-             call read_var('TypeTimingReport',TypeTiming)
+             call read_var('DnTiming', DnTiming)
+             call read_var('nDepthTiming', nDepthTiming)
+             call read_var('TypeTimingReport', TypeTiming)
              UseTimingAll = index(TypeTiming,'all') > 0
              TypeTiming  = TypeTiming(1:4)
           end if
@@ -632,14 +632,14 @@ contains
           if(UseDtFixed)call read_var('DtFixedDim', DtFixedDim)
 
        case("#PARTSTEADY")
-          call read_var('UsePartSteady',UsePartSteady)
+          call read_var('UsePartSteady', UsePartSteady)
 
        case("#PARTSTEADYCRITERIA","#STEADYCRITERIA")
-          call read_var('MinCheckVar',MinCheckVar)
-          call read_var('MaxCheckVar',MaxCheckVar)
+          call read_var('MinCheckVar', MinCheckVar)
+          call read_var('MaxCheckVar', MaxCheckVar)
           do iVar=MinCheckVar, MaxCheckVar
-             call read_var('RelativeEps',RelativeEps_V(iVar))
-             call read_var('AbsoluteEps',AbsoluteEps_V(iVar))
+             call read_var('RelativeEps', RelativeEps_V(iVar))
+             call read_var('AbsoluteEps', AbsoluteEps_V(iVar))
           end do
 
        case("#POINTIMPLICIT")
@@ -679,7 +679,7 @@ contains
 
        case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
             "#RESISTIVITYREGION", "#RESISTIVEREGION",&
-            '#MESSAGEPASSRESISTIVITY','#RESISTIVITYSCHEME')
+            '#MESSAGEPASSRESISTIVITY', '#RESISTIVITYSCHEME')
           call read_resistivity_param(NameCommand)
 
        case("#HALLRESISTIVITY", "#HALLREGION", "#BIERMANNBATTERY")
@@ -707,7 +707,7 @@ contains
           if(UseSpeedMin)then
              call read_var('rSpeedMin',     rSpeedMin)
              call read_var('SpeedMinDim',   SpeedMinDim)
-             call read_var('TauSpeedMinDim',TauSpeedMinDim)
+             call read_var('TauSpeedMinDim', TauSpeedMinDim)
           end if
 
        case("#ELECTRONPRESSURE")
@@ -752,19 +752,19 @@ contains
                 call read_var('nParcel', nParcel)
                 nfile = max(nFile, parcel_+nParcel)
                 do iParcel = 1, nParcel
-                   call read_var('Parcel_DI(1,iParcel)',Parcel_DI(1,iParcel))
-                   call read_var('Parcel_DI(2,iParcel)',Parcel_DI(2,iParcel))
-                   call read_var('Parcel_DI(3,iParcel)',Parcel_DI(3,iParcel))
+                   call read_var('Parcel_DI(1,iParcel)', Parcel_DI(1,iParcel))
+                   call read_var('Parcel_DI(2,iParcel)', Parcel_DI(2,iParcel))
+                   call read_var('Parcel_DI(3,iParcel)', Parcel_DI(3,iParcel))
                 end do
              end if
              call read_var('StringParcel', StringParcel)
-             call read_var('DnParcel',DnOutput_I(parcel_+1))
+             call read_var('DnParcel', DnOutput_I(parcel_+1))
              DnOutput_I(parcel_+1:parcel_+nParcel)=DnOutput_I(parcel_+1)
-             call read_var('DtParcel',DtOutput_I(parcel_+1))
+             call read_var('DtParcel', DtOutput_I(parcel_+1))
              DtOutput_I(parcel_+1:parcel_+nParcel)=DtOutput_I(parcel_+1)
              if(DnOutput_I(parcel_+1) > 0)then
-                call read_var('nStartParcel',nStartParcel)
-                call read_var('nEndParcel',nEndParcel)
+                call read_var('nStartParcel', nStartParcel)
+                call read_var('nEndParcel', nEndParcel)
                 if(nEndParcel < nStartParcel)then
                    write(*,*) ' StartTimeParcel =', StartTimeParcel
                    write(*,*) ' EndTimeParcel   =', EndTimeParcel
@@ -772,8 +772,8 @@ contains
                         'nEndParcel<nStartParcel')
                 end if
              elseif(DtOutput_I(parcel_+1) > 0)then
-                call read_var('StartTimeParcel',StartTimeParcel)
-                call read_var('EndTimeParcel',EndTimeParcel)
+                call read_var('StartTimeParcel', StartTimeParcel)
+                call read_var('EndTimeParcel', EndTimeParcel)
                 if (EndTimeParcel < StartTimeParcel .or. &
                      (EndTimeParcel-StartTimeParcel)/DtOutput_I(parcel_+1) >&
                      1e6) then
@@ -792,7 +792,7 @@ contains
                 TypePlotVar='var'
                 IsDimensionalPlot_I(parcel_+1:parcel_+nParcel) = &
                      index(StringParcel,'VAR')>0
-                call read_var('NameParcelVars',StringParcelVar)
+                call read_var('NameParcelVars', StringParcelVar)
              elseif(index(StringParcel,'MHD')>0 .or. &
                   index(StringParcel,'mhd')>0)then
                 TypePlotVar='mhd'
@@ -814,18 +814,18 @@ contains
           endif
 
        case("#SAVELOGFILE")
-          call read_var('DoSaveLogfile',DoSaveLogfile)
+          call read_var('DoSaveLogfile', DoSaveLogfile)
           if(DoSaveLogfile)then
              nfile=max(nfile,logfile_)
-             call read_var('StringLog',StringLog)
-             call read_var('DnSaveLogfile',DnOutput_I(logfile_))
-             call read_var('DtSaveLogfile',DtOutput_I(logfile_))
+             call read_var('StringLog', StringLog)
+             call read_var('DnSaveLogfile', DnOutput_I(logfile_))
+             call read_var('DtSaveLogfile', DtOutput_I(logfile_))
 
              ! Log variables
              if(index(StringLog,'VAR')>0 .or. index(StringLog,'var')>0)then
                 IsDimensionalPlot_I(logfile_) = index(StringLog,'VAR')>0
                 TypeLogTime='step time'
-                call read_var('StringLogVar',StringLogVar)
+                call read_var('StringLogVar', StringLogVar)
              elseif(index(StringLog,'RAW')>0 &
                   .or. index(StringLog,'raw')>0)then
                 IsDimensionalPlot_I(logfile_) = index(StringLog,'RAW')>0
@@ -881,12 +881,12 @@ contains
              ! If any flux variables are used - input a list of radii
              ! at which to calculate the flux
              if (index(StringLogVar,'flx')>0) &
-                  call read_var('StringLogRadius',StringLogRadius)
+                  call read_var('StringLogRadius', StringLogRadius)
 
           end if
 
        case("#SAVEINITIAL")
-          call read_var('DoSaveInitial',DoSaveInitial)
+          call read_var('DoSaveInitial', DoSaveInitial)
 
        case("#SAVETECPLOT")
           call read_var('DoSaveOneTecFile', DoSaveOneTecFileOrig)
@@ -909,11 +909,11 @@ contains
 
              iFile = iFileStart + iFileRead
 
-             call read_var('StringPlot',StringPlot)
+             call read_var('StringPlot', StringPlot)
 
              ! Plotting frequency
-             call read_var('DnSavePlot',DnOutput_I(iFile))
-             call read_var('DtSavePlot',DtOutput_I(iFile))
+             call read_var('DnSavePlot', DnOutput_I(iFile))
+             call read_var('DtSavePlot', DtOutput_I(iFile))
 
              ! Default resolution (original AMR grid)
              PlotDx_DI(:,iFile) = -1.0
@@ -921,70 +921,71 @@ contains
              ! Plotting area
              if(index(StringPlot,'cut')>0)then
                 TypePlotArea='cut'
-                call read_var('xMinCut',PlotRange_EI(1,iFile))
-                call read_var('xMaxCut',PlotRange_EI(2,iFile))
-                call read_var('yMinCut',PlotRange_EI(3,iFile))
-                call read_var('yMaxCut',PlotRange_EI(4,iFile))
-                call read_var('zMinCut',PlotRange_EI(5,iFile))
-                call read_var('zMaxCut',PlotRange_EI(6,iFile))
+                call read_var('xMinCut', PlotRange_EI(1,iFile))
+                call read_var('xMaxCut', PlotRange_EI(2,iFile))
+                call read_var('yMinCut', PlotRange_EI(3,iFile))
+                call read_var('yMaxCut', PlotRange_EI(4,iFile))
+                call read_var('zMinCut', PlotRange_EI(5,iFile))
+                call read_var('zMaxCut', PlotRange_EI(6,iFile))
              elseif(index(StringPlot,'bx0')>0)then
                 TypePlotArea='bx0'
-                call read_var('xMinCut',PlotRange_EI(1,iFile))
-                call read_var('xMaxCut',PlotRange_EI(2,iFile))
-                call read_var('yMinCut',PlotRange_EI(3,iFile))
-                call read_var('yMaxCut',PlotRange_EI(4,iFile))
-                call read_var('zMinCut',PlotRange_EI(5,iFile))
-                call read_var('zMaxCut',PlotRange_EI(6,iFile))
+                call read_var('xMinCut', PlotRange_EI(1,iFile))
+                call read_var('xMaxCut', PlotRange_EI(2,iFile))
+                call read_var('yMinCut', PlotRange_EI(3,iFile))
+                call read_var('yMaxCut', PlotRange_EI(4,iFile))
+                call read_var('zMinCut', PlotRange_EI(5,iFile))
+                call read_var('zMaxCut', PlotRange_EI(6,iFile))
              elseif(index(StringPlot,'slc')>0)then
                 TypePlotArea='slc'
-                call read_var('xMinCut',PlotRange_EI(1,iFile))
-                call read_var('xMaxCut',PlotRange_EI(2,iFile))
-                call read_var('yMinCut',PlotRange_EI(3,iFile))
-                call read_var('yMaxCut',PlotRange_EI(4,iFile))
-                call read_var('zMinCut',PlotRange_EI(5,iFile))
-                call read_var('zMaxCut',PlotRange_EI(6,iFile))
-                call read_var('xPoint',PlotPointXyz_DI(1,iFile))
-                call read_var('yPoint',PlotPointXyz_DI(2,iFile))
-                call read_var('zPoint',PlotPointXyz_DI(3,iFile))
-                call read_var('xNormal',PlotNormal_DI(1,iFile))
-                call read_var('yNormal',PlotNormal_DI(2,iFile))
-                call read_var('zNormal',PlotNormal_DI(3,iFile))
+                call read_var('xMinCut', PlotRange_EI(1,iFile))
+                call read_var('xMaxCut', PlotRange_EI(2,iFile))
+                call read_var('yMinCut', PlotRange_EI(3,iFile))
+                call read_var('yMaxCut', PlotRange_EI(4,iFile))
+                call read_var('zMinCut', PlotRange_EI(5,iFile))
+                call read_var('zMaxCut', PlotRange_EI(6,iFile))
+                call read_var('xPoint', PlotPointXyz_DI(1,iFile))
+                call read_var('yPoint', PlotPointXyz_DI(2,iFile))
+                call read_var('zPoint', PlotPointXyz_DI(3,iFile))
+                call read_var('xNormal', PlotNormal_DI(1,iFile))
+                call read_var('yNormal', PlotNormal_DI(2,iFile))
+                call read_var('zNormal', PlotNormal_DI(3,iFile))
              elseif(index(StringPlot,'dpl')>0)then
                 TypePlotArea='dpl'
-                call read_var('xMinCut',PlotRange_EI(1,iFile))
-                call read_var('xMaxCut',PlotRange_EI(2,iFile))
-                call read_var('yMinCut',PlotRange_EI(3,iFile))
-                call read_var('yMaxCut',PlotRange_EI(4,iFile))
-                call read_var('zMinCut',PlotRange_EI(5,iFile))
-                call read_var('zMaxCut',PlotRange_EI(6,iFile))
+                call read_var('xMinCut', PlotRange_EI(1,iFile))
+                call read_var('xMaxCut', PlotRange_EI(2,iFile))
+                call read_var('yMinCut', PlotRange_EI(3,iFile))
+                call read_var('yMaxCut', PlotRange_EI(4,iFile))
+                call read_var('zMinCut', PlotRange_EI(5,iFile))
+                call read_var('zMaxCut', PlotRange_EI(6,iFile))
              elseif (index(StringPlot,'blk')>0) then
                 TypePlotArea='blk'
-                call read_var('xPoint',PlotPointXyz_DI(1,iFile))
-                call read_var('yPoint',PlotPointXyz_DI(2,iFile))
-                call read_var('zPoint',PlotPointXyz_DI(3,iFile))
+                call read_var('xPoint', PlotPointXyz_DI(1,iFile))
+                call read_var('yPoint', PlotPointXyz_DI(2,iFile))
+                call read_var('zPoint', PlotPointXyz_DI(3,iFile))
              elseif (index(StringPlot,'pnt')>0) then
                 TypePlotArea='pnt'
              elseif(index(StringPlot,'lin')>0)then
                 iPlotFile = iFile - Plot_
                 TypePlotArea='lin'
-                call read_var('NameLine', NameLine_I(iPlotFile), &
+                call read_var('NameLine',  NameLine_I(iPlotFile), &
                      IsUpperCase=.true.)
-                call read_var('IsSingleLine',IsSingleLine_I(iPlotFile))
-                call read_var('nLine',nLine_I(iPlotFile))
+                call read_var('IsSingleLine', IsSingleLine_I(iPlotFile))
+                call read_var('nLine', nLine_I(iPlotFile))
                 if(nLine_I(iPlotFile)==1)IsSingleLine_I(iPlotFile)=.true.
                 if(nLine_I(iPlotFile) > MaxLine)then
                    if(iProc==0)then
-                      write(*,*)NameSub,' WARNING: nLine=',nLine_I(iPlotFile),&
-                           ' exceeds MaxLine=',MaxLine
+                      write(*,*)NameSub, &
+                           ' WARNING: nLine=', nLine_I(iPlotFile),&
+                           ' exceeds MaxLine=', MaxLine
                       write(*,*)NameSub,' WARNING reducing nLine to MaxLine'
                    end if
                    nLine_I(iPlotFile) = MaxLine
                 end if
                 do i = 1, nLine_I(iPlotFile)
-                   call read_var('xStartLine',XyzStartLine_DII(1,i,iPlotFile))
-                   call read_var('yStartLine',XyzStartLine_DII(2,i,iPlotFile))
-                   call read_var('zStartLine',XyzStartLine_DII(3,i,iPlotFile))
-                   call read_var('IsParallel',IsParallelLine_II(i,iPlotFile))
+                   call read_var('xStartLine', XyzStartLine_DII(1,i,iPlotFile))
+                   call read_var('yStartLine', XyzStartLine_DII(2,i,iPlotFile))
+                   call read_var('zStartLine', XyzStartLine_DII(3,i,iPlotFile))
+                   call read_var('IsParallel', IsParallelLine_II(i,iPlotFile))
                 end do
              elseif (index(StringPlot,'eqr')>0)then
                 TypePlotArea='eqr'
@@ -1010,7 +1011,7 @@ contains
                 call read_var('nLon',   PlotRange_EI(2,iFile))
              elseif (index(StringPlot,'sph')>0)then
                 TypePlotArea='sph'
-                call read_var('Radius',PlotRange_EI(1,iFile))
+                call read_var('Radius', PlotRange_EI(1,iFile))
              elseif (index(StringPlot, 'shl')>0)then
                 TypePlotArea = 'shl'
                 call read_var('TypeCoord', TypeCoordPlot_I(iFile))
@@ -1045,9 +1046,9 @@ contains
                      call read_var('dZ', PlotDx_DI(3,iFile))
                 if(IsObsBox_I(iFile)) then
                    call read_var('TiltAngle', PlotNormal_DI(1,iFile))
-                   call read_var('ObsPosX_HGI',ObsPos_DI(1,iFile))
-                   call read_var('ObsPosY_HGI',ObsPos_DI(2,iFile))
-                   call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
+                   call read_var('ObsPosX_HGI', ObsPos_DI(1,iFile))
+                   call read_var('ObsPosY_HGI', ObsPos_DI(2,iFile))
+                   call read_var('ObsPosZ_HGI', ObsPos_DI(3,iFile))
                 else
                    call read_var('xAngle', PlotNormal_DI(1,iFile))
                    call read_var('yAngle', PlotNormal_DI(2,iFile))
@@ -1064,36 +1065,36 @@ contains
 
                    ! Satellite position
                    if(NameThisComp == 'GM')then
-                      call read_var('ObsPosX',ObsPos_DI(1,iFile))
-                      call read_var('ObsPosY',ObsPos_DI(2,iFile))
-                      call read_var('ObsPosZ',ObsPos_DI(3,iFile))
+                      call read_var('ObsPosX', ObsPos_DI(1,iFile))
+                      call read_var('ObsPosY', ObsPos_DI(2,iFile))
+                      call read_var('ObsPosZ', ObsPos_DI(3,iFile))
                    else
                       ! Coordinates of the observation point are in HGI
                       ! system
-                      call read_var('ObsPosX_HGI',ObsPos_DI(1,iFile))
-                      call read_var('ObsPosY_HGI',ObsPos_DI(2,iFile))
-                      call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
+                      call read_var('ObsPosX_HGI', ObsPos_DI(1,iFile))
+                      call read_var('ObsPosY_HGI', ObsPos_DI(2,iFile))
+                      call read_var('ObsPosZ_HGI', ObsPos_DI(3,iFile))
                    end if
                    ! Offset angle
-                   call read_var('OffsetAngle',OffsetAngle_I(iFile))
+                   call read_var('OffsetAngle', OffsetAngle_I(iFile))
                    OffsetAngle_I(iFile) = OffsetAngle_I(iFile)*cDegToRad
                    ! read max dimensions of the 2d image plane
-                   call read_var('rSizeImage',rSizeImage_I(iFile))
+                   call read_var('rSizeImage', rSizeImage_I(iFile))
                    ! read the position of image origin relative to grid origin
-                   call read_var('xOffset_I',xOffset_I(iFile))
-                   call read_var('yOffset_I',yOffset_I(iFile))
+                   call read_var('xOffset_I', xOffset_I(iFile))
+                   call read_var('yOffset_I', yOffset_I(iFile))
                    ! read the occulting radius
-                   call read_var('rOccult',rOccult_I(iFile))
+                   call read_var('rOccult', rOccult_I(iFile))
                    ! read the limb darkening parameter
-                   call read_var('MuLimbDarkening',MuLimbDarkening)
+                   call read_var('MuLimbDarkening', MuLimbDarkening)
                    ! read the number of pixels
-                   call read_var('nPix',nPixel_I(iFile))
+                   call read_var('nPix', nPixel_I(iFile))
                    ! if it is an EUV plot using a long table then read in the
                    ! name of the specific lookup table (will be matched to the
                    ! name read in by the lookuptable command).
                    if (index(StringPlot,'TBL')>0&
                         .or.index(StringPlot,'tbl')>0) &
-                        call read_var('NameLosTable_I',NameLosTable_I(iFile))
+                        call read_var('NameLosTable_I', NameLosTable_I(iFile))
                 else
                    ! if 'ins' or 'INS' exists
                    call read_var('StringsInstrument',  StringInstrument, &
@@ -1306,7 +1307,7 @@ contains
                      .and. TypePlotArea /= 'eqr' &
                      .and. TypePlotArea /= 'eqb' &
                      .and. TypePlotArea /= 'buf' &
-                     ) call read_var('DxSavePlot',PlotDx_DI(1,iFile))
+                     ) call read_var('DxSavePlot', PlotDx_DI(1,iFile))
 
                 ! Extract the type of idl plot file: default is real4
                 TypeFile_I(iFile) = 'real4'
@@ -1543,30 +1544,30 @@ contains
           call read_var('UseNoRefraction', UseNoRefraction)
 
        case("#SAVEPLOTNAME")
-          call read_var('IsPlotNameN',IsPlotNameN)
-          call read_var('IsPlotNameT',IsPlotNameT)
-          call read_var('IsPlotNameE',IsPlotNameE)
+          call read_var('IsPlotNameN', IsPlotNameN)
+          call read_var('IsPlotNameT', IsPlotNameT)
+          call read_var('IsPlotNameE', IsPlotNameE)
 
        case("#PLOTFILENAME")
-          call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
+          call read_var('NameMaxTimeUnit',  NameMaxTimeUnit)
 
        case("#LOSPLOT")
           call read_var('UseLosSimple', UseLosSimple)
 
        case("#SAVELOGNAME")
-          call read_var('IsLogNameN',IsLogNameN)
-          call read_var('IsLogNameE',IsLogNameE)
+          call read_var('IsLogNameN', IsLogNameN)
+          call read_var('IsLogNameE', IsLogNameE)
           ! Set _n true if _e is false.
           if(.not.IsLogNameE) IsLogNameN=.true.
 
        case("#SAVEPLOTSAMR")
-          call read_var('DoSavePlotsAmr',DoSavePlotsAmr)
+          call read_var('DoSavePlotsAmr', DoSavePlotsAmr)
 
        case("#SAVEBINARY")
-          call read_var('DoSaveBinary',DoSaveBinary)
+          call read_var('DoSaveBinary', DoSaveBinary)
 
        case("#SAVETECBINARY")
-          call read_var('DoSaveTecBinary',DoSaveTecBinary)
+          call read_var('DoSaveTecBinary', DoSaveTecBinary)
 
        case("#GRIDRESOLUTION","#GRIDLEVEL","#REGION","#AMRREGION")
           call read_region_param(NameCommand, UseStrictIn=UseStrict)
@@ -1593,15 +1594,15 @@ contains
           if(nOrder > 4) nStage = 3
           UseHalfStep = nStage <= 2
 
-          call read_var('TypeFlux',TypeFlux, IsUpperCase=.true.)
+          call read_var('TypeFlux', TypeFlux, IsUpperCase=.true.)
           ! For 5-moment equation all schemes are equivalent with Rusanov
           if(UseEfield) TypeFlux = 'RUSANOV'
 
-          BetaLimiter = 1.0
+          LimiterBeta = 1.0
           if(nOrder > 1 .and. TypeFlux /= "SIMPLE")then
              call read_var('TypeLimiter', TypeLimiter)
              if(TypeLimiter /= 'minmod') &
-                  call read_var('LimiterBeta', BetaLimiter)
+                  call read_var('LimiterBeta', LimiterBeta)
           else
              TypeLimiter = "no"
           end if
@@ -1627,8 +1628,8 @@ contains
           call read_var('UseFDFaceFlux', UseFDFaceFlux)
           call read_Var('TypeLimiter5', TypeLimiter5, IsLowerCase=.true.)
           call read_var('UseHighResChange', UseHighResChange)
-          call read_var('UseHighOrderAMR',UseHighOrderAMR)
-          if(UseFDFaceFlux) call read_var('DoCorrectFace',DoCorrectFace)
+          call read_var('UseHighOrderAMR', UseHighOrderAMR)
+          if(UseFDFaceFlux) call read_var('DoCorrectFace', DoCorrectFace)
           if(.not.UseFDFaceFlux) DoCorrectFace = .false.
 
           ! If it is not 'cweno', mp5 scheme will be used.
@@ -1673,8 +1674,8 @@ contains
           if(UseUpdateCheck)then
              call read_var("RhoMinPercent", PercentRhoLimit_I(1))
              call read_var("RhoMaxPercent", PercentRhoLimit_I(2))
-             call read_var("pMinPercent",   percent_max_p(1))
-             call read_var("pMaxPercent",   percent_max_p(2))
+             call read_var("pMinPercent",   PercentPLimit_I(1))
+             call read_var("pMaxPercent",   PercentPLimit_I(2))
           end if
 
        case("#PROLONGATION")
@@ -1699,10 +1700,10 @@ contains
 
        case("#DIVB")
           if(.not.UseB)CYCLE READPARAM
-          call read_var('UseDivbSource'   ,UseDivbSource)
-          call read_var('UseDivbDiffusion',UseDivbDiffusion)
-          call read_var('UseProjection'   ,UseProjection)
-          call read_var('UseConstrainB'   ,UseConstrainB)
+          call read_var('UseDivbSource', UseDivbSource)
+          call read_var('UseDivbDiffusion', UseDivbDiffusion)
+          call read_var('UseProjection', UseProjection)
+          call read_var('UseConstrainB', UseConstrainB)
 
           if (UseProjection.and.UseConstrainB.and.iProc==0) &
                call stop_mpi('Do not use projection and constrain B together!')
@@ -1756,7 +1757,7 @@ contains
              call read_var('UseHyperbolicDivB', UseHyperbolicDivB)
              if(UseHyperbolicDivB) then
                 call read_var('SpeedHypDim', SpeedHypDim)
-                call read_var('HypDecay'   , HypDecay)
+                call read_var('HypDecay', HypDecay)
              end if
           endif
 
@@ -1806,8 +1807,8 @@ contains
           end do
 
        case("#SHOCKPOSITION")
-          call read_var('ShockPosition',ShockPosition)
-          call read_var('ShockSlope',ShockSlope)
+          call read_var('ShockPosition', ShockPosition)
+          call read_var('ShockSlope', ShockSlope)
 
        case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE", "#REFRESHSOLARWINDFILE")
           call read_solar_wind_param(NameCommand)
@@ -1823,16 +1824,16 @@ contains
        case("#IECOUPLING")
           call read_ie_velocity_param
        case("#IMCOUPLING","#IM")
-          call read_var('TauCoupleIm',TauCoupleIm)
+          call read_var('TauCoupleIm', TauCoupleIm)
           if(TauCoupleIm < 1.0)then
              TauCoupleIM = 1.0/TauCoupleIM
              if(iProc==0)then
                 write(*,'(a)')NameSub//' WARNING: TauCoupleIm should be >= 1'
                 if(UseStrict)call stop_mpi('Correct PARAM.in!')
-                write(*,*)NameSub//' using the inverse:',TauCoupleIm
+                write(*,*)NameSub//' using the inverse:', TauCoupleIm
              end if
           end if
-          call read_var('DoImSatTrace',DoImSatTrace)
+          call read_var('DoImSatTrace', DoImSatTrace)
           if(NameCommand == "#IMCOUPLING")then
              call read_var('DoCoupleImPressure', DoCoupleImPressure)
              call read_var('DoCoupleImDensity',  DoCoupleImDensity)
@@ -1861,13 +1862,13 @@ contains
           call read_Var('DoAnisoPressureIMCoupling', DoAnisoPressureIMCoupling)
 
        case('#PSCOUPLING')
-          call read_var('TauCouplePs',TauCoupleIm)
+          call read_var('TauCouplePs', TauCoupleIm)
           if(TauCoupleIm < 1.0)then
              TauCoupleIM = 1.0/TauCoupleIM
              if(iProc==0)then
                 write(*,'(a)')NameSub//' WARNING: TauCoupleIm should be >= 1'
                 if(UseStrict) call stop_mpi('Correct PARAM.in!')
-                write(*,*)NameSub//' using the inverse:',TauCoupleIm
+                write(*,*)NameSub//' using the inverse:', TauCoupleIm
              end if
           end if
           call read_var('DoCouplePsPressure', DoCoupleImPressure)
@@ -1876,7 +1877,7 @@ contains
                call read_var('DensityCoupleFloor', RhoMinDimIm)
 
        case("#RBSATCOUPLING")
-          call read_var('DoRbSatTrace',DoRbSatTrace)
+          call read_var('DoRbSatTrace', DoRbSatTrace)
        case("#USERSWITCH", "#USERSWITCHES")
           call read_var('StringSwitch', StringSwitch, IsLowerCase=.true.)
           call split_string(StringSwitch, NameSwitch_I, nSwitch)
@@ -1938,14 +1939,14 @@ contains
 
        case("#CODEVERSION")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('CodeVersion',CodeVersionRead)
+          call read_var('CodeVersion', CodeVersionRead)
           if(abs(CodeVersionRead-CodeVersion)>0.005.and.iProc==0)&
                write(*,'(a,f6.3,a,f6.3,a)')NameSub//&
-               ' WARNING: CodeVersion in file=',CodeVersionRead,&
-               ' but '//NameThisComp//' version is ',CodeVersion,' !!!'
+               ' WARNING: CodeVersion in file=', CodeVersionRead,&
+               ' but '//NameThisComp//' version is ', CodeVersion,' !!!'
 
        case("#CHANGEVARIABLES")
-          call read_var('DoChangeRestartVariables',DoChangeRestartVariables)
+          call read_var('DoChangeRestartVariables', DoChangeRestartVariables)
           if (DoChangeRestartVariables) UseStrict = .false.
 
        case("#SPECIFYRESTARTVARMAPPING")
@@ -1982,8 +1983,8 @@ contains
 
        case("#EQUATION")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('NameEquation',NameEquationRead)
-          call read_var('nVar',        nVarEquationRead)
+          call read_var('NameEquation', NameEquationRead)
+          call read_var('nVar',         nVarEquationRead)
           if(NameEquationRead /= NameEquation .and. iProc==0 &
                .and. .not. DoChangeRestartVariables)then
              write(*,'(a)')'BATSRUS was compiled with equation '// &
@@ -1995,8 +1996,8 @@ contains
           if(nVarEquationRead /= nVar .and. iProc==0 .and. &
                .not. DoChangeRestartVariables)then
              write(*,'(a,i2,a,i2)')&
-                  'BATSRUS was compiled with nVar=',nVar, &
-                  ' which is different from nVarEquationRead=',nVarEquationRead
+                  'BATSRUS was compiled with nVar=', nVar, &
+                  ' that is different from nVarEquationRead=', nVarEquationRead
              call stop_mpi(NameSub//' ERROR: Incompatible number of variables')
           end if
 
@@ -2053,12 +2054,12 @@ contains
           call read_var('TypeGeometry', TypeGeometry, IsLowerCase=.true.)
           ! need to read in the general grid file
           if(TypeGeometry == 'spherical_genr') then
-             call read_var('NameGridFile',NameGridFile)
+             call read_var('NameGridFile', NameGridFile)
              call read_gen_radial_grid(NameGridFile)
           end if
           if(TypeGeometry == 'roundcube') then
-             call read_var('rRound0',rRound0)
-             call read_var('rRound1',rRound1)
+             call read_var('rRound0', rRound0)
+             call read_var('rRound1', rRound1)
           end if
           if(NameCommand == '#GRIDGEOMETRYLIMIT')then
              do iDim = 1, nDim
@@ -2101,9 +2102,9 @@ contains
           call read_var('UseUniformAxis', UseUniformAxis)
 
        case("#FIXAXIS")
-          call read_var('DoFixAxis',DoFixAxis)
-          call read_var('rFixAxis',rFixAxis)
-          call read_var('r2FixAxis',r2FixAxis)
+          call read_var('DoFixAxis', DoFixAxis)
+          call read_var('rFixAxis', rFixAxis)
+          call read_var('r2FixAxis', r2FixAxis)
 
        case('#COARSEAXIS')
           call read_coarse_axis_param
@@ -2133,7 +2134,7 @@ contains
           call read_var('nJ', nIJKRead_D(2))
           call read_var('nK', nIJKRead_D(3))
           if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
-             write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
+             write(*,*)'Code is compiled with nI,nJ,nK=', nIJK_D
              call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
           end if
           call read_var('MinBlockAll', MinBlockAll)
@@ -2143,21 +2144,21 @@ contains
 
        case("#USERMODULE")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('NameUserModule',NameUserModuleRead)
-          call read_var('VersionUserModule',VersionUserModuleRead)
+          call read_var('NameUserModule', NameUserModuleRead)
+          call read_var('VersionUserModule', VersionUserModuleRead)
           if(NameUserModuleRead /= NameUserModule .or. &
                abs(VersionUserModule-VersionUserModuleRead)>0.001 .and. &
                .not. DoChangeRestartVariables) then
              if(iProc==0)write(*,'(4a,f5.2)') NameSub, &
                   ' WARNING: code is compiled with user module ', &
-                  NameUserModule,' version',VersionUserModule
+                  NameUserModule,' version', VersionUserModule
              if(UseStrict)call stop_mpi('Select the correct user module!')
           end if
 
        case("#GAMMA")
           if(.not.is_first_session())CYCLE READPARAM
           do iFluid = IonFirst_, nFluid
-             call read_var('Gamma_I',Gamma_I(iFluid))
+             call read_var('Gamma_I', Gamma_I(iFluid))
           end do
           Gamma_I(1) = Gamma_I(IonFirst_)
           ! Derived values for fluids
@@ -2182,7 +2183,7 @@ contains
           InvGammaMinus1 = InvGammaMinus1_I(1)
 
           if(UseElectronPressure)then
-             call read_var('GammaElectron', GammaElectron)
+             call read_var('GammaElectron',  GammaElectron)
              ! Derived values for electron
              InvGammaElectron       = 1.0/GammaElectron
              GammaElectronMinus1    = GammaElectron - 1.0
@@ -2255,14 +2256,14 @@ contains
 
        case("#SOLARWIND")
           ! if(.not.is_first_session())CYCLE READPARAM
-          call read_var('SwNDim',  SolarWindNDim)
-          call read_var('SwTDim'  ,SolarWindTempDim)
-          call read_var('SwUxDim' ,SolarWindUxDim)
-          call read_var('SwUyDim' ,SolarWindUyDim)
-          call read_var('SwUzDim' ,SolarWindUzDim)
-          call read_var('SwBxDim' ,SolarWindBxDim)
-          call read_var('SwByDim' ,SolarWindByDim)
-          call read_var('SwBzDim' ,SolarWindBzDim)
+          call read_var('SwNDim', SolarWindNDim)
+          call read_var('SwTDim', SolarWindTempDim)
+          call read_var('SwUxDim', SolarWindUxDim)
+          call read_var('SwUyDim', SolarWindUyDim)
+          call read_var('SwUzDim', SolarWindUzDim)
+          call read_var('SwBxDim', SolarWindBxDim)
+          call read_var('SwByDim', SolarWindByDim)
+          call read_var('SwBzDim', SolarWindBzDim)
 
        case("#OUTFLOWPRESSURE")
           call read_var('UseOutflowPressure', UseOutflowPressure)
@@ -2270,11 +2271,11 @@ contains
 
        case("#MAGNETOSPHERE","#BODY")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('UseBody',UseBody)
+          call read_var('UseBody', UseBody)
           if(UseBody)then
              call read_var('rBody', rBody)
              if(NameThisComp=='GM')&
-                  call read_var('rCurrents' ,Rcurrents)
+                  call read_var('rCurrents', Rcurrents)
              if(UseMultiSpecies)then
                 do iSpecies = 1, nSpecies
                    call read_var('BodyNDim', BodyNSpeciesDim_I(iSpecies))
@@ -2295,24 +2296,24 @@ contains
 
        case("#GRAVITY")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('UseGravity',UseGravity)
+          call read_var('UseGravity', UseGravity)
           if(UseGravity)then
-             call read_var('iDirGravity',iDirGravity)
+             call read_var('iDirGravity', iDirGravity)
              if(iDirGravity /= 0) call read_var('GravitySi', GravitySi)
           end if
 
        case("#SECONDBODY")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('UseBody2',UseBody2)
+          call read_var('UseBody2', UseBody2)
           if(UseBody2)then
-             call read_var('rBody2',rBody2)
-             call read_var('xBody2',xBody2)
-             call read_var('yBody2',yBody2)
-             call read_var('zBody2',zBody2)
-             call read_var('rCurrentsBody2',rCurrentsBody2)
-             call read_var('RhoDimBody2',RhoDimBody2)
-             call read_var('tDimBody2'  ,tDimBody2)
-             call read_var('UseBody2Orbit', UseBody2Orbit)
+             call read_var('rBody2', rBody2)
+             call read_var('xBody2', xBody2)
+             call read_var('yBody2', yBody2)
+             call read_var('zBody2', zBody2)
+             call read_var('rCurrentsBody2', rCurrentsBody2)
+             call read_var('RhoDimBody2', RhoDimBody2)
+             call read_var('tDimBody2', tDimBody2)
+             call read_var('UseBody2Orbit',  UseBody2Orbit)
              if(UseBody2Orbit)then
                 call read_var('OrbitPeriod [days]', OrbitPeriod)
                 ! Convert orbit period from days to seconds
@@ -2338,16 +2339,16 @@ contains
           do iNameBoundary = 1, nNameBoundary
              select case(NameBoundary_I(iNameBoundary))
 
-             case('solid','-3')
+             case('solid', '-3')
                 iFaceBoundaryState_I(SolidBc_) = iBoundaryState
                 FaceStateDim_VI(:,SolidBc_)    = BoundaryStateDim_V
-             case('body2','-2')
+             case('body2', '-2')
                 iFaceBoundaryState_I(body2_) = iBoundaryState
                 FaceStateDim_VI(:,body2_)    = BoundaryStateDim_V
-             case('body1','-1')
+             case('body1', '-1')
                 iFaceBoundaryState_I(body1_) = iBoundaryState
                 FaceStateDim_VI(:,body1_)    = BoundaryStateDim_V
-             case('extra','0')
+             case('extra', '0')
                 iFaceBoundaryState_I(ExtraBc_) = iBoundaryState
                 FaceStateDim_VI(:,ExtraBc_)    = BoundaryStateDim_V
              case('xminbox')
@@ -2369,22 +2370,22 @@ contains
                 iFaceBoundaryState_I(zMaxBc_) = iBoundaryState
                 FaceStateDim_VI(:,zMaxBc_)    = BoundaryStateDim_V
 
-             case('coord1min','1')
+             case('coord1min', '1')
                 iCellBoundaryState_I(Coord1MinBc_) = iBoundaryState
                 CellStateDim_VI(:,Coord1MinBc_)    = BoundaryStateDim_V
-             case('coord1max','2')
+             case('coord1max', '2')
                 iCellBoundaryState_I(Coord1MaxBc_) = iBoundaryState
                 CellStateDim_VI(:,Coord1MaxBc_)    = BoundaryStateDim_V
-             case('coord2min','3')
+             case('coord2min', '3')
                 iCellBoundaryState_I(Coord2MinBc_) = iBoundaryState
                 CellStateDim_VI(:,Coord2MinBc_)    = BoundaryStateDim_V
-             case('coord2max','4')
+             case('coord2max', '4')
                 iCellBoundaryState_I(Coord2MaxBc_) = iBoundaryState
                 CellStateDim_VI(:,Coord2MaxBc_)    = BoundaryStateDim_V
-             case('coord3min','5')
+             case('coord3min', '5')
                 iCellBoundaryState_I(Coord3MinBc_) = iBoundaryState
                 CellStateDim_VI(:,Coord3MinBc_)    = BoundaryStateDim_V
-             case('coord3max','6')
+             case('coord3max', '6')
                 iCellBoundaryState_I(Coord3MaxBc_) = iBoundaryState
                 CellStateDim_VI(:,Coord3MaxBc_)    = BoundaryStateDim_V
 
@@ -2396,13 +2397,13 @@ contains
 
        case("#DIPOLEBODY2")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('BdpDimBody2x',BdpDimBody2_D(1))
-          call read_var('BdpDimBody2y',BdpDimBody2_D(2))
-          call read_var('BdpDimBody2z',BdpDimBody2_D(3))
+          call read_var('BdpDimBody2x', BdpDimBody2_D(1))
+          call read_var('BdpDimBody2y', BdpDimBody2_D(2))
+          call read_var('BdpDimBody2z', BdpDimBody2_D(3))
 
-       case('#PLANET','#MOON','#COMET','#IDEALAXES','#ROTATIONAXIS',&
-            '#MAGNETICAXIS','#MAGNETICCENTER','#ROTATION','#DIPOLE', &
-            '#NONDIPOLE','#UPDATEB0', '#MULTIPOLEB0')
+       case('#PLANET', '#MOON', '#COMET', '#IDEALAXES', '#ROTATIONAXIS',&
+            '#MAGNETICAXIS', '#MAGNETICCENTER', '#ROTATION', '#DIPOLE', &
+            '#NONDIPOLE', '#UPDATEB0',  '#MULTIPOLEB0')
 
           call check_stand_alone
           if(.not.is_first_session())CYCLE READPARAM
@@ -2428,7 +2429,7 @@ contains
              ! system in the course of run
              if(.not.is_first_session())CYCLE READPARAM
           end if
-          call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
+          call read_var('TypeCoordSystem', TypeCoordSystem,IsUpperCase=.true.)
           select case(NameThisComp)
           case('GM')
              if (TypeCoordSystem == 'GEO') UseRotatingFrame = .true.
@@ -2436,7 +2437,7 @@ contains
                   .and. TypeCoordSystem /= 'GEO' ) &
                   call stop_mpi(NameSub// &
                   ' ERROR: cannot handle coordinate system '//TypeCoordSystem)
-          case('IH','OH')
+          case('IH', 'OH')
              select case(TypeCoordSystem)
              case('HGI', 'hgi')
                 ! If rotating frame was on in the previous session then
@@ -2457,7 +2458,7 @@ contains
              case('HGR', 'HGC', 'hgr', 'hgc')
                 UseRotatingFrame = .true.
                 if(iProc==0) &
-                     write(*,*)NameSub//' setting .UseRotatingFrame = T'
+                     write(*,*)NameSub//' setting UseRotatingFrame = T'
              case default
                 call stop_mpi(NameSub// &
                      ' ERROR: cannot handle coordinate system '&
@@ -2481,21 +2482,21 @@ contains
 
        case("#NSTEP")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nStep',nStep)
+          call read_var('nStep', nStep)
 
        case("#NPREVIOUS")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nPrev',nStepPrev)
-          call read_var('DtPrev',DtPrev)
+          call read_var('nPrev', nStepPrev)
+          call read_var('DtPrev', DtPrev)
 
        case("#STARTTIME", "#SETREALTIME")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('iYear'  ,iStartTime_I(1))
-          call read_var('iMonth' ,iStartTime_I(2))
-          call read_var('iDay'   ,iStartTime_I(3))
-          call read_var('iHour'  ,iStartTime_I(4))
-          call read_var('iMinute',iStartTime_I(5))
-          call read_var('iSecond',iStartTime_I(6))
+          call read_var('iYear',   iStartTime_I(1))
+          call read_var('iMonth',  iStartTime_I(2))
+          call read_var('iDay',    iStartTime_I(3))
+          call read_var('iHour',   iStartTime_I(4))
+          call read_var('iMinute', iStartTime_I(5))
+          call read_var('iSecond', iStartTime_I(6))
           iStartTime_I(7) = 0
           if(IsStandAlone)then
              call time_int_to_real(iStartTime_I, StartTime)
@@ -2506,12 +2507,12 @@ contains
 
        case("#TIMEEND", "#ENDTIME")
           UseEndTime = .true.
-          call read_var('iYear'  ,iEndTime_I(1))
-          call read_var('iMonth' ,iEndTime_I(2))
-          call read_var('iDay'   ,iEndTime_I(3))
-          call read_var('iHour'  ,iEndTime_I(4))
-          call read_var('iMinute',iEndTime_I(5))
-          call read_var('iSecond',iEndTime_I(6))
+          call read_var('iYear',   iEndTime_I(1))
+          call read_var('iMonth',  iEndTime_I(2))
+          call read_var('iDay',    iEndTime_I(3))
+          call read_var('iHour',   iEndTime_I(4))
+          call read_var('iMinute', iEndTime_I(5))
+          call read_var('iSecond', iEndTime_I(6))
           iEndTime_I(7) = 0
           call time_int_to_real(iEndTime_I, EndTime)
 
@@ -2531,8 +2532,8 @@ contains
        case("#HELIODIPOLE")
           if(.not.is_first_session())CYCLE READPARAM
           if(.not.UseB0)CYCLE READPARAM
-          call read_var('HelioDipoleStrengthSi',DipoleStrengthSi)
-          call read_var('HelioDipoleTilt'      ,ThetaTilt)
+          call read_var('HelioDipoleStrengthSi', DipoleStrengthSi)
+          call read_var('HelioDipoleTilt', ThetaTilt)
           ThetaTilt = ThetaTilt*cDegToRad
 
        case("#HELIOROTATION", "#INERTIAL")
@@ -2550,19 +2551,19 @@ contains
           ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 
        case("#OHNEUTRALS")
-          call read_var('RhoNeuWindDim' ,RhoNeuWindDim)
-          call read_var('TempNeuWindDim' ,TempNeuWindDim)
-          call read_var('UxNeuWindDim' ,UxNeuWindDim)
-          call read_var('UyNeuWindDim' ,UyNeuWindDim)
-          call read_var('UzNeuWindDim' ,UzNeuWindDim)
-          call read_var('MassNeutralDim',MassNeutralDim)
+          call read_var('RhoNeuWindDim',  RhoNeuWindDim)
+          call read_var('TempNeuWindDim', TempNeuWindDim)
+          call read_var('UxNeuWindDim',   UxNeuWindDim)
+          call read_var('UyNeuWindDim',   UyNeuWindDim)
+          call read_var('UzNeuWindDim',   UzNeuWindDim)
+          call read_var('MassNeutralDim', MassNeutralDim)
 
        case("#OHBOUNDARY")
-          call read_var('DoOhNeutralBc',DoOhNeutralBc)
+          call read_var('DoOhNeutralBc', DoOhNeutralBc)
           if(DoOhNeutralBc)then
              do iFluid = IonLast_+1, nFluid
                 call read_var('RhoBcFactor', RhoBcFactor_I(iFluid))
-                call read_var('uBcFactor'  , uBcFactor_I(iFluid))
+                call read_var('uBcFactor', uBcFactor_I(iFluid))
              end do
           end if
 
@@ -2573,7 +2574,7 @@ contains
           call read_magnetogram_param(NameCommand)
 
        case('#LDEM')
-          call read_var('UseLdem', UseLdem)
+          call read_var('UseLdem',  UseLdem)
           if(UseLdem) then
              call read_var('NameLdemFile', NameLdemFile)
              call read_var('iRadiusLdem', iRadiusLdem)
@@ -2681,7 +2682,7 @@ contains
       ! Fix the NameVar_V string for waves
       if(WaveLast_ > 1)then
          do iWave = 1, nWave
-            write(NameWave,'(a,i2.2)') 'I',iWave
+            write(NameWave,'(a,i2.2)') 'I', iWave
             NameVar_V(WaveFirst_+iWave-1) = NameWave
          end do
       end if
@@ -2689,7 +2690,7 @@ contains
       ! Fix the NameVar_V string for material levels
       if(MaterialLast_ > 1)then
          do iMaterial = 1, nMaterial
-            write(NameMaterial,'(a,i1.1)') 'M',iMaterial
+            write(NameMaterial,'(a,i1.1)') 'M', iMaterial
             NameVar_V(MaterialFirst_+iMaterial-1) = NameMaterial
          end do
       end if
@@ -2797,7 +2798,7 @@ contains
          if (iVar >= WaveFirst_ .and. iVar <= WaveLast_ .and. WaveLast_ >1)then
             if (iVar == WaveFirst_) then
                NameConservative = 'Ew'
-               write(NamePrimitivePlot,'(a,i2.2,a)') 'I(',nWave,')'
+               write(NamePrimitivePlot,'(a,i2.2,a)') 'I(', nWave,')'
             else
                NameConservative  = ''
                NamePrimitivePlot = ''
@@ -2810,7 +2811,7 @@ contains
               MaterialLast_ > 1) then
             if (iVar == MaterialFirst_) then
                NameConservative = ''
-               write(NamePrimitivePlot,'(a,i1.1,a)') 'M(',nMaterial,')'
+               write(NamePrimitivePlot,'(a,i1.1,a)') 'M(', nMaterial,')'
             else
                NameConservative  = ''
                NamePrimitivePlot = ''
@@ -2901,11 +2902,11 @@ contains
 
       ! Default coordinate systems
       select case(NameThisComp)
-      case('IH','OH')
+      case('IH', 'OH')
          UseRotatingFrame  = .false.
          UseRotatingBc     = .false.
          TypeCoordSystem   = 'HGI'
-      case('SC','EE')
+      case('SC', 'EE')
          UseRotatingFrame  = .true.
          UseRotatingBc     = .false.
          TypeCoordSystem   = 'HGR'
@@ -2982,10 +2983,10 @@ contains
       iDirGravity=0
 
       select case(NameThisComp)
-      case('SC','IH','OH','EE')
+      case('SC', 'IH', 'OH', 'EE')
          ! Body parameters
          UseGravity = .true.
-         UseBody      = .true.
+         UseBody    = .true.
          if(NameThisComp == 'EE') UseBody = .false.
          Rbody      = 1.0
          Rcurrents  =-1.0
@@ -3130,8 +3131,8 @@ contains
       ! Check if there are enough ghost cells
       ! We could dynamically (re)allocate State_VGB etc. with nGUsed ?!
       if(nGUsed /= nG .and. iProc==0)then
-         write(*,*)'The code is configured with nG=',nG,' ghost cell layers.'
-         write(*,*)'The selected scheme requires nGUsed=',nGUsed,' layers!'
+         write(*,*)'The code is configured with nG=', nG,' ghost cell layers.'
+         write(*,*)'The selected scheme requires nGUsed=', nGUsed,' layers!'
          if(nGUsed > nG)then
             write(*,*)'Either change settings or reconfigure and recompile!'
             call stop_mpi(NameSub//': insufficient number of ghost cells')
@@ -3156,21 +3157,21 @@ contains
 
       ! Check flux type selection
       select case(TypeFlux)
-      case('SIMPLE','Simple')
+      case('SIMPLE', 'Simple')
          TypeFlux='Simple'
-      case('ROE','Roe')
+      case('ROE', 'Roe')
          TypeFlux='Roe'
-      case('ROEOLD','RoeOld')
+      case('ROEOLD', 'RoeOld')
          TypeFlux='RoeOld'
-      case('RUSANOV','TVDLF','Rusanov')
+      case('RUSANOV', 'TVDLF', 'Rusanov')
          TypeFlux='Rusanov'
-      case('LINDE','HLLEL','Linde')
+      case('LINDE', 'HLLEL', 'Linde')
          TypeFlux='Linde'
-      case('SOKOLOV','AW','Sokolov')
+      case('SOKOLOV', 'AW', 'Sokolov')
          TypeFlux='Sokolov'
-      case('GODUNOV','Godunov')
+      case('GODUNOV', 'Godunov')
          TypeFlux='Godunov'
-      case('HLLD', 'HLLDW', 'LFDW', 'HLLC')
+      case('HLLD',  'HLLDW', 'LFDW', 'HLLC')
       case default
          if(iProc==0)then
             write(*,'(a)')NameSub // &
@@ -3186,20 +3187,21 @@ contains
       select case(TypeFluxNeutral)
       case('default')
          select case(TypeFlux)
-         case('Rusanov','Linde','Sokolov','Godunov','HLLDW','LFDW','HLLC')
+         case('Rusanov', 'Linde', 'Sokolov', 'Godunov', 'HLLDW', 'LFDW', &
+              'HLLC')
             TypeFluxNeutral = TypeFlux
          case default
             TypeFluxNeutral = 'Linde'
          end select
-      case('RUSANOV','TVDLF','Rusanov')
+      case('RUSANOV', 'TVDLF', 'Rusanov')
          TypeFluxNeutral = 'Rusanov'
-      case('LINDE','HLLE','Linde')
+      case('LINDE', 'HLLE', 'Linde')
          TypeFluxNeutral = 'Linde'
-      case('SOKOLOV','AW','Sokolov')
+      case('SOKOLOV', 'AW', 'Sokolov')
          TypeFluxNeutral = 'Sokolov'
-      case('GODUNOV','Godunov')
+      case('GODUNOV', 'Godunov')
          TypeFluxNeutral = 'Godunov'
-      case('HLLDW', 'LFDW', 'HLLC')
+      case('HLLDW',  'LFDW', 'HLLC')
       case default
          if(iProc==0)then
             write(*,'(a)')NameSub// &
@@ -3215,26 +3217,26 @@ contains
       select case(TypeFluxImpl)
       case('default')
          TypeFluxImpl = TypeFlux
-      case('ROE','Roe')
+      case('ROE', 'Roe')
          TypeFluxImpl='Roe'
-      case('ROEOLD','RoeOld')
+      case('ROEOLD', 'RoeOld')
          TypeFluxImpl='RoeOld'
-      case('RUSANOV','TVDLF','Rusanov')
+      case('RUSANOV', 'TVDLF', 'Rusanov')
          TypeFluxImpl='Rusanov'
-      case('LINDE','HLLEL','Linde')
+      case('LINDE', 'HLLEL', 'Linde')
          TypeFluxImpl='Linde'
-      case('SOKOLOV','AW','Sokolov')
+      case('SOKOLOV', 'AW', 'Sokolov')
          TypeFluxImpl='Sokolov'
-      case('GODUNOV','Godunov')
+      case('GODUNOV', 'Godunov')
          TypeFluxImpl='Godunov'
-      case('HLLD', 'HLLDW', 'LFDW', 'HLLC')
+      case('HLLD',  'HLLDW', 'LFDW', 'HLLC')
       case default
          if(iProc==0)then
             write(*,'(a)')NameSub// &
                  ' WARNING: Unknown value for TypeFluxImpl='// &
                  trim(TypeFluxImpl)//' !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
-            write(*,*)NameSub//' setting TypeFluxImpl=',trim(TypeFlux)
+            write(*,*)NameSub//' setting TypeFluxImpl=', trim(TypeFlux)
          end if
          TypeFluxImpl=TypeFlux
       end select
@@ -3722,7 +3724,7 @@ contains
 
       !$acc update device(UseTvdResChange, UseAccurateResChange)
 
-      !$acc update device(TypeLimiter, BetaLimiter)
+      !$acc update device(TypeLimiter, LimiterBeta)
       !$acc update device(nOrderProlong)
       !$acc update device(UseHighResChange)
 
@@ -3782,7 +3784,7 @@ contains
 
       if(product(nRootRead_D) > MaxBlock*nProc .and. iProc==0)then
          write(*,*)'Not enough grid blocks allocated for root blocks'
-         write(*,*)'Number of root blocks=',product(nRootRead_D)
+         write(*,*)'Number of root blocks=', product(nRootRead_D)
          write(*,*)'MaxBlock, nProc, MaxBlock*nProc=', &
               MaxBlock, nProc, MaxBlock*nProc
          call stop_mpi(NameSub//': insufficient number of grid blocks')
@@ -3795,7 +3797,7 @@ contains
       if(.not.i_line_command("#GRIDGEOMETRYLIMIT", &
            iSessionIn=iSessionFirst) > 0) then
          select case(TypeGeometry)
-         case('cartesian' ,'rotatedcartesian')
+         case('cartesian', 'rotatedcartesian')
             XyzMin_D = [xMinBox, yMinBox, zMinBox]
             XyzMax_D = [xMaxBox, yMaxBox, zMaxBox]
          case('rz')
@@ -3905,7 +3907,7 @@ contains
 
     subroutine correct_plot_range
 
-      use BATL_lib,     ONLY: radius_to_gen, Phi_, Theta_, nRoot_D, &
+      use BATL_lib,     ONLY: radius_to_gen, iDimPhi, iDimTheta, nRoot_D, &
            CoordMin_D, CoordMax_D, nIJK_D
       use ModKind,      ONLY: nByteReal
       use ModWritePlot, ONLY: adjust_plot_range
@@ -3928,7 +3930,7 @@ contains
       ! Largest cell size and a much smaller distance for 2D cuts
       CellSizeMax_D = (CoordMax_D - CoordMin_D)/(nIJK_D*nRoot_D)
 
-      if(DoTest)write(*,*)NameSub,' CellSizeMax_D=',CellSizeMax_D
+      if(DoTest)write(*,*)NameSub,' CellSizeMax_D=', CellSizeMax_D
 
       PLOTFILELOOP: do iFile = Plot_+1, Plot_ + nPlotFile
 
@@ -3957,10 +3959,10 @@ contains
                call radius_to_gen(PlotRange_EI(1,iFile))
                call radius_to_gen(PlotRange_EI(2,iFile))
             end if
-            if(Phi_ > 0) PlotRange_EI(2*Phi_-1:2*Phi_,iFile) = &
-                 cDegToRad*PlotRange_EI(2*Phi_-1:2*Phi_,iFile)
-            if(Theta_ > 0) PlotRange_EI(2*Theta_-1:2*Theta_,iFile) = &
-                 cDegToRad*PlotRange_EI(2*Theta_-1:2*Theta_,iFile)
+            if(iDimPhi > 0) PlotRange_EI(2*iDimPhi-1:2*iDimPhi,iFile) = &
+                 cDegToRad*PlotRange_EI(2*iDimPhi-1:2*iDimPhi,iFile)
+            if(iDimTheta > 0) PlotRange_EI(2*iDimTheta-1:2*iDimTheta,iFile) = &
+                 cDegToRad*PlotRange_EI(2*iDimTheta-1:2*iDimTheta,iFile)
             do iDim = 1, nDim
                if(  PlotRange_EI(2*iDim-1,iFile) &
                     < PlotRange_EI(2*iDim,iFile)) CYCLE
@@ -3984,7 +3986,7 @@ contains
                     PlotRange_EI(1,iFile) = log(PlotRange_EI(1,iFile))
                if(IsGenRadius) call radius_to_gen(PlotRange_EI(1,iFile))
                PlotRange_EI(2,iFile)= PlotRange_EI(1,iFile) + 1.e-4 ! so R/=0
-               do i=Phi_,Theta_
+               do i=iDimPhi,iDimTheta
                   PlotRange_EI(2*i-1,iFile) = CoordMin_D(i)
                   PlotRange_EI(2*i,iFile)   = CoordMax_D(i)
                end do
@@ -4011,8 +4013,8 @@ contains
                end if
             else
                ! Limit Phi direction around cHalfPi
-               PlotRange_EI(3, iFile) = cHalfPi - SmallSize_D(Phi_)
-               PlotRange_EI(4, iFile) = cHalfPi + SmallSize_D(Phi_)
+               PlotRange_EI(3, iFile) = cHalfPi - SmallSize_D(iDimPhi)
+               PlotRange_EI(4, iFile) = cHalfPi + SmallSize_D(iDimPhi)
             end if
 
          case('y=0')
@@ -4058,16 +4060,16 @@ contains
          if(nK == 1) PlotRange_EI(5,iFile) = -SmallSize_D(z_)
          if(nK == 1) PlotRange_EI(6,iFile) = +SmallSize_D(z_)
 
-         if(DoTest)write(*,*)'For file ',iFile-plot_,&
-              ' original range   =',PlotRange_EI(:,iFile)
+         if(DoTest)write(*,*)'For file ', iFile-plot_,&
+              ' original range   =', PlotRange_EI(:,iFile)
 
          PlotRange_EI(1:5:2, iFile) = &
               max(PlotRange_EI(1:5:2, iFile), CoordMin_D)
          PlotRange_EI(2:6:2, iFile) = &
               min(PlotRange_EI(2:6:2, iFile), CoordMax_D)
 
-         if(DoTest)write(*,*)'For file ',iFile-plot_,&
-              ' limited range   =',PlotRange_EI(:,iFile)
+         if(DoTest)write(*,*)'For file ', iFile-plot_,&
+              ' limited range   =', PlotRange_EI(:,iFile)
 
          ! For PlotDx_DI = 0.0 or -1.0 there is no need to adjust cut range
          if(PlotDx_DI(1, iFile) <= cTiny)then
@@ -4086,8 +4088,8 @@ contains
 
          ! Make sure that plotting range is placed at an integer multiple of dx
          call adjust_plot_range(PlotRes_D(1), PlotRange_EI(:,iFile))
-         if(DoTest)write(*,*)'For file ',iFile-plot_,&
-              ' adjusted range   =',PlotRange_EI(:,iFile)
+         if(DoTest)write(*,*)'For file ', iFile-plot_,&
+              ' adjusted range   =', PlotRange_EI(:,iFile)
 
       end do PLOTFILELOOP
 
@@ -4193,7 +4195,7 @@ contains
                   ! Last fluid is assumed to be the electrons
                   StringParam = trim(StringParam)//' qe'
                else
-                  write(StringParam,'(a,i1)') trim(StringParam)//' q',iFluid
+                  write(StringParam,'(a,i1)') trim(StringParam)//' q', iFluid
                end if
             end do
          end if

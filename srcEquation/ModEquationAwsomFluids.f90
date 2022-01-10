@@ -16,7 +16,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationAwsomFluids.f90"
+  character(len=*), parameter:: &
+       NameEquationFile = "ModEquationAwsomFluids.f90"
 
   ! This equation module contains the multi-ion equations with wave energy
   ! and electron pressure

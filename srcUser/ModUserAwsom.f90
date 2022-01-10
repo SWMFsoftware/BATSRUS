@@ -32,12 +32,12 @@ module ModUser
   logical :: UseAwsom = .false.
 
   ! Input parameters for chromospheric inner BC's
-  real    :: nChromoSi = 2e17   ! tChromoSi = 5e4
-  real    :: nChromo, RhoChromo, tChromo
+  real    :: ChromoNSi = 2e17   ! tChromoSi = 5e4
+  real    :: ChromoN, RhoChromo, tChromo
   logical :: UseUparBc = .false.
 
   ! variables for Parker initial condition
-  real    :: nCoronaSi = 1.5e14, tCoronaSi = 1.5e6
+  real    :: CoronaN = 1.5e14, tCoronaSi = 1.5e6
   real    :: RhoCorona, tCorona
 
   ! Input parameters for two-temperature effects
@@ -55,15 +55,15 @@ module ModUser
   real    :: UserDipoleStrengthSi = 0.0, UserDipoleStrength = 0.0
 
   ! Rotating boundary condition
-  real:: PeakFlowSpeedFixer =0.0, PeakFlowSpeedFixerSi =0.0
+  real:: FlowSpeedJet =0.0, FlowSpeedJetSi =0.0
   real:: tBeginJet = 0.0, tEndJet = 0.0
   real:: BminJet=0.0, BminJetSi = 0.0, BmaxJet = 0.0, BmaxJetSi = 0.0
-  real:: kbJet = 0.0
-  real:: Bramp = 1.0              ! ramp up of magnetic field?
+  real:: CoefBJet = 0.0
+  real:: BrampJet = 1.0              ! ramp up of magnetic field?
   integer:: iBcMax = 0            ! Index up to which BC is applied
-  logical:: FrampStart = .false.
-  logical:: UrZero = .false.
-  logical:: UpdateWithParker = .true.
+  logical:: DoRampUpJet = .false.
+  logical:: IsUr0Jet = .false.
+  logical:: DoUpdateParkerJet = .true.
 
   ! Different mechanisms for radioemission
   ! 'simplistic' - interpolation between Bremsstrahlung and contributions
@@ -99,8 +99,8 @@ contains
        select case(NameCommand)
           ! This command is used when the inner boundary is the chromosphere
        case("#CHROMOBC")
-          call read_var('nChromoSi', nChromoSi)
-          NumberDensChromosphereCgs = nChromoSi*1.0e-6
+          call read_var('ChromoNSi', ChromoNSi)
+          NumberDensChromosphereCgs = ChromoNSi*1.0e-6
           call read_var('tChromoSi', tChromoSi)
 
        case('#RADIOEMISSION')
@@ -110,7 +110,7 @@ contains
           call read_var('UseUparBc', UseUparBc)
 
        case("#PARKERIC")
-          call read_var('nCoronaSi', nCoronaSi)
+          call read_var('CoronaN', CoronaN)
           call read_var('tCoronaSi', tCoronaSi)
 
        case("#LOWCORONASTEADY")
@@ -122,17 +122,17 @@ contains
           call read_var('UserDipoleStrengthSi', UserDipoleStrengthSi)
 
        case('#POLARJETBOUNDARY')
-          call read_var('PeakFlowSpeedFixerSi',PeakFlowSpeedFixerSi)
+          call read_var('FlowSpeedJetSi',FlowSpeedJetSi)
           call read_var('tBeginJet', tBeginJet)
           call read_var('tEndJet',   tEndJet)
           call read_var('BminJetSi', BminJetSi)
           call read_var('BmaxJetSi', BmaxJetSi)
-          call read_var('kbJet',     kbJet)
+          call read_var('CoefBJet',     CoefBJet)
           call read_var('iBcMax',    iBcMax)
-          call read_var('FrampStart', FrampStart)
-          call read_var('UrZero', UrZero)
-          call read_var('UpdateWithParker', UpdateWithParker)
-          call read_var('Bramp', Bramp)
+          call read_var('DoRampUpJet', DoRampUpJet)
+          call read_var('IsUr0Jet', IsUr0Jet)
+          call read_var('DoUpdateParkerJet', DoUpdateParkerJet)
+          call read_var('BrampJet', BrampJet)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -191,19 +191,19 @@ contains
     UseWavePressure = WaveFirst_ > 1
 
     ! convert to normalized units
-    nChromo = nChromoSi*Si2No_V(UnitN_)
-    RhoChromo = nChromo*MassIon_I(1)
+    ChromoN = ChromoNSi*Si2No_V(UnitN_)
+    RhoChromo = ChromoN*MassIon_I(1)
     tChromo = tChromoSi*Si2No_V(UnitTemperature_)
 
     ! Density and temperature in normalized units
-    RhoCorona = nCoronaSi*Si2No_V(UnitN_)*MassIon_I(1)
+    RhoCorona = CoronaN*Si2No_V(UnitN_)*MassIon_I(1)
     tCorona   = tCoronaSi*Si2No_V(UnitTemperature_)
 
     ! polar jet in normalized units
     UserDipoleStrength = UserDipoleStrengthSi*Si2No_V(UnitB_)
     BminJet = BminJetSi*Si2No_V(UnitB_)
     BmaxJet = BmaxJetSi*Si2No_V(UnitB_)
-    PeakFlowSpeedFixer = PeakFlowSpeedFixerSi &
+    FlowSpeedJet = FlowSpeedJetSi &
          * Si2No_V(UnitX_)**2 / Si2No_V(UnitT_)/Si2No_V(UnitB_)
 
     ! TeFraction is used for ideal EOS:
@@ -261,8 +261,8 @@ contains
     real :: uCorona
     real :: r_D(3), Br
     ! variables for iterative Parker solution
-    integer :: IterCount
-    real :: Ur, Ur0, Ur1, del, rTransonic, Uescape, Usound
+    integer :: nIterParker
+    real :: Ur, Ur0, Ur1, dUr, rTransonic, Uescape, Usound
     real :: Coef, rParker, Temperature
 
     real, parameter :: Epsilon = 1.0e-6
@@ -272,13 +272,13 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     rParker = -1.0
-    if(NchromoSi > nCoronaSi .and. UseAwsom)then
+    if(ChromoNSi > CoronaN .and. UseAwsom)then
        ! In the following, we do not generate a jump in the density,
        ! but we do connect a exponentially stratified atmosphere with
        ! the Parker solution at rParker. This avoids problems with a
        ! strong density jump at the innner boundary otherwise.
        Coef = -GBody/rBody*MassIon_I(1)/Tchromo
-       rParker = rBody/(1.0 + log(nCoronaSi/nChromoSi)/Coef)
+       rParker = rBody/(1.0 + log(CoronaN/ChromoNSi)/Coef)
     end if
 
     ! normalize with isothermal sound speed.
@@ -291,7 +291,7 @@ contains
     rTransonic = 0.25*Uescape**2
     if(.not.(rTransonic>exp(1.0)))then
        write(*,*) NameSub, 'Gbody=', Gbody
-       write(*,*) NameSub,' nCoronaSi, RhoCorona =', NcoronaSi, RhoCorona
+       write(*,*) NameSub,' CoronaN, RhoCorona =', CoronaN, RhoCorona
        write(*,*) NameSub,' TcoronaSi, Tcorona   =', TcoronaSi, Tcorona
        write(*,*) NameSub,' Usound    =', Usound
        write(*,*) NameSub,' Uescape   =', Uescape
@@ -311,7 +311,7 @@ contains
        if(r < rParker .and. UseAwsom)then
           ! Atmosphere with exponential scaleheight (AWSoM only)
           Ur = 0.0
-          Rho = Nchromo*MassIon_I(1)*exp(Coef*(rBody/r - 1.0))
+          Rho = ChromoN*MassIon_I(1)*exp(Coef*(rBody/r - 1.0))
           Temperature = Tchromo
        else
           ! Construct 1D Parker solution
@@ -319,16 +319,16 @@ contains
 
              ! Inside supersonic region
              Ur0 = 1.0
-             IterCount = 0
+             nIterParker = 0
              do
-                IterCount = IterCount + 1
+                nIterParker = nIterParker + 1
                 Ur1 = sqrt(Uescape**2/r - 3.0 &
                      + 2.0*log(16.0*Ur0*r**2/Uescape**4))
-                del = abs(Ur1 - Ur0)
-                if(del < Epsilon)then
+                dUr = abs(Ur1 - Ur0)
+                if(dUr < Epsilon)then
                    Ur = Ur1
                    EXIT
-                elseif(IterCount < 1000)then
+                elseif(nIterParker < 1000)then
                    Ur0 = Ur1
                    CYCLE
                 else
@@ -339,16 +339,16 @@ contains
 
              ! Inside subsonic region
              Ur0 = 1.0
-             IterCount = 0
+             nIterParker = 0
              do
-                IterCount = IterCount + 1
+                nIterParker = nIterParker + 1
                 Ur1 = (Uescape**2/(4.0*r))**2 &
                      *exp(0.5*(Ur0**2 + 3.0 - Uescape**2/r))
-                del = abs(Ur1 - Ur0)
-                if(del < Epsilon)then
+                dUr = abs(Ur1 - Ur0)
+                if(dUr < Epsilon)then
                    Ur = Ur1
                    EXIT
-                elseif(IterCount < 1000)then
+                elseif(nIterParker < 1000)then
                    Ur0 = Ur1
                    CYCLE
                 else
@@ -428,14 +428,14 @@ contains
     real, optional, intent(in) :: Radius
 
     integer :: iBlock, i, j, k
-    real :: unit_energy,Wmajor,Wminor
+    real :: UnitEnergy, Wmajor, Wminor
     real :: FullB_D(3), SignBr, rUnit_D(3), Rho, Ur, Var
     logical:: DoTest
 
     character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    unit_energy = No2Io_V(UnitEnergydens_)*No2Io_V(UnitX_)**3
+    UnitEnergy = No2Io_V(UnitEnergydens_)*No2Io_V(UnitX_)**3
 
     ! Define log variable to be saved::
     select case(TypeVar)
@@ -449,7 +449,7 @@ contains
              Tmp1_GB(:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)
           end if
        end do
-       VarValue = unit_energy*InvGammaMinus1*integrate_grid(Tmp1_GB)
+       VarValue = UnitEnergy*InvGammaMinus1*integrate_grid(Tmp1_GB)
 
     case('emag')
        do iBlock = 1, nBlock
@@ -465,7 +465,7 @@ contains
                   + State_VGB(Bz_,:,:,:,iBlock)**2
           end if
        end do
-       VarValue = unit_energy*0.5*integrate_grid(Tmp1_GB)
+       VarValue = UnitEnergy*0.5*integrate_grid(Tmp1_GB)
 
     case('vol')
        do iBlock = 1, nBlock
@@ -475,7 +475,7 @@ contains
        end do
        VarValue = integrate_grid(Tmp1_GB)
 
-    case('neteflx')
+    case('wflx')
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
           do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
@@ -500,9 +500,9 @@ contains
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
-            *unit_energy/No2Io_V(UnitT_)
+            *UnitEnergy/No2Io_V(UnitT_)
 
-    case('peflx')
+    case('wplusflx')
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
           do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
@@ -526,9 +526,9 @@ contains
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
-            *unit_energy/No2Io_V(UnitT_)
+            *UnitEnergy/No2Io_V(UnitT_)
 
-    case('meflx')
+    case('wminusflx')
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
           do k = 0, nK+1; do j = 0, nJ+1; do i= 0, nI+1
@@ -551,7 +551,7 @@ contains
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
-            *unit_energy/No2Io_V(UnitT_)
+            *UnitEnergy/No2Io_V(UnitT_)
 
     case('keflx')
        do iBlock=1,nBlock
@@ -562,11 +562,11 @@ contains
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
                         Rho
 
-             Tmp1_GB(i,j,k,iBlock) = Rho*Ur**3./2.
+             Tmp1_GB(i,j,k,iBlock) = Rho*Ur**3 / 2.0
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
-            *unit_energy/No2Io_V(UnitT_)
+            *UnitEnergy/No2Io_V(UnitT_)
 
     case default
        VarValue = -7777.
@@ -601,18 +601,20 @@ contains
     use BATL_lib, ONLY: nDim, nG, MaxDim, FaceNormal_DDFB, CellVolume_GB, &
          Xyz_DGB
     use ModHeatConduction, ONLY: get_heat_flux
-    use ModUtilities, ONLY: norm2
     use ModConst, ONLY: cBoltzmann, cElectronMass, cProtonMass, cTwoPi, &
          cElectronCharge, cEps
     use ModGeometry, ONLY: Used_GB
     use ModCellGradient, ONLY: calc_divergence
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
+#ifdef _OPENACC
+    use ModUtilities, ONLY: norm2
+#endif
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -861,7 +863,8 @@ contains
                InvGammaM1 * State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) / &
                State_VGB(Rho_,i,j,k,iBlock) * State_VGB(Pe_,i,j,k,iBlock)
        end do; end do; end do
-       call calc_divergence(iBlock, PeU_DG, nG, PlotVar_G, UseBodyCellIn=.true.)
+       call calc_divergence(iBlock, PeU_DG, nG, PlotVar_G, &
+            UseBodyCellIn=.true.)
        deallocate(PeU_DG)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -903,7 +906,7 @@ contains
     use ModMain,       ONLY: nStep, nIteration, tSimulation, &
          IsTimeAccurate
     use ModB0,         ONLY: B0_DGB
-    use BATL_lib,      ONLY: CellSize_DB, Phi_, Theta_, x_, y_
+    use BATL_lib,      ONLY: CellSize_DB, iDimPhi, iDimTheta, x_, y_
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModNumConst,   ONLY: cPi
     use ModIO,         ONLY : IsRestart
@@ -930,10 +933,10 @@ contains
 
     real    :: Scale, H
 
-    real    :: Usound, Uescape, rTransonic, Ur0, Ur1, del
+    real    :: Usound, Uescape, rTransonic, Ur0, Ur1, dUr
     real    :: uCorona
 
-    real    :: DiffDelta, Ur2
+    real    :: Small, Ur2
 
     ! Variables used in the 'heliofloat' boundary condition
     real,parameter     :: UEscapeSi = 4.0e5 ! 400 km/c
@@ -943,10 +946,10 @@ contains
     real               :: BDotU, BPhi, UTheta
 
     real, parameter :: Epsilon = 1.0e-6
-    integer :: Itercount
+    integer :: nIterParker
 
     ! Variables related to UseAwsom
-    integer :: Major_, Minor_
+    integer :: iMajor, iMinor
     integer :: iFluid, iRho, iRhoUx, iRhoUz, iP
     real    :: FullB_D(3), SignBr
     real    :: U, Bdir_D(3)
@@ -999,7 +1002,7 @@ contains
              do i = MinI, 0
                 ! exponential scaleheight
                 State_VGB(iRho,i,j,k,iBlock) = &
-                     Nchromo*MassFluid_I(iFluid)*exp(-GBody/rBody &
+                     ChromoN*MassFluid_I(iFluid)*exp(-GBody/rBody &
                      *MassFluid_I(iFluid)/Tchromo &
                      *(rBody/r_GB(i,j,k,iBlock) - 1.0))
 
@@ -1016,11 +1019,11 @@ contains
           FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
           SignBr = sign(1.0, sum(Xyz_DGB(:,1,j,k,iBlock)*FullB_D))
           if(SignBr < 0.0)then
-             Major_ = WaveLast_
-             Minor_ = WaveFirst_
+             iMajor = WaveLast_
+             iMinor = WaveFirst_
           else
-             Major_ = WaveFirst_
-             Minor_ = WaveLast_
+             iMajor = WaveFirst_
+             iMinor = WaveLast_
           end if
 
           do i = MinI, 0
@@ -1029,11 +1032,11 @@ contains
                   sum(ChargeIon_I*State_VGB(iPIon_I,i,j,k,iBlock))
 
              ! Outgoing wave energy
-             State_VGB(Major_,i,j,k,iBlock) = PoyntingFluxPerB &
+             State_VGB(iMajor,i,j,k,iBlock) = PoyntingFluxPerB &
                   *sqrt(State_VGB(iRho,i,j,k,iBlock))
 
              ! Ingoing wave energy
-             State_VGB(Minor_,i,j,k,iBlock) = 0.0
+             State_VGB(iMinor,i,j,k,iBlock) = 0.0
           end do
 
           ! At the inner boundary this seems to be unnecessary...
@@ -1062,7 +1065,7 @@ contains
              ! CME part below
              FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
                   + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
-             Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
+             Bdir_D = FullB_D/max(1e-15, norm2(FullB_D))
 
              ! Copy field-aligned velocity component.
              ! Reflect the other components
@@ -1119,8 +1122,8 @@ contains
        ! end of UseAwsom part
     else
 
-       if(DoTest) write(*,*) NameSub,'!!! starting with UpdateWithParker=',&
-            UpdateWithParker
+       if(DoTest) write(*,*) NameSub,'!!! starting with DoUpdateParkerJet=',&
+            DoUpdateParkerJet
 
        ! f(t) = 0                                    if      t < t1
        !      = 1                                    if t2 < t
@@ -1138,11 +1141,12 @@ contains
                      (tEndJet-tBeginJet)))
              endif
           else
-             call stop_mpi(NameSub//'Use time accurate mode with usersurfacerot.')
+             call stop_mpi(NameSub// &
+                  'Use time accurate mode with usersurfacerot.')
           endif
 
-          Dphi = CellSize_DB(Phi_,iBlock)
-          Dlat = CellSize_DB(Theta_,iBlock)
+          Dphi = CellSize_DB(iDimPhi,iBlock)
+          Dlat = CellSize_DB(iDimTheta,iBlock)
 
           !
           ! B_r = X*B/r
@@ -1177,10 +1181,10 @@ contains
              Ur = sum(Xyz1_D*State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)) / &
                   (r1*State_VGB(Rho_,1,j,k,iBlock))
 
-             ! u_perpendicular = 0  if Br < B1 or Br > B2
-             !                 = v0 * f(t) * kb * (B2-B1)/Br * tanh(kb* (Br-B1)/
-             !                                            (B2-B1)) * (r x GradB)
-             !                 = ( 0 , u_Phi, u_Theta)
+             ! u_perp = 0  if Br < B1 or Br > B2
+             !       = v0 * f(t) * kb * (B2-B1)/Br * tanh(kb* (Br-B1)/
+             !         (B2-B1)) * (r x GradB)
+             !       = ( 0 , u_Phi, u_Theta)
              !
              if(Br < BminJet .or. Br > BmaxJet)then
                 Uphi = 0
@@ -1188,12 +1192,12 @@ contains
              else
                 ! Rotation initiation
 
-                if(FrampStart)then
+                if(DoRampUpJet)then
                    Framp = 1.0
                 endif
 
-                uCoeff = PeakFlowSpeedFixer * Framp * kbJet * (BmaxJet-BminJet)/ &
-                     Br * tanh( kbJet * (Br - BminJet)/(BmaxJet-BminJet) )
+                uCoeff = FlowSpeedJet * Framp * CoefBJet * (BmaxJet-BminJet)/ &
+                     Br * tanh( CoefBJet * (Br - BminJet)/(BmaxJet-BminJet) )
 
                 ! r x GradB = (1, 0, 0) x (0, GradBPhi, GradBlat) =
                 !           = (0,-GradBLat,GradBPhi )
@@ -1207,7 +1211,7 @@ contains
                 ! Convert to Cartesian components
                 XyzSph_DD = rot_xyz_sph(Xyz1_D)
 
-                if(UrZero)then
+                if(IsUr0Jet)then
                    u_D = matmul(XyzSph_DD, [max(Ur,0.0), -Ulat, Uphi] )
                 else
                    u_D = matmul(XyzSph_DD, [Ur, -Ulat, Uphi] )
@@ -1220,10 +1224,10 @@ contains
                    CYCLE
                 end if
 
-                ! Set density and pressure in ghost cells once (does not change)
+                ! Set density and pressure in ghost cells once
                 if(nIteration < 2)then
                    ! update with Parker solution
-                   if(UpdateWithParker)then
+                   if(DoUpdateParkerJet)then
 
                       ! normalize with isothermal sound speed.
                       Usound  = sqrt(tCorona*(1.0 + AverageIonCharge) &
@@ -1234,16 +1238,16 @@ contains
                       uCorona = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
                       Ur0 = 1.0
-                      IterCount = 0
+                      nIterParker = 0
                       do
-                         IterCount = IterCount + 1
+                         nIterParker = nIterParker + 1
                          Ur1 = (Uescape**2/(4.0*r))**2 &
                               *exp(0.5*(Ur0**2 + 3.0 - Uescape**2/r))
-                         del = abs(Ur1 - Ur0)
-                         if(del < Epsilon)then
+                         dUr = abs(Ur1 - Ur0)
+                         if(dUr < Epsilon)then
                             Ur2 = Ur1
                             EXIT
-                         elseif(IterCount < 1000)then
+                         elseif(nIterParker < 1000)then
                             Ur0 = Ur1
                             CYCLE
                          else
@@ -1258,7 +1262,7 @@ contains
 
                       p = (NumDensIon + NumDensElectron)*tCorona
 
-                      DiffDelta = 1e-5
+                      Small = 1e-5
 
                    else
                       ! update with scaleheight solution
@@ -1267,15 +1271,15 @@ contains
                       Rho  = RhoCorona*Scale
                       p = tCorona*Rho/MassIon_I(1) *(1 + AverageIonCharge)
 
-                      DiffDelta = 1e-1
+                      Small = 1e-1
                    end if
 
                    ! Check for differences relative to the initial solution.
                    if(.not.IsRestart .and. &
-                        ( p/State_VGB(p_,i,j,k,iBlock)>(1.0+DiffDelta) &
-                        .or. p/State_VGB(p_,i,j,k,iBlock)<(1.0-DiffDelta) &
-                        .or. Rho/State_VGB(Rho_,i,j,k,iBlock)>(1.0+DiffDelta) &
-                        .or. Rho/State_VGB(Rho_,i,j,k,iBlock)<(1.0-DiffDelta)))&
+                        ( p/State_VGB(p_,i,j,k,iBlock) > (1 + Small) &
+                        .or. p/State_VGB(p_,i,j,k,iBlock) < (1 - Small) &
+                        .or. Rho/State_VGB(Rho_,i,j,k,iBlock) > (1 + Small) &
+                        .or. Rho/State_VGB(Rho_,i,j,k,iBlock) < (1 - Small)))&
                         then
                       write(*,*)'nStep=',nStep
                       write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
@@ -1286,7 +1290,8 @@ contains
                       write(*,*)'P,ParkerP=',&
                            p,State_VGB(p_,i,j,k,iBlock),&
                            p/State_VGB(p_,i,j,k,iBlock)
-                      call stop_mpi(NameSub//' BC too far from Parker solution')
+                      call stop_mpi(NameSub// &
+                           ' BC too far from Parker solution')
                    endif
                    State_VGB(Rho_,i,j,k,iBlock)  = Rho
                    State_VGB(p_,i,j,k,iBlock)    = p
@@ -1297,17 +1302,17 @@ contains
                      State_VGB(Rho_,i,j,k,iBlock)*u_D
 
                 ! Set magnetic field: azimuthal component floats
-                b_D = Bramp**(1-i)*State_VGB(Bx_:Bz_,1,j,k,iBlock)
+                b_D = BrampJet**(1-i)*State_VGB(Bx_:Bz_,1,j,k,iBlock)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = b_D - &
                      sum(b_D*Xyz1_D)*Xyz1_D*r2Inv
              end do
 
           end do; end do
 
-          if(UpdateWithParker .and. iProc==0 .and. nStep <1)then
+          if(DoUpdateParkerJet .and. iProc==0 .and. nStep <1)then
              write(*,*)'Update with Parkers solutions'
           endif
-          if(.not.UpdateWithParker .and. iProc==0 .and. nStep < 1)then
+          if(.not.DoUpdateParkerJet .and. iProc==0 .and. nStep < 1)then
              write(*,*)'Update with scaleheight calculation solution'
           endif
 
@@ -1336,7 +1341,8 @@ contains
           if(UseElectronPressure)then
              State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tChromo
           else
-             State_VGB(p_,i,j,k,iBlock) = (NumDensIon + NumDensElectron)*tChromo
+             State_VGB(p_,i,j,k,iBlock) = &
+                  (NumDensIon + NumDensElectron)*tChromo
           end if
        end do; end do; end do
 
@@ -1370,12 +1376,14 @@ contains
              BrCme_D = BrCme*Runit_D
 
              do i = MinI, 0
-                State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)+RhoCme
+                State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
+                     + RhoCme
                 if(UseElectronPressure)then
                    State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                         + 0.5*pCme
                 else
-                   State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + pCme
+                   State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                        + pCme
                 end if
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) + BrCme_D
@@ -1423,10 +1431,10 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
 
-    rUnit_D = FBC%FaceCoords_D/sqrt(sum(FBC%FaceCoords_D**2))
+    rUnit_D = FBC%FaceCoords_D/norm2(FBC%FaceCoords_D)
 
-    ! Magnetic field: radial magnetic field is set to zero, the other are floating
-    ! Density is fixed,
+    ! Magnetic field: radial magnetic field is set to zero,
+    ! the other components are floating
     B1_D  = FBC%VarsTrueFace_V(Bx_:Bz_)
     B1r_D = sum(rUnit_D*B1_D)*rUnit_D
     B1t_D = B1_D - B1r_D
@@ -1446,8 +1454,8 @@ contains
        FullBGhost_D = FBC%B0Face_D + FBC%VarsGhostFace_V(Bx_:Bz_)
        FullBTrue_D  = FBC%B0Face_D + FBC%VarsTrueFace_V(Bx_:Bz_)
 
-       bUnitGhost_D = FullBGhost_D/sqrt(max(1e-30,sum(FullBGhost_D**2)))
-       bUnitTrue_D = FullBTrue_D/sqrt(max(1e-30,sum(FullBTrue_D**2)))
+       bUnitGhost_D = FullBGhost_D/max(1e-30, norm2(FullBGhost_D))
+       bUnitTrue_D = FullBTrue_D/max(1e-15, norm2(FullBTrue_D))
 
        ! Extrapolate field-aligned velocity component to satisfy
        ! the induction equation under steady state conditions.
@@ -1462,18 +1470,19 @@ contains
 
     ! Apply corotation if needed
     if(.not.UseRotatingFrame)then
-       FBC%VarsGhostFace_V(Ux_) = FBC%VarsGhostFace_V(Ux_)-2*OmegaBody*FBC%FaceCoords_D(y_)
-       FBC%VarsGhostFace_V(Uy_) = FBC%VarsGhostFace_V(Uy_)+2*OmegaBody*FBC%FaceCoords_D(x_)
+       FBC%VarsGhostFace_V(Ux_) = FBC%VarsGhostFace_V(Ux_) &
+            - 2*OmegaBody*FBC%FaceCoords_D(y_)
+       FBC%VarsGhostFace_V(Uy_) = FBC%VarsGhostFace_V(Uy_) &
+            + 2*OmegaBody*FBC%FaceCoords_D(x_)
     end if
 
     ! Temperature is fixed
-
     Temperature = tChromo
 
     ! If the CME is applied, we modify: density, temperature, magnetic field
     if(UseCme)then
-       call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, FBC%TimeBc, &
-            nStep, nIteration)
+       call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+            FBC%TimeBc, nStep, nIteration)
 
        RhoCme = RhoCme*Si2No_V(UnitRho_)
        Ucme_D = Ucme_D*Si2No_V(UnitU_)
@@ -1517,7 +1526,8 @@ contains
     if(UseElectronPressure)then
        FBC%VarsGhostFace_V(p_) = NumDensIon*Temperature
        FBC%VarsGhostFace_V(Pe_) = NumDensElectron*Temperature
-       if(UseAnisoPressure) FBC%VarsGhostFace_V(Ppar_) = FBC%VarsGhostFace_V(p_)
+       if(UseAnisoPressure) &
+            FBC%VarsGhostFace_V(Ppar_) = FBC%VarsGhostFace_V(p_)
     else
        FBC%VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Temperature
     end if
@@ -1535,7 +1545,7 @@ contains
              InvGammaMinus1Fluid = InvGammaMinus1
           end if
           FBC%VarsGhostFace_V(Ehot_) = &
-               FBC%VarsGhostFace_V(iP)*(1.0/(GammaHere - 1) - InvGammaMinus1Fluid)
+               FBC%VarsGhostFace_V(iP)*(1/(GammaHere-1) - InvGammaMinus1Fluid)
        else
           FBC%VarsGhostFace_V(Ehot_) = 0.0
        end if
@@ -1793,23 +1803,21 @@ contains
   !============================================================================
 
   subroutine user_get_b0(x, y, z, B0_D)
-    use ModMain, ONLY: TimeSimulation=>tSimulation, UseUserB0
-    use EEE_ModGetB0,   ONLY: EEE_get_B0
+    use ModMain, ONLY: tSimulation, UseUserB0
+    use EEE_ModGetB0, ONLY: EEE_get_B0
     use EEE_ModCommonVariables, ONLY: UseTD
-    use ModPhysics,     ONLY:Si2No_V,UnitB_
-    use ModPhysics, ONLY: MonopoleStrength
+    use ModPhysics, ONLY: Si2No_V, UnitB_
 
     real, intent(in) :: x, y, z
     real, intent(inout):: B0_D(3)
 
-    real :: r,Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3), B_D(3)
-    real :: B0_Dm(3)
+    real :: r, Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3), B_D(3)
 
     character(len=*), parameter:: NameSub = 'user_get_b0'
     !--------------------------------------------------------------------------
-    Xyz_D = [x, y, z]
     if(UseTD)then
-       call EEE_get_B0(Xyz_D,B_D, TimeSimulation)
+       Xyz_D = [x, y, z]
+       call EEE_get_B0(Xyz_D, B_D, tSimulation)
        B0_D = B0_D + B_D*Si2No_V(UnitB_)
        RETURN
     end if
@@ -1819,13 +1827,12 @@ contains
        RETURN
     end if
 
-    r = sqrt(sum(Xyz_D**2))
-    B0_Dm = MonopoleStrength*Xyz_D/r**3
+    ! Dipole centered at [0, 1-UserDipoleDepth, 0]
     ! shifted Xyz_D upwards to center of the user-dipole
+    Xyz_D = [x, y - 1 + UserDipoleDepth, z]
 
-    Xyz_D = [x, y-1.0+UserDipoleDepth, z]
     ! Determine radial distance and powers of it
-    rInv  = 1.0/sqrt(sum(Xyz_D**2))
+    rInv  = 1/norm2(Xyz_D)
     r2Inv = rInv**2
     r3Inv = rInv*r2Inv
 
@@ -1833,7 +1840,8 @@ contains
     Dipole_D = [0.0, UserDipoleStrength, 0.0 ]
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
-    B0_D = B0_Dm + (Dp*Xyz_D - Dipole_D)*r3Inv
+    ! Add up monopole and dipole
+    B0_D = B0_D + (Dp*Xyz_D - Dipole_D)*r3Inv
 
   end subroutine user_get_b0
   !============================================================================

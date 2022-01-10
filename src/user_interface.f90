@@ -324,9 +324,11 @@ integer function i_type_block_user(iBlock)
 
   ! If iBlock is not present, return the number of different user block types
   ! for load balancing.
-  ! If iBlock is present, returnt the combined type for this particular block.
-  ! Example: 2 user block types are present due to expensive boundary and source terms
-  ! calculations. Then return 2 for i_type_block_user(), and for i_type_block_user(iBlock)
+  ! If iBlock is present, return the combined type for this particular block.
+  ! Example: 2 user block types are needed due to expensive boundary and
+  ! source term calculations.
+  ! Then return 2 for i_type_block_user() (no argument)
+  ! and for i_type_block_user(iBlock) (with argument)
   ! return 0 for a block that uses neither boundary nor source,
   ! return 1 for a block that uses boundary but not source,
   ! return 2 for a block that uses source but not boundary,

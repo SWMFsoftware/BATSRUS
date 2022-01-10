@@ -381,7 +381,7 @@ contains
     use ModPhysics,    ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
          UnitTemperature_, UnitElectric_, rCurrents
     use ModCurrent,    ONLY: get_current
-    use BATL_lib,      ONLY: Xyz_DGB, masked_amr_criteria
+    use BATL_lib,      ONLY: Xyz_DGB, is_masked_amr_criteria
     use ModNumConst,   ONLY: cTiny
     use ModVarIndexes, ONLY: SignB_
     use ModUserInterface ! user_amr_criteria
@@ -427,7 +427,7 @@ contains
     Crit_IB = 0.0
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
-       if (masked_amr_criteria(iBlock)) CYCLE
+       if (is_masked_amr_criteria(iBlock)) CYCLE
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Rho_G(i,j,k)  = State_VGB(Rho_,i,j,k,iBlock)
@@ -442,7 +442,7 @@ contains
 
        do iCrit = 1,nAmrCriteria
 
-          if (masked_amr_criteria(iBlock,iCritExtIn=iCrit)) CYCLE
+          if (is_masked_amr_criteria(iBlock,iCritExtIn=iCrit)) CYCLE
           select case(NameAmrCrit_I(iCrit))
           case('gradt')
              ! Temperature gradient.

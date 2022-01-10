@@ -9,10 +9,12 @@ module ModVarIndexes
 
    save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationOuterHelio.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationOuterHelio.f90"
 
    ! This equation module contains the standard MHD equations + 4 neutrals
-   character (len=*), parameter :: NameEquation='MHD and four neutrals'
+   character (len=*), parameter :: &
+       NameEquation = 'MHD and four neutrals'
 
    ! Number of variables without energy:
    integer, parameter :: nVar = 28
@@ -71,11 +73,16 @@ module ModVarIndexes
 
    ! These arrays are useful for multifluid
    integer, parameter :: &
-        iRho_I(nFluid)   = [Rho_,   NeuRho_,  Ne2Rho_,   Ne3Rho_, Ne4Rho_ ],     &
-        iRhoUx_I(nFluid) = [RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], &
-        iRhoUy_I(nFluid) = [RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], &
-        iRhoUz_I(nFluid) = [RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
-        iP_I(nFluid)     = [p_,     NeuP_,      Ne2P_,     Ne3P_ , Ne4P_]
+        iRho_I(nFluid)   &
+        = [Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   ], &
+        iRhoUx_I(nFluid) &
+        = [RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], &
+        iRhoUy_I(nFluid) &
+        = [RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], &
+        iRhoUz_I(nFluid) &
+        = [RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
+        iP_I(nFluid)     &
+        = [p_, NeuP_, Ne2P_, Ne3P_, Ne4P_]
 
    ! The default values for the state variables:
    ! Variables which are physically positive should be set to 1,

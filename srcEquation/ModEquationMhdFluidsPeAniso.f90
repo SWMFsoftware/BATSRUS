@@ -11,11 +11,13 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdFluidsPeAniso.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdFluidsPeAniso.f90"
 
   ! This equation module contains the standard two-fluid MHD equations with
   ! anisotropic pressure
-  character (len=*), parameter :: NameEquation = &
+  character (len=*), parameter :: &
+       NameEquation = &
        '2-fluid MHD with anisotropic ion and electron pressures'
 
   ! Number of variables without energy:

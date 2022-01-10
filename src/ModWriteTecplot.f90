@@ -6,7 +6,7 @@ module ModWriteTecplot
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose, iProc, nProc, iComm
-    use ModBatsrusUtility, ONLY: get_date_time, get_time_string, stop_mpi
+  use ModBatsrusUtility, ONLY: get_date_time, get_time_string, stop_mpi
 
   ! Save cell centered data into Tecplot files
   !
@@ -42,16 +42,16 @@ module ModWriteTecplot
   public:: assign_node_numbers     ! assign node numbers for node averaged plot
   public:: set_tecplot_var_string  ! set variable and unit names
 
-  character(len=23), public :: textDateTime
-  character(len=22), public :: textNandT
-  character, public, parameter :: CharNewLine = char(10)
+  character(len=23), public :: StringDateTime
+  character(len=22), public :: StringNandT
+  character, public, parameter :: CharNewLine = new_line('a')
   integer,   public :: lRecConnect = 2**nDim*11+1
 
   ! Dimensionality of plot
   integer, public :: nPlotDim = nDim
 
   ! Local variables
-  character (len=23) :: textDateTime0
+  character (len=23) :: StringDateTime0
 
   ! Index limits inside the block based on the cut
   integer:: IjkMin_D(3), IjkMax_D(3)
@@ -85,7 +85,7 @@ contains
 
     use BATL_lib,  ONLY: MaxDim, nDim, nJ, nK, nIjk_D, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
-         r_, Phi_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
+         iDimR, iDimPhi, iDimTheta, iDimLat, CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
     use ModNumConst, ONLY: cPi, cHalfPi
     use ModIO,     ONLY: MaxPlotvar, DoSaveOneTecFile, DoSaveTecBinary
@@ -180,18 +180,18 @@ contains
 
       ! No need to push points to the pole if there is no axis
       ! or the 2D cut is along the Phi direction
-      if(.not.IsAnyAxis .or. iCutDim == Phi_) RETURN
+      if(.not.IsAnyAxis .or. iCutDim == iDimPhi) RETURN
 
       if(IsLatitudeAxis)then
-         if(  k==1  .and. CoordMin_DB(Lat_,iBlock) <= -cHalfPi .or. &
-              k==nK .and. CoordMax_DB(Lat_,iBlock) >= +cHalfPi) &
+         if(  k==1  .and. CoordMin_DB(iDimLat,iBlock) <= -cHalfPi .or. &
+              k==nK .and. CoordMax_DB(iDimLat,iBlock) >= +cHalfPi) &
               Xyz_D(1:2) = 0.0
       elseif(IsSphericalAxis)then
-         if(  j==1  .and. CoordMin_DB(Theta_,iBlock) <= 0.0 .or. &
-              j==nJ .and. CoordMax_DB(Theta_,iBlock) >= cPi) &
+         if(  j==1  .and. CoordMin_DB(iDimTheta,iBlock) <= 0.0 .or. &
+              j==nJ .and. CoordMax_DB(iDimTheta,iBlock) >= cPi) &
               Xyz_D(1:2) = 0.0
       elseif(IsCylindricalAxis)then
-         if(  i==1 .and. CoordMin_DB(r_,iBlock) <= 0.0) &
+         if(  i==1 .and. CoordMin_DB(iDimR,iBlock) <= 0.0) &
               Xyz_D(1:2) = 0.0
       end if
     end subroutine set_xyz_state
@@ -199,14 +199,36 @@ contains
 
   end subroutine write_tecplot_data
   !============================================================================
-  function int2str(i) result(res)
-    character(:),allocatable :: res
-    integer,intent(in) :: i
-    character(range(i)+2) :: tmp
+  function int2str(i) result(String)
+
+    ! Convert integer to string of the same length
+
+    integer, intent(in) :: i
+    character(:), allocatable :: String ! return value
+
+    character(40) :: StringTmp
     !--------------------------------------------------------------------------
-    write(tmp,'(i0)') i
-    res = trim(tmp)
+    write(StringTmp,'(i0)') i
+    String = trim(StringTmp)
+
   end function int2str
+  !============================================================================
+  function real2str(r, StringFormat) result(String)
+
+    ! Convert real to string using StringFormat.
+    ! StringFormat should not contain the outside parentheses.
+
+    real, intent(in) :: r
+    character(len=*):: StringFormat
+
+    character(:), allocatable :: String ! return value
+
+    character(40) :: StringTmp
+    !--------------------------------------------------------------------------
+    write(StringTmp, "("//StringFormat//")") r
+    String = trim(StringTmp)
+
+  end function real2str
   !============================================================================
 
   subroutine write_tecplot_connect(iFile, NameFile)
@@ -224,7 +246,7 @@ contains
          MaxBlock, nBlock, Unused_B, nNodeUsed, &
          CoordMin_DB, CoordMax_DB, Xyz_DGB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis, &
-         r_, Phi_, Theta_, Lat_, &
+         iDimR, iDimPhi, iDimTheta, iDimLat, &
          DiLevelNei_IIIB, message_pass_cell, set_tree_periodic
 
     ! Write out connectivity file
@@ -433,16 +455,16 @@ contains
           ! Both sides are at either minimum or maximum so we use the
           ! Y coordinate to select which side takes care of the connection
           ! We assume no resolution change across the poles for simplicity
-          if(iCutDim == Phi_ .and. IsAnyAxis &
+          if(iCutDim == iDimPhi .and. IsAnyAxis &
                .and. Xyz_DGB(2,1,1,1,iBlock) > 0.0)then
              if(IsLatitudeAxis)then
-                if(CoordMin_DB(Lat_,iBlock) <= -cHalfPi) k0 = 0
-                if(CoordMax_DB(Lat_,iBlock) >= +cHalfPi) k1 = nK - 1
+                if(CoordMin_DB(iDimLat,iBlock) <= -cHalfPi) k0 = 0
+                if(CoordMax_DB(iDimLat,iBlock) >= +cHalfPi) k1 = nK - 1
              elseif(IsSphericalAxis)then
-                if(CoordMin_DB(Theta_,iBlock) <= 0.0) j0 = 0
-                if(CoordMax_DB(Theta_,iBlock) >= cPi) j1 = nJ - 1
+                if(CoordMin_DB(iDimTheta,iBlock) <= 0.0) j0 = 0
+                if(CoordMax_DB(iDimTheta,iBlock) >= cPi) j1 = nJ - 1
              elseif(IsCylindricalAxis)then
-                if(CoordMin_DB(r_,iBlock) <= 0.0) i0 = 0
+                if(CoordMin_DB(iDimR,iBlock) <= 0.0) i0 = 0
              end if
           end if
 
@@ -625,56 +647,57 @@ contains
     if(iProc /= 0) RETURN
 
     if(DoSaveTecBinary)then
-      ! Actually only works for 3D right now.
-      ! hyzhou: This is supposed to be cell-centered data, but why is the node
-      ! number and element number different from expected?
-      call open_file(FILE=NameFile, access='stream', form='unformatted')
-      if(DoCut)then
-         write(UnitTmp_) 'TITLE="BATSRUS: cut Data, '//textDateTime//'"',&
-              NEW_LINE('a')
-      else
-         write(UnitTmp_) 'TITLE="BATSRUS: ', int2str(nDim),&
-              'D Data,'//textDateTime//'"',NEW_LINE('a')
-      end if
-      write(UnitTmp_) trim(StringUnit),NEW_LINE('a')
-      select case(nPlotDim)
-      case(2)
-         write(UnitTmp_) &
-              'ZONE T="2D   '//textNandT//'"', &
-              ', N=', int2str(nPointAll), &
-              ', E=', int2str(nBrickAll), &
-              ', F=FEPOINT, ET=QUADRILATERAL', NEW_LINE('a')
-      case(3)
-         write(UnitTmp_) &
-              'ZONE T="3D   '//textNandT//'"', &
-              ', N=', int2str(nPointAll), &
-              ', E=', int2str(nBrickAll), &
-              ', F=FEPOINT, ET=BRICK',NEW_LINE('a')
-      end select
+       ! Actually only works for 3D right now.
+       ! hyzhou: This is supposed to be cell-centered data, but why is the node
+       ! number and element number different from expected?
+       call open_file(FILE=NameFile, access='stream', form='unformatted')
+       if(DoCut)then
+          write(UnitTmp_) 'TITLE="BATSRUS: cut Data, '//StringDateTime//'"',&
+               CharNewLine
+       else
+          write(UnitTmp_) 'TITLE="BATSRUS: ', int2str(nDim),&
+               'D Data,'//StringDateTime//'"', CharNewLine
+       end if
+       write(UnitTmp_) trim(StringUnit), CharNewLine
+       select case(nPlotDim)
+       case(2)
+          write(UnitTmp_) &
+               'ZONE T="2D   '//StringNandT//'"', &
+               ', N=', int2str(nPointAll), &
+               ', E=', int2str(nBrickAll), &
+               ', F=FEPOINT, ET=QUADRILATERAL', CharNewLine
+       case(3)
+          write(UnitTmp_) &
+               'ZONE T="3D   '//StringNandT//'"', &
+               ', N=', int2str(nPointAll), &
+               ', E=', int2str(nBrickAll), &
+               ', F=FEPOINT, ET=BRICK', CharNewLine
+       end select
     else
-      call open_file(File=NameFile)
+       call open_file(File=NameFile)
 
-      if(DoCut)then
-         write(UnitTmp_,'(a)')'TITLE="BATSRUS: cut Data, '//textDateTime//'"'
-      else
-         write(UnitTmp_,'(a,i1,a)') &
-              'TITLE="BATSRUS: ', nDim,'D Data,'//textDateTime//'"'
-      end if
-      write(UnitTmp_,'(a)') trim(StringUnit)
-      select case(nPlotDim)
-      case(2)
-         write(UnitTmp_,'(a,a,i12,a,i12,a)') &
-              'ZONE T="2D   '//textNandT//'"', &
-              ', N=', nPointAll, &
-              ', E=', nBrickAll, &
-              ', F=FEPOINT, ET=QUADRILATERAL'
-      case(3)
-         write(UnitTmp_,'(a,a,i12,a,i12,a)') &
-              'ZONE T="3D   '//textNandT//'"', &
-              ', N=', nPointAll, &
-              ', E=', nBrickAll, &
-              ', F=FEPOINT, ET=BRICK'
-      end select
+       if(DoCut)then
+          write(UnitTmp_,'(a)')'TITLE="BATSRUS: cut Data, ' &
+               //StringDateTime//'"'
+       else
+          write(UnitTmp_,'(a,i1,a)') &
+               'TITLE="BATSRUS: ', nDim,'D Data,'//StringDateTime//'"'
+       end if
+       write(UnitTmp_,'(a)') trim(StringUnit)
+       select case(nPlotDim)
+       case(2)
+          write(UnitTmp_,'(a,a,i12,a,i12,a)') &
+               'ZONE T="2D   '//StringNandT//'"', &
+               ', N=', nPointAll, &
+               ', E=', nBrickAll, &
+               ', F=FEPOINT, ET=QUADRILATERAL'
+       case(3)
+          write(UnitTmp_,'(a,a,i12,a,i12,a)') &
+               'ZONE T="3D   '//StringNandT//'"', &
+               ', N=', nPointAll, &
+               ', E=', nBrickAll, &
+               ', F=FEPOINT, ET=BRICK'
+       end select
     end if
 
     call write_tecplot_auxdata
@@ -686,12 +709,10 @@ contains
 
   subroutine write_tecplot_auxdata(iUnitIn)
 
-    use ModMain, ONLY : nI,nJ,nK, &
-         nBlockALL, IsTimeAccurate,nStep, &
-         nOrder, UseRotatingBc,           &
+    use ModMain, ONLY : IsTimeAccurate, nStep, nOrder, UseRotatingBc, &
          TypeCoordSystem, CodeVersion
     use ModGeometry, ONLY: nUsedCell
-    use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
+    use ModFaceValue, ONLY: TypeLimiter, LimiterBeta
     use ModPhysics, ONLY : &
          ThetaTilt, Rbody, ClightFactor, BodyNDim_I, Gamma_I
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
@@ -700,16 +721,14 @@ contains
     use ModIoUnit, ONLY: UnitTmp_
     use ModIO, ONLY: StringDateOrTime, DoSaveTecBinary
     use ModNumConst, ONLY : cRadToDeg
-    use BATL_lib, ONLY: nProc, nIJK
+    use BATL_lib, ONLY: nProc, nI, nJ, nK, nIJK, nNodeUsed
 
     integer, intent(in), optional :: iUnitIn
 
-    character(len=8)  :: real_date
-    character(len=10) :: real_time
+    character(len=8)  :: StringDate
+    character(len=10) :: StringTime
     integer :: iUnitHere
-    character(40) :: tmp
-    character(:), allocatable :: str
-    character(len=1), parameter :: Newline = NEW_LINE('a')
+    character(:), allocatable :: String
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_tecplot_auxdata'
@@ -723,104 +742,92 @@ contains
 
     if(DoSaveTecBinary) then
        ! DATATYPE
-       write(iUnitHere) 'AUXDATA TYPE="SINGLE"',Newline
+       write(iUnitHere) 'AUXDATA TYPE="SINGLE"', CharNewline
 
        ! BLOCKS
        write(iUnitHere) &
-            'AUXDATA BLOCKS="',int2str(nBlockAll),'  ',int2str(nI),' x',&
-            int2str(nJ),' x',int2str(nK),'"',Newline
+            'AUXDATA BLOCKS="',int2str(nNodeUsed),'  ',int2str(nI),' x',&
+            int2str(nJ),' x',int2str(nK),'"', CharNewLine
 
        ! BODYDENSITY
-       write(tmp, '(a,(f5.2),2a)') 'AUXDATA BODYNUMDENSITY="',&
-            BodyNDim_I(IonFirst_), '"',Newline
-       str = trim(tmp)
-       write(iUnitHere) str
+       write(iUnitHere, '(a,(f5.2),2a)') 'AUXDATA BODYNUMDENSITY="',&
+            BodyNDim_I(IonFirst_), '"', CharNewLine
 
        ! BORIS
        if(UseBorisCorrection .or. UseBorisSimple) then
-          write(tmp, '(a,(f8.4),2a)') 'AUXDATA BORIS="T ', ClightFactor, '"',&
-               Newline
-          str = trim(tmp)
-          write(iUnitHere) str
+          write(iUnitHere) 'AUXDATA BORIS="T ',real2str(ClightFactor, "f8.4"),&
+               CharNewLine
        else
-          write(tmp, '(2a)') 'AUXDATA BORIS="F"',Newline
-          str =	trim(tmp)
-          write(iUnitHere) str
+          write(iUnitHere) 'AUXDATA BORIS="F"', CharNewLine
        end if
 
        ! BTHETATILT
-       write(tmp, '(a,(f12.4),2a)') &
-            'AUXDATA BTHETATILT="',ThetaTilt*cRadToDeg,'"',Newline
-       str = trim(tmp)
-       write(iUnitHere) str
+       write(iUnitHere) 'AUXDATA BTHETATILT="', &
+            real2str(ThetaTilt*cRadToDeg, "f12.4"), '"', CharNewLine
 
        ! CELLS
-       write(iUnitHere) 'AUXDATA CELLS="',int2str(nBlockALL*nIJK),&
-            '"', Newline
+       write(iUnitHere) 'AUXDATA CELLS="',int2str(nNodeUsed*nIJK),&
+            '"', CharNewLine
 
        ! CELLSUSED
-       write(iUnitHere) 'AUXDATA CELLSUSED="',int2str(nUsedCell),'"',Newline
+       write(iUnitHere) 'AUXDATA CELLSUSED="', int2str(nUsedCell),'"', &
+            CharNewLine
 
        ! CODEVERSION
-       write(tmp, '(a,(f5.2),2a)') &
-            'AUXDATA CODEVERSION="BATSRUS',CodeVersion,'"',Newline
-       str = trim(tmp)
-       write(iUnitHere) str
+       write(iUnitHere) 'AUXDATA CODEVERSION="BATSRUS', &
+            real2str(CodeVersion, "f5.2"), '"', CharNewLine
 
        ! COORDSYSTEM
        write(iUnitHere) &
-            'AUXDATA COORDSYSTEM="',TypeCoordSystem,'"',Newline
+            'AUXDATA COORDSYSTEM="',TypeCoordSystem,'"', CharNewLine
 
        ! COROTATION
        if(UseRotatingBc)then
-          write(iUnitHere) 'AUXDATA COROTATION="T"',Newline
+          write(iUnitHere) 'AUXDATA COROTATION="T"', CharNewLine
        else
-          write(iUnitHere) 'AUXDATA COROTATION="F"',Newline
+          write(iUnitHere) 'AUXDATA COROTATION="F"', CharNewLine
        end if
 
        ! TypeFlux
-       write(iUnitHere) 'AUXDATA TypeFlux="',TypeFlux,'"',Newline
+       write(iUnitHere) 'AUXDATA TypeFlux="',TypeFlux,'"', CharNewLine
 
        ! GAMMA
-       write(tmp, '(a,(f14.6),2a)') 'AUXDATA GAMMA="',Gamma_I(1),'"',Newline
-       str = trim(tmp)
-       write(iUnitHere) str
+       write(iUnitHere) 'AUXDATA GAMMA="', real2str(Gamma_I(1), "f14.6"), &
+            '"', CharNewLine
 
        ! ITER
-       write(iUnitHere) 'AUXDATA ITER="',int2str(nStep),'"',Newline
+       write(iUnitHere) 'AUXDATA ITER="',int2str(nStep),'"', CharNewLine
 
        ! NPROC
-       write(iUnitHere) 'AUXDATA NPROC="',int2str(nProc),'"',Newline
+       write(iUnitHere) 'AUXDATA NPROC="',int2str(nProc),'"', CharNewLine
 
        ! ORDER
        if(nOrder > 1)then
-          write(tmp, '(5a,(f8.5),2a)') 'AUXDATA ORDER="',&
-               int2str(nOrder),' ',&
-               trim(TypeLimiter),', beta=',BetaLimiter,'"',Newline
-          str = trim(tmp)
-          write(iUnitHere) str
+          write(iUnitHere) 'AUXDATA ORDER="', int2str(nOrder),' ', &
+               trim(TypeLimiter),', beta=', real2str(LimiterBeta, "f8.5"), &
+               '"', CharNewLine
        else
-          write(iUnitHere) 'AUXDATA ORDER="',int2str(nOrder),'"',Newline
+          write(iUnitHere) 'AUXDATA ORDER="',int2str(nOrder),'"', CharNewLine
        end if
 
        ! RBODY
-       write(tmp, '(a,(f12.2),2a)') 'AUXDATA RBODY="',rBody,'"',Newline
-       str = trim(tmp)
-       write(iUnitHere) str
+       write(iUnitHere) 'AUXDATA RBODY="', real2str(rBody, "f12.2"), &
+            '"', CharNewLine
 
        ! SAVEDATE
-       call Date_and_time(real_date, real_time)
+       call Date_and_time(StringDate, StringTime)
        write(iUnitHere) &
-            'AUXDATA SAVEDATE="','Save Date: ', real_date(1:4),'/',&
-            real_date(5:6),'/', real_date(7:8), &
-            ' at ',  real_time(1:2),':',real_time(3:4),':',real_time(5:6),&
-            '"',Newline
+            'AUXDATA SAVEDATE="','Save Date: ', StringDate(1:4),'/',&
+            StringDate(5:6),'/', StringDate(7:8), &
+            ' at ',  StringTime(1:2),':',StringTime(3:4),':',StringTime(5:6),&
+            '"', CharNewLine
 
        ! TIMEEVENT
-       write(iUnitHere) 'AUXDATA TIMEEVENT="',textDateTime,'"',Newline
+       write(iUnitHere) 'AUXDATA TIMEEVENT="',StringDateTime,'"', CharNewLine
 
        ! TIMEEVENTSTART
-       write(iUnitHere) 'AUXDATA TIMEEVENTSTART="',textDateTime0,'"',Newline
+       write(iUnitHere) 'AUXDATA TIMEEVENTSTART="',StringDateTime0,'"', &
+            CharNewLine
 
        ! TIMESIM
        if(IsTimeAccurate)then
@@ -828,22 +835,22 @@ contains
                StringDateOrTime(1:4)//":"// &
                StringDateOrTime(5:6)//":"// &
                StringDateOrTime(7:8),        &
-               '"',Newline
+               '"', CharNewLine
        else
-          write(iUnitHere) 'AUXDATA TIMESIM="T= N/A"',Newline
+          write(iUnitHere) 'AUXDATA TIMESIM="T= N/A"', CharNewLine
        end if
 
        ! TIMESIMSHORT
        if(IsTimeAccurate)then
           write(iUnitHere) 'AUXDATA TIMESIMSHORT="T=',&
                StringDateOrTime(1:4)//":"// &
-               StringDateOrTime(5:6),'"',Newline
+               StringDateOrTime(5:6),'"', CharNewLine
        else
-          write(iUnitHere) 'AUXDATA TIMESIMSHORT="T= SS"',Newline
+          write(iUnitHere) 'AUXDATA TIMESIMSHORT="T= SS"', CharNewLine
        end if
     else
        ! BLOCKS
-       write(iUnitHere,'(a,i12,3(a,i2),a)') 'AUXDATA BLOCKS="',nBlockALL,'  ',&
+       write(iUnitHere,'(a,i12,3(a,i2),a)') 'AUXDATA BLOCKS="',nNodeUsed,'  ',&
             nI,' x',nJ,' x',nK,'"'
 
        ! BODYDENSITY
@@ -862,7 +869,7 @@ contains
             'AUXDATA BTHETATILT="',ThetaTilt*cRadToDeg,'"'
 
        ! CELLS
-       write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLS="',nBlockALL*nIJK,'"'
+       write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLS="',nNodeUsed*nIJK,'"'
 
        ! CELLSUSED
        write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLSUSED="',nUsedCell,'"'
@@ -883,21 +890,21 @@ contains
        end if
 
        ! TypeFlux
-       write(iUnitHere,'(a,a,a)') 'AUXDATA TypeFlux="',TypeFlux,'"'
+       write(iUnitHere,'(a,a,a)') 'AUXDATA TypeFlux="', TypeFlux,'"'
 
        ! GAMMA
-       write(iUnitHere,'(a,f14.6,a)') 'AUXDATA GAMMA="',Gamma_I(1),'"'
+       write(iUnitHere,'(a,f14.6,a)') 'AUXDATA GAMMA="', Gamma_I(1),'"'
 
        ! ITER
-       write(iUnitHere,'(a,i12,a)') 'AUXDATA ITER="',nStep,'"'
+       write(iUnitHere,'(a,i12,a)') 'AUXDATA ITER="', nStep,'"'
 
        ! NPROC
-       write(iUnitHere,'(a,i12,a)') 'AUXDATA NPROC="',nProc,'"'
+       write(iUnitHere,'(a,i12,a)') 'AUXDATA NPROC="', nProc,'"'
 
        ! ORDER
        if(nOrder > 1)then
-          write(iUnitHere,'(a,i12,a,f8.5,a)') 'AUXDATA ORDER="',nOrder,&
-               ' '//trim(TypeLimiter)//', beta=',BetaLimiter,'"'
+          write(iUnitHere,'(a,i12,a,f8.5,a)') 'AUXDATA ORDER="', nOrder,&
+               ' '//trim(TypeLimiter)//', beta=',LimiterBeta,'"'
        else
           write(iUnitHere,'(a,i12,a)') 'AUXDATA ORDER="',nOrder,'"'
        end if
@@ -906,18 +913,18 @@ contains
        write(iUnitHere,'(a,f12.2,a)') 'AUXDATA RBODY="',rBody,'"'
 
        ! SAVEDATE
-       call Date_and_time(real_date, real_time)
+       call Date_and_time(StringDate, StringTime)
        write(iUnitHere,'(a,a11,a4,a1,a2,a1,a2,a4,a2,a1,a2,a1,a2,a)')&
-            'AUXDATA SAVEDATE="','Save Date: ', real_date(1:4),'/',&
-            real_date(5:6),'/', real_date(7:8), ' at ',  &
-            real_time(1:2),':',real_time(3:4),':',real_time(5:6),'"'
+            'AUXDATA SAVEDATE="','Save Date: ', StringDate(1:4),'/',&
+            StringDate(5:6),'/', StringDate(7:8), ' at ',  &
+            StringTime(1:2),':',StringTime(3:4),':',StringTime(5:6),'"'
 
        ! TIMEEVENT
-       write(iUnitHere,'(a,a,a)') 'AUXDATA TIMEEVENT="',textDateTime,'"'
+       write(iUnitHere,'(a,a,a)') 'AUXDATA TIMEEVENT="', StringDateTime,'"'
 
        ! TIMEEVENTSTART
        write(iUnitHere,'(a,a,a)') &
-            'AUXDATA TIMEEVENTSTART="',textDateTime0,'"'
+            'AUXDATA TIMEEVENTSTART="',StringDateTime0,'"'
 
        ! TIMESIM
        if(IsTimeAccurate)then
@@ -952,7 +959,7 @@ contains
     use ModGeometry, ONLY: count_true_cells
 
     integer :: iTime_I(7)
-    character (len=80) :: format
+    character (len=80) :: StringFormat
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_tecplot_setinfo'
     !--------------------------------------------------------------------------
@@ -964,19 +971,19 @@ contains
     ! Create text string for zone name like 'N=0002000 T=0000:05:00'
     if(IsTimeAccurate)then
        call get_time_string
-       write(textNandT,'(a,i7.7,a)') "N=",nStep," T="// &
+       write(StringNandT,'(a,i7.7,a)') "N=",nStep," T="// &
             StringDateOrTime(1:4)//":"// &
             StringDateOrTime(5:6)//":"// &
             StringDateOrTime(7:8)
     else
-       write(textNandT,'(a,i7.7)') &
+       write(StringNandT,'(a,i7.7)') &
             "N=",nStep
     end if
 
-    format='(i4.4,"/",i2.2,"/",i2.2," ",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+    StringFormat='(i4.4,"/",i2.2,"/",i2.2," ",i2.2,":",i2.2,":",i2.2,".",i3.3)'
     call get_date_time(iTime_I)
-    write(textDateTime0,format) iStartTime_I
-    write(textDateTime ,format) iTime_I
+    write(StringDateTime0,StringFormat) iStartTime_I
+    write(StringDateTime ,StringFormat) iTime_I
 
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_setinfo
@@ -993,7 +1000,7 @@ contains
     ! interpolation coefficients to interpolate onto the cut plane.
 
     use BATL_lib, ONLY: Unused_B, CoordMin_DB, CoordMax_DB, CellSize_DB, &
-         nIjk_D, Phi_
+         nIjk_D, iDimPhi
     use ModNumConst, ONLY: i_DD, cPi, cHalfPi
 
     integer, intent(in):: iBlock
@@ -1019,19 +1026,19 @@ contains
 
     ! Shift Phi coordinate for 2D cuts along the Phi coordinate
     ! e.g. x=0 and y=0 cuts of a spherical grid.
-    if(iCutDim == Phi_)then
+    if(iCutDim == iDimPhi)then
        ! Blocks "far" from the phi cut are shifted 180 degrees towards cut
        ! This will capture both sides of the sphere/cylinder and is the
        ! expected behavior for x=0 and y=0 cuts. But also works for other.
-       PhiCut = CutMin_D(Phi_)
-       PhiBlock = 0.5*(BlockMin_D(Phi_)+BlockMax_D(Phi_))
+       PhiCut = CutMin_D(iDimPhi)
+       PhiBlock = 0.5*(BlockMin_D(iDimPhi)+BlockMax_D(iDimPhi))
 
        if(PhiBlock - PhiCut > cHalfPi)then
-          BlockMin_D(Phi_) = BlockMin_D(Phi_) - cPi
-          BlockMax_D(Phi_) = BlockMax_D(Phi_) - cPi
+          BlockMin_D(iDimPhi) = BlockMin_D(iDimPhi) - cPi
+          BlockMax_D(iDimPhi) = BlockMax_D(iDimPhi) - cPi
        elseif(PhiCut - PhiBlock > cHalfPi)then
-          BlockMin_D(Phi_) = BlockMin_D(Phi_) + cPi
-          BlockMax_D(Phi_) = BlockMax_D(Phi_) + cPi
+          BlockMin_D(iDimPhi) = BlockMin_D(iDimPhi) + cPi
+          BlockMax_D(iDimPhi) = BlockMax_D(iDimPhi) + cPi
        end if
 
     end if
@@ -1066,15 +1073,15 @@ contains
   !============================================================================
 
   subroutine write_tecplot_node_data( &
-       iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, PlotXYZNodes_DNB, &
-       unitstr_TEC, xmin, xmax, ymin, ymax, zmin, zmax, iUnit)
+       iFile, nPlotVar, PlotVarTec_GV, PlotVarNodes_VNB, PlotXYZNodes_DNB, &
+       StringUnitTec, xMin, xMax, yMin, yMax, zMin, zMax, iUnit)
 
     ! NOTE:
     ! This routine assumes that the blocks are sorted on PEs by their global
     ! block number, ie blocks 1 to n on PE 0, blocks n+1 to n+m on PE 1,
     ! etc.
 
-    use ModMain, ONLY : nI,nJ,nK, nBlock, nBlockALL
+    use ModMain, ONLY :
     use ModPhysics, ONLY : No2Io_V, UnitX_, &
          ThetaTilt
     use ModAdvance, ONLY : iTypeAdvance_B, SkippedBlock_
@@ -1082,37 +1089,38 @@ contains
     use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
     use ModNodes, ONLY: nNodeAll, iNodeGlobal_NB, IsNodeUnique_NB
     use BATL_lib, ONLY: IsCartesianGrid, IsRLonLat,                    &
-         nNodeUsed, iNodeMorton_I, iTree_IA, Block_, Proc_,            &
+         nI, nJ, nK, nBlock, nNodeUsed, iNodeMorton_I,                 &
+         iTree_IA, Block_, Proc_,                                      &
          Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,                  &
          find_grid_block, iMortonNode_A, iNode_B
     use ModMpi
     use ModKind, ONLY: Real4_
 
     ! Arguments
-    integer, intent(in) :: ifile, nPlotVar
-    character (LEN=1000), intent(in) :: unitstr_TEC
-    real, intent(in) :: PlotVarBLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    integer, intent(in) :: iFile, nPlotVar
+    character (LEN=1000), intent(in) :: StringUnitTec
+    real, intent(in) :: PlotVarTec_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
     real, intent(in) :: PlotVarNodes_VNB(MaxPlotvar,nI+1,nJ+1,nK+1,nBlock)
     real, intent(in) :: PlotXYZNodes_DNB(3,nI+1,nJ+1,nK+1,nBlock)
-    real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
+    real, intent(in) :: xMin, xMax, yMin, yMax, zMin, zMax
     integer, intent(in) :: iUnit
 
     ! Note: the final output data is in single precision, so in fact it is a
     ! waste of memory to pass in double precision arrays.
 
     ! Local Variables
-    integer :: i,j,k, cut1,cut2, iPE,iBlock, iBlockAll, iNode, nBlockCuts, iError
-    real :: CutValue, factor1,factor2
-    integer, allocatable, dimension(:) :: BlockCut
-    character(len=500) :: stmp
+    integer:: i, j, k, Ijk1, Ijk2, iPE, iBlock, iBlockAll, iNode
+    integer:: nBlockCut, iError
+    real :: CutValue, Factor1,Factor2
+    integer, allocatable:: iBlockCut_A(:)
 
     ! parameters for saving 3d tecplot in a single file
-    character (len=80) :: formatData
+    character (len=80) :: StringFormat
     integer :: iRec
 
-    integer::ic1,ic2,jc1,jc2,kc1,kc2, nCuts, nCutsTotal
-    real :: XarbP,YarbP,ZarbP, XarbNormal,YarbNormal,ZarbNormal, Xp,Yp,Zp
-    real(Real4_), dimension(3,1:nI+1,1:nJ+1,1:nK+1) :: NodeXYZ_DN
+    integer:: i1, i2, j1, j2, k1, k2, nCuts, nCutsTotal
+    real:: XarbP,YarbP,ZarbP, XarbNormal,YarbNormal,ZarbNormal, Xp,Yp,Zp
+    real(Real4_):: NodeXYZ_DN(3,nI+1,nJ+1,nK+1)
     logical :: DoDebug
 
     logical:: DoTest
@@ -1128,39 +1136,37 @@ contains
        call find_grid_block(PlotPointXyz_DI(:,iFile), iPE, iBlock)
        if(iPE /= iProc) RETURN
 
-       write(UnitTmp_,'(a)')'TITLE="BATSRUS: BLK Only, '//textDateTime//'"'
-       write(UnitTmp_,'(a)')trim(unitstr_TEC)
+       write(UnitTmp_,'(a)')'TITLE="BATSRUS: BLK Only, '//StringDateTime//'"'
+       write(UnitTmp_,'(a)')trim(StringUnitTec)
        write(UnitTmp_,'(a,i8,a,i8,a,i8,a)') &
-            'ZONE T="BLK Only '//textNandT//'", I=',nI+4,&
+            'ZONE T="BLK Only '//StringNandT//'", I=',nI+4,&
             ', J=',nJ+4,', K=',nK+4,', F=POINT'
        call write_tecplot_auxdata
        ! DEBUGBLK
-       write(stmp,'(i12)')iBlock
-       write(UnitTmp_,'(a,a,a)') 'AUXDATA DEBUGBLK="',trim(adjustl(stmp)),'"'
+       write(UnitTmp_,'(a,i0,a)') 'AUXDATA DEBUGBLK="', iBlock, '"'
        ! DEBUGPROC
-       write(stmp,'(i12)')iProc
-       write(UnitTmp_,'(a,a,a)') 'AUXDATA DEBUGPROC="',trim(adjustl(stmp)),'"'
+       write(UnitTmp_,'(a,i0,a)') 'AUXDATA DEBUGPROC="', iProc, '"'
        ! Write cell values
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          if (IsDimensionalPlot_I(ifile)) then
+          if (IsDimensionalPlot_I(iFile)) then
              write(UnitTmp_,fmt="(50(ES14.6))") &
                   Xyz_DGB(:,i,j,k,iBlock)*No2Io_V(UnitX_), &
-                  PlotVarBlk(i,j,k,1:nPlotVar)
+                  PlotVarTec_GV(i,j,k,1:nPlotVar)
           else
              write(UnitTmp_,fmt="(50(ES14.6))") &
                   Xyz_DGB(:,i,j,k,iBlock), &
-                  PlotVarBlk(i,j,k,1:nPlotVar)
+                  PlotVarTec_GV(i,j,k,1:nPlotVar)
           end if
        end do; end do; end do
     case('1d_')
        if(iProc==0)then
           ! Write file header
           write(UnitTmp_,'(a)') &
-               'TITLE="BATSRUS: 1D Block Data, '//textDateTime//'"'
-          write(UnitTmp_,'(a)')trim(unitstr_TEC)
+               'TITLE="BATSRUS: 1D Block Data, '//StringDateTime//'"'
+          write(UnitTmp_,'(a)')trim(StringUnitTec)
           write(UnitTmp_,'(a,a,i12,a,a)') &
-               'ZONE T="1D   '//textNandT//'"', &
-               ', I=',nBlockALL,', J=1, K=1,', &
+               'ZONE T="1D   '//StringNandT//'"', &
+               ', I=',nNodeUsed,', J=1, K=1,', &
                ', ZONETYPE=ORDERED, DATAPACKING=POINT'
           call write_tecplot_auxdata
        end if
@@ -1171,7 +1177,7 @@ contains
           iPE   = iTree_IA(Proc_,iNode)
           if(iProc==iPE)then
              ! Write point values
-             call fill_NodeXYZ
+             call fill_node_xyz
              write(UnitTmp_,fmt="(50(ES14.6))") &
                   (NodeXYZ_DN(1,1,1,1)+NodeXYZ_DN(1,nI+1,1,1))/2., &
                   (NodeXYZ_DN(2,1,1,1)+NodeXYZ_DN(2,1,nJ+1,1))/2., &
@@ -1185,22 +1191,22 @@ contains
           ! file. iUnit = UnitTMp_ for DoSaveOneTecFile = F
           ! Write file header
           if(.not.DoSaveTecBinary) then
-             write(iUnit,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
-             write(iUnit,'(a)')trim(unitstr_TEC)
+             write(iUnit,'(a)')'TITLE="BATSRUS: 3D Data, '//StringDateTime//'"'
+             write(iUnit,'(a)')trim(StringUnitTec)
              write(iUnit,'(a,a,i12,a,i12,a)') &
-                  'ZONE T="3D   '//textNandT//'"', &
+                  'ZONE T="3D   '//StringNandT//'"', &
                   ', N=',nNodeALL, &
-                  ', E=',nBlockALL*nIJK, &
+                  ', E=',nNodeUsed*nIJK, &
                   ', F=FEPOINT, ET=BRICK'
           else
-             write(iUnit)'TITLE="BATSRUS: 3D Data, '//textDateTime//'"', &
-                  NEW_LINE('a')
-             write(iUnit)trim(unitstr_TEC),NEW_LINE('a')
+             write(iUnit)'TITLE="BATSRUS: 3D Data, '//StringDateTime//'"', &
+                  CharNewLine
+             write(iUnit)trim(StringUnitTec), CharNewLine
              write(iUnit) &
-                  'ZONE T="3D   '//textNandT//'"', &
+                  'ZONE T="3D   '//StringNandT//'"', &
                   ', N=', int2str(nNodeALL), &
-                  ', E=', int2str(nBlockALL*nIJK), &
-                  ', F=FEPOINT, ET=BRICK',NEW_LINE('a')
+                  ', E=', int2str(nNodeUsed*nIJK), &
+                  ', F=FEPOINT, ET=BRICK', CharNewLine
           end if
 
           call write_tecplot_auxdata(iUnit)
@@ -1208,17 +1214,17 @@ contains
        !================================= 3d ============================
        if (DoSaveOneTecFile) then
           ! output format for tecplot data: coordinate info + nPlotVar
-          write(formatData, '(a,i2.2,a)') "(", nPlotVar+3, "(ES14.6), a)"
-          if(DoTest)write(*,*) 'formatData =', formatData
+          write(StringFormat, '(a,i2.2,a)') "(", nPlotVar+3, "(ES14.6), a)"
+          if(DoTest)write(*,*) 'StringFormat =', StringFormat
           do iBlock = 1, nBlock
              if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
-             call fill_NodeXYZ
+             call fill_node_xyz
 
              ! Write point values
              do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
                 if(IsNodeUnique_NB(i,j,k,iBlock))then
                    iRec = iNodeGlobal_NB(i,j,k,iBlock)
-                   write(UnitTmp_, FMT=formatData, REC=iRec) &
+                   write(UnitTmp_, FMT=StringFormat, REC=iRec) &
                         NodeXYZ_DN(1:3,i,j,k),                  &
                         PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock),&
                         CharNewLine
@@ -1246,7 +1252,7 @@ contains
              do iBlock = 1, nBlock
                 if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
                 ! Write point values
-                call fill_NodeXYZ
+                call fill_node_xyz
                 do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
                    if(IsNodeUnique_NB(i,j,k,iBlock))then
                       write(UnitTmp_) &
@@ -1272,7 +1278,7 @@ contains
              do iBlock = 1,nBlock
                 if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
                 ! Write point values
-                call fill_NodeXYZ
+                call fill_node_xyz
                 do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
                    if(IsNodeUnique_NB(i,j,k,iBlock))then
                       write(UnitTmp_,fmt="(50(ES14.6))") &
@@ -1298,13 +1304,13 @@ contains
     case('cut','x=0','y=0','z=0')
        !================================ cut ============================
        ! Allocate memory for storing the blocks that are cut
-       allocate(BlockCut(nBlockALL))
-       BlockCut=0
-       nBlockCuts=0
+       allocate(iBlockCut_A(nNodeUsed))
+       iBlockCut_A=0
+       nBlockCut=0
 
-       if((xmax-xmin)<(ymax-ymin) .and. (xmax-xmin)<(zmax-zmin))then
+       if((xMax-xMin)<(yMax-yMin) .and. (xMax-xMin)<(zMax-zMin))then
           ! X Slice
-          CutValue = 0.5*(xmin+xmax)
+          CutValue = 0.5*(xMin+xMax)
           if(TypePlot(1:3) == 'x=0') CutValue = 0.
           if(IsCartesianGrid)then
              ! First loop to count nodes and cells
@@ -1315,21 +1321,21 @@ contains
                 if(iProc==iPE)then
                    if ( CutValue> PlotXYZNodes_DNB(1,1   ,1,1,iBlock) .and. &
                         CutValue<=PlotXYZNodes_DNB(1,1+nI,1,1,iBlock)  )then
-                      nBlockCuts=nBlockCuts+1
-                      BlockCut(iBlockALL)=nBlockCuts
+                      nBlockCut=nBlockCut+1
+                      iBlockCut_A(iBlockALL)=nBlockCut
                    end if
                 end if
-                call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
+                call MPI_Bcast(nBlockCut,1,MPI_Integer,iPE,iComm,iError)
              end do
              if(iProc==0)then
                 ! Write file header
                 write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut X Data, ' &
-                     //textDateTime//'"'
-                write(UnitTmp_,'(a)')trim(unitstr_TEC)
+                     //StringDateTime//'"'
+                write(UnitTmp_,'(a)')trim(StringUnitTec)
                 write(UnitTmp_,'(a,a,i12,a,i12,a)') &
-                     'ZONE T="2D X '//textNandT//'"', &
-                     ', N=',nBlockCuts*((nJ+1)*(nK+1)), &
-                     ', E=',nBlockCuts*((nJ  )*(nK  )), &
+                     'ZONE T="2D X '//StringNandT//'"', &
+                     ', N=',nBlockCut*((nJ+1)*(nK+1)), &
+                     ', E=',nBlockCut*((nJ  )*(nK  )), &
                      ', F=FEPOINT, ET=QUADRILATERAL'
                 call write_tecplot_auxdata
              end if
@@ -1343,37 +1349,41 @@ contains
                         CutValue<=PlotXYZNodes_DNB(1,1+nI,1,1,iBlock) )then
                       ! Find cut interpolation factors
                       do i=1,nI
-                         if ( CutValue> PlotXYZNodes_DNB(1,i  ,1,1,iBlock) .and.&
-                              CutValue<=PlotXYZNodes_DNB(1,i+1,1,1,iBlock)  )then
-                            cut1=i
-                            cut2=i+1
-                            factor2 = &
-                                 (CutValue - PlotXYZNodes_DNB(1,i,1,1,iBlock))/ &
-                                 ( PlotXYZNodes_DNB(1,i+1,1,1,iBlock) &
-                                 - PlotXYZNodes_DNB(1,i,1,1,iBlock))
-                            factor1=1.-factor2
+                         if ( CutValue> PlotXYZNodes_DNB(1,i  ,1,1,iBlock) &
+                              .and.&
+                              CutValue<=PlotXYZNodes_DNB(1,i+1,1,1,iBlock)  )&
+                              then
+                            Ijk1=i
+                            Ijk2=i+1
+                            Factor2 = &
+                                 (CutValue - PlotXYZNodes_DNB(1,i,1,1,iBlock))&
+                                 /( PlotXYZNodes_DNB(1,i+1,1,1,iBlock) &
+                                 -  PlotXYZNodes_DNB(1,i,1,1,iBlock))
+                            Factor1=1.-Factor2
                             EXIT
                          end if
                       end do
                       ! Write point values
-                      call fill_NodeXYZ
+                      call fill_node_xyz
                       do k=1,1+nK; do j=1,1+nJ
                          write(UnitTmp_,fmt="(50(ES14.6))") &
-                              (factor1*NodeXYZ_DN(1:3,cut1,j,k)+ &
-                              factor2*NodeXYZ_DN(1:3,cut2,j,k)), &
-                              (factor1*PlotVarNodes_VNB(1:nPlotVar,cut1,j,k,iBlock)+ &
-                              factor2*PlotVarNodes_VNB(1:nPlotVar,cut2,j,k,iBlock))
+                              (Factor1*NodeXYZ_DN(1:3,Ijk1,j,k)+ &
+                              Factor2*NodeXYZ_DN(1:3,Ijk2,j,k)), &
+                              (Factor1 &
+                              *PlotVarNodes_VNB(1:nPlotVar,Ijk1,j,k,iBlock)+ &
+                              Factor2 &
+                              *PlotVarNodes_VNB(1:nPlotVar,Ijk2,j,k,iBlock))
                       end do; end do
                       ! Write point connectivity
                       do k=1,nK; do j=1,nJ
                          write(UnitTmp2_,'(4(i8,1x))') &
-                              ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nJ+1)*(nK+1)) &
                               + (k-1)*(nJ+1)+j, &
-                              ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nJ+1)*(nK+1)) &
                               + (k-1)*(nJ+1)+j+1, &
-                              ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nJ+1)*(nK+1)) &
                               + (k  )*(nJ+1)+j+1, &
-                              ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nJ+1)*(nK+1)) &
                               + (k  )*(nJ+1)+j
                       end do; end do
                    end if
@@ -1386,23 +1396,23 @@ contains
                 iBlock  = iTree_IA(Block_,iNode)
                 iPE   = iTree_IA(Proc_,iNode)
                 if(iProc==iPE)then
-                   if(  (CutValue - PlotXYZNodes_DNB(1,1,1   ,2,iBlock))* &
-                        (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,2,iBlock)) <=0)then
-                      nBlockCuts=nBlockCuts+1
-                      BlockCut(iBlockALL)=nBlockCuts
+                   if((CutValue - PlotXYZNodes_DNB(1,1,1   ,2,iBlock))* &
+                      (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,2,iBlock)) <=0)then
+                      nBlockCut=nBlockCut+1
+                      iBlockCut_A(iBlockALL)=nBlockCut
                    end if
                 end if
-                call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
+                call MPI_Bcast(nBlockCut,1,MPI_Integer,iPE,iComm,iError)
              end do
              if(iProc==0)then
                 ! Write file header
                 write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut X Data, ' &
-                     //textDateTime//'"'
-                write(UnitTmp_,'(a)')trim(unitstr_TEC)
+                     //StringDateTime//'"'
+                write(UnitTmp_,'(a)')trim(StringUnitTec)
                 write(UnitTmp_,'(a,a,i12,a,i12,a)')       &
-                     'ZONE T="2D X '//textNandT//'"',   &
-                     ', N=',nBlockCuts*((nI+1)*(nK+1)), &
-                     ', E=',nBlockCuts*((nI  )*(nK  )), &
+                     'ZONE T="2D X '//StringNandT//'"',   &
+                     ', N=',nBlockCut*((nI+1)*(nK+1)), &
+                     ', E=',nBlockCut*((nI  )*(nK  )), &
                      ', F=FEPOINT, ET=QUADRILATERAL'
                 call write_tecplot_auxdata
              end if
@@ -1412,42 +1422,44 @@ contains
                 iBlock  = iTree_IA(Block_,iNode)
                 iPE   = iTree_IA(Proc_,iNode)
                 if(iProc==iPE)then
-                   if ( (CutValue - PlotXYZNodes_DNB(1,1,1   ,2,iBlock))* &
-                        (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,2,iBlock)) <=0)then
+                   if((CutValue - PlotXYZNodes_DNB(1,1,1   ,2,iBlock))* &
+                      (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,2,iBlock)) <=0)then
                       ! Find cut interpolation factors
                       do j=1, nJ
-                         if ( (CutValue - PlotXYZNodes_DNB(1,1,j  ,2,iBlock))* &
-                              (CutValue - PlotXYZNodes_DNB(1,1,j+1,2,iBlock)) &
-                              <= 0) then
-                            cut1=j
-                            cut2=j+1
-                            factor2 = &
-                                 (CutValue - PlotXYZNodes_DNB(1,1,j,2,iBlock))/ &
-                                 ( PlotXYZNodes_DNB(1,1,j+1,2,iBlock) &
-                                 - PlotXYZNodes_DNB(1,1,j,2,iBlock))
-                            factor1=1.-factor2
+                         if ((CutValue - PlotXYZNodes_DNB(1,1,j  ,2,iBlock))* &
+                             (CutValue - PlotXYZNodes_DNB(1,1,j+1,2,iBlock)) &
+                             <= 0) then
+                            Ijk1=j
+                            Ijk2=j+1
+                            Factor2 = &
+                                 (CutValue - PlotXYZNodes_DNB(1,1,j,2,iBlock))&
+                                 /( PlotXYZNodes_DNB(1,1,j+1,2,iBlock) &
+                                 -   PlotXYZNodes_DNB(1,1,j,2,iBlock))
+                            Factor1=1.-Factor2
                             EXIT
                          end if
                       end do
                       ! Write point values
-                      call fill_NodeXYZ
+                      call fill_node_xyz
                       do k=1,1+nK; do i=1,1+nI
                          write(UnitTmp_,fmt="(50(ES14.6))") &
-                              (factor1*NodeXYZ_DN(1:3,i,cut1,k)+ &
-                              factor2*NodeXYZ_DN(1:3,i,cut2,k)), &
-                              (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBlock)+ &
-                              factor2*PlotVarNodes_VNB(1:nPlotVar,i,cut2,k,iBlock))
+                              (Factor1*NodeXYZ_DN(1:3,i,Ijk1,k)+ &
+                              Factor2*NodeXYZ_DN(1:3,i,Ijk2,k)), &
+                              (Factor1 &
+                              *PlotVarNodes_VNB(1:nPlotVar,i,Ijk1,k,iBlock)+ &
+                              Factor2 &
+                              *PlotVarNodes_VNB(1:nPlotVar,i,Ijk2,k,iBlock))
                       end do; end do
                       ! Write point connectivity
                       do k=1,nK; do i=1,nI
                          write(UnitTmp2_,'(4(i8,1x))') &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k-1)*(nI+1)+i, &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k-1)*(nI+1)+i+1, &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k  )*(nI+1)+i+1, &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k  )*(nI+1)+i
                       end do; end do
                    end if
@@ -1455,9 +1467,9 @@ contains
              end do
           end if
 
-       elseif((ymax-ymin)<(zmax-zmin))then
+       elseif((yMax-yMin)<(zMax-zMin))then
           ! Y Slice
-          CutValue = 0.5*(ymin+ymax)
+          CutValue = 0.5*(yMin+yMax)
           if(TypePlot(1:3) == 'y=0') CutValue = 0.
           if(IsCartesianGrid)then
              ! First loop to count nodes and cells
@@ -1468,21 +1480,21 @@ contains
                 if(iProc==iPE)then
                    if ( CutValue> PlotXYZNodes_DNB(2,1,1   ,1,iBlock) .and. &
                         CutValue<=PlotXYZNodes_DNB(2,1,1+nJ,1,iBlock)  )then
-                      nBlockCuts=nBlockCuts+1
-                      BlockCut(iBlockALL)=nBlockCuts
+                      nBlockCut=nBlockCut+1
+                      iBlockCut_A(iBlockALL)=nBlockCut
                    end if
                 end if
-                call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
+                call MPI_Bcast(nBlockCut,1,MPI_Integer,iPE,iComm,iError)
              end do
              if(iProc==0)then
                 ! Write file header
                 write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut Y Data, ' &
-                     //textDateTime//'"'
-                write(UnitTmp_,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+                     //StringDateTime//'"'
+                write(UnitTmp_,'(a)')StringUnitTec(1:len_trim(StringUnitTec))
                 write(UnitTmp_,'(a,a,i12,a,i12,a)') &
-                     'ZONE T="2D Y '//textNandT//'"', &
-                     ', N=',nBlockCuts*((nI+1)*(nK+1)), &
-                     ', E=',nBlockCuts*((nI  )*(nK  )), &
+                     'ZONE T="2D Y '//StringNandT//'"', &
+                     ', N=',nBlockCut*((nI+1)*(nK+1)), &
+                     ', E=',nBlockCut*((nI  )*(nK  )), &
                      ', F=FEPOINT, ET=QUADRILATERAL'
                 call write_tecplot_auxdata
              end if
@@ -1496,36 +1508,39 @@ contains
                         CutValue<=PlotXYZNodes_DNB(2,1,1+nJ,1,iBlock)  )then
                       ! Find cut interpolation factors
                       do j=1,nJ
-                         if ( CutValue> PlotXYZNodes_DNB(2,1,j  ,1,iBlock) .and.&
-                              CutValue<=PlotXYZNodes_DNB(2,1,j+1,1,iBlock)  )then
-                            cut1=j
-                            cut2=j+1
-                            factor2=(CutValue-PlotXYZNodes_DNB(2,1,j,1,iBlock))/&
+                         if(CutValue> PlotXYZNodes_DNB(2,1,j  ,1,iBlock) .and.&
+                            CutValue<=PlotXYZNodes_DNB(2,1,j+1,1,iBlock)  )then
+                            Ijk1 = j
+                            Ijk2 = j+1
+                            Factor2 = &
+                                 (CutValue-PlotXYZNodes_DNB(2,1,j,1,iBlock))/&
                                  ( PlotXYZNodes_DNB(2,1,j+1,1,iBlock) &
                                  - PlotXYZNodes_DNB(2,1,j,1,iBlock))
-                            factor1=1.-factor2
+                            Factor1 = 1 - Factor2
                             EXIT
                          end if
                       end do
                       ! Write point values
-                      call fill_NodeXYZ
+                      call fill_node_xyz
                       do k=1,1+nK; do i=1,1+nI
                          write(UnitTmp_,fmt="(50(ES14.6))") &
-                              (factor1*NodeXYZ_DN(1:3,i,cut1,k)+ &
-                              factor2*NodeXYZ_DN(1:3,i,cut2,k)), &
-                              (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBlock)+ &
-                              factor2*PlotVarNodes_VNB(1:nPlotVar,i,cut2,k,iBlock))
+                              (Factor1*NodeXYZ_DN(1:3,i,Ijk1,k)+ &
+                              Factor2*NodeXYZ_DN(1:3,i,Ijk2,k)), &
+                              (Factor1 &
+                              *PlotVarNodes_VNB(1:nPlotVar,i,Ijk1,k,iBlock)+ &
+                              Factor2 &
+                              *PlotVarNodes_VNB(1:nPlotVar,i,Ijk2,k,iBlock))
                       end do; end do
                       ! Write point connectivity
                       do k=1,nK; do i=1,nI
                          write(UnitTmp2_,'(4(i8,1x))') &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k-1)*(nI+1)+i, &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k-1)*(nI+1)+i+1, &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k  )*(nI+1)+i+1, &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k  )*(nI+1)+i
                       end do; end do
                    end if
@@ -1538,23 +1553,23 @@ contains
                 iBlock  = iTree_IA(Block_,iNode)
                 iPE   = iTree_IA(Proc_,iNode)
                 if(iProc==iPE)then
-                   if ( (CutValue - PlotXYZNodes_DNB(2,1,1   ,2,iBlock))* &
-                        (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,2,iBlock)) <=0)then
-                      nBlockCuts=nBlockCuts+1
-                      BlockCut(iBlockALL)=nBlockCuts
+                   if((CutValue - PlotXYZNodes_DNB(2,1,1   ,2,iBlock))* &
+                      (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,2,iBlock)) <=0)then
+                      nBlockCut=nBlockCut+1
+                      iBlockCut_A(iBlockALL)=nBlockCut
                    end if
                 end if
-                call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
+                call MPI_Bcast(nBlockCut,1,MPI_Integer,iPE,iComm,iError)
              end do
              if(iProc==0)then
                 ! Write file header
                 write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut Y Data, ' &
-                     //textDateTime//'"'
-                write(UnitTmp_,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+                     //StringDateTime//'"'
+                write(UnitTmp_,'(a)')StringUnitTec(1:len_trim(StringUnitTec))
                 write(UnitTmp_,'(a,a,i12,a,i12,a)') &
-                     'ZONE T="2D Y '//textNandT//'"', &
-                     ', N=',nBlockCuts*((nI+1)*(nK+1)), &
-                     ', E=',nBlockCuts*((nI  )*(nK  )), &
+                     'ZONE T="2D Y '//StringNandT//'"', &
+                     ', N=',nBlockCut*((nI+1)*(nK+1)), &
+                     ', E=',nBlockCut*((nI  )*(nK  )), &
                      ', F=FEPOINT, ET=QUADRILATERAL'
                 call write_tecplot_auxdata
              end if
@@ -1564,44 +1579,44 @@ contains
                 iBlock  = iTree_IA(Block_,iNode)
                 iPE   = iTree_IA(Proc_,iNode)
                 if(iProc==iPE)then
-                   if ( (CutValue - PlotXYZNodes_DNB(2,1,1   ,2,iBlock))* &
-                        (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,2,iBlock)) <=0)then
+                   if((CutValue - PlotXYZNodes_DNB(2,1,1   ,2,iBlock))* &
+                      (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,2,iBlock)) <=0)then
                       ! Find cut interpolation factors
                       do j=1,nJ
-                         if ( (CutValue - PlotXYZNodes_DNB(2,1,j  ,2,iBlock))* &
-                              (CutValue - PlotXYZNodes_DNB(2,1,j+1,2,iBlock)) &
+                         if((CutValue - PlotXYZNodes_DNB(2,1,j  ,2,iBlock))* &
+                            (CutValue - PlotXYZNodes_DNB(2,1,j+1,2,iBlock))  &
                               <= 0)then
-                            cut1=j
-                            cut2=j+1
-                            factor2 = &
-                                 (CutValue - PlotXYZNodes_DNB(2,1,j,2,iBlock))/ &
-                                 ( PlotXYZNodes_DNB(2,1,j+1,2,iBlock) &
-                                 - PlotXYZNodes_DNB(2,1,j,2,iBlock))
-                            factor1=1.-factor2
+                            Ijk1=j
+                            Ijk2=j+1
+                            Factor2 = &
+                                 (CutValue - PlotXYZNodes_DNB(2,1,j,2,iBlock))&
+                                 /( PlotXYZNodes_DNB(2,1,j+1,2,iBlock) &
+                                 -  PlotXYZNodes_DNB(2,1,j,2,iBlock))
+                            Factor1=1.-Factor2
                             EXIT
                          end if
                       end do
                       ! Write point values
-                      call fill_NodeXYZ
+                      call fill_node_xyz
                       do k=1,1+nK; do i=1,1+nI
                          write(UnitTmp_,fmt="(50(ES14.6))") &
-                              (factor1*NodeXYZ_DN(1:3,i,cut1,k)+ &
-                              factor2*NodeXYZ_DN(1:3,i,cut2,k)), &
-                              (factor1 &
-                              *PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBlock)+ &
-                              factor2 &
-                              *PlotVarNodes_VNB(1:nPlotVar,i,cut2,k,iBlock))
+                              (Factor1*NodeXYZ_DN(1:3,i,Ijk1,k)+ &
+                              Factor2*NodeXYZ_DN(1:3,i,Ijk2,k)), &
+                              (Factor1 &
+                              *PlotVarNodes_VNB(1:nPlotVar,i,Ijk1,k,iBlock)+ &
+                              Factor2 &
+                              *PlotVarNodes_VNB(1:nPlotVar,i,Ijk2,k,iBlock))
                       end do; end do
                       ! Write point connectivity
                       do k=1,nK; do i=1,nI
                          write(UnitTmp2_,'(4(i8,1x))') &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k-1)*(nI+1)+i, &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k-1)*(nI+1)+i+1, &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k  )*(nI+1)+i+1, &
-                              ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) &
+                              ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nK+1)) &
                               + (k  )*(nI+1)+i
                       end do; end do
                    end if
@@ -1611,7 +1626,7 @@ contains
 
        else
           ! Z Slice
-          CutValue = 0.5*(zmin+zmax)
+          CutValue = 0.5*(zMin+zMax)
           if(TypePlot(1:3) == 'z=0') CutValue = 0.
           ! First loop to count nodes and cells
           do iBlockAll = 1, nNodeUsed
@@ -1621,21 +1636,21 @@ contains
              if(iProc==iPE)then
                 if ( CutValue> PlotXYZNodes_DNB(3,1,1,1   ,iBlock) .and. &
                      CutValue<=PlotXYZNodes_DNB(3,1,1,1+nK,iBlock)  )then
-                   nBlockCuts=nBlockCuts+1
-                   BlockCut(iBlockALL)=nBlockCuts
+                   nBlockCut=nBlockCut+1
+                   iBlockCut_A(iBlockALL)=nBlockCut
                 end if
              end if
-             call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
+             call MPI_Bcast(nBlockCut,1,MPI_Integer,iPE,iComm,iError)
           end do
           if(iProc==0)then
              ! Write file header
              write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut Z Data, ' &
-                  //textDateTime//'"'
-             write(UnitTmp_,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+                  //StringDateTime//'"'
+             write(UnitTmp_,'(a)')StringUnitTec(1:len_trim(StringUnitTec))
              write(UnitTmp_,'(a,a,i12,a,i12,a)') &
-                  'ZONE T="2D Z '//textNandT//'"', &
-                  ', N=',nBlockCuts*((nI+1)*(nJ+1)), &
-                  ', E=',nBlockCuts*((nI  )*(nJ  )), &
+                  'ZONE T="2D Z '//StringNandT//'"', &
+                  ', N=',nBlockCut*((nI+1)*(nJ+1)), &
+                  ', E=',nBlockCut*((nI  )*(nJ  )), &
                   ', F=FEPOINT, ET=QUADRILATERAL'
              call write_tecplot_auxdata
           end if
@@ -1651,56 +1666,56 @@ contains
                    do k=1,nK
                       if ( CutValue> PlotXYZNodes_DNB(3,1,1,k  ,iBlock) .and. &
                            CutValue<=PlotXYZNodes_DNB(3,1,1,k+1,iBlock)  )then
-                         cut1=k
-                         cut2=k+1
-                         factor2=(CutValue-PlotXYZNodes_DNB(3,1,1,k,iBlock))/ &
+                         Ijk1=k
+                         Ijk2=k+1
+                         Factor2=(CutValue-PlotXYZNodes_DNB(3,1,1,k,iBlock))/ &
                               ( PlotXYZNodes_DNB(3,1,1,k+1,iBlock) &
                               - PlotXYZNodes_DNB(3,1,1,k,iBlock))
-                         factor1=1.-factor2
+                         Factor1=1.-Factor2
                          EXIT
                       end if
                    end do
                    ! Write point values
-                   call fill_NodeXYZ
+                   call fill_node_xyz
                    do j=1,1+nJ; do i=1,1+nI
                       write(UnitTmp_,fmt="(50(ES14.6))") &
-                           (factor1*NodeXYZ_DN(1:3,i,j,cut1)+ &
-                           factor2*NodeXYZ_DN(1:3,i,j,cut2)), &
-                           (factor1 &
-                           *PlotVarNodes_VNB(1:nPlotVar,i,j,cut1,iBlock)+ &
-                           factor2 &
-                           *PlotVarNodes_VNB(1:nPlotVar,i,j,cut2,iBlock))
+                           (Factor1*NodeXYZ_DN(1:3,i,j,Ijk1)+ &
+                           Factor2*NodeXYZ_DN(1:3,i,j,Ijk2)), &
+                           (Factor1 &
+                           *PlotVarNodes_VNB(1:nPlotVar,i,j,Ijk1,iBlock)+ &
+                           Factor2 &
+                           *PlotVarNodes_VNB(1:nPlotVar,i,j,Ijk2,iBlock))
                    end do; end do
                    ! Write point connectivity
                    do j=1,nJ; do i=1,nI
                       write(UnitTmp2_,'(4(i8,1x))') &
-                           ((BlockCut(iBlockALL)-1)*(nI+1)*(nJ+1)) &
+                           ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nJ+1)) &
                            + (j-1)*(nI+1)+i, &
-                           ((BlockCut(iBlockALL)-1)*(nI+1)*(nJ+1)) &
+                           ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nJ+1)) &
                            + (j-1)*(nI+1)+i+1, &
-                           ((BlockCut(iBlockALL)-1)*(nI+1)*(nJ+1)) &
+                           ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nJ+1)) &
                            + (j  )*(nI+1)+i+1, &
-                           ((BlockCut(iBlockALL)-1)*(nI+1)*(nJ+1)) &
+                           ((iBlockCut_A(iBlockALL)-1)*(nI+1)*(nJ+1)) &
                            + (j  )*(nI+1)+i
                    end do; end do
                 end if
              end if
           end do
        end if
-       deallocate(BlockCut)
+       deallocate(iBlockCut_A)
     case('slc','dpl')
        !================================ arbitrary slices ===============
        DoDebug=.false.
 
        ! XarbP,YarbP,ZarbP                    point on plane
        ! XarbNormal,YarbNormal,ZarbNormal     normal for cut
-       ! ic1,jc1,kc1,ic2,jc2,kc2              two opposite corner indices
+       ! i1,j1,k1,i2,j2,k2              two opposite corner indices
 
        if (TypePlot(1:3)=='slc')then
           ! Point-Normal cut plot
-          XarbP=PlotPointXyz_DI(1,ifile); XarbNormal=PlotNormal_DI(1,ifile)
-          YarbP=PlotPointXyz_DI(2,ifile); YarbNormal=PlotNormal_DI(2,ifile)
-          ZarbP=PlotPointXyz_DI(3,ifile); ZarbNormal=PlotNormal_DI(3,ifile)
+          XarbP=PlotPointXyz_DI(1,iFile); XarbNormal=PlotNormal_DI(1,iFile)
+          YarbP=PlotPointXyz_DI(2,iFile); YarbNormal=PlotNormal_DI(2,iFile)
+          ZarbP=PlotPointXyz_DI(3,iFile); ZarbNormal=PlotNormal_DI(3,iFile)
        else
           ! Dipole cut plot
           XarbP=0.; XarbNormal=-sin(ThetaTilt)
@@ -1709,41 +1724,42 @@ contains
        end if
 
        ! First loop to count cuts
-       nBlockCuts=0
+       nBlockCut=0
        do iBlock = 1, nBlock
           if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
-          ic1=1; ic2=1+nI
-          jc1=1; jc2=1+nJ
-          kc1=1; kc2=1+nK
+          i1=1; i2=1+nI
+          j1=1; j2=1+nJ
+          k1=1; k2=1+nK
           call find_cuts(-1)
           if ( nCuts>0 )then
              ! count up number of cuts
              do i=1,nI; do j=1,nJ; do k=1,nK
-                ic1=i; ic2=i+1
-                jc1=j; jc2=j+1
-                kc1=k; kc2=k+1
+                i1=i; i2=i+1
+                j1=j; j2=j+1
+                k1=k; k2=k+1
                 call find_cuts(0)
-                nBlockCuts=nBlockCuts+nCuts
+                nBlockCut=nBlockCut+nCuts
              end do; end do; end do
           end if
        end do
-       call MPI_reduce(nBlockCuts, nCutsTotal, 1, MPI_INTEGER, MPI_SUM, 0, &
+       call MPI_reduce(nBlockCut, nCutsTotal, 1, MPI_INTEGER, MPI_SUM, 0, &
             iComm, iError)
 
        ! Write file header
        if(iProc==0)then
           if (TypePlot(1:3)=='slc')then
-             write(UnitTmp_,'(a)')'TITLE="BATSRUS: Slice, '//textDateTime//'"'
-             write(UnitTmp_,'(a)')trim(unitstr_TEC)
+             write(UnitTmp_,'(a)')'TITLE="BATSRUS: Slice, ' &
+                  //StringDateTime//'"'
+             write(UnitTmp_,'(a)')trim(StringUnitTec)
              write(UnitTmp_,'(a,i8,a)') &
-                  'ZONE T="Slice '//textNandT//'", I=', nCutsTotal,&
+                  'ZONE T="Slice '//StringNandT//'", I=', nCutsTotal,&
                   ', J=1, K=1, F=POINT'
           else
              write(UnitTmp_,'(a)')'TITLE="BATSRUS: Dipole Cut, '// &
-                  textDateTime//'"'
-             write(UnitTmp_,'(a)')trim(unitstr_TEC)
+                  StringDateTime//'"'
+             write(UnitTmp_,'(a)')trim(StringUnitTec)
              write(UnitTmp_,'(a,i8,a)') &
-                  'ZONE T="Dipole Cut '//textNandT//'", I=', nCutsTotal,&
+                  'ZONE T="Dipole Cut '//StringNandT//'", I=', nCutsTotal,&
                   ', J=1, K=1, F=POINT'
           end if
           call write_tecplot_auxdata
@@ -1752,17 +1768,17 @@ contains
        ! Now loop to write values
        do iBlock = 1, nBlock
           if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
-          ic1=1; ic2=1+nI
-          jc1=1; jc2=1+nJ
-          kc1=1; kc2=1+nK
+          i1=1; i2=1+nI
+          j1=1; j2=1+nJ
+          k1=1; k2=1+nK
           call find_cuts(-1)
           if ( nCuts>0 )then
              ! write the cuts
-             call fill_NodeXYZ
+             call fill_node_xyz
              do i=1,nI; do j=1,nJ; do k=1,nK
-                ic1=i; ic2=i+1
-                jc1=j; jc2=j+1
-                kc1=k; kc2=k+1
+                i1=i; i2=i+1
+                j1=j; j2=j+1
+                k1=k; k2=k+1
                 call find_cuts(1)
              end do; end do; end do
           end if
@@ -1772,136 +1788,139 @@ contains
     end select
 
     call test_stop(NameSub, DoTest)
+
   contains
     !==========================================================================
+    subroutine fill_node_xyz
 
-    ! Assumes iBlock value is correct
-    subroutine fill_nodeXYZ
       ! Fill array with position (optionally dimensioned)
+      ! Assumes iBlock value is correct
       !------------------------------------------------------------------------
-      if (IsDimensionalPlot_I(ifile)) then
-         NodeXYZ_DN(1:3,:,:,:)=PlotXYZNodes_DNB(1:3,:,:,:,iBlock)*No2Io_V(UnitX_)
+      if (IsDimensionalPlot_I(iFile)) then
+         NodeXYZ_DN(1:3,:,:,:)=PlotXYZNodes_DNB(1:3,:,:,:,iBlock) &
+              *No2Io_V(UnitX_)
       else
          NodeXYZ_DN(1:3,:,:,:)=PlotXYZNodes_DNB(1:3,:,:,:,iBlock)
       end if
-    end subroutine fill_nodeXYZ
+
+    end subroutine fill_node_xyz
     !==========================================================================
+    subroutine find_cuts(iOption)
 
-    ! iopt =-1 check all edges to see if cut
-    !      = 0 count cuts only
-    !      = 1 find cuts and write to disk
-    subroutine find_cuts(iopt)
-      integer, intent(in) :: iopt
-      integer :: ic,jc,kc
+      integer, intent(in) :: iOption
+      integer :: i, j, k
 
+      ! iOption =-1 check all edges to see if cut
+      !      = 0 count cuts only
+      !      = 1 find cuts and write to disk
       !------------------------------------------------------------------------
       nCuts=0
 
       ! Check edges.
       ! X edges
       if (XarbNormal>0.01) then
-         ic=ic1; jc=jc1; kc=kc1
-         do jc=jc1,jc2,jc2-jc1; do kc=kc1,kc2,kc2-kc1
-            if(iopt>-1 .and. (jc==jc1 .or. kc==kc1) .and. (jc/=0 .and. kc/=0))&
+         i=i1; j=j1; k=k1
+         do j=j1,j2,j2-j1; do k=k1,k2,k2-k1
+            if(iOption>-1 .and. (j==j1 .or. k==k1) .and. (j/=0 .and. k/=0))&
                  CYCLE
-            Yp = PlotXYZNodes_DNB(2,ic,jc,kc,iBlock)
-            Zp = PlotXYZNodes_DNB(3,ic,jc,kc,iBlock)
+            Yp = PlotXYZNodes_DNB(2,i,j,k,iBlock)
+            Zp = PlotXYZNodes_DNB(3,i,j,k,iBlock)
             Xp = XarbP &
                  - (YarbNormal*(Yp-YarbP) + ZarbNormal*(Zp-ZarbP))/XarbNormal
-            if ( Xp> PlotXYZNodes_DNB(1,ic1,jc,kc,iBlock) .and. &
-                 Xp<=PlotXYZNodes_DNB(1,ic2,jc,kc,iBlock) )then
-               if(DoDebug)write(*,*)'x-cut:',iopt,Xp,Yp,Zp
-               if(iopt==-1)then
+            if ( Xp> PlotXYZNodes_DNB(1,i1,j,k,iBlock) .and. &
+                 Xp<=PlotXYZNodes_DNB(1,i2,j,k,iBlock) )then
+               if(DoDebug)write(*,*)'x-cut:',iOption,Xp,Yp,Zp
+               if(iOption==-1)then
                   nCuts=1; RETURN
                end if
                ! Cycle if outside of clipping box
-               if ( Xp<xmin .or. Yp<ymin .or. Zp<zmin .or. &
-                    Xp>xmax .or. Yp>ymax .or. Zp>zmax) CYCLE
+               if ( Xp<xMin .or. Yp<yMin .or. Zp<zMin .or. &
+                    Xp>xMax .or. Yp>yMax .or. Zp>zMax) CYCLE
                nCuts=nCuts+1
-               if (iopt>0) then
+               if (iOption>0) then
                   ! Write point values
-                  factor2 = (Xp-PlotXYZNodes_DNB(1,ic1,jc,kc,iBlock))/ &
-                       ( PlotXYZNodes_DNB(1,ic2,jc,kc,iBlock) &
-                       - PlotXYZNodes_DNB(1,ic1,jc,kc,iBlock))
-                  factor1=1.-factor2
+                  Factor2 = (Xp-PlotXYZNodes_DNB(1,i1,j,k,iBlock))/ &
+                       ( PlotXYZNodes_DNB(1,i2,j,k,iBlock) &
+                       - PlotXYZNodes_DNB(1,i1,j,k,iBlock))
+                  Factor1=1.-Factor2
                   write(UnitTmp_,fmt="(50(ES14.6))") &
-                       (factor1*NodeXYZ_DN(:, ic1,jc,kc)+ &
-                       factor2*NodeXYZ_DN(:, ic2,jc,kc)), &
-                       (factor1*PlotVarNodes_VNB(1:nPlotVar,ic1,jc,kc,iBlock)+ &
-                       factor2*PlotVarNodes_VNB(1:nPlotVar,ic2,jc,kc,iBlock))
-                  if(DoDebug)write(*,*)'  i=',ic1,'-',ic2,' j=',jc,' k=',kc
+                       (Factor1*NodeXYZ_DN(:, i1,j,k)+ &
+                       Factor2*NodeXYZ_DN(:, i2,j,k)), &
+                       (Factor1*PlotVarNodes_VNB(1:nPlotVar,i1,j,k,iBlock)+ &
+                       Factor2*PlotVarNodes_VNB(1:nPlotVar,i2,j,k,iBlock))
+                  if(DoDebug)write(*,*)'  i=',i1,'-',i2,' j=',j,' k=',k
                end if
             end if
          end do; end do
       end if
       ! Y edges
       if (YarbNormal>0.01) then
-         ic=ic1; jc=jc1; kc=kc1
-         do ic=ic1,ic2,ic2-ic1; do kc=kc1,kc2,kc2-kc1
-            if(iopt>-1 .and. (ic==ic1 .or. kc==kc1) .and. (ic/=0 .and. kc/=0))&
+         i=i1; j=j1; k=k1
+         do i=i1,i2,i2-i1; do k=k1,k2,k2-k1
+            if(iOption>-1 .and. (i==i1 .or. k==k1) .and. (i/=0 .and. k/=0))&
                  CYCLE
-            Xp = PlotXYZNodes_DNB(1,ic,jc,kc,iBlock)
-            Zp = PlotXYZNodes_DNB(3,ic,jc,kc,iBlock)
+            Xp = PlotXYZNodes_DNB(1,i,j,k,iBlock)
+            Zp = PlotXYZNodes_DNB(3,i,j,k,iBlock)
             Yp = YarbP &
                  - (XarbNormal*(Xp-XarbP) + ZarbNormal*(Zp-ZarbP))/YarbNormal
-            if ( Yp> PlotXYZNodes_DNB(2,ic,jc1,kc,iBlock) .and. &
-                 Yp<=PlotXYZNodes_DNB(2,ic,jc2,kc,iBlock) )then
-               if(DoDebug)write(*,*)'y-cut:',iopt,Xp,Yp,Zp
-               if(iopt==-1)then
+            if ( Yp> PlotXYZNodes_DNB(2,i,j1,k,iBlock) .and. &
+                 Yp<=PlotXYZNodes_DNB(2,i,j2,k,iBlock) )then
+               if(DoDebug)write(*,*)'y-cut:',iOption,Xp,Yp,Zp
+               if(iOption==-1)then
                   nCuts=1; RETURN
                end if
                ! Cycle if outside of clipping box
-               if ( Xp<xmin .or. Yp<ymin .or. Zp<zmin .or. &
-                    Xp>xmax .or. Yp>ymax .or. Zp>zmax) CYCLE
+               if ( Xp<xMin .or. Yp<yMin .or. Zp<zMin .or. &
+                    Xp>xMax .or. Yp>yMax .or. Zp>zMax) CYCLE
                nCuts=nCuts+1
-               if (iopt>0) then
+               if (iOption>0) then
                   ! Write point values
-                  factor2=(Yp-PlotXYZNodes_DNB(2,ic,jc1,kc,iBlock))/ &
-                       ( PlotXYZNodes_DNB(2,ic,jc2,kc,iBlock) &
-                       - PlotXYZNodes_DNB(2,ic,jc1,kc,iBlock))
-                  factor1 = 1 - factor2
+                  Factor2=(Yp-PlotXYZNodes_DNB(2,i,j1,k,iBlock))/ &
+                       ( PlotXYZNodes_DNB(2,i,j2,k,iBlock) &
+                       - PlotXYZNodes_DNB(2,i,j1,k,iBlock))
+                  Factor1 = 1 - Factor2
                   write(UnitTmp_,fmt="(50(ES14.6))") &
-                       (factor1*NodeXYZ_DN(:, ic,jc1,kc)+ &
-                       factor2*NodeXYZ_DN(:, ic,jc2,kc)), &
-                       (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc1,kc,iBlock)+ &
-                       factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc2,kc,iBlock))
-                  if(DoDebug)write(*,*)'  i=',ic,' j=',jc1,'-',jc2,' k=',kc
+                       (Factor1*NodeXYZ_DN(:, i,j1,k)+ &
+                       Factor2*NodeXYZ_DN(:, i,j2,k)), &
+                       (Factor1*PlotVarNodes_VNB(1:nPlotVar,i,j1,k,iBlock)+ &
+                       Factor2*PlotVarNodes_VNB(1:nPlotVar,i,j2,k,iBlock))
+                  if(DoDebug)write(*,*)'  i=',i,' j=',j1,'-',j2,' k=',k
                end if
             end if
          end do; end do
       end if
       ! Z edges
       if (ZarbNormal>0.01) then
-         ic=ic1; jc=jc1; kc=kc1
-         do ic=ic1,ic2,ic2-ic1; do jc=jc1,jc2,jc2-jc1
-            if(iopt>-1 .and. (ic==ic1 .or. jc==jc1) .and. (ic/=0 .and. jc/=0))&
+         i=i1; j=j1; k=k1
+         do i=i1,i2,i2-i1; do j=j1,j2,j2-j1
+            if(iOption>-1 .and. (i==i1 .or. j==j1) .and. (i/=0 .and. j/=0))&
                  CYCLE
-            Xp = PlotXYZNodes_DNB(1,ic,jc,kc,iBlock)
-            Yp = PlotXYZNodes_DNB(2,ic,jc,kc,iBlock)
+            Xp = PlotXYZNodes_DNB(1,i,j,k,iBlock)
+            Yp = PlotXYZNodes_DNB(2,i,j,k,iBlock)
             Zp = ZarbP &
                  - (XarbNormal*(Xp-XarbP) + YarbNormal*(Yp-YarbP))/ZarbNormal
-            if ( Zp> PlotXYZNodes_DNB(3,ic,jc,kc1,iBlock) .and. &
-                 Zp<=PlotXYZNodes_DNB(3,ic,jc,kc2,iBlock) )then
-               if(DoDebug)write(*,*)'z-cut:',iopt,Xp,Yp,Zp
-               if(iopt==-1)then
+            if ( Zp> PlotXYZNodes_DNB(3,i,j,k1,iBlock) .and. &
+                 Zp<=PlotXYZNodes_DNB(3,i,j,k2,iBlock) )then
+               if(DoDebug)write(*,*)'z-cut:',iOption,Xp,Yp,Zp
+               if(iOption==-1)then
                   nCuts=1; RETURN
                end if
                ! Cycle if outside of clipping box
-               if ( Xp<xmin .or. Yp<ymin .or. Zp<zmin .or. &
-                    Xp>xmax .or. Yp>ymax .or. Zp>zmax) CYCLE
+               if ( Xp<xMin .or. Yp<yMin .or. Zp<zMin .or. &
+                    Xp>xMax .or. Yp>yMax .or. Zp>zMax) CYCLE
                nCuts=nCuts+1
-               if (iopt>0) then
+               if (iOption>0) then
                   ! Write point values
-                  factor2 = (Zp - PlotXYZNodes_DNB(3,ic,jc,kc1,iBlock))/ &
-                       ( PlotXYZNodes_DNB(3,ic,jc,kc2,iBlock) &
-                       - PlotXYZNodes_DNB(3,ic,jc,kc1,iBlock))
-                  factor1=1.-factor2
+                  Factor2 = (Zp - PlotXYZNodes_DNB(3,i,j,k1,iBlock))/ &
+                       ( PlotXYZNodes_DNB(3,i,j,k2,iBlock) &
+                       - PlotXYZNodes_DNB(3,i,j,k1,iBlock))
+                  Factor1=1.-Factor2
                   write(UnitTmp_,fmt="(50(ES14.6))") &
-                       (factor1*NodeXYZ_DN(:, ic,jc,kc1)+ &
-                       factor2*NodeXYZ_DN(:, ic,jc,kc2)), &
-                       (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc1,iBlock)+ &
-                       factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc2,iBlock))
-                  if(DoDebug)write(*,*)'  i=',ic,' j=',jc,' k=',kc1,'-',kc2
+                       (Factor1*NodeXYZ_DN(:, i,j,k1)+ &
+                       Factor2*NodeXYZ_DN(:, i,j,k2)), &
+                       (Factor1*PlotVarNodes_VNB(1:nPlotVar,i,j,k1,iBlock)+ &
+                       Factor2*PlotVarNodes_VNB(1:nPlotVar,i,j,k2,iBlock))
+                  if(DoDebug)write(*,*)'  i=',i,' j=',j,' k=',k1,'-',k2
                end if
             end if
          end do; end do
@@ -1916,20 +1935,20 @@ contains
   subroutine assign_node_numbers
 
     use ModIO, ONLY: write_prefix, iUnitOut
-    use ModMain, ONLY: nBlock, nBlockMax, nBlockALL
     use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
     use ModNodes
     use ModMpi
-    use BATL_lib, ONLY: message_pass_node
+    use ModMain,  ONLY: nBlockMax
+    use BATL_lib, ONLY: nBlock, nNodeUsed, message_pass_node
 
-    integer, parameter :: NodesPerBlock=(nI+1)*(nJ+1)*(nK+1)
+    integer, parameter :: nNodeBlock=(nI+1)*(nJ+1)*(nK+1)
     integer :: iBlockStart
     integer :: i, j, k, iNode, iBlock, iError, iPE, iTag
     integer :: nOffset, nOffsetPrevious
-    integer, allocatable, dimension(:) :: NodeOffset, NodeOffsetMax, nOffset_P
-    real, allocatable, dimension(:,:,:,:,:) :: IndexNode_VNB
+    integer, allocatable:: nNodeOffset_P(:), MaxNodeOffset_P(:), nOffset_P(:)
+    real,    allocatable:: IndexNode_VNB(:,:,:,:,:)
     logical :: DoAllReduce=.true.
-    integer :: iStatus(MPI_STATUS_SIZE)
+    integer :: iStatus_I(MPI_STATUS_SIZE)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'assign_node_numbers'
@@ -1945,14 +1964,14 @@ contains
     iNodeLocal_NB=0
 
     ! Number of nodes on each block (maximum)
-    nNodeALL=nBlockALL*NodesPerBlock
+    nNodeALL=nNodeUsed*nNodeBlock
 
     ! Count number of used blocks on all processors with rank below this one
     iBlockStart = 0
     if(iProc > 0) iBlockStart = &
          count(iTypeAdvance_BP(1:nBlockMax,0:iProc-1) /= SkippedBlock_)
 
-    iNode = iBlockStart*NodesPerBlock
+    iNode = iBlockStart*nNodeBlock
 
     ! Loop to assign local and global node numbers
     TREE1: do iBlock  = 1, nBlock
@@ -1979,9 +1998,9 @@ contains
     deallocate(IndexNode_VNB)
 
     ! Allocate memory for storing the node offsets
-    allocate( NodeOffset   (nBlockALL*NodesPerBlock))
-    allocate( NodeOffsetMax(nBlockALL*NodesPerBlock))
-    NodeOffset=0
+    allocate( nNodeOffset_P   (nNodeUsed*nNodeBlock))
+    allocate( MaxNodeOffset_P(nNodeUsed*nNodeBlock))
+    nNodeOffset_P=0
 
     ! Loop to compute node offsets
     nOffset=0
@@ -1993,7 +2012,7 @@ contains
              nOffset = nOffset+1
              IsNodeUnique_NB(i,j,k,iBlock) = .false.
           end if
-          NodeOffset(iNodeLocal_NB(i,j,k,iBlock)) = nOffset
+          nNodeOffset_P(iNodeLocal_NB(i,j,k,iBlock)) = nOffset
        end do; end do; end do
     end do TREE2
 
@@ -2011,31 +2030,31 @@ contains
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
           iNode = iNodeLocal_NB(i,j,k,iBlock)
-          NodeOffset(iNode) = NodeOffset(iNode) + nOffsetPrevious
+          nNodeOffset_P(iNode) = nNodeOffset_P(iNode) + nOffsetPrevious
        end do; end do; end do
     end do
 
     ! Gather offsets from all PE-s.
-    ! NodeOffset was initialized to 0 so MPI_MAX works.
+    ! nNodeOffset_P was initialized to 0 so MPI_MAX works.
     if(DoAllReduce)then
-       call MPI_allreduce(NodeOffset,NodeOffsetMax,nBlockALL*NodesPerBlock, &
+       call MPI_allreduce(nNodeOffset_P,MaxNodeOffset_P,nNodeUsed*nNodeBlock, &
             MPI_INTEGER,MPI_MAX,iComm,iError)
-       NodeOffset = NodeOffsetMax
+       nNodeOffset_P = MaxNodeOffset_P
        nNodeALL   = nNodeALL - sum(nOffset_P)
     else
        if(iProc == 0) then
           do iPE=1,nProc-1
              iTag = iPE
-             call MPI_recv(NodeOffsetMax,nBlockALL*NodesPerBlock, &
-                  MPI_INTEGER,iPE,itag,iComm,iStatus,iError)
-             NodeOffset = max(NodeOffset,NodeOffsetMax)
+             call MPI_recv(MaxNodeOffset_P,nNodeUsed*nNodeBlock, &
+                  MPI_INTEGER,iPE,itag,iComm,iStatus_I,iError)
+             nNodeOffset_P = max(nNodeOffset_P,MaxNodeOffset_P)
           end do
        else
           itag = iProc
-          call MPI_send(NodeOffset,nBlockALL*NodesPerBlock, &
+          call MPI_send(nNodeOffset_P,nNodeUsed*nNodeBlock, &
                MPI_INTEGER,0,itag,iComm,iError)
        end if
-       call MPI_Bcast(NodeOffset, nBlockALL*NodesPerBlock, MPI_INTEGER, 0, &
+       call MPI_Bcast(nNodeOffset_P, nNodeUsed*nNodeBlock, MPI_INTEGER, 0, &
             iComm, iError)
     end if
 
@@ -2044,7 +2063,7 @@ contains
        if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
           iNodeGlobal_NB(i,j,k,iBlock) = iNodeGlobal_NB(i,j,k,iBlock) &
-               - NodeOffset(iNodeGlobal_NB(i,j,k,iBlock))
+               - nNodeOffset_P(iNodeGlobal_NB(i,j,k,iBlock))
           if(iNodeGlobal_NB(i,j,k,iBlock)>nNodeALL &
                .or. iNodeGlobal_NB(i,j,k,iBlock)<1)then
              ! Error in numbering, report values and stop.
@@ -2052,11 +2071,11 @@ contains
                   ' PE=',iProc,' BLK=',iBlock,' ijk=',i,j,k
              write(*,*)'  iNodeGlobal_NB=',&
                   iNodeGlobal_NB(i,j,k,iBlock)
-             write(*,*)'  NodeOffset           =',&
-                  NodeOffset(iNodeGlobal_NB(i,j,k,iBlock))
-             write(*,*)'  nBlockALL=',nBlockALL,&
-                  ' NodesPerBlock=',NodesPerBlock,&
-                  ' unreduced total=',nBlockALL*NodesPerBlock,&
+             write(*,*)'  nNodeOffset_P           =',&
+                  nNodeOffset_P(iNodeGlobal_NB(i,j,k,iBlock))
+             write(*,*)'  nNodeUsed=',nNodeUsed,&
+                  ' nNodeBlock=',nNodeBlock,&
+                  ' unreduced total=',nNodeUsed*nNodeBlock,&
                   ' nNodeALL=',nNodeALL
              call stop_mpi('message_pass_nodes: error in numbering')
           end if
@@ -2064,13 +2083,13 @@ contains
     end do TREE3
 
     ! Deallocate memory when done with it
-    deallocate(NodeOffset, NodeOffsetMax, nOffset_P)
+    deallocate(nNodeOffset_P, MaxNodeOffset_P, nOffset_P)
 
     ! Write information to the screen
     if(iProc==0)then
        call write_prefix; write(iUnitOUt,*) &
-            ' nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
-            ' unreduced total=',nBlockALL*NodesPerBlock,' nNodeALL=',nNodeALL
+            ' nNodeUsed=',nNodeUsed,' nNodeBlock=',nNodeBlock, &
+            ' unreduced total=',nNodeUsed*nNodeBlock,' nNodeALL=',nNodeALL
     end if
 
     call test_stop(NameSub, DoTest)

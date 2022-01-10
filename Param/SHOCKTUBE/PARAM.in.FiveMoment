@@ -1,9 +1,7 @@
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.FiveMoment: Five-moment test		StringDescription
 
-#USERMODULE
-Waves and GEM, Yingjuan Ma
-1.30			VersionUserModule
+USERMODULE: Waves
 
 #CHECKGRIDSIZE
       10                              nI

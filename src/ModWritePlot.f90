@@ -1048,8 +1048,8 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModFaceValue, ONLY: iRegionLowOrder_I
-    use ModPIC, ONLY: pic_find_region, pic_find_region_active, &
-         pic_find_region_criteria, IsPicCrit_CB, calc_crit_entropy,&
+    use ModPIC, ONLY: i_status_pic_region, i_status_pic_active, &
+         i_status_pic_criteria, iStatusPicCrit_CB, calc_crit_entropy,&
          calc_crit_jb, calc_crit_jbperp, CriteriaB1, DivCurvature_CB
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
@@ -1073,7 +1073,7 @@ contains
     integer :: iVar, i3, j3, jVar, iIon, iFluid
     integer :: i,j,k
 
-    integer:: iDir, Di, Dj, Dk
+    integer:: iDir, nShiftI, nShiftJ, nShiftK
     real:: Current_D(3)
     real:: FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
@@ -1380,25 +1380,25 @@ contains
        case('jx1','jy1','jz1','jx2','jy2','jz2', &
             'jx3','jy3','jz3','jx4','jy4','jz4', &
             'jx5','jy5','jz5','jx6','jy6','jz6')
-          Di=0; Dj=0; Dk=0
+          nShiftI=0; nShiftJ=0; nShiftK=0
           select case(String(3:3))
           case('1')
              iDir=1
           case('2')
-             iDir=1; Di=1
+             iDir=1; nShiftI=1
           case('3')
              iDir=2
           case('4')
-             iDir=2; Dj=1
+             iDir=2; nShiftJ=1
           case('5')
              iDir=3
           case('6')
-             iDir=3; Dk=1
+             iDir=3; nShiftK=1
           end select
           do k=1,nK; do j=1,nJ; do i=1,nI
-             call get_face_curl(iDir, i+Di, j+Dj, k+Dk, iBlock, &
-                  IsNewBlockCurrent, &
-                  FullB_DG, Current_D)
+             call get_face_curl( &
+                  iDir, i+nShiftI, j+nShiftJ, k+nShiftK, iBlock, &
+                  IsNewBlockCurrent, FullB_DG, Current_D)
              select case(String(2:2))
              case('x')
                 PlotVar_GV(i,j,k,iVar) = Current_D(x_)
@@ -1729,15 +1729,15 @@ contains
           end if
        case('pic')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar_GV(i,j,k,iVar) = pic_find_region(iBlock,i,j,k)
+             PlotVar_GV(i,j,k,iVar) = i_status_pic_region(iBlock,i,j,k)
           end do; end do; end do
        case('pic_active')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar_GV(i,j,k,iVar) = pic_find_region_active(iBlock,i,j,k)
+             PlotVar_GV(i,j,k,iVar) = i_status_pic_active(iBlock,i,j,k)
           end do; end do; end do
        case('pic_crit')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar_GV(i,j,k,iVar) = IsPicCrit_CB(i,j,k,iBlock)
+             PlotVar_GV(i,j,k,iVar) = iStatusPicCrit_CB(i,j,k,iBlock)
           end do; end do; end do
        case('jb')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI

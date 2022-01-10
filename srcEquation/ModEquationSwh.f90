@@ -10,7 +10,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationSwh.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationSwh.f90"
 
   character (len=*), parameter :: &
        NameEquation='Solar wind protons with extra indexes'
@@ -33,8 +34,8 @@ module ModVarIndexes
        p_         =  8,          SWHP_ = 8, &
        Energy_    = nVar+1,      SWHEnergy_ = nVar+1
 
-  ! Extra indexes are also declared for sake of compilation with ModUserOuterhelio
-  ! written for multi-fluid neutrals
+  ! Extra indexes are also declared for sake of compilation with
+  ! ModUserOuterhelio written for multi-fluid neutrals
   integer, parameter :: &
        Pu3Rho_    = nVar  , &
        Pu3RhoUx_  = nVar-2, Pu3Ux_ = Pu3RhoUx_, &

@@ -98,7 +98,7 @@ contains
     use CON_planet_field,  ONLY: map_planet_field
     use ModIoUnit, ONLY: UnitTmp_
 
-    integer, parameter :: Theta_=1, Phi_=2
+    integer, parameter :: iDimTheta=1, iDimPhi=2
 
     integer,          intent(in):: nVar, nFieldLine
     real,             intent(in):: Buffer_VI(nVar, nFieldLine)
@@ -130,8 +130,8 @@ contains
        ! where the pressure is going to be taken from
        do iLine = 1, nFieldLine
           ! Map field line from ionosphere (taken at r=1) to rCurrents
-          Theta = Buffer_VI(Theta_, iLine)
-          Phi   = Buffer_VI(Phi_,   iLine)
+          Theta = Buffer_VI(iDimTheta, iLine)
+          Phi   = Buffer_VI(iDimPhi,   iLine)
           call dir_to_xyz(Theta, Phi, XyzPw_D)
           call map_planet_field(tSimulation, XyzPw_D, 'SMG NORM', &
                rCurrents,  CoordXyzPw_DI(:,iLine), iHemisphere)
@@ -159,7 +159,7 @@ contains
        nPoint = nLinePw + nOuterPoint
 
        Tmp_array = 0
-       where(Buffer_VI(Theta_,:)<cHalfPi)
+       where(Buffer_VI(iDimTheta,:)<cHalfPi)
           Tmp_array = 1
        end where
        nLinePw1 = sum(Tmp_array)
@@ -267,27 +267,27 @@ contains
     end if
 
     ! Convert to X, Y on a unit sphere (this will be used for triangulation)
-    where(Buffer_VI(Theta_,:) > cHalfPi)
+    where(Buffer_VI(iDimTheta,:) > cHalfPi)
        CoordXyzPw2_DI(x_,1:nFieldline) =  &
-            sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
+            sin(Buffer_VI(iDimTheta,:)) * cos(Buffer_VI(iDimPhi,:))
        CoordXyzPw2_DI(y_,1:nFieldline) =  &
-            sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+            sin(Buffer_VI(iDimTheta,:)) * sin(Buffer_VI(iDimPhi,:))
        CoordXyzPw2_DI(z_,1:nFieldline) =  &
-            cos(Buffer_VI(Theta_,:))
+            cos(Buffer_VI(iDimTheta,:))
     elsewhere
        CoordXyzPw1_DI(x_,1:nFieldline) =  &
-            sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
+            sin(Buffer_VI(iDimTheta,:)) * cos(Buffer_VI(iDimPhi,:))
        CoordXyzPw1_DI(y_,1:nFieldline) =  &
-            sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+            sin(Buffer_VI(iDimTheta,:)) * sin(Buffer_VI(iDimPhi,:))
        CoordXyzPw1_DI(z_,1:nFieldline) =  &
-            cos(Buffer_VI(Theta_,:))
+            cos(Buffer_VI(iDimTheta,:))
     end where
 
     if(UseMultiIon)then
        do i = iRhoGmFirst, iRhoGmLast
           ! Set values based on if fluid is shared by PW & GM.
           if (iCoupleFluid(i)==-1) then ! Fluid NOT in PW.
-             where(Buffer_VI(Theta_,:)< cHalfPi) ! Northern Hemisphere.
+             where(Buffer_VI(iDimTheta,:)< cHalfPi) ! Northern Hemisphere.
                 StateGm1_VI(i,1:nFieldline) = 1.67E-24 * Si2No_V(UnitRho_)
                 StateGm1_VI(i+nIonFluid, 1:nFieldLine) = 0.0
              elsewhere                           ! Southern Hemisphere
@@ -295,7 +295,7 @@ contains
                 StateGm2_VI(i+nIonFluid, 1:nFieldLine) = 0.0
              end where
           else                          ! Fluid IS in PW.
-             where(Buffer_VI(Theta_,:)< cHalfPi) ! Northern Hemisphere.
+             where(Buffer_VI(iDimTheta,:)< cHalfPi) ! Northern Hemisphere.
                 StateGm1_VI(i,           1:nFieldLine) = &
                      Buffer_VI(iCoupleFluid(i),:) * Si2No_V(UnitRho_)
                 StateGm1_VI(i+nIonFluid, 1:nFieldLine) = &
@@ -327,7 +327,7 @@ contains
        ! Set total
        if(UseMultiSpecies)then
           do i=iRhoGmFirst, iRhoGmLast
-             where(Buffer_VI(Theta_,:)< cHalfPi)
+             where(Buffer_VI(iDimTheta,:)< cHalfPi)
                 StateGm1_VI(i, 1:nFieldline) &
                      = Buffer_VI(i+iRhoPwFirst-1,:) * Si2No_V(UnitRho_)
              elsewhere
@@ -337,7 +337,7 @@ contains
           end do
        else
           ! Total density in normalized units
-          where(Buffer_VI(Theta_,:)< cHalfPi)
+          where(Buffer_VI(iDimTheta,:)< cHalfPi)
              StateGm1_VI(iRhoGmFirst, 1:nFieldline) &
                   = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) * Si2No_V(UnitRho_)
           elsewhere
@@ -347,7 +347,7 @@ contains
        end if
 
        ! Field aligned velocity = total moment/total density
-       where(Buffer_VI(Theta_,:)< cHalfPi)
+       where(Buffer_VI(iDimTheta,:)< cHalfPi)
           StateGm1_VI(iUGmFirst,1:nFieldline) &
                = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
                *     Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
@@ -370,15 +370,15 @@ contains
 
     ! Set coordinates for the outer points
     tmp1_array = cTwoPi
-    where(Buffer_VI(Theta_,:)>cHalfPi)
-       tmp1_array = Buffer_VI(Theta_,:)
+    where(Buffer_VI(iDimTheta,:)>cHalfPi)
+       tmp1_array = Buffer_VI(iDimTheta,:)
     end where
     SinThetaOuter2 = sin(minval(tmp1_array)-dThetaOuter)
     CosThetaOuter2 = cos(minval(tmp1_array)-dThetaOuter)
 
     tmp1_array = 0.0
-    where(Buffer_VI(Theta_,:)<cHalfPi)
-       tmp1_array = Buffer_VI(Theta_,:)
+    where(Buffer_VI(iDimTheta,:)<cHalfPi)
+       tmp1_array = Buffer_VI(iDimTheta,:)
     end where
     SinThetaOuter1 = sin(maxval(tmp1_array)+dThetaOuter)
     CosThetaOuter1 = cos(maxval(tmp1_array)+dThetaOuter)

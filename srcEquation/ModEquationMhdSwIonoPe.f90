@@ -11,7 +11,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdSwIonoPe.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdSwIonoPe.f90"
 
   ! This equation file declares three ion fluids: solar wind H+, ionospheric
   ! H+, and ionospheric O+ along with ion electron pressure.  This allows for
@@ -19,7 +20,8 @@ module ModVarIndexes
   ! within the terrestrial magnetosphere.  Solar wind values default to
   ! first fluid; user must specify inner boundary densities using
   ! #MAGNETOSPHERE command.
-  character (len=*), parameter :: NameEquation = &
+  character (len=*), parameter :: &
+       NameEquation = &
        'MHD with SW and Iono H+, Iono O+, and electron pressure'
 
   integer, parameter :: nVar = 24

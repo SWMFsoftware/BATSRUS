@@ -12,11 +12,13 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdAnisoP.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdAnisoP.f90"
 
   ! This equation module contains the standard single-fluid MHD equations with
   ! anisotropic pressure
-  character (len=*), parameter :: NameEquation = &
+  character (len=*), parameter :: &
+       NameEquation = &
        'MHD with anisotropic pressure'
 
   ! Number of variables without energy:

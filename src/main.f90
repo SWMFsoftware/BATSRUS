@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-program BATSRUS
+program batsrus
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose
@@ -102,8 +102,8 @@ program BATSRUS
 
      TIMELOOP: do
         ! Stop this session if stopping conditions are fulfilled
-        if(stop_condition_true()) EXIT TIMELOOP
-        if(is_time_to_stop())     EXIT SESSIONLOOP
+        if(do_stop_session()) EXIT TIMELOOP
+        if(do_stop_run()) EXIT SESSIONLOOP
 
         call timing_step(nStep+1)
 
@@ -181,23 +181,19 @@ program BATSRUS
 
 contains
   !============================================================================
-
-  function stop_condition_true() result(StopConditionTrue)
-
-    logical :: StopConditionTrue
-
+  logical function do_stop_session()
     !--------------------------------------------------------------------------
-    StopConditionTrue = .false.
+    do_stop_session = .false.
 
-    if(nIter >= 0 .and. nIteration >= nIter) StopConditionTrue = .true.
+    if(nIter >= 0 .and. nIteration >= nIter) &
+         do_stop_session = .true.
     if(IsTimeAccurate .and. tSimulationMax > 0.0 &
          .and. tSimulation >= tSimulationMax) &
-         StopConditionTrue = .true.
+         do_stop_session = .true.
 
-  end function stop_condition_true
+  end function do_stop_session
   !============================================================================
-
-  function is_time_to_stop() result(IsTimeToStop)
+  logical function do_stop_run()
 
     use ModMain, ONLY: CpuTimeMax, DoCheckStopFile
 
@@ -207,12 +203,12 @@ contains
     IsTimeToStop = .false.
 
     if(iProc == 0)then
-       if(CpuTimeMax > 0.0 .and. MPI_WTIME()-CpuTimeStart >= CpuTimeMax)then
-          write(*,*)'CPU time exceeded:',CpuTimeMax,MPI_WTIME()-CpuTimeStart
+       if(CpuTimeMax > 0 .and. MPI_WTIME() - CpuTimeStart >= CpuTimeMax)then
+          write(*,*)'CPU time exceeded:', CpuTimeMax, MPI_WTIME()-CpuTimeStart
           IsTimeToStop=.true.
        end if
        if(.not.IsTimeToStop .and. DoCheckStopFile) then
-          inquire(file='BATSRUS.STOP',exist=IsTimeToStop)
+          inquire(FILE='BATSRUS.STOP', EXIST=IsTimeToStop)
           if (IsTimeToStop) &
                write(*,*)'BATSRUS.STOP file exists: recieved stop signal'
        end if
@@ -220,23 +216,23 @@ contains
 
     call MPI_BCAST(IsTimeToStop, 1, MPI_LOGICAL, 0, iComm, iError)
 
-  end function is_time_to_stop
-  !============================================================================
+    do_stop_run = IsTimeToStop
 
+  end function do_stop_run
+  !============================================================================
   subroutine show_progress
 
     use ModIo,      ONLY: DnProgressShort, DnProgressLong
     use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, nStep, Dt
     use ModPhysics, ONLY: Si2No_V, UnitT_
 
+    ! Show timing results if required
+    ! Show speed as cells/second/PE/step
+
     real(Real8_), external :: timing_func_d
-    real(Real8_) :: CpuTimeBATSRUS,CpuTimeAdvance
+    real(Real8_):: CpuTimeBATSRUS, CpuTimeAdvance
 
     integer :: nIterExpect, nIterExpectTime
-
-    ! Show timing results if required
-
-    ! Show speed as cells/second/PE/step
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'show_progress'
@@ -296,22 +292,26 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine show_progress
   !============================================================================
-
-end program BATSRUS
+end program batsrus
 !==============================================================================
 subroutine read_ih_buffer(y,z,State_V)
+
   use ModBatsrusUtility, ONLY: stop_mpi
   real :: y, z, State_V(8)
   !----------------------------------------------------------------------------
   call stop_mpi('ERROR: read_ih_buffer is for SWMF')
+
 end subroutine read_ih_buffer
 !==============================================================================
 subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+
   use ModBatsrusUtility, ONLY: stop_mpi
+
   real, intent(in) :: FaceCoords_D(3)
   integer, intent(in) :: nVar
   real, intent(inout) :: FaceState_V(nVar)
   !----------------------------------------------------------------------------
   call stop_mpi('ERROR: read_pw_buffer is for SWMF')
+
 end subroutine read_pw_buffer
 !==============================================================================

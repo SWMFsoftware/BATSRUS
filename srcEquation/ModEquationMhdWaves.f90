@@ -14,11 +14,13 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdWaves.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdWaves.f90"
 
   ! This equation module contains the standard MHD equations plus
   ! extra wave energies
-  character (len=*), parameter :: NameEquation='MHD Waves'
+  character (len=*), parameter :: &
+       NameEquation = 'MHD Waves'
 
   ! loop variable over spectrum
   integer, private :: iWave

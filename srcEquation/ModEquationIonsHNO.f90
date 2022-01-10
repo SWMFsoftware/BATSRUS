@@ -10,9 +10,11 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationIonsHNO.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationIonsHNO.f90"
 
-  character (len=*), parameter :: NameEquation='H N O ions'
+  character (len=*), parameter :: &
+       NameEquation = 'H N O ions'
 
   integer, parameter :: nVar = 18
 

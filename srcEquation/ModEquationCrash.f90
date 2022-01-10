@@ -20,7 +20,8 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationCrash.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationCrash.f90"
 
   ! This equation module contains the CRASH equations.
   character (len=*), parameter :: &

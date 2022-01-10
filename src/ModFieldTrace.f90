@@ -1935,9 +1935,10 @@ contains
     ! Sort blocks according to the direction of the solar wind magnetic field
     ! so that open rays are found fast from already calculated trace values.
 
-    ! Weight X, Y and Z according to the SolarWindBx, SolarWindBy, SolarWindBz components
-    ! The Y and Z directions are preferred to X (usually SolarWindBx=0 anyways).
+    ! Weight X, Y and Z according to the solar wind Bx, By, Bz components
+    ! The Y and Z directions are preferred to X
     Weight_D(1) = sign(1.0,SolarWindBx)
+
     ! Select Y or Z direction to be the slowest changing value
     ! to maximize overlap
     if(abs(SolarWindBy) > abs(SolarWindBz))then
@@ -2706,7 +2707,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! Extract grid info from PlotRange_EI (see set_parameters for TypePlot_I eqr)
     if(DoTest)then
        write(*,*)NameSub,' starting on iProc=',iProc,&
             ' with nRadius, nLon=', nRadius, nLon
@@ -3009,14 +3009,15 @@ contains
   subroutine write_plot_line(iFile)
 
     use ModVarIndexes, ONLY: nVar
-    use ModIO,       ONLY: StringDateOrTime,            &
-         NamePlotDir, TypePlot_I, TypePlotFormat_I, IsDimensionalPlot_I, Plot_, &
+    use ModIO, ONLY: &
+         StringDateOrTime, NamePlotDir, TypePlot_I, &
+         TypePlotFormat_I, IsDimensionalPlot_I, Plot_, &
          NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, &
          IsSingleLine_I
     use ModWriteTecplot, ONLY: set_tecplot_var_string
-    use ModMain,     ONLY: &
+    use ModMain, ONLY: &
          nStep, IsTimeAccurate, tSimulation, NamePrimitive_V
-    use ModIoUnit,   ONLY: UnitTmp_
+    use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file, join_string
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
 
@@ -3148,7 +3149,8 @@ contains
        if(.not.IsSingleLine)NameVar = trim(NameVar)//', "Index"'
        NameVar = trim(NameVar)//', "Length"'
     case default
-       call stop_mpi(NameSub//' ERROR invalid plot form='//TypePlotFormat_I(iFile))
+       call stop_mpi(NameSub// &
+            ' ERROR invalid plot form='//TypePlotFormat_I(iFile))
     end select
 
     ! Write out plot files
@@ -3243,7 +3245,7 @@ contains
   subroutine xyz_to_ijk(XyzIn_D, IndOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
 
     use ModNumConst,  ONLY: cPi, cTwoPi
-    use BATL_lib,     ONLY: Phi_, Theta_, x_, y_, &
+    use BATL_lib,     ONLY: iDimPhi, iDimTheta, x_, y_, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsPeriodicCoord_D, &
          CoordMin_D, CoordMax_D, xyz_to_coord
 
@@ -3263,35 +3265,35 @@ contains
           ! Shift Phi by +/-pi (tricky, but works)
           ! E.g. PhiRef=  5deg, Phi=186deg -->   6deg
           ! or   PhiRef=185deg, Phi=  6deg --> 186deg
-          Gen_D(Phi_) = Gen_D(Phi_) &
-               + GenRef_D(Phi_) - modulo((cPi + GenRef_D(Phi_)), cTwoPi)
+          Gen_D(iDimPhi) = Gen_D(iDimPhi) &
+               + GenRef_D(iDimPhi) - modulo((cPi + GenRef_D(iDimPhi)), cTwoPi)
 
           if(IsLatitudeAxis .or. IsSphericalAxis)then
-             if(Gen_D(Theta_) > &
-                  0.5*(CoordMax_D(Theta_) + CoordMin_D(Theta_)))then
+             if(Gen_D(iDimTheta) > &
+                  0.5*(CoordMax_D(iDimTheta) + CoordMin_D(iDimTheta)))then
                 ! Mirror theta/latitude to maximum coordinate
                 ! E.g. Lat=85 deg --> 95 deg, Theta=175 deg --> 185 deg
-                Gen_D(Theta_) = 2*CoordMax_D(Theta_) - Gen_D(Theta_)
+                Gen_D(iDimTheta) = 2*CoordMax_D(iDimTheta) - Gen_D(iDimTheta)
              else
                 ! Mirror theta/latitude to minimum coordinate
                 ! E.g. Lat=-85 deg --> -95 deg, Theta = 5 deg --> -5 deg
-                Gen_D(Theta_) = 2*CoordMin_D(Theta_) - Gen_D(Theta_)
+                Gen_D(iDimTheta) = 2*CoordMin_D(iDimTheta) - Gen_D(iDimTheta)
              end if
           end if
        end if
     end if
 
     ! Did the trace cross the periodic Phi boundary?
-    if(Phi_ > 1)then
-       if(IsPeriodicCoord_D(Phi_))then
-          if    (Gen_D(Phi_) - GenRef_D(Phi_) > cPi)then
+    if(iDimPhi > 1)then
+       if(IsPeriodicCoord_D(iDimPhi))then
+          if    (Gen_D(iDimPhi) - GenRef_D(iDimPhi) > cPi)then
              ! Crossed from small phi direction, make Gen_D negative
              ! E.g. PhiRef=5deg Phi=355deg -> -5deg
-             Gen_D(Phi_) = Gen_D(Phi_) - cTwoPi
-          elseif(GenRef_D(Phi_) - Gen_D(Phi_) > cPi)then
+             Gen_D(iDimPhi) = Gen_D(iDimPhi) - cTwoPi
+          elseif(GenRef_D(iDimPhi) - Gen_D(iDimPhi) > cPi)then
              ! Crossed from phi~2pi direction, make Gen_D larger than 2pi
              ! E.g. PhiRef=355deg Phi=5deg -> 365deg
-             Gen_D(Phi_) = Gen_D(Phi_) + cTwoPi
+             Gen_D(iDimPhi) = Gen_D(iDimPhi) + cTwoPi
           end if
        end if
     end if

@@ -68,7 +68,7 @@ contains
     use ModPhysics
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModIO,        ONLY: iUnitOut, write_prefix
-    use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
+    use ModFaceValue, ONLY: TypeLimiter, LimiterBeta
     use ModAdvance,   ONLY: TypeFlux, UseEfield, iTypeUpdate
     use ModGeometry,  ONLY: &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
@@ -258,7 +258,7 @@ contains
     end select
     if(nOrder > 1 .and. TypeLimiter /= 'minmod') then
        call write_prefix;
-       write(iUnitOut,'(10x,a,f5.2)') '    BetaLimiter =', BetaLimiter
+       write(iUnitOut,'(10x,a,f5.2)') '    LimiterBeta =', LimiterBeta
     end if
 
     call write_prefix

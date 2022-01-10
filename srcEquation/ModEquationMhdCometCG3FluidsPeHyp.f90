@@ -13,11 +13,13 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdCometCG3FluidsPeHyp.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdCometCG3FluidsPeHyp.f90"
 
   ! This equation module contains the standard MHD equations
   ! with electron pressure
-  character (len=*), parameter :: NameEquation= &
+  character (len=*), parameter :: &
+       NameEquation = &
        '2-fluid + Pe MHD + 1-Neutral for Comet CG with hyp div B cleaning'
 
   integer, parameter :: nVar = 20

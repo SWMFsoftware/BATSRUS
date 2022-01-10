@@ -8,16 +8,22 @@ module ModParticles
        test_start, test_stop
   use ModBatsrusUtility, ONLY: stop_mpi
   use BATL_particles, ONLY: &
-       Particle_I, BATL_message_pass=>message_pass_particles, remove_undefined_particles, &
+       Particle_I, BATL_message_pass=>message_pass_particles, &
+       remove_undefined_particles, &
        mark_undefined, check_particle_location, put_particles, trace_particles
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
   use BATL_size,        ONLY: BatlNKind=>nKindParticle
+
   implicit none
+
   SAVE
+
   integer, private :: nKindParticle = 0
+
 contains
   !============================================================================
   subroutine allocate_particles(iKindParticle, nVar, nIndex, nParticleMax)
+
     integer, intent(inout) :: iKindParticle
     integer, intent(in)    :: nVar, nIndex, nParticleMax
 
@@ -58,10 +64,12 @@ contains
     Particle_I(iKindParticle)%State_VI( :,:) = 0.0
     Particle_I(iKindParticle)%iIndex_II(:,:) = 0
     Particle_I(iKindParticle)%nParticle      = 0
+
     call test_stop(NameSub, DoTest)
   end subroutine allocate_particles
   !============================================================================
   subroutine deallocate_particles(iKindParticle)
+
     integer, intent(inout) :: iKindParticle
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'deallocate_particles'
@@ -77,15 +85,16 @@ contains
     Particle_I(iKindParticle)%nParticleMax= 0
     deallocate(Particle_I(iKindParticle)%State_VI)
     deallocate(Particle_I(iKindParticle)%iIndex_II)
+
     call test_stop(NameSub, DoTest)
   end subroutine deallocate_particles
   !============================================================================
   subroutine message_pass_particles(iKindIn)
+
     integer, optional, intent(in):: iKindIn
     ! when changes in grid occur, e.g. AMR,
     ! may need redistribute particles between blocks and processors
     integer:: iKindParticle, iKindFirst, iKindLast ! loop variables
-
     !--------------------------------------------------------------------------
     if(present(iKindIn))then
        iKindFirst = iKindIn; iKindLast = iKindIn
@@ -95,6 +104,7 @@ contains
     do iKindParticle = iKindFirst, iKindLast
        call BATL_message_pass(iKindParticle)
     end do
+
   end subroutine message_pass_particles
   !============================================================================
 end module ModParticles

@@ -10,12 +10,14 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdHypPe.f90"
+  character (len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdHypPe.f90"
 
   ! This equation module contains the standard MHD equations with
   ! an additional electron pressure variable plus one
   ! extra scalar variable to carry the div B away (hyperbolic cleaning)
-  character (len=*), parameter :: NameEquation= &
+  character (len=*), parameter :: &
+       NameEquation = &
        'MHD with electron pressure and hyperbolic cleaning'
 
   ! Number of variables without energy:

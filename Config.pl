@@ -203,7 +203,7 @@ sub set_optimization{
 	# Extract adjustables: NAME => ... lines without Orig
 	$Opt{$1} = 'any' if /^\s+(\w+)\s*\=\>/ and not /Orig/;
 	# Extract fixed params: parameter:: NAME = VALUE
-	$Opt{$1} = $2    if /parameter\s*::\s*(\w+)\s*=\s*(\S+)/;
+	$Opt{$1} = $2    if /parameter\s*::\s*(\w+)\s*=\s*(.+)/;
 	last if /^\s*contains\s*$/;
     }
     close(FILE);
@@ -221,32 +221,54 @@ sub set_optimization{
     my $Change; # set to 1 is settings change
 
     if($Opt =~ /PARAM\.in/){
+
+	# Set the component name used
+	my $NameComp = $Component;
+	open(FILE, $Opt) or die "$ERROR could not open $Opt\n";
+	while(<FILE>){
+	    # Read component name from #COMPNENT command
+	    if(/^#COMPONENT\b/){
+		my $name = <FILE>;
+		my $ison = <FILE>;
+		$NameComp = $name unless $ison =~ /^T|F/;
+		last;
+	    }
+	}
+	close(FILE);
+	    
+	
 	# Read settings from some PARAM.in file
 	# Default settings
 	my %Set = (
 	    ClightFactor        => 1,
-	    nOrder              => 1,
-	    nConservCrit        => 0,
             DoLf                => ".true.",
             IsCartesian         => ".true.",
             IsCartesianGrid     => ".true.",
 	    IsTimeAccurate      => ".true.",
+	    LimiterBeta         => 1,
 	    UseB0               => "UseB"  ,
 	    UseBody             => ".true.",
             UseBorisCorrection  => ".false.",
 	    UseDivbSource       => "UseB .and. nDim>1",
-	    UseDtFixed          => ".false.", 
+	    UseDtFixed          => ".false.",
+	    UseGravity          => ".false.",
             UseHyperbolicDivB   => ".false.",
             UseNonConservative  => ".false.",
 	    UsePMin             => ".false.",
 	    UseRhoMin           => ".false.",
+	    UseRotatingFrame    => ".false.",
             iStage              => 1,
             nStage              => 1,
-            nOrder              => 1,
+	    nConservCrit        => 0,
+	    nOrder              => 1,
 	    );
 
-	# Default for UseB0 depends on the component !!!
-	
+	# Component dependent defaults (from ModSetParameters)
+	$Set{"UseB0"}            = ".false." if $NameComp =~ /IH|OH/;
+	$Set{"UseBody"}          = ".false." if $NameComp =~ /EE/;
+	$Set{"UseGravity"}       = ".true."  if $NameComp !~ /GM/;
+	$Set{"UseRotatingFrame"} = ".true."  if $NameComp =~ /SC|EE/;
+
 	print "processing parameter file $Opt\n";
 	my $first = 1;  # true in the first session
 	my $nstage = 1; # default value for nStage
@@ -336,19 +358,31 @@ sub set_optimization{
 	    }elsif(/^#FIXEDTIMESTEP\b/){
 		my $usedtfixed = <FILE>;
 		check_var($Set{"UseDtFixed"}, $usedtfixed, $first);
+	    }elsif(/^#COORD(INATE)?SYSTEM\b/){
+		my $coor = <FILE>;
+		$Set{"UseRotatingFrame"} = ".false." if $coor =~ /^HGI/i;
+		$Set{"UseRotatingFrame"} = ".true."  if $coor =~ /^GEO|HGC|HGR/i;
+	    }elsif(/^#GRAVITY^/){
+		my $usegrav = <FILE>;
+		check_var($Set{"UseGravity"}, $usegrav, $first);
 	    }
 	}
 	close(FILE);
 
 	foreach $name (sort keys %Set){
 	    if($Set{$name} ne $Opt{$name}){
-		$Opt{$name} = $Set{$name};
 		$Change = 1;
+		last;
 	    }
 	}
 	if($Change){
 	    foreach $name (sort keys %Opt){
-		printf "%-30s = %s\n", $name, $Opt{$name};
+		if($Set{$name} eq $Opt{$name}){
+		    printf("%-30s = %s\n", $name, $Opt{$name});
+		}else{
+		    printf("%-30s = %-17s -> %s\n", $name, $Opt{$name}, $Set{$name});
+		    $Opt{$name} = $Set{$name};
+		}
 	    }
 	}
     }else{
@@ -356,7 +390,7 @@ sub set_optimization{
 	if($Opt =~ s/^(any|none),?//i){
 	    foreach $name (sort keys %Opt){
 		next if $Opt{$name} eq 'any';
-		printf "%-20s%9s -> any\n", "$name:", $Opt{$name};
+		printf "%-30s = %-17s -> any\n", "$name:", $Opt{$name};
 		$Opt{$name} = 'any';
 		$Change = 1;
 	    }
@@ -378,7 +412,7 @@ sub set_optimization{
 	    if($newvalue ne $oldvalue){
 		$Change = 1;
 		# Print out modified value
-		printf "%-20s%9s -> %s\n", "$_:", $oldvalue, $newvalue;
+		printf "%-30s = %-17s -> %s\n", $_, $oldvalue, $newvalue;
 		$Opt{$_} = $newvalue;
 	    }
 	}
@@ -388,6 +422,7 @@ sub set_optimization{
 	print "No changes in $OptFile\n";
 	return;
     }
+    
     # Edit the file
     print "Modifying $OptFile\n";
     my $parameters; # true inside setting parameters part

@@ -7,9 +7,7 @@ Param/SHOCKTUBE/PARAM.in.rayleigh_taylor: Raileigh-Taylor test		StringDescriptio
 HD			NameEquation
 5			nVar
 
-#USERMODULE
-Waves and GEM, Yingjuan Ma
-1.30			VersionUserModule
+USERMODULE: Waves
 
 #CHECKGRIDSIZE
        8                nI

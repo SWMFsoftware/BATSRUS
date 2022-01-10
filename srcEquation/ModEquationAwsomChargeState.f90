@@ -117,7 +117,8 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = ChargeStateFirst_, ScalarLast_ = ChargeStateLast_
+  integer, parameter :: &
+       ScalarFirst_ = ChargeStateFirst_, ScalarLast_ = ChargeStateLast_
 
 end module ModVarIndexes
 !==============================================================================
