@@ -10,15 +10,15 @@ module ModUpdateStateFast
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
-       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
-       UseGravity, UseRotatingFrame
+       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
-       nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
-       DtMax_CB, Vdt_, iTypeUpdate, UpdateOrig_
+       nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
+       DtMax_CB, Vdt_, iTypeUpdate, UpdateOrig_, UseRotatingFrame, &
+       UseElectronPressure
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -30,9 +30,11 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
-       OmegaBody_D, set_dipole, Gbody, OmegaBody
+       OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
+       GammaElectronMinus1, GammaElectron
   use ModMain, ONLY: Dt, DtMax_B, Cfl, nStep, tSimulation, &
-       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe
+       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
+       UseGravity
   use ModB0, ONLY: B0_DGB, get_b0_dipole
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
@@ -41,7 +43,9 @@ module ModUpdateStateFast
   use CON_axes, ONLY: SmgGsm_DD
   use ModUtilities, ONLY: CON_stop
   use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
-
+  use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
+       AlfvenMinusLast_
+  
   implicit none
 
   private ! except
@@ -51,6 +55,8 @@ module ModUpdateStateFast
   public:: update_b0_fast        ! Fast update of B0
   public:: set_boundary_fast     ! set cell based boundary for State_VGB
 
+  logical, parameter:: UseAlfvenWaves  = WaveFirst_ > 1
+  
   logical:: DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny
   !$acc declare create (DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
 
@@ -403,6 +409,39 @@ contains
                 Change_V(iP) = Change_V(iP) &
                      - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
              end do
+          end if
+
+          if(UseElectronPressure)then
+             ! Calculate DivU = div(U_e)
+             DivU =                   Flux_VXI(UnLast_,i+1,j,k,iGang) &
+                  -                   Flux_VXI(UnLast_,i,j,k,iGang)
+             if(nJ > 1) DivU = DivU + Flux_VYI(UnLast_,i,j+1,k,iGang) &
+                  -                   Flux_VYI(UnLast_,i,j,k,iGang)
+             if(nK > 1) DivU = DivU + Flux_VZI(UnLast_,i,j,k+1,iGang) &
+                  -                   Flux_VZI(UnLast_,i,j,k,iGang)
+
+             ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
+             Change_V(Pe_) = Change_V(Pe_) &
+                  - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock)*DivU
+          end if
+
+          if(UseAlfvenWaves)then
+             DivU =                   Flux_VXI(UnFirst_,i+1,j,k,iGang) &
+                  -                   Flux_VXI(UnFirst_,i,j,k,iGang)
+             if(nJ > 1) DivU = DivU + Flux_VYI(UnFirst_,i,j+1,k,iGang) &
+                  -                   Flux_VYI(UnFirst_,i,j,k,iGang)
+             if(nK > 1) DivU = DivU + Flux_VZI(UnFirst_,i,j,k+1,iGang) &
+                  -                   Flux_VZI(UnFirst_,i,j,k,iGang)
+             do iVar = WaveFirst_, WaveLast_
+                Change_V(iVar) = Change_V(iVar) &
+                     - (GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)*DivU
+             end do
+             ! The energy equation contains the work of the wave pressure
+             ! -u.grad Pwave = -div(u Pwave) + Pwave div(u)
+             ! The -div(u Pwave) is implemented as a flux.
+             ! Here we add the Pwave div(u) source term 
+             Change_V(Energy_) = Change_V(Energy_) + (GammaWave - 1) &
+                  *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*DivU
           end if
 
           ! Below we add sources that do not need to be divided by cell volume
@@ -2359,8 +2398,10 @@ contains
     real, intent(in) :: B0_D(3)
 
     ! Convenient variables
+    integer:: iVar
     real:: Un, Bn, pB, e
     real:: FullB_D(3), B0n,  FullBn
+    real:: AlfvenSpeed, pExtra
     !--------------------------------------------------------------------------
     ! For sake of simplicity, to be optimized
     if(UseBorisCorrection)then
@@ -2387,10 +2428,15 @@ contains
     StateCons_V(RhoUx_:RhoUz_) = State_V(Rho_)*State_V(Ux_:Uz_)
     StateCons_V(Energy_) = e + pB ! Add magnetic energy density
 
+    pExtra = 0.0
+    if(UseElectronPressure) pExtra = State_V(Pe_)
+    if(UseAlfvenWaves) &
+         pExtra = pExtra + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+    
     ! Physical flux
     Flux_V(Rho_) = State_V(Rho_)*Un
     Flux_V(RhoUx_:RhoUz_) = Flux_V(Rho_)*State_V(Ux_:Uz_) - Bn*FullB_D &
-         + (pB + State_V(p_))*Normal_D
+         + (pB + State_V(p_) + pExtra)*Normal_D
     if(UseB0) then
        Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
             - B0n*State_V(Bx_:Bz_) + sum(State_V(Bx_:Bz_)*B0_D)*Normal_D
@@ -2404,8 +2450,24 @@ contains
        Flux_V(Bx_:Bz_) = Un*FullB_D - State_V(Ux_:Uz_)*FullBn
     end if
     Flux_V(p_)      =  Un*State_V(p_)
-    Flux_V(Energy_) =  Un*(e + State_V(p_)) &
+    Flux_V(Energy_) =  Un*(e + State_V(p_) + pExtra) &
          + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux
+
+    if(UseElectronPressure) Flux_V(Pe_) = Un*StateCons_V(Pe_)
+    
+    if(Ehot_ > 1) Flux_V(Ehot_) = Un*State_V(Ehot_)
+    
+    if(UseAlfvenWaves)then
+       AlfvenSpeed = FullBn/sqrt(State_V(Rho_))
+
+       do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
+	  Flux_V(iVar) = (Un + AlfvenSpeed)*State_V(iVar)
+       end do
+
+       do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
+          Flux_V(iVar) = (Un - AlfvenSpeed)*State_V(iVar)
+       end do
+    end if
 
   end subroutine get_physical_flux
   !============================================================================
@@ -2551,6 +2613,7 @@ contains
 
     real:: InvRho, Bn, B2
     real:: Sound2, Fast2, Discr, Fast
+    real:: GammaP
     !--------------------------------------------------------------------------
     if(UseBorisCorrection)then
        call get_boris_speed(iTestSide, State_V, Normal_D, Un, B0_D, &
@@ -2567,7 +2630,15 @@ contains
        B2  = sum(State_V(Bx_:Bz_)**2)
     end if
 
-    Sound2= InvRho*State_V(p_)*Gamma
+    GammaP = State_V(p_)*Gamma
+    
+    if(UseElectronPressure) GammaP = GammaP + GammaElectron*State_V(Pe_)
+
+    if(UseAlfvenWaves) GammaP = GammaP &
+         + GammaWave*(GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
+    
+    Sound2= GammaP*InvRho
+
     Fast2 = Sound2 + InvRho*B2
     Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*InvRho*Bn**2))
     Fast  = sqrt( 0.5*(Fast2 + Discr) )
@@ -2781,7 +2852,8 @@ contains
             +          Cmax*(StateLeftCons_V - StateRightCons_V))
 
        if(nFluid == 1)then
-          if(UseNonConservative) Flux_V(UnFirst_) = Area*0.5* &
+          if(UseNonConservative .or. UseAlfvenWaves) &
+               Flux_V(UnFirst_) = Area*0.5* &
                sum((StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))*Normal_D)
        else
           if(UseNonConservative) Flux_V(UnFirst_:UnFirst_+nFluid-1) = &
@@ -2790,6 +2862,8 @@ contains
                + (StateLeft_V(iUy_I) + StateRight_V(iUy_I))*Normal_D(2) &
                + (StateLeft_V(iUz_I) + StateRight_V(iUz_I))*Normal_D(3) )
        end if
+       if(UseElectronPressure) Flux_V(UnLast_) = Area*0.5* &
+               sum((StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))*Normal_D)
 
        ! Store Bnormal
        if(UseB .and. UseDivbSource) Flux_V(Bn_) = Area*0.5* &
@@ -2843,7 +2917,8 @@ contains
             + Cproduct*(StateRightCons_V - StateLeftCons_V) )
 
        if(nFluid == 1)then
-          if(UseNonConservative)Flux_V(UnFirst_) = AreaInvCDiff* &
+          if(UseNonConservative .or. UseAlfvenWaves) &
+               Flux_V(UnFirst_) = AreaInvCDiff* &
                ( (Cright*StateLeft_V(Ux_) &
                -  Cleft*StateRight_V(Ux_))*Normal_D(1) &
                + (Cright*StateLeft_V(Uy_) &
@@ -2860,6 +2935,13 @@ contains
                + (Cright*StateLeft_V(iUz_I)              &
                -  Cleft*StateRight_V(iUz_I))*Normal_D(3) )
        end if
+       if(UseElectronPressure) Flux_V(UnLast_) = AreaInvCDiff* &
+               ( (Cright*StateLeft_V(Ux_) &
+               -  Cleft*StateRight_V(Ux_))*Normal_D(1) &
+               + (Cright*StateLeft_V(Uy_) &
+               -  Cleft*StateRight_V(Uy_))*Normal_D(2) &
+               + (Cright*StateLeft_V(Uz_) &
+               -  Cleft*StateRight_V(Uz_))*Normal_D(3) )
 
        if(UseB)then
           if(Hyp_ > 1 .and. UseHyperbolicDivb) then
