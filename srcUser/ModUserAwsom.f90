@@ -906,7 +906,7 @@ contains
     use ModMain,       ONLY: nStep, nIteration, tSimulation, &
          IsTimeAccurate
     use ModB0,         ONLY: B0_DGB
-    use BATL_lib,      ONLY: CellSize_DB, iDimPhi, iDimTheta, x_, y_
+    use BATL_lib,      ONLY: CellSize_DB, Phi_, Theta_, x_, y_
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModNumConst,   ONLY: cPi
     use ModIO,         ONLY : IsRestart
@@ -1145,8 +1145,8 @@ contains
                   'Use time accurate mode with usersurfacerot.')
           endif
 
-          Dphi = CellSize_DB(iDimPhi,iBlock)
-          Dlat = CellSize_DB(iDimTheta,iBlock)
+          Dphi = CellSize_DB(Phi_,iBlock)
+          Dlat = CellSize_DB(Theta_,iBlock)
 
           !
           ! B_r = X*B/r

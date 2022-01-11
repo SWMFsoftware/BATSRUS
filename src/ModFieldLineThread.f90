@@ -504,7 +504,7 @@ contains
     !==========================================================================
     subroutine set_gc_grid(iBlock, iMin, dCoord1Inv)
       use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz, &
-           CoordMin_DB, CellSize_DB, iDimR
+           CoordMin_DB, CellSize_DB, r_
       integer, intent(in) :: iBlock
       integer, intent(out):: iMin
       real,    intent(out):: dCoord1Inv
@@ -521,15 +521,15 @@ contains
       if(nGUniform > 0)then
          iMin = -nGUniform
          if(dCoord1Uniform < 0.0)then
-            dCoord1Uniform = (CoordMin_DB(iDimR, iBlock) - Coord_D(iDimR))/&
+            dCoord1Uniform = (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
                  nGUniform
-            Coord1TopThread = CoordMin_DB(iDimR, iBlock)
+            Coord1TopThread = CoordMin_DB(r_, iBlock)
          end if
          dCoord1Inv = 1.0/dCoord1Uniform
       else
-         iMin = 1 - floor( (CoordMin_DB(iDimR, iBlock) - Coord_D(iDimR))/&
-              CellSize_DB(iDimR, iBlock) )
-         dCoord1Inv = 1.0/CellSize_DB(iDimR, iBlock)
+         iMin = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
+              CellSize_DB(r_, iBlock) )
+         dCoord1Inv = 1.0/CellSize_DB(r_, iBlock)
       end if
     end subroutine set_gc_grid
     !==========================================================================
@@ -546,7 +546,7 @@ contains
     use ModNumConst, ONLY: cTolerance
     use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB
-    use BATL_lib,    ONLY: MaxDim, xyz_to_coord, iDimR
+    use BATL_lib,    ONLY: MaxDim, xyz_to_coord, r_
     integer, intent(in) :: iBlock
     ! Locals:
     ! Loop variable: (j,k) enumerate the cells at which
@@ -984,7 +984,7 @@ contains
     ! in the ghost grid extended toward the photosphere level
 
     use BATL_lib, ONLY: nBlock, Unused_B, &
-         CoordMin_DB, CellSize_DB, iDimR
+         CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
     integer :: i, j, k, iBlock, nPoint
     real    :: State_VI(PSi_:TiSi_, 1-nPointThreadMax:0), Coord1
@@ -1021,7 +1021,7 @@ contains
 
           do i = BoundaryThreads_B(iBlock)%iMin, iMax
              ! Generalized radial coordinate of the grid point
-             Coord1 = CoordMin_DB(iDimR, iBlock) + &
+             Coord1 = CoordMin_DB(r_, iBlock) + &
                   (real(i) + Coord1Norm0)/&
                   BoundaryThreads_B(iBlock)%dCoord1Inv
              ! interpolate Te and Ne to the ghost cell center:
@@ -1032,7 +1032,7 @@ contains
                   iMin = 1 - nPoint,                           &
                   iMax = 0,                                    &
                   x = Coord1,                                  &
-                  x_I = BoundaryThreads_B(iBlock)%Coord_DIII(iDimR,&
+                  x_I = BoundaryThreads_B(iBlock)%Coord_DIII(r_,&
                   1 - nPoint:0, j, k),                         &
                   DoExtrapolate = .false.)
           end do
@@ -1045,7 +1045,7 @@ contains
 
     use ModAdvance,     ONLY: nVar
     use BATL_lib,       ONLY: &
-         MinIJK_D, MaxIJK_D, CoordMin_DB, CellSize_DB, iDimR
+         MinIJK_D, MaxIJK_D, CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: interpolate_vector
 
     ! Coords of the point in which to interpolate
@@ -1060,15 +1060,15 @@ contains
 
     character(len=*), parameter:: NameSub = 'interpolate_thread_state'
     !--------------------------------------------------------------------------
-    CoordNorm_D(iDimR+1:) = 0.5 + &
-         (Coord_D(iDimR+1:) - CoordMin_DB(iDimR+1:,iBlock)) &
-         /CellSize_DB(iDimR+1:,iBlock)
+    CoordNorm_D(r_+1:) = 0.5 + &
+         (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock)) &
+         /CellSize_DB(r_+1:,iBlock)
 
-    if(IsUniformGrid.and.(Coord_D(iDimR) > CoordMin_DB(iDimR,iBlock)))then
+    if(IsUniformGrid.and.(Coord_D(r_) > CoordMin_DB(r_,iBlock)))then
        ! The point is in between the uniform grid and the first layer pf
        ! physical cells, the width of this gap being the half cell size
-       CoordNorm_D(iDimR) = (Coord_D(iDimR) - CoordMin_DB(iDimR,iBlock))*2/&
-            CellSize_DB(iDimR,iBlock)
+       CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*2/&
+            CellSize_DB(r_,iBlock)
        ! Interpolate the state on threads to the given location
        StateThread_V = interpolate_vector(                        &
             a_VC=BoundaryThreads_B(iBlock)%State_VG(:,iMax:1,:,:),&
@@ -1081,7 +1081,7 @@ contains
     else
        ! Along radial coordinate the resolution and location of the grid
        ! may be different for uniform or non-uniform grid
-       CoordNorm_D(iDimR) = (Coord_D(iDimR) - CoordMin_DB(iDimR,iBlock))*&
+       CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*&
             BoundaryThreads_B(iBlock)%dCoord1Inv - Coord1Norm0
        ! Interpolate the state on threads to the given location
        StateThread_V = interpolate_vector(                        &
@@ -1532,13 +1532,13 @@ contains
   ! equal to input Coord1
   subroutine get_thread_point(Coord1, State_VI)
     use BATL_lib, ONLY: nBlock, Unused_B, &
-         CoordMin_DB, CellSize_DB, iDimR
+         CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
     use ModNumConst, ONLY: cHalfPi
     real,  intent(in) :: Coord1
     real, intent(out) :: State_VI(2+TiSi_, nThread)
     integer :: i, j, k, iBlock, nPoint, iBuff
-    integer, parameter:: iDimLon = 1, iDimLat = 2
+    integer, parameter:: Lon_ = 1, Lat_ = 2
     real    :: StateThread_VI(2+TiSi_, 1-nPointThreadMax:0)
 
     logical:: DoTest
@@ -1564,7 +1564,7 @@ contains
              nPoint = BoundaryThreads_B(iBlock)%nPoint_II(j,k)
              ! Fill in an array for this thread with lon,lat values
              ! of the grid points on the thread
-             StateThread_VI(iDimLon:iDimLat, 1 - nPoint:0) = &
+             StateThread_VI(Lon_:Lat_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock)%Coord_DIII(2:,1-nPoint:0,j,k)
              ! Fill in an array with NeSi and TeSi values
              StateThread_VI(2+PSi_:2+TiSi_, 1 - nPoint:0) = &
@@ -1583,17 +1583,17 @@ contains
              State_VI(:,iBuff)  = &
                      linear(&
                      a_VI =  StateThread_VI(:, 1 - nPoint:0),     &
-                     nVar = iDimLat + TiSi_,                         &
+                     nVar = Lat_ + TiSi_,                         &
                      iMin = 1 - nPoint,                           &
                      iMax = 0,                                    &
                      x = Coord1,                                  &
-                     x_I = BoundaryThreads_B(iBlock)%Coord_DIII(iDimR,&
+                     x_I = BoundaryThreads_B(iBlock)%Coord_DIII(r_,&
                      1 - nPoint:0, j, k),                         &
                      DoExtrapolate = .false.)
           end do
        end do
     end do
-    call broadcast_buffer(nVar=iDimLat+TiSi_, Buff_VI=State_VI)
+    call broadcast_buffer(nVar=Lat_+TiSi_, Buff_VI=State_VI)
     call test_stop(NameSub, DoTest)
   end subroutine get_thread_point
   !============================================================================
@@ -1612,9 +1612,9 @@ contains
 
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
-    integer, parameter :: iDimLon = 1, iDimLat=2
-    real    :: State_VI(iDimLat+TiSi_,nThread+2), State_V(TiSi_), &
-         Coord_D(iDimLon:iDimLat)
+    integer, parameter :: Lon_ = 1, Lat_=2
+    real    :: State_VI(Lat_+TiSi_,nThread+2), State_V(TiSi_), &
+         Coord_D(Lon_:Lat_)
     real    :: Xyz_DI(3,nThread+2), Xyz_D(3)
 
     ! Data for interpolation: stencil and weights
@@ -1692,7 +1692,7 @@ contains
              Coord_D = CoordMin_DB(2:,iBlock) + &
                   CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
              ! Transform longitude and latitude to the unit vector
-             call rlonlat_to_xyz(1.0, Coord_D(iDimLon), Coord_D(iDimLat), &
+             call rlonlat_to_xyz(1.0, Coord_D(Lon_), Coord_D(Lat_), &
                   Xyz_D)
 
              ! Find a triangle into which this vector falls and the
@@ -1830,7 +1830,7 @@ contains
   contains
     !==========================================================================
     subroutine get_te_ptot(TeSi, PTotSi)
-      use BATL_lib,       ONLY: xyz_to_coord, CellSize_DB, CoordMin_DB, iDimR
+      use BATL_lib,       ONLY: xyz_to_coord, CellSize_DB, CoordMin_DB, r_
       use ModInterpolate, ONLY: interpolate_vector
       ! OUTPUT:
       real, intent(out) :: TeSi, PTotSi
@@ -1839,8 +1839,8 @@ contains
       real :: StateThread_V(PSi_:TiSi_)
       !------------------------------------------------------------------------
       call xyz_to_coord(Xyz_D, Coord_D)
-      CoordNorm_D = (Coord_D(iDimR+1:) - CoordMin_DB(iDimR+1:,iBlock))/&
-           CellSize_DB(iDimR+1:,iBlock) + 0.50
+      CoordNorm_D = (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock))/&
+           CellSize_DB(r_+1:,iBlock) + 0.50
 
       ! Along radial coordinate the resolution and location of the grid
       ! may be different:

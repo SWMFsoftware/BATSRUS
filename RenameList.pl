@@ -118,7 +118,7 @@
     #ray_out_ => RayOut_,
     #set_DoTestRay => set_dotestray,
     #IjkIni_D => IndIni_D,
-    #IjkMid_D => IndMind_D,
+    #IjkMid_D => IndMid_D,
     #IjkCur_D => IndCur_D,
     #Ijk_D => Ind_D,
     #dxRel => DxRel,
@@ -682,4 +682,11 @@
     #restriction_high_order_reschange => restrict_high_order_reschange,
     #prolongation_high_order_amr => prolong_high_order_amr,
     #restriction_high_order_amr => restrict_high_order_amr,
+
+    iDimR	 => r_,
+    iDimLon	 => Lon_,   
+    iDimLat	 => Lat_,   
+    iDimPhi	 => Phi_,
+    iDimTheta    => Theta_,
+
     );

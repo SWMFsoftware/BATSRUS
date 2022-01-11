@@ -23,7 +23,7 @@ contains
     use ModAdvance, ONLY: nVar, State_VGB, rFixAxis, r2FixAxis
     use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, CellSize1Min, &
          r_GB, rMin_B, IsBoundary_B
-    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, iDimLat, &
+    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
          IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, radius_to_gen, &
          Xyz_DGB, CellVolume_GB, iComm
     use ModNumConst, ONLY: cHalfPi
@@ -77,9 +77,9 @@ contains
        end if
 
        ! Determine hemisphere
-       if(    CoordMax_DB(iDimLat,iBlock) > cHalfPi-1e-8)then
+       if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
           iHemisphere = 1; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
-       elseif(CoordMin_DB(iDimLat,iBlock) < -cHalfPi+1e-8)then
+       elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
           iHemisphere = 2; kMin = 1; kMax = nAxisCell; kOut = kMax+1
        else
           CYCLE
@@ -146,9 +146,9 @@ contains
           CYCLE
        end if
 
-       if(    CoordMax_DB(iDimLat,iBlock) > cHalfPi-1e-8)then
+       if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
           iHemisphere = 1; kMax = nK + 1; kMin = nK + 1 - nAxisCell
-       elseif(CoordMin_DB(iDimLat,iBlock) < -cHalfPi+1e-8)then
+       elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
           iHemisphere = 2; kMin = 0; kMax = nAxisCell
        else
           CYCLE
@@ -208,7 +208,7 @@ contains
 
     use ModAdvance, ONLY: nVar, State_VGB, r2FixAxis
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, CellSize1Min
-    use BATL_lib, ONLY: nJ, nK, nBlock, Unused_B, x_, y_, z_, iDimR, &
+    use BATL_lib, ONLY: nJ, nK, nBlock, Unused_B, x_, y_, z_, r_, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, CoordMin_DB, iComm
     use ModMpi
 
@@ -248,7 +248,7 @@ contains
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       if(CoordMin_DB(iDimR,iBlock) > 0.0) CYCLE
+       if(CoordMin_DB(r_,iBlock) > 0.0) CYCLE
 
        do k = 1, nK
           if(nK == 1)then
@@ -295,7 +295,7 @@ contains
     do iBlock = 1, nBlock
 
        if(Unused_B(iBlock)) CYCLE
-       if(CoordMin_DB(iDimR,iBlock) > 0.0) CYCLE
+       if(CoordMin_DB(r_,iBlock) > 0.0) CYCLE
 
        do k = 1, nK
           if(nK == 1)then

@@ -151,26 +151,26 @@ contains
   subroutine MH_get_roots_dd(Domain)
 
     use BATL_lib, ONLY: nIJK_D, IsPeriodic_D, nRoot_D, CoordMin_D, CoordMax_D
-    use BATL_geometry, ONLY: IsAnyAxis, IsCylindricalAxis, iDimR, iDimTheta, iDimPhi
+    use BATL_geometry, ONLY: IsAnyAxis, IsCylindricalAxis, r_, Theta_, Phi_
     type(DomainType),intent(inout)::Domain
     logical :: DoGlueMargins
     integer :: iDirMinusGlue, iDirPlusGlue, iDirCycle
     !--------------------------------------------------------------------------
     DoGlueMargins = IsAnyAxis
     iDirMinusGlue = 0; iDirPlusGlue = 0; iDirCycle = 0
-    if(IsAnyAxis) iDirCycle = iDimPhi
+    if(IsAnyAxis) iDirCycle = Phi_
     if(IsCylindricalAxis)then
-       ! IsCylindricalAxis = CoordMin_D(iDimR) == 0.0
-       ! iDimR = 1; iDimPhi = 2; z_=3
-       iDirMinusGlue = iDimR
+       ! IsCylindricalAxis = CoordMin_D(r_) == 0.0
+       ! r_ = 1; Phi_ = 2; z_=3
+       iDirMinusGlue = r_
     else
-       ! IsSphericalAxis = CoordMin_D(iDimTheta) <   0.01*Unit &
-       !         .and.     CoordMax_D(iDimTheta) > 179.99*Unit
-       ! iDimR = 1; iDimTheta = 2; iDimPhi = 3
-       ! IsLatitudeAxis  = CoordMin_D(iDimLat)   < -89.99*Unit &
-       !                   CoordMax_D(iDimLat)   >  89.99*Unit
-       ! iDimR = 1; iDimPhi = 2; iDimTheta = iDimLat = 3
-       iDirMinusGlue = iDimTheta; iDirPlusGlue = iDimTheta
+       ! IsSphericalAxis = CoordMin_D(Theta_) <   0.01*Unit &
+       !         .and.     CoordMax_D(Theta_) > 179.99*Unit
+       ! r_ = 1; Theta_ = 2; Phi_ = 3
+       ! IsLatitudeAxis  = CoordMin_D(Lat_)   < -89.99*Unit &
+       !                   CoordMax_D(Lat_)   >  89.99*Unit
+       ! r_ = 1; Phi_ = 2; Theta_ = Lat_ = 3
+       iDirMinusGlue = Theta_; iDirPlusGlue = Theta_
     end if
     call get_root_decomposition_dd(&
          Domain,       & ! DD to be constructed
@@ -190,26 +190,26 @@ contains
   subroutine MH_get_roots_id(GridID_)
 
     use BATL_lib, ONLY: nIJK_D, IsPeriodic_D, nRoot_D, CoordMin_D, CoordMax_D
-    use BATL_geometry, ONLY: IsAnyAxis, IsCylindricalAxis, iDimR, iDimTheta, iDimPhi
+    use BATL_geometry, ONLY: IsAnyAxis, IsCylindricalAxis, r_, Theta_, Phi_
     integer, intent(in):: GridID_
     logical :: DoGlueMargins
     integer :: iDirMinusGlue, iDirPlusGlue, iDirCycle
     !--------------------------------------------------------------------------
     DoGlueMargins = IsAnyAxis
     iDirMinusGlue = 0; iDirPlusGlue = 0; iDirCycle = 0
-    if(IsAnyAxis) iDirCycle = iDimPhi
+    if(IsAnyAxis) iDirCycle = Phi_
     if(IsCylindricalAxis)then
-       ! IsCylindricalAxis = CoordMin_D(iDimR) == 0.0
-       ! iDimR = 1; iDimPhi = 2; z_=3
-       iDirMinusGlue = iDimR
+       ! IsCylindricalAxis = CoordMin_D(r_) == 0.0
+       ! r_ = 1; Phi_ = 2; z_=3
+       iDirMinusGlue = r_
     else
-       ! IsSphericalAxis = CoordMin_D(iDimTheta) <   0.01*Unit &
-       !         .and.     CoordMax_D(iDimTheta) > 179.99*Unit
-       ! iDimR = 1; iDimTheta = 2; iDimPhi = 3
-       ! IsLatitudeAxis  = CoordMin_D(iDimLat)   < -89.99*Unit &
-       !                   CoordMax_D(iDimLat)   >  89.99*Unit
-       ! iDimR = 1; iDimPhi = 2; iDimTheta = iDimLat = 3
-       iDirMinusGlue = iDimTheta; iDirPlusGlue = iDimTheta
+       ! IsSphericalAxis = CoordMin_D(Theta_) <   0.01*Unit &
+       !         .and.     CoordMax_D(Theta_) > 179.99*Unit
+       ! r_ = 1; Theta_ = 2; Phi_ = 3
+       ! IsLatitudeAxis  = CoordMin_D(Lat_)   < -89.99*Unit &
+       !                   CoordMax_D(Lat_)   >  89.99*Unit
+       ! r_ = 1; Phi_ = 2; Theta_ = Lat_ = 3
+       iDirMinusGlue = Theta_; iDirPlusGlue = Theta_
     end if
     call get_root_decomposition_id(&
          GridID_,                   & ! DD to be constructed

@@ -107,7 +107,7 @@ contains
 
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B
     use ModAdvance, ONLY: nVar, State_VGB
-    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, iDimLat, &
+    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
          IsRLonLat
     use ModNumConst, ONLY: cHalfPi
 
@@ -130,9 +130,9 @@ contains
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-       if(CoordMax_DB(iDimLat,iBlock) > cHalfPi-1e-8)then
+       if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
           k = nK - nCoarseLayer; kStride =  1; jMerge = 1
-       elseif(CoordMin_DB(iDimLat,iBlock) < -cHalfPi+1e-8)then
+       elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
           k =  1 + nCoarseLayer; kStride = -1; jMerge = 1
        else
           CYCLE

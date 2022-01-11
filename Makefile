@@ -37,9 +37,11 @@ help:
 	@echo '    NOMPI   (NOMPI library for compilation without MPI)'
 	@echo '    PIDL    (PostIDL.exe creates 1 .out file from local .idl files)'
 	@echo '    INTERPOLATE (INTERPOLATE.exe interpolates points from *.outs movies)'
-	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs movies)'
+	@echo '    SNAPSHOT   (SNAPSHOT.exe extract snapshots from *.outs movies)'
+	@echo '    SPECTRUM   (SPECTRUM.exe calculates spectra from solar corona output on regular grid)'
+	@echo '    SPECTRUM2  (SPECTRUM2.exe calculates spectra from solar corona output on original grid)'
 	@echo '    EARTH_TRAJ (EARTH_TRAJ.exe creates Earth trajectory file for heliosphere)'
-	@echo '    TIME_CONV (TIME_CONV.exe converts the Carrington time to the usual one)'
+	@echo '    TIME_CONV  (TIME_CONV.exe converts the Carrington time to the usual one)'
 	@echo ' '
 	@echo '    rundir      (create run directory for standalone or SWMF)'
 	@echo '    rundir RUNDIR=run_test (create run directory run_test)'
@@ -114,6 +116,19 @@ SNAPSHOT:
 	cd srcPostProc; make SNAPSHOT
 	@echo ' '
 	@echo Program SNAPSHOT has been brought up to date.
+	@echo ' '
+
+SPECTRUM:
+	cd ${SHAREDIR}; $(MAKE) LIB
+	cd srcPostProc; make SPECTRUM
+	@echo ' '
+	@echo Program SPECTRUM has been brought up to date.
+	@echo ' '
+
+SPECTRUM2: BATSRUS
+	cd srcPostProc; make SPECTRUM2
+	@echo ' '
+	@echo Program SPECTRUM2 has been brought up to date.
 	@echo ' '
 
 EARTH_TRAJ:

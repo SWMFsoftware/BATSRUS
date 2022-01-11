@@ -128,7 +128,7 @@ contains
          UseChromosphereHeating, get_tesi_c, TeSi_C
     use ModPhysics, ONLY: InvGammaMinus1
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
-         IsCylindricalAxis, IsLatitudeAxis, iDimR, iDimLat
+         IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
     use ModNumConst, ONLY: cHalfPi
     use ModCoarseAxis, ONLY: UseCoarseAxis, calc_coarse_axis_timestep,&
          NorthHemiSph_, SouthHemiSph_
@@ -174,7 +174,7 @@ contains
        ! In time accurate this removes the time step constraints from supercell
        ! In local time stepping mode it increases the time step
        if(IsCylindricalAxis)then
-          if(CoordMin_DB(iDimR,iBlock) <= 0.0)then
+          if(CoordMin_DB(r_,iBlock) <= 0.0)then
              Di = 1; if(r2FixAxis > 0.0) Di = 2
              do j = 1, nJ; do i = 1, nI
                 DtMax_CB(1:Di,j,k,iBlock) = DtMax_CB(Di+1,j,k,iBlock)
@@ -182,21 +182,21 @@ contains
           end if
        elseif(IsLatitudeAxis .and. rMin_B(iBlock) < rFixAxis)then
           Dk = 1; if(rMin_B(iBlock) < r2FixAxis) Dk = 2
-          if(CoordMax_DB(iDimLat,iBlock) > cHalfPi-1e-8)then
+          if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
              do k = nK+1-Dk, nK
                 DtMax_CB(1:nI,1:nJ,k,iBlock) = DtMax_CB(1:nI,1:nJ,nK-Dk,iBlock)
              end do
           end if
-          if(CoordMin_DB(iDimLat,iBlock) < -cHalfPi+1e-8)then
+          if(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
              do k = 1, Dk
                 DtMax_CB(1:nI,1:nJ,k,iBlock) = DtMax_CB(1:nI,1:nJ,Dk+1,iBlock)
              end do
           end if
        end if
     elseif(UseCoarseAxis)then
-       if(CoordMax_DB(iDimLat,iBlock) > cHalfPi-1e-8)then
+       if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
           call calc_coarse_axis_timestep(iBlock,NorthHemiSph_)
-       elseif(CoordMin_DB(iDimLat,iBlock) < -cHalfPi+1e-8)then
+       elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
           call calc_coarse_axis_timestep(iBlock,SouthHemiSph_)
        end if
     end if

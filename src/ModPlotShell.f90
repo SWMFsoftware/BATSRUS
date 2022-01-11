@@ -125,7 +125,7 @@ contains
     use ModGeometry,    ONLY: rMin_B
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
-         xyz_to_coord, iDimR
+         xyz_to_coord, r_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModParallel,       ONLY: DiLevel_EB, Unset_
 
@@ -157,7 +157,7 @@ contains
     IsThreadedBlock = UseThreadedGap .and. DiLevel_EB(1, iBlock)==Unset_
     if(IsThreadedBlock)then
        ! Don't check radial coordinate to see if the point is outside the block
-       iDirMin = iDimR + 1
+       iDirMin = r_ + 1
     else
        iDirMin = 1
     end if

@@ -4,7 +4,7 @@ module ModSize
 
   ! Named indexes for coordinate directions
   use BATL_geometry, ONLY: &
-       x_, y_, z_, iDimR, iDimPhi, iDimTheta, iDimLon, iDimLat
+       x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
 
 end module ModSize
 !==============================================================================
