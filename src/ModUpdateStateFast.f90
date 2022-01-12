@@ -45,7 +45,7 @@ module ModUpdateStateFast
   use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
-  
+
   implicit none
 
   private ! except
@@ -56,7 +56,7 @@ module ModUpdateStateFast
   public:: set_boundary_fast     ! set cell based boundary for State_VGB
 
   logical, parameter:: UseAlfvenWaves  = WaveFirst_ > 1
-  
+
   logical:: DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny
   !$acc declare create (DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
 
@@ -439,7 +439,7 @@ contains
              ! The energy equation contains the work of the wave pressure
              ! -u.grad Pwave = -div(u Pwave) + Pwave div(u)
              ! The -div(u Pwave) is implemented as a flux.
-             ! Here we add the Pwave div(u) source term 
+             ! Here we add the Pwave div(u) source term
              Change_V(Energy_) = Change_V(Energy_) + (GammaWave - 1) &
                   *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*DivU
           end if
@@ -2432,7 +2432,7 @@ contains
     if(UseElectronPressure) pExtra = State_V(Pe_)
     if(UseAlfvenWaves) &
          pExtra = pExtra + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
-    
+
     ! Physical flux
     Flux_V(Rho_) = State_V(Rho_)*Un
     Flux_V(RhoUx_:RhoUz_) = Flux_V(Rho_)*State_V(Ux_:Uz_) - Bn*FullB_D &
@@ -2454,9 +2454,9 @@ contains
          + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux
 
     if(UseElectronPressure) Flux_V(Pe_) = Un*StateCons_V(Pe_)
-    
+
     if(Ehot_ > 1) Flux_V(Ehot_) = Un*State_V(Ehot_)
-    
+
     if(UseAlfvenWaves)then
        AlfvenSpeed = FullBn/sqrt(State_V(Rho_))
 
@@ -2631,12 +2631,12 @@ contains
     end if
 
     GammaP = State_V(p_)*Gamma
-    
+
     if(UseElectronPressure) GammaP = GammaP + GammaElectron*State_V(Pe_)
 
     if(UseAlfvenWaves) GammaP = GammaP &
          + GammaWave*(GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
-    
+
     Sound2= GammaP*InvRho
 
     Fast2 = Sound2 + InvRho*B2
