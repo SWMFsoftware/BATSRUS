@@ -181,7 +181,7 @@ contains
     if(UseElectronPressure .and. UseElectronEntropy)then
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)*InvGammaElectron &
-               * State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectronMinus1
+               * State_VGB(Pe_,i,j,k,iBlock)**(InvGammaElectron - 1.0)
        end do; end do; end do
     end if
 
