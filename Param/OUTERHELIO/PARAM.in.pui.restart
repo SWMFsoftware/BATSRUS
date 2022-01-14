@@ -39,6 +39,9 @@ F			IsTimeAccurate
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
+#ELECTRONENTROPY
+F			UseElectronEntropy
+
 ! Applies to the ions only if UseRusanovForNeutrals is true in #MULTIFLUID
 #SCHEME
 2			nOrder

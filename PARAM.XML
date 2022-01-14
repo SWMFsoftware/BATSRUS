@@ -8875,7 +8875,7 @@ The default value is -1, i.e. no threshold is applied.
 </command>
 
 <command name="ELECTRONENTROPY">
-  <parameter name="UseElectronEntropy" type="logical" default="F"/>
+  <parameter name="UseElectronEntropy" type="logical" default="T"/>
 
 #ELECTRONENTROPY
 T			UseElectronEntropy
@@ -8888,8 +8888,7 @@ the electrons (usually is).
 Explicit electron heatconduction is not implemented for the electron entropy,
 but the semi-implicit heat conduction should work fine.
 
-The default value of UseElectronEnetropy is false, but it is better to turn 
-it on because the solution near strong shocks is more reliable.
+The default value of UseElectronEnetropy is true.
 </command>
 
 <command name="ANISOTROPICPRESSURE">
