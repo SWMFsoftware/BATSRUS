@@ -185,7 +185,7 @@ program spectrum
   call MPI_comm_size(iComm, nProc, iError)
 
   if(iProc==0)write(*,*)'Spectrum.exe starting'
-  
+
   call read_param
 
   if(IsResponseFunction)then
