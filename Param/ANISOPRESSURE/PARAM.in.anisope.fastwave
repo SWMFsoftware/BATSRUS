@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/ANISOTROPIC/PARAM.in.anisope.fastwave: both P and Pe are anisotropic
+Param/ANISOPRESSURE/PARAM.in.anisope.fastwave: both P and Pe are anisotropic		StringDescription
 
 #PLANET
 NONE			NamePlanet
