@@ -19,6 +19,7 @@ module GM_wrapper
   use ModBatsrusMethods, ONLY: &
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
+  use ModUtilities, ONLY: CON_set_do_test, CON_stop
 
   implicit none
 

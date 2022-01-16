@@ -6,6 +6,7 @@
 module GM_couple_pc
 
   use BATL_lib, ONLY: iProc
+  use ModUtilities, ONLY: CON_set_do_test
   use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none

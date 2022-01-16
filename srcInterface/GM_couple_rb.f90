@@ -8,7 +8,7 @@ module GM_couple_rb
   ! Coupling with Radiation Belt component
   use BATL_lib, ONLY: iProc
   use ModMpi
-  use CON_coupler, ONLY: Grid_C, ncell_id
+  use CON_coupler, ONLY: Grid_C, ncell_id, CON_set_do_test, CON_stop
   use ModMain, ONLY: nStep
   use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitRho_, UnitTemperature_
 

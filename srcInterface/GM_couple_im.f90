@@ -6,6 +6,7 @@
 module GM_couple_im
 
   use BATL_lib, ONLY: iProc, iComm
+  use ModUtilities, ONLY: CON_set_do_test
   use ModMpi
   use ModNumConst, ONLY: cRadToDeg, cDegToRad, cHalfPi
   use CON_coupler, ONLY: Grid_C, ncell_id, &

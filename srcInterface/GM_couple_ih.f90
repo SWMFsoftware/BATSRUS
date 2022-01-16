@@ -7,6 +7,8 @@ module GM_couple_ih
 
   ! Couple with IH component
 
+  use ModUtilities, ONLY: CON_set_do_test, CON_stop
+
   implicit none
   save
 
