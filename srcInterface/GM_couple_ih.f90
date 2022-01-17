@@ -66,11 +66,11 @@ contains
 
     character(len=*), parameter:: NameSub = 'GM_put_from_mh'
     !--------------------------------------------------------------------------
-    State_V(BuffRho_)              = StateSI_V(BuffRho_) *Si2No_V(UnitRho_)
+    State_V(BuffRho_)              = StateSI_V(BuffRho_)*Si2No_V(UnitRho_)
     State_V(BuffRhoUx_:BuffRhoUz_) = StateSI_V(BuffRhoUx_:BuffRhoUz_) &
          *Si2No_V(UnitRhoU_)
-    State_V(BuffBx_:BuffBz_)       = StateSI_V(BuffBx_:BuffBz_)* Si2No_V(UnitB_)
-    State_V(BuffP_)                = StateSI_V(BuffP_)         * Si2No_V(UnitP_)
+    State_V(BuffBx_:BuffBz_)       = StateSI_V(BuffBx_:BuffBz_)*Si2No_V(UnitB_)
+    State_V(BuffP_)                = StateSI_V(BuffP_)         *Si2No_V(UnitP_)
 
     i      = Put%iCB_II(1,iPutStart)
     j      = Put%iCB_II(2,iPutStart)

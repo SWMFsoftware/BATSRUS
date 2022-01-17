@@ -16,22 +16,22 @@ module GM_couple_ua
 contains
   !============================================================================
 
-  subroutine GM_update_neutral_dens(IsNew, nDenNuSpecies_srcInterface_CBI)
+  subroutine GM_update_neutral_dens(IsNew, DenNuSpecies)
 
     ! Get magnetic field data from GM to UA
 
-    ! use ModProcMH,  ONLY: iProc
     use BATL_lib, ONLY: iProc
     use ModPhysics, ONLY: Si2No_V, No2Si_V, iUnitCons_V, UnitX_
     use ModAdvance, ONLY: State_VGB, nVar, Bx_, Bz_
     use ModVarIndexes, ONLY: nVar
     use ModB0,      ONLY: UseB0, get_b0
-    use BATL_lib,   ONLY: MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
+    use BATL_lib,   ONLY: &
+         MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
     use ModInterpolate, ONLY: trilinear
 
-    logical,          intent(in):: IsNew   ! true for new point array
+    logical, intent(in):: IsNew   ! true for new point array
 
-    real, intent(out):: nDenNuSpecies_srcInterface_CBI ! Data array
+    real, intent(out):: DenNuSpecies ! Data array
 
     character(len=*), parameter:: NameSub = 'GM_update_neutral_dens'
     !--------------------------------------------------------------------------
@@ -52,7 +52,8 @@ contains
     use ModAdvance, ONLY: State_VGB, nVar, Bx_, Bz_
     use ModVarIndexes, ONLY: nVar
     use ModB0,      ONLY: UseB0, get_b0
-    use BATL_lib,   ONLY: MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
+    use BATL_lib,   ONLY: &
+         MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
     use ModInterpolate, ONLY: trilinear
 
     logical,          intent(in):: IsNew   ! true for new point array
@@ -61,7 +62,7 @@ contains
     integer,          intent(in):: nDimIn  ! Dimensionality of positions
     integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
 
-    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors / Xyz_DI is the same as Pos_DI!!!
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint) ! Position vectors
     real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
 
     real:: Xyz_D(MaxDim), b_D(MaxDim)
@@ -108,7 +109,9 @@ contains
     write(*,*) 'Finished GM_get_for_ua...'
   end subroutine GM_get_for_ua
   !============================================================================
-  subroutine GM_get_ua_region(numcall,NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+  subroutine GM_get_ua_region( &
+       nCall, NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+    
     ! This function will be called 3 times :
     !
     ! 1) Count outer boundary ghost cells to be obtained from GM
@@ -135,7 +138,7 @@ contains
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
     integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
-    integer,          intent(in)::numcall
+    integer,          intent(in)::nCall
     real, intent(inout), allocatable, optional :: Pos_DI(:,:)  ! Positions
 
     real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
@@ -147,11 +150,11 @@ contains
     integer :: i, j, k, iBlock, iPoint, iVarBuffer, iVar
     integer :: iLons, iLats, iAlts
     real    :: Coord_D(3), Xyz_D(3)
-    real    :: rMinGm, tempalt
+    real    :: rMinGm, TmpAlt
 
     character(len=*), parameter:: NameSub = 'GM_get_ua_region'
     !--------------------------------------------------------------------------
-    write(*,*) "-->Starting GM_get_ua_region: ",numcall,nPoint,nVar
+    write(*,*) "-->Starting GM_get_ua_region: ", nCall, nPoint, nVar
 
     DoCountOnly = nPoint < 1
 
@@ -165,10 +168,10 @@ contains
     !        do iAlts = 1, nAlts
     !           Coord_D = Xyz_gitm(:,iLons,iLats,iAlts,iBlock)
     !           ! write(*,*) 'Coord_D in UA_wrapper: ',Coord_D
-    !           !         ! Exclude points below the UA-GM bottom boundary (100 km)
+    !           ! Exclude points below the UA-GM bottom boundary (100 km)
     !           if(Altitude_GB(iLons,iLats,iAlts,iBlock)/1.e3 < 100) CYCLE
     !           !
-    !           !         ! Exclude points above the UA-GM bottom boundary (300 km)
+    !           ! Exclude points above the UA-GM bottom boundary (300 km)
     !           if(Altitude_GB(iLons,iLats,iAlts,iBlock)/1.e3 > 300) CYCLE
     !
     !           iPoint = iPoint + 1
@@ -183,9 +186,12 @@ contains
     !   do iLons = 1, nLons
     !     do iLats = 1, nLats
     !       do iAlts = 1, nAlts
-    !         Coord_D(1) = Altitude_GB(iLons,iLats,iAlts,iBlock)/1.e3*sin(Longitude(iLons,iBlock))*cos(Latitude(iLats,iBlock))
-    !         Coord_D(2) = Altitude_GB(iLons,iLats,iAlts,iBlock)/1.e3*sin(Longitude(iLons,iBlock))*sin(Latitude(iLats,iBlock))
-    !         Coord_D(3) = Altitude_GB(iLons,iLats,iAlts,iBlock)/1.e3*cos(Longitude(iLons,iBlock))
+    !         Coord_D(1) = Altitude_GB(iLons,iLats,iAlts,iBlock) &
+    !         /1.e3*sin(Longitude(iLons,iBlock))*cos(Latitude(iLats,iBlock))
+    !         Coord_D(2) = Altitude_GB(iLons,iLats,iAlts,iBlock) &
+    !         /1.e3*sin(Longitude(iLons,iBlock))*sin(Latitude(iLats,iBlock))
+    !         Coord_D(3) = Altitude_GB(iLons,iLats,iAlts,iBlock) &
+    !         /1.e3*cos(Longitude(iLons,iBlock))
     !         ! write(*,*) 'Coord_D: ',Coord_D
     !
     !         ! Exclude points below the UA-GM bottom boundary (100 km)
@@ -213,9 +219,11 @@ contains
     !                   ! if(UseElectronPressure .and. &
     !                   !     .not. DoCoupleVar_V(ElectronPressure_)then
     !                   ! if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-    !                  !      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+    !                   !     State_VGB(Bx_:Bz_,i,j,k,iBlock)  &
+    !                         - B0_DGB(:,i,j,k,iBlock)
     !                else
-    !                   Pos_DI(:,iPoint) = Xyz_gitm(:,iLons,iLats,iAlts,iBlock)! Xyz_DGB(:,i,j,k,iBlock)*No2Si_V(UnitX_)
+    !                   Pos_DI(:,iPoint)=Xyz_gitm(:,iLons,iLats,iAlts,iBlock)!
+    !                     !Xyz_DGB(:,i,j,k,iBlock)*No2Si_V(UnitX_)
     !          end if
     !       end do
     !     end do
@@ -237,15 +245,18 @@ contains
           !     write(*,*) 'Coord_D: ',CoordMin_DB(:,iBlock)
 
           ! Exclude points that are inside the domain
-          ! write(*,*) "Exclude points inside domain1...",(R_Mars+100e3)*Si2No_V(UnitX_),(R_Mars+300e3)*Si2No_V(UnitX_)
-          ! write(*,*) "Exclude points inside domain2...",CoordMin_D,CoordMax_D
+          ! write(*,*) "Exclude points inside domain1...", &
+          !   (R_Mars+100e3)*Si2No_V(UnitX_),(R_Mars+300e3)*Si2No_V(UnitX_)
+          ! write(*,*) "Exclude points inside domain2...", &
+          !   CoordMin_D,CoordMax_D
 
           ! if(all(Coord_D > CoordMin_D) .and. all(Coord_D < CoordMax_D)) CYCLE
-          tempalt = sqrt(Coord_D(1)*Coord_D(1) + Coord_D(2)*Coord_D(2) + Coord_D(3)*Coord_D(3)) - 1
-          ! write(*,*) 'tempalt: ',tempalt
-          ! if(all(Coord_D > (R_Mars+300e3)*Si2No_V(UnitX_)) .and. all(Coord_D < (R_Mars+100e3)*Si2No_V(UnitX_))) CYCLE
-          if (tempalt < (100e3)*Si2No_V(UnitX_)) CYCLE
-          if (tempalt > (300e3)*Si2No_V(UnitX_)) CYCLE
+          TmpAlt = norm2(Coord_D) - 1
+          ! write(*,*) 'TmpAlt: ',TmpAlt
+          ! if(all(Coord_D > (R_Mars+300e3)*Si2No_V(UnitX_)) &
+          !    .and. all(Coord_D < (R_Mars+100e3)*Si2No_V(UnitX_))) CYCLE
+          if (TmpAlt < (100e3)*Si2No_V(UnitX_)) CYCLE
+          if (TmpAlt > (300e3)*Si2No_V(UnitX_)) CYCLE
 
           ! Exclude points below the GM bottom boundary
           ! if(r_GB(i,j,k,iBlock) < rMinGm) CYCLE
@@ -269,11 +280,14 @@ contains
              ! end do
              ! do iVarBuffer = 1, nVarBuffer
 
-              !  iVar = iVarTarget_V(iVarBuffer)
-              !  write(*,*) 'iVar: ',iVar
-              !  write(*,*) 'iVarTarget_V: ',iVarTarget_V
-              ! write(*,*) 'Data in GM: ',Data_VI(:,iPoint), size(Data_VI(:,iPoint))!,size(nDenNuSpecies_fromUA(i,j,k,iBlock,1))
-!!!              nDenNuSpecies_fromUA(i,j,k,iBlock,:) = Data_VI(:,iPoint)  ! Incompatible ranks 0 and 1 in assignment at (1)???
+             !  iVar = iVarTarget_V(iVarBuffer)
+             !  write(*,*) 'iVar: ',iVar
+             !  write(*,*) 'iVarTarget_V: ',iVarTarget_V
+             ! write(*,*) 'Data in GM: ',Data_VI(:,iPoint), &
+             !  size(Data_VI(:,iPoint))
+             !  ,size(nDenNuSpecies_fromUA(i,j,k,iBlock,1))
+             ! nDenNuSpecies_fromUA(i,j,k,iBlock,:) = Data_VI(:,iPoint)
+             ! Incompatible ranks 0 and 1 in assignment at (1)???
               ! nDenNuSpecies_srcInterface_CBI = Data_VI(:,iPoint)
               !  State_VGB_GM(iVar,i,j,k,iBlock) = &
               !       Data_VI(iVarBuffer,iPoint_I(iPoint)) &
@@ -284,12 +298,14 @@ contains
              ! if(UseElectronPressure .and. &
              !     .not. DoCoupleVar_V(ElectronPressure_)then
              ! if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-            !      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+             !      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
           else
              ! Provide position to GM
              ! write(*,*) 'Xyz_DGB: ',Xyz_DGB(:,i,j,k,iBlock)
-             Pos_DI(:,iPoint) = Xyz_DGB(:,i,j,k,iBlock)!*No2Si_V(UnitX_) ! Coord_D
-             ! write(*,*) 'MinMax Pos_DI: ',minval(Xyz_DGB(:,i,j,k,iBlock)),maxval(Xyz_DGB(:,i,j,k,iBlock))
+             Pos_DI(:,iPoint) = Xyz_DGB(:,i,j,k,iBlock)!*No2Si_V(UnitX_)
+             ! Coord_D
+             ! write(*,*) 'MinMax Pos_DI: ', &
+             ! minval(Xyz_DGB(:,i,j,k,iBlock)),maxval(Xyz_DGB(:,i,j,k,iBlock))
              ! write(*,*) 'Pos_DI new: ',Pos_DI(:,iPoint)
           end if
 
@@ -333,7 +349,7 @@ contains
 
 !!!        write(*,*) 'nDimGITM: ',nDimGITM    ! nDimGITM is zero, check why...
         if(allocated(Pos_DI)) deallocate(Pos_DI)
-        allocate(Pos_DI(3,nPoint))          ! Instead of 3, it should be nDimGITM
+        allocate(Pos_DI(3,nPoint))  ! Instead of 3, it should be nDimGITM
         write(*,*) 'Pos_DI(1,1): ',Pos_DI(1,1)
     !
     !    ! get Pos_DI

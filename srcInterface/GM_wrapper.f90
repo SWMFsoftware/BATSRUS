@@ -296,8 +296,8 @@ contains
     use BATL_lib,   ONLY: MaxDim, find_grid_block
     use ModPhysics, ONLY: Si2No_V, UnitX_
 
-    integer, intent(in) :: nDimIn                ! dimension of position vectors
-    integer, intent(in) :: nPoint                ! number of positions
+    integer, intent(in) :: nDimIn ! dimension of position vectors
+    integer, intent(in) :: nPoint ! number of positions
     real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
     integer, intent(out):: iProc_I(nPoint)       ! processor owning position
 
@@ -453,8 +453,10 @@ contains
 
     if(DoTestMe)then
        write(*,*) NameSub,' called from component    =', NameComp_I(iComp)
-       write(*,*) NameSub,' nVarComp2, NameVarComp2  =',  nVarComp2, trim(NameVarComp2)
-!!!       write(*,*) NameSub,' StateComp2_VGB(:,1,1,1,1)=', StateComp2_VGB(:,1,1,1,1)
+       write(*,*) NameSub,' nVarComp2, NameVarComp2  =', &
+            nVarComp2, trim(NameVarComp2)
+       ! write(*,*) NameSub,' StateComp2_VGB(:,1,1,1,1)=', &
+       !      StateComp2_VGB(:,1,1,1,1)
     end if
 
     call user_action('POINTERCOUPLING_'//NameComp_I(iComp))
