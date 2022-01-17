@@ -175,7 +175,7 @@ MASSLOADING
 0.8			CflExpl
 
 #ELECTRONENTROPY
-F			UseEletronEntropy
+F			UseElectronEntropy
 
 #SCHEME
 2			nOrder (1 or 2)
