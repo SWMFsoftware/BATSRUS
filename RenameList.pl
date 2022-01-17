@@ -87,7 +87,7 @@
     #MaxImbalance2 => ImbalanceMax2,
     #
     ### ModFaceValue
-    BetaLimiter => LimiterBeta,
+    #BetaLimiter => LimiterBeta,
     #ip => iP,
     #jp => jP,
     #kp => kP,
@@ -673,20 +673,57 @@
     #kr => kR,
 
     ### BATL_geometry (to avoid the impression of constant value)
-    #r_ => iDimR,
-    #Lon_ => iDimLon,
-    #Lat_ => iDimLat,
-    #Phi_ => iDimPhi,
-    #Theta_ => iDimTheta,
     #prolongation_high_order_for_face_ghost => prolong_high_order_face_ghost,
     #restriction_high_order_reschange => restrict_high_order_reschange,
     #prolongation_high_order_amr => prolong_high_order_amr,
     #restriction_high_order_amr => restrict_high_order_amr,
 
-    iDimR	 => r_,
-    iDimLon	 => Lon_,   
-    iDimLat	 => Lat_,   
-    iDimPhi	 => Phi_,
-    iDimTheta    => Theta_,
+    ### srcInterface/GM_couple_pc
+    #AccumulatedSize_I => nSize_I,
 
+    ### srcInterface/GM_couple_pw
+    #list1_I => iLst1_I,
+    #lptr1_I => lPtr1_I,
+    #lend1_I => lEnd1_I,
+    #list2_I => iLst2_I,
+    #lptr2_I => lPtr2_I,
+    #lend2_I => lEnd2_I,
+    #iCoupleFluid => iCoupleFluid_I,
+    #tmp1_array => Tmp1_I,
+    #Tmp_array => Tmp_I,
+
+    ### srcInterface/GM_couple_rb
+    #MHD_lat_boundary => MhdLatBoundary_I,
+    #MHD_SUM_vol => MhdSumVol_II,
+    #MHD_SUM_rho => MhdSumRho_II,
+    #MHD_SUM_p   => MhdSumP_II,
+    #MHD_Xeq     => MhdXeq_II,
+    #MHD_Yeq     => MhdYeq_II,
+    #noValue     => NoValue,
+
+    ### srcInterface/GM_couple_im
+    MHD_tmp => MhdTmp_II,
+    MHD_HpRho => MhdHpRho_II,
+    MHD_OpRho => MhdOpRho_II,
+    MHD_HpP => MhdHpP_II,
+    MHD_OpP => MhdOpP_II,
+    MHD_Beq => MhdBeq_II,
+    MHD_Fluxerror => MhdFluxError_II,
+    eqB => Beq,
+    colat => Colat,
+    factor => Factor,
+    factor1 => Factor1,
+    factor2 => Factor2,
+    sat_RayVars => SatTrace_I,
+    sat_RayVarsSum => SatTraceSum_I,
+    string => String,
+    new => StringNew,
+    write_IMvars_tec => write_im_vars_tec,
+    lonShift => LonShift,
+    write_IMvars_idl => write_im_vars_idl,
+    tmpT => TmpT,
+    tmpV1 => TmpV1,
+    tmpV2 => TmpV2,
+    tmpHpT => TmpHpT,
+    tmpOpT => TmpOpT,
     );
