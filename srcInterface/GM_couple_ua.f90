@@ -33,10 +33,9 @@ contains
 
     real, intent(out):: DenNuSpecies ! Data array
 
+    ! We should have second order accurate magnetic field in the ghost cells
     character(len=*), parameter:: NameSub = 'GM_update_neutral_dens'
     !--------------------------------------------------------------------------
-
-    ! We should have second order accurate magnetic field in the ghost cells
     write(*,*) "Calling GM_update_neutral_dens..."
 
   end subroutine GM_update_neutral_dens
@@ -111,7 +110,7 @@ contains
   !============================================================================
   subroutine GM_get_ua_region( &
        nCall, NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
-    
+
     ! This function will be called 3 times :
     !
     ! 1) Count outer boundary ghost cells to be obtained from GM
@@ -223,7 +222,7 @@ contains
     !                         - B0_DGB(:,i,j,k,iBlock)
     !                else
     !                   Pos_DI(:,iPoint)=Xyz_gitm(:,iLons,iLats,iAlts,iBlock)!
-    !                     !Xyz_DGB(:,i,j,k,iBlock)*No2Si_V(UnitX_)
+    !                     ! Xyz_DGB(:,i,j,k,iBlock)*No2Si_V(UnitX_)
     !          end if
     !       end do
     !     end do
