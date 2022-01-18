@@ -8,7 +8,7 @@ module GM_couple_rb
   ! Coupling with Radiation Belt component
   use BATL_lib, ONLY: iProc
   use ModMpi
-  use CON_coupler, ONLY: Grid_C, ncell_id
+  use CON_coupler, ONLY: Grid_C, ncell_id, CON_set_do_test, CON_stop
   use ModMain, ONLY: nStep
   use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitRho_, UnitTemperature_
 
@@ -30,26 +30,27 @@ module GM_couple_rb
   integer :: nCells_D(2), iSize,jSize
 
   ! Information about the RB grid ! 2D non-uniform regular grid only !!!
-  real, allocatable, dimension(:) :: RB_lat, RB_lon
+  real, allocatable:: LatRb_I(:), LonRb_I(:)
 
   integer :: i,j
 
-  real, allocatable :: MHD_lat_boundary(:)
+  real, allocatable :: MhdLatBoundary_I(:)
   real, dimension(:,:), allocatable :: &
-       MHD_SUM_vol, &
-       MHD_SUM_rho, &
-       MHD_SUM_p, &
-       MHD_Beq, &
-       MHD_Xeq, &
-       MHD_Yeq
+       MhdSumVol_II, &
+       MhdSumRho_II, &
+       MhdSumP_II, &
+       MhdBeq_II, &
+       MhdXeq_II, &
+       MhdYeq_II
 
-  real, parameter :: noValue=-99999.
+  real, parameter :: NoValue=-99999.
 
   integer :: iError
 
 contains
   !============================================================================
   subroutine allocate_gm_rb(iSizeIn,jSizeIn)
+
     use CON_comp_param, ONLY: RB_
 
     integer, intent(in) :: iSizeIn, jSizeIn
@@ -58,7 +59,7 @@ contains
     iSize = iSizeIn
     jSize = jSizeIn
 
-    if(.not.allocated(RB_lat))then
+    if(.not.allocated(LatRb_I))then
        nCells_D=ncell_id(RB_)
        if(  iSize /= nCells_D(1) .or. &
             jSize /= nCells_D(2) ) then
@@ -66,131 +67,133 @@ contains
                iSize,jSize, nCells_D(1:2)
           call CON_stop(NameSub//' ERROR')
        end if
-       allocate(RB_lat(iSize), RB_lon(jSize))
+       allocate(LatRb_I(iSize), LonRb_I(jSize))
        ! Convert colat, lon to lat-lon in degrees
-       RB_lat = Grid_C(RB_) % Coord1_I
-       RB_lon = Grid_C(RB_) % Coord2_I
+       LatRb_I = Grid_C(RB_) % Coord1_I
+       LonRb_I = Grid_C(RB_) % Coord2_I
     end if
 
-    if(.not.allocated(MHD_SUM_vol))then
-       allocate( MHD_SUM_vol(isize,jsize))
-       MHD_SUM_vol = 0.
+    if(.not.allocated(MhdSumVol_II))then
+       allocate( MhdSumVol_II(isize,jsize))
+       MhdSumVol_II = 0.
     end if
 
-    if(.not.allocated(MHD_SUM_rho))then
-       allocate( MHD_SUM_rho(isize,jsize))
-       MHD_SUM_rho = 0.
+    if(.not.allocated(MhdSumRho_II))then
+       allocate( MhdSumRho_II(isize,jsize))
+       MhdSumRho_II = 0.
     end if
 
-    if(.not.allocated(MHD_SUM_p))then
-       allocate( MHD_SUM_p(isize,jsize))
-       MHD_SUM_p = 0.
+    if(.not.allocated(MhdSumP_II))then
+       allocate( MhdSumP_II(isize,jsize))
+       MhdSumP_II = 0.
     end if
 
-    if(.not.allocated(MHD_Beq))then
-       allocate( MHD_Beq(isize,jsize))
-       MHD_Beq = 0.
+    if(.not.allocated(MhdBeq_II))then
+       allocate( MhdBeq_II(isize,jsize))
+       MhdBeq_II = 0.
     end if
 
-    if(.not.allocated(MHD_Xeq))then
-       allocate( MHD_Xeq(isize,jsize))
-       MHD_Xeq = 0.
+    if(.not.allocated(MhdXeq_II))then
+       allocate( MhdXeq_II(isize,jsize))
+       MhdXeq_II = 0.
     end if
 
-    if(.not.allocated(MHD_Yeq))then
-       allocate( MHD_Yeq(isize,jsize))
-       MHD_Yeq = 0.
+    if(.not.allocated(MhdYeq_II))then
+       allocate( MhdYeq_II(isize,jsize))
+       MhdYeq_II = 0.
     end if
 
-    if(.not.allocated(MHD_lat_boundary))then
-       allocate( MHD_lat_boundary(jsize))
-       MHD_lat_boundary = 0
+    if(.not.allocated(MhdLatBoundary_I))then
+       allocate( MhdLatBoundary_I(jsize))
+       MhdLatBoundary_I = 0
     end if
 
   end subroutine allocate_gm_rb
   !============================================================================
-
   subroutine write_integrated_data_tec
 
-    use ModIoUnit, ONLY: UNITTMP_
-    character(LEN=80) :: filename
-    integer :: j2, nCall=0
-    real :: tmpT, tmpV1,tmpV2, lonShift
-    !--------------------------------------------------------------------------
+    use ModIoUnit, ONLY: UnitTmp_
 
-    nCall=nCall+1
+    character(LEN=80) :: NameFile
+    integer :: j2, nCall = 0
+    real :: TmpT, TmpV1, TmpV2, LonShift
+    !--------------------------------------------------------------------------
+    nCall = nCall + 1
 
     ! write values to plot file
-    write(filename,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",nStep,"_",nCall,".dat"
+    write(NameFile,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",nStep,"_",nCall,".dat"
 
-    OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
-    write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
-    write(UNITTMP_,'(a)') &
+    OPEN (UNIT=UnitTmp_, FILE=NameFile, STATUS='unknown')
+    write(UnitTmp_,'(a)') 'TITLE="Raytrace Values"'
+    write(UnitTmp_,'(a)') &
          'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
          ', "Xeq", "Yeq"', &
          ', "Volume", "Volume**(-2/3)"', &
          ', "MHD `r", "MHD p", "MHD T", "Beq"'
-    write(UNITTMP_,'(a,i3.3,a,i4,a,i4,a)') &
+    write(UnitTmp_,'(a,i3.3,a,i4,a,i4,a)') &
          'ZONE T="PE=',iProc,'", I=',jsize+1,', J=',isize,', K=1, F=POINT'
     do i=1,isize
        do j2=1,jsize+1
           j=j2; if(j2==jsize+1) j=1
-          lonShift=0.; if(j2==jsize+1) lonShift=360.
-          tmpT=-1.; if(MHD_SUM_rho(i,j)>0.) &
-               tmpT = ((MHD_SUM_p(i,j)*Si2No_V(UnitP_)) / &
-               (MHD_SUM_rho(i,j)*Si2No_V(UnitRho_))) &
+          LonShift=0.; if(j2==jsize+1) LonShift=360.
+          TmpT=-1.; if(MhdSumRho_II(i,j)>0.) &
+               TmpT = ((MhdSumP_II(i,j)*Si2No_V(UnitP_)) / &
+               (MhdSumRho_II(i,j)*Si2No_V(UnitRho_))) &
                * No2Si_V(UnitTemperature_)
-          tmpV1=0.; if(MHD_SUM_vol(i,j)>0.) &
-               tmpV1 = (MHD_SUM_vol(i,j)/1.e9)
-          tmpV2=0.; if(MHD_SUM_vol(i,j)>0.) &
-               tmpV2 = (MHD_SUM_vol(i,j)/1.e9)**(-2./3.)
-          write(UNITTMP_,'(2i4,12G14.6)') j2,i,RB_lon(j)+lonShift,RB_lat(i), &
-               MHD_lat_boundary(j), &
-               MHD_Xeq(i,j),MHD_Yeq(i,j), &
-               tmpV1,tmpV2, &
-               MHD_SUM_rho(i,j),MHD_SUM_p(i,j),tmpT,MHD_Beq(i,j)
+          TmpV1=0.; if(MhdSumVol_II(i,j)>0.) &
+               TmpV1 = (MhdSumVol_II(i,j)/1.e9)
+          TmpV2=0.; if(MhdSumVol_II(i,j)>0.) &
+               TmpV2 = (MhdSumVol_II(i,j)/1.e9)**(-2./3.)
+          write(UnitTmp_,'(2i4,12G14.6)') &
+               j2, i, LonRb_I(j)+LonShift, LatRb_I(i), &
+               MhdLatBoundary_I(j), &
+               MhdXeq_II(i,j),MhdYeq_II(i,j), &
+               TmpV1, TmpV2, &
+               MhdSumRho_II(i,j),MhdSumP_II(i,j),TmpT,MhdBeq_II(i,j)
        end do
     end do
-    CLOSE(UNITTMP_)
+    CLOSE(UnitTmp_)
 
   end subroutine write_integrated_data_tec
   !============================================================================
-
   subroutine write_integrated_data_idl
-    use ModPhysics, ONLY: No2Si_V, UnitB_
-    use ModIoUnit, ONLY: UNITTMP_
-    use ModMain,   ONLY: tSimulation
-    CHARACTER (LEN=100) :: filename
-    integer :: nCall = 0
 
     ! write values to plot file
+
+    use ModPhysics, ONLY: No2Si_V, UnitB_
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModMain,   ONLY: tSimulation
+
+    character(len=100) :: NameFile
+
+    integer :: nCall = 0
     !--------------------------------------------------------------------------
     nCall = nCall+1
-    write(filename,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",nStep,"_",nCall,".out"
+    write(NameFile,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",nStep,"_",nCall,".out"
 
-    OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
+    open (UNIT=UnitTmp_, FILE=NameFile, STATUS='unknown', &
          iostat =iError)
-    if (iError /= 0) call CON_stop("Can not open raytrace File "//filename)
-    write(UNITTMP_,'(a79)')            'Raytrace Values_var22'
-    write(UNITTMP_,'(i7,1pe13.5,3i3)') nStep,tSimulation,2,1,6
-    write(UNITTMP_,'(3i4)')            jSize,iSize
-    write(UNITTMP_,'(100(1pe13.5))')   0.0
-    write(UNITTMP_,'(a79)')            'Lon Lat Xeq Yeq vol rho p Beq nothing'
+    if (iError /= 0) call CON_stop("Can not open raytrace File "//NameFile)
+    write(UnitTmp_,'(a79)')            'Raytrace Values_var22'
+    write(UnitTmp_,'(i7,1pe13.5,3i3)') nStep,tSimulation,2,1,6
+    write(UnitTmp_,'(3i4)')            jSize,iSize
+    write(UnitTmp_,'(100(1pe13.5))')   0.0
+    write(UnitTmp_,'(a79)')            'Lon Lat Xeq Yeq vol rho p Beq nothing'
 
     do i=isize,1,-1
        do j=1,jsize
-          write(UNITTMP_,'(100(1pe18.10))') &
-               modulo(RB_lon(j)-180.0,360.0),RB_lat(i), &
-               MHD_Xeq(i,j),MHD_Yeq(i,j),&
-               MHD_SUM_vol(i,j), &
-               MHD_SUM_rho(i,j),MHD_SUM_p(i,j),MHD_Beq(i,j) * No2Si_V(UnitB_)
+          write(UnitTmp_,'(100(1pe18.10))') &
+               modulo(LonRb_I(j)-180.0,360.0),LatRb_I(i), &
+               MhdXeq_II(i,j),MhdYeq_II(i,j),&
+               MhdSumVol_II(i,j), &
+               MhdSumRho_II(i,j), MhdSumP_II(i,j), &
+               MhdBeq_II(i,j)*No2Si_V(UnitB_)
        end do
     end do
-    CLOSE(UNITTMP_)
+    close(UnitTmp_)
 
   end subroutine write_integrated_data_idl
   !============================================================================
-
   subroutine GM_get_for_rb_trace(iSizeIn, jSizeIn, NameVar, nVarLine, &
        nPointLine)
 
@@ -218,7 +221,7 @@ contains
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
     DoExtractUnitSi = .true.
     call integrate_field_from_sphere(&
-         iSizeIn, jSizeIn, RB_lat, RB_lon, Radius, NameVar)
+         iSizeIn, jSizeIn, LatRb_I, LonRb_I, Radius, NameVar)
 
     call line_get(nVarLine, nPointLine)
 
@@ -226,7 +229,6 @@ contains
 
   end subroutine GM_get_for_rb_trace
   !============================================================================
-
   subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
        BufferLine_VI, nVarLine, nPointLine, NameVar)
 
@@ -243,11 +245,11 @@ contains
     use CON_axes,         ONLY: transform_matrix
     use CON_planet,       ONLY: RadiusPlanet
 
-    integer, intent(in)                                :: iSizeIn, jSizeIn, nVarIn
-    real, intent(out), dimension(iSizeIn,jSizeIn,nVarIn) :: Buffer_IIV
+    integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
+    real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
 
     integer, intent(in) :: nPointLine, nVarLine
-    real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+    real, intent(out)   :: BufferLine_VI(nVarLine,nPointLine)
     character (len=*), intent(in):: NameVar
 
     integer :: nVarExtract, nPoint, iPoint, iStartPoint
@@ -269,7 +271,7 @@ contains
     call CON_set_do_test(NameSub//'_idl', DoTestIdl, DoTestMe)
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    ! Initialize buffer_iiv
+    ! Initialize
     Buffer_IIV = 0.0
 
     ! Put the extracted data into BufferLine_VI
@@ -339,7 +341,7 @@ contains
     if(DoTest .or. DoTestIdl)call write_integrated_data_idl
 
     ! Send solar wind values in the array of the extra integral
-    ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
+    ! This is a temporary solution. RB should use MhdSumRho_II and MhdSumP_II
 
     call get_solar_wind_point(tSimulation, [xMaxBox, 0.0, 0.0], SolarWind_V)
 
@@ -355,7 +357,6 @@ contains
 
   end subroutine GM_get_for_rb
   !============================================================================
-
   subroutine GM_satinit_for_rb(nSats)
 
     ! This subroutine collects the number of satellite files for use in
@@ -379,8 +380,7 @@ contains
 
   end subroutine GM_satinit_for_rb
   !============================================================================
-
-  subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
+  subroutine GM_get_sat_for_rb(Buffer_III, NameBuffer_I, nSats)
 
     ! Subroutine to update and collect satellite locations for RB tracing
 
@@ -396,7 +396,7 @@ contains
     ! Arguments
     integer, intent(in)               :: nSats
     real, intent(out)                 :: Buffer_III(4,2,nSats)
-    character (len=100), intent(out)  :: Buffer_I(nSats)
+    character (len=100), intent(out)  :: NameBuffer_I(nSats)
 
     ! Local variables
 
@@ -407,8 +407,8 @@ contains
     integer :: iSat
     character(len=*), parameter:: NameSub = 'GM_get_sat_for_rb'
     !--------------------------------------------------------------------------
-    ! Store satellite names in Buffer_I
-    Buffer_I = NameSat_I(1:nSats)
+    ! Store satellite names in NameBuffer_I
+    NameBuffer_I = NameSat_I(1:nSats)
 
     do iSat=1, nSats
        ! Update satellite position.
@@ -447,6 +447,5 @@ contains
 
   end subroutine GM_get_sat_for_rb
   !============================================================================
-
 end module GM_couple_rb
 !==============================================================================

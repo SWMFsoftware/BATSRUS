@@ -180,11 +180,11 @@ program spectrum
   character(len=*), parameter :: NameSub = 'spectrum.f90'
 
   !---------------------------------------------------------------------------
-  write(*,*)'Spectrum.exe starting'
-
   call MPI_init(iError)
   call MPI_comm_rank(iComm, iProc, iError)
   call MPI_comm_size(iComm, nProc, iError)
+
+  if(iProc==0)write(*,*)'Spectrum.exe starting'
 
   call read_param
 
@@ -201,7 +201,7 @@ program spectrum
   if(DoDEM)then
      call calc_dem
      if(.not. DoSpectrum)then
-        write(*,*)'Spectrum.exe ending with DEM calculation only.'
+        if(iProc==0)write(*,*)'Spectrum.exe ending with DEM calculation only.'
         STOP
      endif
   endif
@@ -213,7 +213,7 @@ program spectrum
   nLineAll = min(nMaxLine,nLineFound)
 
   ! Loop over Chianti lines
-  if(IsVerbose)write(*,*)'IsOneLine = ', IsOneLine
+  if(IsVerbose .and. iProc==0)write(*,*)'IsOneLine = ', IsOneLine
 !!! ! nLineAll = 1.
   do iLine = 1,nLineAll
      if (.not. IsOneLine)call calc_flux
@@ -237,7 +237,7 @@ program spectrum
 
   if(iProc==0)then
      call save_all
-     if(IsVerbose)write(*,*)'done with save_all'
+     if(IsVerbose .and. iProc==0 )write(*,*)'done with save_all'
   end if
 
   deallocate(WavelengthInterval_II, SpectrumTable_I)
@@ -482,7 +482,7 @@ contains
        ! Number of wave length processed so far
        nWave = 0
        ! Loop over intervals
-       if(IsVerbose) write(*,*)"  nWaveInterval = ",nWaveInterval
+       if(IsVerbose .and. iProc==0) write(*,*)"  nWaveInterval = ",nWaveInterval
        do iWaveInterval = 1, nWaveInterval
 
           ! Number of wave length in this interval
@@ -601,7 +601,7 @@ contains
        do iIon=1,nIonFracMax
           if(LineTable_I(iLine)%NameIon==IonFracTable_I(iIon)%NameIonFrac)then
              IsFound = .true.
-             if(IsVerbose) then
+             if(IsVerbose .and. iProc ==0) then
                 write(*,*)"  NON-EQUILIBRIUM IONIZATION USED for"
                 write(*,*)"  Ion : ",LineTable_I(iLine)%NameIon
                 write(*,*)" Line : ",LineTable_I(iLine)%LineWavelength
@@ -611,7 +611,7 @@ contains
        enddo
     endif
 
-    if(IsOnePixel)write(*,*)'n1 n2 n3 i j k =',n1,n2,n3,i,jPixel,kPixel
+    if(IsOnePixel .and. iProc==0)write(*,*)'n1 n2 n3 i j k =',n1,n2,n3,i,jPixel,kPixel
 
     do kPixel=1,n3
        do jPixel=1,n2
@@ -747,7 +747,7 @@ contains
              if(DoExtendTransitionRegion) FluxMono = FluxMono &
                   /extension_factor(Var_VIII(te_,i,jPixel,kPixel))
 
-             if(IsDebug)then
+             if(IsDebug .and. iProc==0)then
                 write(*,*)'                                                   '
                 write(*,*)'      ',LineTable_I(iLine)%NameIon,'         '
                 write(*,*)'LineWavelength = ',LineTable_I(iLine)%LineWavelength
@@ -887,7 +887,7 @@ contains
        select case(NameCommand)
        case("#ECHO")
           call read_var('DoEcho',DoEcho)
-          call read_echo_set(DoEcho)
+          if(iProc==0)call read_echo_set(DoEcho)
 
        case("#VERBOSE")
           call read_var('IsVerbose', IsVerbose)
@@ -913,7 +913,7 @@ contains
           call read_var('nWavelengthInterval',nWavelengthInterval)
           if(IsInstrument)then
              deallocate(WavelengthInterval_II)
-             write(*,*)'INSTRUMENT intervals changed to WAVELENGTHINTERVALS'
+             if(iProc==0)write(*,*)'INSTRUMENT intervals changed to WAVELENGTHINTERVALS'
           endif
           allocate(WavelengthInterval_II(2,nWavelengthInterval))
           do iWavelengthInterval=1, nWavelengthInterval
@@ -944,14 +944,14 @@ contains
 
              SizeWavelengthBin = 0.0223
              if(IsNoInstrument)then
-                write(*,*)'INSTRUMENT interval changed to WAVELENGTHINTERVALS'
+                if(iProc==0)write(*,*)'INSTRUMENT interval changed to WAVELENGTHINTERVALS'
              else
                 allocate(WavelengthInterval_II(2,nWavelengthInterval))
                 WavelengthInterval_II(:,1) = [ 170 ,210 ]
                 WavelengthInterval_II(:,2) = [ 250 ,290 ]
              endif
           case default
-             write(*,*) NameSub // ' WARNING: unknown #INSTRUMENT '
+             if(iProc==0)write(*,*) NameSub // ' WARNING: unknown #INSTRUMENT '
           end select
 
        case("#UNIFORMDATA")
@@ -982,7 +982,7 @@ contains
              call read_var('TperpUni',TperpUni)
              call read_var('TeUni',TeUni)
           else
-             write(*,*) NameSub // ' WARNING: check temperature setting' // &
+             if(iProc==0)write(*,*) NameSub // ' WARNING: check temperature setting' // &
                   'Select 1, 2 (proton+electron), or 3 temperature' // &
                   '(electron+anisotropic proton) model!'
           endif
@@ -1045,7 +1045,7 @@ contains
           call read_var('UseIonFrac',UseIonFrac)
 
        case default
-          write(*,*) NameSub // ' WARNING: unknown #COMMAND '
+          if(iProc==0)write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
        end select
     end do READPARAM
@@ -1189,7 +1189,7 @@ contains
 
     else
        do iVar=1, nVar
-          if(IsVerbose)write(*,*)'NameVar_V(iVar+nDim) = ',&
+          if(IsVerbose .and. iProc==0)write(*,*)'NameVar_V(iVar+nDim) = ',&
                NameVar_V(iVar+nDim)
 
           call lower_case(NameVar_V(iVar+nDim))
@@ -1291,7 +1291,7 @@ contains
                 enddo ELEMENTLOOP
              endif
 
-             if(.not.IsFound) write(*,*) NameSub // ' unused NameVar = '&
+             if(.not.IsFound .and. iProc==0) write(*,*) NameSub // ' unused NameVar = '&
                   // NameVar_V(iVar+nDim)
           end select
        end do
@@ -1320,7 +1320,7 @@ contains
           end do
        end if
 
-       if(IsDebug)then
+       if(IsDebug .and. iProc==0)then
           write(*,*)'ux_,uz_,bx_,bz_=', ux_,uz_,bx_,bz_
           write(*,*)'Rot_DD=', Rot_DD
           write(*,*)'Before: u_D=', Var_VIII(ux_:uz_,1,1,1)
@@ -1331,7 +1331,7 @@ contains
           Var_VIII(bx_:bz_,i,j,k) = matmul(Var_VIII(bx_:bz_,i,j,k), Rot_DD)
        end do; end do; end do
 
-       if(IsDebug)write(*,*)'After: u_D=', Var_VIII(ux_:uz_,1,1,1)
+       if(IsDebug .and. iProc==0)write(*,*)'After: u_D=', Var_VIII(ux_:uz_,1,1,1)
     endif
 
     deallocate(VarIn_VIII)
@@ -1353,13 +1353,13 @@ contains
     ! te = t
     if(.not. IsPe)Var_VIII(te_,1:n1,1:n2,1:n3) = Var_VIII(t_,1:n1,1:n2,1:n3)
 
-    if(IsInstrument .and. nPixel /= n3)write(*,*) &
+    if(IsInstrument .and. nPixel /= n3 .and. iProc==0)write(*,*) &
          '!!! nPixel= ',nPixel,' /= n3  = ',n3,' -> we use n3 '
 
     if(IsNoAlfven)then
        Var_VIII(I01_,1:n1,1:n2,1:n3) = 0
        Var_VIII(I02_,1:n1,1:n2,1:n3) = 0
-       write(*,*)"IsNoAlfven ON !!!"
+       if(iProc==0)write(*,*)"IsNoAlfven ON !!!"
     endif
 
     ! Cells behind the solar disk
@@ -1415,7 +1415,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'read_table'
     !--------------------------------------------------------------------------
-    if(IsVerbose) write(*,*)'reading table file=', trim(NameTableFile)
+    if(IsVerbose .and. iProc==0) write(*,*)'reading table file=', trim(NameTableFile)
 
     ! Read only wavelength of interest into a nice table
     allocate(LineTable_I(nMaxLine))
@@ -1434,13 +1434,13 @@ contains
     READGRID: do
        read(UnitTmp_,'(a)',iostat=iError) StringLine
        if(iError  /= 0)then
-          write(*,*)'iError = ',iError
+          if(iProc==0)write(*,*)'iError = ',iError
           call CON_stop('failed reading header of chianti table')
        end if
        if(StringLine == "#GRID")then
           read(UnitTmp_,*)MinLogN, MaxLogN, DLogN
           read(UnitTmp_,*)MinLogT, MaxLogT, DLogT
-          if(IsVerbose)then
+          if(IsVerbose .and. iProc==0)then
              write(*,*)'MinLogN, MaxLogN, DLogN = ',MinLogN, MaxLogN, DLogN
              write(*,*)'MinLogT, MaxLogT, DLogT = ',MinLogT, MaxLogT, DLogT
           end if
@@ -1461,10 +1461,10 @@ contains
        if(IsHeader)then
           read(UnitTmp_,'(a)',iostat=iError) StringLine
           if(iError  /= 0)then
-             write(*,*)'iError = ',iError
+             if(iProc==0)write(*,*)'iError = ',iError
              call CON_stop('failed reading remaining header of chianti table')
           end if
-          if(IsVerbose) write(*,'(a)') StringLine
+          if(IsVerbose .and. iProc==0) write(*,'(a)') StringLine
           if(StringLine == "#START") IsHeader = .false.
           CYCLE READLOOP
        end if
@@ -1475,8 +1475,8 @@ contains
             LogN, LogT, LogG, LogIonFrac
 
        if(iError  /= 0 .and. iError /= -1)then
-          write(*,*)'iError = ',iError
-          write(*,*)'last line = ',NameIon, Aion, nLevelFrom, nLevelTo, &
+          if(iProc==0)write(*,*)'iError = ',iError
+          if(iProc==0)write(*,*)'last line = ',NameIon, Aion, nLevelFrom, nLevelTo, &
                LineWavelength, LogN, LogT, LogG, LogIonFrac
           call CON_stop('failed reading chianti table')
        end if
@@ -1484,7 +1484,7 @@ contains
        ! Unobserved lines are stored with negative wavelength
        ! If interested in unobserved lines, use absolute value of wavelength
        if(IsAllLines)then
-          if(IsVerbose .and. LineWavelength < 0)&
+          if(IsVerbose .and. iProc==0 .and. LineWavelength < 0)&
                write(*,*)'Unobserved line read : ',LineWavelength
           LineWavelength = abs(LineWavelength)
        endif
@@ -1549,7 +1549,7 @@ contains
 
           ! New line of interest found, decide to store it
           iLine      = iLine + 1
-          if(IsVerbose)write(*,*)iLine,NameIon,LineWavelength
+          if(IsVerbose .and. iProc==0)write(*,*)iLine,NameIon,LineWavelength
           ! Check if there are too many lines already
           if(iLine > nMaxLine)&
                call CON_stop('Too many lines are found, increase MaxWave')
@@ -1568,7 +1568,7 @@ contains
           LineTable_I(iLine)%nLevelTo       = nLevelTo
           LineTable_I(iLine)%LineWavelength = LineWavelength
 
-          if(IsVerbose)write(*,*)'NameIon, LineWavelength = ',NameIon,LineWavelength
+          if(IsVerbose .and. iProc==0)write(*,*)'NameIon, LineWavelength = ',NameIon,LineWavelength
 
           ! Calculate indexes and store as the minimum indexes
           iN                      = nint(LogN/DLogN)
@@ -1595,8 +1595,8 @@ contains
 
     deallocate(g_II, IonFrac_II)
 
-    if(IsVerbose)write(*,*)'nLineFound = ',nLineFound
-    if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
+    if(IsVerbose .and. iProc==0)write(*,*)'nLineFound = ',nLineFound
+    if(IsVerbose .and. iProc==0)write(*,*)'nMaxLine = ',nMaxLine
 
   end subroutine read_table
   !============================================================================

@@ -5,6 +5,7 @@ module GM_couple_pw
 
   ! Coupling with the Polar Wind component.
 
+  use ModUtilities, ONLY: CON_set_do_test, CON_stop
   use BATL_lib, ONLY: nProc, iComm
   use ModNumConst,   ONLY: cDegToRad
   use ModMultiFluid, ONLY: nIonFluid
@@ -29,13 +30,13 @@ module GM_couple_pw
        CoordXyzPw1_DI(:,:), CoordXyzPw2_DI(:,:), &
        StateGm1_VI(:,:),StateGm2_VI(:,:)
 
-  integer, allocatable :: list1_I(:),lptr1_I(:), lend1_I(:),&
-       list2_I(:), lptr2_I(:), lend2_I(:)
+  integer, allocatable :: iLst1_I(:), lPtr1_I(:), lEnd1_I(:),&
+       iLst2_I(:), lPtr2_I(:), lEnd2_I(:)
 
   integer, parameter :: nOuterPoint=12
   real,    parameter :: dThetaOuter=5.0*cDegToRad
 
-  integer :: iCoupleFluid(nIonFluid) = -1
+  integer :: iCoupleFluid_I(nIonFluid) = -1
 
   integer :: nVarPw=-1, nSpeciesPw=-1, nLinePw=-1, nPoint=-1, nTriangle=-1
   integer :: iRhoPwFirst=-1, iRhoPwLast=-1, iUPwFirst=-1, iUPwLast=-1
@@ -82,7 +83,6 @@ contains
 
   end subroutine GM_get_for_pw
   !============================================================================
-
   subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
     use CON_coupler, ONLY: PW_, Grid_C
@@ -109,8 +109,8 @@ contains
     integer :: i, iLine, iHemisphere, j
     real    :: GmPw_DD(3,3), Theta, Phi, XyzPw_D(3), &
          SinThetaOuter1,SinThetaOuter2,CosThetaOuter1,CosThetaOuter2,&
-         tmp1_array(nFieldLine)
-    integer :: Tmp_array(nFieldLine)
+         Tmp1_I(nFieldLine)
+
     integer :: iError=0 ! error counter for triangulation subroutine
 
     logical :: DoTest, DoTestMe
@@ -158,11 +158,7 @@ contains
        nLinePw = nFieldLine
        nPoint = nLinePw + nOuterPoint
 
-       Tmp_array = 0
-       where(Buffer_VI(Theta_,:)<cHalfPi)
-          Tmp_array = 1
-       end where
-       nLinePw1 = sum(Tmp_array)
+       nLinePw1 = count(Buffer_VI(Theta_,:) < cHalfPi)
        nPoint1 = nLinePw1 + nOuterPoint
 
        nLinePw2 = nLinePw - nLinePw1
@@ -200,7 +196,7 @@ contains
           iUGmFirst   = nIonFluid + 1
           iUGmLast    = 2*nIonFluid
 
-          ! Build iCoupleFluid, which connects PW fluids with GM fluids.
+          ! Build iCoupleFluid_I, which connects PW fluids with GM fluids.
           ! Assumption: MHD is using STANDARD FLUID NAMES and PW only has
           ! Op, Hep, and Hp to share.
           j = 1
@@ -208,11 +204,11 @@ contains
              if(DoTestMe)write(*,*) 'Checking var ', trim(NameVar_V(i)),'.'
              select case( trim(NameVar_V(i)) )
              case('HpRho')
-                iCoupleFluid(j) = iRhoPwFirst
+                iCoupleFluid_I(j) = iRhoPwFirst
              case('OpRho')
-                iCoupleFluid(j) = iRhoPwFirst + 1
+                iCoupleFluid_I(j) = iRhoPwFirst + 1
              case('HepRho')
-                iCoupleFluid(j) = iRhoPwFirst + 2
+                iCoupleFluid_I(j) = iRhoPwFirst + 2
              end select
              ! Keep track of which ion species we are on by counting the
              ! number of variables that have the name <Species>Rho.
@@ -220,7 +216,7 @@ contains
           end do
 
           if(DoTestMe)write(*,*) 'nIonFluid = ', nIonFluid
-          if(DoTestMe)write(*,*) 'iCoupleFluid = (',iCoupleFluid,')'
+          if(DoTestMe)write(*,*) 'iCoupleFluid_I = (',iCoupleFluid_I,')'
 
        else
           ! Total density and velocity
@@ -235,28 +231,28 @@ contains
             CoordXyzPw1_DI(nCoord,nPoint), &
             StateGm2_VI(iUGmLast,nPoint), &
             CoordXyzPw2_DI(nCoord,nPoint), &
-            list1_I(6*(nPoint1-2)), &
-            lptr1_I(6*(nPoint1-2)), &
-            lend1_I(nPoint1))
+            iLst1_I(6*(nPoint1-2)), &
+            lPtr1_I(6*(nPoint1-2)), &
+            lEnd1_I(nPoint1))
 
        ! Initialize arrays to zero
        StateGm1_VI    = 0
        CoordXyzPw1_DI = 0
        StateGm2_VI    = 0
        CoordXyzPw2_DI = 0
-       list1_I = 0
-       lend1_I = 0
-       lptr1_I = 0
+       iLst1_I = 0
+       lEnd1_I = 0
+       lPtr1_I = 0
 
        if(nLinePw2 > 0) then
           ! Southern hemisphere
           allocate( &
-               list2_I(6*(nPoint2-2)), &
-               lptr2_I(6*(nPoint2-2)), &
-               lend2_I(nPoint2))
-          list2_I = 0
-          lend2_I = 0
-          lptr2_I = 0
+               iLst2_I(6*(nPoint2-2)), &
+               lPtr2_I(6*(nPoint2-2)), &
+               lEnd2_I(nPoint2))
+          iLst2_I = 0
+          lEnd2_I = 0
+          lPtr2_I = 0
        end if
     end if
 
@@ -286,8 +282,8 @@ contains
     if(UseMultiIon)then
        do i = iRhoGmFirst, iRhoGmLast
           ! Set values based on if fluid is shared by PW & GM.
-          if (iCoupleFluid(i)==-1) then ! Fluid NOT in PW.
-             where(Buffer_VI(Theta_,:)< cHalfPi) ! Northern Hemisphere.
+          if (iCoupleFluid_I(i)==-1) then ! Fluid NOT in PW.
+             where(Buffer_VI(Theta_,:) < cHalfPi) ! Northern Hemisphere.
                 StateGm1_VI(i,1:nFieldline) = 1.67E-24 * Si2No_V(UnitRho_)
                 StateGm1_VI(i+nIonFluid, 1:nFieldLine) = 0.0
              elsewhere                           ! Southern Hemisphere
@@ -295,16 +291,16 @@ contains
                 StateGm2_VI(i+nIonFluid, 1:nFieldLine) = 0.0
              end where
           else                          ! Fluid IS in PW.
-             where(Buffer_VI(Theta_,:)< cHalfPi) ! Northern Hemisphere.
+             where(Buffer_VI(Theta_,:) < cHalfPi) ! Northern Hemisphere.
                 StateGm1_VI(i,           1:nFieldLine) = &
-                     Buffer_VI(iCoupleFluid(i),:) * Si2No_V(UnitRho_)
+                     Buffer_VI(iCoupleFluid_I(i),:) * Si2No_V(UnitRho_)
                 StateGm1_VI(i+nIonFluid, 1:nFieldLine) = &
-                     Buffer_VI(iCoupleFluid(i)+nSpeciesPw, :) * Si2No_V(UnitU_)
+                     Buffer_VI(iCoupleFluid_I(i)+nSpeciesPw,:)*Si2No_V(UnitU_)
              elsewhere                           ! Southern Hemisphere
                 StateGm2_VI(i,           1:nFieldLine) = &
-                     Buffer_VI(iCoupleFluid(i),:) * Si2No_V(UnitRho_)
+                     Buffer_VI(iCoupleFluid_I(i),:) * Si2No_V(UnitRho_)
                 StateGm2_VI(i+nIonFluid, 1:nFieldLine) = &
-                     Buffer_VI(iCoupleFluid(i)+nSpeciesPw,:) * Si2No_V(UnitU_)
+                     Buffer_VI(iCoupleFluid_I(i)+nSpeciesPw,:)*Si2No_V(UnitU_)
              end where
           end if
        end do
@@ -339,10 +335,12 @@ contains
           ! Total density in normalized units
           where(Buffer_VI(Theta_,:)< cHalfPi)
              StateGm1_VI(iRhoGmFirst, 1:nFieldline) &
-                  = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) * Si2No_V(UnitRho_)
+                  = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:), DIM=1) &
+                  *Si2No_V(UnitRho_)
           elsewhere
              StateGm2_VI(iRhoGmFirst, 1:nFieldline) &
-                  = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) * Si2No_V(UnitRho_)
+                  = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:), DIM=1) &
+                  *Si2No_V(UnitRho_)
           end where
        end if
 
@@ -369,19 +367,19 @@ contains
     !     StateGm_VI(iRhoGmFirst:iRhoGmLast,1:nLinePw)*Factor
 
     ! Set coordinates for the outer points
-    tmp1_array = cTwoPi
+    Tmp1_I = cTwoPi
     where(Buffer_VI(Theta_,:)>cHalfPi)
-       tmp1_array = Buffer_VI(Theta_,:)
+       Tmp1_I = Buffer_VI(Theta_,:)
     end where
-    SinThetaOuter2 = sin(minval(tmp1_array)-dThetaOuter)
-    CosThetaOuter2 = cos(minval(tmp1_array)-dThetaOuter)
+    SinThetaOuter2 = sin(minval(Tmp1_I)-dThetaOuter)
+    CosThetaOuter2 = cos(minval(Tmp1_I)-dThetaOuter)
 
-    tmp1_array = 0.0
+    Tmp1_I = 0.0
     where(Buffer_VI(Theta_,:)<cHalfPi)
-       tmp1_array = Buffer_VI(Theta_,:)
+       Tmp1_I = Buffer_VI(Theta_,:)
     end where
-    SinThetaOuter1 = sin(maxval(tmp1_array)+dThetaOuter)
-    CosThetaOuter1 = cos(maxval(tmp1_array)+dThetaOuter)
+    SinThetaOuter1 = sin(maxval(Tmp1_I)+dThetaOuter)
+    CosThetaOuter1 = cos(maxval(Tmp1_I)+dThetaOuter)
 
     do i = 1, nOuterPoint
        CoordXyzPw1_DI(x_,nLinePw1+i) = &
@@ -403,7 +401,7 @@ contains
     !
     call trmesh ( nPoint1, CoordXyzPw1_DI(x_,1:nPoint1), &
          CoordXyzPW1_DI(y_,1:nPoint1), CoordXyzPW1_DI(z_,1:nPoint1), &
-         list1_I, lptr1_I, lend1_I, iError )
+         iLst1_I, lPtr1_I, lEnd1_I, iError )
     if ( iError == -2 ) then
        write(*,*)NameSub, &
             ' WARNING: Error in TRMESH, First three nodes are collinear'
@@ -418,7 +416,7 @@ contains
        call trmesh ( nPoint2, CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2), &
             CoordXyzPW2_DI(y_,nLinePw1+1:nLinePw1+nPoint2), &
             CoordXyzPW2_DI(z_,nLinePw1+1:nLinePw1+nPoint2), &
-            list2_I, lptr2_I, lend2_I, iError )
+            iLst2_I, lPtr2_I, lEnd2_I, iError )
        if ( iError == -2 ) then
           write(*,*)NameSub, &
                ' WARNING: Error in TRMESH, First three nodes are collinear'
@@ -449,23 +447,23 @@ contains
        call trplot ( UnitTmp_, 7.5, 90.0, 0.0, 90.0, nPoint1, &
             CoordXyzPw1_DI(x_,1:nPoint1), &
             CoordXyzPw1_DI(y_,1:nPoint1), &
-            CoordXyzPw1_DI(z_,1:nPoint1), list1_I, lptr1_I, &
-            lend1_I, 'test1 triangulation',.true., iError )
+            CoordXyzPw1_DI(z_,1:nPoint1), iLst1_I, lPtr1_I, &
+            lEnd1_I, 'test1 triangulation',.true., iError )
        close(UnitTmp_)
        if(nLinePw2 > 0)then
           ! Southern Hemi
           open ( UnitTmp_, file = 'TestTriangulation_South.eps' )
           call trplot ( UnitTmp_, 7.5, -90.0, 0.0, 90.0, nPoint2, &
-               CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2), &
-               CoordXyzPw2_DI(y_,nLinePw1+1:nLinePw1+nPoint2), &
-               CoordXyzPw2_DI(z_,nLinePw1+1:nLinePw1+nPoint2), &
-               list2_I, lptr2_I, lend2_I, 'test1 triangulation',.true., iError )
+               CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2),    &
+               CoordXyzPw2_DI(y_,nLinePw1+1:nLinePw1+nPoint2),    &
+               CoordXyzPw2_DI(z_,nLinePw1+1:nLinePw1+nPoint2),    &
+               iLst2_I, lPtr2_I, lEnd2_I, 'test1 triangulation',  &
+               .true., iError )
           close(UnitTmp_)
        end if
     end if
 
   end subroutine GM_put_from_pw
   !============================================================================
-
  end module GM_couple_pw
 !==============================================================================

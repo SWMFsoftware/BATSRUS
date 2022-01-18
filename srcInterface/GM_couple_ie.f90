@@ -6,6 +6,7 @@
 module GM_couple_ie
 
   use BATL_lib, ONLY: iProc
+  use ModUtilities, ONLY: CON_set_do_test
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModIeCoupling, ONLY: rIonosphere, &
        nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I,&
@@ -137,7 +138,8 @@ contains
        IeLat_I = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
        IeLon_I =        cRadToDeg * PhiIono_I
        Radius = (6378.+100.)/6378.
-       call integrate_field_from_sphere(iSize, jSize, IeLat_I, IeLon_I, Radius, &
+       call integrate_field_from_sphere( &
+            iSize, jSize, IeLat_I, IeLon_I, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
 
        ! Only processor 0 has the resulting Integral_I,

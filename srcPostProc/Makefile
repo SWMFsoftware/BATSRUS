@@ -139,7 +139,7 @@ test_spectrum2_run:
 	${MPIRUN} ./SPECTRUM2.exe > test-spectrum2.log
 
 test_spectrum2_check:
-	${SCRIPTDIR}/DiffNum.pl -t  \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		test-spectrum2.out \
 		test-spectrum.ref.gz > ../test_spectrum2.diff
 	@ls -l ../test_spectrum2.diff

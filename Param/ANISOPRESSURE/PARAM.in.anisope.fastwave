@@ -1,3 +1,6 @@
+#DESCRIPTION
+Param/ANISOPRESSURE/PARAM.in.anisope.fastwave: both P and Pe are anisotropic		StringDescription
+
 #PLANET
 NONE			NamePlanet
 
@@ -6,6 +9,9 @@ NONE			TypeIoUnit
 
 #NORMALIZATION
 NONE			TypeNormalization
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
 
 #NONCONSERVATIVE
 T			UseNonConservative

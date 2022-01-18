@@ -4,6 +4,7 @@
 
 subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
+  use GM_couple_pw
   use CON_coupler,       ONLY: PW_, Grid_C
   use CON_axes,          ONLY: transform_matrix
   use ModMain,           ONLY: TypeCoordSystem, tSimulation
@@ -12,7 +13,6 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   use ModAdvance,        ONLY: UseMultiSpecies
   use ModMultiFluid,     ONLY: UseMultiIon, nIonFluid, &
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
-  use GM_couple_pw
   use ModTriangulateSpherical, ONLY: find_triangle_sph
   use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_
   use ModB0,             ONLY: get_b0
@@ -40,7 +40,6 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   logical :: DoTest, DoTestMe
   character(len=*), parameter:: NameSub = 'read_pw_buffer'
   !----------------------------------------------------------------------------
-
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   if(DoInitialize)then
@@ -101,10 +100,10 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   !  write(*,*) 'Calling find_triangle_sph with Xyz_D =', Xyz_D
   !  write(*,*) 'nLinePw2', nLinePw2
   if(Xyz_D(3) < 0 .and. nLinePw2 > 0)then
-     ! Southern hemisphere (z < 0) and there are southern PW field lines (nLinePw2 > 0)
+     ! Southern hemisphere (z < 0) with southern PW field lines (nLinePw2 > 0)
      call find_triangle_sph(Xyz_D, nPoint2, &
           CoordXyzPw2_DI(:,nLinePw1+1:nLinePw1+nPoint2), &
-          list2_I, lptr2_I, lend2_I, Area1, Area2, Area3, IsTriangleFound, &
+          iLst2_I, lPtr2_I, lEnd2_I, Area1, Area2, Area3, IsTriangleFound, &
           iNode1,iNode2,iNode3)
   else
      ! Get weights if in northern hemisphere.
@@ -114,14 +113,14 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      XyzTmp_D(3)=abs(Xyz_D(3))
      call find_triangle_sph(XyzTmp_D, nPoint1, &
           CoordXyzPw1_DI(:,1:nPoint1), &
-          list1_I, lptr1_I, lend1_I, Area1, Area2, Area3, IsTriangleFound,&
+          iLst1_I, lPtr1_I, lEnd1_I, Area1, Area2, Area3, IsTriangleFound,&
           iNode1,iNode2,iNode3)
   end if
 
-  !  write(*,*) '!!!!!!! Point X, Y, Z =', Xyz_D, 'IsTriangleFound=', IsTriangleFound
-  !  write(*,*) '!!!! Areas:', Area1, Area2,Area3
-  !  write(*,*) '!!!! sum area=', Area1+Area2+Area3
-  !  write(*,*) '!!!! Test Position Vector Length', sqrt(sum(Xyz_D(:)**2))
+  !  write(*,*) '! Point X, Y, Z =', Xyz_D, 'IsTriangleFound=', IsTriangleFound
+  !  write(*,*) '! Areas:', Area1, Area2,Area3
+  !  write(*,*) '! sum area=', Area1+Area2+Area3
+  !  write(*,*) '! Test Position Vector Length', sqrt(sum(Xyz_D(:)**2))
   !  write(*,*) '  '
 
   !  call con_stop('')

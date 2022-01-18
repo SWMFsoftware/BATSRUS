@@ -73,9 +73,9 @@ module ModAdvance
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
   logical, parameter:: UseEfield = Ex_ > 1
 
-  ! Use entropy equation for electrons instead of pressure by default
-  ! This should provide more robust results near strong shocks
-  logical:: UseElectronEntropy = .false. !!! UseElectronPressure
+  ! Use the conservative electron entropy equation instead of pressure.
+  ! This should provide more robust results near strong shocks.
+  logical:: UseElectronEntropy = UseElectronPressure
 
   logical:: UseWavePressure = .false.
   !$acc declare create(UseWavePressure)

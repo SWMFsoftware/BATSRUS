@@ -152,6 +152,9 @@ outflow			TypeBc6
 #TIMEACCURATE
 F			IsTimeAccurate
 
+#ELECTRONENTROPY
+F			UseElectronEntropy
+
 #NEUTRALFLUID
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
