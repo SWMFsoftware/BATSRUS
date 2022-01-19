@@ -59,7 +59,7 @@ module ModUpdateStateFast
 
   logical:: DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny
   !$acc declare create (DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
-
+  
 contains
   !============================================================================
   include 'vector_functions.h'
