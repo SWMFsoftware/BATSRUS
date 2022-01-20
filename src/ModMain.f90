@@ -228,6 +228,7 @@ module ModMain
   logical :: UseGravity  = .false.
   integer :: iDirGravity = 0
   real    :: GravitySi   = 0.0
+  !$acc declare create(UseGravity)
 
   ! Logical for rotating inner boundary
   logical :: UseRotatingBc = .false.
@@ -244,6 +245,7 @@ module ModMain
 
   ! Rotating frame or (at least approximately) inertial frame
   logical :: UseRotatingFrame = .false.
+  !$acc declare create(UseRotatingFrame)
 
   ! Transform initial condition between rotating and inertial frames
   integer:: iSignRotationIC = 0

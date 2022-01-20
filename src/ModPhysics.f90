@@ -50,6 +50,7 @@ module ModPhysics
   real :: InvGammaElectron       = 1.0/Gamma0
   real :: GammaElectronMinus1    = Gamma0 - 1.0
   real :: InvGammaElectronMinus1 = 1.0/(Gamma0 - 1.0)
+  !$acc declare create(GammaElectron, GammaElectronMinus1)
 
   ! gamma of the waves
   real :: GammaWave = 1.5
