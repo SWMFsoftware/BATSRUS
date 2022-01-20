@@ -229,7 +229,7 @@ module ModMain
   integer :: iDirGravity = 0
   real    :: GravitySi   = 0.0
   !$acc declare create(UseGravity)
-  
+
   ! Logical for rotating inner boundary
   logical :: UseRotatingBc = .false.
   !$acc declare create(UseRotatingBC)
