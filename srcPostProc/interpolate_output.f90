@@ -274,9 +274,11 @@ contains
          n1Out = n1,                     & ! grid sizes
          n2Out = n2 )
 
-    ! Read time from header, if possible (avoids insufficient precision of real4)
+    ! Read time from header, if possible
+    !    (avoids insufficient precision of real4)
     iTime_I = 0
-    read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', iostat=iError) iTime_I(1:6)
+    read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', &
+         iostat=iError) iTime_I(1:6)
     if(iError == 0)then
        call time_int_to_real(iTime_I, Time)
     end if
@@ -367,7 +369,8 @@ contains
        if(iError /= 0) EXIT
 
        iTime_I = 0
-       read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', iostat=iError) iTime_I(1:6)
+       read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', &
+            iostat=iError) iTime_I(1:6)
        
        if(iError /= 0)then
           write(*,*) NameProgram,': could not read date from header line.', &
@@ -394,8 +397,8 @@ contains
 
     ! Interpolate dB to the position of the magnetometer stations
 
-    real,    allocatable:: Interp_VG(:,:,:)  ! interpolated vars on Lon-Lat grid
-    real,    allocatable:: Interp_VII(:,:,:) ! vars per snapshot and station
+    real,    allocatable:: Interp_VG(:,:,:) ! interpolated vars on Lon-Lat grid
+    real,    allocatable:: Interp_VII(:,:,:)! vars per snapshot and station
     integer, allocatable:: iTime_II(:,:) ! Date-time for each snapshot
 
     real:: Time ! simulation time
@@ -483,7 +486,7 @@ contains
     
     real   :: InterpCoord_D(2) ! interpolated trajectory coordinates
     real   :: RadMin, RadMax, PhiMin, PhiMax, dPhi
-    integer:: Weight
+    real   :: Weight
     integer:: iTrajTimestamp, iSnapshot ! loop indices
 
     character(len=*),parameter::NameSub = 'interpolate_trajectory' 
@@ -582,8 +585,10 @@ contains
      
        ! Undo coordinate normalization for writing to file.
        ! Convert from ln(r) to linear r
-       InterpCoord_DI(1,iSnapshot) = exp((InterpCoord_D(1)-1)*(RadMax-RadMin)/(n1-1)+RadMin)
-       InterpCoord_DI(2,iSnapshot) = InterpCoord_D(2)*(PhiMax-PhiMin)/(n2+1)+PhiMin
+       InterpCoord_DI(1,iSnapshot) = exp((InterpCoord_D(1)-1) &
+            * (RadMax-RadMin)/(n1-1)+RadMin)
+       InterpCoord_DI(2,iSnapshot) = InterpCoord_D(2) &
+            * (PhiMax-PhiMin)/(n2+1)+PhiMin
        TimeOut_I(iSnapshot) = Time
     enddo    
     
