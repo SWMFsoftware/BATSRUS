@@ -44,7 +44,7 @@ program interpolate_output
   integer           :: n1, n2, n3       ! grid size
   integer           :: nSnapshot        ! number of snapshots to be read
   real              :: StartTimeFileIn  ! time of initial snapshot in data file
-  
+
   ! Interpolated file
   character(len=100):: NameFileOut      ! name of output file
   character(len=100):: NameDirOut       ! name of output directory
@@ -311,7 +311,7 @@ contains
        call init_planet_const
        call set_planet_defaults
        call init_axes(StartTimeFileIn)
-       
+
        PointToIn_DD = transform_matrix(0.0, NameCoordPoint, NameCoordIn)
        write(*,*) NameProgram, &
             ': convert from ', NameCoordPoint, ' to ', NameCoordIn
@@ -371,7 +371,7 @@ contains
        iTime_I = 0
        read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', &
             iostat=iError) iTime_I(1:6)
-       
+
        if(iError /= 0)then
           write(*,*) NameProgram,': could not read date from header line.', &
                trim(NameFileIn)
@@ -384,7 +384,7 @@ contains
           if(Time < TrajTime_I(1)) CYCLE  ! before start of trajectory file
           if(Time > TrajTime_I(nPoint)) EXIT  ! after end of trajectory file
        end if
-       
+
        nSnapshot = nSnapshot + 1
     end do
     close(UnitTmp_)
@@ -483,13 +483,13 @@ contains
     real, allocatable:: InterpCoord_DI(:,:)! time interpolated trajectory
     real, allocatable:: TimeOut_I(:)       ! time of snapshots
     character(len=500):: StringHeader      ! required for timestamp
-    
+
     real   :: InterpCoord_D(2) ! interpolated trajectory coordinates
     real   :: RadMin, RadMax, PhiMin, PhiMax, dPhi
     real   :: Weight
     integer:: iTrajTimestamp, iSnapshot ! loop indices
 
-    character(len=*),parameter::NameSub = 'interpolate_trajectory' 
+    character(len=*), parameter:: NameSub = 'interpolate_trajectory'
     !--------------------------------------------------------------------------
     if(allocated(Var_VII)) deallocate(Var_VII)
 
@@ -516,9 +516,9 @@ contains
             VarOut_VII = Var_VII(:,:,1:n2),     &
             TimeOut = Time,                     & ! real4 simulation time
             iErrorOut = iError)
-       
+
        if(iError /= 0) EXIT
-       
+
        ! Read time from header and convert to simulation time.
        ! This is required for long runs that exceed real4
        !   precision for simulation time.
@@ -564,7 +564,7 @@ contains
           PhiMin = PhiMin - dPhi ! account for ghost cells
           PhiMax = PhiMax + dPhi
        endif
-       
+
        ! Fill in ghost cells in phi
        Var_VII(:,:,0)    = Var_VII(:,:,n2)
        Var_VII(:,:,n2+1) = Var_VII(:,:,1)
@@ -582,7 +582,7 @@ contains
             Max_D = [n1,n2+1], &
             x_D = InterpCoord_D, & ! desired position
             DoExtrapolate = .false.)
-     
+
        ! Undo coordinate normalization for writing to file.
        ! Convert from ln(r) to linear r
        InterpCoord_DI(1,iSnapshot) = exp((InterpCoord_D(1)-1) &
@@ -590,8 +590,8 @@ contains
        InterpCoord_DI(2,iSnapshot) = InterpCoord_D(2) &
             * (PhiMax-PhiMin)/(n2+1)+PhiMin
        TimeOut_I(iSnapshot) = Time
-    enddo    
-    
+    enddo
+
     call close_file(NameCaller=NameProgram)
     deallocate(Coord_DII, Var_VII)
 
