@@ -20,29 +20,30 @@ program interpolate_output
   integer:: iError      ! I/O error
   integer:: iTime_I(7)  ! array for year, month ... msec
   real   :: Time        ! time in number of seconds since 00UT 1965/1/1
-  real   :: StartTime   ! start time in seconds since 00UT 1965/1/1
+  real   :: StartTime   ! simulation start time in seconds since 00UT 1965/1/1
 
   ! Point position file
-  character(len=100):: NameFilePoints ! name of position file
-  character(len=100):: StringLine     ! single line from trajectory file
-  character(len=3)  :: NameCoordPoint ! coordinate system of the points
-  real, allocatable :: TrajTime_I(:)  ! simulation time from trajectory file
+  character(len=100):: NameFilePoints   ! name of position file
+  character(len=100):: StringLine       ! single line from trajectory file
+  character(len=3)  :: NameCoordPoint   ! coordinate system of the points
+  real, allocatable :: TrajTime_I(:)    ! simulation time from trajectory file
   character(len=3), allocatable:: NameMag_I(:) ! name of magnetic stations
   real, allocatable :: CoordPoint_DI(:,:) ! positions
   real, allocatable :: CoordIn_DI(:,:)    ! positions in the input file system
   real, allocatable :: CoordNorm_DI(:,:)  ! normalized positions
-  integer           :: nPoint         ! number of points for interpolation
+  integer           :: nPoint           ! number of points for interpolation
 
   ! Input mulit-D file
-  character(len=100):: NameFileIn     ! name of input data file
-  character(len=10) :: TypeFileIn     ! ascii/real4/real8
-  character(len=3)  :: NameCoordIn    ! coordinate system of input data file
+  character(len=100):: NameFileIn       ! name of input data file
+  character(len=10) :: TypeFileIn       ! ascii/real4/real8
+  character(len=3)  :: NameCoordIn      ! coordinate system of input data file
   character(len=500):: NameVar
   integer           :: nDim, nVar
   logical           :: IsCartesian
   real, allocatable :: Var_VII(:,:,:)
-  integer           :: n1, n2, n3     ! grid size
-  integer           :: nSnapshot      ! number of snapshots to be read
+  integer           :: n1, n2, n3       ! grid size
+  integer           :: nSnapshot        ! number of snapshots to be read
+  real              :: StartTimeFileIn  ! time of initial snapshot in data file
 
   ! Interpolated file
   character(len=100):: NameFileOut      ! name of output file
@@ -96,7 +97,7 @@ contains
     write(*,'(a,a,l1)') trim(NameFileIn), ', IsMagStation=', IsMagStation
 
     ! Get simulation start date-time from filename *_e(....)
-    i = index(NameFileIn, '_e', back=.true.) + 2
+    i = index(NameFileIn, '_e') + 2
     iTime_I = 0
     read(NameFileIn(i:i+14),'(i4,2i2,1x,3i2)', iostat=iError) iTime_I(1:6)
     if(iError /= 0)then
@@ -273,6 +274,14 @@ contains
          n1Out = n1,                     & ! grid sizes
          n2Out = n2 )
 
+    ! Read time from header, if possible
+    !    (avoids insufficient precision of real4)
+    iTime_I = 0
+    read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', &
+         iostat=iError) iTime_I(1:6)
+    if(iError == 0)then
+       call time_int_to_real(iTime_I, Time)
+    end if
     write(*,*) NameProgram,': initial Time=', Time,', n1=', n1, ', n2=', n2
     write(*,*) NameProgram,': nDim=', nDim, ', nVar=', nVar, ', NameVar=', &
          trim(NameVar)
@@ -292,15 +301,16 @@ contains
     end if
 
     ! Fix start time (subtract simulation time)
-    StartTime = StartTime - Time
+    StartTimeFileIn = StartTime - Time
 
     ! Convert point coordinates into the input coordinates
     if(NameCoordIn /= NameCoordPoint)then
        ! This works when the two coordinates systems don't move relative
        ! to each other, like GEO and MAG
+
        call init_planet_const
        call set_planet_defaults
-       call init_axes(StartTime)
+       call init_axes(StartTimeFileIn)
 
        PointToIn_DD = transform_matrix(0.0, NameCoordPoint, NameCoordIn)
        write(*,*) NameProgram, &
@@ -345,21 +355,36 @@ contains
 
     ! Read the whole file through to get the number of snapshots
     nSnapshot = 1
-    if(IsTrajectory)then
-       ! matching times require one fewer snapshots
-       ! This does not look like a general solution (Gabor)
-       if(TrajTime_I(1) /= 0) nSnapshot = 0
+    ! matching initial times require one fewer snapshots
+    if(IsTrajectory .and. TrajTime_I(1) > -StartTimeFileIn)then
+       nSnapshot = 0
     end if
+
     do
        call read_plot_file( &
             NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
-            VarOut_VII=Var_VII, TimeOut = Time, iErrorOut=iError)
+            StringHeaderOut=StringHeader, VarOut_VII=Var_VII, TimeOut=Time, &
+            iErrorOut=iError)
 
        if(iError /= 0) EXIT
+
+       iTime_I = 0
+       read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', &
+            iostat=iError) iTime_I(1:6)
+
+       if(iError /= 0)then
+          write(*,*) NameProgram,': could not read date from header line.', &
+               trim(NameFileIn)
+          STOP
+       end if
+       call time_int_to_real(iTime_I, Time)
+       Time = Time - StartTime
+
        if(IsTrajectory)then
           if(Time < TrajTime_I(1)) CYCLE  ! before start of trajectory file
           if(Time > TrajTime_I(nPoint)) EXIT  ! after end of trajectory file
        end if
+
        nSnapshot = nSnapshot + 1
     end do
     close(UnitTmp_)
@@ -372,8 +397,8 @@ contains
 
     ! Interpolate dB to the position of the magnetometer stations
 
-    real,    allocatable:: Interp_VG(:,:,:)  ! interpolated vars on Lon-Lat grid
-    real,    allocatable:: Interp_VII(:,:,:) ! vars per snapshot and station
+    real,    allocatable:: Interp_VG(:,:,:) ! interpolated vars on Lon-Lat grid
+    real,    allocatable:: Interp_VII(:,:,:)! vars per snapshot and station
     integer, allocatable:: iTime_II(:,:) ! Date-time for each snapshot
 
     real:: Time ! simulation time
@@ -395,7 +420,7 @@ contains
           EXIT
        end if
 
-       call time_real_to_int(StartTime + Time, iTime_I)
+       call time_real_to_int(StartTimeFileIn + Time, iTime_I)
        iTime_II(:,iSnapshot) = iTime_I(1:6)
 
        ! Copy the first three variables (dBn dBe dBd)
@@ -457,17 +482,20 @@ contains
     real, allocatable:: InterpData_VI(:,:) ! fully interpolated output
     real, allocatable:: InterpCoord_DI(:,:)! time interpolated trajectory
     real, allocatable:: TimeOut_I(:)       ! time of snapshots
+    character(len=500):: StringHeader      ! required for timestamp
 
     real   :: InterpCoord_D(2) ! interpolated trajectory coordinates
     real   :: RadMin, RadMax, PhiMin, PhiMax, dPhi
-    integer:: Weight
+    real   :: Weight
     integer:: iTrajTimestamp, iSnapshot ! loop indices
 
+    character(len=*), parameter:: NameSub = 'interpolate_trajectory'
     !--------------------------------------------------------------------------
     if(allocated(Var_VII)) deallocate(Var_VII)
 
     ! Create arrays to hold interpolated data.
     ! Reallocate Var_VII with ghost cells.
+
     allocate(                               &
          Coord_DII(nDim, n1, 0:n2+1),       &
          Var_VII(nVar, n1, 0:n2+1),         &
@@ -483,9 +511,25 @@ contains
             NameFile = NameFileIn,              &
             TypeFileIn = TypeFileIn,            &
             iUnitIn = UnitTmp_,                 &
+            StringHeaderOut=StringHeader,       &
             CoordOut_DII = Coord_DII(:,:,1:n2), &
             VarOut_VII = Var_VII(:,:,1:n2),     &
-            TimeOut = Time)                        ! simulation time
+            TimeOut = Time,                     & ! real4 simulation time
+            iErrorOut = iError)
+
+       if(iError /= 0) EXIT
+
+       ! Read time from header and convert to simulation time.
+       ! This is required for long runs that exceed real4
+       !   precision for simulation time.
+       read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', &
+            iostat=iError) iTime_I(1:6)
+       if(iError /= 0)then
+          write(*,*) NameSub,': could not read date from header line.'
+          STOP
+       end if
+       call time_int_to_real(iTime_I, Time)
+       Time = Time - StartTime
 
        if(Time < TrajTime_I(1)) CYCLE  ! before start of trajectory file
        if(Time > TrajTime_I(nPoint)) EXIT  ! after end of trajectory file
@@ -539,9 +583,13 @@ contains
             x_D = InterpCoord_D, & ! desired position
             DoExtrapolate = .false.)
 
-       InterpCoord_DI(:,iSnapshot) = InterpCoord_D
+       ! Undo coordinate normalization for writing to file.
+       ! Convert from ln(r) to linear r
+       InterpCoord_DI(1,iSnapshot) = exp((InterpCoord_D(1)-1) &
+            * (RadMax-RadMin)/(n1-1)+RadMin)
+       InterpCoord_DI(2,iSnapshot) = InterpCoord_D(2) &
+            * (PhiMax-PhiMin)/(n2+1)+PhiMin
        TimeOut_I(iSnapshot) = Time
-
     enddo
 
     call close_file(NameCaller=NameProgram)
