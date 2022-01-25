@@ -223,6 +223,7 @@ contains
     real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), &
          ForcePerRho_D(3), Omega2
     !$acc declare create (Change_V)
+    !$acc declare create (ForcePerRho_D)
 
     integer:: iVar
 
@@ -309,15 +310,15 @@ contains
                IsConserv_CB(iTest,jTest,kTest,iBlock)
           write(*,*)
           do iVar=1,nVar
-#ifdef _OPENACC
+!#ifdef _OPENACC
              write(*,*)' ',NameVar_V(iVar), '(TestCell)  =',&
-#else
-                  write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-#endif
+!#else
+!                  write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+!#endif
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
           end do
        end if
-       !$acc loop vector collapse(3) private(Change_V, DtLocal) independent
+       !$acc loop vector collapse(3) private(Change_V, DtLocal, ForcePerRho_D) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseBody .and. IsBodyBlock) then
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
@@ -451,7 +452,13 @@ contains
              Change_V = Change_V/CellVolume_GB(i,j,k,iBlock)
           end if
 
+          if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
+               .and. iBlock == iBlockTest)then
+             write(*,*)'Change_V after divided by V', Change_V(iVarTest)
+          end if
+
           if(UseGravity .or. UseRotatingFrame)then
+
              do iFluid = 1, nFluid
                 iRho = iRho_I(iFluid)
                 iUx = iUx_I(iFluid)
@@ -466,6 +473,11 @@ contains
                         + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
                    Change_V(iEnergy) = Change_V(iEnergy) &
                         + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*ForcePerRho_D)
+                end if
+
+                if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
+                     .and. iBlock == iBlockTest)then
+                   write(*,*)'Change_V after gravity', Change_V(iVarTest)
                 end if
 
                 if(UseRotatingFrame)then
@@ -483,6 +495,11 @@ contains
                         *Xyz_DGB(x_:y_,i,j,k,iBlock))
                 end if
              end do
+          end if
+
+          if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
+               .and. iBlock == iBlockTest)then
+             write(*,*)'Change_V after rotating frame', Change_V(iVarTest)
           end if
 
           ! Time step for iStage

@@ -3066,7 +3066,7 @@ contains
       end select
 
       TypeFaceBc_I(SolidBc_) = 'reflectall'
-
+    
     end subroutine set_defaults
     !==========================================================================
 
@@ -3749,6 +3749,8 @@ contains
       !$acc update device(UseBody, B1rCoef)
 
       !$acc update device(UseRotatingBc)
+
+      !$acc update device(UseGravity, UseRotatingFrame)
 
       !$acc update device(iTypeCoordSystem)
 
