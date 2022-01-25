@@ -217,15 +217,8 @@ contains
 
     ! optimal for CPU (face value and face flux calculated only once)
 
-    integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn, iUx, iUy, iUz, iRho, &
-         iEnergy
-    logical:: IsBodyBlock, IsConserv
-    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), &
-         ForcePerRho_D(3), Omega2
-    !$acc declare create (Change_V)
-    !$acc declare create (ForcePerRho_D)
-
-    integer:: iVar
+    integer:: i, j, k, iBlock, iGang, iVar
+    logical:: IsBodyBlock 
 
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
@@ -318,10 +311,39 @@ contains
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
           end do
        end if
-       !$acc loop vector collapse(3) private(Change_V, DtLocal, ForcePerRho_D) independent
+
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(UseBody .and. IsBodyBlock) then
-             if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+          call update_cell(i, j, k, iBlock, iGang, IsBodyBlock)
+       enddo; enddo; enddo
+
+       if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
+            call calc_timestep(iBlock)          
+
+    end do
+    !$acc end parallel
+
+    if(DoTestAny)write(*,*) &
+         '==========================================================='
+
+  end subroutine update_state_cpu
+  !============================================================================
+  subroutine update_cell(i, j, k, iBlock, iGang, IsBodyBlock)
+    !$acc routine seq
+
+    !compute source terms and update cell
+    integer, intent(in):: i, j, k, iBlock, iGang
+    logical, intent(in):: IsBodyBlock
+
+    integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar
+    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), &
+         ForcePerRho_D(3), Omega2
+    !Omega2 is constant, should be outside subroutine
+    logical:: IsConserv
+    character(len=*), parameter:: NameSub = 'update_state_cpu'
+    !--------------------------------------------------------------------------
+  if(UseBody .and. IsBodyBlock) then
+             if(.not. Used_GB(i,j,k,iBlock)) RETURN
           end if
 
           Change_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
@@ -601,31 +623,20 @@ contains
              write(*,*)
              write(*,*)NameSub,' final for nStep=', nStep
              do iVar=1,nVar
-#ifdef _OPENACC
+!#ifdef _OPENACC
                 write(*,*) ' ', NameVar_V(iVar), '(TestCell)  =',&
                      State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-#else
-                write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-#endif
+!#else
+!                write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+!                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+!#endif
              end do
              write(*,*) NameSub,' is finished for iProc, iBlock=', 0, iBlock
              if(UseDivbSource)      write(*,*)'divB =', divB
              if(UseNonConservative) write(*,*)'divU =', divU
           end if
 
-       enddo; enddo; enddo
-
-       if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
-            call calc_timestep(iBlock)
-
-    end do
-    !$acc end parallel
-
-    if(DoTestAny)write(*,*) &
-         '==========================================================='
-
-  end subroutine update_state_cpu
+  end subroutine update_cell
   !============================================================================
   subroutine get_flux_x(i, j,  k, iBlock, IsBodyBlock)
     !$acc routine seq
