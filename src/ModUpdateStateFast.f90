@@ -552,7 +552,7 @@ contains
                   -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
              DivF = DivF/CellVolume_GB(iTest,jTest,kTest,iBlockTest)
              write(*,*)'Fluxes and sources for ', NameVar_V(iVarTest)
-#ifdef _OPENACC
+!#ifdef _OPENACC
              write(*,*) &
                   'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
                   Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
@@ -562,23 +562,25 @@ contains
              write(*,*) &
                   'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
                   Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+             write(*,*)'Change_V=', Change_V(iVarTest)
+             write(*,*)'CellVolume=', CellVolume_GB(iTest,jTest,kTest,iBlockTest)
              write(*,*)'source=', Change_V(iVarTest) &
                   /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
              write(*,*)'fluxes=', DivF
-#else
-             write(*,'(2x,a,2es23.15)') &
-                  'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
-                  Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-             write(*,'(2x,a,2es23.15)') &
-                  'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
-                  Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-             write(*,'(2x,a,2es23.15)') &
-                  'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
-                  Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-             write(*,'(2x,a,es23.15)')'source=', Change_V(iVarTest) &
-                  /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
-             write(*,'(2x,a,es23.15)')'fluxes=', DivF
-#endif
+!#else
+!             write(*,'(2x,a,2es23.15)') &
+!                  'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
+!                  Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
+!             write(*,'(2x,a,2es23.15)') &
+!                  'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
+!                  Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
+!             write(*,'(2x,a,2es23.15)') &
+!                  'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
+!                  Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+!             write(*,'(2x,a,es23.15)')'source=', Change_V(iVarTest) &
+!                  /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
+!             write(*,'(2x,a,es23.15)')'fluxes=', DivF
+!#endif
              write(*,*)
              write(*,*)NameSub,' final for nStep=', nStep
              do iVar=1,nVar
@@ -642,24 +644,24 @@ contains
     if(iTestSide > 0)then
        write(*,*)'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
        do iVar = 1, nVar
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)NameVar_V(iVar),'=',&
                StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#else
-          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
-               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#endif
+!#else
+!          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
+!               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
+!#endif
        end do
        if(UseB0)then
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)'B0x:', B0_D(1), iTestSide
           write(*,*)'B0y:', B0_D(2), iTestSide
           write(*,*)'B0z:', B0_D(3), iTestSide
-#else
-          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
-          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
-          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
-#endif
+!#else
+!          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
+!#endif
        end if
     end if
 
@@ -702,24 +704,24 @@ contains
     if(iTestSide > 0)then
        write(*,*)'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
        do iVar = 1, nVar
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)NameVar_V(iVar),'=',&
                StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#else
-          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
-               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#endif
+!#else
+!          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
+!               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
+!#endif
        end do
        if(UseB0)then
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)'B0x:', B0_D(1), iTestSide
           write(*,*)'B0y:', B0_D(2), iTestSide
           write(*,*)'B0z:', B0_D(3), iTestSide
-#else
-          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
-          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
-          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
-#endif
+!#else
+!          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
+!#endif
        end if
     end if
 
@@ -761,24 +763,24 @@ contains
     if (iTestSide > 0)then
        write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
        do iVar = 1, nVar
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)NameVar_V(iVar),'=',&
                StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#else
-          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
-               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#endif
+!#else
+!          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
+!               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
+!#endif
        end do
        if(UseB0)then
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)'B0x:', B0_D(1), iTestSide
           write(*,*)'B0y:', B0_D(2), iTestSide
           write(*,*)'B0z:', B0_D(3), iTestSide
-#else
-          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
-          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
-          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
-#endif
+!#else
+!          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
+!#endif
        end if
     end if
 
@@ -2663,6 +2665,8 @@ contains
        write(*,*) &
             ' Fast2, Discr          =', Fast2, Discr, iTestSide
        write(*,*) &
+            'GammaP, InvRho         =', GammaP, InvRho, iTestSide
+       write(*,*) &
             ' Sound2, Alfven2       =', Sound2, InvRho*B2, iTestSide
        write(*,*) &
             ' FullBn, Alfven2Normal =', Bn, InvRho*Bn**2, iTestSide
@@ -3005,21 +3009,21 @@ contains
        write(*,*)'Eigenvalue_maxabs=', Cmax, iTestSide
        write(*,*)'CmaxDt           =', Cmax, iTestSide
        do iVar = 1, nFlux
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*) 'Var,F,F_L,F_R,dU,c*dU/2=', &
                NameVar_V(iVar),&
                Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area, &
                StateRightCons_V(iVar)-StateLeftCons_V(iVar), &
                0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area, &
                iTestSide
-#else
-          write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=', &
-               NameVar_V(iVar),&
-               Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area,&
-               StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
-               0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area,&
-               iTestSide
-#endif
+!#else
+!          write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=', &
+!               NameVar_V(iVar),&
+!               Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area,&
+!               StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
+!               0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area,&
+!               iTestSide
+!#endif
        end do
     end if
 
