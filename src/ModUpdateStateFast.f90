@@ -2665,7 +2665,7 @@ contains
        write(*,*) &
             ' Fast2, Discr          =', Fast2, Discr, iTestSide
        write(*,*) &
-            'GammaP, InvRho         =', GammaP, InvRho, iTestSide
+            ' GammaP, InvRho         =', GammaP, InvRho, iTestSide
        write(*,*) &
             ' Sound2, Alfven2       =', Sound2, InvRho*B2, iTestSide
        write(*,*) &
