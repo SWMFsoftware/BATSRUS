@@ -419,13 +419,13 @@ contains
     ! Convert gravity to non-dimensional values
     if(iDirGravity == 0)then
        ! Note: The mass of the body is in SI units
-       Gbody  = -cGravitation*MassBodySi*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
+       gBody  = -cGravitation*MassBodySi*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
     else
        ! Normalize gravitational acceleration
-       Gbody  = GravitySi*(Si2No_V(UnitU_)**2 / Si2No_V(UnitX_))
+       gBody  = GravitySi*(Si2No_V(UnitU_)**2 / Si2No_V(UnitX_))
     end if
 
-    GBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
+    gBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
 
     ! Normalize solar wind values. Note: the solarwind is in I/O units
     SolarWindN   = SolarWindNDim*Io2No_V(UnitN_)
