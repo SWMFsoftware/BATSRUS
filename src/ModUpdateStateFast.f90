@@ -218,7 +218,7 @@ contains
     ! optimal for CPU (face value and face flux calculated only once)
 
     integer:: i, j, k, iBlock, iGang, iVar
-    logical:: IsBodyBlock 
+    logical:: IsBodyBlock
 
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
@@ -319,7 +319,7 @@ contains
        enddo; enddo; enddo
 
        if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
-            call calc_timestep(iBlock)          
+            call calc_timestep(iBlock)
 
     end do
     !$acc end parallel
@@ -342,7 +342,7 @@ contains
 
     logical:: IsConserv
 
-    character(len=*), parameter:: NameSub = 'update_state_cpu'
+    character(len=*), parameter:: NameSub = 'update_cell'
     !--------------------------------------------------------------------------
     if(UseBody .and. IsBodyBlock) then
        if(.not. Used_GB(i,j,k,iBlock)) RETURN

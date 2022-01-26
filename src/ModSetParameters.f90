@@ -3066,7 +3066,7 @@ contains
       end select
 
       TypeFaceBc_I(SolidBc_) = 'reflectall'
-    
+
     end subroutine set_defaults
     !==========================================================================
 
