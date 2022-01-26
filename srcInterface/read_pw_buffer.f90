@@ -138,7 +138,8 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   ! Point is not covered: leave the input state variables alone
   if (.not.IsTriangleFound) then
-     if(DoTestMe) write(*,*) NameSub,': triangle not found CoordIn_D=', CoordIn_D,&
+     if(DoTestMe) write(*,*) NameSub, &
+          ': triangle not found CoordIn_D=', CoordIn_D, &
           ' XyzPw_D=', XyzPw_D, ' Xyz_D=', Xyz_D
      RETURN
   end if

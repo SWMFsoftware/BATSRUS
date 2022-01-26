@@ -608,18 +608,18 @@ contains
             /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
        write(*,*)'fluxes=', DivF
        !#else
-       !             write(*,'(2x,a,2es23.15)') &
-       !                  'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
-       !                  Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-       !             write(*,'(2x,a,2es23.15)') &
-       !                  'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
-       !                  Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-       !             write(*,'(2x,a,2es23.15)') &
-       !                  'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
-       !                  Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-       !             write(*,'(2x,a,es23.15)')'source=', Change_V(iVarTest) &
-       !                  /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
-       !             write(*,'(2x,a,es23.15)')'fluxes=', DivF
+       !write(*,'(2x,a,2es23.15)') &
+       !     'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
+       !     Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
+       !write(*,'(2x,a,2es23.15)') &
+       !     'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
+       !     Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
+       !write(*,'(2x,a,2es23.15)') &
+       !     'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
+       !     Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+       !write(*,'(2x,a,es23.15)')'source=', Change_V(iVarTest) &
+       !     /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
+       !write(*,'(2x,a,es23.15)')'fluxes=', DivF
        !#endif
        write(*,*)
        write(*,*)NameSub,' final for nStep=', nStep
@@ -628,8 +628,8 @@ contains
           write(*,*) ' ', NameVar_V(iVar), '(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
           !#else
-          !                write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-          !                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+          !write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+          !     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
           !#endif
        end do
        write(*,*) NameSub,' is finished for iProc, iBlock=', 0, iBlock
