@@ -2668,7 +2668,19 @@ contains
     if(UseAlfvenWaves) GammaP = GammaP &
          + GammaWave*(GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
 
-    Sound2= GammaP*InvRho
+    if(iTestSide>0) then
+       write(*,*)&
+            'Sound2 uninitialized= ', Sound2, iTestSide
+       write(*,*)&
+            'GammaP, InvRho= ', GammaP, InvRho
+    end if
+
+    Sound2= GammaP * InvRho
+
+    if(iTestSide>0) then
+       write(*,*)&
+            'Sound2 updated ', Sound2, iTestSide
+    end if
 
     Fast2 = Sound2 + InvRho*B2
     Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*InvRho*Bn**2))
