@@ -194,6 +194,7 @@ contains
     DoTestAny = DoTestUpdate .or. DoTestFlux .or. DoTestSource
 
     !$acc update device(DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
+    !$acc update device(nStep)
 
     call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
     call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
@@ -2675,7 +2676,7 @@ contains
             'GammaP, InvRho= ', GammaP, InvRho
     end if
 
-    Sound2= GammaP * InvRho
+    Sound2=GammaP*InvRho
 
     if(iTestSide>0) then
        write(*,*)&
