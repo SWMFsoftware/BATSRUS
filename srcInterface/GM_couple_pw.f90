@@ -226,6 +226,15 @@ contains
           iUGmLast    = 2
        end if
 
+       if(DoTestMe)then
+          write(*,*) NameSub, &
+               ': iRhoGmFirst, iRhoGmLast, iUGmFirst, iUGmLast=', &
+               iRhoGmFirst, iRhoGmLast, iUGmFirst, iUGmLast
+          write(*,*) NameSub, &
+               ': iRhoPwFirst, iRhoPwLast, iUPwFirst, iUPwLast=', &
+               iRhoPwFirst, iRhoPwLast, iUPwFirst, iUPwLast
+       end if
+
        allocate( &
             StateGm1_VI(iUGmLast,nPoint), &
             CoordXyzPw1_DI(nCoord,nPoint), &
