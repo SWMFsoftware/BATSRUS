@@ -8,7 +8,7 @@ BLESS=NO
 
 DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
-.NOTPARALLEL: test test_gpu test_extra
+.NOTPARALLEL:
 
 test_help:
 	@echo "    test                       (run tests with ${OMPIRUN})"
@@ -98,7 +98,7 @@ test_extra_help:
 	@echo "    test_jupiter               (run Jupiter test)"
 	@echo "    test_venus                 (run Venus test)"
 
-test: 
+test_off: 
 	@rm -f *.diff
 	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
