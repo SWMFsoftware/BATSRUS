@@ -98,7 +98,7 @@ test_extra_help:
 	@echo "    test_jupiter               (run Jupiter test)"
 	@echo "    test_venus                 (run Venus test)"
 
-test_off: 
+test: 
 	@rm -f *.diff
 	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
