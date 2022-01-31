@@ -24,8 +24,8 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
-       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, Unset_, &
-       test_start, test_stop
+       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, iTestSide, &
+       Unset_, test_start, test_stop
   use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
@@ -648,7 +648,8 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang, iVar, iTestSide
+    integer:: iGang, iVar
+    logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
     iGang = 1
@@ -661,17 +662,14 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
 
-    iTestSide = -1
+    DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 1) .and. &
          j==jTest .and. k==kTest .and. iBlock == iBlockTest)then
-       if(i == iTest)then
-          iTestSide = 1
-       elseif(i == iTest+1)then
-          iTestSide = 2
-       end if
+       if(  (i == iTest .and. iTestSide >= 0) .or. &
+            (i == iTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
     end if
 
-    if(iTestSide > 0)then
+    if(DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
        do iVar = 1, nVar
 !#ifdef _OPENACC
@@ -696,7 +694,7 @@ contains
     end if
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), B0_D, iTestSide)
+         StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), B0_D, DoTestSide)
 
   end subroutine get_flux_x
   !============================================================================
@@ -708,7 +706,8 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang, iVar, iTestSide
+    integer:: iGang, iVar
+    logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
     iGang = 1
@@ -721,17 +720,20 @@ contains
 
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
 
-    iTestSide = -1
+    DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 2) .and. &
          i==iTest .and. k==kTest .and. iBlock == iBlockTest)then
-       if(j == jTest)then
-          iTestSide = 3
-       elseif(j == jTest+1)then
-          iTestSide = 4
-       end if
+       if(  (j == jTest .and. iTestSide >= 0) .or. &
+            (j == jTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
     end if
 
-    if(iTestSide > 0)then
+        if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 1) .and. &
+         j==jTest .and. k==kTest .and. iBlock == iBlockTest)then
+       if(  (i == iTest .and. iTestSide >= 0) .or. &
+            (i == iTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
+    end if
+    
+    if(DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
        do iVar = 1, nVar
 !#ifdef _OPENACC
@@ -756,7 +758,7 @@ contains
     end if
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), B0_D, iTestSide)
+         StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), B0_D, DoTestSide)
 
   end subroutine get_flux_y
   !============================================================================
@@ -768,7 +770,8 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang, iVar, iTestSide
+    integer:: iGang, iVar
+    logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
     iGang = 1
@@ -781,16 +784,14 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
 
-    iTestSide = -1
+    DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 3) .and. &
          i==iTest .and. j==jTest .and. iBlock == iBlockTest)then
-       if(k == kTest)then
-          iTestSide = 5
-       elseif(k == kTest+1)then
-          iTestSide = 6
-       end if
+       if(  (k == kTest .and. iTestSide >= 0) .or. &
+            (k == kTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
     end if
-    if (iTestSide > 0)then
+
+    if (DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
        do iVar = 1, nVar
 !#ifdef _OPENACC
@@ -815,7 +816,7 @@ contains
     end if
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), B0_D, iTestSide)
+         StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), B0_D, DoTestSide)
 
   end subroutine get_flux_z
   !============================================================================
@@ -1076,7 +1077,7 @@ contains
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
-         Flux_V, B0_D, -1)
+         Flux_V, B0_D, .false.)
 
     ! Change due to fluxes through this face
     Change_V(1:nFlux) = Change_V(1:nFlux) + Flux_V(1:nFlux)
@@ -1551,7 +1552,7 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, x_)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, B0_D, -1)
+         StateLeft_V, StateRight_V, Flux_V, B0_D, .false.)
 
   end subroutine get_flux_x_prim
   !============================================================================
@@ -1573,7 +1574,7 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, B0_D, -1)
+         StateLeft_V, StateRight_V, Flux_V, B0_D, .false.)
 
   end subroutine get_flux_y_prim
   !============================================================================
@@ -1595,7 +1596,7 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, z_)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, B0_D, -1)
+         StateLeft_V, StateRight_V, Flux_V, B0_D, .false.)
 
   end subroutine get_flux_z_prim
   !============================================================================
@@ -1775,7 +1776,7 @@ contains
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
-         Flux_V, B0_D, -1)
+         Flux_V, B0_D, .false.)
 
     ! Change due to fluxes through this face
     Change_V(1:nFlux) = Change_V(1:nFlux) + Flux_V(1:nFlux)
@@ -2628,14 +2629,14 @@ contains
 
   end subroutine get_boris_flux
   !============================================================================
-  subroutine get_speed_max(iTestSide, State_V, Normal_D, &
+  subroutine get_speed_max(DoTestSide, State_V, Normal_D, &
        Un, B0_D, Cmax, Cleft, Cright)
     !$acc routine seq
 
     ! Using primitive variable State_V and normal direction get
     ! normal velocity and wave speeds.
 
-    integer, intent(in):: iTestSide
+    logical, intent(in):: DoTestSide
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: Un              ! normal velocity (signed)
     real, intent(in) :: B0_D(3)         ! B0 field on the face
@@ -2648,7 +2649,7 @@ contains
     real:: GammaP
     !--------------------------------------------------------------------------
     if(UseBorisCorrection)then
-       call get_boris_speed(iTestSide, State_V, Normal_D, Un, B0_D, &
+       call get_boris_speed(DoTestSide, State_V, Normal_D, Un, B0_D, &
             Cmax, Cleft, Cright)
        RETURN
     end if
@@ -2669,7 +2670,7 @@ contains
     if(UseAlfvenWaves) GammaP = GammaP &
          + GammaWave*(GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
 
-    if(iTestSide>0) then
+    if(DoTestSide) then
        write(*,*)&
             'Sound2 uninitialized= ', Sound2, iTestSide
        write(*,*)&
@@ -2678,7 +2679,7 @@ contains
 
     Sound2=GammaP*InvRho
 
-    if(iTestSide>0) then
+    if(DoTestSide) then
        write(*,*)&
             'Sound2 updated ', Sound2, iTestSide
     end if
@@ -2692,7 +2693,7 @@ contains
     if(present(Cleft))  Cleft  = Un - Fast
     if(present(Cright)) Cright = Un + Fast
 
-    if(iTestSide > 0)then
+    if(DoTestSide)then
        write(*,*) ' iFluid, rho, p(face)   =', &
             1, State_V(Rho_), State_V(p_), iTestSide
        ! if(UseAnisoPressure) write(*,*) &
@@ -2723,14 +2724,14 @@ contains
 
   end subroutine get_speed_max
   !============================================================================
-  subroutine get_boris_speed(iTestSide, State_V, Normal_D, Un, B0_D, &
+  subroutine get_boris_speed(DoTestSide, State_V, Normal_D, Un, B0_D, &
        Cmax, Cleft, Cright)
     !$acc routine seq
 
     ! Using primitive variable State_V and normal direction get
     ! normal velocity and wave speeds with semi-relativistic Boris correction
 
-    integer, intent(in):: iTestSide ! side of cell being tested
+    logical, intent(in):: DoTestSide ! side of cell being tested
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: Un              ! normal velocity (signed)
     real, intent(in) :: B0_D(3)         ! B0 field on the face
@@ -2835,7 +2836,7 @@ contains
     if(present(Cleft))  Cleft  = min(UnBoris - Fast, Un - Slow)
     if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
 
-    if(iTestSide > 0)then
+    if(DoTestSide)then
        write(*,*) ' InvRho, p      =', InvRho, p, iTestSide
        write(*,*) ' FullB, FullBn  =', FullB_D(1), FullB_D(2), FullB_D(3), &
             FullBn, iTestSide
@@ -2851,7 +2852,7 @@ contains
   end subroutine get_boris_speed
   !============================================================================
   subroutine get_numerical_flux(Normal_D, Area, &
-       StateLeft_V, StateRight_V, Flux_V, B0_D, iTestSide)
+       StateLeft_V, StateRight_V, Flux_V, B0_D, DoTestSide)
     !$acc routine seq
 
     ! Calculate numerical flux Flux_V based on the left and right states
@@ -2862,7 +2863,7 @@ contains
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out)  :: Flux_V(nFaceValue)
     real, intent(in)   :: B0_D(3)
-    integer, intent(in):: iTestSide
+    logical, intent(in):: DoTestSide
 
     ! Average state
     real:: State_V(nVar)
@@ -2886,7 +2887,7 @@ contains
        ! average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
 
-       call get_speed_max(iTestSide, State_V, Normal_D, Un, B0_D, Cmax)
+       call get_speed_max(DoTestSide, State_V, Normal_D, Un, B0_D, Cmax)
        call get_physical_flux(StateLeft_V, Normal_D, &
             StateLeftCons_V, FluxLeft_V, B0_D)
        call get_physical_flux(StateRight_V, Normal_D, &
@@ -2933,16 +2934,16 @@ contains
 
        ! This implementation is for non-relativistic MHD only
        ! Left speed of left state
-       call get_speed_max(iTestSide, StateLeft_V, Normal_D, Un, B0_D, &
+       call get_speed_max(DoTestSide, StateLeft_V, Normal_D, Un, B0_D, &
             Cleft=Cleft)
 
        ! Right speed of right state
-       call get_speed_max(iTestSide, StateRight_V, Normal_D, Un, B0_D, &
+       call get_speed_max(DoTestSide, StateRight_V, Normal_D, Un, B0_D, &
             Cright=Cright)
 
        ! Speeds of average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
-       call get_speed_max(iTestSide, State_V, Normal_D, &
+       call get_speed_max(DoTestSide, State_V, Normal_D, &
             Un, B0_D, Cmax, CleftAverage, CrightAverage)
 
        ! Limited left and right speeds
@@ -3022,7 +3023,7 @@ contains
     ! Store time step constraint (to be generalized for multifluid)
     Flux_V(Vdt_) = abs(Area)*Cmax
 
-    if(iTestSide > 0)then
+    if(DoTestSide)then
        write(*,*)'Hat state for Normal_D=', &
             Normal_D(1), Normal_D(2), Normal_D(3), iTestSide
        write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_)), iTestSide
