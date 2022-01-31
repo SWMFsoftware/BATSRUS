@@ -82,6 +82,13 @@ module ModIO
   real :: RadioFrequency_II(MaxFile,MaxPlotRadioFreq)
   logical :: UseNoRefraction = .false.
 
+  ! Variables for SPECTRUM-DEM/EM calculation
+  real, dimension(MaxFile) :: &
+       LogTeMinDEM_I = 4.0, LogTeMaxDEM_I = 7.0, DLogTeDEM_I = 0.1
+
+  ! Variables for SPECTRUM-FLX calculation
+  character (len=20) :: NameSpmTable_I(MaxFile)
+  
   ! Variables for field/stream/current line files
   logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
   integer :: nLine_I(MaxPlotFile)             ! Number of lines for a plot file
