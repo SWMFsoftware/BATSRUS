@@ -356,8 +356,10 @@ contains
     ! Read the whole file through to get the number of snapshots
     nSnapshot = 1
     ! matching initial times require one fewer snapshots
-    if(IsTrajectory .and. TrajTime_I(1) > -StartTimeFileIn)then
-       nSnapshot = 0
+    if(IsTrajectory)then
+       if(TrajTime_I(1) > -StartTimeFileIn)then
+          nSnapshot = 0
+       end if
     end if
 
     do

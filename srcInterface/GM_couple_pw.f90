@@ -187,8 +187,11 @@ contains
           iUGmFirst   = iRhoGmLast + 1
           iUGmLast    = iUGmFirst
 
+          ! Limit Pw variable range to the number of GM species (He is dropped)
           iRhoPwLast = &
                min(iRhoPwLast, iRhoPwFirst + SpeciesLast_ - SpeciesFirst_)
+          iUPwLast = &
+               min(iUPwLast, iUPwFirst + SpeciesLast_ - SpeciesFirst_)
        elseif(UseMultiIon)then
           ! Fluid densities and velocities
           iRhoGmFirst = 1
@@ -224,6 +227,15 @@ contains
           iRhoGmLast  = 1
           iUGmFirst   = 2
           iUGmLast    = 2
+       end if
+
+       if(DoTestMe)then
+          write(*,*) NameSub, &
+               ': iRhoGmFirst, iRhoGmLast, iUGmFirst, iUGmLast=', &
+               iRhoGmFirst, iRhoGmLast, iUGmFirst, iUGmLast
+          write(*,*) NameSub, &
+               ': iRhoPwFirst, iRhoPwLast, iUPwFirst, iUPwLast=', &
+               iRhoPwFirst, iRhoPwLast, iUPwFirst, iUPwLast
        end if
 
        allocate( &

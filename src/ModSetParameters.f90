@@ -581,7 +581,7 @@ contains
           call read_var('DoWriteCallSequence', DoWriteCallSequence)
 
        case("#VERBOSE", "#TEST", "#TESTXYZ", "#TEST2XYZ", "#TESTIJK", &
-            "#TEST2IJK", "#TESTVAR", "#TESTDIM")
+            "#TEST2IJK", "#TESTVAR", "#TESTDIM", "#TESTSIDE")
           call read_test_param(NameCommand)
           if(NameCommand == "#TESTVAR") call get_iVar(NameVarTest, iVarTest)
           if(NameCommand == "#TEST" .and. IsStandAlone) &
@@ -1054,6 +1054,32 @@ contains
                    call read_var('yAngle', PlotNormal_DI(2,iFile))
                    call read_var('zAngle', PlotNormal_DI(3,iFile))
                 end if
+             elseif (index(StringPlot, 'spm')>0)then
+                TypePlotArea = 'spm'
+                call read_var('TypeCoord', TypeCoordObs)
+                call read_var('ObsPosX',ObsPos_DI(1,iFile))
+                call read_var('ObsPosY',ObsPos_DI(2,iFile))
+                call read_var('ObsPosZ',ObsPos_DI(3,iFile))
+                call read_var('x0',   PlotRange_EI(1,iFile))
+                call read_var('y0',   PlotRange_EI(2,iFile))
+                call read_var('xLen',   PlotRange_EI(3,iFile))
+                if (PlotRange_EI(5, iFile) /= 0) &
+                     call read_var('dX',   PlotDx_DI(1,iFile))
+                call read_var('yLen', PlotRange_EI(4,iFile))
+                if (PlotRange_EI(4, iFile) /= 0) &
+                     call read_var('dY', PlotDx_DI(2,iFile))
+                if (index(StringPlot,'TBL')>0&
+                     .or.index(StringPlot,'tbl')>0) &
+                     call read_var('NameSpmTable',NameSpmTable_I(iFile))
+                ! DEM/EM calculation
+                if (index(StringPlot, 'spm_dem')>0)then
+                   TypePlotVar = 'dem'
+                   call read_var('LogTeMinDEM',LogTeMinDEM_I(iFile))
+                   call read_var('LogTeMaxDEM',LogTeMaxDEM_I(iFile))
+                   call read_var('DLogTeDEM',DLogTeDEM_I(iFile))
+                else
+                   TypePlotVar = 'flx'
+                end if
              elseif (index(StringPlot,'los')>0) then
                 TypePlotArea='los'
                 ! Line of sight vector
@@ -1301,6 +1327,7 @@ contains
                 if (       TypePlotArea /= 'sph' &
                      .and. TypePlotArea /= 'shl' &
                      .and. TypePlotArea /= 'box' &
+                     .and. TypePlotArea /= 'spm' &
                      .and. TypePlotArea /= 'los' &
                      .and. TypePlotArea /= 'rfr' &
                      .and. TypePlotArea /= 'lin' &
@@ -3749,6 +3776,8 @@ contains
       !$acc update device(UseBody, B1rCoef)
 
       !$acc update device(UseRotatingBc)
+
+      !$acc update device(UseGravity, UseRotatingFrame)
 
       !$acc update device(iTypeCoordSystem)
 

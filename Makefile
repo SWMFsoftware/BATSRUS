@@ -150,6 +150,7 @@ rundir:
 	mkdir -p ${RUNDIR}/${COMPONENT}
 	cd ${RUNDIR}/${COMPONENT}; \
 		mkdir restartIN restartOUT IO2; \
+		ln -s IO2 plots; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		cp    ${SCRIPTDIR}/pIDL .; \
 		cp    ${GMDIR}/Scripts/TEC/pTEC .; \

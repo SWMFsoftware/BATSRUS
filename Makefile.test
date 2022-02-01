@@ -8,7 +8,7 @@ BLESS=NO
 
 DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
-.NOTPARALLEL: test test_gpu test_extra
+.NOTPARALLEL:
 
 test_help:
 	@echo "    test                       (run tests with ${OMPIRUN})"

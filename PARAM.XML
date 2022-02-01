@@ -577,7 +577,9 @@ If DoWriteCallSequence is set to true, the code will attempt to produce
 a call sequence from the stop_mpi subroutine (which is called when the
 code finds an error) by making an intentional floating point exception.
 This will work only if the compiler is able to and requested to produce a
-call sequence. The NAGFOR compile combined with the -debug flag can do that.
+call sequence. The NAGFOR compiler combined with the -debug flag can do that.
+
+Default is DoWriteCallSequence=F.
 </command>
 
 <command name="TEST">

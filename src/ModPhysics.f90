@@ -123,7 +123,7 @@ module ModPhysics
   real :: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
   real :: gBody=0.0
   real :: RotPeriodSi=0.0, OmegaBody=0.0
-  !$acc declare create(OmegaBody)
+  !$acc declare create(OmegaBody, gBody)
 
   ! The dimensional quantities are given for individual ion and neutral fluids
   real, dimension(IonFirst_:nFluid) :: &
@@ -419,13 +419,13 @@ contains
     ! Convert gravity to non-dimensional values
     if(iDirGravity == 0)then
        ! Note: The mass of the body is in SI units
-       Gbody  = -cGravitation*MassBodySi*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
+       gBody  = -cGravitation*MassBodySi*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
     else
        ! Normalize gravitational acceleration
-       Gbody  = GravitySi*(Si2No_V(UnitU_)**2 / Si2No_V(UnitX_))
+       gBody  = GravitySi*(Si2No_V(UnitU_)**2 / Si2No_V(UnitX_))
     end if
 
-    GBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
+    gBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
 
     ! Normalize solar wind values. Note: the solarwind is in I/O units
     SolarWindN   = SolarWindNDim*Io2No_V(UnitN_)
@@ -743,6 +743,7 @@ contains
 
     !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
     !$acc update device(OmegaBody, Bdp)
+    !$acc update device(gBody)
 
     !$acc update device(PolarRho_I, PolarP_I)
 

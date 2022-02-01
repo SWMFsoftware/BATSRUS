@@ -42,11 +42,13 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   !----------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+  if(DoTestMe) write(*,*) NameSub,': initial State_V=', State_V
+
   if(DoInitialize)then
      DoInitialize = .false.
      ! Fill in outer points with body values coming in via State_V
      ! For each hemisphere, outer points are after PW points.
-     do iPoint=nLinePw1+1, nPoint1
+     do iPoint = nLinePw1 + 1, nPoint1
         StateGm1_VI(iUGmFirst:iUGmLast, iPoint) = 0.0
         if(UseMultiSpecies)then
            StateGm1_VI(iRhoGmFirst:iRhoGmLast, iPoint) = &
@@ -59,7 +61,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      end do
 
      if (nLinePw2 /=0) then
-        do iPoint=nLinePw+1, nLinePw+nOuterPoint
+        do iPoint = nLinePw + 1, nLinePw + nOuterPoint
            StateGm2_VI(iUGmFirst:iUGmLast, iPoint) = 0.0
            if(UseMultiSpecies)then
               StateGm2_VI(iRhoGmFirst:iRhoGmLast, iPoint) = &
@@ -73,6 +75,15 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      end if
 
      NamePwCoord = Grid_C(PW_) % TypeCoord
+
+     if(DoTestMe)then
+        write(*,*) NameSub, &
+             ': UseMultiIon, UseMultiSpecies, iRhoGmFirst, iRhoGmLast=', &
+             UseMultiIon, UseMultiSpecies, iRhoGmFirst, iRhoGmLast
+        write(*,*) NameSub, &
+             ': nLinePw1, nLinePw2, nLinePw, nOuterPoint=', &
+             nLinePw1, nLinePw2, nLinePw, nOuterPoint
+     end if
   end if
 
   if(TypeCoordSystem == NamePwCoord)then
@@ -108,9 +119,9 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   else
      ! Get weights if in northern hemisphere.
      ! If point is in southern, but no PwLines in south, then flip sign of z
-     XyzTmp_D(1)=Xyz_D(1)
-     XyzTmp_D(2)=Xyz_D(2)
-     XyzTmp_D(3)=abs(Xyz_D(3))
+     XyzTmp_D(1) = Xyz_D(1)
+     XyzTmp_D(2) = Xyz_D(2)
+     XyzTmp_D(3) = abs(Xyz_D(3))
      call find_triangle_sph(XyzTmp_D, nPoint1, &
           CoordXyzPw1_DI(:,1:nPoint1), &
           iLst1_I, lPtr1_I, lEnd1_I, Area1, Area2, Area3, IsTriangleFound,&
@@ -126,7 +137,12 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   !  call con_stop('')
 
   ! Point is not covered: leave the input state variables alone
-  if (.not.IsTriangleFound) RETURN
+  if (.not.IsTriangleFound) then
+     if(DoTestMe) write(*,*) NameSub, &
+          ': triangle not found CoordIn_D=', CoordIn_D, &
+          ' XyzPw_D=', XyzPw_D, ' Xyz_D=', Xyz_D
+     RETURN
+  end if
 
   ! Calculate field aligned momentum vector
   call get_b0(CoordIn_D, B0_D)

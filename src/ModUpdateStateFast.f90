@@ -24,8 +24,8 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
-       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, Unset_, &
-       test_start, test_stop
+       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, iTestSide, &
+       Unset_, test_start, test_stop
   use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
@@ -194,6 +194,7 @@ contains
     DoTestAny = DoTestUpdate .or. DoTestFlux .or. DoTestSource
 
     !$acc update device(DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
+    !$acc update device(nStep)
 
     call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
     call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
@@ -217,14 +218,8 @@ contains
 
     ! optimal for CPU (face value and face flux calculated only once)
 
-    integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn, iUx, iUy, iUz, iRho, &
-         iEnergy
-    logical:: IsBodyBlock, IsConserv
-    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), &
-         ForcePerRho_D(3), Omega2
-    !$acc declare create (Change_V)
-
-    integer:: iVar
+    integer:: i, j, k, iBlock, iGang, iVar
+    logical:: IsBodyBlock
 
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
@@ -309,292 +304,19 @@ contains
                IsConserv_CB(iTest,jTest,kTest,iBlock)
           write(*,*)
           do iVar=1,nVar
-#ifdef _OPENACC
+             !#ifdef _OPENACC
              write(*,*)' ',NameVar_V(iVar), '(TestCell)  =',&
-#else
-                  write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-#endif
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-          end do
+             !#else
+             !   write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+             !     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+             !#endif
+           end do
        end if
-       !$acc loop vector collapse(3) private(Change_V, DtLocal) independent
+
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(UseBody .and. IsBodyBlock) then
-             if(.not. Used_GB(i,j,k,iBlock)) CYCLE
-          end if
-
-          Change_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
-               -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
-          if(nDim > 1) Change_V = Change_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
-               -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
-          if(nDim > 2) Change_V = Change_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
-               -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
-
-          if(UseB .and. UseDivbSource)then
-             DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
-             if(nJ > 1) DivB = DivB + &
-                  Flux_VYI(Bn_,i,j+1,k,iGang) - Flux_VYI(Bn_,i,j,k,iGang)
-             if(nK > 1) DivB = DivB + &
-                  Flux_VZI(Bn_,i,j,k+1,iGang) - Flux_VZI(Bn_,i,j,k,iGang)
-             Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                  - DivB*State_VGB(Bx_:Bz_,i,j,k,iBlock)
-             if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                  - DivB*B0_DGB(:,i,j,k,iBlock)
-
-             ! Divide by density to account for Rho in momentum
-             DivB = DivB/State_VGB(Rho_,i,j,k,iBlock)
-             Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
-                  - DivB*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
-             Change_V(Energy_) = Change_V(Energy_) &
-                  - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-                  *          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-          end if
-
-          if(UseBorisCorrection .and. ClightFactor /= 1.0)then
-             ! Calculate Boris source term
-             DivE = Flux_VXI(En_,i+1,j,k,iGang) - Flux_VXI(En_,i,j,k,iGang)
-             if(nJ > 1) DivE = DivE + &
-                  Flux_VYI(En_,i,j+1,k,iGang) - Flux_VYI(En_,i,j,k,iGang)
-             if(nK > 1) DivE = DivE + &
-                  Flux_VZI(En_,i,j,k+1,iGang) - Flux_VZI(En_,i,j,k,iGang)
-             ! Apply coefficients and divide by density for E=(B x RhoU)/Rho
-             DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
-                  /State_VGB(Rho_,i,j,k,iBlock)
-             Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                  + DivE*cross_prod( &
-                  State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-             if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                  + DivE*cross_prod( &
-                  B0_DGB(:,i,j,k,iBlock), &
-                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-
-             if(DoTestSource .and. i==iTest .and. j==jTest .and. k==kTest &
-                  .and. iBlock == iBlockTest)then
-                write(*,*) 'Enx =', &
-                     Flux_VXI(En_,i,j,k,iGang), Flux_VXI(En_,i+1,j,k,iGang)
-                write(*,*) 'Eny =', &
-                     Flux_VYI(En_,i,j,k,iGang), Flux_VYI(En_,i,j+1,k,iGang)
-                write(*,*) 'Enz =', &
-                     Flux_VZI(En_,i,j,k,iGang), Flux_VZI(En_,i,j,k+1,iGang)
-                divE = divE/CellVolume_GB(i,j,k,iBlock) &
-                     *State_VGB(Rho_,i,j,k,iBlock)
-                write(*,*)'Coef   =', (ClightFactor**2 - 1)*InvClight2
-                write(*,*)'divE*Coef  =', divE
-                ! if(UseB0)then
-                !   write(*,*) '!!! e_D=', cross_prod( &
-                !        B0_DGB(:,i,j,k,iBlock) &
-                !        + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-                !        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
-                !        /State_VGB(Rho_,i,j,k,iBlock)
-                ! else
-                !   write(*,*) '!!! e_D=', DivE*cross_prod( &
-                !        State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-                !        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
-                !        /State_VGB(Rho_,i,j,k,iBlock)
-                ! end if
-             end if
-
-          end if
-          if(UseNonConservative)then
-             ! Add -(g-1)*p*div(u) source term
-             do iFluid = 1, nFluid
-                iP  = iP_I(iFluid)
-                iUn = UnFirst_ + iFluid - 1
-                DivU = Flux_VXI(iUn,i+1,j,k,iGang) - Flux_VXI(iUn,i,j,k,iGang)
-                if(nJ > 1) DivU = DivU &
-                     + Flux_VYI(iUn,i,j+1,k,iGang) - Flux_VYI(iUn,i,j,k,iGang)
-                if(nK > 1) DivU = DivU &
-                     + Flux_VZI(iUn,i,j,k+1,iGang) - Flux_VZI(iUn,i,j,k,iGang)
-                Change_V(iP) = Change_V(iP) &
-                     - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
-             end do
-          end if
-
-          if(UseElectronPressure)then
-             ! Calculate DivU = div(U_e)
-             DivU =                   Flux_VXI(UnLast_,i+1,j,k,iGang) &
-                  -                   Flux_VXI(UnLast_,i,j,k,iGang)
-             if(nJ > 1) DivU = DivU + Flux_VYI(UnLast_,i,j+1,k,iGang) &
-                  -                   Flux_VYI(UnLast_,i,j,k,iGang)
-             if(nK > 1) DivU = DivU + Flux_VZI(UnLast_,i,j,k+1,iGang) &
-                  -                   Flux_VZI(UnLast_,i,j,k,iGang)
-
-             ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
-             Change_V(Pe_) = Change_V(Pe_) &
-                  - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock)*DivU
-          end if
-
-          if(UseAlfvenWaves)then
-             DivU =                   Flux_VXI(UnFirst_,i+1,j,k,iGang) &
-                  -                   Flux_VXI(UnFirst_,i,j,k,iGang)
-             if(nJ > 1) DivU = DivU + Flux_VYI(UnFirst_,i,j+1,k,iGang) &
-                  -                   Flux_VYI(UnFirst_,i,j,k,iGang)
-             if(nK > 1) DivU = DivU + Flux_VZI(UnFirst_,i,j,k+1,iGang) &
-                  -                   Flux_VZI(UnFirst_,i,j,k,iGang)
-             do iVar = WaveFirst_, WaveLast_
-                Change_V(iVar) = Change_V(iVar) &
-                     - (GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)*DivU
-             end do
-             ! The energy equation contains the work of the wave pressure
-             ! -u.grad Pwave = -div(u Pwave) + Pwave div(u)
-             ! The -div(u Pwave) is implemented as a flux.
-             ! Here we add the Pwave div(u) source term
-             Change_V(Energy_) = Change_V(Energy_) + (GammaWave - 1) &
-                  *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*DivU
-          end if
-
-          ! Below we add sources that do not need to be divided by cell volume
-          if(IsCartesian)then
-             Change_V = Change_V/CellVolume_B(iBlock)
-          else
-             Change_V = Change_V/CellVolume_GB(i,j,k,iBlock)
-          end if
-
-          if(UseGravity .or. UseRotatingFrame)then
-             do iFluid = 1, nFluid
-                iRho = iRho_I(iFluid)
-                iUx = iUx_I(iFluid)
-                iUy = iUy_I(iFluid)
-                iUz = iUz_I(iFluid)
-                iEnergy = nVar + iFluid
-
-                if(UseGravity)then
-                   ForcePerRho_D = &
-                        Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
-                   Change_V(iUx:iUz) = Change_V(iUx:iUz) &
-                        + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
-                   Change_V(iEnergy) = Change_V(iEnergy) &
-                        + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*ForcePerRho_D)
-                end if
-
-                if(UseRotatingFrame)then
-                   Omega2 = OmegaBody**2
-                   Change_V(iUx) = Change_V(iUx) &
-                        + 2*OmegaBody*State_VGB(iUy,i,j,k,iBlock) &
-                        + State_VGB(iRho,i,j,k,iBlock) &
-                        *Omega2 * Xyz_DGB(x_,i,j,k,iBlock)
-                   Change_V(iUy) = Change_V(iUy) &
-                        - 2*OmegaBody*State_VGB(iUx,i,j,k,iBlock) &
-                        + State_VGB(iRho,i,j,k,iBlock) &
-                        *Omega2 * Xyz_DGB(y_,i,j,k,iBlock)
-                   Change_V(iEnergy) = Change_V(iEnergy) &
-                        + Omega2 * sum(State_VGB(iUx:iUy,i,j,k,iBlock) &
-                        *Xyz_DGB(x_:y_,i,j,k,iBlock))
-                end if
-             end do
-          end if
-
-          ! Time step for iStage
-          if(IsTimeAccurate)then
-             DtLocal = iStage*Dt/nStage
-          else
-             DtLocal = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
-          end if
-
-          ! Update state
-          if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
-          if(iStage == 1)then
-             if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
-                ! Overwrite pressure and change with energy
-                call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                do iFluid=1, nFluid
-                   Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
-                end do
-             end if
-             if(UseBorisCorrection) call mhd_to_boris( &
-                  State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
-                  IsConserv)
-
-             State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
-                  + DtLocal*Change_V(1:nVar)
-          else
-             if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
-                ! Overwrite old pressure and change with energy
-                call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                do iFluid=1, nFluid
-                   Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
-                end do
-             end if
-             if(UseBorisCorrection) call mhd_to_boris( &
-                  StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
-                  IsConserv)
-
-             State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
-                  + DtLocal*Change_V(1:nVar)
-          end if
-          ! Maybe we should put State_VGB(:,i,j,k) and B0_DGB(:,i,j,k) into
-          ! local private arrays...
-          if(UseBorisCorrection) call boris_to_mhd( &
-               State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
-
-          ! Check minimum density
-          if(UseRhoMin)then
-             do iFluid = 1, nFluid
-                State_VGB(iRho_I(iFluid),i,j,k,iBlock) = max(RhoMin_I(iFluid),&
-                     State_VGB(iRho_I(iFluid),i,j,k,iBlock))
-             end do
-          end if
-
-          ! Convert energy back to pressure
-          if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
-               call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
-
-          if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
-               .and. iBlock == iBlockTest)then
-             DivF = Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
-                  - Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-             if(nDim > 1) DivF = DivF  &
-                  +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
-                  -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-             if(nDim > 2) DivF = DivF  &
-                  +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
-                  -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-             DivF = DivF/CellVolume_GB(iTest,jTest,kTest,iBlockTest)
-             write(*,*)'Fluxes and sources for ', NameVar_V(iVarTest)
-#ifdef _OPENACC
-             write(*,*) &
-                  'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
-                  Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-             write(*,*) &
-                  'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
-                  Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-             write(*,*) &
-                  'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
-                  Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-             write(*,*)'source=', Change_V(iVarTest) &
-                  /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
-             write(*,*)'fluxes=', DivF
-#else
-             write(*,'(2x,a,2es23.15)') &
-                  'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
-                  Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-             write(*,'(2x,a,2es23.15)') &
-                  'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
-                  Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-             write(*,'(2x,a,2es23.15)') &
-                  'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
-                  Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-             write(*,'(2x,a,es23.15)')'source=', Change_V(iVarTest) &
-                  /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
-             write(*,'(2x,a,es23.15)')'fluxes=', DivF
-#endif
-             write(*,*)
-             write(*,*)NameSub,' final for nStep=', nStep
-             do iVar=1,nVar
-#ifdef _OPENACC
-                write(*,*) ' ', NameVar_V(iVar), '(TestCell)  =',&
-                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-#else
-                write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-#endif
-             end do
-             write(*,*) NameSub,' is finished for iProc, iBlock=', 0, iBlock
-             if(UseDivbSource)      write(*,*)'divB =', divB
-             if(UseNonConservative) write(*,*)'divU =', divU
-          end if
-
+          call update_cell(i, j, k, iBlock, iGang, IsBodyBlock)
        enddo; enddo; enddo
 
        if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
@@ -608,6 +330,316 @@ contains
 
   end subroutine update_state_cpu
   !============================================================================
+  subroutine update_cell(i, j, k, iBlock, iGang, IsBodyBlock)
+    !$acc routine seq
+
+    ! compute source terms and update cell
+
+    integer, intent(in):: i, j, k, iBlock, iGang
+    logical, intent(in):: IsBodyBlock
+
+    integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar
+    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), ForcePerRho_D(3)
+
+    logical:: IsConserv
+
+    character(len=*), parameter:: NameSub = 'update_cell'
+    !--------------------------------------------------------------------------
+    if(UseBody .and. IsBodyBlock) then
+       if(.not. Used_GB(i,j,k,iBlock)) RETURN
+    end if
+
+    Change_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
+         -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
+    if(nDim > 1) Change_V = Change_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
+         -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
+    if(nDim > 2) Change_V = Change_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
+         -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
+
+    if(UseB .and. UseDivbSource)then
+       DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
+       if(nJ > 1) DivB = DivB + &
+            Flux_VYI(Bn_,i,j+1,k,iGang) - Flux_VYI(Bn_,i,j,k,iGang)
+       if(nK > 1) DivB = DivB + &
+            Flux_VZI(Bn_,i,j,k+1,iGang) - Flux_VZI(Bn_,i,j,k,iGang)
+       Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+            - DivB*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+            - DivB*B0_DGB(:,i,j,k,iBlock)
+
+       ! Divide by density to account for Rho in momentum
+       DivB = DivB/State_VGB(Rho_,i,j,k,iBlock)
+       Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
+            - DivB*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+       Change_V(Energy_) = Change_V(Energy_) &
+            - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+            *          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+    end if
+
+    if(UseBorisCorrection .and. ClightFactor /= 1.0)then
+       ! Calculate Boris source term
+       DivE = Flux_VXI(En_,i+1,j,k,iGang) - Flux_VXI(En_,i,j,k,iGang)
+       if(nJ > 1) DivE = DivE + &
+            Flux_VYI(En_,i,j+1,k,iGang) - Flux_VYI(En_,i,j,k,iGang)
+       if(nK > 1) DivE = DivE + &
+            Flux_VZI(En_,i,j,k+1,iGang) - Flux_VZI(En_,i,j,k,iGang)
+       ! Apply coefficients and divide by density for E=(B x RhoU)/Rho
+       DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
+            /State_VGB(Rho_,i,j,k,iBlock)
+       Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+            + DivE*cross_prod( &
+            State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+       if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+            + DivE*cross_prod( &
+            B0_DGB(:,i,j,k,iBlock), &
+            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+
+       if(DoTestSource .and. i==iTest .and. j==jTest .and. k==kTest &
+            .and. iBlock == iBlockTest)then
+          write(*,*) 'Enx =', &
+               Flux_VXI(En_,i,j,k,iGang), Flux_VXI(En_,i+1,j,k,iGang)
+          write(*,*) 'Eny =', &
+               Flux_VYI(En_,i,j,k,iGang), Flux_VYI(En_,i,j+1,k,iGang)
+          write(*,*) 'Enz =', &
+               Flux_VZI(En_,i,j,k,iGang), Flux_VZI(En_,i,j,k+1,iGang)
+          divE = divE/CellVolume_GB(i,j,k,iBlock) &
+               *State_VGB(Rho_,i,j,k,iBlock)
+          write(*,*)'Coef   =', (ClightFactor**2 - 1)*InvClight2
+          write(*,*)'divE*Coef  =', divE
+          ! if(UseB0)then
+          !   write(*,*) '!!! e_D=', cross_prod( &
+          !        B0_DGB(:,i,j,k,iBlock) &
+          !        + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+          !        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
+          !        /State_VGB(Rho_,i,j,k,iBlock)
+          ! else
+          !   write(*,*) '!!! e_D=', DivE*cross_prod( &
+          !        State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+          !        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
+          !        /State_VGB(Rho_,i,j,k,iBlock)
+          ! end if
+       end if
+
+    end if
+    if(UseNonConservative)then
+       ! Add -(g-1)*p*div(u) source term
+       do iFluid = 1, nFluid
+          iP  = iP_I(iFluid)
+          iUn = UnFirst_ + iFluid - 1
+          DivU = Flux_VXI(iUn,i+1,j,k,iGang) - Flux_VXI(iUn,i,j,k,iGang)
+          if(nJ > 1) DivU = DivU &
+               + Flux_VYI(iUn,i,j+1,k,iGang) - Flux_VYI(iUn,i,j,k,iGang)
+          if(nK > 1) DivU = DivU &
+               + Flux_VZI(iUn,i,j,k+1,iGang) - Flux_VZI(iUn,i,j,k,iGang)
+          Change_V(iP) = Change_V(iP) &
+               - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
+       end do
+    end if
+
+    if(UseElectronPressure)then
+       ! Calculate DivU = div(U_e)
+       DivU =                   Flux_VXI(UnLast_,i+1,j,k,iGang) &
+            -                   Flux_VXI(UnLast_,i,j,k,iGang)
+       if(nJ > 1) DivU = DivU + Flux_VYI(UnLast_,i,j+1,k,iGang) &
+            -                   Flux_VYI(UnLast_,i,j,k,iGang)
+       if(nK > 1) DivU = DivU + Flux_VZI(UnLast_,i,j,k+1,iGang) &
+            -                   Flux_VZI(UnLast_,i,j,k,iGang)
+
+       ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
+       Change_V(Pe_) = Change_V(Pe_) &
+            - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock)*DivU
+    end if
+
+    if(UseAlfvenWaves)then
+       DivU =                   Flux_VXI(UnFirst_,i+1,j,k,iGang) &
+            -                   Flux_VXI(UnFirst_,i,j,k,iGang)
+       if(nJ > 1) DivU = DivU + Flux_VYI(UnFirst_,i,j+1,k,iGang) &
+            -                   Flux_VYI(UnFirst_,i,j,k,iGang)
+       if(nK > 1) DivU = DivU + Flux_VZI(UnFirst_,i,j,k+1,iGang) &
+            -                   Flux_VZI(UnFirst_,i,j,k,iGang)
+       do iVar = WaveFirst_, WaveLast_
+          Change_V(iVar) = Change_V(iVar) &
+               - (GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)*DivU
+       end do
+       ! The energy equation contains the work of the wave pressure
+       ! -u.grad Pwave = -div(u Pwave) + Pwave div(u)
+       ! The -div(u Pwave) is implemented as a flux.
+       ! Here we add the Pwave div(u) source term
+       Change_V(Energy_) = Change_V(Energy_) + (GammaWave - 1) &
+            *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*DivU
+    end if
+
+    ! Below we add sources that do not need to be divided by cell volume
+    if(IsCartesian)then
+       Change_V = Change_V/CellVolume_B(iBlock)
+    else
+       Change_V = Change_V/CellVolume_GB(i,j,k,iBlock)
+    end if
+
+    if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
+         .and. iBlock == iBlockTest)then
+       write(*,*)'Change_V after divided by V', Change_V(iVarTest)
+    end if
+
+    if(UseGravity .or. UseRotatingFrame)then
+
+       do iFluid = 1, nFluid
+          iRho = iRho_I(iFluid)
+          iUx = iUx_I(iFluid)
+          iUy = iUy_I(iFluid)
+          iUz = iUz_I(iFluid)
+          iEnergy = nVar + iFluid
+
+          if(UseGravity)then
+             ForcePerRho_D = &
+                  Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
+             Change_V(iUx:iUz) = Change_V(iUx:iUz) &
+                  + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
+             Change_V(iEnergy) = Change_V(iEnergy) &
+                  + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*ForcePerRho_D)
+          end if
+
+          if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
+               .and. iBlock == iBlockTest)then
+             write(*,*)'Change_V after gravity', Change_V(iVarTest)
+          end if
+
+          if(UseRotatingFrame)then
+             Change_V(iUx) = Change_V(iUx) &
+                  + 2*OmegaBody*State_VGB(iUy,i,j,k,iBlock) &
+                  + State_VGB(iRho,i,j,k,iBlock) &
+                  *OmegaBody**2 * Xyz_DGB(x_,i,j,k,iBlock)
+             Change_V(iUy) = Change_V(iUy) &
+                  - 2*OmegaBody*State_VGB(iUx,i,j,k,iBlock) &
+                  + State_VGB(iRho,i,j,k,iBlock) &
+                  *OmegaBody**2 * Xyz_DGB(y_,i,j,k,iBlock)
+             Change_V(iEnergy) = Change_V(iEnergy) &
+                  + OmegaBody**2 * sum(State_VGB(iUx:iUy,i,j,k,iBlock) &
+                  *Xyz_DGB(x_:y_,i,j,k,iBlock))
+          end if
+       end do
+    end if
+
+    if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
+         .and. iBlock == iBlockTest)then
+       write(*,*)'Change_V after rotating frame', Change_V(iVarTest)
+    end if
+
+    ! Time step for iStage
+    if(IsTimeAccurate)then
+       DtLocal = iStage*Dt/nStage
+    else
+       DtLocal = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
+    end if
+
+    ! Update state
+    if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
+    if(iStage == 1)then
+       if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
+          ! Overwrite pressure and change with energy
+          call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
+          do iFluid=1, nFluid
+             Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
+          end do
+       end if
+       if(UseBorisCorrection) call mhd_to_boris( &
+            State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
+            IsConserv)
+
+       State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+            + DtLocal*Change_V(1:nVar)
+    else
+       if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
+          ! Overwrite old pressure and change with energy
+          call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
+          do iFluid=1, nFluid
+             Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
+          end do
+       end if
+       if(UseBorisCorrection) call mhd_to_boris( &
+            StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
+            IsConserv)
+
+       State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
+            + DtLocal*Change_V(1:nVar)
+    end if
+    ! Maybe we should put State_VGB(:,i,j,k) and B0_DGB(:,i,j,k) into
+    ! local private arrays...
+    if(UseBorisCorrection) call boris_to_mhd( &
+         State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
+
+    ! Check minimum density
+    if(UseRhoMin)then
+       do iFluid = 1, nFluid
+          State_VGB(iRho_I(iFluid),i,j,k,iBlock) = max(RhoMin_I(iFluid),&
+               State_VGB(iRho_I(iFluid),i,j,k,iBlock))
+       end do
+    end if
+
+    ! Convert energy back to pressure
+    if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
+         call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+
+    if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
+         .and. iBlock == iBlockTest)then
+       DivF = Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
+            - Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
+       if(nDim > 1) DivF = DivF  &
+            +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
+            -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
+       if(nDim > 2) DivF = DivF  &
+            +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
+            -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+       DivF = DivF/CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+       write(*,*)'Fluxes and sources for ', NameVar_V(iVarTest)
+       !#ifdef _OPENACC
+       write(*,*) &
+            'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
+            Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
+       write(*,*) &
+            'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
+            Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
+       write(*,*) &
+            'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
+            Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+       write(*,*)'Change_V=', Change_V(iVarTest)
+       write(*,*)'CellVolume=', CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+       write(*,*)'source=', Change_V(iVarTest) &
+            /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
+       write(*,*)'fluxes=', DivF
+       !#else
+       ! write(*,'(2x,a,2es23.15)') &
+       !     'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
+       !     Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
+       ! write(*,'(2x,a,2es23.15)') &
+       !     'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
+       !     Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
+       ! write(*,'(2x,a,2es23.15)') &
+       !     'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
+       !     Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+       ! write(*,'(2x,a,es23.15)')'source=', Change_V(iVarTest) &
+       !     /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
+       ! write(*,'(2x,a,es23.15)')'fluxes=', DivF
+       !#endif
+       write(*,*)
+       write(*,*)NameSub,' final for nStep=', nStep
+       do iVar=1,nVar
+          !#ifdef _OPENACC
+          write(*,*) ' ', NameVar_V(iVar), '(TestCell)  =',&
+               State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+          !#else
+          ! write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+          !     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+          !#endif
+       end do
+       write(*,*) NameSub,' is finished for iProc, iBlock=', 0, iBlock
+       if(UseDivbSource)      write(*,*)'divB =', divB
+       if(UseNonConservative) write(*,*)'divU =', divU
+    end if
+
+  end subroutine update_cell
+  !============================================================================
   subroutine get_flux_x(i, j,  k, iBlock, IsBodyBlock)
     !$acc routine seq
 
@@ -616,7 +648,8 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang, iVar, iTestSide
+    integer:: iGang, iVar
+    logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
     iGang = 1
@@ -629,42 +662,39 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
 
-    iTestSide = -1
+    DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 1) .and. &
          j==jTest .and. k==kTest .and. iBlock == iBlockTest)then
-       if(i == iTest)then
-          iTestSide = 1
-       elseif(i == iTest+1)then
-          iTestSide = 2
-       end if
+       if(  (i == iTest .and. iTestSide >= 0) .or. &
+            (i == iTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
     end if
 
-    if(iTestSide > 0)then
+    if(DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
        do iVar = 1, nVar
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)NameVar_V(iVar),'=',&
                StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#else
-          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
-               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#endif
+!#else
+!          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
+!               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
+!#endif
        end do
        if(UseB0)then
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)'B0x:', B0_D(1), iTestSide
           write(*,*)'B0y:', B0_D(2), iTestSide
           write(*,*)'B0z:', B0_D(3), iTestSide
-#else
-          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
-          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
-          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
-#endif
+!#else
+!          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
+!#endif
        end if
     end if
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), B0_D, iTestSide)
+         StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), B0_D, DoTestSide)
 
   end subroutine get_flux_x
   !============================================================================
@@ -676,7 +706,8 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang, iVar, iTestSide
+    integer:: iGang, iVar
+    logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
     iGang = 1
@@ -689,42 +720,45 @@ contains
 
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
 
-    iTestSide = -1
+    DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 2) .and. &
          i==iTest .and. k==kTest .and. iBlock == iBlockTest)then
-       if(j == jTest)then
-          iTestSide = 3
-       elseif(j == jTest+1)then
-          iTestSide = 4
-       end if
+       if(  (j == jTest .and. iTestSide >= 0) .or. &
+            (j == jTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
     end if
 
-    if(iTestSide > 0)then
+        if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 1) .and. &
+         j==jTest .and. k==kTest .and. iBlock == iBlockTest)then
+       if(  (i == iTest .and. iTestSide >= 0) .or. &
+            (i == iTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
+    end if
+
+    if(DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
        do iVar = 1, nVar
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)NameVar_V(iVar),'=',&
                StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#else
-          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
-               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#endif
+!#else
+!          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
+!               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
+!#endif
        end do
        if(UseB0)then
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)'B0x:', B0_D(1), iTestSide
           write(*,*)'B0y:', B0_D(2), iTestSide
           write(*,*)'B0z:', B0_D(3), iTestSide
-#else
-          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
-          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
-          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
-#endif
+!#else
+!          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
+!#endif
        end if
     end if
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), B0_D, iTestSide)
+         StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), B0_D, DoTestSide)
 
   end subroutine get_flux_y
   !============================================================================
@@ -736,7 +770,8 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang, iVar, iTestSide
+    integer:: iGang, iVar
+    logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
     iGang = 1
@@ -749,41 +784,39 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
 
-    iTestSide = -1
+    DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 3) .and. &
          i==iTest .and. j==jTest .and. iBlock == iBlockTest)then
-       if(k == kTest)then
-          iTestSide = 5
-       elseif(k == kTest+1)then
-          iTestSide = 6
-       end if
+       if(  (k == kTest .and. iTestSide >= 0) .or. &
+            (k == kTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
     end if
-    if (iTestSide > 0)then
+
+    if (DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
        do iVar = 1, nVar
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)NameVar_V(iVar),'=',&
                StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#else
-          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
-               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-#endif
+!#else
+!          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
+!               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
+!#endif
        end do
        if(UseB0)then
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*)'B0x:', B0_D(1), iTestSide
           write(*,*)'B0y:', B0_D(2), iTestSide
           write(*,*)'B0z:', B0_D(3), iTestSide
-#else
-          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
-          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
-          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
-#endif
+!#else
+!          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
+!          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
+!#endif
        end if
     end if
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), B0_D, iTestSide)
+         StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), B0_D, DoTestSide)
 
   end subroutine get_flux_z
   !============================================================================
@@ -1044,7 +1077,7 @@ contains
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
-         Flux_V, B0_D, -1)
+         Flux_V, B0_D, .false.)
 
     ! Change due to fluxes through this face
     Change_V(1:nFlux) = Change_V(1:nFlux) + Flux_V(1:nFlux)
@@ -1519,7 +1552,7 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, x_)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, B0_D, -1)
+         StateLeft_V, StateRight_V, Flux_V, B0_D, .false.)
 
   end subroutine get_flux_x_prim
   !============================================================================
@@ -1541,7 +1574,7 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, B0_D, -1)
+         StateLeft_V, StateRight_V, Flux_V, B0_D, .false.)
 
   end subroutine get_flux_y_prim
   !============================================================================
@@ -1563,7 +1596,7 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, z_)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, B0_D, -1)
+         StateLeft_V, StateRight_V, Flux_V, B0_D, .false.)
 
   end subroutine get_flux_z_prim
   !============================================================================
@@ -1743,7 +1776,7 @@ contains
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
-         Flux_V, B0_D, -1)
+         Flux_V, B0_D, .false.)
 
     ! Change due to fluxes through this face
     Change_V(1:nFlux) = Change_V(1:nFlux) + Flux_V(1:nFlux)
@@ -2596,14 +2629,14 @@ contains
 
   end subroutine get_boris_flux
   !============================================================================
-  subroutine get_speed_max(iTestSide, State_V, Normal_D, &
+  subroutine get_speed_max(DoTestSide, State_V, Normal_D, &
        Un, B0_D, Cmax, Cleft, Cright)
     !$acc routine seq
 
     ! Using primitive variable State_V and normal direction get
     ! normal velocity and wave speeds.
 
-    integer, intent(in):: iTestSide
+    logical, intent(in):: DoTestSide
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: Un              ! normal velocity (signed)
     real, intent(in) :: B0_D(3)         ! B0 field on the face
@@ -2616,7 +2649,7 @@ contains
     real:: GammaP
     !--------------------------------------------------------------------------
     if(UseBorisCorrection)then
-       call get_boris_speed(iTestSide, State_V, Normal_D, Un, B0_D, &
+       call get_boris_speed(DoTestSide, State_V, Normal_D, Un, B0_D, &
             Cmax, Cleft, Cright)
        RETURN
     end if
@@ -2637,7 +2670,19 @@ contains
     if(UseAlfvenWaves) GammaP = GammaP &
          + GammaWave*(GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
 
-    Sound2= GammaP*InvRho
+    if(DoTestSide) then
+       write(*,*)&
+            'Sound2 uninitialized= ', Sound2, iTestSide
+       write(*,*)&
+            'GammaP, InvRho= ', GammaP, InvRho
+    end if
+
+    Sound2=GammaP*InvRho
+
+    if(DoTestSide) then
+       write(*,*)&
+            'Sound2 updated ', Sound2, iTestSide
+    end if
 
     Fast2 = Sound2 + InvRho*B2
     Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*InvRho*Bn**2))
@@ -2648,7 +2693,7 @@ contains
     if(present(Cleft))  Cleft  = Un - Fast
     if(present(Cright)) Cright = Un + Fast
 
-    if(iTestSide > 0)then
+    if(DoTestSide)then
        write(*,*) ' iFluid, rho, p(face)   =', &
             1, State_V(Rho_), State_V(p_), iTestSide
        ! if(UseAnisoPressure) write(*,*) &
@@ -2662,6 +2707,8 @@ contains
        !     GammaWave, State_V(WaveFirst_:WaveLast_)
        write(*,*) &
             ' Fast2, Discr          =', Fast2, Discr, iTestSide
+       write(*,*) &
+            ' GammaP, InvRho         =', GammaP, InvRho, iTestSide
        write(*,*) &
             ' Sound2, Alfven2       =', Sound2, InvRho*B2, iTestSide
        write(*,*) &
@@ -2677,14 +2724,14 @@ contains
 
   end subroutine get_speed_max
   !============================================================================
-  subroutine get_boris_speed(iTestSide, State_V, Normal_D, Un, B0_D, &
+  subroutine get_boris_speed(DoTestSide, State_V, Normal_D, Un, B0_D, &
        Cmax, Cleft, Cright)
     !$acc routine seq
 
     ! Using primitive variable State_V and normal direction get
     ! normal velocity and wave speeds with semi-relativistic Boris correction
 
-    integer, intent(in):: iTestSide ! side of cell being tested
+    logical, intent(in):: DoTestSide ! side of cell being tested
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: Un              ! normal velocity (signed)
     real, intent(in) :: B0_D(3)         ! B0 field on the face
@@ -2789,7 +2836,7 @@ contains
     if(present(Cleft))  Cleft  = min(UnBoris - Fast, Un - Slow)
     if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
 
-    if(iTestSide > 0)then
+    if(DoTestSide)then
        write(*,*) ' InvRho, p      =', InvRho, p, iTestSide
        write(*,*) ' FullB, FullBn  =', FullB_D(1), FullB_D(2), FullB_D(3), &
             FullBn, iTestSide
@@ -2805,7 +2852,7 @@ contains
   end subroutine get_boris_speed
   !============================================================================
   subroutine get_numerical_flux(Normal_D, Area, &
-       StateLeft_V, StateRight_V, Flux_V, B0_D, iTestSide)
+       StateLeft_V, StateRight_V, Flux_V, B0_D, DoTestSide)
     !$acc routine seq
 
     ! Calculate numerical flux Flux_V based on the left and right states
@@ -2816,7 +2863,7 @@ contains
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out)  :: Flux_V(nFaceValue)
     real, intent(in)   :: B0_D(3)
-    integer, intent(in):: iTestSide
+    logical, intent(in):: DoTestSide
 
     ! Average state
     real:: State_V(nVar)
@@ -2840,7 +2887,7 @@ contains
        ! average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
 
-       call get_speed_max(iTestSide, State_V, Normal_D, Un, B0_D, Cmax)
+       call get_speed_max(DoTestSide, State_V, Normal_D, Un, B0_D, Cmax)
        call get_physical_flux(StateLeft_V, Normal_D, &
             StateLeftCons_V, FluxLeft_V, B0_D)
        call get_physical_flux(StateRight_V, Normal_D, &
@@ -2887,16 +2934,16 @@ contains
 
        ! This implementation is for non-relativistic MHD only
        ! Left speed of left state
-       call get_speed_max(iTestSide, StateLeft_V, Normal_D, Un, B0_D, &
+       call get_speed_max(DoTestSide, StateLeft_V, Normal_D, Un, B0_D, &
             Cleft=Cleft)
 
        ! Right speed of right state
-       call get_speed_max(iTestSide, StateRight_V, Normal_D, Un, B0_D, &
+       call get_speed_max(DoTestSide, StateRight_V, Normal_D, Un, B0_D, &
             Cright=Cright)
 
        ! Speeds of average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
-       call get_speed_max(iTestSide, State_V, Normal_D, &
+       call get_speed_max(DoTestSide, State_V, Normal_D, &
             Un, B0_D, Cmax, CleftAverage, CrightAverage)
 
        ! Limited left and right speeds
@@ -2976,7 +3023,7 @@ contains
     ! Store time step constraint (to be generalized for multifluid)
     Flux_V(Vdt_) = abs(Area)*Cmax
 
-    if(iTestSide > 0)then
+    if(DoTestSide)then
        write(*,*)'Hat state for Normal_D=', &
             Normal_D(1), Normal_D(2), Normal_D(3), iTestSide
        write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_)), iTestSide
@@ -3005,21 +3052,21 @@ contains
        write(*,*)'Eigenvalue_maxabs=', Cmax, iTestSide
        write(*,*)'CmaxDt           =', Cmax, iTestSide
        do iVar = 1, nFlux
-#ifdef _OPENACC
+!#ifdef _OPENACC
           write(*,*) 'Var,F,F_L,F_R,dU,c*dU/2=', &
                NameVar_V(iVar),&
                Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area, &
                StateRightCons_V(iVar)-StateLeftCons_V(iVar), &
                0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area, &
                iTestSide
-#else
-          write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=', &
-               NameVar_V(iVar),&
-               Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area,&
-               StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
-               0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area,&
-               iTestSide
-#endif
+!#else
+!          write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=', &
+!               NameVar_V(iVar),&
+!               Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area,&
+!               StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
+!               0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area,&
+!               iTestSide
+!#endif
        end do
     end if
 
