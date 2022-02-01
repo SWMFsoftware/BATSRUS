@@ -88,6 +88,10 @@ T			UseRadCooling
 #USERSWITCH
 +init +ic		StringSwitch
 
+#COARSEAXIS
+T			UseCoarseAxis
+2			nCoarseLayer
+
 #USERINPUTBEGIN -------------------------------------
 
 #CHROMOBC
@@ -103,7 +107,7 @@ T			DoExpandTransitionRegion
 
 #GRIDGEOMETRY
 spherical_genr		TypeGeometry
-Param/CORONA/grid_TR.dat		NameGridFile
+Param/CORONA/grid_awsom.dat		NameGridFile
 
 ! Use a true sphere, so box is made much larger
 #GRID
@@ -156,11 +160,6 @@ currentsheet -LargeShell		StringRefine
 #GRIDRESOLUTION
 12.0			Resolution
 initial			StringShape
-
-HYPERBOLICDIVB
-F			UseHyperbolicDivb
-400.0			SpeedHypDim
-0.1			HypDecay
 
 #LOOKUPTABLE
 radcool			NameTable

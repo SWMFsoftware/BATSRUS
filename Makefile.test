@@ -1033,7 +1033,7 @@ test_awsom:
 
 # Fails on Pleiades with OpenMP
 test_awsom_compile:
-	./Config.pl -noopenmp -u=Awsom -e=MhdWaves -ng=2 -g=6,4,4
+	./Config.pl -noopenmp -u=Awsom -e=Awsom -ng=2 -g=6,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
