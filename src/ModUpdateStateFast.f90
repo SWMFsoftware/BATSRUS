@@ -732,7 +732,7 @@ contains
        if(  (i == iTest .and. iTestSide >= 0) .or. &
             (i == iTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
     end if
-    
+
     if(DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
        do iVar = 1, nVar

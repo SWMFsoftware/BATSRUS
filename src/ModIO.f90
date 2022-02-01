@@ -88,7 +88,7 @@ module ModIO
 
   ! Variables for SPECTRUM-FLX calculation
   character (len=20) :: NameSpmTable_I(MaxFile)
-  
+
   ! Variables for field/stream/current line files
   logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
   integer :: nLine_I(MaxPlotFile)             ! Number of lines for a plot file
