@@ -3054,12 +3054,12 @@ contains
                0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area, &
                iSideTest
           !#else
-          !          write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=', &
-          !               NameVar_V(iVar),&
-          !               Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area,&
-          !               StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
-          !               0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area,&
-          !               iSideTest
+          ! write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=', &
+          !      NameVar_V(iVar),&
+          !      Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area,&
+          !      StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
+          !      0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area,&
+          !      iSideTest
           !#endif
        end do
     end if
