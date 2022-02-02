@@ -1049,7 +1049,7 @@ test_awsom_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_awsom_check:
-	-@(${DIFFNUM} -t -a=1e-27 -r=2e-5 \
+	-@(${DIFFNUM} -t -a=2e-27 -r=2e-5 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		Param/CORONA/TestOutput/log_n000000.sc.awsom \
 		> test_awsom.diff)
