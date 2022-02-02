@@ -666,6 +666,22 @@ Default is the first variable that is usually density.
 Index of dimension/direction to be tested. Default is X dimension.
 </command>
 
+<command name="TESTSIDE">
+  <parameter name="iSideTest" type="integer" input="select">
+    <option name="all"   value="0" default="T"/>
+    <option name="left"  value="-1" />
+    <option name="right" value="1" />
+  </parameter>
+
+#TESTSIDE
+0                       iSideTest (-1, 0, 1)
+
+Select the side of the cell to be tested. -1 is for "left" side, +1 is
+for right side, 0 is for both sides. Currently this is implemented in the
+UpdateStateFast code only, where the sides are done with multiple threads
+on the GPU. Default value is shown.
+</command>
+
 <command name="STRICT" multiple="T">
   <parameter name="UseStrict" type="logical" default="T" />
 #STRICT
