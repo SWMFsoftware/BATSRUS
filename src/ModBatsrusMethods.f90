@@ -980,6 +980,7 @@ contains
               index(TypePlot_I(iFile),'ieb')==1 .or. &
               index(TypePlot_I(iFile),'lcb')==1 .or. &
               index(TypePlot_I(iFile),'los')==1 .or. &
+              index(TypePlot_I(iFile),'spm')==1 .or. &
               index(TypePlot_I(iFile),'sph')==1 .or. &
               (TypePlotFormat_I(iFile) == 'tec'      .and. &
               index(TypePlot_I(iFile),'rfr')/=1.and. &
@@ -998,6 +999,11 @@ contains
             call write_plot_los(iFile)
          end if
 
+         if(index(TypePlot_I(iFile),'spm')>0) then
+            IsFound = .true.
+            call write_plot_los(iFile)
+         end if
+         
          if(index(TypePlot_I(iFile),'pnt')>0) then
             IsFound = .true.
             call write_plot_particle(iFile)

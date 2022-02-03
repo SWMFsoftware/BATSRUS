@@ -1063,22 +1063,20 @@ contains
                 call read_var('x0',   PlotRange_EI(1,iFile))
                 call read_var('y0',   PlotRange_EI(2,iFile))
                 call read_var('xLen',   PlotRange_EI(3,iFile))
-                if (PlotRange_EI(5, iFile) /= 0) &
-                     call read_var('dX',   PlotDx_DI(1,iFile))
+                call read_var('dX',   PlotDx_DI(1,iFile))
                 call read_var('yLen', PlotRange_EI(4,iFile))
-                if (PlotRange_EI(4, iFile) /= 0) &
-                     call read_var('dY', PlotDx_DI(2,iFile))
+                call read_var('dY', PlotDx_DI(2,iFile))
                 if (index(StringPlot,'TBL')>0&
                      .or.index(StringPlot,'tbl')>0) &
                      call read_var('NameSpmTable',NameSpmTable_I(iFile))
                 ! DEM/EM calculation
-                if (index(StringPlot, 'spm_dem')>0)then
+                if (index(StringPlot, 'dem')>0)then
                    TypePlotVar = 'dem'
                    call read_var('LogTeMinDEM',LogTeMinDEM_I(iFile))
                    call read_var('LogTeMaxDEM',LogTeMaxDEM_I(iFile))
                    call read_var('DLogTeDEM',DLogTeDEM_I(iFile))
                 else
-                   TypePlotVar = 'flx'
+                   TypePlotVar = 'spm'
                 end if
              elseif (index(StringPlot,'los')>0) then
                 TypePlotArea='los'
@@ -1517,6 +1515,12 @@ contains
              elseif(   index(StringPlot,'INS') > 0 &
                   .or. index(StringPlot,'ins') > 0)then
                 ! do nothing
+             elseif(   index(StringPlot,'DEM') > 0 &
+                  .or. index(StringPlot,'dem') > 0)then
+                TypePlotVar='dem'
+                IsDimensionalPlot_I(iFile) = .true.
+                StringPlotVar_I(iFile)='dem em'
+                StringPlotParam_I(iFile)='rbody'
              else
                 call stop_mpi('Variable definition missing from StringPlot=' &
                      //StringPlot)

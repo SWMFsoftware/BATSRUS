@@ -102,7 +102,7 @@ contains
 
     ! Plot variables
     integer, parameter :: MaxParam=10
-    real, allocatable :: ImagePe_VII(:,:,:), Image_VII(:,:,:)
+    real, allocatable :: ImagePe_VIII(:,:,:,:), Image_VIII(:,:,:,:)
 
     real :: Param_I(MaxParam)
     character (len=20) :: NameParam_I(MaxParam)
@@ -169,6 +169,11 @@ contains
     integer :: iSat, iSatLoop
     integer:: iProcFound
 
+    ! SPECTRUM - DEM/EM calculation
+    logical            :: UseDEM = .false., UseSpm = .false.
+    integer, parameter :: DEM_ = 1, EM_ = 2
+    integer            :: iTe = 1, nLogTeDEM = 1
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
     !--------------------------------------------------------------------------
@@ -203,15 +208,31 @@ contains
 
     iSat = 0
 
-    ! Set file specific parameters
-    nPix       = nPixel_I(iFile)
-    aOffset    = xOffset_I(iFile)
-    bOffset    = yOffset_I(iFile)
-    rSizeImage = rSizeImage_I(iFile)
-    rSizeImage2= rSizeImage**2
-    rOccult    = rOccult_I(iFile)
-    rOccult2   = rOccult**2
-    OffsetAngle= OffsetAngle_I(iFile)
+    UseSpm = index(TypePlot_I(iFile),'spm')>0
+    ! Do we calculate SPECTRUM-DEM/EM?
+    UseDEM = index(TypePlot_I(iFile),'dem')>0
+
+    if(UseSpm)then
+       nPix       = nint(PlotRange_EI(3,iFile)/PlotDx_DI(1,iFile))+1
+       aOffset    = 0
+       bOffset    = 0
+       rSizeImage = PlotRange_EI(3,iFile)/2
+       rSizeImage2= rSizeImage**2
+       rOccult    = 0
+       rOccult2   = rOccult**2
+       OffsetAngle= 0
+
+    else
+       ! Set file specific parameters
+       nPix       = nPixel_I(iFile)
+       aOffset    = xOffset_I(iFile)
+       bOffset    = yOffset_I(iFile)
+       rSizeImage = rSizeImage_I(iFile)
+       rSizeImage2= rSizeImage**2
+       rOccult    = rOccult_I(iFile)
+       rOccult2   = rOccult**2
+       OffsetAngle= OffsetAngle_I(iFile)
+    end if
 
     select case(TypeSatPos_I(iFile))
     case('sta', 'stb', 'earth')
@@ -311,7 +332,13 @@ contains
             Table_I(iTableGen)%NameVar
     endif
 
-    NameAllVar='x y '//trim(StringPlotVar)//' '//StringPlotParam_I(iFile)
+    if(UseDEM)then
+       NameAllVar='x y logTe' 
+    else
+       NameAllVar='x y' 
+    end if
+    NameAllVar = trim(NameAllVar)//' '//trim(StringPlotVar)//' '//StringPlotParam_I(iFile)
+
     if(DoTest .and. iProc==0) write(*,*) 'NameAllVar: ', NameAllVar
 
     if(DoTest .and. iProc==0) then
@@ -380,11 +407,19 @@ contains
 
     ! !! aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
 
-    allocate( &
-         ImagePe_VII(nPlotVar,nPix,nPix), &
-         Image_VII(nPlotVar,nPix,nPix))
+    if(UseDEM)then
+       nLogTeDEM = &
+            nint(LogTeMaxDEM_I(iFile)-LogTeMinDEM_I(iFile))/DLogTeDEM_I(IFile)
+       allocate( &
+            ImagePe_VIII(nPlotVar,nPix,nPix,nLogTeDEM), &
+            Image_VIII(nPlotVar,nPix,nPix,nLogTeDEM))
+    else
+       allocate( &
+            ImagePe_VIII(nPlotVar,nPix,nPix,1), &
+            Image_VIII(nPlotVar,nPix,nPix,1))
+    end if
 
-    ImagePe_VII = 0.0
+    ImagePe_VIII = 0.0
 
     ! Do we need to apply scattering
     UseScattering = any(NamePlotVar_V(1:nPlotVar) == 'wl') &
@@ -404,7 +439,7 @@ contains
 
     ! Do we need to calculate density (also for white light and polarization)
     UseRho = UseScattering .or. any(NamePlotVar_V(1:nPlotVar) == 'rho') &
-         .or. UseEuv .or. UseSxr .or. UseTableGen
+         .or. UseEuv .or. UseSxr .or. UseTableGen .or. UseDEM
 
     if(DoTiming)call timing_start('los_block_loop')
 
@@ -437,10 +472,16 @@ contains
     !   if(TypePlotFormat_I(iFile) /= 'hdf') then
     !       ! add up the pixels from all PE-s to root proc
     if(nProc > 1)then
-       call MPI_REDUCE(ImagePe_VII, Image_VII, nPix*nPix*nPlotVar, &
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
+       if(UseDEM)then
+          call MPI_REDUCE(ImagePe_VIII, Image_VIII, &
+               nPix*nPix*nPlotVar*nLogTeDEM, &
+               MPI_REAL, MPI_SUM, 0, iComm, iError)
+       else
+          call MPI_REDUCE(ImagePe_VIII, Image_VIII, nPix*nPix*nPlotVar, &
+               MPI_REAL, MPI_SUM, 0, iComm, iError)
+       end if
     else
-       Image_VII = ImagePe_VII
+       Image_VIII = ImagePe_VIII
     end if
 
     if(iProc==0) then
@@ -534,10 +575,10 @@ contains
 
                 if (IsDimensionalPlot_I(iFile)) then
                    write(UnitTmp_,fmt="(30(E14.6))") aPix*No2Io_V(UnitX_), &
-                        bPix*No2Io_V(UnitX_), Image_VII(1:nPlotVar,iPix,jPix)
+                        bPix*No2Io_V(UnitX_), Image_VIII(1:nPlotVar,iPix,jPix,1)
                 else
                    write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, &
-                        Image_VII(1:nPlotVar,iPix,jPix)
+                        Image_VIII(1:nPlotVar,iPix,jPix,1)
                 end if
 
              end do
@@ -581,17 +622,37 @@ contains
 
           select case(TypePlotFormat_I(iFile))
           case('idl')
-             call save_plot_file(NameFile, &
-                  TypeFileIn = TypeFile_I(iFile), &
-                  StringHeaderIn = StringHeadLine, &
-                  nStepIn = nStep, &
-                  TimeIn = tSimulation, &
-                  ParamIn_I = Param_I(1:neqpar), &
-                  NameVarIn = NameAllVar, &
-                  nDimIn = 2, &
-                  CoordMinIn_D = [-aPix, -aPix], &
-                  CoordMaxIn_D = [+aPix, +aPix], &
-                  VarIn_VII = Image_VII)
+             if(UseDEM)then
+                StringHeadLine= 'DEM integrals '// &
+                     ' TIMEEVENT='//trim(StringDateTime)// &
+                     ' TIMEEVENTSTART='//StringDateTime0// &
+                     ' '//StringUnitIdl
+
+                call save_plot_file(NameFile, &
+                     TypeFileIn = TypeFile_I(iFile), &
+                     StringHeaderIn = StringHeadLine, &
+                     nStepIn = nStep, &
+                     TimeIn = tSimulation, &
+                     ParamIn_I = Param_I(1:neqpar), &
+                     NameVarIn = NameAllVar, &
+                     NameUnitsIn = StringUnitIdl,&
+                     nDimIn = 3, &
+                     CoordMinIn_D = [-aPix, -aPix, LogTeMinDEM_I(iFile)], &
+                     CoordMaxIn_D = [+aPix, +aPix, LogTeMaxDEM_I(iFile)], &
+                     VarIn_VIII = Image_VIII(:,:,:,:))
+             else
+                call save_plot_file(NameFile, &
+                     TypeFileIn = TypeFile_I(iFile), &
+                     StringHeaderIn = StringHeadLine, &
+                     nStepIn = nStep, &
+                     TimeIn = tSimulation, &
+                     ParamIn_I = Param_I(1:neqpar), &
+                     NameVarIn = NameAllVar, &
+                     nDimIn = 2, &
+                     CoordMinIn_D = [-aPix, -aPix], &
+                     CoordMaxIn_D = [+aPix, +aPix], &
+                     VarIn_VII = Image_VIII(:,:,:,1))
+             endif
           case('hdf')
              call save_plot_file(NameFile, &
                   TypeFileIn = 'hdf5', &
@@ -604,7 +665,7 @@ contains
                   nDimIn = 2, &
                   CoordMinIn_D = [-aPix, -aPix], &
                   CoordMaxIn_D = [+aPix, +aPix], &
-                  VarIn_VII = Image_VII)
+                  VarIn_VII = Image_VIII(:,:,:,1))
           end select
        end if
     end if  ! iProc==0
@@ -612,7 +673,7 @@ contains
 
     call barrier_mpi
 
-    deallocate(ImagePe_VII, Image_VII)
+    deallocate(ImagePe_VIII, Image_VIII)
 
     if(UseTableGen) deallocate(InterpValues_I)
 
@@ -631,6 +692,7 @@ contains
            Discriminant = -1.0, SgrtDiscr, DiscrChromo = -1.0, SqrtDiscr
       real:: XyzIntersect_D(3), XyzTR_D(3)
       !------------------------------------------------------------------------
+
       ! Loop over pixels
       do jPix = 1, nPix
 
@@ -685,6 +747,7 @@ contains
                d = - LosDotXyzPix + SqrtDiscr
                XyzIntersect_D = XyzPix_D + d*LosPix_D
                ! Integrate from the intersection point to observer
+
                call integrate_line(XyzIntersect_D, Distance - d)
 
                if(UseFieldLineThreads)then
@@ -703,7 +766,7 @@ contains
                      ! LOS ntersection with the top of Transition Region
                      if(UseTRCorrection.and.DoPlotThreads.and.          &
                           (UseEuv .or. UseSxr .or. UseTableGen))then
-                         XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
+                        XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
                         call find_grid_block((rInner + cTiny)*XyzTR_D/  &
                              norm2(XyzTR_D),iProcFound, iBlock)
                         if( iProc==iProcFound)call get_tr_los_image(&
@@ -715,8 +778,8 @@ contains
                              iTableEuv = iTableEuv,                     &
                              iTableSxr = iTableSxr,                     &
                              iTableGen = iTableGen,                     &
-                             PixIntensity_V  = ImagePe_VII(1:nPlotVar,  &
-                             iPix, jPix))
+                             PixIntensity_V  = ImagePe_VIII(1:nPlotVar,  &
+                             iPix, jPix,1))
                      end if
                   else
                      ! Distance between two intersections with the low
@@ -777,6 +840,7 @@ contains
       ! DoTest = iPix==200 .and. jPix==200
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
+
       iDimMin = r_
       if(present(UseThreads))then
          ! Integration through the threaded gap
@@ -921,7 +985,7 @@ contains
          if(Length + Ds >= LengthMax)then
             ! Reduce the integration step newr the end of segment...
             if(iProc == iProcFound)&
-                 ! Add contribution from this segment to the image
+                                ! Add contribution from this segment to the image
                  call add_segment(LengthMax - Length, XyzLosNew_D, UseThreads)
             RETURN
          else
@@ -1063,7 +1127,7 @@ contains
          Rho = State_V(Rho_)
       end if
 
-      if(UseEuv .or. UseSxr .or. UseTableGen)then
+      if(UseEuv .or. UseSxr .or. UseTableGen .or. UseDEM)then
 
          if(UseMultiIon)then
             Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
@@ -1083,6 +1147,23 @@ contains
 
          ! Here 1e-6 is to convert to CGS
          Ne = 1.0e-6*Ne*No2Si_V(UnitN_)
+
+         if(UseDEM)then
+
+            ! Find temperature bin
+            iTe = int((log10(TeSi) - LogTeMinDEM_I(iFile))/DLogTeDEM_I(iFile))&
+                 + 1
+            if(iTe < 1 .or. iTe > nLogTeDEM)RETURN
+
+            ! Integrate DEM and EM values
+            ImagePe_VIII(DEM_,iPix,jPix,iTe) = ImagePe_VIII(DEM_,iPix,jPix,iTe)&
+                 + Ne**2 * Ds&
+                 * (1.0e2*No2Si_V(UnitX_)) / (DLogTeDEM_I(iFile)*TeSi*log(10.))
+            ImagePe_VIII(EM_,iPix,jPix,iTe) = ImagePe_VIII(EM_,iPix,jPix,iTe)&
+                 + Ne**2 * Ds&
+                 * SizePix**2 * (1.0e2*No2Si_V(UnitX_))**3
+            RETURN
+         end if
 
          !  ResponseFactor is applied to the product of tabulated "response
          !  function" (which is provided in the tables without a scaling
@@ -1128,7 +1209,7 @@ contains
             InterpValues_I = InterpValues_I * FractionTrue
 
             ! if using a generalized table can do it vector style
-            ImagePe_VII(:,iPix,jPix) = ImagePe_VII(:,iPix,jPix) + &
+            ImagePe_VIII(:,iPix,jPix,1) = ImagePe_VIII(:,iPix,jPix,1) + &
                  InterpValues_I*ResponseFactor*Ds
 
             RETURN
@@ -1224,7 +1305,7 @@ contains
             end if
          end select
 
-         ImagePe_VII(iVar,iPix,jPix) = ImagePe_VII(iVar,iPix,jPix) + Value*Ds
+         ImagePe_VIII(iVar,iPix,jPix,1) = ImagePe_VIII(iVar,iPix,jPix,1) + Value*Ds
 
       end do ! iVar
 
@@ -1749,9 +1830,9 @@ contains
 
          select case(NameVar)
          case('len')
-            Image_VII(iVar,:,:) = Image_VII(iVar,:,:)*No2Si_V(UnitX_)
+            Image_VIII(iVar,:,:,1) = Image_VIII(iVar,:,:,1)*No2Si_V(UnitX_)
          case('rho')
-            Image_VII(iVar,:,:) = Image_VII(iVar,:,:) &
+            Image_VIII(iVar,:,:,1) = Image_VIII(iVar,:,:,1) &
                  *No2Si_V(UnitRho_)*No2Si_V(UnitX_)
          case('wl','pb')
             ! The sigma in Hundhausen, A. J. (1993) should be the square of the
@@ -1760,14 +1841,14 @@ contains
             ! in Image Reconstruction from Projections,
             ! ed. G.T. Herman (Berlin:Springer), 105
             ! So we use cSigmaThomson*3.0/16.0 here.
-            Image_VII(iVar,:,:) = Image_VII(iVar,:,:) &
+            Image_VIII(iVar,:,:,1) = Image_VIII(iVar,:,:,1) &
                  *No2Si_V(UnitN_)*No2Si_V(UnitX_)*cSigmaThomson*3.0/16.0
          case('euv171','euv195','euv284','sxr')
             ! do nothing since already taken care of
          case default
             ! User defined functions are already dimensional, but integral
             ! requires a multiplication by length unit
-            Image_VII(iVar,:,:) = Image_VII(iVar,:,:)*No2Si_V(UnitX_)
+            Image_VIII(iVar,:,:,1) = Image_VIII(iVar,:,:,1)*No2Si_V(UnitX_)
          end select
 
       end do ! iVar
@@ -1935,7 +2016,7 @@ contains
     ! Based on plot_var information set the header string with unit names
 
     use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
-    use ModIO, ONLY : IsDimensionalPlot_I
+    use ModIO, ONLY : IsDimensionalPlot_I, TypePlot_I
 
     ! Arguments
 
@@ -1951,10 +2032,16 @@ contains
     character(len=*), parameter:: NameSub = 'get_los_unit_idl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
     if (IsDimensionalPlot_I(iFile)) then
-       write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
-            trim(NameIdlUnit_V(UnitX_))//' '//&
-            trim(NameIdlUnit_V(UnitX_))
+       if(index(TypePlot_I(iFile),'dem')>0)then
+          write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
+               trim(NameIdlUnit_V(UnitX_))//' logK'
+       else
+          write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
+               trim(NameIdlUnit_V(UnitX_))//' '//&
+               trim(NameIdlUnit_V(UnitX_))
+       end if
     else
        if (IsDimensional) then
           do iVar = 1, nPlotVar
@@ -2003,6 +2090,12 @@ contains
           case('sxr')
              write(StringUnitIdl,'(a)') &
                   trim(StringUnitIdl)//' '//'sxr [DN/S]'
+          case('dem')
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[cm^-5 K^-1]'
+          case('em')
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[cm^-3]'
              ! DEFAULT FOR A BAD SELECTION
           case default
              write(StringUnitIdl,'(a)') &
