@@ -96,9 +96,10 @@ contains
     integer :: iError
 
     ! File specific parameters
-    integer :: nPix       ! Image has nPix*nPix pixels
-    real    :: aOffset, bOffset, rSizeImage, rSizeImage2, rOccult, rOccult2,&
-         OffsetAngle
+    integer :: nPix_D(2) ! Narrowband images have nPix*nPix pixels
+    ! Spectrum images are rectangular
+    real    :: aOffset, bOffset, rSizeImage, rSizeImage2, &
+         HalfSizeImage_D(2),rOccult, rOccult2, OffsetAngle
 
     ! Plot variables
     integer, parameter :: MaxParam=10
@@ -117,7 +118,7 @@ contains
     real    :: LosPix_D(3)            ! unit vector from observer to pixel
     real    :: XyzPix_D(3)            ! pixel location in 3D
     real    :: rBlockSize, rBlockCenter
-    real    :: SizePix, r2Pix
+    real    :: SizePix_D(2), r2Pix
     real    :: BlockDistance, ObsDistance, Ratio
     real    :: XyzBlockCenter_D(3), CellSize_D(3), aBlockCenter, bBlockCenter
     real    :: XyzBlockStart_D(3), XyzBlockSign_D(3)=1.0, CoordMinBlock_D(3)
@@ -213,25 +214,26 @@ contains
     UseDEM = index(TypePlot_I(iFile),'dem')>0
 
     if(UseSpm)then
-       nPix       = nint(PlotRange_EI(3,iFile)/PlotDx_DI(1,iFile))+1
-       aOffset    = 0
-       bOffset    = 0
-       rSizeImage = PlotRange_EI(3,iFile)/2
-       rSizeImage2= rSizeImage**2
-       rOccult    = 0
-       rOccult2   = rOccult**2
-       OffsetAngle= 0
-
+       nPix_D          = nint(PlotRange_EI(3:4,iFile)/PlotDx_DI(1:2,iFile))+1
+       aOffset         = 0
+       bOffset         = 0
+       rSizeImage      = 0
+       rSizeImage2     = 0
+       HalfSizeImage_D = 0.5*PlotRange_EI(3:4,iFile)
+       rOccult         = 0
+       rOccult2        = rOccult**2
+       OffsetAngle     = 0
     else
        ! Set file specific parameters
-       nPix       = nPixel_I(iFile)
-       aOffset    = xOffset_I(iFile)
-       bOffset    = yOffset_I(iFile)
-       rSizeImage = rSizeImage_I(iFile)
-       rSizeImage2= rSizeImage**2
-       rOccult    = rOccult_I(iFile)
-       rOccult2   = rOccult**2
-       OffsetAngle= OffsetAngle_I(iFile)
+       nPix_D          = nPixel_I(iFile)
+       aOffset         = xOffset_I(iFile)
+       bOffset         = yOffset_I(iFile)
+       rSizeImage      = rSizeImage_I(iFile)
+       rSizeImage2     = rSizeImage**2
+       HalfSizeImage_D = rSizeImage
+       rOccult         = rOccult_I(iFile)
+       rOccult2        = rOccult**2
+       OffsetAngle     = OffsetAngle_I(iFile)
     end if
 
     select case(TypeSatPos_I(iFile))
@@ -274,15 +276,15 @@ contains
     where(Los_D == 0.0) Los_D = cTiny
 
     ! Pixel size for node based pixel grid
-    SizePix = 2*rSizeImage/(nPix - 1)
+    SizePix_D = 2*HalfSizeImage_D/(nPix_D - 1)
 
     if(DoTest .and. iProc==0) then
        write(*,*) 'ObsPos         =', ObsPos_D
        write(*,*) 'Los_D          =', Los_D
-       write(*,*) 'rSizeImage     =', rSizeImage
+       write(*,*) 'HalfSizeImage_D     =', HalfSizeImage_D
        write(*,*) 'aOffset,bOffset=', aOffset, bOffset
-       write(*,*) 'SizePix        =', SizePix
-       write(*,*) 'nPix           =', nPix
+       write(*,*) 'SizePix_D        =', SizePix_D
+       write(*,*) 'nPix_D           =', nPix_D
     end if
 
     StringUnitTec = ''
@@ -411,12 +413,12 @@ contains
        nLogTeDEM = &
             nint(LogTeMaxDEM_I(iFile)-LogTeMinDEM_I(iFile))/DLogTeDEM_I(IFile)
        allocate( &
-            ImagePe_VIII(nPlotVar,nPix,nPix,nLogTeDEM), &
-            Image_VIII(nPlotVar,nPix,nPix,nLogTeDEM))
+            ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM), &
+            Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM))
     else
        allocate( &
-            ImagePe_VIII(nPlotVar,nPix,nPix,1), &
-            Image_VIII(nPlotVar,nPix,nPix,1))
+            ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),1), &
+            Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),1))
     end if
 
     ImagePe_VIII = 0.0
@@ -474,11 +476,11 @@ contains
     if(nProc > 1)then
        if(UseDEM)then
           call MPI_REDUCE(ImagePe_VIII, Image_VIII, &
-               nPix*nPix*nPlotVar*nLogTeDEM, &
+               nPix_D(1)*nPix_D(2)*nPlotVar*nLogTeDEM, &
                MPI_REAL, MPI_SUM, 0, iComm, iError)
        else
-          call MPI_REDUCE(ImagePe_VIII, Image_VIII, nPix*nPix*nPlotVar, &
-               MPI_REAL, MPI_SUM, 0, iComm, iError)
+          call MPI_REDUCE(ImagePe_VIII, Image_VIII, nPix_D(1)*nPix_D(2)*&
+               nPlotVar, MPI_REAL, MPI_SUM, 0, iComm, iError)
        end if
     else
        Image_VIII = ImagePe_VIII
@@ -528,7 +530,7 @@ contains
           write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
           write(UnitTmp_,'(a)')trim(StringUnitTec)
           write(UnitTmp_,*) 'ZONE T="LOS Image"', &
-               ', I=',nPix,', J=',nPix,', K=1, F=POINT'
+               ', I=',nPix_D(1),', J=',nPix_D(2),', K=1, F=POINT'
 
           ! Write Auxilliary header info, which is useful for EUV images.
           ! Makes it easier to identify, and automatically process synthetic
@@ -568,10 +570,10 @@ contains
                'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
 
           ! Write point values
-          do iPix = 1, nPix
-             aPix = (iPix - 1) * SizePix - rSizeImage
-             do jPix = 1, nPix
-                bPix = (jPix - 1) * SizePix - rSizeImage
+          do iPix = 1, nPix_D(1)
+             aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+             do jPix = 1, nPix_D(2)
+                bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
 
                 if (IsDimensionalPlot_I(iFile)) then
                    write(UnitTmp_,fmt="(30(E14.6))") aPix*No2Io_V(UnitX_), &
@@ -617,8 +619,12 @@ contains
           endif
 
           ! Set image size and dimensionalize if necessary
-          aPix = rSizeImage
-          if (IsDimensionalPlot_I(iFile)) aPix = aPix * No2Io_V(UnitX_)
+          aPix = HalfSizeImage_D(1)
+          bPix = HalfSizeImage_D(2)
+          if (IsDimensionalPlot_I(iFile)) then
+             aPix = aPix * No2Io_V(UnitX_)
+             bPix = bPix * No2Io_V(UnitX_)
+          end if
 
           select case(TypePlotFormat_I(iFile))
           case('idl')
@@ -637,8 +643,8 @@ contains
                      NameVarIn = NameAllVar, &
                      NameUnitsIn = StringUnitIdl,&
                      nDimIn = 3, &
-                     CoordMinIn_D = [-aPix, -aPix, LogTeMinDEM_I(iFile)], &
-                     CoordMaxIn_D = [+aPix, +aPix, LogTeMaxDEM_I(iFile)], &
+                     CoordMinIn_D = [-aPix, -bPix, LogTeMinDEM_I(iFile)], &
+                     CoordMaxIn_D = [+aPix, +bPix, LogTeMaxDEM_I(iFile)], &
                      VarIn_VIII = Image_VIII(:,:,:,:))
              else
                 call save_plot_file(NameFile, &
@@ -694,15 +700,15 @@ contains
       !------------------------------------------------------------------------
 
       ! Loop over pixels
-      do jPix = 1, nPix
+      do jPix = 1, nPix_D(2)
 
          ! Y position of the pixel on the image plane
-         bPix = (jPix - 1) * SizePix - rSizeImage
+         bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
 
-         do iPix = 1, nPix
+         do iPix = 1, nPix_D(1)
 
             ! X position of the pixel on the image plane
-            aPix = (iPix - 1) * SizePix - rSizeImage
+            aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
 
             r2Pix = (aPix + aOffset)**2 + (bPix + bOffset)**2
             ! Check if pixel is within occultation radius
@@ -710,7 +716,7 @@ contains
 
             r2Pix = aPix**2 + bPix**2
             ! Check if pixel is outside the circular region
-            if( r2Pix > rSizeImage2 ) CYCLE
+            if( r2Pix > rSizeImage2 .and. .not. UseDEM) CYCLE
 
             ! Get the 3D location of the pixel
             XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
@@ -1161,7 +1167,7 @@ contains
                  * (1.0e2*No2Si_V(UnitX_)) / (DLogTeDEM_I(iFile)*TeSi*log(10.))
             ImagePe_VIII(EM_,iPix,jPix,iTe) = ImagePe_VIII(EM_,iPix,jPix,iTe)&
                  + Ne**2 * Ds&
-                 * SizePix**2 * (1.0e2*No2Si_V(UnitX_))**3
+                 * SizePix_D(1)*SizePix_D(2) * (1.0e2*No2Si_V(UnitX_))**3
             RETURN
          end if
 
@@ -1393,20 +1399,20 @@ contains
       XyzBlockStart_D = Coord111_DB(:,iBlock)
 
       ! Loop over pixels
-      do jPix = 1, nPix
+      do jPix = 1, nPix_D(2)
 
          ! Y position of the pixel on the image plane
-         bPix = (jPix - 1) * SizePix - rSizeImage
+         bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
 
          ! Check if block can intersect this pixel
          if(DoCheckBlock)then
             if(abs(bPix - bBlockCenter) > rBlockSize) CYCLE
          end if
 
-         do iPix = 1, nPix
+         do iPix = 1, nPix_D(1)
 
             ! X position of the pixel on the image plane
-            aPix = (iPix - 1) * SizePix - rSizeImage
+            aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
 
             ! Check if block can intersect this pixel
             if(DoCheckBlock)then

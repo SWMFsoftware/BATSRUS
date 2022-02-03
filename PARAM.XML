@@ -4402,6 +4402,7 @@ slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
 box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
+spm   - line of sight integrated plot for spectra, DEM/EM
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
@@ -4462,6 +4463,8 @@ values or as non-dimensional values:
          pars: mu
  'tbl' - vars: listed in the LOS table file                   (PlotArea='los' only)
          pars: mu
+ 'dem' - vars: DEM, EM                                        (PlotArea='spm' only)
+         pars: rbody
  'int' - vars: 1/B n/B p/B                                    (PlotArea='lcb' only)
          pars:
  'nul' - vars:                                                (PlotArea='lcb' only)

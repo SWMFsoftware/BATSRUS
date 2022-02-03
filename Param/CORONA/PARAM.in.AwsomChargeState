@@ -192,8 +192,8 @@ HGR                     TypeCoord
 0                       ObsPosZ
 0                       x0
 0                       y0
-2                       xLen
-0.1                     dX
+4                       xLen
+0.2                     dX
 2                       yLen
 0.1                     dY
 5                       LogTeMinDEM

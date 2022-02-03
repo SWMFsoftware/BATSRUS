@@ -3982,7 +3982,7 @@ contains
 
          ! Fix plot range for various plot areas
          select case(TypePlotArea)
-         case('shl', 'box', 'eqb', 'eqr', 'lcb')
+         case('shl', 'box', 'eqb', 'eqr', 'lcb', 'spm')
             ! These plot areas read all ranges from PARAM.in
             CYCLE PLOTFILELOOP
          case('cut')
