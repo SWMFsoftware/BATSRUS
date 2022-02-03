@@ -3955,6 +3955,7 @@ No magnetometer grid file is saved by default.
 	<option name="z=0" />
 	<option name="shell"  value="shl" />
 	<option name="box" />
+	<option name="spm" />
 	<option name="los" />
 	<option name="rfr" />
 	<option name="line" value="lin" />
@@ -3993,6 +3994,7 @@ No magnetometer grid file is saved by default.
 	<option name="Flux vars. scaled" value="flx"/>
 	<option name="Solar variables"    value="SOL"/>
 	<option name="Solar vars. scaled" value="sol"/>
+	<option name="Spectrum variables" value="dem"/>
 	<option name="EUV image variables" value="euv"/>
 	<option name="Tabular image variable"      value="tbl"/>
 	<option name="Radio wave intensity" value="rwi"/>
@@ -4130,6 +4132,21 @@ No magnetometer grid file is saved by default.
       <parameter name="xAngle" type="real" min="-360" max="360" default="0"/>
       <parameter name="yAngle" type="real" min="-360" max="360" default="0"/>
       <parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
+    </if>
+    <if expr="$plotarea =~ /\bspm\b/">
+      <parameter name="TypeCoord" type="string" length="3" default="HGR"/>
+      <parameter name="ObsPosX"     type="real" default="0"/>
+      <parameter name="ObsPosY"     type="real" default="0"/>
+      <parameter name="ObsPosZ"     type="real" default="0"/>
+      <parameter name="x0"  type="real"/>
+      <parameter name="y0"     type="real" />
+      <parameter name="xLen"  type="real" min="0" />
+      <parameter name="dX"     type="real" min="0"/>
+      <parameter name="yLen"  type="real" min="0" />
+      <parameter name="dY"     type="real" min="0"/>
+      <parameter name="LogTeMinDEM" type="real" default="5"/>
+      <parameter name="LogTeMaxDEM" type="real" default="9"/>
+      <parameter name="DLogTeDEM" type="real" default="0.1"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb)\b/)" />
@@ -4285,6 +4302,22 @@ HGR                     TypeCoordPlot
 0.0                     xAngle [deg]
 90.0                    yAngle [deg]
 0.0                     zAngle [deg]
+spm dem idl_ascii       StringPlot
+4                       DnSavePlot
+-1.                     DtSavePlot
+HGR                     TypeCoord
+216                     ObsPosX
+0                       ObsPosY
+0                       ObsPosZ
+0                       x0
+0                       y0
+2                       xLen
+0.1                     dX
+2                       yLen
+0.1                     dY
+5                       LogTeMinDEM
+8                       LogTeMaxDEM
+0.1                     DLogTeDEM            
 rfr tec rwi             StringPlot
 10                      DnSavePlot
 -1.0                    DtSavePlot
