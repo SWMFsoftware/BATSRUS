@@ -1060,11 +1060,11 @@ contains
                 call read_var('ObsPosX',ObsPos_DI(1,iFile))
                 call read_var('ObsPosY',ObsPos_DI(2,iFile))
                 call read_var('ObsPosZ',ObsPos_DI(3,iFile))
-                call read_var('x0',   PlotRange_EI(1,iFile))
-                call read_var('y0',   PlotRange_EI(2,iFile))
-                call read_var('xLen',   PlotRange_EI(3,iFile))
+                call read_var('x0',   xOffset_I(iFile))
+                call read_var('y0',   yOffset_I(iFile))
+                call read_var('xLen',   PlotRange_EI(1,iFile))
                 call read_var('dX',   PlotDx_DI(1,iFile))
-                call read_var('yLen', PlotRange_EI(4,iFile))
+                call read_var('yLen', PlotRange_EI(2,iFile))
                 call read_var('dY', PlotDx_DI(2,iFile))
                 if (index(StringPlot,'TBL')>0&
                      .or.index(StringPlot,'tbl')>0) &

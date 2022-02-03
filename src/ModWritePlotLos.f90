@@ -214,12 +214,12 @@ contains
     UseDEM = index(TypePlot_I(iFile),'dem')>0
 
     if(UseSpm)then
-       nPix_D          = nint(PlotRange_EI(3:4,iFile)/PlotDx_DI(1:2,iFile))+1
-       aOffset         = 0
-       bOffset         = 0
+       nPix_D          = nint(PlotRange_EI(1:2,iFile)/PlotDx_DI(1:2,iFile))+1
+       aOffset         = xOffset_I(iFile)
+       bOffset         = yOffset_I(iFile)
        rSizeImage      = 0
        rSizeImage2     = 0
-       HalfSizeImage_D = 0.5*PlotRange_EI(3:4,iFile)
+       HalfSizeImage_D = 0.5*PlotRange_EI(1:2,iFile)
        rOccult         = 0
        rOccult2        = rOccult**2
        OffsetAngle     = 0
@@ -624,6 +624,8 @@ contains
           if (IsDimensionalPlot_I(iFile)) then
              aPix = aPix * No2Io_V(UnitX_)
              bPix = bPix * No2Io_V(UnitX_)
+             aOffset = aOffset*No2Io_V(UnitX_)
+             bOffset = bOffset*No2Io_V(UnitX_)
           end if
 
           select case(TypePlotFormat_I(iFile))
@@ -643,8 +645,10 @@ contains
                      NameVarIn = NameAllVar, &
                      NameUnitsIn = StringUnitIdl,&
                      nDimIn = 3, &
-                     CoordMinIn_D = [-aPix, -bPix, LogTeMinDEM_I(iFile)], &
-                     CoordMaxIn_D = [+aPix, +bPix, LogTeMaxDEM_I(iFile)], &
+                     CoordMinIn_D = &
+                     [aOffset-aPix, bOffset-bPix, LogTeMinDEM_I(iFile)], &
+                     CoordMaxIn_D = &
+                     [aOffset+aPix, bOffset+bPix, LogTeMaxDEM_I(iFile)], &
                      VarIn_VIII = Image_VIII(:,:,:,:))
              else
                 call save_plot_file(NameFile, &
