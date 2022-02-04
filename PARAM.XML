@@ -666,6 +666,22 @@ Default is the first variable that is usually density.
 Index of dimension/direction to be tested. Default is X dimension.
 </command>
 
+<command name="TESTSIDE">
+  <parameter name="iSideTest" type="integer" input="select">
+    <option name="all"   value="0" default="T"/>
+    <option name="left"  value="-1" />
+    <option name="right" value="1" />
+  </parameter>
+
+#TESTSIDE
+0                       iSideTest (-1, 0, 1)
+
+Select the side of the cell to be tested. -1 is for "left" side, +1 is
+for right side, 0 is for both sides. Currently this is implemented in the
+UpdateStateFast code only, where the sides are done with multiple threads
+on the GPU. Default value is shown.
+</command>
+
 <command name="STRICT" multiple="T">
   <parameter name="UseStrict" type="logical" default="T" />
 #STRICT
@@ -3939,6 +3955,7 @@ No magnetometer grid file is saved by default.
 	<option name="z=0" />
 	<option name="shell"  value="shl" />
 	<option name="box" />
+	<option name="spm" />
 	<option name="los" />
 	<option name="rfr" />
 	<option name="line" value="lin" />
@@ -3977,6 +3994,7 @@ No magnetometer grid file is saved by default.
 	<option name="Flux vars. scaled" value="flx"/>
 	<option name="Solar variables"    value="SOL"/>
 	<option name="Solar vars. scaled" value="sol"/>
+	<option name="Spectrum variables" value="dem"/>
 	<option name="EUV image variables" value="euv"/>
 	<option name="Tabular image variable"      value="tbl"/>
 	<option name="Radio wave intensity" value="rwi"/>
@@ -4114,6 +4132,21 @@ No magnetometer grid file is saved by default.
       <parameter name="xAngle" type="real" min="-360" max="360" default="0"/>
       <parameter name="yAngle" type="real" min="-360" max="360" default="0"/>
       <parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
+    </if>
+    <if expr="$plotarea =~ /\bspm\b/">
+      <parameter name="TypeCoord" type="string" length="3" default="HGR"/>
+      <parameter name="ObsPosX"     type="real" default="0"/>
+      <parameter name="ObsPosY"     type="real" default="0"/>
+      <parameter name="ObsPosZ"     type="real" default="0"/>
+      <parameter name="x0"  type="real"/>
+      <parameter name="y0"     type="real" />
+      <parameter name="xLen"  type="real" min="0" />
+      <parameter name="dX"     type="real" min="0"/>
+      <parameter name="yLen"  type="real" min="0" />
+      <parameter name="dY"     type="real" min="0"/>
+      <parameter name="LogTeMinDEM" type="real" default="5"/>
+      <parameter name="LogTeMaxDEM" type="real" default="9"/>
+      <parameter name="DLogTeDEM" type="real" default="0.1"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb)\b/)" />
@@ -4269,6 +4302,22 @@ HGR                     TypeCoordPlot
 0.0                     xAngle [deg]
 90.0                    yAngle [deg]
 0.0                     zAngle [deg]
+spm dem idl_ascii       StringPlot
+4                       DnSavePlot
+-1.                     DtSavePlot
+HGR                     TypeCoord
+216                     ObsPosX
+0                       ObsPosY
+0                       ObsPosZ
+0                       x0
+0                       y0
+2                       xLen
+0.1                     dX
+2                       yLen
+0.1                     dY
+5                       LogTeMinDEM
+8                       LogTeMaxDEM
+0.1                     DLogTeDEM            
 rfr tec rwi             StringPlot
 10                      DnSavePlot
 -1.0                    DtSavePlot
@@ -4353,6 +4402,7 @@ slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
 box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
+spm   - line of sight integrated plot for spectra, DEM/EM
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
@@ -4413,6 +4463,8 @@ values or as non-dimensional values:
          pars: mu
  'tbl' - vars: listed in the LOS table file                   (PlotArea='los' only)
          pars: mu
+ 'dem' - vars: DEM, EM                                        (PlotArea='spm' only)
+         pars: rbody
  'int' - vars: 1/B n/B p/B                                    (PlotArea='lcb' only)
          pars:
  'nul' - vars:                                                (PlotArea='lcb' only)

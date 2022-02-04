@@ -24,7 +24,7 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
-       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, iTestSide, &
+       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, iSideTest, &
        Unset_, test_start, test_stop
   use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
@@ -311,7 +311,7 @@ contains
              !   write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
              !     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
              !#endif
-           end do
+          end do
        end if
 
        !$acc loop vector collapse(3) independent
@@ -665,31 +665,31 @@ contains
     DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 1) .and. &
          j==jTest .and. k==kTest .and. iBlock == iBlockTest)then
-       if(  (i == iTest .and. iTestSide >= 0) .or. &
-            (i == iTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
+       if(  (i == iTest+1 .and. iSideTest >= 0) .or. &
+            (i == iTest .and. iSideTest <= 0)) DoTestSide = .true.
     end if
 
     if(DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
        do iVar = 1, nVar
-!#ifdef _OPENACC
+          !#ifdef _OPENACC
           write(*,*)NameVar_V(iVar),'=',&
-               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-!#else
-!          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
-!               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-!#endif
+               StateLeft_V(iVar), StateRight_V(iVar), iSideTest
+          !#else
+          !          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
+          !               StateLeft_V(iVar), StateRight_V(iVar), iSideTest
+          !#endif
        end do
        if(UseB0)then
-!#ifdef _OPENACC
-          write(*,*)'B0x:', B0_D(1), iTestSide
-          write(*,*)'B0y:', B0_D(2), iTestSide
-          write(*,*)'B0z:', B0_D(3), iTestSide
-!#else
-!          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
-!          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
-!          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
-!#endif
+          !#ifdef _OPENACC
+          write(*,*)'B0x:', B0_D(1), iSideTest
+          write(*,*)'B0y:', B0_D(2), iSideTest
+          write(*,*)'B0z:', B0_D(3), iSideTest
+          !#else
+          !          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iSideTest
+          !          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iSideTest
+          !          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iSideTest
+          !#endif
        end if
     end if
 
@@ -723,37 +723,31 @@ contains
     DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 2) .and. &
          i==iTest .and. k==kTest .and. iBlock == iBlockTest)then
-       if(  (j == jTest .and. iTestSide >= 0) .or. &
-            (j == jTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
-    end if
-
-        if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 1) .and. &
-         j==jTest .and. k==kTest .and. iBlock == iBlockTest)then
-       if(  (i == iTest .and. iTestSide >= 0) .or. &
-            (i == iTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
+       if(  (j == jTest+1 .and. iSideTest >= 0) .or. &
+            (j == jTest .and. iSideTest <= 0)) DoTestSide = .true.
     end if
 
     if(DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
        do iVar = 1, nVar
-!#ifdef _OPENACC
+          !#ifdef _OPENACC
           write(*,*)NameVar_V(iVar),'=',&
-               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-!#else
-!          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
-!               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-!#endif
+               StateLeft_V(iVar), StateRight_V(iVar), iSideTest
+          !#else
+          !          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
+          !               StateLeft_V(iVar), StateRight_V(iVar), iSideTest
+          !#endif
        end do
        if(UseB0)then
-!#ifdef _OPENACC
-          write(*,*)'B0x:', B0_D(1), iTestSide
-          write(*,*)'B0y:', B0_D(2), iTestSide
-          write(*,*)'B0z:', B0_D(3), iTestSide
-!#else
-!          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
-!          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
-!          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
-!#endif
+          !#ifdef _OPENACC
+          write(*,*)'B0x:', B0_D(1), iSideTest
+          write(*,*)'B0y:', B0_D(2), iSideTest
+          write(*,*)'B0z:', B0_D(3), iSideTest
+          !#else
+          !          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iSideTest
+          !          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iSideTest
+          !          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iSideTest
+          !#endif
        end if
     end if
 
@@ -787,31 +781,31 @@ contains
     DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 3) .and. &
          i==iTest .and. j==jTest .and. iBlock == iBlockTest)then
-       if(  (k == kTest .and. iTestSide >= 0) .or. &
-            (k == kTest+1 .and. iTestSide <= 0)) DoTestSide = .true.
+       if(  (k == kTest+1 .and. iSideTest >= 0) .or. &
+            (k == kTest .and. iSideTest <= 0)) DoTestSide = .true.
     end if
 
     if (DoTestSide)then
        write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
        do iVar = 1, nVar
-!#ifdef _OPENACC
+          !#ifdef _OPENACC
           write(*,*)NameVar_V(iVar),'=',&
-               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-!#else
-!          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
-!               StateLeft_V(iVar), StateRight_V(iVar), iTestSide
-!#endif
+               StateLeft_V(iVar), StateRight_V(iVar), iSideTest
+          !#else
+          !          write(*,'(2a,2es13.5,i3)')NameVar_V(iVar),'=',&
+          !               StateLeft_V(iVar), StateRight_V(iVar), iSideTest
+          !#endif
        end do
        if(UseB0)then
-!#ifdef _OPENACC
-          write(*,*)'B0x:', B0_D(1), iTestSide
-          write(*,*)'B0y:', B0_D(2), iTestSide
-          write(*,*)'B0z:', B0_D(3), iTestSide
-!#else
-!          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iTestSide
-!          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iTestSide
-!          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iTestSide
-!#endif
+          !#ifdef _OPENACC
+          write(*,*)'B0x:', B0_D(1), iSideTest
+          write(*,*)'B0y:', B0_D(2), iSideTest
+          write(*,*)'B0z:', B0_D(3), iSideTest
+          !#else
+          !          write(*,'(a,es13.5,i3)')'B0x:', B0_D(1), iSideTest
+          !          write(*,'(a,es13.5,i3)')'B0y:', B0_D(2), iSideTest
+          !          write(*,'(a,es13.5,i3)')'B0z:', B0_D(3), iSideTest
+          !#endif
        end if
     end if
 
@@ -2672,7 +2666,7 @@ contains
 
     if(DoTestSide) then
        write(*,*)&
-            'Sound2 uninitialized= ', Sound2, iTestSide
+            'Sound2 uninitialized= ', Sound2, iSideTest
        write(*,*)&
             'GammaP, InvRho= ', GammaP, InvRho
     end if
@@ -2681,7 +2675,7 @@ contains
 
     if(DoTestSide) then
        write(*,*)&
-            'Sound2 updated ', Sound2, iTestSide
+            'Sound2 updated ', Sound2, iSideTest
     end if
 
     Fast2 = Sound2 + InvRho*B2
@@ -2695,7 +2689,7 @@ contains
 
     if(DoTestSide)then
        write(*,*) ' iFluid, rho, p(face)   =', &
-            1, State_V(Rho_), State_V(p_), iTestSide
+            1, State_V(Rho_), State_V(p_), iSideTest
        ! if(UseAnisoPressure) write(*,*) &
        !     ' Ppar, Perp             =', Ppar, Pperp
        ! if(UseElectronPressure) write(*,*) &
@@ -2706,18 +2700,18 @@ contains
        !     ' GammaWave, State(Waves)=', &
        !     GammaWave, State_V(WaveFirst_:WaveLast_)
        write(*,*) &
-            ' Fast2, Discr          =', Fast2, Discr, iTestSide
+            ' Fast2, Discr          =', Fast2, Discr, iSideTest
        write(*,*) &
-            ' GammaP, InvRho         =', GammaP, InvRho, iTestSide
+            ' GammaP, InvRho         =', GammaP, InvRho, iSideTest
        write(*,*) &
-            ' Sound2, Alfven2       =', Sound2, InvRho*B2, iTestSide
+            ' Sound2, Alfven2       =', Sound2, InvRho*B2, iSideTest
        write(*,*) &
-            ' FullBn, Alfven2Normal =', Bn, InvRho*Bn**2, iTestSide
+            ' FullBn, Alfven2Normal =', Bn, InvRho*Bn**2, iSideTest
        if(UseB0)then
           write(*,*) ' FullB=', State_V(Bx_) + B0_D(1), &
-               State_V(By_) + B0_D(2),  State_V(Bz_) + B0_D(3), iTestSide
+               State_V(By_) + B0_D(2),  State_V(Bz_) + B0_D(3), iSideTest
        else
-          write(*,*) ' B=', State_V(Bx_), State_V(By_), State_V(Bz_), iTestSide
+          write(*,*) ' B=', State_V(Bx_), State_V(By_), State_V(Bz_), iSideTest
        end if
 
     end if
@@ -2837,16 +2831,16 @@ contains
     if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
 
     if(DoTestSide)then
-       write(*,*) ' InvRho, p      =', InvRho, p, iTestSide
+       write(*,*) ' InvRho, p      =', InvRho, p, iSideTest
        write(*,*) ' FullB, FullBn  =', FullB_D(1), FullB_D(2), FullB_D(3), &
-            FullBn, iTestSide
-       write(*,*) ' Sound2,Alfven2 =', Sound2, Alfven2, iTestSide
-       write(*,*) ' GammaA2,GammaU2=', GammaA2, GammaU2, iTestSide
+            FullBn, iSideTest
+       write(*,*) ' Sound2,Alfven2 =', Sound2, Alfven2, iSideTest
+       write(*,*) ' GammaA2,GammaU2=', GammaA2, GammaU2, iSideTest
        write(*,*) ' Sound2Boris,Alfven2Boris,Normal=', &
-            Sound2Boris, Alfven2Boris, Alfven2NormalBoris, iTestSide
-       write(*,*) ' Fast2, Discr   =', Fast2, Discr, iTestSide
-       write(*,*) ' Fast, Slow     =', Fast, Slow, iTestSide
-       write(*,*) ' Un, UnBoris    =', Un, UnBoris, iTestSide
+            Sound2Boris, Alfven2Boris, Alfven2NormalBoris, iSideTest
+       write(*,*) ' Fast2, Discr   =', Fast2, Discr, iSideTest
+       write(*,*) ' Fast, Slow     =', Fast, Slow, iSideTest
+       write(*,*) ' Un, UnBoris    =', Un, UnBoris, iSideTest
     end if
 
   end subroutine get_boris_speed
@@ -2910,7 +2904,7 @@ contains
                + (StateLeft_V(iUz_I) + StateRight_V(iUz_I))*Normal_D(3) )
        end if
        if(UseElectronPressure) Flux_V(UnLast_) = Area*0.5* &
-               sum((StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))*Normal_D)
+            sum((StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))*Normal_D)
 
        ! Store Bnormal
        if(UseB .and. UseDivbSource) Flux_V(Bn_) = Area*0.5* &
@@ -2983,12 +2977,12 @@ contains
                -  Cleft*StateRight_V(iUz_I))*Normal_D(3) )
        end if
        if(UseElectronPressure) Flux_V(UnLast_) = AreaInvCDiff* &
-               ( (Cright*StateLeft_V(Ux_) &
-               -  Cleft*StateRight_V(Ux_))*Normal_D(1) &
-               + (Cright*StateLeft_V(Uy_) &
-               -  Cleft*StateRight_V(Uy_))*Normal_D(2) &
-               + (Cright*StateLeft_V(Uz_) &
-               -  Cleft*StateRight_V(Uz_))*Normal_D(3) )
+            ( (Cright*StateLeft_V(Ux_) &
+            -  Cleft*StateRight_V(Ux_))*Normal_D(1) &
+            + (Cright*StateLeft_V(Uy_) &
+            -  Cleft*StateRight_V(Uy_))*Normal_D(2) &
+            + (Cright*StateLeft_V(Uz_) &
+            -  Cleft*StateRight_V(Uz_))*Normal_D(3) )
 
        if(UseB)then
           if(Hyp_ > 1 .and. UseHyperbolicDivb) then
@@ -3025,48 +3019,48 @@ contains
 
     if(DoTestSide)then
        write(*,*)'Hat state for Normal_D=', &
-            Normal_D(1), Normal_D(2), Normal_D(3), iTestSide
-       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_)), iTestSide
-       write(*,*)'Un =',Un, iTestSide
-       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_)), iTestSide
+            Normal_D(1), Normal_D(2), Normal_D(3), iSideTest
+       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_)), iSideTest
+       write(*,*)'Un =',Un, iSideTest
+       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_)), iSideTest
        if(UseB)then
           if(UseB0)then
              write(*,*)'B  =', &
                   0.5*(StateLeft_V(Bx_)+ StateRight_V(Bx_)) + B0_D(1),  &
                   0.5*(StateLeft_V(By_)+ StateRight_V(By_)) + B0_D(2),  &
                   0.5*(StateLeft_V(Bz_)+ StateRight_V(Bz_)) + B0_D(3),  &
-                  iTestSide
+                  iSideTest
           else
              write(*,*)'B  =', &
                   0.5*(StateLeft_V(Bx_)+ StateRight_V(Bx_)),  &
                   0.5*(StateLeft_V(By_)+ StateRight_V(By_)),  &
                   0.5*(StateLeft_V(Bz_)+ StateRight_V(Bz_)),  &
-                  iTestSide
+                  iSideTest
           end if
           write(*,*)'BB =', &
                sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)))**2), &
-               iTestSide
+               iSideTest
        end if
        write(*,*)
-       write(*,*) 'Area=', Area, iTestSide
-       write(*,*)'Eigenvalue_maxabs=', Cmax, iTestSide
-       write(*,*)'CmaxDt           =', Cmax, iTestSide
+       write(*,*) 'Area=', Area, iSideTest
+       write(*,*)'Eigenvalue_maxabs=', Cmax, iSideTest
+       write(*,*)'CmaxDt           =', Cmax, iSideTest
        do iVar = 1, nFlux
-!#ifdef _OPENACC
+          !#ifdef _OPENACC
           write(*,*) 'Var,F,F_L,F_R,dU,c*dU/2=', &
                NameVar_V(iVar),&
                Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area, &
                StateRightCons_V(iVar)-StateLeftCons_V(iVar), &
                0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area, &
-               iTestSide
-!#else
-!          write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=', &
-!               NameVar_V(iVar),&
-!               Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area,&
-!               StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
-!               0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area,&
-!               iTestSide
-!#endif
+               iSideTest
+          !#else
+          ! write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=', &
+          !      NameVar_V(iVar),&
+          !      Flux_V(iVar), FluxLeft_V(iVar)*Area, FluxRight_V(iVar)*Area,&
+          !      StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
+          !      0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area,&
+          !      iSideTest
+          !#endif
        end do
     end if
 
