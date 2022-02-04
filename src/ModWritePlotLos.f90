@@ -273,7 +273,7 @@ contains
     ObsDistance = abs(sum(ObsPos_D*Los_D))
 
     ! Make zero components slightly different from zero
-    where(Los_D == 0.0) Los_D = cTiny
+    where(abs(Los_D) < cTiny) Los_D = sign(cTiny, Los_D)
 
     ! Pixel size for node based pixel grid
     SizePix_D = 2*HalfSizeImage_D/(nPix_D - 1)
