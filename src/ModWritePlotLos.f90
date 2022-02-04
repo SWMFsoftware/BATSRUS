@@ -335,9 +335,9 @@ contains
     endif
 
     if(UseDEM)then
-       NameAllVar='x y logTe' 
+       NameAllVar='x y logTe'
     else
-       NameAllVar='x y' 
+       NameAllVar='x y'
     end if
     NameAllVar = trim(NameAllVar)//' '//trim(StringPlotVar)//' '//StringPlotParam_I(iFile)
 
@@ -848,9 +848,9 @@ contains
       logical, parameter :: DoTest = .false.
 
       ! DoTest = iPix==200 .and. jPix==200
+
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
-
       iDimMin = r_
       if(present(UseThreads))then
          ! Integration through the threaded gap
