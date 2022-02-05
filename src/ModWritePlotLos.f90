@@ -339,7 +339,8 @@ contains
     else
        NameAllVar='x y'
     end if
-    NameAllVar = trim(NameAllVar)//' '//trim(StringPlotVar)//' '//StringPlotParam_I(iFile)
+    NameAllVar = trim(NameAllVar)//' '//trim(StringPlotVar)//' ' &
+         //StringPlotParam_I(iFile)
 
     if(DoTest .and. iProc==0) write(*,*) 'NameAllVar: ', NameAllVar
 
@@ -576,8 +577,9 @@ contains
                 bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
 
                 if (IsDimensionalPlot_I(iFile)) then
-                   write(UnitTmp_,fmt="(30(E14.6))") aPix*No2Io_V(UnitX_), &
-                        bPix*No2Io_V(UnitX_), Image_VIII(1:nPlotVar,iPix,jPix,1)
+                   write(UnitTmp_,fmt="(30(E14.6))") &
+                        aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), &
+                        Image_VIII(1:nPlotVar,iPix,jPix,1)
                 else
                    write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, &
                         Image_VIII(1:nPlotVar,iPix,jPix,1)
@@ -995,7 +997,7 @@ contains
          if(Length + Ds >= LengthMax)then
             ! Reduce the integration step newr the end of segment...
             if(iProc == iProcFound)&
-                                ! Add contribution from this segment to the image
+                 ! Add contribution from this segment to the image
                  call add_segment(LengthMax - Length, XyzLosNew_D, UseThreads)
             RETURN
          else
@@ -1166,8 +1168,8 @@ contains
             if(iTe < 1 .or. iTe > nLogTeDEM)RETURN
 
             ! Integrate DEM and EM values
-            ImagePe_VIII(DEM_,iPix,jPix,iTe) = ImagePe_VIII(DEM_,iPix,jPix,iTe)&
-                 + Ne**2 * Ds&
+            ImagePe_VIII(DEM_,iPix,jPix,iTe) = &
+                 ImagePe_VIII(DEM_,iPix,jPix,iTe) + Ne**2 * Ds&
                  * (1.0e2*No2Si_V(UnitX_)) / (DLogTeDEM_I(iFile)*TeSi*log(10.))
             ImagePe_VIII(EM_,iPix,jPix,iTe) = ImagePe_VIII(EM_,iPix,jPix,iTe)&
                  + Ne**2 * Ds&
@@ -1315,7 +1317,8 @@ contains
             end if
          end select
 
-         ImagePe_VIII(iVar,iPix,jPix,1) = ImagePe_VIII(iVar,iPix,jPix,1) + Value*Ds
+         ImagePe_VIII(iVar,iPix,jPix,1) = ImagePe_VIII(iVar,iPix,jPix,1) &
+              + Value*Ds
 
       end do ! iVar
 
