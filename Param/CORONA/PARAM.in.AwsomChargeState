@@ -183,22 +183,22 @@ RAW			StringLog
 
 #SAVEPLOT
 1			nPlotFile
-spm dem idl_ascii       StringPlot
-4                       DnSavePlot
--1.                     DtSavePlot
-HGR                     TypeCoord
-216                     ObsPosX
-0                       ObsPosY
-0                       ObsPosZ
-0                       x0
-0                       y0
-4                       xLen
-0.2                     dX
-2                       yLen
-0.1                     dY
-5                       LogTeMinDEM
-8                       LogTeMaxDEM
-0.1                     DLogTeDEM
+spm dem idl_ascii		StringPlot
+4			DnSavePlot
+-1.			DtSavePlot
+HGR			TypeCoord
+216			ObsPosX
+0			ObsPosY
+0			ObsPosZ
+0			x0
+0			y0
+4			xLen
+0.2			dX
+2			yLen
+0.1			dY
+5			LogTeMinDEM
+8			LogTeMaxDEM
+0.1			DLogTeDEM
 
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs

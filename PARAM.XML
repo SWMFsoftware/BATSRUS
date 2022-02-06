@@ -4149,7 +4149,7 @@ No magnetometer grid file is saved by default.
       <parameter name="DLogTeDEM" type="real" default="0.1"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb)\b/)" />
+	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb|spm)\b/)" />
     <if expr="$plotvar =~ /\bvar\b/i">
       <parameter name="NameVars" type="string" length="$lLine"/>
       <parameter name="NamePars" type="string" length="$lLine"
