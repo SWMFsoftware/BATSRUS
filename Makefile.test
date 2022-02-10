@@ -981,6 +981,10 @@ test_awsomchargestate_check:
 		${TESTDIR}/RESULTS/SC/log_n000001.log \
 		Param/CORONA/TestOutput/log_awsomchargestate.log \
 		> test_awsomchargestate.diff)
+	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
+                ${TESTDIR}/RESULTS/SC/spm_dem_1_n0000004.out \
+                Param/CORONA/TestOutput/spm_dem_1_n0000004.out.gz \
+                > test_awsomchargestate.diff)	
 	ls -l test_awsomchargestate.diff
 
 ### SOLAR CORONA TEST WITH VECTOR MAGNETOGRAM ###
