@@ -297,6 +297,7 @@ contains
        if(.not.IsTimeAccurate .and. iStage==1) call calc_timestep(iBlock)
 
        ! Update
+#ifdef TESTACC
        if(DoTestUpdate .and. iBlock==iBlockTest)then
           write(*,*)NameSub,' nStep=', nStep,' iStage=', iStage,     &
                ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl
@@ -313,6 +314,7 @@ contains
              !#endif
           end do
        end if
+#endif
 
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -395,6 +397,7 @@ contains
             B0_DGB(:,i,j,k,iBlock), &
             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
 
+#ifdef TESTACC
        if(DoTestSource .and. i==iTest .and. j==jTest .and. k==kTest &
             .and. iBlock == iBlockTest)then
           write(*,*) 'Enx =', &
@@ -420,6 +423,7 @@ contains
           !        /State_VGB(Rho_,i,j,k,iBlock)
           ! end if
        end if
+#endif
 
     end if
     if(UseNonConservative)then
@@ -477,10 +481,12 @@ contains
        Change_V = Change_V/CellVolume_GB(i,j,k,iBlock)
     end if
 
+#ifdef TESTACC
     if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
          .and. iBlock == iBlockTest)then
        write(*,*)'Change_V after divided by V', Change_V(iVarTest)
     end if
+#endif
 
     if(UseGravity .or. UseRotatingFrame)then
 
@@ -500,10 +506,12 @@ contains
                   + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*ForcePerRho_D)
           end if
 
+#ifdef TESTACC
           if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest)then
              write(*,*)'Change_V after gravity', Change_V(iVarTest)
           end if
+#endif
 
           if(UseRotatingFrame)then
              Change_V(iUx) = Change_V(iUx) &
@@ -521,10 +529,12 @@ contains
        end do
     end if
 
+#ifdef TESTACC
     if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
          .and. iBlock == iBlockTest)then
        write(*,*)'Change_V after rotating frame', Change_V(iVarTest)
     end if
+#endif
 
     ! Time step for iStage
     if(IsTimeAccurate)then
@@ -581,6 +591,7 @@ contains
     if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
          call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
+#ifdef TESTACC
     if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
          .and. iBlock == iBlockTest)then
        DivF = Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
@@ -637,6 +648,7 @@ contains
        if(UseDivbSource)      write(*,*)'divB =', divB
        if(UseNonConservative) write(*,*)'divU =', divU
     end if
+#endif
 
   end subroutine update_cell
   !============================================================================
@@ -662,6 +674,7 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
 
+#ifdef TESTACC
     DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 1) .and. &
          j==jTest .and. k==kTest .and. iBlock == iBlockTest)then
@@ -692,6 +705,7 @@ contains
           !#endif
        end if
     end if
+#endif
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), B0_D, DoTestSide)
@@ -720,6 +734,7 @@ contains
 
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
 
+#ifdef TESTACC
     DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 2) .and. &
          i==iTest .and. k==kTest .and. iBlock == iBlockTest)then
@@ -750,6 +765,7 @@ contains
           !#endif
        end if
     end if
+#endif
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), B0_D, DoTestSide)
@@ -778,6 +794,7 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
 
+#ifdef TESTACC
     DoTestSide = .false.
     if(DoTestFlux .and. (iDimTest == 0 .or. iDimTest == 3) .and. &
          i==iTest .and. j==jTest .and. iBlock == iBlockTest)then
@@ -808,6 +825,7 @@ contains
           !#endif
        end if
     end if
+#endif
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), B0_D, DoTestSide)
@@ -933,6 +951,7 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                   call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
+#ifdef TESTACC
              if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest)then
                 write(*,*)'iStage, DtPerDv=', iStage, DtPerDv
@@ -941,6 +960,7 @@ contains
                         State_VGB(iVar,i,j,k,iBlock), Change_VC(iVar,i,j,k)
                 end do
              end if
+#endif
 
           enddo; enddo; enddo
        else
@@ -1003,6 +1023,7 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                   call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
+#ifdef TESTACC
              if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest)then
                 write(*,*)'iStage, DtPerDv=', iStage, DtPerDv
@@ -1011,6 +1032,7 @@ contains
                         State_VGB(iVar,i,j,k,iBlock), Change_VC(iVar,i,j,k)
                 end do
              end if
+#endif
 
           enddo; enddo; enddo
        end if
@@ -1509,6 +1531,7 @@ contains
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
+#ifdef TESTACC
           if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest)then
              write(*,*)'iStage, DtPerDv=', iStage, DtPerDv
@@ -1517,7 +1540,7 @@ contains
                      State_VGB(iVar,i,j,k,iBlock), Change_V(iVar)
              end do
           end if
-
+#endif
        enddo; enddo; enddo
 
        if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
@@ -2664,19 +2687,23 @@ contains
     if(UseAlfvenWaves) GammaP = GammaP &
          + GammaWave*(GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
 
+#ifdef TESTACC
     if(DoTestSide) then
        write(*,*)&
             'Sound2 uninitialized= ', Sound2, iSideTest
        write(*,*)&
             'GammaP, InvRho= ', GammaP, InvRho
     end if
+#endif
 
     Sound2=GammaP*InvRho
 
+#ifdef TESTACC
     if(DoTestSide) then
        write(*,*)&
             'Sound2 updated ', Sound2, iSideTest
     end if
+#endif
 
     Fast2 = Sound2 + InvRho*B2
     Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*InvRho*Bn**2))
@@ -2687,6 +2714,7 @@ contains
     if(present(Cleft))  Cleft  = Un - Fast
     if(present(Cright)) Cright = Un + Fast
 
+#ifdef TESTACC
     if(DoTestSide)then
        write(*,*) ' iFluid, rho, p(face)   =', &
             1, State_V(Rho_), State_V(p_), iSideTest
@@ -2715,6 +2743,7 @@ contains
        end if
 
     end if
+#endif
 
   end subroutine get_speed_max
   !============================================================================
@@ -2830,6 +2859,7 @@ contains
     if(present(Cleft))  Cleft  = min(UnBoris - Fast, Un - Slow)
     if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
 
+#ifdef TESTACC
     if(DoTestSide)then
        write(*,*) ' InvRho, p      =', InvRho, p, iSideTest
        write(*,*) ' FullB, FullBn  =', FullB_D(1), FullB_D(2), FullB_D(3), &
@@ -2842,6 +2872,7 @@ contains
        write(*,*) ' Fast, Slow     =', Fast, Slow, iSideTest
        write(*,*) ' Un, UnBoris    =', Un, UnBoris, iSideTest
     end if
+#endif
 
   end subroutine get_boris_speed
   !============================================================================
@@ -3017,6 +3048,7 @@ contains
     ! Store time step constraint (to be generalized for multifluid)
     Flux_V(Vdt_) = abs(Area)*Cmax
 
+#ifdef TESTACC
     if(DoTestSide)then
        write(*,*)'Hat state for Normal_D=', &
             Normal_D(1), Normal_D(2), Normal_D(3), iSideTest
@@ -3063,6 +3095,7 @@ contains
           !#endif
        end do
     end if
+#endif
 
   end subroutine get_numerical_flux
   !============================================================================
