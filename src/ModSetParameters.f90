@@ -1852,6 +1852,8 @@ contains
             "#TRACEIE", &
             "#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
           call read_field_trace_param(NameCommand)
+       case("#PWCOUPLING")
+          call read_var("RhoPwCoef", RhoPwCoef)
        case("#IECOUPLING")
           call read_ie_velocity_param
        case("#IMCOUPLING","#IM")
