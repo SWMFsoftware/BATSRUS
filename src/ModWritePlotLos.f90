@@ -1066,6 +1066,9 @@ contains
       real :: DeltaTeCutSi = 3.0e+4
       real :: FractionTrue
 
+      ! DEM/EM calculation
+      real :: LogTeSi
+
       !------------------------------------------------------------------------
       rLos2= sum(XyzLos_D**2)
       xLos = XyzLos_D(1)
@@ -1156,16 +1159,18 @@ contains
 
          ! !! So minimum temperature is cTolerance in SI units???
          TeSi = max(Te*No2Si_V(UnitTemperature_), cTolerance)
+         LogTeSi = log10(TeSi)
 
          ! Here 1e-6 is to convert to CGS
          Ne = 1.0e-6*Ne*No2Si_V(UnitN_)
 
          if(UseDEM)then
-
             ! Find temperature bin
-            iTe = int((log10(TeSi) - LogTeMinDEM_I(iFile))/DLogTeDEM_I(iFile))&
+            iTe = int((LogTeSi - LogTeMinDEM_I(iFile))/DLogTeDEM_I(iFile))&
                  + 1
-            if(iTe < 1 .or. iTe > nLogTeDEM)RETURN
+
+            if(LogTeSi < LogTeMinDEM_I(iFile) .or. &
+                 iTe > nLogTeDEM)RETURN
 
             ! Integrate DEM and EM values
             ImagePe_VIII(DEM_,iPix,jPix,iTe) = &
