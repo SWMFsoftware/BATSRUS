@@ -3994,7 +3994,8 @@ No magnetometer grid file is saved by default.
 	<option name="Flux vars. scaled" value="flx"/>
 	<option name="Solar variables"    value="SOL"/>
 	<option name="Solar vars. scaled" value="sol"/>
-	<option name="Spectrum variables" value="dem"/>
+	<option name="Spectrum/(D)EM variables" value="dem"/>
+	<option name="Spectrum/Flux variables" value="fux"/>
 	<option name="EUV image variables" value="euv"/>
 	<option name="Tabular image variable"      value="tbl"/>
 	<option name="Radio wave intensity" value="rwi"/>
@@ -4144,9 +4145,19 @@ No magnetometer grid file is saved by default.
       <parameter name="dX"     type="real" min="0"/>
       <parameter name="yLen"  type="real" min="0" />
       <parameter name="dY"     type="real" min="0"/>
-      <parameter name="LogTeMinDEM" type="real" default="5"/>
-      <parameter name="LogTeMaxDEM" type="real" default="9"/>
-      <parameter name="DLogTeDEM" type="real" default="0.1"/>
+      <parameter name="LogTeMinDEM" type="real" default="4" if="$plotvar =~ /dem/i"/>
+      <parameter name="LogTeMaxDEM" type="real" default="7" if="$plotvar =~ /dem/i"/>
+      <parameter name="DLogTeDEM" type="real" default="0.1" if="$plotvar =~ /dem/i"/>
+      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti.dat" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseUnobserved" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="LambdaMin" type="real" default="10" if="$plotvar =~ /fux/i"/>
+      <parameter name="LambdaMax" type="real" default="1700" if="$plotvar =~ /fux/i"/>
+      <parameter name="DLambda" type="real" default="0.001" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseAlfven" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseDoppler" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="DLambdaIns" type="real" default="0.0" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseIonTemp" type="logical" default="F" if="$plotvar =~ /fux/i"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb|spm)\b/)" />
@@ -4317,7 +4328,30 @@ HGR                     TypeCoord
 0.1                     dY
 5                       LogTeMinDEM
 8                       LogTeMaxDEM
-0.1                     DLogTeDEM            
+0.1                     DLogTeDEM
+spm fux idl_ascii       StringPlot
+4                       DnSavePlot
+-1.                     DtSavePlot
+HGR                     TypeCoord
+216                     ObsPosX
+0                       ObsPosY
+0                       ObsPosZ
+0                       x0
+0                       y0
+2                       xLen
+0.1                     dX
+2                       yLen
+0.1                     dY
+SPECTRUM_chianti.dat    NameSpmTable
+F                       UseUnobserved
+400                     LambdaMin
+410                     LambdaMax
+0.1                     DLambda
+T                       UseAlfven
+T                       UseDoppler
+0.0                     DLambdaIns
+F                       UseIonFrac
+F                       UseIonTemp
 rfr tec rwi             StringPlot
 10                      DnSavePlot
 -1.0                    DtSavePlot
@@ -4402,7 +4436,7 @@ slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
 box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
-spm   - line of sight integrated plot for spectra, DEM/EM
+spm   - line of sight integrated plot for spectra (FUX), DEM/EM
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
@@ -4464,6 +4498,8 @@ values or as non-dimensional values:
  'tbl' - vars: listed in the LOS table file                   (PlotArea='los' only)
          pars: mu
  'dem' - vars: DEM, EM                                        (PlotArea='spm' only)
+         pars: rbody
+ 'fux' - vars: flux                                           (PlotArea='spm' only)
          pars: rbody
  'int' - vars: 1/B n/B p/B                                    (PlotArea='lcb' only)
          pars:

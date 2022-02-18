@@ -57,7 +57,7 @@ contains
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
     use ModIO,        ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
-         LambdaMin_I, LambdaMax_I, UseDoppler_I
+         LambdaMin_I, LambdaMax_I
 
     integer, intent(in)         :: iFile
 
@@ -276,7 +276,7 @@ contains
     real                           :: B_D(3), Bnorm_D(3)
     real                           :: Unth2, Uth2
     real                           :: Gint, LogNe, LogTe, Rho
-    real                           :: Tlos
+    real                           :: Tlos, Ulos
     real                           :: Aion
     real                           :: TShift
     logical                        :: IsFound = .false.
@@ -319,6 +319,8 @@ contains
     LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
     LogTe = log10(State_V(Pe_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
 
+    Ulos = sum(State_V(Ux_:Uz_)*LosDir_D)/State_V(Rho_)*No2Si_V(UnitU_)
+    
     do iLine = 1, nLineAll
 
        Aion     = LineTable_I(iLine)%Aion
@@ -328,7 +330,7 @@ contains
        
        ! Doppler shift while x axis is oriented towards observer
        if(UseDoppler_I(iFile))Lambda = &
-            (-State_V(Ux_)*No2Si_V(UnitU_)/cLightSpeed+1)*Lambda
+            (-Ulos/cLightSpeed+1)*Lambda
 
        ! Convert to SI
        LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10
