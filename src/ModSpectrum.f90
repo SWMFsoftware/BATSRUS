@@ -49,8 +49,9 @@ module ModSpectrum
   end type LineTableType
 
   type(LineTableType), allocatable :: LineTable_I(:)
-  
+
 contains
+  !============================================================================
   !---------------------------------------------------------------------------
   subroutine spectrum_read_table(iFile)
 
@@ -165,7 +166,7 @@ contains
        end if
 
        if(DoStore)then
-          
+
           ! Store last indexes as the maximum indexes for N and T
           iMax = iN
           jMax = iT
@@ -260,7 +261,7 @@ contains
     use ModConst, ONLY: rSun, cProtonMass, cLightSpeed, cBoltzmann, cPi
     use ModIO, ONLY: DLambdaIns_I, DLambda_I,LambdaMin_I,LambdaMax_I, &
          UseDoppler_I
-    
+
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
     real, intent(inout)   :: Spectrum_I(nLambda)
@@ -289,29 +290,27 @@ contains
 
     integer                     :: jBin
 
-    character(len=*), parameter:: NameSub = 'calc_flux'
-    !--------------------------------------------------------------------------
-
     ! Calculate Elzasser variables
+    character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
+    !--------------------------------------------------------------------------
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
     Zplus2   = State_V(WaveFirst_)*No2Si_V(UnitEnergyDens_) * 4.0 / Rho
     Zminus2  = State_V(WaveLast_)*No2Si_V(UnitEnergyDens_) * 4.0 / Rho
 
     ! Calculate angle between LOS and B directions
     B_D      = State_V(Bx_:Bz_)*No2Si_V(UnitB_)
-   
+
     CosAlpha = sum(LosDir_D*B_D)/sqrt(max(sum(B_D**2),1e-30))
 
     ! Calculate temperature relative to the LOS direction
     SinAlpha = sqrt(1 - CosAlpha**2)
-    !tperp = (3*t - tpar)/2
+    ! tperp = (3*t - tpar)/2
     Tlos = (SinAlpha**2 * (3*State_V(p_)- State_V(Ppar_))/(2*State_V(Rho_))&
          + CosAlpha**2 * State_V(Ppar_)/State_V(Rho_))&
          * No2Si_V(UnitTemperature_)
 
     ! Calculate the non-thermal broadening
     Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
-    
 
     ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
     ! and divide by cProtonMass in kg so Ne is in cm^-3
@@ -320,14 +319,14 @@ contains
     LogTe = log10(State_V(Pe_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
 
     Ulos = sum(State_V(Ux_:Uz_)*LosDir_D)/State_V(Rho_)*No2Si_V(UnitU_)
-    
+
     do iLine = 1, nLineAll
 
        Aion     = LineTable_I(iLine)%Aion
        Lambda   = LineTable_I(iLine)%LineWavelength
        ! Calculate the thermal broadening
        Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)
-       
+
        ! Doppler shift while x axis is oriented towards observer
        if(UseDoppler_I(iFile))Lambda = &
             (-Ulos/cLightSpeed+1)*Lambda
@@ -345,7 +344,7 @@ contains
        DLambdaSI = sqrt(DLambdaSI2)
        DLambda   = DLambdaSI * 1e10
 
-       ! Gaussian profile 
+       ! Gaussian profile
        InvNorm   = 1/(sqrt(2*cPi) * DLambda)
        InvSigma2 = 1/(2*DLambda**2)
 
@@ -375,26 +374,26 @@ contains
 
        ! Solid angle obtained by the emitting surface at 1AU distance
        ! dOmega = dy*dz / (1.496e11)**2
-       
+
        ! dVperd2/dOmega = Ds * 1e2 or dx in CGS
 
        FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * Ds*No2Si_V(UnitX_)
-       
+
        ! Disperse line onto lamba bins
-       
+
        ! Find the starting/ending wavelength bins
        ! Find the corresponding wavelength bin for starting wavelength
        do iBegin = 1, nLambda - 1
           if (LambdaBegin < LambdaMin_I(iFile)+DLambda_I(iFile)*iBegin)&
             EXIT
        end do
-       
+
        ! stop at nWaveBin-1 so iEnd = nWaveBin if no EXIT was performed
        do iEnd = iBegin, nLambda-1
           if (LambdaEnd > LambdaMin_I(iFile)+DLambda_I(iFile)*iEnd) EXIT
        end do
        iEnd = iEnd-1
-       
+
        ! Update bins between begin and end indices by adding the Gaussian
        ! distribution
 
@@ -415,15 +414,15 @@ contains
           Spectrum_I(iBin) = Spectrum_I(iBin) + Flux
        end do
     end do
-    
+
   end subroutine spectrum_calc_flux
   !============================================================================
 
   subroutine clean_mod_spectrum
     character(len=*), parameter:: NameSub = 'clean_mod_spectrum'
     !--------------------------------------------------------------------------
-    deallocate(LineTable_I) 
-    
+    deallocate(LineTable_I)
+
   end subroutine clean_mod_spectrum
   !============================================================================
 end module ModSpectrum

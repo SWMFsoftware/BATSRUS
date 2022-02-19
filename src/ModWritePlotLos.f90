@@ -90,7 +90,7 @@ contains
          set_satellite_positions
     use ModSpectrum, ONLY : spectrum_read_table, spectrum_calc_flux, &
          clean_mod_spectrum
-    
+
     ! Arguments
 
     integer, intent(in) :: iFile
@@ -223,7 +223,7 @@ contains
     UseFlux = index(TypePlot_I(iFile),'fux')>0
 
     if(UseFlux)call spectrum_read_table(iFile)
-    
+
     if(UseSpm)then
        nPix_D          = nint(PlotRange_EI(1:2,iFile)/PlotDx_DI(1:2,iFile))+1
        aOffset         = xOffset_I(iFile)
@@ -778,7 +778,7 @@ contains
             ! Unit vector pointing from pixel center to observer
             LosPix_D = LosPix_D/Distance
             LosDir_D = LosPix_D
-            
+
             ! Calculate whether there are intersections with the rInner sphere
             ! The LOS line can be written as XyzLine_D = XyzPix_D + d*LosPix_D
             ! If the LOS line intersects with the sphere of radius
@@ -1205,7 +1205,7 @@ contains
          ImagePe_VIII(1,iPix,jPix,:)=ImagePe_VIII(1,iPix,jPix,:)+Spectrum_I(:)
          RETURN
       end if
-      
+
       if(UseEuv .or. UseSxr .or. UseTableGen .or. UseDEM)then
 
          if(UseMultiIon)then
