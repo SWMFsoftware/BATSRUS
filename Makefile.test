@@ -969,7 +969,9 @@ test_awsomchargestate_rundir:
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomChargeState PARAM.in
 	cd ${TESTDIR}; cp ../data/CHARGESTATE/o_tbl.dat.gz .
+	cd ${TESTDIR}; cp ../data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz .
 	cd ${TESTDIR}; gunzip o_tbl.dat.gz
+	cd ${TESTDIR}; gunzip SPECTRUM_chianti_tbl.dat.gz	
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsomchargestate_run:
@@ -984,7 +986,12 @@ test_awsomchargestate_check:
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
                 ${TESTDIR}/RESULTS/SC/spm_dem_1_n0000004.out \
                 Param/CORONA/TestOutput/spm_dem_1_n0000004.out.gz \
-                >> test_awsomchargestate.diff)	
+                >> test_awsomchargestate.diff)
+	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
+                ${TESTDIR}/RESULTS/SC/spm_fux_2_n0000004.out \
+                Param/CORONA/TestOutput/spm_fux_2_n0000004.out.gz \
+                >> test_awsomchargestate.diff)
+
 	ls -l test_awsomchargestate.diff
 
 ### SOLAR CORONA TEST WITH VECTOR MAGNETOGRAM ###

@@ -4148,7 +4148,7 @@ No magnetometer grid file is saved by default.
       <parameter name="LogTeMinDEM" type="real" default="4" if="$plotvar =~ /dem/i"/>
       <parameter name="LogTeMaxDEM" type="real" default="7" if="$plotvar =~ /dem/i"/>
       <parameter name="DLogTeDEM" type="real" default="0.1" if="$plotvar =~ /dem/i"/>
-      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti.dat" if="$plotvar =~ /fux/i"/>
+      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat" if="$plotvar =~ /fux/i"/>
       <parameter name="UseUnobserved" type="logical" default="F" if="$plotvar =~ /fux/i"/>
       <parameter name="LambdaMin" type="real" default="10" if="$plotvar =~ /fux/i"/>
       <parameter name="LambdaMax" type="real" default="1700" if="$plotvar =~ /fux/i"/>
@@ -4342,7 +4342,7 @@ HGR                     TypeCoord
 0.1                     dX
 2                       yLen
 0.1                     dY
-SPECTRUM_chianti.dat    NameSpmTable
+SPECTRUM_chianti_tbl.dat    NameSpmTable
 F                       UseUnobserved
 400                     LambdaMin
 410                     LambdaMax
