@@ -1,7 +1,7 @@
 Begin session: 1
 
 #DESCRIPTION
-Input file for creating a steady state solar corona with oxygen charge states		StringDescription
+Param/CORONA/PARAM.in.AwsomChargeState: create steady state solar corona with oxygen charge states		StringDescription
 
 #COMPONENT
 SC			NameComp
