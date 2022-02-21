@@ -961,7 +961,7 @@ test_awsomchargestate:
 # Test fails on Pleiades with OpenMP
 
 test_awsomchargestate_compile:
-	./Config.pl -f -noopenmp -e=AwsomChargeState -u=AwsomIons -ng=2 -g=6,8,8 -cs=o
+	./Config.pl -noopenmp -e=AwsomChargeState -u=AwsomIons -ng=2 -g=6,8,8 -cs=o
 	$(MAKE) BATSRUS
 
 test_awsomchargestate_rundir:
@@ -975,7 +975,7 @@ test_awsomchargestate_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsomchargestate_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_awsomchargestate_check:
@@ -991,7 +991,6 @@ test_awsomchargestate_check:
                 ${TESTDIR}/RESULTS/SC/spm_fux_2_n0000004.out \
                 Param/CORONA/TestOutput/spm_fux_2_n0000004.out.gz \
                 >> test_awsomchargestate.diff)
-
 	ls -l test_awsomchargestate.diff
 
 ### SOLAR CORONA TEST WITH VECTOR MAGNETOGRAM ###
