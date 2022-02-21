@@ -36,8 +36,6 @@ module ModSpectrum
   type(LineTableType), allocatable :: LineTable_I(:)
   
   ! Variables for using equilibrium ionization despite having charge states
-  integer                     :: nIonFracMax = 500
-
   ! Derived type to read tabulated Ionization Equilibrium values
   type IonFracTableType
      character(len=6)         :: NameIonFrac
@@ -256,7 +254,6 @@ contains
        do iLine = 1,nLineAll
           iTemp = index(LineTable_I(iLine)%NameIon,'_')
           write(LineTable_I(iLine)%NameIon,'(a)')&
-
                LineTable_I(iLine)%NameIon(1:iTemp-1)//&
                LineTable_I(iLine)%NameIon(iTemp+1:)
        end do
@@ -277,6 +274,7 @@ contains
     use ModConst, ONLY: rSun, cProtonMass, cLightSpeed, cBoltzmann, cPi
     use ModIO, ONLY: DLambdaIns_I, DLambda_I, LambdaMin_I, LambdaMax_I, &
          UseDoppler_I, UseAlfven_I
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
 
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
@@ -321,10 +319,13 @@ contains
     ! Calculate temperature relative to the LOS direction
     SinAlpha = sqrt(1 - CosAlpha**2)
     ! tperp = (3*t - tpar)/2
-    Tlos = (SinAlpha**2 * (3*State_V(p_)- State_V(Ppar_))/(2*State_V(Rho_))&
-         + CosAlpha**2 * State_V(Ppar_)/State_V(Rho_))&
-         * No2Si_V(UnitTemperature_)
-
+    if(UseAnisoPressure)then
+       Tlos = (SinAlpha**2 * (3*State_V(p_)- State_V(Ppar_))/(2*State_V(Rho_))&
+            + CosAlpha**2 * State_V(Ppar_)/State_V(Rho_))&
+            * No2Si_V(UnitTemperature_)
+    else
+       Tlos = State_V(p_)/State_V(Rho_)* No2Si_V(UnitTemperature_)
+    end if
     Unth2 = 0.0
     if(UseAlfven_I(iFile))then 
        ! Calculate Elzasser variables
@@ -338,8 +339,11 @@ contains
     ! and divide by cProtonMass in kg so Ne is in cm^-3
     ! 1 : 0.83  electron to proton ratio is assumed
     LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
-    LogTe = log10(State_V(Pe_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
-
+    if(UseElectronPressure)then
+       LogTe = log10(State_V(Pe_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
+    else
+       LogTe = log10(State_V(p_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
+    end if
     Ulos = sum(State_V(Ux_:Uz_)*LosDir_D)/State_V(Rho_)*No2Si_V(UnitU_)
 
     if(UseIonFrac_I(iFile) .and. ChargeStateFirst_>1)then
@@ -470,7 +474,7 @@ contains
 
           ! Calculate total monochromatic flux
           Flux = FluxMono*Phi
-
+  
           ! Update bin with flux
           Spectrum_I(iBin) = Spectrum_I(iBin) + Flux
        end do
