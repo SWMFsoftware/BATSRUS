@@ -85,9 +85,8 @@ my $nWave;
 my $nWaveNew;
 my $nMaterial;
 my $nMaterialNew;
-my $ChargeStateList;
 my $ChargeState;
-my $nChargeStateAll=-1;
+my $ChargeStateNew;
 
 # Settings for optimization
 my $OptFile     = "src/ModOptimizeParam.f90";
@@ -109,7 +108,7 @@ foreach (@Arguments){
     if(/^-s$/)                    {$Show=1;                        next};
     if(/^-nWave=([1-9]\d*)$/i)    {$nWaveNew=$1;                   next};
     if(/^-nMaterial=([1-9]\d*)$/i){$nMaterialNew=$1;               next};
-    if(/^-cs=(.*)/)               {$ChargeState .= "$1";           next};
+    if(/^-cs=(.*)/)               {$ChargeStateNew .= "$1";        next};
     if(/^-ng$/i)                  {print "ng=$GhostCell\n";        next};
     if(/^-ng=(.*)$/i)             {$NewGhostCell=$1;               next};
     if(/^-opt$/)                  {$Opt="show";                    next};
@@ -131,12 +130,11 @@ print "Config.pl -g=$nI,$nJ,$nK\n",
 open(FILE, $EquationMod);
 while(<FILE>){
     next if /^\s*!/; # skip commented out lines
-    $nWave=$1            if /\bnWave\s*=\s*(\d+)/i;
-    $nMaterial=$1        if /\bnMaterial\s*=\s*(\d+)/i;
-    $nChargeStateAll=$1  if /\bnChargeStateAll\s*=\s*(\d+)/i;
-    $ChargeStateList=$1  if /NameElement_I\(1:nElement\)\s*=\s*(.*)/;
+    $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
+    $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
+    $ChargeState=$1  if /NameElement_I\(1:nElement\)\s*=\s*(.*)/;
 }
-$ChargeStateList =~ tr/,\[\]\' /+/d; # format charge state list as h+o
+$ChargeState =~ tr/,\[\]\' /+/d; # format charge state list as h+o
 close FILE;
 
 die "$ERROR nWave was not found in equation module\n"
@@ -147,9 +145,9 @@ die "$ERROR nMaterial was not found in equation module\n"
     if $nMaterialNew and not $nMaterial;
 &set_nmaterial if $nMaterialNew and $nMaterialNew ne $nMaterial;
 
-die "$ERROR nChargeStateAll was not found in equation module\n"
-    if $ChargeState and $nChargeStateAll < 0;
-&set_charge_state if $ChargeState and $ChargeState ne $ChargeStateList;
+die "$ERROR ChargeState was not found in equation module\n"
+    if $ChargeStateNew and not $ChargeState;
+&set_charge_state if $ChargeStateNew and $ChargeStateNew ne $ChargeState;
 
 # Set or list the user modules
 &set_user_module if $UserModule;
@@ -666,7 +664,7 @@ sub set_charge_state{
     
     # Separate input into array
     my @ChargeStateIn;
-    @ChargeStateIn = split('\+', $ChargeState);
+    @ChargeStateIn = split('\+', $ChargeStateNew);
 
     # Get valid element names in correct order
     my @Intersection = ();
@@ -700,10 +698,11 @@ sub set_charge_state{
     }
 
     # Sum of all charge states
-    my $nChargeStateAll = (scalar @nChargeState_I);
+    my $nChargeStateAll;
+    foreach (@nChargeState_I){$nChargeStateAll += $_};
 
     # Convert array to string
-    my $nChargeState_I=join(",", @nChargeState_I);
+    my $nChargeState_I = join(",", @nChargeState_I);
     $nChargeState_I = " \[$nChargeState_I\]";
 
     # Element names have length 2, convert array to string
@@ -818,10 +817,10 @@ sub current_settings{
 	$Equation = $1 if /NameEquation\s*=\s*[\'\"]([^\'\"]*)/;
 
 	# Charge states element list
-	$ChargeStateList = $1 if /NameElement_I\(1:nElement\)\s*=\s*(.*)/;	
+	$ChargeState = $1 if /NameElement_I\(1:nElement\)\s*=\s*(.*)/;	
     }
     # Convert from [' h', ' o'] to h+o
-    $ChargeStateList =~ tr/,\[\]\' /+/d;
+    $ChargeState =~ tr/,\[\]\' /+/d;
 
     if($Verbose){
 	print "$_ = $Value{$_}\n" foreach (sort keys %Value);
@@ -838,9 +837,8 @@ sub current_settings{
     my $nNeutralFluid;
     $nNeutralFluid = $nFluid - $Value{"IonLast_"} if $Value{"IonLast_"};
 
-    $Settings .= "Charge states of elements   : $ChargeStateList\n" if
-	$nChargeStateAll;
-    
+    $Settings .= "Charge states of elements   : $ChargeState\n"
+	if $ChargeState;
     $Settings .= "Number of state variables   : nVar=$nVar\n";
     $Settings .= "Number of species           : nSpecies=$nSpecies\n" 
 	if $nSpecies;
