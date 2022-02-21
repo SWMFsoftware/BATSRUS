@@ -256,11 +256,19 @@ contains
        do iLine = 1,nLineAll
           iTemp = index(LineTable_I(iLine)%NameIon,'_')
           write(LineTable_I(iLine)%NameIon,'(a)')&
+<<<<<<< HEAD
+               LineTable_I(iLine)%NameIon(1:iTemp-1)//&
+               LineTable_I(iLine)%NameIon(iTemp+1:)
+       end do
+    end if
+
+=======
                LineTable_I(iLine)%NameIon(1:iTemp)//&
                LineTable_I(iLine)%NameIon(iTemp+1:)
        end do
     end if
  
+>>>>>>> refs/remotes/origin/master
   end subroutine spectrum_read_table
   !============================================================================
 
