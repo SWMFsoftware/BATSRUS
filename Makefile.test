@@ -484,7 +484,7 @@ test_hallmhd_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_hallmhd_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_hallmhd_check:
@@ -790,7 +790,7 @@ test_eosgodunov_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_eosgodunov_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_eosgodunov_check:
@@ -824,7 +824,7 @@ test_laserpackage_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_laserpackage_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_laserpackage_check:
@@ -858,7 +858,7 @@ test_graydiffusion_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_graydiffusion_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_graydiffusion_check:
@@ -936,7 +936,7 @@ test_awsomfluids_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsomfluids_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_awsomfluids_check:
@@ -1018,7 +1018,7 @@ test_bvector_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_bvector_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_bvector_check:
@@ -1055,7 +1055,7 @@ test_awsom_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsom_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_awsom_check:
@@ -1094,7 +1094,7 @@ test_outerhelio2d_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerhelio2d_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 	cd ${TESTDIR}; ${BINDIR}/INTERPOLATE.exe < INTERPOLATE.in
 
@@ -1660,7 +1660,7 @@ test_mercurysph_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_mercurysph_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
 # Sort the files by numerical values of the first three columns (coordinates)
@@ -1698,7 +1698,7 @@ test_ganymede_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_ganymede_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
@@ -1772,7 +1772,7 @@ test_cometfluids_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_cometfluids_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometfluids_check:
@@ -1888,7 +1888,7 @@ test_earthsph_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_earthsph_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_earthsph_check:
