@@ -3,11 +3,10 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSpectrum
 
-  use ModConst,     ONLY: cLightSpeed, cBoltzmann, cProtonMass, cAU, cPi, rSun
-  use ModUtilities,      ONLY: CON_stop
-  use BATL_lib,          ONLY: iProc, nProc, iComm
+  use BATL_lib,          ONLY: iProc
   use ModBatsrusUtility, ONLY: stop_mpi
-
+  use ModVarIndexes,     ONLY: ChargeStateFirst_
+  use ModIO,             ONLY: UseIonFrac_I
   implicit none
   SAVE
 
@@ -15,26 +14,13 @@ module ModSpectrum
 
   public :: spectrum_read_table, spectrum_calc_flux, clean_mod_spectrum
 
-  integer                     :: iError
-
-  ! For H:He 10:1 fully ionized plasma the proton:electron ratio is 1/(1+2*0.1)
-  real                        :: ProtonElectronRatio = 0.83
-
-  integer                     :: nMaxLine = 10000, nLineFound
-
   ! Temperature and density grid for contribution function (G)
   real                        :: DLogN, DLogT
   real                        :: LogNMin, LogTMin, LogNMax, LogTMax
 
-  ! Maximum index range in density and temperature
-  integer                     :: MaxI, MinI, MaxJ, MinJ
-
-  ! Variables for lines
-  integer                     :: i, iLine
   integer                     :: nLineAll ! All lines of interest
 
   ! Derived type to read tabulated G values
-  !----------------------------------------------------------------------------
   type LineTableType
      character(len=6)         :: NameIon
      real                     :: Aion
@@ -47,18 +33,28 @@ module ModSpectrum
      real                     :: StartLogT
      real, allocatable        :: LogIonFrac_II(:,:)
   end type LineTableType
-
   type(LineTableType), allocatable :: LineTable_I(:)
+  
+  ! Variables for using equilibrium ionization despite having charge states
+  integer                     :: nIonFracMax = 500
+
+  ! Derived type to read tabulated Ionization Equilibrium values
+  type IonFracTableType
+     character(len=6)         :: NameIonFrac
+     real,allocatable         :: IonFraction_I(:)
+  end type IonFracTableType
+  type(IonFracTableType), allocatable :: IonFracTable_I(:)
 
 contains
   !============================================================================
-  !---------------------------------------------------------------------------
+
   subroutine spectrum_read_table(iFile)
 
-    use ModIoUnit,    ONLY: UnitTmp_
-    use ModUtilities, ONLY: open_file, close_file
-    use ModIO,        ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModUtilities,  ONLY: open_file, close_file
+    use ModIO,         ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
          LambdaMin_I, LambdaMax_I
+    use ModVarIndexes, ONLY: NameElement_I
 
     integer, intent(in)         :: iFile
 
@@ -73,6 +69,11 @@ contains
     ! End of file indicated by iError /= 0
     integer                     :: iError
 
+    integer                     :: nMaxLine = 10000, nLineFound
+
+    ! Maximum index range in density and temperature
+    integer                     :: MaxI, MinI, MaxJ, MinJ
+
     ! Intensity table sized to the maximum
     real, allocatable           :: LogG_II(:,:), LogIonFrac_II(:,:)
 
@@ -86,7 +87,10 @@ contains
     logical                     :: IsHeader
     logical                     :: DoStore
 
-    character(len=*), parameter:: NameSub = 'spectrum_read_table'
+    ! For non-equilibrium ionization
+    integer                     :: iTemp = 0
+    
+    character(len=*), parameter :: NameSub = 'spectrum_read_table'
     !--------------------------------------------------------------------------
     ! Read only wavelength of interest into a nice table
     allocate(LineTable_I(nMaxLine))
@@ -247,6 +251,16 @@ contains
     deallocate(LogG_II, LogIonFrac_II)
     nLineAll = min(nMaxLine,nLineFound)
 
+    if(UseIonFrac_I(iFile) .and. ChargeStateFirst_>1)then
+       !Rename Chianti elements to AWSoM Chargestate naming
+       do iLine = 1,nLineAll
+          iTemp = index(LineTable_I(iLine)%NameIon,'_')
+          write(LineTable_I(iLine)%NameIon,'(a)')&
+               LineTable_I(iLine)%NameIon(1:iTemp)//&
+               LineTable_I(iLine)%NameIon(iTemp+1:)
+       end do
+    end if
+ 
   end subroutine spectrum_read_table
   !============================================================================
 
@@ -255,51 +269,53 @@ contains
 
     use ModInterpolate, ONLY: bilinear
     use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, &
-         WaveFirst_, WaveLast_, Pe_, Ppar_, p_
-    use ModPhysics, ONLY: No2Si_V, UnitX_,UnitN_, UnitTemperature_, rBody, &
-         UnitRho_, UnitEnergyDens_ ,UnitB_, UnitP_, UnitMass_,UnitAngle_,UnitU_
+         WaveFirst_, WaveLast_, Pe_, Ppar_, p_, nElement, ChargestateLast_,&
+         NameVar_V
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitN_, UnitTemperature_, rBody, &
+         UnitRho_, UnitEnergyDens_ ,UnitB_, UnitP_, UnitMass_, UnitAngle_, &
+         UnitU_
     use ModConst, ONLY: rSun, cProtonMass, cLightSpeed, cBoltzmann, cPi
-    use ModIO, ONLY: DLambdaIns_I, DLambda_I,LambdaMin_I,LambdaMax_I, &
-         UseDoppler_I
+    use ModIO, ONLY: DLambdaIns_I, DLambda_I, LambdaMin_I, LambdaMax_I, &
+         UseDoppler_I, UseAlfven_I
 
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
     real, intent(inout)   :: Spectrum_I(nLambda)
 
-    integer                        :: i,iBin
+    integer                        :: iBin
     integer                        :: iNMin, jTMin, iNMax, jTMax
-
+    integer                        :: iLine
     real                           :: FluxMono
-    real                           :: Lambda, LambdaSI, Lambda0SI, DLambdaSI
+    real                           :: Lambda, LambdaSI, DLambdaSI
     real                           :: DLambda, DLambdaSI2
-    real                           :: DLambdaInstr2 = 0.0 !!! do it later
     real                           :: Zplus2, Zminus2, CosAlpha, SinAlpha
-    real                           :: B_D(3), Bnorm_D(3)
+    real                           :: B_D(3)
     real                           :: Unth2, Uth2
     real                           :: Gint, LogNe, LogTe, Rho
     real                           :: Tlos, Ulos
     real                           :: Aion
-    real                           :: TShift
-    logical                        :: IsFound = .false.
+    real                           :: LocalState_V(nVar)
+    ! For H:He 10:1 fully ionized plasma the proton:electron ratio is
+    ! 1/(1+2*0.1)
+    real                        :: ProtonElectronRatio = 0.83
 
-    ! From disperse_line
     integer                     :: iBegin, iEnd
     real                        :: Flux, Phi, InvNorm, InvSigma2
     real                        :: LambdaBin, LambdaBegin, LambdaEnd
     real                        :: LambdaDist
 
-    integer                     :: jBin
+    ! Charge state variables 
+    real                        :: EquilIonFrac
+    logical                     :: IsFound = .false.
+    integer                     :: iVar, iVarIon, iElement, nCharge
 
-    ! Calculate Elzasser variables
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
+
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
-    Zplus2   = State_V(WaveFirst_)*No2Si_V(UnitEnergyDens_) * 4.0 / Rho
-    Zminus2  = State_V(WaveLast_)*No2Si_V(UnitEnergyDens_) * 4.0 / Rho
 
     ! Calculate angle between LOS and B directions
     B_D      = State_V(Bx_:Bz_)*No2Si_V(UnitB_)
-
     CosAlpha = sum(LosDir_D*B_D)/sqrt(max(sum(B_D**2),1e-30))
 
     ! Calculate temperature relative to the LOS direction
@@ -309,8 +325,14 @@ contains
          + CosAlpha**2 * State_V(Ppar_)/State_V(Rho_))&
          * No2Si_V(UnitTemperature_)
 
-    ! Calculate the non-thermal broadening
-    Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
+    Unth2 = 0.0
+    if(UseAlfven_I(iFile))then 
+       ! Calculate Elzasser variables
+       Zplus2   = State_V(WaveFirst_)*No2Si_V(UnitEnergyDens_) * 4.0 / Rho
+       Zminus2  = State_V(WaveLast_)*No2Si_V(UnitEnergyDens_) * 4.0 / Rho
+       ! Calculate the non-thermal broadening
+       Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
+    end if
 
     ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
     ! and divide by cProtonMass in kg so Ne is in cm^-3
@@ -320,25 +342,56 @@ contains
 
     Ulos = sum(State_V(Ux_:Uz_)*LosDir_D)/State_V(Rho_)*No2Si_V(UnitU_)
 
-    do iLine = 1, nLineAll
+    if(UseIonFrac_I(iFile) .and. ChargeStateFirst_>1)then
+       ! Normalize charge states to get fractions
+       LocalState_V = State_V
+       iVar = ChargeStateFirst_
+       do iElement = 1, nElement
+          nCharge = iElement
+          LocalState_V(iVar:iVar+nCharge) = &
+               State_V(iVar:iVar+nCharge) / &
+               sum(State_V(iVar:iVar+nCharge))
+          where(LocalState_V(iVar:iVar+nCharge)<1e-99)
+             LocalState_V(iVar:iVar+nCharge) = 0.0
+          end where
+          LocalState_V(iVar:iVar+nCharge) = &
+               LocalState_V(iVar:iVar+nCharge) / &
+               sum(LocalState_V(iVar:iVar+nCharge))
+          iVar = iVar + nCharge + 1
+       end do
+    end if
 
-       Aion     = LineTable_I(iLine)%Aion
-       Lambda   = LineTable_I(iLine)%LineWavelength
+    do iLine = 1, nLineAll
+       if(UseIonFrac_I(iFile) .and. ChargeStateFirst_>1)then
+          ! Pair index of chianti table to state variable
+          IsFound = .false.
+          do iVarIon=ChargestateFirst_,ChargestateLast_
+             if(LineTable_I(iLine)%NameIon==&
+                  NameVar_V(iVarIon))then
+                IsFound = .true.
+                EXIT
+             end if
+          enddo
+       end if
+
        ! Calculate the thermal broadening
+       Aion     = LineTable_I(iLine)%Aion
        Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)
 
        ! Doppler shift while x axis is oriented towards observer
+       Lambda   = LineTable_I(iLine)%LineWavelength
        if(UseDoppler_I(iFile))Lambda = &
             (-Ulos/cLightSpeed+1)*Lambda
 
-       ! Convert to SI
+       ! Convert resting wavelength to SI
        LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10
 
        ! Add thermal and non-thermal broadening
        DLambdaSI2 = LambdaSI**2 * (Uth2 + Unth2)/cLightSpeed**2
 
        ! Add instrumental broadening (if any)
-       DLambdaSI2 = DLambdaSI2 + (DLambdaIns_I(iFile))**2
+       if(DLambdaIns_I(iFile) > 0)&
+            DLambdaSI2 = DLambdaSI2 + (DLambdaIns_I(iFile))**2
 
        ! Convert [m] --> [A]
        DLambdaSI = sqrt(DLambdaSI2)
@@ -363,6 +416,14 @@ contains
             [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
        Gint = 10.0**Gint
 
+       if(UseIonFrac_I(iFile) .and. IsFound)then
+          EquilIonFrac = bilinear(LineTable_I(iLine)%LogIonFrac_II(:,:), &
+               iNMin, iNMax, jTMin, jTMax, &
+               [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
+          EquilIonFrac = 10.0**EquilIonFrac
+          Gint = Gint/EquilIonFrac * 10.0**LocalState_V(iVarIon)
+       end if
+
        ! When Gint becomes negative due to extrapolation -> move to next
        if(Gint<=0)CYCLE
 
@@ -385,7 +446,7 @@ contains
        ! Find the corresponding wavelength bin for starting wavelength
        do iBegin = 1, nLambda - 1
           if (LambdaBegin < LambdaMin_I(iFile)+DLambda_I(iFile)*iBegin)&
-            EXIT
+               EXIT
        end do
 
        ! stop at nWaveBin-1 so iEnd = nWaveBin if no EXIT was performed
