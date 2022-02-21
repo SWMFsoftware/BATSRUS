@@ -707,13 +707,10 @@ sub set_charge_state{
     $nChargeState_I = " \[$nChargeState_I\]";
 
     # Element names have length 2, convert array to string
-    foreach my $elem_k (@Element_I){
-	if(length($elem_k) == 1) {
-	    $elem_k = $elem_k . " ";
-	}
+    foreach (@Element_I){
+	s/^(.)$/$1 /; $_ = "'$_'";
     }
-    foreach (@Element_I) {$_ = "'$_'";}
-    my $NameElement_I=join(",",@Element_I);
+    my $NameElement_I = join(",",@Element_I);
     $NameElement_I = " \[$NameElement_I\]";
 
     # Send variables to ModEquation file
