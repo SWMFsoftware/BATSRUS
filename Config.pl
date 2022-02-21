@@ -733,7 +733,7 @@ sub set_charge_state{
 	s/\b(NameElement_I\(1:nElement\)\s*=)(.*)/$1$NameElement_I/i;
         print;
     }
-    print "Set charge state in $EquationMod\n" # if $Verbose;
+    print "Set charge state in $EquationMod\n" if $Verbose;
 }   
 
 #############################################################################
