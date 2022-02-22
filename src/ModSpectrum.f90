@@ -34,7 +34,7 @@ module ModSpectrum
      real, allocatable        :: LogIonFrac_II(:,:)
   end type LineTableType
   type(LineTableType), allocatable :: LineTable_I(:)
-  
+
   ! Variables for using equilibrium ionization despite having charge states
   ! Derived type to read tabulated Ionization Equilibrium values
   type IonFracTableType
@@ -87,8 +87,8 @@ contains
 
     ! For non-equilibrium ionization
     integer                     :: iTemp = 0
-    
-    character(len=*), parameter :: NameSub = 'spectrum_read_table'
+
+    character(len=*), parameter:: NameSub = 'spectrum_read_table'
     !--------------------------------------------------------------------------
     ! Read only wavelength of interest into a nice table
     allocate(LineTable_I(nMaxLine))
@@ -250,7 +250,7 @@ contains
     nLineAll = min(nMaxLine,nLineFound)
 
     if(UseIonFrac_I(iFile) .and. ChargeStateFirst_>1)then
-       !Rename Chianti elements to AWSoM Chargestate naming
+       ! Rename Chianti elements to AWSoM Chargestate naming
        do iLine = 1,nLineAll
           iTemp = index(LineTable_I(iLine)%NameIon,'_')
           write(LineTable_I(iLine)%NameIon,'(a)')&
@@ -302,7 +302,7 @@ contains
     real                        :: LambdaBin, LambdaBegin, LambdaEnd
     real                        :: LambdaDist
 
-    ! Charge state variables 
+    ! Charge state variables
     real                        :: EquilIonFrac
     logical                     :: IsFound = .false.
     integer                     :: iVar, iVarIon, iElement, nCharge
@@ -327,7 +327,7 @@ contains
        Tlos = State_V(p_)/State_V(Rho_)* No2Si_V(UnitTemperature_)
     end if
     Unth2 = 0.0
-    if(UseAlfven_I(iFile))then 
+    if(UseAlfven_I(iFile))then
        ! Calculate Elzasser variables
        Zplus2   = State_V(WaveFirst_)*No2Si_V(UnitEnergyDens_) * 4.0 / Rho
        Zminus2  = State_V(WaveLast_)*No2Si_V(UnitEnergyDens_) * 4.0 / Rho
@@ -474,7 +474,7 @@ contains
 
           ! Calculate total monochromatic flux
           Flux = FluxMono*Phi
-  
+
           ! Update bin with flux
           Spectrum_I(iBin) = Spectrum_I(iBin) + Flux
        end do
