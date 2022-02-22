@@ -149,7 +149,7 @@ contains
     ! block and variable Indices
     integer :: iBlock, iMirror, jMirror, kMirror, iVar
 
-    logical :: DoTiming, DoCheckBlock
+    logical :: DoTiming = .false., DoCheckBlock
     logical :: UseScattering, UseRho
 
     ! variables added for sph geometry
@@ -746,7 +746,7 @@ contains
            get_tr_los_image, DoPlotThreads, UseTRCorrection
       real:: Distance
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
-           Discriminant = -1.0, SgrtDiscr, DiscrChromo = -1.0, SqrtDiscr
+           Discriminant = -1.0, DiscrChromo = -1.0, SqrtDiscr
       real:: XyzIntersect_D(3), XyzTR_D(3)
       !------------------------------------------------------------------------
 
@@ -1191,12 +1191,6 @@ contains
          DoneStateInterpolate = .true.
          Rho = State_V(Rho_)
       end if
-
- !     if(UseFlux)then
- !        call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D,&
- !             ImagePe_VIII(1,iPix,jPix,:))
- !        RETURN
- !     end if
 
       if(UseFlux)then
          Spectrum_I=0.

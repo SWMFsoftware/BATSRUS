@@ -35,14 +35,6 @@ module ModSpectrum
   end type LineTableType
   type(LineTableType), allocatable :: LineTable_I(:)
 
-  ! Variables for using equilibrium ionization despite having charge states
-  ! Derived type to read tabulated Ionization Equilibrium values
-  type IonFracTableType
-     character(len=6)         :: NameIonFrac
-     real,allocatable         :: IonFraction_I(:)
-  end type IonFracTableType
-  type(IonFracTableType), allocatable :: IonFracTable_I(:)
-
 contains
   !============================================================================
 
@@ -52,7 +44,6 @@ contains
     use ModUtilities,  ONLY: open_file, close_file
     use ModIO,         ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
          LambdaMin_I, LambdaMax_I
-    use ModVarIndexes, ONLY: NameElement_I
 
     integer, intent(in)         :: iFile
 
@@ -265,14 +256,13 @@ contains
        Spectrum_I)
 
     use ModInterpolate, ONLY: bilinear
-    use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, &
-         WaveFirst_, WaveLast_, Pe_, Ppar_, p_, nElement, ChargestateLast_,&
+    use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, Bx_, Bz_, &
+         WaveFirst_, WaveLast_, Pe_, Ppar_, p_, nElement, ChargestateLast_, &
          NameVar_V
-    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitN_, UnitTemperature_, rBody, &
-         UnitRho_, UnitEnergyDens_ ,UnitB_, UnitP_, UnitMass_, UnitAngle_, &
-         UnitU_
-    use ModConst, ONLY: rSun, cProtonMass, cLightSpeed, cBoltzmann, cPi
-    use ModIO, ONLY: DLambdaIns_I, DLambda_I, LambdaMin_I, LambdaMax_I, &
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitTemperature_, &
+         UnitRho_, UnitEnergyDens_ ,UnitB_, UnitU_
+    use ModConst, ONLY: cProtonMass, cLightSpeed, cBoltzmann, cPi
+    use ModIO, ONLY: DLambdaIns_I, DLambda_I, LambdaMin_I, &
          UseDoppler_I, UseAlfven_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
 
@@ -405,7 +395,7 @@ contains
        InvNorm   = 1/(sqrt(2*cPi) * DLambda)
        InvSigma2 = 1/(2*DLambda**2)
 
-       ! Beginning and end of gaussian truncated to +/-5 sigma in [A]
+       ! Gaussian truncated to +/-5 sigma in [A]
        LambdaBegin = Lambda - 5*DLambda
        LambdaEnd   = Lambda + 5*DLambda
 
@@ -425,46 +415,32 @@ contains
                iNMin, iNMax, jTMin, jTMax, &
                [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
           EquilIonFrac = 10.0**EquilIonFrac
-          Gint = Gint/EquilIonFrac * 10.0**LocalState_V(iVarIon)
+          Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
        end if
 
        ! When Gint becomes negative due to extrapolation -> move to next
        if(Gint<=0)CYCLE
 
-       ! Calculate flux and spread it on the Spectrum_II grids
-
        ! Constant multiplier converted from SI [m] to CGS units [cm]
        ! dV_cell / (1AU)^2 * 1e2
        ! dVperd2 = Ds*dy*dz /(1.496e11)**2 * 1e2
-
        ! Solid angle obtained by the emitting surface at 1AU distance
        ! dOmega = dy*dz / (1.496e11)**2
-
        ! dVperd2/dOmega = Ds * 1e2 or dx in CGS
 
-       FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * Ds*No2Si_V(UnitX_)
+       FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * Ds*No2Si_V(UnitX_) * 1e2
 
        ! Disperse line onto lamba bins
-
        ! Find the starting/ending wavelength bins
        ! Find the corresponding wavelength bin for starting wavelength
-       do iBegin = 1, nLambda - 1
-          if (LambdaBegin < LambdaMin_I(iFile)+DLambda_I(iFile)*iBegin)&
-               EXIT
-       end do
-
-       ! stop at nWaveBin-1 so iEnd = nWaveBin if no EXIT was performed
-       do iEnd = iBegin, nLambda-1
-          if (LambdaEnd > LambdaMin_I(iFile)+DLambda_I(iFile)*iEnd) EXIT
-       end do
-       iEnd = iEnd-1
+       iBegin = int((LambdaBegin-LambdaMin_I(iFile))/DLambda_I(iFile))+1
+       iEnd = int((LambdaEnd-LambdaMin_I(iFile))/DLambda_I(iFile))+1
 
        ! Update bins between begin and end indices by adding the Gaussian
        ! distribution
-
-       do iBin = iBegin , iEnd
+       do iBin = max(1,iBegin), min(nLambda,iEnd)
           ! Get wavelength from the center of the bin
-          LambdaBin = LambdaMin_I(iFile)+DLambda_I(iFile)*iBin
+          LambdaBin = LambdaMin_I(iFile)+DLambda_I(iFile)*(iBin-0.5)
 
           ! Get distance from peak wavelength in SI
           LambdaDist = Lambda - LambdaBin
