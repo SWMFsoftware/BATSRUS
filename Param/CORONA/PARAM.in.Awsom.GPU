@@ -55,7 +55,7 @@ F			UseBody
 
 #GAMMA
 1.5			Gamma for fluid 1
-1.5			Gamma for electrons (if UseElectronPressure)
+1.5			GammaElectron for electrons (if UseElectronPressure)
 
 #HEATFLUXCOLLISIONLESS
 F			UseHeatFluxCollisionless
