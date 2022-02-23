@@ -3815,6 +3815,8 @@ contains
       !$acc update device(DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm)
       !$acc update device(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
 
+      !$acc update device(UseElectronEntropy)
+
     end subroutine correct_parameters
     !==========================================================================
 

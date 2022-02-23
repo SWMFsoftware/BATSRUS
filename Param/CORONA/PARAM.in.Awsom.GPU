@@ -72,6 +72,9 @@ F			UseSemiImplicit
 #CORONALHEATING
 none			TypeCoronalHeating
 
+#POYNTINGFLUX
+1.0e6			PoyntingFluxPerBSi
+
 #USERSWITCH
 +init +ic		StringSwitch
 
