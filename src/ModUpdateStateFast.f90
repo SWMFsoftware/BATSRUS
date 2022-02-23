@@ -10,7 +10,8 @@ module ModUpdateStateFast
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
-       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin
+       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
+       UseElectronEntropy
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid
@@ -18,7 +19,7 @@ module ModUpdateStateFast
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB, Vdt_, iTypeUpdate, UpdateOrig_, UseRotatingFrame, &
-       UseElectronPressure, UseElectronEntropy
+       UseElectronPressure
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &

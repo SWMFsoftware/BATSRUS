@@ -249,6 +249,7 @@ sub set_optimization{
             UseBorisCorrection  => ".false.",
 	    UseDivbSource       => "UseB .and. nDim>1",
 	    UseDtFixed          => ".false.",
+	    UseElectronEntropy  => ".true.",
 	    UseGravity          => ".false.",
             UseHyperbolicDivB   => ".false.",
             UseNonConservative  => ".false.",
@@ -336,6 +337,9 @@ sub set_optimization{
 	    }elsif(/^#DIVB\b/){
 		my $use8wave = <FILE>;
 		check_var($Set{"UseDivbSource"}, $use8wave, $first);
+	    }elsif(/^#ELECTRONENTROPY\b/){
+		my $useentropy = <FILE>;
+		check_var($Set{"UseElectronEntropy"}, $useentropy, $first);
 	    }elsif(/^#HYPERBOLICDIVB\b/){
 		my $usehyp = <FILE>;
 		check_var($Set{"UseHyperbolicDivB"}, $usehyp, $first);

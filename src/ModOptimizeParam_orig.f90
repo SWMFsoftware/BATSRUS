@@ -5,10 +5,10 @@ module ModOptimizeParam
   ! and edited by GM/BATSRUS/Config.pl before compilation.
 
   use ModUtilities, ONLY: CON_stop
-
-  use ModAdvance, ONLY: UseB
   use BATL_lib,   ONLY: nDim
 
+  use ModAdvance, ONLY: UseB, &
+       UseElectronEntropy => UseElectronEntropy
   use ModConservative, ONLY: &
        UseNonConservative => UseNonConservative, &
        nConservCrit => nConservCrit
