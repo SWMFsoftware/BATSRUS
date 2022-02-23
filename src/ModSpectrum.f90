@@ -77,7 +77,7 @@ contains
     logical                     :: DoStore
 
     ! For non-equilibrium ionization
-    integer                     :: iTemp = 0
+    integer                     :: iTemp
 
     character(len=*), parameter:: NameSub = 'spectrum_read_table'
     !--------------------------------------------------------------------------
@@ -227,8 +227,8 @@ contains
        LineTable_I(iLine)%jMin = iT
 
        ! Initially zero out the input array
-       LogG_II = 0.0
-       LogIonFrac_II = 0.0
+       LogG_II = -99.0
+       LogIonFrac_II = -99.0
 
        ! Store first element
        LogG_II(iN,iT) = LogG
