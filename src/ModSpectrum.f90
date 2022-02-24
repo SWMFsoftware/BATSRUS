@@ -288,8 +288,8 @@ contains
   end subroutine spectrum_read_table
   !============================================================================
 
-  subroutine spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
-       Spectrum_I,UseNbi)
+  subroutine spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, UseNbi, &
+       Spectrum_I)
 
     use ModInterpolate, ONLY: bilinear
     use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, Bx_, Bz_, &
@@ -304,8 +304,8 @@ contains
 
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
-    real, intent(inout)   :: Spectrum_I(nLambda)
     logical, intent(in)   :: UseNbi
+    real, intent(inout)   :: Spectrum_I(nLambda)
     
     integer                        :: iBin
     integer                        :: iNMin, jTMin, iNMax, jTMax

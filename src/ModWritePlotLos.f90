@@ -425,7 +425,6 @@ contains
     bOffset = dot_product(ImageCenter_D, bUnit_D)
 
     ! !! aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
-
     if(UseDEM)then
        nLogTeDEM = &
             nint(LogTeMaxDEM_I(iFile)-LogTeMinDEM_I(iFile))/DLogTeDEM_I(IFile)
@@ -440,6 +439,7 @@ contains
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
             Spectrum_I(nLambda))
     else
+       nLambda = 1
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),1), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),1))
@@ -1216,8 +1216,8 @@ contains
 
       if(UseFlux .or. UseNbi)then
          Spectrum_I=0.
-         call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D,&
-              Spectrum_I(:),UseNbi)
+         call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, UseNbi,&
+              Spectrum_I(:))
          ImagePe_VIII(1,iPix,jPix,:)=ImagePe_VIII(1,iPix,jPix,:)+Spectrum_I(:)
          RETURN
       end if
