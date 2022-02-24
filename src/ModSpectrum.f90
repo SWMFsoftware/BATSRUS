@@ -35,17 +35,23 @@ module ModSpectrum
   end type LineTableType
   type(LineTableType), allocatable :: LineTable_I(:)
 
+  ! Response function for NarrowBand Image
+  real, allocatable           :: ResponseLambda_I(:), Response_I(:)
+  integer                     :: nResponseBin
 contains
   !============================================================================
 
-  subroutine spectrum_read_table(iFile)
+  subroutine spectrum_read_table(iFile, UseNbi)
 
     use ModIoUnit,     ONLY: UnitTmp_
     use ModUtilities,  ONLY: open_file, close_file
     use ModIO,         ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
-         LambdaMin_I, LambdaMax_I
+         LambdaMin_I, LambdaMax_I, NameNbiTable_I,DLambda_I
+    ! response function 
+    use ModPlotFile,         ONLY: read_plot_file
 
     integer, intent(in)         :: iFile
+    logical, intent(in)         :: UseNbi
 
     ! Data read from the file
     character(len=200)          :: StringLine
@@ -79,8 +85,37 @@ contains
     ! For non-equilibrium ionization
     integer                     :: iTemp
 
+    ! Response function
+
+
     character(len=*), parameter:: NameSub = 'spectrum_read_table'
     !--------------------------------------------------------------------------
+    ! Start with response function if any as it gives the min and max for nbi 
+    if(UseNbi)then
+       call read_plot_file(NameFile = NameNbiTable_I(iFile), &
+            n1Out = nResponseBin, &
+            iErrorOut = iError)
+
+       if(iError /= 0) call stop_mpi( &
+            NameSub//' could not header from '//trim(NameNbiTable_I(iFile)))
+
+       allocate(ResponseLambda_I(nResponseBin), Response_I(nResponseBin))
+
+       call read_plot_file(NameFile = NameNbiTable_I(iFile), &
+            TypeFileIn = 'ascii',                               &
+            VarOut_I   = Response_I,                      &
+            CoordOut_I = ResponseLambda_I,                      &
+            iErrorOut  = iError)
+
+       if(iError /= 0) call stop_mpi( &
+            NameSub//' could not data from '//trim(NameNbiTable_I(iFile)))
+
+       LambdaMin_I(iFile)=ResponseLambda_I(1)
+       LambdaMax_I(iFile)=ResponseLambda_I(nResponseBin)
+       DLambda_I(iFile)=ResponseLambda_I(2)-ResponseLambda_I(1)
+       
+    end if
+
     ! Read only wavelength of interest into a nice table
     allocate(LineTable_I(nMaxLine))
     nLineFound          = 0
@@ -249,11 +284,12 @@ contains
                LineTable_I(iLine)%NameIon(iTemp+1:)
        end do
     end if
+
   end subroutine spectrum_read_table
   !============================================================================
 
   subroutine spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
-       Spectrum_I)
+       Spectrum_I,UseNbi)
 
     use ModInterpolate, ONLY: bilinear
     use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, Bx_, Bz_, &
@@ -269,7 +305,8 @@ contains
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
     real, intent(inout)   :: Spectrum_I(nLambda)
-
+    logical, intent(in)   :: UseNbi
+    
     integer                        :: iBin
     integer                        :: iNMin, jTMin, iNMax, jTMax
     integer                        :: iLine
@@ -297,6 +334,9 @@ contains
     logical                     :: IsFound = .false.
     integer                     :: iVar, iVarIon, iElement, nCharge
 
+    ! Response function
+    integer                     :: jBin
+    
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
 
@@ -450,9 +490,16 @@ contains
 
           ! Calculate total monochromatic flux
           Flux = FluxMono*Phi
-
-          ! Update bin with flux
-          Spectrum_I(iBin) = Spectrum_I(iBin) + Flux
+          if(UseNbi)then
+             !Find bin in responsefunction
+             jBin = int((Lambdabin-ResponseLambda_I(1))/&
+                  (ResponseLambda_I(2)-ResponseLambda_I(1)))+1
+             Spectrum_I(iBin) = &
+                  Spectrum_I(iBin) + Flux*Response_I(jBin)*DLambda_I(iFile)
+          else
+             ! Update bin with flux
+             Spectrum_I(iBin) = Spectrum_I(iBin) + Flux
+          end if
        end do
     end do
 

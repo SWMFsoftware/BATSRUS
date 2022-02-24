@@ -177,8 +177,8 @@ contains
     integer, parameter :: DEM_ = 1, EM_ = 2
     integer            :: iTe = 1, nLogTeDEM = 1
 
-    ! SPECTRUM - flux calculation
-    logical            :: UseFlux = .false.
+    ! SPECTRUM - flux/nbi calculation
+    logical            :: UseFlux = .false., UseNbi = .false.
     integer            :: nLambda = 1
     real               :: LosDir_D(3)
     real,allocatable   :: Spectrum_I(:)
@@ -217,12 +217,13 @@ contains
 
     iSat = 0
 
-    ! Do we calculate SPECTRUM-DEM/EM or flux?
+    ! Do we calculate SPECTRUM-DEM/EM or flux or narroband image?
     UseSpm = index(TypePlot_I(iFile),'spm')>0
     UseDEM = index(TypePlot_I(iFile),'dem')>0
     UseFlux = index(TypePlot_I(iFile),'fux')>0
-
-    if(UseFlux)call spectrum_read_table(iFile)
+    UseNbi = index(TypePlot_I(iFile),'nbi')>0
+    
+    if(UseFlux .or. UseNbi)call spectrum_read_table(iFile,UseNbi)
 
     if(UseSpm)then
        nPix_D          = nint(PlotRange_EI(1:2,iFile)/PlotDx_DI(1:2,iFile))+1
@@ -349,6 +350,8 @@ contains
        NameAllVar='x y logTe'
     elseif(UseFlux)then
        NameAllVar='x y lambda'
+    elseif(UseNbi)then
+       NameAllVar='x y intensity'
     else
        NameAllVar='x y'
     end if
@@ -440,6 +443,7 @@ contains
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),1), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),1))
+       if(UseNbi)allocate(Spectrum_I(nLambda))
     end if
 
     ImagePe_VIII = 0.0
@@ -677,12 +681,30 @@ contains
                      CoordMaxIn_D = &
                      [aOffset+aPix, bOffset+bPix, LogTeMaxDEM_I(iFile)], &
                      VarIn_VIII = Image_VIII(:,:,:,:))
+                elseif(UseNbi)then
+                StringHeadLine= 'NBI integrals '// &
+                     ' TIMEEVENT='//trim(StringDateTime)// &
+                     ' TIMEEVENTSTART='//StringDateTime0// &
+                     ' '//StringUnitIdl
+                call save_plot_file(NameFile, &
+                     TypeFileIn = TypeFile_I(iFile), &
+                     StringHeaderIn = StringHeadLine, &
+                     nStepIn = nStep, &
+                     TimeIn = tSimulation, &
+                     ParamIn_I = Param_I(1:neqpar), &
+                     NameVarIn = NameAllVar, &
+                     NameUnitsIn = StringUnitIdl,&
+                     nDimIn = 2, &
+                     CoordMinIn_D = &
+                     [aOffset-aPix, bOffset-bPix], &
+                     CoordMaxIn_D = &
+                     [aOffset+aPix, bOffset+bPix], &
+                     VarIn_VII = Image_VIII(:,:,:,1))
              elseif(UseFlux)then
                 StringHeadLine= 'Spectrum flux '// &
                      ' TIMEEVENT='//trim(StringDateTime)// &
                      ' TIMEEVENTSTART='//StringDateTime0// &
                      ' '//StringUnitIdl
-
                 call save_plot_file(NameFile, &
                      TypeFileIn = TypeFile_I(iFile), &
                      StringHeaderIn = StringHeadLine, &
@@ -731,7 +753,7 @@ contains
     call barrier_mpi
 
     deallocate(ImagePe_VIII, Image_VIII)
-    if(UseFlux)deallocate(Spectrum_I)
+    if(UseFlux .or. UseNbi)deallocate(Spectrum_I)
     if(UseTableGen) deallocate(InterpValues_I)
 
     if(DoTest)write(*,*) NameSub,' finished'
@@ -1192,16 +1214,15 @@ contains
          Rho = State_V(Rho_)
       end if
 
-      if(UseFlux)then
+      if(UseFlux .or. UseNbi)then
          Spectrum_I=0.
          call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D,&
-              Spectrum_I(:))
+              Spectrum_I(:),UseNbi)
          ImagePe_VIII(1,iPix,jPix,:)=ImagePe_VIII(1,iPix,jPix,:)+Spectrum_I(:)
          RETURN
       end if
-
+      
       if(UseEuv .or. UseSxr .or. UseTableGen .or. UseDEM)then
-
          if(UseMultiIon)then
             Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
          elseif(UseIdealEos)then
@@ -2113,6 +2134,9 @@ contains
        if(index(TypePlot_I(iFile),'dem')>0)then
           write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' logK'
+       elseif(index(TypePlot_I(iFile),'fux')>0)then
+          write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
+               trim(NameIdlUnit_V(UnitX_))//' A'
        else
           write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' '//&
@@ -2172,6 +2196,12 @@ contains
           case('em')
              write(StringUnitIdl,'(a)') &
                   trim(StringUnitIdl)//' '//'[cm^-3]'
+          case('fux')
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[erg sr^-1 cm^-2 A^-1]'
+          case('nbi')
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[DN/s]'
              ! DEFAULT FOR A BAD SELECTION
           case default
              write(StringUnitIdl,'(a)') &

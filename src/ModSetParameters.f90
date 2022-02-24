@@ -1088,7 +1088,7 @@ contains
                 elseif (index(StringPlot, 'nbi')>0)then
                    ! Narrowband image
                    call read_var('NameSpmTable',NameSpmTable_I(iFile))
-                   call read_var('NameFileRespFunc',NameFileRespFunc_I(iFile))
+                   call read_var('NameNbiTable',NameNbiTable_I(iFile))
                 end if
              elseif (index(StringPlot,'los')>0) then
                 TypePlotArea='los'
@@ -1538,6 +1538,12 @@ contains
                 TypePlotVar='fux'
                 IsDimensionalPlot_I(iFile) = .true.
                 StringPlotVar_I(iFile)='flux'
+                StringPlotParam_I(iFile)='rbody'
+             elseif(   index(StringPlot,'NBI') > 0 &
+                  .or. index(StringPlot,'nbi') > 0)then
+                TypePlotVar='nbi'
+                IsDimensionalPlot_I(iFile) = .true.
+                StringPlotVar_I(iFile)='intensity'
                 StringPlotParam_I(iFile)='rbody'
              else
                 call stop_mpi('Variable definition missing from StringPlot=' &
