@@ -36,7 +36,7 @@ NONE			TypeNormalization
 
 #GRIDLEVEL
 1			nLevel
-sphere0			NameShape
+sphere0			StringShape
 10.0			Radius
 
 #GRIDGEOMETRY
@@ -132,6 +132,7 @@ z=0 mhd idl_ascii		StringPlot
 T			DoAmr
 -1			DnAmr
 10.0			DtAmr
+T			IsStrictAmr
 
 #STOP
 -1			MaxIteration
