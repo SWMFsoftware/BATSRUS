@@ -70,8 +70,8 @@ contains
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
     use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal, rPlanetSi
     use ModPIC,        ONLY: XyzMinPic_DI, nRegionPiC, &
-         DxyzPic_DI, xUnitPicSi_I, uUnitPicSi_I, MassUnitPicSi_I, LenPic_DI, &
-         R_DDI, nCellPerPatch
+         DxyzPic_DI, xUnitPicSi_I, uUnitPicSi_I, MassUnitPicSi_I, &
+         ScalingFactor_I, LenPic_DI, R_DDI, nCellPerPatch
     use BATL_lib,      ONLY: x_, y_, z_, nDim
 
     integer, intent(inout) :: nParamInt, nParamReal
@@ -91,10 +91,10 @@ contains
        nParamInt = 9 + nIonFluid*4
 
        ! Charge and mass per species/fluid
-       ! XyzMin_D + LenPic_D + Dxzy_D + R_DD + units  = 21 variables
-       ! for each region
+       ! Variables per region:
+       ! XyzMin_D + LenPic_D + Dxzy_D + R_DD + units + scaling factor = 22
        ! PePerPtotal + rPlanet + No2Si_V(UnitX_) = 3 variables
-       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*21 + 3
+       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*22 + 3
 
        RETURN
     end if
@@ -154,6 +154,8 @@ contains
        Param_I(n) = xUnitPicSi_I(iRegion); n = n+1
        Param_I(n) = uUnitPicSi_I(iRegion); n = n+1
        Param_I(n) = MassUnitPicSi_I(iRegion); n = n+1
+       
+       Param_I(n) = ScalingFactor_I(iRegion); n = n+1
     end do ! iRegion
 
     ! Send charge and mass of each species/fluids
