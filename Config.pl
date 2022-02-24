@@ -249,7 +249,7 @@ sub set_optimization{
             UseBorisCorrection  => ".false.",
 	    UseDivbSource       => "UseB .and. nDim>1",
 	    UseDtFixed          => ".false.",
-	    UseElectronEntropy  => ".true.",
+	    UseElectronEntropy  => "UseElectronPressure",
 	    UseGravity          => ".false.",
             UseHyperbolicDivB   => ".false.",
             UseNonConservative  => ".false.",

@@ -7,7 +7,7 @@ module ModOptimizeParam
   use ModUtilities, ONLY: CON_stop
   use BATL_lib,   ONLY: nDim
 
-  use ModAdvance, ONLY: UseB, &
+  use ModAdvance, ONLY: UseB, UseElectronPressure, &
        UseElectronEntropy => UseElectronEntropy
   use ModConservative, ONLY: &
        UseNonConservative => UseNonConservative, &
