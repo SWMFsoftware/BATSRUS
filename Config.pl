@@ -89,6 +89,7 @@ my $ChargeState;
 my $ChargeStateNew;
 
 # Settings for optimization
+my $OptParam    = "ModOptimizeParam.f90";
 my $OptFile     = "src/ModOptimizeParam.f90";
 my $OptFileOrig = "src/ModOptimizeParam_orig.f90";
 my $Opt;
@@ -195,7 +196,8 @@ sub set_optimization{
 
     # Read current settings
     my %Opt;
-    `cp $OptFileOrig $OptFile` unless -f $OptFile;
+    # Make sure optimized parameter file exists and is up-to-date
+    `cd src; make $OptParam`;
     open(FILE, $OptFile) or die "$ERROR could not open $OptFile\n";
     while(<FILE>){
 	# Extract adjustables: NAME => ... lines without Orig
