@@ -410,13 +410,9 @@ contains
        Aion     = LineTable_I(iLine)%Aion
        Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)
 
-       ! Doppler shift while x axis is oriented towards observer
-       Lambda   = LineTable_I(iLine)%LineWavelength
-       if(UseDoppler_I(iFile))Lambda = &
-            (-Ulos/cLightSpeed+1)*Lambda
-
        ! Convert resting wavelength to SI
-       LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10
+       Lambda   = LineTable_I(iLine)%LineWavelength
+       LambdaSI = Lambda * 1e-10
 
        ! Add thermal and non-thermal broadening
        DLambdaSI2 = LambdaSI**2 * (Uth2 + Unth2)/cLightSpeed**2
@@ -433,6 +429,9 @@ contains
        InvNorm   = 1/(sqrt(2*cPi) * DLambda)
        InvSigma2 = 1/(2*DLambda**2)
 
+       ! Doppler shift while x axis is oriented towards observer
+       if(UseDoppler_I(iFile))Lambda = (-Ulos/cLightSpeed+1)*Lambda
+       
        ! Gaussian truncated to +/-5 sigma in [A]
        LambdaBegin = Lambda - 5*DLambda
        LambdaEnd   = Lambda + 5*DLambda
@@ -492,8 +491,8 @@ contains
              ! Find bin in responsefunction
              jBin = int((Lambdabin-ResponseLambda_I(1))/&
                   (ResponseLambda_I(2)-ResponseLambda_I(1)))+1
-             Spectrum_I(iBin) = &
-                  Spectrum_I(iBin) + Flux*Response_I(jBin)*DLambda_I(iFile)
+             Spectrum_I(1) = &
+                  Spectrum_I(1) + Flux*Response_I(jBin)*DLambda_I(iFile)
           else
              ! Update bin with flux
              Spectrum_I(iBin) = Spectrum_I(iBin) + Flux
