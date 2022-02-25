@@ -165,7 +165,8 @@ rundir:
 		cp -f Param/EARTH/PARAM.in ${RUNDIR}/PARAM.in; \
 		touch ${RUNDIR}/core; chmod 444 ${RUNDIR}/core; \
 		cp ${SCRIPTDIR}/PostProc.pl ${RUNDIR}/; \
-		cp ${SCRIPTDIR}/Restart.pl ${RUNDIR}/; \
+		cp ${SCRIPTDIR}/Restart.pl  ${RUNDIR}/; \
+		cp ${SCRIPTDIR}/Resubmit.pl ${RUNDIR}/; \
 		cd ${RUNDIR}; ln -s ${BINDIR}/${DEFAULT_EXE} .; \
 		ln -s ${COMPONENT}/* .;                          \
 	fi);
