@@ -222,7 +222,7 @@ contains
     UseDEM = index(TypePlot_I(iFile),'dem')>0
     UseFlux = index(TypePlot_I(iFile),'fux')>0
     UseNbi = index(TypePlot_I(iFile),'nbi')>0
-    
+
     if(UseFlux .or. UseNbi)call spectrum_read_table(iFile,UseNbi)
 
     if(UseSpm)then
@@ -1221,7 +1221,7 @@ contains
          ImagePe_VIII(1,iPix,jPix,:)=ImagePe_VIII(1,iPix,jPix,:)+Spectrum_I(:)
          RETURN
       end if
-      
+
       if(UseEuv .or. UseSxr .or. UseTableGen .or. UseDEM)then
          if(UseMultiIon)then
             Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)

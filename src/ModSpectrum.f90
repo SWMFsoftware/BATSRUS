@@ -47,7 +47,7 @@ contains
     use ModUtilities,  ONLY: open_file, close_file
     use ModIO,         ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
          LambdaMin_I, LambdaMax_I, NameNbiTable_I,DLambda_I
-    ! response function 
+    ! response function
     use ModPlotFile,         ONLY: read_plot_file
 
     integer, intent(in)         :: iFile
@@ -87,10 +87,9 @@ contains
 
     ! Response function
 
-
+    ! Start with response function if any as it gives the min and max for nbi
     character(len=*), parameter:: NameSub = 'spectrum_read_table'
     !--------------------------------------------------------------------------
-    ! Start with response function if any as it gives the min and max for nbi 
     if(UseNbi)then
        call read_plot_file(NameFile = NameNbiTable_I(iFile), &
             n1Out = nResponseBin, &
@@ -113,7 +112,7 @@ contains
        LambdaMin_I(iFile)=ResponseLambda_I(1)
        LambdaMax_I(iFile)=ResponseLambda_I(nResponseBin)
        DLambda_I(iFile)=ResponseLambda_I(2)-ResponseLambda_I(1)
-       
+
     end if
 
     ! Read only wavelength of interest into a nice table
@@ -306,7 +305,7 @@ contains
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
     logical, intent(in)   :: UseNbi
     real, intent(inout)   :: Spectrum_I(nLambda)
-    
+
     integer                        :: iBin
     integer                        :: iNMin, jTMin, iNMax, jTMax
     integer                        :: iLine
@@ -336,10 +335,9 @@ contains
 
     ! Response function
     integer                     :: jBin
-    
+
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
-
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
 
     ! Calculate angle between LOS and B directions
@@ -491,7 +489,7 @@ contains
           ! Calculate total monochromatic flux
           Flux = FluxMono*Phi
           if(UseNbi)then
-             !Find bin in responsefunction
+             ! Find bin in responsefunction
              jBin = int((Lambdabin-ResponseLambda_I(1))/&
                   (ResponseLambda_I(2)-ResponseLambda_I(1)))+1
              Spectrum_I(iBin) = &
