@@ -1216,8 +1216,8 @@ contains
 
       if(UseFlux .or. UseNbi)then
          Spectrum_I=0.
-         call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, UseNbi,&
-              Spectrum_I(:))
+         call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
+              UseNbi, Spectrum_I(:))
          ImagePe_VIII(1,iPix,jPix,:)=ImagePe_VIII(1,iPix,jPix,:)+Spectrum_I(:)
          RETURN
       end if

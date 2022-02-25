@@ -287,7 +287,7 @@ contains
   end subroutine spectrum_read_table
   !============================================================================
 
-  subroutine spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, UseNbi, &
+  subroutine spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, UseNbi,&
        Spectrum_I)
 
     use ModInterpolate, ONLY: bilinear
