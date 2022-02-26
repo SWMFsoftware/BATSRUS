@@ -431,7 +431,7 @@ contains
 
        ! Doppler shift while x axis is oriented towards observer
        if(UseDoppler_I(iFile))Lambda = (-Ulos/cLightSpeed+1)*Lambda
-       
+
        ! Gaussian truncated to +/-5 sigma in [A]
        LambdaBegin = Lambda - 5*DLambda
        LambdaEnd   = Lambda + 5*DLambda
