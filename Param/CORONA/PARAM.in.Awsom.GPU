@@ -3,6 +3,9 @@ Begin session: 1
 #DESCRIPTION
 Param/CORONA/PARAM.in.Awsom.GPU		StringDescription
 
+#ELECTRONENTROPY
+T			UseElectronEntropy
+
 #UPDATE
 fast			TypeUpdate
 
@@ -52,6 +55,25 @@ F			UseBody
 
 #GAMMA
 1.5			Gamma for fluid 1
+1.5			GammaElectron for electrons (if UseElectronPressure)
+
+#HEATFLUXCOLLISIONLESS
+F			UseHeatFluxCollisionless
+
+#HEATFLUXREGION
+F			UseHeatFluxRegion
+
+#HEATCONDUCTION
+F			UseHeatConduction
+
+#SEMIIMPLICIT
+F			UseSemiImplicit
+
+#CORONALHEATING
+none			TypeCoronalHeating
+
+#POYNTINGFLUX
+1.0e6			PoyntingFluxPerBSi
 
 #USERSWITCH
 +init +ic		StringSwitch

@@ -10,7 +10,8 @@ module ModUpdateStateFast
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
-       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin
+       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
+       UseElectronEntropy
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid
@@ -441,7 +442,7 @@ contains
        end do
     end if
 
-    if(UseElectronPressure)then
+    if(UseElectronPressure .and. .not.UseElectronEntropy)then
        ! Calculate DivU = div(U_e)
        DivU =                   Flux_VXI(UnLast_,i+1,j,k,iGang) &
             -                   Flux_VXI(UnLast_,i,j,k,iGang)
@@ -557,6 +558,10 @@ contains
             State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
             IsConserv)
 
+       if(UseElectronPressure .and. UseElectronEntropy) &
+            State_VGB(Pe_,i,j,k,iBlock) = &
+            State_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
+
        State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
             + DtLocal*Change_V(1:nVar)
     else
@@ -571,6 +576,10 @@ contains
             StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
             IsConserv)
 
+       if(UseElectronPressure .and. UseElectronEntropy) &
+            StateOld_VGB(Pe_,i,j,k,iBlock) = &
+            StateOld_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
+
        State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
             + DtLocal*Change_V(1:nVar)
     end if
@@ -578,6 +587,9 @@ contains
     ! local private arrays...
     if(UseBorisCorrection) call boris_to_mhd( &
          State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
+
+    if(UseElectronPressure .and. UseElectronEntropy) &
+         State_VGB(Pe_,i,j,k,iBlock)=State_VGB(Pe_,i,j,k,iBlock)**GammaElectron
 
     ! Check minimum density
     if(UseRhoMin)then
@@ -2503,7 +2515,11 @@ contains
     Flux_V(Energy_) =  Un*(e + State_V(p_) + pExtra) &
          + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux
 
-    if(UseElectronPressure) Flux_V(Pe_) = Un*StateCons_V(Pe_)
+    if(UseElectronPressure)then
+       if(UseElectronEntropy) &
+            StateCons_V(Pe_) = State_V(Pe_)**(1/GammaElectron)
+       Flux_V(Pe_) = Un*StateCons_V(Pe_)
+    end if
 
     if(Ehot_ > 1) Flux_V(Ehot_) = Un*State_V(Ehot_)
 

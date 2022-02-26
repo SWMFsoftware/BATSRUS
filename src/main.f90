@@ -35,6 +35,7 @@ program batsrus
   implicit none
 
   integer :: iSession=1
+  logical :: IsForcedStop = .false.
   real(Real8_) :: CpuTimeStart
 
   ! Initialization of MPI/parallel message passing.
@@ -64,9 +65,10 @@ program batsrus
   ! Initialize time which is used to check CPU time
   CpuTimeStart = MPI_WTIME()
 
-  ! Delete BATSRUS.SUCCESS and BATSRUS.STOP files if found
+  ! Delete BATSRUS.SUCCESS, BATSRUS.DONE and BATSRUS.STOP files if found
   if(iProc==0)then
      call remove_file('BATSRUS.SUCCESS')
+     call remove_file('BATSRUS.DONE')
      call remove_file('BATSRUS.STOP')
   end if
 
@@ -176,6 +178,7 @@ program batsrus
 
   ! Touch BATSRUS.SUCCESS
   if(iProc==0) call touch_file('BATSRUS.SUCCESS')
+  if(iProc==0 .and. .not. IsForcedStop) call touch_file('BATSRUS.DONE')
 
   call clean_mpi
 
@@ -197,26 +200,25 @@ contains
 
     use ModMain, ONLY: CpuTimeMax, DoCheckStopFile
 
-    logical :: IsTimeToStop
     integer :: iError
     !--------------------------------------------------------------------------
-    IsTimeToStop = .false.
+    IsForcedStop = .false.
 
     if(iProc == 0)then
        if(CpuTimeMax > 0 .and. MPI_WTIME() - CpuTimeStart >= CpuTimeMax)then
           write(*,*)'CPU time exceeded:', CpuTimeMax, MPI_WTIME()-CpuTimeStart
-          IsTimeToStop=.true.
+          IsForcedStop=.true.
        end if
-       if(.not.IsTimeToStop .and. DoCheckStopFile) then
-          inquire(FILE='BATSRUS.STOP', EXIST=IsTimeToStop)
-          if (IsTimeToStop) &
+       if(.not.IsForcedStop .and. DoCheckStopFile) then
+          inquire(FILE='BATSRUS.STOP', EXIST=IsForcedStop)
+          if (IsForcedStop) &
                write(*,*)'BATSRUS.STOP file exists: recieved stop signal'
        end if
     end if
 
-    call MPI_BCAST(IsTimeToStop, 1, MPI_LOGICAL, 0, iComm, iError)
+    call MPI_BCAST(IsForcedStop, 1, MPI_LOGICAL, 0, iComm, iError)
 
-    do_stop_run = IsTimeToStop
+    do_stop_run = IsForcedStop
 
   end function do_stop_run
   !============================================================================

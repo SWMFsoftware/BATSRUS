@@ -1066,17 +1066,29 @@ contains
                 call read_var('dX',   PlotDx_DI(1,iFile))
                 call read_var('yLen', PlotRange_EI(2,iFile))
                 call read_var('dY', PlotDx_DI(2,iFile))
-                if (index(StringPlot,'TBL')>0&
-                     .or.index(StringPlot,'tbl')>0) &
-                     call read_var('NameSpmTable',NameSpmTable_I(iFile))
-                ! DEM/EM calculation
                 if (index(StringPlot, 'dem')>0)then
+                   ! DEM/EM calculation
                    TypePlotVar = 'dem'
                    call read_var('LogTeMinDEM',LogTeMinDEM_I(iFile))
                    call read_var('LogTeMaxDEM',LogTeMaxDEM_I(iFile))
                    call read_var('DLogTeDEM',DLogTeDEM_I(iFile))
-                else
-                   TypePlotVar = 'spm'
+                elseif (index(StringPlot, 'fux')>0)then
+                   ! Spectra
+                   TypePlotVar = 'fux'
+                   call read_var('NameSpmTable',NameSpmTable_I(iFile))
+                   call read_var('UseUnobserved',UseUnobserved_I(iFile))
+                   call read_var('LambdaMin', LambdaMin_I(iFile))
+                   call read_var('LambdaMax', LambdaMax_I(iFile))
+                   call read_var('DLambda',   DLambda_I(iFile))
+                   call read_var('UseAlfven',UseAlfven_I(iFile))
+                   call read_var('UseDoppler',UseDoppler_I(iFile))
+                   call read_var('DLambdaIns',DLambdaIns_I(iFile))
+                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
+                   call read_var('UseIonTemp',UseIonTemp_I(iFile))
+                elseif (index(StringPlot, 'nbi')>0)then
+                   ! Narrowband image
+                   call read_var('NameSpmTable',NameSpmTable_I(iFile))
+                   call read_var('NameNbiTable',NameNbiTable_I(iFile))
                 end if
              elseif (index(StringPlot,'los')>0) then
                 TypePlotArea='los'
@@ -1521,6 +1533,18 @@ contains
                 IsDimensionalPlot_I(iFile) = .true.
                 StringPlotVar_I(iFile)='dem em'
                 StringPlotParam_I(iFile)='rbody'
+             elseif(   index(StringPlot,'FUX') > 0 &
+                  .or. index(StringPlot,'fux') > 0)then
+                TypePlotVar='fux'
+                IsDimensionalPlot_I(iFile) = .true.
+                StringPlotVar_I(iFile)='flux'
+                StringPlotParam_I(iFile)='rbody'
+             elseif(   index(StringPlot,'NBI') > 0 &
+                  .or. index(StringPlot,'nbi') > 0)then
+                TypePlotVar='nbi'
+                IsDimensionalPlot_I(iFile) = .true.
+                StringPlotVar_I(iFile)='intensity'
+                StringPlotParam_I(iFile)='rbody'
              else
                 call stop_mpi('Variable definition missing from StringPlot=' &
                      //StringPlot)
@@ -1852,6 +1876,8 @@ contains
             "#TRACEIE", &
             "#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
           call read_field_trace_param(NameCommand)
+       case("#PWCOUPLING")
+          call read_var("RhoPwCoef", RhoPwCoef)
        case("#IECOUPLING")
           call read_ie_velocity_param
        case("#IMCOUPLING","#IM")
@@ -3794,6 +3820,8 @@ contains
       !$acc update device(DoCoupleImPressure, DoCoupleImDensity, TauCoupleIM)
       !$acc update device(DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm)
       !$acc update device(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
+
+      !$acc update device(UseElectronEntropy)
 
     end subroutine correct_parameters
     !==========================================================================

@@ -8,7 +8,7 @@ module ModUser
 
   use ModMain, ONLY: nI, nJ,nK
   use ModChromosphere, ONLY: tChromoSi=>TeChromosphereSi
-  use ModCoronalHeating, ONLY: PoyntingFluxPerB
+  use ModCoronalHeating, ONLY: PoyntingFluxPerB, PoyntingFluxPerBSi
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -172,7 +172,7 @@ contains
     use ModNumConst,   ONLY: cTwoPi
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitB_, BodyNDim_I, BodyTDim_I, &
-         UnitX_, UnitT_, Gamma
+         UnitX_, UnitT_, Gamma, UnitEnergyDens_, UnitU_
 
     real, parameter :: CoulombLog = 20.0
     logical:: DoTest
@@ -189,6 +189,9 @@ contains
 
     UseAlfvenWaves  = WaveFirst_ > 1
     UseWavePressure = WaveFirst_ > 1
+
+    PoyntingFluxPerB = PoyntingFluxPerBSi &
+         *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
 
     ! convert to normalized units
     ChromoN = ChromoNSi*Si2No_V(UnitN_)

@@ -134,7 +134,10 @@ module ModPhysics
   real, dimension(nFluid) :: &
        BodyRho_I = 1.0, BodyP_I = 1.0, &
        PolarRho_I= 1.0, PolarP_I= 1.0, PolarU_I=0.0
-   !$acc declare create(PolarRho_I, PolarP_I)
+  !$acc declare create(PolarRho_I, PolarP_I)
+
+  ! Coefficient for PW passed densities
+  real:: RhoPwCoef = 1.0
 
   ! Number and mass densities for multi-species equations
   real, dimension(nSpecies):: BodyNSpeciesDim_I = -1.0, BodyRhoSpecies_I = -1.0

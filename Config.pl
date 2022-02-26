@@ -86,9 +86,10 @@ my $nWaveNew;
 my $nMaterial;
 my $nMaterialNew;
 my $ChargeState;
-my $nChargeStateAll;
+my $ChargeStateNew;
 
 # Settings for optimization
+my $OptParam    = "ModOptimizeParam.f90";
 my $OptFile     = "src/ModOptimizeParam.f90";
 my $OptFileOrig = "src/ModOptimizeParam_orig.f90";
 my $Opt;
@@ -100,27 +101,19 @@ if(not -d $Src){exit 0};
 &get_settings;
 
 foreach (@Arguments){
-    if(/^-f$/)                {$Force=1;                       next};
-    if(/^-e$/)                {$Equation=1;                    next};
-    if(/^-u$/)                {$UserModule=1;                  next};
-    if(/^-e=(.*)$/)           {$Equation=$1;                   next};
-    if(/^-u=(.*)$/)           {$UserModule=$1;                 next};
-    if(/^-s$/)                {$Show=1;                        next};
-    if(/^-nWave=(.*)$/i)      {
-	# Check the number of wave bins (to be set)
-	die "$ERROR nWave=$1 must be 1 or more\n" if $1 < 1;
-	$nWaveNew=$1;
-	next};
-    if(/^-nMaterial=(.*)$/i)  {
-	# Check the number of material level indices (to be set)
-	die "$ERROR nMaterial=$1 must be 1 or more\n" if $1 < 1;
-	$nMaterialNew=$1;
-	next};
-    if(/^-cs=(.*)/)           {$ChargeState.="$1";            next};
-    if(/^-ng$/i)              {print "ng=$GhostCell\n"; next};
-    if(/^-ng=(.*)$/i)         {$NewGhostCell=$1; next};
-    if(/^-opt$/)              {$Opt="show";  next};
-    if(/^-opt=(.*)$/)         {$Opt=$1; next};
+    if(/^-f$/)                    {$Force=1;                       next};
+    if(/^-e$/)                    {$Equation=1;                    next};
+    if(/^-u$/)                    {$UserModule=1;                  next};
+    if(/^-e=(.*)$/)               {$Equation=$1;                   next};
+    if(/^-u=(.*)$/)               {$UserModule=$1;                 next};
+    if(/^-s$/)                    {$Show=1;                        next};
+    if(/^-nWave=([1-9]\d*)$/i)    {$nWaveNew=$1;                   next};
+    if(/^-nMaterial=([1-9]\d*)$/i){$nMaterialNew=$1;               next};
+    if(/^-cs=(.*)/)               {$ChargeStateNew .= "$1";        next};
+    if(/^-ng$/i)                  {print "ng=$GhostCell\n";        next};
+    if(/^-ng=(.*)$/i)             {$NewGhostCell=$1;               next};
+    if(/^-opt$/)                  {$Opt="show";                    next};
+    if(/^-opt=(.*)$/)             {$Opt=$1;                        next};
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
 
@@ -140,16 +133,22 @@ while(<FILE>){
     next if /^\s*!/; # skip commented out lines
     $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
     $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
-    $nChargeStateAll=$1  if /\bnChargeStateAll\s*=\s*(\d+)/i;
+    $ChargeState=$1  if /NameElement_I\(1:nElement\)\s*=\s*(.*)/;
 }
+$ChargeState =~ tr/,\[\]\' /+/d; # format charge state list as h+o
 close FILE;
-die "$ERROR nWave was not found in equation module\n" if $nWaveNew and not $nWave;
+
+die "$ERROR nWave was not found in equation module\n"
+    if $nWaveNew and not $nWave;
 &set_nwave     if $nWaveNew and $nWaveNew ne $nWave;
-die "$ERROR nMaterial was not found in equation module\n" if $nMaterialNew and not $nMaterial;
+
+die "$ERROR nMaterial was not found in equation module\n"
+    if $nMaterialNew and not $nMaterial;
 &set_nmaterial if $nMaterialNew and $nMaterialNew ne $nMaterial;
 
-die "$ERROR nChargeStateAll was not found in equation module\n" if $ChargeState and not $nChargeStateAll;
-&set_charge_state if $ChargeState;
+die "$ERROR ChargeState was not found in equation module\n"
+    if $ChargeStateNew and not $ChargeState;
+&set_charge_state if $ChargeStateNew and $ChargeStateNew ne $ChargeState;
 
 # Set or list the user modules
 &set_user_module if $UserModule;
@@ -197,7 +196,8 @@ sub set_optimization{
 
     # Read current settings
     my %Opt;
-    `cp $OptFileOrig $OptFile` unless -f $OptFile;
+    # Make sure optimized parameter file exists and is up-to-date
+    `cd src; make $OptParam`;
     open(FILE, $OptFile) or die "$ERROR could not open $OptFile\n";
     while(<FILE>){
 	# Extract adjustables: NAME => ... lines without Orig
@@ -251,6 +251,7 @@ sub set_optimization{
             UseBorisCorrection  => ".false.",
 	    UseDivbSource       => "UseB .and. nDim>1",
 	    UseDtFixed          => ".false.",
+	    UseElectronEntropy  => "UseElectronPressure",
 	    UseGravity          => ".false.",
             UseHyperbolicDivB   => ".false.",
             UseNonConservative  => ".false.",
@@ -338,6 +339,9 @@ sub set_optimization{
 	    }elsif(/^#DIVB\b/){
 		my $use8wave = <FILE>;
 		check_var($Set{"UseDivbSource"}, $use8wave, $first);
+	    }elsif(/^#ELECTRONENTROPY\b/){
+		my $useentropy = <FILE>;
+		check_var($Set{"UseElectronEntropy"}, $useentropy, $first);
 	    }elsif(/^#HYPERBOLICDIVB\b/){
 		my $usehyp = <FILE>;
 		check_var($Set{"UseHyperbolicDivB"}, $usehyp, $first);
@@ -666,7 +670,7 @@ sub set_charge_state{
     
     # Separate input into array
     my @ChargeStateIn;
-    @ChargeStateIn = split('\+',$ChargeState);
+    @ChargeStateIn = split('\+', $ChargeStateNew);
 
     # Get valid element names in correct order
     my @Intersection = ();
@@ -700,23 +704,18 @@ sub set_charge_state{
     }
 
     # Sum of all charge states
-    my $nChargeStateAll = 0;
-    foreach (@nChargeState_I){
-	$nChargeStateAll += $_;
-    }
+    my $nChargeStateAll;
+    foreach (@nChargeState_I){$nChargeStateAll += $_};
 
     # Convert array to string
-    my $nChargeState_I=join(",",@nChargeState_I);
+    my $nChargeState_I = join(",", @nChargeState_I);
     $nChargeState_I = " \[$nChargeState_I\]";
 
     # Element names have length 2, convert array to string
-    foreach my $elem_k (@Element_I){
-	if(length($elem_k) == 1) {
-	    $elem_k = $elem_k . " ";
-	}
+    foreach (@Element_I){
+	s/^(.)$/$1 /; $_ = "'$_'";
     }
-    foreach (@Element_I) {$_ = "'$_'";}
-    my $NameElement_I=join(",",@Element_I);
+    my $NameElement_I = join(",",@Element_I);
     $NameElement_I = " \[$NameElement_I\]";
 
     # Send variables to ModEquation file
@@ -736,6 +735,7 @@ sub set_charge_state{
 	s/\b(NameElement_I\(1:nElement\)\s*=)(.*)/$1$NameElement_I/i;
         print;
     }
+    print "Set charge state in $EquationMod\n" if $Verbose;
 }   
 
 #############################################################################
@@ -805,8 +805,6 @@ sub current_settings{
     my $prev;
     my %Value;
 
-    my $ChargeStateList;
-    
     while(<FILE>){
 	next if /^\s*!/; # skip commented out lines
 	if(s/\&\s*\n//){ # concatenate continuation lines
@@ -825,8 +823,11 @@ sub current_settings{
 	$Equation = $1 if /NameEquation\s*=\s*[\'\"]([^\'\"]*)/;
 
 	# Charge states element list
-	$ChargeStateList = $1 if /NameElement_I\(1:nElement\)\s*=\s*(.*)/;	
+	$ChargeState = $1 if /NameElement_I\(1:nElement\)\s*=\s*(.*)/;	
     }
+    # Convert from [' h', ' o'] to h+o
+    $ChargeState =~ tr/,\[\]\' /+/d;
+
     if($Verbose){
 	print "$_ = $Value{$_}\n" foreach (sort keys %Value);
     }
@@ -842,9 +843,8 @@ sub current_settings{
     my $nNeutralFluid;
     $nNeutralFluid = $nFluid - $Value{"IonLast_"} if $Value{"IonLast_"};
 
-    $Settings .= "Charge states of elements   : $ChargeStateList\n" if
-	$nChargeStateAll;
-    
+    $Settings .= "Charge states of elements   : $ChargeState\n"
+	if $ChargeState;
     $Settings .= "Number of state variables   : nVar=$nVar\n";
     $Settings .= "Number of species           : nSpecies=$nSpecies\n" 
 	if $nSpecies;

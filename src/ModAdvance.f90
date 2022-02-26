@@ -76,6 +76,7 @@ module ModAdvance
   ! Use the conservative electron entropy equation instead of pressure.
   ! This should provide more robust results near strong shocks.
   logical:: UseElectronEntropy = UseElectronPressure
+  !$acc declare create(UseElectronEntropy)
 
   logical:: UseWavePressure = .false.
   !$acc declare create(UseWavePressure)

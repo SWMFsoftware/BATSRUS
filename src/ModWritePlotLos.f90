@@ -88,6 +88,8 @@ contains
          IsCartesianGrid, IsCartesian, IsRzGeometry
     use ModSatelliteFile, ONLY: nSatellite, NameSat_I, XyzSat_DI,  &
          set_satellite_positions
+    use ModSpectrum, ONLY : spectrum_read_table, spectrum_calc_flux, &
+         clean_mod_spectrum
 
     ! Arguments
 
@@ -147,7 +149,7 @@ contains
     ! block and variable Indices
     integer :: iBlock, iMirror, jMirror, kMirror, iVar
 
-    logical :: DoTiming, DoCheckBlock
+    logical :: DoTiming = .false., DoCheckBlock
     logical :: UseScattering, UseRho
 
     ! variables added for sph geometry
@@ -174,6 +176,12 @@ contains
     logical            :: UseDEM = .false., UseSpm = .false.
     integer, parameter :: DEM_ = 1, EM_ = 2
     integer            :: iTe = 1, nLogTeDEM = 1
+
+    ! SPECTRUM - flux/nbi calculation
+    logical            :: UseFlux = .false., UseNbi = .false.
+    integer            :: nLambda = 1
+    real               :: LosDir_D(3)
+    real,allocatable   :: Spectrum_I(:)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
@@ -209,9 +217,13 @@ contains
 
     iSat = 0
 
+    ! Do we calculate SPECTRUM-DEM/EM or flux or narroband image?
     UseSpm = index(TypePlot_I(iFile),'spm')>0
-    ! Do we calculate SPECTRUM-DEM/EM?
     UseDEM = index(TypePlot_I(iFile),'dem')>0
+    UseFlux = index(TypePlot_I(iFile),'fux')>0
+    UseNbi = index(TypePlot_I(iFile),'nbi')>0
+
+    if(UseFlux .or. UseNbi)call spectrum_read_table(iFile,UseNbi)
 
     if(UseSpm)then
        nPix_D          = nint(PlotRange_EI(1:2,iFile)/PlotDx_DI(1:2,iFile))+1
@@ -336,6 +348,10 @@ contains
 
     if(UseDEM)then
        NameAllVar='x y logTe'
+    elseif(UseFlux)then
+       NameAllVar='x y lambda'
+    elseif(UseNbi)then
+       NameAllVar='x y intensity'
     else
        NameAllVar='x y'
     end if
@@ -409,17 +425,25 @@ contains
     bOffset = dot_product(ImageCenter_D, bUnit_D)
 
     ! !! aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
-
     if(UseDEM)then
        nLogTeDEM = &
             nint(LogTeMaxDEM_I(iFile)-LogTeMinDEM_I(iFile))/DLogTeDEM_I(IFile)
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM))
+    elseif(UseFlux)then
+       nLambda = &
+            nint(LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(IFile)
+       allocate( &
+            ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
+            Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
+            Spectrum_I(nLambda))
     else
+       nLambda = 1
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),1), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),1))
+       if(UseNbi)allocate(Spectrum_I(nLambda))
     end if
 
     ImagePe_VIII = 0.0
@@ -442,7 +466,7 @@ contains
 
     ! Do we need to calculate density (also for white light and polarization)
     UseRho = UseScattering .or. any(NamePlotVar_V(1:nPlotVar) == 'rho') &
-         .or. UseEuv .or. UseSxr .or. UseTableGen .or. UseDEM
+         .or. UseEuv .or. UseSxr .or. UseTableGen .or. UseSpm
 
     if(DoTiming)call timing_start('los_block_loop')
 
@@ -479,6 +503,11 @@ contains
           call MPI_REDUCE(ImagePe_VIII, Image_VIII, &
                nPix_D(1)*nPix_D(2)*nPlotVar*nLogTeDEM, &
                MPI_REAL, MPI_SUM, 0, iComm, iError)
+       elseif(UseFlux)then
+          call MPI_REDUCE(ImagePe_VIII, Image_VIII, &
+               nPix_D(1)*nPix_D(2)*nPlotVar*nLambda, &
+               MPI_REAL, MPI_SUM, 0, iComm, iError)
+          call clean_mod_spectrum
        else
           call MPI_REDUCE(ImagePe_VIII, Image_VIII, nPix_D(1)*nPix_D(2)*&
                nPlotVar, MPI_REAL, MPI_SUM, 0, iComm, iError)
@@ -652,6 +681,44 @@ contains
                      CoordMaxIn_D = &
                      [aOffset+aPix, bOffset+bPix, LogTeMaxDEM_I(iFile)], &
                      VarIn_VIII = Image_VIII(:,:,:,:))
+                elseif(UseNbi)then
+                StringHeadLine= 'NBI integrals '// &
+                     ' TIMEEVENT='//trim(StringDateTime)// &
+                     ' TIMEEVENTSTART='//StringDateTime0// &
+                     ' '//StringUnitIdl
+                call save_plot_file(NameFile, &
+                     TypeFileIn = TypeFile_I(iFile), &
+                     StringHeaderIn = StringHeadLine, &
+                     nStepIn = nStep, &
+                     TimeIn = tSimulation, &
+                     ParamIn_I = Param_I(1:neqpar), &
+                     NameVarIn = NameAllVar, &
+                     NameUnitsIn = StringUnitIdl,&
+                     nDimIn = 2, &
+                     CoordMinIn_D = &
+                     [aOffset-aPix, bOffset-bPix], &
+                     CoordMaxIn_D = &
+                     [aOffset+aPix, bOffset+bPix], &
+                     VarIn_VII = Image_VIII(:,:,:,1))
+             elseif(UseFlux)then
+                StringHeadLine= 'Spectrum flux '// &
+                     ' TIMEEVENT='//trim(StringDateTime)// &
+                     ' TIMEEVENTSTART='//StringDateTime0// &
+                     ' '//StringUnitIdl
+                call save_plot_file(NameFile, &
+                     TypeFileIn = TypeFile_I(iFile), &
+                     StringHeaderIn = StringHeadLine, &
+                     nStepIn = nStep, &
+                     TimeIn = tSimulation, &
+                     ParamIn_I = Param_I(1:neqpar), &
+                     NameVarIn = NameAllVar, &
+                     NameUnitsIn = StringUnitIdl,&
+                     nDimIn = 3, &
+                     CoordMinIn_D = &
+                     [aOffset-aPix, bOffset-bPix, LambdaMin_I(iFile)], &
+                     CoordMaxIn_D = &
+                     [aOffset+aPix, bOffset+bPix, LambdaMax_I(iFile)], &
+                     VarIn_VIII = Image_VIII(:,:,:,:))
              else
                 call save_plot_file(NameFile, &
                      TypeFileIn = TypeFile_I(iFile), &
@@ -686,7 +753,7 @@ contains
     call barrier_mpi
 
     deallocate(ImagePe_VIII, Image_VIII)
-
+    if(UseFlux .or. UseNbi)deallocate(Spectrum_I)
     if(UseTableGen) deallocate(InterpValues_I)
 
     if(DoTest)write(*,*) NameSub,' finished'
@@ -701,7 +768,7 @@ contains
            get_tr_los_image, DoPlotThreads, UseTRCorrection
       real:: Distance
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
-           Discriminant = -1.0, SgrtDiscr, DiscrChromo = -1.0, SqrtDiscr
+           Discriminant = -1.0, DiscrChromo = -1.0, SqrtDiscr
       real:: XyzIntersect_D(3), XyzTR_D(3)
       !------------------------------------------------------------------------
 
@@ -722,7 +789,7 @@ contains
 
             r2Pix = aPix**2 + bPix**2
             ! Check if pixel is outside the circular region
-            if( r2Pix > rSizeImage2 .and. .not. UseDEM) CYCLE
+            if( r2Pix > rSizeImage2 .and. .not. UseSpm )CYCLE
 
             ! Get the 3D location of the pixel
             XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
@@ -732,6 +799,7 @@ contains
             Distance = norm2(LosPix_D)
             ! Unit vector pointing from pixel center to observer
             LosPix_D = LosPix_D/Distance
+            LosDir_D = LosPix_D
 
             ! Calculate whether there are intersections with the rInner sphere
             ! The LOS line can be written as XyzLine_D = XyzPix_D + d*LosPix_D
@@ -1023,7 +1091,8 @@ contains
       use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
            iRhoIon_I, iPIon_I
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
-      use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
+      use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_, Bx_, Bz_
+      use ModB0,          ONLY: UseB0, B0_DGB
       use BATL_lib,       ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D, CoordMin_D
       use ModUserInterface ! user_set_plot_var
 
@@ -1065,6 +1134,9 @@ contains
       real :: TeCutSi = 4.0e+5
       real :: DeltaTeCutSi = 3.0e+4
       real :: FractionTrue
+
+      ! DEM/EM calculation
+      real :: LogTeSi
 
       !------------------------------------------------------------------------
       rLos2= sum(XyzLos_D**2)
@@ -1134,13 +1206,23 @@ contains
             ! Interpolate in the physical domain
             State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
                  nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+            if(UseB0 .and. UseFlux)State_V(Bx_:Bz_) = State_V(Bx_:Bz_) &
+                 + interpolate_vector(B0_DGB(:,:,:,:,iBlock), &
+                 3, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
          end if
          DoneStateInterpolate = .true.
          Rho = State_V(Rho_)
       end if
 
-      if(UseEuv .or. UseSxr .or. UseTableGen .or. UseDEM)then
+      if(UseFlux .or. UseNbi)then
+         Spectrum_I=0.
+         call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
+              UseNbi, Spectrum_I(:))
+         ImagePe_VIII(1,iPix,jPix,:)=ImagePe_VIII(1,iPix,jPix,:)+Spectrum_I(:)
+         RETURN
+      end if
 
+      if(UseEuv .or. UseSxr .or. UseTableGen .or. UseDEM)then
          if(UseMultiIon)then
             Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
          elseif(UseIdealEos)then
@@ -1156,16 +1238,18 @@ contains
 
          ! !! So minimum temperature is cTolerance in SI units???
          TeSi = max(Te*No2Si_V(UnitTemperature_), cTolerance)
+         LogTeSi = log10(TeSi)
 
          ! Here 1e-6 is to convert to CGS
          Ne = 1.0e-6*Ne*No2Si_V(UnitN_)
 
          if(UseDEM)then
-
             ! Find temperature bin
-            iTe = int((log10(TeSi) - LogTeMinDEM_I(iFile))/DLogTeDEM_I(iFile))&
+            iTe = int((LogTeSi - LogTeMinDEM_I(iFile))/DLogTeDEM_I(iFile))&
                  + 1
-            if(iTe < 1 .or. iTe > nLogTeDEM)RETURN
+
+            if(LogTeSi < LogTeMinDEM_I(iFile) .or. &
+                 iTe > nLogTeDEM)RETURN
 
             ! Integrate DEM and EM values
             ImagePe_VIII(DEM_,iPix,jPix,iTe) = &
@@ -2050,6 +2134,9 @@ contains
        if(index(TypePlot_I(iFile),'dem')>0)then
           write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' logK'
+       elseif(index(TypePlot_I(iFile),'fux')>0)then
+          write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
+               trim(NameIdlUnit_V(UnitX_))//' A'
        else
           write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' '//&
@@ -2109,6 +2196,12 @@ contains
           case('em')
              write(StringUnitIdl,'(a)') &
                   trim(StringUnitIdl)//' '//'[cm^-3]'
+          case('fux')
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[erg sr^-1 cm^-2 A^-1]'
+          case('nbi')
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[DN/s]'
              ! DEFAULT FOR A BAD SELECTION
           case default
              write(StringUnitIdl,'(a)') &

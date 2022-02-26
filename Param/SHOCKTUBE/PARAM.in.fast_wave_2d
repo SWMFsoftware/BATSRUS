@@ -34,6 +34,11 @@ NONE			TypeNormalization
 -0.5			zMin
  0.5			zMax
 
+#GRIDLEVEL
+1			nLevel
+sphere0			StringShape
+10.0			Radius
+
 #GRIDGEOMETRY
 rotatedcartesian		TypeGeometry
 
@@ -42,7 +47,7 @@ rotatedcartesian		TypeGeometry
 0.75			ShockSlope
 
 #GRIDBLOCKALL
-30			MaxBlock
+100			MaxBlock
 
 #UNIFORMSTATE
 1.0			StateVar Rho
@@ -122,6 +127,12 @@ z=0 mhd idl_ascii		StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
 0.0			DxSavePlot
+
+#DOAMR
+T			DoAmr
+-1			DnAmr
+10.0			DtAmr
+T			IsStrictAmr
 
 #STOP
 -1			MaxIteration

@@ -470,7 +470,8 @@ contains
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModLoadBalance, ONLY: load_balance_blocks
-    use ModConservative, ONLY: IsDynamicConservCrit, select_conservative
+    use ModConservative, ONLY: IsDynamicConservCrit, IsStaticConservCrit, &
+         IsConserv_CB, select_conservative
     use ModBoundaryGeometry, ONLY: fix_geometry
     use ModWriteProgress, ONLY: write_timeaccurate
     use ModUpdateState, ONLY: update_b0, update_te0, fix_anisotropy
@@ -541,8 +542,10 @@ contains
     ! Switch off steady blocks to reduce calculation
     if(UsePartSteady) call part_steady_switch(.true.)
 
-    ! Reset conservative criteria based on current solution
-    if(IsDynamicConservCrit) call select_conservative
+    ! (Re)set conservative criteria based on current solution
+    if(IsDynamicConservCrit .or. &
+         IsStaticConservCrit .and. .not.allocated(IsConserv_CB)) &
+         call select_conservative
 
     if(UseImplicit.and.nBlockImplALL>0)then
        call advance_part_impl

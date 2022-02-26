@@ -14,7 +14,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   use ModMultiFluid,     ONLY: UseMultiIon, nIonFluid, &
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
   use ModTriangulateSpherical, ONLY: find_triangle_sph
-  use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_
+  use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_, RhoPwCoef
   use ModB0,             ONLY: get_b0
   use CON_planet_field,  ONLY: map_planet_field
 
@@ -162,10 +162,10 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   ! interpolate values
   if(UseMultiIon)then
-     State_V(iRhoIon_I) = &
-          Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) + &
-          Area2*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode2) + &
-          Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3)
+     State_V(iRhoIon_I) = RhoPwCoef* &
+          ( Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) &
+          + Area2*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode2) &
+          + Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3) )
      do iIon = 1, nIonFluid
         ! Calculate field aligned velocity vector per fluid
         iUGm = iUGmFirst + iIon - 1
@@ -184,17 +184,18 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   else
      if(UseMultiSpecies) then
         ! Interpolate species densities and put total into Rho_
-        State_V(SpeciesFirst_:SpeciesLast_) = &
-             Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) + &
-             Area2*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode2) + &
-             Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3)
+        State_V(SpeciesFirst_:SpeciesLast_) = RhoPwCoef* &
+             ( Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) &
+             + Area2*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode2) &
+             + Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3) )
+
         State_V(Rho_) = sum(State_V(SpeciesFirst_:SpeciesLast_))
      else
         ! For simple MHD the StateGm_VI contains the total density
-        State_V(Rho_) = &
-             Area1*StateGm_VI(iRhoGmFirst, iNode1) + &
-             Area2*StateGm_VI(iRhoGmFirst, iNode2) + &
-             Area3*StateGm_VI(iRhoGmFirst, iNode3)
+        State_V(Rho_) = RhoPwCoef* &
+             ( Area1*StateGm_VI(iRhoGmFirst, iNode1) &
+             + Area2*StateGm_VI(iRhoGmFirst, iNode2) &
+             + Area3*StateGm_VI(iRhoGmFirst, iNode3) )
      end if
 
      ! Field aligned velocity
@@ -212,6 +213,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      write(*,*)'XyzPw_D       =', Xyz_D
      write(*,*)'Area1,2,3     =', Area1, Area2, Area3
      write(*,*)'sum(Area1,2,3)     =', Area1 + Area2 + Area3
+     write(*,*)'RhoPwCoef     =', RhoPwCoef
      write(*,*)'State_V(Rho_) =', State_V(Rho_)*No2Io_V(UnitRho_)
      write(*,*)'B0_D          =', B0_D
      write(*,*)'State_V(Ux:Uz)=', State_V(Ux_:Uz_)*No2Io_V(UnitU_)
