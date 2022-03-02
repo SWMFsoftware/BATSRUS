@@ -221,6 +221,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
+
   end subroutine prepare_amr
   !============================================================================
 
@@ -250,6 +251,7 @@ contains
     use ModVarIndexes, ONLY: DefaultState_V
 
     use ModParticles, ONLY: message_pass_particles
+
     ! Check if we have the same grid as before, store old grid id
     integer:: iLastGrid=-1, iLastDecomposition=-1
 
@@ -366,6 +368,7 @@ contains
     if(DoProfileAmr)call timing_stop('amr::redistribute_particles')
 
     call test_stop(NameSub, DoTest)
+
   end subroutine do_amr
   !============================================================================
   subroutine amr_criteria(Crit_IB)

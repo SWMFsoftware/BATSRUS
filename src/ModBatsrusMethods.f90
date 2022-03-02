@@ -175,7 +175,7 @@ contains
            get_state_from_vdf, trace_particles
 
       use ModUserInterface ! user_initial_perturbation, user_action
-
+      
       ! Set intial conditions for solution in each block.
 
       ! local variables
@@ -444,7 +444,7 @@ contains
          Parcel_DI, nParcel
     use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
-    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
+    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure, State_VGB
     use ModAdvanceExplicit, ONLY: advance_explicit, update_secondbody
     use ModAdvectPoints, ONLY: advect_all_points, advect_points
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
@@ -460,7 +460,7 @@ contains
     use ModLaserHeating,    ONLY: add_laser_heating
     use ModVarIndexes, ONLY: Te0_
     use ModMessagePass, ONLY: exchange_messages, DoExtraMessagePass
-    use ModB0, ONLY: DoUpdateB0, DtUpdateB0
+    use ModB0, ONLY: DoUpdateB0, DtUpdateB0, B0_DGB
     use ModResistivity, ONLY: &
          UseResistivity, UseHeatExchange, calc_heat_exchange
     use ModMultiFluid, ONLY: UseMultiIon
@@ -477,6 +477,9 @@ contains
     use ModUpdateState, ONLY: update_b0, update_te0, fix_anisotropy
     use ModProjectDivB, ONLY: project_divb
     use ModCleanDivB,   ONLY: clean_divb
+#ifdef _OPENACC
+    use BATL_amr, ONLY: sync_cpu_gpu_amr
+#endif
     use BATL_lib, ONLY: iProc
     use ModFreq, ONLY: is_time_to
     use ModPic, ONLY: AdaptPic, calc_pic_criteria, &
@@ -672,10 +675,17 @@ contains
        nStepPrev = -100
 
        ! Do AMR without full initial message passing
+#ifdef _OPENACC
+       !update device
+       call sync_cpu_gpu_amr(1)
+#endif
        call prepare_amr(DoFullMessagePass=.false., TypeAmr='all')
        if(IsTimeLoop) call BATS_save_files('BEFOREAMR')
        call do_amr
-
+#ifdef _OPENACC
+       !update host
+       call sync_cpu_gpu_amr(0)
+#endif
        ! Output timing after AMR.
        call timing_stop(NameThisComp//'_amr')
        if(iProc == 0 .and. lVerbose > 0)then
