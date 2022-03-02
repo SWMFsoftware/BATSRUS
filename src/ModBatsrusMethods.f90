@@ -174,8 +174,7 @@ contains
       use ModParticleMover,       ONLY: UseHybrid, get_vdf_from_state, &
            get_state_from_vdf, trace_particles
 
-      use ModUserInterface ! user_initial_perturbation, user_action
-      
+      use ModUserInterface ! user_initial_perturbation, user_action      
       ! Set intial conditions for solution in each block.
 
       ! local variables
@@ -444,7 +443,7 @@ contains
          Parcel_DI, nParcel
     use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
-    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure, State_VGB
+    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
     use ModAdvanceExplicit, ONLY: advance_explicit, update_secondbody
     use ModAdvectPoints, ONLY: advect_all_points, advect_points
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
@@ -460,7 +459,7 @@ contains
     use ModLaserHeating,    ONLY: add_laser_heating
     use ModVarIndexes, ONLY: Te0_
     use ModMessagePass, ONLY: exchange_messages, DoExtraMessagePass
-    use ModB0, ONLY: DoUpdateB0, DtUpdateB0, B0_DGB
+    use ModB0, ONLY: DoUpdateB0, DtUpdateB0
     use ModResistivity, ONLY: &
          UseResistivity, UseHeatExchange, calc_heat_exchange
     use ModMultiFluid, ONLY: UseMultiIon
