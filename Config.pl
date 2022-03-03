@@ -249,6 +249,7 @@ sub set_optimization{
 	    UseB0               => "UseB"  ,
 	    UseBody             => ".true.",
             UseBorisCorrection  => ".false.",
+	    UseCoarseAxis       => ".false.",
 	    UseDivbSource       => "UseB .and. nDim>1",
 	    UseDtFixed          => ".false.",
 	    UseElectronEntropy  => "UseElectronPressure",
@@ -342,6 +343,9 @@ sub set_optimization{
 	    }elsif(/^#ELECTRONENTROPY\b/){
 		my $useentropy = <FILE>;
 		check_var($Set{"UseElectronEntropy"}, $useentropy, $first);
+	    }elsif(/^#COARSEAXIS\b/){
+                my $usecoarseaxis = <FILE>;
+		check_var($Set{"UseCoarseAxis"}, $usecoarseaxis, $first);
 	    }elsif(/^#HYPERBOLICDIVB\b/){
 		my $usehyp = <FILE>;
 		check_var($Set{"UseHyperbolicDivB"}, $usehyp, $first);

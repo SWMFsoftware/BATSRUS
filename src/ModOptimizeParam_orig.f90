@@ -35,6 +35,8 @@ module ModOptimizeParam
        ClightFactor => ClightFactor, &
        UsePMin => UsePMin, &
        UseRhoMin => UseRhoMin
+  use ModCoarseAxis, ONLY: &
+       UseCoarseAxis => UseCoarseAxis
   use BATL_lib, ONLY: &
        IsCartesian => IsCartesian, &
        IsCartesianGrid => IsCartesianGrid
