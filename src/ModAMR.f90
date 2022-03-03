@@ -5,7 +5,8 @@
 module ModAMR
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+       test_start, test_stop, lVerbose, sync_cpu_gpu_amr
+  use ModUpdateStateFast, ONLY: sync_cpu_gpu
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModCellGradient, ONLY: calc_gradient
   use ModFreq
@@ -164,7 +165,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_amr_param
   !============================================================================
-
   subroutine prepare_amr(DoFullMessagePass, TypeAmr)
 
     use ModMain,     ONLY: nBlockMax
@@ -194,6 +194,8 @@ contains
          DoResChangeOnlyIn=.not.DoFullMessagePass)
     if(DoProfileAmr) call timing_stop('amr::exchange_true')
 
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB)
+    
     if(UsePartSteady)then
        ! Convert iTypeAdvance_BP to _A ! should use _A all the time
        allocate(iTypeAdvance_A(MaxNode))
@@ -223,7 +225,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine prepare_amr
   !============================================================================
-
   subroutine do_amr
 
     use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
@@ -232,8 +233,7 @@ contains
     use ModGeometry, ONLY: CellSizeMin, CellSizeMax, Used_GB, nUsedCell, &
          count_true_cells
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
-         nVar, State_VGB, &
-         SkippedBlock_
+         nVar, State_VGB, SkippedBlock_
     use ModLoadBalance, ONLY: load_balance
     use ModFieldTrace, ONLY: Trace_DSNB
     use ModBlockData, ONLY: clean_block_data
@@ -260,6 +260,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    call sync_cpu_gpu('change on CPU', NameSub, State_VGB)
     if(DoProfileAmr) call timing_start('amr::regrid_batl')
     if(UsePartSteady)then
        call regrid_batl(nVar, State_VGB, DtMax_B, DoTestIn=DoTest, &
@@ -349,6 +350,10 @@ contains
     if(DoProfileAmr) call timing_start('amr::load_balance')
     call load_balance(DoMoveCoord=.true., DoMoveData=.true., IsNewBlock=.true.)
     if(DoProfileAmr) call timing_stop('amr::load_balance')
+
+    ! Send new grid info to GPU
+    call sync_cpu_gpu_amr
+    
     ! redo message passing
     if(DoProfileAmr) call timing_start('amr::exchange_false')
     call exchange_messages(UseOrder2In=.false.)
