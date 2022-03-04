@@ -58,6 +58,7 @@ contains
 
   end subroutine read_coarse_axis_param
   !============================================================================
+
   subroutine calc_coarse_axis_timestep(iBlock,iHemisphere)
     !$acc routine vector
 
@@ -77,7 +78,13 @@ contains
     character(len=*), parameter:: NameSub = 'calc_coarse_axis_timestep'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
+#ifdef _OPENACC
+    iGang = iBlock
+#else
     iGang = 1
+#endif
+
     select case(iHemisphere)
     case(NorthHemiSph_)
        k = nK - nCoarseLayer; kStride =  1; jMerge = 1
@@ -110,15 +117,17 @@ contains
           end do
        end do
     end do
+
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine calc_coarse_axis_timestep
   !============================================================================
+
   subroutine coarsen_axis_cells
 
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B
     use ModAdvance, ONLY: nVar, State_VGB
-    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
-         IsRLonLat
+    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, IsRLonLat
     use ModNumConst, ONLY: cHalfPi
 
     integer :: i, j, k, iBlock,&
@@ -138,6 +147,8 @@ contains
     if(.not.IsRLonLat) &
          call stop_mpi(NameSub//': invalid geometry')
 
+    !$acc parallel
+    !$acc loop independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
@@ -156,9 +167,9 @@ contains
           !$acc loop
           do j = 1, nJ/jMerge
              jStart = (j-1)*jMerge + 1; jLast = j*jMerge
-             !$acc loop independent
+             !$acc loop
              do i = 1,nI
-                !$acc loop independent
+                !$acc loop
                 do iVar = 1,nVar
                    State_VGB(iVar,i,jStart:jLast,k,iBlock) = &
                         sum(State_VGB(iVar,i,jStart:jLast,k,iBlock))/jMerge
@@ -167,6 +178,7 @@ contains
           end do
        end do
     end do
+    !$acc end parallel
 
     if(DoTest)then
        if(.not.Unused_B(iBlockTest)) &
