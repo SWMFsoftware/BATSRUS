@@ -195,7 +195,7 @@ contains
     if(DoProfileAmr) call timing_stop('amr::exchange_true')
 
     call sync_cpu_gpu('update on CPU', NameSub, State_VGB)
-    
+
     if(UsePartSteady)then
        ! Convert iTypeAdvance_BP to _A ! should use _A all the time
        allocate(iTypeAdvance_A(MaxNode))
@@ -353,7 +353,7 @@ contains
 
     ! Send new grid info to GPU
     call sync_cpu_gpu_amr
-    
+
     ! redo message passing
     if(DoProfileAmr) call timing_start('amr::exchange_false')
     call exchange_messages(UseOrder2In=.false.)
