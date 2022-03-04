@@ -8565,17 +8565,11 @@ density is given for all species followed by the (common) temperature.
 The exact effect of these parameters depends on the settings
 in the #INNERBOUNDARY command.
 
-The default values depend on the component:
-For GM rBody=3, rCurrents=4, BodyNDim = 5/cc and BodyTDim = 25000 K.
-However, the above #MAGNETOSPHERE example shows the typically used values
-for Earth running with a single ion fluid.
-For SC/IH/OH: rBody=1, BodyNDim = 1.5e8/cc, BodyTDim = 2.8e6 K.
-The rBody and rCurrents are given in normalized units (usually
-planetary or solar radii).
-
 This command is currently used twice to set some values for the solar corona
 even when there is no BODY boundary condition. This should be removed.
 For now multiple use is allowed.
+
+The default is UseBody=F. Some typical settings are shown above.
 </command>
 
 <command name="STAR" if="$_IsFirstSession">

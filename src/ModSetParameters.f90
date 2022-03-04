@@ -323,13 +323,6 @@ contains
        call adjust_freq(AdaptPic, &
             nStep+1, tSimulation+1e-6, IsTimeAccurate)
 
-       ! Planet NONE in GM means that we do not use a body
-       if (NameThisComp=='GM' .and. NamePlanet == 'NONE' &
-            .and. IsFirstSession)then
-          UseBody = .false.
-          rBody = 0.0
-       end if
-
        ! Initialize axes (coordinate transformation matrices)
        call init_axes(StartTime)
 
@@ -3043,8 +3036,6 @@ contains
       case('SC', 'IH', 'OH', 'EE')
          ! Body parameters
          UseGravity = .true.
-         UseBody    = .true.
-         if(NameThisComp == 'EE') UseBody = .false.
          Rbody      = 1.0
          Rcurrents  =-1.0
 
@@ -3106,9 +3097,6 @@ contains
       case('GM')
          ! Body Parameters
          UseGravity = .false.
-         UseBody      = .true.
-         Rbody      = 3.0
-         Rcurrents  = 4.0
 
          ! Boundary Conditions and Normalization
          ! Default BC type is 'none'.
