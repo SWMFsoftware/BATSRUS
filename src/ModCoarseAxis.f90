@@ -11,6 +11,7 @@ module ModCoarseAxis
   SAVE
   logical:: UseCoarseAxis = .false.
   integer:: nCoarseLayer = 3
+  !$acc declare create(UseCoarseAxis,nCoarseLayer)
 
   ! If nCoarseLayer=1, then each pair of the cells near the axis are merged
   !----------a x i s---------------
@@ -39,8 +40,10 @@ module ModCoarseAxis
 contains
   !============================================================================
   subroutine read_coarse_axis_param
+
     use ModReadParam, ONLY:read_var
     use ModSize, ONLY: nJ
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_coarse_axis_param'
     !--------------------------------------------------------------------------
@@ -50,14 +53,22 @@ contains
     if( ( nJ/(2**nCoarseLayer) )*(2**nCoarseLayer)/=nJ)&
          call stop_mpi('nJ must be a multiple of 2^nCoarseLayer')
     call test_stop(NameSub, DoTest)
+
+    !$acc update device(UseCoarseAxis,nCoarseLayer)
+
   end subroutine read_coarse_axis_param
   !============================================================================
+
   subroutine calc_coarse_axis_timestep(iBlock,iHemisphere)
+    !$acc routine vector
+
     use ModSize, ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, DtMax_CB
     use ModGeometry, ONLY: Used_GB
     use BATL_lib, ONLY: CellVolume_GB
+
     integer, intent(in):: iBlock, iHemisphere
+
     ! Misc
     ! Loop variables
     integer :: i, j, k, jMerge, jStart, jLast, kLayer, kStride
@@ -67,7 +78,13 @@ contains
     character(len=*), parameter:: NameSub = 'calc_coarse_axis_timestep'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
+#ifdef _OPENACC
+    iGang = iBlock
+#else
     iGang = 1
+#endif
+
     select case(iHemisphere)
     case(NorthHemiSph_)
        k = nK - nCoarseLayer; kStride =  1; jMerge = 1
@@ -100,15 +117,17 @@ contains
           end do
        end do
     end do
+
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine calc_coarse_axis_timestep
   !============================================================================
+
   subroutine coarsen_axis_cells
 
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B
     use ModAdvance, ONLY: nVar, State_VGB
-    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
-         IsRLonLat
+    use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, IsRLonLat
     use ModNumConst, ONLY: cHalfPi
 
     integer :: i, j, k, iBlock,&
@@ -128,8 +147,11 @@ contains
     if(.not.IsRLonLat) &
          call stop_mpi(NameSub//': invalid geometry')
 
+    !$acc parallel
+    !$acc loop independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
+
        if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
           k = nK - nCoarseLayer; kStride =  1; jMerge = 1
        elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
@@ -138,12 +160,16 @@ contains
           CYCLE
        end if
 
+       !$acc loop
        do kLayer = 1, nCoarseLayer
           k = k + kStride; jMerge = jMerge*2
 
+          !$acc loop
           do j = 1, nJ/jMerge
              jStart = (j-1)*jMerge + 1; jLast = j*jMerge
+             !$acc loop
              do i = 1,nI
+                !$acc loop
                 do iVar = 1,nVar
                    State_VGB(iVar,i,jStart:jLast,k,iBlock) = &
                         sum(State_VGB(iVar,i,jStart:jLast,k,iBlock))/jMerge
@@ -152,11 +178,14 @@ contains
           end do
        end do
     end do
+    !$acc end parallel
+
     if(DoTest)then
        if(.not.Unused_B(iBlockTest)) &
             write(*,*) NameSub,' final state, energy=', &
             State_VGB(:,iTest,jTest,kTest,iBlockTest)
     end if
+
     call test_stop(NameSub, DoTest)
 
   end subroutine coarsen_axis_cells

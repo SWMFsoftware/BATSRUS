@@ -50,14 +50,22 @@ contains
   end subroutine barrier_mpi2
   !============================================================================
   subroutine stop_mpi(String)
+    !$acc routine seq
 
     use ModMain, ONLY : nIteration, tSimulation, NameThisComp
     use ModUtilities, ONLY: CON_stop
 
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
+
+#ifndef _OPENACC
     write(*,*) trim(NameThisComp),' BATSRUS stopping at iteration=', &
          nIteration,' simulation time=', tSimulation
+#endif
+#ifdef TESTACC
+    write(*,*) ' BATSRUS stopping at iteration=', nIteration, &
+         ' simulation time=', tSimulation
+#endif
 
     call CON_stop(String)
 

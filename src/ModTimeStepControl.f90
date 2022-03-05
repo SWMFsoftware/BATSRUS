@@ -168,8 +168,14 @@ contains
        end if
     end do; end do; end do
 
+    if(UseCoarseAxis)then
+       if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
+          call calc_coarse_axis_timestep(iBlock,NorthHemiSph_)
+       elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
+          call calc_coarse_axis_timestep(iBlock,SouthHemiSph_)
+       end if
 #ifndef _OPENACC
-    if(DoFixAxis)then
+    elseif(DoFixAxis)then
        ! Use the time step in the super cell of the cell just outside.
        ! In time accurate this removes the time step constraints from supercell
        ! In local time stepping mode it increases the time step
@@ -193,14 +199,10 @@ contains
              end do
           end if
        end if
-    elseif(UseCoarseAxis)then
-       if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
-          call calc_coarse_axis_timestep(iBlock,NorthHemiSph_)
-       elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
-          call calc_coarse_axis_timestep(iBlock,SouthHemiSph_)
-       end if
+#endif
     end if
 
+#ifndef _OPENACC
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
     if(UseAlfvenWaveDissipation .or.UseRadCooling)then

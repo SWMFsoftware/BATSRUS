@@ -78,6 +78,10 @@ none			TypeCoronalHeating
 #USERSWITCH
 +init +ic		StringSwitch
 
+#COARSEAXIS
+T			UseCoarseAxis
+2			nCoarseLayer
+
 #USERINPUTBEGIN -------------------------------------
 
 #CHROMOBC
