@@ -1,6 +1,12 @@
+! Old defaults before March 04 2022
+#MAGNETOSPHERE
+T                       UseBody
+3.0                     rBody
+4.0                     rCurrents
+5.0			BodyNDim
+25000.0			BodyTDim
 
-#BEGIN_COMP GM
-
+! Old defaults
 #SOLARWIND
 5.0			SW_rho_dim [n/cc]    \
 181712.175		SW_T_dim [K]          | Standard GGCM
@@ -10,7 +16,3 @@
 0.0			SW_Bx_dim [nT]        |
 0.0			SW_By_dim [nT]        |
 5.0			SW_Bz_dim [nT]       /
-
-#END_COMP GM
-
-#END

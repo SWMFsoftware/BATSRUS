@@ -1268,7 +1268,7 @@ test_func_compile:
 	make PIDL
 
 test_func_run: test_rundir
-	./TestSuite.pl -r='${OMPIRUN} ' -d=${TESTDIR} func
+	./TestSuite.pl -r='${OMPIRUN} ' -d=${TESTDIR}
 
 test_func_check:
 	if [ "${BLESS}" != "NO" ]; then make test_func_bless; fi
