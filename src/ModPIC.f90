@@ -1499,7 +1499,7 @@ contains
     call get_current(i, j, k, iBlock, Current_D)
     Current = norm2(Current_D)
     CurrentCrossB_D = cross_product(Current_D, FullB_DG(:,i,j,k))
-    CritJBperp = Current**2 / (norm2(CurrentCrossB_D) + Current*CriteriaB1)&
+    CritJBperp = Current**2 / (norm2(CurrentCrossB_D) + (Current+1e-30)*CriteriaB1)&
          *CellSize_DB(1, iBlock)
 
   end subroutine calc_crit_jbperp
