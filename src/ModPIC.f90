@@ -1477,6 +1477,9 @@ contains
   subroutine calc_crit_jbperp( &
        i, j, k, iBlock, FullB_DG, CriteriaB1, CritJBperp)
 
+
+    ! Calculate dx*j/Bperp = dx*j^2/|j x B|
+    
     use BATL_lib,          ONLY: CellSize_DB, MinI, MaxI,&
          MinJ, MaxJ, MinK, MaxK
     use ModCurrent,        ONLY: get_current
@@ -1499,8 +1502,8 @@ contains
     call get_current(i, j, k, iBlock, Current_D)
     Current = norm2(Current_D)
     CurrentCrossB_D = cross_product(Current_D, FullB_DG(:,i,j,k))
-    CritJBperp = Current**2 / (norm2(CurrentCrossB_D) + (Current+1e-30)*CriteriaB1)&
-         *CellSize_DB(1, iBlock)
+    CritJBperp = CellSize_DB(1, iBlock) * Current**2 &
+         / ( norm2(CurrentCrossB_D) + (Current + 1e-30)*CriteriaB1)
 
   end subroutine calc_crit_jbperp
   !============================================================================
