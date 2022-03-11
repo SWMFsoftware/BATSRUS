@@ -87,8 +87,6 @@ user			TypeBc1
 float			TypeBc2
 user			TypeBc3
 user			TypeBc4
-reflect			zMinBc
-reflect			zMaxBc
 
 #SCHEME			2 ghost cells
 5			nOrder

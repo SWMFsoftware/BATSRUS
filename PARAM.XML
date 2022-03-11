@@ -4980,7 +4980,7 @@ The default is to flush the output, i.e. DoFlush=T.
 		 required="T">
 	<option name="GL"             />
 	<option name="GIBSON-LOW"     />
-	<option name="TD "	      />
+	<option name="TD"	      />
 	<option name="TITOV-DEMOULIN" />
 	<option name="TD14"	      />
 	<option name="SPHEROMAK"	      />
@@ -4998,7 +4998,7 @@ The default is to flush the output, i.e. DoFlush=T.
 	<parameter name="ApexHeight" type="real" min="0" default="0" />
 	<parameter name="uCme" type="real" min="0" default="0" />
       </if>
-      <if expr="$TypeCme =~ /TD |TITOV-DEMOULIN/">
+      <if expr="$TypeCme =~ /TD\b|TITOV-DEMOULIN/">
 	<parameter name="BcTubeDim" type="real" default="0" />
 	<parameter name="RadiusMajor" type="real" min="0" default="0" />
 	<parameter name="RadiusMinor" type="real" min="0" default="0" />
@@ -5386,7 +5386,7 @@ Only useful if the initial condition has a non-trivial analytic form.
     <parameter name="yRotate" type="real" min="-360" max="360"
 	       default="0" if="$nK!=1"/>
     <parameter name="zRotate" type="real" min="-360" max="360"
-	       default="0" if="$nK!=1"/>
+	       default="0" if="$nJ!=1"/>
   </if>
 
 #REGION
@@ -7137,7 +7137,7 @@ The default is using 1st order prolongation for the first order scheme
   <parameter name="UseLogPLimiter" type="logical" default="F" />
   <parameter name="UseRhoRatioLimiter" type="logical" default="F" />
   <parameter name="NameVarLimitRatio" type="string" length="$lLine"
-	     if="$UseScalarRhoLimiter" />
+	     if="$UseRhoRatioLimiter" />
 
 #LIMITER
 F		UseLogRhoLimiter
@@ -10075,12 +10075,12 @@ Default values are shown.
 </command>
 
 <command name="TRANSITIONREGION">
-  <parameter name="DoExpandTransitionRegion" type="logical" default="F"/>
+  <parameter name="DoExtendTransitionRegion" type="logical" default="F"/>
   <parameter name="TeTransitionRegionSi" type="real"        default="3.0E+5" />
   <parameter name="DeltaTeModSi" type="real"                default="1.0E+4"
 		   if="$DoExtendTransitionRegion"/>
 #TRANSITIONREGION
-T                    DoExpandTransitionRegion
+T                    DoExtendTransitionRegion
 3.0E+5               TeTransitionRegionSi
 1.0E+4               DeltaTeSi  (read if DoExtendTransitionRegion is true)
 
@@ -10093,13 +10093,14 @@ in this case are maintained to be the same as in the actual transition
 region, however, the spatial scale becomes much longer, so that the TR
 may be modelled with feasible grid resolution.
 
-If DoExpandTransitionRegion is false, the #TRANSITIONREGION command
+If DoExtendTransitionRegion is false, the #TRANSITIONREGION command
 can be used to set the temperature of the top of the transition region.
 Then the special boundary condition (REB - radiation energy balance)
 is used at the "coronal base", while the temperature is fixed at
 Te=TeTopTransitionRegion.
 
-Default value is DoExpandTransitionRegion = .false.
+Default value is DoExtendTransitionRegion = .false.
+and TeTransitionRegionSi = 4e5.
 </command>
 <command name="THREADRESTART">
   <parameter name="DoThreadRestart" type="logical" default="F"/>

@@ -72,8 +72,6 @@ shear			TypeBc1
 shear			TypeBc2
 shear			TypeBc3
 shear			TypeBc4
-float			zMinBc
-float			zMaxBc
 
 #TIMESTEPPING
 2			nStage

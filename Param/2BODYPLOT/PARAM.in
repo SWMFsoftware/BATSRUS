@@ -21,10 +21,9 @@ T			IsTimeAccurate
 10			iHour
 45			iMinute
 0			iSecond
-0.0			FracSecond
 
-#IDEALAXES
 ! align rotation and magnetic axes with z axis
+#IDEALAXES
 
 #ROTATION
 F			UseRotation

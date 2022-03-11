@@ -45,9 +45,6 @@ periodic		TypeBc1
 periodic		TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
-periodic		TypeBc5
-periodic		TypeBc6
-
 
 #HALLRESISTIVITY
 T			UseHallResistFlux
@@ -142,7 +139,6 @@ box_gen			StringShape
 
 #HALLREGION
 +r1 +r2 -r3 -r4 -r5 +r6 +r7 +r8
--1.0			HallSpeedTinyDim
 
 #SAVEINITIAL
 T			DoSaveInitial
