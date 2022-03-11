@@ -1750,8 +1750,10 @@ of the polar boundary where the outflow is defined.
 <command name="CPCPBOUNDARY">
   <parameter name="UseCpcpBc" type="logical" default="F"/>
   <if expr="$UseCpcpBc">
-    <parameter name="Rho0Cpcp" type="real" min="0" default="18"/>
-    <parameter name="RhoPerCpcp" type="real" min="0" default="0.2"/>
+    <for from="1" to="($nIonFluid+$nSpecies-1) or 1">
+      <parameter name="Rho0Cpcp" type="real" min="0" default="18"/>
+      <parameter name="RhoPerCpcp" type="real" min="0" default="0.2"/>
+    </for>
   </if>
 #CPCPBOUNDARY
 T                       UseCpcpBc  (rest is read if true)
