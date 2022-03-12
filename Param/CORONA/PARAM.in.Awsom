@@ -100,7 +100,7 @@ T			UseCoarseAxis
 #USERINPUTEND -------------------------------------
 
 #TRANSITIONREGION
-T			DoExpandTransitionRegion
+T			DoExtendTransitionRegion
 2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
@@ -327,15 +327,16 @@ T			DoAddFluxRope
 15.0			LatitudeCme
 30.0			OrientationCme
 TD			TypeCme
-1			Current
+1			BcTubeDim
 1.005747126436782		RadiusMajor
 0.431034482758621		RadiusMinor
 0.1436781609195402		Depth
-T			UsePlsamaBeta
+T			UsePlasmaBeta
 0.1			PlasmaBeta
 5.0e4			EjectaTemperature
-readbstrap		TypeCharge
-11.976710014764566		bStrapping
+readbstrap		TypeBStrap
+11.976710014764566		bStrappingDim
+none			TypeCharge
 
 #HELIOUPDATEB0
 1.0			DtUpdateB0
