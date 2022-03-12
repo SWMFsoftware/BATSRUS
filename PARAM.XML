@@ -9,7 +9,7 @@ List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 <set name="nSpecies"          type="integer" value="$_Value{nSpecies}"         />
 <set name="nFluid"            type="integer" value="($_Value{nFluid} or 1)"    />
 <set name="nIonFluid"         type="integer" value="($_Value{nIonFluid} or 1)" />
-<set name="nNeturalFluid"     type="integer" value="$_Value{nNeutralFluid}"    />
+<set name="nNeutralFluid"     type="integer" value="$_Value{nNeutralFluid}"    />
 <set name="UsePe"             type="integer" value="$_Value{UsePe}"            />
 <set name="nG"                type="integer" value="$_Value{nG}"               />
 <set name="nI"                type="integer" value="$_Value{nI}"               />
@@ -241,7 +241,7 @@ These modified commands cannot precede the #PLANET command!
 	 if="$_IsFirstSession and $_IsStandAlone">
   <parameter name="NamePlanet" type="string" case="upper" input="select">
     <option name="NONE"			/>
-    <option name="NEW" 			/>
+    <option name="NEW"                  />
     <option name="MERCURY"		/>
     <option name="VENUS"		/>
     <option name="EARTH" default="T"	/>
@@ -265,7 +265,7 @@ These modified commands cannot precede the #PLANET command!
     <option name="COMET67P"		/>
     <option name="HALEBOPP"		/>
   </parameter>
-  <if expr="$NamePlanet eq 'NEW'">
+  <if expr="$NamePlanet =~ /NEW|GANYMEDE|COMET[16]|BORRELLY|PLUTO|NEPTUNE/">
     <parameter name="RadiusPlanet" type="real" min="0" />
     <parameter name="MassPlanet"   type="real" min="0" />
     <parameter name="OmegaPlanet"  type="real" min="0" />
@@ -1320,7 +1320,9 @@ There are no default values. User must set face boundary type if a box is cut ou
 
 <command name="BOUNDARYSTATE" multiple="T">
   <parameter name="StringBoundary" type="string" length="$lLine"/>
-  <parameter name="BoundaryStateDim_V" type="real"/>
+  <for from="1" to="$nVar">
+    <parameter name="BoundaryStateDim_V" type="real"/>
+  </for>
 
 #BOUNDARYSTATE
 body1 1 2 xminbox	StringBoundary
