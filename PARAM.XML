@@ -1173,6 +1173,7 @@ so this command is always present in the current restart header files.
       <option name="usernoinflow"/>
     </parameter>
   </for>
+  <set name="_OUTERBOUNDARY" type="logical" value="T"/>
   <rule
       expr="not($TypeBc1 eq 'periodic' xor $TypeBc2 eq 'periodic')">
     First and second BCs must be both periodic or neither
@@ -1258,6 +1259,8 @@ The default values are 'none' on all sides.
       <option name="user"/>
     </parameter>
   </for>
+  <set name="_BOXBOUNDARY" type="logical" value="T"/>
+  
 #BOXBOUNDARY
 outflow                 TypeBcXmin
 inflow                  TypeBcXmax
@@ -5382,7 +5385,7 @@ Only useful if the initial condition has a non-trivial analytic form.
   </if>
   <if expr="$RotateArea =~ /rotated/">
     <parameter name="xRotate" type="real" min="-360" max="360"
-	       default="0"/>
+	       default="0" if="$nK!=1"/>
     <parameter name="yRotate" type="real" min="-360" max="360"
 	       default="0" if="$nK!=1"/>
     <parameter name="zRotate" type="real" min="-360" max="360"
@@ -10390,6 +10393,10 @@ The default is to use a single PARAM.in file.
 -->
 <rule expr="$MaxBlock>0">
         Number of grid blocks should be set in the first session!
+</rule>
+
+<rule expr="$_OUTERBOUNDARY or $_BOXBOUNDARY">
+  Either #OUTERBOUNDARY or #BOXBOUNDARY must be set in first session
 </rule>
 
 </commandList>
