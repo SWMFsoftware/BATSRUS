@@ -121,11 +121,13 @@ module ModThreadedLC
   ! See above about usage of the latter constant
   integer, parameter:: Impl_=4
 
-  integer        :: nIter = 20
-  real           :: cTol=1.0e-6
+  integer:: nIter = 20
+  real   :: cTol = 1.0e-6
+
 contains
   !============================================================================
   subroutine init_threaded_lc
+
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModLookupTable,     ONLY: i_lookup_table
     use ModConst,           ONLY: cElectronMass, &
@@ -235,9 +237,11 @@ contains
     RhoNoDimCoef = Si2No_V(UnitEnergyDens_)/PeFraction*&
          TeFraction/Si2No_V(UnitTemperature_)
     call test_stop(NameSub, DoTest)
+
   end subroutine init_threaded_lc
   !============================================================================
   subroutine read_threaded_bc_param
+
     use ModReadParam, ONLY: read_var
     character(LEN=7)::TypeBc = 'limited'
     integer :: iError
@@ -257,33 +261,27 @@ contains
        if(iProc==0)write(*,'(a)')&
             'Unknown TypeBc = '//TypeBc//', reset to limited'
     end select
-    call read_var('cTol',cTol, iError)
-    if(iError/=0)then
-       cTol = 1.0e-6 ! Recover the default value
-       RETURN
-    end if
-    call read_var('nIter', nIter, iError)
-    if(iError/=0)then
-       nIter = 20 ! Recover a default value
-       RETURN
-    end if
+    call read_var('Tolerance', cTol, iError)
+    call read_var('MaxIter', nIter, iError)
+
   end subroutine read_threaded_bc_param
   !============================================================================
-  ! Main routine:
-  ! solves MHD equations along thread, to link the state above the
-  ! inner boundary of the global solar corona to the photosphere
   subroutine solve_boundary_thread(j, k, iBlock, &
        iAction, TeSiIn, TiSiIn, PeSiIn, USiIn, AMinorIn, &
        DTeOverDsSiOut, PeSiOut,PiSiOut, RhoNoDimOut, AMajorOut)
-    ! USE:
+
+    ! solve MHD equations along thread, to link the state above the
+    ! inner boundary of the global solar corona to the photosphere
+
     use ModAdvance,          ONLY: nJ
     use ModTransitionRegion, ONLY: HeatCondParSi
     use ModPhysics,      ONLY: InvGammaMinus1,&
          No2Si_V, UnitX_,Si2No_V, UnitB_, UnitTemperature_
     use ModLookupTable,  ONLY: interpolate_lookup_table
-    !INPUT:
+
     ! Cell and block indexes for the boundary point
     integer,intent(in):: j, k, iBlock, iAction
+
     ! Parameters of the state in the true cell near the boundary:
     ! TeSiIn: Temperature in K
     ! USiIn:  Velocity progection on the magnetic field direction.
@@ -291,7 +289,7 @@ contains
     ! AMinorIn: for the wave propagating toward the Sun
     !            WaveEnergyDensity = (\Pi/B)\sqrt{\rho} AMinor**2
     real,   intent(in):: TeSiIn, TiSiIn, PeSiIn, USiIn, AMinorIn
-    !OUTPUT:
+
     ! DTeOverDsSiOut: Temperature derivative along the thread, at the end point
     !                Used to find the electron temperature in the ghostcell
     ! PeSiOut: The electron pressure
@@ -308,6 +306,7 @@ contains
     ! Number of TEMPERATURE nodes (first one is on the top of TR
     ! the last one is in the physical cell of the SC model
     integer        :: nPoint, iPoint
+
     ! Corrrect density and pressure values in the ghost
     real :: GhostCellCorr, BarometricFactor, DeltaTeFactor,             &
          Limiter, DensityRatio, RhoTrueCell,                            &
@@ -415,7 +414,8 @@ contains
        AMajorOut = AMajor_I(nPoint)
        ! Output for temperature gradient, all the other outputs
        ! are meaningless
-       DTeOverDsSiOut = max(0.0,(TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
+       DTeOverDsSiOut = max(0.0, &
+            (TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
             (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
             BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))
        ! Do not store temperatures
@@ -480,7 +480,7 @@ contains
          BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))
 
     DeltaTeFactor = TeSi_I(nPoint)/max(TeSiMin, TeSi_I(nPoint) + &
-         max(TeSi_I(nPoint  ) - TeSi_I(nPoint-1),0.0)*GhostCellCorr)
+         max(TeSi_I(nPoint) - TeSi_I(nPoint-1), 0.0)*GhostCellCorr)
     ! Limit DeltaTeFactor
     DeltaTeFactor = min(DeltaTeFactor,2.0)
     ! Approximately TeSiGhost = TeSiIn/DeltaTeFactor, so that:
@@ -581,7 +581,7 @@ contains
             DtLocal = Dt*No2Si_V(UnitT_)
          else
             DtLocal = cfl*No2Si_V(UnitT_)*&
-                 DtMax_CB(1,max(min(j,nJ),1),max(min(k,nK),1),iBlock)
+                 DtMax_CB(1,max(min(j,nJ),1), max(min(k, nK), 1), iBlock)
          end if
          if(DtLocal==0.0)RETURN ! No time-accurate advance is needed
          DtInv = 1/DtLocal
@@ -785,10 +785,13 @@ contains
               TeSiIn,USiIn,USi,PeSiIn,PressureTRCoef
          call stop_mpi('Algorithm failure in advance_thread')
       end if
+
     end subroutine advance_thread
     !==========================================================================
     subroutine get_res_heating(nIterIn)
+
       use ModCoronalHeating,  ONLY: rMinWaveReflection
+
       integer, intent(in)::nIterIn
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim
@@ -858,7 +861,7 @@ contains
     subroutine get_heat_cond
       !------------------------------------------------------------------------
       Main_VVI = 0.0; ResHeatCond_I = 0.0; Upper_VVI = 0.0; Lower_VVI = 0.0
-      !----------------
+
       ! Contribution from heat conduction fluxes
       ! Flux linearizations over small dCons
       ! Dimensionless flux= dCons/ds(1/( (PoyntingFlux/B)B)
@@ -950,6 +953,7 @@ contains
          DResCoolingOverDLogT_I(iPoint) = &
               ResCooling_I(iPoint)*Value_V(DLogLambdaOverDLogT_)
       end do
+
     end subroutine get_cooling
     !==========================================================================
   end subroutine solve_boundary_thread
@@ -1115,7 +1119,7 @@ contains
       derivative_major = -AMinor*&
            (max(0.0,AMajor - ImbalanceMax*AMinor)      &
            -max(0.0,AMinor - ImbalanceMax*AMajor)  )*  &
-           min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
+           min(0.5*Reflection/max(AMinor, AMajor), 1.0) &
            - AMinor*AMajor
     end function derivative_major
     !==========================================================================
@@ -1123,10 +1127,11 @@ contains
       real, intent(in)         ::   AMajor, AMinor, Reflection
       !------------------------------------------------------------------------
       derivative_minor =  -AMajor*&
-           (max(0.0,AMajor - ImbalanceMax*AMinor)      &
-           -max(0.0,AMinor - ImbalanceMax*AMajor)  )*  &
-           min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
+           (max(0.0, AMajor - ImbalanceMax*AMinor)      &
+           -max(0.0, AMinor - ImbalanceMax*AMajor)  )*  &
+           min(0.5*Reflection/max(AMinor, AMajor), 1.0) &
            + AMinor*AMajor
+
     end function derivative_minor
     !==========================================================================
   end subroutine solve_a_plus_minus
@@ -1215,7 +1220,7 @@ contains
             B0_DGB(:, 0, j, k, iBlock))
        BDir_D = BDir_D/max(norm2(BDir_D), 1e-30)
        DirR_D = Xyz_DGB(:,1,j,k,iBlock)
-       DirR_D = DirR_D/max(norm2(DirR_D),1e-30)
+       DirR_D = DirR_D/max(norm2(DirR_D), 1e-30)
 
        if(BoundaryThreads_B(iBlock) % SignB_II(j, k) <  0.0)then
           iMajor = WaveLast_
@@ -1227,7 +1232,7 @@ contains
        if(sum(BDir_D*DirR_D) <  0.0)&
             BDir_D = -BDir_D
        ! Calculate input parameters for solving the thread
-       Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
+       Te_G(0, j, k) = max(TeMin, min(Te_G(0, j, k), &
             BoundaryThreads_B(iBlock) % TMax_II(j,k)))
        UAbsMax = 0.10*sqrt(Te_G(0,j,k))
        TeSi = Te_G(0, j, k)*No2Si_V(UnitTemperature_)
@@ -1253,23 +1258,23 @@ contains
           DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
           ! Solve equation: -(TeGhost-TeTrue)/DeltaR =
           ! dTe/ds*(b . DirR)
-          Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs/max(&
+          Te_G(0, j, k) = Te_G(0,j,k) - DTeOverDs/max(&
                sum(BDir_D*DirR_D),0.7)*&
                BoundaryThreads_B(iBlock)% DeltaR_II(j,k)
           ! Version Easter 2015 Limit TeGhost
-          Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
+          Te_G(0, j, k) = max(TeMin,min(Te_G(0,j,k), &
                BoundaryThreads_B(iBlock) % TMax_II(j,k)))
-          State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
+          State_VG(iTeImpl,0,j,k) = Te_G(0,j,k)
           CYCLE
        end if
 
        State_VG(iP,0,j,k) = PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction
        ! Extrapolation of pressure
-       State_VG(iP, 1-nGhost:-1, j, k) = State_VG(iP,0,j,k)**2/&
+       State_VG(iP, 1-nGhost:-1,j,k) = State_VG(iP,0,j,k)**2/&
             State_VG(iP,1,j,k)
        ! Assign ion pressure (if separate from electron one)
        if(iP/=p_)then
-          State_VG(p_, 0, j, k) = PiSiOut*Si2No_V(UnitEnergyDens_)
+          State_VG(p_,0,j,k) = PiSiOut*Si2No_V(UnitEnergyDens_)
           State_VG(p_,1-nGhost:-1,j,k) = State_VG(p_,0,j,k)**2/&
                State_VG(p_,1,j,k)
        end if
@@ -1324,6 +1329,7 @@ contains
     BoundaryThreads_B(iBlock)%iAction = Done_
 
     call timing_stop('set_thread_bc')
+
   end subroutine set_field_line_thread_bc
   !============================================================================
 end module ModThreadedLC
