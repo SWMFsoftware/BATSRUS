@@ -10252,12 +10252,30 @@ Default values are shown above.
 </command>
 
 <command name="RESTARTBUFFERGRID">
-	 <parameter name="DoRestartBuffer" type="logical" default="F"/>
+  <parameter name="DoRestartBuffer" type="logical" default="F"/>
+  <parameter name="TypeCoordSource" type="string" input="select"
+	     if="$DoRestartBuffer">
+    <option name="GEO"/>
+    <option name="GSE"/>
+    <option name="GSM"/>
+    <option name="MAG"/>
+    <option name="SMG"/>
+    <option name="HGR"/>
+    <option name="HGI"/>
+    <option name="HGC"/>
+    <option name="hgr"/>
+    <option name="hgi"/>
+    <option name="hgc"/>
+  </parameter>
 
 #RESTARTBUFFERGRID
-F		DoRestartBuffer
+T		DoRestartBuffer
+HGR             TypeCoordSource
 
-If .true. the MHD state on the buffer grid  is restored from the restart file
+If .true. the MHD state on the buffer grid  is restored from the restart file.
+The coordinate system is defined by TypeCoordSource. This command is usually
+read from the restart.H file. 
+
 Default value is DoRestartBuffer = .false.
 </command>
 
