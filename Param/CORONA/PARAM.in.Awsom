@@ -23,7 +23,6 @@ F			IsTimeAccurate
 17			iHour
 26			iMinute
 0			iSecond
-0.0			FracSecond
 
 #SAVERESTART
 T			DoSaveRestart

@@ -41,8 +41,6 @@ user			TypeBc1
 float			TypeBc2
 user			TypeBc3
 user			TypeBc4
-float
-float
 
 #TIMESTEPPING
 2			nStage

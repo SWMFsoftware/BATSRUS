@@ -149,6 +149,7 @@ dphi Innershell		StringRefine
 dphi ActiveRegion		StringRefine
 1.5			RefineTo
 0.75  			CoarsenFrom
+
 currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
@@ -160,9 +161,6 @@ initial			StringShape
 
 #DOAMR
 F			DoAmr
--1			DnAmr
--1			DtAmr
-F			IsStrictAmr
 
 #TIMEACCURATE
 F			IsTimeAccurate

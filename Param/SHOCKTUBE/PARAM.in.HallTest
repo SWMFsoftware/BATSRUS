@@ -200,8 +200,6 @@ box tapered		StringShape
 
 #HALLREGION
 +box1			StringHallRegion
-0			HallSpeedTinyDim
-
 
 #SAVERESTART
 F			DoSaveRestart

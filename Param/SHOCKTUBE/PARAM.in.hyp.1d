@@ -36,8 +36,6 @@ NONE			TypeNormalization
 
 #HYPERBOLICDIVB
 F			UseHyperbolicDivb
-4.0			SpeedHypDim
-0.1			HypDecay
 
 #SHOCKTUBE
 1.			LeftState  Rho

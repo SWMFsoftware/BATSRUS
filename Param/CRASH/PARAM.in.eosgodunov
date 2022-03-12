@@ -45,10 +45,6 @@ Reflective boundary at the left
 #OUTERBOUNDARY
 reflect			TypeBc1
 float			TypeBc2
-float			TypeBcyMin
-float			TypeBcyMax
-float			TypeBczMin
-float			TypeBczMax
 
 #SCHEME
 2			nOrder

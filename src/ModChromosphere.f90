@@ -4,16 +4,15 @@
 
 module ModChromosphere
 
+  ! All parameters relating to chromosphere and tansition region
+
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, nI, nJ, nK
   use ModBatsrusUtility, ONLY: stop_mpi
 
-  ! Here all parameters relating to chromosphere and tansition region are
-  ! collected
-
-  use ModSize, ONLY: nI, nJ, nK
   implicit none
-  save
+
+  SAVE
 
   ! The use of short-scale exponential heat function with
   ! the decay length = (30 m/K)*TeCromosphere SI
@@ -28,19 +27,17 @@ module ModChromosphere
 
   ! The following variables are meaningful if
   ! DoExtendTransitionRegion=.true.
-
   real :: TeModSi = 3.0E+5                ! K
   real :: DeltaTeModSi = 1E+4             ! K
 
   ! The following variable is meaningful if
-  ! DoExtendTransitionRegion = .false. . Al long as
+  ! DoExtendTransitionRegion = .false. . As long as
   ! the unextended transition region cannot be resolved
   ! we set the 'corona base temperature' equal to the
   ! temperature at the top of the transition region and
   ! use the integral ralationship across the transition
   ! region to find the number density at the top of the
   ! transition region
-
   real :: TeTransitionRegionTopSi = 4.0e+5 ! [K]
 
   ! Electron temperature in K:

@@ -112,15 +112,10 @@ unsignedflux		TypeCoronalHeating
 
 #AMR
 -1			DnRefine
-F			DoAutoRefine
-0.0			PercentCoarsen
-50.0			PercentRefine
-100000			MaxTotalBlocks
 
 #AMRLEVELS
 0			MinBlockLevel
 99			MaxBlockLevel
-F			DoFixBodyLevel
 
 #SCHEME
 2			nOrder
@@ -149,7 +144,6 @@ VAR  			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 rho Ux Uy Uz E Pmin Pmax		NameLogVars
-4.0  10.0		rLog
 
 #IOUNITS
 HELIOSPHERIC		TypeIoUnit

@@ -13,9 +13,9 @@ module ModRadiativeCooling
   implicit none
   save
   real, parameter:: TeChromosphereSi = 1.0e4
-  logical:: UseRadCooling      =.false.
-  logical:: UseRadCoolingTable =.false.
-  integer,private:: iTableRadCool      =-1
+  logical:: UseRadCooling          = .false.
+  logical:: UseRadCoolingTable     = .false.
+  integer, private:: iTableRadCool = -1
 
   real :: AuxTeSi
 
@@ -45,10 +45,10 @@ contains
     call test_start(NameSub, DoTest)
     call read_var('DoExtendTransitionRegion', DoExtendTransitionRegion)
     if(DoExtendTransitionRegion)then
-       call read_var('TeModSi', TeModSi)
+       call read_var('TeTransitionRegionSi', TeModSi)
        call read_var('DeltaTeModSi', DeltaTeModSi)
     else
-       call read_var('TeTransitionRegionTopSi', TeTransitionRegionTopSi)
+       call read_var('TeTransitionRegionSi', TeTransitionRegionTopSi)
     end if
     call test_stop(NameSub, DoTest)
 

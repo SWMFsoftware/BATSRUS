@@ -36,7 +36,6 @@ testsat.dat		NameTrajectoryFile
 
 #GRAVITY
 F			UseGravity
-0			iDirGravity
 
 #BODY
 T			UseBody

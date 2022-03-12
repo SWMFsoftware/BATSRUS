@@ -16,7 +16,6 @@ F			IsTimeAccurate
 09			iHour
 59			iMinute
 00			iSecond
-0.0			FracSecond
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
@@ -120,7 +119,9 @@ Param/CORONA/grid_awsom.dat		NameGridFile
 #LIMITRADIUS
 1.0			rMin
 24.0			rMax
+
 ----------------------------------------------------
+
 #AMRREGION
 InnerShell		NameRegion
 shell0			StringShape
@@ -148,13 +149,11 @@ F			DoAmr
 2			nOrder (1 or 2)
 Linde			TypeFlux (Roe, Rusanov, Linde, Sokolov
 minmod			TypeLimiter
-1.2			LimiterBeta
 
 #LIMITER
 T			UseLogRhoLimiter
 T			UseLogPLimiter
-T			UseRhoRatioLimiter  !!!
-o(9)
+T			UseRhoRatioLimiter
 
 #MINIMUMTEMPERATURE
 5e4			TminDim  [K] for fluid 1
