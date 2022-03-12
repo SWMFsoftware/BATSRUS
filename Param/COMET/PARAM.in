@@ -13,7 +13,7 @@ SOLARWIND		TypeNormalization
 #DESCRIPTION
 Param/COMET/PARAM.in: Comet test		StringDescription
 
-#PLANET
+#COMET
 Halley			NamePlanet
 
 #IOUNITS
@@ -143,8 +143,8 @@ rho Ux Uy Uz Bx p rhopnt ppnt Pmin Pmax		NameLogVars
 #SAVERESTART
 F			DoSaveRestart
 
-#SAVEPLOT
-0			nPlotFile
+SAVEPLOT
+4			nPlotFile
 z=0 FUL tec		StringPlot
 500			DnSavePlot
 -1.0			DtSavePlot

@@ -1,7 +1,7 @@
 #DESCRIPTION
 Param/COMET3FLUIDSPE/PARAM.in		StringDescription
 
-#PLANET
+#COMET
 HALLEY			NamePlanet
 
 #TIMEACCURATE
@@ -55,8 +55,8 @@ ionosphere		TypeBcBody
 #GRIDBLOCKALL
 400			MaxBlock
 
-#BODY
-F			UseBody
+BODY
+T			UseBody
 6e-6			rBody
 1.0			rCurrents
 0.1			BodyRhoDim (1/ccm)
@@ -107,8 +107,7 @@ F			UseSingleIonTemperature
 
 #SCHEME
 1			nOrder
-Rusanov			TypeFlux | only for nOrder=2
-minmod			TypeLimiter
+Rusanov			TypeFlux
 
 #TIMESTEPPING
 1			nStage

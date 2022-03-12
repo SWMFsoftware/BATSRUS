@@ -64,8 +64,7 @@ F			DoRestrictMultiIon
 
 #SCHEME
 1			nOrder
-Rusanov			TypeFlux | only for nOrder=2
-minmod			TypeLimiter
+Rusanov			TypeFlux
 
 #TIMESTEPPING
 1			nStage

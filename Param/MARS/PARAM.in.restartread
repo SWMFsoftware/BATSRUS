@@ -102,6 +102,7 @@ z=0 MHD idl		StringPlot
 2000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
+
 cut MHD idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot

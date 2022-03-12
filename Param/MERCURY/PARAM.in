@@ -90,15 +90,12 @@ box			NameArea
 
 --------grid end-----
 
-
-#BORIS
-F			UseBorisCorrection
+BORIS
+T			UseBorisCorrection
 0.02			BorisFactor
-
 
 TEST
 krylov show_pmin
-
 
 #STARTTIME
 2000			iYear
@@ -205,12 +202,10 @@ doubleconez0 tapered		StringShape
 
 #HALLREGION
 +hallbox1 -hallsphere -polars		StringHallRegion
-0
-
 
 ! Turn on semi-implicit for both  for time accurate run.
-#SEMIIMPLICIT
-F			UseSemiImplicit
+SEMIIMPLICIT
+T			UseSemiImplicit
 resistivity		TypeSemiImplicit
 
 #SEMIKRYLOV
