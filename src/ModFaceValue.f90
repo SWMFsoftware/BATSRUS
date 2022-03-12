@@ -94,8 +94,8 @@ module ModFaceValue
   !$acc declare create(UsePtotalLtd)
 
   ! Parameters for limiting the variable divided by density
-  logical :: UseScalarToRhoRatioLtd = .false.
-  !$acc declare  create(UseScalarToRhoRatioLtd)
+  logical :: UseRhoRatioLimiter = .false.
+  !$acc declare  create(UseRhoRatioLimiter)
   integer :: nVarLimitRatio
   integer, allocatable, save:: iVarLimitRatio_I(:)
   !$omp threadprivate( iVarLimitRatio_I )
@@ -191,8 +191,8 @@ contains
     case("#LIMITER")
        call read_var('UseLogRhoLimiter', UseLogRhoLimiter)
        call read_var('UseLogPLimiter',   UseLogPLimiter)
-       call read_var('UseScalarPerRhoLimiter', UseScalarToRhoRatioLtd)
-       if(.not. UseScalarToRhoRatioLtd)RETURN
+       call read_var('UseRhoRatioLimiter', UseRhoRatioLimiter)
+       if(.not. UseRhoRatioLimiter)RETURN
        call read_var('NameVarLimitRatio', NameVarLimitRatio)
        call split_string(NameVarLimitRatio, nVar, NameVar_I, nVarLimitRatio, &
             UseArraySyntaxIn=.true.)
@@ -1199,7 +1199,7 @@ contains
           end if
        end if
 
-       if(UseScalarToRhoRatioLtd)then
+       if(UseRhoRatioLimiter)then
           if(DoResChangeOnly)then
              if(DiLevel_EB(1,iBlock)==+1) &
                   call ratio_to_scalar_faceX(1, 1, 1, nJ, 1, nK)
@@ -1313,9 +1313,9 @@ contains
 
     end subroutine limit_flux
     !==========================================================================
-    subroutine logfacex_to_facex(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine logfacex_to_facex(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iVar
 
       !------------------------------------------------------------------------
@@ -1330,9 +1330,9 @@ contains
 
     end subroutine logfacex_to_facex
     !==========================================================================
-    subroutine logfacey_to_facey(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine logfacey_to_facey(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iVar
 
       !------------------------------------------------------------------------
@@ -1347,9 +1347,9 @@ contains
 
     end subroutine logfacey_to_facey
     !==========================================================================
-    subroutine logfacez_to_facez(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine logfacez_to_facez(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iVar
 
       !------------------------------------------------------------------------
@@ -1364,9 +1364,9 @@ contains
 
     end subroutine logfacez_to_facez
     !==========================================================================
-    subroutine ratio_to_scalar_facex(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine ratio_to_scalar_facex(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
 
       !------------------------------------------------------------------------
@@ -1381,9 +1381,9 @@ contains
 
     end subroutine ratio_to_scalar_facex
     !==========================================================================
-    subroutine ratio_to_scalar_facey(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine ratio_to_scalar_facey(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
 
       !------------------------------------------------------------------------
@@ -1398,9 +1398,9 @@ contains
 
     end subroutine ratio_to_scalar_facey
     !==========================================================================
-    subroutine ratio_to_scalar_facez(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine ratio_to_scalar_facez(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
 
       !------------------------------------------------------------------------
@@ -1569,7 +1569,7 @@ contains
          end if
       end if
 
-      if(UseScalarToRhoRatioLtd) Primitive_VGI(iVarLimitRatio_I,i,j,k,iGang) &
+      if(UseRhoRatioLimiter) Primitive_VGI(iVarLimitRatio_I,i,j,k,iGang) &
            = RhoInv*Primitive_VGI(iVarLimitRatio_I,i,j,k,iGang)
 
       if(UseLogLimiter)then
@@ -1581,9 +1581,9 @@ contains
 
     end subroutine calc_primitives
     !==========================================================================
-    subroutine get_facex_high(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
+    subroutine get_facex_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+      integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       real, allocatable, save:: State_VX(:,:,:,:)
       !$omp threadprivate( State_VX )
       integer:: iVar, iSort
@@ -1711,15 +1711,16 @@ contains
 
       if(TypeLimiter == 'no') RightState_VX= LeftState_VX
 
-      if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) &
+           call boris_to_mhd_x(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
-           iMin,iMax,jMin,jMax,kMin,kMax)
+      if(UseRhoRatioLimiter) &
+           call ratio_to_scalar_faceX(iMin, iMax, jMin, jMax, kMin, kMax)
 
     end subroutine get_facex_high
     !==========================================================================
-    subroutine get_facey_high(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+    subroutine get_facey_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+      integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
       real, allocatable, save:: State_VY(:,:,:,:)
       !$omp threadprivate( State_VY )
@@ -1845,16 +1846,17 @@ contains
       end if
 
       if(TypeLimiter == 'no') RightState_VY= LeftState_VY
-      if(DoLimitMomentum)call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) &
+           call boris_to_mhd_y(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
-           iMin,iMax,jMin,jMax,kMin,kMax)
+      if(UseRhoRatioLimiter) &
+           call ratio_to_scalar_faceY(iMin, iMax, jMin, jMax, kMin, kMax)
 
     end subroutine get_facey_high
     !==========================================================================
-    subroutine get_facez_high(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
+    subroutine get_facez_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+      integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
       real, allocatable, save:: State_VZ(:,:,:,:)
       !$omp threadprivate( State_VZ )
@@ -1977,15 +1979,16 @@ contains
          end do; end do
       end if
 
-      if(DoLimitMomentum)call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) &
+           call boris_to_mhd_z(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
-           iMin,iMax,jMin,jMax,kMin,kMax)
+      if(UseRhoRatioLimiter) &
+           call ratio_to_scalar_faceZ(iMin, iMax, jMin, jMax, kMin, kMax)
 
     end subroutine get_facez_high
     !==========================================================================
-    subroutine get_facex_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+    subroutine get_facex_first(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+      integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: i, j, k
       integer:: iGang
       !------------------------------------------------------------------------
@@ -1996,14 +1999,15 @@ contains
          RightState_VX(:,i,j,k)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
-      if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) &
+           call boris_to_mhd_x(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
-           iMin,iMax,jMin,jMax,kMin,kMax)
+      if(UseRhoRatioLimiter) &
+           call ratio_to_scalar_faceX(iMin, iMax, jMin, jMax, kMin, kMax)
     end subroutine get_facex_first
     !==========================================================================
-    subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+    subroutine get_facey_first(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+      integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: i, j, k, iVar
       integer:: iGang
       !------------------------------------------------------------------------
@@ -2014,14 +2018,16 @@ contains
          RightState_VY(:,i,j,k)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
-      if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) &
+           call boris_to_mhd_y(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
-           iMin,iMax,jMin,jMax,kMin,kMax)
+      if(UseRhoRatioLimiter) &
+           call ratio_to_scalar_faceY(iMin, iMax, jMin, jMax, kMin, kMax)
+
     end subroutine get_facey_first
     !==========================================================================
-    subroutine get_facez_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+    subroutine get_facez_first(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+      integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: i, j, k, iVar
       integer:: iGang
       !------------------------------------------------------------------------
@@ -2032,14 +2038,16 @@ contains
          RightState_VZ(:,i,j,k)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
-      if(DoLimitMomentum)call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) &
+           call boris_to_mhd_z(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
-           iMin,iMax,jMin,jMax,kMin,kMax)
+      if(UseRhoRatioLimiter) &
+           call ratio_to_scalar_faceZ(iMin, iMax, jMin, jMax, kMin, kMax)
+
     end subroutine get_facez_first
     !==========================================================================
-    subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+    subroutine get_facex_second(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+      integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer::i1, iMinSharp, iMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
       ! variables used for TVD limiters
@@ -2093,12 +2101,13 @@ contains
          end do
       end do; end do
 
-      if(DoLimitMomentum) call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) &
+           call boris_to_mhd_x(iMin, iMax, jMin, jMax, kMin, kMax)
 
     end subroutine get_facex_second
     !==========================================================================
-    subroutine get_facey_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+    subroutine get_facey_second(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+      integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer::j1, jMinSharp, jMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
       ! variables used for TVD limiters
@@ -2152,12 +2161,13 @@ contains
          end do
       end do; end do
 
-      if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) &
+           call boris_to_mhd_y(iMin, iMax, jMin, jMax, kMin, kMax)
 
     end subroutine get_facey_second
     !==========================================================================
-    subroutine get_facez_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+    subroutine get_facez_second(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+      integer,intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer::k1, kMinSharp, kMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
       ! variables used for TVD limiters
@@ -2211,7 +2221,8 @@ contains
          end do
       end do; end do
 
-      if(DoLimitMomentum) call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) &
+           call boris_to_mhd_z(iMin, iMax, jMin, jMax, kMin, kMax)
 
     end subroutine get_facez_second
     !==========================================================================
