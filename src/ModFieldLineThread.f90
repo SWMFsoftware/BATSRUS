@@ -1564,7 +1564,7 @@ contains
     ! Calculate coordinates (lon, lat) of the intersection point of threads
     ! with the spherical surface at the first generalized coordinate value
     ! equal to input Coord1
-    
+
     use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
