@@ -23,7 +23,6 @@ initial			StringShape
 
 #GRIDBLOCKALL
 700			MaxBlock
-1			MaxBlockImpl
 
 #BODY
 T			UseBody
@@ -52,7 +51,6 @@ minmod			TypeLimiter
 
 #TEST
 init_hall_resist		StringTest
-update_states calc_sources calc_facefluxes calc_timestep
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -148,6 +146,7 @@ z=0 MHD idl		StringPlot
 2000			DnSavePlot
 -1.0			DtSavePlot
 0.0			DxSavePlot
+
 cut MHD idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot

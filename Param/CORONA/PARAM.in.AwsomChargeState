@@ -86,7 +86,7 @@ Param/CORONA/RadCoolCorona_8.0.dat		NameFile
 ascii			TypeFile
 
 #TRANSITIONREGION
-T			DoExpandTransitionRegion
+T			DoExtendTransitionRegion
 2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
@@ -154,6 +154,7 @@ minmod			TypeLimiter
 T			UseLogRhoLimiter
 T			UseLogPLimiter
 T			UseRhoRatioLimiter
+o(9)			NameVarLimitRatio
 
 #MINIMUMTEMPERATURE
 5e4			TminDim  [K] for fluid 1

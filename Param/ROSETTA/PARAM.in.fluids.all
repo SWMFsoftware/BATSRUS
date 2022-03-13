@@ -166,8 +166,6 @@ T			DoAddRhoU
 1e-8			LowDensityRatio
 1e-13			LowPressureRatio
 F			DoRestrictMultiIon
-3.0			MachNumberMultiIon (read if DoRestrictMultiIon)
-0.25			ParabolaWidthMultiIon (read if DoRestrictMultiIon)
 
 #MULTIIONSTATE
 T			UseSingleIonVelocity
@@ -187,9 +185,6 @@ Linde			TypeFluxNeutral
 
 #POINTIMPLICIT
 F			UsePointImplicit
-1.0			BetaPointImpl
-F			IsAsymetric
-T			DoNormalizeCell
 
 #RESTARTOUTFILE
 one			StringRestartOutFile

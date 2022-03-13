@@ -46,7 +46,6 @@ F			IsTimeAccurate
 
 #TEST
 read_inputs amr		StringTest
-update_states calc_sources calc_facefluxes calc_timestep
 
 #TESTXYZ
 0.6672			xTest		(X coordinate of cell for testing)

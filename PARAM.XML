@@ -9,7 +9,7 @@ List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 <set name="nSpecies"          type="integer" value="$_Value{nSpecies}"         />
 <set name="nFluid"            type="integer" value="($_Value{nFluid} or 1)"    />
 <set name="nIonFluid"         type="integer" value="($_Value{nIonFluid} or 1)" />
-<set name="nNeturalFluid"     type="integer" value="$_Value{nNeutralFluid}"    />
+<set name="nNeutralFluid"     type="integer" value="$_Value{nNeutralFluid}"    />
 <set name="UsePe"             type="integer" value="$_Value{UsePe}"            />
 <set name="nG"                type="integer" value="$_Value{nG}"               />
 <set name="nI"                type="integer" value="$_Value{nI}"               />
@@ -241,7 +241,7 @@ These modified commands cannot precede the #PLANET command!
 	 if="$_IsFirstSession and $_IsStandAlone">
   <parameter name="NamePlanet" type="string" case="upper" input="select">
     <option name="NONE"			/>
-    <option name="NEW" 			/>
+    <option name="NEW"                  />
     <option name="MERCURY"		/>
     <option name="VENUS"		/>
     <option name="EARTH" default="T"	/>
@@ -265,7 +265,7 @@ These modified commands cannot precede the #PLANET command!
     <option name="COMET67P"		/>
     <option name="HALEBOPP"		/>
   </parameter>
-  <if expr="$NamePlanet eq 'NEW'">
+  <if expr="$NamePlanet =~ /NEW|GANYMEDE|COMET[16]|BORRELLY|PLUTO|NEPTUNE/">
     <parameter name="RadiusPlanet" type="real" min="0" />
     <parameter name="MassPlanet"   type="real" min="0" />
     <parameter name="OmegaPlanet"  type="real" min="0" />
@@ -1173,6 +1173,7 @@ so this command is always present in the current restart header files.
       <option name="usernoinflow"/>
     </parameter>
   </for>
+  <set name="_OUTERBOUNDARY" type="logical" value="T"/>
   <rule
       expr="not($TypeBc1 eq 'periodic' xor $TypeBc2 eq 'periodic')">
     First and second BCs must be both periodic or neither
@@ -1258,6 +1259,8 @@ The default values are 'none' on all sides.
       <option name="user"/>
     </parameter>
   </for>
+  <set name="_BOXBOUNDARY" type="logical" value="T"/>
+  
 #BOXBOUNDARY
 outflow                 TypeBcXmin
 inflow                  TypeBcXmax
@@ -1317,7 +1320,9 @@ There are no default values. User must set face boundary type if a box is cut ou
 
 <command name="BOUNDARYSTATE" multiple="T">
   <parameter name="StringBoundary" type="string" length="$lLine"/>
-  <parameter name="BoundaryStateDim_V" type="real"/>
+  <for from="1" to="$nVar">
+    <parameter name="BoundaryStateDim_V" type="real"/>
+  </for>
 
 #BOUNDARYSTATE
 body1 1 2 xminbox	StringBoundary
@@ -1750,7 +1755,7 @@ of the polar boundary where the outflow is defined.
 <command name="CPCPBOUNDARY">
   <parameter name="UseCpcpBc" type="logical" default="F"/>
   <if expr="$UseCpcpBc">
-    <for from="1" to="($nIonFluid+$nSpecies-1) or 1">
+    <for from="1" to="max($nIonFluid,$nSpecies)">
       <parameter name="Rho0Cpcp" type="real" min="0" default="18"/>
       <parameter name="RhoPerCpcp" type="real" min="0" default="0.2"/>
     </for>
@@ -4966,6 +4971,9 @@ The default is to flush the output, i.e. DoFlush=T.
 </commandgroup>
 
 <commandgroup name="ERUPTIVE EVENT GENERATOR">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!  ERUPTIVE EVENT GENERATOR  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   <command name="CME">
     <parameter name="UseCme" type="logical" default="F" />
     <if expr="$UseCme">
@@ -4978,27 +4986,35 @@ The default is to flush the output, i.e. DoFlush=T.
 		 min="0" max="359" default="0" />
       <parameter name="TypeCme" type="string" case="upper" input="select"
 		 required="T">
-	<option name="GL"             />
-	<option name="GIBSON-LOW"     />
-	<option name="TD"	      />
-	<option name="TITOV-DEMOULIN" />
-	<option name="TD14"	      />
-	<option name="SPHEROMAK"	      />
+	<option name="GIBSON-LOW"          value="GL" default="T" />
+	<option name="TITOV-DEMOULIN 1999" value="TD"             />
+	<option name="TITOV-DEMOULIN 2014" value="TD14"	          />
+	<option name="SPHEROMAK"	                          />
+	<option name="BREAKOUT"                                   />
       </parameter>
-      <if expr="$TypeCme =~ /GL|GIBSON-LOW/">
+      <if expr="$TypeCme eq 'BREAKOUT'">
+	<parameter name="FlowAmplitude"     type="real"/>     
+	<parameter name="FlowWidthAngle"    type="real"/>
+	<parameter name="MaxBrActiveRegion" type="real"/>
+	<parameter name="StartTime"         type="real"/>
+	<parameter name="StopTime"          type="real"/>
+	<parameter name="RampUpTime"        type="real"/>
+	<parameter name="RampDownTime"      type="real"/>
+      </if>
+      <if expr="$TypeCme eq 'GL'">
 	<parameter name="BStrength" type="real" default="0" />
 	<parameter name="Radius" type="real" min="0" default="0" />
 	<parameter name="Stretch" type="real" min="0" default="0" />
 	<parameter name="ApexHeight" type="real" min="0" default="0" />
       </if>
-      <if expr="$TypeCme =~ /SPHEROMAK/">
+      <if expr="$TypeCme eq 'SPHEROMAK'">
 	<parameter name="BStrength" type="real" default="0" />
 	<parameter name="Radius" type="real" min="0" default="0" />
 	<parameter name="Stretch" type="real" min="0" default="0" />
 	<parameter name="ApexHeight" type="real" min="0" default="0" />
 	<parameter name="uCme" type="real" min="0" default="0" />
       </if>
-      <if expr="$TypeCme =~ /TD\b|TITOV-DEMOULIN/">
+      <if expr="$TypeCme eq 'TD'">
 	<parameter name="BcTubeDim" type="real" default="0" />
 	<parameter name="RadiusMajor" type="real" min="0" default="0" />
 	<parameter name="RadiusMinor" type="real" min="0" default="0" />
@@ -5040,7 +5056,7 @@ The default is to flush the output, i.e. DoFlush=T.
 	  </if>
 	</if>
       </if>
-      <if expr="$TypeCme =~ /TD14/">
+      <if expr="$TypeCme eq 'TD14'">
 	<parameter name="BcTubeDim" type="real" default="0" />
 	<parameter name="RadiusMajor" type="real" min="0" default="0" />
 	<parameter name="RadiusMinor" type="real" min="0" default="0" />
@@ -5113,7 +5129,7 @@ T			DoAddFluxRope
 0			LongitudeCme   [deg]
 0			LatitudeCme    [deg]
 0			OrientationCme [deg]
-GL			TypeCme    GL/GIBSON-LOW
+GL			TypeCme    GL/TD/TD14/SPHEROMAK
 1.0			BStrength      [Gs]
 1.03			Radius         [Rs]
 0.3			Stretch        [Rs]
@@ -5144,9 +5160,9 @@ of the configuration center respectively, in angular degrees. OrientationCme
 provides the angle of rotation about the radial direction (again, in angular 
 degrees) needed to transform the coordinate system of the model to that of the
 configuration.
-!!!!!!!!!!!!!!!!!!!!!!!GIBSON-LOW!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 The latest implementation for the Gibson-Low eruptive event generator 
-(TypeCme=GL or TypeCme=Gibson-Low) follows the paper Borovikov, D., I. V. 
+(TypeCme=GL) follows the paper Borovikov, D., I. V. 
 Sokolov, W. B. Manchester, M. Jin, and T. I. Gombosi (2017), Eruptive event 
 generator based on the Gibson-Low magnetic configuration, J. Geophys. Res. 
 Space Physics, 122, 7979, doi:10.1002/2017JA024304. With this regard, 
@@ -5159,18 +5175,17 @@ confining all currents in the configuration. Stretch ("a" in the paper) is
 the scale of stretching transformation (see details in the paper). Finally, 
 ApexHeight is the altitude of top of configuration respectively to the solar 
 surface. It is expoected that Radius &lt; ApexHeight &lt; 2*Radius.
-!!!!!!!!!!!!!!!!!!!!!Backward compatibility!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 If you have an outdated parameter file you can convert it to the standard
 format as follows:
 1. Move line for BStrength to have it just below "GL      TypeCme" line.
 2. Move  line for reading Radius just below the line for BStrength.
 3. RESCALE the OLD data for BStrength as follows:
-
    BStrengthNew = 13.1687517342067082*BStrengthOld*Radius**2
 4. The old line for reading Distance should be converted to the line for
    reading ApexHeight = Distance + Radius - Stretch - 1
 5. Line for reading pBackground should be removed
-!!!!!!!!!!!!!!!!!!!!!!!!!!!HELICITY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 FOR GL configuration, the field parameter, BStrength, may be both positive 
 and negative. In changing the sign for negative, the poloidal field 
 components change their sign, hence, the toroidal current too. However,
@@ -5178,11 +5193,9 @@ the sign of toroidal magnetic field is fixed by the choice of active region
 geometry and does not change the sign when BSthrength flips. hence, the 
 toroidal current-to-field ratio also changes sign and so does the helicity, if
 the negative BStrength is chosen.  
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! SPHEROMAK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 In addition to the above parameters uCme is read, controlling the speed
 of the CME self-similar expansion
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!TITOV-DEMOULIN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #CME
@@ -5226,12 +5239,11 @@ is created by the current inside the toroidal filament. RadiusMajor and
 RadiusMinor are characteristics of the toroid shape. Depth characterizes 
 the toroid center location below the photosphere level. Mass in kilograms 
 is an approximate integral of density over the volume of current filament.
-!!!!!!!!!!!!!!!!!!!!!Backward compatibility!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 To convert an outdated parameter file, with the Current in [A] and spatial 
 scales in [m], one can convert it to the standard format as follows:
 
 1. RESCALE the data for Current[A] as follows:
-
    BcTubeDim[Gs] = 2.0E-03*cPi*Current[A]/RadiusMajor[m]
 
 2. Convert all spatial scales (RadiusMajor, RadiusMinor, Depth) in meters 
@@ -5239,8 +5251,7 @@ scales in [m], one can convert it to the standard format as follows:
    Scale[R_s] = Scale[m]/6.96E+08
    Or, if the scales are in megameters, the formulae are:
    Scale[R_s] = Scale[Mm]/6.96E+02
-   
-!!!!!!!!!!!!!!!!!!!!!!!!!!!HELICITY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 For TD configuration,  magnetic field at the center of configuration is 
 always parallel, while the starpping field is anti-parallel, to the x-axis. 
 Phi-conponent of the toroidal current is positive. However, the sign of 
@@ -5249,7 +5260,12 @@ to the positive and negative helicity. To set the negative helicity, the
 input parameter, BcTube, should be negative. This choice affects only the 
 sign of helicity, but not the direction of the poloidal magnetic field 
 components, including the nagnetic field at the center of configuration.
-  
+
+TypeCME=BREAKOUT should be described by Bart van der Holst. Please ask
+him for a description.
+
+There is no CME by default.
+
 </command>
 </commandgroup>
 
@@ -5382,7 +5398,7 @@ Only useful if the initial condition has a non-trivial analytic form.
   </if>
   <if expr="$RotateArea =~ /rotated/">
     <parameter name="xRotate" type="real" min="-360" max="360"
-	       default="0"/>
+	       default="0" if="$nK!=1"/>
     <parameter name="yRotate" type="real" min="-360" max="360"
 	       default="0" if="$nK!=1"/>
     <parameter name="zRotate" type="real" min="-360" max="360"
@@ -10236,12 +10252,30 @@ Default values are shown above.
 </command>
 
 <command name="RESTARTBUFFERGRID">
-	 <parameter name="DoRestartBuffer" type="logical" default="F"/>
+  <parameter name="DoRestartBuffer" type="logical" default="F"/>
+  <parameter name="TypeCoordSource" type="string" input="select"
+	     if="$DoRestartBuffer">
+    <option name="GEO"/>
+    <option name="GSE"/>
+    <option name="GSM"/>
+    <option name="MAG"/>
+    <option name="SMG"/>
+    <option name="HGR"/>
+    <option name="HGI"/>
+    <option name="HGC"/>
+    <option name="hgr"/>
+    <option name="hgi"/>
+    <option name="hgc"/>
+  </parameter>
 
 #RESTARTBUFFERGRID
-F		DoRestartBuffer
+T		DoRestartBuffer
+HGR             TypeCoordSource
 
-If .true. the MHD state on the buffer grid  is restored from the restart file
+If .true. the MHD state on the buffer grid  is restored from the restart file.
+The coordinate system is defined by TypeCoordSource. This command is usually
+read from the restart.H file. 
+
 Default value is DoRestartBuffer = .false.
 </command>
 
@@ -10390,6 +10424,10 @@ The default is to use a single PARAM.in file.
 -->
 <rule expr="$MaxBlock>0">
         Number of grid blocks should be set in the first session!
+</rule>
+
+<rule expr="$_OUTERBOUNDARY or $_BOXBOUNDARY">
+  Either #OUTERBOUNDARY or #BOXBOUNDARY must be set in first session
 </rule>
 
 </commandList>

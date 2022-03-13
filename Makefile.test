@@ -642,8 +642,8 @@ test_magnetometer_compile:
 	make PIDL
 	
 test_magnetometer_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/MAGNETOMETER/PARAM.in PARAM.in
 	cd ${TESTDIR}; cp Param/MAGNETOMETER/magin.dat .
+	cd ${TESTDIR}; cp Param/MAGNETOMETER/PARAM.in PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	
 test_magnetometer_run:
@@ -2194,15 +2194,17 @@ test_region2d_compile:
 
 test_region2d_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/REGION/PARAM.in.2d PARAM.in
-	./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
+	-./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
 
 test_region2d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS/2d
 	cd ${TESTDIR}; cp Param/REGION/PARAM.in.cyl PARAM.in
+	-./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl
 	cd ${TESTDIR}; cp Param/REGION/PARAM.in.cyl_lnr PARAM.in
+	-./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl_lnr
 
@@ -2333,7 +2335,7 @@ test_L1toBC_compile:
 test_L1toBC_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/EARTH/PARAM.in.L1toBC PARAM.in
 	cd ${TESTDIR}; cp Param/EARTH/imf19980504.dat L1.dat
-	./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_L1toBC.diff
+	-./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_L1toBC.diff
 
 test_L1toBC_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog

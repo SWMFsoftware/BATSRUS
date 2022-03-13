@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/REGION/PARAM.in.2d: Test BATL_region features
+Param/REGION/PARAM.in.2d: Test BATL_region features		StringDescription
 
 #SAVERESTART
 F			DoSaveRestart
@@ -8,26 +8,26 @@ GRIDGEOMETRY
 spherical_lnr		TypeGeometry
 
 #GRID
-4			nRootBlockX
-4			nRootBlockY
-1			nRootBlockZ
--32.                    xMin
-+32.                    xMax
--32.                    yMin
-+32.                    yMax
--1.                     zMin
-+1.                     zMax
+4			nRootBlock1
+4			nRootBlock2
+1			nRootBlock3
+-32.			xMin
++32.			xMax
+-32.			yMin
++32.			yMax
+-1.			zMin
++1.			zMax
 
 #GRIDBLOCKALL
 700			MaxBlock
 
 #GRIDRESOLUTION
 0.5			Resolution
-initial
+initial			StringShape
 
 #GRIDRESOLUTION
 0.5			Resolution
-sphere0			NameShape
+sphere0			StringShape
 15.0			Radius
 
 #UNIFORMSTATE
@@ -47,13 +47,13 @@ periodic		TypeBc3
 periodic		TypeBc4
 
 #HALLRESISTIVITY
-T			UseHallResistFlux
+T			UseHallResist
 1.0			HallFactorMax
 1.0			HallCmaxFactor
 
 #REGION
-r1
-sphere stretched tapered
+r1			NameRegion
+sphere stretched tapered		StringShape
 0.0			xPosition
 2.0			yPosition
 9.0			Radius
@@ -61,45 +61,44 @@ sphere stretched tapered
 2.0			Taper
 
 #REGION
-r2
-paraboloidy tapered
-0.0	    		xPosition
+r2			NameRegion
+paraboloidy tapered		StringShape
+0.0			xPosition
 -7.0			yPosition
 -22.0			Height
 20.0			Radius
 2.0			Taper
 
 #REGION
-r3
-doubleconex
+r3			NameRegion
+doubleconex		StringShape
 0.0			xPosition
 -12.0			yPosition
 7.0			Height
 3.0			Radius
 
 #REGION
-r4
-brick rotated
+r4			NameRegion
+brick rotated		StringShape
 4.0  			xPosition
 3.0			yPosition
-4.0			SizeX
-4.0			SizeY
+4.0			xSizeBrick
+4.0			ySizeBrick
 45.0			zRotate
 
 #REGION
-r5
-shell stretched
+r5			NameRegion
+shell stretched		StringShape
 -4.0  			xPosition
 3.0			yPosition
 1.0			RadiusInner
 2.0			Radius
-3.0			RadiusPerp
-45.0			zRotate
+3.0			RadiusY
 
 #REGION
-r6
-funnely tapered rotated
-10.0   			xPosition
+r6			NameRegion
+funnely tapered rotated		StringShape
+10.0			xPosition
 -10.0			yPosition
 15.0			Height
 3.0			RadiusStart
@@ -108,9 +107,9 @@ funnely tapered rotated
 -45			zRotate
 
 #REGION
-r7
-funnely tapered rotated
--10.0   		xPosition
+r7			NameRegion
+funnely tapered rotated		StringShape
+-10.0			xPosition
 -10.0			yPosition
 15.0			Height
 3.0			RadiusStart
@@ -119,38 +118,36 @@ funnely tapered rotated
 +45			zRotate
 
 #REGION
-r8
-coney tapered
-  0.0   		xPosition
+r8			NameRegion
+coney tapered		StringShape
+  0.0			xPosition
  22.0			yPosition
 -15.0			Height
 11.0			Radius
 2.0			Taper
 
 #REGION
-r6
+r6			NameRegion
 box_gen			StringShape
-15.0   			rMin
-337.5			PhiMin
--10.0			LatMin
-25.0			rMax
-382.5			PhiMax
-+10.0			LatMax
+15.0			xMinBox
+337.5			yMinBox
+-10.0			xMaxBox
+25.0			yMaxBox
 
 #HALLREGION
-+r1 +r2 -r3 -r4 -r5 +r6 +r7 +r8
++r1 +r2 -r3 -r4 -r5 +r6 +r7 +r8		StringHallRegion
 
 #SAVEINITIAL
 T			DoSaveInitial
 
 #SAVEPLOT
-1					nPlotFiles
-z=0 VAR idl_ascii			StringPlot
-1					DnSavePlot
--1.					DtSavePlot
-0.					DxSavePlot
-hall hallfactor hallblock amrlevel	NamePlotVar
-g   	 		  		NamePlotPar
+1			nPlotFile
+z=0 VAR idl_ascii		StringPlot
+1			DnSavePlot
+-1.			DtSavePlot
+0.			DxSavePlot
+hall hallfactor hallblock amrlevel		NameVars
+g			NamePars
 
 #STOP
 0			MaxIteration

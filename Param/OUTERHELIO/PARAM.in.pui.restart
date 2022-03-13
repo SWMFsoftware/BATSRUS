@@ -13,7 +13,6 @@ Param/OUTERHELIO/PARAM.in.pui.restart: Restart outer heliosphere with 2 ion and 
 
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
-0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
 
 #PLOTFILENAME
 year			NameMaxTimeUnit
@@ -94,12 +93,12 @@ F			DoRestrictMultiIon
 T			UseOhNeutralBc
 0.05			RhoNeuFactor
 1.0			uNeuFactor
-1.E-2			RhoNe2Factor
-0.2			uNe2Factor
-1.E-2			RhoNe3Factor
-1.0			uNe3Factor
-1.E-3			RhoNe4Factor
-0.1			uNe4Factor
+1.E-2			RhoNeuFactor Ne2
+0.2			uNeuFactor
+1.E-2			RhoNeuFactor Ne3
+1.0			uNeuFactor
+1.E-3			RhoNeuFactor Ne4
+0.1			uNeuFactor
 
 #OHNEUTRALS
 0.18			RhoNeutralsISW

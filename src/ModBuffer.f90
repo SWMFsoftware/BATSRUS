@@ -96,6 +96,7 @@ contains
        BufferMin_D(BuffLon_:BuffLat_) = [0.0   , -cHalfPi]
        BufferMax_D(BuffLon_:BuffLat_) = [cTwoPi,  cHalfPi]
        call init_buffer_grid
+
     case("#BUFFERGRID","#BUFFERBODY2")
        if(NameCommand=="#BUFFERBODY2")then
           IsBody2Buffer = .true.
@@ -118,10 +119,16 @@ contains
        BufferMax_D(BuffLon_:BuffLat_) = BufferMax_D(BuffLon_:BuffLat_)&
             *cDegToRad
        call init_buffer_grid
+
     case("#RESTARTBUFFERGRID")
        call read_var('DoRestartBuffer', DoRestartBuffer)
        if(DoRestartBuffer)call read_var('TypeCoordSource', TypeCoordSource)
+
+    case default
+       call stop_mpi(NameSub//': unknown command '//NameCommand)
+
     end select
+
   end subroutine read_buffer_grid_param
   !============================================================================
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
