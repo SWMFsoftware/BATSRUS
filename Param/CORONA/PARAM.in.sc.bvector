@@ -95,7 +95,7 @@ load			NameCommand
 ascii			TypeFile
 
 #TRANSITIONREGION
-T			DoExpandTransitionRegion
+T			DoExtendTransitionRegion
 2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
