@@ -5044,7 +5044,7 @@ The default is to flush the output, i.e. DoFlush=T.
 	    <option name="moving" />
 	    <option name="cancelflux" />
 	  </parameter>
-	  <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	  <if expr="$TypeCharge ne 'none'">
 	    <parameter name="bQStrapFraction" type="real" min="0" 
 		       default="0" />
 	    <parameter name="qDistance" type="real" min="0" 
