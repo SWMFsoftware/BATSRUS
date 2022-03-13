@@ -111,56 +111,57 @@ module ModFieldLineThread
 
   type(BoundaryThreads), public, allocatable :: BoundaryThreads_B(:)
 
-  !
   integer,public :: nPointThreadMax = 100
   real           :: DsThreadMin = 0.002
 
   real, parameter:: TeGlobalMaxSi = 1.80e7
-  ! Logical from ModMain.
+
   public:: UseFieldLineThreads
-  ! If .true., use threaded gap in plots
+
   logical, public :: DoPlotThreads = .true.
-  ! If .true., use triangulation
+
   logical, public :: UseTriangulation = .true.
-  ! When the triangulation is done, interpolation may be done with
-  ! two ways to find the interpolation weights: via the areas of spherical
-  ! trangles, or via areas of planar trianles on a plane passing through
-  ! three nodes of the interpolation stencil (the latter is the "original"
-  ! interpolation mechanism by Renka, who proved its good theretical
-  ! properties, such as continuity of the interpolated valiable across the
-  ! boundary of interpolation stencil). The "original" algorithm is applied
-  ! if the following logical is set to .true.
+
+  ! Interolate with planar vs spherical triangles
   logical         :: UsePlanarTriangles = .false.
 
-  ! If .true. correct the contribution to the LOS plots from
-  ! the transition region
+  ! Add contribution from the transition region to the LOS plots
   logical, public :: UseTRCorrection = .true.
+
   ! Number of threads, originating from physical cells
   integer :: nThread = -1
+
   ! Number of GhostCells in a uniform grid covering a threaded gap
   integer :: nGUniform = 10
+
   ! The following logical is .true., if nUniform >=1
   logical, public :: IsUniformGrid = .true.
+
   ! Resolution along radial direction, if the grid is uniform
   real,    public :: dCoord1Uniform  = -1.0
   real,    public :: Coord1TopThread = -1.0
+
   ! The cell-centered grid starts at i=1, if nUniform <=0 (no uniform grid)
   ! The uniform grid starts at i=0, if nUniform>=1.
   integer :: iMax = 0
+
   ! For the cell-centered grid,  the normalized radial gen coordinate
   ! equals -0.5 for i=0.
   ! The uniform grid starts at normalized coordinate equal to 0 at i=0.
   real   :: Coord1Norm0 = 0.0
+
   ! Public members
   public :: BoundaryThreads
   public :: init                      ! Initializes module
   public :: read_thread_param         ! Read parameters of threads
   public :: check_tr_table            ! Calculate a table for transition region
   public :: set_threads       ! (Re)Sets threads in the inner boundary blocks
+
   ! Called prior to different invokes of set_cell_boundary, to determine
   ! how the solution on the thread should be (or not be) advanced:
   ! after hydro stage or after the heat conduction stage etc
   public :: advance_threads
+
   ! Correspondent named indexes
   integer,public,parameter:: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2, &
        Restart_=3
@@ -168,7 +169,8 @@ module ModFieldLineThread
   public :: interpolate_thread_state  ! Interpolate state from State_VG
   public :: set_thread_plotvar        ! Plot variables for "shell" plots
   public :: get_tr_los_image          ! Correction for TR on LOS images
-  ! Saves restart
+
+  ! Saves thread state into restart
   public :: save_thread_restart
 
   ! The number of grid spaces which are covered by the TR model
@@ -176,8 +178,10 @@ module ModFieldLineThread
   ! However, 1 is not recommended, as long as the length of the
   ! last interval is not controlled (may be too small)
   integer, parameter:: nIntervalTR = 2
+
   ! Number of threads on each processor
   integer, allocatable :: nThread_P(:)
+
   !   Hydrostatic equilibrium in an isothermal corona:
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
   ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r))
@@ -185,10 +189,13 @@ module ModFieldLineThread
   ! eefect of gravity on the hydrostatic equilibrium
   real,public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
   logical :: IsInitialized = .false.
+
   character(len=100) :: NameRestartFile
+
 contains
   !============================================================================
   subroutine init
+
     use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB
     integer :: iBlock ! Loop variable
@@ -231,6 +238,7 @@ contains
     do iBlock = 1, MaxBlock
        call nullify_thread_b(iBlock)
     end do
+
   end subroutine init
   !============================================================================
   subroutine clean
@@ -246,9 +254,11 @@ contains
     deallocate(IsAllocatedThread_B)
     deallocate(  BoundaryThreads_B)
     deallocate(nThread_P)
+
   end subroutine clean
   !============================================================================
   subroutine read_thread_param(NameCommand, iSession)
+
     use ModReadParam, ONLY: read_var
     use ModMain,      ONLY: NameThisComp
     character(len=*), intent(in):: NameCommand
@@ -279,12 +289,14 @@ contains
           iMax = 0
           Coord1Norm0 = 0.0
           call read_var('UseTriangulation', UseTriangulation)
+
           ! If the non-uniform grid is used extending the existing block
           ! adaptive grid, the grid normally does not even reach the
           ! chromosphere height, so that the contribution from the TR is
           ! not worth while quantifying. With the uniform grid, this
           ! option is available.
           call read_var('UseTRCorrection', UseTRCorrection)
+
           ! When the triangulation is done, interpolation may be done with
           ! two ways to find the interpolation weights: via the areas of
           ! spherical triangles, or via areas of planar triangles on a plane
@@ -294,13 +306,7 @@ contains
           ! the interpolated valiable across the boundary of interpolation
           ! stencil). The "original" algorithm is applied if the following
           ! logical is set to .true.
-          call read_var('UsePlanarTriangles', UsePlanarTriangles, iError)
-          if(iError /= 0)then
-             UsePlanarTriangles = .false.
-             if(iProc==0)write(*,'(a)')&
-                  NameThisComp//': Missing UsePlanarTriangles is set to F'
-             RETURN
-          end if
+          call read_var('UsePlanarTriangles', UsePlanarTriangles)
 
        else
           IsUniformGrid = .false.
@@ -315,6 +321,7 @@ contains
   end subroutine read_thread_param
   !============================================================================
   subroutine nullify_thread_b(iBlock)
+
     integer, intent(in) :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'nullify_thread_b'
@@ -338,9 +345,11 @@ contains
     BoundaryThreads_B(iBlock)%iMin       = 0
     BoundaryThreads_B(iBlock)%DCoord1Inv = 0.0
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine nullify_thread_b
   !============================================================================
   subroutine deallocate_thread_b(iBlock)
+
     integer, intent(in) :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'deallocate_thread_b'
@@ -363,9 +372,11 @@ contains
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine deallocate_thread_b
   !============================================================================
   subroutine set_threads(NameCaller)
+
     use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock
     use ModParallel, ONLY: DiLevel_EB, Unset_
     use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
@@ -500,9 +511,11 @@ contains
        if(nProc<=4)write(*,*)'Number of threads on different PEs: ', nThread_P
     end if
     call test_stop(NameSub, DoTest)
+
   contains
     !==========================================================================
     subroutine set_gc_grid(iBlock, iMin, dCoord1Inv)
+
       use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz, &
            CoordMin_DB, CellSize_DB, r_
       integer, intent(in) :: iBlock
@@ -531,11 +544,13 @@ contains
               CellSize_DB(r_, iBlock) )
          dCoord1Inv = 1.0/CellSize_DB(r_, iBlock)
       end if
+
     end subroutine set_gc_grid
     !==========================================================================
   end subroutine set_threads
   !============================================================================
   subroutine set_threads_b(iBlock)
+
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModMain,       ONLY: nStep, nIteration, tSimulation, &
@@ -867,9 +882,11 @@ contains
        end do
     end if
     call test_stop(NameSub, DoTest, iBlock)
+
   contains
     !==========================================================================
     subroutine limit_cosbr
+
       real::CosBR
       !------------------------------------------------------------------------
       CosBR = sum(DirB_D*DirR_D)
@@ -877,15 +894,16 @@ contains
       DirB_D = (DirB_D - CosBR*DirR_D)*&      ! Tangential componenets
            sqrt((1 - CosBRMin**2)/(1 - CosBR**2))+& ! Reduced in magnitude
            DirR_D*CosBRMin          ! Plus increased radial comp
+
     end subroutine limit_cosbr
     !==========================================================================
     subroutine limit_temperature(BLength, TMax)
+
       use ModPhysics,      ONLY: UnitX_, Si2No_V, UnitB_
       use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
       real, intent(in)  :: BLength
       real, intent(out) :: TMax
       real :: HeatFluxXLength, Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
-
       !------------------------------------------------------------------------
       HeatFluxXLength = 2*PoyntingFluxPerBSi*&
            BLength*No2Si_V(UnitX_)*No2Si_V(UnitB_)
@@ -900,6 +918,7 @@ contains
       ! physical, however, at large enough timerature
       ! the existing semi-implicit solver is unstable
       TMax = min(TMax,TeGlobalMaxSi)*Si2No_V(UnitTemperature_)
+
     end subroutine limit_temperature
     !==========================================================================
   end subroutine set_threads_b
@@ -933,9 +952,11 @@ contains
     end do
 
     call test_stop(NameSub, DoTest)
+
   end subroutine advance_threads
   !============================================================================
   subroutine read_thread_restart(iBlock)
+
     use ModMain,       ONLY: NameThisComp
     use ModIoUnit,     ONLY: UnitTmp_
     use ModUtilities,  ONLY: open_file, close_file
@@ -1095,9 +1116,11 @@ contains
             DoExtrapolate=.false.                                 )
     end if
     call state_thread_to_mhd(StateThread_V, State_V)
+
   end subroutine interpolate_thread_state
   !============================================================================
   subroutine state_thread_to_mhd(StateThread_V, State_V)
+
     use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
     use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_
     !INPUT:
@@ -1130,9 +1153,11 @@ contains
     end if
     State_V(WaveFirst_) = StateThread_V(A2Major_)
     State_V(WaveLast_ ) = StateThread_V(A2Minor_)
+
   end subroutine state_thread_to_mhd
   !============================================================================
   subroutine state_mhd_to_thread(State_V, Xyz_D, B0_D, StateThread_V)
+
     use ModPhysics,        ONLY: No2Si_V, UnitTemperature_, &
          UnitEnergyDens_
     use ModVarIndexes,      ONLY: Rho_, p_, Pe_, Bx_, Bz_, nVar
@@ -1170,10 +1195,12 @@ contains
     else
        StateThread_V(PSi_) = State_V(p_)*No2Si_V(UnitEnergyDens_)
     end if
+
   end subroutine state_mhd_to_thread
   !============================================================================
   subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, &
     State_V, PlotVar_V)
+
     use ModMain
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
@@ -1456,9 +1483,11 @@ contains
        end select
     end do ! iVar
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine set_thread_plotvar
   !============================================================================
   subroutine save_thread_restart
+
     use ModMain,       ONLY: NameThisComp
     use BATL_lib, ONLY: nBlock, Unused_B
     use ModIoUnit,     ONLY: UnitTmp_
@@ -1487,6 +1516,7 @@ contains
        call close_file
     end do
     call test_stop(NameSub, DoTest)
+
   end subroutine save_thread_restart
   !============================================================================
   subroutine get_restart_file_name(iBlock, NameRestartDir)
@@ -1513,6 +1543,7 @@ contains
   !============================================================================
   !==========================ROUTINES USED FOR TRIANGULATION===================
   subroutine broadcast_buffer(nVar, Buff_VI)
+
     use ModMpi
     integer, intent(in) :: nVar
     real, intent(inout) :: Buff_VI(nVar, nThread)
@@ -1525,12 +1556,15 @@ contains
             nVar*nThread_P(iProcBCast), MPI_REAL, iProcBCast, iComm, iError)
        iBuff = iBuff + nThread_P(iProcBCast)
     end do
+
   end subroutine broadcast_buffer
   !============================================================================
-  ! Calculate coordinates (lon, lat) of the intersection point of threads
-  ! with the spherical surface at the first generalized coordinate value
-  ! equal to input Coord1
   subroutine get_thread_point(Coord1, State_VI)
+
+    ! Calculate coordinates (lon, lat) of the intersection point of threads
+    ! with the spherical surface at the first generalized coordinate value
+    ! equal to input Coord1
+    
     use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
@@ -1595,9 +1629,11 @@ contains
     end do
     call broadcast_buffer(nVar=Lat_+TiSi_, Buff_VI=State_VI)
     call test_stop(NameSub, DoTest)
+
   end subroutine get_thread_point
   !============================================================================
   subroutine triangulate_thread_for_plot
+
     use BATL_lib,               ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, x_, y_, z_, Xyz_DGB
     use ModB0,                  ONLY: B0_DGB
@@ -1830,6 +1866,7 @@ contains
   contains
     !==========================================================================
     subroutine get_te_ptot(TeSi, PTotSi)
+
       use BATL_lib,       ONLY: xyz_to_coord, CellSize_DB, CoordMin_DB, r_
       use ModInterpolate, ONLY: interpolate_vector
       ! OUTPUT:
