@@ -5014,55 +5014,21 @@ The default is to flush the output, i.e. DoFlush=T.
 	<parameter name="ApexHeight" type="real" min="0" default="0" />
 	<parameter name="uCme" type="real" min="0" default="0" />
       </if>
-      <if expr="$TypeCme eq 'TD'">
+      <if expr="$TypeCme =~ /^TD/">
 	<parameter name="BcTubeDim" type="real" default="0" />
 	<parameter name="RadiusMajor" type="real" min="0" default="0" />
 	<parameter name="RadiusMinor" type="real" min="0" default="0" />
 	<parameter name="Depth" type="real" min="0" default="0" />
-	<parameter name="UsePlasmaBeta" type="logical" default="F"/>
-	<if expr="not $UsePlasmaBeta">
-	  <parameter name="Mass" type="real" min="0" default="0" />
+	<if expr="$TypeCme eq 'TD'">
+	  <parameter name="UsePlasmaBeta" type="logical" default="F"/>
+	  <parameter name="PlasmaBeta" type="real" min="0" default="0"
+		     if="$UsePlasmaBeta"/>
+	  <parameter name="EjectaTemperature" type="real" min="1e4" default="5e4"
+		     if="$UsePlasmaBeta"/>
+	  <parameter name="Mass" type="real" min="0" default="0"
+		     if="not $UsePlasmaBeta"/>
 	</if>
-	<if expr="$UsePlasmaBeta">
-	  <parameter name="PlasmaBeta" type="real" min="0" default="0" />
-	  <parameter name="EjectaTemperature" type="real" min="1e4" 
-		     default="5e4" />
-	</if>
-	<parameter name="TypeBStrap" type="string" case="lower"
-		   input="select" required="F">
-	  <option name="none"	  />
-	  <option name="readbstrap" />
-	  <option name="getbstrap"  />
-	</parameter>
-	<if expr="$TypeBStrap =~ /readbstrap/">
-	  <parameter name="bStrappingDim" type="real" min="0" 
-		     default="0" />
-	  <parameter name="TypeCharge" type="string" case="lower"
-	    	 input="select" required="F">
-	    <option name="none"	  />
-	    <option name="steady" />
-	    <option name="moving" />
-	    <option name="cancelflux" />
-	  </parameter>
-	  <if expr="$TypeCharge ne 'none'">
-	    <parameter name="bQStrapFraction" type="real" min="0" 
-		       default="0" />
-	    <parameter name="qDistance" type="real" min="0" 
-		       default="0" />
-	  </if>
-	  <if expr="$TypeCharge =~ /moving|cancelflux/">
-	    <parameter name="UChargeX" type="real" min="0" 
-		       default="0" />
-	  </if>
-	</if>
-      </if>
-      <if expr="$TypeCme eq 'TD14'">
-	<parameter name="BcTubeDim" type="real" default="0" />
-	<parameter name="RadiusMajor" type="real" min="0" default="0" />
-	<parameter name="RadiusMinor" type="real" min="0" default="0" />
-	<parameter name="Depth" type="real" min="0" default="0" />
-	<parameter name="TypeBStrap" type="string" case="lower"
-		   input="select" required="F">
+	<parameter name="TypeBStrap" type="string" case="lower" input="select">
 	  <option name="none"	  />
 	  <option name="readbstrap" />
 	  <option name="getbstrap"  />
@@ -5070,55 +5036,27 @@ The default is to flush the output, i.e. DoFlush=T.
 	  <option name="moving" />
 	  <option name="cancelflux" />
 	</parameter>
-	<if expr="$TypeBStrap =~ /readbstrap/">
-	  <parameter name="bStrappingDim" type="real" min="0" 
-		     default="0" />
-	  <parameter name="TypeCharge" type="string" case="lower"
-		     input="select" required="F">
+	<if expr="$TypeBStrap =~ /readbstrap|getbstrap/">
+	  <parameter name="bStrappingDim" type="real" min="0" default="0"
+		     if="$TypeBStrap eq 'readbstrap'"/>
+	  <parameter name="TypeCharge" type="string" case="lower" input="select">
 	    <option name="none"	  />
 	    <option name="steady" />
 	    <option name="moving" />
 	    <option name="cancelflux" />
 	  </parameter>
-	  <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    <parameter name="bQStrapFraction" type="real" min="0" 
-		       default="0" />
-	    <parameter name="qDistance" type="real" min="0" 
-		       default="0" />
-	  </if>
-	  <if expr="$TypeCharge =~ /moving|cancelflux/">
-	    <parameter name="UChargeX" type="real" min="0" 
-		       default="0" />
-	  </if>
-	</if>
-	<if expr="$TypeBStrap =~ /getbstrap/">
-	  <parameter name="TypeCharge" type="string" case="lower"
-		     input="select" required="F">
-	    <option name="none"	  />
-	    <option name="steady" />
-	    <option name="moving" />
-	    <option name="cancelflux" />
-	  </parameter>
-	  <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    <parameter name="bQStrapFraction" type="real" min="0" 
-		       default="0" />
-	    <parameter name="qDistance" type="real" min="0" 
-		       default="0" />
-	  </if>
-	  <if expr="$TypeCharge =~ /moving|cancelflux/">
-	    <parameter name="UChargeX" type="real" min="0" 
-		       default="0" />
-	  </if>
+	  <parameter name="bQStrapFraction" type="real" min="0" default="0"
+		     if="$TypeCharge ne 'none'"/>
+	  <parameter name="qDistance" type="real" min="0" default="0"
+		     if="$TypeCharge ne 'none'"/>
+	  <parameter name="UChargeX" type="real" min="0" default="0"
+		     if="$TypeCharge =~ /moving|cancelflux/"/>
 	</if>
 	<if expr="$TypeBStrap =~ /steady|moving|cancelflux/">
-	  <parameter name="bQStrappingDim" type="real" min="0" 
-		     default="0" />
-	  <parameter name="qDistance" type="real" min="0" 
-		     default="0" />
-	  <if expr="$TypeBStrap =~ /moving|cancelflux/">
-	    <parameter name="UChargeX" type="real" min="0" 
-		       default="0" />
-	  </if>
+	  <parameter name="bQStrappingDim" type="real" min="0" default="0" />
+	  <parameter name="qDistance" type="real" min="0" default="0" />
+	  <parameter name="UChargeX" type="real" min="0" default="0"
+		     if="$TypeBStrap =~ /moving|cancelflux/"/>
 	</if>
       </if>
     </if>
