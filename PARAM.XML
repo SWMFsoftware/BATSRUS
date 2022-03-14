@@ -5014,55 +5014,21 @@ The default is to flush the output, i.e. DoFlush=T.
 	<parameter name="ApexHeight" type="real" min="0" default="0" />
 	<parameter name="uCme" type="real" min="0" default="0" />
       </if>
-      <if expr="$TypeCme eq 'TD'">
+      <if expr="$TypeCme =~ /^TD/">
 	<parameter name="BcTubeDim" type="real" default="0" />
 	<parameter name="RadiusMajor" type="real" min="0" default="0" />
 	<parameter name="RadiusMinor" type="real" min="0" default="0" />
 	<parameter name="Depth" type="real" min="0" default="0" />
-	<parameter name="UsePlasmaBeta" type="logical" default="F"/>
-	<if expr="not $UsePlasmaBeta">
-	  <parameter name="Mass" type="real" min="0" default="0" />
+	<if expr="$TypeCme eq 'TD'">
+	  <parameter name="UsePlasmaBeta" type="logical" default="F"/>
+	  <parameter name="PlasmaBeta" type="real" min="0" default="0"
+		     if="$UsePlasmaBeta"/>
+	  <parameter name="EjectaTemperature" type="real" min="1e4" default="5e4"
+		     if="$UsePlasmaBeta"/>
+	  <parameter name="Mass" type="real" min="0" default="0"
+		     if="not $UsePlasmaBeta"/>
 	</if>
-	<if expr="$UsePlasmaBeta">
-	  <parameter name="PlasmaBeta" type="real" min="0" default="0" />
-	  <parameter name="EjectaTemperature" type="real" min="1e4" 
-		     default="5e4" />
-	</if>
-	<parameter name="TypeBStrap" type="string" case="lower"
-		   input="select" required="F">
-	  <option name="none"	  />
-	  <option name="readbstrap" />
-	  <option name="getbstrap"  />
-	</parameter>
-	<if expr="$TypeBStrap =~ /readbstrap/">
-	  <parameter name="bStrappingDim" type="real" min="0" 
-		     default="0" />
-	  <parameter name="TypeCharge" type="string" case="lower"
-	    	 input="select" required="F">
-	    <option name="none"	  />
-	    <option name="steady" />
-	    <option name="moving" />
-	    <option name="cancelflux" />
-	  </parameter>
-	  <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    <parameter name="bQStrapFraction" type="real" min="0" 
-		       default="0" />
-	    <parameter name="qDistance" type="real" min="0" 
-		       default="0" />
-	  </if>
-	  <if expr="$TypeCharge =~ /moving|cancelflux/">
-	    <parameter name="UChargeX" type="real" min="0" 
-		       default="0" />
-	  </if>
-	</if>
-      </if>
-      <if expr="$TypeCme eq 'TD14'">
-	<parameter name="BcTubeDim" type="real" default="0" />
-	<parameter name="RadiusMajor" type="real" min="0" default="0" />
-	<parameter name="RadiusMinor" type="real" min="0" default="0" />
-	<parameter name="Depth" type="real" min="0" default="0" />
-	<parameter name="TypeBStrap" type="string" case="lower"
-		   input="select" required="F">
+	<parameter name="TypeBStrap" type="string" case="lower" input="select">
 	  <option name="none"	  />
 	  <option name="readbstrap" />
 	  <option name="getbstrap"  />
@@ -5070,55 +5036,27 @@ The default is to flush the output, i.e. DoFlush=T.
 	  <option name="moving" />
 	  <option name="cancelflux" />
 	</parameter>
-	<if expr="$TypeBStrap =~ /readbstrap/">
-	  <parameter name="bStrappingDim" type="real" min="0" 
-		     default="0" />
-	  <parameter name="TypeCharge" type="string" case="lower"
-		     input="select" required="F">
+	<if expr="$TypeBStrap =~ /readbstrap|getbstrap/">
+	  <parameter name="bStrappingDim" type="real" min="0" default="0"
+		     if="$TypeBStrap eq 'readbstrap'"/>
+	  <parameter name="TypeCharge" type="string" case="lower" input="select">
 	    <option name="none"	  />
 	    <option name="steady" />
 	    <option name="moving" />
 	    <option name="cancelflux" />
 	  </parameter>
-	  <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    <parameter name="bQStrapFraction" type="real" min="0" 
-		       default="0" />
-	    <parameter name="qDistance" type="real" min="0" 
-		       default="0" />
-	  </if>
-	  <if expr="$TypeCharge =~ /moving|cancelflux/">
-	    <parameter name="UChargeX" type="real" min="0" 
-		       default="0" />
-	  </if>
-	</if>
-	<if expr="$TypeBStrap =~ /getbstrap/">
-	  <parameter name="TypeCharge" type="string" case="lower"
-		     input="select" required="F">
-	    <option name="none"	  />
-	    <option name="steady" />
-	    <option name="moving" />
-	    <option name="cancelflux" />
-	  </parameter>
-	  <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    <parameter name="bQStrapFraction" type="real" min="0" 
-		       default="0" />
-	    <parameter name="qDistance" type="real" min="0" 
-		       default="0" />
-	  </if>
-	  <if expr="$TypeCharge =~ /moving|cancelflux/">
-	    <parameter name="UChargeX" type="real" min="0" 
-		       default="0" />
-	  </if>
+	  <parameter name="bQStrapFraction" type="real" min="0" default="0"
+		     if="$TypeCharge ne 'none'"/>
+	  <parameter name="qDistance" type="real" min="0" default="0"
+		     if="$TypeCharge ne 'none'"/>
+	  <parameter name="UChargeX" type="real" min="0" default="0"
+		     if="$TypeCharge =~ /moving|cancelflux/"/>
 	</if>
 	<if expr="$TypeBStrap =~ /steady|moving|cancelflux/">
-	  <parameter name="bQStrappingDim" type="real" min="0" 
-		     default="0" />
-	  <parameter name="qDistance" type="real" min="0" 
-		     default="0" />
-	  <if expr="$TypeBStrap =~ /moving|cancelflux/">
-	    <parameter name="UChargeX" type="real" min="0" 
-		       default="0" />
-	  </if>
+	  <parameter name="bQStrappingDim" type="real" min="0" default="0" />
+	  <parameter name="qDistance" type="real" min="0" default="0" />
+	  <parameter name="UChargeX" type="real" min="0" default="0"
+		     if="$TypeBStrap =~ /moving|cancelflux/"/>
 	</if>
       </if>
     </if>
@@ -10029,10 +9967,10 @@ preferred).
 </command>
 
 <command name="PLOTTHREADS">
-  <parameter name="DoPlotThreads" type="logical"      default="F"/>
-  <parameter name="nGUniform" type="integer"          default="0"/>
-  <parameter name="UseTriangulation" type="logical"   default="F"/> 
-  <parameter name="DoTRCorrection" type="logical"     default="F"/>
+  <parameter name="DoPlotThreads"      type="logical" default="T"/>
+  <parameter name="nGUniform"          type="integer" default="10"/>
+  <parameter name="UseTriangulation"   type="logical" default="T"/> 
+  <parameter name="DoTRCorrection"     type="logical" default="T"/>
   <parameter name="UsePlanarTriangles" type="logical" default="F"/>
    
 #PLOTTHREADS
@@ -10040,30 +9978,34 @@ T	DoPlotThreads
 10      nGUniform
 T       UseTriangulation
 T       UseTRCorrection
-T	UsePlanarTriangles  
+F	UsePlanarTriangles  
 
-Used for plotting images in the solar corona. The threaded gap 
+Used for plotting images in the solar corona. The threaded gap
 contributes to the line-of-site integrals determining the intensity of
-the image pixel, if DoPlotThreads is true. If nUniform is greater or equal
-than 1, the threaded gap is split into nGUniform intervals uniformly in the
-first generalized coordinate. Otherwise, the grid for plotting continues 
-the grid of the block near the inner boundary, as extra ghost cells.
+the image pixel, if DoPlotThreads is true. If nUniform is greater or
+equal than 1, the threaded gap is split into nGUniform intervals
+uniformly in the first generalized coordinate. Otherwise, the grid for
+plotting continues the grid of the block near the inner boundary, as
+extra ghost cells.
 
-If UseTriangulation is false, the threads are approximated with straight 
-radial lines, otherwise data from the actual curved threads are interpolated 
-to a uniform spherical grid using a triangulation on a unit spherical grid. 
+If UseTriangulation is false, the threads are approximated with
+straight radial lines, otherwise data from the actual curved threads
+are interpolated to a uniform spherical grid using a triangulation on
+a unit spherical grid.
 
-If UseTRCorrection is true correct the contribution frop the threaded gap to 
-the LOS plots is corrected to account for the contribution from transition 
-region.
+If UseTRCorrection is true correct the contribution frop the threaded
+gap to the LOS plots is corrected to account for the contribution from
+transition region.
  	
-When triangulation on sphere as described above is completed, interpolation 
-weights can be assigned in two ways: via the areas of spherical triangles 
-(UsePlanarTriangle=F) or via areas of planar triangles (UsePlanarTriangle=T). 
-The latter is the "original" interpolation algorithm by Renka, who proved its good theretical 
+When triangulation on sphere as described above is completed,
+interpolation weights can be assigned in two ways: via the areas of
+spherical triangles (UsePlanarTriangle=F) or via areas of planar
+triangles (UsePlanarTriangle=T).  The latter is the "original"
+interpolation algorithm by Renka, who proved its good theretical
 properties, such as continuity of the interpolated valiable across the
-boundary of the interpolation stencil. 
+boundary of the interpolation stencil.
 
+Default values are shown above.
 </command>
 
 <command name="THREADEDBC">

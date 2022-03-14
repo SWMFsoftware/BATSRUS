@@ -243,8 +243,8 @@ contains
   subroutine read_threaded_bc_param
 
     use ModReadParam, ONLY: read_var
-    character(LEN=7)::TypeBc = 'limited'
-    integer :: iError
+    character(len=7)::TypeBc = 'limited'
+
     character(len=*), parameter:: NameSub = 'read_threaded_bc_param'
     !--------------------------------------------------------------------------
     call read_var('UseAlignedVelocity', UseAlignedVelocity)
@@ -261,8 +261,8 @@ contains
        if(iProc==0)write(*,'(a)')&
             'Unknown TypeBc = '//TypeBc//', reset to limited'
     end select
-    call read_var('Tolerance', cTol, iError)
-    call read_var('MaxIter', nIter, iError)
+    call read_var('Tolerance', cTol)
+    call read_var('MaxIter', nIter)
 
   end subroutine read_threaded_bc_param
   !============================================================================
