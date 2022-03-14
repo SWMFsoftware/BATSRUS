@@ -239,6 +239,7 @@ contains
     use ModBlockData, ONLY: clean_block_data
     use ModIO, ONLY : write_prefix, iUnitOut
     use ModMpi
+    use ModB0, ONLY : B0_DGB
 
     use BATL_lib,         ONLY: regrid_batl, &
          iProc, nNode, iTree_IA, nLevelMin, nLevelMax, &
@@ -353,6 +354,7 @@ contains
 
     ! Send new grid info to GPU
     call sync_cpu_gpu_amr
+    !$acc update device(B0_DGB)
 
     ! redo message passing
     if(DoProfileAmr) call timing_start('amr::exchange_false')
