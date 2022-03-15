@@ -302,7 +302,7 @@ contains
     end if
 
     call sync_cpu_gpu('change on CPU', NameSub, State_VGB, B0_DGB)
-    
+
     ! write_log_file may use Trace_DSNB array before another Trace_DSNB tracing
     ! only needs to zero Trace_DSNB() out if the grid changed
     if(UseB .and. allocated(Trace_DSNB) .and. iNewGrid/=iLastGrid) &
