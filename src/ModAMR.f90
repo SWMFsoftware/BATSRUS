@@ -355,7 +355,7 @@ contains
 
     ! Send new grid info and B0 to GPU. State_VGB is done by exchange_messages.
     call sync_cpu_gpu_amr
-    call sync_cpu_gpu('update on GPU', NameSub, B0_DGB)
+    call sync_cpu_gpu('update on GPU', NameSub, B0_DGB=B0_DGB)
 
     ! redo message passing
     if(DoProfileAmr) call timing_start('amr::exchange_false')
