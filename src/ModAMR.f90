@@ -261,7 +261,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    call sync_cpu_gpu('change on CPU', NameSub, State_VGB)
     if(DoProfileAmr) call timing_start('amr::regrid_batl')
     if(UsePartSteady)then
        call regrid_batl(nVar, State_VGB, DtMax_B, DoTestIn=DoTest, &
@@ -302,6 +301,8 @@ contains
        RETURN
     end if
 
+    call sync_cpu_gpu('change on CPU', NameSub, State_VGB, B0_DGB)
+    
     ! write_log_file may use Trace_DSNB array before another Trace_DSNB tracing
     ! only needs to zero Trace_DSNB() out if the grid changed
     if(UseB .and. allocated(Trace_DSNB) .and. iNewGrid/=iLastGrid) &
@@ -352,9 +353,9 @@ contains
     call load_balance(DoMoveCoord=.true., DoMoveData=.true., IsNewBlock=.true.)
     if(DoProfileAmr) call timing_stop('amr::load_balance')
 
-    ! Send new grid info to GPU
+    ! Send new grid info and B0 to GPU. State_VGB is done by exchange_messages.
     call sync_cpu_gpu_amr
-    !$acc update device(B0_DGB)
+    call sync_cpu_gpu('update on GPU', NameSub, B0_DGB)
 
     ! redo message passing
     if(DoProfileAmr) call timing_start('amr::exchange_false')
