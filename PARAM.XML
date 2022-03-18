@@ -3497,6 +3497,9 @@ The default is DoSaveLogFile false.
 	<option name="HGR"/>
 	<option name="HGI"/>
 	<option name="HGC"/>
+	<option name="hgr"/>
+	<option name="hgi"/>
+	<option name="hgc"/>
       </part>
       <part name="OptionalVar" type="string" input="select" required="F"
 	    multiple="T">
@@ -3556,10 +3559,10 @@ For each satellite the StringSatellite parameter determines what
 is saved into the satellite file(s).
 The StringSatellite can contain the following parts in arbitrary order
 \begin{verbatim}
-SatelliteVar   = 'mhd', 'ful' or 'var' (normalized units)
-                 'MHD', 'FUL' or 'VAR' (I/O units)
-NameCoord      = 'GEO', 'GSE', 'GSM', 'MAG', 'SMG', 'HGR', 'HGI' or 'HGC'
-OptionalVar    = 'ray', 'none', 'step', 'time', 'traj', 'trajrange' and/or 'date'
+SatelliteVar   = mhd, ful or var (normalized units)
+                 MHD, FUL or VAR (I/O units)
+NameCoord      = GEO, GSE, GSM, MAG, SMG, HGR, HGI, HGC, hgr, hgi, hgc
+OptionalVar    = ray, none, step, time, traj, trajrange, date
 \end{verbatim}
 The SatelliteVar part is required and determines the list
 of variables to be saved along the satellite trajectory.
@@ -3648,7 +3651,7 @@ GSM
 \end{verbatim}
 The #COOR command is optional.  It indicates which coordinate system is used
 for the trajectory coordinates. Possible values (GSM, GEO, GSE, SMG, HGI, HGR...)
-and their meaning is described in share/Library/src/CON_axes.f90 for example
+and their meaning is described in share/Library/src/CON_axes.f90.
 The default coordinate system is GSM.
 After the #START line the data lines contain
 the date-time information (year, month, day, hour, minute, second, millisecond)
