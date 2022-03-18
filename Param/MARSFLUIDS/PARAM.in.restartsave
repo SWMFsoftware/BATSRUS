@@ -121,7 +121,7 @@ fixed			TypeBc6 MaxZ
 #USERSWITCH
 +init +ic +source		StringSwitch
 
-#USERINPUTBEGIN -----------------------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #UseHotO
 T

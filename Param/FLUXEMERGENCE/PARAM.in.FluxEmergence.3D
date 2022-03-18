@@ -48,7 +48,7 @@ usernoinflow		TypeBc6
 #USERSWITCH
 +init +ic +perturb +source +update		StringSwitch
 
-#USERINPUTBEGIN ---------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #RADMHD
 0.0                     z_photo
