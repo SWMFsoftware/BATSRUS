@@ -290,11 +290,11 @@ contains
     ! Pixel size for node based pixel grid
     SizePix_D = 2*HalfSizeImage_D/(nPix_D - 1)
 
-    if(DoTest .and. iProc==0) then
+    if(DoTest) then
        write(*,*) 'ObsPos         =', ObsPos_D
        write(*,*) 'Los_D          =', Los_D
-       write(*,*) 'HalfSizeImage_D     =', HalfSizeImage_D
-       write(*,*) 'aOffset,bOffset=', aOffset, bOffset
+       write(*,*) 'HalfSizeImage_D =', HalfSizeImage_D
+       write(*,*) 'aOffset,bOffset =', aOffset, bOffset
        write(*,*) 'SizePix_D        =', SizePix_D
        write(*,*) 'nPix_D           =', nPix_D
     end if
