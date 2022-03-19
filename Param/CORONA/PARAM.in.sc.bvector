@@ -57,7 +57,7 @@ T			UseB0MomentumFlux
 #USERSWITCH
 +init +ic		StringSwitch
 
-#USERINPUTBEGIN
+#USERINPUTBEGIN -----------------------------------
 
 #ARSMOOTHEXT
 8.0			ExtLonLeft

@@ -81,7 +81,7 @@ none			TypeCoronalHeating
 T			UseCoarseAxis
 2			nCoarseLayer
 
-#USERINPUTBEGIN -------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #CHROMOBC
 1.5e14			NchromoSi

@@ -36,7 +36,7 @@ F			UseBody
 #USERSWITCH
 +init +ic +source		StringSwitch
 
-#USERINPUTBEGIN ------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #CHROMOBC
 2e17                    nChromoSi H+ [1/m^3]

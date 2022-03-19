@@ -28,7 +28,7 @@ NONE			TypeNormalization
 T			UseViscosity
 1.05			ViscoCoeffSi
 
-#USERINPUTBEGIN -----------------
+#USERINPUTBEGIN -----------------------------------
 
 #PIPEFLOW
 T

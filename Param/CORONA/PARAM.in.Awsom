@@ -91,7 +91,7 @@ T			UseRadCooling
 T			UseCoarseAxis
 2			nCoarseLayer
 
-#USERINPUTBEGIN -------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #CHROMOBC
 2e17			NchromoSi

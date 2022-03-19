@@ -44,7 +44,7 @@ initial			StringShape
 #USERSWITCH
 +init +ic		StringSwitch
 
-#USERINPUTBEGIN ------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #LOWRIETEST
 3			iRadiationTest

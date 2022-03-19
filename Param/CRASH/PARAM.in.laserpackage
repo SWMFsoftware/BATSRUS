@@ -31,7 +31,7 @@ HYPRE			TypePrecond
 #USERSWITCH
 +all			StringSwitch
 
-#USERINPUTBEGIN ------------------------
+#USERINPUTBEGIN -----------------------------------
 
 LEVELSET
 F			UseNonConsLevelSet

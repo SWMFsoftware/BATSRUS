@@ -53,7 +53,7 @@ READ			TypeNormalization
 #USERSWITCH
 +init +ic +source +update		StringSwitch
 
-#USERINPUTBEGIN -------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #RADMHD
 0.0                     z_photo
