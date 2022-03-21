@@ -34,6 +34,7 @@ test_help:
 	@echo "    test_amrsph                (run spherical AMR test)"
 	@echo "    test_awsom                 (run AWSoM corona test)"
 	@echo "    test_awsom_gpu             (run AWSoM corona test on GPU)"
+	@echo "    test_awsom_gpu_large       (run large AWSoM corona test on GPU)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
 	@echo "    test_bvector               (run Bvector Solar Corona test)"
 	@echo "    test_earth                 (run Cartesian Earth test)"	
@@ -135,6 +136,7 @@ test_gpu:
 	-@($(MAKE) test_fastwave_2d TESTDIR=run_test_fastwave_2d)
 	-@($(MAKE) test_earth TESTDIR=run_test_earth)
 	-@($(MAKE) test_awsom_gpu TESTDIR=run_test_awsom_gpu)
+	-@($(MAKE) test_awsom_gpu_large TESTDIR=run_test_awsom_gpu_large)
 
 test_extra:
 	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)
@@ -907,6 +909,44 @@ test_awsom_gpu_check:
 		Param/CORONA/TestOutput/log_n000001.sc.awsom_gpu \
 		> test_awsom_gpu.diff)
 	ls -l test_awsom_gpu.diff
+
+
+
+test_awsom_gpu_large:
+	@echo "test_awsom_gpu_large_compile..." > test_awsom_gpu_large.diff
+	$(MAKE) test_awsom_gpu_large_compile
+	@echo "test_awsom_gpu_large_rundir..." >> test_awsom_gpu_large.diff
+	$(MAKE) test_awsom_gpu_large_rundir
+	@echo "test_awsom_gpu_large_run..." >> test_awsom_gpu_large.diff
+	$(MAKE) test_awsom_gpu_large_run
+	@echo "test_awsom_gpu_large_check..." >> test_awsom_gpu_large.diff
+	$(MAKE) test_awsom_gpu_large_check
+
+# Fails on Pleiades with OpenMP
+test_awsom_gpu_large_compile:
+	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -u=Awsom -e=Mhd -ng=2 -g=6,4,4
+	./Config.pl -opt=Param/CORONA/PARAM.in.Awsom.GPU.large
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_awsom_gpu_large_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.Awsom.GPU.large PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_awsom_gpu_large_run:
+	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	
+test_awsom_gpu_large_check:
+	-@(${DIFFNUM} -a=1e-19 -r=1e-5 -t \
+		${TESTDIR}/RESULTS/SC/log_n000010.log \
+		Param/CORONA/TestOutput/log_n000010.sc.awsom_gpu_large \
+		> test_awsom_gpu_large.diff)
+	ls -l test_awsom_gpu_large.diff
+
 
 # TEST 1D CORONA WITH AWSOM-MULTIFLUID SETTING
 
