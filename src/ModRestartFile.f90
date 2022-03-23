@@ -500,10 +500,10 @@ contains
        endif
        if(IsLimitedGeometry) then
           do iDim = 1, nDim
-             write(UnitTmp_,'(es22.15,a)') &
-                  CoordDimMin_D(iDim), cTab//cTab//'CoordDimMin_D'
-             write(UnitTmp_,'(es22.15,a)') &
-                  CoordDimMax_D(iDim), cTab//cTab//'CoordDimMax_D'
+             write(UnitTmp_,'(es22.15,a,i1,a)') &
+                  CoordDimMin_D(iDim), cTab//cTab//'Coord', iDim, 'Min'
+             write(UnitTmp_,'(es22.15,a,i1,a)') &
+                  CoordDimMax_D(iDim), cTab//cTab//'Coord', iDim, 'Max'
           end do
        endif
        write(UnitTmp_,*)

@@ -152,7 +152,7 @@ T			UseNonConservative
 ! Switch of TVD and Accurate res change.
 ! 1st order prolongation does not work near body for fast updates so far.
 #PROLONGATION
-2                       nOrderProlong
+2			nOrderProlong
 
 #SAVELOGFILE
 T			DoSaveLogfile
