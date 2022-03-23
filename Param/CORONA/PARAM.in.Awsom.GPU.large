@@ -13,7 +13,7 @@ fast			TypeUpdate
 SC			NameComp
 
 #GRIDBLOCKALL
-50000			MaxBlock
+40000			MaxBlock
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -114,13 +114,14 @@ shell0			StringShape
 1.7			Radius
 
 #AMRCRITERIARESOLUTION
-3			nRefineCrit
+2			nRefineCrit
 dphi			StringRefine
 3.0			RefineTo
 1.5			CoarsenFrom
 dphi Innershell		StringRefine
 1.5			RefineTo
 0.75			CoarsenFrom
+
 currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
@@ -130,7 +131,7 @@ currentsheet		StringRefine
 1.5			Resolution
 initial			StringShape
 
-#DOAMR
+DOAMR
 T			DoAmr
 6			DnAmr
 -1.0			DtAmr
@@ -157,7 +158,7 @@ T			UseNonConservative
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLog
-10			DnSaveLogfile
+500			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #OUTERBOUNDARY
@@ -171,7 +172,7 @@ float			TypeBc6
 #SAVEPLOT
 1			nPlotFile
 x=0 VAR idl		StringPlot
-10			DnSavePlot
+500			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
 {MHD}			NameVars
@@ -181,5 +182,5 @@ x=0 VAR idl		StringPlot
 F			DoSaveInitial
 
 #STOP
-10			MaxIteration
+500			MaxIteration
 -1.0			tSimulationMax
