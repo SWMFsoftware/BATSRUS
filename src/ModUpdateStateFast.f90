@@ -491,16 +491,37 @@ contains
 
     if(UseGravity .or. UseRotatingFrame)then
 
-       do iFluid = 1, nFluid
+       if(UseGravity)then
+          ForcePerRho_D = &
+               Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
+          Change_V(Ux_:Uz_) = Change_V(Ux_:Uz_) &
+               + State_VGB(Rho_,i,j,k,iBlock)*ForcePerRho_D
+          Change_V(Energy_) = Change_V(Energy_) &
+               + sum(State_VGB(Ux_:Uz_,i,j,k,iBlock)*ForcePerRho_D)
+       end if
+
+       if(UseRotatingFrame)then
+          Change_V(Ux_) = Change_V(Ux_) &
+               + 2*OmegaBody*State_VGB(Uy_,i,j,k,iBlock) &
+               + State_VGB(Rho_,i,j,k,iBlock) &
+               *OmegaBody**2 * Xyz_DGB(x_,i,j,k,iBlock)
+          Change_V(Uy_) = Change_V(Uy_) &
+               - 2*OmegaBody*State_VGB(Ux_,i,j,k,iBlock) &
+               + State_VGB(Rho_,i,j,k,iBlock) &
+               *OmegaBody**2 * Xyz_DGB(y_,i,j,k,iBlock)
+          Change_V(Energy_) = Change_V(Energy_) &
+               + OmegaBody**2 * sum(State_VGB(Ux_:Uy_,i,j,k,iBlock) &
+               *Xyz_DGB(x_:y_,i,j,k,iBlock))
+       end if
+
+       do iFluid = 2, nFluid
           iRho = iRho_I(iFluid)
           iUx = iUx_I(iFluid)
-          iUy = iUy_I(iFluid)
-          iUz = iUz_I(iFluid)
           iEnergy = nVar + iFluid
 
           if(UseGravity)then
-             ForcePerRho_D = &
-                  Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
+             iUz = iUz_I(iFluid)
+
              Change_V(iUx:iUz) = Change_V(iUx:iUz) &
                   + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
              Change_V(iEnergy) = Change_V(iEnergy) &
@@ -515,6 +536,8 @@ contains
 #endif
 
           if(UseRotatingFrame)then
+             iUy = iUy_I(iFluid)
+
              Change_V(iUx) = Change_V(iUx) &
                   + 2*OmegaBody*State_VGB(iUy,i,j,k,iBlock) &
                   + State_VGB(iRho,i,j,k,iBlock) &
