@@ -36,7 +36,7 @@ module ModMain
 
   ! Time stepping parameters and values.
   integer :: nStep=0, nOrder, iStage, nStage, nIteration=0, nOrderOld
-  !$acc declare create(nStep, nOrder, iStage, nStage)
+  !$acc declare create(nStep, nOrder, iStage, nStage, nIteration)
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
   !$acc declare create(UseHalfStep)
 
