@@ -52,7 +52,6 @@ F			UseBody
 
 #GAMMA
 1.5			Gamma for fluid 1
-
 1.5			GammaElectron for electrons (if UseElectronPressure)
 
 #HEATFLUXCOLLISIONLESS
@@ -67,10 +66,10 @@ F			UseHeatConduction
 #SEMIIMPLICIT
 F			UseSemiImplicit
 
-CORONALHEATING
+#CORONALHEATING
 none			TypeCoronalHeating
 
-POYNTINGFLUX
+#POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi
 
 #USERSWITCH

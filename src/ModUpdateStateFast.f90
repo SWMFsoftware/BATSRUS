@@ -429,7 +429,15 @@ contains
     end if
     if(UseNonConservative)then
        ! Add -(g-1)*p*div(u) source term
-       do iFluid = 1, nFluid
+       DivU = Flux_VXI(UnFirst_,i+1,j,k,iGang) - Flux_VXI(UnFirst_,i,j,k,iGang)
+       if(nJ > 1) DivU = DivU &
+            + Flux_VYI(UnFirst_,i,j+1,k,iGang) - Flux_VYI(UnFirst_,i,j,k,iGang)
+       if(nK > 1) DivU = DivU &
+            + Flux_VZI(UnFirst_,i,j,k+1,iGang) - Flux_VZI(UnFirst_,i,j,k,iGang)
+       Change_V(p_) = Change_V(p_) &
+            - GammaMinus1*State_VGB(p_,i,j,k,iBlock)*DivU
+
+       do iFluid = 2, nFluid
           iP  = iP_I(iFluid)
           iUn = UnFirst_ + iFluid - 1
           DivU = Flux_VXI(iUn,i+1,j,k,iGang) - Flux_VXI(iUn,i,j,k,iGang)
