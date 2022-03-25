@@ -2711,7 +2711,6 @@ contains
 
     end function is_first_session
     !==========================================================================
-
     subroutine set_namevar
 
       use ModMultiFluid, ONLY: extract_fluid_name
@@ -2728,7 +2727,6 @@ contains
       integer           :: iVar, iElement, iChargeState
       character(len=4)  :: NameChargestate
       !------------------------------------------------------------------------
-
       ! Fix the NameVar_V string for waves
       if(WaveLast_ > 1)then
          do iWave = 1, nWave
@@ -2928,6 +2926,8 @@ contains
 
       ! Remove tailing spaces
       NamePrimitiveVarOrig    = trim(StringPrimitiveOrig)
+
+      !$acc update device (NameVar_V)
 
     end subroutine set_namevar
     !==========================================================================

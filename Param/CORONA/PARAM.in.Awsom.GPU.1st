@@ -1,9 +1,9 @@
 Begin session: 1
 
 #DESCRIPTION
-Param/CORONA/PARAM.in.Awsom.GPU.large		StringDescription
+Param/CORONA/PARAM.in.Awsom.GPU		StringDescription
 
-ELECTRONENTROPY
+#ELECTRONENTROPY
 T			UseElectronEntropy
 
 #UPDATE
@@ -13,7 +13,7 @@ fast			TypeUpdate
 SC			NameComp
 
 #GRIDBLOCKALL
-40000			MaxBlock
+6000			MaxBlock
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -27,7 +27,9 @@ F			IsTimeAccurate
 0			iSecond
 
 #SAVERESTART
-F			DoSaveRestart
+T			DoSaveRestart
+10000			DnSaveRestart
+-1.0			DtSaveRestart
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
@@ -52,7 +54,6 @@ F			UseBody
 
 #GAMMA
 1.5			Gamma for fluid 1
-
 1.5			GammaElectron for electrons (if UseElectronPressure)
 
 #HEATFLUXCOLLISIONLESS
@@ -67,18 +68,32 @@ F			UseHeatConduction
 #SEMIIMPLICIT
 F			UseSemiImplicit
 
-CORONALHEATING
+#CORONALHEATING
 none			TypeCoronalHeating
 
-POYNTINGFLUX
+#POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi
 
 #USERSWITCH
 +init +ic		StringSwitch
 
-COARSEAXIS
+#COARSEAXIS
 T			UseCoarseAxis
 2			nCoarseLayer
+
+#TEST
+update_state calc_face_flux calc_source		StringTest
+
+#TESTXYZ
+0.0			xTest
+1.80			yTest
+0.04			zTest
+
+#TESTVAR
+p			NameTestVar
+
+#TESTSIDE
+1			iSideTest
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -116,8 +131,8 @@ shell0			StringShape
 #AMRCRITERIARESOLUTION
 2			nRefineCrit
 dphi			StringRefine
-3.0			RefineTo
-1.5			CoarsenFrom
+6.0			RefineTo
+3.0			CoarsenFrom
 dphi Innershell		StringRefine
 1.5			RefineTo
 0.75			CoarsenFrom
@@ -128,37 +143,32 @@ currentsheet		StringRefine
 1.5			MaxResolution
 
 #GRIDRESOLUTION
-1.5			Resolution
+6.0			Resolution
 initial			StringShape
 
-DOAMR
+#DOAMR
 T			DoAmr
 6			DnAmr
 -1.0			DtAmr
 T			IsStrictAmr
 
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
-
 #SCHEME
-2			nOrder (1 or 2)
-Linde			TypeFlux
-mc3			TypeLimiter
-1.2			LimiterBeta
+1			nOrder (1 or 2)
+Rusanov			TypeFlux
 
 #NONCONSERVATIVE
 T			UseNonConservative
 
-! Switch of TVD and Accurate res change.
-! 1st order prolongation does not work near body for fast updates so far.
-#PROLONGATION
-2			nOrderProlong
+#MESSAGEPASS
+all			TypeMessagePass
+
+#RESCHANGE
+T			UseAccurateReschange
 
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLog
-500			DnSaveLogfile
+1			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #OUTERBOUNDARY
@@ -172,7 +182,7 @@ float			TypeBc6
 #SAVEPLOT
 1			nPlotFile
 x=0 VAR idl		StringPlot
-500			DnSavePlot
+1			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
 {MHD}			NameVars
@@ -182,5 +192,5 @@ x=0 VAR idl		StringPlot
 F			DoSaveInitial
 
 #STOP
-500			MaxIteration
+10			MaxIteration
 -1.0			tSimulationMax

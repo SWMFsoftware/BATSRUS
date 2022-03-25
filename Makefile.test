@@ -925,15 +925,15 @@ test_awsom_large_gpu:
 # Fails on Pleiades with OpenMP
 test_awsom_large_gpu_compile:
 	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
-	./Config.pl -u=Awsom -e=Mhd -ng=2 -g=6,4,4
-	./Config.pl -opt=Param/CORONA/PARAM.in.Awsom.GPU.large
+	./Config.pl -u=Awsom -e=Awsom -ng=2 -g=6,4,4
+	./Config.pl -opt=Param/CORONA/PARAM.in.Awsom.large.GPU
 	$(MAKE) BATSRUS
 	make PIDL
 
 test_awsom_large_gpu_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
-	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.Awsom.GPU.large PARAM.in
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.Awsom.large.GPU PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsom_large_gpu_run:
