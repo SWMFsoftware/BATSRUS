@@ -9,7 +9,7 @@ module ModWritePlot
   use ModBatsrusUtility, ONLY: get_date_time, get_time_string
   use ModCellBoundary, ONLY: set_cell_boundary
   use ModGeometry, ONLY: IsBoundary_B
-  
+
   implicit none
 
   private ! except
