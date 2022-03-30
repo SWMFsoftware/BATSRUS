@@ -4,11 +4,9 @@
 module ModWritePlot
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iProc, nProc, iComm, nG
+       test_start, test_stop, iProc, nProc, iComm
   use ModNumConst, ONLY: cRadToDeg
   use ModBatsrusUtility, ONLY: get_date_time, get_time_string
-  use ModCellBoundary, ONLY: set_cell_boundary
-  use ModGeometry, ONLY: IsBoundary_B
 
   implicit none
 
@@ -425,12 +423,7 @@ contains
           end do
 
        end do
-       !! Fill in the outer boundaries for second order prolongation
-       do iBlock = 1, nBlock
-          if (Unused_B(iBlock)) CYCLE
-          if (IsBoundary_B(iBlock)) call set_cell_boundary( &
-               nG, iBlock, nPlotVar, PlotVar_VGB(:,:,:,:,iBlock))
-       end do
+
        ! Pass plotting variables to fill ghost cell values
        call message_pass_cell(nPlotVar, PlotVar_VGB)
     end if
