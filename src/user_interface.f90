@@ -163,7 +163,7 @@ subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
   integer,          intent(in)   :: iBlock
   character(len=*), intent(in)   :: NameVar
   logical,          intent(in)   :: IsDimensional
-  real,             intent(out)  :: &
+  real,             intent(inout):: &
        PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   real,             intent(out)  :: PlotVarBody
   logical,          intent(out)  :: UsePlotVarBody
