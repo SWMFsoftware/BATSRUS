@@ -546,9 +546,7 @@ contains
        allocate(InsidePicRegion_C(1:nI,1:nJ,1:nK))
        InsidePicRegion_C = 1.0
 
-       call pic_find_node
        ! Calculate the pic region criteria
-
        if(.not. DoRestartPicStatus) then
           if(allocated(iStatusPicCrit_CB)) then
              call calc_pic_criteria
@@ -645,12 +643,14 @@ contains
   subroutine pic_find_node
 
     ! Find blocks that overlap with PIC region(s).
-    use BATL_lib,  ONLY: nDim, MaxDim, find_grid_block, &
-         x_, y_, z_, MaxNode, Unset_
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, &
+         Xyz_DGB, iNode_B, MaxNode
 
-    integer:: nIjk_D(1:MaxDim), Ijk_D(1:MaxDim)
-    real:: XyzPic_D(1:MaxDim), XyzMhd_D(1:MaxDim)
-    integer:: iRegion, iBlock, i, j, k, iProcFound, iNode
+    real:: Xyz_D(nDim), Pic_D(nDim)
+
+    integer:: iBlock, i, j, k, iNode
+
+    logical:: IsPicBlock 
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_find_node'
@@ -659,29 +659,20 @@ contains
     if(DoTest)write(*,*) NameSub,' is called'
 
     if(.not.allocated(IsPicNode_A)) allocate(IsPicNode_A(MaxNode))
-    IsPicNode_A = .false.
+    IsPicNode_A = .false.    
 
-    nIjk_D = 1; XyzPic_D = 0; XyzMhd_D=0
-
-    do iRegion = 1, nRegionPic
-       nIjk_D(1:nDim) = int(&
-            LenPic_DI(1:nDim,iRegion)/DxyzPic_DI(1:nDim,iRegion) + 0.5)
-
-       if(DoTest) write(*,*) NameSub,' iRegion = ',iRegion, &
-            ' nIjk_D = ',nIjk_D(1:nDim)
-
-       do k=1, nIjk_D(z_); do j=1, nIjk_D(y_); do i=1, nIjk_D(x_)
-
-          ! Loop through all the PIC node points
-          Ijk_D(x_) = i - 1; Ijk_D(y_) = j - 1; Ijk_D(z_) = k - 1
-          XyzPic_D(1:nDim) = Ijk_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)
-          call pic_to_mhd_vec(iRegion, XyzPic_D, XyzMhd_D)
-          call find_grid_block(XyzMhd_D, iProcFound, iBlock, iNodeOut=iNode)
-          if(iProcFound /= Unset_) IsPicNode_A(iNode) = .true.
-
-       enddo; enddo; enddo
-
-    enddo
+    do iBlock=1,nBlock
+       if(Unused_B(iBlock)) CYCLE
+       IsPicBlock = .false.
+       ! Loop through all cells of a block, if any cell of this block 
+       ! is overlapped with the PIC grid, this block is considered as 
+       ! a PIC block/node. 
+       do i = 1, nI; do j = 1, nJ; do k = 1, nK
+          if(.not. IsPicBlock .and. i_status_pic_region(iBlock,i,j,k) == 1) &
+               IsPicBlock = .true.
+       end do; end do; end do
+       IsPicNode_A(iNode_B(iBlock)) = IsPicBlock
+    end do
 
     if(DoTest) write(*,*)'IsPicNode= ', IsPicNode_A(:)
     call test_stop(NameSub, DoTest)
@@ -981,7 +972,7 @@ contains
        call mhd_to_pic_vec(iRegion, Xyz_D, Pic_D)
 
        if(all(Pic_D > 0 ).and.&
-            all(Pic_D < LenPic_DI(:,iRegion))) & ! Not accurate here. --Yuxi
+            all(Pic_D < LenPic_DI(:,iRegion))) & 
             iStatus = 1
     enddo
 
@@ -1239,6 +1230,8 @@ contains
        iStatusPicCrit_CB = iPicOn_
        RETURN
     end if
+
+    call pic_find_node
 
     iPicGrid = iNewGrid
     iPicDecomposition = iNewDecomposition
