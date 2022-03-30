@@ -827,6 +827,11 @@ contains
                             do kPExt = max(kP - nPatchExtend_D(z_), 0), &
                                  min(kP + nPatchExtend_D(z_), nZ-1)
 
+                               ! The patches switched on here may outside
+                               ! the regions that are defined by #PICREGIONMAX.
+                               ! So, correct_status is called below to ensure
+                               ! all active patches are inside the regions of
+                               ! #PICREGIONMAX.
                                call set_point_status(iPicStatus_I(&
                                     iPicStatusMin_I(iRegion):&
                                     iPicStatusMax_I(iRegion)),&
@@ -843,6 +848,8 @@ contains
        end do ! end loop blocks
     end do ! end loop thorugh regions
 
+    call correct_status
+    
     ! Global MPI reduction for iPicStatus_I array
     call MPI_Allreduce(MPI_IN_PLACE, iPicStatus_I, nSizeStatus,&
          MPI_INT, MPI_BOR, iComm, iError)
@@ -863,6 +870,52 @@ contains
     end if
 
   end function is_inside_pic_grid
+  !============================================================================
+  subroutine correct_status
+
+    ! This subroutine ensures all active patches are inside the regions
+    ! that are defined by #PICREGIONMAX
+    
+    use BATL_lib, ONLY: x_, y_, z_, MaxDim, nDim
+    use BATL_Region, ONLY: is_point_inside_regions
+
+    integer :: iRegion, nX, nY, nZ, i, j, k
+    integer :: iStatus    
+    integer:: iPatch_D(MaxDim)
+    real:: XyzMhd_D(MaxDim)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'correct_status'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
+
+    if(.not. allocated(iRegionPicLimit_I)) return
+
+    do iRegion = 1, nRegionPic
+       nX = nPatchCell_DI(x_, iRegion)
+       nY = nPatchCell_DI(y_, iRegion)
+       nZ = nPatchCell_DI(z_, iRegion)
+       do i = 0, nX-1; do j = 0, nY-1; do k = 0, nZ-1          
+          call get_point_status(&
+               iPicStatus_I(iPicStatusMin_I(iRegion):iPicStatusMax_I(iRegion)),&
+               nX, nY, nZ, i, j, k, iStatus)
+          if(iStatus == iPicOn_) then 
+             iPatch_D = [i, j,k]
+             call patch_index_to_coord(iRegion, iPatch_D(1:nDim), &
+                  "Mhd", XyzMhd_D(1:nDim))
+
+             if(.not. is_point_inside_regions(&
+                  iRegionPicLimit_I, XyzMhd_D(1:nDim))) then 
+                call set_point_status(iPicStatus_I(&
+                     iPicStatusMin_I(iRegion):iPicStatusMax_I(iRegion)),&
+                     nX, nY, nZ, i, j, k, iPicOff_)
+             endif
+             
+          endif
+       enddo; enddo; enddo
+    enddo
+  end subroutine correct_status
   !============================================================================
   subroutine set_status_all(iStatusDest)
 
