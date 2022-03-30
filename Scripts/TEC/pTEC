@@ -111,7 +111,7 @@ echo '--Working in directory: '${d}'/   on files: '${ff}'*.T '${ff}'*.tec'
 
 # Go to the directory where the run is supposed to be processed and
 # proceed with processing the files
-cd ${d}
+cd ${d} || echo "pTec could not cd ${d}" && exit 1;
 touch ${ff}TMP.T
 foreach i (${ff}*.T)
     if (!( ${i} == ${ff}TMP.T )) then
@@ -159,7 +159,7 @@ endif
 
 echo '========================================================================'
 
-cd ${dd}
+cd ${dd} || echo "pTec could not cd ${dd}" && exit 1;
 ############################################### IO2 end #############
 
 # preplot or gzip files
@@ -196,6 +196,6 @@ endif
 
 echo '========================================================================'
 
-cd ${dd}
+cd ${dd} || echo "pTec could not cd ${dd}" && exit 1;
 endif
 ############################################### spherical end #######
