@@ -103,7 +103,7 @@ test:
 	@rm -f *.diff
 	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
-	-@($(MAKE) test_gpu)
+	-@($(MAKE) test_small_gpu)
 	cd ${DIR}; ./Config.pl -noacc
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
@@ -130,12 +130,14 @@ test:
 	./Config.pl -noopenmp
 	@ls -l *.diff
 
-test_gpu:
+test_small_gpu:
 	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
 	-@($(MAKE) test_fastwave TESTDIR=run_test_fastwave)
 	-@($(MAKE) test_fastwave_2d TESTDIR=run_test_fastwave_2d)
 	-@($(MAKE) test_earth TESTDIR=run_test_earth)
 	-@($(MAKE) test_awsom_gpu TESTDIR=run_test_awsom_gpu)
+
+test_gpu: test_small_gpu
 	-@($(MAKE) test_awsom_large_gpu TESTDIR=run_test_awsom_large_gpu)
 
 test_extra:
