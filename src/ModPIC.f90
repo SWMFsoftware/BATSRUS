@@ -546,9 +546,7 @@ contains
        allocate(InsidePicRegion_C(1:nI,1:nJ,1:nK))
        InsidePicRegion_C = 1.0
 
-       call pic_find_node
        ! Calculate the pic region criteria
-
        if(.not. DoRestartPicStatus) then
           if(allocated(iStatusPicCrit_CB)) then
              call calc_pic_criteria
@@ -645,12 +643,14 @@ contains
   subroutine pic_find_node
 
     ! Find blocks that overlap with PIC region(s).
-    use BATL_lib,  ONLY: nDim, MaxDim, find_grid_block, &
-         x_, y_, z_, MaxNode, Unset_
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, &
+         Xyz_DGB, iNode_B, MaxNode
 
-    integer:: nIjk_D(1:MaxDim), Ijk_D(1:MaxDim)
-    real:: XyzPic_D(1:MaxDim), XyzMhd_D(1:MaxDim)
-    integer:: iRegion, iBlock, i, j, k, iProcFound, iNode
+    real:: Xyz_D(nDim), Pic_D(nDim)
+
+    integer:: iBlock, i, j, k, iNode
+
+    logical:: IsPicBlock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_find_node'
@@ -661,27 +661,18 @@ contains
     if(.not.allocated(IsPicNode_A)) allocate(IsPicNode_A(MaxNode))
     IsPicNode_A = .false.
 
-    nIjk_D = 1; XyzPic_D = 0; XyzMhd_D=0
-
-    do iRegion = 1, nRegionPic
-       nIjk_D(1:nDim) = int(&
-            LenPic_DI(1:nDim,iRegion)/DxyzPic_DI(1:nDim,iRegion) + 0.5)
-
-       if(DoTest) write(*,*) NameSub,' iRegion = ',iRegion, &
-            ' nIjk_D = ',nIjk_D(1:nDim)
-
-       do k=1, nIjk_D(z_); do j=1, nIjk_D(y_); do i=1, nIjk_D(x_)
-
-          ! Loop through all the PIC node points
-          Ijk_D(x_) = i - 1; Ijk_D(y_) = j - 1; Ijk_D(z_) = k - 1
-          XyzPic_D(1:nDim) = Ijk_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)
-          call pic_to_mhd_vec(iRegion, XyzPic_D, XyzMhd_D)
-          call find_grid_block(XyzMhd_D, iProcFound, iBlock, iNodeOut=iNode)
-          if(iProcFound /= Unset_) IsPicNode_A(iNode) = .true.
-
-       enddo; enddo; enddo
-
-    enddo
+    do iBlock=1,nBlock
+       if(Unused_B(iBlock)) CYCLE
+       IsPicBlock = .false.
+       ! Loop through all cells of a block, if any cell of this block
+       ! is overlapped with the PIC grid, this block is considered as
+       ! a PIC block/node.
+       do i = 1, nI; do j = 1, nJ; do k = 1, nK
+          if(.not. IsPicBlock .and. i_status_pic_region(iBlock,i,j,k) == 1) &
+               IsPicBlock = .true.
+       end do; end do; end do
+       IsPicNode_A(iNode_B(iBlock)) = IsPicBlock
+    end do
 
     if(DoTest) write(*,*)'IsPicNode= ', IsPicNode_A(:)
     call test_stop(NameSub, DoTest)
@@ -836,6 +827,11 @@ contains
                             do kPExt = max(kP - nPatchExtend_D(z_), 0), &
                                  min(kP + nPatchExtend_D(z_), nZ-1)
 
+                               ! The patches switched on here may outside
+                               ! the regions that are defined by #PICREGIONMAX.
+                               ! So, correct_status is called below to ensure
+                               ! all active patches are inside the regions of
+                               ! #PICREGIONMAX.
                                call set_point_status(iPicStatus_I(&
                                     iPicStatusMin_I(iRegion):&
                                     iPicStatusMax_I(iRegion)),&
@@ -851,6 +847,8 @@ contains
 
        end do ! end loop blocks
     end do ! end loop thorugh regions
+
+    call correct_status
 
     ! Global MPI reduction for iPicStatus_I array
     call MPI_Allreduce(MPI_IN_PLACE, iPicStatus_I, nSizeStatus,&
@@ -872,6 +870,52 @@ contains
     end if
 
   end function is_inside_pic_grid
+  !============================================================================
+  subroutine correct_status
+
+    ! This subroutine ensures all active patches are inside the regions
+    ! that are defined by #PICREGIONMAX
+
+    use BATL_lib, ONLY: x_, y_, z_, MaxDim, nDim
+    use BATL_Region, ONLY: is_point_inside_regions
+
+    integer :: iRegion, nX, nY, nZ, i, j, k
+    integer :: iStatus
+    integer:: iPatch_D(MaxDim)
+    real:: XyzMhd_D(MaxDim)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'correct_status'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
+
+    if(.not. allocated(iRegionPicLimit_I)) RETURN
+
+    do iRegion = 1, nRegionPic
+       nX = nPatchCell_DI(x_, iRegion)
+       nY = nPatchCell_DI(y_, iRegion)
+       nZ = nPatchCell_DI(z_, iRegion)
+       do i = 0, nX-1; do j = 0, nY-1; do k = 0, nZ-1
+          call get_point_status(iPicStatus_I(&
+               iPicStatusMin_I(iRegion):iPicStatusMax_I(iRegion)),&
+               nX, nY, nZ, i, j, k, iStatus)
+          if(iStatus == iPicOn_) then
+             iPatch_D = [i, j,k]
+             call patch_index_to_coord(iRegion, iPatch_D(1:nDim), &
+                  "Mhd", XyzMhd_D(1:nDim))
+
+             if(.not. is_point_inside_regions(&
+                  iRegionPicLimit_I, XyzMhd_D(1:nDim))) then
+                call set_point_status(iPicStatus_I(&
+                     iPicStatusMin_I(iRegion):iPicStatusMax_I(iRegion)),&
+                     nX, nY, nZ, i, j, k, iPicOff_)
+             endif
+
+          endif
+       enddo; enddo; enddo
+    enddo
+  end subroutine correct_status
   !============================================================================
   subroutine set_status_all(iStatusDest)
 
@@ -981,7 +1025,7 @@ contains
        call mhd_to_pic_vec(iRegion, Xyz_D, Pic_D)
 
        if(all(Pic_D > 0 ).and.&
-            all(Pic_D < LenPic_DI(:,iRegion))) & ! Not accurate here. --Yuxi
+            all(Pic_D < LenPic_DI(:,iRegion))) &
             iStatus = 1
     enddo
 
@@ -1239,6 +1283,8 @@ contains
        iStatusPicCrit_CB = iPicOn_
        RETURN
     end if
+
+    call pic_find_node
 
     iPicGrid = iNewGrid
     iPicDecomposition = iNewDecomposition

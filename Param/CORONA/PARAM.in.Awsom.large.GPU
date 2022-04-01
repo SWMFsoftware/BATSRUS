@@ -3,7 +3,7 @@ Begin session: 1
 #DESCRIPTION
 Param/CORONA/PARAM.in.Awsom.large.GPU		StringDescription
 
-ELECTRONENTROPY
+#ELECTRONENTROPY
 T			UseElectronEntropy
 
 #UPDATE
@@ -138,7 +138,7 @@ T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
-0.8			CflExpl
+0.08			CflExpl
 
 #SCHEME
 2			nOrder (1 or 2)
