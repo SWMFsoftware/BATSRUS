@@ -384,7 +384,7 @@ contains
                               State_VGB(:,i,j,k,iBlock)
                          write(*,*) 'iProc=', iProc,   &
                               ': x, y, z = ', Xyz_DGB(:,i,j,k,iBlock)
-                         exit block
+                         EXIT block
                       end if
                    end do
                 end do; end do; end do
