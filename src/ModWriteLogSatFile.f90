@@ -87,6 +87,9 @@ contains
     integer         :: iParcel, iUnitParcel_I(MaxParcel)=-1
     character(len=2):: StringIParcel
 
+    ! NaN detection variables
+    integer :: iProcAll, iBlockAll, iVarAll, k
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
@@ -364,12 +367,35 @@ contains
             write(iUnit,'(3es13.5)',ADVANCE='NO') Xyz_D
 
        ! Do a check if any variable is NaN and STOP with an error message.
-       do iVar=1,nLogTot
+       logvar: do iVar=1,nLogTot
           if (ieee_is_nan(LogVar_I(iVar))) then
+             ! Find location of NaN in State_VGB.
+             proc: do iProcAll=1,nProc ! loop over proc
+                block: do iBlockAll=1,nBlock! loop over block
+                   do k=1,nK; do j=1,nJ; do i=1,nI
+                      do iVarAll=1,nVar
+                         if (ieee_is_nan(State_VGB(iVarAll,i,j,k,iBlockAll))) then
+                            write(iUnit,*) 'iProc=',iProcAll,': NaN found in State_VGB.'
+                            write(*,*) 'iProc=',iProcAll, &
+                                 ': i, j, k, iBlock = ',  &
+                                 i,j,k,iBlockAll
+                            write(*,*) 'iProc=',iProcAll, &
+                                 'State_VGB = ',          &
+                                 State_VGB(:,i,j,k,iBlockAll)
+                            write(*,*) 'iProc=',iProcAll, &
+                                 ': x, y, z = ', Xyz_DGB(:,i,j,k,iBlockAll)
+                            call stop_mpi('ERROR: NaN in Log file. '//&
+                                 'Code stopped with NaN in variable - '//NameLogVar_I(iVar))
+                            exit logvar
+                         end if
+                      end do
+                   end do; end do; end do
+                end do block
+             end do proc
              call stop_mpi('ERROR: NaN in Log file. '//&
                   'Code stopped with NaN in variable - '//NameLogVar_I(iVar))
           end if
-       end do
+       end do logvar
 
        ! Finally write out the data variables
        write(iUnit,'(100es14.5e3)') LogVar_I(1:nLogTot)
