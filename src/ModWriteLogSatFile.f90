@@ -88,7 +88,8 @@ contains
     character(len=2):: StringIParcel
 
     ! NaN detection variables
-    integer :: iBlockAll, iVarLog, k
+    integer :: iVarLog, k
+    real :: Value
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
@@ -370,27 +371,25 @@ contains
        do iVarLog=1,nLogTot
           if (ieee_is_nan(LogVar_I(iVarLog))) then
              ! Find location of NaN in State_VGB.
-             block: do iBlock=1,nBlock! loop over used blocks
+             BLOCKLOOOP: do iBlock = 1, nBlock
                 if (Unused_B(iBlock)) CYCLE
-                do k=1,nK; do j=1,nJ; do i=1,nI
-                   do iVar=1,nVar
-                      if (ieee_is_nan(State_VGB(iVar,i,j,k,iBlock))) then
-                         write(iUnit,*) 'iProc=', iProc, ': NaN found in State_VGB.'
-                         write(*,*) 'iProc=', iProc,   &
-                              ': i, j, k, iBlock = ',  &
-                              i, j, k, iBlock
-                         write(*,*) 'iProc=', iProc,   &
-                              'State_VGB = ',          &
-                              State_VGB(:,i,j,k,iBlock)
-                         write(*,*) 'iProc=', iProc,   &
-                              ': x, y, z = ', Xyz_DGB(:,i,j,k,iBlock)
-                         EXIT block
-                      end if
-                   end do
-                end do; end do; end do
-             end do block
-             call stop_mpi('ERROR: NaN in Log file. '//&
-                  'Code stopped with NaN in variable - '//NameLogVar_I(iVarLog))
+                do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
+                   Value = State_VGB(iVar,i,j,k,iBlock)
+                   if (ieee_is_nan(Value)) then
+                      write(iUnit,*) 'iProc=', iProc, &
+                           ': NaN found in State_VGB.'
+                      write(*,*) 'iProc=', iProc, &
+                              ': i, j, k, iBlock = ', i, j, k, iBlock
+                      write(*,*) 'iProc=', iProc,   &
+                           ' State_VGB = ', State_VGB(:,i,j,k,iBlock)
+                      write(*,*) 'iProc=', iProc, &
+                           ': x, y, z = ', Xyz_DGB(:,i,j,k,iBlock)
+                      EXIT BLOCKLOOOP
+                   end if
+                end do; end do; end do; end do
+             end do BLOCKLOOOP
+             call stop_mpi('ERROR: NaN in logfile. '//&
+                  'Code stopped with NaN in variable '//NameLogVar_I(iVarLog))
           end if
        end do
 
