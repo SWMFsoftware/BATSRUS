@@ -87,6 +87,9 @@ contains
     integer         :: iParcel, iUnitParcel_I(MaxParcel)=-1
     character(len=2):: StringIParcel
 
+    ! NaN detection variables
+    integer :: iBlockAll, iVarLog, k
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
@@ -364,10 +367,30 @@ contains
             write(iUnit,'(3es13.5)',ADVANCE='NO') Xyz_D
 
        ! Do a check if any variable is NaN and STOP with an error message.
-       do iVar=1,nLogTot
-          if (ieee_is_nan(LogVar_I(iVar))) then
+       do iVarLog=1,nLogTot
+          if (ieee_is_nan(LogVar_I(iVarLog))) then
+             ! Find location of NaN in State_VGB.
+             block: do iBlock=1,nBlock! loop over used blocks
+                if (Unused_B(iBlock)) CYCLE
+                do k=1,nK; do j=1,nJ; do i=1,nI
+                   do iVar=1,nVar
+                      if (ieee_is_nan(State_VGB(iVar,i,j,k,iBlock))) then
+                         write(iUnit,*) 'iProc=', iProc, ': NaN found in State_VGB.'
+                         write(*,*) 'iProc=', iProc,   &
+                              ': i, j, k, iBlock = ',  &
+                              i, j, k, iBlock
+                         write(*,*) 'iProc=', iProc,   &
+                              'State_VGB = ',          &
+                              State_VGB(:,i,j,k,iBlock)
+                         write(*,*) 'iProc=', iProc,   &
+                              ': x, y, z = ', Xyz_DGB(:,i,j,k,iBlock)
+                         EXIT block
+                      end if
+                   end do
+                end do; end do; end do
+             end do block
              call stop_mpi('ERROR: NaN in Log file. '//&
-                  'Code stopped with NaN in variable - '//NameLogVar_I(iVar))
+                  'Code stopped with NaN in variable - '//NameLogVar_I(iVarLog))
           end if
        end do
 
