@@ -1,4 +1,4 @@
-!  Copyright (C) 2002 Regents of the University of Michigan,
+!  Copyright (C) 2001 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSetParameters
@@ -42,9 +42,9 @@ contains
     use ModBlockData, ONLY: init_mod_block_data, clean_block_data
     use BATL_lib, ONLY: &
          read_region_param, read_test_param, NameVarTest, iVarTest, &
-         BetaProlong, init_mpi, IsCartesianGrid, IsCartesian, &
+         UseSimpleProlongation, BetaProlong, IsCartesianGrid, IsCartesian, &
          IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, &
-         iProc, nProc, iComm
+         iProc, nProc, iComm, init_mpi
     use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits, &
          AdaptGrid
     use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param, &
@@ -3744,14 +3744,14 @@ contains
          ! If fast (or compatible slow) update is used at all,
          ! the following features are swiched off
 
-         UseDbTrick           = .false.
-         UseB0Source          = .false.
-         UseTvdResChange      = .false.
-         UseAccurateResChange = .false.
-         UseBorisRegion       = .false.
-         DoLimitMomentum      = .false.
-         DoConserveFlux       = .false.
-
+         UseDbTrick            = .false.
+         UseB0Source           = .false.
+         UseTvdResChange       = .false.
+         UseAccurateResChange  = .false.
+         UseBorisRegion        = .false.
+         DoLimitMomentum       = .false.
+         DoConserveFlux        = .false.
+         UseSimpleProlongation = .true.
          nOrderProlong = 2
       end if
 
@@ -3772,6 +3772,7 @@ contains
       !$acc update device(TypeLimiter, LimiterBeta)
       !$acc update device(nOrderProlong)
       !$acc update device(UseHighResChange)
+      !$acc update device(UseSimpleProlongation)
 
       !$acc update device(TypeCellBc_I, iTypeCellBc_I)
 
