@@ -86,6 +86,7 @@ contains
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+    DoTest= .true.
     if(DoExtraMessagePass)then
        if(DoTest) write(*,*) NameSub,': doing extra message pass'
        ! Switch off request
@@ -119,7 +120,7 @@ contains
 
     UseHighResChangeNow = nOrder==5 .and. UseHighResChange
 
-    if(DoTest)write(*,*) NameSub, &
+    write(*,*) NameSub, &
          ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
          DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
 

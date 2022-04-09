@@ -1,4 +1,4 @@
-!  Copyright (C) 2002 Regents of the University of Michigan,
+!  Copyright (C) 2001 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
@@ -314,6 +314,15 @@ contains
              !     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
              !#endif
           end do
+!          switch on to test first ghost cell in the i direction
+!          do iVar=1,nVar
+!             write(*,*)' ',NameVar_V(iVar), '(RightCell)  =',&
+!                  State_VGB(iVar,iTest+1,jTest,kTest,iBlockTest)
+!          end do
+!          do iVar=1,nVar
+!             write(*,*)' ',NameVar_V(iVar), '(LeftCell)  =',&
+!                  State_VGB(iVar,iTest-1,jTest,kTest,iBlockTest)
+!          end do
        end if
 #endif
 
