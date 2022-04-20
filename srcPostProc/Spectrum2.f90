@@ -143,6 +143,7 @@ contains
     end do
 
     NameThisComp = 'SC'
+    !$acc update device(NameThisComp)
     TypeNormalization = "SOLARWIND"
     TypeIoUnit = "HELIOSPHERIC"
 

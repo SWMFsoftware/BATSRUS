@@ -517,6 +517,7 @@ contains
           call read_var('NameComp', NameCompRead)
           if(NameThisComp /= NameCompRead)then
              NameThisComp = NameCompRead
+             !$acc update device(NameThisComp)
              call set_defaults
           end if
 
