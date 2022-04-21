@@ -631,7 +631,7 @@ contains
     ! Subroutine to update and collect satellite locations for iM tracing
 
     ! Modules
-    use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, &
+    use ModSatelliteFile, ONLY: NameFileSat_I, XyzSat_DI, &
          get_satellite_ray, set_satellite_flags
     use ModMPI
 
@@ -648,7 +648,7 @@ contains
     character(len=*), parameter:: NameSub = 'GM_get_sat_for_im'
     !--------------------------------------------------------------------------
     ! Store satellite names in Buffer_I
-    Name_I = NameSat_I(1:nSats)
+    Name_I = NameFileSat_I(1:nSats)
 
     do iSat = 1, nSats
        ! Update satellite position.
