@@ -61,11 +61,14 @@ contains
 #ifndef _OPENACC
     write(*,*) trim(NameThisComp),' BATSRUS stopping at iteration=', &
          nIteration,' simulation time=', tSimulation
+#else
+    write(*,*) NameThisComp,' BATSRUS stopping at iteration=', &
+         nIteration,' simulation time=', tSimulation
 #endif
-#ifdef TESTACC
-    write(*,*) ' BATSRUS stopping at iteration=', nIteration, &
-         ' simulation time=', tSimulation
-#endif
+!#ifdef TESTACC
+!    write(*,*) ' BATSRUS stopping at iteration=', nIteration, &
+!         ' simulation time=', tSimulation
+!#endif
 
     call CON_stop(String)
 

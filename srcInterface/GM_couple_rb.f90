@@ -384,7 +384,7 @@ contains
 
     ! Subroutine to update and collect satellite locations for RB tracing
 
-    use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, gm_trace_sat
+    use ModSatelliteFile, ONLY: NameFileSat_I, XyzSat_DI, gm_trace_sat
     use ModWriteLogSatFile, ONLY: collect_satellite_data
     use ModMain,          ONLY: UseB0, nBlock
     use ModPhysics,       ONLY: No2Si_V, UnitB_
@@ -408,7 +408,7 @@ contains
     character(len=*), parameter:: NameSub = 'GM_get_sat_for_rb'
     !--------------------------------------------------------------------------
     ! Store satellite names in NameBuffer_I
-    NameBuffer_I = NameSat_I(1:nSats)
+    NameBuffer_I = NameFileSat_I(1:nSats)
 
     do iSat=1, nSats
        ! Update satellite position.

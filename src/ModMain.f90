@@ -30,6 +30,7 @@ module ModMain
 
   ! In the SWMF the BATSRUS may run as GM, EE, SC, IH, or OH component
   character (len=2)   :: NameThisComp='GM'
+  !$acc declare create(NameThisComp)
 
   ! In hydro equations B_ = U_ is set.
   logical, parameter:: UseB = B_ /= U_
