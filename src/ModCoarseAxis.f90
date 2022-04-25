@@ -167,9 +167,8 @@ contains
           !$acc loop
           do j = 1, nJ/jMerge
              jStart = (j-1)*jMerge + 1; jLast = j*jMerge
-             !$acc loop
+             !$acc loop vector collapse(2) independent
              do i = 1,nI
-                !$acc loop
                 do iVar = 1,nVar
                    State_VGB(iVar,i,jStart:jLast,k,iBlock) = &
                         sum(State_VGB(iVar,i,jStart:jLast,k,iBlock))/jMerge
