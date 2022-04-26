@@ -75,7 +75,7 @@ none			TypeCoronalHeating
 #USERSWITCH
 +init +ic		StringSwitch
 
-COARSEAXIS
+#COARSEAXIS
 T			UseCoarseAxis
 2			nCoarseLayer
 
@@ -138,7 +138,7 @@ T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
-0.08			CflExpl
+0.8			CflExpl
 
 #SCHEME
 2			nOrder (1 or 2)
