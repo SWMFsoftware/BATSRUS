@@ -8459,7 +8459,7 @@ Default is DoReadAgain false, so the code keeps running with the last
 value read.
 </command>
 
-<command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession" multiple="T">
+<command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
   <parameter name="UseBody" type="logical" default="F"/>
   <if expr="$UseBody">
     <parameter name="rBody" type="real" min="0" default="3"/>
@@ -8524,11 +8524,30 @@ density is given for all species followed by the (common) temperature.
 The exact effect of these parameters depends on the settings
 in the #INNERBOUNDARY command.
 
-This command is currently used twice to set some values for the solar corona
-even when there is no BODY boundary condition. This should be removed.
-For now multiple use is allowed.
-
 The default is UseBody=F. Some typical settings are shown above.
+</command>
+
+<command name="CORONA" if="$_IsFirstSession">
+  <parameter name="rCorona" type="real" min="0" default="1"/>  
+  <for from="1" to="$nFluid">
+    <parameter name="CoronaNDim" type="real" min="0" default="1.5e8"/>
+    <parameter name="CoronaTDim" type="real" min="0" default="1.5e6"/>
+  </for>
+#CORONA
+1.0                     rCorona
+1.5E8			CoronaNDim (/cc) for fluid 1
+1.5E6			CoronaTDim (K)
+1.5E2                   CoronaNDim (/cc) for fluid 2
+1.5E6                   CoronaTDim (K)
+
+This command can be used to set physical parameters at the inner
+boundary of the solar domain. Unlike the #BODY command, this command does
+not switch on the face boundary. 
+rCorona sets the radius of the inner boundary (typically 1 Rs).
+The rest of the parameters set the density and temperature for AWSoM(-R).
+For multi-fluid case, the values are repeated.
+
+Default values are shown.
 </command>
 
 <command name="STAR" if="$_IsFirstSession">
