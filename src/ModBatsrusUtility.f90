@@ -53,7 +53,7 @@ contains
     !$acc routine seq
 
     use ModMain, ONLY : nIteration, tSimulation, NameThisComp
-    use ModUtilities, ONLY: CON_stop
+    use ModUtilities, ONLY: CON_stop_simple
 
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
@@ -70,7 +70,7 @@ contains
 !         ' simulation time=', tSimulation
 !#endif
 
-    call CON_stop(String)
+    call CON_stop_simple(String)
 
   end subroutine stop_mpi
   !============================================================================
