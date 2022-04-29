@@ -2324,9 +2324,10 @@ contains
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('UseBody', UseBody)
           if(UseBody)then
-             call read_var('rBody', rBody)
-             if(NameThisComp=='GM')&
+             call read_var('rBody', rBody) ! Inner boundary radius
+             if(NameThisComp=='GM') & ! for calculating field-aligned currents
                   call read_var('rCurrents', Rcurrents)
+             ! Read densities and temperatures
              if(UseMultiSpecies)then
                 do iSpecies = 1, nSpecies
                    call read_var('BodyNDim', BodyNSpeciesDim_I(iSpecies))
@@ -2339,6 +2340,14 @@ contains
                 end do
              end if
           end if
+       case("#CORONA")
+          if(.not.is_first_session())CYCLE READPARAM
+          call read_var('rCorona', rBody) ! Inner boundary radius
+          ! Read densities and temperatures
+          do iFluid = IonFirst_, nFluid
+             call read_var('CoronaNDim', BodyNDim_I(iFluid))
+             call read_var('CoronaTDim', BodyTDim_I(iFluid))
+          end do
 
        case("#INNERBOUNDARY", "#INNERBCPE", &
             "#POLARBOUNDARY", "#CPCPBOUNDARY", &
@@ -3042,8 +3051,8 @@ contains
 
          ! Boundary Conditions
          ! Default boundary type is 'none'.
-         BodyTDim_I            = 2.85E06    ! K
-         BodyNDim_I(IonFirst_) = 1.50E8     ! /cc  protons
+         BodyTDim_I            = 1.5E6    ! K
+         BodyNDim_I(IonFirst_) = 1.5E8    ! /cc  protons
          BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
 
          ! Normalization and I/O units
