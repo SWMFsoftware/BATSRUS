@@ -13,7 +13,7 @@ fast			TypeUpdate
 SC			NameComp
 
 #GRIDBLOCKALL
-6000			MaxBlock
+12000			MaxBlock
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -115,14 +115,13 @@ shell0			StringShape
 1.7			Radius
 
 #AMRCRITERIARESOLUTION
-2			nRefineCrit
+3			nRefineCrit
 dphi			StringRefine
 6.0			RefineTo
 3.0			CoarsenFrom
 dphi Innershell		StringRefine
 1.5			RefineTo
 0.75			CoarsenFrom
-
 currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
