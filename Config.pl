@@ -247,7 +247,7 @@ sub set_optimization{
 	    IsTimeAccurate      => ".true.",
 	    LimiterBeta         => 1,
 	    UseB0               => "UseB"  ,
-	    UseBody             => ".true.",
+	    UseBody             => ".false.",
             UseBorisCorrection  => ".false.",
 	    UseCoarseAxis       => ".false.",
 	    UseDivbSource       => "UseB .and. nDim>1",
@@ -267,7 +267,6 @@ sub set_optimization{
 
 	# Component dependent defaults (from ModSetParameters)
 	$Set{"UseB0"}            = ".false." if $NameComp =~ /IH|OH/;
-	$Set{"UseBody"}          = ".false." if $NameComp =~ /EE/;
 	$Set{"UseGravity"}       = ".true."  if $NameComp !~ /GM/;
 	$Set{"UseRotatingFrame"} = ".true."  if $NameComp =~ /SC|EE/;
 
