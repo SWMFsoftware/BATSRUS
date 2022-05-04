@@ -67,7 +67,7 @@ F		DoSaverestart
 
 #SAVEPLOT
 3		nPlotfile
-x=0 raw idl_ascii	PlotString
+y=0 raw idl_ascii	PlotString
 -1		DnSavePlot
 10.0		DtSavePlot
 0.0		DxSavePlot
