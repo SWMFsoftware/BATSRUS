@@ -1,24 +1,23 @@
 #GAMMA
-2.0
+2.0			Gamma
 
 #SHOCKTUBE
-1.		rho (left state)
-0.		Ux
-0.		Uy
-0.		Uz
-0.75		Bx
-1.		By
-0.		Bz
-1.		P
-0.125		rho (right state)
-0.		Ux
-0.		Uy
-0.		Uz
-0.75		Bx
--1.		By
-0.		Bz
-0.1		P
-
+1.			LeftState (left state)
+0.			LeftState
+0.			LeftState
+0.			LeftState
+0.75			LeftState
+1.			LeftState
+0.			LeftState
+1.			LeftState
+0.125			RightState (right state)
+0.			RightState
+0.			RightState
+0.			RightState
+0.75			RightState
+-1.			RightState
+0.			RightState
+0.1			RightState
 
 
 
