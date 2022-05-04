@@ -53,6 +53,7 @@ test_help:
 	@echo "    test_partsteady            (run part steady test)"
 	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_shockramp             (run shockramp test)"
+	@echo "    test_shockround            (run shocktube test on roundcube)"
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shocktube_1d          (run 1D shocktube test on GPU)"
 	@echo "    test_fastwave              (run 3D fast wave test on GPU)"
@@ -107,6 +108,7 @@ test:
 	cd ${DIR}; ./Config.pl -noacc
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
+	-@($(MAKE) test_shockround TESTDIR=run_test_shockround)
 	-@($(MAKE) test_shockramp TESTDIR=run_test_shockramp)
 	-@($(MAKE) test_partsteady TESTDIR=run_test_partsteady)
 	-@($(MAKE) test_hallmhd TESTDIR=run_test_hallmhd)
@@ -265,6 +267,39 @@ test_shocktube_check:
 		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out \
 		> test_shocktube.diff)
 	ls -l test_shocktube.diff
+
+### ROUND CUBE SHOCK TUBE TEST ###
+
+test_shockround:
+	@echo "test_shockround_compile..." > test_shockround.diff
+	$(MAKE) test_shockround_compile
+	@echo "test_shockround_rundir..." >> test_shockround.diff
+	$(MAKE) test_shockround_rundir
+	@echo "test_shockround_run..." >> test_shockround.diff
+	$(MAKE) test_shockround_run
+	@echo "test_shockround_check..." >> test_shockround.diff
+	$(MAKE) test_shockround_check
+
+test_shockround_compile:
+	./Config.pl ${OPENMP} -u=Default -e=Mhd -ng=2 -g=4,4,4
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_shockround_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.roundcube PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_shockround_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+
+test_shockround_check:
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
+		${TESTDIR}/RESULT/GM/log*.log \
+		Param/SHOCKTUBE/TestOutput/shockround.log \
+		> test_shockround.diff)
+	ls -l test_shockround.diff
+
 
 ### 1D SHOCK TUBE TEST ###
 
