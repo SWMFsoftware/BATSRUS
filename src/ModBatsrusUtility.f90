@@ -474,19 +474,19 @@ contains
   end subroutine get_ivar
   !============================================================================
   subroutine check_nan
-    
+
     use ModMain
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
     use BATL_lib, ONLY: Xyz_DGB, iProc
     use ModMpi
     use,intrinsic :: ieee_arithmetic
-    
+
     integer:: iVar, iBlock
     integer :: i, j, k
     character(len=*), parameter:: NameSub = 'check_nan'
     !--------------------------------------------------------------------------
-    
+
     block: do iBlock=1,nBlock! loop over block
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iVar=1,nVar
@@ -500,7 +500,7 @@ contains
                 write(*,*) 'iProc=',iProc, &
                      ': x, y, z = ', Xyz_DGB(:,i,j,k,iBlock)
                 call stop_mpi('ERROR: NaN in State_VGB.')
-                exit block
+                EXIT block
              end if
           end do
        end do; end do; end do
