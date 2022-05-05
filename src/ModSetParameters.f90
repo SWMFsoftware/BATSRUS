@@ -44,13 +44,13 @@ contains
          read_region_param, read_test_param, NameVarTest, iVarTest, &
          UseSimpleProlongation, BetaProlong, IsCartesianGrid, IsCartesian, &
          IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, &
-         iProc, nProc, iComm, init_mpi
+         IsRoundCube, iProc, nProc, iComm, init_mpi
     use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits, &
          AdaptGrid
     use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param, &
          DoMapEquatorRay
     use ModIO
-    use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
+    use CON_planet,       ONLY: read_planet_var, check_planet_var
     use ModPlanetConst
     use CON_axes,         ONLY: init_axes, get_axes, &
          dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
@@ -2695,9 +2695,7 @@ contains
 
   contains
     !==========================================================================
-
     subroutine check_stand_alone
-
       !------------------------------------------------------------------------
       if(IsStandAlone) RETURN
       if(iProc==0) write(*,*) NameSub,' WARNING:'// &
@@ -2707,9 +2705,7 @@ contains
 
     end subroutine check_stand_alone
     !==========================================================================
-
     logical function is_first_session()
-
       !------------------------------------------------------------------------
       is_first_session = IsFirstSession
 
@@ -2941,7 +2937,6 @@ contains
 
     end subroutine set_namevar
     !==========================================================================
-
     subroutine set_defaults
 
       use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -3124,7 +3119,6 @@ contains
 
     end subroutine set_defaults
     !==========================================================================
-
     subroutine correct_parameters
 
       use ModMultiFluid, ONLY: UseMultiIon
@@ -3824,7 +3818,6 @@ contains
 
     end subroutine correct_parameters
     !==========================================================================
-
     subroutine correct_grid_geometry
 
       use ModGeometry, ONLY: LogRGen_I
@@ -3968,7 +3961,6 @@ contains
 
     end subroutine correct_grid_geometry
     !==========================================================================
-
     subroutine correct_plot_range
 
       use BATL_lib,     ONLY: radius_to_gen, Phi_, Theta_, nRoot_D, &
@@ -4067,13 +4059,14 @@ contains
          case('x=0')
             PlotRange_EI(1:5:2, iFile) = CoordMin_D
             PlotRange_EI(2:6:2, iFile) = CoordMax_D
-            if( TypePlotFormat_I(iFile)=='tec' .or. IsCartesianGrid )then
+            if( TypePlotFormat_I(iFile)=='tec' .or. &
+                 IsCartesianGrid .or. IsRoundCube )then
                ! Limit plot range along x direction to be very small
                PlotRange_EI(1, iFile) = -SmallSize_D(x_)
                PlotRange_EI(2, iFile) = +SmallSize_D(x_)
                if(IsRlonLat) then
                   PlotRange_EI(1, iFile) = CoordMin_D(x_)
-                  PlotRange_EI(2, iFile) = CoordMin_D(x_)+SmallSize_D(x_)
+                  PlotRange_EI(2, iFile) = CoordMin_D(x_) + SmallSize_D(x_)
                end if
             else
                ! Limit Phi direction around cHalfPi
@@ -4160,7 +4153,6 @@ contains
       call test_stop(NameSub, DoTest)
     end subroutine correct_plot_range
     !==========================================================================
-
     subroutine set_extra_parameters
 
       use ModMultiFluid, ONLY: UseMultiIon
@@ -4287,7 +4279,6 @@ contains
 
       real:: RealIVarSmooth_V(nVar)
       integer:: iVar
-
       !------------------------------------------------------------------------
       do iVar = 1, nVar
          if(iVarSmooth_V(iVar) == iVar) then
@@ -4301,9 +4292,7 @@ contains
 
     end subroutine sort_smooth_indicator
     !==========================================================================
-
   end subroutine set_parameters
   !============================================================================
-
 end module ModSetParameters
 !==============================================================================
