@@ -433,7 +433,7 @@ contains
     call lower_case(NameVar)
 
     ! Remove the fluid name first
-    call extract_fluid_name(NameVar,iFluid)
+    call extract_fluid_name(NameVar, iFluid)
 
     ! In case the user specifies ux/uy/uz instead of mx/my/mz
     select case(NameVar)
@@ -446,21 +446,22 @@ contains
     end select
 
     ! Put back the fluid name
-    if(iFluid /= 1) NameVar = trim(NameFluid_I(iFluid))//trim(NameVar)
+    if(iFluid /= 1) NameVar = trim(NameFluid_I(iFluid))//NameVar
 
     ! The first character in NameFluid_I is in upper case...
     call lower_case(NameVar)
 
     ! Find NameVar in NameVarLower_V if it is there
-    do iVarLoop=1,nVar
-       if (NameVar /= NameVarLower_V(iVarLoop)) CYCLE
-       iVar = iVarLoop
-       EXIT
+    do iVarLoop = 1, nVar
+       if (NameVar == NameVarLower_V(iVarLoop)) then
+          iVar = iVarLoop
+          EXIT
+       end if
     end do
 
     if(iVar < 0)then
        ! Try reading iVar as an index.
-       read(NameVar,*,iostat=iError) iVar
+       read(NameVar,*,IOSTAT=iError) iVar
 
        ! If it is not an integer and not one of the element in NameVarLower_V
        if (iError /= 0) call stop_mpi(NameSub//': unknown NameVar =' &
@@ -473,38 +474,40 @@ contains
 
   end subroutine get_ivar
   !============================================================================
-  subroutine check_nan
+  subroutine check_nan(iError)
 
-    use ModMain
-    use ModVarIndexes
+    use ModVarIndexes, ONLY: nVar
     use ModAdvance, ONLY: State_VGB
-    use BATL_lib, ONLY: Xyz_DGB, iProc
-    use ModMpi
-    use,intrinsic :: ieee_arithmetic
+    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, Xyz_DGB, iProc
+    use, intrinsic :: ieee_arithmetic
 
-    integer:: iVar, iBlock
-    integer :: i, j, k
+    integer, intent(out), optional:: iError
+    
+    integer:: iVar, iBlock, i, j, k
+    
     character(len=*), parameter:: NameSub = 'check_nan'
     !--------------------------------------------------------------------------
-
-    block: do iBlock=1,nBlock! loop over block
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          do iVar=1,nVar
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do iVar = 1, nVar
              if (ieee_is_nan(State_VGB(iVar,i,j,k,iBlock))) then
-                write(*,*) 'iProc=',iProc,': NaN found in State_VGB.'
-                write(*,*) 'iProc=',iProc, &
-                     ': i, j, k, iBlock = ',  &
-                     i,j,k,iBlock,            &
-                     'State_VGB = ',          &
-                     State_VGB(:,i,j,k,iBlock)
-                write(*,*) 'iProc=',iProc, &
-                     ': x, y, z = ', Xyz_DGB(:,i,j,k,iBlock)
-                call stop_mpi('ERROR: NaN in State_VGB.')
-                EXIT block
+                write(*,*) 'iProc=', iProc, &
+                     ': NaN in State_V=', State_VGB(:,i,j,k,iBlock)
+                write(*,*) 'iProc=', iProc, &
+                     ': NaN at i,j,k,iBlock= ', i, j, k, iBlock,  &
+                     ', x,y,z= ', Xyz_DGB(:,i,j,k,iBlock)
+
+                if(present(iError))then
+                   iError = 1
+                   RETURN
+                else
+                   call stop_mpi('ERROR: NaN in State_VGB.')
+                end if
              end if
           end do
        end do; end do; end do
-    end do block
+    end do
 
   end subroutine check_nan
   !============================================================================
