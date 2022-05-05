@@ -1,0 +1,87 @@
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.roundcube: Brio-Wu with round cube		StringDescription
+
+#PLANET
+NONE
+
+#IOUNITS
+NONE
+
+#NORMALIZATION
+NONE
+
+#GRIDBLOCKALL
+512			MaxBlock
+
+#GRID
+8			nRootBlock1
+8			nRootBlock2
+8			nRootBlock3
+-128.0			xMin
+ 128.0			xMax
+-128.0			yMin
+ 128.0			yMax
+-128.0			zMin
+ 128.0			zMax
+
+#GRIDGEOMETRY
+roundcube		TypeGeometry
+64.0			rRound0
+75.0			rRound1
+
+Brio-Wu MHD shock tube problem rotated around Z axis
+#INCLUDE
+Param/SHOCKTUBE/briowu
+
+#SHOCKPOSITION
+0.0		ShockPosition
+0.5		ShockSlope
+
+Sheared boundary condition is used for non-zero shock slope
+#OUTERBOUNDARY
+float		xMinBc
+float		xMaxBc
+float		yMinBc
+float		yMaxBc
+float		zMinBc
+float		zMaxBc
+
+#TIMESTEPPING
+2		nStage
+0.8		CflExpl
+
+#SCHEME
+2		nOrder
+Roe		TypeFlux
+mc3		TypeLimiter
+1.5		LimiterBeta
+
+#SAVELOGFILE
+T		DoSaveLogfile
+raw		StringLogfile
+1		DnSaveLogfile
+-1.		DtSaveLogfile
+
+#SAVERESTART
+F		DoSaverestart
+
+#SAVEPLOT
+3		nPlotfile
+y=0 raw idl_ascii	PlotString
+-1		DnSavePlot
+10.0		DtSavePlot
+0.0		DxSavePlot
+y=0 raw idl_ascii	PlotString
+-1		DnSavePlot
+10.0		DtSavePlot
+0.0		DxSavePlot
+z=0 raw idl_ascii	PlotString
+-1		DnSavePlot
+10.0		DtSavePlot
+0.0		DxSavePlot
+
+The grid size is 256, so the final time corresponds to the usual 0.1
+#STOP
+-1		MaxIteration
+25.6		tSimulationMax
+

@@ -16,6 +16,7 @@ module ModBatsrusUtility
   public:: get_date_time   ! get integer date+time for current simulation time
   public:: get_time_string ! create date+time string based on NameMaxTimeUnit
   public:: get_ivar        ! calculate variable index based on its name
+  public:: check_nan       ! check for NaN at runtime
 
 contains
   !============================================================================
@@ -471,6 +472,41 @@ contains
          //'iVar is not within 1 and nVar???')
 
   end subroutine get_ivar
+  !============================================================================
+  subroutine check_nan
+
+    use ModMain
+    use ModVarIndexes
+    use ModAdvance, ONLY: State_VGB
+    use BATL_lib, ONLY: Xyz_DGB, iProc
+    use ModMpi
+    use,intrinsic :: ieee_arithmetic
+
+    integer:: iVar, iBlock
+    integer :: i, j, k
+    character(len=*), parameter:: NameSub = 'check_nan'
+    !--------------------------------------------------------------------------
+
+    block: do iBlock=1,nBlock! loop over block
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          do iVar=1,nVar
+             if (ieee_is_nan(State_VGB(iVar,i,j,k,iBlock))) then
+                write(*,*) 'iProc=',iProc,': NaN found in State_VGB.'
+                write(*,*) 'iProc=',iProc, &
+                     ': i, j, k, iBlock = ',  &
+                     i,j,k,iBlock,            &
+                     'State_VGB = ',          &
+                     State_VGB(:,i,j,k,iBlock)
+                write(*,*) 'iProc=',iProc, &
+                     ': x, y, z = ', Xyz_DGB(:,i,j,k,iBlock)
+                call stop_mpi('ERROR: NaN in State_VGB.')
+                EXIT block
+             end if
+          end do
+       end do; end do; end do
+    end do block
+
+  end subroutine check_nan
   !============================================================================
 end module ModBatsrusUtility
 !==============================================================================
