@@ -482,9 +482,9 @@ contains
     use, intrinsic :: ieee_arithmetic
 
     integer, intent(out), optional:: iError
-    
+
     integer:: iVar, iBlock, i, j, k
-    
+
     character(len=*), parameter:: NameSub = 'check_nan'
     !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
