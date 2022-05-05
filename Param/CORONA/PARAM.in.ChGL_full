@@ -73,15 +73,6 @@ T			UseFieldLineThreads
 TEST
 get_wave_reflection		StringTest
 
-#BODY
-T			UseBody
-1.0			rBody
-1.5e8			BodyNDim
-1.5e6			BodyTDim
-
-#BODY
-F			UseBody
-
 LOOKUPTABLE		FDIPS
 B0			NameTable
 load			NameCommand
