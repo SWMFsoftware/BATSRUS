@@ -26,15 +26,6 @@ T			DoSaveRestart
 1.0			AverageIonCharge H+ [e]
 1.0			ElectronTemperatureRatio
 
-#BODY
-T			UseBody
-1.0			rBody
-1.5e8			BodyNDim
-1.5e6			BodyTDim
-
-#BODY
-F			UseBody
-
 To run the dipole test, switch UseCurlB0 and UseMagnetogram to false
 and activate the HELIODIPOLE command below
 #HELIODIPOLE

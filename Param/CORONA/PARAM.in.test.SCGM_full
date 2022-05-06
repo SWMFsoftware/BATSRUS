@@ -97,15 +97,6 @@ T			UseFieldLineThreads
 180			nPointThreadMax
 1.0e-3			DsThreadMin
 
-#BODY
-T			UseBody
-1.0			rBody
-1.5e8			BodyNDim
-1.5e6			BodyTDim
-
-#BODY
-F			UseBody
-
 #STAR
 0.8			RadiusStar
 0.84			MassStar
