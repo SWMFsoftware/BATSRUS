@@ -484,6 +484,7 @@ contains
     integer, intent(out), optional:: iError
 
     integer:: iVar, iBlock, i, j, k
+    real:: Value
 
     character(len=*), parameter:: NameSub = 'check_nan'
     !--------------------------------------------------------------------------
@@ -491,7 +492,8 @@ contains
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           do iVar = 1, nVar
-             if (ieee_is_nan(State_VGB(iVar,i,j,k,iBlock))) then
+             Value = State_VGB(iVar,i,j,k,iBlock)
+             if (ieee_is_nan(Value)) then
                 write(*,*) 'iProc=', iProc, &
                      ': NaN in State_V=', State_VGB(:,i,j,k,iBlock)
                 write(*,*) 'iProc=', iProc, &
