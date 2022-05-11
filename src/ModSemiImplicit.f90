@@ -330,7 +330,7 @@ contains
     end select
 
     call check_nan_semi
-    
+
     ! Set the test block
     if(iProc == iProcTest)then
        do iBlockSemi = 1, nBlockSemi
