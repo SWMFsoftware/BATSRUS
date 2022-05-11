@@ -25,6 +25,7 @@ contains
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModVarIndexes, ONLY: NameEquation, NameEquationFile
+    use ModUserInterface ! set_user_version
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_progress'
@@ -52,6 +53,7 @@ contains
          ' EQUATIONS:     '//NameEquation
     call write_prefix; write(iUnitOut,'(a)') &
          ' EQUATION FILE: '//NameEquationFile
+    call set_user_version
     call write_prefix; write(iUnitOut,'(a,f5.2)') &
          ' USER MODULE:   '//trim(NameUserModule), VersionUserModule
     call write_prefix; write(iUnitOut,'(a)') &
@@ -61,7 +63,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_progress
   !============================================================================
-
   subroutine write_runtime_values
 
     use ModMain
@@ -366,11 +367,9 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_runtime_values
   !============================================================================
-
   subroutine write_timeaccurate
 
     use ModMain, ONLY : tSimulation
-
     !--------------------------------------------------------------------------
     write(*, '(a,e13.5,a,f12.6,a,f12.6,a)') &
          '   Simulated Time T = ',tSimulation, &
@@ -379,6 +378,5 @@ contains
 
   end subroutine write_timeaccurate
   !============================================================================
-
 end module ModWriteProgress
 !==============================================================================

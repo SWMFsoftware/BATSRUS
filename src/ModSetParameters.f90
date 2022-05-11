@@ -248,7 +248,6 @@ contains
     if(IsUninitialized)then
        call set_namevar
        call set_defaults
-       call set_user_version
        IsUninitialized=.false.
     end if
 
