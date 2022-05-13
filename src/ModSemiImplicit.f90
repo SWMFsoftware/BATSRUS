@@ -1083,6 +1083,7 @@ contains
   subroutine check_nan_semi
 
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, Xyz_DGB, iProc
+    use ModAdvance, ONLY: State_VGB
     use, intrinsic :: ieee_arithmetic
 
     integer:: iVar, iBlockSemi, iBlock, i, j, k
@@ -1098,8 +1099,10 @@ contains
              if (ieee_is_nan(Value1) .or. ieee_is_nan(Value2)) then
                 write(*,*) 'iProc=', iProc, &
                      ': NaN in SemiAll_V=', SemiAll_VCB(:,i,j,k,iBlockSemi)
-                write(*,*) 'iProc=', iProc, ': NaN in DconsDsemiAll_V=', &
+                write(*,*) 'iProc=', iProc, ': NaN DconsDsemiAll_V=', &
                      DconsDsemiAll_VCB(:,i,j,k,iBlockSemi)
+                write(*,*) 'iProc=', iProc, ': NaN State_V=', &
+                     State_VGB(:,i,j,k,iBlock)
                 iBlock = iBlockFromSemi_B(iBlockSemi)
                 write(*,*) 'iProc=', iProc, &
                      ': NaN at i,j,k,iBlockSemi, iBlock= ', &
