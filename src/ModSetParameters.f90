@@ -3727,14 +3727,8 @@ contains
          iTypeUpdate = UpdateOrig_
       case('slow')
          iTypeUpdate = UpdateSlow_
-      case('fast', 'fast1', 'cpuupdate')
+      case('fast')
          iTypeUpdate = UpdateFast_
-      case('fast2', 'gpuupdate')
-         iTypeUpdate = UpdateFast_+1
-      case('fast3', 'cpuprim')
-         iTypeUpdate = UpdateFast_+2
-      case('fast4', 'gpuprim')
-         iTypeUpdate = UpdateFast_+3
       case default
 #ifdef _OPENACC
          iTypeUpdate = UpdateFast_ ! Default for GPU
