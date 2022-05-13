@@ -2,7 +2,7 @@
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
 #UPDATE
-GPUUPDATE		TypeUpdate
+fast			TypeUpdate
 
 #TIMING
 T			UseTiming
@@ -186,72 +186,15 @@ z=0 mhd idl_ascii		StringPlot
 
 #RUN ##########################################################################
 
-#UPDATE
-CPUUPDATE		TypeUpdate
-
-#STOP
--1			MaxIteration
-50.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-GPUPRIM			TypeUpdate
-
-#STOP
--1			MaxIteration
-75.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-CPUPRIM			TypeUpdate
-
-#STOP
--1			MaxIteration
-100.0			tSimulationMax
-
-#RUN ##########################################################################
-
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
-#UPDATE
-GPUUPDATE		TypeUpdate
-
 #STOP
 -1			MaxIteration
-125.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-CPUUPDATE		TypeUpdate
-
-#STOP
--1			MaxIteration
-150.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-GPUPRIM			TypeUpdate
-
-#STOP
--1			MaxIteration
-175.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-CPUPRIM			TypeUpdate
-
-#STOP
--1			MaxIteration
-200.0			tSimulationMax
+50.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -261,37 +204,7 @@ Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
-#UPDATE
-GPUUPDATE		TypeUpdate
-
 #STOP
 -1			MaxIteration
-225.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-CPUUPDATE		TypeUpdate
-
-#STOP
--1			MaxIteration
-250.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-GPUPRIM			TypeUpdate
-
-#STOP
--1			MaxIteration
-275.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-CPUPRIM			TypeUpdate
-
-#STOP
--1			MaxIteration
-300.0			tSimulationMax
+75.0			tSimulationMax
 
