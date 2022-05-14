@@ -2,7 +2,7 @@
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
 #UPDATE
-fast			TypeUpdate
+GPUUPDATE		TypeUpdate
 
 #TIMING
 T			UseTiming
@@ -25,20 +25,20 @@ F			DoConserveFlux
 #GRID
 5			nRootBlock1
 5			nRootBlock2
-20			nRootBlock3
+1			nRootBlock3
 -45.255			xMin
  45.255  		xMax
 -45.255			yMin
  45.255			yMax
--181.02			zMin
- 181.02			zMax
+-9.0			zMin
+ 9.0			zMax
 
 
-#GRIDLEVEL
+GRIDLEVEL
 1			nLevel
 initial			StringShape
 
-#GRIDLEVEL
+GRIDLEVEL
 1			nLevel
 box			StringShape
 -1.0			xMinBox
@@ -165,7 +165,7 @@ T			UseDtFixed
 T			DoSaveLogfile
 raw			StringLog
 -1			DnSaveLogfile
-100.0			DtSaveLogfile
+0.5			DtSaveLogfile
 
 #SAVERESTART
 F			DoSaveRestart
@@ -175,36 +175,14 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1			nPlotFile
-z=0 mhd idl_ascii		StringPlot
--1			DnSavePlot
-100.0			DtSavePlot
+z=0 var idl_ascii		StringPlot
+1			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
+{MHD} proc		StringVar
+{default}		StringPar
 
 #STOP
 -1			MaxIteration
-25.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#SCHEME
-2			nOrder
-Rusanov			TypeFlux
-mc3			TypeLimiter
-1.2			LimiterBeta
-
-#STOP
--1			MaxIteration
-50.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#SCHEME
-2			nOrder
-Linde			TypeFlux
-mc3			TypeLimiter
-1.2			LimiterBeta
-
-#STOP
--1			MaxIteration
-75.0			tSimulationMax
+5.0			tSimulationMax
 

@@ -6241,21 +6241,18 @@ limited by the minimum and maximum levels only
   <parameter name="TypeUpdate" type="string" input="select" case="lower">
     <option name="orig"  value="orig/1" default="T"/>
     <option name="slow"  value="slow/2"/>
-    <option name="fast1" value="fast/fast1/cpuupdate/3"/>
-    <option name="fast2" value="fast2/gpuupdate/4"/>
-    <option name="fast3" value="fast3/cpuprim/5"/>
-    <option name="fast4" value="fast4/gpuprim/6"/>
+    <option name="fast"  value="fast/3"/>
   </parameter>
 
 #UPDATE
-slow			TypeUpdate (orig/slow/fast/fast1/fast2/fast3/fast4)
+slow			TypeUpdate (orig/slow/fast)
 
-The parameter determines which implementation of the update is used.
+The TypeUpdate parameter determines which implementation of the update is used.
 The value "orig" is the original implementation that works on CPU only.
 The value "slow" is the original implementation but parameters are forced
-to match the fast implementation for sake of debugging.
-The values "fast1" .. "fast4" are different implementations for the GPU (but can
-also be run on the CPU. The value "fast" is equivalent to "fast1".
+to match the fast implementation for sake of debugging. Works on CPU only.
+The value "fast" is the implementation for the GPU, but it can also be run on
+the CPU. 
 
 The default value is "orig" if the code is compiled for CPU,
 and "fast" when compiled for the GPU.

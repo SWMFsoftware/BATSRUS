@@ -2795,6 +2795,19 @@ contains
             uDotB1 = uDotB1L1
          else
             ! Calculate some values for first right intermediate state
+            if(DsRhoR/(sR-Un) < 0)then
+               write(*,*) NameSub, &
+                    ': DsRhoR, sR, Un, DsRhoR/(sR-Un)=', &
+                    DsRhoR, sR, Un, DsRhoR/(sR-Un)
+               write(*,*) NameSub, &
+                    ': iDimFace, iFace, jFace, kFace, iBlockFace=', &
+                    iDimFace, iFace, jFace, kFace, iBlockFace
+               write(*,*) NameSub, ': Xyz_D(left)=', &
+                    Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
+               write(*,*) NameSub, ': Xyz_D(right)=', &
+                    Xyz_DGB(:,iRight,jRight,kRight,iBlockFace)
+               call stop_mpi(NameSub//': Negative DsRhoR/(sR-Un)')
+            end if
             SqRhoR1 = sqrt(DsRhoR/(sR-Un))
             Tmp = DsRhoR*(sR-Un) - Bn2
             if(Tmp < cTiny) then
@@ -2864,6 +2877,18 @@ contains
             uDotB1 = uDotB1R1
          else
             ! Calculate some values for the first left intermediate state
+            if(DsRhoL/(sL-Un) < 0)then
+               write(*,*) NameSub, ': DsRhoL, sL, Un, DsRhoL/(sL-Un)=', &
+                    DsRhoL, sL, Un, DsRhoL/(sL-Un)
+               write(*,*) NameSub, &
+                    ': iDimFace, iFace, jFace, kFace, iBlockFace=', &
+                    iDimFace, iFace, jFace, kFace, iBlockFace
+               write(*,*) NameSub, ': Xyz_D(left)=', &
+                    Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
+               write(*,*) NameSub, ': Xyz_D(right)=', &
+                    Xyz_DGB(:,iRight,jRight,kRight,iBlockFace)
+               call stop_mpi(NameSub//': Negative DsRhoL/(sL-Un)')
+            end if
             SqRhoL1 = sqrt(DsRhoL/(sL-Un))
             Tmp = DsRhoL*(sL-Un) - Bn2
             if(Tmp < cTiny) then

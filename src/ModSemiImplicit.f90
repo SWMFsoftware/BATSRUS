@@ -329,6 +329,8 @@ contains
             //TypeSemiImplicit)
     end select
 
+    call check_nan_semi
+
     ! Set the test block
     if(iProc == iProcTest)then
        do iBlockSemi = 1, nBlockSemi
@@ -1078,7 +1080,43 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_semi_impl_jacobian
   !============================================================================
+  subroutine check_nan_semi
 
+    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, Xyz_DGB, iProc
+    use ModAdvance, ONLY: State_VGB
+    use, intrinsic :: ieee_arithmetic
+
+    integer:: iVar, iBlockSemi, iBlock, i, j, k
+    real:: Value1, Value2
+
+    character(len=*), parameter:: NameSub = 'check_nan_semi'
+    !--------------------------------------------------------------------------
+    do iBlockSemi = 1, nBlockSemi
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do iVar = 1, nVarSemiAll
+             Value1 = SemiAll_VCB(iVar,i,j,k,iBlockSemi)
+             Value2 = DconsDsemiAll_VCB(iVar,i,j,k,iBlockSemi)
+             if (ieee_is_nan(Value1) .or. ieee_is_nan(Value2)) then
+                write(*,*) 'iProc=', iProc, &
+                     ': NaN in SemiAll_V=', SemiAll_VCB(:,i,j,k,iBlockSemi)
+                write(*,*) 'iProc=', iProc, ': NaN DconsDsemiAll_V=', &
+                     DconsDsemiAll_VCB(:,i,j,k,iBlockSemi)
+                write(*,*) 'iProc=', iProc, ': NaN State_V=', &
+                     State_VGB(:,i,j,k,iBlock)
+                iBlock = iBlockFromSemi_B(iBlockSemi)
+                write(*,*) 'iProc=', iProc, &
+                     ': NaN at i,j,k,iBlockSemi, iBlock= ', &
+                     i, j, k, iBlockSemi, iBlock, &
+                     ', x,y,z= ', Xyz_DGB(:,i,j,k,iBlock)
+
+                call stop_mpi(NameSub//': NaN in SemiAll or DconsDsemiAll')
+             end if
+          end do
+       end do; end do; end do
+    end do
+
+  end subroutine check_nan_semi
+  !============================================================================
 end module ModSemiImplicit
 !==============================================================================
 

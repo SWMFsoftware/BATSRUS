@@ -431,7 +431,7 @@ test_fastwave_run:
 
 test_fastwave_check:
 	-@(${DIFFNUM} -t -r=1e-3 -a=1e-6 \
-		${TESTDIR}/RESULT/GM/z*_n00000600.out \
+		${TESTDIR}/RESULT/GM/z*_n00000150.out \
 		Param/SHOCKTUBE/TestOutput/fast_wave_ref.out \
 		> test_fastwave_gpu.diff)
 	ls -l test_fastwave_gpu.diff
@@ -1928,11 +1928,11 @@ test_earth_check:
 		Param/EARTH/TestOutput/earth_cartesian_ref.log \
 		> test_earth_gpu.diff)
 	-@(${DIFFNUM} -t -r=1e-8 -a=1e-13 \
-		${TESTDIR}/RESULTS/GM/y=0_var_2_t00000004*.out \
+		${TESTDIR}/RESULTS/GM/y=0_var_2_t00000001*.out \
 		Param/EARTH/TestOutput/earth_cartesian_ref.out \
 		>> test_earth_gpu.diff)
 	-@(${DIFFNUM} -t -r=2e-4 -a=1e-4 \
-		${TESTDIR}/RESULTS/GM/mag_grid_n00000097.out \
+		${TESTDIR}/RESULTS/GM/mag_grid_n00000025.out \
 		Param/EARTH/TestOutput/earth_cartesian_mag_grid.out.gz \
 		>> test_earth_gpu.diff)
 	ls -l test_earth_gpu.diff
