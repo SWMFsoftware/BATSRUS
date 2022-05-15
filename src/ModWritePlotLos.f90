@@ -207,21 +207,26 @@ contains
     rInner2 = rInner**2
     rOuter2 = rOuter**2
 
-    if(NameThisComp == 'GM')then
-       ! Do not convert to HGI
-       FromObs_DD = cUnit_DD
-    else
-       ! Convert to HGI
-       FromObs_DD = transform_matrix(tSimulation,'HGI', TypeCoordSystem)
-    end if
-
-    iSat = 0
-
     ! Do we calculate SPECTRUM-DEM/EM or flux or narroband image?
     UseSpm = index(TypePlot_I(iFile),'spm')>0
     UseDEM = index(TypePlot_I(iFile),'dem')>0
     UseFlux = index(TypePlot_I(iFile),'fux')>0
     UseNbi = index(TypePlot_I(iFile),'nbi')>0
+
+    if(NameThisComp == 'GM')then
+       ! Do not convert to HGI
+       FromObs_DD = cUnit_DD   
+    else
+       if(UseSpm)then
+          ! Get coordinate transformation matrix:
+          FromObs_DD = transform_matrix(tSimulation, &
+               TypeCoordPlot_I(iFile), TypeCoordSystem)
+       else
+          ! Convert to HGI
+          FromObs_DD = transform_matrix(tSimulation,'HGI', TypeCoordSystem)
+       end if
+    end if
+    iSat = 0
 
     if(UseFlux .or. UseNbi)call spectrum_read_table(iFile,UseNbi)
 
@@ -279,8 +284,10 @@ contains
     ObsDistance = norm2(ObsPos_D)
     ! Normalize line of sight vector pointing towards the origin
     Los_D       = -ObsPos_D/ObsDistance
+    
     ! Rotation with offset angle
     Los_D = matmul( rot_matrix_z(OffsetAngle), Los_D)
+    
     ! Observer distance from image plane
     ObsDistance = abs(sum(ObsPos_D*Los_D))
 
@@ -682,7 +689,7 @@ contains
                      CoordMaxIn_D = &
                      [aOffset+aPix, bOffset+bPix, LogTeMaxDEM_I(iFile)], &
                      VarIn_VIII = Image_VIII(:,:,:,:))
-                elseif(UseNbi)then
+             elseif(UseNbi)then
                 StringHeadLine= 'NBI integrals '// &
                      ' TIMEEVENT='//trim(StringDateTime)// &
                      ' TIMEEVENTSTART='//StringDateTime0// &
@@ -1066,7 +1073,7 @@ contains
          if(Length + Ds >= LengthMax)then
             ! Reduce the integration step newr the end of segment...
             if(iProc == iProcFound)&
-                 ! Add contribution from this segment to the image
+                                ! Add contribution from this segment to the image
                  call add_segment(LengthMax - Length, XyzLosNew_D, UseThreads)
             RETURN
          else

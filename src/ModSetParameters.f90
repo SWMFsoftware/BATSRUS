@@ -1050,7 +1050,7 @@ contains
                 end if
              elseif (index(StringPlot, 'spm')>0)then
                 TypePlotArea = 'spm'
-                call read_var('TypeCoord', TypeCoordObs)
+                call read_var('TypeCoord', TypeCoordPlot_I(iFile))
                 call read_var('ObsPosX',ObsPos_DI(1,iFile))
                 call read_var('ObsPosY',ObsPos_DI(2,iFile))
                 call read_var('ObsPosZ',ObsPos_DI(3,iFile))
