@@ -215,7 +215,7 @@ contains
 
     if(NameThisComp == 'GM')then
        ! Do not convert to HGI
-       FromObs_DD = cUnit_DD   
+       FromObs_DD = cUnit_DD
     else
        if(UseSpm)then
           ! Get coordinate transformation matrix:
@@ -284,10 +284,10 @@ contains
     ObsDistance = norm2(ObsPos_D)
     ! Normalize line of sight vector pointing towards the origin
     Los_D       = -ObsPos_D/ObsDistance
-    
+
     ! Rotation with offset angle
     Los_D = matmul( rot_matrix_z(OffsetAngle), Los_D)
-    
+
     ! Observer distance from image plane
     ObsDistance = abs(sum(ObsPos_D*Los_D))
 
