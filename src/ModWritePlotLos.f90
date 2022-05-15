@@ -427,13 +427,14 @@ contains
     ! !! aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
     if(UseDEM)then
        nLogTeDEM = &
-            nint((LogTeMaxDEM_I(iFile)-LogTeMinDEM_I(iFile))/DLogTeDEM_I(IFile))
+            nint((LogTeMaxDEM_I(iFile)-LogTeMinDEM_I(iFile))/&
+            DLogTeDEM_I(IFile))+1
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM))
     elseif(UseFlux)then
        nLambda = &
-            nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(IFile))
+            nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(IFile))+1
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
