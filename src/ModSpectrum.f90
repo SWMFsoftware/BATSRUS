@@ -470,14 +470,14 @@ contains
        ! Disperse line onto lamba bins
        ! Find the starting/ending wavelength bins
        ! Find the corresponding wavelength bin for starting wavelength
-       iBegin = int((LambdaBegin-LambdaMin_I(iFile))/DLambda_I(iFile))+1
-       iEnd = int((LambdaEnd-LambdaMin_I(iFile))/DLambda_I(iFile))+1
+       iBegin = nint((LambdaBegin-LambdaMin_I(iFile))/DLambda_I(iFile))+1
+       iEnd = nint((LambdaEnd-LambdaMin_I(iFile))/DLambda_I(iFile))+1
 
        ! Update bins between begin and end indices by adding the Gaussian
        ! distribution
        do iBin = max(1,iBegin), min(nLambda,iEnd)
           ! Get wavelength from the center of the bin
-          LambdaBin = LambdaMin_I(iFile)+DLambda_I(iFile)*(iBin-0.5)
+          LambdaBin = LambdaMin_I(iFile)+DLambda_I(iFile)*(iBin-1)
 
           ! Get distance from peak wavelength in SI
           LambdaDist = Lambda - LambdaBin
