@@ -1071,9 +1071,9 @@ contains
             end do
          end if
          if(Length + Ds >= LengthMax)then
-            ! Reduce the integration step newr the end of segment...
+            ! Reduce the integration step near the end of segment
+            ! and add contribution from this segment to the image
             if(iProc == iProcFound)&
-                                ! Add contribution from this segment to the image
                  call add_segment(LengthMax - Length, XyzLosNew_D, UseThreads)
             RETURN
          else
