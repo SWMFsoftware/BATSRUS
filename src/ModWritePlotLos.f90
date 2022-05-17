@@ -526,7 +526,8 @@ contains
 
     if(iProc==0) then
 
-       if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar_los
+       if(IsDimensionalPlot_I(iFile) .and. .not. UseSpm)&
+            call dimensionalize_plotvar_los
 
        if(DoTiming)call timing_start('los_save_plot')
 
