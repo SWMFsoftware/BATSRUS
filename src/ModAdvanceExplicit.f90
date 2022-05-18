@@ -240,7 +240,7 @@ contains
 
        ! Check for NaN-s unless running on GPU
        if(iTypeUpdate < UpdateFast_) call check_nan(NameSub)
-       
+
        ! Check for allowable update percentage change.
        if(UseUpdateCheck)then
           call timing_start('update_check')

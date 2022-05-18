@@ -20,7 +20,7 @@ module ModUpdateState
   public:: update_check         ! check and correct update if necessary
   public:: fix_anisotropy       ! fix pressure anisotropy after update
   public:: check_nan            ! Check State_VGB for NaNs
-  
+
 contains
   !============================================================================
   subroutine update_state(iBlock)
