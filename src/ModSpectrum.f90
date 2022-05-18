@@ -419,7 +419,7 @@ contains
 
        ! Add instrumental broadening (if any)
        if(DLambdaIns_I(iFile) > 0)&
-            DLambdaSI2 = DLambdaSI2 + (DLambdaIns_I(iFile))**2
+            DLambdaSI2 = DLambdaSI2 + (DLambdaIns_I(iFile)/1e10)**2
 
        ! Convert [m] --> [A]
        DLambdaSI = sqrt(DLambdaSI2)
