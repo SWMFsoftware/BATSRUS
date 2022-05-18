@@ -52,23 +52,13 @@ contains
   subroutine stop_mpi(String)
     !$acc routine seq
 
-    use ModMain, ONLY : nIteration, tSimulation, NameThisComp
+    use ModMain, ONLY: nIteration, iStage, tSimulation, NameThisComp
     use ModUtilities, ONLY: CON_stop_simple
 
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
-
-#ifndef _OPENACC
-    write(*,*) trim(NameThisComp),' BATSRUS stopping at iteration=', &
-         nIteration,' simulation time=', tSimulation
-#else
     write(*,*) NameThisComp,' BATSRUS stopping at iteration=', &
-         nIteration,' simulation time=', tSimulation
-#endif
-!#ifdef TESTACC
-!    write(*,*) ' BATSRUS stopping at iteration=', nIteration, &
-!         ' simulation time=', tSimulation
-!#endif
+         nIteration, ' stage=', iStage, ' simulation time=', tSimulation
 
     call CON_stop_simple(String)
 
