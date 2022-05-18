@@ -7,7 +7,8 @@ module ModWriteLogSatFile
        test_start, test_stop, StringTest, XyzTestCell_D, &
        iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest, &
        iProc, nProc, iComm
-  use ModBatsrusUtility, ONLY: get_date_time, stop_mpi, check_nan
+  use ModBatsrusUtility, ONLY: get_date_time, stop_mpi
+  use ModUpdateState, ONLY: check_nan
   use,intrinsic :: ieee_arithmetic
 
 #ifdef _OPENACC
@@ -315,7 +316,7 @@ contains
     ! Do a check if any variable is NaN and STOP with an error message.
     do iVar = 1, nLogTot
        if (ieee_is_nan(LogVar_I(iVar))) then
-          call check_nan
+          call check_nan(NameSub)
           call MPI_barrier(iComm, iError)
           if(iProc == 0) call stop_mpi('ERROR: NaN in Log file. '//&
                'Code stopped with NaN in variable - '//NameLogVar_I(iVar))

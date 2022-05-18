@@ -43,7 +43,7 @@ contains
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModUpdateStateFast, ONLY: update_state_fast
-    use ModUpdateState, ONLY: update_check, update_state
+    use ModUpdateState, ONLY: update_check, update_state, check_nan
     use ModConstrainDivB, ONLY: &
          bface_to_bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
@@ -238,6 +238,9 @@ contains
        if(IsAnyAxis .and. DoFixAxis) call fix_axis_cells
        if(UseCoarseAxis) call coarsen_axis_cells
 
+       ! Check for NaN-s unless running on GPU
+       if(iTypeUpdate < UpdateFast_) call check_nan(NameSub)
+       
        ! Check for allowable update percentage change.
        if(UseUpdateCheck)then
           call timing_start('update_check')
