@@ -19,10 +19,10 @@ module ModUpdateState
   public:: update_te0           ! update Te0 variable
   public:: update_check         ! check and correct update if necessary
   public:: fix_anisotropy       ! fix pressure anisotropy after update
+  public:: check_nan            ! Check State_VGB for NaNs
 
 contains
   !============================================================================
-
   subroutine update_state(iBlock)
 
     use ModMain
@@ -605,7 +605,6 @@ contains
     !==========================================================================
   end subroutine update_state_normal
   !============================================================================
-
   subroutine update_te0
 
     use ModPhysics, ONLY: UnitTemperature_,Si2No_V
@@ -639,7 +638,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine update_te0
   !============================================================================
-
   subroutine update_check
 
     ! Check updated values for allowed change in density or pressure
@@ -651,7 +649,7 @@ contains
     use ModNumConst, ONLY: cTiny
     use ModMpi
     use ModMultiIon,   ONLY: DoRestrictMultiIon, IsMultiIon_CB
-    use ModBatsrusUtility, ONLY: error_report
+    use ModBatsrusUtility, ONLY: error_report, stop_mpi
 
     integer, parameter :: MaxCheck=25, RhoDn_=1, RhoUp_=2, pDn_=3, pUp_=4
     integer :: i,j,k, iVar, iBlock, nCheck, iError
@@ -1113,7 +1111,6 @@ contains
 
     end subroutine fix_update
     !==========================================================================
-
   end subroutine update_check
   !============================================================================
   subroutine fix_anisotropy
@@ -1255,7 +1252,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine fix_anisotropy
   !============================================================================
-
   subroutine update_b0
 
     use ModMain,          ONLY: nBlock, Unused_B,      &
@@ -1345,7 +1341,6 @@ contains
 
   end subroutine update_b0
   !============================================================================
-
   subroutine fix_multi_ion_update(iBlock)
 
     ! This subroutine sets the ion velocities of the individual fluids equal to
@@ -1436,6 +1431,45 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_multi_ion_update
   !============================================================================
+  subroutine check_nan(NameSub, iError)
 
+    use ModVarIndexes, ONLY: nVar
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: r_GB
+    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, Xyz_DGB, iProc
+    use ModBatsrusUtility, ONLY: stop_mpi
+    use, intrinsic :: ieee_arithmetic
+
+    character(len=*), intent(in):: NameSub
+    integer, intent(out), optional:: iError
+
+    integer:: iVar, iBlock, i, j, k
+    real:: Value
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do iVar = 1, nVar
+             Value = State_VGB(iVar,i,j,k,iBlock)
+             if (ieee_is_nan(Value)) then
+                write(*,*) 'iProc=', iProc, &
+                     ': NaN in State_V=', State_VGB(:,i,j,k,iBlock)
+                write(*,*) 'iProc=', iProc, &
+                     ': NaN at i,j,k,iBlock= ', i, j, k, iBlock,  &
+                     ', x,y,z,r= ', Xyz_DGB(:,i,j,k,iBlock), r_GB(i,j,k,iBlock)
+
+                if(present(iError))then
+                   iError = 1
+                   RETURN
+                else
+                   call stop_mpi('ERROR: NaN from '//NameSub)
+                end if
+             end if
+          end do
+       end do; end do; end do
+    end do
+
+  end subroutine check_nan
+  !============================================================================
 end module ModUpdateState
 !==============================================================================

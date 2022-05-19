@@ -526,7 +526,8 @@ contains
 
     if(iProc==0) then
 
-       if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar_los
+       if(IsDimensionalPlot_I(iFile) .and. .not. UseSpm)&
+            call dimensionalize_plotvar_los
 
        if(DoTiming)call timing_start('los_save_plot')
 
@@ -1071,9 +1072,9 @@ contains
             end do
          end if
          if(Length + Ds >= LengthMax)then
-            ! Reduce the integration step newr the end of segment...
+            ! Reduce the integration step near the end of segment
+            ! and add contribution from this segment to the image
             if(iProc == iProcFound)&
-                                ! Add contribution from this segment to the image
                  call add_segment(LengthMax - Length, XyzLosNew_D, UseThreads)
             RETURN
          else

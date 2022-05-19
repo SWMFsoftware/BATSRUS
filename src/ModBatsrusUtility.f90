@@ -16,7 +16,6 @@ module ModBatsrusUtility
   public:: get_date_time   ! get integer date+time for current simulation time
   public:: get_time_string ! create date+time string based on NameMaxTimeUnit
   public:: get_ivar        ! calculate variable index based on its name
-  public:: check_nan       ! check for NaN at runtime
 
 contains
   !============================================================================
@@ -53,23 +52,13 @@ contains
   subroutine stop_mpi(String)
     !$acc routine seq
 
-    use ModMain, ONLY : nIteration, tSimulation, NameThisComp
+    use ModMain, ONLY: nIteration, iStage, tSimulation, NameThisComp
     use ModUtilities, ONLY: CON_stop_simple
 
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
-
-#ifndef _OPENACC
-    write(*,*) trim(NameThisComp),' BATSRUS stopping at iteration=', &
-         nIteration,' simulation time=', tSimulation
-#else
     write(*,*) NameThisComp,' BATSRUS stopping at iteration=', &
-         nIteration,' simulation time=', tSimulation
-#endif
-!#ifdef TESTACC
-!    write(*,*) ' BATSRUS stopping at iteration=', nIteration, &
-!         ' simulation time=', tSimulation
-!#endif
+         nIteration, ' stage=', iStage, ' simulation time=', tSimulation
 
     call CON_stop_simple(String)
 
@@ -473,45 +462,6 @@ contains
          //'iVar is not within 1 and nVar???')
 
   end subroutine get_ivar
-  !============================================================================
-  subroutine check_nan(iError)
-
-    use ModVarIndexes, ONLY: nVar
-    use ModAdvance, ONLY: State_VGB
-    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, Xyz_DGB, iProc
-    use, intrinsic :: ieee_arithmetic
-
-    integer, intent(out), optional:: iError
-
-    integer:: iVar, iBlock, i, j, k
-    real:: Value
-
-    character(len=*), parameter:: NameSub = 'check_nan'
-    !--------------------------------------------------------------------------
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iVar = 1, nVar
-             Value = State_VGB(iVar,i,j,k,iBlock)
-             if (ieee_is_nan(Value)) then
-                write(*,*) 'iProc=', iProc, &
-                     ': NaN in State_V=', State_VGB(:,i,j,k,iBlock)
-                write(*,*) 'iProc=', iProc, &
-                     ': NaN at i,j,k,iBlock= ', i, j, k, iBlock,  &
-                     ', x,y,z= ', Xyz_DGB(:,i,j,k,iBlock)
-
-                if(present(iError))then
-                   iError = 1
-                   RETURN
-                else
-                   call stop_mpi('ERROR: NaN in State_VGB.')
-                end if
-             end if
-          end do
-       end do; end do; end do
-    end do
-
-  end subroutine check_nan
   !============================================================================
 end module ModBatsrusUtility
 !==============================================================================
