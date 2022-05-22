@@ -4,7 +4,7 @@
 module ModTransitionRegion
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iComm
 
   implicit none
 
@@ -149,7 +149,7 @@ contains
     ! The table is now initialized.
     iTableTR = i_lookup_table('TR')
     ! Fill in the table
-    call make_lookup_table_1d(iTableTR, calc_tr_table)
+    call make_lookup_table_1d(iTableTR, calc_tr_table, iComm)
   end subroutine check_tr_table
   !============================================================================
   subroutine calc_tr_table(iTableIn, Arg1, Value_V)
