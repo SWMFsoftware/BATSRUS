@@ -1433,7 +1433,7 @@ contains
   !============================================================================
   subroutine check_nan(NameSub, iError)
 
-    use ModVarIndexes, ONLY: nVar
+    use ModVarIndexes, ONLY: nVar, NameVar_V
     use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: r_GB
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, Xyz_DGB, iProc
@@ -1454,6 +1454,7 @@ contains
              if (ieee_is_nan(Value)) then
                 write(*,*) 'iProc=', iProc, &
                      ': NaN in State_V=', State_VGB(:,i,j,k,iBlock)
+                write(*,*) 'NameVar_V =', NameVar_V
                 write(*,*) 'iProc=', iProc, &
                      ': NaN at i,j,k,iBlock= ', i, j, k, iBlock,  &
                      ', x,y,z,r= ', Xyz_DGB(:,i,j,k,iBlock), r_GB(i,j,k,iBlock)
