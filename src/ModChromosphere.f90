@@ -77,6 +77,7 @@ contains
 
   subroutine get_tesi_c(iBlock, TeSi_C)
 
+    use BATL_lib,      ONLY: Xyz_DGB
     use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
     use ModAdvance,    ONLY: State_VGB, p_, Pe_, Rho_
     use ModSize,       ONLY: nI, nJ, nK
@@ -121,6 +122,15 @@ contains
                TeOut=TeSi_C(i,j,k))
        end do; end do; end do
     end if
+
+    if(any(TeSi_C < 0)) then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if (TeSi_C(i,j,k) < 0) &
+               write(*,*) NameSub, ' Te is negative at Xyz_DGB =', &
+               Xyz_DGB(:,i,j,k,iBlock)
+          call stop_mpi('Te is negative!')
+       end do; end do; end do
+    endif
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_tesi_c
   !============================================================================
