@@ -502,7 +502,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    write(*,*) NameSub,' starting'
+    if (DoTest) write(*,*) NameSub,' starting'
 
     ! Initialize constants
     DoTraceRay     = .true.
