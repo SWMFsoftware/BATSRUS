@@ -1191,9 +1191,9 @@ contains
       real :: Factor, r
       real :: Bnorm, B_D(3), Bunit_D(3)
       integer :: iDim
-      !------------------------------------------------------------------------
 
       ! Calculate Ne, NeSi, Te, TeSi
+      !------------------------------------------------------------------------
       if(UseIdealEos)then
          if(UseMultiIon)then
             Te = State_V(Pe_)/sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
