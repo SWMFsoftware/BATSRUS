@@ -558,7 +558,7 @@ contains
 
     if (TeSi <= 0) then
        write(*,*) NameSub, ' Te <= 0 at iDir,iFace,jFace,kFace,iBlock =', &
-            iDir,iFace,jFace,kFace,iBlock ', and Xyz_DGB =',              &
+            iDir,iFace,jFace,kFace,iBlock, ', and Xyz_DGB =',             &
             Xyz_DGB(:,iFace,jFace,kFace,iBlock)
        write(*,*) NameSub, ' State_V =', State_V
        call stop_mpi('Te is negative')
