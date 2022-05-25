@@ -515,7 +515,6 @@ contains
           call MPI_REDUCE(ImagePe_VIII, Image_VIII, &
                nPix_D(1)*nPix_D(2)*nPlotVar*nLambda, &
                MPI_REAL, MPI_SUM, 0, iComm, iError)
-          call clean_mod_spectrum
        else
           call MPI_REDUCE(ImagePe_VIII, Image_VIII, nPix_D(1)*nPix_D(2)*&
                nPlotVar, MPI_REAL, MPI_SUM, 0, iComm, iError)
@@ -523,6 +522,8 @@ contains
     else
        Image_VIII = ImagePe_VIII
     end if
+
+    if(UseFlux .or. UseNbi) call clean_mod_spectrum
 
     if(iProc==0) then
 
