@@ -471,9 +471,6 @@ contains
            NameSub, ' after flux/source                   =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
-      ! in case any pressure becomes negative
-      call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
-
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          ! Convert relativistic momentum/energy back to classical
          call boris_to_mhd(iBlock)
@@ -491,7 +488,8 @@ contains
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock)**GammaElectron
-            State_VGB(Pe_,i,j,k,iBlock) = &
+            if(State_VGB(Pe_,i,j,k,iBlock) > 0.0) &
+                 State_VGB(Pe_,i,j,k,iBlock) = &
                  State_VGB(Pe_,i,j,k,iBlock)**GammaElectron
          end do; end do; end do
       end if
