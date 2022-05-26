@@ -488,7 +488,8 @@ contains
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock)**GammaElectron
-            State_VGB(Pe_,i,j,k,iBlock) = &
+            if(State_VGB(Pe_,i,j,k,iBlock) > 0.0) &
+                 State_VGB(Pe_,i,j,k,iBlock) = &
                  State_VGB(Pe_,i,j,k,iBlock)**GammaElectron
          end do; end do; end do
       end if

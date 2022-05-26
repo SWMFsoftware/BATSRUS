@@ -497,6 +497,7 @@ contains
   subroutine get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
+    use BATL_lib,        ONLY: Xyz_DGB
     use ModAdvance,      ONLY: UseIdealEos, UseElectronPressure
     use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
     use ModMain,         ONLY: UseB0
@@ -554,6 +555,14 @@ contains
             iFace, jFace, kFace, iBlock, iDir, TeOut=TeSi)
        Te = TeSi*Si2No_V(UnitTemperature_)
     end if
+
+    if (TeSi <= 0) then
+       write(*,*) NameSub, ' Te <= 0 at iDir,iFace,jFace,kFace,iBlock =', &
+            iDir,iFace,jFace,kFace,iBlock, ', and Xyz_DGB =',             &
+            Xyz_DGB(:,iFace,jFace,kFace,iBlock)
+       write(*,*) NameSub, ' State_V =', State_V
+       call stop_mpi('Te is negative')
+    endif
 
     if(DoWeakFieldConduction)then
        ! Initialize these public variables. The user can change them in
@@ -1153,6 +1162,7 @@ contains
     !==========================================================================
     subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
 
+      use BATL_lib,      ONLY: Xyz_DGB
       use ModB0,         ONLY: B0_DGB
       use ModConst,      ONLY: cBoltzmann, cElectronmass
       use ModGeometry,   ONLY: r_GB
@@ -1183,9 +1193,9 @@ contains
       real :: Factor, r
       real :: Bnorm, B_D(3), Bunit_D(3)
       integer :: iDim
-      !------------------------------------------------------------------------
 
       ! Calculate Ne, NeSi, Te, TeSi
+      !------------------------------------------------------------------------
       if(UseIdealEos)then
          if(UseMultiIon)then
             Te = State_V(Pe_)/sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
@@ -1205,6 +1215,12 @@ contains
          Ne = NeSi*Si2No_V(UnitN_)
          Te = TeSi*Si2No_V(UnitTemperature_)
       end if
+
+      if (TeSi < 0) then
+         write(*,*) NameSub, ' Te is negative at: ', &
+              Xyz_DGB(:,i,j,k,iBlock)
+         call stop_mpi('Te is negative')
+      endif
 
       if(DoWeakFieldConduction)then
          ! Initialize these public variables. The user can change them in

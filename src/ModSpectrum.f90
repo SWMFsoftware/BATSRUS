@@ -293,7 +293,7 @@ contains
     use ModInterpolate, ONLY: bilinear
     use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, Bx_, Bz_, &
          WaveFirst_, WaveLast_, Pe_, Ppar_, p_, nElement, ChargestateLast_, &
-         NameVar_V
+         NameVar_V, nChargeState_I
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitTemperature_, &
          UnitRho_, UnitEnergyDens_ ,UnitB_, UnitU_
     use ModConst, ONLY: cProtonMass, cLightSpeed, cBoltzmann, cPi
@@ -379,7 +379,7 @@ contains
        LocalState_V = State_V
        iVar = ChargeStateFirst_
        do iElement = 1, nElement
-          nCharge = iElement
+          nCharge = nChargeState_I(iElement)-1
           LocalState_V(iVar:iVar+nCharge) = &
                State_V(iVar:iVar+nCharge) / &
                sum(State_V(iVar:iVar+nCharge))
