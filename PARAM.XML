@@ -4006,6 +4006,7 @@ No magnetometer grid file is saved by default.
 	<option name="Solar vars. scaled" value="sol"/>
 	<option name="Spectrum/(D)EM variables" value="dem"/>
 	<option name="Spectrum/Flux variables" value="fux"/>
+	<option name="Spectrum/Narrowband image variables" value="nbi"/>
 	<option name="EUV image variables" value="euv"/>
 	<option name="Tabular image variable"      value="tbl"/>
 	<option name="Radio wave intensity" value="rwi"/>
@@ -4168,6 +4169,8 @@ No magnetometer grid file is saved by default.
       <parameter name="DLambdaIns" type="real" default="0.0" if="$plotvar =~ /fux/i"/>
       <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /fux/i"/>
       <parameter name="UseIonTemp" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat" if="$plotvar =~ /nbi/i"/>
+      <parameter name="NameResponse" type="string" default="eit195response.dat" if="$plotvar =~ /nbi/i"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb|spm)\b/)" />
@@ -4179,7 +4182,7 @@ No magnetometer grid file is saved by default.
   </for>
 
 #SAVEPLOT
-19			nPlotFile
+20			nPlotFile
 cut MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -4362,6 +4365,21 @@ T                       UseDoppler
 0.0                     DLambdaIns
 F                       UseIonFrac
 F                       UseIonTemp
+spm nbi idl_ascii       StringPlot                                                             
+4                       DnSavePlot                                                                       
+-1.                     DtSavePlot                                                                        
+HGR                     TypeCoord                                                                         
+216                     ObsPosX                                                                           
+0                       ObsPosY
+0                       ObsPosZ  
+0                       x0
+0                       y0
+2                       xLen
+0.1                     dX
+2                       yLen
+0.1                     dY
+SPECTRUM_chianti_tbl.dat    NameSpmTable
+eit195response.out      NameResponse 
 rfr tec rwi             StringPlot
 10                      DnSavePlot
 -1.0                    DtSavePlot
@@ -4446,7 +4464,7 @@ slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
 box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
-spm   - line of sight integrated plot for spectra (FUX), DEM/EM
+spm   - line of sight integrated plot for spectra (FUX), DEM/EM, narrowband image (NBI)
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
@@ -4510,6 +4528,8 @@ values or as non-dimensional values:
  'dem' - vars: DEM, EM                                        (PlotArea='spm' only)
          pars: rbody
  'fux' - vars: flux                                           (PlotArea='spm' only)
+         pars: rbody
+ 'nbi' - vars: intensity                                      (PlotArea='spm' only)
          pars: rbody
  'int' - vars: 1/B n/B p/B                                    (PlotArea='lcb' only)
          pars:

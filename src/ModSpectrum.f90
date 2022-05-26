@@ -304,7 +304,7 @@ contains
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
     logical, intent(in)   :: UseNbi
-    real, intent(inout)   :: Spectrum_I(nLambda)
+    real, intent(inout)   :: Spectrum_I(:)
 
     integer                        :: iBin
     integer                        :: iNMin, jTMin, iNMax, jTMax

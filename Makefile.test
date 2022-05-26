@@ -1047,8 +1047,10 @@ test_awsomchargestate_rundir:
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomChargeState PARAM.in
 	cd ${TESTDIR}; cp ../data/CHARGESTATE/o_tbl.dat.gz .
 	cd ${TESTDIR}; cp ../data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz .
+	cd ${TESTDIR}; cp ../data/SPECTRUM/eit195response.out.gz .	
 	cd ${TESTDIR}; gunzip o_tbl.dat.gz
-	cd ${TESTDIR}; gunzip SPECTRUM_chianti_tbl.dat.gz	
+	cd ${TESTDIR}; gunzip SPECTRUM_chianti_tbl.dat.gz
+	cd ${TESTDIR}; gunzip eit195response.out.gz
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsomchargestate_run:
@@ -1067,6 +1069,10 @@ test_awsomchargestate_check:
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
                 ${TESTDIR}/RESULTS/SC/spm_fux_2_n0000004.out \
                 Param/CORONA/TestOutput/spm_fux_2_n0000004.out.gz \
+                >> test_awsomchargestate.diff)
+	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
+                ${TESTDIR}/RESULTS/SC/spm_nbi_3_n0000004.out \
+                Param/CORONA/TestOutput/spm_nbi_3_n0000004.out.gz \
                 >> test_awsomchargestate.diff)
 	ls -l test_awsomchargestate.diff
 
