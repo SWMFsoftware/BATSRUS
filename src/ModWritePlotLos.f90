@@ -447,11 +447,12 @@ contains
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
             Spectrum_I(nLambda))
     else
-       nLambda = 1
+       nLambda = &
+            nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(IFile))+1
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),1), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),1))
-       if(UseNbi)allocate(Spectrum_I(nLambda))
+       if(UseNbi)allocate(Spectrum_I(1))
     end if
 
     ImagePe_VIII = 0.0

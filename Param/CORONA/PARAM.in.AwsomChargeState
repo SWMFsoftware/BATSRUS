@@ -173,7 +173,7 @@ RAW			StringLog
 -1.			DtSaveLogfile
 
 #SAVEPLOT
-2			nPlotFile
+3			nPlotFile
 spm dem idl_ascii		StringPlot
 4			DnSavePlot
 -1.			DtSavePlot
@@ -213,6 +213,21 @@ T			UseDoppler
 0.0			DLambdaIns
 F			UseIonFrac
 F			UseIonTemp
+spm nbi idl_ascii		StringPlot
+4			DnSavePlot
+-1.			DtSavePlot
+HGR			TypeCoord
+216			ObsPosX
+0			ObsPosY
+0			ObsPosZ
+0			x0
+0			y0
+2			xLen
+0.2			dX
+2			yLen
+0.2			dY
+SPECTRUM_chianti_tbl.dat		NameSpmTable
+eit195response.out		NameResponse
 
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs
