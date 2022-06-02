@@ -370,19 +370,20 @@ contains
 
        if(iError /= 0) EXIT
 
-       iTime_I = 0
-       read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', &
-            iostat=iError) iTime_I(1:6)
-
-       if(iError /= 0)then
-          write(*,*) NameProgram,': could not read date from header line.', &
-               trim(NameFileIn)
-          STOP
-       end if
-       call time_int_to_real(iTime_I, Time)
-       Time = Time - StartTime
-
        if(IsTrajectory)then
+          iTime_I = 0
+          read(StringHeader(:19),'(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)', &
+               iostat=iError) iTime_I(1:6)
+
+          if(iError /= 0)then
+             write(*,*) NameProgram,&
+                  ': could not read date from header line.', trim(NameFileIn)
+             STOP
+          end if
+          call time_int_to_real(iTime_I, Time)
+
+          Time = Time - StartTime
+
           if(Time < TrajTime_I(1)) CYCLE  ! before start of trajectory file
           if(Time > TrajTime_I(nPoint)) EXIT  ! after end of trajectory file
        end if
