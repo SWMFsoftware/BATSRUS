@@ -333,9 +333,6 @@ contains
     logical                     :: IsFound = .false.
     integer                     :: iVar, iVarIon, iElement, nCharge
 
-    ! Response function
-    integer                     :: jBin
-
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
@@ -488,11 +485,8 @@ contains
           ! Calculate total monochromatic flux
           Flux = FluxMono*Phi
           if(UseNbi)then
-             ! Find bin in responsefunction
-             jBin = int((Lambdabin-ResponseLambda_I(1))/&
-                  (ResponseLambda_I(2)-ResponseLambda_I(1)))+1
              Spectrum_I(1) = &
-                  Spectrum_I(1) + Flux*Response_I(jBin)*DLambda_I(iFile)
+                  Spectrum_I(1) + Flux*Response_I(iBin)*DLambda_I(iFile)
           else
              ! Update bin with flux
              Spectrum_I(iBin) = Spectrum_I(iBin) + Flux

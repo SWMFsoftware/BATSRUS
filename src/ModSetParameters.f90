@@ -1081,6 +1081,7 @@ contains
                    call read_var('UseIonTemp',UseIonTemp_I(iFile))
                 elseif (index(StringPlot, 'nbi')>0)then
                    ! Narrowband image
+                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
                    call read_var('NameSpmTable',NameSpmTable_I(iFile))
                    call read_var('NameNbiTable',NameNbiTable_I(iFile))
                 end if

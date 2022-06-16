@@ -226,6 +226,7 @@ HGR			TypeCoord
 0.2			dX
 2			yLen
 0.2			dY
+F			UseIonFrac
 SPECTRUM_chianti_tbl.dat		NameSpmTable
 eit195response.out		NameResponse
 
