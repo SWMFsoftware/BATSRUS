@@ -4164,13 +4164,15 @@ No magnetometer grid file is saved by default.
       <parameter name="LambdaMin" type="real" default="10" if="$plotvar =~ /fux/i"/>
       <parameter name="LambdaMax" type="real" default="1700" if="$plotvar =~ /fux/i"/>
       <parameter name="DLambda" type="real" default="0.001" if="$plotvar =~ /fux/i"/>
+      <parameter name="TempMin" type="real" default="0.0" if="$plotvar =~ /fux/i"/>
       <parameter name="UseAlfven" type="logical" default="F" if="$plotvar =~ /fux/i"/>
       <parameter name="UseDoppler" type="logical" default="F" if="$plotvar =~ /fux/i"/>
       <parameter name="DLambdaIns" type="real" default="0.0" if="$plotvar =~ /fux/i"/>
       <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /fux/i"/>
       <parameter name="UseIonTemp" type="logical" default="F" if="$plotvar =~ /fux/i"/>
-      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /nbi/i"/>
       <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat" if="$plotvar =~ /nbi/i"/>
+      <parameter name="TempMin" type="real" default="0.0" if="$plotvar =~ /nbi/i"/>
+      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /nbi/i"/>
       <parameter name="NameResponse" type="string" default="eit195response.dat" if="$plotvar =~ /nbi/i"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
@@ -4361,16 +4363,17 @@ F                       UseUnobserved
 400                     LambdaMin
 410                     LambdaMax
 0.1                     DLambda
+0.0                     TempMin
 T                       UseAlfven
 T                       UseDoppler
 0.0                     DLambdaIns
 F                       UseIonFrac
 F                       UseIonTemp
-spm nbi idl_ascii       StringPlot                                                             
-4                       DnSavePlot                                                                       
--1.                     DtSavePlot                                                                        
-HGR                     TypeCoord                                                                         
-216                     ObsPosX                                                                           
+spm nbi idl_ascii       StringPlot                                                        
+4                       DnSavePlot               
+-1.                     DtSavePlot
+HGR                     TypeCoord
+216                     ObsPosX
 0                       ObsPosY
 0                       ObsPosZ  
 0                       x0
@@ -4379,8 +4382,9 @@ HGR                     TypeCoord
 0.1                     dX
 2                       yLen
 0.1                     dY
-F                       UseIonFrac
 SPECTRUM_chianti_tbl.dat    NameSpmTable
+0.0                     TempMin
+F                       UseIonFrac
 eit195response.out      NameResponse 
 rfr tec rwi             StringPlot
 10                      DnSavePlot

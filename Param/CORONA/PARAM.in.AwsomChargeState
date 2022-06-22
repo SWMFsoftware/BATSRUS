@@ -208,6 +208,7 @@ F			UseUnobserved
 194.5			LambdaMin
 195.5			LambdaMax
 0.1			DLambda
+0			TempMin
 T			UseAlfven
 T			UseDoppler
 0.0			DLambdaIns
@@ -226,11 +227,12 @@ HGR			TypeCoord
 0.2			dX
 2			yLen
 0.2			dY
-F			UseIonFrac
 SPECTRUM_chianti_tbl.dat		NameSpmTable
+0			TempMin
+F			UseIonFrac
 eit195response.out		NameResponse
 
-#OUTERBOUNDARY
+#OUTERBOUNDARY		DLambda
 user			TypeBc1   user for spherical and user_outerbcs
 float			TypeBc2
 float			TypeBc3

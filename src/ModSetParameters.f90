@@ -1074,6 +1074,7 @@ contains
                    call read_var('LambdaMin', LambdaMin_I(iFile))
                    call read_var('LambdaMax', LambdaMax_I(iFile))
                    call read_var('DLambda',   DLambda_I(iFile))
+                   call read_var('TempMin', TempMin_I(iFile))
                    call read_var('UseAlfven',UseAlfven_I(iFile))
                    call read_var('UseDoppler',UseDoppler_I(iFile))
                    call read_var('DLambdaIns',DLambdaIns_I(iFile))
@@ -1081,8 +1082,9 @@ contains
                    call read_var('UseIonTemp',UseIonTemp_I(iFile))
                 elseif (index(StringPlot, 'nbi')>0)then
                    ! Narrowband image
-                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
                    call read_var('NameSpmTable',NameSpmTable_I(iFile))
+                   call read_var('TempMin', TempMin_I(iFile))
+                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
                    call read_var('NameNbiTable',NameNbiTable_I(iFile))
                 end if
              elseif (index(StringPlot,'los')>0) then
