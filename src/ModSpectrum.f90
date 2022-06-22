@@ -353,7 +353,7 @@ contains
     end if
 
     if(Tlos<TempMin_I(iFile))RETURN
-    
+
     Unth2 = 0.0
     if(UseAlfven_I(iFile))then
        ! Calculate Elzasser variables
