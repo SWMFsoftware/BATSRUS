@@ -46,7 +46,7 @@ contains
     use ModIoUnit,     ONLY: UnitTmp_
     use ModUtilities,  ONLY: open_file, close_file
     use ModIO,         ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
-         LambdaMin_I, LambdaMax_I, NameNbiTable_I,DLambda_I
+         LambdaMin_I, LambdaMax_I, NameNbiTable_I, DLambda_I, TempMin_I
     ! response function
     use ModPlotFile,         ONLY: read_plot_file
 
@@ -298,7 +298,7 @@ contains
          UnitRho_, UnitEnergyDens_ ,UnitB_, UnitU_
     use ModConst, ONLY: cProtonMass, cLightSpeed, cBoltzmann, cPi
     use ModIO, ONLY: DLambdaIns_I, DLambda_I, LambdaMin_I, &
-         UseDoppler_I, UseAlfven_I
+         UseDoppler_I, UseAlfven_I, TempMin_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
 
     integer, intent(in)   :: iFile, nLambda
@@ -351,6 +351,9 @@ contains
     else
        Tlos = State_V(p_)/State_V(Rho_)* No2Si_V(UnitTemperature_)
     end if
+
+    if(Tlos<TempMin_I(iFile))RETURN
+
     Unth2 = 0.0
     if(UseAlfven_I(iFile))then
        ! Calculate Elzasser variables
@@ -500,8 +503,9 @@ contains
   subroutine clean_mod_spectrum
     character(len=*), parameter:: NameSub = 'clean_mod_spectrum'
     !--------------------------------------------------------------------------
-    deallocate(LineTable_I)
-
+    if(allocated(LineTable_I))deallocate(LineTable_I)
+    if(allocated(ResponseLambda_I))deallocate(ResponseLambda_I)
+    if(allocated(Response_I))deallocate(Response_I)
   end subroutine clean_mod_spectrum
   !============================================================================
 end module ModSpectrum
