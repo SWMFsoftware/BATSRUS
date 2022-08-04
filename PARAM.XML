@@ -5018,6 +5018,7 @@ The default is to flush the output, i.e. DoFlush=T.
 	<option name="GIBSON-LOW"          value="GL" default="T" />
 	<option name="TITOV-DEMOULIN 1999" value="TD"             />
 	<option name="TITOV-DEMOULIN 2014" value="TD14"	          />
+	<option name="TITOV-DEMOULIN 2022" value="TD22"	          />
 	<option name="SPHEROMAK"	                          />
 	<option name="BREAKOUT"                                   />
       </parameter>
@@ -5056,6 +5057,10 @@ The default is to flush the output, i.e. DoFlush=T.
 		     if="$UsePlasmaBeta"/>
 	  <parameter name="Mass" type="real" min="0" default="0"
 		     if="not $UsePlasmaBeta"/>
+	</if>
+	<if expr="$TypeCme eq 'TD22'">
+	  <parameter name="PlasmaBeta" type="real" min="0" default="0"/>
+	  <parameter name="EjectaTemperature" type="real" min="1e4" default="5e4"/>
 	</if>
 	<parameter name="TypeBStrap" type="string" case="lower" input="select">
 	  <option name="none"	  />
@@ -5096,7 +5101,7 @@ T			DoAddFluxRope
 0			LongitudeCme   [deg]
 0			LatitudeCme    [deg]
 0			OrientationCme [deg]
-GL			TypeCme    GL/TD/TD14/SPHEROMAK
+GL			TypeCme    GL/TD/TD14/TD22/SPHEROMAK
 1.0			BStrength      [Gs]
 1.03			Radius         [Rs]
 0.3			Stretch        [Rs]
@@ -5200,6 +5205,35 @@ cancelflux		TypeCharge  none/steady/moving/cancelflux
 5			BqStrapping       [Gs]
 0.4			qDistance         [R_s]	
 5.0			ChargeUx          [km/s]
+!!!!!!!!!!!!!!!!!!!!!!!!TITOV-DEMOULIN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#CME
+T			UseCme
+T			DoAddFluxRope
+180.0                   LongitudeCme  [deg]
+15.0                    LatitudeCme   [deg]
+30.0                    OrientationCme[deg]
+TD			TypeCme    TD/TITOV-DEMOULIN
+10.0			BcTubeDim    [Gs]
+0.5			RadiusMajor  [R_s]
+0.2			RadiusMinor  [R_s]
+0.2			Depth        [R_s]
+F			UsePlasmaBeta
+1.000E+16               Mass         [g]
+readbstrap		TypeBStrap readbstrap/getbstrap/none
+5			bStrapping  [Gs]
+steady			TypeCharge  none/steady/moving/cancelflux
+1.0			BqFraction  [ ]
+0.4			qDistance   [R_s]
+
+Version with UsePlasmaBeta=.true.:
+...
+T			UsePlasmaBeta
+PlasmaBeta              0.1               [ ]
+5.0e4			EjectaTemperature [K]	
+...
+steady			TypeCharge  none/steady/moving/cancelflux
+5			BStrapping        [Gs]
+0.4			qDistance         [R_s]	
 
 BcTubeDim, in Gauss, is a magnetic field at the center of totoid, which field 
 is created by the current inside the toroidal filament. RadiusMajor and 
@@ -5227,6 +5261,26 @@ to the positive and negative helicity. To set the negative helicity, the
 input parameter, BcTube, should be negative. This choice affects only the 
 sign of helicity, but not the direction of the poloidal magnetic field 
 components, including the nagnetic field at the center of configuration.
+
+!!!!!!!!!!! TITOV-DEMOULIN version 2022 (Grad-Shafranov solution) !!!!!!!!!!!!
+#CME
+T			UseCme
+T			DoAddFluxRope
+180.0                   LongitudeCme  [deg]
+15.0                    LatitudeCme   [deg]
+30.0                    OrientationCme[deg]
+TD			TypeCme    TD/TITOV-DEMOULIN
+10.0			BcTubeDim    [Gs]
+0.5			RadiusMajor  [R_s]
+0.2			RadiusMinor  [R_s]
+0.2			Depth        [R_s]
+PlasmaBeta              0.1           [ ]
+5.0e4			EjectaTemperature [K]
+readbstrap		TypeBStrap readbstrap/getbstrap/none
+5			bStrapping  [Gs]
+steady			TypeCharge  none/steady/moving/cancelflux
+1.0			BqFraction  [ ]
+0.4			qDistance   [R_s]
 
 TypeCME=BREAKOUT should be described by Bart van der Holst. Please ask
 him for a description.
