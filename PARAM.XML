@@ -7876,14 +7876,14 @@ The default action is to not couple density or pressure from PS.
 
 #PICUNIT
 1.0		xUnitPicSi [m]
-3000e3		uUnitPicSi [m/s] Speed of light for iPIC3D
+3000e3		uUnitPicSi [m/s] Speed of light for PIC
 
 Define the length and velocity units for the PIC model. The length unit
 is arbitrary (can be defined to be the same as for the MHD model, or
 any other convenient length). The velocity unit, however, determines
-the speed of light for the iPIC3D model, since c=1 is defined.
+the speed of light for the PIC model, since c=1 is defined.
 Using the true speed of light makes the convergence
-slow in the implicit solver of iPIC3D. Therefore uUnitPicSi should be
+slow in the implicit solver of PIC. Therefore uUnitPicSi should be
 set to a velocity that is larger than the typical velocities
 (including the electron thermal velocity), but not orders of magnitude
 larger. For typical magnetosphere applications a few 1000 km/s can work.
@@ -7957,13 +7957,10 @@ Do not use #PICUNIT and #PICRGRIDUNIT at the same time.
 1/8			DzPic   (read for 3D only)
 
 This command defines the number of PIC grids, their sizes and resolutions.
-All distances are given in the BATSRUS distance units.
-When coupling with IPIC3D, the number of PIC cells in any dimension
-should be an integer multiple of the number of subdomains in that direction
-(see Config.pl -h in IPIC3D). The grid resolution of the PIC grid
-can be different from the grid resolution of BATSRUS.
-When coupling with FLEKS, the number of grid cells should be a multiple
-of the patch sized defined by the #PICPATCH command.
+All distances are given in the BATSRUS distance units. The grid resolution 
+of the PIC grid can be different from the grid resolution of BATSRUS.
+When coupling with FLEKS, the number of PIC grid cells in each direction
+should be a multiple of the patch sized defined by the #PICPATCH command.
 
 The default is to have no PIC regions at all, so this command is
 required for the MHD-EPIC algorithm.
