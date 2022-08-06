@@ -389,7 +389,7 @@ contains
        call stop_mpi(NameSub)
     endif
 
-    ! Normalizing the system so q/(mc) == 1 in IPIC3D.
+    ! Normalizing the system so q/(mc) == 1 in PIC.
     !
     ! In CGS units the Hall speed is uH_CGS = j/(nq) = c/4pi curlB m/(q rho)
     !
@@ -414,7 +414,7 @@ contains
     !
     !   [M]_SI = 10^7 * [L]_SI * (m_SI/q_SI)^2
 
-    ! iPIC3D does not suppor multi-sessions now. If the pic region related
+    ! PIC does not suppor multi-sessions now. If the pic region related
     ! parameters has been initialized, then skip this subroutine in
     ! the following sessions.
     if(IsPicRegionInitialized) RETURN
@@ -562,7 +562,7 @@ contains
     end if
 
     if(iProc == 0) then
-       write(*,*) "Corrected IPIC3D  regions"
+       write(*,*) "Corrected PIC regions"
        do iRegion = 1, nRegionPic
           write(*,*) "  Region : ", iRegion
           write(*,*) "     Min Cordinate : ", &
