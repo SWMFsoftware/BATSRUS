@@ -198,14 +198,6 @@ contains
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V)
     end if
-
-    !$acc parallel
-    if(iProc == iProcTest) &
-
-         write(*,*)'!!!after message_pass_cell ghost value=', &
-         State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-    !$acc end parallel
-
     ! If the grid changed, fix iBoundary_GB
     ! This could/should be done where the grid is actually being changed,
     ! for example in load_balance

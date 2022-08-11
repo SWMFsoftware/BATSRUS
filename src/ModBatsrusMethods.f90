@@ -491,12 +491,6 @@ contains
     ! Check if time limit is reached (to be safe)
     if(tSimulation >= TimeSimulationLimit) RETURN
 
-    !$acc parallel
-    if(iProc == iProcTest) &
-         write(*,*)'!!! BATS_advance starts, ghost value=', &
-         State_VGB(iVarTest, iTest-1, jTest, kTest, iBlockTest)
-    !$acc end parallel
-
     ! Check if steady state is achieved
     if(.not.IsTimeAccurate .and. UsePartSteady .and. IsSteadyState)then
        ! Create stop condition for stand alone mode
@@ -543,12 +537,6 @@ contains
     ! Select block types and load balance blocks
     call load_balance_blocks
 
-    !$acc parallel
-    if(iProc == iProcTest) &
-         write(*,*)'after load_balance ghost value=', &
-         State_VGB(iVarTest, iTest-1,jTest,kTest,iBlockTest)
-    !$acc end parallel
-
     if(UseSolidState) call fix_geometry(DoSolveSolidIn=.false.)
 
     ! Switch off steady blocks to reduce calculation
@@ -558,12 +546,6 @@ contains
     if(IsDynamicConservCrit .or. &
          IsStaticConservCrit .and. .not.allocated(IsConserv_CB)) &
          call select_conservative
-
-    !$acc parallel
-    if(iProc == iProcTest) &
-         write(*,*)'before advance_explicit ghost value=', &
-         State_VGB(iVarTest, iTest-1,jTest,kTest,iBlockTest)
-    !$acc end parallel
 
     if(UseImplicit.and.nBlockImplALL>0)then
        call advance_part_impl
@@ -613,15 +595,7 @@ contains
     if(Te0_>1)call update_te0
 
     if(UseFieldLineThreads)call advance_threads(Enthalpy_)
-    write(*,*)'!!! call exchange_messages!!!'
     call exchange_messages
-
-    !$acc parallel
-    if(iProc == iProcTest) &
-
-         write(*,*)'!!!after exchange_messages ghost value=', &
-         State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-    !$acc end parallel
 
     if(UseSemiImplicit .and. (Dt>0 .or. .not.IsTimeAccurate)) &
          call advance_semi_impl
@@ -665,12 +639,6 @@ contains
        end if
     end if
 
-    !$acc parallel
-    if(iProc == iProcTest) &
-         write(*,*)'!!!after PIC ghost value=', &
-         State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-    !$acc end parallel
-
     if(DoTest)write(*,*)NameSub,' iProc,new nStep,tSimulation=',&
          iProc,nStep,tSimulation
 
@@ -682,24 +650,12 @@ contains
             call update_b0
     end if
 
-    !$acc parallel
-    if(iProc == iProcTest) &
-         write(*,*)'!!!after upDateB0 ghost value=', &
-         State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-    !$acc end parallel
-
     if(UseBody2Orbit) then
        call update_secondbody
        call update_b0
     end if
 
     if(UseProjection) call project_divb
-
-    !$acc parallel
-    if(iProc == iProcTest) &
-         write(*,*)'!!!after project_divb ghost value=', &
-         State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-    !$acc end parallel
 
     ! Adapt grid
     if(is_time_to(AdaptGrid, nStep, tSimulation, IsTimeAccurate)) then
@@ -721,12 +677,6 @@ contains
        if(IsTimeLoop) call BATS_save_files('BEFOREAMR')
        call do_amr
 
-       !$acc parallel
-       if(iProc == iProcTest) &
-            write(*,*)'!!!after do_amr ghost value=', &
-            State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-       !$acc end parallel
-
        ! Output timing after AMR.
        call timing_stop(NameThisComp//'_amr')
        if(iProc == 0 .and. lVerbose > 0)then
@@ -746,19 +696,7 @@ contains
        ! is called in ModAMR to save the AMR criteria.
        call BATS_save_files('NORMAL')
 
-       !$acc parallel
-       if(iProc == iProcTest) &
-            write(*,*)'!!!after BATS_save_files ghost value=', &
-            State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-       !$acc end parallel
-
     end if
-
-    !$acc parallel
-    if(iProc == iProcTest) &
-         write(*,*)'!!!BATS_advance ends, ghost value=', &
-         State_VGB(iVarTest, iTest-1, jTest, kTest, iBlockTest)
-    !$acc end parallel
 
     call timing_stop('advance')
     call test_stop(NameSub, DoTest)
@@ -927,12 +865,6 @@ contains
            kTest
       logical :: DoPlotThread
       !------------------------------------------------------------------------
-      !$acc parallel
-      if(iProc == iProcTest) &
-           write(*,*)'!!!save_files starts, ghost value=',&
-           State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-      !$acc end parallel
-
       DoPlotThread = DoPlotThreads
       do iFile = 1, nFile
          ! We want to use the IE magnetic perturbations that were passed
@@ -949,13 +881,6 @@ contains
                end if
                call save_file
 
-               !$acc parallel
-               if(iProc == iProcTest) &
-                    write(*,*)'!!!breakpoint 1 triggered, ghost value=',&
-                    State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-               !$acc end parallel
-
-
             else if(mod(nStep,DnOutput_I(iFile)) == 0)then
                if(DoPlotThread.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
@@ -963,14 +888,6 @@ contains
                   DoPlotThread = .false.
                end if
                call save_file
-
-               !$acc parallel
-               if(iProc == iProcTest) &
-                    write(*,*)'!!!breakpoint 2 triggered, ghost value=',&
-                    State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-               !$acc end parallel
-
-
             end if
          else if(IsTimeAccurate .and. DtOutput_I(iFile) > 0.)then
             if(int(tSimulation/DtOutput_I(iFile))>iTimeOutputLast_I(iFile))then
@@ -980,23 +897,7 @@ contains
                   call save_threads_for_plot
                   DoPlotThread = .false.
                end if
-
-               !$acc parallel
-               if(iProc == iProcTest) &
-                    write(*,*)'!!!breakpoint 3 before save_file, ghost value=',&
-                    State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-               !$acc end parallel
-
-
                call save_file
-
-               !$acc parallel
-               if(iProc == iProcTest) &
-                    write(*,*)'!!!breakpoint 3 after save_file, ghost value=',&
-                    State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-               !$acc end parallel
-
-
             end if
          end if
       end do
@@ -1005,23 +906,12 @@ contains
       ! in ghost cells.
 
       if(DoExchangeAgain)then
-         if(iProc == iProcTest) &
-              write(*,*)'!!!DoExchangeAgain==.true. starts with ghost value =',&
-              State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-
          if(iProc == 0 .and. lVerbose > 0)then
             call write_prefix; write(iUnitOut,*)&
                  'Calling exchange_messages to reset ghost cells ...'
          end if
          call exchange_messages(DoResChangeOnlyIn=.true.)
       end if
-
-      !$acc parallel
-      if(iProc==iProcTest) &
-           write(*,*)'!!!save_files ends, ghost value=', &
-           State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-      !$acc end parallel
-
     end subroutine save_files
     !==========================================================================
     subroutine save_file
@@ -1065,29 +955,7 @@ contains
       real :: tSimulationBackup = 0.0
       !------------------------------------------------------------------------
       if(nStep<=nStepOutputLast_I(iFile) .and. DnOutput_I(iFile)/=0) RETURN
-
-      !$acc parallel
-      if(iProc == iProcTest) &
-           write(*,*)'!!!save_file starts, GPU ghost value=',&
-           State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-      !$acc end parallel
-
-      if(iProc == iProcTest) &
-           write(*,*)'!!!save_file starts, CPU ghost value=',&
-           State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-
       call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
-
-      !$acc parallel
-      if(iProc == iProcTest) &
-           write(*,*)'!!!in save_file after 1st sync, GPU ghost value=',&
-           State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-      !$acc end parallel
-
-      if(iProc == iProcTest) &
-           write(*,*)'!!!in save_file after 1st sync, CPU ghost value=',&
-           State_VGB(iVarTest,iTest-1,jTest,kTest,iBlockTest)
-
       if(iFile==restart_) then
          ! Case for restart file
          if(.not.DoSaveRestart)RETURN
