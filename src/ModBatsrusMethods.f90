@@ -859,7 +859,7 @@ contains
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
 
-      !!!debug
+      !!! debug
       use ModAdvance, ONLY: State_VGB
       use BATL_lib, ONLY: iProc, iProcTest, iBlockTest, iVarTest, iTest, jTest, &
            kTest
@@ -939,7 +939,7 @@ contains
       use ModAdvance,           ONLY: State_VGB
       use ModB0,                ONLY: B0_DGB
 
-!!!debug
+!!! debug
       use BATL_lib,             ONLY: iTest, jTest, kTest, iBlockTest, iVarTest, &
            iProc, iProcTest
 
