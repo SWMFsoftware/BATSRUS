@@ -15,13 +15,13 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #CHECKGRIDSIZE
-1024			nI
+64			nI
 1			nJ
 1			nK
 1			MinBlockAll
 
 #GRID
-1			nRootBlock1
+16			nRootBlock1
 1			nRootBlock2
 1			nRootBlock3
 -128.			xMin
