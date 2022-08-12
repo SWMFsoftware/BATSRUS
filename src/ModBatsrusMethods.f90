@@ -6,7 +6,8 @@ module ModBatsrusMethods
 
   ! This module contains the top level methods for BATSRUS
 
-  use BATL_lib, ONLY: test_start, test_stop, lVerbose
+  use BATL_lib, ONLY: test_start, test_stop, lVerbose,&
+       iTest, jTest, kTest, iBlockTest, iVarTest, iProc, iProcTest
   use ModUpdateStateFast, ONLY: sync_cpu_gpu
   use ModBatsrusUtility, ONLY: stop_mpi
 
@@ -476,8 +477,6 @@ contains
     use ModUpdateState, ONLY: update_b0, update_te0, fix_anisotropy
     use ModProjectDivB, ONLY: project_divb
     use ModCleanDivB,   ONLY: clean_divb
-    use BATL_lib, ONLY: iProc, iProcTest, iBlockTest,iTest, jTest, kTest, &
-         iVarTest
     use ModFreq, ONLY: is_time_to
     use ModPic, ONLY: AdaptPic, calc_pic_criteria, &
          pic_set_cell_status, iPicGrid, iPicDecomposition
@@ -858,11 +857,7 @@ contains
     !==========================================================================
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
-
-      !!! debug
       use ModAdvance, ONLY: State_VGB
-      use BATL_lib, ONLY: iProc, iProcTest, iBlockTest, iVarTest, &
-           iTest, jTest, kTest
       logical :: DoPlotThread
       !------------------------------------------------------------------------
       DoPlotThread = DoPlotThreads
@@ -938,10 +933,6 @@ contains
       use ModMessagePass,       ONLY: exchange_messages
       use ModAdvance,           ONLY: State_VGB
       use ModB0,                ONLY: B0_DGB
-
-!!! debug
-      use BATL_lib,             ONLY: iTest, jTest, kTest, iBlockTest, iVarTest, &
-           iProc, iProcTest
 
       integer :: iSat, iPointSat, iParcel
 
