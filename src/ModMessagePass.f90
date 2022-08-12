@@ -5,7 +5,8 @@
 module ModMessagePass
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iProc
+       test_start, test_stop, iProc, iTest, jTest, kTest, iBlockTest, &
+       iProcTest, iVarTest
 
   ! Message passing to fill in ghost cells.
   !
@@ -197,7 +198,6 @@ contains
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V)
     end if
-
     ! If the grid changed, fix iBoundary_GB
     ! This could/should be done where the grid is actually being changed,
     ! for example in load_balance

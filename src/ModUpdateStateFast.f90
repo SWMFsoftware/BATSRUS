@@ -96,13 +96,14 @@ contains
 
     call test_start(NameSub, DoTest)
 
-    if(DoTest)then
-       write(*,*) NameSub,': String=', String
-       if(present(NameCaller)) write(*,*) NameSub,' called by ',NameCaller
-    end if
-
     DoChange = index(String, 'change') > 0
     IsCpu    = index(String, 'CPU') > 0
+
+    if(DoTest)then
+       write(*,*) NameSub,': String, DoChange, IsCpu, DiState=', &
+            String, DoChange, IsCpu, DiState
+       if(present(NameCaller)) write(*,*) NameSub,' called by ',NameCaller
+    end if
 
     if(present(State_VGB))then
        if(DoChange)then

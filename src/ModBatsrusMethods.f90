@@ -443,7 +443,7 @@ contains
          Parcel_DI, nParcel
     use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
-    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
+    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure, State_VGB
     use ModAdvanceExplicit, ONLY: advance_explicit, update_secondbody
     use ModAdvectPoints, ONLY: advect_all_points, advect_points
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
@@ -476,7 +476,8 @@ contains
     use ModUpdateState, ONLY: update_b0, update_te0, fix_anisotropy
     use ModProjectDivB, ONLY: project_divb
     use ModCleanDivB,   ONLY: clean_divb
-    use BATL_lib, ONLY: iProc
+    use BATL_lib, ONLY: iProc, iProcTest, iBlockTest,iTest, jTest, kTest, &
+         iVarTest
     use ModFreq, ONLY: is_time_to
     use ModPic, ONLY: AdaptPic, calc_pic_criteria, &
          pic_set_cell_status, iPicGrid, iPicDecomposition
@@ -648,6 +649,7 @@ contains
             int((tSimulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
             call update_b0
     end if
+
     if(UseBody2Orbit) then
        call update_secondbody
        call update_b0
@@ -693,6 +695,7 @@ contains
        ! If AMR is done, then the plotting of BATS_save_files('NORMAL')
        ! is called in ModAMR to save the AMR criteria.
        call BATS_save_files('NORMAL')
+
     end if
 
     call timing_stop('advance')
@@ -855,6 +858,11 @@ contains
     !==========================================================================
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
+
+      !!! debug
+      use ModAdvance, ONLY: State_VGB
+      use BATL_lib, ONLY: iProc, iProcTest, iBlockTest, iVarTest, iTest, jTest, &
+           kTest
       logical :: DoPlotThread
       !------------------------------------------------------------------------
       DoPlotThread = DoPlotThreads
@@ -872,6 +880,7 @@ contains
                   DoPlotThread = .false.
                end if
                call save_file
+
             else if(mod(nStep,DnOutput_I(iFile)) == 0)then
                if(DoPlotThread.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
@@ -903,7 +912,6 @@ contains
          end if
          call exchange_messages(DoResChangeOnlyIn=.true.)
       end if
-
     end subroutine save_files
     !==========================================================================
     subroutine save_file
@@ -931,6 +939,10 @@ contains
       use ModAdvance,           ONLY: State_VGB
       use ModB0,                ONLY: B0_DGB
 
+!!! debug
+      use BATL_lib,             ONLY: iTest, jTest, kTest, iBlockTest, iVarTest, &
+           iProc, iProcTest
+
       integer :: iSat, iPointSat, iParcel
 
       ! Backup location for the tSimulation variable.
@@ -943,9 +955,7 @@ contains
       real :: tSimulationBackup = 0.0
       !------------------------------------------------------------------------
       if(nStep<=nStepOutputLast_I(iFile) .and. DnOutput_I(iFile)/=0) RETURN
-
       call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
-
       if(iFile==restart_) then
          ! Case for restart file
          if(.not.DoSaveRestart)RETURN

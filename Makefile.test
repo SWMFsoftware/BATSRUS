@@ -315,7 +315,7 @@ test_shocktube_1d:
 
 test_shocktube_1d_compile:
 	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
-	./Config.pl -u=Default -e=MhdHyp -ng=2 -g=1024,1,1
+	./Config.pl -u=Default -e=MhdHyp -ng=2 -g=64,1,1
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.hyp.1d
 	$(MAKE) BATSRUS
 	make PIDL
@@ -325,7 +325,7 @@ test_shocktube_1d_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_shocktube_1d_run:
-	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shocktube_1d_check:
