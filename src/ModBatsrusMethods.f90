@@ -861,8 +861,8 @@ contains
 
       !!! debug
       use ModAdvance, ONLY: State_VGB
-      use BATL_lib, ONLY: iProc, iProcTest, iBlockTest, iVarTest, iTest, jTest, &
-           kTest
+      use BATL_lib, ONLY: iProc, iProcTest, iBlockTest, iVarTest, &
+           iTest, jTest, kTest
       logical :: DoPlotThread
       !------------------------------------------------------------------------
       DoPlotThread = DoPlotThreads
