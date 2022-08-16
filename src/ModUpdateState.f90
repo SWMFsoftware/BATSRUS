@@ -25,15 +25,18 @@ contains
   !============================================================================
   subroutine update_state(iBlock)
 
-    use ModMain
-    use ModAdvance
+    use ModMain, ONLY: nStep, iStage, Cfl, UseUserUpdateStates, UseBufferGrid
+    use ModVarIndexes, ONLY: nVar, Ehot_, SignB_, NameVar_V, nFluid
+    use ModAdvance, ONLY: State_VGB, StateOld_VGB, DTMAX_CB, &
+         Flux_VXI, Flux_VYI, Flux_VZI, Source_VC
+    use ModPhysics, ONLY: No2Si_V, UnitT_
     use ModChGL, ONLY: UseChGL, update_chgl
-    use ModEnergy,     ONLY: limit_pressure
-    use ModMultiFluid, ONLY: nFluid
+    use ModEnergy, ONLY: limit_pressure
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless
+    use ModBuffer, ONLY: fix_buffer_grid
+    use BATL_lib, ONLY: nI, nJ, nK
     use ModUserInterface ! user_update_states
-    use ModBuffer,     ONLY: fix_buffer_grid
 
     integer, intent(in) :: iBlock
     integer :: iVar, i, j, k
@@ -46,7 +49,8 @@ contains
 
     if(DoTest)then
        write(*,*)NameSub,' nStep=', nStep,' iStage=', iStage,     &
-            ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl
+            ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl, &
+            ' dtSI=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl*No2Si_V(UnitT_)
        if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
             IsConserv_CB(iTest,jTest,kTest,iBlock)
        write(*,*)
@@ -105,9 +109,12 @@ contains
   end subroutine update_state
   !============================================================================
   subroutine update_state_normal(iBlock)
-    use ModMain
+
     use ModAdvance
-    use ModPhysics
+    use ModMain, ONLY: &
+         IsTimeAccurate, iStage, nStage, Dt, Cfl, UseBufferGrid, &
+         UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
+    use ModPhysics, ONLY: InvGammaElectron, GammaElectron, RhoMin_I
     use ModSemiImplVar, ONLY: UseStableImplicit
     use ModVarIndexes, ONLY: pe_, p_
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
@@ -580,7 +587,7 @@ contains
     end subroutine update_explicit
     !==========================================================================
     subroutine deduct_expl_source()
-      integer:: iVarSemi
+      integer:: iVarSemi, i, j, k
 
       character(len=*), parameter:: NameSub = 'deduct_expl_source'
       !------------------------------------------------------------------------
@@ -643,14 +650,19 @@ contains
 
     ! Check updated values for allowed change in density or pressure
 
-    use ModMain
+    use ModMain, ONLY: IsTimeAccurate, Dt, DtFixed, DtFixedOrig, &
+         iStage, nStage, nStep, nBlockMax
     use ModImplicit, ONLY: UsePartImplicit
-    use ModAdvance
-    use ModPhysics
+    use ModVarIndexes, ONLY: p_, Rho_, nVar, SpeciesFirst_, SpeciesLast_, &
+         NameVar_V, DefaultState_V
+    use ModAdvance, ONLY: State_VGB, StateOld_VGB, DtMax_CB, &
+         UseMultiIon, UseMultiSpecies, SpeciesPercentCheck, &
+         PercentPLimit_I, PercentRhoLimit_I
     use ModNumConst, ONLY: cTiny
-    use ModMpi
     use ModMultiIon,   ONLY: DoRestrictMultiIon, IsMultiIon_CB
     use ModBatsrusUtility, ONLY: error_report, stop_mpi
+    use BATL_lib, ONLY: iProc, nProc, nI, nJ, nK, Unused_B
+    use ModMpi
 
     integer, parameter :: MaxCheck=25, RhoDn_=1, RhoUp_=2, pDn_=3, pUp_=4
     integer :: i,j,k, iVar, iBlock, nCheck, iError
