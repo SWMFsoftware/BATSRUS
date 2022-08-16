@@ -5059,7 +5059,7 @@ The default is to flush the output, i.e. DoFlush=T.
 		     if="not $UsePlasmaBeta"/>
 	</if>
 	<if expr="$TypeCme eq 'TD22'">
-	  <parameter name="PlasmaBeta" type="real" min="0" default="0"/>
+	  <parameter name="PlasmaBeta" type="real" min="1e-8" default="1e-2"/>
 	  <parameter name="EjectaTemperature" type="real" min="1e4" default="5e4"/>
 	</if>
 	<parameter name="TypeBStrap" type="string" case="lower" input="select">
