@@ -295,7 +295,7 @@ T			DoAddFluxRope
 -10.0			LatitudeCme
 0.0			OrientationCme
 SPHEROMAK		TypeCme
-1.4			BStrength
+-1.4			BStrength
 1.03			Radius
 0.7			Stretch
 1.13			ApexHeight

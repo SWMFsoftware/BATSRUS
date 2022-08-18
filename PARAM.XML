@@ -5059,7 +5059,7 @@ The default is to flush the output, i.e. DoFlush=T.
 		     if="not $UsePlasmaBeta"/>
 	</if>
 	<if expr="$TypeCme eq 'TD22'">
-	  <parameter name="PlasmaBeta" type="real" min="0" default="0"/>
+	  <parameter name="PlasmaBeta" type="real" min="1e-8" default="1e-2"/>
 	  <parameter name="EjectaTemperature" type="real" min="1e4" default="5e4"/>
 	</if>
 	<parameter name="TypeBStrap" type="string" case="lower" input="select">
@@ -5164,7 +5164,12 @@ components change their sign, hence, the toroidal current too. However,
 the sign of toroidal magnetic field is fixed by the choice of active region 
 geometry and does not change the sign when BSthrength flips. hence, the 
 toroidal current-to-field ratio also changes sign and so does the helicity, if
-the negative BStrength is chosen.  
+the negative BStrength is chosen. Before 08.15.2022 the negative sign of
+BStrength corresponded to the positive helicity, after this date the code
+had been modified so that the sign of BStrength coincides with the sign of
+helicity. To reprroduce the older results with the modified code the sign of
+the parameter BStrength should be changed for the opposite one.
+
 
 In addition to the above parameters uCme is read, controlling the speed
 of the CME self-similar expansion
