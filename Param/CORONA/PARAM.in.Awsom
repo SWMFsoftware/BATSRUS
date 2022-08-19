@@ -317,7 +317,7 @@ T			UseCme
 T			DoAddFluxRope
 270.0			LongitudeCme
 15.0			LatitudeCme
-30.0			OrientationCme
+300.0			OrientationCme
 TD			TypeCme
 1			BcTubeDim
 1.005747126436782		RadiusMajor
@@ -348,7 +348,7 @@ T			UseCme
 T			DoAddFluxRope
 180.0			LongitudeCme
 15.0			LatitudeCme
-30.0			OrientationCme
+300.0			OrientationCme
 TD14			TypeCme
 1.79519580205131		BcTubeDim
 1.005747126436782		RadiusMajor
