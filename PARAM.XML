@@ -989,9 +989,17 @@ radius of the central body (moon, planet, or the Sun). If there is
 no central body, the length normalization is 1km. The velocity unit
 is km/s, and the density unit is amu/cm3.
 
-If TypeNormalization="SOLARWIND" then the distance unit is the
-same as for PLANETARY units, but the velocity and density are normalized to
-the density and the sound speed of the solar wind. This normalization
+TypeNormalization="SOLARWIND" is used for the solar corona and
+the inner heliosphere components. The distance unit is the 
+solar radius, the velocity and density are normalized to
+the density and the sound speed of the coronal plasma defined
+by the #CORONA command.
+
+For planetary applications (GM component), TypeNormalization="SOLARWIND" 
+is depreciated. If it is used then the distance unit is the radius of the
+planet, and the velocity and density are normalized to
+the density and the sound speed of the solar wind defined by
+the #SOLARWIND or #SOLARWINDFILE commands. This normalization
 is very impractical, because it depends on the solar wind values
 that are variable, and may not even make sense (e.g. for a shock tube test
 or a Tokamak problem). This normalization is only kept for sake of
