@@ -5147,7 +5147,7 @@ configuration is applied at each grid point, but for a single time (via the
 Next two parameters, LongitudeCme and LatitudeCme, characterize location of
 the superimposed configuration. They provide the longitude and latitude in
 degrees, of the configuration center. Third parameter, OrientationCme,
-chaaracterizes the CME configuration. For TD, GL or spheromac eruptive
+chaaracterizes the CME orientation. For TD, GL or spheromac eruptive
 event generator, the magnetic field, pressure and density distribution is
 set employing anylitical formulae in which the coordinate dependence is
 provided in some "rotated" coordinate frame. The general convention about
@@ -5155,24 +5155,22 @@ the "rotated" frame is that its xy-plane is tangent to the solar surface
 at the point with longitude and latitude equal to LongitudeCme and LatitudeCme
 correspondingly, with z-axis being directed upward (outward the heliocenter).
 With the default setting OrientationCme, the direction of x-axis
-is parallel to the solar equatorial plane and  and y-axis is aligned with the
-positive meridional direction (from south to north) respectively. However, it
-may be also convenient to rotate the "rotated" coordinate frame about the
-vertical z-axis by non-zero, angle set by the input parameter OrientationCme,
-in degrees. With unchanged equations to calculate the field coordinate
-dependence this rotation of fraame of reference corresponds to the rotation of
-super-imposed magnetic configuration, to better fit the observed geometry of
-the active region from which the erruption occurs. For the GL configuration
-the recommended value of OrientationCme is the angle between x-axis and the
-direction from the center of positive magnetic spot to that of the negative
+is aalong the local parallel to the solar equatorial plane and  and y-axis
+is aligned with the positive meridional direction (from south to north)
+respectively. However, it may be also convenient to rotate the said
+coordinate frame about the vertical z-axis by non-zero, angle set by the
+input parameter OrientationCme, in degrees. With unchanged equations to
+calculate the field coordinate dependence this rotation of fraame of
+reference corresponds to the rotation of super-imposed magnetic configuration,
+to better fit the observed geometry of the active region from which the erruption
+occurs. The recommended value of OrientationCme is the counterclockwise angle
+between x-axis (local paraallel, the horizontal axis of solar magnetogram) and
+the direction from the center of positive magnetic spot to that of the negative
 magnetic spot, which can be determined from the observed magnetogram for a
-simple bi-polar  region. For TD configuration, the rotation by angle
-OrientationCme should align x-axis of the coordinate frame with the direction
-from the center of negative magnetic spot to that of the positive magnetic spot,
-therefore the recommended value for TD configuration is by +/-180 degrees
-different from that for that by GL. In both cases the choice of the rotated
-frame, for a given model, is the coordinate frame in which the analytical
-solution is most simple, or just that used in the orriginal publications.  
+simple bi-polar  region. The field in the rotated frame is calculated with
+an account of the active region orientation, such that the direction from
+positive to negative spot is aligned with x-axis.
+
 
 The latest implementation for the Gibson-Low eruptive event generator
 (TypeCme=GL) follows the paper Borovikov, D., I. V.  Sokolov,
