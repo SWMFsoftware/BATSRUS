@@ -356,7 +356,7 @@ TD14			TypeCme
 0.1436781609195402		Depth
 cancelflux		TypeBStrap
 1.79519580205131		BcTubeDim
-208.738459636369		bQStrapFraction
+5.9916085277386298E+02		bQStrapFraction ! Increased to notice effect
 0.4			qDistance
 10			UChargeX
 
