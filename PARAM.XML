@@ -5061,7 +5061,10 @@ The default is to flush the output, i.e. DoFlush=T.
 	<parameter name="uCme" type="real" min="0" default="0" />
       </if>
       <if expr="$TypeCme =~ /^TD/">
-	<parameter name="BcTubeDim" type="real" default="0" />
+	<parameter name="iHelicity" type="integer" input="select">
+	  <option name="+1" default="T" />
+	  <option name="-1" />
+	</parameter>
 	<parameter name="RadiusMajor" type="real" min="0" default="0" />
 	<parameter name="RadiusMinor" type="real" min="0" default="0" />
 	<parameter name="Depth" type="real" min="0" default="0" />
@@ -5086,6 +5089,8 @@ The default is to flush the output, i.e. DoFlush=T.
 	  <option name="moving" />
 	  <option name="cancelflux" />
 	</parameter>
+	<parameter name="BcTubeDim" type="real" default="0" min="0"
+		   if="$TypeBStrap eq 'none'"/>
 	<if expr="$TypeBStrap =~ /readbstrap|getbstrap/">
 	  <parameter name="bStrappingDim" type="real" min="0" default="0"
 		     if="$TypeBStrap eq 'readbstrap'"/>
@@ -5103,7 +5108,8 @@ The default is to flush the output, i.e. DoFlush=T.
 		     if="$TypeCharge =~ /moving|cancelflux/"/>
 	</if>
 	<if expr="$TypeBStrap =~ /steady|moving|cancelflux/">
-	  <parameter name="bQStrappingDim" type="real" min="0" default="0" />
+	  <parameter name="BcTubeDim" type="real" default="0" min="0"/>
+	  <parameter name="bQStrapFraction" type="real" min="0" default="0" />
 	  <parameter name="qDistance" type="real" min="0" default="0" />
 	  <parameter name="UChargeX" type="real" min="0" default="0"
 		     if="$TypeBStrap =~ /moving|cancelflux/"/>
@@ -5212,7 +5218,7 @@ T			DoAddFluxRope
 15.0                    LatitudeCme   [deg]
 30.0                    OrientationCme[deg]
 TD			TypeCme    TD/TITOV-DEMOULIN
-10.0			BcTubeDim    [Gs]
++1			iHelicty
 0.5			RadiusMajor  [R_s]
 0.2			RadiusMinor  [R_s]
 0.2			Depth        [R_s]

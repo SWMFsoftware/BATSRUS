@@ -319,7 +319,7 @@ T			DoAddFluxRope
 15.0			LatitudeCme
 120.0			OrientationCme
 TD			TypeCme
-1			BcTubeDim
++1			iHelicity
 1.005747126436782		RadiusMajor
 0.431034482758621		RadiusMinor
 0.1436781609195402		Depth
@@ -350,12 +350,13 @@ T			DoAddFluxRope
 15.0			LatitudeCme
 120.0			OrientationCme
 TD14			TypeCme
-1.79519580205131		BcTubeDim
++1			iHelicity
 1.005747126436782		RadiusMajor
 0.431034482758621		RadiusMinor
 0.1436781609195402		Depth
 cancelflux		TypeBStrap
-100			bQStrappingDim [Gs]
+1.79519580205131		BcTubeDim
+208.738459636369		bQStrapFraction
 0.4			qDistance
 10			UChargeX
 
