@@ -5040,20 +5040,31 @@ The default is to flush the output, i.e. DoFlush=T.
 	<parameter name="RampDownTime"      type="real"/>
       </if>
       <if expr="$TypeCme eq 'GL'">
-	<parameter name="BStrength" type="real" default="0" />
+	<parameter name="BStrength" type="real" default="0" min="0"/>
+	<parameter name="iHelicity" type="integer" input="select">
+	  <option name="+1" default="T" />
+	  <option name="-1" />
+	</parameter>
 	<parameter name="Radius" type="real" min="0" default="0" />
 	<parameter name="Stretch" type="real" min="0" default="0" />
 	<parameter name="ApexHeight" type="real" min="0" default="0" />
       </if>
       <if expr="$TypeCme eq 'SPHEROMAK'">
 	<parameter name="BStrength" type="real" default="0" />
+	<parameter name="iHelicity" type="integer" input="select">
+	  <option name="+1" default="T" />
+	  <option name="-1" />
+	</parameter>
 	<parameter name="Radius" type="real" min="0" default="0" />
 	<parameter name="Stretch" type="real" min="0" default="0" />
 	<parameter name="ApexHeight" type="real" min="0" default="0" />
 	<parameter name="uCme" type="real" min="0" default="0" />
       </if>
       <if expr="$TypeCme =~ /^TD/">
-	<parameter name="BcTubeDim" type="real" default="0" />
+	<parameter name="iHelicity" type="integer" input="select">
+	  <option name="+1" default="T" />
+	  <option name="-1" />
+	</parameter>
 	<parameter name="RadiusMajor" type="real" min="0" default="0" />
 	<parameter name="RadiusMinor" type="real" min="0" default="0" />
 	<parameter name="Depth" type="real" min="0" default="0" />
@@ -5078,6 +5089,8 @@ The default is to flush the output, i.e. DoFlush=T.
 	  <option name="moving" />
 	  <option name="cancelflux" />
 	</parameter>
+	<parameter name="BcTubeDim" type="real" default="0" min="0"
+		   if="$TypeBStrap eq 'none'"/>
 	<if expr="$TypeBStrap =~ /readbstrap|getbstrap/">
 	  <parameter name="bStrappingDim" type="real" min="0" default="0"
 		     if="$TypeBStrap eq 'readbstrap'"/>
@@ -5095,7 +5108,8 @@ The default is to flush the output, i.e. DoFlush=T.
 		     if="$TypeCharge =~ /moving|cancelflux/"/>
 	</if>
 	<if expr="$TypeBStrap =~ /steady|moving|cancelflux/">
-	  <parameter name="bQStrappingDim" type="real" min="0" default="0" />
+	  <parameter name="BcTubeDim" type="real" default="0" min="0"/>
+	  <parameter name="bQStrapFraction" type="real" min="0" default="0" />
 	  <parameter name="qDistance" type="real" min="0" default="0" />
 	  <parameter name="UChargeX" type="real" min="0" default="0"
 		     if="$TypeBStrap =~ /moving|cancelflux/"/>
@@ -5110,7 +5124,8 @@ T			DoAddFluxRope
 0			LatitudeCme    [deg]
 0			OrientationCme [deg]
 GL			TypeCme    GL/TD/TD14/TD22/SPHEROMAK
-1.0			BStrength      [Gs]
+5.0			BStrength      [Gs]
+1                       iHelicity
 1.03			Radius         [Rs]
 0.3			Stretch        [Rs]
 1.8			ApexHeight     [Rs]
@@ -5122,62 +5137,75 @@ T			DoAddFluxRope
 0			LatitudeCme    [deg]
 0			OrientationCme [deg]
 SPHEROMAK		TypeCme    
-1.0			BStrength      [Gs]
+5.0			BStrength      [Gs]
+-1                      iHelicity
 1.03			Radius         [Rs]
 0.3			Stretch        [Rs]
 1.8			ApexHeight     [Rs]
 600                     uCme           [km/s]
 
 First five parameters are common for all types of EE generators. If UseCme is 
-.true. the generator may be applied permanently, usually via the boundary
-condition. If, in addition to this, DoAddFluxRope is .true. the confiruation
-in applied at each grid point, but for a single time (via the "user
-perturbation")
+true, the generator may be applied permanently, usually via the boundary
+condition. If, in addition to this, DoAddFluxRope is true, then the
+configuration is applied at each grid point, but for a single time (via the
+"user perturbation").
 
-Three parameters characterize location of the superimposed configuration and 
-its orientation. LongitudeCme and LatitudeCme are the longitude and latitude
-of the configuration center respectively, in angular degrees. OrientationCme
-provides the angle of rotation about the radial direction (again, in angular 
-degrees) needed to transform the coordinate system of the model to that of the
-configuration.
+Next two parameters, LongitudeCme and LatitudeCme, characterize location of
+the superimposed configuration. They provide the longitude and latitude in
+degrees, of the configuration center. Third parameter, OrientationCme,
+chaaracterizes the CME orientation. The recommended value of OrientationCme
+is the counterclockwise angle, in degrees, between the local parallel
+(the horizontal axis of solar magnetogram), and the ``major direction of the
+horizontal solar magnetic field'' in the active region from which the eruption
+ooccurs. For different types of the eruptive event generator this major field
+direction may be quantified in somewhat different way. For example, for GL
+soluution this is the direction from the center of positive magnetic spot to
+that of the negative magnetic spot, which can be determined from the observed
+magnetogram for a simple bi-polar region. For the modified TD generator
+(TD14) this is the direction of the magnetic field acting on the
+super-imposed current filament, which may be found based on 3D
+reconstruction of the solar magnetic field. Depending on this input parameter,
+the simulated CME configuration will be properly orriented to better fit
+the observed solar magnetic field.
 
-The latest implementation for the Gibson-Low eruptive event generator 
-(TypeCme=GL) follows the paper Borovikov, D., I. V. 
-Sokolov, W. B. Manchester, M. Jin, and T. I. Gombosi (2017), Eruptive event 
-generator based on the Gibson-Low magnetic configuration, J. Geophys. Res. 
-Space Physics, 122, 7979, doi:10.1002/2017JA024304. With this regard, 
-parameter, BStrength (denoted as B0 in the cited paper) is the characteristic 
-magnetic field, in Gauss, such that the magnetic field at the center of 
-configuration (prior to stretching) equals ~0.7 B0. It is signed variable, two 
-choises of sign correspond to two possible signs of the integral helicity. 
-Radius of configuration is the radius of the last magnetic (spherical) surface 
-confining all currents in the configuration. Stretch ("a" in the paper) is 
-the scale of stretching transformation (see details in the paper). Finally, 
-ApexHeight is the altitude of top of configuration respectively to the solar 
-surface. It is expoected that Radius &lt; ApexHeight &lt; 2*Radius.
 
-If you have an outdated parameter file you can convert it to the standard
+The latest implementation for the Gibson-Low eruptive event generator
+(TypeCme=GL) follows the paper Borovikov, D., I. V.  Sokolov,
+W. B. Manchester, M. Jin, and T. I. Gombosi (2017), Eruptive event
+generator based on the Gibson-Low magnetic configuration,
+J. Geophys. Res.  Space Physics, 122, 7979,
+doi:10.1002/2017JA024304.
+
+BStrength (denoted as B0 in the cited paper) is the characteristic
+magnetic field, in Gauss, such that the magnetic field at the center
+of configuration (prior to stretching) equals about 0.7 B0.
+
+The integer iHelicity defines positive (+1) or negative (-1) helicity
+by setting the sign of the poloidal field. The sign of the toroidal field
+is fixed, as it points from the positive to the negative spot of the active region.
+
+The Radius parameter sets of the radius of the last
+magnetic (spherical) surface confining all currents (before stretching).
+
+The Stretch parameter ("a" in the paper) is the scale of stretching
+transformation (see details in the paper).
+ApexHeight is the altitude of top of configuration from the solar surface.
+It is expected that Radius &lt; ApexHeight &lt; 2*Radius.
+
+NOTE1: Before 08.15.2022 the sign of BStrength was used to set helicity.
+The negative sign corresponded to the positive helicity (which was essentially a bug).
+
+NOTE2:
+If you have an outdated parameter file you can convert it to the new
 format as follows:
-1. Move line for BStrength to have it just below "GL      TypeCme" line.
+1. Move line for BStrength to have it just below "GL      TypeCme" line
+   and add the line setting iHelicity.
 2. Move  line for reading Radius just below the line for BStrength.
 3. RESCALE the OLD data for BStrength as follows:
    BStrengthNew = 13.1687517342067082*BStrengthOld*Radius**2
 4. The old line for reading Distance should be converted to the line for
    reading ApexHeight = Distance + Radius - Stretch - 1
 5. Line for reading pBackground should be removed
-
-FOR GL configuration, the field parameter, BStrength, may be both positive 
-and negative. In changing the sign for negative, the poloidal field 
-components change their sign, hence, the toroidal current too. However,
-the sign of toroidal magnetic field is fixed by the choice of active region 
-geometry and does not change the sign when BSthrength flips. hence, the 
-toroidal current-to-field ratio also changes sign and so does the helicity, if
-the negative BStrength is chosen. Before 08.15.2022 the negative sign of
-BStrength corresponded to the positive helicity, after this date the code
-had been modified so that the sign of BStrength coincides with the sign of
-helicity. To reprroduce the older results with the modified code the sign of
-the parameter BStrength should be changed for the opposite one.
-
 
 In addition to the above parameters uCme is read, controlling the speed
 of the CME self-similar expansion
@@ -5190,7 +5218,7 @@ T			DoAddFluxRope
 15.0                    LatitudeCme   [deg]
 30.0                    OrientationCme[deg]
 TD			TypeCme    TD/TITOV-DEMOULIN
-10.0			BcTubeDim    [Gs]
++1			iHelicty
 0.5			RadiusMajor  [R_s]
 0.2			RadiusMinor  [R_s]
 0.2			Depth        [R_s]
