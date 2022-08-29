@@ -1105,6 +1105,7 @@ contains
       use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_, Bx_, Bz_
       use ModB0,          ONLY: UseB0, B0_DGB
       use BATL_lib,       ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D, CoordMin_D
+      use ModIO,          ONLY: TempMin_I
       use ModUserInterface ! user_set_plot_var
 
       real, intent(in):: Ds          ! Length of line segment
@@ -1255,6 +1256,7 @@ contains
          Ne = 1.0e-6*Ne*No2Si_V(UnitN_)
 
          if(UseDEM)then
+            if(10.**LogTeSi < TempMin_I(iFile))RETURN
             ! Find temperature bin
             iTe = int((LogTeSi - LogTeMinDEM_I(iFile))/DLogTeDEM_I(iFile))&
                  + 1

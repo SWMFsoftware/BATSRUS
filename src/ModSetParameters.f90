@@ -1060,6 +1060,7 @@ contains
                 call read_var('dX',   PlotDx_DI(1,iFile))
                 call read_var('yLen', PlotRange_EI(2,iFile))
                 call read_var('dY', PlotDx_DI(2,iFile))
+                call read_var('TempMin', TempMin_I(iFile))
                 if (index(StringPlot, 'dem')>0)then
                    ! DEM/EM calculation
                    TypePlotVar = 'dem'
@@ -1074,7 +1075,6 @@ contains
                    call read_var('LambdaMin', LambdaMin_I(iFile))
                    call read_var('LambdaMax', LambdaMax_I(iFile))
                    call read_var('DLambda',   DLambda_I(iFile))
-                   call read_var('TempMin', TempMin_I(iFile))
                    call read_var('UseAlfven',UseAlfven_I(iFile))
                    call read_var('UseDoppler',UseDoppler_I(iFile))
                    call read_var('DLambdaIns',DLambdaIns_I(iFile))
@@ -1083,7 +1083,6 @@ contains
                 elseif (index(StringPlot, 'nbi')>0)then
                    ! Narrowband image
                    call read_var('NameSpmTable',NameSpmTable_I(iFile))
-                   call read_var('TempMin', TempMin_I(iFile))
                    call read_var('UseIonFrac',UseIonFrac_I(iFile))
                    call read_var('NameNbiTable',NameNbiTable_I(iFile))
                 end if
