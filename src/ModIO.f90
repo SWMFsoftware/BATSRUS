@@ -93,7 +93,7 @@ module ModIO
        UseAlfven_I(MaxFile) = .false., UseDoppler_I(MaxFile) = .false.,&
        UseIonFrac_I(MaxFile) = .false., UseIonTemp_I(MaxFile) = .false.
   real, dimension(MaxFile)  :: LambdaMin_I = 10.0, LambdaMax_I=1700.0,&
-       DLambda_I = 0.001, DLambdaIns_I = 0.0, TempMin_I = 0.0
+       DLambda_I = 0.001, DLambdaIns_I = 0.0, TempMin_I = 1e5
 
   ! Variables for field/stream/current line files
   logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?

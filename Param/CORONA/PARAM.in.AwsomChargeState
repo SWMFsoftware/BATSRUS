@@ -187,6 +187,7 @@ HGR			TypeCoord
 0.2			dX
 2			yLen
 0.1			dY
+0			TempMin
 5			LogTeMinDEM
 8			LogTeMaxDEM
 0.1			DLogTeDEM
@@ -203,12 +204,12 @@ HGR			TypeCoord
 0.2			dX
 2			yLen
 0.2			dY
+0			TempMin
 SPECTRUM_chianti_tbl.dat		NameSpmTable
 F			UseUnobserved
 194.5			LambdaMin
 195.5			LambdaMax
 0.1			DLambda
-0			TempMin
 T			UseAlfven
 T			UseDoppler
 0.0			DLambdaIns
@@ -227,8 +228,8 @@ HGR			TypeCoord
 0.2			dX
 2			yLen
 0.2			dY
-SPECTRUM_chianti_tbl.dat		NameSpmTable
 0			TempMin
+SPECTRUM_chianti_tbl.dat		NameSpmTable
 F			UseIonFrac
 eit195response.out		NameResponse
 
