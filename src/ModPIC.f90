@@ -1322,6 +1322,15 @@ contains
                *Io2No_V(UnitP_)/(Io2No_V(UnitRho_)**Gamma)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)&
                *Io2No_V(UnitP_)/(Io2No_V(UnitRho_)**Gamma)
+       case('speed')
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)&
+               *Io2No_V(UnitU_)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)&
+               *Io2No_V(UnitU_)
+       case('jy')
+          if(.not. allocated(Current_D)) allocate(Current_D(3))
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
        end select
     end do
 
@@ -1452,6 +1461,14 @@ contains
              case('entropy')
                 call calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
                 CriteriaValue = CritEntropy
+             case('speed')
+                CriteriaValue = sqrt( &
+                     State_VGB(Ux_, i, j, k, iBlock)**2 + &
+                     State_VGB(Uy_, i, j, k, iBlock)**2 + &
+                     State_VGB(Uz_, i, j, k, iBlock)**2)
+             case('jy')
+                call get_current(i, j, k, iBlock, Current_D)
+                CriteriaValue = Current_D(2)
              end select
 
              if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
