@@ -399,7 +399,7 @@ contains
                                  ': x, y, z = ', Xyz_DGB(:,i,j,k,iBlockAll)
                             call stop_mpi('ERROR: NaN in State_VGB. '//&
                                  'Code stopped with NaN in variable - '//NameLogVar_I(iVar))
-                            exit logvar
+                            EXIT logvar
                          end if
                       end do
                    end do; end do; end do
