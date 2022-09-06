@@ -89,12 +89,9 @@ contains
     character(len=2):: StringIParcel
 
     ! NaN detection variables
-<<<<<<< HEAD
     integer :: iVarLog, k
     real :: Value
-=======
     integer :: iProcAll, iBlockAll, iVarAll, k
->>>>>>> if NaN in log file, find and print location and State_VGB
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
@@ -382,8 +379,6 @@ contains
        if(DoWritePosition) &
             write(iUnit,'(3es13.5)',ADVANCE='NO') Xyz_D
 
-<<<<<<< HEAD
-=======
        ! Do a check if any variable is NaN and STOP with an error message.
        logvar: do iVar=1,nLogTot
           if (ieee_is_nan(LogVar_I(iVar))) then
@@ -415,7 +410,6 @@ contains
           end if
        end do logvar
 
->>>>>>> if NaN in log file, find and print location and State_VGB
        ! Finally write out the data variables
        write(iUnit,'(100es14.5e3)') LogVar_I(1:nLogTot)
 
