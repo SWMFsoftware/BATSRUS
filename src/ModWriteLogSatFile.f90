@@ -91,7 +91,7 @@ contains
     ! NaN detection variables
     integer :: iVarLog, k
     real :: Value
-    integer :: iProcAll, iBlockAll, iVarAll, k
+    integer :: iProcAll, iBlockAll, iVarAll
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
