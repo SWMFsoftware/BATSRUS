@@ -287,9 +287,9 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModMain, ONLY: UseConstrainB
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
-    use BATL_lib, ONLY:  nI,nJ,nK, MaxBlock, nBlock, Unused_B, &
+    use BATL_lib, ONLY:  nI,nJ,nK, nG, MaxBlock, nBlock, Unused_B, &
          x_, y_, z_, CellSize_DB
-
+    use ModCellGradient, ONLY: calc_divergence
     ! Argument
 
     real, intent(out) :: DivB_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
@@ -320,21 +320,7 @@ contains
     else
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
-          DxInvHalf = 0.5/CellSize_DB(x_,iBlock);
-          DyInvHalf = 0.5/CellSize_DB(y_,iBlock);
-          DzInvHalf = 0.5/CellSize_DB(z_,iBlock);
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             DivB_GB(i,j,k,iBlock) = &
-                  DxInvHalf* &
-                  (State_VGB(Bx_,i+1,j,k,iBlock) &
-                  -State_VGB(Bx_,i-1,j,k,iBlock)) + &
-                  DyInvHalf* &
-                  (State_VGB(By_,i,j+1,k,iBlock) &
-                  -State_VGB(By_,i,j-1,k,iBlock)) + &
-                  DzInvHalf* &
-                  (State_VGB(Bz_,i,j,k+1,iBlock) &
-                  -State_VGB(Bz_,i,j,k-1,iBlock))
-          end do; end do; end do
+          call calc_divergence(iBlock, State_VGB(Bx_:Bz_,:,:,:,:), nG, DivB_GB(:,:,:,iBlock), UseBodyCellIn=.true.)
        end do
     end if
 
