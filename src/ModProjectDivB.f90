@@ -55,6 +55,8 @@ module ModProjectDivB
   real ::              AbsoluteLimit=0.0
   integer ::           MaxMatvec=50
 
+  real, allocatable:: GradPhi_DGB(:,:,:,:,:)
+  
   ! Minimum value for divB (a small number)
   real, parameter :: DivBTiny=1E-10
 
@@ -295,8 +297,7 @@ contains
     real, intent(out) :: DivB_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    integer :: iBlock, i, j, k
-    real    :: DxInvHalf, DyInvHalf, DzInvHalf
+    integer :: iBlock, i, j, k    
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_get_divb'
@@ -387,8 +388,7 @@ contains
     ! Solve the Poisson equation
     select case(TypeProjectIter)
     case('cg')
-       call       proj_cg(Rhs_GB,Phi_GB,nMatvec,Resid,TypeStop,iInfo)
-
+       call proj_cg(Rhs_GB,Phi_GB,nMatvec,Resid,TypeStop,iInfo)
     case('bicgstab')
        call proj_bicgstab(Rhs_GB,Phi_GB,nMatvec,Resid,TypeStop,iInfo)
     case default
@@ -424,7 +424,8 @@ contains
     use ModMain, ONLY : MaxBlock,nBlock,Unused_B,nI,nJ,nK, x_, y_, z_
     use ModGeometry, ONLY : Used_GB,IsBody_B
     use ModMain, ONLY : UseConstrainB
-    use BATL_lib, ONLY: CellSize_DB
+    use BATL_lib, ONLY: CellSize_DB, nG, message_pass_cell
+    use ModCellGradient, ONLY: calc_gradient, calc_divergence
 
     ! Arguments
 
@@ -432,8 +433,7 @@ contains
     real, intent(out) :: LaplacePhi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    integer :: iDim, iBlock
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock):: dPhi_GB, DdPhi_GB
+    integer :: iDim, iBlock    
     integer :: i,j,k
     real :: Phi_III(-1:1,-1:1,-1:1), InvDx2, InvDy2, InvDz2
     logical:: DoTest
@@ -487,23 +487,44 @@ contains
 
        RETURN
     end if
+    
+    if(.not.allocated(GradPhi_DGB)) &
+         allocate(GradPhi_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
-    call proj_gradient(1,Phi_GB,dPhi_GB)
-
-    call proj_boundphi(dPhi_GB)
-
-    call proj_gradient(1,dPhi_GB,LaplacePhi_GB)
-
-    do iDim=2,3
-       call proj_gradient(iDim,Phi_GB,dPhi_GB)
-
-       call proj_boundphi(dPhi_GB)
-
-       call proj_gradient(iDim,dPhi_GB,DdPhi_GB)
-
-       call add_block(LaplacePhi_GB,DdPhi_GB)
-
+    ! Calculate gradient of Phi
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       call calc_gradient(iBlock, Phi_GB(:,:,:,iBlock), &
+            nG, GradPhi_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
     end do
+
+    ! Fill in ghost cells
+    call message_pass_cell(3,GradPhi_DGB)
+
+    ! Calculate Laplace(Phi)
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+
+       call calc_divergence(iBlock, GradPhi_DGB(:,:,:,:,iBlock), nG, &
+            LaplacePhi_GB(:,:,:,iBlock), UseBodyCellIn=.true.)
+    end do
+
+    ! call proj_gradient(1,Phi_GB,dPhi_GB)
+
+    ! call proj_boundphi(dPhi_GB)
+    
+    ! call proj_gradient(1,dPhi_GB,LaplacePhi_GB)
+       
+    ! do iDim=2,3
+    !    call proj_gradient(iDim,Phi_GB,dPhi_GB)
+       
+    !    call proj_boundphi(dPhi_GB)
+
+    !    call proj_gradient(iDim,dPhi_GB,DdPhi_GB)
+       
+    !    call add_block(LaplacePhi_GB,DdPhi_GB)
+
+    ! end do
 
     call test_stop(NameSub, DoTest)
   end subroutine proj_matvec
@@ -649,7 +670,8 @@ contains
     use ModMain, ONLY : UseConstrainB
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB, &
          bface_to_bcenter, bound_bface
-    use BATL_lib, ONLY: CellSize_DB, x_, y_, z_, nI, nJ, nK, nBlock,Unused_B
+    use BATL_lib, ONLY: CellSize_DB, x_, y_, z_, nI, nJ, nK, nG, nBlock,Unused_B
+    use ModCellGradient, ONLY: calc_gradient
 
     ! Arguments
     real, intent(inout) :: Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
@@ -713,19 +735,15 @@ contains
     else
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          DxInvHalf = 0.5/CellSize_DB(x_,iBlock);
-          DyInvHalf = 0.5/CellSize_DB(y_,iBlock);
-          DzInvHalf = 0.5/CellSize_DB(z_,iBlock);
+
+          call calc_gradient(iBlock, Phi_GB(:,:,:,iBlock), &
+               nG, GradPhi_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
+         
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-             State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) - &
-                  DxInvHalf*(Phi_GB(i+1,j,k,iBlock)-Phi_GB(i-1,j,k,iBlock))
-
-             State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) - &
-                  DyInvHalf*(Phi_GB(i,j+1,k,iBlock)-Phi_GB(i,j-1,k,iBlock))
-
-             State_VGB(Bz_,i,j,k,iBlock) = State_VGB(Bz_,i,j,k,iBlock) - &
-                  DzInvHalf*(Phi_GB(i,j,k+1,iBlock)-Phi_GB(i,j,k-1,iBlock))
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
+                  GradPhi_DGB(:,i,j,k,iBlock)
           end do; end do; end do
        end do
     end if
