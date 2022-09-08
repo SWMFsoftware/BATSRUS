@@ -321,7 +321,8 @@ contains
     else
        do iBlock=1,nBlock
           if(Unused_B(iBlock))CYCLE
-          call calc_divergence(iBlock, State_VGB(Bx_:Bz_,:,:,:,:), nG, DivB_GB(:,:,:,iBlock), UseBodyCellIn=.true.)
+          call calc_divergence(iBlock, State_VGB(Bx_:Bz_,:,:,:,iBlock), nG, &
+               DivB_GB(:,:,:,iBlock), UseBodyCellIn=.true.)
        end do
     end if
 
