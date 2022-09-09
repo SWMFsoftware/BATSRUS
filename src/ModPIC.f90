@@ -1254,7 +1254,7 @@ contains
          message_pass_cell, CellSize_DB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, Bx_, By_, Bz_, Rho_, &
-         x_, y_, z_, Ux_, Uy_, Uz_, p_
+         x_, y_, z_, Ux_, Uy_, Uz_, p_, RhoUx_, RhoUy_, RhoUz_
     use ModCurrent,      ONLY: get_current
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
     use ModB0,           ONLY: UseB0, B0_DGB
@@ -1322,6 +1322,15 @@ contains
                *Io2No_V(UnitP_)/(Io2No_V(UnitRho_)**Gamma)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)&
                *Io2No_V(UnitP_)/(Io2No_V(UnitRho_)**Gamma)
+       case('speed')
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)&
+               *Io2No_V(UnitU_)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)&
+               *Io2No_V(UnitU_)
+       case('jy')
+          if(.not. allocated(Current_D)) allocate(Current_D(3))
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
        end select
     end do
 
@@ -1452,6 +1461,12 @@ contains
              case('entropy')
                 call calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
                 CriteriaValue = CritEntropy
+             case('speed')
+                CriteriaValue = norm2(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
+                     /State_VGB(Rho_,i,j,k,iBlock))
+             case('jy')
+                call get_current(i, j, k, iBlock, Current_D)
+                CriteriaValue = Current_D(2)
              end select
 
              if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
