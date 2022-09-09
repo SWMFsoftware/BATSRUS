@@ -672,7 +672,7 @@ contains
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB, &
          bface_to_bcenter, bound_bface
     use BATL_lib, ONLY: CellSize_DB, x_, y_, z_, nI, nJ, nK, nG, nBlock,Unused_B
-    use ModCellGradient, ONLY: calc_gradient
+    use ModCellGradient, ONLY: calc_gradient    
 
     ! Arguments
     real, intent(inout) :: Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
@@ -680,6 +680,7 @@ contains
     ! Local variables
     integer :: iBlock, i, j, k
     real    :: DxInvHalf, DyInvHalf, DzInvHalf, DxInv, DyInv, DzInv
+    real    :: dB_D(3), Ratio, dBRatioMax
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_correction'
@@ -739,12 +740,28 @@ contains
 
           call calc_gradient(iBlock, Phi_GB(:,:,:,iBlock), &
                nG, GradPhi_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
-         
+
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE             
+
+             dB_D = GradPhi_DGB(:,i,j,k,iBlock)
+
+             if(.false.) then
+                ! In a simulation with large magnetic field gradient, the
+                ! correction dB may be too large for the small B side.
+                ! The following lines limit the correction ratio.
+                
+                Ratio = sqrt(sum(dB_D**2)/ &
+                     (sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)+1e-99))
+
+                dBRatioMax = 0.1
+                if(Ratio > dBRatioMax) then 
+                   dB_D = dB_D/Ratio*dBRatioMax
+                endif
+             endif
+             
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-                  State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
-                  GradPhi_DGB(:,i,j,k,iBlock)
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock) - dB_D
           end do; end do; end do
        end do
     end if
