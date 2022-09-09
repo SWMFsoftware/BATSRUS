@@ -56,7 +56,7 @@ module ModProjectDivB
   integer ::           MaxMatvec=50
 
   real, allocatable:: GradPhi_DGB(:,:,:,:,:)
-  
+
   ! Minimum value for divB (a small number)
   real, parameter :: DivBTiny=1E-10
 
@@ -297,7 +297,7 @@ contains
     real, intent(out) :: DivB_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    integer :: iBlock, i, j, k    
+    integer :: iBlock, i, j, k
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_get_divb'
@@ -434,7 +434,7 @@ contains
     real, intent(out) :: LaplacePhi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    integer :: iDim, iBlock    
+    integer :: iDim, iBlock
     integer :: i,j,k
     real :: Phi_III(-1:1,-1:1,-1:1), InvDx2, InvDy2, InvDz2
     logical:: DoTest
@@ -488,7 +488,7 @@ contains
 
        RETURN
     end if
-    
+
     if(.not.allocated(GradPhi_DGB)) &
          allocate(GradPhi_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
@@ -513,16 +513,16 @@ contains
     ! call proj_gradient(1,Phi_GB,dPhi_GB)
 
     ! call proj_boundphi(dPhi_GB)
-    
+
     ! call proj_gradient(1,dPhi_GB,LaplacePhi_GB)
-       
+
     ! do iDim=2,3
     !    call proj_gradient(iDim,Phi_GB,dPhi_GB)
-       
+
     !    call proj_boundphi(dPhi_GB)
 
     !    call proj_gradient(iDim,dPhi_GB,DdPhi_GB)
-       
+
     !    call add_block(LaplacePhi_GB,DdPhi_GB)
 
     ! end do
@@ -672,7 +672,7 @@ contains
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB, &
          bface_to_bcenter, bound_bface
     use BATL_lib, ONLY: CellSize_DB, x_, y_, z_, nI, nJ, nK, nG, nBlock,Unused_B
-    use ModCellGradient, ONLY: calc_gradient    
+    use ModCellGradient, ONLY: calc_gradient
 
     ! Arguments
     real, intent(inout) :: Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
@@ -742,7 +742,7 @@ contains
                nG, GradPhi_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
 
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(.not.Used_GB(i,j,k,iBlock)) CYCLE             
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              dB_D = GradPhi_DGB(:,i,j,k,iBlock)
 
@@ -750,16 +750,16 @@ contains
                 ! In a simulation with large magnetic field gradient, the
                 ! correction dB may be too large for the small B side.
                 ! The following lines limit the correction ratio.
-                
+
                 Ratio = sqrt(sum(dB_D**2)/ &
                      (sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)+1e-99))
 
                 dBRatioMax = 0.1
-                if(Ratio > dBRatioMax) then 
+                if(Ratio > dBRatioMax) then
                    dB_D = dB_D/Ratio*dBRatioMax
                 endif
              endif
-             
+
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) - dB_D
           end do; end do; end do
