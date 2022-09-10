@@ -671,7 +671,8 @@ contains
     use ModMain, ONLY : UseConstrainB
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB, &
          bface_to_bcenter, bound_bface
-    use BATL_lib, ONLY: CellSize_DB, x_, y_, z_, nI, nJ, nK, nG, nBlock,Unused_B
+    use BATL_lib, ONLY: &
+         CellSize_DB, x_, y_, z_, nI, nJ, nK, nG, nBlock, Unused_B
     use ModCellGradient, ONLY: calc_gradient
 
     ! Arguments
