@@ -3407,8 +3407,6 @@ contains
       end if
 
       if(.not.IsCartesian)then
-         if(UseProjection)call stop_mpi(&
-              'Only Cartesian works with projection')
          if(UseConstrainB)call stop_mpi(&
               'Only Cartesian works with constrain B')
          if(UseDivBDiffusion)call stop_mpi(&
