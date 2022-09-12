@@ -491,6 +491,7 @@ contains
 
     if(.not.allocated(GradPhi_DGB)) &
          allocate(GradPhi_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    GradPhi_DGB = 0.0
 
     ! Calculate gradient of Phi
     do iBlock = 1, nBlock
