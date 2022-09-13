@@ -630,7 +630,15 @@ contains
           call close_file
        else
           ! description of file contains units, physics and dimension
-          StringHeadLine = 'LOS integrals'
+          if(UseDEM)then
+             StringHeadLine = 'DEM integrals'
+          elseif(UseNbi)then
+             StringHeadLine = 'Narrowband Image'
+          elseif(UseFlux)then
+             StringHeadLine = 'Spectrum flux'
+          else
+             StringHeadLine = 'LOS integrals'
+          end if
           ! Write Auxilliary header info, which is useful for EUV images.
           ! Makes it easier to identify, and automatically process synthetic
           ! images from different instruments/locations
@@ -673,11 +681,6 @@ contains
           select case(TypePlotFormat_I(iFile))
           case('idl')
              if(UseDEM)then
-                StringHeadLine= 'DEM integrals '// &
-                     ' TIMEEVENT='//trim(StringDateTime)// &
-                     ' TIMEEVENTSTART='//StringDateTime0// &
-                     ' '//StringUnitIdl
-
                 call save_plot_file(NameFile, &
                      TypeFileIn = TypeFile_I(iFile), &
                      StringHeaderIn = StringHeadLine, &
@@ -693,10 +696,6 @@ contains
                      [aOffset+aPix, bOffset+bPix, LogTeMaxDEM_I(iFile)], &
                      VarIn_VIII = Image_VIII(:,:,:,:))
              elseif(UseNbi)then
-                StringHeadLine= 'NBI integrals '// &
-                     ' TIMEEVENT='//trim(StringDateTime)// &
-                     ' TIMEEVENTSTART='//StringDateTime0// &
-                     ' '//StringUnitIdl
                 call save_plot_file(NameFile, &
                      TypeFileIn = TypeFile_I(iFile), &
                      StringHeaderIn = StringHeadLine, &
@@ -712,10 +711,6 @@ contains
                      [aOffset+aPix, bOffset+bPix], &
                      VarIn_VII = Image_VIII(:,:,:,1))
              elseif(UseFlux)then
-                StringHeadLine= 'Spectrum flux '// &
-                     ' TIMEEVENT='//trim(StringDateTime)// &
-                     ' TIMEEVENTSTART='//StringDateTime0// &
-                     ' '//StringUnitIdl
                 call save_plot_file(NameFile, &
                      TypeFileIn = TypeFile_I(iFile), &
                      StringHeaderIn = StringHeadLine, &
