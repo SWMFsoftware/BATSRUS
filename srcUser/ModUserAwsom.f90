@@ -730,6 +730,7 @@ contains
                 CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)/Coef
              end if
              call apportion_coronal_heating(i, j, k, iBlock, &
+                  State_VGB(:,i,j,k,iBlock), &
                   WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              select case(NameVar)
