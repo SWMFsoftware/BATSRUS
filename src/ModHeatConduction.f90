@@ -83,7 +83,7 @@ module ModHeatConduction
   !$omp threadprivate( FreeStreamFlux_G )
 
   ! electron-ion energy exchange
-  real, allocatable :: PointCoef_CB(:,:,:,:)
+  real, allocatable :: PointCoef_VCB(:,:,:,:,:)
   real, allocatable :: PointImpl_VCB(:,:,:,:,:)
 
   real:: cTeTiExchangeRate
@@ -299,10 +299,11 @@ contains
        !$omp end parallel
 
        if(UseElectronPressure .and. .not.UseMultiIon)then
-          allocate(PointCoef_CB(nI,nJ,nK,MaxBlock))
           if(UseAnisoPressure)then
+             allocate(PointCoef_VCB(2,nI,nJ,nK,MaxBlock))
              allocate(PointImpl_VCB(2,nI,nJ,nK,MaxBlock))
           else
+             allocate(PointCoef_VCB(1,nI,nJ,nK,MaxBlock))
              allocate(PointImpl_VCB(1,nI,nJ,nK,MaxBlock))
           end if
 
@@ -911,7 +912,7 @@ contains
     real :: GammaTmp
     real :: DtLocal
     real :: NumDens, NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
-    real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
+    real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe, CviPar
     real, parameter:: TeEpsilonSi = 1.0
     real :: TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
     real :: Bb_DD(nDim,nDim)
@@ -1046,9 +1047,13 @@ contains
 
           if(UseElectronPressure .and. .not.UseMultiIon)then
              Cvi = InvGammaElectronMinus1*Natomic
-             PointCoef_CB(i,j,k,iBlock) = TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi)
+             PointCoef_VCB(1,i,j,k,iBlock) = &
+                  TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi)
              PointImpl_VCB(1,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)/Natomic
              if(UseAnisoPressure)then
+                CviPar = 0.5*Natomic
+                PointCoef_VCB(2,i,j,k,iBlock) = &
+                  TeTiCoef/(1.0 + DtLocal*TeTiCoef/CviPar)
                 PointImpl_VCB(2,i,j,k,iBlock) = &
                      State_VGB(Ppar_,i,j,k,iBlock)/Natomic
              end if
@@ -1391,11 +1396,11 @@ contains
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
-                  - PointCoef_CB(i,j,k,iBlock)*StateImpl_VG(iTeImpl,i,j,k)
+                  - PointCoef_VCB(1,i,j,k,iBlock)*StateImpl_VG(iTeImpl,i,j,k)
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) + PointCoef_CB(i,j,k,iBlock) &
+             Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) + PointCoef_VCB(1,i,j,k,iBlock)&
                   *(PointImpl_VCB(1,i,j,k,iBlock) &
                   - StateImpl_VG(iTeImpl,i,j,k))
           end do; end do; end do
@@ -1436,7 +1441,7 @@ contains
     if(UseElectronPressure .and. .not.UseMultiIon)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
-               - PointCoef_CB(i,j,k,iBlock)
+               - PointCoef_VCB(1,i,j,k,iBlock)
        end do; end do; end do
     end if
 
@@ -1585,18 +1590,18 @@ contains
        if(UseElectronPressure .and. .not.UseMultiIon)then
           if(.not.IsTimeAccurate) DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
           Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
-               + DtLocal*PointCoef_CB(i,j,k,iBlock) &
+               + DtLocal*PointCoef_VCB(1,i,j,k,iBlock) &
                *(NewSemiAll_VC(iTeImpl,i,j,k) - PointImpl_VCB(1,i,j,k,iBlock))
 
           State_VGB(p_,i,j,k,iBlock) = max(1e-30, GammaMinus1*Einternal)
 
           if(UseAnisoPressure)then
-             Einternal = InvGammaMinus1*State_VGB(Ppar_,i,j,k,iBlock) &
-                  + DtLocal*PointCoef_CB(i,j,k,iBlock) &
+             Einternal = 0.5*State_VGB(Ppar_,i,j,k,iBlock) &
+                  + DtLocal*PointCoef_VCB(2,i,j,k,iBlock) &
                   *(NewSemiAll_VC(iTeImpl,i,j,k) &
                   - PointImpl_VCB(2,i,j,k,iBlock))
 
-             State_VGB(Ppar_,i,j,k,iBlock) = max(1e-30, GammaMinus1*Einternal)
+             State_VGB(Ppar_,i,j,k,iBlock) = max(1e-30, 2.0*Einternal)
           end if
        end if
     end do; end do; end do
