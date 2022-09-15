@@ -1070,16 +1070,16 @@ contains
   end subroutine get_curl_u
   !============================================================================
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
-       WaveDissipation_V, CoronalHeating, &
+       State_V, WaveDissipation_V, CoronalHeating, &
        QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
 
+    use ModVarIndexes, ONLY: nVar
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: IonMassPerCharge, pMin_I, TMin_I
-    use ModAdvance, ONLY: State_VGB, UseAnisoPressure, &
-         Bx_, Bz_, Pe_
+    use ModAdvance, ONLY: nVar, UseAnisoPressure, Bx_, Bz_, Pe_
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_C
@@ -1089,6 +1089,7 @@ contains
     use ModLookupTable, ONLY: interpolate_lookup_table
 
     integer, intent(in) :: i, j, k, iBlock
+    real, intent(in) :: State_V(nVar)
     real, intent(in) :: WaveDissipation_V(WaveFirst_:WaveLast_)
     real, intent(in) :: CoronalHeating
     real, intent(out) :: QPerQtotal_I(nIonFluid), &
@@ -1122,14 +1123,14 @@ contains
        Qtotal = max(CoronalHeating*ExtensionCoef, 1e-30)
 
        if(UseB0) then
-          B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          B_D = B0_DGB(:,i,j,k,iBlock) + State_V(Bx_:Bz_)
        else
-          B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          B_D = State_V(Bx_:Bz_)
        end if
        B2 = max(sum(B_D**2), 1e-30)
        B = sqrt(B2)
 
-       RhoProton = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
+       RhoProton = State_V(iRhoIon_I(1))
 
        Valfven = B/sqrt(RhoProton)
 
@@ -1140,17 +1141,15 @@ contains
           if(Tmin_I(iFluid) < 0.0)then
              if(pMin_I(iFluid) >= 0.0) pMin = pMin_I(iFluid)
           else
-             pMin = State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) &
-                  /MassIon_I(iIon)*Tmin_I(iFluid)
+             pMin = State_V(iRhoIon_I(iIon))/MassIon_I(iIon)*Tmin_I(iFluid)
              if(pMin_I(iFluid) >= 0.0) pMin = max(pMin_I(iFluid), pMin)
           end if
           pMin = max(pMin, 1e-30)
 
-          P_I(iIon) = max(pMin, State_VGB(iPIon_I(iIon),i,j,k,iBlock))
+          P_I(iIon) = max(pMin, State_V(iPIon_I(iIon)))
           if(UseAnisoPressure)then
              Ppar_I(iIon) = min(max(pMin, &
-                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)), &
-                  (3*P_I(iIon)-2*pMin))
+                  State_V(iPparIon_I(iFluid))), (3*P_I(iIon)-2*pMin))
           else
              Ppar_I(iIon) = P_I(iIon)
           end if
@@ -1158,8 +1157,8 @@ contains
 
        BetaProton = 2.0*P_I(1)/B2
 
-       Wplus  = State_VGB(WaveFirst_,i,j,k,iBlock)
-       Wminus = State_VGB(WaveLast_,i,j,k,iBlock)
+       Wplus  = State_V(WaveFirst_)
+       Wminus = State_V(WaveLast_)
 
        Wmajor = max(Wplus, Wminus)
        Wminor = min(Wplus, Wminus)
@@ -1184,19 +1183,17 @@ contains
        if(UseMultiIon)then
           BetaParProton = 2.0*Ppar_I(1)/B2
           Np = RhoProton
-          Na = State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock) &
-               /MassIon_I(nIonFluid)
-          Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
+          Na = State_V(iRhoIon_I(nIonFluid))/MassIon_I(nIonFluid)
+          Ne = sum(State_V(iRhoIon_I)*ChargeIon_I/MassIon_I)
           Tp = P_I(1)/Np
           Ta = P_I(nIonFluid)/Na
-          Te = State_VGB(Pe_,i,j,k,iBlock)/Ne
+          Te = State_V(Pe_)/Ne
 
           ! difference bulk speed between alphas and protons
-          Udiff_D = State_VGB( &
-               iRhoUxIon_I(nIonFluid):iRhoUzIon_I(nIonFluid),i,j,k,iBlock) &
-               /State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock) &
-               -State_VGB(iRhoUxIon_I(1):iRhoUzIon_I(1),i,j,k,iBlock) &
-               /State_VGB(iRhoIon_I(1),i,j,k,iBlock)
+          Udiff_D = State_V(iRhoUxIon_I(nIonFluid):iRhoUzIon_I(nIonFluid)) &
+               /State_V(iRhoIon_I(nIonFluid)) &
+               -State_V(iRhoUxIon_I(1):iRhoUzIon_I(1)) &
+               /State_V(iRhoIon_I(1))
           Upar = sum(Udiff_D*B_D)/B
 
           ! The damping rates (divided by k_parallel V_Ap) in the lookup
@@ -1222,9 +1219,9 @@ contains
           end if
        else
           Pp = P_I(1)
-          TeByTp = State_VGB(Pe_,i,j,k,iBlock)/Pp
+          TeByTp = State_V(Pe_)/Pp
 
-          BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/B2
+          BetaElectron = 2.0*State_V(Pe_)/B2
 
           DampingElectron = 0.01*sqrt(TeByTp/BetaProton) &
                *(1.0 + 0.17*BetaProton**1.3) &
@@ -1241,7 +1238,7 @@ contains
           Pperp = 0.5*(3*P_I(iIon) - Ppar)
 
           ! Perpendicular ion thermal speed
-          Vperp = sqrt(2.0*Pperp/State_VGB(iRhoIon_I(iIon),i,j,k,iBlock))
+          Vperp = sqrt(2.0*Pperp/State_V(iRhoIon_I(iIon)))
 
           GyroRadiusTimesB_I(iIon) = Vperp &
                *IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon)
@@ -1306,7 +1303,7 @@ contains
                *exp(-StochasticExponent/max(Epsilon,1e-15)) &
                + StochasticAmplitude2*sqrt(BetaProton) &
                *exp(-StochasticExponent2/max(Delta,1e-15))) &
-               *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*DeltaU**3 &
+               *State_V(iRhoIon_I(iIon))*DeltaU**3 &
                *InvGyroRadius/Wgyro
        end do
 

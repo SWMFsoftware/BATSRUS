@@ -417,6 +417,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseElectronPressure)then
              call apportion_coronal_heating(i, j, k, iBlock, &
+                  State_VGB(:,i,j,k,iBlock), &
                   WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
