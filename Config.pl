@@ -499,7 +499,7 @@ sub set_optimization{
 sub get_settings{
 
     # Make sure that BATL_size.f90 is up-to-date
-    `make $NameBatlFile`;
+    `cd srcBATL; make BATL_size.f90`;
     open(FILE, $NameBatlFile) or die "$ERROR could not open $NameBatlFile\n";
     while(<FILE>){
         next if /^\s*!/; # skip commented out lines
