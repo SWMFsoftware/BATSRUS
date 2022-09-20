@@ -91,7 +91,7 @@ module ModHeatConduction
 
   ! coronal heating
   logical :: UseImplicitCoronalHeating = .false.
-  
+
   ! radiative cooling
   logical :: DoRadCooling = .false.
 
@@ -145,7 +145,7 @@ contains
 
     case("#IMPLICITCORONALHEATING")
        call read_var('UseImplicitCoronalHeating', UseImplicitCoronalHeating)
-       
+
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
@@ -323,7 +323,7 @@ contains
              call stop_mpi(NameSub//&
                   'Implicit coronal heating only works with turbulent cascade')
           end if
-          
+
           allocate(PointCoef_VCB(4,nI,nJ,nK,MaxBlock))
 
           UseHeatExchange = .false.
@@ -1035,7 +1035,7 @@ contains
 
        if(UseImplicitCoronalHeating .and. DoExtendTransitionRegion) &
             call get_tesi_c(iBlock, TeSi_C)
-       
+
        ! Store the electron temperature in SemiAll_VCB and the
        ! specific heat in DconsDsemiAll_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
