@@ -9367,7 +9367,7 @@ If UseImplicitCoronalHeating is false, the coronal heating is added explicitly.
 If UseImplicitCoronalHeating is true, the coronal heating is solved point
 implicitly together with the heat conduction.
 
-The default is UseImplicitCoronalHeating=.true.
+The default is UseImplicitCoronalHeating=.false.
 
 </command>
 
