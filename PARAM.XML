@@ -9357,6 +9357,21 @@ The default is UseHeatConduction=.false.
 
 </command>
 
+<command name="IMPLICITCORONALHEATING">
+  <parameter name="UseImplicitCoronalHeating"    type="logical" default="F"/>
+
+#IMPLICITCORONALHEATING
+F                       UseImplicitCoronalHeating
+
+If UseImplicitCoronalHeating is false, the coronal heating is added explicitly.
+If UseImplicitCoronalHeating is true, the coronal heating is solved point
+implicitly together with the heat conduction.
+
+The default is UseImplicitCoronalHeating=.true.
+
+</command>
+
+
 <command name="IONHEATCONDUCTION">
   <parameter name="UseIonHeatConduction"    type="logical" default="F"/>
   <if expr="$UseIonHeatConduction">

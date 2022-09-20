@@ -374,27 +374,21 @@ contains
 
     if(UseTurbulentCascade) call get_wave_reflection(iBlock)
 
-    if(UseCoronalHeating .and. DoExtendTransitionRegion .or. UseRadCooling) &
+    if((UseCoronalHeating .or. UseAlfvenWaveDissipation) &
+         .and. DoExtendTransitionRegion .or. UseRadCooling) &
          call get_tesi_c(iBlock, TeSi_C)
 
-    if(UseCoronalHeating)then
+    if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
+
        call get_block_heating(iBlock)
 
-       if(UseChromosphereHeating.and. DoExtendTransitionRegion)then
-          call add_chromosphere_heating(TeSi_C, iBlock)
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             CoronalHeating_C(i,j,k) = &
-                  CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
-          end do; end do; end do
-       end if
+       if(UseChromosphereHeating) call add_chromosphere_heating(TeSi_C, iBlock)
 
        if(UseAlfvenWaveDissipation)then
           if(DoExtendTransitionRegion)then
-             ! Does not work together with UseChromosphereHeating
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                Coef = extension_factor(TeSi_C(i,j,k))
-                WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k)/Coef
-                CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)/Coef
+                WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k) &
+                     /extension_factor(TeSi_C(i,j,k))
              end do; end do; end do
           end if
 
@@ -414,38 +408,45 @@ contains
           end do; end do; end do
        end if
 
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(UseElectronPressure)then
-             call apportion_coronal_heating(i, j, k, iBlock, &
-                  State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
-                  QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-
-             Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
-
-             Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*QPerQtotal_I &
-                  *GammaMinus1_I(IonFirst_:IonLast_)
-             Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) = &
-                  Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*QPerQtotal_I
-
-             if(UseAnisoPressure)then
-                do iFluid = IonFirst_, IonLast_
-                   Source_VC(iPparIon_I(iFluid),i,j,k) = &
-                        Source_VC(iPparIon_I(iFluid),i,j,k) &
-                        + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid)*2.0
-                end do
-             end if
-          else
-             Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*GammaMinus1
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)
+       if(UseCoronalHeating)then
+          if(DoExtendTransitionRegion)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                CoronalHeating_C(i,j,k) = &
+                     CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
+             end do; end do; end do
           end if
-       end do; end do; end do
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(UseElectronPressure)then
+                call apportion_coronal_heating(i, j, k, iBlock, &
+                     State_VGB(:,i,j,k,iBlock), &
+                     WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
+                     QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
+                Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+                     + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
+
+                Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
+                     + CoronalHeating_C(i,j,k)*QPerQtotal_I &
+                     *GammaMinus1_I(IonFirst_:IonLast_)
+                Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) = &
+                     Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) &
+                     + CoronalHeating_C(i,j,k)*QPerQtotal_I
+
+                if(UseAnisoPressure)then
+                   do iFluid = IonFirst_, IonLast_
+                      Source_VC(iPparIon_I(iFluid),i,j,k) = &
+                           Source_VC(iPparIon_I(iFluid),i,j,k) &
+                           + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid)*2
+                   end do
+                end if
+             else
+                Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+                     + CoronalHeating_C(i,j,k)*GammaMinus1
+                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                     + CoronalHeating_C(i,j,k)
+             end if
+          end do; end do; end do
+       end if
     end if
 
     if(UseRadCooling)then

@@ -723,7 +723,8 @@ contains
        case("#RADIATION", "#HEATFLUXLIMITER", "#ACCURATERADIATION")
           call read_rad_diffusion_param(NameCommand)
 
-       case("#HEATCONDUCTION", "#WEAKFIELDCONDUCTION", "#IONHEATCONDUCTION")
+       case("#HEATCONDUCTION", "#WEAKFIELDCONDUCTION", "#IONHEATCONDUCTION", &
+            "#IMPLICITCORONALHEATING")
           call read_heatconduction_param(NameCommand)
 
        case("#HEATFLUXREGION", "#HEATFLUXCOLLISIONLESS")
