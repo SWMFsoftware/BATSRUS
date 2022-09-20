@@ -3611,29 +3611,29 @@ tracing variables  'Theta1 Phi1 Theta2 Phi2 Status' are saved as well.
 The strings 'step', 'time' and 'date' define the corresponding
 time information. The value 'none' means that no time information is saved.
 \begin{verbatim}
- none  - there will be no indication of time in the logfile (not even the number of steps)
+ none  - there will be no indication of time or steps in the logfile
  step  - number of time steps
- date  - date-time as 7 integers:  year month day hour minute second millisecond,
+ date  - date-time as 7 integers:  year month day hour minute second millisecond
  time  - simulation time
  ray   - fieldline tracing variables: theta1 phi1 theta2 phi2 status
- traj  - extract the information (MHD/VAR) along the full trajectory file
- trajrange  - extract the information (MHD/VAR) along the trajectory file for the seleced time range
+ traj  - extract information along the full trajectory file
+ trajrange  - extract information along a part of the trajectory file
 \end{verbatim}
-More than one OptionalVar strings can be listed. They can be put together in any
-combination. The default value for OptionalVar is 'step date'.\\
+More than one OptionalVar strings can be listed. They can be put
+together in any combination. The default value for OptionalVar is
+'step date'.
 
-\noindent
-The DnOutput and DtOutput parameters determine the frequency of extracting
-values along the satellite trajectories. \\
+The DnOutput and DtOutput parameters determine the frequency of
+extracting values along the satellite trajectories.
 
-\noindent
 The extracted satellite information is saved into the files named
 \begin{verbatim}
 PLOTDIR/sat_TRAJECTORYNAME_TIMESTAMP.sat
 \end{verbatim}
-where TIMESTAMP contains the time step or the date-and-time information
-(see #SAVELOGNAME command) and TRAJECTORYNAME is the name of the trajectory file.
-The satellite files have a very simple format:
+where TIMESTAMP contains the time step or the date-and-time
+information (see #SAVELOGNAME command) and TRAJECTORYNAME is the name
+of the trajectory file.  The satellite files have a very simple
+format:
 \begin{verbatim}
 arbitrary header line that can define for example the units
 name1 name2 name3 ... nameN
@@ -3652,29 +3652,27 @@ have the following format:
 #COOR
 GSM
 
-#START
- 2004  6  24   0   0  58   0  2.9  -3.1 - 3.7
- 2004  6  24   0   1  58   0  2.8  -3.2 - 3.6
- ...
-\end{verbatim}
-The #COOR command is optional.  It indicates which coordinate system is used
-for the trajectory coordinates. Possible values (GSM, GEO, GSE, SMG, HGI, HGR...)
-and their meaning is described in share/Library/src/CON_axes.f90.
-The default coordinate system is GSM.
-After the #START line the data lines contain
-the date-time information (year, month, day, hour, minute, second, millisecond)
-and the x, y and z coordinates in normalized units
-(typically planetary or solar radius, see the #NORMALIZATION command).
+#START 2004 6 24 0 0 58 0 2.9 -3.1 - 3.7 2004 6 24 0 1 58 0 2.8 -3.2 -
+3.6 ...  \end{verbatim} 
+The #COOR command is optional.  It indicates which coordinate system
+is used for the trajectory coordinates. Possible values (GSM, GEO,
+GSE, SMG, HGI, HGR...)  and their meaning is described in
+share/Library/src/CON_axes.f90.  The default coordinate system is GSM.
+After the #START line, the data lines contain the date-time information
+(year, month, day, hour, minute, second, millisecond) and the x, y and
+z coordinates in normalized units (typically planetary or solar
+radius, see the #NORMALIZATION command).
 
-If the StringSatellite contains 'traj', then the code simply extract the information
-at ALL satellite locations from the satellite file.
+If the StringSatellite contains 'traj', then the code simply extract
+the information at ALL satellite locations from the satellite file.
 
-If the StringSatellite contains 'trajrange', then StringStartTimeTraj, StringEndTimeTraj
-and StringDtTraj need to be provided followed by the NameTrajectoryFile. This alows
-writing the information along the trajectory file for a given time range, both in
-time accurate and steady state. 
-StringStartTimeTraj and StringEndTimeTraj determine the time range of the output 
-satellite file and accept the following forms of string:
+If the StringSatellite contains 'trajrange', then StringStartTimeTraj,
+StringEndTimeTraj and StringDtTraj need to be provided followed by the
+NameTrajectoryFile. This alows writing the information along the
+trajectory file for a given time range, both in time accurate and
+steady state.  StringStartTimeTraj and StringEndTimeTraj determine the
+time range of the output satellite file and accept the following forms
+of string:
 \begin{verbatim}
  A time string ending with ' UT', such as 'YYYY-MM-DDTHH:MM:SS:MSC UT' or 
    	    'YYYY MM DD HH MM SS MSC UT' (single digit need to fill 0 ahead and the 
@@ -4712,17 +4710,14 @@ SDO:   	     sdo:aia
 Hinode:	     hinode:xrt
 SOHO:	     SOHO:c2, SOHO:c3
 \end{verbatim}
-
-\noindent
 The possible values for NameVars for other plot areas
 are listed in subroutine set_plotvar in write_plot_common.f90.
 For convenience and to avoid exceeding the line length limit
 of the PARAM.in file, the {MHD} and {HD} strings can be
 used in NameVars. These are replaced with the appropriate
 primitive variables (and jx jy jz for MHD), so one can add
-a few extra variables easily.\\
+a few extra variables easily.
 
-\noindent
 The possible values for NamePars are listed in subroutine
 set_scalar_param in write_plot_common.f90. The {default} string
 will be replaced with the default list of parameters, which
@@ -4777,8 +4772,6 @@ where headextension is:
            'T' for TEC/TCP file format
            'h' for IDL file format
 \end{verbatim}
-
-\noindent
 The line of sight integration produces TecPlot and IDL files directly:
 \begin{verbatim}
  IO2/los_PlotVar_PlotNumber_TIMESTAMP.extension
@@ -6426,9 +6419,9 @@ NOTE 1: The 5th order scheme requires 3 ghost cells and at least 6x6x6
 grid blocks (to be set with Config.pl -g=... -ng=...). The 1st and 2nd
 order schemes work with 2 ghost cells and can have 4x4x4 blocks.
 
-NOTE 2: the time discretization scheme can be modified
-with the #TIMESTEPPING, #RUNGEKUTTA or #RK commands after the #SCHEME command.
-\noindent
+NOTE 2: the time discretization scheme can be modified with the
+#TIMESTEPPING, #RUNGEKUTTA or #RK commands after the #SCHEME command.
+
 Possible values for TypeFlux:
 \begin{verbatim}
  'Rusanov'     - Rusanov or Lax-Friedrichs flux
@@ -7538,14 +7531,12 @@ rel			TypeProjectStop:'rel' or 'max' error for stop condition
 0.0			AbsoluteLimit
 50			MaxMatvec (upper limit on matrix.vector multipl.)
 
-Default values are shown above.\\
+Default values are shown above.
 
-\noindent
 For symmetric Laplacian matrix TypeProjectIter='cg' (Conjugate Gradients)
 should be used, as it is faster than BiCGSTAB. In current applications
-the Laplacian matrix is always symmetric.\\
+the Laplacian matrix is always symmetric.
 
-\noindent
 The iterative scheme stops when the stopping condition is fulfilled:
 \begin{verbatim}
   TypeProjectStop = 'rel':
