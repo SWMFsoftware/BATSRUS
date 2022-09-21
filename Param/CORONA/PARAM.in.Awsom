@@ -72,6 +72,9 @@ stochasticheating		TypeHeatPartitioning
 0.21			StochasticExponent
 0.18			StochasticAmplitude
 
+#IMPLICITCORONALHEATING
+F			UseImplicitCoronalHeating
+
 #RADIATIVECOOLING
 T			UseRadCooling
 

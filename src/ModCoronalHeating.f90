@@ -28,6 +28,7 @@ module ModCoronalHeating
   public :: get_wave_reflection
   public :: init_coronal_heating
   public :: read_coronal_heating_param
+  public :: turbulent_cascade
 
   ! The Poynting flux to magnetic field ratio (one of the input parameters
   ! in SI unins and diminsionless:

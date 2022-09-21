@@ -115,17 +115,15 @@ contains
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, DtFixed, DtMax_B, Cfl, &
-             UseDtLimit, DtLimit, IsTimeAccurate
+         UseDtLimit, DtLimit, IsTimeAccurate
     use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B
-    use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
-         CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
-    use ModRadiativeCooling, ONLY: UseRadCooling, &
-         get_radiative_cooling, add_chromosphere_heating
+    use ModCoronalHeating, ONLY: get_block_heating, &
+         UseAlfvenWaveDissipation, WaveDissipation_VC
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
-         UseChromosphereHeating, get_tesi_c, TeSi_C
+         get_tesi_c, TeSi_C
     use ModPhysics, ONLY: InvGammaMinus1
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
@@ -139,7 +137,7 @@ contains
     real:: Vdt, DtBlock
 
     ! Variables for time step control due to loss terms
-    real :: Einternal, Source, DtLoss, Coef
+    real :: Einternal, Source, DtLoss
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_timestep'
@@ -205,65 +203,29 @@ contains
 #ifndef _OPENACC
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
-    if(UseAlfvenWaveDissipation .or.UseRadCooling)then
-       if(UseRadCooling .or. DoExtendTransitionRegion) &
-            call get_tesi_c(iBlock, TeSi_C)
+    if(UseAlfvenWaveDissipation)then
+       call get_tesi_c(iBlock, TeSi_C)
+       call get_block_heating(iBlock)
 
-       if(UseCoronalHeating)then
-          call get_block_heating(iBlock)
-
-          if(UseChromosphereHeating .and. DoExtendTransitionRegion)then
-             call add_chromosphere_heating(TeSi_C, iBlock)
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                CoronalHeating_C(i,j,k) = &
-                     CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
-             end do; end do; end do
-          end if
-       end if
-
-       if(UseAlfvenWaveDissipation)then
-          if(DoExtendTransitionRegion)then
-             ! Does not work together with UseChromosphereHeating
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                Coef = extension_factor(TeSi_C(i,j,k))
-                WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k)/Coef
-                CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)/Coef
-             end do; end do; end do
-          end if
-
+       if(DoExtendTransitionRegion)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not. Used_GB(i,j,k,iBlock)) CYCLE
-
-             if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
-                DtLoss = 0.5*minval( &
-                     State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                     /WaveDissipation_VC(:,i,j,k))
-                ! The following prevents the wave energies from becoming
-                ! negative due to too large loss terms.
-                DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), DtLoss)
-             end if
+             WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k) &
+                  /extension_factor(TeSi_C(i,j,k))
           end do; end do; end do
        end if
 
-       ! No time step restriction yet if the electron pressure is used
-       if(UseRadCooling .and. .not.UseElectronPressure)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
-                  Source, NameCaller=NameSub)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
-             if(UseCoronalHeating) Source = Source + CoronalHeating_C(i,j,k)
-
-             ! Only limit for losses
-             if(Source >= -1e-30) CYCLE
-
-             Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock)
-
-             DtLoss = 0.5*Einternal/abs(Source)
-             ! The following prevents the pressure from becoming negative
-             ! due to too large loss terms.
+          if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
+             DtLoss = 0.5*minval( &
+                  State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                  /WaveDissipation_VC(:,i,j,k))
+             ! The following prevents the wave energies from becoming
+             ! negative due to too large loss terms.
              DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), DtLoss)
-          end do; end do; end do
-       end if
+          end if
+       end do; end do; end do
     end if
 
     if(DoTest)then

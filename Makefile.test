@@ -46,7 +46,6 @@ test_help:
 	@echo "    test_hallmhd               (run Hall MHD test)"
 	@echo "    test_L1toBC                (run L1 to BC propagation test)"
 	@echo "    test_magnetometer          (run magnetometer test)"
-	@echo "    test_mhdions               (run MHD with ions test)"
 	@echo "    test_mhdnoncons            (run non-conservative MHD test)"
 	@echo "    test_multifluid            (run multi-fluid test)"
 	@echo "    test_multiion              (run multi-ion test)"
@@ -69,9 +68,6 @@ test_extra_help:
 	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
 	@echo "    test_awsomchargestate      (run corona with charge state test)"
 	@echo "    test_comet                 (run comet test)"
-	@echo "    test_cometfluids           (run 3-fluid+Pe comet test)"
-	@echo "    test_cometfluids_start     (run first 3-fluid+Pe comet test)" 
-	@echo "    test_cometfluids_restart   (run 3-fluid+Pe comet restart test)"
 	@echo "    test_cometCGhd             (run comet CG hd test)"
 	@echo "    test_cometCGfluids         (run comet CG fluids test)"
 	@echo "    test_eosgodunov            (run EOS/Godunov test)"
@@ -88,9 +84,6 @@ test_extra_help:
 	@echo "    test_mars_restart          (run mars restart test)"
 	@echo "    test_mercurysph            (run Mercury test)"
 	@echo "    test_ganymede              (run Ganymede test)"
-	@echo "    test_marsfluids            (run marsfluids tests)"
-	@echo "    test_marsfluids_start      (run first marsfluids test)"
-	@echo "    test_marsfluids_restart    (run marsfluids restart test)"
 	@echo "    test_outerhelio2d          (run 2D Outer Heliosphere test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_outerhelio_1d         (run 1D Outer Heliosphere test)"
@@ -115,7 +108,6 @@ test:
 	-@($(MAKE) test_twofluidmhd TESTDIR=run_test_twofluidmhd)
 	-@($(MAKE) test_multifluid TESTDIR=run_test_multifluid)
 	-@($(MAKE) test_multiion TESTDIR=run_test_multiion)
-	-@($(MAKE) test_mhdions TESTDIR=run_test_mhdions)
 	-@($(MAKE) test_mhdnoncons TESTDIR=run_test_mhdnoncons)
 	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
 	-@($(MAKE) test_awsom TESTDIR=run_test_awsom)
@@ -159,14 +151,12 @@ test_extra:
 	-@($(MAKE) test_outerheliopui_1d TESTDIR=run_test_outerheliopui_1d)
 	-@($(MAKE) test_titan TESTDIR=run_test_titan)
 	-@($(MAKE) test_mars TESTDIR=run_test_mars)
-	-@($(MAKE) test_marsfluids TESTDIR=run_test_marsfluids)
 	-@($(MAKE) test_venus TESTDIR=run_test_venus)
 	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
 	-@($(MAKE) test_ganymede TESTDIR=run_test_ganymede)
 	-@($(MAKE) test_saturn TESTDIR=run_test_saturn)
 	-@($(MAKE) test_jupiter TESTDIR=run_test_jupiter)
 	-@($(MAKE) test_comet TESTDIR=run_test_comet)
-	-@($(MAKE) test_cometfluids TESTDIR=run_test_cometfluids)
 	-@($(MAKE) test_cometCGhd TESTDIR=run_test_cometCGhd)
 	-@($(MAKE) test_cometCGfluids TESTDIR=run_test_cometCGfluids)
 	-@($(MAKE) test_europa2fluidspe TESTDIR=run_test_europa2fluidspe)
@@ -739,38 +729,6 @@ test_multiion_check:
 		Param/MULTIION/TestOutput/cut_t2.out \
 		> test_multiion.diff)
 	ls -l test_multiion.diff
-
-### MHD WITH MULTIPLE IONS TEST ###
-
-test_mhdions:
-	@echo "test_mhdions_compile..." > test_mhdions.diff
-	$(MAKE) test_mhdions_compile
-	@echo "test_mhdions_rundir..." >> test_mhdions.diff
-	$(MAKE) test_mhdions_rundir
-	@echo "test_mhdions_run..." >> test_mhdions.diff
-	$(MAKE) test_mhdions_run
-	@echo "test_mhdions_check..." >> test_mhdions.diff
-	$(MAKE) test_mhdions_check
-
-test_mhdions_compile:
-	./Config.pl ${OPENMP} -u=Default -e=MhdIons -f -ng=2 -g=64,2,2
-	$(MAKE) BATSRUS
-	make PIDL
-
-test_mhdions_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/MHDIONS/PARAM.in .
-	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test_mhdions_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS
-
-test_mhdions_check:
-	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULTS/GM/cut_mhd_1_t00001000*.out \
-		Param/MHDIONS/TestOutput/cut_mhd_t10m.out \
-		> test_mhdions.diff)
-	ls -l test_mhdions.diff
 
 ### NONCONSERVATIVE MHD TEST ###
 
