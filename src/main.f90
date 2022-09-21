@@ -3,6 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program batsrus
 
+  
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose
 
