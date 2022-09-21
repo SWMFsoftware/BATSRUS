@@ -1106,7 +1106,7 @@ contains
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipation_V, CoronalHeating, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-             Qi = CoronalHeating*QPerQtotal_I(1)
+             Qi = CoronalHeating*QPerQtotal_I(IonFirst_)
              Qe = CoronalHeating*QePerQtotal
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + Deltap
@@ -1117,7 +1117,7 @@ contains
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipation_V, CoronalHeating, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-             QiTiR = CoronalHeating*QPerQtotal_I(1)
+             QiTiR = CoronalHeating*QPerQtotal_I(IonFirst_)
              QeTiR = CoronalHeating*QePerQtotal
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - 2*Deltap
@@ -1128,7 +1128,7 @@ contains
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipation_V, CoronalHeating, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-             QiTiL = CoronalHeating*QPerQtotal_I(1)
+             QiTiL = CoronalHeating*QPerQtotal_I(IonFirst_)
              QeTiL = CoronalHeating*QePerQtotal
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + Deltap
@@ -1146,7 +1146,7 @@ contains
                      State_VGB(:,i,j,k,iBlock), &
                      WaveDissipation_V, CoronalHeating, &
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-                QiTeR = CoronalHeating*QPerQtotal_I(1)
+                QiTeR = CoronalHeating*QPerQtotal_I(IonFirst_)
                 QeTeR = CoronalHeating*QePerQtotal
 
                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
@@ -1159,7 +1159,7 @@ contains
                      State_VGB(:,i,j,k,iBlock), &
                      WaveDissipation_V, CoronalHeating, &
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-                QiTeL = CoronalHeating*QPerQtotal_I(1)
+                QiTeL = CoronalHeating*QPerQtotal_I(IonFirst_)
                 QeTeL = CoronalHeating*QePerQtotal
 
                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
