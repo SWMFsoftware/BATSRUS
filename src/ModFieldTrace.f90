@@ -466,7 +466,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(allocated(Trace_DSNB))           deallocate(Trace_DSNB)
+    if(allocated(Trace_DSNB))    deallocate(Trace_DSNB)
     if(allocated(b_DGB))         deallocate(b_DGB)
     if(allocated(RayIntegral_V)) deallocate(RayIntegral_V)
     if(allocated(Extra_VGB))     deallocate(Extra_VGB)
