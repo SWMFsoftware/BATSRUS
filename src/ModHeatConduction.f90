@@ -958,6 +958,9 @@ contains
 
     real :: Te, Ti, Qe, Qi, dQedTe, dQedTi, dQidTe, dQidTi
     real :: QeTiR, QeTiL, QiTiR, QiTiL, QeTeR, QeTeL, QiTeR, QiTeL
+    real :: Qpar, QparTiR, QparTiL, dQpardTi, QparTeR, QparTeL, dQpardTe
+    real :: QiTparR, QiTparL, dQidTpar, QeTparR, QeTparL, dQedTpar
+    real :: QparTparR, QparTparL, dQpardTpar
     real :: Deltap, Coef, Denominator
     real :: RadCool, RadCoolDeriv
     real :: dQidTe1, dQidTi1, Qi1, TeTiCoef1, TeTiCoef2
@@ -1108,6 +1111,8 @@ contains
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              Qi = CoronalHeating*QPerQtotal_I(IonFirst_)
              Qe = CoronalHeating*QePerQtotal
+             if(UseAnisoPressure) &
+                  Qpar = CoronalHeating*QparPerQtotal_I(IonFirst_)
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + Deltap
              call turbulent_cascade(i, j, k, iBlock, &
@@ -1119,6 +1124,8 @@ contains
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              QiTiR = CoronalHeating*QPerQtotal_I(IonFirst_)
              QeTiR = CoronalHeating*QePerQtotal
+             if(UseAnisoPressure) &
+                  QparTiR = CoronalHeating*QparPerQtotal_I(IonFirst_)
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - 2*Deltap
              call turbulent_cascade(i, j, k, iBlock, &
@@ -1130,12 +1137,50 @@ contains
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              QiTiL = CoronalHeating*QPerQtotal_I(IonFirst_)
              QeTiL = CoronalHeating*QePerQtotal
+             if(UseAnisoPressure) &
+                  QparTiL = CoronalHeating*QparPerQtotal_I(IonFirst_)
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + Deltap
              dQidTi = 0.5*(QiTiR  - QiTiL)/TeEpsilon
              dQedTi = 0.5*(QeTiR  - QeTiL)/TeEpsilon
+             if(UseAnisoPressure) &
+                  dQpardTi = 0.5*(QparTiR  - QparTiL)/TeEpsilon
 
              if(UseElectronPressure)then
+                if(UseAnisoPressure)then
+                   State_VGB(Ppar_,i,j,k,iBlock) = &
+                        State_VGB(Ppar_,i,j,k,iBlock) + Deltap
+                   call turbulent_cascade(i, j, k, iBlock, &
+                        WaveDissipation_V, CoronalHeating)
+                   CoronalHeating = CoronalHeating/Coef
+                   call apportion_coronal_heating(i, j, k, iBlock, &
+                        State_VGB(:,i,j,k,iBlock), &
+                        WaveDissipation_V, CoronalHeating, &
+                        QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
+                   QiTparR = CoronalHeating*QPerQtotal_I(IonFirst_)
+                   QeTparR = CoronalHeating*QePerQtotal
+                   QparTparR = CoronalHeating*QparPerQtotal_I(IonFirst_)
+
+                   State_VGB(Ppar_,i,j,k,iBlock) = &
+                        State_VGB(Ppar_,i,j,k,iBlock) - 2*Deltap
+                   call turbulent_cascade(i, j, k, iBlock, &
+                        WaveDissipation_V, CoronalHeating)
+                   CoronalHeating = CoronalHeating/Coef
+                   call apportion_coronal_heating(i, j, k, iBlock, &
+                        State_VGB(:,i,j,k,iBlock), &
+                        WaveDissipation_V, CoronalHeating, &
+                        QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
+                   QiTparL = CoronalHeating*QPerQtotal_I(IonFirst_)
+                   QeTparL = CoronalHeating*QePerQtotal
+                   QparTparL = CoronalHeating*QparPerQtotal_I(IonFirst_)
+
+                   State_VGB(Ppar_,i,j,k,iBlock) = &
+                        State_VGB(Ppar_,i,j,k,iBlock) + Deltap
+                   dQidTpar = 0.5*(QiTparR  - QiTparL)/TeEpsilon
+                   dQedTpar = 0.5*(QeTparR  - QeTparL)/TeEpsilon
+                   dQpardTpar = 0.5*(QparTparR  - QparTparL)/TeEpsilon
+                end if
+
                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                      + Deltap
                 TeSi_C(i,j,k) = TeSi_C(i,j,k) + TeEpsilonSi
@@ -1148,6 +1193,8 @@ contains
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
                 QiTeR = CoronalHeating*QPerQtotal_I(IonFirst_)
                 QeTeR = CoronalHeating*QePerQtotal
+                if(UseAnisoPressure) &
+                     QparTeR = CoronalHeating*QparPerQtotal_I(IonFirst_)
 
                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                      - 2*Deltap
@@ -1161,12 +1208,16 @@ contains
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
                 QiTeL = CoronalHeating*QPerQtotal_I(IonFirst_)
                 QeTeL = CoronalHeating*QePerQtotal
+                if(UseAnisoPressure) &
+                     QparTeL = CoronalHeating*QparPerQtotal_I(IonFirst_)
 
                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                      + Deltap
                 TeSi_C(i,j,k) = TeSi_C(i,j,k) + TeEpsilonSi
                 dQidTe = 0.5*(QiTeR  - QiTeL)/TeEpsilon
                 dQedTe = 0.5*(QeTeR  - QeTeL)/TeEpsilon
+                if(UseAnisoPressure) &
+                     dQpardTe = 0.5*(QparTeR  - QparTeL)/TeEpsilon
              else
                 dQidTe = 0.0
                 dQedTe = 0.0
