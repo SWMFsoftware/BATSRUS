@@ -1117,7 +1117,7 @@ contains
        NamePlotVar = NamePlotVar_V(iVar)
        call lower_case(NamePlotVar)
        select case(NamePlotVar)
-       case('dlogrhodx', 'dlogrhodx','dlogrhodx', &
+       case('dlogrhodx', 'dlogrhody','dlogrhodz', &
             'normx', 'normy', 'normz', 'comprho')
           if(.not. allocated(GradRho_DG)) &
                allocate(GradRho_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
