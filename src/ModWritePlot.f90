@@ -1071,7 +1071,7 @@ contains
     real, allocatable :: Current_DC(:,:,:,:)
     real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:), u_DG(:,:,:,:)
     real, allocatable :: GradRho_DG(:,:,:,:), ShockNorm_DG(:,:,:,:)
-    
+
     integer :: iVar, i3, j3, jVar, iIon, iFluid
     integer :: i,j,k
 
@@ -1090,7 +1090,7 @@ contains
     logical:: IsNewBlockCurrent
 
     real:: Coord_D(3), Norm_D(3), Dist, StateDn_V(nVar), StateUp_V(nVar)
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
     !--------------------------------------------------------------------------
@@ -1142,7 +1142,7 @@ contains
           end do; end do; end do
        end select
     end do
-    
+
     do iVar = 1, nPlotVar
        NamePlotVar = NamePlotVar_V(iVar)
 

@@ -933,7 +933,7 @@ contains
     if(DoTest)write(*,*) NameSub,' is called'
 
     iPicStatus_I = 0
-    
+
     do iRegion = 1, nRegionPic
        nX = nPatchCell_DI(x_, iRegion)
        nY = nPatchCell_DI(y_, iRegion)
