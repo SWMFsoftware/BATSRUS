@@ -3594,7 +3594,7 @@ Jx, Jy, Jz                   - current density
 n                            - number density
 T, Temp                      - temperature
 Pperp                        - perpendicular pressure
-Theta1, Theta2               - colatitude of mapped field line along B and -B
+Theta1, Theta2               - latitude of mapped field line along B and -B
 Phi1, Phi2                   - longitude  of mapped field line along B and -B
 Status                       - field line topology
         (0: open, 1: closed along B, 2: closed along -B 3: fully closed)
@@ -7655,14 +7655,14 @@ If there is no ionosphere and no body then the default is rTrace=-1.
 
   
 <command name="TRACELIMIT" alias="RAYTRACELIMIT">
-  <parameter name="TraceLengthMax" type="real" default="100"/>
+  <parameter name="TraceLengthMax" type="real" default="200"/>
 
 #TRACELIMIT
 50			TraceLengthMax
 
 TraceLengthMax provides the maximum length for tracing a field/stream line.
 This avoid tracing extremely long field lines that are not used later.
-The default is 100 units.
+The default is 200 units.
 </command>
 
 

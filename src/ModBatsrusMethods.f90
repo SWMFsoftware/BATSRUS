@@ -1051,7 +1051,7 @@ contains
                DoAssignNodeNumbers = .false.
             end if
 
-            if(  index(TypePlot_I(iFile),'Trace_DSNB')>0 .or. &
+            if(  index(TypePlot_I(iFile),'ray')>0 .or. &
                  index(StringPlotVar_I(iFile),'status')>0)then
                call trace_field_grid
                call sync_cpu_gpu('update on CPU', NameSub, &
