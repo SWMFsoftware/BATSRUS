@@ -1052,9 +1052,10 @@ contains
          i_status_pic_criteria, iStatusPicCrit_CB, calc_crit_entropy,&
          calc_crit_jb, calc_crit_jbperp, CriteriaB1, DivCurvature_CB
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
+    use ModInterpolate, ONLY: trilinear
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, &
-         Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB
+         Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB, CoordMin_DB
 
     use ModUserInterface ! user_set_plot_var
 
@@ -1069,7 +1070,8 @@ contains
     real:: FullB2, FullBRhoU
     real, allocatable :: Current_DC(:,:,:,:)
     real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:), u_DG(:,:,:,:)
-
+    real, allocatable :: GradRho_DG(:,:,:,:), ShockNorm_DG(:,:,:,:)
+    
     integer :: iVar, i3, j3, jVar, iIon, iFluid
     integer :: i,j,k
 
@@ -1087,6 +1089,8 @@ contains
     ! Passed to and set by get_face_curl
     logical:: IsNewBlockCurrent
 
+    real:: Coord_D(3), Norm_D(3), Dist, StateDn_V(nVar), StateUp_V(nVar)
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
     !--------------------------------------------------------------------------
@@ -1109,6 +1113,36 @@ contains
     ! Set default value to zero
     PlotVar_GV = 0.0
 
+    do iVar = 1, nPlotVar
+       NamePlotVar = NamePlotVar_V(iVar)
+       call lower_case(NamePlotVar)
+       select case(NamePlotVar)
+       case('dlogrhodx', 'dlogrhodx','dlogrhodx', &
+            'normx', 'normy', 'normz', 'comprho')
+          if(.not. allocated(GradRho_DG)) &
+               allocate(GradRho_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          GradRho_DG = 0.0
+          if(.not. allocated(Var_G)) &
+               allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          ! Log of density gradient
+          Var_G = log10(State_VGB(rho_,:,:,:,iBlock))
+          call calc_gradient(iBlock, Var_G, nG, GradRho_DG)
+       end select
+       select case(NamePlotVar)
+       case('normx', 'normy', 'normz', 'comprho')
+          if(.not. allocated(ShockNorm_DG)) &
+               allocate(ShockNorm_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             if(norm2(GradRho_DG(:,i,j,k)) < 0.001)then
+                ShockNorm_DG(:,i,j,k) = [1., 0., 0.]
+             else
+                ShockNorm_DG(:,i,j,k) = -GradRho_DG(:,i,j,k) &
+                     / norm2(GradRho_DG(:,i,j,k))
+             end if
+          end do; end do; end do
+       end select
+    end do
+    
     do iVar = 1, nPlotVar
        NamePlotVar = NamePlotVar_V(iVar)
 
@@ -1307,6 +1341,48 @@ contains
           Var_G = log10(State_VGB(P_,:,:,:,iBlock))
           call calc_gradient(iBlock, Var_G, nG, GradPe_DG)
           PlotVar_GV(:,:,:,iVar) = sqrt(sum(GradPe_DG**2, DIM=1))
+       case('dlogrhodx')
+          PlotVar_GV(:,:,:,iVar) = GradRho_DG(1,:,:,:)
+       case('dlogrhody')
+          PlotVar_GV(:,:,:,iVar) = GradRho_DG(2,:,:,:)
+       case('dlogrhodz')
+          PlotVar_GV(:,:,:,iVar) = GradRho_DG(3,:,:,:)
+       case('normx')
+          PlotVar_GV(:,:,:,iVar) = ShockNorm_DG(1,:,:,:)
+       case('normy')
+          PlotVar_GV(:,:,:,iVar) = ShockNorm_DG(2,:,:,:)
+       case('normz')
+          PlotVar_GV(:,:,:,iVar) = ShockNorm_DG(3,:,:,:)
+       case('comprho')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             ! 2 cell distance
+             Dist = 2*minval(CellSize_DB(:,iBlock)/ &
+                  max(1e-30, abs(ShockNorm_DG(:,i,j,k))))
+             Coord_D = Xyz_DGB(:,i,j,k,iBlock) + Dist*ShockNorm_DG(:,i,j,k)
+             Norm_D = &
+                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
+             if(DoTest)then
+                write(*,*)'i,j,k,iBlock,Xyz=', i,j,k,Xyz_DGB(:,i,j,k,iBlock)
+                write(*,*)'ShockNorm_D     =', ShockNorm_DG(:,i,j,k)
+                write(*,*)'CellSize_D      =', CellSize_DB(:,iBlock)
+                write(*,*)'Dist            =', Dist
+                write(*,*)'CoordUp_D       =', Coord_D
+                write(*,*)'NormUp_D        =', Norm_D
+             end if
+             StateUp_V = trilinear(State_VGB(:,:,:,:,iBlock), &
+                  nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
+             Coord_D = Xyz_DGB(:,i,j,k,iBlock) - Dist*ShockNorm_DG(:,i,j,k)
+             Norm_D = &
+                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
+             if(DoTest)then
+                write(*,*)'CoordDn_D       =', Coord_D
+                write(*,*)'NormDn_D        =', Norm_D
+             end if
+             StateDn_V = trilinear(State_VGB(:,:,:,:,iBlock), &
+                  nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
+             PlotVar_GV(i,j,k,iVar) = &
+                  StateDn_V(Rho_)/max(1e-30, StateUp_V(Rho_))
+          end do; end do; end do
        case('b1x')
           PlotVar_GV(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBlock)
        case('b1y')
