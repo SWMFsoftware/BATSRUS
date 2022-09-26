@@ -1404,7 +1404,7 @@ contains
              StateUp_V = trilinear(State_VGB(:,:,:,:,iBlock), &
                   nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
              ! shock upstream thetaBN
-             PlotVar_GV(i,j,k,iVar) = acos(sum(StateUp_V(Bx_:B_z)* &
+             PlotVar_GV(i,j,k,iVar) = acos(sum(StateUp_V(Bx_:Bz_)* &
                   ShockNorm_DG(:,i,j,k))/max(1e-30,norm2(StateUp_V(Bx_:Bz_))))
           end do; end do; end do
        case('thetaBN2')
@@ -1426,7 +1426,7 @@ contains
              StateDn_V = trilinear(State_VGB(:,:,:,:,iBlock), &
                   nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
              ! shock downstream thetaBN
-             PlotVar_GV(i,j,k,iVar) = acos(sum(StateDn_V(Bx_:B_z)* &
+             PlotVar_GV(i,j,k,iVar) = acos(sum(StateDn_V(Bx_:Bz_)* &
                   ShockNorm_DG(:,i,j,k))/max(1e-30,norm2(StateDn_V(Bx_:Bz_))))
           end do; end do; end do
        case('b1x')
