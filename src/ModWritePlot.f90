@@ -1070,7 +1070,7 @@ contains
     real:: FullB2, FullBRhoU
     real, allocatable :: Current_DC(:,:,:,:)
     real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:), u_DG(:,:,:,:)
-    real, allocatable :: GradRho_DG(:,:,:,:), ShockNorm_DG(:,:,:,:)
+    real, allocatable :: ShockNorm_DG(:,:,:,:)
 
     integer :: iVar, i3, j3, jVar, iIon, iFluid
     integer :: i,j,k
@@ -1089,7 +1089,8 @@ contains
     ! Passed to and set by get_face_curl
     logical:: IsNewBlockCurrent
 
-    real:: Coord_D(3), Norm_D(3), Dist, StateDn_V(nVar), StateUp_V(nVar)
+    real:: Coord_D(3), Norm_D(3), Dist
+    real:: StateDn_V(nVar), StateUp_V(nVar), b_D(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
@@ -1117,29 +1118,23 @@ contains
        NamePlotVar = NamePlotVar_V(iVar)
        call lower_case(NamePlotVar)
        select case(NamePlotVar)
-       case('dlogrhodx', 'dlogrhody','dlogrhodz', &
-            'normx', 'normy', 'normz', 'comprho', &
-            'thetaBN1', 'thetaBN2')
-          if(.not. allocated(GradRho_DG)) &
-               allocate(GradRho_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-          GradRho_DG = 0.0
+       case('normx', 'normy', 'normz', 'comprho', 'thetaup', 'thetadn')
+          if(.not. allocated(ShockNorm_DG)) &
+               allocate(ShockNorm_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          ShockNorm_DG = 0.0
           if(.not. allocated(Var_G)) &
                allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           ! Log of density gradient
           Var_G = log10(State_VGB(rho_,:,:,:,iBlock))
-          call calc_gradient(iBlock, Var_G, nG, GradRho_DG)
-       end select
-       select case(NamePlotVar)
-       case('normx', 'normy', 'normz', 'comprho', &
-            'thetaBN1', 'thetaBN2')
-          if(.not. allocated(ShockNorm_DG)) &
-               allocate(ShockNorm_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          call calc_gradient(iBlock, Var_G, nG, ShockNorm_DG)
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             if(norm2(GradRho_DG(:,i,j,k)) < 0.001)then
+             if(norm2(ShockNorm_DG(:,i,j,k)) < 0.001)then
+                ! Some arbitrary unit vector
                 ShockNorm_DG(:,i,j,k) = [1., 0., 0.]
              else
-                ShockNorm_DG(:,i,j,k) = -GradRho_DG(:,i,j,k) &
-                     / norm2(GradRho_DG(:,i,j,k))
+                ! Grad rho points opposite of standard shock normal (velocity)
+                ShockNorm_DG(:,i,j,k) = -ShockNorm_DG(:,i,j,k) &
+                     / norm2(ShockNorm_DG(:,i,j,k))
              end if
           end do; end do; end do
        end select
@@ -1343,12 +1338,6 @@ contains
           Var_G = log10(State_VGB(P_,:,:,:,iBlock))
           call calc_gradient(iBlock, Var_G, nG, GradPe_DG)
           PlotVar_GV(:,:,:,iVar) = sqrt(sum(GradPe_DG**2, DIM=1))
-       case('dlogrhodx')
-          PlotVar_GV(:,:,:,iVar) = GradRho_DG(1,:,:,:)
-       case('dlogrhody')
-          PlotVar_GV(:,:,:,iVar) = GradRho_DG(2,:,:,:)
-       case('dlogrhodz')
-          PlotVar_GV(:,:,:,iVar) = GradRho_DG(3,:,:,:)
        case('normx')
           PlotVar_GV(:,:,:,iVar) = ShockNorm_DG(1,:,:,:)
        case('normy')
@@ -1385,7 +1374,7 @@ contains
              PlotVar_GV(i,j,k,iVar) = &
                   StateDn_V(Rho_)/max(1e-30, StateUp_V(Rho_))
           end do; end do; end do
-       case('thetaBN1')
+       case('thetaup')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ! 2 cell distance
              Dist = 2*minval(CellSize_DB(:,iBlock)/ &
@@ -1403,11 +1392,17 @@ contains
              end if
              StateUp_V = trilinear(State_VGB(:,:,:,:,iBlock), &
                   nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
+             if(UseB0)then
+                b_D = trilinear(FullB_DG(:,:,:,:), &
+                     3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
+             else
+                b_D = StateUp_V(Bx_:Bz_)
+             end if
              ! shock upstream thetaBN
-             PlotVar_GV(i,j,k,iVar) = acos(sum(StateUp_V(Bx_:Bz_)* &
-                  ShockNorm_DG(:,i,j,k))/max(1e-30,norm2(StateUp_V(Bx_:Bz_))))
+             PlotVar_GV(i,j,k,iVar) = cRadToDeg*acos(abs( &
+                  sum(b_D*ShockNorm_DG(:,i,j,k))/max(1e-30, norm2(b_D))))
           end do; end do; end do
-       case('thetaBN2')
+       case('thetadn')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ! 2 cell distance
              Dist = 2*minval(CellSize_DB(:,iBlock)/ &
@@ -1425,9 +1420,15 @@ contains
              end if
              StateDn_V = trilinear(State_VGB(:,:,:,:,iBlock), &
                   nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
-             ! shock downstream thetaBN
-             PlotVar_GV(i,j,k,iVar) = acos(sum(StateDn_V(Bx_:Bz_)* &
-                  ShockNorm_DG(:,i,j,k))/max(1e-30,norm2(StateDn_V(Bx_:Bz_))))
+             if(UseB0)then
+                b_D = trilinear(FullB_DG(:,:,:,:), &
+                     3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
+             else
+                b_D = StateUp_V(Bx_:Bz_)
+             end if
+             ! shock downstream thetaBN             
+             PlotVar_GV(i,j,k,iVar) = cRadToDeg*acos(abs( &
+                  sum(b_D*ShockNorm_DG(:,i,j,k))/max(1e-30, norm2(b_D))))
           end do; end do; end do
        case('b1x')
           PlotVar_GV(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBlock)
@@ -1696,16 +1697,17 @@ contains
              where(.not.Used_GB(:,:,:,iBlock)) PlotVar_GV(:,:,:,iVar) = 0.0
           endif
 
-       case('theta1','req1','theta2','req2','phi1','phi2','status')
+       case('theta1','req1','theta2','req2','phi1','phi2','status', &
+            'lon1', 'lat1', 'lon2', 'lat2')
           ! BASIC RAYTRACE variables
           select case(String)
-          case ('theta1', 'req1')
+          case ('theta1', 'lat1', 'req1')
              i3 = 1 ; j3 = 1
-          case ('theta2', 'req2')
+          case ('theta2', 'lat2', 'req2')
              i3 = 1 ; j3 = 2
-          case ('phi1')
+          case ('phi1', 'lon1')
              i3 = 2 ; j3 = 1
-          case ('phi2')
+          case ('phi2', 'lon2')
              i3 = 2 ; j3 = 2
           case ('status')
              i3 = 3 ; j3 = 1
@@ -2152,7 +2154,8 @@ contains
           NameUnit = NameIdlUnit_V(UnitPoynting_)
        case('divb','divb_cd','divb_ct','absdivb')
           NameUnit = NameIdlUnit_V(UnitDivB_)
-       case('theta1','phi1','theta2','phi2')
+       case('lon1', 'lat1', 'lon2', 'lat2', 'thetaup', 'thetadn', &
+            'theta1', 'phi1', 'theta2', 'phi2') ! backward compatible
           NameUnit = NameIdlUnit_V(UnitAngle_)
        case('status','f1x','f1y','f1z','f2x','f2y','f2z')
           NameUnit = '--'
