@@ -1333,7 +1333,7 @@ contains
              b_D = StateUp_VC(Bx_:Bz_,i,j,k)
              PlotVar_GV(i,j,k,iVar) = cRadToDeg*acos( &
                   abs(sum(b_D*ShockNorm_DC(:,i,j,k))/max(1e-30, norm2(b_D))))
-          end do; end do; end do          
+          end do; end do; end do
        case('thetadn')
           ! Downstream angle between full B and shock normal
           call set_shock_var
@@ -1846,7 +1846,7 @@ contains
       real:: Length, d1, d2, d3, dMax
       real:: d_D(3), s_D(3), NormUp_D(3), NormDn_D(3)
       integer:: i, j, k
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       if(allocated(ShockNorm_DC)) RETURN
       allocate(ShockNorm_DC(3,nI,nJ,nK), &
            StateDn_VC(nVar,nI,nJ,nK), StateUp_VC(nVar,nI,nJ,nK))
