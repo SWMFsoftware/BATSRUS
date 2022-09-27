@@ -1054,7 +1054,7 @@ contains
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use ModInterpolate, ONLY: trilinear
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
-         iTimeLevel_A, AmrCrit_IB, nAmrCrit, &
+         iTimeLevel_A, AmrCrit_IB, nAmrCrit, IsCartesian, &
          Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB, CoordMin_DB
 
     use ModUserInterface ! user_set_plot_var
@@ -1070,14 +1070,15 @@ contains
     real:: FullB2, FullBRhoU
     real, allocatable :: Current_DC(:,:,:,:)
     real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:), u_DG(:,:,:,:)
-    real, allocatable :: ShockNorm_DG(:,:,:,:)
+    real, allocatable :: ShockNorm_DC(:,:,:,:)
+    real, allocatable :: StateDn_VC(:,:,:,:), StateUp_VC(:,:,:,:)
 
     integer :: iVar, i3, j3, jVar, iIon, iFluid
-    integer :: i,j,k
+    integer :: i, j, k
 
     integer:: iDir, nShiftI, nShiftJ, nShiftK
     real:: Current_D(3)
-    real:: FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real:: FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), b_D(3)
 
     logical :: IsFound
 
@@ -1088,9 +1089,6 @@ contains
 
     ! Passed to and set by get_face_curl
     logical:: IsNewBlockCurrent
-
-    real:: Coord_D(3), Norm_D(3), Dist
-    real:: StateDn_V(nVar), StateUp_V(nVar), b_D(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
@@ -1116,32 +1114,6 @@ contains
 
     do iVar = 1, nPlotVar
        NamePlotVar = NamePlotVar_V(iVar)
-       call lower_case(NamePlotVar)
-       select case(NamePlotVar)
-       case('normx', 'normy', 'normz', 'comprho', 'thetaup', 'thetadn')
-          if(.not. allocated(ShockNorm_DG)) &
-               allocate(ShockNorm_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-          ShockNorm_DG = 0.0
-          if(.not. allocated(Var_G)) &
-               allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-          ! Log of density gradient
-          Var_G = log10(State_VGB(rho_,:,:,:,iBlock))
-          call calc_gradient(iBlock, Var_G, nG, ShockNorm_DG)
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             if(norm2(ShockNorm_DG(:,i,j,k)) < 0.001)then
-                ! Some arbitrary unit vector
-                ShockNorm_DG(:,i,j,k) = [1., 0., 0.]
-             else
-                ! Grad rho points opposite of standard shock normal (velocity)
-                ShockNorm_DG(:,i,j,k) = -ShockNorm_DG(:,i,j,k) &
-                     / norm2(ShockNorm_DG(:,i,j,k))
-             end if
-          end do; end do; end do
-       end select
-    end do
-
-    do iVar = 1, nPlotVar
-       NamePlotVar = NamePlotVar_V(iVar)
 
        ! Default values for TecPlot variable name
        ! and TecPlot and IDL unit names
@@ -1150,8 +1122,9 @@ contains
        NameUnitUserIdl_I(iVar) = '?'
 
        call lower_case(NamePlotVar)
+
        String = NamePlotVar
-       call extract_fluid_name(String,iFluid)
+       call extract_fluid_name(String, iFluid)
 
        ! Set PlotVarBody_V to something reasonable for inside the body.
        ! Load zeros (0) for most values - load something better for
@@ -1339,96 +1312,35 @@ contains
           call calc_gradient(iBlock, Var_G, nG, GradPe_DG)
           PlotVar_GV(:,:,:,iVar) = sqrt(sum(GradPe_DG**2, DIM=1))
        case('normx')
-          PlotVar_GV(:,:,:,iVar) = ShockNorm_DG(1,:,:,:)
+          call set_shock_var
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = ShockNorm_DC(1,:,:,:)
        case('normy')
-          PlotVar_GV(:,:,:,iVar) = ShockNorm_DG(2,:,:,:)
+          call set_shock_var
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = ShockNorm_DC(2,:,:,:)
        case('normz')
-          PlotVar_GV(:,:,:,iVar) = ShockNorm_DG(3,:,:,:)
+          call set_shock_var
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = ShockNorm_DC(3,:,:,:)
        case('comprho')
+          call set_shock_var
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             ! 2 cell distance
-             Dist = 2*minval(CellSize_DB(:,iBlock)/ &
-                  max(1e-30, abs(ShockNorm_DG(:,i,j,k))))
-             Coord_D = Xyz_DGB(:,i,j,k,iBlock) + Dist*ShockNorm_DG(:,i,j,k)
-             Norm_D = &
-                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
-             if(DoTest)then
-                write(*,*)'i,j,k,iBlock,Xyz=', i,j,k,Xyz_DGB(:,i,j,k,iBlock)
-                write(*,*)'ShockNorm_D     =', ShockNorm_DG(:,i,j,k)
-                write(*,*)'CellSize_D      =', CellSize_DB(:,iBlock)
-                write(*,*)'Dist            =', Dist
-                write(*,*)'CoordUp_D       =', Coord_D
-                write(*,*)'NormUp_D        =', Norm_D
-             end if
-             StateUp_V = trilinear(State_VGB(:,:,:,:,iBlock), &
-                  nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
-             Coord_D = Xyz_DGB(:,i,j,k,iBlock) - Dist*ShockNorm_DG(:,i,j,k)
-             Norm_D = &
-                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
-             if(DoTest)then
-                write(*,*)'CoordDn_D       =', Coord_D
-                write(*,*)'NormDn_D        =', Norm_D
-             end if
-             StateDn_V = trilinear(State_VGB(:,:,:,:,iBlock), &
-                  nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
              PlotVar_GV(i,j,k,iVar) = &
-                  StateDn_V(Rho_)/max(1e-30, StateUp_V(Rho_))
+                  StateDn_VC(Rho_,i,j,k)/max(1e-30, StateUp_VC(Rho_,i,j,k))
           end do; end do; end do
        case('thetaup')
+          ! upstream angle between full B and shock normal
+          call set_shock_var
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             ! 2 cell distance
-             Dist = 2*minval(CellSize_DB(:,iBlock)/ &
-                  max(1e-30, abs(ShockNorm_DG(:,i,j,k))))
-             Coord_D = Xyz_DGB(:,i,j,k,iBlock) + Dist*ShockNorm_DG(:,i,j,k)
-             Norm_D = &
-                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
-             if(DoTest)then
-                write(*,*)'i,j,k,iBlock,Xyz=', i,j,k,Xyz_DGB(:,i,j,k,iBlock)
-                write(*,*)'ShockNorm_D     =', ShockNorm_DG(:,i,j,k)
-                write(*,*)'CellSize_D      =', CellSize_DB(:,iBlock)
-                write(*,*)'Dist            =', Dist
-                write(*,*)'CoordUp_D       =', Coord_D
-                write(*,*)'NormUp_D        =', Norm_D
-             end if
-             StateUp_V = trilinear(State_VGB(:,:,:,:,iBlock), &
-                  nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
-             if(UseB0)then
-                b_D = trilinear(FullB_DG(:,:,:,:), &
-                     3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
-             else
-                b_D = StateUp_V(Bx_:Bz_)
-             end if
-             ! shock upstream thetaBN
-             PlotVar_GV(i,j,k,iVar) = cRadToDeg*acos(abs( &
-                  sum(b_D*ShockNorm_DG(:,i,j,k))/max(1e-30, norm2(b_D))))
-          end do; end do; end do
+             b_D = StateUp_VC(Bx_:Bz_,i,j,k)
+             PlotVar_GV(i,j,k,iVar) = cRadToDeg*acos( &
+                  abs(sum(b_D*ShockNorm_DC(:,i,j,k))/max(1e-30, norm2(b_D))))
+          end do; end do; end do          
        case('thetadn')
+          ! Downstream angle between full B and shock normal
+          call set_shock_var
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             ! 2 cell distance
-             Dist = 2*minval(CellSize_DB(:,iBlock)/ &
-                  max(1e-30, abs(ShockNorm_DG(:,i,j,k))))
-             Coord_D = Xyz_DGB(:,i,j,k,iBlock) - Dist*ShockNorm_DG(:,i,j,k)
-             Norm_D = &
-                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
-             if(DoTest)then
-                write(*,*)'i,j,k,iBlock,Xyz=', i,j,k,Xyz_DGB(:,i,j,k,iBlock)
-                write(*,*)'ShockNorm_D     =', ShockNorm_DG(:,i,j,k)
-                write(*,*)'CellSize_D      =', CellSize_DB(:,iBlock)
-                write(*,*)'Dist            =', Dist
-                write(*,*)'CoordDn_D       =', Coord_D
-                write(*,*)'NormDn_D        =', Norm_D
-             end if
-             StateDn_V = trilinear(State_VGB(:,:,:,:,iBlock), &
-                  nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
-             if(UseB0)then
-                b_D = trilinear(FullB_DG(:,:,:,:), &
-                     3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
-             else
-                b_D = StateUp_V(Bx_:Bz_)
-             end if
-             ! shock downstream thetaBN             
-             PlotVar_GV(i,j,k,iVar) = cRadToDeg*acos(abs( &
-                  sum(b_D*ShockNorm_DG(:,i,j,k))/max(1e-30, norm2(b_D))))
+             b_D = StateDn_VC(Bx_:Bz_,i,j,k)
+             PlotVar_GV(i,j,k,iVar) = cRadToDeg*acos( &
+                  abs(sum(b_D*ShockNorm_DC(:,i,j,k))/max(1e-30, norm2(b_D))))
           end do; end do; end do
        case('b1x')
           PlotVar_GV(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBlock)
@@ -1921,8 +1833,108 @@ contains
     if(allocated(Current_DC)) deallocate(Current_DC)
     if(allocated(Var_G)) deallocate(Var_G)
     if(allocated(GradPe_DG)) deallocate(GradPe_DG)
+    if(allocated(ShockNorm_DC))deallocate(ShockNorm_DC, StateDn_VC, StateUp_VC)
 
     call test_stop(NameSub, DoTest, iBlock)
+
+  contains
+    !==========================================================================
+    subroutine set_shock_var
+
+      ! Set variables related to shocks
+
+      real:: Length, d1, d2, d3, dMax
+      real:: d_D(3), s_D(3), NormUp_D(3), NormDn_D(3)
+      integer:: i, j, k
+      !-----------------------------------------------------------------------
+      if(allocated(ShockNorm_DC)) RETURN
+      allocate(ShockNorm_DC(3,nI,nJ,nK), &
+           StateDn_VC(nVar,nI,nJ,nK), StateUp_VC(nVar,nI,nJ,nK))
+
+      ! Calculate shock normal from density gradient (no ghost cells)
+      call calc_gradient(iBlock, State_VGB(rho_,:,:,:,iBlock), 0, ShockNorm_DC)
+
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
+         ! Normalize shock normal
+         Length = norm2(ShockNorm_DC(:,i,j,k))
+         if(Length < 1e-30)then
+            ! Some arbitrary unit vector
+            ShockNorm_DC(:,i,j,k) = [1., 0., 0.]
+         else
+            ! Grad rho points opposite of standard shock normal (velocity)
+            ShockNorm_DC(:,i,j,k) = -ShockNorm_DC(:,i,j,k)/Length
+         end if
+
+         ! Caclulate upstream and downstream states
+         ! Shock normal vector
+         s_D = ShockNorm_DC(:,i,j,k)
+
+         if(IsCartesian)then
+            ! Get the length of the vector that stays within 2 cell dist
+            Length = 2/maxval(abs(s_D)/CellSize_DB(:,iBlock))
+            ! Upstream point in normalized coordinates
+            NormUp_D = 0.5 + (Xyz_DGB(:,i,j,k,iBlock) + Length*s_D &
+                 - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock)
+            ! Downstream point
+            NormDn_D = 0.5 + (Xyz_DGB(:,i,j,k,iBlock) - Length*s_D &
+                 - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock)
+         else
+            ! Calculate components of s_d in the local generalized
+            ! coordinate system in units of the 2 cell size distance
+
+            ! Cartesian vector pointing from i-2 to i
+            d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)
+            d1 = sum(d_D*s_D)/sum(d_D**2)
+            dMax = abs(d1)
+
+            if(nDim > 1)then
+               d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)
+               d2 = sum(d_D*s_D)/sum(d_D**2)
+               dMax = max(dMax, abs(d2))
+            else
+               d2 = 0.0
+            end if
+
+            if(nDim == 3)then
+               d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)
+               d3 = sum(d_D*s_D)/sum(d_D**2)
+               dMax = max(dMax, abs(d3))
+            else
+               d3 = 0.0
+            end if
+
+            ! Scale components so that maximum is 2.0 (= 2 cells)
+            d1 = 2*d1/dMax; d2 = 2*d2/dMax; d3 = 2*d3/dMax
+
+            ! Normalized coordinates of upstream and downstream points
+            NormUp_D = [i+d1, j+d2, k+d3]
+            NormDn_D = [i-d1, j-d2, k-d3]
+
+         end if
+
+         if(DoTest)then
+            write(*,*)'i,j,k,iBlock,Xyz=', i, j, k, iBlock, &
+                 Xyz_DGB(:,i,j,k,iBlock)
+            write(*,*)'ShockNorm_D     =', ShockNorm_DC(:,i,j,k)
+            write(*,*)'CellSize_D      =', CellSize_DB(:,iBlock)
+            write(*,*)'NormUp_D        =', NormUp_D
+            write(*,*)'NormDn_D        =', NormDn_D
+         end if
+         StateUp_VC(:,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
+              nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormUp_D)
+         StateDn_VC(:,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
+              nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
+         if(UseB0)then
+            ! Set full field in Bx_:Bz_
+            StateUp_VC(Bx_:Bz_,i,j,k) = trilinear(FullB_DG, &
+                 3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormUp_D)
+            StateDn_VC(Bx_:Bz_,i,j,k) = trilinear(FullB_DG, &
+                 3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
+         end if
+      end do; end do; end do
+
+    end subroutine set_shock_var
+    !==========================================================================
   end subroutine set_plotvar
   !============================================================================
   subroutine dimensionalize_plotvar(iBlock, iPlotFile, nPlotVar, &
@@ -2273,6 +2285,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine adjust_plot_range
   !============================================================================
-
 end module ModWritePlot
 !==============================================================================
