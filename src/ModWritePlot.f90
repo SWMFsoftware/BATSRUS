@@ -1118,7 +1118,8 @@ contains
        call lower_case(NamePlotVar)
        select case(NamePlotVar)
        case('dlogrhodx', 'dlogrhody','dlogrhodz', &
-            'normx', 'normy', 'normz', 'comprho')
+            'normx', 'normy', 'normz', 'comprho', &
+            'thetaBN1', 'thetaBN2')
           if(.not. allocated(GradRho_DG)) &
                allocate(GradRho_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           GradRho_DG = 0.0
@@ -1129,7 +1130,8 @@ contains
           call calc_gradient(iBlock, Var_G, nG, GradRho_DG)
        end select
        select case(NamePlotVar)
-       case('normx', 'normy', 'normz', 'comprho')
+       case('normx', 'normy', 'normz', 'comprho', &
+            'thetaBN1', 'thetaBN2')
           if(.not. allocated(ShockNorm_DG)) &
                allocate(ShockNorm_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -1382,6 +1384,50 @@ contains
                   nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
              PlotVar_GV(i,j,k,iVar) = &
                   StateDn_V(Rho_)/max(1e-30, StateUp_V(Rho_))
+          end do; end do; end do
+       case('thetaBN1')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             ! 2 cell distance
+             Dist = 2*minval(CellSize_DB(:,iBlock)/ &
+                  max(1e-30, abs(ShockNorm_DG(:,i,j,k))))
+             Coord_D = Xyz_DGB(:,i,j,k,iBlock) + Dist*ShockNorm_DG(:,i,j,k)
+             Norm_D = &
+                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
+             if(DoTest)then
+                write(*,*)'i,j,k,iBlock,Xyz=', i,j,k,Xyz_DGB(:,i,j,k,iBlock)
+                write(*,*)'ShockNorm_D     =', ShockNorm_DG(:,i,j,k)
+                write(*,*)'CellSize_D      =', CellSize_DB(:,iBlock)
+                write(*,*)'Dist            =', Dist
+                write(*,*)'CoordUp_D       =', Coord_D
+                write(*,*)'NormUp_D        =', Norm_D
+             end if
+             StateUp_V = trilinear(State_VGB(:,:,:,:,iBlock), &
+                  nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
+             ! shock upstream thetaBN
+             PlotVar_GV(i,j,k,iVar) = acos(sum(StateUp_V(Bx_:Bz_)* &
+                  ShockNorm_DG(:,i,j,k))/max(1e-30,norm2(StateUp_V(Bx_:Bz_))))
+          end do; end do; end do
+       case('thetaBN2')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             ! 2 cell distance
+             Dist = 2*minval(CellSize_DB(:,iBlock)/ &
+                  max(1e-30, abs(ShockNorm_DG(:,i,j,k))))
+             Coord_D = Xyz_DGB(:,i,j,k,iBlock) - Dist*ShockNorm_DG(:,i,j,k)
+             Norm_D = &
+                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
+             if(DoTest)then
+                write(*,*)'i,j,k,iBlock,Xyz=', i,j,k,Xyz_DGB(:,i,j,k,iBlock)
+                write(*,*)'ShockNorm_D     =', ShockNorm_DG(:,i,j,k)
+                write(*,*)'CellSize_D      =', CellSize_DB(:,iBlock)
+                write(*,*)'Dist            =', Dist
+                write(*,*)'CoordDn_D       =', Coord_D
+                write(*,*)'NormDn_D        =', Norm_D
+             end if
+             StateDn_V = trilinear(State_VGB(:,:,:,:,iBlock), &
+                  nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Norm_D)
+             ! shock downstream thetaBN
+             PlotVar_GV(i,j,k,iVar) = acos(sum(StateDn_V(Bx_:Bz_)* &
+                  ShockNorm_DG(:,i,j,k))/max(1e-30,norm2(StateDn_V(Bx_:Bz_))))
           end do; end do; end do
        case('b1x')
           PlotVar_GV(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBlock)
