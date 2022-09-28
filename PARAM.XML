@@ -3433,15 +3433,15 @@ Ux Uy Uz            - average velocity on the grid
 Ekinx Ekiny Ekinz   - average kinetic energy in X, Y and Z directions
 Ekin                - average kinetic energy
 Erad Ew             - average radiation/wave energy (summed for all groups/waves)
-Theta1 Theta2       - average of colatitude of fieldline tracing (for testing)
-Phi1 Phi2 Status    - average of longitude and status of fieldline (for testing)
+Lat1 Lat2           - average of latitude of fieldline tracing (for testing)
+Lon1 Lon2 Status    - average of longitude and status of fieldline (for testing)
 
 VARpnt              - point value of VAR (listed in NameVar_V) at the test cell
 Uxpnt Uypnt Uzpnt   - point value of velocity at test cell
 B1xpnt B1ypnt B1zpnt- point value of B1 field at test cell
 Jxpnt Jypnt Jzpnt   - point value of current density
-Theta1pnt Theta2pnt - point value of colatitude of fieldline mapping
-Phi1pnt Phi2pnt     - point value of longitude  of fieldline mapping
+Lat1pnt Lat2pnt     - point value of latitude of fieldline mapping
+Lon1pnt Lon2pnt     - point value of longitude of fieldline mapping
 Statuspnt           - point value of status of fieldline tracing from test cell:
   (0: open, 1: connected along B, 2: connected along -B, 3: closed)
 
@@ -3594,8 +3594,8 @@ Jx, Jy, Jz                   - current density
 n                            - number density
 T, Temp                      - temperature
 Pperp                        - perpendicular pressure
-Theta1, Theta2               - latitude of mapped field line along B and -B
-Phi1, Phi2                   - longitude  of mapped field line along B and -B
+Lon1, Lon2                   - longitude of mapped field line along B and -B
+Lat1, Lat2                   - latitude of mapped field line along B and -B
 Status                       - field line topology
         (0: open, 1: closed along B, 2: closed along -B 3: fully closed)
 	(-1: cells inside body, -2: loop ray within block, -3: strange)
@@ -3607,7 +3607,7 @@ component. In the list of log variables the X, Y and Z components of a
 given vector have to be all present and following each other in this order.
 
 If the optional OptionalVar part contains 'ray' then the ray (fieldline)
-tracing variables  'Theta1 Phi1 Theta2 Phi2 Status' are saved as well.
+tracing variables  'Lon1 Lat1 Lon2 Lat2 Status' are saved as well.
 The strings 'step', 'time' and 'date' define the corresponding
 time information. The value 'none' means that no time information is saved.
 \begin{verbatim}
@@ -3615,7 +3615,7 @@ time information. The value 'none' means that no time information is saved.
  step  - number of time steps
  date  - date-time as 7 integers:  year month day hour minute second millisecond
  time  - simulation time
- ray   - fieldline tracing variables: theta1 phi1 theta2 phi2 status
+ ray   - fieldline tracing variables: lon1 lat1 lon2 lat2 status
  traj  - extract information along the full trajectory file
  trajrange  - extract information along a part of the trajectory file
 \end{verbatim}
@@ -4517,7 +4517,7 @@ values or as non-dimensional values:
          pars: g rbody
  'raw' - vars: Conservative_Variables P b1x b1y b1z divb
          pars: g rbody
- 'ray' - vars: bx by bz theta1 phi1 theta2 phi2 status blk    (if DoMapEquatorRay=F)
+ 'ray' - vars: bx by bz lon1 lat1 lon2 lat2 status blk        (if DoMapEquatorRay=F)
          vars: bx by bz req1 phi1 req2 phi2 status blk        (if DoMapEquatorRay=T)
          pars: rbody
  'eqr' - vars: iLine l x y z rho ux uy uz bx by bz p rCurve   (for all rays traced)
