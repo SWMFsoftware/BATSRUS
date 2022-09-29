@@ -478,7 +478,8 @@ contains
        ! If any tracing satellite variables are present, collect trace data
        do iVar=1, nLogVar
           select case(NameLogVar_I(iVar))
-          case('theta1','theta2','phi1','phi2','status')
+          case('lon1', 'lon2', 'lat1', 'lat2', 'status', &
+               'theta1', 'theta2', 'phi1', 'phi2') ! backward compatible
              call get_satellite_ray(iSat, SatRayVar_I)
              if(nProc > 1)call MPI_reduce_real_array(SatRayVar_I, 5, MPI_SUM, &
                   0, iComm, iError)
@@ -977,15 +978,16 @@ contains
               State_VGB(iRhoUz,iTest,jTest,kTest,iBlockTest) / &
               State_VGB(iRho,  iTest,jTest,kTest,iBlockTest)
          ! RAYTRACE variables averaged over volume
-      case('theta1', 'theta2', 'phi1', 'phi2','status')
+      case('lon1', 'lon2', 'lat1', 'lat2', 'status', &
+           'theta1', 'theta2', 'phi1', 'phi2') ! backward compatible
          select case(NameLogvar)
-         case('theta1')
+         case('lat1', 'theta1')
             i = 1; j = 1
-         case('theta2')
+         case('lat2', 'theta2')
             i = 1; j = 2
-         case('phi1')
+         case('lon1', 'phi1')
             i = 2; j = 1
-         case('phi2')
+         case('lon2', 'phi2')
             i = 2; j = 2
          case('status')
             i = 3; j = 1
@@ -997,16 +999,16 @@ contains
          end do
          LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
          ! RAYTRACE variables at iTest, jTest, kTest, iBlockTest, iProcTest
-      case('theta1pnt')
+      case('lat1pnt', 'theta1pnt') ! theta1pnt is backward compatible
          if(iProc == iProcTest) &
               LogVar_I(iVarTot) = Trace_DSNB(1,1,iTest,jTest,kTest,iBlockTest)
-      case('theta2pnt')
+      case('lat2pnt', 'theta2pnt')
          if(iProc == iProcTest) &
               LogVar_I(iVarTot) = Trace_DSNB(1,2,iTest,jTest,kTest,iBlockTest)
-      case('phi1pnt')
+      case('lon1pnt', 'phi1pnt')
          if(iProc == iProcTest) &
               LogVar_I(iVarTot) = Trace_DSNB(2,1,iTest,jTest,kTest,iBlockTest)
-      case('phi2pnt')
+      case('lon2pnt', 'phi2pnt')
          if(iProc == iProcTest) &
               LogVar_I(iVarTot) = Trace_DSNB(2,2,iTest,jTest,kTest,iBlockTest)
       case('statuspnt')
@@ -1289,15 +1291,15 @@ contains
          end if
 
          ! Raytracing footpoint values
-      case('theta1')
+      case('lat1', 'theta1') ! theta1 is backward compatible
          LogVar_I(iVarTot) = SatRayVar_I(1)
-      case('phi1')
+      case('lon1', 'phi1')
          LogVar_I(iVarTot) = SatRayVar_I(2)
       case('status')
          LogVar_I(iVarTot) = SatRayVar_I(3)
-      case('theta2')
+      case('lat2', 'theta2')
          LogVar_I(iVarTot) = SatRayVar_I(4)
-      case('phi2')
+      case('lon2', 'phi2')
          LogVar_I(iVarTot) = SatRayVar_I(5)
 
       case default

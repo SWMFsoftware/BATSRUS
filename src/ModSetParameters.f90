@@ -1418,7 +1418,7 @@ contains
                         'bx by bz req1 phi1 req2 phi2 status blk'
                 else
                    StringPlotVar_I(iFile) = &
-                        'bx by bz theta1 phi1 theta2 phi2 status blk'
+                        'bx by bz lon1 lat1 lon2 lat2 status blk'
                 end if
                 StringPlotParam_I(iFile)='rbody'
              elseif(   index(StringPlot,'RAW') > 0 &
