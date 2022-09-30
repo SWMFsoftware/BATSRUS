@@ -1312,7 +1312,7 @@ contains
           ! Calculate div(u)
           call calc_divergence(iBlock, u_DG, &
                nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
-          ! Calculate div(u)*dx/u
+          ! Calculate div(u)*dx
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar)* &
                norm2(CellSize_DB(:,iBlock))
           deallocate(u_DG)
