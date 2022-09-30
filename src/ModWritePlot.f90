@@ -1313,8 +1313,9 @@ contains
           call calc_divergence(iBlock, u_DG, &
                nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
           ! Calculate div(u)*dx
-          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar)* &
-               norm2(CellSize_DB(:,iBlock))
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             PlotVar_GV(i,j,k,iVar) = PlotVar_GV(i,j,k,iVar)*
+             norm2(Xyz_DGB(:,i+1,j+1,k+1,iBlock) - Xyz_DGB(:,i,j,k,iBlock))
           deallocate(u_DG)
        case('gradlogp')
           if(.not. allocated(GradPe_DG)) &
