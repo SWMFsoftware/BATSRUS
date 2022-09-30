@@ -1302,6 +1302,20 @@ contains
           call calc_divergence(iBlock, u_DG, &
                nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
           deallocate(u_DG)
+       case('divudx')
+          allocate(u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          ! Calculate velocity
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             u_DG(:,i,j,k) = State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)/ &
+                  State_VGB(iRho,i,j,k,iBlock)
+          end do; end do; end do
+          ! Calculate div(u)
+          call calc_divergence(iBlock, u_DG, &
+               nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
+          ! Calculate div(u)*dx/u
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar)* &
+               norm2(CellSize_DB(:,iBlock))
+          deallocate(u_DG)
        case('gradlogp')
           if(.not. allocated(GradPe_DG)) &
                allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
@@ -2016,7 +2030,8 @@ contains
        case('eta','visco')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *(No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
-       case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight')
+       case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight', &
+            'divudx')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitU_)
        case('divu')
