@@ -1055,7 +1055,7 @@ contains
     use ModInterpolate, ONLY: trilinear
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, IsCartesian, &
-         Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB, CoordMin_DB
+         Xyz_DGB, Xyz_DNB, iNode_B, CellSize_DB, CellVolume_GB, CoordMin_DB
 
     use ModUserInterface ! user_set_plot_var
 
@@ -1314,8 +1314,10 @@ contains
                nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
           ! Calculate div(u)*dx
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar_GV(i,j,k,iVar) = PlotVar_GV(i,j,k,iVar)*
-             norm2(Xyz_DNB(:,i+1,j+1,k+1,iBlock) - Xyz_DNB(:,i,j,k,iBlock))
+             PlotVar_GV(i,j,k,iVar) = PlotVar_GV(i,j,k,iVar)* &
+                  norm2(Xyz_DNB(:,i+1,j+1,k+1,iBlock) &
+                  -     Xyz_DNB(:,i,j,k,iBlock))
+          end do; end do; end do
           deallocate(u_DG)
        case('gradlogp')
           if(.not. allocated(GradPe_DG)) &
