@@ -1055,7 +1055,7 @@ contains
     use ModInterpolate, ONLY: trilinear
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, IsCartesian, &
-         Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB, CoordMin_DB
+         Xyz_DGB, Xyz_DNB, iNode_B, CellSize_DB, CellVolume_GB, CoordMin_DB
 
     use ModUserInterface ! user_set_plot_var
 
@@ -1301,6 +1301,23 @@ contains
           ! Calculate div(u)
           call calc_divergence(iBlock, u_DG, &
                nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
+          deallocate(u_DG)
+       case('divudx')
+          allocate(u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          ! Calculate velocity
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             u_DG(:,i,j,k) = State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)/ &
+                  State_VGB(iRho,i,j,k,iBlock)
+          end do; end do; end do
+          ! Calculate div(u)
+          call calc_divergence(iBlock, u_DG, &
+               nG, PlotVar_GV(:,:,:,iVar), UseBodyCellIn=.true.)
+          ! Calculate div(u)*dx
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             PlotVar_GV(i,j,k,iVar) = PlotVar_GV(i,j,k,iVar)* &
+                  norm2(Xyz_DNB(:,i+1,j+1,k+1,iBlock) &
+                  -     Xyz_DNB(:,i,j,k,iBlock))
+          end do; end do; end do
           deallocate(u_DG)
        case('gradlogp')
           if(.not. allocated(GradPe_DG)) &
@@ -2016,7 +2033,8 @@ contains
        case('eta','visco')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *(No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
-       case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight')
+       case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight', &
+            'divudx')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitU_)
        case('divu')
