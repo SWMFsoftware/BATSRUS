@@ -8111,6 +8111,8 @@ By default the whole domain covered by PIC grids can become active.
       <option name="beta"		/>
       <option name="divcurv"		/>
       <option name="entropy"            />
+      <option name="speed"              />
+      <option name="jy"                 />
     </parameter>
     <parameter name="MinCriteriaValue" type="real" default="0" />
     <parameter name="MaxCriteriaValue" type="real" min="$MinCriteriaValue" />
@@ -8140,13 +8142,14 @@ value.  The cell which satisfies all criteria will be active. This
 physics based selection can be limited geometrically by the
 #PICREGIONMIN and #PICREGIONMAX commands.
 
-The available criteria are "rho" (for testing), "beta" (the ratiro
+The available criteria are "rho" (for testing), "beta" (the ratio
 between plasma pressure and magnetic paressure), "j/b", "j/bperp"
-(current divided by magnetic field for finding current sheets) and
+(current divided by magnetic field for finding current sheets),
 "divcurv" (the divergence of the curvature of the magnetic field lines
-to distinguish X lines from flux ropes). Criteria "j/b" and "j/bperp"
-requires an extra input parameter for B1 in the denominator to avoid
-dividing by 0. Default value of B1 is 0.
+to distinguish X lines from flux ropes), "speed" (bulk flow speed to exclude
+magnetosheath), and "jy" (distinguish main current sheet in magnetotail).
+Criteria "j/b" and "j/bperp" require an extra input parameter for B1 in the 
+denominator to avoid dividing by 0. Default value of B1 is 0.
 
 By default the whole PIC region is active (possibly limited by #PICREGIONMAX).
 </command>
