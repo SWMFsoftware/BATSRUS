@@ -6965,37 +6965,6 @@ The defaults are LowDensityRatio=0.0001, LowPressureRatio=1e-10, and
 DoRestrictMultiIon=false.
 </command>
 
-<command name="MHDIONS">
-  <parameter name="DoAddRho"  type="logical" default="T"/>
-  <parameter name="DoAddRhoU" type="logical" default="T"/>
-#MHDIONS
-T			DoAddRho
-T			DoAddRhoU
-
-This command determines how the total MHD fluid and the individual ion
-fluids are reconciled after each time step. If both DoAddRho and
-DoAddRhoU are true, then the density and momentum of individual ion
-fluids are added up and the MHD solution is overwritten. This is
-mostly useful for testing purposes, because in this case it is better
-not to solve for the total fluid at all. This is the default, because
-it is BETTER not to solve for the total fluid.
-
-If DoAddRho is false then the density obtained by  the MHD scheme is used
-to adjust the densities of the ion fluids.
-They are scaled such that their sum matches the total fluid.
-
-If DoAddRhoU is false, the same scaling is done for the three
-components of the ion momenta as long as all ion velocities have the
-same signs!  If the signs are mixed, the total momentum is replaced by
-the sum of the ion momenta. The procedure is done separately for the
-X, Y and Z components of the momenta. In real problems this algorithm
-does not seem to work very well.
-
-In short, do NOT use the total fluid.
-
-Default values are shown.
-</command>
-
 <command name="MULTIIONSTATE">
 	<parameter name="UseSingleIonVelocity"    type="logical" default="F"/>
 	<parameter name="UseSingleIonTemperature" type="logical" default="F"/>
@@ -7009,11 +6978,11 @@ simulation should become equivalient with a singlefluid multi-species
 simulation. This is useful for testing.
 
 When UseSingleIonVelocity is true, the ion velocities are set to the
-velocity of the total fluid $u=\sum_s(\rho_s u_s)/\sum_s\rho_s$
+average fluid velocity $u=\sum_s(\rho_s u_s)/\sum_s\rho_s$
 as if there was an infinitely strong friction force between the ion fluids.
 
 When UseSingleIonTemperature is true, the ion temperatures are set to the
-temperature of the total fluid $k_B T = \sum_s p_s/\sum_s(\rho_s/M_s)$
+average temperature $k_B T = \sum_s p_s/\sum_s(\rho_s/M_s)$
 as if there was an infinitely fast energy exchange between the ion fluids.
 
 Default values are false for both parameters.

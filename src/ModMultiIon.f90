@@ -33,7 +33,6 @@ module ModMultiIon
   public:: multi_ion_source_expl
   public:: multi_ion_source_impl
   public:: multi_ion_init_point_impl
-  public:: multi_ion_update
 
   logical, public, protected   :: DoRestrictMultiIon = .false.
 
@@ -58,10 +57,6 @@ module ModMultiIon
   ! calculate analytic Jacobian for point-implicit scheme
   logical, parameter:: IsAnalyticJacobian = .true.
 
-  ! how to reconcile ions with total fluid
-  logical :: DoAddRho  = .true.
-  logical :: DoAddRhoU = .true.
-
   ! Minimum pressure ratio for a minor fluid (so it remains positive)
   real:: LowPressureRatio = 1e-10
 
@@ -78,9 +73,6 @@ contains
     character(len=*), intent(in):: NameCommand
     !--------------------------------------------------------------------------
     select case(NameCommand)
-    case("#MHDIONS")
-       call read_var('DoAddRho',  DoAddRho)
-       call read_var('DoAddRhoU', DoAddRhoU)
     case("#MULTIION")
        call read_var('LowDensityRatio',    LowDensityRatio)
        call read_var('LowPressureRatio',   LowPressureRatio)
@@ -694,172 +686,6 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine multi_ion_init_point_impl
-  !============================================================================
-  subroutine multi_ion_update(iBlock, IsFinal)
-
-    ! Resolve the update of total fluid vs. ion fluids:
-    !   - take care of minor fluids with very small densities
-    !   - take care of conservation of total density and energy
-
-    use ModAdvance, ONLY: State_VGB, &
-         Rho_, p_, RhoUx_, RhoUy_, RhoUz_, UseElectronPressure
-    use ModPhysics, ONLY: ElectronTemperatureRatio, LowDensityRatio
-    use ModEnergy,  ONLY: limit_pressure
-
-    integer, intent(in) :: iBlock
-    logical, intent(in) :: IsFinal  ! true for the final update
-
-    integer :: i, j, k, iFluid
-    real    :: State_V(nVar), Rho, InvRho, p, IonSum, InvSum
-    real    :: TeRatio1, InvTeRatio1
-    logical :: IsMultiIon
-
-    logical:: DoTestCell
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'multi_ion_update'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    if(DoTest)write(*,*) NameSub,' starting with IsFinal, testvar=', &
-         IsFinal, State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
-
-    TeRatio1    = 1 + ElectronTemperatureRatio
-    InvTeRatio1 = 1 / TeRatio1
-
-    do k=1,nK; do j=1,nJ; do i=1,nI
-        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-
-       DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
-
-       State_V = State_VGB(:,i,j,k,iBlock)
-
-       ! Total density
-       Rho    = State_V(Rho_)
-       InvRho = 1/Rho
-
-       ! Total pressure
-       p      = sum(State_V(iPIon_I))
-
-       ! Keep pressures above LowPressureRatio*pTotal
-       State_VGB(iPIon_I,i,j,k,iBlock) = &
-            max( State_V(iPIon_I), LowPressureRatio*p )
-
-       if(DoTestCell)write(*,*) NameSub,' after low pressure:', &
-            State_VGB(iVarTest,i,j,k,iBlock)
-
-       if(.not.IsFinal)then
-
-          ! Ion pressures are always added up into total pressure
-          if(UseElectronPressure) then
-             State_VGB(p_,i,j,k,iBlock) = p
-          else
-             State_VGB(p_,i,j,k,iBlock) = p * TeRatio1
-          end if
-
-          if(DoAddRho)then
-             State_VGB(Rho_,i,j,k,iBlock) = sum(State_V(iRhoIon_I))
-          else
-             ! Distribute total density among ions
-             InvSum = 1/sum(State_V(iRhoIon_I))
-             State_VGB(iRhoIon_I,i,j,k,iBlock) = State_V(iRhoIon_I)*Rho*InvSum
-          end if
-
-          IonSum = sum(State_V(iRhoUxIon_I))
-          if(DoAddRhoU .or. &
-               maxval(State_V(iRhoUxIon_I))* &
-               minval(State_V(iRhoUxIon_I)) <= 0)then
-             State_VGB(RhoUx_,i,j,k,iBlock) = IonSum
-          else
-             State_VGB(iRhoUxIon_I,i,j,k,iBlock) = State_V(iRhoUxIon_I) &
-                  *State_V(RhoUx_)/IonSum
-          endif
-
-          IonSum = sum(State_V(iRhoUyIon_I))
-          if(DoAddRhoU .or. &
-               maxval(State_V(iRhoUyIon_I)) &
-               *minval(State_V(iRhoUyIon_I)) <= 0)then
-             State_VGB(RhoUy_,i,j,k,iBlock) = IonSum
-          else
-             State_VGB(iRhoUyIon_I,i,j,k,iBlock) = State_V(iRhoUyIon_I) &
-                  *State_V(RhoUy_)/IonSum
-          endif
-
-          IonSum = sum(State_V(iRhoUzIon_I))
-          if(DoAddRhoU .or. &
-               maxval(State_V(iRhoUzIon_I)) &
-               *minval(State_V(iRhoUzIon_I)) <= 0)then
-             State_VGB(RhoUz_,i,j,k,iBlock) = IonSum
-          else
-             InvSum = 1/IonSum
-             State_VGB(iRhoUzIon_I,i,j,k,iBlock) = State_V(iRhoUzIon_I) &
-                  *State_V(RhoUz_)/IonSum
-          endif
-
-          ! Nothing more to do if not final update
-          CYCLE
-       end if
-
-       ! Check if we are in a region with multiple ions or not
-       ! Note that IsMultiIon_CB is not necessarily allocated
-       IsMultiIon = .true.
-       if(DoRestrictMultiIon)IsMultiIon = IsMultiIon_CB(i,j,k,iBlock)
-
-       if(IsMultiIon)then
-          ! Add up ion fluids to total fluid
-          ! This is necessary when point-implicit source terms are evaluated
-          ! for the ion fluids only and their sum is not 0 due to user sources
-
-          State_VGB(Rho_,  i,j,k,iBlock) = sum(State_V(iRhoIon_I))
-          State_VGB(RhoUx_,i,j,k,iBlock) = sum(State_V(iRhoUxIon_I))
-          State_VGB(RhoUy_,i,j,k,iBlock) = sum(State_V(iRhoUyIon_I))
-          State_VGB(RhoUz_,i,j,k,iBlock) = sum(State_V(iRhoUzIon_I))
-          if(UseElectronPressure)then
-             State_VGB(p_,i,j,k,iBlock)  = p
-          else
-             State_VGB(p_,i,j,k,iBlock)  = p * TeRatio1
-          end if
-       else
-          ! Put most of the stuff into the first ion fluid
-          State_VGB(iRhoIon_I(1),i,j,k,iBlock) = &
-               Rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
-          do iFluid = 2, nIonFluid
-             State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock) = Rho*LowDensityRatio
-          end do
-
-          ! Set ion velocities to be equal with the total
-          State_VGB(iRhoUxIon_I,i,j,k,iBlock) = &
-               State_VGB(iRhoIon_I,i,j,k,iBlock) &
-               *InvRho*State_VGB(RhoUx_,i,j,k,iBlock)
-          State_VGB(iRhoUyIon_I,i,j,k,iBlock) = &
-               State_VGB(iRhoIon_I,i,j,k,iBlock) &
-               *InvRho*State_VGB(RhoUy_,i,j,k,iBlock)
-          State_VGB(iRhoUzIon_I,i,j,k,iBlock) = &
-               State_VGB(iRhoIon_I,i,j,k,iBlock) &
-               *InvRho*State_VGB(RhoUz_,i,j,k,iBlock)
-
-          ! Set ion temperatures to be equal with the total
-          if(UseElectronPressure)then
-             p = State_V(p_)
-          else
-             p = State_V(p_) * InvTeRatio1
-          end if
-          State_VGB(iPIon_I,i,j,k,iBlock) = p*InvRho * &
-               State_VGB(iRhoIon_I,i,j,k,iBlock)*MassIon_I(1)/MassIon_I
-
-          if(DoTestCell)write(*,*) NameSub,' after not ismultiion:', &
-               State_VGB(iVarTest,i,j,k,iBlock)
-       end if
-
-    end do; end do; end do
-
-    ! write(*,*) NameSub,' !!! call limit_pressure'
-    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, IonLast_)
-
-    if(DoTest)write(*,*) NameSub,' finishing with testvar=', &
-         State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine multi_ion_update
   !============================================================================
 end module ModMultiIon
 !==============================================================================

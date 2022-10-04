@@ -2291,7 +2291,7 @@ contains
           call read_var('DoConserveNeutrals', DoConserveNeutrals)
           call read_var('TypeFluxNeutral',    TypeFluxNeutral)
 
-       case("#MULTIION", "#MHDIONS", "#COLLISION", "#MULTIIONSTATE")
+       case("#MULTIION", "#COLLISION", "#MULTIIONSTATE")
           call multi_ion_set_parameters(NameCommand)
 
        case('#USERBOUNDARY', '#EXTRABOUNDARY')
