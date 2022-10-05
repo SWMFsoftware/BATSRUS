@@ -127,10 +127,6 @@ user			TypeBc6
 T			UseExtraBoundary
 user			TypeExtraBoundary
 
-#MHDIONS
-T			DoAddRho
-T			DoAddRhoU
-
 #MINIMUMPRESSURE
 1e-15			pMinDim
 1e-15			pMinDim

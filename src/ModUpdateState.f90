@@ -120,7 +120,7 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
          IsDynamicPointImplicit, update_point_implicit
     use ModMultiIon, ONLY: multi_ion_source_impl, &
-         multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
+         multi_ion_set_restrict, DoRestrictMultiIon
     use ModEnergy, ONLY: energy_to_pressure, pressure_to_energy, limit_pressure
     use ModWaves, ONLY: nWave, WaveFirst_,WaveLast_, &
          UseWavePressure, UseWavePressureLtd, UseAlfvenWaves, DoAdvectWaves, &
@@ -222,15 +222,6 @@ contains
 
     end if
 
-    if(UseMultiIon .and. IsMhd)then
-       call multi_ion_update(iBlock, IsFinal = .false.)
-
-       if(DoTest)write(*,'(2x,2a,15es20.12)')  &
-            NameSub, ' after multiion update1              =', &
-            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
-
-    end if
-
     ! The point implicit update and other stuff below are only done in
     ! the last stage except for ion-electron equations where the point
     ! implicit has to be done in every stage.
@@ -303,13 +294,6 @@ contains
                NameSub, ' after point impl state              =', &
                State_VGB(iVarTest, iTest,jTest,kTest,iBlock)
        end if
-    end if
-
-    if(UseMultiIon .and. IsMhd)then
-       call multi_ion_update(iBlock, IsFinal = .true.)
-       if(DoTest)write(*,'(2x,2a,15es20.12)') &
-            NameSub, ' after multiion update2              =', &
-            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
     end if
 
     ! The parabolic div B decay is only done in the last stage.
