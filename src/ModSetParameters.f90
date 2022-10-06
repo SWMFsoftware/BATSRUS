@@ -2360,7 +2360,7 @@ contains
 
        case("#FRICTION")
           call read_source_param(NameCommand)
-          
+
        case("#GRAVITY")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('UseGravity', UseGravity)

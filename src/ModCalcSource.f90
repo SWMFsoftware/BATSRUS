@@ -16,10 +16,10 @@ module ModCalcSource
   public :: calc_source
   public :: read_source_param
 
-  ! Friction force relative to a (moving) background fluid 
+  ! Friction force relative to a (moving) background fluid
   real, public:: FrictionSi = 0.0, Friction = 0.0
   real, public:: FrictionUDim_D(3) = 0.0, FrictionU_D(3) = 0.0
-  
+
 contains
   !============================================================================
   subroutine read_source_param(NameCommand)
@@ -30,10 +30,10 @@ contains
     character(len=*), intent(in):: NameCommand
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'read_face_flux_param'
+    character(len=*), parameter:: NameSub = 'read_source_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    
+
     select case(NameCommand)
     case("#FRICTION")
        call read_var('FrictionSi',    FrictionSi)
@@ -58,14 +58,14 @@ contains
     ! 1. MHD with full field (Powell99)
     ! For UseB true and UseB0 false the sources are added if
     ! UseDivBSource is true
-    ! 
+    !
     ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(div B)
     ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(div B)
     ! Source_V(Energy_) = -dot_product(B_D*U_D)*(div B)
-    ! 
+    !
     ! Comments: 1a. divB is calculated in terms of the face values of B
     !           1b. other variables are cell-centered
-    ! 
+    !
     ! 2. MHD with split field B1 + B0, B0 field is assumed to be potential and
     !    divergence free (Powell99). For  UseB true and UseB0 true, the sources
     !    proportional to div B1 are added if  UseDivBSource is true. The terms
@@ -121,7 +121,6 @@ contains
     !              UseDivFullBSource. Depending on this switch, the divB source
     !              cleans either div B1 or dib (B1 + B0)
     !          2d. other variables are cell-centered
-
 
     use ModMain,          ONLY: iDirGravity, UseBody2, TypeCoordSystem, &
          UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
@@ -961,7 +960,6 @@ contains
     if(UseRadDiffusion .and. UseFullImplicit) &
          call calc_source_rad_diffusion(iBlock)
 
-
     if(FrictionSi > 0.0) call calc_friction(iBlock)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
@@ -1543,7 +1541,7 @@ contains
     !==========================================================================
     subroutine calc_friction(iBlock)
 
-      ! Calculate friction force due to some background fluid 
+      ! Calculate friction force due to some background fluid
       integer, intent(in):: iBlock
 
       real:: Rho, u_D(3), Force_D(3)

@@ -354,7 +354,7 @@ contains
     character(len=*), parameter:: NameSub = 'read_face_flux_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    
+
     select case(NameCommand)
     case('#CLIMIT')
        call read_var('UseClimit', UseClimit)

@@ -401,7 +401,7 @@ contains
           !     = Rhoright for x > 0
           !     = pLeft + (x-xMinBox)*RhoLeft*Gamma                 for x < 0
           !     = pLeft - xMinBox*RhoLeft*Gamma + x*RhoRight*Gamma  for x > 0
-       
+
           where(Xyz_DGB(x_,:,:,:,iBlock) <= 0.0)
              State_VGB(p_,:,:,:,iBlock) = pLeft + GravitySi &
                   *(Xyz_DGB(x_,:,:,:,iBlock) - xMinBox)*RhoLeft
