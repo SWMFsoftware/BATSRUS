@@ -8645,6 +8645,30 @@ switch off the rotation as shown by the example.
 By default the Sun is the central star.
 </command>
 
+<command name="FRICTION">
+  <parameter name="FrictionSi" type="real" min="0" default="0"/>
+  <if expr="$FrictionSi&gt;0">
+    <parameter name="FrictionUxDim" type="real" default="0"/>
+    <parameter name="FrictionUyDim" type="real" default="0"/>
+    <parameter name="FrictionUzDim" type="real" default="0"/>
+  </if>
+
+#FRICTION
+0.2                    FrictionSi [1/s] (rest read if larger than 0)
+0.5                    FrictionUxDim
+0.0                    FrictionUyDim
+0.0                    FrictionUzDim
+
+Define a friction force against a background fluid moving at velocity
+FrictionU = (FrictionUxDim, FrictionUyDim, FrictionUzDim). The force
+is F = Friction*Rho*(FrictionU - U), where Friction is in normalized
+units (1/time), Rho and U are the density and velocity vector of the
+first fluid, respectively. The current implementation is for the first
+fluid with an explicit source term.
+
+By default there is no friction. 
+</command>
+
 <command name="GRAVITY" if="$_IsFirstSession">
   <parameter name="UseGravity" type="logical" default="F" />
   <parameter name="iDirGravity" type="integer" input="select"

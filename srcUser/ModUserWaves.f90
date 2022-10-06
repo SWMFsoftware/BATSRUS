@@ -384,22 +384,32 @@ contains
 
        ! Set pressure gradient. Gravity is positive.
 
-       ! rho      = Rholeft for x < 0
-       !          = Rhoright for x > 0
        ! pressure = pLeft + integral_x1^xMaxBox rho*Gamma dx
-       !          = pLeft + (x-xMinBox)*RhoLeft*Gamma                 for x < 0
-       !          = pLeft - xMinBox*RhoLeft*Gamma + x*RhoRight*Gamma  for x > 0
 
        RhoLeft  = ShockLeftState_V(Rho_)
        RhoRight = ShockRightState_V(Rho_)
        pLeft    = ShockLeftState_V(p_)
-       where(Xyz_DGB(x_,:,:,:,iBlock) <= 0.0)
-          State_VGB(p_,:,:,:,iBlock) = pLeft + GravitySi &
-               *(Xyz_DGB(x_,:,:,:,iBlock) - xMinBox)*RhoLeft
-       elsewhere
-          State_VGB(p_,:,:,:,iBlock) = pLeft + GravitySi &
-               *(Xyz_DGB(x_,:,:,:,iBlock)*RhoRight - xMinBox*RhoLeft)
-       end where
+       if(KxWave_V(Rho_) > 0.0 .and. iPower_V(iVar) < 0)then
+          ! Gaussian density profile. Integral from -infty to x is 1+erf(x)
+          do i = MinI, MaxI
+             x = Xyz_DGB(x_,i,j,k,iBlock) - x_V(Rho_)
+             State_VGB(p_,i,:,:,iBlock) = pLeft + GravitySi &
+                  *Ampl_V(Rho_)*(1.0 + erf(KxWave_V(Rho_)*x))
+          end do
+       else
+          ! rho = Rholeft for x < 0
+          !     = Rhoright for x > 0
+          !     = pLeft + (x-xMinBox)*RhoLeft*Gamma                 for x < 0
+          !     = pLeft - xMinBox*RhoLeft*Gamma + x*RhoRight*Gamma  for x > 0
+       
+          where(Xyz_DGB(x_,:,:,:,iBlock) <= 0.0)
+             State_VGB(p_,:,:,:,iBlock) = pLeft + GravitySi &
+                  *(Xyz_DGB(x_,:,:,:,iBlock) - xMinBox)*RhoLeft
+          elsewhere
+             State_VGB(p_,:,:,:,iBlock) = pLeft + GravitySi &
+                  *(Xyz_DGB(x_,:,:,:,iBlock)*RhoRight - xMinBox*RhoLeft)
+          end where
+       end if
        ! Perturb velocity
        where(abs(Xyz_DGB(x_,:,:,:,iBlock)) < Width)
           State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(Rho_,:,:,:,iBlock) &
