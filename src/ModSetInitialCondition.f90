@@ -13,7 +13,7 @@ module ModSetInitialCondition
        ShockPosition, ShockSlope
   use ModBatsrusUtility, ONLY: stop_mpi, get_ivar
   use ModNumConst, ONLY: cTwoPi, cDegToRad
-  
+
   implicit none
 
   private ! except
@@ -30,7 +30,7 @@ module ModSetInitialCondition
   real, dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
        x_V=0.0, y_V=0.0, z_V=0.0, KxWave_V=0.0, KyWave_V=0.0, KzWave_V=0.0
   integer :: iPower_V(nVar)=1
-  
+
 contains
   !============================================================================
   subroutine read_initial_cond_param(NameCommand)
@@ -43,7 +43,7 @@ contains
     character(len=20):: NameVar
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'read_face_flux_param'
+    character(len=*), parameter:: NameSub = 'read_initial_cond_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
@@ -216,7 +216,7 @@ contains
           end if  ! UseShockTube
 
           if(UseWave) call apply_wave
-                    
+
           ! Loop through all the cells
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              if(.not.Used_GB(i,j,k,iBlock))then
@@ -298,7 +298,7 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
 
   contains
-    !=====================================================================================
+    !==========================================================================
     subroutine apply_wave
 
       use ModGeometry, ONLY: &
@@ -306,7 +306,7 @@ contains
 
       integer:: iVar, i, j, k
       real:: x, y, z, r, r2
-      !-----------------------------------------------------------------------------------
+      !------------------------------------------------------------------------
       ! Apply waves
       do iVar = 1, nVar
 
@@ -370,6 +370,7 @@ contains
       end do
 
     end subroutine apply_wave
+    !==========================================================================
 
   end subroutine set_initial_condition
   !============================================================================

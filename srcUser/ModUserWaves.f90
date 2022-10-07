@@ -346,7 +346,7 @@ contains
     real :: ViscoCoeff
 
     real :: Acceleration
-    
+
     ! For 4th order scheme
     real :: Laplace
     real, allocatable:: State_G(:,:,:)
@@ -397,7 +397,7 @@ contains
 
        write(*,*)'!!! RhoLeft, pLeft, KxWave, Power=', &
             RhoLeft, pLeft, KxWave_V(Rho_), iPower_V(Rho_)
-       
+
        if(KxWave_V(Rho_) > 0.0 .and. iPower_V(Rho_) < 0)then
           ! Gaussian density profile. Integral from -infty to x is 1+erf(x)
           ! Integral scales with amplitude and 1/KxWave
