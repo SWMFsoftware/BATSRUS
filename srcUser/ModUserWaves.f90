@@ -313,6 +313,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModMain,     ONLY: TypeCoordSystem, GravitySi
+    use ModCalcSource, ONLY: FrictionSi, FrictionUDim_D
     use ModGeometry, ONLY: &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
     use ModAdvance,  ONLY: &
@@ -344,6 +345,8 @@ contains
     real :: RhoLeft, RhoRight, pLeft
     real :: ViscoCoeff
 
+    real :: Acceleration
+    
     ! For 4th order scheme
     real :: Laplace
     real, allocatable:: State_G(:,:,:)
@@ -382,19 +385,34 @@ contains
     case('RT')
        ! Initialize Rayleigh-Taylor instability
 
-       ! Set pressure gradient. Gravity is positive.
+       Acceleration = max(GravitySi, FrictionSi*FrictionUDim_D(x_))
+
+       ! Set pressure gradient balancing Gravity/Friction
 
        ! pressure = pLeft + integral_x1^xMaxBox rho*Gamma dx
 
        RhoLeft  = ShockLeftState_V(Rho_)
        RhoRight = ShockRightState_V(Rho_)
        pLeft    = ShockLeftState_V(p_)
-       if(KxWave_V(Rho_) > 0.0 .and. iPower_V(iVar) < 0)then
+
+       write(*,*)'!!! RhoLeft, pLeft, KxWave, Power=', &
+            RhoLeft, pLeft, KxWave_V(Rho_), iPower_V(Rho_)
+       
+       if(KxWave_V(Rho_) > 0.0 .and. iPower_V(Rho_) < 0)then
           ! Gaussian density profile. Integral from -infty to x is 1+erf(x)
+          ! Integral scales with amplitude and 1/KxWave
           do i = MinI, MaxI
-             x = Xyz_DGB(x_,i,j,k,iBlock) - x_V(Rho_)
-             State_VGB(p_,i,:,:,iBlock) = pLeft + GravitySi &
-                  *Ampl_V(Rho_)*(1.0 + erf(KxWave_V(Rho_)*x))
+             x = Xyz_DGB(x_,i,1,1,iBlock)
+             State_VGB(Rho_,i,:,:,iBlock) = RhoLeft + &
+                  Ampl_V(Rho_)*exp(-(KxWave_V(Rho_)*x)**2)
+             if(KxWave_V(Uy_) > 0.0) State_VGB(RhoUy_,i,:,:,iBlock) = &
+                  State_VGB(Rho_,i,:,:,iBlock) &
+                  *Ampl_V(Uy_)*exp(-(KxWave_V(Uy_)*x)**2)
+
+             State_VGB(p_,i,:,:,iBlock) = pLeft + Acceleration* &
+                  ( RhoLeft*(x- xMinBox) &
+                  + Ampl_V(Rho_)/KxWave_V(Rho_) &
+                  *0.5*sqrt(cPi)*(1.0 + erf(KxWave_V(Rho_)*(x-x_V(Rho_)))))
           end do
        else
           ! rho = Rholeft for x < 0
@@ -403,10 +421,10 @@ contains
           !     = pLeft - xMinBox*RhoLeft*Gamma + x*RhoRight*Gamma  for x > 0
 
           where(Xyz_DGB(x_,:,:,:,iBlock) <= 0.0)
-             State_VGB(p_,:,:,:,iBlock) = pLeft + GravitySi &
+             State_VGB(p_,:,:,:,iBlock) = pLeft + Acceleration &
                   *(Xyz_DGB(x_,:,:,:,iBlock) - xMinBox)*RhoLeft
           elsewhere
-             State_VGB(p_,:,:,:,iBlock) = pLeft + GravitySi &
+             State_VGB(p_,:,:,:,iBlock) = pLeft + Acceleration &
                   *(Xyz_DGB(x_,:,:,:,iBlock)*RhoRight - xMinBox*RhoLeft)
           end where
        end if
