@@ -1845,7 +1845,7 @@ contains
           end select
 
        case("#UNIFORMSTATE", "#SHOCKTUBE", "#SHOCKPOSITION", &
-            "#WAVE", "#GAUSSIAN", "#TOPHAT")
+            "#WAVE", "#WAVE2", "#WAVE4", "#WAVE6", "#GAUSSIAN", "#TOPHAT")
           call read_initial_cond_param(NameCommand)
 
        case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE", "#REFRESHSOLARWINDFILE")
