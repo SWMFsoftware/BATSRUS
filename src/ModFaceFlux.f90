@@ -54,7 +54,7 @@ module ModFaceFlux
   public :: print_face_values
   public :: calc_face_flux
   public :: calc_cell_flux
-  public :: face_flux_set_parameters
+  public :: read_face_flux_param
   public :: init_mod_face_flux
   public :: set_block_values
   public :: set_cell_values
@@ -344,12 +344,17 @@ contains
 
   end subroutine print_face_values
   !============================================================================
+  subroutine read_face_flux_param(NameCommand)
 
-  subroutine face_flux_set_parameters(NameCommand)
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in):: NameCommand
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_face_flux_param'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
     select case(NameCommand)
     case('#CLIMIT')
        call read_var('UseClimit', UseClimit)
@@ -364,9 +369,12 @@ contains
        call read_var('DoClightWarning', DoClightWarning)
        if (DoClightWarning) &
             call read_var('FactorClightWarning', FactorClightWarning)
+    case default
+       call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
 
-  end subroutine face_flux_set_parameters
+    call test_stop(NameSub, DoTest)
+  end subroutine read_face_flux_param
   !============================================================================
   subroutine init_mod_face_flux
 
@@ -377,7 +385,6 @@ contains
     use ModAdvance, ONLY: TypeFlux => TypeFlux
     use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
     !--------------------------------------------------------------------------
-
     DoSimple = TypeFlux == 'Simple'
     DoLf     = TypeFlux == 'Rusanov'
     DoHll    = TypeFlux == 'Linde'
@@ -428,7 +435,6 @@ contains
     !$acc update device(DoHallInduction, UseClimit, ClimitDim, rClimit)
   end subroutine init_mod_face_flux
   !============================================================================
-
   subroutine set_block_values(iBlock, iDim)
     integer, intent(in) :: iBlock, iDim
 
@@ -464,7 +470,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_values
   !============================================================================
-
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
     use ModAdvance,  ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
     use ModParallel, ONLY: DiLevel_EB
@@ -543,7 +548,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
-
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
       use ModAdvance, ONLY: State_VGB, FaceDivU_IX
 
@@ -555,7 +559,6 @@ contains
       integer:: iFF_I(nFFInt)
       real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
-
       iGang = 1
       iBlockFace = iBlock
       iDimFace = x_
@@ -649,7 +652,6 @@ contains
       endif
     end subroutine get_flux_x
     !==========================================================================
-
     subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
       use ModAdvance, ONLY: State_VGB, FaceDivU_IY
 
@@ -661,7 +663,6 @@ contains
       integer:: iFF_I(nFFInt)
       real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
-
       iGang = 1
       iBlockFace = iBlock
       iDimFace = y_
@@ -756,7 +757,6 @@ contains
 
     end subroutine get_flux_y
     !==========================================================================
-
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax,iBlock)
       use ModAdvance, ONLY: State_VGB, FaceDivU_IZ
 
@@ -768,7 +768,6 @@ contains
       integer:: iFF_I(nFFInt)
       real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
-
       iGang = 1
       iBlockFace = iBlock
       iDimFace = z_
@@ -936,10 +935,8 @@ contains
 
     end subroutine add_artificial_viscosity
     !==========================================================================
-
   end subroutine calc_face_flux
   !============================================================================
-
   subroutine set_cell_values
     !--------------------------------------------------------------------------
     select case(iDimFace)
@@ -981,7 +978,6 @@ contains
     call set_cell_values_common
   end subroutine set_cell_values_x
   !============================================================================
-
   subroutine set_cell_values_y
     character(len=*), parameter:: NameSub = 'set_cell_values_y'
     !--------------------------------------------------------------------------
@@ -1007,7 +1003,6 @@ contains
     call set_cell_values_common
   end subroutine set_cell_values_y
   !============================================================================
-
   subroutine set_cell_values_z
     character(len=*), parameter:: NameSub = 'set_cell_values_z'
     !--------------------------------------------------------------------------
@@ -1022,7 +1017,6 @@ contains
     call set_cell_values_common
   end subroutine set_cell_values_z
   !============================================================================
-
   subroutine set_cell_values_common
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_GB
@@ -1381,7 +1375,6 @@ contains
 
   contains
     !==========================================================================
-
     subroutine get_boris_flux
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
@@ -1390,7 +1383,6 @@ contains
       real :: Rho, Ux, Uy, Uz, p, e, PeAdd
       real :: B2, FullB2, pTotal, pTotal2, uDotB, DpPerB
       real :: Ex, Ey, Ez, E2Half
-
       !------------------------------------------------------------------------
       Rho     = State_V(Rho_)
       Ux      = State_V(Ux_)
@@ -1573,7 +1565,6 @@ contains
       end if
     end subroutine get_magnetic_flux
     !==========================================================================
-
     subroutine get_mhd_flux(State_V, Un, Flux_V, &
          StateCons_V, Bx, By, Bz, Bn, B0n, &
          FullBx, FullBy, FullBz, FullBn, HallUn)
@@ -1599,7 +1590,6 @@ contains
       real, dimension(nIonFluid) :: Ux_I, Uy_I, Uz_I, RhoUn_I
       real :: MagneticForce_D(RhoUx_:RhoUz_)
       !------------------------------------------------------------------------
-
       ! Extract primitive variables
       Rho     = State_V(Rho_)
       Ux      = State_V(Ux_)
@@ -1788,12 +1778,10 @@ contains
 
     end subroutine get_mhd_flux
     !==========================================================================
-
     subroutine get_electro_magnetic_flux
       use ModPhysics, ONLY: Clight, C2light
 
       real :: Ex, Ey, Ez
-
       !------------------------------------------------------------------------
       Ex = State_V(Ex_); Ey = State_V(Ey_); Ez = State_V(Ez_)
 
@@ -1827,7 +1815,6 @@ contains
       end if
     end subroutine get_electro_magnetic_flux
     !==========================================================================
-
     subroutine get_hd_flux
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModPhysics, ONLY: InvGammaMinus1_I
@@ -1838,7 +1825,6 @@ contains
       real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal, PeAdd
       real :: DpPerB, FullB2
       !------------------------------------------------------------------------
-
       ! Extract primitive variables
       Rho = State_V(iRho)
       Ux  = State_V(iUx)
@@ -1937,17 +1923,14 @@ contains
       if(iFluid == 1 .and. .not.UseB) HallUn = Un
     end subroutine get_hd_flux
     !==========================================================================
-
     subroutine get_burgers_flux
       !------------------------------------------------------------------------
       Flux_V = 0.0
       Flux_V(iRho) = 0.5*State_V(iRho)**2
     end subroutine get_burgers_flux
     !==========================================================================
-
   end subroutine get_physical_flux
   !============================================================================
-
   subroutine get_numerical_flux(Flux_V)
     use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies, SignB_
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
@@ -1982,7 +1965,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_numerical_flux'
     !--------------------------------------------------------------------------
-
     ! Initialize diffusion coefficient for time step restriction
     DiffCoef = 0.0
 
@@ -2288,7 +2270,6 @@ contains
     subroutine modify_flux(Flux_V, Un, MhdFlux_V)
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(MaxDim)
-
       !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       ! Conservative update for the total flux for multi-ion MHD
@@ -2297,7 +2278,6 @@ contains
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
     end subroutine modify_flux
     !==========================================================================
-
     subroutine roe_solver_new
       !------------------------------------------------------------------------
       Flux_V(1:p_) = &
@@ -2448,7 +2428,6 @@ contains
 
     end subroutine harten_lax_vanleer_flux
     !==========================================================================
-
     subroutine dominant_wave_flux(DoLf)
 
       use ModPhysics,  ONLY: Gamma_I
@@ -2584,7 +2563,6 @@ contains
       end if
     end subroutine dominant_wave_flux
     !==========================================================================
-
     subroutine artificial_wind
 
       real, dimension(nFluid) :: Cleft_I, Cright_I, Cmax_I
@@ -2972,7 +2950,6 @@ contains
       end if
     end subroutine hlld_flux
     !==========================================================================
-
     subroutine godunov_flux
 
       ! The Godunov flux works for hydro fluid (no magnetic field)
@@ -2994,7 +2971,6 @@ contains
       real :: Adiabatic, Isothermal, GammaRatio, Factor
       integer :: iVar
       !------------------------------------------------------------------------
-
       RhoL = StateLeft_V(iRho)
       pL   = StateLeft_V(iP)
       RhoR = StateRight_V(iRho)
@@ -3127,7 +3103,6 @@ contains
       end if
     end subroutine godunov_flux
     !==========================================================================
-
     subroutine hllc_flux
 
       ! The HLLC scheme works for single ion fluid only
@@ -3199,7 +3174,6 @@ contains
 
     end subroutine hllc_flux
     !==========================================================================
-
     subroutine write_test_info
       integer :: iVar
       !------------------------------------------------------------------------
@@ -3236,7 +3210,6 @@ contains
 
     end subroutine write_test_info
     !==========================================================================
-
   end subroutine get_numerical_flux
   !============================================================================
   subroutine calc_simple_cell_flux(iBlock)
@@ -3355,7 +3328,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_simple_cell_flux
   !============================================================================
-
   subroutine get_speed_max(State_V, cMax_I, cLeft_I, cRight_I, UseAwSpeedIn)
 
     use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP, &
@@ -3539,7 +3511,6 @@ contains
     end if
   contains
     !==========================================================================
-
     subroutine get_boris_speed
       use ModPhysics, ONLY: Gamma, GammaElectron
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
@@ -3668,7 +3639,6 @@ contains
 
     end subroutine get_boris_speed
     !==========================================================================
-
     subroutine get_mhd_speed(State_V, CmaxDt_I, Cmax_I, Cleft_I, Cright_I, &
          UnLeft, UnRight, UseAwSpeed)
 
@@ -4089,7 +4059,6 @@ contains
            U2n + sqrt(2*U2n*U2nChGL))            ! (Right)
     end subroutine get_chgl_speed
     !==========================================================================
-
     subroutine get_hd_speed
       use ModAdvance, ONLY: UseElectronPressure, State_VGB
       use ModPhysics, ONLY: Gamma_I, GammaElectron
@@ -4168,7 +4137,6 @@ contains
 
     end subroutine get_hd_speed
     !==========================================================================
-
     subroutine get_burgers_speed
       real :: Rho
       !------------------------------------------------------------------------
@@ -4181,10 +4149,8 @@ contains
       if(present(Cright_I)) Cright_I(1) = Rho
     end subroutine get_burgers_speed
     !==========================================================================
-
   end subroutine get_speed_max
   !============================================================================
-
   subroutine correct_u_normal(iFF_I, rFF_I, Unormal_I)
     ! Make Unormal 6th order accuracte
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
@@ -4204,7 +4170,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'correct_u_normal'
     !--------------------------------------------------------------------------
-
     do iFluid = iFluidMin, iFluidMax
 
        Unormal = Unormal_I(iFluid)
@@ -4276,7 +4241,6 @@ contains
     enddo
   end subroutine correct_u_normal
   !============================================================================
-
   subroutine rotate_state_vectors
     use ModCoordTransform, ONLY: cross_product
 
@@ -4438,7 +4402,6 @@ contains
   end subroutine rotate_flux_vector
   !============================================================================
   !==================REDUNDANT ROUTINES========================================
-
   subroutine calc_cell_flux(iBlock)
 
     ! Calculate cell centered fluxes including ghost cells
@@ -4595,7 +4558,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'roe_solver'
     !--------------------------------------------------------------------------
-
     RhoL  =  StateLeft_V(Rho_)
     pL    =  StateLeft_V(p_ )
     RhoR  =  StateRight_V(Rho_)

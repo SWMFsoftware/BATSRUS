@@ -100,7 +100,8 @@ contains
     use ModSatelliteFile, ONLY: nSatellite, NameFileSat_I, NameSat_I, &
          read_satellite_parameters, read_satellite_input_files
     use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
-    use ModFaceFlux, ONLY: face_flux_set_parameters, init_mod_face_flux, &
+    use ModCalcSource, ONLY: read_source_param
+    use ModFaceFlux, ONLY: read_face_flux_param, init_mod_face_flux, &
          TypeFluxNeutral, UseClimit, DoBurgers
     use ModLookupTable,     ONLY: read_lookup_table_param, get_lookup_table, &
          i_lookup_table
@@ -1742,7 +1743,7 @@ contains
           call read_var('TypeMessagePass', TypeMessagePass)
 
        case('#CLIMIT', '#CLIGHTWARNING')
-          call face_flux_set_parameters(NameCommand)
+          call read_face_flux_param(NameCommand)
 
        case('#LIGHTSPEED')
           call read_var('ClightDim', ClightDim)
@@ -2356,6 +2357,9 @@ contains
             "#POLARBOUNDARY", "#CPCPBOUNDARY", &
             "#MAGNETICINNERBOUNDARY", "#OUTFLOWCRITERIA", "#YOUNGBOUNDARY")
           call read_face_boundary_param(NameCommand)
+
+       case("#FRICTION")
+          call read_source_param(NameCommand)
 
        case("#GRAVITY")
           if(.not.is_first_session())CYCLE READPARAM

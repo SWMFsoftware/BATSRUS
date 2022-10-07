@@ -14,77 +14,114 @@ module ModCalcSource
 
   ! Public methods
   public :: calc_source
+  public :: read_source_param
+
+  ! Friction force relative to a (moving) background fluid
+  real, public:: FrictionSi = 0.0, Friction = 0.0
+  real, public:: FrictionUDim_D(3) = 0.0, FrictionU_D(3) = 0.0
 
 contains
   !============================================================================
-  ! Full list of source terms for different MHD models:
-  ! 1. MHD with full field (Powell99)
-  ! For UseB=.true.; UseB0=.false. the sources are added if
-  ! UseDivBSource = .true.
-  ! ---------------------
-  ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(\div B)
-  ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(\div B)
-  ! Source_V(Energy_) = -dot_product(B_D*U_D)*(\div B)
-  ! ---------------------
-  ! Comments: 1a.\divB is calculated in terms of the face values of B
-  !           1b. other variables are cell-centered
-  ! -------------------
-  ! 2. MHD with split field B1 + B0, B0 field is assumed to be potential and
-  !    divergence free (Powell99). For  UseB=.true.; UseB0=.true., the sources
-  !    proportional to \div B1 are added, if  UseDivBSource = .true.. The terms
-  !    proportional to \div B0 and \curl B0 (unpublished, present in the code
-  !    since 2001-2002) are added if UseB0Source = .true.:
-  ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(\div B1 + \div B0) - B0*(\div B1)- &
-  !                      cross_product(\curl B0, B1)
-  ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(\div B1 + \div B0)
-  ! Source_V(Energy_) = -dot_product(B_D*U_D)*(\div B1 + \div B0)
-  ! Comment: 2a. \divB is calculated in terms of the face values of B1
-  !          2b. B0*(\div B1) is calculated together with (\div B1), and
-  !              different contrributions to (\div B1) are multiplied by face-
-  !              or cell-centered B0 field
-  !          2c. Historically in Source_V(Bx_:Bz_) and in Source_V(Energy_)
-  !              sources \div B0 sources was omitted. To enable this, turrn on
-  !              UseDivFullBSource. Depending on this switch, the divB source
-  !              cleans either div B1 or dib (B1 + B0)
-  !          2d. other variables are cell-centered
-  ! 2. MHD with split field B1 + B0, B0 field is assumed to be potential and
-  !    divergence free (Powell99). For  UseB=.true.; UseB0=.true., the sources
-  !    proportional to \div B1 are added, if  UseDivBSource = .true.. The terms
-  !    proportional to \div B0 and \curl B0 (unpublished, present in the code
-  !    since 2001-2002) are added if UseB0Source = .true.:
-  ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(\div B1 + \div B0) - B0*(\div B1)- &
-  !                      cross_product(\curl B0, B1)
-  ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(\div B1 + \div B0)
-  ! Source_V(Energy_) = -dot_product(B_D*U_D)*(\div B1 + \div B0)
-  ! Comment: 2a. \divB is calculated in terms of the face values of B1
-  !          2b. B0*(\div B1) is calculated together with (\div B1), and
-  !              different contrributions to (\div B1) are multiplied by face-
-  !              or cell-centered B0 field
-  !          2c. Historically, in Source_V(Bx_:Bz_) and in Source_V(Energy_)
-  !              \div B0 sources were omitted. To enable them, turn on
-  !              UseDivFullBSource. Depending on this switch, the divB source
-  !              cleans the field by reducing either div B1 or dib (B1 + B0).
-  !              In the momentum equation div B0 source is always present
-  !          2d. other variables are cell-centered
-  ! 3. MHD with split field B1 + B0, B0 field is NOT assumed to be potential
-  !    and divergence free. For UseB=.true.; UseB0=.true.,
-  !    UseDivBSource = .true. and UseB0Source =0, the extra sources are applied
-  !    if UseeCurlB0 = .true. at R > rCurrrentFreeB0. The extra sources are:
-  ! Source_V(Mx_:Mz_)= Source_V(Mx_:Mz_) + SM_D
-  ! Source_V(Energy_)= Source_V(Energy_) + dot_product(SM_D,U_D)
-  ! where SM_D = cross_product(\curl B0, B1) +         &
-  !              div (B0 B0) - grad B0^2/2 - B0 div B0 ! If UseB0MomentumFlux
-  !           or cross_product(\curl B0, B0)           ! Otherwise
-  ! Comment: 2a. \divB is calculated in terms of the face values of B1
-  !          2b. B0*(\div B1) is calculated together with (\div B1), and
-  !              different contrributions to (\div B1) are multiplied by face-
-  !              or cell-centered B0 field
-  !          2c. Historically in Source_V(Bx_:Bz_) and in Source_V(Energy_)
-  !              sources \div B0 sources were omitted. To enable then, turn on
-  !              UseDivFullBSource. Depending on this switch, the divB source
-  !              cleans either div B1 or dib (B1 + B0)
-  !          2d. other variables are cell-centered
+  subroutine read_source_param(NameCommand)
+
+    use ModReadParam, ONLY: read_var
+    use ModBatsrusUtility, ONLY: stop_mpi
+
+    character(len=*), intent(in):: NameCommand
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_source_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    select case(NameCommand)
+    case("#FRICTION")
+       call read_var('FrictionSi',    FrictionSi)
+       call read_var('FrictionUxDim', FrictionUDim_D(1))
+       call read_var('FrictionUyDim', FrictionUDim_D(2))
+       call read_var('FrictionUzDim', FrictionUDim_D(3))
+       Friction = 0.0 ! Make sure that normalization is done
+    case default
+       call stop_mpi(NameSub//': unknown command='//NameCommand)
+    end select
+
+    call test_stop(NameSub, DoTest)
+  end subroutine read_source_param
+  !============================================================================
   subroutine calc_source(iBlock)
+
+    ! Calculate source terms Source_VC for block iBlock
+
+    ! Notes by I. Sokolov on div B related source terms
+    !
+    ! Full list of source terms for different MHD models:
+    ! 1. MHD with full field (Powell99)
+    ! For UseB true and UseB0 false the sources are added if
+    ! UseDivBSource is true
+    !
+    ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(div B)
+    ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(div B)
+    ! Source_V(Energy_) = -dot_product(B_D*U_D)*(div B)
+    !
+    ! Comments: 1a. divB is calculated in terms of the face values of B
+    !           1b. other variables are cell-centered
+    !
+    ! 2. MHD with split field B1 + B0, B0 field is assumed to be potential and
+    !    divergence free (Powell99). For  UseB true and UseB0 true, the sources
+    !    proportional to div B1 are added if  UseDivBSource is true. The terms
+    !    proportional to div B0 and curl B0 (unpublished, present in the code
+    !    since 2001-2002) are added if UseB0Source is true:
+    ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(div B1 + div B0) - B0*(div B1)- &
+    !                      (curl B0) x B1
+    ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(div B1 + div B0)
+    ! Source_V(Energy_) = -B_D.U_D*(div B1 + div B0)
+    ! Comment: 2a. divB is calculated in terms of the face values of B1
+    !          2b. B0*(div B1) is calculated together with (div B1), and
+    !              different contrributions to (div B1) are multiplied by face-
+    !              or cell-centered B0 field
+    !          2c. Historically in Source_V(Bx_:Bz_) and in Source_V(Energy_)
+    !              sources div B0 sources was omitted. To enable this, turrn on
+    !              UseDivFullBSource. Depending on this switch, the divB source
+    !              cleans either div B1 or dib (B1 + B0)
+    !          2d. other variables are cell-centered
+    ! 2. MHD with split field B1 + B0, B0 field is assumed to be potential and
+    !    divergence free (Powell99). For  UseB true and UseB0 true, the sources
+    !    proportional to div B1 are added if  UseDivBSource is true. The terms
+    !    proportional to div B0 and curl B0 (unpublished, present in the code
+    !    since 2001-2002) are added if UseB0Source is true:
+    ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(div B1 + div B0) - B0*(div B1)- &
+    !                      (curl B0) x B1
+    ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(div B1 + div B0)
+    ! Source_V(Energy_) = -(B_D.U_D)*(div B1 + div B0)
+    ! Comment: 2a. divB is calculated in terms of the face values of B1
+    !          2b. B0*(div B1) is calculated together with (div B1), and
+    !              different contrributions to (div B1) are multiplied by face-
+    !              or cell-centered B0 field
+    !          2c. Historically, in Source_V(Bx_:Bz_) and in Source_V(Energy_)
+    !              div B0 sources were omitted. To enable them, turn on
+    !              UseDivFullBSource. Depending on this switch, the divB source
+    !              cleans the field by reducing either div B1 or dib (B1 + B0).
+    !              In the momentum equation div B0 source is always present
+    !          2d. other variables are cell-centered
+    ! 3. MHD with split field B1 + B0, B0 field is NOT assumed to be potential
+    !    and divergence free. For UseB true, UseB0 true, UseDivBSource true
+    !    and UseB0Source =0, the extra sources are applied
+    !    if UseeCurlB0 is true at R > rCurrrentFreeB0. The extra sources are:
+    ! Source_V(Mx_:Mz_) = Source_V(Mx_:Mz_) + SM_D
+    ! Source_V(Energy_) = Source_V(Energy_) + SM_D.U_D
+    ! where SM_D = (curl B0) x B1 +
+    !              div(B0 B0) - grad B0^2/2 - B0 div B0  ! If UseB0MomentumFlux
+    !           or (curl B0) x B0                        ! Otherwise
+    ! Comment: 2a. divB is calculated in terms of the face values of B1
+    !          2b. B0*div B1 is calculated together with div B1, and
+    !              different contrributions to div B1 are multiplied by face-
+    !              or cell-centered B0 field
+    !          2c. Historically in Source_V(Bx_:Bz_) and in Source_V(Energy_)
+    !              sources div B0 sources were omitted. To enable then, turn on
+    !              UseDivFullBSource. Depending on this switch, the divB source
+    !              cleans either div B1 or dib (B1 + B0)
+    !          2d. other variables are cell-centered
+
     use ModMain,          ONLY: iDirGravity, UseBody2, TypeCoordSystem, &
          UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
          UseUserSourceExpl, UseUserSourceImpl
@@ -647,6 +684,7 @@ contains
     if(UseB0) call set_b0_source(iBlock)
 
     if(UseB .and. UseDivbSource)then
+
        ! 8 wave scheme results in terms proportional to div B
        if(IsCartesian)then
           call calc_divb_source(iBlock)
@@ -665,13 +703,13 @@ contains
           ! associated with the given cell (the internal divergence) and
           ! the surface magnetic charges at the faces. Historically, the
           ! effect from B0 field, B0 div B1, is ALWAYS (well, if UseB0 is !
-          ! .true.) is calculated via thus decomposed magnettic charge, i. e.
+          ! true) is calculated via thus decomposed magnettic charge, i. e.
           ! the internal difergence B1 is multiplied by the cell-centered
           ! value of B0 field, while the the face B0 field is applied to the
           ! surface magnetic charges at the faces. In contrast with this
           ! approach, the entire effect from B1 field, B1 div B1 was calculated
           ! by applying cell-centered B1 field to the total divergence (see
-          ! below. Now, there is an option to set UseDivFullBSource=.true.
+          ! below. Now, there is an option to set UseDivFullBSource=true
           ! so that the contribution from the source B1 div B1 is also
           ! calculated via the decomposed magnetic charges, hence, it is
           ! also calculated in the calc_divb_source_gencoord subroutine and
@@ -922,6 +960,8 @@ contains
     if(UseRadDiffusion .and. UseFullImplicit) &
          call calc_source_rad_diffusion(iBlock)
 
+    if(FrictionSi > 0.0) call calc_friction(iBlock)
+
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -1116,9 +1156,7 @@ contains
       real,    intent(out) :: uPlus_D(3)
 
       real :: ChargeDens_I(nIonFluid)
-
       !------------------------------------------------------------------------
-
       ChargeDens_I    = ChargeIon_I*StateIn_V(iRhoIon_I)/MassIon_I
       InvElectronDens = 1.0/sum(ChargeDens_I)
 
@@ -1501,7 +1539,32 @@ contains
       end if
     end subroutine calc_divb_source_gencoord
     !==========================================================================
+    subroutine calc_friction(iBlock)
 
+      ! Calculate friction force due to some background fluid
+      integer, intent(in):: iBlock
+
+      real:: Rho, u_D(3), Force_D(3)
+      integer:: i, j, k
+      !------------------------------------------------------------------------
+      if(Friction == 0.0)then
+         ! Calculate normalized quantities
+         Friction    = FrictionSi     / Si2No_V(UnitT_)
+         FrictionU_D = FrictionUDim_D * Io2No_V(UnitU_)
+      end if
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
+         if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+         Rho = State_VGB(Rho_,i,j,k,iBlock)
+         u_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/Rho
+         Force_D = Friction*(FrictionU_D - u_D)*Rho
+         Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
+              + Force_D
+         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+              + sum(Force_D*u_D)
+       end do; end do; end do
+
+    end subroutine calc_friction
+    !==========================================================================
     subroutine write_source(String)
       character(len=*), intent(in) :: String
       !------------------------------------------------------------------------
@@ -1509,10 +1572,8 @@ contains
            Source_VC(iVarTest,iTest,jTest,kTest)
     end subroutine write_source
     !==========================================================================
-
   end subroutine calc_source
   !============================================================================
-
   subroutine calc_divb(iBlock)
 
     ! Calculate div B for a block and store result into DivB1_GB
@@ -1566,6 +1627,5 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_divb
   !============================================================================
-
 end module ModCalcSource
 !==============================================================================
