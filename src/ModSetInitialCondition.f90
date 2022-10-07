@@ -7,16 +7,66 @@ module ModSetInitialCondition
   use BATL_lib, ONLY: &
        test_start, test_stop, iBlockTest, iTest, jTest, kTest
 
+  use ModVarIndexes, ONLY: nVar
+  use ModMain, ONLY: NamePrimitive_V
+  use ModPhysics, ONLY: UseShocktube, ShockLeftState_V, ShockRightState_V, &
+       ShockPosition, ShockSlope
+  use ModBatsrusUtility, ONLY: stop_mpi
+  
   implicit none
 
   private ! except
 
+  public:: read_initial_cond_param ! read parameters for initial condition
   public:: set_initial_condition   ! set initial condition for one block
   public:: add_rotational_velocity ! transform between rotating/inertial frames
 
 contains
   !============================================================================
+  subroutine read_initial_cond_param(NameCommand)
 
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+
+    integer:: iVar
+    
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_face_flux_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    select case(NameCommand)
+    case("#UNIFORMSTATE")
+       UseShockTube = .true.
+       do iVar = 1, nVar
+          call read_var(NamePrimitive_V(iVar), ShockLeftState_V(iVar))
+       end do
+       ShockRightState_V = ShockLeftState_V
+
+    case("#SHOCKTUBE")
+       UseShockTube = .true.
+       do iVar = 1, nVar
+          call read_var(NamePrimitive_V(iVar)//' left', ShockLeftState_V(iVar))
+       end do
+       do iVar = 1, nVar
+          call read_var(NamePrimitive_V(iVar)//' right', &
+               ShockRightState_V(iVar))
+       end do
+       
+    case("#SHOCKPOSITION")
+       call read_var('ShockPosition', ShockPosition)
+       call read_var('ShockSlope', ShockSlope)
+
+    case("#WAVE")
+    case("#GAUSSIAN", "#TOPHAT")
+    case default
+       call stop_mpi(NameSub//': unknown command='//NameCommand)
+    end select
+
+    call test_stop(NameSub, DoTest)
+  end subroutine read_initial_cond_param
+  !============================================================================
   subroutine set_initial_condition(iBlock)
 
     use ModMain

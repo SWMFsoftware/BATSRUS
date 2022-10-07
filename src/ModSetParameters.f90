@@ -18,9 +18,10 @@ contains
 
     ! Set input parameters for BATS-R-US!
 
+    use ModAdvance
     use ModMain
     use ModBuffer, ONLY: read_buffer_grid_param
-    use ModAdvance
+    use ModSetInitialCondition, ONLY: read_initial_cond_param
     use ModConservative, ONLY: &
          set_non_conservative, UseNonConservative, nConservCrit
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
@@ -1843,25 +1844,9 @@ contains
                   //TypeNormalization)
           end select
 
-       case("#UNIFORMSTATE")
-          UseShockTube = .true.
-          do i=1,nVar
-             call read_var(NamePrimitive_V(i), ShockLeftState_V(i))
-          end do
-          ShockRightState_V = ShockLeftState_V
-
-       case("#SHOCKTUBE")
-          UseShockTube = .true.
-          do i=1,nVar
-             call read_var(NamePrimitive_V(i)//' left', ShockLeftState_V(i))
-          end do
-          do i=1,nVar
-             call read_var(NamePrimitive_V(i)//' right', ShockRightState_V(i))
-          end do
-
-       case("#SHOCKPOSITION")
-          call read_var('ShockPosition', ShockPosition)
-          call read_var('ShockSlope', ShockSlope)
+       case("#UNIFORMSTATE", "#SHOCKTUBE", "#SHOCKPOSITION", &
+            "#WAVE", "#GAUSSIAN", "#TOPHAT")
+          call read_initial_cond_param(NameCommand)
 
        case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE", "#REFRESHSOLARWINDFILE")
           call read_solar_wind_param(NameCommand)
