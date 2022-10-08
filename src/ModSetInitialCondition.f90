@@ -5,18 +5,141 @@
 module ModSetInitialCondition
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iBlockTest, iTest, jTest, kTest
+       test_start, test_stop, iProc, iBlockTest, iTest, jTest, kTest
+
+  use ModVarIndexes, ONLY: nVar
+  use ModMain, ONLY: NamePrimitive_V
+  use ModPhysics, ONLY: UseShocktube, ShockLeftState_V, ShockRightState_V, &
+       ShockPosition, ShockSlope
+  use ModBatsrusUtility, ONLY: stop_mpi, get_ivar
+  use ModNumConst, ONLY: cTwoPi, cDegToRad
 
   implicit none
 
   private ! except
 
+  public:: read_initial_cond_param ! read parameters for initial condition
   public:: set_initial_condition   ! set initial condition for one block
   public:: add_rotational_velocity ! transform between rotating/inertial frames
 
+  ! Local variables
+
+  ! Wave/Tophat/Gaussian
+  logical:: UseWave = .false.
+  real :: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
+  real, dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
+       x_V=0.0, y_V=0.0, z_V=0.0, KxWave_V=0.0, KyWave_V=0.0, KzWave_V=0.0
+  integer :: iPower_V(nVar)=1
+
 contains
   !============================================================================
+  subroutine read_initial_cond_param(NameCommand)
 
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+
+    integer:: iVar
+    character(len=20):: NameVar
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_initial_cond_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    select case(NameCommand)
+    case("#UNIFORMSTATE")
+       UseShockTube = .true.
+       do iVar = 1, nVar
+          call read_var(NamePrimitive_V(iVar), ShockLeftState_V(iVar))
+       end do
+       ShockRightState_V = ShockLeftState_V
+
+    case("#SHOCKTUBE")
+       UseShockTube = .true.
+       do iVar = 1, nVar
+          call read_var(NamePrimitive_V(iVar)//' left', ShockLeftState_V(iVar))
+       end do
+       do iVar = 1, nVar
+          call read_var(NamePrimitive_V(iVar)//' right', &
+               ShockRightState_V(iVar))
+       end do
+
+    case("#SHOCKPOSITION")
+       call read_var('ShockPosition', ShockPosition)
+       call read_var('ShockSlope', ShockSlope)
+
+    case("#WAVE", "#WAVE2", "#WAVE4", "#WAVE6")
+       UseWave = .true.
+       call read_var('NameVar', NameVar)
+       call get_iVar(NameVar, iVar)
+       call read_var('Width', Width)
+       call read_var('Amplitude', Amplitude)
+       call read_var('LambdaX', LambdaX)
+       call read_var('LambdaY', LambdaY)
+       call read_var('LambdaZ', LambdaZ)
+       call read_var('Phase', Phase)
+       Width_V(iVar) = Width
+       Ampl_V(iVar)  = Amplitude
+       Phase_V(iVar) = Phase*cDegToRad
+
+       if(NameCommand == '#WAVE6')then
+          iPower_V(iVar) = 6
+       elseif(NameCommand == '#WAVE4')then
+          iPower_V(iVar) = 4
+       elseif(NameCommand == '#WAVE2')then
+          iPower_V(iVar) = 2
+       else
+          iPower_V(iVar) = 1
+       end if
+
+       ! if wavelength is smaller than 0, then the wave number is set to 0
+       KxWave_V(iVar) = max(0.0, cTwoPi/LambdaX)
+       KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)
+       KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
+
+       if(iProc == 0) write(*,*) 'Setting wave for iVar =', iVar, &
+            ', NameVar =', NamePrimitive_V(iVar)
+
+    case('#GAUSSIAN', '#TOPHAT')
+       UseWave = .true.
+       ! Read parameters for a tophat ampl for r/d < 1 or
+       ! a Gaussian profile multiplied by smoother:
+       !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
+       ! where d = k.(x-xCenter) and k = 1/lambda
+       call read_var('NameVar',   NameVar)
+       call get_iVar(NameVar, iVar)
+       call read_var('Amplitude', Ampl_V(iVar))
+       call read_var('LambdaX',   LambdaX)
+       call read_var('LambdaY',   LambdaY)
+       call read_var('LambdaZ',   LambdaZ)
+       call read_var('CenterX',   x_V(iVar))
+       call read_var('CenterY',   y_V(iVar))
+       call read_var('CenterZ',   z_V(iVar))
+
+       ! Negative Lambda sets 0 for wavenumber (constant in that direction)
+       KxWave_V(iVar) = max(0.0, 1/LambdaX)
+       KyWave_V(iVar) = max(0.0, 1/LambdaY)
+       KzWave_V(iVar) = max(0.0, 1/LambdaZ)
+
+       if(NameCommand == '#TOPHAT')then
+          ! Setting zero value signals that this is a tophat
+          iPower_V(iVar) = 0
+       else
+          ! Setting negative value signals that this is a Gaussian
+          iPower_V(iVar) = -2
+       end if
+
+       if (iProc == 0) write(*,*) 'Setting GAUSSIAN or TOPHAT for iVar =', &
+            iVar, ', NameVar =', NamePrimitive_V(iVar)
+
+    case default
+       call stop_mpi(NameSub//': unknown command='//NameCommand)
+    end select
+
+    call test_stop(NameSub, DoTest)
+  end subroutine read_initial_cond_param
+  !============================================================================
   subroutine set_initial_condition(iBlock)
 
     use ModMain
@@ -33,7 +156,7 @@ contains
     use ModMultiFluid
     use ModRestartFile, ONLY: UseRestartWithFullB
     use ModBoundaryGeometry, ONLY: iBoundary_GB
-    use BATL_lib, ONLY: Xyz_DGB
+    use BATL_lib, ONLY: Xyz_DGB, IsPeriodic_D
 
     integer, intent(in) :: iBlock
 
@@ -91,6 +214,8 @@ contains
              end do
 
           end if  ! UseShockTube
+
+          if(UseWave) call apply_wave
 
           ! Loop through all the cells
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -171,9 +296,84 @@ contains
          NameSub, 'State(test)=',State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
     call test_stop(NameSub, DoTest, iBlock)
+
+  contains
+    !==========================================================================
+    subroutine apply_wave
+
+      use ModGeometry, ONLY: &
+           xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
+
+      integer:: iVar, i, j, k
+      real:: x, y, z, r, r2
+      !------------------------------------------------------------------------
+      ! Apply waves
+      do iVar = 1, nVar
+
+         if(iPower_V(iVar) <= 0)then
+            ! iPower==0: Tophat
+            ! iPower< 0: Gaussian profile multiplied by smoother:
+            !    ampl*exp(-(r/d)^2)*(cos(0.25*pi*r/d))^6 for r/d < 2
+            do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+               x = Xyz_DGB(x_,i,j,k,iBlock) - x_V(iVar)
+               y = Xyz_DGB(y_,i,j,k,iBlock) - y_V(iVar)
+               z = Xyz_DGB(z_,i,j,k,iBlock) - z_V(iVar)
+               if(IsPeriodic_D(1))then
+                  if(x > +(xMaxBox-xMinBox)/2) x = x - (xMaxBox-xMinBox)
+                  if(x < -(xMaxBox-xMinBox)/2) x = x + (xMaxBox-xMinBox)
+               end if
+               if(IsPeriodic_D(2))then
+                  if(y > +(yMaxBox-yMinBox)/2) y = y - (yMaxBox-yMinBox)
+                  if(y < -(yMaxBox-yMinBox)/2) y = y + (yMaxBox-yMinBox)
+               end if
+               if(IsPeriodic_D(3))then
+                  if(z > +(zMaxBox-zMinBox)/2) z = z - (zMaxBox-zMinBox)
+                  if(z < -(zMaxBox-zMinBox)/2) z = z + (zMaxBox-zMinBox)
+               end if
+               r2 =   (KxWave_V(iVar)*x)**2 + (KyWave_V(iVar)*y)**2 &
+                    + (KzWave_V(iVar)*z)**2
+
+               if(iPower_V(iVar) == 0)then
+                  ! Top hat
+                  if(r2 > 1.0) CYCLE
+                  State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)&
+                       + Ampl_V(iVar)
+               else
+                  ! Gaussian smoothed with cos^6
+                  if(r2 > 4.0) CYCLE
+                  r  = sqrt(r2)
+                  State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)&
+                       + Ampl_V(iVar)*cos(cPi*0.25*r)**6*exp(-r2)
+               end if
+            end do; end do; end do
+         else
+            ! cos^n profile
+            do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+               if(KxWave_V(iVar) > 0.0)then
+                  if(abs(Xyz_DGB(x_,i,j,k,iBlock) &
+                       + ShockSlope*Xyz_DGB(y_,i,j,k,iBlock)) &
+                       > Width_V(iVar) ) CYCLE
+               elseif(KyWave_V(iVar) > 0.0)then
+                  if(abs(Xyz_DGB(y_,i,j,k,iBlock)) > Width_V(iVar) ) CYCLE
+               elseif(KzWave_V(iVar) > 0.0)then
+                  if(abs(Xyz_DGB(z_,i,j,k,iBlock)) > Width_V(iVar) ) CYCLE
+               end if
+
+               State_VGB(iVar,i,j,k,iBlock) =        &
+                    State_VGB(iVar,i,j,k,iBlock)          &
+                    + Ampl_V(iVar)*cos(Phase_V(iVar)      &
+                    + KxWave_V(iVar)*Xyz_DGB(x_,i,j,k,iBlock)  &
+                    + KyWave_V(iVar)*Xyz_DGB(y_,i,j,k,iBlock)  &
+                    + KzWave_V(iVar)*Xyz_DGB(z_,i,j,k,iBlock))**iPower_V(iVar)
+            end do; end do; end do
+         end if
+      end do
+
+    end subroutine apply_wave
+    !==========================================================================
+
   end subroutine set_initial_condition
   !============================================================================
-
   subroutine add_rotational_velocity(iSign, iBlockIn)
 
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, x_, y_
