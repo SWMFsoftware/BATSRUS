@@ -325,7 +325,7 @@ contains
           else
              allocate(PointCoef_VCB(4,nI,nJ,nK,MaxBlock))
           end if
-          
+
           UseHeatExchange = .false.
           DoRadCooling = UseRadCooling
           UseRadCooling = .false.
