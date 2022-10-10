@@ -315,16 +315,16 @@ contains
              call stop_mpi(NameSub//&
                   'Implicit coronal heating only works with electron pressure')
           end if
-          if(UseAnisoPressure)then
-             call stop_mpi(NameSub//&
-                  'Implicit coronal heating does not work with aniso pressure')
-          end if
           if(.not.UseTurbulentCascade)then
              call stop_mpi(NameSub//&
                   'Implicit coronal heating only works with turbulent cascade')
           end if
 
-          allocate(PointCoef_VCB(4,nI,nJ,nK,MaxBlock))
+          if(UseAnisoPressure)then
+             allocate(PointCoef_VCB(6,nI,nJ,nK,MaxBlock))
+          else
+             allocate(PointCoef_VCB(4,nI,nJ,nK,MaxBlock))
+          end if
 
           UseHeatExchange = .false.
           DoRadCooling = UseRadCooling
@@ -968,6 +968,7 @@ contains
     real :: QPerQtotal_I(IonFirst_:IonLast_)
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
+    real :: Tpar, Ai, Apar, Bi, Bpar, Determinant, Fi, Fpar, Gi, Gpar
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
@@ -1239,26 +1240,51 @@ contains
              end if
 
              Cvi = InvGammaElectronMinus1*Natomic
-             TeTiCoef1 = TeTiCoef/Cvi
-             Qi1 = Qi/Cvi
-             dQidTe1 = dQidTe/Cvi
-             dQidTi1 = dQidTi/Cvi
-             Denominator = 1.0 + (TetiCoef1-dQidTi1)*DtLocal
-             TeTiCoef2 = (TeTiCoef + dQedTi)/Denominator
-
              Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
              Te = Te_G(i,j,k)
 
-             PointCoef_VCB(1,i,j,k,iBlock) = &
-                  TeTiCoef2*DtLocal*(TeTiCoef1 + dQidTe1) &
-                  -TeTiCoef + dQedTe + RadCoolDeriv
-             PointCoef_VCB(2,i,j,k,iBlock) = &
-                  (-TeTiCoef2*DtLocal*TeTiCoef1 + TeTiCoef)*(Ti - Te) &
-                  + TeTiCoef2*DtLocal*Qi1 + Qe + RadCool
-             PointCoef_VCB(3,i,j,k,iBlock) = &
-                  DtLocal*(TeTiCoef + dQidTe)/Denominator
-             PointCoef_VCB(4,i,j,k,iBlock) = &
-                  DtLocal*(TeTiCoef*(Te - Ti) + Qi)/Denominator
+             if(UseAnisoPressure)then
+                CviPar = 0.5*Natomic
+                Tpar = State_VGB(Ppar_,i,j,k,iBlock)/Natomic
+                Ai   = DtLocal/(Cvi + DtLocal*(TeTiCoef - dQidTi))
+                Apar = DtLocal/(CviPar + DtLocal*(TeTiCoef - dQpardTpar))
+                Bi   = Ai*(TeTiCoef*(Te - Ti) + Qi)
+                Bpar = Apar*(TeTiCoef*(Te - Tpar) + Qpar)
+                Determinant = 1.0 - Apar*dQpardTi*Ai*dQidTpar
+                Fi   = (Ai*TeTiCoef + dQidTe + Ai*dQidTpar &
+                     *(Apar*TeTiCoef + dQpardTe))/Determinant
+                Fpar = (Apar*TeTiCoef + dQpardTe + Apar*dQpardTi &
+                     *(Ai*TeTiCoef + dQidTe))/Determinant
+                Gi   = (Bi + Ai*dQidTpar*Bpar)/Determinant
+                Gpar = (Bpar + Apar*dQpardTi*Bi)/Determinant
+
+                PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef*(Fi - 1) + dQedTe &
+                     + (Fi*dQedTi + Fpar*dQedTpar) + RadCoolDeriv
+                PointCoef_VCB(2,i,j,k,iBlock) = TeTiCoef*(Ti + Gi - Te) &
+                     +  Qe + (Gi*dQedTi + Gpar*dQedTpar) + RadCool
+                PointCoef_VCB(3,i,j,k,iBlock) = Cvi*Fi
+                PointCoef_VCB(4,i,j,k,iBlock) = Cvi*Gi
+                PointCoef_VCB(5,i,j,k,iBlock) = CviPar*Fpar
+                PointCoef_VCB(6,i,j,k,iBlock) = CviPar*Gpar
+             else
+                TeTiCoef1 = TeTiCoef/Cvi
+                Qi1 = Qi/Cvi
+                dQidTe1 = dQidTe/Cvi
+                dQidTi1 = dQidTi/Cvi
+                Denominator = 1.0 + (TetiCoef1-dQidTi1)*DtLocal
+                TeTiCoef2 = (TeTiCoef + dQedTi)/Denominator
+
+                PointCoef_VCB(1,i,j,k,iBlock) = &
+                     TeTiCoef2*DtLocal*(TeTiCoef1 + dQidTe1) &
+                     -TeTiCoef + dQedTe + RadCoolDeriv
+                PointCoef_VCB(2,i,j,k,iBlock) = &
+                     (-TeTiCoef2*DtLocal*TeTiCoef1 + TeTiCoef)*(Ti - Te) &
+                     + TeTiCoef2*DtLocal*Qi1 + Qe + RadCool
+                PointCoef_VCB(3,i,j,k,iBlock) = &
+                     DtLocal*(TeTiCoef + dQidTe)/Denominator
+                PointCoef_VCB(4,i,j,k,iBlock) = &
+                     DtLocal*(TeTiCoef*(Te - Ti) + Qi)/Denominator
+             end if
           else
              if(UseElectronPressure .and. .not.UseMultiIon)then
                 Cvi = InvGammaElectronMinus1*Natomic
@@ -1834,6 +1860,15 @@ contains
                + PointCoef_VCB(4,i,j,k,iBlock)
 
           State_VGB(p_,i,j,k,iBlock) = max(1e-30, GammaMinus1*Einternal)
+
+          if(UseAnisoPressure)then
+             Einternal = 0.5*State_VGB(Ppar_,i,j,k,iBlock) &
+                  + PointCoef_VCB(5,i,j,k,iBlock) &
+                  *(NewSemiAll_VC(iTeImpl,i,j,k)-OldSemiAll_VC(iTeImpl,i,j,k))&
+                  + PointCoef_VCB(6,i,j,k,iBlock)
+
+             State_VGB(Ppar_,i,j,k,iBlock) = max(1e-30, 2.0*Einternal)
+          end if
        else
           ! update ion pressure for energy exchange between ions and electrons
           if(UseElectronPressure .and. .not.UseMultiIon)then
