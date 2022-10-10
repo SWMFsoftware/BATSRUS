@@ -315,6 +315,10 @@ contains
              call stop_mpi(NameSub//&
                   'Implicit coronal heating only works with electron pressure')
           end if
+          if(UseAnisoPressure)then
+             call stop_mpi(NameSub//&
+                  'Implicit coronal heating does not work with aniso pressure')
+          end if
           if(.not.UseTurbulentCascade)then
              call stop_mpi(NameSub//&
                   'Implicit coronal heating only works with turbulent cascade')
