@@ -10,7 +10,7 @@ module ModSetInitialCondition
   use ModVarIndexes, ONLY: nVar
   use ModMain, ONLY: NamePrimitive_V
   use ModPhysics, ONLY: UseShocktube, ShockLeftState_V, ShockRightState_V, &
-       ShockPosition, ShockSlope
+       ShockPosition, ShockSlope, nVectorVar, iVectorVar_I
   use ModBatsrusUtility, ONLY: stop_mpi, get_ivar
   use ModNumConst, ONLY: cTwoPi, cDegToRad
 
@@ -32,6 +32,7 @@ module ModSetInitialCondition
   
   ! Wave/Tophat/Gaussian
   logical:: UseWave = .false.
+  logical:: DoRotateWave = .true.
 
   ! Wave parameters
   real:: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
@@ -223,16 +224,21 @@ contains
 
           if(UseShockTube)then
              ! Calculate sin and cos from the tangent = ShockSlope
-             SinSlope=ShockSlope/sqrt(1.0 + ShockSlope**2)
-             CosSlope=       1.0/sqrt(1.0 + ShockSlope**2)
+             CosSlope = 1/sqrt(1 + ShockSlope**2)
+             SinSlope = ShockSlope*CosSlope
+
              ! Set rotational matrix
              Rot_II = reshape([CosSlope, SinSlope, -SinSlope, CosSlope],[2,2])
+
              ! calculate normalized left and right states
              ShockLeft_V  = ShockLeftState_V * Io2No_V(iUnitPrim_V)
              ShockRight_V = ShockRightState_V* Io2No_V(iUnitPrim_V)
 
+             if(ShockSlope /= 0.0 .and. UseWave .and. DoRotateWave) &
+                  call rotate_wave
+             
           end if  ! UseShockTube
-
+          
           if(UseInitialStateDefinition)then
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 x = Xyz_DGB(x_,i,j,k,iBlock)
@@ -268,10 +274,10 @@ contains
                    do iFluid = 1, nFluid
                       if(nFluid > 1) call select_fluid(iFluid)
                       State_VGB(iUx:iUy,i,j,k,iBlock) = &
-                           matmul(Rot_II,ShockLeft_V(iUx:iUy))
+                           matmul(Rot_II, ShockLeft_V(iUx:iUy))
                    end do
                    if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
-                        matmul(Rot_II,ShockLeft_V(Bx_:By_))
+                        matmul(Rot_II, ShockLeft_V(Bx_:By_))
                 else
                    ! Set all variables first
                    State_VGB(:,i,j,k,iBlock) = ShockRight_V
@@ -279,15 +285,15 @@ contains
                    do iFluid = 1, nFluid
                       if(nFluid > 1) call select_fluid(iFluid)
                       State_VGB(iUx:iUy,i,j,k,iBlock) = &
-                           matmul(Rot_II,ShockRight_V(iUx:iUy))
+                           matmul(Rot_II, ShockRight_V(iUx:iUy))
                    end do
                    if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
-                        matmul(Rot_II,ShockRight_V(Bx_:By_))
+                        matmul(Rot_II, ShockRight_V(Bx_:By_))
                 end if
 
                 ! Apply "wave" perturbations
                 if(UseWave) call apply_wave(i, j, k, iBlock)
-                
+
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
                    if(nFluid > 1) call select_fluid(iFluid)
@@ -315,7 +321,7 @@ contains
                call correct_electronfluid_efield(State_VGB(:,:,:,:,iBlock), &
                1, nI, 1, nJ, 1, nK, iBlock, DoHallCurrentIn=.true.,         &
                DoGradPeIn=.false., DoCorrectEfieldIn=DoCorrectEfield)
-          
+
           if(UseConstrainB) call constrain_ics(iBlock)
 
           ! Apply user defined initial conditions
@@ -336,10 +342,47 @@ contains
 
   contains
     !==========================================================================
+    subroutine rotate_wave
+
+      ! Rotate wave parameters with the angle of the shock slope
+      
+      integer:: iVar, iVectorVar, iVarX, iVarY
+      real:: x, y
+      !------------------------------------------------------------------------
+      DoRotateWave = .false.
+
+      ! Rotate vector variables
+      do iVectorVar = 1, nVectorVar
+         ! X and Y indexes of the vector variables
+         iVarX = iVectorVar_I(iVectorVar)
+         iVarY = iVarX + 1
+
+         ! Make sure that the X and Y components of vector variables
+         ! have consistent wave parameters
+         if(Width_V(iVarX) > 0.0 .and. Width_V(iVarY) == 0.0) &
+              call copy_wave(iVarX, iVarY)
+         if(Width_V(iVarY) > 0.0 .and. Width_V(iVarX) == 0.0) &
+              call copy_wave(iVarY, iVarX)
+            
+         ! Rotate amplitudes with the angle of the shock slope
+         x = Ampl_V(iVarX); y = Ampl_V(iVarY)
+         Ampl_V(iVarX) = CosSlope*x - SinSlope*y
+         Ampl_V(iVarY) = SinSlope*x + CosSlope*y
+      end do
+
+      ! Rotate wave vectors
+      do iVar = 1, nVar
+         x = KxWave_V(iVar); y = KyWave_V(iVar)
+         KxWave_V(iVar) = CosSlope*x - SinSlope*y
+         KyWave_V(iVar) = SinSlope*x + CosSlope*y
+      end do
+      
+    end subroutine rotate_wave
+    !==========================================================================
     subroutine apply_wave(i, j, k, iBlock)
 
       ! Apply wave/Gaussian/tophat perturbations at a given grid cell
-      
+
       use ModGeometry, ONLY: &
            xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
 
@@ -396,7 +439,7 @@ contains
             elseif(KzWave_V(iVar) > 0.0)then
                if(abs(Xyz_DGB(z_,i,j,k,iBlock)) > Width_V(iVar) ) CYCLE
             end if
-            
+
             State_VGB(iVar,i,j,k,iBlock) =        &
                  State_VGB(iVar,i,j,k,iBlock)          &
                  + Ampl_V(iVar)*cos(Phase_V(iVar)      &
@@ -407,6 +450,25 @@ contains
       end do
 
     end subroutine apply_wave
+    !==========================================================================
+    subroutine copy_wave(iVar, jVar)
+
+      ! Copy wave parameters from iVar to jVar for rotated problems
+
+      integer, intent(in):: iVar, jVar
+      logical:: DoTest
+      character(len=*), parameter:: NameSub = 'copy_wave'
+      !------------------------------------------------------------------------
+      call test_start(NameSub, DoTest)
+      Width_V(jVar)  = Width_V(iVar)
+      KxWave_V(jVar) = KxWave_V(iVar)
+      KyWave_V(jVar) = KyWave_V(iVar)
+      KzWave_V(jVar) = KzWave_V(iVar)
+      Phase_V(jVar)  = Phase_V(iVar)
+      iPower_V(jVar) = iPower_V(iVar)
+
+      call test_stop(NameSub, DoTest)
+    end subroutine copy_wave
     !==========================================================================
   end subroutine set_initial_condition
   !============================================================================
