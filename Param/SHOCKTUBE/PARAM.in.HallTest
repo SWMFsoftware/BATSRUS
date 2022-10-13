@@ -7,8 +7,6 @@ Param/SHOCKTUBE/PARAM.in.HallTest: Fast Whistler wave test. Hall term is only ap
 MHD			NameEquation
 8			nVar
 
-USERMODULE: Waves
-
 #CHECKGRIDSIZE
 4			nI
 2			nJ
@@ -60,7 +58,7 @@ periodic		TypeBc4
 periodic		TypeBc5
 periodic		TypeBc6
 
-#USERINPUTBEGIN -----------------------------------
+Wave parameters:
 
 Right Alfven (no Hall)
 +0.01			AmplBy
@@ -81,7 +79,7 @@ Right slow Whistler
 -0.0169343		AmplUz
 
 #WAVE
-3			RhoUy_
+Uy			NameVar
 1000.0			Width
 -0.00590516		Amplitude  -0.01 for Alfven
 200.0			LambdaX
@@ -90,7 +88,7 @@ Right slow Whistler
 0.0			Phase
 
 #WAVE
-4			RhoUz_
+Uz			NameVar
 1000.0			Width
 +0.00590516		Amplitude  +0.01 for Alfven
 200.0			LambdaX
@@ -99,7 +97,7 @@ Right slow Whistler
 -90.0			Phase
 
 #WAVE
-6			By_
+By			NameVar
 1000.0			Width
 +0.01			Amplitude
 200.0			LambdaX
@@ -108,15 +106,13 @@ Right slow Whistler
 0.0			Phase
 
 #WAVE
-7			Bz_
+Bz			NameVar
 1000.0			Width
 -0.01			Amplitude
 200.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 -90.0			Phase
-
-#USERINPUTEND -------------------------------------
 
 #TEST
 init_hall_resist krylov load_balance		StringTest

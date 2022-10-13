@@ -63,10 +63,8 @@ SAVEPLOTALL
 #USERSWITCH
 +source			StringSwitch
 
-#USERINPUTBEGIN -----------------
-
 #WAVE
-1			Rho
+Rho			NameVar
 300.0			Width
 0.1			Amplitude
 32.0			LambdaX
@@ -75,7 +73,7 @@ SAVEPLOTALL
 270.0			Phase
 
 #WAVE
-2			Ux
+Ux			NameVar
 300.0			Width
 0.005			Amplitude
 32.0			LambdaX
@@ -84,7 +82,7 @@ SAVEPLOTALL
 270.0			Phase
 
 #WAVE
-6			By
+NameVar			By
 300.0			Width
 0.004			Amplitude
 32.0			LambdaX
@@ -93,7 +91,7 @@ SAVEPLOTALL
 270.0			Phase
 
 #WAVE
-12			Ppar
+Ppar			NameVar
 300.0			Width
 4.5e-5/2		Amplitude
 32.0			LambdaX
@@ -102,7 +100,7 @@ SAVEPLOTALL
 270.0			Phase
 
 #WAVE
-13			P
+P			NameVar
 300.0			Width
 3.75e-5			Amplitude
 32.0			LambdaX
@@ -111,7 +109,7 @@ SAVEPLOTALL
 270.0			Phase
 
 #WAVE
-18			ePpar
+ePpar			NameVar
 300.0			Width
 4.5e-5/2		Amplitude
 32.0			LambdaX
@@ -120,16 +118,13 @@ SAVEPLOTALL
 270.0			Phase
 
 #WAVE
-19			eP
+eP			NameVar
 300.0			Width
 3.75e-5			Amplitude
 32.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 270.0			Phase
-
-
-#USERINPUTEND ---------------------
 
 #CORRECTELECTRONFLUID
 T			DoCorrectElfuid

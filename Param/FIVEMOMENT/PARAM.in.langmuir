@@ -1,8 +1,6 @@
 #DESCRIPTION
 Param/FIVEMOMENT/PARAM.in.langmuir: 5-moment test with Langmuir waves		StringDescription
 
-USERMODULE: Waves
-
 #CHECKGRIDSIZE
       50		nI
       50		nJ
@@ -69,8 +67,6 @@ F			DoNormalizeCell
 0.0			ShockPosition
 1.0			ShockSlope
 
-#USERINPUTBEGIN -----------------------------------
-
 #WAVE
 ElUx			NameVar
 1000.0			Width
@@ -79,8 +75,6 @@ ElUx			NameVar
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
 periodic		TypeBc1

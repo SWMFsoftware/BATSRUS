@@ -406,7 +406,7 @@ test_fastwave:
 
 test_fastwave_compile:
 	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
-	./Config.pl -u=Waves -e=Mhd -ng=2 -g=10,10,10
+	./Config.pl -u=Default -e=Mhd -ng=2 -g=10,10,10
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave
 	$(MAKE) BATSRUS
 	make PIDL
@@ -439,7 +439,7 @@ test_bx0:
 	$(MAKE) test_bx0_check
 
 test_bx0_compile:
-	./Config.pl -noopenmp -u=Waves -e=Mhd -g=10,10,10
+	./Config.pl -noopenmp -u=Default -e=Mhd -g=10,10,10
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -504,7 +504,7 @@ test_hallmhd:
 	$(MAKE) test_hallmhd_check
 
 test_hallmhd_compile:
-	./Config.pl -noopenmp -u=Waves -e=Mhd -f -ng=2 -g=4,2,2
+	./Config.pl -noopenmp -u=Default -e=Mhd -f -ng=2 -g=4,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -601,7 +601,7 @@ test_twofluidmhd:
 	$(MAKE) test_twofluidmhd_check
 
 test_twofluidmhd_compile:
-	./Config.pl ${OPENMP} -u=Waves -e=MhdHypPe -f -ng=2 -g=64,2,2
+	./Config.pl ${OPENMP} -u=Default -e=MhdHypPe -f -ng=2 -g=64,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -2058,7 +2058,7 @@ test_anisotropic:
 	$(MAKE) test_anisotropic_check
 
 test_anisotropic_compile:
-	./Config.pl ${OPENMP} -u=Waves -e=MhdPeAniso -f -ng=2 -g=100,2,2
+	./Config.pl ${OPENMP} -u=Default -e=MhdPeAniso -f -ng=2 -g=100,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -2277,7 +2277,7 @@ test_fivemoment_alfven:
 	$(MAKE) test_fivemoment_alfven_check
 
 test_fivemoment_alfven_compile:
-	./Config.pl ${OPENMP} -u=Waves -e=FiveMoment -ng=2 -g=100,1,1
+	./Config.pl ${OPENMP} -u=Default -e=FiveMoment -ng=2 -g=100,1,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -2337,7 +2337,7 @@ test_fivemoment_langmuir:
 	$(MAKE) test_fivemoment_langmuir_check
 
 test_fivemoment_langmuir_compile:
-	./Config.pl ${OPENMP} -u=Waves -e=FiveMoment -ng=2 -g=50,50,1
+	./Config.pl ${OPENMP} -u=Default -e=FiveMoment -ng=2 -g=50,50,1
 	$(MAKE) BATSRUS
 	make PIDL
 

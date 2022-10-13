@@ -62,8 +62,6 @@ periodic                TypeBc4
 periodic                TypeBc5
 periodic                TypeBc6
 
-#USERINPUTBEGIN ----------------
-
 Right Alfven (no Hall)
 +0.01		AmplBy
 -0.01		AmplBz
@@ -83,7 +81,7 @@ Right slow Whistler
 -0.0169343	AmplUz
 
 #WAVE
-3			RhoUy_
+Uy			NameVar
 1000.0			Width
 -0.00590516		Amplitude  -0.01 for Alfven
 200.0			LambdaX
@@ -92,7 +90,7 @@ Right slow Whistler
 0.0			Phase
 
 #WAVE
-4			RhoUz_
+Uz			NameVar
 1000.0			Width
 +0.00590516		Amplitude  +0.01 for Alfven
 200.0			LambdaX
@@ -101,7 +99,7 @@ Right slow Whistler
 -90.0			Phase
 
 #WAVE
-6			By_
+By			NameVar
 1000.0			Width
 +0.01			Amplitude
 200.0			LambdaX
@@ -110,15 +108,13 @@ Right slow Whistler
 0.0			Phase
 
 #WAVE
-7			Bz_
+Bz			NameVar
 1000.0			Width
 -0.01			Amplitude
 200.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 -90.0			Phase
-
-#USERINPUTEND   ----------------
 
 #CHARGEDPARTICLES
 1                      nHybridParticleSort

@@ -34,10 +34,8 @@ NONE			TypeNormalization
 0.0			StateVar Bz
 1.0			StateVar p
 
-#USERINPUTBEGIN -----------------------------------
-
 #WAVE
-1			Rho_
+Rho			NameVar
 1000.0			Width
 0.1			Amplitude (rho1/rho0)*b0
 20.0			LambdaX
@@ -46,7 +44,7 @@ NONE			TypeNormalization
 90.0			Phase
 
 #WAVE
-5			Bx_
+Bx			NameVar
 1000.0			Width
 0.2			Amplitude (rho1/rho0)*b0
 40.0			LambdaX
@@ -55,15 +53,13 @@ NONE			TypeNormalization
 25.123			Phase
 
 #WAVE
-7			Bz_
+Bz			NameVar
 1000.0			Width
 -0.1			Amplitude (rho1/rho0)*b0
 40.0			LambdaX
 -1.0			LambdaY
 20.0			LambdaZ
 25.123			Phase
-
-#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
 periodic		TypeBc1

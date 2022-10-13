@@ -50,7 +50,7 @@ brick0			NameArea
 2.0			zSize
 
 #SHOCKTUBE
-1.0			LeftState rho
+1.0			LeftState Rho
 0.0			LeftState Ux
 0.0			LeftState Uy
 0.0			LeftState Uz
@@ -58,7 +58,7 @@ brick0			NameArea
 0.0			LeftState By
 0.0			LeftState Bz
 3.0			LeftState p
-1.0			RightState rho
+1.0			RightState Rho
 0.0			RightState Ux
 0.0			RightState Uy
 0.0			RightState Uz
@@ -67,10 +67,8 @@ brick0			NameArea
 0.0			RightState Bz
 3.0			RightState P
 
-#USERINPUTBEGIN -----------------
-
 #WAVE
-6			By
+By			NameVar
 40.0			Width
 0.1			Amplitude
 5.0			LambdaX
@@ -79,15 +77,13 @@ brick0			NameArea
 0.0			Phase
 
 #WAVE
-7			Bz
+Bz			NameVar
 40.0			Width
 0.1			Amplitude
 5.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 90.0			Phase
-
-#USERINPUTEND ---------------------
 
 #OUTERBOUNDARY
 periodic	xMinBc

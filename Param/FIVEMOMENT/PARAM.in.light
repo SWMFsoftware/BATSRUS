@@ -1,8 +1,6 @@
 #DESCRIPTION
 Param/FIVEMOMENT/PARAM.in.light: 5-moment test with Langmuir waves
 
-USERMODULE: Waves
-
 #CHECKGRIDSIZE
       50                              nI
       50                              nJ
@@ -69,8 +67,6 @@ SHOCKPOSITION
 0.0			ShockPosition
 1.0			ShockSlope
 
-#USERINPUTBEGIN ----------------
-
 #WAVE
 By			NameVar
 1000.0			Width
@@ -91,8 +87,6 @@ Ez			NameVar
 
 UPDATEELECTRONFLUID
 T			DoUpdateElectronFluid
-
-#USERINPUTEND ---------------
 
 #OUTERBOUNDARY
 periodic                TypeBcEast

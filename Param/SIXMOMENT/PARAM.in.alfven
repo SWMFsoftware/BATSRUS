@@ -1,8 +1,6 @@
 #DESCRIPTION
 Param/SIXMOMENT/PARAM.in.alfven: Five-moment test with Alfven waves		StringDescription
 
-USERMODULE: Waves
-
 #POINTIMPLICIT
 T			UsePointImplicit
 0.5			BetaPointImplicit
@@ -74,7 +72,7 @@ float                   TypeBcNorth
 float                   TypeBcBottom
 float                   TypeBcTop
 
-#USERINPUTBEGIN ----------------
+Wave parameters
 
 Bx  = 1
 Rho = 1
@@ -83,7 +81,7 @@ Bz  = 0
 Uz  = 0
 
 #WAVE
-6			By_       = Ampl*cos(2pi/LambdaX*x)
+By			NameVar       = Ampl*cos(2pi/LambdaX*x)
 10000.0			Width
 0.1			Amplitude = 0.1
 10000.0			LambdaX   = 1e4
@@ -92,15 +90,13 @@ Uz  = 0
 0.0			Phase
 
 #WAVE
-3			Uy_ = cA * By / Bx
+Uy			NameVar = cA * By / Bx
 10000.0			Width
 0.1			Amplitude
 10000.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-#USERINPUTEND   ----------------
 
 #CORRECTELECTRONFLUID
 T
