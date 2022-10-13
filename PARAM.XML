@@ -929,10 +929,371 @@ The default values are shown above.
 </command>
 
 </commandgroup>
+
 <commandgroup name="INITIAL AND BOUNDARY CONDITIONS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="UNIFORMSTATE" if="$_IsFirstSession">
+  <for from="1" to="$nVar">
+    <parameter name="StateVar" type="real"/>
+  </for>
+
+#UNIFORMSTATE
+0.125		StateVar Rho
+1.0		StateVar Ux
+-0.5		StateVar Uy
+0.0             StateVar Uz
+1.0             StateVar p
+
+The #UNIFORMSTATE command sets up a uniform initial state. This uniform
+state can be perturbed or modified by the user module.
+The command sets the primitive variables in the order defined in
+the equation module.
+</command>
+
+<command name="SHOCKTUBE" if="$_IsFirstSession">
+  <for from="1" to="$nVar">
+    <parameter name="LeftState" type="real"/>
+  </for>
+  <for from="1" to="$nVar">
+    <parameter name="RightState" type="real"/>
+  </for>
+    
+#SHOCKTUBE
+1.		LeftState Rho
+0.		LeftState Ux
+0.		LeftState Uy
+0.		LeftState Uz
+0.75		LeftState Bx
+1.		LeftState By
+0.		LeftState Bz
+1.              LeftState p
+0.125		RightState Rho
+0.		RightState Ux
+0.		RightState Uy
+0.              RightState Uz
+0.75            RightState Bx
+-1.		RightState By
+0.		RightState Bz
+0.1             RightState p
+
+The #SHOCKTUBE command can be used to set up a shocktube problem.
+The left and right state values are given in terms of the primitive
+variables as defined in the equation module.
+The shock can be shifted and rotated by the #SHOCKPOSITION command.
+
+By default the initial condition is uniform, and the
+values are determined by the #SOLARWIND command. The user module
+can be used to set up more complicated initial conditions.
+</command>
+
+<command name="SHOCKPOSITION" if="$_IsFirstSession">
+  <parameter name="ShockPosition" type="real" default="0"/>
+  <parameter name="ShockSlope" type="real" default="0"/>
+#SHOCKPOSITION
+5.0			ShockPosition
+1/2			ShockSlope
+
+The ShockPosition parameter sets the position where the shock,
+ie. the interface between the left and right states given by
+the #SHOCKTUBE command, intersects the X axis.
+When ShockSlope is 0, the shock normal points in the X direction.
+Otherwise the shock is rotated around the Z axis, and the tangent of
+the rotation angle is given by ShockSlope. Possible values are
+\begin{verbatim}
+  ShockSlope = 0., 1/4, 1/3, 1/2, 1., 2., 3., 4.
+\end{verbatim}
+because these angles can be accurately represented
+on the grid. The default values are zero, ie. the shock is in the
+X=0 plane.
+</command>
+
+<command name="WAVE" alias="WAVE2,WAVE4,WAVE6" multiple="T"
+	 if="$_IsFirstSession">
+  <parameter name="NameVar"   type="string" length="20"/>
+  <parameter name="Width"     type="real" min="0"  default="0"/>
+  <parameter name="Amplitude" type="real"          default="0"/>
+  <parameter name="LambdaX"   type="real" min="-1" default="-1"/>
+  <parameter name="LambdaY"   type="real" min="-1" default="-1"/>
+  <parameter name="LambdaZ"   type="real" min="-1" default="-1"/>
+  <parameter name="Phase"     type="real" min="0"  default="0"/>
+
+#WAVE
+Ux                    NameVar
+10.0                  Width
+0.1                   Amplitude
+5.0                   LambdaX
+-1.0                  LambdaY
+-1.0                  LambdaZ
+90.0                  Phase [deg]
+
+Add a wave to the initial condition.
+
+NameVar selects the primitive variable to be changed.
+
+Width limits the extent of the wave relative to the origin.
+
+Inside the width the following formula is applied:
+
+Var += Amplitude*cos(Phase + Kx*x + Ky*y + Kz*z)^Exponent
+
+where Kx max(2*pi/LambdaX, 0), so negative LambdaX results in Kx=0.
+Ky and Kz are calculated similarly. The exponent is given by the
+name of the command. For #WAVE it is 1, for #WAVE2, #WAVE4 and #WAVE6
+it is 2, 4 and 6, respectively. The high power allows setting up
+tests for the fifth order scheme.
+
+The wave vectors and the amplitudes of vector variables are rotated
+around the Z axis with the angle of the shock slope if it is not zero.
+
+This command can be repeated to add different waves to different
+variables. There is no wave perturbation by default. 
+
+</command>
+
+<command name="SOLARWIND">
+  <parameter name="SwNDim"   type="real" min="-1"	default="5"	/>
+  <parameter name="SwTDim"   type="real" min="-1"	default="100000." />
+  <parameter name="SwUxDim"  type="real"		default="-400"	/>
+  <parameter name="SwUyDim"  type="real"		default="0"	/>
+  <parameter name="SwUzDim"  type="real"		default="0"	/>
+  <parameter name="SwBxDim"  type="real"		default="0"	/>
+  <parameter name="SwByDim"  type="real"		default="0"	/>
+  <parameter name="SwBzDim"  type="real"		default="-5"	/>
+#SOLARWIND
+5.0			SwNDim  [n/cc]
+100000.0		SwTDim  [K]
+-400.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+0.0			SwBxDim [nT]
+0.0			SwByDim [nT]
+-5.0			SwBzDim [nT]
+
+This command defines the solar wind parameters for the GM component.
+The default values are all 0.0-s.
+</command>
+
+<command name="SOLARWINDFILE" alias="UPSTREAM_INPUT_FILE">
+  <parameter name="UseSolarWindFile" type="logical" default="F"/>
+  <if expr="$UseSolarWindFile">
+    <parameter name="NameSolarWindFile" type="string"
+	       length="$lLine"/>
+  </if>
+  <rule expr="-f $NameSolarWindFile">
+    Solar wind file $NameSolarWindFile must exist
+  </rule>
+#SOLARWINDFILE
+T			UseSolarWindFile (rest of parameters read if true)
+IMF.dat                 NameSolarWindFile
+
+Default is UseSolarWindFile = .false.
+
+Read IMF data from file NameSolarWindFile if UseSolarWindFile is true.
+The data file contains all information required for setting the upstream
+boundary conditions. Parameter TypeBcWest should be set to 'vary' for
+the time dependent boundary condition.
+
+If the #SOLARWIND command is not provided then the first time read from
+the solar wind file will set the normalization of all variables
+in the GM component. Consequently either the #SOLARWIND command or
+the #SOLARWINDFILE command with UseSolarWindFile=.true.
+is required by the GM component.
+
+The input files are strutured similar to the PARAM.in file.  There are
+{\tt #commands} that can be  inserted as well as the data.
+The file containing the upstream conditions should include data in the
+following order:
+\begin{verbatim}
+yr mn dy hr min sec msec bx by bz vx vy vz dens temp
+\end{verbatim}
+The units of the variables should be:
+\begin{verbatim}
+Magnetic field (b)     nT
+Velocity (v)           km/s
+Number Density (dens)  cm^-3
+Temperature (Temp)     K
+\end{verbatim}
+
+The input files  can have the following optional commands at the beginning
+\begin{verbatim}
+#REREAD      Reread the file if the simulation runs beyond the final time
+             See also the #REFRESHSOLARWINDFILE command
+
+#COOR
+GSM          The coordinate system of the data: GSM (default) or GSE
+
+#VAR
+rho ux uy uz bx by bz p pe
+
+#PLANE       The input data represents values on a tilted plane
+20.0         Angle to rotate in the XY plane [deg]
+15.0         Angle to rotate in the XZ plane [deg]
+
+#POSITION    Y-Z Position of the satellite (also origin of plane rotation)
+20.0         Y location
+30.0         Z location
+
+#SATELLITEXYZ  3D Position of the satellite
+65.0         X location
+0.0          Y location
+0.0          Z location
+
+#ZEROBX
+T            Bx is ignored and set to zero if true
+
+#TIMEDELAY
+3600.0       A constant delay added to the time in the file [s]
+\end{verbatim}
+The #REREAD command tells BATS-R-US to reread the solarwind file
+when the simulation goes past the time of the last data in the current file.
+The default behavior is to keep using the last data point, but
+this can also be changed with the #REFRESHSOLARWINDFILE command.
+
+The #VAR command allows reading an extended set of variables,
+e.g. densities of multiple species, electron pressure, etc.
+
+Finally, the data should be preceded by a {\tt #START}.  The beginning of
+a typical solar wind input file might look like:
+\begin{verbatim}
+#COOR
+GSM
+
+#START
+ 2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  -300.0  0.0  0.0  5.3  2.00E+04
+ 2004  6  24   0   1  58   0  3.0  -3.2 - 3.6  -305.0  0.0  0.0  5.4  2.01E+04
+\end{verbatim}
+
+The maximum number of lines of data allowed in the input file is 50,000.
+However, this can be modified by changing the variable Max_Upstream_Npts
+in the file GM/BATSRUS/get_solar_wind_point.f90.
+</command>
+
+<command name="REFRESHSOLARWINDFILE">
+  <parameter name="DoReadAgain" type="logical" default="F"/>
+
+#REFRESHSOLARWINDFILE
+T			DoReadAgain
+
+If DoReadAgain is set to true and the code is using a solar wind data file,
+the code will stop running when the time goes beyond the end of the last
+data point in the solar wind input file and wait until new data arrives
+(see #SOLARWINDFILE command). The same effect can be achieved with the #REREAD
+command put into the solar wind input file itself (see #SOLARWIND command).
+
+Default is DoReadAgain false, so the code keeps running with the last
+value read.
+</command>
+
+<command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
+  <parameter name="UseBody" type="logical" default="F"/>
+  <if expr="$UseBody">
+    <parameter name="rBody" type="real" min="0" default="3"/>
+    <parameter name="rCurrents" type="real" min="-1" default="4"
+	       if="$NameComp eq 'GM'"/>
+    <if expr="$nSpecies != 0">
+      <for from="1" to="$nSpecies">
+	<parameter name="BodyNDim" type="real" min="0" default="28"/>
+      </for>
+      <parameter name="BodyTDim" type="real" min="0" default="50000"/>
+    </if>
+    <if expr="$nSpecies == 0">  
+      <for from="1" to="$nFluid">
+	<parameter name="BodyNDim" type="real" min="0" default="28"/>
+	<parameter name="BodyTDim" type="real" min="0" default="50000"/>
+      </for>
+    </if>
+  </if>
+#BODY
+T			UseBody (rest of parameters read if true)
+3.0			rBody
+4.0			rCurrents (only read for GM component)
+1.0			BodyNDim (/cc) for fluid 1
+10000.0			BodyTDim (K)   for fluid 1
+0.01			BodyNDim (/cc) for fluid 2
+300.0			BodyTDim (K)   for fluid 2
+
+#BODY
+T			UseBody (rest of parameters read if true)
+3.0			rBody
+4.0			rCurrents (only read for GM component)
+1.0			BodyNDim (/cc) for species 1
+0.01			BodyNDim (/cc) for species 2
+300.0			BodyTDim (K)
+
+#MAGNETOSPHERE
+T                       UseBody (rest of parameters read if true)
+2.5                     rBody
+3.5                     rCurrents (only read for GM component)
+28.0                    BodyNDim (/cc)
+25000.0                 BodyTDim (K)
+
+Note that the #BODY command is most useful for Cartesian grids so that a sphere
+can be cut out as the inner boundary.
+For spherical grids the cell based boundary at the minimum radius
+can be controlled with the #OUTERBOUNDARY and #BOUNDARYSTATE commands.
+
+If UseBody is true, the inner boundary is a spherical surface
+with radius rBody. The rBody is defined in units of the planet/solar
+radius. It can be 1.0, in which case the simulation extends all the
+way to the surface of the central body. In many cases it is more
+economic to use an rBody larger than 1.
+
+The rCurrents parameter defines where the currents are calculated for
+the GM-IE coupling as well as for calculating the FAC contribution
+of ground magnetic field perturbations.
+
+The BodyNDim and BodyTDim parameters define the number density and temperature
+inside the body, respectively. For multifluid MHD the number density and
+temperature are given for all the fluids. For multispecies MHD the number
+density is given for all species followed by the (common) temperature.
+The exact effect of these parameters depends on the settings
+in the #INNERBOUNDARY command.
+
+The default is UseBody=F. Some typical settings are shown above.
+</command>
+
+<command name="CORONA" if="$_IsFirstSession">
+  <parameter name="rCorona" type="real" min="0" default="1"/>  
+  <for from="1" to="$nFluid">
+    <parameter name="CoronaNDim" type="real" min="0" default="1.5e8"/>
+    <parameter name="CoronaTDim" type="real" min="0" default="1.5e6"/>
+  </for>
+#CORONA
+1.0                     rCorona
+1.5E8			CoronaNDim (/cc) for fluid 1
+1.5E6			CoronaTDim (K)
+1.5E2                   CoronaNDim (/cc) for fluid 2
+1.5E6                   CoronaTDim (K)
+
+This command can be used to set physical parameters at the inner
+boundary of the solar domain. Unlike the #BODY command, this command does
+not switch on the face boundary. 
+rCorona sets the radius of the inner boundary (typically 1 Rs).
+The rest of the parameters set the density and temperature for AWSoM(-R).
+For multi-fluid case, the values are repeated.
+
+Default values are shown.
+</command>
+
+<command name="STAR" if="$_IsFirstSession">
+  <parameter name="RadiusStar" type="real" minimum="0" default="1"/>
+  <parameter name="MassStar"   type="real" minimum="0" default="1"/>
+  <parameter name="RotationPeriodStar" type="real"/>
+
+#STAR
+1.0                     RadiusStar (in solar radius)
+1.0                     MassStar   (in solar mass)
+0.0                     RotationPeriodStar (in days)
+
+Modify the parameters of the central star (when BATSRUS is running
+in heliospheric mode). Setting zero for the rotation period will
+switch off the rotation as shown by the example.
+
+By default the Sun is the central star.
+</command>
+
 <command name="NORMALIZATION" if="$_IsFirstSession">
   <parameter name="TypeNormalization" type="string" case="upper"
 	     input="select">
@@ -8326,323 +8687,6 @@ index, respectively. For nIndex larger than 1, the nIndex2, Index2Min,
 Index2Max parameters define the number and range of the second index, etc.
 
 This command can occur multiple times. By default no lookup tables are used.
-</command>
-
-<command name="UNIFORMSTATE" if="$_IsFirstSession">
-  <for from="1" to="$nVar">
-    <parameter name="StateVar" type="real"/>
-  </for>
-
-#UNIFORMSTATE
-0.125		StateVar Rho
-1.0		StateVar Ux
--0.5		StateVar Uy
-0.0             StateVar Uz
-1.0             StateVar p
-
-The #UNIFORMSTATE command sets up a uniform initial state. This uniform
-state can be perturbed or modified by the user module.
-The command sets the primitive variables in the order defined in
-the equation module.
-</command>
-
-<command name="SHOCKTUBE" if="$_IsFirstSession">
-  <for from="1" to="$nVar">
-    <parameter name="LeftState" type="real"/>
-  </for>
-  <for from="1" to="$nVar">
-    <parameter name="RightState" type="real"/>
-  </for>
-    
-#SHOCKTUBE
-1.		LeftState Rho
-0.		LeftState Ux
-0.		LeftState Uy
-0.		LeftState Uz
-0.75		LeftState Bx
-1.		LeftState By
-0.		LeftState Bz
-1.              LeftState p
-0.125		RightState Rho
-0.		RightState Ux
-0.		RightState Uy
-0.              RightState Uz
-0.75            RightState Bx
--1.		RightState By
-0.		RightState Bz
-0.1             RightState p
-
-The #SHOCKTUBE command can be used to set up a shocktube problem.
-The left and right state values are given in terms of the primitive
-variables as defined in the equation module.
-The shock can be shifted and rotated by the #SHOCKPOSITION command.
-
-By default the initial condition is uniform, and the
-values are determined by the #SOLARWIND command. The user module
-can be used to set up more complicated initial conditions.
-</command>
-
-<command name="SHOCKPOSITION" if="$_IsFirstSession">
-  <parameter name="ShockPosition" type="real" default="0"/>
-  <parameter name="ShockSlope" type="real" default="0"/>
-#SHOCKPOSITION
-5.0			ShockPosition
-1/2			ShockSlope
-
-The ShockPosition parameter sets the position where the shock,
-ie. the interface between the left and right states given by
-the #SHOCKTUBE command, intersects the X axis.
-When ShockSlope is 0, the shock normal points in the X direction.
-Otherwise the shock is rotated around the Z axis, and the tangent of
-the rotation angle is given by ShockSlope. Possible values are
-\begin{verbatim}
-  ShockSlope = 0., 1/4, 1/3, 1/2, 1., 2., 3., 4.
-\end{verbatim}
-because these angles can be accurately represented
-on the grid. The default values are zero, ie. the shock is in the
-X=0 plane.
-</command>
-
-<command name="SOLARWIND">
-  <parameter name="SwNDim"   type="real" min="-1"	default="5"	/>
-  <parameter name="SwTDim"   type="real" min="-1"	default="100000." />
-  <parameter name="SwUxDim"  type="real"		default="-400"	/>
-  <parameter name="SwUyDim"  type="real"		default="0"	/>
-  <parameter name="SwUzDim"  type="real"		default="0"	/>
-  <parameter name="SwBxDim"  type="real"		default="0"	/>
-  <parameter name="SwByDim"  type="real"		default="0"	/>
-  <parameter name="SwBzDim"  type="real"		default="-5"	/>
-#SOLARWIND
-5.0			SwNDim  [n/cc]
-100000.0		SwTDim  [K]
--400.0			SwUxDim [km/s]
-0.0			SwUyDim [km/s]
-0.0			SwUzDim [km/s]
-0.0			SwBxDim [nT]
-0.0			SwByDim [nT]
--5.0			SwBzDim [nT]
-
-This command defines the solar wind parameters for the GM component.
-The default values are all 0.0-s.
-</command>
-
-<command name="SOLARWINDFILE" alias="UPSTREAM_INPUT_FILE">
-  <parameter name="UseSolarWindFile" type="logical" default="F"/>
-  <if expr="$UseSolarWindFile">
-    <parameter name="NameSolarWindFile" type="string"
-	       length="$lLine"/>
-  </if>
-  <rule expr="-f $NameSolarWindFile">
-    Solar wind file $NameSolarWindFile must exist
-  </rule>
-#SOLARWINDFILE
-T			UseSolarWindFile (rest of parameters read if true)
-IMF.dat                 NameSolarWindFile
-
-Default is UseSolarWindFile = .false.
-
-Read IMF data from file NameSolarWindFile if UseSolarWindFile is true.
-The data file contains all information required for setting the upstream
-boundary conditions. Parameter TypeBcWest should be set to 'vary' for
-the time dependent boundary condition.
-
-If the #SOLARWIND command is not provided then the first time read from
-the solar wind file will set the normalization of all variables
-in the GM component. Consequently either the #SOLARWIND command or
-the #SOLARWINDFILE command with UseSolarWindFile=.true.
-is required by the GM component.
-
-The input files are strutured similar to the PARAM.in file.  There are
-{\tt #commands} that can be  inserted as well as the data.
-The file containing the upstream conditions should include data in the
-following order:
-\begin{verbatim}
-yr mn dy hr min sec msec bx by bz vx vy vz dens temp
-\end{verbatim}
-The units of the variables should be:
-\begin{verbatim}
-Magnetic field (b)     nT
-Velocity (v)           km/s
-Number Density (dens)  cm^-3
-Temperature (Temp)     K
-\end{verbatim}
-
-The input files  can have the following optional commands at the beginning
-\begin{verbatim}
-#REREAD      Reread the file if the simulation runs beyond the final time
-             See also the #REFRESHSOLARWINDFILE command
-
-#COOR
-GSM          The coordinate system of the data: GSM (default) or GSE
-
-#VAR
-rho ux uy uz bx by bz p pe
-
-#PLANE       The input data represents values on a tilted plane
-20.0         Angle to rotate in the XY plane [deg]
-15.0         Angle to rotate in the XZ plane [deg]
-
-#POSITION    Y-Z Position of the satellite (also origin of plane rotation)
-20.0         Y location
-30.0         Z location
-
-#SATELLITEXYZ  3D Position of the satellite
-65.0         X location
-0.0          Y location
-0.0          Z location
-
-#ZEROBX
-T            Bx is ignored and set to zero if true
-
-#TIMEDELAY
-3600.0       A constant delay added to the time in the file [s]
-\end{verbatim}
-The #REREAD command tells BATS-R-US to reread the solarwind file
-when the simulation goes past the time of the last data in the current file.
-The default behavior is to keep using the last data point, but
-this can also be changed with the #REFRESHSOLARWINDFILE command.
-
-The #VAR command allows reading an extended set of variables,
-e.g. densities of multiple species, electron pressure, etc.
-
-Finally, the data should be preceded by a {\tt #START}.  The beginning of
-a typical solar wind input file might look like:
-\begin{verbatim}
-#COOR
-GSM
-
-#START
- 2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  -300.0  0.0  0.0  5.3  2.00E+04
- 2004  6  24   0   1  58   0  3.0  -3.2 - 3.6  -305.0  0.0  0.0  5.4  2.01E+04
-\end{verbatim}
-
-The maximum number of lines of data allowed in the input file is 50,000.
-However, this can be modified by changing the variable Max_Upstream_Npts
-in the file GM/BATSRUS/get_solar_wind_point.f90.
-</command>
-
-<command name="REFRESHSOLARWINDFILE">
-  <parameter name="DoReadAgain" type="logical" default="F"/>
-
-#REFRESHSOLARWINDFILE
-T			DoReadAgain
-
-If DoReadAgain is set to true and the code is using a solar wind data file,
-the code will stop running when the time goes beyond the end of the last
-data point in the solar wind input file and wait until new data arrives
-(see #SOLARWINDFILE command). The same effect can be achieved with the #REREAD
-command put into the solar wind input file itself (see #SOLARWIND command).
-
-Default is DoReadAgain false, so the code keeps running with the last
-value read.
-</command>
-
-<command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
-  <parameter name="UseBody" type="logical" default="F"/>
-  <if expr="$UseBody">
-    <parameter name="rBody" type="real" min="0" default="3"/>
-    <parameter name="rCurrents" type="real" min="-1" default="4"
-	       if="$NameComp eq 'GM'"/>
-    <if expr="$nSpecies != 0">
-      <for from="1" to="$nSpecies">
-	<parameter name="BodyNDim" type="real" min="0" default="28"/>
-      </for>
-      <parameter name="BodyTDim" type="real" min="0" default="50000"/>
-    </if>
-    <if expr="$nSpecies == 0">  
-      <for from="1" to="$nFluid">
-	<parameter name="BodyNDim" type="real" min="0" default="28"/>
-	<parameter name="BodyTDim" type="real" min="0" default="50000"/>
-      </for>
-    </if>
-  </if>
-#BODY
-T			UseBody (rest of parameters read if true)
-3.0			rBody
-4.0			rCurrents (only read for GM component)
-1.0			BodyNDim (/cc) for fluid 1
-10000.0			BodyTDim (K)   for fluid 1
-0.01			BodyNDim (/cc) for fluid 2
-300.0			BodyTDim (K)   for fluid 2
-
-#BODY
-T			UseBody (rest of parameters read if true)
-3.0			rBody
-4.0			rCurrents (only read for GM component)
-1.0			BodyNDim (/cc) for species 1
-0.01			BodyNDim (/cc) for species 2
-300.0			BodyTDim (K)
-
-#MAGNETOSPHERE
-T                       UseBody (rest of parameters read if true)
-2.5                     rBody
-3.5                     rCurrents (only read for GM component)
-28.0                    BodyNDim (/cc)
-25000.0                 BodyTDim (K)
-
-Note that the #BODY command is most useful for Cartesian grids so that a sphere
-can be cut out as the inner boundary.
-For spherical grids the cell based boundary at the minimum radius
-can be controlled with the #OUTERBOUNDARY and #BOUNDARYSTATE commands.
-
-If UseBody is true, the inner boundary is a spherical surface
-with radius rBody. The rBody is defined in units of the planet/solar
-radius. It can be 1.0, in which case the simulation extends all the
-way to the surface of the central body. In many cases it is more
-economic to use an rBody larger than 1.
-
-The rCurrents parameter defines where the currents are calculated for
-the GM-IE coupling as well as for calculating the FAC contribution
-of ground magnetic field perturbations.
-
-The BodyNDim and BodyTDim parameters define the number density and temperature
-inside the body, respectively. For multifluid MHD the number density and
-temperature are given for all the fluids. For multispecies MHD the number
-density is given for all species followed by the (common) temperature.
-The exact effect of these parameters depends on the settings
-in the #INNERBOUNDARY command.
-
-The default is UseBody=F. Some typical settings are shown above.
-</command>
-
-<command name="CORONA" if="$_IsFirstSession">
-  <parameter name="rCorona" type="real" min="0" default="1"/>  
-  <for from="1" to="$nFluid">
-    <parameter name="CoronaNDim" type="real" min="0" default="1.5e8"/>
-    <parameter name="CoronaTDim" type="real" min="0" default="1.5e6"/>
-  </for>
-#CORONA
-1.0                     rCorona
-1.5E8			CoronaNDim (/cc) for fluid 1
-1.5E6			CoronaTDim (K)
-1.5E2                   CoronaNDim (/cc) for fluid 2
-1.5E6                   CoronaTDim (K)
-
-This command can be used to set physical parameters at the inner
-boundary of the solar domain. Unlike the #BODY command, this command does
-not switch on the face boundary. 
-rCorona sets the radius of the inner boundary (typically 1 Rs).
-The rest of the parameters set the density and temperature for AWSoM(-R).
-For multi-fluid case, the values are repeated.
-
-Default values are shown.
-</command>
-
-<command name="STAR" if="$_IsFirstSession">
-  <parameter name="RadiusStar" type="real" minimum="0" default="1"/>
-  <parameter name="MassStar"   type="real" minimum="0" default="1"/>
-  <parameter name="RotationPeriodStar" type="real"/>
-
-#STAR
-1.0                     RadiusStar (in solar radius)
-1.0                     MassStar   (in solar mass)
-0.0                     RotationPeriodStar (in days)
-
-Modify the parameters of the central star (when BATSRUS is running
-in heliospheric mode). Setting zero for the rotation period will
-switch off the rotation as shown by the example.
-
-By default the Sun is the central star.
 </command>
 
 <command name="FRICTION">
