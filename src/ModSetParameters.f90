@@ -1844,8 +1844,10 @@ contains
                   //TypeNormalization)
           end select
 
-       case("#UNIFORMSTATE", "#SHOCKTUBE", "#SHOCKPOSITION", &
-            "#WAVE", "#WAVE2", "#WAVE4", "#WAVE6", "#GAUSSIAN", "#TOPHAT")
+       case("#STATEDEFINITION", "#STATEINTERFACE", &
+            "#UNIFORMSTATE", "#SHOCKTUBE", "#SHOCKPOSITION", &
+            "#WAVE", "#WAVE2", "#WAVE4", "#WAVE6", "#GAUSSIAN", "#TOPHAT", &
+            "#ENTROPYCONSTANT")
           call read_initial_cond_param(NameCommand)
 
        case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE", "#REFRESHSOLARWINDFILE")
