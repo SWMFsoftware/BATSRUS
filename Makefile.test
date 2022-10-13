@@ -340,7 +340,7 @@ test_fastwave_2d:
 
 test_fastwave_2d_compile:
 	cd ${DIR}; ./Config.pl ${OPENACC}
-	./Config.pl -u=Waves -e=Mhd -ng=2 -g=6,6,1
+	./Config.pl -u=Default -e=Mhd -ng=2 -g=6,6,1
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave_2d
 	$(MAKE) BATSRUS
 	make PIDL
