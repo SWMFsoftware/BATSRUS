@@ -29,7 +29,7 @@ module ModSetInitialCondition
 
   ! Use 2D initial state algorithm
   logical:: UseInitialStateDefinition = .false.
-  
+
   ! Wave/Tophat/Gaussian
   logical:: UseWave = .false.
   logical:: DoRotateWave = .true.
@@ -236,9 +236,9 @@ contains
 
              if(ShockSlope /= 0.0 .and. UseWave .and. DoRotateWave) &
                   call rotate_wave
-             
+
           end if  ! UseShockTube
-          
+
           if(UseInitialStateDefinition)then
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 x = Xyz_DGB(x_,i,j,k,iBlock)
@@ -345,7 +345,7 @@ contains
     subroutine rotate_wave
 
       ! Rotate wave parameters with the angle of the shock slope
-      
+
       integer:: iVar, iVectorVar, iVarX, iVarY
       real:: x, y
       !------------------------------------------------------------------------
@@ -363,7 +363,7 @@ contains
               call copy_wave(iVarX, iVarY)
          if(Width_V(iVarY) > 0.0 .and. Width_V(iVarX) == 0.0) &
               call copy_wave(iVarY, iVarX)
-            
+
          ! Rotate amplitudes with the angle of the shock slope
          x = Ampl_V(iVarX); y = Ampl_V(iVarY)
          Ampl_V(iVarX) = CosSlope*x - SinSlope*y
@@ -376,7 +376,7 @@ contains
          KxWave_V(iVar) = CosSlope*x - SinSlope*y
          KyWave_V(iVar) = SinSlope*x + CosSlope*y
       end do
-      
+
     end subroutine rotate_wave
     !==========================================================================
     subroutine apply_wave(i, j, k, iBlock)
