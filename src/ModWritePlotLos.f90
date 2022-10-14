@@ -182,6 +182,7 @@ contains
     integer            :: nLambda = 1
     real               :: LosDir_D(3)
     real,allocatable   :: Spectrum_I(:)
+    real               :: LambdaMin, LambdaMax
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
@@ -440,8 +441,12 @@ contains
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM))
     elseif(UseFlux)then
-       nLambda = &
-            nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(IFile))+1
+       if(LambdaMax_I(iFile)==LambdaMin_I(iFile))then
+          nLambda=1000
+       else
+          nLambda = &
+               nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(IFile))+1
+       endif
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
@@ -678,6 +683,14 @@ contains
              bOffset = bOffset*No2Io_V(UnitX_)
           end if
 
+          ! If one line is to be used only, fux needs an artificial wvlinterval
+          if(LambdaMax_I(iFile)==LambdaMin_I(iFile))then
+             LambdaMax = LambdaMax_I(iFile)+nLambda*0.5*DLambda_I(IFile)
+             LambdaMin = LambdaMin_I(iFile)-nLambda*0.5*DLambda_I(IFile)
+          else
+             LambdaMax = LambdaMax_I(iFile)
+             LambdaMin = LambdaMin_I(iFile)
+          end if
           select case(TypePlotFormat_I(iFile))
           case('idl')
              if(UseDEM)then
@@ -721,9 +734,9 @@ contains
                      NameUnitsIn = StringUnitIdl,&
                      nDimIn = 3, &
                      CoordMinIn_D = &
-                     [aOffset-aPix, bOffset-bPix, LambdaMin_I(iFile)], &
+                     [aOffset-aPix, bOffset-bPix, LambdaMin], &
                      CoordMaxIn_D = &
-                     [aOffset+aPix, bOffset+bPix, LambdaMax_I(iFile)], &
+                     [aOffset+aPix, bOffset+bPix, LambdaMax], &
                      VarIn_VIII = Image_VIII(:,:,:,:))
              else
                 call save_plot_file(NameFile, &
