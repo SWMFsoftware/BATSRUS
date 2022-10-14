@@ -334,7 +334,7 @@ contains
     integer                     :: iVar, iVarIon, iElement, nCharge
 
     real                        :: LambdaMin
-    
+
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
