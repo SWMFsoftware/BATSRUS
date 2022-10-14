@@ -1036,7 +1036,7 @@ Width limits the extent of the wave relative to the origin.
 
 Inside the width the following formula is applied:
 
-Var += Amplitude*cos(Phase + Kx*x + Ky*y + Kz*z)^Exponent
+Var = Var + Amplitude*cos(Phase + Kx*x + Ky*y + Kz*z)**Exponent
 
 where Kx max(2*pi/LambdaX, 0), so negative LambdaX results in Kx=0.
 Ky and Kz are calculated similarly. The exponent is given by the
