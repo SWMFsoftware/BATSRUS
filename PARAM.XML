@@ -1017,7 +1017,7 @@ X=0 plane.
   <parameter name="LambdaX"   type="real" min="-1" default="-1"/>
   <parameter name="LambdaY"   type="real" min="-1" default="-1"/>
   <parameter name="LambdaZ"   type="real" min="-1" default="-1"/>
-  <parameter name="Phase"     type="real" min="0"  default="0"/>
+  <parameter name="Phase"     type="real"          default="0"/>
 
 #WAVE
 Ux                    NameVar
