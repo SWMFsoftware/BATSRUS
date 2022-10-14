@@ -50,10 +50,8 @@ T			UseNonConservative
 #USERSWITCH
 +ic			StringSwitch
 
-#USERINPUTBEGIN -----------------
-
 #WAVE
-1			Rho
+Rho			NameVar
 1.0			Width
 0.001			Amplitude
 6.0			LambdaX
@@ -62,7 +60,7 @@ T			UseNonConservative
 0.0			Phase
 
 #WAVE
-8			Ppar
+Ppar			NameVar
 1.0			Width
 0.001			Amplitude
 6.0			LambdaX
@@ -71,15 +69,13 @@ T			UseNonConservative
 0.0			Phase
 
 #WAVE
-9			Pperp
+Pperp			NameVar
 1.0			Width
 0.05			Amplitude
 6.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-#USERINPUTEND ---------------------
 
 #OUTERBOUNDARY
 periodic	xMinBc

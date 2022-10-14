@@ -56,10 +56,8 @@ pepar			NameTestVar
 14.0			StateVar Ppar
 16.0			StateVar P
 
-#USERINPUTBEGIN -----------------------------------
-
 #WAVE
-Rho
+Rho			NameVar
 3.0			Width
 0.01			Amplitude
 12.0			LambdaX
@@ -68,7 +66,7 @@ Rho
 0.0			Phase
 
 #WAVE
-P
+P			NameVar
 3.0			Width
 0.16			Amplitude
 12.0			LambdaX
@@ -77,7 +75,7 @@ P
 0.0			Phase
 
 #WAVE
-Ppar
+Ppar			NameVar
 3.0			Width
 0.14			Amplitude
 12.0			LambdaX
@@ -86,7 +84,7 @@ Ppar
 0.0			Phase
 
 #WAVE
-Pe
+Pe			NameVar
 3.0			Width
 0.16			Amplitude
 12.0			LambdaX
@@ -95,7 +93,7 @@ Pe
 0.0			Phase
 
 #WAVE
-Pepar
+Pepar			NameVar
 3.0			Width
 0.14			Amplitude
 12.0			LambdaX
@@ -104,16 +102,13 @@ Pepar
 0.0			Phase
 
 #WAVE
-By
+By			NameVar
 3.0			Width
 0.3			Amplitude
 12.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-
-#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
 periodic		TypeBc1

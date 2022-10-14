@@ -1,8 +1,6 @@
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.FiveMoment: Five-moment test		StringDescription
 
-USERMODULE: Waves
-
 #CHECKGRIDSIZE
       10                              nI
        1                              nJ
@@ -65,10 +63,8 @@ float                   TypeBc4
 float                   TypeBc5
 float                   TypeBc6
 
-#USERINPUTBEGIN ----------------
-
 #WAVE
-6			By_
+By			NameVar
 1000.0			Width
 10.0			Amplitude
 100.0			LambdaX
@@ -80,16 +76,13 @@ Ez =  c*By (left going wave)
 Ez = -c*By (right going wave)
 
 #WAVE
-10			Ez_
+Ez			NameVar
 1000.0			Width
 -1000.0			Amplitude
 100.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-
-#USERINPUTEND   ----------------
 
 #NONCONSERVATIVE
 T			UseNonConservative

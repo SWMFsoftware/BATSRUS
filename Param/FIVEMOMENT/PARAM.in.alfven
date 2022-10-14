@@ -1,8 +1,6 @@
 #DESCRIPTION
 Param/FIVEMOMENT/PARAM.in.alfven: Five-moment test with Alfven waves		StringDescription
 
-USERMODULE: Waves
-
 #POINTIMPLICIT
 T			UsePointImplicit
 0.5			BetaPointImplicit
@@ -68,7 +66,7 @@ NONE			TypeNormalization
 periodic		TypeBc1
 periodic		TypeBc2
 
-#USERINPUTBEGIN -----------------------------------
+Wave parameters:
 
 Bx  = 1
 Rho = 1
@@ -77,7 +75,7 @@ Bz  = 0
 Uz  = 0
 
 #WAVE
-By			By_       = Ampl*cos(2pi/LambdaX*x)
+By			NameVar       = Ampl*cos(2pi/LambdaX*x)
 10000.0			Width
 0.1			Amplitude = 0.1
 10000.0			LambdaX   = 1e4
@@ -86,7 +84,7 @@ By			By_       = Ampl*cos(2pi/LambdaX*x)
 0.0			Phase
 
 #WAVE
-Uy			Uy_ = cA * By / Bx
+Uy			NameVar     = cA * By / Bx
 10000.0			Width
 0.1			Amplitude
 10000.0			LambdaX
@@ -95,7 +93,7 @@ Uy			Uy_ = cA * By / Bx
 0.0			Phase
 
 #WAVE
-ElUy			ElUy_ = Uey = Uy  since Jy=0
+ElUy			NameVar     = Uey = Uy  since Jy=0
 10000.0			Width
 0.1			Amplitude
 10000.0			LambdaX
@@ -104,7 +102,7 @@ ElUy			ElUy_ = Uey = Uy  since Jy=0
 0.0			Phase
 
 #WAVE
-ElUz			ElUz_ = Uez = Uz - Jz/(n*e) = -dBy/dx / (Rho/Mi)
+ElUz			NameVar     = Uez = Uz - Jz/(n*e) = -dBy/dx / (Rho/Mi)
 10000.0			Width       = 2pi/LambdaX*Ampl*sin(2pi/LambdaX*x)
 6.2831852e-05		Amplitude     2e-5*pi
 10000.0			LambdaX
@@ -113,7 +111,7 @@ ElUz			ElUz_ = Uez = Uz - Jz/(n*e) = -dBy/dx / (Rho/Mi)
 -90.0			Phase       sin(x) = cos(x-90)
 
 #WAVE
-Ey			Ey_  = -Uez * Bx = -2pi/LambdaX*Ampl*sin(2pi/LambdaX*x)
+Ey			NameVar     = -Uez*Bx = -2pi/LambdaX*Ampl*sin(kX*x)
 10000.0			Width
 -6.2831852e-05		Amplitude 2e-4*pi
 10000.0			LambdaX
@@ -122,15 +120,13 @@ Ey			Ey_  = -Uez * Bx = -2pi/LambdaX*Ampl*sin(2pi/LambdaX*x)
 -90.0			Phase
 
 #WAVE
-Ez			Ez_ = +Uey * Bx
+Ez			NameVar     = Ez_ = +Uey * Bx
 10000.0			Width
 0.1			Amplitude
 10000.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-#USERINPUTEND -------------------------------------
 
 #NONCONSERVATIVE
 T			UseNonConservative

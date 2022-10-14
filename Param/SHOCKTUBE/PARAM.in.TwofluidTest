@@ -7,8 +7,6 @@ Param/SHOCKTUBE/PARAM.in.TwofluidTest: Two-fluid MHD test		StringDescription
 MHD with electron pressure and hyperbolic cleaning		NameEquation
 10			nVar
 
-USERMODULE: Waves
-
 #ELECTRONENTROPY
 F			UseElectronEntropy
 
@@ -68,10 +66,8 @@ float			TypeBc4
 float			TypeBc5
 float			TypeBc6
 
-#USERINPUTBEGIN -----------------------------------
-
 #WAVE
-6			By_
+By			NameVar
 1000.0			Width
 10.0			Amplitude
 100.0			LambdaX
@@ -80,16 +76,13 @@ float			TypeBc6
 0.0			Phase
 
 #WAVE
-7			Bz_
+Bz			NameVar
 1000.0			Width
 10.0			Amplitude
 100.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 90.0			Phase
-
-#USERINPUTEND -------------------------------------
-
 
 #TESTXYZ
 2.0			xTest		(X coordinate of cell for testing)

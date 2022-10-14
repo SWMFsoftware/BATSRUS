@@ -59,10 +59,8 @@ rotatedcartesian		TypeGeometry
 0.0			StateVar Bz
 4.5e-4			StateVar p
 
-#USERINPUTBEGIN -----------------------------------
-
 #WAVE
-1			Rho_
+Rho			NameVar
 1000.0			Width
 0.1			Amplitude
 32.0			LambdaX
@@ -71,7 +69,7 @@ rotatedcartesian		TypeGeometry
 0.0			Phase
 
 #WAVE
-2			Ux_
+Ux			NameVar
 1000.0			Width
 0.005			Amplitude (rho1/rho0)*cF
 32.0			LambdaX
@@ -80,7 +78,7 @@ rotatedcartesian		TypeGeometry
 0.0			Phase
 
 #WAVE
-6			By_
+By			NameVar
 1000.0			Width
 0.004			Amplitude (rho1/rho0)*b0
 32.0			LambdaX
@@ -89,15 +87,13 @@ rotatedcartesian		TypeGeometry
 0.0			Phase
 
 #WAVE
-8			p_
+p			NameVar
 10000.0			Width
 7.5e-5			Amplitude (rho1/rho0)*5/3*p0
 32.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
 periodic		TypeBc1

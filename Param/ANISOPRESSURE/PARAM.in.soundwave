@@ -47,10 +47,8 @@ T			UseNonConservative
 3.0			RightState Ppar
 3.0			RightState p
 
-#USERINPUTBEGIN -----------------
-
 #WAVE
-1			Rho
+Rho			NameVar
 12.0			Width
 0.02			Amplitude
 6.0			LambdaX
@@ -59,7 +57,7 @@ T			UseNonConservative
 0.0			Phase
 
 #WAVE
-8			Ppar
+Ppar			NameVar
 12.0			Width
 0.18			Amplitude
 6.0			LambdaX
@@ -68,15 +66,13 @@ T			UseNonConservative
 0.0			Phase
 
 #WAVE
-9			p
+p			NameVar
 12.0			Width
 0.1			Amplitude
 6.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-#USERINPUTEND ---------------------
 
 #OUTERBOUNDARY
 periodic		xMinBc

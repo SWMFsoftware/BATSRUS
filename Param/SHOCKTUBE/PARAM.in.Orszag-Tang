@@ -41,10 +41,8 @@ NONE			NameNormalization
 5/3			StateVar P
 
 
-#USERINPUTBEGIN ----------------
-
 #WAVE
-ux			Ux 
+Ux			NameVar
 1.0			Width
 -1.0			Amplitude
 -1			LambdaX  
@@ -53,7 +51,7 @@ ux			Ux
 -90.0			Phase
 
 #WAVE
-uy			Ux 
+Uy			NameVar
 1.0			Width
 1.0			Amplitude
 1			LambdaX  
@@ -62,7 +60,7 @@ uy			Ux
 -90.0			Phase
 
 #WAVE
-bx			Bx 
+Bx			NameVar
 1.0			Width
 -1.0			Amplitude
 -1			LambdaX  
@@ -71,16 +69,13 @@ bx			Bx
 -90.0			Phase
 
 #WAVE
-by			By 
+By			NameVar
 1.0			Width
 1.0			Amplitude
 0.5			LambdaX  
 -1.0			LambdaY
 -1.0			LambdaZ
 -90.0			Phase
-
-
-#USERINPUTEND   ----------------
 
 #OUTERBOUNDARY
 periodic			xMinBc

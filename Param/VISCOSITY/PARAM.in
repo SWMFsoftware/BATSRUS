@@ -31,7 +31,7 @@ T			UseViscosity
 #USERINPUTBEGIN -----------------------------------
 
 #PIPEFLOW
-T
+T			DoPipeFlow
 
 #USERINPUTEND -------------------------------------
 

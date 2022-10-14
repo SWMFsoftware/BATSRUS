@@ -38,10 +38,8 @@ T			UseNonConservative
 6.0			StateVar Ppar
 35.3333			StateVar p
 
-#USERINPUTBEGIN -----------------
-
 #WAVE
-3			Uy
+Uy			NameVar
 1.0			Width
 0.12			Amplitude
 6.0			LambdaX
@@ -50,16 +48,13 @@ T			UseNonConservative
 0.0			Phase
 
 #WAVE
-6			By
+By			NameVar
 1.0			Width
 0.1			Amplitude
 6.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-
-#USERINPUTEND ---------------------
 
 #OUTERBOUNDARY
 periodic		xMinBc

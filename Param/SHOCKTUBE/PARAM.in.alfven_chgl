@@ -43,10 +43,8 @@ T			UseNonConservative
 1.0			StateVar ChGL
 0.25			StateVar p
 
-#USERINPUTBEGIN -----------------------------------
-
 #WAVE
-3			Uy_
+Uy			NameVar
 1000.0			Width
 0.1			Amplitude
 32.0			LambdaX
@@ -55,7 +53,7 @@ T			UseNonConservative
 0.0			Phase
 
 #WAVE
-4			Uz_
+Uz			NameVar
 1000.0			Width
 0.1			Amplitude
 32.0			LambdaX
@@ -64,7 +62,7 @@ T			UseNonConservative
 0.0			Phase
 
 #WAVE
-6			By_
+By			NameVar
 1000.0			Width
 0.1			Amplitude (rho1/rho0)*b0
 32.0			LambdaX
@@ -73,15 +71,13 @@ T			UseNonConservative
 0.0			Phase
 
 #WAVE
-7			Bz_
+Bz			NameVar
 1000.0			Width
 0.1			Amplitude (rho1/rho0)*b0
 32.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
 periodic		TypeBc1
