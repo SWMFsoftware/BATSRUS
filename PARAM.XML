@@ -1017,7 +1017,7 @@ X=0 plane.
   <parameter name="LambdaX"   type="real" min="-1" default="-1"/>
   <parameter name="LambdaY"   type="real" min="-1" default="-1"/>
   <parameter name="LambdaZ"   type="real" min="-1" default="-1"/>
-  <parameter name="Phase"     type="real" min="0"  default="0"/>
+  <parameter name="Phase"     type="real"          default="0"/>
 
 #WAVE
 Ux                    NameVar
@@ -1031,14 +1031,12 @@ Ux                    NameVar
 Add a wave to the initial condition.
 
 NameVar selects the primitive variable to be changed.
-
 Width limits the extent of the wave relative to the origin.
-
 Inside the width the following formula is applied:
-
-Var += Amplitude*cos(Phase + Kx*x + Ky*y + Kz*z)^Exponent
-
-where Kx max(2*pi/LambdaX, 0), so negative LambdaX results in Kx=0.
+\begin{verbatim}
+   Var = Var + Amplitude*cos(Phase + Kx*x + Ky*y + Kz*z)**Exponent
+\end{verbatim}
+where Kx = max(2*pi/LambdaX, 0), so negative LambdaX results in Kx=0.
 Ky and Kz are calculated similarly. The exponent is given by the
 name of the command. For #WAVE it is 1, for #WAVE2, #WAVE4 and #WAVE6
 it is 2, 4 and 6, respectively. The high power allows setting up
@@ -1049,7 +1047,68 @@ around the Z axis with the angle of the shock slope if it is not zero.
 
 This command can be repeated to add different waves to different
 variables. There is no wave perturbation by default. 
+</command>
 
+<command name="GAUSSIAN" alias="TOPHAT" multiple="T" if="$_IsFirstSession">
+  <parameter name="NameVar"   type="string" length="20"/>
+  <parameter name="Amplitude" type="real"          default="0"/>
+  <parameter name="LambdaX"   type="real" min="-1" default="-1"/>
+  <parameter name="LambdaY"   type="real" min="-1" default="-1"/>
+  <parameter name="LambdaZ"   type="real" min="-1" default="-1"/>
+  <parameter name="CenterX"   type="real" default="0"/>
+  <parameter name="CenterY"   type="real" default="0"/>
+  <parameter name="CenterZ"   type="real" default="0"/>
+
+#GAUSSIAN
+Rho                     NameVar
+0.1                     Amplitude
+5.0                     LambdaX
+3.0                     LambdaY
+-1.0                    LambdaZ
+4.2                     CenterX
+0.0                     CenterY
+-0.2                    CenterZ
+
+Add a compact Gaussian or a top hat perturbation to some variable.
+
+NameVar selects the primitive variable to be perturbed.
+Amplitude sets the amplitude of the perturbation.
+LambdaX, LambdaY and LambdaZ define the spatial extent of the perturbation
+in the 3 directions. Negative value means that there is no restriction.
+The "wave vector" is defined as
+\begin{verbatim}
+    Kx = max(0.0, 1/LambdaX)
+\end{verbatim}
+and similarly for Ky and Kz. Note that there is no 2*pi factor here.
+CenterX, CenterY and CenterZ define the center of the perturbation.
+
+The wave vectors and the amplitudes of vector variables are rotated
+around the Z axis with the angle of the shock slope if it is not zero.
+
+For a given point at x, y, z, the square of the normalized radial distance
+from the center is calculated as
+\begin{verbatim}
+    r2 = (Kx*(x-xCenter))**2 + (Ky*(y-yCenter))**2 + (Kz*(z-zCenter))**2
+    r  = sqrt(r2)
+\end{verbatim}
+A compact Gaussian perturbation is defined as
+\begin{verbatim}
+    Var = Var + Amplitude*cos(Pi*r/4)**6*exp(-r2)
+\end{verbatim}
+for r &lt; 2, and no perturbation otherwise. The sixth power of the cosine
+function ensures that the perturbation and its derivatives go to zero at r=2.
+At r=0 the full amplitude is applied. At r=1 the amplitude is about
+0.046*Amplitude.
+
+The #TOPHAT command has the same parameters as the #GAUSSIAN. In this
+case the full amplitude is applied for r &lt;= 1:
+\begin{verbatim} 
+   Var = Var + Amplitude
+\end{verbatim}
+and no perturbation is done outside.
+
+This command can be repeated multiple times to add perturbations to
+multiple variables. No perturbation is applied by default.
 </command>
 
 <command name="SOLARWIND">

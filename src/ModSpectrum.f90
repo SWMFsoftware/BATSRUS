@@ -222,7 +222,7 @@ contains
        ! If wavelength is different than previous line
        ! pass only if wavelength is inside of wavelengthintervals of interest
 
-       if(UseDoppler_I(iFile))then
+       if(UseDoppler_I(iFile).and.LambdaMin_I(iFile) /= LambdaMax_I(iFile))then
           ! If Doppler shift is calculated, use shifted intervals
           if(LineWavelength < LambdaMin_I(iFile)*0.9)CYCLE
           if(LineWavelength > LambdaMax_I(iFile)*1.1)CYCLE
@@ -298,7 +298,7 @@ contains
          UnitRho_, UnitEnergyDens_ ,UnitB_, UnitU_
     use ModConst, ONLY: cProtonMass, cLightSpeed, cBoltzmann, cPi
     use ModIO, ONLY: DLambdaIns_I, DLambda_I, LambdaMin_I, &
-         UseDoppler_I, UseAlfven_I, TempMin_I
+         UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
 
     integer, intent(in)   :: iFile, nLambda
@@ -332,6 +332,8 @@ contains
     real                        :: EquilIonFrac
     logical                     :: IsFound = .false.
     integer                     :: iVar, iVarIon, iElement, nCharge
+
+    real                        :: LambdaMin
 
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
@@ -470,14 +472,19 @@ contains
        ! Disperse line onto lamba bins
        ! Find the starting/ending wavelength bins
        ! Find the corresponding wavelength bin for starting wavelength
-       iBegin = nint((LambdaBegin-LambdaMin_I(iFile))/DLambda_I(iFile))+1
-       iEnd = nint((LambdaEnd-LambdaMin_I(iFile))/DLambda_I(iFile))+1
+       if(LambdaMin_I(iFile)==LambdaMax_I(iFile))then
+          LambdaMin=LambdaMin_I(iFile)-nLambda*0.5*DLambda_I(iFile)
+       else
+          LambdaMin=LambdaMin_I(iFile)
+       end if
+       iBegin = nint((LambdaBegin-LambdaMin)/DLambda_I(iFile))+1
+       iEnd = nint((LambdaEnd-LambdaMin)/DLambda_I(iFile))+1
 
        ! Update bins between begin and end indices by adding the Gaussian
        ! distribution
        do iBin = max(1,iBegin), min(nLambda,iEnd)
           ! Get wavelength from the center of the bin
-          LambdaBin = LambdaMin_I(iFile)+DLambda_I(iFile)*(iBin-1)
+          LambdaBin = LambdaMin+DLambda_I(iFile)*(iBin-1)
 
           ! Get distance from peak wavelength in SI
           LambdaDist = Lambda - LambdaBin
