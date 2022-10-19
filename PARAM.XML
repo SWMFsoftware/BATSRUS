@@ -4879,6 +4879,8 @@ The "IDL" format can be read with the IDL visualization macros
 (read\_data and animate\_data)
 in BATSRUS/Idl or with the SpacePy python package.
 The ASCII "IDL" format can be easily read with any other plotting software.
+The "IDL" file format is described
+at the beginning of the share/Library/src/ModPlotFile.f90.
 
 The PlotArea string defines a 1, 2, or 3D volume for plotting:
 \begin{verbatim}
@@ -8700,6 +8702,14 @@ logrho logp pXe pBe pPl		NameVar
 50				nIndex2
 0.001				Index2Min
 100.0				Index2Max
+
+Lookup tables allow interpolating one or more variables from a discrete
+table. For sake of efficiency, lookup tables should have uniform indexes,
+but non-uniform tables are also supported.
+Tables with up to 5 indexes are supported.
+Lookup tables are in the same format as structured "IDL" plotfiles.
+The file format is described at the beginning of the
+source code share/Library/src/ModPlotFile.f90.
 
 Tables are identified by the NameTable string that should be unique for
 the table and must agree with the name used in the ModUser module.
