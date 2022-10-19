@@ -202,7 +202,7 @@ contains
             ! if PICREGIONMAX is presented, set PICADAPT=True
             AdaptPic % DoThis = .true.
        end if
-       
+
     case("#PICREGIONMIN")
        call read_var('StringPicRegion', StringPicRegion)
        if (StringPicRegion /= 'none') then
@@ -210,7 +210,7 @@ contains
             ! if PICREGIONMIN is presented, set PICADAPT=True
             AdaptPic % DoThis = .true.
        end if
-       
+
     case('#RESTARTPICSTATUS')
        call read_var('DoRestartPicStatus', DoRestartPicStatus)
 
