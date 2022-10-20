@@ -67,7 +67,6 @@ module ModCellBoundary
   !$omp threadprivate(iMin, iMax, jMin, jMax, kMin, kMax)
 contains
   !============================================================================
-
   subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
        iImplBlock, IsLinear, iTypeBcIn, iSideIn)
 
@@ -466,7 +465,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
-
     subroutine set_gradpot_bc
 
       ! Pot(ghost) = Pot(inside2) + (x_ghost - x_inside2).E_inside1
@@ -517,7 +515,6 @@ contains
 
     end subroutine set_gradpot_bc
     !==========================================================================
-
     subroutine set_float_bc(iVarMin, iVarMax, iSide, iMin, iMax, &
          jMin, jMax, kMin, kMax, nVarState, State_VG)
 
@@ -526,7 +523,6 @@ contains
            iMin, iMax, jMin, jMax, kMin, kMax
       real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
       integer:: i, j, k
-
       !------------------------------------------------------------------------
       select case(iSide)
       case(1)
@@ -562,7 +558,6 @@ contains
       end select
     end subroutine set_float_bc
     !==========================================================================
-
     subroutine set_shear_bc
 
       use ModPhysics, ONLY: ShockSlope
@@ -670,7 +665,6 @@ contains
 
     end subroutine set_symm_bc
     !==========================================================================
-
     subroutine set_reflect_bc(nVector, iVector_I)
 
       ! Copy variables in a symmetric fashion, and then
@@ -788,7 +782,6 @@ contains
 
       character(len=*), parameter:: NameSub = 'set_fixed_semi_bc'
       !------------------------------------------------------------------------
-
       if(UseSemiHallResist .or. UseSemiResistivity)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(BxImpl_:BzImpl_,i,j,k) = CellState_VI(Bx_:Bz_,iSide)
@@ -836,7 +829,6 @@ contains
       ! Set B = B - B0 in ghost cells
 
       integer:: i, j, k
-
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          State_VG(iVarMin:iVarMax,i,j,k) =  &
@@ -845,7 +837,6 @@ contains
 
     end subroutine fix_b0
     !==========================================================================
-
     subroutine set_solar_wind_bc
 
       use ModAdvance,     ONLY: nVar, UseIdealEos, UseElectronPressure
@@ -940,7 +931,6 @@ contains
 
     end subroutine set_solar_wind_bc
     !==========================================================================
-
     subroutine set_solar_wind_bc_buffer
 
       use ModVarIndexes, ONLY: Bx_, Bz_
@@ -950,7 +940,6 @@ contains
       ! index and location of a single point
       integer :: i, j, k
       real    :: y, z
-
       !------------------------------------------------------------------------
       do k = kMin, kMax
          z = Xyz_DGB(z_,1,1,k,iBlock)
@@ -967,7 +956,6 @@ contains
 
     end subroutine set_solar_wind_bc_buffer
     !==========================================================================
-
     subroutine set_radiation_outflow_bc(iVarMin, iVarMax, iSide)
 
       use ModAdvance,  ONLY: nWave
@@ -987,7 +975,6 @@ contains
 
       real   :: OpacityRosselandSi_W(nWave), Coef
       !------------------------------------------------------------------------
-
       select case(iSide)
       case(1, 2)
          if(iSide == 1)then
@@ -1076,10 +1063,8 @@ contains
 
     end subroutine set_radiation_outflow_bc
     !==========================================================================
-
   end subroutine set_cell_boundary
   !============================================================================
-
   subroutine set_edge_corner_ghost(nGhost,iBlock, nVarState, State_VG)
     ! The blocks near boundary may have problem with high order resolution
     ! change and high order AMR. These blocks' corner/edge ghost cells
@@ -1194,6 +1179,5 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_edge_corner_ghost
   !============================================================================
-
 end module ModCellBoundary
 !==============================================================================
