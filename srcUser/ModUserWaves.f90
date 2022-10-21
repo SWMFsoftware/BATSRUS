@@ -109,6 +109,10 @@ module ModUser
   ! Variables for shockramp problem
   logical :: DoShockramp=.false.
 
+  ! Variables for incompressible flow problem: Hill vortex
+  real:: xCenter, zCenter, xWidth, zWidth
+  logical:: IsSmooth
+  
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -136,93 +140,34 @@ contains
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
-       case("#STATEDEFINITION")
-          UseInitialStateDefinition = .true.
-          call join_string(nVar, NameVar_V(1:nVar), StringVar)
-          call init_initial_state(StringVar)
-          call read_initial_state_param(NameCommand)
-       case("#STATEINTERFACE")
-          call read_initial_state_param(NameCommand)
+
        case('#USERPROBLEM')
           call read_var('NameProblem',NameProblem)
+
        case('#GEM')
           call read_var('Amplitude',Az)
+
        case('#GEMPERTURB')
           call read_var('GemEps',GemEps)
+
+       case('#HILL')
+          NameProblem = 'HILL'
+          call read_var('xWidth',  xWidth)
+          call read_var('zWidth',  zWidth)
+          call read_var('xCenter', xCenter)
+          call read_var('zCenter', zCenter)
+          call read_var('IsSmooth', IsSmooth)
+
        case('#RT')
           NameProblem = 'RT'
           call read_var('X Velocity Amplitude', Amplitude)
           call read_var('X Perturbation Width', Width)
+
        case('#WAVESPEED')
           call read_var('Velocity',Velocity)
-       case('#ENTROPY')
-          call read_var('EntropyConstant', EntropyConstant)
-       case('#WAVEINTEGRAL')
-          call read_var('DoIntegrateWave', DoIntegrateWave)
-       case('#GAUSSIAN', '#TOPHAT')
-          ! Read parameters for a tophat ampl for r/d < 1 or
-          ! a Gaussian profile multiplied by smoother:
-          !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
-          ! where d = k.(x-xCenter) and k = 1/lambda
-          call read_var('NameVar',   NameVar)
-          call get_iVar(NameVar, iVar)
-          call read_var('Amplitude', Ampl_V(iVar))
-          call read_var('LambdaX',   LambdaX)
-          call read_var('LambdaY',   LambdaY)
-          call read_var('LambdaZ',   LambdaZ)
-          call read_var('CenterX',   x_V(iVar))
-          call read_var('CenterY',   y_V(iVar))
-          call read_var('CenterZ',   z_V(iVar))
-
-          ! Negative Lambda sets 0 for wavenumber (constant in that direction)
-          KxWave_V(iVar) = max(0.0, 1/LambdaX)
-          KyWave_V(iVar) = max(0.0, 1/LambdaY)
-          KzWave_V(iVar) = max(0.0, 1/LambdaZ)
-
-          if(NameCommand == '#TOPHAT')then
-             ! Setting zero value signals that this is a tophat
-             iPower_V(iVar) = 0
-          else
-             ! Setting negative value signals that this is a Gaussian
-             iPower_V(iVar) = -2
-          end if
-
-          if (iProc == 0) write(*,*) 'Setting GAUSSIAN or TOPHAT for iVar =', &
-               iVar, ', NameVar =', NameVar_V(iVar)
 
        case('#SHOCKRAMP')
           call read_var('DoShockramp', DoShockramp)
-
-       case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
-          call read_var('NameVar',   NameVar)
-          call get_iVar(NameVar, iVar)
-          call read_var('Width', Width)
-          call read_var('Amplitude', Amplitude)
-          call read_var('LambdaX', LambdaX)
-          call read_var('LambdaY', LambdaY)
-          call read_var('LambdaZ', LambdaZ)
-          call read_var('Phase',Phase)
-          Width_V(iVar) = Width
-          Ampl_V(iVar)  = Amplitude
-          Phase_V(iVar) = Phase*cDegToRad
-
-          if(NameCommand == '#WAVE6')then
-             iPower_V(iVar) = 6
-          elseif(NameCommand == '#WAVE4')then
-             iPower_V(iVar) = 4
-          elseif(NameCommand == '#WAVE2')then
-             iPower_V(iVar) = 2
-          else
-             iPower_V(iVar) = 1
-          end if
-
-          ! if wavelength is smaller than 0, then the wave number is set to 0
-          KxWave_V(iVar) = max(0.0, cTwoPi/LambdaX)
-          KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)
-          KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
-
-          if(iProc == 0) write(*,*) 'Setting wave for iVar =', iVar, &
-               ', NameVar =', NameVar_V(iVar)
 
        case('#USERINPUTUNITX')
           ! This option controls the normalization of the unit of length
@@ -342,7 +287,7 @@ contains
     real:: x, y, z, r, r2, Lx, Ly, HalfWidth
     integer:: i, j, k, iVectorVar, iVar, iVarX, iVarY
 
-    real :: RhoLeft, RhoRight, pLeft
+    real :: Rho, RhoLeft, RhoRight, pLeft
     real :: ViscoCoeff
 
     real :: Acceleration
@@ -382,6 +327,22 @@ contains
     end if
 
     select case(NameProblem)
+    case('HILL')
+       ! set density
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          x = sqrt(sum(Xyz_DGB(x_:y_,i,j,k,iBlock)**2)) - xCenter
+          z = Xyz_DGB(z_,i,j,k,iBlock) - zCenter
+          Rho = ShockLeftState_V(Rho_)
+          if(IsSmooth)then
+             if(abs(x) < xWidth/2 .and. abs(z) < zWidth/2) &
+                  Rho = Rho + cos(cPi*x/xWidth)**2*cos(cPi*z/zWidth)**2
+          else
+             if((x/xWidth)**2 + (z/zWidth)**2 < 0.25) &
+                  Rho = Rho + 1.0
+          end if
+          State_VGB(Rho_,i,j,k,iBlock)   = Rho
+       end do; end do; end do
+       call set_hill_velocity(iBlock)
     case('RT')
        ! Initialize Rayleigh-Taylor instability
 
@@ -1379,7 +1340,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_amr_criteria
   !============================================================================
-
   subroutine user_update_states(iBlock)
 
     use ModMain, ONLY: UseUserUpdateStates
@@ -1417,6 +1377,8 @@ contains
 
     call update_state_normal(iBlock)
 
+    if(NameProblem == 'HILL') call set_hill_velocity(iBlock)
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
   !============================================================================
@@ -1447,6 +1409,36 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_gaussian_field
   !============================================================================
+  subroutine set_hill_velocity(iBlock)
 
+    use ModAdvance, ONLY: State_VGB
+    use BATL_lib, ONLY: Xyz_DGB
+    
+    integer, intent(in):: iBlock
+
+    integer:: i, j, k
+    real:: x, y, z, rCyl, rSph, Rho
+    !--------------------------------------------------------------------------
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       ! Set velocity
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
+       rCyl = sqrt(x**2    + y**2)
+       rSph = sqrt(rCyl**2 + z**2)
+       
+       Rho = State_VGB(Rho_,i,j,k,iBlock)
+       if(rSph < 1)then
+          State_VGB(RhoUz_,i,j,k,iBlock) = 1.5*Rho*(-1 + rCyl**2 + rSph**2)
+          State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = -1.5*Rho*[x, y]*z
+       else
+          State_VGB(RhoUz_,i,j,k,iBlock) = &
+               Rho*(1 - 1/rSph**3 + 1.5*rCyl**2/rSph**5)
+          State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = -1.5*Rho*[x, y]*z/rSph**5
+       end if
+    end do; end do; end do
+    
+  end subroutine set_hill_velocity
+  !============================================================================
 end module ModUser
 !==============================================================================
