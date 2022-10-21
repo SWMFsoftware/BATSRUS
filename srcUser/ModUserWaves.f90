@@ -112,7 +112,7 @@ module ModUser
   ! Variables for incompressible flow problem: Hill vortex
   real:: xCenter, zCenter, xWidth, zWidth
   logical:: IsSmooth
-  
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -1378,7 +1378,7 @@ contains
     call update_state_normal(iBlock)
 
     if(NameProblem == 'HILL') call set_hill_velocity(iBlock)
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
   !============================================================================
@@ -1413,7 +1413,7 @@ contains
 
     use ModAdvance, ONLY: State_VGB
     use BATL_lib, ONLY: Xyz_DGB
-    
+
     integer, intent(in):: iBlock
 
     integer:: i, j, k
@@ -1426,7 +1426,7 @@ contains
        z = Xyz_DGB(z_,i,j,k,iBlock)
        rCyl = sqrt(x**2    + y**2)
        rSph = sqrt(rCyl**2 + z**2)
-       
+
        Rho = State_VGB(Rho_,i,j,k,iBlock)
        if(rSph < 1)then
           State_VGB(RhoUz_,i,j,k,iBlock) = 1.5*Rho*(-1 + rCyl**2 + rSph**2)
@@ -1437,7 +1437,7 @@ contains
           State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = -1.5*Rho*[x, y]*z/rSph**5
        end if
     end do; end do; end do
-    
+
   end subroutine set_hill_velocity
   !============================================================================
 end module ModUser

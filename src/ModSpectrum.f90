@@ -267,7 +267,7 @@ contains
           ! Pair index of chianti table to state variable
           if(trim(LineTable_I(iLine)%NameIon(1:iTemp-1))==&
                trim(NameElement_I(jTemp)))then
-             Aion = AElement_I(jTemp) 
+             Aion = AElement_I(jTemp)
              EXIT
           end if
        enddo
@@ -461,7 +461,7 @@ contains
             iNMin, iNMax, jTMin, jTMax, &
             [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
        Gint = 10.0**Gint
-       
+
        if(UseIonFrac_I(iFile) .and. IsFound)then
           EquilIonFrac = bilinear(LineTable_I(iLine)%LogIonFrac_II(:,:), &
                iNMin, iNMax, jTMin, jTMax, &
