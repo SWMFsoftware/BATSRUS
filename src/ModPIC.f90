@@ -196,14 +196,20 @@ contains
 
     case("#PICREGIONMAX")
        call read_var('StringPicRegionLimit', StringPicRegionLimit)
-       if (StringPicRegionLimit /= 'none') &
+       if (StringPicRegionLimit /= 'none') then
             call get_region_indexes(StringPicRegionLimit, &
             iRegionPicLimit_I)
+            ! if PICREGIONMAX is presented, set PICADAPT=True
+            AdaptPic % DoThis = .true.
+       end if
 
     case("#PICREGIONMIN")
        call read_var('StringPicRegion', StringPicRegion)
-       if (StringPicRegion /= 'none') &
+       if (StringPicRegion /= 'none') then
             call get_region_indexes(StringPicRegion, iRegionPic_I)
+            ! if PICREGIONMIN is presented, set PICADAPT=True
+            AdaptPic % DoThis = .true.
+       end if
 
     case('#RESTARTPICSTATUS')
        call read_var('DoRestartPicStatus', DoRestartPicStatus)
