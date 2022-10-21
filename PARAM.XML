@@ -8538,7 +8538,7 @@ between plasma pressure and magnetic paressure), "j/b", "j/bperp"
 to distinguish X lines from flux ropes), "speed" (bulk flow speed to exclude
 magnetosheath), and "jy" (distinguish main current sheet in magnetotail).
 Criteria "j/b" and "j/bperp" require an extra input parameter for B1 in the 
-denominator to avoid dividing by 0. Default value of B1 is 0.
+denominator to avoid dividing by 0. Default value of B1 is 1 nT.
 
 By default the whole PIC region is active (possibly limited by #PICREGIONMAX).
 </command>
