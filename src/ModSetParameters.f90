@@ -2345,7 +2345,7 @@ contains
             "#MAGNETICINNERBOUNDARY", "#OUTFLOWCRITERIA", "#YOUNGBOUNDARY")
           call read_face_boundary_param(NameCommand)
 
-       case("#FRICTION")
+       case("#ADVECTION", "#FRICTION")
           call read_source_param(NameCommand)
 
        case("#GRAVITY")

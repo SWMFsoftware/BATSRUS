@@ -20,6 +20,10 @@ module ModCalcSource
   real, public:: FrictionSi = 0.0, Friction = 0.0
   real, public:: FrictionUDim_D(3) = 0.0, FrictionU_D(3) = 0.0
 
+  ! Advection source term
+  logical:: UseAdvectionSource = .false.
+  integer:: iVarAdvectFirst, iVarAdvectLast
+
 contains
   !============================================================================
   subroutine read_source_param(NameCommand)
@@ -35,6 +39,12 @@ contains
     call test_start(NameSub, DoTest)
 
     select case(NameCommand)
+    case("#ADVECTION")
+       call read_var('UseAdvectionSource', UseAdvectionSource)
+       if(UseAdvectionSource)then
+          call read_var('iVarAdvectFirst', iVarAdvectFirst)
+          call read_var('iVarAdvectLast',  iVarAdvectLast)
+       end if
     case("#FRICTION")
        call read_var('FrictionSi',    FrictionSi)
        call read_var('FrictionUxDim', FrictionUDim_D(1))
@@ -212,11 +222,23 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nSource
        Source_VC(iVar,i,j,k) = 0
     end do; end do; end do; end do
+
     ! Contribution from the magnetic source is collected separately
     ! To be used in calculating electrric field for hybrid scheme
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
        SourceMhd_VC(iVar,i,j,k) = 0
     end do; end do; end do; end do
+
+    ! Source term for continuity equation(s). Only single fluid case
+    ! is considered. Impact on other equations is ignored.
+    if(UseAdvectionSource)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+          DivU = div_u(UnFirst_, i, j, k, iGang)
+          Source_VC(iVarAdvectFirst:iVarAdvectLast,i,j,k) = &
+               State_VGB(iVarAdvectFirst:iVarAdvectLast,i,j,k,iBlock)*DivU
+       end do; end do; end do
+    end if
 
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
@@ -230,7 +252,7 @@ contains
              if(UseViscosity)call set_visco_factor_cell(iBlock)
 
              ! Source terms for anisotropic pressure equations
-             do k=1,nK; do j=1,nJ; do i=1,nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 DoTestCell = DoTest .and. i==iTest .and. &
                      j==jTest .and. k==kTest
 
@@ -314,15 +336,10 @@ contains
           end if
 
           ! Adiabatic heating: -(g-1)*P*Div(U)
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-             DivU = Flux_VXI(iUn,i+1,j,k,iGang) - Flux_VXI(iUn,i,j,k,iGang)
-             if(nJ > 1) DivU = DivU &
-                  + Flux_VYI(iUn,i,j+1,k,iGang) - Flux_VYI(iUn,i,j,k,iGang)
-             if(nK > 1) DivU = DivU &
-                  + Flux_VZI(iUn,i,j,k+1,iGang) - Flux_VZI(iUn,i,j,k,iGang)
-             DivU = DivU/CellVolume_GB(i,j,k,iBlock)
+             DivU = div_u(iUn, i, j, k, iGang)
              if(UseAnisoPressure .and. IsIon_I(iFluid))then
                 Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
                      - (State_VGB(iP,i,j,k,iBlock) &
@@ -360,27 +377,16 @@ contains
     end if ! UseSpeedMin
 
     if(UseWavePressure)then
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           if(UseMultiIon)then
              ! The following should be Div(Uplus). For zero Hall velocity
              ! this is the same as Div(Ue).
-             DivU =                   Flux_VXI(UnLast_,i+1,j,k,iGang) &
-                  -                   Flux_VXI(UnLast_,i,j,k,iGang)
-             if(nJ > 1) DivU = DivU + Flux_VYI(UnLast_,i,j+1,k,iGang) &
-                  -                   Flux_VYI(UnLast_,i,j,k,iGang)
-             if(nK > 1) DivU = DivU + Flux_VZI(UnLast_,i,j,k+1,iGang) &
-                  -                   Flux_VZI(UnLast_,i,j,k,iGang)
+             DivU = div_u(UnLast_, i, j, k, iGang)
           else
-             DivU =                   Flux_VXI(UnFirst_,i+1,j,k,iGang) &
-                  -                   Flux_VXI(UnFirst_,i,j,k,iGang)
-             if(nJ > 1) DivU = DivU + Flux_VYI(UnFirst_,i,j+1,k,iGang) &
-                  -                   Flux_VYI(UnFirst_,i,j,k,iGang)
-             if(nK > 1) DivU = DivU + Flux_VZI(UnFirst_,i,j,k+1,iGang) &
-                  -                   Flux_VZI(UnFirst_,i,j,k,iGang)
+             DivU = div_u(UnFirst_,i, j, k, iGang)
           end if
-          DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           ! Store div U so it can be used in ModWaves
           DivU_C(i,j,k) = DivU
@@ -512,13 +518,7 @@ contains
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          DivU = Flux_VXI(UnLast_,i+1,j,k,iGang) &
-               - Flux_VXI(UnLast_,i,j,k,iGang)
-          if(nJ > 1) DivU = DivU + Flux_VYI(UnLast_,i,j+1,k,iGang) &
-               -                   Flux_VYI(UnLast_,i,j,k,iGang)
-          if(nK > 1) DivU = DivU + Flux_VZI(UnLast_,i,j,k+1,iGang) &
-               -                   Flux_VZI(UnLast_,i,j,k,iGang)
-          DivU = DivU/CellVolume_GB(i,j,k,iBlock)
+          DivU = div_u(UnLast_, i, j, k, iGang)
 
           Pe = State_VGB(Pe_,i,j,k,iBlock)
 
@@ -963,20 +963,12 @@ contains
     if(FrictionSi > 0.0) call calc_friction(iBlock)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Note that the velocity of the first (and only) fluid is used
-          DivU =                   Flux_VXI(UnFirst_,i+1,j,k,iGang) &
-               -                   Flux_VXI(UnFirst_,i,j,k,iGang)
-          if(nJ > 1) DivU = DivU + Flux_VYI(UnFirst_,i,j+1,k,iGang) &
-               -                   Flux_VYI(UnFirst_,i,j,k,iGang)
-          if(nK > 1) DivU = DivU + Flux_VZI(UnFirst_,i,j,k+1,iGang) &
-               -                   Flux_VZI(UnFirst_,i,j,k,iGang)
-          DivU = DivU/CellVolume_GB(i,j,k,iBlock)
-
           Source_VC(SignB_,i,j,k) = Source_VC(SignB_,i,j,k) &
-               + State_VGB(SignB_,i,j,k,iBlock)*DivU
+               + State_VGB(SignB_,i,j,k,iBlock)*div_u(UnFirst_, i, j, k, iGang)
        end do; end do; end do
     end if
 
@@ -995,6 +987,22 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
+    !==========================================================================
+    function div_u(iUn, i, j, k, iGang) result(DivU)
+      ! Calculate div(u) for velocity indexed by iUn at cell i,j,k
+
+      integer, intent(in):: iUn, i, j, k, iGang
+      real:: DivU
+      !------------------------------------------------------------------------
+      DivU =                   Flux_VXI(iUn,i+1,j,k,iGang) &
+           -                   Flux_VXI(iUn,i,j,k,iGang)
+      if(nJ > 1) DivU = DivU + Flux_VYI(iUn,i,j+1,k,iGang) &
+           -                   Flux_VYI(iUn,i,j,k,iGang)
+      if(nK > 1) DivU = DivU + Flux_VZI(iUn,i,j,k+1,iGang) &
+           -                   Flux_VZI(iUn,i,j,k,iGang)
+      DivU = DivU/CellVolume_GB(i,j,k,iBlock)
+
+    end function div_u
     !==========================================================================
     subroutine calc_grad_u(GradU_DD, i, j, k, iBlock)
 
