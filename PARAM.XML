@@ -4456,7 +4456,15 @@ No magnetometer grid file is saved by default.
     </parameter>
     <parameter name="DnSavePlot" type="integer" min="-1" default="-1"/>
     <parameter name="DtSavePlot" type="real"    min="-1" default="-1.0"/>
-    <if expr="$plotarea =~ /\bdpl|cut|bx0|slc\b/">
+    <if expr="$plotarea eq 'cut'">
+      <parameter name="Coord1MinCut" type="real" />
+      <parameter name="Coord1MaxCut" type="real" min="$Coord1MinCut"/>
+      <parameter name="Coord2MinCut" type="real" />
+      <parameter name="Coord2MaxCut" type="real" min="$Coord2MinCut"/>
+      <parameter name="Coord3MinCut" type="real" />
+      <parameter name="Coord3MaxCut" type="real" min="$CoordMinCut"/>
+    </if>
+    <if expr="$plotarea =~ /\bdpl|bx0|slc\b/">
       <parameter name="xMinCut" type="real" />
       <parameter name="xMaxCut" type="real" min="$xMinCut"/>
       <parameter name="yMinCut" type="real" />
@@ -4833,12 +4841,12 @@ buf MHD idl	 	StringPlot
 bx0 MHD idl_ascii	StringPlot ! bx=0(on z) isosurface plot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
--10.			Coord1MinCut
-10.			Coord1MaxCut
--10.			Coord2MinCut
-10.			Coord2MaxCut
--10.			Coord3MinCut
-10.			Coord3MaxCut
+-10.			xMinCut
+10.			xMaxCut
+-10.			yMinCut
+10.			yMaxCut
+-10.			zMinCut
+10.			zMaxCut
 -1                      DxSavePlot
 
 The #SAVEPLOT command determines the number and type of plot files
@@ -4975,7 +4983,8 @@ values or as non-dimensional values:
 Depending on StringPlot, the following parameters are also read
 from the parameter file in this order:
 \begin{verbatim}
- xMinCut...zMaxCut	 if PlotArea is 'cut', 'bx0', 'dpl', or 'slc'
+ xMinCut...zMaxCut	 if PlotArea is 'bx0', 'dpl', or 'slc'
+ Coord1MinCut...Coord3MaxCut	 if PlotArea is 'cut'
  nRadius nLon            if PlotArea is 'eqr' or 'eqb'
  TypeCoordPlot           if PlotArea is 'shl' or 'box'
  RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', or 'shl'
@@ -4992,8 +5001,9 @@ from the parameter file in this order:
  NameVars		 if PlotVar  is 'var' or 'VAR'
  NamePars		 if PlotVar  is 'var' or 'VAR'
 \end{verbatim}
-The six parameters xMinCut ... zMaxCut define a 3D box in (curvilinear)
-coordinates: the plotting range.
+Plotting range: the six parameters xMinCut ... zMaxCut define a 3D box
+in Cartesian coordinates. The Coord1MinCut ... Coord3MaxCut define a
+box in Cartesian or curvilinear coordinates.
 
 For IDL plots, if the width in one or two dimensions is
 less than the smallest cell size within the plotarea,
@@ -8756,6 +8766,26 @@ index, respectively. For nIndex larger than 1, the nIndex2, Index2Min,
 Index2Max parameters define the number and range of the second index, etc.
 
 This command can occur multiple times. By default no lookup tables are used.
+</command>
+
+<command name="ADVECTION">
+  <parameter name="UseAdvectionSource" type="logical" default="T"/>
+  <if expr="$UseAdvectionSource">
+    <parameter name="iVarAdvectFirst" type="integer"
+	       min="1" max="$nVar" default="1"/>
+    <parameter name="iVarAdvectLast"  type="integer" min="$iVarAdvectFirst"
+	       max="$nVar" default="$iVarAdvectFirst"/>
+  </if>
+
+#ADVECTION
+T                      UseAdvectionSource
+1                      iVarAdvectFirst
+2                      iVarAdvectLast
+
+If UseAdvectionSource is true, then add a source term Var*div(u) for
+all variables Var with index between iVarAdvectFirst and iVarAdvectLast.
+
+No advection source is added by default.
 </command>
 
 <command name="FRICTION">
