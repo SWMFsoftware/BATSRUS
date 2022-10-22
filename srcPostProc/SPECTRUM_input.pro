@@ -48,7 +48,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   NameFileOut='SPECTRUM_chianti_tbl.dat'
 
 ; Input the ion fraction file
-  ioneqfile = !ioneq_file
+  ioneqfile = 'chianti_dblpre.ioneq'
   read_ioneq,ioneqfile,t_ioneq,ioneq,ref
 
 ; Input the abundance file
@@ -81,12 +81,6 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
            'si','p' ,'s' ,'cl','ar','k' ,'ca','sc','ti','v' ,'cr','mn','fe', $
            'co','ni','cu','zn']
 
-  Aelement=[ 1.008,  4.003,  6.94 ,  9.012, 10.81 , 12.011, 14.007, 15.999, $
-             18.998, 20.18 , 22.99 , 24.305, 26.982, $
-             28.085, 30.974, 32.06 , 35.45 , 39.948, 39.098, 40.078, 44.956, $
-             47.867, 50.942, 51.996, 54.938 ,55.845, $
-             58.933, 58.693, 63.546, 65.38]
-
   nElement=n_elements(Element)
   
 ; Set CHIANTI version (if keyword 'notstandard' is set)
@@ -114,7 +108,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   position=strpos(masterlist,'d')
   masterlist = masterlist[where(position LT 2)]
   nIon = n_elements(masterlist)
- 
+
 ; Close lun=10 because we are going to use that for writing the output file
   close,10
 
@@ -128,8 +122,8 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   printf,10,LogNmin,LogNmax,dLogN
   printf,10,t_ioneq[0],t_ioneq[-1],t_ioneq[1]-t_ioneq[0]
   printf,10,'number of ions = ',nIon,format='(a17,i3)'
-  printf,10,'ion ','atomic mass ','lvl1 ','lvl2 ','wavelength ','logn ','logT ',$
-         'logG(n,T) ','logIonEq ',format='(a4,a12,2a5,a11,2a5,a9,a9)'
+  printf,10,'ion ','lvl1 ','lvl2 ','wavelength ','logn ','logT ',$
+         'logG(n,T) ','logIonEq ',format='(a5,a12,2a5,a11,2a5,a9,a9)'
   printf,10,'in units [A] [cm^-3] [K] [erg cm^3 s^-1]'
   printf,10,'#START',format='(a)'
 
@@ -140,9 +134,17 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      position=strpos(masterlist(i),'_')
      LocalElement=strmid(masterlist(i),0,position)
      zElem=where(Element eq LocalElement)+1
-     Aion = Aelement(where(Element eq LocalElement)) 
      zElem=zElem(0)
      Ion=masterlist(i)
+     
+     ; rename to match SWMF naming
+     string=masterlist(i)
+     position = strpos(string, '_')
+     ionname=string.substring(0,position-1)
+     ionnumb=string.substring(position+1)
+     if zElem lt 9 then masterlist(i) = strtrim(string(ionname),2)+strtrim('_',2)+strtrim(string(ionnumb),2)
+     if zElem ge 9 and ionnumb lt 10 then masterlist(i) = strtrim(string(ionname),2)+strtrim('_',2)+strtrim(string(0),2)+strtrim(string(ionnumb),2)
+     if zElem ge 9 and ionnumb ge 10 then masterlist(i) = strtrim(string(ionname),2)+strtrim('_',2)+strtrim(string(ionnumb),2)
      zIon=float(strmid(Ion,position+1,strlen(Ion)))
      print,'doing ',masterlist(i),' which is the ',i+1,'th ion out of ',nIon
 
@@ -193,7 +195,6 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
               for l=0,nLogT-1 do begin
                  if Flag(k) eq 0 then begin
                     printf,10,strtrim(masterlist(i),2)+STRING(9B)+ $
-                           strtrim(string(Aion,format='(f13.3)'),2)+STRING(9B)+ $
                            strtrim(string(LevelFrom(k)),2)+STRING(9B)+ $
                            strtrim(string(LevelTo(k)),2)+STRING(9B)+ $
                            strtrim(string(Wavelength(k),format='(f13.3)'),2)+STRING(9B)+ $
@@ -204,7 +205,6 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
                  endif
                  if Flag(k) lt 0 then begin
                     printf,10,strtrim(masterlist(i),2)+STRING(9B)+ $
-                           strtrim(string(Aion,format='(f13.3)'),2)+STRING(9B)+ $
                            strtrim(string(LevelFrom(k)),2)+STRING(9B)+ $
                            strtrim(string(LevelTo(k)),2)+STRING(9B)+ $
                            strtrim(string(Wavelength(k)*Flag(k),format='(f13.3)'),2)+STRING(9B)+ $

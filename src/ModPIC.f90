@@ -62,7 +62,7 @@ module ModPIC
   real, public, allocatable :: &
        CriteriaMinPic_I(:), CriteriaMaxPic_I(:), &
        CriteriaMinPicDim_I(:), CriteriaMaxPicDim_I(:)
-  real, public :: CriteriaB1=0.0, CriteriaB1Dim=0.0
+  real, public :: CriteriaB1=1.0, CriteriaB1Dim=1.0
   integer, public:: nPatchExtend_D(3)=0
 
   ! Description of the region where the pic region is fixed there

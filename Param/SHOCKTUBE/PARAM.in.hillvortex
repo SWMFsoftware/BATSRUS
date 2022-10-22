@@ -1,0 +1,125 @@
+Config.pl -e=Hd -u=Waves -f -g=10,2,10
+
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.hillvortex: incomperessible flow around sphere		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#GRIDBLOCKALL
+1000			MaxBlock
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+0.02/1			DtFixedDim
+
+#GRID
+5			nRootBlock1
+2			nRootBlock2
+5			nRootBlock3
+-6.0			xMin
+ 6.0			xMax
+-6.0			yMin
+ 6.0			yMax
+-6.0			zMin
+ 6.0			zMax
+
+#GRIDGEOMETRYLIMIT
+spherical		TypeGeometry
+5/9			Coord1Min Radius   5/9 or 1
+5.0			Coord1Max
+-5.0			Coord2Min Longitude
+5.0			Coord2Max
+-90.0			Coord3Min Latitude
++90.0			Coord3Max
+
+#UNIFORMSTATE
+1.0			StateVar rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+1.0			StateVar Uz
+0.001			StateVar p
+
+#USERINPUTBEGIN -----------------------------------
+
+#HILL
+6.0			xWidth
+3.0			zWidth
+0.0			xCenter
+-3.0			zCenter
+F			IsSmooth
+
+#UPDATEVAR
+Rho			StringVar
+
+#USERINPUTEND -------------------------------------
+
+#OUTERBOUNDARY
+reflect			TypeBc1 
+none			TypeBc2 ! could also be float
+periodic		TypeBc3
+periodic		TypeBc4
+reflect			TypeBc5
+reflect			TypeBc6
+
+#ADVECTION
+T			UseAdvectionSource
+1			iVarAdvectFirst
+1			iVarAdvectLast
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+2.0			LimiterBeta
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#PLOTFILENAME
+second			NameMaxTimeUnit
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+2			nPlotFile
+y=0 var idl		StringPlot
+-1			DnSavePlot
+0.1			DtSavePlot
+0.0			DxSavePlot
+{HD} divu		NameVars
+{default}		NamePars
+cut hd idl_real8		StringPlot
+5			DnSavePlot  == nRootBlock1
+-0.1			DtSavePlot
+0.0			Coord1MinCut
+5.0			Coord1MaxCut
+0.0			Coord2MinCut
+0.0			Coord2MaxCut
+-90.0			Coord3MinCut
++90.0			Coord3MaxCut
+0.0			DxSavePlot
+3d hd idl		PlotString
+-1			DnSavePlot
+5.0			DtSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+10.0			tSimulationMax

@@ -5,8 +5,6 @@ module ModSpectrum
 
   use BATL_lib,          ONLY: iProc
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModVarIndexes,     ONLY: ChargeStateFirst_
-  use ModIO,             ONLY: UseIonFrac_I
   implicit none
   SAVE
 
@@ -22,7 +20,7 @@ module ModSpectrum
 
   ! Derived type to read tabulated G values
   type LineTableType
-     character(len=6)         :: NameIon
+     character(len=4)         :: NameIon
      real                     :: Aion
      integer                  :: nLevelFrom, nLevelTo ! Levels of transition
      ! Indexes on density-temperature grid
@@ -85,7 +83,22 @@ contains
     ! For non-equilibrium ionization
     integer                     :: iTemp
 
-    ! Response function
+    !  List of elements and their atomic weight of periodic table
+    integer, parameter                   :: nElement = 30
+    integer                              :: jTemp = 0
+    character(len=100)                   :: NameElement_I(1:nElement)=&
+         ['h ','he','li','be','b ','c ',&
+         'n ' ,'o ','f ','ne','na','mg','al', &
+         'si','p ','s ','cl','ar','k ','ca','sc','ti','v ','cr','mn','fe', &
+         'co','ni','cu','zn']
+
+    real,parameter                     :: AElement_I(1:nElement)=&
+         [1.008,  4.003,  6.94 ,  9.012, &
+         10.81 , 12.011, 14.007, 15.999, &
+         18.998, 20.18 , 22.99 , 24.305, 26.982, &
+         28.085, 30.974, 32.06 , 35.45 , 39.948, 39.098, 40.078, 44.956, &
+         47.867, 50.942, 51.996, 54.938 ,55.845, &
+         58.933, 58.693, 63.546, 65.38]
 
     ! Start with response function if any as it gives the min and max for nbi
     character(len=*), parameter:: NameSub = 'spectrum_read_table'
@@ -101,9 +114,9 @@ contains
        allocate(ResponseLambda_I(nResponseBin), Response_I(nResponseBin))
 
        call read_plot_file(NameFile = NameNbiTable_I(iFile), &
-            TypeFileIn = 'ascii',                               &
-            VarOut_I   = Response_I,                      &
-            CoordOut_I = ResponseLambda_I,                      &
+            TypeFileIn = 'ascii',                            &
+            VarOut_I   = Response_I,                         &
+            CoordOut_I = ResponseLambda_I,                   &
             iErrorOut  = iError)
 
        if(iError /= 0) call stop_mpi( &
@@ -164,7 +177,7 @@ contains
 
        ! Read data line
        read(UnitTmp_,*,iostat=iError) &
-            NameIon, Aion, nLevelFrom, nLevelTo, LineWavelength, &
+            NameIon, nLevelFrom, nLevelTo, LineWavelength, &
             LogN, LogT, LogG, LogIonFrac
 
        if(iError  /= 0 .and. iError /= -1)then
@@ -247,7 +260,18 @@ contains
        nLineFound = nLineFound + 1
 
        ! Store ion name and wavelength
-       LineTable_I(iLine)%NameIon        = NameIon
+       ! Rename Chianti elements to AWSoM Chargestate naming
+       iTemp = index(NameIon,'_')
+       LineTable_I(iLine)%NameIon = NameIon(1:iTemp-1)//NameIon(iTemp+1:5)
+       do jTemp = 1, nElement
+          ! Pair index of chianti table to state variable
+          if(trim(LineTable_I(iLine)%NameIon(1:iTemp-1))==&
+               trim(NameElement_I(jTemp)))then
+             Aion = AElement_I(jTemp)
+             EXIT
+          end if
+       enddo
+
        LineTable_I(iLine)%Aion           = Aion
        LineTable_I(iLine)%nLevelFrom     = nLevelFrom
        LineTable_I(iLine)%nLevelTo       = nLevelTo
@@ -274,16 +298,6 @@ contains
     deallocate(LogG_II, LogIonFrac_II)
     nLineAll = min(nMaxLine,nLineFound)
 
-    if(UseIonFrac_I(iFile) .and. ChargeStateFirst_>1)then
-       ! Rename Chianti elements to AWSoM Chargestate naming
-       do iLine = 1,nLineAll
-          iTemp = index(LineTable_I(iLine)%NameIon,'_')
-          write(LineTable_I(iLine)%NameIon,'(a)')&
-               LineTable_I(iLine)%NameIon(1:iTemp-1)//&
-               LineTable_I(iLine)%NameIon(iTemp+1:)
-       end do
-    end if
-
   end subroutine spectrum_read_table
   !============================================================================
 
@@ -292,13 +306,13 @@ contains
 
     use ModInterpolate, ONLY: bilinear
     use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, Bx_, Bz_, &
-         WaveFirst_, WaveLast_, Pe_, Ppar_, p_, nElement, ChargestateLast_, &
-         NameVar_V, nChargeState_I
+         WaveFirst_, WaveLast_, Pe_, Ppar_, p_, nElement, ChargeStateFirst_, &
+         ChargestateLast_, NameVar_V, nChargeState_I
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitTemperature_, &
          UnitRho_, UnitEnergyDens_ ,UnitB_, UnitU_
     use ModConst, ONLY: cProtonMass, cLightSpeed, cBoltzmann, cPi
     use ModIO, ONLY: DLambdaIns_I, DLambda_I, LambdaMin_I, &
-         UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I
+         UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I, UseIonFrac_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
 
     integer, intent(in)   :: iFile, nLambda
@@ -400,8 +414,7 @@ contains
           ! Pair index of chianti table to state variable
           IsFound = .false.
           do iVarIon=ChargestateFirst_,ChargestateLast_
-             if(LineTable_I(iLine)%NameIon==&
-                  NameVar_V(iVarIon))then
+             if(trim(LineTable_I(iLine)%NameIon)==trim(NameVar_V(iVarIon)))then
                 IsFound = .true.
                 EXIT
              end if
@@ -517,4 +530,3 @@ contains
   !============================================================================
 end module ModSpectrum
 !==============================================================================
-
