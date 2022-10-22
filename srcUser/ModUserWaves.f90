@@ -205,8 +205,8 @@ contains
        case('#POWERPROFILE')
           ! Read parameters for a power profile. Power is a postive or
           ! negative integer or zero (linear profile).
-          call read_var('NameVar',   NameVar)
-          call get_iVar(NameVar, iVar)
+          call read_var('NameVar', NameVar)
+          call get_ivar(NameVar, iVar)
           call read_var('CoeffX',  CoeffX_V(iVar))
           call read_var('nPowerX', nPowerX_V(iVar))
           if(nDim > 1) call read_var('CoeffY',  CoeffY_V(iVar))
