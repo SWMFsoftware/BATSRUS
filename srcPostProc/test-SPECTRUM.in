@@ -7,7 +7,6 @@ F				IsVerbose
 
 #OUTFILE
 test-spectrum.out		NameSpectrumFile
-test-label.out			NameLabelFile
 
 DATAFILE
 box.out				NameDataFile
