@@ -1413,7 +1413,7 @@ contains
     logical                     :: IsHeader
     logical                     :: DoStore
 
-    !  List of elements and their atomic weight of periodic table               
+    !  List of elements and their atomic weight of periodic table
     integer, parameter                   :: nElement = 30
     integer                              :: iTemp=0, jTemp = 0
     character(len=100)                   :: NameElement_I(1:nElement)=&
@@ -1429,7 +1429,7 @@ contains
          28.085, 30.974, 32.06 , 35.45 , 39.948, 39.098, 40.078, 44.956, &
          47.867, 50.942, 51.996, 54.938 ,55.845, &
          58.933, 58.693, 63.546, 65.38]
-    
+
     character(len=*), parameter:: NameSub = 'read_table'
     !--------------------------------------------------------------------------
     if(IsVerbose .and. iProc==0) write(*,*)'reading table file=', trim(NameTableFile)
@@ -1582,7 +1582,7 @@ contains
           iTemp = index(NameIon,'_')
           LineTable_I(iLine)%NameIon = NameIon(1:iTemp-1)//NameIon(iTemp+1:5)
           do jTemp = 1, nElement
-             ! Pair index of chianti table to state variable                       
+             ! Pair index of chianti table to state variable
              if(trim(LineTable_I(iLine)%NameIon(1:iTemp-1))==&
                   trim(NameElement_I(jTemp)))then
                 Aion = AElement_I(jTemp)
