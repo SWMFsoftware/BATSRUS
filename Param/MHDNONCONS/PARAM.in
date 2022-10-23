@@ -82,12 +82,12 @@ T			DoSaveInitial
 cut MHD idl_ascii		StringPlot
 -1			DnSavePlot
 60.0			DtSavePlot
--128e3			xMinCut
-+128e3			xMaxCut
--0.1			yMinCut
-0.1			yMaxCut
--0.1			zMinCut
-0.1			zMaxCut
+-128e3			Coord1MinCut
++128e3			Coord1MaxCut
+-0.1			Coord2MinCut
+0.1			Coord2MaxCut
+-0.1			Coord3MinCut
+0.1			Coord3MaxCut
 0.0			DxSavePlot
 
 #STOP

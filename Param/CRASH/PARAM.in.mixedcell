@@ -119,12 +119,12 @@ RAW			StringLogfile
 cut HD idl		PlotString
 -1              	DnSavePlot
 4.0e-7          	DtSavePlot
-0.0			xMinCut
-5.0e4			xMaxCut
-0.1			yMinCut
-0.11			yMaxCut
-0.1 	   		zMinCut
-0.11			zMaxCut
+0.0			Coord1MinCut
+5.0e4			Coord1MaxCut
+0.1			Coord2MinCut
+0.11			Coord2MaxCut
+0.1 	   		Coord3MinCut
+0.11			Coord3MaxCut
 0.0             	DxSavePlot
 z=0 VAR idl		PlotString
 -1                      DnSavePlot

@@ -60,12 +60,12 @@ F			DoSaveRestart
 cut HD idl_ascii		StringPlot
 -1			DnSavePlot
 1.0e-8			DtSavePlot
-0.0			xMinCut
-5.0e3			xMaxCut
--1.0e-7			yMinCut
-+1.0e-7			yMaxCut
--1.0e-7			zMinCut
-+1.0e-7			zMaxCut
+0.0			Coord1MinCut
+5.0e3			Coord1MaxCut
+-1.0e-7			Coord2MinCut
++1.0e-7			Coord2MaxCut
+-1.0e-7			Coord3MinCut
++1.0e-7			Coord3MaxCut
 0.0			DxSavePlot
 
 #STOP

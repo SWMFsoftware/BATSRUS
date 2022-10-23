@@ -182,12 +182,12 @@ g			NamePars
 cut var idl		StringPlot
 -1			DnSavePlot
 1.e-10			DtSavePlot
--10000.0		xMinCut
-10000.0			xMaxCut
-0.0			yMinCut
-0.001			yMaxCut
-0.0			zMinCut
-0.001			zMaxCut
+-10000.0		Coord1MinCut
+10000.0			Coord1MaxCut
+0.0			Coord2MinCut
+0.001			Coord2MaxCut
+0.0			Coord3MinCut
+0.001			Coord3MaxCut
 -1.0			DxSavePlot
 rho ux uy Eint p pe level tekev trkev tikev zavg elaser dx		NameVars
 gamma			NamePars

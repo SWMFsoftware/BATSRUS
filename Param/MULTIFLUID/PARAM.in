@@ -83,12 +83,12 @@ z=0 raw idl		StringPlot
 cut raw idl_ascii		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
--128.0			xMinCut
-+128.0			xMaxCut
--0.01			yMinCut
-0.01			yMaxCut
--0.01			zMinCut
-0.01			zMaxCut
+-128.0			Coord1MinCut
++128.0			Coord1MaxCut
+-0.01			Coord2MinCut
+0.01			Coord2MaxCut
+-0.01			Coord3MinCut
+0.01			Coord3MaxCut
 0.0			DxSavePlot
 
 The grid size is 256, so the final time corresponds to the usual 0.1
