@@ -115,12 +115,12 @@ T		DoSaveInitial
 cut mhd idl	PlotString
 -1              DnSavePlot
 0.1             DtSavePlot
--6.0		xMinCut
-+6.0		xMaxCut
--0.001		yMinCut
-+0.001		yMaxCut
--0.001		zMinCut
-+0.001		zMaxCut
+-6.0		Coord1MinCut
++6.0		Coord1MaxCut
+-0.001		Coord2MinCut
++0.001		Coord2MaxCut
+-0.001		Coord3MinCut
++0.001		Coord3MaxCut
 0.0             DxSavePlot
 
 #STOP

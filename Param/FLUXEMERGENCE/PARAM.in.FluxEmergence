@@ -140,12 +140,12 @@ g eta			NamePars
 cut VAR tec		StringPlot
 -1  			DnSavePlot
 10.			DtSavePlot
--35.			xMinCut
-35.			xMaxCut
--35.			yMinCut
-35.			yMaxCut
--17.4			zMinCut
--17.3			zMaxCut
+-35.			Coord1MinCut
+35.			Coord1MaxCut
+-35.			Coord2MinCut
+35.			Coord2MaxCut
+-17.4			Coord3MinCut
+-17.3			Coord3MaxCut
 rho Uz P tempe Bx By Bz		NameVars
 g eta			NamePars
 

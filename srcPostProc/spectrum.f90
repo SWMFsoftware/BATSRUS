@@ -1413,6 +1413,23 @@ contains
     logical                     :: IsHeader
     logical                     :: DoStore
 
+    !  List of elements and their atomic weight of periodic table
+    integer, parameter                   :: nElement = 30
+    integer                              :: iTemp=0, jTemp = 0
+    character(len=100)                   :: NameElement_I(1:nElement)=&
+         ['h ','he','li','be','b ','c ',&
+         'n ' ,'o ','f ','ne','na','mg','al', &
+         'si','p ','s ','cl','ar','k ','ca','sc','ti','v ','cr','mn','fe', &
+         'co','ni','cu','zn']
+
+    real,parameter                     :: AElement_I(1:nElement)=&
+         [1.008,  4.003,  6.94 ,  9.012, &
+         10.81 , 12.011, 14.007, 15.999, &
+         18.998, 20.18 , 22.99 , 24.305, 26.982, &
+         28.085, 30.974, 32.06 , 35.45 , 39.948, 39.098, 40.078, 44.956, &
+         47.867, 50.942, 51.996, 54.938 ,55.845, &
+         58.933, 58.693, 63.546, 65.38]
+
     character(len=*), parameter:: NameSub = 'read_table'
     !--------------------------------------------------------------------------
     if(IsVerbose .and. iProc==0) write(*,*)'reading table file=', trim(NameTableFile)
@@ -1471,12 +1488,12 @@ contains
 
        ! Read data line
        read(UnitTmp_,*,iostat=iError) &
-            NameIon, Aion, nLevelFrom, nLevelTo, LineWavelength, &
+            NameIon, nLevelFrom, nLevelTo, LineWavelength, &
             LogN, LogT, LogG, LogIonFrac
 
        if(iError  /= 0 .and. iError /= -1)then
           if(iProc==0)write(*,*)'iError = ',iError
-          if(iProc==0)write(*,*)'last line = ',NameIon, Aion, nLevelFrom, nLevelTo, &
+          if(iProc==0)write(*,*)'last line = ',NameIon, nLevelFrom, nLevelTo, &
                LineWavelength, LogN, LogT, LogG, LogIonFrac
           call CON_stop('failed reading chianti table')
        end if
@@ -1562,7 +1579,17 @@ contains
           nLineFound = nLineFound + 1
 
           ! Store ion name and wavelength
-          LineTable_I(iLine)%NameIon        = NameIon
+          iTemp = index(NameIon,'_')
+          LineTable_I(iLine)%NameIon = NameIon(1:iTemp-1)//NameIon(iTemp+1:5)
+          do jTemp = 1, nElement
+             ! Pair index of chianti table to state variable
+             if(trim(LineTable_I(iLine)%NameIon(1:iTemp-1))==&
+                  trim(NameElement_I(jTemp)))then
+                Aion = AElement_I(jTemp)
+                EXIT
+             end if
+          enddo
+
           LineTable_I(iLine)%Aion           = Aion
           LineTable_I(iLine)%nLevelFrom     = nLevelFrom
           LineTable_I(iLine)%nLevelTo       = nLevelTo

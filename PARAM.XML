@@ -59,7 +59,7 @@ In the SWMF the BATSRUS codes are configured to the appropriate components,
 so the default components should not be changed by this command.
 </command>
 
-<command name="DESCRIPTION" if="$_IsStandAlone">
+<command name="DESCRIPTION" multiple="T" if="$_IsStandAlone">
   <parameter name="StringDescription" type="string" length="$lLine" />
 
 #DESCRIPTION

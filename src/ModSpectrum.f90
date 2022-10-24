@@ -182,7 +182,7 @@ contains
 
        if(iError  /= 0 .and. iError /= -1)then
           if(iProc==0)write(*,*)'iError = ',iError
-          if(iProc==0)write(*,*)'last line = ',NameIon, Aion, nLevelFrom, &
+          if(iProc==0)write(*,*)'last line = ',NameIon, nLevelFrom, &
                nLevelTo, LineWavelength, LogN, LogT, LogG, LogIonFrac
           call stop_mpi(NameSub//' failed reading chianti table')
        end if

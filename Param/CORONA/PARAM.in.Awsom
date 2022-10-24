@@ -250,12 +250,12 @@ y=0 RAY idl		StringPlot
 cut RAY idl		StringPlot
 -1  			DnSavePlot
 60.0			DtSavePlot
-1.0			xMinCut
-10.0			xMaxCut
-0.0			yMinCut
-360.0			yMaxCut
--90.0			zMinCut
-+90.0			zMaxCut
+1.0			Coord1MinCut
+10.0			Coord1MaxCut
+0.0			Coord2MinCut
+360.0			Coord2MaxCut
+-90.0			Coord3MinCut
++90.0			Coord3MaxCut
 0.0			DxSavePlot
 
 x=0 VAR tec		StringPlot

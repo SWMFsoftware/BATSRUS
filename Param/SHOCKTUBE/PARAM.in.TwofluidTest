@@ -139,12 +139,12 @@ raw			StringLog
 cut mhd idl_ascii		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
--100.0			xMinCut
-+100.0			xMaxCut
--0.01			yMinCut
-+0.01			yMaxCut
--0.01			zMinCut
-+0.01			zMaxCut
+-100.0			Coord1MinCut
++100.0			Coord1MaxCut
+-0.01			Coord2MinCut
++0.01			Coord2MaxCut
+-0.01			Coord3MinCut
++0.01			Coord3MaxCut
 0.			DxSavePlot
 
 #STOP

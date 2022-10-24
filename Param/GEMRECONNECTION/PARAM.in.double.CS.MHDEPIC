@@ -94,10 +94,10 @@ T			UseNonConservative
 
 #PICREGION
 1                       nPicRegion
--12.8  	                xMinCut
-+12.8                   xMaxCut
--6.4                    yMinCut
-+6.4                    yMaxCut
+-12.8  	                Coord1MinCut
++12.8                   Coord1MaxCut
+-6.4                    Coord2MinCut
++6.4                    Coord2MaxCut
 0.05			DxPic
 0.05                    DyPic
 0.05                    DyPic
