@@ -100,12 +100,12 @@ rho mx my mz bx by bz p pmin pmax jin jout jinmax joutmax		NameLogVars
 slc MHD tec		StringPlot
 10000			DnSavePlot
 -1.			DtSavePlot
--576.			Coord1MinCut
-  96.			Coord1MaxCut
--192.			Coord2MinCut
- 192.			Coord2MaxCut
--192.			Coord3MinCut
- 192.			Coord3MaxCut
+-576.			xMinCut
+  96.			xMaxCut
+-192.			yMinCut
+ 192.			yMaxCut
+-192.			zMinCut
+ 192.			zMaxCut
  0.			xPoint
  0.			yPoint
  0.			zPoint

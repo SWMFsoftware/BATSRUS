@@ -140,12 +140,12 @@ eqb eqb tec		StringPlot
 bx0 MHD idl_ascii		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
--20.			Coord1MinCut
-0.			Coord1MaxCut
--20.			Coord2MinCut
-20.			Coord2MaxCut
--20.			Coord3MinCut
-20.			Coord3MaxCut
+-20.			xMinCut
+0.			xMaxCut
+-20.			yMinCut
+20.			yMaxCut
+-20.			zMinCut
+20.			zMaxCut
 -1.			DxSavePlot
 
 #STOP

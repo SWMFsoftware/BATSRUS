@@ -59,7 +59,6 @@ test_help:
 	@echo "    test_fastwave_2d           (run 2D rotated fast wave test on GPU)"
 	@echo "    test_bx0                   (run 3D bx0 isosurface plot test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"
-	@echo "    test_spectrum2             (run spectrum2 post-processing test)"
 	@echo "    test_twofluidmhd           (run two-fluid test)"
 	@echo "    test_viscosity             (run viscosity test)"
 	-@(if [ -d srcUserExtra ]; then ${MAKE} test_extra_help; fi)
@@ -95,7 +94,6 @@ test_extra_help:
 
 test: 
 	@rm -f *.diff
-	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_small_gpu)
 	cd ${DIR}; ./Config.pl -noacc
@@ -2396,10 +2394,3 @@ test_spectrum:
 	cd ${SHAREDIR}; $(MAKE) LIB
 	cd srcPostProc; $(MAKE) test_spectrum
 
-### TEST FOR POST-PROCESSING SPECTRUM2 CODE#####################################
-
-test_spectrum2:
-	./Config.pl -nohypre -noamrex -nohdf5 -nospice -noopenmp -mpi
-	./Config.pl -e=Awsom -u=Awsom -g=6,8,8 -ng=2
-	$(MAKE) BATSRUS
-	cd srcPostProc; $(MAKE) test_spectrum2
