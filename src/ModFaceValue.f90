@@ -3720,9 +3720,9 @@ contains
   subroutine limiter(lMin, lMax, Beta, Primitive_VI, dVarLimL_VI, dVarLimR_VI)
 
     ! Calculate left and right slopes from the primitive variables Primitive_VI
-    ! for indexes lMin-1 to lMax. 
+    ! for indexes lMin-1 to lMax.
     ! These are actually just differences (as if the cell size was one)
-    ! multiplied by 0.5 for sake of simplifying the formulas. 
+    ! multiplied by 0.5 for sake of simplifying the formulas.
     ! For all limiters except mc3 (Koren's limiter with adjustable Beta),
     ! dVarLimL_VI and dVarLimR_VI are equal.
     ! The Beta parameter is used in all limiters except for 'no' and 'minmod'
@@ -3749,7 +3749,7 @@ contains
           dVarLimR_VI(:,l) = 0.25*(Primitive_VI(:,l+1) - Primitive_VI(:,l-1))
           dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
        end do
-       
+
     case('beta')
        dVar1_I(1:nVar) = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
        dVar1_I(Lo2_:Hi2_) = abs(dVar1_I(1:nVar))
