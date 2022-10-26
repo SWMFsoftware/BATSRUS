@@ -29,10 +29,12 @@ contains
   subroutine read_source_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
-    use ModBatsrusUtility, ONLY: stop_mpi
+    use ModBatsrusUtility, ONLY: stop_mpi, get_ivar
 
     character(len=*), intent(in):: NameCommand
 
+    character(len=20):: NameVar
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_source_param'
     !--------------------------------------------------------------------------
@@ -42,8 +44,10 @@ contains
     case("#ADVECTION")
        call read_var('UseAdvectionSource', UseAdvectionSource)
        if(UseAdvectionSource)then
-          call read_var('iVarAdvectFirst', iVarAdvectFirst)
-          call read_var('iVarAdvectLast',  iVarAdvectLast)
+          call read_var('NameVarAdvectFirst', NameVar)
+          call get_ivar(NameVar, iVarAdvectFirst)
+          call read_var('NameVarAdvectLast', NameVar)
+          call get_ivar(NameVar, iVarAdvectLast)
        end if
     case("#FRICTION")
        call read_var('FrictionSi',    FrictionSi)
