@@ -1615,10 +1615,10 @@ contains
                   ! Get 2nd order limited slopes
                   if(UseTrueCell)then
                      call limiter_body(iMin, iMax, LimiterBeta,&
-                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                          Primitive_VI, dVarLimL_VI, dVarLimR_VI)
                   else
                      call limiter(iMin, iMax, LimiterBeta,&
-                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                          Primitive_VI, dVarLimL_VI, dVarLimR_VI)
                   end if
                else
                   dVarLimL_VI = 0; dVarLimR_VI = 0
@@ -1709,7 +1709,7 @@ contains
 
       end if
 
-      if(TypeLimiter == 'no') RightState_VX= LeftState_VX
+      if(TypeLimiter == 'no') RightState_VX = LeftState_VX
 
       if(DoLimitMomentum) &
            call boris_to_mhd_x(iMin, iMax, jMin, jMax, kMin, kMax)
@@ -1720,6 +1720,7 @@ contains
     end subroutine get_facex_high
     !==========================================================================
     subroutine get_facey_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
       real, allocatable, save:: State_VY(:,:,:,:)
@@ -1727,11 +1728,11 @@ contains
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+
       ! variables used for TVD limiters
       real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
       real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
       !------------------------------------------------------------------------
-
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
             LeftState_VY(:,i,j,k) &
@@ -1751,10 +1752,10 @@ contains
                        Used_GB(i,jMin-nG:jMax-1+nG,k,iBlock)
                   if(UseTrueCell)then
                      call limiter_body(jMin, jMax, LimiterBeta,&
-                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                          Primitive_VI, dVarLimL_VI, dVarLimR_VI)
                   else
                      call limiter(jMin, jMax, LimiterBeta,&
-                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                          Primitive_VI, dVarLimL_VI, dVarLimR_VI)
                   end if
                else
                   dVarLimL_VI = 0; dVarLimR_VI = 0
@@ -1845,7 +1846,7 @@ contains
          end do; end do
       end if
 
-      if(TypeLimiter == 'no') RightState_VY= LeftState_VY
+      if(TypeLimiter == 'no') RightState_VY = LeftState_VY
       if(DoLimitMomentum) &
            call boris_to_mhd_y(iMin, iMax, jMin, jMax, kMin, kMax)
 
@@ -1890,10 +1891,10 @@ contains
                        Used_GB(i,j,kMin-nG:kMax-1+nG,iBlock)
                   if(UseTrueCell)then
                      call limiter_body(kMin, kMax, LimiterBeta,&
-                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                          Primitive_VI, dVarLimL_VI, dVarLimR_VI)
                   else
                      call limiter(kMin, kMax, LimiterBeta,&
-                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                          Primitive_VI, dVarLimL_VI, dVarLimR_VI)
                   end if
                else
                   dVarLimL_VI = 0; dVarLimR_VI = 0
@@ -2074,23 +2075,23 @@ contains
             IsTrueCell_I(iMin-2:iMax+1) = Used_GB(iMin-2:iMax+1,j,k,iBlock)
             if(iMinSharp <= iMaxSharp) &
                  call limiter_body(iMinSharp, iMaxSharp, LimiterBeta,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(iMin < iMinSharp) &
                  call limiter_body(iMin, iMinSharp-1, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(iMax > iMaxSharp) &
                  call limiter_body(iMaxSharp+1, iMax, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
          else
             if(iMinSharp <= iMaxSharp) &
                  call limiter(iMinSharp, iMaxSharp, LimiterBeta,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(iMin < iMinSharp) &
                  call limiter(iMin, iMinSharp-1, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(iMax > iMaxSharp) &
                  call limiter(iMaxSharp+1, iMax, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
          end if
          do i=iMin,iMax
             i1 = i - 1
@@ -2134,23 +2135,23 @@ contains
             IsTrueCell_I(jMin-2:jMax+1) = Used_GB(i,jMin-2:jMax+1,k,iBlock)
             if(jMinSharp <= jMaxSharp) &
                  call limiter_body(jMinSharp, jMaxSharp, LimiterBeta,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(jMin < jMinSharp) &
                  call limiter_body(jMin, jMinSharp-1, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(jMax > jMaxSharp) &
                  call limiter_body(jMaxSharp+1, jMax, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
          else
             if(jMinSharp <= jMaxSharp) &
                  call limiter(jMinSharp, jMaxSharp, LimiterBeta,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(jMin < jMinSharp) &
                  call limiter(jMin, jMinSharp-1, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(jMax > jMaxSharp) &
                  call limiter(jMaxSharp+1, jMax, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
          end if
          do j=jMin, jMax
             j1 = j - 1
@@ -2194,23 +2195,23 @@ contains
             IsTrueCell_I(kMin-2:kMax+1) = Used_GB(i,j,kMin-2:kMax+1,iBlock)
             if(kMinSharp <= kMaxSharp) &
                  call limiter_body(kMinSharp, kMaxSharp, LimiterBeta,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(kMin < kMinSharp) &
                  call limiter_body(kMin, kMinSharp-1, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(kMax > kMaxSharp) &
                  call limiter_body(kMaxSharp+1, kMax, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
          else
             if(kMinSharp <= kMaxSharp) &
                  call limiter(kMinSharp, kMaxSharp, LimiterBeta,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(kMin < kMinSharp) &
                  call limiter(kMin, kMinSharp-1, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
             if(kMax > kMaxSharp) &
                  call limiter(kMaxSharp+1, kMax, BetaLimiterResChange,&
-                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
          end if
          do k=kMin,kMax
             k1 = k - 1
@@ -3640,18 +3641,18 @@ contains
        dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
        dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
        dVar1_I(Lo3_:Hi3_)=Beta*dVar1_I(Lo2_:Hi2_)
-       dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
+       dVar1_I(1:nVar)=sign(0.25, dVar1_I(1:nVar))
        do l=lMax,lMin-1,-1
           dVar2_I=dVar1_I
           dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
           dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
           dVar1_I(Lo3_:Hi3_)=Beta*dVar1_I(Lo2_:Hi2_)
-          dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
+          dVar1_I(1:nVar)=sign(0.25, dVar1_I(1:nVar))
           if(all(IsTrueCell_I(l-1:l+1)))then
              dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
-             dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo3_:Hi3_))
-             dVar2_I(Lo3_:Hi3_)=min(dVar1_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
-             dVar2_I(Lo2_:Hi2_)=max(dVar2_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
+             dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_), dVar1_I(Lo3_:Hi3_))
+             dVar2_I(Lo3_:Hi3_)=min(dVar1_I(Lo2_:Hi2_), dVar2_I(Lo3_:Hi3_))
+             dVar2_I(Lo2_:Hi2_)=max(dVar2_I(Lo2_:Hi2_), dVar2_I(Lo3_:Hi3_))
              dVarLimR_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
           else
              dVarLimR_VI(:,l) = 0.0
@@ -3661,15 +3662,15 @@ contains
     case('minmod')
        dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
        dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-       dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
+       dVar1_I(1:nVar)=sign(0.25, dVar1_I(1:nVar))
        do l=lMax,lMin-1,-1
           dVar2_I(1:Hi2_)=dVar1_I(1:Hi2_)
           dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
           dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-          dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
+          dVar1_I(1:nVar)=sign(0.25, dVar1_I(1:nVar))
           if(all(IsTrueCell_I(l-1:l+1)))then
              dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
-             dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
+             dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_), dVar1_I(Lo2_:Hi2_))
              dVarLimR_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
           else
              dVarLimR_VI(:,l) = 0.0
@@ -3683,7 +3684,7 @@ contains
           dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
           if(all(IsTrueCell_I(l-1:l+1)))then
              dVarLimR_VI(:,l) = &
-                  (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))*&
+                  (sign(0.25, dVar1_V)+sign(0.25, dVar2_V))*&
                   min(Beta*abs(dVar1_V), Beta*abs(dVar2_V), &
                   0.5*abs(dVar1_V+dVar2_V))
           else
@@ -3698,11 +3699,11 @@ contains
           dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
           if(all(IsTrueCell_I(l-1:l+1)))then
              dVarLimR_VI(:,l) = &
-                  (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))*&
+                  (sign(0.25, dVar1_V)+sign(0.25, dVar2_V))*&
                   min(Beta*abs(dVar1_V), Beta*abs(dVar2_V), &
                   cThird*abs(2*dVar1_V+dVar2_V))
              dVarLimL_VI(:,l) = &
-                  (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))*&
+                  (sign(0.25, dVar1_V)+sign(0.25, dVar2_V))*&
                   min(Beta*abs(dVar1_V), Beta*abs(dVar2_V), &
                   cThird*abs(dVar1_V+2*dVar2_V))
           else
@@ -3716,7 +3717,18 @@ contains
 
   end subroutine limiter_body
   !============================================================================
-  subroutine limiter(lMin, lMax, Beta, Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+  subroutine limiter(lMin, lMax, Beta, Primitive_VI, dVarLimL_VI, dVarLimR_VI)
+
+    ! Calculate left and right slopes from the primitive variables Primitive_VI
+    ! for indexes lMin-1 to lMax.
+    ! These are actually just differences (as if the cell size was one)
+    ! multiplied by 0.5 for sake of simplifying the formulas.
+    ! For all limiters except mc3 (Koren's limiter with adjustable Beta),
+    ! dVarLimL_VI and dVarLimR_VI are equal.
+    ! The Beta parameter is used in all limiters except for 'no' and 'minmod'
+    ! to set the maximum slope ratio.
+    ! The 'no' limiter does not apply any limiter at all, just
+    ! calculates the second order accurate average slope.
 
     integer, intent(in):: lMin, lMax
     real,    intent(in):: Beta
@@ -3731,36 +3743,43 @@ contains
     character(len=*), parameter:: NameSub = 'limiter'
     !--------------------------------------------------------------------------
     select case(TypeLimiter)
+    case('no')
+       do l = lMin-1, lMax
+          ! Calculate the unlimited slope
+          dVarLimR_VI(:,l) = 0.25*(Primitive_VI(:,l+1) - Primitive_VI(:,l-1))
+          dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
+       end do
+
     case('beta')
-       dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
-       dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-       dVar1_I(Lo3_:Hi3_)=Beta*dVar1_I(Lo2_:Hi2_)
-       dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
-       do l=lMax,lMin-1,-1
-          dVar2_I=dVar1_I
-          dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
-          dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-          dVar1_I(Lo3_:Hi3_)=Beta*dVar1_I(Lo2_:Hi2_)
-          dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
-          dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
-          dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo3_:Hi3_))
-          dVar2_I(Lo3_:Hi3_)=min(dVar1_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
-          dVar2_I(Lo2_:Hi2_)=max(dVar2_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
+       dVar1_I(1:nVar) = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
+       dVar1_I(Lo2_:Hi2_) = abs(dVar1_I(1:nVar))
+       dVar1_I(Lo3_:Hi3_) = Beta*dVar1_I(Lo2_:Hi2_)
+       dVar1_I(1:nVar) = sign(0.25, dVar1_I(1:nVar))
+       do l = lMax, lMin-1, -1
+          dVar2_I = dVar1_I
+          dVar1_I(1:nVar) = Primitive_VI(:,l) - Primitive_VI(:,l-1)
+          dVar1_I(Lo2_:Hi2_) = abs(dVar1_I(1:nVar))
+          dVar1_I(Lo3_:Hi3_) = Beta*dVar1_I(Lo2_:Hi2_)
+          dVar1_I(1:nVar) = sign(0.25, dVar1_I(1:nVar))
+          dVar2_I(1:nVar) = dVar2_I(1:nVar)+dVar1_I(1:nVar)
+          dVar2_I(Lo2_:Hi2_) = min(dVar2_I(Lo2_:Hi2_), dVar1_I(Lo3_:Hi3_))
+          dVar2_I(Lo3_:Hi3_) = min(dVar1_I(Lo2_:Hi2_), dVar2_I(Lo3_:Hi3_))
+          dVar2_I(Lo2_:Hi2_) = max(dVar2_I(Lo2_:Hi2_), dVar2_I(Lo3_:Hi3_))
           dVarLimR_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
 
           dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
        end do
     case('minmod')
-       dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
-       dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-       dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
-       do l=lMax,lMin-1,-1
-          dVar2_I(1:Hi2_)=dVar1_I(1:Hi2_)
-          dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
-          dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-          dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
-          dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
-          dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
+       dVar1_I(1:nVar) = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
+       dVar1_I(Lo2_:Hi2_) = abs(dVar1_I(1:nVar))
+       dVar1_I(1:nVar) = sign(0.25, dVar1_I(1:nVar))
+       do l = lMax, lMin-1, -1
+          dVar2_I(1:Hi2_) = dVar1_I(1:Hi2_)
+          dVar1_I(1:nVar) = Primitive_VI(:,l) - Primitive_VI(:,l-1)
+          dVar1_I(Lo2_:Hi2_) = abs(dVar1_I(1:nVar))
+          dVar1_I(1:nVar) = sign(0.25, dVar1_I(1:nVar))
+          dVar2_I(1:nVar) = dVar2_I(1:nVar) + dVar1_I(1:nVar)
+          dVar2_I(Lo2_:Hi2_) = min(dVar2_I(Lo2_:Hi2_), dVar1_I(Lo2_:Hi2_))
           dVarLimR_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
 
           dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
@@ -3768,13 +3787,13 @@ contains
     case('mc')
        ! Calculate rightmost unlimited slope
        dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
-       do l=lMax,lMin-1,-1
+       do l = lMax, lMin-1, -1
           ! Propagate old left slope to become the right slope
           dVar2_V = dVar1_V
           ! Calculate left slope
           dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
           ! Calculate the limited slope
-          dVarLimR_VI(:,l) = (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))* &
+          dVarLimR_VI(:,l) = (sign(0.25, dVar1_V) + sign(0.25, dVar2_V))* &
                min(Beta*abs(dVar1_V), Beta*abs(dVar2_V), &
                0.5*abs(dVar1_V+dVar2_V))
 
@@ -3783,16 +3802,16 @@ contains
     case('mc3')
        ! Calculate rightmost unlimited slope
        dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
-       do l=lMax,lMin-1,-1
+       do l = lMax, lMin-1, -1
           ! Propagate old left slope to become the right slope
           dVar2_V = dVar1_V
           ! Calculate left slope
           dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
           ! Calculate the limited slopes
-          dVarLimR_VI(:,l) = (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))* &
+          dVarLimR_VI(:,l) = (sign(0.25, dVar1_V) + sign(0.25, dVar2_V))* &
                min(Beta*abs(dVar1_V), Beta*abs(dVar2_V), &
                cThird*abs(2*dVar1_V+dVar2_V))
-          dVarLimL_VI(:,l) = (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))* &
+          dVarLimL_VI(:,l) = (sign(0.25, dVar1_V) + sign(0.25, dVar2_V))* &
                min(Beta*abs(dVar1_V), Beta*abs(dVar2_V), &
                cThird*abs(dVar1_V+2*dVar2_V))
        end do
