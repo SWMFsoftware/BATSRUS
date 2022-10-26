@@ -97,7 +97,7 @@ contains
     case("#WAVE", "#WAVE2", "#WAVE4", "#WAVE6")
        UseWave = .true.
        call read_var('NameVar', NameVar)
-       call get_iVar(NameVar, iVar)
+       call get_ivar(NameVar, iVar)
        call read_var('Width', Width)
        call read_var('Amplitude', Amplitude)
        call read_var('LambdaX', LambdaX)
@@ -133,7 +133,7 @@ contains
        !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
        ! where d = k.(x-xCenter) and k = 1/lambda
        call read_var('NameVar',   NameVar)
-       call get_iVar(NameVar, iVar)
+       call get_ivar(NameVar, iVar)
        call read_var('Amplitude', Ampl_V(iVar))
        call read_var('LambdaX',   LambdaX)
        call read_var('LambdaY',   LambdaY)
@@ -389,10 +389,14 @@ contains
       integer, intent(in):: i, j, k, iBlock
 
       integer:: iVar
-      real:: x, y, z, r, r2
+      real:: x, y, z, r, r2, Ampl
       !------------------------------------------------------------------------
       do iVar = 1, nVar
-         if(Ampl_V(iVar) == 0.0) CYCLE
+
+         ! Normalize amplitude
+         Ampl = Ampl_V(iVar)*Io2No_V(iUnitPrim_V(iVar))
+
+         if(Ampl == 0.0) CYCLE
 
          if(iPower_V(iVar) <= 0)then
             ! iPower == 0: Tophat
@@ -420,13 +424,13 @@ contains
                ! Top hat
                if(r2 > 1.0) CYCLE
                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)&
-                    + Ampl_V(iVar)
+                    + Ampl
             else
                ! Gaussian smoothed with cos^6
                if(r2 > 4.0) CYCLE
                r  = sqrt(r2)
                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)&
-                    + Ampl_V(iVar)*cos(cPi*0.25*r)**6*exp(-r2)
+                    + Ampl*cos(cPi*0.25*r)**6*exp(-r2)
             end if
          else
             ! cos^n profile
@@ -442,7 +446,7 @@ contains
 
             State_VGB(iVar,i,j,k,iBlock) =        &
                  State_VGB(iVar,i,j,k,iBlock)          &
-                 + Ampl_V(iVar)*cos(Phase_V(iVar)      &
+                 + Ampl*cos(Phase_V(iVar)      &
                  + KxWave_V(iVar)*Xyz_DGB(x_,i,j,k,iBlock)  &
                  + KyWave_V(iVar)*Xyz_DGB(y_,i,j,k,iBlock)  &
                  + KzWave_V(iVar)*Xyz_DGB(z_,i,j,k,iBlock))**iPower_V(iVar)
