@@ -442,7 +442,7 @@ contains
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM))
     elseif(UseFlux)then
        if(LambdaMax_I(iFile)==LambdaMin_I(iFile))then
-          nLambda=1000
+          nLambda=100
        else
           nLambda = &
                nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(IFile))+1

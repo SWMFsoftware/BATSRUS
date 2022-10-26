@@ -53,7 +53,7 @@ contains
 
     ! Data read from the file
     character(len=200)          :: StringLine
-    character(len=6)            :: NameIon
+    character(len=5)            :: NameIon
     integer                     :: nLevelFrom, nLevelTo
     integer                     :: nFirstLevelFrom, nFirstLevelTo
     real                        :: LineWavelength, FirstLineWavelength
@@ -84,15 +84,15 @@ contains
     integer                     :: iTemp
 
     !  List of elements and their atomic weight of periodic table
-    integer, parameter                   :: nElement = 30
-    integer                              :: jTemp = 0
-    character(len=100)                   :: NameElement_I(1:nElement)=&
+    integer, parameter                  :: nElement = 30
+    integer                             :: jTemp = 0
+    character(len=2), parameter         :: NameElement_I(1:nElement)=&
          ['h ','he','li','be','b ','c ',&
          'n ' ,'o ','f ','ne','na','mg','al', &
          'si','p ','s ','cl','ar','k ','ca','sc','ti','v ','cr','mn','fe', &
          'co','ni','cu','zn']
 
-    real,parameter                     :: AElement_I(1:nElement)=&
+    real, parameter                     :: AElement_I(1:nElement)=&
          [1.008,  4.003,  6.94 ,  9.012, &
          10.81 , 12.011, 14.007, 15.999, &
          18.998, 20.18 , 22.99 , 24.305, 26.982, &
@@ -521,11 +521,23 @@ contains
   !============================================================================
 
   subroutine clean_mod_spectrum
-    character(len=*), parameter:: NameSub = 'clean_mod_spectrum'
+    
+    integer                     :: iLine = 0
+
+    character(len=*), parameter :: NameSub = 'clean_mod_spectrum'
     !--------------------------------------------------------------------------
-    if(allocated(LineTable_I))deallocate(LineTable_I)
+    if(allocated(LineTable_I))then
+       do iLine = 1, nLineAll
+          if(allocated(LineTable_I(iLine)%LogG_II)) &
+	       deallocate(LineTable_I(iLine)%LogG_II)
+          if(allocated(LineTable_I(iLine)%LogIonFrac_II)) &
+               deallocate(LineTable_I(iLine)%LogIonFrac_II)
+       end do
+       deallocate(LineTable_I)
+    end if
     if(allocated(ResponseLambda_I))deallocate(ResponseLambda_I)
     if(allocated(Response_I))deallocate(Response_I)
+    
   end subroutine clean_mod_spectrum
   !============================================================================
 end module ModSpectrum
