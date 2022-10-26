@@ -521,10 +521,10 @@ contains
   !============================================================================
 
   subroutine clean_mod_spectrum
-    
+
     integer                     :: iLine = 0
 
-    character(len=*), parameter :: NameSub = 'clean_mod_spectrum'
+    character(len=*), parameter:: NameSub = 'clean_mod_spectrum'
     !--------------------------------------------------------------------------
     if(allocated(LineTable_I))then
        do iLine = 1, nLineAll
@@ -537,7 +537,7 @@ contains
     end if
     if(allocated(ResponseLambda_I))deallocate(ResponseLambda_I)
     if(allocated(Response_I))deallocate(Response_I)
-    
+
   end subroutine clean_mod_spectrum
   !============================================================================
 end module ModSpectrum

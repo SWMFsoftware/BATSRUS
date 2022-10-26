@@ -34,7 +34,7 @@ contains
     character(len=*), intent(in):: NameCommand
 
     character(len=20):: NameVar
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_source_param'
     !--------------------------------------------------------------------------
