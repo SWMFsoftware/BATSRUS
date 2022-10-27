@@ -973,10 +973,8 @@ contains
     do iRegion = 1, nRegionPic
 
        ! If Xyz_D is outside this PIC grid, then go to check the next PIC grid.
-       if(any(Xyz_D < XyzMinPic_DI(1:nDim, iRegion) + &
-            0.9*DxyzPic_DI(:,iRegion) )) CYCLE
-       if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - &
-            0.9*DxyzPic_DI(:,iRegion) )) CYCLE
+       if(any(Xyz_D < XyzMinPic_DI(1:nDim, iRegion))) CYCLE
+       if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion))) CYCLE
 
        nX = nPatchCell_DI(x_, iRegion)
        nY = nPatchCell_DI(y_, iRegion)
