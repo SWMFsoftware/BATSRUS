@@ -1,3 +1,5 @@
+ Config.pl -e=OuterHelio -u=OuterHelio2d -f -g 10,10,2 -ng=2 -debug
+
 #COMPONENT
 OH			NameComp
 
@@ -40,8 +42,16 @@ F			UseGravity
 #BODY
 T			UseBody
 1.0			rBody [AU] Earth's orbit
-0.01			BodyNDim [/cc] (used for plotting only)
-1.09E5			BodyTDim [K] (used for plotting only)
+0.01			BodyNDim [/cc] number density for inner boundary
+1.09E5			BodyTDim [K] temperature for inner boundary
+0.18			BodyNDim(2)
+6519.0			BodyTDim(2)
+7.0E-5			BodyNDim(3)
+6519.0			BodyTDim(3)
+7.8E-3			BodyNDim(4)
+1.609e3			BodyTDim(4)
+0.18			BodyNDim(5)
+6519.0			BodyTDim(5)
 
 #NORMALIZATION
 OUTERHELIO		TypeNormalization
@@ -77,11 +87,11 @@ spherical_lnr		TypeGeometry
 
 #OUTERBOUNDARY
 none			TypeBc1 rMin
-outflow			TypeBc2 rMax
-periodic		TypeBc3 LonMin
+user			TypeBc2 rMax
+periodic		TypeBc3 LonMin (azimuthal)
 periodic		TypeBc4 LonMax
-float			TypeBc5 LatMin
-float			TypeBc6 LatMax
+periodic		TypeBc5 LatMin (altitude)
+periodic		TypeBc6 LatMax
 
 #INNERBOUNDARY
 user			TypeBcBody
@@ -99,12 +109,6 @@ mc3			TypeLimiter
 #NONCONSERVATIVE
 F			UseNonConservative
 
-#CONSERVATIVECRITERIA
-0			nConservCrit remove?
-
-#SAVERESTART
-F			DoSaveRestart
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLog
@@ -121,10 +125,40 @@ z=0 MHD idl_ascii		StringPlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
 
+#OHBOUNDARY
+T			
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.0E-2			RhoNe2Factor
+1.0			uNe2Factor
+1.0E-2			RhoNe3Factor
+1.0			uNe3Factor
+1.0E-3			RhoNe4Factor
+0.9			uNe4Factor
+
+#OHNEUTRALS
+0.06			RhoNeutralsISW [amu/cc]
+7000.0			TNeutralsISW   [K]
+15.0			UxNeutralsISW  [km/s]
+0.0			UyNeutralsISW  [km/s]
+0.0			UzNeutralsISW  [km/s]
+1			mNeutrals      [amu]
+
+#NEUTRALFLUID
+T			DoConserveNeutrals
+Linde			TypeFluxNeutral
+
 #USERSWITCH
-+init +ic		StringSwitch
++ic +init +update +source		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
+
+#SOURCES
+T			UseIonSource
+T			UseNeuSource
+F			UseNe2Source
+F			UseNe3Source
+T			UseNe4Source
 
 #SOLARWINDH		! slow solar wind
 5.0			SWH_rho_dim [n/cc]
@@ -146,6 +180,21 @@ z=0 MHD idl_ascii		StringPlot
 -0.0748			VLISW_By_dim
 -0.1296			VLISW_Bz_dim
 
+#NEUTRAL4
+0.075			RhoNe4Dim [n/cc]
+27.0			UxNe4Dim  [km/s]
+0.0			UyNe4Dim  [km/s]
+0.0			UzNe4Dim  [km/s]
+7.25E-14		pNe4Dim	  [dyne/cm^2] T = 7000 K
+
+#REGIONS
+6.0E5			TempPop1LimitDim
+100.0			uPop1LimitDim
+0.9			MachPop2Limit
+1.5			MachPop3Limit
+50.0			rPop3Limit
+1.0			MachPop4Limit
+
 #USERINPUTEND -------------------------------------
 
 #STOP
@@ -157,6 +206,10 @@ z=0 MHD idl_ascii		StringPlot
 #TIMEACCURATE
 T			IsTimeAccurate
 
+#FIXEDTIMESTEP
+T			UseDtFixed
+1200			DtFixedDim [sec]
+
 #SAVEPLOTNAME
 F			UsePlotNameStep
 F			UsePlotNameTime
@@ -164,10 +217,12 @@ T			UsePlotNameDateTime
 
 #SAVEPLOT
 1			nPlotFile
-z=0 MHD idl_ascii		StringPlot
+z=0 VAR idl_ascii	StringPlot
 -1  			DnSavePlot
-6 hours			DtSavePlot
+12 hour			DtSavePlot
 0.0			DxSavePlot
+rho ux bz p neurho neuux neup ne4rho ne4ux ne4p	NameVars
+{default}    	      	NamePars
 
 #STOP
 -1			MaxIteration

@@ -8771,19 +8771,18 @@ This command can occur multiple times. By default no lookup tables are used.
 <command name="ADVECTION">
   <parameter name="UseAdvectionSource" type="logical" default="T"/>
   <if expr="$UseAdvectionSource">
-    <parameter name="iVarAdvectFirst" type="integer"
-	       min="1" max="$nVar" default="1"/>
-    <parameter name="iVarAdvectLast"  type="integer" min="$iVarAdvectFirst"
-	       max="$nVar" default="$iVarAdvectFirst"/>
+    <parameter name="NameVarAdvectFirst" type="character" length="20"/>
+    <parameter name="NameVarAdvectLast" type="character" length="20"/>
   </if>
 
 #ADVECTION
 T                      UseAdvectionSource
-1                      iVarAdvectFirst
-2                      iVarAdvectLast
+Rho                    NameVarAdvectFirst
+Rho                    NameVarAdvectLast
 
 If UseAdvectionSource is true, then add a source term Var*div(u) for
-all variables Var with index between iVarAdvectFirst and iVarAdvectLast.
+all variables from NameVarAdvectFirst to NameVarAdvectLast.
+This could be improved to a string of variables. 
 
 No advection source is added by default.
 </command>
