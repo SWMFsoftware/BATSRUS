@@ -241,7 +241,7 @@ contains
     character(len=*), parameter:: NameSub = 'normalize_lookup_solar_wind'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    
+
     VarsGhostFace_V(Bx_:Bz_) = LookupIMF_V(2:4)*Io2No_V(UnitB_)
     VarsGhostFace_V(Ux_:Uz_) = LookupIMF_V(5:7)*Io2No_V(UnitU_)
     if(UseNumberDensity) then
@@ -255,9 +255,9 @@ contains
     else
        VarsGhostFace_V(p_) = LookupIMF_V(9)*Io2No_V(UnitP_)
     endif
-    
+
     call test_stop(NameSub, DoTest)
-    
+
   end subroutine normalize_lookup_solar_wind
   !============================================================================
 
@@ -430,7 +430,7 @@ contains
     else
        !----IMF FILE PROVIDED----
        ! Allows only one input file.
-       
+
        DoDebug = .FALSE.
        ! Get initial Phi coordinate of Earth
        if(PhiEarth0 < -1000)then
@@ -1181,9 +1181,9 @@ contains
     ! OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
 
     logical :: DoTest
-    character (len=*), parameter :: NameSub='set_omega_parker_tilt'
+
+    character(len=*), parameter:: NameSub = 'set_omega_parker_tilt'
     !--------------------------------------------------------------------------
-    
     call test_start(NameSub, DoTest)
 
     OmegaSun   = cTwoPi/(26.0*24.0*3600.00*Si2No_V(UnitT_))
@@ -1210,7 +1210,7 @@ contains
     character(len=*), parameter:: NameSub = 'select_region'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    
+
     if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
 
     ! Produce fluid3 at the inner boundary
