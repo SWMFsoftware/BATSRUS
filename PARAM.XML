@@ -8771,8 +8771,8 @@ This command can occur multiple times. By default no lookup tables are used.
 <command name="ADVECTION">
   <parameter name="UseAdvectionSource" type="logical" default="T"/>
   <if expr="$UseAdvectionSource">
-    <parameter name="NameVarAdvectFirst" type="character" length="20"/>
-    <parameter name="NameVarAdvectLast" type="character" length="20"/>
+    <parameter name="NameVarAdvectFirst" type="string" length="20"/>
+    <parameter name="NameVarAdvectLast" type="string" length="20"/>
   </if>
 
 #ADVECTION
