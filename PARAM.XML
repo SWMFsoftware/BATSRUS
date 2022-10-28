@@ -6804,6 +6804,25 @@ The default value is "orig" if the code is compiled for CPU,
 and "fast" when compiled for the GPU.
 </command>
 
+<command name="UPDATEVAR">
+  <parameter name="StringVarUpdate" type="string" length="$lLine"/>
+
+#UPDATEVAR
+rho mx my               StringVarUpdate
+
+Update only a subset of the state variables. The variables should be
+listed with a single space separator in the StringVarUpdate.
+
+If density is updated but some components of the momentum are not,
+then the velocity is preserved (not the momentum). In the example
+above, the Z component of the velocity is fixed. In the current
+implementation this only works with classical momentum
+(not with semi-relativistic momentum, see #BORIS command) and only
+for the first fluid.
+
+The default is to update all the variables.
+</command>
+  
 <command name="SCHEME">
   <parameter name="nOrder" type="integer" input="select">
     <option name="1st order"  value="1"/>
