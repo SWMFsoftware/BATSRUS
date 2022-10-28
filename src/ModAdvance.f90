@@ -29,6 +29,11 @@ module ModAdvance
   integer:: iTypeUpdate = 1
   integer, parameter:: UpdateOrig_ = 1, UpdateSlow_ = 2, UpdateFast_ = 3
 
+  ! Advance only a subset of state variables?
+  integer             :: nVarUpdate = nVar
+  integer, allocatable:: iVarUpdate_I(:)
+  logical::              DoUpdate_V(nVar) = .true.
+
   ! This should be changed to false probably
   logical:: UseDbTrick = .true., UseDbTrickNow = .true.
 
