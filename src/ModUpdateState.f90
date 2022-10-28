@@ -81,7 +81,6 @@ contains
             /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
     end if
 
-    
     ! Note must copy state to old state only if iStage is 1.
     if(iStage==1) then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -108,7 +107,7 @@ contains
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
        end do
     end if
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_state
   !============================================================================
@@ -507,7 +506,7 @@ contains
             end do; end do; end do
          end do
       endif
-      
+
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after flux/source                   =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
