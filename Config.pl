@@ -40,10 +40,12 @@ if ($Component eq "G"."M"){
     `$gitclone srcUserExtra` if not -d "srcUserExtra" and $umichgitlab;
 }
 
+my $MakefileConf = 'Makefile.conf';
 if(-f $config){
     require $config;
 }else{
     require "../../$config";
+    $MakefileConf = "../../$MakefileConf";
 }
 
 # Variables inherited from share/Scripts/Config.pl
@@ -607,6 +609,14 @@ sub set_equation{
     `cp $EquationMod $EquationModSafe` if -f $EquationMod; # save previous eq.
     print "cp $File $EquationMod\n" if $Verbose;
     `cp $File $EquationMod`;
+
+    # Add -DSCALAR compiler flag for ModEquationScalar
+    @ARGV = ($MakefileConf);
+    while (<>){
+	s/^(CFLAG *= *)-DSCALAR */$1/;
+	s/^(CFLAG *=) */$1 -DSCALAR / if $Equation eq 'Scalar';
+	print;
+    }
 }
 
 ##############################################################################
