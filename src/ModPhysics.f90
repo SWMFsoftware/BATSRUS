@@ -1091,7 +1091,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    allocate(UnitUser_V(nVar+nFluid), &
+    if(.not.allocated(UnitUser_V)) allocate(UnitUser_V(nVar+nFluid), &
          NameUnitUserTec_V(nVar+nFluid), NameUnitUserIdl_V(nVar+nFluid))
 
     UnitUser_V = 1.0
