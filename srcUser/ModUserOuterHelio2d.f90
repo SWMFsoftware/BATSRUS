@@ -23,7 +23,7 @@ module ModUser
        Bx_, By_, Bz_, p_, Energy_, iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I,&
        nFluid, NameVar_V
   use ModMultiFluid, ONLY: UseNeutralFluid, RhoNeutralsISW, &
-       RhoNeuWindDim, PNeutralsISW, pNeuWindDim, &
+       RhoNeuWindDim, PNeutralsISW, &
        UxNeutralsISW, UyNeutralsISW, UzNeutralsISW, TempNeuWindDim, &
        UxNeuWindDim, UyNeuWindDim, UzNeuWindDim, &
        MassNeutralDim, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iEnergy, &
@@ -43,8 +43,7 @@ module ModUser
 
   real,              parameter :: VersionUserModule = 2.3
   character (len=*), parameter :: NameUserFile = "ModUserOuterHelio2d.f90"
-  character (len=*), parameter :: &
-       NameUserModule = '2D Outer Heliosphere, Zieger & Toth (2015)'
+  character (len=*), parameter :: NameUserModule = "2D Outer Heliosphere"
 
   ! Variables used for multiflud neutrals
   ! that are not defined in ModEquationMhd.f90 used for K-MHD
@@ -82,60 +81,29 @@ module ModUser
   real :: ParkerTilt = 0.0  ! Bphi/Br at the equator at r=rBody
 
   ! SWH variables.
-  real :: SWH_a_dim=0.0  , &
-       SWH_rho=0.0, SWH_rho_dim=0.0, &
-       SWH_p=0.0  , SWH_T_dim  =0.0, &
-       SWH_Ux=0.0 , SWH_Ux_dim=0.0 , &
-       SWH_Uy=0.0 , SWH_Uy_dim=0.0 , &
-       SWH_Uz=0.0 , SWH_Uz_dim=0.0 , &
-       SWH_Bx=0.0 , SWH_Bx_dim=0.0 , &
-       SWH_By=0.0 , SWH_By_dim=0.0 , &
-       SWH_Bz=0.0 , SWH_Bz_dim=0.0 , &
-       SWH_B_factor=0.0
-
-  real, dimension(0:1) :: &
-       SWH_rho_t,  &
-       SWH_p_t  ,  &
-       SWH_Ux_t ,  &
-       SWH_Uy_t ,  &
-       SWH_Uz_t ,  &
-       SWH_Bx_t ,  &
-       SWH_By_t ,  &
-       SWH_Bz_t ,  &
-       SWH_time_t
+  real :: &
+       SwhRho = 0.0, SwhRhoDim = 0.0, &
+       SwhP   = 0.0, SwhTDim   = 0.0, &
+       SwhUx  = 0.0, SwhUxDim  = 0.0, &
+       SwhUy  = 0.0, SwhUyDim  = 0.0, &
+       SwhUz  = 0.0, SwhUzDim  = 0.0, &
+       SwhBx  = 0.0, SwhBxDim  = 0.0, &
+       SwhBy  = 0.0, SwhByDim  = 0.0, &
+       SwhBz  = 0.0, SwhBzDim  = 0.0
 
   ! VLISM variables.
-  real :: SW_B_factor=0.0
-  real :: VLISW_T_dim=0.0  , &
-       VLISW_a_dim=0.0  , &
-       VLISW_rho=0.0 , VLISW_rho_dim=0.0, &
-       VLISW_p=0.0  , VLISW_p_dim=0.0   , &
-       VLISW_Ux=0.0 , VLISW_Ux_dim=0.0 , &
-       VLISW_Uy=0.0  , VLISW_Uy_dim=0.0 , &
-       VLISW_Uz=0.0 , VLISW_Uz_dim=0.0 , &
-       VLISW_Bx=0.0 , VLISW_Bx_dim=0.0 , &
-       VLISW_By=0.0 , VLISW_By_dim=0.0 , &
-       VLISW_Bz=0.0 , VLISW_Bz_dim=0.0 , &
-       VLISW_B_factor=0.0
-
-  real :: VLISW_p_dim1=0.0, VLISW_p1=0.0
-  real :: SWH_p1=0.0, PNeutralsISW1=0.0
-
-  ! FASTSW variables.
-  real :: SWfast_T_dim=0.0, &
-       SWfast_a_dim=0.0, &
-       SWfast_rho=0.0, SWfast_rho_dim=0.0, &
-       SWfast_p=0.0  , SWfast_p_dim=0.0  , &
-       SWfast_Ux=0.0 , SWfast_Ux_dim=0.0 , &
-       SWfast_Uy=0.0 , SWfast_Uy_dim=0.0 , &
-       SWfast_Uz=0.0 , SWfast_Uz_dim=0.0,  &
-       SWfast_Bx=0.0 , SWfast_Bx_dim=0.0 , &
-       SWfast_By=0.0 , SWfast_By_dim=0.0 , &
-       SWfast_Bz=0.0 , SWfast_Bz_dim=0.0 , &
-       SWfast_B_factor=0.0
+  real :: VliswTDim=0.0, &
+       VliswRho = 0.0, VliswRhoDim = 0.0, &
+       VliswP   = 0.0, VliswPDim   = 0.0, &
+       VliswUx  = 0.0, VliswUxDim  = 0.0, &
+       VliswUy  = 0.0, VliswUyDim  = 0.0, &
+       VliswUz  = 0.0, VliswUzDim  = 0.0, &
+       VliswBx  = 0.0, VliswBxDim  = 0.0, &
+       VliswBy  = 0.0, VliswByDim  = 0.0, &
+       VliswBz  = 0.0, VliswBzDim  = 0.0
 
   ! neutrals variables
-  real :: mNeutrals
+  real :: MassNeutral
 
   ! Velocity, temperature, Mach number and radius limits for the populations
   real :: TempPop1LimitDim = 1e5    ! [K]
@@ -171,28 +139,23 @@ contains
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
        case("#SOLARWINDH")
-          call read_var('SWH_rho_dim',SWH_rho_dim)
-          call read_var('SWH_T_dim'  ,SWH_T_dim)
-          call read_var('SWH_Ux_dim' ,SWH_Ux_dim)
-          call read_var('SWH_Uy_dim' ,SWH_Uy_dim)
-          call read_var('SWH_Uz_dNe4Uz Ne4Pim' ,SWH_Uz_dim)
-          call read_var('SWH_Bx_dim' ,SWH_Bx_dim)
-          call read_var('SWH_By_dim' ,SWH_By_dim)
-          call read_var('SWH_Bz_dim' ,SWH_Bz_dim)
-       case("#SOLARWINDFAST")
-          call read_var('SWfast_rho_dim',SWfast_rho_dim)
-          call read_var('SWfast_Ux_dim' ,SWfast_Ux_dim)
-          call read_var('SWfast_Uy_dim' ,SWfast_Uy_dim)
-          call read_var('SWfast_Uz_dim' ,SWfast_Uz_dim)
+          call read_var('SwhRhoDim',SwhRhoDim)
+          call read_var('SwhTDim'  ,SwhTDim)
+          call read_var('SwhUxDim' ,SwhUxDim)
+          call read_var('SwhUyDim' ,SwhUyDim)
+          call read_var('SwhUz_dNe4Uz Ne4Pim' ,SwhUzDim)
+          call read_var('SwhBxDim' ,SwhBxDim)
+          call read_var('SwhByDim' ,SwhByDim)
+          call read_var('SwhBzDim' ,SwhBzDim)
        case("#VLISW")
-          call read_var('VLISW_rho_dim' ,VLISW_rho_dim)
-          call read_var('VLISW_T_dim'  ,VLISW_T_dim)
-          call read_var('VLISW_Ux_dim' ,VLISW_Ux_dim)
-          call read_var('VLISW_Uy_dim' ,VLISW_Uy_dim)
-          call read_var('VLISW_Uz_dim' ,VLISW_Uz_dim)
-          call read_var('VLISW_Bx_dim' ,VLISW_Bx_dim)
-          call read_var('VLISW_By_dim' ,VLISW_By_dim)
-          call read_var('VLISW_Bz_dim' ,VLISW_Bz_dim)
+          call read_var('VliswRhoDim' ,VliswRhoDim)
+          call read_var('VliswTDim'  ,VliswTDim)
+          call read_var('VliswUxDim' ,VliswUxDim)
+          call read_var('VliswUyDim' ,VliswUyDim)
+          call read_var('VliswUzDim' ,VliswUzDim)
+          call read_var('VliswBxDim' ,VliswBxDim)
+          call read_var('VliswByDim' ,VliswByDim)
+          call read_var('VliswBzDim' ,VliswBzDim)
        case("#SOURCES")
           call read_var('UseIonSource', UseSource_I(Ion_))
           call read_var('UseNeuSource', UseSource_I(Neu_))
@@ -220,7 +183,6 @@ contains
 
   end subroutine user_read_inputs
   !============================================================================
-
   subroutine normalize_lookup_solar_wind(LookupIMF_V, VarsGhostFace_V)
     !
     ! Normalize the solar wind read from a lookup table.
@@ -234,8 +196,8 @@ contains
 
     real, intent(in) :: LookupIMF_V(9)
     real, intent(out):: VarsGhostFace_V(8)
-    logical :: UseNumberDensity = .TRUE.
-    logical :: UseTemperature = .TRUE.
+    logical :: UseNumberDensity = .true.
+    logical :: UseTemperature = .true.
 
     logical :: DoTest
     character(len=*), parameter:: NameSub = 'normalize_lookup_solar_wind'
@@ -289,26 +251,25 @@ contains
     real :: ShiftedTime1, ShiftedTime2
 
     !! For lookup tables
-    integer :: MaxNumLookupTables = 3
+    integer :: MaxLookupTable = 3
     !   allow up to 3 solar wind inputs (L1, STA, STB)
-    integer, allocatable :: LookupTable_I(:)
+    integer, allocatable :: iLookupTable_I(:)
     real :: VarsSatR_V(8), VarsSatL_V(8)
     real :: LookupData_V(9)
-    character(len=3)  :: NameiTable
-    integer           :: i
-    real              :: PhiDiff, PhiFace, PhiSat
-    real              :: MinPhiDiffR, MinPhiDiffL
-    real              :: PhiDiffR, PhiDiffL
-    integer           :: PhiMinR_I = 1, PhiMinL_I = 1
-    real              :: SatR_V(9), SatL_V(9)
-    real              :: SatRWeight, SatLWeight
-    real              :: ShiftedTimeR, ShiftedTimeL
-    real              :: TimeFirst_I(3), TimeLast_I(3)
-    real              :: IndexMin_I(1), IndexMax_I(1)
+    character(len=3):: NameTable
+    integer         :: i
+    real            :: PhiDiff, PhiFace, PhiSat
+    real            :: PhiMinDiffR, PhiMinDiffL
+    real            :: PhiDiffR, PhiDiffL
+    integer         :: iTableMinPhiR = 1, iTableMinPhiL = 1
+    real            :: SatR_V(9), SatL_V(9)
+    real            :: SatRWeight, SatLWeight
+    real            :: ShiftedTimeR, ShiftedTimeL
+    real            :: TimeFirst_I(3), TimeLast_I(3)
+    real            :: IndexMin_I(1), IndexMax_I(1)
 
-    logical:: FirstCall = .TRUE.
     logical:: DoTest, DoTestCell
-    logical:: DoDebug = .FALSE.
+    logical:: DoDebug = .false.
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
@@ -336,32 +297,32 @@ contains
     XyzSph_DD = rot_xyz_sph(FaceCoords_D)
 
     ! Detect the number of solar wind lookup tables provided.
-    do i=1,MaxNumLookupTables
-       write(NameiTable,'(A,I1)') 'SW',i
-       if(.not.allocated(LookupTable_I) .and. &
-            i_lookup_table(NameiTable)>0)then
-          allocate(LookupTable_I(MaxNumLookupTables))
+    do i = 1, MaxLookupTable
+       write(NameTable,'(A,I1)') 'SW', i
+       if(.not.allocated(iLookupTable_I) .and. &
+            i_lookup_table(NameTable) > 0)then
+          allocate(iLookupTable_I(MaxLookupTable))
        endif
-       if(allocated(LookupTable_I))then
-          LookupTable_I(i) = i_lookup_table(NameiTable)
+       if(allocated(iLookupTable_I))then
+          iLookupTable_I(i) = i_lookup_table(NameTable)
        endif
     enddo
 
-    if(allocated(LookupTable_I))then
+    if(allocated(iLookupTable_I))then
        !----LOOKUP TABLE(S) PROVIDED----
 
        ! Determine which satellites are closest to the cell.
        ! Do this by getting data from all lookup tables.
        !  Note: NO TIME SHIFT YET!
-       MinPhiDiffR = cTwoPi
-       MinPhiDiffL = cTwoPi
-       PhiMinR_I = 1
-       PhiMinL_I = 1
+       PhiMinDiffR = cTwoPi
+       PhiMinDiffL = cTwoPi
+       iTableMinPhiR = 1
+       iTableMinPhiL = 1
 
        ! Find and store index max and min of each lookup table.
-       do i=1,size(LookupTable_I)
-          if(LookupTable_I(i)<0) CYCLE
-          call get_lookup_table(iTable=LookupTable_I(i), &
+       do i=1,size(iLookupTable_I)
+          if(iLookupTable_I(i)<0) CYCLE
+          call get_lookup_table(iTable=iLookupTable_I(i), &
                IndexMin_I=IndexMin_I, IndexMax_I=IndexMax_I)
           TimeFirst_I(i) = IndexMin_I(1)
           TimeLast_I(i) = IndexMax_I(1)
@@ -371,10 +332,10 @@ contains
        if(PhiFace > cPi) PhiFace = PhiFace - cTwoPi
 
        ! Find two satellites closest to cell on right and left.
-       do i=1,size(LookupTable_I)
-          if(LookupTable_I(i)<0) CYCLE
-          CALL interpolate_lookup_table(LookupTable_I(i), StartTime+tSimulation, &
-               LookupData_V, DoExtrapolate=.false.)
+       do i=1, size(iLookupTable_I)
+          if(iLookupTable_I(i)<0) CYCLE
+          CALL interpolate_lookup_table(iLookupTable_I(i), &
+               StartTime+tSimulation, LookupData_V, DoExtrapolate=.false.)
 
           ! Ignore values outside of lookup table.
           if(StartTime+tSimulation < TimeFirst_I(i) .or. &
@@ -396,58 +357,58 @@ contains
           endif
 
           ! If differences are smallest, store as global minima.
-          if(PhiDiffR < MinPhiDiffR)then
-             MinPhiDiffR = PhiDiffR
-             PhiMinR_I = LookupTable_I(i)
+          if(PhiDiffR < PhiMinDiffR)then
+             PhiMinDiffR = PhiDiffR
+             iTableMinPhiR = iLookupTable_I(i)
           endif
-          if(PhiDiffL < MinPhiDiffL)then
-             MinPhiDiffL = PhiDiffL
-             PhiMinL_I = LookupTable_I(i)
+          if(PhiDiffL < PhiMinDiffL)then
+             PhiMinDiffL = PhiDiffL
+             iTableMinPhiL = iLookupTable_I(i)
           endif
        enddo
 
        ! Get shifted time of observation at cell
        ShiftedTimeR = StartTime + tSimulation &
-            - MinPhiDiffR/cTwoPi*CarringtonSynodicPeriod
+            - PhiMinDiffR/cTwoPi*CarringtonSynodicPeriod
        ShiftedTimeL = StartTime + tSimulation &
-            + MinPhiDiffL/cTwoPi*CarringtonSynodicPeriod
+            + PhiMinDiffL/cTwoPi*CarringtonSynodicPeriod
 
        ! Get IMF data from each closest satellite to the cell.
-       call interpolate_lookup_table(PhiMinR_I, ShiftedTimeR, &
-            SatR_V, DoExtrapolate=.FALSE.)
+       call interpolate_lookup_table(iTableMinPhiR, ShiftedTimeR, &
+            SatR_V, DoExtrapolate=.false.)
        call normalize_lookup_solar_wind(SatR_V, VarsSatR_V)
-       call interpolate_lookup_table(PhiMinL_I, ShiftedTimeL, &
-            SatL_V, DoExtrapolate=.FALSE.)
+       call interpolate_lookup_table(iTableMinPhiL, ShiftedTimeL, &
+            SatL_V, DoExtrapolate=.false.)
        call normalize_lookup_solar_wind(SatL_V, VarsSatL_V)
 
        ! Average observations from both satellites.
        !   -> smaller distance, larger weight
-       SatRWeight = MinPhiDiffL/(MinPhiDiffR+MinPhiDiffL)
+       SatRWeight = PhiMinDiffL/(PhiMinDiffR + PhiMinDiffL)
        SatLWeight = 1 - SatRWeight
-       VarsGhostFace_V(Rho_:p_) = VarsSatR_V*SatRWeight &
-            + VarsSatL_V*SatLWeight
+       VarsGhostFace_V(Rho_:p_) = VarsSatR_V*SatRWeight + VarsSatL_V*SatLWeight
 
     else
        !----IMF FILE PROVIDED----
        ! Allows only one input file.
 
-       DoDebug = .FALSE.
+       DoDebug = .false.
        ! Get initial Phi coordinate of Earth
        if(PhiEarth0 < -1000)then
           PhiEarth0 = atan2(XyzPlanetHgi_D(2), XyzPlanetHgi_D(1))
           if(DoDebug)then
              write(*,*) NameSub,': PhiEarth0[deg]=',PhiEarth0*cRadToDeg
-             write(*,*) NameSub,': OmegaOrbit, TimeSim=', OmegaOrbit, tSimulation
-             DoDebug=.FALSE.
+             write(*,*) NameSub,': OmegaOrbit, TimeSim=', &
+                  OmegaOrbit, tSimulation
+             DoDebug = .false.
           end if
        end if
-       DoDebug = .FALSE.
+       DoDebug = .false.
 
        ! Phi angle relative to the Earth (or the OMNI observation).
        ! Include orbital motion of Earth (for long simulations)
        Phi = atan2(yFace, xFace) - PhiEarth0 - OmegaOrbit*tSimulation
 
-       ! Center in a way that the discontinuity is away from Earth (-pi < Phi < pi)
+       ! Center in a way that the discontinuity is away from Earth
        Phi = modulo(Phi, cTwoPi) ! make Phi < 2pi
        if(Phi > cPi) Phi = Phi - cTwoPi ! if Phi > pi: make Phi negative
        ! get second solar wind point to improve discontinuity
@@ -467,17 +428,20 @@ contains
        ! Thus, no additional time shift is applied in get_solar_wind_point.
        ! This functionality is designed to propagate solar wind from L1,
        ! but is not needed.
-       call get_solar_wind_point(ShiftedTime1, [1.0, 0.0, 0.0], VarsGhostFace_V)
-       call get_solar_wind_point(ShiftedTime2, [1.0, 0.0, 0.0], VarsGhostFace2_V)
+       call get_solar_wind_point(ShiftedTime1, [1.0, 0.0, 0.0], &
+            VarsGhostFace_V)
+       call get_solar_wind_point(ShiftedTime2, [1.0, 0.0, 0.0], &
+            VarsGhostFace2_V)
 
        ! Average observations from consecutive rotations to improve solution
        ! and continuity.
-       !    Note that the unweighted average preserves a sharp discontinuity,
-       !    whereas the weighted average smooths it completely.
-       !     -> weighted average based on fractional angular distance from Earth
+       ! Note that the unweighted average preserves a sharp discontinuity,
+       ! whereas the weighted average smooths it completely.
+       ! -> weighted average based on fractional angular distance from Earth
        Time2Weight = abs(Phi/cTwoPi)
        Time1Weight = 1 - Time2Weight
-       VarsGhostFace_V = VarsGhostFace_V*Time1Weight + VarsGhostFace2_V*Time2Weight
+       VarsGhostFace_V = &
+            VarsGhostFace_V*Time1Weight + VarsGhostFace2_V*Time2Weight
 
     endif
 
@@ -486,23 +450,24 @@ contains
     ! u_theta component ignored
     !   could be included if periodic in Latitude is required
     Vsph_D = [ VarsGhostFace_V(Ux_), 0.0, VarsGhostFace_V(Uy_) ]
-    Bsph_D = [ VarsGhostFace_V(Bx_), -VarsGhostFace_V(Bz_), VarsGhostFace_V(By_) ]
+    Bsph_D = &
+         [ VarsGhostFace_V(Bx_), -VarsGhostFace_V(Bz_), VarsGhostFace_V(By_) ]
 
     ! Convert to X,Y,Z components
     VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
     VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
 
-    DoDebug=.FALSE.
-    if(iProc==0.and.DoDebug)then
-       write(*,*) NameSub, ' GhostFace_V=', VarsGhostFace_V(1:8)
-    end if
+    DoDebug = .false.
+    if(iProc == 0 .and. DoDebug) &
+         write(*,*) NameSub, ' GhostFace_V=', VarsGhostFace_V(1:8)
 
     if(UseNeutralFluid)then
 
        VarsGhostFace_V(NeuRho_:Ne4P_) = VarsTrueFace_V(NeuRho_:Ne4P_)
 
        ! PopI/Neu (disturbed by bow shock)
-       if(sum([UxNeutralsISW,UyNeutralsISW,UzNeutralsISW]*FaceCoords_D) > 0.0)then
+       if(sum([UxNeutralsISW,UyNeutralsISW,UzNeutralsISW]*FaceCoords_D) &
+            > 0.0)then
           VarsGhostFace_V(NeuRho_) = RhoNeutralsISW * RhoBcFactor_I(Neu_)
           VarsGhostFace_V(NeuUx_ ) = UxNeutralsISW  * uBcFactor_I(Neu_)
           VarsGhostFace_V(NeuUy_ ) = UyNeutralsISW  * uBcFactor_I(Neu_)
@@ -530,12 +495,12 @@ contains
     end associate
   end subroutine user_set_face_boundary
   !============================================================================
-  subroutine user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     ! The ISM enters at the east boundary (negative x)
 
     integer,          intent(in) :: iBlock, iSide
-    character(len=*), intent(in):: CBC
+    character(len=*), intent(in) :: TypeBc
     logical,          intent(out):: IsFound
 
     integer :: i,j,k
@@ -557,11 +522,11 @@ contains
        if(UseNeutralFluid)then
           if(sum(Xyz_DGB(:,i,j,k,iBlock) &
                * State_VGB(NeuRhoUx_:NeuRhoUz_,nI,j,k,iBlock)) < 0)then
-             State_VGB(NeuRho_   ,i,j,k,iBlock) = RhoNeutralsISW
-             State_VGB(NeuRhoUx_ ,i,j,k,iBlock) = RhoNeutralsISW * UxNeutralsISW
-             State_VGB(NeuRhoUy_ ,i,j,k,iBlock) = RhoNeutralsISW * UyNeutralsISW
-             State_VGB(NeuRhoUz_ ,i,j,k,iBlock) = RhoNeutralsISW * UzNeutralsISW
-             State_VGB(NeuP_     ,i,j,k,iBlock) = PNeutralsISW
+             State_VGB(NeuRho_  ,i,j,k,iBlock) = RhoNeutralsISW
+             State_VGB(NeuRhoUx_,i,j,k,iBlock) = RhoNeutralsISW*UxNeutralsISW
+             State_VGB(NeuRhoUy_,i,j,k,iBlock) = RhoNeutralsISW*UyNeutralsISW
+             State_VGB(NeuRhoUz_,i,j,k,iBlock) = RhoNeutralsISW*UzNeutralsISW
+             State_VGB(NeuP_    ,i,j,k,iBlock) = PNeutralsISW
           endif
           if(sum(Xyz_DGB(:,i,j,k,iBlock) &
                * State_VGB(Ne4RhoUx_:Ne4RhoUz_,nI,j,k,iBlock)) < 0)then
@@ -588,7 +553,7 @@ contains
 
     integer :: i,j,k
 
-    real :: x, y, z, r, rho0
+    real :: x, y, z, r
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3)
     real :: SinTheta, SignZ
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
@@ -630,16 +595,16 @@ contains
        ! good for polarity of 1997
        SignZ = -sign(1.0,z)  ! good for 2005
 
-       Bsph_D(1) = SignZ*SWH_Bx*(rBody/r)**2  ! Br
+       Bsph_D(1) = SignZ*SwhBx*(rBody/r)**2  ! Br
        Bsph_D(2) = 0.0                        ! Btheta
-       Bsph_D(3) = -SignZ*SWH_Bx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
+       Bsph_D(3) = -SignZ*SwhBx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
 
        ! wrong:   Vphi = OmegaSun*(6.96E5)*sin_theta/No2Io_V(UnitU_)
        ! correct: Vphi = OmegaSun*sin_theta*rSun**2/r
        ! rSun must be in normalized units, of course
        ! Vphi is approximately 0. (30km/s at 1AU, 1km/s at 30AU)
 
-       Vsph_D = [SWH_Ux, 0., 0.]
+       Vsph_D = [SwhUx, 0., 0.]
 
        ! magnetic field components in cartesian coordinates
        b_D = matmul(XyzSph_DD, Bsph_D)
@@ -650,8 +615,8 @@ contains
        v_D = matmul(XyzSph_DD, Vsph_D)
 
        ! density and pressure
-       State_VGB(Rho_,i,j,k,iBlock) = SWH_rho * (rBody/r)**2
-       State_VGB(P_,i,j,k,iBlock)   = SWH_p   * (rBody/r)**(2*Gamma)
+       State_VGB(Rho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
+       State_VGB(P_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
 
        ! momentum
        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*v_D
@@ -690,8 +655,8 @@ contains
 
        if(DoTestCell)then
           write(*,*)NameSub,' x, y, z, r             =', x, y, z, r
-          write(*,*)NameSub,' SignZ, SWH_Bx, SinTheta=',SignZ, SWH_Bx, SinTheta
-          write(*,*)NameSub,' OmegaSun, rBody, SWH_Ux=',OmegaSun,rBody,SWH_Ux
+          write(*,*)NameSub,' SignZ, SwhBx, SinTheta=',SignZ, SwhBx, SinTheta
+          write(*,*)NameSub,' OmegaSun, rBody, SwhUx=',OmegaSun,rBody,SwhUx
           write(*,*)NameSub,' Vsph_D                 =',Vsph_D
           write(*,*)NameSub,' v_D                    =',v_D
           write(*,*)NameSub,' Bsph_D                 =',Bsph_D
@@ -727,37 +692,39 @@ contains
     call test_start(NameSub, DoTest)
     if(NameAction /= 'write progress') RETURN
 
-    write(*,StringFormat) 'SWH_rho_dim [n/cc]:',SWH_rho_dim,'SWH_rho:',SWH_rho
+    write(*,StringFormat) 'SwhRhoDim [n/cc]:',SwhRhoDim,'SwhRho:',SwhRho
 
-    write(*,StringFormat) 'SWH_Ux_dim  [km/s]:',SWH_Ux_dim,'SWH_Ux:',SWH_Ux
-    write(*,StringFormat) 'SWH_Uy_dim  [km/s]:',SWH_Uy_dim,'SWH_Uy:',SWH_Uy
-    write(*,StringFormat) 'SWH_Uz_dim  [km/s]:',SWH_Uz_dim,'SWH_Uz:',SWH_Uz
-    write(*,StringFormat) 'SWH_T_dim   [   K]:',SWH_T_dim,'SWH_p:',SWH_p
-    write(*,StringFormat) 'SWH_Bx_dim  [  nT]:',SWH_Bx_dim,'SWH_Bx:',SWH_Bx
-    write(*,StringFormat) 'SWH_By_dim  [  nT]:',SWH_By_dim,'SWH_By:',SWH_By
-    write(*,StringFormat) 'SWH_Bz_dim  [  nT]:',SWH_Bz_dim,'SWH_Bz:',SWH_Bz
-    write(*,'(10X,A19,F15.6)')           'SWH_T_dim   [   K]:',SWH_T_dim
+    write(*,StringFormat) 'SwhUxDim  [km/s]:',SwhUxDim,'SwhUx:',SwhUx
+    write(*,StringFormat) 'SwhUyDim  [km/s]:',SwhUyDim,'SwhUy:',SwhUy
+    write(*,StringFormat) 'SwhUzDim  [km/s]:',SwhUzDim,'SwhUz:',SwhUz
+    write(*,StringFormat) 'SwhTDim   [   K]:',SwhTDim,'SwhP:',SwhP
+    write(*,StringFormat) 'SwhBxDim  [  nT]:',SwhBxDim,'SwhBx:',SwhBx
+    write(*,StringFormat) 'SwhByDim  [  nT]:',SwhByDim,'SwhBy:',SwhBy
+    write(*,StringFormat) 'SwhBzDim  [  nT]:',SwhBzDim,'SwhBz:',SwhBz
+    write(*,'(10X,A19,F15.6)') 'SwhTDim   [   K]:',SwhTDim
     ! fast solar wind
     write(*,*)
     write(*,*)
-    write(*,StringFormat) 'VLISW_rho_dim[n/cc]:',VLISW_rho_dim,'VLISW_rho:',VLISW_rho
-    write(*,StringFormat) 'VLISW_Ux_dim[km/s]: ',VLISW_Ux_dim,'VLISW_Ux:',VLISW_Ux
-    write(*,StringFormat) 'VLISW_Uy_dim[km/s]: ',VLISW_Uy_dim,'VLISW_Uy:',VLISW_Uy
-    write(*,StringFormat) 'VLISW_Uz_dim[km/s]: ',VLISW_Uz_dim,'VLISW_Uz:',VLISW_Uz
-    write(*,StringFormat) 'VLISW_p_dim [nPa]: ',VLISW_p_dim,'VLISW_p:',VLISW_p
-    write(*,StringFormat) 'VLISW_Bx_dim[nT]: ',VLISW_Bx_dim,'VLISW_Bx:',VLISW_Bx
-    write(*,StringFormat) 'VLISW_By_dim[nT]:',VLISW_By_dim,'VLISW_By:',VLISW_By
-    write(*,StringFormat) 'VLISW_Bz_dim[nT]:',VLISW_Bz_dim,'VLISW_Bz:',VLISW_Bz
-    write(*,'(10X,A19,F15.6)') 'VLISW_a_dim[km/s]: ',VLISW_a_dim
-    write(*,'(10X,A19,F15.6)') 'VLISW_T_dim[K]: ',VLISW_T_dim!
+    write(*,StringFormat) 'VliswRhoDim[n/cc]:',VliswRhoDim,'VliswRho:',VliswRho
+    write(*,StringFormat) 'VliswUxDim[km/s]: ',VliswUxDim,'VliswUx:',VliswUx
+    write(*,StringFormat) 'VliswUyDim[km/s]: ',VliswUyDim,'VliswUy:',VliswUy
+    write(*,StringFormat) 'VliswUzDim[km/s]: ',VliswUzDim,'VliswUz:',VliswUz
+    write(*,StringFormat) 'VliswPDim [nPa]: ',VliswPDim,'VliswP:',VliswP
+    write(*,StringFormat) 'VliswBxDim[nT]: ',VliswBxDim,'VliswBx:',VliswBx
+    write(*,StringFormat) 'VliswByDim[nT]:',VliswByDim,'VliswBy:',VliswBy
+    write(*,StringFormat) 'VliswBzDim[nT]:',VliswBzDim,'VliswBz:',VliswBz
+    write(*,'(10X,A19,F15.6)') 'VliswTDim[K]: ',VliswTDim!
     if(UseNeutralFluid)then
        ! neutrals
        write(*,*)
-       write(*,StringFormat) 'RhoNeuWindDim:',RhoNeuWindDim ,'RhoNeutralsISW:',RhoNeutralsISW
-       write(*,StringFormat) 'UxNeuWindDim:',UxNeuWindDim,'UxNeutralsISW:',UxNeutralsISW
-       write(*,StringFormat) 'UyNeuWindDim:',UyNeuWindDim,'UyNeutralsISW:',UyNeutralsISW
-       write(*,StringFormat) 'UzNeuWindDim:',UzNeuWindDim,'UzNeutralsISW:',UzNeutralsISW
-       write(*,StringFormat) 'pNeuWindDim:',pNeuWindDim,'PNeutralsISW:',PNeutralsISW
+       write(*,StringFormat) &
+            'RhoNeuWindDim:',RhoNeuWindDim ,'RhoNeutralsISW:',RhoNeutralsISW
+       write(*,StringFormat) &
+            'UxNeuWindDim:',UxNeuWindDim,'UxNeutralsISW:',UxNeutralsISW
+       write(*,StringFormat) &
+            'UyNeuWindDim:',UyNeuWindDim,'UyNeutralsISW:',UyNeutralsISW
+       write(*,StringFormat) &
+            'UzNeuWindDim:',UzNeuWindDim,'UzNeutralsISW:',UzNeutralsISW
        write(*,'(10X,A19,F15.6)') 'TempNeuWindDim:',TempNeuWindDim
        write(*,*)
        write(*,StringFormat) 'RhoNe4Dim:',RhoNe4Dim ,'RhoNe4:',RhoNe4
@@ -770,8 +737,8 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_action
   !============================================================================
-
   subroutine user_calc_sources_expl(iBlock)
+
     ! Calculates the charge exchange cross sections for the neutrals
     ! This subroutine calculates the charge exchange between the ionized
     ! component and the three population of neutrals, Neu, Ne2, Ne3
@@ -799,7 +766,6 @@ contains
 
     character (len=*), parameter :: Name='user_calc_sources'
 
-    real :: cth
     real :: State_V(nVar)
     real :: Ux, Uy, Uz, U2
 
@@ -816,11 +782,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_calc_sources_expl'
     !--------------------------------------------------------------------------
-
     call test_start(NameSub, DoTest, iBlock)
-
-    ! calculating some constant cBoltzmann is J/K
-    cth = 2.0*cBoltzmann/mNeutrals
 
     ! Figure out which neutral population is produced at this point
     call select_region(iBlock)
@@ -845,7 +807,9 @@ contains
 
        ! Thermal speed (squared) for ionized and four populations of neutrals
        ! UThS units are (m/s)^2
-       UThS_I = cth*Temp_I
+
+       ! Thermal speed squared
+       UThS_I = Temp_I*2.0*cBoltzmann/MassNeutral
 
        ! Relative velocity between neutrals and ionized fluid squared
        URelS_I(1)    = 0.0
@@ -876,19 +840,27 @@ contains
 
        ! UStar_I has units of m/s
        UStar_I(1)    = 0.0
-       UStar_I(Neu_) = sqrt(URelSdim_I(Neu_) + (4./cPi)*(UThS_I(Neu_) +UThS_I(1)))
-       UStar_I(Ne2_) = sqrt(URelSdim_I(Ne2_) + (4./cPi)*(UThS_I(Ne2_) +UThS_I(1)))
-       UStar_I(Ne3_) = sqrt(URelSdim_I(Ne3_) + (4./cPi)*(UThS_I(Ne3_) +UThS_I(1)))
-       UStar_I(Ne4_) = sqrt(URelSdim_I(Ne4_) + (4./cPi)*(UThS_I(Ne4_) +UThS_I(1)))
+       UStar_I(Neu_) &
+            = sqrt(URelSdim_I(Neu_) + (4/cPi)*(UThS_I(Neu_) +UThS_I(1)))
+       UStar_I(Ne2_) &
+            = sqrt(URelSdim_I(Ne2_) + (4./cPi)*(UThS_I(Ne2_) +UThS_I(1)))
+       UStar_I(Ne3_) &
+            = sqrt(URelSdim_I(Ne3_) + (4./cPi)*(UThS_I(Ne3_) +UThS_I(1)))
+       UStar_I(Ne4_) &
+            = sqrt(URelSdim_I(Ne4_) + (4./cPi)*(UThS_I(Ne4_) +UThS_I(1)))
 
        ! UStarM_I has units of m/s
        !!   UStarM_I  = sqrt(URelSdim_I + (64./(9.*cPi))*(UThS_I +UThS_I(1)))
 
        UStarM_I(1)    = 1.0
-       UStarM_I(Neu_) = sqrt(URelSdim_I(Neu_) + (64./(9.*cPi))*(UThS_I(Neu_) +UThS_I(1)))
-       UStarM_I(Ne2_) = sqrt(URelSdim_I(Ne2_) + (64./(9.*cPi))*(UThS_I(Ne2_) +UThS_I(1)))
-       UStarM_I(Ne3_) = sqrt(URelSdim_I(Ne3_) + (64./(9.*cPi))*(UThS_I(Ne3_) +UThS_I(1)))
-       UStarM_I(Ne4_) = sqrt(URelSdim_I(Ne4_) + (64./(9.*cPi))*(UThS_I(Ne4_) +UThS_I(1)))
+       UStarM_I(Neu_) = &
+            sqrt(URelSdim_I(Neu_) + (64./(9.*cPi))*(UThS_I(Neu_) +UThS_I(1)))
+       UStarM_I(Ne2_) = &
+            sqrt(URelSdim_I(Ne2_) + (64./(9.*cPi))*(UThS_I(Ne2_) +UThS_I(1)))
+       UStarM_I(Ne3_) = &
+            sqrt(URelSdim_I(Ne3_) + (64./(9.*cPi))*(UThS_I(Ne3_) +UThS_I(1)))
+       UStarM_I(Ne4_) = &
+            sqrt(URelSdim_I(Ne4_) + (64./(9.*cPi))*(UThS_I(Ne4_) +UThS_I(1)))
 
        ! Maher and Tinsley cross section Sigma
        ! UStar has to have units of cm/s so the factor 100 is to pass m to cm
@@ -897,14 +869,22 @@ contains
        !    SigmaN_I =((1.64E-7 - (6.95E-9)*log(UStar_I*100.))**2)*(1.E-4)
        Sigma_I(1)     = 0.0
        SigmaN_I(1)    = 0.0
-       Sigma_I(Neu_)  = ((1.64E-7 - (6.95E-9)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
-       SigmaN_I(Neu_) = ((1.64E-7 - (6.95E-9)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
-       Sigma_I(Ne2_)  = ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
-       SigmaN_I(Ne2_) = ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne2_)*100.))**2)*(1.E-4)
-       Sigma_I(Ne3_)  = ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne3_)*100.))**2)*(1.E-4)
-       SigmaN_I(Ne3_) = ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne3_)*100.))**2)*(1.E-4)
-       Sigma_I(Ne4_)  = ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
-       SigmaN_I(Ne4_) = ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne4_)*100.))**2)*(1.E-4)
+       Sigma_I(Neu_)  = &
+            ((1.64E-7 - (6.95E-9)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
+       SigmaN_I(Neu_) = &
+            ((1.64E-7 - (6.95E-9)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
+       Sigma_I(Ne2_)  = &
+            ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
+       SigmaN_I(Ne2_) = &
+            ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne2_)*100.))**2)*(1.E-4)
+       Sigma_I(Ne3_)  = &
+            ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne3_)*100.))**2)*(1.E-4)
+       SigmaN_I(Ne3_) = &
+            ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne3_)*100.))**2)*(1.E-4)
+       Sigma_I(Ne4_)  = &
+            ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
+       SigmaN_I(Ne4_) = &
+            ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne4_)*100.))**2)*(1.E-4)
 
        ! Calculating Rate  = \nu * nH * mp where nH is the density of neutrals
        ! \nu = Sigma*np*u_star where np is the density of the ionized flow and
@@ -914,23 +894,31 @@ contains
        !! Rate_I =Sigma_I*State_V(Rho_)*State_V(iRho_I)*UStarM_I  &
        !!      *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        Rate_I(1)    = 0.0
-       Rate_I(Neu_) = Sigma_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStarM_I(Neu_) &
+       Rate_I(Neu_) = &
+            Sigma_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStarM_I(Neu_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       Rate_I(Ne2_) = Sigma_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStarM_I(Ne2_) &
+       Rate_I(Ne2_) = &
+            Sigma_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStarM_I(Ne2_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       Rate_I(Ne3_) = Sigma_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStarM_I(Ne3_) &
+       Rate_I(Ne3_) = &
+            Sigma_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStarM_I(Ne3_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       Rate_I(Ne4_) = Sigma_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStarM_I(Ne4_) &
+       Rate_I(Ne4_) = &
+            Sigma_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStarM_I(Ne4_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
        RateN_I(1)    = 0.0
-       RateN_I(Neu_) = SigmaN_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStar_I(Neu_) &
+       RateN_I(Neu_) = &
+            SigmaN_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStar_I(Neu_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       RateN_I(Ne2_) = SigmaN_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStar_I(Ne2_) &
+       RateN_I(Ne2_) = &
+            SigmaN_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStar_I(Ne2_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       RateN_I(Ne3_) = SigmaN_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStar_I(Ne3_) &
+       RateN_I(Ne3_) = &
+            SigmaN_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStar_I(Ne3_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       RateN_I(Ne4_) = SigmaN_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStar_I(Ne4_) &
+       RateN_I(Ne4_) = &
+            SigmaN_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStar_I(Ne4_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
        ! Calculating the terms that enter in the Source terms
@@ -1103,7 +1091,6 @@ contains
 
     end subroutine calc_source_cell
     !==========================================================================
-
   end subroutine user_calc_sources_expl
   !============================================================================
   subroutine user_calc_sources_impl(iBlock)
@@ -1173,7 +1160,6 @@ contains
 
   end subroutine user_calc_sources_impl
   !============================================================================
-
   subroutine set_omega_parker_tilt
 
     ! Calculate angular velocity in normalized units
@@ -1187,13 +1173,12 @@ contains
     call test_start(NameSub, DoTest)
 
     OmegaSun   = cTwoPi/(26.0*24.0*3600.00*Si2No_V(UnitT_))
-    ParkerTilt = OmegaSun*rBody/SWH_Ux
+    ParkerTilt = OmegaSun*rBody/SwhUx
 
     call test_stop(NameSub, DoTest)
 
   end subroutine set_omega_parker_tilt
   !============================================================================
-
   subroutine select_region(iBlock)
 
     ! set the global variable iFluidProduced_C
@@ -1211,7 +1196,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
+    if(.not.UseNeutralFluid) call CON_stop(NameSub// &
+         ': no neutral fluids present')
 
     ! Produce fluid3 at the inner boundary
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1258,18 +1244,19 @@ contains
 
     end do; end do; end do
     call test_stop(NameSub, DoTest)
+
   end subroutine select_region
   !============================================================================
-
   subroutine user_update_states(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,    ONLY: StateOld_VGB, State_VGB, &
+    use ModAdvance,     ONLY: StateOld_VGB, State_VGB, &
          Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, DtMax_CB
-    use ModMain,       ONLY: Cfl, nStage, iStage
-    use ModEnergy,     ONLY: energy_to_pressure, pressure_to_energy
-    use BATL_lib,      ONLY: CellVolume_GB, CoordMin_DB, CellSize_DB, IsLogRadius
-    use ModMultiFluid, ONLY: DoConserveNeutrals
+    use ModMain,        ONLY: Cfl, nStage, iStage
+    use ModEnergy,      ONLY: energy_to_pressure, pressure_to_energy
+    use BATL_lib,       ONLY: CellVolume_GB, CoordMin_DB, CellSize_DB, &
+         IsLogRadius
+    use ModMultiFluid,  ONLY: DoConserveNeutrals
 
     integer,intent(in):: iBlock
     integer:: i, j, k, iVar, iVarFlux, iFluid
@@ -1399,67 +1386,42 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    !  normalization of SWH and VLISW and Neutrals
-    VLISW_a_dim    = No2Io_V(UnitU_)*(VLISW_T_dim/SWH_T_dim)
-    VLISW_p_dim1    = No2Io_V(UnitP_)/Gamma &
-         *(VLISW_rho_dim/SWH_rho_dim)*(VLISW_T_dim/SWH_T_dim)
+    VliswRho = VliswRhoDim*Io2No_V(UnitRho_)
+    VliswP   = 2.*VliswTDim*Io2No_V(UnitTemperature_)*VliswRho
 
+    VliswUx  = VliswUxDim*Io2No_V(UnitU_)
+    VliswUy  = VliswUyDim*Io2No_V(UnitU_)
+    VliswUz  = VliswUzDim*Io2No_V(UnitU_)
+    VliswBx  = VliswBxDim*Io2No_V(UnitB_)
+    VliswBy  = VliswByDim*Io2No_V(UnitB_)
+    VliswBz  = VliswBzDim*Io2No_V(UnitB_)
+
+    SwhRho = SwhRhoDim*Io2No_V(UnitRho_)
     ! Pressure of plasma = 2*T_ion*rho_ion
-    VLISW_B_factor = No2Io_V(UnitB_)*sqrt((VLISW_T_dim/SWH_T_dim) &
-         *(VLISW_rho_dim/SWH_rho_dim))
+    SwhP   = 2.*SwhTDim*Io2No_V(UnitTemperature_)*SwhRho
 
-    VLISW_rho = VLISW_rho_dim*Io2No_V(UnitRho_)
-    VLISW_p1   = VLISW_p_dim1*Io2No_V(UnitP_)
-    VLISW_p    = 2.*VLISW_T_dim*Io2No_V(UnitTemperature_)*VLISW_rho
+    SwhUx  = SwhUxDim*Io2No_V(UnitU_)
+    SwhUy  = SwhUyDim*Io2No_V(UnitU_)
+    SwhUz  = SwhUzDim*Io2No_V(UnitU_)
+    SwhBx  = SwhBxDim*Io2No_V(UnitB_)
+    SwhBy  = SwhByDim*Io2No_V(UnitB_)
+    SwhBz  = SwhBzDim*Io2No_V(UnitB_)
 
-    VLISW_Ux  = VLISW_Ux_dim*Io2No_V(UnitU_)
-    VLISW_Uy  = VLISW_Uy_dim*Io2No_V(UnitU_)
-    VLISW_Uz  = VLISW_Uz_dim*Io2No_V(UnitU_)
-    VLISW_Bx  = VLISW_Bx_dim*Io2No_V(UnitB_)
-    VLISW_By  = VLISW_By_dim*Io2No_V(UnitB_)
-    VLISW_Bz  = VLISW_Bz_dim*Io2No_V(UnitB_)
-
-    ! Latitude Dependent Wind
-    SWfast_rho = SWfast_rho_dim*Io2No_V(UnitRho_)
-    SWfast_p   = SWfast_p_dim*Io2No_V(UnitP_)
-    SWfast_Ux  = SWfast_Ux_dim*Io2No_V(UnitU_)
-    SWfast_Uy  = SWfast_Uy_dim*Io2No_V(UnitU_)
-    SWfast_Uz  = SWfast_Uz_dim*Io2No_V(UnitU_)
-
-    SWH_rho = SWH_rho_dim*Io2No_V(UnitRho_)
-    ! Pressure of plasma = 2*T_ion*rho_ion
-
-    SWH_p1   = SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
-    SWH_p   = 2.*SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
-
-    SWH_Ux  = SWH_Ux_dim*Io2No_V(UnitU_)
-    SWH_Uy  = SWH_Uy_dim*Io2No_V(UnitU_)
-    SWH_Uz  = SWH_Uz_dim*Io2No_V(UnitU_)
-    SWH_Bx  = SWH_Bx_dim*Io2No_V(UnitB_)
-    SWH_By  = SWH_By_dim*Io2No_V(UnitB_)
-    SWH_Bz  = SWH_Bz_dim*Io2No_V(UnitB_)
-
-    SWfast_p_dim = No2Io_V(UnitP_)/Gamma*(SWfast_rho_dim/SWH_rho_dim)
-    SWfast_p = SWfast_p_dim*Io2No_V(UnitP_)
-    ! The units of rho_dim are n/cc and unitUSER_rho Gamma/cc
+    ! The units of rhoDim are n/cc and unitUSER_Rho Gamma/cc
 
     if(UseNeutralFluid)then
 
        if(DoTest)write(*,*)" ",NameSub,": modifying neutral fluid..."
 
        RhoNeutralsISW = RhoNeuWindDim*Io2No_V(UnitRho_)
-       pNeuWindDim = No2Io_V(UnitP_) / Gamma &
-            * (RhoNeuWindDim / SWH_rho_dim) &
-            * (TempNeuWindDim / SWH_T_dim)
 
        if(DoTest)write(*,*)" ",NameSub,": RhoNeutralsISW = ",RhoNeutralsISW
 
-       ! PNeutralsISW = pNeuWindDim*Io2No_V(UnitP_)
-       PNeutralsISW = TempNeuWindDim*Io2No_V(UnitTemperature_)*RhoNeutralsISW
-       UxNeutralsISW  = UxNeuWindDim*Io2No_V(UnitU_)
-       UyNeutralsISW  = UyNeuWindDim*Io2No_V(UnitU_)
-       UzNeutralsISW  = UzNeuWindDim*Io2No_V(UnitU_)
-       mNeutrals    = MassNeutralDim*cProtonMass
+       PNeutralsISW  = TempNeuWindDim*Io2No_V(UnitTemperature_)*RhoNeutralsISW
+       UxNeutralsISW = UxNeuWindDim*Io2No_V(UnitU_)
+       UyNeutralsISW = UyNeuWindDim*Io2No_V(UnitU_)
+       UzNeutralsISW = UzNeuWindDim*Io2No_V(UnitU_)
+       MassNeutral   = MassNeutralDim*cProtonMass
 
        RhoNe4 = RhoNe4Dim*Io2No_V(UnitRho_)
        UxNe4  = UxNe4Dim*Io2No_V(UnitU_)
@@ -1475,6 +1437,5 @@ contains
 
   end subroutine user_init_session
   !============================================================================
-
 end module ModUser
 !==============================================================================
