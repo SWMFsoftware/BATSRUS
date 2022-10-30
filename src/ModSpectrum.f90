@@ -38,7 +38,6 @@ module ModSpectrum
   integer                     :: nResponseBin
 contains
   !============================================================================
-
   subroutine spectrum_read_table(iFile, UseNbi)
 
     use ModIoUnit,     ONLY: UnitTmp_
@@ -351,6 +350,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
 
     ! Calculate angle between LOS and B directions
@@ -516,10 +516,9 @@ contains
           end if
        end do
     end do
-
+#endif
   end subroutine spectrum_calc_flux
   !============================================================================
-
   subroutine clean_mod_spectrum
 
     integer                     :: iLine = 0

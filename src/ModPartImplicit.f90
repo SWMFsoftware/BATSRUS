@@ -319,7 +319,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine clean_mod_part_impl
   !============================================================================
-
   subroutine advance_part_impl
 
     ! The implicit schemes used in this module are described in detail in
@@ -955,7 +954,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine impl_newton_init
   !============================================================================
-
   subroutine impl_newton_loop
 
     use ModMpi
@@ -1002,7 +1000,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine impl_newton_loop
   !============================================================================
-
   subroutine impl_newton_update(NormX, IsConverged)
 
     ! Update Impl_VGB(k+1) = Impl_VGB(k) + x_I
@@ -1057,7 +1054,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine impl_newton_update
   !============================================================================
-
   subroutine impl_newton_conserve
 
     ! Replace the final Newton iterate Impl_VGB with a flux based
@@ -1099,7 +1095,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine impl_newton_conserve
   !============================================================================
-
   subroutine impl_matvec(x_I, y_I, n)
 
     ! Calculate y=P_L.A.P_R.x for the iterative solver, where
@@ -1147,7 +1142,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine impl_matvec
   !============================================================================
-
   subroutine impl_matvec_free(x_I, y_I)
 
     ! Calculate y=L.x for the iterative solver, matrix-free
@@ -1254,7 +1248,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine impl_matvec_free
   !============================================================================
-
   subroutine impl_jacobian(iBlockImpl, Jac_VVCI)
 
     ! Calculate Jacobian matrix for block iBlockImpl:
@@ -1343,6 +1336,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'impl_jacobian'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     iBlock = iBlockFromImpl_B(iBlockImpl)
     call test_start(NameSub, DoTest, iBlock)
 
@@ -1630,7 +1624,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
-
     subroutine impl_divbsrc_init
 
       ! Calculate div B for middle cell contribution to Powell's source terms
@@ -1692,7 +1685,6 @@ contains
 
     end subroutine impl_divbsrc_init
     !==========================================================================
-
     subroutine impl_divbsrc_middle
 
       integer:: i,j,k
@@ -1766,7 +1758,6 @@ contains
 
     end subroutine impl_divbsrc_middle
     !==========================================================================
-
     subroutine impl_init_hall
 
       ! Calculate cell centered currents to be used by getflux
@@ -1866,7 +1857,7 @@ contains
       call test_stop(NameSub, DoTest, iBlock)
     end subroutine impl_init_hall
     !==========================================================================
-
+#endif
   end subroutine impl_jacobian
   !============================================================================
   subroutine implicit_init
@@ -1947,7 +1938,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine implicit_init
   !============================================================================
-
   subroutine explicit2implicit(iMin, iMax, jMin, jMax, kMin, kMax, Var_VGB)
 
     ! Convert data structure Var_VGB of the implicit code to the explicit code
@@ -2005,7 +1995,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine explicit2implicit
   !============================================================================
-
   subroutine impl2expl(Var_VC, iBlock)
 
     ! Convert the implicit block Var_VC to block iBlock of the explicit code
@@ -2048,7 +2037,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine impl2expl
   !============================================================================
-
   subroutine implicit2explicit(Var_VCB)
 
     use ModMain, ONLY: nI,nJ,nK
@@ -2075,7 +2063,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine implicit2explicit
   !============================================================================
-
   subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, Var_VCB, &
        Res_VCB)
 
@@ -2176,7 +2163,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_residual
   !============================================================================
-
   subroutine get_impl_source(iBlock, Var_VC, SourceImpl_VC)
 
     ! Get sources for block iBlock using implicit data Var_VC
@@ -2219,7 +2205,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_impl_source
   !============================================================================
-
   subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
 
     ! We need the cell centered physical flux function, but to keep
@@ -2297,7 +2282,6 @@ contains
 #endif
   end subroutine get_face_flux
   !============================================================================
-
   subroutine get_cmax_face(Var_VF, B0_DF, nFaceI, nFaceJ, nFaceK, &
        iDim, iBlock,Cmax_F)
 
@@ -2360,7 +2344,6 @@ contains
 #endif
   end subroutine get_cmax_face
   !============================================================================
-
   subroutine conservative_to_primitive(State_V)
 
     use ModVarIndexes, ONLY: Bx_, Bz_, IsMhd, nFluid
@@ -2374,6 +2357,7 @@ contains
     integer :: iFluid
     character(len=*), parameter:: NameSub = 'conservative_to_primitive'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     if(UseImplicitEnergy)then
        do iFluid = 1, nFluid
           if(nFluid > 1) call select_fluid(iFluid)
@@ -2395,10 +2379,9 @@ contains
        State_V(iUy_I) = InvRho_I*State_V(iRhoUy_I)
        State_V(iUz_I) = InvRho_I*State_V(iRhoUz_I)
     end if
-
+#endif
   end subroutine conservative_to_primitive
   !============================================================================
-
   subroutine get_dt_courant(DtOut)
 
     use ModMain
@@ -2464,6 +2447,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_dt_courant
   !============================================================================
-
 end module ModPartImplicit
 !==============================================================================

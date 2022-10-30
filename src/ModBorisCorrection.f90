@@ -151,6 +151,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'mhd_to_boris'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseBorisRegion)then
@@ -195,7 +196,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
-
     subroutine mhd_to_boris_cell(State_V, i, j, k, iBlock)
 
       real, intent(inout):: State_V(nVar)
@@ -246,10 +246,9 @@ contains
 
     end subroutine mhd_to_boris_simple_cell
     !==========================================================================
-
+#endif
   end subroutine mhd_to_boris
   !============================================================================
-
   subroutine boris_to_mhd(iBlock)
 
     integer, intent(in):: iBlock
@@ -261,6 +260,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'boris_to_mhd'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseBorisRegion)then
@@ -360,7 +360,7 @@ contains
 
     end subroutine boris_simple_to_mhd_cell
     !==========================================================================
-
+#endif
   end subroutine boris_to_mhd
   !============================================================================
   subroutine add_boris_source(iBlock)

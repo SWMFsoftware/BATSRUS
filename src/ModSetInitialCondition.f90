@@ -269,7 +269,7 @@ contains
                      < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
                    ! Set all variables first
                    State_VGB(:,i,j,k,iBlock) = ShockLeft_V
-
+#ifndef SCALAR
                    ! Rotate vector variables
                    do iFluid = 1, nFluid
                       if(nFluid > 1) call select_fluid(iFluid)
@@ -278,9 +278,11 @@ contains
                    end do
                    if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
                         matmul(Rot_II, ShockLeft_V(Bx_:By_))
+#endif
                 else
                    ! Set all variables first
                    State_VGB(:,i,j,k,iBlock) = ShockRight_V
+#ifndef SCALAR
                    ! Set vector variables
                    do iFluid = 1, nFluid
                       if(nFluid > 1) call select_fluid(iFluid)
@@ -289,6 +291,7 @@ contains
                    end do
                    if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
                         matmul(Rot_II, ShockRight_V(Bx_:By_))
+#endif
                 end if
 
                 ! Apply "wave" perturbations

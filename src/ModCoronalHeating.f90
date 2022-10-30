@@ -1114,6 +1114,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     if(UseStochasticHeating)then
 
        if(DoExtendTransitionRegion)then
@@ -1345,7 +1346,7 @@ contains
     else
        call stop_mpi(NameSub//' Unknown energy partitioning')
     end if
-
+#endif
   end subroutine apportion_coronal_heating
   !============================================================================
 end module ModCoronalHeating

@@ -190,6 +190,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start('update_state',   DoTestUpdate)
     call test_start('calc_face_flux', DoTestFlux)
     call test_start('calc_source',    DoTestSource)
@@ -317,8 +318,9 @@ contains
 
     if(DoTestAny)write(*,*) &
          '==========================================================='
-
+#endif
   end subroutine update_state_fast
+#ifndef SCALAR
   !============================================================================
   subroutine update_cell(i, j, k, iBlock, iGang, IsBodyBlock)
     !$acc routine seq
@@ -1118,6 +1120,7 @@ contains
          min(abs(Slope32), abs(Slope43), cThird*abs(Var3+Var4-2*Var2))
 
   end subroutine limiter2
+#endif
   !============================================================================
   subroutine set_boundary_fast
 
@@ -1125,7 +1128,7 @@ contains
 
     integer:: i, j, k, iBlock
     !--------------------------------------------------------------------------
-
+#ifndef SCALAR
     if (IsTimeAccurate .and. iTypeCellBc_I(2) == VaryBC_)then
        call get_solar_wind_point(tSimulation, [xMaxBox, 0., 0.], &
             CellState_VI(:,2))
@@ -1160,8 +1163,9 @@ contains
           end if
        end do; end do; end do
     end do
-
+#endif
   end subroutine set_boundary_fast
+#ifndef SCALAR
   !============================================================================
   subroutine set_boundary1(j, k, iBlock)
     !$acc routine seq
@@ -2280,6 +2284,7 @@ contains
     if(IsMhd) State_V(p_) = State_V(p_) + 0.5*sum(State_V(Bx_:Bz_)**2)
 
   end subroutine pressure_to_energy
+#endif
   !============================================================================
   subroutine update_b0_fast
 
@@ -2385,6 +2390,5 @@ contains
     u_D = cross_prod(eField_D, b_D) / B2
   end subroutine calc_inner_bc_velocity
   !============================================================================
-
 end module ModUpdateStateFast
 !==============================================================================

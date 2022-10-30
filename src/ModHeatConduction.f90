@@ -557,6 +557,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_heat_cond_coef'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     if(UseB0)then
        select case(iDir)
        case(1)
@@ -651,9 +652,9 @@ contains
        HeatCond_D = HeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
     end if
 
+#endif
   end subroutine get_heat_cond_coef
   !============================================================================
-
   subroutine get_ion_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
        StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, &
        HeatFlux, IsNewBlockIonHeatCond)
@@ -674,13 +675,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_ion_heat_flux'
     !--------------------------------------------------------------------------
-    ! associate( &
-    !   iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
-    !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), &
-    !   kFace => IFF_I(kFace_), &
-    !   HeatCondCoefNormal => RFF_I(HeatCondCoefNormal_), &
-    !   HeatFlux => RFF_I(HeatFlux_), &
-    !   IsNewBlockIonHeatCond => IsFF_I(IsNewBlockIonHeatCond_) )
+#ifndef SCALAR
 
     if(IsNewBlockIonHeatCond)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
@@ -722,10 +717,9 @@ contains
     end if
     HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
 
-    ! end associate
+#endif
   end subroutine get_ion_heat_flux
   !============================================================================
-
   subroutine get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
@@ -745,6 +739,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_ion_heat_cond_coef'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     if(UseB0)then
        select case(iDir)
        case(1)
@@ -778,9 +773,9 @@ contains
 
     HeatCond_D = IonHeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
 
+#endif
   end subroutine get_ion_heat_cond_coef
   !============================================================================
-
   real function heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
 
     use BATL_lib,    ONLY: Xyz_DGB
@@ -977,6 +972,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest)
     DoCalcDelta = .false.
     if(present(DoCalcDeltaIn)) DoCalcDelta=DoCalcDeltaIn
@@ -1557,10 +1553,9 @@ contains
 
     end subroutine get_heat_cond_tensor
     !==========================================================================
-
+#endif
   end subroutine get_impl_heat_cond_state
   !============================================================================
-
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use BATL_lib,        ONLY: store_face_flux, CellVolume_GB

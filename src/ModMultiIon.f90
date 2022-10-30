@@ -192,6 +192,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
@@ -255,6 +256,7 @@ contains
          Source_VC(iVarTest,iTest,jTest,kTest)
 
     call test_stop(NameSub, DoTest, iBlock)
+#endif
   end subroutine multi_ion_source_expl
   !============================================================================
   subroutine multi_ion_source_impl(iBlock)
@@ -321,6 +323,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'multi_ion_source_impl'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     DoTestCell = .false.
@@ -635,6 +638,7 @@ contains
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
+#endif
   end subroutine multi_ion_source_impl
   !============================================================================
   subroutine multi_ion_init_point_impl
@@ -653,6 +657,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'multi_ion_init_point_impl'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest)
     IsPointImpl_V = .false.
     IsPointImplMatrixSet = IsAnalyticJacobian
@@ -685,6 +690,7 @@ contains
     end do
 
     call test_stop(NameSub, DoTest)
+#endif
   end subroutine multi_ion_init_point_impl
   !============================================================================
 end module ModMultiIon

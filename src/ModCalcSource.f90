@@ -1169,6 +1169,7 @@ contains
 
       real :: ChargeDens_I(nIonFluid)
       !------------------------------------------------------------------------
+#ifndef SCALAR
       ChargeDens_I    = ChargeIon_I*StateIn_V(iRhoIon_I)/MassIon_I
       InvElectronDens = 1.0/sum(ChargeDens_I)
 
@@ -1177,7 +1178,7 @@ contains
       uPlus_D(z_) = InvElectronDens*sum( ChargeDens_I*StateIn_V(iUzIon_I) )
 
       if (DoTestCell) write(*,*) 'uPlus_D =', uPlus_D
-
+#endif
     end subroutine get_uplus
     !==========================================================================
     subroutine calc_divb_source(iBlock)

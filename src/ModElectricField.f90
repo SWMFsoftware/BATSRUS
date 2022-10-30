@@ -236,6 +236,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     Efield_DGB(:,:,:,:,iBlock) = 0.0
@@ -299,9 +300,11 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
+#endif
   end subroutine get_efield_in_comoving_frame
   !============================================================================
   subroutine correct_efield_block(iBlock)
+
     ! Recalculates electric field, which has been obtained
     ! with get_efield_in_comoving_frame, to a global frame
     ! of reference. To achive this, -v x B is added, v being a
