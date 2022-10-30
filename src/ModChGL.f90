@@ -18,7 +18,7 @@ module ModChGL
   use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, SignB_, Rho_, &
        nVar, Ux_, Uz_
   use BATL_lib, ONLY: MaxDim
-  use ModAdvance,  ONLY: State_VGB, nI, nJ, nK, Uz__, Bz__
+  use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
   use ModGeometry, ONLY: r_GB, Used_GB
   use ModB0,       ONLY: UseB0, B0_DGB
 
@@ -164,17 +164,17 @@ contains
     R = sqrt(sum(Xyz_D**2))
     if(R < RSourceChGL)then
        ! The ChGL ratio is calculated in terms of U, B
-       U2 = sum(State_V(Ux_:Uz__)**2)
+       U2 = sum(State_V(Ux_:Uz_)**2)
        if(U2 ==0.0)then
           State_V(SignB_) = 0
        else
-          State_V(SignB_) = sum(State_V(Bx_:Bz__)*State_V(Ux_:Uz__))/U2
+          State_V(SignB_) = sum(State_V(Bx_:Bz_)*State_V(Ux_:Uz_))/U2
        end if
     end if
     if(R > RMinChGL)then
        ! the magnetic field is solved as
        ! \mathbf{B} = (\rho s)\mathbf{U}
-       State_V(Bx_:Bz__) = State_V(SignB_)*State_V(Ux_:Uz__)
+       State_V(Bx_:Bz_) = State_V(SignB_)*State_V(Ux_:Uz_)
        if(UseB0)then
           call get_b0(Xyz_D, B0_D)
           State_V(Bx_:Bz_) = State_V(Bx_:Bz_) - B0_D
@@ -347,8 +347,8 @@ contains
     real :: FullB_D(3), U2
     !--------------------------------------------------------------------------
 #ifndef SCALAR
-    U2 = max(sum(StateLeft_V(Ux_:Uz__)**2), &
-         sum(StateRight_V(Ux_:Uz__)**2), 1e-30)
+    U2 = max(sum(StateLeft_V(Ux_:Uz_)**2), &
+         sum(StateRight_V(Ux_:Uz_)**2), 1e-30)
     if(r_GB(iLeft,jLeft,kLeft,iBlockFace) < RMinChGL.and.&
          r_GB(iFace,jFace,kFace,iBlockFace) >= RMinChGL)then
        FullB_D  = StateLeft_V(Bx_:Bz_) + [B0x, B0y, B0z]

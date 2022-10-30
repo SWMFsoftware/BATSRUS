@@ -128,16 +128,15 @@ contains
 
     real :: TimeDelay
     real(Real8_) :: Time, DtData1, DtData2
-    real    :: Transform_DD(3,3)
-    real, allocatable:: Solarwind_V(:)
+    real:: Transform_DD(3,3)
+    real:: Solarwind_V(nVar)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_solar_wind_file'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest)
 
-    allocate(SolarWind_V(nVar))
-    
     ! Set defaults
     UseZeroBx = .false.
     TimeDelay = 0.0
@@ -411,13 +410,10 @@ contains
        SolarWindTempDim = Solarwind_V(p_)
     endif
 
-    deallocate(SolarWind_V)
-    
     call test_stop(NameSub, DoTest)
-
+#endif
   end subroutine read_solar_wind_file
   !============================================================================
-
   subroutine normalize_solar_wind_data
 
     use ModAdvance, ONLY: &

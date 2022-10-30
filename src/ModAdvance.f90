@@ -48,9 +48,6 @@ module ModAdvance
        UnFirst_ = nFlux+1, UnLast_ = UnFirst_ + nFluid, &
        Vdt_ = UnLast_ + 1
 
-  ! indexes when nVar < 3
-  integer, parameter:: Uz__ = min(nVar, Uz_), Bz__ = min(nVar, Bz_)
-  
   ! The normal components of the magnetic field is exchaned only for
   ! B_>U_ (UseB_ is true)
   integer, parameter :: BnL_ = Vdt_ + min(1, B_-U_)
