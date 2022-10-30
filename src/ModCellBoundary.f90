@@ -865,9 +865,9 @@ contains
       ! logical :: DoTest, DoTestMe
       ! call set_oktest(NameSub, DoTest, DoTestMe)
 
+#ifndef SCALAR
       character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
       !------------------------------------------------------------------------
-#ifndef SCALAR
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          Xyz_D =  Xyz_DGB(:,i,j,k,iBlock)
          if(IsCartesianGrid)then

@@ -1161,7 +1161,7 @@ contains
     !--------------------------------------------------------------------------
     StateCons_V(1:nVar)  = State_V
 #ifndef SCALAR
-    
+
     ! Make sure normal electric field is initialized
     En = 0.0
 
@@ -2130,7 +2130,7 @@ contains
          iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                   &
          StateLeft_V, StateRight_V)
 #endif
-    
+
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     if(DoSimple)then
        State_V = StateLeft_V
@@ -2279,8 +2279,8 @@ contains
 
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(MaxDim)
-      !------------------------------------------------------------------------
 #ifndef SCALAR
+      !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       ! Conservative update for the total flux for multi-ion MHD
       ! if(.not.UseJCrossBForce) MhdFlux_V = &
@@ -4375,8 +4375,8 @@ contains
     real, intent(in)   :: FluxRot_V(:)
     real, intent(inout):: Flux_V(:)
     ! Rotate n,t1,t2 components back to x,y,z components
-    !--------------------------------------------------------------------------
 #ifndef SCALAR
+    !--------------------------------------------------------------------------
     if(IsCartesianGrid)then
        select case (iDimFace)
        case (x_)

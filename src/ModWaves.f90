@@ -257,10 +257,10 @@ contains
 
     real:: BTotal_D(MaxDim)
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_wave_state'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest)
     if(UseAlfvenWaves)then
 

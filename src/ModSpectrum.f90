@@ -348,9 +348,9 @@ contains
 
     real                        :: LambdaMin
 
+#ifndef SCALAR
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
 
     ! Calculate angle between LOS and B directions

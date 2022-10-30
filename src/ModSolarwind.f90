@@ -431,10 +431,10 @@ contains
     integer:: iData, iFluid
     real :: Solarwind_V(nVar)
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'normalize_solar_wind_data'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest)
 
     do iData=1, nData

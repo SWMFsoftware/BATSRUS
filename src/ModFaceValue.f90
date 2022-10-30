@@ -2886,10 +2886,10 @@ contains
       integer :: iFace, jFace, kFace
       real:: State_VI(nVar,-3:2)
 
+#ifndef SCALAR
       logical:: DoTest
       character(len=*), parameter:: NameSub = 'set_phys_based_low_order_face'
       !------------------------------------------------------------------------
-#ifndef SCALAR
       call test_start(NameSub, DoTest)
 
       ! Face along x-direction

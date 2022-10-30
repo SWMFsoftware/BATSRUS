@@ -148,10 +148,10 @@ contains
 
     real:: InvClight2Cell
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'mhd_to_boris'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseBorisRegion)then
@@ -257,10 +257,10 @@ contains
 
     real:: Clight2Cell, InvClight2Cell
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'boris_to_mhd'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseBorisRegion)then

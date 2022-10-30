@@ -320,8 +320,8 @@ contains
          '==========================================================='
 #endif
   end subroutine update_state_fast
-#ifndef SCALAR
   !============================================================================
+#ifndef SCALAR
   subroutine update_cell(i, j, k, iBlock, iGang, IsBodyBlock)
     !$acc routine seq
 
@@ -1120,8 +1120,8 @@ contains
          min(abs(Slope32), abs(Slope43), cThird*abs(Var3+Var4-2*Var2))
 
   end subroutine limiter2
-#endif
   !============================================================================
+#endif
   subroutine set_boundary_fast
 
     ! Set cell boundaries for State_VGB
@@ -1165,8 +1165,8 @@ contains
     end do
 #endif
   end subroutine set_boundary_fast
-#ifndef SCALAR
   !============================================================================
+#ifndef SCALAR
   subroutine set_boundary1(j, k, iBlock)
     !$acc routine seq
 
@@ -2284,8 +2284,8 @@ contains
     if(IsMhd) State_V(p_) = State_V(p_) + 0.5*sum(State_V(Bx_:Bz_)**2)
 
   end subroutine pressure_to_energy
-#endif
   !============================================================================
+#endif
   subroutine update_b0_fast
 
     ! Update B0 due to the rotation of the dipole

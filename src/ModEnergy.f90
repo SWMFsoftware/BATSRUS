@@ -111,8 +111,8 @@ contains
 
     real, intent(in):: State_V(nVar)
     integer, intent(in):: iFluid
-    !--------------------------------------------------------------------------
 #ifndef SCALAR
+    !--------------------------------------------------------------------------
     if(iFluid == 1 .and. IsMhd) then
        ! MHD energy density
        energy_i = InvGammaMinus1*State_V(p_) + 0.5* &

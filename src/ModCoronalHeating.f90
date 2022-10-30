@@ -1112,9 +1112,9 @@ contains
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te, Pp
     real :: Value_I(6)
 
+#ifndef SCALAR
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     if(UseStochasticHeating)then
 
        if(DoExtendTransitionRegion)then

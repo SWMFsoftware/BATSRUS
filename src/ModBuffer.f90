@@ -274,8 +274,8 @@ contains
     ! Coords: Longitude, Latitude, in degrees
     real               :: Coord_DII(2, nLonBuff, nLatBuff)
     character(LEN=30)::NameFile
-    !--------------------------------------------------------------------------
 #ifndef SCALAR
+    !--------------------------------------------------------------------------
     if(iProc/=0)RETURN ! May be improved
 
     ! Convert time to integers:

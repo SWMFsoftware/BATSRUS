@@ -320,10 +320,10 @@ contains
     real    :: SignedB, ForceCoeff, Coeff, CoefJacobian, Du2
     real    :: Du_D(3)
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'multi_ion_source_impl'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     DoTestCell = .false.
