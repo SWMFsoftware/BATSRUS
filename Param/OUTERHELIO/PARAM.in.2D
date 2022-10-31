@@ -44,14 +44,14 @@ T			UseBody
 1.0			rBody [AU] Earth's orbit
 0.01			BodyNDim [/cc] number density for inner boundary
 1.09E5			BodyTDim [K] temperature for inner boundary
-0.18			BodyNDim(2)
-6519.0			BodyTDim(2)
-7.0E-5			BodyNDim(3)
-6519.0			BodyTDim(3)
-7.8E-3			BodyNDim(4)
-1.609e3			BodyTDim(4)
-0.18			BodyNDim(5)
-6519.0			BodyTDim(5)
+0.18			BodyNDim
+6519.0			BodyTDim
+7.0E-5			BodyNDim
+6519.0			BodyTDim
+7.8E-3			BodyNDim
+1.609e3			BodyTDim
+0.18			BodyNDim
+6519.0			BodyTDim
 
 #NORMALIZATION
 OUTERHELIO		TypeNormalization
@@ -126,15 +126,15 @@ z=0 MHD idl_ascii		StringPlot
 -1.0			DxSavePlot
 
 #OHBOUNDARY
-T			
+T			UseOhNeutralBc
 0.05			RhoNeuFactor
 1.0			uNeuFactor
-1.0E-2			RhoNe2Factor
-1.0			uNe2Factor
-1.0E-2			RhoNe3Factor
-1.0			uNe3Factor
-1.0E-3			RhoNe4Factor
-0.9			uNe4Factor
+1.0E-2			RhoNeuFactor
+1.0			uNeuFactor
+1.0E-2			RhoNeuFactor
+1.0			uNeuFactor
+1.0E-3			RhoNeuFactor
+0.9			uNeuFactor
 
 #OHNEUTRALS
 0.06			RhoNeutralsISW [amu/cc]
@@ -142,7 +142,7 @@ T
 15.0			UxNeutralsISW  [km/s]
 0.0			UyNeutralsISW  [km/s]
 0.0			UzNeutralsISW  [km/s]
-1			mNeutrals      [amu]
+1			mNeutral      [amu]
 
 #NEUTRALFLUID
 T			DoConserveNeutrals
@@ -217,12 +217,12 @@ T			UsePlotNameDateTime
 
 #SAVEPLOT
 1			nPlotFile
-z=0 VAR idl_ascii	StringPlot
+z=0 VAR idl_ascii		StringPlot
 -1  			DnSavePlot
 12 hour			DtSavePlot
 0.0			DxSavePlot
-rho ux bz p neurho neuux neup ne4rho ne4ux ne4p	NameVars
-{default}    	      	NamePars
+rho ux bz p neurho neuux neup ne4rho ne4ux ne4p		NameVars
+{default}		NamePars
 
 #STOP
 -1			MaxIteration
