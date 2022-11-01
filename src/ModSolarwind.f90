@@ -128,12 +128,13 @@ contains
 
     real :: TimeDelay
     real(Real8_) :: Time, DtData1, DtData2
-    real    :: Transform_DD(3,3)
-    real    :: Solarwind_V(nVar)
+    real:: Transform_DD(3,3)
+    real:: Solarwind_V(nVar)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_solar_wind_file'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest)
 
     ! Set defaults
@@ -399,21 +400,20 @@ contains
             Solarwind_V(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
 
        ! These scalars should be removed eventually
-       SolarWindBxDim  = Solarwind_V(Bx_)
-       SolarWindByDim  = Solarwind_V(By_)
-       SolarWindBzDim  = Solarwind_V(Bz_)
-       SolarWindUxDim  = Solarwind_V(Ux_)
-       SolarWindUyDim  = Solarwind_V(Uy_)
-       SolarWindUzDim  = Solarwind_V(Uz_)
-       SolarWindNDim   = Solarwind_V(rho_)
-       SolarWindTempDim   = Solarwind_V(p_)
+       SolarWindBxDim   = Solarwind_V(Bx_)
+       SolarWindByDim   = Solarwind_V(By_)
+       SolarWindBzDim   = Solarwind_V(Bz_)
+       SolarWindUxDim   = Solarwind_V(Ux_)
+       SolarWindUyDim   = Solarwind_V(Uy_)
+       SolarWindUzDim   = Solarwind_V(Uz_)
+       SolarWindNDim    = Solarwind_V(rho_)
+       SolarWindTempDim = Solarwind_V(p_)
     endif
 
     call test_stop(NameSub, DoTest)
-
+#endif
   end subroutine read_solar_wind_file
   !============================================================================
-
   subroutine normalize_solar_wind_data
 
     use ModAdvance, ONLY: &
@@ -431,6 +431,7 @@ contains
     integer:: iData, iFluid
     real :: Solarwind_V(nVar)
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'normalize_solar_wind_data'
     !--------------------------------------------------------------------------
@@ -584,10 +585,9 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
-
+#endif
   end subroutine normalize_solar_wind_data
   !============================================================================
-
   subroutine get_solar_wind_point(TimeSimulation, Xyz_D, SolarWind_V)
 
     ! Calculate the solar wind data SolarWind_V expected at time
@@ -650,7 +650,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_solar_wind_point'
     !--------------------------------------------------------------------------
-
+#ifndef SCALAR
     if(nData <= 0 .or. .not.UseSolarwindFile)then
        ! Use fixed boundary conditon if there is no input data
        SolarWind_V = FaceState_VI(:,xMinBc_)
@@ -736,10 +736,9 @@ contains
          DoExtrapolate=.false.)
 
     if(DoTestCell)write(*,*)NameSub,' SolarWind_V =',SolarWind_V
-
+#endif
   end subroutine get_solar_wind_point
   !============================================================================
-
 end module ModSolarwind
 !==============================================================================
 

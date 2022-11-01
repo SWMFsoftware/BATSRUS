@@ -414,7 +414,7 @@ test_fastwave_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fastwave_run:
-	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
 
 test_fastwave_check:

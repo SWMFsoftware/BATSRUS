@@ -239,6 +239,7 @@ contains
   end subroutine check_waves
   !============================================================================
   subroutine set_wave_state(EWaveTotal, State_V, Xyz_D, B0_D)
+
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Ew_
     use ModMain, ONLY: MaxDim, UseB0
 
@@ -256,6 +257,7 @@ contains
 
     real:: BTotal_D(MaxDim)
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_wave_state'
     !--------------------------------------------------------------------------
@@ -282,10 +284,11 @@ contains
          State_V(Ew_) = sum(State_V(WaveFirst_:WaveLast_))
 
     call test_stop(NameSub, DoTest)
+#endif
   end subroutine set_wave_state
   !============================================================================
-
   subroutine update_wave_group_advection(iBlock)
+
     use ModAdvance,           ONLY: State_VGB, DtMax_CB
     use ModGeometry,          ONLY: Used_GB
     use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
@@ -420,9 +423,7 @@ contains
       call stop_mpi('Stopped')
     end subroutine write_and_stop
     !==========================================================================
-
   end subroutine update_wave_group_advection
   !============================================================================
-
 end module ModWaves
 !==============================================================================

@@ -51,6 +51,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pressure_to_energy'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     ! Make sure pressure is larger than floor value
     ! write(*,*) NameSub,' !!! call limit_pressure'
     call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
@@ -101,7 +102,7 @@ contains
     end do FLUIDLOOP
 
     call test_stop(NameSub, DoTest, iBlock)
-
+#endif
   end subroutine pressure_to_energy
   !============================================================================
   real function energy_i(State_V, iFluid)
@@ -110,6 +111,7 @@ contains
 
     real, intent(in):: State_V(nVar)
     integer, intent(in):: iFluid
+#ifndef SCALAR
     !--------------------------------------------------------------------------
     if(iFluid == 1 .and. IsMhd) then
        ! MHD energy density
@@ -122,7 +124,7 @@ contains
        energy_i = InvGammaMinus1_I(iFluid)*State_V(iP) &
             + 0.5*sum(State_V(iRhoUx:iRhoUz)**2)/State_V(iRho)
     end if
-
+#endif
   end function energy_i
   !============================================================================
   subroutine get_fluid_energy_block(iBlock, iFluid, Energy_G)
@@ -163,6 +165,7 @@ contains
 
     integer:: i, j, k, iFluid
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     do iFluid = 1, nFluid
 
        if(nFluid > 1) call select_fluid(iFluid)
@@ -182,7 +185,7 @@ contains
 
        end do; end do; end do
     end do
-
+#endif
   end subroutine pressure_to_energy_block
   !============================================================================
   subroutine energy_to_pressure(iBlock, State_VGB, IsOld)
@@ -200,6 +203,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'energy_to_pressure'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     ! Fully non-conservative scheme
     if(UseNonConservative .and. nConservCrit <= 0 .and. &
          .not. (UseNeutralFluid .and. DoConserveNeutrals))then
@@ -262,7 +266,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-
+#endif
   end subroutine energy_to_pressure
   !============================================================================
   subroutine energy_to_pressure_cell(iBlock, State_VGB)
@@ -277,6 +281,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'energy_to_pressure_cell'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     FLUIDLOOP: do iFluid = 1, nFluid
@@ -305,7 +310,7 @@ contains
     end do FLUIDLOOP
 
     call test_stop(NameSub, DoTest, iBlock)
-
+#endif
   end subroutine energy_to_pressure_cell
   !============================================================================
   subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &

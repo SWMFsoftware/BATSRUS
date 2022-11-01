@@ -190,6 +190,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start('update_state',   DoTestUpdate)
     call test_start('calc_face_flux', DoTestFlux)
     call test_start('calc_source',    DoTestSource)
@@ -317,9 +318,10 @@ contains
 
     if(DoTestAny)write(*,*) &
          '==========================================================='
-
+#endif
   end subroutine update_state_fast
   !============================================================================
+#ifndef SCALAR
   subroutine update_cell(i, j, k, iBlock, iGang, IsBodyBlock)
     !$acc routine seq
 
@@ -1119,13 +1121,14 @@ contains
 
   end subroutine limiter2
   !============================================================================
+#endif
   subroutine set_boundary_fast
 
     ! Set cell boundaries for State_VGB
 
     integer:: i, j, k, iBlock
     !--------------------------------------------------------------------------
-
+#ifndef SCALAR
     if (IsTimeAccurate .and. iTypeCellBc_I(2) == VaryBC_)then
        call get_solar_wind_point(tSimulation, [xMaxBox, 0., 0.], &
             CellState_VI(:,2))
@@ -1160,9 +1163,10 @@ contains
           end if
        end do; end do; end do
     end do
-
+#endif
   end subroutine set_boundary_fast
   !============================================================================
+#ifndef SCALAR
   subroutine set_boundary1(j, k, iBlock)
     !$acc routine seq
 
@@ -2281,6 +2285,7 @@ contains
 
   end subroutine pressure_to_energy
   !============================================================================
+#endif
   subroutine update_b0_fast
 
     ! Update B0 due to the rotation of the dipole
@@ -2385,6 +2390,5 @@ contains
     u_D = cross_prod(eField_D, b_D) / B2
   end subroutine calc_inner_bc_velocity
   !============================================================================
-
 end module ModUpdateStateFast
 !==============================================================================

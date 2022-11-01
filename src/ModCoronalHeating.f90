@@ -1112,6 +1112,7 @@ contains
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te, Pp
     real :: Value_I(6)
 
+#ifndef SCALAR
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
     if(UseStochasticHeating)then
@@ -1345,7 +1346,7 @@ contains
     else
        call stop_mpi(NameSub//' Unknown energy partitioning')
     end if
-
+#endif
   end subroutine apportion_coronal_heating
   !============================================================================
 end module ModCoronalHeating

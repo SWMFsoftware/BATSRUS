@@ -274,10 +274,13 @@ contains
     ! Coords: Longitude, Latitude, in degrees
     real               :: Coord_DII(2, nLonBuff, nLatBuff)
     character(LEN=30)::NameFile
+#ifndef SCALAR
     !--------------------------------------------------------------------------
     if(iProc/=0)RETURN ! May be improved
+
     ! Convert time to integers:
     call time_real_to_int(StartTime + tSimulation, iTimePlot_I)
+
     ! Independing on nRBuff, plot only two 2D files for spherical surfaces
     ! of radius of BufferMin_D(BuffR_) and BufferMax_D(BuffR_)
     do iR = 1, nRBuff, nRBuff - 1
@@ -341,9 +344,11 @@ contains
             CoordIn_DII=Coord_DII, &
             VarIn_VII=State_VII)
     end do
+#endif
   end subroutine plot_buffer
   !============================================================================
   subroutine  save_buffer_restart
+
     use ModMain,       ONLY: NameThisComp
     use ModIoUnit,     ONLY: UnitTmp_
     use ModUtilities,  ONLY: open_file, close_file
@@ -353,9 +358,11 @@ contains
          form='UNFORMATTED', NameCaller=NameSub)
     write(UnitTmp_)BufferState_VG(:,:,1:nLonBuff,1:nLatBuff)
     call close_file
+
   end subroutine save_buffer_restart
   !============================================================================
   subroutine write_buffer_restart_header(iFile)
+
     use ModUtilities, ONLY: cTab
     integer, intent(in) :: iFile
     !--------------------------------------------------------------------------
@@ -384,9 +391,11 @@ contains
     write(iFile,'(a)')'90.0'//&
          cTab//cTab//cTab//'LatBuffMax'
     write(iFile,*)
+
   end subroutine write_buffer_restart_header
   !============================================================================
   subroutine  read_buffer_restart
+
     use ModMain,       ONLY: NameThisComp
     use ModIoUnit,     ONLY: UnitTmp_
     use ModUtilities,  ONLY: open_file, close_file
@@ -397,9 +406,11 @@ contains
     read(UnitTmp_)BufferState_VG(:,:,1:nLonBuff,1:nLatBuff)
     call close_file
     call fill_in_buffer_grid_gc
+
   end subroutine read_buffer_restart
   !============================================================================
   logical function is_buffered_point(i,j,k,iBlock)
+
     use ModGeometry, ONLY: r_GB, rBody2_GB
     integer, intent(in):: i, j, k, iBlock
     !--------------------------------------------------------------------------
@@ -410,9 +421,11 @@ contains
        is_buffered_point =   r_GB(i,j,k,iBlock) <= BufferMax_D(1) &
             .and.            r_GB(i,j,k,iBlock) >= BufferMin_D(1)
     end if
+
   end function is_buffered_point
   !============================================================================
   subroutine fill_in_from_buffer(iBlock)
+
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
     use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, iProc, &
          test_start, test_stop
@@ -514,12 +527,12 @@ contains
   end subroutine match_ibc
   !============================================================================
   subroutine fill_in_buffer_grid_gc
+
     ! Fill in the buffer grid ghost cells:
     ! For longitude: using periodic BCs at 0th and 360 degrees longitude
     ! For latitude: interpolation across the pole
     integer   :: iLonNew, iLon
     !--------------------------------------------------------------------------
-    ! Fill buffer grid ghost cells
     do iLon = 1, nLonBuff
        iLonNew = iLon + nLonBuff/2
        if (iLonNew > nLonBuff) iLonNew = iLonNew - nLonBuff
@@ -529,8 +542,8 @@ contains
     end do
     BufferState_VG(:,:,0,:)          = BufferState_VG(:,:,nLonBuff,:)
     BufferState_VG(:,:,nLonBuff+1,:) = BufferState_VG(:,:,1,:)
+
   end subroutine fill_in_buffer_grid_gc
   !============================================================================
-
 end module ModBuffer
 !==============================================================================

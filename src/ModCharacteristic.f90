@@ -27,6 +27,7 @@ module ModCharacteristicMhd
 
 contains
   !============================================================================
+#ifndef SCALAR
   subroutine generate_tangent12(Normal_D,Tangent1_D,Tangent2_D)
 
     real,dimension(3),intent(in) ::Normal_D
@@ -446,7 +447,7 @@ contains
 
   end subroutine get_fixed_abs_eigenvalue
   !============================================================================
-
+#endif
   subroutine get_dissipation_flux_mhd(Dir_D, StateL_V, StateR_V, &
        B0_D, DeltaB0_D, uL_D, uR_D, DeltaBnL,DeltaBnR, IsBoundary, DoTest, &
        DissipationFlux_V, cMax, Un)
@@ -467,6 +468,7 @@ contains
     integer:: iWave
 
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call decompose_state(Dir_D, StateL_V,StateR_V, B0_D, &
          Eigenvector_VV,        &
          DeltaWave_V,           &    ! Wave amplitudes, dimensionless
@@ -510,9 +512,8 @@ contains
          flux_from_pseudochar(FluxPseudoChar_V,UH_D,B1H_D,XH)
 
     Un = sum(UH_D*Dir_D)
-
+#endif
   end subroutine get_dissipation_flux_mhd
   !============================================================================
-
 end module ModCharacteristicMhd
 !==============================================================================

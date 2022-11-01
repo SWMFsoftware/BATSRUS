@@ -492,6 +492,7 @@ contains
 
       character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
+#ifndef SCALAR
       associate( iBoundary => FBC%iBoundary, TypeBc => FBC%TypeBc, &
            iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
            TimeBc => FBC%TimeBc, iBlockBc => FBC%iBlockBc, &
@@ -1054,11 +1055,10 @@ contains
         end if
 
       end associate
+#endif
     end subroutine set_face
     !==========================================================================
-
   end subroutine set_face_bc
   !============================================================================
-
 end module ModFaceBoundary
 !==============================================================================

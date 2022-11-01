@@ -1226,9 +1226,11 @@ contains
             ! Interpolate in the physical domain
             State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
                  nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+#ifndef SCALAR
             if(UseB0 .and. UseFlux)State_V(Bx_:Bz_) = State_V(Bx_:Bz_) &
                  + interpolate_vector(B0_DGB(:,:,:,:,iBlock), &
                  3, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+#endif
          end if
          DoneStateInterpolate = .true.
          Rho = State_V(Rho_)

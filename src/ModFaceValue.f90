@@ -2886,6 +2886,7 @@ contains
       integer :: iFace, jFace, kFace
       real:: State_VI(nVar,-3:2)
 
+#ifndef SCALAR
       logical:: DoTest
       character(len=*), parameter:: NameSub = 'set_phys_based_low_order_face'
       !------------------------------------------------------------------------
@@ -2896,9 +2897,9 @@ contains
          do jFace = jMinFace, jMaxFace
             do iFace = 1, nIFace
                State_VI = State_VGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
+
                if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
                     B0_DGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
-
                LowOrderCrit_XB(iFace,jFace,kFace,iBlock) = &
                     low_order_face_criteria( State_VI, &
                     Vel_IDGB(:,x_,iFace-3:iFace+2,jFace,kFace,iBlock))
@@ -2939,7 +2940,7 @@ contains
       endif
 
       call test_stop(NameSub, DoTest)
-
+#endif
     end subroutine set_phys_based_low_order_face
     !==========================================================================
     real function low_order_face_criteria(State_VI, Vel_II)

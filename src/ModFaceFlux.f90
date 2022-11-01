@@ -1160,6 +1160,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_physical_flux'
     !--------------------------------------------------------------------------
     StateCons_V(1:nVar)  = State_V
+#ifndef SCALAR
 
     ! Make sure normal electric field is initialized
     En = 0.0
@@ -1204,7 +1205,7 @@ contains
     ! Make sure this is initialized
     HallUn = 0.0
 
-    do iFluid=iFluidMin,iFluidMax
+    do iFluid = iFluidMin, iFluidMax
 
        if(iFluid == 1 .and. IsMhd)then
           ! Calculate MHD flux for first fluid
@@ -1372,10 +1373,10 @@ contains
     ! Set the normal electron velocity used for Hall MHD and/or
     ! the electron pressure source term
     Un_I(eFluid_) = HallUn
-
   contains
     !==========================================================================
     subroutine get_boris_flux
+
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
@@ -1816,6 +1817,7 @@ contains
     end subroutine get_electro_magnetic_flux
     !==========================================================================
     subroutine get_hd_flux
+
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModPhysics, ONLY: InvGammaMinus1_I
       use ModMultiFluid, ONLY: iPpar
@@ -1929,9 +1931,11 @@ contains
       Flux_V(iRho) = 0.5*State_V(iRho)**2
     end subroutine get_burgers_flux
     !==========================================================================
+#endif
   end subroutine get_physical_flux
   !============================================================================
   subroutine get_numerical_flux(Flux_V)
+
     use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies, SignB_
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
@@ -1968,6 +1972,7 @@ contains
     ! Initialize diffusion coefficient for time step restriction
     DiffCoef = 0.0
 
+#ifndef SCALAR
     if(UseMultiSpecies .and. DoReplaceDensity)then
        StateLeft_V (Rho_)=sum(StateLeft_V(SpeciesFirst_:SpeciesLast_))
        StateRight_V(Rho_)=sum(StateRight_V(SpeciesFirst_:SpeciesLast_))
@@ -2124,6 +2129,8 @@ contains
     if(IsChGLInterface)call aligning_bc(iFace, jFace, kFace, iBlockFace, &
          iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                   &
          StateLeft_V, StateRight_V)
+#endif
+
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     if(DoSimple)then
        State_V = StateLeft_V
@@ -2153,6 +2160,7 @@ contains
        end if
     end if
 
+#ifndef SCALAR
     if(UseB .and. (UseMultiIon .or. .not. IsMhd))then
        ! Calculate bCrossArea_D to be used for J in the J x B source term
        ! for the individual ion fluids in calc_sources.f90.
@@ -2248,7 +2256,7 @@ contains
           call stop_mpi(NameSub//': Unknown flux type for neutrals')
        end if
     end do
-
+#endif
     ! Restore
     iFluidMin = 1; iFluidMax = nFluid
 
@@ -2268,14 +2276,17 @@ contains
   contains
     !==========================================================================
     subroutine modify_flux(Flux_V, Un, MhdFlux_V)
+
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(MaxDim)
+#ifndef SCALAR
       !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       ! Conservative update for the total flux for multi-ion MHD
       ! if(.not.UseJCrossBForce) MhdFlux_V = &
       !           MhdFlux_V + 0.5*DiffBb*Normal_D
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
+#endif
     end subroutine modify_flux
     !==========================================================================
     subroutine roe_solver_new
@@ -2357,6 +2368,7 @@ contains
            Cmax_I, CrightStateRight_I, CrightStateHat_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion, Un
       !------------------------------------------------------------------------
+#ifndef SCALAR
       call get_speed_max(StateLeft_V, Cleft_I =CleftStateLeft_I)
 
       call get_speed_max(StateRight_V, Cright_I=CrightStateRight_I)
@@ -2425,7 +2437,7 @@ contains
               ( StateRightCons_V(ChargeStateFirst_:ChargeStateLast_) &
               - StateLeftCons_V(ChargeStateFirst_:ChargeStateLast_)) )
       end if
-
+#endif
     end subroutine harten_lax_vanleer_flux
     !==========================================================================
     subroutine dominant_wave_flux(DoLf)
@@ -3181,6 +3193,7 @@ contains
 
       write(*,*)'Hat state for Normal_D=', Normal_D, iTestSide
       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_)), iTestSide
+#ifndef SCALAR
       write(*,*)'Un =',sum(0.5*(StateLeft_V(Ux_:Uz_) &
            +                   StateRight_V(Ux_:Uz_))*Normal_D), iTestSide
       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_)), iTestSide
@@ -3191,6 +3204,7 @@ contains
               sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))&
               + [B0x,B0y,B0z])**2), iTestSide
       end if
+#endif
       write(*,'(1x,4(a,i4))') 'Fluxes for dir    =',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
 
@@ -3521,6 +3535,7 @@ contains
       real :: GammaA2, GammaU2
       real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
       !------------------------------------------------------------------------
+#ifndef SCALAR
       ! No explicit formula for multi-ion fluids
       if (nTrueIon > 1) call stop_mpi &
            ('get_boris_speed should not be called with multi-ion fluids')
@@ -3636,7 +3651,7 @@ contains
          write(*,*) ' Fast, Slow     =', Fast, Slow
          write(*,*) ' Un, UnBoris    =', Un, UnBoris
       end if
-
+#endif
     end subroutine get_boris_speed
     !==========================================================================
     subroutine get_mhd_speed(State_V, CmaxDt_I, Cmax_I, Cleft_I, Cright_I, &
@@ -3672,6 +3687,7 @@ contains
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
       integer:: jFluid
       !------------------------------------------------------------------------
+#ifndef SCALAR
       Rho = State_V(iRhoIon_I(1))
       Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
@@ -4021,6 +4037,7 @@ contains
          if(present(Cleft_I))  Cleft_I(1)  = UnMin - Fast
          if(present(Cright_I)) Cright_I(1) = UnMax + Fast
       end if
+#endif
     end subroutine get_mhd_speed
     !==========================================================================
     subroutine get_chgl_speed(U1n, U2n, Ut2, InvRho, Sound2, Alpha, &
@@ -4036,6 +4053,7 @@ contains
       real :: U1nChGL, U2nChGL, ChGL2OverRho, ChGLFast2
       ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
       !------------------------------------------------------------------------
+#ifndef SCALAR
       ChGL2OverRho = InvRho*Alpha**2
       ! Magetosonic speed squared:
       ChGLFast2     = Sound2 + Ut2*ChGL2OverRho
@@ -4057,6 +4075,7 @@ contains
       if(UseAlfvenWaves) cChGLRight = max(cChGLRight,  &
            U1n + sqrt(2*U1n*U1nChGL),          & ! Alfven wave
            U2n + sqrt(2*U2n*U2nChGL))            ! (Right)
+#endif
     end subroutine get_chgl_speed
     !==========================================================================
     subroutine get_hd_speed
@@ -4067,6 +4086,7 @@ contains
 
       character(len=*), parameter:: NameSub = 'get_hd_speed'
       !------------------------------------------------------------------------
+#ifndef SCALAR
       if(DoTestCell) then
          write(*,'(1x,a,a,i3,i3)')    NameSub,' iRho, iP =',iRho, iP
          write(*,'(1x,a,a,30es13.5)') NameSub,' State_V  =',State_V(iRho:iP)
@@ -4134,7 +4154,7 @@ contains
          write(*,*)NameSub,' Csound =',Sound
          if(present(Cmax_I))write(*,*)NameSub,' Cmax   =',Cmax_I(iFluid)
       end if
-
+#endif
     end subroutine get_hd_speed
     !==========================================================================
     subroutine get_burgers_speed
@@ -4251,6 +4271,7 @@ contains
     ! Also store the transformation for rotating back.
     ! Current implementation is for a single ion fluid.
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     if(IsCartesianGrid)then
        select case (iDimFace)
        case (x_) ! x face
@@ -4347,12 +4368,14 @@ contains
        B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
        B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
     end if
+#endif
   end subroutine rotate_state_vectors
   !============================================================================
   subroutine rotate_flux_vector(FluxRot_V, Flux_V)
     real, intent(in)   :: FluxRot_V(:)
     real, intent(inout):: Flux_V(:)
     ! Rotate n,t1,t2 components back to x,y,z components
+#ifndef SCALAR
     !--------------------------------------------------------------------------
     if(IsCartesianGrid)then
        select case (iDimFace)
@@ -4399,6 +4422,7 @@ contains
             +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
             +           Tangent2_D(z_)*FluxRot_V(B1t2_)
     end if
+#endif
   end subroutine rotate_flux_vector
   !============================================================================
   !==================REDUNDANT ROUTINES========================================

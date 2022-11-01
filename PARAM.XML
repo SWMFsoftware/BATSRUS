@@ -6002,10 +6002,23 @@ paraboloidx stretched	StringShape
 myregion		NameRegion
 user			StringShape
 
-The #REGION comand allow making a library of areas in the simulation
+The #REGION comand allows making a library of areas in the simulation
 domain identified by a unique NameRegion to be used in other commands
-(e.g. #AMRCRITERIALEVEL, #AMRCRITERIARESOLUTION) to define where some
-action (e.g. grid refinement) should be performed.
+(e.g. #AMRCRITERIALEVEL, #AMRCRITERIARESOLUTION, #HALLREGION) to
+define where some action (e.g. grid refinement) should be performed.
+In those commands the regions can be combined with + and - signs to
+form more complex shapes. For example
+
++dayside +tail -nearearth -nearaxis
+
+The + sign means that a region is "added" (more formally, take the
+union of the regions).  The - sign means that the region is excluded.
+The best way to list multiple regions is to start with the + signs
+and finish with the - signs. If all regions have - signs, for example
+
+-nearearth -nearaxis
+
+then the interpretation is that they are excluded from the whole domain.
 
 The StringShape parameter defines the shape of the region with the possible
 options. The basic shape names are the following:
@@ -6432,7 +6445,7 @@ without any percentage limits.
 
 <command name="AMR">
   <parameter name="DnRefine" type="integer" min="-1" default="-1" />
-  <if expr="$DnRefine>0">
+  <if expr="$DnRefine &gt; 0">
     <parameter name="DoAutoRefine" type="logical" default="F" />
     <if expr="$DoAutoRefine">
       <parameter name="PercentCoarsen" type="real"
@@ -6718,11 +6731,7 @@ This can be limited to a certain area by adding +REGIONNAME and -REGIONNAME
 modifiers to the end of the TypeCriteria string. The unique REGIONNAME names
 have to be defined in the #REGION command(s), where the definition
 of the region is given (for example a sphere, or a box).
-The plus sign before the region name means that the AMR criterion is
-applied in this region, while the minus sign means that the criterion
-is not applied in this region. If the first modifier has a negative sign,
-it is assumed that you want the criterion to be evaluated everywhere except
-in the region(s) specified with - sign(s).
+See the #REGION command for a description of how to combine multiple regions.
 
 TypeCriteria can be chosen from the following list:
 \begin{verbatim}
@@ -6804,6 +6813,25 @@ The default value is "orig" if the code is compiled for CPU,
 and "fast" when compiled for the GPU.
 </command>
 
+<command name="UPDATEVAR">
+  <parameter name="StringVarUpdate" type="string" length="$lLine"/>
+
+#UPDATEVAR
+rho mx my               StringVarUpdate
+
+Update only a subset of the state variables. The variables should be
+listed with a single space separator in the StringVarUpdate.
+
+If density is updated but some components of the momentum are not,
+then the velocity is preserved (not the momentum). In the example
+above, the Z component of the velocity is fixed. In the current
+implementation this only works with classical momentum
+(not with semi-relativistic momentum, see #BORIS command) and only
+for the first fluid.
+
+The default is to update all the variables.
+</command>
+  
 <command name="SCHEME">
   <parameter name="nOrder" type="integer" input="select">
     <option name="1st order"  value="1"/>
@@ -8771,8 +8799,8 @@ This command can occur multiple times. By default no lookup tables are used.
 <command name="ADVECTION">
   <parameter name="UseAdvectionSource" type="logical" default="T"/>
   <if expr="$UseAdvectionSource">
-    <parameter name="NameVarAdvectFirst" type="character" length="20"/>
-    <parameter name="NameVarAdvectLast" type="character" length="20"/>
+    <parameter name="NameVarAdvectFirst" type="string" length="20"/>
+    <parameter name="NameVarAdvectLast" type="string" length="20"/>
   </if>
 
 #ADVECTION

@@ -245,11 +245,10 @@ module ModPhysics
 
   ! Names of the user (I/O) units for IDL and TECPlot output
   ! for all variables including energies
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
+  character(len=20), allocatable :: NameUnitUserIdl_V(:), NameUnitUserTec_V(:)
 
   ! The user defined units for the variables including energies
-  real :: UnitUser_V(nVar+nFluid) = 1.0
+  real, allocatable :: UnitUser_V(:)
 
   ! Some strange logical used in calc_heat_flux
   logical :: UseDefaultUnits = .false.
@@ -532,15 +531,16 @@ contains
     ! For Outer Boundaries (if SW_* are set)
     if(SolarWindRho > 0.0)then
 
-       FaceState_VI(Rho_, xMinBc_:zMaxBc_) = SolarWindRho
-       FaceState_VI(Ux_,  xMinBc_:zMaxBc_) = SolarWindUx
-       FaceState_VI(Uy_,  xMinBc_:zMaxBc_) = SolarWindUy
-       FaceState_VI(Uz_,  xMinBc_:zMaxBc_) = SolarWindUz
-       FaceState_VI(Bx_,  xMinBc_:zMaxBc_) = SolarWindBx
-       FaceState_VI(By_,  xMinBc_:zMaxBc_) = SolarWindBy
-       FaceState_VI(Bz_,  xMinBc_:zMaxBc_) = SolarWindBz
-       FaceState_VI(P_,   xMinBc_:zMaxBc_) = SolarWindP
-
+       FaceState_VI(Rho_,xMinBc_:zMaxBc_) = SolarWindRho
+#ifndef SCALAR
+       FaceState_VI(Ux_, xMinBc_:zMaxBc_) = SolarWindUx
+       FaceState_VI(Uy_, xMinBc_:zMaxBc_) = SolarWindUy
+       FaceState_VI(Uz_, xMinBc_:zMaxBc_) = SolarWindUz
+       FaceState_VI(Bx_, xMinBc_:zMaxBc_) = SolarWindBx
+       FaceState_VI(By_, xMinBc_:zMaxBc_) = SolarWindBy
+       FaceState_VI(Bz_, xMinBc_:zMaxBc_) = SolarWindBz
+       FaceState_VI(P_,  xMinBc_:zMaxBc_) = SolarWindP
+#endif
        if(UseElectronPressure) FaceState_VI(Pe_,xMinBc_:zMaxBc_) &
             = SolarWindP*ElectronPressureRatio
 
@@ -1090,6 +1090,13 @@ contains
     character(len=*), parameter:: NameSub = 'init_mhd_variables'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    if(.not.allocated(UnitUser_V)) allocate(UnitUser_V(nVar+nFluid), &
+         NameUnitUserTec_V(nVar+nFluid), NameUnitUserIdl_V(nVar+nFluid))
+
+    UnitUser_V = 1.0
+    NameUnitUserTec_V = ''
+    NameUnitUserIdl_V = ''
 
     if(UseB)then
        UnitUser_V(Bx_:Bz_)        = No2Io_V(UnitB_)

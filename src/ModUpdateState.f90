@@ -28,7 +28,8 @@ contains
     use ModMain, ONLY: nStep, iStage, Cfl, UseUserUpdateStates, UseBufferGrid
     use ModVarIndexes, ONLY: nVar, Ehot_, SignB_, NameVar_V, nFluid
     use ModAdvance, ONLY: State_VGB, StateOld_VGB, DTMAX_CB, &
-         Flux_VXI, Flux_VYI, Flux_VZI, Source_VC
+         Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, &
+         nVarUpdate, iVarUpdate_I, DoUpdate_V
     use ModPhysics, ONLY: No2Si_V, UnitT_
     use ModChGL, ONLY: UseChGL, update_chgl
     use ModEnergy, ONLY: limit_pressure
@@ -82,22 +83,23 @@ contains
 
     ! Note must copy state to old state only if iStage is 1.
     if(iStage==1) then
-       do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar
-         StateOld_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)
-       enddo; enddo; enddo; enddo
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          StateOld_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock)
+       enddo; enddo; enddo
     end if
 
     ! The first call may set UseUserUpdateStates to false
     if(UseUserUpdateStates)       call user_update_states(iBlock)
     if(.not. UseUserUpdateStates) call update_state_normal(iBlock)
-    ! write(*,*) NameSub,' !!! call limit_pressure after update_state_*'
+
     call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
 
     if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
        call update_heatflux_collisionless(iBlock)
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
-    if(SignB_ > 1.and.UseChGL)call update_chgl(iBlock, iStage)
+    if(SignB_ > 1 .and. UseChGL)call update_chgl(iBlock, iStage)
+
     if(DoTest)then
        write(*,*)NameSub,' final for nStep =', nStep
        do iVar=1,nVar
@@ -105,6 +107,7 @@ contains
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
        end do
     end if
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_state
   !============================================================================
@@ -386,19 +389,46 @@ contains
          end do; end do; end do
       end if
 
+      if(nVarUpdate /= nVar .and. DoUpdate_V(Rho_))then
+         ! Convert to velocity when momentum is not updated
+         do iVar = RhoUx_, RhoUz_
+            if(DoUpdate_V(iVar)) CYCLE
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               State_VGB(iVar,i,j,k,iBlock) &
+                    = State_VGB(iVar,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+            end do; end do; end do
+         end do
+      endif
+
       ! Now update State_VGB
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state
-         do k=1,nK; do j=1,nJ; do i=1,nI; do iVar = 1, nVar
-            State_VGB(iVar,i,j,k,iBlock) = &
-                 StateOld_VGB(iVar,i,j,k,iBlock) + Source_VC(iVar,i,j,k)
-         end do; end do; end do; end do
+         if(nVarUpdate == nVar)then
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               State_VGB(:,i,j,k,iBlock) = &
+                    StateOld_VGB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
+            end do; end do; end do
+         else
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               State_VGB(iVarUpdate_I,i,j,k,iBlock) = &
+                    StateOld_VGB(iVarUpdate_I,i,j,k,iBlock) &
+                    + Source_VC(iVarUpdate_I,i,j,k)
+            end do; end do; end do
+         end if
       else
          ! Update state variables starting from previous stage (RK schemes)
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            State_VGB(:,i,j,k,iBlock) = &
-                 State_VGB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
-         end do; end do; end do
+         if(nVarUpdate == nVar)then
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               State_VGB(:,i,j,k,iBlock) = &
+                    State_VGB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
+            end do; end do; end do
+         else
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               State_VGB(iVarUpdate_I,i,j,k,iBlock) = &
+                    State_VGB(iVarUpdate_I,i,j,k,iBlock) &
+                    + Source_VC(iVarUpdate_I,i,j,k)
+            end do; end do; end do
+         end if
       end if
 
       if(nStage == 4)then
@@ -451,11 +481,30 @@ contains
          Coeff2 = 1 - Coeff1
 
          ! Interpolate state variables
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            State_VGB(:,i,j,k,iBlock) = &
-                 Coeff1*StateOld_VGB(:,i,j,k,iBlock) + &
-                 Coeff2*State_VGB(:,i,j,k,iBlock)
-         end do; end do; end do
+         if(nVarUpdate == nVar)then
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               State_VGB(:,i,j,k,iBlock) = &
+                    Coeff1*StateOld_VGB(:,i,j,k,iBlock) + &
+                    Coeff2*State_VGB(:,i,j,k,iBlock)
+            end do; end do; end do
+         else
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               State_VGB(iVarUpdate_I,i,j,k,iBlock) = &
+                    Coeff1*StateOld_VGB(iVarUpdate_I,i,j,k,iBlock) + &
+                    Coeff2*State_VGB(iVarUpdate_I,i,j,k,iBlock)
+            end do; end do; end do
+         end if
+      endif
+
+      if(nVarUpdate /= nVar .and. DoUpdate_V(Rho_))then
+         ! Convert back to momentum with preserved velocity
+         do iVar = RhoUx_, RhoUz_
+            if(DoUpdate_V(iVar)) CYCLE
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               State_VGB(iVar,i,j,k,iBlock) &
+                    = State_VGB(iVar,i,j,k,iBlock)*State_VGB(Rho_,i,j,k,iBlock)
+            end do; end do; end do
+         end do
       endif
 
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
@@ -474,7 +523,7 @@ contains
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron entropy back to pressure
          ! Pe = Se^GammaE
-         do k=1,nK; do j=1,nJ; do i=1,nI
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
@@ -493,7 +542,7 @@ contains
 
          if(DoReplaceDensity)then
             ! Add up species densities to total density
-            do k=1,nK; do j=1,nJ; do i=1,nI
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
                State_VGB(Rho_,i,j,k,iBlock) = &
                     sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock))
             end do; end do; end do
@@ -521,14 +570,15 @@ contains
               State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
       end if
 
-      if(UseDbTrickNow .and. (nStage==2 .and. iStage==1 &
-           .or.               nStage==1 .and. .not.IsTimeAccurate)) then
+      if(DoUpdate_V(p_) .and. &
+           (UseDbTrickNow .and. (nStage==2 .and. iStage==1 &
+           .or.               nStage==1 .and. .not.IsTimeAccurate))) then
 
          ! A desparate attempt to maintain positivity by adding dB^2/2 to the
          ! energy. This is fine for steady state, and is 2nd order accurate
          ! for half+full step method. But it cannot be used for RK schemes!
 
-         do k=1,nK; do j=1,nJ; do i=1,nI
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             if(UseNonConservative)then
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
@@ -545,7 +595,7 @@ contains
       if(UseWavePressure)then
          if(DoAdvectWaves .and. iStage==nStage .and. nWave>2)&
               call update_wave_group_advection(iBlock)
-         if(UseWavePressureLtd)then
+         if(UseWavePressureLtd .and. DoUpdate_V(Ew_))then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                State_VGB(Ew_,i,j,k,iBlock) = &
                     sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))

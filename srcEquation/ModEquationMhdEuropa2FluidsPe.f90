@@ -121,10 +121,6 @@ module ModVarIndexes
        '"r^O^+", "U_x^O^+", "U_y^O^+", "U_z^O^+", "B_x", "B_y", "B_z", &
        "p_e", "P^O^+", "r^O2^+", "U_x^O2^+", "U_y^O2^+", "U_z^O2^+", "P^O2^+"'
 
-  ! Names of the user units for IDL and TECPlot output
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
-
   ! There are no extra scalars (Pe has its own flux)
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 

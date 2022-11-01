@@ -38,7 +38,6 @@ module ModSpectrum
   integer                     :: nResponseBin
 contains
   !============================================================================
-
   subroutine spectrum_read_table(iFile, UseNbi)
 
     use ModIoUnit,     ONLY: UnitTmp_
@@ -349,6 +348,7 @@ contains
 
     real                        :: LambdaMin
 
+#ifndef SCALAR
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
@@ -516,10 +516,9 @@ contains
           end if
        end do
     end do
-
+#endif
   end subroutine spectrum_calc_flux
   !============================================================================
-
   subroutine clean_mod_spectrum
 
     integer                     :: iLine = 0

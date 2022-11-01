@@ -168,8 +168,9 @@ contains
     logical :: DoReadSatelliteFiles = .false.
     logical :: IsMirrorX,  IsMirrorY,  IsMirrorZ
 
-    ! The name of the command
+    ! The name of the command and an one line from the PARAM.in file
     character(len=lStringLine) :: NameCommand, StringLine
+    character(len=20):: NameVarUpdate_I(nVar)
 
     ! Temporary variables
     logical :: DoEcho=.false.
@@ -1740,6 +1741,20 @@ contains
        case("#UPDATE")
           call read_var('TypeUpdate', TypeUpdate, IsLowerCase=.true.)
 
+       case('#UPDATEVAR')
+          call read_var('StringVarUpdate', StringLine)
+          call split_string(StringLine, NameVarUpdate_I, nVarUpdate)
+          if(nVarUpdate == nVar)then
+             deallocate(iVarUpdate_I)
+             DoUpdate_V = .true.
+          else
+             allocate(iVarUpdate_I(nVarUpdate))
+             do iVar = 1, nVarUpdate
+                call get_ivar(NameVarUpdate_I(iVar), iVarUpdate_I(iVar))
+             end do
+             DoUpdate_V = .false.
+             DoUpdate_V(iVarUpdate_I) = .true.
+          end if
        case("#MESSAGEPASS","#OPTIMIZE")
           call read_var('TypeMessagePass', TypeMessagePass)
 
