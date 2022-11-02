@@ -78,7 +78,7 @@ module ModPhysics
   real :: MassIonElectron_I(nIonFluid+1)
   real :: ReducedMass_II(nIonFluid+1,nIonFluid+1)
   real :: CollisionCoef_II(nIonFluid+1,nIonFluid+1)
-  
+
   ! Ion charge for multi-species.
   real :: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
 
@@ -402,7 +402,6 @@ contains
     ! For single ion fluid the average ion mass per charge is constant
     if(ChargeIon_I(1) /= 0 .and. nIonFluid == 1 .and. .not. UseMultiSpecies) &
          IonMassPerCharge = IonMassPerCharge * MassIon_I(1)/ChargeIon_I(1)
-
 
     ! arrays to have electron mass and charge available in an indexed
     ! arrary when no electron fluid present
