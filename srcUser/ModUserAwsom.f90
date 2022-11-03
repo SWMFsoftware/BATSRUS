@@ -1128,7 +1128,7 @@ contains
        ! end of UseAwsom part (AWSoM)
     else
        ! start of .not.UseAwsom part (AWSoM-R)
-       
+
        if(TypeBc == 'usersurfacerot')then
 
           if(DoTest) write(*,*) NameSub,'!!! starting with DoUpdateParkerJet=',&
