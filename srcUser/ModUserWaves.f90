@@ -112,7 +112,7 @@ module ModUser
   ! Variables for incompressible flow problem: Hill vortex
   real:: xCenter, zCenter, xWidth, zWidth
   logical:: IsSmooth
-
+  
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -205,8 +205,8 @@ contains
        case('#POWERPROFILE')
           ! Read parameters for a power profile. Power is a postive or
           ! negative integer or zero (linear profile).
-          call read_var('NameVar', NameVar)
-          call get_ivar(NameVar, iVar)
+          call read_var('NameVar',   NameVar)
+          call get_iVar(NameVar, iVar)
           call read_var('CoeffX',  CoeffX_V(iVar))
           call read_var('nPowerX', nPowerX_V(iVar))
           if(nDim > 1) call read_var('CoeffY',  CoeffY_V(iVar))
@@ -335,7 +335,7 @@ contains
           Rho = ShockLeftState_V(Rho_)
           if(IsSmooth)then
              if(abs(x) < xWidth/2 .and. abs(z) < zWidth/2) &
-                  Rho = Rho + cos(cPi*x/xWidth)**2*cos(cPi*z/zWidth)**2
+                  Rho = Rho + cos(cPi*x/xWidth)**4*cos(cPi*z/zWidth)**4
           else
              if((x/xWidth)**2 + (z/zWidth)**2 < 0.25) &
                   Rho = Rho + 1.0
@@ -1378,7 +1378,7 @@ contains
     call update_state_normal(iBlock)
 
     if(NameProblem == 'HILL') call set_hill_velocity(iBlock)
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
   !============================================================================
@@ -1413,7 +1413,7 @@ contains
 
     use ModAdvance, ONLY: State_VGB
     use BATL_lib, ONLY: Xyz_DGB
-
+    
     integer, intent(in):: iBlock
 
     integer:: i, j, k
@@ -1426,7 +1426,7 @@ contains
        z = Xyz_DGB(z_,i,j,k,iBlock)
        rCyl = sqrt(x**2    + y**2)
        rSph = sqrt(rCyl**2 + z**2)
-
+       
        Rho = State_VGB(Rho_,i,j,k,iBlock)
        if(rSph < 1)then
           State_VGB(RhoUz_,i,j,k,iBlock) = 1.5*Rho*(-1 + rCyl**2 + rSph**2)
@@ -1437,7 +1437,7 @@ contains
           State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = -1.5*Rho*[x, y]*z/rSph**5
        end if
     end do; end do; end do
-
+    
   end subroutine set_hill_velocity
   !============================================================================
 end module ModUser
