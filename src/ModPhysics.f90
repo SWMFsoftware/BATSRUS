@@ -10,7 +10,8 @@ module ModPhysics
   use ModNumConst, ONLY: cDegToRad
   use ModConst, ONLY: rSun, mSun, RotationPeriodSun, cSecondPerDay, &
        cProtonMass, cElectronCharge, cGyroElectron, cLightSpeed, &
-       cRadiation, cGravitation, cAU, cBoltzmann, cMu, cRadToDeg
+       cRadiation, cGravitation, cAU, cBoltzmann, cMu, cRadToDeg, cEps, &
+       cElectronMass
   use ModMain, ONLY: TypeCoordSystem, body2_, SolidBc_, xMinBc_, zMaxBc_, &
        Coord1MinBc_, Coord3MaxBc_ , NameVarLower_V
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
@@ -72,6 +73,11 @@ module ModPhysics
   real :: PePerPtotal              = 0.0
   real :: IonMassPerCharge         = 1.0
   !$acc declare create(ElectronPressureRatio, PePerPtotal)
+
+  ! Quantities for reduced mass and collision frequencies
+  real :: MassIonElectron_I(nIonFluid+1)
+  real :: ReducedMass_II(nIonFluid+1,nIonFluid+1)
+  real :: CollisionCoef_II(nIonFluid+1,nIonFluid+1)
 
   ! Ion charge for multi-species.
   real :: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
@@ -305,8 +311,8 @@ contains
     real :: MassBodySi
     real :: MassBody2Si
     real :: pCoef
-
-    integer :: i, iBoundary, iFluid
+    real :: Charge_I(nIonFluid+1)
+    integer :: i, iBoundary, iFluid, iIon, jIon
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_physics_constants'
@@ -396,6 +402,33 @@ contains
     ! For single ion fluid the average ion mass per charge is constant
     if(ChargeIon_I(1) /= 0 .and. nIonFluid == 1 .and. .not. UseMultiSpecies) &
          IonMassPerCharge = IonMassPerCharge * MassIon_I(1)/ChargeIon_I(1)
+
+    ! arrays to have electron mass and charge available in an indexed
+    ! arrary when no electron fluid present
+    MassIonElectron_I(:nIonFluid)  = MassIon_I
+    MassIonElectron_I(nIonFluid+1) = cElectronMass/cProtonMass
+    Charge_I(:nIonFluid)  = ChargeIon_I
+    Charge_I(nIonFluid+1) = -1.0
+
+    ! Coefficient for effective ion-ion collision frequencies
+    do jIon = 1, nIonFluid+1
+       do iIon = 1, nIonFluid+1
+          ReducedMass_II(iIon,jIon) = &
+               MassIonElectron_I(iIon)*MassIonElectron_I(jIon) &
+               /(MassIonElectron_I(iIon) + MassIonElectron_I(jIon))
+
+          CollisionCoef_II(iIon,jIon) = CoulombLog &
+	       *sqrt(ReducedMass_II(iIon,jIon)/cProtonMass) &
+               /MassIonElectron_I(iIon) &
+               *(Charge_I(iIon)*Charge_I(jIon)*cElectronCharge**2/cEps)**2 &
+               /(3*(cTwoPi*cBoltzmann)**1.5)
+       end do
+    end do
+    ! To obtain the effective ion-ion collision frequencies, the
+    ! coefficients still need to be multiplied by N(jIon)/reducedTemp**1.5.
+    ! Here, we already take care of the units.
+    CollisionCoef_II = CollisionCoef_II &
+         *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
     ! set the (corrected) speed of light and get normalization
     if(ClightDim > 0.0)then

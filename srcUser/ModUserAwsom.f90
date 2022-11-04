@@ -74,7 +74,6 @@ module ModUser
   character(len=20):: TypeRadioEmission = 'simplistic'
 contains
   !============================================================================
-
   subroutine user_read_inputs
 
     use ModChromosphere, ONLY: NumberDensChromosphereCgs
@@ -581,7 +580,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
   !============================================================================
-
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -963,7 +961,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
-
     call test_start(NameSub, DoTest, iBlock)
     if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') &
          call CON_stop('Wrong iSide in user_set_cell_boundary')
@@ -1113,6 +1110,10 @@ contains
                    State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
                         + pCme
                 end if
+
+                ! Only the radial component is set. The tangential components
+                ! float. As the flux rope leaves, the solution becomes
+                ! more and more potential.
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) + BrCme_D
 
@@ -1124,16 +1125,18 @@ contains
        end if
        ! End of CME part
 
-       ! end of UseAwsom part
+       ! end of UseAwsom part (AWSoM)
     else
+       ! start of .not.UseAwsom part (AWSoM-R)
 
-       if(DoTest) write(*,*) NameSub,'!!! starting with DoUpdateParkerJet=',&
-            DoUpdateParkerJet
-
-       ! f(t) = 0                                    if      t < t1
-       !      = 1                                    if t2 < t
-       !      = 0.5 * ( 1- cos(Pi * (t-t1)/(t2-t1))) if t1 < t < t2
        if(TypeBc == 'usersurfacerot')then
+
+          if(DoTest) write(*,*) NameSub,'!!! starting with DoUpdateParkerJet=',&
+               DoUpdateParkerJet
+
+          ! f(t) = 0                                    if      t < t1
+          !      = 1                                    if t2 < t
+          !      = 0.5 * ( 1- cos(Pi * (t-t1)/(t2-t1))) if t1 < t < t2
 
           ! Check if time accurate is set.
           if(IsTimeAccurate)then
@@ -1322,7 +1325,7 @@ contains
           endif
 
           RETURN
-       endif
+       endif ! TypeBc == 'usersourcerot'
 
        ! The routine is only used by the solver for semi-implicit heat
        ! conduction along the magnetic field. To calculate the heat
@@ -1435,7 +1438,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-
     rUnit_D = FBC%FaceCoords_D/norm2(FBC%FaceCoords_D)
 
     ! Magnetic field: radial magnetic field is set to zero,
@@ -1601,7 +1603,7 @@ contains
     integer :: i, j, k, iBlock, iError
     real :: x_D(nDim), Rho, B_D(MaxDim), B0_D(MaxDim), p
     real :: Mass, MassDim, MassTotal
-    ! -------------------------------------------------------------------------
+
     logical:: DoTest, IsFound
     character(len=*), parameter:: NameSub = 'user_initial_perturbation'
     !--------------------------------------------------------------------------
@@ -1781,7 +1783,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
   !============================================================================
-
   subroutine user_update_states(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
@@ -1806,8 +1807,8 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
   !============================================================================
-
   subroutine user_get_b0(x, y, z, B0_D)
+
     use ModMain, ONLY: tSimulation, UseUserB0
     use EEE_ModGetB0, ONLY: EEE_get_B0
     use EEE_ModCommonVariables, ONLY: UseTD

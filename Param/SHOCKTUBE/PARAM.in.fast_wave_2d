@@ -47,7 +47,7 @@ rotatedcartesian		TypeGeometry
 0.75			ShockSlope
 
 #GRIDBLOCKALL
-100			MaxBlock
+200			MaxBlock
 
 #UNIFORMSTATE
 1.0			StateVar Rho
