@@ -1507,7 +1507,7 @@ contains
       integer:: iGang
       real:: RhoInv
       !------------------------------------------------------------------------
-#ifndef SCALAR     
+#ifndef SCALAR
       i = IArguments_I(x_); j = IArguments_I(y_); k = IArguments_I(z_)
       iGang = 1
 

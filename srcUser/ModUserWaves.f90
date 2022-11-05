@@ -108,7 +108,7 @@ module ModUser
   logical:: IsSmooth
   real, allocatable:: Stream_DG(:,:,:,:), &
        Un_XB(:,:,:,:),  Un_YB(:,:,:,:),  Un_ZB(:,:,:,:)
-  
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -1372,12 +1372,12 @@ contains
        end if
     end do; end do; end do
 
-    !if(iBlock == iBlockTest)then
+    ! if(iBlock == iBlockTest)then
     !   write(*,*) 'UnY,Left,Right=',Un_YB(iTest,jTest,kTest,iBlockTest), &
     !        LeftState_VY(Rho_,iTest,jTest,kTest), &
     !        RightState_VY(Rho_,iTest,jTest,kTest)
-    !end if
-    
+    ! end if
+
     if(nDim > 2)then
        do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
           Un = Un_ZB(i,j,k,iBlock)
@@ -1423,7 +1423,7 @@ contains
   real function stream(iDir, Xyz_D)
 
     ! Calculate iDir component of the stream function at location Xyz_D
-    
+
     integer, intent(in):: iDir
     real,    intent(in):: Xyz_D(3)
 
@@ -1431,11 +1431,11 @@ contains
     !--------------------------------------------------------------------------
 
     ! Pure rotation:
-    !if(iDir == 3)then
+    ! if(iDir == 3)then
     !   stream = sum(Xyz_D(1:2)**2)/2.0
-    !else
+    ! else
     !   stream = 0.0
-    !end if
+    ! end if
 
     ! Hill vortex stream function is rCyl times the "Stoke stream function" in
     ! https://en.wikipedia.org/wiki/Hill%27s_spherical_vortex
@@ -1453,7 +1453,7 @@ contains
        stream = 0.0
        RETURN
     end if
-    
+
     x = Xyz_D(1); y = Xyz_D(2); z = Xyz_D(3)
 
     rSph = norm2(Xyz_D)
@@ -1477,7 +1477,7 @@ contains
        ! Phi component in spherical or cylindrical coordinates
        stream = StreamPhi*rCyl
     endif
-    
+
   end function stream
   !============================================================================
   subroutine set_hill_velocity(iBlock)
@@ -1487,7 +1487,7 @@ contains
          CellFace_DFB, FaceNormal_DDFB
 
     integer, intent(in):: iBlock
-    
+
     integer:: i, j, k
     real:: Rho, u_D(3)
     !--------------------------------------------------------------------------
@@ -1500,7 +1500,7 @@ contains
     endif
 
     Stream_DG = 0.0
-    
+
     ! Calculate edge centered stream function
     if(nDim == 2)then
        ! In 2D, only the 3rd component is needed
@@ -1539,13 +1539,13 @@ contains
        ! Take curl of Stream function on each face multiplied by the area
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
           ! ux = dSz/dy - dSy/dz
-          Un_XB(i,j,k,iBlock) = & 
+          Un_XB(i,j,k,iBlock) = &
                (Stream_DG(3,i,j+1,k) - Stream_DG(3,i,j,k)) - &
                (Stream_DG(2,i,j,k+1) - Stream_DG(2,i,j,k))
        end do; end do; end do
        do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
           ! uy = dSx/dz - dSz/dx
-          Un_YB(i,j,k,iBlock) = & 
+          Un_YB(i,j,k,iBlock) = &
                (Stream_DG(1,i,j,k+1) - Stream_DG(1,i,j,k)) - &
                (Stream_DG(3,i+1,j,k) - Stream_DG(3,i,j,k))
        end do; end do; end do
