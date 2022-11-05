@@ -707,13 +707,14 @@ contains
     end do
 
     ! Convert velocity to momentum for all fluids and boundaries
+#ifndef SCALAR
     do iFluid = 1, nFluid
        if(nFluid > 1) call select_fluid(iFluid)
        CellState_VI(iRhoUx,:) = CellState_VI(iUx,:)*CellState_VI(iRho,:)
        CellState_VI(iRhoUy,:) = CellState_VI(iUy,:)*CellState_VI(iRho,:)
        CellState_VI(iRhoUz,:) = CellState_VI(iUz,:)*CellState_VI(iRho,:)
     end do
-
+#endif
     if(UseOutflowPressure) pOutflow = pOutflowSi*Si2No_V(UnitP_)
 
     ! Minimum value for densities, pressures, energy
@@ -1153,19 +1154,21 @@ contains
     do iFluid = 1, nFluid
        if(nFluid > 1) call select_fluid(iFluid)
        UnitUser_V(iRho)          = No2Io_V(UnitRho_)
+       NameUnitUserTec_V(iRho)          = NameTecUnit_V(UnitRho_)
+       NameUnitUserIdl_V(iRho)          = NameIdlUnit_V(UnitRho_)
+#ifndef SCALAR
        UnitUser_V(iRhoUx:iRhoUz) = No2Io_V(UnitRhoU_)
        UnitUser_V(iP)            = No2Io_V(UnitP_)
        UnitUser_V(iEnergy)       = No2Io_V(UnitEnergyDens_)
 
-       NameUnitUserTec_V(iRho)          = NameTecUnit_V(UnitRho_)
        NameUnitUserTec_V(iRhoUx:iRhoUz) = NameTecUnit_V(UnitRhoU_)
        NameUnitUserTec_V(iP)            = NameTecUnit_V(UnitP_)
        NameUnitUserTec_V(iEnergy)       = NameTecUnit_V(UnitEnergyDens_)
 
-       NameUnitUserIdl_V(iRho)          = NameIdlUnit_V(UnitRho_)
        NameUnitUserIdl_V(iRhoUx:iRhoUz) = NameIdlUnit_V(UnitRhoU_)
        NameUnitUserIdl_V(iP)            = NameIdlUnit_V(UnitP_)
        NameUnitUserIdl_V(iEnergy)       = NameIdlUnit_V(UnitEnergyDens_)
+#endif
     end do
 
     ! By default the scalar advected variables are assumed to be like density

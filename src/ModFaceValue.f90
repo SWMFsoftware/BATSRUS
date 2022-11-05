@@ -1507,6 +1507,7 @@ contains
       integer:: iGang
       real:: RhoInv
       !------------------------------------------------------------------------
+#ifndef SCALAR     
       i = IArguments_I(x_); j = IArguments_I(y_); k = IArguments_I(z_)
       iGang = 1
 
@@ -1578,7 +1579,7 @@ contains
                  = log(Primitive_VGI(iVar,i,j,k,iGang))
          end do
       end if
-
+#endif
     end subroutine calc_primitives
     !==========================================================================
     subroutine get_facex_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
