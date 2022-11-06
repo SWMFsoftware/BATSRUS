@@ -239,17 +239,13 @@ contains
 
           end if  ! UseShockTube
 
-          if(UseInitialStateDefinition)then
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                x = Xyz_DGB(x_,i,j,k,iBlock)
-                y = Xyz_DGB(y_,i,j,k,iBlock)
-                call get_initial_state( [x, y], State_VGB(:,i,j,k,iBlock) )
-             end do; end do; end do
-          end if
-
           ! Loop through all the cells
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             ! Default state
+             State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Coord1MaxBc_)
+
              if(.not.Used_GB(i,j,k,iBlock))then
+                ! Cells outside the domain
                 iBoundary = iBoundary_GB(i,j,k,iBlock)
 
                 State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,iBoundary)
@@ -261,10 +257,12 @@ contains
                         FaceState_VI(iUx:iUz,iBoundary) &
                         *FaceState_VI(iRho,iBoundary)
                 end do
-
-             elseif(.not.UseShockTube)then
-                State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Coord1MaxBc_)
-             else
+             elseif(UseInitialStateDefinition)then
+                ! Cells defined by the #STATEDEFINITION command
+                x = Xyz_DGB(x_,i,j,k,iBlock)
+                y = Xyz_DGB(y_,i,j,k,iBlock)
+                call get_initial_state( [x, y], State_VGB(:,i,j,k,iBlock) )
+             elseif(UseShocktube)then
                 if( (Xyz_DGB(x_,i,j,k,iBlock) - ShockPosition) &
                      < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
                    ! Set all variables first
@@ -341,7 +339,7 @@ contains
     end if ! Unused_B
 
     if(DoTest)write(*,*) &
-         NameSub, 'State(test)=',State_VGB(:,iTest,jTest,kTest,iBlockTest)
+         NameSub,': State(test)=',State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
     call test_stop(NameSub, DoTest, iBlock)
 
