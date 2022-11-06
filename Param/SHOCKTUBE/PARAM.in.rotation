@@ -1,0 +1,118 @@
+Config.pl -e=Hd -u=Waves -g=10,10,1
+
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.rotation: rotation		StringDescription
+
+#TEST
+set_initial_condition
+
+#TESTXYZ
+1.0			xTest
+1.0			yTest
+0.0			zTest
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+FIXEDTIMESTEP
+T			UseDtFixed
+5.			DtFixedDim [sec] (read if UseDtFixed is true)
+
+#GRIDBLOCKALL
+2000			MaxBlock
+
+#GRID
+36			nRootBlock1
+36			nRootBlock2
+1			nRootBlock3
+-12.			xMin
+ 12.			xMax
+-12.			yMin
+ 12.			yMax
+-0.5			zMin
+ 0.5			zMax
+
+UNIFORMSTATE
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.001			StateVar p
+
+#STATEDEFINITION
+   rho p
+2			nMaterialState
+M1 2.0 0.0001		StringState
+M2 1.0 0.0001		StringState
+
+#STATEINTERFACE
+4			nSegment
+M1 M2 -1. -10. +1. -10.		StringSegment
+M1 M2 +1. -10. +1. +10.		StringSegment
+M1 M2 +1. +10. -1. +10.		StringSegment
+M1 M2 -1. +10. -1. -10.		StringSegment
+
+#UPDATEVAR
+Rho			StringVarUpdate
+
+#USERINPUTBEGIN -----------------
+
+#POWERPROFILE
+Ux			NameVar
+0.0			CoeffX
+1			nPowerX
+-6.2831853071795862D0		CoeffY
+1			nPowerY
+
+#POWERPROFILE
+Uy			NameVar
+6.2831853071795862D0		CoeffX
+1			nPowerX
+0.0			CoeffY
+1			nPowerY
+
+#USERINPUTEND -------------------
+
+#OUTERBOUNDARY
+none			TypeBc1
+none			TypeBc2
+none			TypeBc3
+none			TypeBc4
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+2.0			BetaLimiter
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 mhd idl_real8		StringPlot
+-1			DnSavePlot
+0.05			DtSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+1.0			tSimulationMax
