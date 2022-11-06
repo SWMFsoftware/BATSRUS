@@ -487,6 +487,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_flux'
     !--------------------------------------------------------------------------
+#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
@@ -935,6 +936,7 @@ contains
 
     end subroutine add_artificial_viscosity
     !==========================================================================
+#endif
   end subroutine calc_face_flux
   !============================================================================
   subroutine set_cell_values
@@ -2256,7 +2258,7 @@ contains
           call stop_mpi(NameSub//': Unknown flux type for neutrals')
        end if
     end do
-#endif
+
     ! Restore
     iFluidMin = 1; iFluidMax = nFluid
 
@@ -2272,7 +2274,7 @@ contains
     if(UseHyperbolicDivb) CmaxDt = max(SpeedHyp, CmaxDt)
 
     if(DoTestCell)call write_test_info
-
+#endif
   contains
     !==========================================================================
     subroutine modify_flux(Flux_V, Un, MhdFlux_V)

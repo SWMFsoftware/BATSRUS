@@ -28,7 +28,8 @@ module ModUser
   !   Si units to be chosen.
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc, &
+       IsCartesian
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -88,13 +89,6 @@ module ModUser
   integer :: nPowerX_V(nVar)=1, nPowerY_V(nVar)=1, nPowerZ_V(nVar)=1
   real    :: CoeffX_V(nVar)=0.0, CoeffY_V(nVar)=0.0, CoeffZ_V(nVar)=0.0
 
-  ! For updating selected variables
-  character(len=200)   :: StringVarUpdate
-  integer, parameter   :: MaxVarUpdate = 20
-  integer              :: nVarUpdate
-  character(len=20)    :: NameVarUpdate_I(MaxVarUpdate)
-  integer, allocatable :: iVarUpdate_I(:)
-
   ! Enable user units of length in input file
   logical           :: UseUserInputUnitx=.false.
   character(len=20) :: TypeInputUnitX
@@ -112,6 +106,8 @@ module ModUser
   ! Variables for incompressible flow problem: Hill vortex
   real:: xCenter, zCenter, xWidth, zWidth
   logical:: IsSmooth
+  real, allocatable:: Stream_DG(:,:,:,:), &
+       Un_XB(:,:,:,:),  Un_YB(:,:,:,:),  Un_ZB(:,:,:,:)
 
 contains
   !============================================================================
@@ -205,8 +201,8 @@ contains
        case('#POWERPROFILE')
           ! Read parameters for a power profile. Power is a postive or
           ! negative integer or zero (linear profile).
-          call read_var('NameVar', NameVar)
-          call get_ivar(NameVar, iVar)
+          call read_var('NameVar',   NameVar)
+          call get_iVar(NameVar, iVar)
           call read_var('CoeffX',  CoeffX_V(iVar))
           call read_var('nPowerX', nPowerX_V(iVar))
           if(nDim > 1) call read_var('CoeffY',  CoeffY_V(iVar))
@@ -223,25 +219,6 @@ contains
        case('#PIPEFLOW')
           call read_var('DoPipeFlow',DoPipeFlow)
           if(DoPipeFlow) NameProblem = 'PipeFlow'
-
-       case('#UPDATEVAR')
-          ! Only the states of the specified variables are updated
-          UseUserUpdateStates = .true.
-
-          call read_var('StringVarUpdate', StringVarUpdate)
-          call split_string(StringVarUpdate, NameVarUpdate_I, nVarUpdate)
-
-          if (allocated(iVarUpdate_I)) deallocate(iVarUpdate_I)
-          allocate(iVarUpdate_I(nVarUpdate))
-
-          do iVar = 1, nVarUpdate
-             call get_iVar(NameVarUpdate_I(iVar), iVarUpdate_I(iVar))
-          end do
-
-          if(iProc == 0)then
-             write(*,*) 'Only update vars =', NameVar_V(iVarUpdate_I)
-             write(*,*) 'Indexes          =', iVarUpdate_I
-          end if
 
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
@@ -330,12 +307,17 @@ contains
     case('HILL')
        ! set density
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          x = sqrt(sum(Xyz_DGB(x_:y_,i,j,k,iBlock)**2)) - xCenter
-          z = Xyz_DGB(z_,i,j,k,iBlock) - zCenter
+          if(IsCartesian)then
+             x = Xyz_DGB(x_,i,j,k,iBlock) - xCenter
+             z = Xyz_DGB(y_,i,j,k,iBlock) - zCenter
+          else
+             x = sqrt(sum(Xyz_DGB(x_:y_,i,j,k,iBlock)**2)) - xCenter
+             z = Xyz_DGB(z_,i,j,k,iBlock) - zCenter
+          end if
           Rho = ShockLeftState_V(Rho_)
           if(IsSmooth)then
              if(abs(x) < xWidth/2 .and. abs(z) < zWidth/2) &
-                  Rho = Rho + cos(cPi*x/xWidth)**2*cos(cPi*z/zWidth)**2
+                  Rho = Rho + cos(cPi*x/xWidth)**4*cos(cPi*z/zWidth)**4
           else
              if((x/xWidth)**2 + (z/zWidth)**2 < 0.25) &
                   Rho = Rho + 1.0
@@ -343,6 +325,7 @@ contains
           State_VGB(Rho_,i,j,k,iBlock)   = Rho
        end do; end do; end do
        call set_hill_velocity(iBlock)
+#ifndef SCALAR
     case('RT')
        ! Initialize Rayleigh-Taylor instability
 
@@ -395,7 +378,7 @@ contains
                * Amplitude * cos(cHalfPi*Xyz_DGB(x_,:,:,:,iBlock)/Width)**2 &
                * sin(cTwoPi*(Xyz_DGB(y_,:,:,:,iBlock))/(yMaxBox-yMinBox))
        endwhere
-
+#endif
     case('AdvectSphere')
        DoAdvectSphere = .true.
        ! This case describes an IC with uniform 1D flow of plasma in a fixed
@@ -513,6 +496,7 @@ contains
              KzWave_V = KzWave_V/(Input2SiUnitX*Si2No_V(UnitX_))
           end if
 
+#ifndef SCALAR
           if(ShockSlope /= 0.0)then
 
              CosSlope = 1.0/sqrt(1+ShockSlope**2)
@@ -555,6 +539,7 @@ contains
              ! write(*,*)'      Phase_V(Bx_:Bz_) =',       Phase_V(Bx_:Bz_)
 
           end if
+#endif
        end if
 
        ! Convert momentum to velocity
@@ -1099,6 +1084,7 @@ contains
     IsFound = .true.
 
     if(DoShockramp)then
+#ifndef SCALAR
        SinSlope = ShockSlope/sqrt(1 + ShockSlope**2)
        CosSlope =         1/sqrt(1 + ShockSlope**2)
 
@@ -1153,6 +1139,7 @@ contains
                   *State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
        end select
+#endif
     end if
 
     if(DoResistivityGaussian)then
@@ -1306,7 +1293,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
   !============================================================================
-
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
     use ModSize,     ONLY: nI, nJ, nK
@@ -1344,21 +1330,22 @@ contains
 
     use ModMain, ONLY: UseUserUpdateStates
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,    ONLY: nVar, Flux_VXI, Flux_VYI, Flux_VZI, Source_VC
+    use ModAdvance,    ONLY: nVar, Flux_VXI, Flux_VYI, Flux_VZI, &
+         LeftState_VX, RightState_VX, LeftState_VY, RightState_VY, &
+         LeftState_VZ, RightState_VZ
+    use BATL_lib, ONLY: nDim, nI, nJ, nK
     use ModVarIndexes
 
     integer,intent(in)::iBlock
-    integer :: iVar
-    integer:: iGang
+
+    integer:: iGang, i, j, k
+    real:: Un
 
     logical:: DoTest
 
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
-    if(.not.allocated(iVarUpdate_I))then
-       UseUserUpdateStates = .false.
-       RETURN
-    end if
+    if(NameProblem /= 'HILL') RETURN
 
     call test_start(NameSub, DoTest, iBlock)
     iGang = 1
@@ -1366,23 +1353,47 @@ contains
     iGang = iBlock
 #endif
 
-    do iVar=1,nVar
-       if(minval(abs(iVarUpdate_I - iVar)) /= 0)then
-          Flux_VXI(iVar,:,:,:,iGang)  = 0.0
-          Flux_VYI(iVar,:,:,:,iGang)  = 0.0
-          Flux_VZI(iVar,:,:,:,iGang)  = 0.0
-          Source_VC(iVar,:,:,:) = 0.0
+    ! Calculate upwind flux (same as Rusanov scheme)
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI + 1
+       Un = Un_XB(i,j,k,iBlock)
+       if(Un > 0)then
+          Flux_VXI(Rho_,i,j,k,iGang) = Un*LeftState_VX(Rho_,i,j,k)
+       else
+          Flux_VXI(Rho_,i,j,k,iGang) = Un*RightState_VX(Rho_,i,j,k)
        end if
-    end do
+    end do; end do; end do
+
+    do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+       Un = Un_YB(i,j,k,iBlock)
+       if(Un > 0)then
+          Flux_VYI(Rho_,i,j,k,iGang) = Un*LeftState_VY(Rho_,i,j,k)
+       else
+          Flux_VYI(Rho_,i,j,k,iGang) = Un*RightState_VY(Rho_,i,j,k)
+       end if
+    end do; end do; end do
+
+    ! if(iBlock == iBlockTest)then
+    !   write(*,*) 'UnY,Left,Right=',Un_YB(iTest,jTest,kTest,iBlockTest), &
+    !        LeftState_VY(Rho_,iTest,jTest,kTest), &
+    !        RightState_VY(Rho_,iTest,jTest,kTest)
+    ! end if
+
+    if(nDim > 2)then
+       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+          Un = Un_ZB(i,j,k,iBlock)
+          if(Un > 0)then
+             Flux_VZI(Rho_,i,j,k,iGang) = Un*LeftState_VZ(Rho_,i,j,k)
+          else
+             Flux_VZI(Rho_,i,j,k,iGang) = Un*RightState_VZ(Rho_,i,j,k)
+          end if
+       end do; end do; end do
+    end if
 
     call update_state_normal(iBlock)
-
-    if(NameProblem == 'HILL') call set_hill_velocity(iBlock)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
   !============================================================================
-
   subroutine get_gaussian_field(i, j, k, iBlock, B_D)
 
     use ModGeometry,    ONLY: Xyz_DGB
@@ -1409,34 +1420,188 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_gaussian_field
   !============================================================================
+  real function stream(iDir, Xyz_D)
+
+    ! Calculate iDir component of the stream function at location Xyz_D
+
+    integer, intent(in):: iDir
+    real,    intent(in):: Xyz_D(3)
+
+    real:: x, y, z, rCyl, rSph, StreamPhi
+    !--------------------------------------------------------------------------
+
+    ! Pure rotation:
+    ! if(iDir == 3)then
+    !   stream = sum(Xyz_D(1:2)**2)/2.0
+    ! else
+    !   stream = 0.0
+    ! end if
+
+    ! Hill vortex stream function is rCyl times the "Stoke stream function" in
+    ! https://en.wikipedia.org/wiki/Hill%27s_spherical_vortex
+    ! with a=1 (radius of vortex) and U=1 (far away flow speed)
+    ! Only the Phi component is non-zero, which is in the X-Y plane.
+
+    if(iDir == 3)then
+       ! The Z or Latitude components are zero
+       stream = 0.0
+       RETURN
+    end if
+
+    if(iDir == 1 .and. .not.IsCartesian)then
+       ! The R component is zero too (spherical or cylindrical)
+       stream = 0.0
+       RETURN
+    end if
+
+    x = Xyz_D(1); y = Xyz_D(2); z = Xyz_D(3)
+
+    rSph = norm2(Xyz_D)
+    rCyl = sqrt(x**2 + y**2)
+
+    ! Calculate the phi component of the Stream function/rCyl
+    if(rSph < 1.0)then
+       StreamPhi = 0.75*(rSph**2 - 1)
+    else
+       StreamPhi = 0.5*(1 - 1/rSph**3)
+    endif
+
+    if(IsCartesian)then
+       ! Calculate the x and y components in Cartesian coordinates
+       if(iDir == 1)then
+          stream = -y*StreamPhi
+       else
+          stream =  x*StreamPhi
+       end if
+    else
+       ! Phi component in spherical or cylindrical coordinates
+       stream = StreamPhi*rCyl
+    endif
+
+  end function stream
+  !============================================================================
   subroutine set_hill_velocity(iBlock)
 
     use ModAdvance, ONLY: State_VGB
-    use BATL_lib, ONLY: Xyz_DGB
+    use BATL_lib, ONLY: Xyz_DNB, nI, nJ, nK, nDim, MaxBlock, CellFace_DB, &
+         CellFace_DFB, FaceNormal_DDFB
 
     integer, intent(in):: iBlock
 
     integer:: i, j, k
-    real:: x, y, z, rCyl, rSph, Rho
+    real:: Rho, u_D(3)
     !--------------------------------------------------------------------------
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       ! Set velocity
-       x = Xyz_DGB(x_,i,j,k,iBlock)
-       y = Xyz_DGB(y_,i,j,k,iBlock)
-       z = Xyz_DGB(z_,i,j,k,iBlock)
-       rCyl = sqrt(x**2    + y**2)
-       rSph = sqrt(rCyl**2 + z**2)
+    if(.not.allocated(Stream_DG))then
+       allocate( &
+            Stream_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+            Un_XB(nI+1,nJ,nK,MaxBlock), &
+            Un_YB(nI,nJ+1,nK,MaxBlock), &
+            Un_ZB(nI,nJ,nK+1,MaxBlock) )
+    endif
 
-       Rho = State_VGB(Rho_,i,j,k,iBlock)
-       if(rSph < 1)then
-          State_VGB(RhoUz_,i,j,k,iBlock) = 1.5*Rho*(-1 + rCyl**2 + rSph**2)
-          State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = -1.5*Rho*[x, y]*z
-       else
-          State_VGB(RhoUz_,i,j,k,iBlock) = &
-               Rho*(1 - 1/rSph**3 + 1.5*rCyl**2/rSph**5)
-          State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = -1.5*Rho*[x, y]*z/rSph**5
-       end if
-    end do; end do; end do
+    Stream_DG = 0.0
+
+    ! Calculate edge centered stream function
+    if(nDim == 2)then
+       ! In 2D, only the 3rd component is needed
+       do j = 1, nJ+1; do i = 1, nI+1
+          ! write(*,*)'i,j,iBlock,Xyz=',i,j,iBlock,Xyz_DNB(:,i,j,1,iBlock)
+          Stream_DG(3,i,j,1) = stream(3, Xyz_DNB(:,i,j,1,iBlock))
+       end do; end do
+
+       ! Take curl of Stream function on each face
+       do j = 1, nJ; do i = 1, nI+1
+          ! ux = dSz/dy
+          Un_XB(i,j,1,iBlock) = -Stream_DG(3,i,j,1) + Stream_DG(3,i,j+1,1)
+       end do; end do
+       do j = 1, nJ+1; do i = 1, nI
+          ! uy = -dSz/dx
+          Un_YB(i,j,1,iBlock) = Stream_DG(3,i,j,1) - Stream_DG(3,i+1,j,1)
+       end do; end do
+    else
+       ! 3D: approximate the integral with the midedge value times edge length
+       do k = 1, nK+1; do j = 1, nJ+1; do i = 1, nI
+          Stream_DG(1,i,j,k) = stream(1, &
+               0.5*  (Xyz_DNB(:,i+1,j,k,iBlock) + Xyz_DNB(:,i,j,k,iBlock))) &
+               *norm2(Xyz_DNB(:,i+1,j,k,iBlock) - Xyz_DNB(:,i,j,k,iBlock))
+       end do; end do; end do
+       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI+1
+          Stream_DG(2,i,j,k) = stream(2, &
+               0.5*  (Xyz_DNB(:,i,j+1,k,iBlock) + Xyz_DNB(:,i,j,k,iBlock))) &
+               *norm2(Xyz_DNB(:,i,j+1,k,iBlock) - Xyz_DNB(:,i,j,k,iBlock))
+       end do; end do; end do
+       do k = 1, nK; do j = 1, nJ+1; do i = 1, nI+1
+          Stream_DG(3,i,j,k) = stream(3, &
+               0.5*  (Xyz_DNB(:,i,j,k+1,iBlock) + Xyz_DNB(:,i,j,k,iBlock))) &
+               *norm2(Xyz_DNB(:,i,j,k+1,iBlock) - Xyz_DNB(:,i,j,k,iBlock))
+       end do; end do; end do
+
+       ! Take curl of Stream function on each face multiplied by the area
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+          ! ux = dSz/dy - dSy/dz
+          Un_XB(i,j,k,iBlock) = &
+               (Stream_DG(3,i,j+1,k) - Stream_DG(3,i,j,k)) - &
+               (Stream_DG(2,i,j,k+1) - Stream_DG(2,i,j,k))
+       end do; end do; end do
+       do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+          ! uy = dSx/dz - dSz/dx
+          Un_YB(i,j,k,iBlock) = &
+               (Stream_DG(1,i,j,k+1) - Stream_DG(1,i,j,k)) - &
+               (Stream_DG(3,i+1,j,k) - Stream_DG(3,i,j,k))
+       end do; end do; end do
+       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+          ! uz = dSy/dx - dSx/dy
+          Un_ZB(i,j,k,iBlock) = &
+               (Stream_DG(2,i+1,j,k) - Stream_DG(2,i,j,k)) - &
+               (Stream_DG(1,i,j+1,k) - Stream_DG(1,i,j,k))
+       end do; end do; end do
+    end if
+
+    if(nVar > 1)then
+       ! Set velocity at cell centers (these are the face normal components)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          Rho = State_VGB(Rho_,i,j,k,iBlock)
+          if(IsCartesian)then
+             ! Average 2 faces to cell center.
+             ! Divide by face area, because Un_*B has area in it.
+             State_VGB(RhoUx_,i,j,k,iBlock) = Rho/CellFace_DB(1,iBlock)* &
+                  0.5*(Un_XB(i+1,j,k,iBlock) + Un_XB(i,j,k,iBlock))
+             State_VGB(RhoUy_,i,j,k,iBlock) = Rho/CellFace_DB(2,iBlock)* &
+                  0.5*(Un_YB(i,j+1,k,iBlock) + Un_YB(i,j,k,iBlock))
+             if(nDim > 2)then
+                State_VGB(RhoUz_,i,j,k,iBlock) = Rho/CellFace_DB(3,iBlock)* &
+                     0.5*(Un_ZB(i,j,k+1,iBlock) + Un_ZB(i,j,k,iBlock))
+             else
+                State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
+             end if
+          else
+             ! Add up 6 face normal velocities averaged to the cell center
+             ! Divide by face squared, because of FaceNormal and Un_*B.
+             u_D = 0.5* &
+                  Un_XB(i+1,j,k,iBlock)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(1,i+1,j,k,iBlock)**2)
+             u_D = u_D + 0.5* &
+                  Un_XB(i,j,k,iBlock)*FaceNormal_DDFB(:,1,i,j,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(1,i,j,k,iBlock)**2)
+
+             u_D = u_D + 0.5* &
+                  Un_YB(i,j+1,k,iBlock)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(2,i,j+1,k,iBlock)**2)
+             u_D = u_D + 0.5* &
+                  Un_YB(i,j,k,iBlock)*FaceNormal_DDFB(:,2,i,j,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(2,i,j,k,iBlock)**2)
+
+             u_D = u_D + 0.5* &
+                  Un_ZB(i,j,k+1,iBlock)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                  /max(1e-30, CellFace_DFB(3,i,j,k+1,iBlock)**2)
+             u_D = u_D + 0.5* &
+                  Un_ZB(i,j,k,iBlock)*FaceNormal_DDFB(:,3,i,j,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(3,i,j,k,iBlock)**2)
+
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = Rho*u_D
+          end if
+       end do; end do; end do
+    end if
 
   end subroutine set_hill_velocity
   !============================================================================

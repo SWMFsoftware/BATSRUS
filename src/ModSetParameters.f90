@@ -1745,7 +1745,7 @@ contains
           call read_var('StringVarUpdate', StringLine)
           call split_string(StringLine, NameVarUpdate_I, nVarUpdate)
           if(nVarUpdate == nVar)then
-             deallocate(iVarUpdate_I)
+             if(allocated(iVarUpdate_I)) deallocate(iVarUpdate_I)
              DoUpdate_V = .true.
           else
              allocate(iVarUpdate_I(nVarUpdate))

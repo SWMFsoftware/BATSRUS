@@ -297,6 +297,7 @@ contains
                 ! Apply "wave" perturbations
                 if(UseWave) call apply_wave(i, j, k, iBlock)
 
+#ifndef SCALAR
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
                    if(nFluid > 1) call select_fluid(iFluid)
@@ -304,6 +305,7 @@ contains
                         State_VGB(iRho,i,j,k,iBlock) * &
                         State_VGB(iUx:iUz,i,j,k,iBlock)
                 end do
+#endif
                 if(.not.UseB0)CYCLE
                 ! Remove B0 from B (if any)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
