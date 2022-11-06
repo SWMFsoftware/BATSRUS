@@ -133,7 +133,7 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1			nPlotFile
-z=0 mhd idl_real8		StringPlot
+z=0 hd idl_real8		StringPlot
 -1			DnSavePlot
 0.05			DtSavePlot
 0.0			DxSavePlot
