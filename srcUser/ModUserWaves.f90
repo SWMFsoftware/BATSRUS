@@ -804,7 +804,8 @@ contains
     use ModVarIndexes, ONLY: RhoUx_, RhoUy_, RhoUz_, p_, Rho_
     use ModConst,      ONLY: RotationPeriodSun
     use ModNumConst,   ONLY: cTwoPi
-    use ModGeometry,   ONLY: Xyz_DGB
+    use BATL_lib,      ONLY: &
+         nI, nJ, nK, Xyz_DGB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB 
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -821,8 +822,8 @@ contains
          RhoExact_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
          RhoError_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real    :: FlowSpeedCell, Pressure, Density, OmegaSun
-    real    :: RhoU_D(3), B_D(3)
-    integer :: i, j, k
+    real    :: RhoU_D(3), B_D(3), u_D(3)
+    integer :: i, j, k, iDir
     logical:: DoTest
 
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
@@ -893,6 +894,59 @@ contains
           end do; end do ; end do
        end if
 
+    case('divun')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = &
+               Un_XB(i+1,j,k,iBlock) - Un_XB(i,j,k,iBlock) + &
+               Un_YB(i,j+1,k,iBlock) - Un_YB(i,j,k,iBlock) + &
+               Un_ZB(i,j,k+1,iBlock) - Un_ZB(i,j,k,iBlock)
+       end do; end do; end do
+    case('unx', 'uny', 'unz')
+       select case(NameVar)
+       case('unx')
+          iDir = 1
+       case('uny')
+          iDir = 2
+       case('unz')
+          iDir = 3
+       end select
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(IsCartesian)then
+             ! Average 2 faces to cell center.
+             ! Divide by face area, because Un_*B has area in it.
+             u_D(1) = 0.5*(Un_XB(i+1,j,k,iBlock) + Un_XB(i,j,k,iBlock)) &
+                  /max(1e-30, CellFace_DB(1,iBlock))
+             u_D(2) = 0.5*(Un_YB(i,j+1,k,iBlock) + Un_YB(i,j,k,iBlock)) &
+                  /max(1e-30, CellFace_DB(2,iBlock))
+             u_D(3) = 0.5*(Un_ZB(i,j,k+1,iBlock) + Un_ZB(i,j,k,iBlock)) &
+                  /max(1e-30, CellFace_DB(3,iBlock))
+          else
+             ! Add up 6 face normal velocities averaged to the cell center
+             ! Divide by face squared, because of FaceNormal and Un definition
+             u_D = 0.5* &
+                  Un_XB(i+1,j,k,iBlock)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(1,i+1,j,k,iBlock)**2)
+             u_D = u_D + 0.5* &
+                  Un_XB(i,j,k,iBlock)*FaceNormal_DDFB(:,1,i,j,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(1,i,j,k,iBlock)**2)
+
+             u_D = u_D + 0.5* &
+                  Un_YB(i,j+1,k,iBlock)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(2,i,j+1,k,iBlock)**2)
+             u_D = u_D + 0.5* &
+                  Un_YB(i,j,k,iBlock)*FaceNormal_DDFB(:,2,i,j,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(2,i,j,k,iBlock)**2)
+
+             u_D = u_D + 0.5* &
+                  Un_ZB(i,j,k+1,iBlock)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                  /max(1e-30, CellFace_DFB(3,i,j,k+1,iBlock)**2)
+             u_D = u_D + 0.5* &
+                  Un_ZB(i,j,k,iBlock)*FaceNormal_DDFB(:,3,i,j,k,iBlock) &
+                  /max(1e-30, CellFace_DFB(3,i,j,k,iBlock)**2)
+          end if
+          PlotVar_G(i,j,k) = u_D(iDir)
+       end do; end do; end do
+       
     case default
        IsFound = .false.
     end select
@@ -1483,13 +1537,12 @@ contains
   subroutine set_hill_velocity(iBlock)
 
     use ModAdvance, ONLY: State_VGB
-    use BATL_lib, ONLY: Xyz_DNB, nI, nJ, nK, nDim, MaxBlock, CellFace_DB, &
-         CellFace_DFB, FaceNormal_DDFB
-
+    use BATL_lib, ONLY: Xyz_DNB, nI, nJ, nK, nDim, MaxBlock, Xyz_DGB
+    
     integer, intent(in):: iBlock
 
     integer:: i, j, k
-    real:: Rho, u_D(3)
+    real:: Rho, rCyl, rSph, x, y, z
     !--------------------------------------------------------------------------
     if(.not.allocated(Stream_DG))then
        allocate( &
@@ -1559,47 +1612,25 @@ contains
 
     if(nVar > 1)then
        ! Set velocity at cell centers (these are the face normal components)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Rho = State_VGB(Rho_,i,j,k,iBlock)
-          if(IsCartesian)then
-             ! Average 2 faces to cell center.
-             ! Divide by face area, because Un_*B has area in it.
-             State_VGB(RhoUx_,i,j,k,iBlock) = Rho/CellFace_DB(1,iBlock)* &
-                  0.5*(Un_XB(i+1,j,k,iBlock) + Un_XB(i,j,k,iBlock))
-             State_VGB(RhoUy_,i,j,k,iBlock) = Rho/CellFace_DB(2,iBlock)* &
-                  0.5*(Un_YB(i,j+1,k,iBlock) + Un_YB(i,j,k,iBlock))
-             if(nDim > 2)then
-                State_VGB(RhoUz_,i,j,k,iBlock) = Rho/CellFace_DB(3,iBlock)* &
-                     0.5*(Un_ZB(i,j,k+1,iBlock) + Un_ZB(i,j,k,iBlock))
-             else
-                State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
-             end if
+
+          x = Xyz_DGB(x_,i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
+          z = Xyz_DGB(z_,i,j,k,iBlock)
+          rCyl = sqrt(x**2    + y**2)
+          rSph = sqrt(rCyl**2 + z**2)
+       
+          Rho = State_VGB(Rho_,i,j,k,iBlock)
+          if(rSph < 1)then
+             State_VGB(RhoUz_,i,j,k,iBlock) = 1.5*Rho*(-1 + rCyl**2 + rSph**2)
+             State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = -1.5*Rho*[x, y]*z
           else
-             ! Add up 6 face normal velocities averaged to the cell center
-             ! Divide by face squared, because of FaceNormal and Un_*B.
-             u_D = 0.5* &
-                  Un_XB(i+1,j,k,iBlock)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
-                  /max(1e-30, CellFace_DFB(1,i+1,j,k,iBlock)**2)
-             u_D = u_D + 0.5* &
-                  Un_XB(i,j,k,iBlock)*FaceNormal_DDFB(:,1,i,j,k,iBlock) &
-                  /max(1e-30, CellFace_DFB(1,i,j,k,iBlock)**2)
-
-             u_D = u_D + 0.5* &
-                  Un_YB(i,j+1,k,iBlock)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                  /max(1e-30, CellFace_DFB(2,i,j+1,k,iBlock)**2)
-             u_D = u_D + 0.5* &
-                  Un_YB(i,j,k,iBlock)*FaceNormal_DDFB(:,2,i,j,k,iBlock) &
-                  /max(1e-30, CellFace_DFB(2,i,j,k,iBlock)**2)
-
-             u_D = u_D + 0.5* &
-                  Un_ZB(i,j,k+1,iBlock)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                  /max(1e-30, CellFace_DFB(3,i,j,k+1,iBlock)**2)
-             u_D = u_D + 0.5* &
-                  Un_ZB(i,j,k,iBlock)*FaceNormal_DDFB(:,3,i,j,k,iBlock) &
-                  /max(1e-30, CellFace_DFB(3,i,j,k,iBlock)**2)
-
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = Rho*u_D
+             State_VGB(RhoUz_,i,j,k,iBlock) = &
+                  Rho*(1 - 1/rSph**3 + 1.5*rCyl**2/rSph**5)
+             State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = -1.5*Rho*[x, y]*z/rSph**5
           end if
+
        end do; end do; end do
     end if
 
