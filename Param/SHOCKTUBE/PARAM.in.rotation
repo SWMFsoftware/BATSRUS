@@ -48,8 +48,29 @@ UNIFORMSTATE
 0.0			StateVar Uz
 0.001			StateVar p
 
+For a smooth initial condition use the next two commands
+
+#UNIFORMSTATE
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0001			StateVar p
+
+GAUSSIAN
+Rho			NameVar
+1.0			Amplitude
+3.0			LambdaX
+3.0			LambdaY
+-1.0			LambdaZ
+5.0			CenterX
+0.0			CenterY
+0.0			CenterZ
+
+For a discontinuous initial condition use the next two commands
+
 #STATEDEFINITION
-   rho p
+   rho p		StringVar
 2			nMaterialState
 M1 2.0 0.0001		StringState
 M2 1.0 0.0001		StringState
@@ -61,10 +82,14 @@ M1 M2 +1. -10. +1. +10.		StringSegment
 M1 M2 +1. +10. -1. +10.		StringSegment
 M1 M2 -1. +10. -1. -10.		StringSegment
 
+Solve for density only
+
 #UPDATEVAR
 Rho			StringVarUpdate
 
 #USERINPUTBEGIN -----------------
+
+Solid rotation with omega=2pi
 
 #POWERPROFILE
 Ux			NameVar
@@ -112,6 +137,8 @@ z=0 mhd idl_real8		StringPlot
 -1			DnSavePlot
 0.05			DtSavePlot
 0.0			DxSavePlot
+
+Full rotation: t=1
 
 #STOP
 -1			MaxIteration
