@@ -85,6 +85,7 @@ module ModUser
   logical :: UseColdCloud = .false.
   logical :: DoInitializeCloud = .false.
   logical :: UseSrcsInHelio = .true.
+  logical :: DoFixChargeExchange = .false.
 
   ! from 173K use 0.7
   real :: HpLimit = 0.5
@@ -238,6 +239,11 @@ contains
           call read_var('UseSrcsInHelio', UseSrcsInHelio)
           call read_var('HpLimit', HpLimit)
           call read_var('RhoPop4LimitDim', RhoPop4LimitDim)
+
+          ! Bair. This is a flag to use charge exchange formula 
+          ! with the extra splitting terms.  
+       case("#CHARGEEXCHANGE")
+          call read_var("DoFixChargeExchange", DoFixChargeExchange)
 
        case("#REGIONS")
           call read_var('TempPop1LimitDim', TempPop1LimitDim)
@@ -2062,6 +2068,10 @@ contains
 
     call test_start(NameSub, DoTest, iBlock)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       
+       ! Added by Ethan for Testing Purposes only
+       iFluidProduced_C(i,j,k) = 0
+       CYCLE
 
        if(r_GB(i,j,k,iBlock) < rPop3Limit) then
           iFluidProduced_C(i,j,k) = Ne3_
@@ -2331,6 +2341,8 @@ contains
     real:: SqrtDuDim, SqrtCsDim  ! sqrt of relative and thermal speeds (km/s)
     real:: Integral_V(3)         ! integrals used to get rate, force and work
     real:: MassRate, ForcePerU, WorkPerCs2
+    real:: U1_D(3)
+    real:: U1Sqrd, Cs2Sum
 
     character(len=*), parameter:: NameSub = 'get_charge_exchange'
     !--------------------------------------------------------------------------
@@ -2364,6 +2376,23 @@ contains
     SourceNeu_V(1)    = MassRate
     SourceNeu_V(2:4)  = ForcePerU*uNeu_D
     SourceNeu_V(5)    = WorkPerCs2*Cs2Neu + 0.5*sum(ForcePerU*uNeu_D**2)
+
+    if(DoFixChargeExchange) then
+       !Extra terms that appear when splitting McNutt
+       Cs2Sum = Cs2Ion + Cs2Neu
+       U1_D = (Cs2Neu*uIon_D + Cs2Ion*uNeu_D)/Cs2Sum
+       U1Sqrd = sum(U1_D*U1_D)
+
+       SourceIon_V(2:4)  = SourceIon_V(2:4) + U1_D*(MassRate - ForcePerU)
+       SourceIon_V(5)    = SourceIon_V(5) &
+               + Cs2Ion*Cs2Neu*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
+               + 0.5*U1Sqrd*(MassRate - ForcePerU)
+
+       SourceNeu_V(2:4)  = SourceNeu_V(2:4) + U1_D*(MassRate - ForcePerU)
+       SourceNeu_V(5)    = SourceNeu_V(5) &
+               + Cs2Ion*Cs2Neu*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
+               + 0.5*U1Sqrd*(MassRate - ForcePerU)
+    endif
 
     if(Cs2Neu > 0.0) then
        ! Convert to normalized units here for BATSRUS
