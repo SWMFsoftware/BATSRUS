@@ -2068,10 +2068,6 @@ contains
 
     call test_start(NameSub, DoTest, iBlock)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       
-       ! Added by Ethan for Testing Purposes only
-       iFluidProduced_C(i,j,k) = 0
-       CYCLE
 
        if(r_GB(i,j,k,iBlock) < rPop3Limit) then
           iFluidProduced_C(i,j,k) = Ne3_
