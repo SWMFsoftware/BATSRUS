@@ -148,7 +148,7 @@ contains
 
     case("#IMPLICITCORONALHEATING")
        call read_var('UseImplicitCoronalHeating', UseImplicitCoronalHeating)
-       
+
     case("#FIXISOTROPIZATION")
        call read_var('UseFixIsotropization', UseFixIsotropization)
 
@@ -345,7 +345,7 @@ contains
              call stop_mpi(NameSub//&
                   'Implicit coronal heating does not work with fixing isotropization')
           end if
-          
+
           allocate(PointCoef_VCB(6,nI,nJ,nK,MaxBlock))
        else
           if(UseElectronPressure .and. .not.UseMultiIon)then
@@ -980,10 +980,10 @@ contains
     real :: QePerQtotal
     real :: Tpar, CollisionRate, IsotropizationCoef
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest)
     DoCalcDelta = .false.
     if(present(DoCalcDeltaIn)) DoCalcDelta=DoCalcDeltaIn

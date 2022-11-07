@@ -805,7 +805,7 @@ contains
     use ModConst,      ONLY: RotationPeriodSun
     use ModNumConst,   ONLY: cTwoPi
     use BATL_lib,      ONLY: &
-         nI, nJ, nK, Xyz_DGB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB 
+         nI, nJ, nK, Xyz_DGB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -946,7 +946,7 @@ contains
           end if
           PlotVar_G(i,j,k) = u_D(iDir)
        end do; end do; end do
-       
+
     case default
        IsFound = .false.
     end select
@@ -1538,7 +1538,7 @@ contains
 
     use ModAdvance, ONLY: State_VGB
     use BATL_lib, ONLY: Xyz_DNB, nI, nJ, nK, nDim, MaxBlock, Xyz_DGB
-    
+
     integer, intent(in):: iBlock
 
     integer:: i, j, k
@@ -1620,7 +1620,7 @@ contains
           z = Xyz_DGB(z_,i,j,k,iBlock)
           rCyl = sqrt(x**2    + y**2)
           rSph = sqrt(rCyl**2 + z**2)
-       
+
           Rho = State_VGB(Rho_,i,j,k,iBlock)
           if(rSph < 1)then
              State_VGB(RhoUz_,i,j,k,iBlock) = 1.5*Rho*(-1 + rCyl**2 + rSph**2)
