@@ -1131,7 +1131,7 @@ contains
 
        if(TypeBc == 'usersurfacerot')then
 
-          if(DoTest) write(*,*) NameSub,'!!! starting with DoUpdateParkerJet=',&
+          if(DoTest) write(*,*) NameSub,' starting with DoUpdateParkerJet=',&
                DoUpdateParkerJet
 
           ! f(t) = 0                                    if      t < t1

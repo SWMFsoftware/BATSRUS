@@ -32,10 +32,10 @@ T			UseDtFixed
 
 #GRIDGEOMETRYLIMIT
 spherical		TypeGeometry
-5/9			Coord1Min Radius   5/9 or 1
+0.5			Coord1Min Radius   5/9 or 1
 5.0			Coord1Max
--5.0			Coord2Min Longitude
-5.0			Coord2Max
+-1.5			Coord2Min Longitude
++2.5			Coord2Max
 -90.0			Coord3Min Latitude
 +90.0			Coord3Max
 
@@ -44,7 +44,18 @@ spherical		TypeGeometry
 0.0			StateVar Ux
 0.0			StateVar Uy
 1.0			StateVar Uz
-0.001			StateVar p
+0.0001			StateVar p
+
+#MINIMUMPRESSURE
+0.0001			pMin
+
+ADVECTION
+T			UseAdvectionSource
+Rho			NameVarAdvectFirst
+Rho			NameVarAdvectLast
+
+#USERSWITCH
++update
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -53,25 +64,20 @@ spherical		TypeGeometry
 3.0			zWidth
 0.0			xCenter
 -3.0			zCenter
-F			IsSmooth
-
-#UPDATEVAR
-Rho			StringVar
+T			IsSmooth
 
 #USERINPUTEND -------------------------------------
 
+#UPDATEVAR
+Rho			StringVarUpdate
+
 #OUTERBOUNDARY
-reflect			TypeBc1 
+reflect			TypeBc1
 none			TypeBc2 ! could also be float
 periodic		TypeBc3
 periodic		TypeBc4
 reflect			TypeBc5
 reflect			TypeBc6
-
-#ADVECTION
-T			UseAdvectionSource
-1			iVarAdvectFirst
-1			iVarAdvectLast
 
 #SCHEME
 2			nOrder
@@ -105,7 +111,7 @@ y=0 var idl		StringPlot
 0.0			DxSavePlot
 {HD} divu		NameVars
 {default}		NamePars
-cut hd idl_real8		StringPlot
+cut var idl_real8		StringPlot
 5			DnSavePlot  == nRootBlock1
 -0.1			DtSavePlot
 0.0			Coord1MinCut
@@ -115,7 +121,10 @@ cut hd idl_real8		StringPlot
 -90.0			Coord3MinCut
 +90.0			Coord3MaxCut
 0.0			DxSavePlot
-3d hd idl		PlotString
+{HD} divu dvol unx uny unz divun		NameVars
+{default}		NamePars
+
+3d hd idl		StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
 0.0			DxSavePlot

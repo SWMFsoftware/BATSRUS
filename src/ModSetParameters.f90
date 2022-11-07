@@ -727,7 +727,7 @@ contains
           call read_rad_diffusion_param(NameCommand)
 
        case("#HEATCONDUCTION", "#WEAKFIELDCONDUCTION", "#IONHEATCONDUCTION", &
-            "#IMPLICITCORONALHEATING")
+            "#IMPLICITCORONALHEATING","#FIXISOTROPIZATION")
           call read_heatconduction_param(NameCommand)
 
        case("#HEATFLUXREGION", "#HEATFLUXCOLLISIONLESS")
