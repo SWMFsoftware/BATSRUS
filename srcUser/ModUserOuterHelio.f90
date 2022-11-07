@@ -74,7 +74,7 @@ module ModUser
   character (len=*), parameter :: NameUserFile = "ModUserOuterHelio.f90"
   character (len=*), parameter :: NameUserModule = "Outer Heliosphere"
 
-  ! Zieger Named indexes for fluids
+  ! Named indexes for fluids
   integer, parameter :: SWH_ = 1, Ion_ = 1, &
        Pu3_ = min(nFluid,2), Neu_ = min(nFluid,IonLast_+1), &
        Ne2_ = min(nFluid,IonLast_+2), Ne3_ = min(nFluid,IonLast_+3), &
@@ -212,7 +212,6 @@ contains
 
           ! This is a flag to define how many populations of Neutrals to run
        case("#SOURCES")
-          ! Zieger
           if(IsMhd)then
              call read_var('UseIonSource', UseSource_I(Ion_))
              call read_var('UseNeuSource', UseSource_I(Neu_))
@@ -252,10 +251,9 @@ contains
           call read_var('MachPop3Limit',    MachPop3Limit)
           call read_var('rPop3Limit',       rPop3Limit)
           call read_var('MachPop4Limit',    MachPop4Limit)
-          ! Zieger
           if(.not.IsMhd)then
-             call read_var('MachPUIPop3',      MachPUIPop3)
-             call read_var('MachSWPop1',       MachSWPop1)
+             call read_var('MachPUIPop3',   MachPUIPop3)
+             call read_var('MachSWPop1',    MachSWPop1)
           end if
 
        case default
@@ -325,7 +323,6 @@ contains
       ! this method guarantees equal pressure at inner boundary.
       ! Simpler splitting method likely
 
-      ! Zieger
       if(.not.IsMhd) pPUI = Pu3P
 
       pSolarWind = SwhP
@@ -336,7 +333,6 @@ contains
       VarsGhostFace_V(SWHUx_:SWHUz_) = matmul(XyzSph_DD, Vsph_D)
       VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
 
-      ! Zieger
       if(.not.IsMhd)then
          VarsGhostFace_V(Pu3Rho_)    = Pu3Rho
          VarsGhostFace_V(Pu3P_)      = pPUI  ! Pu3P ???
@@ -405,7 +401,7 @@ contains
          write(*,*) NameSub,' Bsph_D   =', Bsph_D
          write(*,*) NameSub,' Vsph_D   =', Vsph_D
          write(*,*) NameSub,' Pmag, Peq=', Pmag, PmagEquator
-         ! Zieger
+
          if(.not.IsMhd)then
             write(*,*) NameSub,' SWHRhoGhost =', VarsGhostFace_V(SWHRho_)
             write(*,*) NameSub,' SWHpGhost   =', VarsGhostFace_V(SWHP_)
@@ -422,7 +418,6 @@ contains
             write(*,*) NameSub,' Pop3     =', VarsGhostFace_V(Ne3Rho_:Ne3P_)
             write(*,*) NameSub,' Pop4     =', VarsGhostFace_V(Ne4Rho_:Ne4P_)
          end if
-         ! Zieger
          if(.not.IsMhd)then
             write(*,*) NameSub,' VPUIsph_D=', VPUIsph_D
             write(*,*) NameSub,' Pui3     =', VarsGhostFace_V(Pu3Rho_:Pu3P_)
@@ -617,8 +612,8 @@ contains
        ! velocity components in cartesian coordinates
        v_D = matmul(XyzSph_DD, Vsph_D)
        vPUI_D = matmul(XyzSph_DD, VPUIsph_D)
+
        ! density and pressure
-       ! zieger
        if(.not.IsMhd)then
           State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
           State_VGB(SWHP_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
@@ -702,7 +697,6 @@ contains
        ! if (r <= rPop3Limit) then
 
        ! No production yet
-       ! Zieger
        if(.not.IsMhd)then
           State_VGB(Pu3Rho_,i,j,k,iBlock) = Pu3Rho * (rBody/r)**2
           State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P   * (rBody/r)**(2*Gamma)
@@ -719,7 +713,6 @@ contains
           write(*,*)NameSub,' Bsph_D                =', Bsph_D
           write(*,*)NameSub,' b_D                   =', &
                State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          ! Zieger
           if(.not.IsMhd)then
              write(*,*)NameSub,' SWHRhoU_D =', &
                   State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock)
@@ -759,7 +752,6 @@ contains
     do iBlock = 1, nBlock
 
        if( Unused_B(iBlock) ) CYCLE
-       ! Zieger
        if(.not.IsMhd)then
           State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoBcFactor_I(Ne2_) * &
                State_VGB(SWHRho_,:,:,:,iBlock)
@@ -902,7 +894,6 @@ contains
       ! Spherical magnetic field converted to Cartesian components
       State_VGB(Bx_:Bz_,i,j,k,iBlock) = matmul(XyzSph_DD, Bsph_D)
 
-      ! Zieger
       if(.not.IsMhd)then
          ! merav
          ! velocity components in cartesian coordinates
@@ -982,9 +973,6 @@ contains
        write(*,'(10X,A19,F15.6)') 'TempNeuWindDim:',TempNeuWindDim
        write(*,*)
     end if
-    ! PUIs
-    ! C.P. added
-    ! Zieger
     if(.not.IsMhd)then
        write(*,*)
        write(*,StringFormat) 'Pu3RhoDim [n/cc]:',Pu3RhoDim,'SwhRho:',Pu3Rho
@@ -1029,7 +1017,6 @@ contains
     UsePlotVarBody = .true.
     PlotVarBody    = 0.0
 
-    ! Zieger
     if(.not.IsMhd)then
        IsFound = .true.
        select case(NameVar)
@@ -1205,7 +1192,7 @@ contains
 
     real :: r
     real, dimension(nFluid) :: &
-         Ux_I, Uy_I, Uz_I, U2_I, Temp_I, Rho_D, UThS_I
+         Ux_I, Uy_I, Uz_I, U2_I, Temp_I, Rho_I, UThS_I
 
     real:: u_DI(3,nFluid)
     real:: SrcLookI_II(Neu_:Ne4_,5), SrcLookN_II(Neu_:Ne4_,5)
@@ -1255,7 +1242,6 @@ contains
              ! Extract conservative variables
              State_V = State_VGB(:,i,j,k,iBlock)
 
-             ! Zieger
              if(.not.IsMhd)then
 
                 ! SWH variables
@@ -1327,7 +1313,6 @@ contains
                 write(*,*) 'Norm n =', No2Si_V(UnitN_)
                 write(*,*) 'Norm U =', No2Si_V(UnitU_)
                 write(*,*) 'Norm Time =', No2Si_V(UnitT_)
-                ! Zieger
                 if(.not.IsMhd)then
                    write(*,*) ' PUI Density Source =', &
                         ExtraSource_ICB(6,i,j,k,iBlock)
@@ -1381,14 +1366,16 @@ contains
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       ! Extrxact conservative variables
+       ! Extract conservative variables
        State_V = State_VGB(:, i, j, k, iBlock)
+
        ! Production rates of neutrals through charge exchange between
        ! sw ions and neutrals, 0 rate for sw ions with other ions
 
-       Rho_D = State_V(iRho_I)*No2Si_V(UnitN_)
+       ! Densities
+       Rho_I = State_V(iRho_I)*No2Si_V(UnitN_)
 
-       ! This calculates the array for flow values for all populations
+       ! Velocities per component
        Ux_I = State_V(iRhoUx_I)/State_V(iRho_I)
        Uy_I = State_V(iRhoUy_I)/State_V(iRho_I)
        Uz_I = State_V(iRhoUz_I)/State_V(iRho_I)
@@ -1404,7 +1391,6 @@ contains
        ! Temperature for the two ionized and four population of neutrals (K)
        Temp_I = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
 
-       ! Zieger
        if(IsMhd)then
           ! Why?
           Temp_I(Ion_) = 0.5*Temp_I(Ion_)
@@ -1418,15 +1404,15 @@ contains
        ! UThS units are (m/s)^2
        UThS_I = (2*cBoltzmann/cProtonMass)*Temp_I
 
-       ! calculus of radius for heating the PU3 population
+       ! radius (needed for heating the PU3 population)
        r = r_GB(i,j,k,iBlock)
 
        ! Using look-up table to find source terms
        if(iTableChargeExchange > 0) then
           do iFluid = Neu_, Ne4_
              call get_charge_exchange( &
-                  Rho_D(Ion_), UthS_I(Ion_), u_DI(:,Ion_), &
-                  Rho_D(iFluid), UthS_I(iFluid), u_DI(:,iFluid), &
+                  Rho_I(Ion_), UthS_I(Ion_), u_DI(:,Ion_), &
+                  Rho_I(iFluid), UthS_I(iFluid), u_DI(:,iFluid), &
                   SrcLookI_II(iFluid,:),SrcLookN_II(iFluid,:))
           enddo
 
@@ -1446,7 +1432,7 @@ contains
 
           ! Relative velocity between neutrals and ionized fluid squared
 
-          ! Zieger For SW or Ion
+          ! For SW
           where(UseSource_I(Neu_:)) &
                URelS_I = (Ux_I(Neu_:) - Ux_I(1))**2 &
                + (Uy_I(Neu_:) - Uy_I(1))**2 &
@@ -1454,7 +1440,6 @@ contains
 
           URelSdim_I = URelS_I * No2Si_V(UnitU_)**2
 
-          ! Zieger
           if(.not.IsMhd)then
              ! for PU3
              where(UseSource_I(Neu_:)) &
@@ -1471,20 +1456,13 @@ contains
           ! No2Si_V(UnitU_) has units of m/s like cstartT so UReldim and UStar
           ! has units of m/s
 
-          !! URelSdim_I  = URelS_I * No2Si_V(UnitU_)**2
+          ! Eq. (62) of McNutt et al. 1988 for U* [m/s]
 
-          ! Eq. (62) of McNutt et al. 1988 for U*
-
-          ! Zieger For SW or Ion
+          ! For SW
           where(UseSource_I(Neu_:)) &
                UStar_I = sqrt(URelSdim_I &
                + (4./cPi)*(UThS_I(Neu_:) + UThS_I(1)))
 
-          ! UStar_I has units of m/s
-
-          !!  UStar_I = sqrt(URelSdim_I + (4./cPi)*(UThS_I +UThS_I(SWH_)))
-
-          ! Zieger
           if(.not.IsMhd)then
              ! For PU3
              where(UseSource_I(Neu_:)) &
@@ -1494,12 +1472,11 @@ contains
 
           ! Eq. (64) of McNutt et al. 1988 for UM*
 
-          ! Zieger For SW or Ion
+          ! For SW
           where(UseSource_I(Neu_:)) &
                UStarM_I = sqrt(URelSdim_I &
                + (64./(9.*cPi))*(UThS_I(Neu_:) + UThS_I(1)))
 
-          ! Zieger
           if(.not.IsMhd)then
              ! For PU3
              where(UseSource_I(Neu_:)) &
@@ -1510,13 +1487,12 @@ contains
           ! UStar has units of cm/s so the factor 100 is to convert m to cm
           ! Sigma has units of m^2
 
-          ! Zieger for SW or Ion
+          ! For SW
           ! Cross Section from Lindsay and Stebbings, 2005
           where(UseSource_I(Neu_:)) &
                Sigma_I = ((2.2835E-7 - (1.062E-8)*log(UStarM_I*100.))**2)*1.E-4
           SigmaN_I = ((2.2835E-7 - (1.062E-8)*log(UStar_I*100.))**2)*1.E-4
 
-          ! Zieger
           if(.not.IsMhd)then
              ! For PU3
              where(UseSource_I(Neu_:)) &
@@ -1532,7 +1508,6 @@ contains
           ! The charge exhange cross section 100 to change ustar to cm/s
           ! Rate has no units (m^2*m/s*s*m-3 )
 
-          ! Zieger
           if(.not.IsMhd)then
              ! For SW
              where(UseSource_I(Neu_:)) &
@@ -1554,7 +1529,6 @@ contains
 
           end if
 
-          ! Zieger
           if(.not.IsMhd)then
              ! for SW
              where(UseSource_I(Neu_:)) &
@@ -1598,14 +1572,13 @@ contains
           ! I0xpNe2 is the term of creation of Neu by charge exchange p-Ne2
           ! I0xpNe3 is the term of creation of Neu by charge exchange p-Ne3
 
-          ! Zieger For SW or Ion
+          ! For SW
           I0xp_I = RateN_I
           I0px_I = RateN_I
 
           I2xp_I  = RateN_I*UThS_I(1)/No2Si_V(UnitU_)**2
           I2px_I  = RateN_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
 
-          ! Zieger
           if(.not.IsMhd)then
              ! For PUI's
              I0xpu3_I = RateNPu3_I
@@ -1616,7 +1589,7 @@ contains
              ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
           end if
 
-          ! Zieger For SW or Ion
+          ! For SW
           JxpUx_I = Ux_I(1)*Rate_I
           JxpUy_I = Uy_I(1)*Rate_I
           JxpUz_I = Uz_I(1)*Rate_I
@@ -1625,7 +1598,6 @@ contains
           JpxUy_I = Uy_I(Neu_:)*Rate_I
           JpxUz_I = Uz_I(Neu_:)*Rate_I
 
-          ! Zieger
           if(.not.IsMhd)then
              ! For PU3
              Jxpu3Ux_I = Ux_I(PU3_)*RatePu3_I
@@ -1642,19 +1614,14 @@ contains
           ! QmpxUy_I = JpxUy_I - JxpUy_I
           ! QmpxUz_I = JpxUz_I - JxpUz_I
 
-          ! Zieger For SW or Ion
+          ! For SW
           QmpxUx_I = (Ux_I(Neu_:) - Ux_I(1))*Rate_I(Neu_:)
-
           QmpxUy_I = (Uy_I(Neu_:) - Uy_I(1))*Rate_I(Neu_:)
-
           QmpxUz_I = (Uz_I(Neu_:) - Uz_I(1))*Rate_I(Neu_:)
 
-          ! Zieger
           if(.not.IsMhd)then
              Qmpu3xUx_I = (Ux_I(Neu_:) - Ux_I(PU3_))*RatePu3_I(Neu_:)
-
              Qmpu3xUy_I = (Uy_I(Neu_:) - Uy_I(PU3_))*RatePu3_I(Neu_:)
-
              Qmpu3xUz_I = (Uz_I(Neu_:) - Uz_I(PU3_))*RatePu3_I(Neu_:)
           end if
 
@@ -1663,7 +1630,6 @@ contains
           Kpx_I = 0.5*U2_I(Neu_:)*Rate_I + I2px_I
           Qepx_I = Kpx_I - Kxp_I
 
-          ! Zieger
           if(.not.IsMhd)then
              ! For PU3
              Kxpu3_I = 0.5*U2_I(Pu3_)*RatePu3_I + I2xpu3_I
@@ -1777,7 +1743,6 @@ contains
          if (iFluid == iFluidProduced_C(i,j,k)) then
             ! iRho etc = change in density etc
             if (iTableChargeExchange < 0) then
-               ! Zieger
                if(.not.IsMhd)then
                   Source_V(iRho)    = sum(I0xp_I) + sum(I0pu3x_I) &
                        - I0xp_I(iFluid) - I0xpu3_I(iFluid)
@@ -1815,7 +1780,6 @@ contains
             endif
          else
             if (iTableChargeExchange < 0) then
-               ! Zieger
                if(.not.IsMhd)then
                   Source_V(iRho)    = -I0px_I(iFluid)  - I0pu3x_I(iFluid)
                   Source_V(iRhoUx)  = -JpxUx_I(iFluid) - Jpu3xUx_I(iFluid)
@@ -1845,7 +1809,6 @@ contains
       end do
 
       if (iTableChargeExchange < 0) then
-         ! Zieger
          if(.not.IsMhd)then
             ! Source terms for the ion populations
             if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
@@ -1960,7 +1923,6 @@ contains
          do iVar = 1, nVar + nFLuid
             write(*,*) ' Source(',NameVar_V(iVar),')=',Source_V(iVar)
          end do
-         ! Zieger
          if(.not.IsMhd)then
             write(*,*) ' Temp_I    ', Temp_I
             write(*,*) ' Rate_I    ', Rate_I
@@ -2074,7 +2036,6 @@ contains
           CYCLE
        end if
 
-       ! Zieger
        if(.not.IsMhd)then
           if(UseElectronPressure) then
              p = State_VGB(SWHp_,i,j,k,iBlock) &
@@ -2121,8 +2082,7 @@ contains
           ! Square of Alfven Mach Number
           MachAlfven2 = U2*Rho/(B2+1.E-30)
           MachMagneto2 = U2/((1.E-10)+(Gamma*Tave)+(B2*InvRho))
-          ! Zieger Here you need the speed of the total fluid (U2)
-          ! Square of Mach number
+          ! Square of Mach number using U2
           Mach2  = U2/(Gamma*p*InvRho)
           ! Square of PUI Mach number (using total fluid speed)
           ! Zieger This Mach number has no physical meaning
@@ -2269,7 +2229,6 @@ contains
 
     SwhRho = SwhRhoDim*Io2No_V(UnitRho_)
 
-    ! Zieger
     if(IsMhd)then
        ! Pressure of plasma = 2*T_ion*Rho_ion
        SwhP   = 2.*SwhTDim*Io2No_V(UnitTemperature_)*SwhRho
@@ -2282,7 +2241,6 @@ contains
     SwhBy  = SwhByDim*Io2No_V(UnitB_)
     SwhBz  = SwhBzDim*Io2No_V(UnitB_)
 
-    ! Zieger
     if(.not.IsMhd)then
        Pu3Ux  = Pu3UxDim*Io2No_V(UnitU_)
        Pu3Uy  = Pu3UyDim*Io2No_V(UnitU_)
@@ -2336,9 +2294,9 @@ contains
 
     real:: SqrtDuDim, SqrtCsDim  ! sqrt of relative and thermal speeds (km/s)
     real:: Integral_V(3)         ! integrals used to get rate, force and work
+    real:: Cs2Sum                ! Cs2Ion + Cs2Neu
+    real:: Umean_D(3), Umean2    ! Cs2 weighted mean velocity, squared
     real:: MassRate, ForcePerU, WorkPerCs2
-    real:: U1_D(3)
-    real:: U1Sqrd, Cs2Sum
 
     character(len=*), parameter:: NameSub = 'get_charge_exchange'
     !--------------------------------------------------------------------------
@@ -2374,20 +2332,20 @@ contains
     SourceNeu_V(5)    = WorkPerCs2*Cs2Neu + 0.5*sum(ForcePerU*uNeu_D**2)
 
     if(DoFixChargeExchange) then
-       !Extra terms that appear when splitting McNutt
+       ! Extra terms that appear when splitting McNutt's formulas
        Cs2Sum = Cs2Ion + Cs2Neu
-       U1_D = (Cs2Neu*uIon_D + Cs2Ion*uNeu_D)/Cs2Sum
-       U1Sqrd = sum(U1_D*U1_D)
+       Umean_D = (Cs2Neu*uIon_D + Cs2Ion*uNeu_D)/Cs2Sum
+       Umean2  = sum(Umean_D**2)
 
-       SourceIon_V(2:4)  = SourceIon_V(2:4) + U1_D*(MassRate - ForcePerU)
+       SourceIon_V(2:4)  = SourceIon_V(2:4) + Umean_D*(MassRate - ForcePerU)
        SourceIon_V(5)    = SourceIon_V(5) &
                + Cs2Ion*Cs2Neu*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
-               + 0.5*U1Sqrd*(MassRate - ForcePerU)
+               + 0.5*Umean2*(MassRate - ForcePerU)
 
-       SourceNeu_V(2:4)  = SourceNeu_V(2:4) + U1_D*(MassRate - ForcePerU)
+       SourceNeu_V(2:4)  = SourceNeu_V(2:4) + Umean_D*(MassRate - ForcePerU)
        SourceNeu_V(5)    = SourceNeu_V(5) &
                + Cs2Ion*Cs2Neu*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
-               + 0.5*U1Sqrd*(MassRate - ForcePerU)
+               + 0.5*Umean2*(MassRate - ForcePerU)
     endif
 
     if(Cs2Neu > 0.0) then
