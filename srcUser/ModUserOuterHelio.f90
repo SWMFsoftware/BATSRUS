@@ -811,7 +811,7 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(r_GB(i,j,k,iBlock) > rBody) CYCLE
 
-       if(iTableSolarwind > 0)then
+       if(iTableSolarWind > 0)then
           ! Calculate the time dependent solar wind
           call calc_time_dep_sw(i,j,k,iBlock)
        else
@@ -829,6 +829,7 @@ contains
 
       use BATL_lib,       ONLY: Xyz_DGB
       use ModCoordTransform, ONLY: rot_xyz_sph
+      use ModLookupTable, ONLY: interpolate_lookup_table
 
       integer,intent(in):: i, j, k, iBlock
 
@@ -860,6 +861,11 @@ contains
 
       ! calculating time relative to the solar cycle
       TimeCycle = modulo(tSimulation, LengthCycle)
+ 
+      ! interpolating the value of Rho, Vr, and Temp
+      ! at the cell from the lookup table
+      call interpolate_lookup_table(iTableSolarWind, Latitude, TimeCycle, &
+           Value_I)  
 
       Ur  = Value_I(1)*Io2No_V(UnitU_)
       Rho = Value_I(2)*Io2No_V(UnitRho_)
@@ -2298,6 +2304,10 @@ contains
     ! The table can be read by BATSRUS or the AMPS Fortran wrapper.
     if(iTableChargeExchange < 0) &
          iTableChargeExchange = i_lookup_table('ChargeExchange')
+
+    ! Set table index for iTableSolarWind with table name solarwind2d
+    if(iTableSolarWind < 0 ) &
+         iTableSolarWind=i_lookup_table('solarwind2d')
 
     call test_stop(NameSub, DoTest)
 
