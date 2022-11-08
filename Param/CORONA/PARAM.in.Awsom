@@ -294,6 +294,7 @@ T			IsTimeAccurate
 #CME
 T			UseCme
 T			DoAddFluxRope
+-1.			tDecayCmeDim
 80.0			LongitudeCme
 -10.0			LatitudeCme
 0.0			OrientationCme
@@ -318,6 +319,7 @@ SPHEROMAK		TypeCme
 #CME
 T			UseCme
 T			DoAddFluxRope
+-1.			tDecayCmeDim
 270.0			LongitudeCme
 15.0			LatitudeCme
 120.0			OrientationCme
@@ -349,6 +351,7 @@ none			TypeCharge
 #CME
 T			UseCme
 T			DoAddFluxRope
+-1.0			tDecayCmeDim
 180.0			LongitudeCme
 15.0			LatitudeCme
 120.0			OrientationCme
