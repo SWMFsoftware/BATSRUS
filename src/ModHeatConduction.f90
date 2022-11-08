@@ -342,8 +342,8 @@ contains
                   'Fixing isotropization is only for aniso pressure')
           end if
           if(UseImplicitCoronalHeating)then
-             call stop_mpi(NameSub//&
-                  'Implicit coronal heating does not work with fixing isotropization')
+             call stop_mpi(NameSub//'Implicit coronal heating '// &
+                  'does not work with fixing isotropization')
           end if
 
           allocate(PointCoef_VCB(6,nI,nJ,nK,MaxBlock))
