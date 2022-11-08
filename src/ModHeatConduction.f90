@@ -824,17 +824,19 @@ contains
 
     ! Non-split operator, (almost) explicit ei heat energy exchange
 
+    use ModConst,      ONLY: cElectronMass, cProtonMass
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
     use ModGeometry,   ONLY: Used_GB
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, &
-                             UseIdealEos
+         UseIdealEos
     use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon
     use ModUserInterface ! user_material_properties
 
     real :: DtLocal, TeSi
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
+    real :: IsotropizationCoef
     integer:: i, j, k, iBlock
 
     logical:: DoTest
@@ -847,7 +849,7 @@ contains
 
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
-      ! For the electron flux limiter, we need Te in the ghostcells
+       ! For the electron flux limiter, we need Te in the ghostcells
        if(UseMultiIon)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
@@ -882,6 +884,8 @@ contains
           HeatExchange = cTeTiExchangeRate * &
                State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
 
+          IsotropizationCoef = 0.5*cProtonMass/cElectronMass*HeatExchange
+          
           ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
           HeatExchange = HeatExchange / (1 + 2.0*DtLocal*HeatExchange)
 
@@ -890,12 +894,23 @@ contains
 
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
-             HeatExchangePePpar = HeatExchange &
-                  *(State_VGB(Ppar_,i,j,k,iBlock) &
-                  - State_VGB(Pe_,i,j,k,iBlock))
+             if(UseFixIsotropization)then
+                IsotropizationCoef = IsotropizationCoef &
+                     /(1 + DtLocal*IsotropizationCoef)
 
-             State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                  - DtLocal*HeatExchangePePpar
+                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
+                     - DtLocal*HeatExchangePeP &
+                     + IsotropizationCoef*DtLocal &
+                     *(State_VGB(p_,i,j,k,iBlock) &
+                     - State_VGB(Ppar_,i,j,k,iBlock))
+             else
+                HeatExchangePePpar = HeatExchange &
+                     *(State_VGB(Ppar_,i,j,k,iBlock) &
+                     - State_VGB(Pe_,i,j,k,iBlock))
+
+                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
+                     - DtLocal*HeatExchangePePpar
+             end if
           end if
 
           ! Heat exchange for the ions
