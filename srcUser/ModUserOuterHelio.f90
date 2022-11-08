@@ -239,8 +239,8 @@ contains
           call read_var('HpLimit', HpLimit)
           call read_var('RhoPop4LimitDim', RhoPop4LimitDim)
 
-          ! Bair. This is a flag to use charge exchange formula 
-          ! with the extra splitting terms.  
+          ! Bair. This is a flag to use charge exchange formula
+          ! with the extra splitting terms.
        case("#CHARGEEXCHANGE")
           call read_var("DoFixChargeExchange", DoFixChargeExchange)
 
@@ -859,11 +859,11 @@ contains
 
       ! calculating time relative to the solar cycle
       TimeCycle = modulo(tSimulation, LengthCycle)
- 
+
       ! interpolating the value of Rho, Vr, and Temp
       ! at the cell from the lookup table
       call interpolate_lookup_table(iTableSolarWind, Latitude, TimeCycle, &
-           Value_I)  
+           Value_I)
 
       Ur  = Value_I(1)*Io2No_V(UnitU_)
       Rho = Value_I(2)*Io2No_V(UnitRho_)
