@@ -93,7 +93,7 @@ module ModHeatConduction
   logical :: UseImplicitCoronalHeating = .false.
 
   ! Fixing isotropization
-  logical :: UseFixIsotropization = .false.
+  logical, public :: UseFixIsotropization = .false.
 
   ! radiative cooling
   logical :: DoRadCooling = .false.
@@ -827,11 +827,12 @@ contains
     use ModConst,      ONLY: cElectronMass, cProtonMass
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
     use ModGeometry,   ONLY: Used_GB
-    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
+    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, CollisionCoef_II
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, &
          UseIdealEos
-    use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon
+    use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon, &
+         nIonFluid
     use ModUserInterface ! user_material_properties
 
     real :: DtLocal, TeSi
@@ -878,11 +879,10 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
-          ! We apply the energy exchange rate for temperature,
-          ! Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
+
           ! For a hydrogen only, for ideal EOS only
-          HeatExchange = cTeTiExchangeRate * &
-               State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
+          HeatExchange = 2.0*CollisionCoef_II(1,nIonFluid+1) &
+               *State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
 
           IsotropizationCoef = 0.5*cProtonMass/cElectronMass*HeatExchange
           

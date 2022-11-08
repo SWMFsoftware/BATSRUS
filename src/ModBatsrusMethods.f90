@@ -466,7 +466,7 @@ contains
     use ModMultiFluid, ONLY: UseMultiIon
     use ModLocalTimeStep, ONLY: advance_localstep
     use ModPartImplicit, ONLY: advance_part_impl
-    use ModHeatConduction, ONLY: calc_ei_heat_exchange
+    use ModHeatConduction, ONLY: calc_ei_heat_exchange, UseFixIsotropization
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModLoadBalance, ONLY: load_balance_blocks
@@ -576,7 +576,11 @@ contains
           if(.not.UseSemiImplicit)call calc_ei_heat_exchange
        elseif(UseResistivity .and. UseHeatExchange &
             .and. UseElectronPressure)then
-          call calc_heat_exchange
+          if(UseFixIsotropization)then
+             call calc_ei_heat_exchange
+          else
+             call calc_heat_exchange
+          end if
        end if
     end if
 
