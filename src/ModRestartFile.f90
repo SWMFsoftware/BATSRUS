@@ -115,16 +115,13 @@ module ModRestartFile
 
 contains
   !============================================================================
-
   subroutine init_mod_restart_file
-
     !--------------------------------------------------------------------------
     NameRestartInDir(1:2)  = NameThisComp
     NameRestartOutDir(1:2) = NameThisComp
 
   end subroutine init_mod_restart_file
   !============================================================================
-
   subroutine read_restart_parameters(NameCommand)
 
     use ModReadParam, ONLY: read_var
@@ -187,7 +184,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_restart_parameters
   !============================================================================
-
   subroutine write_restart_files
 
     use ModB0,       ONLY: UseB0, add_b0, subtract_b0, B0_DGB
@@ -277,7 +273,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_restart_files
   !============================================================================
-
   subroutine read_restart_files
 
     use ModBuffer, ONLY: DoRestartBuffer, read_buffer_restart
@@ -369,7 +364,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_restart_files
   !============================================================================
-
   subroutine write_restart_header
 
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem, nBlockAll, &
@@ -390,7 +384,6 @@ contains
     ! the PGF90 compiler fails.
     use ModVarIndexes, ONLY: NameEquation
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
-
     use ModGeometry, ONLY: &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
@@ -399,8 +392,9 @@ contains
     use ModUtilities, ONLY: cTab, write_string_tabs_name
     use ModIO,       ONLY: NameMaxTimeUnit
     use ModMain,     ONLY: UseFieldLineThreads
-    use BATL_lib,    ONLY: nRoot_D
     use ModBuffer,   ONLY: write_buffer_restart_header
+    use EEE_ModCommonVariables, ONLY: tStartCme
+    use BATL_lib,    ONLY: nRoot_D
 
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
@@ -581,6 +575,12 @@ contains
        write(UnitTmp_,*)
     end if
 
+    if(tStartCme > 0.0)then
+       write(UnitTmp_,'(a)')'#CMETIME'
+       write(UnitTmp_,'(es22.15,a)') &
+            tStartCme, cTab//cTab//'tStartCme'
+       write(UnitTmp_,*)
+    end if
     if(UseFieldLineThreads)then
        write(UnitTmp_,'(a)')'#THREADRESTART'
        write(UnitTmp_,'(l1,a)')UseFieldLineThreads,&
@@ -626,7 +626,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_restart_header
   !============================================================================
-
   subroutine write_restart_index
 
     use ModMpi, ONLY: MPI_reduce, MPI_INTEGER, MPI_SUM
@@ -805,7 +804,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine read_restart_file
   !============================================================================
-
   subroutine write_restart_file(iBlock)
 
     integer, intent(in) :: iBlock
@@ -846,7 +844,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_restart_file
   !============================================================================
-
   subroutine open_direct_restart_file(DoRead, iFile)
 
     logical, intent(in)           :: DoRead
@@ -929,7 +926,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine open_direct_restart_file
   !============================================================================
-
   subroutine read_direct_restart_file
 
     integer :: i, j, k, iBlock, iMorton, iRec, iVar, iFile, iFileLast = -1
@@ -1053,7 +1049,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_direct_restart_file
   !============================================================================
-
   subroutine write_direct_restart_file
 
     integer :: iBlock, iMorton, iRec, iVar
@@ -1123,7 +1118,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_direct_restart_file
   !============================================================================
-
   subroutine string_append_iter(NameFile, nIter)
 
     character (len=100), intent(inout) :: NameFile
@@ -1147,7 +1141,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine string_append_iter
   !============================================================================
-
   subroutine write_geoind_restart
 
     ! Save ModGroundMagPerturb::MagHistory_II to a restart file on proc 0
@@ -1185,7 +1178,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_geoind_restart
   !============================================================================
-
   subroutine read_geoind_restart
 
     ! Read MagHistory_II from restart file on processor 0
@@ -1249,8 +1241,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_geoind_restart
   !============================================================================
-
-  ! ===================================================================
   subroutine match_copy_restart_variables
 
     ! This subroutine allows to use the state stored in an existing
@@ -1464,7 +1454,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine match_copy_restart_variables
   !============================================================================
-
 end module ModRestartFile
 !==============================================================================
 

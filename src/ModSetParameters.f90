@@ -2682,7 +2682,7 @@ contains
           call read_laser_heating_param(NameCommand)
 
        case("#CME", "#ARCH", "#TD99FLUXROPE", "#GL98FLUXROPE", "#SHEARFLOW", &
-            "#CMS")
+            "#CMS", "#CMETIME")
           call EEE_set_parameters(NameCommand)
 
        case("#STAR")
