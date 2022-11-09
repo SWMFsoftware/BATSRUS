@@ -885,7 +885,7 @@ contains
                *State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
 
           IsotropizationCoef = 0.5*cProtonMass/cElectronMass*HeatExchange
-          
+
           ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
           HeatExchange = HeatExchange / (1 + 2.0*DtLocal*HeatExchange)
 
