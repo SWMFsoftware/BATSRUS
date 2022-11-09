@@ -835,7 +835,7 @@ contains
          nIonFluid
     use ModUserInterface ! user_material_properties
 
-    real :: DtLocal, TeSi
+    real :: DtLocal, TeSi, Ti
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
     real :: IsotropizationCoef
     integer:: i, j, k, iBlock
@@ -884,8 +884,6 @@ contains
           HeatExchange = 2.0*CollisionCoef_II(1,nIonFluid+1) &
                *State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
 
-          IsotropizationCoef = 0.5*cProtonMass/cElectronMass*HeatExchange
-
           ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
           HeatExchange = HeatExchange / (1 + 2.0*DtLocal*HeatExchange)
 
@@ -895,6 +893,10 @@ contains
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
              if(UseFixIsotropization)then
+                Ti = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+                IsotropizationCoef = CollisionCoef_II(1,1) &
+                     *State_VGB(Rho_,i,j,k,iBlock)/Ti**1.5
+                
                 IsotropizationCoef = IsotropizationCoef &
                      /(1 + DtLocal*IsotropizationCoef)
 
@@ -1245,10 +1247,9 @@ contains
                 Te = Te_G(i,j,k)
                 Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
                 Tpar = State_VGB(Ppar_,i,j,k,iBlock)/Natomic
-                CollisionRate = CollisionCoef_II(1,nIonFluid+1) &
-                     *Natomic/(Te*sqrt(Te)) ! should be electron density
-                IsotropizationCoef = 0.5*State_VGB(Rho_,i,j,k,iBlock) &
-                     *CollisionRate/ReducedMass_II(1,nIonFluid+1)
+                CollisionRate = CollisionCoef_II(1,1) &
+                     *Natomic/(Ti*sqrt(Ti))
+                IsotropizationCoef = 0.5*Natomic*CollisionRate
 
                 if(DoRadCooling)then
                    call get_radiative_cooling(i, j, k, iBlock, TeSi, &
