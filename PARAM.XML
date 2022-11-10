@@ -5440,6 +5440,7 @@ The default is to flush the output, i.e. DoFlush=T.
     <parameter name="UseCme" type="logical" default="F" />
     <if expr="$UseCme">
       <parameter name="DoAddFluxRope" type="logical" default="F" />
+      <parameter name="tDecayCme" type="real" min="-1" default="-1" />
       <parameter name="LongitudeCme" type="real"
 		 min="0" max="359" default="0" />
       <parameter name="LatitudeCme" type="real"
@@ -5544,7 +5545,8 @@ The default is to flush the output, i.e. DoFlush=T.
 
 #CME
 T			UseCme ! Rest is read if UseCme is true
-T			DoAddFluxRope 
+T			DoAddFluxRope
+2 h			tDecayCme
 0			LongitudeCme   [deg]
 0			LatitudeCme    [deg]
 0			OrientationCme [deg]
@@ -5556,8 +5558,9 @@ GL			TypeCme    GL/TD/TD14/TD22/SPHEROMAK
 1.8			ApexHeight     [Rs]
 
 #CME
-T			UseCme
+T			UseCme ! Rest is read if UseCme is true
 T			DoAddFluxRope
+-1.0			tDecayCme
 0			LongitudeCme   [deg]
 0			LatitudeCme    [deg]
 0			OrientationCme [deg]
@@ -5569,13 +5572,16 @@ SPHEROMAK		TypeCme
 1.8			ApexHeight     [Rs]
 600                     uCme           [km/s]
 
-First five parameters are common for all types of EE generators. If UseCme is 
-true, the generator may be applied permanently, usually via the boundary
-condition. If, in addition to this, DoAddFluxRope is true, then the
-configuration is applied at each grid point, but for a single time (via the
-"user perturbation").
+If UseCme is false, no CME gnerator is applied.
+If UseCme is true, the CME generator is applied via the boundary condition.
+If, in addition to this, DoAddFluxRope is true, then the flux rope
+is added as a "user perturbation" at the beginning of the session.
+The tDecayCme determines how long it takes for the CME related boundary
+conditions to decay toward zero. If tDecayCme is -1, there boundary conditions
+do not decay. If tDecayCme is positive, the boundary conditions linearly
+decay from the original values to zero in tDecayCme time.
 
-Next two parameters, LongitudeCme and LatitudeCme, characterize location of
+The LongitudeCme and LatitudeCme parameters characterize location of
 the superimposed configuration. They provide the longitude and latitude in
 degrees, of the configuration center. Third parameter, OrientationCme,
 chaaracterizes the CME orientation. The recommended value of OrientationCme

@@ -93,7 +93,7 @@ module ModHeatConduction
   logical :: UseImplicitCoronalHeating = .false.
 
   ! Fixing isotropization
-  logical :: UseFixIsotropization = .false.
+  logical, public :: UseFixIsotropization = .false.
 
   ! radiative cooling
   logical :: DoRadCooling = .false.
@@ -824,17 +824,20 @@ contains
 
     ! Non-split operator, (almost) explicit ei heat energy exchange
 
+    use ModConst,      ONLY: cElectronMass, cProtonMass
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
     use ModGeometry,   ONLY: Used_GB
-    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
+    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, CollisionCoef_II
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, &
-                             UseIdealEos
-    use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon
+         UseIdealEos
+    use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon, &
+         nIonFluid
     use ModUserInterface ! user_material_properties
 
-    real :: DtLocal, TeSi
+    real :: DtLocal, TeSi, Ti
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
+    real :: IsotropizationCoef
     integer:: i, j, k, iBlock
 
     logical:: DoTest
@@ -847,7 +850,7 @@ contains
 
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
-      ! For the electron flux limiter, we need Te in the ghostcells
+       ! For the electron flux limiter, we need Te in the ghostcells
        if(UseMultiIon)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
@@ -876,11 +879,10 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
-          ! We apply the energy exchange rate for temperature,
-          ! Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
+
           ! For a hydrogen only, for ideal EOS only
-          HeatExchange = cTeTiExchangeRate * &
-               State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
+          HeatExchange = 2.0*CollisionCoef_II(1,nIonFluid+1) &
+               *State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
 
           ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
           HeatExchange = HeatExchange / (1 + 2.0*DtLocal*HeatExchange)
@@ -890,12 +892,27 @@ contains
 
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
-             HeatExchangePePpar = HeatExchange &
-                  *(State_VGB(Ppar_,i,j,k,iBlock) &
-                  - State_VGB(Pe_,i,j,k,iBlock))
+             if(UseFixIsotropization)then
+                Ti = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+                IsotropizationCoef = CollisionCoef_II(1,1) &
+                     *State_VGB(Rho_,i,j,k,iBlock)/Ti**1.5
 
-             State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                  - DtLocal*HeatExchangePePpar
+                IsotropizationCoef = IsotropizationCoef &
+                     /(1 + DtLocal*IsotropizationCoef)
+
+                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
+                     - DtLocal*HeatExchangePeP &
+                     + IsotropizationCoef*DtLocal &
+                     *(State_VGB(p_,i,j,k,iBlock) &
+                     - State_VGB(Ppar_,i,j,k,iBlock))
+             else
+                HeatExchangePePpar = HeatExchange &
+                     *(State_VGB(Ppar_,i,j,k,iBlock) &
+                     - State_VGB(Pe_,i,j,k,iBlock))
+
+                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
+                     - DtLocal*HeatExchangePePpar
+             end if
           end if
 
           ! Heat exchange for the ions
@@ -1230,10 +1247,9 @@ contains
                 Te = Te_G(i,j,k)
                 Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
                 Tpar = State_VGB(Ppar_,i,j,k,iBlock)/Natomic
-                CollisionRate = CollisionCoef_II(1,nIonFluid+1) &
-                     *Natomic/(Te*sqrt(Te)) ! should be electron density
-                IsotropizationCoef = 0.5*State_VGB(Rho_,i,j,k,iBlock) &
-                     *CollisionRate/ReducedMass_II(1,nIonFluid+1)
+                CollisionRate = CollisionCoef_II(1,1) &
+                     *Natomic/(Ti*sqrt(Ti))
+                IsotropizationCoef = 0.5*Natomic*CollisionRate
 
                 if(DoRadCooling)then
                    call get_radiative_cooling(i, j, k, iBlock, TeSi, &
