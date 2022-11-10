@@ -1849,7 +1849,7 @@ contains
              call read_var('No2SiUnitX',   No2Si_V(UnitX_))
              call read_var('No2SiUnitU',   No2Si_V(UnitU_))
              call read_var('No2SiUnitRho', No2Si_V(UnitRho_))
-          case('PLANETARY', 'SOLARWIND', 'OUTERHELIO')
+          case('PLANETARY', 'SOLARWIND', 'HELIOSPHERIC', 'OUTERHELIO')
              ! Depends on other commands, defined in set_physics
           case('USER')
              ! Call user_normalization later in set_units (see set_physics.f90)
@@ -3060,7 +3060,7 @@ contains
          BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
 
          ! Normalization and I/O units
-         TypeNormalization     = "SOLARWIND"
+         TypeNormalization     = "HELIOSPHERIC"
          TypeIoUnit            = "HELIOSPHERIC"
 
          if(NameThisComp == "OH")then
