@@ -5759,6 +5759,19 @@ him for a description.
 There is no CME by default.
 
 </command>
+
+<command name="CMETIME">
+  <parameter name="tStartCme" type="real" min="-1.0" default="-1.0" />
+
+#CMETIME
+0.0			tStartCme [sec]
+
+The tStartCme variable contains the time in seconds when the flux-rope
+is added via the #CME command and is relative to the initial start time.
+It is saved into the restart header file, so if the CME run is restarted
+with DoAddFluxRope set to F and the tDecayCme is positive the CME related
+boundary conditions continue to decay to zero in tDecayCme time.
+</command>
 </commandgroup>
 
 <commandgroup name="AMR PARAMETERS">
