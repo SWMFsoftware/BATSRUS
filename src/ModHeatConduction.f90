@@ -896,7 +896,7 @@ contains
                 Ti = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
                 IsotropizationCoef = CollisionCoef_II(1,1) &
                      *State_VGB(Rho_,i,j,k,iBlock)/Ti**1.5
-                
+
                 IsotropizationCoef = IsotropizationCoef &
                      /(1 + DtLocal*IsotropizationCoef)
 
