@@ -3060,7 +3060,7 @@ contains
          BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
 
          ! Normalization and I/O units
-         TypeNormalization     = "HELIOSPHERIC"
+         TypeNormalization     = "SOLARWIND"
          TypeIoUnit            = "HELIOSPHERIC"
 
          if(NameThisComp == "OH")then
