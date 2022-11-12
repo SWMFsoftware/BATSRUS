@@ -575,7 +575,7 @@ contains
        write(UnitTmp_,*)
     end if
 
-    if(tStartCme > 0.0)then
+    if(tStartCme >= 0.0)then
        write(UnitTmp_,'(a)')'#CMETIME'
        write(UnitTmp_,'(es22.15,a)') &
             tStartCme, cTab//cTab//'tStartCme'

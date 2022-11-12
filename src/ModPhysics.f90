@@ -808,10 +808,13 @@ contains
     ! and density(rho).  All others are built from these three.
     select case(TypeNormalization)
     case("PLANETARY")
-       ! rPlanet, rPlanet/sec, amu/cm^3
-       No2Si_V(UnitX_)   = rPlanetSi
-       No2Si_V(UnitU_)   = rPlanetSi
-       No2Si_V(UnitRho_) = 1000000*cProtonMass ! AtomicMass
+       No2Si_V(UnitX_)   = rPlanetSi           ! rPlanet
+       No2Si_V(UnitU_)   = rPlanetSi           ! rPlanet/s
+       No2Si_V(UnitRho_) = 1000000*cProtonMass ! amu/cm^3
+    case("HELIOSPHERIC")
+       No2Si_V(UnitX_)   = rPlanetSi           ! rPlanet/rStar
+       No2Si_V(UnitU_)   = 1000.0              ! km/s
+       No2Si_V(UnitRho_) = 1000000*cProtonMass ! amu/cm^3
     case("OUTERHELIO")
        No2Si_V(UnitX_)   = cAU                 ! AU
        No2Si_V(UnitU_)   = 1000.0              ! km/s

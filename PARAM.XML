@@ -1358,8 +1358,9 @@ By default the Sun is the central star.
 	     input="select">
     <option name="SI"/>
     <option name="PLANETARY" default="T"/>
-    <option name="SOLARWIND"/>
+    <option name="HELIOSPHERIC"/>
     <option name="OUTERHELIO"/>
+    <option name="SOLARWIND"/>
     <option name="NONE"/>
     <option name="USER"/>
     <option name="READ"/>
@@ -1394,8 +1395,8 @@ It is important to note that the normalization of number density
 is usually not consistent with the inverse cube of the normalization
 of distance.
 
-Possible values for TypeNormalization are NONE, PLANETARY, SOLARWIND,
-OUTERHELIO, USER and READ.
+Possible values for TypeNormalization are NONE, PLANETARY,
+HELIOSPHERIC, OUTERHELIO, SOLARWIND, USER and READ.
 
 If TypeNormalization="NONE" then the distance, velocity and density
 units are the SI units, i.e. meter, meter/sec, and kg/m$^3$.
@@ -1407,26 +1408,24 @@ where the AverageIonMass is given relative to the mass of proton.
 If TypeNormalization="PLANETARY" then the distance unit is the
 radius of the central body (moon, planet, or the Sun). If there is
 no central body, the length normalization is 1km. The velocity unit
-is km/s, and the density unit is amu/cm3.
+is rPlanet/s (so time unit is seconds), and the density unit is amu/cm3.
 
-TypeNormalization="SOLARWIND" is used for the solar corona and
-the inner heliosphere components. The distance unit is the 
-solar radius, the velocity and density are normalized to
-the density and the sound speed of the coronal plasma defined
-by the #CORONA command.
+If TypeNormalization="HELIOSPHERIC" then the distance unit is the
+radius of the central body (Sun, star), the velocity unit is km/s,
+and the density unit is amu/cm3.
 
-For planetary applications (GM component), TypeNormalization="SOLARWIND" 
-is depreciated. If it is used then the distance unit is the radius of the
+If TypeNormalization="OUTERHELIO" then the distance unit is 1 AU,
+the velocity unit is km/s, and the density unit is amu/cm3.
+
+TypeNormalization="SOLARWIND" is depreciated! Don't use it.
+If it is used then the distance unit is the radius of the
 planet, and the velocity and density are normalized to
 the density and the sound speed of the solar wind defined by
 the #SOLARWIND or #SOLARWINDFILE commands. This normalization
 is very impractical, because it depends on the solar wind values
-that are variable, and may not even make sense (e.g. for a shock tube test
-or a Tokamak problem). This normalization is only kept for sake of
-backwards compatibility.
-
-If TypeNormalization="OUTERHELIO" then the distance unit is 1 AU,
-the velocity unit is km/s, and the density unit is amu/cm3.
+that are variable, and may not even make sense (e.g. for a shock tube test).
+This normalization is only kept for sake of backwards compatibility
+for a few user modules (Mars, Venus, Titan, Saturn).
 
 If TypeNormalization="USER" the normalization is set in the user module.
 This may be useful if the normalization depends on some input parameters.
@@ -5759,6 +5758,19 @@ him for a description.
 
 There is no CME by default.
 
+</command>
+
+<command name="CMETIME">
+  <parameter name="tStartCme" type="real" min="-1.0" default="-1.0" />
+
+#CMETIME
+0.0			tStartCme [sec]
+
+The tStartCme variable contains the time in seconds when the flux-rope
+is added via the #CME command and is relative to the initial start time.
+It is saved into the restart header file, so if the CME run is restarted
+with DoAddFluxRope set to F and the tDecayCme is positive the CME related
+boundary conditions continue to decay to zero in tDecayCme time.
 </command>
 </commandgroup>
 

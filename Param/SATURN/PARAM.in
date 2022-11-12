@@ -27,9 +27,6 @@ F			IsTimeAccurate
 #SAVERESTART
 F			DoSaveRestart (Rest of parameters read if true)
 
-#NORMALIZATION
-SOLARWIND		TypeNormalization
-
 #GRID
        7		nRootBlock1
        4		nRootBlock2
