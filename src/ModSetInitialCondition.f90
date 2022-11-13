@@ -123,40 +123,24 @@ contains
        KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)
        KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
 
-       if(iProc == 0) write(*,*) 'Setting wave for iVar =', iVar, &
-            ', NameVar =', NamePrimitive_V(iVar)
-
-    case('#GAUSSIAN', '#TOPHAT')
+    case("#BUMP")
        UseWave = .true.
-       ! Read parameters for a tophat ampl for r/d < 1 or
-       ! a Gaussian profile multiplied by smoother:
-       !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
-       ! where d = k.(x-xCenter) and k = 1/lambda
        call read_var('NameVar',   NameVar)
        call get_ivar(NameVar, iVar)
        call read_var('Amplitude', Ampl_V(iVar))
-       call read_var('LambdaX',   LambdaX)
-       call read_var('LambdaY',   LambdaY)
-       call read_var('LambdaZ',   LambdaZ)
+       call read_var('WidthX',    LambdaX)
+       call read_var('WidthY',    LambdaY)
+       call read_var('WidthZ',    LambdaZ)
        call read_var('CenterX',   x_V(iVar))
        call read_var('CenterY',   y_V(iVar))
        call read_var('CenterZ',   z_V(iVar))
+       call read_var('nPower',    iPower_V(iVar))
+       iPower_V(iVar) = -iPower_V(iVar)
 
-       ! Negative Lambda sets 0 for wavenumber (constant in that direction)
+       ! Negative width sets 0 for 1/width (unlimited in that direction)
        KxWave_V(iVar) = max(0.0, 1/LambdaX)
        KyWave_V(iVar) = max(0.0, 1/LambdaY)
        KzWave_V(iVar) = max(0.0, 1/LambdaZ)
-
-       if(NameCommand == '#TOPHAT')then
-          ! Setting zero value signals that this is a tophat
-          iPower_V(iVar) = 0
-       else
-          ! Setting negative value signals that this is a Gaussian
-          iPower_V(iVar) = -2
-       end if
-
-       if (iProc == 0) write(*,*) 'Setting GAUSSIAN or TOPHAT for iVar =', &
-            iVar, ', NameVar =', NamePrimitive_V(iVar)
 
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
@@ -392,7 +376,7 @@ contains
       integer, intent(in):: i, j, k, iBlock
 
       integer:: iVar
-      real:: x, y, z, r, r2, Ampl
+      real:: x, y, z, r, Ampl
       !------------------------------------------------------------------------
       do iVar = 1, nVar
 
@@ -402,9 +386,7 @@ contains
          if(Ampl == 0.0) CYCLE
 
          if(iPower_V(iVar) <= 0)then
-            ! iPower == 0: Tophat
-            ! iPower <  0: Gaussian profile multiplied by smoother:
-            !    ampl*exp(-(r/d)^2)*(cos(0.25*pi*r/d))^6 for r/d < 2
+            ! Bump
             x = Xyz_DGB(x_,i,j,k,iBlock) - x_V(iVar)
             y = Xyz_DGB(y_,i,j,k,iBlock) - y_V(iVar)
             z = Xyz_DGB(z_,i,j,k,iBlock) - z_V(iVar)
@@ -420,21 +402,14 @@ contains
                if(z > +(zMaxBox-zMinBox)/2) z = z - (zMaxBox-zMinBox)
                if(z < -(zMaxBox-zMinBox)/2) z = z + (zMaxBox-zMinBox)
             end if
-            r2 =   (KxWave_V(iVar)*x)**2 + (KyWave_V(iVar)*y)**2 &
-                 + (KzWave_V(iVar)*z)**2
-
-            if(iPower_V(iVar) == 0)then
-               ! Top hat
-               if(r2 > 1.0) CYCLE
-               State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)&
-                    + Ampl
-            else
-               ! Gaussian smoothed with cos^6
-               if(r2 > 4.0) CYCLE
-               r  = sqrt(r2)
-               State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)&
-                    + Ampl*cos(cPi*0.25*r)**6*exp(-r2)
-            end if
+            ! normalize
+            x = x*KxWave_V(iVar)
+            y = y*KyWave_V(iVar)
+            z = z*KzWave_V(iVar)
+            r = sqrt(x**2 + y**2 + z**2)
+            if(r < 0.5) State_VGB(iVar,i,j,k,iBlock) = &
+                 State_VGB(iVar,i,j,k,iBlock) &
+                 + Ampl * cos(cPi*r)**abs(iPower_V(iVar))
          else
             ! cos^n profile
             if(KxWave_V(iVar) > 0.0)then

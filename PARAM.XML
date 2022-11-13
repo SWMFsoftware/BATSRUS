@@ -1049,64 +1049,53 @@ This command can be repeated to add different waves to different
 variables. There is no wave perturbation by default. 
 </command>
 
-<command name="GAUSSIAN" alias="TOPHAT" multiple="T" if="$_IsFirstSession">
+<command name="BUMP" multiple="T" if="$_IsFirstSession">
   <parameter name="NameVar"   type="string" length="20"/>
   <parameter name="Amplitude" type="real"          default="0"/>
-  <parameter name="LambdaX"   type="real" min="-1" default="-1"/>
-  <parameter name="LambdaY"   type="real" min="-1" default="-1"/>
-  <parameter name="LambdaZ"   type="real" min="-1" default="-1"/>
+  <parameter name="WidthX"    type="real" min="-1" default="-1"/>
+  <parameter name="WidthY"    type="real" min="-1" default="-1"/>
+  <parameter name="WidthZ"    type="real" min="-1" default="-1"/>
   <parameter name="CenterX"   type="real" default="0"/>
   <parameter name="CenterY"   type="real" default="0"/>
   <parameter name="CenterZ"   type="real" default="0"/>
+  <parameter name="nPower"    type="integer" min="0" default="1"/>
 
-#GAUSSIAN
+#BUMP
 Rho                     NameVar
 0.1                     Amplitude
-5.0                     LambdaX
-3.0                     LambdaY
--1.0                    LambdaZ
+5.0                     WidthX
+3.0                     WidthY
+-1.0                    WidthZ
 4.2                     CenterX
 0.0                     CenterY
 -0.2                    CenterZ
+4                       nPower
 
-Add a compact Gaussian or a top hat perturbation to some variable.
+Add a "bump" perturbation to a variable.
 
 NameVar selects the primitive variable to be perturbed.
+
 Amplitude sets the amplitude of the perturbation.
-LambdaX, LambdaY and LambdaZ define the spatial extent of the perturbation
-in the 3 directions. Negative value means that there is no restriction.
-The "wave vector" is defined as
-\begin{verbatim}
-    Kx = max(0.0, 1/LambdaX)
-\end{verbatim}
-and similarly for Ky and Kz. Note that there is no 2*pi factor here.
+
+WidthX, WidthY and WidthZ define the spatial extent of the perturbation
+in the 3 directions. Negative value means that there is no restriction,
+so 1/Width is set to 0.
+
 CenterX, CenterY and CenterZ define the center of the perturbation.
 
-The wave vectors and the amplitudes of vector variables are rotated
-around the Z axis with the angle of the shock slope if it is not zero.
+nPower is the power of the cosine functions, which sets the smoothness.
+nPower=0 defines a bump with a constant value with a sharp edge.
+nPower=2 is suitable for convergence studies up to 2nd order.
 
-For a given point at x, y, z, the square of the normalized radial distance
-from the center is calculated as
+For a given point at x, y, z, the normalized radial distances from
+the center is
 \begin{verbatim}
-    r2 = (Kx*(x-xCenter))**2 + (Ky*(y-yCenter))**2 + (Kz*(z-zCenter))**2
-    r  = sqrt(r2)
+  r = sqrt( ((x-CenterX)/WidthX)**2 + ((y-CenterY)/WidthY)**2 ...)
 \end{verbatim}
-A compact Gaussian perturbation is defined as
+The perturbation is applied for r less than 0.5 as
 \begin{verbatim}
-    Var = Var + Amplitude*cos(Pi*r/4)**6*exp(-r2)
+  Var = Var + Amplitude * cos(pi*r)**nPower
 \end{verbatim}
-for r &lt; 2, and no perturbation otherwise. The sixth power of the cosine
-function ensures that the perturbation and its derivatives go to zero at r=2.
-At r=0 the full amplitude is applied. At r=1 the amplitude is about
-0.046*Amplitude.
-
-The #TOPHAT command has the same parameters as the #GAUSSIAN. In this
-case the full amplitude is applied for r &lt;= 1:
-\begin{verbatim} 
-   Var = Var + Amplitude
-\end{verbatim}
-and no perturbation is done outside.
-
 This command can be repeated multiple times to add perturbations to
 multiple variables. No perturbation is applied by default.
 </command>
