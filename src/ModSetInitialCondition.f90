@@ -93,7 +93,7 @@ contains
 
     case("#ENTROPYCONSTANT")
        call read_var('EntropyConstant', EntropyConstant)
-       
+
     case("#WAVE", "#WAVE2", "#WAVE4", "#WAVE6")
        UseWave = .true.
        call read_var('NameVar', NameVar)
