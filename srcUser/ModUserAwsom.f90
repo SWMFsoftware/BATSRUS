@@ -1,4 +1,3 @@
-
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission For more information, see
 !  http://csem.engin.umich.edu/tools/swmf
@@ -22,7 +21,8 @@ module ModUser
        IMPLEMENTED9 => user_initial_perturbation,       &
        IMPLEMENTED10=> user_update_states,              &
        IMPLEMENTED11=> user_get_b0,                     &
-       IMPLEMENTED12=> user_material_properties
+       IMPLEMENTED12=> user_material_properties,        &
+       IMPLEMENTED13=> user_calc_sources_expl
 
   include 'user_module.h' ! list of public methods
 
@@ -55,6 +55,10 @@ module ModUser
   real    :: UserDipoleDepth = 1.0
   real    :: UserDipoleStrengthSi = 0.0, UserDipoleStrength = 0.0
 
+  ! STITCH
+  real    :: ZetaSI = 0.0, Zeta
+  integer :: iMaxStitch
+  
   ! Rotating boundary condition
   real:: FlowSpeedJet =0.0, FlowSpeedJetSi =0.0
   real:: tBeginJet = 0.0, tEndJet = 0.0
@@ -133,6 +137,10 @@ contains
           call read_var('IsUr0Jet', IsUr0Jet)
           call read_var('DoUpdateParkerJet', DoUpdateParkerJet)
           call read_var('BrampJet', BrampJet)
+
+       case("#STITCH")
+          call read_var('ZetaSI', ZetaSI)
+          call read_var('iMaxStitch', iMaxStitch)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -232,6 +240,10 @@ contains
 
     if(UseCme) call EEE_initialize(BodyNDim_I(1), BodyTDim_I(1), Gamma,&
          TimeNow = tSimulation)
+
+    ! ZetaSI is in SI unit of [meter^2*second^(-1)]
+    ! ZetaSI = 1.4E14 [m^2/s]
+    Zeta = ZetaSI*Si2No_V(UnitX_)*Si2No_V(UnitU_)
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -1947,6 +1959,68 @@ contains
             //TypeRadioEmission)
     end select
   end subroutine user_material_properties
+  !============================================================================
+  subroutine user_calc_sources_expl(iBlock)
+
+    use ModAdvance, ONLY: Source_VC, State_VGB
+    use ModB0, ONLY: B0_DGB
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_
+    use ModNumConst, ONLY: cRadToDeg, cHalfPi
+    use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModParallel, ONLY: Unset_, DiLevel_EB
+    use BATL_size, ONLY: MinI, nK, nJ
+    use BATL_lib, ONLY: CellFace_DFB, CoordMin_DB, CellSize_DB
+
+    integer, intent(in) :: iBlock
+
+    integer :: i,j,k
+    real :: Br, Blon, Blat
+    real :: XyzSph_DD(3,3), BSph_D(3), BXyz_D(3), dBSph_D(3), dBXyz_D(3)
+    real :: BXyzJLeft_D(3), BXyzJRight_D(3), BXyzKLeft_D(3), BXyzKRight_D(3)
+    real :: BSphJLeft_D(3), BSphJRight_D(3), BSphKLeft_D(3), BSphKRight_D(3)
+    real :: LonRad, LatRad, Lon, Lat, Phi, Theta, sum
+    !--------------------------------------------------------------------------
+    ! Only add the STITCH source term in cells next to the inner boundary.
+    ! Works only in spherical coordinates.
+    if(DiLevel_EB(1,iBlock) /= Unset_) RETURN
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, iMaxStitch
+
+      LonRad = CoordMin_DB(2,iBlock) + (j-0.5)*CellSize_DB(2,iBlock)
+      LatRad = CoordMin_DB(3,iBlock) + (k-0.5)*CellSize_DB(3,iBlock)
+      Lon = LonRad * cRadToDeg
+      Lat = LatRad * cRadToDeg
+      Phi = LonRad
+      Theta = cHalfPi - LatRad
+      XyzSph_DD = rot_xyz_sph(Theta, Phi)
+
+      BXyz_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+      BXyzJLeft_D = B0_DGB(:,i,j-1,k,iBlock) &
+           + State_VGB(Bx_:Bz_,i,j-1,k,iBlock)
+      BXyzJRight_D = B0_DGB(:,i,j+1,k,iBlock) &
+           + State_VGB(Bx_:Bz_,i,j+1,k,iBlock)
+      BXyzKLeft_D = B0_DGB(:,i,j,k-1,iBlock) &
+           + State_VGB(Bx_:Bz_,i,j,k-1,iBlock)
+      BXyzKRight_D = B0_DGB(:,i,j,k+1,iBlock) &
+           + State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
+
+      BSph_D = matmul(BXyz_D, XyzSph_DD)
+      BSphJLeft_D = matmul(BXyzJLeft_D, XyzSph_DD)
+      BSphJRight_D = matmul(BXyzJRight_D, XyzSph_DD)
+      BSphKLeft_D = matmul(BXyzKLeft_D, XyzSph_DD)
+      BSphKRight_D = matmul(BXyzKRight_D, XyzSph_DD)
+
+      dBSph_D(1) = 0
+      dBSph_D(2) = -Zeta*(BSphKRight_D(1)-BSphKLeft_D(1))/ &
+                  (CellFace_DFB(2,i,j,k,iBlock)+CellFace_DFB(2,i,j+1,k,iBlock))
+      dBSph_D(3) =  Zeta*(BSphJRight_D(1)-BSphJLeft_D(1))/ &
+                  (CellFace_DFB(3,i,j,k,iBlock)+CellFace_DFB(3,i,j,k+1,iBlock))
+      dBXyz_D = matmul(XyzSph_DD, dBSph_D)
+
+      Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) + dBXyz_D
+    end do; end do; end do
+
+  end subroutine user_calc_sources_expl
   !============================================================================
 end module ModUser
 !==============================================================================
