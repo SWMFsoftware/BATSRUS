@@ -1964,21 +1964,20 @@ contains
 
     use ModAdvance, ONLY: Source_VC, State_VGB
     use ModB0, ONLY: B0_DGB
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_
+    use ModVarIndexes, ONLY: Bx_, Bz_
     use ModNumConst, ONLY: cRadToDeg, cHalfPi
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModParallel, ONLY: Unset_, DiLevel_EB
-    use BATL_size, ONLY: MinI, nK, nJ
+    use BATL_size, ONLY: nK, nJ
     use BATL_lib, ONLY: CellFace_DFB, CoordMin_DB, CellSize_DB
 
     integer, intent(in) :: iBlock
 
-    integer :: i,j,k
-    real :: Br, Blon, Blat
+    integer :: i, j, k
     real :: XyzSph_DD(3,3), BSph_D(3), BXyz_D(3), dBSph_D(3), dBXyz_D(3)
     real :: BXyzJLeft_D(3), BXyzJRight_D(3), BXyzKLeft_D(3), BXyzKRight_D(3)
     real :: BSphJLeft_D(3), BSphJRight_D(3), BSphKLeft_D(3), BSphKRight_D(3)
-    real :: LonRad, LatRad, Lon, Lat, Phi, Theta, sum
+    real :: LonRad, LatRad, Lon, Lat, Phi, Theta
     !--------------------------------------------------------------------------
     ! Only add the STITCH source term in cells next to the inner boundary.
     ! Works only in spherical coordinates.
