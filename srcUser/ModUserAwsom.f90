@@ -1965,6 +1965,7 @@ contains
     use ModAdvance, ONLY: Source_VC, State_VGB
     use ModB0, ONLY: B0_DGB
     use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModMain, ONLY: UseB0
     use ModNumConst, ONLY: cRadToDeg, cHalfPi
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModParallel, ONLY: Unset_, DiLevel_EB
@@ -1993,15 +1994,20 @@ contains
       Theta = cHalfPi - LatRad
       XyzSph_DD = rot_xyz_sph(Theta, Phi)
 
-      BXyz_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
-      BXyzJLeft_D = B0_DGB(:,i,j-1,k,iBlock) &
-           + State_VGB(Bx_:Bz_,i,j-1,k,iBlock)
-      BXyzJRight_D = B0_DGB(:,i,j+1,k,iBlock) &
-           + State_VGB(Bx_:Bz_,i,j+1,k,iBlock)
-      BXyzKLeft_D = B0_DGB(:,i,j,k-1,iBlock) &
-           + State_VGB(Bx_:Bz_,i,j,k-1,iBlock)
-      BXyzKRight_D = B0_DGB(:,i,j,k+1,iBlock) &
-           + State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
+      BXyz_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+      if(UseB0) BXyz_D = BXyz_D + B0_DGB(:,i,j,k,iBlock)
+
+      BXyzJLeft_D = State_VGB(Bx_:Bz_,i,j-1,k,iBlock)
+      if(UseB0) BXyzJLeft_D = BXyzJLeft_D + B0_DGB(:,i,j-1,k,iBlock)
+
+      BXyzJRight_D = State_VGB(Bx_:Bz_,i,j+1,k,iBlock)
+      if(UseB0) BXyzJRight_D = BXyzJRight_D + B0_DGB(:,i,j+1,k,iBlock)
+
+      BXyzKLeft_D = State_VGB(Bx_:Bz_,i,j,k-1,iBlock)
+      if(UseB0) BXyzKLeft_D = BXyzKLeft_D + B0_DGB(:,i,j,k-1,iBlock)
+
+      BXyzKRight_D = State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
+      if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
 
       BSph_D = matmul(BXyz_D, XyzSph_DD)
       BSphJLeft_D = matmul(BXyzJLeft_D, XyzSph_DD)
