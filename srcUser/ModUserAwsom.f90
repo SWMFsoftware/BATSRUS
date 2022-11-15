@@ -58,7 +58,7 @@ module ModUser
   ! STITCH
   real    :: ZetaSI = 0.0, Zeta
   integer :: iMaxStitch
-  
+
   ! Rotating boundary condition
   real:: FlowSpeedJet =0.0, FlowSpeedJetSi =0.0
   real:: tBeginJet = 0.0, tEndJet = 0.0
