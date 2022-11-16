@@ -1966,19 +1966,17 @@ contains
     use ModB0, ONLY: B0_DGB
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMain, ONLY: UseB0
-    use ModNumConst, ONLY: cRadToDeg, cHalfPi
-    use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModCoordTransform, ONLY: rot_xyz_rlonlat
     use ModParallel, ONLY: Unset_, DiLevel_EB
     use BATL_size, ONLY: nK, nJ
-    use BATL_lib, ONLY: CellFace_DFB, CoordMin_DB, CellSize_DB
+    use BATL_lib, ONLY: CellFace_DFB, Xyz_DGB
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: XyzSph_DD(3,3), BSph_D(3), BXyz_D(3), dBSph_D(3), dBXyz_D(3)
+    real :: XyzSph_DD(3,3), dBSph_D(3), dBXyz_D(3)
     real :: BXyzJLeft_D(3), BXyzJRight_D(3), BXyzKLeft_D(3), BXyzKRight_D(3)
     real :: BSphJLeft_D(3), BSphJRight_D(3), BSphKLeft_D(3), BSphKRight_D(3)
-    real :: LonRad, LatRad, Lon, Lat, Phi, Theta
     !--------------------------------------------------------------------------
     ! Only add the STITCH source term in cells next to the inner boundary.
     ! Works only in spherical coordinates.
@@ -1986,43 +1984,33 @@ contains
 
     do k = 1, nK; do j = 1, nJ; do i = 1, iMaxStitch
 
-      LonRad = CoordMin_DB(2,iBlock) + (j-0.5)*CellSize_DB(2,iBlock)
-      LatRad = CoordMin_DB(3,iBlock) + (k-0.5)*CellSize_DB(3,iBlock)
-      Lon = LonRad * cRadToDeg
-      Lat = LatRad * cRadToDeg
-      Phi = LonRad
-      Theta = cHalfPi - LatRad
-      XyzSph_DD = rot_xyz_sph(Theta, Phi)
+       XyzSph_DD = rot_xyz_rlonlat(Xyz_DGB(:,i,j,k,iBlock))
 
-      BXyz_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-      if(UseB0) BXyz_D = BXyz_D + B0_DGB(:,i,j,k,iBlock)
+       BXyzJLeft_D = State_VGB(Bx_:Bz_,i,j-1,k,iBlock)
+       if(UseB0) BXyzJLeft_D = BXyzJLeft_D + B0_DGB(:,i,j-1,k,iBlock)
 
-      BXyzJLeft_D = State_VGB(Bx_:Bz_,i,j-1,k,iBlock)
-      if(UseB0) BXyzJLeft_D = BXyzJLeft_D + B0_DGB(:,i,j-1,k,iBlock)
+       BXyzJRight_D = State_VGB(Bx_:Bz_,i,j+1,k,iBlock)
+       if(UseB0) BXyzJRight_D = BXyzJRight_D + B0_DGB(:,i,j+1,k,iBlock)
 
-      BXyzJRight_D = State_VGB(Bx_:Bz_,i,j+1,k,iBlock)
-      if(UseB0) BXyzJRight_D = BXyzJRight_D + B0_DGB(:,i,j+1,k,iBlock)
+       BXyzKLeft_D = State_VGB(Bx_:Bz_,i,j,k-1,iBlock)
+       if(UseB0) BXyzKLeft_D = BXyzKLeft_D + B0_DGB(:,i,j,k-1,iBlock)
 
-      BXyzKLeft_D = State_VGB(Bx_:Bz_,i,j,k-1,iBlock)
-      if(UseB0) BXyzKLeft_D = BXyzKLeft_D + B0_DGB(:,i,j,k-1,iBlock)
+       BXyzKRight_D = State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
+       if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
 
-      BXyzKRight_D = State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
-      if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
+       BSphJLeft_D = matmul(BXyzJLeft_D, XyzSph_DD)
+       BSphJRight_D = matmul(BXyzJRight_D, XyzSph_DD)
+       BSphKLeft_D = matmul(BXyzKLeft_D, XyzSph_DD)
+       BSphKRight_D = matmul(BXyzKRight_D, XyzSph_DD)
 
-      BSph_D = matmul(BXyz_D, XyzSph_DD)
-      BSphJLeft_D = matmul(BXyzJLeft_D, XyzSph_DD)
-      BSphJRight_D = matmul(BXyzJRight_D, XyzSph_DD)
-      BSphKLeft_D = matmul(BXyzKLeft_D, XyzSph_DD)
-      BSphKRight_D = matmul(BXyzKRight_D, XyzSph_DD)
+       dBSph_D(1) = 0
+       dBSph_D(2) = -Zeta*(BSphKRight_D(1)-BSphKLeft_D(1))/ &
+            (CellFace_DFB(2,i,j,k,iBlock)+CellFace_DFB(2,i,j+1,k,iBlock))
+       dBSph_D(3) =  Zeta*(BSphJRight_D(1)-BSphJLeft_D(1))/ &
+            (CellFace_DFB(3,i,j,k,iBlock)+CellFace_DFB(3,i,j,k+1,iBlock))
+       dBXyz_D = matmul(XyzSph_DD, dBSph_D)
 
-      dBSph_D(1) = 0
-      dBSph_D(2) = -Zeta*(BSphKRight_D(1)-BSphKLeft_D(1))/ &
-                  (CellFace_DFB(2,i,j,k,iBlock)+CellFace_DFB(2,i,j+1,k,iBlock))
-      dBSph_D(3) =  Zeta*(BSphJRight_D(1)-BSphJLeft_D(1))/ &
-                  (CellFace_DFB(3,i,j,k,iBlock)+CellFace_DFB(3,i,j,k+1,iBlock))
-      dBXyz_D = matmul(XyzSph_DD, dBSph_D)
-
-      Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) + dBXyz_D
+       Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) + dBXyz_D
     end do; end do; end do
 
   end subroutine user_calc_sources_expl
