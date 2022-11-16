@@ -85,7 +85,7 @@ module ModUser
   logical :: UseColdCloud = .false.
   logical :: DoInitializeCloud = .false.
   logical :: UseSrcsInHelio = .true.
-  logical :: DoFixChargeExchange = .false.
+  logical :: DoFixChargeExchange = .true.
 
   ! from 173K use 0.7
   real :: HpLimit = 0.5
