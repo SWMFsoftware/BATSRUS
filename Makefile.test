@@ -330,7 +330,7 @@ test_fastwave_2d:
 	@echo "test_fastwave_2d_compile..." > test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_compile
 	@echo "test_fastwave_2d_rundir..." >> test_fastwave_2d_gpu.diff
-	$(MAKE) test_fastwave_2d_runir
+	$(MAKE) test_fastwave_2d_rundir
 	@echo "test_fastwave_2d_run..." >> test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_run
 	@echo "test_fastwave_2d_check..." >> test_fastwave_2d_gpu.diff
@@ -1881,7 +1881,7 @@ test_earth_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_earth_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_earth_check:
