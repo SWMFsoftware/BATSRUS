@@ -1997,7 +1997,7 @@ contains
     real :: ZetaJLeft, ZetaJRight, ZetaKLeft, ZetaKRight
     real :: XyzSph_DD(3,3), dBSph_D(3), dBXyz_D(3)
     real :: BXyzJLeft_D(3), BXyzJRight_D(3), BXyzKLeft_D(3), BXyzKRight_D(3)
-    real :: BrJLeft, BrJRight, BrKLeft, BrKRight, Runit_D(3)
+    real :: BrJLeft, BrJRight, BrKLeft, BrKRight
     !--------------------------------------------------------------------------
     ! Only add the STITCH source term in cells next to the inner boundary.
     ! Works only in spherical coordinates.
@@ -2024,12 +2024,14 @@ contains
        BXyzKRight_D = State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
        if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
 
-       Runit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
-
-       BrJLeft  = sum(BXyzJLeft_D*Runit_D)
-       BrJRight = sum(BXyzJRight_D*Runit_D)
-       BrKLeft  = sum(BXyzKLeft_D*Runit_D)
-       BrKRight = sum(BXyzKRight_D*Runit_D)
+       BrJLeft  = sum(BXyzJLeft_D*Xyz_DGB(:,i,j-1,k,iBlock)) &
+            /r_GB(i,j-1,k,iBlock)
+       BrJRight = sum(BXyzJRight_D*Xyz_DGB(:,i,j+1,k,iBlock)) &
+            /r_GB(i,j+1,k,iBlock)
+       BrKLeft  = sum(BXyzKLeft_D*Xyz_DGB(:,i,j,k-1,iBlock)) &
+            /r_GB(i,j,k-1,iBlock)
+       BrKRight = sum(BXyzKRight_D*Xyz_DGB(:,i,j,k+1,iBlock)) &
+            /r_GB(i,j,k+1,iBlock)
 
        if(UseStitchRegion)then
           call xyz_to_lonlat(Xyz_DGB(:,i,j-1,k,iBlock), Lon, Lat)
