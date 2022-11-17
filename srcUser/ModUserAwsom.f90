@@ -59,6 +59,7 @@ module ModUser
   real    :: ZetaSI = 0.0, Zeta
   integer :: iMaxStitch
   logical :: UseStitchRegion
+  real    :: Lon0Deg, Lon1Deg, Lat0Deg, Lat1Deg
   real    :: Lon0, Lon1, Lat0, Lat1
 
   ! Rotating boundary condition
@@ -147,10 +148,10 @@ contains
        case("#STITCHREGION") ! input in degrees
           call read_var('UseStitchRegion', UseStitchRegion)
           if(UseStitchRegion)then
-             call read_var('Longitude0', Lon0)
-             call read_var('Longitude1', Lon1)
-             call read_var('Latitude0', Lat0)
-             call read_var('Latitude1', Lat1)
+             call read_var('Longitude0', Lon0Deg)
+             call read_var('Longitude1', Lon1Deg)
+             call read_var('Latitude0', Lat0Deg)
+             call read_var('Latitude1', Lat1Deg)
           end if
 
        case('#USERINPUTEND')
@@ -257,10 +258,10 @@ contains
     Zeta = ZetaSI*Si2No_V(UnitX_)*Si2No_V(UnitU_)
 
     if(UseStitchRegion)then
-       Lon0 = Lon0*cDegToRad
-       Lon1 = Lon1*cDegToRad
-       Lat0 = Lat0*cDegToRad
-       Lat1 = Lat1*cDegToRad
+       Lon0 = Lon0Deg*cDegToRad
+       Lon1 = Lon1Deg*cDegToRad
+       Lat0 = Lat0Deg*cDegToRad
+       Lat1 = Lat1Deg*cDegToRad
     end if
 
     if(iProc == 0)then
