@@ -964,8 +964,8 @@ contains
 
     integer:: iRegion, iStatus, nX, nY, nZ
     integer:: iCellInPatch_D(3) = 0
-    !--------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     IsInside = .false.
 
     do iRegion = 1, nRegionPic
@@ -982,7 +982,7 @@ contains
        iCellInPatch_D(1:nDim) = floor((Xyz_D - &
             XyzMinPic_DI(1:nDim,iRegion))/ &
             (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
-       
+
        call get_point_status(&
             iPicStatus_I(iPicStatusMin_I(iRegion):&
             iPicStatusMax_I(iRegion)),&

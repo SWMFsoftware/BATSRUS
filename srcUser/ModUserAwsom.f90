@@ -60,7 +60,7 @@ module ModUser
   integer :: iMaxStitch
   logical :: UseStitchRegion
   real    :: Lon0, Lon1, Lat0, Lat1
-  
+
   ! Rotating boundary condition
   real:: FlowSpeedJet =0.0, FlowSpeedJetSi =0.0
   real:: tBeginJet = 0.0, tEndJet = 0.0
@@ -152,7 +152,7 @@ contains
              call read_var('Latitude0', Lat0)
              call read_var('Latitude1', Lat1)
           end if
-          
+
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -262,7 +262,7 @@ contains
        Lat0 = Lat0*cDegToRad
        Lat1 = Lat1*cDegToRad
     end if
-    
+
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session finished'
@@ -1989,7 +1989,7 @@ contains
     use BATL_size, ONLY: nK, nJ
     use BATL_lib, ONLY: CellFace_DFB, Xyz_DGB
     use ModGeometry, ONLY: r_GB
-    
+
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
@@ -2007,7 +2007,7 @@ contains
     ZetaJRight = Zeta
     ZetaKLeft = Zeta
     ZetaKRight = Zeta
-    
+
     do k = 1, nK; do j = 1, nJ; do i = 1, iMaxStitch
 
        XyzSph_DD = rot_xyz_rlonlat(Xyz_DGB(:,i,j,k,iBlock))
@@ -2025,7 +2025,7 @@ contains
        if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
 
        Runit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
-       
+
        BrJLeft  = sum(BXyzJLeft_D*Runit_D)
        BrJRight = sum(BXyzJRight_D*Runit_D)
        BrKLeft  = sum(BXyzKLeft_D*Runit_D)
@@ -2034,17 +2034,17 @@ contains
        if(UseStitchRegion)then
           call xyz_to_lonlat(Xyz_DGB(:,i,j-1,k,iBlock), Lon, Lat)
           ZetaJLeft = zeta_region(lon, lat)
-       
+
           call xyz_to_lonlat(Xyz_DGB(:,i,j+1,k,iBlock), Lon, Lat)
           ZetaJRight = zeta_region(lon, lat)
-       
+
           call xyz_to_lonlat(Xyz_DGB(:,i,j,k-1,iBlock), Lon, Lat)
           ZetaKLeft = zeta_region(lon, lat)
-       
+
           call xyz_to_lonlat(Xyz_DGB(:,i,j,k+1,iBlock), Lon, Lat)
           ZetaKRight = zeta_region(lon, lat)
        end if
-          
+
        dBSph_D(1) = 0
        dBSph_D(2) = -(ZetaKRight*BrKRight - ZetaKLeft*BrKLeft)/ &
             (CellFace_DFB(2,i,j,k,iBlock) + CellFace_DFB(2,i,j+1,k,iBlock))
@@ -2061,7 +2061,7 @@ contains
       use ModNumConst, ONLY: cHalfPi, cTwoPi, cPi
 
       real, intent(in) :: lon, lat
-      
+
       real :: LonLocal, LatLocal, LonShift
       !------------------------------------------------------------------------
       LonShift = mod(Lon+cPi,cTwoPi)-cPi
@@ -2072,8 +2072,9 @@ contains
       else
          zeta_region = 0.0
       end if
-      
+
     end function zeta_region
+    !==========================================================================
 
   end subroutine user_calc_sources_expl
   !============================================================================
