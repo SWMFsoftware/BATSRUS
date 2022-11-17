@@ -348,7 +348,7 @@ test_fastwave_2d_rundir:test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fastwave_2d_run:
-	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
 
 test_fastwave_2d_check:
@@ -893,7 +893,7 @@ test_awsom_gpu_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsom_gpu_run:
-	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_awsom_gpu_check:
@@ -904,7 +904,7 @@ test_awsom_gpu_check:
 	ls -l test_awsom_gpu.diff
 
 
-
+# change to MPIRUN once message_pass_block is parallelized
 test_awsom_large_gpu:
 	@echo "test_awsom_large_gpu_compile..." > test_awsom_large_gpu.diff
 	$(MAKE) test_awsom_large_gpu_compile

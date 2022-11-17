@@ -961,13 +961,11 @@ contains
 
     real, intent(in) :: Xyz_D(nDim)
     logical, intent(out):: IsInside
-    integer:: nShift_D(3)
 
     integer:: iRegion, iStatus, nX, nY, nZ
     integer:: iCellInPatch_D(3) = 0
-    integer:: nShiftI = 0, nShiftJ = 0, nShiftK = 0
-    !--------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     IsInside = .false.
 
     do iRegion = 1, nRegionPic
@@ -980,27 +978,18 @@ contains
        nY = nPatchCell_DI(y_, iRegion)
        nZ = nPatchCell_DI(z_, iRegion)
 
-       do nShiftI = -1, 1; do nShiftJ = -1, 1; do nShiftK = -1, 1
+       ! Patch cell index
+       iCellInPatch_D(1:nDim) = floor((Xyz_D - &
+            XyzMinPic_DI(1:nDim,iRegion))/ &
+            (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
 
-          nShift_D(x_) = nShiftI
-          nShift_D(y_) = nShiftJ
-          nShift_D(z_) = nShiftK
+       call get_point_status(&
+            iPicStatus_I(iPicStatusMin_I(iRegion):&
+            iPicStatusMax_I(iRegion)),&
+            nX, nY, nZ, iCellInPatch_D(x_), iCellInPatch_D(y_),&
+            iCellInPatch_D(z_), iStatus)
 
-          ! Patch cell index
-          iCellInPatch_D(1:nDim) = floor((Xyz_D + &
-               nShift_D(1:nDim)*DxyzPic_DI(1:nDim, iRegion) - &
-               XyzMinPic_DI(1:nDim,iRegion))/ &
-               (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
-
-          call get_point_status(&
-               iPicStatus_I(iPicStatusMin_I(iRegion):&
-               iPicStatusMax_I(iRegion)),&
-               nx, ny, nz, iCellInPatch_D(x_), iCellInPatch_D(y_),&
-               iCellInPatch_D(z_), iStatus)
-
-          if(iStatus==iPicOff_) RETURN
-
-       enddo; enddo; enddo
+       if(iStatus==iPicOff_) RETURN
 
        ! All the patches surround Xyz_D are actived.
        IsInside = .true.

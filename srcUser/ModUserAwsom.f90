@@ -58,6 +58,8 @@ module ModUser
   ! STITCH
   real    :: ZetaSI = 0.0, Zeta
   integer :: iMaxStitch
+  logical :: UseStitchRegion
+  real    :: Lon0, Lon1, Lat0, Lat1
 
   ! Rotating boundary condition
   real:: FlowSpeedJet =0.0, FlowSpeedJetSi =0.0
@@ -142,6 +144,15 @@ contains
           call read_var('ZetaSI', ZetaSI)
           call read_var('iMaxStitch', iMaxStitch)
 
+       case("#STITCHREGION") ! input in degrees
+          call read_var('UseStitchRegion', UseStitchRegion)
+          if(UseStitchRegion)then
+             call read_var('Longitude0', Lon0)
+             call read_var('Longitude1', Lon1)
+             call read_var('Latitude0', Lat0)
+             call read_var('Latitude1', Lat1)
+          end if
+
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -177,7 +188,7 @@ contains
     use ModMultiFluid, ONLY: MassIon_I
     use ModConst,      ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
          cElectronMass
-    use ModNumConst,   ONLY: cTwoPi
+    use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitB_, BodyNDim_I, BodyTDim_I, &
          UnitX_, UnitT_, Gamma, UnitEnergyDens_, UnitU_
@@ -244,6 +255,13 @@ contains
     ! ZetaSI is in SI unit of [meter^2*second^(-1)]
     ! ZetaSI = 1.4E14 [m^2/s]
     Zeta = ZetaSI*Si2No_V(UnitX_)*Si2No_V(UnitU_)
+
+    if(UseStitchRegion)then
+       Lon0 = Lon0*cDegToRad
+       Lon1 = Lon1*cDegToRad
+       Lat0 = Lat0*cDegToRad
+       Lat1 = Lat1*cDegToRad
+    end if
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -1966,64 +1984,97 @@ contains
     use ModB0, ONLY: B0_DGB
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMain, ONLY: UseB0
-    use ModNumConst, ONLY: cRadToDeg, cHalfPi
-    use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModCoordTransform, ONLY: rot_xyz_rlonlat, xyz_to_lonlat
     use ModParallel, ONLY: Unset_, DiLevel_EB
     use BATL_size, ONLY: nK, nJ
-    use BATL_lib, ONLY: CellFace_DFB, CoordMin_DB, CellSize_DB
+    use BATL_lib, ONLY: CellFace_DFB, Xyz_DGB
+    use ModGeometry, ONLY: r_GB
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: XyzSph_DD(3,3), BSph_D(3), BXyz_D(3), dBSph_D(3), dBXyz_D(3)
+    real :: Lon, Lat
+    real :: ZetaJLeft, ZetaJRight, ZetaKLeft, ZetaKRight
+    real :: XyzSph_DD(3,3), dBSph_D(3), dBXyz_D(3)
     real :: BXyzJLeft_D(3), BXyzJRight_D(3), BXyzKLeft_D(3), BXyzKRight_D(3)
-    real :: BSphJLeft_D(3), BSphJRight_D(3), BSphKLeft_D(3), BSphKRight_D(3)
-    real :: LonRad, LatRad, Lon, Lat, Phi, Theta
+    real :: BrJLeft, BrJRight, BrKLeft, BrKRight, Runit_D(3)
     !--------------------------------------------------------------------------
     ! Only add the STITCH source term in cells next to the inner boundary.
     ! Works only in spherical coordinates.
     if(DiLevel_EB(1,iBlock) /= Unset_) RETURN
 
+    ZetaJLeft = Zeta
+    ZetaJRight = Zeta
+    ZetaKLeft = Zeta
+    ZetaKRight = Zeta
+
     do k = 1, nK; do j = 1, nJ; do i = 1, iMaxStitch
 
-      LonRad = CoordMin_DB(2,iBlock) + (j-0.5)*CellSize_DB(2,iBlock)
-      LatRad = CoordMin_DB(3,iBlock) + (k-0.5)*CellSize_DB(3,iBlock)
-      Lon = LonRad * cRadToDeg
-      Lat = LatRad * cRadToDeg
-      Phi = LonRad
-      Theta = cHalfPi - LatRad
-      XyzSph_DD = rot_xyz_sph(Theta, Phi)
+       XyzSph_DD = rot_xyz_rlonlat(Xyz_DGB(:,i,j,k,iBlock))
 
-      BXyz_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-      if(UseB0) BXyz_D = BXyz_D + B0_DGB(:,i,j,k,iBlock)
+       BXyzJLeft_D = State_VGB(Bx_:Bz_,i,j-1,k,iBlock)
+       if(UseB0) BXyzJLeft_D = BXyzJLeft_D + B0_DGB(:,i,j-1,k,iBlock)
 
-      BXyzJLeft_D = State_VGB(Bx_:Bz_,i,j-1,k,iBlock)
-      if(UseB0) BXyzJLeft_D = BXyzJLeft_D + B0_DGB(:,i,j-1,k,iBlock)
+       BXyzJRight_D = State_VGB(Bx_:Bz_,i,j+1,k,iBlock)
+       if(UseB0) BXyzJRight_D = BXyzJRight_D + B0_DGB(:,i,j+1,k,iBlock)
 
-      BXyzJRight_D = State_VGB(Bx_:Bz_,i,j+1,k,iBlock)
-      if(UseB0) BXyzJRight_D = BXyzJRight_D + B0_DGB(:,i,j+1,k,iBlock)
+       BXyzKLeft_D = State_VGB(Bx_:Bz_,i,j,k-1,iBlock)
+       if(UseB0) BXyzKLeft_D = BXyzKLeft_D + B0_DGB(:,i,j,k-1,iBlock)
 
-      BXyzKLeft_D = State_VGB(Bx_:Bz_,i,j,k-1,iBlock)
-      if(UseB0) BXyzKLeft_D = BXyzKLeft_D + B0_DGB(:,i,j,k-1,iBlock)
+       BXyzKRight_D = State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
+       if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
 
-      BXyzKRight_D = State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
-      if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
+       Runit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
 
-      BSph_D = matmul(BXyz_D, XyzSph_DD)
-      BSphJLeft_D = matmul(BXyzJLeft_D, XyzSph_DD)
-      BSphJRight_D = matmul(BXyzJRight_D, XyzSph_DD)
-      BSphKLeft_D = matmul(BXyzKLeft_D, XyzSph_DD)
-      BSphKRight_D = matmul(BXyzKRight_D, XyzSph_DD)
+       BrJLeft  = sum(BXyzJLeft_D*Runit_D)
+       BrJRight = sum(BXyzJRight_D*Runit_D)
+       BrKLeft  = sum(BXyzKLeft_D*Runit_D)
+       BrKRight = sum(BXyzKRight_D*Runit_D)
 
-      dBSph_D(1) = 0
-      dBSph_D(2) = -Zeta*(BSphKRight_D(1)-BSphKLeft_D(1))/ &
-                  (CellFace_DFB(2,i,j,k,iBlock)+CellFace_DFB(2,i,j+1,k,iBlock))
-      dBSph_D(3) =  Zeta*(BSphJRight_D(1)-BSphJLeft_D(1))/ &
-                  (CellFace_DFB(3,i,j,k,iBlock)+CellFace_DFB(3,i,j,k+1,iBlock))
-      dBXyz_D = matmul(XyzSph_DD, dBSph_D)
+       if(UseStitchRegion)then
+          call xyz_to_lonlat(Xyz_DGB(:,i,j-1,k,iBlock), Lon, Lat)
+          ZetaJLeft = zeta_region(lon, lat)
 
-      Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) + dBXyz_D
+          call xyz_to_lonlat(Xyz_DGB(:,i,j+1,k,iBlock), Lon, Lat)
+          ZetaJRight = zeta_region(lon, lat)
+
+          call xyz_to_lonlat(Xyz_DGB(:,i,j,k-1,iBlock), Lon, Lat)
+          ZetaKLeft = zeta_region(lon, lat)
+
+          call xyz_to_lonlat(Xyz_DGB(:,i,j,k+1,iBlock), Lon, Lat)
+          ZetaKRight = zeta_region(lon, lat)
+       end if
+
+       dBSph_D(1) = 0
+       dBSph_D(2) = -(ZetaKRight*BrKRight - ZetaKLeft*BrKLeft)/ &
+            (CellFace_DFB(2,i,j,k,iBlock) + CellFace_DFB(2,i,j+1,k,iBlock))
+       dBSph_D(3) =  (ZetaJRight*BrJRight - ZetaJLeft*BrJLeft)/ &
+            (CellFace_DFB(3,i,j,k,iBlock) + CellFace_DFB(3,i,j,k+1,iBlock))
+       dBXyz_D = matmul(XyzSph_DD, dBSph_D)
+
+       Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) + dBXyz_D
     end do; end do; end do
+
+  contains
+    !==========================================================================
+    real function zeta_region(lon, lat)
+      use ModNumConst, ONLY: cHalfPi, cTwoPi, cPi
+
+      real, intent(in) :: lon, lat
+
+      real :: LonLocal, LatLocal, LonShift
+      !------------------------------------------------------------------------
+      LonShift = mod(Lon+cPi,cTwoPi)-cPi
+      LonLocal = cHalfPi*(LonShift - Lon0)/Lon1
+      LatLocal = cHalfPi*(Lat - Lat0)/Lat1
+      if(abs(LonShift-Lon0)<Lon1 .and. abs(Lat-Lat0)<Lat1)then
+         zeta_region = Zeta*cos(LonLocal)*cos(LatLocal)
+      else
+         zeta_region = 0.0
+      end if
+
+    end function zeta_region
+    !==========================================================================
 
   end subroutine user_calc_sources_expl
   !============================================================================
