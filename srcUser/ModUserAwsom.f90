@@ -59,6 +59,7 @@ module ModUser
   real    :: ZetaSI = 0.0, Zeta
   integer :: iMaxStitch
   logical :: UseStitchRegion
+  real    :: Lon0Deg, Lon1Deg, Lat0Deg, Lat1Deg
   real    :: Lon0, Lon1, Lat0, Lat1
 
   ! Rotating boundary condition
@@ -147,10 +148,10 @@ contains
        case("#STITCHREGION") ! input in degrees
           call read_var('UseStitchRegion', UseStitchRegion)
           if(UseStitchRegion)then
-             call read_var('Longitude0', Lon0)
-             call read_var('Longitude1', Lon1)
-             call read_var('Latitude0', Lat0)
-             call read_var('Latitude1', Lat1)
+             call read_var('Longitude0', Lon0Deg)
+             call read_var('Longitude1', Lon1Deg)
+             call read_var('Latitude0', Lat0Deg)
+             call read_var('Latitude1', Lat1Deg)
           end if
 
        case('#USERINPUTEND')
@@ -257,10 +258,10 @@ contains
     Zeta = ZetaSI*Si2No_V(UnitX_)*Si2No_V(UnitU_)
 
     if(UseStitchRegion)then
-       Lon0 = Lon0*cDegToRad
-       Lon1 = Lon1*cDegToRad
-       Lat0 = Lat0*cDegToRad
-       Lat1 = Lat1*cDegToRad
+       Lon0 = Lon0Deg*cDegToRad
+       Lon1 = Lon1Deg*cDegToRad
+       Lat0 = Lat0Deg*cDegToRad
+       Lat1 = Lat1Deg*cDegToRad
     end if
 
     if(iProc == 0)then
@@ -1997,7 +1998,7 @@ contains
     real :: ZetaJLeft, ZetaJRight, ZetaKLeft, ZetaKRight
     real :: XyzSph_DD(3,3), dBSph_D(3), dBXyz_D(3)
     real :: BXyzJLeft_D(3), BXyzJRight_D(3), BXyzKLeft_D(3), BXyzKRight_D(3)
-    real :: BrJLeft, BrJRight, BrKLeft, BrKRight, Runit_D(3)
+    real :: BrJLeft, BrJRight, BrKLeft, BrKRight
     !--------------------------------------------------------------------------
     ! Only add the STITCH source term in cells next to the inner boundary.
     ! Works only in spherical coordinates.
@@ -2024,12 +2025,14 @@ contains
        BXyzKRight_D = State_VGB(Bx_:Bz_,i,j,k+1,iBlock)
        if(UseB0) BXyzKRight_D = BXyzKRight_D + B0_DGB(:,i,j,k+1,iBlock)
 
-       Runit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
-
-       BrJLeft  = sum(BXyzJLeft_D*Runit_D)
-       BrJRight = sum(BXyzJRight_D*Runit_D)
-       BrKLeft  = sum(BXyzKLeft_D*Runit_D)
-       BrKRight = sum(BXyzKRight_D*Runit_D)
+       BrJLeft  = sum(BXyzJLeft_D*Xyz_DGB(:,i,j-1,k,iBlock)) &
+            /r_GB(i,j-1,k,iBlock)
+       BrJRight = sum(BXyzJRight_D*Xyz_DGB(:,i,j+1,k,iBlock)) &
+            /r_GB(i,j+1,k,iBlock)
+       BrKLeft  = sum(BXyzKLeft_D*Xyz_DGB(:,i,j,k-1,iBlock)) &
+            /r_GB(i,j,k-1,iBlock)
+       BrKRight = sum(BXyzKRight_D*Xyz_DGB(:,i,j,k+1,iBlock)) &
+            /r_GB(i,j,k+1,iBlock)
 
        if(UseStitchRegion)then
           call xyz_to_lonlat(Xyz_DGB(:,i,j-1,k,iBlock), Lon, Lat)
