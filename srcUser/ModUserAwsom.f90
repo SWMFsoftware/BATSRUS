@@ -2063,7 +2063,7 @@ contains
     real function zeta_region(lon, lat)
       use ModNumConst, ONLY: cHalfPi, cTwoPi, cPi
 
-      real, intent(in) :: lon, lat
+      real, intent(in) :: Lon, Lat
 
       real :: LonLocal, LatLocal, LonShift
       !------------------------------------------------------------------------
