@@ -934,7 +934,7 @@ test_awsom_large_gpu_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_awsom_large_gpu_check:
-	-@(${DIFFNUM} -a=1e-19 -r=1e-5 -t \
+	-@(${DIFFNUM} -a=2e-19 -r=1e-5 -t \
 		${TESTDIR}/RESULTS/SC/log_n000500.log \
 		Param/CORONA/TestOutput/log_n000500.sc.awsom_large_gpu \
 		> test_awsom_large_gpu.diff)
