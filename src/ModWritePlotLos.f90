@@ -2221,7 +2221,7 @@ contains
                   trim(StringUnitIdl)//' '//'[cm^-3]'
           case('fux')
              write(StringUnitIdl,'(a)') &
-                  trim(StringUnitIdl)//' '//'[erg sr^-1 cm^-2 A^-1]'
+                  trim(StringUnitIdl)//' '//'[erg sr^-1 cm^-2 A^-1 s^-1]'
           case('nbi')
              write(StringUnitIdl,'(a)') &
                   trim(StringUnitIdl)//' '//'[DN/s]'
