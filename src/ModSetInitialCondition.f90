@@ -176,6 +176,7 @@ contains
     real   :: ShockLeft_V(nVar), ShockRight_V(nVar)
     integer:: i, j, k, iVar, iBoundary, iFluid, iGang
 
+    logical:: DoTestCell
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_initial_condition'
     !--------------------------------------------------------------------------
@@ -225,14 +226,22 @@ contains
 
           ! Loop through all the cells
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+
+             DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
              ! Default state
              State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Coord1MaxBc_)
+
+             if(DoTestCell)write(*,*) NameSub,': default state=', &
+                  State_VGB(:,i,j,k,iBlock)
 
              if(.not.Used_GB(i,j,k,iBlock))then
                 ! Cells outside the domain
                 iBoundary = iBoundary_GB(i,j,k,iBlock)
 
                 State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,iBoundary)
+
+                if(DoTestCell)write(*,*) NameSub,': face state=', &
+                     State_VGB(:,i,j,k,iBlock)
 
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
@@ -241,16 +250,26 @@ contains
                         FaceState_VI(iUx:iUz,iBoundary) &
                         *FaceState_VI(iRho,iBoundary)
                 end do
+
+                if(DoTestCell)write(*,*) NameSub,': face cons.=', &
+                     State_VGB(:,i,j,k,iBlock)
+
              elseif(UseInitialStateDefinition)then
                 ! Cells defined by the #STATEDEFINITION command
                 x = Xyz_DGB(x_,i,j,k,iBlock)
                 y = Xyz_DGB(y_,i,j,k,iBlock)
                 call get_initial_state( [x, y], State_VGB(:,i,j,k,iBlock) )
+
+                if(DoTestCell)write(*,*) NameSub,': InitalState=', &
+                     State_VGB(:,i,j,k,iBlock)
              elseif(UseShocktube)then
                 if( (Xyz_DGB(x_,i,j,k,iBlock) - ShockPosition) &
                      < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
                    ! Set all variables first
                    State_VGB(:,i,j,k,iBlock) = ShockLeft_V
+
+                   if(DoTestCell)write(*,*) NameSub,': left State=', &
+                        State_VGB(:,i,j,k,iBlock)
 #ifndef SCALAR
                    ! Rotate vector variables
                    do iFluid = 1, nFluid
@@ -261,9 +280,13 @@ contains
                    if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
                         matmul(Rot_II, ShockLeft_V(Bx_:By_))
 #endif
+                   if(DoTestCell)write(*,*) NameSub,': final left State=', &
+                        State_VGB(:,i,j,k,iBlock)
                 else
                    ! Set all variables first
                    State_VGB(:,i,j,k,iBlock) = ShockRight_V
+                   if(DoTestCell)write(*,*) NameSub,': right State=', &
+                        State_VGB(:,i,j,k,iBlock)
 #ifndef SCALAR
                    ! Set vector variables
                    do iFluid = 1, nFluid
@@ -274,10 +297,16 @@ contains
                    if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
                         matmul(Rot_II, ShockRight_V(Bx_:By_))
 #endif
+                   if(DoTestCell)write(*,*) NameSub,': final right State=', &
+                        State_VGB(:,i,j,k,iBlock)
                 end if
 
                 ! Apply "wave" perturbations
-                if(UseWave) call apply_wave(i, j, k, iBlock)
+                if(UseWave)then
+                   call apply_wave(i, j, k, iBlock)
+                   if(DoTestCell)write(*,*) NameSub,': wave State=', &
+                        State_VGB(:,i,j,k,iBlock)
+                end if
 
 #ifndef SCALAR
                 ! Convert velocity to momentum
@@ -292,6 +321,9 @@ contains
                 ! Remove B0 from B (if any)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+                if(DoTestCell)write(*,*) NameSub,': cons shock State=', &
+                     State_VGB(:,i,j,k,iBlock)
+
              end if ! UseShockTube
 
           end do; end do; end do
@@ -301,29 +333,43 @@ contains
                 State_VGB(iP_I,i,j,k,iBlock) = &
                      EntropyConstant*State_VGB(iRho_I,i,j,k,iBlock)**Gamma_I
              end do; end do; end do
+             if(DoTestCell)write(*,*) NameSub,': entropy State=', &
+                  State_VGB(:,i,j,k,iBlock)
           end if
 
           ! Correct electron fluid for wave perturbations
-          if(UseEfield .and. DoCorrectElectronFluid .and. UseWave) &
-               call correct_electronfluid_efield(State_VGB(:,:,:,:,iBlock), &
-               1, nI, 1, nJ, 1, nK, iBlock, DoHallCurrentIn=.true.,         &
-               DoGradPeIn=.false., DoCorrectEfieldIn=DoCorrectEfield)
-
+          if(UseEfield .and. DoCorrectElectronFluid .and. UseWave) then
+             call correct_electronfluid_efield(State_VGB(:,:,:,:,iBlock), &
+                  1, nI, 1, nJ, 1, nK, iBlock, DoHallCurrentIn=.true.,    &
+                  DoGradPeIn=.false., DoCorrectEfieldIn=DoCorrectEfield)
+             if(DoTestCell)write(*,*) NameSub,': electric State=', &
+                  State_VGB(:,i,j,k,iBlock)
+          end if
           if(UseConstrainB) call constrain_ics(iBlock)
 
           ! Apply user defined initial conditions
-          if(UseUserICs) call user_set_ics(iBlock)
+          if(UseUserICs)then
+             call user_set_ics(iBlock)
+             if(DoTestCell)write(*,*) NameSub,': user State=', &
+                  State_VGB(:,i,j,k,iBlock)
+          end if
 
-          if(iSignRotationIC /= 0) &
-               call add_rotational_velocity(iSignRotationIC, iBlock)
-
-          if(UseChGL)call init_chgl(iBlock)
+          if(iSignRotationIC /= 0)then
+             call add_rotational_velocity(iSignRotationIC, iBlock)
+             if(DoTestCell)write(*,*) NameSub,': rot vel State=', &
+                  State_VGB(:,i,j,k,iBlock)
+          end if
+          if(UseChGL)then
+             call init_chgl(iBlock)
+             if(DoTestCell)write(*,*) NameSub,': chgl State=', &
+                  State_VGB(:,i,j,k,iBlock)
+          end if
        end if ! not IsRestart
 
     end if ! Unused_B
 
     if(DoTest)write(*,*) &
-         NameSub,': State(test)=',State_VGB(:,iTest,jTest,kTest,iBlockTest)
+         NameSub,': final State=',State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
     call test_stop(NameSub, DoTest, iBlock)
 
@@ -377,6 +423,7 @@ contains
 
       integer:: iVar
       real:: x, y, z, r, Ampl
+      character(len=*), parameter:: NameSub = 'apply_wave'
       !------------------------------------------------------------------------
       do iVar = 1, nVar
 
@@ -384,6 +431,10 @@ contains
          Ampl = Ampl_V(iVar)*Io2No_V(iUnitPrim_V(iVar))
 
          if(Ampl == 0.0) CYCLE
+
+         if(DoTestCell) write(*,*) NameSub, 'iVar, Ampl, kX, kY, kZ, iPower=', &
+              iVar, Ampl, KxWave_V(iVar), KyWave_V(iVar), KzWave_V(iVar), &
+              iPower_V(iVar)
 
          if(iPower_V(iVar) <= 0)then
             ! Bump
@@ -412,14 +463,17 @@ contains
                  + Ampl * cos(cPi*r)**abs(iPower_V(iVar))
          else
             ! cos^n profile
-            if(KxWave_V(iVar) > 0.0)then
-               if(abs(Xyz_DGB(x_,i,j,k,iBlock) &
-                    + ShockSlope*Xyz_DGB(y_,i,j,k,iBlock)) &
-                    > Width_V(iVar) ) CYCLE
-            elseif(KyWave_V(iVar) > 0.0)then
-               if(abs(Xyz_DGB(y_,i,j,k,iBlock)) > Width_V(iVar) ) CYCLE
-            elseif(KzWave_V(iVar) > 0.0)then
-               if(abs(Xyz_DGB(z_,i,j,k,iBlock)) > Width_V(iVar) ) CYCLE
+            if(Width_V(iVar) > 0)then
+               if(DoTestCell)write(*,*) NameSub,': Width=', Width_V(iVar)
+               if(KxWave_V(iVar) > 0.0)then
+                  if(abs(Xyz_DGB(x_,i,j,k,iBlock) &
+                       + ShockSlope*Xyz_DGB(y_,i,j,k,iBlock)) &
+                       > Width_V(iVar) ) CYCLE
+               elseif(KyWave_V(iVar) > 0.0)then
+                  if(abs(Xyz_DGB(y_,i,j,k,iBlock)) > Width_V(iVar) ) CYCLE
+               elseif(KzWave_V(iVar) > 0.0)then
+                  if(abs(Xyz_DGB(z_,i,j,k,iBlock)) > Width_V(iVar) ) CYCLE
+               end if
             end if
 
             State_VGB(iVar,i,j,k,iBlock) =        &

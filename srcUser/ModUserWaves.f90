@@ -53,10 +53,10 @@ module ModUser
   character(len=*), parameter :: NameUserModule = "Waves"
 
   character(len=20):: NameProblem='wave'
-  real :: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
+  real :: Width, Amplitude, AmplitudeRho, Phase, LambdaX, LambdaY, LambdaZ
   real, dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
        x_V=0.0, y_V=0.0, z_V=0.0, KxWave_V=0.0, KyWave_V=0.0, KzWave_V=0.0
-  integer :: iPower_V(nVar)=1
+  integer :: iPower_V(nVar) = 1
   logical :: DoInitialize=.true.
 
   ! GEM challenge parameters
@@ -156,8 +156,14 @@ contains
 
        case('#RT')
           NameProblem = 'RT'
-          call read_var('X Velocity Amplitude', Amplitude)
-          call read_var('X Perturbation Width', Width)
+          call read_var('AmplitudeUx', Amplitude)
+          call read_var('WidthXUx'   , Width)
+          call read_var('LambdaYUx'  , LambdaY)
+          call read_var('IsSmoothRho', IsSmooth)
+          if(IsSmooth)then
+             call read_var('WidthRho',     Width)
+             call read_var('AmplitudeRho', AmplitudeRho)
+          end if
 
        case('#WAVESPEED')
           call read_var('Velocity',Velocity)
@@ -339,24 +345,21 @@ contains
        RhoRight = ShockRightState_V(Rho_)
        pLeft    = ShockLeftState_V(p_)
 
-       write(*,*)'!!! RhoLeft, pLeft, KxWave, Power=', &
-            RhoLeft, pLeft, KxWave_V(Rho_), iPower_V(Rho_)
+       write(*,*)'!!! RhoLeft, pLeft, Width=', &
+            RhoLeft, pLeft, Width, IsSmooth, AmplitudeRho
 
-       if(KxWave_V(Rho_) > 0.0 .and. iPower_V(Rho_) < 0)then
+       if(IsSmooth)then
           ! Gaussian density profile. Integral from -infty to x is 1+erf(x)
           ! Integral scales with amplitude and 1/KxWave
           do i = MinI, MaxI
              x = Xyz_DGB(x_,i,1,1,iBlock)
              State_VGB(Rho_,i,:,:,iBlock) = RhoLeft + &
-                  Ampl_V(Rho_)*exp(-(KxWave_V(Rho_)*x)**2)
-             if(KxWave_V(Uy_) > 0.0) State_VGB(RhoUy_,i,:,:,iBlock) = &
-                  State_VGB(Rho_,i,:,:,iBlock) &
-                  *Ampl_V(Uy_)*exp(-(KxWave_V(Uy_)*x)**2)
+                  AmplitudeRho*exp(-(x/Width)**2)
 
              State_VGB(p_,i,:,:,iBlock) = pLeft + Acceleration* &
-                  ( RhoLeft*(x- xMinBox) &
-                  + Ampl_V(Rho_)/KxWave_V(Rho_) &
-                  *0.5*sqrt(cPi)*(1.0 + erf(KxWave_V(Rho_)*(x-x_V(Rho_)))))
+                  ( RhoLeft*(x - xMinBox) &
+                  + AmplitudeRho*Width &
+                  *0.5*sqrt(cPi)*(1.0 + erf(x/Width)))
           end do
        else
           ! rho = Rholeft for x < 0
@@ -372,11 +375,12 @@ contains
                   *(Xyz_DGB(x_,:,:,:,iBlock)*RhoRight - xMinBox*RhoLeft)
           end where
        end if
-       ! Perturb velocity
+
+       ! Perturb Ux velocity
        where(abs(Xyz_DGB(x_,:,:,:,iBlock)) < Width)
           State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(Rho_,:,:,:,iBlock) &
                * Amplitude * cos(cHalfPi*Xyz_DGB(x_,:,:,:,iBlock)/Width)**2 &
-               * sin(cTwoPi*(Xyz_DGB(y_,:,:,:,iBlock))/(yMaxBox-yMinBox))
+               * sin(cTwoPi*(Xyz_DGB(y_,:,:,:,iBlock))/LambdaY)
        endwhere
 #endif
     case('AdvectSphere')
