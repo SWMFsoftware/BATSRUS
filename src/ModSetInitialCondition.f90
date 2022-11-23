@@ -176,7 +176,8 @@ contains
     real   :: ShockLeft_V(nVar), ShockRight_V(nVar)
     integer:: i, j, k, iVar, iBoundary, iFluid, iGang
 
-    logical:: DoTest, DoTestCell
+    logical:: DoTestCell
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_initial_condition'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -232,7 +233,7 @@ contains
 
              if(DoTestCell)write(*,*) NameSub,': default state=', &
                   State_VGB(:,i,j,k,iBlock)
-             
+
              if(.not.Used_GB(i,j,k,iBlock))then
                 ! Cells outside the domain
                 iBoundary = iBoundary_GB(i,j,k,iBlock)
@@ -241,7 +242,7 @@ contains
 
                 if(DoTestCell)write(*,*) NameSub,': face state=', &
                      State_VGB(:,i,j,k,iBlock)
-                
+
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
                    if(nFluid > 1) call select_fluid(iFluid)
@@ -260,7 +261,7 @@ contains
                 call get_initial_state( [x, y], State_VGB(:,i,j,k,iBlock) )
 
                 if(DoTestCell)write(*,*) NameSub,': InitalState=', &
-                     State_VGB(:,i,j,k,iBlock)                
+                     State_VGB(:,i,j,k,iBlock)
              elseif(UseShocktube)then
                 if( (Xyz_DGB(x_,i,j,k,iBlock) - ShockPosition) &
                      < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
@@ -322,7 +323,7 @@ contains
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
                 if(DoTestCell)write(*,*) NameSub,': cons shock State=', &
                      State_VGB(:,i,j,k,iBlock)
-                
+
              end if ! UseShockTube
 
           end do; end do; end do
@@ -434,7 +435,7 @@ contains
          if(DoTestCell) write(*,*) NameSub, 'iVar, Ampl, kX, kY, kZ, iPower=', &
               iVar, Ampl, KxWave_V(iVar), KyWave_V(iVar), KzWave_V(iVar), &
               iPower_V(iVar)
-         
+
          if(iPower_V(iVar) <= 0)then
             ! Bump
             x = Xyz_DGB(x_,i,j,k,iBlock) - x_V(iVar)
