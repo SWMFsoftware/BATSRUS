@@ -432,7 +432,8 @@ contains
 
          if(Ampl == 0.0) CYCLE
 
-         if(DoTestCell) write(*,*) NameSub, 'iVar, Ampl, kX, kY, kZ, iPower=', &
+         if(DoTestCell) &
+              write(*,*) NameSub, 'iVar, Ampl, kX, kY, kZ, iPower=', &
               iVar, Ampl, KxWave_V(iVar), KyWave_V(iVar), KzWave_V(iVar), &
               iPower_V(iVar)
 
