@@ -911,7 +911,7 @@ contains
                 HeatExchangePPpar = DtLocal*PPparImpl &
                      *(State_VGB(Ppar_,i,j,k,iBlock) &
                      - State_VGB(P_,i,j,k,iBlock))
-                
+
                 State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
                      - HeatExchangePePpar - HeatExchangePPpar &
                      + DtLocal*(PePparImpl - PPparImpl)*HeatExchangePeP
