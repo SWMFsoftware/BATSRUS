@@ -837,7 +837,7 @@ contains
 
     real :: DtLocal, TeSi, Ti
     real :: HeatExchange, IsotropizationCoef
-    real :: PePImpl, PePparImpl, PPparImpl
+    real :: PePImpl, PPparImpl
     real :: HeatExchangePeP, HeatExchangePePpar, HeatExchangePPpar
     integer:: i, j, k, iBlock
 
@@ -893,33 +893,27 @@ contains
 
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
+             HeatExchangePePpar = DtLocal*PePImpl &
+                  *(State_VGB(Ppar_,i,j,k,iBlock) &
+                  - State_VGB(Pe_,i,j,k,iBlock))
+
              if(UseFixIsotropization)then
                 Ti = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
                 IsotropizationCoef = CollisionCoef_II(1,1) &
                      *State_VGB(Rho_,i,j,k,iBlock)/Ti**1.5
 
-                PePparImpl = HeatExchange &
-                     /(1 + DtLocaL*(HeatExchange + IsotropizationCoef))
-
-                PPparImpl = IsotropizationCoef &
-                     /(1 + DtLocaL*(HeatExchange + IsotropizationCoef))
-
-                HeatExchangePePpar = DtLocal*PePparImpl &
-                     *(State_VGB(Ppar_,i,j,k,iBlock) &
-                     - State_VGB(Pe_,i,j,k,iBlock))
+                PPparImpl = (IsotropizationCoef + HeatExchange &
+                     *DtLocaL*(HeatExchange + IsotropizationCoef)) &
+                     /(1 + DtLocaL*(HeatExchange + IsotropizationCoef)) &
+                     /(1 + 2.0*DtLocal*HeatExchange)
 
                 HeatExchangePPpar = DtLocal*PPparImpl &
                      *(State_VGB(Ppar_,i,j,k,iBlock) &
                      - State_VGB(P_,i,j,k,iBlock))
 
                 State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                     - HeatExchangePePpar - HeatExchangePPpar &
-                     + DtLocal*(PePparImpl - PPparImpl)*HeatExchangePeP
+                     - HeatExchangePePpar - HeatExchangePPpar
              else
-                HeatExchangePePpar = DtLocal*PePImpl &
-                     *(State_VGB(Ppar_,i,j,k,iBlock) &
-                     - State_VGB(Pe_,i,j,k,iBlock))
-
                 State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
                      - HeatExchangePePpar
              end if
