@@ -837,7 +837,7 @@ contains
 
     real :: DtLocal, TeSi, Ti
     real :: HeatExchange, IsotropizationCoef
-    real :: PePImpl, PePparImpl, PPparImpl
+    real :: PePImpl, PPparImpl
     real :: HeatExchangePeP, HeatExchangePePpar, HeatExchangePPpar
     integer:: i, j, k, iBlock
 
@@ -893,33 +893,27 @@ contains
 
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
+             HeatExchangePePpar = DtLocal*PePImpl &
+                  *(State_VGB(Ppar_,i,j,k,iBlock) &
+                  - State_VGB(Pe_,i,j,k,iBlock))
+
              if(UseFixIsotropization)then
                 Ti = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
                 IsotropizationCoef = CollisionCoef_II(1,1) &
                      *State_VGB(Rho_,i,j,k,iBlock)/Ti**1.5
 
-                PePparImpl = HeatExchange &
-                     /(1 + DtLocaL*(HeatExchange + IsotropizationCoef))
-
-                PPparImpl = IsotropizationCoef &
-                     /(1 + DtLocaL*(HeatExchange + IsotropizationCoef))
-
-                HeatExchangePePpar = DtLocal*PePparImpl &
-                     *(State_VGB(Ppar_,i,j,k,iBlock) &
-                     - State_VGB(Pe_,i,j,k,iBlock))
+                PPparImpl = (IsotropizationCoef + HeatExchange &
+                     *DtLocaL*(HeatExchange + IsotropizationCoef)) &
+                     /(1 + DtLocaL*(HeatExchange + IsotropizationCoef)) &
+                     /(1 + 2.0*DtLocal*HeatExchange)
 
                 HeatExchangePPpar = DtLocal*PPparImpl &
                      *(State_VGB(Ppar_,i,j,k,iBlock) &
                      - State_VGB(P_,i,j,k,iBlock))
 
                 State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                     - HeatExchangePePpar - HeatExchangePPpar &
-                     + DtLocal*(PePparImpl - PPparImpl)*HeatExchangePeP
+                     - HeatExchangePePpar - HeatExchangePPpar
              else
-                HeatExchangePePpar = DtLocal*PePImpl &
-                     *(State_VGB(Ppar_,i,j,k,iBlock) &
-                     - State_VGB(Pe_,i,j,k,iBlock))
-
                 State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
                      - HeatExchangePePpar
              end if
@@ -1005,7 +999,7 @@ contains
     real :: QPerQtotal_I(IonFirst_:IonLast_)
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
-    real :: Tpar, CollisionRate, IsotropizationCoef
+    real :: Tpar, CollisionRate, IsotropizationCoef, DenominatorPar
 
 #ifndef SCALAR
     logical:: DoTest
@@ -1260,6 +1254,8 @@ contains
                 CollisionRate = CollisionCoef_II(1,1) &
                      *Natomic/(Ti*sqrt(Ti))
                 IsotropizationCoef = 0.5*Natomic*CollisionRate
+                DenominatorPar =  CviPar/DtLocal + 0.5*GammaMinus1*TeTiCoef &
+                     + IsotropizationCoef
 
                 if(DoRadCooling)then
                    call get_radiative_cooling(i, j, k, iBlock, TeSi, &
@@ -1285,13 +1281,13 @@ contains
                 PointCoef_VCB(4,i,j,k,iBlock) = &
                      PointCoef_VCB(3,i,j,k,iBlock)*(Te - Ti)
                 PointCoef_VCB(5,i,j,k,iBlock) = &
-                     CviPar*TeTiCoef/(Cvi/DtLocal + TeTiCoef) &
-                     *(0.5*GammaMinus1*Cvi + IsotropizationCoef*DtLocal) &
-                     /(CviPar + IsotropizationCoef*DtLocal)
+                     CviPar/DenominatorPar*(0.5*GammaMinus1*TeTiCoef &
+                     + TeTiCoef*IsotropizationCoef/(Cvi + TeTiCoef))
                 PointCoef_VCB(6,i,j,k,iBlock) = &
-                     PointCoef_VCB(5,i,j,k,iBlock)*(Te - Ti) &
-                     + CviPar*IsotropizationCoef*(Ti - Tpar) &
-                     /(CviPar/DtLocal + IsotropizationCoef)
+                     PointCoef_VCB(5,i,j,k,iBlock)*(Te - Tpar) &
+                     + CviPar/DenominatorPar*(IsotropizationCoef &
+                     - TeTiCoef*IsotropizationCoef/(Cvi + TeTiCoef)) &
+                     *(Ti - Tpar)
              else
                 if(UseElectronPressure .and. .not.UseMultiIon)then
                    Cvi = InvGammaElectronMinus1*Natomic
