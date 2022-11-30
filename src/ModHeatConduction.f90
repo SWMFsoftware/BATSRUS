@@ -1282,12 +1282,12 @@ contains
                      PointCoef_VCB(3,i,j,k,iBlock)*(Te - Ti)
                 PointCoef_VCB(5,i,j,k,iBlock) = &
                      CviPar/DenominatorPar*(0.5*GammaMinus1*TeTiCoef &
-                     + TeTiCoef*IsotropizationCoef/(Cvi + TeTiCoef))
+                     + TeTiCoef*IsotropizationCoef/(Cvi/DtLocal + TeTiCoef))
                 PointCoef_VCB(6,i,j,k,iBlock) = &
                      PointCoef_VCB(5,i,j,k,iBlock)*(Te - Tpar) &
                      + CviPar/DenominatorPar*(IsotropizationCoef &
-                     - TeTiCoef*IsotropizationCoef/(Cvi + TeTiCoef)) &
-                     *(Ti - Tpar)
+                     - TeTiCoef*IsotropizationCoef/(Cvi/DtLocal + TeTiCoef)) &
+                    *(Ti - Tpar)
              else
                 if(UseElectronPressure .and. .not.UseMultiIon)then
                    Cvi = InvGammaElectronMinus1*Natomic
