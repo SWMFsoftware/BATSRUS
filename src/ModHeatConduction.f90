@@ -174,7 +174,7 @@ contains
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModCoronalHeating, ONLY: UseCoronalHeating, UseTurbulentCascade
     use ModRadiativeCooling, ONLY: UseRadCooling
-    use ModResistivity,  ONLY: UseHeatExchange
+    use ModResistivity,  ONLY: UseHeatExchange, UseResistivity
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitT_, No2Si_V, UnitN_, &
          ElectronTemperatureRatio, AverageIonCharge, CoulombLog
@@ -188,7 +188,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(.not.UseSemiImplicit)then
-       if(UseHeatConduction)then
+       if(UseHeatConduction .or. UseResistivity .and. UseHeatExchange)then
           if(.not.allocated(Te_G))allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        else
           if(allocated(Te_G))deallocate(Te_G)
