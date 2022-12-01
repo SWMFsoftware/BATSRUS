@@ -338,14 +338,16 @@ contains
     use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
          UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
          UseProjection, UseConstrainB,  UseLocalTimeStepNew
+    use ModAdvance, ONLY: UseElectronPressure
     use ModSetInitialCondition, ONLY: add_rotational_velocity
     use ModConstrainDivB, ONLY: DoInitConstrainB
     use ModProjectDivB, ONLY: project_divb
     use ModHallResist, ONLY: &
          UseHallResist, UseBiermannBattery, init_hall_resist
+    use ModResistivity, ONLY: UseResistivity, UseHeatExchange
     use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit, TypeSemiImplicit
     use ModRadDiffusion, ONLY: init_rad_diffusion
-    use ModHeatConduction, ONLY: init_heat_conduction
+    use ModHeatConduction, ONLY: init_heat_conduction, UseFixIsotropization
     use ModParticleFieldLine, ONLY: UseParticles, init_particle_line
     use ModRestartFile, ONLY: UseRestartOutSeries
     use ModMessagePass, ONLY: exchange_messages
@@ -402,7 +404,8 @@ contains
 
     if(UsePic) call pic_init_region
 
-    if(UseHeatConduction .or. UseIonHeatConduction) &
+    if(UseHeatConduction .or. UseIonHeatConduction .or. UseFixIsotropization &
+         .and. UseResistivity .and. UseHeatExchange .and. UseElectronPressure)&
          call init_heat_conduction
 
     if(UseParticles) &
