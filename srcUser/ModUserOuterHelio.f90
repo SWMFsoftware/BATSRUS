@@ -2425,7 +2425,8 @@ contains
     end select
 
 
-    Cs2Sum = Cs2A + CS2B
+    Cs2Sum = Cs2A + CS2B        ! Sum of square thermal speeds
+    UDiff_D = uA_D - uB_D       ! Velocity difference
 
     ! Use square root of sound speeds and relative velocity for lookup table
     SqrtCsDim = sqrt(sqrt(Cs2Sum)/1.E3)
