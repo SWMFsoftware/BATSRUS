@@ -39,19 +39,21 @@ module ModUser
   use ModSize,     ONLY: nI, nJ, nK
   use ModMain,       ONLY: body1_,      &
        nBlock, Unused_B, tSimulation
-  use ModPhysics,    ONLY: Gamma, GammaMinus1, OmegaBody, &
+  use ModPhysics,    ONLY: Gamma, GammaMinus1, InvGammaMinus1, OmegaBody, &
        UnitX_, Io2Si_V, Si2Io_V, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
        NameTecUnit_V, NameIdlUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
        UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
-       UnitTemperature_, UnitT_, UnitRhoU_, FaceState_VI
+       UnitTemperature_, UnitT_, UnitRhoU_, FaceState_VI, IonMassPerCharge
 
-  use ModConst,    ONLY: cAU, cProtonMass, cBoltzmann
+  use ModConst,    ONLY: cAU, cProtonMass, cElectronMass, cBoltzmann, cEV, &
+          cRyToEv, cElectronCharge
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModAdvance,  ONLY: State_VGB,Source_VC, ExtraSource_ICB, Pe_, &
        UseElectronPressure
   use ModGeometry, ONLY: Xyz_DGB, r_GB, Used_GB
   use ModVarIndexes
   use ModMultiFluid
+  use ModCurrent, ONLY: get_current
   use ModUserEmpty,                                     &
        IMPLEMENTED1  => user_read_inputs,               &
        IMPLEMENTED2  => user_set_face_boundary,         &
@@ -68,7 +70,7 @@ module ModUser
   include 'user_module.h' ! list of public methods
 
   ! Needed for coupling with AMPS through the C wrapper
-  public:: get_charge_exchange
+  public:: get_collision
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserFile = "ModUserOuterHelio.f90"
@@ -86,6 +88,7 @@ module ModUser
   logical :: DoInitializeCloud = .false.
   logical :: UseSrcsInHelio = .true.
   logical :: DoFixChargeExchange = .true.
+  logical :: UseElectronImpact = .false.
 
   ! from 173K use 0.7
   real :: HpLimit = 0.5
@@ -98,6 +101,10 @@ module ModUser
 
   integer :: iTableSolarWind = -1 ! initialization is needed
   integer :: iTableChargeExchange = -1
+  integer :: iTableElectronImpact = -1
+
+  ! Needed for lookup table
+  integer,parameter :: ChargeExchange_ = 1, ElectronImpact_ = 2
 
   ! SWH variables.
   real :: &
@@ -243,6 +250,9 @@ contains
           ! with the extra splitting terms.
        case("#CHARGEEXCHANGE")
           call read_var("DoFixChargeExchange", DoFixChargeExchange)
+
+       case("#ELECTRONIMPACT")
+          call read_var("UseElectronImpact", UseElectronImpact)
 
        case("#REGIONS")
           call read_var('TempPop1LimitDim', TempPop1LimitDim)
@@ -1215,11 +1225,21 @@ contains
          Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
          Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
 
+    ! For Electron Impact
+    real:: SrcImp_II(Neu_:Ne4_,5)
+
     real, dimension(Neu_:Ne4_):: &
          SrcLookRhoN_I, SrcLookRhoUxN_I, SrcLookRhoUyN_I, SrcLookRhoUzN_I, &
          SrcLookEnergyN_I, &
          SrcLookRhoI_I, SrcLookRhoUxI_I, SrcLookRhoUyI_I, SrcLookRhoUzI_I, &
          SrcLookEnergyI_I
+
+    real:: RhoEleNo, UIon_D(3), RhoEleSi, UEle_D(3), TempEle, UThSEle, Current_D(3)
+    real:: IonizationEnergy
+
+    real, dimension(Neu_:Ne4_):: &
+         SrcImpRho_I, SrcImpRhoUx_I, SrcImpRhoUy_I, SrcImpRhoUz_I, &
+         SrcImpEnergy_I, SrcImpPe_I
 
     integer :: i, j, k
 
@@ -1359,6 +1379,13 @@ contains
     JxpUyPh_I     = 0
     JxpUzPh_I     = 0
     KxpPh_I       = 0
+    SrcImpRho_I   = 0
+    SrcImpRhoUx_I = 0
+    SrcImpRhoUy_I = 0
+    SrcImpRhoUz_I = 0
+    SrcImpEnergy_I= 0
+    SrcImpPe_I    = 0
+    SrcImp_II     = 0
 
     ! Initialize with 1 to avoid division by zero
     UStarM_I      = 1
@@ -1410,7 +1437,8 @@ contains
        ! Using look-up table to find source terms
        if(iTableChargeExchange > 0) then
           do iFluid = Neu_, Ne4_
-             call get_charge_exchange( &
+             call get_collision( &
+                  ChargeExchange_, &
                   Rho_I(Ion_), UthS_I(Ion_), u_DI(:,Ion_), &
                   Rho_I(iFluid), UthS_I(iFluid), u_DI(:,iFluid), &
                   SrcLookI_II(iFluid,:),SrcLookN_II(iFluid,:))
@@ -1683,6 +1711,50 @@ contains
 
        end if
 
+       if(UseElectronImpact .and. UseElectronPressure)then
+
+          ! Electroncdensity in normalized units
+          RhoEleNo = State_V(SWHRho_) + State_V(Pu3Rho_)
+
+          ! Average Ion Velocity
+          UIon_D = (State_V(SWHRho_)*State_V(SWHRhoUx_:SWHRhoUz_) + &
+                  State_V(Pu3Rho_)*State_V(Pu3RhoUx_:Pu3RhoUz_))/RhoEleNo
+
+          ! Electron density in SI units
+          RhoEleSi = RhoEleNo*No2Si_V(UnitN_)
+
+          ! Get electron velocity from the current and positive ion velocities
+          call get_current(j, j, k, iBlock, Current_D)
+          UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo)*No2Si_V(UnitU_)
+
+          ! Electron temperature
+          TempEle = State_V(Pe_)/RhoEleNo*No2Si_V(UnitTemperature_)
+
+          ! Electron thermal speed squared
+          UThSEle = (2*cBoltzmann/cElectronMass)*TempEle
+
+          ! Electron Ionization Energy
+          IonizationEnergy = cRyToEv*cEv
+
+          if(iTableElectronImpact > 0)then
+             do iFluid = Neu_, Ne4_
+                call get_collision( &
+                   ElectronImpact_, &
+                   Rho_I(iFluid), UThS_I(iFluid), u_DI(:,iFLuid), &
+                   RhoEleSi, UThSEle, UEle_D, &
+                   SrcImp_II(iFluid,:))
+             enddo
+          end if
+
+          where(UseSource_I(Neu_:)) SrcImpRho_I = SrcImp_II(Neu_:,1)
+          where(UseSource_I(Neu_:)) SrcImpRhoUx_I = SrcImp_II(Neu_:,2)
+          where(UseSource_I(Neu_:)) SrcImpRhoUy_I = SrcImp_II(Neu_:,3)
+          where(UseSource_I(Neu_:)) SrcImpRhoUz_I = SrcImp_II(Neu_:,4)
+          where(UseSource_I(Neu_:)) SrcImpEnergy_I = SrcImp_II(Neu_:,5)
+          where(UseSource_I(Neu_:)) SrcImpPe_I = SrcImp_II(iFluid,1) &
+                          *IonizationEnergy*InvGammaMinus1/cProtonMass
+       end if
+
        if(UseColdCloud)then
           if(UseSrcsInHelio)then
              !! for studies of heliosphere encountering Cold Cloud
@@ -1745,15 +1817,20 @@ contains
             if (iTableChargeExchange < 0) then
                if(.not.IsMhd)then
                   Source_V(iRho)    = sum(I0xp_I) + sum(I0pu3x_I) &
-                       - I0xp_I(iFluid) - I0xpu3_I(iFluid)
+                       - I0xp_I(iFluid) - I0xpu3_I(iFluid) &
+                       - SrcImpRho_I(iFLuid)
                   Source_V(iRhoUx)  = sum(JxpUx_I) + sum(Jxpu3Ux_I) &
-                       - JpxUx_I(iFluid) - Jpu3xUx_I(iFluid)
+                       - JpxUx_I(iFluid) - Jpu3xUx_I(iFluid) &
+                       - SrcImpRhoUx_I(iFluid)
                   Source_V(iRhoUy)  = sum(JxpUy_I) + sum(Jxpu3Uy_I) &
-                       - JpxUy_I(iFluid) - Jpu3xUy_I(iFluid)
+                       - JpxUy_I(iFluid) - Jpu3xUy_I(iFluid) &
+                       - SrcImpRhoUy_I(iFluid)
                   Source_V(iRhoUz)  = sum(JxpUz_I) + sum(Jxpu3Uz_I) &
-                       - JpxUz_I(iFluid) - Jpu3xUz_I(iFluid)
+                       - JpxUz_I(iFluid) - Jpu3xUz_I(iFluid) &
+                       - SrcImpRhoUz_I(iFLuid)
                   Source_V(iEnergy) = sum(Kxp_I) + sum(Kxpu3_I) &
-                       - Kpx_I(iFluid) - Kpu3x_I(iFluid)
+                       - Kpx_I(iFluid) - Kpu3x_I(iFluid) &
+                       - SrcImpEnergy_I(iFluid)
                else
                   Source_V(iRho)    = &
                        sum(I0xp_I)  - I0xp_I(iFluid) - I0xpPh_I(iFluid)
@@ -1781,11 +1858,16 @@ contains
          else
             if (iTableChargeExchange < 0) then
                if(.not.IsMhd)then
-                  Source_V(iRho)    = -I0px_I(iFluid)  - I0pu3x_I(iFluid)
-                  Source_V(iRhoUx)  = -JpxUx_I(iFluid) - Jpu3xUx_I(iFluid)
-                  Source_V(iRhoUy)  = -JpxUy_I(iFluid) - Jpu3xUy_I(iFluid)
-                  Source_V(iRhoUz)  = -JpxUz_I(iFluid) - Jpu3xUz_I(iFluid)
-                  Source_V(iEnergy) = -Kpx_I(iFluid)   - Kpu3x_I(iFluid)
+                  Source_V(iRho)    = -I0px_I(iFluid)  - I0pu3x_I(iFluid) &
+                          - SrcImpRho_I(iFluid)
+                  Source_V(iRhoUx)  = -JpxUx_I(iFluid) - Jpu3xUx_I(iFluid) &
+                          - SrcImpRhoUx_I(iFLuid)
+                  Source_V(iRhoUy)  = -JpxUy_I(iFluid) - Jpu3xUy_I(iFluid) &
+                          - SrcImpRhoUy_I(iFluid)
+                  Source_V(iRhoUz)  = -JpxUz_I(iFluid) - Jpu3xUz_I(iFluid) &
+                          - SrcImpRhoUz_I(iFluid)
+                  Source_V(iEnergy) = -Kpx_I(iFluid)   - Kpu3x_I(iFluid) &
+                          - SrcImpEnergy_I(iFluid)
                else
                   Source_V(iRho)    = -I0px_I(iFluid) - I0xpPh_I(iFluid)
                   Source_V(iRhoUx)  = -JpxUx_I(iFluid) - JxpUxPh_I(iFluid)
@@ -1831,16 +1913,20 @@ contains
                        - Uz_I(SWH_)*Source_V(SWHRhoUz_) &
                        + 0.5*U2_I(SWH_)*Source_V(SWHRho_) )
                   Source_V(Pu3Rho_) = sum(I0px_I) &
-                       - I0px_I(Ne3_) - I0xpu3_I(Ne3_)
+                       - I0px_I(Ne3_) - I0xpu3_I(Ne3_) &
+                       + sum(SrcImpRho_I)
                   Source_V(Pu3RhoUx_) = sum(Qmpu3xUx_I) + sum(JpxUx_I) &
-                       - JpxUx_I(Ne3_) - Jpu3xUx_I(Ne3_)
+                       - JpxUx_I(Ne3_) - Jpu3xUx_I(Ne3_) &
+                       + sum(SrcImpRhoUx_I)
                   Source_V(Pu3RhoUy_) = sum(Qmpu3xUy_I) + sum(JpxUy_I) &
-                       - JpxUy_I(Ne3_) -Jpu3xUy_I(Ne3_)
+                       - JpxUy_I(Ne3_) -Jpu3xUy_I(Ne3_) &
+                       + sum(SrcImpRhoUy_I)
                   Source_V(Pu3RhoUz_) = sum(Qmpu3xUz_I) + sum(JpxUz_I) &
-                       - JpxUz_I(Ne3_)- Jpu3xUz_I(Ne3_)
+                       - JpxUz_I(Ne3_)- Jpu3xUz_I(Ne3_) &
+                       + sum(SrcImpRhoUz_I)
                   Source_V(Pu3Energy_)= sum(Qepu3x_I) + sum(Kpx_I) &
                        - Kpu3x_I(Ne3_) - Kpx_I(Ne3_) &
-                       + HeatPu3
+                       + HeatPu3 + sum(SrcImpEnergy_I)
                   Source_V(Pu3P_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
                        - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
                        - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
@@ -1849,11 +1935,15 @@ contains
 
                   ! end of Region 3
                else ! outside of region 3
-                  Source_V(SWHRho_) = sum(I0xpu3_I)
-                  Source_V(SWHRhoUx_) = sum(QmpxUx_I) + sum(Jpu3xUx_I)
-                  Source_V(SWHRhoUy_) = sum(QmpxUy_I) + sum(Jpu3xUy_I)
-                  Source_V(SWHRhoUz_) = sum(QmpxUz_I) + sum(Jpu3xUz_I)
-                  Source_V(SWHEnergy_)= sum(Qepx_I)+ sum(Kpu3x_I)
+                  Source_V(SWHRho_) = sum(I0xpu3_I) + sum(SrcImpRho_I)
+                  Source_V(SWHRhoUx_) = sum(QmpxUx_I) + sum(Jpu3xUx_I) &
+                          + sum(SrcImpRhoUx_I)
+                  Source_V(SWHRhoUy_) = sum(QmpxUy_I) + sum(Jpu3xUy_I) &
+                          + sum(SrcImpRhoUy_I)
+                  Source_V(SWHRhoUz_) = sum(QmpxUz_I) + sum(Jpu3xUz_I) &
+                          + sum(SrcImpRhoUz_I)
+                  Source_V(SWHEnergy_)= sum(Qepx_I)+ sum(Kpu3x_I) &
+                          + sum(SrcImpEnergy_I)
                   Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
                        - Ux_I(SWH_)*Source_V(SWHRhoUx_) &
                        - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
@@ -1870,6 +1960,10 @@ contains
                        - Uz_I(Pu3_)*Source_V(Pu3RhoUz_) &
                        + 0.5*U2_I(Pu3_)*Source_V(Pu3Rho_))
                end if
+            end if
+
+            if(UseElectronPressure)then
+                    Source_V(Pe_) = -sum(SrcImpPe_I)
             end if
          else
             if(UseSource_I(Ion_))then
@@ -2273,99 +2367,133 @@ contains
     if(iTableSolarWind < 0 ) &
          iTableSolarWind=i_lookup_table('solarwind2d')
 
+    if(iTableElectronImpact < 0) &
+         iTableElectronImpact=i_lookup_table('ElectronImpact')
+
     call test_stop(NameSub, DoTest)
 
   end subroutine user_init_session
   !============================================================================
-  subroutine get_charge_exchange( &
-       RhoIon, Cs2Ion, uIon_D, RhoNeu, Cs2Neu, uNeu_D, &
-       SourceIon_V, SourceNeu_V)
+  subroutine get_collision( &
+     iTypeCollision, &
+     RhoA, Cs2A, uA_D, RhoB, Cs2B, uB_D, &
+     SourceA_V, SourceB_V)
 
-    use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table
+     use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
+        Table_I
 
-    real, intent(in):: RhoIon    ! ion mass density
-    real, intent(in):: Cs2Ion    ! ion thermal speed squared
-    real, intent(in):: uIon_D(3) ! ion bulk velocity
-    real, intent(in):: RhoNeu    ! neutral mass density
-    real, intent(in):: Cs2Neu    ! neutral thermal speed squared (0 for AMPS)
-    real, intent(in):: uNeu_D(3) ! neutral bulk velocity
-    real, intent(out):: SourceIon_V(5) ! mass,momentum,energy sources from ions
-    real, intent(out):: SourceNeu_V(5) ! mass,momentum,energy sources from neu.
+    integer, intent(in):: iTypeCollision
+    real, intent(in):: RhoA      ! fluid A mass density
+    real, intent(in):: Cs2A      ! fluid A thermal speed squared
+    real, intent(in):: uA_D(3)   ! fluid A bulk velocity
+    real, intent(in):: RhoB      ! fluid B mass density
+    real, intent(in):: Cs2B      ! fluid B thermal speed squared
+    real, intent(in):: uB_D(3)   ! fluid B bulk velocity
+    real, intent(out):: SourceA_V(5) ! mass,momentum,energy sources from fluid A
+    real, optional, intent(out):: SourceB_V(5) ! msources from fluid B
 
+    integer:: iTableCollision
     real:: SqrtDuDim, SqrtCsDim  ! sqrt of relative and thermal speeds (km/s)
     real:: Integral_V(3)         ! integrals used to get rate, force and work
-    real:: Cs2Sum                ! Cs2Ion + Cs2Neu
+    real:: Cs2Sum                ! Cs2A + Cs2B
     real:: Umean_D(3), Umean2    ! Cs2 weighted mean velocity, squared
+    real:: UDiff_D(3)            ! relative velocity
     real:: MassRate, ForcePerU, WorkPerCs2
 
-    character(len=*), parameter:: NameSub = 'get_charge_exchange'
+    character(len=*), parameter:: NameSub = 'get_collision'
     !--------------------------------------------------------------------------
-    if(iTableChargeExchange < 0)then
-       iTableChargeExchange = i_lookup_table('ChargeExchange')
-       if(iTableChargeExchange < 0) call CON_stop(NameSub// &
-            ' : could not find lookup table ChargeExchange. Fix PARAM.in')
-    end if
+
+    select case(iTypeCollision)
+
+    case(ChargeExchange_)
+            if(iTableChargeExchange < 0)then
+                    iTableChargeExchange = i_lookup_table('ChargeExchange')
+                    if(iTableChargeExchange < 0) call CON_stop(NameSub// &
+             ' : could not find lookup table ChargeExchange. Fix PARAM.in')
+            end if
+            iTableCollision = iTableChargeExchange
+    case(ElectronImpact_)
+            if(iTableElectronImpact < 0)then
+                    iTableElectronImpact = i_lookup_table('ElectronImpact')
+                    if(iTableElectronImpact < 0) call CON_stop(NameSub// &
+             ' : could not find lookup table ElectronImpact. Fix PARAM.in')
+            end if
+            iTableCollision = iTableElectronImpact
+    case default
+            call CON_stop(NameSub// &
+                    ' : unexpected collision type.')
+    end select
+
+    Cs2Sum = Cs2A + CS2B        ! Sum of square thermal speeds
+    UDiff_D = uA_D - uB_D       ! Velocity difference
 
     ! Use square root of sound speeds and relative velocity for lookup table
-    SqrtCsDim = sqrt(sqrt(Cs2Ion + Cs2Neu)/1.E3)
-    SqrtDuDim = sqrt(sqrt(sum((uNeu_D - uIon_D)**2))/1.E3)
+    SqrtCsDim = sqrt(sqrt(Cs2Sum)/1.E3)
+    SqrtDuDim = sqrt(sqrt(sum(UDiff_D*UDiff_D))/1.E3)
 
     ! Get the MassRate, Force and Work integrals frame from the lookup table
     ! in SI units
-    call interpolate_lookup_table(iTableChargeExchange, &
+    call interpolate_lookup_table(iTableCollision, &
          SqrtCsDim, SqrtDuDim, Integral_V, DoExtrapolate=.false.)
 
     ! Multiply with mass densities
-    Integral_V = Integral_V * RhoIon * RhoNeu
+    Integral_V = Integral_V * RhoA * RhoB
 
-    MassRate   = Integral_V(1)  ! mass density change
-    ForcePerU  = Integral_V(2)  ! force per velocity
-    WorkPerCs2 = Integral_V(3)  ! work per thermal speed squared
+    MassRate   = Integral_V(1)         ! mass density change
+    ForcePerU  = Integral_V(2)         ! force per velocity
+    WorkPerCs2 = Integral_V(3)         ! work per thermal speed squared
 
-    ! Put data into the source term array
-    SourceIon_V(1)    = MassRate
-    SourceIon_V(2:4)  = ForcePerU*uIon_D
-    SourceIon_V(5)    = WorkPerCs2*Cs2Ion + 0.5*sum(ForcePerU*uIon_D**2)
+    SourceA_V(1)    = MassRate
+    SourceA_V(2:4)  = ForcePerU*uA_D
+    SourceA_V(5)    = WorkPerCs2*Cs2A + 0.5*sum(ForcePerU*uA_D**2)
 
-    SourceNeu_V(1)    = MassRate
-    SourceNeu_V(2:4)  = ForcePerU*uNeu_D
-    SourceNeu_V(5)    = WorkPerCs2*Cs2Neu + 0.5*sum(ForcePerU*uNeu_D**2)
+    if(present(SourceB_V)) then
+        SourceB_V(1)    = MassRate
+        SourceB_V(2:4)  = ForcePerU*uB_D
+        SourceB_V(5)    = WorkPerCs2*Cs2B + 0.5*sum(ForcePerU*uB_D**2)
+    endif
 
-    if(DoFixChargeExchange) then
+    if(iTypeCollision /= ChargeExchange_ .or. DoFixChargeExchange) then
        ! Extra terms that appear when splitting McNutt's formulas
-       Cs2Sum = Cs2Ion + Cs2Neu
-       Umean_D = (Cs2Neu*uIon_D + Cs2Ion*uNeu_D)/Cs2Sum
+       Umean_D = (Cs2A*uB_D + Cs2B*uA_D)/Cs2Sum
        Umean2  = sum(Umean_D**2)
 
-       SourceIon_V(2:4)  = SourceIon_V(2:4) + Umean_D*(MassRate - ForcePerU)
-       SourceIon_V(5)    = SourceIon_V(5) &
-               + Cs2Ion*Cs2Neu*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
+       SourceA_V(2:4)  = SourceA_V(2:4) + Umean_D*(MassRate - ForcePerU)
+       SourceA_V(5)    = SourceA_V(5) &
+               + Cs2A*Cs2B*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
                + 0.5*Umean2*(MassRate - ForcePerU)
 
-       SourceNeu_V(2:4)  = SourceNeu_V(2:4) + Umean_D*(MassRate - ForcePerU)
-       SourceNeu_V(5)    = SourceNeu_V(5) &
-               + Cs2Ion*Cs2Neu*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
-               + 0.5*Umean2*(MassRate - ForcePerU)
+       if (present(SourceB_V)) then
+           SourceB_V(2:4)  = SourceB_V(2:4) + Umean_D*(MassRate - ForcePerU)
+           SourceB_V(5)    = SourceB_V(5) &
+                   + Cs2A*Cs2B*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
+                   + 0.5*Umean2*(MassRate - ForcePerU)
+       endif
     endif
 
-    if(Cs2Neu > 0.0) then
+    ! Particles from AMPS treated as zero temperature fluids
+    if(Cs2A > 0.0 .and. Cs2B > 0.0) then
        ! Convert to normalized units here for BATSRUS
-       SourceIon_V(1)   = SourceIon_V(1)  *Si2No_V(UnitRho_)
-       SourceIon_V(2:4) = SourceIon_V(2:4)*Si2No_V(UnitRhoU_)
-       SourceIon_V(5)   = SourceIon_V(5)  *Si2No_V(UnitEnergyDens_)
-       SourceIon_V      = SourceIon_V     *No2Si_V(UnitT_) ! same as /Si2No_V
+       SourceA_V(1)   = SourceA_V(1)  *Si2No_V(UnitRho_)
+       SourceA_V(2:4) = SourceA_V(2:4)*Si2No_V(UnitRhoU_)
+       SourceA_V(5)   = SourceA_V(5)  *Si2No_V(UnitEnergyDens_)
+       SourceA_V      = SourceA_V     *No2Si_V(UnitT_) ! same as /Si2No_V
 
-       SourceNeu_V(1)   = SourceNeu_V(1)  *Si2No_V(UnitRho_)
-       SourceNeu_V(2:4) = SourceNeu_V(2:4)*Si2No_V(UnitRhoU_)
-       SourceNeu_V(5)   = SourceNeu_V(5)  *Si2No_V(UnitEnergyDens_)
-       SourceNeu_V      = SourceNeu_V     *No2Si_V(UnitT_)
+       if (present(SourceB_V)) then
+           SourceB_V(1)   = SourceB_V(1)  *Si2No_V(UnitRho_)
+           SourceB_V(2:4) = SourceB_V(2:4)*Si2No_V(UnitRhoU_)
+           SourceB_V(5)   = SourceB_V(5)  *Si2No_V(UnitEnergyDens_)
+           SourceB_V      = SourceB_V     *No2Si_V(UnitT_)
+       endif
     else
        ! AMPS prefers to get rate of change for number density
-       SourceIon_V(1)   = SourceIon_V(1)/cProtonMass
-       SourceNeu_V(1)   = SourceNeu_V(1)/cProtonMass
+       SourceA_V(1)   = SourceA_V(1)/cProtonMass
+       if (present(SourceB_V)) then
+        SourceB_V(1)   = SourceB_V(1)/cProtonMass
+       endif
     endif
 
-  end subroutine get_charge_exchange
+  end subroutine get_collision
   !============================================================================
 end module ModUser
 !==============================================================================
@@ -2376,7 +2504,7 @@ subroutine get_charge_exchange_wrapper( &
 
   ! C wrapper for coupling with AMPS
 
-  use ModUser, ONLY: get_charge_exchange
+  use ModUser, ONLY: get_collision
 
   real, intent(in):: RhoIon    ! ion mass density
   real, intent(in):: Cs2Ion    ! ion thermal speed squared
@@ -2387,7 +2515,7 @@ subroutine get_charge_exchange_wrapper( &
   real, intent(out):: SourceIon_V(5) ! mass, momentum, energy sources from ions
   real, intent(out):: SourceNeu_V(5) ! mass, momentum, energy sources from neu.
   !----------------------------------------------------------------------------
-  call get_charge_exchange(RhoIon, Cs2Ion, &
+  call get_collision(1, RhoIon, Cs2Ion, &
        uIon_D, RhoNeu, Cs2Neu, uNeu_D, SourceIon_V, SourceNeu_V)
 
 end subroutine get_charge_exchange_wrapper
