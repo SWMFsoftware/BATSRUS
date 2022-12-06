@@ -1712,7 +1712,7 @@ contains
        end if
 
        if(UseElectronImpact .and. UseElectronPressure)then
-          
+
           ! Electroncdensity in normalized units
           RhoEleNo = State_V(SWHRho_) + State_V(Pu3Rho_)
 
@@ -1726,11 +1726,11 @@ contains
           ! Get electron velocity from the current and positive ion velocities
           call get_current(j, j, k, iBlock, Current_D)
           UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo)*No2Si_V(UnitU_)
-          
+
           ! Electron temperature
           TempEle = State_V(Pe_)/RhoEleNo*No2Si_V(UnitTemperature_)
 
-          !Electron thermal speed squared
+          ! Electron thermal speed squared
           UThSEle = (2*cBoltzmann/cElectronMass)*TempEle
 
           ! Electron Ionization Energy
@@ -1745,7 +1745,7 @@ contains
                    SrcImp_II(iFluid,:))
              enddo
           end if
-           
+
           where(UseSource_I(Neu_:)) SrcImpRho_I = SrcImp_II(Neu_:,1)
           where(UseSource_I(Neu_:)) SrcImpRhoUx_I = SrcImp_II(Neu_:,2)
           where(UseSource_I(Neu_:)) SrcImpRhoUy_I = SrcImp_II(Neu_:,3)
@@ -2401,10 +2401,10 @@ contains
     real:: MassRate, ForcePerU, WorkPerCs2
 
     character(len=*), parameter:: NameSub = 'get_collision'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     select case(iTypeCollision)
-    
+
     case(ChargeExchange_)
             if(iTableChargeExchange < 0)then
                     iTableChargeExchange = i_lookup_table('ChargeExchange')
@@ -2424,14 +2424,13 @@ contains
                     ' : unexpected collision type.')
     end select
 
-
     Cs2Sum = Cs2A + CS2B        ! Sum of square thermal speeds
     UDiff_D = uA_D - uB_D       ! Velocity difference
 
     ! Use square root of sound speeds and relative velocity for lookup table
     SqrtCsDim = sqrt(sqrt(Cs2Sum)/1.E3)
     SqrtDuDim = sqrt(sqrt(sum(UDiff_D*UDiff_D))/1.E3)
-    
+
     ! Get the MassRate, Force and Work integrals frame from the lookup table
     ! in SI units
     call interpolate_lookup_table(iTableCollision, &
@@ -2443,7 +2442,7 @@ contains
     MassRate   = Integral_V(1)         ! mass density change
     ForcePerU  = Integral_V(2)         ! force per velocity
     WorkPerCs2 = Integral_V(3)         ! work per thermal speed squared
-    
+
     SourceA_V(1)    = MassRate
     SourceA_V(2:4)  = ForcePerU*uA_D
     SourceA_V(5)    = WorkPerCs2*Cs2A + 0.5*sum(ForcePerU*uA_D**2)
@@ -2463,13 +2462,13 @@ contains
        SourceA_V(5)    = SourceA_V(5) &
                + Cs2A*Cs2B*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
                + 0.5*Umean2*(MassRate - ForcePerU)
-       
+
        if (present(SourceB_V)) then
            SourceB_V(2:4)  = SourceB_V(2:4) + Umean_D*(MassRate - ForcePerU)
            SourceB_V(5)    = SourceB_V(5) &
                    + Cs2A*Cs2B*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
                    + 0.5*Umean2*(MassRate - ForcePerU)
-       endif 
+       endif
     endif
 
     ! Particles from AMPS treated as zero temperature fluids
