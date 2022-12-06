@@ -758,7 +758,7 @@ contains
          .or. TypePlot(1:3) == '2d_' .and. nDim<=2 &
          .or. TypePlot(1:3) == '1d_' .and. nDim==1 ) )then
        NameFile = trim(NameSnapshot)//'.tree'
-       call write_tree_file(NameFile)
+       call write_tree_file(NameFile, IsFormattedIn=.true.)
     end if
 
     if(DoTest)write(*,*) NameSub,' finished'
