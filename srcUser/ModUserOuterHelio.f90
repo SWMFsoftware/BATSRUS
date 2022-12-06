@@ -1234,8 +1234,8 @@ contains
          SrcLookRhoI_I, SrcLookRhoUxI_I, SrcLookRhoUyI_I, SrcLookRhoUzI_I, &
          SrcLookEnergyI_I
 
-    real:: RhoEleNo, UIon_D(3), RhoEleSi, UEle_D(3), TempEle, UThSEle, Current_D(3)
-    real:: IonizationEnergy
+    real:: RhoEleNo, UIon_D(3), RhoEleSi, UEle_D(3), TempEle, UThSEle
+    real:: IonizationEnergy, Current_D(3)
 
     real, dimension(Neu_:Ne4_):: &
          SrcImpRho_I, SrcImpRhoUx_I, SrcImpRhoUy_I, SrcImpRhoUz_I, &
@@ -1725,7 +1725,8 @@ contains
 
           ! Get electron velocity from the current and positive ion velocities
           call get_current(j, j, k, iBlock, Current_D)
-          UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo)*No2Si_V(UnitU_)
+          UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo) &
+               *No2Si_V(UnitU_)
 
           ! Electron temperature
           TempEle = State_V(Pe_)/RhoEleNo*No2Si_V(UnitTemperature_)
@@ -2374,8 +2375,7 @@ contains
 
   end subroutine user_init_session
   !============================================================================
-  subroutine get_collision( &
-     iTypeCollision, &
+  subroutine get_collision( iTypeCollision, &
      RhoA, Cs2A, uA_D, RhoB, Cs2B, uB_D, &
      SourceA_V, SourceB_V)
 
@@ -2389,8 +2389,8 @@ contains
     real, intent(in):: RhoB      ! fluid B mass density
     real, intent(in):: Cs2B      ! fluid B thermal speed squared
     real, intent(in):: uB_D(3)   ! fluid B bulk velocity
-    real, intent(out):: SourceA_V(5) ! mass,momentum,energy sources from fluid A
-    real, optional, intent(out):: SourceB_V(5) ! msources from fluid B
+    real, intent(out):: SourceA_V(5) ! mass,momentum,energy sources for fluid A
+    real, optional, intent(out):: SourceB_V(5) ! sources for fluid B
 
     integer:: iTableCollision
     real:: SqrtDuDim, SqrtCsDim  ! sqrt of relative and thermal speeds (km/s)
@@ -2488,9 +2488,8 @@ contains
     else
        ! AMPS prefers to get rate of change for number density
        SourceA_V(1)   = SourceA_V(1)/cProtonMass
-       if (present(SourceB_V)) then
-        SourceB_V(1)   = SourceB_V(1)/cProtonMass
-       endif
+       if (present(SourceB_V)) &
+            SourceB_V(1) = SourceB_V(1)/cProtonMass
     endif
 
   end subroutine get_collision
