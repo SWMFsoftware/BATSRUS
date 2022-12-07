@@ -164,7 +164,16 @@ T 			UseSourceNe2
 T 			UseSourceNe3
 T 			UseSourceNe4
 
+#ELECTRONIMPACT
+T                       UseElectronImpact
+
 #USERINPUTEND -------------------------------------
+
+#LOOKUPTABLE
+ElectronImpact          NameTable
+load                    NameCommand
+Param/OUTERHELIO/ElectronImpactRate.dat               NameFile
+ascii                   TypeFile
 
 #STOP
 25			MaxIteration
