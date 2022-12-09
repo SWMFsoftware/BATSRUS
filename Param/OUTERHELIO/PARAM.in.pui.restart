@@ -170,10 +170,10 @@ T                       UseElectronImpact
 #USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
-ElectronImpact          NameTable
-load                    NameCommand
-Param/OUTERHELIO/ElectronImpactRate.dat               NameFile
-ascii                   TypeFile
+ElectronImpact		NameTable
+load			NameCommand
+Param/OUTERHELIO/ElectronImpactRate.dat		NameFile
+ascii			TypeFile
 
 #STOP
 25			MaxIteration
