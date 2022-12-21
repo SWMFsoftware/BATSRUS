@@ -39,7 +39,7 @@ module ModUser
   use ModSize,     ONLY: nI, nJ, nK
   use ModMain,       ONLY: body1_,      &
        nBlock, Unused_B, tSimulation
-  use ModPhysics,    ONLY: Gamma, GammaMinus1, InvGammaMinus1, OmegaBody, &
+  use ModPhysics,  ONLY: Gamma, GammaMinus1, GammaElectronMinus1, OmegaBody, &
        UnitX_, Io2Si_V, Si2Io_V, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
        NameTecUnit_V, NameIdlUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
        UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
@@ -1239,7 +1239,8 @@ contains
 
     real, dimension(Neu_:Ne4_):: &
          SrcImpRho_I, SrcImpRhoUx_I, SrcImpRhoUy_I, SrcImpRhoUz_I, &
-         SrcImpEnergy_I, SrcImpPe_I
+         SrcImpEnergy_I
+    real:: SrcImpPe
 
     integer :: i, j, k
 
@@ -1384,7 +1385,7 @@ contains
     SrcImpRhoUy_I = 0
     SrcImpRhoUz_I = 0
     SrcImpEnergy_I= 0
-    SrcImpPe_I    = 0
+    SrcImpPe      = 0
     SrcImp_II     = 0
 
     ! Initialize with 1 to avoid division by zero
@@ -1752,8 +1753,11 @@ contains
           where(UseSource_I(Neu_:)) SrcImpRhoUy_I = SrcImp_II(Neu_:,3)
           where(UseSource_I(Neu_:)) SrcImpRhoUz_I = SrcImp_II(Neu_:,4)
           where(UseSource_I(Neu_:)) SrcImpEnergy_I = SrcImp_II(Neu_:,5)
-          where(UseSource_I(Neu_:)) SrcImpPe_I = SrcImp_II(iFluid,1) &
-                          *IonizationEnergy*InvGammaMinus1/cProtonMass
+          ! Pressure source term for the electrons
+          ! Ionization Energy * total ionization rate
+          SrcImpPe = -sum(SrcImp_II(Neu_:,1), MASK=UseSource_I(Neu_:)) &
+                   *IonizationEnergy*GammaElectronMinus1/cProtonMass &
+                   *No2Si_V(UnitRho_)/No2Si_V(UnitP_)
        end if
 
        if(UseColdCloud)then
@@ -1963,9 +1967,7 @@ contains
                end if
             end if
 
-            if(UseElectronPressure)then
-                    Source_V(Pe_) = -sum(SrcImpPe_I)
-            end if
+            if(UseElectronPressure) Source_V(Pe_) = SrcImpPe
          else
             if(UseSource_I(Ion_))then
                Source_V(Rho_)    = sum(I0xpPh_I)
