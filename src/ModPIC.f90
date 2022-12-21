@@ -360,7 +360,8 @@ contains
     use ModMultiFluid, ONLY: nIonFLuid, MassIon_I
     use ModVarIndexes, ONLY: IsMhd
     use ModMpi,        ONLY: MPI_REAL
-
+    use ModMain,         ONLY: iNewGrid, iNewDecomposition
+    
     ! PIC grid indexes
     integer:: iRegion
 
@@ -542,6 +543,11 @@ contains
        end if
     end do
 
+    ! iPicGrid and iPicDecomposition should be initialized here
+    ! in case #PICREGIONMIN/MAX is used but PICADAPT is set to false
+    iPicGrid = iNewGrid
+    iPicDecomposition = iNewDecomposition
+    
     ! Set active PIC cells for adaptive PIC
     if(UseAdaptivePic) then
 
