@@ -82,11 +82,8 @@ contains
     end if
 
     ! Note must copy state to old state only if iStage is 1.
-    if(iStage==1) then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          StateOld_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock)
-       enddo; enddo; enddo
-    end if
+    if(iStage==1) &
+         StateOld_VGB(:,:,:,:,iBlock) = State_VGB(:,:,:,:,iBlock)
 
     ! The first call may set UseUserUpdateStates to false
     if(UseUserUpdateStates)       call user_update_states(iBlock)
