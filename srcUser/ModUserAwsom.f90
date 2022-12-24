@@ -180,6 +180,7 @@ contains
 
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,   ONLY: EEE_initialize
+    use BATL_lib,      ONLY: iComm
     use ModMain,       ONLY: tSimulation, TypeCellBc_I, TypeFaceBc_I, &
          Body1_
     use ModIO,         ONLY: write_prefix, iUnitOut
@@ -251,7 +252,7 @@ contains
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
 
     if(UseCme) call EEE_initialize(BodyNDim_I(1), BodyTDim_I(1), Gamma,&
-         TimeNow = tSimulation)
+         iCommIn=iComm, TimeNow = tSimulation)
 
     ! ZetaSI is in SI unit of [meter^2*second^(-1)]
     ! ZetaSI = 1.4E14 [m^2/s]
