@@ -10,7 +10,8 @@ module ModSetInitialCondition
   use ModVarIndexes, ONLY: nVar
   use ModMain, ONLY: NamePrimitive_V
   use ModPhysics, ONLY: UseShocktube, ShockLeftState_V, ShockRightState_V, &
-       ShockLeft_V, ShockRight_V, ShockPosition, ShockSlope, nVectorVar, iVectorVar_I
+       ShockLeft_V, ShockRight_V, ShockPosition, ShockSlope, &
+       nVectorVar, iVectorVar_I
   use ModBatsrusUtility, ONLY: stop_mpi, get_ivar
   use ModNumConst, ONLY: cTwoPi, cDegToRad
 
