@@ -154,6 +154,8 @@ contains
           call read_var('zCenter', zCenter)
           call read_var('IsSmooth', IsSmooth)
 
+       case('#SPHALFVEN')
+          NameProblem = 'SPHALFVEN'
        case('#RT')
           NameProblem = 'RT'
           call read_var('AmplitudeUx', Amplitude)
@@ -251,7 +253,7 @@ contains
     use ModMultiFluid, ONLY: &
          iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I
     use ModPhysics,  ONLY: &
-         ShockSlope, ShockLeftState_V, ShockRightState_V, &
+         ShockSlope, ShockLeft_V, ShockRight_V, &
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
          rPlanetSi, rBody, UnitT_, Gamma_I, nVectorVar, iVectorVar_I
     use ModNumconst, ONLY: cHalfPi, cPi, cTwoPi, cDegToRad
@@ -270,7 +272,7 @@ contains
     real:: x, y, z, r, r2, Lx, Ly, HalfWidth
     integer:: i, j, k, iVectorVar, iVar, iVarX, iVarY
 
-    real :: Rho, RhoLeft, RhoRight, pLeft
+    real :: Rho, RhoLeft, RhoRight, pLeft, Bx, By, Bz, B2
     real :: ViscoCoeff
 
     real :: Acceleration
@@ -320,7 +322,7 @@ contains
              x = sqrt(sum(Xyz_DGB(x_:y_,i,j,k,iBlock)**2)) - xCenter
              z = Xyz_DGB(z_,i,j,k,iBlock) - zCenter
           end if
-          Rho = ShockLeftState_V(Rho_)
+          Rho = ShockLeft_V(Rho_)
           if(IsSmooth)then
              if(abs(x) < xWidth/2 .and. abs(z) < zWidth/2) &
                   Rho = Rho + cos(cPi*x/xWidth)**4*cos(cPi*z/zWidth)**4
@@ -331,6 +333,41 @@ contains
           State_VGB(Rho_,i,j,k,iBlock)   = Rho
        end do; end do; end do
        call set_hill_velocity(iBlock)
+    case('SPHALFVEN')
+       ! set u=B for a spherical Alfven wave inside |x|,|y| < pi
+       ! Outside this square B = ShockLeft_V(Bx_:Bz_)]
+
+       ! Calculate minimum Bz value and adjust ShockLeft(Bz_) if needed
+       Bx = ShockLeft_V(Bx_)
+       By = ShockLeft_V(By_)
+       Bz = sqrt( (2 + abs(Bx))**2 - Bx**2 + (2 + abs(By))**2 - By**2)
+       if(abs(ShockLeft_V(Bz_)) < Bz)then
+          if(ShockLeft_V(Bz_) >= 0)then
+             ShockLeft_V(Bz_) = Bz
+          else
+             ShockLeft_V(Bz_) = -Bz
+          end if
+       endif
+       B2 = sum(ShockLeft_V(Bx_:Bz_)**2)
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          x = Xyz_DGB(x_,i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
+          if(abs(x) < cPi .and. abs(y) < cPi) then
+             Bx = ShockLeft_V(Bx_) - (1 + cos(x))*sin(y)
+             By = ShockLeft_V(By_) + (1 + cos(y))*sin(x)
+             Bz = sqrt(B2 - Bx**2 - By**2)
+             State_VGB(Bx_,i,j,k,iBlock) = Bx
+             State_VGB(By_,i,j,k,iBlock) = By
+             State_VGB(Bz_,i,j,k,iBlock) = Bz
+          else
+             ! in case it was modified above
+             State_VGB(Bz_,i,j,k,iBlock) = ShockLeft_V(Bz_)
+          end if
+          ! Modify velocities to include Alfven wave perturbations
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
+               + State_VGB(Bx_:Bz_,i,j,k,iBlock)*sqrt(ShockLeft_V(Rho_))
+       end do; end do; end do
 #ifndef SCALAR
     case('RT')
        ! Initialize Rayleigh-Taylor instability
@@ -341,12 +378,9 @@ contains
 
        ! pressure = pLeft + integral_x1^xMaxBox rho*Gamma dx
 
-       RhoLeft  = ShockLeftState_V(Rho_)
-       RhoRight = ShockRightState_V(Rho_)
-       pLeft    = ShockLeftState_V(p_)
-
-       write(*,*)'!!! RhoLeft, pLeft, Width=', &
-            RhoLeft, pLeft, Width, IsSmooth, AmplitudeRho
+       RhoLeft  = ShockLeft_V(Rho_)
+       RhoRight = ShockRight_V(Rho_)
+       pLeft    = ShockLeft_V(p_)
 
        if(IsSmooth)then
           ! Gaussian density profile. Integral from -infty to x is 1+erf(x)
@@ -490,7 +524,7 @@ contains
              end do
           end if
 
-          PrimInit_V = ShockLeftState_V
+          PrimInit_V = ShockLeft_V
 
           if(UseUserInputUnitX)then
              ! Convert to normalized units of length
@@ -530,7 +564,7 @@ contains
              KxWave_V= CosSlope*KxTemp_V - SinSlope*KyTemp_V
              KyWave_V= SinSlope*KxTemp_V + CosSlope*KyTemp_V
 
-             State_V = ShockLeftState_V
+             State_V = ShockLeft_V
              PrimInit_V(Ux_) = CosSlope*State_V(Ux_) - SinSlope*State_V(Uy_)
              PrimInit_V(Uy_) = SinSlope*State_V(Ux_) + CosSlope*State_V(Uy_)
              PrimInit_V(Bx_) = CosSlope*State_V(Bx_) - SinSlope*State_V(By_)
@@ -668,29 +702,29 @@ contains
        ! Modify pressure(s) to balance magnetic pressure
        if(UseElectronPressure) then
           ! Distribute the correction proportionally between electrons and ions
-          State_VGB(Pe_,:,:,:,iBlock) = ShockLeftState_V(Pe_)*(1.0 &
+          State_VGB(Pe_,:,:,:,iBlock) = ShockLeft_V(Pe_)*(1.0 &
                + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
-               /(ShockLeftState_V(Pe_) + ShockLeftState_V(p_)))
+               /(ShockLeft_V(Pe_) + ShockLeft_V(p_)))
 
-          State_VGB(p_,:,:,:,iBlock) = ShockLeftState_V(p_)*(1.0 &
+          State_VGB(p_,:,:,:,iBlock) = ShockLeft_V(p_)*(1.0 &
                + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
-               /(ShockLeftState_V(Pe_) + ShockLeftState_V(p_)))
+               /(ShockLeft_V(Pe_) + ShockLeft_V(p_)))
        else
-          State_VGB(p_,:,:,:,iBlock)  = ShockLeftState_V(p_) &
+          State_VGB(p_,:,:,:,iBlock)  = ShockLeft_V(p_) &
                + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)
        end if
 
        if(UseAnisoPressure) &
                                 ! parallel pressure
-            State_VGB(Ppar_,:,:,:,iBlock) = ShockLeftState_V(Ppar_)*(1.0 &
+            State_VGB(Ppar_,:,:,:,iBlock) = ShockLeft_V(Ppar_)*(1.0 &
             + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
-            /ShockLeftState_V(p_))
+            /ShockLeft_V(p_))
 
        if(UseAnisoPe) &
                                 ! parallel pressure
-            State_VGB(Pepar_,:,:,:,iBlock) = ShockLeftState_V(Pepar_)*(1.0 &
+            State_VGB(Pepar_,:,:,:,iBlock) = ShockLeft_V(Pepar_)*(1.0 &
             + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
-            /ShockLeftState_V(Pe_))
+            /ShockLeft_V(Pe_))
 
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
 
@@ -725,7 +759,7 @@ contains
              State_VGB(iUz_I,i,j,k,iBlock) = State_VGB(iRhoUz_I,i,j,k,iBlock) &
                   /State_VGB(iRho_I,i,j,k,iBlock)
 
-             State_VGB(iVar,i,j,k,iBlock) = ShockLeftState_V(iVar) &
+             State_VGB(iVar,i,j,k,iBlock) = ShockLeft_V(iVar) &
                   + CoeffX_V(iVar)*Xyz_DGB(x_,i,j,k,iBlock)**nPowerX_V(iVar) &
                   + CoeffY_V(iVar)*Xyz_DGB(y_,i,j,k,iBlock)**nPowerY_V(iVar) &
                   + CoeffZ_V(iVar)*Xyz_DGB(z_,i,j,k,iBlock)**nPowerZ_V(iVar)
@@ -1109,7 +1143,7 @@ contains
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
     use ModPhysics,  ONLY: Si2No_V, Io2Si_V,&
          Io2No_V, UnitRho_, UnitU_, UnitP_, UnitN_,&
-         UnitT_, ShockLeftState_V, ShockRightState_V,&
+         UnitT_, ShockLeft_V, ShockRight_V,&
          ShockSlope, ShockPosition
     use ModNumconst, ONLY: cTwoPi, cDegToRad
     use ModConst,    ONLY: cProtonMass, RotationPeriodSun
@@ -1146,14 +1180,14 @@ contains
        SinSlope = ShockSlope/sqrt(1 + ShockSlope**2)
        CosSlope =         1/sqrt(1 + ShockSlope**2)
 
-       ShockRampLeft_I = ShockLeftState_V(Rho_:p_)
+       ShockRampLeft_I = ShockLeft_V(Rho_:p_)
        ! Project the velocity in the shock front reference frame into the frame
        ! for computation.
-       ShockRampLeft_I(Ux_) = ShockLeftState_V(Ux_)*CosSlope
-       ShockRampLeft_I(Uy_) = ShockLeftState_V(Ux_)*SinSlope
+       ShockRampLeft_I(Ux_) = ShockLeft_V(Ux_)*CosSlope
+       ShockRampLeft_I(Uy_) = ShockLeft_V(Ux_)*SinSlope
 
        ! The velocity is zero in the right of shock.
-       ShockRampRight_I = ShockRightState_V(Rho_:p_)
+       ShockRampRight_I = ShockRight_V(Rho_:p_)
        select case (iSide)
        case(1)
           ! inflow BC for x=0
