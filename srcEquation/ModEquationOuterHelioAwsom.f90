@@ -22,7 +22,7 @@ module ModVarIndexes
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
-  
+
   ! Number of bins in Alfven wave spectrum
   integer, parameter :: nWave = 2
 
