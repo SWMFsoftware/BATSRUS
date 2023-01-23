@@ -159,6 +159,9 @@ module ModUser
   ! variable to hold sources from charge-exchange with neutral fluids
   real, allocatable :: FluidSource_ICB(:,:,:,:,:)
 
+  ! Wave turbulence
+  real :: DeltaUSi = 10.0, DeltaU = 0.0
+  
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -266,6 +269,9 @@ contains
              call read_var('MachSWPop1',    MachSWPop1)
           end if
 
+       case("#DELTAU")
+          call read_var('DeltaUSi', DeltaUSi)
+
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -279,7 +285,8 @@ contains
 
     use ModMain, ONLY: FaceBCType
     use ModCoordTransform, ONLY: rot_xyz_sph
-
+    use ModWaves,          ONLY: UseAlfvenWaves
+    
     type(FaceBCType), intent(inout):: FBC
 
     ! local variables
@@ -288,7 +295,7 @@ contains
     ! C.P. edited
     real:: Bsph_D(3), Vsph_D(3), VPUIsph_D(3)
 
-    real :: pSolarWind,pPUI, Pmag, PmagEquator
+    real :: pSolarWind,pPUI, Pmag, PmagEquator, Ewave
 
     real :: XyzSph_DD(3,3)
 
@@ -342,6 +349,17 @@ contains
       VarsGhostFace_V(SWHP_)      = pSolarWind ! SwhP
       VarsGhostFace_V(SWHUx_:SWHUz_) = matmul(XyzSph_DD, Vsph_D)
       VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
+
+      if(UseAlfvenWaves)then
+         Ewave = SwhRho*DeltaU**2
+         if(Bsph_D(1) > 0.0)then
+            VarsGhostFace_V(WaveFirst_) = Ewave
+            VarsGhostFace_V(WaveLast_) = 0.0
+         else
+            VarsGhostFace_V(WaveFirst_) = 0.0
+            VarsGhostFace_V(WaveLast_) = Ewave
+         end if
+      end if
 
       if(.not.IsMhd)then
          VarsGhostFace_V(Pu3Rho_)    = Pu3Rho
@@ -467,7 +485,8 @@ contains
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModCellBoundary, ONLY: iMin, iMax, jMin, jMax, kMin, kMax
-
+    use ModWaves,        ONLY: UseAlfvenWaves
+    
     ! The ISM enters at the east boundary (negative x)
     ! February 08, 2018 - added the possibility for using user conditions in
     ! other boundaries as well
@@ -492,6 +511,7 @@ contains
        State_VGB(Bx_,i,j,k,iBlock)=VliswBx
        State_VGB(By_,i,j,k,iBlock)=VliswBy
        State_VGB(Bz_,i,j,k,iBlock)=VliswBz
+       if(UseAlfvenWaves) State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
        State_VGB(SWHP_,i,j,k,iBlock)=VliswP
        if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock)=VliswPe
 
@@ -562,6 +582,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModWaves,          ONLY: UseAlfvenWaves
 
     integer, intent(in) :: iBlock
 
@@ -652,6 +673,23 @@ contains
              State_VGB(RhoUy_,i,j,k,iBlock) = VliswUy*VliswRho
              State_VGB(RhoUz_,i,j,k,iBlock) = VliswUz*VliswRho
           endif
+       end if
+
+       if(UseAlfvenWaves)then
+          if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+               * Xyz_DGB(x_:z_,i,j,k,iBlock))>0.0)then
+             State_VGB(WaveFirst_,i,j,k,iBlock) = &
+                  State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
+                  *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
+             State_VGB(WaveLast_,i,j,k,iBlock) = &
+                  1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
+          else
+             State_VGB(WaveLast_,i,j,k,iBlock) = &
+                  State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
+                  *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
+             State_VGB(WaveFirst_,i,j,k,iBlock) = &
+	          1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
+          end if
        end if
 
        if(UseNeutralFluid)then
@@ -2302,12 +2340,19 @@ contains
 
     use ModMain,          ONLY: UseUserUpdateStates
     use ModLookupTable,   ONLY: i_lookup_table
+    use ModWaves,         ONLY: UseWavePressure, UseAlfvenWaves
+    use ModVarIndexes,    ONLY: WaveFirst_
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    UseAlfvenWaves  = WaveFirst_ > 1
+    UseWavePressure = WaveFirst_ > 1
+
+    DeltaU = DeltaUSi*Si2No_V(UnitU_)
+    
     ! normalization of SWH and VLISW and Neutrals
 
     VliswRho = VliswRhoDim*Io2No_V(UnitRho_)

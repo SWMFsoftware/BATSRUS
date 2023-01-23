@@ -18,7 +18,7 @@ module ModVarIndexes
        NameEquation = 'MHD + Alfven waves + electron pressure + four neutrals'
 
   ! Number of variables without energy:
-  integer, parameter :: nVar = 32
+  integer, parameter :: nVar = 31
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
@@ -48,33 +48,32 @@ module ModVarIndexes
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
-       Ehot_      =  8, &
-       WaveFirst_ =  9, &
-       WaveLast_  = 10, &
-       Pe_        = 11, &
-       p_         = 12,              SWHP_     = 12
+       WaveFirst_ =  8, &
+       WaveLast_  =  9, &
+       Pe_        = 10, &
+       p_         = 11,              SWHP_     = 11
 
   integer, parameter :: &
-       NeuRho_    = 13,              Pu3Rho_    = 13, &
-       NeuRhoUx_  = 14, NeuUx_ = 14, Pu3RhoUx_  = 14, Pu3Ux_ = 14, &
-       NeuRhoUy_  = 15, NeuUy_ = 15, Pu3RhoUy_  = 15, Pu3Uy_ = 15, &
-       NeuRhoUz_  = 16, NeuUz_ = 16, Pu3RhoUz_  = 16, Pu3Uz_ = 16, &
-       NeuP_      = 17,              Pu3P_      = 17, &
-       Ne2Rho_    = 18, &
-       Ne2RhoUx_  = 19, Ne2Ux_ = 19, &
-       Ne2RhoUy_  = 20, Ne2Uy_ = 20, &
-       Ne2RhoUz_  = 21, Ne2Uz_ = 21, &
-       Ne2P_      = 22, &
-       Ne3Rho_    = 23, &
-       Ne3RhoUx_  = 24, Ne3Ux_ = 24, &
-       Ne3RhoUy_  = 25, Ne3Uy_ = 25, &
-       Ne3RhoUz_  = 26, Ne3Uz_ = 26, &
-       Ne3P_      = 27, &
-       Ne4Rho_    = 28, &
-       Ne4RhoUx_  = 29, Ne4Ux_ = 29, &
-       Ne4RhoUy_  = 30, Ne4Uy_ = 30, &
-       Ne4RhoUz_  = 31, Ne4Uz_ = 31, &
-       Ne4P_      = 32, &
+       NeuRho_    = 12,              Pu3Rho_    = 12, &
+       NeuRhoUx_  = 13, NeuUx_ = 13, Pu3RhoUx_  = 13, Pu3Ux_ = 13, &
+       NeuRhoUy_  = 14, NeuUy_ = 14, Pu3RhoUy_  = 14, Pu3Uy_ = 14, &
+       NeuRhoUz_  = 15, NeuUz_ = 15, Pu3RhoUz_  = 15, Pu3Uz_ = 15, &
+       NeuP_      = 16,              Pu3P_      = 16, &
+       Ne2Rho_    = 17, &
+       Ne2RhoUx_  = 18, Ne2Ux_ = 18, &
+       Ne2RhoUy_  = 19, Ne2Uy_ = 19, &
+       Ne2RhoUz_  = 20, Ne2Uz_ = 20, &
+       Ne2P_      = 21, &
+       Ne3Rho_    = 22, &
+       Ne3RhoUx_  = 23, Ne3Ux_ = 23, &
+       Ne3RhoUy_  = 24, Ne3Uy_ = 24, &
+       Ne3RhoUz_  = 25, Ne3Uz_ = 25, &
+       Ne3P_      = 26, &
+       Ne4Rho_    = 27, &
+       Ne4RhoUx_  = 28, Ne4Ux_ = 28, &
+       Ne4RhoUy_  = 29, Ne4Uy_ = 29, &
+       Ne4RhoUz_  = 30, Ne4Uz_ = 30, &
+       Ne4P_      = 31, &
        Energy_    = nVar+1,          SWHEnergy_ = nVar+1, &
        NeuEnergy_ = nVar+2,          Pu3Energy_ = nVar+2, &
        Ne2Energy_ = nVar+3, &
@@ -108,7 +107,6 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0, & ! Pe_
        1.0, & ! p_
@@ -147,7 +145,6 @@ module ModVarIndexes
        'Bx    ', & ! Bx_
        'By    ', & ! By_
        'Bz    ', & ! Bz_
-       'Ehot  ', & ! Ehot_
        ('I??   ', iWave=WaveFirst_,WaveLast_), &
        'Pe    ', & ! Pe_
        'p     ', & ! p_
