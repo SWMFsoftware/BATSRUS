@@ -161,7 +161,7 @@ module ModUser
 
   ! Wave turbulence
   real :: DeltaUSi = 10.0, DeltaU = 0.0
-  
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -286,7 +286,7 @@ contains
     use ModMain, ONLY: FaceBCType
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
-    
+
     type(FaceBCType), intent(inout):: FBC
 
     ! local variables
@@ -486,7 +486,7 @@ contains
 
     use ModCellBoundary, ONLY: iMin, iMax, jMin, jMax, kMin, kMax
     use ModWaves,        ONLY: UseAlfvenWaves
-    
+
     ! The ISM enters at the east boundary (negative x)
     ! February 08, 2018 - added the possibility for using user conditions in
     ! other boundaries as well
@@ -2352,7 +2352,7 @@ contains
     UseWavePressure = WaveFirst_ > 1
 
     DeltaU = DeltaUSi*Si2No_V(UnitU_)
-    
+
     ! normalization of SWH and VLISW and Neutrals
 
     VliswRho = VliswRhoDim*Io2No_V(UnitRho_)
