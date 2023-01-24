@@ -3,7 +3,11 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
-  use ModExtraVariables
+  use ModExtraVariables, &
+       Redefine1 => nWave, &
+       Redefine2 => WaveFirst_, &
+       Redefine3 => WaveLast_, &
+       Redefine4 => Pe_
 
   implicit none
 

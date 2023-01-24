@@ -1,0 +1,157 @@
+#COMPONENT
+OH			NameComp
+
+#DESCRIPTION
+Param/OUTERHELIO/PARAM.in.1d: charge exchange test with 1 ion and 4 neutral fluids		StringDescription
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#GRAVITY
+F			UseGravity
+
+#BODY
+F			UseBody
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+#GRIDBLOCK
+1			MaxBlock
+
+#GRID
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-200			xMin
+200			xMax
+-200			yMin
+200			yMax
+-200			zMin
+200			zMax
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+0.01 year		DtFixedDim
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+-1			DnSaveLogfile
+0.1 year		DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+y=0 VAR idl		StringPlot
+-1			DnSavePlot
+0.1 year		DtSavePlot
+0.0			DxSavePlot
+{MHD} fluid		NameVars
+{default}		NamePars
+
+#UNIFORMSTATE
+0.01			StateVar Rho
+-100			StateVar Ux
+0			StateVar Uy
+0			StateVar Uz
+0.01			StateVar Bx
+0.0			StateVar By
+0			StateVar Bz
+0			StateVar I01
+0			StateVar I02
+1.3E-13			StateVar Pe
+1.3E-13			StateVar P
+1E-5			StateVar NeuRho
+0			StateVar NeuUx
+0			StateVar NeuUy
+0			StateVar NeuUz
+1E-16			StateVar NeuP
+1E-5			StateVar Ne2Rho
+0			StateVar Ne2Ux
+0			StateVar Ne2Uy
+0			StateVar Ne2Uz
+1E-16			StateVar Ne2P
+1E-5			StateVar Ne3Rho
+0			StateVar Ne3Ux
+0			StateVar Ne3Uy
+0			StateVar Ne3Uz
+1E-16			StateVar Ne3P
+0.18			StateVar Ne4Rho
+100			StateVar Ne4Ux
+0			StateVar Ne4Uy
+0			StateVar Ne4Uz
+1.6E-13			StateVar Ne4P
+
+#HEATPARTITIONING
+uniform			TypeHeatPartitioning
+0.6			QionRatio
+
+#USERSWITCH
++init +source +progress		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#SOLARWINDH
+0.00874			SWH_rho_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07			SWH_Ux_dim [km/s]
+0.0			SWH_Uy_dim [km/s]
+0.0			SWH_Uz_dim [km/s]
+7.17E-03		SWH_Bx_dim [nT]
+0.0			SWH_By_dim [nT]
+0.0			SWH_Bz_dim [nT]
+1.0868E5		SWH_Te_dim [K]
+
+#VLISW
+0.06			VLISW_rho_dim [n/cc]
+6519.0			VLISW_T_dim
+26.3			VLISW_Ux_dim
+0.3			VLISW_Uy_dim
+-2.3			VLISW_Uz_dim
+0.411			VLISW_Bx_dim
+-0.0748			VLISW_By_dim
+-0.1296			VLISW_Bz_dim
+6519.0			VLISW_Te_dim
+
+#REGIONS
+6.E5                    TempPop1LimitDim
+100.0                   uPop1LimitDim
+0.9                     MachPop2Limit
+1.5                     MachPop3Limit
+50.0                    rPop3Limit
+0.5                     MachPop4Limit
+
+#SOURCES
+T                       UseIonSource
+T                       UseNeuSource
+T                       UseNe2Source
+T                       UseNe3Source
+T                       UseNe4Source
+
+#USERINPUTEND -------------------------------------
+
+#LOOKUPTABLE
+ChargeExchange		NameTable
+load			NameCommand
+Param/OUTERHELIO/ExchangeRate.dat		NameFile
+ascii			TypeFile
+
+#STOP
+-1			MaxIteration
+5 year			tSimulationMax
+
