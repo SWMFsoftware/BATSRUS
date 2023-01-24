@@ -1742,9 +1742,9 @@ contains
           call read_var('TypeUpdate', TypeUpdate, IsLowerCase=.true.)
 
        case('#UPDATEVAR')
-          call read_var('StringVarUpdate', StringLine)
+          call read_var('StringVarUpdate', StringLine, IsLowerCase=.true.)
           call split_string(StringLine, NameVarUpdate_I, nVarUpdate)
-          if(nVarUpdate == nVar)then
+          if(nVarUpdate == nVar .or. StringLine == 'all')then
              if(allocated(iVarUpdate_I)) deallocate(iVarUpdate_I)
              DoUpdate_V = .true.
           else
@@ -3070,20 +3070,24 @@ contains
 
          ! Some defaults for AWSoM and AWSoM-R
          ! If Ehot_>1, then we assume we use these models
-         if(Ehot_ > 1)then
+         if(Ehot_ > 1 .and. DoUpdate_V(Ehot_))then
             UseHeatFluxCollisionless = .true.
             if(NameThisComp == 'SC')then
                UseHeatFluxRegion = .true.
-               UseHeatConduction = .true.
+               if(i_line_command('#HEATCONDUCTION') < 1) &
+                    UseHeatConduction = .true.
 
-               ! defaults for semi-implicit heat conduction
-               UseSemiImplicit = .true.
-               TypeSemiImplicit = "parcond"
-
-               SemiParam%TypeKrylov = "GMRES"
-               SemiParam%ErrorMax = 1.0e-5
-               SemiParam%MaxMatvec = 20
-               SemiParam%nKrylovVector = SemiParam%MaxMatvec
+               if(i_line_command('#SEMIIMPLICIT') < 1) then
+                  ! defaults for semi-implicit heat conduction
+                  UseSemiImplicit = .true.
+                  TypeSemiImplicit = "parcond"
+               end if
+               if(UseSemiImplicit .and. i_line_command('#SEMIKRYLOV') < 1)then
+                  SemiParam%TypeKrylov = "GMRES"
+                  SemiParam%ErrorMax = 1.0e-5
+                  SemiParam%MaxMatvec = 20
+                  SemiParam%nKrylovVector = SemiParam%MaxMatvec
+               end if
             end if
          end if
 
