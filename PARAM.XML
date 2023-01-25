@@ -6826,11 +6826,16 @@ and "fast" when compiled for the GPU.
 #UPDATEVAR
 rho mx my               StringVarUpdate
 
+#UPDATEVAR
+all                     StringVarUpdate
+
+
 Update only a subset of the state variables. The variables should be
 listed with a single space separator in the StringVarUpdate.
+If StringVarUpdate is set to 'all' then all the variables are updated.
 
 If density is updated but some components of the momentum are not,
-then the velocity is preserved (not the momentum). In the example
+then the velocity is preserved (not the momentum). In the first example
 above, the Z component of the velocity is fixed. In the current
 implementation this only works with classical momentum
 (not with semi-relativistic momentum, see #BORIS command) and only
