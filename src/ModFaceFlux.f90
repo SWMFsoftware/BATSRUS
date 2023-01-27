@@ -3664,7 +3664,7 @@ contains
            GammaElectron, GammaMinus1, Gamma_I
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
-           UseAnisoPressure, UseAnisoPe, SignB_
+           UseAnisoPressure, UseAnisoPe, SignB_, UseMagFriction, MagFrictionCoef!MagFrictionUmin
 
       real, intent(in) :: State_V(:)
       real, optional, intent(out) :: CmaxDt_I(:)
@@ -3690,9 +3690,20 @@ contains
       integer:: jFluid
       !------------------------------------------------------------------------
 #ifndef SCALAR
+      Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
+      if(UseMagFriction)then
+         if(present(Cmax_I))then
+            Cmax_I(1)    = abs(Un)
+            !CmaxDt_I(1) = max(Cmax_I(1),MagFrictionUmin)
+            CmaxDt_I(1) = InvDxyz/MagFrictionCoef
+         end if
+         if(present(Cleft_I))  Cleft_I(1)  = Un
+         if(present(Cright_I)) Cright_I(1) = Un
+         RETURN
+      end if
+
       Rho = State_V(iRhoIon_I(1))
       Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
-      Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       UnMin = Un
       UnMax = Un
 

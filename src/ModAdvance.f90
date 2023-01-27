@@ -34,6 +34,9 @@ module ModAdvance
   integer, allocatable:: iVarUpdate_I(:)
   logical::              DoUpdate_V(nVar) = .true.
 
+  logical   ::    UseMagFriction = .false.
+  real      ::    MagFrictionCoef
+
   ! This should be changed to false probably
   logical:: UseDbTrick = .true., UseDbTrickNow = .true.
 
