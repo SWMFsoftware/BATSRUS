@@ -5855,13 +5855,21 @@ Only useful if the initial condition has a non-trivial analytic form.
     <parameter name="zPosition" type="real" default="0"
 	       if="$nK!=1"/>
   </if>
-  <if expr="$NameShape =~ /box/">
+  <if expr="$NameShape =~ /box\b/">
     <parameter name="xMinBox" type="real" />
     <parameter name="yMinBox" type="real" if="$nJ != 1"/>
     <parameter name="zMinBox" type="real" if="$nK != 1"/>
     <parameter name="xMaxBox" type="real" />
     <parameter name="yMaxBox" type="real" if="$nJ != 1"/>
     <parameter name="zMaxBox" type="real" if="$nK != 1"/>
+  </if>
+  <if expr="$NameShape =~ /box_gen/">
+    <parameter name="Coord1MinBox" type="real" />
+    <parameter name="Coord2MinBox" type="real" if="$nJ != 1"/>
+    <parameter name="Coord3MinBox" type="real" if="$nK != 1"/>
+    <parameter name="Coord1MaxBox" type="real" />
+    <parameter name="Coord2MaxBox" type="real" if="$nJ != 1"/>
+    <parameter name="Coord3MaxBox" type="real" if="$nK != 1"/>
   </if>
   <if expr="$NameShape =~ /brick/">
     <parameter name="xSizeBrick" type="real" min="0" />
