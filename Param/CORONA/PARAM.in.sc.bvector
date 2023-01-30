@@ -122,12 +122,12 @@ shell0			StringShape
 #AMRREGION
 ActiveRegion		NameRegion
 box_gen			StringShape
-1.0			xMinBox
-145.0			yMinBox
--23.0			zMinBox
-1.001			xMaxBox
-182.0			yMaxBox
--3.0			zMaxBox
+1.0			Coord1MinBox
+145.0			Coord2MinBox
+-23.0			Coord3MinBox
+1.001			Coord1MaxBox
+182.0			Coord2MaxBox
+-3.0			Coord3MaxBox
 
 #AMRCRITERIARESOLUTION
 3			nRefineCrit
