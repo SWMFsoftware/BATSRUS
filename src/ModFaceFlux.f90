@@ -3664,7 +3664,8 @@ contains
            GammaElectron, GammaMinus1, Gamma_I
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
-           UseAnisoPressure, UseAnisoPe, SignB_, UseMagFriction, MagFrictionCoef! MagFrictionUmin
+           UseAnisoPressure, UseAnisoPe, SignB_, &
+           UseMagFriction, MagFrictionCoef
 
       real, intent(in) :: State_V(:)
       real, optional, intent(out) :: CmaxDt_I(:)
@@ -3693,8 +3694,7 @@ contains
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       if(UseMagFriction)then
          if(present(Cmax_I))then
-            Cmax_I(1)    = abs(Un)
-            ! CmaxDt_I(1) = max(Cmax_I(1),MagFrictionUmin)
+            Cmax_I(1)   = abs(Un)
             CmaxDt_I(1) = InvDxyz/MagFrictionCoef
          end if
          if(present(Cleft_I))  Cleft_I(1)  = Un
