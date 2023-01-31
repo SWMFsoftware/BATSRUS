@@ -70,12 +70,12 @@ initial			TypeRegion
 GRIDLEVEL
 1			nLevelArea
 box_gen			TypeRegion
-1.2			rMin
-135			LonMin
--40.0			LatMin
-3.0			rMax
-225.0			LonMax
-40.0			LatMax
+1.2			Coord1Min rMin
+135			Coord2Min LonMin
+-40.0			Coord3Min LatMin
+3.0			Coord1Max rMax
+225.0			Coord2Max LonMax
+40.0			Coord3Max LatMax
 
 GRIDLEVEL
 1			nLevelArea
