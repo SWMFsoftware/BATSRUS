@@ -53,10 +53,10 @@ module ModUser
     ! Extra dipole under surface
   real    :: UserDipoleStrength = 0., UserDipoleStrengthSi = 0.
   real    :: UserDipoleDepth = 1.
-  real    :: UserDipoleLatitude = 0.
-  real    :: UserDipoleLongitude = 0.
-  real    :: UserDipoleAxisLatitude = 0.
-  real    :: UserDipoleAxisLongitude = 0.
+  real    :: UserDipoleLatitude, UserDipoleLatDeg = 0.
+  real    :: UserDipoleLongitude, UserDipoleLonDeg = 0.
+  real    :: UserDipoleAxisLatitude, UserDipoleAxisLatDeg = 0.
+  real    :: UserDipoleAxisLongitude, UserDipoleAxisLonDeg = 0.
 
   ! STITCH
   real    :: ZetaSI = 0.0, Zeta
@@ -130,10 +130,10 @@ contains
        case("#EXTRADIPOLE")
           call read_var('UserDipoleStrengthSi', UserDipoleStrengthSi)
           call read_var('UserDipoleDepth', UserDipoleDepth)
-          call read_var('UserDipoleLatitude',UserDipoleLatitude)
-          call read_var('UserDipoleLongitude',UserDipoleLongitude)
-          call read_var('UserDipoleAxisLatitude',UserDipoleAxisLatitude)
-          call read_var('UserDipoleAxisLongitude',UserDipoleAxisLongitude)
+          call read_var('UserDipoleLatitude',UserDipoleLatDeg)
+          call read_var('UserDipoleLongitude',UserDipoleLonDeg)
+          call read_var('UserDipoleAxisLatitude',UserDipoleAxisLatDeg)
+          call read_var('UserDipoleAxisLongitude',UserDipoleAxisLonDeg)
 
        case('#POLARJETBOUNDARY')
           call read_var('FlowSpeedJetSi',FlowSpeedJetSi)
@@ -232,6 +232,11 @@ contains
 
     ! polar jet in normalized units
     UserDipoleStrength = UserDipoleStrengthSi*Si2No_V(UnitB_)
+    UserDipoleLatitude = UserDipoleLatDeg*cDegToRad
+    UserDipoleLongitude = UserDipoleLonDeg*cDegToRad
+    UserDipoleAxisLatitude = UserDipoleAxisLatDeg*cDegToRad
+    UserDipoleAxisLongitude = UserDipoleAxisLonDeg*cDegToRad
+    
     BminJet = BminJetSi*Si2No_V(UnitB_)
     BmaxJet = BmaxJetSi*Si2No_V(UnitB_)
     FlowSpeedJet = FlowSpeedJetSi &
@@ -1875,7 +1880,7 @@ contains
        RETURN
     end if
 
-    ! Center of dipole shifted by UserDipoleDepth below RadiusMin               
+    ! Center of dipole shifted by UserDipoleDepth below RadiusMin
     call rlonlat_to_xyz( &
          [RadiusMin-UserDipoleDepth, &
          UserDipoleLongitude, UserDipoleLatitude], &
