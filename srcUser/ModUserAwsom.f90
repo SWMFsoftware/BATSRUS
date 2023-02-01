@@ -1863,8 +1863,10 @@ contains
     real, intent(in) :: x, y, z
     real, intent(inout):: B0_D(3)
 
-    real :: Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3), B_D(3)
-    real :: UserDipoleAxis_D(3)
+    real :: Xyz_D(3), Dp, rInv, r2Inv, r3Inv, UserDipoleAxis_D(3), B_D(3)
+
+    logical, save :: DoFirst = .true.
+    real, save :: XyzCenter_D(3), Dipole_D(3)
     
     character(len=*), parameter:: NameSub = 'user_get_b0'
     !--------------------------------------------------------------------------
@@ -1880,26 +1882,29 @@ contains
        RETURN
     end if
 
-    ! Center of dipole shifted by UserDipoleDepth below RadiusMin
-    call rlonlat_to_xyz( &
-         [RadiusMin-UserDipoleDepth, &
-         UserDipoleLongitude, UserDipoleLatitude], &
-         Xyz_D &
-         )
-    ! Normalize with depth
-    Xyz_D = ([x, y, z] - Xyz_D)/UserDipoleDepth
+    if(DoFirst)then
+       DoFirst = .false.
+       
+       ! Center of dipole shifted by UserDipoleDepth below RadiusMin
+       call rlonlat_to_xyz( &
+            [RadiusMin-UserDipoleDepth, &
+            UserDipoleLongitude, UserDipoleLatitude], XyzCenter_D )
 
-    call rlonlat_to_xyz(&
-         [1.,UserDipoleAxisLongitude, UserDipoleAxisLatitude], &
-         UserDipoleAxis_D)
+       call rlonlat_to_xyz(&
+            [1.,UserDipoleAxisLongitude, UserDipoleAxisLatitude], &
+            UserDipoleAxis_D)
+
+       ! Compute dipole moment of the intrinsic magnetic field B0.
+       Dipole_D = UserDipoleStrength * UserDipoleAxis_D
+    end if
+
+    ! Normalize with depth
+    Xyz_D = ([x, y, z] - XyzCenter_D)/UserDipoleDepth
 
     ! Determine radial distance and powers of it
     rInv  = 1.0/sqrt(sum(Xyz_D**2))
     r2Inv = rInv**2
     r3Inv = rInv*r2Inv
-
-    ! Compute dipole moment of the intrinsic magnetic field B0.
-    Dipole_D = UserDipoleStrength * UserDipoleAxis_D
 
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
