@@ -133,10 +133,10 @@ coney tapered		StringShape
 #REGION
 r6			NameRegion
 box_gen			StringShape
-15.0			xMinBox
-337.5			yMinBox
--10.0			xMaxBox
-25.0			yMaxBox
+15.0			Coord1MinBox
+337.5			Coord2MinBox
+-10.0			Coord1MaxBox
+25.0			Coord2MaxBox
 
 #HALLREGION
 +r1 +r2 -r3 -r4 -r5 +r6 +r7 +r8		StringHallRegion

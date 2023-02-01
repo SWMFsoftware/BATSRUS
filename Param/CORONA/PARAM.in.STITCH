@@ -123,22 +123,22 @@ shell0			StringShape
 #REGION
 DipoleBox1		NameRegion
 box_gen			StringShape
-1.0			xMinBox
-0.0			yMinBox
--10.0			zMinBox
-1.2			xMaxBox
-10.0			yMaxBox
-10.0			zMaxBox			
+1.0			Coord1MinBox
+0.0			Coord2MinBox
+-10.0			Coord3MinBox
+1.2			Coord1MaxBox
+10.0			Coord2MaxBox
+10.0			Coord3MaxBox			
 
 #REGION
 DipoleBox2		NameRegion
 box_gen			StringShape
-1.0			xMinBox
-350.0			yMinBox
--10.0			zMinBox
-1.2			xMaxBox
-360.0			yMaxBox
-10.0			zMaxBox			
+1.0			Coord1MinBox
+350.0			Coord2MinBox
+-10.0			Coord3MinBox
+1.2			Coord1MaxBox
+360.0			Coord2MaxBox
+10.0			Coord3MaxBox			
 
 #AMRCRITERIARESOLUTION
 4			nRefineCrit
