@@ -50,10 +50,13 @@ module ModUser
   real    :: rSteady = 1.125
   logical :: UseSteady = .false.
 
-  ! variables for polar jet application
-  ! Dipole unders surface
-  real    :: UserDipoleDepth = 1.0
-  real    :: UserDipoleStrengthSi = 0.0, UserDipoleStrength = 0.0
+    ! Extra dipole under surface
+  real    :: UserDipoleStrength = 0., UserDipoleStrengthSi = 0.
+  real    :: UserDipoleDepth = 1.
+  real    :: UserDipoleLatitude = 0.
+  real    :: UserDipoleLongitude = 0.
+  real    :: UserDipoleAxisLatitude = 0.
+  real    :: UserDipoleAxisLongitude = 0.
 
   ! STITCH
   real    :: ZetaSI = 0.0, Zeta
@@ -124,9 +127,13 @@ contains
           call read_var('UseSteady', UseSteady)
           if(UseSteady) call read_var('rSteady', rSteady)
 
-       case("#POLARJETDIPOLE")
-          call read_var('UserDipoleDepth', UserDipoleDepth)
+       case("#EXTRADIPOLE")
           call read_var('UserDipoleStrengthSi', UserDipoleStrengthSi)
+          call read_var('UserDipoleDepth', UserDipoleDepth)
+          call read_var('UserDipoleLatitude',UserDipoleLatitude)
+          call read_var('UserDipoleLongitude',UserDipoleLongitude)
+          call read_var('UserDipoleAxisLatitude',UserDipoleAxisLatitude)
+          call read_var('UserDipoleAxisLongitude',UserDipoleAxisLongitude)
 
        case('#POLARJETBOUNDARY')
           call read_var('FlowSpeedJetSi',FlowSpeedJetSi)
@@ -1841,6 +1848,8 @@ contains
   !============================================================================
   subroutine user_get_b0(x, y, z, B0_D)
 
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
+    use ModGeometry, ONLY: RadiusMin
     use ModMain, ONLY: tSimulation, UseUserB0
     use EEE_ModGetB0, ONLY: EEE_get_B0
     use EEE_ModCommonVariables, ONLY: UseTD
@@ -1849,8 +1858,9 @@ contains
     real, intent(in) :: x, y, z
     real, intent(inout):: B0_D(3)
 
-    real :: r, Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3), B_D(3)
-
+    real :: Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3), B_D(3)
+    real :: UserDipoleAxis_D(3)
+    
     character(len=*), parameter:: NameSub = 'user_get_b0'
     !--------------------------------------------------------------------------
     if(UseTD)then
@@ -1865,21 +1875,30 @@ contains
        RETURN
     end if
 
-    ! Dipole centered at [0, 1-UserDipoleDepth, 0]
-    ! shifted Xyz_D upwards to center of the user-dipole
-    Xyz_D = [x, y - 1 + UserDipoleDepth, z]
+    ! Center of dipole shifted by UserDipoleDepth below RadiusMin               
+    call rlonlat_to_xyz( &
+         [RadiusMin-UserDipoleDepth, &
+         UserDipoleLongitude, UserDipoleLatitude], &
+         Xyz_D &
+         )
+    ! Normalize with depth
+    Xyz_D = ([x, y, z] - Xyz_D)/UserDipoleDepth
+
+    call rlonlat_to_xyz(&
+         [1.,UserDipoleAxisLongitude, UserDipoleAxisLatitude], &
+         UserDipoleAxis_D)
 
     ! Determine radial distance and powers of it
-    rInv  = 1/norm2(Xyz_D)
+    rInv  = 1.0/sqrt(sum(Xyz_D**2))
     r2Inv = rInv**2
     r3Inv = rInv*r2Inv
 
     ! Compute dipole moment of the intrinsic magnetic field B0.
-    Dipole_D = [0.0, UserDipoleStrength, 0.0 ]
+    Dipole_D = UserDipoleStrength * UserDipoleAxis_D
+
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
-    ! Add up monopole and dipole
-    B0_D = B0_D + (Dp*Xyz_D - Dipole_D)*r3Inv
+    B0_D = B0_D + (Dp*Xyz_D - Dipole_D) * r3Inv
 
   end subroutine user_get_b0
   !============================================================================
