@@ -236,7 +236,7 @@ contains
     UserDipoleLongitude = UserDipoleLonDeg*cDegToRad
     UserDipoleAxisLatitude = UserDipoleAxisLatDeg*cDegToRad
     UserDipoleAxisLongitude = UserDipoleAxisLonDeg*cDegToRad
-    
+
     BminJet = BminJetSi*Si2No_V(UnitB_)
     BmaxJet = BmaxJetSi*Si2No_V(UnitB_)
     FlowSpeedJet = FlowSpeedJetSi &
@@ -1867,7 +1867,7 @@ contains
 
     logical, save :: DoFirst = .true.
     real, save :: XyzCenter_D(3), Dipole_D(3)
-    
+
     character(len=*), parameter:: NameSub = 'user_get_b0'
     !--------------------------------------------------------------------------
     if(UseTD)then
@@ -1884,7 +1884,7 @@ contains
 
     if(DoFirst)then
        DoFirst = .false.
-       
+
        ! Center of dipole shifted by UserDipoleDepth below RadiusMin
        call rlonlat_to_xyz( &
             [RadiusMin-UserDipoleDepth, &
