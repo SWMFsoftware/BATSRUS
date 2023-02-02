@@ -361,11 +361,12 @@ contains
          end if
       end if
 
+      if(UseElectronPressure) VarsGhostFace_V(Pe_) = SwhPe
+
       if(.not.IsMhd)then
          VarsGhostFace_V(Pu3Rho_)    = Pu3Rho
          VarsGhostFace_V(Pu3P_)      = pPUI  ! Pu3P ???
          VarsGhostFace_V(Pu3Ux_:Pu3Uz_) = matmul(XyzSph_DD, VPUIsph_D)
-         if(UseElectronPressure) VarsGhostFace_V(Pe_) = SwhPe
       end if
 
       if(UseNeutralFluid)then
@@ -451,9 +452,9 @@ contains
             write(*,*) NameSub,' Pui3     =', VarsGhostFace_V(Pu3Rho_:Pu3P_)
             write(*,*) NameSub,' pPUI, PU3_p, pSolarwind, SwhP =', &
                  pPUI, Pu3P, pSolarwind, SwhP
-            if(UseElectronPressure)then
-               write(*,*) NameSub,' Pe     =', SwhPe
-            end if
+         end if
+         if(UseElectronPressure)then
+            write(*,*) NameSub,' Pe     =', SwhPe
          end if
       end if
 
@@ -648,8 +649,6 @@ contains
        if(.not.IsMhd)then
           State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
           State_VGB(SWHP_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
-          if(UseElectronPressure) &
-               State_VGB(Pe_,i,j,k,iBlock) = SwhPe * (rBody/r)**(2*Gamma)
           State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
                State_VGB(SWHRho_,i,j,k,iBlock)*v_D
        else
@@ -658,6 +657,8 @@ contains
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                State_VGB(Rho_,i,j,k,iBlock)*v_D
        end if
+       if(UseElectronPressure) &
+            State_VGB(Pe_,i,j,k,iBlock) = SwhPe * (rBody/r)**(2*Gamma)
 
        if(UseColdCloud) then
           !! for studies of Heliosphere in cold cloud
@@ -770,14 +771,14 @@ contains
              write(*,*)NameSub,' vPUI_D    =', vPUI_D
              write(*,*)NameSub,' Pu3Rho,   =', State_VGB(Pu3Rho_,i,j,k,iBlock)
              write(*,*)NameSub,' Pu3P      =', State_VGB(Pu3P_,i,j,k,iBlock)
-             if(UseElectronPressure) &
-                  write(*,*)NameSub,' Pe        =', State_VGB(Pe_,i,j,k,iBlock)
           else
              write(*,*)NameSub,' RhoU_D =', &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
              write(*,*)NameSub,' Rho,   =',State_VGB(Rho_,i,j,k,iBlock)
              write(*,*)NameSub,' p      =',State_VGB(P_,i,j,k,iBlock)
           end if
+          if(UseElectronPressure) &
+               write(*,*)NameSub,' Pe        =', State_VGB(Pe_,i,j,k,iBlock)
        end if
 
     end do; end do; end do
@@ -2356,11 +2357,11 @@ contains
     ! normalization of SWH and VLISW and Neutrals
 
     VliswRho = VliswRhoDim*Io2No_V(UnitRho_)
-    if(IsMhd)then
-       VliswP  = 2.*VliswTDim*Io2No_V(UnitTemperature_)*VliswRho
-    else
+    if(UseElectronPressure)then
        VliswP  = VliswTDim*Io2No_V(UnitTemperature_)*VliswRho
        VliswPe = VliswTeDim*Io2No_V(UnitTemperature_)*VliswRho
+    else
+       VliswP  = 2.*VliswTDim*Io2No_V(UnitTemperature_)*VliswRho
     end if
     VliswUx  = VliswUxDim*Io2No_V(UnitU_)
     VliswUy  = VliswUyDim*Io2No_V(UnitU_)
@@ -2371,11 +2372,6 @@ contains
 
     SwhRho = SwhRhoDim*Io2No_V(UnitRho_)
 
-    if(IsMhd)then
-       ! Pressure of plasma = 2*T_ion*Rho_ion
-       SwhP   = 2.*SwhTDim*Io2No_V(UnitTemperature_)*SwhRho
-    end if
-
     SwhUx  = SwhUxDim*Io2No_V(UnitU_)
     SwhUy  = SwhUyDim*Io2No_V(UnitU_)
     SwhUz  = SwhUzDim*Io2No_V(UnitU_)
@@ -2383,7 +2379,15 @@ contains
     SwhBy  = SwhByDim*Io2No_V(UnitB_)
     SwhBz  = SwhBzDim*Io2No_V(UnitB_)
 
-    if(.not.IsMhd)then
+    if(IsMhd)then
+       if(UseElectronPressure)then
+          SwhP   = SwhTDim*Io2No_V(UnitTemperature_)*SwhRho
+          SwhPe  = SwhTeDim*Io2No_V(UnitTemperature_)*SwhRho
+       else
+          ! Pressure of plasma = 2*T_ion*Rho_ion
+          SwhP   = 2.*SwhTDim*Io2No_V(UnitTemperature_)*SwhRho
+       end if
+    else
        Pu3Ux  = Pu3UxDim*Io2No_V(UnitU_)
        Pu3Uy  = Pu3UyDim*Io2No_V(UnitU_)
        Pu3Uz  = Pu3UzDim*Io2No_V(UnitU_)

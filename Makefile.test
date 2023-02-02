@@ -86,7 +86,7 @@ test_extra_help:
 	@echo "    test_outerhelio2d          (run 2D Outer Heliosphere test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_outerhelio_1d         (run 1D Outer Heliosphere test)"
-	@echo "    test_outerhelioawsom_1d    (run 1D Outer Heliosphere w/ Turb test)"
+	@echo "    test_outerhelioawsom    (run 1D Outer Heliosphere w/ Turb test)"
 	@echo "    test_outerheliopui         (run Outer Heliosphere w/ PUIs test)"
 	@echo "    test_outerheliopui_1d      (run 1D Outer Heliosphere w/ PUIs test)"
 	@echo "    test_saturn                (run Saturn test)"
@@ -146,7 +146,7 @@ test_extra:
 	-@($(MAKE) test_outerhelio2d TESTDIR=run_test_outerhelio2d)
 	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
 	-@($(MAKE) test_outerhelio_1d TESTDIR=run_test_outerhelio_1d)
-	-@($(MAKE) test_outerhelioawsom_1d TESTDIR=run_test_outerhelioawsom_1d)
+	-@($(MAKE) test_outerhelioawsom TESTDIR=run_test_outerhelioawsom)
 	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
 	-@($(MAKE) test_outerheliopui_1d TESTDIR=run_test_outerheliopui_1d)
 	-@($(MAKE) test_titan TESTDIR=run_test_titan)
@@ -1223,37 +1223,38 @@ test_outerhelio_1d_check:
                 > test_outerhelio_1d.diff)
 	ls -l test_outerhelio_1d.diff
 
-test_outerhelioawsom_1d:
-	@echo "test_outerhelioawsom_1d_compile..." > test_outerhelioawsom_1d.diff
-	$(MAKE) test_outerhelioawsom_1d_compile
-	@echo "test_outerhelioawsom_1d_rundir..." >> test_outerhelioawsom_1d.diff
-	$(MAKE) test_outerhelioawsom_1d_rundir
-	@echo "test_outerhelioawsom_1d_run..." >> test_outerhelioawsom_1d.diff
-	$(MAKE) test_outerhelioawsom_1d_run
-	@echo "test_outerhelioawsom_1d_check..." >> test_outerhelioawsom_1d.diff
-	$(MAKE) test_outerhelioawsom_1d_check
 
-test_outerhelioawsom_1d_compile:
+test_outerhelioawsom:
+	@echo "test_outerhelioawsom_compile..." > test_outerhelioawsom.diff
+	$(MAKE) test_outerhelioawsom_compile
+	@echo "test_outerhelioawsom_rundir..." >> test_outerhelioawsom.diff
+	$(MAKE) test_outerhelioawsom_rundir
+	@echo "test_outerhelioawsom_run..." >> test_outerhelioawsom.diff
+	$(MAKE) test_outerhelioawsom_run
+	@echo "test_outerhelioawsom_check..." >> test_outerhelioawsom.diff
+	$(MAKE) test_outerhelioawsom_check
+
+test_outerhelioawsom_compile:
 	./Config.pl ${OPENMP} -u=OuterHelio -e=OuterHelioAwsom -ng=2 -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
-test_outerhelioawsom_1d_rundir:
+test_outerhelioawsom_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
-	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.awsom1d ./PARAM.in
+	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.awsom ./PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
-test_outerhelioawsom_1d_run:
+test_outerhelioawsom_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
 
-test_outerhelioawsom_1d_check:
-	-@(${DIFFNUM} -t -r=1e-5 \
-                ${TESTDIR}/RESULTS/OH/log_n000000.log \
-                Param/OUTERHELIO/TestOutput/log_n000000_1d.log \
-                > test_outerhelioawsom_1d.diff)
-	ls -l test_outerhelioawsom_1d.diff
+test_outerhelioawsom_check:
+	-@(${DIFFNUM} -t \
+                ${TESTDIR}/RESULTS/OH/log_n000010.log \
+                Param/OUTERHELIO/TestOutput/log_n000010_awsom.log \
+                > test_outerhelioawsom.diff)
+	ls -l test_outerhelioawsom.diff
 
 
 test_outerheliopui:
