@@ -219,7 +219,7 @@ T			UseOhNeutralBc
 1.0			mNeutral
 
 #CORONALHEATING
-turbulentcascade	TypeCoronalHeating
+turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi^
 0.0			rMinWaveReflection^
