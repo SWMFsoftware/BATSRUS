@@ -685,7 +685,7 @@ contains
 
     integer :: iFace, jFace, kFace, iDir, iMax, jMax, kMax, iLeft, jLeft, kLeft
     real, allocatable :: HeatFlux_DF(:,:,:,:)
-    real :: AreaX, AreaY, AreaZ, Area2, Area, Normal_D(nDim)
+    real :: AreaX, AreaY, AreaZ, Area2, Area, Normal_D(MaxDim)
     real :: HeatCondCoefNormal, HeatFlux
     logical :: IsNewBlockHeatCond
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -1653,7 +1653,7 @@ contains
          iComm, CellVolume_GB, message_pass_cell, interpolate_state_vector
     use ModMpi
     integer :: i, j, k, iBlock, iError
-    real :: x_D(nDim), Rho, B_D(MaxDim), B0_D(MaxDim), p
+    real :: x_D(MaxDim), Rho, B_D(MaxDim), B0_D(MaxDim), p
     real :: Mass, MassDim, MassTotal
 
     logical:: DoTest, IsFound
