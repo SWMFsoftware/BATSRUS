@@ -58,6 +58,9 @@ module ModUser
   real    :: UserDipoleAxisLatitude, UserDipoleAxisLatDeg = 0.
   real    :: UserDipoleAxisLongitude, UserDipoleAxisLonDeg = 0.
 
+  ! Uniform B0
+  real    :: UniformB0Si_D(3) = 0.0
+
   ! STITCH
   real    :: ZetaSI = 0.0, Zeta
   integer :: iMaxStitch
@@ -91,7 +94,7 @@ contains
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
     character (len=100) :: NameCommand
-
+    integer :: iDir
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
@@ -134,6 +137,11 @@ contains
           call read_var('UserDipoleLongitude',UserDipoleLonDeg)
           call read_var('UserDipoleAxisLatitude',UserDipoleAxisLatDeg)
           call read_var('UserDipoleAxisLongitude',UserDipoleAxisLonDeg)
+
+       case('#UNIFORMB0')
+          do iDir = 1, 3
+             call read_var('UniformB0Si', UniformB0Si_D(iDir))
+          end do
 
        case('#POLARJETBOUNDARY')
           call read_var('FlowSpeedJetSi',FlowSpeedJetSi)
@@ -1859,6 +1867,7 @@ contains
     use EEE_ModGetB0, ONLY: EEE_get_B0
     use EEE_ModCommonVariables, ONLY: UseTD
     use ModPhysics, ONLY: Si2No_V, UnitB_
+    use BATL_lib, ONLY: IsRzGeometry, z_
 
     real, intent(in) :: x, y, z
     real, intent(inout):: B0_D(3)
@@ -1870,6 +1879,11 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_get_b0'
     !--------------------------------------------------------------------------
+    if(any(UniformB0Si_D/=0.0))then
+       B_D = UniformB0Si_D*Si2No_V(UnitB_)
+       if(IsRzGeometry)B_D(z_) = B_D(z_)/y
+       B0_D = B0_D + B_D
+    end if
     if(UseTD)then
        Xyz_D = [x, y, z]
        call EEE_get_B0(Xyz_D, B_D, tSimulation)
