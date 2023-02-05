@@ -2091,16 +2091,21 @@ contains
   contains
     !==========================================================================
     real function zeta_region(lon, lat)
-      use ModNumConst, ONLY: cHalfPi, cTwoPi, cPi
+      use ModNumConst, ONLY: cHalfPi, cTwoPi
 
       real, intent(in) :: Lon, Lat
 
-      real :: LonLocal, LatLocal, LonShift
+      real :: LonLocal, LatLocal
       !------------------------------------------------------------------------
-      LonShift = mod(Lon+cPi,cTwoPi)-cPi
-      LonLocal = cHalfPi*(LonShift - Lon0)/Lon1
       LatLocal = cHalfPi*(Lat - Lat0)/Lat1
-      if(abs(LonShift-Lon0)<Lon1 .and. abs(Lat-Lat0)<Lat1)then
+      if(abs(Lon-Lon0)<Lon1 .and. abs(Lat-Lat0)<Lat1)then
+         LonLocal = cHalfPi*(Lon - Lon0)/Lon1
+         zeta_region = Zeta*cos(LonLocal)*cos(LatLocal)
+      elseif(Lon-Lon0>cTwoPi-Lon1 .and. abs(Lat-Lat0)<Lat1)then
+         LonLocal = cHalfPi*(Lon - Lon0 - cTwoPi)/Lon1
+         zeta_region = Zeta*cos(LonLocal)*cos(LatLocal)
+      elseif(Lon-Lon0<-cTwoPi+Lon1 .and. abs(Lat-Lat0)<Lat1)then
+         LonLocal = cHalfPi*(Lon - Lon0 + cTwoPi)/Lon1
          zeta_region = Zeta*cos(LonLocal)*cos(LatLocal)
       else
          zeta_region = 0.0
