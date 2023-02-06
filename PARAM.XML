@@ -10531,7 +10531,7 @@ Three components of uniform B0 field. In the example above
 there is a uniform field of 5 Gs along x axis. Exception is
 the case of rz-geometry, in which the intensity of Phi
 (third) field component should be divided by dimensionless r.
-
+</command>
 
 <command name="HELIOBUFFERGRID" if="$_IsFirstSession and $NameComp =~ /IH|OH/">
         <parameter name="nRBuff"     type="integer" min="2" default="2"/>
