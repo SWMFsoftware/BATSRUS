@@ -1,5 +1,5 @@
 #image: ubuntu:latest
-image: ubuntu:20.04
+image: ubuntu:22.04
 
 variables:
   GCC_V: 9

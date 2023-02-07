@@ -58,6 +58,9 @@ module ModUser
   real    :: UserDipoleAxisLatitude, UserDipoleAxisLatDeg = 0.
   real    :: UserDipoleAxisLongitude, UserDipoleAxisLonDeg = 0.
 
+  ! Uniform B0
+  real    :: UniformB0Si_D(3) = 0.0
+
   ! STITCH
   real    :: ZetaSI = 0.0, Zeta
   integer :: iMaxStitch
@@ -91,7 +94,7 @@ contains
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
     character (len=100) :: NameCommand
-
+    integer :: iDir
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
@@ -134,6 +137,11 @@ contains
           call read_var('UserDipoleLongitude',UserDipoleLonDeg)
           call read_var('UserDipoleAxisLatitude',UserDipoleAxisLatDeg)
           call read_var('UserDipoleAxisLongitude',UserDipoleAxisLonDeg)
+
+       case('#UNIFORMB0')
+          do iDir = 1, 3
+             call read_var('UniformB0Si', UniformB0Si_D(iDir))
+          end do
 
        case('#POLARJETBOUNDARY')
           call read_var('FlowSpeedJetSi',FlowSpeedJetSi)
@@ -677,7 +685,7 @@ contains
 
     integer :: iFace, jFace, kFace, iDir, iMax, jMax, kMax, iLeft, jLeft, kLeft
     real, allocatable :: HeatFlux_DF(:,:,:,:)
-    real :: AreaX, AreaY, AreaZ, Area2, Area, Normal_D(nDim)
+    real :: AreaX, AreaY, AreaZ, Area2, Area, Normal_D(MaxDim)
     real :: HeatCondCoefNormal, HeatFlux
     logical :: IsNewBlockHeatCond
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -1645,7 +1653,7 @@ contains
          iComm, CellVolume_GB, message_pass_cell, interpolate_state_vector
     use ModMpi
     integer :: i, j, k, iBlock, iError
-    real :: x_D(nDim), Rho, B_D(MaxDim), B0_D(MaxDim), p
+    real :: x_D(MaxDim), Rho, B_D(MaxDim), B0_D(MaxDim), p
     real :: Mass, MassDim, MassTotal
 
     logical:: DoTest, IsFound
@@ -1859,6 +1867,7 @@ contains
     use EEE_ModGetB0, ONLY: EEE_get_B0
     use EEE_ModCommonVariables, ONLY: UseTD
     use ModPhysics, ONLY: Si2No_V, UnitB_
+    use BATL_lib, ONLY: IsRzGeometry, z_
 
     real, intent(in) :: x, y, z
     real, intent(inout):: B0_D(3)
@@ -1870,6 +1879,11 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_get_b0'
     !--------------------------------------------------------------------------
+    if(any(UniformB0Si_D/=0.0))then
+       B_D = UniformB0Si_D*Si2No_V(UnitB_)
+       if(IsRzGeometry)B_D(z_) = B_D(z_)/y
+       B0_D = B0_D + B_D
+    end if
     if(UseTD)then
        Xyz_D = [x, y, z]
        call EEE_get_B0(Xyz_D, B_D, tSimulation)
@@ -2091,16 +2105,21 @@ contains
   contains
     !==========================================================================
     real function zeta_region(lon, lat)
-      use ModNumConst, ONLY: cHalfPi, cTwoPi, cPi
+      use ModNumConst, ONLY: cHalfPi, cTwoPi
 
       real, intent(in) :: Lon, Lat
 
-      real :: LonLocal, LatLocal, LonShift
+      real :: LonLocal, LatLocal
       !------------------------------------------------------------------------
-      LonShift = mod(Lon+cPi,cTwoPi)-cPi
-      LonLocal = cHalfPi*(LonShift - Lon0)/Lon1
       LatLocal = cHalfPi*(Lat - Lat0)/Lat1
-      if(abs(LonShift-Lon0)<Lon1 .and. abs(Lat-Lat0)<Lat1)then
+      if(abs(Lon-Lon0)<Lon1 .and. abs(Lat-Lat0)<Lat1)then
+         LonLocal = cHalfPi*(Lon - Lon0)/Lon1
+         zeta_region = Zeta*cos(LonLocal)*cos(LatLocal)
+      elseif(Lon-Lon0>cTwoPi-Lon1 .and. abs(Lat-Lat0)<Lat1)then
+         LonLocal = cHalfPi*(Lon - Lon0 - cTwoPi)/Lon1
+         zeta_region = Zeta*cos(LonLocal)*cos(LatLocal)
+      elseif(Lon-Lon0<-cTwoPi+Lon1 .and. abs(Lat-Lat0)<Lat1)then
+         LonLocal = cHalfPi*(Lon - Lon0 + cTwoPi)/Lon1
          zeta_region = Zeta*cos(LonLocal)*cos(LatLocal)
       else
          zeta_region = 0.0
