@@ -18,7 +18,7 @@ NONE			NamePlanet
 F			UseGravity (rest of parameters read if true)
 
 #BODY
-T			UseBody
+F			UseBody
 30.0			rBody (AU)
 0.01			BodyNDim [/cc] number density for ions
 1.09E5			BodyTDim [K] temperature for ions
@@ -197,7 +197,7 @@ z=0 MHD idl		StringPlot
 
 
 #USERSWITCH
-+init +ic +progress		StringSwitch
++init +ic +progress +update		StringSwitch
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -219,6 +219,9 @@ T			UseOhNeutralBc
 1.0			mNeutral
 
 #USERINPUTBEGIN -----------------------------------
+
+#GLOBALHELIOSPHERE
+30.
 
 #SOLARWINDH
 0.00874			SWH_N_dim [n/cc]
