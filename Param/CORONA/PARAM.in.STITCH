@@ -1,69 +1,43 @@
+Begin session: 1
+
 #DESCRIPTION
-Stitch model with dipole field		StringDescription
-
-VERBOSE
-10			lVerbose
-
-CPUTIMEMAX
-1.9 hour		CpuTimeMax
-
-INCLUDE
-SC/restartIN/restart.H
-
-#GRIDBLOCKALL
-300000			MaxBlock
+PARAM.in.stitch: run STITCH in solar corona		StringDescription
 
 #COMPONENT
 SC			NameComp
 
-#SAVERESTART
-T			DoSaveRestart
--1			DnSaveRestart
-10			DtSaveRestart
-
-#COORDSYSTEM
-HGR			TypeCoordSystem
- GM_set_parameters setting .UseRotatingFrame = T
-
-#PLASMA
-1.0			FluidMass [amu]		MassFluid
-1.0			IonCharge [e]		ChargeIon
-1.0			ElectronTemperatureRatio
+#TIMEACCURATE
+F			IsTimeAccurate
 
 #STARTTIME
 2011			iYear
-2			iMonth
-16			iDay
-17			iHour
-26			iMinute
-0			iSecond
+03			iMonth
+07			iDay
+08			iHour
+00			iMinute
+00			iSecond
+0.0			FracSecond
+
+#GRIDBLOCKALL
+4000			MaxBlock
+
+#RESTARTOUTFILE
+one			StringRestartOutFile
+
+#COORDSYSTEM
+HGR			TypeCoordSystem
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
 
 #HELIODIPOLE
--0.0005			HelioDipoleStrength [Tesla]
- 0.0			HelioDipoleTilt     [deg]
-
-#USERSWITCH
-+init +ic +B0 +SExpl		StringSwitch
- Switches: Init,IC,Perturb,B0,SExpl,SImpl,Update,Progress= T T F T T F F F
-
-#USERINPUTBEGIN ---------
-
-#USERDIPOLE
-0.70			UserDipolePositionX
-0.0			UserDipolePositionY
-0.0			UserDipolePositionZ
-0.0			UserDipoleStrengthX
-0.0			UserDipoleStrengthY
-1.0			UserDipoleStrengthZ
-
-#STITCHPARAM
-1.4E12			ZetaSI
-2			iMaxStitch
-
-#USERINPUTEND -------------------------------------
+5.0e-4                  HelioDipoleStrengthSi
+0.0                     HelioDipoleTiltDeg
 
 #POYNTINGFLUX
-1.0e6			PoyntingFluxPerBSi
+1.0e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
@@ -73,7 +47,7 @@ T			UseWaveReflection
 F			UseSurfaceWaveRefl
 
 #HEATPARTITIONING
-stochasticheating		TypeHeatPartitioning
+stochasticheating	TypeHeatPartitioning
 0.21			StochasticExponent
 0.18			StochasticAmplitude
 
@@ -83,22 +57,41 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-./Param/CORONA/RadCoolCorona.dat		NameFile
+Param/CORONA/RadCoolCorona_8.0.dat		NameFile
 ascii			TypeFile
 
+#USERINPUTBEGIN -----------------------------------
+
+#CHROMOBC
+2e17			NchromoSi
+5e4			TchromoSi
+
+#EXTRADIPOLE
+50e-4			UserDipoleStrengthSi
+0.2			UserDipoleDepth
+0.0			UserDipoleLatitude
+180.0			UserDipoleLongitude
+-90.0			UserDipoleAxisLatitude
+0.0			UserDipoleAxisLongitude
+
+#USERINPUTEND -------------------------------------
+
 #TRANSITIONREGION
-T			DoExpandTransitionRegion		DoExtendTransitionRegion
-2.2e5			TeTransitionRegionSi		TeModSi
+T			DoExtendTransitionRegion
+2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
 #COARSEAXIS
 T			UseCoarseAxis
 2			nCoarseLayer
 
+turn these off when restarting
+---------------------------------------------------
 #GRIDGEOMETRY
 spherical_genr		TypeGeometry
-./Param/CORONA/grid_awsom.dat		NameGridFile
+Param/CORONA/grid_awsom.dat		NameGridFile
 
+! Use a true sphere, so box is made much larger
 #GRID
 2			nRootBlock1
 2			nRootBlock2
@@ -114,59 +107,35 @@ spherical_genr		TypeGeometry
 1.0			rMin
 24.0			rMax
 
-#REGION
+----------------------------------------------------
+#AMRREGION
 InnerShell		NameRegion
 shell0			StringShape
-1.0			Radius1
-2.0			Radius2
-
-#REGION
-DipoleBox1		NameRegion
-box_gen			StringShape
-1.0			Coord1MinBox
-0.0			Coord2MinBox
--10.0			Coord3MinBox
-1.2			Coord1MaxBox
-10.0			Coord2MaxBox
-10.0			Coord3MaxBox			
-
-#REGION
-DipoleBox2		NameRegion
-box_gen			StringShape
-1.0			Coord1MinBox
-350.0			Coord2MinBox
--10.0			Coord3MinBox
-1.2			Coord1MaxBox
-360.0			Coord2MaxBox
-10.0			Coord3MaxBox			
+1.0			RadiusInner
+1.7			Radius
 
 #AMRCRITERIARESOLUTION
-4			nRefineCrit
-dphi			TypeCriteria
-4.0			RefineTo
-2.0			CoarsenFrom
-dphi InnerShell		TypeCriteria
-2.0  			RefineTo
-1.0			CoarsenFrom
-dphi DipoleBox1		TypeCriteria
-1.0  			RefineTo
-0.5			CoarsenFrom
-dphi DipoleBox2		TypeCriteria
-1.0  			RefineTo
-0.5			CoarsenFrom
+3			nRefineCrit
+dphi			StringRefine
+3.0			RefineTo
+1.5			CoarsenFrom
+dphi Innershell		StringRefine
+1.5  			RefineTo
+0.75			CoarsenFrom
+currentsheet		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+1.5			MaxResolution
 
 #GRIDRESOLUTION
-0.5			Resolution
-initial			NameShape
+12.0			Resolution
+initial			StringShape
 
 #DOAMR
-F			DoAmr
--1			DnAmr
--1			DtAmr
-F			IsStrictAmr
-
-#TIMEACCURATE
-T			IsTimeAccurate		DoTimeAccurate
+T			DoAmr
+40			DnAmr
+-1.0			DtAmr
+T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
@@ -184,8 +153,8 @@ T			UseLogPLimiter
 F			UseRhoRatioLimiter
 
 #MINIMUMTEMPERATURE
-5E4			TminDim  [K] for fluid 1 TMinDim
-5E4			TeMinDim
+5e4			TminDim  [K] for fluid 1
+5e4			TeMinDim [K]
 
 #MINIMUMPRESSURE
 1E-9			pMinDim for fluid 1
@@ -195,55 +164,93 @@ F			UseRhoRatioLimiter
 F			UseNonConservative
 
 #RESCHANGE
-T			UseAccurateReschange		UseAccurateResChange
+T			UseAccurateReschange
 
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLog
--1			DnSaveLogfile
-1			DtSaveLogfile
-
-INNERBOUNDARY
-user			TypeBcBody		TypeBcInner
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #OUTERBOUNDARY
-user			TypeBc1   user for spherical and user_outerbcs		TypeCellBc
-float			TypeBc2		TypeCellBc
-float			TypeBc3		TypeCellBc
-float			TypeBc4		TypeCellBc
-float			TypeBc5		TypeCellBc
-float			TypeBc6		TypeCellBc
+user			TypeBc1   user for spherical and user_outerbcs
+float			TypeBc2   rMax
+periodic		TypeBc3   LonMin
+periodic		TypeBc4   LonMax
+periodic		TypeBc5   LatMin
+periodic		TypeBc6   LatMax
 
-TEST
-update_state update_state_normal calc_source
-
-TESTVAR
-Bz                      NameTestVar
-
-TESTXYZ
-1.01			xTest 
-0.0			yTest
-0.0			zTest
+#USERSWITCH
++init +ic +B0		StringSwitch
 
 #SAVEPLOT
-1			nPlotFile
-shl MHD idl_ascii		StringPlot
--1			DnSavePlot
-10			DtSavePlot
-HGR 			TypeCoordPlot
-1.0			rMin
-1.01			rMax
-0.0025			dR
--180.0			LonMin
-180.0			LonMax
-2.0			dLon
--90.0			LatMin
-90.0			LatMax
-2.0			dLat
+4			nPlotFile
+x=0 VAR idl_ascii		StringPlot
+20			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dphi		NameVars
+{default}		NamePars
+y=0 VAR idl_ascii		StringPlot
+20			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dphi		NameVars
+{default}		NamePars
+z=0 VAR idl_ascii		StringPlot
+20			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dphi		NameVars
+{default}		NamePars
+shl VAR idl		StringPlot
+20  			DnSavePlot
+-1.			DtSavePlot
+HGR			TypeCoordPlot
+1.001			rMin
+1.001			rMax
+0.			LonMin
+360.			LonMax
+1.			dLon    ! only read if LonMin /= LonMax
+-90.			LatMin
+90.			LatMax
+1.			dLat    ! only read if LatMin /= LatMax
+{MHD} b1x b1y b1z	NameVars
+{default}     		NamePars
 
 #SAVEINITIAL
 T			DoSaveInitial
 
 #STOP
--1			MaxIteration 60000
-0			tSimulationMax
+50			MaxIter
+-1.0			TimeMax
+
+#RUN
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#AMR
+-1			DnRefine
+
+#USERSWITCH
++SExpl			StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#STITCH
+1.4E12			ZetaSI
+2			iMaxStitch
+
+#STITCHREGION
+T			UseStitchRegion
+180.0			Longitude0
+90.0			Longitude1
+0.0			Latitude0
+45.0			Latitude1
+
+#USERINPUTEND -------------------------------------
+
+#STOP
+-1			MaxIter
+5.0			tSimulationMax
