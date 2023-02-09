@@ -101,7 +101,7 @@ module ModUser
   ! Meant for allowing variable start time
   ! for time dependent run
   real :: TableStart = 0.0
-  real :: RunStart = 0.0 
+  real :: RunStart = 0.0
   real :: Offset = 0.0
 
   logical :: UsePu3Heating = .false.
@@ -905,7 +905,7 @@ contains
           iTableSolarWind = i_lookup_table('solarwind2d')
           if(iTableSolarWind < 0) call CON_stop(NameSub// &
              ' : could not find lookup table solarwind2d.')
-      end if   
+      end if
 
       x = Xyz_DGB(1,i,j,k,iBlock)
       y = Xyz_DGB(2,i,j,k,iBlock)
@@ -2448,7 +2448,7 @@ contains
                  IndexMax_I=IndexMax_I)
 
             ! Calculate start of run in unit [years]
-            ! based on #STARTTIME command 
+            ! based on #STARTTIME command
             RunStart = iStartTime_I(1) + &
               n_day_of_year(iStartTime_I(1),iStartTime_I(2),iStartTime_I(3))*2.74E-3 + &
               iStartTime_I(4)*1.14E-4 + iStartTime_I(5)*1.9E-6 + iStartTime_I(6)/cSecondPerYear
@@ -2456,13 +2456,13 @@ contains
             !(1) Find the offset between the #STARTTIME of the run and
             ! start time of the lookup table.
             !(2) If RunStart is out of range of the lookup table time range
-            ! Offset defaults to zero. 
+            ! Offset defaults to zero.
             if(RunStart >= TableStart .and. RunStart <= &
             TableStart+(IndexMax_I(2)/cSecondPerYear))then
-               Offset = Runstart - TableStart !years
+               Offset = Runstart - TableStart ! years
             end if
          end if
-    end if  
+    end if
 
     if(iTableElectronImpact < 0) &
          iTableElectronImpact=i_lookup_table('ElectronImpact')
