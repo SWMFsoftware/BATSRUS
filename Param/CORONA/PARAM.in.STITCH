@@ -33,8 +33,8 @@ HGR			TypeCoordSystem
 1.0			ElectronTemperatureRatio
 
 #HELIODIPOLE
-5.0e-4                  HelioDipoleStrengthSi
-0.0                     HelioDipoleTiltDeg
+5.0e-4			HelioDipoleStrength
+0.0			HelioDipoleTilt
 
 #POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi [J/m^2/s/T]
@@ -47,7 +47,7 @@ T			UseWaveReflection
 F			UseSurfaceWaveRefl
 
 #HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
+stochasticheating		TypeHeatPartitioning
 0.21			StochasticExponent
 0.18			StochasticAmplitude
 
@@ -215,17 +215,17 @@ HGR			TypeCoordPlot
 -90.			LatMin
 90.			LatMax
 1.			dLat    ! only read if LatMin /= LatMax
-{MHD} b1x b1y b1z	NameVars
-{default}     		NamePars
+{MHD} b1x b1y b1z		NameVars
+{default}		NamePars
 
 #SAVEINITIAL
 T			DoSaveInitial
 
 #STOP
-50			MaxIter
--1.0			TimeMax
+50			MaxIteration
+-1.0			tSimulationMax
 
-#RUN
+#RUN ##########################################################################
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -252,5 +252,5 @@ T			UseStitchRegion
 #USERINPUTEND -------------------------------------
 
 #STOP
--1			MaxIter
+-1			MaxIteration
 5.0			tSimulationMax
