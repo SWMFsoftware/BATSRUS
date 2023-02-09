@@ -38,7 +38,7 @@ module ModUser
 
   use ModSize,     ONLY: nI, nJ, nK
   use ModMain,       ONLY: body1_,      &
-       nBlock, Unused_B, tSimulation
+       nBlock, Unused_B, tSimulation, IsTimeAccurate, iStartTime_I
   use ModPhysics,  ONLY: Gamma, GammaMinus1, GammaElectronMinus1, OmegaBody, &
        UnitX_, Io2Si_V, Si2Io_V, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
        NameTecUnit_V, NameIdlUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
@@ -46,7 +46,8 @@ module ModUser
        UnitTemperature_, UnitT_, UnitRhoU_, FaceState_VI, IonMassPerCharge
 
   use ModConst,    ONLY: cAU, cProtonMass, cElectronMass, cBoltzmann, cEV, &
-          cRyToEv, cElectronCharge
+          cRyToEv, cElectronCharge, cSecondPerYear
+  use ModTimeConvert, ONLY: n_day_of_year
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModAdvance,  ONLY: State_VGB,Source_VC, ExtraSource_ICB, Pe_, &
        UseElectronPressure
@@ -95,6 +96,13 @@ module ModUser
 
   real :: OmegaSun   = 0.0  ! normalized angular speed of Sun
   real :: ParkerTilt = 0.0  ! Bphi/Br at the equator at r=rBody
+
+  ! Time-dependent variables
+  ! Meant for allowing variable start time
+  ! for time dependent run
+  real :: TableStart = 0.0
+  real :: RunStart = 0.0
+  real :: Offset = 0.0
 
   logical :: UsePu3Heating = .false.
   real :: TempPu3, FactorPu3, HeatPu3
@@ -876,7 +884,8 @@ contains
 
       use BATL_lib,       ONLY: Xyz_DGB
       use ModCoordTransform, ONLY: rot_xyz_sph
-      use ModLookupTable, ONLY: interpolate_lookup_table
+      use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
+                                get_lookup_table
 
       integer,intent(in):: i, j, k, iBlock
 
@@ -887,12 +896,17 @@ contains
       real :: v_D(3),vPUI_D(3), vPUISph_D(3)
       real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD,Sph_D)
 
-      real, parameter:: LengthCycle = 662206313.647 ! length of solar cycle
-
-      real :: TimeCycle ! holds current time of the simulation
+      real :: TimeCycle ! holds the time, in seconds, from the start time of run
       real :: Value_I(3)
       real :: SinTheta
+      real :: IndexMax_I(2)
       !------------------------------------------------------------------------
+      if(iTableSolarWind < 0)then
+          iTableSolarWind = i_lookup_table('solarwind2d')
+          if(iTableSolarWind < 0) call CON_stop(NameSub// &
+             ' : could not find lookup table solarwind2d.')
+      end if
+
       x = Xyz_DGB(1,i,j,k,iBlock)
       y = Xyz_DGB(2,i,j,k,iBlock)
       z = Xyz_DGB(3,i,j,k,iBlock)
@@ -907,7 +921,8 @@ contains
       Latitude = cRadToDeg*asin(z/r)
 
       ! calculating time relative to the solar cycle
-      TimeCycle = modulo(tSimulation, LengthCycle)
+      call get_lookup_table(iTableSolarWind,IndexMax_I=IndexMax_I)
+      TimeCycle = modulo(tSimulation + (Offset*cSecondPerYear) , IndexMax_I(2))
 
       ! interpolating the value of Rho, Vr, and Temp
       ! at the cell from the lookup table
@@ -1006,6 +1021,13 @@ contains
     write(*,StringFormat) 'VliswByDim[nT]:',VliswByDim,'VliswBy:',VliswBy
     write(*,StringFormat) 'VliswBzDim[nT]:',VliswBzDim,'VliswBz:',VliswBz
     write(*,'(10X,A19,F15.6)') 'VliswTDim[K]: ',VliswTDim!
+
+    if(iTableSolarWind > 0)then
+       write(*,*)
+       write(*,'(10X,A19,F15.6)') 'RunStart[yr]:', RunStart
+       write(*,'(10X,A19,F15.6)') 'Offset[yr]:',Offset
+    end if
+
     if(UseNeutralFluid)then
        ! neutrals
        write(*,*)
@@ -2340,9 +2362,11 @@ contains
   subroutine user_init_session
 
     use ModMain,          ONLY: UseUserUpdateStates
-    use ModLookupTable,   ONLY: i_lookup_table
+    use ModLookupTable,   ONLY: i_lookup_table, get_lookup_table
     use ModWaves,         ONLY: UseWavePressure, UseAlfvenWaves
     use ModVarIndexes,    ONLY: WaveFirst_
+
+    real:: IndexMax_I(2)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_session'
@@ -2416,8 +2440,29 @@ contains
          iTableChargeExchange = i_lookup_table('ChargeExchange')
 
     ! Set table index for iTableSolarWind with table name solarwind2d
-    if(iTableSolarWind < 0 ) &
+    if(iTableSolarWind < 0)then
          iTableSolarWind=i_lookup_table('solarwind2d')
+
+         if(iTableSolarWind > 0)then
+            call get_lookup_table(iTableSolarWind,Time=TableStart, &
+                 IndexMax_I=IndexMax_I)
+
+            ! Calculate start of run in unit [years]
+            ! based on #STARTTIME command
+            RunStart = iStartTime_I(1) + &
+              n_day_of_year(iStartTime_I(1),iStartTime_I(2),iStartTime_I(3))*2.74E-3 + &
+              iStartTime_I(4)*1.14E-4 + iStartTime_I(5)*1.9E-6 + iStartTime_I(6)/cSecondPerYear
+
+            !(1) Find the offset between the #STARTTIME of the run and
+            ! start time of the lookup table.
+            !(2) If RunStart is out of range of the lookup table time range
+            ! Offset defaults to zero.
+            if(RunStart >= TableStart .and. RunStart <= &
+            TableStart+(IndexMax_I(2)/cSecondPerYear))then
+               Offset = Runstart - TableStart ! years
+            end if
+         end if
+    end if
 
     if(iTableElectronImpact < 0) &
          iTableElectronImpact=i_lookup_table('ElectronImpact')

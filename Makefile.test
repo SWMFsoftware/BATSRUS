@@ -35,6 +35,7 @@ test_help:
 	@echo "    test_awsom                 (run AWSoM corona test)"
 	@echo "    test_awsom_gpu             (run AWSoM corona test on GPU)"
 	@echo "    test_awsom_large_gpu       (run large AWSoM corona test on GPU)"
+	@echo "    test_stitch                (run STITCH test)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
 	@echo "    test_bvector               (run Bvector Solar Corona test)"
 	@echo "    test_earth                 (run Cartesian Earth test)"	
@@ -110,6 +111,7 @@ test:
 	-@($(MAKE) test_mhdnoncons TESTDIR=run_test_mhdnoncons)
 	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
 	-@($(MAKE) test_awsom TESTDIR=run_test_awsom)
+	-@($(MAKE) test_stitch TESTDIR=run_test_stitch)
 	-@($(MAKE) test_earthsph TESTDIR=run_test_earthsph)
 	-@($(MAKE) test_2bodyplot TESTDIR=run_test_2bodyplot)
 	-@($(MAKE) test_magnetometer TESTDIR=run_test_magnetometer)
@@ -1105,6 +1107,43 @@ test_awsom_check:
 		Param/CORONA/TestOutput/log_n000000.sc.awsom \
 		> test_awsom.diff)
 	ls -l test_awsom.diff
+
+
+### STANDALONE STITCH TESTS ###
+
+test_stitch:
+	@echo "test_stitch_compile..." > test_stitch.diff
+	$(MAKE) test_stitch_compile
+	@echo "test_stitch_rundir..." >> test_stitch.diff
+	$(MAKE) test_stitch_rundir
+	@echo "test_stitch_run..." >> test_stitch.diff
+	$(MAKE) test_stitch_run
+	@echo "test_stitch_check..." >> test_stitch.diff
+	$(MAKE) test_stitch_check
+
+# Fails on Pleiades with OpenMP
+test_stitch_compile:
+	./Config.pl -noopenmp -u=Awsom -e=Awsom -ng=2 -g=6,4,4
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_stitch_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.STITCH PARAM.in
+	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_stitch_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	
+test_stitch_check:
+	-@(${DIFFNUM} -t \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
+		Param/CORONA/TestOutput/log_n000000.sc.stitch \
+		> test_stitch.diff)
+	ls -l test_stitch.diff
 
 
 ### STANDALONE 2D OUTER HELIOSPHERE TEST ###
