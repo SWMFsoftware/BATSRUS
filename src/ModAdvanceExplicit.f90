@@ -52,6 +52,8 @@ contains
          UseHybrid, trace_particles, get_state_from_vdf, advance_ion_current
     use ModViscosity, ONLY: UseArtificialVisco
     use omp_lib
+    use ModImplicit, ONLY: UseSemiImplicit
+
 
     logical, intent(in) :: DoCalcTimestep
 
@@ -318,6 +320,7 @@ contains
        if(DoTest)write(*,*)NameSub,' finished stage=',istage
 
     end do STAGELOOP  ! Multi-stage solution update loop.
+    iStage = nStage
 
     call timing_stop(NameSub)
 
