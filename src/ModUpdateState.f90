@@ -346,7 +346,7 @@ contains
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
 
-      if(UseElectronPressure .and. UseElectronEntropy)then
+      if(UseElectronPressure .and. UseElectronEntropy .and. DoUpdate_V(Pe_))then
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
          do k=1,nK; do j=1,nJ; do i=1,nI
@@ -517,7 +517,7 @@ contains
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
 
-      if(UseElectronPressure .and. UseElectronEntropy)then
+      if(UseElectronPressure .and. UseElectronEntropy .and. DoUpdate_V(Pe_))then
          ! Convert electron entropy back to pressure
          ! Pe = Se^GammaE
          do k = 1, nK; do j = 1, nJ; do i = 1, nI

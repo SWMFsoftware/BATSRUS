@@ -896,7 +896,7 @@ contains
       real :: v_D(3),vPUI_D(3), vPUISph_D(3)
       real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD,Sph_D)
 
-      real :: TimeCycle ! holds the time, in seconds, from the start time of run
+      real :: TimeCycle ! holds the time [s] from the start time of run
       real :: Value_I(3)
       real :: SinTheta
       real :: IndexMax_I(2)
@@ -2448,10 +2448,11 @@ contains
                  IndexMax_I=IndexMax_I)
 
             ! Calculate start of run in unit [years]
-            ! based on #STARTTIME command
+            ! based on #STARTTIME command  !!! to be improved
             RunStart = iStartTime_I(1) + &
-              n_day_of_year(iStartTime_I(1),iStartTime_I(2),iStartTime_I(3))*2.74E-3 + &
-              iStartTime_I(4)*1.14E-4 + iStartTime_I(5)*1.9E-6 + iStartTime_I(6)/cSecondPerYear
+                 n_day_of_year(iStartTime_I(1), iStartTime_I(2), &
+                 iStartTime_I(3))*2.74E-3 + iStartTime_I(4)*1.14E-4 &
+                 + iStartTime_I(5)*1.9E-6 + iStartTime_I(6)/cSecondPerYear
 
             !(1) Find the offset between the #STARTTIME of the run and
             ! start time of the lookup table.

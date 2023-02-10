@@ -14,13 +14,13 @@ Param/OUTERHELIO/PARAM.in.restart: Restart outer heliosphere with 1 ion and 4 ne
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
 
-#STARTTIME              for 1985.102
-1985
-2
-6
-5
-31
-12
+#STARTTIME		for 1985.102
+1985			iYear
+2			iMonth
+6			iDay
+5			iHour
+31			iMinute
+12			iSecond
 
 #PLOTFILENAME
 year			NameMaxTimeUnit
@@ -166,10 +166,10 @@ ascii			TypeFile
 #RUN ##########################################################################
 
 #LOOKUPTABLE
-solarwind2d             NameTable
-load                    NameCommand
-Param/OUTERHELIO/solarwind2D.dat           NameFile
-ascii                   TypeFile
+solarwind2d		NameTable
+load			NameCommand
+Param/OUTERHELIO/solarwind2D.dat		NameFile
+ascii			TypeFile
 
 #TIMEACCURATE
 T  			IsTimeAccurate
@@ -183,6 +183,6 @@ y=0 MHD idl		StringPlot
 
 #STOP
 -1			MaxIteration
-0.01 year			tSimulationMax
+0.01 year		tSimulationMax
 
 #END
