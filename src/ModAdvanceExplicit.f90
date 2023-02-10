@@ -54,7 +54,6 @@ contains
     use omp_lib
     use ModImplicit, ONLY: UseSemiImplicit
 
-
     logical, intent(in) :: DoCalcTimestep
 
     integer :: iBlock
