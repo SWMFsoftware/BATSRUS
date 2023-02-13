@@ -1271,7 +1271,7 @@ contains
     ! For Ion/SWH
     real, dimension(Neu_:Ne4_) :: &
          URelS_I, URelSdim_I, UStar_I, Sigma_I, Rate_I, &
-         UStarM_I, SigmaN_I, RateN_I, RatePh_I, &
+         UStarM_I, SigmaN_I, RateN_I, RateE_I, RatePh_I, &
          I0xp_I, I0px_I, I0xpPh_I, I2xp_I, I2px_I, &
          JxpUx_I, JxpUxPh_I, JxpUy_I, JxpUyPh_I,&
          JxpUz_I, JxpUzPh_I, JpxUx_I, JpxUy_I, JpxUz_I, &
@@ -1281,7 +1281,7 @@ contains
     ! For PU3
     real, dimension(Neu_:Ne4_):: &
          URelSPu3_I, URelSPu3dim_I, UStarPu3_I, SigmaPu3_I, RatePu3_I, &
-         UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, &
+         UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, RateEPu3_I, &
          I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, &
          Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
          Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
@@ -1425,6 +1425,8 @@ contains
     RatePu3_I     = 0
     RateN_I       = 0
     RateNPu3_I    = 0
+    RateE_I       = 0
+    RateEPu3_I    = 0
     Ustar_I       = 0
     UStarPu3_I    = 0
     URelS_I       = 0
@@ -1480,14 +1482,16 @@ contains
        ! Temperature for the two ionized and four population of neutrals (K)
        Temp_I = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
 
-       if(IsMhd)then
-          ! Why?
-          Temp_I(Ion_) = 0.5*Temp_I(Ion_)
-       else
-          Temp_I(SWH_) = (State_V(SWHP_) &
-               /(2*State_V(SWHRho_) + State_V(PU3Rho_))) &
-               *No2Si_V(UnitTemperature_)
-       endif
+       ! If not using Pe, electron pressure is grouped with SWH
+       if(.not.UseElectronPressure)then
+          if(IsMhd)then
+             Temp_I(Ion_) = 0.5*Temp_I(Ion_)
+          else
+             Temp_I(SWH_) = (State_V(SWHP_) &
+                  /(2*State_V(SWHRho_) + State_V(PU3Rho_))) &
+                  *No2Si_V(UnitTemperature_)
+          endif
+       end if
 
        ! Thermal speed (squared) for ionized and three populations of neutrals
        ! UThS units are (m/s)^2
@@ -1639,6 +1643,26 @@ contains
                   *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
           end if
 
+          if(.not.IsMhd)then
+             ! for SW
+             where(UseSource_I(Neu_:)) &
+                  RateE_I = Sigma_I*State_V(SWHRho_)&
+                  *State_V(iRho_I(Neu_:))*UStar_I&
+                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+
+             ! For PU3
+             where(UseSource_I(Neu_:)) &
+                  RateEPu3_I = SigmaPu3_I*State_V(PU3Rho_)&
+                  *State_V(iRho_I(Neu_:))*UStarPu3_I &
+                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+
+          else
+             where(UseSource_I(Neu_:)) &
+                  RateE_I =Sigma_I*State_V(Rho_)&
+                  *State_V(iRho_I(Neu_:))*UStar_I  &
+                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+          end if
+
           ! Calculating the terms that enter in the Source terms
           ! The expressions for I0, Jxp, Kxp, Qexp are taken from
           ! Zank, Pauls, Williams, and Hall 1996
@@ -1666,16 +1690,16 @@ contains
           I0xp_I = RateN_I
           I0px_I = RateN_I
 
-          I2xp_I  = RateN_I*UThS_I(1)/No2Si_V(UnitU_)**2
-          I2px_I  = RateN_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
+          I2xp_I  = RateE_I*UThS_I(1)/No2Si_V(UnitU_)**2
+          I2px_I  = RateE_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
 
           if(.not.IsMhd)then
              ! For PUI's
              I0xpu3_I = RateNPu3_I
              I0pu3x_I = RateNPu3_I
-             I2xpu3_I = RateNPu3_I*UThS_I(PU3_)/&
+             I2xpu3_I = RateEPu3_I*UThS_I(PU3_)/&
                   No2Si_V(UnitU_)**2
-             I2pu3x_I = RateNPu3_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
+             I2pu3x_I = RateEPu3_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
              ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
           end if
 
@@ -2417,10 +2441,13 @@ contains
        Pu3Uz  = Pu3UzDim*Io2No_V(UnitU_)
        Pu3Rho = Pu3RhoDim*Io2No_V(UnitRho_)
        Pu3P   = Pu3TDim*Io2No_V(UnitTemperature_)*Pu3Rho
-       ! For SwhP, see eq. 1 from Opher et al. (2020)
-       SwhP = (2*SwhRho + Pu3Rho)*SwhTDim*Io2No_V(UnitTemperature_)
-       if(UseElectronPressure) &
-            SwhPe = SwhTeDim*Io2No_V(UnitTemperature_)*(SwhRho + Pu3Rho)
+       if(UseElectronPressure)then
+          SwhP   = SwhTDim*Io2No_V(UnitTemperature_)*SwhRho
+          SwhPe  = SwhTeDim*Io2No_V(UnitTemperature_)*(SwhRho + Pu3Rho)
+       else
+          ! For SwhP, see eq. 1 from Opher et al. (2020)
+          SwhP = (2*SwhRho + Pu3Rho)*SwhTDim*Io2No_V(UnitTemperature_)
+       end if
     end if
 
     if(UseNeutralFluid)then
