@@ -453,13 +453,13 @@ contains
           Interp_VII(4,iSnapshot,iPoint) = &
                modulo(Interp_VII(4,iSnapshot,iPoint), 360.0)
        end do
-       ! Overwrite dBn dBe dBd with largest magnitude nearby
+       ! Overwrite dBn dBe dBd with largest magnitude in nearby cells
        if(Di + Dj > 0)then
           do iPoint = 1, nPoint
-             i0 = nint(CoordNorm_DI(1,iPoint))
-             j0 = nint(CoordNorm_DI(2,iPoint))
-             iMin = max(1, i0 - Di); iMax = min(n1+1, i0 + Di)
-             jMin = min(1, j0 - Dj); jMax = min(n2, j0 + Dj)
+             i0 = floor(CoordNorm_DI(1,iPoint))
+             j0 = floor(CoordNorm_DI(2,iPoint))
+             iMin = max(1, i0 - Di/2); iMax = min(n1+1, i0 + (Di+1)/2)
+             jMin = min(1, j0 - Dj/2); jMax = min(n2,   j0 + (Dj+1/2))
              do iVar = 1, 3
                 Ij_D = maxloc(abs(Interp_VG(iVar,iMin:iMax,jMin:jMax)))
                 Interp_VII(iVar,iSnapshot,iPoint) = &
