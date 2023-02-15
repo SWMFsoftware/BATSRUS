@@ -411,9 +411,9 @@ contains
 
     real:: Time ! simulation time
     integer:: iSnapshot, iPoint, iVar, i0, j0, iMin, iMax, jMin, jMax, Ij_D(2)
-    !--------------------------------------------------------------------------
 
     ! Extra cell for periodic longitudes
+    !--------------------------------------------------------------------------
     allocate(Interp_VG(5,n1+1,n2), Interp_VII(5,nSnapshot,nPoint), &
          iTime_II(6,nSnapshot))
 
