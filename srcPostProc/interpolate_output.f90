@@ -42,6 +42,7 @@ program interpolate_output
   logical           :: IsCartesian
   real, allocatable :: Var_VII(:,:,:)
   integer           :: n1, n2, n3       ! grid size
+  integer           :: Di=0, Dj=0       ! cells surrounding station
   integer           :: nSnapshot        ! number of snapshots to be read
   real              :: StartTimeFileIn  ! time of initial snapshot in data file
 
@@ -138,6 +139,10 @@ contains
           call fix_dir_name(NameDirOut)
           call make_dir(NameDirOut)
        end if
+       write(*,'(a)') trim(NameDirOut)
+       write(*,'(a)', ADVANCE='NO') 'Surrounding cells Di, Dj:               '
+       read(*,*,iostat=iError) Di, Dj
+       write(*,'(2i4)') Di, Dj
     else
        write(*,'(a)', ADVANCE='NO') 'Name of output file:                    '
        read(*,'(a)',iostat=iError) NameFileOut
@@ -405,7 +410,8 @@ contains
     integer, allocatable:: iTime_II(:,:) ! Date-time for each snapshot
 
     real:: Time ! simulation time
-    integer:: iSnapshot, iPoint
+    integer:: iSnapshot, iPoint, iVar, i0, j0, iMin, iMax, jMin, jMax, Ij_D(2)
+
     ! Extra cell for periodic longitudes
     !--------------------------------------------------------------------------
     allocate(Interp_VG(5,n1+1,n2), Interp_VII(5,nSnapshot,nPoint), &
@@ -440,13 +446,27 @@ contains
 
        do iPoint = 1, nPoint
           Interp_VII(:,iSnapshot,iPoint) = &
-               bilinear(Interp_VG, 5, 1, n1+1, 1, n2, CoordNorm_DI(:,iPoint), &
-               DoExtrapolate=.false.)
+               bilinear(Interp_VG, 5, 1, n1+1, 1, n2, &
+               CoordNorm_DI(:,iPoint), DoExtrapolate=.false.)
 
           ! Correct longitude to be in the 0,360 range
           Interp_VII(4,iSnapshot,iPoint) = &
                modulo(Interp_VII(4,iSnapshot,iPoint), 360.0)
        end do
+       ! Overwrite dBn dBe dBd with largest magnitude in nearby cells
+       if(Di + Dj > 0)then
+          do iPoint = 1, nPoint
+             i0 = floor(CoordNorm_DI(1,iPoint))
+             j0 = floor(CoordNorm_DI(2,iPoint))
+             iMin = max(1, i0 - Di/2); iMax = min(n1+1, i0 + (Di+1)/2)
+             jMin = min(1, j0 - Dj/2); jMax = min(n2,   j0 + (Dj+1/2))
+             do iVar = 1, 3
+                Ij_D = maxloc(abs(Interp_VG(iVar,iMin:iMax,jMin:jMax)))
+                Interp_VII(iVar,iSnapshot,iPoint) = &
+                     Interp_VG(iVar, Ij_D(1), Ij_D(2))
+             end do
+          end do
+       end if
     end do
     close(UnitTmp_)
 
