@@ -14,6 +14,9 @@ Param/OUTERHELIO/PARAM.in.restart: Restart outer heliosphere with 1 ion and 4 ne
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
 
+#BODY
+F
+
 #STARTTIME		for 1985.102
 1985			iYear
 2			iMonth
@@ -116,6 +119,9 @@ T			UseOhNeutralBc
 
 #USERINPUTBEGIN -----------------------------------
 
+#GLOBALHELIOSPHERE
+30.
+
 #SOLARWINDH
 0.00874			SWH_N_dim [n/cc]
 1.0868E5		SWH_T_dim [K]
@@ -178,7 +184,7 @@ T  			IsTimeAccurate
 1			nPlotFile
 y=0 MHD idl		StringPlot
 -1			DnSavePlot
-0.001			DtSavePlot
+0.001 year		DtSavePlot
 -1.0			DxSavePlot
 
 #STOP
