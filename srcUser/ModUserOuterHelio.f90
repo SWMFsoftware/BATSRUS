@@ -1270,7 +1270,7 @@ contains
 
     ! For Ion/SWH
     real, dimension(Neu_:Ne4_) :: &
-         URelS_I, URelSdim_I, UStar_I, Sigma_I, Rate_I, &
+         URelS_I, URelSdim_I, UTh2Sum_I, UStar_I, Sigma_I, Rate_I, &
          UStarM_I, SigmaN_I, RateN_I, RateE_I, RatePh_I, &
          I0xp_I, I0px_I, I0xpPh_I, I2xp_I, I2px_I, &
          JxpUx_I, JxpUxPh_I, JxpUy_I, JxpUyPh_I,&
@@ -1280,11 +1280,14 @@ contains
 
     ! For PU3
     real, dimension(Neu_:Ne4_):: &
-         URelSPu3_I, URelSPu3dim_I, UStarPu3_I, SigmaPu3_I, RatePu3_I, &
-         UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, RateEPu3_I, &
+         URelSPu3_I, URelSPu3dim_I, UTh2SumPu3_I, UStarPu3_I, SigmaPu3_I, &
+         RatePu3_I, UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, RateEPu3_I, &
          I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, &
          Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
          Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
+
+    real, dimension(3,Neu_:Ne4_)::&
+         UMean_DI, UMeanPu3_DI
 
     ! For Electron Impact
     real:: SrcImp_II(Neu_:Ne4_,5)
@@ -1531,6 +1534,10 @@ contains
                URelS_I = (Ux_I(Neu_:) - Ux_I(1))**2 &
                + (Uy_I(Neu_:) - Uy_I(1))**2 &
                + (Uz_I(Neu_:) - Uz_I(1))**2
+          
+          ! Sum of thermal speeds squared for ionized and neutral fluid
+          where(UseSource_I(Neu_:)) &
+               UTh2Sum_I = UThS_I(SWH_) + UThS_I(Neu_:)
 
           URelSdim_I = URelS_I * No2Si_V(UnitU_)**2
 
@@ -1540,6 +1547,9 @@ contains
                   URelSPu3_I = (Ux_I(Neu_:) - Ux_I(PU3_))**2 &
                   + (Uy_I(Neu_:) - Uy_I(PU3_))**2 &
                   + (Uz_I(Neu_:) - Uz_I(PU3_))**2
+             
+             where(UseSource_I(Neu_:)) &
+                  UTh2SumPu3_I = UThS_I(Pu3_) + UThS_I(Neu_:)
 
              URelSPu3dim_I = URelSPu3_I * No2Si_V(UnitU_)**2
           end if
@@ -1555,13 +1565,13 @@ contains
           ! For SW
           where(UseSource_I(Neu_:)) &
                UStar_I = sqrt(URelSdim_I &
-               + (4./cPi)*(UThS_I(Neu_:) + UThS_I(1)))
+               + (4./cPi)*UTh2Sum_I)
 
           if(.not.IsMhd)then
              ! For PU3
              where(UseSource_I(Neu_:)) &
                   UStarPu3_I = sqrt(URelSPu3dim_I &
-                  + (4./cPi)*(UThS_I(Neu_:) + UThS_I(PU3_)))
+                  + (4./cPi)*UTh2SumPu3_I)
           end if
 
           ! Eq. (64) of McNutt et al. 1988 for UM*
@@ -1569,13 +1579,13 @@ contains
           ! For SW
           where(UseSource_I(Neu_:)) &
                UStarM_I = sqrt(URelSdim_I &
-               + (64./(9.*cPi))*(UThS_I(Neu_:) + UThS_I(1)))
+               + (64./(9.*cPi))*UTh2Sum_I)
 
           if(.not.IsMhd)then
              ! For PU3
              where(UseSource_I(Neu_:)) &
                   UStarMPu3_I = sqrt(URelSPu3dim_I &
-                  + (64./(9.*cPi))*(UThS_I(Neu_:) + UThS_I(PU3_)))
+                  + (64./(9.*cPi))*UTh2SumPu3_I)
           end if
 
           ! UStar has units of cm/s so the factor 100 is to convert m to cm
@@ -1729,14 +1739,14 @@ contains
           ! QmpxUz_I = JpxUz_I - JxpUz_I
 
           ! For SW
-          QmpxUx_I = (Ux_I(Neu_:) - Ux_I(1))*Rate_I(Neu_:)
-          QmpxUy_I = (Uy_I(Neu_:) - Uy_I(1))*Rate_I(Neu_:)
-          QmpxUz_I = (Uz_I(Neu_:) - Uz_I(1))*Rate_I(Neu_:)
+          QmpxUx_I = JpxUx_I - JxpUx_I
+          QmpxUy_I = JpxUy_I - JxpUy_I
+          QmpxUz_I = JpxUz_I - JxpUz_I
 
           if(.not.IsMhd)then
-             Qmpu3xUx_I = (Ux_I(Neu_:) - Ux_I(PU3_))*RatePu3_I(Neu_:)
-             Qmpu3xUy_I = (Uy_I(Neu_:) - Uy_I(PU3_))*RatePu3_I(Neu_:)
-             Qmpu3xUz_I = (Uz_I(Neu_:) - Uz_I(PU3_))*RatePu3_I(Neu_:)
+             Qmpu3xUx_I = Jpu3xUx_I - Jxpu3Ux_I
+             Qmpu3xUy_I = Jpu3xUy_I - Jxpu3Uy_I
+             Qmpu3xUz_I = Jpu3xUz_I - Jxpu3Uz_I
           end if
 
           ! For SW or Ion
@@ -1756,6 +1766,81 @@ contains
                   State_V(PU3Rho_)*(TempPu3 - Temp_I(PU3_))*&
                   Io2No_V(UnitTemperature_)*(r-rBody)*FactorPu3
 
+          end if
+
+          ! Additional energy and momentum terms from having multiple fluids.
+          ! The Qm and Qe variables do not need to be corrected because the
+          ! additional terms cancel.
+          if(DoFixChargeExchange)then
+             ! Mean ion and neutral velocity weighted by sound speed squared
+             UMean_DI(1,:) = &
+                  (UThS_I(SWH_)*Ux_I(Neu_:) + UThS_I(Neu_:)*Ux_I(SWH_))/&
+                  UTh2Sum_I
+             UMean_DI(2,:) = &
+                  (UThS_I(SWH_)*Uy_I(Neu_:) + UThS_I(Neu_:)*Uy_I(SWH_))/&
+                  UTh2Sum_I
+             UMean_DI(3,:) = &
+                  (UThS_I(SWH_)*Uz_I(Neu_:) + UThS_I(Neu_:)*Uz_I(SWH_))/&
+                  UTh2Sum_I
+
+             ! Momentum
+             JxpUx_I = JxpUx_I + UMean_DI(1,:)*(RateN_I - Rate_I)
+             JxpUy_I = JxpUy_I + UMean_DI(2,:)*(RateN_I - Rate_I)
+             JxpUz_I = JxpUz_I + UMean_DI(3,:)*(RateN_I - Rate_I)
+
+             JpxUx_I = JpxUx_I + UMean_DI(1,:)*(RateN_I - Rate_I)
+             JpxUy_I = JpxUy_I + UMean_DI(2,:)*(RateN_I - Rate_I)
+             JpxUz_I = JpxUz_I + UMean_DI(3,:)*(RateN_I - Rate_I)
+             
+             ! Energy
+             Kxp_I = Kxp_I + 0.5*Sum(UMean_DI**2, 1)*(RateN_I - Rate_I)&
+                  + (0.75*RateN_I - RateE_I)*UThS_I(SWH_)*UThS_I(Neu_:)/&
+                  UTh2Sum_I/No2Si_V(UnitU_)**2
+             Kpx_I = Kpx_I + 0.5*Sum(UMean_DI**2, 1)*(RateN_I - Rate_I)&
+                  + (0.75*RateN_I - RateE_I)*UThS_I(SWH_)*UThS_I(Neu_:)/&
+                  UTh2Sum_I/No2Si_V(UnitU_)**2
+
+             ! For PUIs
+             if(.not.IsMhd)then
+                UMeanPu3_DI(1,:) = &
+                     (UThS_I(Pu3_)*Ux_I(Neu_:) + UThS_I(Neu_:)*Ux_I(Pu3_))/&
+                     UTh2SumPu3_I
+                UMeanPu3_DI(2,:) = &
+                     (UThS_I(Pu3_)*Uy_I(Neu_:) + UThS_I(Neu_:)*Uy_I(Pu3_))/&
+                     UTh2SumPu3_I
+                UMeanPu3_DI(3,:) = &
+                     (UThS_I(Pu3_)*Uz_I(Neu_:) + UThS_I(Neu_:)*Uz_I(Pu3_))/&
+                     UTh2SumPu3_I
+                
+                !Momentum
+                Jxpu3Ux_I = Jxpu3Ux_I + UMeanPu3_DI(1,:)&
+                     *(RateNPu3_I - RatePu3_I)
+                Jxpu3Uy_I = Jxpu3Uy_I + UMeanPu3_DI(2,:)&
+                     *(RateNPu3_I - RatePu3_I)
+                Jxpu3Uz_I = Jxpu3Uz_I + UMeanPu3_DI(3,:)&
+                     *(RateNPu3_I - RatePu3_I)
+
+                Jpu3xUx_I = Jpu3xUx_I + UMeanPu3_DI(1,:)&
+                     *(RateNPu3_I - RatePu3_I)
+                Jpu3xUy_I = Jpu3xUy_I + UMeanPu3_DI(2,:)&
+                     *(RateNPu3_I - RatePu3_I)
+                Jpu3xUz_I = Jpu3xUz_I + UMeanPu3_DI(3,:)&
+                     *(RateNPu3_I - RatePu3_I)
+
+                ! Energy
+                Kxpu3_I = Kxpu3_I &
+                     + 0.5*Sum(UMeanPu3_DI(:,:)**2, 1)&
+                     *(RateNPu3_I - RatePu3_I)&
+                     + (0.75*RateNPu3_I - RateEPu3_I)&
+                     *UThS_I(Pu3_)*UThS_I(Neu_:)/&
+                     UTh2SumPu3_I/No2Si_V(UnitU_)**2
+                Kpu3x_I = Kpu3x_I &
+                     + 0.5*Sum(UMeanPu3_DI(:,:)**2, 1)&
+                     *(RateNPu3_I - RatePu3_I)&
+                     + (0.75*RateNPu3_I - RateEPu3_I)*&
+                     UThS_I(Pu3_)*UThS_I(Neu_:)/&
+                     UTh2SumPu3_I/No2Si_V(UnitU_)**2
+             end if
           end if
 
        endif
