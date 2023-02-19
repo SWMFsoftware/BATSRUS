@@ -1534,7 +1534,7 @@ contains
                URelS_I = (Ux_I(Neu_:) - Ux_I(1))**2 &
                + (Uy_I(Neu_:) - Uy_I(1))**2 &
                + (Uz_I(Neu_:) - Uz_I(1))**2
-          
+
           ! Sum of thermal speeds squared for ionized and neutral fluid
           where(UseSource_I(Neu_:)) &
                UTh2Sum_I = UThS_I(SWH_) + UThS_I(Neu_:)
@@ -1547,7 +1547,7 @@ contains
                   URelSPu3_I = (Ux_I(Neu_:) - Ux_I(PU3_))**2 &
                   + (Uy_I(Neu_:) - Uy_I(PU3_))**2 &
                   + (Uz_I(Neu_:) - Uz_I(PU3_))**2
-             
+
              where(UseSource_I(Neu_:)) &
                   UTh2SumPu3_I = UThS_I(Pu3_) + UThS_I(Neu_:)
 
@@ -1791,7 +1791,7 @@ contains
              JpxUx_I = JpxUx_I + UMean_DI(1,:)*(RateN_I - Rate_I)
              JpxUy_I = JpxUy_I + UMean_DI(2,:)*(RateN_I - Rate_I)
              JpxUz_I = JpxUz_I + UMean_DI(3,:)*(RateN_I - Rate_I)
-             
+
              ! Energy
              Kxp_I = Kxp_I + 0.5*Sum(UMean_DI**2, 1)*(RateN_I - Rate_I)&
                   + (0.75*RateN_I - RateE_I)*UThS_I(SWH_)*UThS_I(Neu_:)/&
@@ -1811,8 +1811,8 @@ contains
                 UMeanPu3_DI(3,:) = &
                      (UThS_I(Pu3_)*Uz_I(Neu_:) + UThS_I(Neu_:)*Uz_I(Pu3_))/&
                      UTh2SumPu3_I
-                
-                !Momentum
+
+                ! Momentum
                 Jxpu3Ux_I = Jxpu3Ux_I + UMeanPu3_DI(1,:)&
                      *(RateNPu3_I - RatePu3_I)
                 Jxpu3Uy_I = Jxpu3Uy_I + UMeanPu3_DI(2,:)&
