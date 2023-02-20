@@ -1,0 +1,84 @@
+Config.pl -e=Mhd -u=Waves -g=8,8,1 -ng=3
+
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.sphalfven: spherical Alfven wave		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#GRIDBLOCKALL
+1000			MaxBlock
+
+#GRID
+10			nRootBlock1
+10			nRootBlock2
+1			nRootBlock3
+-10.0			xMin
+ 10.0			xMax
+-10.0			yMin
+ 10.0			yMax
+-1.0			zMin
+ 1.0			zMax
+
+#UNIFORMSTATE
+1.0			StateVar rho
+5.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+1.0			StateVar Bx
+0.0			StateVar By
+1.0			StateVar Bz
+0.1			StateVar p
+
+#USERINPUTBEGIN -----------------------------------
+
+#SPHALFVEN
+
+#USERINPUTEND -------------------------------------
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2 ! could also be float
+periodic		TypeBc3
+periodic		TypeBc4
+
+#SCHEME
+5			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+2.0			LimiterBeta
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#PLOTFILENAME
+second			NameMaxTimeUnit
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 mhd idl		StringPlot
+-1			DnSavePlot
+0.1			DtSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+4.0			tSimulationMax
