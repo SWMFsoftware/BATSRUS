@@ -30,7 +30,7 @@ contains
     use ModGeometry,  ONLY: r_GB
     use ModPhysics,   ONLY: No2Si_V, UnitX_, rBody
     !!! import temp, neutral densities and ionization rates
-    
+
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
     integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
@@ -93,7 +93,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'GM_put_from_ua'
     !--------------------------------------------------------------------------
-
      if(.not. present(Data_VI))then
         nPoint = 0
         ! get nPoint
@@ -112,5 +111,7 @@ contains
      call GM_get_ua_region(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
   end subroutine GM_put_from_ua
+  !============================================================================
 
 end module GM_couple_ua
+!==============================================================================
