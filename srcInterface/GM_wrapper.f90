@@ -97,7 +97,6 @@ module GM_wrapper
   !^CMP END RB
 
   !^CMP IF UA BEGIN
-  public:: GM_get_for_ua
   public:: GM_put_from_ua
   !^CMP END UA
 

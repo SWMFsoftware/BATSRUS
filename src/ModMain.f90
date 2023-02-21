@@ -346,6 +346,8 @@ module ModMain
   character(len=len(NameVar_V)) :: NameVarLower_V(nVar+nFluid)
   character(len=len(NameVar_V)) :: NamePrimitive_V(nVar)
 
+  real, allocatable :: UaState_VCB(:,:,:,:,:)
+
 contains
   !============================================================================
   subroutine init_mod_main
