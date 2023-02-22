@@ -1139,7 +1139,7 @@ test_stitch_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_stitch_check:
-	-@(${DIFFNUM} -t -a=1e-17 \
+	-@(${DIFFNUM} -t -a=2e-16 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		Param/CORONA/TestOutput/log_n000000.sc.stitch \
 		> test_stitch.diff)

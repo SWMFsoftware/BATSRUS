@@ -459,11 +459,11 @@ contains
              i0 = floor(CoordNorm_DI(1,iPoint))
              j0 = floor(CoordNorm_DI(2,iPoint))
              iMin = max(1, i0 - Di/2); iMax = min(n1+1, i0 + (Di+1)/2)
-             jMin = min(1, j0 - Dj/2); jMax = min(n2,   j0 + (Dj+1/2))
+             jMin = max(1, j0 - Dj/2); jMax = min(n2,   j0 + (Dj+1)/2)
              do iVar = 1, 3
                 Ij_D = maxloc(abs(Interp_VG(iVar,iMin:iMax,jMin:jMax)))
                 Interp_VII(iVar,iSnapshot,iPoint) = &
-                     Interp_VG(iVar, Ij_D(1), Ij_D(2))
+                     Interp_VG(iVar, Ij_D(1)+iMin-1, Ij_D(2)+jMin-1)
              end do
           end do
        end if
