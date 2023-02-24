@@ -68,7 +68,7 @@ module ModUser
   real    :: Lon0Deg, Lon1Deg, Lat0Deg, Lat1Deg
   real    :: Lon0, Lon1, Lat0, Lat1
   real    :: tStartStitch = -1.0, tStopStitch = -1.0
-  
+
   ! Rotating boundary condition
   real:: FlowSpeedJet =0.0, FlowSpeedJetSi =0.0
   real:: tBeginJet = 0.0, tEndJet = 0.0
@@ -280,7 +280,7 @@ contains
     ! ZetaSI is in SI unit of [meter^2*second^(-1)]
     ! ZetaSI = 1.4E14 [m^2/s]
     Zeta = ZetaSI*Si2No_V(UnitX_)*Si2No_V(UnitU_)
-    
+
     if(UseStitchRegion)then
        Lon0 = Lon0Deg*cDegToRad
        Lon1 = Lon1Deg*cDegToRad
@@ -2052,7 +2052,7 @@ contains
     if(DiLevel_EB(1,iBlock) /= Unset_) RETURN
 
     if(tSimulation < tStartStitch .or. tSimulation > tStopStitch) RETURN
-    
+
     ZetaJLeft = Zeta
     ZetaJRight = Zeta
     ZetaKLeft = Zeta
