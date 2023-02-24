@@ -67,6 +67,7 @@ module ModUser
   logical :: UseStitchRegion
   real    :: Lon0Deg, Lon1Deg, Lat0Deg, Lat1Deg
   real    :: Lon0, Lon1, Lat0, Lat1
+  real    :: tStartStitch = -1.0, tStopStitch = -1.0
 
   ! Rotating boundary condition
   real:: FlowSpeedJet =0.0, FlowSpeedJetSi =0.0
@@ -159,6 +160,8 @@ contains
        case("#STITCH")
           call read_var('ZetaSI', ZetaSI)
           call read_var('iMaxStitch', iMaxStitch)
+          call read_var('tStartStitch', tStartStitch)
+          call read_var('tStopStitch', tStopStitch)
 
        case("#STITCHREGION") ! input in degrees
           call read_var('UseStitchRegion', UseStitchRegion)
@@ -2028,7 +2031,7 @@ contains
     use ModAdvance, ONLY: Source_VC, State_VGB
     use ModB0, ONLY: B0_DGB
     use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModMain, ONLY: UseB0
+    use ModMain, ONLY: UseB0, tSimulation
     use ModCoordTransform, ONLY: rot_xyz_rlonlat, xyz_to_lonlat
     use ModParallel, ONLY: Unset_, DiLevel_EB
     use BATL_size, ONLY: nK, nJ
@@ -2047,6 +2050,8 @@ contains
     ! Only add the STITCH source term in cells next to the inner boundary.
     ! Works only in spherical coordinates.
     if(DiLevel_EB(1,iBlock) /= Unset_) RETURN
+
+    if(tSimulation < tStartStitch .or. tSimulation > tStopStitch) RETURN
 
     ZetaJLeft = Zeta
     ZetaJRight = Zeta
