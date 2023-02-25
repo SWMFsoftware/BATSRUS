@@ -9356,7 +9356,7 @@ The default for UseRadFluxLimiter is false.
     <parameter name="HeatFluxLimiter" type="real" min="0"
 	       default="0.06"/>
   </if>
-#HEATLUXLIMITER
+#HEATFLUXLIMITER
 T			UseHeatFluxLimiter
 0.06			HeatFluxLimiter
 
