@@ -5430,9 +5430,9 @@ The default is to flush the output, i.e. DoFlush=T.
       <parameter name="DoAddFluxRope" type="logical" default="F" />
       <parameter name="tDecayCme" type="real" min="-1" default="-1" />
       <parameter name="LongitudeCme" type="real"
-		 min="0" max="359" default="0" />
+		 min="-180" max="359" default="0" />
       <parameter name="LatitudeCme" type="real"
-		 min="-89" max="89" default="0" />	
+		 min="-90" max="90" default="0" />
       <parameter name="OrientationCme" type="real" 
 		 min="0" max="359" default="0" />
       <parameter name="TypeCme" type="string" case="upper" input="select"
