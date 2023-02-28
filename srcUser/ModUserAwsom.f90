@@ -93,6 +93,7 @@ contains
     use ModChromosphere, ONLY: NumberDensChromosphereCgs
     use ModReadParam, ONLY: read_line, read_command, read_var
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModMain,      ONLY: UseRotatingFrame
 
     character (len=100) :: NameCommand
     integer :: iDir
@@ -143,6 +144,9 @@ contains
           do iDir = 1, 3
              call read_var('UniformB0Si', UniformB0Si_D(iDir))
           end do
+
+       case('#ROTATINGFRAME')
+          call read_var('UseRotatingFrame',UseRotatingFrame)
 
        case('#POLARJETBOUNDARY')
           call read_var('FlowSpeedJetSi',FlowSpeedJetSi)
@@ -1884,7 +1888,7 @@ contains
     !--------------------------------------------------------------------------
     if(any(UniformB0Si_D/=0.0))then
        B_D = UniformB0Si_D*Si2No_V(UnitB_)
-       if(IsRzGeometry)B_D(z_) = B_D(z_)/y
+       if(IsRzGeometry.and.B_D(z_)/=0.0)B_D(z_) = B_D(z_)/y
        B0_D = B0_D + B_D
     end if
     if(UseTD)then
@@ -1895,7 +1899,7 @@ contains
     end if
 
     if(UserDipoleStrength == 0.0)then
-       UseUserB0 = .false.
+       if(.not.any(UniformB0Si_D/=0.0))UseUserB0 = .false.
        RETURN
     end if
 
