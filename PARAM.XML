@@ -4060,8 +4060,11 @@ have the following format:
 #COOR
 GSM
 
-#START 2004 6 24 0 0 58 0 2.9 -3.1 - 3.7 2004 6 24 0 1 58 0 2.8 -3.2 -
-3.6 ...  \end{verbatim} 
+#START
+2004 6 24 0 0 58 0 2.9 -3.1 -3.7
+2004 6 24 0 1 58 0 2.8 -3.2 -3.6
+...
+\end{verbatim} 
 The #COOR command is optional.  It indicates which coordinate system
 is used for the trajectory coordinates. Possible values (GSM, GEO,
 GSE, SMG, HGI, HGR...)  and their meaning is described in
@@ -4721,13 +4724,13 @@ lcb int tec             StringPlot  !last closed field line plots with integrals
 -1.                     DtSavePlot
 6.			Radius
 36			nLon
-shl MHD idl	        StringPlot
+shl MHD idl		StringPlot
 10  			DnSavePlot
 -1.			DtSavePlot
 GEO			TypeCoordPlot
 5.6			rMin
 7.6			rMax
-0.5                     dRad    ! only read if rMin /= rMax
+0.5			dRad    ! only read if rMin /= rMax
 0.			LonMin
 360.			LonMax
 10.			dLon    ! only read if LonMin /= LonMax
