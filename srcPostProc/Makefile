@@ -30,21 +30,6 @@ SPECTRUM:
 	rm -f ./SPECTRUM.exe
 	ln -s ${BINDIR}/SPECTRUM.exe .
 
-# ------------------------------- SPECTRUM2 ---------------
-OBJECTS = ModSpectrumLos.o ModSpectrum.o 
-
-${OBJECTS} : ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS}
-
-OBJECTS_EXE = Spectrum2.o 
-
-${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS} ${OBJECTS}
-
-SPECTRUM2: ${OBJECTS_EXE} 
-	${LINK.f90} -o SPECTRUM2.exe ${OBJECTS_EXE} ${OBJECTS} \
-		-L../src -lBATSRUS \
-		-L${LIBDIR} -lMAGNETOGRAM -lDEMT -lEMPIRICALEE \
-		-lTIMING -lSHARE ${LflagMpi}
-
 # ------------------------------- SNAPSHOT ----------------
 
 ${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
@@ -117,32 +102,6 @@ test_spectrum_check:
 		test-spectrum.out \
 		test-spectrum.ref.gz > ../test_spectrum.diff
 	@ls -l ../test_spectrum.diff
-
-#
-# test for SPECTRUM2
-#
-test_spectrum2:
-	@echo "test_spectrum2 started"
-	@echo "test_spectrum2_compile..." > ../test_spectrum2.diff
-	$(MAKE) test_spectrum2_compile
-	@echo "test_spectrum2_run..." >> ../test_spectrum2.diff
-	$(MAKE) test_spectrum2_run
-	@echo "test_spectrum2_check..." >> ../test_spectrum2.diff
-	$(MAKE) test_spectrum2_check
-
-test_spectrum2_compile: SPECTRUM_chianti_tbl.dat
-	make SPECTRUM2
-
-test_spectrum2_run:
-	rm -f test-spectrum.out test-spectrum.eps
-	cp -f test-SPECTRUM2.in SPECTRUM.in
-	${MPIRUN} ./SPECTRUM2.exe > test-spectrum2.log
-
-test_spectrum2_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-		test-spectrum2.out \
-		test-spectrum.ref.gz > ../test_spectrum2.diff
-	@ls -l ../test_spectrum2.diff
 
 #
 #	cleaning
