@@ -164,7 +164,7 @@ contains
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
     use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0,    &
          rCurrentFreeB0, DivB0_C, CurlB0_DC, B0_DGB, B0_DX, B0_DY, B0_DZ, &
-         UseDivFullBSource, B0MomentumSource_DC
+         UseDivFullBSource, B0MomentumSource_DC, UseForceFreeB0
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_,&
          correct_face_value
@@ -694,8 +694,8 @@ contains
           call calc_divb_source(iBlock)
        else
           ! Calculate div B1 via the face interpolation of the magnetic field
-          ! In paarallel, the some source terms in the momentum equation
-          ! calculated which can be formally represented as -(B1 + B0) div B1.
+          ! In paarallel, the same source terms in the momentum equation
+          ! calculated, which can be formally represented as -(B1 + B0) div B1.
           ! Although B1 and B0 contribution to this term look additive and
           ! identical, nevertheless their contributions are calculated
           ! differently and in different places. Historically, div B1 as
@@ -707,8 +707,8 @@ contains
           ! associated with the given cell (the internal divergence) and
           ! the surface magnetic charges at the faces. Historically, the
           ! effect from B0 field, B0 div B1, is ALWAYS (well, if UseB0 is !
-          ! true) is calculated via thus decomposed magnettic charge, i. e.
-          ! the internal difergence B1 is multiplied by the cell-centered
+          ! true) is calculated via the decomposed magnetic charge, i.e.
+          ! the internal divergence B1 is multiplied by the cell-centered
           ! value of B0 field, while the the face B0 field is applied to the
           ! surface magnetic charges at the faces. In contrast with this
           ! approach, the entire effect from B1 field, B1 div B1 was calculated
@@ -809,17 +809,22 @@ contains
           if(r_GB(i,j,k,iBlock) < rCurrentFreeB0)CYCLE
 
           ! +curl(B0) x B1    - undo source term above
-          ! +curl(B0) x B1    - add this if B0MomentumFux = .true.
+          ! +curl(B0) x B1    - add this if B0MomentumFlux = .true.
           ! + div.(B0 B0 - I B0^2/2) - B0 div B0 -  or this, if it is .false.
           ! since curl B0 is not 0 and produces the force effect.
+
+          ! Calculate curl(B0)xB1
           CurlB0CrossB_D = cross_product( CurlB0_DC(:,i,j,k),&
-               State_VGB(Bx_:Bz_,i,j,k,iBlock)) + B0MomentumSource_DC(:,i,j,k)
-          SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) = &
-               SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) &
-               + CurlB0CrossB_D
-          ! Energy equation source term is u.(curl(B0)xB)
+               State_VGB(Bx_:Bz_,i,j,k,iBlock))
+          ! Add curl(B0)xB0 if necessary
+          if(.not.UseForceFreeB0) &
+               CurlB0CrossB_D = CurlB0CrossB_D + B0MomentumSource_DC(:,i,j,k)
+          ! Add momentum source
+          SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+               SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) + CurlB0CrossB_D
+          ! Energy equation source term is (curl(B0)xB) . u
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               + sum(CurlB0CrossB_D*State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))&
+               + sum(CurlB0CrossB_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))&
                /State_VGB(rho_,i,j,k,iBlock)
        end do; end do; end do
 
