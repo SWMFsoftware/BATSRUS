@@ -26,6 +26,10 @@ module ModPlotShell
   ! Ranges for current plot:
   real :: dR, dLat, dLon
   real :: rMin, rMax, LonMin, LonMax, LatMin, LatMax
+  integer, parameter :: RadiusTransformLinear_ = 1  
+  integer, parameter :: RadiusTransformLog_ = 2  
+  integer, parameter :: RadiusTransformLog10_ = 3  
+  integer :: iRadiusTransform = RadiusTransformLinear_
 
   ! Local results container:
   ! Array of values written to file:
@@ -60,23 +64,40 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+
     ! Allocate results array and set up all the spherical shell
     if(allocated(PlotVar_VIII)) RETURN
 
     StringPlotVar = StringPlotVar_I(iFile)
     call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar, &
          UseArraySyntaxIn=.true.)
+    if(index(TypePlot_I(iFile),'shl')>0) then
+       iRadiusTransform = RadiusTransformLinear_  
+    elseif(index(TypePlot_I(iFile),'sln')>0) then
+       iRadiusTransform = RadiusTransformLog_  
+    elseif(index(TypePlot_I(iFile),'slg')>0) then
+       iRadiusTransform = RadiusTransformLog10_
+    endif
 
     ! Get plot area info from ModIO arrays:
     dR     = abs(PlotDx_DI(1, iFile))
-    dLon   = PlotDx_DI(2, iFile) * cDegtoRad
-    dLat   = PlotDx_DI(3, iFile) * cDegtoRad
-    rMin   = PlotRange_EI(1, iFile)
-    rMax   = PlotRange_EI(2, iFile)
-    LonMin = PlotRange_EI(3, iFile) * cDegtoRad
-    LonMax = PlotRange_EI(4, iFile) * cDegtoRad
-    LatMin = PlotRange_EI(5, iFile) * cDegtoRad
-    LatMax = PlotRange_EI(6, iFile) * cDegtoRad
+    dLon   = PlotDx_DI(2,iFile) * cDegtoRad
+    dLat   = PlotDx_DI(3,iFile) * cDegtoRad
+    rMin   = PlotRange_EI(1,iFile)
+    rMax   = PlotRange_EI(2,iFile)
+    LonMin = PlotRange_EI(3,iFile) * cDegtoRad
+    LonMax = PlotRange_EI(4,iFile) * cDegtoRad
+    LatMin = PlotRange_EI(5,iFile) * cDegtoRad
+    LatMax = PlotRange_EI(6,iFile) * cDegtoRad
+    if(iRadiusTransform == RadiusTransformLog_) then
+       dR   = log((rMin + dR)/rMin)
+       rMin = log(rMin)
+       rMax = log(rMax)
+    elseif(iRadiusTransform == RadiusTransformLog10_) then
+       dR   = log10((rMin + dR)/rMin)
+       rMin = log10(rMin)
+       rMax = log10(rMax)
+    endif
 
     ! Set number of points:
     nR   = nint((rMax - rMin)/dR)       + 1
@@ -154,7 +175,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     ! Does this block include grid points in the threaded gap?
-    IsThreadedBlock = UseThreadedGap .and. DiLevel_EB(1, iBlock)==Unset_
+    IsThreadedBlock = UseThreadedGap .and. DiLevel_EB(1,iBlock) == Unset_
     if(IsThreadedBlock)then
        ! Don't check radial coordinate to see if the point is outside the block
        iDirMin = r_ + 1
@@ -165,6 +186,11 @@ contains
     ! Loop through shell points and interpolate PlotVar
     do i = 1, nR
        r = rMin + (i-1)*dR
+       if(iRadiusTransform == RadiusTransformLog_)then  
+          r = exp(r)
+       elseif(iRadiusTransform == RadiusTransformLog10_)then
+          r = 10**r
+       endif
 
        if(IsThreadedBlock)then
           ! The point should be skipped, if below the chromosphere
@@ -181,7 +207,7 @@ contains
              Lat = LatMin + (k-1)*dLat
 
              ! Convert to Cartesian coordinates
-             call rlonlat_to_xyz(r,Lon,Lat,XyzPlot_D)
+             call rlonlat_to_xyz(r, Lon, Lat, XyzPlot_D)
 
              ! Convert from plot coordinates to BATSRUS grid:
              XyzGm_D = matmul(PlotToGm_DD, XyzPlot_D)
@@ -265,6 +291,13 @@ contains
        else
           NameVar = 'r lon lat'
        end if
+       if(NameVar(1:1)=='r') then
+          if(iRadiusTransform == RadiusTransformLog_) then  
+             NameVar='ln'//trim(NameVar)
+          elseif(iRadiusTransform == RadiusTransformLog10_) then  
+             NameVar='log'//trim(NameVar)
+          endif
+       endif
        do iVar=1, nPlotVar
           NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
