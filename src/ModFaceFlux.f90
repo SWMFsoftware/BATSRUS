@@ -3695,7 +3695,7 @@ contains
       if(UseMagFriction)then
          if(present(Cmax_I))then
             Cmax_I(1)   = abs(Un)
-            CmaxDt_I(1) = InvDxyz/MagFrictionCoef
+            CmaxDt_I(1) = abs(Un) + InvDxyz/MagFrictionCoef
          end if
          if(present(Cleft_I))  Cleft_I(1)  = Un
          if(present(Cright_I)) Cright_I(1) = Un
