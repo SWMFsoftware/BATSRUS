@@ -86,9 +86,9 @@ module ModIO
   real, dimension(MaxFile) :: &
        LogTeMinDEM_I = 4.0, LogTeMaxDEM_I = 7.0, DLogTeDEM_I = 0.1
 
-  ! Variables for SPECTRUM-FUX/NBI calculation
+  ! Variables for SPECTRUM-FUX/PHX/NBI calculation
   character (len=200)        :: NameSpmTable_I(MaxFile), &
-       NameNbiTable_I(MaxFile)
+       NameNbiTable_I(MaxFile), NamePhxTable_I(MaxFile)
   logical                   :: UseUnobserved_I(MaxFile) = .false.,&
        UseAlfven_I(MaxFile) = .false., UseDoppler_I(MaxFile) = .false.,&
        UseIonFrac_I(MaxFile) = .false., UseIonTemp_I(MaxFile) = .false.

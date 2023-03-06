@@ -36,19 +36,25 @@ module ModSpectrum
   ! Response function for NarrowBand Image
   real, allocatable           :: ResponseLambda_I(:), Response_I(:)
   integer                     :: nResponseBin
+
+  ! Photoexcitation
+  integer                     :: iTablePhx=0
 contains
   !============================================================================
-  subroutine spectrum_read_table(iFile, UseNbi)
+  subroutine spectrum_read_table(iFile, UseNbi, UsePhx)
 
-    use ModIoUnit,     ONLY: UnitTmp_
-    use ModUtilities,  ONLY: open_file, close_file
-    use ModIO,         ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
-         LambdaMin_I, LambdaMax_I, NameNbiTable_I, DLambda_I, TempMin_I
+    use ModIoUnit,      ONLY: UnitTmp_
+    use ModUtilities,   ONLY: open_file, close_file
+    use ModIO,          ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
+         LambdaMin_I, LambdaMax_I, NameNbiTable_I, DLambda_I, TempMin_I, &
+         NamePhxTable_I
     ! response function
-    use ModPlotFile,         ONLY: read_plot_file
+    use ModPlotFile,    ONLY: read_plot_file
+    !photoexcitation
+    use ModLookupTable, ONLY: init_lookup_table, i_lookup_table, Table_I
 
     integer, intent(in)         :: iFile
-    logical, intent(in)         :: UseNbi
+    logical, intent(in)         :: UseNbi, UsePhx
 
     ! Data read from the file
     character(len=200)          :: StringLine
@@ -82,6 +88,8 @@ contains
     ! For non-equilibrium ionization
     integer                     :: iTemp
 
+    integer                     :: iElement, iCharge
+    
     !  List of elements and their atomic weight of periodic table
     integer, parameter                  :: nElement = 30
     integer                             :: jTemp = 0
@@ -102,6 +110,33 @@ contains
     ! Start with response function if any as it gives the min and max for nbi
     character(len=*), parameter:: NameSub = 'spectrum_read_table'
     !--------------------------------------------------------------------------
+    if(UsePhx)then
+       if(i_lookup_table(NamePhxTable_I(iFile)) <= 0) &
+            call init_lookup_table(NamePhxTable_I(iFile), "load", &
+            NameFile = NamePhxTable_I(iFile), TypeFile = 'ascii')
+       iTablePhx = i_lookup_table(NamePhxTable_I(iFile))
+       if(iTablePhx <= 0) call stop_mpi('table required for photoexcitation')
+
+       iElement = nint(Table_I(iTablePhx)%Param_I(1))
+       iCharge  = nint(Table_I(iTablePhx)%Param_I(2))
+       LineWavelength = Table_I(iTablePhx)%Param_I(3)
+
+       nLineAll = 1
+       allocate(LineTable_I(nLineAll))
+       
+       if(iElement < 10) then
+          write(LineTable_I(1)%NameIon,'(a,i1.1)') &
+               trim(NameElement_I(iElement)), iCharge
+       else
+          write(LineTable_I(1)%NameIon,'(a,i2.2)') &
+               trim(NameElement_I(iElement)), iCharge
+       end if
+       LineTable_I(1)%Aion = AElement_I(iElement)
+       LineTable_I(1)%LineWavelength = LineWavelength
+       
+       RETURN
+    end if
+
     if(UseNbi)then
        call read_plot_file(NameFile = NameNbiTable_I(iFile), &
             n1Out = nResponseBin, &
@@ -301,7 +336,7 @@ contains
   !============================================================================
 
   subroutine spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, UseNbi,&
-       Spectrum_I)
+       Spectrum_I, r)
 
     use ModInterpolate, ONLY: bilinear
     use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, Bx_, Bz_, &
@@ -313,11 +348,13 @@ contains
     use ModIO, ONLY: DLambdaIns_I, DLambda_I, LambdaMin_I, &
          UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I, UseIonFrac_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
-
+    use ModLookupTable, ONLY: interpolate_lookup_table
+    
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
     logical, intent(in)   :: UseNbi
     real, intent(inout)   :: Spectrum_I(:)
+    real, intent(in), optional :: r
 
     integer                        :: iBin
     integer                        :: iNMin, jTMin, iNMax, jTMax
@@ -348,6 +385,8 @@ contains
 
     real                        :: LambdaMin
 
+    real                        :: Value_I(2)
+    
 #ifndef SCALAR
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
@@ -451,23 +490,36 @@ contains
        LambdaBegin = Lambda - 5*DLambda
        LambdaEnd   = Lambda + 5*DLambda
 
-       ! Get the contribution function
-       iNMin  = LineTable_I(iLine)%iMin
-       jTMin  = LineTable_I(iLine)%jMin
-       iNMax  = LineTable_I(iLine)%iMax
-       jTMax  = LineTable_I(iLine)%jMax
+       ! Photoexcitation
+       if(present(r))then
+          call interpolate_lookup_table(iTablePhx, LogTe, LogNe, log(r), &
+               Value_I, DoExtrapolate = .false.)
+          Gint = 10.0**Value_I(1)
+          
+          if(UseIonFrac_I(iFile) .and. IsFound)then
+             EquilIonFrac = 10.0**Value_I(2)
+             Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
+          end if
+       else
 
-       Gint = bilinear(LineTable_I(iLine)%LogG_II(:,:), &
-            iNMin, iNMax, jTMin, jTMax, &
-            [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
-       Gint = 10.0**Gint
+          ! Get the contribution function
+          iNMin  = LineTable_I(iLine)%iMin
+          jTMin  = LineTable_I(iLine)%jMin
+          iNMax  = LineTable_I(iLine)%iMax
+          jTMax  = LineTable_I(iLine)%jMax
 
-       if(UseIonFrac_I(iFile) .and. IsFound)then
-          EquilIonFrac = bilinear(LineTable_I(iLine)%LogIonFrac_II(:,:), &
+          Gint = bilinear(LineTable_I(iLine)%LogG_II(:,:), &
                iNMin, iNMax, jTMin, jTMax, &
                [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
-          EquilIonFrac = 10.0**EquilIonFrac
-          Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
+          Gint = 10.0**Gint
+
+          if(UseIonFrac_I(iFile) .and. IsFound)then
+             EquilIonFrac = bilinear(LineTable_I(iLine)%LogIonFrac_II(:,:), &
+                  iNMin, iNMax, jTMin, jTMax, &
+                  [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
+             EquilIonFrac = 10.0**EquilIonFrac
+             Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
+          end if
        end if
 
        ! When Gint becomes negative due to extrapolation -> move to next

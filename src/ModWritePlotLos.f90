@@ -178,7 +178,7 @@ contains
     integer            :: iTe = 1, nLogTeDEM = 1
 
     ! SPECTRUM - flux/nbi calculation
-    logical            :: UseFlux = .false., UseNbi = .false.
+    logical            :: UseFlux = .false., UseNbi = .false., UsePhx = .false.
     integer            :: nLambda = 1
     real               :: LosDir_D(3)
     real,allocatable   :: Spectrum_I(:)
@@ -212,6 +212,7 @@ contains
     UseSpm = index(TypePlot_I(iFile),'spm')>0
     UseDEM = index(TypePlot_I(iFile),'dem')>0
     UseFlux = index(TypePlot_I(iFile),'fux')>0
+    UsePhx = index(TypePlot_I(iFile),'phx')>0
     UseNbi = index(TypePlot_I(iFile),'nbi')>0
 
     if(NameThisComp == 'GM')then
@@ -229,7 +230,8 @@ contains
     end if
     iSat = 0
 
-    if(UseFlux .or. UseNbi)call spectrum_read_table(iFile,UseNbi)
+    if(UseFlux .or. UseNbi .or. UsePhx) &
+         call spectrum_read_table(iFile, UseNbi, UsePhx)
 
     if(UseSpm)then
        nPix_D          = nint(PlotRange_EI(1:2,iFile)/PlotDx_DI(1:2,iFile))+1
@@ -356,7 +358,7 @@ contains
 
     if(UseDEM)then
        NameAllVar='x y logTe'
-    elseif(UseFlux)then
+    elseif(UseFlux .or. UsePhx)then
        NameAllVar='x y lambda'
     elseif(UseNbi)then
        NameAllVar='x y intensity'
@@ -440,7 +442,7 @@ contains
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM))
-    elseif(UseFlux)then
+    elseif(UseFlux .or. UsePhx)then
        if(LambdaMax_I(iFile)==LambdaMin_I(iFile))then
           nLambda=100
        else
@@ -517,7 +519,7 @@ contains
           call MPI_REDUCE(ImagePe_VIII, Image_VIII, &
                nPix_D(1)*nPix_D(2)*nPlotVar*nLogTeDEM, &
                MPI_REAL, MPI_SUM, 0, iComm, iError)
-       elseif(UseFlux)then
+       elseif(UseFlux .or. UsePhx)then
           call MPI_REDUCE(ImagePe_VIII, Image_VIII, &
                nPix_D(1)*nPix_D(2)*nPlotVar*nLambda, &
                MPI_REAL, MPI_SUM, 0, iComm, iError)
@@ -529,7 +531,7 @@ contains
        Image_VIII = ImagePe_VIII
     end if
 
-    if(UseFlux .or. UseNbi) call clean_mod_spectrum
+    if(UseFlux .or. UseNbi .or. UsePhx) call clean_mod_spectrum
 
     if(iProc==0) then
 
@@ -641,6 +643,8 @@ contains
              StringHeadLine = 'Narrowband Image'
           elseif(UseFlux)then
              StringHeadLine = 'Spectrum flux'
+          elseif(UsePhx)then
+             StringHeadLine = 'Flux with Photoexcitation'
           else
              StringHeadLine = 'LOS integrals'
           end if
@@ -723,7 +727,7 @@ contains
                      CoordMaxIn_D = &
                      [aOffset+aPix, bOffset+bPix], &
                      VarIn_VII = Image_VIII(:,:,:,1))
-             elseif(UseFlux)then
+             elseif(UseFlux .or. UsePhx)then
                 call save_plot_file(NameFile, &
                      TypeFileIn = TypeFile_I(iFile), &
                      StringHeaderIn = StringHeadLine, &
@@ -772,7 +776,7 @@ contains
     call barrier_mpi
 
     deallocate(ImagePe_VIII, Image_VIII)
-    if(UseFlux .or. UseNbi)deallocate(Spectrum_I)
+    if(UseFlux .or. UseNbi .or. UsePhx)deallocate(Spectrum_I)
     if(UseTableGen) deallocate(InterpValues_I)
 
     if(DoTest)write(*,*) NameSub,' finished'
@@ -1115,12 +1119,13 @@ contains
       use BATL_lib,       ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D, CoordMin_D
       use ModIO,          ONLY: TempMin_I
       use ModUserInterface ! user_set_plot_var
-
+      use ModGeometry,    ONLY: r_GB
+      
       real, intent(in):: Ds          ! Length of line segment
       real, intent(in):: XyzLos_D(3) ! location of center of line segment
       logical, optional, intent(in) :: UseThreads
 
-      real :: x, y, z
+      real :: x, y, z, r
       real :: aLos, bLos, cLos, dLos
       real :: SinOmega, CosOmega, Cos2Theta, Sin2Omega, Cos2Omega, Logarithm
 
@@ -1236,10 +1241,17 @@ contains
          Rho = State_V(Rho_)
       end if
 
-      if(UseFlux .or. UseNbi)then
+      if(UseFlux .or. UseNbi .or. UsePhx)then
          Spectrum_I=0.
-         call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
-              UseNbi, Spectrum_I(:))
+         if(UsePhx)then
+            r = interpolate_scalar(r_GB(:,:,:,iBlock), &
+                 nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+            call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
+                 UseNbi, Spectrum_I(:), r)
+         else
+            call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
+                 UseNbi, Spectrum_I(:))
+         end if
          ImagePe_VIII(1,iPix,jPix,:)=ImagePe_VIII(1,iPix,jPix,:)+Spectrum_I(:)
          RETURN
       end if
@@ -2157,7 +2169,7 @@ contains
        if(index(TypePlot_I(iFile),'dem')>0)then
           write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' logK'
-       elseif(index(TypePlot_I(iFile),'fux')>0)then
+       elseif(index(TypePlot_I(iFile),'fux')>0 .or. index(TypePlot_I(iFile),'phx')>0 )then
           write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' A'
        else
@@ -2220,6 +2232,9 @@ contains
              write(StringUnitIdl,'(a)') &
                   trim(StringUnitIdl)//' '//'[cm^-3]'
           case('fux')
+             write(StringUnitIdl,'(a)') &
+                  trim(StringUnitIdl)//' '//'[erg sr^-1 cm^-2 A^-1 s^-1]'
+          case('phx')
              write(StringUnitIdl,'(a)') &
                   trim(StringUnitIdl)//' '//'[erg sr^-1 cm^-2 A^-1 s^-1]'
           case('nbi')

@@ -4423,6 +4423,7 @@ No magnetometer grid file is saved by default.
 	<option name="Solar vars. scaled" value="sol"/>
 	<option name="Spectrum/(D)EM variables" value="dem"/>
 	<option name="Spectrum/Flux variables" value="fux"/>
+	<option name="Spectrum/Photoexcitation flux variables" value="phx"/>
 	<option name="Spectrum/Narrowband image variables" value="nbi"/>
 	<option name="EUV image variables" value="euv"/>
 	<option name="Tabular image variable"      value="tbl"/>
@@ -4598,6 +4599,15 @@ No magnetometer grid file is saved by default.
       <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat" if="$plotvar =~ /nbi/i"/>
       <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /nbi/i"/>
       <parameter name="NameResponse" type="string" default="eit195response.dat" if="$plotvar =~ /nbi/i"/>
+      <parameter name="NamePhxTable" type="string" default="PHOTOEXC_6376.2900.dat" if="$plotvar =~ /phx/i"/>
+      <parameter name="LambdaMin" type="real" default="10" if="$plotvar =~ /phx/i"/>
+      <parameter name="LambdaMax" type="real" default="1700" if="$plotvar =~ /phx/i"/>
+      <parameter name="DLambda" type="real" default="0.001" if="$plotvar =~ /phx/i"/>
+      <parameter name="UseAlfven" type="logical" default="F" if="$plotvar =~ /phx/i"/>
+      <parameter name="UseDoppler" type="logical" default="F" if="$plotvar =~ /phx/i"/>
+      <parameter name="DLambdaIns" type="real" default="0.0" if="$plotvar =~ /phx/i"/>
+      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /phx/i"/>
+      <parameter name="UseIonTemp" type="logical" default="F" if="$plotvar =~ /phx/i"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb|spm)\b/)" />
@@ -4609,7 +4619,7 @@ No magnetometer grid file is saved by default.
   </for>
 
 #SAVEPLOT
-20			nPlotFile
+21			nPlotFile
 cut MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -4810,7 +4820,30 @@ HGR                     TypeCoord
 0.0                     TempMin
 SPECTRUM_chianti_tbl.dat    NameSpmTable
 F                       UseIonFrac
-eit195response.out      NameResponse 
+eit195response.out      NameResponse
+spm phx idl_ascii                 StringPlot
+4			DnSavePlot
+-1.			DtSavePlot
+HGR			TypeCoord
+216			ObsPosX
+0			ObsPosY
+0			ObsPosZ
+1			x0
+1			y0
+2			xLen
+0.2			dX
+2			yLen
+0.2			dY
+0			TempMin
+PHOTOEXC_6376.2900.dat		NamePhxTable
+6375			LambdaMin
+6378			LambdaMax
+0.1			DLambda
+T			UseAlfven
+T			UseDoppler
+0.02			DLambdaInstrument
+F			UseIonFrac
+F			UseIonTemp
 rfr tec rwi             StringPlot
 10                      DnSavePlot
 -1.0                    DtSavePlot
@@ -4897,7 +4930,7 @@ slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
 box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
-spm   - line of sight integrated plot for spectra (FUX), DEM/EM, narrowband image (NBI)
+spm   - line of sight integrated plot for spectra (FUX), DEM/EM, narrowband image (NBI), phx for photoexcitation
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
@@ -4963,6 +4996,8 @@ values or as non-dimensional values:
  'fux' - vars: flux                                           (PlotArea='spm' only)
          pars: rbody
  'nbi' - vars: intensity                                      (PlotArea='spm' only)
+         pars: rbody
+ 'phx' - vars: flux                                           (PlotArea='spm' only)
          pars: rbody
  'int' - vars: 1/B n/B p/B                                    (PlotArea='lcb' only)
          pars:
