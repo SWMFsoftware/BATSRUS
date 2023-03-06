@@ -2341,7 +2341,7 @@ contains
                + State_VGB(Pu3Rho_,i,j,k,iBlock)
           RhoSW = State_VGB(SWHRho_,i,j,k,iBlock)
           RhoPUI = State_VGB(Pu3Rho_,i,j,k,iBlock)
-          Tave = p/Rho
+          Tave = 0.5*p/Rho
           InvRhoSW = 1.0/RhoSW
           InvRhoPUI = 1.0/RhoPUI
           InvRho = 1.0/Rho
@@ -2361,8 +2361,8 @@ contains
           ! Zieger This Mach number has no physical meaning
           SWHMach2 = SWHU2/(Gamma*pSW*InvRhoSW)
           ! Temperature in Kelvins
-          TempDim = InvRho*p*No2Si_V(UnitTemperature_)
-          ! Temperature of solar wind in Kelvins
+          TempDim = 0.5*InvRho*p*No2Si_V(UnitTemperature_)
+          ! Temperature of solar wind ions in Kelvins
           TempSWDim = InvRhoSW*pSW*No2Si_V(UnitTemperature_)
           ! use sonic Mach number - good for slow Bow Shock (Zieger+ 2015)
           if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
@@ -2393,7 +2393,11 @@ contains
           ! first 10K after heating
        else
           InvRho = 1.0/State_VGB(Rho_,i,j,k,iBlock)
-          p      = State_VGB(p_,i,j,k,iBlock)
+          if(UseElectronPressure)then
+             p = State_VGB(p_,i,j,k,iBlock) + State_VGB(Pe_, i,j,k, iBlock)
+          else
+             p = State_VGB(p_,i,j,k,iBlock)
+          endif
           U2     = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*InvRho**2
           U2Dim  = U2*No2Io_V(UnitU_)**2
           ! merav modifications
@@ -2406,7 +2410,7 @@ contains
           Mach2      = U2/(Gamma*p*InvRho)
           RhoDim = State_VGB(Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_)
           ! Temperature in Kelvins
-          TempDim = InvRho*p*No2Si_V(UnitTemperature_)
+          TempDim = 0.5*InvRho*p*No2Si_V(UnitTemperature_)
           ! Apply full source except near the boundaries between regions
           if(.not.UseColdCloud)then
              if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
