@@ -2134,6 +2134,10 @@ contains
           call read_magperturb_param(NameCommand)
           nFile = max(nFile, maggridfile_)
 
+       case('#SUPERMAGINDICES')
+          call read_magperturb_param(NameCommand)
+          nFile = max(nFile, supermagfile_)
+          
        case("#GRIDGEOMETRY", "#GRIDGEOMETRYLIMIT")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('TypeGeometry', TypeGeometry, IsLowerCase=.true.)
