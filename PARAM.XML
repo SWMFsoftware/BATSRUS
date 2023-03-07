@@ -4357,6 +4357,27 @@ seconds.
 No magnetometer grid file is saved by default.
 </command>
 
+<command name="SUPERMAGINDICES">
+  <parameter name="DoWriteSupermagIndices" type="logical" default="F"/>
+
+#SUPERMAGINDICES
+T			DoWriteSupermagIndices
+
+This command calculates and saves synthetic SuperMAG geomagnetic indices
+from the magnetometer grid.
+
+The indices SML (AL), SMU (AU), SME (AE), and SMO (AO) are computed
+using every grid point defined in the #MAGNETOMETERGRID command, within
+the magnetic latitude range +40 to +80. Output is written at the same
+cadence as the DnSaveMagGrid or DtSaveMagGrid and saved in the
+superindex*.log file.
+
+If the #SUPERMAGINDICES command is used without the #MAGNETOMETERGRID
+command, or if the magnetometer grid does not cover the full latitude
+range from +40 to +80, then a warning message will be generated and
+indices are not calculated.
+</command>
+
 <command name="SAVEPLOT">
   <parameter name="nPlotFile" type="integer" min="0" max="15" default="1" />
   <for name="iPlot" from="1" to="$nPlotFile">
