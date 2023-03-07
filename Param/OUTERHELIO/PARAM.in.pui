@@ -54,58 +54,58 @@ year			NameMaxTimeUnit
 3500			MaxBlock
 
 #GRIDRESOLUTION
-2.                      nLevel (usually 11)
-initial                 StringShape
+2.			Resolution
+initial			StringShape
 
 #GRIDRESOLUTION
-187.5                  Resolution
-box                     StringShape
-750                     xMinBox
--1500                    yMinBox
--1500                    zMinBox
-1500                    xMaxBox
-1500                     yMaxBox
-1500                     zMaxBox
+187.5			Resolution
+box			StringShape
+750			xMinBox
+-1500			yMinBox
+-1500			zMinBox
+1500			xMaxBox
+1500			yMaxBox
+1500			zMaxBox
 
 #GRIDRESOLUTION
-93.75                   Resolution
-box                     StringShape
--1500                   xMinBox
--1500                   yMinBox
--1500                   zMinBox
-750                     xMaxBox
-1500                    yMaxBox
-1500                    zMaxBox
+93.75			Resolution
+box			StringShape
+-1500			xMinBox
+-1500			yMinBox
+-1500			zMinBox
+750			xMaxBox
+1500			yMaxBox
+1500			zMaxBox
 
 #GRIDRESOLUTION
-46.875                  Resolution
-box                     StringShape
--1125                   xMinBox
--1125                   yMinBox
--1125                   zMinBox
-375                     xMaxBox
-1125                    yMaxBox
-1125                    zMaxBox
+46.875			Resolution
+box			StringShape
+-1125			xMinBox
+-1125			yMinBox
+-1125			zMinBox
+375			xMaxBox
+1125			yMaxBox
+1125			zMaxBox
 
 #GRIDRESOLUTION
-23.4375                 Resolution
-box                     StringShape
--750                    xMinBox
--750                    yMinBox
--750                    zMinBox
-0                       xMaxBox
-750                     yMaxBox
-750                     zMaxBox
+23.4375			Resolution
+box			StringShape
+-750			xMinBox
+-750			yMinBox
+-750			zMinBox
+0			xMaxBox
+750			yMaxBox
+750			zMaxBox
 
 #GRIDRESOLUTION
-23.4375                 Resolution
-box                     StringShape
-0                       xMinBox
--187.5                  yMinBox
--187.5                  zMinBox
-187.5                   xMaxBox
-187.5                   yMaxBox
-187.5                   zMaxBox
+23.4375			Resolution
+box			StringShape
+0			xMinBox
+-187.5			yMinBox
+-187.5			zMinBox
+187.5			xMaxBox
+187.5			yMaxBox
+187.5			zMaxBox
 
 #INNERBOUNDARY
 user			TypeBcBody
