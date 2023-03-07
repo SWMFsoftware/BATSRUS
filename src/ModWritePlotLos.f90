@@ -1120,7 +1120,7 @@ contains
       use ModIO,          ONLY: TempMin_I
       use ModUserInterface ! user_set_plot_var
       use ModGeometry,    ONLY: r_GB
-      
+
       real, intent(in):: Ds          ! Length of line segment
       real, intent(in):: XyzLos_D(3) ! location of center of line segment
       logical, optional, intent(in) :: UseThreads
