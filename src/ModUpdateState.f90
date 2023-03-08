@@ -345,13 +345,13 @@ contains
               NameSub, ' after mhd_to_boris                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
-
+      ! Do not convert to electron entropy when electrons are not evolved.
       if(UseElectronPressure .and. UseElectronEntropy &
            .and. DoUpdate_V(Pe_))then
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
          do k=1,nK; do j=1,nJ; do i=1,nI
-            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock) .or. .not. DoUpdate_V(Pe_)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
@@ -523,7 +523,7 @@ contains
          ! Convert electron entropy back to pressure
          ! Pe = Se^GammaE
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock) .or. .not. DoUpdate_V(Pe_)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock)**GammaElectron

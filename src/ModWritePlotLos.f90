@@ -2169,7 +2169,8 @@ contains
        if(index(TypePlot_I(iFile),'dem')>0)then
           write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' logK'
-       elseif(index(TypePlot_I(iFile),'fux')>0 .or. index(TypePlot_I(iFile),'phx')>0 )then
+       elseif(index(TypePlot_I(iFile),'fux')>0 .or. &
+            index(TypePlot_I(iFile),'phx')>0 )then
           write(StringUnitIdl,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
                trim(NameIdlUnit_V(UnitX_))//' A'
        else

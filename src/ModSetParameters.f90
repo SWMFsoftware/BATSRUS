@@ -1010,8 +1010,17 @@ contains
              elseif (index(StringPlot,'sph')>0)then
                 TypePlotArea='sph'
                 call read_var('Radius', PlotRange_EI(1,iFile))
-             elseif (index(StringPlot, 'shl')>0)then
-                TypePlotArea = 'shl'
+             elseif (  index(StringPlot, 'shl')>0 &
+                  .or. index(StringPlot, 'sln')>0 &
+                  .or. index(StringPlot, 'slg')>0)then
+                if(index(StringPlot, 'shl')>0) then
+                   TypePlotArea = 'shl'
+                elseif(index(StringPlot, 'sln')>0) then
+                   TypePlotArea = 'sln'
+                elseif(index(StringPlot, 'slg')>0) then
+                   TypePlotArea = 'slg'
+                endif
+
                 call read_var('TypeCoord', TypeCoordPlot_I(iFile))
                 call read_var('rMin',   PlotRange_EI(1,iFile))
                 call read_var('rMax',   PlotRange_EI(2,iFile))
@@ -1347,6 +1356,8 @@ contains
                 TypePlotFormat_I(iFile)='idl'
                 if (       TypePlotArea /= 'sph' &
                      .and. TypePlotArea /= 'shl' &
+                     .and. TypePlotArea /= 'sln' &
+                     .and. TypePlotArea /= 'slg' &
                      .and. TypePlotArea /= 'box' &
                      .and. TypePlotArea /= 'spm' &
                      .and. TypePlotArea /= 'los' &
@@ -1819,7 +1830,7 @@ contains
           ! reinitialize constrained transport if needed
           DoInitConstrainB = .true.
 
-       case("#B0", "#B0SOURCE", "#CURLB0", "#MONOPOLEB0")
+       case("#B0", "#B0SOURCE", "#CURLB0", "#FORCEFREEB0", "#MONOPOLEB0")
           if(.not.is_first_session())CYCLE READPARAM
           call read_b0_param(NameCommand)
 
@@ -2122,6 +2133,10 @@ contains
        case("#MAGNETOMETERGRID")
           call read_magperturb_param(NameCommand)
           nFile = max(nFile, maggridfile_)
+
+       case('#SUPERMAGINDICES')
+          call read_magperturb_param(NameCommand)
+          nFile = max(nFile, supermagfile_)
 
        case("#GRIDGEOMETRY", "#GRIDGEOMETRYLIMIT")
           if(.not.is_first_session())CYCLE READPARAM
@@ -3087,7 +3102,7 @@ contains
 
          ! Some defaults for AWSoM and AWSoM-R
          ! If Ehot_>1, then we assume we use these models
-         if(Ehot_ > 1)then
+         if(Ehot_ > 1 .and. DoUpdate_V(Ehot_))then
             UseHeatFluxCollisionless = .true.
             if(NameThisComp == 'SC')then
                UseHeatFluxRegion = .true.
@@ -4021,7 +4036,7 @@ contains
 
          ! Fix plot range for various plot areas
          select case(TypePlotArea)
-         case('shl', 'box', 'eqb', 'eqr', 'lcb', 'spm')
+         case('shl', 'sln','slg','box', 'eqb', 'eqr', 'lcb', 'spm')
             ! These plot areas read all ranges from PARAM.in
             CYCLE PLOTFILELOOP
          case('cut')

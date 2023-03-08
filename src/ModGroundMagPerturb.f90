@@ -33,12 +33,14 @@ module ModGroundMagPerturb
   real,    public:: Kp=0.0   ! Resulting indices
 
   ! Public geomagnetic indices variables
-  logical, public :: DoWriteIndices=.false., DoCalcKp=.false., DoCalcAe=.false.
+  logical, public :: DoWriteIndices=.false., DoWriteSuper=.false.
+  logical, public :: DoCalcKp=.false., DoCalcAe=.false.
   logical, public           :: IsFirstCalc=.true., IsSecondCalc=.true.
   integer, public           :: iSizeKpWindow = 0 ! Size of MagHistory_II
   integer, public, parameter:: nKpMag = 24, nAeMag = 24
   real, public, allocatable :: MagHistory_DII(:,:,:)  ! Mag time history.
   real, public              :: AeIndex_I(4)
+  real, public              :: SuperIndex_I(4) ! SuperMAG indices
 
   ! Local variables ------
 
@@ -78,6 +80,7 @@ module ModGroundMagPerturb
   ! Private geomagnetic indices variables:
   integer :: nIndexMag = 0  ! Total number of mags required by indices
   integer :: iUnitIndices   ! File IO unit for indices file
+  integer :: iUnitSupermag   ! File IO unit for SuperMAG file
   real, parameter    :: KpLat   = 60.0         ! Synthetic Kp geomag. latitude
   real, parameter    :: AeLat   = 70.0         ! Synthetic AE geomag. latitude
   real               :: ScaleK9 = 600.0        ! Scaling of standard K
@@ -109,7 +112,8 @@ module ModGroundMagPerturb
   character(len=*), parameter :: NameKpVars = &
        'Kp K_12 K_13 K_14 K_15 K_16 K_17 K_18 K_19 K_20 K_21 K_22 K_23 '//&
        'K_00 K_01 K_02 K_03 K_04 K_05 K_06 K_07 K_08 K_09 K_10 K_11 '
-  character(len=*), parameter :: NameAeVars = 'AL AU AE AO '
+  character(len=*), parameter :: NameAeVars  = 'AL AU AE AO '
+  character(len=*), parameter :: NameSuperVars = 'SML SMU SME SMO '
 
 contains
   !============================================================================
@@ -119,7 +123,7 @@ contains
     ! Handle params for all magnetometer-related commands.
 
     use ModIO,        ONLY: magfile_, maggridfile_, indexfile_, &
-         DnOutput_I,DtOutput_I
+         supermagfile_, DnOutput_I, DtOutput_I
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -177,6 +181,26 @@ contains
        DtOutput_I(indexfile_) = DtWriteIndices
        DnOutput_I(indexfile_) = -1  ! Indices are function of physical time.
 
+    case('#SUPERMAGINDICES')
+       call read_var('DoWriteSupermagIndices', DoWriteSuper)
+       if(.not. DoSaveGridMag .and. DoWriteSuper) then
+          ! #MAGNETOMETERGRID must be activated
+          write(*,*)'Warning: MagnetometerGrid must be saved to compute ', &
+               'SuperMAG indices. Setting DoWriteSupermagIndices to False.'
+          DoWriteSuper = .false.
+       elseif(GridLatMax < 80 .or. GridLatMin > 40)then
+          ! Latitude must include +40 to +80 for SuperMAG calculation.
+          write(*,*)'Warning: MagnetometerGrid must cover latitude range', &
+               ' [+40, +80]. Setting DoWriteSupermagIndices to False.'
+          DoWriteSuper = .false.
+       elseif(GridLonMax < 350 .or. GridLonMin > 10)then
+          ! Longitude should be [0, 360]
+          ! allow 20 deg of leeway in case pole is covered (see manual)
+          write(*,*)'Warning: MagnetometerGrid must cover longitude ', &
+          'range [0, 360]. Setting DoWriteSupermagIndices to False.'
+          DoWriteSuper = .false.
+       endif
+       DtOutput_I(supermagfile_) = DtOutput_I(maggridfile_)
     case default
        call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
     end select
@@ -247,7 +271,6 @@ contains
           dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
        endif
        dLat = (GridLatMax - GridLatMin)/max(1, nGridLat-1)
-
        if(DoTest) then
           write(*,*)NameSub//' nLon and nLat = ', nGridLon, nGridLat
           write(*,*)NameSub//' Lon and Lat spacing = ', dLon, dLat
@@ -275,6 +298,9 @@ contains
        PosMagnetometer_II(2, iMag+1:iMag+nKpMag+nAeMag) = LonIndex_I*cRadToDeg
        NameMag_I(iMag+1:iMag+nKpMag) = 'KP_'
     end if
+
+    ! Initialize SuperMAG indices file.
+    if(DoWriteSuper) call init_supermag
 
     if(DoTest)then
        write(*,*) NameSub//'Magnetometer positions to send to IE: '
@@ -326,7 +352,7 @@ contains
     XyzKp_DI(3,:) = sin(KpLat * cDegToRad) ! Z for all stations.
     RadXY         = cos(KpLat * cDegToRad) ! radial dist. from z-axis.
     do i=1, nKpMag
-       Phi = cTwoPi * (i-1)/24.0
+       Phi = cTwoPi * (i-1)/nKpMag
        XyzKp_DI(1,i) = RadXY * cos(Phi)
        XyzKp_DI(2,i) = RadXY * sin(Phi)
        if(iProc==0 .and. DoTest) &
@@ -339,7 +365,7 @@ contains
     XyzAe_DI(3,:) = sin(AeLat * cDegToRad) ! Z for all stations.
     RadXY         = cos(AeLat * cDegToRad) ! radial dist. from z-axis.
     do i=1, nAeMag
-       Phi = cTwoPi * (i-1)/24.0
+       Phi = cTwoPi * (i-1)/nAeMag
        XyzAe_DI(1,i) = RadXY * cos(Phi)
        XyzAe_DI(2,i) = RadXY * sin(Phi)
        if(iProc==0 .and. DoTest) &
@@ -382,6 +408,50 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine init_geoindices
+  !============================================================================
+  subroutine init_supermag
+
+    ! Initialize variables, arrays, and output file.
+    use ModNumConst,  ONLY: cDegToRad, cTwoPi
+    use ModUtilities, ONLY: flush_unit, open_file
+    use ModMain,      ONLY: nStep
+    use ModIoUnit,    ONLY: io_unit_new
+    use ModIO,        ONLY: NamePlotDir, IsLogNameE, supermagfile_, DtOutput_I
+
+    integer            :: i, iTime_I(7)
+    character(len=100) :: NameFile
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_supermag'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    ! open index file, write header.
+    if (iProc==0) then
+       if(IsLogNameE)then
+          ! Event date added to superindex file name
+          call get_date_time(iTime_I)
+          write(NameFile, '(a, a, i4.4, 2i2.2, "-", 3i2.2, a)') &
+               trim(NamePlotDir), 'superindex_e', iTime_I(1:6), '.log'
+       else
+          write(NameFile, '(a, a, i8.8, a)') &
+               trim(NamePlotDir), 'superindex_n', nStep, '.log'
+       end if
+       iUnitSupermag = io_unit_new()
+       call open_file(iUnitSupermag, file=NameFile, status='replace')
+
+       write(iUnitSupermag, '(2a,f8.2)') &
+            'Synthetic SuperMAG Indices', &
+            ' DtOutput=', DtOutput_I(supermagfile_)
+       write(iUnitSupermag, '(a)', advance='NO') &
+            'it year mo dy hr mn sc msc '
+       write(iUnitSupermag, '(a)', advance='NO') NameSuperVars
+       write(iUnitSupermag, '(a)', advance='YES') '' ! Close header line.
+       call flush_unit(iUnitSupermag)
+    end if
+
+    call test_stop(NameSub, DoTest)
+  end subroutine init_supermag
   !============================================================================
   subroutine ground_mag_perturb(nMag, Xyz_DI, MagPerturb_DI)
 
@@ -792,7 +862,6 @@ contains
                    ! Store it for fast calculation
                    if(UseFastFacIntegral) &
                         InvDist2_DII(:,iMag+iMag0,iLineProc) = InvDist2_D
-
                 end do
 
              end if
@@ -1529,12 +1598,70 @@ contains
 
     end if
 
+    if(DoWriteSuper) call write_supermag
+
     ! Release memory.
     deallocate(MagGmXyz_DI, MagSmXyz_DI, &
          dBMhd_DI, dBFac_DI, dBHall_DI, dBPedersen_DI, dBTotal_DI)
 
     call test_stop(NameSub, DoTest)
   contains
+    !==========================================================================
+    subroutine write_supermag
+
+      use ModMain,  ONLY: nStep
+      use ModUtilities, ONLY: flush_unit
+      use ModMpi
+
+      integer :: iLon, iLat
+      integer :: iTime_I(7)
+      real    :: SuperIndex_I(4)
+      real    :: LonLat_D(2)
+
+      logical:: DoTest
+      character(len=*), parameter:: NameSub = 'write_supermag'
+      !------------------------------------------------------------------------
+      call test_start(NameSub, DoTest)
+
+      if(iProc > 0) RETURN ! Write only on head node.
+
+      SuperIndex_I(1) =  99999.
+      SuperIndex_I(2) = -99999.
+
+      ! Find SML/SMU indices in latutude range.
+      iMag = 0
+      do iLat = 1, nGridLat
+         do iLon = 1, nGridLon
+            iMag = iMag + 1
+            MagOut_VII( 1: 3,iLon,iLat) = dBTotal_DI(:,iMag)
+            call xyz_to_lonlat(MagSmXyz_DI(:,iMag), LonLat_D)
+            LonLat_D = LonLat_D*cRadToDeg
+            if(LonLat_D(2) < 80.0 .and. LonLat_D(2) > 40.0)then
+               if(dBTotal_DI(1,iMag) < SuperIndex_I(1)) &  ! SML Index
+                    SuperIndex_I(1) = dBTotal_DI(1,iMag)
+               if(dBTotal_DI(1,iMag) > SuperIndex_I(2)) &  ! SMU Index
+                    SuperIndex_I(2) = dBTotal_DI(1,iMag)
+            endif
+         end do
+      end do
+
+      ! Now, calculate SME/SMO indices.
+      SuperIndex_I(3) = SuperIndex_I(2) - SuperIndex_I(1)      ! SME Index
+      SuperIndex_I(4) = (SuperIndex_I(2)+SuperIndex_I(1))/2.   ! SMO Index
+
+      ! Write date and time.
+      call get_date_time(iTime_I)
+      write(iUnitSupermag, '(i7.7, i5.4, 5(i3.2), i4.3)', ADVANCE='NO') &
+           nStep, iTime_I
+
+      write(iUnitSupermag, '(4(1x,f9.2))', ADVANCE='NO') SuperIndex_I
+      ! Add newline
+      write(iUnitSupermag, *)
+
+      call flush_unit(iUnitSupermag)
+
+      call test_stop(NameSub, DoTest)
+    end subroutine write_supermag
     !==========================================================================
     subroutine write_mag_grid
 

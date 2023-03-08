@@ -28,7 +28,8 @@ module ModIO
   ! Named indexes for output files
   integer, parameter :: &
        restart_=1, logfile_=2, magfile_=3, indexfile_=4, maggridfile_=5, &
-       plot_=5, parcel_=plot_+MaxPlotfile, satellite_ = parcel_+MaxParcel
+       supermagfile_=6, &
+       plot_=6, parcel_=plot_+MaxPlotfile, satellite_ = parcel_+MaxParcel
 
   ! I/O
   integer             :: iUnitOut = STDOUT_

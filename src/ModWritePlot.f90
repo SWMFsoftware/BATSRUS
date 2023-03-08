@@ -235,7 +235,8 @@ contains
     end if
 
     ! Spherical slices are special cases:
-    DoPlotShell = TypePlot(1:3) == 'shl'
+    DoPlotShell = TypePlot(1:3) == 'shl' .or. TypePlot(1:3) == 'sln' &
+         .or. TypePlot(1:3) == 'slg'
     DoPlotBox   = TypePlot(1:3) == 'box'
 
     ! If threaded gap is used, the dimensional factors should be calculated,
@@ -1040,6 +1041,7 @@ contains
     use ModWaves, ONLY: UseWavePressure
     use ModLaserHeating, ONLY: LaserHeating_CB
     use ModCurrent, ONLY: get_current
+    use ModB0, ONLY: UseCurlB0, CurlB0_DC, set_b0_source
     use ModEnergy, ONLY: get_fluid_energy_block
     use ModElectricField, ONLY: Efield_DGB, DivE_CB, Potential_GB, &
          Epot_DGB, Eind_DGB, &
@@ -1086,6 +1088,7 @@ contains
     ! but we write them separately.
     ! DoCurrent used to make sure we only calculate the currents once per block
     logical :: DoCurrent
+    logical :: DoCurrent0
 
     ! Passed to and set by get_face_curl
     logical:: IsNewBlockCurrent
@@ -1105,6 +1108,7 @@ contains
 
     ! Calculate current if needed
     DoCurrent = .true.
+    DoCurrent0 = .true.
 
     ! Recalculate magnetic field in block for face currents (if needed)
     IsNewBlockCurrent = .true.
@@ -1425,6 +1429,29 @@ contains
              do k = 1,nK; do j = 1, nJ; do i = 1, nI
                 PlotVar_GV(i,j,k,iVar) = &
                      sum(Current_DC(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
+                     / max(1e-30, r_GB(i,j,k,iBlock))
+             end do; end do; end do
+          end select
+       case('j0x', 'j0y', 'j0z', 'j0r')
+          if(.not. UseCurlB0) RETURN
+
+          ! Calculationg all the currents only once per block
+          if(DoCurrent0) then
+             call set_b0_source(iBlock)
+             DoCurrent0 = .false.
+          end if
+
+          select case(String)
+          case('j0x')
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = CurlB0_DC(1,:,:,:)
+          case('j0y')
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = CurlB0_DC(2,:,:,:)
+          case('j0z')
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = CurlB0_DC(3,:,:,:)
+          case('j0r')
+             do k = 1,nK; do j = 1, nJ; do i = 1, nI
+                PlotVar_GV(i,j,k,iVar) = &
+                     sum(CurlB0_DC(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
                      / max(1e-30, r_GB(i,j,k,iBlock))
              end do; end do; end do
           end select
@@ -2044,6 +2071,7 @@ contains
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitP_)/No2Si_V(UnitX_)
        case('jx','jy','jz','jr',&
+            'j0x','j0y','j0z','j0r',&
             'jx1','jy1','jz1','jx2','jy2','jz2', &
             'jx3','jy3','jz3','jx4','jy4','jz4', &
             'jx5','jy5','jz5','jx6','jy6','jz6')
@@ -2131,8 +2159,9 @@ contains
        RETURN
     end if
 
-    if(TypePlot(1:3) == 'shl' .or. &
-         (TypePlot(1:3) == 'cut' .and. IsRLonLat)) then
+    if( (TypePlot(1:3) == 'cut' .and. IsRLonLat) .or. &
+         TypePlot(1:3) == 'shl' .or. TypePlot(1:3) == 'sln' .or. &
+         TypePlot(1:3) == 'slg' ) then
        StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
     elseif(TypePlot(1:3) == 'cut' .and. IsCylindrical)then
           StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&

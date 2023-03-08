@@ -4357,6 +4357,27 @@ seconds.
 No magnetometer grid file is saved by default.
 </command>
 
+<command name="SUPERMAGINDICES">
+  <parameter name="DoWriteSupermagIndices" type="logical" default="F"/>
+
+#SUPERMAGINDICES
+T			DoWriteSupermagIndices
+
+This command calculates and saves synthetic SuperMAG geomagnetic indices
+from the magnetometer grid.
+
+The indices SML (AL), SMU (AU), SME (AE), and SMO (AO) are computed
+using every grid point defined in the #MAGNETOMETERGRID command, within
+the magnetic latitude range +40 to +80. Output is written at the same
+cadence as the DnSaveMagGrid or DtSaveMagGrid and saved in the
+superindex*.log file.
+
+If the #SUPERMAGINDICES command is used without the #MAGNETOMETERGRID
+command, or if the magnetometer grid does not cover the full latitude
+range from +40 to +80, then a warning message will be generated and
+indices are not calculated.
+</command>
+
 <command name="SAVEPLOT">
   <parameter name="nPlotFile" type="integer" min="0" max="15" default="1" />
   <for name="iPlot" from="1" to="$nPlotFile">
@@ -4380,7 +4401,9 @@ No magnetometer grid file is saved by default.
 	<option name="x=0" />
 	<option name="y=0" default="T" />
 	<option name="z=0" />
-	<option name="shell"  value="shl" />
+	<option name="shell"        value="shl" />
+	<option name="shell ln(r)"  value="sln" />
+	<option name="shell lg(r)"  value="slg" />
 	<option name="box" />
 	<option name="spm" />
 	<option name="los" />
@@ -4540,7 +4563,7 @@ No magnetometer grid file is saved by default.
       <parameter name="Radius"  type="real" min="0" default="6"/>
       <parameter name="nLon"    type="real" min="4" default="36"/>
     </if>
-    <if expr="$plotarea =~ /\bshl\b/">
+    <if expr="$plotarea =~ /\b(shl|sln|slg)\b/">
       <parameter name="TypeCoordPlot" type="string" length="3" default="GEO"/>
       <parameter name="rMin"   type="real" min="0"     default="6.6"/>
       <parameter name="rMax"   type="real" min="$rMin" default="6.6"/>
@@ -4610,7 +4633,7 @@ No magnetometer grid file is saved by default.
       <parameter name="UseIonTemp" type="logical" default="F" if="$plotvar =~ /phx/i"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb|spm)\b/)" />
+	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|sln|slg|los|rfr|lin|eqr|eqb|spm)\b/)" />
     <if expr="$plotvar =~ /\bvar\b/i">
       <parameter name="NameVars" type="string" length="$lLine"/>
       <parameter name="NamePars" type="string" length="$lLine"
@@ -4928,6 +4951,8 @@ bx0   - bx=0 (along z direction) isosurface plot
 dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
+sln   - spherical shell with ln(r) radial coordinate
+slg   - spherical shell with log10(r) radial coordinate
 box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
 spm   - line of sight integrated plot for spectra (FUX), DEM/EM, narrowband image (NBI), phx for photoexcitation
@@ -5012,18 +5037,18 @@ from the parameter file in this order:
  xMinCut...zMaxCut	 if PlotArea is 'bx0', 'dpl', or 'slc'
  Coord1MinCut...Coord3MaxCut	 if PlotArea is 'cut'
  nRadius nLon            if PlotArea is 'eqr' or 'eqb'
- TypeCoordPlot           if PlotArea is 'shl' or 'box'
- RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', or 'shl'
- LonMin LonMax           if PlotArea is 'eqb' or 'shl'
- LatMin LatMax           if PlotArea is 'shl'
- dRadius, dLon, dLat     if PlotArea is 'shl' and associated range is nonzero.
+ TypeCoordPlot           if PlotArea is 'shl', 'sln', 'slg' or 'box'
+ RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', 'shl', 'sln', 'slg'
+ LonMin LonMax           if PlotArea is 'eqb', 'shl', 'sln', 'slg'
+ LatMin LatMax           if PlotArea is 'shl', 'sln', 'slg'
+ dRadius, dLon, dLat     if PlotArea is 'sln', 'slg' or 'shl' and range is nonzero.
  x0, y0, z0              if PlotArea is 'box'
  xSize, ySize, zSize     if PlotArea is 'box'
  dX, dY, dZ              if PlotArea is 'box' and associated range is nonzero.
  xAngle, yAngle, zAngle  if PlotArea is 'box' (given in degrees)
  xPoint yPoint zPoint	 if PlotArea is 'slc', or 'blk'
  xNormal yNormal zNormal if PlotArea is 'slc'
- DxSavePlot		 if PlotForm is 'idl' and PlotArea is not box/shl/los/rfr/lin/eqr/eqb
+ DxSavePlot		 if PlotForm is 'idl' and PlotArea is not box/shl/sln/slg/los/rfr/lin/eqr/eqb
  NameVars		 if PlotVar  is 'var' or 'VAR'
  NamePars		 if PlotVar  is 'var' or 'VAR'
 \end{verbatim}
@@ -5236,12 +5261,16 @@ The line of sight integration produces TecPlot and IDL files directly:
 \end{verbatim}
 where extension is 'dat' for TecPlot and 'out' for IDL file formats.
 
-The shell plot area ('shl') can be used to extract a spherical shell
-defined by radius, longitude and latitude ranges in the coordinate
+The shell plot area ('shl', 'sln', 'slg') can be used to extract a spherical
+shell defined by radius, longitude and latitude ranges in the coordinate
 system given by TypeCoordPlot. If the range has extent zero in
 one or two coordinates, the shell becomes a 2D or 1D slice
 (for example 2D Lon-Lat, r-Lon, r-Lat surfaces, or 1D circle at fixed latitude,
 or a radial line with fixed longitude and latitude).
+The 'sln' and 'slg' are uniform in the logarithm of the radius, the former
+saves ln(r) into the file, the latter the 10-based lg(r). The meaning of
+the radial resolution dR becomes the size of the first cell at the minimum
+radius. The minimum and maximum radii are read as normal radii (not logarithm).
 The output is a single file in IDL or Tecplot format.
 
 The box plot area ('box') can be used to extract a Cartesian box
@@ -7895,6 +7924,20 @@ artificially will allow larger explicit time steps. The speed of light
 should be larger than the typical wave speeds present in the problem.
 
 Default is the true speed of light.
+</command>
+
+<command name="FORCEFREEB0">
+  <parameter name="UseForceFreeB0" type="logical" default="F"/>
+
+#FORCEFREEB0
+T                       UseForceFreeB0
+
+Define the B0 field to be force-free but with non-zero J0=curl B0.
+The force-free property means that J0 x B0 = 0 in the momentum and
+energy equations. UseForceFreeB0=T switches on curl B0 in the whole
+domain, so there is no need for the #CURLB0 command.
+
+By default the B0 field is curl free.
 </command>
 
 <command name="HYPERBOLICDIVE">

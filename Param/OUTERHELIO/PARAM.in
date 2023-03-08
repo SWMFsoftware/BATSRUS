@@ -52,18 +52,18 @@ year			NameMaxTimeUnit
 3500			MaxBlock
 
 #GRIDRESOLUTION
-2.			nLevel (usually 11)
+20.0			Resolution
 initial			StringShape
 
 #GRIDRESOLUTION
-187.5                  Resolution
-box                     StringShape
-750                     xMinBox
--1500                    yMinBox
--1500                    zMinBox
-1500                    xMaxBox
-1500                     yMaxBox
-1500                     zMaxBox
+187.5			Resolution
+box			StringShape
+750			xMinBox
+-1500			yMinBox
+-1500			zMinBox
+1500			xMaxBox
+1500			yMaxBox
+1500			zMaxBox
 
 #GRIDRESOLUTION
 93.75			Resolution
@@ -153,7 +153,7 @@ F			DoSaveInitial
 y=0 MHD idl		StringPlot
 10			DnSavePlot
 -1.0			DtSavePlot
--1.0                    DxSavePlot
+-1.0			DxSavePlot
 y=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.0			DtSavePlot

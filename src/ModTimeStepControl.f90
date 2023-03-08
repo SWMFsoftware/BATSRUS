@@ -118,7 +118,7 @@ contains
          UseDtLimit, DtLimit, IsTimeAccurate
     use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
-         UseElectronPressure
+         UseElectronPressure, DoUpdate_V
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B
     use ModCoronalHeating, ONLY: get_block_heating, &
          UseAlfvenWaveDissipation, WaveDissipation_VC
@@ -203,7 +203,7 @@ contains
 #ifndef _OPENACC
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
-    if(UseAlfvenWaveDissipation)then
+    if(UseAlfvenWaveDissipation .and. DoUpdate_V(WaveFirst_) )then
        call get_tesi_c(iBlock, TeSi_C)
        call get_block_heating(iBlock)
 

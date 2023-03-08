@@ -61,6 +61,10 @@ module ModB0
   logical, public:: UseCurlB0 = .false.
   !$acc declare create(UseCurlB0)
 
+  ! Force free B0 means that J0 x B0 = 0 is assumed
+  logical, public:: UseForceFreeB0 = .false.
+  !$acc declare create(UseForceFreeB0)
+
   ! The momentum source term for non-current-free B0 field, curl B0 x B0
   ! may be alternatively calculated as div (B0 B0) - grad B0^2/2 -B0 div B0
   logical, public :: UseB0MomentumFlux = .false.
@@ -130,6 +134,9 @@ contains
           call read_var('UseB0MomentumFlux', UseB0MomentumFlux)
        end if
 
+    case("#FORCEFREEB0")
+       call read_var('UseForceFreeB0', UseForceFreeB0)
+
     case("#MONOPOLEB0")
        call read_var('MonopoleStrengthSi', MonopoleStrengthSi)
 
@@ -192,21 +199,29 @@ contains
     call init_magnetogram_lookup_table(iComm)
 
     if(iTableB0 > 0) then
-       ! if(iProc==0)write(*,*)NameSub,&
-       !     ' Input: UseCurlB0, rCurrentFreeB0, rSourceSurface = ',&
-       !     UseCurlB0, rCurrentFreeB0, rMaxB0
-       if(rMaxB0 < RadiusMax) then
+       if(iProc==0)write(*,*)NameSub,&
+            ' Input: UseCurlB0, rCurrentFreeB0, rSourceSurface = ',&
+            UseCurlB0, rCurrentFreeB0, rMaxB0
+       if(UseForceFreeB0) then
+          ! J0 is not zero, only J0 x B0 = 0
+          UseCurlB0 = .true.
+          rCurrentFreeB0 = 1.0
+          UseB0Source = .true.
+          if(iProc==0)write(*,*)NameSub,&
+                  ' ForceFreeB0, so UseCurlB0=T, rCurrentFreeB0= 1'
+       else if(rMaxB0 < RadiusMax)then
+          ! J0 is finite above rMaxB0
           UseCurlB0 = .true.
           rCurrentFreeB0 = rMaxB0
           UseB0Source = .true.
           if(iProc==0)write(*,*)NameSub,&
-               ' UseCurlB0 is switched ON, rCurrentFreeB0 = ',rCurrentFreeB0
+                  ' UseCurlB0 is switched ON, rCurrentFreeB0 = ',rCurrentFreeB0
        else if(UseCurlB0)then
-          ! if SourceSurface > SC boundary then USECURLB0 is NOT required
+          ! if rSourceSurface > SC boundary then UseCurlB0 is NOT required
           UseCurlB0 = .false.
           rCurrentFreeB0 = -1.0
           if(iProc==0)write(*,*)NameSub,&
-               ' NOTE: UseCurlB0 is switched OFF as source surface = ',rMaxB0
+               ' NOTE: UseCurlB0 is switched OFF as source surface = ', rMaxB0
        end if
     end if
 
@@ -616,6 +631,7 @@ contains
     if(UseB0MomentumFlux)then
        if(IsCartesian.or.IsRzGeometry)call stop_mpi(&
             'B0MomentumFlux is not implemented in RZ or Cartesian Geometry')
+       ! Divergence of Maxwell tensor : div(B0 B0 - B0^2/2)  = J0 x B0
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           B0MomentumSource_DC(:,i,j,k) =                                &
                + B0_DX(:,i+1,j,k)*sum(B0_DX(:,i+1,j,k)*                 &
@@ -646,6 +662,7 @@ contains
                + FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*                   &
                sum(B0_DZ(:,i,j,k  )**2)*0.50
 
+          ! Remove contribution from finite div(B0)
           B0MomentumSource_DC(:,i,j,k) =                                &
                B0MomentumSource_DC(:,i,j,k)/CellVolume_GB(i,j,k,iBlock) &
                - B0_DGB(:,i,j,k,iBlock)*DivB0_C(i,j,k)
