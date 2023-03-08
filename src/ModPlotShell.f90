@@ -26,9 +26,9 @@ module ModPlotShell
   ! Ranges for current plot:
   real :: dR, dLat, dLon
   real :: rMin, rMax, LonMin, LonMax, LatMin, LatMax
-  integer, parameter :: RadiusTransformLinear_ = 1  
-  integer, parameter :: RadiusTransformLog_ = 2  
-  integer, parameter :: RadiusTransformLog10_ = 3  
+  integer, parameter :: RadiusTransformLinear_ = 1
+  integer, parameter :: RadiusTransformLog_ = 2
+  integer, parameter :: RadiusTransformLog10_ = 3
   integer :: iRadiusTransform = RadiusTransformLinear_
 
   ! Local results container:
@@ -64,7 +64,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-
     ! Allocate results array and set up all the spherical shell
     if(allocated(PlotVar_VIII)) RETURN
 
@@ -72,9 +71,9 @@ contains
     call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar, &
          UseArraySyntaxIn=.true.)
     if(index(TypePlot_I(iFile),'shl')>0) then
-       iRadiusTransform = RadiusTransformLinear_  
+       iRadiusTransform = RadiusTransformLinear_
     elseif(index(TypePlot_I(iFile),'sln')>0) then
-       iRadiusTransform = RadiusTransformLog_  
+       iRadiusTransform = RadiusTransformLog_
     elseif(index(TypePlot_I(iFile),'slg')>0) then
        iRadiusTransform = RadiusTransformLog10_
     endif
@@ -186,7 +185,7 @@ contains
     ! Loop through shell points and interpolate PlotVar
     do i = 1, nR
        r = rMin + (i-1)*dR
-       if(iRadiusTransform == RadiusTransformLog_)then  
+       if(iRadiusTransform == RadiusTransformLog_)then
           r = exp(r)
        elseif(iRadiusTransform == RadiusTransformLog10_)then
           r = 10**r
@@ -292,9 +291,9 @@ contains
           NameVar = 'r lon lat'
        end if
        if(NameVar(1:1)=='r') then
-          if(iRadiusTransform == RadiusTransformLog_) then  
+          if(iRadiusTransform == RadiusTransformLog_) then
              NameVar='ln'//trim(NameVar)
-          elseif(iRadiusTransform == RadiusTransformLog10_) then  
+          elseif(iRadiusTransform == RadiusTransformLog10_) then
              NameVar='log'//trim(NameVar)
           endif
        endif

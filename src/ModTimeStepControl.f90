@@ -166,7 +166,6 @@ contains
        end if
     end do; end do; end do
 
-
     if(UseCoarseAxis)then
        if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
           call calc_coarse_axis_timestep(iBlock,NorthHemiSph_)

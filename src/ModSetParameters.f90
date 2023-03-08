@@ -1013,7 +1013,7 @@ contains
              elseif (  index(StringPlot, 'shl')>0 &
                   .or. index(StringPlot, 'sln')>0 &
                   .or. index(StringPlot, 'slg')>0)then
-                if(index(StringPlot, 'shl')>0) then  
+                if(index(StringPlot, 'shl')>0) then
                    TypePlotArea = 'shl'
                 elseif(index(StringPlot, 'sln')>0) then
                    TypePlotArea = 'sln'
@@ -2137,7 +2137,7 @@ contains
        case('#SUPERMAGINDICES')
           call read_magperturb_param(NameCommand)
           nFile = max(nFile, supermagfile_)
-          
+
        case("#GRIDGEOMETRY", "#GRIDGEOMETRYLIMIT")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('TypeGeometry', TypeGeometry, IsLowerCase=.true.)

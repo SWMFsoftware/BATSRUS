@@ -1041,7 +1041,7 @@ contains
     use ModWaves, ONLY: UseWavePressure
     use ModLaserHeating, ONLY: LaserHeating_CB
     use ModCurrent, ONLY: get_current
-    use ModB0, ONLY: UseCurlB0, CurlB0_DC, set_b0_source 
+    use ModB0, ONLY: UseCurlB0, CurlB0_DC, set_b0_source
     use ModEnergy, ONLY: get_fluid_energy_block
     use ModElectricField, ONLY: Efield_DGB, DivE_CB, Potential_GB, &
          Epot_DGB, Eind_DGB, &

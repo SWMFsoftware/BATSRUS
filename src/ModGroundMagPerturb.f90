@@ -1618,7 +1618,7 @@ contains
       real    :: SuperIndex_I(4)
       real    :: LonLat_D(2)
 
-      logical :: DoTest
+      logical:: DoTest
       character(len=*), parameter:: NameSub = 'write_supermag'
       !------------------------------------------------------------------------
       call test_start(NameSub, DoTest)
