@@ -247,7 +247,7 @@ minmod			TypeLimiter
 
 #SCHEME
 2			nOrder
-Roe			TypeFlux
+Linde			TypeFlux
 mc			TypeLimiter
 1.5			LimiterBeta
 
