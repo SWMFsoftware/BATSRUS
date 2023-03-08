@@ -1278,6 +1278,9 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
 
+    iPicGrid = iNewGrid
+    iPicDecomposition = iNewDecomposition
+    
     if(.not. allocated(iStatusPicCrit_CB)) RETURN
 
     if(nCriteriaPic==0) then
@@ -1286,9 +1289,6 @@ contains
     end if
 
     call pic_find_node
-
-    iPicGrid = iNewGrid
-    iPicDecomposition = iNewDecomposition
 
     ! if pic criteria exists in PARAM.in
     if(.not. allocated(iPicStatus_CBI)) &
