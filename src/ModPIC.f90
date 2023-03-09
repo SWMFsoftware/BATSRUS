@@ -1280,7 +1280,7 @@ contains
 
     iPicGrid = iNewGrid
     iPicDecomposition = iNewDecomposition
-    
+
     if(.not. allocated(iStatusPicCrit_CB)) RETURN
 
     if(nCriteriaPic==0) then
