@@ -9899,9 +9899,6 @@ Param/CORONA/CR1935_WSO.dat           NameHarmonicsFile
 NameHarmonicsFile is the name of the file containing the harmonics
 coefficients.
 
-rMagnetogram and rSourceSurface are the photosphere and source surface
-heliocentric radii, respectively. B0 becomes radial at rSourceSurface.
-
 After reading the harmonics file, the B0 lookup table is generated and saved.
 By default this lookup table is saved into "harmonics_bxyz.out" file.
 The defaults can be changed with the #LOOKUPTABLE command. Once the
@@ -9924,8 +9921,7 @@ NameHarmonicsFileNew is the name of the file containing the harmonics
 coefficients for the time at the end of the session.
 
 After reading the harmonics file, the B0NEW lookup table is generated
-and saved. By default this lookup table is saved into the
-"harmonics_bxyz_new.out" file.
+and saved into the "harmonics_bxyz_new.out" file.
 The default parameters of the lookup table can be changed with the
 #LOOKUPTABLE command. Once the lookup table file is created,
 it can be loaded directly and there is no need for this command.
