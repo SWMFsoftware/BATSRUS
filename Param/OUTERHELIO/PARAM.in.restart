@@ -140,7 +140,7 @@ T			UseOhNeutralBc
 -0.2988			VLISW_Bz_dim
 
 #REGIONS
-IsmFirst
+IsmFirst		NameRegionFormula
 6.E5			TempPop1LimitDim
 100.0			uPop1LimitDim
 0.9			MachPop2Limit
