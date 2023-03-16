@@ -835,10 +835,10 @@ contains
 
        ! No reflection when turbulence is balanced (waves are then
        ! assumed to be uncorrelated)
-       if(ImbalanceMax2*EwaveMinus <= EwavePlus)then
+       if(ImbalanceMax2*EwaveMinus < EwavePlus)then
           ReflectionRate = ReflectionRate*&
                (1.0 - ImbalanceMax*sqrt(EwaveMinus/EwavePlus))
-       elseif(ImbalanceMax2*EwavePlus <= EwaveMinus)then
+       elseif(ImbalanceMax2*EwavePlus < EwaveMinus)then
           ReflectionRate = ReflectionRate*&
                (ImbalanceMax*sqrt(EwavePlus/EwaveMinus)-1.0)
        else
@@ -1167,8 +1167,12 @@ contains
 
        ! alpha-gyroscale fractional cross helicity, which equals
        ! fractional cross helicity
-       Sigma = (Wplus - Wminus)/(Wplus + Wminus)
-
+       if(Wplus > 0 .and. Wminus > 0) then  
+         Sigma = (Wplus - Wminus)/(Wplus + Wminus)
+       else
+         Sigma = 0d0
+       endif  
+  
        ! Sign of major wave
        SignMajor = sign(1.0, Wplus - Wminus)
 
@@ -1306,7 +1310,7 @@ contains
                + StochasticAmplitude2*sqrt(BetaProton) &
                *exp(-StochasticExponent2/max(Delta,1e-15))) &
                *State_V(iRhoIon_I(iIon))*DeltaU**3 &
-               *InvGyroRadius/Wgyro
+               *InvGyroRadius/max(Wgyro,1e-15)
        end do
 
        ! Set k_parallel*V_Alfven = 1/t_minor (critical balance)
