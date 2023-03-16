@@ -140,7 +140,7 @@ module ModUser
        VliswBz    = 0.0 , VliswBzDim  = 0.0
 
   ! Region Formulas
-  character(len=20) :: RegionFormula
+  character(len=20) :: NameRegionFormula
   integer,parameter :: IsmFirst_ = 1, ColdCloud_ = 2
   integer :: iRegionFormula = IsmFirst_
 
@@ -269,8 +269,8 @@ contains
           call read_var("UseElectronImpact", UseElectronImpact)
 
        case("#REGIONS")
-          call read_var('RegionFormula', RegionFormula)
-          select case(RegionFormula)
+          call read_var('NameRegionFormula', NameRegionFormula)
+          select case(NameRegionFormula)
 
           case('IsmFirst')
              iRegionFormula = IsmFirst_
@@ -290,8 +290,8 @@ contains
              call read_var('RhoPop4LimitDim',  RhoPop4LimitDim)
 
           case default
-             call stop_mpi(NameSub//': unknown RegionFormula = ' &
-                     // RegionFormula)
+             call stop_mpi(NameSub//': unknown NameRegionFormula = ' &
+                     // NameRegionFormula)
           end select
 
        case("#DELTAU")
@@ -2386,7 +2386,8 @@ contains
               ! Inside termination shock
               iFluidProduced_C(i,j,k) = Ne3_
            else
-              ! No neutrals are produced in this region (but they are destroyed)
+              ! No neutrals are produced in this region 
+              ! but they are destroyed
               iFluidProduced_C(i,j,k) = 0
            end if
 
