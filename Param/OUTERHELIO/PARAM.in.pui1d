@@ -135,6 +135,7 @@ y=0 VAR idl		StringPlot
 -0.1296			VLISW_Bz_dim
 
 REGIONS
+IsmFirst		RegionFormula
 6.E5			TempPop1LimitDim
 100.0			uPop1LimitDim
 1.0			MachPop2Limit
@@ -142,7 +143,6 @@ REGIONS
 50.0			rPop3Limit
 1.0			MachPop4Limit
 1.0			MachPUIPop3
-1.2			MachSWPop1
 
 #USERINPUTEND -------------------------------------
 

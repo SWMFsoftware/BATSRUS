@@ -147,6 +147,7 @@ T			UseOhNeutralBc
 6519.0			VLISW_Te_dim [K]
 
 #REGIONS
+IsmFirst		RegionFormula
 6.E5			TempPop1LimitDim
 100.0			uPop1LimitDim
 0.9			MachPop2Limit
