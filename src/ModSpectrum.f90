@@ -89,7 +89,7 @@ contains
     integer                     :: iTemp
 
     integer                     :: iElement, iCharge
-    
+
     !  List of elements and their atomic weight of periodic table
     integer, parameter                  :: nElement = 30
     integer                             :: jTemp = 0
@@ -123,7 +123,7 @@ contains
 
        nLineAll = 1
        allocate(LineTable_I(nLineAll))
-       
+
        if(iElement < 9) then
           write(LineTable_I(1)%NameIon,'(a,i1.1)') &
                trim(NameElement_I(iElement)), iCharge
@@ -133,7 +133,7 @@ contains
        end if
        LineTable_I(1)%Aion = AElement_I(iElement)
        LineTable_I(1)%LineWavelength = LineWavelength
-       
+
        RETURN
     end if
 
@@ -349,7 +349,7 @@ contains
          UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I, UseIonFrac_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModLookupTable, ONLY: interpolate_lookup_table
-    
+
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
     logical, intent(in)   :: UseNbi
@@ -386,7 +386,7 @@ contains
     real                        :: LambdaMin
 
     real                        :: Value_I(2)
-    
+
 #ifndef SCALAR
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
@@ -495,7 +495,7 @@ contains
           call interpolate_lookup_table(iTablePhx, 10**LogTe, 10**LogNe, &
                10**log(r), Value_I, DoExtrapolate = .false.)
           Gint = 10.0**Value_I(1)
-          
+
           if(UseIonFrac_I(iFile) .and. IsFound)then
              EquilIonFrac = 10.0**Value_I(2)
              Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)

@@ -702,11 +702,11 @@ contains
        end if
 
        if(UseAlfvenWaves)then
-          !Energy density as specified in van der Holst et al. 2014
+          ! Energy density as specified in van der Holst et al. 2014
           Ewave = State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
                   *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
 
-          !Positive propagating waves
+          ! Positive propagating waves
           if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                * Xyz_DGB(x_:z_,i,j,k,iBlock))>0.0)then
 
@@ -714,7 +714,7 @@ contains
              State_VGB(WaveLast_,i,j,k,iBlock) = &
                   1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
 
-          !Negative propagating waves
+          ! Negative propagating waves
           else
              State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
              State_VGB(WaveFirst_,i,j,k,iBlock) = &
@@ -2390,7 +2390,7 @@ contains
               ! Inside termination shock
               iFluidProduced_C(i,j,k) = Ne3_
            else
-              ! No neutrals are produced in this region 
+              ! No neutrals are produced in this region
               ! but they are destroyed
               iFluidProduced_C(i,j,k) = 0
            end if

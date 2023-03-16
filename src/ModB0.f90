@@ -65,7 +65,7 @@ module ModB0
   logical, public:: UseForceFreeB0 = .false.
   !$acc declare create(UseForceFreeB0)
 
-  ! maximum radius of the force free B0 
+  ! maximum radius of the force free B0
   real, public:: rMaxForceFreeB0 = -1.0
 
   ! The momentum source term for non-current-free B0 field, curl B0 x B0
@@ -139,9 +139,9 @@ contains
 
     case("#FORCEFREEB0")
        call read_var('UseForceFreeB0', UseForceFreeB0)
-       if(UseForceFreeB0) then  
+       if(UseForceFreeB0) then
           call read_var('rMaxForceFreeB0', rMaxForceFreeB0)
-       endif  
+       endif
 
     case("#MONOPOLEB0")
        call read_var('MonopoleStrengthSi', MonopoleStrengthSi)
