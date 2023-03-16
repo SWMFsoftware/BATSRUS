@@ -1167,12 +1167,12 @@ contains
 
        ! alpha-gyroscale fractional cross helicity, which equals
        ! fractional cross helicity
-       if(Wplus > 0 .and. Wminus > 0) then  
-         Sigma = (Wplus - Wminus)/(Wplus + Wminus)
+       if(Wplus + Wminus > 0) then
+          Sigma = (Wplus - Wminus)/(Wplus + Wminus)
        else
-         Sigma = 0d0
-       endif  
-  
+          Sigma = 0
+       endif
+
        ! Sign of major wave
        SignMajor = sign(1.0, Wplus - Wminus)
 
