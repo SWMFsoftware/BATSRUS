@@ -616,7 +616,7 @@ contains
     real :: x, y, z, r
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3), vPUI_D(3), vPUISph_D(3)
     real :: SinTheta, SignZ
-
+    real :: Ewave
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
 
     logical :: DoTestCell
@@ -702,19 +702,23 @@ contains
        end if
 
        if(UseAlfvenWaves)then
+          !Energy density as specified in van der Holst et al. 2014
+          Ewave = State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
+                  *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
+
+          !Positive propagating waves
           if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                * Xyz_DGB(x_:z_,i,j,k,iBlock))>0.0)then
-             State_VGB(WaveFirst_,i,j,k,iBlock) = &
-                  State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
-                  *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
+
+             State_VGB(WaveFirst_,i,j,k,iBlock) = Ewave
              State_VGB(WaveLast_,i,j,k,iBlock) = &
                   1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
+
+          !Negative propagating waves
           else
-             State_VGB(WaveLast_,i,j,k,iBlock) = &
-                  State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
-                  *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
+             State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
              State_VGB(WaveFirst_,i,j,k,iBlock) = &
-	          1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
+	          1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
           end if
        end if
 
