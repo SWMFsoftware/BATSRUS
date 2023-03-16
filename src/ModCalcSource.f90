@@ -164,7 +164,8 @@ contains
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
     use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0,    &
          rCurrentFreeB0, DivB0_C, CurlB0_DC, B0_DGB, B0_DX, B0_DY, B0_DZ, &
-         UseDivFullBSource, B0MomentumSource_DC, UseForceFreeB0, rMaxForceFreeB0
+         UseDivFullBSource, B0MomentumSource_DC, &
+         UseForceFreeB0, rMaxForceFreeB0
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_,&
          correct_face_value

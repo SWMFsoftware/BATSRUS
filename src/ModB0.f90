@@ -213,8 +213,9 @@ contains
           UseCurlB0 = .true.
           rCurrentFreeB0 = 1.0
           UseB0Source = .true.
-          if(iProc==0)write(*,*)NameSub,&
-                  ' ForceFreeB0, so UseCurlB0=T, rCurrentFreeB0= 1,rMaxForceFreeB0=', rMaxForceFreeB0
+          if(iProc==0)write(*,*)NameSub, &
+               ' ForceFreeB0, so UseCurlB0=T, rCurrentFreeB0= 1, ', &
+               ' rMaxForceFreeB0=', rMaxForceFreeB0
        else if(rMaxB0 < RadiusMax)then
           ! J0 is finite above rMaxB0
           UseCurlB0 = .true.
