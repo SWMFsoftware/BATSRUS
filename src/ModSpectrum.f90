@@ -492,8 +492,8 @@ contains
 
        ! Photoexcitation
        if(present(r))then
-          call interpolate_lookup_table(iTablePhx, 10**LogTe, 10**LogNe, &
-               10**log(r), Value_I, DoExtrapolate = .false.)
+          call interpolate_lookup_table(iTablePhx, 10**LogTe, 10**LogNe, r, &
+               Value_I, DoExtrapolate = .false.)
           Gint = 10.0**Value_I(1)
 
           if(UseIonFrac_I(iFile) .and. IsFound)then
