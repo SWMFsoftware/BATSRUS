@@ -139,6 +139,11 @@ module ModUser
        VliswBy    = 0.0 , VliswByDim  = 0.0, &
        VliswBz    = 0.0 , VliswBzDim  = 0.0
 
+  ! Region Formulas
+  character(len=20) :: NameRegionFormula
+  integer,parameter :: IsmFirst_ = 1, ColdCloud_ = 2
+  integer :: iRegionFormula = IsmFirst_
+
   ! Velocity, temperature, Mach number and radius limits for the populations
   real :: TempPop1LimitDim = 1e5    ! [K]
   real :: uPop1LimitDim    = 100.0  ! [km/s]
@@ -147,7 +152,6 @@ module ModUser
   real :: MachPop4Limit    = 2.0
   real :: rPop3Limit       = 50.0   ! [AU] it is all Pop3 out to rPop3Limit
   real :: MachPUIPop3      = 0.9
-  real :: MachSWPop1       = 1.2
 
   real :: RhoPop4LimitDim  = 0.01  ! for cold cloud
 
@@ -255,7 +259,6 @@ contains
           call read_var('DoInitializeCloud', DoInitializeCloud)
           call read_var('UseSrcsInHelio', UseSrcsInHelio)
           call read_var('HpLimit', HpLimit)
-          call read_var('RhoPop4LimitDim', RhoPop4LimitDim)
 
           ! Bair. This is a flag to use charge exchange formula
           ! with the extra splitting terms.
@@ -266,16 +269,30 @@ contains
           call read_var("UseElectronImpact", UseElectronImpact)
 
        case("#REGIONS")
-          call read_var('TempPop1LimitDim', TempPop1LimitDim)
-          call read_var('uPop1LimitDim',    uPop1LimitDim)
-          call read_var('MachPop2Limit',    MachPop2Limit)
-          call read_var('MachPop3Limit',    MachPop3Limit)
-          call read_var('rPop3Limit',       rPop3Limit)
-          call read_var('MachPop4Limit',    MachPop4Limit)
-          if(.not.IsMhd)then
-             call read_var('MachPUIPop3',   MachPUIPop3)
-             call read_var('MachSWPop1',    MachSWPop1)
-          end if
+          call read_var('NameRegionFormula', NameRegionFormula)
+          select case(NameRegionFormula)
+
+          case('IsmFirst')
+             iRegionFormula = IsmFirst_
+             call read_var('TempPop1LimitDim', TempPop1LimitDim)
+             call read_var('uPop1LimitDim',    uPop1LimitDim)
+             call read_var('MachPop2Limit',    MachPop2Limit)
+             call read_var('MachPop3Limit',    MachPop3Limit)
+             call read_var('rPop3Limit',       rPop3Limit)
+             call read_var('MachPop4Limit',    MachPop4Limit)
+             if(.not.IsMhd) call read_var('MachPUIPop3',   MachPUIPop3)
+
+          case('ColdCloud')
+             iRegionFormula = ColdCloud_
+             call read_var('TempPop1LimitDim', TempPop1LimitDim)
+             call read_var('uPopLimitDim',     uPop1LimitDim)
+             call read_var('rPop3Limit',       rPop3Limit)
+             call read_var('RhoPop4LimitDim',  RhoPop4LimitDim)
+
+          case default
+             call stop_mpi(NameSub//': unknown NameRegionFormula = ' &
+                     // NameRegionFormula)
+          end select
 
        case("#DELTAU")
           call read_var('DeltaUSi', DeltaUSi)
@@ -599,7 +616,7 @@ contains
     real :: x, y, z, r
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3), vPUI_D(3), vPUISph_D(3)
     real :: SinTheta, SignZ
-
+    real :: Ewave
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
 
     logical :: DoTestCell
@@ -685,19 +702,23 @@ contains
        end if
 
        if(UseAlfvenWaves)then
+          ! Energy density as specified in van der Holst et al. 2014
+          Ewave = State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
+                  *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
+
+          ! Positive propagating waves
           if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                * Xyz_DGB(x_:z_,i,j,k,iBlock))>0.0)then
-             State_VGB(WaveFirst_,i,j,k,iBlock) = &
-                  State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
-                  *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
+
+             State_VGB(WaveFirst_,i,j,k,iBlock) = Ewave
              State_VGB(WaveLast_,i,j,k,iBlock) = &
                   1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
+
+          ! Negative propagating waves
           else
-             State_VGB(WaveLast_,i,j,k,iBlock) = &
-                  State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
-                  *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
+             State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
              State_VGB(WaveFirst_,i,j,k,iBlock) = &
-	          1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
+	          1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
           end if
        end if
 
@@ -2280,11 +2301,8 @@ contains
     integer :: i, j, k
 
     ! cold cloud
-    real :: RhoDim
-    real :: InvRho, Ux, Uy, Uz, U2, SWHU2, p, Mach2, MachSW2
-    real :: RhoT, TempDim, TempSWDim, U2Dim, B2, Rho, MachAlfven2, Tave
-    real :: pSW, InvRhoSW, MachPUI2, pPUI, InvRhoPUI, RhoPUI, r
-    real :: MachMagneto2, RhoSw, SWHMach2
+    real :: RhoDim, InvRho, U2, p, Mach2, MachSW2, TempDim,  U2Dim, Rho
+    real :: pSW, InvRhoSW, MachPUI2, pPUI, InvRhoPUI, RhoPUI, RhoSw
 
     ! Produce fluid3 at the inner boundary
 
@@ -2298,175 +2316,141 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-       if(r_GB(i,j,k,iBlock) < rPop3Limit) then
-          iFluidProduced_C(i,j,k) = Ne3_
-          CYCLE
-       end if
-
-       if(.not.IsMhd)then
-          if(UseElectronPressure) then
-             p = State_VGB(SWHp_,i,j,k,iBlock) &
-                  + State_VGB(Pu3P_,i,j,k,iBlock) + State_VGB(Pe_,i,j,k,iBlock)
-          else
-             p = State_VGB(SWHp_,i,j,k,iBlock) + State_VGB(Pu3P_,i,j,k,iBlock)
-          end if
-          pSW = State_VGB(SWHp_,i,j,k,iBlock)
-          pPUI = State_VGB(Pu3P_,i,j,k,iBlock)
-          r = r_GB(i,j,k,iBlock)
-          ! Calculating speed of total fluid
-          Ux = (State_VGB(RhoUx_,i,j,k,iBlock) &
-               + State_VGB(Pu3RhoUx_,i,j,k,iBlock)) &
-               /(State_VGB(Rho_,i,j,k,iBlock) &
-               + State_VGB(Pu3Rho_,i,j,k,iBlock))
-          Uy = (State_VGB(RhoUy_,i,j,k,iBlock) &
-               + State_VGB(Pu3RhoUy_,i,j,k,iBlock)) &
-               /(State_VGB(Rho_,i,j,k,iBlock) &
-               + State_VGB(Pu3Rho_,i,j,k,iBlock))
-          Uz = (State_VGB(RhoUz_,i,j,k,iBlock) &
-               + State_VGB(Pu3RhoUz_,i,j,k,iBlock)) &
-               /(State_VGB(Rho_,i,j,k,iBlock) &
-               + State_VGB(Pu3Rho_,i,j,k,iBlock))
-          U2 = (Ux**2 + Uy**2 + Uz**2)
-          ! Speed of SWH population
-          SWHU2 = (State_VGB(SWHRhoUx_,i,j,k,iBlock) &
-               /State_VGB(SWHRho_,i,j,k,iBlock))**2 &
-               + (State_VGB(SWHRhoUy_,i,j,k,iBlock) &
-               /State_VGB(SWHRho_,i,j,k,iBlock))**2 &
-               + (State_VGB(SWHRhoUz_,i,j,k,iBlock) &
-               /State_VGB(SWHRho_,i,j,k,iBlock))**2
-          U2Dim  = U2*No2Io_V(UnitU_)**2
-          ! for cold cloud
-          RhoDim = State_VGB(Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_)
-          Rho = State_VGB(SWHRho_,i,j,k,iBlock) &
-               + State_VGB(Pu3Rho_,i,j,k,iBlock)
-          RhoSW = State_VGB(SWHRho_,i,j,k,iBlock)
-          RhoPUI = State_VGB(Pu3Rho_,i,j,k,iBlock)
-          Tave = 0.5*p/Rho
-          InvRhoSW = 1.0/RhoSW
-          InvRhoPUI = 1.0/RhoPUI
+       if(IsMhd) then
+          ! Single ion
+          Rho = State_VGB(Rho_,i,j,k,iBlock)
           InvRho = 1.0/Rho
-          B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-          ! Square of Alfven Mach Number
-          MachAlfven2 = U2*Rho/(B2+1.E-30)
-          MachMagneto2 = U2/((1.E-10)+(Gamma*Tave)+(B2*InvRho))
-          ! Square of Mach number using U2
-          Mach2  = U2/(Gamma*p*InvRho)
+          U2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*InvRho**2
+          if(UseElectronPressure) then
+             p = State_VGB(P_,i,j,k,iBlock) + State_VGB(Pe_,i,j,k,iBlock)
+          else
+             p = State_VGB(P_,i,j,k,iBlock)
+          endif
+       else
+          ! Multi ion
+          Rho    = State_VGB(SWHRho_,i,j,k,iBlock) &
+                  + State_VGB(Pu3Rho_,i,j,k,iBlock)
+          RhoSW  = State_VGB(SWHRho_,i,j,k,iBlock)
+          RhoPui = State_VGB(Pu3Rho_,i,j,k,iBLock)
+          InvRho    = 1.0/Rho
+          InvRhoSW  = 1.0/RhoSW
+          InvRhoPUI = 1.0/RhoPui
+          U2 = sum((State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) &
+                  +State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock))**2) &
+                  *InvRho**2
+          if (UseElectronPressure) then
+             p = State_VGB(SWHP_,i,j,k,iBlock) &
+                     + State_VGB(Pu3P_,i,j,k,iBlock) &
+                     + State_VGB(Pe_,i,j,k,iBlock)
+          else
+             p = State_VGB(SWHP_,i,j,k,iBlock) &
+                     + State_VGB(Pu3P_,i,j,k,iBlock)
+          endif
+          pSW  = State_VGB(SWHP_,i,j,k,iBlock)
+          pPUI = State_VGB(Pu3P_,i,j,k,iBlock)
+
           ! Square of PUI Mach number (using total fluid speed)
           ! Zieger This Mach number has no physical meaning
           MachPUI2 = U2/(Gamma*pPUI*InvRhoPUI)
+
           ! Square of Solar Wind Mach number (using total fluid speed)
           ! Zieger This Mach number has no physical meaning
           MachSW2 = U2/(Gamma*pSW*InvRhoSW)
-          ! Square of Solar Wind Mach number (using SWH speed)
-          ! Zieger This Mach number has no physical meaning
-          SWHMach2 = SWHU2/(Gamma*pSW*InvRhoSW)
-          ! Temperature in Kelvins
-          TempDim = 0.5*InvRho*p*No2Si_V(UnitTemperature_)
-          ! Temperature of solar wind ions in Kelvins
-          TempSWDim = InvRhoSW*pSW*No2Si_V(UnitTemperature_)
-          ! use sonic Mach number - good for slow Bow Shock (Zieger+ 2015)
-          if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
-             ! Outside the bow shock
-             iFluidProduced_C(i,j,k) = Ne4_
-          elseif(TempDim < TempPop1LimitDim .and. U2Dim < uPop1LimitDim**2)then
-             ! Outside the heliopause
-             iFluidProduced_C(i,j,k) = Neu_
-          elseif( Mach2 < MachPop2Limit**2 )then
-             ! Heliosheath
-             iFluidProduced_C(i,j,k) = Ne2_
-          elseif( Mach2 > MachPop3Limit**2 )then
-             !! before 85K      elseif( MachSW2 > MachPop3Limit**2 )then
-             ! Inside termination shock
-             iFluidProduced_C(i,j,k) = Ne3_
-          else
-             ! No neutrals are produced in this region (but they are destroyed)
-             iFluidProduced_C(i,j,k) = 0
-          end if
-          ! adding more conditions to help with the regions
-          if (MachSW2 > MachPop4Limit**2 .and. MachPUI2 < MachPUIPop3**2 ) then
-             iFluidProduced_C(i,j,k) = Ne2_
-          end if
-          if (MachSW2 < MachPop3Limit**2 .and. MachPUI2 > MachPUIPop3**2 &
-               .and. r<rPop3Limit) then
-             iFluidProduced_C(i,j,k) = Ne3_
-          end if
-          ! first 10K after heating
-       else
-          InvRho = 1.0/State_VGB(Rho_,i,j,k,iBlock)
-          if(UseElectronPressure)then
-             p = State_VGB(p_,i,j,k,iBlock) + State_VGB(Pe_, i,j,k, iBlock)
-          else
-             p = State_VGB(p_,i,j,k,iBlock)
-          endif
-          U2     = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*InvRho**2
-          U2Dim  = U2*No2Io_V(UnitU_)**2
-          ! merav modifications
-          B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-          ! Square of Alfven Mach Number
-          MachAlfven2 = U2/(B2*InvRho + 1.E-30)
-          MachMagneto2 = U2/(1.E-10 + Gamma*p*InvRho + B2*InvRho)
-          ! end of merav modifications
-          ! Square of Mach number
-          Mach2      = U2/(Gamma*p*InvRho)
-          RhoDim = State_VGB(Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_)
-          ! Temperature in Kelvins
-          TempDim = 0.5*InvRho*p*No2Si_V(UnitTemperature_)
-          ! Apply full source except near the boundaries between regions
-          if(.not.UseColdCloud)then
-             if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
-                ! Outside the bow shock
-                iFluidProduced_C(i,j,k) = Ne4_
-             elseif( TempPop1LimitDim > TempDim &
-                  .and. uPop1LimitDim**2 > U2Dim)then
-                ! Outside the heliopause
-                iFluidProduced_C(i,j,k) = Neu_
-             elseif( MachPop2Limit**2 > Mach2 )then
-                ! Heliosheath
-                iFluidProduced_C(i,j,k) = Ne2_
-             elseif( Mach2 > MachPop3Limit**2 )then
-                ! Inside termination shock
-                iFluidProduced_C(i,j,k) = Ne3_
-             else
-                ! No neutrals are produced in this region
-                ! but they are destroyed
-                iFluidProduced_C(i,j,k) = 0
-             end if
-          else
-             if(DoInitializeCloud)then
-                if (r_GB(i,j,k,iBlock) > rPop3Limit) then
-                   ! Outside the bow shock
-                   iFluidProduced_C(i,j,k) = Ne4_
-                else
-                   ! Outside the heliopause
-                   iFluidProduced_C(i,j,k) = Ne3_
-                end if
-             else
-                !! for studies of heliosphere with cold cloud
-                if (TempPop1LimitDim > TempDim &
-                     .and. RhoPop4LimitDim > RhoDim) then
-                   ! Outside the bow shock
-                   iFluidProduced_C(i,j,k) = Ne4_
-                elseif (TempPop1LimitDim > TempDim &
-                     .and. RhoDim > RhoPop4LimitDim) then
-                   ! Outside the heliopause
-                   iFluidProduced_C(i,j,k) = Neu_
-                elseif(TempDim > TempPop1LimitDim &
-                     .and. uPop1LimitDim**2 > U2Dim)then
-                   ! Heliosheath
-                   iFluidProduced_C(i,j,k) = Ne2_
-                elseif(TempDim > TempPop1LimitDim .and. &
-                     U2Dim > uPop1LimitDim**2)then
-                   ! Inside termination shock
-                   iFluidProduced_C(i,j,k) = Ne3_
-                else
-                   ! No neutrals are produced in this region
-                   ! but they are destroyed
-                   iFluidProduced_C(i,j,k) = 0
-                end if
-             endif
-          endif
+       endif
 
-       end if
+       RhoDim = Rho*No2Si_V(UnitRho_)
+       U2Dim = U2*No2Io_V(UnitU_)**2
+       TempDim = 0.5*p*InvRho*No2Si_V(UnitTemperature_)
+
+       ! Square of Mach number
+       Mach2 = U2/(Gamma*p*InvRho)
+
+       ! Apply region formulas
+       select case(iRegionFormula)
+
+       case(IsmFirst_)
+           if(r_GB(i,j,k,iBlock) < rPop3Limit) then
+              iFluidProduced_C(i,j,k) = Ne3_
+              CYCLE
+           end if
+
+           if (MachPop4Limit**2 < Mach2 &
+                   .and. uPop1LimitDim**2 > U2Dim) then
+              ! Outside the bow shock
+              iFluidProduced_C(i,j,k) = Ne4_
+           elseif(TempDim < TempPop1LimitDim &
+                           .and. U2Dim < uPop1LimitDim**2)then
+              ! Outside the heliopause
+              iFluidProduced_C(i,j,k) = Neu_
+           elseif( Mach2 < MachPop2Limit**2 )then
+              ! Heliosheath
+              iFluidProduced_C(i,j,k) = Ne2_
+           elseif( Mach2 > MachPop3Limit**2 )then
+              !! before 85K      elseif( MachSW2 > MachPop3Limit**2 )then
+              ! Inside termination shock
+              iFluidProduced_C(i,j,k) = Ne3_
+           else
+              ! No neutrals are produced in this region
+              ! but they are destroyed
+              iFluidProduced_C(i,j,k) = 0
+           end if
+
+           if (.not.IsMhd) then
+              ! adding more conditions to help with the regions
+              if (MachSW2 > MachPop4Limit**2 &
+                      .and. MachPUI2 < MachPUIPop3**2 ) then
+                 iFluidProduced_C(i,j,k) = Ne2_
+              end if
+              if (MachSW2 < MachPop3Limit**2 &
+                      .and. MachPUI2 > MachPUIPop3**2 &
+                   .and. r_GB(i,j,k,iBlock)<rPop3Limit) then
+                 iFluidProduced_C(i,j,k) = Ne3_
+              end if
+           endif
+
+       case(ColdCloud_)
+           if(DoInitializeCloud)then
+              if(r_GB(i,j,k,iBlock) > rPop3Limit) then
+                 ! Outside the bow shock
+                 iFluidProduced_C(i,j,k) = Ne4_
+              else
+                 ! Outside the heliopause
+                 iFluidProduced_C(i,j,k) = Ne3_
+              endif
+           else
+              !! for studies of heliosphere with cold cloud
+              if(r_GB(i,j,k,iBlock) < rPop3Limit) then
+                 iFluidProduced_C(i,j,k) = Ne3_
+                 CYCLE
+              end if
+
+              if (TempPop1LimitDim > TempDim &
+                   .and. RhoPop4LimitDim > RhoDim) then
+                 ! Outside the bow shock
+                 iFluidProduced_C(i,j,k) = Ne4_
+              elseif (TempPop1LimitDim > TempDim &
+                   .and. RhoDim > RhoPop4LimitDim) then
+                 ! Outside the heliopause
+                 iFluidProduced_C(i,j,k) = Neu_
+              elseif(TempDim > TempPop1LimitDim &
+                   .and. uPop1LimitDim**2 > U2Dim)then
+                 ! Heliosheath
+                 iFluidProduced_C(i,j,k) = Ne2_
+              elseif(TempDim > TempPop1LimitDim .and. &
+                   U2Dim > uPop1LimitDim**2)then
+                 ! Inside termination shock
+                 iFluidProduced_C(i,j,k) = Ne3_
+              else
+                 ! No neutrals are produced in this region
+                 ! but they are destroyed
+                 iFluidProduced_C(i,j,k) = 0
+              end if
+           endif
+
+       case default
+           call CON_stop(NameSub// &
+                   ' : unexpected region formulas.')
+       end select
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)

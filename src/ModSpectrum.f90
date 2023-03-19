@@ -124,7 +124,7 @@ contains
        nLineAll = 1
        allocate(LineTable_I(nLineAll))
 
-       if(iElement < 10) then
+       if(iElement < 9) then
           write(LineTable_I(1)%NameIon,'(a,i1.1)') &
                trim(NameElement_I(iElement)), iCharge
        else
@@ -492,7 +492,7 @@ contains
 
        ! Photoexcitation
        if(present(r))then
-          call interpolate_lookup_table(iTablePhx, LogTe, LogNe, log(r), &
+          call interpolate_lookup_table(iTablePhx, 10**LogTe, 10**LogNe, r, &
                Value_I, DoExtrapolate = .false.)
           Gint = 10.0**Value_I(1)
 

@@ -835,10 +835,10 @@ contains
 
        ! No reflection when turbulence is balanced (waves are then
        ! assumed to be uncorrelated)
-       if(ImbalanceMax2*EwaveMinus <= EwavePlus)then
+       if(ImbalanceMax2*EwaveMinus < EwavePlus)then
           ReflectionRate = ReflectionRate*&
                (1.0 - ImbalanceMax*sqrt(EwaveMinus/EwavePlus))
-       elseif(ImbalanceMax2*EwavePlus <= EwaveMinus)then
+       elseif(ImbalanceMax2*EwavePlus < EwaveMinus)then
           ReflectionRate = ReflectionRate*&
                (ImbalanceMax*sqrt(EwavePlus/EwaveMinus)-1.0)
        else
@@ -1104,7 +1104,7 @@ contains
     real :: Wmajor, Wminor, Wplus, Wminus, WmajorGyro, WminorGyro, Wgyro
     real :: DampingElectron, DampingPar_I(nIonFluid)
     real :: DampingPerp_I(nIonFluid), DampingProton
-    real :: RhoProton, Ppar, Sigma, SignMajor
+    real :: RhoProton, Ppar, SignMajor
     real :: QratioProton, ExtensionCoef, Qmajor, Qminor
     real, dimension(nIonFluid) :: QminorFraction_I, QmajorFraction_I, &
          CascadeTimeMajor_I, CascadeTimeMinor_I, Qmajor_I, Qminor_I, &
@@ -1164,10 +1164,6 @@ contains
 
        Wmajor = max(Wplus, Wminus)
        Wminor = min(Wplus, Wminus)
-
-       ! alpha-gyroscale fractional cross helicity, which equals
-       ! fractional cross helicity
-       Sigma = (Wplus - Wminus)/(Wplus + Wminus)
 
        ! Sign of major wave
        SignMajor = sign(1.0, Wplus - Wminus)
@@ -1306,7 +1302,7 @@ contains
                + StochasticAmplitude2*sqrt(BetaProton) &
                *exp(-StochasticExponent2/max(Delta,1e-15))) &
                *State_V(iRhoIon_I(iIon))*DeltaU**3 &
-               *InvGyroRadius/Wgyro
+               *InvGyroRadius/max(Wgyro,1e-15)
        end do
 
        ! Set k_parallel*V_Alfven = 1/t_minor (critical balance)

@@ -40,11 +40,46 @@ pro PHOTOEXC_input,abund_unity=abund_unity,rmax=rmax,Nr=Nr,zElem=zElem,zIon=zIon
 ;  This is a modified version of SPECTRUM_input.pro.  
 ;
 ; 
-; EXAMPLE
+; EXAMPLES
 ;
-;     PHOTOEXC_input,zElem=26,zIon=10,wvl=6376.290
+
+;     PHOTOEXC_input,zElem=26,zIon=10,wvl=6376.2900
+;6376.2900    Fe X              3s2 3p5 2P3/2 - 3s2 3p5 2P1/2  
+
 ;     PHOTOEXC_input,zElem=26,zIon=11,wvl=7894.0308
-; 
+;7894.0308    Fe XI             3s2 3p4 3P2 - 3s2 3p4 3P1
+
+;     PHOTOEXC_input,zElem=26,zIon=13,wvl=10749.1055 
+;10749.1055   Fe XIII           3s2 3p2 3P0 - 3s2 3p2 3P1
+
+;     PHOTOEXC_input,zElem=26,zIon=13,wvl=10800.7695 
+;10800.7695   Fe XIII           3s2 3p2 3P1 - 3s2 3p2 3P2
+
+;     PHOTOEXC_input,zElem=26,zIon=14,wvl=5304.4771
+;5304.4771    Fe XIV            3s2.3p 2P1/2 - 3s2.3p 2P3/2
+
+;     PHOTOEXC_input,zElem=26,zIon=15,wvl=7062.1470
+;7062.1470    Fe XV             3s 3p 3P1 - 3s 3p 3P2
+
+;     PHOTOEXC_input,zElem=14,zIon=10,wvl=14304.7188
+;14304.7188   Si X              2s2 2p 2P1/2 - 2s2 2p 2P3/2
+
+;     PHOTOEXC_input,zElem=16,zIon=8,wvl=9916.7002
+;9916.7002    S VIII            2s2.2p5 2P3/2 - 2s2.2p5 2P1/2
+
+;     PHOTOEXC_input,zElem=16,zIon=12,wvl=7613.0732
+;7613.0732    S XII             2s2 2p 2P1/2 - 2s2 2p 2P3/2
+
+;     PHOTOEXC_input,zElem=28,zIon=15,wvl=6703.5361 
+;6703.5361    Ni XV             3s2 3p2 3P0 - 3s2 3p2 3P1
+
+;     PHOTOEXC_input,zElem=28,zIon=15,wvl=8026.3262 
+;8026.3262    Ni XV             3s2 3p2 3P1 - 3s2 3p2 3P2
+
+;     PHOTOEXC_input,zElem=12,zIon=8,wvl=30284.6758
+;30284.6758   Mg VIII           2s2 2p 2P1/2 - 2s2 2p 2P3/2
+
+  
 ;  
 ; CHIANTI version
   Result = CH_GET_VERSION()

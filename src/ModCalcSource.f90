@@ -164,7 +164,8 @@ contains
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
     use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0,    &
          rCurrentFreeB0, DivB0_C, CurlB0_DC, B0_DGB, B0_DX, B0_DY, B0_DZ, &
-         UseDivFullBSource, B0MomentumSource_DC, UseForceFreeB0
+         UseDivFullBSource, B0MomentumSource_DC, &
+         UseForceFreeB0, rMaxForceFreeB0
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_,&
          correct_face_value
@@ -378,6 +379,7 @@ contains
              end if
           end do; end do; end do
        end do
+       if(DoTest)call write_source('After UseSpeedMin')
     end if ! UseSpeedMin
 
     if(UseWavePressure)then
@@ -417,6 +419,7 @@ contains
                   Source_VC(RhoUy_,i,j,k) + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
           end if
        end do; end do; end do
+       if(DoTest)call write_source('After UseWavePressure')
     end if
 
     if(UseTurbulentCascade) call get_wave_reflection(iBlock)
@@ -453,6 +456,7 @@ contains
                   Source_VC(WaveFirst_:WaveLast_,i,j,k) &
                   - WaveDissipation_VC(:,i,j,k)
           end do; end do; end do
+          if(DoTest)call write_source('After UseAlfvenWaveDissipation')
        end if
 
        if(UseCoronalHeating)then
@@ -493,6 +497,7 @@ contains
                      + CoronalHeating_C(i,j,k)
              end if
           end do; end do; end do
+          if(DoTest)call write_source('After UseCoronalHeating')
        end if
     end if
 
@@ -513,6 +518,7 @@ contains
                   + RadCooling_C(i,j,k)
           end if
        end do; end do; end do
+       if(DoTest)call write_source('After UseRadCooling')
     end if
 
     if(UseElectronPressure .and. &
@@ -666,6 +672,7 @@ contains
                   *0.5*(Pe_G(i+1,j,k) - Pe_G(i-1,j,k))/CellSize_DB(x_,iBlock)
           end do; end do; end do
        end if
+       if(DoTest)call write_source('After UseRzGeometry')
     end if ! UseRzGeometry
 
     ! We consider two cases: curl(B0) is zero analytically or non-zero
@@ -817,7 +824,7 @@ contains
           CurlB0CrossB_D = cross_product( CurlB0_DC(:,i,j,k),&
                State_VGB(Bx_:Bz_,i,j,k,iBlock))
           ! Add curl(B0)xB0 if necessary
-          if(.not.UseForceFreeB0) &
+          if(.not.UseForceFreeB0 .or. r_GB(i,j,k,iBlock) > rMaxForceFreeB0) &
                CurlB0CrossB_D = CurlB0CrossB_D + B0MomentumSource_DC(:,i,j,k)
           ! Add momentum source
           SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &

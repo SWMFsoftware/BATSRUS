@@ -65,6 +65,9 @@ module ModB0
   logical, public:: UseForceFreeB0 = .false.
   !$acc declare create(UseForceFreeB0)
 
+  ! maximum radius of the force free B0
+  real, public:: rMaxForceFreeB0 = -1.0
+
   ! The momentum source term for non-current-free B0 field, curl B0 x B0
   ! may be alternatively calculated as div (B0 B0) - grad B0^2/2 -B0 div B0
   logical, public :: UseB0MomentumFlux = .false.
@@ -136,6 +139,9 @@ contains
 
     case("#FORCEFREEB0")
        call read_var('UseForceFreeB0', UseForceFreeB0)
+       if(UseForceFreeB0) then
+          call read_var('rMaxForceFreeB0', rMaxForceFreeB0)
+       endif
 
     case("#MONOPOLEB0")
        call read_var('MonopoleStrengthSi', MonopoleStrengthSi)
@@ -207,8 +213,9 @@ contains
           UseCurlB0 = .true.
           rCurrentFreeB0 = 1.0
           UseB0Source = .true.
-          if(iProc==0)write(*,*)NameSub,&
-                  ' ForceFreeB0, so UseCurlB0=T, rCurrentFreeB0= 1'
+          if(iProc==0)write(*,*)NameSub, &
+               ' ForceFreeB0, so UseCurlB0=T, rCurrentFreeB0= 1, ', &
+               ' rMaxForceFreeB0=', rMaxForceFreeB0
        else if(rMaxB0 < RadiusMax)then
           ! J0 is finite above rMaxB0
           UseCurlB0 = .true.
