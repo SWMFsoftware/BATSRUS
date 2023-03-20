@@ -26,11 +26,13 @@ contains
   subroutine update_state(iBlock)
 
     use ModMain, ONLY: nStep, iStage, Cfl, UseUserUpdateStates, UseBufferGrid
-    use ModVarIndexes, ONLY: nVar, Ehot_, SignB_, NameVar_V, nFluid
+    use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Ehot_, SignB_, &
+         NameVar_V, nFluid
     use ModAdvance, ONLY: State_VGB, StateOld_VGB, DTMAX_CB, &
          Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, &
          nVarUpdate, iVarUpdate_I, DoUpdate_V
-    use ModPhysics, ONLY: No2Si_V, UnitT_
+    use ModPhysics, ONLY: &
+         No2Si_V, No2Io_V, UnitT_, UnitU_, UnitRhoU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
     use ModEnergy, ONLY: limit_pressure
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -42,6 +44,7 @@ contains
     integer, intent(in) :: iBlock
     integer :: iVar, i, j, k
     integer, parameter:: iGang=1
+    real :: Rho
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state'
@@ -55,9 +58,19 @@ contains
        if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
             IsConserv_CB(iTest,jTest,kTest,iBlock)
        write(*,*)
-       do iVar=1,nVar
-          write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-               State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+       do iVar = 1, nVar
+          write(*,'(2x,2a,2es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+               State_VGB(iVar,iTest,jTest,kTest,iBlockTest), &
+               State_VGB(iVar,iTest,jTest,kTest,iBlockTest) &
+               *No2Io_V(iUnitCons_V(iVar))
+          if(iVar >= RhoUx_ .and. iVar <= RhoUz_)then
+             Rho = State_VGB(Rho_,iTest,jTest,kTest,iBlockTest)
+             write(*,'(2x,a,2es23.15)') &
+                  'Velocity (TestCell)  =',&
+                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)/Rho, &
+                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)/Rho &
+                  *No2Io_V(UnitU_)
+          end if
        end do
        write(*,*)'Fluxes and sources for ', NameVar_V(iVarTest)
        write(*,'(2x,a,2es23.15)') &
