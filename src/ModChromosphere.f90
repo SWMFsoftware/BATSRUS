@@ -125,10 +125,26 @@ contains
 
     if(any(TeSi_C < 0)) then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if (TeSi_C(i,j,k) < 0) &
+          if (TeSi_C(i,j,k) < 0) then
                write(*,*) NameSub, ' Te is negative at Xyz_DGB =', &
                Xyz_DGB(:,i,j,k,iBlock)
-          call stop_mpi('Te is negative!')
+               if(UseMultiIon) then
+                  write(*,*) "UseMultiIon=T, Pe =",State_VGB(Pe_,i,j,k,iBlock),&
+                              ", RhoI= ",State_VGB(iRhoIon_I,i,j,k,iBlock)
+               elseif(UseIdealEos) then
+                  write(*,*) "IdealEOS"
+                  if(UseElectronPressure)then
+                     write(*,*) "UseElectronPressure=T, Pe =",State_VGB(Pe_,i,j,k,iBlock),&
+                              ", Rho =",State_VGB(Rho_,i,j,k,iBlock)
+                  else
+                     write(*,*) "UseElectronPressure=F, p =",State_VGB(p_,i,j,k,iBlock),&
+                              ", Rho =",State_VGB(Rho_,i,j,k,iBlock)
+                  endif
+               else
+                  write(*,*) "NonIdeal EOS"
+               endif
+               call stop_mpi('Te is negative!')
+          endif  
        end do; end do; end do
     endif
     call test_stop(NameSub, DoTest, iBlock)
