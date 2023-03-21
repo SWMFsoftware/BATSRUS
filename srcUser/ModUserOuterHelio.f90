@@ -141,8 +141,8 @@ module ModUser
 
   ! Region Formulas
   character(len=20) :: NameRegionFormula
-  integer,parameter :: IsmFirst_ = 1, ColdCloud_ = 2
-  integer :: iRegionFormula = IsmFirst_
+  integer,parameter :: SingleIon_ = 1, ColdCloud_ = 2
+  integer :: iRegionFormula = SingleIon_
 
   ! Velocity, temperature, Mach number and radius limits for the populations
   real :: TempPop1LimitDim = 1e5    ! [K]
@@ -272,8 +272,8 @@ contains
           call read_var('NameRegionFormula', NameRegionFormula)
           select case(NameRegionFormula)
 
-          case('IsmFirst')
-             iRegionFormula = IsmFirst_
+          case('SingleIon')
+             iRegionFormula = SingleIon_
              call read_var('TempPop1LimitDim', TempPop1LimitDim)
              call read_var('uPop1LimitDim',    uPop1LimitDim)
              call read_var('MachPop2Limit',    MachPop2Limit)
@@ -2368,7 +2368,7 @@ contains
        ! Apply region formulas
        select case(iRegionFormula)
 
-       case(IsmFirst_)
+       case(SingleIon_)
            if(r_GB(i,j,k,iBlock) < rPop3Limit) then
               iFluidProduced_C(i,j,k) = Ne3_
               CYCLE
