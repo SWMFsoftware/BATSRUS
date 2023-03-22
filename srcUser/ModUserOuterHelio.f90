@@ -141,7 +141,7 @@ module ModUser
 
   ! Region Formulas
   character(len=20) :: NameRegionFormula
-  integer,parameter :: SingleIon_ = 1, ColdCloud_ = 2
+  integer,parameter :: SingleIon_ = 1, ColdCloud_ = 2, MultiIon_=3
   integer :: iRegionFormula = SingleIon_
 
   ! Velocity, temperature, Mach number and radius limits for the populations
@@ -152,6 +152,9 @@ module ModUser
   real :: MachPop4Limit    = 2.0
   real :: rPop3Limit       = 50.0   ! [AU] it is all Pop3 out to rPop3Limit
   real :: MachPUIPop3      = 0.9
+  real :: uPop3LimitDim    = 250.0  ! [km/s]
+  real :: TempPop2LimitDim = 0.7e5  ! [K]
+  real :: MachPop1Limit    = 1.0
 
   real :: RhoPop4LimitDim  = 0.01  ! for cold cloud
 
@@ -288,6 +291,14 @@ contains
              call read_var('uPopLimitDim',     uPop1LimitDim)
              call read_var('rPop3Limit',       rPop3Limit)
              call read_var('RhoPop4LimitDim',  RhoPop4LimitDim)
+
+          case('MultiIon')
+             iRegionFormula = MultiIon_
+             call read_var('uPop3LimitDim', uPop3LimitDim)
+             call read_var('MachPop3Limit', MachPop3Limit)
+             call read_var('TempPop2LimitDim', TempPop2LimitDim)
+             call read_var('uPop1LimitDim', uPop1LimitDim)
+             call read_var('MachPop1Limit', MachPop1Limit)
 
           case default
              call stop_mpi(NameSub//': unknown NameRegionFormula = ' &
@@ -2445,6 +2456,26 @@ contains
                  ! but they are destroyed
                  iFluidProduced_C(i,j,k) = 0
               end if
+           endif
+
+       case(MultiIon_)
+           if (r_GB(i,j,k,iBlock) < rBody) then
+              ! inside inner boundary (inside termination shock)
+              iFluidProduced_C(i,j,k) = Ne3_
+           elseif (U2Dim > uPop3LimitDim**2 &
+                           .and. Mach2 > MachPop3Limit**2) then
+              ! inside termination shock
+              iFluidProduced_C(i,j,k) = Ne3_
+           elseif (TempDim > TempPop2LimitDim) then
+              ! inside heliosheath
+              iFluidProduced_C(i,j,k) = Ne2_
+           elseif (U2Dim < uPop1LimitDim**2 &
+                           .and. Mach2 < MachPop1Limit**2) then
+              ! inside bowshock
+              iFluidProduced_C(i,j,k) = Neu_
+           else
+              ! outside bowshock
+              iFluidProduced_C(i,j,k) = Ne4_
            endif
 
        case default
