@@ -147,15 +147,13 @@ T			UseOhNeutralBc
 6519.0			VLISW_Te_dim [K]
 
 #REGIONS
-SingleIon		NameRegionFormula
-6.E5			TempPop1LimitDim
-100.0			uPop1LimitDim
-0.9			MachPop2Limit
-1.5			MachPop3Limit
-50.0			rPop3Limit
-1.0			MachPop4Limit
-0.9			MachPUIPop3
-1.2			MachSWPop1
+MultiIon                NameRegionFormula
+250.0                   uPop3LimitDim
+1.0                     MachPop3Limit
+0.7e5                   TempPop2LimitDim
+100.0                   uPop1LimitDim
+1.0                     MachPop1Limit
+
 
 #SOURCES
 T			UseSourceSWH
