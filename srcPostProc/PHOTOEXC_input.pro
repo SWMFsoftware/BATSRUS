@@ -78,9 +78,25 @@ pro PHOTOEXC_input,abund_unity=abund_unity,rmax=rmax,Nr=Nr,zElem=zElem,zIon=zIon
 
 ;     PHOTOEXC_input,zElem=12,zIon=8,wvl=30284.6758
 ;30284.6758   Mg VIII           2s2 2p 2P1/2 - 2s2 2p 2P3/2
-
   
-;  
+;     PHOTOEXC_input,zElem=16,zIon=9,wvl=12523.4824
+;12523.4824   S IX              2s2.2p4 3P2 - 2s2.2p4 3P1
+  
+;     PHOTOEXC_input,zElem=14,zIon=9,wvl=39293.0000
+;39293.0000   Si IX             2s2 2p2 3P0 - 2s2 2p2 3P1
+
+;     PHOTOEXC_input,zElem=26,zIon=9,wvl=22183.2480 
+;22183.2480   Fe IX             3s2 3p5 3d 3F3 - 3s2 3p5 3d 3F2
+
+;     PHOTOEXC_input,zElem=26,zIon=12,wvl=22063.0000
+;22063.0000   Fe XII            3s2 3p3 2D3/2 - 3s2 3p3 2D5/2
+
+;     PHOTOEXC_input,zElem=28,zIon=14,wvl=12792.6201
+;12792.6201   Ni XIV            3s2.3p3 2D3/2 - 3s2.3p3 2D5/2
+
+;     PHOTOEXC_input,zElem=20,zIon=15,wvl=5695.0850  
+;5695.0850    Ca XV             2s2 2p2 3P0 - 2s2 2p2 3P1
+  
 ; CHIANTI version
   Result = CH_GET_VERSION()
   version=Result
@@ -132,7 +148,7 @@ pro PHOTOEXC_input,abund_unity=abund_unity,rmax=rmax,Nr=Nr,zElem=zElem,zIon=zIon
   printf,10,'0 0.0 3 3 2'
   printf,10,nLogT,nLogN,nLogR
   printf,10,strtrim(string(zElem,format='(i2)'),2)+' '+strtrim(string(zIon,format='(i2)'),2)+' '+strtrim(string(wvl,format='(f13.3)'),2)
-  printf,10,'logT logN logR logG logIonEq zElem zIon Wvl'  
+  printf,10,'lgT lgN logR logG logIonEq zElem zIon Wvl'  
   
 ; Select ioneq
   ion_eq=ioneq(*,zElem-1,zIon-1)
