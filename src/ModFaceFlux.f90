@@ -3694,7 +3694,8 @@ contains
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       if(UseMagFriction)then
          if(present(Cmax_I))then
-            Cmax_I(1)   = abs(Un)
+            Cmax_I(1)   = abs(Un) + InvDxyz/MagFrictionCoef
+            !Cmax_I(1)   = abs(Un) 
             CmaxDt_I(1) = abs(Un) + InvDxyz/MagFrictionCoef
          end if
          if(present(Cleft_I))  Cleft_I(1)  = Un
