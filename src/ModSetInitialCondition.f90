@@ -333,8 +333,8 @@ contains
                 State_VGB(iP_I,i,j,k,iBlock) = &
                      EntropyConstant*State_VGB(iRho_I,i,j,k,iBlock)**Gamma_I
              end do; end do; end do
-             if(DoTestCell)write(*,*) NameSub,': entropy State=', &
-                  State_VGB(:,i,j,k,iBlock)
+             if(DoTest)write(*,*) NameSub,': entropy State=', &
+                  State_VGB(:,iTest,jTest,kTest,iBlockTest)
           end if
 
           ! Correct electron fluid for wave perturbations
@@ -342,27 +342,27 @@ contains
              call correct_electronfluid_efield(State_VGB(:,:,:,:,iBlock), &
                   1, nI, 1, nJ, 1, nK, iBlock, DoHallCurrentIn=.true.,    &
                   DoGradPeIn=.false., DoCorrectEfieldIn=DoCorrectEfield)
-             if(DoTestCell)write(*,*) NameSub,': electric State=', &
-                  State_VGB(:,i,j,k,iBlock)
+             if(DoTest)write(*,*) NameSub,': electric State=', &
+                  State_VGB(:,iTest,jTest,kTest,iBlockTest)
           end if
           if(UseConstrainB) call constrain_ics(iBlock)
 
           ! Apply user defined initial conditions
           if(UseUserICs)then
              call user_set_ics(iBlock)
-             if(DoTestCell)write(*,*) NameSub,': user State=', &
-                  State_VGB(:,i,j,k,iBlock)
+             if(DoTest)write(*,*) NameSub,': user State=', &
+                  State_VGB(:,iTest,jTest,kTest,iBlockTest)
           end if
 
           if(iSignRotationIC /= 0)then
              call add_rotational_velocity(iSignRotationIC, iBlock)
-             if(DoTestCell)write(*,*) NameSub,': rot vel State=', &
-                  State_VGB(:,i,j,k,iBlock)
+             if(DoTest)write(*,*) NameSub,': rot vel State=', &
+                  State_VGB(:,iTest,jTest,kTest,iBlockTest)
           end if
           if(UseChGL)then
              call init_chgl(iBlock)
-             if(DoTestCell)write(*,*) NameSub,': chgl State=', &
-                  State_VGB(:,i,j,k,iBlock)
+             if(DoTest)write(*,*) NameSub,': chgl State=', &
+                  State_VGB(:,iTest,jTest,kTest,iBlockTest)
           end if
        end if ! not IsRestart
 
