@@ -144,7 +144,7 @@ contains
                   write(*,*) "NonIdeal EOS"
                endif
                call stop_mpi('Te is negative!')
-          endif  
+          endif
        end do; end do; end do
     endif
     call test_stop(NameSub, DoTest, iBlock)
