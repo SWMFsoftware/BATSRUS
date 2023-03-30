@@ -129,16 +129,19 @@ contains
                write(*,*) NameSub, ' Te is negative at Xyz_DGB =', &
                Xyz_DGB(:,i,j,k,iBlock)
                if(UseMultiIon) then
-                  write(*,*) "UseMultiIon=T, Pe =",State_VGB(Pe_,i,j,k,iBlock),&
-                              ", RhoI= ",State_VGB(iRhoIon_I,i,j,k,iBlock)
+                  write(*,*) "UseMultiIon=T, Pe =", &
+                       State_VGB(Pe_,i,j,k,iBlock), &
+                       ", RhoI= ", State_VGB(iRhoIon_I,i,j,k,iBlock)
                elseif(UseIdealEos) then
                   write(*,*) "IdealEOS"
                   if(UseElectronPressure)then
-                     write(*,*) "UseElectronPressure=T, Pe =",State_VGB(Pe_,i,j,k,iBlock),&
-                              ", Rho =",State_VGB(Rho_,i,j,k,iBlock)
+                     write(*,*) "UseElectronPressure=T, Pe =", &
+                          State_VGB(Pe_,i,j,k,iBlock), &
+                          ", Rho =", State_VGB(Rho_,i,j,k,iBlock)
                   else
-                     write(*,*) "UseElectronPressure=F, p =",State_VGB(p_,i,j,k,iBlock),&
-                              ", Rho =",State_VGB(Rho_,i,j,k,iBlock)
+                     write(*,*) "UseElectronPressure=F, p =", &
+                          State_VGB(p_,i,j,k,iBlock), &
+                          ", Rho =",State_VGB(Rho_,i,j,k,iBlock)
                   endif
                else
                   write(*,*) "NonIdeal EOS"
