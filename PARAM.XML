@@ -6303,15 +6303,15 @@ By default there are no "regions" defined.
 
 #GRIDRESOLUTION
 2.0			Resolution
-initial			NameShape
+initial			StringShape
 
 #GRIDLEVEL
 3			nLevel
-all			NameShape
+all			StringShape
 
 #GRIDLEVEL
 4			nLevel
-box			NameShape
+box			StringShape
 -64.0			xMinBox
 -16.0			yMinBox
 -16.0			zMinBox
@@ -6321,7 +6321,7 @@ box			NameShape
 
 #GRIDLEVEL
 4			nLevel
-brick			NameShape
+brick			StringShape
 -48.0			xPosition
   0.0			yPosition
  -8.0			zPosition
@@ -6331,13 +6331,13 @@ brick			NameShape
 
 #GRIDRESOLUTION
 1/8			Resolution
-shell0			NameShape
+shell0			StringShape
 3.5			RadiusInner
 4.5			Radius
 
 #GRIDRESOLUTION
 0.5			Resolution
-sphere			NameShape
+sphere			StringShape
 -10.0			xPosition
  10.0			yPosition
   0.0			zPosition
@@ -6345,7 +6345,7 @@ sphere			NameShape
 
 #GRIDRESOLUTION
 1/8			Resolution
-cylinderx		NameShape
+cylinderx		StringShape
 -30.0			xPosition
   0.0			yPosition
   0.0			zPosition
@@ -6354,7 +6354,7 @@ cylinderx		NameShape
 
 #GRIDRESOLUTION
 1/8			Resolution
-ringz0 rotated		NameShape
+ringz0 rotated		StringShape
   5.0			Height
  20.0			RadiusInner
  25.0			Radius
@@ -6364,17 +6364,27 @@ ringz0 rotated		NameShape
 
 #GRIDRESOLUTION
 1/4			Resolution
-paraboloidx0 stretched	NameShape
+paraboloidx0 stretched	StringShape
 30.0			Height
 10.0			Radius
 12.0			RadiusPerp
 
 #GRIDRESOLUTION
 1/8			Resolution
-user			NameShape
+user			StringShape
 
-The #GRIDRESOLUTION and #GRIDLEVEL commands allow to set the grid resolution
-or refinement level, respectively, in a given area.
+The #GRIDRESOLUTION and #GRIDLEVEL commands allow to set the desired (!)
+grid resolution or refinement level, respectively, in a given area.
+This grid resolution is only realized if either the
+StringShape='initial' resolution is set to an equal or finer
+refinement than the desired resolution, for example
+
+#GRIDRESOLUTION
+1/8			Resolution
+initial			StringShape
+
+or by applying adaptive mesh refinement during the run (see the #DOAMR
+command).
 
 The Resolution parameter of the #GRIRDESOLUTION command
 usually refers to the size of the cell in the first direction (Dx or Dr),
@@ -6383,7 +6393,12 @@ it refers to the resolution in the Phi coordinate in degrees.
 Note that this definition of resolution is different from that used in the
 #AMRCRITERIARESOLUTION command for non-Cartesian grids.
 
-The nLevel parameter is an integer with level 0 meaning no refinement relative
+Normally it is best to use the #GRIDRESOLUTION command to define the desired
+grid as it describes the resolution in physical units, so it is independent
+of the number of the size of the domain and the number of root blocks.
+The alternative #GRIDLEVEL command can be useful for simple numerical
+tests, where an algorithm is tested on anon-uniform grid. For this command
+the nLevel parameter is an integer with level 0 meaning no refinement relative
 to the root block, while level N is a refinement by 2 to the power N.
 
 Note that the #REGION commands in combination with the #AMRCRITERIALEVEL
@@ -6391,33 +6406,33 @@ and #AMRCRITERIARESOLUTION commands allow even more flexibility in controlling
 the grid adaptation, but the initial resolution/level still has to be set
 by this command. However, if #AMRCRITERIALEVEL/AMRCRITERIARESOLUTION is 
 specified, the user should not use #GRIDLEVEL/#GRIDRESOLUTION to specify
-any NameShape except 'initial', otherwise the code will just crash.
+any StringShape except 'initial', otherwise the code will just crash.
 
-If NameShape is set to 'initial', it determines the number of grid adaptations
-used to initialize the grid. The grid adaptations are done according to the
-other #GRIDLEVEL, #GRIDESOLUTION commands.
-{\bf The default is no refinement initially,
-which means that the grid is uniform at the beginning, and it is refined during
-the run according to the #AMR or #DOAMR commands. This means that one has
-to set the initial refinement level to get a non-uniform grid from the
+If StringShape is set to 'initial', it determines the number of grid
+adaptations used to initialize the grid. The grid adaptations are done
+according to the other #GRIDLEVEL, #GRIDESOLUTION commands.  {\bf The
+default is no refinement initially, which means that the grid is
+uniform at the beginning, and it is refined during the run according
+to the #AMR or #DOAMR commands. This means that one has to set the
+initial refinement level to get a non-uniform grid from the
 beginning.}
 
-The NameShape 'all' refers to the whole computational domain, and it can be
+The StringShape 'all' refers to the whole computational domain, and it can be
 used to set the overall minimum resolution.
 
-For other values of NameShape, the command specifies the shape of the area.
+For other values of StringShape, the command specifies the shape of the area.
 where the blocks are to be refined. See the #REGION command for a description
 of these parameters. Note that "tapering" can only be used with the
 #REGION command.
 
-If the desired grid resolution is finer
-than the initial resolution, then initially the grid will be refined
-to the initial resolution only, but the area will be further refined
-in subsequent pre-specified adaptive mesh refinements (AMRs) during the run
-(see the #AMR command). Once the resolution reaches the
-desired level, the AMR-s will not do further refinement. If a grid block
-is covered by more than one areas, the area with the finest resolution
-determines the desired grid resolution.
+If the desired grid resolution is finer than the initial resolution,
+then initially the grid will be refined to the initial resolution
+only, but the area will be further refined in subsequent pre-specified
+adaptive mesh refinements (AMRs) during the run (see the #AMR
+command). Once the resolution reaches the desired level, the AMR-s
+will not do further refinement. If a grid block is covered by more
+than one areas, the area with the finest resolution determines the
+desired grid resolution.
 
 All computational blocks that intersect the area and have a coarser
 resolution than the resolution set for the area are selected for refinement.
@@ -10579,19 +10594,19 @@ A negative value means that the B0 field is not updated.
 </command>
 
 <command name="HELIODIPOLE" if="$NameComp ne 'GM'">
-  <parameter name="HelioDipoleStrength" type="real" />
+  <parameter name="HelioDipoleStrengthSi" type="real" />
   <parameter name="HelioDipoleTilt" type="real" min="-90" max="90"
 	     default="0"/>
 
 #HELIODIPOLE
--0.0003                 HelioDipoleStrength [Telsa]
+-0.0003                 HelioDipoleStrengthSi [Telsa]
  0.0                    HelioDipoleTilt     [deg]
 
-Variable HelioDipoleStrength defines the equatorial field strength in Tesla,
+Variable HelioDipoleStrengthSi defines the equatorial field strength in Tesla,
 while HelioDipoleTilt is the tilt relative to the ecliptic North
 (negative sign means towards the planet) in degrees.
 
-Default value is HelioDipoleStrength = 0.0.
+Default value is HelioDipoleStrengthSi = 0.0.
 </command>
 
 <command name="UNIFORMB0" if="$NameComp ne 'GM'">
