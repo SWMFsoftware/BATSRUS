@@ -1592,13 +1592,12 @@ contains
           call write_mag_step
        case('ascii', 'real4', 'real8', 'tec')
           call write_mag_grid
+          if(DoWriteSuper) call write_supermag
        case('station')
           call stop_mpi(NameSub//': separate mag files not implemented yet.')
        end select
 
     end if
-
-    if(DoWriteSuper) call write_supermag
 
     ! Release memory.
     deallocate(MagGmXyz_DI, MagSmXyz_DI, &
@@ -1613,6 +1612,7 @@ contains
       use ModUtilities, ONLY: flush_unit
       use ModMpi
 
+      integer, parameter:: nVar = 17
       integer :: iLon, iLat
       integer :: iTime_I(7)
       real    :: SuperIndex_I(4)
