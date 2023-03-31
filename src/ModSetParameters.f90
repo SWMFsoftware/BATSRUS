@@ -2626,16 +2626,15 @@ contains
           end if
 
        case("#HELIOUPDATEB0")
-          if(.not.UseB0)CYCLE READPARAM
           call read_var('DtUpdateB0', DtUpdateB0)
           DoUpdateB0 = DtUpdateB0 > 0.0
 
        case("#HELIODIPOLE")
           if(.not.is_first_session())CYCLE READPARAM
-          if(.not.UseB0)CYCLE READPARAM
           call read_var('HelioDipoleStrengthSi', DipoleStrengthSi)
           call read_var('HelioDipoleTilt', ThetaTilt)
           ThetaTilt = ThetaTilt*cDegToRad
+          UseB0 = .true.
 
        case("#HELIOROTATION", "#INERTIAL")
           if(iProc==0)write(*,*) NameSub, ' WARNING: ',&
@@ -3013,10 +3012,10 @@ contains
       end select
 
       ! Do not set B0 field in IH and OH
-      if(NameThisComp/='IH'.and.NameThisComp/='OH')then
-         UseB0=UseB
+      if(NameThisComp /= 'IH' .and. NameThisComp /= 'OH')then
+         UseB0 = UseB
       else
-         UseB0=.false.
+         UseB0 = .false.
       end if
 
       ! Do not update B0 except in GM
