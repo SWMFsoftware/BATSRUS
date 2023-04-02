@@ -33,7 +33,7 @@ HGR			TypeCoordSystem
 1.0			ElectronTemperatureRatio
 
 #HELIODIPOLE
-5.0e-4			HelioDipoleStrength
+5.0e-4			HelioDipoleStrengthSi
 0.0			HelioDipoleTilt
 
 #POYNTINGFLUX

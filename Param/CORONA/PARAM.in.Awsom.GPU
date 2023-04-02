@@ -40,7 +40,7 @@ HGR			TypeCoordSystem
 1.0			ElectronTemperatureRatio
 
 #HELIODIPOLE
-2.8e-4			HelioDipoleStrength
+2.8e-4			HelioDipoleStrengthSi
 0.0			HelioDipoleTilt
 
 #GAMMA
