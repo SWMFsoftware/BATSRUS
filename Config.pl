@@ -85,6 +85,8 @@ my ($nI, $nJ, $nK, $nG);
 # additional variable information
 my $nWave;
 my $nWaveNew;
+my $nPui;
+my $nPuiNew;
 my $nMaterial;
 my $nMaterialNew;
 my $ChargeState;
@@ -110,6 +112,7 @@ foreach (@Arguments){
     if(/^-u=(.*)$/)               {$UserModule=$1;                 next};
     if(/^-s$/)                    {$Show=1;                        next};
     if(/^-nWave=([1-9]\d*)$/i)    {$nWaveNew=$1;                   next};
+    if(/^-nPui=([1-9]\d*)$/i)     {$nPuiNew=$1;                    next};
     if(/^-nMaterial=([1-9]\d*)$/i){$nMaterialNew=$1;               next};
     if(/^-cs=(.*)/)               {$ChargeStateNew .= "$1";        next};
     if(/^-ng$/i)                  {print "ng=$GhostCell\n";        next};
@@ -134,6 +137,7 @@ open(FILE, $EquationMod);
 while(<FILE>){
     next if /^\s*!/; # skip commented out lines
     $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
+    $nPui=$1         if /\bnPui\s*=\s*(\d+)/i;
     $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
     $ChargeState=$1  if /NameElement_I\(1:nElement\)\s*=\s*(.*)/;
 }
@@ -143,6 +147,10 @@ close FILE;
 die "$ERROR nWave was not found in equation module\n"
     if $nWaveNew and not $nWave;
 &set_nwave     if $nWaveNew and $nWaveNew ne $nWave;
+
+die "$ERROR nPui was not found in equation module\n"
+    if $nPuiNew and not $nPui;
+&set_npui      if $nPuiNew and $nPuiNew ne $nPui;
 
 die "$ERROR nMaterial was not found in equation module\n"
     if $nMaterialNew and not $nMaterial;
@@ -593,8 +601,8 @@ sub set_equation{
 	open(FILE1,$File); open(FILE2,$EquationMod);
 	my $IsSame = 1; my $line1; my $line2;
 	while($line1=<FILE1> and $line2=<FILE2>){
-	    # Ignore the nWave and nMaterial definitions
-	    next if $line1=~/nMaterial|nWave/ and $line2=~/nMaterial|nWave/;
+	    # Ignore the nWave, nPui, and nMaterial definitions
+	    next if $line1=~/nMaterial|nWave|nPui/ and $line2=~/nMaterial|nWave|nPui/;
 	    if($line1 ne $line2){
 		$IsSame = 0;
 		last;
@@ -642,6 +650,33 @@ sub set_nwave{
 	$prev = "";
         s/\b(nWave\s*=[^0-9]*)(\d+)/$1$nWaveNew/i;
         s/I\([^\)]+\)/I($nWaveTwo)/m if /NamePrimitiveVar\s*\=/;
+        print;
+    }
+}
+
+##############################################################################
+
+sub set_npui{
+
+    $nPui = $nPuiNew;
+
+    print "Writing new nPui = $nPuiNew into $EquationMod...\n";
+
+    my $nPuiTwo = sprintf("%02d", $nPuiNew);
+
+    @ARGV = ($EquationMod);
+
+    my $prev;
+    while(<>){
+        if(/^\s*!/){print; next} # Skip commented out lines
+        if(m/\&\s*\n/){         # Concatenate continuation lines
+            $prev .= $_;
+            next;
+        }
+        $_ = $prev . $_;
+	$prev = "";
+        s/\b(nPui\s*=[^0-9]*)(\d+)/$1$nPuiNew/i;
+        s/I\([^\)]+\)/I($nPuiTwo)/m if /NamePrimitiveVar\s*\=/;
         print;
     }
 }
@@ -862,6 +897,7 @@ sub current_settings{
     $Settings .= "Number of species           : nSpecies=$nSpecies\n" 
 	if $nSpecies;
     $Settings .= "Number of wave bins         : nWave=$nWave\n" if $nWave;
+    $Settings .= "Number of PUI bins          : nPui=$nPui\n"   if $nPui;
     $Settings .= "Number of materials         : nMaterial=$nMaterial\n" 
 	if $nMaterial;
     $Settings .= "Number of ion fluids        : nIonFluid=$nIonFluid\n"
@@ -919,6 +955,9 @@ Additional options for BATSRUS/Config.pl:
 
 -nWave=NWAVE    Set the number of wave bins used for radiation or wave
                 turbulence to NWAVE for the selected EQUATION module.
+
+-nPui=NPUI      Set the number of PUI bins to NPUI for the selected
+                EQUATION module.
 
 -nMaterial=NM   Set the number of material levels to NM
                 for the selected EQUATION module.
