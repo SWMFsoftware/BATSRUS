@@ -10280,7 +10280,9 @@ Intensifies the Alfven wave disssipation in the regions of weak field
     <option name="stochasticheating"/>
   </parameter>
   <if expr="$TypeHeatPartitioning =~ /uniform/">
-    <parameter name="QionRatio" type="real"            default="0.6" />
+    <for from="1" to="$nIonFluid">
+      <parameter name="QionRatio" type="real"          default="0.6" />
+    </for>
   </if>
   <if expr="$TypeHeatPartitioning =~ /stochasticheating/">
     <parameter name="StochasticExponent" type="real"   default="0.21" />
