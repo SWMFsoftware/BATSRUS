@@ -567,7 +567,7 @@ contains
 
     ! if multi-ion, then use lookup table to determine the linear Landau
     ! and transit-time damping of kinetic Alfven waves
-    if(UseMultiIon)then
+    if(UseMultiIon .and. UseStochasticHeating)then
        iTableHeatPartition = i_lookup_table('heatpartition')
        if(.not. iTableHeatPartition > 0) &
             call stop_mpi('Heat partition table required for multi-ion')
