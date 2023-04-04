@@ -9,7 +9,7 @@ T			UseUpdateCheck
 400.			pMaxPercent
 
 #DESCRIPTION
-Param/OUTERHELIO/PARAM.in: Outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
+Param/OUTERHELIO/PARAM.in.pui: Outer heliosphere with 2 ion and 4 neutral fluids		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -18,10 +18,12 @@ NONE			NamePlanet
 F			UseGravity (rest of parameters read if true)
 
 #BODY
-T			UseBody
-30.0			rBody (AU)
-0.01			BodyNDim [/cc] number density for ions
-1.09E5			BodyTDim [K] temperature for ions
+T			UseBody (rest of parameters read if true)
+30.0			rBody (user units)
+0.01			BodyNDim (/cc) number density for sw ions
+2.0E4			BodyTDim temperature for sw ions
+9.45E-4			BodyNDim for PUIs
+8.20E6			BodyTDim
 0.18			BodyNDim for 1st neutral fluid
 6519.0			BodyTDim
 7.E-5			BodyNDim for 2nd neutral fluid
@@ -117,7 +119,10 @@ outflow			TypeBc5
 outflow			TypeBc6
 
 #TIMEACCURATE
-F  			IsTimeAccurate
+F			IsTimeAccurate
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
 
 #NEUTRALFLUID
 F			DoConserveNeutrals
@@ -131,9 +136,6 @@ Linde			TypeFlux
 1			nStage (1 or 2)
 0.80			CflExpl
 
-#NONCONSERVATIVE
-T			UseNonConservative
-
 #SAVERESTART
 T			DoSaveRestart
 1000			DnSaveRestart
@@ -144,9 +146,6 @@ T			DoSaveLogfile
 RAW			StringLog
 10			DnSaveLogfile
 -1.			DtSaveLogfile
-
-#SAVEINITIAL
-F			DoSaveInitial
 
 #SAVEPLOT
 3			nPlotFile
@@ -165,9 +164,14 @@ z=0 MHD idl		StringPlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
 
+#MULTIIONSTATE
+T			UseSingleIonVelocity
+F			UseSingleIonTemperature
 
-#USERSWITCH
-+init +ic +progress		StringSwitch
+#MULTIION
+1e-10			LowDensityRatio
+1e-10			LowPressureRatio
+F			DoRestrictMultiIon
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -184,12 +188,15 @@ T			UseOhNeutralBc
 0.18			RhoNeutralsISW
 6519.0			TNeutralsISW
 26.3			UxNeutralsISW
-0.0			UyNeutralsISW
+0.3			UyNeutralsISW
 -2.3			UzNeutralsISW
 1.0			mNeutral
 
+#USERSWITCH
++init +ic +perturb +progress		StringSwitch
+
 #CORONALHEATING
-turbulentcascade		TypeCoronalHeating
+turbulentcascade	TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi^
 0.0			rMinWaveReflection^
@@ -198,11 +205,16 @@ F			UseSurfaceWaveRefl^
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
 0.6			QionRatio
+0.0			QionRatio
 
 #USERINPUTBEGIN -----------------------------------
 
+! This is same as rbody in #BODY
+#GLOBALHELIOSPHERE
+30.
+
 #SOLARWINDH
-0.00874			SWH_N_dim [n/cc]
+0.00874			SWH_rho_dim [n/cc]
 2.0E4			SWH_T_dim [K]
 417.07			SWH_Ux_dim [km/s]
 0.0			SWH_Uy_dim [km/s]
@@ -212,30 +224,53 @@ uniform			TypeHeatPartitioning
 0.0			SWH_Bz_dim [nT]
 2.0E4			SWH_Te_dim [K]
 
+#PICKUPION3
+9.45E-4			PU3_rho_dim [n/cc]
+8.20E6			PU3_T_dim [K]
+417.07			PU3_Ux_dim [km/s]
+0			PU3_Uy_dim [km/s]
+0			PU3_Uz_dim [km/s]
+
 #VLISW
-0.06			VLISW_N_dim [n/cc]
+0.06			VLISW_rho_dim [n/cc]
 6519.0			VLISW_T_dim
 26.3			VLISW_Ux_dim
-0.0			VLISW_Uy_dim
+0.3			VLISW_Uy_dim
 -2.3			VLISW_Uz_dim
-0.3093			VLISW_Bx_dim
--0.080			VLISW_By_dim
--0.2988			VLISW_Bz_dim
+0.4111			VLISW_Bx_dim
+-0.0748			VLISW_By_dim
+-0.1296			VLISW_Bz_dim
 6519.0			VLISW_Te_dim [K]
 
 #REGIONS
-SingleIon		NameRegionFormula
-6.E5			TempPop1LimitDim
-100.0			uPop1LimitDim
-0.9			MachPop2Limit
-1.5			MachPop3Limit
-50.0			rPop3Limit
-0.5			MachPop4Limit
+MultiIon                NameRegionFormula
+250.0                   uPop3LimitDim
+1.0                     MachPop3Limit
+0.7e5                   TempPop2LimitDim
+100.0                   uPop1LimitDim
+1.0                     MachPop1Limit
+
+#SOURCES
+F			UseSourceSWH
+F 			UseSourcePu3
+F 			UseSourceNeu
+F 			UseSourceNe2
+F 			UseSourceNe3
+F 			UseSourceNe4
+
+#ELECTRONIMPACT
+T                       UseElectronImpact
 
 #USERINPUTEND -------------------------------------
 
+#LOOKUPTABLE
+ElectronImpact		NameTable
+load			NameCommand
+Param/OUTERHELIO/ElectronImpactRate.dat		NameFile
+ascii			TypeFile
+
 #STOP
-10			MaxIteration
+25			MaxIteration
 -1.0			tSimulationMax
 
 #RUN ##########################################################################
@@ -248,3 +283,38 @@ minmod			TypeLimiter
 #STOP
 20			MaxIteration
 -1.0			tSimulationMax
+
+#END
+
+#RUN ##########################################################################
+
+#TIMESTEPPING
+2			nStage
+0.6			CflExpl
+
+! Applies to the ions only if UseRusanovForNeutrals is true in #MULTIFLUID
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+#USERSWITCH
++source_expl -progress +perturb		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#SOURCES
+T			UseSourceSWH
+T			UseSourcePu3
+T			UseSourceNeu
+T			UseSourceNe2
+T			UseSourceNe3
+T			UseSourceNe4
+
+#USERINPUTEND -------------------------------------
+
+#STOP
+30			MaxIteration
+-1.0			tSimulationMax
+
