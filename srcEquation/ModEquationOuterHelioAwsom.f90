@@ -6,7 +6,7 @@ module ModVarIndexes
   use ModExtraVariables, &
        Redefine1 => nWave, &
        Redefine2 => WaveFirst_, &
-       Redefine3 => WaveLast_, &       
+       Redefine3 => WaveLast_, &
        Redefine4 => Pe_, &
        Redefine5 => nPui, &
        Redefine6 => PuiFirst_, &
