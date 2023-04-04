@@ -528,6 +528,9 @@ contains
                         -InterpOld_VG(1:2,iLocal,jLocal),                  &
                         InterpNbor_VII(2,iSnapshot,iPoint)
                 endif
+             else
+                ! dBdt is set to 0 for the first snapshot
+                InterpNbor_VII(2,iSnapshot,iPoint) = 0
              endif
           end do
           ! store for dB/dt calculation
