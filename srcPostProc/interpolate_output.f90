@@ -407,15 +407,21 @@ contains
 
     real,    allocatable:: Interp_VG(:,:,:) ! interpolated vars on Lon-Lat grid
     real,    allocatable:: Interp_VII(:,:,:)! vars per snapshot and station
+    real,    allocatable:: InterpOld_VG(:,:,:)  ! vars per snapshot and station
+    real,    allocatable:: InterpNbor_VII(:,:,:)! vars per snapshot and station
     integer, allocatable:: iTime_II(:,:) ! Date-time for each snapshot
 
-    real:: Time ! simulation time
+    real:: Time,TimeOld ! simulation time
     integer:: iSnapshot, iPoint, iVar, i0, j0, iMin, iMax, jMin, jMax, Ij_D(2)
+    integer:: iLocal, jLocal
+
+    logical :: DoTest = .False.
 
     ! Extra cell for periodic longitudes
     !--------------------------------------------------------------------------
-    allocate(Interp_VG(5,n1+1,n2), Interp_VII(5,nSnapshot,nPoint), &
-         iTime_II(6,nSnapshot))
+    allocate(Interp_VG(5,n1+1,n2), Interp_VII(5,nSnapshot,nPoint),   &
+         iTime_II(6,nSnapshot), InterpNbor_VII(4,nSnapshot,nPoint),  &
+         InterpOld_VG(3,n1+1,n2))
 
     do iSnapshot = 1, nSnapshot
        ! Read variable and time
@@ -462,10 +468,71 @@ contains
              jMin = max(1, j0 - Dj/2); jMax = min(n2,   j0 + (Dj+1)/2)
              do iVar = 1, 3
                 Ij_D = maxloc(abs(Interp_VG(iVar,iMin:iMax,jMin:jMax)))
+                iLocal = Ij_D(1)+iMin-1
+                jLocal = Ij_D(2)+jMin-1
                 Interp_VII(iVar,iSnapshot,iPoint) = &
-                     Interp_VG(iVar, Ij_D(1)+iMin-1, Ij_D(2)+jMin-1)
+                     Interp_VG(iVar,iLocal,jLocal)
              end do
+
+             ! maximum dB and dB/dt in the neighboring cells
+             ! Copy the last two variable (LonSm LatSm)
+             InterpNbor_VII( 3:4,iSnapshot,iPoint) = &
+                  Interp_VII(4:5,iSnapshot,iPoint)
+             ! find the index with the maximum dB and set the value
+             ! Only consider the North (1) and East (2) components
+             Ij_D = maxloc(sum(Interp_VG(1:2,iMin:iMax,jMin:jMax)**2,DIM=1))
+             iLocal = Ij_D(1)+iMin-1
+             jLocal = Ij_D(2)+jMin-1
+             InterpNbor_VII(1,iSnapshot,iPoint) = &
+                  sqrt(sum(Interp_VG(1:2,iLocal,jLocal)**2))
+
+             if (DoTest) then
+                write(*,*) '============================================'
+                write(*,*) 'Interp_VG(1,iMin:iMax,jMin:jMax) =', &
+                     Interp_VG(1,iMin:iMax,jMin:jMax)
+                write(*,*) 'Interp_VG(2,iMin:iMax,jMin:jMax) =', &
+                     Interp_VG(2,iMin:iMax,jMin:jMax)
+                write(*,*) 'dB(iMin:iMax,jMin:jMax)          =', &
+                     sum(Interp_VG(1:2,iMin:iMax,jMin:jMax)**2,DIM=1)
+                write(*,*) 'Ij_D  =', Ij_D
+                write(*,*) 'dBn(Ij_D), dBe(Ij_D), dBn(Ij_D)  =', &
+                     Interp_VG(1:2,iLocal,jLocal),               &
+                     InterpNbor_VII(1,iSnapshot,iPoint)
+             endif
+
+             ! find the index with the maximum dB/dt and set the value
+             if (iSnapshot > 1) then
+                Ij_D = maxloc(sum(                                         &
+                     ( Interp_VG(   1:2,iMin:iMax,jMin:jMax)               &
+                     - InterpOld_VG(1:2,iMin:iMax,jMin:jMax))**2, DIM=1))
+                iLocal = Ij_D(1)+iMin-1
+                jLocal = Ij_D(2)+jMin-1
+                InterpNbor_VII(2,iSnapshot,iPoint) = sqrt(sum(             &
+                     ( Interp_VG(   1:2,iLocal,jLocal)                     &
+                     - InterpOld_VG(1:2,iLocal,jLocal))**2 ))/(Time-TimeOld)
+
+                if (DoTest) then
+                   write(*,*) '--------------------------------------------'
+                   write(*,*) 'dBndt(iMin:iMax,jMin:jMax)       =',        &
+                        Interp_VG(     1,iMin:iMax,jMin:jMax)              &
+                        - InterpOld_VG(1,iMin:iMax,jMin:jMax)
+                   write(*,*) 'dBedt(iMin:iMax,jMin:jMax)       =',        &
+                        Interp_VG(     2,iMin:iMax,jMin:jMax)              &
+                        - InterpOld_VG(2,iMin:iMax,jMin:jMax)
+                   write(*,*) 'dBdt(iMin:iMax,jMin:jMax)        =', sum(   &
+                        ( Interp_VG(   1:2,iMin:iMax,jMin:jMax)            &
+                        - InterpOld_VG(1:2,iMin:iMax,jMin:jMax))**2, DIM=1)
+                   write(*,*) 'Ij_D  =', Ij_D
+                   write(*,*) 'dBndt(Ij_D), dBedt(Ij_D), dBdt(Ij_D) =',    &
+                        Interp_VG(1:2,iLocal,jLocal)                       &
+                        -InterpOld_VG(1:2,iLocal,jLocal),                  &
+                        InterpNbor_VII(2,iSnapshot,iPoint)
+                endif
+             endif
           end do
+          ! store for dB/dt calculation
+          InterpOld_VG = Interp_VG(1:3,:,:)
+          TimeOld      = Time
        end if
     end do
     close(UnitTmp_)
@@ -490,7 +557,30 @@ contains
                iTime_II(:,iSnapshot), Interp_VII(:,iSnapshot,iPoint)
        end do
        call close_file
-    end do
+
+       ! the file containing the maximum dB and dB/dt in neighboring cells
+       call open_file(FILE=trim(NameDirOut)//NameMag_I(iPoint)//'_nbor.txt')
+       write(UnitTmp_, '(a)') &
+            '# Maximum dB [nT] and dB/dt [nT/s] in neighboring cells'
+       write(UnitTmp_, '(a)') &
+            '# computed from magnetosphere and ionosphere currents'
+       write(UnitTmp_, '(a,2f10.3)') &
+            '# '//NameCoordPoint//' lon, lat=', CoordPoint_DI(:,iPoint)
+       if(NameCoordIn /= NameCoordPoint) write(UnitTmp_, '(a,2f10.3)') &
+            '# '//NameCoordIn//' lon, lat=', CoordIn_DI(:,iPoint)
+       write(UnitTmp_, '(a, 2i4)') &
+            '# Di, Dj=', Di, Dj
+       write(UnitTmp_, '(a)') &
+            '# Station: '//NameMag_I(iPoint)
+       write(UnitTmp_, '(a)') &
+            'Year Month Day Hour Min Sec '// &
+            'dB dBdt SmLon SmLat'
+       do iSnapshot = 1, nSnapshot
+          write(UnitTmp_,'(i4,5i3,4f10.3)') &
+               iTime_II(:,iSnapshot), InterpNbor_VII(:,iSnapshot,iPoint)
+       end do
+       call close_file
+end do
 
     deallocate(iTime_II, Interp_VG, Interp_VII)
 
