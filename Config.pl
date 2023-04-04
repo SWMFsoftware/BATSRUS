@@ -662,8 +662,6 @@ sub set_npui{
 
     print "Writing new nPui = $nPuiNew into $EquationMod...\n";
 
-    my $nPuiTwo = sprintf("%02d", $nPuiNew);
-
     @ARGV = ($EquationMod);
 
     my $prev;
@@ -676,7 +674,7 @@ sub set_npui{
         $_ = $prev . $_;
 	$prev = "";
         s/\b(nPui\s*=[^0-9]*)(\d+)/$1$nPuiNew/i;
-        s/I\([^\)]+\)/I($nPuiTwo)/m if /NamePrimitiveVar\s*\=/;
+        s/F\([^\)]+\)/F($nPuiNew)/m if /NamePrimitiveVar\s*\=/;
         print;
     }
 }
