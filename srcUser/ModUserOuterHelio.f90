@@ -1927,7 +1927,7 @@ contains
           RhoEleSi = RhoEleNo*No2Si_V(UnitN_)
 
           ! Get electron velocity from the current and positive ion velocities
-          call get_current(j, j, k, iBlock, Current_D)
+          call get_current(i, j, k, iBlock, Current_D)
           UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo) &
                *No2Si_V(UnitU_)
 
