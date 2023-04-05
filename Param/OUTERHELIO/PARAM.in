@@ -222,6 +222,9 @@ SingleIon		NameRegionFormula
 50.0			rPop3Limit
 0.5			MachPop4Limit
 
+#PHOTOIONIZATION
+F                       UsePhotoionization
+
 #USERINPUTEND -------------------------------------
 
 #STOP

@@ -155,6 +155,9 @@ T			UseNe2Source
 T			UseNe3Source
 T			UseNe4Source
 
+#PHOTOIONIZATION
+F                       UsePhotoionization
+
 #USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
