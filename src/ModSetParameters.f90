@@ -2762,8 +2762,8 @@ contains
       use ModMultiFluid, ONLY: extract_fluid_name
       use ModUtilities,  ONLY: join_string
 
-      integer :: iWave, iMaterial, iFluid, lConservative, lPrimitive
-      character(len=3)  :: NameWave
+      integer :: iWave, iPui, iMaterial, iFluid, lConservative, lPrimitive
+      character(len=3)  :: NameWave, NamePui
       character(len=2)  :: NameMaterial
       character(len=50) :: NamePrimitive, NamePrimitivePlot, NameConservative
       character(len=50) :: NamePrimitiveNT
@@ -2778,6 +2778,14 @@ contains
          do iWave = 1, nWave
             write(NameWave,'(a,i2.2)') 'I', iWave
             NameVar_V(WaveFirst_+iWave-1) = NameWave
+         end do
+      end if
+
+      ! Fix the NameVar_V string for pickup ions
+      if(PuiLast_ > 1)then
+         do iPui = 1, nPui
+            write(NamePui,'(a,i2.2)') 'F', iPui
+            NameVar_V(PuiFirst_+iPui-1) = NamePui
          end do
       end if
 

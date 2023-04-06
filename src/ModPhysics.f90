@@ -1094,6 +1094,9 @@ contains
           elseif(WaveFirst_ <= iVar .and. iVar <= WaveLast_)then
              iUnitCons_V(iVar) = UnitEnergyDens_
              iUnitPrim_V(iVar) = UnitEnergyDens_
+          elseif(PuiFirst_ <= iVar .and. iVar <= PuiLast_)then
+             iUnitCons_V(iVar) = UnitRho_
+             iUnitPrim_V(iVar) = UnitRho_
           elseif(iVar >= ChargeStateFirst_ .and. iVar <= ChargeStateLast_)then
              iUnitCons_V(iVar) = UnitRho_
              iUnitPrim_V(iVar) = UnitRho_
@@ -1214,6 +1217,13 @@ contains
        UnitUser_V(Ew_)        = No2Io_V(UnitEnergyDens_)
        NameUnitUserTec_V(Ew_) = NameTecUnit_V(UnitEnergyDens_)
        NameUnitUserIdl_V(Ew_) = NameIdlUnit_V(UnitEnergyDens_)
+    end if
+
+    if(PuiLast_ > 1)then
+       ! Set the unit and unit name for the pickup ion variable
+       UnitUser_V(PuiFirst_:PuiLast_)        = No2Io_V(UnitRho_)
+       NameUnitUserTec_V(PuiFirst_:PuiLast_) = NameTecUnit_V(UnitRho_)
+       NameUnitUserIdl_V(PuiFirst_:PuiLast_) = NameIdlUnit_V(UnitRho_)
     end if
 
     if(.not.UseIdealEos)then

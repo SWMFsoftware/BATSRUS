@@ -26,6 +26,10 @@ module ModExtraVariables
   integer, parameter :: nWave = 1
   integer, parameter :: WaveFirst_ = 1, WaveLast_ = 1
 
+  ! The named index range for velocity bins in pickup ions
+  integer, parameter :: nPui = 1
+  integer, parameter :: PuiFirst_ = 1, PuiLast_ = 1
+
   ! The named index range for material levels
   integer, parameter :: nMaterial = 1
   integer, parameter :: MaterialFirst_ = 1, MaterialLast_ = 1
