@@ -136,7 +136,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_plot_shell
   !============================================================================
-
   subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_GV)
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
@@ -219,13 +218,13 @@ contains
                   (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
 
              ! Check if point is inside block
-             if(any(CoordNorm_D(iDirMin:) < 0.5)) CYCLE
-             if(any(CoordNorm_D > nIjk_D + 0.5)) CYCLE
+             if(any(CoordNorm_D(iDirMin:) < 0.4999)) CYCLE
+             if(any(CoordNorm_D > nIjk_D + 0.5001)) CYCLE
 
              ! compute the interpolated values at the current location
              PlotVar_VIII(0,i,j,k) = 1.0
              if(IsThreadedBlock.and. Coord_D(1) < &
-                  CoordMin_DB(1,iBlock) + 0.50*CellSize_DB(1,iBlock))then
+                  CoordMin_DB(1,iBlock) + 0.5*CellSize_DB(1,iBlock))then
                 ! The threaded gap is used and the point is below
                 ! the first layer of grid cell centers
                 ! Interpolate using the solution on threads
