@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/CORONA/PARAM.in.bvector
+Param/CORONA/PARAM.in.bvector		StringDescription
 
 VERBOSE
 10
@@ -60,9 +60,9 @@ T			IsLogRadius^
 90			nLat
 
 use:
-90                      MaxOrder
-100                     nR
-180                     nLon
+90			MaxOrder
+100			nR
+180			nLon
 for the real run
 
 #USERSWITCH
