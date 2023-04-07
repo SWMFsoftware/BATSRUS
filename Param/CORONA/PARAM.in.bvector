@@ -189,7 +189,7 @@ float			TypeBc5
 float			TypeBc6
 
 #SAVEPLOT
-3			nPlotFile
+4			nPlotFile
 y=0 VAR idl		StringPlot
 1000			DnSavePlot 5000
 -1			DtSavePlot
@@ -214,22 +214,23 @@ cut VAR idl		StringPlot
 0.0			DxSavePlot ! unstructured grid (for IDL plots)
 {MHD} uxrot uyrot uzrot b1x b1y b1z absdivb dt		NameVars
 {default}		NamePars
-
 shl VAR idl		StringPlot ! to be used for B0local lookup table
 100000			DnSavePlot
 -1			DtSavePlot
 HGR			TypeCoordPlot
 1.0			rMin
 1.09			rMax
-0.0003			dR
+0.003			dR  ! use 0.0003 for real run
 145.0			LonMin
-182.0			LonMax
-0.35			dLon
+181.0			LonMax
+3.0			dLon ! use 0.35 for real run
 -24.0			LatMin
 -3			LatMax
-0.35			dLat
+3.0			dLat ! use 0.35 for real run
 bx by bz 		NameVars
 {default}		NamePars
+
+
 3d VAR tcp		StringPlot
 100000			DnSavePlot
 -1.			DtSavePlot
