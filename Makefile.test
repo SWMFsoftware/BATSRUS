@@ -33,6 +33,7 @@ test_help:
 	@echo "    test_amr                   (run Cartesian AMR test)"
 	@echo "    test_amrsph                (run spherical AMR test)"
 	@echo "    test_awsom                 (run AWSoM corona test)"
+	@echo "    test_awsom_bvector         (run AWSoM with vector B field)"
 	@echo "    test_awsom_gpu             (run AWSoM corona test on GPU)"
 	@echo "    test_awsom_large_gpu       (run large AWSoM corona test on GPU)"
 	@echo "    test_stitch                (run STITCH test)"
@@ -903,7 +904,7 @@ test_awsom_gpu_run:
 test_awsom_gpu_check:
 	-@(${DIFFNUM} -a=1e-19 -r=1e-5 -t \
 		${TESTDIR}/RESULTS/SC/log_n000001.log \
-		Param/CORONA/TestOutput/log_n000001.sc.awsom_gpu \
+		Param/CORONA/TestOutput/log_n000001.awsom_gpu \
 		> test_awsom_gpu.diff)
 	ls -l test_awsom_gpu.diff
 
@@ -940,7 +941,7 @@ test_awsom_large_gpu_run:
 test_awsom_large_gpu_check:
 	-@(${DIFFNUM} -a=2e-19 -r=1e-5 -t \
 		${TESTDIR}/RESULTS/SC/log_n000500.log \
-		Param/CORONA/TestOutput/log_n000500.sc.awsom_large_gpu \
+		Param/CORONA/TestOutput/log_n000500.awsom_large_gpu \
 		> test_awsom_large_gpu.diff)
 	ls -l test_awsom_large_gpu.diff
 
@@ -1073,9 +1074,44 @@ test_bvector_run:
 test_bvector_check:
 	-@(${DIFFNUM} -t -a=1e-26 -r=2e-5 \
 		${TESTDIR}/RESULTS/SC/log_n000001.log \
-		Param/CORONA/TestOutput/log_n000001.sc.bvector \
+		Param/CORONA/TestOutput/log_n000001.bvector \
 		> test_bvector.diff)
 	ls -l test_bvector.diff
+
+### SOLAR CORONA TEST AWSOM WITH B0local from VECTOR MAGNETOGRAM ###
+
+test_awsom_bvector:
+	@echo "test_awsom_bvector_compile..." > test_awsom_bvector.diff
+	$(MAKE) test_awsom_bvector_compile
+	@echo "test_awsom_bvector_rundir..." >> test_awsom_bvector.diff
+	$(MAKE) test_awsom_bvector_rundir
+	@echo "test_awsom_bvector_run..." >> test_awsom_bvector.diff
+	$(MAKE) test_awsom_bvector_run
+	@echo "test_awsom_bvector_check..." >> test_awsom_bvector.diff
+	$(MAKE) test_awsom_bvector_check
+
+# Fails on Pleiades with OpenMP
+test_awsom_bvector_compile:
+	./Config.pl -noopenmp -u=Sharp -e=Awsom -ng=2 -g=8,8,8
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_awsom_bvector_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.awsom.bvector PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_awsom_bvector_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	
+test_awsom_bvector_check:
+	-@(${DIFFNUM} -t -a=1e-26 -r=2e-5 \
+		${TESTDIR}/RESULTS/SC/log_n000001.log \
+		Param/CORONA/TestOutput/log_n000001.awsom.bvector \
+		> test_awsom_bvector.diff)
+	ls -l test_awsom_bvector.diff
 
 
 ### STANDALONE AWSOM SOLAR CORONA TESTS ###
@@ -1110,7 +1146,7 @@ test_awsom_run:
 test_awsom_check:
 	-@(${DIFFNUM} -t -a=2e-27 -r=2e-5 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
-		Param/CORONA/TestOutput/log_n000000.sc.awsom \
+		Param/CORONA/TestOutput/log_n000000.awsom \
 		> test_awsom.diff)
 	ls -l test_awsom.diff
 
@@ -1147,7 +1183,7 @@ test_stitch_run:
 test_stitch_check:
 	-@(${DIFFNUM} -t -a=2e-15 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
-		Param/CORONA/TestOutput/log_n000000.sc.stitch \
+		Param/CORONA/TestOutput/log_n000000.stitch \
 		> test_stitch.diff)
 	ls -l test_stitch.diff
 
