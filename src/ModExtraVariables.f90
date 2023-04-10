@@ -26,6 +26,10 @@ module ModExtraVariables
   integer, parameter :: nWave = 1
   integer, parameter :: WaveFirst_ = 1, WaveLast_ = 1
 
+  ! Perpendicular correlation length (Assumed to be the same for major
+  ! and minor turbulence energy density)
+  integer, parameter :: Lperp_ = 1
+  
   ! The named index range for velocity bins in pickup ions
   integer, parameter :: nPui = 1
   integer, parameter :: PuiFirst_ = 1, PuiLast_ = 1
