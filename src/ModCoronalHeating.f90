@@ -123,6 +123,12 @@ module ModCoronalHeating
   ! lower than the irregular one.
   logical :: UseNonLinearAWDissipation = .false.
 
+  ! The normalized energy difference:
+  ! SigmaD = (kinetic - magnetic)/(kinetic + magnetic)
+  logical :: UseReynoldsDecomposition = .false.
+  logical :: UseTransverseTurbulence = .true.
+  real :: SigmaD = -1.0/3.0
+
 contains
   !============================================================================
   subroutine get_coronal_heat_factor
