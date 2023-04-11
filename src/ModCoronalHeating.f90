@@ -125,10 +125,12 @@ module ModCoronalHeating
 
   ! The normalized energy difference:
   ! SigmaD = (kinetic - magnetic)/(kinetic + magnetic)
-  logical :: UseReynoldsDecomposition = .false.
-  logical :: UseTransverseTurbulence = .true.
-  real :: SigmaD = -1.0/3.0
-
+  logical, public :: UseReynoldsDecomposition = .false.
+  logical, public :: UseTransverseTurbulence = .true.
+  real, public :: SigmaD = -1.0/3.0
+  real, public :: KarmanTaylorAlpha = 1.0
+  real, public :: KarmanTaylorBeta = 1.0
+  
 contains
   !============================================================================
   subroutine get_coronal_heat_factor
