@@ -130,7 +130,7 @@ module ModCoronalHeating
   real, public :: SigmaD = -1.0/3.0
   real, public :: KarmanTaylorAlpha = 1.0
   real, public :: KarmanTaylorBeta = 1.0
-  
+
 contains
   !============================================================================
   subroutine get_coronal_heat_factor
