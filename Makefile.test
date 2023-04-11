@@ -140,6 +140,7 @@ test_extra:
 	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)
 	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)
 	-@($(MAKE) test_bvector TESTDIR=run_test_bvector)
+	-@($(MAKE) test_awsom_bvector TESTDIR=run_test_awsom_bvector)
 	-@($(MAKE) test_fluxemergence TESTDIR=run_test_fluxemergence)
 	-@($(MAKE) test_eosgodunov TESTDIR=run_test_eosgodunov)
 	./Config.pl -nohdf5
