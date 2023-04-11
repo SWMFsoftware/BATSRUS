@@ -1805,15 +1805,15 @@ contains
           ! additional terms cancel.
           if(DoFixChargeExchange)then
              ! Mean ion and neutral velocity weighted by sound speed squared
-             UMean_DI(1,:) = &
-                  (UThS_I(SWH_)*Ux_I(Neu_:) + UThS_I(Neu_:)*Ux_I(SWH_))/&
-                  UTh2Sum_I
-             UMean_DI(2,:) = &
-                  (UThS_I(SWH_)*Uy_I(Neu_:) + UThS_I(Neu_:)*Uy_I(SWH_))/&
-                  UTh2Sum_I
-             UMean_DI(3,:) = &
-                  (UThS_I(SWH_)*Uz_I(Neu_:) + UThS_I(Neu_:)*Uz_I(SWH_))/&
-                  UTh2Sum_I
+             where(UseSource_I(Neu_:)) &
+                  UMean_DI(1,:) = (UThS_I(SWH_)*Ux_I(Neu_:) &
+                  + UThS_I(Neu_:)*Ux_I(SWH_))/UTh2Sum_I
+             where(UseSource_I(Neu_:)) &
+                  UMean_DI(2,:) = (UThS_I(SWH_)*Uy_I(Neu_:) &
+                  + UThS_I(Neu_:)*Uy_I(SWH_))/UTh2Sum_I
+             where(UseSource_I(Neu_:))&
+                  UMean_DI(3,:) = (UThS_I(SWH_)*Uz_I(Neu_:) &
+                  + UThS_I(Neu_:)*Uz_I(SWH_))/UTh2Sum_I
 
              ! Momentum
              JxpUx_I = JxpUx_I + UMean_DI(1,:)*(RateN_I - Rate_I)
@@ -1920,8 +1920,8 @@ contains
           RhoEleNo = State_V(SWHRho_) + State_V(Pu3Rho_)
 
           ! Average Ion Velocity
-          UIon_D = (State_V(SWHRho_)*State_V(SWHRhoUx_:SWHRhoUz_) + &
-                  State_V(Pu3Rho_)*State_V(Pu3RhoUx_:Pu3RhoUz_))/RhoEleNo
+          UIon_D = (State_V(SWHRhoUx_:SWHRhoUz_) + &
+                  State_V(Pu3RhoUx_:Pu3RhoUz_))/RhoEleNo
 
           ! Electron density in SI units
           RhoEleSi = RhoEleNo*No2Si_V(UnitN_)
