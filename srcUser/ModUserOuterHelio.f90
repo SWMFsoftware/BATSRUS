@@ -1489,6 +1489,8 @@ contains
     ! Initialize with 1 to avoid division by zero
     UStarM_I      = 1
     UStarMPu3_I   = 1
+    UTh2Sum_I     = 1
+    UTh2SumPu3_I  = 1
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -1805,14 +1807,11 @@ contains
           ! additional terms cancel.
           if(DoFixChargeExchange)then
              ! Mean ion and neutral velocity weighted by sound speed squared
-             where(UseSource_I(Neu_:)) &
-                  UMean_DI(1,:) = (UThS_I(SWH_)*Ux_I(Neu_:) &
+             UMean_DI(1,:) = (UThS_I(SWH_)*Ux_I(Neu_:) &
                   + UThS_I(Neu_:)*Ux_I(SWH_))/UTh2Sum_I
-             where(UseSource_I(Neu_:)) &
-                  UMean_DI(2,:) = (UThS_I(SWH_)*Uy_I(Neu_:) &
+             UMean_DI(2,:) = (UThS_I(SWH_)*Uy_I(Neu_:) &
                   + UThS_I(Neu_:)*Uy_I(SWH_))/UTh2Sum_I
-             where(UseSource_I(Neu_:))&
-                  UMean_DI(3,:) = (UThS_I(SWH_)*Uz_I(Neu_:) &
+             UMean_DI(3,:) = (UThS_I(SWH_)*Uz_I(Neu_:) &
                   + UThS_I(Neu_:)*Uz_I(SWH_))/UTh2Sum_I
 
              ! Momentum
