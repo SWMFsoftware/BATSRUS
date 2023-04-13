@@ -155,7 +155,7 @@ contains
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
-         UseAlignmentAngle, Cdiss_C
+         UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta, UseReynoldsDecomposition
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -420,6 +420,21 @@ contains
           end if
        end do; end do; end do
        if(DoTest)call write_source('After UseWavePressure')
+    end if
+
+    if(Lperp_ > 1 .and. UseReynoldsDecomposition)then
+       ! Positive (definite) source term for the correlation length
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+
+          Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) + &
+               2.0*KarmanTaylorBeta*sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+               *(State_VGB(WaveLast_,i,j,k,iBlock) &
+               *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)) &
+               + State_VGB(WaveFirst_,i,j,k,iBlock) &
+               *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))) / max(1e-30, &
+               sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))
+       end do; end do; end do
     end if
 
     if(UseTurbulentCascade) call get_wave_reflection(iBlock)
@@ -1586,7 +1601,7 @@ contains
               + Force_D
          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
               + sum(Force_D*u_D)
-       end do; end do; end do
+      end do; end do; end do
 
     end subroutine calc_friction
     !==========================================================================
