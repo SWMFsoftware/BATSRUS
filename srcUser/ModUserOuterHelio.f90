@@ -1291,52 +1291,12 @@ contains
          Pu3Ux, Pu3Uy, Pu3Uz, Pu3U2
     real:: RhoSWH, uSWH_D(3), sRho, sRhoU_D(3), sEnergy, &
          RhoPu3, uPu3_D(3), USWH2, UPu32
-    real:: Source_V(nVar + nFluid)
+    real, dimension(nVar + nFluid):: Source_V, SourceCx_V, SourcePh_V, &
+         SourceImp_V
 
-    real :: r
-    real, dimension(nFluid) :: &
-         Ux_I, Uy_I, Uz_I, U2_I, Temp_I, Rho_I, UThS_I
+    real, dimension(nFluid) :: U2_I, Temp_I, Rho_I, UThS_I
 
-    real:: u_DI(3,nFluid)
-    real:: SrcLookI_II(Neu_:Ne4_,5), SrcLookN_II(Neu_:Ne4_,5)
-
-    ! For Ion/SWH
-    real, dimension(Neu_:Ne4_) :: &
-         URelS_I, URelSdim_I, UTh2Sum_I, UStar_I, Sigma_I, Rate_I, &
-         UStarM_I, SigmaN_I, RateN_I, RateE_I, RatePh_I, &
-         I0xp_I, I0px_I, I0xpPh_I, I2xp_I, I2px_I, &
-         JxpUx_I, JxpUxPh_I, JxpUy_I, JxpUyPh_I,&
-         JxpUz_I, JxpUzPh_I, JpxUx_I, JpxUy_I, JpxUz_I, &
-         Kxp_I, Kpx_I, Qepx_I, ExpPh_I, KxpPh_I, &
-         QmpxUx_I, QmpxUy_I, QmpxUz_I
-
-    ! For PU3
-    real, dimension(Neu_:Ne4_):: &
-         URelSPu3_I, URelSPu3dim_I, UTh2SumPu3_I, UStarPu3_I, SigmaPu3_I, &
-         RatePu3_I, UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, RateEPu3_I, &
-         I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, &
-         Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
-         Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
-
-    real, dimension(3,Neu_:Ne4_)::&
-         UMean_DI, UMeanPu3_DI
-
-    ! For Electron Impact
-    real:: SrcImp_II(Neu_:Ne4_,5)
-
-    real, dimension(Neu_:Ne4_):: &
-         SrcLookRhoN_I, SrcLookRhoUxN_I, SrcLookRhoUyN_I, SrcLookRhoUzN_I, &
-         SrcLookEnergyN_I, &
-         SrcLookRhoI_I, SrcLookRhoUxI_I, SrcLookRhoUyI_I, SrcLookRhoUzI_I, &
-         SrcLookEnergyI_I
-
-    real:: RhoEleNo, UIon_D(3), RhoEleSi, UEle_D(3), TempEle, UThSEle
-    real:: IonizationEnergy, Current_D(3)
-
-    real, dimension(Neu_:Ne4_):: &
-         SrcImpRho_I, SrcImpRhoUx_I, SrcImpRhoUy_I, SrcImpRhoUz_I, &
-         SrcImpEnergy_I
-    real:: SrcImpPe
+    real :: U_DI(3,nFluid)
 
     integer :: i, j, k
 
@@ -1446,14 +1406,194 @@ contains
        RETURN
     end if
 
-    ! calculating some constants cBoltzmann is J/K;
-    ! cth is related to U* and the thermal speed w1
-    ! see Eq (1) in McNutt et al. 1988; w1 = sqrt(cth*T1)
-
-    ! ALL FLUIDS, including total ion
-
     ! Figure out which neutral population is produced at this point
     call select_region(iBlock)
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       ! Calculate Rho, U, U^2, Temp, and UTh^2 for source terms
+       call calc_source_inputs( &
+          i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+
+       ! Charge Exchange
+       call calc_charge_exchange_source( &
+          i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+
+       ! Photoionization
+       if(UsePhotoion)then
+          call calc_photoion_source( &
+             i,j,k,iBlock,U_DI,U2_I,SourcePh_V)
+       else
+          SourcePh_V = 0.0
+       end if
+
+       ! Electron Impact Ionization
+       if(UseElectronImpact .and. UseElectronPressure)then
+          call calc_electron_impact_source( &
+             i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceImp_V)
+       else
+          SourceImp_V = 0.0
+       end if
+
+       if(.not.IsMhd)then
+          ! Heating Pu3
+          HeatPu3 = 0.0
+          if(UsePu3Heating) HeatPu3 = &
+             State_V(PU3Rho_)*(TempPu3 - Temp_I(PU3_))*&
+             Io2No_V(UnitTemperature_)*(r_GB(i,j,k,iBlock)-rBody)*FactorPu3
+
+       end if
+
+       ! Calculate the source terms for this cell
+       call calc_source_cell
+    end do; end do; end do
+
+    call test_stop(NameSub, DoTest, iBlock)
+  contains
+    !==========================================================================
+    subroutine calc_source_cell
+
+      ! Calculate source temrs for one cell. The pressures source is
+      ! S(p) = (gamma-1)[S(e) - u.S(Rhou) + 0.5 u**2 S(Rho)]
+
+      real :: Source_V(nVar + nFluid)
+      integer :: iVar, iFluid
+      !------------------------------------------------------------------------
+      Source_V = 0.0
+
+      if(.not.IsMhd)then
+         ! Source terms for the ion populations
+         if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
+            ! Region 3: only make Pu3 in region before TS
+            if (Ne3_ == iFluidProduced_C(i,j,k)) then
+               ! in Pop III region
+               Source_V(Pu3Energy_)= HeatPu3
+               Source_V(Pu3P_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
+                    - sum(U_DI(:,Pu3_)*Source_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                    + 0.5*U2_I(Pu3_)*Source_V(Pu3Rho_) )
+            end if
+         end if
+      end if
+
+      Source_V = Source_V + SourceCx_V + SourcePh_V + SourceImp_V
+
+      Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
+
+      if(.not.allocated(FluidSource_ICB)) &
+           allocate(FluidSource_ICB(nVar+nFluid,nI,nJ,nK,nBlock))
+      FluidSource_ICB(:,i,j,k,iBlock) = Source_V
+
+      if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
+
+         Source_V = Source_VC(:,i,j,k)
+
+         write(*,*) NameSub, ' iFluidProduced=', iFluidProduced_C(i,j,k)
+         do iVar = 1, nVar + nFLuid
+            write(*,*) ' Source(',NameVar_V(iVar),')=',Source_V(iVar)
+         end do
+
+         do iVar = 1, nVar + nFLuid
+            write(*,*) ' SourceCx(',NameVar_V(iVar),')=',SourceCx_V(iVar)
+         end do
+
+         do iVar = 1, nVar + nFLuid
+            write(*,*) ' SourcePh(',NameVar_V(iVar),')=',SourcePh_V(iVar)
+         end do
+
+         do iVar = 1, nVar + nFLuid
+            write(*,*) ' SourceImp(',NameVar_V(iVar),')=',SourceImp_V(iVar)
+         end do
+
+         if(.not.IsMhd)then
+            write(*,*) ' HeatPu3   ', HeatPu3
+         end if
+      end if
+
+    end subroutine calc_source_cell
+    !==========================================================================
+  end subroutine user_calc_sources_expl
+  !============================================================================
+  subroutine calc_source_inputs( &
+     i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+
+    ! Calculate parameters to pass to source terms
+
+    integer, intent(in):: i,j,k,iBlock
+    real, dimension(nFLuid), intent(out) :: Rho_I, U2_I, Temp_I, UThS_I
+    real, intent(out) :: U_DI(3,nFLuid)
+
+    real:: State_V(nVar)
+    !------------------------------------------------------------------------
+
+    State_V = State_VGB(:,i,j,k,iBlock)
+
+    ! Densities
+    Rho_I = State_V(iRho_I)*No2Si_V(UnitN_)
+
+    ! Velocities per component
+    U_DI(x_,:) = State_V(iRhoUx_I)/State_V(iRho_I)
+    U_DI(y_,:) = State_V(iRhoUy_I)/State_V(iRho_I)
+    U_DI(z_,:) = State_V(iRhoUz_I)/State_V(iRho_I)
+
+    ! Velocity square for the two ionized and four population of neutrals;
+    U2_I = sum(U_DI**2, 1)
+
+    ! Temperature for the two ionized and four population of neutrals (K)
+    Temp_I = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
+
+    ! If not using Pe, electron pressure is grouped with SWH
+    if(.not.UseElectronPressure)then
+       if(IsMhd)then
+          Temp_I(Ion_) = 0.5*Temp_I(Ion_)
+       else
+          Temp_I(SWH_) = (State_V(SWHP_) &
+               /(2*State_V(SWHRho_) + State_V(PU3Rho_))) &
+               *No2Si_V(UnitTemperature_)
+       endif
+    end if
+
+    ! Thermal speed (squared) for ionized and three populations of neutrals
+    ! UThS units are (m/s)^2
+    UThS_I = (2*cBoltzmann/cProtonMass)*Temp_I
+
+  end subroutine calc_source_inputs
+  !============================================================================
+  subroutine calc_charge_exchange_source( &
+     i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+
+    ! Calculate the charge exchange source terms for one cell.
+
+    integer, intent(in):: i,j,k,iBlock
+    real, dimension(nFluid), intent(in) :: Rho_I, U2_I, UThS_I
+    real, intent(in) :: U_DI(3,nFluid)
+    real, intent(out):: SourceCx_V(nVar + nFluid)
+
+    integer :: iFluid
+    real :: State_V(nVar)
+
+    real:: uDim_DI(3,nFLuid)
+    real, dimension(Neu_:Ne4_,5):: SrcLookI_II, SrcLookN_II, &
+       SrcLookPu3_II, SrcLookNPu3_II
+
+    ! For Ion/SWH
+    real, dimension(Neu_:Ne4_) :: &
+       URelS_I, URelSdim_I, UTh2Sum_I, UStar_I, Sigma_I, Rate_I, &
+       UStarM_I, SigmaN_I, RateN_I, RateE_I, &
+       I0xp_I, I0px_I, I2xp_I, I2px_I, &
+       JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
+       Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
+
+    ! For PU3
+    real, dimension(Neu_:Ne4_):: &
+       URelSPu3_I, URelSPu3dim_I, UTh2SumPu3_I, UStarPu3_I, SigmaPu3_I, &
+       RatePu3_I, UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, RateEPu3_I, &
+       I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, &
+       Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
+       Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
+
+    real, dimension(3,Neu_:Ne4_):: Umean_DI, UMeanPu3_DI
+
+    !--------------------------------------------------------------------------
+    SourceCx_V = 0.0
 
     ! Initialize and set all elements
     Rate_I        = 0
@@ -1472,19 +1612,26 @@ contains
     SigmaN_I      = 0
     SigmaPu3_I    = 0
     SigmaNPu3_I   = 0
-    RatePh_I      = 0
-    I0xpPh_I      = 0
-    JxpUxPh_I     = 0
-    JxpUyPh_I     = 0
-    JxpUzPh_I     = 0
-    KxpPh_I       = 0
-    SrcImpRho_I   = 0
-    SrcImpRhoUx_I = 0
-    SrcImpRhoUy_I = 0
-    SrcImpRhoUz_I = 0
-    SrcImpEnergy_I= 0
-    SrcImpPe      = 0
-    SrcImp_II     = 0
+    I0px_I        = 0
+    I0xp_I        = 0
+    JpxUx_I       = 0
+    JpxUy_I       = 0
+    JpxUz_I       = 0
+    JxpUx_I       = 0
+    JxpUy_I       = 0
+    JxpUz_I       = 0
+    Kpx_I         = 0
+    Kxp_I         = 0
+    I0pu3x_I        = 0
+    I0xpu3_I        = 0
+    Jpu3xUx_I       = 0
+    Jpu3xUy_I       = 0
+    Jpu3xUz_I       = 0
+    Jxpu3Ux_I       = 0
+    Jxpu3Uy_I       = 0
+    Jxpu3Uz_I       = 0
+    Kpu3x_I         = 0
+    Kxpu3_I         = 0
 
     ! Initialize with 1 to avoid division by zero
     UStarM_I      = 1
@@ -1492,803 +1639,766 @@ contains
     UTh2Sum_I     = 1
     UTh2SumPu3_I  = 1
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    ! Calculating the terms that enter in the Source terms
+    ! I0, Jxp, Kxp, Qexp are used as in Zank, Pauls, Williams, and Hall 1996
+    ! However the expressions for each are taken from McNutt et al. 1998
+    ! For example for population I; Neu:
+    !
+    ! Source(density) = I0xpNe2 + I0xpNe3 + I0xoNe4 in region 1
+    !                 = - I0pxNeu         otherwise
+    !
+    ! Source(momentum) = QmxpNeu + JxpNe2 + JxpNe3 + JxpNe4 in region 1
+    !                  = - JpxNeu                  otherwise
+    !
+    ! Source(energy) = QexpNeu + KxpNe2 + KxpNe3 + KxpNe4 in region 1
+    !                = -KpxNeu                   otherwise
+    !
+    ! 'xp' indicates neutrals-> SW protons charge exchange rates and
+    ! 'px' indicates SW protons->neutrals
+    ! 'xpu3' indicates neutrals -> PUI 3
+    ! 'pu3x' indicates PUI3 -> neutrals
+    ! charge exchange
+    ! For example:
+    ! I0xpNe2 is the term of creation of Neu by charge exchange p-Ne2
+    ! I0xpNe3 is the term of creation of Neu by charge exchange p-Ne3
 
-       ! Extract conservative variables
-       State_V = State_VGB(:, i, j, k, iBlock)
+    State_V = State_VGB(:,i,j,k,iBlock)
 
-       ! Production rates of neutrals through charge exchange between
-       ! sw ions and neutrals, 0 rate for sw ions with other ions
+    uDim_DI = U_DI * No2Si_V(UnitU_)
 
-       ! Densities
-       Rho_I = State_V(iRho_I)*No2Si_V(UnitN_)
+    ! Using look-up table to find source terms
+    if(iTableChargeExchange > 0) then
+       do iFluid = Neu_, Ne4_
+          call get_collision( &
+               ChargeExchange_, &
+               Rho_I(Ion_),UThS_I(Ion_), uDIm_DI(:,Ion_), &
+               Rho_I(iFluid), UThS_I(iFluid), uDim_DI(:,iFluid), &
+               SrcLookI_II(iFluid,:),SrcLookN_II(iFluid,:))
+       end do
 
-       ! Velocities per component
-       Ux_I = State_V(iRhoUx_I)/State_V(iRho_I)
-       Uy_I = State_V(iRhoUy_I)/State_V(iRho_I)
-       Uz_I = State_V(iRhoUz_I)/State_V(iRho_I)
+       where(UseSource_I(Neu_:)) I0xp_I  = SrcLookI_II(Neu_:,1)
+       where(UseSource_I(Neu_:)) JxpUx_I = SrcLookI_II(Neu_:,2)
+       where(UseSource_I(Neu_:)) JxpUy_I = SrcLookI_II(Neu_:,3)
+       where(UseSource_I(Neu_:)) JxpUz_I = SrcLookI_II(Neu_:,4)
+       where(UseSource_I(Neu_:)) Kxp_I   = SrcLookI_II(Neu_:,5)
 
-       ! u_DI  = State_V(iRhoUx_I:iRhoUz_I)/State_V(iRho_I)*No2Si_V(UnitU_)
-       u_DI(1,:) = Ux_I*No2Si_V(UnitU_)
-       u_DI(2,:) = Uy_I*No2Si_V(UnitU_)
-       u_DI(3,:) = Uz_I*No2Si_V(UnitU_)
+       where(UseSource_I(Neu_:)) I0px_I  = SrcLookN_II(Neu_:,1)
+       where(UseSource_I(Neu_:)) JpxUx_I = SrcLookN_II(Neu_:,2)
+       where(UseSource_I(Neu_:)) JpxUy_I = SrcLookN_II(Neu_:,3)
+       where(UseSource_I(Neu_:)) JpxUz_I = SrcLookN_II(Neu_:,4)
+       where(UseSource_I(Neu_:)) Kpx_I   = SrcLookN_II(Neu_:,5)
 
-       ! Velocity square for the two ionized and four population of neutrals;
-       U2_I = Ux_I**2 + Uy_I**2 + Uz_I**2
+       QmpxUx_I = JpxUx_I - JxpUx_I
+       QmpxUy_I = JpxUy_I - JxpUy_I
+       QmpxUz_I = JpxUz_I - JxpUz_I
 
-       ! Temperature for the two ionized and four population of neutrals (K)
-       Temp_I = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
+       Qepx_I = Kpx_I - Kxp_I
 
-       ! If not using Pe, electron pressure is grouped with SWH
-       if(.not.UseElectronPressure)then
-          if(IsMhd)then
-             Temp_I(Ion_) = 0.5*Temp_I(Ion_)
-          else
-             Temp_I(SWH_) = (State_V(SWHP_) &
-                  /(2*State_V(SWHRho_) + State_V(PU3Rho_))) &
-                  *No2Si_V(UnitTemperature_)
-          endif
-       end if
-
-       ! Thermal speed (squared) for ionized and three populations of neutrals
-       ! UThS units are (m/s)^2
-       UThS_I = (2*cBoltzmann/cProtonMass)*Temp_I
-
-       ! radius (needed for heating the PU3 population)
-       r = r_GB(i,j,k,iBlock)
-
-       ! Using look-up table to find source terms
-       if(iTableChargeExchange > 0) then
+       if(.not.IsMhd) then
           do iFluid = Neu_, Ne4_
              call get_collision( &
                   ChargeExchange_, &
-                  Rho_I(Ion_), UthS_I(Ion_), u_DI(:,Ion_), &
-                  Rho_I(iFluid), UthS_I(iFluid), u_DI(:,iFluid), &
-                  SrcLookI_II(iFluid,:),SrcLookN_II(iFluid,:))
-          enddo
+                  Rho_I(Pu3_),UThS_I(Pu3_), uDim_DI(:,Pu3_), &
+                  Rho_I(iFluid), UThs_I(iFluid), uDIm_DI(:,iFluid), &
+                  SrcLookPu3_II(iFluid,:),SrcLookNPu3_II(iFluid,:))
+          end do
 
-          where(UseSource_I(Neu_:)) SrcLookRhoI_I    = SrcLookI_II(Neu_:,1)
-          where(UseSource_I(Neu_:)) SrcLookRhoUxI_I  = SrcLookI_II(Neu_:,2)
-          where(UseSource_I(Neu_:)) SrcLookRhoUyI_I  = SrcLookI_II(Neu_:,3)
-          where(UseSource_I(Neu_:)) SrcLookRhoUzI_I  = SrcLookI_II(Neu_:,4)
-          where(UseSource_I(Neu_:)) SrcLookEnergyI_I = SrcLookI_II(Neu_:,5)
+          where(UseSource_I(Neu_:)) I0xpu3_I  = SrcLookPu3_II(Neu_:,1)
+          where(UseSource_I(Neu_:)) Jxpu3Ux_I = SrcLookPu3_II(Neu_:,2)
+          where(UseSource_I(Neu_:)) Jxpu3Uy_I = SrcLookPu3_II(Neu_:,3)
+          where(UseSource_I(Neu_:)) Jxpu3Uz_I = SrcLookPu3_II(Neu_:,4)
+          where(UseSource_I(Neu_:)) Kxpu3_I   = SrcLookPu3_II(Neu_:,5)
 
-          where(UseSource_I(Neu_:)) SrcLookRhoN_I    = SrcLookN_II(Neu_:,1)
-          where(UseSource_I(Neu_:)) SrcLookRhoUxN_I  = SrcLookN_II(Neu_:,2)
-          where(UseSource_I(Neu_:)) SrcLookRhoUyN_I  = SrcLookN_II(Neu_:,3)
-          where(UseSource_I(Neu_:)) SrcLookRhoUzN_I  = SrcLookN_II(Neu_:,4)
-          where(UseSource_I(Neu_:)) SrcLookEnergyN_I = SrcLookN_II(Neu_:,5)
+          where(UseSource_I(Neu_:)) I0pu3x_I  = SrcLookNPu3_II(Neu_:,1)
+          where(UseSource_I(Neu_:)) Jpu3xUx_I = SrcLookNPu3_II(Neu_:,2)
+          where(UseSource_I(Neu_:)) Jpu3xUy_I = SrcLookNPu3_II(Neu_:,3)
+          where(UseSource_I(Neu_:)) Jpu3xUz_I = SrcLookNPu3_II(Neu_:,4)
+          where(UseSource_I(Neu_:)) Kpu3x_I   = SrcLookNPu3_II(Neu_:,5)
+
+          Qmpu3xUx_I = Jpu3xUx_I - Jxpu3Ux_I
+          Qmpu3xUy_I = Jpu3xUy_I - Jxpu3Uy_I
+          Qmpu3xUz_I = Jpu3xUz_I - Jxpu3Uz_I
+
+          Qepu3x_I = Kpu3x_I - Kxpu3_I
+
+       end if
+
+    else
+       ! Using analytic formulas to find source terms
+
+       ! Relative velocity between neutrals and SW fluid squared
+       where(UseSource_I(Neu_:)) &
+            URelS_I = (U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
+            + (U_DI(y_,Neu_:) - U_DI(y_,Ion_))**2 &
+            + (U_DI(z_,Neu_:) - U_DI(z_,Ion_))**2
+       URelSDim_I = URelS_I * No2Si_V(UnitU_)**2
+
+       ! Sum of thermal speeds squared for SW fluid and neutral fluid
+       where(UseSource_I(Neu_:)) &
+            UTh2Sum_I = UThS_I(SWH_) + UThS_I(Neu_:)
+
+       if(.not.IsMhd)then
+          ! for Pu3
+          ! Relative velocity between neutrals and PUI fluid squared
+          where(UseSource_I(Neu_:)) &
+               URelSPu3_I = (U_DI(x_,Neu_:) - U_DI(x_,Pu3_))**2 &
+               + (U_DI(y_,Neu_:) - U_DI(y_,Pu3_))**2 &
+               + (U_DI(z_,Neu_:) - U_DI(z_,Pu3_))**2
+          URelSPu3Dim_I = URelSPu3_I * No2Si_V(UNitU_)**2
+
+          ! Sum of thermal speeds for PUI fluid and neutral fluid
+          where(UseSource_I(Neu_:)) &
+               UTh2SumPu3_I = UThS_I(Pu3_) + UThS_I(Neu_:)
+       end if
+
+       ! Calculating Cross Section Sigma_I for the different neutrals
+
+       ! Eq. (62) of McNutt et al. 1998 for U* [m/s]
+
+       ! For SW
+       where(UseSource_I(Neu_:)) &
+            UStar_I = sqrt(URelSdim_I &
+            + (4./cPi)*UTh2Sum_I)
+
+       if(.not.IsMhd)then
+          ! For Pu3
+          where(UseSource_I(Neu_:)) &
+               UStarPu3_I = sqrt(UrelSPu3dim_I &
+               + (4./cPi)*UTh2SumPu3_I)
+       end if
+
+       ! Eq. (64) of McNutt et al. 1998 for UM*
+
+       ! For SW
+       where(UseSource_I(Neu_:)) &
+            UStarM_I = sqrt(URelSdim_I &
+            + (64./(9.*cPi))*UTh2Sum_I)
+
+       if(.not.IsMhd)then
+          ! For Pu3
+          where(UseSource_I(Neu_:)) &
+               UStarMPu3_I = sqrt(UrelSPu3dim_I &
+               + (64./(9.*cPi))*UTh2SumPu3_I)
+       end if
+
+       ! Ustar has units of cm/s so the factor 100 si to convert m to cm
+       ! Sigma has units of m^2
+
+       ! For SW
+       ! Cross Section from Lindsay and Stebbings, 2005
+       where(UseSource_I(Neu_:)) &
+             Sigma_I = ((2.2835E-7 - (1.062E-8)*log(UStarM_I*100.))**2)*1.E-4
+       where(UseSource_I(Neu_:)) &
+             SigmaN_I = ((2.2835E-7 - (1.062E-8)*log(UStar_I*100.))**2)*1.E-4
+
+       if(.not.IsMhd)then
+          ! For Pu3
+          where(UseSource_I(Neu_:)) &
+                SigmaPu3_I = &
+                ((2.2835E-7 - (1.062E-8)*log(UStarMPu3_I*100.))**2)*(1.E-4)
+          where(UseSource_I(Neu_:)) &
+                SigmaNPu3_I = &
+                ((2.2835E-7 - (1.062E-8)*log(UStarPu3_I*100.))**2)*(1.E-4)
+       end if
+
+       ! Calculate Rate = \nu * nH * mp where nH is the neutral density
+       ! \nu = Sigma*np*u_star where np is the ion density and
+       ! For each population of neutrals there will be another Rate
+       ! The charge xchange cross section 100 to change ustar to cm/s
+       ! Rate has no units (m^2*m/s*s*m-3 )
+
+       if(.not.IsMhd)then
+          ! For SW
+          where(UseSource_I(Neu_:)) &
+               Rate_I = Sigma_I*State_V(SWHRho_) &
+               *State_V(iRho_I(Neu_:))*UStarM_I &
+               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+
+          ! For PU3
+          where(UseSource_I(Neu_:)) &
+               RatePu3_I = SigmaPu3_I*State_V(PU3Rho_) &
+               *State_V(iRho_I(Neu_:))*UStarMPu3_I &
+               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
        else
-
-          ! Relative velocity between neutrals and ionized fluid squared
-
-          ! For SW
           where(UseSource_I(Neu_:)) &
-               URelS_I = (Ux_I(Neu_:) - Ux_I(1))**2 &
-               + (Uy_I(Neu_:) - Uy_I(1))**2 &
-               + (Uz_I(Neu_:) - Uz_I(1))**2
+               Rate_I = Sigma_I*State_V(Rho_) &
+               *State_V(iRho_I(Neu_:))*UStarM_I &
+               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
-          ! Sum of thermal speeds squared for ionized and neutral fluid
+       end if
+
+       if(.not.IsMhd)then
+          ! for SW
           where(UseSource_I(Neu_:)) &
-               UTh2Sum_I = UThS_I(SWH_) + UThS_I(Neu_:)
+               RateN_I = SigmaN_I*State_V(SWHRho_)&
+               *State_V(iRho_I(Neu_:))*UStar_I&
+               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
-          URelSdim_I = URelS_I * No2Si_V(UnitU_)**2
-
-          if(.not.IsMhd)then
-             ! for PU3
-             where(UseSource_I(Neu_:)) &
-                  URelSPu3_I = (Ux_I(Neu_:) - Ux_I(PU3_))**2 &
-                  + (Uy_I(Neu_:) - Uy_I(PU3_))**2 &
-                  + (Uz_I(Neu_:) - Uz_I(PU3_))**2
-
-             where(UseSource_I(Neu_:)) &
-                  UTh2SumPu3_I = UThS_I(Pu3_) + UThS_I(Neu_:)
-
-             URelSPu3dim_I = URelSPu3_I * No2Si_V(UnitU_)**2
-          end if
-
-          ! Calculating Cross Section Sigma_I for the different neutrals
-          !
-          ! Incorporating units to calculate the charge exchange cross sections
-          ! No2Si_V(UnitU_) has units of m/s like cstartT so UReldim and UStar
-          ! has units of m/s
-
-          ! Eq. (62) of McNutt et al. 1988 for U* [m/s]
-
-          ! For SW
+          ! For PU3
           where(UseSource_I(Neu_:)) &
-               UStar_I = sqrt(URelSdim_I &
-               + (4./cPi)*UTh2Sum_I)
+               RateNPu3_I = SigmaNPu3_I*State_V(PU3Rho_)&
+               *State_V(iRho_I(Neu_:))*UStarPu3_I &
+               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
-          if(.not.IsMhd)then
-             ! For PU3
-             where(UseSource_I(Neu_:)) &
-                  UStarPu3_I = sqrt(URelSPu3dim_I &
-                  + (4./cPi)*UTh2SumPu3_I)
-          end if
-
-          ! Eq. (64) of McNutt et al. 1988 for UM*
-
-          ! For SW
+       else
           where(UseSource_I(Neu_:)) &
-               UStarM_I = sqrt(URelSdim_I &
-               + (64./(9.*cPi))*UTh2Sum_I)
+               RateN_I =SigmaN_I*State_V(Rho_)&
+               *State_V(iRho_I(Neu_:))*UStar_I  &
+               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       end if
 
-          if(.not.IsMhd)then
-             ! For PU3
-             where(UseSource_I(Neu_:)) &
-                  UStarMPu3_I = sqrt(URelSPu3dim_I &
-                  + (64./(9.*cPi))*UTh2SumPu3_I)
-          end if
-
-          ! UStar has units of cm/s so the factor 100 is to convert m to cm
-          ! Sigma has units of m^2
-
-          ! For SW
-          ! Cross Section from Lindsay and Stebbings, 2005
+       if(.not.IsMhd)then
+          ! for SW
           where(UseSource_I(Neu_:)) &
-               Sigma_I = ((2.2835E-7 - (1.062E-8)*log(UStarM_I*100.))**2)*1.E-4
-          SigmaN_I = ((2.2835E-7 - (1.062E-8)*log(UStar_I*100.))**2)*1.E-4
+               RateE_I = Sigma_I*State_V(SWHRho_)&
+               *State_V(iRho_I(Neu_:))*UStar_I&
+               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
+          ! For PU3
+          where(UseSource_I(Neu_:)) &
+               RateEPu3_I = SigmaPu3_I*State_V(PU3Rho_)&
+               *State_V(iRho_I(Neu_:))*UStarPu3_I &
+               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+
+       else
+          where(UseSource_I(Neu_:)) &
+               RateE_I =Sigma_I*State_V(Rho_)&
+               *State_V(iRho_I(Neu_:))*UStar_I  &
+               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       end if
+
+       ! For SW
+       I0xp_I = RateN_I
+       I0px_I = RateN_I
+
+       I2xp_I  = RateE_I*UThS_I(Ion_)/No2Si_V(UnitU_)**2
+       I2px_I  = RateE_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
+
+       if(.not.IsMhd)then
+          ! For PUI's
+          I0xpu3_I = RateNPu3_I
+          I0pu3x_I = RateNPu3_I
+          I2xpu3_I = RateEPu3_I*UThS_I(PU3_)/&
+               No2Si_V(UnitU_)**2
+          I2pu3x_I = RateEPu3_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
+          ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
+       end if
+
+       ! For SW
+       JxpUx_I = U_DI(x_,Ion_)*Rate_I
+       JxpUy_I = U_DI(y_,Ion_)*Rate_I
+       JxpUz_I = U_DI(z_,Ion_)*Rate_I
+
+       JpxUx_I = U_DI(x_,Neu_:)*Rate_I
+       JpxUy_I = U_DI(y_,Neu_:)*Rate_I
+       JpxUz_I = U_DI(z_,Neu_:)*Rate_I
+
+       if(.not.IsMhd)then
+          ! For PU3
+          Jxpu3Ux_I = U_DI(x_,PU3_)*RatePu3_I
+          Jxpu3Uy_I = U_DI(y_,PU3_)*RatePu3_I
+          Jxpu3Uz_I = U_DI(z_,PU3_)*RatePu3_I
+
+          Jpu3xUx_I = U_DI(x_,Neu_:)*RatePu3_I
+          Jpu3xUy_I = U_DI(y_,Neu_:)*RatePu3_I
+          Jpu3xUz_I = U_DI(z_,Neu_:)*RatePu3_I
+       end if
+
+       ! this is for neutrals, which can be created or destroyed
+       ! QmpxUx_I = JpxUx_I - JxpUx_I
+       ! QmpxUy_I = JpxUy_I - JxpUy_I
+       ! QmpxUz_I = JpxUz_I - JxpUz_I
+
+       ! For SW
+       QmpxUx_I = JpxUx_I - JxpUx_I
+       QmpxUy_I = JpxUy_I - JxpUy_I
+       QmpxUz_I = JpxUz_I - JxpUz_I
+
+       if(.not.IsMhd)then
+          Qmpu3xUx_I = Jpu3xUx_I - Jxpu3Ux_I
+          Qmpu3xUy_I = Jpu3xUy_I - Jxpu3Uy_I
+          Qmpu3xUz_I = Jpu3xUz_I - Jxpu3Uz_I
+       end if
+
+       ! For SW or Ion
+       Kxp_I = 0.5*U2_I(Ion_)*Rate_I + I2xp_I
+       Kpx_I = 0.5*U2_I(Neu_:)*Rate_I + I2px_I
+       Qepx_I = Kpx_I - Kxp_I
+
+       if(.not.IsMhd)then
+          ! For PU3
+          Kxpu3_I = 0.5*U2_I(Pu3_)*RatePu3_I + I2xpu3_I
+          Kpu3x_I = 0.5*U2_I(Neu_:)*RatePu3_I + I2pu3x_I
+          Qepu3x_I = Kpu3x_I - Kxpu3_I
+       end if
+
+       ! Additional energy and momentum terms from having multiple fluids.
+       ! The Qm and Qe variables do not need to be corrected because the
+       ! additional terms cancel.
+       if(DoFixChargeExchange)then
+          ! Mean ion and neutral velocity weighted by sound speed squared
+          UMean_DI(x_,:) = (UThS_I(SWH_)*U_DI(x_,Neu_:) &
+               + UThS_I(Neu_:)*U_DI(x_,SWH_))/UTh2Sum_I
+          UMean_DI(y_,:) = (UThS_I(SWH_)*U_DI(y_,Neu_:) &
+               + UThS_I(Neu_:)*U_DI(y_,SWH_))/UTh2Sum_I
+          UMean_DI(z_,:) = (UThS_I(SWH_)*U_DI(z_,Neu_:) &
+               + UThS_I(Neu_:)*U_DI(z_,SWH_))/UTh2Sum_I
+
+          ! Momentum
+          JxpUx_I = JxpUx_I + UMean_DI(x_,:)*(RateN_I - Rate_I)
+          JxpUy_I = JxpUy_I + UMean_DI(y_,:)*(RateN_I - Rate_I)
+          JxpUz_I = JxpUz_I + UMean_DI(z_,:)*(RateN_I - Rate_I)
+
+          JpxUx_I = JpxUx_I + UMean_DI(x_,:)*(RateN_I - Rate_I)
+          JpxUy_I = JpxUy_I + UMean_DI(y_,:)*(RateN_I - Rate_I)
+          JpxUz_I = JpxUz_I + UMean_DI(z_,:)*(RateN_I - Rate_I)
+
+          ! Energy
+          Kxp_I = Kxp_I + 0.5*Sum(UMean_DI**2, 1)*(RateN_I - Rate_I)&
+               + (0.75*RateN_I - RateE_I)*UThS_I(SWH_)*UThS_I(Neu_:)/&
+               UTh2Sum_I/No2Si_V(UnitU_)**2
+          Kpx_I = Kpx_I + 0.5*Sum(UMean_DI**2, 1)*(RateN_I - Rate_I)&
+               + (0.75*RateN_I - RateE_I)*UThS_I(SWH_)*UThS_I(Neu_:)/&
+               UTh2Sum_I/No2Si_V(UnitU_)**2
+
+          ! For PUIs
           if(.not.IsMhd)then
-             ! For PU3
-             where(UseSource_I(Neu_:)) &
-                  SigmaPu3_I = &
-                  ((2.2835E-7 - (1.062E-8)*log(UStarMPu3_I*100.))**2)*(1.E-4)
-             SigmaNPu3_I = &
-                  ((2.2835E-7 - (1.062E-8)*log(UStarPu3_I*100.))**2)*(1.E-4)
-          end if
-
-          ! Calculate Rate = \nu * nH * mp where nH is the density of neutrals
-          ! \nu = Sigma*np*u_star where np is the density of ions and
-          ! For each population of neutrals there will be another Rate
-          ! The charge exhange cross section 100 to change ustar to cm/s
-          ! Rate has no units (m^2*m/s*s*m-3 )
-
-          if(.not.IsMhd)then
-             ! For SW
-             where(UseSource_I(Neu_:)) &
-                  Rate_I = Sigma_I*State_V(SWHRho_) &
-                  *State_V(iRho_I(Neu_:))*UStarM_I &
-                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-             ! For PU3
-             where(UseSource_I(Neu_:)) &
-                  RatePu3_I = SigmaPu3_I*State_V(PU3Rho_) &
-                  *State_V(iRho_I(Neu_:))*UStarMPu3_I &
-                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-          else
-             where(UseSource_I(Neu_:)) &
-                  Rate_I = Sigma_I*State_V(Rho_) &
-                  *State_V(iRho_I(Neu_:))*UStarM_I &
-                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-          end if
-
-          if(.not.IsMhd)then
-             ! for SW
-             where(UseSource_I(Neu_:)) &
-                  RateN_I = SigmaN_I*State_V(SWHRho_)&
-                  *State_V(iRho_I(Neu_:))*UStar_I&
-                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-             ! For PU3
-             where(UseSource_I(Neu_:)) &
-                  RateNPu3_I = SigmaNPu3_I*State_V(PU3Rho_)&
-                  *State_V(iRho_I(Neu_:))*UStarPu3_I &
-                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-          else
-             where(UseSource_I(Neu_:)) &
-                  RateN_I =SigmaN_I*State_V(Rho_)&
-                  *State_V(iRho_I(Neu_:))*UStar_I  &
-                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-          end if
-
-          if(.not.IsMhd)then
-             ! for SW
-             where(UseSource_I(Neu_:)) &
-                  RateE_I = Sigma_I*State_V(SWHRho_)&
-                  *State_V(iRho_I(Neu_:))*UStar_I&
-                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-             ! For PU3
-             where(UseSource_I(Neu_:)) &
-                  RateEPu3_I = SigmaPu3_I*State_V(PU3Rho_)&
-                  *State_V(iRho_I(Neu_:))*UStarPu3_I &
-                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-          else
-             where(UseSource_I(Neu_:)) &
-                  RateE_I =Sigma_I*State_V(Rho_)&
-                  *State_V(iRho_I(Neu_:))*UStar_I  &
-                  *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-          end if
-
-          ! Calculating the terms that enter in the Source terms
-          ! The expressions for I0, Jxp, Kxp, Qexp are taken from
-          ! Zank, Pauls, Williams, and Hall 1996
-          ! For example for population I; Neu:
-          !
-          ! Source(density) = I0xpNe2 + I0xpNe3 in region 1
-          !                 = - I0pxNeu         otherwise
-          !
-          ! Source(momentum) = QmxpNeu + JxpNe2 + JxpNe3 in region 1
-          !                  = - JpxNeu                  otherwise
-          !
-          ! Source(energy) = QexpNeu + KxpNe2 + KxpNe3 in region 1
-          !                = -KpxNeu                   otherwise
-          !
-          ! 'xp' indicates neutrals-> SW protons charge exchange rates and
-          ! 'px' indicates SW protons->neutrals
-          ! 'xpu3' indicates neutrals -> PUI 3
-          ! 'pu3x' indicates PUI3 -> neutrals
-          ! charge exchange
-          ! For example:
-          ! I0xpNe2 is the term of creation of Neu by charge exchange p-Ne2
-          ! I0xpNe3 is the term of creation of Neu by charge exchange p-Ne3
-
-          ! For SW
-          I0xp_I = RateN_I
-          I0px_I = RateN_I
-
-          I2xp_I  = RateE_I*UThS_I(1)/No2Si_V(UnitU_)**2
-          I2px_I  = RateE_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
-
-          if(.not.IsMhd)then
-             ! For PUI's
-             I0xpu3_I = RateNPu3_I
-             I0pu3x_I = RateNPu3_I
-             I2xpu3_I = RateEPu3_I*UThS_I(PU3_)/&
-                  No2Si_V(UnitU_)**2
-             I2pu3x_I = RateEPu3_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
-             ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
-          end if
-
-          ! For SW
-          JxpUx_I = Ux_I(1)*Rate_I
-          JxpUy_I = Uy_I(1)*Rate_I
-          JxpUz_I = Uz_I(1)*Rate_I
-
-          JpxUx_I = Ux_I(Neu_:)*Rate_I
-          JpxUy_I = Uy_I(Neu_:)*Rate_I
-          JpxUz_I = Uz_I(Neu_:)*Rate_I
-
-          if(.not.IsMhd)then
-             ! For PU3
-             Jxpu3Ux_I = Ux_I(PU3_)*RatePu3_I
-             Jxpu3Uy_I = Uy_I(PU3_)*RatePu3_I
-             Jxpu3Uz_I = Uz_I(PU3_)*RatePu3_I
-
-             Jpu3xUx_I = Ux_I(Neu_:)*RatePu3_I
-             Jpu3xUy_I = Uy_I(Neu_:)*RatePu3_I
-             Jpu3xUz_I = Uz_I(Neu_:)*RatePu3_I
-          end if
-
-          ! this is for neutrals, which can be created or destroyed
-          ! QmpxUx_I = JpxUx_I - JxpUx_I
-          ! QmpxUy_I = JpxUy_I - JxpUy_I
-          ! QmpxUz_I = JpxUz_I - JxpUz_I
-
-          ! For SW
-          QmpxUx_I = JpxUx_I - JxpUx_I
-          QmpxUy_I = JpxUy_I - JxpUy_I
-          QmpxUz_I = JpxUz_I - JxpUz_I
-
-          if(.not.IsMhd)then
-             Qmpu3xUx_I = Jpu3xUx_I - Jxpu3Ux_I
-             Qmpu3xUy_I = Jpu3xUy_I - Jxpu3Uy_I
-             Qmpu3xUz_I = Jpu3xUz_I - Jxpu3Uz_I
-          end if
-
-          ! For SW or Ion
-          Kxp_I = 0.5*U2_I(1)*Rate_I + I2xp_I
-          Kpx_I = 0.5*U2_I(Neu_:)*Rate_I + I2px_I
-          Qepx_I = Kpx_I - Kxp_I
-
-          if(.not.IsMhd)then
-             ! For PU3
-             Kxpu3_I = 0.5*U2_I(Pu3_)*RatePu3_I + I2xpu3_I
-             Kpu3x_I = 0.5*U2_I(Neu_:)*RatePu3_I + I2pu3x_I
-             Qepu3x_I = Kpu3x_I - Kxpu3_I
-
-             ! Heating Pu3
-             HeatPu3 = 0.0
-             if(UsePu3Heating) HeatPu3 = &
-                  State_V(PU3Rho_)*(TempPu3 - Temp_I(PU3_))*&
-                  Io2No_V(UnitTemperature_)*(r-rBody)*FactorPu3
-
-          end if
-
-          ! Additional energy and momentum terms from having multiple fluids.
-          ! The Qm and Qe variables do not need to be corrected because the
-          ! additional terms cancel.
-          if(DoFixChargeExchange)then
-             ! Mean ion and neutral velocity weighted by sound speed squared
-             UMean_DI(1,:) = (UThS_I(SWH_)*Ux_I(Neu_:) &
-                  + UThS_I(Neu_:)*Ux_I(SWH_))/UTh2Sum_I
-             UMean_DI(2,:) = (UThS_I(SWH_)*Uy_I(Neu_:) &
-                  + UThS_I(Neu_:)*Uy_I(SWH_))/UTh2Sum_I
-             UMean_DI(3,:) = (UThS_I(SWH_)*Uz_I(Neu_:) &
-                  + UThS_I(Neu_:)*Uz_I(SWH_))/UTh2Sum_I
+             UMeanPu3_DI(x_,:) = &
+                  (UThS_I(Pu3_)*U_DI(x_,Neu_:) + UThS_I(Neu_:)*U_DI(x_,Pu3_))/&
+                  UTh2SumPu3_I
+             UMeanPu3_DI(y_,:) = &
+                  (UThS_I(Pu3_)*U_DI(y_,Neu_:) + UThS_I(Neu_:)*U_DI(y_,Pu3_))/&
+                  UTh2SumPu3_I
+             UMeanPu3_DI(z_,:) = &
+                  (UThS_I(Pu3_)*U_DI(z_,Neu_:) + UThS_I(Neu_:)*U_DI(z_,Pu3_))/&
+                  UTh2SumPu3_I
 
              ! Momentum
-             JxpUx_I = JxpUx_I + UMean_DI(1,:)*(RateN_I - Rate_I)
-             JxpUy_I = JxpUy_I + UMean_DI(2,:)*(RateN_I - Rate_I)
-             JxpUz_I = JxpUz_I + UMean_DI(3,:)*(RateN_I - Rate_I)
+             Jxpu3Ux_I = Jxpu3Ux_I + UMeanPu3_DI(x_,:)&
+                  *(RateNPu3_I - RatePu3_I)
+             Jxpu3Uy_I = Jxpu3Uy_I + UMeanPu3_DI(y_,:)&
+                  *(RateNPu3_I - RatePu3_I)
+             Jxpu3Uz_I = Jxpu3Uz_I + UMeanPu3_DI(z_,:)&
+                  *(RateNPu3_I - RatePu3_I)
 
-             JpxUx_I = JpxUx_I + UMean_DI(1,:)*(RateN_I - Rate_I)
-             JpxUy_I = JpxUy_I + UMean_DI(2,:)*(RateN_I - Rate_I)
-             JpxUz_I = JpxUz_I + UMean_DI(3,:)*(RateN_I - Rate_I)
+             Jpu3xUx_I = Jpu3xUx_I + UMeanPu3_DI(x_,:)&
+                  *(RateNPu3_I - RatePu3_I)
+             Jpu3xUy_I = Jpu3xUy_I + UMeanPu3_DI(y_,:)&
+                  *(RateNPu3_I - RatePu3_I)
+             Jpu3xUz_I = Jpu3xUz_I + UMeanPu3_DI(z_,:)&
+                  *(RateNPu3_I - RatePu3_I)
 
              ! Energy
-             Kxp_I = Kxp_I + 0.5*Sum(UMean_DI**2, 1)*(RateN_I - Rate_I)&
-                  + (0.75*RateN_I - RateE_I)*UThS_I(SWH_)*UThS_I(Neu_:)/&
-                  UTh2Sum_I/No2Si_V(UnitU_)**2
-             Kpx_I = Kpx_I + 0.5*Sum(UMean_DI**2, 1)*(RateN_I - Rate_I)&
-                  + (0.75*RateN_I - RateE_I)*UThS_I(SWH_)*UThS_I(Neu_:)/&
-                  UTh2Sum_I/No2Si_V(UnitU_)**2
-
-             ! For PUIs
-             if(.not.IsMhd)then
-                UMeanPu3_DI(1,:) = &
-                     (UThS_I(Pu3_)*Ux_I(Neu_:) + UThS_I(Neu_:)*Ux_I(Pu3_))/&
-                     UTh2SumPu3_I
-                UMeanPu3_DI(2,:) = &
-                     (UThS_I(Pu3_)*Uy_I(Neu_:) + UThS_I(Neu_:)*Uy_I(Pu3_))/&
-                     UTh2SumPu3_I
-                UMeanPu3_DI(3,:) = &
-                     (UThS_I(Pu3_)*Uz_I(Neu_:) + UThS_I(Neu_:)*Uz_I(Pu3_))/&
-                     UTh2SumPu3_I
-
-                ! Momentum
-                Jxpu3Ux_I = Jxpu3Ux_I + UMeanPu3_DI(1,:)&
-                     *(RateNPu3_I - RatePu3_I)
-                Jxpu3Uy_I = Jxpu3Uy_I + UMeanPu3_DI(2,:)&
-                     *(RateNPu3_I - RatePu3_I)
-                Jxpu3Uz_I = Jxpu3Uz_I + UMeanPu3_DI(3,:)&
-                     *(RateNPu3_I - RatePu3_I)
-
-                Jpu3xUx_I = Jpu3xUx_I + UMeanPu3_DI(1,:)&
-                     *(RateNPu3_I - RatePu3_I)
-                Jpu3xUy_I = Jpu3xUy_I + UMeanPu3_DI(2,:)&
-                     *(RateNPu3_I - RatePu3_I)
-                Jpu3xUz_I = Jpu3xUz_I + UMeanPu3_DI(3,:)&
-                     *(RateNPu3_I - RatePu3_I)
-
-                ! Energy
-                Kxpu3_I = Kxpu3_I &
-                     + 0.5*Sum(UMeanPu3_DI(:,:)**2, 1)&
-                     *(RateNPu3_I - RatePu3_I)&
-                     + (0.75*RateNPu3_I - RateEPu3_I)&
-                     *UThS_I(Pu3_)*UThS_I(Neu_:)/&
-                     UTh2SumPu3_I/No2Si_V(UnitU_)**2
-                Kpu3x_I = Kpu3x_I &
-                     + 0.5*Sum(UMeanPu3_DI(:,:)**2, 1)&
-                     *(RateNPu3_I - RatePu3_I)&
-                     + (0.75*RateNPu3_I - RateEPu3_I)*&
-                     UThS_I(Pu3_)*UThS_I(Neu_:)/&
-                     UTh2SumPu3_I/No2Si_V(UnitU_)**2
-             end if
+             Kxpu3_I = Kxpu3_I &
+                  + 0.5*Sum(UMeanPu3_DI**2, 1)&
+                  *(RateNPu3_I - RatePu3_I)&
+                  + (0.75*RateNPu3_I - RateEPu3_I)&
+                  *UThS_I(Pu3_)*UThS_I(Neu_:)/&
+                  UTh2SumPu3_I/No2Si_V(UnitU_)**2
+             Kpu3x_I = Kpu3x_I &
+                  + 0.5*Sum(UMeanPu3_DI**2, 1)&
+                  *(RateNPu3_I - RatePu3_I)&
+                  + (0.75*RateNPu3_I - RateEPu3_I)*&
+                  UThS_I(Pu3_)*UThS_I(Neu_:)/&
+                  UTh2SumPu3_I/No2Si_V(UnitU_)**2
           end if
+       end if
+    end if
 
+    if(UseColdCloud)then
+       if(UseSrcsInHelio)then
+          !! for studies of heliosphere encountering Cold Cloud
+          if(r_GB(i,j,k,iBlock) < HpLimit) then
+             I0xp_I(Ne4_) = 0.0
+             I0px_I(Ne4_) = 0.0
+             JpxUx_I(Ne4_) = 0.0
+             JpxUy_I(Ne4_) = 0.0
+             JpxUz_I(Ne4_) = 0.0
+             JxpUx_I(Ne4_) = 0.0
+             JxpUy_I(Ne4_) = 0.0
+             JxpUz_I(Ne4_) = 0.0
+             QmpxUx_I(Ne4_) = 0.0
+             QmpxUy_I(Ne4_) = 0.0
+             QmpxUz_I(Ne4_) = 0.0
+             Kxp_I(Ne4_) = 0.0
+             Kpx_I(Ne4_) = 0.0
+             Qepx_I(Ne4_) = 0.0
+             I0xp_I(Neu_) = 0.0
+             I0px_I(Neu_) = 0.0
+             JpxUx_I(Neu_) = 0.0
+             JpxUy_I(Neu_) = 0.0
+             JpxUz_I(Neu_) = 0.0
+             JxpUx_I(Neu_) = 0.0
+             JxpUy_I(Neu_) = 0.0
+             JxpUz_I(Neu_) = 0.0
+             QmpxUx_I(Neu_) = 0.0
+             QmpxUy_I(Neu_) = 0.0
+             QmpxUz_I(Neu_) = 0.0
+             Kxp_I(Neu_) = 0.0
+             Kpx_I(Neu_) = 0.0
+             Qepx_I(Neu_) = 0.0
+          endif
        endif
+    end if
 
-       if(UsePhotoion)then
-          ! Chika. Photoionization rate
-          ! rate_ph = 8E-8*(r0/r)**2
-          ! 8E-8 has units 1/s
-          ! r0 = 1 AU
-          where(UseSource_I(Neu_:)) &
-               RatePh_I = 8E-8*(1/(r+1e-10))**2*State_V(iRho_I(Neu_:)) &
-               * No2Si_V(UnitT_)
+    ! Neutral source terms
+    do iFluid = Neu_, Ne4_
+       if(.not.UseSource_I(iFluid)) CYCLE
+       call select_fluid(iFluid)
+       if (iFluid == iFluidProduced_C(i,j,k)) then
+          ! iRho etc = change in density etc
+          if(IsMhd)then
+             ! Single Ion
+             SourceCx_V(iRho)    = sum(I0xp_I)  - I0px_I(iFluid)
+             SourceCx_V(iRhoUx)  = sum(JxpUx_I) - JpxUx_I(iFluid)
+             SourceCx_V(iRhoUy)  = sum(JxpUy_I) - JpxUy_I(iFluid)
+             SourceCx_V(iRhoUz)  = sum(JxpUz_I) - JpxUz_I(iFluid)
+             SourceCx_V(iEnergy) = sum(Kxp_I)   - Kpx_I(iFluid)
+          else
+             ! Multi ion
+             SourceCx_V(iRho)    = sum(I0xp_I) + sum(I0pu3x_I) &
+                  - I0xp_I(iFluid) - I0xpu3_I(iFluid)
+             SourceCx_V(iRhoUx)  = sum(JxpUx_I) + sum(Jxpu3Ux_I) &
+                  - JpxUx_I(iFluid) - Jpu3xUx_I(iFluid)
+             SourceCx_V(iRhoUy)  = sum(JxpUy_I) + sum(Jxpu3Uy_I) &
+                  - JpxUy_I(iFluid) - Jpu3xUy_I(iFluid)
+             SourceCx_V(iRhoUz)  = sum(JxpUz_I) + sum(Jxpu3Uz_I) &
+                  - JpxUz_I(iFluid) - Jpu3xUz_I(iFluid)
+             SourceCx_V(iEnergy) = sum(Kxp_I) + sum(Kxpu3_I) &
+                  - Kpx_I(iFluid) - Kpu3x_I(iFluid)
+          end if
+       else
+          if(IsMhd)then
+             ! Single Ion
+             SourceCx_V(iRho)    = -I0px_I(iFluid)
+             SourceCx_V(iRhoUx)  = -JpxUx_I(iFluid)
+             SourceCx_V(iRhoUy)  = -JpxUy_I(iFluid)
+             SourceCx_V(iRhoUz)  = -JpxUz_I(iFluid)
+             SourceCx_V(iEnergy) = -Kpx_I(iFluid)
+          else
+             ! Multi Ion
+             SourceCx_V(iRho)    = -I0px_I(iFluid)  - I0pu3x_I(iFluid)
+             SourceCx_V(iRhoUx)  = -JpxUx_I(iFluid) - Jpu3xUx_I(iFluid)
+             SourceCx_V(iRhoUy)  = -JpxUy_I(iFluid) - Jpu3xUy_I(iFluid)
+             SourceCx_V(iRhoUz)  = -JpxUz_I(iFluid) - Jpu3xUz_I(iFluid)
+             SourceCx_V(iEnergy) = -Kpx_I(iFluid)   - Kpu3x_I(iFluid)
+          end if
+       end if
+       SourceCx_V(iP) = (Gamma-1)* ( SourceCx_V(iEnergy) &
+            - sum(U_DI(:,iFluid)*SourceCx_V(iRhoUx:iRhoUz)) &
+            + 0.5*U2_I(iFluid)*SourceCx_V(iRho) )
+    end do
 
-          ! Chika: Source terms for single ion
-          ! Density source term for photoionization
-          ! Fahr et al. 2000 Table 2
-          I0xpPh_I = RatePh_I
+    ! Ion source terms
+    if(IsMhd)then
+       ! Single Ion
+       if(UseSource_I(Ion_)) then
+          SourceCx_V(RhoUx_)  = sum(QmpxUx_I)
+          SourceCx_V(RhoUy_)  = sum(QmpxUy_I)
+          SourceCx_V(RhoUz_)  = sum(QmpxUz_I)
+          SourceCx_V(Energy_) = sum(Qepx_I)
+          SourceCx_V(p_) = (Gamma-1)* ( SourceCx_V(Energy_) &
+               - sum(U_DI(:,Ion_)*SourceCx_V(RhoUx_:RhoUz_)) &
+               + 0.5*U2_I(Ion_)*SourceCx_V(Rho_) )
+       end if
+    else
+       ! Multi Ion
+       if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
+          ! Region 3: only make Pu3 in region before TS
+          if (Ne3_ == iFluidProduced_C(i,j,k)) then
+             ! in Pop III region
+             SourceCx_V(SWHRho_)    = -sum(I0px_I) &
+                    + I0px_I(Ne3_) + I0xpu3_I(Ne3_)
+             SourceCx_V(SWHRhoUx_)  = -sum(JxpUx_I) &
+                    + JpxUx_I(Ne3_) + Jpu3xUx_I(Ne3_)
+             SourceCx_V(SWHRhoUy_)  = -sum(JxpUy_I) &
+                    + JpxUy_I(Ne3_) + Jpu3xUy_I(Ne3_)
+             SourceCx_V(SWHRhoUz_)  = -sum(JxpUz_I) &
+                    + JpxUz_I(Ne3_) + Jpu3xUz_I(Ne3_)
+             SourceCx_V(SWHEnergy_) = -sum(Kxp_I) &
+                    + Kpx_I(Ne3_) + Kpu3x_I(Ne3_)
+             SourceCx_V(SWHp_) = (Gamma-1)* ( SourceCx_V(SWHEnergy_) &
+                    - sum(U_DI(:,SWH_)*SourceCx_V(SWHRhoUx_:SWHRhoUz_)) &
+                    + 0.5*U2_I(SWH_)*SourceCx_V(SWHRho_) )
 
-          ! Momentum source term for neutrals
-          ! Table 2 Fahr et al. 2000
-          JxpUxPh_I = Ux_I(Neu_:)*RatePh_I
-          JxpUyPh_I = Uy_I(Neu_:)*RatePh_I
-          JxpUzPh_I = Uz_I(Neu_:)*RatePh_I
+             SourceCx_V(Pu3Rho_) = sum(I0px_I) &
+                    - I0px_I(Ne3_) - I0xpu3_I(Ne3_)
+             SourceCx_V(Pu3RhoUx_) = sum(Qmpu3xUx_I) + sum(JpxUx_I) &
+                    - JpxUx_I(Ne3_) - Jpu3xUx_I(Ne3_)
+             SourceCx_V(Pu3RhoUy_) = sum(Qmpu3xUy_I) + sum(JpxUy_I) &
+                    - JpxUy_I(Ne3_) -Jpu3xUy_I(Ne3_)
+             SourceCx_V(Pu3RhoUz_) = sum(Qmpu3xUz_I) + sum(JpxUz_I) &
+                    - JpxUz_I(Ne3_)- Jpu3xUz_I(Ne3_)
+             SourceCx_V(Pu3Energy_)= sum(Qepu3x_I) + sum(Kpx_I) &
+                    - Kpu3x_I(Ne3_) - Kpx_I(Ne3_)
+             SourceCx_V(Pu3P_) = (Gamma-1)* ( SourceCx_V(Pu3Energy_) &
+                    - sum(U_DI(:,Pu3_)*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                    + 0.5*U2_I(Pu3_)*SourceCx_V(Pu3Rho_) )
 
-          ! Energy source term
-          ! Defining first this "energy" term for sw/ion and neutral species.
-          ! Has units of (m/s)^2.
-          ! Dividing out density so that energy source terms KxpPh_I
-          ! syntax is consistent with momentum and density source
-          ! term definitions.
-          ! Equation 4 Fahr et al. 2000
+             ! end of Region 3
+          else
+             SourceCx_V(SWHRho_) = sum(I0xpu3_I)
+             SourceCx_V(SWHRhoUx_) = sum(QmpxUx_I) + sum(Jpu3xUx_I)
+             SourceCx_V(SWHRhoUy_) = sum(QmpxUy_I) + sum(Jpu3xUy_I)
+             SourceCx_V(SWHRhoUz_) = sum(QmpxUz_I) + sum(Jpu3xUz_I)
+             SourceCx_V(SWHEnergy_)= sum(Qepx_I)+ sum(Kpu3x_I)
+             SourceCx_V(SWHp_) = (Gamma-1)* ( SourceCx_V(SWHEnergy_) &
+                  - sum(U_DI(:,SWH_)*SourceCx_V(SWHRhoUx_:SWHRhoUz_)) &
+                  + 0.5*U2_I(SWH_)*SourceCx_V(SWHRho_) )
+             SourceCx_V(Pu3Rho_)   = -sum(I0xpu3_I)
+             SourceCx_V(Pu3RhoUx_) = -sum(Jxpu3Ux_I)
+             SourceCx_V(Pu3RhoUy_) = -sum(Jxpu3Uy_I)
+             SourceCx_V(Pu3RhoUz_) = -sum(Jxpu3Uz_I)
+             SourceCx_V(Pu3Energy_)= -sum(Kxpu3_I)
+             SourceCx_V(Pu3P_) = (Gamma-1)* ( SourceCx_V(Pu3Energy_) &
+                  - sum(U_DI(:,Pu3_)*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                  + 0.5*U2_I(Pu3_)*SourceCx_V(Pu3Rho_))
+          end if
+       end if
+    end if
 
-          ExpPh_I = 0.5*U2_I(Neu_:) + State_V(iP_I(Neu_:))/&
+  end subroutine calc_charge_exchange_source
+  !============================================================================
+  subroutine calc_photoion_source( &
+     i,j,k,iBlock,U_DI,U2_I,SourcePh_V)
+
+    ! Calculate the photoionization source terms for one cell.
+
+    integer, intent(in):: i,j,k,iBlock
+    real, intent(in):: U_DI(3,nFluid)
+    real, intent(in) :: U2_I(nFluid)
+    real, intent(out):: SourcePh_V(nVar + nFluid)
+
+    integer :: iFluid
+    real :: r
+    real, dimension(Neu_:Ne4_):: RatePh_I, I0xpPh_I, JxpUxPh_I, JxpUyPh_I, &
+            JxpUzPh_I, ExpPh_I, KxpPh_I
+    real :: State_V(nVar)
+
+    ! Chika. Photoionization rate
+    character(len=*), parameter:: NameSub = 'calc_photoion_source'
+    !--------------------------------------------------------------------------
+    SourcePh_V = 0.0
+
+    ! Only defined for Single Ion (for now)
+    if(.not.IsMhd) RETURN
+
+    State_V = State_VGB(:,i,j,k,iBlock)
+    r = r_GB(i,j,k,iBlock)
+
+    ! rate_ph = 8E-8*(r0/r)**2
+    ! 8E-8 has units 1/s
+    ! r0 = 1 AU
+    where(UseSource_I(Neu_:)) &
+         RatePh_I = 8E-8*(1/(r+1e-10))**2*State_V(iRho_I(Neu_:)) &
+         * No2Si_V(UnitT_)
+
+    ! Chika: Source terms for single ion
+    ! Density source term for photoionization
+    ! Fahr et al. 2000 Table 2
+    I0xpPh_I = RatePh_I
+
+    ! Momentum source term for neutrals
+    ! Table 2 Fahr et al. 2000
+    JxpUxPh_I = U_DI(x_,Neu_:)*RatePh_I
+    JxpUyPh_I = U_DI(y_,Neu_:)*RatePh_I
+    JxpUzPh_I = U_DI(z_,Neu_:)*RatePh_I
+
+    ! Energy source term
+    ! Defining first this "energy" term for sw/ion and neutral species.
+    ! Has units of (m/s)^2.
+    ! Dividing out density so that energy source terms KxpPh_I
+    ! syntax is consistent with momentum and density source
+    ! term definitions.
+    ! Equation 4 Fahr et al. 2000
+
+    ExpPh_I = 0.5*U2_I(Neu_:) + State_V(iP_I(Neu_:))/&
                State_V(iRho_I(Neu_:))/(GammaMinus1)
 
-          ! Chika: Energy source term
-          ! Table 2 Fahr et al. 2000
-          KxpPh_I = RatePh_I*ExpPh_I
+    ! Chika: Energy source term
+    ! Table 2 Fahr et al. 2000
+    KxpPh_I = RatePh_I*ExpPh_I
 
-       end if
+    do iFluid = Neu_, Ne4_
+        if(.not.UseSource_I(iFluid)) CYCLE
+        call select_fluid(iFluid)
+        SourcePh_V(iRho)    = -I0xpPh_I(iFluid)
+        SourcePh_V(iRhoUx)  = -JxpUxPh_I(iFluid)
+        SourcePh_V(iRhoUy)  = -JxpUyPh_I(iFluid)
+        SourcePh_V(iRhoUz)  = -JxpUzPh_I(iFluid)
+        SourcePh_V(iEnergy) = -KxpPh_I(iFluid)
 
-       if(UseElectronImpact .and. UseElectronPressure)then
+        SourcePh_V(iP) = (Gamma-1)* ( SourcePh_V(iEnergy) &
+             - sum(U_DI(:,iFluid)*SourcePh_V(iRhoUx:iRhoUz)) &
+             + 0.5*U2_I(iFluid)*SourcePh_V(iRho) )
+    end do
 
-          ! Electroncdensity in normalized units
-          RhoEleNo = State_V(SWHRho_) + State_V(Pu3Rho_)
+    if(UseSource_I(Ion_))then
+        SourcePh_V(Rho_)    = sum(I0xpPh_I)
+        SourcePh_V(RhoUx_)  = sum(JxpUxPh_I)
+        SourcePh_V(RhoUy_)  = sum(JxpUyPh_I)
+        SourcePh_V(RhoUz_)  = sum(JxpUzPh_I)
+        SourcePh_V(Energy_) = sum(KxpPh_I)
 
-          ! Average Ion Velocity
-          UIon_D = (State_V(SWHRhoUx_:SWHRhoUz_) + &
-                  State_V(Pu3RhoUx_:Pu3RhoUz_))/RhoEleNo
+        SourcePh_V(P_) = (Gamma-1)* ( SourcePh_V(Energy_) &
+             - sum(U_DI(:,Ion_)*SourcePh_V(RhoUx_:RhoUz_)) &
+             + 0.5*U2_I(Ion_)*SourcePh_V(Rho_) )
+    end if
 
-          ! Electron density in SI units
-          RhoEleSi = RhoEleNo*No2Si_V(UnitN_)
+  end subroutine calc_photoion_source
+  !============================================================================
+  subroutine calc_electron_impact_source( &
+     i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceImp_V)
 
-          ! Get electron velocity from the current and positive ion velocities
-          call get_current(i, j, k, iBlock, Current_D)
-          UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo) &
+    ! Calculate the electron impact source terms for one cell.
+    ! Requires a separate electron pressure
+
+    integer, intent(in):: i,j,k,iBlock
+    real, dimension(nFluid), intent(in):: Rho_I, U2_I, UThS_I
+    real, intent(in) :: U_DI(3,nFluid)
+    real, intent(out):: SourceImp_V(nVar + nFluid)
+
+    integer :: iFluid
+    real, dimension(Neu_:Ne4_):: SrcImpRho_I, &
+         SrcImpRhoUx_I, SrcImpRhoUy_I, SrcImpRhoUz_I, &
+         SrcImpEnergy_I
+    real, dimension(3,nFluid):: uDim_DI
+    real :: State_V(nVar)
+    real :: RhoEleNo, RhoEleSi, TempEle, UthSEle, IonizationEnergy, SrcImpPe
+    real, dimension(3):: Uion_D, UEle_D, Current_D
+    real :: SrcImp_II(Neu_:Ne4_,5)
+
+    character(len=*), parameter:: NameSub = 'calc_electron_impact_source'
+    !--------------------------------------------------------------------------
+
+    SourceImp_V = 0.0
+
+    ! Requires a separate electron pressure
+    if (.not.UseElectronPressure) RETURN
+
+    State_V = State_VGB(:,i,j,k,iBlock)
+
+    ! uDIm_DI  = State_V(iRhoUx_I:iRhoUz_I)/State_V(iRho_I)*No2Si_V(UnitU_)
+    uDim_DI = U_DI*No2Si_V(UnitU_)
+
+    if (IsMhd) then
+       ! Electron density in normalized units
+       RhoEleNo = State_V(Ion_)
+
+       ! Average Ion Velocity
+       UIon_D = State_V(RhoUx_:RhoUz_)/RhoEleNo
+    else
+       ! Electron density in normalized units
+       RhoEleNo = State_V(SWHRho_) + State_V(Pu3Rho_)
+
+       ! Average Ion Velocity
+       UIon_D = (State_V(SWHRhoUx_:SWHRhoUz_) + &
+               State_V(Pu3RhoUx_:Pu3RhoUz_))/RhoEleNo
+    end if
+
+    ! Electron density in SI units
+    RhoEleSi = RhoEleNo*No2Si_V(UnitN_)
+
+    ! Get electron velocity from the current and positive ion velocities
+    call get_current(i, j, k, iBlock, Current_D)
+    UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo) &
                *No2Si_V(UnitU_)
 
-          ! Electron temperature
-          TempEle = State_V(Pe_)/RhoEleNo*No2Si_V(UnitTemperature_)
+    ! Electron temperature
+    TempEle = State_V(Pe_)/RhoEleNo*No2Si_V(UnitTemperature_)
 
-          ! Electron thermal speed squared
-          UThSEle = (2*cBoltzmann/cElectronMass)*TempEle
+    ! Electron thermal speed squared
+    UThSEle = (2*cBoltzmann/cElectronMass)*TempEle
 
-          ! Electron Ionization Energy
-          IonizationEnergy = cRyToEv*cEv
+    ! Electron Ionization Energy
+    IonizationEnergy = cRyToEv*cEv
 
-          if(iTableElectronImpact > 0)then
-             do iFluid = Neu_, Ne4_
-                call get_collision( &
-                   ElectronImpact_, &
-                   Rho_I(iFluid), UThS_I(iFluid), u_DI(:,iFLuid), &
-                   RhoEleSi, UThSEle, UEle_D, &
-                   SrcImp_II(iFluid,:))
-             enddo
+    if(iTableElectronImpact > 0)then
+       do iFluid = Neu_, Ne4_
+          call get_collision( &
+             ElectronImpact_, &
+             Rho_I(iFluid), UThS_I(iFluid), uDim_DI(:,iFLuid), &
+             RhoEleSi, UThSEle, UEle_D, &
+             SrcImp_II(iFluid,:))
+       enddo
+    end if
+
+    where(UseSource_I(Neu_:)) SrcImpRho_I    = SrcImp_II(Neu_:,1)
+    where(UseSource_I(Neu_:)) SrcImpRhoUx_I  = SrcImp_II(Neu_:,2)
+    where(UseSource_I(Neu_:)) SrcImpRhoUy_I  = SrcImp_II(Neu_:,3)
+    where(UseSource_I(Neu_:)) SrcImpRhoUz_I  = SrcImp_II(Neu_:,4)
+    where(UseSource_I(Neu_:)) SrcImpEnergy_I = SrcImp_II(Neu_:,5)
+    ! Pressure source term for the electrons
+    ! Ionization Energy * total ionization rate
+    SrcImpPe = -sum(SrcImp_II(Neu_:,1), MASK=UseSource_I(Neu_:)) &
+             *IonizationEnergy*GammaElectronMinus1/cProtonMass &
+             *No2Si_V(UnitRho_)/No2Si_V(UnitP_)
+
+    ! Neutral source terms
+    do iFluid = Neu_, Ne4_
+        if(.not.UseSource_I(iFluid)) CYCLE
+        call select_fluid(iFLuid)
+        SourceImp_V(iRho)    = -SrcImpRho_I(iFluid)
+        SourceImp_V(iRhoUx)  = -SrcImpRhoUx_I(iFluid)
+        SourceImp_V(iRhoUy)  = -SrcImpRhoUy_I(iFluid)
+        SourceImp_V(iRhoUz)  = -SrcImpRhoUz_I(iFluid)
+        SourceImp_V(iEnergy) = -SrcImpEnergy_I(iFluid)
+
+        SourceImp_V(iP) = (Gamma-1)* ( SourceImp_V(iEnergy) &
+             - sum(U_DI(:,iFluid)*SourceImp_V(iRhoUx:iRhoUz)) &
+             + 0.5*U2_I(iFluid)*SourceImp_V(iRho) )
+    end do
+
+    ! Ion source terms
+    if(IsMhd) then
+       ! Single Ion
+       if (UseSource_I(Ion_)) then
+          SourceImp_V(Rho_)    = sum(SrcImpRho_I)
+          SourceImp_V(RhoUx_)  = sum(SrcImpRhoUx_I)
+          SourceImp_V(RhoUy_)  = sum(SrcImpRhoUy_I)
+          SourceImp_V(RhoUz_)  = sum(SrcImpRhoUz_I)
+          SourceImp_V(Energy_) = sum(SrcImpEnergy_I)
+
+          SourceImp_V(P_) = (Gamma-1)* ( SourceImp_V(Energy_) &
+             - sum(U_DI(:,Ion_)*SourceImp_V(RhoUx_:RhoUz_)) &
+             + 0.5*U2_I(Ion_)*SourceImp_V(Rho_) )
+       end if
+    else
+       ! Multi Ion
+       if(UseSource_I(SWH_) .and. UseSource_I(Pu3_)) then
+          if (Ne3_ == iFluidProduced_C(i,j,k)) then
+             ! inside region 3
+             ! Pu3 is created here
+             SourceImp_V(Pu3Rho_)    = sum(SrcImpRho_I)
+             SourceImp_V(Pu3RhoUx_)  = sum(SrcImpRhoUx_I)
+             SourceImp_V(Pu3RhoUy_)  = sum(SrcImpRhoUy_I)
+             SourceImp_V(Pu3RhoUz_)  = sum(SrcImpRhoUz_I)
+             SourceImp_V(Pu3Energy_) = sum(SrcImpEnergy_I)
+
+             SourceImp_V(Pu3P_) = (Gamma-1)* ( SourceImp_V(Pu3Energy_) &
+                       - sum(U_DI(:,Pu3_)*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                       + 0.5*U2_I(Pu3_)*SourceImp_V(Pu3Rho_))
+          else
+             ! outside region 3
+             ! SWH is created
+             SourceImp_V(SwhRho_)    = sum(SrcImpRho_I)
+             SourceImp_V(SwhRhoUx_)  = sum(SrcImpRhoUx_I)
+             SourceImp_V(SwhRhoUy_)  = sum(SrcImpRhoUy_I)
+             SourceImp_V(SwhRhoUz_)  = sum(SrcImpRhoUz_I)
+             SourceImp_V(SwhEnergy_) = sum(SrcImpEnergy_I)
+
+             SourceImp_V(SWHp_) = (Gamma-1)* ( SourceImp_V(SWHEnergy_) &
+                       - sum(U_DI(:,SWH_)*SourceImp_V(SWHRhoUx_:SWHRhoUz_)) &
+                       + 0.5*U2_I(SWH_)*SourceImp_V(SWHRho_) )
           end if
-
-          where(UseSource_I(Neu_:)) SrcImpRho_I = SrcImp_II(Neu_:,1)
-          where(UseSource_I(Neu_:)) SrcImpRhoUx_I = SrcImp_II(Neu_:,2)
-          where(UseSource_I(Neu_:)) SrcImpRhoUy_I = SrcImp_II(Neu_:,3)
-          where(UseSource_I(Neu_:)) SrcImpRhoUz_I = SrcImp_II(Neu_:,4)
-          where(UseSource_I(Neu_:)) SrcImpEnergy_I = SrcImp_II(Neu_:,5)
-          ! Pressure source term for the electrons
-          ! Ionization Energy * total ionization rate
-          SrcImpPe = -sum(SrcImp_II(Neu_:,1), MASK=UseSource_I(Neu_:)) &
-                   *IonizationEnergy*GammaElectronMinus1/cProtonMass &
-                   *No2Si_V(UnitRho_)/No2Si_V(UnitP_)
        end if
+    end if
 
-       if(UseColdCloud)then
-          if(UseSrcsInHelio)then
-             !! for studies of heliosphere encountering Cold Cloud
-             if(r_GB(i,j,k,iBlock) < HpLimit) then
-                I0xp_I(Ne4_) = 0.0
-                I0px_I(Ne4_) = 0.0
-                JpxUx_I(Ne4_) = 0.0
-                JpxUy_I(Ne4_) = 0.0
-                JpxUz_I(Ne4_) = 0.0
-                JxpUx_I(Ne4_) = 0.0
-                JxpUy_I(Ne4_) = 0.0
-                JxpUz_I(Ne4_) = 0.0
-                QmpxUx_I(Ne4_) = 0.0
-                QmpxUy_I(Ne4_) = 0.0
-                QmpxUz_I(Ne4_) = 0.0
-                Kxp_I(Ne4_) = 0.0
-                Kpx_I(Ne4_) = 0.0
-                Qepx_I(Ne4_) = 0.0
-                I0xp_I(Neu_) = 0.0
-                I0px_I(Neu_) = 0.0
-                JpxUx_I(Neu_) = 0.0
-                JpxUy_I(Neu_) = 0.0
-                JpxUz_I(Neu_) = 0.0
-                JxpUx_I(Neu_) = 0.0
-                JxpUy_I(Neu_) = 0.0
-                JxpUz_I(Neu_) = 0.0
-                QmpxUx_I(Neu_) = 0.0
-                QmpxUy_I(Neu_) = 0.0
-                QmpxUz_I(Neu_) = 0.0
-                Kxp_I(Neu_) = 0.0
-                Kpx_I(Neu_) = 0.0
-                Qepx_I(Neu_) = 0.0
-             endif
-          endif
-       end if
+    ! Electron Pressure source term
+    SourceImp_V(Pe_) = SrcImpPe
 
-       ! Calculate the source terms for this cell
-       call calc_source_cell
-
-    end do; end do; end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  contains
-    !==========================================================================
-    subroutine calc_source_cell
-
-      ! Calculate source temrs for one cell. The pressures source is
-      ! S(p) = (gamma-1)[S(e) - u.S(Rhou) + 0.5 u**2 S(Rho)]
-
-      real :: Source_V(nVar + nFluid)
-      integer :: iVar, iFluid
-      !------------------------------------------------------------------------
-      Source_V = 0.0
-
-      do iFluid = Neu_, Ne4_
-         if(.not.UseSource_I(iFluid)) CYCLE
-         call select_fluid(iFluid)
-         if (iFluid == iFluidProduced_C(i,j,k)) then
-            ! iRho etc = change in density etc
-            if (iTableChargeExchange < 0) then
-               if(.not.IsMhd)then
-                  Source_V(iRho)    = sum(I0xp_I) + sum(I0pu3x_I) &
-                       - I0xp_I(iFluid) - I0xpu3_I(iFluid) &
-                       - SrcImpRho_I(iFLuid)
-                  Source_V(iRhoUx)  = sum(JxpUx_I) + sum(Jxpu3Ux_I) &
-                       - JpxUx_I(iFluid) - Jpu3xUx_I(iFluid) &
-                       - SrcImpRhoUx_I(iFluid)
-                  Source_V(iRhoUy)  = sum(JxpUy_I) + sum(Jxpu3Uy_I) &
-                       - JpxUy_I(iFluid) - Jpu3xUy_I(iFluid) &
-                       - SrcImpRhoUy_I(iFluid)
-                  Source_V(iRhoUz)  = sum(JxpUz_I) + sum(Jxpu3Uz_I) &
-                       - JpxUz_I(iFluid) - Jpu3xUz_I(iFluid) &
-                       - SrcImpRhoUz_I(iFLuid)
-                  Source_V(iEnergy) = sum(Kxp_I) + sum(Kxpu3_I) &
-                       - Kpx_I(iFluid) - Kpu3x_I(iFluid) &
-                       - SrcImpEnergy_I(iFluid)
-               else
-                  Source_V(iRho)    = &
-                       sum(I0xp_I)  - I0xp_I(iFluid) - I0xpPh_I(iFluid)
-                  Source_V(iRhoUx)  = &
-                       sum(JxpUx_I) - JpxUx_I(iFluid) - JxpUxPh_I(iFluid)
-                  Source_V(iRhoUy)  = &
-                       sum(JxpUy_I) - JpxUy_I(iFluid) - JxpUyPh_I(iFluid)
-                  Source_V(iRhoUz)  = &
-                       sum(JxpUz_I) - JpxUz_I(iFluid) - JxpUzPh_I(iFluid)
-                  Source_V(iEnergy) = &
-                       sum(Kxp_I)   - Kpx_I(iFluid) - KxpPh_I(iFluid)
-               endif
-            else
-               Source_V(iRho)    =  sum(SrcLookRhoI_I) &
-                    - SrcLookRhoN_I(iFluid) - I0xpPh_I(iFluid)
-               Source_V(iRhoUx)  =  sum(SrcLookRhoUxI_I) &
-                    - SrcLookRhoUxN_I(iFluid) - JxpUxPh_I(iFluid)
-               Source_V(iRhoUy)  =  sum(SrcLookRhoUyI_I) &
-                    - SrcLookRhoUyN_I(iFluid) - JxpUyPh_I(iFluid)
-               Source_V(iRhoUz)  =  sum(SrcLookRhoUzI_I) &
-                    - SrcLookRhoUzN_I(iFluid) - JxpUzPh_I(iFluid)
-               Source_V(iEnergy) =  sum(SrcLookEnergyI_I) &
-                    - SrcLookEnergyN_I(iFluid) - KxpPh_I(iFluid)
-            endif
-         else
-            if (iTableChargeExchange < 0) then
-               if(.not.IsMhd)then
-                  Source_V(iRho)    = -I0px_I(iFluid)  - I0pu3x_I(iFluid) &
-                          - SrcImpRho_I(iFluid)
-                  Source_V(iRhoUx)  = -JpxUx_I(iFluid) - Jpu3xUx_I(iFluid) &
-                          - SrcImpRhoUx_I(iFLuid)
-                  Source_V(iRhoUy)  = -JpxUy_I(iFluid) - Jpu3xUy_I(iFluid) &
-                          - SrcImpRhoUy_I(iFluid)
-                  Source_V(iRhoUz)  = -JpxUz_I(iFluid) - Jpu3xUz_I(iFluid) &
-                          - SrcImpRhoUz_I(iFluid)
-                  Source_V(iEnergy) = -Kpx_I(iFluid)   - Kpu3x_I(iFluid) &
-                          - SrcImpEnergy_I(iFluid)
-               else
-                  Source_V(iRho)    = -I0px_I(iFluid) - I0xpPh_I(iFluid)
-                  Source_V(iRhoUx)  = -JpxUx_I(iFluid) - JxpUxPh_I(iFluid)
-                  Source_V(iRhoUy)  = -JpxUy_I(iFluid) - JxpUyPh_I(iFluid)
-                  Source_V(iRhoUz)  = -JpxUz_I(iFluid) - JxpUzPh_I(iFluid)
-                  Source_V(iEnergy) = -Kpx_I(iFluid) - KxpPh_I(iFluid)
-               end if
-            else
-               Source_V(iRho)    = -SrcLookRhoN_I(iFluid) - I0xpPh_I(iFluid)
-               Source_V(iRhoUx)  = -SrcLookRhoUxN_I(iFluid) - JxpUxPh_I(iFluid)
-               Source_V(iRhoUy)  = -SrcLookRhoUyN_I(iFluid) - JxpUyPh_I(iFluid)
-               Source_V(iRhoUz)  = -SrcLookRhoUzN_I(iFluid) - JxpUzPh_I(iFluid)
-               Source_V(iEnergy) = -SrcLookEnergyN_I(iFluid) - KxpPh_I(iFluid)
-            endif
-         end if
-         Source_V(iP) = (Gamma-1)* ( Source_V(iEnergy) &
-              - Ux_I(iFluid)*Source_V(iRhoUx) &
-              - Uy_I(iFluid)*Source_V(iRhoUy) &
-              - Uz_I(iFluid)*Source_V(iRhoUz) &
-              + 0.5*U2_I(iFluid)*Source_V(iRho) )
-      end do
-
-      if (iTableChargeExchange < 0) then
-         if(.not.IsMhd)then
-            ! Source terms for the ion populations
-            if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
-               ! Region 3: only make Pu3 in region before TS
-               if (Ne3_ == iFluidProduced_C(i,j,k)) then
-                  ! in Pop III region
-                  Source_V(SWHRho_)   = -sum(I0px_I) &
-                       + I0px_I(Ne3_) + I0xpu3_I(Ne3_)
-                  Source_V(SWHRhoUx_) = -sum(JxpUx_I) &
-                       + JpxUx_I(Ne3_) + Jpu3xUx_I(Ne3_)
-                  Source_V(SWHRhoUy_) = -sum(JxpUy_I) &
-                       + JpxUy_I(Ne3_) + Jpu3xUy_I(Ne3_)
-                  Source_V(SWHRhoUz_) = -sum(JxpUz_I) &
-                       + JpxUz_I(Ne3_) + Jpu3xUz_I(Ne3_)
-                  Source_V(SWHEnergy_)= -sum(Kxp_I) &
-                       + Kpx_I(Ne3_) + Kpu3x_I(Ne3_)
-                  Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
-                       - Ux_I(SWH_)*Source_V(SWHRhoUx_) &
-                       - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
-                       - Uz_I(SWH_)*Source_V(SWHRhoUz_) &
-                       + 0.5*U2_I(SWH_)*Source_V(SWHRho_) )
-                  Source_V(Pu3Rho_) = sum(I0px_I) &
-                       - I0px_I(Ne3_) - I0xpu3_I(Ne3_) &
-                       + sum(SrcImpRho_I)
-                  Source_V(Pu3RhoUx_) = sum(Qmpu3xUx_I) + sum(JpxUx_I) &
-                       - JpxUx_I(Ne3_) - Jpu3xUx_I(Ne3_) &
-                       + sum(SrcImpRhoUx_I)
-                  Source_V(Pu3RhoUy_) = sum(Qmpu3xUy_I) + sum(JpxUy_I) &
-                       - JpxUy_I(Ne3_) -Jpu3xUy_I(Ne3_) &
-                       + sum(SrcImpRhoUy_I)
-                  Source_V(Pu3RhoUz_) = sum(Qmpu3xUz_I) + sum(JpxUz_I) &
-                       - JpxUz_I(Ne3_)- Jpu3xUz_I(Ne3_) &
-                       + sum(SrcImpRhoUz_I)
-                  Source_V(Pu3Energy_)= sum(Qepu3x_I) + sum(Kpx_I) &
-                       - Kpu3x_I(Ne3_) - Kpx_I(Ne3_) &
-                       + HeatPu3 + sum(SrcImpEnergy_I)
-                  Source_V(Pu3P_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
-                       - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
-                       - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
-                       - Uz_I(Pu3_)*Source_V(Pu3RhoUz_) &
-                       + 0.5*U2_I(Pu3_)*Source_V(Pu3Rho_) )
-
-                  ! end of Region 3
-               else ! outside of region 3
-                  Source_V(SWHRho_) = sum(I0xpu3_I) + sum(SrcImpRho_I)
-                  Source_V(SWHRhoUx_) = sum(QmpxUx_I) + sum(Jpu3xUx_I) &
-                          + sum(SrcImpRhoUx_I)
-                  Source_V(SWHRhoUy_) = sum(QmpxUy_I) + sum(Jpu3xUy_I) &
-                          + sum(SrcImpRhoUy_I)
-                  Source_V(SWHRhoUz_) = sum(QmpxUz_I) + sum(Jpu3xUz_I) &
-                          + sum(SrcImpRhoUz_I)
-                  Source_V(SWHEnergy_)= sum(Qepx_I)+ sum(Kpu3x_I) &
-                          + sum(SrcImpEnergy_I)
-                  Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
-                       - Ux_I(SWH_)*Source_V(SWHRhoUx_) &
-                       - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
-                       - Uz_I(SWH_)*Source_V(SWHRhoUz_) &
-                       + 0.5*U2_I(SWH_)*Source_V(SWHRho_) )
-                  Source_V(Pu3Rho_)   = -sum(I0xpu3_I)
-                  Source_V(Pu3RhoUx_) = -sum(Jxpu3Ux_I)
-                  Source_V(Pu3RhoUy_) = -sum(Jxpu3Uy_I)
-                  Source_V(Pu3RhoUz_) = -sum(Jxpu3Uz_I)
-                  Source_V(Pu3Energy_)= -sum(Kxpu3_I)
-                  Source_V(Pu3P_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
-                       - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
-                       - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
-                       - Uz_I(Pu3_)*Source_V(Pu3RhoUz_) &
-                       + 0.5*U2_I(Pu3_)*Source_V(Pu3Rho_))
-               end if
-            end if
-
-            if(UseElectronPressure) Source_V(Pe_) = SrcImpPe
-         else
-            if(UseSource_I(Ion_))then
-               Source_V(Rho_)    = sum(I0xpPh_I)
-               Source_V(RhoUx_) = QmpxUx_I(Neu_) + QmpxUx_I(Ne2_) &
-                    + QmpxUx_I(Ne3_) + QmpxUx_I(Ne4_) + sum(JxpUxPh_I)
-               Source_V(RhoUy_) = QmpxUy_I(Neu_) + QmpxUy_I(Ne2_) &
-                    + QmpxUy_I(Ne3_) + QmpxUy_I(Ne4_) + sum(JxpUyPh_I)
-               Source_V(RhoUz_) = QmpxUz_I(Neu_) + QmpxUz_I(Ne2_) &
-                    + QmpxUz_I(Ne3_) + QmpxUz_I(Ne4_) + sum(JxpUzPh_I)
-
-               Source_V(Energy_)= sum( Qepx_I ) + sum(KxpPh_I)
-
-               Source_V(p_) = (Gamma-1)* ( Source_V(Energy_) &
-                    - Ux_I(Ion_)*Source_V(RhoUx_) &
-                    - Uy_I(Ion_)*Source_V(RhoUy_) &
-                    - Uz_I(Ion_)*Source_V(RhoUz_) &
-                    + 0.5*U2_I(Ion_)*Source_V(Rho_) )
-            end if
-         end if
-      else
-         if(UseSource_I(Ion_))then
-            Source_V(Rho_) = sum(I0xpPh_I)
-            Source_V(RhoUx_)  = sum(SrcLookRhoUxN_I) &
-                 -sum(SrcLookRhoUxI_I) + sum(JxpUxPh_I)
-            Source_V(RhoUy_)  = sum(SrcLookRhoUyN_I) &
-                 -sum(SrcLookRhoUyI_I) + sum(JxpUyPh_I)
-            Source_V(RhoUz_)  = sum(SrcLookRhoUzN_I) &
-                 -sum(SrcLookRhoUzI_I) + sum(JxpUzPh_I)
-            Source_V(Energy_) = sum(SrcLookEnergyN_I) &
-                 -sum(SrcLookEnergyI_I) + sum(KxpPh_I)
-            Source_V(p_) = (Gamma-1)* ( Source_V(Energy_) &
-                 - Ux_I(Ion_)*Source_V(RhoUx_) &
-                 - Uy_I(Ion_)*Source_V(RhoUy_) &
-                 - Uz_I(Ion_)*Source_V(RhoUz_) &
-                 + 0.5*U2_I(Ion_)*Source_V(Rho_) )
-         endif
-      endif
-
-      Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
-
-      if(.not.allocated(FluidSource_ICB)) &
-           allocate(FluidSource_ICB(nVar+nFluid,nI,nJ,nK,nBlock))
-      FluidSource_ICB(:,i,j,k,iBlock) = Source_V
-
-      if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
-
-         Source_V = Source_VC(:,i,j,k)
-
-         write(*,*) NameSub, ' iFluidProduced=', iFluidProduced_C(i,j,k)
-         do iVar = 1, nVar + nFLuid
-            write(*,*) ' Source(',NameVar_V(iVar),')=',Source_V(iVar)
-         end do
-         if(.not.IsMhd)then
-            write(*,*) ' Temp_I    ', Temp_I
-            write(*,*) ' Rate_I    ', Rate_I
-            write(*,*) ' RateN_I   ', RateN_I
-            write(*,*) ' Sigma_I   ', Sigma_I
-            write(*,*) ' UStar_I   ', UStar_I
-            write(*,*) ' UStarM_I  ', UStarM_I
-            write(*,*) ' Ux_I      ', Ux_I
-            write(*,*) ' U2_I      ', U2_I
-            write(*,*) ' UTh_I     ', sqrt(UThS_I)
-            write(*,*) ' URelSDim_I ', sqrt(URelSdim_I)
-            write(*,*) ' uDim_I    ', sqrt(U2_I)*No2Io_V(UnitU_)
-            write(*,*) ' I0xp_I    ', I0xp_I
-            write(*,*) ' I0px_I    ', I0px_I
-            write(*,*) ' I2xp_I    ', I2xp_I
-            write(*,*) ' I2px_I    ', I2px_I
-            write(*,*) ' JxpUx_I   ', JxpUx_I
-            write(*,*) ' JpxUx_I   ', JpxUx_I
-            write(*,*) ' QmpxUx_I  ', QmpxUx_I
-            write(*,*) ' Kxp_I     ', Kxp_I
-            write(*,*) ' Kpx_I     ', Kpx_I
-            write(*,*) ' Qepx_I    ', Qepx_I
-            write(*,*) ' HeatPu3   ', HeatPu3
-            !
-            write(*,*) ' RatePu3_I    ', RatePu3_I
-            write(*,*) ' RateNPu3_I   ', RateNPu3_I
-            write(*,*) ' SigmaPu3_I   ', SigmaPu3_I
-            write(*,*) ' UStarPu3_I   ', UStarPu3_I
-            write(*,*) ' UStarMPu3_I  ', UStarMPu3_I
-            write(*,*) ' UTh_I     ', sqrt(UThS_I)
-            write(*,*) ' URelSPu3dim_I ', sqrt(URelSPu3dim_I)
-            write(*,*) ' uDim_I    ', sqrt(U2_I)*No2Io_V(UnitU_)
-            write(*,*) ' I2xpu3_I    ', I2xpu3_I
-            write(*,*) ' I2pu3x_I    ', I2pu3x_I
-            write(*,*) ' Jxpu3Ux_I   ', Jxpu3Ux_I
-            write(*,*) ' Jpx3Ux_I   ', Jpu3xUx_I
-            write(*,*) ' Qmpu3xUx_I  ', Qmpu3xUx_I
-            write(*,*) ' Kxpu3_I     ', Kxpu3_I
-            write(*,*) ' Kpu3x_I     ', Kpu3x_I
-            write(*,*) ' Qepu3x_I    ', Qepu3x_I
-         else
-            write(*,*) ' Temp_I    ', Temp_I
-            write(*,*) ' Rate_I    ', Rate_I
-            write(*,*) ' RatePh_I  ', RatePh_I
-            write(*,*) ' Sigma_I   ', Sigma_I
-            write(*,*) ' UStar_I   ', UStar_I
-            write(*,*) ' UStarM_I  ', UStarM_I
-            write(*,*) ' Ux_I      ', Ux_I
-            write(*,*) ' U2_I      ', U2_I
-            write(*,*) ' UTh_I     ', sqrt(UThS_I)
-            write(*,*) ' URelDim_I ', sqrt(URelSdim_I)
-            write(*,*) ' uDim_I    ', sqrt(U2_I)*No2Io_V(UnitU_)
-            write(*,*) ' I2xp_I    ', I2xp_I
-            write(*,*) ' I2px_I    ', I2px_I
-            write(*,*) ' JxpUx_I   ', JxpUx_I
-            write(*,*) ' JxpUxPh_I ', JxpUxPh_I
-            write(*,*) ' JpxUx_I   ', JpxUx_I
-            write(*,*) ' QmpxUx_I  ', QmpxUx_I
-            write(*,*) ' Kxp_I     ', Kxp_I
-            write(*,*) ' KxpPh_I   ', KxpPh_I
-            write(*,*) ' Kpx_I     ', Kpx_I
-            write(*,*) ' Qepx_I    ', Qepx_I
-         end if
-      end if
-
-    end subroutine calc_source_cell
-    !==========================================================================
-  end subroutine user_calc_sources_expl
+    end subroutine calc_electron_impact_source
   !============================================================================
   subroutine set_omega_parker_tilt
 
