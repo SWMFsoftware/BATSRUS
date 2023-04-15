@@ -9,6 +9,9 @@ default : ${DEFAULT_TARGET}
 include Makefile.def
 include Makefile.conf
 
+# Nothing should be done parallel in this Makefile
+.NOTPARALLEL:
+
 #
 # Menu of make options
 #
@@ -244,4 +247,5 @@ dist:
 	mv tmp.tar.gz BATSRUS_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
 	@echo ' '
 	@ls -l BATSRUS_v*.tgz
+
 include Makefile.test #^CFG IF TESTING
