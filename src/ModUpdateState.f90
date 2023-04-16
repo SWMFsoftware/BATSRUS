@@ -358,13 +358,12 @@ contains
               NameSub, ' after mhd_to_boris                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
-      ! Do not convert to electron entropy when electrons are not evolved.
-      if(UseElectronPressure .and. UseElectronEntropy &
-           .and. DoUpdate_V(Pe_))then
+
+      if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
          do k=1,nK; do j=1,nJ; do i=1,nI
-            if(.not.Used_GB(i,j,k,iBlock) .or. .not. DoUpdate_V(Pe_)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
@@ -531,12 +530,11 @@ contains
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
 
-      if(UseElectronPressure .and. UseElectronEntropy &
-           .and. DoUpdate_V(Pe_))then
+      if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron entropy back to pressure
          ! Pe = Se^GammaE
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.Used_GB(i,j,k,iBlock) .or. .not. DoUpdate_V(Pe_)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock)**GammaElectron
@@ -697,7 +695,7 @@ contains
     ! Check updated values for allowed change in density or pressure
 
     use ModMain, ONLY: IsTimeAccurate, Dt, DtFixed, DtFixedOrig, &
-         iStage, nStage, nStep, nBlockMax
+         iStage, nStage, nStep
     use ModImplicit, ONLY: UsePartImplicit
     use ModVarIndexes, ONLY: p_, Rho_, nVar, SpeciesFirst_, SpeciesLast_, &
          NameVar_V, DefaultState_V
@@ -705,9 +703,9 @@ contains
          UseMultiIon, UseMultiSpecies, SpeciesPercentCheck, &
          PercentPLimit_I, PercentRhoLimit_I
     use ModNumConst, ONLY: cTiny
-    use ModMultiIon,   ONLY: DoRestrictMultiIon, IsMultiIon_CB
+    use ModMultiIon, ONLY: DoRestrictMultiIon, IsMultiIon_CB
     use ModBatsrusUtility, ONLY: error_report, stop_mpi
-    use BATL_lib, ONLY: iProc, nProc, nI, nJ, nK, Unused_B
+    use BATL_lib, ONLY: iProc, nProc, nI, nJ, nK, nBlock, Unused_B
     use ModMpi
 
     integer, parameter :: MaxCheck=25, RhoDn_=1, RhoUp_=2, pDn_=3, pUp_=4
@@ -742,15 +740,15 @@ contains
     ! Check for allowable percentage changed from update
     if(IsTimeAccurate) then
        TimeFractionReport = 1.
-       do nCheck = 1,MaxCheck
+       do nCheck = 1, MaxCheck
           RhoChangeLimit_S = 0.1
           pChangeLimit_S   = 0.1
           !$omp parallel do private(iVar, i, j, k) &
           !$omp reduction(max:RhoChangeLimit_S) reduction(max:pChangeLimit_S)
-          do iBlock = 1, nBlockMax
+          do iBlock = 1, nBlock
              if (Unused_B(iBlock)) CYCLE
              if (nCheck == 1) then
-                do k=1,nK; do j=1,nJ; do i=1,nI
+                do k = 1, nK; do j = 1, nJ; do i = 1, nI
                    do iVar = 1, nVar
                       if(DefaultState_V(iVar) == 0.0) CYCLE
 
@@ -807,7 +805,7 @@ contains
              !$omp parallel do &
              !$omp      reduction(max:RhoChangeLimit_S) &
              !$omp      reduction(max:pChangeLimit_S)
-             do iBlock = 1, nBlockMax
+             do iBlock = 1, nBlock
                 if(Unused_B(iBlock)) CYCLE
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    do iVar = 1, nVar
@@ -887,11 +885,11 @@ contains
           else
              TimeFraction = 0.5
           end if
-          dt = dt * TimeFraction
+          dt = dt*TimeFraction
           TimeFractionReport = TimeFractionReport*TimeFraction
 
           !$omp parallel do private(i,j,k)
-          do iBlock = 1, nBlockMax
+          do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
 
              ! Fix the update in the cells
@@ -926,7 +924,7 @@ contains
        !$omp private(TimeFraction, RhoChangeLimit_S, pChangeLimit_S) &
        !$omp reduction(max:ChangeLimit_I) &
        !$omp reduction(min:TimeFractionReport)
-       do iBlock = 1, nBlockMax
+       do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           do k=1,nK; do j=1,nJ; do i=1,nI
              TimeFractionCell = 1.
@@ -1042,7 +1040,7 @@ contains
 
        if(DoTest3)then
           !$omp parallel do private(i,j,k)
-          do iBlock = 1,nBlockMax
+          do iBlock = 1,nBlock
              if(Unused_B(iBlock))CYCLE
              do k=1,nK; do j=1,nJ; do i=1,nI
                 if(.not.Used_GB(i,j,k,iBlock))CYCLE
@@ -1100,7 +1098,7 @@ contains
     ! Check for positivity of variables
     IsNegative = .false.
     !$omp parallel do private(Value,i_D,IsNegative,iVar,i,j,k)
-    do iBlock = 1, nBlockMax
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do iVar = 1, nVar
           ! Ignore variables that do not have to be positive
