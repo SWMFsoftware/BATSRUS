@@ -155,7 +155,8 @@ contains
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
-         UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta, UseReynoldsDecomposition
+         UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta, &
+         UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -419,6 +420,40 @@ contains
                   Source_VC(RhoUy_,i,j,k) + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
           end if
        end do; end do; end do
+
+       if(UseReynoldsDecomposition)then
+          if(UseTransverseTurbulence)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+
+                ! Calculate gradient tensor of velocity
+                call calc_grad_U(GradU_DD, i, j, k, iBlock)
+
+                ! Calculate unit vector parallel with full B field
+                b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+                b_D = b_D/norm2(b_D)
+
+                ! Calculate b.grad u.b
+                bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
+
+                Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
+                     Source_VC(WaveFirst_:WaveLast_,i,j,k) &
+                     - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
+                     *(0.5*DivU_C(i,j,k) - bDotGradparU)
+             end do; end do; end do
+          else ! isotropic turbulence
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+
+                Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
+                     Source_VC(WaveFirst_:WaveLast_,i,j,k) &
+                     - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
+                     *DivU_C(i,j,k)/6.0
+             end do; end do; end do
+          end if
+       end if
+
        if(DoTest)call write_source('After UseWavePressure')
     end if
 
