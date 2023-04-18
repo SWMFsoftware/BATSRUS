@@ -873,7 +873,6 @@ contains
     use ModPhysics, ONLY: GammaWave
     use ModB0
     use ModAdvance, ONLY: &
-         DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
          Flux_VXI, Flux_VYI, Flux_VZI, UnFirst_, &
          UseElectronPressure, UseWavePressure, UseAnisoPressure, UseAnisoPe, &
          LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
@@ -1594,7 +1593,6 @@ contains
       real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
       real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
       !------------------------------------------------------------------------
-
       if(TypeLimiter == 'no')then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VX(:,i,j,k) &
@@ -1602,9 +1600,9 @@ contains
                  +          Primitive_VGI(:,i,j,k,iGang)  )   &
                  - c1over12*(Primitive_VGI(:,i-2,j,k,iGang)   &
                  +         Primitive_VGI(:,i+1,j,k,iGang) )
+            RightState_VX(:,i,j,k) = LeftState_VX(:,i,j,k)
          end do; end do; end do
       else
-
          do k = kMin, kMax; do j = jMin, jMax
             if(UseLowOrder) then
                Primitive_VI(:,iMin-2:iMax+1) &
@@ -1634,83 +1632,44 @@ contains
                end do
             endif
 
-            if(.not.DoInterpolateFlux)then
-               if(UseLowOrder) then
-                  LowOrderCrit_I(iMin:iMax) = &
-                       LowOrderCrit_XB(iMin:iMax,j,k,iBlock)
+            if(UseLowOrder) LowOrderCrit_I(iMin:iMax) = &
+                    LowOrderCrit_XB(iMin:iMax,j,k,iBlock)
+
+            iVarSmoothLast = 0
+            do iSort = 1, nVar
+               if(UseCweno) then
+                  iVar = iVarSmoothIndex_I(iSort)
+                  iVarSmooth = iVarSmooth_V(iVar)
+                  if(iVarSmooth /= iVarSmoothLast) then
+                     IsSmoothIndictor = .true.
+                     iVarSmoothLast = iVarSmooth
+                  else
+                     IsSmoothIndictor = .false.
+                  endif
+               else
+                  iVar = iSort
                endif
 
-               iVarSmoothLast = 0
-               do iSort = 1, nVar
-                  if(UseCweno) then
-                     iVar = iVarSmoothIndex_I(iSort)
-                     iVarSmooth = iVarSmooth_V(iVar)
-                     if(iVarSmooth /= iVarSmoothLast) then
-                        IsSmoothIndictor = .true.
-                        iVarSmoothLast = iVarSmooth
-                     else
-                        IsSmoothIndictor = .false.
-                     endif
-                  else
-                     iVar = iSort
-                  endif
-
-                  ! Copy points along i direction into 1D array
-                  Cell_I(iMin-nG:iMax-1+nG) = &
-                       Primitive_VGI(iVar,iMin-nG:iMax-1+nG,j,k,iGang)
-
-                  if(UseLowOrder)then
-                     ! Use 2nd order face values where high order is skipped
-                     ! where(UseLowOrder_I(iMin:iMax)...
-                     FaceL_I(iMin:iMax) &
-                          = LeftState_VX(iVar,iMin:iMax,j,k)
-                     FaceR_I(iMin:iMax) &
-                          = RightState_VX(iVar,iMin:iMax,j,k)
-                  end if
-
-                  call limit_var(iMin, iMax, iVar, &
-                       DoCalcWeightIn = IsSmoothIndictor)
-
-                  ! Copy back the results into the 3D arrays
-                  LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
-                  RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
-               end do
-            else
-               if(UseCweno)then
-                  ! Use Rho as the smooth indicator
-                  Cell_I(iMin-nG:iMax-1+nG) = &
-                       Primitive_VGI(Rho_,iMin-nG:iMax-1+nG,j,k,iGang)
-                  call calc_cweno_weight(iMin, iMax)
-               end if
-
-               ! Get face value for Ux
                ! Copy points along i direction into 1D array
                Cell_I(iMin-nG:iMax-1+nG) = &
-                    Primitive_VGI(Ux_,iMin-nG:iMax-1+nG,j,k,iGang)
-               call limit_var(iMin, iMax, Ux_)
-               Flux_VXI(UnFirst_,iMin:iMax,j,k,iGang) = CellFace_DB(1,iBlock) &
-                    *0.5*(FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax))
+                    Primitive_VGI(iVar,iMin-nG:iMax-1+nG,j,k,iGang)
+               
+               if(UseLowOrder)then
+                  ! Use 2nd order face values where high order is skipped
+                  ! where(UseLowOrder_I(iMin:iMax)...
+                  FaceL_I(iMin:iMax) = LeftState_VX(iVar,iMin:iMax,j,k)
+                  FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
+               end if
 
-               ! Interpolate cell centered split fluxes to the face
-               do iFlux = 1, nFlux
-                  ! Copy left fluxes along i direction into 1D array
-                  Cell_I(iMin-nG:iMax-1+nG) = &
-                       FluxLeft_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
+               call limit_var(iMin, iMax, iVar, &
+                    DoCalcWeightIn = IsSmoothIndictor)
 
-                  Cell2_I(iMin-nG:iMax-1+nG) = &
-                       FluxRight_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
-
-                  call limit_flux(iMin, iMax)
-
-                  Flux_VXI(iFlux,iMin:iMax,j,k,iGang)  = &
-                       FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax)
-               end do
-            endif
+               ! Copy back the results into the 3D arrays
+               LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
+               RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
+            end do
          end do; end do
-
       end if
-
-      if(TypeLimiter == 'no') RightState_VX = LeftState_VX
 
       if(DoLimitMomentum) &
            call boris_to_mhd_x(iMin, iMax, jMin, jMax, kMin, kMax)
@@ -1741,6 +1700,7 @@ contains
                  +           Primitive_VGI(:,i,j,k,iGang))  &
                  - c1over12*(Primitive_VGI(:,i,j-2,k,iGang) &
                  +           Primitive_VGI(:,i,j+1,k,iGang))
+            RightState_VY(:,i,j,k) = LeftState_VY(:,i,j,k)
          end do; end do; end do
       else
          do k = kMin, kMax; do i = iMin, iMax
@@ -1769,85 +1729,47 @@ contains
                end do
             endif
 
-            if(.not.DoInterpolateFlux)then
-               if(UseLowOrder) then
-                  LowOrderCrit_I(jMin:jMax) = &
-                       LowOrderCrit_YB(i,jMin:jMax,k,iBlock)
+            if(UseLowOrder) LowOrderCrit_I(jMin:jMax) = &
+                 LowOrderCrit_YB(i,jMin:jMax,k,iBlock)
+
+            iVarSmoothLast = 0
+            do iSort = 1, nVar
+               if(UseCweno) then
+                  ! The variables use the same smooth indicator are
+                  ! calculated one by one. And the smooth indicator
+                  ! itself is calculated first.
+                  iVar = iVarSmoothIndex_I(iSort)
+                  iVarSmooth = iVarSmooth_V(iVar)
+                  if(iVarSmooth /= iVarSmoothLast) then
+                     IsSmoothIndictor = .true.
+                     iVarSmoothLast = iVarSmooth
+                  else
+                     IsSmoothIndictor = .false.
+                  endif
+               else
+                  iVar = iSort
                endif
 
-               iVarSmoothLast = 0
-               do iSort = 1, nVar
-                  if(UseCweno) then
-                     ! The variables use the same smooth indicator are
-                     ! calculated one by one. And the smooth indicator
-                     ! itself is calculated first.
-                     iVar = iVarSmoothIndex_I(iSort)
-                     iVarSmooth = iVarSmooth_V(iVar)
-                     if(iVarSmooth /= iVarSmoothLast) then
-                        IsSmoothIndictor = .true.
-                        iVarSmoothLast = iVarSmooth
-                     else
-                        IsSmoothIndictor = .false.
-                     endif
-                  else
-                     iVar = iSort
-                  endif
+               ! Copy points along j direction into 1D array
+               Cell_I(jMin-nG:jMax-1+nG) = &
+                    Primitive_VGI(iVar,i,jMin-nG:jMax-1+nG,k,iGang)
 
-                  ! Copy points along j direction into 1D array
-                  Cell_I(jMin-nG:jMax-1+nG) = &
-                       Primitive_VGI(iVar,i,jMin-nG:jMax-1+nG,k,iGang)
-
-                  if(UseLowOrder)then
-                     ! Use 2nd order face values where high order is skipped
-                     FaceL_I(jMin:jMax) = &
-                          LeftState_VY(iVar,i,jMin:jMax,k)
-                     FaceR_I(jMin:jMax) = &
-                          RightState_VY(iVar,i,jMin:jMax,k)
-                  end if
-
-                  call limit_var(jMin, jMax, iVar, &
-                       DoCalcWeightIn = IsSmoothIndictor)
-
-                  ! Copy back the results into the 3D arrays
-                  LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
-                  RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
-               end do
-            else
-               if(UseCweno)then
-                  ! Use Rho as the smooth indicator
-                  Cell_I(jMin-nG:jMax-1+nG) = &
-                       Primitive_VGI(Rho_,i,jMin-nG:jMax-1+nG,k,iGang)
-                  call calc_cweno_weight(jMin, jMax)
+               if(UseLowOrder)then
+                  ! Use 2nd order face values where high order is skipped
+                  FaceL_I(jMin:jMax) = LeftState_VY(iVar,i,jMin:jMax,k)
+                  FaceR_I(jMin:jMax) = RightState_VY(iVar,i,jMin:jMax,k)
                end if
 
-               ! Get face value for Uy
-               ! Copy points along i direction into 1D array
-               Cell_I(jMin-nG:jMax-1+nG) = &
-                    Primitive_VGI(Uy_,i,jMin-nG:jMax-1+nG,k,iGang)
-               call limit_var(jMin, jMax, Uy_)
-               Flux_VYI(UnFirst_,i,jMin:jMax,k,iGang) = CellFace_DB(2,iBlock) &
-                    *0.5*(FaceL_I(jMin:jMax) + FaceR_I(jMin:jMax))
+               call limit_var(jMin, jMax, iVar, &
+                    DoCalcWeightIn = IsSmoothIndictor)
 
-               ! Interpolate cell centered split fluxes to the face
-               do iFlux = 1, nFlux
-                  ! Copy left fluxes along i direction into 1D array
-                  Cell_I(jMin-nG:jMax-1+nG) = &
-                       FluxLeft_VGD(iFlux,i,jMin-nG:jMax-1+nG,k,y_)
-
-                  Cell2_I(jMin-nG:jMax-1+nG) = &
-                       FluxRight_VGD(iFlux,i,jMin-nG:jMax-1+nG,k,y_)
-
-                  call limit_flux(jMin, jMax)
-
-                  Flux_VYI(iFlux,i,jMin:jMax,k,iGang)  = &
-                       FaceL_I(jMin:jMax) + FaceR_I(jMin:jMax)
-               end do
-            endif
-
+               ! Copy back the results into the 3D arrays
+               LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
+               RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
+            end do
          end do; end do
-      end if
+      end if 
 
-      if(TypeLimiter == 'no') RightState_VY = LeftState_VY
       if(DoLimitMomentum) &
            call boris_to_mhd_y(iMin, iMax, jMin, jMax, kMin, kMax)
 
@@ -1869,7 +1791,6 @@ contains
       real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
       real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
       !------------------------------------------------------------------------
-
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
             LeftState_VZ(:,i,j,k) &
@@ -1878,7 +1799,7 @@ contains
                  - c1over12*(Primitive_VGI(:,i,j,k-2,iGang) &
                  +           Primitive_VGI(:,i,j,k+1,iGang))
 
-            RightState_VZ(:,i,j,k)=LeftState_VZ(:,i,j,k)
+            RightState_VZ(:,i,j,k) = LeftState_VZ(:,i,j,k)
          end do; end do; end do
       else
          do j = jMin, jMax; do i = iMin, iMax
@@ -1908,76 +1829,41 @@ contains
                end do
             end if
 
-            if(.not.DoInterpolateFlux)then
-               if(UseLowOrder) then
-                  LowOrderCrit_I(kMin:kMax) = &
-                       LowOrderCrit_ZB(i,j,kMin:kMax,iBlock)
+            if(UseLowOrder) LowOrderCrit_I(kMin:kMax) = &
+                 LowOrderCrit_ZB(i,j,kMin:kMax,iBlock)
+
+            iVarSmoothLast = 0
+            do iSort = 1, nVar
+               if(UseCweno) then
+                  iVar = iVarSmoothIndex_I(iSort)
+                  iVarSmooth = iVarSmooth_V(iVar)
+                  if(iVarSmooth /= iVarSmoothLast) then
+                     IsSmoothIndictor = .true.
+                     iVarSmoothLast = iVarSmooth
+                  else
+                     IsSmoothIndictor = .false.
+                  endif
+               else
+                  iVar = iSort
                endif
 
-               iVarSmoothLast = 0
-               do iSort = 1, nVar
-                  if(UseCweno) then
-                     iVar = iVarSmoothIndex_I(iSort)
-                     iVarSmooth = iVarSmooth_V(iVar)
-                     if(iVarSmooth /= iVarSmoothLast) then
-                        IsSmoothIndictor = .true.
-                        iVarSmoothLast = iVarSmooth
-                     else
-                        IsSmoothIndictor = .false.
-                     endif
-                  else
-                     iVar = iSort
-                  endif
+               ! Copy points along k direction into 1D array
+               Cell_I(kMin-nG:kMax-1+nG) = &
+                    Primitive_VGI(iVar,i,j,kMin-nG:kMax-1+nG,iGang)
 
-                  ! Copy points along k direction into 1D array
-                  Cell_I(kMin-nG:kMax-1+nG) = &
-                       Primitive_VGI(iVar,i,j,kMin-nG:kMax-1+nG,iGang)
-
-                  if(UseLowOrder)then
-                     ! Use 2nd order face values where high order is skipped
-                     FaceL_I(kMin:kMax) &
-                          = LeftState_VZ(iVar,i,j,kMin:kMax)
-                     FaceR_I(kMin:kMax) &
-                          = RightState_VZ(iVar,i,j,kMin:kMax)
-                  end if
-
-                  call limit_var(kMin, kMax, iVar, &
-                       DoCalcWeightIn = IsSmoothIndictor)
-
-                  ! Copy back the results into the 3D arrays
-                  LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
-                  RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
-               end do
-            else
-               if (UseCweno) then
-                  Cell_I(kMin-nG:kMax-1+nG) = &
-                       Primitive_VGI(Rho_,i,j,kMin-nG:kMax-1+nG,iGang)
-                  call calc_cweno_weight(kMin, kMax)
+               if(UseLowOrder)then
+                  ! Use 2nd order face values where high order is skipped
+                  FaceL_I(kMin:kMax) = LeftState_VZ(iVar,i,j,kMin:kMax)
+                  FaceR_I(kMin:kMax) = RightState_VZ(iVar,i,j,kMin:kMax)
                end if
 
-               ! Copy points along i direction into 1D array
-               Cell_I(kMin-nG:kMax-1+nG) = &
-                    Primitive_VGI(Uz_,i,j,kMin-nG:kMax-1+nG,iGang)
+               call limit_var(kMin, kMax, iVar, &
+                    DoCalcWeightIn = IsSmoothIndictor)
 
-               call limit_var(kMin, kMax, Uz_)
-               Flux_VZI(UnFirst_,i,j,kMin:kMax,iGang) = CellFace_DB(3,iBlock) &
-                    *0.5*(FaceL_I(kMin:kMax) + FaceR_I(kMin:kMax))
-
-               ! Interpolate cell centered split fluxes to the face
-               do iFlux = 1, nFlux
-                  ! Copy left fluxes along i direction into 1D array
-                  Cell_I(kMin-nG:kMax-1+nG) = &
-                       FluxLeft_VGD(iFlux,i,j,kMin-nG:kMax-1+nG,z_)
-
-                  Cell2_I(kMin-nG:kMax-1+nG) = &
-                       FluxRight_VGD(iFlux,i,j,kMin-nG:kMax-1+nG,z_)
-
-                  call limit_flux(kMin, kMax)
-
-                  Flux_VZI(iFlux,i,j,kMin:kMax,iGang)  = &
-                       FaceL_I(kMin:kMax) + FaceR_I(kMin:kMax)
-               end do
-            endif
+               ! Copy back the results into the 3D arrays
+               LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
+               RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
+            end do
          end do; end do
       end if
 

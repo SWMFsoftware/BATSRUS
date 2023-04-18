@@ -19,11 +19,11 @@ contains
 
     use ModMain
     use ModFaceBoundary, ONLY: set_face_boundary
-    use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
-    use ModFaceValue
+    use ModFaceFlux,   ONLY: calc_face_flux
+    use ModFaceValue,  ONLY: calc_face_value, calc_cell_norm_velocity, &
+         set_low_order_face
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
-         DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux, &
-         iTypeUpdate, UpdateFast_
+         UseAdaptiveLowOrder, UseMhdMomentumFlux, iTypeUpdate, UpdateFast_
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: DiLevel_EB
@@ -149,12 +149,6 @@ contains
              ! and apply BCs for interface states as needed.
              call set_b0_face(iBlock)
 
-             if(DoInterpolateFlux)then
-                call timing_start('calc_fluxes')
-                call calc_cell_flux(iBlock)
-                call timing_stop('calc_fluxes')
-             end if
-
              call timing_start('calc_facevalues')
              call calc_face_value(iBlock, DoResChangeOnly=.false., &
                   DoMonotoneRestrict=.true.)
@@ -162,14 +156,10 @@ contains
              if(IsBody_B(iBlock)) &
                   call set_face_boundary(iBlock, tSimulation,.false.)
 
-             if(.not.DoInterpolateFlux)then
-                ! Compute interface fluxes for each cell.
-
-                call timing_start('calc_fluxes')
-                call calc_face_flux(.false., iBlock)
-                call timing_stop('calc_fluxes')
-
-             end if
+             ! Compute interface fluxes for each cell.
+             call timing_start('calc_fluxes')
+             call calc_face_flux(.false., iBlock)
+             call timing_stop('calc_fluxes')
 
              ! Enforce flux conservation by applying corrected fluxes
              ! to each coarse grid cell face at block edges with

@@ -190,11 +190,6 @@ module ModAdvance
   !$omp threadprivate( Flux_VXI, Flux_VYI, Flux_VZI )
   !$acc declare create( Flux_VXI, Flux_VYI, Flux_VZI )
 
-  ! Cell centered fluxes
-  logical:: DoInterpolateFlux = .false.
-  real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
-  !$omp threadprivate( FluxLeft_VGD, FluxRight_VGD )
-
   ! Variables for ECHO scheme
   logical:: UseFDFaceFlux = .false., DoCorrectFace = .false.
   !$acc declare create(DoCorrectFace, UseFDFaceFlux)
