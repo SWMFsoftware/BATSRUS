@@ -65,7 +65,7 @@ module ModVarIndexes
        Bz_        = 7, &
        WaveFirst_ = 8, &
        WaveLast_  = WaveFirst_+nWave-1, &
-       Lperp_,    = WaveLast_+1, &
+       Lperp_     = WaveLast_+1, &
        PuiFirst_  = Lperp_+1, &
        PuiLast_   = PuiFirst_+nPui-1, &
        Pe_        = PuiLast_+1, &
