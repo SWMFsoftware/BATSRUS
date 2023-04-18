@@ -7,11 +7,12 @@ module ModVarIndexes
        Redefine1 => nWave, &
        Redefine2 => WaveFirst_, &
        Redefine3 => WaveLast_, &
-       Redefine4 => Pe_, &
-       Redefine5 => nPui, &
-       Redefine6 => PuiFirst_, &
-       Redefine7 => PuiLast_, &
-       Redefine8 => iPparIon_I
+       Redefine4 => Lperp_, &
+       Redefine5 => Pe_, &
+       Redefine6 => nPui, &
+       Redefine7 => PuiFirst_, &
+       Redefine8 => PuiLast_, &
+       Redefine9 => iPparIon_I
 
   implicit none
 
@@ -35,7 +36,7 @@ module ModVarIndexes
   integer, parameter :: nPui = 0
 
   ! Number of variables without energy:
-  integer, parameter :: nVar = 34 + nWave + nPui
+  integer, parameter :: nVar = 35 + nWave + nPui
 
   ! 2 ion fluid and 4 neutral fluids
   integer, parameter :: nFluid    = 6
@@ -64,7 +65,8 @@ module ModVarIndexes
        Bz_        = 7, &
        WaveFirst_ = 8, &
        WaveLast_  = WaveFirst_+nWave-1, &
-       PuiFirst_  = WaveLast_+1, &
+       Lperp_,    = WaveLast_+1, &
+       PuiFirst_  = Lperp_+1, &
        PuiLast_   = PuiFirst_+nPui-1, &
        Pe_        = PuiLast_+1, &
        p_         = Pe_+1,                SWHP_     = Pe_+1, &
@@ -128,6 +130,7 @@ module ModVarIndexes
        0.0, 0.0, 0.0, & ! SWHRhoUx_ .. SWHRhoUz_
        0.0, 0.0, 0.0, & ! Bx_ .. Bz_
        (1.0, iWave=WaveFirst_,WaveLast_), &
+       1.0,           & ! Lperp_
        (1.0, iPui=PuiFirst_,PuiLast_), &
        1.0,           & ! Pe_
        1.0,           & ! SWHP_
@@ -159,6 +162,7 @@ module ModVarIndexes
        'Mx    ', 'My    ', 'Mz    ', & ! RhoUx_ RhoUz_
        'Bx    ', 'By    ', 'Bz    ', & ! Bx_  Bz_
        ('I??   ', iWave=WaveFirst_,WaveLast_), &
+       'Lperp ',                     & ! Lperp_
        ('F??   ', iPui=PuiFirst_,PuiLast_), &
        'Pe    ',                     & ! Pe_
        'P     ',                     & ! p_
@@ -184,8 +188,8 @@ module ModVarIndexes
        'Ne3E  ',                     & ! Ne3Energy_
        'Ne4E  '                      ] ! Ne4Energy_
 
-  ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = PuiFirst_, ScalarLast_ = PuiLast_
+  ! There are extra scalars
+  integer, parameter :: ScalarFirst_ = Lperp_, ScalarLast_ = PuiLast_
 
 end module ModVarIndexes
 !==============================================================================
