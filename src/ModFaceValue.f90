@@ -1653,7 +1653,7 @@ contains
                ! Copy points along i direction into 1D array
                Cell_I(iMin-nG:iMax-1+nG) = &
                     Primitive_VGI(iVar,iMin-nG:iMax-1+nG,j,k,iGang)
-               
+
                if(UseLowOrder)then
                   ! Use 2nd order face values where high order is skipped
                   ! where(UseLowOrder_I(iMin:iMax)...
@@ -1768,7 +1768,7 @@ contains
                RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
             end do
          end do; end do
-      end if 
+      end if
 
       if(DoLimitMomentum) &
            call boris_to_mhd_y(iMin, iMax, jMin, jMax, kMin, kMax)
