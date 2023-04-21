@@ -93,7 +93,7 @@ module ModHeatConduction
   logical :: UseImplicitCoronalHeating = .false.
 
   ! Fixing isotropization
-  logical, public :: UseFixIsotropization = .false.
+  logical, public :: UseFixIsotropization = .true.
 
   ! radiative cooling
   logical :: DoRadCooling = .false.
@@ -336,11 +336,7 @@ contains
           DoRadCooling = UseRadCooling
           UseRadCooling = .false.
           UseCoronalHeating = .false.
-       elseif(UseFixIsotropization)then
-          if(.not.UseAnisoPressure)then
-             call stop_mpi(NameSub//&
-                  'Fixing isotropization is only for aniso pressure')
-          end if
+       elseif(UseFixIsotropization .and. UseAnisoPressure)then
           if(UseImplicitCoronalHeating)then
              call stop_mpi(NameSub//'Implicit coronal heating '// &
                   'does not work with fixing isotropization')
@@ -1564,7 +1560,7 @@ contains
 
     use BATL_lib,        ONLY: store_face_flux, CellVolume_GB
     use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: UseElectronPressure
+    use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
     use ModFaceGradient, ONLY: get_face_gradient
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
@@ -1622,7 +1618,8 @@ contains
        end do; end do; end do
     end do
 
-    if(UseImplicitCoronalHeating .or. UseFixIsotropization)then
+    if(UseImplicitCoronalHeating .or. &
+         (UseAnisoPressure .and. UseFixIsotropization))then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
@@ -1679,7 +1676,7 @@ contains
     ! This code can only be called from the semi-implicit scheme
     ! since this works on temperature and not energy or pressure,
 
-    use ModAdvance,      ONLY: UseElectronPressure
+    use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
     use ModFaceGradient, ONLY: set_block_jacobian_face
     use ModImplicit,     ONLY: UseNoOverlap, nStencil, iTeImpl
     use ModMain,         ONLY: nI, nJ, nK
@@ -1700,7 +1697,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(UseImplicitCoronalHeating .or. UseFixIsotropization)then
+    if(UseImplicitCoronalHeating .or. &
+         (UseAnisoPressure .and. UseFixIsotropization))then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                + PointCoef_VCB(1,i,j,k,iBlock)
@@ -1856,7 +1854,8 @@ contains
 
        end if
 
-       if(UseImplicitCoronalHeating .or. UseFixIsotropization)then
+       if(UseImplicitCoronalHeating .or. &
+            (UseAnisoPressure .and. UseFixIsotropization))then
           Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
                + PointCoef_VCB(3,i,j,k,iBlock) &
                *(NewSemiAll_VC(iTeImpl,i,j,k) - OldSemiAll_VC(iTeImpl,i,j,k))&
