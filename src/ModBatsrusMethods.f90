@@ -338,7 +338,7 @@ contains
     use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
          UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
          UseProjection, UseConstrainB,  UseLocalTimeStepNew
-    use ModAdvance, ONLY: UseElectronPressure
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModSetInitialCondition, ONLY: add_rotational_velocity
     use ModConstrainDivB, ONLY: DoInitConstrainB
     use ModProjectDivB, ONLY: project_divb
@@ -404,7 +404,8 @@ contains
 
     if(UsePic) call pic_init_region
 
-    if(UseHeatConduction .or. UseIonHeatConduction .or. UseFixIsotropization &
+    if(UseHeatConduction .or. UseIonHeatConduction .or. &
+         UseAnisoPressure .and. UseFixIsotropization &
          .and. UseResistivity .and. UseHeatExchange .and. UseElectronPressure)&
          call init_heat_conduction
 
@@ -579,7 +580,7 @@ contains
           if(.not.UseSemiImplicit)call calc_ei_heat_exchange
        elseif(UseResistivity .and. UseHeatExchange &
             .and. UseElectronPressure)then
-          if(UseFixIsotropization)then
+          if(UseAnisoPressure .and. UseFixIsotropization)then
              call calc_ei_heat_exchange
           else
              call calc_heat_exchange
