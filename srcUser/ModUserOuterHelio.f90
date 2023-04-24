@@ -176,7 +176,8 @@ module ModUser
 
   ! Wave turbulence
   real :: DeltaUSi = 10.0, DeltaU = 0.0
-
+  real :: LperpTimesSqrtBSi = 1.5e5, LperpTimesSqrtB = 0.0
+  
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -305,9 +306,10 @@ contains
                      // NameRegionFormula)
           end select
 
-       case("#DELTAU")
+       case("#TURBULENCE")
           call read_var('DeltaUSi', DeltaUSi)
-
+          call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+          
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -331,7 +333,7 @@ contains
     ! C.P. edited
     real:: Bsph_D(3), Vsph_D(3), VPUIsph_D(3)
 
-    real :: pSolarWind,pPUI, Pmag, PmagEquator, Ewave
+    real :: pSolarWind,pPUI, Pmag, PmagEquator, Ewave, B
 
     real :: XyzSph_DD(3,3)
 
@@ -394,6 +396,11 @@ contains
          else
             VarsGhostFace_V(WaveFirst_) = 0.0
             VarsGhostFace_V(WaveLast_) = Ewave
+         end if
+
+         if(Lperp_>1)then
+            B = sqrt(max(sum(VarsGhostFace_V(Bx_:Bz_)), 1e-30))
+            VarsGhostFace_V(Lperp_) = SwhRho*LperpTimesSqrtB/sqrt(B)
          end if
       end if
 
@@ -583,33 +590,35 @@ contains
 
        !
        ! PopII and III supersonic outflow
-       do iVar = NeuRho_, Ne3P_
-          select case(iSide)
-          case(1)
-             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                State_VGB(iVar,i,j,k,iBlock) =  State_VGB(iVar,1,j,k,iBlock)
-             end do; end do; end do
-          case(2)
-             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                State_VGB(iVar,i,j,k,iBlock) =  State_VGB(iVar,nI,j,k,iBlock)
-             end do; end do; end do
-          case(3)
-             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,1,k,iBlock)
-             end do; end do; end do
-          case(4)
-             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,nJ,k,iBlock)
-             end do; end do; end do
-          case(5)
-             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,1,iBlock)
-             end do; end do; end do
-          case(6)
-             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,nK,iBlock)
-             end do; end do; end do
-          end select
+       do iVar = Lperp_, Ne3P_
+          if(iVar>=NeuRho_.and.iVar<=Ne3P_ .or. Lperp_>1.and.iVar==Lperp_)then
+             select case(iSide)
+             case(1)
+                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,1,j,k,iBlock)
+                end do; end do; end do
+             case(2)
+                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,nI,j,k,iBlock)
+                end do; end do; end do
+             case(3)
+                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,1,k,iBlock)
+                end do; end do; end do
+             case(4)
+                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,nJ,k,iBlock)
+                end do; end do; end do
+             case(5)
+                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,1,iBlock)
+                end do; end do; end do
+             case(6)
+                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,nK,iBlock)
+                end do; end do; end do
+             end select
+          end if
        end do
     end if
 
@@ -627,7 +636,7 @@ contains
     real :: x, y, z, r
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3), vPUI_D(3), vPUISph_D(3)
     real :: SinTheta, SignZ
-    real :: Ewave
+    real :: Ewave, B
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
 
     logical :: DoTestCell
@@ -731,6 +740,12 @@ contains
              State_VGB(WaveFirst_,i,j,k,iBlock) = &
 	          1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
           end if
+
+          if(Lperp_ > 1)then
+             B = sqrt(max(sum(B_D**2), 1e-30))
+             State_VGB(Lperp_,i,j,k,iBlock) = &
+                  State_VGB(Rho_,i,j,k,iBlock)*LperpTimesSqrtB/sqrt(B)
+	  end if
        end if
 
        if(UseNeutralFluid)then
@@ -2614,7 +2629,8 @@ contains
     UseWavePressure = WaveFirst_ > 1
 
     DeltaU = DeltaUSi*Si2No_V(UnitU_)
-
+    LperpTimesSqrtB = LperpTimesSqrtBSi*Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+    
     ! normalization of SWH and VLISW and Neutrals
 
     VliswRho = VliswRhoDim*Io2No_V(UnitRho_)
