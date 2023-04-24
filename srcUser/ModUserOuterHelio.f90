@@ -177,7 +177,7 @@ module ModUser
   ! Wave turbulence
   real :: DeltaUSi = 10.0, DeltaU = 0.0
   real :: LperpTimesSqrtBSi = 1.5e5, LperpTimesSqrtB = 0.0
-  
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -309,7 +309,7 @@ contains
        case("#TURBULENCE")
           call read_var('DeltaUSi', DeltaUSi)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-          
+
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -2630,7 +2630,7 @@ contains
 
     DeltaU = DeltaUSi*Si2No_V(UnitU_)
     LperpTimesSqrtB = LperpTimesSqrtBSi*Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
-    
+
     ! normalization of SWH and VLISW and Neutrals
 
     VliswRho = VliswRhoDim*Io2No_V(UnitRho_)
