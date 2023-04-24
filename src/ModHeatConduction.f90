@@ -94,7 +94,7 @@ module ModHeatConduction
   logical :: UseImplicitCoronalHeating = .false.
 
   ! Fixing isotropization
-  logical, public :: UseFixIsotropization = nIonFluid == 1
+  logical, public :: UseFixIsotropization = .true.
 
   ! radiative cooling
   logical :: DoRadCooling = .false.
@@ -337,7 +337,8 @@ contains
           DoRadCooling = UseRadCooling
           UseRadCooling = .false.
           UseCoronalHeating = .false.
-       elseif(UseFixIsotropization .and. UseAnisoPressure)then
+       elseif(UseFixIsotropization .and. UseAnisoPressure &
+            .and. .not.UseMultiIon)then
           if(UseImplicitCoronalHeating)then
              call stop_mpi(NameSub//'Implicit coronal heating '// &
                   'does not work with fixing isotropization')
@@ -1242,7 +1243,8 @@ contains
              PointCoef_VCB(4,i,j,k,iBlock) = &
                   DtLocal*(TeTiCoef*(Te - Ti) + Qi)/Denominator
           else
-             if(UseAnisoPressure .and. UseFixIsotropization)then
+             if(UseAnisoPressure .and. UseFixIsotropization .and. &
+                  .not.UseMultiIon)then
                 Cvi = InvGammaMinus1*Natomic
                 CviPar = 0.5*Natomic
                 Te = Te_G(i,j,k)
@@ -1620,7 +1622,7 @@ contains
     end do
 
     if(UseImplicitCoronalHeating .or. &
-         (UseAnisoPressure .and. UseFixIsotropization))then
+         (UseAnisoPressure.and.UseFixIsotropization.and..not.UseMultiIon))then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
@@ -1699,7 +1701,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseImplicitCoronalHeating .or. &
-         (UseAnisoPressure .and. UseFixIsotropization))then
+         (UseAnisoPressure.and.UseFixIsotropization.and..not.UseMultiIon))then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                + PointCoef_VCB(1,i,j,k,iBlock)
@@ -1856,7 +1858,8 @@ contains
        end if
 
        if(UseImplicitCoronalHeating .or. &
-            (UseAnisoPressure .and. UseFixIsotropization))then
+            (UseAnisoPressure .and. UseFixIsotropization.and. &
+            .not.UseMultiIon))then
           Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
                + PointCoef_VCB(3,i,j,k,iBlock) &
                *(NewSemiAll_VC(iTeImpl,i,j,k) - OldSemiAll_VC(iTeImpl,i,j,k))&
