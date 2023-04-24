@@ -12,6 +12,7 @@ module ModHeatConduction
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxRegion, &
        rCollisional, rCollisionless
   use ModFaceFluxParameters
+  use ModMultiFluid, ONLY: nIonFluid
   use BATL_size, ONLY: nDim, MaxDim
   use omp_lib
 
@@ -93,7 +94,7 @@ module ModHeatConduction
   logical :: UseImplicitCoronalHeating = .false.
 
   ! Fixing isotropization
-  logical, public :: UseFixIsotropization = .true.
+  logical, public :: UseFixIsotropization = nIonFluid == 1
 
   ! radiative cooling
   logical :: DoRadCooling = .false.
