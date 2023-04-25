@@ -5144,11 +5144,13 @@ following:
                           plot variables.
  nPix                   - the number of pixels in each direction
 \end{verbatim}
-For line-of-site Extreme Ultraviolet (EUV) and Soft X-Ray (SXR) plots,
+For line-of-sight Extreme Ultraviolet (EUV) and Soft X-Ray (SXR) plots,
 the same parametes are read as for the wl and pb plots (above) but now
 the integration is carried out to the surface of the sun so rOccult should
 be set to zero. MuLimbDarkening has no effect but needs to be included.
-
+Also, for line-of-sight (los) EUV images from STEREO-A/B and SDO/AIA using
+the response function table both 'ins' and 'INS' give the same dimensional
+output.
 Additionally, because EUV and SXR plots are configured to read in a response
 table specific to the EUV or SXR instument (e.g. SOHO EIT, STEREO EUVI,
 Yohkoh SXT) the tables for the response need to be read in by additional
