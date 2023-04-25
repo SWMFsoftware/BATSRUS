@@ -1956,10 +1956,10 @@ contains
 
       use ModConst,   ONLY : cSigmaThomson
       use ModPhysics, ONLY : No2Si_V, UnitX_, UnitRho_
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       if (UseTableGen) RETURN
-      
+
       do iVar = 1, nPlotVar
          NameVar = NamePlotVar_V(iVar)
 
