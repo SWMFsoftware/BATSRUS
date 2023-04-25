@@ -457,7 +457,7 @@ contains
        if(DoTest)call write_source('After UseWavePressure')
     end if
 
-    if(Lperp_ > 1 .and. UseReynoldsDecomposition)then
+    if(Lperp_ > 1)then
        ! Positive (definite) source term for the correlation length
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
