@@ -457,7 +457,7 @@ contains
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
                 Coef = SigmaD*DivU_C(i,j,k)/6.0
-                
+
                 Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                      Source_VC(WaveFirst_:WaveLast_,i,j,k) &
                      - Coef*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
@@ -1180,7 +1180,7 @@ contains
     subroutine calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, IsNewBlock)
 
       use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, Dim1_, Dim2_, Dim3_
-      
+
       integer, intent(in) :: i, j, k, iBlock
       logical, intent(inout) :: IsNewBlock
       real,   intent(out) :: GradAlfven_DD(nDim,MaxDim)
@@ -1259,7 +1259,7 @@ contains
       real :: FullB_D(MaxDim)
       integer :: i, j, k
 
-      character(len=*), parameter:: NameSub = 'calc_grad_alfven'
+      character(len=*), parameter:: NameSub = 'get_alfven_speed'
       !------------------------------------------------------------------------
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1

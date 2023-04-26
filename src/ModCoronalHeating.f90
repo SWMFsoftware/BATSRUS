@@ -732,7 +732,7 @@ contains
     ! Low-frequency cascade due to small-scale nonlinearities
 
     if(Lperp_ > 1 .and. UseReynoldsDecomposition)then
-       ! Note that Lperp is multiplied with the density                      
+       ! Note that Lperp is multiplied with the density
        Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
             *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
     else
