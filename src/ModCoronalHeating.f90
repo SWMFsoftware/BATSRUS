@@ -717,7 +717,7 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModB0, ONLY: B0_DGB
     use ModMain, ONLY: UseB0
-    use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,  Lperp_
     use ModMultiFluid, ONLY: iRho_I, IonFirst_
 
     integer, intent(in) :: i, j, k, iBlock
@@ -731,22 +731,28 @@ contains
     !--------------------------------------------------------------------------
     ! Low-frequency cascade due to small-scale nonlinearities
 
-    if(UseB0)then
-       FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    if(Lperp_ > 1 .and. UseReynoldsDecomposition)then
+       ! Note that Lperp is multiplied with the density                      
+       Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+            *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
     else
-       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       if(UseB0)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       else
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+       if(UseNonLinearAWDissipation)then
+          ! Account for a contribution from the wave field into their
+          ! dissipation. A half of wave energy, w/2, is the magneic oscillation
+          ! energy, deltaB^2/2. Hence, DeltaB+/-=sqrt(W+/-)
+          FullB = sqrt(sum(FullB_D**2) + &
+               sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) )
+       else
+          FullB = norm2(FullB_D)
+       end if
+       Coef = 2.0*sqrt(FullB/State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)) &
+            /LperpTimesSqrtB
     end if
-    if(UseNonLinearAWDissipation)then
-       ! Account for a contribution from the wave field into their dissipation
-       ! A half of wave energy, w/2, is the magneic oscillation energy,
-       ! deltaB^2/2. Hence, DeltaB+/-=sqrt(W+/-)
-       FullB = sqrt(sum(FullB_D**2) + &
-            sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) )
-    else
-       FullB = norm2(FullB_D)
-    end if
-    Coef = 2.0*sqrt(FullB/State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)) &
-         /LperpTimesSqrtB
 
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
