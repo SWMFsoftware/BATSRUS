@@ -437,19 +437,39 @@ contains
                 ! Calculate b.grad u.b
                 bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
+                Coef = SigmaD*(0.5*DivU_C(i,j,k) - bDotGradparU)
+
                 Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                      Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                     - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
-                     *(0.5*DivU_C(i,j,k) - bDotGradparU)
+                     - State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Coef
+
+                ! Reflection term
+                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
+                     + 0.5*Coef*(State_VGB(WaveFirst_,i,j,k,iBlock) &
+                     - State_VGB(WaveLast_,i,j,k,iBlock))
+
+                Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
+                     + 0.5*Coef*(State_VGB(WaveLast_,i,j,k,iBlock) &
+                     - State_VGB(WaveFirst_,i,j,k,iBlock))
              end do; end do; end do
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
+                Coef = SigmaD*DivU_C(i,j,k)/6.0
+                
                 Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                      Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                     - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
-                     *DivU_C(i,j,k)/6.0
+                     - Coef*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+
+                ! Reflection term
+                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
+                     + 0.5*Coef*(State_VGB(WaveFirst_,i,j,k,iBlock) &
+                     - State_VGB(WaveLast_,i,j,k,iBlock))
+
+                Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
+                     + 0.5*Coef*(State_VGB(WaveLast_,i,j,k,iBlock) &
+                     - State_VGB(WaveFirst_,i,j,k,iBlock))
              end do; end do; end do
           end if
        end if
