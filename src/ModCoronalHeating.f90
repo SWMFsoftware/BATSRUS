@@ -1091,7 +1091,7 @@ contains
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
 
-    use ModVarIndexes, ONLY: nVar
+    use ModVarIndexes, ONLY: nVar, Lperp_
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: IonMassPerCharge, pMin_I, TMin_I
     use ModAdvance, ONLY: nVar, UseAnisoPressure, Bx_, Bz_, Pe_
@@ -1261,7 +1261,11 @@ contains
              Qmajor_I(iIon) = Qmajor
              Qminor_I(iIon) = Qminor
 
-             LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
+             if(Lperp_ > 1)then
+                LperpInvGyroRad = InvGyroRadius*State_V(Lperp_)/RhoProton
+             else
+                LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
+             end if
 
              WmajorGyro = Wmajor/sqrt(LperpInvGyroRad)
              WminorGyro = Wminor/sqrt(LperpInvGyroRad)
