@@ -493,6 +493,23 @@ contains
                 Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
                      + 0.5*Coef*(State_VGB(WaveLast_,i,j,k,iBlock) &
                      - State_VGB(WaveFirst_,i,j,k,iBlock))
+
+                ! Calculate gradient tensor of Alfven speed.
+                ! The following is not the fastest way to calculate
+                ! div u_A (or div rho), but the transverse turbulence
+                ! is the more common turbulence to use, so speed is not
+                ! an issue
+                call calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, &
+                     IsNewBlockAlfven)
+
+                Coef = 0.5*SigmaD &
+                     *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
+                     *sum((/ (GradAlfven_DD(iVar,iVar), iVar=1, nDim) /))
+
+                ! Reflection term
+                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) -Coef
+
+		Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) +Coef
              end do; end do; end do
           end if
        end if
