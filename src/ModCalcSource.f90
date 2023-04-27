@@ -437,19 +437,39 @@ contains
                 ! Calculate b.grad u.b
                 bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
+                Coef = SigmaD*(0.5*DivU_C(i,j,k) - bDotGradparU)
+
                 Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                      Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                     - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
-                     *(0.5*DivU_C(i,j,k) - bDotGradparU)
+                     - State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Coef
+
+                ! Reflection term
+                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
+                     + 0.5*Coef*(State_VGB(WaveFirst_,i,j,k,iBlock) &
+                     - State_VGB(WaveLast_,i,j,k,iBlock))
+
+                Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
+                     + 0.5*Coef*(State_VGB(WaveLast_,i,j,k,iBlock) &
+                     - State_VGB(WaveFirst_,i,j,k,iBlock))
              end do; end do; end do
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
+                Coef = SigmaD*DivU_C(i,j,k)/6.0
+
                 Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                      Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                     - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
-                     *DivU_C(i,j,k)/6.0
+                     - Coef*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+
+                ! Reflection term
+                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
+                     + 0.5*Coef*(State_VGB(WaveFirst_,i,j,k,iBlock) &
+                     - State_VGB(WaveLast_,i,j,k,iBlock))
+
+                Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
+                     + 0.5*Coef*(State_VGB(WaveLast_,i,j,k,iBlock) &
+                     - State_VGB(WaveFirst_,i,j,k,iBlock))
              end do; end do; end do
           end if
        end if
@@ -1156,6 +1176,121 @@ contains
       end if
 
     end subroutine calc_grad_u
+    !==========================================================================
+    subroutine calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, IsNewBlock)
+
+      use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, Dim1_, Dim2_, Dim3_
+
+      integer, intent(in) :: i, j, k, iBlock
+      logical, intent(inout) :: IsNewBlock
+      real,   intent(out) :: GradAlfven_DD(nDim,MaxDim)
+
+      real, save :: Alfven_VFD(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+      integer :: iDir
+
+      character(len=*), parameter:: NameSub = 'calc_grad_alfven'
+      !------------------------------------------------------------------------
+      if(IsNewBlock)then
+         call get_alfven_speed(Alfven_VFD)
+         IsNewBlock = .false.
+      end if
+
+      GradAlfven_DD = 0.0
+
+      ! Calculate gradient tensor of velocity
+      if(IsCartesian) then
+         GradAlfven_DD(Dim1_,:) = &
+              (Alfven_VFD(:,i+1,j,k,Dim1_) - Alfven_VFD(:,i,j,k,Dim1_)) &
+              /CellSize_DB(Dim1_,iBlock)
+
+         if(nJ > 1) GradAlfven_DD(Dim2_,:) = &
+              (Alfven_VFD(:,i,j+1,k,Dim2_) - Alfven_VFD(:,i,j,k,Dim2_)) &
+              /CellSize_DB(Dim2_,iBlock)
+
+         if(nK > 1) GradAlfven_DD(Dim3_,:) = &
+              (Alfven_VFD(:,i,j,k+1,Dim3_) - Alfven_VFD(:,i,j,k,Dim3_)) &
+              /CellSize_DB(Dim3_,iBlock)
+
+      else if(IsRzGeometry) then
+         call stop_mpi(NameSub//': RZ geometry to be implemented')
+      else
+         do iDir = 1, MaxDim
+            GradAlfven_DD(:,iDir) = &
+                 Alfven_VFD(iDir,i+1,j,k,Dim1_) &
+                 *FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
+                 - Alfven_VFD(iDir,i,j,k,Dim1_) &
+                 *FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
+
+            if(nJ == 1) CYCLE
+
+            GradAlfven_DD(:,iDir) = GradAlfven_DD(:,iDir) + &
+                 Alfven_VFD(iDir,i,j+1,k,Dim2_) &
+                 *FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
+                 + Alfven_VFD(iDir,i,j,k,Dim2_) &
+                 *FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
+
+            if(nK == 1) CYCLE
+
+            GradAlfven_DD(:,iDir) = GradAlfven_DD(:,iDir) + &
+                 Alfven_VFD(iDir,i,j,k+1,Dim3_) &
+                 *FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
+                 + Alfven_VFD(iDir,i,j,k,Dim3_) &
+                 *FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
+         end do
+
+         GradAlfven_DD = GradAlfven_DD/CellVolume_GB(i,j,k,iBlock)
+
+      end if
+
+    end subroutine calc_grad_alfven
+    !==========================================================================
+
+    subroutine get_alfven_speed(Alfven_VFD)
+
+      use ModAdvance, ONLY: &
+           LeftState_VX, LeftState_VY, LeftState_VZ,  &
+           RightState_VX, RightState_VY, RightState_VZ
+      use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+      use ModMain, ONLY: UseB0
+      use ModVarIndexes, ONLY: Bx_, Bz_, Rho_
+
+      real, intent(out) :: Alfven_VFD(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+
+      real :: FullB_D(MaxDim)
+      integer :: i, j, k
+
+      character(len=*), parameter:: NameSub = 'get_alfven_speed'
+      !------------------------------------------------------------------------
+
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+         FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
+              + RightState_VX(Bx_:Bz_,i,j,k))
+         if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
+         Rho = 0.5*(LeftState_VX(Rho_,i,j,k) + RightState_VX(Rho_,i,j,k))
+         Alfven_VFD(:,i,j,k,Dim1_) = FullB_D/sqrt(Rho)
+      end do; end do; end do
+
+      if(nJ > 1)then
+         do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+            FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
+                 + RightState_VY(Bx_:Bz_,i,j,k))
+            if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
+            Rho = 0.5*(LeftState_VY(Rho_,i,j,k) + RightState_VY(Rho_,i,j,k))
+            Alfven_VFD(:,i,j,k,Dim2_) = FullB_D/sqrt(Rho)
+         end do; end do; end do
+      end if
+
+      if(nK > 1)then
+         do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+            FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
+                 + RightState_VZ(Bx_:Bz_,i,j,k))
+            if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
+            Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) + RightState_VZ(Rho_,i,j,k))
+            Alfven_VFD(:,i,j,k,Dim3_) = FullB_D/sqrt(Rho)
+         end do; end do; end do
+      end if
+
+    end subroutine get_alfven_speed
     !==========================================================================
     subroutine calc_grad_uplus(GradU_DD, i, j, k, iBlock)
 
