@@ -219,7 +219,7 @@ contains
     ! Variables needed for outer heliosphere turbulence
     real :: GradAlfven_DD(nDim,MaxDim)
     logical :: IsNewBlockAlfven
-    
+
     logical:: DoTestCell
 
     logical:: DoTest
@@ -504,7 +504,7 @@ contains
 
                 Coef = 0.5*SigmaD &
                      *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
-                     *sum((/ (GradAlfven_DD(iVar,iVar), iVar=1, nDim) /))
+                     *sum([ (GradAlfven_DD(iVar,iVar), iVar=1, nDim) ])
 
                 ! Reflection term
                 Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) -Coef

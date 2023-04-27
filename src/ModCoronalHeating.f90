@@ -448,7 +448,7 @@ contains
        UseAlfvenWaveDissipation = .false.
        UseTurbulentCascade = .false.
        UseReynoldsDecomposition = .false.
-       
+
        select case(TypeCoronalHeating)
        case('F','none')
           UseCoronalHeating = .false.
