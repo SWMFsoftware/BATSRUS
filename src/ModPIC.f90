@@ -22,6 +22,7 @@ module ModPIC
   public:: pic_read_param
   public:: pic_init_region
   public:: pic_find_node
+  public:: pic_find_active_node
   public:: i_status_pic_region
   public:: i_status_pic_active
   public:: i_status_pic_criteria
@@ -73,8 +74,12 @@ module ModPIC
   type(FreqType), public :: &
        AdaptPic = FreqType(.false.,100000,1e30,-1,-1.0)
 
+  ! Load balance the blocks that are overlapped with the PIC grids. 
   logical, public:: DoBalancePicBlock=.true.
 
+  ! Load balance the blocks that are overlapped with the active PIC grids.
+  logical, public:: DoBalanceActivePicBlock=.false.
+  
   ! The cell status related to get PIC involved, -1 is the default
   integer, public, allocatable:: iStatusPicCrit_CB(:, :, :, :)
 
@@ -120,6 +125,9 @@ module ModPIC
 
   ! Is the node overlaped with PIC domain?
   logical, public,allocatable:: IsPicNode_A(:)
+
+  ! Is the node overlaped with active PIC region?
+  logical, public,allocatable:: IsActivePicNode_A(:)
 
   ! The last grid/decomposition when pic criteria were calculated.
   integer, public :: iPicGrid = -1, iPicDecomposition = -1
@@ -244,7 +252,8 @@ contains
 
     case("#PICBALANCE")
        call read_var('DoBalancePicBlock', DoBalancePicBlock)
-
+       call read_var('DoBalanceActivePicBlock', DoBalanceActivePicBlock)
+       if(DoBalanceActivePicBlock) DoBalancePicBlock = .false.
     case("#PICGRID")
        call read_var('nPicRegion', nRegionPicTmp)
        if(nRegionPic > 0 .and. nRegionPicTmp /= nRegionPic ) then
@@ -691,6 +700,49 @@ contains
 
   end subroutine pic_find_node
   !============================================================================
+  subroutine pic_find_active_node
+
+    ! Find blocks that overlap with active PIC region(s).
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, &
+         Xyz_DGB, iNode_B, MaxNode
+
+    real:: Xyz_D(nDim), Pic_D(nDim)
+
+    integer:: iBlock, i, j, k, iNode
+
+    logical:: IsActivePicBlock
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'pic_find_active_node'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
+
+    if(.not.allocated(IsActivePicNode_A)) allocate(IsActivePicNode_A(MaxNode))
+    IsActivePicNode_A = .false.
+
+    if(IsPicRegionInitialized) then
+       do iBlock=1,nBlock
+          if(Unused_B(iBlock)) CYCLE
+          IsActivePicBlock = .false.
+          ! Loop through all cells of a block, if any cell of this block
+          ! is overlapped with the PIC grid, this block is considered as
+          ! a PIC block/node.
+          do i = 1, nI; do j = 1, nJ; do k = 1, nK
+             if(.not. IsActivePicBlock .and. i_status_pic_active(iBlock,i,j,k) == 1) &
+                  IsActivePicBlock = .true.
+          end do; end do; end do
+          IsActivePicNode_A(iNode_B(iBlock)) = IsActivePicBlock
+       end do
+    else
+       call pic_find_node
+       IsActivePicNode_A = IsPicNode_A       
+    endif
+    if(DoTest) write(*,*)'IsActivePicNode= ', IsActivePicNode_A(:)
+    call test_stop(NameSub, DoTest)
+
+  end subroutine pic_find_active_node
+  !============================================================================
   subroutine pic_set_cell_status
 
     use BATL_lib, ONLY: &
@@ -736,7 +788,7 @@ contains
        call set_status_all(iPicOn_)
        RETURN
     end if
-
+    
     do iRegion = 1, nRegionPic
 
        nX = nPatchCell_DI(x_, iRegion)
