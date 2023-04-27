@@ -447,6 +447,8 @@ contains
        UseExponentialHeating= .false.
        UseAlfvenWaveDissipation = .false.
        UseTurbulentCascade = .false.
+       UseReynoldsDecomposition = .false.
+       
        select case(TypeCoronalHeating)
        case('F','none')
           UseCoronalHeating = .false.
@@ -475,6 +477,13 @@ contains
              call read_var('rMinWaveReflection', rMinWaveReflection)
              call read_var('UseSurfaceWaveRefl', UseSurfaceWaveRefl)
           end if
+       case('usmanov')
+          UseAlfvenWaveDissipation = .true.
+          UseReynoldsDecomposition = .true.
+          call read_var('UseTransverseTurbulence', UseTransverseTurbulence)
+          call read_var('SigmaD', SigmaD)
+          call read_var('KarmanTaylorAlpha', KarmanTaylorAlpha)
+          call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
        case default
           call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
@@ -613,7 +622,7 @@ contains
 
     if(UseAlfvenWaveDissipation)then
 
-       if(UseTurbulentCascade)then
+       if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
                   WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
