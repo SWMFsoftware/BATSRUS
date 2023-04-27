@@ -216,6 +216,10 @@ contains
     ! Variables for Minimum radial speed
     real :: Ur, Rho, rUnit_D(3), Force_D(3)
 
+    ! Variables needed for outer heliosphere turbulence
+    real :: GradAlfven_DD(nDim,MaxDim)
+    logical :: IsNewBlockAlfven
+    
     logical:: DoTestCell
 
     logical:: DoTest
@@ -423,6 +427,7 @@ contains
 
        if(UseReynoldsDecomposition)then
           if(UseTransverseTurbulence)then
+             IsNewBlockAlfven = .true.
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
@@ -451,6 +456,24 @@ contains
                 Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
                      + 0.5*Coef*(State_VGB(WaveLast_,i,j,k,iBlock) &
                      - State_VGB(WaveFirst_,i,j,k,iBlock))
+
+                ! Calculate gradient tensor of Alfven speed
+                call calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, &
+                     IsNewBlockAlfven)
+
+                ! Calculate unit vector parallel with full B field
+		b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+                b_D = b_D/norm2(b_D)
+
+                Coef = 0.5*SigmaD &
+                     *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
+                     *dot_product(b_D, matmul(b_D(1:nDim), GradAlfven_DD))
+
+                ! Reflection term
+                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) -Coef
+
+                Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) +Coef
              end do; end do; end do
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
