@@ -426,8 +426,8 @@ contains
        end do; end do; end do
 
        if(UseReynoldsDecomposition)then
+          IsNewBlockAlfven = .true.
           if(UseTransverseTurbulence)then
-             IsNewBlockAlfven = .true.
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
