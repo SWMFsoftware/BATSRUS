@@ -1574,7 +1574,9 @@ contains
       use ModElectricField, ONLY: UseJCrossBForce
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
-
+      use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
+           UseTransverseTurbulence, SigmaD
+      
       real, intent(in) :: State_V(:)
       real, intent(out) :: Un
       real, intent(out) :: Flux_V(:)
@@ -1695,12 +1697,33 @@ contains
          end if
       end if
       if(UseWavePressure)then
-         if(UseWavePressureLtd)then
-            pExtra = pExtra &
-                 + (GammaWave-1)*State_V(Ew_)
+         if(UseReynoldsDecomposition)then
+            if(UseTransverseTurbulence)then
+               pExtra = pExtra &
+                    + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_)) &
+                    *(1 + SigmaD)
+
+               DpPerB = -SigmaD*sum(State_V(WaveFirst_:WaveLast_))*FullBn &
+                    /max(1e-30, FullB2)
+
+               Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
+               Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
+               Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
+               Flux_V(Energy_)= Flux_V(Energy_) &
+                    + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
+            else
+               pExtra = pExtra &
+                    + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_)) &
+                    *(1 + SigmaD/3)
+            end if
          else
-            pExtra = pExtra &
-                 + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+            if(UseWavePressureLtd)then
+               pExtra = pExtra &
+                    + (GammaWave-1)*State_V(Ew_)
+            else
+               pExtra = pExtra &
+                    + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+            end if
          end if
       end if
       ! Calculate some intermediate values for flux calculations
