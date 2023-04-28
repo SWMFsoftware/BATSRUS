@@ -74,12 +74,12 @@ module ModPIC
   type(FreqType), public :: &
        AdaptPic = FreqType(.false.,100000,1e30,-1,-1.0)
 
-  ! Load balance the blocks that are overlapped with the PIC grids. 
+  ! Load balance the blocks that are overlapped with the PIC grids.
   logical, public:: DoBalancePicBlock=.true.
 
   ! Load balance the blocks that are overlapped with the active PIC grids.
   logical, public:: DoBalanceActivePicBlock=.false.
-  
+
   ! The cell status related to get PIC involved, -1 is the default
   integer, public, allocatable:: iStatusPicCrit_CB(:, :, :, :)
 
@@ -736,7 +736,7 @@ contains
        end do
     else
        call pic_find_node
-       IsActivePicNode_A = IsPicNode_A       
+       IsActivePicNode_A = IsPicNode_A
     endif
     if(DoTest) write(*,*)'IsActivePicNode= ', IsActivePicNode_A(:)
     call test_stop(NameSub, DoTest)
@@ -788,7 +788,7 @@ contains
        call set_status_all(iPicOn_)
        RETURN
     end if
-    
+
     do iRegion = 1, nRegionPic
 
        nX = nPatchCell_DI(x_, iRegion)

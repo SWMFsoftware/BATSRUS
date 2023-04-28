@@ -321,7 +321,7 @@ contains
           if(UsePic) then
              if(DoBalancePicBlock .and. IsNewBlock) then
                 call pic_find_node
-             else if(DoBalanceActivePicBlock) then 
+             else if(DoBalanceActivePicBlock) then
                 call pic_find_active_node
              endif
           endif
@@ -439,7 +439,7 @@ contains
              if(UsePic)then
                 if(DoBalancePicBlock) then
                    if(IsPicNode_A(iNode_B(iBlock))) iType = iType + iPicBlock
-                else if(DoBalanceActivePicBlock) then 
+                else if(DoBalanceActivePicBlock) then
                    if(IsActivePicNode_A(iNode_B(iBlock))) iType = iType + iPicBlock
                 end if
              endif

@@ -1593,8 +1593,8 @@ contains
 
       real, dimension(nIonFluid) :: Ux_I, Uy_I, Uz_I, RhoUn_I
       real :: MagneticForce_D(RhoUx_:RhoUz_)
-      !------------------------------------------------------------------------
       ! Extract primitive variables
+      !------------------------------------------------------------------------
       Rho     = State_V(Rho_)
       Ux      = State_V(Ux_)
       Uy      = State_V(Uy_)
