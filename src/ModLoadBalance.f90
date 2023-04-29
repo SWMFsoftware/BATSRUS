@@ -262,8 +262,8 @@ contains
     use BATL_lib,      ONLY: Unused_BP
     use ModParallel
     use ModMpi
-    use ModPIC, ONLY: UsePic, pic_find_node, IsPicNode_A, DoBalancePicBlock
-
+    use ModPIC, ONLY: UsePic, pic_find_active_node, IsActivePicNode_A, &
+         DoBalanceActivePicBlock, pic_find_node, IsPicNode_A, DoBalancePicBlock
     use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, &
          Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl, find_test_cell
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
@@ -318,8 +318,13 @@ contains
           if(TypeSemiImplicit(1:6) == 'resist' .and. nBlockSemi >= 0) &
                IsSemiImplBlock_B(iBlockFromSemi_B(1:nBlockSemi)) = .true.
 
-          if(UsePic .and. DoBalancePicBlock .and. IsNewBlock) &
-               call pic_find_node
+          if(UsePic) then
+             if(DoBalancePicBlock .and. IsNewBlock) then
+                call pic_find_node
+             else if(DoBalanceActivePicBlock) then
+                call pic_find_active_node
+             endif
+          endif
 
           ! N criteria are used to decide the type of a block.
           ! Each criterion determines the value of one bit (0 or 1).
@@ -357,7 +362,8 @@ contains
           end if
 
           ! next bit: PIC-block         -> 1, otherwise -> 0
-          if(UsePic .and. DoBalancePicBlock)then
+          if(UsePic .and. &
+               (DoBalancePicBlock .or. DoBalanceActivePicBlock))then
              iCrit = 2*iCrit
              iPicBlock = iCrit
           endif
@@ -430,8 +436,12 @@ contains
                      iType = iType + iFieldLineThreadBlock
              end if
 
-             if(UsePic .and. DoBalancePicBlock)then
-                if(IsPicNode_A(iNode_B(iBlock))) iType = iType + iPicBlock
+             if(UsePic)then
+                if(DoBalancePicBlock) then
+                   if(IsPicNode_A(iNode_B(iBlock))) iType = iType + iPicBlock
+                else if(DoBalanceActivePicBlock) then
+                   if(IsActivePicNode_A(iNode_B(iBlock))) iType = iType + iPicBlock
+                end if
              endif
 
              if(UsePartSteady)then
@@ -764,6 +774,7 @@ contains
     use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
     use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
     use ModTimeStepControl, ONLY: UseMaxTimeStep
+    use ModPIC, ONLY: DoBalanceActivePicBlock, UsePic
 
     ! Local variables
     logical:: DoBalanceSemiImpl = .true.
@@ -778,8 +789,9 @@ contains
          UsePartImplicit .or.                             &! part implicit
          UsePartSteady .and. IsNewSteadySelect .or.       &! part steady scheme
          nBlockSemi >= 0 .and. DoBalanceSemiImpl .or.     &! semi-implicit
-         DoBalancePointImplicit .and. nIteration>1  &! point-implicit
-         ) then ! semi-implicit scheme
+         DoBalancePointImplicit .and. nIteration>1 .or.   &! point-implicit
+         UsePic .and. DoBalanceActivePicBlock             &! PIC region
+         ) then
 
        ! Redo load balancing
        call load_balance(DoMoveCoord=.true., DoMoveData=.true., &

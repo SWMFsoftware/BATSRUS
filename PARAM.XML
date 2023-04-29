@@ -8615,14 +8615,33 @@ Default is no extension.
 
 <command name="PICBALANCE">
   <parameter name="DoBalancePicBlock" type="logical" default="T"/>
+  <parameter name="DoBalanceActivePicBlock" type="logical" default="F"/>
 
 #PICBALANCE
 T                      DoBalancePicBlock 
+F                      DoBalancePicBlock 
 
-If it is switched on, the BATSRUS blocks that are overlapped with the PIC
-domains will be load balanced separatelly.
+If DoBalancePicBlock is switched on, the BATSRUS blocks that are overlapped 
+with the PIC domains (defined by #PICGRID) will be load balanced separatelly.
 
-The default is DoBalancePicBlock true.
+If DoBalanceActivePicBlock is true, only the BATSRUS blocks that are overlapped
+with the active PIC regions, which are determined by #PICREGIONMIN and/or 
+#PICREGIONMAX, are load balanced separatelly. If the GM-PC coupling is slow, 
+this option is likely speed up the coupling significantly. However, it has 
+two known minor side effects, which may change nightly test results but are 
+acceptable for a production run:
+1. After calling load balance function, the PIC adaptation criteria will be 
+re-calculated. For a simulation with physics based PIC region criteria, 
+running with 1 MPI or a few MPIs may produce different results, because the 
+simulation with 1 MPI does not need to do load balance and the pic 
+criteria will not be re-calculated. Load balancing BATSRUS blocks 
+frequently may also slow down BATSRUS. 
+2. Inside BATS_advance(), set_global_timestep(TimeSimulationLimit) is called, 
+and the timestep is limited by TimeSimulationLimit. However, if 
+load_balance_blocks() is called later, the global time step will be 
+overwritten inside calc_other_vars(). 
+
+The default is DoBalancePicBlock true, and DoBalanceActivePicBlock is false.
 </command>
 
 <command name="PICREGIONMIN">

@@ -179,7 +179,7 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k, iVar, iFluid, iUn, iGang
-    real :: Pe, Pwave, DivU
+    real :: Pe, Pwave, DivU, Ew
     real :: Coef
 
     ! Variable for B0 source term
@@ -440,6 +440,7 @@ contains
                 b_D = b_D/norm2(b_D)
 
                 ! Calculate b.grad u.b
+                ! A misnomer, should be bDotbDotGradU
                 bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
                 Coef = SigmaD*(0.5*DivU_C(i,j,k) - bDotGradparU)
@@ -447,6 +448,10 @@ contains
                 Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                      Source_VC(WaveFirst_:WaveLast_,i,j,k) &
                      - State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Coef
+
+                ! Energy source related to the Alfven wave source above
+                Ew = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Coef*Ew
 
                 ! Reflection term
                 Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
@@ -466,8 +471,7 @@ contains
                 if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                 b_D = b_D/norm2(b_D)
 
-                Coef = 0.5*SigmaD &
-                     *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
+                Coef = 0.5*SigmaD*Ew &
                      *dot_product(b_D, matmul(b_D(1:nDim), GradAlfven_DD))
 
                 ! Reflection term
@@ -485,6 +489,10 @@ contains
                      Source_VC(WaveFirst_:WaveLast_,i,j,k) &
                      - Coef*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
 
+                ! Energy source related to the Alfven wave source above
+                Ew = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Coef*Ew
+
                 ! Reflection term
                 Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
                      + 0.5*Coef*(State_VGB(WaveFirst_,i,j,k,iBlock) &
@@ -496,14 +504,13 @@ contains
 
                 ! Calculate gradient tensor of Alfven speed.
                 ! The following is not the fastest way to calculate
-                ! div u_A (or div rho), but the transverse turbulence
+                ! div u_A (or B \cdot grad rho), but the transverse turbulence
                 ! is the more common turbulence to use, so speed is not
                 ! an issue
                 call calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, &
                      IsNewBlockAlfven)
 
-                Coef = 0.5*SigmaD &
-                     *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
+                Coef = 0.5*SigmaD*Ew &
                      *sum([ (GradAlfven_DD(iVar,iVar), iVar=1, nDim) ])
 
                 ! Reflection term

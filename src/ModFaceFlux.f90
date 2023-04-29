@@ -1574,6 +1574,8 @@ contains
       use ModElectricField, ONLY: UseJCrossBForce
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
+      use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
+           UseTransverseTurbulence, SigmaD
 
       real, intent(in) :: State_V(:)
       real, intent(out) :: Un
@@ -1591,8 +1593,8 @@ contains
 
       real, dimension(nIonFluid) :: Ux_I, Uy_I, Uz_I, RhoUn_I
       real :: MagneticForce_D(RhoUx_:RhoUz_)
-      !------------------------------------------------------------------------
       ! Extract primitive variables
+      !------------------------------------------------------------------------
       Rho     = State_V(Rho_)
       Ux      = State_V(Ux_)
       Uy      = State_V(Uy_)
@@ -1695,12 +1697,24 @@ contains
          end if
       end if
       if(UseWavePressure)then
-         if(UseWavePressureLtd)then
-            pExtra = pExtra &
-                 + (GammaWave-1)*State_V(Ew_)
+         if(UseReynoldsDecomposition)then
+            if(UseTransverseTurbulence)then
+               pExtra = pExtra &
+                    + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_)) &
+                    *(1 + SigmaD)
+            else
+               pExtra = pExtra &
+                    + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_)) &
+                    *(1 + SigmaD/3)
+            end if
          else
-            pExtra = pExtra &
-                 + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+            if(UseWavePressureLtd)then
+               pExtra = pExtra &
+                    + (GammaWave-1)*State_V(Ew_)
+            else
+               pExtra = pExtra &
+                    + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+            end if
          end if
       end if
       ! Calculate some intermediate values for flux calculations
@@ -1748,6 +1762,17 @@ contains
             write(*,*) 'Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
             write(*,*) 'Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
          end if
+      end if
+
+      if(UseReynoldsDecomposition .and. UseTransverseTurbulence)then
+         DpPerB = -SigmaD*sum(State_V(WaveFirst_:WaveLast_))*FullBn &
+              /max(1e-30, FullB2)
+
+         MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
+         MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
+         MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
+         Flux_V(Energy_)= Flux_V(Energy_) &
+              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
       end if
 
       call get_magnetic_flux(State_V, Flux_V, &
