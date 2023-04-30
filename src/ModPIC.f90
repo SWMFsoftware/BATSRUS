@@ -729,7 +729,8 @@ contains
           ! is overlapped with the PIC grid, this block is considered as
           ! a PIC block/node.
           do i = 1, nI; do j = 1, nJ; do k = 1, nK
-             if(.not. IsActivePicBlock .and. i_status_pic_active(iBlock,i,j,k) == 1) &
+             if(.not. IsActivePicBlock .and. &
+                  i_status_pic_active(iBlock,i,j,k) == 1) &
                   IsActivePicBlock = .true.
           end do; end do; end do
           IsActivePicNode_A(iNode_B(iBlock)) = IsActivePicBlock
