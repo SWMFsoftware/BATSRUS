@@ -1699,13 +1699,11 @@ contains
       if(UseWavePressure)then
          if(UseReynoldsDecomposition)then
             if(UseTransverseTurbulence)then
-               pExtra = pExtra &
-                    + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_)) &
-                    *(1 + SigmaD)
+               pExtra = pExtra + ((GammaWave-1) + SigmaD/2) &
+                    *sum(State_V(WaveFirst_:WaveLast_))
             else
-               pExtra = pExtra &
-                    + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_)) &
-                    *(1 + SigmaD/3)
+               pExtra = pExtra + ((GammaWave-1) + SigmaD/6) &
+                    *sum(State_V(WaveFirst_:WaveLast_))
             end if
          else
             if(UseWavePressureLtd)then
@@ -3690,7 +3688,9 @@ contains
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe, SignB_, &
            UseMagFriction, MagFrictionCoef
-
+      use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
+           UseTransverseTurbulence, SigmaD
+      
       real, intent(in) :: State_V(:)
       real, optional, intent(out) :: CmaxDt_I(:)
       real, optional, intent(out) :: Cmax_I(:)
@@ -3804,8 +3804,16 @@ contains
                  max(StateLeft_V(Ew_)/StateLeft_V(Rho_),&
                  StateRight_V(Ew_)/StateRight_V(Rho_))
          else
-            Pw = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
-            Sound2 = Sound2 + GammaWave*Pw*InvRho
+            if(UseReynoldsDecomposition)then
+               if(.not.UseTransverseTurbulence)then
+                  Pw = ((GammaWave - 1) + SigmaD/6) &
+                       *sum(State_V(WaveFirst_:WaveLast_))
+                  Sound2 = Sound2 + Pw*(GammaWave + SigmaD/6)*InvRho
+               end if
+            else
+               Pw = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
+               Sound2 = Sound2 + GammaWave*Pw*InvRho
+            end if
          end if
       end if
 
@@ -4010,7 +4018,7 @@ contains
          elseif(IsChGLDomain)then
             ! Stream-aligned MHD is at least from one side of the face
             call get_chgl_speed(U1n=UnLeft, U2n=UnRight,                &
-                 ! Tangetial velocity squared
+                                ! Tangetial velocity squared
                  Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - &
                  Un*Un, 0.0),                                           &
                  InvRho = InvRho,                                       &
@@ -4038,7 +4046,7 @@ contains
       elseif(IsChGLDomain)then
          ! Stream-aligned MHD is at least from one side of the face
          call get_chgl_speed(U1n=UnMin, U2n=UnMax,                   &
-              ! Tangetial velocity squared
+                                ! Tangetial velocity squared
               Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - &
               Un*Un, 0.0),                                           &
               InvRho = InvRho,                                       &
