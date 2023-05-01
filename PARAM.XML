@@ -8619,7 +8619,7 @@ Default is no extension.
 
 #PICBALANCE
 T                      DoBalancePicBlock 
-F                      DoBalancePicBlock 
+F                      DoBalanceActivePicBlock 
 
 If DoBalancePicBlock is switched on, the BATSRUS blocks that are overlapped 
 with the PIC domains (defined by #PICGRID) will be load balanced separatelly.
