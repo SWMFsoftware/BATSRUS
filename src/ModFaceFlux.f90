@@ -3690,7 +3690,7 @@ contains
            UseMagFriction, MagFrictionCoef
       use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD
-      
+
       real, intent(in) :: State_V(:)
       real, optional, intent(out) :: CmaxDt_I(:)
       real, optional, intent(out) :: Cmax_I(:)

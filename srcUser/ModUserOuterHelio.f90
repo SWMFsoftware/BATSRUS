@@ -1328,8 +1328,6 @@ contains
              NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
           end select
 
-
-
        case default
           IsFound = .false.
        end select
