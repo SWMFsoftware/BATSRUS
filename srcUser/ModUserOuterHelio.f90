@@ -1127,6 +1127,14 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
+    integer :: i,j,k
+
+    real, dimension(nVar + nFluid):: SourceCx_V
+
+    real, dimension(nFluid) :: U2_I, Temp_I, Rho_I, UThS_I
+
+    real :: U_DI(3,nFluid)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -1220,6 +1228,108 @@ contains
 
           ! end of merav addition
 
+       case( 'srswhcx','sruxswhcx','sruyswhcx' &
+                  ,'sruzswhcx','spswhcx','seswhcx')
+          if(UseNeutralFluid)then
+             call select_region(iBlock)
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call calc_source_inputs( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                call calc_charge_exchange_source( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+                select case(NameVar)
+                case('srswhcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(SwhRho_)*No2Io_V(UnitRho_)
+                case('sruxswhcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(SwhRhoUx_)*No2Io_V(UnitRhoU_)
+                case('sruyswhcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(SwhRhoUy_)*No2Io_V(UnitRhoU_)
+                case('sruzswhcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(SwhRhoUz_)*No2Io_V(UnitRhoU_)
+                case('spswhcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(SwhP_)*No2Io_V(UnitP_)
+                case('seswhcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(SwhEnergy_)&
+                      *No2Io_V(UnitEnergydens_)
+                end select
+             end do; end do; end do
+          else
+             ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
+             PlotVar_G = 0.0
+          end if
+          select case(NameVar)
+          case('srswhcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRho_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRho_)) // '/s'
+          case('sruxswhcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruyswhcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruzswhcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('spswhcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitP_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitP_)) // '/s'
+          case('seswhcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitEnergydens_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
+          end select
+
+       case( 'srpuicx','sruxpuicx','sruypuicx' &
+                  ,'sruzpuicx','sppuicx','sepuicx')
+          if(UseNeutralFluid)then
+             call select_region(iBlock)
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call calc_source_inputs( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                call calc_charge_exchange_source( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+                select case(NameVar)
+                case('srpuicx')
+                   PlotVar_G(i,j,k) = SourceCx_V(Pu3Rho_)*No2Io_V(UnitRho_)
+                case('sruxpuicx')
+                   PlotVar_G(i,j,k) = SourceCx_V(Pu3RhoUx_)*No2Io_V(UnitRhoU_)
+                case('sruypuicx')
+                   PlotVar_G(i,j,k) = SourceCx_V(Pu3RhoUy_)*No2Io_V(UnitRhoU_)
+                case('sruzpuicx')
+                   PlotVar_G(i,j,k) = SourceCx_V(Pu3RhoUz_)*No2Io_V(UnitRhoU_)
+                case('sppuicx')
+                   PlotVar_G(i,j,k) = SourceCx_V(Pu3P_)*No2Io_V(UnitP_)
+                case('sepuicx')
+                   PlotVar_G(i,j,k) = SourceCx_V(Pu3Energy_)&
+                      *No2Io_V(UnitEnergydens_)
+                end select
+             end do; end do; end do
+          else
+             ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
+             PlotVar_G = 0.0
+          end if
+          select case(NameVar)
+          case('srpuicx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRho_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRho_)) // '/s'
+          case('sruxpuicx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruypuicx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruzpuicx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sppuicx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitP_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitP_)) // '/s'
+          case('sepuicx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitEnergydens_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
+          end select
+
+
+
        case default
           IsFound = .false.
        end select
@@ -1250,6 +1360,57 @@ contains
                * State_VGB(Rho_,:,:,:,iBlock)) )
 
           ! end of merav addition
+
+       case( 'srcx','sruxcx','sruycx' &
+                  ,'sruzcx','spcx','secx')
+          if(UseNeutralFluid)then
+             call select_region(iBlock)
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call calc_source_inputs( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                call calc_charge_exchange_source( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+                select case(NameVar)
+                case('srcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(Rho_)*No2Io_V(UnitRho_)
+                case('sruxcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(RhoUx_)*No2Io_V(UnitRhoU_)
+                case('sruycx')
+                   PlotVar_G(i,j,k) = SourceCx_V(RhoUy_)*No2Io_V(UnitRhoU_)
+                case('sruzcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(RhoUz_)*No2Io_V(UnitRhoU_)
+                case('spcx')
+                   PlotVar_G(i,j,k) = SourceCx_V(P_)*No2Io_V(UnitP_)
+                case('secx')
+                   PlotVar_G(i,j,k) = SourceCx_V(Energy_)&
+                      *No2Io_V(UnitEnergydens_)
+                end select
+             end do; end do; end do
+          else
+             ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
+             PlotVar_G = 0.0
+          end if
+          select case(NameVar)
+          case('srcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRho_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRho_)) // '/s'
+          case('sruxcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruycx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruzcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('spcx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitP_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitP_)) // '/s'
+          case('secx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitEnergydens_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
+          end select
+
        case default
           IsFound = .false.
        end select
