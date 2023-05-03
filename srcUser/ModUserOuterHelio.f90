@@ -1129,7 +1129,7 @@ contains
 
     integer :: i,j,k
 
-    real, dimension(nVar + nFluid):: SourceCx_V
+    real, dimension(nVar + nFluid):: Source_V
 
     real, dimension(nFluid) :: U2_I, Temp_I, Rho_I, UThS_I
 
@@ -1236,20 +1236,20 @@ contains
                 call calc_source_inputs( &
                    i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srswhcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(SwhRho_)*No2Io_V(UnitRho_)
+                   PlotVar_G(i,j,k) = Source_V(SwhRho_)*No2Io_V(UnitRho_)
                 case('sruxswhcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(SwhRhoUx_)*No2Io_V(UnitRhoU_)
+                   PlotVar_G(i,j,k) = Source_V(SwhRhoUx_)*No2Io_V(UnitRhoU_)
                 case('sruyswhcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(SwhRhoUy_)*No2Io_V(UnitRhoU_)
+                   PlotVar_G(i,j,k) = Source_V(SwhRhoUy_)*No2Io_V(UnitRhoU_)
                 case('sruzswhcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(SwhRhoUz_)*No2Io_V(UnitRhoU_)
+                   PlotVar_G(i,j,k) = Source_V(SwhRhoUz_)*No2Io_V(UnitRhoU_)
                 case('spswhcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(SwhP_)*No2Io_V(UnitP_)
+                   PlotVar_G(i,j,k) = Source_V(SwhP_)*No2Io_V(UnitP_)
                 case('seswhcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(SwhEnergy_)&
+                   PlotVar_G(i,j,k) = Source_V(SwhEnergy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
              end do; end do; end do
@@ -1286,20 +1286,20 @@ contains
                 call calc_source_inputs( &
                    i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srpuicx')
-                   PlotVar_G(i,j,k) = SourceCx_V(Pu3Rho_)*No2Io_V(UnitRho_)
+                   PlotVar_G(i,j,k) = Source_V(Pu3Rho_)*No2Io_V(UnitRho_)
                 case('sruxpuicx')
-                   PlotVar_G(i,j,k) = SourceCx_V(Pu3RhoUx_)*No2Io_V(UnitRhoU_)
+                   PlotVar_G(i,j,k) = Source_V(Pu3RhoUx_)*No2Io_V(UnitRhoU_)
                 case('sruypuicx')
-                   PlotVar_G(i,j,k) = SourceCx_V(Pu3RhoUy_)*No2Io_V(UnitRhoU_)
+                   PlotVar_G(i,j,k) = Source_V(Pu3RhoUy_)*No2Io_V(UnitRhoU_)
                 case('sruzpuicx')
-                   PlotVar_G(i,j,k) = SourceCx_V(Pu3RhoUz_)*No2Io_V(UnitRhoU_)
+                   PlotVar_G(i,j,k) = Source_V(Pu3RhoUz_)*No2Io_V(UnitRhoU_)
                 case('sppuicx')
-                   PlotVar_G(i,j,k) = SourceCx_V(Pu3P_)*No2Io_V(UnitP_)
+                   PlotVar_G(i,j,k) = Source_V(Pu3P_)*No2Io_V(UnitP_)
                 case('sepuicx')
-                   PlotVar_G(i,j,k) = SourceCx_V(Pu3Energy_)&
+                   PlotVar_G(i,j,k) = Source_V(Pu3Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
              end do; end do; end do
@@ -1324,6 +1324,106 @@ contains
              NameIdlUnit = trim(NameIdlUnit_V(UnitP_)) // '/s'
              NameTecUnit = trim(NameTecUnit_V(UnitP_)) // '/s'
           case('sepuicx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitEnergydens_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
+          end select
+
+       case( 'srswhimp','sruxswhimp','sruyswhimp' &
+                  ,'sruzswhimp','spswhimp','seswhimp')
+          if(UseNeutralFluid)then
+             call select_region(iBlock)
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call calc_source_inputs( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                call calc_electron_impact_source( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                select case(NameVar)
+                case('srswhimp')
+                   PlotVar_G(i,j,k) = Source_V(SwhRho_)*No2Io_V(UnitRho_)
+                case('sruxswhimp')
+                   PlotVar_G(i,j,k) = Source_V(SwhRhoUx_)*No2Io_V(UnitRhoU_)
+                case('sruyswhimp')
+                   PlotVar_G(i,j,k) = Source_V(SwhRhoUy_)*No2Io_V(UnitRhoU_)
+                case('sruzswhimp')
+                   PlotVar_G(i,j,k) = Source_V(SwhRhoUz_)*No2Io_V(UnitRhoU_)
+                case('spswhimp')
+                   PlotVar_G(i,j,k) = Source_V(SwhP_)*No2Io_V(UnitP_)
+                case('seswhimp')
+                   PlotVar_G(i,j,k) = Source_V(SwhEnergy_)&
+                      *No2Io_V(UnitEnergydens_)
+                end select
+             end do; end do; end do
+          else
+             ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
+             PlotVar_G = 0.0
+          end if
+          select case(NameVar)
+          case('srswhimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRho_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRho_)) // '/s'
+          case('sruxswhimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruyswhimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruzswhimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('spswhimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitP_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitP_)) // '/s'
+          case('seswhimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitEnergydens_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
+          end select
+
+       case( 'srpuiimp','sruxpuiimp','sruypuiimp' &
+                  ,'sruzpuiimp','sppuiimp','sepuiimp')
+          if(UseNeutralFluid)then
+             call select_region(iBlock)
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call calc_source_inputs( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                call calc_electron_impact_source( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                select case(NameVar)
+                case('srpuiimp')
+                   PlotVar_G(i,j,k) = Source_V(Pu3Rho_)*No2Io_V(UnitRho_)
+                case('sruxpuiimp')
+                   PlotVar_G(i,j,k) = Source_V(Pu3RhoUx_)*No2Io_V(UnitRhoU_)
+                case('sruypuiimp')
+                   PlotVar_G(i,j,k) = Source_V(Pu3RhoUy_)*No2Io_V(UnitRhoU_)
+                case('sruzpuiimp')
+                   PlotVar_G(i,j,k) = Source_V(Pu3RhoUz_)*No2Io_V(UnitRhoU_)
+                case('sppuiimp')
+                   PlotVar_G(i,j,k) = Source_V(Pu3P_)*No2Io_V(UnitP_)
+                case('sepuiimp')
+                   PlotVar_G(i,j,k) = Source_V(Pu3Energy_)&
+                      *No2Io_V(UnitEnergydens_)
+                end select
+             end do; end do; end do
+          else
+             ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
+             PlotVar_G = 0.0
+          end if
+          select case(NameVar)
+          case('srpuiimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRho_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRho_)) // '/s'
+          case('sruxpuiimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruypuiimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruzpuiimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sppuiimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitP_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitP_)) // '/s'
+          case('sepuiimp')
              NameIdlUnit = trim(NameIdlUnit_V(UnitEnergydens_)) // '/s'
              NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
           end select
@@ -1367,20 +1467,20 @@ contains
                 call calc_source_inputs( &
                    i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(Rho_)*No2Io_V(UnitRho_)
+                   PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
                 case('sruxcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(RhoUx_)*No2Io_V(UnitRhoU_)
+                   PlotVar_G(i,j,k) = Source_V(RhoUx_)*No2Io_V(UnitRhoU_)
                 case('sruycx')
-                   PlotVar_G(i,j,k) = SourceCx_V(RhoUy_)*No2Io_V(UnitRhoU_)
+                   PlotVar_G(i,j,k) = Source_V(RhoUy_)*No2Io_V(UnitRhoU_)
                 case('sruzcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(RhoUz_)*No2Io_V(UnitRhoU_)
+                   PlotVar_G(i,j,k) = Source_V(RhoUz_)*No2Io_V(UnitRhoU_)
                 case('spcx')
-                   PlotVar_G(i,j,k) = SourceCx_V(P_)*No2Io_V(UnitP_)
+                   PlotVar_G(i,j,k) = Source_V(P_)*No2Io_V(UnitP_)
                 case('secx')
-                   PlotVar_G(i,j,k) = SourceCx_V(Energy_)&
+                   PlotVar_G(i,j,k) = Source_V(Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
              end do; end do; end do
@@ -1405,6 +1505,105 @@ contains
              NameIdlUnit = trim(NameIdlUnit_V(UnitP_)) // '/s'
              NameTecUnit = trim(NameTecUnit_V(UnitP_)) // '/s'
           case('secx')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitEnergydens_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
+          end select
+
+       case( 'srph','sruxph','sruyph' &
+                  ,'sruzph','spph','seph')
+          if(UseNeutralFluid .and. UsePhotoion)then
+             call select_region(iBlock)
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call calc_source_inputs( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                call calc_photoion_source( &
+                   i,j,k,iBlock,U_DI,U2_I,Source_V)
+                select case(NameVar)
+                case('srph')
+                   PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
+                case('sruxph')
+                   PlotVar_G(i,j,k) = Source_V(RhoUx_)*No2Io_V(UnitRhoU_)
+                case('sruyph')
+                   PlotVar_G(i,j,k) = Source_V(RhoUy_)*No2Io_V(UnitRhoU_)
+                case('sruzph')
+                   PlotVar_G(i,j,k) = Source_V(RhoUz_)*No2Io_V(UnitRhoU_)
+                case('spph')
+                   PlotVar_G(i,j,k) = Source_V(P_)*No2Io_V(UnitP_)
+                case('seph')
+                   PlotVar_G(i,j,k) = Source_V(Energy_)&
+                      *No2Io_V(UnitEnergydens_)
+                end select
+             end do; end do; end do
+          else
+             PlotVar_G = 0.0
+          end if
+          select case(NameVar)
+          case('srph')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRho_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRho_)) // '/s'
+          case('sruxph')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruyph')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruzph')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('spph')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitP_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitP_)) // '/s'
+          case('seph')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitEnergydens_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
+          end select
+
+       case( 'srimp','sruximp','sruyimp' &
+                  ,'sruzimp','spimp','seimp')
+          if(UseNeutralFluid)then
+             call select_region(iBlock)
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call calc_source_inputs( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                call calc_electron_impact_source( &
+                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                select case(NameVar)
+                case('srimp')
+                   PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
+                case('sruximp')
+                   PlotVar_G(i,j,k) = Source_V(RhoUx_)*No2Io_V(UnitRhoU_)
+                case('sruyimp')
+                   PlotVar_G(i,j,k) = Source_V(RhoUy_)*No2Io_V(UnitRhoU_)
+                case('sruzimp')
+                   PlotVar_G(i,j,k) = Source_V(RhoUz_)*No2Io_V(UnitRhoU_)
+                case('spimp')
+                   PlotVar_G(i,j,k) = Source_V(P_)*No2Io_V(UnitP_)
+                case('seimp')
+                   PlotVar_G(i,j,k) = Source_V(Energy_)&
+                      *No2Io_V(UnitEnergydens_)
+                end select
+             end do; end do; end do
+          else
+             ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
+             PlotVar_G = 0.0
+          end if
+          select case(NameVar)
+          case('srimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRho_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRho_)) // '/s'
+          case('sruximp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruyimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('sruzimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitRhoU_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitRhoU_)) // '/s'
+          case('spimp')
+             NameIdlUnit = trim(NameIdlUnit_V(UnitP_)) // '/s'
+             NameTecUnit = trim(NameTecUnit_V(UnitP_)) // '/s'
+          case('seimp')
              NameIdlUnit = trim(NameIdlUnit_V(UnitEnergydens_)) // '/s'
              NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
           end select

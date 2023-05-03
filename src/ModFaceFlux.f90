@@ -3700,7 +3700,8 @@ contains
       logical, optional, intent(in) :: UseAwSpeed
 
       real:: UnMin, UnMax
-      real:: Rho, InvRho, GammaPe, Pw, Sound2, Ppar, p, p1, Ppar1, Pperp
+      real:: Rho, InvRho, GammaPe, GammaWavePw, Sound2, Ppar, p, p1
+      real:: Ppar1, Pperp
       real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
       real:: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       ! dB1_D = B1R_D - B1L_D; dB1dB1 = 0.25*sum(dB1_D**2)
@@ -3797,24 +3798,25 @@ contains
 
       if(UseRS7) Sound2 = Sound2 + GammaMinus1*DiffBb*InvRho
 
+      GammaWavePw = 0.0
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
-            Sound2 = Sound2 + &
-                 GammaWave * (GammaWave - 1)*&
-                 max(StateLeft_V(Ew_)/StateLeft_V(Rho_),&
-                 StateRight_V(Ew_)/StateRight_V(Rho_))
+            GammaWavePw = GammaWave*(GammaWave - 1) &
+                 *max(StateLeft_V(Ew_)/StateLeft_V(Rho_), &
+                 StateRight_V(Ew_)/StateRight_V(Rho_))*Rho
          else
             if(UseReynoldsDecomposition)then
                if(.not.UseTransverseTurbulence)then
-                  Pw = ((GammaWave - 1) + SigmaD/6) &
+                  GammaWavePw = (GammaWave + SigmaD/6) &
+                       *((GammaWave - 1) + SigmaD/6) &
                        *sum(State_V(WaveFirst_:WaveLast_))
-                  Sound2 = Sound2 + Pw*(GammaWave + SigmaD/6)*InvRho
                end if
             else
-               Pw = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
-               Sound2 = Sound2 + GammaWave*Pw*InvRho
+               GammaWavePw = GammaWave*(GammaWave - 1) &
+                    *sum(State_V(WaveFirst_:WaveLast_))
             end if
          end if
+         Sound2  = Sound2 + GammaWavePw*InvRho
       end if
 
       FullBx = State_V(Bx_) + B0x
@@ -3901,14 +3903,15 @@ contains
          end if
 
          BnInvB2 = FullBn**2/FullB2
-         Sound2  = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
+         Sound2  = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 &
+              + GammaPe + GammaWavePw)
          Fast2   = Sound2 + Alfven2
          Discr   = sqrt(max(0.0, Fast2**2  &
               + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &
               - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2 - BnInvB2) &
               + 3*Ppar*Ppar*(InvRho*BnInvB2)**2 &
-              - (3*Ppar + GammaPe)*InvRho*Alfven2Normal &
-              + GammaPe*InvRho**2*(4*Ppar*BnInvB2 &
+              - (3*Ppar + GammaPe + GammaWavePw)*InvRho*Alfven2Normal &
+              + (GammaPe + GammaWavePw)*InvRho**2*(4*Ppar*BnInvB2 &
               - 3*Ppar - Pperp*BnInvB2)*BnInvB2)))
       else
          Fast2 = Sound2 + Alfven2
