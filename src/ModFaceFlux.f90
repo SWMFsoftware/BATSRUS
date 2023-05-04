@@ -1763,6 +1763,7 @@ contains
       end if
 
       if(UseReynoldsDecomposition .and. UseTransverseTurbulence)then
+         FullB2 = FullBx**2 + FullBy**2 + FullBz**2
          DpPerB = -SigmaD*sum(State_V(WaveFirst_:WaveLast_))*FullBn &
               /max(1e-30, FullB2)
 
