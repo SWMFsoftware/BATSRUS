@@ -3806,7 +3806,10 @@ contains
                  StateRight_V(Ew_)/StateRight_V(Rho_))*Rho
          else
             if(UseReynoldsDecomposition)then
-               if(.not.UseTransverseTurbulence)then
+               if(UseTransverseTurbulence)then
+                  GammaWavePw = GammaWave*(GammaWave - 1) &
+                       *(1.0 + abs(SigmaD))*sum(State_V(WaveFirst_:WaveLast_))
+               else
                   GammaWavePw = (GammaWave + SigmaD/6) &
                        *((GammaWave - 1) + SigmaD/6) &
                        *sum(State_V(WaveFirst_:WaveLast_))
