@@ -12,7 +12,7 @@ module ModCoronalHeating
 #endif
   use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
-  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
+  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, Z2SigmaD_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
   use omp_lib
 
@@ -36,6 +36,10 @@ module ModCoronalHeating
   real, public :: ImbalanceMax = 2.0, ImbalanceMax2 = 4.0
 
   logical, public :: UseCoronalHeating = .false.
+  ! Check if we use an extra equation for the energy difference
+  ! ("Sigma_D" in a standard argo).
+  logical, public, parameter :: &
+       UseEquation4SigmaD = Z2SigmaD_ == WaveLast_ + 1
   character(len=lStringLine) :: NameModel, TypeCoronalHeating
 
   ! Exponential Model ---------
