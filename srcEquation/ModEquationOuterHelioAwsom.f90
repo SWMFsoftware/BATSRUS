@@ -33,7 +33,7 @@ module ModVarIndexes
   integer, parameter :: nWave = 2
 
   ! Number of PUI bins
-  integer, parameter :: nPui = 0
+  integer, parameter :: nPui = 1
 
   ! Number of variables without energy:
   integer, parameter :: nVar = 35 + nWave + nPui
