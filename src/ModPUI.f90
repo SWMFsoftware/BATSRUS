@@ -35,7 +35,7 @@ contains
     character(len=*), parameter:: NameSub = 'read_pui_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    
+
     select case(NameCommand)
     case("#PUIGRID")
        call read_var('VpuiMinSi', VpuiMinSi)
@@ -43,16 +43,16 @@ contains
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine read_pui_param
   !============================================================================
   subroutine init_mod_pui
-    
+
     use ModPhysics, ONLY: Si2No_V, UnitU_
-    
+
     integer ::  iPui
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_pui'
     !--------------------------------------------------------------------------
@@ -72,6 +72,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_pui
+  !============================================================================
 
 end module ModPUI
 !==============================================================================

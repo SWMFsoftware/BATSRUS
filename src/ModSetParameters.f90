@@ -467,7 +467,7 @@ contains
        if(UseUserInitSession)call user_init_session
 
        if(PuiFirst_ > 1) call init_mod_pui
-       
+
        call check_waves
 
        if((iProc==0 .or. UseTimingAll) .and. IsStandAlone)then
@@ -2674,7 +2674,7 @@ contains
 
        case("#PUIGRID")
           call read_pui_param(NameCommand)
-          
+
           ! CORONA SPECIFIC COMMANDS
 
        case("#HARMONICSFILE", "#NEWHARMONICSFILE", "#HARMONICSGRID", &
