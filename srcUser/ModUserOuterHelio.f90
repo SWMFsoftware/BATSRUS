@@ -1135,9 +1135,9 @@ contains
 
     integer :: i,j,k
 
-    real, dimension(nVar + nFluid):: Source_V
+    real:: Source_V(nVar+nFluid)
 
-    real, dimension(nFluid) :: U2_I, Temp_I, Rho_I, UThS_I
+    real:: U2_I(nFluid), Temp_I(nFluid), Rho_I(nFluid), UThS_I(nFluid)
 
     real :: U_DI(3,nFluid)
 
