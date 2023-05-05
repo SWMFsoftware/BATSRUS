@@ -1763,6 +1763,7 @@ contains
       end if
 
       if(UseReynoldsDecomposition .and. UseTransverseTurbulence)then
+         FullB2 = FullBx**2 + FullBy**2 + FullBz**2
          DpPerB = -SigmaD*sum(State_V(WaveFirst_:WaveLast_))*FullBn &
               /max(1e-30, FullB2)
 
@@ -3806,7 +3807,10 @@ contains
                  StateRight_V(Ew_)/StateRight_V(Rho_))*Rho
          else
             if(UseReynoldsDecomposition)then
-               if(.not.UseTransverseTurbulence)then
+               if(UseTransverseTurbulence)then
+                  GammaWavePw = GammaWave*(GammaWave - 1) &
+                       *(1.0 + abs(SigmaD))*sum(State_V(WaveFirst_:WaveLast_))
+               else
                   GammaWavePw = (GammaWave + SigmaD/6) &
                        *((GammaWave - 1) + SigmaD/6) &
                        *sum(State_V(WaveFirst_:WaveLast_))

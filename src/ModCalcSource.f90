@@ -156,7 +156,8 @@ contains
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta, &
-         UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence
+         UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
+         UseEquation4SigmaD
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -188,7 +189,6 @@ contains
 
     ! Variables needed for Boris source terms also used for div(u)
     real :: RhoInv
-
     ! Variables needed for anisotropic pressure
     real :: b_D(MaxDim), GradU_DD(nDim,MaxDim), bDotGradparU
 
@@ -219,6 +219,21 @@ contains
     ! Variables needed for outer heliosphere turbulence
     real :: GradAlfven_DD(nDim,MaxDim)
     logical :: IsNewBlockAlfven
+
+    ! Variables used to calculate sources for Reynolds decomposition:
+    !
+    ! Energy difference, in the standrad argo denoted as Z^2\sigma_D
+    ! Can be eveluated from the total energy assuming the constant
+    ! extent of energy difference, i. e. as constant \sigma_D multiplied
+    ! by the total energy. Otherwise, a separate equation can be solved
+    real :: RhoZ2SigmaDHalf
+    !
+    ! Mode interaction coefficients for conversion of
+    ! W_+ and W_- to the energy difference, Z^2\sigma_D and vise versa
+    real :: ModeConversionPlus, ModeConversionMinus
+
+    ! To calculate above coefficients:
+    real :: bDotbDotGradU, bDotGradVAlfven
 
     logical:: DoTestCell
 
@@ -402,7 +417,7 @@ contains
           ! Store div U so it can be used in ModWaves
           DivU_C(i,j,k) = DivU
 
-          do iVar = WaveFirst_, WaveLast_
+          do iVar = WaveFirst_, max(WaveLast_,Z2SigmaD_)
              Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
@@ -439,68 +454,50 @@ contains
                 if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                 b_D = b_D/norm2(b_D)
 
-                ! Calculate b.grad u.b
-                ! A misnomer, should be bDotbDotGradU
-                bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
+                ! Calculate bb : grad u
+                bDotbDotGradU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
-                Coef = SigmaD*(0.5*DivU_C(i,j,k) - bDotGradparU)
-
-                Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
-                     Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                     - State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Coef
-
-                ! Energy source related to the Alfven wave source above
-                Ew = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Coef*Ew
-
-                ! Reflection term
-                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-                     + 0.5*Coef*(State_VGB(WaveFirst_,i,j,k,iBlock) &
-                     - State_VGB(WaveLast_,i,j,k,iBlock))
-
-                Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-                     + 0.5*Coef*(State_VGB(WaveLast_,i,j,k,iBlock) &
-                     - State_VGB(WaveFirst_,i,j,k,iBlock))
+                ModeConversionPlus  = 0.5*DivU_C(i,j,k) - bDotbDotGradU
+                ModeConversionMinus = ModeConversionPlus
 
                 ! Calculate gradient tensor of Alfven speed
                 call calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, &
                      IsNewBlockAlfven)
 
-                ! Calculate unit vector parallel with full B field
-		b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-                b_D = b_D/norm2(b_D)
+                ! Calculate b.grad V_a
+                bDotGradVAlfven  = &
+                     dot_product(b_D, matmul(b_D(1:nDim), GradAlfven_DD))
+                ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
+                ModeConversionMinus = ModeConversionMinus - bDotGradVAlfven
 
-                Coef = 0.5*SigmaD*Ew &
-                     *dot_product(b_D, matmul(b_D(1:nDim), GradAlfven_DD))
+                if(UseEquation4SigmaD)then
+                   RhoZ2SigmaDHalf = State_VGB(Z2SigmaD_,i,j,k,iBlock)
+                else
+                   RhoZ2SigmaDHalf = SigmaD*&
+                        sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+                end if
 
-                ! Reflection term
-                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) -Coef
+                Source_VC(WaveFirst_,i,j,k) = &
+                     Source_VC(WaveFirst_,i,j,k) &
+                     - 0.5*ModeConversionPlus *RhoZ2SigmaDHalf
+                Source_VC(WaveLast_,i,j,k) = &
+                     Source_VC(WaveLast_ ,i,j,k) &
+                     - 0.5*ModeConversionMinus*RhoZ2SigmaDHalf
 
-                Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) +Coef
+                ! Energy source related to the Alfven wave source above
+                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
+                     (ModeConversionPlus + ModeConversionMinus)*&
+                     RhoZ2SigmaDHalf
+                if(UseEquation4SigmaD) &
+                     Source_VC(Z2SigmaD_,i,j,k) = Source_VC(Z2SigmaD_,i,j,k) -&
+                     Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus         -&
+                     Source_VC(WaveLast_ ,i,j,k)*ModeConversionPlus
              end do; end do; end do
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-
-                Coef = SigmaD*DivU_C(i,j,k)/6.0
-
-                Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
-                     Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                     - Coef*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
-
-                ! Energy source related to the Alfven wave source above
-                Ew = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Coef*Ew
-
-                ! Reflection term
-                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-                     + 0.5*Coef*(State_VGB(WaveFirst_,i,j,k,iBlock) &
-                     - State_VGB(WaveLast_,i,j,k,iBlock))
-
-                Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-                     + 0.5*Coef*(State_VGB(WaveLast_,i,j,k,iBlock) &
-                     - State_VGB(WaveFirst_,i,j,k,iBlock))
+                ModeConversionPlus  = DivU_C(i,j,k)/6.0
+                ModeConversionMinus = ModeConversionPlus
 
                 ! Calculate gradient tensor of Alfven speed.
                 ! The following is not the fastest way to calculate
@@ -510,13 +507,34 @@ contains
                 call calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, &
                      IsNewBlockAlfven)
 
-                Coef = 0.5*SigmaD*Ew &
-                     *sum([ (GradAlfven_DD(iVar,iVar), iVar=1, nDim) ])
+                bDotGradVAlfven = &
+                     sum([ (GradAlfven_DD(iVar,iVar), iVar=1, nDim) ])
 
-                ! Reflection term
-                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) -Coef
+                ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
+                ModeConversionMinus = ModeConversionMinus - bDotGradVAlfven
 
-		Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) +Coef
+                if(UseEquation4SigmaD)then
+                   RhoZ2SigmaDHalf = State_VGB(Z2SigmaD_,i,j,k,iBlock)
+                else
+                   RhoZ2SigmaDHalf = SigmaD*&
+                        sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+                end if
+
+                Source_VC(WaveFirst_,i,j,k) = &
+                     Source_VC(WaveFirst_,i,j,k) &
+                     - 0.5*ModeConversionPlus *RhoZ2SigmaDHalf
+                Source_VC(WaveLast_,i,j,k) = &
+                     Source_VC(WaveLast_ ,i,j,k) &
+                     - 0.5*ModeConversionMinus*RhoZ2SigmaDHalf
+
+                ! Energy source related to the Alfven wave source above
+                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
+                     (ModeConversionPlus + ModeConversionMinus)*&
+                     RhoZ2SigmaDHalf
+                if(UseEquation4SigmaD) &
+                     Source_VC(Z2SigmaD_,i,j,k) = Source_VC(Z2SigmaD_,i,j,k) -&
+                     Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus         -&
+                     Source_VC(WaveLast_ ,i,j,k)*ModeConversionPlus
              end do; end do; end do
           end if
        end if
@@ -539,7 +557,8 @@ contains
        end do; end do; end do
     end if
 
-    if(UseTurbulentCascade) call get_wave_reflection(iBlock)
+    if(UseTurbulentCascade.and.(.not.UseReynoldsDecomposition))&
+         call get_wave_reflection(iBlock)
 
     if((UseCoronalHeating .or. UseAlfvenWaveDissipation) &
          .and. DoExtendTransitionRegion .or. UseRadCooling) &

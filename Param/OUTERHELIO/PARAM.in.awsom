@@ -196,11 +196,11 @@ T			UseOhNeutralBc
 +init +ic +perturb +progress		StringSwitch
 
 #CORONALHEATING
-turbulentcascade		TypeCoronalHeating
-T			UseWaveReflection
-1.5e5			LperpTimesSqrtBSi^
-0.0			rMinWaveReflection^
-F			UseSurfaceWaveRefl^
+usmanov			TypeCoronalHeating
+T			UseTransverseTurbulence
+-1/3			SigmaD
+1.0			KarmanTaylorAlpha
+1.0			KarmanTaylorBeta
 
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
