@@ -3723,8 +3723,8 @@ contains
       ! Energy difference (in the standard argo, Rho*sigma_D*Z^2/2
       real :: RhoZ2SigmaDHalf
       integer:: jFluid
-      !------------------------------------------------------------------------
 #ifndef SCALAR
+      !------------------------------------------------------------------------
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       if(UseMagFriction)then
          if(present(Cmax_I))then
