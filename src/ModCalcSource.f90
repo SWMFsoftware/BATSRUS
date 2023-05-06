@@ -441,6 +441,7 @@ contains
        end do; end do; end do
 
        if(UseReynoldsDecomposition)then
+          DoTestCell = .false.
           IsNewBlockAlfven = .true.
           if(UseTransverseTurbulence)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
