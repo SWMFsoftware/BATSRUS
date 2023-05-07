@@ -1317,7 +1317,7 @@ test_outerhelioawsom:
 	$(MAKE) test_outerhelioawsom_check
 
 test_outerhelioawsom_compile:
-	./Config.pl ${OPENMP} -u=OuterHelio -e=OuterHelioAwsom -ng=2 -g=4,4,4
+	./Config.pl -u=OuterHelio -e=OuterHelioAwsom -ng=2 -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1328,7 +1328,7 @@ test_outerhelioawsom_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerhelioawsom_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
 
 test_outerhelioawsom_check:

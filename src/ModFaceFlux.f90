@@ -1575,7 +1575,7 @@ contains
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
-           UseTransverseTurbulence, SigmaD
+           UseTransverseTurbulence, SigmaD, UseEquation4SigmaD
 
       real, intent(in) :: State_V(:)
       real, intent(out) :: Un
@@ -1590,6 +1590,9 @@ contains
       real :: pExtra   ! Electrons and waves act on ions via electr.field
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2
+
+      ! Energy difference (in the standard argo, Rho*sigma_D*Z^2/2
+      real :: RhoZ2SigmaDHalf
 
       real, dimension(nIonFluid) :: Ux_I, Uy_I, Uz_I, RhoUn_I
       real :: MagneticForce_D(RhoUx_:RhoUz_)
@@ -1697,21 +1700,24 @@ contains
          end if
       end if
       if(UseWavePressure)then
-         if(UseReynoldsDecomposition)then
-            if(UseTransverseTurbulence)then
-               pExtra = pExtra + ((GammaWave-1) + SigmaD/2) &
-                    *sum(State_V(WaveFirst_:WaveLast_))
-            else
-               pExtra = pExtra + ((GammaWave-1) + SigmaD/6) &
-                    *sum(State_V(WaveFirst_:WaveLast_))
-            end if
+         if(UseWavePressureLtd)then
+            pExtra = pExtra &
+                 + (GammaWave-1)*State_V(Ew_)
          else
-            if(UseWavePressureLtd)then
-               pExtra = pExtra &
-                    + (GammaWave-1)*State_V(Ew_)
+            pExtra = pExtra &
+                 + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+         end if
+         if(UseReynoldsDecomposition)then
+            if(UseEquation4SigmaD)then
+               RhoZ2SigmaDHalf = State_V(Z2SigmaD_)
             else
-               pExtra = pExtra &
-                    + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+               RhoZ2SigmaDHalf = SigmaD*&
+                    sum(State_V(WaveFirst_:WaveLast_))
+            end if
+            if(UseTransverseTurbulence)then
+               pExtra = pExtra + (GammaWave-1)*RhoZ2SigmaDHalf
+            else
+               pExtra = pExtra + (GammaWave-1)*RhoZ2SigmaDHalf/3
             end if
          end if
       end if
@@ -1762,10 +1768,10 @@ contains
          end if
       end if
 
-      if(UseReynoldsDecomposition .and. UseTransverseTurbulence)then
+      if(UseWavePressure.and.UseReynoldsDecomposition &
+           .and. UseTransverseTurbulence)then
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-         DpPerB = -SigmaD*sum(State_V(WaveFirst_:WaveLast_))*FullBn &
-              /max(1e-30, FullB2)
+         DpPerB = -RhoZ2SigmaDHalf*FullBn/max(1e-30, FullB2)
 
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
@@ -3690,7 +3696,7 @@ contains
            UseAnisoPressure, UseAnisoPe, SignB_, &
            UseMagFriction, MagFrictionCoef
       use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
-           UseTransverseTurbulence, SigmaD
+           UseTransverseTurbulence, SigmaD, UseEquation4SigmaD
 
       real, intent(in) :: State_V(:)
       real, optional, intent(out) :: CmaxDt_I(:)
@@ -3714,9 +3720,11 @@ contains
            B1B0L, B1B0R, cChGLLeft, cChGLRight
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
+      ! Energy difference (in the standard argo, Rho*sigma_D*Z^2/2
+      real :: RhoZ2SigmaDHalf
       integer:: jFluid
-      !------------------------------------------------------------------------
 #ifndef SCALAR
+      !------------------------------------------------------------------------
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       if(UseMagFriction)then
          if(present(Cmax_I))then
@@ -3806,17 +3814,22 @@ contains
                  *max(StateLeft_V(Ew_)/StateLeft_V(Rho_), &
                  StateRight_V(Ew_)/StateRight_V(Rho_))*Rho
          else
-            if(UseReynoldsDecomposition)then
-               if(UseTransverseTurbulence)then
-                  GammaWavePw = GammaWave*(GammaWave - 1) &
-                       *(1.0 + abs(SigmaD))*sum(State_V(WaveFirst_:WaveLast_))
-               else
-                  GammaWavePw = (GammaWave + SigmaD/6) &
-                       *((GammaWave - 1) + SigmaD/6) &
-                       *sum(State_V(WaveFirst_:WaveLast_))
-               end if
+            GammaWavePw = GammaWave*(GammaWave - 1) &
+                 *sum(State_V(WaveFirst_:WaveLast_))
+         end if
+         if(UseReynoldsDecomposition)then
+            if(UseEquation4SigmaD)then
+               RhoZ2SigmaDHalf = State_V(Z2SigmaD_)
             else
-               GammaWavePw = GammaWave*(GammaWave - 1) &
+               RhoZ2SigmaDHalf = SigmaD*&
+                    sum(State_V(WaveFirst_:WaveLast_))
+            end if
+            if(UseTransverseTurbulence)then
+               GammaWavePw = GammaWavePw + GammaWave*(GammaWave - 1) &
+                    *abs(RhoZ2SigmaDHalf)
+            else
+               GammaWavePw = (GammaWave + SigmaD/6) &
+                    *((GammaWave - 1) + SigmaD/6) &
                     *sum(State_V(WaveFirst_:WaveLast_))
             end if
          end if
