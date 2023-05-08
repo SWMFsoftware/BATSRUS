@@ -2810,7 +2810,7 @@ contains
           iRegion = Ne3_
           RETURN
        end if
-       
+
        if (MachPop4Limit**2 < Mach2 &
             .and. uPop1LimitDim**2 > U2Dim) then
           ! Outside the bow shock
@@ -2909,8 +2909,8 @@ contains
             ' : unexpected region formulas.')
     end select
   end subroutine get_region
-
   !============================================================================
+
   subroutine select_region(iBlock)
 
     ! set the global variabls iFluidProduced_C
@@ -2925,7 +2925,7 @@ contains
     real :: pSW, InvRhoSW, MachPUI2, pPUI, InvRhoPUI, RhoPUI, RhoSw
 
     ! Produce fluid3 at the inner boundary
-    
+
     ! This subroutine is not needed when not using the 4 neutral fluids
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'select_region'
@@ -3257,18 +3257,18 @@ end subroutine get_charge_exchange_wrapper
 subroutine select_charge_exchange_region( &
      iRegion, r, RhoDim, U2Dim, TempDim, Mach2) &
      bind(c, name='select_charge_exchange_region')
-  
+
   use ModUser, ONLY: get_region
 
   integer, intent(out):: iRegion
   real, intent(in)    :: r, RhoDim, U2Dim, TempDim, Mach2
   real :: MachPUI2, MachSW2
-  
+
   !----------------------------------------------------------------------------
   MachPUI2 = 0
   MachSW2 = 0
 
   call get_region(iRegion, r, RhoDim, U2Dim, TempDim, Mach2, MachPUI2, MachSW2)
-  
+
 end subroutine select_charge_exchange_region
 !==============================================================================
