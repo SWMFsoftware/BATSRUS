@@ -70,8 +70,9 @@ module ModUser
 
   include 'user_module.h' ! list of public methods
 
-  ! Needed for coupling with AMPS through the C wrapper
+  ! Needed for coupling with PT through the C wrapper
   public:: get_collision
+  public:: get_region
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserFile = "ModUserOuterHelio.f90"
@@ -2790,6 +2791,126 @@ contains
 
   end subroutine set_omega_parker_tilt
   !============================================================================
+  subroutine get_region(iRegion, r, RhoDim, U2Dim, TempDim, Mach2, &
+       MachPUI2, MachSW2)
+
+    ! set the global variabls iFluidProduced_C
+    ! to select which neutral fluid is produced in each cell of the block
+
+    integer, intent(out):: iRegion
+    real, intent(in)    :: r, RhoDim, U2Dim, TempDim, Mach2, MachPUI2, MachSW2
+
+    character(len=*), parameter:: NameSub = 'get_region'
+    !--------------------------------------------------------------------------
+    ! Apply region formulas
+    select case(iRegionFormula)
+
+    case(SingleIon_)
+       if(r < rPop3Limit) then
+          iRegion = Ne3_
+          RETURN
+       end if
+       
+       if (MachPop4Limit**2 < Mach2 &
+            .and. uPop1LimitDim**2 > U2Dim) then
+          ! Outside the bow shock
+          iRegion = Ne4_
+       elseif(TempDim < TempPop1LimitDim &
+            .and. U2Dim < uPop1LimitDim**2)then
+          ! Outside the heliopause
+          iRegion = Neu_
+       elseif( Mach2 < MachPop2Limit**2 )then
+          ! Heliosheath
+          iRegion = Ne2_
+       elseif( Mach2 > MachPop3Limit**2 )then
+          !! before 85K      elseif( MachSW2 > MachPop3Limit**2 )then
+          ! Inside termination shock
+          iRegion = Ne3_
+       else
+          ! No neutrals are produced in this region
+          ! but they are destroyed
+          iRegion = 0
+       end if
+
+       if (.not.IsMhd) then
+          ! adding more conditions to help with the regions
+          if (MachSW2 > MachPop4Limit**2 &
+               .and. MachPUI2 < MachPUIPop3**2 ) then
+             iRegion = Ne2_
+          end if
+          if (MachSW2 < MachPop3Limit**2 &
+               .and. MachPUI2 > MachPUIPop3**2 &
+               .and. r < rPop3Limit) then
+             iRegion = Ne3_
+          end if
+       endif
+
+    case(ColdCloud_)
+       if(DoInitializeCloud)then
+          if(r > rPop3Limit) then
+             ! Outside the bow shock
+             iRegion = Ne4_
+          else
+             ! Outside the heliopause
+             iRegion = Ne3_
+          endif
+       else
+          !! for studies of heliosphere with cold cloud
+          if(r < rPop3Limit) then
+             iRegion = Ne3_
+             RETURN
+          end if
+
+          if (TempPop1LimitDim > TempDim &
+               .and. RhoPop4LimitDim > RhoDim) then
+             ! Outside the bow shock
+             iRegion = Ne4_
+          elseif (TempPop1LimitDim > TempDim &
+               .and. RhoDim > RhoPop4LimitDim) then
+             ! Outside the heliopause
+             iRegion = Neu_
+          elseif(TempDim > TempPop1LimitDim &
+               .and. uPop1LimitDim**2 > U2Dim)then
+             ! Heliosheath
+             iRegion = Ne2_
+          elseif(TempDim > TempPop1LimitDim .and. &
+               U2Dim > uPop1LimitDim**2)then
+             ! Inside termination shock
+             iRegion = Ne3_
+          else
+             ! No neutrals are produced in this region
+             ! but they are destroyed
+             iRegion = 0
+          end if
+       endif
+
+    case(MultiIon_)
+       if (r < rBody) then
+          ! inside inner boundary (inside termination shock)
+          iRegion = Ne3_
+       elseif (U2Dim > uPop3LimitDim**2 &
+            .and. Mach2 > MachPop3Limit**2) then
+          ! inside termination shock
+          iRegion = Ne3_
+       elseif (TempDim > TempPop2LimitDim) then
+          ! inside heliosheath
+          iRegion = Ne2_
+       elseif (U2Dim < uPop1LimitDim**2 &
+            .and. Mach2 < MachPop1Limit**2) then
+          ! inside bowshock
+          iRegion = Neu_
+       else
+          ! outside bowshock
+          iRegion = Ne4_
+       endif
+
+    case default
+       call CON_stop(NameSub// &
+            ' : unexpected region formulas.')
+    end select
+  end subroutine get_region
+
+  !============================================================================
   subroutine select_region(iBlock)
 
     ! set the global variabls iFluidProduced_C
@@ -2797,14 +2918,14 @@ contains
 
     integer, intent(in):: iBlock
 
-    integer :: i, j, k
+    integer :: i, j, k, iRegion
 
     ! cold cloud
     real :: RhoDim, InvRho, U2, p, Mach2, MachSW2, TempDim,  U2Dim, Rho
     real :: pSW, InvRhoSW, MachPUI2, pPUI, InvRhoPUI, RhoPUI, RhoSw
 
     ! Produce fluid3 at the inner boundary
-
+    
     ! This subroutine is not needed when not using the 4 neutral fluids
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'select_region'
@@ -2828,22 +2949,22 @@ contains
        else
           ! Multi ion
           Rho    = State_VGB(SWHRho_,i,j,k,iBlock) &
-                  + State_VGB(Pu3Rho_,i,j,k,iBlock)
+               + State_VGB(Pu3Rho_,i,j,k,iBlock)
           RhoSW  = State_VGB(SWHRho_,i,j,k,iBlock)
           RhoPui = State_VGB(Pu3Rho_,i,j,k,iBLock)
           InvRho    = 1.0/Rho
           InvRhoSW  = 1.0/RhoSW
           InvRhoPUI = 1.0/RhoPui
           U2 = sum((State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) &
-                  +State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock))**2) &
-                  *InvRho**2
+               +State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock))**2) &
+               *InvRho**2
           if (UseElectronPressure) then
              p = State_VGB(SWHP_,i,j,k,iBlock) &
-                     + State_VGB(Pu3P_,i,j,k,iBlock) &
-                     + State_VGB(Pe_,i,j,k,iBlock)
+                  + State_VGB(Pu3P_,i,j,k,iBlock) &
+                  + State_VGB(Pe_,i,j,k,iBlock)
           else
              p = State_VGB(SWHP_,i,j,k,iBlock) &
-                     + State_VGB(Pu3P_,i,j,k,iBlock)
+                  + State_VGB(Pu3P_,i,j,k,iBlock)
           endif
           pSW  = State_VGB(SWHP_,i,j,k,iBlock)
           pPUI = State_VGB(Pu3P_,i,j,k,iBlock)
@@ -2864,112 +2985,9 @@ contains
        ! Square of Mach number
        Mach2 = U2/(Gamma*p*InvRho)
 
-       ! Apply region formulas
-       select case(iRegionFormula)
-
-       case(SingleIon_)
-           if(r_GB(i,j,k,iBlock) < rPop3Limit) then
-              iFluidProduced_C(i,j,k) = Ne3_
-              CYCLE
-           end if
-
-           if (MachPop4Limit**2 < Mach2 &
-                   .and. uPop1LimitDim**2 > U2Dim) then
-              ! Outside the bow shock
-              iFluidProduced_C(i,j,k) = Ne4_
-           elseif(TempDim < TempPop1LimitDim &
-                           .and. U2Dim < uPop1LimitDim**2)then
-              ! Outside the heliopause
-              iFluidProduced_C(i,j,k) = Neu_
-           elseif( Mach2 < MachPop2Limit**2 )then
-              ! Heliosheath
-              iFluidProduced_C(i,j,k) = Ne2_
-           elseif( Mach2 > MachPop3Limit**2 )then
-              !! before 85K      elseif( MachSW2 > MachPop3Limit**2 )then
-              ! Inside termination shock
-              iFluidProduced_C(i,j,k) = Ne3_
-           else
-              ! No neutrals are produced in this region
-              ! but they are destroyed
-              iFluidProduced_C(i,j,k) = 0
-           end if
-
-           if (.not.IsMhd) then
-              ! adding more conditions to help with the regions
-              if (MachSW2 > MachPop4Limit**2 &
-                      .and. MachPUI2 < MachPUIPop3**2 ) then
-                 iFluidProduced_C(i,j,k) = Ne2_
-              end if
-              if (MachSW2 < MachPop3Limit**2 &
-                      .and. MachPUI2 > MachPUIPop3**2 &
-                   .and. r_GB(i,j,k,iBlock)<rPop3Limit) then
-                 iFluidProduced_C(i,j,k) = Ne3_
-              end if
-           endif
-
-       case(ColdCloud_)
-           if(DoInitializeCloud)then
-              if(r_GB(i,j,k,iBlock) > rPop3Limit) then
-                 ! Outside the bow shock
-                 iFluidProduced_C(i,j,k) = Ne4_
-              else
-                 ! Outside the heliopause
-                 iFluidProduced_C(i,j,k) = Ne3_
-              endif
-           else
-              !! for studies of heliosphere with cold cloud
-              if(r_GB(i,j,k,iBlock) < rPop3Limit) then
-                 iFluidProduced_C(i,j,k) = Ne3_
-                 CYCLE
-              end if
-
-              if (TempPop1LimitDim > TempDim &
-                   .and. RhoPop4LimitDim > RhoDim) then
-                 ! Outside the bow shock
-                 iFluidProduced_C(i,j,k) = Ne4_
-              elseif (TempPop1LimitDim > TempDim &
-                   .and. RhoDim > RhoPop4LimitDim) then
-                 ! Outside the heliopause
-                 iFluidProduced_C(i,j,k) = Neu_
-              elseif(TempDim > TempPop1LimitDim &
-                   .and. uPop1LimitDim**2 > U2Dim)then
-                 ! Heliosheath
-                 iFluidProduced_C(i,j,k) = Ne2_
-              elseif(TempDim > TempPop1LimitDim .and. &
-                   U2Dim > uPop1LimitDim**2)then
-                 ! Inside termination shock
-                 iFluidProduced_C(i,j,k) = Ne3_
-              else
-                 ! No neutrals are produced in this region
-                 ! but they are destroyed
-                 iFluidProduced_C(i,j,k) = 0
-              end if
-           endif
-
-       case(MultiIon_)
-           if (r_GB(i,j,k,iBlock) < rBody) then
-              ! inside inner boundary (inside termination shock)
-              iFluidProduced_C(i,j,k) = Ne3_
-           elseif (U2Dim > uPop3LimitDim**2 &
-                           .and. Mach2 > MachPop3Limit**2) then
-              ! inside termination shock
-              iFluidProduced_C(i,j,k) = Ne3_
-           elseif (TempDim > TempPop2LimitDim) then
-              ! inside heliosheath
-              iFluidProduced_C(i,j,k) = Ne2_
-           elseif (U2Dim < uPop1LimitDim**2 &
-                           .and. Mach2 < MachPop1Limit**2) then
-              ! inside bowshock
-              iFluidProduced_C(i,j,k) = Neu_
-           else
-              ! outside bowshock
-              iFluidProduced_C(i,j,k) = Ne4_
-           endif
-
-       case default
-           call CON_stop(NameSub// &
-                   ' : unexpected region formulas.')
-       end select
+       call get_region(iRegion, r_GB(i,j,k,iBlock), RhoDim, &
+            U2Dim, TempDim, Mach2, MachPUI2, MachSW2)
+       iFluidProduced_C(i,j,k) = iRegion
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -3235,4 +3253,22 @@ subroutine get_charge_exchange_wrapper( &
        uIon_D, RhoNeu, Cs2Neu, uNeu_D, SourceIon_V, SourceNeu_V)
 
 end subroutine get_charge_exchange_wrapper
+!==============================================================================
+subroutine select_charge_exchange_region( &
+     iRegion, r, RhoDim, U2Dim, TempDim, Mach2) &
+     bind(c, name='select_charge_exchange_region')
+  
+  use ModUser, ONLY: get_region
+
+  integer, intent(out):: iRegion
+  real, intent(in)    :: r, RhoDim, U2Dim, TempDim, Mach2
+  real :: MachPUI2, MachSW2
+  
+  !----------------------------------------------------------------------------
+  MachPUI2 = 0
+  MachSW2 = 0
+
+  call get_region(iRegion, r, RhoDim, U2Dim, TempDim, Mach2, MachPUI2, MachSW2)
+  
+end subroutine select_charge_exchange_region
 !==============================================================================
