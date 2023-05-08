@@ -174,7 +174,7 @@ contains
     use ModViscosity,     ONLY: &
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
-
+    use ModPUI, ONLY: UsePui, add_pui_source
     use ModUserInterface, ONLY: user_calc_sources_expl, user_calc_sources_impl
 
     integer, intent(in):: iBlock
@@ -637,6 +637,8 @@ contains
           if(DoTest)call write_source('After UseCoronalHeating')
        end if
     end if
+
+    if(UsePui) call add_pui_source(iBlock)
 
     if(UseRadCooling)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
