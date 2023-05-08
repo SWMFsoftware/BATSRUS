@@ -89,8 +89,8 @@ contains
 
     integer, intent(in) :: iBlock
 
-    logical :: DoTest
-    character(len=*), parameter :: NameSub = 'pui_advection_diffusion'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'pui_advection_diffusion'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
@@ -103,12 +103,13 @@ contains
 
     integer, intent(in) :: iBlock
 
-    logical :: DoTest
-    character(len=*), parameter :: NameSub = 'add_pui_source'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'add_pui_source'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     call test_stop(NameSub, DoTest)
   end subroutine add_pui_source
+  !============================================================================
 end module ModPUI
 !==============================================================================
