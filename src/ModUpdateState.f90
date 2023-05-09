@@ -146,6 +146,7 @@ contains
          HypEDecay
     use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoUxIon_I, iRhoUyIon_I, &
          iRhoUzIon_I, iPIon_I, nIonFluid, UseNeutralFluid, DoConserveNeutrals
+    use ModPui, ONLY: UsePui, pui_advection_diffusion
 
     integer, intent(in) :: iBlock
 
@@ -601,6 +602,8 @@ contains
               NameSub, ' after energy dB correct             =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       end if
+
+      if(UsePui) call pui_advection_diffusion(iBlock)
 
       if(UseWavePressure)then
          if(DoAdvectWaves .and. iStage==nStage .and. nWave>2)&

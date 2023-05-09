@@ -121,7 +121,7 @@ contains
     use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I, &
          ion_electron_init_point_impl
     use ModFaceBoundary, ONLY: read_face_boundary_param, B1rCoef
-    use ModPUI, ONLY: read_pui_param, init_mod_pui
+    use ModPUI, ONLY: read_pui_param, init_mod_pui, UsePui
     ! CORONA SPECIFIC PARAMETERS
     use EEE_ModMain, ONLY: EEE_set_parameters
     use ModMagnetogram, ONLY: read_magnetogram_param
@@ -466,7 +466,7 @@ contains
        ! Initialize user module and allow user to modify things
        if(UseUserInitSession)call user_init_session
 
-       if(PuiFirst_ > 1) call init_mod_pui
+       if(UsePui) call init_mod_pui
 
        call check_waves
 
