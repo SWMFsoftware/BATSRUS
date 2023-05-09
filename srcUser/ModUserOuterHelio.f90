@@ -2792,40 +2792,64 @@ contains
   end subroutine set_omega_parker_tilt
   !============================================================================
   subroutine get_region(iRegion, r, RhoDim, U2Dim, TempDim, Mach2, &
-       MachPUI2, MachSW2)
+       MachPUI2, MachSW2, DoReIndexIn)
 
     ! set the global variabls iFluidProduced_C
     ! to select which neutral fluid is produced in each cell of the block
 
-    integer, intent(out):: iRegion
-    real, intent(in)    :: r, RhoDim, U2Dim, TempDim, Mach2, MachPUI2, MachSW2
+    integer,          intent(out) :: iRegion
+    real,             intent(in)  :: r, RhoDim, U2Dim, TempDim, &
+         Mach2, MachPUI2, MachSW2
 
+    ! Force the indices of neutral species to 1 ... 4. It is used by FLEKS
+    ! for OH-PT coupling
+    logical, optional, intent(in) :: DoReIndexIn
+    
+    logical :: DoReIndex
+
+    integer :: iNe1, iNe2, iNe3, iNe4
+    
     character(len=*), parameter:: NameSub = 'get_region'
     !--------------------------------------------------------------------------
+    DoReIndex = .false.
+    if(present(DoReIndexIn)) DoReIndex = DoReIndexIn
+
+    if(DoReIndex) then
+       iNe1 = 1
+       iNe2 = 2
+       iNe3 = 3
+       iNe4 = 4      
+    else
+       iNe1 = Neu_
+       iNe2 = Ne2_
+       iNe3 = Ne3_
+       iNe4 = Ne4_
+    endif
+    
     ! Apply region formulas
     select case(iRegionFormula)
 
     case(SingleIon_)
        if(r < rPop3Limit) then
-          iRegion = Ne3_
+          iRegion = iNe3
           RETURN
        end if
 
        if (MachPop4Limit**2 < Mach2 &
             .and. uPop1LimitDim**2 > U2Dim) then
           ! Outside the bow shock
-          iRegion = Ne4_
+          iRegion = iNe4
        elseif(TempDim < TempPop1LimitDim &
             .and. U2Dim < uPop1LimitDim**2)then
           ! Outside the heliopause
-          iRegion = Neu_
+          iRegion = iNe1
        elseif( Mach2 < MachPop2Limit**2 )then
           ! Heliosheath
-          iRegion = Ne2_
+          iRegion = iNe2
        elseif( Mach2 > MachPop3Limit**2 )then
           !! before 85K      elseif( MachSW2 > MachPop3Limit**2 )then
           ! Inside termination shock
-          iRegion = Ne3_
+          iRegion = iNe3
        else
           ! No neutrals are produced in this region
           ! but they are destroyed
@@ -2836,12 +2860,12 @@ contains
           ! adding more conditions to help with the regions
           if (MachSW2 > MachPop4Limit**2 &
                .and. MachPUI2 < MachPUIPop3**2 ) then
-             iRegion = Ne2_
+             iRegion = iNe2
           end if
           if (MachSW2 < MachPop3Limit**2 &
                .and. MachPUI2 > MachPUIPop3**2 &
                .and. r < rPop3Limit) then
-             iRegion = Ne3_
+             iRegion = iNe3
           end if
        endif
 
@@ -2849,34 +2873,34 @@ contains
        if(DoInitializeCloud)then
           if(r > rPop3Limit) then
              ! Outside the bow shock
-             iRegion = Ne4_
+             iRegion = iNe4
           else
              ! Outside the heliopause
-             iRegion = Ne3_
+             iRegion = iNe3
           endif
        else
           !! for studies of heliosphere with cold cloud
           if(r < rPop3Limit) then
-             iRegion = Ne3_
+             iRegion = iNe3
              RETURN
           end if
 
           if (TempPop1LimitDim > TempDim &
                .and. RhoPop4LimitDim > RhoDim) then
              ! Outside the bow shock
-             iRegion = Ne4_
+             iRegion = iNe4
           elseif (TempPop1LimitDim > TempDim &
                .and. RhoDim > RhoPop4LimitDim) then
              ! Outside the heliopause
-             iRegion = Neu_
+             iRegion = iNe1
           elseif(TempDim > TempPop1LimitDim &
                .and. uPop1LimitDim**2 > U2Dim)then
              ! Heliosheath
-             iRegion = Ne2_
+             iRegion = iNe2
           elseif(TempDim > TempPop1LimitDim .and. &
                U2Dim > uPop1LimitDim**2)then
              ! Inside termination shock
-             iRegion = Ne3_
+             iRegion = iNe3
           else
              ! No neutrals are produced in this region
              ! but they are destroyed
@@ -2887,21 +2911,21 @@ contains
     case(MultiIon_)
        if (r < rBody) then
           ! inside inner boundary (inside termination shock)
-          iRegion = Ne3_
+          iRegion = iNe3
        elseif (U2Dim > uPop3LimitDim**2 &
             .and. Mach2 > MachPop3Limit**2) then
           ! inside termination shock
-          iRegion = Ne3_
+          iRegion = iNe3
        elseif (TempDim > TempPop2LimitDim) then
           ! inside heliosheath
-          iRegion = Ne2_
+          iRegion = iNe2
        elseif (U2Dim < uPop1LimitDim**2 &
             .and. Mach2 < MachPop1Limit**2) then
           ! inside bowshock
-          iRegion = Neu_
+          iRegion = iNe1
        else
           ! outside bowshock
-          iRegion = Ne4_
+          iRegion = iNe4
        endif
 
     case default
@@ -3254,21 +3278,28 @@ subroutine get_charge_exchange_wrapper( &
 
 end subroutine get_charge_exchange_wrapper
 !==============================================================================
-subroutine select_charge_exchange_region( &
+subroutine get_charge_exchange_region( &
      iRegion, r, RhoDim, U2Dim, TempDim, Mach2) &
-     bind(c, name='select_charge_exchange_region')
+     bind(c, name='get_charge_exchange_region')
 
   use ModUser, ONLY: get_region
 
   integer, intent(out):: iRegion
   real, intent(in)    :: r, RhoDim, U2Dim, TempDim, Mach2
+  
   real :: MachPUI2, MachSW2
-
+  logical :: DoReIndex
   !----------------------------------------------------------------------------
   MachPUI2 = 0
   MachSW2 = 0
+  DoReIndex = .true. 
+  
+  call get_region(iRegion, r, RhoDim, U2Dim, TempDim, &
+       Mach2, MachPUI2, MachSW2, DoReIndex)
 
-  call get_region(iRegion, r, RhoDim, U2Dim, TempDim, Mach2, MachPUI2, MachSW2)
+  ! For convenience, reduce iRegion by 1 since the c/c++ array
+  ! index starts from 0
+  iRegion = iRegion - 1
 
-end subroutine select_charge_exchange_region
+end subroutine get_charge_exchange_region
 !==============================================================================
