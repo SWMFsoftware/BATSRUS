@@ -2798,17 +2798,20 @@ contains
     ! to select which neutral fluid is produced in each cell of the block
 
     integer,          intent(out) :: iRegion
-    real,             intent(in)  :: r, RhoDim, U2Dim, TempDim, &
-         Mach2, MachPUI2, MachSW2
+    real,             intent(in)  :: r       ! unit: cAU
+    real,             intent(in)  :: RhoDim  ! unit: ?
+    real,             intent(in)  :: U2Dim   ! unit: (km/s)^2
+    real,             intent(in)  :: TempDim ! unit: K
+    real,             intent(in)  :: Mach2, MachPUI2, MachSW2
 
     ! Force the indices of neutral species to 1 ... 4. It is used by FLEKS
     ! for OH-PT coupling
     logical, optional, intent(in) :: DoReIndexIn
-    
+
     logical :: DoReIndex
 
     integer :: iNe1, iNe2, iNe3, iNe4
-    
+
     character(len=*), parameter:: NameSub = 'get_region'
     !--------------------------------------------------------------------------
     DoReIndex = .false.
@@ -2818,14 +2821,14 @@ contains
        iNe1 = 1
        iNe2 = 2
        iNe3 = 3
-       iNe4 = 4      
+       iNe4 = 4
     else
        iNe1 = Neu_
        iNe2 = Ne2_
        iNe3 = Ne3_
        iNe4 = Ne4_
     endif
-    
+
     ! Apply region formulas
     select case(iRegionFormula)
 
@@ -3002,6 +3005,8 @@ contains
           MachSW2 = U2/(Gamma*pSW*InvRhoSW)
        endif
 
+       ! The unit of RhoDim is converted to km/m^3. Maybe a number density
+       ! instead of mass density is needed here. To be verified by Merav. --Yuxi
        RhoDim = Rho*No2Si_V(UnitRho_)
        U2Dim = U2*No2Io_V(UnitU_)**2
        TempDim = 0.5*p*InvRho*No2Si_V(UnitTemperature_)
@@ -3286,14 +3291,14 @@ subroutine get_charge_exchange_region( &
 
   integer, intent(out):: iRegion
   real, intent(in)    :: r, RhoDim, U2Dim, TempDim, Mach2
-  
+
   real :: MachPUI2, MachSW2
   logical :: DoReIndex
   !----------------------------------------------------------------------------
   MachPUI2 = 0
   MachSW2 = 0
-  DoReIndex = .true. 
-  
+  DoReIndex = .true.
+
   call get_region(iRegion, r, RhoDim, U2Dim, TempDim, &
        Mach2, MachPUI2, MachSW2, DoReIndex)
 
