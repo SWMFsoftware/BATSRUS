@@ -88,7 +88,7 @@ test_extra_help:
 	@echo "    test_outerhelio2d          (run 2D Outer Heliosphere test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_outerhelio_1d         (run 1D Outer Heliosphere test)"
-	@echo "    test_outerhelioawsom    (run 1D Outer Heliosphere w/ Turb test)"
+	@echo "    test_outerhelioawsom       (run 1D Outer Heliosphere w/ Turb test)"
 	@echo "    test_outerheliopui         (run Outer Heliosphere w/ PUIs test)"
 	@echo "    test_outerheliopui_1d      (run 1D Outer Heliosphere w/ PUIs test)"
 	@echo "    test_saturn                (run Saturn test)"
@@ -308,7 +308,7 @@ test_shocktube_1d:
 	$(MAKE) test_shocktube_1d_check
 
 test_shocktube_1d_compile:
-	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -noopenmp ${OPENACC}
 	./Config.pl -u=Default -e=MhdHyp -ng=2 -g=64,1,1
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.hyp.1d
 	$(MAKE) BATSRUS
@@ -343,7 +343,7 @@ test_fastwave_2d:
 	$(MAKE) test_fastwave_2d_check
 
 test_fastwave_2d_compile:
-	cd ${DIR}; ./Config.pl ${OPENACC}
+	./Config.pl -noopenmp ${OPENACC}
 	./Config.pl -u=Default -e=Mhd -ng=2 -g=6,6,1
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave_2d
 	$(MAKE) BATSRUS
@@ -409,7 +409,7 @@ test_fastwave:
 	$(MAKE) test_fastwave_check
 
 test_fastwave_compile:
-	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -noopenmp ${OPENACC}
 	./Config.pl -u=Default -e=Mhd -ng=2 -g=10,10,10
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave
 	$(MAKE) BATSRUS
@@ -886,7 +886,7 @@ test_awsom_gpu:
 
 # Fails on Pleiades with OpenMP
 test_awsom_gpu_compile:
-	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -noopenmp ${OPENACC}
 	./Config.pl -u=Awsom -e=Awsom -ng=2 -g=6,4,4
 	./Config.pl -opt=Param/CORONA/PARAM.in.Awsom.GPU
 	$(MAKE) BATSRUS
@@ -923,7 +923,7 @@ test_awsom_large_gpu:
 
 # Fails on Pleiades with OpenMP
 test_awsom_large_gpu_compile:
-	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -noopenmp ${OPENACC}
 	./Config.pl -u=Awsom -e=Awsom -ng=2 -g=6,4,4
 	./Config.pl -opt=Param/CORONA/PARAM.in.Awsom.large.GPU
 	$(MAKE) BATSRUS
@@ -1233,7 +1233,7 @@ test_outerhelio2d_check:
 	ls -l test_outerhelio2d.diff
 
 
-### STANDALONE 3D OUTER HELIOSPHERE TESTS ###
+### STANDALONE OUTER HELIOSPHERE TESTS ###
 
 test_outerhelio:
 	@echo "test_outerhelio_compile..." > test_outerhelio.diff
@@ -1317,7 +1317,7 @@ test_outerhelioawsom:
 	$(MAKE) test_outerhelioawsom_check
 
 test_outerhelioawsom_compile:
-	./Config.pl -u=OuterHelio -e=OuterHelioAwsom -ng=2 -g=4,4,4
+	./Config.pl -noopenmp -u=OuterHelio -e=OuterHelioAwsom -ng=2 -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1986,7 +1986,7 @@ test_earth_start:
 	$(MAKE) test_earth_check
 
 test_earth_compile:
-	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -noopenmp ${OPENACC}
 	./Config.pl -e=Mhd -u=Default -ng=2 -g=10,10,10
 	./Config.pl -opt=Param/EARTH/PARAM.in.GPU.dev
 	${MAKE} BATSRUS
