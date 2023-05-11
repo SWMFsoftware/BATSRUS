@@ -3006,7 +3006,8 @@ contains
        endif
 
        ! The unit of RhoDim is converted to km/m^3. Maybe a number density
-       ! instead of mass density is needed here. To be verified by Merav. --Yuxi
+       ! instead of mass density is needed here. To be verified by Merav.
+       ! --Yuxi
        RhoDim = Rho*No2Si_V(UnitRho_)
        U2Dim = U2*No2Io_V(UnitU_)**2
        TempDim = 0.5*p*InvRho*No2Si_V(UnitTemperature_)
