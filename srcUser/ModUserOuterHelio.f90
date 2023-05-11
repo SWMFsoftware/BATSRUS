@@ -516,9 +516,9 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    No2Si_V(UnitX_)  = cAU                                      ! m
-    No2Si_V(UnitU_)  = sqrt(Gamma*cBoltzmann*SwhTDim/cProtonMass) ! m/s
-    No2Si_V(UnitRho_)= cProtonMass*SwhRhoDim*1.0E+6           ! kg/m^3
+    No2Si_V(UnitX_)  = cAU                                        ! au
+    No2Si_V(UnitU_)  = sqrt(Gamma*cBoltzmann*SwhTDim/cProtonMass) ! sound speed
+    No2Si_V(UnitRho_)= cProtonMass*SwhRhoDim*1.0E+6               ! amu/cm^3
 
     if(DoTest)then
        write(*,*)NameSub,' No2Si_V(UnitX_)  =',No2Si_V(UnitX_)
@@ -1235,8 +1235,8 @@ contains
 
           ! end of merav addition
 
-       case( 'srswhcx','sruxswhcx','sruyswhcx' &
-                  ,'sruzswhcx','spswhcx','seswhcx')
+       case('srswhcx','sruxswhcx','sruyswhcx', &
+            'sruzswhcx','spswhcx','seswhcx')
           if(UseNeutralFluid)then
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1285,8 +1285,8 @@ contains
              NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
           end select
 
-       case( 'srpuicx','sruxpuicx','sruypuicx' &
-                  ,'sruzpuicx','sppuicx','sepuicx')
+       case('srpuicx','sruxpuicx','sruypuicx', &
+            'sruzpuicx','sppuicx','sepuicx')
           if(UseNeutralFluid)then
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1335,8 +1335,8 @@ contains
              NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
           end select
 
-       case( 'srswhimp','sruxswhimp','sruyswhimp' &
-                  ,'sruzswhimp','spswhimp','seswhimp')
+       case('srswhimp','sruxswhimp','sruyswhimp', &
+            'sruzswhimp','spswhimp','seswhimp')
           if(UseNeutralFluid)then
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1385,8 +1385,8 @@ contains
              NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
           end select
 
-       case( 'srpuiimp','sruxpuiimp','sruypuiimp' &
-                  ,'sruzpuiimp','sppuiimp','sepuiimp')
+       case('srpuiimp','sruxpuiimp','sruypuiimp', &
+            'sruzpuiimp','sppuiimp','sepuiimp')
           if(UseNeutralFluid)then
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1466,8 +1466,8 @@ contains
 
           ! end of merav addition
 
-       case( 'srcx','sruxcx','sruycx' &
-                  ,'sruzcx','spcx','secx')
+       case('srcx','sruxcx','sruycx', &
+            'sruzcx','spcx','secx')
           if(UseNeutralFluid)then
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1516,8 +1516,7 @@ contains
              NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
           end select
 
-       case( 'srph','sruxph','sruyph' &
-                  ,'sruzph','spph','seph')
+       case('srph','sruxph','sruyph','sruzph','spph','seph')
           if(UseNeutralFluid .and. UsePhotoion)then
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1565,8 +1564,7 @@ contains
              NameTecUnit = trim(NameTecUnit_V(UnitEnergydens_)) // '/s'
           end select
 
-       case( 'srimp','sruximp','sruyimp' &
-                  ,'sruzimp','spimp','seimp')
+       case('srimp','sruximp','sruyimp','sruzimp','spimp','seimp')
           if(UseNeutralFluid)then
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1893,20 +1891,19 @@ contains
   end subroutine user_calc_sources_expl
   !============================================================================
   subroutine calc_source_inputs( &
-     i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+     i, j, k, iBlock, Rho_I, U_DI, U2_I, Temp_I, UThS_I)
 
     ! Calculate parameters to pass to source terms
 
-    integer, intent(in):: i,j,k,iBlock
+    integer, intent(in):: i, j, k, iBlock
     real, dimension(nFLuid), intent(out) :: Rho_I, U2_I, Temp_I, UThS_I
     real, intent(out) :: U_DI(3,nFLuid)
 
     real:: State_V(nVar)
-
     !--------------------------------------------------------------------------
     State_V = State_VGB(:,i,j,k,iBlock)
 
-    ! Densities
+    ! Densities in amu/m^3
     Rho_I = State_V(iRho_I)*No2Si_V(UnitN_)
 
     ! Velocities per component
@@ -1914,10 +1911,10 @@ contains
     U_DI(y_,:) = State_V(iRhoUy_I)/State_V(iRho_I)
     U_DI(z_,:) = State_V(iRhoUz_I)/State_V(iRho_I)
 
-    ! Velocity square for the two ionized and four population of neutrals;
+    ! Velocity square in normalized units ?
     U2_I = sum(U_DI**2, 1)
 
-    ! Temperature for the two ionized and four population of neutrals (K)
+    ! Temperature (K)
     Temp_I = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
 
     ! If not using Pe, electron pressure is grouped with SWH
@@ -1931,8 +1928,7 @@ contains
        endif
     end if
 
-    ! Thermal speed (squared) for ionized and three populations of neutrals
-    ! UThS units are (m/s)^2
+    ! Thermal speed squared in (m/s)^2
     UThS_I = (2*cBoltzmann/cProtonMass)*Temp_I
 
   end subroutine calc_source_inputs
@@ -2799,7 +2795,7 @@ contains
 
     integer,          intent(out) :: iRegion
     real,             intent(in)  :: r       ! unit: cAU
-    real,             intent(in)  :: RhoDim  ! unit: ?
+    real,             intent(in)  :: RhoDim  ! unit: amu/cm^3
     real,             intent(in)  :: U2Dim   ! unit: (km/s)^2
     real,             intent(in)  :: TempDim ! unit: K
     real,             intent(in)  :: Mach2, MachPUI2, MachSW2
@@ -2937,7 +2933,6 @@ contains
     end select
   end subroutine get_region
   !============================================================================
-
   subroutine select_region(iBlock)
 
     ! set the global variabls iFluidProduced_C
@@ -3005,10 +3000,7 @@ contains
           MachSW2 = U2/(Gamma*pSW*InvRhoSW)
        endif
 
-       ! The unit of RhoDim is converted to km/m^3. Maybe a number density
-       ! instead of mass density is needed here. To be verified by Merav.
-       ! --Yuxi
-       RhoDim = Rho*No2Si_V(UnitRho_)
+       RhoDim = Rho*No2Io_V(UnitRho_)
        U2Dim = U2*No2Io_V(UnitU_)**2
        TempDim = 0.5*p*InvRho*No2Si_V(UnitTemperature_)
 
