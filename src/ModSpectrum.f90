@@ -5,7 +5,6 @@ module ModSpectrum
 
   use BATL_lib,          ONLY: iProc
   use ModBatsrusUtility, ONLY: stop_mpi
-  
 
   implicit none
   SAVE
@@ -16,7 +15,7 @@ module ModSpectrum
        spectrum_calc_emission
 
   logical :: UseIonFrac
-  
+
   ! Temperature and density grid for contribution function (G)
   real                        :: DLogN, DLogT
   real                        :: LogNMin, LogTMin, LogNMax, LogTMax
@@ -69,7 +68,7 @@ contains
     real                        :: LineWavelength, FirstLineWavelength
     real                        :: LogN, LogT, LogG, Aion, LogIonFrac
     integer                     :: iUnit
-    
+
     ! End of file indicated by iError /= 0
     integer                     :: iError
 
@@ -612,7 +611,7 @@ contains
 #ifndef SCALAR
     character(len=*), parameter:: NameSub = 'spectrum_calc_emission'
     !--------------------------------------------------------------------------
-   
+
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
 
     LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
@@ -642,7 +641,7 @@ contains
     end if
 
     iLine = 1
-    
+
     if(UseIonFrac .and. ChargeStateFirst_>1)then
        ! Pair index of chianti table to state variable
        IsFound = .false.

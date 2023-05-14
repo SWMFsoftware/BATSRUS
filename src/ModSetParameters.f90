@@ -1071,7 +1071,7 @@ contains
                 if(index(StringPlot, 'dem') > 0 .or. &
                      index(StringPlot, 'fux') > 0 .or. &
                      index(StringPlot, 'phx') > 0 .or. &
-                     index(StringPlot, 'nbi') > 0)then 
+                     index(StringPlot, 'nbi') > 0)then
                    call read_var('TypeCoord', TypeCoordPlot_I(iFile))
                    call read_var('ObsPosX',ObsPos_DI(1,iFile))
                    call read_var('ObsPosY',ObsPos_DI(2,iFile))
@@ -1352,7 +1352,6 @@ contains
                      //' from StringPlot='//StringPlot)
              end if
 
-
              ! Plot file format
              if(index(StringPlot,'idl') > 0)then
                 TypePlotFormat_I(iFile)='idl'
@@ -1415,7 +1414,7 @@ contains
                    call read_var('LambdaMin', LambdaMin_I(iFile))
                    call read_var('LambdaMax', LambdaMax_I(iFile))
                    call read_var('DLambda',   DLambda_I(iFile))
-                   call read_var('UseIonFrac',UseIonFrac_I(iFile)) 
+                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
                 elseif(index(StringPlot, 'nbi')>0)then
                    call read_var('NameSpmTable',NameSpmTable_I(iFile))
                    call read_var('UseIonFrac',UseIonFrac_I(iFile))
@@ -1603,7 +1602,7 @@ contains
              ! to describe block structure and the dipole. Needed by CCMC.
              if(TypePlotArea == '3d_' .and. TypePlotFormat_I(iFile) == 'idl' &
                   .and. PlotDx_DI(1, iFile) < 0.0) &
-                  StringPlotParam_I(iFile) = 'g c th p1 p2 p3 NX NY NZ R'           
+                  StringPlotParam_I(iFile) = 'g c th p1 p2 p3 NX NY NZ R'
              if(nInstrument < 1) &
                   TypePlot_I(iFile) = TypePlotArea//'_'//TypePlotVar
           end do

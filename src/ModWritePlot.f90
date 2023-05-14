@@ -18,7 +18,7 @@ module ModWritePlot
   public:: reverse_field
 
   logical ::  DoPlotSpm, DoPlotFlux, DoPlotPhx, DoPlotNbi
-  
+
 contains
   !============================================================================
   subroutine write_plot(iFile)
@@ -181,7 +181,6 @@ contains
        write(*,*) 'form =  ', TypePlotFormat_I(iFile)
        write(*,*) 'DoSaveOneTecFile =', DoSaveOneTecFile
     end if
-
 
     ! Construct the file name
     ! Plotfile names start with the plot directory and the type infor
@@ -1074,7 +1073,7 @@ contains
 
     use ModUserInterface ! user_set_plot_var
     use ModSpectrum, ONLY: spectrum_calc_emission
-    
+
     integer, intent(in) :: iBlock,iPlotFile,nPlotVar
     character (LEN=10), intent(in) :: NamePlotVar_V(nPlotVar)
     real, intent(out)   :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
@@ -1160,7 +1159,7 @@ contains
        UsePlotVarBody_V(iVar) = .false.
 
        if(DoPlotSpm)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI        
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(DoPlotPhx)then
                 call spectrum_calc_emission(State_VGB(:,i,j,k,iBlock), &
                      DoPlotNbi, Emission, r_GB(i,j,k,iBlock))
@@ -1909,7 +1908,7 @@ contains
     if(allocated(Var_G)) deallocate(Var_G)
     if(allocated(GradPe_DG)) deallocate(GradPe_DG)
     if(allocated(ShockNorm_DC))deallocate(ShockNorm_DC, StateDn_VC, StateUp_VC)
-   
+
     call test_stop(NameSub, DoTest, iBlock)
 
   contains
@@ -2335,7 +2334,7 @@ contains
     call test_start(NameSub, DoTest)
     ! Largest cell size and a much smaller distance for 2D cuts
     CellSizeMax_D = DomainSize_D(1:nDim)/(nIJK_D(1:nDim)*nRoot_D(1:nDim))
-   
+
     ! Calculate plot cell size in all directions
     PlotRes_D = PlotRes1/CellSizeMax_D(1) * CellSizeMax_D
 
