@@ -5,13 +5,18 @@ module ModSpectrum
 
   use BATL_lib,          ONLY: iProc
   use ModBatsrusUtility, ONLY: stop_mpi
+  
+
   implicit none
   SAVE
 
   private ! except
 
-  public :: spectrum_read_table, spectrum_calc_flux, clean_mod_spectrum
+  public :: spectrum_read_table, spectrum_calc_flux, clean_mod_spectrum, &
+       spectrum_calc_emission
 
+  logical :: UseIonFrac
+  
   ! Temperature and density grid for contribution function (G)
   real                        :: DLogN, DLogT
   real                        :: LogNMin, LogTMin, LogNMax, LogTMax
@@ -43,11 +48,11 @@ contains
   !============================================================================
   subroutine spectrum_read_table(iFile, UseNbi, UsePhx)
 
-    use ModIoUnit,      ONLY: UnitTmp_
+    use ModIoUnit,      ONLY: io_unit_new
     use ModUtilities,   ONLY: open_file, close_file
     use ModIO,          ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
          LambdaMin_I, LambdaMax_I, NameNbiTable_I, DLambda_I, TempMin_I, &
-         NamePhxTable_I
+         NamePhxTable_I, UseIonFrac_I
     ! response function
     use ModPlotFile,    ONLY: read_plot_file
     ! photoexcitation
@@ -63,7 +68,8 @@ contains
     integer                     :: nFirstLevelFrom, nFirstLevelTo
     real                        :: LineWavelength, FirstLineWavelength
     real                        :: LogN, LogT, LogG, Aion, LogIonFrac
-
+    integer                     :: iUnit
+    
     ! End of file indicated by iError /= 0
     integer                     :: iError
 
@@ -110,6 +116,7 @@ contains
     ! Start with response function if any as it gives the min and max for nbi
     character(len=*), parameter:: NameSub = 'spectrum_read_table'
     !--------------------------------------------------------------------------
+    UseIonFrac = UseIonFrac_I(iFile)
     if(UsePhx)then
        if(i_lookup_table(NamePhxTable_I(iFile)) <= 0) &
             call init_lookup_table(NamePhxTable_I(iFile), "load", &
@@ -173,18 +180,19 @@ contains
     IsHeader            = .true.
 
     ! Start to read data file
-    call open_file(FILE=NameSpmTable_I(iFile), STATUS='old')
+    iUnit = io_unit_new()
+    call open_file(iUnit,FILE=NameSpmTable_I(iFile), STATUS='old')
 
     ! Read grid size information from header
     READGRID: do
-       read(UnitTmp_,'(a)',iostat=iError) StringLine
+       read(iUnit,'(a)',iostat=iError) StringLine
        if(iError  /= 0)then
           if(iProc==0)write(*,*)'iError = ',iError
           call stop_mpi(NameSub//' failed reading header of chianti table')
        end if
        if(StringLine == "#GRID")then
-          read(UnitTmp_,*)LogNMin, LogNMax, DLogN
-          read(UnitTmp_,*)LogTMin, LogTMax, DLogT
+          read(iUnit,*)LogNMin, LogNMax, DLogN
+          read(iUnit,*)LogTMin, LogTMax, DLogT
           EXIT READGRID
        end if
     end do READGRID
@@ -200,7 +208,7 @@ contains
     READLOOP: do
        ! Read remaining header lines of table file
        if(IsHeader)then
-          read(UnitTmp_,'(a)',iostat=iError) StringLine
+          read(iUnit,'(a)',iostat=iError) StringLine
           if(iError  /= 0)then
              if(iProc==0)write(*,*)'iError = ',iError
              call stop_mpi(NameSub//' failed reading header of chianti table')
@@ -210,7 +218,7 @@ contains
        end if
 
        ! Read data line
-       read(UnitTmp_,*,iostat=iError) &
+       read(iUnit,*,iostat=iError) &
             NameIon, nLevelFrom, nLevelTo, LineWavelength, &
             LogN, LogT, LogG, LogIonFrac
 
@@ -346,7 +354,7 @@ contains
          UnitRho_, UnitEnergyDens_ ,UnitB_, UnitU_
     use ModConst, ONLY: cProtonMass, cLightSpeed, cBoltzmann, cPi
     use ModIO, ONLY: DLambdaIns_I, DLambda_I, LambdaMin_I, &
-         UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I, UseIonFrac_I
+         UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModLookupTable, ONLY: interpolate_lookup_table
 
@@ -429,7 +437,7 @@ contains
     end if
     Ulos = sum(State_V(Ux_:Uz_)*LosDir_D)/State_V(Rho_)*No2Si_V(UnitU_)
 
-    if(UseIonFrac_I(iFile) .and. ChargeStateFirst_>1)then
+    if(UseIonFrac .and. ChargeStateFirst_>1)then
        ! Normalize charge states to get fractions
        LocalState_V = State_V
        iVar = ChargeStateFirst_
@@ -449,7 +457,7 @@ contains
     end if
 
     do iLine = 1, nLineAll
-       if(UseIonFrac_I(iFile) .and. ChargeStateFirst_>1)then
+       if(UseIonFrac .and. ChargeStateFirst_>1)then
           ! Pair index of chianti table to state variable
           IsFound = .false.
           do iVarIon=ChargestateFirst_,ChargestateLast_
@@ -496,7 +504,7 @@ contains
                Value_I, DoExtrapolate = .false.)
           Gint = 10.0**Value_I(1)
 
-          if(UseIonFrac_I(iFile) .and. IsFound)then
+          if(UseIonFrac .and. IsFound)then
              EquilIonFrac = 10.0**Value_I(2)
              Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
           end if
@@ -513,7 +521,7 @@ contains
                [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
           Gint = 10.0**Gint
 
-          if(UseIonFrac_I(iFile) .and. IsFound)then
+          if(UseIonFrac .and. IsFound)then
              EquilIonFrac = bilinear(LineTable_I(iLine)%LogIonFrac_II(:,:), &
                   iNMin, iNMax, jTMin, jTMax, &
                   [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
@@ -571,6 +579,121 @@ contains
 #endif
   end subroutine spectrum_calc_flux
   !============================================================================
+
+  subroutine spectrum_calc_emission(State_V, UseNbi,Emission,r)
+
+    use ModConst, ONLY: cProtonMass
+    use ModInterpolate, ONLY: bilinear
+    use ModVarIndexes, ONLY: nVar, Rho_,Pe_, p_, nElement, &
+    ChargeStateFirst_, ChargestateLast_, NameVar_V, nChargeState_I
+    use ModPhysics, ONLY: No2Si_V, UnitTemperature_, UnitRho_
+    use ModAdvance, ONLY: UseElectronPressure
+    use ModLookupTable, ONLY: interpolate_lookup_table
+
+    real, intent(in)      :: State_V(nVar)
+    logical, intent(in)   :: UseNbi
+    real, intent(out)   :: Emission
+    real, intent(in), optional :: r
+
+    integer                        :: iNMin, jTMin, iNMax, jTMax
+    real                           :: Gint, LogNe, LogTe, Rho
+    real                           :: LocalState_V(nVar)
+    ! For H:He 10:1 fully ionized plasma the proton:electron ratio is
+    ! 1/(1+2*0.1)
+    real                        :: ProtonElectronRatio = 0.83
+
+    ! Charge state variables
+    real                        :: EquilIonFrac
+    logical                     :: IsFound = .false.
+    integer                     :: iVar, iVarIon, iElement, nCharge
+    integer                        :: iLine
+    real                        :: Value_I(2)
+
+#ifndef SCALAR
+    character(len=*), parameter:: NameSub = 'spectrum_calc_emission'
+    !--------------------------------------------------------------------------
+   
+    Rho = State_V(Rho_)*No2Si_V(UnitRho_)
+
+    LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
+    if(UseElectronPressure)then
+       LogTe = log10(State_V(Pe_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
+    else
+       LogTe = log10(State_V(p_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
+    end if
+
+    if(UseIonFrac .and. ChargeStateFirst_>1)then
+       ! Normalize charge states to get fractions
+       LocalState_V = State_V
+       iVar = ChargeStateFirst_
+       do iElement = 1, nElement
+          nCharge = nChargeState_I(iElement)-1
+          LocalState_V(iVar:iVar+nCharge) = &
+               State_V(iVar:iVar+nCharge) / &
+               sum(State_V(iVar:iVar+nCharge))
+          where(LocalState_V(iVar:iVar+nCharge)<1e-99)
+             LocalState_V(iVar:iVar+nCharge) = 0.0
+          end where
+          LocalState_V(iVar:iVar+nCharge) = &
+               LocalState_V(iVar:iVar+nCharge) / &
+               sum(LocalState_V(iVar:iVar+nCharge))
+          iVar = iVar + nCharge + 1
+       end do
+    end if
+
+    iLine = 1
+    
+    if(UseIonFrac .and. ChargeStateFirst_>1)then
+       ! Pair index of chianti table to state variable
+       IsFound = .false.
+       do iVarIon=ChargestateFirst_,ChargestateLast_
+          if(trim(LineTable_I(iLine)%NameIon)==trim(NameVar_V(iVarIon)))then
+             IsFound = .true.
+             EXIT
+          end if
+       enddo
+    end if
+
+    ! Photoexcitation
+    if(present(r))then
+       call interpolate_lookup_table(iTablePhx, LogTe, LogNe, r, &
+            Value_I, DoExtrapolate = .false.)
+       Gint = 10.0**Value_I(1)
+
+       if(UseIonFrac .and. IsFound)then
+          EquilIonFrac = 10.0**Value_I(2)
+          Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
+       end if
+    else
+       ! Get the contribution function
+       iNMin  = LineTable_I(iLine)%iMin
+       jTMin  = LineTable_I(iLine)%jMin
+       iNMax  = LineTable_I(iLine)%iMax
+       jTMax  = LineTable_I(iLine)%jMax
+
+       Gint = bilinear(LineTable_I(iLine)%LogG_II(:,:), &
+            iNMin, iNMax, jTMin, jTMax, &
+            [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
+       Gint = 10.0**Gint
+
+       if(UseIonFrac .and. IsFound)then
+          EquilIonFrac = bilinear(LineTable_I(iLine)%LogIonFrac_II(:,:), &
+               iNMin, iNMax, jTMin, jTMax, &
+               [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
+          EquilIonFrac = 10.0**EquilIonFrac
+          Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
+       end if
+    end if
+
+    ! When Gint becomes negative due to extrapolation -> move to next
+    if(Gint<=0)Gint = 0.0
+
+    Emission = Gint * (10.0**LogNe)**2
+
+#endif
+  end subroutine spectrum_calc_emission
+  !============================================================================
+
   subroutine clean_mod_spectrum
 
     integer                     :: iLine = 0

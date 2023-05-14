@@ -1064,64 +1064,62 @@ contains
                    call read_var('yAngle', PlotNormal_DI(2,iFile))
                    call read_var('zAngle', PlotNormal_DI(3,iFile))
                 end if
-             elseif (index(StringPlot, 'spm')>0)then
-                TypePlotArea = 'spm'
-                call read_var('TypeCoord', TypeCoordPlot_I(iFile))
-                call read_var('ObsPosX',ObsPos_DI(1,iFile))
-                call read_var('ObsPosY',ObsPos_DI(2,iFile))
-                call read_var('ObsPosZ',ObsPos_DI(3,iFile))
-                call read_var('x0',   xOffset_I(iFile))
-                call read_var('y0',   yOffset_I(iFile))
-                call read_var('xLen',   PlotRange_EI(1,iFile))
-                call read_var('dX',   PlotDx_DI(1,iFile))
-                call read_var('yLen', PlotRange_EI(2,iFile))
-                call read_var('dY', PlotDx_DI(2,iFile))
-                call read_var('TempMin', TempMin_I(iFile))
-                if (index(StringPlot, 'dem')>0)then
-                   ! DEM/EM calculation
-                   TypePlotVar = 'dem'
-                   call read_var('LogTeMinDEM',LogTeMinDEM_I(iFile))
-                   call read_var('LogTeMaxDEM',LogTeMaxDEM_I(iFile))
-                   call read_var('DLogTeDEM',DLogTeDEM_I(iFile))
-                elseif (index(StringPlot, 'fux')>0)then
-                   ! Spectra
-                   TypePlotVar = 'fux'
-                   call read_var('NameSpmTable',NameSpmTable_I(iFile))
-                   call read_var('UseUnobserved',UseUnobserved_I(iFile))
-                   call read_var('LambdaMin', LambdaMin_I(iFile))
-                   call read_var('LambdaMax', LambdaMax_I(iFile))
-                   call read_var('DLambda',   DLambda_I(iFile))
-                   call read_var('UseAlfven',UseAlfven_I(iFile))
-                   call read_var('UseDoppler',UseDoppler_I(iFile))
-                   call read_var('DLambdaIns',DLambdaIns_I(iFile))
-                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
-                   call read_var('UseIonTemp',UseIonTemp_I(iFile))
-                   ! Individual line with photoexcitation
-                elseif (index(StringPlot, 'phx')>0)then
-                   call read_var('NamePhxTable',NamePhxTable_I(iFile))
-                   call read_var('LambdaMin', LambdaMin_I(iFile))
-                   call read_var('LambdaMax', LambdaMax_I(iFile))
-                   call read_var('DLambda',   DLambda_I(iFile))
-                   call read_var('UseAlfven',UseAlfven_I(iFile))
-                   call read_var('UseDoppler',UseDoppler_I(iFile))
-                   call read_var('DLambdaIns',DLambdaIns_I(iFile))
-                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
-                   call read_var('UseIonTemp',UseIonTemp_I(iFile))
-                elseif (index(StringPlot, 'nbi')>0)then
-                   ! Narrowband image
-                   call read_var('NameSpmTable',NameSpmTable_I(iFile))
-                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
-                   call read_var('NameNbiTable',NameNbiTable_I(iFile))
-                end if
-             elseif (index(StringPlot,'los')>0) then
+
+             elseif (index(StringPlot,'los')>0)then
                 TypePlotArea='los'
                 ! Line of sight vector
-
-                if(index(StringPlot,'ins') == 0 .and.                      &
-                     index(StringPlot,'INS') == 0) then
-
+                if(index(StringPlot, 'dem') > 0 .or. &
+                     index(StringPlot, 'fux') > 0 .or. &
+                     index(StringPlot, 'phx') > 0 .or. &
+                     index(StringPlot, 'nbi') > 0)then 
+                   call read_var('TypeCoord', TypeCoordPlot_I(iFile))
+                   call read_var('ObsPosX',ObsPos_DI(1,iFile))
+                   call read_var('ObsPosY',ObsPos_DI(2,iFile))
+                   call read_var('ObsPosZ',ObsPos_DI(3,iFile))
+                   call read_var('x0',   xOffset_I(iFile))
+                   call read_var('y0',   yOffset_I(iFile))
+                   call read_var('xLen',   PlotRange_EI(1,iFile))
+                   call read_var('dX',   PlotDx_DI(1,iFile))
+                   call read_var('yLen', PlotRange_EI(2,iFile))
+                   call read_var('dY', PlotDx_DI(2,iFile))
+                   call read_var('TempMin', TempMin_I(iFile))
+                   if (index(StringPlot, 'dem')>0)then
+                      ! DEM/EM calculation
+                      call read_var('LogTeMinDEM',LogTeMinDEM_I(iFile))
+                      call read_var('LogTeMaxDEM',LogTeMaxDEM_I(iFile))
+                      call read_var('DLogTeDEM',DLogTeDEM_I(iFile))
+                   elseif (index(StringPlot, 'fux')>0)then
+                      ! Spectra
+                      call read_var('NameSpmTable',NameSpmTable_I(iFile))
+                      call read_var('UseUnobserved',UseUnobserved_I(iFile))
+                      call read_var('LambdaMin', LambdaMin_I(iFile))
+                      call read_var('LambdaMax', LambdaMax_I(iFile))
+                      call read_var('DLambda',   DLambda_I(iFile))
+                      call read_var('UseAlfven',UseAlfven_I(iFile))
+                      call read_var('UseDoppler',UseDoppler_I(iFile))
+                      call read_var('DLambdaIns',DLambdaIns_I(iFile))
+                      call read_var('UseIonFrac',UseIonFrac_I(iFile))
+                      call read_var('UseIonTemp',UseIonTemp_I(iFile))
+                      ! Individual line with photoexcitation
+                   elseif (index(StringPlot, 'phx')>0)then
+                      call read_var('NamePhxTable',NamePhxTable_I(iFile))
+                      call read_var('LambdaMin', LambdaMin_I(iFile))
+                      call read_var('LambdaMax', LambdaMax_I(iFile))
+                      call read_var('DLambda',   DLambda_I(iFile))
+                      call read_var('UseAlfven',UseAlfven_I(iFile))
+                      call read_var('UseDoppler',UseDoppler_I(iFile))
+                      call read_var('DLambdaIns',DLambdaIns_I(iFile))
+                      call read_var('UseIonFrac',UseIonFrac_I(iFile))
+                      call read_var('UseIonTemp',UseIonTemp_I(iFile))
+                   elseif (index(StringPlot, 'nbi')>0)then
+                      ! Narrowband image
+                      call read_var('NameSpmTable',NameSpmTable_I(iFile))
+                      call read_var('UseIonFrac',UseIonFrac_I(iFile))
+                      call read_var('NameNbiTable',NameNbiTable_I(iFile))
+                   end if
+                elseif(index(StringPlot,'ins') == 0 .and. &
+                     index(StringPlot,'INS') == 0)then
                    ! original code witout 'ins' or 'INS'
-
                    ! Satellite position
                    if(NameThisComp == 'GM')then
                       call read_var('ObsPosX', ObsPos_DI(1,iFile))
@@ -1354,6 +1352,7 @@ contains
                      //' from StringPlot='//StringPlot)
              end if
 
+
              ! Plot file format
              if(index(StringPlot,'idl') > 0)then
                 TypePlotFormat_I(iFile)='idl'
@@ -1362,7 +1361,6 @@ contains
                      .and. TypePlotArea /= 'sln' &
                      .and. TypePlotArea /= 'slg' &
                      .and. TypePlotArea /= 'box' &
-                     .and. TypePlotArea /= 'spm' &
                      .and. TypePlotArea /= 'los' &
                      .and. TypePlotArea /= 'rfr' &
                      .and. TypePlotArea /= 'lin' &
@@ -1404,6 +1402,26 @@ contains
                      //StringPlot)
              end if
 
+             if(index(StringPlot,'los') == 0)then
+                if(index(StringPlot, 'fux')>0)then
+                   call read_var('NameSpmTable',NameSpmTable_I(iFile))
+                   call read_var('UseUnobserved',UseUnobserved_I(iFile))
+                   call read_var('LambdaMin', LambdaMin_I(iFile))
+                   call read_var('LambdaMax', LambdaMax_I(iFile))
+                   call read_var('DLambda',   DLambda_I(iFile))
+                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
+                elseif(index(StringPlot, 'phx')>0)then
+                   call read_var('NamePhxTable',NamePhxTable_I(iFile))
+                   call read_var('LambdaMin', LambdaMin_I(iFile))
+                   call read_var('LambdaMax', LambdaMax_I(iFile))
+                   call read_var('DLambda',   DLambda_I(iFile))
+                   call read_var('UseIonFrac',UseIonFrac_I(iFile)) 
+                elseif(index(StringPlot, 'nbi')>0)then
+                   call read_var('NameSpmTable',NameSpmTable_I(iFile))
+                   call read_var('UseIonFrac',UseIonFrac_I(iFile))
+                   call read_var('NameNbiTable',NameNbiTable_I(iFile))
+                end if
+             end if
              ! Plot variables
              if(       index(StringPlot,'VAR') > 0 &
                   .or. index(StringPlot,'var') > 0)then
@@ -1585,8 +1603,7 @@ contains
              ! to describe block structure and the dipole. Needed by CCMC.
              if(TypePlotArea == '3d_' .and. TypePlotFormat_I(iFile) == 'idl' &
                   .and. PlotDx_DI(1, iFile) < 0.0) &
-                  StringPlotParam_I(iFile) = 'g c th p1 p2 p3 NX NY NZ R'
-
+                  StringPlotParam_I(iFile) = 'g c th p1 p2 p3 NX NY NZ R'           
              if(nInstrument < 1) &
                   TypePlot_I(iFile) = TypePlotArea//'_'//TypePlotVar
           end do
@@ -4051,7 +4068,7 @@ contains
 
          ! Fix plot range for various plot areas
          select case(TypePlotArea)
-         case('shl', 'sln','slg','box', 'eqb', 'eqr', 'lcb', 'spm')
+         case('shl', 'sln','slg','box', 'eqb', 'eqr', 'lcb','los')
             ! These plot areas read all ranges from PARAM.in
             CYCLE PLOTFILELOOP
          case('cut')

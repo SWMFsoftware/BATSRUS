@@ -17,6 +17,8 @@ module ModWritePlot
   public:: set_plot_scalars   !
   public:: reverse_field
 
+  logical ::  DoPlotSpm, DoPlotFlux, DoPlotPhx, DoPlotNbi
+  
 contains
   !============================================================================
   subroutine write_plot(iFile)
@@ -49,6 +51,7 @@ contains
          message_pass_node, message_pass_cell, average_grid_node, &
          find_grid_block, IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, &
          nDim, rRound0, rRound1, SqrtNDim
+    use ModSpectrum, ONLY: clean_mod_spectrum, spectrum_read_table
 
     ! Arguments
 
@@ -179,6 +182,7 @@ contains
        write(*,*) 'DoSaveOneTecFile =', DoSaveOneTecFile
     end if
 
+
     ! Construct the file name
     ! Plotfile names start with the plot directory and the type infor
     NameSnapshot = trim(NamePlotDir) // trim(TypePlot) // "_"
@@ -239,6 +243,14 @@ contains
          .or. TypePlot(1:3) == 'slg'
     DoPlotBox   = TypePlot(1:3) == 'box'
 
+    ! Plotting emission
+    DoPlotFlux = index(TypePlot_I(iFile),'fux')>0
+    DoPlotPhx = index(TypePlot_I(iFile),'phx')>0
+    DoPlotNbi = index(TypePlot_I(iFile),'nbi')>0
+    DoPlotSpm = DoPlotFlux .or. DoPlotPhx .or. DoPlotNbi
+    ! Emission table read in
+    if(DoPlotSpm)call spectrum_read_table(iFile, DoPlotNbi, DoPlotPhx)
+
     ! If threaded gap is used, the dimensional factors should be calculated,
     ! which are needed to convert a point state vector to a dimensional form
     if(DoPlotThreads .and. (DoPlotShell .or. DoPlotBox))then
@@ -272,7 +284,7 @@ contains
           call open_file(&
                FILE=NameFileNorth, ACCESS='DIRECT', RECL=lRecData, &
                iComm=iComm, NameCaller=NameSub//'_tcp_direct_data')
-       else
+        else
           if(DoSaveTecBinary) then
              call open_file(FILE=NameFileNorth, &
                   NameCaller=NameSub//'_tcp_data', &
@@ -762,6 +774,7 @@ contains
        call write_tree_file(NameFile, IsFormattedIn=.true.)
     end if
 
+    if(DoPlotSpm)call clean_mod_spectrum
     if(DoTest)write(*,*) NameSub,' finished'
 
     call test_stop(NameSub, DoTest)
@@ -1060,7 +1073,8 @@ contains
          Xyz_DGB, Xyz_DNB, iNode_B, CellSize_DB, CellVolume_GB, CoordMin_DB
 
     use ModUserInterface ! user_set_plot_var
-
+    use ModSpectrum, ONLY: spectrum_calc_emission
+    
     integer, intent(in) :: iBlock,iPlotFile,nPlotVar
     character (LEN=10), intent(in) :: NamePlotVar_V(nPlotVar)
     real, intent(out)   :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
@@ -1093,10 +1107,13 @@ contains
     ! Passed to and set by get_face_curl
     logical:: IsNewBlockCurrent
 
+    real :: Emission
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
     if(.not.UseB)then
        FullB_DG = 0.00
     elseif(UseB0)then
@@ -1141,6 +1158,20 @@ contains
        ! Set UsePlotVarBody_V to false unless cell values inside of the body
        ! are to be used for plotting.
        UsePlotVarBody_V(iVar) = .false.
+
+       if(DoPlotSpm)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI        
+             if(DoPlotPhx)then
+                call spectrum_calc_emission(State_VGB(:,i,j,k,iBlock), &
+                     DoPlotNbi, Emission, r_GB(i,j,k,iBlock))
+             else
+                call spectrum_calc_emission(State_VGB(:,i,j,k,iBlock), &
+                     DoPlotNbi, Emission)
+             end if
+             PlotVar_GV(i,j,k,iVar) = Emission
+          end do; end do; end do
+          RETURN
+       end if
 
        select case(String)
 
@@ -1878,7 +1909,7 @@ contains
     if(allocated(Var_G)) deallocate(Var_G)
     if(allocated(GradPe_DG)) deallocate(GradPe_DG)
     if(allocated(ShockNorm_DC))deallocate(ShockNorm_DC, StateDn_VC, StateUp_VC)
-
+   
     call test_stop(NameSub, DoTest, iBlock)
 
   contains
@@ -2304,7 +2335,7 @@ contains
     call test_start(NameSub, DoTest)
     ! Largest cell size and a much smaller distance for 2D cuts
     CellSizeMax_D = DomainSize_D(1:nDim)/(nIJK_D(1:nDim)*nRoot_D(1:nDim))
-
+   
     ! Calculate plot cell size in all directions
     PlotRes_D = PlotRes1/CellSizeMax_D(1) * CellSizeMax_D
 
@@ -2328,8 +2359,7 @@ contains
        Plotrange_I(iMin:iMax) = CoordMin_D(iDim) + PlotRes_D(iDim)* &
             nint( (PlotRange_I(iMin:iMax) - CoordMin_D(iDim))/PlotRes_D(iDim) )
     end do
-
-    call test_stop(NameSub, DoTest)
+     call test_stop(NameSub, DoTest)
   end subroutine adjust_plot_range
   !============================================================================
 end module ModWritePlot
