@@ -2263,6 +2263,12 @@ contains
           NameUnit = 'm2/s'
        case('qtot')
           NameUnit = 'e'//NameIdlUnit_V(UnitN_)
+       case('flux')
+          NameUnit = 'erg sr^-1 cm^-2 A^-1 s^-1'
+       case('emiss')
+          NameUnit = 'erg s^-1 cm^-3'
+       case('intensity')
+          NameUnit = 'DN s^-1 cm^-3'
        case default
           ! Set default or user defined unit
           NameUnit = NameUnitUserIdl_I(iPlotVar)

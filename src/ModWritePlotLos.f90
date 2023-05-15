@@ -340,7 +340,6 @@ contains
 
        ! redefine StringPlotVar with correct table info
        call join_string(nPlotVar, NamePlotVar_V, StringPlotVar)
-
        if(DoTest .and. iProc==0) then
           write(*,*) 'plot variables, UseRho=', trim(StringPlotVar), UseRho
           write(*,*) 'nPlotVar, PlotVarNames_V=', &
@@ -2235,13 +2234,10 @@ contains
           case('em')
              write(StringUnitIdl,'(a)') &
                   trim(StringUnitIdl)//' '//'[cm^-3]'
-          case('fux')
+          case('flux')
              write(StringUnitIdl,'(a)') &
                   trim(StringUnitIdl)//' '//'[erg sr^-1 cm^-2 A^-1 s^-1]'
-          case('phx')
-             write(StringUnitIdl,'(a)') &
-                  trim(StringUnitIdl)//' '//'[erg sr^-1 cm^-2 A^-1 s^-1]'
-          case('nbi')
+          case('intensity')
              write(StringUnitIdl,'(a)') &
                   trim(StringUnitIdl)//' '//'[DN/s]'
              ! DEFAULT FOR A BAD SELECTION
