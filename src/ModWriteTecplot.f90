@@ -2401,7 +2401,7 @@ contains
           NameTecVar = 'emiss'
           NameUnit = '[erg s^-1 cm^-3]'
        case('intensity')
-          NameTecVar = 'intensity' 
+          NameTecVar = 'intensity'
           NameUnit = '[DN s^-1 cm^-3]'
        case default
           ! Set the default or user defined values
