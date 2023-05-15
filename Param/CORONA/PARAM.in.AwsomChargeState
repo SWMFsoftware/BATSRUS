@@ -175,8 +175,11 @@ RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
+#SAVETECPLOT
+T			DoSaveOneTecFile
+
 #SAVEPLOT
-4			nPlotFile
+7			nPlotFile
 los dem idl_ascii		StringPlot
 4			DnSavePlot
 -1.			DtSavePlot
@@ -258,7 +261,25 @@ T			UseDoppler
 0.02			DLambdaIns
 F			UseIonFrac
 F			UseIonTemp
-
+3d fux tec		StringPlot !use tcp
+4			DnSavePlot
+-1.			DtSavePlot
+SPECTRUM_chianti_tbl.dat		NameSpmTable
+F			UseUnobserved
+195.119			Lambda
+F			UseIonFrac
+3d nbi tec		StringPlot !use tcp
+4			DnSavePlot
+-1.			DtSavePlot
+SPECTRUM_chianti_tbl.dat		NameSpmTable
+F			UseIonFrac
+eit195response.out		NameNbiTable
+3d phx tec		StringPlot !use tcp
+4			DnSavePlot
+-1.			DtSavePlot
+PHOTOEXC_6376.2900.dat		NamePhxTable
+6376.2900		Lambda
+F			UseIonFrac
 
 #OUTERBOUNDARY		DLambda
 user			TypeBc1   user for spherical and user_outerbcs

@@ -4635,16 +4635,12 @@ indices are not calculated.
     <if expr="$plotarea =~ /\b(3d|3d_)\b/ and $plotvar =~ /\bfux\b/">
       <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat"/>
       <parameter name="UseUnobserved" type="logical" default="F"/>
-      <parameter name="LambdaMin" type="real" default="195.118"/>
-      <parameter name="LambdaMax" type="real" default="195.120"/>
-      <parameter name="DLambda" type="real" default="0.1"/>
+      <parameter name="Lambda" type="real" default="195.119"/>
       <parameter name="UseIonFrac" type="logical" default="F"/>
     </if>
     <if expr="$plotarea =~ /\b(3d|3d_)\b/ and $plotvar =~ /\bphx\b/">
       <parameter name="NamePhxTable" type="string" default="PHOTOEXC_6376.2900.dat"/>
-      <parameter name="LambdaMin" type="real" default="6376.289"/>
-      <parameter name="LambdaMax" type="real" default="6376.291"/>
-      <parameter name="DLambda" type="real" default="0.02"/>
+      <parameter name="Lambda" type="real" default="6376.2900"/>
       <parameter name="UseIonFrac" type="logical" default="F"/>
     </if>
     <if expr="$plotarea =~ /\b(3d|3d_)\b/ and $plotvar =~ /\bnbi\b/">
