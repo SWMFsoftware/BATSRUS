@@ -177,7 +177,7 @@ RAW			StringLog
 
 #SAVEPLOT
 4			nPlotFile
-spm dem idl_ascii		StringPlot
+los dem idl_ascii		StringPlot
 4			DnSavePlot
 -1.			DtSavePlot
 HGR			TypeCoord
@@ -194,7 +194,7 @@ HGR			TypeCoord
 5			LogTeMinDEM
 8			LogTeMaxDEM
 0.1			DLogTeDEM
-spm fux idl_ascii		StringPlot
+los fux idl_ascii		StringPlot
 4			DnSavePlot
 -1.			DtSavePlot
 HGR			TypeCoord
@@ -218,7 +218,7 @@ T			UseDoppler
 0.0			DLambdaIns
 F			UseIonFrac
 F			UseIonTemp
-spm nbi idl_ascii		StringPlot
+los nbi idl_ascii		StringPlot
 4			DnSavePlot
 -1.			DtSavePlot
 HGR			TypeCoord
@@ -235,7 +235,7 @@ HGR			TypeCoord
 SPECTRUM_chianti_tbl.dat		NameSpmTable
 F			UseIonFrac
 eit195response.out		NameResponse
-spm phx idl_ascii		StringPlot
+los phx idl_ascii		StringPlot
 4			DnSavePlot
 -1.			DtSavePlot
 HGR			TypeCoord

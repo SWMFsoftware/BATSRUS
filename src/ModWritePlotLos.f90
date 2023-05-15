@@ -209,11 +209,11 @@ contains
     rOuter2 = rOuter**2
 
     ! Do we calculate SPECTRUM-DEM/EM or flux or narroband image?
-    UseSpm = index(TypePlot_I(iFile),'spm')>0
     UseDEM = index(TypePlot_I(iFile),'dem')>0
     UseFlux = index(TypePlot_I(iFile),'fux')>0
     UsePhx = index(TypePlot_I(iFile),'phx')>0
     UseNbi = index(TypePlot_I(iFile),'nbi')>0
+    UseSpm = UseDEM .or. UseFlux .or. UsePhx .or. UseNbi
 
     if(NameThisComp == 'GM')then
        ! Do not convert to HGI
@@ -232,7 +232,6 @@ contains
 
     if(UseFlux .or. UseNbi .or. UsePhx) &
          call spectrum_read_table(iFile, UseNbi, UsePhx)
-
     if(UseSpm)then
        nPix_D          = nint(PlotRange_EI(1:2,iFile)/PlotDx_DI(1:2,iFile))+1
        aOffset         = xOffset_I(iFile)
@@ -695,6 +694,7 @@ contains
              LambdaMax = LambdaMax_I(iFile)
              LambdaMin = LambdaMin_I(iFile)
           end if
+
           select case(TypePlotFormat_I(iFile))
           case('idl')
              if(UseDEM)then

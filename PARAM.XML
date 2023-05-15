@@ -4405,7 +4405,6 @@ indices are not calculated.
 	<option name="shell ln(r)"  value="sln" />
 	<option name="shell lg(r)"  value="slg" />
 	<option name="box" />
-	<option name="spm" />
 	<option name="los" />
 	<option name="rfr" />
 	<option name="line" value="lin" />
@@ -4503,7 +4502,7 @@ indices are not calculated.
     <if expr="$plotarea =~ /\blos\b/ and $plotvar =~ /\bins\b/">
       <parameter name="StringsInstrument" type="string" length="$lLine"/>
     </if>
-    <if expr="$plotarea =~ /\blos\b/ and $plotvar !~ /\bins\b/">
+    <if expr="$plotarea =~ /\blos\b/ and $plotvar !~ /\bins\b/ and $plotvar !~ /\b(dem|fux|phx|nbi)\b/">
       <parameter name="ObsPosX" type="real" default="-215"/>
       <parameter name="ObsPosY" type="real" default="0"/>
       <parameter name="ObsPosZ" type="real" default="0"/>
@@ -4519,6 +4518,45 @@ indices are not calculated.
       <parameter name="NameLosTable" type="string" length="$lLine"
 		 if="$plotvar =~ /tbl/i"/>
     </if>
+    <if expr="$plotarea =~ /\blos\b/ and $plotvar =~ /\b(dem|fux|phx|nbi)\b/">
+      <parameter name="TypeCoord" type="string" length="3" default="HGR"/>
+      <parameter name="ObsPosX"     type="real" default="0"/>
+      <parameter name="ObsPosY"     type="real" default="0"/>
+      <parameter name="ObsPosZ"     type="real" default="0"/>
+      <parameter name="x0"  type="real"/>
+      <parameter name="y0"     type="real" />
+      <parameter name="xLen"  type="real" min="0" />
+      <parameter name="dX"     type="real" min="0"/>
+      <parameter name="yLen"  type="real" min="0" />
+      <parameter name="dY"     type="real" min="0"/>
+      <parameter name="TempMin" type="real" default="1e5"/>
+      <parameter name="LogTeMinDEM" type="real" default="4" if="$plotvar =~ /dem/i"/>
+      <parameter name="LogTeMaxDEM" type="real" default="7" if="$plotvar =~ /dem/i"/>
+      <parameter name="DLogTeDEM" type="real" default="0.1" if="$plotvar =~ /dem/i"/>
+      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseUnobserved" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="LambdaMin" type="real" default="10" if="$plotvar =~ /fux/i"/>
+      <parameter name="LambdaMax" type="real" default="1700" if="$plotvar =~ /fux/i"/>
+      <parameter name="DLambda" type="real" default="0.001" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseAlfven" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseDoppler" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="DLambdaIns" type="real" default="0.0" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="UseIonTemp" type="logical" default="F" if="$plotvar =~ /fux/i"/>
+      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat" if="$plotvar =~ /nbi/i"/>
+      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /nbi/i"/>
+      <parameter name="NameResponse" type="string" default="eit195response.dat" if="$plotvar =~ /nbi/i"/>
+      <parameter name="NamePhxTable" type="string" default="PHOTOEXC_6376.2900.dat" if="$plotvar =~ /phx/i"/>
+      <parameter name="LambdaMin" type="real" default="10" if="$plotvar =~ /phx/i"/>
+      <parameter name="LambdaMax" type="real" default="1700" if="$plotvar =~ /phx/i"/>
+      <parameter name="DLambda" type="real" default="0.001" if="$plotvar =~ /phx/i"/>
+      <parameter name="UseAlfven" type="logical" default="F" if="$plotvar =~ /phx/i"/>
+      <parameter name="UseDoppler" type="logical" default="F" if="$plotvar =~ /phx/i"/>
+      <parameter name="DLambdaIns" type="real" default="0.0" if="$plotvar =~ /phx/i"/>
+      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /phx/i"/>
+      <parameter name="UseIonTemp" type="logical" default="F" if="$plotvar =~ /phx/i"/>
+    </if>
+    
     <if expr="$plotarea =~ /\brfr\b/">
       <parameter name="ObsPosX" type="real" default="-215"/>
       <parameter name="ObsPosY" type="real" default="0"/>
@@ -4594,46 +4632,28 @@ indices are not calculated.
       <parameter name="yAngle" type="real" min="-360" max="360" default="0"/>
       <parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
     </if>
-    <if expr="$plotarea =~ /\bspm\b/">
-      <parameter name="TypeCoord" type="string" length="3" default="HGR"/>
-      <parameter name="ObsPosX"     type="real" default="0"/>
-      <parameter name="ObsPosY"     type="real" default="0"/>
-      <parameter name="ObsPosZ"     type="real" default="0"/>
-      <parameter name="x0"  type="real"/>
-      <parameter name="y0"     type="real" />
-      <parameter name="xLen"  type="real" min="0" />
-      <parameter name="dX"     type="real" min="0"/>
-      <parameter name="yLen"  type="real" min="0" />
-      <parameter name="dY"     type="real" min="0"/>
-      <parameter name="TempMin" type="real" default="1e5"/>
-      <parameter name="LogTeMinDEM" type="real" default="4" if="$plotvar =~ /dem/i"/>
-      <parameter name="LogTeMaxDEM" type="real" default="7" if="$plotvar =~ /dem/i"/>
-      <parameter name="DLogTeDEM" type="real" default="0.1" if="$plotvar =~ /dem/i"/>
-      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat" if="$plotvar =~ /fux/i"/>
-      <parameter name="UseUnobserved" type="logical" default="F" if="$plotvar =~ /fux/i"/>
-      <parameter name="LambdaMin" type="real" default="10" if="$plotvar =~ /fux/i"/>
-      <parameter name="LambdaMax" type="real" default="1700" if="$plotvar =~ /fux/i"/>
-      <parameter name="DLambda" type="real" default="0.001" if="$plotvar =~ /fux/i"/>
-      <parameter name="UseAlfven" type="logical" default="F" if="$plotvar =~ /fux/i"/>
-      <parameter name="UseDoppler" type="logical" default="F" if="$plotvar =~ /fux/i"/>
-      <parameter name="DLambdaIns" type="real" default="0.0" if="$plotvar =~ /fux/i"/>
-      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /fux/i"/>
-      <parameter name="UseIonTemp" type="logical" default="F" if="$plotvar =~ /fux/i"/>
-      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat" if="$plotvar =~ /nbi/i"/>
-      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /nbi/i"/>
-      <parameter name="NameResponse" type="string" default="eit195response.dat" if="$plotvar =~ /nbi/i"/>
-      <parameter name="NamePhxTable" type="string" default="PHOTOEXC_6376.2900.dat" if="$plotvar =~ /phx/i"/>
-      <parameter name="LambdaMin" type="real" default="10" if="$plotvar =~ /phx/i"/>
-      <parameter name="LambdaMax" type="real" default="1700" if="$plotvar =~ /phx/i"/>
-      <parameter name="DLambda" type="real" default="0.001" if="$plotvar =~ /phx/i"/>
-      <parameter name="UseAlfven" type="logical" default="F" if="$plotvar =~ /phx/i"/>
-      <parameter name="UseDoppler" type="logical" default="F" if="$plotvar =~ /phx/i"/>
-      <parameter name="DLambdaIns" type="real" default="0.0" if="$plotvar =~ /phx/i"/>
-      <parameter name="UseIonFrac" type="logical" default="F" if="$plotvar =~ /phx/i"/>
-      <parameter name="UseIonTemp" type="logical" default="F" if="$plotvar =~ /phx/i"/>
+    <if expr="$plotarea =~ /\b(3d|3d_)\b/ and $plotvar =~ /\bfux\b/">
+      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat"/>
+      <parameter name="UseUnobserved" type="logical" default="F"/>
+      <parameter name="LambdaMin" type="real" default="195.118"/>
+      <parameter name="LambdaMax" type="real" default="195.120"/>
+      <parameter name="DLambda" type="real" default="0.1"/>
+      <parameter name="UseIonFrac" type="logical" default="F"/>
+    </if>
+    <if expr="$plotarea =~ /\b(3d|3d_)\b/ and $plotvar =~ /\bphx\b/">
+      <parameter name="NamePhxTable" type="string" default="PHOTOEXC_6376.2900.dat"/>
+      <parameter name="LambdaMin" type="real" default="6376.289"/>
+      <parameter name="LambdaMax" type="real" default="6376.291"/>
+      <parameter name="DLambda" type="real" default="0.02"/>
+      <parameter name="UseIonFrac" type="logical" default="F"/>
+    </if>
+    <if expr="$plotarea =~ /\b(3d|3d_)\b/ and $plotvar =~ /\bnbi\b/">
+      <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat"/>
+      <parameter name="UseIonFrac" type="logical" default="F"/>
+      <parameter name="NameNbiTable" type="string" default="eit195response.out"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|sln|slg|los|rfr|lin|eqr|eqb|spm)\b/)" />
+	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|sln|slg|los|rfr|lin|eqr|eqb)\b/)" />
     <if expr="$plotvar =~ /\bvar\b/i">
       <parameter name="NameVars" type="string" length="$lLine"/>
       <parameter name="NamePars" type="string" length="$lLine"
@@ -4786,7 +4806,7 @@ HGR                     TypeCoordPlot
 0.0                     xAngle [deg]
 90.0                    yAngle [deg]
 0.0                     zAngle [deg]
-spm dem idl_ascii       StringPlot
+los dem idl_ascii       StringPlot
 4                       DnSavePlot
 -1.                     DtSavePlot
 HGR                     TypeCoord
@@ -4803,7 +4823,7 @@ HGR                     TypeCoord
 5                       LogTeMinDEM
 8                       LogTeMaxDEM
 0.1                     DLogTeDEM
-spm fux idl_ascii       StringPlot
+los fux idl_ascii       StringPlot
 4                       DnSavePlot
 -1.                     DtSavePlot
 HGR                     TypeCoord
@@ -4827,7 +4847,7 @@ T                       UseDoppler
 0.0                     DLambdaIns
 F                       UseIonFrac
 F                       UseIonTemp
-spm nbi idl_ascii       StringPlot                                                        
+los nbi idl_ascii       StringPlot                                                        
 4                       DnSavePlot               
 -1.                     DtSavePlot
 HGR                     TypeCoord
@@ -4844,7 +4864,7 @@ HGR                     TypeCoord
 SPECTRUM_chianti_tbl.dat    NameSpmTable
 F                       UseIonFrac
 eit195response.out      NameResponse
-spm phx idl_ascii                 StringPlot
+los phx idl_ascii                 StringPlot
 4			DnSavePlot
 -1.			DtSavePlot
 HGR			TypeCoord
@@ -4955,7 +4975,6 @@ sln   - spherical shell with ln(r) radial coordinate
 slg   - spherical shell with log10(r) radial coordinate
 box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
-spm   - line of sight integrated plot for spectra (FUX), DEM/EM, narrowband image (NBI), phx for photoexcitation
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
@@ -5016,13 +5035,13 @@ values or as non-dimensional values:
          pars: mu
  'tbl' - vars: listed in the LOS table file                   (PlotArea='los' only)
          pars: mu
- 'dem' - vars: DEM, EM                                        (PlotArea='spm' only)
+ 'dem' - vars: DEM, EM                                        (PlotArea='los' only)
          pars: rbody
- 'fux' - vars: flux                                           (PlotArea='spm' only)
+ 'fux' - vars: flux
          pars: rbody
- 'nbi' - vars: intensity                                      (PlotArea='spm' only)
+ 'nbi' - vars: intensity
          pars: rbody
- 'phx' - vars: flux                                           (PlotArea='spm' only)
+ 'phx' - vars: flux
          pars: rbody
  'int' - vars: 1/B n/B p/B                                    (PlotArea='lcb' only)
          pars:
