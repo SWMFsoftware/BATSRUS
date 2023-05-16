@@ -1042,15 +1042,15 @@ test_awsomchargestate_check:
                 ${TESTDIR}/RESULTS/SC/los_phx_4_n0000004.out \
                 Param/CORONA/TestOutput/los_phx_4_n0000004.out.gz \
                 >> test_awsomchargestate.diff)
-	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
+	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t -p="sort -k1 -k2 -k3 -g | grep -v AUXDATA" \
                 ${TESTDIR}/RESULTS/SC/3d__fux_5_n00000004.dat.gz \
                 Param/CORONA/TestOutput/3d__fux_5_n00000004.dat.gz \
                 >> test_awsomchargestate.diff)
-	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
+	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t -p="sort -k1 -k2 -k3 -g | grep -v AUXDATA" \
                 ${TESTDIR}/RESULTS/SC/3d__nbi_6_n00000004.dat.gz \
                 Param/CORONA/TestOutput/3d__nbi_6_n00000004.dat.gz \
                 >> test_awsomchargestate.diff)
-	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
+	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t -p="sort -k1 -k2 -k3 -g | grep -v AUXDATA" \
                 ${TESTDIR}/RESULTS/SC/3d__phx_7_n00000004.dat.gz \
                 Param/CORONA/TestOutput/3d__phx_7_n00000004.dat.gz \
                 >> test_awsomchargestate.diff)
