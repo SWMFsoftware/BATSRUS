@@ -687,7 +687,7 @@ contains
     ! When Gint becomes negative due to extrapolation -> move to next
     if(Gint<=0)Gint = 0.0
 
-    Emission = Gint * (10.0**LogNe)**2
+    Emission = Gint * (10.0**LogNe)**2 ![erg s-1 cm-3]
 
 #endif
   end subroutine spectrum_calc_emission

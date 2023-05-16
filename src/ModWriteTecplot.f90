@@ -2397,6 +2397,12 @@ contains
        case('ew','erad')
           NameTecVar = String
           NameUnit   = NameTecUnit_V(UnitEnergydens_)
+       case('emiss')
+          NameTecVar = 'emiss'
+          NameUnit = '[erg s^-1 cm^-3]'
+       case('intensity')
+          NameTecVar = 'intensity'
+          NameUnit = '[DN s^-1 cm^-3]'
        case default
           ! Set the default or user defined values
           NameTecVar = NameVarUserTec_I(iPlotVar)

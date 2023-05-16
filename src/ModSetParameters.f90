@@ -1405,16 +1405,14 @@ contains
                 if(index(StringPlot, 'fux')>0)then
                    call read_var('NameSpmTable',NameSpmTable_I(iFile))
                    call read_var('UseUnobserved',UseUnobserved_I(iFile))
-                   call read_var('LambdaMin', LambdaMin_I(iFile))
-                   call read_var('LambdaMax', LambdaMax_I(iFile))
-                   call read_var('DLambda',   DLambda_I(iFile))
+                   call read_var('Lambda',   LambdaMin_I(iFile))
                    call read_var('UseIonFrac',UseIonFrac_I(iFile))
+                   LambdaMax_I(iFile) = LambdaMin_I(iFile)
                 elseif(index(StringPlot, 'phx')>0)then
                    call read_var('NamePhxTable',NamePhxTable_I(iFile))
-                   call read_var('LambdaMin', LambdaMin_I(iFile))
-                   call read_var('LambdaMax', LambdaMax_I(iFile))
-                   call read_var('DLambda',   DLambda_I(iFile))
+                   call read_var('Lambda',   LambdaMin_I(iFile))
                    call read_var('UseIonFrac',UseIonFrac_I(iFile))
+                   LambdaMax_I(iFile) = LambdaMin_I(iFile)
                 elseif(index(StringPlot, 'nbi')>0)then
                    call read_var('NameSpmTable',NameSpmTable_I(iFile))
                    call read_var('UseIonFrac',UseIonFrac_I(iFile))
@@ -1579,13 +1577,21 @@ contains
                   .or. index(StringPlot,'fux') > 0)then
                 TypePlotVar='fux'
                 IsDimensionalPlot_I(iFile) = .true.
-                StringPlotVar_I(iFile)='flux'
+                if(TypePlotArea=='los')then
+                   StringPlotVar_I(iFile)='flux'
+                else
+                   StringPlotVar_I(iFile)='emiss'
+                end if
                 StringPlotParam_I(iFile)='rbody'
              elseif(   index(StringPlot,'PHX') > 0 &
                   .or. index(StringPlot,'phx') > 0)then
                 TypePlotVar='phx'
                 IsDimensionalPlot_I(iFile) = .true.
-                StringPlotVar_I(iFile)='flux'
+                if(TypePlotArea=='los')then
+                   StringPlotVar_I(iFile)='flux'
+                else
+                   StringPlotVar_I(iFile)='emiss'
+                end if
                 StringPlotParam_I(iFile)='rbody'
              elseif(   index(StringPlot,'NBI') > 0 &
                   .or. index(StringPlot,'nbi') > 0)then
