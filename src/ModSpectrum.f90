@@ -589,7 +589,7 @@ contains
     use ModAdvance, ONLY: UseElectronPressure
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModIO, ONLY: DLambda_I, LambdaMin_I, LambdaMax_I
-    
+
     real, intent(in)      :: State_V(nVar)
     integer,intent(in)    :: iFile, nLambda
     logical, intent(in)   :: UseNbi
@@ -616,7 +616,7 @@ contains
          LambdaEnd, FluxMono, LambdaMin, LambdaDist, Phi, Flux, &
          DLambda, DLambdaSI2, InvNorm, InvSigma2
     integer                        :: iBegin, iEnd, iBin
-    
+
 #ifndef SCALAR
     character(len=*), parameter:: NameSub = 'spectrum_calc_emission'
     !--------------------------------------------------------------------------
@@ -665,26 +665,26 @@ contains
 
        if(UseNbi)then
           Tlos = State_V(p_)/State_V(Rho_)* No2Si_V(UnitTemperature_)
-          ! Calculate the thermal broadening                          
+          ! Calculate the thermal broadening
           Aion     = LineTable_I(iLine)%Aion
           Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)
 
-          ! Convert resting wavelength to SI                    
+          ! Convert resting wavelength to SI
           Lambda   = LineTable_I(iLine)%LineWavelength
           LambdaSI = Lambda * 1e-10
 
-          ! Add thermal and non-thermal broadening                    
+          ! Add thermal and non-thermal broadening
           DLambdaSI2 = LambdaSI**2 * Uth2/cLightSpeed**2
 
-          ! Convert [m] --> [A]                                      
+          ! Convert [m] --> [A]
           DLambdaSI = sqrt(DLambdaSI2)
           DLambda   = DLambdaSI * 1e10
 
-          ! Gaussian profile                                       
+          ! Gaussian profile
           InvNorm   = 1/(sqrt(2*cPi) * DLambda)
           InvSigma2 = 1/(2*DLambda**2)
 
-          ! Gaussian truncated to +/-5 sigma in [A]          
+          ! Gaussian truncated to +/-5 sigma in [A]
           LambdaBegin = Lambda - 5*DLambda
           LambdaEnd   = Lambda + 5*DLambda
 
@@ -725,11 +725,11 @@ contains
        if(Gint<=0)Gint = 0.0
 
        if(UseNbi)then
-          FluxMono = Gint * (10.0**LogNe)**2 
+          FluxMono = Gint * (10.0**LogNe)**2
 
-          ! Disperse line onto lamba bins          
-          ! Find the starting/ending wavelength bins      
-          ! Find the corresponding wavelength bin for starting wavelength 
+          ! Disperse line onto lamba bins
+          ! Find the starting/ending wavelength bins
+          ! Find the corresponding wavelength bin for starting wavelength
           if(LambdaMin_I(iFile)==LambdaMax_I(iFile))then
              LambdaMin=LambdaMin_I(iFile)-nLambda*0.5*DLambda_I(iFile)
           else
@@ -739,7 +739,7 @@ contains
           iEnd = nint((LambdaEnd-LambdaMin)/DLambda_I(iFile))+1
 
           ! Update bins between begin and end indices by adding the Gaussian
-          ! distribution                           
+          ! distribution
           do iBin = max(1,iBegin), min(nLambda,iEnd)
              ! Get wavelength from the center of the bin
              LambdaBin = LambdaMin+DLambda_I(iFile)*(iBin-1)
@@ -759,7 +759,7 @@ contains
           Emission = Gint * (10.0**LogNe)**2 ![erg s-1 cm-3]
        endif
     end do
-    
+
 #endif
   end subroutine spectrum_calc_emission
   !============================================================================
