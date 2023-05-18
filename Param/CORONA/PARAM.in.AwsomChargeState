@@ -268,9 +268,10 @@ SPECTRUM_chianti_tbl.dat		NameSpmTable
 F			UseUnobserved
 195.119			Lambda
 F			UseIonFrac
-3d nbi tec		StringPlot !use tcp
+y=0 nbi idl_ascii		StringPlot !use tcp
 4			DnSavePlot
 -1.			DtSavePlot
+-1			DxSavePlot
 SPECTRUM_chianti_tbl.dat		NameSpmTable
 F			UseIonFrac
 eit195response.out		NameNbiTable

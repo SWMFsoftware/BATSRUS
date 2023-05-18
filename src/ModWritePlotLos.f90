@@ -445,7 +445,7 @@ contains
           nLambda=100
        else
           nLambda = &
-               nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(IFile))+1
+               nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(iFile))+1
        endif
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
@@ -453,7 +453,7 @@ contains
             Spectrum_I(nLambda))
     else
        nLambda = &
-            nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(IFile))+1
+            nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(iFile))+1
        allocate( &
             ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),1), &
             Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),1))

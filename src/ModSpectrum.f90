@@ -579,17 +579,19 @@ contains
   end subroutine spectrum_calc_flux
   !============================================================================
 
-  subroutine spectrum_calc_emission(State_V, UseNbi,Emission,r)
+  subroutine spectrum_calc_emission(iFile,State_V, UseNbi,Emission,nLambda,r)
 
-    use ModConst, ONLY: cProtonMass
+    use ModConst, ONLY: cProtonMass, cLightSpeed, cBoltzmann, cPi
     use ModInterpolate, ONLY: bilinear
     use ModVarIndexes, ONLY: nVar, Rho_,Pe_, p_, nElement, &
-    ChargeStateFirst_, ChargestateLast_, NameVar_V, nChargeState_I
+         ChargeStateFirst_, ChargestateLast_, NameVar_V, nChargeState_I
     use ModPhysics, ONLY: No2Si_V, UnitTemperature_, UnitRho_
     use ModAdvance, ONLY: UseElectronPressure
     use ModLookupTable, ONLY: interpolate_lookup_table
-
+    use ModIO, ONLY: DLambda_I, LambdaMin_I, LambdaMax_I
+    
     real, intent(in)      :: State_V(nVar)
+    integer,intent(in)    :: iFile, nLambda
     logical, intent(in)   :: UseNbi
     real, intent(out)   :: Emission
     real, intent(in), optional :: r
@@ -608,10 +610,17 @@ contains
     integer                        :: iLine
     real                        :: Value_I(2)
 
+    ! NBI variables
+    real                           :: Tlos, Aion, Uth2, LambdaBin, &
+         Lambda, LambdaSI, DLambdaSI, LambdaBegin,&
+         LambdaEnd, FluxMono, LambdaMin, LambdaDist, Phi, Flux, &
+         DLambda, DLambdaSI2, InvNorm, InvSigma2
+    integer                        :: iBegin, iEnd, iBin
+    
 #ifndef SCALAR
     character(len=*), parameter:: NameSub = 'spectrum_calc_emission'
     !--------------------------------------------------------------------------
-
+    Emission = 0
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
 
     LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
@@ -640,55 +649,117 @@ contains
        end do
     end if
 
-    iLine = 1
+    if(.not.UseNbi)nLineAll = 1
 
-    if(UseIonFrac .and. ChargeStateFirst_>1)then
-       ! Pair index of chianti table to state variable
-       IsFound = .false.
-       do iVarIon=ChargestateFirst_,ChargestateLast_
-          if(trim(LineTable_I(iLine)%NameIon)==trim(NameVar_V(iVarIon)))then
-             IsFound = .true.
-             EXIT
-          end if
-       enddo
-    end if
-
-    ! Photoexcitation
-    if(present(r))then
-       call interpolate_lookup_table(iTablePhx, LogTe, LogNe, r, &
-            Value_I, DoExtrapolate = .false.)
-       Gint = 10.0**Value_I(1)
-
-       if(UseIonFrac .and. IsFound)then
-          EquilIonFrac = 10.0**Value_I(2)
-          Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
+    do iLine = 1, nLineAll
+       if(UseIonFrac .and. ChargeStateFirst_>1)then
+          ! Pair index of chianti table to state variable
+          IsFound = .false.
+          do iVarIon=ChargestateFirst_,ChargestateLast_
+             if(trim(LineTable_I(iLine)%NameIon)==trim(NameVar_V(iVarIon)))then
+                IsFound = .true.
+                EXIT
+             end if
+          enddo
        end if
-    else
-       ! Get the contribution function
-       iNMin  = LineTable_I(iLine)%iMin
-       jTMin  = LineTable_I(iLine)%jMin
-       iNMax  = LineTable_I(iLine)%iMax
-       jTMax  = LineTable_I(iLine)%jMax
 
-       Gint = bilinear(LineTable_I(iLine)%LogG_II(:,:), &
-            iNMin, iNMax, jTMin, jTMax, &
-            [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
-       Gint = 10.0**Gint
+       if(UseNbi)then
+          Tlos = State_V(p_)/State_V(Rho_)* No2Si_V(UnitTemperature_)
+          ! Calculate the thermal broadening                          
+          Aion     = LineTable_I(iLine)%Aion
+          Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)
 
-       if(UseIonFrac .and. IsFound)then
-          EquilIonFrac = bilinear(LineTable_I(iLine)%LogIonFrac_II(:,:), &
+          ! Convert resting wavelength to SI                    
+          Lambda   = LineTable_I(iLine)%LineWavelength
+          LambdaSI = Lambda * 1e-10
+
+          ! Add thermal and non-thermal broadening                    
+          DLambdaSI2 = LambdaSI**2 * Uth2/cLightSpeed**2
+
+          ! Convert [m] --> [A]                                      
+          DLambdaSI = sqrt(DLambdaSI2)
+          DLambda   = DLambdaSI * 1e10
+
+          ! Gaussian profile                                       
+          InvNorm   = 1/(sqrt(2*cPi) * DLambda)
+          InvSigma2 = 1/(2*DLambda**2)
+
+          ! Gaussian truncated to +/-5 sigma in [A]          
+          LambdaBegin = Lambda - 5*DLambda
+          LambdaEnd   = Lambda + 5*DLambda
+
+       end if
+
+       ! Photoexcitation
+       if(present(r))then
+          call interpolate_lookup_table(iTablePhx, LogTe, LogNe, r, &
+               Value_I, DoExtrapolate = .false.)
+          Gint = 10.0**Value_I(1)
+
+          if(UseIonFrac .and. IsFound)then
+             EquilIonFrac = 10.0**Value_I(2)
+             Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
+          end if
+       else
+          ! Get the contribution function
+          iNMin  = LineTable_I(iLine)%iMin
+          jTMin  = LineTable_I(iLine)%jMin
+          iNMax  = LineTable_I(iLine)%iMax
+          jTMax  = LineTable_I(iLine)%jMax
+
+          Gint = bilinear(LineTable_I(iLine)%LogG_II(:,:), &
                iNMin, iNMax, jTMin, jTMax, &
                [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
-          EquilIonFrac = 10.0**EquilIonFrac
-          Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
+          Gint = 10.0**Gint
+
+          if(UseIonFrac .and. IsFound)then
+             EquilIonFrac = bilinear(LineTable_I(iLine)%LogIonFrac_II(:,:), &
+                  iNMin, iNMax, jTMin, jTMax, &
+                  [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
+             EquilIonFrac = 10.0**EquilIonFrac
+             Gint = Gint/EquilIonFrac * LocalState_V(iVarIon)
+          end if
        end if
-    end if
 
-    ! When Gint becomes negative due to extrapolation -> move to next
-    if(Gint<=0)Gint = 0.0
+       ! When Gint becomes negative due to extrapolation -> move to next
+       if(Gint<=0)Gint = 0.0
 
-    Emission = Gint * (10.0**LogNe)**2 ![erg s-1 cm-3]
+       if(UseNbi)then
+          FluxMono = Gint * (10.0**LogNe)**2 
 
+          ! Disperse line onto lamba bins          
+          ! Find the starting/ending wavelength bins      
+          ! Find the corresponding wavelength bin for starting wavelength 
+          if(LambdaMin_I(iFile)==LambdaMax_I(iFile))then
+             LambdaMin=LambdaMin_I(iFile)-nLambda*0.5*DLambda_I(iFile)
+          else
+             LambdaMin=LambdaMin_I(iFile)
+          end if
+          iBegin = nint((LambdaBegin-LambdaMin)/DLambda_I(iFile))+1
+          iEnd = nint((LambdaEnd-LambdaMin)/DLambda_I(iFile))+1
+
+          ! Update bins between begin and end indices by adding the Gaussian
+          ! distribution                           
+          do iBin = max(1,iBegin), min(nLambda,iEnd)
+             ! Get wavelength from the center of the bin
+             LambdaBin = LambdaMin+DLambda_I(iFile)*(iBin-1)
+
+             ! Get distance from peak wavelength in SI
+             LambdaDist = Lambda - LambdaBin
+
+             ! Calculate Gaussian of the line
+             Phi = InvNorm * exp(-LambdaDist**2 * InvSigma2)
+
+             ! Calculate total monochromatic flux
+             Flux = FluxMono*Phi
+             Emission = Emission + Flux*Response_I(iBin)*DLambda_I(iFile)
+
+          end do
+       else
+          Emission = Gint * (10.0**LogNe)**2 ![erg s-1 cm-3]
+       endif
+    end do
+    
 #endif
   end subroutine spectrum_calc_emission
   !============================================================================
