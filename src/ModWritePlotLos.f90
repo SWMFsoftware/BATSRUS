@@ -573,7 +573,6 @@ contains
        if(TypePlotFormat_I(iFile)=='tec' .or. TypePlotFormat_I(iFile)=='tcp') then
           call open_file(FILE=NameFile)
 
-
           if(UseDEM)then
              write(UnitTmp_,*) 'DEM integrals'
           elseif(UseNbi)then
@@ -691,7 +690,7 @@ contains
                    end do
                 end do
              end do
-          else   
+          else
              do iPix = 1, nPix_D(1)
                 aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
                 do jPix = 1, nPix_D(2)

@@ -1864,7 +1864,7 @@ contains
           end do; end do; end do
        case('emiss')
           Emission = 0.
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI      
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(DoPlotPhx)then
                 call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
                   DoPlotNbi, Emission, 1, r_GB(i,j,k,iBlock))
