@@ -71,7 +71,7 @@ contains
     use ModGeometry, ONLY: &
          Coord111_DB, nMirror_D, RadiusMin, rMin_B
     use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
-         UnitTemperature_
+         UnitTemperature_, UnitT_
     use ModIO
     use ModIoUnit, ONLY: UnitTmp_
     use ModAdvance, ONLY : State_VGB
@@ -179,10 +179,10 @@ contains
 
     ! SPECTRUM - flux/nbi calculation
     logical            :: UseFlux = .false., UseNbi = .false., UsePhx = .false.
-    integer            :: nLambda = 1
+    integer            :: nLambda = 1, kPix
     real               :: LosDir_D(3)
     real,allocatable   :: Spectrum_I(:)
-    real               :: LambdaMin, LambdaMax
+    real               :: LambdaMin, LambdaMax, cPix
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
@@ -379,6 +379,9 @@ contains
     case('tec')
        call get_los_variable_tec(iFile,nPlotVar,NamePlotVar_V,StringUnitTec)
        if(DoTest .and. iProc==0) write(*,*)StringUnitTec
+    case('tcp')
+       call get_los_variable_tec(iFile,nPlotVar,NamePlotVar_V,StringUnitTec)
+       if(DoTest .and. iProc==0) write(*,*)StringUnitTec
     case('idl')
        call get_los_unit_idl(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, &
             .false.)
@@ -541,6 +544,8 @@ contains
        select case(TypePlotFormat_I(iFile))
        case('tec')
           StringExtension='.dat'
+       case('tcp')
+          StringExtension='.dat'
        case('idl')
           StringExtension='.out'
        case('hdf')
@@ -570,13 +575,40 @@ contains
 
        ! write header file
 
-       if(TypePlotFormat_I(iFile)=='tec') then
+       if(TypePlotFormat_I(iFile)=='tec' .or. TypePlotFormat_I(iFile)=='tcp') then
           call open_file(FILE=NameFile)
 
-          write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
+
+          if(UseDEM)then
+             write(UnitTmp_,*) 'DEM integrals'
+          elseif(UseNbi)then
+             write(UnitTmp_,*) 'Narrowband Image'
+          elseif(UseFlux)then
+             write(UnitTmp_,*) 'Spectrum flux'
+          elseif(UsePhx)then
+             write(UnitTmp_,*) 'Flux with Photoexcitation'
+          else
+             write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
+          end if
+
           write(UnitTmp_,'(a)')trim(StringUnitTec)
-          write(UnitTmp_,*) 'ZONE T="LOS Image"', &
-               ', I=',nPix_D(1),', J=',nPix_D(2),', K=1, F=POINT'
+
+          if(UseDEM)then
+             write(UnitTmp_,*) 'ZONE T="DEM Image"', &
+                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=',nLogTeDEM,', F=POINT'
+          elseif(UseNbi)then
+             write(UnitTmp_,*) 'ZONE T="NBI Image"', &
+                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=1, F=POINT'
+          elseif(UseFlux)then
+             write(UnitTmp_,*) 'ZONE T="Spectrum Image"', &
+                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=',nLambda,', F=POINT'
+          elseif(UsePhx)then
+             write(UnitTmp_,*) 'ZONE T="PHX Image"', &
+                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=',nLambda,', F=POINT'
+          else
+             write(UnitTmp_,*) 'ZONE T="LOS Image"', &
+                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=1, F=POINT'
+          endif
 
           ! Write Auxilliary header info, which is useful for EUV images.
           ! Makes it easier to identify, and automatically process synthetic
@@ -607,31 +639,80 @@ contains
                'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
 
           ! NAMELOSTABLE
-          if (UseTableGen) write(UnitTmp_,'(a,a,a)') &
+          if(UseTableGen) write(UnitTmp_,'(a,a,a)') &
                'AUXDATA NAMELOSTABLE="',trim(NameLosTable_I(iFile)),'"'
+          if(UseNbi)write(UnitTmp_,'(a,a,a)') &
+               'AUXDATA NAMELOSTABLE="',trim(NameNbiTable_I(iFile)),'"'
+          if(UseFlux .or. UsePhx)write(UnitTmp_,'(a,E20.13,a)') &
+               'AUXDATA LAMBDAMIN="',LambdaMin_I(iFile),'"'
 
-          ! HGIXYZ
-          write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
-          write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
+          if(UseDEM .or. UseNbi .or. UseNbi .or. UsePhx)then
+             write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+             write(UnitTmp_,'(a,a,a)') &
+                  'AUXDATA TYPECOORD="',trim(TypeCoordPlot_I(iFile)),'"'
+             write(UnitTmp_,'(a,a,a)') &
+                  'AUXDATA OBSPOSXYZ="',trim(adjustl(StringTmp)),'"'
+          else
+             ! HGIXYZ
+             write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+             write(UnitTmp_,'(a,a,a)') &
+                  'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
+          end if
 
           ! Write point values
-          do iPix = 1, nPix_D(1)
-             aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
-             do jPix = 1, nPix_D(2)
-                bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
-
-                if (IsDimensionalPlot_I(iFile)) then
-                   write(UnitTmp_,fmt="(30(E14.6))") &
-                        aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), &
-                        Image_VIII(1:nPlotVar,iPix,jPix,1)
-                else
-                   write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, &
-                        Image_VIII(1:nPlotVar,iPix,jPix,1)
-                end if
-
+          if(UseDEM)then
+             do iPix = 1, nPix_D(1)
+                aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+                do jPix = 1, nPix_D(2)
+                   bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+                   do kPix = 1,nLogTeDEM
+                      cPix = (kPix - 1) * DLogTeDEM_I(iFile) + LogTeMinDEM_I(iFile)
+                      if (IsDimensionalPlot_I(iFile)) then
+                         write(UnitTmp_,fmt="(30(E14.6))") &
+                              aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), cPix*No2Io_V(UnitT_),&
+                              Image_VIII(1:nPlotVar,iPix,jPix,kPix)
+                      else
+                         write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, cPix,&
+                              Image_VIII(1:nPlotVar,iPix,jPix,kPix)
+                      end if
+                   end do
+                end do
              end do
-          end do
+          elseif(UseFlux)then
+             do iPix = 1, nPix_D(1)
+                aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+                do jPix = 1, nPix_D(2)
+                   bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+                   do kPix = 1,nLambda
+                      cPix = (kPix - 1) * DLambda_I(iFile) + LambdaMin_I(iFile)
+                      if (IsDimensionalPlot_I(iFile)) then
+                         write(UnitTmp_,fmt="(30(E14.6))") &
+                              aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), cPix,&
+                              Image_VIII(1:nPlotVar,iPix,jPix,kPix)
+                      else
+                         write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, cPix,&
+                              Image_VIII(1:nPlotVar,iPix,jPix,kPix)
+                      end if
+                   end do
+                end do
+             end do
+          else   
+             do iPix = 1, nPix_D(1)
+                aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+                do jPix = 1, nPix_D(2)
+                   bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+                   if (IsDimensionalPlot_I(iFile)) then
+                      write(UnitTmp_,fmt="(30(E14.6))") &
+                           aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), &
+                           Image_VIII(1:nPlotVar,iPix,jPix,1)
+                   else
+                      write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, &
+                           Image_VIII(1:nPlotVar,iPix,jPix,1)
+                   end if
+                end do
+             end do
+          end if
+
           call close_file
        else
           ! description of file contains units, physics and dimension
@@ -2026,7 +2107,7 @@ contains
     ! Using plot var information set the units for Tecplot files
 
     use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
-    use ModIO, ONLY: IsDimensionalPlot_I
+    use ModIO, ONLY: IsDimensionalPlot_I,TypePlot_I
 
     ! Arguments
 
@@ -2047,8 +2128,19 @@ contains
             trim(NameTecUnit_V(UnitX_))
        write(StringUnitTec,'(a)') trim(StringUnitTec)//'", "Y '//&
             trim(NameTecUnit_V(UnitX_))
+       if(index(TypePlot_I(iFile),'fux')>0 .or. index(TypePlot_I(iFile),'phx')>0)then
+          write(StringUnitTec,'(a)') trim(StringUnitTec)//'", "Lambda [A]'
+       elseif(index(TypePlot_I(iFile),'dem')>0)then
+          write(StringUnitTec,'(a)')'VARIABLES = "X", "Y", "logT [K]"'
+       end if
     else
-       write(StringUnitTec,'(a)') 'VARIABLES = "X", "Y'
+       if(index(TypePlot_I(iFile),'fux')>0 .or. index(TypePlot_I(iFile),'phx')>0)then
+          write(StringUnitTec,'(a)')'VARIABLES = "X", "Y", "Lambda"'
+       elseif(index(TypePlot_I(iFile),'dem')>0)then
+          write(StringUnitTec,'(a)')'VARIABLES = "X", "Y", "logT"'
+       else
+          write(StringUnitTec,'(a)') 'VARIABLES = "X", "Y'
+       end if
     end if
 
     do iVar = 1, nPlotVar
@@ -2089,6 +2181,18 @@ contains
           case('sxr')
              write(StringUnitTec,'(a)') &
                   trim(StringUnitTec)//'`sxr [DN/S]'//' '
+          case('dem')
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//' '//'DEM [cm^-5 K^-1]'
+          case('em')
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//' '//'EM [cm^-3]'
+          case('flux')
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//' '//'Flux [erg sr^-1 cm^-2 A^-1 s^-1]'
+          case('intensity')
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//' '//'Intensity [DN/s]'
 
              ! DEFAULT FOR A BAD SELECTION
           case default
@@ -2127,6 +2231,18 @@ contains
           case('sxr')
              write(StringUnitTec,'(a)') &
                   trim(StringUnitTec)//'sxr'
+          case('dem')
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//' '//'dem'
+          case('em')
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//' '//'em'
+          case('flux')
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//' '//'flux'
+          case('intensity')
+             write(StringUnitTec,'(a)') &
+                  trim(StringUnitTec)//' '//'intensity'
 
              ! DEFAULT FOR A BAD SELECTION
           case default
