@@ -1788,6 +1788,9 @@ contains
     call select_region(iBlock)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       ! Extract conservative variables
+       State_V = State_VGB(:,i,j,k,iBlock)
+
        ! Calculate Rho, U, U^2, Temp, and UTh^2 for source terms
        call calc_source_inputs( &
           i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
@@ -1882,7 +1885,7 @@ contains
          end do
 
          if(.not.IsMhd)then
-            write(*,*) ' HeatPu3   ', HeatPu3
+            write(*,*) ' HeatPu3=', HeatPu3
          end if
       end if
 

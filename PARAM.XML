@@ -4632,24 +4632,24 @@ indices are not calculated.
       <parameter name="yAngle" type="real" min="-360" max="360" default="0"/>
       <parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
     </if>
-    <if expr="$plotarea =~ /\b(3d|3d_)\b/ and $plotvar =~ /\bfux\b/">
+    <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
+	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|sln|slg|los|rfr|lin|eqr|eqb)\b/)" />
+    <if expr="$plotarea !~ /\blos\b/ and $plotvar =~ /\bfux\b/">
       <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat"/>
       <parameter name="UseUnobserved" type="logical" default="F"/>
       <parameter name="Lambda" type="real" default="195.119"/>
       <parameter name="UseIonFrac" type="logical" default="F"/>
     </if>
-    <if expr="$plotarea =~ /\b(3d|3d_)\b/ and $plotvar =~ /\bphx\b/">
+    <if expr="$plotarea !~ /\blos\b/ and $plotvar =~ /\bphx\b/">
       <parameter name="NamePhxTable" type="string" default="PHOTOEXC_6376.2900.dat"/>
       <parameter name="Lambda" type="real" default="6376.2900"/>
       <parameter name="UseIonFrac" type="logical" default="F"/>
     </if>
-    <if expr="$plotarea =~ /\b(3d|3d_)\b/ and $plotvar =~ /\bnbi\b/">
+    <if expr="$plotarea !~ /\blos\b/ and $plotvar =~ /\bnbi\b/">
       <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat"/>
       <parameter name="UseIonFrac" type="logical" default="F"/>
       <parameter name="NameNbiTable" type="string" default="eit195response.out"/>
     </if>
-    <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|sln|slg|los|rfr|lin|eqr|eqb)\b/)" />
     <if expr="$plotvar =~ /\bvar\b/i">
       <parameter name="NameVars" type="string" length="$lLine"/>
       <parameter name="NamePars" type="string" length="$lLine"

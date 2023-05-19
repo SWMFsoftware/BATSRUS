@@ -433,7 +433,6 @@ contains
           do iVar = 1 , nPlotVar
              PlotVar_VGB(iVar,:,:,:,iBlock) = PlotVar_GV(:,:,:,iVar)
           end do
-
        end do
 
        ! Pass plotting variables to fill ghost cell values
@@ -1039,7 +1038,7 @@ contains
     use ModFieldTrace, ONLY: Trace_DSNB
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
-         IsDimensionalPlot_I, Plot_
+         IsDimensionalPlot_I, Plot_, DLambda_I, LambdaMax_I, LambdaMin_I
     use ModHallResist, ONLY: UseHallResist, &
          set_hall_factor_cell, HallFactor_C, IsHallBlock
     use ModResistivity, ONLY: Eta_GB, Eta0
@@ -1106,7 +1105,9 @@ contains
     ! Passed to and set by get_face_curl
     logical:: IsNewBlockCurrent
 
+    ! Narroband images
     real :: Emission
+    integer :: nLambda
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
@@ -1159,13 +1160,21 @@ contains
        UsePlotVarBody_V(iVar) = .false.
 
        if(DoPlotSpm)then
+          Emission = 0.
+          if(DoPlotNbi)then
+             nLambda = &
+                  nint((LambdaMax_I(iPlotFile+plot_)-&
+                  LambdaMin_I(iPlotFile+plot_))/DLambda_I(iPlotFile+plot_))+1
+          else
+             nLambda= 1
+          end if
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(DoPlotPhx)then
-                call spectrum_calc_emission(State_VGB(:,i,j,k,iBlock), &
-                     DoPlotNbi, Emission, r_GB(i,j,k,iBlock))
+                call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
+                     DoPlotNbi, Emission, nLambda, r_GB(i,j,k,iBlock))
              else
-                call spectrum_calc_emission(State_VGB(:,i,j,k,iBlock), &
-                     DoPlotNbi, Emission)
+                call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
+                     DoPlotNbi, Emission, nLambda)
              end if
              PlotVar_GV(i,j,k,iVar) = Emission
           end do; end do; end do

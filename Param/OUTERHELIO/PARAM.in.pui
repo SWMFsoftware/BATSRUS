@@ -249,6 +249,11 @@ F 			UseSourceNe4
 #ELECTRONIMPACT
 T                       UseElectronImpact
 
+#PU3HEATING
+T			UsePu3Heating
+1e7			TempPu3
+10.			FactorPu3
+
 #USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
