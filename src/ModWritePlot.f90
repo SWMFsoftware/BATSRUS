@@ -1132,7 +1132,6 @@ contains
 
     ! Set default value to zero
     PlotVar_GV = 0.0
-
     do iVar = 1, nPlotVar
        NamePlotVar = NamePlotVar_V(iVar)
 
@@ -1159,30 +1158,7 @@ contains
        ! are to be used for plotting.
        UsePlotVarBody_V(iVar) = .false.
 
-       if(DoPlotSpm)then
-          Emission = 0.
-          if(DoPlotNbi)then
-             nLambda = &
-                  nint((LambdaMax_I(iPlotFile+plot_)-&
-                  LambdaMin_I(iPlotFile+plot_))/DLambda_I(iPlotFile+plot_))+1
-          else
-             nLambda= 1
-          end if
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(DoPlotPhx)then
-                call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
-                     DoPlotNbi, Emission, nLambda, r_GB(i,j,k,iBlock))
-             else
-                call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
-                     DoPlotNbi, Emission, nLambda)
-             end if
-             PlotVar_GV(i,j,k,iVar) = Emission
-          end do; end do; end do
-          RETURN
-       end if
-
        select case(String)
-
           ! Cartesian coordinates for non-Cartesian plots
        case('x')
           PlotVar_GV(:,:,:,iVar) = Xyz_DGB(1,:,:,:,iBlock)
@@ -1885,6 +1861,28 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar_GV(i,j,k,iVar) = &
                   sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
+          end do; end do; end do
+       case('emiss')
+          Emission = 0.
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI      
+             if(DoPlotPhx)then
+                call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
+                  DoPlotNbi, Emission, 1, r_GB(i,j,k,iBlock))
+             else
+                call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
+                     DoPlotNbi, Emission, 1)
+             end if
+             PlotVar_GV(i,j,k,iVar) = Emission
+          end do; end do; end do
+       case('intensity')
+          Emission = 0.
+          nLambda = &
+               nint((LambdaMax_I(iPlotFile+plot_)-&
+               LambdaMin_I(iPlotFile+plot_))/DLambda_I(iPlotFile+plot_))+1
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
+                  DoPlotNbi, Emission, nLambda)
+             PlotVar_GV(i,j,k,iVar) = Emission
           end do; end do; end do
 
        case default

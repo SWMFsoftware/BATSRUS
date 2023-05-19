@@ -376,10 +376,7 @@ contains
 
     ! Get the headers that contain variables names and units
     select case(TypePlotFormat_I(iFile))
-    case('tec')
-       call get_los_variable_tec(iFile,nPlotVar,NamePlotVar_V,StringUnitTec)
-       if(DoTest .and. iProc==0) write(*,*)StringUnitTec
-    case('tcp')
+    case('tec', 'tcp')
        call get_los_variable_tec(iFile,nPlotVar,NamePlotVar_V,StringUnitTec)
        if(DoTest .and. iProc==0) write(*,*)StringUnitTec
     case('idl')
@@ -542,9 +539,7 @@ contains
        if(DoTiming)call timing_start('los_save_plot')
 
        select case(TypePlotFormat_I(iFile))
-       case('tec')
-          StringExtension='.dat'
-       case('tcp')
+       case('tec','tcp')
           StringExtension='.dat'
        case('idl')
           StringExtension='.out'
@@ -1486,9 +1481,7 @@ contains
                        nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
                   DoneStateInterpolate = .true.
                end if
-
                Value = State_V(jVar)
-
                EXIT
             end do
 
