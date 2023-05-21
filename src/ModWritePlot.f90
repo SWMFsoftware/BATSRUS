@@ -17,7 +17,7 @@ module ModWritePlot
   public:: set_plot_scalars   !
   public:: reverse_field
 
-  logical ::  DoPlotSpm, DoPlotFlux, DoPlotPhx, DoPlotNbi
+  logical::  DoPlotSpm, DoPlotFlux, DoPlotPhx, DoPlotNbi
 
 contains
   !============================================================================
@@ -38,7 +38,6 @@ contains
     use ModMpi
     use ModUtilities, ONLY: split_string, join_string, open_file, close_file
     use ModAdvance, ONLY : State_VGB
-    use ModB0, ONLY: B0_DGB
     use ModVarIndexes, ONLY: SignB_
     use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
     use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
@@ -55,42 +54,42 @@ contains
 
     ! Arguments
 
-    integer, intent(in) :: iFile
+    integer, intent(in):: iFile
 
     ! Local variables
 
-    integer :: iError
+    integer:: iError
 
     integer, parameter:: lNameVar = 10
 
     ! Plot variables
-    real :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
-    real :: PlotVarTec_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
-    real :: PlotVarBody_V(MaxPlotvar)
-    logical :: UsePlotVarBody_V(MaxPlotvar)
-    real, allocatable :: PlotVarNodes_VNB(:,:,:,:,:)
-    real, allocatable :: PlotXYZNodes_DNB(:,:,:,:,:)
-    real, allocatable :: PlotVar_VGB(:,:,:,:,:)
+    real:: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real:: PlotVarTec_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real:: PlotVarBody_V(MaxPlotvar)
+    logical:: UsePlotVarBody_V(MaxPlotvar)
+    real, allocatable:: PlotVarNodes_VNB(:,:,:,:,:)
+    real, allocatable:: PlotXYZNodes_DNB(:,:,:,:,:)
+    real, allocatable:: PlotVar_VGB(:,:,:,:,:)
 
-    character (len=lNameVar) :: NamePlotVar_V(MaxPlotvar) = ''
-    integer :: nPlotVar
-    character(len=lNameVar) :: NamePlotUnit_V(MaxPlotvar)
+    character (len=lNameVar):: NamePlotVar_V(MaxPlotvar) = ''
+    integer:: nPlotVar
+    character(len=lNameVar):: NamePlotUnit_V(MaxPlotvar)
 
     ! True for shell / box plots and tcp cuts
     logical:: DoPlotShell, DoPlotBox, DoPassPlotVar
 
     ! Equation parameters
-    integer, parameter :: MaxParam = 100
-    real               :: Param_I(MaxParam)
-    character (len=10) :: NameParam_I(MaxParam)
-    integer :: nParam
+    integer, parameter:: MaxParam = 100
+    real              :: Param_I(MaxParam)
+    character (len=10):: NameParam_I(MaxParam)
+    integer:: nParam
 
-    character (Len=500)  :: NameAllVar
-    character (Len=1500) :: StringUnitTec
-    character (Len=500)  :: StringUnitIdl
-    character (len=80)   :: NameFileNorth, NameFileSouth, NameFileHeader
-    character (len=80)   :: NameSnapshot, NameProc
-    character (len=20)   :: TypeForm
+    character (Len=500) :: NameAllVar
+    character (Len=1500):: StringUnitTec
+    character (Len=500) :: StringUnitIdl
+    character (len=80)  :: NameFileNorth, NameFileSouth, NameFileHeader
+    character (len=80)  :: NameSnapshot, NameProc
+    character (len=20)  :: TypeForm
 
     logical:: IsBinary
 
@@ -99,30 +98,30 @@ contains
     ! If DoSaveGenCoord is false, save x,y,z coordinates with either normalized
     ! or I/O units.
     logical:: DoSaveGenCoord
-    real   :: CoordUnit
+    real  :: CoordUnit
 
     ! Indices and coordinates
-    integer :: iBlock, i, j, k, iVar, iH5Index, iProcFound, iBlockFound
-    real :: Coord1Min, Coord1Max, Coord2Min, Coord2Max, Coord3Min, Coord3Max
-    real :: CellSize1, CellSize2, CellSize3
+    integer:: iBlock, i, j, k, iVar, iH5Index, iProcFound, iBlockFound
+    real:: Coord1Min, Coord1Max, Coord2Min, Coord2Max, Coord3Min, Coord3Max
+    real:: CellSize1, CellSize2, CellSize3
 
-    real :: CellSizeMin_D(3)
-    integer :: nCellProc, nCellBlock, nCellAll
+    real:: CellSizeMin_D(3)
+    integer:: nCellProc, nCellBlock, nCellAll
 
-    integer :: iTime_I(7), iDim, iParam
-    integer :: iDefaultStartTime_I(7) = [2000,3,21,10,45,0,0]
+    integer:: iTime_I(7), iDim, iParam
+    integer:: iDefaultStartTime_I(7) = [2000,3,21,10,45,0,0]
 
-    character (len=10) :: NamePlotVar
+    character (len=10):: NamePlotVar
 
     ! Event date for NameFile
-    character (len=3)  :: NameExt
-    character (len=19) :: StringDateTime
+    character (len=3) :: NameExt
+    character (len=19):: StringDateTime
 
     ! Parameters for saving a single 3D tecplot file (DoSaveOneTecFile = T)
-    integer :: lRecData
-    integer :: iUnit
+    integer:: lRecData
+    integer:: iUnit
 
-    logical :: IsNotCut, DoH5Advance,IsNonCartesianPlot
+    logical:: IsNotCut, DoH5Advance,IsNonCartesianPlot
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot'
@@ -780,10 +779,10 @@ contains
     !==========================================================================
     subroutine plotvar_to_plotvarnodes
 
-      integer :: i2,j2,k2
-      integer :: nCell_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
-      real    :: PlotVar_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
-      real    :: r2, r2Min
+      integer:: i2,j2,k2
+      integer:: nCell_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
+      real   :: PlotVar_NV(nI+1,nJ+1,nK+1,MaxPlotvar)
+      real   :: r2, r2Min
       !------------------------------------------------------------------------
       if(.not.allocated(PlotVarNodes_VNB)) then
          allocate(PlotVarNodes_VNB(MaxPlotvar,nI+1,nJ+1,nK+1,nBlock))
@@ -837,10 +836,8 @@ contains
 
     end subroutine plotvar_to_plotvarnodes
     !==========================================================================
-
   end subroutine write_plot
   !============================================================================
-
   subroutine set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
 
     ! For file iPlotFile set Param_I based on NameParam_I
@@ -858,14 +855,14 @@ contains
     use BATL_lib, ONLY: nRoot_D, nI, nJ, nK
     use ModUtilities, ONLY: split_string, lower_case
 
-    integer,           intent(in) :: iFile
-    integer,           intent(in) :: MaxParam
+    integer,           intent(in):: iFile
+    integer,           intent(in):: MaxParam
     integer,           intent(out):: nParam
     character(len=10), intent(out):: NameParam_I(MaxParam)
     real,              intent(out):: Param_I(MaxParam)
 
     character(len=500):: NameParam
-    integer :: iPar
+    integer:: iPar
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plot_scalars'
     !--------------------------------------------------------------------------
@@ -1062,7 +1059,7 @@ contains
     use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModFaceValue, ONLY: iRegionLowOrder_I
     use ModPIC, ONLY: i_status_pic_region, i_status_pic_active, &
-         i_status_pic_criteria, iStatusPicCrit_CB, calc_crit_entropy,&
+         iStatusPicCrit_CB, calc_crit_entropy,&
          calc_crit_jb, calc_crit_jbperp, CriteriaB1, DivCurvature_CB
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use ModInterpolate, ONLY: trilinear
@@ -1073,46 +1070,45 @@ contains
     use ModUserInterface ! user_set_plot_var
     use ModSpectrum, ONLY: spectrum_calc_emission
 
-    integer, intent(in) :: iBlock,iPlotFile,nPlotVar
-    character (LEN=10), intent(in) :: NamePlotVar_V(nPlotVar)
-    real, intent(out)   :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
-    real, intent(out)   :: PlotVarBody_V(nPlotVar)
+    integer, intent(in):: iBlock, iPlotFile, nPlotVar
+    character (LEN=10), intent(in):: NamePlotVar_V(nPlotVar)
+    real, intent(out)  :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
+    real, intent(out)  :: PlotVarBody_V(nPlotVar)
     logical, intent(out):: UsePlotVarBody_V(nPlotVar)
 
-    character (len=10)  :: String, NamePlotVar
+    character (len=10) :: String, NamePlotVar
 
     real:: FullB2, FullBRhoU
-    real, allocatable :: Current_DC(:,:,:,:)
-    real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:), u_DG(:,:,:,:)
-    real, allocatable :: ShockNorm_DC(:,:,:,:)
-    real, allocatable :: StateDn_VC(:,:,:,:), StateUp_VC(:,:,:,:)
+    real, allocatable:: Current_DC(:,:,:,:)
+    real, allocatable:: GradPe_DG(:,:,:,:), Var_G(:,:,:), u_DG(:,:,:,:)
+    real, allocatable:: ShockNorm_DC(:,:,:,:)
+    real, allocatable:: StateDn_VC(:,:,:,:), StateUp_VC(:,:,:,:)
 
-    integer :: iVar, i3, j3, jVar, iIon, iFluid
-    integer :: i, j, k
-
+    integer:: iVar, i3, j3, jVar, iIon, iFluid, i, j, k, iFile
     integer:: iDir, nShiftI, nShiftJ, nShiftK
     real:: Current_D(3)
     real:: FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), b_D(3)
 
-    logical :: IsFound
+    logical:: IsFound
 
     ! ModCurrent with get_current calculate jx,jy and jz at the same time,
     ! but we write them separately.
     ! DoCurrent used to make sure we only calculate the currents once per block
-    logical :: DoCurrent
-    logical :: DoCurrent0
+    logical:: DoCurrent
+    logical:: DoCurrent0
 
     ! Passed to and set by get_face_curl
     logical:: IsNewBlockCurrent
 
-    ! Narroband images
-    real :: Emission
-    integer :: nLambda
+    ! Narrowband images
+    integer:: nLambda
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
+    iFile = iPlotFile + plot_
 
     if(.not.UseB)then
        FullB_DG = 0.00
@@ -1863,28 +1859,22 @@ contains
                   sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
           end do; end do; end do
        case('emiss')
-          Emission = 0.
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(DoPlotPhx)then
-                call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
-                  DoPlotNbi, Emission, 1, r_GB(i,j,k,iBlock))
+                call spectrum_calc_emission(iFile, State_VGB(:,i,j,k,iBlock), &
+                     DoPlotNbi, PlotVar_GV(i,j,k,iVar), 1, r_GB(i,j,k,iBlock))
              else
-                call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
-                     DoPlotNbi, Emission, 1)
+                call spectrum_calc_emission(iFile, State_VGB(:,i,j,k,iBlock), &
+                     DoPlotNbi, PlotVar_GV(i,j,k,iVar), 1)
              end if
-             PlotVar_GV(i,j,k,iVar) = Emission
           end do; end do; end do
        case('intensity')
-          Emission = 0.
-          nLambda = &
-               nint((LambdaMax_I(iPlotFile+plot_)-&
-               LambdaMin_I(iPlotFile+plot_))/DLambda_I(iPlotFile+plot_))+1
+          nLambda = 1 + nint( (LambdaMax_I(iFile) - LambdaMin_I(iPlotFile)) &
+               /DLambda_I(iFile))
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             call spectrum_calc_emission(iPlotFile+plot_,State_VGB(:,i,j,k,iBlock), &
-                  DoPlotNbi, Emission, nLambda)
-             PlotVar_GV(i,j,k,iVar) = Emission
+             call spectrum_calc_emission(iFile, State_VGB(:,i,j,k,iBlock), &
+                  DoPlotNbi, PlotVar_GV(i,j,k,iVar), nLambda)
           end do; end do; end do
-
        case default
           ! Check if the name is one of the state variable names
           do jVar = 1, nVar
@@ -2022,22 +2012,22 @@ contains
        NamePlotVar_V, PlotVar_GV, PlotVarBody_V)
 
     use ModPhysics, ONLY: nVar, UnitX_, UnitTemperature_, UnitN_, UnitRho_, &
-       UnitP_, UnitU_, UnitB_, UnitT_, UnitMass_, UnitDivB_, UnitRhoU_, &
-       UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &
+       UnitP_, UnitU_, UnitB_, UnitT_, UnitDivB_, UnitRhoU_, &
+       UnitElectric_, UnitJ_, UnitPoynting_, UnitEnergyDens_, &
        No2Io_V, No2Si_V, UnitUser_V, NameVarLower_V
     use ModVarIndexes, ONLY: DefaultState_V
     use ModUtilities,  ONLY: lower_case
     use ModMultiFluid, ONLY: extract_fluid_name
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
-    integer, intent(in) :: iBlock,iPlotFile,nPlotVar
-    character (LEN=10), intent(in) :: NamePlotVar_V(nPlotVar)
-    real, intent(inout) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
-    real, intent(inout) :: PlotVarBody_V(nPlotVar)
+    integer, intent(in):: iBlock,iPlotFile,nPlotVar
+    character (LEN=10), intent(in):: NamePlotVar_V(nPlotVar)
+    real, intent(inout):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
+    real, intent(inout):: PlotVarBody_V(nPlotVar)
 
-    character (len=10)  :: String, NamePlotVar
+    character (len=10) :: String, NamePlotVar
 
-    integer :: iVar, jVar
+    integer:: iVar, jVar
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'dimensionalize_plotvar'
     !--------------------------------------------------------------------------
@@ -2160,13 +2150,12 @@ contains
 
   end subroutine dimensionalize_plotvar
   !============================================================================
-
   subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
        StringUnitIdl)
 
     use ModPhysics, ONLY: nVar, UnitX_, UnitTemperature_, UnitN_, UnitRho_, &
-       UnitP_, UnitU_, UnitB_, UnitT_, UnitMass_, UnitDivB_, UnitRhoU_, &
-       UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &
+       UnitP_, UnitU_, UnitB_, UnitT_, UnitDivB_, UnitRhoU_, &
+       UnitElectric_, UnitJ_, UnitPoynting_, UnitEnergyDens_, &
        NameIdlUnit_V, NameUnitUserIdl_V, UnitAngle_, NameVarLower_V
     use ModUtilities,  ONLY: lower_case
     use ModIO,         ONLY: TypePlot, IsDimensionalPlot_I, NameUnitUserIdl_I
@@ -2175,16 +2164,16 @@ contains
 
     ! Arguments
 
-    integer, intent(in)             :: iFile, nPlotVar
-    character (len=10), intent(in)  :: NamePlotVar_V(nPlotVar)
-    character (len=10), intent(out) :: NamePlotUnit_V(nPlotVar)
-    character (len=500),intent(out) :: StringUnitIdl
+    integer, intent(in)            :: iFile, nPlotVar
+    character (len=10), intent(in) :: NamePlotVar_V(nPlotVar)
+    character (len=10), intent(out):: NamePlotUnit_V(nPlotVar)
+    character (len=500),intent(out):: StringUnitIdl
 
     ! set the unit description strings based on the plot variable names
     ! for plot  file iFile
 
-    character (len=10) :: String, NamePlotVar, NameUnit
-    integer            :: iPlotVar, iVar
+    character (len=10):: String, NamePlotVar, NameUnit
+    integer           :: iPlotVar, iVar
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_idl_units'
@@ -2295,7 +2284,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_idl_units
   !============================================================================
-
   subroutine reverse_field(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
@@ -2303,10 +2291,10 @@ contains
     use ModVarIndexes, ONLY: Bx_, Bz_, SignB_, WaveFirst_, WaveLast_
     use ModWaves,      ONLY: UseAlfvenWaves
 
-    integer, intent(in) :: iBlock
+    integer, intent(in):: iBlock
 
-    integer :: i, j, k
-    real :: Ewave
+    integer:: i, j, k
+    real:: Ewave
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'reverse_field'
