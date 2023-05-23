@@ -570,7 +570,8 @@ contains
 
        ! write header file
 
-       if(TypePlotFormat_I(iFile)=='tec' .or. TypePlotFormat_I(iFile)=='tcp') then
+       if(TypePlotFormat_I(iFile)=='tec' .or. &
+            TypePlotFormat_I(iFile)=='tcp') then
           call open_file(FILE=NameFile)
 
           if(UseDEM)then
@@ -589,7 +590,8 @@ contains
 
           if(UseDEM)then
              write(UnitTmp_,*) 'ZONE T="DEM Image"', &
-                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=',nLogTeDEM,', F=POINT'
+                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=',&
+                  nLogTeDEM,', F=POINT'
           elseif(UseNbi)then
              write(UnitTmp_,*) 'ZONE T="NBI Image"', &
                   ', I=',nPix_D(1),', J=',nPix_D(2),', K=1, F=POINT'
@@ -660,10 +662,12 @@ contains
                 do jPix = 1, nPix_D(2)
                    bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
                    do kPix = 1,nLogTeDEM
-                      cPix = (kPix - 1) * DLogTeDEM_I(iFile) + LogTeMinDEM_I(iFile)
+                      cPix = (kPix - 1) * DLogTeDEM_I(iFile) + &
+                           LogTeMinDEM_I(iFile)
                       if (IsDimensionalPlot_I(iFile)) then
                          write(UnitTmp_,fmt="(30(E14.6))") &
-                              aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), cPix*No2Io_V(UnitT_),&
+                              aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_),&
+                              cPix*No2Io_V(UnitT_),&
                               Image_VIII(1:nPlotVar,iPix,jPix,kPix)
                       else
                          write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, cPix,&
@@ -681,8 +685,8 @@ contains
                       cPix = (kPix - 1) * DLambda_I(iFile) + LambdaMin_I(iFile)
                       if (IsDimensionalPlot_I(iFile)) then
                          write(UnitTmp_,fmt="(30(E14.6))") &
-                              aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), cPix,&
-                              Image_VIII(1:nPlotVar,iPix,jPix,kPix)
+                              aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), &
+                              cPix,Image_VIII(1:nPlotVar,iPix,jPix,kPix)
                       else
                          write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, cPix,&
                               Image_VIII(1:nPlotVar,iPix,jPix,kPix)
@@ -2120,13 +2124,15 @@ contains
             trim(NameTecUnit_V(UnitX_))
        write(StringUnitTec,'(a)') trim(StringUnitTec)//'", "Y '//&
             trim(NameTecUnit_V(UnitX_))
-       if(index(TypePlot_I(iFile),'fux')>0 .or. index(TypePlot_I(iFile),'phx')>0)then
+       if(index(TypePlot_I(iFile),'fux')>0 .or. &
+            index(TypePlot_I(iFile),'phx')>0)then
           write(StringUnitTec,'(a)') trim(StringUnitTec)//'", "Lambda [A]'
        elseif(index(TypePlot_I(iFile),'dem')>0)then
           write(StringUnitTec,'(a)')'VARIABLES = "X", "Y", "logT [K]"'
        end if
     else
-       if(index(TypePlot_I(iFile),'fux')>0 .or. index(TypePlot_I(iFile),'phx')>0)then
+       if(index(TypePlot_I(iFile),'fux')>0 .or. &
+            index(TypePlot_I(iFile),'phx')>0)then
           write(StringUnitTec,'(a)')'VARIABLES = "X", "Y", "Lambda"'
        elseif(index(TypePlot_I(iFile),'dem')>0)then
           write(StringUnitTec,'(a)')'VARIABLES = "X", "Y", "logT"'
