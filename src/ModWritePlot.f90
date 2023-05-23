@@ -1886,7 +1886,7 @@ contains
           end do
           if(jVar > nVar) then
              call user_set_plot_var(iBlock, &
-                  NamePlotVar, IsDimensionalPlot_I(Plot_+iFile), &
+                  NamePlotVar, IsDimensionalPlot_I(iFile), &
                   PlotVar_GV(:,:,:,iVar), &
                   PlotVarBody_V(iVar), UsePlotVarBody_V(iVar), &
                   NameVarUserTec_I(iVar), NameUnitUserTec_I(iVar), &
