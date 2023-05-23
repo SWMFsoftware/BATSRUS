@@ -1869,7 +1869,7 @@ contains
              end if
           end do; end do; end do
        case('intensity')
-          nLambda = 1 + nint( (LambdaMax_I(iFile) - LambdaMin_I(iPlotFile)) &
+          nLambda = 1 + nint( (LambdaMax_I(iFile) - LambdaMin_I(iFile)) &
                /DLambda_I(iFile))
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call spectrum_calc_emission(iFile, State_VGB(:,i,j,k,iBlock), &
@@ -1886,7 +1886,7 @@ contains
           end do
           if(jVar > nVar) then
              call user_set_plot_var(iBlock, &
-                  NamePlotVar, IsDimensionalPlot_I(Plot_+iPlotFile), &
+                  NamePlotVar, IsDimensionalPlot_I(Plot_+iFile), &
                   PlotVar_GV(:,:,:,iVar), &
                   PlotVarBody_V(iVar), UsePlotVarBody_V(iVar), &
                   NameVarUserTec_I(iVar), NameUnitUserTec_I(iVar), &
