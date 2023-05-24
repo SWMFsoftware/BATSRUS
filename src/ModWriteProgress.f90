@@ -186,7 +186,7 @@ contains
        if (UseBody2Orbit) then
           call write_prefix; write(iUnitOut,'(10X,''UseBody2Orbit: .true.'')')
           call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
-               'OrbitPeriod: ', OrbitPeriod/cSecondPerDay
+               'OrbitPeriod: ', cTwoPi/OmegaOrbit
        endif
     else
        call write_prefix
