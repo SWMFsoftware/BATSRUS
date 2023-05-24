@@ -183,11 +183,10 @@ module ModPhysics
   ! General variables for the second body
   real :: rPlanetDimBody2=0.0, rBody2=0.0, rCurrentsBody2=0.0
   real :: xBody2=0.0, yBody2=0.0, zBody2=0.0
-  real :: PhaseBody2=0.0, DistanceBody2=0.0
   real :: RhoDimBody2=0.0, tDimBody2=0.0, RhoBody2=0.0, pBody2=0.0
   real :: gBody2=0.0
   logical:: UseBody2Orbit = .false.
-  real :: OrbitPeriod=0.0
+  !$acc declare create(UseBody2Orbit)
 
   ! Variables for two-state shock tube problems
   logical :: UseShockTube = .false.
@@ -750,12 +749,6 @@ contains
     Bdp = DipoleStrengthSi*Si2No_V(UnitB_)
 
     BdpBody2_D = BdpDimBody2_D*Io2No_V(UnitB_)
-
-    ! Saving initial coordinates of second body:
-    if(UseBody2Orbit)then
-       PhaseBody2    = atan2(yBody2, xBody2)
-       DistanceBody2 = sqrt(xBody2**2 + yBody2**2)
-    end if
 
     ! Compute dipole tilt variables
     ! For IH ThetaTilt should be set with the #HELIODIPOLETILT command
