@@ -3830,13 +3830,17 @@ contains
            (nStage == 1 .and. IsTimeAccurate) .or. .not.UseHalfStep) &
            UseDbTrickNow = .false.
 
-      if(UseBody2Orbit.and..not.UseOrbitElements)then
-         if(iProc == 0)then
-            write(*,'(a)') NameSub//' WARNING: ' &
-                 //'Orbit elements are not availlable for second body orbit'
+      if(UseBody2Orbit)then
+         if(.not.UseOrbitElements)then
+            if(iProc == 0)then
+               write(*,'(a)') NameSub//' WARNING: ' &
+                    //'Orbit elements are not availlable for second body orbit'
+               if(UseStrict)call stop_mpi('Correct PARAM.in!')
+            end if
+            UseBody2Orbit = .false.
+         elseif(IsFirstSession)then
+            call set_second_body_coord
          end if
-         if(UseStrict)call stop_mpi('Correct PARAM.in!')
-         UseBody2Orbit = .false.
       end if
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
