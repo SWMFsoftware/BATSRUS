@@ -17,6 +17,7 @@ module ModPhysics
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   use ModAdvance, ONLY: UseMultiSpecies, nSpecies
   use ModMultiFluid, ONLY: nIonFluid
+  use CON_star, ONLY: UseStar, RadiusStar, MassStar, RotPeriodStar
 
   implicit none
   save
@@ -260,10 +261,6 @@ module ModPhysics
   ! Some strange logical used in calc_heat_flux
   logical :: UseDefaultUnits = .false.
 
-  ! Use Stellar parameters
-  logical :: UseStar = .false.
-  real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38
-
   ! Number and indexes of vector variables in State_VGB
   integer :: nVectorVar=0
   integer, allocatable:: iVectorVar_I(:) ! Index of first components
@@ -335,9 +332,9 @@ contains
        end if
     case('SC', 'IH', 'OH', 'EE')
        if(UseStar) then
-          rPlanetSi   = RadiusStar*rSun
-          MassBodySi  = MassStar*mSun
-          RotPeriodSi = RotationPeriodStar*cSecondPerDay
+          rPlanetSi   = RadiusStar
+          MassBodySi  = MassStar
+          RotPeriodSi = RotPeriodStar
        else
           rPlanetSi   = rSun
           MassBodySi  = mSun
