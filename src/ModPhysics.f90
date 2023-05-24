@@ -1410,5 +1410,22 @@ contains
     end do ! iVar
   end subroutine set_dimensional_factor
   !============================================================================
+  subroutine set_second_body_coord
+    use ModMain, ONLY:tSimulation, StartTime, TypeCoordSystem
+    use CON_axes,      ONLY: transform_matrix
+    use CON_planet, ONLY: orbit_in_hgi
+    ! Second body location in HGI
+    real    :: XyzBody2Hgi_D(3), XyzBody2_D(3),  Transform_DD(3,3)
+    !--------------------------------------------------------------------------
+    call orbit_in_hgi(StartTime + tSimulation,XyzBody2Hgi_D)
+    ! Convert to the coordinate system of the model, if needed
+    Transform_DD = transform_matrix(TimeSim=tSimulation,&
+         TypeCoordIn = 'HGI', TypeCoordOut = TypeCoordSystem)
+    XyzBody2_D = matmul(Transform_DD, XyzBody2Hgi_D)*Si2No_V(UnitX_)
+    xBody2 = XyzBody2_D(1)
+    yBody2 = XyzBody2_D(2)
+    zBody2 = XyzBody2_D(3)
+  end subroutine set_second_body_coord
+  !============================================================================
 end module ModPhysics
 !==============================================================================
