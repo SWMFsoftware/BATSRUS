@@ -52,6 +52,7 @@ contains
          DoMapEquatorRay
     use ModIO
     use CON_planet,       ONLY: read_planet_var, check_planet_var
+    use CON_star,         ONLY: read_star_var
     use ModPlanetConst
     use CON_axes,         ONLY: init_axes, get_axes, &
          dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
@@ -2747,10 +2748,10 @@ contains
           call EEE_set_parameters(NameCommand)
 
        case("#STAR")
-          UseStar=.true.
-          call read_var('RadiusStar',         RadiusStar)
-          call read_var('MassStar',           MassStar)
-          call read_var('RotationPeriodStar', RotationPeriodStar)
+          call check_stand_alone
+          if(.not.is_first_session())CYCLE READPARAM
+
+          call read_star_var(NameCommand)
 
        case default
           if(iProc==0) then
