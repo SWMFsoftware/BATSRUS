@@ -334,7 +334,7 @@ contains
     use BATL_lib, ONLY: nI, nJ, nK
     use CON_planet, ONLY: orbit_in_hgi
     use CON_axes,      ONLY: transform_matrix
-    
+
     integer :: i,j,k
     integer :: iCounter, iNei, jNei, kNei
     integer :: iBlock
