@@ -321,7 +321,7 @@ contains
     use ModMain,     ONLY: UseIe, UsePw, TypeCellBc_I, TypeFaceBc_I, body1_
     use ModMain,     ONLY: UseIM
     use ModPIC,      ONLY: NameVersionPic
-    use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_, PS_, PC_
+    use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_, PS_, PC_, SC_
     use CON_world,   ONLY: get_comp_info
 
     integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -343,12 +343,13 @@ contains
     if(Couple_CC(GM_, PC_) % DoThis) &
          call get_comp_info(PC_, NameVersion=NameVersionPic)
 
-    if(Couple_CC(IH_,GM_) % DoThis .neqv. (TypeCellBc_I(2)=='coupled'))then
-       if(Couple_CC(IH_,GM_) % DoThis) then
+    if((Couple_CC(IH_,GM_) % DoThis.or.Couple_CC(SC_,GM_) % DoThis) &
+         .neqv. (TypeCellBc_I(2)=='coupled'))then
+       if(Couple_CC(IH_,GM_) % DoThis.or.Couple_CC(SC_,GM_) % DoThis) then
           TypeCellBc_I(2)='coupled'
        else
           if(iProc==0)write(*,*)NameSub, &
-               ' WARNING: IH and GM are not coupled,',&
+               ' WARNING: GM is not coupled to SC nor to IH, ',&
                ' changing west boundary type from "coupled" to "vary"'
           TypeCellBc_I(2)='vary'
        end if
