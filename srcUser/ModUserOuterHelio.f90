@@ -322,9 +322,12 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(FBC)
 
-    use ModMain, ONLY: FaceBCType
+    use ModMain,           ONLY: FaceBCType
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
+#ifdef _OPENACC
+    use ModUtilities,      ONLY: norm2
+#endif
 
     type(FaceBCType), intent(inout):: FBC
 
@@ -334,7 +337,7 @@ contains
     ! C.P. edited
     real:: Bsph_D(3), Vsph_D(3), VPUIsph_D(3)
 
-    real :: pSolarWind,pPUI, Pmag, PmagEquator, Ewave, B
+    real :: pSolarWind,pPUI, Pmag, PmagEquator, Ewave
 
     real :: XyzSph_DD(3,3)
 
@@ -399,10 +402,8 @@ contains
             VarsGhostFace_V(WaveLast_) = Ewave
          end if
 
-         if(Lperp_>1)then
-            B = sqrt(max(sum(VarsGhostFace_V(Bx_:Bz_)**2), 1e-30))
-            VarsGhostFace_V(Lperp_) = SwhRho*LperpTimesSqrtB/sqrt(B)
-         end if
+         if(Lperp_ > 1) VarsGhostFace_V(Lperp_) = &
+              SwhRho*LperpTimesSqrtB/sqrt(norm2(VarsGhostFace_V(Bx_:Bz_)))
       end if
 
       if(UseElectronPressure) VarsGhostFace_V(Pe_) = SwhPe
@@ -634,6 +635,9 @@ contains
 
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
+#ifdef _OPENACC
+    use ModUtilities,      ONLY: norm2
+#endif
 
     integer, intent(in) :: iBlock
 
@@ -641,7 +645,7 @@ contains
     real :: x, y, z, r
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3), vPUI_D(3), vPUISph_D(3)
     real :: SinTheta, SignZ
-    real :: Ewave, B
+    real :: Ewave
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
 
     logical :: DoTestCell
@@ -746,11 +750,8 @@ contains
 	          1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
           end if
 
-          if(Lperp_ > 1)then
-             B = sqrt(max(sum(B_D**2), 1e-30))
-             State_VGB(Lperp_,i,j,k,iBlock) = &
-                  State_VGB(Rho_,i,j,k,iBlock)*LperpTimesSqrtB/sqrt(B)
-	  end if
+          if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = &
+               State_VGB(Rho_,i,j,k,iBlock)*LperpTimesSqrtB/sqrt(norm2(B_D))
        end if
 
        if(UseNeutralFluid)then
