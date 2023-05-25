@@ -400,7 +400,7 @@ contains
          end if
 
          if(Lperp_>1)then
-            B = sqrt(max(sum(VarsGhostFace_V(Bx_:Bz_)), 1e-30))
+            B = sqrt(max(sum(VarsGhostFace_V(Bx_:Bz_)**2), 1e-30))
             VarsGhostFace_V(Lperp_) = SwhRho*LperpTimesSqrtB/sqrt(B)
          end if
       end if
