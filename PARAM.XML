@@ -9807,45 +9807,53 @@ The default is UseHeatFluxCollisionless=.false.
   <parameter name="UseBody2" type="logical" default="F"/>
   <if expr="$UseBody2">
     <parameter name="rBody2" type="real" min="0"
-	       default="0.1"/>
-    <parameter name="xBody2" type="real" min="$xMin" max="$xMax"
-	       default="-40"/>
-    <parameter name="yBody2" type="real" min="$yMin" max="$yMax"
-	       default="0" />
-    <parameter name="zBody2" type="real" min="$zMin" max="$zMax"
-	       default="0" />
-    <parameter name="rCurrentsBody2" type="real" min="$rBody2"
-	       default="1.3*$rBody2"/>
-    <parameter name="RhoDimBody2" type="real" min="0"
-	       default="5" />
-    <parameter name="tDimBody2" type="real" min="0"
-	       default="25000"/>
+	       default="0"/>
     <parameter name="UseBody2Orbit" type="logical" default="F"/>
+    <if expr="$UseBody2Orbit eq F">
+      <parameter name="xBody2" type="real" min="$xMin" max="$xMax"
+		 default="0"/>
+      <parameter name="yBody2" type="real" min="$yMin" max="$yMax"
+		 default="0" />
+      <parameter name="zBody2" type="real" min="$zMin" max="$zMax"
+		 default="0" />
+    </if>
+    <parameter name="MassBody2Si" type="real" default="0"/>
+    <parameter name="Body2NDim" type="real" min="0"
+	       default="1" />
+    <parameter name="Body2TDim" type="real" min="0"
+	       default="1000"/>
   </if>
 
 #SECONDBODY
 T			UseBody2   ! Rest of the parameters read if .true.
-0.01			rBody2
--40.			xBody2
+1.0			rBody2
+F			UseBody2Orbit
+1.			xBody2
 0.			yBody2
 0.			zBody2
-0.011                   rCurrentsyBody2  ! This is unused currently
-5.0			RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
-25000.0			TDimBody2 (K) temperature for fixed BC for P_BLK
-T			UseBody2Orbit
+0.                      MassBody2Si  ! If 0, the second body gravity is 0
+1.0			Body2NDim (/ccm) density for fixed BC for rho_BLK
+1000.0			Body2TDim (K) temperature for fixed BC for P_BLK
 
-Defines the radius, (initial) position, surface density and temperature,
-and orbit period (if any) of a second body. The second body may also
-have magnetic field given by the #DIPOLEBODY2 command.
-This command should appear before the #INNERBOUNDARY command when using
-a second body. rCurrentsBody2 is read for no reason. Ask Igor Sokolov why.
+Defines the radius, position, surface density and temperature,
+of a second body. The second body may also have magnetic field given by
+the #DIPOLEBODY2 command. This command should appear before the
+#INNERBOUNDARY command when using a second body. MassBody2Si is used to
+calculate the gravity force.
 
 If UseBody2Orbit is .true., the orbit of the second body is traced using
 orbit elements set in CON_planet in the shared module, assuming that
 the central body is the Sun (or a star set in CON_star), so that the
-orbit elements are set in the HGI coordinate system.
-It is unclear what xBody2, yBody2, zBody2 are used for in this case.
-Ask Igor Sokolov.
+orbit elements are set in the HGI coordinate system. In this case,
+xBody2, yBody2, zBody2 are not read
+
+#SECONDBODY
+T			UseBody2   ! Rest of the parameters read if .true.
+1.0			rBody2
+T			UseBody2Orbit
+0.                      MassBody2Si  ! If 0, the second body gravity is 0
+1.0			Body2NDim (/ccm) density for fixed BC for rho_BLK
+1000.0			Body2TDim (K) temperature for fixed BC for P_BLK
 
 Default is UseBody2 false.
 </command>
