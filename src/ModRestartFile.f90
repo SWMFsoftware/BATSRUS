@@ -376,7 +376,7 @@ contains
          UnitX_, UnitU_, UnitRho_, &
          rBody, rCurrents, BodyNDim_I, BodyNSpeciesDim_I, BodyTDim_I, &
          rBody2, xBody2, yBody2, zBody2, rCurrentsBody2, &
-         UseBody2Orbit, OrbitPeriod, &
+         UseBody2Orbit, &
          RhoDimBody2, tDimBody2, &
          nVar, nFluid, IonFirst_
 
@@ -600,7 +600,6 @@ contains
        write(UnitTmp_,'(es22.15,a)')RhoDimBody2,   cTab//cTab//'RhoDimBody2'
        write(UnitTmp_,'(es22.15,a)')tDimBody2,     cTab//cTab//'tDimBody2'
        write(UnitTmp_,'(l1,a)')UseBody2Orbit,cTab//cTab//cTab//'UseBody2Orbit'
-       write(UnitTmp_,'(es22.15,a)')OrbitPeriod,   cTab//cTab//'OrbitPeriod'
        write(UnitTmp_,*)
     end if
 

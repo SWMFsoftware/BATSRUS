@@ -449,12 +449,13 @@ contains
       use ModPhysics, ONLY: xBody2, yBody2, zBody2, OmegaBody_D
       use ModAdvance, ONLY: UseMultiSpecies
       use ModPhysics, ONLY: FaceState_VI, Si2No_V, No2Si_V, UnitX_, UnitN_, &
-           UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_, OrbitPeriod, &
+           UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_, &
            UseOutflowPressure, pOutflow
       use ModCurrent, ONLY: get_point_data
       use ModMain
       use ModMultiFluid
       use CON_planet_field, ONLY: get_planet_field, map_planet_field
+      use CON_planet, ONLY: OmegaOrbit
       use ModConst,   ONLY: cElectronCharge, cBoltzmann,cProtonMass
       use ModPlanetConst, ONLY: Earth_, rPlanet_I
       use ModUtilities
@@ -989,14 +990,15 @@ contains
 
         case('body2orbit')
            FBC%VarsGhostFace_V = FaceState_V
-
+           ! Obsolete version, assuming that the sesond body rotates
+           ! in the equatorial plane
            ! Setting velocity BCs to be the second body orbital velocity:
            ! Ux = -( \omega_SI y_SI)-> NoDim
            FBC%VarsGhostFace_V(Ux_) = FaceState_V(Ux_) &
-                - (cTwoPi/OrbitPeriod)*(yBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
+                - OmegaOrbit*(yBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
            ! Uy = ( \omega_SI x_SI)-> NoDim
            FBC%VarsGhostFace_V(Uy_) = FaceState_V(Uy_) &
-                + (cTwoPi/OrbitPeriod)*(xBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
+                + OmegaOrbit*(xBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
 
         case default
            write(*,*) NameSub,': iTrue, jTrue, kTrue, iBlockBc =', &

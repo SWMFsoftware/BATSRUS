@@ -52,6 +52,7 @@ contains
          DoMapEquatorRay
     use ModIO
     use CON_planet,       ONLY: read_planet_var, check_planet_var
+    use CON_star,         ONLY: read_star_var
     use ModPlanetConst
     use CON_axes,         ONLY: init_axes, get_axes, &
          dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
@@ -2440,11 +2441,7 @@ contains
              call read_var('RhoDimBody2', RhoDimBody2)
              call read_var('tDimBody2', tDimBody2)
              call read_var('UseBody2Orbit',  UseBody2Orbit)
-             if(UseBody2Orbit)then
-                call read_var('OrbitPeriod [days]', OrbitPeriod)
-                ! Convert orbit period from days to seconds
-                OrbitPeriod = OrbitPeriod*cSecondPerDay
-             end if
+             !$acc update device(UseBody2Orbit)
           end if
 
        case("#BOUNDARYSTATE", "#BOUNDARYSTATE_NT")
@@ -2747,10 +2744,10 @@ contains
           call EEE_set_parameters(NameCommand)
 
        case("#STAR")
-          UseStar=.true.
-          call read_var('RadiusStar',         RadiusStar)
-          call read_var('MassStar',           MassStar)
-          call read_var('RotationPeriodStar', RotationPeriodStar)
+          call check_stand_alone
+          if(.not.is_first_session())CYCLE READPARAM
+
+          call read_star_var(NameCommand)
 
        case default
           if(iProc==0) then
@@ -3203,6 +3200,7 @@ contains
       use ModFieldLineThread, ONLY: DoPlotThreads
       use ModMain, ONLY: iTypeCellBc_I
       use ModCellBoundary, ONLY: NameCellBc_I, nTypeBC, UnknownBC_
+      use CON_planet, ONLY: UseOrbitElements
 
       ! option and module parameters
       character (len=40) :: Name
@@ -3213,8 +3211,8 @@ contains
       real    :: BetaProlongOrig = 0.0
       logical :: IsFirstCheck = .true.
       character(len(NameVarRestart_V)) :: NameVarTemp_V(100) = ''
-      !------------------------------------------------------------------------
       ! Check for some combinations of things that cannot be accepted as input
+      !------------------------------------------------------------------------
       if (iProc==0) write (*,*) ' '
 
       if(IsFirstCheck)then
@@ -3832,6 +3830,15 @@ contains
            (nStage == 1 .and. IsTimeAccurate) .or. .not.UseHalfStep) &
            UseDbTrickNow = .false.
 
+      if(UseBody2Orbit.and..not.UseOrbitElements)then
+         if(iProc == 0)then
+            write(*,'(a)') NameSub//' WARNING: ' &
+                 //'Orbit elements are not availlable for second body orbit'
+         end if
+         if(UseStrict)call stop_mpi('Correct PARAM.in!')
+         UseBody2Orbit = .false.
+      end if
+
       ! Update parameters on the GPU that are not done by init_mod_* routines
 
       !$acc update device(MaxBlock)
@@ -3881,7 +3888,7 @@ contains
       !$acc update device(DoCoupleImPressure, DoCoupleImDensity, TauCoupleIM)
       !$acc update device(DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm)
       !$acc update device(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
-
+      !$acc update device(UseBody2Orbit)
       !$acc update device(UseElectronEntropy)
 
     end subroutine correct_parameters
