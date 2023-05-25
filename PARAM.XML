@@ -9835,14 +9835,17 @@ T			UseBody2   ! Rest of the parameters read if .true.
 5.0			RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
 25000.0			TDimBody2 (K) temperature for fixed BC for P_BLK
 T			UseOrbit
-365.25			OrbitPeriod [days]
+
 
 Defines the radius, (initial) position, surface density and temperature,
 and orbit period (if any) of a second body. The second body may also
 have magnetic field given by the #DIPOLEBODY2 command.
 This command should appear before the #INNERBOUNDARY command when using
 a second body.
-Default is UseBody2=.false.
+Default is UseBody2=.false. If UseOrbit is .true., the orbit of the second
+body is traced using orbit elements set in CON_planet in the shared module,
+assuming that the central body is the Sun (or a star set in CON_star), so
+that the orbit elements are set in the HGI coordinate system. 
 </command>
 
 <command name="DIPOLEBODY2" if="$_IsFirstSession">
