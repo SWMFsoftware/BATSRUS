@@ -9814,15 +9814,13 @@ The default is UseHeatFluxCollisionless=.false.
 	       default="0" />
     <parameter name="zBody2" type="real" min="$zMin" max="$zMax"
 	       default="0" />
-    <parameter name="rCurrents2" type="real" min="$rBody2"
+    <parameter name="rCurrentsBody2" type="real" min="$rBody2"
 	       default="1.3*$rBody2"/>
     <parameter name="RhoDimBody2" type="real" min="0"
 	       default="5" />
     <parameter name="tDimBody2" type="real" min="0"
 	       default="25000"/>
-    <parameter name="UseOrbit" type="logical" default="F"/>
-    <parameter name="OrbitPeriod" type="real" min="0"
-	       default="100.0" if="$UseOrbit"/>
+    <parameter name="UseBody2Orbit" type="logical" default="F"/>
   </if>
 
 #SECONDBODY
@@ -9831,21 +9829,25 @@ T			UseBody2   ! Rest of the parameters read if .true.
 -40.			xBody2
 0.			yBody2
 0.			zBody2
-0.011                   rCurrents2  !This is unused currently
+0.011                   rCurrentsyBody2  ! This is unused currently
 5.0			RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
 25000.0			TDimBody2 (K) temperature for fixed BC for P_BLK
-T			UseOrbit
-
+T			UseBody2Orbit
 
 Defines the radius, (initial) position, surface density and temperature,
 and orbit period (if any) of a second body. The second body may also
 have magnetic field given by the #DIPOLEBODY2 command.
 This command should appear before the #INNERBOUNDARY command when using
-a second body.
-Default is UseBody2=.false. If UseOrbit is .true., the orbit of the second
-body is traced using orbit elements set in CON_planet in the shared module,
-assuming that the central body is the Sun (or a star set in CON_star), so
-that the orbit elements are set in the HGI coordinate system. 
+a second body. rCurrentsBody2 is read for no reason. Ask Igor Sokolov why.
+
+If UseBody2Orbit is .true., the orbit of the second body is traced using
+orbit elements set in CON_planet in the shared module, assuming that
+the central body is the Sun (or a star set in CON_star), so that the
+orbit elements are set in the HGI coordinate system.
+It is unclear what xBody2, yBody2, zBody2 are used for in this case.
+Ask Igor Sokolov.
+
+Default is UseBody2 false.
 </command>
 
 <command name="DIPOLEBODY2" if="$_IsFirstSession">
