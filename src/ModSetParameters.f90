@@ -2437,11 +2437,13 @@ contains
              call read_var('xBody2', xBody2)
              call read_var('yBody2', yBody2)
              call read_var('zBody2', zBody2)
-             call read_var('rCurrentsBody2', rCurrentsBody2)
-             call read_var('RhoDimBody2', RhoDimBody2)
-             call read_var('tDimBody2', tDimBody2)
+             !$acc update device(rBody2, xBody2, yBody2, zBody2)
+             call read_var('MassBody2Si',MassBody2Si)
+             !$acc update device(MassBody2Si)
+             call read_var('Body2NDim', Body2NDim)
+             call read_var('Body2TDim', Body2TDim)
              call read_var('UseBody2Orbit',  UseBody2Orbit)
-             !$acc update device(UseBody2Orbit)
+             !$acc update device(UseBody2Orbit, Body2NDim, Body2TDim)
           end if
 
        case("#BOUNDARYSTATE", "#BOUNDARYSTATE_NT")
@@ -3099,11 +3101,11 @@ contains
       xBody2 = 0.0
       yBody2 = 0.0
       zBody2 = 0.0
+      !$acc update device(rBody2, xBody2, yBody2, zBody2)
       BdpBody2_D  = 0.0
-      rCurrentsBody2 = 0.0
-      RhoDimBody2 = 1.0    ! n/cc
-      TDimBody2   = 10000.0! K
-
+      Body2NDim   = 1.0    ! n/cc
+      Body2TDim   = 10000.0! K
+      !$acc update device(Body2NDim, Body2TDim)
       MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
 
       call init_mod_amr

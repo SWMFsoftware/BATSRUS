@@ -375,9 +375,7 @@ contains
          TypeIoUnit, TypeNormalization, No2Si_V, Io2Si_V, No2Io_V, &
          UnitX_, UnitU_, UnitRho_, &
          rBody, rCurrents, BodyNDim_I, BodyNSpeciesDim_I, BodyTDim_I, &
-         rBody2, xBody2, yBody2, zBody2, rCurrentsBody2, &
-         UseBody2Orbit, &
-         RhoDimBody2, tDimBody2, &
+         rBody2, xBody2, yBody2, zBody2, UseBody2Orbit, Body2NDim, Body2TDim, &
          nVar, nFluid, IonFirst_
 
     ! If nFluid or IonFirst_ is taken directly from ModVarIndexes,
@@ -596,9 +594,8 @@ contains
        write(UnitTmp_,'(es22.15,a)')xbody2,        cTab//cTab//'xBody2'
        write(UnitTmp_,'(es22.15,a)')ybody2,        cTab//cTab//'yBody2'
        write(UnitTmp_,'(es22.15,a)')zbody2,        cTab//cTab//'zBody2'
-       write(UnitTmp_,'(es22.15,a)')rCurrentsBody2,cTab//cTab//'rCurrentsBody2'
-       write(UnitTmp_,'(es22.15,a)')RhoDimBody2,   cTab//cTab//'RhoDimBody2'
-       write(UnitTmp_,'(es22.15,a)')tDimBody2,     cTab//cTab//'tDimBody2'
+       write(UnitTmp_,'(es22.15,a)')Body2NDim,   cTab//cTab//'Body2NDim'
+       write(UnitTmp_,'(es22.15,a)')Body2TDim,     cTab//cTab//'Body2TDim'
        write(UnitTmp_,'(l1,a)')UseBody2Orbit,cTab//cTab//cTab//'UseBody2Orbit'
        write(UnitTmp_,*)
     end if
