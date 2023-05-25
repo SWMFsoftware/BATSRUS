@@ -190,7 +190,7 @@ contains
     ! Variables needed for Boris source terms also used for div(u)
     real :: RhoInv
     ! Variables needed for anisotropic pressure
-    real :: b_D(MaxDim), GradU_DD(nDim,MaxDim), bDotGradparU
+    real :: b_D(MaxDim), GradU_DD(nDim,MaxDim)
 
     ! Gravitational force towards body
     real :: ForcePerRho_D(3)
@@ -292,7 +292,7 @@ contains
                 call calc_grad_U(GradU_DD, i, j, k, iBlock)
 
                 if(UseAnisoPressure .and. IsIon_I(iFluid))then
-                   ! Calculate bDotGradparU = b dot (b matmul GradU)
+                   ! Calculate bDotbDotGradU = b dot (b matmul GradU)
 
                    ! Calculate unit vector parallel with full B field
                    b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -300,18 +300,18 @@ contains
                    b_D = b_D/norm2(b_D)
 
                    ! Calculate b.grad u.b
-                   bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
+                   bDotbDotGradU=dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
                    ! p parallel: -2*ppar*b.(b.(Grad U))
                    Source_VC(iPpar,i,j,k) = &
                         Source_VC(iPpar,i,j,k) &
-                        - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotGradparU
+                        - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotbDotGradU
 
                    ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
                    !     = (p - ppar)*b.(b.(GradU))
                    Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
                         + (State_VGB(iP,i,j,k,iBlock) -  &
-                        State_VGB(iPpar,i,j,k,iBlock))*bDotGradparU
+                        State_VGB(iPpar,i,j,k,iBlock))*bDotbDotGradU
                 end if
 
                 if(UseViscosity) then
@@ -356,7 +356,7 @@ contains
 
              if(DoTest .and. UseAnisoPressure .and. &
                   (iVarTest == iPparIon_I(IonFirst_) .or. iVarTest == p_)) &
-                  call write_source('After bDotGradparU')
+                  call write_source('After bDotbDotGradU')
 
           end if
 
@@ -672,7 +672,7 @@ contains
           Pe = State_VGB(Pe_,i,j,k,iBlock)
 
           if (UseAnisoPe) then
-             ! Calculate bDotGradparU = b dot (b matmul GradU)
+             ! Calculate bDotbDotGradU = b dot (b matmul GradU)
 
              call calc_grad_uplus(GradU_DD, i, j, k, iBlock)
 
@@ -682,22 +682,22 @@ contains
              b_D = b_D/norm2(b_D)
 
              ! Calculate b.grad u.b
-             bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
+             bDotbDotGradU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
              ! p parallel: -2*ppar*b.(b.(Grad U))
              Source_VC(Pepar_,i,j,k) = Source_VC(Pepar_,i,j,k) &
-                  - 2*State_VGB(Pepar_,i,j,k,iBlock)*bDotGradparU
+                  - 2*State_VGB(Pepar_,i,j,k,iBlock)*bDotbDotGradU
 
              ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
              !     = (p - ppar)*b.(b.(GradU))
              Source_VC(Pe_,i,j,k)    = Source_VC(Pe_,i,j,k)      &
                   + (State_VGB(Pe_,i,j,k,iBlock) -               &
-                  State_VGB(Pepar_,i,j,k,iBlock))*bDotGradparU
+                  State_VGB(Pepar_,i,j,k,iBlock))*bDotbDotGradU
 
              if(DoTestCell) write(*,*) ' GradU_DD=', GradU_DD
 
              if(DoTestCell .and. (iVarTest == Pepar_ .or. iVarTest == pe_)) &
-                  call write_source('After bDotGradparUplus')
+                  call write_source('After bDotbDotGradUplus')
           end if
 
           ! For electron entropy equation there is no such term
