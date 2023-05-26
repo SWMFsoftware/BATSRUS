@@ -9823,6 +9823,9 @@ The default is UseHeatFluxCollisionless=.false.
   <if expr="$UseBody2">
     <parameter name="rBody2" type="real" min="0"
 	       default="0"/>
+    <parameter name="MassBody2Si" type="real" default="0"/>
+    <parameter name="Body2NDim" type="real" min="0" default="1" />
+    <parameter name="Body2TDim" type="real" min="0" default="1000"/>
     <parameter name="UseBody2Orbit" type="logical" default="F"/>
     <if expr="not $UseBody2Orbit">
       <parameter name="xBody2" type="real" min="$xMin" max="$xMax"
@@ -9832,21 +9835,18 @@ The default is UseHeatFluxCollisionless=.false.
       <parameter name="zBody2" type="real" min="$zMin" max="$zMax"
 		 default="0" />
     </if>
-    <parameter name="MassBody2Si" type="real" default="0"/>
-    <parameter name="Body2NDim" type="real" min="0" default="1" />
-    <parameter name="Body2TDim" type="real" min="0" default="1000"/>
   </if>
 
 #SECONDBODY
 T			UseBody2 ! Rest of the parameters read if true
 1.0			rBody2
-F			UseBody2Orbit
-1.			xBody2  ! only read if UseBody2Orbit is true
-0.			yBody2  ! only read if UseBody2Orbit is true
-0.			zBody2  ! only read if UseBody2Orbit is true
 0.                      MassBody2Si [kg] ! If 0, the second body gravity is 0
 1.0			Body2NDim [/cc] density for fixed BC for rho_BLK
 1000.0			Body2TDim [K] temperature for fixed BC for P_BLK
+F			UseBody2Orbit
+1.			xBody2  ! only read if UseBody2Orbit is false
+0.			yBody2  ! only read if UseBody2Orbit is false
+0.			zBody2  ! only read if UseBody2Orbit is false
 
 Defines the radius, position, surface density and temperature,
 of a second body. The second body may also have magnetic field given by

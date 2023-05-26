@@ -2434,6 +2434,10 @@ contains
           call read_var('UseBody2', UseBody2)
           if(UseBody2)then
              call read_var('rBody2', rBody2)
+             call read_var('MassBody2Si',MassBody2Si)
+             call read_var('Body2NDim', Body2NDim)
+             call read_var('Body2TDim', Body2TDim)
+             !$acc update device(rBody2, MassBody2Si, Body2NDim, Body2TDim)
              call read_var('UseBody2Orbit',  UseBody2Orbit)
              !$acc update device(rBody2,UseBody2Orbit)
              if(.not.UseBody2Orbit)then
@@ -2442,10 +2446,6 @@ contains
                 call read_var('zBody2', zBody2)
                 !$acc update device( xBody2, yBody2, zBody2)
              end if
-             call read_var('MassBody2Si',MassBody2Si)
-             call read_var('Body2NDim', Body2NDim)
-             call read_var('Body2TDim', Body2TDim)
-             !$acc update device(MassBody2Si,Body2NDim, Body2TDim)
           end if
 
        case("#BOUNDARYSTATE", "#BOUNDARYSTATE_NT")
