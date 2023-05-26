@@ -2632,6 +2632,9 @@ contains
              call time_int_to_real(iStartTime_I, StartTimeCheck)
           end if
 
+       case('#ROTPERIOD')
+          call read_var('RotPeriodSi', RotPeriodSI)
+
        case("#TIMEEND", "#ENDTIME")
           UseEndTime = .true.
           call read_var('iYear',   iEndTime_I(1))
@@ -3122,7 +3125,7 @@ contains
          UseGravity = .true.
          Rbody      = 1.0
          Rcurrents  =-1.0
-
+         RotPeriodSi = RotationPeriodSun
          ! Boundary Conditions
          ! Default boundary type is 'none'.
          BodyTDim_I            = 1.5E6    ! K

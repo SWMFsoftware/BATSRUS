@@ -1333,7 +1333,7 @@ Default values are shown.
 #STAR
 1.0                     RadiusStar (in solar radius)
 1.0                     MassStar   (in solar mass)
-0.0                     RotationPeriodStar (in days)
+25.38                     RotationPeriodStar (in days)
 
 Modify the parameters of the central star (when BATSRUS is running
 in heliospheric mode). Setting zero for the rotation period will
@@ -1341,6 +1341,21 @@ switch off the rotation as shown by the example.
 
 By default the Sun is the central star.
 </command>
+
+<command name="ROTPERIOD">
+  <parameter name="RotPeriodSi" type="real" minimum="0"/>
+
+#ROTPERIOD
+0.0                     RotPeriodSI (in second)
+
+If goal is to switch off (or modify) the effects of the star rotation
+FOR A GIVEN MODEL (SC, IH, OH, EE), the #STAR command is not applicable,
+since it also modifies the infrastructure (HGI to HGR stransformation matrix,
+Earth location, Carrington rotations etc). For this purpose #ROTPERIOD
+command works, which affects only the model, not the infrastructure.
+</command>
+
+
 
 <command name="NORMALIZATION" if="$_IsFirstSession">
   <parameter name="TypeNormalization" type="string" case="upper"

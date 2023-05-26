@@ -346,7 +346,7 @@ contains
        else
           rPlanetSi   = rSun
           MassBodySi  = mSun
-          RotPeriodSi = RotationPeriodSun
+          ! RotPeriodSi is set in set_defaults and may be read from PARAM.in
        endif
        SolarWindNDim = BodyNDim_I(IonFirst_)    ! SOLARWIND normalization only
        SolarWindTempDim = BodyTDim_I(IonFirst_) ! SOLARWIND normalization only
