@@ -2940,7 +2940,7 @@ contains
           iRegion = iNe4
        endif
 
-    case(LevelSet_) 
+    case(LevelSet_)
        if (r < rBody) then
           ! inside inner boundary (inside termination shock)
           iRegion = iNe3
@@ -2948,7 +2948,7 @@ contains
        end if
 
        if (LevelHP < 0.) then
-          !Outside Heliopause
+          ! Outside Heliopause
           if (Mach2 > MachPop4Limit**2) then
              ! Outside bow shock
              iRegion = iNe4
@@ -2957,7 +2957,7 @@ contains
              iRegion = iNe1
           end if
        else
-          !Inside Heliopause
+          ! Inside Heliopause
           if (Mach2 < MachPop2Limit**2) then
              ! Outside termination Shock
              iRegion = iNe2
