@@ -142,7 +142,7 @@ module ModUser
 
   ! Region Formulas
   character(len=20) :: NameRegionFormula
-  integer,parameter :: SingleIon_ = 1, ColdCloud_ = 2, MultiIon_=3
+  integer,parameter :: SingleIon_ = 1, ColdCloud_ = 2, MultiIon_=3, LevelSet_ = 4
   integer :: iRegionFormula = SingleIon_
 
   ! Velocity, temperature, Mach number and radius limits for the populations
@@ -301,6 +301,11 @@ contains
              call read_var('TempPop2LimitDim', TempPop2LimitDim)
              call read_var('uPop1LimitDim', uPop1LimitDim)
              call read_var('MachPop1Limit', MachPop1Limit)
+
+          case('LevelSet')
+             iRegionFormula = LevelSet_
+             call read_var('MachPop2Limit',    MachPop2Limit)
+             call read_var('MachPop4Limit',    MachPop4Limit)
 
           case default
              call stop_mpi(NameSub//': unknown NameRegionFormula = ' &
@@ -553,6 +558,7 @@ contains
 
     do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
        State_VGB(SWHRho_,i,j,k,iBlock)=VliswRho
+       State_VGB(LevelHP_,i,j,k,iBlock)=-VliswRho
        State_VGB(SWHRhoUx_,i,j,k,iBlock)=VliswRho*VliswUx
        State_VGB(SWHRhoUy_,i,j,k,iBlock)=VliswRho*VliswUy
        State_VGB(SWHRhoUz_,i,j,k,iBlock)=VliswRho*VliswUz
@@ -702,11 +708,13 @@ contains
        ! density and pressure
        if(.not.IsMhd)then
           State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
+          State_VGB(LevelHP_,i,j,k,iBlock) = State_VGB(SWHRho_,i,j,k,iBlock)
           State_VGB(SWHP_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
           State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
                State_VGB(SWHRho_,i,j,k,iBlock)*v_D
        else
           State_VGB(Rho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
+          State_VGB(LevelHP_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
           State_VGB(P_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                State_VGB(Rho_,i,j,k,iBlock)*v_D
@@ -2792,7 +2800,7 @@ contains
   end subroutine set_omega_parker_tilt
   !============================================================================
   subroutine get_region(iRegion, r, RhoDim, U2Dim, TempDim, Mach2, &
-       MachPUI2, MachSW2, DoReIndexIn)
+       MachPUI2, MachSW2, LevelHP, DoReIndexIn)
 
     ! set the global variabls iFluidProduced_C
     ! to select which neutral fluid is produced in each cell of the block
@@ -2803,6 +2811,7 @@ contains
     real,             intent(in)  :: U2Dim   ! unit: (km/s)^2
     real,             intent(in)  :: TempDim ! unit: K
     real,             intent(in)  :: Mach2, MachPUI2, MachSW2
+    real,             intent(in)  :: LevelHP
 
     ! Force the indices of neutral species to 1 ... 4. It is used by FLEKS
     ! for OH-PT coupling
@@ -2931,6 +2940,33 @@ contains
           iRegion = iNe4
        endif
 
+    case(LevelSet_) 
+       if (r < rBody) then
+          ! inside inner boundary (inside termination shock)
+          iRegion = iNe3
+          RETURN
+       end if
+
+       if (LevelHP < 0.) then
+          !Outside Heliopause
+          if (Mach2 > MachPop4Limit**2) then
+             ! Outside bow shock
+             iRegion = iNe4
+          else
+             ! Inside bow shock
+             iRegion = iNe1
+          end if
+       else
+          !Inside Heliopause
+          if (Mach2 < MachPop2Limit**2) then
+             ! Outside termination Shock
+             iRegion = iNe2
+          else
+             ! Inside termination Shock
+             iRegion = iNe3
+          end if
+       end if
+
     case default
        call CON_stop(NameSub// &
             ' : unexpected region formulas.')
@@ -2949,6 +2985,7 @@ contains
     ! cold cloud
     real :: RhoDim, InvRho, U2, p, Mach2, MachSW2, TempDim,  U2Dim, Rho
     real :: pSW, InvRhoSW, MachPUI2, pPUI, InvRhoPUI, RhoPUI, RhoSw
+    real :: LevelHP
 
     ! Produce fluid3 at the inner boundary
 
@@ -3011,8 +3048,11 @@ contains
        ! Square of Mach number
        Mach2 = U2/(Gamma*p*InvRho)
 
+       ! Level Set function
+       LevelHP = State_VGB(LevelHP_,i,j,k,iBlock)
+
        call get_region(iRegion, r_GB(i,j,k,iBlock), RhoDim, &
-            U2Dim, TempDim, Mach2, MachPUI2, MachSW2)
+            U2Dim, TempDim, Mach2, MachPUI2, MachSW2, LevelHP)
        iFluidProduced_C(i,j,k) = iRegion
     end do; end do; end do
 
@@ -3289,15 +3329,16 @@ subroutine get_charge_exchange_region( &
   integer, intent(out):: iRegion
   real, intent(in)    :: r, RhoDim, U2Dim, TempDim, Mach2
 
-  real :: MachPUI2, MachSW2
+  real :: MachPUI2, MachSW2, LevelHP
   logical :: DoReIndex
   !----------------------------------------------------------------------------
   MachPUI2 = 0
   MachSW2 = 0
+  LevelHP = 0
   DoReIndex = .true.
 
   call get_region(iRegion, r, RhoDim, U2Dim, TempDim, &
-       Mach2, MachPUI2, MachSW2, DoReIndex)
+       Mach2, MachPUI2, MachSW2, LevelHP, DoReIndex)
 
   ! For convenience, reduce iRegion by 1 since the c/c++ array
   ! index starts from 0
