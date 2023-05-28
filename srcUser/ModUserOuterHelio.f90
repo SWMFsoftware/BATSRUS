@@ -142,7 +142,8 @@ module ModUser
 
   ! Region Formulas
   character(len=20) :: NameRegionFormula
-  integer,parameter :: SingleIon_ = 1, ColdCloud_ = 2, MultiIon_=3, LevelSet_ = 4
+  integer, parameter:: SingleIon_ = 1, ColdCloud_ = 2
+  integer, parameter:: MultiIon_=3, LevelSet_ = 4
   integer :: iRegionFormula = SingleIon_
 
   ! Velocity, temperature, Mach number and radius limits for the populations
