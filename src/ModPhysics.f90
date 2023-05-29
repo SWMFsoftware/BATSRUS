@@ -17,7 +17,7 @@ module ModPhysics
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   use ModAdvance, ONLY: UseMultiSpecies, nSpecies
   use ModMultiFluid, ONLY: nIonFluid
-  use CON_star, ONLY: UseStar, RadiusStar, MassStar, RotPeriodStar
+  use CON_star, ONLY: NameStar, RadiusStar, MassStar, RotPeriodStar
 
   implicit none
   save
@@ -339,7 +339,7 @@ contains
           NamePlanetRadius = 'km'
        end if
     case('SC', 'IH', 'OH', 'EE')
-       if(UseStar) then
+       if(NameStar/='SUN') then
           rPlanetSi   = RadiusStar
           MassBodySi  = MassStar
           RotPeriodSi = RotPeriodStar
