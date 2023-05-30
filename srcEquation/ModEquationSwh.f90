@@ -105,7 +105,7 @@ module ModVarIndexes
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_
 
-  ! There are no extra scalars
+  ! There are extra scalars
   integer, parameter :: ScalarFirst_ = LevelHP_, ScalarLast_ = LevelHP_
 
 end module ModVarIndexes
