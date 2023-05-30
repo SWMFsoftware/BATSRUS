@@ -17,7 +17,7 @@ module ModVarIndexes
        NameEquation='Solar wind protons with extra indexes'
 
   ! Number of variables without energy:
-  integer, parameter :: nVar = 8
+  integer, parameter :: nVar = 9
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
@@ -31,7 +31,8 @@ module ModVarIndexes
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
-       p_         =  8,          SWHP_ = 8, &
+       LevelHP_   =  8, &
+       p_         =  9,          SWHP_ = 9, &
        Energy_    = nVar+1,      SWHEnergy_ = nVar+1
 
   ! Extra indexes are also declared for sake of compilation with
@@ -84,26 +85,28 @@ module ModVarIndexes
        0.0, & ! SWHBx_
        0.0, & ! SWHBy_
        0.0, & ! SWHBz_
+       0.0, & ! LevelHP_
        1.0, & ! SWHp_
        1.0 ]  ! SWHEnergy_
 
   ! The names of the variables used in i/o
-  character(len=3) :: NameVar_V(nVar+1) = [ &
-       'Rho', & ! Rho_
-       'Mx ', & ! RhoUx_
-       'My ', & ! RhoUy_
-       'Mz ', & ! RhoUz_
-       'Bx ', & ! Bx_
-       'By ', & ! By_
-       'Bz ', & ! Bz_
-       'p  ', & ! p_
-       'e  ' ] ! Energy_
+  character(len=6) :: NameVar_V(nVar+1) = [ &
+       'Rho   ', & ! Rho_
+       'Mx    ', & ! RhoUx_
+       'My    ', & ! RhoUy_
+       'Mz    ', & ! RhoUz_
+       'Bx    ', & ! Bx_
+       'By    ', & ! By_
+       'Bz    ', & ! Bz_
+       'HPLim ', & ! LevelHP_
+       'p     ', & ! p_
+       'e     ' ]  ! Energy_
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
+  integer, parameter :: ScalarFirst_ = LevelHP_, ScalarLast_ = LevelHP_
 
 end module ModVarIndexes
 !==============================================================================
