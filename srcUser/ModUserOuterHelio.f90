@@ -398,6 +398,8 @@ contains
       VarsGhostFace_V(SWHUx_:SWHUz_) = matmul(XyzSph_DD, Vsph_D)
       VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
 
+      VarsGhostFace_V(LevelHP_) = SwhRho
+      
       if(UseAlfvenWaves)then
          Ewave = SwhRho*DeltaU**2
          if(Bsph_D(1) > 0.0)then
