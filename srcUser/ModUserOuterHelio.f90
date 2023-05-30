@@ -399,7 +399,7 @@ contains
       VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
 
       VarsGhostFace_V(LevelHP_) = SwhRho
-      
+
       if(UseAlfvenWaves)then
          Ewave = SwhRho*DeltaU**2
          if(Bsph_D(1) > 0.0)then
