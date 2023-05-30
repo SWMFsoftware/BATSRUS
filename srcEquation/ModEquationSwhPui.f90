@@ -16,7 +16,7 @@ module ModVarIndexes
   character (len=*), parameter :: &
        NameEquation = 'Multi-ion MHD'
 
-  integer, parameter :: nVar = 13
+  integer, parameter :: nVar = 14
 
   ! There are two ion fluids but no total ion fluid
   integer, parameter :: nFluid    = 2
@@ -39,12 +39,13 @@ module ModVarIndexes
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
-       p_         =  8,          SWHP_ = 8, &
-       Pu3Rho_    =  9, &
-       Pu3RhoUx_  = 10, Pu3Ux_ = 10, &
-       Pu3RhoUy_  = 11, Pu3Uy_ = 11, &
-       Pu3RhoUz_  = 12, Pu3Uz_ = 12, &
-       Pu3P_      = 13, &
+       LevelHP_   =  8, &
+       p_         =  9,          SWHP_ = 9, &
+       Pu3Rho_    =  10, &
+       Pu3RhoUx_  = 11, Pu3Ux_ = 11, &
+       Pu3RhoUy_  = 12, Pu3Uy_ = 12, &
+       Pu3RhoUz_  = 13, Pu3Uz_ = 13, &
+       Pu3P_      = 14, &
        Energy_    = nVar+1,      SWHEnergy_ = nVar+1, &
        Pu3Energy_ = nVar+2
 
@@ -95,6 +96,7 @@ module ModVarIndexes
        0.0, & ! SWHBx_
        0.0, & ! SWHBy_
        0.0, & ! SWHBz_
+       0.0, & ! LevelHP_
        1.0, & ! SWHp_
        1.0, & ! Pu3Rho_
        0.0, & ! Pu3RhoUx_
@@ -113,6 +115,7 @@ module ModVarIndexes
        'Bx    ', & ! SWHBx_
        'By    ', & ! SWHBy_
        'Bz    ', & ! SWHBz_
+       'HPLim ', & ! LevelHP_
        'P     ', & ! SWHp_
        'Pu3Rho', & ! Pu3Rho_
        'Pu3Mx ', & ! Pu3RhoUx_
@@ -122,8 +125,8 @@ module ModVarIndexes
        'Pu3E  ', & ! Energy_
        'Pu3E  ' ]  ! Pu3Energy_
 
-  ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
+  ! There are extra scalars
+  integer, parameter :: ScalarFirst_ = LevelHP_, ScalarLast_ = LevelHP_
 
 end module ModVarIndexes
 !==============================================================================
