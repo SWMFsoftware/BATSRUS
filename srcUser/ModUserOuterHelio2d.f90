@@ -122,7 +122,6 @@ module ModUser
 
 contains
   !============================================================================
-
   subroutine user_read_inputs
 
     use ModReadParam
@@ -222,7 +221,6 @@ contains
 
   end subroutine normalize_lookup_solar_wind
   !============================================================================
-
   subroutine user_set_face_boundary(FBC)
 
     use ModMain, ONLY: tSimulation, StartTime, FaceBCType
@@ -543,7 +541,6 @@ contains
 
   end subroutine user_set_cell_boundary
   !============================================================================
-
   subroutine user_set_ics(iBlock)
 
     use ModPhysics,  ONLY: rBody
@@ -561,7 +558,6 @@ contains
     logical :: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-
     call test_start(NameSub, DoTest)
 
     ! Make sure that OmegaSun and ParkerTilt are set
@@ -679,7 +675,6 @@ contains
 
   end subroutine user_set_ics
   !============================================================================
-
   subroutine user_action(NameAction)
 
     character(len=*), intent(in):: NameAction
@@ -996,7 +991,6 @@ contains
 
   contains
     !==========================================================================
-
     subroutine calc_source_cell
 
       use ModPhysics,   ONLY: GammaMinus1_I

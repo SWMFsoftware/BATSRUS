@@ -36,7 +36,7 @@ module ModVarIndexes
   integer, parameter :: nPui = 1
 
   ! Number of variables without energy:
-  integer, parameter :: nVar = 35 + nWave + nPui
+  integer, parameter :: nVar = 36 + nWave + nPui
 
   ! 2 ion fluid and 4 neutral fluids
   integer, parameter :: nFluid    = 6
@@ -68,7 +68,8 @@ module ModVarIndexes
        Lperp_     = WaveLast_+1, &
        PuiFirst_  = Lperp_+1, &
        PuiLast_   = PuiFirst_+nPui-1, &
-       Pe_        = PuiLast_+1, &
+       LevelHP_   = PuiLast_+1, &
+       Pe_        = PuiLast_+2, &
        p_         = Pe_+1,                SWHP_     = Pe_+1, &
        Pu3Rho_    = p_+1, &
        Pu3RhoUx_  = p_+2, Pu3Ux_ = p_+2, &
@@ -132,6 +133,7 @@ module ModVarIndexes
        (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0,           & ! Lperp_
        (1.0, iPui=PuiFirst_,PuiLast_), &
+       0.0,           & ! LevelHP_
        1.0,           & ! Pe_
        1.0,           & ! SWHP_
        1.0,           & ! Pu3Rho_
@@ -164,6 +166,7 @@ module ModVarIndexes
        ('I??   ', iWave=WaveFirst_,WaveLast_), &
        'Lperp ',                     & ! Lperp_
        ('F??   ', iPui=PuiFirst_,PuiLast_), &
+       'HPLim ',                     & ! LevelHP_
        'Pe    ',                     & ! Pe_
        'P     ',                     & ! p_
        'Pu3Rho',                     & ! Pu3Rho_
@@ -189,7 +192,7 @@ module ModVarIndexes
        'Ne4E  '                      ] ! Ne4Energy_
 
   ! There are extra scalars
-  integer, parameter :: ScalarFirst_ = Lperp_, ScalarLast_ = PuiLast_
+  integer, parameter :: ScalarFirst_ = Lperp_, ScalarLast_ = LevelHP_
 
 end module ModVarIndexes
 !==============================================================================

@@ -182,7 +182,7 @@ contains
             'zBody2:      ',zBody2   ,', Bdp2Body_z:    ',BdpBody2_D(3)
        call write_prefix
        write(iUnitOut,'(10X,2(A13,ES13.5))') &
-            'RhoDimBody2: ',RhoDimBody2,', TDimBody2:   ',TDimBody2
+            'Body2NDim: ',Body2NDim,', Body2TDim:   ',Body2TDim
        if (UseBody2Orbit) then
           call write_prefix; write(iUnitOut,'(10X,''UseBody2Orbit: .true.'')')
           call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &

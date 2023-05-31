@@ -18,7 +18,7 @@ module ModVarIndexes
   character (len=*), parameter :: &
        NameEquation = 'SWH + PUI and four neutrals'
 
-  integer, parameter :: nVar = 33
+  integer, parameter :: nVar = 34
 
   integer, parameter :: nFluid    = 6
   integer, parameter :: IonFirst_ = 1
@@ -45,34 +45,35 @@ module ModVarIndexes
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
-       P_         =  8,          SWHP_  = 8, &
-       Pu3Rho_    =  9, &
-       Pu3RhoUx_  = 10, Pu3Ux_ = 10, &
-       Pu3RhoUy_  = 11, Pu3Uy_ = 11, &
-       Pu3RhoUz_  = 12, Pu3Uz_ = 12, &
-       Pu3P_      = 13
+       LevelHP_   =  8, &
+       P_         =  9,          SWHP_  = 9, &
+       Pu3Rho_    =  10, &
+       Pu3RhoUx_  = 11, Pu3Ux_ = 11, &
+       Pu3RhoUy_  = 12, Pu3Uy_ = 12, &
+       Pu3RhoUz_  = 13, Pu3Uz_ = 13, &
+       Pu3P_      = 14
 
   integer, parameter:: &
-       NeuRho_    = 14, &
-       NeuRhoUx_  = 15, NeuUx_ = 15, &
-       NeuRhoUy_  = 16, NeuUy_ = 16, &
-       NeuRhoUz_  = 17, NeuUz_ = 17, &
-       NeuP_      = 18, &
-       Ne2Rho_    = 19, &
-       Ne2RhoUx_  = 20, Ne2Ux_ = 20, &
-       Ne2RhoUy_  = 21, Ne2Uy_ = 21, &
-       Ne2RhoUz_  = 22, Ne2Uz_ = 22, &
-       Ne2P_      = 23, &
-       Ne3Rho_    = 24, &
-       Ne3RhoUx_  = 25, Ne3Ux_ = 25, &
-       Ne3RhoUy_  = 26, Ne3Uy_ = 26, &
-       Ne3RhoUz_  = 27, Ne3Uz_ = 27, &
-       Ne3P_      = 28, &
-       Ne4Rho_    = 29, &
-       Ne4RhoUx_  = 30, Ne4Ux_ = 30, &
-       Ne4RhoUy_  = 31, Ne4Uy_ = 31, &
-       Ne4RhoUz_  = 32, Ne4Uz_ = 32, &
-       Ne4P_      = 33, &
+       NeuRho_    = 15, &
+       NeuRhoUx_  = 16, NeuUx_ = 16, &
+       NeuRhoUy_  = 17, NeuUy_ = 17, &
+       NeuRhoUz_  = 18, NeuUz_ = 18, &
+       NeuP_      = 19, &
+       Ne2Rho_    = 20, &
+       Ne2RhoUx_  = 21, Ne2Ux_ = 21, &
+       Ne2RhoUy_  = 22, Ne2Uy_ = 22, &
+       Ne2RhoUz_  = 23, Ne2Uz_ = 23, &
+       Ne2P_      = 24, &
+       Ne3Rho_    = 25, &
+       Ne3RhoUx_  = 26, Ne3Ux_ = 26, &
+       Ne3RhoUy_  = 27, Ne3Uy_ = 27, &
+       Ne3RhoUz_  = 28, Ne3Uz_ = 28, &
+       Ne3P_      = 29, &
+       Ne4Rho_    = 30, &
+       Ne4RhoUx_  = 31, Ne4Ux_ = 31, &
+       Ne4RhoUy_  = 32, Ne4Uy_ = 32, &
+       Ne4RhoUz_  = 33, Ne4Uz_ = 33, &
+       Ne4P_      = 34, &
        Energy_    = nVar+1, SWHEnergy_ = nVar+1, &
        Pu3Energy_ = nVar+2, &
        NeuEnergy_ = nVar+3, &
@@ -105,6 +106,7 @@ module ModVarIndexes
        1.0,           & ! SWHRho_
        0.0, 0.0, 0.0, & ! SWHRhoUx_ .. SWHRhoUz_
        0.0, 0.0, 0.0, & ! Bx_ .. Bz_
+       0.0,           & ! LevelHP_
        1.0,           & ! SWHP_
        1.0,           & ! Pu3Rho_
        0.0, 0.0, 0.0, & ! Pu3RhoUx_ .. Pu3RhoUz_
@@ -133,6 +135,7 @@ module ModVarIndexes
        'Rho   ', & ! SWHRho_
        'Mx    ', 'My    ', 'Mz    ', & ! RhoUx_ RhoUz_
        'Bx    ', 'By    ', 'Bz    ', & ! Bx_  Bz_
+       'HPLim ',                     & ! LevelHP_
        'p     ',                     & ! p_
        'Pu3Rho',                     & ! Pu3Rho_
        'Pu3Mx ', 'Pu3My ', 'Pu3Mz ', & ! Pu3RhoUx_ Pu3RhoUz_
@@ -156,8 +159,8 @@ module ModVarIndexes
        'Ne3E  ',                     & ! Ne3Energy_
        'Ne4E  '                      ] ! Ne4Energy_
 
-  ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
+  ! There are extra scalars
+  integer, parameter :: ScalarFirst_ = LevelHP_, ScalarLast_ = LevelHP_
 
 end module ModVarIndexes
 !==============================================================================

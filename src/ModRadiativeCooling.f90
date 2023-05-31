@@ -235,7 +235,7 @@ contains
   subroutine add_chromosphere_heating(TeSi_C,iBlock)
     use ModGeometry, ONLY: r_GB
     use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
-    use ModPhysics,  ONLY: UnitX_, Si2No_V,UseStar,RadiusStar,MassStar
+    use ModPhysics,  ONLY: UnitX_, Si2No_V,NameStar,RadiusStar,MassStar
     use ModCoronalHeating, ONLY: CoronalHeating_C
 
     real,    intent(in):: TeSi_C(1:nI,1:nJ,1:nK)
@@ -250,9 +250,9 @@ contains
     character(len=*), parameter:: NameSub = 'add_chromosphere_heating'
     !--------------------------------------------------------------------------
     HeightSi_C = (r_GB(1:nI,1:nJ,1:nK,iBlock) - 1) * Si2No_V(UnitX_)
-    if(UseStar)then
+    if(NameStar/='SUN')then
        BarometricScaleSi = TeChromosphereSi &
-            * cBarometricScalePerT*RadiusStar**2/MassStar
+            * cBarometricScalePerT*(RadiusStar/rSun)**2/(MassStar/mSun)
     else
        BarometricScaleSi = TeChromosphereSi * cBarometricScalePerT
     endif

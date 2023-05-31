@@ -17,7 +17,7 @@ module ModVarIndexes
        NameEquation = 'MHD and four neutrals'
 
    ! Number of variables without energy:
-   integer, parameter :: nVar = 29
+   integer, parameter :: nVar = 28
 
    ! 1 ion fluid and 4 neutral fluids
    integer, parameter :: nFluid    = 5
@@ -41,28 +41,27 @@ module ModVarIndexes
         Bx_        =  5, &
         By_        =  6, &
         Bz_        =  7, &
-        LevelHP_   =  8, &
-        p_         =  9,              SWHP_  = 9, &
-        NeuRho_    =  10,              Pu3Rho_    =  10, &
-        NeuRhoUx_  = 11, NeuUx_ = 11, Pu3RhoUx_  = 11, Pu3Ux_ = 11, &
-        NeuRhoUy_  = 12, NeuUy_ = 12, Pu3RhoUy_  = 12, Pu3Uy_ = 12, &
-        NeuRhoUz_  = 13, NeuUz_ = 13, Pu3RhoUz_  = 13, Pu3Uz_ = 13, &
-        NeuP_      = 14,              Pu3P_      = 14, &
-        Ne2Rho_    = 15, &
-        Ne2RhoUx_  = 16, Ne2Ux_ = 16, &
-        Ne2RhoUy_  = 17, Ne2Uy_ = 17, &
-        Ne2RhoUz_  = 18, Ne2Uz_ = 18, &
-        Ne2P_      = 19, &
-        Ne3Rho_    = 20, &
-        Ne3RhoUx_  = 21, Ne3Ux_ = 21, &
-        Ne3RhoUy_  = 22, Ne3Uy_ = 22, &
-        Ne3RhoUz_  = 23, Ne3Uz_ = 23, &
-        Ne3P_      = 24, &
-        Ne4Rho_    = 25, &
-        Ne4RhoUx_  = 26, Ne4Ux_ = 26, &
-        Ne4RhoUy_  = 27, Ne4Uy_ = 27, &
-        Ne4RhoUz_  = 28, Ne4Uz_ = 28, &
-        Ne4P_      = 29, &
+        p_         =  8,              SWHP_  = 8, &
+        NeuRho_    =  9,              Pu3Rho_    =  9, &
+        NeuRhoUx_  = 10, NeuUx_ = 10, Pu3RhoUx_  = 10, Pu3Ux_ = 10, &
+        NeuRhoUy_  = 11, NeuUy_ = 11, Pu3RhoUy_  = 11, Pu3Uy_ = 11, &
+        NeuRhoUz_  = 12, NeuUz_ = 12, Pu3RhoUz_  = 12, Pu3Uz_ = 12, &
+        NeuP_      = 13,              Pu3P_      = 13, &
+        Ne2Rho_    = 14, &
+        Ne2RhoUx_  = 15, Ne2Ux_ = 15, &
+        Ne2RhoUy_  = 16, Ne2Uy_ = 16, &
+        Ne2RhoUz_  = 17, Ne2Uz_ = 17, &
+        Ne2P_      = 18, &
+        Ne3Rho_    = 19, &
+        Ne3RhoUx_  = 20, Ne3Ux_ = 20, &
+        Ne3RhoUy_  = 21, Ne3Uy_ = 21, &
+        Ne3RhoUz_  = 22, Ne3Uz_ = 22, &
+        Ne3P_      = 23, &
+        Ne4Rho_    = 24, &
+        Ne4RhoUx_  = 25, Ne4Ux_ = 25, &
+        Ne4RhoUy_  = 26, Ne4Uy_ = 26, &
+        Ne4RhoUz_  = 27, Ne4Uz_ = 27, &
+        Ne4P_      = 28, &
         Energy_    = nVar+1,          SWHEnergy_ = nVar+1, &
         NeuEnergy_ = nVar+2,          Pu3Energy_ = nVar+2, &
         Ne2Energy_ = nVar+3, &
@@ -96,7 +95,6 @@ module ModVarIndexes
         0.0, & ! Bx_
         0.0, & ! By_
         0.0, & ! Bz_
-        0.0, & ! LevelHP_
         1.0, & ! p_
         1.0, & ! NeuRho_
         0.0, & ! NeuRhoUx_
@@ -133,7 +131,6 @@ module ModVarIndexes
         'Bx    ', & ! Bx_
         'By    ', & ! By_
         'Bz    ', & ! Bz_
-        'HPLim ', & ! LevelHP_
         'p     ', & ! p_
         'NeuRho', & ! NeuRho_
         'NeuMx ', & ! NeuRhoUx_
@@ -162,7 +159,7 @@ module ModVarIndexes
         'Ne4E  ' ] ! Ne4Energy_
 
    ! There are no extra scalars
-   integer, parameter :: ScalarFirst_ = LevelHP_, ScalarLast_ = LevelHP_
+   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
 end module ModVarIndexes
 !==============================================================================

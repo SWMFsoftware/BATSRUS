@@ -320,10 +320,10 @@ contains
   end subroutine advance_explicit
   !============================================================================
   subroutine update_secondbody
-    use ModMain,     ONLY: tSimulation, StartTime, nBlock, Unused_B, body2_, &
-         iNewGrid, TypeCoordSystem
+    use ModMain,     ONLY:  nBlock, Unused_B, body2_, iNewGrid
     use ModConst,    ONLY: cTwoPi
-    use ModPhysics,  ONLY: rBody2, Si2No_V, UnitX_
+    use ModPhysics,  ONLY: rBody2, xBody2, yBody2, zBody2, &
+         set_second_body_coord
     use ModMessagePass,      ONLY: exchange_messages
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_, &
          fix_boundary_ghost_cells
@@ -333,15 +333,12 @@ contains
     use ModAdvance,    ONLY: State_VGB, nVar
     use BATL_lib, ONLY: nI, nJ, nK
     use CON_planet, ONLY: orbit_in_hgi
-    use CON_axes,      ONLY: transform_matrix
 
     integer :: i,j,k
     integer :: iCounter, iNei, jNei, kNei
     integer :: iBlock
     real    :: StateCounter_V(nVar)
     logical, allocatable:: IsBody2Old_GB(:,:,:,:)
-    ! Second body location in HGI
-    real    :: XyzBody2Hgi_D(3), XyzBody2_D(3),  Transform_DD(3,3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_secondbody'
@@ -358,11 +355,8 @@ contains
     enddo
 
     ! Update second body coordinates using orbit elemnts from CON_planet
-    call orbit_in_hgi(StartTime + tSimulation,XyzBody2Hgi_D)
-    ! Convert to the coordinate system of the model, if needed
-    Transform_DD = transform_matrix(TimeSim=tSimulation,&
-         TypeCoordIn = 'HGI', TypeCoordOut = TypeCoordSystem)
-    XyzBody2_D = matmul(Transform_DD, XyzBody2Hgi_D)*Si2No_V(UnitX_)
+    call set_second_body_coord
+
     ! Updating the grid structure for the new second body position
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -370,7 +364,7 @@ contains
        ! with new second body location
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           rBody2_GB(i,j,k,iBlock) = norm2( Xyz_DGB(:,i,j,k,iBlock) - &
-               XyzBody2_D)
+               [xBody2, yBody2, zBody2])
        end do; end do; end do
        rMinBody2_B(iBlock) = minval(rBody2_GB(:,:,:,iBlock))
        ! Reset true cells. "True" are old true cells or old body2 cells

@@ -2434,14 +2434,18 @@ contains
           call read_var('UseBody2', UseBody2)
           if(UseBody2)then
              call read_var('rBody2', rBody2)
-             call read_var('xBody2', xBody2)
-             call read_var('yBody2', yBody2)
-             call read_var('zBody2', zBody2)
-             call read_var('rCurrentsBody2', rCurrentsBody2)
-             call read_var('RhoDimBody2', RhoDimBody2)
-             call read_var('tDimBody2', tDimBody2)
+             call read_var('MassBody2Si',MassBody2Si)
+             call read_var('Body2NDim', Body2NDim)
+             call read_var('Body2TDim', Body2TDim)
+             !$acc update device(rBody2, MassBody2Si, Body2NDim, Body2TDim)
              call read_var('UseBody2Orbit',  UseBody2Orbit)
-             !$acc update device(UseBody2Orbit)
+             !$acc update device(rBody2,UseBody2Orbit)
+             if(.not.UseBody2Orbit)then
+                call read_var('xBody2', xBody2)
+                call read_var('yBody2', yBody2)
+                call read_var('zBody2', zBody2)
+                !$acc update device( xBody2, yBody2, zBody2)
+             end if
           end if
 
        case("#BOUNDARYSTATE", "#BOUNDARYSTATE_NT")
@@ -2627,6 +2631,9 @@ contains
              ! Check if things work out or not
              call time_int_to_real(iStartTime_I, StartTimeCheck)
           end if
+
+       case('#ROTPERIOD')
+          call read_var('RotPeriodSi', RotPeriodSI)
 
        case("#TIMEEND", "#ENDTIME")
           UseEndTime = .true.
@@ -3099,11 +3106,11 @@ contains
       xBody2 = 0.0
       yBody2 = 0.0
       zBody2 = 0.0
+      !$acc update device(rBody2, xBody2, yBody2, zBody2)
       BdpBody2_D  = 0.0
-      rCurrentsBody2 = 0.0
-      RhoDimBody2 = 1.0    ! n/cc
-      TDimBody2   = 10000.0! K
-
+      Body2NDim   = 1.0    ! n/cc
+      Body2TDim   = 10000.0! K
+      !$acc update device(Body2NDim, Body2TDim)
       MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
 
       call init_mod_amr
@@ -3118,7 +3125,7 @@ contains
          UseGravity = .true.
          Rbody      = 1.0
          Rcurrents  =-1.0
-
+         RotPeriodSi = RotationPeriodSun
          ! Boundary Conditions
          ! Default boundary type is 'none'.
          BodyTDim_I            = 1.5E6    ! K
@@ -3830,13 +3837,17 @@ contains
            (nStage == 1 .and. IsTimeAccurate) .or. .not.UseHalfStep) &
            UseDbTrickNow = .false.
 
-      if(UseBody2Orbit.and..not.UseOrbitElements)then
-         if(iProc == 0)then
-            write(*,'(a)') NameSub//' WARNING: ' &
-                 //'Orbit elements are not availlable for second body orbit'
+      if(UseBody2Orbit)then
+         if(.not.UseOrbitElements)then
+            if(iProc == 0)then
+               write(*,'(a)') NameSub//' WARNING: ' &
+                    //'Orbit elements are not availlable for second body orbit'
+               if(UseStrict)call stop_mpi('Correct PARAM.in!')
+            end if
+            UseBody2Orbit = .false.
+         elseif(IsFirstSession)then
+            call set_second_body_coord
          end if
-         if(UseStrict)call stop_mpi('Correct PARAM.in!')
-         UseBody2Orbit = .false.
       end if
 
       ! Update parameters on the GPU that are not done by init_mod_* routines

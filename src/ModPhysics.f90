@@ -17,7 +17,7 @@ module ModPhysics
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   use ModAdvance, ONLY: UseMultiSpecies, nSpecies
   use ModMultiFluid, ONLY: nIonFluid
-  use CON_star, ONLY: UseStar, RadiusStar, MassStar, RotPeriodStar
+  use CON_star, ONLY: NameStar, RadiusStar, MassStar, RotPeriodStar
 
   implicit none
   save
@@ -181,10 +181,20 @@ module ModPhysics
   real    :: TauGlobalSi_I(nFluid)      = -1.0, TauGlobal_I(nFluid)
 
   ! General variables for the second body
-  real :: rPlanetDimBody2=0.0, rBody2=0.0, rCurrentsBody2=0.0
-  real :: xBody2=0.0, yBody2=0.0, zBody2=0.0
-  real :: RhoDimBody2=0.0, tDimBody2=0.0, RhoBody2=0.0, pBody2=0.0
-  real :: gBody2=0.0
+
+  ! Radius and center coordinates
+  real :: rBody2=0.0, xBody2=0.0, yBody2=0.0, zBody2=0.0
+  !$acc declare create(rBody2, xBody2, yBody2, zBody2)
+
+  ! Dimensional and diminsionless parameters on the seconnd body boundary
+  real :: Body2NDim = 0.0, Body2TDim = 0.0, RhoBody2 = 0.0, pBody2 = 0.0
+  !$acc declare create(Body2NDim, Body2TDim, RhoBody2, pBody2)
+
+  ! Second body mass and gravity force parameter derived from it
+  real   :: MassBody2Si, gBody2=0.0
+  !$acc declare create(MassBody2Si,gBody2)
+  ! Logical determining if the orbit elements from CON_planet are used to
+  ! trace a second body.
   logical:: UseBody2Orbit = .false.
   !$acc declare create(UseBody2Orbit)
 
@@ -306,7 +316,6 @@ contains
     use BATL_lib, ONLY: IsCartesian
 
     real :: MassBodySi
-    real :: MassBody2Si
     real :: pCoef
     real :: Charge_I(nIonFluid+1)
     integer :: i, iBoundary, iFluid, iIon, jIon
@@ -330,14 +339,14 @@ contains
           NamePlanetRadius = 'km'
        end if
     case('SC', 'IH', 'OH', 'EE')
-       if(UseStar) then
+       if(NameStar/='SUN') then
           rPlanetSi   = RadiusStar
           MassBodySi  = MassStar
           RotPeriodSi = RotPeriodStar
        else
           rPlanetSi   = rSun
           MassBodySi  = mSun
-          RotPeriodSi = RotationPeriodSun
+          ! RotPeriodSi is set in set_defaults and may be read from PARAM.in
        endif
        SolarWindNDim = BodyNDim_I(IonFirst_)    ! SOLARWIND normalization only
        SolarWindTempDim = BodyTDim_I(IonFirst_) ! SOLARWIND normalization only
@@ -349,7 +358,7 @@ contains
 
     ! Second body mass is set to zero by default
     MassBody2Si = 0.0
-
+    !$acc update device(MassBody2Si)
     ! Make sure that MassIon_I is consistent with MassFluid_I
     MassIon_I = MassFluid_I(IonFirst_:IonLast_)
 
@@ -458,7 +467,7 @@ contains
     end if
 
     gBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
-
+    !$acc update device(gBody2)
     ! Normalize solar wind values. Note: the solarwind is in I/O units
     SolarWindN   = SolarWindNDim*Io2No_V(UnitN_)
     SolarWindRho = SolarWindN * MassIon_I(1)
@@ -512,9 +521,9 @@ contains
        PolarP_I(1) = PolarP_I(1)*(1 + ElectronPressureRatio)
     end if
 
-    RhoBody2= RhoDimBody2 *Io2No_V(UnitN_)*MassIon_I(1)
-    pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
-
+    RhoBody2= Body2NDim *Io2No_V(UnitN_)*MassIon_I(1)
+    pBody2  = RhoBody2 * Body2TDim*Io2No_V(UnitTemperature_)
+    !$acc update device(RhoBody2,pBody2)
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization
     do iBoundary=SolidBc_,zMaxBc_
@@ -1409,6 +1418,24 @@ contains
        end select
     end do ! iVar
   end subroutine set_dimensional_factor
+  !============================================================================
+  subroutine set_second_body_coord
+    use ModMain, ONLY:tSimulation, StartTime, TypeCoordSystem
+    use CON_axes,      ONLY: transform_matrix
+    use CON_planet, ONLY: orbit_in_hgi
+    ! Second body location in HGI
+    real    :: XyzBody2Hgi_D(3), XyzBody2_D(3),  Transform_DD(3,3)
+    !--------------------------------------------------------------------------
+    call orbit_in_hgi(StartTime + tSimulation,XyzBody2Hgi_D)
+    ! Convert to the coordinate system of the model, if needed
+    Transform_DD = transform_matrix(TimeSim=tSimulation,&
+         TypeCoordIn = 'HGI', TypeCoordOut = TypeCoordSystem)
+    XyzBody2_D = matmul(Transform_DD, XyzBody2Hgi_D)*Si2No_V(UnitX_)
+    xBody2 = XyzBody2_D(1)
+    yBody2 = XyzBody2_D(2)
+    zBody2 = XyzBody2_D(3)
+    !$acc update device(xBody2, yBody2, zBody2)
+  end subroutine set_second_body_coord
   !============================================================================
 end module ModPhysics
 !==============================================================================
