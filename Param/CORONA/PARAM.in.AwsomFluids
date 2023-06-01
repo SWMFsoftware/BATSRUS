@@ -7,10 +7,8 @@ Param/CORONA/PARAM.in.AwsomFluids: Test in BATSRUS the AwsomFluids user module.	
 #TIMEACCURATE
 F			IsTimeAccurate
 
-#STAR
-1.0			RadiusStar
-1.0			MassStar
-0.0			RotationPeriodStar
+#ROTPERIOD
+0.0			RotPeriodSI (in second)
 
 #PLASMA
 1.0			FluidMass H+ [amu]

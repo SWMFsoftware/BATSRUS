@@ -8,10 +8,8 @@ SC			NameComp
 #DESCRIPTION
 Param/CORONA/PARAM.in.2Dwedge: Input file for creating a steady state solar corona
 
-#STAR
-1.0                     RadiusStar
-1.0                     MassStar
-0.0                     RotationPeriodStar
+#ROTPERIOD
+0.0			RotPeriodSI (in second)
 
 #TIMEACCURATE
 F                       DoTimeAccurate
