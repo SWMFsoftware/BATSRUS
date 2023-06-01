@@ -8,7 +8,7 @@ Param/CORONA/PARAM.in.AwsomFluids: Test in BATSRUS the AwsomFluids user module.	
 F			IsTimeAccurate
 
 #ROTPERIOD
-0.0			RotPeriodSI (in second)
+0.0			RotPeriodSi (in second)
 
 #PLASMA
 1.0			FluidMass H+ [amu]
