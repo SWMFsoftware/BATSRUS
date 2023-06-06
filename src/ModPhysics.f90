@@ -523,6 +523,7 @@ contains
 
     RhoBody2= Body2NDim *Io2No_V(UnitN_)*MassIon_I(1)
     pBody2  = RhoBody2 * Body2TDim*Io2No_V(UnitTemperature_)
+    if(UseBody2Orbit)call set_second_body_coord
     !$acc update device(RhoBody2,pBody2)
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization

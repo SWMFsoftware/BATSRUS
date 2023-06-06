@@ -3845,8 +3845,6 @@ contains
                if(UseStrict)call stop_mpi('Correct PARAM.in!')
             end if
             UseBody2Orbit = .false.
-         elseif(IsFirstSession)then
-            call set_second_body_coord
          end if
       end if
 
