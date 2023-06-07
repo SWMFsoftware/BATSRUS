@@ -1,4 +1,4 @@
-Config.pl -e=Hd -u=Waves -g=10,10,1
+Config.pl -e=Hd -u=Waves -g=4,4,1 -ng=2
 
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.rotation: rotation		StringDescription
@@ -23,32 +23,38 @@ NONE			TypeNormalization
 #NONCONSERVATIVE
 T			UseNonConservative
 
-FIXEDTIMESTEP
-T			UseDtFixed
-5.			DtFixedDim [sec] (read if UseDtFixed is true)
-
 #GRIDBLOCKALL
-2000			MaxBlock
+16000			MaxBlock
 
 #GRID
-36			nRootBlock1
-36			nRootBlock2
+10			nRootBlock1
+10			nRootBlock2
 1			nRootBlock3
--12.			xMin
- 12.			xMax
--12.			yMin
- 12.			yMax
+-15.			xMin
+ 15.			xMax
+-15.			yMin
+ 15.			yMax
 -0.5			zMin
  0.5			zMax
 
-UNIFORMSTATE
-1.0			StateVar Rho
-0.0			StateVar Ux
-0.0			StateVar Uy
-0.0			StateVar Uz
-0.001			StateVar p
+#AMRINITPHYSICS
+4			nRefineLevelIC
 
-For a smooth initial condition use the next two commands
+#DOAMR
+T			DoAmr
+1			DnAmr
+-1			DtAmr
+T			IsStrictAmr
+
+#AMRCRITERIA
+1			nRefineCrit
+gradlogrho		TypeRefine
+0.1			CoarsenLimit
+0.15			RefineLimit
+
+#AMRLEVELS
+0			MinBlockLevel
+4			MaxBlockLevel
 
 #UNIFORMSTATE
 1.0			StateVar Rho
@@ -57,30 +63,42 @@ For a smooth initial condition use the next two commands
 0.0			StateVar Uz
 0.0001			StateVar p
 
-GAUSSIAN
-Rho			NameVar
-1.0			Amplitude
-3.0			LambdaX
-3.0			LambdaY
--1.0			LambdaZ
-5.0			CenterX
-0.0			CenterY
-0.0			CenterZ
-
 For a discontinuous initial condition use the next two commands
 
 #STATEDEFINITION
-   rho p		StringVar
+rho p			StringVar
 2			nMaterialState
-M1 2.0 0.0001		StringState
-M2 1.0 0.0001		StringState
+M1 2.0 1e-4		StringState
+M2 1.0 1e-4		StringState
+
+BLOCK M
 
 #STATEINTERFACE
-4			nSegment
-M1 M2 -1. -10. +1. -10.		StringSegment
-M1 M2 +1. -10. +1. +10.		StringSegment
-M1 M2 +1. +10. -1. +10.		StringSegment
-M1 M2 -1. +10. -1. -10.		StringSegment
+24				nSegment
+M1 M2 -8. -10. -4. -10.		StringSegment
+M1 M2 -4. -10. -4.  -6.		StringSegment
+M1 M2 -4.  -6. -5.  -6.		StringSegment
+M1 M2 -5.  -6. -5.   2.		StringSegment
+M1 M2 -5.   2.  0.  -8.		StringSegment
+M1 M2  0.  -8.  5.   2.		StringSegment
+M1 M2  5.   2.  5.  -6.		StringSegment
+M1 M2  5.  -6. +4.  -6.		StringSegment
+M1 M2 +4.  -6. +4. -10.		StringSegment
+M1 M2 +4. -10. +8. -10.		StringSegment
+M1 M2 +8. -10.  8.  -6.		StringSegment
+M1 M2  8.  -6.  7.  -6.		StringSegment
+M1 M2  7.  -6.  7.   6.		StringSegment
+M1 M2  7.   6.  8.   6.		StringSegment
+M1 M2  8.   6.  8.  10.		StringSegment
+M1 M2  8.  10.  5.  10.		StringSegment
+M1 M2  5.  10.  0.   0.		StringSegment
+M1 M2  0.   0. -5.  10.		StringSegment
+M1 M2 -5.  10. -8.  10.		StringSegment
+M1 M2 -8.  10. -8.   6.		StringSegment
+M1 M2 -8.   6. -7.   6.		StringSegment
+M1 M2 -7.   6. -7.  -6.		StringSegment
+M1 M2 -7.  -6. -8.  -6.		StringSegment
+M1 M2 -8.  -6. -8. -10.		StringSegment
 
 Solve for density only
 
@@ -108,16 +126,16 @@ Uy			NameVar
 #USERINPUTEND -------------------
 
 #OUTERBOUNDARY
-none			TypeBc1
-none			TypeBc2
-none			TypeBc3
-none			TypeBc4
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
 
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux
-mc3			TypeLimiter
-2.0			BetaLimiter
+beta			TypeLimiter
+1.5			BetaLimiter
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -133,10 +151,12 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1			nPlotFile
-z=0 hd idl_real8		StringPlot
+z=0 var idl_real8		StringPlot
 -1			DnSavePlot
-0.05			DtSavePlot
+0.01			DtSavePlot
 0.0			DxSavePlot
+rho ux uy dx crit1		NameVar
+g      	  		NamePar
 
 Full rotation: t=1
 
