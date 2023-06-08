@@ -332,7 +332,6 @@ contains
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModAdvance,    ONLY: State_VGB, nVar
     use BATL_lib, ONLY: nI, nJ, nK
-    use CON_planet, ONLY: orbit_in_hgi
 
     integer :: i,j,k
     integer :: iCounter, iNei, jNei, kNei
