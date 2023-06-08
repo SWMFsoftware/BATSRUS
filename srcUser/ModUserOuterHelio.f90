@@ -569,6 +569,8 @@ contains
        State_VGB(By_,i,j,k,iBlock)=VliswBy
        State_VGB(Bz_,i,j,k,iBlock)=VliswBz
        if(UseAlfvenWaves) State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
+       ! Set Lperp to a large value of 1 AU in ISW
+       if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = VliswRho
        State_VGB(SWHP_,i,j,k,iBlock)=VliswP
        if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock)=VliswPe
 
@@ -605,35 +607,33 @@ contains
 
        !
        ! PopII and III supersonic outflow
-       do iVar = Lperp_, Ne3P_
-          if(iVar>=NeuRho_.and.iVar<=Ne3P_ .or. Lperp_>1.and.iVar==Lperp_)then
-             select case(iSide)
-             case(1)
-                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,1,j,k,iBlock)
-                end do; end do; end do
-             case(2)
-                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,nI,j,k,iBlock)
-                end do; end do; end do
-             case(3)
-                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,1,k,iBlock)
-                end do; end do; end do
-             case(4)
-                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,nJ,k,iBlock)
-                end do; end do; end do
-             case(5)
-                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,1,iBlock)
-                end do; end do; end do
-             case(6)
-                do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,nK,iBlock)
-                end do; end do; end do
-             end select
-          end if
+       do iVar = NeuRho_, Ne3P_
+          select case(iSide)
+          case(1)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,1,j,k,iBlock)
+             end do; end do; end do
+          case(2)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,nI,j,k,iBlock)
+             end do; end do; end do
+          case(3)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,1,k,iBlock)
+             end do; end do; end do
+          case(4)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,nJ,k,iBlock)
+             end do; end do; end do
+          case(5)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,1,iBlock)
+             end do; end do; end do
+          case(6)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,nK,iBlock)
+             end do; end do; end do
+          end select
        end do
     end if
 
