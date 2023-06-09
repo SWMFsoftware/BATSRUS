@@ -183,8 +183,8 @@ module ModPhysics
   ! General variables for the second body
 
   ! Radius and center coordinates
-  real :: rBody2=0.0, xBody2=0.0, yBody2=0.0, zBody2=0.0
-  !$acc declare create(rBody2, xBody2, yBody2, zBody2)
+  real :: rBody2=0.0, xBody2=0.0, yBody2=0.0, zBody2=0.0, vBody2_D(3) = 0.0
+  !$acc declare create(rBody2, xBody2, yBody2, zBody2, vBody2_D)
 
   ! Dimensional and diminsionless parameters on the seconnd body boundary
   real :: Body2NDim = 0.0, Body2TDim = 0.0, RhoBody2 = 0.0, pBody2 = 0.0
@@ -1425,9 +1425,10 @@ contains
     use CON_axes,      ONLY: transform_matrix
     use CON_planet, ONLY: orbit_in_hgi
     ! Second body location in HGI
-    real    :: XyzBody2Hgi_D(3), XyzBody2_D(3),  Transform_DD(3,3)
+    real    :: XyzBody2Hgi_D(3), XyzBody2_D(3), vBody2Hgi_D(3)
+    real    :: Transform_DD(3,3)
     !--------------------------------------------------------------------------
-    call orbit_in_hgi(StartTime + tSimulation,XyzBody2Hgi_D)
+    call orbit_in_hgi(StartTime + tSimulation,XyzBody2Hgi_D,vBody2Hgi_D)
     ! Convert to the coordinate system of the model, if needed
     Transform_DD = transform_matrix(TimeSim=tSimulation,&
          TypeCoordIn = 'HGI', TypeCoordOut = TypeCoordSystem)
@@ -1435,7 +1436,8 @@ contains
     xBody2 = XyzBody2_D(1)
     yBody2 = XyzBody2_D(2)
     zBody2 = XyzBody2_D(3)
-    !$acc update device(xBody2, yBody2, zBody2)
+    vBody2_D = matmul(Transform_DD, vBody2Hgi_D)*Si2No_V(UnitU_)
+    !$acc update device(xBody2, yBody2, zBody2, vBody2_D)
   end subroutine set_second_body_coord
   !============================================================================
 end module ModPhysics

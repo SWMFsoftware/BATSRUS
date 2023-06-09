@@ -446,7 +446,7 @@ contains
     !==========================================================================
     subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
-      use ModPhysics, ONLY: xBody2, yBody2, zBody2, OmegaBody_D
+      use ModPhysics, ONLY: xBody2, yBody2, zBody2, vBody2_D, OmegaBody_D
       use ModAdvance, ONLY: UseMultiSpecies
       use ModPhysics, ONLY: FaceState_VI, Si2No_V, No2Si_V, UnitX_, UnitN_, &
            UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_, &
@@ -993,13 +993,8 @@ contains
            ! Obsolete version, assuming that the sesond body rotates
            ! in the equatorial plane
            ! Setting velocity BCs to be the second body orbital velocity:
-           ! Ux = -( \omega_SI y_SI)-> NoDim
-           FBC%VarsGhostFace_V(Ux_) = FaceState_V(Ux_) &
-                - OmegaOrbit*(yBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
-           ! Uy = ( \omega_SI x_SI)-> NoDim
-           FBC%VarsGhostFace_V(Uy_) = FaceState_V(Uy_) &
-                + OmegaOrbit*(xBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
-
+           FBC%VarsGhostFace_V(Ux_:Uz_) = FaceState_V(Ux_:Uz_) + &
+                vBody2_D(1:1+Uz_-Ux_)
         case default
            write(*,*) NameSub,': iTrue, jTrue, kTrue, iBlockBc =', &
                 iTrue, jTrue, kTrue, iBlockBc

@@ -237,7 +237,7 @@ contains
     integer:: nParam, iTableB0 = -1
     real(Real8_):: CarringtonRotationNumber
     character(len=500):: StringHeader
-    real:: Param_I(4)
+    real:: Param_I(4), CRFraction
 
     character(len=17) :: NameSub='MH_set_parameters'
     !--------------------------------------------------------------------------
@@ -273,17 +273,18 @@ contains
        iTableB0 = i_lookup_table('B0')
        if(iTableB0 > 0)then
           call get_lookup_table(1, StringDescription = StringHeader, &
-               nParam=nParam, Param_I=Param_I)
+               nParam=nParam, Param_I=Param_I, Time=CRFraction)
           if(iProc==0 .and. nParam >= 4 )then
              CarringtonRotationNumber = (StartTime &
                   - tStartCarringtonRotation)/CarringtonSynodicPeriod
              ! If the User provided StartTime is off by over half of the
              ! Carrington Rotation, it stops
-             if((abs(CarringtonRotationNumber - Param_I(4))) > 0.5)then
+             if( abs(CarringtonRotationNumber - (Param_I(4) + CRFraction) )&
+                  > 0.5)then
                 write(*,*)NameSub,': Carrington Rotation number from '// &
                      'PARAM.in  = ', CarringtonRotationNumber
                 write(*,*)NameSub,': Carrington Rotation number from '// &
-                     'input map = ',Param_I(4)
+                     'input map = ',Param_I(4) + CRFraction
                 write(*,*)NameSub,': WARNING! #STARTTIME in PARAM.in '// &
                      'differs from Carrington Rotation of Central Meridian '//&
                      'of Input Map !!!'
