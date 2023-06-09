@@ -151,7 +151,7 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1			nPlotFile
-z=0 var idl_real8		StringPlot
+z=0 var idl		StringPlot
 -1			DnSavePlot
 0.01			DtSavePlot
 0.0			DxSavePlot
