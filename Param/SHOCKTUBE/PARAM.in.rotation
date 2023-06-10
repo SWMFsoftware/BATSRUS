@@ -30,10 +30,10 @@ T			UseNonConservative
 10			nRootBlock1
 10			nRootBlock2
 1			nRootBlock3
--15.			xMin
- 15.			xMax
--15.			yMin
- 15.			yMax
+-20.			xMin
+ 20.			xMax
+-20.			yMin
+ 20.			yMax
 -0.5			zMin
  0.5			zMax
 
@@ -71,34 +71,34 @@ rho p			StringVar
 M1 2.0 1e-4		StringState
 M2 1.0 1e-4		StringState
 
-BLOCK M
+Block M logo
 
 #STATEINTERFACE
 24				nSegment
-M1 M2 -8. -10. -4. -10.		StringSegment
-M1 M2 -4. -10. -4.  -6.		StringSegment
-M1 M2 -4.  -6. -5.  -6.		StringSegment
-M1 M2 -5.  -6. -5.   2.		StringSegment
-M1 M2 -5.   2.  0.  -8.		StringSegment
-M1 M2  0.  -8.  5.   2.		StringSegment
-M1 M2  5.   2.  5.  -6.		StringSegment
-M1 M2  5.  -6. +4.  -6.		StringSegment
-M1 M2 +4.  -6. +4. -10.		StringSegment
-M1 M2 +4. -10. +8. -10.		StringSegment
-M1 M2 +8. -10.  8.  -6.		StringSegment
-M1 M2  8.  -6.  7.  -6.		StringSegment
-M1 M2  7.  -6.  7.   6.		StringSegment
-M1 M2  7.   6.  8.   6.		StringSegment
-M1 M2  8.   6.  8.  10.		StringSegment
-M1 M2  8.  10.  5.  10.		StringSegment
-M1 M2  5.  10.  0.   0.		StringSegment
-M1 M2  0.   0. -5.  10.		StringSegment
-M1 M2 -5.  10. -8.  10.		StringSegment
-M1 M2 -8.  10. -8.   6.		StringSegment
-M1 M2 -8.   6. -7.   6.		StringSegment
-M1 M2 -7.   6. -7.  -6.		StringSegment
-M1 M2 -7.  -6. -8.  -6.		StringSegment
-M1 M2 -8.  -6. -8. -10.		StringSegment
+M1 M2 -13. -10.  -4. -10.		StringSegment
+M1 M2  -4. -10.  -4.  -4.		StringSegment
+M1 M2  -4.  -4.  -6.  -4.		StringSegment
+M1 M2  -6.  -4.  -6.   2.		StringSegment
+M1 M2  -6.   2.   0.  -6.		StringSegment
+M1 M2   0.  -6.   6.   2.		StringSegment
+M1 M2   6.   2.   6.  -4.		StringSegment
+M1 M2   6.  -4.  +4.  -4.		StringSegment
+M1 M2  +4.  -4.  +4. -10.		StringSegment
+M1 M2  +4. -10.  13. -10.		StringSegment
+M1 M2 +13. -10.  13.  -4.		StringSegment
+M1 M2  13.  -4.  11.  -4.		StringSegment
+M1 M2  11.  -4.  11.   4.		StringSegment
+M1 M2  11.   4.  13.   4.		StringSegment
+M1 M2  13.   4.  13.  10.		StringSegment
+M1 M2  13.  10.   6.  10.		StringSegment
+M1 M2   6.  10.   0.   2.		StringSegment
+M1 M2   0.   2.  -6.  10.		StringSegment
+M1 M2  -6.  10. -13.  10.		StringSegment
+M1 M2 -13.  10. -13.   4.		StringSegment
+M1 M2 -13.   4. -11.   4.		StringSegment
+M1 M2 -11.   4. -11.  -4.		StringSegment
+M1 M2 -11.  -4. -13.  -4.		StringSegment
+M1 M2 -13.  -4. -13. -10.		StringSegment
 
 Solve for density only
 
@@ -151,7 +151,7 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1			nPlotFile
-z=0 var idl_real8		StringPlot
+z=0 var idl		StringPlot
 -1			DnSavePlot
 0.01			DtSavePlot
 0.0			DxSavePlot
