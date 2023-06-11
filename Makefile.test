@@ -121,7 +121,6 @@ test:
 	-@($(MAKE) test_fivemoment_alfven TESTDIR=run_test_fivemoment_alfven)
 	-@($(MAKE) test_fivemoment_shock TESTDIR=run_test_fivemoment_shock)
 	-@($(MAKE) test_fivemoment_langmuir TESTDIR=run_test_fivemoment_langmuir)
-	-@($(MAKE) test_graydiffusion TESTDIR=run_test_graydiffusion)
 	-@($(MAKE) test_outerhelio2d TESTDIR=run_test_outerhelio2d)
 	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
 	-@($(MAKE) test_outerhelio_1d TESTDIR=run_test_outerhelio_1d)
@@ -149,6 +148,7 @@ test_extra:
 	-@($(MAKE) test_bvector TESTDIR=run_test_bvector)
 	-@($(MAKE) test_awsom_bvector TESTDIR=run_test_awsom_bvector)
 	-@($(MAKE) test_fluxemergence TESTDIR=run_test_fluxemergence)
+	-@($(MAKE) test_graydiffusion TESTDIR=run_test_graydiffusion)
 	-@($(MAKE) test_eosgodunov TESTDIR=run_test_eosgodunov)
 	./Config.pl -nohdf5
 	-@($(MAKE) test_laserpackage TESTDIR=run_test_laserpackage)
