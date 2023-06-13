@@ -1,15 +1,7 @@
-Config.pl -e=Hd -u=Waves -g=4,4,1 -ng=2
+Config.pl -e=Hd -u=Waves -g=6,6,1 -ng=3
 
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.rotation: rotation		StringDescription
-
-#TEST
-set_initial_condition
-
-#TESTXYZ
-1.0			xTest
-1.0			yTest
-0.0			zTest
 
 #PLANET
 NONE			NamePlanet
@@ -27,8 +19,8 @@ T			UseNonConservative
 16000			MaxBlock
 
 #GRID
-10			nRootBlock1
-10			nRootBlock2
+6			nRootBlock1
+6			nRootBlock2
 1			nRootBlock3
 -20.			xMin
  20.			xMax
@@ -146,6 +138,9 @@ raw			StringLog
 #SAVERESTART
 F			DoSaveRestart
 
+#PLOTFILENAME
+second			NameMaxTimeUnit
+
 #SAVEINITIAL
 T			DoSaveInitial
 
@@ -162,4 +157,4 @@ Full rotation: t=1
 
 #STOP
 -1			MaxIteration
-1.0			tSimulationMax
+3.0			tSimulationMax
