@@ -548,8 +548,13 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
+          if(nIonFluid > 1)then
+             Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
+          else
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
+          end if
           Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) + &
-               2.0*KarmanTaylorBeta*sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+               2.0*KarmanTaylorBeta*sqrt(Rho) &
                *(State_VGB(WaveLast_,i,j,k,iBlock) &
                *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)) &
                + State_VGB(WaveFirst_,i,j,k,iBlock) &
@@ -1335,7 +1340,12 @@ contains
          FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
               + RightState_VX(Bx_:Bz_,i,j,k))
          if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
-         Rho = 0.5*(LeftState_VX(Rho_,i,j,k) + RightState_VX(Rho_,i,j,k))
+         if(nIonFluid > 1)then
+            Rho = 0.5*(sum(LeftState_VX(iRho_I(IonFirst_:IonLast_),i,j,k) &
+                 + RightState_VX(iRho_I(IonFirst_:IonLast_),i,j,k)))
+         else
+            Rho = 0.5*(LeftState_VX(Rho_,i,j,k) + RightState_VX(Rho_,i,j,k))
+         end if
          Alfven_VFD(:,i,j,k,Dim1_) = FullB_D/sqrt(Rho)
       end do; end do; end do
 
@@ -1344,7 +1354,12 @@ contains
             FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
                  + RightState_VY(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
-            Rho = 0.5*(LeftState_VY(Rho_,i,j,k) + RightState_VY(Rho_,i,j,k))
+            if(nIonFluid > 1)then
+               Rho = 0.5*(sum(LeftState_VY(iRho_I(IonFirst_:IonLast_),i,j,k) &
+                    + RightState_VY(iRho_I(IonFirst_:IonLast_),i,j,k)))
+            else
+               Rho = 0.5*(LeftState_VY(Rho_,i,j,k) + RightState_VY(Rho_,i,j,k))
+            end if
             Alfven_VFD(:,i,j,k,Dim2_) = FullB_D/sqrt(Rho)
          end do; end do; end do
       end if
@@ -1354,7 +1369,12 @@ contains
             FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
                  + RightState_VZ(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
-            Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) + RightState_VZ(Rho_,i,j,k))
+            if(nIonFluid > 1)then
+               Rho = 0.5*(sum(LeftState_VZ(iRho_I(IonFirst_:IonLast_),i,j,k) &
+                    + RightState_VZ(iRho_I(IonFirst_:IonLast_),i,j,k)))
+            else
+               Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) + RightState_VZ(Rho_,i,j,k))
+            end if
             Alfven_VFD(:,i,j,k,Dim3_) = FullB_D/sqrt(Rho)
          end do; end do; end do
       end if

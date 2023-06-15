@@ -731,13 +731,13 @@ contains
     use ModB0, ONLY: B0_DGB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,  Lperp_
-    use ModMultiFluid, ONLY: iRho_I, IonFirst_
+    use ModMultiFluid, ONLY: iRho_I, IonFirst_, nIonFluid
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
          CoronalHeating
 
-    real :: FullB_D(3), FullB, Coef
+    real :: FullB_D(3), FullB, Coef, Rho
     real :: EwavePlus, EwaveMinus
 
     character(len=*), parameter:: NameSub = 'turbulent_cascade'
@@ -746,8 +746,12 @@ contains
 
     if(Lperp_ > 1 .and. UseReynoldsDecomposition)then
        ! Note that Lperp is multiplied with the density
-       Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
-            *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
+       if(nIonFluid > 1)then
+          Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
+       else
+          Rho = State_VGB(Rho_,i,j,k,iBlock)
+       end if
+       Coef = sqrt(Rho)*2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
     else
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
