@@ -70,7 +70,6 @@ module ModCoronalHeating
 
   logical,public :: UseTurbulentCascade = .false.
   logical,public :: UseWaveReflection = .true.
-  logical        :: UseSurfaceWaveRefl= .false.
   real,   public :: rMinWaveReflection = 0.0
 
   ! long scale height heating (Ch = Coronal Hole)
@@ -479,7 +478,8 @@ contains
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           if(UseWaveReflection)then
              call read_var('rMinWaveReflection', rMinWaveReflection)
-             call read_var('UseSurfaceWaveRefl', UseSurfaceWaveRefl)
+             if(UseEquation4SigmaD)call read_var(&
+                  'UseReynoldsDecomposition', UseReynoldsDecomposition)
           end if
        case('usmanov')
           UseAlfvenWaveDissipation = .true.
@@ -841,21 +841,8 @@ contains
 
        AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
 
-       if(UseSurfaceWaveRefl)then
-          !
-          ! Calculate perpendicular gradient of log(sqrt(Rho))
-          !
-          GradLogRho_D = GradLogRho_D - b_D(:nDim)*sum(b_D(:nDim)*GradLogRho_D)
-          !
-          ! Account for max(EWave)/Rho*GradLogRho_D**2 in the reflection
-          ! coefficient:
-          !
-          ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl +&
-             0.250*max(EwavePlus,EwaveMinus)*sum(GradLogRho_D**2)/Rho)
-       else
-
-          ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
-       end if
+       
+       ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
 
        ! Clip the reflection rate from above with maximum dissipation rate
        ReflectionRate = min(ReflectionRateImb, DissipationRateMax)

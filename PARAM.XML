@@ -10167,7 +10167,7 @@ Default value for PoyntingFluxPerBSi is 1.0E-6.
     <parameter name="LperpTimesSqrtBSi" type="real"    default="1.5E5"/>
     <parameter name="rMinWaveReflection" type = "real" default="0"
 	       if="$UseWaveReflection"/>
-    <parameter name="UseSurfaceWaveRefl" type = "logical" default="F"
+    <parameter name="UseReynoldsDecomposition" type = "logical" default="F"
 	       if="$UseWaveReflection"/>
   </if>
   <if expr="$TypeCoronalHeating =~ /usmanov/">
@@ -10197,7 +10197,7 @@ turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection (read for turbulentcascade only)
 1.5e5                   LperpTimesSqrtBSi (read for turbulentcascade only)
 1.2			rMinWaveReflection (read if UseWaveReflection is true)
-T			UseSurfaceWaveRefl (read if UseWaveReflection is true)
+T			UseReynoldsDecomposition (read if UseWaveReflection is true)
 
 #CORONALHEATING
 usmanov                 TypeCoronalHeating
@@ -10243,7 +10243,7 @@ $L_{\perp}\sqrt{B}$ as input parameter LperpTimesSqrtBSi.
 The UseWaveReflection logical is obsolete, but kept for compatibility.
 If rMinWaveReflection > rBody is set, then the wave reflection is switched 
 off in the cells, at which R_BLK(i,j,k,iBlock) &lt; rMinWaveReflection. 
-If UseSurfaceWaveRefl is set true, an extra reflection acts if the transverse
+If UseReynoldsDecomposition is set true, an extra reflection acts if the transverse
 gradient of density is sufficiently high. 
 
 The default is TypeCoronalHeating="none"
