@@ -417,7 +417,7 @@ contains
          else
             Rho = VarsGhostFace_V(Rho_)
          end if
-         
+
          Ewave = Rho*DeltaU**2/(1.0 +  SigmaD)
          if(Bsph_D(1) > 0.0)then
             VarsGhostFace_V(WaveFirst_) = Ewave
@@ -560,7 +560,7 @@ contains
 
     integer :: iVar, i, j, k
     real :: Rho
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------

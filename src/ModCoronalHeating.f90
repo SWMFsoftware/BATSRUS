@@ -845,7 +845,6 @@ contains
 
        AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
 
-       
        ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
 
        ! Clip the reflection rate from above with maximum dissipation rate
