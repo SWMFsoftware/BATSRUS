@@ -2686,10 +2686,9 @@ contains
     real :: Uion_D(3), UEle_D(3), UEleDim_D(3), Current_D(3)
     real :: SrcImp_II(Neu_:Ne4_,5)
 
+    ! Requires a separate electron pressure
     character(len=*), parameter:: NameSub = 'calc_electron_impact_source'
     !--------------------------------------------------------------------------
-
-    ! Requires a separate electron pressure
     if (.not.UseElectronPressure) call CON_stop(NameSub// &
          ': Electron impact requires a separate electron pressure')
 
