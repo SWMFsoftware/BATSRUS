@@ -331,6 +331,7 @@ contains
     use ModMain,           ONLY: FaceBCType
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
+    use ModCoronalHeating, ONLY: SigmaD
 #ifdef _OPENACC
     use ModUtilities,      ONLY: norm2
 #endif
@@ -343,7 +344,7 @@ contains
     ! C.P. edited
     real:: Bsph_D(3), Vsph_D(3), VPUIsph_D(3)
 
-    real :: pSolarWind,pPUI, Pmag, PmagEquator, Ewave
+    real :: pSolarWind,pPUI, Pmag, PmagEquator, Ewave, Rho
 
     real :: XyzSph_DD(3,3)
 
@@ -400,20 +401,6 @@ contains
 
       VarsGhostFace_V(LevelHP_) = SwhRho
 
-      if(UseAlfvenWaves)then
-         Ewave = SwhRho*DeltaU**2
-         if(Bsph_D(1) > 0.0)then
-            VarsGhostFace_V(WaveFirst_) = Ewave
-            VarsGhostFace_V(WaveLast_) = 0.0
-         else
-            VarsGhostFace_V(WaveFirst_) = 0.0
-            VarsGhostFace_V(WaveLast_) = Ewave
-         end if
-
-         if(Lperp_ > 1) VarsGhostFace_V(Lperp_) = &
-              SwhRho*LperpTimesSqrtB/sqrt(norm2(VarsGhostFace_V(Bx_:Bz_)))
-      end if
-
       if(UseElectronPressure) VarsGhostFace_V(Pe_) = SwhPe
 
       if(.not.IsMhd)then
@@ -423,6 +410,26 @@ contains
       end if
 
       if(PuiFirst_ > 1) VarsGhostFace_V(PuiFirst_:PuiLast_) = 1.0
+
+      if(UseAlfvenWaves)then
+         if(nIonFluid > 1)then
+            Rho = sum(VarsGhostFace_V(iRho_I(IonFirst_:IonLast_)))
+         else
+            Rho = VarsGhostFace_V(Rho_)
+         end if
+
+         Ewave = Rho*DeltaU**2/(1.0 +  SigmaD)
+         if(Bsph_D(1) > 0.0)then
+            VarsGhostFace_V(WaveFirst_) = Ewave
+            VarsGhostFace_V(WaveLast_) = 0.0
+         else
+            VarsGhostFace_V(WaveFirst_) = 0.0
+            VarsGhostFace_V(WaveLast_) = Ewave
+         end if
+
+         if(Lperp_ > 1) VarsGhostFace_V(Lperp_) = &
+              Rho*LperpTimesSqrtB/sqrt(norm2(VarsGhostFace_V(Bx_:Bz_)))
+      end if
 
       if(UseNeutralFluid)then
 
@@ -552,6 +559,7 @@ contains
     logical,      intent(out):: IsFound
 
     integer :: iVar, i, j, k
+    real :: Rho
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
@@ -568,9 +576,6 @@ contains
        State_VGB(Bx_,i,j,k,iBlock)=VliswBx
        State_VGB(By_,i,j,k,iBlock)=VliswBy
        State_VGB(Bz_,i,j,k,iBlock)=VliswBz
-       if(UseAlfvenWaves) State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
-       ! Set Lperp to a large value of 1 AU in ISW
-       if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = VliswRho
        State_VGB(SWHP_,i,j,k,iBlock)=VliswP
        if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock)=VliswPe
 
@@ -584,6 +589,18 @@ contains
 
        if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 1.0
 
+       if(UseAlfvenWaves)then
+          if(nIonFluid > 1)then
+             Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
+          else
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
+          end if
+
+          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
+
+          ! Set Lperp to a large value of 1 AU in ISW
+          if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = Rho
+       end if
     end do; end do; end do
 
     if(UseNeutralFluid)then
@@ -644,6 +661,7 @@ contains
 
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
+    use ModCoronalHeating, ONLY: SigmaD
 #ifdef _OPENACC
     use ModUtilities,      ONLY: norm2
 #endif
@@ -654,7 +672,7 @@ contains
     real :: x, y, z, r
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3), vPUI_D(3), vPUISph_D(3)
     real :: SinTheta, SignZ
-    real :: Ewave
+    real :: Ewave, Rho, RhoBody
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
 
     logical :: DoTestCell
@@ -741,30 +759,6 @@ contains
           endif
        end if
 
-       if(UseAlfvenWaves)then
-          ! Energy density as specified in van der Holst et al. 2014
-          Ewave = State_VGB(Rho_,i,j,k,iBlock)*DeltaU**2 &
-                  *sqrt(State_VGB(Rho_,i,j,k,iBlock)/SwhRho)
-
-          ! Positive propagating waves
-          if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-               * Xyz_DGB(x_:z_,i,j,k,iBlock))>0.0)then
-
-             State_VGB(WaveFirst_,i,j,k,iBlock) = Ewave
-             State_VGB(WaveLast_,i,j,k,iBlock) = &
-                  1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
-
-          ! Negative propagating waves
-          else
-             State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
-             State_VGB(WaveFirst_,i,j,k,iBlock) = &
-	          1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
-          end if
-
-          if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = &
-               State_VGB(Rho_,i,j,k,iBlock)*LperpTimesSqrtB/sqrt(norm2(B_D))
-       end if
-
        if(UseNeutralFluid)then
           if(UseColdCloud)then
              ! PopI for studies of Heliosphere in cold cloud
@@ -826,6 +820,34 @@ contains
        end if
 
        if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 1.0
+
+       if(UseAlfvenWaves)then
+          if(nIonFluid > 1)then
+             Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
+             RhoBody = SwhRho + Pu3Rho
+          else
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
+             RhoBody = SwhRho
+          end if
+
+          Ewave = Rho*DeltaU**2/(1.0 + SigmaD)*sqrt(Rho/RhoBody)
+
+          if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+               * Xyz_DGB(x_:z_,i,j,k,iBlock))>0.0)then
+             ! Positive propagating waves
+             State_VGB(WaveFirst_,i,j,k,iBlock) = Ewave
+             State_VGB(WaveLast_,i,j,k,iBlock) = &
+                  1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
+          else
+             ! Negative propagating waves
+             State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
+             State_VGB(WaveFirst_,i,j,k,iBlock) = &
+	          1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
+          end if
+
+          if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = &
+               Rho*LperpTimesSqrtB/sqrt(norm2(B_D))
+       end if
 
        if(DoTestCell)then
           write(*,*)NameSub,' x, y, z, r            =', x, y, z, r
