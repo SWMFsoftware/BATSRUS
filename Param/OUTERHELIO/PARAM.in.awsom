@@ -128,13 +128,16 @@ F			UseElectronEntropy
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
+#NONCONSERVATIVE
+T			UseNonConservative
+
 #SCHEME
 1			nOrder
 Linde			TypeFlux
 
 #TIMESTEPPING
 1			nStage (1 or 2)
-0.80			CflExpl
+0.8			CflExpl
 
 #SAVERESTART
 T			DoSaveRestart
@@ -250,6 +253,15 @@ MultiIon                NameRegionFormula
 100.0                   uPop1LimitDim
 1.0                     MachPop1Limit
 
+#PU3HEATING
+T			UsePu3Heating
+1e7			TempPu3
+10.			FactorPu3
+
+#TURBULENCE
+10.0			DeltaUSi
+1.5e5			LperpTimesSqrtBSi
+
 #SOURCES
 F			UseSourceSWH
 F 			UseSourcePu3
@@ -258,19 +270,16 @@ F 			UseSourceNe2
 F 			UseSourceNe3
 F 			UseSourceNe4
 
-#ELECTRONIMPACT
-T                       UseElectronImpact
-
 #USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
-ElectronImpact		NameTable
+ChargeExchange		NameTable
 load			NameCommand
-Param/OUTERHELIO/ElectronImpactRate.dat		NameFile
+Param/OUTERHELIO/ExchangeRate.dat	NameFile
 ascii			TypeFile
 
 #STOP
-25			MaxIteration
+10			MaxIteration
 -1.0			tSimulationMax
 
 #RUN ##########################################################################
@@ -283,8 +292,6 @@ minmod			TypeLimiter
 #STOP
 20			MaxIteration
 -1.0			tSimulationMax
-
-#END
 
 #RUN ##########################################################################
 
