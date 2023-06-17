@@ -275,7 +275,7 @@ F 			UseSourceNe4
 #LOOKUPTABLE
 ChargeExchange		NameTable
 load			NameCommand
-Param/OUTERHELIO/ExchangeRate.dat	NameFile
+Param/OUTERHELIO/ExchangeRate.dat		NameFile
 ascii			TypeFile
 
 #STOP
