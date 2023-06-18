@@ -1260,7 +1260,7 @@ test_outerhelio:
 	$(MAKE) test_outerhelio_check
 
 test_outerhelio_compile:
-	./Config.pl ${OPENMP} -u=OuterHelio -e=OuterHelio -ng=2 -g=4,4,4
+	./Config.pl -noopenmp -u=OuterHelio -e=OuterHelio -ng=2 -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1271,12 +1271,12 @@ test_outerhelio_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerhelio_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_start
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_start
 	cd ${TESTDIR}; ./Restart.pl
 	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.restart ./PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
 
 test_outerhelio_check:
@@ -1286,6 +1286,7 @@ test_outerhelio_check:
 		> test_outerhelio.diff)
 	ls -l test_outerhelio.diff
 
+### 1D OUTER HELIOSPHERE TEST ###
 
 test_outerhelio_1d:
 	@echo "test_outerhelio_1d_compile..." > test_outerhelio_1d.diff
@@ -1319,6 +1320,7 @@ test_outerhelio_1d_check:
                 > test_outerhelio_1d.diff)
 	ls -l test_outerhelio_1d.diff
 
+### OUTER HELIOSPHERE TEST WITH PUI AND TURBULENCE ###
 
 test_outerhelioawsom:
 	@echo "test_outerhelioawsom_compile..." > test_outerhelioawsom.diff
@@ -1352,6 +1354,7 @@ test_outerhelioawsom_check:
                 > test_outerhelioawsom.diff)
 	ls -l test_outerhelioawsom.diff
 
+### OUTER HELIOSPHERE TEST WITH PUI ###
 
 test_outerheliopui:
 	@echo "test_outerheliopui_compile..." > test_outerheliopui.diff
@@ -1364,7 +1367,7 @@ test_outerheliopui:
 	$(MAKE) test_outerheliopui_check
 
 test_outerheliopui_compile:
-	./Config.pl ${OPENMP} -u=OuterHelio -e=OuterHelioPUIPe -ng=2 -g=4,4,4
+	./Config.pl -noopenmp -u=OuterHelio -e=OuterHelioPUIPe -ng=2 -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1375,12 +1378,12 @@ test_outerheliopui_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerheliopui_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_start
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_start
 	cd ${TESTDIR}; ./Restart.pl
 	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui.restart ./PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS/
 
 test_outerheliopui_check:
@@ -1389,6 +1392,8 @@ test_outerheliopui_check:
 		Param/OUTERHELIO/TestOutput/log_n000010_pui.log \
 		> test_outerheliopui.diff)
 	ls -l test_outerheliopui.diff
+
+### 1D OUTER HELIOSPHERE TEST WITH PUI ###
 
 test_outerheliopui_1d:
 	@echo "test_outerheliopui_1d_compile..." > test_outerheliopui_1d.diff

@@ -180,6 +180,11 @@ module ModUser
   real :: DeltaUSi = 10.0, DeltaU = 0.0
   real :: LperpTimesSqrtBSi = 1.5e5, LperpTimesSqrtB = 0.0
 
+  ! Ionization energy for neutral atomic hydrogen
+  ! Needed for electron impact ionization
+  real :: IonizationEnergyDim = cRyToEv*cEv
+  real :: IonizationEnergy = 0
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -1842,7 +1847,7 @@ contains
        end if
 
        ! Electron Impact Ionization
-       if(UseElectronImpact .and. UseElectronPressure)then
+       if(UseElectronImpact)then
           call calc_electron_impact_source( &
              i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceImp_V)
        else
@@ -2668,27 +2673,31 @@ contains
     ! Requires a separate electron pressure
 
     integer, intent(in):: i,j,k,iBlock
-    real, dimension(nFluid), intent(in):: Rho_I, U2_I, UThS_I
+    real, intent(in):: Rho_I(nFluid), U2_I(nFluid), UThS_I(nFluid)
     real, intent(in) :: U_DI(3,nFluid)
     real, intent(out):: SourceImp_V(nVar + nFluid)
 
     integer :: iFluid
-    real, dimension(Neu_:Ne4_):: SrcImpRho_I, &
-         SrcImpRhoUx_I, SrcImpRhoUy_I, SrcImpRhoUz_I, &
-         SrcImpEnergy_I
-    real, dimension(3,nFluid):: uDim_DI
+    real, dimension(Neu_:Ne4_):: SrcImpRho_I, SrcImpRhoUx_I, &
+            SrcImpRhoUy_I, SrcImpRhoUz_I, SrcImpEnergy_I
+    real :: uDim_DI(3,nFluid)
     real :: State_V(nVar)
-    real :: RhoEleNo, RhoEleSi, TempEle, UthSEle, IonizationEnergy, SrcImpPe
-    real, dimension(3):: Uion_D, UEle_D, Current_D
+    real :: RhoEleNo, RhoEleSi, TempEle, UthSEle
+    real :: Uion_D(3), UEle_D(3), UEleDim_D(3), Current_D(3)
     real :: SrcImp_II(Neu_:Ne4_,5)
 
+    ! Requires a separate electron pressure
     character(len=*), parameter:: NameSub = 'calc_electron_impact_source'
     !--------------------------------------------------------------------------
+    if (.not.UseElectronPressure) call CON_stop(NameSub// &
+         ': Electron impact requires a separate electron pressure')
 
+    SrcImpRho_I = 0.0
+    SrcImpRhoUx_I = 0.0
+    SrcImpRhoUy_I = 0.0
+    SrcImpRhoUz_I = 0.0
+    SrcImpEnergy_I = 0.0
     SourceImp_V = 0.0
-
-    ! Requires a separate electron pressure
-    if (.not.UseElectronPressure) RETURN
 
     State_V = State_VGB(:,i,j,k,iBlock)
 
@@ -2697,7 +2706,7 @@ contains
 
     if (IsMhd) then
        ! Electron density in normalized units
-       RhoEleNo = State_V(Ion_)
+       RhoEleNo = State_V(Rho_)
 
        ! Average Ion Velocity
        UIon_D = State_V(RhoUx_:RhoUz_)/RhoEleNo
@@ -2715,8 +2724,9 @@ contains
 
     ! Get electron velocity from the current and positive ion velocities
     call get_current(i, j, k, iBlock, Current_D)
-    UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo) &
-               *No2Si_V(UnitU_)
+    UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo)
+
+    UEleDim_D = UEle_D*No2Si_V(UnitU_)
 
     ! Electron temperature
     TempEle = State_V(Pe_)/RhoEleNo*No2Si_V(UnitTemperature_)
@@ -2724,15 +2734,12 @@ contains
     ! Electron thermal speed squared
     UThSEle = (2*cBoltzmann/cElectronMass)*TempEle
 
-    ! Electron Ionization Energy
-    IonizationEnergy = cRyToEv*cEv
-
     if(iTableElectronImpact > 0)then
        do iFluid = Neu_, Ne4_
           call get_collision( &
              ElectronImpact_, &
              Rho_I(iFluid), UThS_I(iFluid), uDim_DI(:,iFLuid), &
-             RhoEleSi, UThSEle, UEle_D, &
+             RhoEleSi, UThSEle, UEleDim_D, &
              SrcImp_II(iFluid,:))
        enddo
     end if
@@ -2742,11 +2749,6 @@ contains
     where(UseSource_I(Neu_:)) SrcImpRhoUy_I  = SrcImp_II(Neu_:,3)
     where(UseSource_I(Neu_:)) SrcImpRhoUz_I  = SrcImp_II(Neu_:,4)
     where(UseSource_I(Neu_:)) SrcImpEnergy_I = SrcImp_II(Neu_:,5)
-    ! Pressure source term for the electrons
-    ! Ionization Energy * total ionization rate
-    SrcImpPe = -sum(SrcImp_II(Neu_:,1), MASK=UseSource_I(Neu_:)) &
-             *IonizationEnergy*GammaElectronMinus1/cProtonMass &
-             *No2Si_V(UnitRho_)/No2Si_V(UnitP_)
 
     ! Neutral source terms
     do iFluid = Neu_, Ne4_
@@ -2763,7 +2765,7 @@ contains
              + 0.5*U2_I(iFluid)*SourceImp_V(iRho) )
     end do
 
-    ! Ion source terms
+    ! Plasma source terms
     if(IsMhd) then
        ! Single Ion
        if (UseSource_I(Ion_)) then
@@ -2776,6 +2778,15 @@ contains
           SourceImp_V(P_) = (Gamma-1)* ( SourceImp_V(Energy_) &
              - sum(U_DI(:,Ion_)*SourceImp_V(RhoUx_:RhoUz_)) &
              + 0.5*U2_I(Ion_)*SourceImp_V(Rho_) )
+
+          ! Electron pressure source term
+          ! Ionization Energy * total ionization rate
+          ! + thermal energy from new electron
+          SourceImp_V(Pe_) = GammaElectronMinus1*( &
+                  -SourceImp_V(Rho_)*IonizationEnergy &
+                  + (cElectronMass/cProtonMass)* ( SourceImp_V(Energy_) &
+                  - sum(UEle_D*SourceImp_V(RhoUx_:RhoUz_)) &
+                  + 0.5*sum(UEle_D**2)*SourceImp_V(Rho_) ) )
        end if
     else
        ! Multi Ion
@@ -2792,6 +2803,15 @@ contains
              SourceImp_V(Pu3P_) = (Gamma-1)* ( SourceImp_V(Pu3Energy_) &
                        - sum(U_DI(:,Pu3_)*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
                        + 0.5*U2_I(Pu3_)*SourceImp_V(Pu3Rho_))
+
+             ! Electron pressure source term
+             ! Ionization Energy * total ionization rate
+             ! + thermal energy from new electron
+             SourceImp_V(Pe_) = GammaElectronMinus1*( &
+                     -SourceImp_V(Pu3Rho_)*IonizationEnergy &
+                     + (cElectronMass/cProtonMass)* ( SourceImp_V(Pu3Energy_) &
+                     - sum(UEle_D*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                     + 0.5*sum(UEle_D**2)*SourceImp_V(Pu3Rho_) ) )
           else
              ! outside region 3
              ! SWH is created
@@ -2804,12 +2824,18 @@ contains
              SourceImp_V(SWHp_) = (Gamma-1)* ( SourceImp_V(SWHEnergy_) &
                        - sum(U_DI(:,SWH_)*SourceImp_V(SWHRhoUx_:SWHRhoUz_)) &
                        + 0.5*U2_I(SWH_)*SourceImp_V(SWHRho_) )
+
+             ! Electron pressure source term
+             ! Ionization Energy * total ionization rate
+             ! + thermal energy from new electron
+             SourceImp_V(Pe_) = GammaElectronMinus1*( &
+                     -SourceImp_V(SWHRho_)*IonizationEnergy &
+                     + (cElectronMass/cProtonMass)* ( SourceImp_V(SWHEnergy_) &
+                     - sum(UEle_D*SourceImp_V(SWHRhoUx_:SWHRhoUz_)) &
+                     + 0.5*sum(UEle_D**2)*SourceImp_V(SWHRho_) ) )
           end if
        end if
     end if
-
-    ! Electron Pressure source term
-    SourceImp_V(Pe_) = SrcImpPe
 
     end subroutine calc_electron_impact_source
   !============================================================================
@@ -3196,6 +3222,10 @@ contains
 
     if(iTableElectronImpact < 0) &
          iTableElectronImpact=i_lookup_table('ElectronImpact')
+
+    ! Normalize ionization energy for electron impact
+    IonizationEnergy = IonizationEnergyDim*Si2No_V(UnitEnergyDens_) &
+            /Si2No_V(UnitN_)
 
     call test_stop(NameSub, DoTest)
 
