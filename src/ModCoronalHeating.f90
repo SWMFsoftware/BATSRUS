@@ -738,7 +738,6 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out)   :: CoronalHeating, WaveDissipation_V(&
          WaveFirst_:max(WaveLast_,Z2SigmaD_))
-         
 
     real :: FullB_D(3), FullB, Coef, Rho
     real :: EwavePlus, EwaveMinus
