@@ -247,7 +247,7 @@ contains
           call read_var('FactorPu3', FactorPu3)
 
        case("#ELECTRONHEATING")
-          call read_var('UseElectronHeatin', UseElectronHeating)
+          call read_var('UseElectronHeating', UseElectronHeating)
           call read_var('TempHeatElectron', TempHeatElectron)
           call read_var('FactorHeatElectron', FactorHeatElectron)
 
