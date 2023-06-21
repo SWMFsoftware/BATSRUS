@@ -64,7 +64,7 @@ module ModCoronalHeating
 
   ! Alfven wave dissipation
   logical,public :: UseAlfvenWaveDissipation = .false.
-  real,   public :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
+  real           :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real,   public :: LperpTimesSqrtB
   real :: Crefl = 0.04
 
@@ -79,7 +79,8 @@ module ModCoronalHeating
 
   ! Arrays for the calculated heat function and dissipated wave energy
   real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
-  real, public :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
+  real, public :: WaveDissipation_VC(WaveFirst_:max(WaveLast_,Z2SigmaD_),&
+       1:nI,1:nJ,1:nK)
   !$omp threadprivate( CoronalHeating_C, WaveDissipation_VC )
 
   character(len=lStringLine) :: TypeHeatPartitioning
@@ -634,7 +635,8 @@ contains
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+                  WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k),&
+                  CoronalHeating_C(i,j,k))
           end do; end do; end do
        end if
 
@@ -734,8 +736,9 @@ contains
     use ModMultiFluid, ONLY: iRho_I, IonFirst_, nIonFluid
 
     integer, intent(in) :: i, j, k, iBlock
-    real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
-         CoronalHeating
+    real, intent(out)   :: CoronalHeating, WaveDissipation_V(&
+         WaveFirst_:max(WaveLast_,Z2SigmaD_))
+         
 
     real :: FullB_D(3), FullB, Coef, Rho
     real :: EwavePlus, EwaveMinus
@@ -778,6 +781,11 @@ contains
     WaveDissipation_V(WaveLast_) = Coef*sqrt(EwavePlus)*EwaveMinus
 
     CoronalHeating = sum(WaveDissipation_V)
+    ! Dissipation rate for the energy difference
+    if(UseReynoldsDecomposition.and. UseEquation4SigmaD)      &
+         WaveDissipation_V(max(WaveLast_,Z2SigmaD_)) = Coef*  &
+         0.50*(sqrt(EwaveMinus) + sqrt(EwaveMinus))*          &
+         State_VGB(Z2SigmaD_,i,j,k,iBlock)
 
   end subroutine turbulent_cascade
   !============================================================================
