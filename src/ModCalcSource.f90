@@ -594,8 +594,8 @@ contains
           end if
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
-                  Source_VC(WaveFirst_:WaveLast_,i,j,k) &
+             Source_VC(WaveFirst_:max(WaveLast_,Z2SigmaD_),i,j,k) = &
+                  Source_VC(WaveFirst_:max(WaveLast_,Z2SigmaD_),i,j,k) &
                   - WaveDissipation_VC(:,i,j,k)
           end do; end do; end do
           if(DoTest)call write_source('After UseAlfvenWaveDissipation')
