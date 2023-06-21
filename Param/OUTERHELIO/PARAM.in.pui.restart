@@ -171,6 +171,11 @@ T			UsePu3Heating
 1e7			TempPu3
 10.			FactorPu3
 
+#ELECTRONHEATING
+T			UseElectronHeating
+1e7			TempHeatElectron
+10.			FactorHeatElectron
+
 #USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
