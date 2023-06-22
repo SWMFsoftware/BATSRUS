@@ -1017,19 +1017,23 @@ contains
                 call read_var('Radius', PlotRange_EI(1,iFile))
              elseif (  index(StringPlot, 'shl')>0 &
                   .or. index(StringPlot, 'sln')>0 &
-                  .or. index(StringPlot, 'slg')>0)then
+                  .or. index(StringPlot, 'slg')>0 &
+                  .or. index(StringPlot, 'shk')>0)then
                 if(index(StringPlot, 'shl')>0) then
                    TypePlotArea = 'shl'
                 elseif(index(StringPlot, 'sln')>0) then
                    TypePlotArea = 'sln'
                 elseif(index(StringPlot, 'slg')>0) then
                    TypePlotArea = 'slg'
+                elseif(index(StringPlot, 'shk')>0) then
+                   TypePlotArea = 'shk'
                 endif
 
                 call read_var('TypeCoord', TypeCoordPlot_I(iFile))
                 call read_var('rMin',   PlotRange_EI(1,iFile))
                 call read_var('rMax',   PlotRange_EI(2,iFile))
-                if (PlotRange_EI(1, iFile) /= PlotRange_EI(2,iFile)) &
+                if (PlotRange_EI(1, iFile) /= PlotRange_EI(2,iFile) &
+                     .and. TypePlotArea /= 'shk') &
                      call read_var('dR',   PlotDx_DI(1,iFile))
                 call read_var('LonMin', PlotRange_EI(3,iFile))
                 call read_var('LonMax', PlotRange_EI(4,iFile))
@@ -1361,6 +1365,7 @@ contains
                      .and. TypePlotArea /= 'shl' &
                      .and. TypePlotArea /= 'sln' &
                      .and. TypePlotArea /= 'slg' &
+                     .and. TypePlotArea /= 'shk' &
                      .and. TypePlotArea /= 'box' &
                      .and. TypePlotArea /= 'los' &
                      .and. TypePlotArea /= 'rfr' &
@@ -1605,6 +1610,8 @@ contains
                 call stop_mpi('Variable definition missing from StringPlot=' &
                      //StringPlot)
              end if
+             if (TypePlotArea == 'shk') &
+               StringPlotVar_I(iFile) = 'divudx '//StringPlotVar_I(iFile)
 
              ! Set equation parameters for 3D unstructured IDL files
              ! to describe block structure and the dipole. Needed by CCMC.
@@ -4090,7 +4097,7 @@ contains
 
          ! Fix plot range for various plot areas
          select case(TypePlotArea)
-         case('shl', 'sln','slg','box', 'eqb', 'eqr', 'lcb','los')
+         case('shl', 'sln','slg','shk','box', 'eqb', 'eqr', 'lcb','los')
             ! These plot areas read all ranges from PARAM.in
             CYCLE PLOTFILELOOP
          case('cut')

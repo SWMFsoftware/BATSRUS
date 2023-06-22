@@ -12,7 +12,7 @@ module ModWritePlot
 
   private ! except
 
-  public:: write_plot         ! write IDL, Tecplot, shell or box plot
+  public:: write_plot         ! write IDL, Tecplot, shell, shock or box plot
   public:: adjust_plot_range  ! adjust the range of cut plots
   public:: set_plot_scalars   !
   public:: reverse_field
@@ -40,6 +40,7 @@ contains
     use ModAdvance, ONLY : State_VGB
     use ModVarIndexes, ONLY: SignB_
     use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
+    use ModPlotShock, ONLY: init_plot_shock, set_plot_shock, write_plot_shock
     use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
     use ModWritePlotIdl, ONLY: write_plot_idl
     use ModWriteTecplot, ONLY: lRecConnect, nPlotDim, &
@@ -75,8 +76,8 @@ contains
     integer:: nPlotVar
     character(len=lNameVar):: NamePlotUnit_V(MaxPlotvar)
 
-    ! True for shell / box plots and tcp cuts
-    logical:: DoPlotShell, DoPlotBox, DoPassPlotVar
+    ! True for shell, Shock, / box plots and tcp cuts
+    logical:: DoPlotShell, DoPlotShock, DoPlotBox, DoPassPlotVar
 
     ! Equation parameters
     integer, parameter:: MaxParam = 100
@@ -239,6 +240,7 @@ contains
     ! Spherical slices are special cases:
     DoPlotShell = TypePlot(1:3) == 'shl' .or. TypePlot(1:3) == 'sln' &
          .or. TypePlot(1:3) == 'slg'
+    DoPlotShock = TypePlot(1:3) == 'shk'
     DoPlotBox   = TypePlot(1:3) == 'box'
 
     ! Plotting emission
@@ -251,7 +253,7 @@ contains
 
     ! If threaded gap is used, the dimensional factors should be calculated,
     ! which are needed to convert a point state vector to a dimensional form
-    if(DoPlotThreads .and. (DoPlotShell .or. DoPlotBox))then
+    if(DoPlotThreads .and. (DoPlotShell .or. DoPlotBox .or. DoPlotShock))then
        if(IsDimensionalPlot_I(iFile))then
           call set_dimensional_factor(nPlotVar, NamePlotVar_V(1:nPlotVar), &
                DimFactor_V(1:nPlotVar) , DimFactorBody_V(1:nPlotVar))
@@ -325,6 +327,9 @@ contains
     elseif(DoPlotShell)then
        ! Initialize the shell grid for this file
        call init_plot_shell(iFile, nPlotVar)
+    elseif(DoPlotShock)then
+       ! Initialize the shock grid for this file
+       call init_plot_shock(iFile, nPlotVar)
     elseif(TypePlotFormat_I(iFile)=='tec')then
        ! Open two files for connectivity and data
        NameFileNorth = trim(NameSnapshot)//"_1"//trim(NameProc)
@@ -352,6 +357,7 @@ contains
     IsNonCartesianPlot = .not.IsCartesianGrid
 
     if (DoPlotShell) IsNonCartesianPlot = .true.
+    if (DoPlotShock) IsNonCartesianPlot = .true.
     if (DoPlotBox) IsNonCartesianPlot = .false.
 
     ! Logical for hdf plots
@@ -404,7 +410,7 @@ contains
 
     ! True if message passing is needed for interpolating non-primitive
     ! variables using the ghost cells.
-    DoPassPlotVar = DoPlotShell .or. DoPlotBox .or. &
+    DoPassPlotVar = DoPlotShell .or. DoPlotBox .or. DoPlotShock .or. &
          TypePlotFormat_I(iFile)=='tcp' .and. nPlotDim < nDim
 
     if(DoPassPlotVar)then
@@ -461,6 +467,8 @@ contains
 
        if(DoPlotShell) then
           call set_plot_shell(iBlock, nPlotVar, PlotVar_GV)
+       else if(DoPlotShock) then
+          call set_plot_shock(iBlock, nPlotVar, PlotVar_GV)
        else if (DoPlotBox) then
           call set_plot_box(iBlock, nPlotVar, PlotVar_GV)
        else
@@ -488,7 +496,8 @@ contains
        end if
 
        if (TypePlotFormat_I(iFile) == 'idl' .and. &
-            .not.DoPlotShell .and. .not.DoPlotBox) then
+            .not.DoPlotShell .and. .not.DoPlotBox &
+            .and. .not.DoPlotShock ) then
           ! Update number of cells per processor
           nCellProc = nCellProc + nCellBlock
 
@@ -523,6 +532,8 @@ contains
             trim(StringUnitTec)
        if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
             NamePlotVar_V, StringUnitTec, trim(NameSnapshot)//'.dat')
+       if(DoPlotShock) call write_plot_shock(iFile, nPlotVar, &
+            NamePlotVar_V, StringUnitTec, trim(NameSnapshot)//'.dat')
        if(DoPlotBox) call write_plot_box(iFile, nPlotVar, &
             NamePlotVar_V, StringUnitTec, trim(NameSnapshot)//'.dat')
     case('idl')
@@ -531,12 +542,15 @@ contains
        if(DoTest .and. iProc==0) write(*,*) StringUnitIdl
        if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
             NamePlotVar_V, StringUnitIdl, trim(NameSnapshot)//'.out')
+       if(DoPlotShock) call write_plot_shock(iFile, nPlotVar, &
+            NamePlotVar_V, StringUnitIdl, trim(NameSnapshot)//'.out')
        if(DoPlotBox) call write_plot_box(iFile, nPlotVar, &
             NamePlotVar_V, StringUnitIdl, trim(NameSnapshot)//'.out')
     end select
 
     ! Done writing shell plot
     if(DoPlotShell) RETURN
+    if(DoPlotShock) RETURN
     if(DoPlotBox) RETURN
 
     ! Write files for tecplot format
