@@ -938,7 +938,7 @@ contains
     ! Operator split, semi-implicit subroutines
 
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_, &
-         WaveFirst_, WaveLast_
+         WaveFirst_, WaveLast_, Z2SigmaD_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, DtMax_CB, Source_VCB
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
@@ -993,7 +993,8 @@ contains
     real :: Deltap, Coef, Denominator
     real :: RadCool, RadCoolDeriv
     real :: dQidTe1, dQidTi1, Qi1, TeTiCoef1, TeTiCoef2
-    real :: CoronalHeating, WaveDissipation_V(WaveFirst_:WaveLast_)
+    real :: CoronalHeating
+    real :: WaveDissipation_V(WaveFirst_:max(WaveLast_,Z2SigmaD_))
     real :: QPerQtotal_I(IonFirst_:IonLast_)
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal

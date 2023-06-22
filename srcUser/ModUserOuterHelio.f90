@@ -108,6 +108,9 @@ module ModUser
   logical :: UsePu3Heating = .false.
   real :: TempPu3, FactorPu3, HeatPu3
 
+  logical :: UseElectronHeating = .false.
+  real :: TempHeatElectron, FactorHeatElectron
+
   integer :: iTableSolarWind = -1 ! initialization is needed
   integer :: iTableChargeExchange = -1
   integer :: iTableElectronImpact = -1
@@ -242,6 +245,11 @@ contains
           call read_var('UsePu3Heating', UsePu3Heating)
           call read_var('TempPu3', TempPu3)
           call read_var('FactorPu3', FactorPu3)
+
+       case("#ELECTRONHEATING")
+          call read_var('UseElectronHeating', UseElectronHeating)
+          call read_var('TempHeatElectron', TempHeatElectron)
+          call read_var('FactorHeatElectron', FactorHeatElectron)
 
           ! This is a flag to define how many populations of Neutrals to run
        case("#SOURCES")
@@ -1711,7 +1719,8 @@ contains
     real, dimension(nVar + nFluid):: Source_V, SourceCx_V, SourcePh_V, &
          SourceImp_V
 
-    real, dimension(nFluid) :: U2_I, Temp_I, Rho_I, UThS_I
+    real :: U2_I(nFluid), Temp_I(nFluid), Rho_I(nFluid), UThS_I(nFluid)
+    real :: HeatElectron, NumDensElectron, TempElectron
 
     real :: U_DI(3,nFluid)
 
@@ -1863,6 +1872,22 @@ contains
 
        end if
 
+       if(UseElectronPressure)then
+          ! Heating electrons
+          HeatElectron = 0.0
+          if(UseElectronHeating) then
+             ! Electron number density
+             NumDensElectron = sum(State_V(iRhoIon_I)/MassIon_I)
+             ! Electron Temperature
+             TempElectron = State_V(Pe_)/NumDensElectron
+
+             HeatElectron = &
+                GammaElectronMinus1*NumDensElectron*&
+                (TempHeatElectron*Io2No_V(UnitTemperature_) - TempElectron)*&
+                (r_GB(i,j,k,iBlock)-rBody)*FactorHeatElectron
+           end if
+       end if
+
        ! Calculate the source terms for this cell
        call calc_source_cell
     end do; end do; end do
@@ -1890,6 +1915,7 @@ contains
                Source_V(Pu3P_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
                     - sum(U_DI(:,Pu3_)*Source_V(Pu3RhoUx_:Pu3RhoUz_)) &
                     + 0.5*U2_I(Pu3_)*Source_V(Pu3Rho_) )
+               Source_V(Pe_) = HeatElectron
             end if
          end if
       end if
@@ -1925,6 +1951,10 @@ contains
 
          if(.not.IsMhd)then
             write(*,*) ' HeatPu3=', HeatPu3
+         end if
+
+         if(UseElectronPressure)then
+            write(*,*) ' HeatElectron=', HeatElectron
          end if
       end if
 

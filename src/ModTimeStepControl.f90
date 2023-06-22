@@ -220,7 +220,7 @@ contains
           if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
              DtLoss = 0.5*minval( &
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                  /WaveDissipation_VC(:,i,j,k))
+                  /WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k))
              ! The following prevents the wave energies from becoming
              ! negative due to too large loss terms.
              DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), DtLoss)
