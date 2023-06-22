@@ -80,7 +80,6 @@ contains
     LatMin = PlotRange_EI(5,iFile) * cDegtoRad
     LatMax = PlotRange_EI(6,iFile) * cDegtoRad
 
-
     ! Set number of points:
     nLon = nint((LonMax - LonMin)/dLon) + 1
     nLat = nint((LatMax - LatMin)/dLat) + 1
@@ -93,7 +92,7 @@ contains
     ! contribute to a plot variable.
     allocate(PlotVar_VII(0:nPlotVar,nLon,nLat))
     PlotVar_VII = 0.0
-       
+
     ! Get coordinate transformation matrix:
     PlotToGm_DD = transform_matrix(tSimulation, &
          TypeCoordPlot_I(iFile), TypeCoordSystem)
@@ -153,7 +152,7 @@ contains
     dR = (maxval(r_GB(:,:,:,iBlock)) - rMin)/nR
     ! skip blocks with all positive divudx
     if(minval(PlotVar_GV(:,:,:,1)) >= 0.0) RETURN
-    
+
     do k = 1, nLat
        Lat = LatMin + (k-1)*dLat
        do j = 1, nLon
@@ -221,7 +220,7 @@ contains
          ': HDF file type not supported for Geo Sphere output.')
 
     ! Collect results to head node
-    ! Allocate variable 
+    ! Allocate variable
 
     if(nProc > 1)then
         allocate(PlotVar_VIIP(0:nPlotVar,nLon,nLat,nProc))
@@ -238,7 +237,7 @@ contains
             enddo; enddo
         endif
         deallocate(PlotVar_VIIP)
-    endif 
+    endif
 
     ! Save results to disk
     if(iProc==0) then
@@ -252,7 +251,7 @@ contains
        do iVar = 1, nPlotVar
           NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
-       
+
        ! Call save_plot_file to write data to disk.
        call save_plot_file(NameFile, &
                TypeFileIn=TypeFile_I(iFile), &
