@@ -1185,7 +1185,7 @@ contains
 
     real:: Source_V(nVar+nFluid)
 
-    real:: U2_I(nFluid), Temp_I(nFluid), Rho_I(nFluid), UThS_I(nFluid)
+    real:: U2_I(nFluid), TempSi_I(nFluid), NumDensSi_I(nFluid), UThS_I(nFluid)
 
     real :: U_DI(3,nFluid)
 
@@ -1288,9 +1288,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srswhcx')
                    PlotVar_G(i,j,k) = Source_V(SwhRho_)*No2Io_V(UnitRho_)
@@ -1338,9 +1338,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srpuicx')
                    PlotVar_G(i,j,k) = Source_V(Pu3Rho_)*No2Io_V(UnitRho_)
@@ -1388,9 +1388,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_electron_impact_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srswhimp')
                    PlotVar_G(i,j,k) = Source_V(SwhRho_)*No2Io_V(UnitRho_)
@@ -1438,9 +1438,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_electron_impact_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srpuiimp')
                    PlotVar_G(i,j,k) = Source_V(Pu3Rho_)*No2Io_V(UnitRho_)
@@ -1519,9 +1519,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srcx')
                    PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
@@ -1568,7 +1568,7 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_photoion_source( &
                    i,j,k,iBlock,U_DI,U2_I,Source_V)
                 select case(NameVar)
@@ -1616,9 +1616,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_electron_impact_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srimp')
                    PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
