@@ -1185,7 +1185,7 @@ contains
 
     real:: Source_V(nVar+nFluid)
 
-    real:: U2_I(nFluid), Temp_I(nFluid), Rho_I(nFluid), UThS_I(nFluid)
+    real:: U2_I(nFluid), TempSi_I(nFluid), NumDensSi_I(nFluid), UThS_I(nFluid)
 
     real :: U_DI(3,nFluid)
 
@@ -1288,9 +1288,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srswhcx')
                    PlotVar_G(i,j,k) = Source_V(SwhRho_)*No2Io_V(UnitRho_)
@@ -1338,9 +1338,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srpuicx')
                    PlotVar_G(i,j,k) = Source_V(Pu3Rho_)*No2Io_V(UnitRho_)
@@ -1388,9 +1388,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_electron_impact_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srswhimp')
                    PlotVar_G(i,j,k) = Source_V(SwhRho_)*No2Io_V(UnitRho_)
@@ -1438,9 +1438,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_electron_impact_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srpuiimp')
                    PlotVar_G(i,j,k) = Source_V(Pu3Rho_)*No2Io_V(UnitRho_)
@@ -1519,9 +1519,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srcx')
                    PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
@@ -1568,7 +1568,7 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_photoion_source( &
                    i,j,k,iBlock,U_DI,U2_I,Source_V)
                 select case(NameVar)
@@ -1616,9 +1616,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_electron_impact_source( &
-                   i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,Source_V)
+                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srimp')
                    PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
@@ -1719,7 +1719,7 @@ contains
     real, dimension(nVar + nFluid):: Source_V, SourceCx_V, SourcePh_V, &
          SourceImp_V
 
-    real :: U2_I(nFluid), Temp_I(nFluid), Rho_I(nFluid), UThS_I(nFluid)
+    real :: U2_I(nFluid), TempSi_I(nFluid), NumDensSi_I(nFluid), UTh2Si_I(nFluid)
     real :: HeatElectron, NumDensElectron, TempElectron
 
     real :: U_DI(3,nFluid)
@@ -1841,11 +1841,11 @@ contains
 
        ! Calculate Rho, U, U^2, Temp, and UTh^2 for source terms
        call calc_source_inputs( &
-          i,j,k,iBlock,Rho_I,U_DI,U2_I,Temp_I,UThS_I)
+          i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UTh2Si_I)
 
        ! Charge Exchange
        call calc_charge_exchange_source( &
-          i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+          i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
 
        ! Photoionization
        if(UsePhotoion)then
@@ -1858,7 +1858,7 @@ contains
        ! Electron Impact Ionization
        if(UseElectronImpact)then
           call calc_electron_impact_source( &
-             i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceImp_V)
+             i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceImp_V)
        else
           SourceImp_V = 0.0
        end if
@@ -1867,7 +1867,7 @@ contains
           ! Heating Pu3
           HeatPu3 = 0.0
           if(UsePu3Heating) HeatPu3 = &
-             State_V(PU3Rho_)*(TempPu3 - Temp_I(PU3_))*&
+             State_V(PU3Rho_)/MassFluid_I(Pu3_)*(TempPu3 - TempSi_I(PU3_))*&
              Io2No_V(UnitTemperature_)*(r_GB(i,j,k,iBlock)-rBody)*FactorPu3
 
        end if
@@ -1963,55 +1963,59 @@ contains
   end subroutine user_calc_sources_expl
   !============================================================================
   subroutine calc_source_inputs( &
-     i, j, k, iBlock, Rho_I, U_DI, U2_I, Temp_I, UThS_I)
+     i, j, k, iBlock, NumDensSi_I, U_DI, U2_I, TempSi_I, UTh2Si_I)
 
     ! Calculate parameters to pass to source terms
 
     integer, intent(in):: i, j, k, iBlock
-    real, dimension(nFLuid), intent(out) :: Rho_I, U2_I, Temp_I, UThS_I
+    real, dimension(nFLuid), intent(out) :: NumDensSi_I, U2_I, TempSi_I, UTh2Si_I
     real, intent(out) :: U_DI(3,nFLuid)
 
-    real:: State_V(nVar)
+    real :: State_V(nVar)
+    real :: NumDens_I(nFluid)
     !--------------------------------------------------------------------------
     State_V = State_VGB(:,i,j,k,iBlock)
 
-    ! Densities in amu/m^3
-    Rho_I = State_V(iRho_I)*No2Si_V(UnitN_)
+    ! Numberd densities
+    NumDens_I = State_V(iRho_I)/MassFluid_I
+
+    ! Number densities in #/m^3
+    NumDensSi_I = NumDens_I*No2Si_V(UnitN_)
 
     ! Velocities per component
     U_DI(x_,:) = State_V(iRhoUx_I)/State_V(iRho_I)
     U_DI(y_,:) = State_V(iRhoUy_I)/State_V(iRho_I)
     U_DI(z_,:) = State_V(iRhoUz_I)/State_V(iRho_I)
 
-    ! Velocity square in normalized units ?
+    ! Velocity square in normalized units
     U2_I = sum(U_DI**2, 1)
 
     ! Temperature (K)
-    Temp_I = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
+    TempSi_I = State_V(iP_I)/NumDens_I*No2Si_V(UnitTemperature_)
 
     ! If not using Pe, electron pressure is grouped with SWH
     if(.not.UseElectronPressure)then
        if(IsMhd)then
-          Temp_I(Ion_) = 0.5*Temp_I(Ion_)
+          TempSi_I(Ion_) = 0.5*TempSi_I(Ion_)
        else
-          Temp_I(SWH_) = (State_V(SWHP_) &
+          TempSi_I(SWH_) = (State_V(SWHP_) &
                /(2*State_V(SWHRho_) + State_V(PU3Rho_))) &
                *No2Si_V(UnitTemperature_)
        endif
     end if
 
     ! Thermal speed squared in (m/s)^2
-    UThS_I = (2*cBoltzmann/cProtonMass)*Temp_I
+    UTh2Si_I = (2*cBoltzmann/cProtonMass)*TempSi_I
 
   end subroutine calc_source_inputs
   !============================================================================
   subroutine calc_charge_exchange_source( &
-     i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceCx_V)
+     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
 
     ! Calculate the charge exchange source terms for one cell.
 
     integer, intent(in):: i,j,k,iBlock
-    real, dimension(nFluid), intent(in) :: Rho_I, U2_I, UThS_I
+    real, dimension(nFluid), intent(in) :: NumDensSi_I, U2_I, UTh2Si_I
     real, intent(in) :: U_DI(3,nFluid)
     real, intent(out):: SourceCx_V(nVar + nFluid)
 
@@ -2119,8 +2123,8 @@ contains
        do iFluid = Neu_, Ne4_
           call get_collision( &
                ChargeExchange_, &
-               Rho_I(Ion_),UThS_I(Ion_), uDIm_DI(:,Ion_), &
-               Rho_I(iFluid), UThS_I(iFluid), uDim_DI(:,iFluid), &
+               NumDensSi_I(Ion_),UTh2Si_I(Ion_), uDIm_DI(:,Ion_), &
+               NumDensSi_I(iFluid), UTh2Si_I(iFluid), uDim_DI(:,iFluid), &
                SrcLookI_II(iFluid,:),SrcLookN_II(iFluid,:))
        end do
 
@@ -2146,8 +2150,8 @@ contains
           do iFluid = Neu_, Ne4_
              call get_collision( &
                   ChargeExchange_, &
-                  Rho_I(Pu3_),UThS_I(Pu3_), uDim_DI(:,Pu3_), &
-                  Rho_I(iFluid), UThs_I(iFluid), uDIm_DI(:,iFluid), &
+                  NumDensSi_I(Pu3_),UTh2Si_I(Pu3_), uDim_DI(:,Pu3_), &
+                  NumDensSi_I(iFluid), UTh2Si_I(iFluid), uDIm_DI(:,iFluid), &
                   SrcLookPu3_II(iFluid,:),SrcLookNPu3_II(iFluid,:))
           end do
 
@@ -2183,7 +2187,7 @@ contains
 
        ! Sum of thermal speeds squared for SW fluid and neutral fluid
        where(UseSource_I(Neu_:)) &
-            UTh2Sum_I = UThS_I(SWH_) + UThS_I(Neu_:)
+            UTh2Sum_I = UTh2Si_I(SWH_) + UTh2Si_I(Neu_:)
 
        if(.not.IsMhd)then
           ! for Pu3
@@ -2196,7 +2200,7 @@ contains
 
           ! Sum of thermal speeds for PUI fluid and neutral fluid
           where(UseSource_I(Neu_:)) &
-               UTh2SumPu3_I = UThS_I(Pu3_) + UThS_I(Neu_:)
+               UTh2SumPu3_I = UTh2Si_I(Pu3_) + UTh2Si_I(Neu_:)
        end if
 
        ! Calculating Cross Section Sigma_I for the different neutrals
@@ -2320,16 +2324,16 @@ contains
        I0xp_I = RateN_I
        I0px_I = RateN_I
 
-       I2xp_I  = RateE_I*UThS_I(Ion_)/No2Si_V(UnitU_)**2
-       I2px_I  = RateE_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
+       I2xp_I  = RateE_I*UTh2Si_I(Ion_)/No2Si_V(UnitU_)**2
+       I2px_I  = RateE_I(Neu_:)*UTh2Si_I(Neu_:)/No2Si_V(UnitU_)**2
 
        if(.not.IsMhd)then
           ! For PUI's
           I0xpu3_I = RateNPu3_I
           I0pu3x_I = RateNPu3_I
-          I2xpu3_I = RateEPu3_I*UThS_I(PU3_)/&
+          I2xpu3_I = RateEPu3_I*UTh2Si_I(PU3_)/&
                No2Si_V(UnitU_)**2
-          I2pu3x_I = RateEPu3_I(Neu_:)*UThS_I(Neu_:)/No2Si_V(UnitU_)**2
+          I2pu3x_I = RateEPu3_I(Neu_:)*UTh2Si_I(Neu_:)/No2Si_V(UnitU_)**2
           ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
        end if
 
@@ -2386,12 +2390,12 @@ contains
        ! additional terms cancel.
        if(DoFixChargeExchange)then
           ! Mean ion and neutral velocity weighted by sound speed squared
-          UMean_DI(x_,:) = (UThS_I(SWH_)*U_DI(x_,Neu_:) &
-               + UThS_I(Neu_:)*U_DI(x_,SWH_))/UTh2Sum_I
-          UMean_DI(y_,:) = (UThS_I(SWH_)*U_DI(y_,Neu_:) &
-               + UThS_I(Neu_:)*U_DI(y_,SWH_))/UTh2Sum_I
-          UMean_DI(z_,:) = (UThS_I(SWH_)*U_DI(z_,Neu_:) &
-               + UThS_I(Neu_:)*U_DI(z_,SWH_))/UTh2Sum_I
+          UMean_DI(x_,:) = (UTh2Si_I(SWH_)*U_DI(x_,Neu_:) &
+               + UTh2Si_I(Neu_:)*U_DI(x_,SWH_))/UTh2Sum_I
+          UMean_DI(y_,:) = (UTh2Si_I(SWH_)*U_DI(y_,Neu_:) &
+               + UTh2Si_I(Neu_:)*U_DI(y_,SWH_))/UTh2Sum_I
+          UMean_DI(z_,:) = (UTh2Si_I(SWH_)*U_DI(z_,Neu_:) &
+               + UTh2Si_I(Neu_:)*U_DI(z_,SWH_))/UTh2Sum_I
 
           ! Momentum
           JxpUx_I = JxpUx_I + UMean_DI(x_,:)*(RateN_I - Rate_I)
@@ -2404,22 +2408,22 @@ contains
 
           ! Energy
           Kxp_I = Kxp_I + 0.5*Sum(UMean_DI**2, 1)*(RateN_I - Rate_I)&
-               + (0.75*RateN_I - RateE_I)*UThS_I(SWH_)*UThS_I(Neu_:)/&
+               + (0.75*RateN_I - RateE_I)*UTh2Si_I(SWH_)*UTh2Si_I(Neu_:)/&
                UTh2Sum_I/No2Si_V(UnitU_)**2
           Kpx_I = Kpx_I + 0.5*Sum(UMean_DI**2, 1)*(RateN_I - Rate_I)&
-               + (0.75*RateN_I - RateE_I)*UThS_I(SWH_)*UThS_I(Neu_:)/&
+               + (0.75*RateN_I - RateE_I)*UTh2Si_I(SWH_)*UTh2Si_I(Neu_:)/&
                UTh2Sum_I/No2Si_V(UnitU_)**2
 
           ! For PUIs
           if(.not.IsMhd)then
              UMeanPu3_DI(x_,:) = &
-                  (UThS_I(Pu3_)*U_DI(x_,Neu_:) + UThS_I(Neu_:)*U_DI(x_,Pu3_))/&
+                  (UTh2Si_I(Pu3_)*U_DI(x_,Neu_:) + UTh2Si_I(Neu_:)*U_DI(x_,Pu3_))/&
                   UTh2SumPu3_I
              UMeanPu3_DI(y_,:) = &
-                  (UThS_I(Pu3_)*U_DI(y_,Neu_:) + UThS_I(Neu_:)*U_DI(y_,Pu3_))/&
+                  (UTh2Si_I(Pu3_)*U_DI(y_,Neu_:) + UTh2Si_I(Neu_:)*U_DI(y_,Pu3_))/&
                   UTh2SumPu3_I
              UMeanPu3_DI(z_,:) = &
-                  (UThS_I(Pu3_)*U_DI(z_,Neu_:) + UThS_I(Neu_:)*U_DI(z_,Pu3_))/&
+                  (UTh2Si_I(Pu3_)*U_DI(z_,Neu_:) + UTh2Si_I(Neu_:)*U_DI(z_,Pu3_))/&
                   UTh2SumPu3_I
 
              ! Momentum
@@ -2442,13 +2446,13 @@ contains
                   + 0.5*Sum(UMeanPu3_DI**2, 1)&
                   *(RateNPu3_I - RatePu3_I)&
                   + (0.75*RateNPu3_I - RateEPu3_I)&
-                  *UThS_I(Pu3_)*UThS_I(Neu_:)/&
+                  *UTh2Si_I(Pu3_)*UTh2Si_I(Neu_:)/&
                   UTh2SumPu3_I/No2Si_V(UnitU_)**2
              Kpu3x_I = Kpu3x_I &
                   + 0.5*Sum(UMeanPu3_DI**2, 1)&
                   *(RateNPu3_I - RatePu3_I)&
                   + (0.75*RateNPu3_I - RateEPu3_I)*&
-                  UThS_I(Pu3_)*UThS_I(Neu_:)/&
+                  UTh2Si_I(Pu3_)*UTh2Si_I(Neu_:)/&
                   UTh2SumPu3_I/No2Si_V(UnitU_)**2
           end if
        end if
@@ -2710,10 +2714,10 @@ contains
     integer :: iFluid
     real, dimension(Neu_:Ne4_):: SrcImpRho_I, SrcImpRhoUx_I, &
             SrcImpRhoUy_I, SrcImpRhoUz_I, SrcImpEnergy_I
-    real :: uDim_DI(3,nFluid)
+    real :: uSi_DI(3,nFluid)
     real :: State_V(nVar)
-    real :: RhoEleNo, RhoEleSi, TempEle, UthSEle
-    real :: Uion_D(3), UEle_D(3), UEleDim_D(3), Current_D(3)
+    real :: RhoEl, NumDensEl, UthSElSi, RhoIonTot, NumDensElSi
+    real :: UIonMean_D(3), UEl_D(3), UElSi_D(3), Current_D(3)
     real :: SrcImp_II(Neu_:Ne4_,5)
 
     ! Requires a separate electron pressure
@@ -2732,44 +2736,40 @@ contains
     State_V = State_VGB(:,i,j,k,iBlock)
 
     ! uDIm_DI  = State_V(iRhoUx_I:iRhoUz_I)/State_V(iRho_I)*No2Si_V(UnitU_)
-    uDim_DI = U_DI*No2Si_V(UnitU_)
+    uSi_DI = U_DI*No2Si_V(UnitU_)
 
-    if (IsMhd) then
-       ! Electron density in normalized units
-       RhoEleNo = State_V(Rho_)
+    ! Total ion mass density
+    RhoIonTot = sum(State_V(iRhoIon_I))
 
-       ! Average Ion Velocity
-       UIon_D = State_V(RhoUx_:RhoUz_)/RhoEleNo
-    else
-       ! Electron density in normalized units
-       RhoEleNo = State_V(SWHRho_) + State_V(Pu3Rho_)
+    ! Electron number density
+    NumDensEl = sum(State_V(iRhoIon_I)/MassIon_I)
 
-       ! Average Ion Velocity
-       UIon_D = (State_V(SWHRhoUx_:SWHRhoUz_) + &
-               State_V(Pu3RhoUx_:Pu3RhoUz_))/RhoEleNo
-    end if
+    ! Electron number density in SI units (#/m^3)
+    NumDensElSi = NumDensEl*No2Si_V(UnitN_)
 
-    ! Electron density in SI units
-    RhoEleSi = RhoEleNo*No2Si_V(UnitN_)
+    ! Electron mass density
+    RhoEl = cElectronMass/cProtonMass*NumDensEl
+
+    ! Average ion velocity
+    UIonMean_D(x_) = sum(State_V(iRhoUxIon_I))/RhoIonTot
+    UIonMean_D(y_) = sum(State_V(iRhoUyIon_I))/RhoIonTot
+    UIonMean_D(z_) = sum(State_V(iRhoUzIon_I))/RhoIonTot
 
     ! Get electron velocity from the current and positive ion velocities
     call get_current(i, j, k, iBlock, Current_D)
-    UEle_D = (UIon_D - Current_D*IonMassPerCharge/RhoEleNo)
+    UEl_D = (UIonMean_D - Current_D/NumDensEl)
 
-    UEleDim_D = UEle_D*No2Si_V(UnitU_)
+    UElSi_D = UEl_D*No2Si_V(UnitU_)
 
-    ! Electron temperature
-    TempEle = State_V(Pe_)/RhoEleNo*No2Si_V(UnitTemperature_)
-
-    ! Electron thermal speed squared
-    UThSEle = (2*cBoltzmann/cElectronMass)*TempEle
+    ! Electron thermal speed squared in SI units
+    UThSElSi = 2*State_V(Pe_)/RhoEl*No2Si_V(UnitU_)**2
 
     if(iTableElectronImpact > 0)then
        do iFluid = Neu_, Ne4_
           call get_collision( &
              ElectronImpact_, &
-             Rho_I(iFluid), UThS_I(iFluid), uDim_DI(:,iFLuid), &
-             RhoEleSi, UThSEle, UEleDim_D, &
+             Rho_I(iFluid), UThS_I(iFluid), uSi_DI(:,iFluid), &
+             NumDensElSi, UThSElSi, UElSi_D, &
              SrcImp_II(iFluid,:))
        enddo
     end if
@@ -2815,8 +2815,8 @@ contains
           SourceImp_V(Pe_) = GammaElectronMinus1*( &
                   -SourceImp_V(Rho_)*IonizationEnergy &
                   + (cElectronMass/cProtonMass)* ( SourceImp_V(Energy_) &
-                  - sum(UEle_D*SourceImp_V(RhoUx_:RhoUz_)) &
-                  + 0.5*sum(UEle_D**2)*SourceImp_V(Rho_) ) )
+                  - sum(UEl_D*SourceImp_V(RhoUx_:RhoUz_)) &
+                  + 0.5*sum(UEl_D**2)*SourceImp_V(Rho_) ) )
        end if
     else
        ! Multi Ion
@@ -2840,8 +2840,8 @@ contains
              SourceImp_V(Pe_) = GammaElectronMinus1*( &
                      -SourceImp_V(Pu3Rho_)*IonizationEnergy &
                      + (cElectronMass/cProtonMass)* ( SourceImp_V(Pu3Energy_) &
-                     - sum(UEle_D*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
-                     + 0.5*sum(UEle_D**2)*SourceImp_V(Pu3Rho_) ) )
+                     - sum(UEl_D*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                     + 0.5*sum(UEl_D**2)*SourceImp_V(Pu3Rho_) ) )
           else
              ! outside region 3
              ! SWH is created
@@ -2861,8 +2861,8 @@ contains
              SourceImp_V(Pe_) = GammaElectronMinus1*( &
                      -SourceImp_V(SWHRho_)*IonizationEnergy &
                      + (cElectronMass/cProtonMass)* ( SourceImp_V(SWHEnergy_) &
-                     - sum(UEle_D*SourceImp_V(SWHRhoUx_:SWHRhoUz_)) &
-                     + 0.5*sum(UEle_D**2)*SourceImp_V(SWHRho_) ) )
+                     - sum(UEl_D*SourceImp_V(SWHRhoUx_:SWHRhoUz_)) &
+                     + 0.5*sum(UEl_D**2)*SourceImp_V(SWHRho_) ) )
           end if
        end if
     end if
@@ -3262,17 +3262,17 @@ contains
   end subroutine user_init_session
   !============================================================================
   subroutine get_collision( iTypeCollision, &
-     RhoA, Cs2A, uA_D, RhoB, Cs2B, uB_D, &
+     NumDensA, Cs2A, uA_D, NumDensB, Cs2B, uB_D, &
      SourceA_V, SourceB_V)
 
      use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
         Table_I
 
     integer, intent(in):: iTypeCollision
-    real, intent(in):: RhoA      ! fluid A mass density
+    real, intent(in):: NumDensA  ! fluid A number density
     real, intent(in):: Cs2A      ! fluid A thermal speed squared
     real, intent(in):: uA_D(3)   ! fluid A bulk velocity
-    real, intent(in):: RhoB      ! fluid B mass density
+    real, intent(in):: NumDensB  ! fluid B number density
     real, intent(in):: Cs2B      ! fluid B thermal speed squared
     real, intent(in):: uB_D(3)   ! fluid B bulk velocity
     real, intent(out):: SourceA_V(5) ! mass,momentum,energy sources for fluid A
@@ -3323,7 +3323,7 @@ contains
          SqrtCsDim, SqrtDuDim, Integral_V, DoExtrapolate=.false.)
 
     ! Multiply with mass densities
-    Integral_V = Integral_V * RhoA * RhoB
+    Integral_V = Integral_V * NumDensA * NumDensB
 
     MassRate   = Integral_V(1)         ! mass density change
     ForcePerU  = Integral_V(2)         ! force per velocity

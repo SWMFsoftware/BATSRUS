@@ -85,6 +85,7 @@ OBJECTS = \
 	ModPIC.o \
 	ModPlotBox.o \
 	ModPlotShell.o \
+	ModPlotShock.o \
 	ModPointImplicit.o \
 	ModProjectDivB.o \
 	ModPUI.o \
