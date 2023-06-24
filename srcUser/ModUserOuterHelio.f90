@@ -1719,7 +1719,8 @@ contains
     real, dimension(nVar + nFluid):: Source_V, SourceCx_V, SourcePh_V, &
          SourceImp_V
 
-    real :: U2_I(nFluid), TempSi_I(nFluid), NumDensSi_I(nFluid), UTh2Si_I(nFluid)
+    real :: U2_I(nFluid), TempSi_I(nFluid)
+    real :: NumDensSi_I(nFluid), UTh2Si_I(nFluid)
     real :: HeatElectron, NumDensElectron, TempElectron
 
     real :: U_DI(3,nFluid)
@@ -1968,7 +1969,8 @@ contains
     ! Calculate parameters to pass to source terms
 
     integer, intent(in):: i, j, k, iBlock
-    real, dimension(nFLuid), intent(out) :: NumDensSi_I, U2_I, TempSi_I, UTh2Si_I
+    real,  intent(out) :: NumDensSi_I(nFluid), U2_I(nFluid)
+    real, intent(out) :: TempSi_I(nFluid), UTh2Si_I(nFluid)
     real, intent(out) :: U_DI(3,nFLuid)
 
     real :: State_V(nVar)
@@ -2417,14 +2419,14 @@ contains
           ! For PUIs
           if(.not.IsMhd)then
              UMeanPu3_DI(x_,:) = &
-                  (UTh2Si_I(Pu3_)*U_DI(x_,Neu_:) + UTh2Si_I(Neu_:)*U_DI(x_,Pu3_))/&
-                  UTh2SumPu3_I
+                  ( UTh2Si_I(Pu3_)*U_DI(x_,Neu_:) &
+                  + UTh2Si_I(Neu_:)*U_DI(x_,Pu3_) )/UTh2SumPu3_I
              UMeanPu3_DI(y_,:) = &
-                  (UTh2Si_I(Pu3_)*U_DI(y_,Neu_:) + UTh2Si_I(Neu_:)*U_DI(y_,Pu3_))/&
-                  UTh2SumPu3_I
+                  ( UTh2Si_I(Pu3_)*U_DI(y_,Neu_:) &
+                  + UTh2Si_I(Neu_:)*U_DI(y_,Pu3_) )/UTh2SumPu3_I
              UMeanPu3_DI(z_,:) = &
-                  (UTh2Si_I(Pu3_)*U_DI(z_,Neu_:) + UTh2Si_I(Neu_:)*U_DI(z_,Pu3_))/&
-                  UTh2SumPu3_I
+                  ( UTh2Si_I(Pu3_)*U_DI(z_,Neu_:) &
+                  + UTh2Si_I(Neu_:)*U_DI(z_,Pu3_) )/UTh2SumPu3_I
 
              ! Momentum
              Jxpu3Ux_I = Jxpu3Ux_I + UMeanPu3_DI(x_,:)&
