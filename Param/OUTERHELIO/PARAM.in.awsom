@@ -1,13 +1,6 @@
 #COMPONENT
 OH			NameComp
 
-#UPDATECHECK
-T			UseUpdateCheck
-40.			RhoMinPercent
-400.			RhoMaxPercent
-40.			pMinPercent
-400.			pMaxPercent
-
 #DESCRIPTION
 Param/OUTERHELIO/PARAM.in.awsom: 2 ion and 4 neutral fluids		StringDescription
 
@@ -18,20 +11,25 @@ NONE			NamePlanet
 F			UseGravity (rest of parameters read if true)
 
 #BODY
-T			UseBody (rest of parameters read if true)
-30.0			rBody (user units)
-0.01			BodyNDim (/cc) number density for sw ions
-2.0E4			BodyTDim temperature for sw ions
-9.45E-4			BodyNDim for PUIs
-8.20E6			BodyTDim
-0.18			BodyNDim for 1st neutral fluid
-6519.0			BodyTDim
-7.E-5			BodyNDim for 2nd neutral fluid
-6519.0			BodyTDim
-7.8E-3			BodyNDim for 3rd neutral fluid
-1.609E3			BodyTDim
-0.18			BodyNDim for 4th neutral fluid
-6519.0			BodyTDim
+F			UseBody (rest of parameters read if true)
+
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+1.E-23			pMinDim for fluid PUI
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
+1.E-23			pMinDim for electrons
+
+#MINIMUMDENSITY
+1.E-4			rhoMinDim for fluid SW
+1.E-9			rhoMinDim for fluid PUI
+1.E-9			rhoMinDim for Neu
+1.E-9			rhoMinDim for Ne2
+1.E-9			rhoMinDim for Ne3
+1.E-9			rhoMinDim for Ne4
+1.E-9			rhoMinDim for electrons
 
 #NORMALIZATION
 USER			TypeNormalization
@@ -107,9 +105,6 @@ box			StringShape
 187.5			yMaxBox
 187.5			zMaxBox
 
-#INNERBOUNDARY
-user			TypeBcBody
-
 #OUTERBOUNDARY
 user			TypeBc1
 outflow			TypeBc2
@@ -121,15 +116,12 @@ outflow			TypeBc6
 #TIMEACCURATE
 F			IsTimeAccurate
 
-#ELECTRONENTROPY
-F			UseElectronEntropy
-
 #NEUTRALFLUID
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #SCHEME
 1			nOrder
@@ -168,13 +160,19 @@ z=0 MHD idl		StringPlot
 -1.0			DxSavePlot
 
 #MULTIIONSTATE
-T			UseSingleIonVelocity
+F			UseSingleIonVelocity
 F			UseSingleIonTemperature
 
 #MULTIION
 1e-10			LowDensityRatio
 1e-10			LowPressureRatio
 F			DoRestrictMultiIon
+
+#COLLISION
+-1.0			CollisionCoefDim
+1.0e6			TauCutOffDim [s]
+-2.0			uCutOffDim [km/s] read if TauCutOffDim positive
+2			nPowerCutOff read if TauCutOffDim positive
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -262,14 +260,6 @@ T			UsePu3Heating
 10.0			DeltaUSi
 1.5e5			LperpTimesSqrtBSi
 
-#SOURCES
-F			UseSourceSWH
-F 			UseSourcePu3
-F 			UseSourceNeu
-F 			UseSourceNe2
-F 			UseSourceNe3
-F 			UseSourceNe4
-
 #USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
@@ -284,10 +274,15 @@ ascii			TypeFile
 
 #RUN ##########################################################################
 
+#TIMESTEPPING
+2			nStage
+0.6			CflExpl
+
 #SCHEME
 2			nOrder
 Linde			TypeFlux
-minmod			TypeLimiter
+mc3			TypeLimiter
+1.2			LimiterBeta
 
 #STOP
 20			MaxIteration
@@ -295,19 +290,11 @@ minmod			TypeLimiter
 
 #RUN ##########################################################################
 
-#TIMESTEPPING
-2			nStage
-0.6			CflExpl
-
-! Applies to the ions only if UseRusanovForNeutrals is true in #MULTIFLUID
-#SCHEME
-2			nOrder
-Linde			TypeFlux
-mc			TypeLimiter
-1.5			LimiterBeta
+#TIMEACCURATE
+T			IsTimeAccurate
 
 #USERSWITCH
-+source_expl -progress +perturb		StringSwitch
++source_expl +perturb	StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
