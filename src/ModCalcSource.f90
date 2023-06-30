@@ -266,7 +266,7 @@ contains
     end if
 
     ! Calculate source terms for ion pressure
-    if(UseNonconservative .or. UseAnisoPressure)then
+    if((UseNonconservative .or. UseAnisoPressure) .and. .not.UseEntropy)then
        do iFluid = 1, nFluid
           if(nFluid > 1) call select_fluid(iFluid)
           iUn = UnFirst_ + iFluid - 1
@@ -289,7 +289,7 @@ contains
                 end if
 
                 ! Calculate gradient tensor of velocity
-                call calc_grad_U(GradU_DD, i, j, k, iBlock)
+                call calc_grad_u(GradU_DD, i, j, k, iBlock)
 
                 if(UseAnisoPressure .and. IsIon_I(iFluid))then
                    ! Calculate bDotbDotGradU = b dot (b matmul GradU)
@@ -303,15 +303,14 @@ contains
                    bDotbDotGradU=dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
                    ! p parallel: -2*ppar*b.(b.(Grad U))
-                   Source_VC(iPpar,i,j,k) = &
-                        Source_VC(iPpar,i,j,k) &
-                        - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotbDotGradU
+                   Source_VC(iPpar,i,j,k) = Source_VC(iPpar,i,j,k) &
+                        - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotGradparU
 
                    ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
                    !     = (p - ppar)*b.(b.(GradU))
                    Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-                        + (State_VGB(iP,i,j,k,iBlock) -  &
-                        State_VGB(iPpar,i,j,k,iBlock))*bDotbDotGradU
+                        + (State_VGB(iP,i,j,k,iBlock)  &
+                        - State_VGB(iPpar,i,j,k,iBlock))*bDotbDotGradU
                 end if
 
                 if(UseViscosity) then
