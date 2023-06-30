@@ -304,7 +304,7 @@ contains
 
                    ! p parallel: -2*ppar*b.(b.(Grad U))
                    Source_VC(iPpar,i,j,k) = Source_VC(iPpar,i,j,k) &
-                        - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotGradparU
+                        - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotbDotGradU
 
                    ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
                    !     = (p - ppar)*b.(b.(GradU))
