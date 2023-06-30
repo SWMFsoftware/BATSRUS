@@ -123,7 +123,7 @@ contains
          ion_electron_init_point_impl
     use ModFaceBoundary, ONLY: read_face_boundary_param, B1rCoef
     use ModPUI, ONLY: read_pui_param, init_mod_pui, UsePui
-    ! CORONA SPECIFIC PARAMETERS
+    ! BEGIN CORONA SPECIFIC
     use EEE_ModMain, ONLY: EEE_set_parameters
     use ModMagnetogram, ONLY: read_magnetogram_param
     use ModCoronalHeating,  ONLY: read_coronal_heating_param, &
@@ -133,21 +133,21 @@ contains
     use ModRadiativeCooling, ONLY: UseRadCooling,&
          read_cooling_param, check_cooling_param
     use ModChromosphere, ONLY: read_chromosphere_param
-    use ModCoarseAxis, ONLY: read_coarse_axis_param
     use ModWaves, ONLY: read_waves_param, check_waves
     use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
+    use ModChGL, ONLY: read_chgl_param
+    ! END CORONA SPECIFIC
+    use ModCoarseAxis, ONLY: read_coarse_axis_param
     use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
          UseBorisRegion, init_mod_boris_correction
     use ModUserInterface ! user_read_inputs, user_init_session
-    use ModChGL, ONLY: read_chgl_param
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
     use ModFreq, ONLY: adjust_freq
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
          rRound0, rRound1, StringTest
-    use ModBatsrusUtility, ONLY: get_iVar
-
+    use ModBatsrusUtility, ONLY: get_ivar
     use ModOptimizeParam, ONLY: check_optimize_param
 
     ! Arguments
@@ -715,6 +715,9 @@ contains
        case("#ELECTRONPRESSURE")
           call read_var('PeMinSi', PeMinSi)
 
+       case("#ENTROPY")
+          call read_var('UseEntropy', UseEntropy)
+          
        case("#ELECTRONENTROPY")
           call read_var('UseElectronEntropy', UseElectronEntropy)
 
@@ -1718,7 +1721,7 @@ contains
           LimiterBeta = 1.0
           if(nOrder > 1 .and. TypeFlux /= "SIMPLE")then
              call read_var('TypeLimiter', TypeLimiter)
-             if(TypeLimiter /= 'minmod') &
+             if(TypeLimiter /= 'minmod' .and. TypeLimiter /= 'no') &
                   call read_var('LimiterBeta', LimiterBeta)
           else
              TypeLimiter = "no"
@@ -2283,9 +2286,9 @@ contains
           do iFluid = IonFirst_, nFluid
              call read_var('Gamma_I', Gamma_I(iFluid))
           end do
-          Gamma_I(1) = Gamma_I(IonFirst_)
           ! Derived values for fluids
-          GammaMinus1_I    = Gamma_I - 1.0
+          InvGamma_I    = 1.0/Gamma_I
+          GammaMinus1_I = Gamma_I - 1.0
           where(GammaMinus1_I /= 0.0)
              InvGammaMinus1_I = 1.0 / GammaMinus1_I
           elsewhere
@@ -2302,6 +2305,7 @@ contains
 
           ! Scalar values for the first fluid for simpler code
           Gamma          = Gamma_I(1)
+          InvGamma       = InvGamma_I(1)
           GammaMinus1    = GammaMinus1_I(1)
           InvGammaMinus1 = InvGammaMinus1_I(1)
 
@@ -3303,7 +3307,7 @@ contains
          TypeFlux='RoeOld'
       case('RUSANOV', 'TVDLF', 'Rusanov')
          TypeFlux='Rusanov'
-      case('LINDE', 'HLLEL', 'Linde')
+      case('LINDE', 'Linde', 'HLLEL', 'HLLE')
          TypeFlux='Linde'
       case('SOKOLOV', 'AW', 'Sokolov')
          TypeFlux='Sokolov'
@@ -3885,8 +3889,8 @@ contains
 
       !$acc update device(UseUserUpdateStates)
 
-      !$acc update device(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
-      !$acc update device(Gamma, GammaMinus1, InvGammaMinus1)
+      !$acc update device(Gamma_I, GammaMinus1_I, InvGamma_I, InvGammaMinus1_I)
+      !$acc update device(Gamma, GammaMinus1, InvGamma, InvGammaMinus1)
 
       !$acc update device(GammaElectron, GammaElectronMinus1)
 
