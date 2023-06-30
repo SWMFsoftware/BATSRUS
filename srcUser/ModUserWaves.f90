@@ -189,6 +189,11 @@ contains
              end if
           end if
 
+       case('#SHEARSQUARE')
+          NameProblem = 'ShearSquare'
+          call read_var('Amplitude', Amplitude)
+          call read_var('Side', Width)
+
        case('#ADVECTSPHERE')
           NameProblem = 'AdvectSphere'
           call read_var('DoInitSphere',      DoInitSphere     )
@@ -417,6 +422,18 @@ contains
                * sin(cTwoPi*(Xyz_DGB(y_,:,:,:,iBlock))/LambdaY)
        endwhere
 #endif
+    case('ShearSquare')
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          x = Xyz_DGB(x_,i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
+          z = Xyz_DGB(z_,i,j,k,iBlock)
+          if(abs(x) < Width/2 .and. abs(y) < Width/2) &
+               State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
+               + Amplitude
+          State_VGB(RhoUx_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)*abs(y)
+          ! State_VGB(RhoUy_,i,j,k,iBlock)=State_VGB(Rho_,i,j,k,iBlock)*abs(x)
+       end do; end do; end do
+
     case('AdvectSphere')
        DoAdvectSphere = .true.
        ! This case describes an IC with uniform 1D flow of plasma in a fixed

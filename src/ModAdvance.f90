@@ -87,6 +87,10 @@ module ModAdvance
   logical:: UseElectronEntropy = UseElectronPressure
   !$acc declare create(UseElectronEntropy)
 
+  ! This should provide more robust results near strong shocks.
+  logical:: UseEntropy  = .false. !!! UseAnisoPressure
+  !$acc declare create(UselEntropy)
+  
   logical:: UseWavePressure = .false.
   !$acc declare create(UseWavePressure)
 
