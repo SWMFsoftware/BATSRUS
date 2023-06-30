@@ -717,7 +717,7 @@ contains
 
        case("#ENTROPY")
           call read_var('UseEntropy', UseEntropy)
-          
+
        case("#ELECTRONENTROPY")
           call read_var('UseElectronEntropy', UseElectronEntropy)
 

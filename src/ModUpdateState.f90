@@ -350,7 +350,7 @@ contains
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
       use ModB0, ONLY: UseB0, B0_DGB
-      
+
       integer, intent(in):: iBlock
       logical, intent(in):: DoTest
 
@@ -445,7 +445,7 @@ contains
             end do; end do; end do
          end if
       endif
-      
+
       ! Move energy source terms to pressure index as needed
       ! Ions first
       if(.not.UseNonConservative)then

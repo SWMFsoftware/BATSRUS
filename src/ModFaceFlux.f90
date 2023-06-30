@@ -120,7 +120,7 @@ module ModFaceFlux
 
   ! Solve scalar advection equation
   logical :: UseScalar = .false.
-  
+
   logical :: DoClightWarning     = .true.
   real    :: FactorClightWarning = 2.0
 
@@ -424,7 +424,7 @@ contains
          allocate(Pe_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     UseScalar = DoUpdate_V(Rho_) .and. .not. any(DoUpdate_V(Rho_+1:))
-    
+
     !$acc update device(DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld)
     !$acc update device(DoAw, DoRoeOld, DoRoe)
 
@@ -617,16 +617,16 @@ contains
          StateRight_V = RightState_VX(:,iFace,jFace,kFace)
 
          if(UseScalar)then
-            !call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
-            !Flux0 = Flux_VXI(Rho_,iFace,jFace,kFace,iGang)
-            !CmaxDt0 = CmaxDt
+            ! call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
+            ! Flux0 = Flux_VXI(Rho_,iFace,jFace,kFace,iGang)
+            ! CmaxDt0 = CmaxDt
             call get_scalar_flux(1, Flux_VXI(Rho_,iFace,jFace,kFace,iGang))
-            !if(abs(Flux0 - Flux_VXI(Rho_,iFace,jFace,kFace,iGang)) > 1e-6) &
+            ! if(abs(Flux0 - Flux_VXI(Rho_,iFace,jFace,kFace,iGang)) > 1e-6) &
             !     write(*,*) NameSub, &
             !     ' error: iFace, jFace, kFace, iBlock, Flux0, FluxX=',&
             !     iFace, jFace, kFace, iBlock, &
             !     Flux0, Flux_VXI(Rho_,iFace,jFace,kFace,iGang)
-            !if(abs(CmaxDt0 - CmaxDt) > 1e-6) &
+            ! if(abs(CmaxDt0 - CmaxDt) > 1e-6) &
             !     write(*,*) NameSub, &
             !     ' error: iFace, jFace, kFace, iBlock, CmaxDt0, CmaxDtX=',&
             !     iFace, jFace, kFace, iBlock, CmaxDt0, CmaxDt
@@ -643,7 +643,7 @@ contains
          endif
 
          Flux_VXI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
-         
+
          ! Correct Unormal_I to make div(u) achieve 6th order.
          if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
 
@@ -736,11 +736,11 @@ contains
          StateRight_V = RightState_VY(:,iFace,jFace,kFace)
 
          if(UseScalar)then
-            !call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang))
-            !Flux0 = Flux_VYI(Rho_,iFace,jFace,kFace,iGang)
-            !CmaxDt0 = CmaxDt
+            ! call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang))
+            ! Flux0 = Flux_VYI(Rho_,iFace,jFace,kFace,iGang)
+            ! CmaxDt0 = CmaxDt
             call get_scalar_flux(2, Flux_VYI(Rho_,iFace,jFace,kFace,iGang))
-            !if(abs(Flux0 - Flux_VYI(Rho_,iFace,jFace,kFace,iGang)) > 1e-6) &
+            ! if(abs(Flux0 - Flux_VYI(Rho_,iFace,jFace,kFace,iGang)) > 1e-6) &
             !     write(*,*) NameSub, &
             !     ' error: iFace, jFace, kFace, iBlock, Flux0, FluxY=',&
             !     iFace, jFace, kFace, iBlock, &
@@ -1708,7 +1708,7 @@ contains
          Flux_V(Ppar_)  = Un*StateCons_V(Ppar_)
          ! f_i[p] = u_i*p or f_i[s] = u_i*s
          Flux_V(p_)     = Un*StateCons_V(p_)
-            
+
          if(DoTestCell)then
             write(*,*) NameSub, ' after aniso flux:'
             write(*,*) 'DpPerB  =', DpPerB
@@ -2043,7 +2043,7 @@ contains
     else
        RhoFace = StateRight_V(Rho_)
     end if
-    
+
     if(DoBurgers)then
        Flux = 0.5*RhoFace**2 * Un * Area
        CmaxDt = abs(Un)*RhoFace
@@ -2088,9 +2088,9 @@ contains
     real, save :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !$omp threadprivate( b_DG )
 
+    ! Initialize diffusion coefficient for time step restriction
     character(len=*), parameter:: NameSub = 'get_numerical_flux'
     !--------------------------------------------------------------------------
-    ! Initialize diffusion coefficient for time step restriction
     DiffCoef = 0.0
 
 #ifndef SCALAR
@@ -2500,7 +2500,7 @@ contains
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
 
       Cmax   = maxval(Cmax_I(iFluidMin:iFluidMax))
-      
+
       if(DoBurgers)then
          if(CleftStateHat_I(1) > 0.0)then
             Flux_V(Rho_) = FluxLeft_V(Rho_)

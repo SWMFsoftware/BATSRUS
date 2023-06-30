@@ -306,7 +306,7 @@ contains
           if(UseFieldLineThreads) call advance_threads(Enthalpy_)
           call exchange_messages
        end if
-       
+
        if(DoTest)write(*,*)NameSub,' finished stage=',istage
 
     end do STAGELOOP  ! Multi-stage solution update loop.
