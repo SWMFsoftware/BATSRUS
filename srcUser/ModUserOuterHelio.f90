@@ -253,24 +253,16 @@ contains
 
           ! This is a flag to define how many populations of Neutrals to run
        case("#SOURCES")
-          if(IsMhd)then
-             call read_var('UseIonSource', UseSource_I(Ion_))
-             call read_var('UseNeuSource', UseSource_I(Neu_))
-             call read_var('UseNe2Source', UseSource_I(Ne2_))
-             call read_var('UseNe3Source', UseSource_I(Ne3_))
-             call read_var('UseNe4Source', UseSource_I(Ne4_))
-          else
-             call read_var('UseSWHSource', UseSource_I(SWH_))
-             call read_var('UsePu3Source', UseSource_I(Pu3_))
-             call read_var('UseNeuSource', UseSource_I(Neu_))
-             call read_var('UseNe2Source', UseSource_I(Ne2_))
-             call read_var('UseNe3Source', UseSource_I(Ne3_))
-             call read_var('UseNe4Source', UseSource_I(Ne4_))
-          end if
+          call read_var('UseSWHSource', UseSource_I(SWH_))
+          if(.not.IsMhd) call read_var('UsePu3Source', UseSource_I(Pu3_))
+          call read_var('UseNeuSource', UseSource_I(Neu_))
+          call read_var('UseNe2Source', UseSource_I(Ne2_))
+          call read_var('UseNe3Source', UseSource_I(Ne3_))
+          call read_var('UseNe4Source', UseSource_I(Ne4_))
 
+       case("#PHOTOIONIZATION")
           ! Chika. This is a flag to turn on photoionization
           ! If not specified in PARAM.in, it will be false
-       case("#PHOTOIONIZATION")
           call read_var('UsePhotoionization', UsePhotoion)
 
        case("#COLDCLOUD")
@@ -279,9 +271,9 @@ contains
           call read_var('UseSrcsInHelio', UseSrcsInHelio)
           call read_var('HpLimit', HpLimit)
 
+       case("#CHARGEEXCHANGE")
           ! Bair. This is a flag to use charge exchange formula
           ! with the extra splitting terms.
-       case("#CHARGEEXCHANGE")
           call read_var("DoFixChargeExchange", DoFixChargeExchange)
 
        case("#ELECTRONIMPACT")
@@ -505,16 +497,9 @@ contains
          write(*,*) NameSub,' Bsph_D   =', Bsph_D
          write(*,*) NameSub,' Vsph_D   =', Vsph_D
          write(*,*) NameSub,' Pmag, Peq=', Pmag, PmagEquator
-
-         if(.not.IsMhd)then
-            write(*,*) NameSub,' SWHRhoGhost =', VarsGhostFace_V(SWHRho_)
-            write(*,*) NameSub,' SWHpGhost   =', VarsGhostFace_V(SWHP_)
-            write(*,*) NameSub,' SWHUghost   =', VarsGhostFace_V(SWHUx_:SWHUz_)
-         else
-            write(*,*) NameSub,' RhoGhost =', VarsGhostFace_V(Rho_)
-            write(*,*) NameSub,' pGhost   =', VarsGhostFace_V(p_)
-            write(*,*) NameSub,' Ughost   =', VarsGhostFace_V(Ux_:Uz_)
-         end if
+         write(*,*) NameSub,' SWHRhoGhost =', VarsGhostFace_V(SWHRho_)
+         write(*,*) NameSub,' SWHpGhost   =', VarsGhostFace_V(SWHP_)
+         write(*,*) NameSub,' SWHUghost   =', VarsGhostFace_V(SWHUx_:SWHUz_)
          write(*,*) NameSub,' Bghost   =', VarsGhostFace_V(Bx_:Bz_)
          if(UseNeutralFluid)then
             write(*,*) NameSub,' Pop1     =', VarsGhostFace_V(NeuRho_:NeuP_)
@@ -736,23 +721,16 @@ contains
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = b_D
 
        ! velocity components in cartesian coordinates
-       v_D = matmul(XyzSph_DD, Vsph_D)
+       v_D    = matmul(XyzSph_DD, Vsph_D)
        vPUI_D = matmul(XyzSph_DD, VPUIsph_D)
 
        ! density and pressure
-       if(.not.IsMhd)then
-          State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
-          State_VGB(LevelHP_,i,j,k,iBlock) = State_VGB(SWHRho_,i,j,k,iBlock)
-          State_VGB(SWHP_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
-          State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
-               State_VGB(SWHRho_,i,j,k,iBlock)*v_D
-       else
-          State_VGB(Rho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
-          State_VGB(LevelHP_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-          State_VGB(P_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
-          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-               State_VGB(Rho_,i,j,k,iBlock)*v_D
-       end if
+       State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
+       State_VGB(LevelHP_,i,j,k,iBlock) = State_VGB(SWHRho_,i,j,k,iBlock)
+       State_VGB(SWHP_,i,j,k,iBlock) = SwhP   * (rBody/r)**(2*Gamma)
+       State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
+            State_VGB(SWHRho_,i,j,k,iBlock)*v_D
+
        if(UseElectronPressure) &
             State_VGB(Pe_,i,j,k,iBlock) = SwhPe * (rBody/r)**(2*Gamma)
 
@@ -871,20 +849,15 @@ contains
           write(*,*)NameSub,' Bsph_D                =', Bsph_D
           write(*,*)NameSub,' b_D                   =', &
                State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          write(*,*)NameSub,' SWHRhoU_D =', &
+               State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock)
+          write(*,*)NameSub,' SWHRho,   =', State_VGB(SWHRho_,i,j,k,iBlock)
+          write(*,*)NameSub,' SWHp      =', State_VGB(SWHP_,i,j,k,iBlock)
           if(.not.IsMhd)then
-             write(*,*)NameSub,' SWHRhoU_D =', &
-                  State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock)
-             write(*,*)NameSub,' SWHRho,   =', State_VGB(SWHRho_,i,j,k,iBlock)
-             write(*,*)NameSub,' SWHp      =', State_VGB(SWHP_,i,j,k,iBlock)
              write(*,*)NameSub,' VPUIsph_D =', VPUIsph_D
              write(*,*)NameSub,' vPUI_D    =', vPUI_D
              write(*,*)NameSub,' Pu3Rho,   =', State_VGB(Pu3Rho_,i,j,k,iBlock)
              write(*,*)NameSub,' Pu3P      =', State_VGB(Pu3P_,i,j,k,iBlock)
-          else
-             write(*,*)NameSub,' RhoU_D =', &
-                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
-             write(*,*)NameSub,' Rho,   =',State_VGB(Rho_,i,j,k,iBlock)
-             write(*,*)NameSub,' p      =',State_VGB(P_,i,j,k,iBlock)
           end if
           if(UseElectronPressure) &
                write(*,*)NameSub,' Pe        =', State_VGB(Pe_,i,j,k,iBlock)
@@ -908,26 +881,14 @@ contains
 
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
-
        if( Unused_B(iBlock) ) CYCLE
-       if(.not.IsMhd)then
-          State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoBcFactor_I(Ne2_) * &
-               State_VGB(SWHRho_,:,:,:,iBlock)
-          State_VGB(Ne2RhoUx_:Ne2RhoUz_,:,:,:,iBlock) = &
-               RhoBcFactor_I(Ne2_)*uBcFactor_I(Ne2_)* &
-               State_VGB(SWHRhoUx_:SWHRhoUz_,:,:,:,iBlock)
-          State_VGB(Ne2P_,:,:,:,iBlock) = RhoBcFactor_I(Ne2_) * &
-               State_VGB(SWHp_,:,:,:,iBlock)
-       else
-          State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoBcFactor_I(Ne2_) * &
-               State_VGB(Rho_,:,:,:,iBlock)
-          State_VGB(Ne2RhoUx_:Ne2RhoUz_,:,:,:,iBlock) = &
-               RhoBcFactor_I(Ne2_)*uBcFactor_I(Ne2_)* &
-               State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)
-          State_VGB(Ne2P_,:,:,:,iBlock) = RhoBcFactor_I(Ne2_) * &
-               State_VGB(p_,:,:,:,iBlock)
-       end if
-
+       State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoBcFactor_I(Ne2_) * &
+            State_VGB(SWHRho_,:,:,:,iBlock)
+       State_VGB(Ne2RhoUx_:Ne2RhoUz_,:,:,:,iBlock) = &
+            RhoBcFactor_I(Ne2_)*uBcFactor_I(Ne2_)* &
+            State_VGB(SWHRhoUx_:SWHRhoUz_,:,:,:,iBlock)
+       State_VGB(Ne2P_,:,:,:,iBlock) = RhoBcFactor_I(Ne2_) * &
+            State_VGB(SWHp_,:,:,:,iBlock)
     end do
 
     call test_stop(NameSub, DoTest)
@@ -1040,11 +1001,11 @@ contains
 
       ! monopole with By negative and a time varying B
       ! time-dependent behavior of B taken from Michael et al. 2015
-      Bsph_D(1) = (SQRT(0.5)/rBody**2)*(9.27638+ &
-           7.60832d-8*TimeCycle-1.91555*SIN(1.28737d-8*TimeCycle)+ &
-           0.144184*SIN(2.22823d-8*TimeCycle)+ &
-           47.7758*SIN(2.18788d-10*TimeCycle)+ &
-           83.5522*SIN(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_) ! Br
+      Bsph_D(1) = (sqrt(0.5)/rBody**2)*(9.27638+ &
+           7.60832d-8*TimeCycle-1.91555*sin(1.28737d-8*TimeCycle)+ &
+           0.144184*sin(2.22823d-8*TimeCycle)+ &
+           47.7758*sin(2.18788d-10*TimeCycle)+ &
+           83.5522*sin(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_) ! Br
       Bsph_D(2) =  0.0                             ! Btheta
       Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt*SwhUx/Ur ! Bphi for vary B
 
@@ -1059,31 +1020,24 @@ contains
       ! Spherical magnetic field converted to Cartesian components
       State_VGB(Bx_:Bz_,i,j,k,iBlock) = matmul(XyzSph_DD, Bsph_D)
 
+      ! merav
+      ! density and pressure
+      State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
+      State_VGB(SWHP_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
+      if(UseElectronPressure) &
+           State_VGB(Pe_,i,j,k,iBlock) = SwhPe   * (rBody/r)**(2*Gamma)
+      ! momentum
+      v_D = matmul(XyzSph_DD, Vsph_D)
+      State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
+           State_VGB(SWHRho_,i,j,k,iBlock)*v_D
+
       if(.not.IsMhd)then
-         ! merav
-         ! velocity components in cartesian coordinates
-         v_D = matmul(XyzSph_DD, Vsph_D)
-         vPUI_D = matmul(XyzSph_DD, VPUIsph_D)
-         ! density and pressure
-         State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
-         State_VGB(SWHP_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
-         if(UseElectronPressure)then
-            State_VGB(Pe_,i,j,k,iBlock)   = SwhPe   * (rBody/r)**(2*Gamma)
-         end if
-         ! momentum
-         State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
-              State_VGB(SWHRho_,i,j,k,iBlock)*v_D
          State_VGB(Pu3Rho_,i,j,k,iBlock) = Pu3Rho * (rBody/r)**2
          State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P   * (rBody/r)**(2*Gamma)
          ! momentum
+         vPUI_D = matmul(XyzSph_DD, VPUIsph_D)
          State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock) = &
               State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
-      else
-         State_VGB(Rho_,i,j,k,iBlock) = Rho
-         ! Velocity converted to 3 components of momentum in Cartesian coords
-         State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = matmul(XyzSph_DD, Rho*Vsph_D)
-         ! Sets pressure and energy only for the ion fluid
-         State_VGB(p_,i,j,k,iBlock) = p
       end if
 
     end subroutine calc_time_dep_sw
@@ -1154,13 +1108,13 @@ contains
        write(*,StringFormat) 'Pu3TDim   [   K]:',Pu3TDim,'Pu3P:',Pu3P
        write(*,'(10X,A19,F15.6)')           'Pu3TDim   [   K]:',Pu3TDim
        write(*,*)
-       if(UseElectronPressure)then
-          write(*,StringFormat) 'VliswPeDim [nPa]: ', &
-               VliswPeDim,' VliswPe:', VliswPe
-          write(*,'(10X,A19,F15.6)') 'VliswTeDim[K]: ', VliswTeDim
-          write(*,StringFormat) 'SwhTeDim   [   K]:', SwhTeDim, &
-               ' SwhPe:', SwhPe
-       end if
+    end if
+    if(UseElectronPressure)then
+       write(*,StringFormat) 'VliswPeDim [nPa]: ', &
+            VliswPeDim,' VliswPe:', VliswPe
+       write(*,'(10X,A19,F15.6)') 'VliswTeDim[K]: ', VliswTeDim
+       write(*,StringFormat) 'SwhTeDim   [   K]:', SwhTeDim, &
+            ' SwhPe:', SwhPe
     end if
 
     call test_stop(NameSub, DoTest)
@@ -1182,13 +1136,9 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i,j,k
-
     real:: Source_V(nVar+nFluid)
-
     real:: U2_I(nFluid), TempSi_I(nFluid), NumDensSi_I(nFluid), UThS_I(nFluid)
-
     real :: U_DI(3,nFluid)
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -1950,13 +1900,9 @@ contains
             write(*,*) ' SourceImp(',NameVar_V(iVar),')=',SourceImp_V(iVar)
          end do
 
-         if(.not.IsMhd)then
-            write(*,*) ' HeatPu3=', HeatPu3
-         end if
+         if(.not.IsMhd) write(*,*) ' HeatPu3=', HeatPu3
 
-         if(UseElectronPressure)then
-            write(*,*) ' HeatElectron=', HeatElectron
-         end if
+         if(UseElectronPressure)  write(*,*) ' HeatElectron=', HeatElectron
       end if
 
     end subroutine calc_source_cell
@@ -2261,64 +2207,45 @@ contains
        ! The charge xchange cross section 100 to change ustar to cm/s
        ! Rate has no units (m^2*m/s*s*m-3 )
 
-       if(.not.IsMhd)then
-          ! For SW
-          where(UseSource_I(Neu_:)) &
-               Rate_I = Sigma_I*State_V(SWHRho_) &
-               *State_V(iRho_I(Neu_:))*UStarM_I &
-               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       ! For SW
+       where(UseSource_I(Neu_:)) &
+            Rate_I = Sigma_I*State_V(SWHRho_) &
+            *State_V(iRho_I(Neu_:))*UStarM_I &
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
+       if(.not.IsMhd)then
           ! For PU3
           where(UseSource_I(Neu_:)) &
                RatePu3_I = SigmaPu3_I*State_V(PU3Rho_) &
                *State_V(iRho_I(Neu_:))*UStarMPu3_I &
                *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-       else
-          where(UseSource_I(Neu_:)) &
-               Rate_I = Sigma_I*State_V(Rho_) &
-               *State_V(iRho_I(Neu_:))*UStarM_I &
-               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
        end if
 
-       if(.not.IsMhd)then
-          ! for SW
-          where(UseSource_I(Neu_:)) &
-               RateN_I = SigmaN_I*State_V(SWHRho_)&
-               *State_V(iRho_I(Neu_:))*UStar_I&
-               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       ! for SW
+       where(UseSource_I(Neu_:)) &
+            RateN_I = SigmaN_I*State_V(SWHRho_)&
+            *State_V(iRho_I(Neu_:))*UStar_I&
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
+       if(.not.IsMhd)then
           ! For PU3
           where(UseSource_I(Neu_:)) &
                RateNPu3_I = SigmaNPu3_I*State_V(PU3Rho_)&
                *State_V(iRho_I(Neu_:))*UStarPu3_I &
                *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-       else
-          where(UseSource_I(Neu_:)) &
-               RateN_I =SigmaN_I*State_V(Rho_)&
-               *State_V(iRho_I(Neu_:))*UStar_I  &
-               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        end if
 
-       if(.not.IsMhd)then
-          ! for SW
-          where(UseSource_I(Neu_:)) &
-               RateE_I = Sigma_I*State_V(SWHRho_)&
-               *State_V(iRho_I(Neu_:))*UStar_I&
-               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       ! for SW
+       where(UseSource_I(Neu_:)) &
+            RateE_I = Sigma_I*State_V(SWHRho_)&
+            *State_V(iRho_I(Neu_:))*UStar_I&
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
+       if(.not.IsMhd)then
           ! For PU3
           where(UseSource_I(Neu_:)) &
                RateEPu3_I = SigmaPu3_I*State_V(PU3Rho_)&
                *State_V(iRho_I(Neu_:))*UStarPu3_I &
-               *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-       else
-          where(UseSource_I(Neu_:)) &
-               RateE_I =Sigma_I*State_V(Rho_)&
-               *State_V(iRho_I(Neu_:))*UStar_I  &
                *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        end if
 
@@ -2869,7 +2796,7 @@ contains
        end if
     end if
 
-    end subroutine calc_electron_impact_source
+  end subroutine calc_electron_impact_source
   !============================================================================
   subroutine set_omega_parker_tilt
 
@@ -3095,7 +3022,7 @@ contains
        else
           ! Multi ion
           Rho    = State_VGB(SWHRho_,i,j,k,iBlock) &
-               + State_VGB(Pu3Rho_,i,j,k,iBlock)
+               +   State_VGB(Pu3Rho_,i,j,k,iBlock)
           RhoSW  = State_VGB(SWHRho_,i,j,k,iBlock)
           RhoPui = State_VGB(Pu3Rho_,i,j,k,iBLock)
           InvRho    = 1.0/Rho
