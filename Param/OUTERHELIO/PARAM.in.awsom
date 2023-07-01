@@ -29,7 +29,6 @@ F			UseBody (rest of parameters read if true)
 1.E-9			rhoMinDim for Ne2
 1.E-9			rhoMinDim for Ne3
 1.E-9			rhoMinDim for Ne4
-1.E-9			rhoMinDim for electrons
 
 #NORMALIZATION
 USER			TypeNormalization
