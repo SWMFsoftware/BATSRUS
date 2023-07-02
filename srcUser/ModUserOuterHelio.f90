@@ -682,7 +682,7 @@ contains
     ! Make sure that OmegaSun and ParkerTilt are set
     if(OmegaSun == 0.0)call set_omega_parker_tilt
 
-    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
 
        if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
@@ -944,6 +944,8 @@ contains
     !==========================================================================
     subroutine calc_time_dep_sw(i,j,k,iBlock)
 
+      ! Time dependent solar wind from a lookup table
+      
       use BATL_lib,       ONLY: Xyz_DGB
       use ModCoordTransform, ONLY: rot_xyz_sph
       use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
@@ -1010,34 +1012,35 @@ contains
       Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt*SwhUx/Ur ! Bphi for vary B
 
       ! Scale density, pressure, and magnetic field with radial distance
-      Rho = Rho*(rBody/r)**2
-      p     = p*(rBody/r)**(2*Gamma)
+      Rho       = Rho*(rBody/r)**2
+      p         = p*(rBody/r)**(2*Gamma)
       Bsph_D(1) = Bsph_D(1)*(rBody/r)**2
       Bsph_D(3) = Bsph_D(3)*(rBody/r)
-
-      ! merav      ! Setting the state variables
 
       ! Spherical magnetic field converted to Cartesian components
       State_VGB(Bx_:Bz_,i,j,k,iBlock) = matmul(XyzSph_DD, Bsph_D)
 
-      ! merav
-      ! density and pressure
-      State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
-      State_VGB(SWHP_,i,j,k,iBlock)   = SwhP   * (rBody/r)**(2*Gamma)
-      if(UseElectronPressure) &
-           State_VGB(Pe_,i,j,k,iBlock) = SwhPe   * (rBody/r)**(2*Gamma)
+      ! density
+      State_VGB(SWHRho_,i,j,k,iBlock) = Rho
       ! momentum
       v_D = matmul(XyzSph_DD, Vsph_D)
-      State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
-           State_VGB(SWHRho_,i,j,k,iBlock)*v_D
-
+      State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = Rho*v_D
+      ! pressures
+      if(UseElectronPressure)then
+         State_VGB(SWHP_,i,j,k,iBlock) = 0.5*p
+         State_VGB(Pe_,i,j,k,iBlock)   = 0.5*p
+      else
+         State_VGB(SWHP_,i,j,k,iBlock) = p
+      end if
       if(.not.IsMhd)then
+         ! PUI density
          State_VGB(Pu3Rho_,i,j,k,iBlock) = Pu3Rho * (rBody/r)**2
-         State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P   * (rBody/r)**(2*Gamma)
-         ! momentum
+         ! PUI momentum
          vPUI_D = matmul(XyzSph_DD, VPUIsph_D)
          State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock) = &
               State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
+         ! PUI pressure
+         State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P   * (rBody/r)**(2*Gamma)
       end if
 
     end subroutine calc_time_dep_sw
