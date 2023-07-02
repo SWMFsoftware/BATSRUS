@@ -377,7 +377,7 @@ contains
           if(DoTest .and. iVarTest==iP)call write_source('After p div U')
 
        end do ! iFluid
-    end if ! UseAnisoPressure.or.UseNonConservative
+    end if ! (UseAnisoPressure.or.UseNonConservative) .and. .not.UseEntropy
 
     if(UseSpeedMin)then
        ! push radial ion speed above SpeedMin outside rSpeedMin

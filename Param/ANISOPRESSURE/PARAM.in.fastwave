@@ -43,8 +43,6 @@ T			UseEntropy
 0.0			StateVar Bx
 30.0			StateVar By
 0.0			StateVar Bz
-14.0			StateVar Pepar
-16.0			StateVar Pe
 14.0			StateVar Ppar
 16.0			StateVar P
 
