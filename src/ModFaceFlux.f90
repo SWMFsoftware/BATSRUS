@@ -1527,11 +1527,11 @@ contains
             ! Parallel entropy Spar = Ppar * B^2/rho^2
             StateCons_V(Ppar_) = State_V(Ppar_)*FullB2/Rho**2
             ! Perpendicular entropy Sperp = Pperp/FullB
-            StateCons_V(p_) = 0.5*(State_V(p_) - State_V(Ppar_)) &
+            StateCons_V(p_) = 0.5*(3*State_V(p_) - State_V(Ppar_)) &
                  /sqrt(max(1e-30, FullB2))
          end if
-         Flux_V(Ppar_)  = Un*StateCons_V(Ppar_)
-         Flux_V(p_)     = Un*StateCons_V(p_)
+         Flux_V(Ppar_)   = Un*StateCons_V(Ppar_)
+         Flux_V(p_)      = Un*StateCons_V(p_)
          Flux_V(Energy_) = Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
       else if(UseEntropy) then
@@ -1701,7 +1701,7 @@ contains
             ! Parallel entropy Spar = Ppar * B^2/rho^2
             StateCons_V(Ppar_) = State_V(Ppar_)*FullB2/Rho**2
             ! Perpendicular entropy Sperp = Pperp/FullB
-            StateCons_V(p_) = 0.5*(State_V(p_) - State_V(Ppar_)) &
+            StateCons_V(p_) = 0.5*(3*State_V(p_) - State_V(Ppar_)) &
                  /sqrt(max(1e-30, FullB2))
          end if
          ! f_i[Ppar] = u_i*Ppar or f_i[Spar] = u_i*Spar
@@ -1978,7 +1978,7 @@ contains
             ! Parallel entropy Spar = Ppar * B^2/rho^2
             StateCons_V(iPpar) = State_V(iPpar)*FullB2/Rho**2
             ! Perpendicular entropy Sperp = Pperp/FullB
-            StateCons_V(iP) = 0.5*(State_V(iP) - State_V(iPpar)) &
+            StateCons_V(iP) = 0.5*(3*State_V(iP) - State_V(iPpar)) &
                  /sqrt(max(1e-30, FullB2))
          end if
          Flux_V(iPpar) = Un*StateCons_V(iPpar)

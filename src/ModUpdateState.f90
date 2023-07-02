@@ -199,9 +199,9 @@ contains
     if(UseEntropy)then
        if(UseAnisoPressure)then
           ! Calculate source term for iSperp stored in iP
-          do k = 1,nK; do j = 1,nJ; do i = 1,nI
-             Source_VC(iPIon_I,i,j,k) = &
-                  0.5*(Source_VC(iPIon_I,i,j,k) - Source_VC(iPparIon_I,i,j,k))
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Source_VC(iPIon_I,i,j,k) = 0.5* &
+                  (3*Source_VC(iPIon_I,i,j,k) - Source_VC(iPparIon_I,i,j,k))
           end do; end do; end do
        else
           ! Modify pressure source terms to entropy source if necessary
@@ -401,10 +401,10 @@ contains
                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                FullB2 = sum(b_D**2)
                FullB  = sqrt(max(1e-30, FullB2))
-               ! Sperp = Pperp/B = 0.5*(p-Ppar)/B
+               ! Sperp = Pperp/B = 0.5*(3*p-Ppar)/B
                Coeff1 = 0.5/FullB
                StateOld_VGB(iPIon_I,i,j,k,iBlock) = &
-                    CoefF1*(StateOld_VGB(iPIon_I,i,j,k,iBlock) &
+                    CoefF1*(3*StateOld_VGB(iPIon_I,i,j,k,iBlock) &
                     -       StateOld_VGB(iPparIon_I,i,j,k,iBlock))
 
                ! Spar = Ppar*(B^2/rho^2)
@@ -422,7 +422,7 @@ contains
                   ! Sperp = Pperp/B = 0.5*(p-Ppar)/B
                   Coeff1 = 0.5/FullB
                   State_VGB(iPIon_I,i,j,k,iBlock) = &
-                       Coeff1*(State_VGB(iPIon_I,i,j,k,iBlock) &
+                       Coeff1*(3*State_VGB(iPIon_I,i,j,k,iBlock) &
                        -       State_VGB(iPparIon_I,i,j,k,iBlock))
 
                   ! Spar = Ppar*(B^2/rho^2)
@@ -624,16 +624,16 @@ contains
                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                FullB2 = max(1e-30, sum(b_D**2))
                FullB  = sqrt(FullB2)
-               ! Convert parallel and  entropy back to pressure
+               ! Convert parallel and perpendicular entropies back to pressures
                ! Ppar = Spar*(rho^2/B^2)
                Coeff1 = StateOld_VGB(Rho_,i,j,k,iBlock)**2/FullB2
                StateOld_VGB(iPparIon_I,i,j,k,iBlock) = &
                     Coeff1*StateOld_VGB(iPparIon_I,i,j,k,iBlock)
 
-               ! P = Ppar + 2*Spar*B
-               StateOld_VGB(iPIon_I,i,j,k,iBlock) = &
-                    StateOld_VGB(iPparIon_I,i,j,k,iBlock) &
-                    + 2*FullB*StateOld_VGB(iPIon_I,i,j,k,iBlock)
+               ! P = (Ppar + 2*Sperp*B)/3
+               StateOld_VGB(iPIon_I,i,j,k,iBlock) = cThird* &
+                    ( StateOld_VGB(iPparIon_I,i,j,k,iBlock) &
+                    + 2*FullB*StateOld_VGB(iPIon_I,i,j,k,iBlock))
 
                b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
@@ -642,10 +642,10 @@ contains
                Coeff1 = State_VGB(Rho_,i,j,k,iBlock)**2/FullB2
                State_VGB(iPparIon_I,i,j,k,iBlock) = &
                     Coeff1*State_VGB(iPparIon_I,i,j,k,iBlock)
-               ! P = Ppar + 2*Spar*B
-               State_VGB(iPIon_I,i,j,k,iBlock) = &
-                    State_VGB(iPparIon_I,i,j,k,iBlock) &
-                    + 2*FullB*State_VGB(iPIon_I,i,j,k,iBlock)
+               ! P = (Ppar + 2*Sperp*B)/3
+               State_VGB(iPIon_I,i,j,k,iBlock) = cThird*( &
+                    State_VGB(iPparIon_I,i,j,k,iBlock)    &
+                    + 2*FullB*State_VGB(iPIon_I,i,j,k,iBlock))
             end do; end do; end do
          else
             ! Convert entropy back to pressure
