@@ -2319,7 +2319,7 @@ contains
              ! Default values for electrons are the same as first fluid
              ! so ideal MHD works as expected
              GammaElectron          = Gamma
-             InvGammaElectron       = 1.0/GammaElectron
+             InvGammaElectron       = InvGamma
              GammaElectronMinus1    = GammaMinus1
              InvGammaElectronMinus1 = InvGammaMinus1
           end if

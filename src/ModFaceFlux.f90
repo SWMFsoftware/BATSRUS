@@ -1638,7 +1638,7 @@ contains
       real :: Gamma2
 
       ! Energy difference (in the standard argo, Rho*sigma_D*Z^2/2
-      real :: RhoZ2SigmaDHalf
+      real :: wD
 
       real, dimension(nIonFluid) :: Ux_I, Uy_I, Uz_I, RhoUn_I
       real :: MagneticForce_D(RhoUx_:RhoUz_)
@@ -1751,15 +1751,15 @@ contains
          end if
          if(UseReynoldsDecomposition)then
             if(UseEquation4SigmaD)then
-               RhoZ2SigmaDHalf = State_V(Z2SigmaD_)
+               wD = State_V(Z2SigmaD_)
             else
-               RhoZ2SigmaDHalf = SigmaD*&
+               wD = SigmaD*&
                     sum(State_V(WaveFirst_:WaveLast_))
             end if
             if(UseTransverseTurbulence)then
-               pExtra = pExtra + (GammaWave-1)*RhoZ2SigmaDHalf
+               pExtra = pExtra + (GammaWave-1)*wD
             else
-               pExtra = pExtra + (GammaWave-1)*RhoZ2SigmaDHalf/3
+               pExtra = pExtra + (GammaWave-1)*wD/3
             end if
          end if
       end if
@@ -1813,7 +1813,7 @@ contains
       if(UseWavePressure.and.UseReynoldsDecomposition &
            .and. UseTransverseTurbulence)then
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-         DpPerB = -RhoZ2SigmaDHalf*FullBn/max(1e-30, FullB2)
+         DpPerB = -wD*FullBn/max(1e-30, FullB2)
 
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
@@ -2001,10 +2001,10 @@ contains
          ! s = p^1/g
          StateCons_V(iP) = State_V(iP)**InvGamma
          ! u_i * s
-         Flux_V(p_)  = Un*StateCons_V(p_)
+         Flux_V(iP)  = Un*StateCons_V(iP)
       else
          ! f_i[p]=u_i*p
-         Flux_V(p_)  = Un*p
+         Flux_V(iP)  = Un*p
       end if
 
       ! Needed for adiabatic source term for electron pressure
@@ -3827,7 +3827,7 @@ contains
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
       ! Energy difference (in the standard argo, Rho*sigma_D*Z^2/2
-      real :: RhoZ2SigmaDHalf
+      real :: wD
       integer:: jFluid
 #ifndef SCALAR
       !------------------------------------------------------------------------
@@ -3913,7 +3913,8 @@ contains
       end if
 
       if(UseRS7) Sound2 = Sound2 + GammaMinus1*DiffBb*InvRho
-
+      
+      ! No comments, so ask I. Sokolov
       GammaWavePw = 0.0
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
@@ -3926,14 +3927,12 @@ contains
          end if
          if(UseReynoldsDecomposition)then
             if(UseEquation4SigmaD)then
-               RhoZ2SigmaDHalf = State_V(Z2SigmaD_)
+               wD = State_V(Z2SigmaD_)
             else
-               RhoZ2SigmaDHalf = SigmaD*&
-                    sum(State_V(WaveFirst_:WaveLast_))
+               wD = SigmaD*sum(State_V(WaveFirst_:WaveLast_))
             end if
             if(UseTransverseTurbulence)then
-               GammaWavePw = GammaWavePw + GammaWave*(GammaWave - 1) &
-                    *abs(RhoZ2SigmaDHalf)
+               GammaWavePw = GammaWavePw + GammaWave*(GammaWave - 1)*abs(wD)
             else
                GammaWavePw = (GammaWave + SigmaD/6) &
                     *((GammaWave - 1) + SigmaD/6) &
@@ -3947,17 +3946,8 @@ contains
       FullBy = State_V(By_) + B0y
       FullBz = State_V(Bz_) + B0z
       if(UseAwSpeed)then
-         ! According to I. Sokolov computinng fast magnetosonic wave speed
-         ! in terms of the average field squared (Bright+Bleft)^2/4 does not
-         ! provide reliable esstimate for the maximum speed, since the average
-         ! magnetic field by magnitude may be much less than left or right
-         ! field, if the left and right field are antiparallel. By adding
-         ! dB1dB1 = (Bright-Bleft)^2/4 to the average field squared it reduces
-         ! to arithmetic average of the field squared. Then, by adding or
-         ! subtracting (Bright - Bleft)*FullB we obtain Bright^2 and Bleft^2
-         ! corresspondingly. By adding absolute value of the said dot product,
-         ! we would arrive at max(Bleft^2,Bright^2)
-         !
+         ! Add dB1dB1 to replace ((B_L+B_R)/2)^2 with (B_L^2+B_R^2)/2
+         ! by canceling out the 2B_LB_R product. 
          dB1_D = StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_)
          dB1dB1 = 0.25*sum(dB1_D**2)
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
