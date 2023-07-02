@@ -1,128 +1,131 @@
+#DESCRIPTION
+Param/ANISOPRESSURE/PARAM.in.fastwave: P anisotropic		StringDescription
+
 #PLANET
 NONE			NamePlanet
 
 #IOUNITS
-NONE			NameIoUnits
+NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE			NameNormalization
+NONE			TypeNormalization
+
+#ANISOTROPICPRESSURE
+T			UseConstantTau
+-1.0			TauInstabilitySi
+-1.0			TauGlobalSi
 
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#CHECKGRIDSIZE
-100			nI
-2			nJ
-2			nK
-100			MinBlockAll
+#ENTROPY
+T			UseEntropy
+
+#GRIDBLOCKALL
+20			MaxBlock
 
 #GRID
-12			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
--6.0			xMin
- 6.0			xMax
+10			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-30.0			xMin
+ 30.0			xMax
 -0.05			yMin
  0.05			yMax
 -0.05			zMin
  0.05			zMax
 
-#SHOCKTUBE
-1.0			LeftState rho
-0.0			LeftState Ux
-0.0			LeftState Uy
-0.0			LeftState Uz
-0.0			LeftState Bx
-10.0			LeftState By
-0.0			LeftState Bz
-3.0			LeftState Ppar
-22.0			LeftState Pperp
-1.0			RightState rho
-0.0			RightState Ux
-0.0			RightState Uy
-0.0			RightState Uz
-0.0			RightState Bx
-10.0			RightState By
-0.0			RightState Bz
-3.0			RightState Ppar
-22.0			RightState Pperp
-
-#USERSWITCH
-+ic			StringSwitch
+#UNIFORMSTATE
+1.0			StateVar Rho (left state)
+12.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+30.0			StateVar By
+0.0			StateVar Bz
+14.0			StateVar Pepar
+16.0			StateVar Pe
+14.0			StateVar Ppar
+16.0			StateVar P
 
 #WAVE
 Rho			NameVar
-1.0			Width
-0.001			Amplitude
-6.0			LambdaX
+3.0			Width
+0.01			Amplitude
+12.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+P			NameVar
+3.0			Width
+0.16			Amplitude
+12.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
 
 #WAVE
 Ppar			NameVar
-1.0			Width
-0.001			Amplitude
-6.0			LambdaX
+3.0			Width
+0.14			Amplitude
+12.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
 
 #WAVE
-Pperp			NameVar
-1.0			Width
-0.05			Amplitude
-6.0			LambdaX
+By			NameVar
+3.0			Width
+0.3			Amplitude
+12.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
 
 #OUTERBOUNDARY
-periodic	xMinBc
-periodic	xMaxBc
-float		yMinBc
-float		yMaxBc
-float		zMinBc
-float		zMaxBc
+periodic		TypeBc1
+periodic		TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #TIMESTEPPING
-2		nStage
-0.8		CflExpl
+2			nStage
+0.8			CflExpl
 
 #SCHEME
-2		nOrder
-Rusanov		TypeFlux
-mc3		TypeLimiter
-1.5		LimiterBeta
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
 
 #SAVELOGFILE
-T		DoSaveLogfile
-raw		StringLogfile
-1		DnSaveLogfile
--1.		DtSaveLogfile
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #SAVERESTART
-F		DoSaverestart
+F			DoSaveRestart
 
 #PLOTFILENAME
-second		NameMaxTimeUnit
+second			NameMaxTimeUnit
 
 #SAVEINITIAL
-T		DoSaveInitial
+T			DoSaveInitial
 
 #SAVEPLOT
-1		nPlotfile
-cut mhd idl	PlotString
--1              DnSavePlot
-0.1             DtSavePlot
--6.0		Coord1MinCut
-+6.0		Coord1MaxCut
--0.001		Coord2MinCut
-+0.001		Coord2MaxCut
--0.001		Coord3MinCut
-+0.001		Coord3MaxCut
-0.0             DxSavePlot
+1			nPlotFile
+1d var idl_ascii		StringPlot
+-1			DnSavePlot
+0.1			DtSavePlot
+0.0			DxSavePlot
+{mhd}			NameVars
+{default}		NamePars
 
 #STOP
--1		MaxIteration
-3.0		tSimulationMax
+-1			MaxIteration
+1.0			tSimulationMax
