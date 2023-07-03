@@ -945,7 +945,7 @@ contains
     subroutine calc_time_dep_sw(i,j,k,iBlock)
 
       ! Time dependent solar wind from a lookup table
-      
+
       use BATL_lib,       ONLY: Xyz_DGB
       use ModCoordTransform, ONLY: rot_xyz_sph
       use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &

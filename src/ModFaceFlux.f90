@@ -3913,7 +3913,7 @@ contains
       end if
 
       if(UseRS7) Sound2 = Sound2 + GammaMinus1*DiffBb*InvRho
-      
+
       ! No comments, so ask I. Sokolov
       GammaWavePw = 0.0
       if(UseWavePressure)then
@@ -3947,7 +3947,7 @@ contains
       FullBz = State_V(Bz_) + B0z
       if(UseAwSpeed)then
          ! Add dB1dB1 to replace ((B_L+B_R)/2)^2 with (B_L^2+B_R^2)/2
-         ! by canceling out the 2B_LB_R product. 
+         ! by canceling out the 2B_LB_R product.
          dB1_D = StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_)
          dB1dB1 = 0.25*sum(dB1_D**2)
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
