@@ -779,7 +779,7 @@ contains
     WaveDissipation_V(WaveFirst_) = Coef*sqrt(EwaveMinus)*EwavePlus
     WaveDissipation_V(WaveLast_) = Coef*sqrt(EwavePlus)*EwaveMinus
 
-    CoronalHeating = sum(WaveDissipation_V)
+    CoronalHeating = sum(WaveDissipation_V(WaveFirst_:WaveLast_))
     ! Dissipation rate for the energy difference
     if(UseReynoldsDecomposition.and. UseEquation4SigmaD)      &
          WaveDissipation_V(max(WaveLast_,Z2SigmaD_)) = Coef*  &

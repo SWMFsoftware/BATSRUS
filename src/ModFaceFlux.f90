@@ -1621,7 +1621,7 @@ contains
       use ModPhysics, ONLY: InvGamma, InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
-           UseTransverseTurbulence, SigmaD, UseEquation4SigmaD
+           UseTransverseTurbulence, SigmaD, UseWDiff
 
       real, intent(in) :: State_V(:)
       real, intent(out) :: Un
@@ -3802,7 +3802,7 @@ contains
            UseAnisoPressure, UseAnisoPe, SignB_, &
            UseMagFriction, MagFrictionCoef
       use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
-           UseTransverseTurbulence, SigmaD, UseEquation4SigmaD
+           UseTransverseTurbulence, SigmaD, UseWDiff
 
       real, intent(in) :: State_V(:)
       real, optional, intent(out) :: CmaxDt_I(:)
