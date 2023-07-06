@@ -1750,8 +1750,8 @@ contains
                  + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
          end if
          if(UseReynoldsDecomposition)then
-            if(UseEquation4SigmaD)then
-               wD = State_V(Z2SigmaD_)
+            if(UseWDiff)then
+               wD = State_V(WDiff_)
             else
                wD = SigmaD*&
                     sum(State_V(WaveFirst_:WaveLast_))
@@ -3926,8 +3926,8 @@ contains
                  *sum(State_V(WaveFirst_:WaveLast_))
          end if
          if(UseReynoldsDecomposition)then
-            if(UseEquation4SigmaD)then
-               wD = State_V(Z2SigmaD_)
+            if(UseWDiff)then
+               wD = State_V(WDiff_)
             else
                wD = SigmaD*sum(State_V(WaveFirst_:WaveLast_))
             end if

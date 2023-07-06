@@ -12,7 +12,7 @@ module ModCoronalHeating
 #endif
   use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
-  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, Z2SigmaD_
+  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
   use omp_lib
 
@@ -38,8 +38,7 @@ module ModCoronalHeating
   logical, public :: UseCoronalHeating = .false.
   ! Check if we use an extra equation for the energy difference
   ! ("Sigma_D" in a standard argo).
-  logical, public, parameter :: &
-       UseEquation4SigmaD = Z2SigmaD_ == WaveLast_ + 1
+  logical, public, parameter :: UseWDiff = WDiff_ == WaveLast_ + 1
   character(len=lStringLine) :: NameModel, TypeCoronalHeating
 
   ! Exponential Model ---------
@@ -79,7 +78,7 @@ module ModCoronalHeating
 
   ! Arrays for the calculated heat function and dissipated wave energy
   real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
-  real, public :: WaveDissipation_VC(WaveFirst_:max(WaveLast_,Z2SigmaD_),&
+  real, public :: WaveDissipation_VC(WaveFirst_:max(WaveLast_,WDiff_),&
        1:nI,1:nJ,1:nK)
   !$omp threadprivate( CoronalHeating_C, WaveDissipation_VC )
 
@@ -479,7 +478,7 @@ contains
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           if(UseWaveReflection)then
              call read_var('rMinWaveReflection', rMinWaveReflection)
-             if(UseEquation4SigmaD)call read_var(&
+             if(UseWDiff)call read_var(&
                   'UseReynoldsDecomposition', UseReynoldsDecomposition)
           end if
        case('usmanov')
@@ -737,7 +736,7 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out)   :: CoronalHeating, WaveDissipation_V(&
-         WaveFirst_:max(WaveLast_,Z2SigmaD_))
+         WaveFirst_:max(WaveLast_,WDiff_))
 
     real :: FullB_D(3), FullB, Coef, Rho
     real :: EwavePlus, EwaveMinus
@@ -781,10 +780,10 @@ contains
 
     CoronalHeating = sum(WaveDissipation_V(WaveFirst_:WaveLast_))
     ! Dissipation rate for the energy difference
-    if(UseReynoldsDecomposition.and. UseEquation4SigmaD)      &
-         WaveDissipation_V(max(WaveLast_,Z2SigmaD_)) = Coef*  &
+    if(UseReynoldsDecomposition .and. UseWDiff)      &
+         WaveDissipation_V(max(WaveLast_,WDiff_)) = Coef*  &
          0.50*(sqrt(EwaveMinus) + sqrt(EwaveMinus))*          &
-         State_VGB(Z2SigmaD_,i,j,k,iBlock)
+         State_VGB(WDiff_,i,j,k,iBlock)
 
   end subroutine turbulent_cascade
   !============================================================================
