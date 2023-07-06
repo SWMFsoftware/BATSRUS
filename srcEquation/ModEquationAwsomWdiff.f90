@@ -11,19 +11,19 @@ module ModVarIndexes
        Redefine4 => Erad_, &
        Redefine5 => Pe_, &
        Redefine6 => Ehot_,&
-       Redefine7 => Z2SigmaD_
+       Redefine7 => WDiff_
 
   implicit none
 
   save
 
   character (len=*), parameter :: &
-       NameEquationFile = "ModEquationAwsom.f90"
+       NameEquationFile = "ModEquationAwsomWdiff.f90"
 
   ! This equation module contains the standard MHD equations with wave energy
   ! and electron pressure
   character (len=*), parameter :: &
-       NameEquation='MHD + Alfven waves + electron pressure + Z2SigmaD'
+       NameEquation='MHD + Alfven waves + electron pressure + Wdiff'
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
@@ -47,7 +47,7 @@ module ModVarIndexes
        Ehot_      = 8,                  &
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
-       Z2SigmaD_ = WaveLast_ + 1,      &
+       WDiff_     = WaveLast_ + 1,      &
        Pe_        = nVar-1,             &
        p_         = nVar,               &
        Energy_    = nVar+1
@@ -78,7 +78,7 @@ module ModVarIndexes
        0.0, & ! Bz_
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
-       0.0, & ! Z2SigmaD_
+       0.0, & ! WDiff_
        1.0, & ! Pe_
        1.0, & ! p_
        1.0 ] ! Energy_
@@ -94,7 +94,7 @@ module ModVarIndexes
        'Bz  ', & ! Bz_
        'Ehot', & ! Ehot_
        ('I?? ', iWave=WaveFirst_,WaveLast_), &
-       'Z2SD', &! Z2SigmaD_
+       'wD  ', & ! WDiff_
        'Pe  ', & ! Pe_
        'p   ', & ! p_
        'e   ' ] ! Energy_
@@ -105,7 +105,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ =  Z2SigmaD_, ScalarLast_ =  Z2SigmaD_
+  integer, parameter :: ScalarFirst_ = WDiff_, ScalarLast_ = WDiff_
 
 end module ModVarIndexes
 !==============================================================================
