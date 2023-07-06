@@ -12,19 +12,19 @@ module ModVarIndexes
        Redefine5 => Pe_, &
        Redefine6 => Ehot_,&
        Redefine7 => SignB_,&
-       Redefine8 => Z2SigmaD_
+       Redefine8 => WDiff_
 
   implicit none
 
   save
 
   character(len=*), parameter :: &
-       NameEquationFile = "ModEquationAwsomChGL.f90"
+       NameEquationFile = "ModEquationAwsomChGLSigmaD.f90"
 
   ! This equation module contains the standard MHD equations with wave energy
   ! and electron pressure
   character (len=*), parameter :: &
-       NameEquation='MHD + Alfven waves + electron pressure + Z2SigmaD + ChGL'
+       NameEquation='MHD + Alfven waves + WDiff + electron pressure + ChGL'
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
@@ -48,7 +48,7 @@ module ModVarIndexes
        Ehot_      = 8,                  &
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
-       Z2SigmaD_  = WaveLast_ + 1,      &
+       WDiff_     = WaveLast_ + 1,      &
        SignB_     = nVar-2,             &
        Pe_        = nVar-1,             &
        p_         = nVar,               &
@@ -80,34 +80,34 @@ module ModVarIndexes
        0.0, & ! Bz_
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
-       0.0, & ! Z2SigmaD_
+       0.0, & ! WDiff_
        0.0, & ! SignB_ or ChGL_
        1.0, & ! Pe_
        1.0, & ! p_
        1.0 ]  ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=4) :: NameVar_V(nVar+1) = [ &
-       'Rho ', & ! Rho_
-       'Mx  ', & ! RhoUx_
-       'My  ', & ! RhoUy_
-       'Mz  ', & ! RhoUz_
-       'Bx  ', & ! Bx_
-       'By  ', & ! By_
-       'Bz  ', & ! Bz_
-       'Ehot', & ! Ehot_
-       ('I?? ', iWave=WaveFirst_,WaveLast_), &
-       'Z2SD', & ! Z2SigmaD_
-       'Sign', & ! SignB_
-       'Pe  ', & ! Pe_
-       'p   ', & ! p_
-       'e   ' ] ! Energy_
+  character(len=5) :: NameVar_V(nVar+1) = [ &
+       'Rho  ', & ! Rho_
+       'Mx   ', & ! RhoUx_
+       'My   ', & ! RhoUy_
+       'Mz   ', & ! RhoUz_
+       'Bx   ', & ! Bx_
+       'By   ', & ! By_
+       'Bz   ', & ! Bz_
+       'Ehot ', & ! Ehot_
+       ('I??  ', iWave=WaveFirst_,WaveLast_), &
+       'WDiff', & ! WDiff_
+       'Sign ', & ! SignB_
+       'Pe   ', & ! Pe_
+       'p    ', & ! p_
+       'e    ' ] ! Energy_
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = ScalarFirst_
+  integer, parameter :: ScalarFirst_ = WDiff_ , ScalarLast_ = SignB_
 
 end module ModVarIndexes
 !==============================================================================
