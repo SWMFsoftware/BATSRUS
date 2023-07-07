@@ -457,9 +457,9 @@ contains
                 if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                 FullB = norm2(b_D)
                 b_D = b_D/FullB
-                DissipationRateMax = &
-                     2.0*sqrt(maxval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*FullB/&
-                     State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))/LperpTimesSqrtB
+                DissipationRateMax = 2/LperpTimesSqrtB*sqrt(maxval( &
+                     State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*FullB/&
+                     State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
 
                 ! Calculate bb : grad u
                 bDotbDotGradU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
@@ -499,14 +499,13 @@ contains
 
                 ! Energy source related to the Alfven wave source above
                 Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
-                     (ModeConversionPlus + ModeConversionMinus)*&
-                     wD
+                     (ModeConversionPlus + ModeConversionMinus)*wD
                 if(UseWDiff) &
-                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) -&
-                     sum(Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k))    &
-                     *ModeConversionMinus         -&
-                     sum(Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_ ,i,j,k)) &
-                     *ModeConversionPlus
+                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k)  &
+                     - ModeConversionMinus &
+                     *sum(Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k)) &
+                     - ModeConversionPlus &
+                     *sum(Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_,i,j,k))
              end do; end do; end do
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
