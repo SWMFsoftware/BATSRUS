@@ -55,7 +55,7 @@ module ModVarIndexes
        Energy_    = nVar+1
 
   !$acc declare create (NameVar_V)
-  
+
   ! This is for backward compatibility with single group radiation
   integer, parameter :: Erad_ = WaveFirst_
 
