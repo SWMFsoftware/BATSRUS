@@ -18,13 +18,13 @@ our @Arguments = @ARGV;
 
 # Figure out remote git server
 my $remote = `git config remote.origin.url`; $remote =~ s/\/BATSRUS(.git)?\n//;
-my $umichgitlab = ($remote =~ /gitlab\.umich\.edu/);
+my $SWMFsoftware = ($remote =~ /SWMFsoftware/);
 
-#print "remote=$remote umichgitlab=$umichgitlab\n";
+#print "remote=$remote SWMFsoftware=$SWMFsoftware\n";
 
 my $config   = "share/Scripts/Config.pl";
 my $gitclone;
-if($umichgitlab){
+if($SWMFsoftware){
     $gitclone = "share/Scripts/gitclone -s";
 }else{
     $gitclone = "share/Scripts/githubclone";
@@ -37,7 +37,7 @@ if (not -f $config and not -f "../../$config"){
 # The component ID is hidden from Rename.pl
 if ($Component eq "G"."M"){
     `$gitclone srcBATL` if not -d "srcBATL";
-    `$gitclone srcUserExtra` if not -d "srcUserExtra" and $umichgitlab;
+    `$gitclone srcUserExtra` if not -d "srcUserExtra" and $SWMFsoftware;
 }
 
 my $MakefileConf = 'Makefile.conf';
