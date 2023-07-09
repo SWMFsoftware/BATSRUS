@@ -228,8 +228,8 @@ contains
     ! extent of energy difference, i. e. as constant \sigma_D multiplied
     ! by the total energy. Otherwise, a separate equation can be solved
     real :: wD
-    ! Total magnetic field and maximum dissipation rate
-    real :: FullB, DissipationRateMax
+    ! Total magnetic field and dissipation rates
+    real :: FullB, DissipationRate_V(WaveFirst_:WaveLast_)
     !
     ! Mode interaction coefficients for conversion of
     ! W_+ and W_- to the energy difference, Z^2\sigma_D and vise versa
@@ -449,27 +449,11 @@ contains
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-                ! Calculate gradient tensor of velocity
-                call calc_grad_U(GradU_DD, i, j, k, iBlock)
-
                 ! Calculate unit vector parallel with full B field
                 b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                 if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                 FullB = norm2(b_D)
                 b_D = b_D/FullB
-                DissipationRateMax = 2/LperpTimesSqrtB*sqrt(maxval( &
-                     State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*FullB/&
-                     State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
-
-                ! Calculate bb : grad u
-                bDotbDotGradU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
-
-                ModeConversionPlus  = 0.5*DivU_C(i,j,k) - bDotbDotGradU
-                if(UseTurbulentCascade)ModeConversionPlus = &
-                     sign(min(abs(ModeConversionPlus), DissipationRateMax), &
-                     ModeConversionPlus)
-                ModeConversionMinus = ModeConversionPlus
-
                 ! Calculate gradient tensor of Alfven speed
                 call calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, &
                      IsNewBlockAlfven)
@@ -477,9 +461,25 @@ contains
                 ! Calculate b.grad V_a
                 bDotGradVAlfven  = &
                      dot_product(b_D, matmul(b_D(1:nDim), GradAlfven_DD))
-                 if(UseTurbulentCascade)bDotGradVAlfven = &
-                      sign(min(abs(bDotGradVAlfven), DissipationRateMax), &
-                      bDotGradVAlfven)
+                ! Calculate gradient tensor of velocity
+                call calc_grad_U(GradU_DD, i, j, k, iBlock)
+                ! Calculate bb : grad u
+                bDotbDotGradU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
+
+                ModeConversionPlus  = 0.5*DivU_C(i,j,k) - bDotbDotGradU
+                if(UseTurbulentCascade)then
+                   DissipationRate_V = 2/LperpTimesSqrtB*sqrt(&
+                        State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*FullB/&
+                        State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
+                   bDotGradVAlfven = sign(min(abs(bDotGradVAlfven), 0.5*abs(&
+                        DissipationRate_V(WaveFirst_) - &
+                        DissipationRate_V(WaveLast_)) ),&
+                        bDotGradVAlfven)
+                   ModeConversionPlus = sign(min(abs(ModeConversionPlus), sqrt(&
+                        bDotGradVAlfven**2 + product(DissipationRate_V))),     &
+                        ModeConversionPlus)
+                end if
+                ModeConversionMinus = ModeConversionPlus
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
                 ModeConversionMinus = ModeConversionMinus - bDotGradVAlfven
 
