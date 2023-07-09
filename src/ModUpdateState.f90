@@ -33,6 +33,7 @@ contains
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, UnitRhoU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
+    use ModCoronalHeating, ONLY: UseReynoldsDecomposition, UseWDiff
     use ModEnergy, ONLY: limit_pressure
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless
@@ -108,7 +109,7 @@ contains
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
     if(SignB_ > 1 .and. UseChGL)call update_chgl(iBlock, iStage)
-
+    if(UseReynoldsDecomposition.and.UseWDiff)call fix_wdiff(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' final for nStep =', nStep
        do iVar=1,nVar
@@ -1607,6 +1608,24 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_multi_ion_update
+  !============================================================================
+  subroutine fix_wdiff(iBlock)
+    use ModVarIndexes, ONLY: WDiff_, WaveFirst_, WaveLast_
+    use ModSize, ONLY: nI, nJ, nK
+    use ModAdvance, ONLY : State_VGB
+
+    integer, intent(in) :: iBlock
+    integer :: i, j, k
+    !--------------------------------------------------------------------------
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+       State_VGB(WDiff_,i,j,k,iBlock) = sign(min(       &
+            abs(State_VGB(WDiff_,i,j,k,iBlock)),        &
+            2.0*sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)*&
+            State_VGB(WaveLast_,i,j,k,iBlock))),        &
+            State_VGB(WDiff_,i,j,k,iBlock))
+    end do; end do; end do
+  end subroutine fix_wdiff
   !============================================================================
   subroutine check_nan(NameSub, iError)
 
