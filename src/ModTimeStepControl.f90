@@ -212,7 +212,7 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k) = &
                   WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k) &
-                  /extension_factor(TeSi_C(i,j,k)) 
+                  /extension_factor(TeSi_C(i,j,k))
           end do; end do; end do
        end if
 
