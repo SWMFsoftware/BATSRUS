@@ -280,8 +280,7 @@ ascii			TypeFile
 #SCHEME
 2			nOrder
 Linde			TypeFlux
-mc3			TypeLimiter
-1.2			LimiterBeta
+minmod			TypeLimiter
 
 #STOP
 20			MaxIteration
@@ -311,3 +310,14 @@ T			UseSourceNe4
 30			MaxIteration
 -1.0			tSimulationMax
 
+#RUN ##########################################################################
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#STOP
+40			MaxIteration
+-1.0			tSimulationMax
