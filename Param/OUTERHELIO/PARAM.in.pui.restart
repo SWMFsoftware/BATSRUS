@@ -1,27 +1,37 @@
 #INCLUDE
 restartIN/restart.H
 
-#UPDATECHECK
-T			UseUpdateCheck
-40.			RhoMinPercent
-400.			RhoMaxPercent
-40.			pMinPercent
-400.			pMaxPercent
-
 #DESCRIPTION
-Param/OUTERHELIO/PARAM.in.pui.restart: Restart outer heliosphere with 2 ion and 4 neutral fluids		StringDescription
+Param/OUTERHELIO/PARAM.in.pui: Outer heliosphere with 2 ion and 4 neutral fluids		StringDescription
+
+#PLANET
+NONE			NamePlanet
 
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
 
+#BODY
+F			 UseBody (rest of parameters read if true)
+
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+1.E-23			pMinDim for fluid PUI
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
+1.E-23			PeMinDim for electrons
+
+#MINIMUMDENSITY
+1.E-4			RhoMinDim for fluid SW
+1.E-9			RhoMinDim for fluid PUI
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
+
 #PLOTFILENAME
 year			NameMaxTimeUnit
-
-#GRIDBLOCKALL
-3500			MaxBlock
-
-#INNERBOUNDARY
-user			TypeBcBody
 
 #OUTERBOUNDARY
 user			TypeBc1
@@ -32,25 +42,23 @@ outflow			TypeBc5
 outflow			TypeBc6
 
 #TIMEACCURATE
-F			IsTimeAccurate
+T			IsTimeAccurate
 
 #NEUTRALFLUID
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
-#ELECTRONENTROPY
-F			UseElectronEntropy
-
-! Applies to the ions only if UseRusanovForNeutrals is true in #MULTIFLUID
-#SCHEME
-2			nOrder
-Linde			TypeFlux
-mc			TypeLimiter
-1.5			LimiterBeta
+#NONCONSERVATIVE
+F			UseNonConservative
 
 #TIMESTEPPING
 2			nStage
 0.6			CflExpl
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
 
 #SAVERESTART
 T			DoSaveRestart
@@ -88,6 +96,12 @@ F			UseSingleIonTemperature
 1e-10			LowDensityRatio
 1e-10			LowPressureRatio
 F			DoRestrictMultiIon
+
+#COLLISION
+-1.0			CollisionCoefDim
+1.0e6			TauCutOffDim [s]
+-2.0			uCutOffDim [km/s] read if TauCutOffDim positive
+2			nPowerCutOff read if TauCutOffDim positive
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -154,27 +168,21 @@ MultiIon                NameRegionFormula
 100.0                   uPop1LimitDim
 1.0                     MachPop1Limit
 
-
-#SOURCES
-T			UseSourceSWH
-T 			UseSourcePu3
-T 			UseSourceNeu
-T 			UseSourceNe2
-T 			UseSourceNe3
-T 			UseSourceNe4
-
-#ELECTRONIMPACT
-T                       UseElectronImpact
-
 #PU3HEATING
 T			UsePu3Heating
 1e7			TempPu3
 10.			FactorPu3
 
-#ELECTRONHEATING
-T			UseElectronHeating
-1e7			TempHeatElectron
-10.			FactorHeatElectron
+#ELECTRONIMPACT
+T                       UseElectronImpact
+
+#SOURCES
+T			UseSourceSWH
+T			UseSourcePu3
+T			UseSourceNeu
+T			UseSourceNe2
+T			UseSourceNe3
+T			UseSourceNe4
 
 #USERINPUTEND -------------------------------------
 
@@ -185,7 +193,17 @@ Param/OUTERHELIO/ElectronImpactRate.dat		NameFile
 ascii			TypeFile
 
 #STOP
-25			MaxIteration
+10			MaxIteration
 -1.0			tSimulationMax
 
+#RUN ##########################################################################
 
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#STOP
+20			MaxIteration
+-1.0			tSimulationMax
