@@ -181,8 +181,7 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k, iVar, iFluid, iUn, iGang
-    real :: Pe, Pwave, DivU, Ew
-    real :: Coef
+    real :: Pe, Pwave, DivU
 
     ! Variable for B0 source term
 
@@ -475,9 +474,9 @@ contains
                         DissipationRate_V(WaveFirst_) - &
                         DissipationRate_V(WaveLast_)) ),&
                         bDotGradVAlfven)
-                   ModeConversionPlus = sign(min(abs(ModeConversionPlus), sqrt(&
-                        bDotGradVAlfven**2 + product(DissipationRate_V))),     &
-                        ModeConversionPlus)
+                   ModeConversionPlus = sign(min(abs(ModeConversionPlus), &
+                        sqrt(bDotGradVAlfven**2 &
+                        +    product(DissipationRate_V))), ModeConversionPlus)
                 end if
                 ModeConversionMinus = ModeConversionPlus
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
@@ -1337,7 +1336,6 @@ contains
 
     end subroutine calc_grad_alfven
     !==========================================================================
-
     subroutine get_alfven_speed(Alfven_VFD)
 
       use ModAdvance, ONLY: &
