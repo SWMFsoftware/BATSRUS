@@ -11,7 +11,7 @@ NONE			NamePlanet
 F			UseGravity (rest of parameters read if true)
 
 #BODY
-F			 UseBody (rest of parameters read if true)
+F			UseBody (rest of parameters read if true)
 
 #MINIMUMPRESSURE
 1.E-18			pMinDim for fluid SW
