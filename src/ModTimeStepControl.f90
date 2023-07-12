@@ -223,15 +223,10 @@ contains
              DtLoss = minval( &
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
                   /WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k))
-             if(UseReynoldsDecomposition.and.UseWDiff)then
-                ! The following prevents the wave energies from becoming
-                ! negative due to too large loss terms.
-                DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*DtLoss/&
-                     (DtMax_CB(i,j,k,iBlock) + DtLoss)
-             else
-                DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock),   &
-                     0.5*DtLoss)
-             end if
+             ! The following prevents the wave energies from becoming
+             ! negative due to too large loss terms.
+             DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*DtLoss/&
+                  (DtMax_CB(i,j,k,iBlock) + DtLoss)
           end if
        end do; end do; end do
     end if
