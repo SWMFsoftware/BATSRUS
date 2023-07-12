@@ -5,36 +5,54 @@ module ModVarIndexes
 
   use ModSingleFluid
   use ModExtraVariables, &
-       Redefine1 => SignB_
+       Redefine1 => nWave, &
+       Redefine2 => WaveFirst_, &
+       Redefine3 => WaveLast_, &
+       Redefine4 => Ppar_, &
+       Redefine5 => Pe_, &
+       Redefine6 => Ehot_,&
+       Redefine7 => SignB_,&
+       Redefine8 => iPparIon_I
 
   implicit none
 
   save
 
   character(len=*), parameter :: &
-       NameEquationFile = "ModEquationMhdChGL.f90"
+       NameEquationFile = "ModEquationAwsomAnisoPiSA.f90"
 
+  ! This equation module contains the anisotropic ion pressure MHD equations
+  ! with wave energy and electron pressure
   character(len=*), parameter :: &
-       NameEquation = 'MHD + ChGL'
+       NameEquation = "AWSoM + anistropic Pi + stream aligned"
 
-  ! Number of variables without energy:
-  integer, parameter :: nVar = 9
+  ! loop variable for implied do-loop over spectrum
+  integer, private :: iWave
+
+  ! Number of wave bins in spectrum
+  integer, parameter :: nWave = 2
+  integer, parameter :: nVar = 12 + nWave
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
   ! The energy is handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       Rho_   = 1,    &
-       RhoUx_ = 2,    &
-       RhoUy_ = 3,    &
-       RhoUz_ = 4,    &
-       Bx_    = 5,    &
-       By_    = 6,    &
-       Bz_    = 7,    &
-       SignB_ = 8, ChGL_ = 8, &
-       p_     = nVar, &
-       Energy_= nVar+1
+       Rho_       = 1,                  &
+       RhoUx_     = 2,                  &
+       RhoUy_     = 3,                  &
+       RhoUz_     = 4,                  &
+       Bx_        = 5,                  &
+       By_        = 6,                  &
+       Bz_        = 7,                  &
+       Ehot_      = 8,                  &
+       WaveFirst_ = 9,                  &
+       WaveLast_  = WaveFirst_+nWave-1, &
+       SignB_     = nVar-3,             &
+       Pe_        = nVar-2,             &
+       Ppar_      = nVar-1,             &
+       p_         = nVar,               &
+       Energy_    = nVar+1
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
@@ -45,6 +63,8 @@ module ModVarIndexes
   integer, parameter :: iRhoUy_I(nFluid) = [RhoUy_]
   integer, parameter :: iRhoUz_I(nFluid) = [RhoUz_]
   integer, parameter :: iP_I(nFluid)     = [p_]
+
+  integer, parameter :: iPparIon_I(1) = Ppar_
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
@@ -57,9 +77,13 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! ChGL_
+       0.0, & ! Ehot_
+       (1.0, iWave=WaveFirst_,WaveLast_), &
+       0.0, & ! SignB_ or ChGL_
+       1.0, & ! Pe_
+       1.0, & ! Ppar_
        1.0, & ! p_
-       1.0 ]  ! Energy_
+       1.0 ] ! Energy_
 
   ! The names of the variables used in i/o
   character(len=4) :: NameVar_V(nVar+1) = [ &
@@ -70,15 +94,19 @@ module ModVarIndexes
        'Bx  ', & ! Bx_
        'By  ', & ! By_
        'Bz  ', & ! Bz_
-       'ChGL', & ! ChGL_
+       'Ehot', & ! Ehot_
+       ('I?? ', iWave=WaveFirst_,WaveLast_), &
+       'Sign', & ! SignB_
+       'Pe  ', & ! Pe_
+       'Ppar', & ! Ppar_
        'p   ', & ! p_
-       'e   '  ] ! Energy_
+       'e   ' ] ! Energy_
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = ChGL_, ScalarLast_ = ChGL_
+  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = ScalarFirst_
 
 end module ModVarIndexes
 !==============================================================================

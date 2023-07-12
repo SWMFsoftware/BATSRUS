@@ -20,16 +20,15 @@ F			UseBody (rest of parameters read if true)
 1.E-23			pMinDim for Ne2
 1.E-23			pMinDim for Ne3
 1.E-23			pMinDim for Ne4
-1.E-23			pMinDim for electrons
+1.E-23			PeMinDim for electrons
 
 #MINIMUMDENSITY
-1.E-4			rhoMinDim for fluid SW
-1.E-9			rhoMinDim for fluid PUI
-1.E-9			rhoMinDim for Neu
-1.E-9			rhoMinDim for Ne2
-1.E-9			rhoMinDim for Ne3
-1.E-9			rhoMinDim for Ne4
-1.E-9			rhoMinDim for electrons
+1.E-4			RhoMinDim for fluid SW
+1.E-9			RhoMinDim for fluid PUI
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
 
 #NORMALIZATION
 USER			TypeNormalization
@@ -281,8 +280,7 @@ ascii			TypeFile
 #SCHEME
 2			nOrder
 Linde			TypeFlux
-mc3			TypeLimiter
-1.2			LimiterBeta
+minmod			TypeLimiter
 
 #STOP
 20			MaxIteration
@@ -294,7 +292,7 @@ mc3			TypeLimiter
 T			IsTimeAccurate
 
 #USERSWITCH
-+source_expl +perturb	StringSwitch
++source_expl +perturb		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -312,3 +310,14 @@ T			UseSourceNe4
 30			MaxIteration
 -1.0			tSimulationMax
 
+#RUN ##########################################################################
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#STOP
+40			MaxIteration
+-1.0			tSimulationMax

@@ -1,13 +1,6 @@
 #COMPONENT
 OH			NameComp
 
-#UPDATECHECK
-T			UseUpdateCheck
-40.			RhoMinPercent
-400.			RhoMaxPercent
-40.			pMinPercent
-400.			pMaxPercent
-
 #DESCRIPTION
 Param/OUTERHELIO/PARAM.in.pui: Outer heliosphere with 2 ion and 4 neutral fluids		StringDescription
 
@@ -18,20 +11,24 @@ NONE			NamePlanet
 F			UseGravity (rest of parameters read if true)
 
 #BODY
-T			UseBody (rest of parameters read if true)
-30.0			rBody (user units)
-0.01			BodyNDim (/cc) number density for sw ions
-2.0E4			BodyTDim temperature for sw ions
-9.45E-4			BodyNDim for PUIs
-8.20E6			BodyTDim
-0.18			BodyNDim for 1st neutral fluid
-6519.0			BodyTDim
-7.E-5			BodyNDim for 2nd neutral fluid
-6519.0			BodyTDim
-7.8E-3			BodyNDim for 3rd neutral fluid
-1.609E3			BodyTDim
-0.18			BodyNDim for 4th neutral fluid
-6519.0			BodyTDim
+F			 UseBody (rest of parameters read if true)
+
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+1.E-23			pMinDim for fluid PUI
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
+1.E-23			PeMinDim for electrons
+
+#MINIMUMDENSITY
+1.E-4			RhoMinDim for fluid SW
+1.E-9			RhoMinDim for fluid PUI
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
 
 #NORMALIZATION
 USER			TypeNormalization
@@ -107,9 +104,6 @@ box			StringShape
 187.5			yMaxBox
 187.5			zMaxBox
 
-#INNERBOUNDARY
-user			TypeBcBody
-
 #OUTERBOUNDARY
 user			TypeBc1
 outflow			TypeBc2
@@ -121,12 +115,12 @@ outflow			TypeBc6
 #TIMEACCURATE
 F			IsTimeAccurate
 
-#ELECTRONENTROPY
-F			UseElectronEntropy
-
 #NEUTRALFLUID
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
+
+#NONCONSERVATIVE
+F			UseNonConservative
 
 #SCHEME
 1			nOrder
@@ -134,7 +128,7 @@ Linde			TypeFlux
 
 #TIMESTEPPING
 1			nStage (1 or 2)
-0.80			CflExpl
+0.8			CflExpl
 
 #SAVERESTART
 T			DoSaveRestart
@@ -172,6 +166,12 @@ F			UseSingleIonTemperature
 1e-10			LowDensityRatio
 1e-10			LowPressureRatio
 F			DoRestrictMultiIon
+
+#COLLISION
+-1.0			CollisionCoefDim
+1.0e6			TauCutOffDim [s]
+-2.0			uCutOffDim [km/s] read if TauCutOffDim positive
+2			nPowerCutOff read if TauCutOffDim positive
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -238,21 +238,13 @@ MultiIon                NameRegionFormula
 100.0                   uPop1LimitDim
 1.0                     MachPop1Limit
 
-#SOURCES
-F			UseSourceSWH
-F 			UseSourcePu3
-F 			UseSourceNeu
-F 			UseSourceNe2
-F 			UseSourceNe3
-F 			UseSourceNe4
-
-#ELECTRONIMPACT
-T                       UseElectronImpact
-
 #PU3HEATING
 T			UsePu3Heating
 1e7			TempPu3
 10.			FactorPu3
+
+#ELECTRONIMPACT
+T                       UseElectronImpact
 
 #USERINPUTEND -------------------------------------
 
@@ -263,21 +255,8 @@ Param/OUTERHELIO/ElectronImpactRate.dat		NameFile
 ascii			TypeFile
 
 #STOP
-25			MaxIteration
+10			MaxIteration
 -1.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#SCHEME
-2			nOrder
-Linde			TypeFlux
-minmod			TypeLimiter
-
-#STOP
-50			MaxIteration
--1.0			tSimulationMax
-
-#END
 
 #RUN ##########################################################################
 
@@ -285,15 +264,24 @@ minmod			TypeLimiter
 2			nStage
 0.6			CflExpl
 
-! Applies to the ions only if UseRusanovForNeutrals is true in #MULTIFLUID
 #SCHEME
 2			nOrder
 Linde			TypeFlux
-mc			TypeLimiter
-1.5			LimiterBeta
+minmod			TypeLimiter
+
+#STOP
+20			MaxIteration
+-1.0			tSimulationMax
+
+#END
+
+#RUN ##########################################################################
+
+#TIMEACCURATE
+T			IsTimeAccurate
 
 #USERSWITCH
-+source_expl -progress +perturb		StringSwitch
++source_expl +perturb		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -308,6 +296,17 @@ T			UseSourceNe4
 #USERINPUTEND -------------------------------------
 
 #STOP
-75			MaxIteration
+30			MaxIteration
 -1.0			tSimulationMax
 
+#RUN ##########################################################################
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#STOP
+40			MaxIteration
+-1.0			tSimulationMax

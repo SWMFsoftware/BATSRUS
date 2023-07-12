@@ -95,7 +95,7 @@ contains
 
        if(DoConserveFlux)then
           !$omp parallel do
-          do iBlock=1,nBlock
+          do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
              if(all(DiLevel_EB(:,iBlock)/=1)) CYCLE
              ! Calculate interface values for L/R states of each
@@ -141,7 +141,7 @@ contains
        else
           ! CPU compatible code
           !$omp parallel do
-          do iBlock = 1,nBlock
+          do iBlock = 1, nBlock
 
              if(Unused_B(iBlock)) CYCLE
 
@@ -301,6 +301,7 @@ contains
                   Dt=Dt, DoBorisStepIn=.true.)
           end if
        end if
+
        if(iStage < nStage)then
           if(UseFieldLineThreads) call advance_threads(Enthalpy_)
           call exchange_messages

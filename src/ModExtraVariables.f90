@@ -26,7 +26,7 @@ module ModExtraVariables
   integer, parameter :: nWave = 1
   integer, parameter :: WaveFirst_ = 1, WaveLast_ = 1
   ! For Alfven wave energy difference, \rho\delta u^2 - \delta B^2/\mu_0
-  integer, parameter :: Z2SigmaD_ = 1
+  integer, parameter :: WDiff_ = 1
 
   ! Perpendicular correlation length (Assumed to be the same for major
   ! and minor turbulence energy density)

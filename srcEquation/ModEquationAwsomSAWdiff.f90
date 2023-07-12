@@ -11,26 +11,27 @@ module ModVarIndexes
        Redefine4 => Erad_, &
        Redefine5 => Pe_, &
        Redefine6 => Ehot_,&
-       Redefine7 => SignB_
+       Redefine7 => SignB_,&
+       Redefine8 => WDiff_
 
   implicit none
 
   save
 
   character(len=*), parameter :: &
-       NameEquationFile = "ModEquationAwsomChGL.f90"
+       NameEquationFile = "ModEquationAwsomSAWdiff.f90"
 
   ! This equation module contains the standard MHD equations with wave energy
   ! and electron pressure
-  character (len=*), parameter :: &
-       NameEquation='MHD + Alfven waves + electron pressure + ChGL'
+  character(len=*), parameter :: &
+       NameEquation = "AWSoM + Wdiff + stream aligned"
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
 
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2
-  integer, parameter :: nVar = 11 + nWave
+  integer, parameter :: nVar = 12 + nWave
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
@@ -47,10 +48,13 @@ module ModVarIndexes
        Ehot_      = 8,                  &
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
+       WDiff_     = WaveLast_ + 1,      &
        SignB_     = nVar-2,             &
        Pe_        = nVar-1,             &
        p_         = nVar,               &
        Energy_    = nVar+1
+
+  !$acc declare create (NameVar_V)
 
   ! This is for backward compatibility with single group radiation
   integer, parameter :: Erad_ = WaveFirst_
@@ -78,6 +82,7 @@ module ModVarIndexes
        0.0, & ! Bz_
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
+       0.0, & ! WDiff_
        0.0, & ! SignB_ or ChGL_
        1.0, & ! Pe_
        1.0, & ! p_
@@ -94,6 +99,7 @@ module ModVarIndexes
        'Bz  ', & ! Bz_
        'Ehot', & ! Ehot_
        ('I?? ', iWave=WaveFirst_,WaveLast_), &
+       'wD  ', & ! WDiff_
        'Sign', & ! SignB_
        'Pe  ', & ! Pe_
        'p   ', & ! p_
@@ -103,7 +109,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = ScalarFirst_
+  integer, parameter :: ScalarFirst_ = WDiff_ , ScalarLast_ = SignB_
 
 end module ModVarIndexes
 !==============================================================================

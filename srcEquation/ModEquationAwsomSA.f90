@@ -11,19 +11,19 @@ module ModVarIndexes
        Redefine4 => Erad_, &
        Redefine5 => Pe_, &
        Redefine6 => Ehot_,&
-       Redefine7 => Z2SigmaD_
+       Redefine7 => SignB_
 
   implicit none
 
   save
 
-  character (len=*), parameter :: &
-       NameEquationFile = "ModEquationAwsom.f90"
+  character(len=*), parameter :: &
+       NameEquationFile = "ModEquationAwsomSA.f90"
 
   ! This equation module contains the standard MHD equations with wave energy
   ! and electron pressure
-  character (len=*), parameter :: &
-       NameEquation='MHD + Alfven waves + electron pressure + Z2SigmaD'
+  character(len=*), parameter :: &
+       NameEquation = "AWSoM + stream aligned"
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
@@ -47,7 +47,7 @@ module ModVarIndexes
        Ehot_      = 8,                  &
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
-       Z2SigmaD_ = WaveLast_ + 1,      &
+       SignB_     = nVar-2,             &
        Pe_        = nVar-1,             &
        p_         = nVar,               &
        Energy_    = nVar+1
@@ -78,10 +78,10 @@ module ModVarIndexes
        0.0, & ! Bz_
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
-       0.0, & ! Z2SigmaD_
+       0.0, & ! SignB_ or ChGL_
        1.0, & ! Pe_
        1.0, & ! p_
-       1.0 ] ! Energy_
+       1.0 ]  ! Energy_
 
   ! The names of the variables used in i/o
   character(len=4) :: NameVar_V(nVar+1) = [ &
@@ -94,18 +94,16 @@ module ModVarIndexes
        'Bz  ', & ! Bz_
        'Ehot', & ! Ehot_
        ('I?? ', iWave=WaveFirst_,WaveLast_), &
-       'Z2SD', &! Z2SigmaD_
+       'Sign', & ! SignB_
        'Pe  ', & ! Pe_
        'p   ', & ! p_
        'e   ' ] ! Energy_
-
-  !$acc declare create (NameVar_V)
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
+  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = ScalarFirst_
 
 end module ModVarIndexes
 !==============================================================================

@@ -151,13 +151,14 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
     use ModIonElectron,   ONLY: ion_electron_source_impl
-    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
+    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C, &
+         AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, AlfvenMinusLast_
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
-         UseEquation4SigmaD
+         UseWDiff, LperpTimesSqrtB
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -180,8 +181,7 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k, iVar, iFluid, iUn, iGang
-    real :: Pe, Pwave, DivU, Ew
-    real :: Coef
+    real :: Pe, Pwave, DivU
 
     ! Variable for B0 source term
 
@@ -226,7 +226,9 @@ contains
     ! Can be eveluated from the total energy assuming the constant
     ! extent of energy difference, i. e. as constant \sigma_D multiplied
     ! by the total energy. Otherwise, a separate equation can be solved
-    real :: RhoZ2SigmaDHalf
+    real :: wD
+    ! Total magnetic field and dissipation rates
+    real :: FullB, DissipationRate_V(WaveFirst_:WaveLast_)
     !
     ! Mode interaction coefficients for conversion of
     ! W_+ and W_- to the energy difference, Z^2\sigma_D and vise versa
@@ -266,7 +268,7 @@ contains
     end if
 
     ! Calculate source terms for ion pressure
-    if(UseNonconservative .or. UseAnisoPressure)then
+    if((UseNonconservative .or. UseAnisoPressure) .and. .not.UseEntropy)then
        do iFluid = 1, nFluid
           if(nFluid > 1) call select_fluid(iFluid)
           iUn = UnFirst_ + iFluid - 1
@@ -289,7 +291,7 @@ contains
                 end if
 
                 ! Calculate gradient tensor of velocity
-                call calc_grad_U(GradU_DD, i, j, k, iBlock)
+                call calc_grad_u(GradU_DD, i, j, k, iBlock)
 
                 if(UseAnisoPressure .and. IsIon_I(iFluid))then
                    ! Calculate bDotbDotGradU = b dot (b matmul GradU)
@@ -303,15 +305,14 @@ contains
                    bDotbDotGradU=dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
                    ! p parallel: -2*ppar*b.(b.(Grad U))
-                   Source_VC(iPpar,i,j,k) = &
-                        Source_VC(iPpar,i,j,k) &
+                   Source_VC(iPpar,i,j,k) = Source_VC(iPpar,i,j,k) &
                         - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotbDotGradU
 
                    ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
                    !     = (p - ppar)*b.(b.(GradU))
                    Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-                        + (State_VGB(iP,i,j,k,iBlock) -  &
-                        State_VGB(iPpar,i,j,k,iBlock))*bDotbDotGradU
+                        + (State_VGB(iP,i,j,k,iBlock)  &
+                        - State_VGB(iPpar,i,j,k,iBlock))*bDotbDotGradU
                 end if
 
                 if(UseViscosity) then
@@ -378,7 +379,7 @@ contains
           if(DoTest .and. iVarTest==iP)call write_source('After p div U')
 
        end do ! iFluid
-    end if ! UseAnisoPressure.or.UseNonConservative
+    end if ! (UseAnisoPressure.or.UseNonConservative) .and. .not.UseEntropy
 
     if(UseSpeedMin)then
        ! push radial ion speed above SpeedMin outside rSpeedMin
@@ -417,7 +418,7 @@ contains
           ! Store div U so it can be used in ModWaves
           DivU_C(i,j,k) = DivU
 
-          do iVar = WaveFirst_, max(WaveLast_,Z2SigmaD_)
+          do iVar = WaveFirst_, max(WaveLast_,WDiff_)
              Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
@@ -447,20 +448,11 @@ contains
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-                ! Calculate gradient tensor of velocity
-                call calc_grad_U(GradU_DD, i, j, k, iBlock)
-
                 ! Calculate unit vector parallel with full B field
                 b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                 if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-                b_D = b_D/norm2(b_D)
-
-                ! Calculate bb : grad u
-                bDotbDotGradU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
-
-                ModeConversionPlus  = 0.5*DivU_C(i,j,k) - bDotbDotGradU
-                ModeConversionMinus = ModeConversionPlus
-
+                FullB = norm2(b_D)
+                b_D = b_D/FullB
                 ! Calculate gradient tensor of Alfven speed
                 call calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, &
                      IsNewBlockAlfven)
@@ -468,31 +460,51 @@ contains
                 ! Calculate b.grad V_a
                 bDotGradVAlfven  = &
                      dot_product(b_D, matmul(b_D(1:nDim), GradAlfven_DD))
+                ! Calculate gradient tensor of velocity
+                call calc_grad_U(GradU_DD, i, j, k, iBlock)
+                ! Calculate bb : grad u
+                bDotbDotGradU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
+
+                ModeConversionPlus  = 0.5*DivU_C(i,j,k) - bDotbDotGradU
+                if(UseTurbulentCascade)then
+                   DissipationRate_V = 2/LperpTimesSqrtB*sqrt(&
+                        State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*FullB/&
+                        State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
+                   bDotGradVAlfven = sign(min(abs(bDotGradVAlfven), 0.5*abs(&
+                        DissipationRate_V(WaveFirst_) - &
+                        DissipationRate_V(WaveLast_)) ),&
+                        bDotGradVAlfven)
+                   ModeConversionPlus = sign(min(abs(ModeConversionPlus), &
+                        sqrt(bDotGradVAlfven**2 &
+                        +    product(DissipationRate_V))), ModeConversionPlus)
+                end if
+                ModeConversionMinus = ModeConversionPlus
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
                 ModeConversionMinus = ModeConversionMinus - bDotGradVAlfven
 
-                if(UseEquation4SigmaD)then
-                   RhoZ2SigmaDHalf = State_VGB(Z2SigmaD_,i,j,k,iBlock)
+                if(UseWDiff)then
+                   wD = State_VGB(WDiff_,i,j,k,iBlock)
                 else
-                   RhoZ2SigmaDHalf = SigmaD*&
+                   wD = SigmaD*&
                         sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
                 end if
 
-                Source_VC(WaveFirst_,i,j,k) = &
-                     Source_VC(WaveFirst_,i,j,k) &
-                     - 0.5*ModeConversionPlus *RhoZ2SigmaDHalf
-                Source_VC(WaveLast_,i,j,k) = &
-                     Source_VC(WaveLast_ ,i,j,k) &
-                     - 0.5*ModeConversionMinus*RhoZ2SigmaDHalf
+                Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k) = &
+                     Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k) &
+                     - 0.5*ModeConversionPlus *wD
+                Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_,i,j,k) = &
+                     Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_ ,i,j,k) &
+                     - 0.5*ModeConversionMinus*wD
 
                 ! Energy source related to the Alfven wave source above
                 Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
-                     (ModeConversionPlus + ModeConversionMinus)*&
-                     RhoZ2SigmaDHalf
-                if(UseEquation4SigmaD) &
-                     Source_VC(Z2SigmaD_,i,j,k) = Source_VC(Z2SigmaD_,i,j,k) -&
-                     Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus         -&
-                     Source_VC(WaveLast_ ,i,j,k)*ModeConversionPlus
+                     (ModeConversionPlus + ModeConversionMinus)*wD
+                if(UseWDiff) &
+                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k)  &
+                     - ModeConversionMinus &
+                     *sum(Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k)) &
+                     - ModeConversionPlus &
+                     *sum(Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_,i,j,k))
              end do; end do; end do
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -514,26 +526,25 @@ contains
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
                 ModeConversionMinus = ModeConversionMinus - bDotGradVAlfven
 
-                if(UseEquation4SigmaD)then
-                   RhoZ2SigmaDHalf = State_VGB(Z2SigmaD_,i,j,k,iBlock)
+                if(UseWDiff)then
+                   wD = State_VGB(WDiff_,i,j,k,iBlock)
                 else
-                   RhoZ2SigmaDHalf = SigmaD*&
+                   wD = SigmaD*&
                         sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
                 end if
 
                 Source_VC(WaveFirst_,i,j,k) = &
                      Source_VC(WaveFirst_,i,j,k) &
-                     - 0.5*ModeConversionPlus *RhoZ2SigmaDHalf
+                     - 0.5*ModeConversionPlus *wD
                 Source_VC(WaveLast_,i,j,k) = &
                      Source_VC(WaveLast_ ,i,j,k) &
-                     - 0.5*ModeConversionMinus*RhoZ2SigmaDHalf
+                     - 0.5*ModeConversionMinus*wD
 
                 ! Energy source related to the Alfven wave source above
                 Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
-                     (ModeConversionPlus + ModeConversionMinus)*&
-                     RhoZ2SigmaDHalf
-                if(UseEquation4SigmaD) &
-                     Source_VC(Z2SigmaD_,i,j,k) = Source_VC(Z2SigmaD_,i,j,k) -&
+                     (ModeConversionPlus + ModeConversionMinus)*wD
+                if(UseWDiff) &
+                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) -&
                      Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus         -&
                      Source_VC(WaveLast_ ,i,j,k)*ModeConversionPlus
              end do; end do; end do
@@ -592,12 +603,19 @@ contains
                      *Cdiss_C(i,j,k)
              end do; end do; end do
           end if
-
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Source_VC(WaveFirst_:max(WaveLast_,Z2SigmaD_),i,j,k) = &
-                  Source_VC(WaveFirst_:max(WaveLast_,Z2SigmaD_),i,j,k) &
-                  - WaveDissipation_VC(:,i,j,k)
-          end do; end do; end do
+          if(UseReynoldsDecomposition.and.UseWDiff)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                Source_VC(WaveFirst_:max(WaveLast_,WDiff_),i,j,k) = &
+                     Source_VC(WaveFirst_:max(WaveLast_,WDiff_),i,j,k) &
+                     - WaveDissipation_VC(:,i,j,k)
+             end do; end do; end do
+          else
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
+                     Source_VC(WaveFirst_:WaveLast_,i,j,k) &
+                     - WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k)
+             end do; end do; end do
+          end if
           if(DoTest)call write_source('After UseAlfvenWaveDissipation')
        end if
 
@@ -1318,7 +1336,6 @@ contains
 
     end subroutine calc_grad_alfven
     !==========================================================================
-
     subroutine get_alfven_speed(Alfven_VFD)
 
       use ModAdvance, ONLY: &

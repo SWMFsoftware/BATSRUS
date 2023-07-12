@@ -1,7 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-
 module ModUpdateState
 
   use BATL_lib, ONLY: &
@@ -34,6 +33,7 @@ contains
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, UnitRhoU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
+    use ModCoronalHeating, ONLY: UseReynoldsDecomposition, UseWDiff
     use ModEnergy, ONLY: limit_pressure
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless
@@ -109,7 +109,7 @@ contains
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
     if(SignB_ > 1 .and. UseChGL)call update_chgl(iBlock, iStage)
-
+    if(UseReynoldsDecomposition.and.UseWDiff)call fix_wdiff(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' final for nStep =', nStep
        do iVar=1,nVar
@@ -127,7 +127,8 @@ contains
     use ModMain, ONLY: &
          IsTimeAccurate, iStage, nStage, Dt, Cfl, UseBufferGrid, &
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
-    use ModPhysics, ONLY: InvGammaElectron, GammaElectron, RhoMin_I
+    use ModPhysics, ONLY: &
+         Gamma_I, InvGamma_I, InvGammaElectron, GammaElectron, RhoMin_I
     use ModSemiImplVar, ONLY: UseStableImplicit
     use ModVarIndexes, ONLY: pe_, p_
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
@@ -142,8 +143,7 @@ contains
          calc_resistivity_source
     use ModUserInterface
     use ModBuffer,      ONLY: fix_buffer_grid
-    use ModIonElectron, ONLY: ion_electron_source_impl, &
-         HypEDecay
+    use ModIonElectron, ONLY: ion_electron_source_impl, HypEDecay
     use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoUxIon_I, iRhoUyIon_I, &
          iRhoUzIon_I, iPIon_I, nIonFluid, UseNeutralFluid, DoConserveNeutrals
     use ModPui, ONLY: UsePui, pui_advection_diffusion
@@ -197,10 +197,27 @@ contains
        DtFactor = Cfl
     end if
 
+    if(UseEntropy)then
+       if(UseAnisoPressure)then
+          ! Calculate source term for iSperp stored in iP
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Source_VC(iPIon_I,i,j,k) = 0.5* &
+                  (3*Source_VC(iPIon_I,i,j,k) - Source_VC(iPparIon_I,i,j,k))
+          end do; end do; end do
+       else
+          ! Modify pressure source terms to entropy source if necessary
+          ! ds/dp = (1/gamma)*p^(1/gammaE-1)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Source_VC(iP_I,i,j,k) = Source_VC(iP_I,i,j,k)*InvGamma_I &
+                  * State_VGB(iP_I,i,j,k,iBlock)**(InvGamma_I - 1.0)
+          end do; end do; end do
+       end if
+    end if
+
     ! Modify electron pressure source term to electron entropy if necessary
     ! d(Se)/d(Pe) = Pe^(1/gammaE-1)/gammaE
     if(UseElectronPressure .and. UseElectronEntropy)then
-       do k = 1,nK; do j = 1,nJ; do i = 1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)*InvGammaElectron &
                * State_VGB(Pe_,i,j,k,iBlock)**(InvGammaElectron - 1.0)
        end do; end do; end do
@@ -333,6 +350,7 @@ contains
     subroutine update_explicit(iBlock, DoTest)
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
+      use ModB0, ONLY: UseB0, B0_DGB
 
       integer, intent(in):: iBlock
       logical, intent(in):: DoTest
@@ -341,7 +359,7 @@ contains
       real, allocatable, save:: Rk4_VCB(:,:,:,:,:)
 
       real, parameter:: cThird = 1./3.
-      real:: Coeff1, Coeff2
+      real:: Coeff1, Coeff2, b_D(3), FullB2, FullB
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
       !------------------------------------------------------------------------
@@ -363,17 +381,71 @@ contains
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
-         do k=1,nK; do j=1,nJ; do i=1,nI
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
-                 StateOld_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
+                 StateOld_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
             ! State_VGB is not used in 1-stage and HalfStep schemes
             if(.not.UseHalfStep .and. nStage > 1) &
                  State_VGB(Pe_,i,j,k,iBlock) = &
-                 State_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
+                 State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
          end do; end do; end do
       end if
+
+      if(UseEntropy)then
+         if(UseAnisoPressure)then
+            ! Convert parallel pressure to entropy
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+               b_D = StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)
+               if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+               FullB2 = sum(b_D**2)
+               FullB  = sqrt(max(1e-30, FullB2))
+               ! Sperp = Pperp/B = 0.5*(3*p-Ppar)/B
+               Coeff1 = 0.5/FullB
+               StateOld_VGB(iPIon_I,i,j,k,iBlock) = &
+                    CoefF1*(3*StateOld_VGB(iPIon_I,i,j,k,iBlock) &
+                    -       StateOld_VGB(iPparIon_I,i,j,k,iBlock))
+
+               ! Spar = Ppar*(B^2/rho^2)
+               Coeff2 = FullB2/StateOld_VGB(Rho_,i,j,k,iBlock)**2
+               StateOld_VGB(iPparIon_I,i,j,k,iBlock) = &
+                    Coeff2*StateOld_VGB(iPparIon_I,i,j,k,iBlock)
+
+               ! State_VGB is not used in 1-stage and HalfStep schemes
+               if(.not.UseHalfStep .and. nStage > 1) then
+                  b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+                  if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+                  FullB2 = sum(b_D**2)
+                  FullB  = sqrt(max(1e-30, FullB2))
+
+                  ! Sperp = Pperp/B = 0.5*(p-Ppar)/B
+                  Coeff1 = 0.5/FullB
+                  State_VGB(iPIon_I,i,j,k,iBlock) = &
+                       Coeff1*(3*State_VGB(iPIon_I,i,j,k,iBlock) &
+                       -       State_VGB(iPparIon_I,i,j,k,iBlock))
+
+                  ! Spar = Ppar*(B^2/rho^2)
+                  Coeff2 = FullB2/State_VGB(Rho_,i,j,k,iBlock)**2
+                  State_VGB(iPparIon_I,i,j,k,iBlock) = &
+                       Coeff2*State_VGB(iPparIon_I,i,j,k,iBlock)
+               end if
+            end do; end do; end do
+         else
+            ! Convert pressures to entropy
+            ! s = p^(1/Gamma)
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+               StateOld_VGB(iP_I,i,j,k,iBlock) = &
+                    StateOld_VGB(iP_I,i,j,k,iBlock)**InvGamma_I
+               ! State_VGB is not used in 1-stage and HalfStep schemes
+               if(.not.UseHalfStep .and. nStage > 1) &
+                    State_VGB(iP_I,i,j,k,iBlock) = &
+                    State_VGB(iP_I,i,j,k,iBlock)**InvGamma_I
+            end do; end do; end do
+         end if
+      endif
 
       ! Move energy source terms to pressure index as needed
       ! Ions first
@@ -543,6 +615,52 @@ contains
                  State_VGB(Pe_,i,j,k,iBlock) = &
                  State_VGB(Pe_,i,j,k,iBlock)**GammaElectron
          end do; end do; end do
+      end if
+
+      if(UseEntropy)then
+         if(UseAnisoPressure)then
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+               b_D = StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)
+               if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+               FullB2 = max(1e-30, sum(b_D**2))
+               FullB  = sqrt(FullB2)
+               ! Convert parallel and perpendicular entropies back to pressures
+               ! Ppar = Spar*(rho^2/B^2)
+               Coeff1 = StateOld_VGB(Rho_,i,j,k,iBlock)**2/FullB2
+               StateOld_VGB(iPparIon_I,i,j,k,iBlock) = &
+                    Coeff1*StateOld_VGB(iPparIon_I,i,j,k,iBlock)
+
+               ! P = (Ppar + 2*Sperp*B)/3
+               StateOld_VGB(iPIon_I,i,j,k,iBlock) = cThird* &
+                    ( StateOld_VGB(iPparIon_I,i,j,k,iBlock) &
+                    + 2*FullB*StateOld_VGB(iPIon_I,i,j,k,iBlock))
+
+               b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+               if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+               FullB2 = max(1e-30, sum(b_D**2))
+               FullB  = sqrt(FullB2)
+               Coeff1 = State_VGB(Rho_,i,j,k,iBlock)**2/FullB2
+               State_VGB(iPparIon_I,i,j,k,iBlock) = &
+                    Coeff1*State_VGB(iPparIon_I,i,j,k,iBlock)
+               ! P = (Ppar + 2*Sperp*B)/3
+               State_VGB(iPIon_I,i,j,k,iBlock) = cThird*( &
+                    State_VGB(iPparIon_I,i,j,k,iBlock)    &
+                    + 2*FullB*State_VGB(iPIon_I,i,j,k,iBlock))
+            end do; end do; end do
+         else
+            ! Convert entropy back to pressure
+            ! p = s^Gamma
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+
+               StateOld_VGB(iP_I,i,j,k,iBlock) = &
+                    StateOld_VGB(iP_I,i,j,k,iBlock)**Gamma_I
+               where(State_VGB(iP_I,i,j,k,iBlock) > 0.0) &
+                    State_VGB(iP_I,i,j,k,iBlock) = &
+                    State_VGB(iP_I,i,j,k,iBlock)**Gamma_I
+            end do; end do; end do
+         end if
       end if
 
       if(UseMultiSpecies)then
@@ -1490,6 +1608,24 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_multi_ion_update
+  !============================================================================
+  subroutine fix_wdiff(iBlock)
+    use ModVarIndexes, ONLY: WDiff_, WaveFirst_, WaveLast_
+    use ModSize, ONLY: nI, nJ, nK
+    use ModAdvance, ONLY : State_VGB
+
+    integer, intent(in) :: iBlock
+    integer :: i, j, k
+    !--------------------------------------------------------------------------
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+       State_VGB(WDiff_,i,j,k,iBlock) = sign(min(       &
+            abs(State_VGB(WDiff_,i,j,k,iBlock)),        &
+            2.0*sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)*&
+            State_VGB(WaveLast_,i,j,k,iBlock))),        &
+            State_VGB(WDiff_,i,j,k,iBlock))
+    end do; end do; end do
+  end subroutine fix_wdiff
   !============================================================================
   subroutine check_nan(NameSub, iError)
 

@@ -84,16 +84,10 @@ contains
     call test_start(NameSub, DoTest)
 
     if(DoTest)then
-       write(*,*) ''
-       write(*,*) '>>>>>>>>>>>>>>>>> HALL Resistivity Parameters <<<<<<<<<<'
-       write(*,*)
-       write(*,*) 'HallFactorMax    = ', HallFactorMax
-       write(*,*) 'HallCmaxFactor   = ', HallCmaxFactor
-       write(*,*) 'IonMassPerCharge = ', IonMassPerCharge
+       write(*,*) NameSub, ': HallFactorMax    = ', HallFactorMax
+       write(*,*) NameSub, ': HallCmaxFactor   = ', HallCmaxFactor
+       write(*,*) NameSub, ': IonMassPerCharge = ', IonMassPerCharge
        ! Omega_Bi=B0/IonMassPerCharge'
-       write(*,*)
-       write(*,*) '>>>>>>>>>>>>>>>>>                       <<<<<<<<<<<<<<<<<'
-       write(*,*) ''
     end if
 
     !$omp parallel
