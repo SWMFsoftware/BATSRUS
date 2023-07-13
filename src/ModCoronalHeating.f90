@@ -132,7 +132,7 @@ module ModCoronalHeating
   logical, public :: UseTransverseTurbulence = .true.
   real, public :: SigmaD = -1.0/3.0
   real, public :: KarmanTaylorAlpha = 1.0
-  real, public :: KarmanTaylorBeta = 1.0
+  real, public :: KTBeta2AlphaRatio = 1.0
 
 contains
   !============================================================================
@@ -486,8 +486,15 @@ contains
           UseReynoldsDecomposition = .true.
           call read_var('UseTransverseTurbulence', UseTransverseTurbulence)
           call read_var('SigmaD', SigmaD)
+          ! "historically" our  Lperp = Usmanov's \Lambda/KarmanTaylorAlpha
+          ! Therefore, we solve an equation for Lperp introduced in this way,
+          ! so that KarmanTaylorAlpha is not present in any equation ...
           call read_var('KarmanTaylorAlpha', KarmanTaylorAlpha)
-          call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
+          ! KarmanTaylorBeta is present in non-linear term in the evolution
+          ! equation for Lperp via its ratio to KarmanTaylorAlpha ...
+          call read_var('KarmanTaylorBeta', KTBeta2AlphaRatio)
+          ! Therefore
+          KTBeta2AlphaRatio = KTBeta2AlphaRatio/KarmanTaylorAlpha
        case default
           call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
@@ -752,7 +759,7 @@ contains
        else
           Rho = State_VGB(Rho_,i,j,k,iBlock)
        end if
-       Coef = sqrt(Rho)*2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
+       Coef = sqrt(Rho)*2.0/State_VGB(Lperp_,i,j,k,iBlock)
     else
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
