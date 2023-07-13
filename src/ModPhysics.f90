@@ -1264,7 +1264,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
- 
+
   end subroutine init_mhd_variables
   !============================================================================
   subroutine init_vector_variables
