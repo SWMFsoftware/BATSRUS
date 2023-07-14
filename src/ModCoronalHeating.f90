@@ -68,8 +68,8 @@ module ModCoronalHeating
   real :: Crefl = 0.04
 
   logical,public :: UseTurbulentCascade = .false.
-  logical,public :: UseWaveReflection = .true.
   real,   public :: rMinWaveReflection = 0.0
+  logical        :: UseNewLimiter4Reflection
 
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
@@ -434,6 +434,7 @@ contains
     use ModReadParam,  ONLY: read_var
 
     integer :: iFluid
+    logical :: UseReflectionParam = .true.
 
     character(len=*), intent(in):: NameCommand
     logical:: DoTest
@@ -474,12 +475,18 @@ contains
           UseAlfvenWaveDissipation = .true.
           UseTurbulentCascade = .true.
           DoInit = .true.
-          call read_var('UseWaveReflection', UseWaveReflection)
+          call read_var('UseReflection', UseReflectionParam)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-          if(UseWaveReflection)then
+          if(UseReflectionParam)then
              call read_var('rMinWaveReflection', rMinWaveReflection)
-             if(UseWDiff)call read_var(&
-                  'UseReynoldsDecomposition', UseReynoldsDecomposition)
+             if(UseWDiff)then
+                call read_var(&
+                     'UseReynoldsDecomposition', UseReynoldsDecomposition)
+             else
+                call read_var(&
+                     'UseReynoldsDecomposition', UseNewLimiter4Reflection)
+             end if
+                
           end if
        case('usmanov')
           UseAlfvenWaveDissipation = .true.
@@ -811,7 +818,8 @@ contains
 
     integer :: i, j, k
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3), GradLogRho_D(nDim)
-    real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
+    real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate,  &
+         DissipationRate_V(WaveFirst_:WaveLast_), DissipationRateDiff
     real :: EwavePlus, EwaveMinus
     real :: AlfvenGradRefl, ReflectionRateImb
     logical :: IsNewBlockAlfven
@@ -850,31 +858,37 @@ contains
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       DissipationRateMax = &
-            2.0*sqrt(max(EwavePlus,EwaveMinus)*FullB/Rho)/LperpTimesSqrtB
+       DissipationRate_V = &
+            2.0*sqrt([EwavePlus,EwaveMinus]*FullB/Rho)/LperpTimesSqrtB
 
-       if(DoExtendTransitionRegion) DissipationRateMax = &
-            DissipationRateMax/extension_factor(TeSi_C(i,j,k))
+       if(DoExtendTransitionRegion) DissipationRate_V = &
+            DissipationRate_V/extension_factor(TeSi_C(i,j,k))
 
        AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
 
        ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
-
-       ! Clip the reflection rate from above with maximum dissipation rate
-       ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
-
-       ! No reflection when turbulence is balanced (waves are then
-       ! assumed to be uncorrelated)
-       if(ImbalanceMax2*EwaveMinus < EwavePlus)then
-          ReflectionRate = ReflectionRate*&
-               (1.0 - ImbalanceMax*sqrt(EwaveMinus/EwavePlus))
-       elseif(ImbalanceMax2*EwavePlus < EwaveMinus)then
-          ReflectionRate = ReflectionRate*&
-               (ImbalanceMax*sqrt(EwavePlus/EwaveMinus)-1.0)
+       if(UseNewLimiter4Reflection)then
+          DissipationRateDiff = 0.50*(DissipationRate_V(WaveFirst_) - &
+               DissipationRate_V(WaveLast_))
+          ReflectionRate = sign(min(ReflectionRateImb,&
+               abs(DissipationRateDiff)), DissipationRateDiff)
        else
-          ReflectionRate = 0.0
+          DissipationRateMax  = maxval(DissipationRate_V)
+          ! Clip the reflection rate from above with maximum dissipation rate
+          ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
+          
+          ! No reflection when turbulence is balanced (waves are then
+          ! assumed to be uncorrelated)
+          if(ImbalanceMax2*EwaveMinus < EwavePlus)then
+             ReflectionRate = ReflectionRate*&
+                  (1.0 - ImbalanceMax*sqrt(EwaveMinus/EwavePlus))
+          elseif(ImbalanceMax2*EwavePlus < EwaveMinus)then
+             ReflectionRate = ReflectionRate*&
+                  (ImbalanceMax*sqrt(EwavePlus/EwaveMinus)-1.0)
+          else
+             ReflectionRate = 0.0
+          end if
        end if
-
        Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
             - ReflectionRate*sqrt(EwavePlus*EwaveMinus)
        Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
