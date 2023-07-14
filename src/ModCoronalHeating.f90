@@ -434,7 +434,7 @@ contains
     use ModReadParam,  ONLY: read_var
 
     integer :: iFluid
-    
+
     character(len=*), intent(in):: NameCommand
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_coronal_heating_param'
@@ -873,7 +873,7 @@ contains
           DissipationRateMax  = maxval(DissipationRate_V)
           ! Clip the reflection rate from above with maximum dissipation rate
           ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
-          
+
           ! No reflection when turbulence is balanced (waves are then
           ! assumed to be uncorrelated)
           if(ImbalanceMax2*EwaveMinus < EwavePlus)then

@@ -8,7 +8,7 @@ module ModUpdateState
        iVarTest, iComm, Used_GB, CellVolume_GB, Xyz_DGB
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
   use ModB0, ONLY: B0_DGB
-  
+
   implicit none
 
   private ! except
