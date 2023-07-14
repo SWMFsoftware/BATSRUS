@@ -804,6 +804,8 @@ contains
     character(len=*), parameter:: NameSub = 'BATS_save_files'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+    if(DoTest) write(*,*) NameSub,': TypeSaveIn=', TypeSaveIn
+
     DoExchangeAgain     = .false.
     DoAssignNodeNumbers = .true.
     TypeSave = TypeSaveIn
@@ -1185,7 +1187,7 @@ contains
          if(IsTimeAccurate)then
             call write_prefix;
             write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
-                 'saved iFile=',iFile,' type=',TypePlot_I(iFile),&
+                 'saved iFile=',iFile,' type=',trim(TypePlot_I(iFile)),&
                  ' at nStep=',nStep,' time=', &
                  int(                            tSimulation/3600.),':', &
                  int((tSimulation &
