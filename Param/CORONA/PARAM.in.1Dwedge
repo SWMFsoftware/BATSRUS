@@ -43,7 +43,7 @@ T			DoSaveRestart
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
-T                       UseWaveReflection
+T                       UseReflectionParam
 1.5e5                   LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 F			UseReynoldsDecomposition
