@@ -28,8 +28,7 @@ module ModIO
   ! Named indexes for output files
   integer, parameter :: &
        restart_=1, logfile_=2, magfile_=3, indexfile_=4, maggridfile_=5, &
-       supermagfile_=6, &
-       plot_=6, parcel_=plot_+MaxPlotfile, satellite_ = parcel_+MaxParcel
+       plot_=5, parcel_=plot_+MaxPlotfile, satellite_ = parcel_+MaxParcel
 
   ! I/O
   integer             :: iUnitOut = STDOUT_
@@ -125,12 +124,11 @@ module ModIO
   ! Frequency of writing progress reports in terms of time steps
   integer :: DnProgressShort=10, DnProgressLong=100
 
-  character(LEN=20) :: TypePlot_I(MaxFile), TypePlot
-  character(LEN=3)  :: TypePlotFormat_I(MaxFile)
-  character(LEN=3)  :: TypeLogFormat
-  character(LEN=10) :: TypeFile_I(MaxFile)
-
+  character(LEN=3)  :: TypePlotFormat_I(MaxFile) = '?'
+  character(LEN=3)  :: TypeLogFormat = '??'
   character(LEN=3)  :: TypeCoordPlot_I(MaxFile) = '???'
+  character(LEN=10) :: TypeFile_I(MaxFile) = '??????'
+  character(LEN=20) :: TypePlot_I(MaxFile) = '????', TypePlot = '?????'
 
   ! x,y,z limits for plotting
   real :: PlotRange_EI(6,MaxFile) = 0.0
