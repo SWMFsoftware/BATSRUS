@@ -132,7 +132,7 @@ module ModCoronalHeating
   logical, public :: UseTransverseTurbulence = .true.
   real, public :: SigmaD = -1.0/3.0
   real, public :: KarmanTaylorAlpha = 1.0
-  real, public :: KTBeta2AlphaRatio = 1.0
+  real, public :: KarmanTaylorBeta2AlphaRatio = 1.0
 
 contains
   !============================================================================
@@ -499,9 +499,10 @@ contains
           call read_var('KarmanTaylorAlpha', KarmanTaylorAlpha)
           ! KarmanTaylorBeta is present in non-linear term in the evolution
           ! equation for Lperp via its ratio to KarmanTaylorAlpha ...
-          call read_var('KarmanTaylorBeta', KTBeta2AlphaRatio)
+          call read_var('KarmanTaylorBeta', KarmanTaylorBeta2AlphaRatio)
           ! Therefore
-          KTBeta2AlphaRatio = KTBeta2AlphaRatio/KarmanTaylorAlpha
+          KarmanTaylorBeta2AlphaRatio = KarmanTaylorBeta2AlphaRatio / &
+               KarmanTaylorAlpha
        case default
           call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
@@ -859,7 +860,8 @@ contains
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
        DissipationRate_V = &
-            2.0*sqrt([EwavePlus,EwaveMinus]*FullB/Rho)/LperpTimesSqrtB
+            2.0*sqrt(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*&
+            FullB/Rho)/LperpTimesSqrtB
 
        if(DoExtendTransitionRegion) DissipationRate_V = &
             DissipationRate_V/extension_factor(TeSi_C(i,j,k))

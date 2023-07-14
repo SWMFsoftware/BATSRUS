@@ -156,7 +156,7 @@ contains
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
-         UseAlignmentAngle, Cdiss_C, KTBeta2AlphaRatio, &
+         UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta2AlphaRatio, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
          UseWDiff, LperpTimesSqrtB
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
@@ -565,7 +565,7 @@ contains
              Rho = State_VGB(Rho_,i,j,k,iBlock)
           end if
           Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) + &
-               2.0*KTBeta2AlphaRatio*sqrt(Rho) &
+               2.0*KarmanTaylorBeta2AlphaRatio*sqrt(Rho) &
                *(State_VGB(WaveLast_,i,j,k,iBlock) &
                *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)) &
                + State_VGB(WaveFirst_,i,j,k,iBlock) &
