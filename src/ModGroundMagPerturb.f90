@@ -122,8 +122,7 @@ contains
 
     ! Handle params for all magnetometer-related commands.
 
-    use ModIO,        ONLY: magfile_, maggridfile_, indexfile_, &
-         supermagfile_, DnOutput_I, DtOutput_I
+    use ModIO, ONLY: magfile_, maggridfile_, indexfile_, DnOutput_I, DtOutput_I
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -200,7 +199,6 @@ contains
           'range [0, 360]. Setting DoWriteSupermagIndices to False.'
           DoWriteSuper = .false.
        endif
-       DtOutput_I(supermagfile_) = DtOutput_I(maggridfile_)
     case default
        call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
     end select
@@ -416,7 +414,7 @@ contains
     use ModUtilities, ONLY: flush_unit, open_file
     use ModMain,      ONLY: nStep
     use ModIoUnit,    ONLY: io_unit_new
-    use ModIO,        ONLY: NamePlotDir, IsLogNameE, supermagfile_, DtOutput_I
+    use ModIO,        ONLY: NamePlotDir, IsLogNameE
 
     integer            :: i, iTime_I(7)
     character(len=100) :: NameFile
@@ -440,13 +438,9 @@ contains
        iUnitSupermag = io_unit_new()
        call open_file(iUnitSupermag, file=NameFile, status='replace')
 
-       write(iUnitSupermag, '(2a,f8.2)') &
-            'Synthetic SuperMAG Indices', &
-            ' DtOutput=', DtOutput_I(supermagfile_)
-       write(iUnitSupermag, '(a)', advance='NO') &
-            'it year mo dy hr mn sc msc '
-       write(iUnitSupermag, '(a)', advance='NO') NameSuperVars
-       write(iUnitSupermag, '(a)', advance='YES') '' ! Close header line.
+       write(iUnitSupermag, '(a)') 'Synthetic SuperMAG Indices'
+       write(iUnitSupermag, '(a)') &
+            'it year mo dy hr mn sc msc '//trim(NameSuperVars)
        call flush_unit(iUnitSupermag)
     end if
 
