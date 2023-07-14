@@ -434,8 +434,7 @@ contains
     use ModReadParam,  ONLY: read_var
 
     integer :: iFluid
-    logical :: UseReflectionParam = .true.
-
+    
     character(len=*), intent(in):: NameCommand
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_coronal_heating_param'
@@ -475,18 +474,14 @@ contains
           UseAlfvenWaveDissipation = .true.
           UseTurbulentCascade = .true.
           DoInit = .true.
-          call read_var('UseReflection', UseReflectionParam)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-          if(UseReflectionParam)then
-             call read_var('rMinWaveReflection', rMinWaveReflection)
-             if(UseWDiff)then
-                call read_var(&
-                     'UseReynoldsDecomposition', UseReynoldsDecomposition)
-             else
-                call read_var(&
-                     'UseReynoldsDecomposition', UseNewLimiter4Reflection)
-             end if
-                
+          call read_var('rMinWaveReflection', rMinWaveReflection)
+          if(UseWDiff)then
+             call read_var(&
+                  'UseReynoldsDecomposition', UseReynoldsDecomposition)
+          else
+             call read_var(&
+                  'UseReynoldsDecomposition', UseNewLimiter4Reflection)
           end if
        case('usmanov')
           UseAlfvenWaveDissipation = .true.

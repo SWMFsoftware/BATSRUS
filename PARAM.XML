@@ -10163,12 +10163,9 @@ Default value for PoyntingFluxPerBSi is 1.0E-6.
     <parameter name="Crefl" type="real"                default="0.04"/>
   </if>
   <if expr="$TypeCoronalHeating =~ /turbulentcascade/">
-    <parameter name="UseReflectionParam" type="logical" default="T"/>
     <parameter name="LperpTimesSqrtBSi" type="real"    default="1.5E5"/>
-    <parameter name="rMinWaveReflection" type = "real" default="0"
-	       if="$UseReflectionParam"/>
-    <parameter name="UseReynoldsDecomposition" type = "logical" default="F"
-	       if="$UseReflectionParam"/>
+    <parameter name="rMinWaveReflection" type = "real" default="0"/>
+    <parameter name="UseReynoldsDecomposition" type = "logical" default="F"/>
   </if>
   <if expr="$TypeCoronalHeating =~ /usmanov/">
     <parameter name="UseTransverseTurbulence" type="logical" default="T"/>
@@ -10194,10 +10191,9 @@ alfvenwavedissipation	TypeCoronalHeating
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
-T                       UseReflectionParam (read for turbulentcascade only)
 1.5e5                   LperpTimesSqrtBSi (read for turbulentcascade only)
-1.2			rMinWaveReflection (read if UseReflectionParam is true)
-T			UseReynoldsDecomposition (read if UseReflectionParam is true)
+1.2			rMinWaveReflection 
+T			UseReynoldsDecomposition
 
 #CORONALHEATING
 usmanov                 TypeCoronalHeating
@@ -10240,7 +10236,6 @@ correlation length, $L_{\perp}$, in the transverse (with respect to the
 magnetic field) direction. Similar to Hollweg (1986) we use a simple scaling
 law $L_{\perp} \propto B^{-1/2}$ with the proportionality constant
 $L_{\perp}\sqrt{B}$ as input parameter LperpTimesSqrtBSi.
-The UseWaveReflection logical is obsolete, but kept for compatibility.
 If rMinWaveReflection > rBody is set, then the wave reflection is switched 
 off in the cells, at which R_BLK(i,j,k,iBlock) &lt; rMinWaveReflection. 
 If UseReynoldsDecomposition is set true, there are two options, depending on
