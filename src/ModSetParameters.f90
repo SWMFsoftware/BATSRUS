@@ -2173,7 +2173,7 @@ contains
 
        case('#SUPERMAGINDICES')
           call read_magperturb_param(NameCommand)
-          nFile = max(nFile, supermagfile_)
+          nFile = max(nFile, maggridfile_)
 
        case("#GRIDGEOMETRY", "#GRIDGEOMETRYLIMIT")
           if(.not.is_first_session())CYCLE READPARAM
