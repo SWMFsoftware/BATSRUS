@@ -127,9 +127,8 @@ T			UseOhNeutralBc
 
 #USERINPUTBEGIN -----------------------------------
 
-! This is same as rbody in #BODY
 #GLOBALHELIOSPHERE
-30.
+30.			rBody
 
 #SOLARWINDH
 0.00874			SWH_rho_dim [n/cc]

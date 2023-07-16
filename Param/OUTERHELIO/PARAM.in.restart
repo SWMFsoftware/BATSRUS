@@ -117,7 +117,7 @@ T			UseOhNeutralBc
 #USERINPUTBEGIN -----------------------------------
 
 #GLOBALHELIOSPHERE
-30.
+30.			rBody
 
 #SOLARWINDH
 0.00874			SWH_N_dim [n/cc]
