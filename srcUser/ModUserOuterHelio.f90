@@ -34,27 +34,28 @@ module ModUser
   ! 07/2022 Merav Opher added conditions needed for Cold Cloud
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iProc
-
-  use ModSize,     ONLY: nI, nJ, nK
-  use ModMain,       ONLY: body1_,      &
-       nBlock, Unused_B, tSimulation, IsTimeAccurate, iStartTime_I
-  use ModPhysics,  ONLY: Gamma, GammaMinus1, GammaElectronMinus1, OmegaBody, &
-       UnitX_, Io2Si_V, Si2Io_V, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
-       NameTecUnit_V, NameIdlUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
-       UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
-       UnitTemperature_, UnitT_, UnitRhoU_, FaceState_VI, IonMassPerCharge
-
-  use ModConst,    ONLY: cAU, cProtonMass, cElectronMass, cBoltzmann, cEV, &
-          cRyToEv, cElectronCharge, cSecondPerYear
+       test_start, test_stop, iTest, jTest, kTest, iProc, nI, nJ, nK, &
+       nBlock, Unused_B
+  use ModMain, ONLY: &
+       body1_, tSimulation, iStartTime_I
+  use ModPhysics,  ONLY: &
+       Gamma, GammaMinus1, GammaElectronMinus1, InvGammaMinus1, &
+       InvGammaElectronMinus1, &
+       UnitX_, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
+       NameTecUnit_V, NameIdlUnit_V, UnitEnergyDens_, &
+       UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
+       UnitTemperature_, UnitT_, UnitRhoU_
+  use ModConst, ONLY: cAU, cProtonMass, cElectronMass, cBoltzmann, cEV, &
+          cRyToEv, cSecondPerYear
   use ModTimeConvert, ONLY: n_day_of_year
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
-  use ModAdvance,  ONLY: State_VGB,Source_VC, ExtraSource_ICB, Pe_, &
-       UseElectronPressure
+  use ModAdvance, ONLY: &
+       State_VGB,Source_VC, ExtraSource_ICB, Pe_, UseElectronPressure
   use ModGeometry, ONLY: Xyz_DGB, r_GB, Used_GB
   use ModVarIndexes
   use ModMultiFluid
   use ModCurrent, ONLY: get_current
+
   use ModUserEmpty,                                     &
        IMPLEMENTED1  => user_read_inputs,               &
        IMPLEMENTED2  => user_set_face_boundary,         &
@@ -106,10 +107,10 @@ module ModUser
   real :: Offset = 0.0
 
   logical :: UsePu3Heating = .false.
-  real :: TempPu3, FactorPu3, HeatPu3
+  real :: TempPu3Si, FactorPu3, HeatPu3
 
   logical :: UseElectronHeating = .false.
-  real :: TempHeatElectron, FactorHeatElectron
+  real :: TempHeatElectronSi, FactorHeatElectron
 
   integer :: iTableSolarWind = -1 ! initialization is needed
   integer :: iTableChargeExchange = -1
@@ -243,13 +244,17 @@ contains
 
        case("#PU3HEATING")
           call read_var('UsePu3Heating', UsePu3Heating)
-          call read_var('TempPu3', TempPu3)
+          call read_var('TempPu3Si', TempPu3Si)
           call read_var('FactorPu3', FactorPu3)
-
+          ! convert from 1/[au yr] to 1/[au s]
+          FactorPu3 = FactorPu3/cSecondPerYear
+          
        case("#ELECTRONHEATING")
           call read_var('UseElectronHeating', UseElectronHeating)
-          call read_var('TempHeatElectron', TempHeatElectron)
+          call read_var('TempHeatElectronSi', TempHeatElectronSi)
           call read_var('FactorHeatElectron', FactorHeatElectron)
+          ! convert from 1/[au yr] to 1/[au s]
+          FactorHeatElectron = FactorHeatElectron/cSecondPerYear
 
           ! This is a flag to define how many populations of Neutrals to run
        case("#SOURCES")
@@ -1662,14 +1667,11 @@ contains
     !
 
     integer, intent(in) :: iBlock
-    integer :: iFluid
 
     real :: State_V(nVar)
-    real :: Ux, Uy, Uz, U2, SWHUx, SWHUy, SWHUz, SWHU2, &
-         Pu3Ux, Pu3Uy, Pu3Uz, Pu3U2
     real:: RhoSWH, uSWH_D(3), sRho, sRhoU_D(3), sEnergy, &
          RhoPu3, uPu3_D(3), USWH2, UPu32
-    real, dimension(nVar + nFluid):: Source_V, SourceCx_V, SourcePh_V, &
+    real, dimension(nVar + nFluid):: SourceCx_V, SourcePh_V, &
          SourceImp_V
 
     real :: U2_I(nFluid), TempSi_I(nFluid)
@@ -1819,27 +1821,34 @@ contains
 
        if(.not.IsMhd)then
           ! Heating Pu3
-          HeatPu3 = 0.0
-          if(UsePu3Heating) HeatPu3 = &
-             State_V(PU3Rho_)/MassFluid_I(Pu3_)*(TempPu3 - TempSi_I(PU3_))*&
-             Io2No_V(UnitTemperature_)*(r_GB(i,j,k,iBlock)-rBody)*FactorPu3
-
+          if(UsePu3Heating) then
+             ! HeatPu3 = n*(TempPu3 - T)/(gamma-1) * (r-rBody)*FactorPu3
+             ! in normalized units, so FactorPu3 has units of 1/(AU s)
+             HeatPu3 = &
+                  InvGammaMinus1*State_V(PU3Rho_)/MassFluid_I(Pu3_) &
+                  *(TempPu3Si - TempSi_I(PU3_))*Si2No_V(UnitTemperature_) &
+                  *(r_GB(i,j,k,iBlock) - rBody)*FactorPu3/Si2No_V(UnitT_)
+          else
+             HeatPu3 = 0.0
+          end if
        end if
 
-       if(UseElectronPressure)then
+       if(UseElectronPressure .and. UseElectronHeating)then
           ! Heating electrons
-          HeatElectron = 0.0
-          if(UseElectronHeating) then
-             ! Electron number density
-             NumDensElectron = sum(State_V(iRhoIon_I)/MassIon_I)
-             ! Electron Temperature
-             TempElectron = State_V(Pe_)/NumDensElectron
+          ! Electron number density
+          NumDensElectron = sum(State_V(iRhoIon_I)/MassIon_I)
+          ! Electron Temperature
+          TempElectron = State_V(Pe_)/NumDensElectron
+          
+          ! HeatElectron = Ne*(TeHeat - Te)/(gamma-1) * (r-rBody)*FactorHeatE
+          ! in normalized units, so FactorHeatE has units of 1/(AU s)
+          HeatElectron = &
+               InvGammaElectronMinus1*NumDensElectron*&
+               (TempHeatElectronSi*Si2No_V(UnitTemperature_) - TempElectron)*&
+               (r_GB(i,j,k,iBlock) - rBody)*FactorHeatElectron/Si2No_V(UnitT_)
 
-             HeatElectron = &
-                GammaElectronMinus1*NumDensElectron*&
-                (TempHeatElectron*Io2No_V(UnitTemperature_) - TempElectron)*&
-                (r_GB(i,j,k,iBlock)-rBody)*FactorHeatElectron
-           end if
+       else
+          HeatElectron = 0.0
        end if
 
        ! Calculate the source terms for this cell
@@ -1855,7 +1864,7 @@ contains
       ! S(p) = (gamma-1)[S(e) - u.S(Rhou) + 0.5 u**2 S(Rho)]
 
       real :: Source_V(nVar + nFluid)
-      integer :: iVar, iFluid
+      integer :: iVar
       !------------------------------------------------------------------------
       Source_V = 0.0
 
@@ -2737,7 +2746,7 @@ contains
           SourceImp_V(RhoUz_)  = sum(SrcImpRhoUz_I)
           SourceImp_V(Energy_) = sum(SrcImpEnergy_I)
 
-          SourceImp_V(P_) = (Gamma-1)* ( SourceImp_V(Energy_) &
+          SourceImp_V(P_) = GammaMinus1*( SourceImp_V(Energy_) &
              - sum(U_DI(:,Ion_)*SourceImp_V(RhoUx_:RhoUz_)) &
              + 0.5*U2_I(Ion_)*SourceImp_V(Rho_) )
 
@@ -2762,18 +2771,18 @@ contains
              SourceImp_V(Pu3RhoUz_)  = sum(SrcImpRhoUz_I)
              SourceImp_V(Pu3Energy_) = sum(SrcImpEnergy_I)
 
-             SourceImp_V(Pu3P_) = (Gamma-1)* ( SourceImp_V(Pu3Energy_) &
-                       - sum(U_DI(:,Pu3_)*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
-                       + 0.5*U2_I(Pu3_)*SourceImp_V(Pu3Rho_))
+             SourceImp_V(Pu3P_) = GammaMinus1*( SourceImp_V(Pu3Energy_) &
+                  - sum(U_DI(:,Pu3_)*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                  + 0.5*U2_I(Pu3_)*SourceImp_V(Pu3Rho_))
 
              ! Electron pressure source term
              ! Ionization Energy * total ionization rate
              ! + thermal energy from new electron
              SourceImp_V(Pe_) = GammaElectronMinus1*( &
-                     -SourceImp_V(Pu3Rho_)*IonizationEnergy &
-                     + (cElectronMass/cProtonMass)* ( SourceImp_V(Pu3Energy_) &
-                     - sum(UEl_D*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
-                     + 0.5*sum(UEl_D**2)*SourceImp_V(Pu3Rho_) ) )
+                  -SourceImp_V(Pu3Rho_)*IonizationEnergy &
+                  + (cElectronMass/cProtonMass)* ( SourceImp_V(Pu3Energy_) &
+                  - sum(UEl_D*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                  + 0.5*sum(UEl_D**2)*SourceImp_V(Pu3Rho_) ) )
           else
              ! outside region 3
              ! SWH is created
@@ -2783,9 +2792,9 @@ contains
              SourceImp_V(SwhRhoUz_)  = sum(SrcImpRhoUz_I)
              SourceImp_V(SwhEnergy_) = sum(SrcImpEnergy_I)
 
-             SourceImp_V(SWHp_) = (Gamma-1)* ( SourceImp_V(SWHEnergy_) &
-                       - sum(U_DI(:,SWH_)*SourceImp_V(SWHRhoUx_:SWHRhoUz_)) &
-                       + 0.5*U2_I(SWH_)*SourceImp_V(SWHRho_) )
+             SourceImp_V(SWHp_) = GammaMinus1*( SourceImp_V(SWHEnergy_) &
+                  - sum(U_DI(:,SWH_)*SourceImp_V(SWHRhoUx_:SWHRhoUz_)) &
+                  + 0.5*U2_I(SWH_)*SourceImp_V(SWHRho_) )
 
              ! Electron pressure source term
              ! Ionization Energy * total ionization rate
@@ -3074,7 +3083,6 @@ contains
   !============================================================================
   subroutine user_init_session
 
-    use ModMain,          ONLY: UseUserUpdateStates
     use ModLookupTable,   ONLY: i_lookup_table, get_lookup_table
     use ModWaves,         ONLY: UseWavePressure, UseAlfvenWaves
     use ModVarIndexes,    ONLY: WaveFirst_
@@ -3197,8 +3205,7 @@ contains
      NumDensA, Cs2A, uA_D, NumDensB, Cs2B, uB_D, &
      SourceA_V, SourceB_V)
 
-     use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
-        Table_I
+     use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table
 
     integer, intent(in):: iTypeCollision
     real, intent(in):: NumDensA  ! fluid A number density

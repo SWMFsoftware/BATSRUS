@@ -251,8 +251,8 @@ MultiIon                NameRegionFormula
 
 #PU3HEATING
 T			UsePu3Heating
-1e7			TempPu3
-10.			FactorPu3
+1e7			TempPu3Si [K]
+20.0			FactorPu3 1/[au yr]
 
 #TURBULENCE
 10.0			DeltaUSi
