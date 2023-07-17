@@ -248,7 +248,7 @@ contains
           call read_var('FactorPu3', FactorPu3)
           ! convert from 1/[au yr] to 1/[au s]
           FactorPu3 = FactorPu3/cSecondPerYear
-          
+
        case("#ELECTRONHEATING")
           call read_var('UseElectronHeating', UseElectronHeating)
           call read_var('TempHeatElectronSi', TempHeatElectronSi)
@@ -1839,7 +1839,7 @@ contains
           NumDensElectron = sum(State_V(iRhoIon_I)/MassIon_I)
           ! Electron Temperature
           TempElectron = State_V(Pe_)/NumDensElectron
-          
+
           ! HeatElectron = Ne*(TeHeat - Te)/(gamma-1) * (r-rBody)*FactorHeatE
           ! in normalized units, so FactorHeatE has units of 1/(AU s)
           HeatElectron = &
@@ -3227,7 +3227,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_collision'
     !--------------------------------------------------------------------------
-
     select case(iTypeCollision)
 
     case(ChargeExchange_)
