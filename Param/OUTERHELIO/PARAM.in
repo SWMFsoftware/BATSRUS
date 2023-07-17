@@ -20,9 +20,6 @@ F			UseGravity
 #BODY
 F			UseBody
 
-#NORMALIZATION
-USER			TypeNormalization
-
 #PLOTFILENAME
 year			NameMaxTimeUnit
 
