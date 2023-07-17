@@ -1002,6 +1002,7 @@ test_awsomchargestate:
 test_awsomchargestate_compile:
 	./Config.pl -noopenmp -e=AwsomChargeState -u=AwsomIons -ng=2 -g=6,8,8 -cs=o
 	$(MAKE) BATSRUS
+	make PIDL
 
 test_awsomchargestate_rundir:
 	rm -rf ${TESTDIR}
