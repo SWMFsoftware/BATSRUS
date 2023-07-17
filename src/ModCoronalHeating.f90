@@ -78,9 +78,9 @@ module ModCoronalHeating
 
   ! Arrays for the calculated heat function and dissipated wave energy
   real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
-  real, public :: WaveDissipation_VC(WaveFirst_:max(WaveLast_,WDiff_),&
+  real, public :: WaveDissipationRate_VC(WaveFirst_:WaveLast_,&
        1:nI,1:nJ,1:nK)
-  !$omp threadprivate( CoronalHeating_C, WaveDissipation_VC )
+  !$omp threadprivate( CoronalHeating_C, WaveDissipationRate_VC )
 
   character(len=lStringLine) :: TypeHeatPartitioning
 
@@ -639,13 +639,12 @@ contains
        if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k))
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k),&
-                  CoronalHeating_C(i,j,k))
+                  WaveDissipationRate_VC(:,i,j,k),CoronalHeating_C(i,j,k))
           end do; end do; end do
        end if
 
@@ -698,8 +697,8 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_block_heating
   !============================================================================
-  subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, WaveDissipation_V, &
-       CoronalHeating)
+  subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, &
+       WaveDissipationRate_V, CoronalHeating)
 
     use ModAdvance, ONLY: State_VGB
     use ModB0,      ONLY: B0_DGB
@@ -707,7 +706,7 @@ contains
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
     integer, intent(in) :: i, j, k, iBlock
-    real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
+    real, intent(out)   :: WaveDissipationRate_V(WaveFirst_:WaveLast_), &
          CoronalHeating
 
     real :: EwavePlus, EwaveMinus, FullB_D(3), FullB, Coef
@@ -725,17 +724,18 @@ contains
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-    WaveDissipation_V(WaveFirst_) = Coef*EwavePlus &
-         *sqrt(max(EwaveMinus,Crefl**2*EwavePlus))
+    WaveDissipationRate_V(WaveFirst_) = Coef* &
+         sqrt(max(EwaveMinus,Crefl**2*EwavePlus))
 
-    WaveDissipation_V(WaveLast_) = Coef*EwaveMinus &
-         *sqrt(max(EwavePlus,Crefl**2*EwaveMinus))
+    WaveDissipationRate_V(WaveLast_) = Coef* &
+         sqrt(max(EwavePlus,Crefl**2*EwaveMinus))
 
-    CoronalHeating = sum(WaveDissipation_V)
+    CoronalHeating = sum(&
+         WaveDissipationRate_V*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
   end subroutine calc_alfven_wave_dissipation
   !============================================================================
-  subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
+  subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipationRate_V, &
        CoronalHeating)
 
     use ModAdvance, ONLY: State_VGB
@@ -745,8 +745,8 @@ contains
     use ModMultiFluid, ONLY: iRho_I, IonFirst_, nIonFluid
 
     integer, intent(in) :: i, j, k, iBlock
-    real, intent(out)   :: CoronalHeating, WaveDissipation_V(&
-         WaveFirst_:max(WaveLast_,WDiff_))
+    real, intent(out)   :: CoronalHeating, WaveDissipationRate_V(&
+         WaveFirst_:WaveLast_)
 
     real :: FullB_D(3), FullB, Coef, Rho
     real :: EwavePlus, EwaveMinus
@@ -785,15 +785,11 @@ contains
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-    WaveDissipation_V(WaveFirst_) = Coef*sqrt(EwaveMinus)*EwavePlus
-    WaveDissipation_V(WaveLast_) = Coef*sqrt(EwavePlus)*EwaveMinus
+    WaveDissipationRate_V(WaveFirst_) = Coef*sqrt(EwaveMinus)
+    WaveDissipationRate_V(WaveLast_) = Coef*sqrt(EwavePlus)
 
-    CoronalHeating = sum(WaveDissipation_V(WaveFirst_:WaveLast_))
-    ! Dissipation rate for the energy difference
-    if(UseReynoldsDecomposition .and. UseWDiff)      &
-         WaveDissipation_V(max(WaveLast_,WDiff_)) = Coef*  &
-         0.50*(sqrt(EwaveMinus) + sqrt(EwaveMinus))*          &
-         State_VGB(WDiff_,i,j,k,iBlock)
+    CoronalHeating = sum(&
+         WaveDissipationRate_V*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
   end subroutine turbulent_cascade
   !============================================================================
@@ -1112,7 +1108,7 @@ contains
   end subroutine get_curl_u
   !============================================================================
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
-       State_V, WaveDissipation_V, CoronalHeating, &
+       State_V, WaveDissipationRate_V, CoronalHeating, &
        QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
     ! Apportion the coronal heating to the electrons and protons based on
@@ -1132,7 +1128,7 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: State_V(nVar)
-    real, intent(in) :: WaveDissipation_V(WaveFirst_:WaveLast_)
+    real, intent(in) :: WaveDissipationRate_V(WaveFirst_:WaveLast_)
     real, intent(in) :: CoronalHeating
     real, intent(out) :: QPerQtotal_I(nIonFluid), &
          QparPerQtotal_I(nIonFluid), QePerQtotal
@@ -1210,11 +1206,11 @@ contains
        SignMajor = sign(1.0, Wplus - Wminus)
 
        if(SignMajor > 0.0)then
-          Qmajor = WaveDissipation_V(WaveFirst_)*ExtensionCoef
-          Qminor = WaveDissipation_V(WaveLast_)*ExtensionCoef
+          Qmajor = WaveDissipationRate_V(WaveFirst_)*Wplus*ExtensionCoef
+          Qminor = WaveDissipationRate_V(WaveLast_)*Wminus*ExtensionCoef
        else
-          Qmajor = WaveDissipation_V(WaveLast_)*ExtensionCoef
-          Qminor = WaveDissipation_V(WaveFirst_)*ExtensionCoef
+          Qmajor = WaveDissipationRate_V(WaveLast_)*Wminus*ExtensionCoef
+          Qminor = WaveDissipationRate_V(WaveFirst_)*Wplus*ExtensionCoef
        end if
 
        ! Linear Landau damping and transit-time damping of kinetic Alfven

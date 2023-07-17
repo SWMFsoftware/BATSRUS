@@ -994,7 +994,7 @@ contains
     real :: RadCool, RadCoolDeriv
     real :: dQidTe1, dQidTi1, Qi1, TeTiCoef1, TeTiCoef2
     real :: CoronalHeating
-    real :: WaveDissipation_V(WaveFirst_:max(WaveLast_,WDiff_))
+    real :: WaveDissipationRate_V(WaveFirst_:WaveLast_)
     real :: QPerQtotal_I(IonFirst_:IonLast_)
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
@@ -1134,34 +1134,34 @@ contains
           if(UseImplicitCoronalHeating)then
              Deltap = Natomic*TeEpsilon
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipation_V, CoronalHeating)
+                  WaveDissipationRate_V, CoronalHeating)
              Coef = extension_factor(TeSi)
              CoronalHeating = CoronalHeating/Coef
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipation_V, CoronalHeating, &
+                  WaveDissipationRate_V, CoronalHeating, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              Qi = CoronalHeating*QPerQtotal_I(IonFirst_)
              Qe = CoronalHeating*QePerQtotal
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + Deltap
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipation_V, CoronalHeating)
+                  WaveDissipationRate_V, CoronalHeating)
              CoronalHeating = CoronalHeating/Coef
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipation_V, CoronalHeating, &
+                  WaveDissipationRate_V, CoronalHeating, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              QiTiR = CoronalHeating*QPerQtotal_I(IonFirst_)
              QeTiR = CoronalHeating*QePerQtotal
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - 2*Deltap
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipation_V, CoronalHeating)
+                  WaveDissipationRate_V, CoronalHeating)
              CoronalHeating = CoronalHeating/Coef
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipation_V, CoronalHeating, &
+                  WaveDissipationRate_V, CoronalHeating, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              QiTiL = CoronalHeating*QPerQtotal_I(IonFirst_)
              QeTiL = CoronalHeating*QePerQtotal
@@ -1175,11 +1175,11 @@ contains
                      + Deltap
                 TeSi_C(i,j,k) = TeSi_C(i,j,k) + TeEpsilonSi
                 call turbulent_cascade(i, j, k, iBlock, &
-                     WaveDissipation_V, CoronalHeating)
+                     WaveDissipationRate_V, CoronalHeating)
                 CoronalHeating = CoronalHeating/extension_factor(TeSi_C(i,j,k))
                 call apportion_coronal_heating(i, j, k, iBlock, &
                      State_VGB(:,i,j,k,iBlock), &
-                     WaveDissipation_V, CoronalHeating, &
+                     WaveDissipationRate_V, CoronalHeating, &
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
                 QiTeR = CoronalHeating*QPerQtotal_I(IonFirst_)
                 QeTeR = CoronalHeating*QePerQtotal
@@ -1188,11 +1188,11 @@ contains
                      - 2*Deltap
                 TeSi_C(i,j,k) = TeSi_C(i,j,k) -2*TeEpsilonSi
                 call turbulent_cascade(i, j, k, iBlock, &
-                     WaveDissipation_V, CoronalHeating)
+                     WaveDissipationRate_V, CoronalHeating)
                 CoronalHeating = CoronalHeating/extension_factor(TeSi_C(i,j,k))
                 call apportion_coronal_heating(i, j, k, iBlock, &
                      State_VGB(:,i,j,k,iBlock), &
-                     WaveDissipation_V, CoronalHeating, &
+                     WaveDissipationRate_V, CoronalHeating, &
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
                 QiTeL = CoronalHeating*QPerQtotal_I(IonFirst_)
                 QeTeL = CoronalHeating*QePerQtotal
