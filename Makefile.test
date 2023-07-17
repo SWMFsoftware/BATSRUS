@@ -2263,7 +2263,7 @@ test_cometCGfluids_start:
 	$(MAKE) test_cometCGfluids_check
 
 test_cometCGfluids_compile:
-	./Config.pl ${OPENMP} -u=CometCGfluids -e=MhdCometCG3FluidsPe -ng=2 -g=4,4,4
+	./Config.pl -noopenmp -u=CometCGfluids -e=MhdCometCG3FluidsPe -ng=2 -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
