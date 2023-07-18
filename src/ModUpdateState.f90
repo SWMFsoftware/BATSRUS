@@ -27,14 +27,14 @@ contains
 
     use ModMain, ONLY: nStep, iStage, Cfl, UseUserUpdateStates, UseBufferGrid
     use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Ehot_, SignB_, &
-         NameVar_V, nFluid
+         NameVar_V, nFluid, WDiff_
     use ModAdvance, ONLY: State_VGB, StateOld_VGB, DTMAX_CB, &
          Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, &
          nVarUpdate, iVarUpdate_I, DoUpdate_V
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, UnitRhoU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
-    use ModCoronalHeating, ONLY: UseReynoldsDecomposition, UseWDiff
+    use ModCoronalHeating, ONLY: UseReynoldsDecomposition
     use ModEnergy, ONLY: limit_pressure
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless
@@ -110,7 +110,7 @@ contains
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
     if(SignB_ > 1 .and. UseChGL)call update_chgl(iBlock, iStage)
-    if(UseReynoldsDecomposition.and.UseWDiff)call fix_wdiff(iBlock)
+    if(UseReynoldsDecomposition.and.WDiff_>1)call fix_wdiff(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' final for nStep =', nStep
        do iVar=1,nVar
