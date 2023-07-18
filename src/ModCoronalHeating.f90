@@ -12,7 +12,7 @@ module ModCoronalHeating
 #endif
   use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
-  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_
+  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
   use omp_lib
 
@@ -36,9 +36,6 @@ module ModCoronalHeating
   real, public :: ImbalanceMax = 2.0, ImbalanceMax2 = 4.0
 
   logical, public :: UseCoronalHeating = .false.
-  ! Check if we use an extra equation for the energy difference
-  ! ("Sigma_D" in a standard argo).
-  logical, public, parameter :: UseWDiff = WDiff_ == WaveLast_ + 1
   character(len=lStringLine) :: NameModel, TypeCoronalHeating
 
   ! Exponential Model ---------
@@ -476,13 +473,17 @@ contains
           DoInit = .true.
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('rMinWaveReflection', rMinWaveReflection)
-          if(UseWDiff)then
+          if(WDiff_>1)then
              call read_var(&
                   'UseReynoldsDecomposition', UseReynoldsDecomposition)
           else
              call read_var(&
                   'UseReynoldsDecomposition', UseNewLimiter4Reflection)
           end if
+          ! KarmanTaylorBeta is present in non-linear term in the evolution
+          ! equation for Lperp via its ratio to KarmanTaylorAlpha ...
+          if(UseReynoldsDecomposition.and.Lperp_>1)&
+               call read_var('KarmanTaylorBeta', KarmanTaylorBeta2AlphaRatio)
        case('usmanov')
           UseAlfvenWaveDissipation = .true.
           UseReynoldsDecomposition = .true.
