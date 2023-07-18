@@ -30,9 +30,6 @@ F			UseBody (rest of parameters read if true)
 1.E-9			RhoMinDim for Ne3
 1.E-9			RhoMinDim for Ne4
 
-#NORMALIZATION
-USER			TypeNormalization
-
 #PLOTFILENAME
 year			NameMaxTimeUnit
 

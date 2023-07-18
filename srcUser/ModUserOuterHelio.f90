@@ -419,7 +419,7 @@ contains
          VarsGhostFace_V(Pu3Ux_:Pu3Uz_) = matmul(XyzSph_DD, VPUIsph_D)
       end if
 
-      if(PuiFirst_ > 1) VarsGhostFace_V(PuiFirst_:PuiLast_) = 1.0
+      if(PuiFirst_ > 1) VarsGhostFace_V(PuiFirst_:PuiLast_) = 0.0
 
       if(UseAlfvenWaves)then
          if(nIonFluid > 1)then
@@ -590,7 +590,7 @@ contains
           State_VGB(Pu3P_,    i,j,k,iBlock) = 1E-5*VliswP
        end if
 
-       if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 1.0
+       if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 0.0
 
        if(UseAlfvenWaves)then
           if(nIonFluid > 1)then
@@ -815,7 +815,7 @@ contains
                State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
        end if
 
-       if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 1.0
+       if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 0.0
 
        if(UseAlfvenWaves)then
           if(nIonFluid > 1)then
