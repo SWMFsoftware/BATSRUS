@@ -1808,7 +1808,8 @@ contains
 
        case('#UPDATEVAR')
           call read_var('StringVarUpdate', StringLine, IsLowerCase=.true.)
-          call split_string(StringLine, NameVarUpdate_I, nVarUpdate)
+          call split_string(StringLine, NameVarUpdate_I, nVarUpdate,&
+               UseArraySyntaxIn=.true.)
           if(nVarUpdate == nVar .or. StringLine == 'all')then
              if(allocated(iVarUpdate_I)) deallocate(iVarUpdate_I)
              DoUpdate_V = .true.
