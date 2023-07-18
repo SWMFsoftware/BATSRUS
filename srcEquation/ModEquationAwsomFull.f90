@@ -13,7 +13,6 @@ module ModVarIndexes
        Redefine6 => Ehot_,&
        Redefine7 => WDiff_,&
        Redefine8 => Lperp_
-  
 
   implicit none
 
