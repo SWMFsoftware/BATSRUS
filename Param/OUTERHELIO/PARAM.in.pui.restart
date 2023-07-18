@@ -11,7 +11,7 @@ NONE			NamePlanet
 F			UseGravity (rest of parameters read if true)
 
 #BODY
-F			 UseBody (rest of parameters read if true)
+F			UseBody (rest of parameters read if true)
 
 #MINIMUMPRESSURE
 1.E-18			pMinDim for fluid SW
@@ -127,9 +127,8 @@ T			UseOhNeutralBc
 
 #USERINPUTBEGIN -----------------------------------
 
-! This is same as rbody in #BODY
 #GLOBALHELIOSPHERE
-30.
+30.			rBody
 
 #SOLARWINDH
 0.00874			SWH_rho_dim [n/cc]
@@ -170,8 +169,8 @@ MultiIon                NameRegionFormula
 
 #PU3HEATING
 T			UsePu3Heating
-1e7			TempPu3
-10.			FactorPu3
+1e7			TempPu3Si [K]
+20.0			FactorPu3 1/[au yr]
 
 #ELECTRONIMPACT
 T                       UseElectronImpact

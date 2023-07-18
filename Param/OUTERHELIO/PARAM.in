@@ -15,24 +15,10 @@ Param/OUTERHELIO/PARAM.in: Outer heliosphere with 1 ion and 4 neutral fluids		St
 NONE			NamePlanet
 
 #GRAVITY
-F			UseGravity (rest of parameters read if true)
+F			UseGravity
 
 #BODY
 F			UseBody
-30.0			rBody (AU)
-0.01			BodyNDim [/cc] number density for ions
-1.09E5			BodyTDim [K] temperature for ions
-0.18			BodyNDim for 1st neutral fluid
-6519.0			BodyTDim
-7.E-5			BodyNDim for 2nd neutral fluid
-6519.0			BodyTDim
-7.8E-3			BodyNDim for 3rd neutral fluid
-1.609E3			BodyTDim
-0.18			BodyNDim for 4th neutral fluid
-6519.0			BodyTDim
-
-#NORMALIZATION
-USER			TypeNormalization
 
 #PLOTFILENAME
 year			NameMaxTimeUnit
@@ -191,7 +177,7 @@ T			UseOhNeutralBc
 #USERINPUTBEGIN -----------------------------------
 
 #GLOBALHELIOSPHERE
-30.
+30.			rBody
 
 #SOLARWINDH
 0.00874			SWH_N_dim [n/cc]

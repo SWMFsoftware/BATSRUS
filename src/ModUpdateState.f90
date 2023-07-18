@@ -7,6 +7,7 @@ module ModUpdateState
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
        iVarTest, iComm, Used_GB, CellVolume_GB, Xyz_DGB
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
+  use ModB0, ONLY: B0_DGB
 
   implicit none
 
@@ -125,7 +126,7 @@ contains
 
     use ModAdvance
     use ModMain, ONLY: &
-         IsTimeAccurate, iStage, nStage, Dt, Cfl, UseBufferGrid, &
+         IsTimeAccurate, iStage, nStage, Dt, Cfl, UseB0, UseBufferGrid, &
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
     use ModPhysics, ONLY: &
          Gamma_I, InvGamma_I, InvGammaElectron, GammaElectron, RhoMin_I
@@ -155,6 +156,7 @@ contains
 
     ! These variables have to be double precision for accurate Boris scheme
     real:: DtLocal, DtFactor, SourceIonEnergy_I(nIonFluid)
+    real:: Coeff1, Coeff2, b_D(3), FullB2, FullB
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
@@ -199,10 +201,22 @@ contains
 
     if(UseEntropy)then
        if(UseAnisoPressure)then
-          ! Calculate source term for iSperp stored in iP
+          ! Calculate source term for iSperp and iSpar from iP and iPpar
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Source_VC(iPIon_I,i,j,k) = 0.5* &
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+             b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+             FullB2 = sum(b_D**2)
+             FullB  = sqrt(max(1e-30, FullB2))
+             ! Source(Sperp) = Source(Pperp)/B
+             !               = (3*Source(p)-Source(Ppar)*0.5/B
+             Coeff1 = 0.5/FullB
+             Source_VC(iPIon_I,i,j,k) = Coeff1* &
                   (3*Source_VC(iPIon_I,i,j,k) - Source_VC(iPparIon_I,i,j,k))
+
+             ! Source(Spar) = Source(Ppar)*(B^2/rho^2)
+             Coeff2 = FullB2/State_VGB(Rho_,i,j,k,iBlock)**2
+             Source_VC(iPparIon_I,i,j,k) = Coeff2*Source_VC(iPparIon_I,i,j,k)
           end do; end do; end do
        else
           ! Modify pressure source terms to entropy source if necessary
@@ -350,7 +364,6 @@ contains
     subroutine update_explicit(iBlock, DoTest)
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
-      use ModB0, ONLY: UseB0, B0_DGB
 
       integer, intent(in):: iBlock
       logical, intent(in):: DoTest

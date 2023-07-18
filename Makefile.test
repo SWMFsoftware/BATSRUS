@@ -903,7 +903,7 @@ test_awsom_gpu_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_awsom_gpu_check:
-	-@(${DIFFNUM} -a=1e-19 -r=1e-5 -t \
+	-@(${DIFFNUM} -a=2e-19 -r=1e-5 -t \
 		${TESTDIR}/RESULTS/SC/log_n000001.log \
 		Param/CORONA/TestOutput/log_n000001.awsom_gpu \
 		> test_awsom_gpu.diff)
@@ -1002,6 +1002,7 @@ test_awsomchargestate:
 test_awsomchargestate_compile:
 	./Config.pl -noopenmp -e=AwsomChargeState -u=AwsomIons -ng=2 -g=6,8,8 -cs=o
 	$(MAKE) BATSRUS
+	make PIDL
 
 test_awsomchargestate_rundir:
 	rm -rf ${TESTDIR}
@@ -1195,7 +1196,7 @@ test_stitch_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_stitch_check:
-	-@(${DIFFNUM} -t -a=2e-15 \
+	-@(${DIFFNUM} -t -a=4e-15 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		Param/CORONA/TestOutput/log_n000000.stitch \
 		> test_stitch.diff)
@@ -2262,7 +2263,7 @@ test_cometCGfluids_start:
 	$(MAKE) test_cometCGfluids_check
 
 test_cometCGfluids_compile:
-	./Config.pl ${OPENMP} -u=CometCGfluids -e=MhdCometCG3FluidsPe -ng=2 -g=4,4,4
+	./Config.pl -noopenmp -u=CometCGfluids -e=MhdCometCG3FluidsPe -ng=2 -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 

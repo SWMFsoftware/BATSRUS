@@ -122,7 +122,7 @@ contains
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B
     use ModCoronalHeating, ONLY: get_block_heating, &
          UseReynoldsDecomposition, UseWDiff,        &
-         UseAlfvenWaveDissipation, WaveDissipation_VC
+         UseAlfvenWaveDissipation, WaveDissipationRate_VC
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
     use ModPhysics, ONLY: InvGammaMinus1
@@ -210,8 +210,8 @@ contains
 
        if(DoExtendTransitionRegion)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k) = &
-                  WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k) &
+             WaveDissipationRate_VC(:,i,j,k) = &
+                  WaveDissipationRate_VC(:,i,j,k) &
                   /extension_factor(TeSi_C(i,j,k))
           end do; end do; end do
        end if
@@ -220,18 +220,11 @@ contains
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
           if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
-             DtLoss = minval( &
-                  State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                  /WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k))
-             if(UseReynoldsDecomposition.and.UseWDiff)then
-                ! The following prevents the wave energies from becoming
-                ! negative due to too large loss terms.
-                DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*DtLoss/&
-                     (DtMax_CB(i,j,k,iBlock) + DtLoss)
-             else
-                DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock),   &
-                     0.5*DtLoss)
-             end if
+             DtLoss = 1 / maxval(WaveDissipationRate_VC(:,i,j,k))
+             ! The following prevents the wave energies from becoming
+             ! negative due to too large loss terms.
+             DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*DtLoss/&
+                  (DtMax_CB(i,j,k,iBlock) + DtLoss)
           end if
        end do; end do; end do
     end if

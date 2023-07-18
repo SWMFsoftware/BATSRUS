@@ -154,9 +154,9 @@ contains
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C, &
          AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, AlfvenMinusLast_
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
-         CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
+         CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
-         UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta, &
+         UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta2AlphaRatio, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
          UseWDiff, LperpTimesSqrtB
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
@@ -553,27 +553,6 @@ contains
 
        if(DoTest)call write_source('After UseWavePressure')
     end if
-
-    if(Lperp_ > 1)then
-       ! Positive (definite) source term for the correlation length
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-
-          if(nIonFluid > 1)then
-             Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
-          else
-             Rho = State_VGB(Rho_,i,j,k,iBlock)
-          end if
-          Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) + &
-               2.0*KarmanTaylorBeta*sqrt(Rho) &
-               *(State_VGB(WaveLast_,i,j,k,iBlock) &
-               *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)) &
-               + State_VGB(WaveFirst_,i,j,k,iBlock) &
-               *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))) / max(1e-30, &
-               sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))
-       end do; end do; end do
-    end if
-
     if(UseTurbulentCascade.and.(.not.UseReynoldsDecomposition))&
          call get_wave_reflection(iBlock)
 
@@ -590,32 +569,38 @@ contains
        if(UseAlfvenWaveDissipation)then
           if(DoExtendTransitionRegion)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k) &
+                WaveDissipationRate_VC(:,i,j,k) = &
+                     WaveDissipationRate_VC(:,i,j,k) &
                      /extension_factor(TeSi_C(i,j,k))
              end do; end do; end do
           end if
 
           if(UseAlignmentAngle)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k) &
+                WaveDissipationRate_VC(:,i,j,k) = &
+                     WaveDissipationRate_VC(:,i,j,k) &
                      *Cdiss_C(i,j,k)
                 CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) &
                      *Cdiss_C(i,j,k)
              end do; end do; end do
           end if
-          if(UseReynoldsDecomposition.and.UseWDiff)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                Source_VC(WaveFirst_:max(WaveLast_,WDiff_),i,j,k) = &
-                     Source_VC(WaveFirst_:max(WaveLast_,WDiff_),i,j,k) &
-                     - WaveDissipation_VC(:,i,j,k)
-             end do; end do; end do
-          else
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
-                     Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                     - WaveDissipation_VC(WaveFirst_:WaveLast_,i,j,k)
-             end do; end do; end do
-          end if
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
+                  Source_VC(WaveFirst_:WaveLast_,i,j,k) &
+                  - WaveDissipationRate_VC(:,i,j,k)*&
+                  State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+             ! aritmetic average of cascade rates for w_D, if needed
+             if(UseWDiff)Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
+                  - 0.50*sum(WaveDissipationRate_VC(:,i,j,k))*&
+                  State_VGB(WDiff_,i,j,k,iBlock)
+             ! Weighted average of cascade rates for Lperp_, if needed
+             if(Lperp_ > 1)Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) +&
+               KarmanTaylorBeta2AlphaRatio*sum( &
+               WaveDissipationRate_VC(:,i,j,k)*  &
+               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
+               max(1e-30, sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))) *&
+               State_VGB(Lperp_,i,j,k,iBlock)
+          end do; end do; end do
           if(DoTest)call write_source('After UseAlfvenWaveDissipation')
        end if
 
@@ -630,7 +615,7 @@ contains
              if(UseElectronPressure)then
                 call apportion_coronal_heating(i, j, k, iBlock, &
                      State_VGB(:,i,j,k,iBlock), &
-                     WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
+                     WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k),&
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
                 Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &

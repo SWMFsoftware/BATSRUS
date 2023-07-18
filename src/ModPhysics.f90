@@ -1214,6 +1214,14 @@ contains
        NameUnitUserIdl_V(WaveFirst_:WaveLast_) = NameIdlUnit_V(UnitEnergyDens_)
     end if
 
+    if(WDiff_ > 1)then
+       ! Set the unit and unit name for the difference in the turbulent
+       ! kinetic and magnetic energy
+       UnitUser_V(WDiff_)        = No2Io_V(UnitEnergyDens_)
+       NameUnitUserTec_V(WDiff_) = NameTecUnit_V(UnitEnergyDens_)
+       NameUnitUserIdl_V(WDiff_) = NameIdlUnit_V(UnitEnergyDens_)
+    end if
+
     if(Ew_ > 1)then
        ! Set the unit and unit name for the total wave energy variable
        UnitUser_V(Ew_)        = No2Io_V(UnitEnergyDens_)
@@ -1256,6 +1264,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
+
   end subroutine init_mhd_variables
   !============================================================================
   subroutine init_vector_variables
