@@ -756,7 +756,8 @@ contains
     !--------------------------------------------------------------------------
     ! Low-frequency cascade due to small-scale nonlinearities
 
-    if(Lperp_ > 1 .and. UseReynoldsDecomposition)then
+    if(Lperp_ > 1 .and. .not.UseTurbulentCascade)then
+       ! Usmanov's model for Lperp = \Lambda/KarmanTaylorAlpha
        ! Note that Lperp is multiplied with the density
        if(nIonFluid > 1)then
           Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
@@ -779,8 +780,14 @@ contains
        else
           FullB = norm2(FullB_D)
        end if
-       Coef = 2.0*sqrt(FullB/State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)) &
-            /LperpTimesSqrtB
+       Coef = 2.0*sqrt(FullB/State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
+       if(Lperp_>1)then
+          ! The model for SC and IH, Lperp_ state variable is Lperp*sqrt(B)
+          Coef = Coef/State_VGB(Lperp_,i,j,k,iBlock)
+       else
+          ! Lperp*sqrt(B) is constant (Hollweg's model)
+          Coef = Coef/LperpTimesSqrtB
+       end if
     end if
 
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
