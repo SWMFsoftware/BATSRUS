@@ -1980,12 +1980,17 @@ contains
                  call limiter(iMaxSharp+1, iMax, BetaLimiterResChange,&
                  Primitive_VI, dVarLimL_VI, dVarLimR_VI)
          end if
+
+         LowOrderCrit_I = 0
+         if(UseLowOrder .and. nLowOrder==1) LowOrderCrit_I(iMin:iMax) = &
+              LowOrderCrit_XB(iMin:iMax,j,k,iBlock)
+
          do i=iMin,iMax
             i1 = i - 1
             LeftState_VX(:,i,j,k)  &
-                 = Primitive_VI(:,i1) + dVarLimL_VI(:,i1)
+                 = Primitive_VI(:,i1) + dVarLimL_VI(:,i1)*(1-LowOrderCrit_I(i))
             RightState_VX(:,i,j,k) &
-                 = Primitive_VI(:,i ) - dVarLimR_VI(:,i )
+                 = Primitive_VI(:,i ) - dVarLimR_VI(:,i )*(1-LowOrderCrit_I(i))
          end do
       end do; end do
 
@@ -2040,12 +2045,17 @@ contains
                  call limiter(jMaxSharp+1, jMax, BetaLimiterResChange,&
                  Primitive_VI, dVarLimL_VI, dVarLimR_VI)
          end if
+
+         LowOrderCrit_I = 0
+         if(UseLowOrder) LowOrderCrit_I(jMin:jMax) = &
+              LowOrderCrit_YB(i,jMin:jMax,k,iBlock)
+
          do j=jMin, jMax
             j1 = j - 1
             LeftState_VY(:,i,j,k)  &
-                 = Primitive_VI(:,j1) + dVarLimL_VI(:,j1)
+                 = Primitive_VI(:,j1) + dVarLimL_VI(:,j1)*(1-LowOrderCrit_I(j))
             RightState_VY(:,i,j,k) &
-                 = Primitive_VI(:,j ) - dVarLimR_VI(:,j )
+                 = Primitive_VI(:,j ) - dVarLimR_VI(:,j )*(1-LowOrderCrit_I(j))
          end do
       end do; end do
 
@@ -2100,12 +2110,17 @@ contains
                  call limiter(kMaxSharp+1, kMax, BetaLimiterResChange,&
                  Primitive_VI, dVarLimL_VI, dVarLimR_VI)
          end if
+
+         LowOrderCrit_I = 0
+         if(UseLowOrder) LowOrderCrit_I(kMin:kMax) = &
+              LowOrderCrit_ZB(i,j,kMin:kMax,iBlock)
+
          do k=kMin,kMax
             k1 = k - 1
             LeftState_VZ(:,i,j,k)  &
-                 = Primitive_VI(:,k1) + dVarLimL_VI(:,k1)
+                 = Primitive_VI(:,k1) + dVarLimL_VI(:,k1)*(1-LowOrderCrit_I(k))
             RightState_VZ(:,i,j,k) &
-                 = Primitive_VI(:,k ) - dVarLimR_VI(:,k )
+                 = Primitive_VI(:,k ) - dVarLimR_VI(:,k )*(1-LowOrderCrit_I(k))
          end do
       end do; end do
 
@@ -2676,7 +2691,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(nOrder<=2) then
+    if(nOrder<2) then
        IsLowOrderOnly_B = .true.
     else
        IsLowOrderOnly_B = .false.
@@ -2772,6 +2787,7 @@ contains
 
       integer :: iFace, jFace, kFace
       real:: State_VI(nVar,-3:2)
+      integer :: iL, iR
 
 #ifndef SCALAR
       logical:: DoTest
@@ -2779,17 +2795,31 @@ contains
       !------------------------------------------------------------------------
       call test_start(NameSub, DoTest)
 
+      if(nOrder > 2) then
+         ! Use 6 neighbors to calculate the low order criteria
+         iL = -3
+         iR = 2
+      else
+         ! 2nd order is 'high order'. Use 4 neighbors to calculate
+         ! the low order criteria
+         iL = -2
+         iR = 1
+      endif
+
+      State_VI = 0
       ! Face along x-direction
       do kFace = kMinFace, kMaxFace
          do jFace = jMinFace, jMaxFace
             do iFace = 1, nIFace
-               State_VI = State_VGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
+               State_VI(:,iL:iR) = &
+                  State_VGB(:,iFace+iL:iFace+iR,jFace,kFace,iBlock)
 
-               if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
-                    B0_DGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
+               if(UseB0) State_VI(Bx_:Bz_,iL:iR) = &
+                    State_VI(Bx_:Bz_,iL:iR) + &
+                    B0_DGB(:,iFace+iL:iFace+iR,jFace,kFace,iBlock)
                LowOrderCrit_XB(iFace,jFace,kFace,iBlock) = &
-                    low_order_face_criteria( State_VI, &
-                    Vel_IDGB(:,x_,iFace-3:iFace+2,jFace,kFace,iBlock))
+                    low_order_face_criteria( State_VI(:,iL:iR), &
+                    Vel_IDGB(:,x_,iFace+iL:iFace+iR,jFace,kFace,iBlock),iL,iR)
             enddo
          enddo
       enddo
@@ -2799,12 +2829,13 @@ contains
          do kFace = kMinFace, kMaxFace
             do jFace = 1, nJFace
                do iFace=iMinFace,iMaxFace
-                  State_VI = State_VGB(:,iFace,jFace-3:jFace+2,kFace,iBlock)
-                  if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
-                       B0_DGB(:,iFace,jFace-3:jFace+2,kFace,iBlock)
+                  State_VI(:,iL:iR) = &
+                       State_VGB(:,iFace,jFace+iL:jFace+iR,kFace,iBlock)
+                  if(UseB0) State_VI(Bx_:Bz_,iL:iR) = State_VI(Bx_:Bz_,iL:iR) + &
+                       B0_DGB(:,iFace,jFace+iL:jFace+iR,kFace,iBlock)
                   LowOrderCrit_YB(iFace,jFace,kFace,iBlock) = &
-                       low_order_face_criteria(State_VI, &
-                       Vel_IDGB(:,y_,iFace,jFace-3:jFace+2,kFace,iBlock))
+                       low_order_face_criteria(State_VI(:,iL:iR), &
+                       Vel_IDGB(:,y_,iFace,jFace+iL:jFace+iR,kFace,iBlock),iL,iR)
                enddo
             enddo
          enddo
@@ -2815,12 +2846,13 @@ contains
          do kFace = 1, nKFace
             do jFace = jMinFace, jMaxFace
                do iFace = iMinFace, iMaxFace
-                  State_VI = State_VGB(:,iFace,jFace,kFace-3:kFace+2,iBlock)
-                  if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
-                       B0_DGB(:,iFace,jFace,kFace-3:kFace+2,iBlock)
+                  State_VI(:,iL:iR) = &
+                       State_VGB(:,iFace,jFace,kFace+iL:kFace+iR,iBlock)
+                  if(UseB0) State_VI(Bx_:Bz_,iL:iR) = State_VI(Bx_:Bz_,iL:iR) + &
+                       B0_DGB(:,iFace,jFace,kFace+iL:kFace+iR,iBlock)
                   LowOrderCrit_ZB(iFace,jFace,kFace,iBlock) = &
-                       low_order_face_criteria(State_VI, &
-                       Vel_IDGB(:,z_,iFace,jFace,kFace-3:kFace+2,iBlock))
+                       low_order_face_criteria(State_VI(:,iL:iR), &
+                       Vel_IDGB(:,z_,iFace,jFace,kFace+iL:kFace+iR,iBlock),iL,iR)
                enddo
             enddo
          enddo
@@ -2830,19 +2862,20 @@ contains
 #endif
     end subroutine set_phys_based_low_order_face
     !==========================================================================
-    real function low_order_face_criteria(State_VI, Vel_II)
+    real function low_order_face_criteria(State_VI, Vel_II, iL, iR)
 
       use ModMain, ONLY: UseB
       use ModMultiFluid, ONLY: iRho, iP, select_fluid
 
-      real, intent(in):: State_VI(:,:) ! (nVar,-3:2)
-      real, intent(in):: Vel_II(:,:) ! (nFluid,-3:2)
+      real,    intent(in):: State_VI(:,:) 
+      real,    intent(in):: Vel_II(:,:) 
+      integer, intent(in):: iL, iR
 
       integer:: iFluid
-      real:: pTotal_I(-3:2), Sound_I(-3:2)
+      real:: pTotal_I(iL:iR), Sound_I(iL:iR)
       real:: Crit, pRatio, VelRatio, SoundMin
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       pTotal_I = 0
       VelRatio = 0
       do iFluid = 1, nFluid
