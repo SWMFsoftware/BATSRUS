@@ -418,10 +418,12 @@ contains
           ! Store div U so it can be used in ModWaves
           DivU_C(i,j,k) = DivU
 
-          do iVar = WaveFirst_, max(WaveLast_,WDiff_)
+          do iVar = WaveFirst_, WaveLast_
              Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
+          if(WDiff_>1)Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
+                  - DivU*(GammaWave - 1)*State_VGB(WDiff_,i,j,k,iBlock)
 
           if(.not.UseMultiIon)then
              Pwave = (GammaWave - 1) &
