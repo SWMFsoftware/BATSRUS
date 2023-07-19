@@ -1983,7 +1983,7 @@ contains
 
          LowOrderCrit_I = 0
          if(UseLowOrder .and. nLowOrder==1) LowOrderCrit_I(iMin:iMax) = &
-              LowOrderCrit_XB(iMin:iMax,j,k,iBlock)
+               LowOrderCrit_XB(iMin:iMax,j,k,iBlock)
 
          do i=iMin,iMax
             i1 = i - 1
@@ -2047,7 +2047,7 @@ contains
          end if
 
          LowOrderCrit_I = 0
-         if(UseLowOrder) LowOrderCrit_I(jMin:jMax) = &
+         if(UseLowOrder .and. nLowOrder==1) LowOrderCrit_I(jMin:jMax) = &
               LowOrderCrit_YB(i,jMin:jMax,k,iBlock)
 
          do j=jMin, jMax
@@ -2112,7 +2112,7 @@ contains
          end if
 
          LowOrderCrit_I = 0
-         if(UseLowOrder) LowOrderCrit_I(kMin:kMax) = &
+         if(UseLowOrder .and. nLowOrder==1) LowOrderCrit_I(kMin:kMax) = &
               LowOrderCrit_ZB(i,j,kMin:kMax,iBlock)
 
          do k=kMin,kMax
@@ -2867,8 +2867,8 @@ contains
       use ModMain, ONLY: UseB
       use ModMultiFluid, ONLY: iRho, iP, select_fluid
 
-      real,    intent(in):: State_VI(:,:) 
-      real,    intent(in):: Vel_II(:,:) 
+      real,    intent(in):: State_VI(:,:)
+      real,    intent(in):: Vel_II(:,:)
       integer, intent(in):: iL, iR
 
       integer:: iFluid
