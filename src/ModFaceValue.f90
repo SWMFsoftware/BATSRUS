@@ -2748,8 +2748,10 @@ contains
                         all(LowOrderCrit_ZB(:,:,:,iBlock) >= cLowOrder-cSmall)
                 end if
 
-             else if(UseTrueCell)then
-                ! The 5th order schemes need 3 cells on both sides of the face
+             else if(nOrder > 2 .and. UseTrueCell)then
+                ! 1. When high-order scheme is used, change to low order for
+                !    cells near the boundary.
+                ! 2. The 5th order schemes need 3 cells on both sides of the face
                 do k=1, nK; do j=1, nJ; do i = 1, nI+1
                    if(.not.all(Used_GB(i-3:i+2,j,k,iBlock))) &
                         LowOrderCrit_XB(i,j,k,iBlock) = cLowOrder
@@ -2817,9 +2819,12 @@ contains
                if(UseB0) State_VI(Bx_:Bz_,iL:iR) = &
                     State_VI(Bx_:Bz_,iL:iR) + &
                     B0_DGB(:,iFace+iL:iFace+iR,jFace,kFace,iBlock)
+
                LowOrderCrit_XB(iFace,jFace,kFace,iBlock) = &
-                    low_order_face_criteria( State_VI(:,iL:iR), &
-                    Vel_IDGB(:,x_,iFace+iL:iFace+iR,jFace,kFace,iBlock),iL,iR)
+                    low_order_face_criteria( &
+                    State_VI(:,iL:iR), &
+                    Vel_IDGB(:,x_,iFace+iL:iFace+iR,jFace,kFace,iBlock),&
+                    iL,iR)
             enddo
          enddo
       enddo
@@ -2831,11 +2836,16 @@ contains
                do iFace=iMinFace,iMaxFace
                   State_VI(:,iL:iR) = &
                        State_VGB(:,iFace,jFace+iL:jFace+iR,kFace,iBlock)
-                  if(UseB0) State_VI(Bx_:Bz_,iL:iR) = State_VI(Bx_:Bz_,iL:iR) + &
+
+                  if(UseB0) State_VI(Bx_:Bz_,iL:iR) = &
+                       State_VI(Bx_:Bz_,iL:iR) + &
                        B0_DGB(:,iFace,jFace+iL:jFace+iR,kFace,iBlock)
+
                   LowOrderCrit_YB(iFace,jFace,kFace,iBlock) = &
-                       low_order_face_criteria(State_VI(:,iL:iR), &
-                       Vel_IDGB(:,y_,iFace,jFace+iL:jFace+iR,kFace,iBlock),iL,iR)
+                       low_order_face_criteria( &
+                       State_VI(:,iL:iR), &
+                       Vel_IDGB(:,y_,iFace,jFace+iL:jFace+iR,kFace,iBlock),&
+                       iL,iR)
                enddo
             enddo
          enddo
@@ -2848,11 +2858,16 @@ contains
                do iFace = iMinFace, iMaxFace
                   State_VI(:,iL:iR) = &
                        State_VGB(:,iFace,jFace,kFace+iL:kFace+iR,iBlock)
-                  if(UseB0) State_VI(Bx_:Bz_,iL:iR) = State_VI(Bx_:Bz_,iL:iR) + &
+
+                  if(UseB0) State_VI(Bx_:Bz_,iL:iR) = &
+                       State_VI(Bx_:Bz_,iL:iR) + &
                        B0_DGB(:,iFace,jFace,kFace+iL:kFace+iR,iBlock)
+
                   LowOrderCrit_ZB(iFace,jFace,kFace,iBlock) = &
-                       low_order_face_criteria(State_VI(:,iL:iR), &
-                       Vel_IDGB(:,z_,iFace,jFace,kFace+iL:kFace+iR,iBlock),iL,iR)
+                       low_order_face_criteria( &
+                       State_VI(:,iL:iR), &
+                       Vel_IDGB(:,z_,iFace,jFace,kFace+iL:kFace+iR,iBlock),&
+                       iL,iR)
                enddo
             enddo
          enddo
