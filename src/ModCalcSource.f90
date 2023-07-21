@@ -158,7 +158,7 @@ contains
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta2AlphaRatio, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
-         UseWDiff, LperpTimesSqrtB
+         LperpTimesSqrtB
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -418,10 +418,12 @@ contains
           ! Store div U so it can be used in ModWaves
           DivU_C(i,j,k) = DivU
 
-          do iVar = WaveFirst_, max(WaveLast_,WDiff_)
+          do iVar = WaveFirst_, WaveLast_
              Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
+          if(WDiff_>1)Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
+                  - DivU*(GammaWave - 1)*State_VGB(WDiff_,i,j,k,iBlock)
 
           if(.not.UseMultiIon)then
              Pwave = (GammaWave - 1) &
@@ -482,7 +484,7 @@ contains
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
                 ModeConversionMinus = ModeConversionMinus - bDotGradVAlfven
 
-                if(UseWDiff)then
+                if(WDiff_>1)then
                    wD = State_VGB(WDiff_,i,j,k,iBlock)
                 else
                    wD = SigmaD*&
@@ -499,7 +501,7 @@ contains
                 ! Energy source related to the Alfven wave source above
                 Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
                      (ModeConversionPlus + ModeConversionMinus)*wD
-                if(UseWDiff) &
+                if(WDiff_>1) &
                      Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k)  &
                      - ModeConversionMinus &
                      *sum(Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k)) &
@@ -526,7 +528,7 @@ contains
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
                 ModeConversionMinus = ModeConversionMinus - bDotGradVAlfven
 
-                if(UseWDiff)then
+                if(WDiff_>1)then
                    wD = State_VGB(WDiff_,i,j,k,iBlock)
                 else
                    wD = SigmaD*&
@@ -543,7 +545,7 @@ contains
                 ! Energy source related to the Alfven wave source above
                 Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
                      (ModeConversionPlus + ModeConversionMinus)*wD
-                if(UseWDiff) &
+                if(WDiff_>1) &
                      Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) -&
                      Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus         -&
                      Source_VC(WaveLast_ ,i,j,k)*ModeConversionPlus
@@ -590,7 +592,7 @@ contains
                   - WaveDissipationRate_VC(:,i,j,k)*&
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
              ! aritmetic average of cascade rates for w_D, if needed
-             if(UseWDiff)Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
+             if(WDiff_>1)Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
                   - 0.50*sum(WaveDissipationRate_VC(:,i,j,k))*&
                   State_VGB(WDiff_,i,j,k,iBlock)
              ! Weighted average of cascade rates for Lperp_, if needed

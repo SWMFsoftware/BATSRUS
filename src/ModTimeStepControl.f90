@@ -121,7 +121,6 @@ contains
          UseElectronPressure, DoUpdate_V
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B
     use ModCoronalHeating, ONLY: get_block_heating, &
-         UseReynoldsDecomposition, UseWDiff,        &
          UseAlfvenWaveDissipation, WaveDissipationRate_VC
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C

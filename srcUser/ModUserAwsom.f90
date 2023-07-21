@@ -307,12 +307,12 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModB0,         ONLY: B0_DGB
-    use ModCoronalHeating, ONLY: UseTurbulentCascade
+    use ModCoronalHeating, ONLY: UseTurbulentCascade, LperpTimesSqrtB
     use ModGeometry,   ONLY: Xyz_DGB, r_GB
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: rBody, GBody, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
-         Ppar_, WaveFirst_, WaveLast_, SignB_
+         Ppar_, WaveFirst_, WaveLast_, SignB_, Lperp_
     use ModChGL,       ONLY: UseChGL
     use ModWaves, ONLY: UseAlfvenWaves
 
@@ -444,7 +444,8 @@ contains
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
        if(UseChGL)State_VGB(SignB_,i,j,k,iBlock) = &
             sum(B0_DGB(1:3,i,j,k,iBlock)*r_D) / (r*Usound)
-
+       if(UseTurbulentCascade.and.Lperp_>1)&
+            State_VGB(Lperp_,i,j,k,iBlock) = LperpTimesSqrtB
        if(UseAlfvenWaves)then
           Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
           if (Br >= 0.0) then
@@ -784,7 +785,8 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(DoExtendTransitionRegion)then
                 Coef = extension_factor(TeSi_C(i,j,k))
-                WaveDissipationRate_VC(:,i,j,k) = WaveDissipationRate_VC(:,i,j,k)/Coef
+                WaveDissipationRate_VC(:,i,j,k) = &
+                     WaveDissipationRate_VC(:,i,j,k)/Coef
                 CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)/Coef
              end if
              call apportion_coronal_heating(i, j, k, iBlock, &

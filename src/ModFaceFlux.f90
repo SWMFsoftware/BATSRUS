@@ -1621,7 +1621,7 @@ contains
       use ModPhysics, ONLY: InvGamma, InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
-           UseTransverseTurbulence, SigmaD, UseWDiff
+           UseTransverseTurbulence, SigmaD
 
       real, intent(in) :: State_V(:)
       real, intent(out) :: Un
@@ -1750,7 +1750,7 @@ contains
                  + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
          end if
          if(UseReynoldsDecomposition)then
-            if(UseWDiff)then
+            if(WDiff_>1)then
                wD = State_V(WDiff_)
             else
                wD = SigmaD*&
@@ -3802,7 +3802,7 @@ contains
            UseAnisoPressure, UseAnisoPe, SignB_, &
            UseMagFriction, MagFrictionCoef
       use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
-           UseTransverseTurbulence, SigmaD, UseWDiff
+           UseTransverseTurbulence, SigmaD
 
       real, intent(in) :: State_V(:)
       real, optional, intent(out) :: CmaxDt_I(:)
@@ -3926,7 +3926,7 @@ contains
                  *sum(State_V(WaveFirst_:WaveLast_))
          end if
          if(UseReynoldsDecomposition)then
-            if(UseWDiff)then
+            if(WDiff_>1)then
                wD = State_V(WDiff_)
             else
                wD = SigmaD*sum(State_V(WaveFirst_:WaveLast_))

@@ -1083,7 +1083,7 @@ contains
        case('p','pe', 'ppar')
           iUnitCons_V(iVar) = UnitP_
           iUnitPrim_V(iVar) = UnitP_
-       case('e', 'ew', 'ehot', 'eint')
+       case('e', 'ew', 'wd', 'ehot', 'eint')
           iUnitCons_V(iVar) = UnitEnergyDens_
           iUnitPrim_V(iVar) = UnitEnergyDens_
        case('ex', 'ey', 'ez','hype')
