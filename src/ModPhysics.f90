@@ -149,7 +149,7 @@ module ModPhysics
   real:: RhoPwCoef = 1.0
 
   ! Number and mass densities for multi-species equations
-  real, dimension(nSpecies):: BodyNSpeciesDim_I = -1.0, BodyRhoSpecies_I = -1.0
+  real:: BodyNSpeciesDim_I(nSpecies) = -1.0, BodyRhoSpecies_I(nSpecies) = -1.0
 
   ! Density ratio of major and minor ions/neutrals (e.g. in the solar wind)
   real :: LowDensityRatio = 0.0001
@@ -193,7 +193,7 @@ module ModPhysics
   !$acc declare create(Body2NDim, Body2TDim, RhoBody2, pBody2)
 
   ! Second body mass and gravity force parameter derived from it
-  real   :: MassBody2Si, gBody2=0.0
+  real   :: MassBody2Si, gBody2 = 0.0
   !$acc declare create(MassBody2Si,gBody2)
   ! Logical determining if the orbit elements from CON_planet are used to
   ! trace a second body.
@@ -202,7 +202,7 @@ module ModPhysics
 
   ! Variables for two-state shock tube problems
   logical :: UseShockTube = .false.
-  real :: ShockLeftState_V(nVar)=0.0, ShockRightState_V(nVar)=0.0
+  real :: ShockLeftDim_V(nVar)=0.0, ShockRightDim_V(nVar)=0.0
   real :: ShockLeft_V(nVar)=0.0, ShockRight_V(nVar)=0.0 ! physical units
   real :: ShockPosition = 0.0, ShockSlope = 0.0
 
@@ -214,11 +214,11 @@ module ModPhysics
   integer :: iCellBoundaryState_I(Coord1MinBc_:Coord3MaxBc_) = 0
 
   ! State for the boundary conditions
-  real, dimension(nVar,SolidBc_:zMaxBc_):: &
-       FaceState_VI, FaceStateDim_VI
+  real::  FaceState_VI(nVar,SolidBc_:zMaxBc_), &
+       FaceStateDim_VI(nVar,SolidBc_:zMaxBc_)
   !$acc declare create(FaceState_VI)
-  real, dimension(nVar,Coord1MinBc_:Coord3MaxBc_):: &
-       CellState_VI, CellStateDim_VI
+  real::  CellState_VI(nVar,Coord1MinBc_:Coord3MaxBc_), &
+       CellStateDim_VI(nVar,Coord1MinBc_:Coord3MaxBc_)
   !$acc declare create(CellState_VI)
 
   ! Units for normalization of variables
@@ -256,11 +256,10 @@ module ModPhysics
   !$acc declare create(Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V)
 
   ! Mapping between state array indices and unit conversion array indices
-  integer, dimension(nVar) :: iUnitCons_V
-  integer, dimension(nVar) :: iUnitPrim_V
+  integer:: iUnitCons_V(nVar), iUnitPrim_V(nVar)
 
-  character (len=20), dimension(nIoUnit) :: &
-       NameIdlUnit_V, NameTecUnit_V, NameSiUnit_V
+  character(len=20):: &
+       NameIdlUnit_V(nIoUnit), NameTecUnit_V(nIoUnit), NameSiUnit_V(nIoUnit)
 
   ! Names of the user (I/O) units for IDL and TECPlot output
   ! for all variables including energies
@@ -470,6 +469,11 @@ contains
 
     gBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
     !$acc update device(gBody2)
+
+    ! Normalize shocktube/uniform state values
+    ShockLeft_V  = ShockLeftDim_V * Io2No_V(iUnitPrim_V)
+    ShockRight_V = ShockRightDim_V* Io2No_V(iUnitPrim_V)
+
     ! Normalize solar wind values. Note: the solarwind is in I/O units
     SolarWindN   = SolarWindNDim*Io2No_V(UnitN_)
     SolarWindRho = SolarWindN * MassIon_I(1)
@@ -1264,7 +1268,6 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
-
   end subroutine init_mhd_variables
   !============================================================================
   subroutine init_vector_variables

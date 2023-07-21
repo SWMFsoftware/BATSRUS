@@ -762,7 +762,7 @@ contains
 
     case('PowerProfile')
        ! Generalized power profile:
-       ! state = shockleftstate + c1*x^p1 + c2*y^p2 + c3*z^p3
+       ! state = shockleft + c1*x^p1 + c2*y^p2 + c3*z^p3
        do iVar=1,nVar
           if(.not.IsPowerProfile_V(iVar)) CYCLE
           ! set up the power profile for iVar
