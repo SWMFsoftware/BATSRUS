@@ -2715,8 +2715,8 @@ contains
              LowOrderCrit_YB(:,:,:,iBlock) = 0
              LowOrderCrit_ZB(:,:,:,iBlock) = 0
 
-             ! Get the LowOrderCrit based on physical criteria. The vale of
-             ! 'LowOrderCrit_*B' is the ratio of the low order face value.
+             ! Get the LowOrderCrit based on physical criteria. The value of
+             ! 'LowOrderCrit_*B' is the ratio of the low order face values.
              if(UseAdaptiveLowOrder) call set_phys_based_low_order_face
 
              if(allocated(iRegionLowOrder_I)) then
@@ -2751,7 +2751,7 @@ contains
              else if(nOrder > 2 .and. UseTrueCell)then
                 ! 1. When high-order scheme is used, change to low order for
                 !    cells near the boundary.
-                ! 2. The 5th order schemes need 3 cells on both sides of the face
+                ! 2. 5th order scheme needs 3 cells on both sides of the face
                 do k=1, nK; do j=1, nJ; do i = 1, nI+1
                    if(.not.all(Used_GB(i-3:i+2,j,k,iBlock))) &
                         LowOrderCrit_XB(i,j,k,iBlock) = cLowOrder

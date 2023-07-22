@@ -9,9 +9,9 @@ module ModSetInitialCondition
 
   use ModVarIndexes, ONLY: nVar
   use ModMain, ONLY: NamePrimitive_V
-  use ModPhysics, ONLY: UseShocktube, ShockLeftState_V, ShockRightState_V, &
-       ShockLeft_V, ShockRight_V, ShockPosition, ShockSlope, &
-       nVectorVar, iVectorVar_I
+  use ModPhysics, ONLY: &
+       UseShocktube, ShockLeftDim_V, ShockRightDim_V, ShockLeft_V, &
+       ShockRight_V, ShockPosition, ShockSlope, nVectorVar, iVectorVar_I
   use ModBatsrusUtility, ONLY: stop_mpi, get_ivar
   use ModNumConst, ONLY: cTwoPi, cDegToRad
 
@@ -74,18 +74,18 @@ contains
     case("#UNIFORMSTATE")
        UseShockTube = .true.
        do iVar = 1, nVar
-          call read_var(NamePrimitive_V(iVar), ShockLeftState_V(iVar))
+          call read_var(NamePrimitive_V(iVar), ShockLeftDim_V(iVar))
        end do
-       ShockRightState_V = ShockLeftState_V
+       ShockRightDim_V = ShockLeftDim_V
 
     case("#SHOCKTUBE")
        UseShockTube = .true.
        do iVar = 1, nVar
-          call read_var(NamePrimitive_V(iVar)//' left', ShockLeftState_V(iVar))
+          call read_var(NamePrimitive_V(iVar)//' left', ShockLeftDim_V(iVar))
        end do
        do iVar = 1, nVar
           call read_var(NamePrimitive_V(iVar)//' right', &
-               ShockRightState_V(iVar))
+               ShockRightDim_V(iVar))
        end do
 
     case("#SHOCKPOSITION")
@@ -158,8 +158,7 @@ contains
     use ModGeometry, ONLY: Used_GB
     use ModIO, ONLY: IsRestart
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, &
-         UseShockTube, ShockLeftState_V, ShockRightState_V, &
-         ShockPosition, iUnitPrim_V, Io2No_V, Gamma_I
+         UseShockTube, ShockPosition, iUnitPrim_V, Io2No_V, Gamma_I
     use ModUserInterface ! user_set_ics
     use ModChGL,          ONLY: UseChGL, init_chgl
     use ModConstrainDivB, ONLY: constrain_ics
@@ -214,10 +213,6 @@ contains
 
              ! Set rotational matrix
              Rot_II = reshape([CosSlope, SinSlope, -SinSlope, CosSlope],[2,2])
-
-             ! calculate normalized left and right states
-             ShockLeft_V  = ShockLeftState_V * Io2No_V(iUnitPrim_V)
-             ShockRight_V = ShockRightState_V* Io2No_V(iUnitPrim_V)
 
              if(ShockSlope /= 0.0 .and. UseWave .and. DoRotateWave) &
                   call rotate_wave

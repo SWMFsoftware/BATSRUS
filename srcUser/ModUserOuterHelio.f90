@@ -59,7 +59,6 @@ module ModUser
   use ModUserEmpty,                                     &
        IMPLEMENTED1  => user_read_inputs,               &
        IMPLEMENTED2  => user_set_face_boundary,         &
-       IMPLEMENTED3  => user_normalization,             &
        IMPLEMENTED4  => user_set_cell_boundary,         &
        IMPLEMENTED5  => user_set_ics,                   &
        IMPLEMENTED6  => user_initial_perturbation,      &
@@ -527,26 +526,6 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
-  !============================================================================
-  subroutine user_normalization
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_normalization'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
-    No2Si_V(UnitX_)  = cAU                                        ! au
-    No2Si_V(UnitU_)  = sqrt(Gamma*cBoltzmann*SwhTDim/cProtonMass) ! sound speed
-    No2Si_V(UnitRho_)= cProtonMass*SwhRhoDim*1.0E+6               ! amu/cm^3
-
-    if(DoTest)then
-       write(*,*)NameSub,' No2Si_V(UnitX_)  =',No2Si_V(UnitX_)
-       write(*,*)NameSub,' No2Si_V(UnitU_)  =',No2Si_V(UnitU_)
-       write(*,*)NameSub,' No2Si_V(UnitRho_)=',No2Si_V(UnitRho_)
-    end if
-
-    call test_stop(NameSub, DoTest)
-  end subroutine user_normalization
   !============================================================================
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
