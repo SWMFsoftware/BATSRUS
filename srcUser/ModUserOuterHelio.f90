@@ -3050,7 +3050,7 @@ contains
        Mach2 = U2/(Gamma*p*InvRho)
 
        ! Level Set function
-       LevelHP = State_VGB(LevelHP_,i,j,k,iBlock)
+       LevelHP = State_VGB(LevelHP_,i,j,k,iBlock)/Rho
 
        call get_region(iRegion, r_GB(i,j,k,iBlock), RhoDim, &
             U2Dim, TempDim, Mach2, MachPUI2, MachSW2, LevelHP)
