@@ -163,6 +163,9 @@ module ModUser
 
   real :: RhoPop4LimitDim  = 0.01  ! for cold cloud
 
+  ! Level Set criterion
+  real :: LevelHPLimit = 0.0
+
   integer :: iFluidProduced_C(nI, nJ, nK)
   !$omp threadprivate( iFluidProduced_C )
 
@@ -314,6 +317,7 @@ contains
 
           case('LevelSet')
              iRegionFormula = LevelSet_
+             call read_var('LevelHPLimit',     LevelHPLimit)
              call read_var('MachPop2Limit',    MachPop2Limit)
              call read_var('MachPop4Limit',    MachPop4Limit)
 
@@ -2948,7 +2952,7 @@ contains
           RETURN
        end if
 
-       if (LevelHP < 0.) then
+       if (LevelHP < LevelHPLimit) then
           ! Outside Heliopause
           if (Mach2 > MachPop4Limit**2) then
              ! Outside bow shock

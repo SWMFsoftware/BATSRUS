@@ -192,6 +192,7 @@ y=0 MHD idl		StringPlot
 
 #REGIONS
 LevelSet		NameRegionFormula
+0                       LevelHPLimit
 1			MachPop2Limit
 1			MachPop4Limit
 
