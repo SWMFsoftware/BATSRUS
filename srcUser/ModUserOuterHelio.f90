@@ -2747,25 +2747,34 @@ contains
        if(UseSource_I(SWH_) .and. UseSource_I(Pu3_)) then
           if (Ne3_ == iFluidProduced_C(i,j,k)) then
              ! inside region 3
+
+             ! Pop 3 still creates SWH because it is already
+             ! moving as 400 km/s and does not get picked up
+             SourceImp_V(SwhRho_)    = SrcImpRho_I(Ne3_)
+             SourceImp_V(SwhRhoUx_)  = SrcImpRhoUx_I(Ne3_)
+             SourceImp_V(SwhRhoUy_)  = SrcImpRhoUy_I(Ne3_)
+             SourceImp_V(SwhRhoUz_)  = SrcImpRhoUz_I(Ne3_)
+             SourceImp_V(SwhEnergy_) = SrcImpEnergy_I(Ne3_)
+
+             SourceImp_V(SwhP_) = GammaMinus1*( SourceImp_V(SwhEnergy_) &
+                  - sum(U_DI(:,Swh_)*SourceImp_V(SwhRhoUx_:SwhRhoUz_)) &
+                  + 0.5*U2_I(Swh_)*SourceImp_V(SwhRho_))
+
              ! Pu3 is created here
-             SourceImp_V(Pu3Rho_)    = sum(SrcImpRho_I)
-             SourceImp_V(Pu3RhoUx_)  = sum(SrcImpRhoUx_I)
-             SourceImp_V(Pu3RhoUy_)  = sum(SrcImpRhoUy_I)
-             SourceImp_V(Pu3RhoUz_)  = sum(SrcImpRhoUz_I)
-             SourceImp_V(Pu3Energy_) = sum(SrcImpEnergy_I)
+             SourceImp_V(Pu3Rho_)    = sum(SrcImpRho_I) &
+                  - SrcImpRho_I(Ne3_)
+             SourceImp_V(Pu3RhoUx_)  = sum(SrcImpRhoUx_I) &
+                  - SrcImpRhoUx_I(Ne3_)
+             SourceImp_V(Pu3RhoUy_)  = sum(SrcImpRhoUy_I) &
+                  - SrcImpRhoUy_I(Ne3_)
+             SourceImp_V(Pu3RhoUz_)  = sum(SrcImpRhoUz_I) &
+                  - SrcImpRhoUz_I(Ne3_)
+             SourceImp_V(Pu3Energy_) = sum(SrcImpEnergy_I) &
+                  - SrcImpEnergy_I(Ne3_)
 
              SourceImp_V(Pu3P_) = GammaMinus1*( SourceImp_V(Pu3Energy_) &
                   - sum(U_DI(:,Pu3_)*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
                   + 0.5*U2_I(Pu3_)*SourceImp_V(Pu3Rho_))
-
-             ! Electron pressure source term
-             ! Ionization Energy * total ionization rate
-             ! + thermal energy from new electron
-             SourceImp_V(Pe_) = GammaElectronMinus1*( &
-                  -SourceImp_V(Pu3Rho_)*IonizationEnergy &
-                  + (cElectronMass/cProtonMass)* ( SourceImp_V(Pu3Energy_) &
-                  - sum(UEl_D*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
-                  + 0.5*sum(UEl_D**2)*SourceImp_V(Pu3Rho_) ) )
           else
              ! outside region 3
              ! SWH is created
@@ -2778,16 +2787,21 @@ contains
              SourceImp_V(SWHp_) = GammaMinus1*( SourceImp_V(SWHEnergy_) &
                   - sum(U_DI(:,SWH_)*SourceImp_V(SWHRhoUx_:SWHRhoUz_)) &
                   + 0.5*U2_I(SWH_)*SourceImp_V(SWHRho_) )
-
-             ! Electron pressure source term
-             ! Ionization Energy * total ionization rate
-             ! + thermal energy from new electron
-             SourceImp_V(Pe_) = GammaElectronMinus1*( &
-                     -SourceImp_V(SWHRho_)*IonizationEnergy &
-                     + (cElectronMass/cProtonMass)* ( SourceImp_V(SWHEnergy_) &
-                     - sum(UEl_D*SourceImp_V(SWHRhoUx_:SWHRhoUz_)) &
-                     + 0.5*sum(UEl_D**2)*SourceImp_V(SWHRho_) ) )
           end if
+
+          ! Electron pressure source term
+          ! ionization Energy * total ionization rate
+          ! + thermal energy from new electron.
+          ! (nVar+IonFirst_:nVar+IonLast_) corresponds to the ion energy terms
+          SourceImp_V(Pe_) = GammaElectronMinus1*( &
+                  -sum(SourceImp_V(iRhoIon_I))*IonizationEnergy &
+                  + (cElectronMass/cProtonMass)&
+                  *( sum(SourceImp_V(nVar+IonFirst_:nVar+IonLast_)) &
+                  - UEl_D(x_)*sum(SourceImp_V(iRhoUxIon_I)) &
+                  - UEl_D(y_)*sum(SourceImp_V(iRhoUyIon_I)) &
+                  - UEl_D(z_)*sum(SourceImp_V(iRhoUzIon_I)) &
+                  + 0.5*sum(UEl_D**2)*sum(SourceImp_V(iRhoIon_I)) ) )
+
        end if
     end if
 
