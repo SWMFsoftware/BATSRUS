@@ -535,7 +535,7 @@ Simpl, source_impl      : point-implicit user source terms
 update, update_state    : user defined state update
 progress, write_progress: user progress report
 \end{verbatim}
-Default is that all implemented user routines are off.
+Default is that init is on all others are off.
 When the perturbation is switched on, it gets switched off after
 the perturbation is applied. The corresponding logicals can be
 changed in the user module. 

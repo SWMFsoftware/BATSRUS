@@ -19,7 +19,6 @@ module ModUserEmpty
 
 contains
   !============================================================================
-
   subroutine user_set_boundary_cells(iBlock)
 
     ! Set "false" cells that are surrounded by the "extra" face boundary
@@ -34,7 +33,6 @@ contains
     
   end subroutine user_set_boundary_cells
   !============================================================================
-
   subroutine user_set_face_boundary(FBC)
 
     ! Apply user defined face boundary condition
@@ -47,10 +45,11 @@ contains
     FBC%VarsGhostFace_V = 0.0
 
     call stop_user(NameSub)
+
   end subroutine user_set_face_boundary
   !============================================================================
-
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)    
+
     ! Apply user defined ghost cell boundary condition
     
     integer,          intent(in)  :: iBlock, iSide
@@ -64,7 +63,6 @@ contains
     
   end subroutine user_set_cell_boundary
   !============================================================================
-
   subroutine user_initial_perturbation
     
     ! Apply initial perturbation. 
@@ -77,7 +75,6 @@ contains
     integer::iBlock
     character(len=*), parameter:: NameSub = 'user_initial_perturbation'
     !--------------------------------------------------------------------------
-
     UseUserPerturbation = .false. ! if not implemented
     
     !do iBlock = 1, nBlockMax
@@ -86,7 +83,6 @@ contains
 
   end subroutine user_initial_perturbation
   !============================================================================
-
   subroutine user_set_ics(iBlock)
 
     ! Set user defined initial state
@@ -101,17 +97,14 @@ contains
     
   end subroutine user_set_ics
   !============================================================================
-
   subroutine user_init_session
 
     character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
-
     UseUserInitSession = .false. ! if not implemented
     
   end subroutine user_init_session
   !============================================================================
-
   subroutine user_action(NameAction)
 
     ! This routine gets called multiple times during the run and provides
@@ -159,7 +152,6 @@ contains
 
   end subroutine user_specify_region
   !============================================================================
-
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
     ! User defined AMR criteria. Set the value of UserCriteria for
@@ -181,15 +173,14 @@ contains
 
   end subroutine user_amr_criteria
   !============================================================================
-
   subroutine user_read_inputs
 
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
     call stop_user(NameSub)
+
   end subroutine user_read_inputs
   !============================================================================
-
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
     real, intent(out)            :: VarValue
@@ -206,7 +197,6 @@ contains
     
   end subroutine user_get_log_var
   !============================================================================
-
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -235,20 +225,17 @@ contains
 
   end subroutine user_set_plot_var
   !============================================================================
-
   subroutine user_calc_sources_expl(iBlock)
 
     integer, intent(in) :: iBlock
 
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
-
     UseUserSourceExpl = .false. ! if not implemented
     ! Source_VC(...,iBlock) = ...
     
   end subroutine user_calc_sources_expl
   !============================================================================
-  
   subroutine user_calc_sources_impl(iBlock)
 
     integer, intent(in) :: iBlock
@@ -260,7 +247,6 @@ contains
     
   end subroutine user_calc_sources_impl
   !============================================================================
-  
   subroutine user_init_point_implicit
 
     ! Set list of point-implicit variables and initialize other parameters
@@ -275,7 +261,6 @@ contains
 
   end subroutine user_init_point_implicit
   !============================================================================
-
   subroutine user_get_b0(x, y, z, B0_D)
 
     ! Set or modify B0_D for location x, y, z
@@ -289,7 +274,6 @@ contains
 
   end subroutine user_get_b0
   !============================================================================
-
   subroutine user_update_states(iBlock)
 
     ! Update State_VGB with a user defined method.
@@ -299,12 +283,10 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
-
     UseUserUpdateStates = .false. ! if not implemented
 
   end subroutine user_update_states
   !============================================================================
-
   subroutine user_normalization
 
     ! Set user specific normalization. 
@@ -321,7 +303,6 @@ contains
 
   end subroutine user_normalization
   !============================================================================
-
   subroutine user_io_units
 
     ! Set user defined I/O units
@@ -349,7 +330,6 @@ contains
 
   end subroutine user_io_units
   !============================================================================
-
   subroutine user_set_resistivity(iBlock, Eta_G)
     ! This subrountine set the eta for every block
     use ModSize
@@ -365,7 +345,6 @@ contains
 
   end subroutine user_set_resistivity
   !============================================================================
-
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut, &
@@ -423,9 +402,11 @@ contains
     integer, intent(in), optional:: iBlock
     !--------------------------------------------------------------------------
     i_type_block_user = 0
+
   end function i_type_block_user
   !============================================================================
   subroutine stop_user(NameSub)
+
     ! Note that this routine is not a user routine but just a routine
     ! which warns the user if they try to use an unimplemented user routine.
 
@@ -433,8 +414,8 @@ contains
     !--------------------------------------------------------------------------
     call stop_mpi('You are trying to call the empty user routine '//   &
          NameSub//'. Please implement the routine in src/ModUser.f90')
+
   end subroutine stop_user
   !============================================================================
-
 end module ModUserEmpty
 !==============================================================================
