@@ -150,7 +150,7 @@ contains
     use ModBatsrusUtility, ONLY: get_ivar
     use ModOptimizeParam, ONLY: check_optimize_param
     use ModPlotShock, ONLY: divudxMin
-    
+
     ! Arguments
 
     ! TypeAction determines if we read or check parameters

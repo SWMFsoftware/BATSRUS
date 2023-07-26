@@ -153,13 +153,13 @@ contains
     rMax = maxval(r_GB(:,:,:,iBlock))
     ! Return if block is below the PlotRange
     if(rMax < rMinPlot) RETURN
-    ! Return if block is above the PlotRange   
+    ! Return if block is above the PlotRange
     rMin = rMin_B(iBlock)
-    if(rMin > rMaxPlot) RETURN 
+    if(rMin > rMaxPlot) RETURN
 
     ! Limit radial range
-    !rMin = max(rMin, rMinPlot)
-    !rMax = min(rMax, rMaxPlot)
+    ! rMin = max(rMin, rMinPlot)
+    ! rMax = min(rMax, rMaxPlot)
 
     ! Loop through shock points and interpolate PlotVar
     if(IsCartesianGrid)then

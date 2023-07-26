@@ -1347,7 +1347,7 @@ contains
              if(nFluid > 1) call select_fluid(iFluid)
 
              if(.not.DoUpdate_V(iPpar)) CYCLE
-             
+
              UseConstantTau = UseConstantTau_I(iFluid)
              TauInstability = TauInstability_I(iFluid)
              TauGlobal      = TauGlobal_I(iFluid)
