@@ -4419,6 +4419,7 @@ indices are not calculated.
 	<option name="shell"        value="shl" />
 	<option name="shell ln(r)"  value="sln" />
 	<option name="shell lg(r)"  value="slg" />
+	<option name="shock"        value="shk" />
 	<option name="box" />
 	<option name="los" />
 	<option name="rfr" />
@@ -4616,11 +4617,11 @@ indices are not calculated.
       <parameter name="Radius"  type="real" min="0" default="6"/>
       <parameter name="nLon"    type="real" min="4" default="36"/>
     </if>
-    <if expr="$plotarea =~ /\b(shl|sln|slg)\b/">
+    <if expr="$plotarea =~ /\b(shl|sln|slg|shk)\b/">
       <parameter name="TypeCoordPlot" type="string" length="3" default="GEO"/>
       <parameter name="rMin"   type="real" min="0"     default="6.6"/>
       <parameter name="rMax"   type="real" min="$rMin" default="6.6"/>
-      <parameter name="dR"     type="real" min="0" if="$rMin != $rMax"/>
+      <parameter name="dR"     type="real" min="0" if="$rMin != $rMax and $plotarea !~ /shk/"/>
       <parameter name="LonMin" type="real" min="0"     default="0"/>
       <parameter name="LonMax" type="real" min="$LonMin" max="360"
 		 default="360"/>
@@ -4631,6 +4632,7 @@ indices are not calculated.
 		 default="90"/>
       <parameter name="dLat"   type="real" min="0"
 		 if="$LatMin != $LatMax"/>
+      <parameter name="DivuDxMin" type="real" max="0" if="$plotarea =~ /shk/"/>
     </if>
     <if expr="$plotarea =~ /\bbox\b/">
       <parameter name="TypeCoordPlot" type="string" length="3" default="HGR"/>
@@ -4648,7 +4650,7 @@ indices are not calculated.
       <parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
     </if>
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|sln|slg|los|rfr|lin|eqr|eqb)\b/)" />
+       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|sln|slg|shk|los|rfr|lin|eqr|eqb)\b/)" />
     <if expr="$plotarea !~ /\blos\b/ and $plotvar =~ /\bfux\b/">
       <parameter name="NameSpmTable" type="string" default="SPECTRUM_chianti_tbl.dat"/>
       <parameter name="UseUnobserved" type="logical" default="F"/>
@@ -4801,6 +4803,18 @@ GEO			TypeCoordPlot
 -90.			LatMin
 90.			LatMax
 10.			dLat    ! only read if LatMin /= LatMax
+shk HD idl		StringPlot
+10  			DnSavePlot
+-1.			DtSavePlot
+-10.0                   DivuDxMin [km/s]
+1.2			rMin
+25.0			rMax
+0.			LonMin
+360.			LonMax
+1.			dLon
+-90.			LatMin
+90.			LatMax
+1.			dLat
 box MHD idl             StringPlot
 1                       DnSavePlot
 -10.0                   DtSavePlot
@@ -4984,6 +4998,7 @@ slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
 sln   - spherical shell with ln(r) radial coordinate
 slg   - spherical shell with log10(r) radial coordinate
+shk   - shock surface extracted on a lon-lat grid. Limited in radial distance.
 box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
 lin   - one dimensional plot along a field or stream or current line
@@ -5068,17 +5083,19 @@ from the parameter file in this order:
  Coord1MinCut...Coord3MaxCut	 if PlotArea is 'cut'
  nRadius nLon            if PlotArea is 'eqr' or 'eqb'
  TypeCoordPlot           if PlotArea is 'shl', 'sln', 'slg' or 'box'
- RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', 'shl', 'sln', 'slg'
- LonMin LonMax           if PlotArea is 'eqb', 'shl', 'sln', 'slg'
- LatMin LatMax           if PlotArea is 'shl', 'sln', 'slg'
+ DivuDxMin               if PlotArea is 'shk'
+ RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', 'shl', 'sln', 'slg', 'shk'
+ LonMin LonMax           if PlotArea is 'eqb', 'shl', 'sln', 'slg', 'shk'
+ LatMin LatMax           if PlotArea is 'shl', 'sln', 'slg', 'shk'
  dRadius, dLon, dLat     if PlotArea is 'sln', 'slg' or 'shl' and range is nonzero.
+ dLon, dLat              if PlotArea is 'shk'
  x0, y0, z0              if PlotArea is 'box'
  xSize, ySize, zSize     if PlotArea is 'box'
  dX, dY, dZ              if PlotArea is 'box' and associated range is nonzero.
  xAngle, yAngle, zAngle  if PlotArea is 'box' (given in degrees)
  xPoint yPoint zPoint	 if PlotArea is 'slc', or 'blk'
  xNormal yNormal zNormal if PlotArea is 'slc'
- DxSavePlot		 if PlotForm is 'idl' and PlotArea is not box/shl/sln/slg/los/rfr/lin/eqr/eqb
+ DxSavePlot		 if PlotForm is 'idl' and PlotArea is not box/shl/sln/slg/shk/los/rfr/lin/eqr/eqb
  NameVars		 if PlotVar  is 'var' or 'VAR'
  NamePars		 if PlotVar  is 'var' or 'VAR'
 \end{verbatim}
@@ -5304,6 +5321,13 @@ saves ln(r) into the file, the latter the 10-based lg(r). The meaning of
 the radial resolution dR becomes the size of the first cell at the minimum
 radius. The minimum and maximum radii are read as normal radii (not logarithm).
 The output is a single file in IDL or Tecplot format.
+
+The shock surface ('shk') is extracted along radial lines started from a
+longitude-latitude grid. The surface is defined by the smallest value of
+div u*dx along each radial line. If the minimum div u*dx is larger than DivuDxMin
+(a negative value in velocity units), there is no shock surface. The output
+always contains DivuDx and the radial distance of the surface as additional
+plot variables.
 
 The box plot area ('box') can be used to extract a Cartesian box
 defined by the center position and the size (length of the edges)
