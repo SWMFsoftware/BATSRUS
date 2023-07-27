@@ -19,11 +19,11 @@ module ModPlotShock
   public:: set_plot_shock
   public:: write_plot_shock
 
-  ! Threshold for Divu*Dx 
+  ! Threshold for Divu*Dx
   real, public :: DivuDxMin = 0.0
 
   ! Local variables
-  
+
   ! Size of current plot:
   integer :: nR, nLon, nLat
 
