@@ -42,9 +42,9 @@ module ModPlotShock
 
   ! If  .true., the part of the grid is in the threaded gap
   logical :: UseThreadedGap = .false.
-  !
 
-  real, public :: divudxMin = 0.0
+  ! Threshold for Divu*Dx 
+  real, public :: DivuDxMin = 0.0
 
   character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
@@ -168,8 +168,8 @@ contains
        nR = nI*3
     end if
     dR = (maxval(r_GB(:,:,:,iBlock)) - rMin)/nR
-    ! skip all blocks with divudx >= divudxMin
-    if(minval(PlotVar_GV(:,:,:,1)) >= divudxMin) RETURN
+    ! skip all blocks with DivuDx >= DivuDxMin
+    if(minval(PlotVar_GV(:,:,:,1)) >= DivuDxMin) RETURN
 
     do k = 1, nLat
        Lat = LatMin + (k-1)*dLat
@@ -259,9 +259,10 @@ contains
 
     ! Save results to disk
     if(iProc==0) then
-       ! zero out all variables if divudx > divudxMin
+       ! zero out all variables if DivuDx > DivuDxMin
        do iLat = 1, nLat; do iLon = 1, nLon
-          if(PlotVar_VII(1,iLon,iLat) > divudxMin) PlotVar_VII(:,iLon,iLat) = 0.0
+          if(PlotVar_VII(1,iLon,iLat) > DivuDxMin) &
+               PlotVar_VII(:,iLon,iLat) = 0.0
        enddo; enddo
 
        ! Build a single-line list of variable names.
