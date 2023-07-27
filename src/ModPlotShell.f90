@@ -42,13 +42,12 @@ module ModPlotShell
 
   ! If  .true., the part of the grid is in the threaded gap
   logical :: UseThreadedGap = .false.
-  !
 
   character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
 contains
   !============================================================================
-  subroutine init_plot_shell(iFile, nPlotVarIn)
+  subroutine init_plot_shell(iFile)
 
     ! set up the shell grid for this plot file
 
@@ -56,7 +55,9 @@ contains
     use CON_axes,          ONLY: transform_matrix
     use ModCoordTransform, ONLY: show_rot_matrix
     use ModUtilities,      ONLY: split_string
-    integer, intent(in):: iFile, nPlotVarIn
+
+    integer, intent(in):: iFile
+
     integer :: nPlotVar
 
     logical:: DoTest
@@ -223,7 +224,7 @@ contains
 
              ! compute the interpolated values at the current location
              PlotVar_VIII(0,i,j,k) = 1.0
-             if(IsThreadedBlock.and. Coord_D(1) < &
+             if(IsThreadedBlock .and. Coord_D(1) < &
                   CoordMin_DB(1,iBlock) + 0.5*CellSize_DB(1,iBlock))then
                 ! The threaded gap is used and the point is below
                 ! the first layer of grid cell centers
@@ -231,7 +232,7 @@ contains
                 call interpolate_thread_state(Coord_D, iBlock, State_V)
                 call set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V(&
                      1:nPlotVar), XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
-                PlotVar_VIII(1:, i, j, k) = PlotVar_V(1:nPlotVar)*&
+                PlotVar_VIII(1:,i,j,k) = PlotVar_V(1:nPlotVar)*&
                      DimFactor_V(1:nPlotVar)
              else
                 do iVar=1, nPlotVar

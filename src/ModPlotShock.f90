@@ -4,13 +4,11 @@
 module ModPlotShock
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iBlockTest, iProc, nProc, iComm
+       test_start, test_stop, iProc, nProc, iComm
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModIO
-  use ModNumConst,        ONLY: cRadtoDeg, cDegToRad, cTiny
-  use ModFieldLineThread, ONLY: DoPlotThreads, rChromo=>rBody
-  use ModGeometry,        ONLY: RadiusMin
+  use ModNumConst,  ONLY: cRadtoDeg, cDegToRad
 
   implicit none
 
@@ -21,63 +19,49 @@ module ModPlotShock
   public:: set_plot_shock
   public:: write_plot_shock
 
+  ! Threshold for Divu*Dx 
+  real, public :: DivuDxMin = 0.0
+
+  ! Local variables
+  
   ! Size of current plot:
   integer :: nR, nLon, nLat
 
   ! Ranges for current plot:
   real :: dR, dLat, dLon
   real :: rMinPlot, rMaxPlot, LonMin, LonMax, LatMin, LatMax
+
   integer, parameter :: RadiusTransformLinear_ = 1
   integer, parameter :: RadiusTransformLog_ = 2
   integer, parameter :: RadiusTransformLog10_ = 3
-  integer :: iRadiusTransform = RadiusTransformLinear_
 
   ! Local results container:
   ! Array of values written to file:
   real, allocatable :: PlotVar_VII(:,:,:)
   real, allocatable :: PlotVar_VIIP(:,:,:,:)
 
-  ! Coordinate conversion matrix
-  real:: PlotToGm_DD(3,3)
-
-  ! If  .true., the part of the grid is in the threaded gap
-  logical :: UseThreadedGap = .false.
-
-  ! Threshold for Divu*Dx 
-  real, public :: DivuDxMin = 0.0
-
-  character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
+  character(len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
 contains
   !============================================================================
-  subroutine init_plot_shock(iFile, nPlotVarIn)
+  subroutine init_plot_shock(iFile, nPlotVar)
 
     ! set up the shock grid for this plot file
-
-    use ModMain,           ONLY: tSimulation, TypeCoordSystem
-    use CON_axes,          ONLY: transform_matrix
-    use ModCoordTransform, ONLY: show_rot_matrix
-    use ModUtilities,      ONLY: split_string
-    integer, intent(in):: iFile, nPlotVarIn
-    integer :: nPlotVar
+    integer, intent(in):: iFile, nPlotVar
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_shock'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! Allocate results array and set up all the spherical shock
+    ! Allocate results array and set up the spherical grid
     if(allocated(PlotVar_VII)) RETURN
 
-    StringPlotVar = StringPlotVar_I(iFile)
-    call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar, &
-         UseArraySyntaxIn=.true.)
-
     ! Get plot area info from ModIO arrays:
-    dLon   = PlotDx_DI(2,iFile) * cDegtoRad
-    dLat   = PlotDx_DI(3,iFile) * cDegtoRad
-    rMinPlot   = PlotRange_EI(1,iFile)
-    rMaxPlot   = PlotRange_EI(2,iFile)
+    dLon     = PlotDx_DI(2,iFile) * cDegtoRad
+    dLat     = PlotDx_DI(3,iFile) * cDegtoRad
+    rMinPlot = PlotRange_EI(1,iFile)
+    rMaxPlot = PlotRange_EI(2,iFile)
     LonMin = PlotRange_EI(3,iFile) * cDegtoRad
     LonMax = PlotRange_EI(4,iFile) * cDegtoRad
     LatMin = PlotRange_EI(5,iFile) * cDegtoRad
@@ -96,10 +80,6 @@ contains
     allocate(PlotVar_VII(0:nPlotVar,nLon,nLat))
     PlotVar_VII = 0.0
 
-    ! Get coordinate transformation matrix:
-    PlotToGm_DD = transform_matrix(tSimulation, &
-         TypeCoordPlot_I(iFile), TypeCoordSystem)
-
     if (DoTest) then
        write(*,*) NameSub//' iFile, nPlotVar= ', iFile, nPlotVar
        write(*,*) NameSub//' Raw PlotDx_DI=   ', PlotDx_DI(:,iFile)
@@ -109,24 +89,21 @@ contains
             rMinPlot, rMaxPlot, LonMin,LonMax,LatMin,LatMax
        write(*,*) NameSub,' nLon, nLat, dLon, dLat = ', &
             nLon, nLat, dLon, dLat
-       write(*,*) NameSub,' PlotToGm_DD:'
-       call show_rot_matrix(PlotToGm_DD)
     end if
 
     call test_stop(NameSub, DoTest)
+
   end subroutine init_plot_shock
   !============================================================================
   subroutine set_plot_shock(iBlock, nPlotvar, Plotvar_GV)
+
     ! Interpolate the plot variables for block iBlock
     ! onto the shock surface of the plot area.
-    use ModMain,            ONLY: UseB0
-    use ModFieldLineThread, ONLY: interpolate_thread_state, set_thread_plotvar
     use ModGeometry,    ONLY: rMin_B, r_GB
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
-         xyz_to_coord, r_, IsCartesianGrid
+         xyz_to_coord, IsCartesianGrid
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModParallel,       ONLY: DiLevel_EB, Unset_
 
     ! Arguments
     integer, intent(in) :: iBlock
@@ -168,8 +145,9 @@ contains
        nR = nI*3
     end if
     dR = (maxval(r_GB(:,:,:,iBlock)) - rMin)/nR
-    ! skip all blocks with DivuDx >= DivuDxMin
-    if(minval(PlotVar_GV(:,:,:,1)) >= DivuDxMin) RETURN
+
+    ! skip blocks with all DivuDx >= DivuDxMin
+    if(all(PlotVar_GV(:,:,:,1) >= DivuDxMin)) RETURN
 
     do k = 1, nLat
        Lat = LatMin + (k-1)*dLat
@@ -180,9 +158,6 @@ contains
              if(r < rMinPlot .or. r > rMaxPlot) CYCLE
              ! Convert to Cartesian coordinates
              call rlonlat_to_xyz(r, Lon, Lat, XyzPlot_D)
-
-             ! Convert from plot coordinates to BATSRUS grid:
-             XyzGm_D = matmul(PlotToGm_DD, XyzPlot_D)
 
              ! Convert to generalized coordinates
              call xyz_to_coord(XyzGm_D, Coord_D)
@@ -208,14 +183,14 @@ contains
                 PlotVar_VII(1:,j,k) = PlotVar_V
              endif
           end do ! r loop
-       end do   ! lon loop
+       end do    ! lon loop
     end do       ! lat loop
 
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine set_plot_shock
   !============================================================================
-  subroutine write_plot_shock(iFile, nPlotVar, NameVar_V, &
-       NameUnit, NameFile)
+  subroutine write_plot_shock(iFile, nPlotVar, NameVar_V, NameUnit, NameFile)
 
     ! Collect results from all blocks and write to single output file.
     use ModMpi
@@ -225,7 +200,7 @@ contains
     integer,          intent(in) :: iFile, nPlotvar
     character(len=*), intent(in) :: NameFile, NameVar_V(nPlotVar), NameUnit
 
-    integer :: iVar, iR, iLon, iLat, iError, nVarAll, jProc
+    integer :: iVar, iLon, iLat, iError, nVarAll, jProc
     character(len=500) :: NameVar
 
     logical:: DoTest
@@ -287,8 +262,8 @@ contains
     deallocate(PlotVar_VII)
 
     call test_stop(NameSub, DoTest)
+
   end subroutine write_plot_shock
   !============================================================================
-
 end module ModPlotShock
 !==============================================================================
