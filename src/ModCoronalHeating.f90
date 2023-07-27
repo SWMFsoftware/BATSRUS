@@ -100,6 +100,7 @@ module ModCoronalHeating
   ! Switch whether or not to use Alignment angle between Zplus and Zminus
   ! Elsasser variables in the cascade rate
   logical, public :: UseAlignmentAngle = .false.
+  real,    public :: Cdiss_C(1:nI,1:nJ,1:nk)
   !$omp threadprivate(Cdiss_C)
 
   logical :: DoInit = .true.
@@ -847,7 +848,7 @@ contains
     integer :: i, j, k
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate,  &
-         DissipationRateDiff, cDiss
+         DissipationRateDiff
     real :: EwavePlus, EwaveMinus
     real :: AlfvenGradRefl, ReflectionRateImb
     logical :: IsNewBlockAlfven
@@ -917,11 +918,11 @@ contains
        ! Calculate sin(theta), where theta is the angle between Zplus
        ! and Zminus at the outer Lperp scale
        if(UseAlignmentAngle)then
-          cDiss = sqrt(1.0 - AlfvenGradRefl &
+          Cdiss_C(i,j,k) = sqrt(1.0 - AlfvenGradRefl &
                *(ReflectionRate/ReflectionRateImb**2)**2)
           WaveDissipationRate_VC(:,i,j,k) = &
-               WaveDissipationRate_VC(:,i,j,k)*cDiss
-          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)*cDiss
+               WaveDissipationRate_VC(:,i,j,k)*Cdiss_C(i,j,k)
+          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)*Cdiss_C(i,j,k)
        end if
     end do; end do; end do
 
