@@ -155,7 +155,7 @@ contains
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
-         UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta2AlphaRatio, &
+         KarmanTaylorBeta2AlphaRatio, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
          LperpTimesSqrtB, rMinWaveReflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
@@ -570,15 +570,6 @@ contains
           end if
        elseif(UseTurbulentCascade)then
           call get_wave_reflection(iBlock)
-          if(UseAlignmentAngle)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                WaveDissipationRate_VC(:,i,j,k) = &
-                     WaveDissipationRate_VC(:,i,j,k) &
-                     *Cdiss_C(i,j,k)
-                CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) &
-                     *Cdiss_C(i,j,k)
-             end do; end do; end do
-          end if
        end if
        if(UseAlfvenWaveDissipation)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
