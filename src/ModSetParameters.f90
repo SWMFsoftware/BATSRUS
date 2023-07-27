@@ -1032,8 +1032,11 @@ contains
                 elseif(index(StringPlot, 'shk')>0) then
                    TypePlotArea = 'shk'
                 endif
-
-                call read_var('TypeCoord', TypeCoordPlot_I(iFile))
+                if(TypePlotArea == 'shk') then
+                   call read_var('DivuDxMin', DivuDxMin)
+                else
+                   call read_var('TypeCoord', TypeCoordPlot_I(iFile))
+                end if
                 call read_var('rMin',   PlotRange_EI(1,iFile))
                 call read_var('rMax',   PlotRange_EI(2,iFile))
                 if (PlotRange_EI(1, iFile) /= PlotRange_EI(2,iFile) &
@@ -1047,8 +1050,6 @@ contains
                 call read_var('LatMax', PlotRange_EI(6,iFile))
                 if (PlotRange_EI(5, iFile) /= PlotRange_EI(6,iFile)) &
                      call read_var('dLat', PlotDx_DI(3,iFile))
-                if(TypePlotArea == 'shk') &
-                     call read_var('DivuDxMin', DivuDxMin)
              elseif (index(StringPlot, 'box')>0)then
                 TypePlotArea = 'box'
                 call read_var('TypeCoord', TypeCoordObs)
