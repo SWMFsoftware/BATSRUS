@@ -4618,10 +4618,13 @@ indices are not calculated.
       <parameter name="nLon"    type="real" min="4" default="36"/>
     </if>
     <if expr="$plotarea =~ /\b(shl|sln|slg|shk)\b/">
-      <parameter name="TypeCoordPlot" type="string" length="3" default="GEO"/>
+      <parameter name="DivuDxMin" type="real" max="0" if="$plotarea =~ /shk/"/>
+      <parameter name="TypeCoordPlot" type="string" length="3" default="GEO"
+		 if="$plotarea !~ /shk/"/>
       <parameter name="rMin"   type="real" min="0"     default="6.6"/>
       <parameter name="rMax"   type="real" min="$rMin" default="6.6"/>
-      <parameter name="dR"     type="real" min="0" if="$rMin != $rMax and $plotarea !~ /shk/"/>
+      <parameter name="dR"     type="real" min="0"
+		 if="$rMin != $rMax and $plotarea !~ /shk/"/>
       <parameter name="LonMin" type="real" min="0"     default="0"/>
       <parameter name="LonMax" type="real" min="$LonMin" max="360"
 		 default="360"/>
@@ -4632,7 +4635,6 @@ indices are not calculated.
 		 default="90"/>
       <parameter name="dLat"   type="real" min="0"
 		 if="$LatMin != $LatMax"/>
-      <parameter name="DivuDxMin" type="real" max="0" if="$plotarea =~ /shk/"/>
     </if>
     <if expr="$plotarea =~ /\bbox\b/">
       <parameter name="TypeCoordPlot" type="string" length="3" default="HGR"/>
@@ -6955,9 +6957,9 @@ limited by the minimum and maximum levels only
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="UPDATE">
   <parameter name="TypeUpdate" type="string" input="select" case="lower">
-    <option name="orig"  value="orig/1" default="T"/>
-    <option name="slow"  value="slow/2"/>
-    <option name="fast"  value="fast/3"/>
+    <option name="orig"  default="T"/>
+    <option name="slow"  />
+    <option name="fast"  />
   </parameter>
 
 #UPDATE
