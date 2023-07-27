@@ -149,7 +149,7 @@ contains
          rRound0, rRound1, StringTest
     use ModBatsrusUtility, ONLY: get_ivar
     use ModOptimizeParam, ONLY: check_optimize_param
-    use ModPlotShock, ONLY: divudxMin
+    use ModPlotShock, ONLY: DivuDxMin
 
     ! Arguments
 
@@ -1047,7 +1047,8 @@ contains
                 call read_var('LatMax', PlotRange_EI(6,iFile))
                 if (PlotRange_EI(5, iFile) /= PlotRange_EI(6,iFile)) &
                      call read_var('dLat', PlotDx_DI(3,iFile))
-                call read_var('divudxMin', divudxMin)
+                if(TypePlotArea == 'shk') &
+                     call read_var('DivuDxMin', DivuDxMin)
              elseif (index(StringPlot, 'box')>0)then
                 TypePlotArea = 'box'
                 call read_var('TypeCoord', TypeCoordObs)
