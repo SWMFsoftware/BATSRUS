@@ -619,13 +619,15 @@ contains
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModAdvance,    ONLY: State_VGB
     use ModB0,         ONLY: B0_DGB
+    use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
+         TeSi_C
 
     integer, intent(in) :: iBlock
 
     integer             :: i, j, k
     real :: HeatCh
 
-    real :: B_D(3)
+    real :: B_D(3), ExtensionFactorInv
 
     ! local variables for ArHeating (Active Region Heating)
     real :: FractionB, Bcell
@@ -646,6 +648,15 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
                   WaveDissipationRate_VC(:,i,j,k),CoronalHeating_C(i,j,k))
+          end do; end do; end do
+       end if
+       if(DoExtendTransitionRegion)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             ExtensionFactorInv = 1/extension_factor(TeSi_C(i,j,k))
+             WaveDissipationRate_VC(:,i,j,k) = ExtensionFactorInv*&
+                  WaveDissipationRate_VC(:,i,j,k)
+             CoronalHeating_C(i,j,k) = ExtensionFactorInv*&
+                  CoronalHeating_C(i,j,k)
           end do; end do; end do
        end if
 
@@ -694,6 +705,12 @@ contains
                * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
        end do; end do; end do
     endif
+    if(DoExtendTransitionRegion.and..not.UseAlfvenWaveDissipation)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) / &
+               extension_factor(TeSi_C(i,j,k))
+       end do; end do; end do
+    end if
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_block_heating

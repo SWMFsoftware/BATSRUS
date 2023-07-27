@@ -122,8 +122,7 @@ contains
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B
     use ModCoronalHeating, ONLY: get_block_heating, &
          UseAlfvenWaveDissipation, WaveDissipationRate_VC
-    use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
-         get_tesi_c, TeSi_C
+    use ModChromosphere, ONLY: get_tesi_c, TeSi_C
     use ModPhysics, ONLY: InvGammaMinus1
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
@@ -206,14 +205,6 @@ contains
     if(UseAlfvenWaveDissipation .and. DoUpdate_V(WaveFirst_) )then
        call get_tesi_c(iBlock, TeSi_C)
        call get_block_heating(iBlock)
-
-       if(DoExtendTransitionRegion)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             WaveDissipationRate_VC(:,i,j,k) = &
-                  WaveDissipationRate_VC(:,i,j,k) &
-                  /extension_factor(TeSi_C(i,j,k))
-          end do; end do; end do
-       end if
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE

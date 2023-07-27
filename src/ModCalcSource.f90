@@ -151,14 +151,13 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
     use ModIonElectron,   ONLY: ion_electron_source_impl
-    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C, &
-         AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, AlfvenMinusLast_
+    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta2AlphaRatio, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
-         LperpTimesSqrtB
+         LperpTimesSqrtB, rMinWaveReflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -404,6 +403,9 @@ contains
     end if ! UseSpeedMin
 
     if(UseWavePressure)then
+       ! Back reaction of the Alfven wave pressure on
+       ! the wave turbulence equations as well as
+       ! its contribution to the wave energy source
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
@@ -423,7 +425,7 @@ contains
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
           if(WDiff_>1)Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
-                  - DivU*(GammaWave - 1)*State_VGB(WDiff_,i,j,k,iBlock)
+               - DivU*(GammaWave - 1)*State_VGB(WDiff_,i,j,k,iBlock)
 
           if(.not.UseMultiIon)then
              Pwave = (GammaWave - 1) &
@@ -442,6 +444,20 @@ contains
                   Source_VC(RhoUy_,i,j,k) + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
           end if
        end do; end do; end do
+       if(DoTest)call write_source('After UseWavePressure')
+    end if ! UseAlfvenWavePressure
+
+    ! TeSi cell-centered values are calculated if needed
+    if((UseCoronalHeating .or. UseAlfvenWaveDissipation) &
+         .and. DoExtendTransitionRegion .or. UseRadCooling) &
+         call get_tesi_c(iBlock, TeSi_C)
+
+    if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
+       ! Calculate heating functions and, if the AW turbulence
+       ! is used, the wave dissipation rates
+       call get_block_heating(iBlock)
+
+       if(UseChromosphereHeating) call add_chromosphere_heating(TeSi_C, iBlock)
 
        if(UseReynoldsDecomposition)then
           DoTestCell = .false.
@@ -449,6 +465,7 @@ contains
           if(UseTransverseTurbulence)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+                if(r_GB(i,j,k,iBlock) < rMinWaveReflection)CYCLE
 
                 ! Calculate unit vector parallel with full B field
                 b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -478,7 +495,7 @@ contains
                         bDotGradVAlfven)
                    ModeConversionPlus = sign(min(abs(ModeConversionPlus), &
                         sqrt(bDotGradVAlfven**2 &
-                        +    product(DissipationRate_V))), ModeConversionPlus)
+                        + product(DissipationRate_V))), ModeConversionPlus)
                 end if
                 ModeConversionMinus = ModeConversionPlus
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
@@ -491,22 +508,22 @@ contains
                         sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
                 end if
 
-                Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k) = &
-                     Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k) &
+                Source_VC(WaveFirst_,i,j,k) =   &
+                     Source_VC(WaveFirst_,i,j,k) &
                      - 0.5*ModeConversionPlus *wD
-                Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_,i,j,k) = &
-                     Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_ ,i,j,k) &
+                Source_VC(WaveLast_,i,j,k) = &
+                     Source_VC(WaveLast_ ,i,j,k) &
                      - 0.5*ModeConversionMinus*wD
 
                 ! Energy source related to the Alfven wave source above
                 Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
                      (ModeConversionPlus + ModeConversionMinus)*wD
                 if(WDiff_>1) &
-                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k)  &
-                     - ModeConversionMinus &
-                     *sum(Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k)) &
-                     - ModeConversionPlus &
-                     *sum(Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_,i,j,k))
+                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k)    &
+                     - ModeConversionMinus * &
+                     State_VGB(WaveFirst_,i,j,k,iBlock) &
+                     - ModeConversionPlus  * &
+                     State_VGB(WaveLast_,i,j,k ,iBlock)
              end do; end do; end do
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -547,36 +564,12 @@ contains
                      (ModeConversionPlus + ModeConversionMinus)*wD
                 if(WDiff_>1) &
                      Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) -&
-                     Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus         -&
+                     Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus   -&
                      Source_VC(WaveLast_ ,i,j,k)*ModeConversionPlus
              end do; end do; end do
           end if
-       end if
-
-       if(DoTest)call write_source('After UseWavePressure')
-    end if
-    if(UseTurbulentCascade.and.(.not.UseReynoldsDecomposition))&
-         call get_wave_reflection(iBlock)
-
-    if((UseCoronalHeating .or. UseAlfvenWaveDissipation) &
-         .and. DoExtendTransitionRegion .or. UseRadCooling) &
-         call get_tesi_c(iBlock, TeSi_C)
-
-    if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
-
-       call get_block_heating(iBlock)
-
-       if(UseChromosphereHeating) call add_chromosphere_heating(TeSi_C, iBlock)
-
-       if(UseAlfvenWaveDissipation)then
-          if(DoExtendTransitionRegion)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                WaveDissipationRate_VC(:,i,j,k) = &
-                     WaveDissipationRate_VC(:,i,j,k) &
-                     /extension_factor(TeSi_C(i,j,k))
-             end do; end do; end do
-          end if
-
+       elseif(UseTurbulentCascade)then
+          call get_wave_reflection(iBlock)
           if(UseAlignmentAngle)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 WaveDissipationRate_VC(:,i,j,k) = &
@@ -586,6 +579,8 @@ contains
                      *Cdiss_C(i,j,k)
              end do; end do; end do
           end if
+       end if
+       if(UseAlfvenWaveDissipation)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                   Source_VC(WaveFirst_:WaveLast_,i,j,k) &
@@ -597,22 +592,16 @@ contains
                   State_VGB(WDiff_,i,j,k,iBlock)
              ! Weighted average of cascade rates for Lperp_, if needed
              if(Lperp_ > 1)Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) +&
-               KarmanTaylorBeta2AlphaRatio*sum( &
-               WaveDissipationRate_VC(:,i,j,k)*  &
-               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
-               max(1e-30, sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))) *&
-               State_VGB(Lperp_,i,j,k,iBlock)
+                  KarmanTaylorBeta2AlphaRatio*sum( &
+                  WaveDissipationRate_VC(:,i,j,k)*  &
+                  State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
+                  max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))*&
+                  State_VGB(Lperp_,i,j,k,iBlock)
           end do; end do; end do
           if(DoTest)call write_source('After UseAlfvenWaveDissipation')
-       end if
+       end if ! UseAlfvenWaveDissipation
 
        if(UseCoronalHeating)then
-          if(DoExtendTransitionRegion)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                CoronalHeating_C(i,j,k) = &
-                     CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
-             end do; end do; end do
-          end if
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(UseElectronPressure)then
                 call apportion_coronal_heating(i, j, k, iBlock, &
@@ -645,7 +634,7 @@ contains
              end if
           end do; end do; end do
           if(DoTest)call write_source('After UseCoronalHeating')
-       end if
+       end if ! UseCoronalHeating
     end if
 
     if(UsePui) call add_pui_source(iBlock)
