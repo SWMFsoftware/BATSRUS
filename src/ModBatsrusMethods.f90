@@ -102,10 +102,10 @@ contains
 
       ! adjust if Area_I(iArea)%TypeCoordIn == hgr/hgi/GSE
       do iArea=1,nArea
-         if (Area_I(iArea)%TypeCoordIn == '') CYCLE
          TypeCoordTmp = Area_I(iArea)%TypeCoordIn
+         if (TypeCoordTmp == '' .or. TypeCoordTmp == TypeCoordSystem) CYCLE
 
-         if(TypeCoordTmp == 'hgr') then
+         if(TypeCoordTmp == 'HGR' .and. TypeCoordSystem == 'hgr') then
             ! If TypeCoordIn is hgr
             if (Area_I(iArea)%NameShape == 'brick_coord') then
                ! if NameShape is 'brick_coord' adjust the Longitude for the box
@@ -119,9 +119,9 @@ contains
                Area_I(iArea)%Center_D(Phi_) = modulo( &
                     Area_I(iArea)%Center_D(Phi_), cTwoPi)
             else
-               call stop_mpi(NameSub//': hgr can only be added to brick_coord')
+               call stop_mpi(NameSub//': HGR can only be added to brick_coord')
             end if
-         elseif(TypeCoordTmp == 'hgi') then
+         elseif(TypeCoordTmp == 'HGI' .and. TypeCoordSystem == 'hgi') then
             ! If TypeCoordIn is hgi
             if (Area_I(iArea)%NameShape == 'brick_coord') then
                ! if NameShape is 'brick_coord' adjust the Longitude for the box
@@ -135,15 +135,16 @@ contains
                Area_I(iArea)%Center_D(Phi_) = modulo( &
                     Area_I(iArea)%Center_D(Phi_), cTwoPi)
             else
-               call stop_mpi(NameSub//': hgi can only be added to brick_coord')
+               call stop_mpi(NameSub//': HGI can only be added to brick_coord')
             end if
          elseif(TypeCoordTmp == 'GSE') then
             ! Rotate if TypeCoordIn == GSE
             Area_I(iArea)%DoRotate = .true.
             Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
                  TypeCoordSystem, TypeCoordTmp)
-         elseif(TypeCoordTmp /= 'HGR' .and. TypeCoordTmp /= 'HGI') then
-            call stop_mpi(NameSub//': TypeCoordIn only supports hgr/hgi/GSE!')
+         else
+            call stop_mpi(NameSub//': TypeCoordIn, TypeCoordSystem ='// &
+                 TypeCoordTmp//' '//TypeCoordSystem)
          end if
       end do
 
