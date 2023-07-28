@@ -114,7 +114,7 @@ contains
     integer :: i, j, k, iVar
 
     real :: r, Lon, Lat
-    real :: XyzPlot_D(3), XyzGm_D(3)
+    real :: XyzPlot_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
     ! Interpolated plot variables
@@ -160,7 +160,7 @@ contains
              call rlonlat_to_xyz(r, Lon, Lat, XyzPlot_D)
 
              ! Convert to generalized coordinates
-             call xyz_to_coord(XyzGm_D, Coord_D)
+             call xyz_to_coord(XyzPlot_D, Coord_D)
 
              ! Normalize to block coordinates
              CoordNorm_D = &
