@@ -74,26 +74,78 @@ contains
       use ModRestartFile, ONLY: NameRestartInDir, &
            UseRestartInSeries, string_append_iter
 
-      use ModMain, ONLY: nIteration
+      use ModMain, ONLY: nIteration, TypeCoordSystem
       use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
            set_amr_geometry, nBlock, Unused_B, init_amr_criteria, &
            nInitialAmrLevel
+      use BATL_region, only: Area_I, nArea
       use ModBatlInterface, ONLY: set_batsrus_grid
       ! Dummy variables, to avoid array size issues with State_VGB in
       ! set_amr_criteria
       use ModAdvance, ONLY : nVar, State_VGB
       use ModLoadBalance, ONLY: load_balance
       use ModAMR, ONLY: DoSetAmrLimits, set_amr_limits
+      use CON_axes, ONLY: transform_matrix, dLongitudeHgr, dLongitudeHgi
+      use ModUtilities, ONLY : upper_case
+      use ModNumConst, ONLY: cTwoPi
 
       ! local variables
 
       character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
       character(len=100) :: NameFile
 
-      integer:: iBlock
+      integer:: iBlock, iArea
+      character(len=3):: TypeCoordTmp
 
       !------------------------------------------------------------------------
       call set_batsrus_grid
+
+      ! adjust if Area_I(iArea)%TypeCoordIn == hgr/hgi/GSE
+      do iArea=1,nArea
+         if (Area_I(iArea)%TypeCoordIn == '') CYCLE
+         TypeCoordTmp = Area_I(iArea)%TypeCoordIn
+
+         if(TypeCoordTmp == 'hgr') then
+            ! If TypeCoordIn is hgr
+            if (Area_I(iArea)%NameShape == 'brick_coord') then
+               ! if NameShape is 'brick_coord' adjust the Longitude for the box
+               Area_I(iArea)%Center_D(Phi_) = &
+                    Area_I(iArea)%Center_D(Phi_)-dLongitudeHgr
+               ! If Center_D < 0, then Center_D += 2*Pi
+               if (Area_I(iArea)%Center_D(Phi_) < 0) &
+                    Area_I(iArea)%Center_D(Phi_) =   &
+                    Area_I(iArea)%Center_D(Phi_) + cTwoPi
+               ! Center_D is within 0 and 2*Pi
+               Area_I(iArea)%Center_D(Phi_) = modulo( &
+                    Area_I(iArea)%Center_D(Phi_), cTwoPi)
+            else
+               call stop_mpi(NameSub//': hgr can only be added to brick_coord')
+            end if
+         elseif(TypeCoordTmp == 'hgi') then
+            ! If TypeCoordIn is hgi
+            if (Area_I(iArea)%NameShape == 'brick_coord') then
+               ! if NameShape is 'brick_coord' adjust the Longitude for the box
+               Area_I(iArea)%Center_D(Phi_) = &
+                    Area_I(iArea)%Center_D(Phi_)-dLongitudeHgi
+               ! If Center_D < 0, then Center_D += 2*Pi
+               if (Area_I(iArea)%Center_D(Phi_) < 0) &
+                    Area_I(iArea)%Center_D(Phi_) =   &
+                    Area_I(iArea)%Center_D(Phi_) + cTwoPi
+               ! Center_D is within 0 and 2*Pi
+               Area_I(iArea)%Center_D(Phi_) = modulo( &
+                    Area_I(iArea)%Center_D(Phi_), cTwoPi)
+            else
+               call stop_mpi(NameSub//': hgi can only be added to brick_coord')
+            end if
+         elseif(TypeCoordTmp == 'GSE') then
+            ! Rotate if TypeCoordIn == GSE
+            Area_I(iArea)%DoRotate = .true.
+            Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
+                 TypeCoordSystem, TypeCoordTmp)
+         else
+            call stop_mpi(NameSub//': TypeCoordIn only supports hgr/hgi/GSE!')
+         end if
+      end do
 
       if (.not.IsRestart) then
          ! Create initial solution block geometry.
