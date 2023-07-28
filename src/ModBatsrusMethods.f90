@@ -142,7 +142,7 @@ contains
             Area_I(iArea)%DoRotate = .true.
             Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
                  TypeCoordSystem, TypeCoordTmp)
-         else
+         elseif(TypeCoordTmp /= 'HGR' .and. TypeCoordTmp /= 'HGI') then
             call stop_mpi(NameSub//': TypeCoordIn only supports hgr/hgi/GSE!')
          end if
       end do
