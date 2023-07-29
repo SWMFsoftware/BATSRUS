@@ -889,7 +889,7 @@ contains
 
        ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
        if(UseNewLimiter4Reflection)then
-          DissipationRateDiff =-0.50*(WaveDissipationRate_VC(WaveFirst_,i,j,k) &
+          DissipationRateDiff =-0.50*(WaveDissipationRate_VC(WaveFirst_,i,j,k)&
                - WaveDissipationRate_VC(WaveLast_,i,j,k))
           ReflectionRate = sign(min(ReflectionRateImb,&
                abs(DissipationRateDiff)), DissipationRateDiff)

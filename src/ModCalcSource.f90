@@ -576,8 +576,8 @@ contains
                   KarmanTaylorBeta2AlphaRatio*sum( &
                   WaveDissipationRate_VC(:,i,j,k)*  &
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
-                  max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))*&
-                  State_VGB(Lperp_,i,j,k,iBlock)
+                  max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))&
+                  *State_VGB(Lperp_,i,j,k,iBlock)
           end do; end do; end do
           if(DoTest)call write_source('After UseAlfvenWaveDissipation')
        end if ! UseAlfvenWaveDissipation
