@@ -1355,6 +1355,103 @@ contains
 
     end subroutine get_alfven_speed
     !==========================================================================
+    subroutine vect_dot_grad_state(Vector_DC, iVar, iBlock)
+
+      use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, Dim1_, Dim2_, Dim3_
+
+      real,    intent(in) :: Vector_DC(MaxDim,nI,nJ,nK)
+      integer, intent(in) :: iVar, iBlock
+
+      real :: Source_C(nI,nJ,nK), VectorComp
+      integer :: iDir, i, j, k
+
+      character(len=*), parameter:: NameSub = 'vect_dot_grad_state'
+      !------------------------------------------------------------------------
+
+      if(IsCartesian) then
+         do k = 1,nK; do j=1,nJ; do i=1,nI
+            VectorComp = Vector_DC(x_,i,j,k)
+            Source_C(i,j,k) = 0.5*(VectorComp*(&
+                 LeftState_VX(iVar,i+1,j,k) + RightState_VX(iVar,i+1,j,k)&
+                 -LeftState_VX(iVar,i,j,k) - RightState_VX(iVar,i,j,k))  &
+                 + abs(VectorComp)*(&
+                 LeftState_VX(iVar,i+1,j,k) - RightState_VX(iVar,i+1,j,k)&
+                 -LeftState_VX(iVar,i,j,k) + RightState_VX(iVar,i,j,k)) )&
+                 /CellSize_DB(Dim1_,iBlock)
+
+            if(nJ > 1)then
+               VectorComp = Vector_DC(y_,i,j,k)
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VY(iVar,i,j+1,k) + RightState_VY(iVar,i,j+1,k)&
+                    -LeftState_VY(iVar,i,j,k) - RightState_VY(iVar,i,j,k))  &
+                    + abs(VectorComp)*(&
+                    LeftState_VY(iVar,i,j+1,k) - RightState_VY(iVar,i,j+1,k)&
+                    -LeftState_VY(iVar,i,j,k) + RightState_VY(iVar,i,j,k)) )&
+                    /CellSize_DB(Dim2_,iBlock)
+            end if
+            if(nK > 1)then
+               VectorComp = Vector_DC(z_,i,j,k)
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VZ(iVar,i,j,k+1) + RightState_VZ(iVar,i,j,k+1)&
+                    -LeftState_VZ(iVar,i,j,k) - RightState_VZ(iVar,i,j,k))  &
+                    + abs(VectorComp)*(&
+                    LeftState_VZ(iVar,i,j,k+1) - RightState_VZ(iVar,i,j,k+1)&
+                    -LeftState_VZ(iVar,i,j,k) + RightState_VZ(iVar,i,j,k)) )&
+                    /CellSize_DB(Dim3_,iBlock)
+            end if
+         end do; end do; end do
+      else if(IsRzGeometry) then
+         call stop_mpi(NameSub//': RZ geometry to be implemented')
+      else
+         do k = 1,nK; do j=1,nJ; do i=1,nI
+            VectorComp = sum(Vector_DC(:,i,j,k)* &
+                 FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock))
+            Source_C(i,j,k) = 0.5*(VectorComp*(&
+                 LeftState_VX(iVar,i+1,j,k) + RightState_VX(iVar,i+1,j,k)) &
+                 + abs(VectorComp)*(&
+                 LeftState_VX(iVar,i+1,j,k) - RightState_VX(iVar,i+1,j,k)))
+            VectorComp = -sum(Vector_DC(:,i,j,k)* &
+                 FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock))
+            Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                 LeftState_VX(iVar,i,j,k) + RightState_VX(iVar,i,j,k)) &
+                 + abs(VectorComp)*(&
+                 -LeftState_VX(iVar,i,j,k) + RightState_VX(iVar,i,j,k)))
+
+            if(nJ > 1)then
+               VectorComp = sum(Vector_DC(:,i,j,k)* &
+                    FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock))
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VY(iVar,i,j+1,k) + RightState_VY(iVar,i,j+1,k))&
+                    + abs(VectorComp)*(&
+                    LeftState_VY(iVar,i,j+1,k) - RightState_VY(iVar,i,j+1,k)))
+               VectorComp = -sum(Vector_DC(:,i,j,k)* &
+                    FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock))
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VY(iVar,i,j,k) + RightState_VY(iVar,i,j,k))&
+                    + abs(VectorComp)*(&
+                    -LeftState_VY(iVar,i,j,k) + RightState_VY(iVar,i,j,k)))
+            end if
+            if(nK > 1) then
+               VectorComp = sum(Vector_DC(:,i,j,k)* &
+                    FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock))
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VZ(iVar,i,j,k+1) + RightState_VZ(iVar,i,j,k+1))&
+                    + abs(VectorComp)*(&
+                    LeftState_VZ(iVar,i,j,k+1) - RightState_VZ(iVar,i,j,k+1)))
+               VectorComp = -sum(Vector_DC(:,i,j,k)* &
+                    FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock))
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VZ(iVar,i,j,k) + RightState_VZ(iVar,i,j,k))+&
+                    abs(VectorComp)*(&
+                    -LeftState_VZ(iVar,i,j,k) + RightState_VZ(iVar,i,j,k)))
+            end if
+
+            Source_C(i,j,k)  = Source_C(i,j,k)/CellVolume_GB(i,j,k,iBlock)
+         end do; end do; end do
+      end if
+      Source_VC(iVar,:,:,:) = Source_VC(iVar,:,:,:) - Source_C(:,:,:)
+    end subroutine vect_dot_grad_state
+    !==========================================================================
     subroutine calc_grad_uplus(GradU_DD, i, j, k, iBlock)
 
       ! This routine calculates the gradient tensor of uPlus_D, which is used
