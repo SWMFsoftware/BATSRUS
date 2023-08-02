@@ -3826,8 +3826,6 @@ contains
            B1B0L, B1B0R, cChGLLeft, cChGLRight
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
-      ! Energy difference (in the standard argo, Rho*sigma_D*Z^2/2
-      real :: wD
       integer:: jFluid
 #ifndef SCALAR
       !------------------------------------------------------------------------
@@ -3921,23 +3919,21 @@ contains
             GammaWavePw = GammaWave*(GammaWave - 1) &
                  *max(StateLeft_V(Ew_)/StateLeft_V(Rho_), &
                  StateRight_V(Ew_)/StateRight_V(Rho_))*Rho
-         else
-            GammaWavePw = GammaWave*(GammaWave - 1) &
-                 *sum(State_V(WaveFirst_:WaveLast_))
-         end if
-         if(UseReynoldsDecomposition)then
+         elseif(UseReynoldsDecomposition)then
             if(WDiff_>1)then
-               wD = State_V(WDiff_)
-            else
-               wD = SigmaD*sum(State_V(WaveFirst_:WaveLast_))
-            end if
-            if(UseTransverseTurbulence)then
-               GammaWavePw = GammaWavePw + GammaWave*(GammaWave - 1)*abs(wD)
+               GammaWavePw = &
+                    abs(State_V(WDiff_)) + sum(State_V(WaveFirst_:WaveLast_))
+            elseif(UseTransverseTurbulence)then
+               GammaWavePw = GammaWave*(GammaWave - 1)*(1 + abs(SigmaD)) &
+                    *sum(State_V(WaveFirst_:WaveLast_))
             else
                GammaWavePw = (GammaWave + SigmaD/6) &
                     *((GammaWave - 1) + SigmaD/6) &
                     *sum(State_V(WaveFirst_:WaveLast_))
             end if
+         else
+            GammaWavePw = GammaWave*(GammaWave - 1) &
+                 *sum(State_V(WaveFirst_:WaveLast_))
          end if
          Sound2  = Sound2 + GammaWavePw*InvRho
       end if
