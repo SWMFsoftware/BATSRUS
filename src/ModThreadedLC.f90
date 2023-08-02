@@ -1148,7 +1148,7 @@ contains
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, UnitB_, InvGammaElectronMinus1
     use ModVarIndexes,   ONLY: Rho_, p_, Bx_, Bz_, &
-         RhoUx_, RhoUz_, EHot_
+         RhoUx_, RhoUz_, EHot_, WDiff_
     use ModImplicit,     ONLY: iTeImpl
     use ModB0,           ONLY: B0_DGB
     use ModWaves,        ONLY: WaveFirst_, WaveLast_
@@ -1313,6 +1313,7 @@ contains
 
           State_VG(iMajor, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
+          if(WDiff_>1)State_VG(WDiff_, i, j, k) = 0.0
        end do
 
        if(Ehot_ > 1)then
