@@ -10192,9 +10192,6 @@ Default value for PoyntingFluxPerBSi is 1.0E-6.
     <parameter name="LperpTimesSqrtBSi"  type="real"    default="1.5E5"/>
     <parameter name="rMinWaveReflection" type="real"    default="0"/>
     <parameter name="UseReynoldsDecomposition" type = "logical" default="F"/>
-    <if expr="$UseReynoldsDecomposition">
-      <parameter name="KarmanTaylorBeta" type="real"    default="1.0"/>
-    </if>
   </if>
   <if expr="$TypeCoronalHeating =~ /usmanov/">
     <parameter name="UseTransverseTurbulence" type="logical" default="T"/>

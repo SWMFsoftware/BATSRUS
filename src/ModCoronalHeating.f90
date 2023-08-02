@@ -480,10 +480,6 @@ contains
              call read_var(&
                   'UseReynoldsDecomposition', UseNewLimiter4Reflection)
           end if
-          ! KarmanTaylorBeta is present in non-linear term in the evolution
-          ! equation for Lperp via its ratio to KarmanTaylorAlpha ...
-          if(UseReynoldsDecomposition.and.Lperp_>1)&
-               call read_var('KarmanTaylorBeta', KarmanTaylorBeta2AlphaRatio)
        case('usmanov')
           UseAlfvenWaveDissipation = .true.
           UseReynoldsDecomposition = .true.
