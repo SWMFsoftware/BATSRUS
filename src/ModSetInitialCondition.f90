@@ -319,7 +319,30 @@ contains
                 if(DoTestCell)write(*,*) NameSub,': cons shock State=', &
                      State_VGB(:,i,j,k,iBlock)
 
-             end if ! UseShockTube
+                ! end if UseShockTube
+
+             elseif(UseWave)then
+                ! Apply waves/bump without shocktube
+                call apply_wave(i, j, k, iBlock)
+                if(DoTestCell)write(*,*) NameSub,': wave State=', &
+                     State_VGB(:,i,j,k,iBlock)
+#ifndef SCALAR
+                ! Convert velocity to momentum
+                do iFluid = 1, nFluid
+                   if(nFluid > 1) call select_fluid(iFluid)
+                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                        State_VGB(iRho,i,j,k,iBlock) * &
+                        State_VGB(iUx:iUz,i,j,k,iBlock)
+                end do
+#endif
+                if(.not.UseB0)CYCLE
+                ! Remove B0 from B (if any)
+                State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                     State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+                if(DoTestCell)write(*,*) NameSub,': cons wave State=', &
+                     State_VGB(:,i,j,k,iBlock)
+
+             end if
 
           end do; end do; end do
 

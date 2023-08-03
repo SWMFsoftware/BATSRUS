@@ -1320,7 +1320,7 @@ contains
     use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0, &
          IsTimeAccurate, Cfl, dt
     use ModB0,      ONLY: B0_DGB
-    use ModAdvance, ONLY: State_VGB, DtMax_CB
+    use ModAdvance, ONLY: State_VGB, DtMax_CB, DoUpdate_V
     use ModPhysics, ONLY: UseConstantTau_I, TauInstability_I, &
          IonMassPerCharge, TauGlobal_I
     use ModMultiFluid, ONLY: select_fluid, iP, iPpar
@@ -1343,9 +1343,10 @@ contains
        if(Unused_B(iBlock)) CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-
           do iFluid = 1, nFluid
              if(nFluid > 1) call select_fluid(iFluid)
+
+             if(.not.DoUpdate_V(iPpar)) CYCLE
 
              UseConstantTau = UseConstantTau_I(iFluid)
              TauInstability = TauInstability_I(iFluid)

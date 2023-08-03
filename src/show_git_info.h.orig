@@ -1,4 +1,4 @@
 
   write(*,'(100(a/))') &
-       'Git repo=git@gitlab.umich.edu:swmf_software/BATSRUS', &
+       'Git repo=git@github.com:SWMFsoftware/BATSRUS', &
        '  GIT REFERENCES HAVE NOT BEEN OBTAINED!'

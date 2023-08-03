@@ -323,10 +323,10 @@ contains
             NameCaller=NameSub//'_tec_direct_connect')
     elseif(DoPlotBox)then
        ! Initialize the box grid for this file
-       call init_plot_box(iFile, nPlotVar)
+       call init_plot_box(iFile)
     elseif(DoPlotShell)then
        ! Initialize the shell grid for this file
-       call init_plot_shell(iFile, nPlotVar)
+       call init_plot_shell(iFile)
     elseif(DoPlotShock)then
        ! Initialize the shock grid for this file
        call init_plot_shock(iFile, nPlotVar)

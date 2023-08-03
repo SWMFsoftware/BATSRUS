@@ -151,14 +151,13 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
     use ModIonElectron,   ONLY: ion_electron_source_impl
-    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C, &
-         AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, AlfvenMinusLast_
+    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
-         UseAlignmentAngle, Cdiss_C, KarmanTaylorBeta2AlphaRatio, &
+         KarmanTaylorBeta2AlphaRatio, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
-         LperpTimesSqrtB
+         LperpTimesSqrtB, rMinWaveReflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -227,8 +226,6 @@ contains
     ! extent of energy difference, i. e. as constant \sigma_D multiplied
     ! by the total energy. Otherwise, a separate equation can be solved
     real :: wD
-    ! Total magnetic field and dissipation rates
-    real :: FullB, DissipationRate_V(WaveFirst_:WaveLast_)
     !
     ! Mode interaction coefficients for conversion of
     ! W_+ and W_- to the energy difference, Z^2\sigma_D and vise versa
@@ -404,6 +401,9 @@ contains
     end if ! UseSpeedMin
 
     if(UseWavePressure)then
+       ! Back reaction of the Alfven wave pressure on
+       ! the wave turbulence equations as well as
+       ! its contribution to the wave energy source
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
@@ -423,7 +423,7 @@ contains
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
           if(WDiff_>1)Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
-                  - DivU*(GammaWave - 1)*State_VGB(WDiff_,i,j,k,iBlock)
+               - DivU*(GammaWave - 1)*State_VGB(WDiff_,i,j,k,iBlock)
 
           if(.not.UseMultiIon)then
              Pwave = (GammaWave - 1) &
@@ -442,6 +442,20 @@ contains
                   Source_VC(RhoUy_,i,j,k) + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
           end if
        end do; end do; end do
+       if(DoTest)call write_source('After UseWavePressure')
+    end if ! UseAlfvenWavePressure
+
+    ! TeSi cell-centered values are calculated if needed
+    if((UseCoronalHeating .or. UseAlfvenWaveDissipation) &
+         .and. DoExtendTransitionRegion .or. UseRadCooling) &
+         call get_tesi_c(iBlock, TeSi_C)
+
+    if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
+       ! Calculate heating functions and, if the AW turbulence
+       ! is used, the wave dissipation rates
+       call get_block_heating(iBlock)
+
+       if(UseChromosphereHeating) call add_chromosphere_heating(TeSi_C, iBlock)
 
        if(UseReynoldsDecomposition)then
           DoTestCell = .false.
@@ -449,12 +463,12 @@ contains
           if(UseTransverseTurbulence)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+                if(r_GB(i,j,k,iBlock) < rMinWaveReflection)CYCLE
 
                 ! Calculate unit vector parallel with full B field
                 b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                 if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-                FullB = norm2(b_D)
-                b_D = b_D/FullB
+                b_D = b_D/norm2(b_D)
                 ! Calculate gradient tensor of Alfven speed
                 call calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, &
                      IsNewBlockAlfven)
@@ -469,16 +483,13 @@ contains
 
                 ModeConversionPlus  = 0.5*DivU_C(i,j,k) - bDotbDotGradU
                 if(UseTurbulentCascade)then
-                   DissipationRate_V = 2/LperpTimesSqrtB*sqrt(&
-                        State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*FullB/&
-                        State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
                    bDotGradVAlfven = sign(min(abs(bDotGradVAlfven), 0.5*abs(&
-                        DissipationRate_V(WaveFirst_) - &
-                        DissipationRate_V(WaveLast_)) ),&
+                        WaveDissipationRate_VC(WaveFirst_,i,j,k) - &
+                        WaveDissipationRate_VC(WaveLast_ ,i,j,k)) ),&
                         bDotGradVAlfven)
                    ModeConversionPlus = sign(min(abs(ModeConversionPlus), &
-                        sqrt(bDotGradVAlfven**2 &
-                        +    product(DissipationRate_V))), ModeConversionPlus)
+                        sqrt(bDotGradVAlfven**2 + product(&
+                        WaveDissipationRate_VC(:,i,j,k)))), ModeConversionPlus)
                 end if
                 ModeConversionMinus = ModeConversionPlus
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
@@ -491,22 +502,20 @@ contains
                         sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
                 end if
 
-                Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k) = &
-                     Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k) &
+                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
                      - 0.5*ModeConversionPlus *wD
-                Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_,i,j,k) = &
-                     Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_ ,i,j,k) &
+                Source_VC(WaveLast_ ,i,j,k) = Source_VC(WaveLast_ ,i,j,k) &
                      - 0.5*ModeConversionMinus*wD
 
                 ! Energy source related to the Alfven wave source above
                 Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
                      (ModeConversionPlus + ModeConversionMinus)*wD
                 if(WDiff_>1) &
-                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k)  &
-                     - ModeConversionMinus &
-                     *sum(Source_VC(AlfvenPlusFirst_:AlfvenPlusLast_,i,j,k)) &
-                     - ModeConversionPlus &
-                     *sum(Source_VC(AlfvenMinusFirst_:AlfvenMinusLast_,i,j,k))
+                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k)    &
+                     - ModeConversionMinus * &
+                     State_VGB(WaveFirst_,i,j,k,iBlock) &
+                     - ModeConversionPlus  * &
+                     State_VGB(WaveLast_,i,j,k ,iBlock)
              end do; end do; end do
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -535,11 +544,9 @@ contains
                         sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
                 end if
 
-                Source_VC(WaveFirst_,i,j,k) = &
-                     Source_VC(WaveFirst_,i,j,k) &
+                Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
                      - 0.5*ModeConversionPlus *wD
-                Source_VC(WaveLast_,i,j,k) = &
-                     Source_VC(WaveLast_ ,i,j,k) &
+                Source_VC(WaveLast_, i,j,k) = Source_VC(WaveLast_ ,i,j,k) &
                      - 0.5*ModeConversionMinus*wD
 
                 ! Energy source related to the Alfven wave source above
@@ -547,45 +554,14 @@ contains
                      (ModeConversionPlus + ModeConversionMinus)*wD
                 if(WDiff_>1) &
                      Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) -&
-                     Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus         -&
+                     Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus   -&
                      Source_VC(WaveLast_ ,i,j,k)*ModeConversionPlus
              end do; end do; end do
           end if
+       elseif(UseTurbulentCascade)then
+          call get_wave_reflection(iBlock)
        end if
-
-       if(DoTest)call write_source('After UseWavePressure')
-    end if
-    if(UseTurbulentCascade.and.(.not.UseReynoldsDecomposition))&
-         call get_wave_reflection(iBlock)
-
-    if((UseCoronalHeating .or. UseAlfvenWaveDissipation) &
-         .and. DoExtendTransitionRegion .or. UseRadCooling) &
-         call get_tesi_c(iBlock, TeSi_C)
-
-    if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
-
-       call get_block_heating(iBlock)
-
-       if(UseChromosphereHeating) call add_chromosphere_heating(TeSi_C, iBlock)
-
        if(UseAlfvenWaveDissipation)then
-          if(DoExtendTransitionRegion)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                WaveDissipationRate_VC(:,i,j,k) = &
-                     WaveDissipationRate_VC(:,i,j,k) &
-                     /extension_factor(TeSi_C(i,j,k))
-             end do; end do; end do
-          end if
-
-          if(UseAlignmentAngle)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                WaveDissipationRate_VC(:,i,j,k) = &
-                     WaveDissipationRate_VC(:,i,j,k) &
-                     *Cdiss_C(i,j,k)
-                CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) &
-                     *Cdiss_C(i,j,k)
-             end do; end do; end do
-          end if
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                   Source_VC(WaveFirst_:WaveLast_,i,j,k) &
@@ -597,22 +573,16 @@ contains
                   State_VGB(WDiff_,i,j,k,iBlock)
              ! Weighted average of cascade rates for Lperp_, if needed
              if(Lperp_ > 1)Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) +&
-               KarmanTaylorBeta2AlphaRatio*sum( &
-               WaveDissipationRate_VC(:,i,j,k)*  &
-               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
-               max(1e-30, sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))) *&
-               State_VGB(Lperp_,i,j,k,iBlock)
+                  KarmanTaylorBeta2AlphaRatio*sum( &
+                  WaveDissipationRate_VC(:,i,j,k)*  &
+                  State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
+                  max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))&
+                  *State_VGB(Lperp_,i,j,k,iBlock)
           end do; end do; end do
           if(DoTest)call write_source('After UseAlfvenWaveDissipation')
-       end if
+       end if ! UseAlfvenWaveDissipation
 
        if(UseCoronalHeating)then
-          if(DoExtendTransitionRegion)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                CoronalHeating_C(i,j,k) = &
-                     CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
-             end do; end do; end do
-          end if
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(UseElectronPressure)then
                 call apportion_coronal_heating(i, j, k, iBlock, &
@@ -645,7 +615,7 @@ contains
              end if
           end do; end do; end do
           if(DoTest)call write_source('After UseCoronalHeating')
-       end if
+       end if ! UseCoronalHeating
     end if
 
     if(UsePui) call add_pui_source(iBlock)
@@ -1384,6 +1354,103 @@ contains
       end if
 
     end subroutine get_alfven_speed
+    !==========================================================================
+    subroutine vect_dot_grad_state(Vector_DC, iVar, iBlock)
+
+      use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, Dim1_, Dim2_, Dim3_
+
+      real,    intent(in) :: Vector_DC(MaxDim,nI,nJ,nK)
+      integer, intent(in) :: iVar, iBlock
+
+      real :: Source_C(nI,nJ,nK), VectorComp
+      integer :: iDir, i, j, k
+
+      character(len=*), parameter:: NameSub = 'vect_dot_grad_state'
+      !------------------------------------------------------------------------
+
+      if(IsCartesian) then
+         do k = 1,nK; do j=1,nJ; do i=1,nI
+            VectorComp = Vector_DC(x_,i,j,k)
+            Source_C(i,j,k) = 0.5*(VectorComp*(&
+                 LeftState_VX(iVar,i+1,j,k) + RightState_VX(iVar,i+1,j,k)&
+                 -LeftState_VX(iVar,i,j,k) - RightState_VX(iVar,i,j,k))  &
+                 + abs(VectorComp)*(&
+                 LeftState_VX(iVar,i+1,j,k) - RightState_VX(iVar,i+1,j,k)&
+                 -LeftState_VX(iVar,i,j,k) + RightState_VX(iVar,i,j,k)) )&
+                 /CellSize_DB(Dim1_,iBlock)
+
+            if(nJ > 1)then
+               VectorComp = Vector_DC(y_,i,j,k)
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VY(iVar,i,j+1,k) + RightState_VY(iVar,i,j+1,k)&
+                    -LeftState_VY(iVar,i,j,k) - RightState_VY(iVar,i,j,k))  &
+                    + abs(VectorComp)*(&
+                    LeftState_VY(iVar,i,j+1,k) - RightState_VY(iVar,i,j+1,k)&
+                    -LeftState_VY(iVar,i,j,k) + RightState_VY(iVar,i,j,k)) )&
+                    /CellSize_DB(Dim2_,iBlock)
+            end if
+            if(nK > 1)then
+               VectorComp = Vector_DC(z_,i,j,k)
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VZ(iVar,i,j,k+1) + RightState_VZ(iVar,i,j,k+1)&
+                    -LeftState_VZ(iVar,i,j,k) - RightState_VZ(iVar,i,j,k))  &
+                    + abs(VectorComp)*(&
+                    LeftState_VZ(iVar,i,j,k+1) - RightState_VZ(iVar,i,j,k+1)&
+                    -LeftState_VZ(iVar,i,j,k) + RightState_VZ(iVar,i,j,k)) )&
+                    /CellSize_DB(Dim3_,iBlock)
+            end if
+         end do; end do; end do
+      else if(IsRzGeometry) then
+         call stop_mpi(NameSub//': RZ geometry to be implemented')
+      else
+         do k = 1,nK; do j=1,nJ; do i=1,nI
+            VectorComp = sum(Vector_DC(:,i,j,k)* &
+                 FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock))
+            Source_C(i,j,k) = 0.5*(VectorComp*(&
+                 LeftState_VX(iVar,i+1,j,k) + RightState_VX(iVar,i+1,j,k)) &
+                 + abs(VectorComp)*(&
+                 LeftState_VX(iVar,i+1,j,k) - RightState_VX(iVar,i+1,j,k)))
+            VectorComp = -sum(Vector_DC(:,i,j,k)* &
+                 FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock))
+            Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                 LeftState_VX(iVar,i,j,k) + RightState_VX(iVar,i,j,k)) &
+                 + abs(VectorComp)*(&
+                 -LeftState_VX(iVar,i,j,k) + RightState_VX(iVar,i,j,k)))
+
+            if(nJ > 1)then
+               VectorComp = sum(Vector_DC(:,i,j,k)* &
+                    FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock))
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VY(iVar,i,j+1,k) + RightState_VY(iVar,i,j+1,k))&
+                    + abs(VectorComp)*(&
+                    LeftState_VY(iVar,i,j+1,k) - RightState_VY(iVar,i,j+1,k)))
+               VectorComp = -sum(Vector_DC(:,i,j,k)* &
+                    FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock))
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VY(iVar,i,j,k) + RightState_VY(iVar,i,j,k))&
+                    + abs(VectorComp)*(&
+                    -LeftState_VY(iVar,i,j,k) + RightState_VY(iVar,i,j,k)))
+            end if
+            if(nK > 1) then
+               VectorComp = sum(Vector_DC(:,i,j,k)* &
+                    FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock))
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VZ(iVar,i,j,k+1) + RightState_VZ(iVar,i,j,k+1))&
+                    + abs(VectorComp)*(&
+                    LeftState_VZ(iVar,i,j,k+1) - RightState_VZ(iVar,i,j,k+1)))
+               VectorComp = -sum(Vector_DC(:,i,j,k)* &
+                    FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock))
+               Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
+                    LeftState_VZ(iVar,i,j,k) + RightState_VZ(iVar,i,j,k))+&
+                    abs(VectorComp)*(&
+                    -LeftState_VZ(iVar,i,j,k) + RightState_VZ(iVar,i,j,k)))
+            end if
+
+            Source_C(i,j,k)  = Source_C(i,j,k)/CellVolume_GB(i,j,k,iBlock)
+         end do; end do; end do
+      end if
+      Source_VC(iVar,:,:,:) = Source_VC(iVar,:,:,:) - Source_C(:,:,:)
+    end subroutine vect_dot_grad_state
     !==========================================================================
     subroutine calc_grad_uplus(GradU_DD, i, j, k, iBlock)
 

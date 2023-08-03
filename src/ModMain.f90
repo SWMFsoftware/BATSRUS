@@ -299,7 +299,7 @@ module ModMain
   logical:: UseUserPerturbation      = .false.
   logical:: UseUserICs               = .false.
   logical:: UseUserB0                = .false.
-  logical:: UseUserInitSession       = .false.
+  logical:: UseUserInitSession       = .true.
   logical:: UseUserUpdateStates      = .false.
   logical:: UseUserWriteProgress     = .false.
   !$acc declare create(UseUserUpdateStates)

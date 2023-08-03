@@ -188,6 +188,16 @@ y=0 MHD idl		StringPlot
 0.001 year		DtSavePlot
 -1.0			DxSavePlot
 
+#USERINPUTBEGIN -----------------------------------
+
+#REGIONS
+LevelSet		NameRegionFormula
+0                       LevelHPLimit
+1			MachPop2Limit
+1			MachPop4Limit
+
+#USERINPUTEND -------------------------------------
+
 #STOP
 -1			MaxIteration
 0.01 year		tSimulationMax

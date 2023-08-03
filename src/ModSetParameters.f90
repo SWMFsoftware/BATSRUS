@@ -149,6 +149,7 @@ contains
          rRound0, rRound1, StringTest
     use ModBatsrusUtility, ONLY: get_ivar
     use ModOptimizeParam, ONLY: check_optimize_param
+    use ModPlotShock, ONLY: DivuDxMin
 
     ! Arguments
 
@@ -1031,8 +1032,11 @@ contains
                 elseif(index(StringPlot, 'shk')>0) then
                    TypePlotArea = 'shk'
                 endif
-
-                call read_var('TypeCoord', TypeCoordPlot_I(iFile))
+                if(TypePlotArea == 'shk') then
+                   call read_var('DivuDxMin', DivuDxMin)
+                else
+                   call read_var('TypeCoord', TypeCoordPlot_I(iFile))
+                end if
                 call read_var('rMin',   PlotRange_EI(1,iFile))
                 call read_var('rMax',   PlotRange_EI(2,iFile))
                 if (PlotRange_EI(1, iFile) /= PlotRange_EI(2,iFile) &

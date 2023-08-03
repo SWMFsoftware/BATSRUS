@@ -13,18 +13,19 @@ user manual please follow the instructions below.
 
 # Obtain BATSRUS
 
-Get the source code from GitLab or GitHub.
+Get the full source code from GitHub/SWMFsoftware or the open-source code from
+GitHub/MSTEM-QUDA.
 
 The minimum requirement is the `BATSRUS` repository. 
 
 You may also need the open-source `SWMF_data` repository that contains
-large data files for BATSRUS in the `GM/BATSRUS/data/` and `SC/BATSRUS/data`
+large data files for BATSRUS in the `GM/BATSRUS/data/` and `SC/BATSRUS/data/`
 subdirectories. The other subdirectories can be removed to save disk space.
 The `SWMF_data` should be put into the home directory:
 
 ```
 cd
-git clone https://gitlab.umich.edu/SWMF_software/SWMF_data --depth=1
+git clone https://github.com/SWMFsoftware/SWMF_data --depth=1
 ```
 
 Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
@@ -33,7 +34,7 @@ If needed, it has to be placed into the home directory.
 
 # Getting the open-source MSTEM-QUDA/BATSRUS from GitHub
 
-Clone BATSRUS from GitHub
+Clone BATSRUS from GitHub/MSTEM-QUDA
 
 ```
 cd {where_you_want_to_have_mstem-quda}
@@ -41,25 +42,25 @@ git clone https://github.com/MSTEM-QUDA/BATSRUS
 ```
 
 The rest of the repositories (share, util, srcBATL ...)
-will be cloned from GitHub during the installation.
+will be cloned from GitHub/MSTEM-QUDA during the installation.
 
-# Getting the full BATSRUS from UM GitLab (requires access)
+# Getting the full BATSRUS from GitHub/SWMFsoftware (requires access)
 
 Read the
-[GitLab instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf)
+[Git instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/Git_instructions.pdf)
 about registering, passwordless access, mail notifications, and
-using the [gitclone](https://gitlab.umich.edu/swmf_software/share/-/blob/master/Scripts/gitclone) script.
+using the [gitclone](https://github.com/SWMFsoftware/share/blob/master/Scripts/gitclone) script.
 
 ## Clone the BATSRUS distribution
 ```
 cd {where_you_want_to_have_batsrus}
-gitlabclone BATSRUS
+gitclone BATSRUS
 ```
 
 ## Clone the CRASH_data repository into the home directory if needed
 ```
 cd
-gitlabclone CRASH_data
+gitclone CRASH_data
 ```
 
 # Install BATSRUS
@@ -71,8 +72,8 @@ For these platform/compiler combinations installation is very simple:
 ```
 ./Config.pl -install
 ```
-On other platforms the Fortran (and C) compilers should be explicitly given. 
-To see available choices, type 
+On other platforms the Fortran (and C) compilers should be explicitly given.
+To see available choices, type
 ```
 ./Config.pl -compiler
 ```
@@ -110,12 +111,12 @@ Please note that creating the PDF manuals requires that LaTeX
 To create the PDF manuals for BATSRUS and CRASH type
 ```
 make PDF
-cd util/CRASH/doc/Tex; make PDF # for GitLab version only
+cd util/CRASH/doc/Tex; make PDF
 ```
 in the BATSRUS directory. The manuals will be in the `Doc/` and
 `util/CRASH/doc/` directories, and can be accessed by opening
 `Doc/index.html` and `util/CRASH/doc/index.html`. Note that
-the CRASH application is only usable in the full GitLab version.
+the CRASH application is only usable in the full SWMFsoftware version.
 
 The input parameters of BATSRUS/CRASH are described in the `PARAM.XML`
 in the main directory. This is the best source of information when

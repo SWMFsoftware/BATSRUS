@@ -1,6 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 module ModPlotBox
 
   use BATL_lib, ONLY: &
@@ -44,11 +45,11 @@ module ModPlotBox
   real :: PlotToGm_DD(3,3)
   real :: Rot_DD(3,3)
 
-  character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
+  character(len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
 contains
   !============================================================================
-  subroutine init_plot_box(iFile, nPlotVarIn)
+  subroutine init_plot_box(iFile)
 
     ! Set up the box grid for this plot file
 
@@ -58,7 +59,7 @@ contains
          rot_matrix_x, rot_matrix_y, rot_matrix_z
     use ModUtilities,      ONLY: split_string
 
-    integer, intent(in)        :: iFile, nPlotVarIn
+    integer, intent(in):: iFile
 
     integer :: nPlotVar
 
@@ -155,9 +156,9 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
+
   end subroutine init_plot_box
   !============================================================================
-
   subroutine set_plot_box(iBlock, nPlotvar, Plotvar_GV)
 
     ! Interpolate the plot variables for block iBlock
@@ -256,10 +257,10 @@ contains
                 call interpolate_thread_state(Coord_D, iBlock, State_V)
                 call set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V(&
                      1:nPlotVar), XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
-                PlotVar_VIII(1:, i, j, k) = PlotVar_V(1:nPlotVar)*&
+                PlotVar_VIII(1:,i,j,k) = PlotVar_V(1:nPlotVar)*&
                      DimFactor_V(1:nPlotVar)
              else
-                do iVar=1, nPlotVar
+                do iVar = 1, nPlotVar
                    ! Interpolate up to ghost cells.
                    PlotVar_VIII(iVar,i,j,k) = &
                         trilinear(PlotVar_GV(:,:,:,iVar), &

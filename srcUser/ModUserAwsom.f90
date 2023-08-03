@@ -647,7 +647,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
          UseAnisoPressure, Source_VC, LeftState_VX, RightState_VX, &
          LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
-    use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
+    use ModChromosphere, ONLY: DoExtendTransitionRegion, &
          get_tesi_c, TeSi_C
     use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
          apportion_coronal_heating, get_wave_reflection, &
@@ -764,11 +764,9 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., &
             DoMonotoneRestrict = .false.)
-       call get_block_heating(iBlock)
        if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+       call get_block_heating(iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(DoExtendTransitionRegion) CoronalHeating_C(i,j,k) = &
-               CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
           PlotVar_G(i,j,k) = CoronalHeating_C(i,j,k) &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
        end do; end do; end do
@@ -780,15 +778,9 @@ contains
           call set_b0_face(iBlock)
           call calc_face_value(iBlock, DoResChangeOnly = .false., &
                DoMonotoneRestrict = .false.)
-          call get_block_heating(iBlock)
           if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+          call get_block_heating(iBlock)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(DoExtendTransitionRegion)then
-                Coef = extension_factor(TeSi_C(i,j,k))
-                WaveDissipationRate_VC(:,i,j,k) = &
-                     WaveDissipationRate_VC(:,i,j,k)/Coef
-                CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)/Coef
-             end if
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
