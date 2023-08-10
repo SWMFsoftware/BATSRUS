@@ -19,6 +19,10 @@ $Compiler eq "crayftn"
 $Compiler eq "ifort"
 	${COMPILE.f90} ${Cflag1} ModWritePlot.f90
 
+# compiling ModWritePlot with -O2 and nagfor + GNU gcc fails on M1 architecture
+$Compiler eq "nagfor"
+	${COMPILE.f90} ${Cflag0} ModWritePlot.f90
+
 # test_swpc_multispecies fails with -debug -O1
 $Compiler eq "nagfor" and $Debug eq "yes"
 	${COMPILE.f90} ${Cflag0} ModFieldTraceFast.f90
