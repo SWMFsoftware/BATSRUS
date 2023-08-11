@@ -24,8 +24,9 @@ $Compiler eq "nagfor"
 	${COMPILE.f90} ${Cflag0} ModWritePlot.f90
 
 # test_swpc_multispecies fails with -debug -O1
-$Compiler eq "nagfor" and $Debug eq "yes"
-	${COMPILE.f90} ${Cflag0} ModFieldTraceFast.f90
+# test_swpc_cimi_pwom_species fails with -debug -O0, so comment out
+#$Compiler eq "nagfor" and $Debug eq "yes"
+#	${COMPILE.f90} ${Cflag0} ModFieldTraceFast.f90
 
 # who knows why
 $Compiler eq "nagfor"
