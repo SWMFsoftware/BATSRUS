@@ -10,7 +10,7 @@ module ModVarIndexes
    save
 
   character (len=*), parameter :: &
-       NameEquationFile = "ModEquationOuterHelio.f90"
+       NameEquationFile = "ModEquationOuterHelio2d.f90"
 
    ! This equation module contains the standard MHD equations + 4 neutrals
    character (len=*), parameter :: &
