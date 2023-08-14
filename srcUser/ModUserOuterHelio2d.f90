@@ -9,7 +9,7 @@ module ModUser
 
   use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock
   use BATL_lib, ONLY: test_start, test_stop, iTest, jTest, kTest, iProcTest, &
-       iBlockTest, iVarTest, iProc
+       iBlockTest, iVarTest, iProc, IsCylindrical
   use ModMain, ONLY: body1_, nBlock, Unused_B
   use ModPhysics, ONLY: Gamma, GammaMinus1, UnitX_, Io2Si_V, Si2Io_V, No2Io_V,&
        No2Si_V, Io2No_V,  NameTecUnit_V, UnitAngle_, UnitDivB_, &
@@ -290,9 +290,14 @@ contains
     zFace = FaceCoords_D(3)
 
     ! The IMF file contains X, Y, Z coordinates,
-    ! but we interpret them as R-Lon-Lat
-    ! convert face coordinates from Car to sph
-    XyzSph_DD = rot_xyz_sph(FaceCoords_D)
+    if(IsCylindrical)then
+       ! Rotation is taken in the ecliptic plane
+       XyzSph_DD = rot_xyz_sph(FaceCoords_D(1), FaceCoords_D(2), 0.0)
+    else
+       ! but we interpret them as R-Lon-Lat
+       ! convert face coordinates from Car to sph
+       XyzSph_DD = rot_xyz_sph(FaceCoords_D)
+    end if
 
     ! Detect the number of solar wind lookup tables provided.
     do i = 1, MaxLookupTable
@@ -572,28 +577,26 @@ contains
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
        z = Xyz_DGB(z_,i,j,k,iBlock)
-       r = r_GB(i,j,k,iBlock)
 
-       XyzSph_DD = rot_xyz_sph(x,y,z)
-
-       ! theta is the angle measured from the pole
-       SinTheta = sqrt(x**2+y**2)/r
-
-       ! for the neutrals thetaN angle is relative to the X axis
-       ! thetaN = atan(sqrt(y**2+z**2)/(x+cTiny))
-       ! sinThetaN=sqrt(y**2+z**2)/r
-       ! lambda = 4.0
-       ! Just to start, I set lambda as 4.0
-       !  (look at expression 3.53 of Linde's thesis)
+       if(IsCylindrical)then
+          ! Rotation is taken in the ecliptic plane
+          XyzSph_DD = rot_xyz_sph(x, y, 0.0)
+          ! No dependence on theta
+          r = sqrt(x**2 + y**2)
+          SinTheta = 1.0
+       else
+          ! but we interpret them as R-Lon-Lat
+          ! convert face coordinates from Car to sph
+          XyzSph_DD = rot_xyz_sph(x, y, z)
+          ! theta is the angle measured from the pole
+          r = r_GB(i,j,k,iBlock)
+          SinTheta = sqrt(x**2 + y**2)/r
+       end if
 
        ! calculating the Parker B field spherical components Bsph_D
-
-       ! good for polarity of 1997
-       SignZ = -sign(1.0,z)  ! good for 2005
-
-       Bsph_D(1) = SignZ*SwhBx*(rBody/r)**2  ! Br
-       Bsph_D(2) = 0.0                        ! Btheta
-       Bsph_D(3) = -SignZ*SwhBx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
+       Bsph_D(1) = SwhBx*(rBody/r)**2                  ! Br
+       Bsph_D(2) = 0.0                                 ! Btheta
+       Bsph_D(3) = SwhBx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
 
        ! wrong:   Vphi = OmegaSun*(6.96E5)*sin_theta/No2Io_V(UnitU_)
        ! correct: Vphi = OmegaSun*sin_theta*rSun**2/r
@@ -604,7 +607,6 @@ contains
 
        ! magnetic field components in cartesian coordinates
        b_D = matmul(XyzSph_DD, Bsph_D)
-
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = b_D
 
        ! velocity components in cartesian coordinates
@@ -620,17 +622,17 @@ contains
        if(UseNeutralFluid)then
 
           ! PopI
-          State_VGB(NeuRho_,i,j,k,iBlock)  =  RhoNeutralsISW
-          State_VGB(NeuP_,i,j,k,iBlock) =   PNeutralsISW
-          State_VGB(NeuRhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW
-          State_VGB(NeuRhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW
-          State_VGB(NeuRhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
+          State_VGB(NeuRho_,i,j,k,iBlock)   = RhoNeutralsISW
+          State_VGB(NeuP_,i,j,k,iBlock)     = PNeutralsISW
+          State_VGB(NeuRhoUx_,i,j,k,iBlock) = RhoNeutralsISW*UxNeutralsISW
+          State_VGB(NeuRhoUy_,i,j,k,iBlock) = RhoNeutralsISW*UyNeutralsISW
+          State_VGB(NeuRhoUz_,i,j,k,iBlock) = RhoNeutralsISW*UzNeutralsISW
 
           ! PopII - set to be about 100km/s radially.
           ! The temperature is set to be 10^5K for this population.
           ! v_D is the plasma velocity, we take one quarter of that.
-          State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3 * RhoNeutralsISW
-          State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3 * PNeutralsISW
+          State_VGB(Ne2Rho_,i,j,k,iBlock) = 1e-3 * RhoNeutralsISW
+          State_VGB(Ne2P_,i,j,k,iBlock)   = 1e-3 * PNeutralsISW
           State_VGB(Ne2RhoUx_:Ne2RhoUz_,i,j,k,iBlock) = &
                0.25*State_VGB(Ne2Rho_,i,j,k,iBlock)*v_D
 
