@@ -594,9 +594,9 @@ contains
        end if
 
        ! calculating the Parker B field spherical components Bsph_D
-       Bsph_D(1) = SwhBx*(rBody/r)**2                  ! Br
-       Bsph_D(2) = 0.0                                 ! Btheta
-       Bsph_D(3) = SwhBx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
+       Bsph_D(1) =  SwhBx*(rBody/r)**2                  ! Br
+       Bsph_D(2) =  0.0                                 ! Btheta
+       Bsph_D(3) = -SwhBx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
 
        ! wrong:   Vphi = OmegaSun*(6.96E5)*sin_theta/No2Io_V(UnitU_)
        ! correct: Vphi = OmegaSun*sin_theta*rSun**2/r
