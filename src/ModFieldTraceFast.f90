@@ -2273,7 +2273,7 @@ contains
 
       ! WAIT FOR ALL MESSAGES TO BE RECEIVED
       if (nRecvRequest > 0) call MPI_waitall(nRecvRequest, iRecvRequest_I, &
-           MPI_STATUS_IGNORE, iError)
+           MPI_STATUSES_IGNORE, iError)
 
       if(DoTest)write(*,*)'messages received, me, iDir=',iProc, iDir
 
