@@ -1229,12 +1229,12 @@ contains
                             rSizeImage_I(iFileInstrument) = 4.0
                             rOccult_I(iFileInstrument)    = 1.3
                             MuLimbDarkening               = 0.5
-                            nPixel_I(iFileInstrument)     = 300
+                            nPixel_I(iFileInstrument)     = 512
                          case('cor2')
                             rSizeImage_I(iFileInstrument) = 15.0
                             rOccult_I(iFileInstrument)    = 2.0
                             MuLimbDarkening               = 0.5
-                            nPixel_I(iFileInstrument)     = 300
+                            nPixel_I(iFileInstrument)     = 512
                          case default
                             call stop_mpi(NameSub//': unknown INS: '// &
                                  StringInstrument_I(iInstrument))
@@ -1250,12 +1250,12 @@ contains
                             rSizeImage_I(iFileInstrument)    = 4.0
                             rOccult_I(iFileInstrument)       = 1.3
                             MuLimbDarkening                  = 0.5
-                            nPixel_I(iFileInstrument)        = 300
+                            nPixel_I(iFileInstrument)        = 512
                          case('cor2')
                             rSizeImage_I(iFileInstrument)    = 15.0
                             rOccult_I(iFileInstrument)       = 2.0
                             MuLimbDarkening                  = 0.5
-                            nPixel_I(iFileInstrument)        = 300
+                            nPixel_I(iFileInstrument)        = 512
                          case default
                             call stop_mpi(NameSub//': unknown INS: '// &
                                  StringInstrument_I(iInstrument))
