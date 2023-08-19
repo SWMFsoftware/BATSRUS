@@ -43,7 +43,7 @@ contains
     use ModUserInterface ! user_update_states
 
     integer, intent(in) :: iBlock
-    integer :: iVar, i, j, k
+    integer :: iVar, iVarLast, i, j, k
     integer, parameter:: iGang=1
     real :: Rho
 
@@ -73,26 +73,30 @@ contains
                   *No2Io_V(UnitU_)
           end if
        end do
-       write(*,*)'Fluxes and sources for ', NameVar_V(iVarTest)
-       write(*,'(2x,a,2es23.15)') &
-            'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang) ,&
-            Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-       write(*,'(2x,a,2es23.15)') &
-            'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang) ,&
-            Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-       write(*,'(2x,a,2es23.15)') &
-            'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang) ,&
-            Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-       write(*,'(2x,a,es23.15)')'source=',&
-            Source_VC(iVarTest,iTest,jTest,kTest)
-       write(*,'(2x,a,es23.15)')'fluxes=', &
-            +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
-            -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
-            +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
-            -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)   &
-            +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
-            -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) ) &
-            /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+       iVarLast = iVarTest
+       if(iVarTest == nVar) iVarLast = iVarTest+1
+       do iVar = iVarTest, iVarLast
+          write(*,*)'Fluxes and sources for ', NameVar_V(iVar)
+          write(*,'(2x,a,2es23.15)') &
+               'X fluxes L,R =',Flux_VXI(iVar,iTest,jTest,kTest,iGang) ,&
+               Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)
+          write(*,'(2x,a,2es23.15)') &
+               'Y fluxes L,R =',Flux_VYI(iVar,iTest,jTest,kTest,iGang) ,&
+               Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)
+          write(*,'(2x,a,2es23.15)') &
+               'Z fluxes L,R =',Flux_VZI(iVar,iTest,jTest,kTest,iGang) ,&
+               Flux_VZI(iVar,iTest,jTest,kTest+1,iGang)
+          write(*,'(2x,a,es23.15)')'source=',&
+               Source_VC(iVar,iTest,jTest,kTest)
+          write(*,'(2x,a,es23.15)')'fluxes=', &
+               +(Flux_VXI(iVar,iTest,jTest,kTest,iGang)    &
+               -Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)   &
+               +Flux_VYI(iVar,iTest,jTest,kTest,iGang)     &
+               -Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)   &
+               +Flux_VZI(iVar,iTest,jTest,kTest,iGang)     &
+               -Flux_VZI(iVar,iTest,jTest,kTest+1,iGang) ) &
+               /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+       end do
     end if
 
     ! Note must copy state to old state only if iStage is 1.
@@ -128,8 +132,8 @@ contains
     use ModMain, ONLY: &
          IsTimeAccurate, iStage, nStage, Dt, Cfl, UseB0, UseBufferGrid, &
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
-    use ModPhysics, ONLY: &
-         Gamma_I, InvGamma_I, InvGammaElectron, GammaElectron, RhoMin_I
+    use ModPhysics, ONLY: Gamma, GammaMinus1, InvGamma, Gamma_I, InvGamma_I, &
+         InvGammaElectron, GammaElectron, InvGammaElectronMinus1, RhoMin_I
     use ModSemiImplVar, ONLY: UseStableImplicit
     use ModVarIndexes, ONLY: pe_, p_
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
@@ -200,6 +204,7 @@ contains
     end if
 
     if(UseEntropy)then
+       ! Convert pressure source term(s) to entropy source term(s)
        if(UseAnisoPressure)then
           ! Calculate source term for iSperp and iSpar from iP and iPpar
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -362,6 +367,11 @@ contains
   contains
     !==========================================================================
     subroutine update_explicit(iBlock, DoTest)
+
+      ! Use Source_VC = dt*(S - div F) set for nVar+nFluid variables
+      ! to update the nVar variables in State_VGB.
+      ! Update energy, pressure or entropy as needed.
+
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
 
@@ -372,21 +382,47 @@ contains
       real, allocatable, save:: Rk4_VCB(:,:,:,:,:)
 
       real, parameter:: cThird = 1./3.
-      real:: Coeff1, Coeff2, b_D(3), FullB2, FullB
+
+      ! true if the update is State=StateOld+Source
+      logical :: DoAddToStateOld 
+
+      real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, dP
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
+      real, allocatable, save:: pAdiab_C(:,:,:)
       !------------------------------------------------------------------------
+      DoAddToStateOld = UseHalfStep .or. nStage == 1 .or. nStage == 4
+
+      if(ElectronShockHeatingFraction > 0.0)then
+         ! Store the initial pressure and the adiabatic change of it
+         if(.not.allocated(pAdiab_C)) allocate(pAdiab_C(nI,nJ,nK))
+         if(DoAddToStateOld)then
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               pAdiab_C(i,j,k) = max(0.0, Source_VC(p_,i,j,k) + &
+                    StateOld_VGB(p_,i,j,k,iBlock)**InvGamma)**Gamma
+            end do; end do; end do
+         else
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+               pAdiab_C(i,j,k) = max(0.0, Source_VC(p_,i,j,k) + &
+                    State_VGB(p_,i,j,k,iBlock)**InvGamma)**Gamma
+            end do; end do; end do
+         end if
+      end if
+
       ! Convert pressure to energy for the conservative scheme
       call pressure_to_energy(iBlock, StateOld_VGB)
 
-      if(.not.(UseHalfStep .or. nStage == 1 .or. nStage == 4)) &
-         call pressure_to_energy(iBlock, State_VGB)
+      if(DoTest .and. iVarTest==p_)write(*,'(2x,2a,es20.12)') &
+           NameSub, ' after pressure_to_energy StateOld   =', &
+           StateOld_VGB(iVarTest,iTest,jTest,kTest,iBlock)
+
+      if(.not.DoAddToStateOld) call pressure_to_energy(iBlock, State_VGB)
 
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          ! Convert classical momentum and energy to relativistic
          call mhd_to_boris(iBlock)
 
-         if(DoTest)write(*,'(2x,2a,15es20.12)') &
+         if(DoTest)write(*,'(2x,2a,es20.12)') &
               NameSub, ' after mhd_to_boris                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
@@ -407,6 +443,7 @@ contains
       end if
 
       if(UseEntropy)then
+         ! Convert pressure(s) to entropy
          if(UseAnisoPressure)then
             ! Convert parallel pressure to entropy
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -445,8 +482,8 @@ contains
                        Coeff2*State_VGB(iPparIon_I,i,j,k,iBlock)
                end if
             end do; end do; end do
-         else
-            ! Convert pressures to entropy
+         else if(UseNonConservative)then
+            ! Convert ion pressure to entropy
             ! s = p^(1/Gamma)
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -497,7 +534,7 @@ contains
       endif
 
       ! Now update State_VGB
-      if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
+      if(DoAddToStateOld)then
          ! Update state variables starting from level n (=old) state
          if(nVarUpdate == nVar)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -631,6 +668,7 @@ contains
       end if
 
       if(UseEntropy)then
+         ! Convert entropy to pressure(s)
          if(UseAnisoPressure)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -661,7 +699,7 @@ contains
                     State_VGB(iPparIon_I,i,j,k,iBlock)    &
                     + 2*FullB*State_VGB(iPIon_I,i,j,k,iBlock))
             end do; end do; end do
-         else
+         elseif(UseNonConservative)then
             ! Convert entropy back to pressure
             ! p = s^Gamma
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -693,7 +731,6 @@ contains
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after multispecies correct          =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
-
       end if
 
       ! Check minimum density
@@ -754,13 +791,38 @@ contains
          end if
       end if
 
+      if(DoTest .and. iVarTest==p_)write(*,'(2x,2a,15es20.12)') &
+           NameSub, ' before pressure/energy update       =', &
+           State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
+
       ! Convert energy back to pressure as needed
       call energy_to_pressure(iBlock, State_VGB)
       call energy_to_pressure(iBlock, StateOld_VGB, IsOld=.true.)
 
-      if(DoTest)write(*,'(2x,2a,15es20.12)') &
+      if(DoTest)write(*,'(2x,2a,es20.12)') &
            NameSub, ' after pressure/energy update        =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
+
+      if(ElectronShockHeatingFraction > 0.0)then
+         if(DoTest)write(*,'(2x,2a,3es20.12)') &
+              NameSub,' before shock heating Pe, P, pAdiab=', &
+              State_VGB(Pe_,iTest,jTest,kTest,iBlock), & 
+              State_VGB(p_,iTest,jTest,kTest,iBlock), &
+              pAdiab_C(iTest,jTest,kTest)
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            ! Fraction of non-adiabatic ion heating going to the electrons
+            dP = ElectronShockHeatingFraction* &
+                 (State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k))
+            if(dP <= 0.0) CYCLE
+            State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - dP
+            State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+            + InvGammaElectronMinus1*GammaMinus1*dP
+         end do; end do; end do
+         if(DoTest)write(*,'(2x,2a,3es20.12)') &
+              NameSub,' after shock heating Pe, P=', &
+              State_VGB(Pe_,iTest,jTest,kTest,iBlock), & 
+              State_VGB(p_,iTest,jTest,kTest,iBlock)
+      end if
 
     end subroutine update_explicit
     !==========================================================================
