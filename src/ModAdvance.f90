@@ -84,7 +84,7 @@ module ModAdvance
 
   ! The fraction of non-adiabatic heating put into electrons
   real:: ElectronShockHeatingFraction = 0.0
-  
+
   ! Use the conservative electron entropy equation instead of pressure.
   ! This should provide more robust results near strong shocks.
   logical:: UseElectronEntropy = UseElectronPressure

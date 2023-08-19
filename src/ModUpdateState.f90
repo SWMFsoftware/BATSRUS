@@ -384,7 +384,7 @@ contains
       real, parameter:: cThird = 1./3.
 
       ! true if the update is State=StateOld+Source
-      logical :: DoAddToStateOld 
+      logical :: DoAddToStateOld
 
       real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, dP
       integer:: iFluid, iRho
@@ -806,7 +806,7 @@ contains
       if(ElectronShockHeatingFraction > 0.0)then
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' before shock heating Pe, P, pAdiab=', &
-              State_VGB(Pe_,iTest,jTest,kTest,iBlock), & 
+              State_VGB(Pe_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
               pAdiab_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -820,7 +820,7 @@ contains
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' after shock heating Pe, P=', &
-              State_VGB(Pe_,iTest,jTest,kTest,iBlock), & 
+              State_VGB(Pe_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock)
       end if
 
