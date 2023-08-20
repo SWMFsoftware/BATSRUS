@@ -722,6 +722,18 @@ contains
        case("#ELECTRONENTROPY")
           call read_var('UseElectronEntropy', UseElectronEntropy)
 
+       case("#ELECTRONSHOCKHEATING")
+          if(UseElectronPressure)then
+             call read_var("ElectronShockHeatingFraction", &
+                  ElectronShockHeatingFraction)
+             if(ElectronShockHeatingFraction > 0.0)then
+                ! This only makes sense if entropies are used
+                UseEntropy = .true.
+                UseElectronEntropy = .true.
+             end if
+          else
+             if(UseStrict) call stop_mpi('#ELECTRONSHOCKHEATING needs Pe')
+          end if
        case("#ANISOTROPICPRESSURE")
           do iFluid = IonFirst_, nFluid
              call read_var('UseConstantTau_I', UseConstantTau_I(iFluid))
