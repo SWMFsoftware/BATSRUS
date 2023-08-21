@@ -619,22 +619,24 @@ see the appropriate strings.
 0                       iProcTest       (processor index for testing)
 
 The location of test info in terms of indices, block and processor number.
-Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
-are set, the final one in the session will set the test point.
+Note that the user should set #TESTIJK or #TESTXYZ, not both.
+
+The default test cell is shown by the example.
 </command>
 
 <command name="TESTXYZ">
   <parameter name="xTest" type="real" min="$xMin" max="$xMax" />
-  <parameter name="yTest" type="real" min="$yMin" max="$yMax" />
-  <parameter name="zTest" type="real" min="$zMin" max="$zMax" />
+  <parameter name="yTest" type="real" min="$yMin" max="$yMax" if="$nJ!=1"/>
+  <parameter name="zTest" type="real" min="$zMin" max="$zMax" if="$nK!=1"/>
 #TESTXYZ
 1.5                     xTest           (X coordinate of cell for testing)
--10.5                   yTest           (Y coordinate of cell for testing)
--10.                    zTest           (Z coordinate of cell for testing)
+-10.5                   yTest           (Y coordinate for nDim=2 or 3)
+-10.                    zTest           (Z coordinate for nDim=3)
 
 The location of test info in terms of coordinates.
-Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
-are set, the final one in the session will set the test point.
+Note that the user should set #TESTIJK or #TESTXYZ, not both.
+
+The default test cell is described in #TESTIJK.
 </command>
 
 <command name="TESTVAR">
@@ -9416,14 +9418,43 @@ The default value is -1, i.e. no threshold is applied.
 T			UseElectronEntropy
 
 If UseElectronEntropy is true, solve for the electron entropy Se defined as
-Se = Pe**(1/GammaE). For discontinuous problems electron entropy should be
-conserved (if there are no source terms) if the shock is subsonic for
-the electrons (usually is).
+Se = Pe**(1/GammaE). The electron entropy, unlike electron pressure,
+satisfies a pure conservation law, so it is well behaved across shocks.
 
 Explicit electron heatconduction is not implemented for the electron entropy,
 but the semi-implicit heat conduction should work fine.
 
 The default value of UseElectronEnetropy is true.
+</command>
+
+<command name="ENTROPY">
+  <parameter name="UseEntropy" type="logical" default="F"/>
+
+#ENTROPY
+T			UseEntropy
+
+If UseEntropy is true, solve for the ion entropy density s defined as
+s = P**(1/Gamma). The ion entropy, unlike ion pressure,
+satisfies a pure conservation law, so it is well behaved across shocks.
+
+The default value of UseEntropy is false, except when the #ELECTRONSHOCKHEATING
+command is used, which requires and sets UseEntropy=T.
+</command>
+
+<command name="ELECTRONSHOCKHEATING">
+  <parameter name="ElectronShockHeatingFraction" type="real"
+	     min="0" max="1" default="1"/>
+
+#ELECTRONSHOCKHEATING
+0.5                     ElectronShockHeatingFraction
+
+If ElectronShockHeatingFraction is positive, a fraction of the non-adiabatic
+heating is deposited into the electron thermal energy Pe/(GammaE-1), and the
+same amount of energy is removed from the ion thermal energy P/(Gamma-1).
+If command is used, both UseEntropy and UseElectronEntropy are set to true
+(see #ENTROPY and #ELECTRONENTROPY).
+
+Default value is 0, which means that all shock heating goes to the ions.
 </command>
 
 <command name="ANISOTROPICPRESSURE">
