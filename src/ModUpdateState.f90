@@ -399,7 +399,7 @@ contains
 
       UseElectronShockHeating = &
            ElectronShockHeatingFraction > 0.0 .and. .not.UseNonConservative
-      
+
       UseAnisoShockHeating = &
            UseAnisoPressure .and. UseEntropy .and. .not.UseNonConservative
 
@@ -442,7 +442,7 @@ contains
             end do; end do; end do
          end if
       end if
-      
+
       ! Convert pressure to energy for the conservative scheme
       call pressure_to_energy(iBlock, StateOld_VGB)
 
@@ -909,7 +909,7 @@ contains
               State_VGB(Ppar_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock)
       end if
-      
+
     end subroutine update_explicit
     !==========================================================================
     subroutine deduct_expl_source()
