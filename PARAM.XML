@@ -9478,27 +9478,27 @@ is true. However, this version TauInstabilitySi will be read even
 UseConstantTau is false.
 
 If UseConstantTau is set to false, use the growth-rate based relaxation time.
-This is the default and also recommended.
+This is the default for single ion fluid and also recommended.
 
-If UseConstantTau is set to true, TauInstabilitySi provides the relaxation time
+If UseConstantTau is set to true (default for multiple ion fluids),
+then TauInstabilitySi provides the exponential relaxation time
 in seconds to restrict the pressure anisotropy in unstable regions. Within the
 time, the parallel pressure is pushed towards plasma instability limits.
 The default value is -1, i.e, do not apply the pressure relaxation due to
 instabilities. If applied, a typical value for magnetospheric simulations
 is 10 seconds.
 
-TauGlobalSi provides the global pressure relaxation time in seconds
+TauGlobalSi provides the global pressure exponential relaxation time in seconds
 applied in the whole domain. Within the time, the parallel pressure
 is pushed towards the total scalar pressure. In the presence of both
 the instability and global relaxation, the one that changes pressure
 more will be used for the pressure relaxation term.
 The default value for TauGlobalSi is -1, i.e. do not apply the global
-relaxation. The example shows a recommended value for magnetospheric simulations.
+relaxation.
+The example shows a recommended value for magnetospheric simulations.
 
 When UseConstantTau = T and TauInstabilitySi = -1, the pressure relaxation
 term is not applied, thus TauGlobalSi is meaningless in this case.
-
-
 </command>
 
 <command name="EXTRAINTERNALENERGY">
