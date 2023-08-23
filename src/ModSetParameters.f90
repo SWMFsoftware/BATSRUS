@@ -736,9 +736,9 @@ contains
           end if
        case("#ANISOTROPICPRESSURE")
           do iFluid = IonFirst_, nFluid
-             call read_var('UseConstantTau_I', UseConstantTau_I(iFluid))
-             call read_var('TauInstabilitySi_I', TauInstabilitySi_I(iFluid))
-             call read_var('TauGlobalSi_I', TauGlobalSi_I(iFluid))
+             call read_var('UseConstantTau', UseConstantTau_I(iFluid))
+             call read_var('TauInstabilitySi', TauInstabilitySi_I(iFluid))
+             call read_var('TauGlobalSi', TauGlobalSi_I(iFluid))
           end do
 
        case("#EXTRAINTERNALENERGY")
