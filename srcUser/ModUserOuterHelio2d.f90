@@ -17,6 +17,7 @@ module ModUser
        UnitP_, UnitTemperature_, UnitT_, UnitRhoU_, Si2No_V
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModConst, ONLY: cBoltzmann, cProtonMass
+  use ModBatsrusUtility, ONLY: stop_mpi
   use ModAdvance, ONLY: State_VGB, Source_VC, ExtraSource_ICB, nFlux
   use ModGeometry, ONLY: Xyz_DGB, r_GB, Used_GB
   use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uy_, Uz_, RhoUx_, RhoUy_, RhoUz_, &
@@ -272,228 +273,228 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
     associate( VarsGhostFace_V => FBC%VarsGhostFace_V, &
-               VarsTrueFace_V => FBC%VarsTrueFace_V, &
-               FaceCoords_D => FBC%FaceCoords_D, &
-               iBlockBc => FBC%iBlockBc, &
-               iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
-               iBoundary => FBC%iBoundary )
+         VarsTrueFace_V => FBC%VarsTrueFace_V, &
+         FaceCoords_D => FBC%FaceCoords_D, &
+         iBlockBc => FBC%iBlockBc, &
+         iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
+         iBoundary => FBC%iBoundary )
 
-    call test_start(NameSub, DoTest)
+      call test_start(NameSub, DoTest)
 
-    if(iBoundary /= body1_ .and. iBoundary /= 1)then
-       write(*,*) NameSub,': iBoundary=', iBoundary
-       call stop_mpi(NameSub//' is not implemented for this boundary!')
-    end if
+      if(iBoundary /= body1_ .and. iBoundary /= 1)then
+         write(*,*) NameSub,': iBoundary=', iBoundary
+         call stop_mpi(NameSub//' is not implemented for this boundary!')
+      end if
 
-    xFace = FaceCoords_D(1)
-    yFace = FaceCoords_D(2)
-    zFace = FaceCoords_D(3)
+      xFace = FaceCoords_D(1)
+      yFace = FaceCoords_D(2)
+      zFace = FaceCoords_D(3)
 
-    ! The IMF file contains X, Y, Z coordinates,
-    if(IsCylindrical)then
-       ! Rotation is taken in the ecliptic plane
-       XyzSph_DD = rot_xyz_sph(FaceCoords_D(1), FaceCoords_D(2), 0.0)
-    else
-       ! but we interpret them as R-Lon-Lat
-       ! convert face coordinates from Car to sph
-       XyzSph_DD = rot_xyz_sph(FaceCoords_D)
-    end if
+      ! The IMF file contains X, Y, Z coordinates,
+      if(IsCylindrical)then
+         ! Rotation is taken in the ecliptic plane
+         XyzSph_DD = rot_xyz_sph(FaceCoords_D(1), FaceCoords_D(2), 0.0)
+      else
+         ! but we interpret them as R-Lon-Lat
+         ! convert face coordinates from Car to sph
+         XyzSph_DD = rot_xyz_sph(FaceCoords_D)
+      end if
 
-    ! Detect the number of solar wind lookup tables provided.
-    do i = 1, MaxLookupTable
-       write(NameTable,'(A,I1)') 'SW', i
-       if(.not.allocated(iLookupTable_I) .and. &
-            i_lookup_table(NameTable) > 0)then
-          allocate(iLookupTable_I(MaxLookupTable))
-       endif
-       if(allocated(iLookupTable_I))then
-          iLookupTable_I(i) = i_lookup_table(NameTable)
-       endif
-    enddo
+      ! Detect the number of solar wind lookup tables provided.
+      do i = 1, MaxLookupTable
+         write(NameTable,'(A,I1)') 'SW', i
+         if(.not.allocated(iLookupTable_I) .and. &
+              i_lookup_table(NameTable) > 0)then
+            allocate(iLookupTable_I(MaxLookupTable))
+         endif
+         if(allocated(iLookupTable_I))then
+            iLookupTable_I(i) = i_lookup_table(NameTable)
+         endif
+      enddo
 
-    if(allocated(iLookupTable_I))then
-       !----LOOKUP TABLE(S) PROVIDED----
+      if(allocated(iLookupTable_I))then
+         !----LOOKUP TABLE(S) PROVIDED----
 
-       ! Determine which satellites are closest to the cell.
-       ! Do this by getting data from all lookup tables.
-       !  Note: NO TIME SHIFT YET!
-       PhiMinDiffR = cTwoPi
-       PhiMinDiffL = cTwoPi
-       iTableMinPhiR = 1
-       iTableMinPhiL = 1
+         ! Determine which satellites are closest to the cell.
+         ! Do this by getting data from all lookup tables.
+         !  Note: NO TIME SHIFT YET!
+         PhiMinDiffR = cTwoPi
+         PhiMinDiffL = cTwoPi
+         iTableMinPhiR = 1
+         iTableMinPhiL = 1
 
-       ! Find and store index max and min of each lookup table.
-       do i=1,size(iLookupTable_I)
-          if(iLookupTable_I(i)<0) CYCLE
-          call get_lookup_table(iTable=iLookupTable_I(i), &
-               IndexMin_I=IndexMin_I, IndexMax_I=IndexMax_I)
-          TimeFirst_I(i) = IndexMin_I(1)
-          TimeLast_I(i) = IndexMax_I(1)
-       enddo
+         ! Find and store index max and min of each lookup table.
+         do i=1,size(iLookupTable_I)
+            if(iLookupTable_I(i)<0) CYCLE
+            call get_lookup_table(iTable=iLookupTable_I(i), &
+                 IndexMin_I=IndexMin_I, IndexMax_I=IndexMax_I)
+            TimeFirst_I(i) = IndexMin_I(1)
+            TimeLast_I(i) = IndexMax_I(1)
+         enddo
 
-       PhiFace = atan2(yFace, xFace)
-       if(PhiFace > cPi) PhiFace = PhiFace - cTwoPi
+         PhiFace = atan2(yFace, xFace)
+         if(PhiFace > cPi) PhiFace = PhiFace - cTwoPi
 
-       ! Find two satellites closest to cell on right and left.
-       do i=1, size(iLookupTable_I)
-          if(iLookupTable_I(i)<0) CYCLE
-          CALL interpolate_lookup_table(iLookupTable_I(i), &
-               StartTime+tSimulation, LookupData_V, DoExtrapolate=.false.)
+         ! Find two satellites closest to cell on right and left.
+         do i=1, size(iLookupTable_I)
+            if(iLookupTable_I(i)<0) CYCLE
+            CALL interpolate_lookup_table(iLookupTable_I(i), &
+                 StartTime+tSimulation, LookupData_V, DoExtrapolate=.false.)
 
-          ! Ignore values outside of lookup table.
-          if(StartTime+tSimulation < TimeFirst_I(i) .or. &
-               StartTime+tSimulation > TimeLast_I(i)) CYCLE
+            ! Ignore values outside of lookup table.
+            if(StartTime+tSimulation < TimeFirst_I(i) .or. &
+                 StartTime+tSimulation > TimeLast_I(i)) CYCLE
 
-          ! Compute angular locations in the interval (-Pi, Pi)
-          PhiSat = LookupData_V(1)*cDegToRad
-          if(PhiSat > cPi) PhiSat = PhiSat - cTwoPi
+            ! Compute angular locations in the interval (-Pi, Pi)
+            PhiSat = LookupData_V(1)*cDegToRad
+            if(PhiSat > cPi) PhiSat = PhiSat - cTwoPi
 
-          ! Calculate both angular differences between satellite and cell
-          !   Note: both differences are positive.
-          PhiDiff = PhiFace - PhiSat
-          if(PhiDiff < 0)then
-             PhiDiffL = -PhiDiff
-             PhiDiffR = cTwoPi - PhiDiffL
-          else
-             PhiDiffR = PhiDiff
-             PhiDiffL = cTwoPi - PhiDiffR
-          endif
+            ! Calculate both angular differences between satellite and cell
+            !   Note: both differences are positive.
+            PhiDiff = PhiFace - PhiSat
+            if(PhiDiff < 0)then
+               PhiDiffL = -PhiDiff
+               PhiDiffR = cTwoPi - PhiDiffL
+            else
+               PhiDiffR = PhiDiff
+               PhiDiffL = cTwoPi - PhiDiffR
+            endif
 
-          ! If differences are smallest, store as global minima.
-          if(PhiDiffR < PhiMinDiffR)then
-             PhiMinDiffR = PhiDiffR
-             iTableMinPhiR = iLookupTable_I(i)
-          endif
-          if(PhiDiffL < PhiMinDiffL)then
-             PhiMinDiffL = PhiDiffL
-             iTableMinPhiL = iLookupTable_I(i)
-          endif
-       enddo
+            ! If differences are smallest, store as global minima.
+            if(PhiDiffR < PhiMinDiffR)then
+               PhiMinDiffR = PhiDiffR
+               iTableMinPhiR = iLookupTable_I(i)
+            endif
+            if(PhiDiffL < PhiMinDiffL)then
+               PhiMinDiffL = PhiDiffL
+               iTableMinPhiL = iLookupTable_I(i)
+            endif
+         enddo
 
-       ! Get shifted time of observation at cell
-       ShiftedTimeR = StartTime + tSimulation &
-            - PhiMinDiffR/cTwoPi*CarringtonSynodicPeriod
-       ShiftedTimeL = StartTime + tSimulation &
-            + PhiMinDiffL/cTwoPi*CarringtonSynodicPeriod
+         ! Get shifted time of observation at cell
+         ShiftedTimeR = StartTime + tSimulation &
+              - PhiMinDiffR/cTwoPi*CarringtonSynodicPeriod
+         ShiftedTimeL = StartTime + tSimulation &
+              + PhiMinDiffL/cTwoPi*CarringtonSynodicPeriod
 
-       ! Get IMF data from each closest satellite to the cell.
-       call interpolate_lookup_table(iTableMinPhiR, ShiftedTimeR, &
-            SatR_V, DoExtrapolate=.false.)
-       call normalize_lookup_solar_wind(SatR_V, VarsSatR_V)
-       call interpolate_lookup_table(iTableMinPhiL, ShiftedTimeL, &
-            SatL_V, DoExtrapolate=.false.)
-       call normalize_lookup_solar_wind(SatL_V, VarsSatL_V)
+         ! Get IMF data from each closest satellite to the cell.
+         call interpolate_lookup_table(iTableMinPhiR, ShiftedTimeR, &
+              SatR_V, DoExtrapolate=.false.)
+         call normalize_lookup_solar_wind(SatR_V, VarsSatR_V)
+         call interpolate_lookup_table(iTableMinPhiL, ShiftedTimeL, &
+              SatL_V, DoExtrapolate=.false.)
+         call normalize_lookup_solar_wind(SatL_V, VarsSatL_V)
 
-       ! Average observations from both satellites.
-       !   -> smaller distance, larger weight
-       SatRWeight = PhiMinDiffL/(PhiMinDiffR + PhiMinDiffL)
-       SatLWeight = 1 - SatRWeight
-       VarsGhostFace_V(Rho_:p_) = VarsSatR_V*SatRWeight + VarsSatL_V*SatLWeight
+         ! Average observations from both satellites.
+         !   -> smaller distance, larger weight
+         SatRWeight = PhiMinDiffL/(PhiMinDiffR + PhiMinDiffL)
+         SatLWeight = 1 - SatRWeight
+         VarsGhostFace_V(Rho_:p_) = VarsSatR_V*SatRWeight + VarsSatL_V*SatLWeight
 
-    else
-       !----IMF FILE PROVIDED----
-       ! Allows only one input file.
+      else
+         !----IMF FILE PROVIDED----
+         ! Allows only one input file.
 
-       DoDebug = .false.
-       ! Get initial Phi coordinate of Earth
-       if(PhiEarth0 < -1000)then
-          PhiEarth0 = atan2(XyzPlanetHgi_D(2), XyzPlanetHgi_D(1))
-          if(DoDebug)then
-             write(*,*) NameSub,': PhiEarth0[deg]=',PhiEarth0*cRadToDeg
-             write(*,*) NameSub,': OmegaOrbit, TimeSim=', &
-                  OmegaOrbit, tSimulation
-             DoDebug = .false.
-          end if
-       end if
-       DoDebug = .false.
+         DoDebug = .false.
+         ! Get initial Phi coordinate of Earth
+         if(PhiEarth0 < -1000)then
+            PhiEarth0 = atan2(XyzPlanetHgi_D(2), XyzPlanetHgi_D(1))
+            if(DoDebug)then
+               write(*,*) NameSub,': PhiEarth0[deg]=',PhiEarth0*cRadToDeg
+               write(*,*) NameSub,': OmegaOrbit, TimeSim=', &
+                    OmegaOrbit, tSimulation
+               DoDebug = .false.
+            end if
+         end if
+         DoDebug = .false.
 
-       ! Phi angle relative to the Earth (or the OMNI observation).
-       ! Include orbital motion of Earth (for long simulations)
-       Phi = atan2(yFace, xFace) - PhiEarth0 - OmegaOrbit*tSimulation
+         ! Phi angle relative to the Earth (or the OMNI observation).
+         ! Include orbital motion of Earth (for long simulations)
+         Phi = atan2(yFace, xFace) - PhiEarth0 - OmegaOrbit*tSimulation
 
-       ! Center in a way that the discontinuity is away from Earth
-       Phi = modulo(Phi, cTwoPi) ! make Phi < 2pi
-       if(Phi > cPi) Phi = Phi - cTwoPi ! if Phi > pi: make Phi negative
-       ! get second solar wind point to improve discontinuity
-       ! this second point should be less than one full rotation from Earth
-       if(Phi > 0)then
-          Phi2 = Phi - cTwoPi
-       else
-          Phi2 = Phi + cTwoPi
-       end if
+         ! Center in a way that the discontinuity is away from Earth
+         Phi = modulo(Phi, cTwoPi) ! make Phi < 2pi
+         if(Phi > cPi) Phi = Phi - cTwoPi ! if Phi > pi: make Phi negative
+         ! get second solar wind point to improve discontinuity
+         ! this second point should be less than one full rotation from Earth
+         if(Phi > 0)then
+            Phi2 = Phi - cTwoPi
+         else
+            Phi2 = Phi + cTwoPi
+         end if
 
-       ! Shift time (assuming steady state in the corotating frame)
-       ! Time and tSimulation are in seconds (SI units).
-       ShiftedTime1 = tSimulation - Phi/cTwoPi*CarringtonSynodicPeriod
-       ShiftedTime2 = tSimulation - Phi2/cTwoPi*CarringtonSynodicPeriod
+         ! Shift time (assuming steady state in the corotating frame)
+         ! Time and tSimulation are in seconds (SI units).
+         ShiftedTime1 = tSimulation - Phi/cTwoPi*CarringtonSynodicPeriod
+         ShiftedTime2 = tSimulation - Phi2/cTwoPi*CarringtonSynodicPeriod
 
-       ! Time is shifted above, so 1,0,0 should be the same in the IMF file.
-       ! Thus, no additional time shift is applied in get_solar_wind_point.
-       ! This functionality is designed to propagate solar wind from L1,
-       ! but is not needed.
-       call get_solar_wind_point(ShiftedTime1, [1.0, 0.0, 0.0], &
-            VarsGhostFace_V)
-       call get_solar_wind_point(ShiftedTime2, [1.0, 0.0, 0.0], &
-            VarsGhostFace2_V)
+         ! Time is shifted above, so 1,0,0 should be the same in the IMF file.
+         ! Thus, no additional time shift is applied in get_solar_wind_point.
+         ! This functionality is designed to propagate solar wind from L1,
+         ! but is not needed.
+         call get_solar_wind_point(ShiftedTime1, [1.0, 0.0, 0.0], &
+              VarsGhostFace_V)
+         call get_solar_wind_point(ShiftedTime2, [1.0, 0.0, 0.0], &
+              VarsGhostFace2_V)
 
-       ! Average observations from consecutive rotations to improve solution
-       ! and continuity.
-       ! Note that the unweighted average preserves a sharp discontinuity,
-       ! whereas the weighted average smooths it completely.
-       ! -> weighted average based on fractional angular distance from Earth
-       Time2Weight = abs(Phi/cTwoPi)
-       Time1Weight = 1 - Time2Weight
-       VarsGhostFace_V = &
-            VarsGhostFace_V*Time1Weight + VarsGhostFace2_V*Time2Weight
+         ! Average observations from consecutive rotations to improve solution
+         ! and continuity.
+         ! Note that the unweighted average preserves a sharp discontinuity,
+         ! whereas the weighted average smooths it completely.
+         ! -> weighted average based on fractional angular distance from Earth
+         Time2Weight = abs(Phi/cTwoPi)
+         Time1Weight = 1 - Time2Weight
+         VarsGhostFace_V = &
+              VarsGhostFace_V*Time1Weight + VarsGhostFace2_V*Time2Weight
 
-    endif
+      endif
 
-    ! In IMF file, X is R, Y is PHI, Z is THETA
-    !   so here, we need (/ X , -Z , Y /) as R, THETA, PHI
-    ! u_theta component ignored
-    !   could be included if periodic in Latitude is required
-    Vsph_D = [ VarsGhostFace_V(Ux_), 0.0, VarsGhostFace_V(Uy_) ]
-    Bsph_D = &
-         [ VarsGhostFace_V(Bx_), -VarsGhostFace_V(Bz_), VarsGhostFace_V(By_) ]
+      ! In IMF file, X is R, Y is PHI, Z is THETA
+      !   so here, we need (/ X , -Z , Y /) as R, THETA, PHI
+      ! u_theta component ignored
+      !   could be included if periodic in Latitude is required
+      Vsph_D = [ VarsGhostFace_V(Ux_), 0.0, VarsGhostFace_V(Uy_) ]
+      Bsph_D = &
+           [ VarsGhostFace_V(Bx_), -VarsGhostFace_V(Bz_), VarsGhostFace_V(By_) ]
 
-    ! Convert to X,Y,Z components
-    VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
-    VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
+      ! Convert to X,Y,Z components
+      VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
+      VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
 
-    DoDebug = .false.
-    if(iProc == 0 .and. DoDebug) &
-         write(*,*) NameSub, ' GhostFace_V=', VarsGhostFace_V(1:8)
+      DoDebug = .false.
+      if(iProc == 0 .and. DoDebug) &
+           write(*,*) NameSub, ' GhostFace_V=', VarsGhostFace_V(1:8)
 
-    if(UseNeutralFluid)then
+      if(UseNeutralFluid)then
 
-       VarsGhostFace_V(NeuRho_:Ne4P_) = VarsTrueFace_V(NeuRho_:Ne4P_)
+         VarsGhostFace_V(NeuRho_:Ne4P_) = VarsTrueFace_V(NeuRho_:Ne4P_)
 
-       ! PopI/Neu (disturbed by bow shock)
-       if(sum([UxNeutralsISW,UyNeutralsISW,UzNeutralsISW]*FaceCoords_D) &
-            > 0.0)then
-          VarsGhostFace_V(NeuRho_) = RhoNeutralsISW * RhoBcFactor_I(Neu_)
-          VarsGhostFace_V(NeuUx_ ) = UxNeutralsISW  * uBcFactor_I(Neu_)
-          VarsGhostFace_V(NeuUy_ ) = UyNeutralsISW  * uBcFactor_I(Neu_)
-          VarsGhostFace_V(NeuUz_ ) = UzNeutralsISW  * uBcFactor_I(Neu_)
-          VarsGhostFace_V(NeuP_)   = PNeutralsISW   * RhoBcFactor_I(Neu_)
-       else
-          VarsGhostFace_V(NeuRho_:NeuP_) = VarsTrueFace_V(NeuRho_:NeuP_)
-       end if
+         ! PopI/Neu (disturbed by bow shock)
+         if(sum([UxNeutralsISW,UyNeutralsISW,UzNeutralsISW]*FaceCoords_D) &
+              > 0.0)then
+            VarsGhostFace_V(NeuRho_) = RhoNeutralsISW * RhoBcFactor_I(Neu_)
+            VarsGhostFace_V(NeuUx_ ) = UxNeutralsISW  * uBcFactor_I(Neu_)
+            VarsGhostFace_V(NeuUy_ ) = UyNeutralsISW  * uBcFactor_I(Neu_)
+            VarsGhostFace_V(NeuUz_ ) = UzNeutralsISW  * uBcFactor_I(Neu_)
+            VarsGhostFace_V(NeuP_)   = PNeutralsISW   * RhoBcFactor_I(Neu_)
+         else
+            VarsGhostFace_V(NeuRho_:NeuP_) = VarsTrueFace_V(NeuRho_:NeuP_)
+         end if
 
-       ! PopIV/Ne4 (undisturbed)
-       if( sum([ UxNe4, UyNe4, UzNe4 ]*FaceCoords_D) > 0.0)then
-          VarsGhostFace_V(Ne4Rho_) = RhoNe4 * RhoBcFactor_I(Ne4_)
-          VarsGhostFace_V(Ne4Ux_ ) = UxNe4  * uBcFactor_I(Ne4_)
-          VarsGhostFace_V(Ne4Uy_ ) = UyNe4  * uBcFactor_I(Ne4_)
-          VarsGhostFace_V(Ne4Uz_ ) = UzNe4  * uBcFactor_I(Ne4_)
-          VarsGhostFace_V(Ne4P_  ) = PNe4   * RhoBcFactor_I(Ne4_)
-       else
-          VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
-       end if
+         ! PopIV/Ne4 (undisturbed)
+         if( sum([ UxNe4, UyNe4, UzNe4 ]*FaceCoords_D) > 0.0)then
+            VarsGhostFace_V(Ne4Rho_) = RhoNe4 * RhoBcFactor_I(Ne4_)
+            VarsGhostFace_V(Ne4Ux_ ) = UxNe4  * uBcFactor_I(Ne4_)
+            VarsGhostFace_V(Ne4Uy_ ) = UyNe4  * uBcFactor_I(Ne4_)
+            VarsGhostFace_V(Ne4Uz_ ) = UzNe4  * uBcFactor_I(Ne4_)
+            VarsGhostFace_V(Ne4P_  ) = PNe4   * RhoBcFactor_I(Ne4_)
+         else
+            VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
+         end if
 
-    endif
+      endif
 
-    call test_stop(NameSub, DoTest)
+      call test_stop(NameSub, DoTest)
 
     end associate
   end subroutine user_set_face_boundary
@@ -1112,7 +1113,7 @@ contains
        if(DoTest)write(*,*)"  No neutrals."
 
        if(.not.allocated(ExtraSource_ICB)) &
-            ! allocate(ExtraSource_ICB(5,nI,nJ,nK,nBlock)) ! 5 is nFluid
+                                ! allocate(ExtraSource_ICB(5,nI,nJ,nK,nBlock)) ! 5 is nFluid
             call CON_stop(NameSub//': ExtraSource_ICB is not allocated')
 
        if(DoTest) write(*,*)"..."
@@ -1245,6 +1246,32 @@ contains
   !============================================================================
   subroutine user_update_states(iBlock)
 
+    use ModGeometry, ONLY: TypeGeometry
+    integer,intent(in):: iBlock
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
+    if(DoTest)write(*,*) NameSub,': coordinate system ', &
+         TypeGeometry
+
+    if(TypeGeometry == "spherical_lnr")then
+       call user_update_states_sph(iBlock)
+    else if(TypeGeometry == "cylindrical_lnr")then
+       call user_update_states_cyl(iBlock)
+    else
+       write(*,*) NameSub,': user_update_states not implemented for ', &
+            TypeGeometry
+       call stop_mpi(NameSub//' invalid grid geometry '//TypeGeometry)
+    endif
+
+    call test_stop(NameSub, DoTest)
+
+  end subroutine user_update_states
+  !============================================================================
+  subroutine user_update_states_sph(iBlock)
+
     use ModUpdateState, ONLY: update_state_normal
     use ModAdvance,     ONLY: StateOld_VGB, State_VGB, &
          Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, DtMax_CB
@@ -1261,7 +1288,7 @@ contains
     real:: UpdateFlux
     logical:: DoTest, DoTestCell
 
-    character(len=*), parameter:: NameSub = 'user_update_states'
+    character(len=*), parameter:: NameSub = 'user_update_states_sph'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
@@ -1373,7 +1400,59 @@ contains
 
     call test_stop(NameSub, DoTest)
 
-  end subroutine user_update_states
+  end subroutine user_update_states_sph
+  !============================================================================
+  subroutine user_update_states_cyl(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
+    use ModAdvance,     ONLY: StateOld_VGB, State_VGB, &
+         Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, DtMax_CB
+    use ModMain,        ONLY: Cfl, nStage, iStage
+    use ModEnergy,      ONLY: energy_to_pressure, pressure_to_energy
+    use BATL_lib,       ONLY: CellVolume_GB, CoordMin_DB, CellSize_DB, &
+         IsLogRadius
+    use ModMultiFluid,  ONLY: DoConserveNeutrals
+
+    integer,intent(in):: iBlock
+    integer:: i, j, k, iVar, iVarFlux, iFluid
+    real:: DtFactor, DtLocal, InvVolume
+    real:: rCell_I(nI), rFace_I(nI+1), FactorL, FactorR
+    real:: UpdateFlux
+    logical:: DoTest, DoTestCell
+
+    character(len=*), parameter:: NameSub = 'user_update_states_cyl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
+    if(DoTest)write(*,*)' Initial value: ', &
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+
+    DtFactor = (Cfl*iStage)/nStage
+
+    ! Precalculate radial distances of cell centers and faces.
+    do i = 1, nI
+       rCell_I(i) = CoordMin_DB(1,iBlock) + (i-0.5)*CellSize_DB(1,iBlock)
+    end do
+    do i = 1, nI+1
+       rFace_I(i) = CoordMin_DB(1,iBlock) + (i-1)*CellSize_DB(1,iBlock)
+    end do
+    if(IsLogRadius)then
+       rCell_I = exp(rCell_I)
+       rFace_I = exp(rFace_I)
+    end if
+
+    ! Perform normal update.
+    call update_state_normal(iBlock)
+
+    if(DoTest)write(*,*)' After normal update:', &
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+
+    if(DoTest)write(*,*)' Final value: ', &
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+
+    call test_stop(NameSub, DoTest)
+
+  end subroutine user_update_states_cyl
   !============================================================================
   subroutine user_init_session
 
