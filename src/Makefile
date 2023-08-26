@@ -33,7 +33,6 @@ OBJECTS = \
 	ModCellBoundary.o \
 	ModCellGradient.o \
 	ModCharacteristic.o \
-	ModChGL.o \
 	ModChromosphere.o \
 	ModCleanDivB.o \
 	ModCoarseAxis.o \
@@ -102,7 +101,8 @@ OBJECTS = \
 	ModSize.o \
 	ModSolarwind.o \
 	ModSpectrum.o \
-	ModTransitionRegion.o\
+	ModStreamAligned.o \
+	ModTransitionRegion.o \
 	ModThreadedLC.o \
 	ModTimeStepControl.o \
 	ModUaCoupling.o \
