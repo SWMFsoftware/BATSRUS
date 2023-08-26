@@ -9,7 +9,7 @@ module ModChGL
   ! with it. A proper name is "stream-aligned MHD" or "SA" for short.
   !
   ! In steady state MHD the magnetic field and mass density flux are
-  ! aligned as long as they are aligned at the boundaries. This is 
+  ! aligned as long as they are aligned at the boundaries. This is
   ! easty to see: the magnetic field lines are equipotentials, so
   ! if E=u x B is zero at the bounraries, it is zero everywhere, so
   ! u and B are parallel everywhere.
