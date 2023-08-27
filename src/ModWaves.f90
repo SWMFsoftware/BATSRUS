@@ -33,6 +33,24 @@ module ModWaves
   integer, parameter :: AlfvenMinusFirst_ = WaveLast_ + 1 - nWaveHalf
   integer, parameter :: AlfvenMinusLast_  = WaveLast_
 
+  ! If UseAlfvenWaves = .true. then by default WaveFirst_ and WaveLast_
+  ! components of the state vector mean the energy density for wave.
+  ! However, for the AWSoM model of turbulence, it may be useful to
+  ! introduce the (dimensionless) representative functions:
+  ! w_+ = (\Pi/B)\sqrt(\mu_0\rho)\tilde{w}_+
+  ! w_- = (\Pi/B)\sqrt(\mu_0\rho)\tilde{w}_-,
+  ! where (\Pi/B) is the constant Poynting-flux-to-magnetic field ratio
+  ! at the coronal inner boundary.
+  ! The features of representative functions model:
+  ! 1. Numerical/physical flux does not include contribution proportional
+  !    to the Alfvenwave speed, the source term \pm V_A.grad.\tilde{w}_\pm
+  !    needs to be computed instead.
+  ! 2. 1/2 w_\pm grad.u source term disappears
+  ! 3. 0 <= \tilde{w}_\pm <= 1 inequalities hold.
+  ! To use the representative functions model, turn on the logical as follows:
+
+  Logical :: UseAwRepresentative = .false.
+
   real :: FreqMinSI = -1.0
   real :: FreqMaxSI = -1.0
 
