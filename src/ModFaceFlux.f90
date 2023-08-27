@@ -46,6 +46,7 @@ module ModFaceFlux
   use ModViscosity, ONLY: UseViscosity, Visco_DDI,&
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
   use ModBorisCorrection, ONLY: UseBorisRegion, set_clight_face, Clight_DF
+  use ModWaves, ONLY: UseAlfvenWaves, UseAwRepresentative
   use omp_lib
 
   implicit none
@@ -1168,7 +1169,7 @@ contains
          UseElectronPressure, UseElectronEntropy, UseEntropy, UseAnisoPe
     use ModWaves,    ONLY: AlfvenMinusFirst_, AlfvenMinusLast_,&
          AlfvenPlusFirst_, AlfvenPlusLast_, &
-         GammaWave, UseAlfvenWaves, UseWavePressure, &
+         GammaWave, UseWavePressure, &
          UseWavePressureLtd
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
@@ -1310,15 +1311,23 @@ contains
     if(Ehot_ > 1) Flux_V(Ehot_) = HallUn*State_V(Ehot_)
 
     if(UseAlfvenWaves)then
-       AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
+       if(.not. UseAwRepresentative)then
+          ! Flux contribution proportional to the Alfven wave speed
+          ! is calculated
+          AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
 
-       do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
-          Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
-       end do
+          do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
+             Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
+          end do
 
-       do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
-          Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
-       end do
+          do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
+             Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
+          end do
+       else
+          do iVar = AlfvenPlusFirst_, AlfvenMinusLast_
+             Flux_V(iVar) = Un_I(IonFirst_)*State_V(iVar)
+          end do
+       end if
     end if
 
     if(ViscoCoeff > 0.0)then
@@ -3486,7 +3495,7 @@ contains
          ElectronFirst_, IonFirst_, &
          nIonFluid, nTrueIon, UseMultiIon, ChargePerMass_I
     use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
-         GammaWave, UseAlfvenWaves
+         GammaWave
     use ModMain,    ONLY: Climit
     use ModPhysics, ONLY: Clight
     use ModAdvance, ONLY: State_VGB
@@ -4102,7 +4111,7 @@ contains
       HallUnLeft  = UnLeft_I(eFluid_)
       HallUnRight = UnRight_I(eFluid_)
 
-      if(UseAlfvenWaves .and. UseAwSpeed) then
+      if(UseAlfvenWaves.and..not.UseAwRepresentative.and. UseAwSpeed) then
          ! In this case the propagation speed for
          ! Alfven waves equal to the Alvfen speed
          ! may happen to be larger that the fast wave
@@ -4218,14 +4227,16 @@ contains
            - sqrt( max(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
            U2n - max(U2nChGL,0.0)              & ! Corrected Un
            - sqrt( max(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
-      if(UseAlfvenWaves)cChGLLeft  = min(cChGLLeft,    &
+      if(UseAlfvenWaves.and. .not. UseAwRepresentative)&
+           cChGLLeft  = min(cChGLLeft,    &
            U1n - sqrt(2*U1n*U1nChGL),          & ! Alfven wave
            U2n - sqrt(2*U2n*U2nChGL))            ! (left)
       cChGLRight  = max(U1n - min(U1nChGL, 0.0)& ! Corrected Un
            + sqrt( min(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
            U2n - min(U2nChGL, 0.0)             & ! Corrected Un
            + sqrt( min(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
-      if(UseAlfvenWaves) cChGLRight = max(cChGLRight,  &
+      if(UseAlfvenWaves.and. .not. UseAwRepresentative)&
+           cChGLRight = max(cChGLRight,  &
            U1n + sqrt(2*U1n*U1nChGL),          & ! Alfven wave
            U2n + sqrt(2*U2n*U2nChGL))            ! (Right)
 #endif
