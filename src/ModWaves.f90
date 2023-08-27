@@ -49,8 +49,8 @@ module ModWaves
   ! 3. 0 <= \tilde{w}_\pm <= 1 inequalities hold.
   ! To use the representative functions model, turn on the logical as follows:
 
-  Logical :: UseAwRepresentative = .false.
-
+  Logical :: UseAlfvenWaveRepresentative = .false.
+  !$acc declare create(UseAlfvenWaveRepresentative)
   real :: FreqMinSI = -1.0
   real :: FreqMaxSI = -1.0
 
