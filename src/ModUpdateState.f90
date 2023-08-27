@@ -396,12 +396,9 @@ contains
       logical:: UseElectronShockHeating, UseAnisoShockHeating
 
       real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, dP, Sperp
-      real:: Rho, Ti, DsTi, DsTpar, DsTperp
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
-      real, allocatable, save:: &
-           pAdiab_C(:,:,:), TiOrig_C(:,:,:), TparOrig_C(:,:,:), &
-           TperpOrig_C(:,:,:), pPerp_C(:,:,:), bOrig_C(:,:,:)
+      real, allocatable, save:: pAdiab_C(:,:,:), bOrig_C(:,:,:)
       !------------------------------------------------------------------------
       DoAddToStateOld = UseHalfStep .or. nStage == 1 .or. nStage == 4
 
@@ -416,8 +413,7 @@ contains
          if(UseAnisoShockHeating .or. UseElectronShockHeating) &
               allocate(pAdiab_C(nI,nJ,nK))
          if(UseAnisoShockHeating) &
-              allocate(TiOrig_C(nI,nJ,nK), TparOrig_C(nI,nJ,nK), &
-              TperpOrig_C(nI,nJ,nK), pPerp_C(nI,nJ,nK), bOrig_C(nI,nJ,nK))
+              allocate(bOrig_C(nI,nJ,nK))
       end if
 
       if(UseElectronShockHeating .and. .not.UseAnisoPressure)then
@@ -440,18 +436,12 @@ contains
          ! Store original temperatures
          if(DoAddToStateOld)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               Rho               = StateOld_VGB(Rho_,i,j,k,iBlock)
-               TiOrig_C(i,j,k)   = StateOld_VGB(p_,i,j,k,iBlock)/Rho
-               TparOrig_C(i,j,k) = StateOld_VGB(pPar_,i,j,k,iBlock)/Rho
                b_D               = StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)
                if(UseB0) b_D     = b_D + B0_DGB(:,i,j,k,iBlock)
                Borig_C(i,j,k)    = norm2(b_D)
             end do; end do; end do
          else
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               Rho               = State_VGB(Rho_,i,j,k,iBlock)
-               TiOrig_C(i,j,k)   = State_VGB(p_,i,j,k,iBlock)/Rho
-               TparOrig_C(i,j,k) = State_VGB(pPar_,i,j,k,iBlock)/Rho
                b_D               = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                if(UseB0) b_D     = b_D + B0_DGB(:,i,j,k,iBlock)
                Borig_C(i,j,k)    = norm2(b_D)
@@ -531,10 +521,10 @@ contains
                   Sperp = Sperp + Source_VC(p_,i,j,k)
                   ! Convert perpendicular entropy to perpendicular pressure
                   ! The parallel pressure will be added later
-                  pPerp_C(i,j,k) = Sperp*norm2(b_D)
+                  pAdiab_C(i,j,k) = Sperp*norm2(b_D)
                   if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
                        write(*,*) NameSub,' Sperp, SperpNew, pPerpAdiabNew=', &
-                       Sperp - Source_VC(p_,i,j,k), Sperp, pPerp_C(i,j,k)
+                       Sperp - Source_VC(p_,i,j,k), Sperp, pAdiab_C(i,j,k)
                end if
             end do; end do; end do
          else if(UseNonConservative)then
@@ -886,7 +876,7 @@ contains
          ! Add parallel pressure to the perpendicular pressure (adiabatic)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             pAdiab_C(i,j,k) = &
-                 cThird*(2*pPerp_C(i,j,k) + State_VGB(Ppar_,i,j,k,iBlock))
+                 cThird*(2*pAdiab_C(i,j,k) + State_VGB(Ppar_,i,j,k,iBlock))
          end do; end do; end do
       end if
 
@@ -915,45 +905,19 @@ contains
       if(UseAnisoShockHeating)then
          ! Distribute ion shock heating between parallel and perpendicular
          ! pressures
-         if(DoTest) write(*,'(2x,2a,2es20.12)') &
-              NameSub,' before shock TparOrig, TiOrig=', &
-              TparOrig_C(iTest,jTest,kTest), TiOrig_C(iTest,jTest,kTest)
          if(DoTest) write(*,'(2x,2a,4es20.12)') &
-              NameSub,' Ppar, P, pAdiab=', &
+              NameSub,' Ppar, P, pAdiab, bOrig=', &
               State_VGB(Ppar_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
-              pAdiab_C(iTest,jTest,kTest)
+              pAdiab_C(iTest,jTest,kTest), Borig_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            Rho    = State_VGB(Rho_,i,j,k,iBlock)
-            Ti     = State_VGB(p_,i,j,k,iBlock)/Rho
-            ! Adiabatic change of scalar temperature
-            DsTi   = pAdiab_C(i,j,k)/Rho - TiOrig_C(i,j,k)
-            DsTpar = State_VGB(pPar_,i,j,k,iBlock)/Rho - TparOrig_C(i,j,k)
-            DsTperp = pPerp_C(i,j,k)/Rho - TperpOrig_C(i,j,k)
-            !if(abs(DsTpar) + abs(DsTperp) < 1e-10) CYCLE
-            !if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
-            !     write(*,*) NameSub,' RhoNew,TiNew,DsTi=', &
-            !     Rho, Ti, DsTi
-            ! Avoid division with a small number
-            ! if(abs(DsTi) <= 0.1*Ti) CYCLE
-            ! Ppar = Rho*(TparOrig + dTi/DsTi*DsTpar)
-            !      = Rho*TparOrig + (Ti-TiOrig)/DsTi * Rho*(Tpar-TparOrig)
-            !State_VGB(p_,i,j,k,iBlock) = pAdiab_C(i,j,k) !!!
-            !State_VGB(Ppar_,i,j,k,iBlock) = Rho*TparOrig_C(i,j,k) + &
-            !     (Ti - TiOrig_C(i,j,k))/DsTi * &
-            !     (State_VGB(Ppar_,i,j,k,iBlock) - Rho*TparOrig_C(i,j,k))
-
-            ! Distribute non-adiab energy with dTpar and dTperp weights
-            ! Ppar = PparAdiab + dEshock*(GammaPar-1)*DsTpar/DsTi
-            ! where GammaPar = 3, dEshock = (p - pAdiab)/(Gamma -1)
-            ! Ppar = PparAdiab + 3*(p-pAdiab)*DsTpar/DsTi
             b_D           = State_VGB(Bx_:Bz_,i,j,k,iBlock)
             if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
             FullB         = norm2(b_D)
             ! WeightPar = 1 - DeltaB*rho/(B*DeltaRho)
-            WeightPar = 1 - abs(FullB - Borig_C(i,j,k))*Rho &
-                 /         (FullB*abs(Source_VC(Rho_,i,j,k)) + 1e-30)
-            WeightPar = max(0.0, min(1.0, WeightPar))
+            WeightPar = max(0.0, min(1.0, &
+                 1 - abs(FullB - Borig_C(i,j,k))*State_VGB(Rho_,i,j,k,iBlock) &
+                 / (FullB*abs(Source_VC(Rho_,i,j,k)) + 1e-30)))
             State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
                  + 3*(State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k))*WeightPar
 
