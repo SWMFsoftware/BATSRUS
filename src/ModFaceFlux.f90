@@ -46,7 +46,6 @@ module ModFaceFlux
   use ModViscosity, ONLY: UseViscosity, Visco_DDI,&
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
   use ModBorisCorrection, ONLY: UseBorisRegion, set_clight_face, Clight_DF
-  use ModWaves, ONLY: UseAlfvenWaves, UseAwRepresentative
   use omp_lib
 
   implicit none
@@ -76,6 +75,9 @@ module ModFaceFlux
        DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
   !$acc declare create(DoLfNeutral, DoHllNeutral, DoHlldwNeutral,DoLfdwNeutral)
   !$acc declare create(DoAwNeutral, DoGodunovNeutral, DoHllcNeutral)
+
+  logical :: UseAlfvenWaveSpeed
+  !$acc declare create(UseAlfvenWaveSpeed)
 
   ! 1D Burgers' equation, works for Hd equations.
   logical, public:: DoBurgers = .false.
@@ -387,6 +389,7 @@ contains
     use ModMain, ONLY: UseHyperbolicDivb
     use ModAdvance, ONLY: TypeFlux
     use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
+    use ModWaves, ONLY: UseAlfvenWaves, UseAlfvenWaveRepresentative
     !--------------------------------------------------------------------------
     DoSimple = TypeFlux == 'Simple'
     DoLf     = TypeFlux == 'Rusanov'
@@ -397,6 +400,8 @@ contains
     DoAw     = TypeFlux == 'Sokolov'
     DoRoeOld = TypeFlux == 'RoeOld'
     DoRoe    = TypeFlux == 'Roe'
+
+    UseAlfvenWaveSpeed = UseAlfvenWaves.and..not. UseAlfvenWaveRepresentative
 
     DoLfNeutral      = TypeFluxNeutral == 'Rusanov'
     DoHllNeutral     = TypeFluxNeutral == 'Linde'
@@ -427,7 +432,7 @@ contains
     UseScalar = DoUpdate_V(Rho_) .and. .not. any(DoUpdate_V(Rho_+1:))
 
     !$acc update device(DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld)
-    !$acc update device(DoAw, DoRoeOld, DoRoe)
+    !$acc update device(DoAw, DoRoeOld, DoRoe, UseAlfvenWaveSpeed)
 
     !$acc update device(DoLfNeutral, DoHllNeutral,DoHlldwNeutral,DoLfdwNeutral)
     !$acc update device(DoAwNeutral, DoGodunovNeutral, DoHllcNeutral)
@@ -1169,7 +1174,7 @@ contains
          UseElectronPressure, UseElectronEntropy, UseEntropy, UseAnisoPe
     use ModWaves,    ONLY: AlfvenMinusFirst_, AlfvenMinusLast_,&
          AlfvenPlusFirst_, AlfvenPlusLast_, &
-         GammaWave, UseWavePressure, &
+         GammaWave, UseWavePressure, UseAlfvenWaves, &
          UseWavePressureLtd
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
@@ -1311,7 +1316,7 @@ contains
     if(Ehot_ > 1) Flux_V(Ehot_) = HallUn*State_V(Ehot_)
 
     if(UseAlfvenWaves)then
-       if(.not. UseAwRepresentative)then
+       if(UseAlfvenWaveSpeed)then
           ! Flux contribution proportional to the Alfven wave speed
           ! is calculated
           AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
@@ -4111,7 +4116,7 @@ contains
       HallUnLeft  = UnLeft_I(eFluid_)
       HallUnRight = UnRight_I(eFluid_)
 
-      if(UseAlfvenWaves.and..not.UseAwRepresentative.and. UseAwSpeed) then
+      if(UseAlfvenWaveSpeed .and. UseAwSpeed) then
          ! In this case the propagation speed for
          ! Alfven waves equal to the Alvfen speed
          ! may happen to be larger that the fast wave
@@ -4227,7 +4232,7 @@ contains
            - sqrt( max(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
            U2n - max(U2nChGL,0.0)              & ! Corrected Un
            - sqrt( max(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
-      if(UseAlfvenWaves.and. .not. UseAwRepresentative)&
+      if(UseAlfvenWaveSpeed)&
            cChGLLeft  = min(cChGLLeft,    &
            U1n - sqrt(2*U1n*U1nChGL),          & ! Alfven wave
            U2n - sqrt(2*U2n*U2nChGL))            ! (left)
@@ -4235,7 +4240,7 @@ contains
            + sqrt( min(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
            U2n - min(U2nChGL, 0.0)             & ! Corrected Un
            + sqrt( min(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
-      if(UseAlfvenWaves.and. .not. UseAwRepresentative)&
+      if(UseAlfvenWaveSpeed)&
            cChGLRight = max(cChGLRight,  &
            U1n + sqrt(2*U1n*U1nChGL),          & ! Alfven wave
            U2n + sqrt(2*U2n*U2nChGL))            ! (Right)

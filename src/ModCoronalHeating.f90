@@ -73,6 +73,10 @@ module ModCoronalHeating
   real :: HeatChCgs = 5.0e-7
   real :: DecayLengthCh = 0.7
 
+  ! Alfven wave speed array, cell-centered
+  real, public, allocatable :: AlfvenWaveSpeed_C(:,:,:)
+  !$omp threadprivate(AlfvenWaveSpeed_C)
+
   ! Arrays for the calculated heat function and dissipated wave energy
   real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real, public :: WaveDissipationRate_VC(WaveFirst_:WaveLast_,&
@@ -429,6 +433,8 @@ contains
 
     use ModAdvance,    ONLY: UseAnisoPressure
     use ModReadParam,  ONLY: read_var
+    use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
+         UseAlfvenWaveRepresentative
 
     integer :: iFluid
 
@@ -457,17 +463,20 @@ contains
           UseExponentialHeating = .true.
           call read_var('DecayLengthExp', DecayLengthExp)
           call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
-
        case('unsignedflux','Abbett')
           UseUnsignedFluxModel = .true.
           call read_var('DecayLength', DecayLength)
           call read_var('HeatNormalization', HeatNormalization)
        case('alfvenwavedissipation')
+          UseAlfvenWaves  = WaveFirst_ > 1
+          UseWavePressure = WaveFirst_ > 1
           UseAlfvenWaveDissipation = .true.
           DoInit = .true.
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('Crefl', Crefl)
        case('turbulentcascade')
+          UseAlfvenWaves  = WaveFirst_ > 1
+          UseWavePressure = WaveFirst_ > 1
           UseAlfvenWaveDissipation = .true.
           UseTurbulentCascade = .true.
           DoInit = .true.
@@ -481,8 +490,11 @@ contains
                   'UseReynoldsDecomposition', UseNewLimiter4Reflection)
           end if
        case('usmanov')
+          UseAlfvenWaves  = WaveFirst_ > 1
+          UseWavePressure = WaveFirst_ > 1
           UseAlfvenWaveDissipation = .true.
           UseReynoldsDecomposition = .true.
+
           call read_var('UseTransverseTurbulence', UseTransverseTurbulence)
           call read_var('SigmaD', SigmaD)
           ! "historically" our  Lperp = Usmanov's \Lambda/KarmanTaylorAlpha
@@ -502,7 +514,9 @@ contains
     case('#LIMITIMBALANCE')
        call read_var('ImbalanceMax',ImbalanceMax)
        ImbalanceMax2 = ImbalanceMax**2
-
+    case('#AWREPRESENTATIVE')
+       call read_var('UseAlfvenWaveRepresentative',&
+            UseAlfvenWaveRepresentative)
     case("#POYNTINGFLUX")
        DoInit = .true.
        call read_var('PoyntingFluxPerBSi', PoyntingFluxPerBSi)
@@ -572,6 +586,7 @@ contains
          UnitX_, UnitU_
     use ModMultiFluid,  ONLY: UseMultiIon, nIonFluid
     use ModLookupTable, ONLY: i_lookup_table
+    use ModWaves,       ONLY: UseAlfvenWaves
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_coronal_heating'
@@ -584,6 +599,10 @@ contains
        HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
             *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     end if
+
+    if(UseAlfvenWaves.and.                   &
+         .not.allocated(AlfvenWaveSpeed_C))  &
+         allocate(AlfvenWaveSpeed_C(nI,nJ,nK))
 
     if(UseAlfvenWaveDissipation)then
        LperpTimesSqrtB = LperpTimesSqrtBSi &
