@@ -596,12 +596,21 @@ contains
        ! we took the separation as Vlad in x=-1500AU
 
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          State_VGB(Ne4Rho_,i,j,k,iBlock) = RhoNeutralsISW
+          State_VGB(Ne4Rho_,i,j,k,iBlock)   = RhoNeutralsISW
           State_VGB(Ne4RhoUx_,i,j,k,iBlock) = RhoNeutralsISW*UxNeutralsISW
           State_VGB(Ne4RhoUy_,i,j,k,iBlock) = RhoNeutralsISW*UyNeutralsISW
           State_VGB(Ne4RhoUz_,i,j,k,iBlock) = RhoNeutralsISW*UzNeutralsISW
           State_VGB(Ne4P_,i,j,k,iBlock)     = PNeutralsISW
        end do; end do; end do
+
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          State_VGB(NeuRho_,i,j,k,iBlock)   = 0.01*RhoNeutralsISW
+          State_VGB(NeuRhoUx_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UxNeutralsISW
+          State_VGB(NeuRhoUy_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UyNeutralsISW
+          State_VGB(NeuRhoUz_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UzNeutralsISW
+          State_VGB(NeuP_,i,j,k,iBlock)     = 0.01*PNeutralsISW
+       end do; end do; end do
+
        !
        ! In general you should specify as many values as many incoming
        ! characteristic waves are present. For a neutral fluid this
@@ -610,7 +619,7 @@ contains
 
        !
        ! PopII and III supersonic outflow
-       do iVar = NeuRho_, Ne3P_
+       do iVar = Ne2Rho_, Ne3P_
           select case(iSide)
           case(1)
              do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -748,11 +757,12 @@ contains
              State_VGB(NeuRhoUz_,i,j,k,iBlock)= VliswUz*VliswRho
           else
              ! PopI
-             State_VGB(NeuRho_,i,j,k,iBlock)  =  RhoNeutralsISW
-             State_VGB(NeuP_,i,j,k,iBlock) =   PNeutralsISW
-             State_VGB(NeuRhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW
-             State_VGB(NeuRhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW
-             State_VGB(NeuRhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
+             ! Set to small fraction of incoming ISW density and pressure
+             State_VGB(NeuRho_,i,j,k,iBlock)   = 0.01*RhoNeutralsISW
+             State_VGB(NeuP_,i,j,k,iBlock)     = 0.01*PNeutralsISW
+             State_VGB(NeuRhoUx_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UxNeutralsISW
+             State_VGB(NeuRhoUy_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UyNeutralsISW
+             State_VGB(NeuRhoUz_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UzNeutralsISW
           endif
           !! This profile takes into account loss due to PUI
           !! State_VGB(NeuRho_,i,j,k,iBlock) = &
