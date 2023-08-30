@@ -262,7 +262,7 @@ contains
 
     if(DoTest)write(*,'(2x,2a,es20.12)') &
          NameSub, ' original testvar =', &
-         State_VGB(iVarTest,iTest,jTest,kTest,iBlock)         
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
     call update_explicit(iBlock, DoTest)
 
