@@ -760,9 +760,12 @@ contains
              ! Set to small fraction of incoming ISW density and pressure
              State_VGB(NeuRho_,i,j,k,iBlock)   = 0.01*RhoNeutralsISW
              State_VGB(NeuP_,i,j,k,iBlock)     = 0.01*PNeutralsISW
-             State_VGB(NeuRhoUx_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UxNeutralsISW
-             State_VGB(NeuRhoUy_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UyNeutralsISW
-             State_VGB(NeuRhoUz_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UzNeutralsISW
+             State_VGB(NeuRhoUx_,i,j,k,iBlock) = 0.01*RhoNeutralsISW &
+                  * UxNeutralsISW
+             State_VGB(NeuRhoUy_,i,j,k,iBlock) = 0.01*RhoNeutralsISW &
+                  * UyNeutralsISW
+             State_VGB(NeuRhoUz_,i,j,k,iBlock) = 0.01*RhoNeutralsISW &
+                  * UzNeutralsISW
           endif
           !! This profile takes into account loss due to PUI
           !! State_VGB(NeuRho_,i,j,k,iBlock) = &
