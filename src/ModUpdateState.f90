@@ -395,7 +395,7 @@ contains
       ! true if shock heating is applied to electrons, anisotropic ion pressure
       logical:: UseElectronShockHeating, UseAnisoShockHeating
 
-      real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, dP, Sperp
+      real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, dP, Sperp, u_D(3)
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
       real, allocatable, save:: pAdiab_C(:,:,:), bOrig_C(:,:,:)
@@ -403,18 +403,14 @@ contains
       DoAddToStateOld = UseHalfStep .or. nStage == 1 .or. nStage == 4
 
       UseElectronShockHeating = &
-           ElectronShockHeatingFraction > 0.0 .and. .not.UseNonConservative
+           PeShockHeatingFraction > 0.0 .and. .not.UseNonConservative
 
       UseAnisoShockHeating = &
-           UseAnisoPressure .and. UseEntropy .and. .not.UseNonConservative
+           PparShockHeatingFraction /= 0.0 .and. .not.UseNonConservative
 
       ! Allocate arrays as needed
-      if(.not.allocated(pAdiab_C))then
-         if(UseAnisoShockHeating .or. UseElectronShockHeating) &
-              allocate(pAdiab_C(nI,nJ,nK))
-         if(UseAnisoShockHeating) &
-              allocate(bOrig_C(nI,nJ,nK))
-      end if
+      if( (UseAnisoShockHeating .or. UseElectronShockHeating) &
+           .and. .not.allocated(pAdiab_C))allocate(pAdiab_C(nI,nJ,nK))
 
       if(UseElectronShockHeating .and. .not.UseAnisoPressure)then
          ! Calculate adiabatic update for isotropic pressure
@@ -432,22 +428,6 @@ contains
          end if
       end if
 
-      if(UseAnisoShockHeating)then
-         ! Store original temperatures
-         if(DoAddToStateOld)then
-            do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               b_D               = StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)
-               if(UseB0) b_D     = b_D + B0_DGB(:,i,j,k,iBlock)
-               Borig_C(i,j,k)    = norm2(b_D)
-            end do; end do; end do
-         else
-            do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               b_D               = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-               if(UseB0) b_D     = b_D + B0_DGB(:,i,j,k,iBlock)
-               Borig_C(i,j,k)    = norm2(b_D)
-            end do; end do; end do
-         end if
-      end if
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
@@ -880,7 +860,7 @@ contains
          end do; end do; end do
       end if
 
-      if(ElectronShockHeatingFraction > 0.0)then
+      if(UseElectronShockHeating)then
          ! Distribute shock heating between ions and electrons
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' before shock heating Pe, P, pAdiab=', &
@@ -889,9 +869,8 @@ contains
               pAdiab_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             ! Fraction of non-adiabatic ion heating going to the electrons
-            dP = ElectronShockHeatingFraction* &
-                 (State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k))
-            if(dP <= 0.0) CYCLE
+            dP = PeShockHeatingFraction &
+                 *(State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k))
             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - dP
             State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                  + InvGammaElectronMinus1*GammaMinus1*dP
@@ -911,16 +890,26 @@ contains
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
               pAdiab_C(iTest,jTest,kTest), Borig_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            b_D           = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-            if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-            FullB         = norm2(b_D)
-            ! WeightPar = 1 - DeltaB*rho/(B*DeltaRho)
-            WeightPar = max(0.0, min(1.0, &
-                 1 - abs(FullB - Borig_C(i,j,k))*State_VGB(Rho_,i,j,k,iBlock) &
-                 / (FullB*abs(Source_VC(Rho_,i,j,k)) + 1e-30)))
+            dP = State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k)
+            if(PparShockHeatingFraction > 0.)then
+               dP = dP*PparShockHeatingFraction
+            else
+               ! Evaluate b.n
+               ! rho^2*du = rho*d(rho u) - rho*u*drho
+               !u_D = State_VGB(RhoUx_:RhoUz_,i+1,j,k,iBlock) &
+               !     /State_VGB(Rho_,i+1,j,k,iBlock) &
+               !     -State_VGB(RhoUx_:RhoUz_,i-1,j,k,iBlock) &
+               !     /State_VGB(Rho_,i-1,j,k,iBlock)
+               u_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+               b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+               if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+               ! For parallel shock |u.b|=1 and all heating goes into Ppar,
+               ! for perpendicular shock |u.b|=0 no heating goes into Ppar. 
+               dP = dP*abs(sum(u_D*b_D))/(norm2(b_D)*norm2(u_D) + 1e-30)
+            end if
+            ! dPpar = (GammaPar-1)*dP/(Gamma-1) = 2*dP/(5/3-1) = 3*dP
             State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                 + 3*(State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k))*WeightPar
-
+                 + 3*dP
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' after shock heating Ppar, P=', &
