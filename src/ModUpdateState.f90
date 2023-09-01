@@ -30,9 +30,9 @@ contains
          NameVar_V, nFluid, WDiff_, p_, Ppar_
     use ModAdvance, ONLY: State_VGB, StateOld_VGB, DTMAX_CB, &
          Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, &
-         nVarUpdate, iVarUpdate_I, DoUpdate_V, UseAnisoPressure
+         UseAnisoPressure
     use ModPhysics, ONLY: &
-         No2Si_V, No2Io_V, UnitT_, UnitU_, UnitRhoU_, iUnitCons_V
+         No2Si_V, No2Io_V, UnitT_, UnitU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
     use ModCoronalHeating, ONLY: UseReynoldsDecomposition
     use ModEnergy, ONLY: limit_pressure
@@ -43,7 +43,7 @@ contains
     use ModUserInterface ! user_update_states
 
     integer, intent(in) :: iBlock
-    integer :: iVar, iVarLast, i, j, k
+    integer :: iVar, iVarLast
     integer, parameter:: iGang=1
     real :: Rho
 
@@ -166,7 +166,7 @@ contains
 
     ! These variables have to be double precision for accurate Boris scheme
     real:: DtLocal, DtFactor, SourceIonEnergy_I(nIonFluid)
-    real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, WeightPar
+    real:: Coeff1, Coeff2, b_D(3), FullB2, FullB
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
@@ -398,7 +398,7 @@ contains
       real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, dP, Sperp, u_D(3)
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
-      real, allocatable, save:: pAdiab_C(:,:,:), bOrig_C(:,:,:)
+      real, allocatable, save:: pAdiab_C(:,:,:)
       !------------------------------------------------------------------------
       DoAddToStateOld = UseHalfStep .or. nStage == 1 .or. nStage == 4
 
@@ -885,10 +885,10 @@ contains
          ! Distribute ion shock heating between parallel and perpendicular
          ! pressures
          if(DoTest) write(*,'(2x,2a,4es20.12)') &
-              NameSub,' Ppar, P, pAdiab, bOrig=', &
+              NameSub,' Ppar, P, pAdiab=', &
               State_VGB(Ppar_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
-              pAdiab_C(iTest,jTest,kTest), Borig_C(iTest,jTest,kTest)
+              pAdiab_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             dP = State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k)
             if(PparShockHeatingFraction > 0.)then
@@ -896,7 +896,7 @@ contains
             else
                ! Evaluate b.n
                ! rho^2*du = rho*d(rho u) - rho*u*drho
-               !u_D = State_VGB(RhoUx_:RhoUz_,i+1,j,k,iBlock) &
+               ! u_D = State_VGB(RhoUx_:RhoUz_,i+1,j,k,iBlock) &
                !     /State_VGB(Rho_,i+1,j,k,iBlock) &
                !     -State_VGB(RhoUx_:RhoUz_,i-1,j,k,iBlock) &
                !     /State_VGB(Rho_,i-1,j,k,iBlock)
@@ -904,7 +904,7 @@ contains
                b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                ! For parallel shock |u.b|=1 and all heating goes into Ppar,
-               ! for perpendicular shock |u.b|=0 no heating goes into Ppar. 
+               ! for perpendicular shock |u.b|=0 no heating goes into Ppar.
                dP = dP*abs(sum(u_D*b_D))/(norm2(b_D)*norm2(u_D) + 1e-30)
             end if
             ! dPpar = (GammaPar-1)*dP/(Gamma-1) = 2*dP/(5/3-1) = 3*dP
