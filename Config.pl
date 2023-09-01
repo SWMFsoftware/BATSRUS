@@ -905,6 +905,7 @@ sub current_settings{
     $Settings .= "Number of fluids            : nFluid=$nFluid\n"
 	if $nFluid > 1;
     $Settings .= "Electron pressure           : UsePe=1\n" if $Value{"Pe_"}>1;
+    $Settings .= "Parallel pressure           : UsePpar=1\n" if $Value{"Ppar_"}>1;
     
     $Settings; # return value
 }
