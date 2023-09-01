@@ -27,10 +27,10 @@ contains
 
     use ModMain, ONLY: nStep, iStage, Cfl, UseUserUpdateStates, UseBufferGrid
     use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Ehot_, SignB_, &
-         NameVar_V, nFluid, WDiff_
+         NameVar_V, nFluid, WDiff_, p_, Ppar_
     use ModAdvance, ONLY: State_VGB, StateOld_VGB, DTMAX_CB, &
          Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, &
-         nVarUpdate, iVarUpdate_I, DoUpdate_V
+         nVarUpdate, iVarUpdate_I, DoUpdate_V, UseAnisoPressure
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, UnitRhoU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
@@ -73,6 +73,9 @@ contains
                   *No2Io_V(UnitU_)
           end if
        end do
+       if(UseAnisoPressure) write(*,'(2x,a,es23.15)') 'Pperp(TestCell) =', &
+            0.5*(3*State_VGB(p_,iTest,jTest,kTest,iBlockTest) &
+            -    State_VGB(Ppar_,iTest,jTest,kTest,iBlockTest))
        iVarLast = iVarTest
        if(iVarTest == nVar) iVarLast = iVarTest+1
        do iVar = iVarTest, iVarLast
@@ -117,10 +120,13 @@ contains
     if(UseReynoldsDecomposition.and.WDiff_>1)call fix_wdiff(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' final for nStep =', nStep
-       do iVar=1,nVar
+       do iVar = 1, nVar
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar),'(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
        end do
+       if(UseAnisoPressure) write(*,'(2x,a,es23.15)') 'Pperp(TestCell) =', &
+            0.5*(3*State_VGB(p_,iTest,jTest,kTest,iBlockTest) &
+            -    State_VGB(Ppar_,iTest,jTest,kTest,iBlockTest))
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -160,7 +166,7 @@ contains
 
     ! These variables have to be double precision for accurate Boris scheme
     real:: DtLocal, DtFactor, SourceIonEnergy_I(nIonFluid)
-    real:: Coeff1, Coeff2, b_D(3), FullB2, FullB
+    real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, WeightPar
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
@@ -254,8 +260,8 @@ contains
 
     if(UseMultiIon .and. DoRestrictMultiIon)call multi_ion_set_restrict(iBlock)
 
-    if(DoTest)write(*,'(2x,2a,15es20.12)') &
-         NameSub, ' original testvar and energy         =', &
+    if(DoTest)write(*,'(2x,2a,es20.12)') &
+         NameSub, ' original testvar =', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
     call update_explicit(iBlock, DoTest)
@@ -389,11 +395,10 @@ contains
       ! true if shock heating is applied to electrons, anisotropic ion pressure
       logical:: UseElectronShockHeating, UseAnisoShockHeating
 
-      real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, dP, Rho, Ti, DsTi, Sperp
+      real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, dP, Sperp
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
-      real, allocatable, save:: &
-           pAdiab_C(:,:,:), TiOrig_C(:,:,:), TparOrig_C(:,:,:)
+      real, allocatable, save:: pAdiab_C(:,:,:), bOrig_C(:,:,:)
       !------------------------------------------------------------------------
       DoAddToStateOld = UseHalfStep .or. nStage == 1 .or. nStage == 4
 
@@ -408,11 +413,12 @@ contains
          if(UseAnisoShockHeating .or. UseElectronShockHeating) &
               allocate(pAdiab_C(nI,nJ,nK))
          if(UseAnisoShockHeating) &
-              allocate(TiOrig_C(nI,nJ,nK), TparOrig_C(nI,nJ,nK))
+              allocate(bOrig_C(nI,nJ,nK))
       end if
 
       if(UseElectronShockHeating .and. .not.UseAnisoPressure)then
          ! Calculate adiabatic update for isotropic pressure
+         ! using entropy s = p^(1/gamma)
          if(DoAddToStateOld)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                pAdiab_C(i,j,k) = max(0.0, Source_VC(p_,i,j,k) + &
@@ -430,37 +436,18 @@ contains
          ! Store original temperatures
          if(DoAddToStateOld)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               Rho                = StateOld_VGB(Rho_,i,j,k,iBlock)
-               TiOrig_C(i,j,k)    = StateOld_VGB(p_,i,j,k,iBlock)/Rho
-               TparOrig_C(i,j,k) = StateOld_VGB(pPar_,i,j,k,iBlock)/Rho
+               b_D               = StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)
+               if(UseB0) b_D     = b_D + B0_DGB(:,i,j,k,iBlock)
+               Borig_C(i,j,k)    = norm2(b_D)
             end do; end do; end do
          else
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               Rho                = State_VGB(Rho_,i,j,k,iBlock)
-               TiOrig_C(i,j,k)    = State_VGB(p_,i,j,k,iBlock)/Rho
-               TparOrig_C(i,j,k) = State_VGB(pPar_,i,j,k,iBlock)/Rho
+               b_D               = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+               if(UseB0) b_D     = b_D + B0_DGB(:,i,j,k,iBlock)
+               Borig_C(i,j,k)    = norm2(b_D)
             end do; end do; end do
          end if
       end if
-
-      ! Convert pressure to energy for the conservative scheme
-      call pressure_to_energy(iBlock, StateOld_VGB)
-
-      if(DoTest .and. iVarTest==p_)write(*,'(2x,2a,es20.12)') &
-           NameSub, ' after pressure_to_energy StateOld   =', &
-           StateOld_VGB(iVarTest,iTest,jTest,kTest,iBlock)
-
-      if(.not.DoAddToStateOld) call pressure_to_energy(iBlock, State_VGB)
-
-      if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
-         ! Convert classical momentum and energy to relativistic
-         call mhd_to_boris(iBlock)
-
-         if(DoTest)write(*,'(2x,2a,es20.12)') &
-              NameSub, ' after mhd_to_boris                  =', &
-              State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
-      endif
-
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
@@ -489,9 +476,17 @@ contains
                FullB  = sqrt(max(1e-30, FullB2))
                ! Sperp = Pperp/B = 0.5*(3*p-Ppar)/B
                Coeff1 = 0.5/FullB
-               StateOld_VGB(iPIon_I,i,j,k,iBlock) = &
-                    Coeff1*(3*StateOld_VGB(iPIon_I,i,j,k,iBlock) &
-                    -       StateOld_VGB(iPparIon_I,i,j,k,iBlock))
+               if(UseNonConservative)then
+                  StateOld_VGB(iPIon_I,i,j,k,iBlock) = &
+                       Coeff1*(3*StateOld_VGB(iPIon_I,i,j,k,iBlock) &
+                       -       StateOld_VGB(iPparIon_I,i,j,k,iBlock))
+                  if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
+                       write(*,*) NameSub,' Sperp=', &
+                       StateOld_VGB(p_,i,j,k,iBlock)
+               else
+                  Sperp = Coeff1*(3*StateOld_VGB(p_,i,j,k,iBlock) &
+                       -          StateOld_VGB(pPar_,i,j,k,iBlock))
+               end if
 
                ! Spar = Ppar*(B^2/rho^2)
                Coeff2 = FullB2/StateOld_VGB(Rho_,i,j,k,iBlock)**2
@@ -507,30 +502,29 @@ contains
 
                   ! Sperp = Pperp/B = 0.5*(3*p-Ppar)/B
                   Coeff1 = 0.5/FullB
-                  State_VGB(iPIon_I,i,j,k,iBlock) = &
-                       Coeff1*(3*State_VGB(iPIon_I,i,j,k,iBlock) &
-                       -       State_VGB(iPparIon_I,i,j,k,iBlock))
-
+                  if(UseNonConservative)then
+                     State_VGB(iPIon_I,i,j,k,iBlock) = &
+                          Coeff1*(3*State_VGB(iPIon_I,i,j,k,iBlock) &
+                          -       State_VGB(iPparIon_I,i,j,k,iBlock))
+                  else
+                     Sperp = Coeff1*(3*State_VGB(p_,i,j,k,iBlock) &
+                          -          State_VGB(pPar_,i,j,k,iBlock))
+                  end if
                   ! Spar = Ppar*(B^2/rho^2)
                   Coeff2 = FullB2/State_VGB(Rho_,i,j,k,iBlock)**2
                   State_VGB(iPparIon_I,i,j,k,iBlock) = &
                        Coeff2*State_VGB(iPparIon_I,i,j,k,iBlock)
                end if
                if(UseAnisoShockHeating)then
-                  if(DoAddToStateOld)then
-                     b_D   = StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)
-                     Sperp = StateOld_VGB(P_,i,j,k,iBlock)
-                  else
-                     b_D   = StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)
-                     Sperp = State_VGB(P_,i,j,k,iBlock)
-                  end if
                   ! update total magnetic field and perpendicular entropy
                   b_D   = b_D   + Source_VC(Bx_:Bz_,i,j,k)
-                  if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                   Sperp = Sperp + Source_VC(p_,i,j,k)
                   ! Convert perpendicular entropy to perpendicular pressure
                   ! The parallel pressure will be added later
-                  pAdiab_C(i,j,k) = Sperp*norm2(b_D**2)
+                  pAdiab_C(i,j,k) = Sperp*norm2(b_D)
+                  if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
+                       write(*,*) NameSub,' Sperp, SperpNew, pPerpAdiabNew=', &
+                       Sperp - Source_VC(p_,i,j,k), Sperp, pAdiab_C(i,j,k)
                end if
             end do; end do; end do
          else if(UseNonConservative)then
@@ -546,6 +540,23 @@ contains
                     State_VGB(iP_I,i,j,k,iBlock)**InvGamma_I
             end do; end do; end do
          end if
+      endif
+
+      ! Convert pressure to energy for the conservative scheme
+      call pressure_to_energy(iBlock, StateOld_VGB)
+
+      if(DoTest .and. iVarTest==p_)write(*,'(2x,2a,es20.12)') &
+           NameSub, ' after pressure_to_energy StateOld   =', &
+           StateOld_VGB(iVarTest,iTest,jTest,kTest,iBlock)
+
+      if(.not.DoAddToStateOld) call pressure_to_energy(iBlock, State_VGB)
+      if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
+         ! Convert classical momentum and energy to relativistic
+         call mhd_to_boris(iBlock)
+
+         if(DoTest)write(*,'(2x,2a,es20.12)') &
+              NameSub, ' after mhd_to_boris                  =', &
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
 
       ! Move energy source terms to pressure index as needed
@@ -659,7 +670,7 @@ contains
             if(iStage==2)then
                Coeff1 = 0.75
             elseif(iStage==3)then
-               Coeff1 = 1./3.
+               Coeff1 = cThird
             end if
          end if
          Coeff2 = 1 - Coeff1
@@ -734,7 +745,8 @@ contains
                     Coeff1*StateOld_VGB(iPparIon_I,i,j,k,iBlock)
 
                ! P = (Ppar + 2*Sperp*B)/3
-               StateOld_VGB(iPIon_I,i,j,k,iBlock) = cThird* &
+               if(UseNonConservative) &
+                    StateOld_VGB(iPIon_I,i,j,k,iBlock) = cThird* &
                     ( StateOld_VGB(iPparIon_I,i,j,k,iBlock) &
                     + 2*FullB*StateOld_VGB(iPIon_I,i,j,k,iBlock))
 
@@ -746,9 +758,15 @@ contains
                State_VGB(iPparIon_I,i,j,k,iBlock) = &
                     Coeff1*State_VGB(iPparIon_I,i,j,k,iBlock)
                ! P = (Ppar + 2*Sperp*B)/3
-               State_VGB(iPIon_I,i,j,k,iBlock) = cThird*( &
-                    State_VGB(iPparIon_I,i,j,k,iBlock)    &
-                    + 2*FullB*State_VGB(iPIon_I,i,j,k,iBlock))
+               if(UseNonConservative)then
+                  if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
+                       write(*,*) NameSub,' SperpNew, pPerpAdiabNew=',&
+                       State_VGB(p_,i,j,k,iBlock), &
+                       FullB*State_VGB(p_,i,j,k,iBlock)
+                  State_VGB(iPIon_I,i,j,k,iBlock) = cThird*( &
+                       State_VGB(iPparIon_I,i,j,k,iBlock)    &
+                       + 2*FullB*State_VGB(iPIon_I,i,j,k,iBlock))
+               end if
             end do; end do; end do
          elseif(UseNonConservative)then
             ! Convert entropy back to pressure
@@ -876,7 +894,7 @@ contains
             if(dP <= 0.0) CYCLE
             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - dP
             State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-            + InvGammaElectronMinus1*GammaMinus1*dP
+                 + InvGammaElectronMinus1*GammaMinus1*dP
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' after shock heating Pe, P=', &
@@ -887,22 +905,22 @@ contains
       if(UseAnisoShockHeating)then
          ! Distribute ion shock heating between parallel and perpendicular
          ! pressures
-         if(DoTest)write(*,'(2x,2a,3es20.12)') &
-              NameSub,' before shock heating Ppar, P, pAdiab=', &
+         if(DoTest) write(*,'(2x,2a,4es20.12)') &
+              NameSub,' Ppar, P, pAdiab, bOrig=', &
               State_VGB(Ppar_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
-              pAdiab_C(iTest,jTest,kTest)
+              pAdiab_C(iTest,jTest,kTest), Borig_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            Rho    = State_VGB(Rho_,i,j,k,iBlock)
-            Ti     = State_VGB(p_,i,j,k,iBlock)/Rho
-            ! Adiabatic change of scalar temperature
-            DsTi   = pAdiab_C(i,j,k)/Rho - TiOrig_C(i,j,k)
-            ! Avoid division with a small number
-            if(abs(DsTi) <= 0.01*Ti) CYCLE
-            ! Ppar = Rho*TparOrig + dTi/DsTi * Rho*DsTpar)
-            State_VGB(Ppar_,i,j,k,iBlock) = Rho*TparOrig_C(i,j,k) + &
-                 (Ti - TiOrig_C(i,j,k))/DsTi * &
-                 (State_VGB(Ppar_,i,j,k,iBlock) - Rho*TparOrig_C(i,j,k))
+            b_D           = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+            if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+            FullB         = norm2(b_D)
+            ! WeightPar = 1 - DeltaB*rho/(B*DeltaRho)
+            WeightPar = max(0.0, min(1.0, &
+                 1 - abs(FullB - Borig_C(i,j,k))*State_VGB(Rho_,i,j,k,iBlock) &
+                 / (FullB*abs(Source_VC(Rho_,i,j,k)) + 1e-30)))
+            State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
+                 + 3*(State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k))*WeightPar
+
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' after shock heating Ppar, P=', &

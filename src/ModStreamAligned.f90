@@ -4,15 +4,20 @@
 
 module ModChGL
 
+  ! The name of this module is due to an incorrect association with the
+  ! Chew-Golberger-Low theory. In fact, none of this has anything to do
+  ! with it. A proper name is "stream-aligned MHD" or "SA" for short.
+  !
   ! In steady state MHD the magnetic field and mass density flux are
-  ! related, according to the Chew-Golberger-Low theory  with the scalar
-  ! coefficient, \mathbf{B} = s \rho\mathbf{U}, which is constant along
-  ! the magnetic field line,
-  ! \partial s/\partial t + \mathbf{U}\cdot\nabla s = 0
-  ! which may be solved as the conservation law:
-  ! \partial (\rho s)/\partial t + \nabla\cdot(\rho s  \mathbf{U}) = 0
-  ! Once \rho s is solved, the magnetic field may be found locally as
-  ! \mathbf{B} = (\rho s)\mathbf{U}
+  ! aligned as long as they are aligned at the boundaries. This is
+  ! easty to see: the magnetic field lines are equipotentials, so
+  ! if E=u x B is zero at the bounraries, it is zero everywhere, so
+  ! u and B are parallel everywhere.
+  !
+  ! Conservation of mass flux along a flux tube implies that
+  ! s = rho*u/B is constant along field lines, where 1/B is proportional
+  ! to the cross section of the flux tube. So one can solve for the scalar s
+  ! instead of the magnetic field vector, and obtain B as B = s*rho*u
 
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, SignB_, Rho_, &

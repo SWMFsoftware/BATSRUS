@@ -76,6 +76,9 @@ module ModFaceFlux
   !$acc declare create(DoLfNeutral, DoHllNeutral, DoHlldwNeutral,DoLfdwNeutral)
   !$acc declare create(DoAwNeutral, DoGodunovNeutral, DoHllcNeutral)
 
+  logical :: UseAlfvenWaveSpeed
+  !$acc declare create(UseAlfvenWaveSpeed)
+
   ! 1D Burgers' equation, works for Hd equations.
   logical, public:: DoBurgers = .false.
   !$acc declare create(DoBurgers)
@@ -386,6 +389,7 @@ contains
     use ModMain, ONLY: UseHyperbolicDivb
     use ModAdvance, ONLY: TypeFlux
     use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
+    use ModWaves, ONLY: UseAlfvenWaves, UseAlfvenWaveRepresentative
     !--------------------------------------------------------------------------
     DoSimple = TypeFlux == 'Simple'
     DoLf     = TypeFlux == 'Rusanov'
@@ -396,6 +400,8 @@ contains
     DoAw     = TypeFlux == 'Sokolov'
     DoRoeOld = TypeFlux == 'RoeOld'
     DoRoe    = TypeFlux == 'Roe'
+
+    UseAlfvenWaveSpeed = UseAlfvenWaves.and..not. UseAlfvenWaveRepresentative
 
     DoLfNeutral      = TypeFluxNeutral == 'Rusanov'
     DoHllNeutral     = TypeFluxNeutral == 'Linde'
@@ -426,7 +432,7 @@ contains
     UseScalar = DoUpdate_V(Rho_) .and. .not. any(DoUpdate_V(Rho_+1:))
 
     !$acc update device(DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld)
-    !$acc update device(DoAw, DoRoeOld, DoRoe)
+    !$acc update device(DoAw, DoRoeOld, DoRoe, UseAlfvenWaveSpeed)
 
     !$acc update device(DoLfNeutral, DoHllNeutral,DoHlldwNeutral,DoLfdwNeutral)
     !$acc update device(DoAwNeutral, DoGodunovNeutral, DoHllcNeutral)
@@ -1168,7 +1174,7 @@ contains
          UseElectronPressure, UseElectronEntropy, UseEntropy, UseAnisoPe
     use ModWaves,    ONLY: AlfvenMinusFirst_, AlfvenMinusLast_,&
          AlfvenPlusFirst_, AlfvenPlusLast_, &
-         GammaWave, UseAlfvenWaves, UseWavePressure, &
+         GammaWave, UseWavePressure, UseAlfvenWaves, &
          UseWavePressureLtd
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
@@ -1310,15 +1316,23 @@ contains
     if(Ehot_ > 1) Flux_V(Ehot_) = HallUn*State_V(Ehot_)
 
     if(UseAlfvenWaves)then
-       AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
+       if(UseAlfvenWaveSpeed)then
+          ! Flux contribution proportional to the Alfven wave speed
+          ! is calculated
+          AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
 
-       do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
-          Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
-       end do
+          do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
+             Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
+          end do
 
-       do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
-          Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
-       end do
+          do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
+             Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
+          end do
+       else
+          do iVar = AlfvenPlusFirst_, AlfvenMinusLast_
+             Flux_V(iVar) = Un_I(IonFirst_)*State_V(iVar)
+          end do
+       end if
     end if
 
     if(ViscoCoeff > 0.0)then
@@ -3486,7 +3500,7 @@ contains
          ElectronFirst_, IonFirst_, &
          nIonFluid, nTrueIon, UseMultiIon, ChargePerMass_I
     use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
-         GammaWave, UseAlfvenWaves
+         GammaWave
     use ModMain,    ONLY: Climit
     use ModPhysics, ONLY: Clight
     use ModAdvance, ONLY: State_VGB
@@ -4102,7 +4116,7 @@ contains
       HallUnLeft  = UnLeft_I(eFluid_)
       HallUnRight = UnRight_I(eFluid_)
 
-      if(UseAlfvenWaves .and. UseAwSpeed) then
+      if(UseAlfvenWaveSpeed .and. UseAwSpeed) then
          ! In this case the propagation speed for
          ! Alfven waves equal to the Alvfen speed
          ! may happen to be larger that the fast wave
@@ -4218,14 +4232,16 @@ contains
            - sqrt( max(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
            U2n - max(U2nChGL,0.0)              & ! Corrected Un
            - sqrt( max(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
-      if(UseAlfvenWaves)cChGLLeft  = min(cChGLLeft,    &
+      if(UseAlfvenWaveSpeed)&
+           cChGLLeft  = min(cChGLLeft,    &
            U1n - sqrt(2*U1n*U1nChGL),          & ! Alfven wave
            U2n - sqrt(2*U2n*U2nChGL))            ! (left)
       cChGLRight  = max(U1n - min(U1nChGL, 0.0)& ! Corrected Un
            + sqrt( min(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
            U2n - min(U2nChGL, 0.0)             & ! Corrected Un
            + sqrt( min(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
-      if(UseAlfvenWaves) cChGLRight = max(cChGLRight,  &
+      if(UseAlfvenWaveSpeed)&
+           cChGLRight = max(cChGLRight,  &
            U1n + sqrt(2*U1n*U1nChGL),          & ! Alfven wave
            U2n + sqrt(2*U2n*U2nChGL))            ! (Right)
 #endif
