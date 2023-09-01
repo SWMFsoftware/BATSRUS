@@ -389,7 +389,8 @@ contains
          !   -> smaller distance, larger weight
          SatRWeight = PhiMinDiffL/(PhiMinDiffR + PhiMinDiffL)
          SatLWeight = 1 - SatRWeight
-         VarsGhostFace_V(Rho_:p_) = VarsSatR_V*SatRWeight + VarsSatL_V*SatLWeight
+         VarsGhostFace_V(Rho_:p_) = VarsSatR_V*SatRWeight &
+              + VarsSatL_V*SatLWeight
 
       else
          !----IMF FILE PROVIDED----
@@ -454,8 +455,8 @@ contains
       ! u_theta component ignored
       !   could be included if periodic in Latitude is required
       Vsph_D = [ VarsGhostFace_V(Ux_), 0.0, VarsGhostFace_V(Uy_) ]
-      Bsph_D = &
-           [ VarsGhostFace_V(Bx_), -VarsGhostFace_V(Bz_), VarsGhostFace_V(By_) ]
+      Bsph_D = [ VarsGhostFace_V(Bx_), -VarsGhostFace_V(Bz_), &
+           VarsGhostFace_V(By_) ]
 
       ! Convert to X,Y,Z components
       VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
@@ -1113,7 +1114,7 @@ contains
        if(DoTest)write(*,*)"  No neutrals."
 
        if(.not.allocated(ExtraSource_ICB)) &
-                                ! allocate(ExtraSource_ICB(5,nI,nJ,nK,nBlock)) ! 5 is nFluid
+            ! allocate(ExtraSource_ICB(5,nI,nJ,nK,nBlock)) ! 5 is nFluid
             call CON_stop(NameSub//': ExtraSource_ICB is not allocated')
 
        if(DoTest) write(*,*)"..."
