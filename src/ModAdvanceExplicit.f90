@@ -35,7 +35,10 @@ contains
     use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
          nCorrectedFaceValues, CorrectedFlux_VXB, &
          CorrectedFlux_VYB, CorrectedFlux_VZB, DoConserveFlux
-    use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
+    use ModCoronalHeating, ONLY: get_coronal_heat_factor,&
+         UseUnsignedFluxModel,&
+         wave_energy_to_representative, representative_to_wave_energy
+    use ModWaves,       ONLY: UseAlfvenWaveRepresentative
     use ModMessagePass, ONLY: exchange_messages
     use ModTimeStepControl, ONLY: calc_timestep
     use BATL_lib, ONLY: message_pass_face, IsAnyAxis
@@ -70,7 +73,7 @@ contains
     !$acc update device(IsNoBody_B)
 
     if(UseBody2Orbit) call update_secondbody
-
+    if(UseAlfvenWaveRepresentative)call wave_energy_to_representative
     STAGELOOP: do iStage = 1, nStage
        !$acc update device(iStage)
        if(DoTest) write(*,*)NameSub,' starting stage=',iStage
@@ -311,7 +314,7 @@ contains
 
     end do STAGELOOP  ! Multi-stage solution update loop.
     iStage = nStage
-
+    if(UseAlfvenWaveRepresentative)call representative_to_wave_energy
     call timing_stop(NameSub)
 
     if(DoTest)write(*,*)NameSub,' finished'
