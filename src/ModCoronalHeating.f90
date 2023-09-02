@@ -25,6 +25,8 @@ module ModCoronalHeating
   public :: get_coronal_heating
   public :: get_block_heating
   public :: apportion_coronal_heating
+  public :: wave_energy_to_representative
+  public :: representative_to_wave_energy
   public :: get_wave_reflection
   public :: init_coronal_heating
   public :: read_coronal_heating_param
@@ -624,6 +626,60 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine init_coronal_heating
+  !============================================================================
+  subroutine wave_energy_to_representative
+    ! Convert Alfven wave turbulence energy densities to
+    ! dimensionless representative functions. Switch the logical
+    ! UseAwRepresentativeHere on.
+    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, nI, nJ, nK
+    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes, ONLY: IonFirst_, iRho_I, WDiff_, WaveFirst_, WaveLast_
+    use ModWaves,      ONLY: UseAwRepresentativeHere
+    integer :: iBlock, i, j, k
+    real    :: InvSqrtRho
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.Used_GB(i,j,k,iBlock))CYCLE
+          InvSqrtRho = 1/(  PoyntingFluxPerB*&
+               sqrt( State_VGB(iRho_I(IonFirst_),i,j,k,iBlock) )  )
+          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+               InvSqrtRho*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+          if(WDiff_>1)State_VGB(WDiff_,i,j,k,iBlock) = &
+               InvSqrtRho*State_VGB(WDiff_,i,j,k,iBlock)
+       end do; end do; end do
+    end do
+    UseAwRepresentativeHere = .true.
+    !$acc update device(UseAlfvenWaveRepresentative)
+  end subroutine wave_energy_to_representative
+  !============================================================================
+  subroutine representative_to_wave_energy
+    ! Convert dimensionless representative functions to Alfven wave turbulence
+    ! energy densities. Switch the logical
+    ! UseAwRepresentativeHere off.
+    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, nI, nJ, nK
+    use ModVarIndexes, ONLY: IonFirst_, iRho_I, WDiff_, WaveFirst_, WaveLast_
+    use ModAdvance,    ONLY: State_VGB
+    use ModWaves,      ONLY: UseAwRepresentativeHere
+    integer :: iBlock, i, j, k
+    real    :: SqrtRho
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.Used_GB(i,j,k,iBlock))CYCLE
+          SqrtRho = PoyntingFluxPerB*sqrt( &
+               State_VGB(iRho_I(IonFirst_),i,j,k,iBlock) )
+          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+               SqrtRho*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+          if(WDiff_>1)State_VGB(WDiff_,i,j,k,iBlock) = &
+               SqrtRho*State_VGB(WDiff_,i,j,k,iBlock)
+       end do; end do; end do
+    end do
+    UseAwRepresentativeHere = .false.
+    !$acc update device(UseAlfvenWaveRepresentative)
+  end subroutine representative_to_wave_energy
   !============================================================================
   subroutine get_block_heating(iBlock)
     ! Calculate two arrays: CoronalHeating_C  and   WaveDissipationRate_VC
