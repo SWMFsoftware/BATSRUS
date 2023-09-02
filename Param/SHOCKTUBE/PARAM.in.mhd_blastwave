@@ -1,0 +1,100 @@
+Begin session: 1
+
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.mhd_blastwave:		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#SHOCKHEATING
+0.4			PeShockHeatingFraction
+
+ELECTRONENTROPY
+F			UseElectronEntropy
+
+#UNIFORMSTATE
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.70710677		StateVar Bx
+0.70710677		StateVar By
+0.0			StateVar Bz
+0.05			StateVar Pe
+0.05			StateVar P
+
+#BUMP
+p			NameVar
+4.95			Amplitude
+0.2			WidthX
+0.2			WidthY
+-1.0			WidthZ
+0.5			CenterX
+0.5			CenterY
+0.0			CenterZ
+0			nPower
+
+#BUMP
+Pe			NameVar
+4.95			Amplitude
+0.2			WidthX
+0.2			WidthY
+-1.0			WidthZ
+0.5			CenterX
+0.5			CenterY
+0.0			CenterZ
+0			nPower
+
+#GRIDBLOCKALL
+500			MaxBlock
+
+#GRID
+20                    	nRootBlockX
+20                    	nRootBlockY
+1                     	nRootBlockZ
+0.0                 	xMin
+1.0                 	xMax
+0.0                   	yMin
+1.0                   	yMax
+-0.5                   	zMin
+ 0.5                   	zMax
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1
+z=0 mhd idl             StringPlot
+-1			DnOutput
+0.01			DtOutput
+0.			DxOutput
+
+#STOP
+-1			MaxIteration
+0.2			tSimulationMax

@@ -82,8 +82,8 @@ module ModAdvance
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
   logical, parameter:: UseEfield = Ex_ > 1
 
-  ! The fraction of non-adiabatic heating put into electrons
-  real:: ElectronShockHeatingFraction = 0.0
+  ! The fraction of non-adiabatic heating put into Pe and Ppar
+  real:: PeShockHeatingFraction = 0.0, PparShockHeatingFraction = 0.0
 
   ! Use the conservative electron entropy equation instead of pressure.
   ! This should provide more robust results near strong shocks.

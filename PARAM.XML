@@ -11,6 +11,7 @@ List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 <set name="nIonFluid"         type="integer" value="($_Value{nIonFluid} or 1)" />
 <set name="nNeutralFluid"     type="integer" value="$_Value{nNeutralFluid}"    />
 <set name="UsePe"             type="integer" value="$_Value{UsePe}"            />
+<set name="UsePpar"           type="integer" value="$_Value{UsePpar}"          />
 <set name="nG"                type="integer" value="$_Value{nG}"               />
 <set name="nI"                type="integer" value="$_Value{nI}"               />
 <set name="nJ"                type="integer" value="$_Value{nJ}"               />
@@ -9437,24 +9438,34 @@ If UseEntropy is true, solve for the ion entropy density s defined as
 s = P**(1/Gamma). The ion entropy, unlike ion pressure,
 satisfies a pure conservation law, so it is well behaved across shocks.
 
-The default value of UseEntropy is false, except when the #ELECTRONSHOCKHEATING
+The default value of UseEntropy is false, except when the #SHOCKHEATING
 command is used, which requires and sets UseEntropy=T.
 </command>
 
-<command name="ELECTRONSHOCKHEATING">
-  <parameter name="ElectronShockHeatingFraction" type="real"
-	     min="0" max="1" default="1"/>
+<command name="SHOCKHEATING">
+  <parameter name="PeShockHeatingFraction" type="real"
+	     min="0" max="1" default="0" if="$UsePe"/>
+  <parameter name="PparShockHeatingFraction" type="real"
+	     min="-1" max="1" default="0" if="$UsePpar"/>
 
-#ELECTRONSHOCKHEATING
-0.5                     ElectronShockHeatingFraction
+#SHOCKHEATING
+0.5                     PeShockHeatingFraction (read if electron pressure is used)
+1.0                     PparShockHeatingFraction (read if ion pressure is anisotropic)
 
-If ElectronShockHeatingFraction is positive, a fraction of the non-adiabatic
+If PeShockHeatingFraction is positive, a fraction of the non-adiabatic
 heating is deposited into the electron thermal energy Pe/(GammaE-1), and the
 same amount of energy is removed from the ion thermal energy P/(Gamma-1).
-If command is used, both UseEntropy and UseElectronEntropy are set to true
+If PparShockHeatingFraction is positive, a fraction of the non-adiabatic
+heating is deposited into the parallel ion energy, and the same
+amount of energy is removed from the perpendicular ion energy.
+If PeShockHeatingFraction is negative, then the fraction of heating going into
+the parallel pressure is abs(b.u), where b and u are the unit vectors for
+the magnetic field and velocity, respectively. 
+If the command is used, both UseEntropy and UseElectronEntropy are set to true
 (see #ENTROPY and #ELECTRONENTROPY).
 
-Default value is 0, which means that all shock heating goes to the ions.
+Default values are 0, which means that all shock heating goes to the (perpendicular)
+ion pressure.
 </command>
 
 <command name="ANISOTROPICPRESSURE">
