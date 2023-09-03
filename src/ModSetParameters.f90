@@ -2768,7 +2768,8 @@ contains
           call read_var('DoThreadRestart', DoThreadRestart)
 
        case("#ADVECTWAVES", "#ALFVENWAVES", "#WAVEPRESSURE", &
-            "#FREQUENCY", "#SPECTRUM", "#WAVEREFLECTION")
+            "#FREQUENCY", "#SPECTRUM", "#WAVEREFLECTION",    &
+            "#WAVEREPRESENTATIVE")
           call read_waves_param(NameCommand)
 
        case("#LASERPULSE", "#LASERBEAM", "#LASERBEAMS", "#LASERBEAMPROFILE", &

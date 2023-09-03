@@ -10856,7 +10856,22 @@ If UseAlfvenWaves = .true. the waves are separated into
 two sets, one of them ('plus') propagate parallel to the magnetic
 field, the second one ('minus') is for waves propagating anti-parallel
 to the field. The propagation speed with respect to the background
-plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.  </command>
+plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.
+</command>
+
+<command name="WAVEREPRESENTATIVE">
+  <parameter name="UseAlfvenWaveRepresentative" type="logical" default="F"/>
+
+#WAVEREPRESENTATIVE
+F			UseAlfenWaveRepresentative
+
+If UseAlfvenWaveRepresentative is .true., in ExplicitAdvance at the beginning
+the wave energy densities are divided by sqrt(Rho)*PoyntingFluxPerB, to get
+representative functions, for which the equations and boundary conditions are
+easier to handle. After the stage loop, the functions are converted back
+to physically meaningful wave energy densities.
+
+</command>
 
 </commandgroup>
 

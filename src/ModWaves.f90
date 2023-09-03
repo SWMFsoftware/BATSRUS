@@ -50,7 +50,8 @@ module ModWaves
   ! To use the representative functions model, turn on the logical as follows:
 
   Logical :: UseAlfvenWaveRepresentative = .false.
-  !$acc declare create(UseAlfvenWaveRepresentative)
+  logical :: UseAwRepresentativeHere = .false.
+  !$acc declare create(UseAlfvenWaveRepresentative, UseAwRepresentativeHere)
   real :: FreqMinSI = -1.0
   real :: FreqMaxSI = -1.0
 
@@ -143,6 +144,11 @@ contains
        call read_var('UseWavePressure'   ,UseWavePressure)
        call read_var('UseWavePressureLtd',UseWavePressureLtd)
        !$acc update device(UseWavePressure, UseWavePressureLtd)
+
+    case("#WAVEREPRESENTATIVE")
+       call read_var('UseAlfvenWaveRepresentative',UseAlfvenWaveRepresentative)
+       !$acc update device(UseAlfvenWaveRepresentative)
+
     case("#FREQUENCY")
        call read_var('FreqMinSI',FreqMinSI)
        call read_var('FreqMaxSI',FreqMaxSI)
