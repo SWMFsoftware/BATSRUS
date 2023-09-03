@@ -24,7 +24,7 @@ module ModAwTurbulence
   logical :: UseTurbulentCascade = .false.
   real    :: rMinWaveReflection = 0.0
   logical :: UseNewLimiter4Reflection
-  
+
   ! The Poynting flux to magnetic field ratio (one of the input parameters
   ! in SI unins and diminsionless:
   real :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
@@ -43,7 +43,7 @@ module ModAwTurbulence
   !$omp threadprivate( CoronalHeating_C, WaveDissipationRate_VC )
 
   character(len=lStringLine) :: TypeHeatPartitioning
-  
+
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
   integer :: iTableHeatPartition = -1
 
@@ -61,7 +61,7 @@ module ModAwTurbulence
   real :: StochasticAmplitude2 = 0.0 ! 1.17
 
   logical :: UseNonlinearAwDissipation = .false.
-  
+
   ! Switch whether or not to use Alignment angle between Zplus and Zminus
   ! Elsasser variables in the cascade rate
   logical :: UseAlignmentAngle = .false.
@@ -145,7 +145,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine read_aw_turbulence_param
- !============================================================================
+  !============================================================================
   subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, &
        WaveDissipationRate_V, CoronalHeating)
 

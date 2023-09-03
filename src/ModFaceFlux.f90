@@ -493,10 +493,10 @@ contains
     real:: FaceDivU_I(nFluid)
     real, parameter:: cLowOrder = 0.999999
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_flux'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
@@ -1671,7 +1671,7 @@ contains
       Uy      = State_V(Uy_)
       Uz      = State_V(Uz_)
       p       = State_V(p_)
-      ! A factor to convert representative functions to a real wave energy 
+      ! A factor to convert representative functions to a real wave energy
       if(UseAwRepresentativeHere)SqrtRho = sqrt(Rho)*PoyntingFluxPerB
       ! Hydrodynamic part of fluxes
 
@@ -1926,14 +1926,14 @@ contains
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal, PeAdd, pWave, wD, SqrtRho
       real :: DpPerB, FullB2
-      !------------------------------------------------------------------------
       ! Extract primitive variables
+      !------------------------------------------------------------------------
       Rho = State_V(iRho)
       Ux  = State_V(iUx)
       Uy  = State_V(iUy)
       Uz  = State_V(iUz)
       p   = State_V(iP)
-      ! A factor to convert representative functions to a real wave energy 
+      ! A factor to convert representative functions to a real wave energy
       if(UseAwRepresentativeHere)SqrtRho = sqrt(Rho)*PoyntingFluxPerB
       ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
       ! anisotropic Pe, Peperp contributes

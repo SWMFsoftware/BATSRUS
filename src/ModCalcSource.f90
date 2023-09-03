@@ -1443,7 +1443,7 @@ contains
                  LeftState_VX(iVar,i+1,j,k) + RightState_VX(iVar,i+1,j,k)) &
                  + abs(VectorComp)*(&
                  LeftState_VX(iVar,i+1,j,k) - RightState_VX(iVar,i+1,j,k)))
-            ! Face X Left            
+            ! Face X Left
             VectorComp = -sum(Vector_DC(:,i,j,k)* &
                  FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock))
             if(present(DoLimitTimeStep))then
