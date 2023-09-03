@@ -34,7 +34,7 @@ contains
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
-    use ModCoronalHeating, ONLY: UseReynoldsDecomposition
+    use ModAwTurbulence, ONLY: UseReynoldsDecomposition
     use ModEnergy, ONLY: limit_pressure
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless

@@ -127,7 +127,8 @@ contains
     use EEE_ModMain, ONLY: EEE_set_parameters
     use ModMagnetogram, ONLY: read_magnetogram_param
     use ModCoronalHeating,  ONLY: read_coronal_heating_param, &
-         init_coronal_heating, UseCoronalHeating, UseAlfvenWaveDissipation
+         init_coronal_heating, UseCoronalHeating
+    use ModAwTurbulence,    ONLY: UseAlfvenWaveDissipation
     use ModFieldLineThread, ONLY: read_thread_param
     use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc_param
     use ModRadiativeCooling, ONLY: UseRadCooling,&

@@ -389,7 +389,6 @@ contains
     use ModMain, ONLY: UseHyperbolicDivb
     use ModAdvance, ONLY: TypeFlux
     use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
-    use ModWaves, ONLY: UseAlfvenWaves, UseAlfvenWaveRepresentative
     !--------------------------------------------------------------------------
     DoSimple = TypeFlux == 'Simple'
     DoLf     = TypeFlux == 'Rusanov'
@@ -400,8 +399,6 @@ contains
     DoAw     = TypeFlux == 'Sokolov'
     DoRoeOld = TypeFlux == 'RoeOld'
     DoRoe    = TypeFlux == 'Roe'
-
-    UseAlfvenWaveSpeed = UseAlfvenWaves.and..not. UseAlfvenWaveRepresentative
 
     DoLfNeutral      = TypeFluxNeutral == 'Rusanov'
     DoHllNeutral     = TypeFluxNeutral == 'Linde'
@@ -432,7 +429,7 @@ contains
     UseScalar = DoUpdate_V(Rho_) .and. .not. any(DoUpdate_V(Rho_+1:))
 
     !$acc update device(DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld)
-    !$acc update device(DoAw, DoRoeOld, DoRoe, UseAlfvenWaveSpeed)
+    !$acc update device(DoAw, DoRoeOld, DoRoe)
 
     !$acc update device(DoLfNeutral, DoHllNeutral,DoHlldwNeutral,DoLfdwNeutral)
     !$acc update device(DoAwNeutral, DoGodunovNeutral, DoHllcNeutral)
@@ -488,7 +485,8 @@ contains
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
     use ModMultiFluid, ONLY: UseMultiIon
-
+    use ModWaves, ONLY: UseAlfvenWaves
+    use ModAwTurbulence, ONLY: UseAwRepresentativeHere
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
 
@@ -513,6 +511,9 @@ contains
     IsNewBlockIonHeatCond  = .true.
     IsNewBlockVisco        = .true.
     IsNewBlockAlfven       = .true.
+
+    UseAlfvenWaveSpeed = UseAlfvenWaves.and..not.UseAwRepresentativeHere
+    !$acc update device(UseAlfvenWaveSpeed)
 
     if(UseHallResist)then
        call set_hall_factor_face(iBlock)
@@ -1176,12 +1177,14 @@ contains
          AlfvenPlusFirst_, AlfvenPlusLast_, &
          GammaWave, UseWavePressure, UseAlfvenWaves, &
          UseWavePressureLtd
+    use ModAwTurbulence, ONLY: UseAwRepresentativeHere
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
          iRho, iRhoUx, iRhoUy, iRhoUz, iUx, iUy, iUz, iEnergy, iP, &
          IsIon_I, nIonFluid, UseMultiIon, ChargePerMass_I, select_fluid
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_GB
+    use ModAwTurbulence, ONLY: PoyntingFluxPerB
 
     real, intent(in) :: State_V(nVar)      ! input primitive state
 
@@ -1236,6 +1239,9 @@ contains
           else
              Pwave = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
           end if
+          ! Covert the representative function to a real pressure if needed
+          if(UseAwRepresentativeHere)Pwave=Pwave*PoyntingFluxPerB*&
+               sqrt(State_V(iRho_I(IonFirst_)))
        end if
 
     else
@@ -1634,8 +1640,8 @@ contains
       use ModElectricField, ONLY: UseJCrossBForce
       use ModPhysics, ONLY: InvGamma, InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
-      use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
-           UseTransverseTurbulence, SigmaD
+      use ModAwTurbulence, ONLY: UseReynoldsDecomposition, SigmaD, &
+           UseTransverseTurbulence,  PoyntingFluxPerB, UseAwRepresentativeHere
 
       real, intent(in) :: State_V(:)
       real, intent(out) :: Un
@@ -1646,8 +1652,10 @@ contains
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
-      real :: pPerp    ! in anisptropic case is not the same as p
+      real :: pPerp    ! in anisotropic case is not the same as p
+      real :: pWave    ! Contribution from waves to pressure
       real :: pExtra   ! Electrons and waves act on ions via electr.field
+      real :: SqrtRho  ! Square root of density times PoyntingFluxPerB
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2
 
@@ -1663,7 +1671,8 @@ contains
       Uy      = State_V(Uy_)
       Uz      = State_V(Uz_)
       p       = State_V(p_)
-
+      ! A factor to convert representative functions to a real wave energy 
+      if(UseAwRepresentativeHere)SqrtRho = sqrt(Rho)*PoyntingFluxPerB
       ! Hydrodynamic part of fluxes
 
       ! Normal direction
@@ -1757,11 +1766,9 @@ contains
       end if
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
-            pExtra = pExtra &
-                 + (GammaWave-1)*State_V(Ew_)
+            pWave = (GammaWave-1)*State_V(Ew_)
          else
-            pExtra = pExtra &
-                 + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+            pWave = (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
          end if
          if(UseReynoldsDecomposition)then
             if(WDiff_>1)then
@@ -1771,11 +1778,14 @@ contains
                     sum(State_V(WaveFirst_:WaveLast_))
             end if
             if(UseTransverseTurbulence)then
-               pExtra = pExtra + (GammaWave-1)*wD
+               pWave = pWave + (GammaWave-1)*wD
             else
-               pExtra = pExtra + (GammaWave-1)*wD/3
+               pWave = pWave + (GammaWave-1)*wD/3
             end if
          end if
+         ! Convert representative functions to a real wave pressure if needed
+         if(UseAwRepresentativeHere) pWave = SqrtRho*pWave
+         pExtra = pExtra + pWave
       end if
       ! Calculate some intermediate values for flux calculations
       B2      = Bx*Bx + By*By + Bz*Bz
@@ -1828,7 +1838,8 @@ contains
            .and. UseTransverseTurbulence)then
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
          DpPerB = -wD*FullBn/max(1e-30, FullB2)
-
+         ! Convert representative functions to a real wave pressure if needed
+         if(UseAwRepresentativeHere)DpPerB = DpPerB*SqrtRho
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
@@ -1908,10 +1919,12 @@ contains
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModPhysics, ONLY: InvGamma, InvGammaMinus1_I
       use ModMultiFluid, ONLY: iPpar
+      use ModAwTurbulence, ONLY: UseReynoldsDecomposition, &
+           UseTransverseTurbulence, SigmaD, PoyntingFluxPerB
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal, PeAdd
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal, PeAdd, pWave, wD, SqrtRho
       real :: DpPerB, FullB2
       !------------------------------------------------------------------------
       ! Extract primitive variables
@@ -1920,7 +1933,8 @@ contains
       Uy  = State_V(iUy)
       Uz  = State_V(iUz)
       p   = State_V(iP)
-
+      ! A factor to convert representative functions to a real wave energy 
+      if(UseAwRepresentativeHere)SqrtRho = sqrt(Rho)*PoyntingFluxPerB
       ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
       ! anisotropic Pe, Peperp contributes
       if (UseElectronPressure .and. .not. UseAnisoPe) then
@@ -1938,8 +1952,28 @@ contains
       if(nIonFluid == 1 .and. iFluid == 1)then
          if(UseElectronPressure) pTotal = pTotal + PeAdd
 
-         if(UseWavePressure) &
-              pTotal = pTotal +(GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+         if(UseWavePressure)then
+            if(UseWavePressureLtd)then
+               pWave = (GammaWave-1)*State_V(Ew_)
+            else
+               pWave = (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+            end if
+            if(UseReynoldsDecomposition)then
+               if(WDiff_>1)then
+                  wD = State_V(WDiff_)
+               else
+                  wD = SigmaD*&
+                       sum(State_V(WaveFirst_:WaveLast_))
+               end if
+               if(UseTransverseTurbulence)then
+                  pWave = pWave + (GammaWave-1)*wD
+               else
+                  pWave = pWave + (GammaWave-1)*wD/3
+               end if
+            end if
+            if(UseAwRepresentativeHere)pWave = pWave*SqrtRho
+            pTotal = pTotal + pWave
+         end if
       end if
 
       ! pTotal = pperp = 3/2*p - 1/2*ppar = p + (p - ppar)/2
@@ -3124,6 +3158,7 @@ contains
       use ModPhysics,  ONLY: InvGammaMinus1_I, Gamma_I, InvGammaMinus1
       use ModMultiFluid, ONLY: iRhoUx, iRhoUz, iUx, iUz
       use ModWaves,    ONLY: UseWavePressure, GammaWave
+      use ModAwTurbulence, ONLY: PoyntingFluxPerB
 
       real :: Rho, Un, p, pTotal, e, StateStar_V(nVar)
       real :: RhoSide,UnSide
@@ -3150,6 +3185,10 @@ contains
          ! Increase maximum speed due to isotropic wave pressure
          pWaveL = (GammaWave - 1)*sum(StateLeft_V(WaveFirst_:WaveLast_))
          pWaveR = (GammaWave - 1)*sum(StateRight_V(WaveFirst_:WaveLast_))
+         if(UseAlfvenWaveSpeed)then
+            pWaveL = pWaveL*sqrt(RhoL)*PoyntingFluxPerB
+            pWaveR = pWaveR*sqrt(RhoR)*PoyntingFluxPerB
+         end if
          pL = pL + pWaveL
          pR = pR + pWaveR
       else
@@ -3227,7 +3266,7 @@ contains
       StateStar_V(iUx:iUz) = StateStar_V(iUx:iUz) + (Un-UnSide)*Normal_D
       StateStar_V(P_)      = p
       do iVar=ScalarFirst_, ScalarLast_
-         StateStar_V(iVar) = StateStar_V(iVar)*(Rho/RhoSide)
+         StateStar_V(iVar) = StateStar_V(iVar)*Isothermal
       end do
 
       ! Calculate flux
@@ -3815,7 +3854,7 @@ contains
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe, SignB_, &
            UseMagFriction, MagFrictionCoef
-      use ModCoronalHeating, ONLY: UseReynoldsDecomposition, &
+      use ModAwTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD
 
       real, intent(in) :: State_V(:)
