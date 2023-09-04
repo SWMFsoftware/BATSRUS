@@ -722,6 +722,7 @@ contains
 
        case("#ELECTRONENTROPY")
           call read_var('UseElectronEntropy', UseElectronEntropy)
+          call read_var('UseElectronEnergy',  UseElectronEnergy)
 
        case("#SHOCKHEATING")
           if(UseElectronPressure) call read_var("PeShockHeatingFraction", &

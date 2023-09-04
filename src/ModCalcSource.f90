@@ -630,7 +630,9 @@ contains
           if(UseElectronPressure)then
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaElectronMinus1
-
+             if(UseElectronEnergy) &
+                  Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                  + RadCooling_C(i,j,k)
           else
              Source_VC(p_,i,j,k)  = Source_VC(p_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaMinus1
@@ -697,7 +699,8 @@ contains
              ! -u.grad Pe = -div(u Pe) + Pe div(u)
              ! The -div(u Pe) is implemented as a flux in ModFaceFlux.
              ! Here we add the Pe div(u_e) source term
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
+             if(.not. UseElectronEnergy) &
+                  Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
 
              ! Add "geometrical source term" p/r to the radial momentum
              ! equation. The "radial" direction is along the Y axis
