@@ -175,6 +175,7 @@ MASSLOADING
 
 #ELECTRONENTROPY
 F			UseElectronEntropy
+F			UseElectronEnergy
 
 #SCHEME
 2			nOrder (1 or 2)
