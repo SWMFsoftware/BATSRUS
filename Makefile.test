@@ -144,9 +144,8 @@ test_gpu: test_small_gpu
 
 test_extra:
 	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)
-	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)
-	-@($(MAKE) test_bvector TESTDIR=run_test_bvector)
 	-@($(MAKE) test_awsom_bvector TESTDIR=run_test_awsom_bvector)
+	-@($(MAKE) test_bvector TESTDIR=run_test_bvector)
 	-@($(MAKE) test_fluxemergence TESTDIR=run_test_fluxemergence)
 	-@($(MAKE) test_graydiffusion TESTDIR=run_test_graydiffusion)
 	-@($(MAKE) test_eosgodunov TESTDIR=run_test_eosgodunov)
@@ -166,12 +165,10 @@ test_extra:
 	-@($(MAKE) test_europa2fluidspe TESTDIR=run_test_europa2fluidspe)
 	-@($(MAKE) test_europa3fluidspe TESTDIR=run_test_europa3fluidspe)
 
-# !!! NOTE: In the above list "test_func" should be the last test
-
-# All tests are done in this directory:
+# Default run directory for tests
 TESTDIR = run_test
 
-# Reference solution is put into this directory when needed:
+# Reference solution directory for test_func
 REFDIR = run_test_ref
 
 OPENMP = -openmp
