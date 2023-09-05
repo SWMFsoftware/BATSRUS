@@ -429,21 +429,6 @@ contains
          end if
       end if
 
-      if(UseElectronPressure .and. UseElectronEntropy)then
-         ! Convert electron pressure to entropy
-         ! Se = Pe^(1/GammaE)
-         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-
-            StateOld_VGB(Pe_,i,j,k,iBlock) = &
-                 StateOld_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
-            ! State_VGB is not used in 1-stage and HalfStep schemes
-            if(.not.UseHalfStep .and. nStage > 1) &
-                 State_VGB(Pe_,i,j,k,iBlock) = &
-                 State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
-         end do; end do; end do
-      end if
-
       if(UseEntropy)then
          ! Convert pressure(s) to entropy
          if(UseAnisoPressure)then
@@ -531,6 +516,7 @@ contains
            StateOld_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
       if(.not.DoAddToStateOld) call pressure_to_energy(iBlock, State_VGB)
+
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          ! Convert classical momentum and energy to relativistic
          call mhd_to_boris(iBlock)
@@ -565,6 +551,22 @@ contains
          end do; end do; end do
       end if
 
+      if(UseElectronPressure .and. UseElectronEntropy)then
+         ! Convert electron pressure to entropy
+         ! This has to be after call pressure_to_energy for UseElectronEnergy
+         ! Se = Pe^(1/GammaE)
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+
+            StateOld_VGB(Pe_,i,j,k,iBlock) = &
+                 StateOld_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
+            ! State_VGB is not used in 1-stage and HalfStep schemes
+            if(.not.UseHalfStep .and. nStage > 1) &
+                 State_VGB(Pe_,i,j,k,iBlock) = &
+                 State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
+         end do; end do; end do
+      end if
+      
       if(nVarUpdate /= nVar .and. DoUpdate_V(Rho_))then
          ! Convert to velocity when momentum is not updated
          do iVar = RhoUx_, RhoUz_
@@ -698,6 +700,7 @@ contains
 
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron entropy back to pressure
+         ! This has to be before call energy_to_pressure for UseElectronEnergy
          ! Pe = Se^GammaE
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
