@@ -6,22 +6,23 @@ module ModEnergy
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModExtraVariables, ONLY: Pepar_
-  use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
-       Hyp_, p_, Pe_, IsMhd
-  use ModMultiFluid, ONLY: nFluid, IonLast_, &
-       iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, &
+  use ModVarIndexes, ONLY: &
+       nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, Hyp_, p_, Pe_, IsMhd
+  use ModMultiFluid, ONLY: &
+       nFluid, IonLast_, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, &
        UseNeutralFluid, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
-  use ModAdvance,    ONLY: State_VGB, StateOld_VGB, UseElectronPressure, &
-       UseElectronEnergy
+  use ModAdvance, ONLY: &
+       State_VGB, StateOld_VGB, UseElectronPressure, UseElectronEnergy
   use ModConservative, ONLY: UseNonConservative, nConservCrit, IsConserv_CB
   use ModPhysics, ONLY: &
-       GammaMinus1_I, InvGammaMinus1_I, InvGammaMinus1, GammaElectronMinus1, &
+       GammaMinus1_I, InvGammaMinus1_I, InvGammaMinus1, &
        InvGammaElectronMinus1, pMin_I, PeMin, Tmin_I, TeMin
-  use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       MaxBlock, Used_GB
+  use BATL_lib, ONLY: &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, Used_GB
   use ModChGL,     ONLY: UseChGL, rMinChGL
   use ModGeometry, ONLY: r_GB
+
   implicit none
 
   private ! except
@@ -266,7 +267,7 @@ contains
 
           if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-               - State_VGB(Pe_,i,j,k,iBlock)*GammaElectronMinus1
+               - State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
           
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &
@@ -320,7 +321,7 @@ contains
 
           if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-               - State_VGB(Pe_,i,j,k,iBlock)*GammaElectronMinus1
+               - State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
 
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &
