@@ -798,7 +798,7 @@ contains
        if(DoTest)call write_source('After UseRzGeometry')
     end if ! UseRzGeometry
 
-    ! We consider two cases: curl(B0) is zero analytically or non-zero
+    ! We consider two cases: curl(B0) is zero analytically or non-zero.
     ! These are distinguished by UseCurlB0 being true or false.
     !
     ! Momentum equation has the Lorentz force J x B
