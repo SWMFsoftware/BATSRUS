@@ -566,7 +566,7 @@ contains
                  State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
          end do; end do; end do
       end if
-      
+
       if(nVarUpdate /= nVar .and. DoUpdate_V(Rho_))then
          ! Convert to velocity when momentum is not updated
          do iVar = RhoUx_, RhoUz_
@@ -909,7 +909,7 @@ contains
                !     /State_VGB(Rho_,i-1,j,k,iBlock)
                u_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
                ! For parallel shock |u.b|=1 and all heating goes into Ppar,
-               ! for perpendicular shock |u.b|=0 no heating goes into Ppar. 
+               ! for perpendicular shock |u.b|=0 no heating goes into Ppar.
                WeightPar = abs(sum(u_D*b_D))/(norm2(b_D)*norm2(u_D) + 1e-30)
             end if
             ! Final weight is wPar/(wPar + (1-wPar)*2B^3/rho^2)

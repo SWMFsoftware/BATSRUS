@@ -93,7 +93,7 @@ module ModAdvance
   ! Include electron energy into the total energy conservation?
   logical:: UseElectronEnergy  = .false.
   !$acc declare create(UseElectronEnergy)
-  
+
   ! This should provide more robust results near strong shocks.
   logical:: UseEntropy  = .false. !!! UseAnisoPressure
   !$acc declare create(UseEntropy)

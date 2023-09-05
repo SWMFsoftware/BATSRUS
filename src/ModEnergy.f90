@@ -268,7 +268,7 @@ contains
           if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                - State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
-          
+
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &
                GammaMinus1_I(iFluid)*(State_VGB(iP,i,j,k,iBlock) &
