@@ -12,6 +12,7 @@ NONE			TypeNormalization
 
 #ELECTRONENTROPY
 F			UseElectronEntropy
+F			UseElectronEnergy
 
 #NONCONSERVATIVE
 T			UseNonConservative

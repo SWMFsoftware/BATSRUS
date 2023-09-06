@@ -16,7 +16,8 @@ NONE			TypeNormalization
 0.4			PeShockHeatingFraction
 
 ELECTRONENTROPY
-F			UseElectronEntropy
+T			UseElectronEntropy
+T			UseElectronEnergy
 
 #UNIFORMSTATE
 1.0			StateVar Rho

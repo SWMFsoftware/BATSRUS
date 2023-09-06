@@ -34,7 +34,7 @@ contains
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
-    use ModCoronalHeating, ONLY: UseReynoldsDecomposition
+    use ModAwTurbulence, ONLY: UseReynoldsDecomposition
     use ModEnergy, ONLY: limit_pressure
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless
@@ -395,7 +395,8 @@ contains
       ! true if shock heating is applied to electrons, anisotropic ion pressure
       logical:: UseElectronShockHeating, UseAnisoShockHeating
 
-      real:: Coeff1, Coeff2, b_D(3), FullB2, FullB, dP, Sperp, u_D(3)
+      real:: Coeff1, Coeff2, b_D(3), u_D(3), FullB2, FullB
+      real:: dP, Sperp, WeightPar
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
       real, allocatable, save:: pAdiab_C(:,:,:)
@@ -426,21 +427,6 @@ contains
                     State_VGB(p_,i,j,k,iBlock)**InvGamma)**Gamma
             end do; end do; end do
          end if
-      end if
-
-      if(UseElectronPressure .and. UseElectronEntropy)then
-         ! Convert electron pressure to entropy
-         ! Se = Pe^(1/GammaE)
-         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-
-            StateOld_VGB(Pe_,i,j,k,iBlock) = &
-                 StateOld_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
-            ! State_VGB is not used in 1-stage and HalfStep schemes
-            if(.not.UseHalfStep .and. nStage > 1) &
-                 State_VGB(Pe_,i,j,k,iBlock) = &
-                 State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
-         end do; end do; end do
       end if
 
       if(UseEntropy)then
@@ -530,6 +516,7 @@ contains
            StateOld_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
       if(.not.DoAddToStateOld) call pressure_to_energy(iBlock, State_VGB)
+
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          ! Convert classical momentum and energy to relativistic
          call mhd_to_boris(iBlock)
@@ -561,6 +548,22 @@ contains
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             Source_VC(iP_I(IonLast_+1:),i,j,k) = &
                  Source_VC(Energy_+IonLast_:,i,j,k)
+         end do; end do; end do
+      end if
+
+      if(UseElectronPressure .and. UseElectronEntropy)then
+         ! Convert electron pressure to entropy
+         ! This has to be after call pressure_to_energy for UseElectronEnergy
+         ! Se = Pe^(1/GammaE)
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+
+            StateOld_VGB(Pe_,i,j,k,iBlock) = &
+                 StateOld_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
+            ! State_VGB is not used in 1-stage and HalfStep schemes
+            if(.not.UseHalfStep .and. nStage > 1) &
+                 State_VGB(Pe_,i,j,k,iBlock) = &
+                 State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
          end do; end do; end do
       end if
 
@@ -697,6 +700,7 @@ contains
 
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron entropy back to pressure
+         ! This has to be before call energy_to_pressure for UseElectronEnergy
          ! Pe = Se^GammaE
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -891,8 +895,11 @@ contains
               pAdiab_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             dP = State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k)
+            b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+            if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+            FullB = norm2(b_D)
             if(PparShockHeatingFraction > 0.)then
-               dP = dP*PparShockHeatingFraction
+               WeightPar = PparShockHeatingFraction
             else
                ! Evaluate b.n
                ! rho^2*du = rho*d(rho u) - rho*u*drho
@@ -901,12 +908,13 @@ contains
                !     -State_VGB(RhoUx_:RhoUz_,i-1,j,k,iBlock) &
                !     /State_VGB(Rho_,i-1,j,k,iBlock)
                u_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
-               b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-               if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                ! For parallel shock |u.b|=1 and all heating goes into Ppar,
                ! for perpendicular shock |u.b|=0 no heating goes into Ppar.
-               dP = dP*abs(sum(u_D*b_D))/(norm2(b_D)*norm2(u_D) + 1e-30)
+               WeightPar = abs(sum(u_D*b_D))/(norm2(b_D)*norm2(u_D) + 1e-30)
             end if
+            ! Final weight is wPar/(wPar + (1-wPar)*2B^3/rho^2)
+            dP = dP * WeightPar/(WeightPar + (1 - WeightPar)*2*FullB**3 &
+                 /State_VGB(Rho_,i,j,k,iBlock)**2)
             ! dPpar = (GammaPar-1)*dP/(Gamma-1) = 2*dP/(5/3-1) = 3*dP
             State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
                  + 3*dP

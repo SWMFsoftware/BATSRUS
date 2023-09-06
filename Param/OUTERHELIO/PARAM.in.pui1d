@@ -40,6 +40,7 @@ periodic		TypeBc6
 
 #ELECTRONENTROPY
 F			UseElectronEntropy
+F			UseElectronEnergy
 
 #SCHEME
 1			nOrder

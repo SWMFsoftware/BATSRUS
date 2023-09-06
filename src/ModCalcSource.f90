@@ -152,7 +152,8 @@ contains
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
     use ModIonElectron,   ONLY: ion_electron_source_impl
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
-    use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
+    use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating
+    use ModAwTurbulence,  ONLY: &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          KarmanTaylorBeta2AlphaRatio, &
@@ -629,7 +630,9 @@ contains
           if(UseElectronPressure)then
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaElectronMinus1
-
+             if(UseElectronEnergy) &
+                  Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                  + RadCooling_C(i,j,k)
           else
              Source_VC(p_,i,j,k)  = Source_VC(p_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaMinus1
@@ -696,7 +699,8 @@ contains
              ! -u.grad Pe = -div(u Pe) + Pe div(u)
              ! The -div(u Pe) is implemented as a flux in ModFaceFlux.
              ! Here we add the Pe div(u_e) source term
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
+             if(.not. UseElectronEnergy) &
+                  Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
 
              ! Add "geometrical source term" p/r to the radial momentum
              ! equation. The "radial" direction is along the Y axis
@@ -794,7 +798,7 @@ contains
        if(DoTest)call write_source('After UseRzGeometry')
     end if ! UseRzGeometry
 
-    ! We consider two cases: curl(B0) is zero analytically or non-zero
+    ! We consider two cases: curl(B0) is zero analytically or non-zero.
     ! These are distinguished by UseCurlB0 being true or false.
     !
     ! Momentum equation has the Lorentz force J x B
@@ -1355,14 +1359,14 @@ contains
 
     end subroutine get_alfven_speed
     !==========================================================================
-    subroutine vect_dot_grad_state(Vector_DC, iVar, iBlock)
+    subroutine vect_dot_grad_state(Vector_DC, iVar, iBlock, DoLimitTimeStep)
 
       use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, Dim1_, Dim2_, Dim3_,&
            CellFace_DB
       use ModAdvance, ONLY:  Flux_VXI, Flux_VYI, Flux_VZI, Vdt_
       real,    intent(in) :: Vector_DC(MaxDim,nI,nJ,nK)
       integer, intent(in) :: iVar, iBlock
-
+      logical, optional, intent(in) :: DoLimitTimeStep
       real :: Source_C(nI,nJ,nK), VectorComp, VectDotArea
       integer :: iDir, i, j, k
 
@@ -1373,9 +1377,13 @@ contains
          do k = 1,nK; do j=1,nJ; do i=1,nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             VectorComp = Vector_DC(x_,i,j,k)
-            VectDotArea = abs(VectorComp)*CellFace_DB(x_,iBlock)
-            Flux_VXI(Vdt_,i:i+1,j,k,iGang) = max(&
-                 Flux_VXI(Vdt_,i:i+1,j,k,iGang), VectDotArea)
+            if(present(DoLimitTimeStep))then
+               VectDotArea = abs(VectorComp)*CellFace_DB(x_,iBlock)
+               Flux_VXI(Vdt_,i:i+1,j,k,iGang) = max(        &
+                    Flux_VXI(Vdt_,i:i+1,j,k,iGang),         &
+                    VectDotArea  +                          &
+                    abs(Flux_VXI(UnFirst_,i:i+1,j,k,iGang)) )
+            end if
             Source_C(i,j,k) = 0.5*(VectorComp*(&
                  LeftState_VX(iVar,i+1,j,k) + RightState_VX(iVar,i+1,j,k)&
                  -LeftState_VX(iVar,i,j,k) - RightState_VX(iVar,i,j,k))  &
@@ -1386,9 +1394,13 @@ contains
 
             if(nJ > 1)then
                VectorComp = Vector_DC(y_,i,j,k)
-               VectDotArea = abs(VectorComp)*CellFace_DB(y_,iBlock)
-               Flux_VYI(Vdt_,i,j:j+1,k,iGang) = max(&
-                 Flux_VYI(Vdt_,i,j:j+1,k,iGang), VectDotArea)
+               if(present(DoLimitTimeStep))then
+                  VectDotArea = abs(VectorComp)*CellFace_DB(y_,iBlock)
+                  Flux_VYI(Vdt_,i,j:j+1,k,iGang) = max(        &
+                       Flux_VYI(Vdt_,i,j:j+1,k,iGang),         &
+                       VectDotArea  +                          &
+                       abs(Flux_VYI(UnFirst_,i,j:j+1,k,iGang)) )
+               end if
                Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
                     LeftState_VY(iVar,i,j+1,k) + RightState_VY(iVar,i,j+1,k)&
                     -LeftState_VY(iVar,i,j,k) - RightState_VY(iVar,i,j,k))  &
@@ -1399,9 +1411,13 @@ contains
             end if
             if(nK > 1)then
                VectorComp = Vector_DC(z_,i,j,k)
-               VectDotArea = abs(VectorComp)*CellFace_DB(z_,iBlock)
-               Flux_VZI(Vdt_,i,j,k:k+1,iGang) = max(&
-                    Flux_VZI(Vdt_,i,j,k:k+1,iGang), VectDotArea)
+               if(present(DoLimitTimeStep))then
+                  VectDotArea = abs(VectorComp)*CellFace_DB(z_,iBlock)
+                  Flux_VZI(Vdt_,i,j,k:k+1,iGang) = max(        &
+                       Flux_VZI(Vdt_,i,j,k:k+1,iGang),         &
+                       VectDotArea +                           &
+                       abs(Flux_VZI(UnFirst_,i,j,k:k+1,iGang)) )
+               end if
                Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
                     LeftState_VZ(iVar,i,j,k+1) + RightState_VZ(iVar,i,j,k+1)&
                     -LeftState_VZ(iVar,i,j,k) - RightState_VZ(iVar,i,j,k))  &
@@ -1415,61 +1431,90 @@ contains
          call stop_mpi(NameSub//': RZ geometry to be implemented')
       else
          do k = 1,nK; do j=1,nJ; do i=1,nI
+            ! Face X Right
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             VectorComp = sum(Vector_DC(:,i,j,k)* &
                  FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock))
-            VectDotArea = abs(VectorComp)
-            Flux_VXI(Vdt_,i+1,j,k,iGang) = max(&
-                 Flux_VXI(Vdt_,i+1,j,k,iGang), VectDotArea)
+            if(present(DoLimitTimeStep))then
+               VectDotArea = abs(VectorComp)
+               Flux_VXI(Vdt_,i+1,j,k,iGang) = max(             &
+                    Flux_VXI(Vdt_,i+1,j,k,iGang),              &
+                    VectDotArea +                              &
+                    abs(Flux_VXI(UnFirst_,i+1,j,k,iGang))      )
+            end if
             Source_C(i,j,k) = 0.5*(VectorComp*(&
                  LeftState_VX(iVar,i+1,j,k) + RightState_VX(iVar,i+1,j,k)) &
                  + abs(VectorComp)*(&
                  LeftState_VX(iVar,i+1,j,k) - RightState_VX(iVar,i+1,j,k)))
+            ! Face X Left
             VectorComp = -sum(Vector_DC(:,i,j,k)* &
                  FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock))
-            VectDotArea = abs(VectorComp)
-            Flux_VXI(Vdt_,i,j,k,iGang) = max(&
-                 Flux_VXI(Vdt_,i,j,k,iGang), VectDotArea)
+            if(present(DoLimitTimeStep))then
+               VectDotArea = abs(VectorComp)
+               Flux_VXI(Vdt_,i,j,k,iGang) = max(               &
+                    Flux_VXI(Vdt_,i,j,k,iGang),                &
+                    VectDotArea +                              &
+                    abs(Flux_VXI(UnFirst_,i,j,k,iGang))        )
+            end if
             Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
                  LeftState_VX(iVar,i,j,k) + RightState_VX(iVar,i,j,k)) &
                  + abs(VectorComp)*(&
                  -LeftState_VX(iVar,i,j,k) + RightState_VX(iVar,i,j,k)))
-
             if(nJ > 1)then
+               ! Face Y Right
                VectorComp = sum(Vector_DC(:,i,j,k)* &
                     FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock))
-               VectDotArea = abs(VectorComp)
-               Flux_VYI(Vdt_,i,j+1,k,iGang) = max(&
-                    Flux_VYI(Vdt_,i,j+1,k,iGang), VectDotArea)
+               if(present(DoLimitTimeStep))then
+                  VectDotArea = abs(VectorComp)
+                  Flux_VYI(Vdt_,i,j+1,k,iGang) = max(          &
+                       Flux_VYI(Vdt_,i,j+1,k,iGang),           &
+                       VectDotArea +                           &
+                       Flux_VYI(UnFirst_,i,j+1,k,iGang))
+               end if
                Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
                     LeftState_VY(iVar,i,j+1,k) + RightState_VY(iVar,i,j+1,k))&
                     + abs(VectorComp)*(&
                     LeftState_VY(iVar,i,j+1,k) - RightState_VY(iVar,i,j+1,k)))
+               ! Face Y Left
                VectorComp = -sum(Vector_DC(:,i,j,k)* &
                     FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock))
-               VectDotArea = abs(VectorComp)
-               Flux_VYI(Vdt_,i,j,k,iGang) = max(&
-                    Flux_VYI(Vdt_,i,j,k,iGang), VectDotArea)
+               if(present(DoLimitTimeStep))then
+                  VectDotArea = abs(VectorComp)
+                  Flux_VYI(Vdt_,i,j,k,iGang) = max(            &
+                       Flux_VYI(Vdt_,i,j,k,iGang),             &
+                       VectDotArea +                           &
+                       Flux_VYI(UnFirst_,i,j,k,iGang))
+               end if
                Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
                     LeftState_VY(iVar,i,j,k) + RightState_VY(iVar,i,j,k))&
                     + abs(VectorComp)*(&
                     -LeftState_VY(iVar,i,j,k) + RightState_VY(iVar,i,j,k)))
             end if
             if(nK > 1) then
+               ! Face Z Right
                VectorComp = sum(Vector_DC(:,i,j,k)* &
                     FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock))
-               VectDotArea = abs(VectorComp)
-               Flux_VZI(Vdt_,i,j,k+1,iGang) = max(&
-                    Flux_VZI(Vdt_,i,j,k+1,iGang), VectDotArea)
+               if(present(DoLimitTimeStep))then
+                  VectDotArea = abs(VectorComp)
+                  Flux_VZI(Vdt_,i,j,k+1,iGang) = max(          &
+                       Flux_VZI(Vdt_,i,j,k+1,iGang),           &
+                       VectDotArea +                           &
+                       Flux_VZI(UnFirst_,i,j,k+1,iGang)            )
+               end if
                Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
                     LeftState_VZ(iVar,i,j,k+1) + RightState_VZ(iVar,i,j,k+1))&
                     + abs(VectorComp)*(&
                     LeftState_VZ(iVar,i,j,k+1) - RightState_VZ(iVar,i,j,k+1)))
+               ! Face Z Left
                VectorComp = -sum(Vector_DC(:,i,j,k)* &
                     FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock))
-               VectDotArea = abs(VectorComp)
-               Flux_VZI(Vdt_,i,j,k,iGang) = max(&
-                    Flux_VZI(Vdt_,i,j,k,iGang), VectDotArea)
+               if(present(DoLimitTimeStep))then
+                  VectDotArea = abs(VectorComp)
+                  Flux_VZI(Vdt_,i,j,k,iGang) = max(            &
+                       Flux_VZI(Vdt_,i,j,k,iGang),             &
+                       VectDotArea +                           &
+                       Flux_VZI(UnFirst_,i,j,k,iGang))
+               end if
                Source_C(i,j,k) = Source_C(i,j,k) + 0.5*(VectorComp*(&
                     LeftState_VZ(iVar,i,j,k) + RightState_VZ(iVar,i,j,k))+&
                     abs(VectorComp)*(&

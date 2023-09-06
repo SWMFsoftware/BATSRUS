@@ -36,9 +36,10 @@ contains
          nCorrectedFaceValues, CorrectedFlux_VXB, &
          CorrectedFlux_VYB, CorrectedFlux_VZB, DoConserveFlux
     use ModCoronalHeating, ONLY: get_coronal_heat_factor,&
-         UseUnsignedFluxModel,&
+         UseUnsignedFluxModel
+    use ModWaves,  ONLY: UseAlfvenWaveRepresentative
+    use ModAwTurbulence, ONLY:           &
          wave_energy_to_representative, representative_to_wave_energy
-    use ModWaves,       ONLY: UseAlfvenWaveRepresentative
     use ModMessagePass, ONLY: exchange_messages
     use ModTimeStepControl, ONLY: calc_timestep
     use BATL_lib, ONLY: message_pass_face, IsAnyAxis

@@ -8,7 +8,7 @@ module ModUser
 
   use ModMain, ONLY: nI, nJ,nK
   use ModChromosphere, ONLY: tChromoSi=>TeChromosphereSi
-  use ModCoronalHeating, ONLY: PoyntingFluxPerB, PoyntingFluxPerBSi
+  use ModAwTurbulence, ONLY: PoyntingFluxPerB, PoyntingFluxPerBSi
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -307,7 +307,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModB0,         ONLY: B0_DGB
-    use ModCoronalHeating, ONLY: UseTurbulentCascade, LperpTimesSqrtB
+    use ModAwTurbulence, ONLY: UseTurbulentCascade, LperpTimesSqrtB
     use ModGeometry,   ONLY: Xyz_DGB, r_GB
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: rBody, GBody, AverageIonCharge
@@ -649,7 +649,8 @@ contains
          LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
     use ModChromosphere, ONLY: DoExtendTransitionRegion, &
          get_tesi_c, TeSi_C
-    use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
+    use ModCoronalHeating, ONLY: get_block_heating
+    use ModAwTurbulence, ONLY: CoronalHeating_C, &
          apportion_coronal_heating, get_wave_reflection, &
          WaveDissipationRate_VC
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitT_, &

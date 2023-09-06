@@ -1,0 +1,874 @@
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
+
+module ModAwTurbulence
+
+  use BATL_lib, ONLY: test_start, test_stop
+  use ModBatsrusUtility, ONLY: stop_mpi
+#ifdef _OPENACC
+  use ModUtilities, ONLY: norm2
+#endif
+  use ModMain,       ONLY: nI, nJ, nK
+  use ModReadParam,  ONLY: lStringLine
+  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
+  use ModMultiFluid, ONLY: IonFirst_, IonLast_
+  use omp_lib
+
+  implicit none
+  SAVE
+
+  logical :: UseAwRepresentativeHere = .false.
+  !$acc declare create(UseAwRepresentativeHere)
+
+  logical :: UseTurbulentCascade = .false.
+  real    :: rMinWaveReflection = 0.0
+  logical :: UseNewLimiter4Reflection
+
+  ! The Poynting flux to magnetic field ratio (one of the input parameters
+  ! in SI unins and diminsionless:
+  real :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
+  real :: ImbalanceMax = 2.0, ImbalanceMax2 = 4.0
+
+  ! Alfven wave dissipation
+  logical :: UseAlfvenWaveDissipation = .false.
+  real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
+  real    :: LperpTimesSqrtB
+  real :: Crefl = 0.04
+
+  ! Arrays for the calculated heat function and dissipated wave energy
+  real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
+  real, public :: WaveDissipationRate_VC(WaveFirst_:WaveLast_,&
+       1:nI,1:nJ,1:nK)
+  !$omp threadprivate( CoronalHeating_C, WaveDissipationRate_VC )
+
+  character(len=lStringLine) :: TypeHeatPartitioning
+
+  ! Use a lookup table for linear Landau and transit-time damping of KAWs
+  integer :: iTableHeatPartition = -1
+
+  ! Switch whether to use uniform heat partition
+  logical :: UseUniformHeatPartition = .false.
+  real :: QionRatio_I(IonFirst_:IonLast_) = 0.6
+  real :: QionParRatio_I(IonFirst_:IonLast_) = 0.0
+  real :: QeRatio = 0.4
+
+  ! Dimensionless parameters for stochastic heating
+  logical :: UseStochasticHeating = .true.
+  real :: StochasticExponent   = 0.21
+  real :: StochasticAmplitude  = 0.18
+  real :: StochasticExponent2  = 0.21
+  real :: StochasticAmplitude2 = 0.0 ! 1.17
+
+  logical :: UseNonlinearAwDissipation = .false.
+
+  ! Switch whether or not to use Alignment angle between Zplus and Zminus
+  ! Elsasser variables in the cascade rate
+  logical :: UseAlignmentAngle = .false.
+  real    :: Cdiss_C(1:nI,1:nJ,1:nk)
+  !$omp threadprivate(Cdiss_C)
+
+  ! The normalized energy difference:
+  ! SigmaD = (kinetic - magnetic)/(kinetic + magnetic)
+  logical :: UseReynoldsDecomposition = .false.
+  logical :: UseTransverseTurbulence = .true.
+  real    :: SigmaD = -1.0/3.0
+  real    :: KarmanTaylorAlpha = 1.0
+  real    :: KarmanTaylorBeta2AlphaRatio = 1.0
+contains
+  !============================================================================
+  subroutine read_aw_turbulence_param(NameCommand)
+
+    use ModAdvance,    ONLY: UseAnisoPressure
+    use ModReadParam,  ONLY: read_var
+    use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
+         UseAlfvenWaveRepresentative
+
+    integer :: iFluid
+
+    character(len=*), intent(in):: NameCommand
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_aw_turbulence_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    select case(NameCommand)
+
+    case('#LIMITIMBALANCE')
+       call read_var('ImbalanceMax',ImbalanceMax)
+       ImbalanceMax2 = ImbalanceMax**2
+    case('#AWREPRESENTATIVE')
+       call read_var('UseAlfvenWaveRepresentative',&
+            UseAlfvenWaveRepresentative)
+    ! case("#POYNTINGFLUX")
+    !   DoInit = .true.
+    !   call read_var('PoyntingFluxPerBSi', PoyntingFluxPerBSi)
+    case("#HEATPARTITIONING")
+       UseUniformHeatPartition = .false.
+       UseStochasticHeating = .false.
+       call read_var('TypeHeatPartitioning', TypeHeatPartitioning)
+       select case(TypeHeatPartitioning)
+       case('uniform')
+          UseUniformHeatPartition = .true.
+          do iFluid = IonFirst_, IonLast_
+             call read_var('QionRatio', QionRatio_I(iFluid))
+          end do
+          if(UseAnisoPressure)then
+             do iFluid = IonFirst_, IonLast_
+                call read_var('QionParRatio', QionParRatio_I(iFluid))
+             end do
+          end if
+          QeRatio = 1.0 - sum(QionRatio_I)
+       case('stochasticheating')
+          UseStochasticHeating = .true.
+          ! Stochastic heating when Beta_proton is below 1
+          call read_var('StochasticExponent', StochasticExponent)
+          call read_var('StochasticAmplitude', StochasticAmplitude)
+       case default
+          call stop_mpi(NameSub//': unknown TypeHeatPartitioning = '&
+               // TypeHeatPartitioning)
+       end select
+
+    case("#HIGHBETASTOCHASTIC")
+       ! Correction for stochastic heating when Beta_proton is between 1 and 30
+       ! KAWs are non-propagating for Beta_proton > 30.
+       call read_var('StochasticExponent2', StochasticExponent2)
+       call read_var('StochasticAmplitude2', StochasticAmplitude2)
+
+    case("#ALIGNMENTANGLE")
+       call read_var('UseAlignmentAngle', UseAlignmentAngle)
+    case("#NONLINAWDISSIPATION")
+       call read_var('UseNonLinearAWDissipation',UseNonLinearAWDissipation)
+    case default
+       call stop_mpi(NameSub//': unknown command = ' &
+            // NameCommand)
+    end select
+
+    call test_stop(NameSub, DoTest)
+  end subroutine read_aw_turbulence_param
+  !============================================================================
+  subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, &
+       WaveDissipationRate_V, CoronalHeating)
+
+    use ModAdvance, ONLY: State_VGB
+    use ModB0,      ONLY: B0_DGB
+    use ModMain, ONLY: UseB0
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out)   :: WaveDissipationRate_V(WaveFirst_:WaveLast_), &
+         CoronalHeating
+
+    real :: EwavePlus, EwaveMinus, FullB_D(3), FullB, Coef
+    character(len=*), parameter:: NameSub = 'calc_alfven_wave_dissipation'
+    !--------------------------------------------------------------------------
+    if(UseB0)then
+       FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    else
+       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    end if
+    FullB = norm2(FullB_D)
+
+    Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
+
+    EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+    EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+
+    WaveDissipationRate_V(WaveFirst_) = Coef* &
+         sqrt(max(EwaveMinus,Crefl**2*EwavePlus))
+
+    WaveDissipationRate_V(WaveLast_) = Coef* &
+         sqrt(max(EwavePlus,Crefl**2*EwaveMinus))
+
+    CoronalHeating = sum(&
+         WaveDissipationRate_V*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+
+  end subroutine calc_alfven_wave_dissipation
+  !============================================================================
+  subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipationRate_V, &
+       CoronalHeating)
+
+    use ModAdvance, ONLY: State_VGB
+    use ModB0, ONLY: B0_DGB
+    use ModMain, ONLY: UseB0
+    use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,  Lperp_
+    use ModMultiFluid, ONLY: iRho_I, IonFirst_, nIonFluid
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out)   :: CoronalHeating, WaveDissipationRate_V(&
+         WaveFirst_:WaveLast_)
+
+    real :: FullB_D(3), FullB, Coef, Rho
+    real :: EwavePlus, EwaveMinus
+
+    character(len=*), parameter:: NameSub = 'turbulent_cascade'
+    !--------------------------------------------------------------------------
+    ! Low-frequency cascade due to small-scale nonlinearities
+
+    if(Lperp_ > 1 .and. .not.UseTurbulentCascade)then
+       ! Usmanov's model for Lperp = \Lambda/KarmanTaylorAlpha
+       ! Note that Lperp is multiplied with the density
+       if(nIonFluid > 1)then
+          Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
+       else
+          Rho = State_VGB(Rho_,i,j,k,iBlock)
+       end if
+       Coef = sqrt(Rho)*2.0/State_VGB(Lperp_,i,j,k,iBlock)
+    else
+       if(UseB0)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       else
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+       if(UseNonLinearAWDissipation)then
+          ! Account for a contribution from the wave field into their
+          ! dissipation. A half of wave energy, w/2, is the magneic oscillation
+          ! energy, deltaB^2/2. Hence, DeltaB+/-=sqrt(W+/-)
+          FullB = sqrt(sum(FullB_D**2) + &
+               sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) )
+       else
+          FullB = norm2(FullB_D)
+       end if
+       Coef = 2.0*sqrt(FullB/State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
+       if(Lperp_>1)then
+          ! The model for SC and IH, Lperp_ state variable is Lperp*sqrt(B)
+          Coef = Coef/State_VGB(Lperp_,i,j,k,iBlock)
+       else
+          ! Lperp*sqrt(B) is constant (Hollweg's model)
+          Coef = Coef/LperpTimesSqrtB
+       end if
+    end if
+
+    EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+    EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+
+    WaveDissipationRate_V(WaveFirst_) = Coef*sqrt(EwaveMinus)
+    WaveDissipationRate_V(WaveLast_) = Coef*sqrt(EwavePlus)
+
+    CoronalHeating = sum(&
+         WaveDissipationRate_V*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+
+  end subroutine turbulent_cascade
+  !============================================================================
+  subroutine get_wave_reflection(iBlock, IsNewBlock)
+    ! Use array WaveDissipationRate_VC. With these regards
+    ! the usual way to call this function is:
+    !
+    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+    ! call get_block_heating(iBlock)
+    ! call get_wave_reflection(iBlock, IsNewBlock)
+    use BATL_size, ONLY: nDim, nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB, Source_VC
+    use ModB0, ONLY: B0_DGB
+    use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
+         get_tesi_c, TeSi_C
+    use ModGeometry, ONLY: Used_GB, r_GB
+    use ModMain, ONLY: UseB0
+    use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModMultiFluid, ONLY: iRho_I, IonFirst_
+
+    integer, intent(in) :: iBlock
+    logical, optional, intent(inout):: IsNewBlock
+
+    integer :: i, j, k
+    real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
+    real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate,  &
+         DissipationRateDiff
+    real :: EwavePlus, EwaveMinus
+    real :: AlfvenGradRefl, ReflectionRateImb
+    logical :: IsNewBlockAlfven
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_wave_reflection'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
+    if(present(IsNewBlock)) then
+      IsNewBlockAlfven = IsNewBlock
+    else
+      IsNewBlockAlfven = .true.
+    end if
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if( (.not.Used_GB(i,j,k,iBlock)).or.&
+            r_GB(i,j,k, iBlock) < rMinWaveReflection)CYCLE
+
+       call get_grad_log_alfven_speed(i, j, k, iBlock, IsNewBlockAlfven, &
+            GradLogAlfven_D)
+       call get_curl_u(i, j, k, iBlock, CurlU_D)
+
+       if(UseB0)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       else
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+       FullB = norm2(FullB_D)
+       b_D = FullB_D/max(1e-15, FullB)
+
+       Rho = State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)
+
+       EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+       EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+
+       AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
+
+       ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
+       if(UseNewLimiter4Reflection)then
+          DissipationRateDiff =-0.50*(WaveDissipationRate_VC(WaveFirst_,i,j,k)&
+               - WaveDissipationRate_VC(WaveLast_,i,j,k))
+          ReflectionRate = sign(min(ReflectionRateImb,&
+               abs(DissipationRateDiff)), DissipationRateDiff)
+       else
+          DissipationRateMax  = maxval(WaveDissipationRate_VC(:,i,j,k))
+          ! Clip the reflection rate from above with maximum dissipation rate
+          ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
+
+          ! No reflection when turbulence is balanced (waves are then
+          ! assumed to be uncorrelated)
+          if(ImbalanceMax2*EwaveMinus < EwavePlus)then
+             ReflectionRate = ReflectionRate*&
+                  (1.0 - ImbalanceMax*sqrt(EwaveMinus/EwavePlus))
+          elseif(ImbalanceMax2*EwavePlus < EwaveMinus)then
+             ReflectionRate = ReflectionRate*&
+                  (ImbalanceMax*sqrt(EwavePlus/EwaveMinus)-1.0)
+          else
+             ReflectionRate = 0.0
+          end if
+       end if
+       Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
+            - ReflectionRate*sqrt(EwavePlus*EwaveMinus)
+       Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
+            + ReflectionRate*sqrt(EwavePlus*EwaveMinus)
+
+       ! Calculate sin(theta), where theta is the angle between Zplus
+       ! and Zminus at the outer Lperp scale
+       if(UseAlignmentAngle)then
+          Cdiss_C(i,j,k) = sqrt(1.0 - AlfvenGradRefl &
+               *(ReflectionRate/ReflectionRateImb**2)**2)
+          WaveDissipationRate_VC(:,i,j,k) = &
+               WaveDissipationRate_VC(:,i,j,k)*Cdiss_C(i,j,k)
+          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)*Cdiss_C(i,j,k)
+       end if
+    end do; end do; end do
+
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine get_wave_reflection
+  !============================================================================
+  subroutine get_grad_log_alfven_speed(i, j, k, iBlock, IsNewBlockAlfven, &
+       GradLogAlfven_D)
+
+    use BATL_lib, ONLY: IsCartesianGrid, &
+         CellSize_DB, FaceNormal_DDFB, CellVolume_GB, &
+         x_, y_, z_, Dim1_, Dim2_, Dim3_
+    use BATL_size, ONLY: nDim, nI, j0_, nJp1_, k0_, nKp1_
+
+    integer, intent(in) :: i, j, k, iBlock
+    logical, intent(inout) :: IsNewBlockAlfven
+    real, intent(out) :: GradLogAlfven_D(nDim)
+
+    real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+    !$omp threadprivate(LogAlfven_FD)
+
+    character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
+    !--------------------------------------------------------------------------
+    if(IsNewBlockAlfven)then
+       call get_log_alfven_speed
+       IsNewBlockAlfven = .false.
+    end if
+
+    if(IsCartesianGrid)then
+       GradLogAlfven_D(Dim1_) = 1.0/CellSize_DB(x_,iBlock) &
+            *(LogAlfven_FD(i+1,j,k,Dim1_) - LogAlfven_FD(i,j,k,Dim1_))
+       if(nJ > 1) then
+          GradLogAlfven_D(Dim2_) = 1.0/CellSize_DB(y_,iBlock) &
+               *(LogAlfven_FD(i,j+1,k,Dim2_) - LogAlfven_FD(i,j,k,Dim2_))
+       end if
+       if(nK > 1) then
+          GradLogAlfven_D(Dim3_) = 1.0/CellSize_DB(z_,iBlock) &
+            *(LogAlfven_FD(i,j,k+1,Dim3_) - LogAlfven_FD(i,j,k,Dim3_))
+       end if
+    else
+       GradLogAlfven_D = &
+            LogAlfven_FD(i+1,j,k,Dim1_) &
+            *FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
+            - LogAlfven_FD(i,j,k,Dim1_) &
+            *FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
+       if(nJ > 1)then
+          GradLogAlfven_D = GradLogAlfven_D + &
+               LogAlfven_FD(i,j+1,k,Dim2_) &
+               *FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
+               - LogAlfven_FD(i,j,k,Dim2_) &
+               *FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
+       end if
+       if(nK > 1) then
+          GradLogAlfven_D = GradLogAlfven_D + &
+               LogAlfven_FD(i,j,k+1,Dim3_) &
+               *FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
+               - LogAlfven_FD(i,j,k,Dim3_) &
+               *FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
+       end if
+
+       GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
+    end if
+
+  contains
+    !==========================================================================
+    subroutine get_log_alfven_speed
+
+      use ModAdvance, ONLY: &
+           LeftState_VX, LeftState_VY, LeftState_VZ,  &
+           RightState_VX, RightState_VY, RightState_VZ
+      use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+      use ModMain, ONLY: UseB0
+      use ModVarIndexes, ONLY: Bx_, Bz_
+      use ModMultiFluid, ONLY: iRho_I, IonFirst_
+
+      integer :: i, j, k
+      real :: Rho, FullB_D(3)
+      !------------------------------------------------------------------------
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+         FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
+              + RightState_VX(Bx_:Bz_,i,j,k))
+         if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
+         Rho = 0.5*(LeftState_VX(iRho_I(IonFirst_),i,j,k) &
+              +     RightState_VX(iRho_I(IonFirst_),i,j,k))
+         LogAlfven_FD(i,j,k,x_) = 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+      end do; end do; end do
+
+      if(nJ > 1)then
+         do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+            FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
+                 + RightState_VY(Bx_:Bz_,i,j,k))
+            if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
+            Rho = 0.5*(LeftState_VY(iRho_I(IonFirst_),i,j,k) &
+                 +     RightState_VY(iRho_I(IonFirst_),i,j,k))
+            LogAlfven_FD(i,j,k,Dim2_) = &
+                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+         end do; end do; end do
+      end if
+
+      if(nK > 1)then
+         do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+            FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
+                 + RightState_VZ(Bx_:Bz_,i,j,k))
+            if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
+            Rho = 0.5*(LeftState_VZ(iRho_I(IonFirst_),i,j,k) &
+                 +     RightState_VZ(iRho_I(IonFirst_),i,j,k))
+            LogAlfven_FD(i,j,k,Dim3_) = &
+                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+         end do; end do; end do
+      end if
+
+    end subroutine get_log_alfven_speed
+    !==========================================================================
+  end subroutine get_grad_log_alfven_speed
+  !============================================================================
+  subroutine get_curl_u(i, j, k, iBlock, CurlU_D)
+
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
+         CellVolume_GB, x_, y_, z_
+    use ModAdvance, ONLY: &
+         LeftState_VX, LeftState_VY, LeftState_VZ,  &
+         RightState_VX, RightState_VY, RightState_VZ
+    use ModCoordTransform, ONLY: cross_product
+    use ModSize, ONLY: MaxDim
+    use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, IonFirst_
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out) :: CurlU_D(MaxDim)
+
+    real :: DxInvHalf, DyInvHalf, DzInvHalf
+    character(len=*), parameter:: NameSub = 'get_curl_u'
+    !--------------------------------------------------------------------------
+    if(IsCartesianGrid)then
+       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
+       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
+       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
+
+       CurlU_D(x_) = &
+            DyInvHalf*(LeftState_VY(iUz_I(IonFirst_),i,j+1,k)  &
+            +          RightState_VY(iUz_I(IonFirst_),i,j+1,k) &
+            -          LeftState_VY(iUz_I(IonFirst_),i,j,k)    &
+            -          RightState_VY(iUz_I(IonFirst_),i,j,k))  &
+            - DzInvHalf*(LeftState_VZ(iUy_I(IonFirst_),i,j,k+1)  &
+            +            RightState_VZ(iUy_I(IonFirst_),i,j,k+1) &
+            -            LeftState_VZ(iUy_I(IonFirst_),i,j,k)    &
+            -            RightState_VZ(iUy_I(IonFirst_),i,j,k))
+
+       CurlU_D(y_) = &
+            DzInvHalf*(LeftState_VZ(iUx_I(IonFirst_),i,j,k+1)  &
+            +          RightState_VZ(iUx_I(IonFirst_),i,j,k+1) &
+            -          LeftState_VZ(iUx_I(IonFirst_),i,j,k)    &
+            -          RightState_VZ(iUx_I(IonFirst_),i,j,k))  &
+            - DxInvHalf*(LeftState_VX(iUz_I(IonFirst_),i+1,j,k)  &
+            +            RightState_VX(iUz_I(IonFirst_),i+1,j,k) &
+            -            LeftState_VX(iUz_I(IonFirst_),i,j,k)    &
+            -            RightState_VX(iUz_I(IonFirst_),i,j,k))
+
+       CurlU_D(z_) = &
+            DxInvHalf*(LeftState_VX(iUy_I(IonFirst_),i+1,j,k)  &
+            +          RightState_VX(iUy_I(IonFirst_),i+1,j,k) &
+            -          LeftState_VX(iUy_I(IonFirst_),i,j,k)    &
+            -          RightState_VX(iUy_I(IonFirst_),i,j,k))  &
+            - DyInvHalf*(LeftState_VY(iUx_I(IonFirst_),i,j+1,k)  &
+            +            RightState_VY(iUx_I(IonFirst_),i,j+1,k) &
+            -            LeftState_VY(iUx_I(IonFirst_),i,j,k)    &
+            -            RightState_VY(iUx_I(IonFirst_),i,j,k))
+    else
+       CurlU_D(:) = &
+            + cross_product( FaceNormal_DDFB(:,1,i+1,j,k,iBlock),       &
+            LeftState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i+1,j,k)     &
+            + RightState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i+1,j,k)) &
+            - cross_product( FaceNormal_DDFB(:,1,i  ,j,k,iBlock),       &
+            LeftState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i  ,j,k)     &
+            + RightState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i  ,j,k)) &
+            + cross_product( FaceNormal_DDFB(:,2,i,j+1,k,iBlock),       &
+            LeftState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j+1,k)     &
+            + RightState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j+1,k)) &
+            - cross_product( FaceNormal_DDFB(:,2,i,j  ,k,iBlock),       &
+            LeftState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j  ,k)     &
+            + RightState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j  ,k)) &
+            + cross_product( FaceNormal_DDFB(:,3,i,j,k+1,iBlock),       &
+            LeftState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k+1)     &
+            + RightState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k+1)) &
+            - cross_product( FaceNormal_DDFB(:,3,i,j,k  ,iBlock),       &
+            LeftState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k)     &
+            + RightState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k))
+
+       CurlU_D(:) = 0.5*CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
+    end if
+
+  end subroutine get_curl_u
+  !============================================================================
+  subroutine apportion_coronal_heating(i, j, k, iBlock, &
+       State_V, WaveDissipationRate_V, CoronalHeating, &
+       QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
+
+    ! Apportion the coronal heating to the electrons and protons based on
+    ! how the Alfven waves dissipate at length scales << Lperp
+
+    use ModVarIndexes, ONLY: nVar, Lperp_
+    use ModMain, ONLY: UseB0
+    use ModPhysics, ONLY: IonMassPerCharge, pMin_I, TMin_I
+    use ModAdvance, ONLY: nVar, UseAnisoPressure, Bx_, Bz_, Pe_
+    use ModB0, ONLY: B0_DGB
+    use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
+         TeSi_C
+    use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
+         nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
+         iPparIon_I, IonFirst_
+    use ModLookupTable, ONLY: interpolate_lookup_table
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(in) :: State_V(nVar)
+    real, intent(in) :: WaveDissipationRate_V(WaveFirst_:WaveLast_)
+    real, intent(in) :: CoronalHeating
+    real, intent(out) :: QPerQtotal_I(nIonFluid), &
+         QparPerQtotal_I(nIonFluid), QePerQtotal
+
+    integer :: iIon, iPrev, iFluid
+    real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
+    real :: B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon, DeltaB, Delta
+    real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
+    real :: pMin, P_I(nIonFluid), Ppar_I(nIonFluid)
+    real :: Wmajor, Wminor, Wplus, Wminus, WmajorGyro, WminorGyro, Wgyro
+    real :: DampingElectron, DampingPar_I(nIonFluid)
+    real :: DampingPerp_I(nIonFluid), DampingProton
+    real :: RhoProton, Ppar, SignMajor
+    real :: QratioProton, ExtensionCoef, Qmajor, Qminor
+    real, dimension(nIonFluid) :: QminorFraction_I, QmajorFraction_I, &
+         CascadeTimeMajor_I, CascadeTimeMinor_I, Qmajor_I, Qminor_I, &
+         QperpPerQtotal_I, GyroRadiusTimesB_I
+    real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te, Pp
+    real :: Value_I(6)
+
+#ifndef SCALAR
+    character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
+    !--------------------------------------------------------------------------
+    if(UseStochasticHeating)then
+
+       if(DoExtendTransitionRegion)then
+          ExtensionCoef = extension_factor(TeSi_C(i,j,k))
+       else
+          ExtensionCoef = 1.0
+       end if
+       Qtotal = max(CoronalHeating*ExtensionCoef, 1e-30)
+
+       if(UseB0) then
+          B_D = B0_DGB(:,i,j,k,iBlock) + State_V(Bx_:Bz_)
+       else
+          B_D = State_V(Bx_:Bz_)
+       end if
+       B2 = max(sum(B_D**2), 1e-30)
+       B = sqrt(B2)
+
+       RhoProton = State_V(iRhoIon_I(1))
+
+       Valfven = B/sqrt(RhoProton)
+
+       do iIon = 1, nIonFluid
+          iFluid = IonFirst_ - 1 + iIon
+
+          pMin = 0.0
+          if(Tmin_I(iFluid) < 0.0)then
+             if(pMin_I(iFluid) >= 0.0) pMin = pMin_I(iFluid)
+          else
+             pMin = State_V(iRhoIon_I(iIon))/MassIon_I(iIon)*Tmin_I(iFluid)
+             if(pMin_I(iFluid) >= 0.0) pMin = max(pMin_I(iFluid), pMin)
+          end if
+          pMin = max(pMin, 1e-30)
+
+          P_I(iIon) = max(pMin, State_V(iPIon_I(iIon)))
+          if(UseAnisoPressure)then
+             Ppar_I(iIon) = min(max(pMin, &
+                  State_V(iPparIon_I(iFluid))), (3*P_I(iIon)-2*pMin))
+          else
+             Ppar_I(iIon) = P_I(iIon)
+          end if
+       end do
+
+       BetaProton = 2.0*P_I(1)/B2
+
+       Wplus  = State_V(WaveFirst_)
+       Wminus = State_V(WaveLast_)
+
+       Wmajor = max(Wplus, Wminus)
+       Wminor = min(Wplus, Wminus)
+
+       ! Sign of major wave
+       SignMajor = sign(1.0, Wplus - Wminus)
+
+       if(SignMajor > 0.0)then
+          Qmajor = WaveDissipationRate_V(WaveFirst_)*Wplus*ExtensionCoef
+          Qminor = WaveDissipationRate_V(WaveLast_)*Wminus*ExtensionCoef
+       else
+          Qmajor = WaveDissipationRate_V(WaveLast_)*Wminus*ExtensionCoef
+          Qminor = WaveDissipationRate_V(WaveFirst_)*Wplus*ExtensionCoef
+       end if
+
+       ! Linear Landau damping and transit-time damping of kinetic Alfven
+       ! waves contributes to electron and parallel ion heating
+       if(UseMultiIon)then
+          BetaParProton = 2.0*Ppar_I(1)/B2
+          Np = RhoProton
+          Na = State_V(iRhoIon_I(nIonFluid))/MassIon_I(nIonFluid)
+          Ne = sum(State_V(iRhoIon_I)*ChargeIon_I/MassIon_I)
+          Tp = P_I(1)/Np
+          Ta = P_I(nIonFluid)/Na
+          Te = State_V(Pe_)/Ne
+
+          ! difference bulk speed between alphas and protons
+          Udiff_D = State_V(iRhoUxIon_I(nIonFluid):iRhoUzIon_I(nIonFluid)) &
+               /State_V(iRhoIon_I(nIonFluid)) &
+               -State_V(iRhoUxIon_I(1):iRhoUzIon_I(1)) &
+               /State_V(iRhoIon_I(1))
+          Upar = sum(Udiff_D*B_D)/B
+
+          ! The damping rates (divided by k_parallel V_Ap) in the lookup
+          ! table are for both forward propagating Alfven modes (i.e. in
+          ! same direction as the alpha-proton drift) as well as backward
+          ! propagating modes. The sign in drift can break the symmetrical
+          ! behavior of forward and backward modes. For steady state, the
+          ! Alfven modes are mostly forward propagating.
+          call interpolate_lookup_table(iTableHeatPartition, &
+               BetaParProton, abs(Upar)/Valfven, Tp/Ta, Tp/Te, Na/Np, &
+               Value_I, DoExtrapolate = .false.)
+
+          if(SignMajor*Upar < 0.0)then
+             ! Backward propagating
+             DampingPar_I(1) = Value_I(4)
+             DampingPar_I(nIonFluid) = Value_I(6)
+             DampingElectron = Value_I(5)
+          else
+             ! Forward propagating
+             DampingPar_I(1) = Value_I(1)
+             DampingPar_I(nIonFluid) = Value_I(3)
+             DampingElectron = Value_I(2)
+          end if
+       else
+          Pp = P_I(1)
+          TeByTp = State_V(Pe_)/Pp
+
+          BetaElectron = 2.0*State_V(Pe_)/B2
+
+          DampingElectron = 0.01*sqrt(TeByTp/BetaProton) &
+               *(1.0 + 0.17*BetaProton**1.3) &
+               /(1.0 +(2800.0*BetaElectron)**(-1.25))
+          DampingPar_I(1) = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
+               *exp(-1.3/BetaProton)
+       end if
+
+       ! Stochasting heating contributes to perpendicular ion heating.
+       ! Loop in reverse order for cascade power subtraction.
+       do iIon = nIonFluid, 1, -1
+
+          Ppar = Ppar_I(iIon)
+          Pperp = 0.5*(3*P_I(iIon) - Ppar)
+
+          ! Perpendicular ion thermal speed
+          Vperp = sqrt(2.0*Pperp/State_V(iRhoIon_I(iIon)))
+
+          GyroRadiusTimesB_I(iIon) = Vperp &
+               *IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon)
+
+          InvGyroRadius = B/GyroRadiusTimesB_I(iIon)
+
+          if(iIon == nIonFluid)then
+             Qmajor_I(iIon) = Qmajor
+             Qminor_I(iIon) = Qminor
+
+             if(Lperp_ > 1)then
+                LperpInvGyroRad = InvGyroRadius*State_V(Lperp_)/RhoProton
+             else
+                LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
+             end if
+
+             WmajorGyro = Wmajor/sqrt(LperpInvGyroRad)
+             WminorGyro = Wminor/sqrt(LperpInvGyroRad)
+          else
+             iPrev = iIon + 1
+
+             QmajorFraction_I(iPrev) = &
+                  DampingPerp_I(iPrev)*CascadeTimeMajor_I(iPrev) &
+                  /(1.0 + DampingPerp_I(iPrev)*CascadeTimeMajor_I(iPrev))
+             QminorFraction_I(iPrev) = &
+                  DampingPerp_I(iPrev)*CascadeTimeMinor_I(iPrev) &
+                  /(1.0 + DampingPerp_I(iPrev)*CascadeTimeMinor_I(iPrev))
+
+             ! Subtract what was used for stochastic heating of alphas
+             Qmajor_I(iIon) = &
+                  Qmajor_I(iPrev)*(1.0 - QmajorFraction_I(iPrev))
+             Qminor_I(iIon) = &
+                  Qminor_I(iPrev)*(1.0 - QminorFraction_I(iPrev))
+
+             ! Reduce similarly the cascade power and exploit non-alignment
+             ! (Boldyrev, 2005) of small-scale fluctuations to arrive at
+             ! Wmajor and Wminor at the proton gyro-radius
+             WmajorGyro = WmajorGyro &
+                  *( (1.0 - QmajorFraction_I(iPrev))**2 &
+                  /(1.0 - QminorFraction_I(iPrev)) )**(2.0/3.0) &
+                  *sqrt(GyroRadiusTimesB_I(iIon)/GyroRadiusTimesB_I(iPrev))
+             WminorGyro = WminorGyro &
+                  *( (1.0 - QminorFraction_I(iPrev))**2 &
+                  /(1.0 - QmajorFraction_I(iPrev)) )**(2.0/3.0) &
+                  *sqrt(GyroRadiusTimesB_I(iIon)/GyroRadiusTimesB_I(iPrev))
+          end if
+
+          Wgyro = WmajorGyro + WminorGyro
+
+          ! Cascade timescale at the gyroscale
+          CascadeTimeMajor_I(iIon) = WmajorGyro/max(Qmajor_I(iIon),1e-30)
+          CascadeTimeMinor_I(iIon) = WminorGyro/max(Qminor_I(iIon),1e-30)
+
+          ! For protons the following would be DeltaU and DeltaB at ion gyro
+          ! radius, except that we assumed that the Alfven ratio is one.
+          DeltaU = sqrt(Wgyro/RhoProton)
+          DeltaB = sqrt(Wgyro)
+
+          Epsilon = DeltaU/Vperp
+          Delta = DeltaB/B
+
+          ! Damping rate for stochastic heating.
+          ! It interpolates between the beta<1 and 1<beta<30 version.
+          ! This formula is at the moment only suitable for protons.
+          DampingPerp_I(iIon) = (StochasticAmplitude &
+               *exp(-StochasticExponent/max(Epsilon,1e-15)) &
+               + StochasticAmplitude2*sqrt(BetaProton) &
+               *exp(-StochasticExponent2/max(Delta,1e-15))) &
+               *State_V(iRhoIon_I(iIon))*DeltaU**3 &
+               *InvGyroRadius/max(Wgyro,1e-15)
+       end do
+
+       ! Set k_parallel*V_Alfven = 1/t_minor (critical balance)
+       DampingElectron = DampingElectron/max(CascadeTimeMinor_I(1), 1e-30)
+       DampingPar_I = DampingPar_I/max(CascadeTimeMinor_I(1), 1e-30)
+
+       ! Total damping rate around proton gyroscale
+       DampingProton = DampingElectron + sum(DampingPar_I) &
+            + DampingPerp_I(1)
+
+       QmajorFraction_I(1) = DampingProton*CascadeTimeMajor_I(1) &
+            /(1.0 + DampingProton*CascadeTimeMajor_I(1))
+       QminorFraction_I(1) = DampingProton*CascadeTimeMinor_I(1) &
+            /(1.0 + DampingProton*CascadeTimeMinor_I(1))
+
+       QratioProton = (QmajorFraction_I(1)*Qmajor_I(1) &
+            + QminorFraction_I(1)*Qminor_I(1))/Qtotal
+
+       QparPerQtotal_I = DampingPar_I/DampingProton*QratioProton
+
+       QperpPerQtotal_I(1) = DampingPerp_I(1)/DampingProton*QratioProton
+
+       if(nIonFluid > 1) QperpPerQtotal_I(2:) = &
+            (QmajorFraction_I(2:)*Qmajor_I(2:) &
+            + QminorFraction_I(2:)*Qminor_I(2:))/Qtotal
+
+       QPerQtotal_I = QperpPerQtotal_I + QparPerQtotal_I
+
+       QePerQtotal = (DampingElectron/DampingProton - 1)*QratioProton &
+            + (Qmajor_I(1) + Qminor_I(1))/Qtotal
+
+    elseif(UseUniformHeatPartition)then
+       QPerQtotal_I = QionRatio_I
+       QparPerQtotal_I = QionParRatio_I
+       QePerQtotal = QeRatio
+
+    else
+       call stop_mpi(NameSub//' Unknown energy partitioning')
+    end if
+#endif
+  end subroutine apportion_coronal_heating
+  !============================================================================
+  subroutine wave_energy_to_representative
+    ! Convert Alfven wave turbulence energy densities to
+    ! dimensionless representative functions. Switch the logical
+    ! UseAwRepresentativeHere on.
+    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, nI, nJ, nK
+    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes, ONLY: IonFirst_, iRho_I, WDiff_, WaveFirst_, WaveLast_
+    integer :: iBlock, i, j, k
+    real    :: InvSqrtRho
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.Used_GB(i,j,k,iBlock))CYCLE
+          InvSqrtRho = 1/(  PoyntingFluxPerB*&
+               sqrt( State_VGB(iRho_I(IonFirst_),i,j,k,iBlock) )  )
+          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+               InvSqrtRho*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+          if(WDiff_>1)State_VGB(WDiff_,i,j,k,iBlock) = &
+               InvSqrtRho*State_VGB(WDiff_,i,j,k,iBlock)
+       end do; end do; end do
+    end do
+    UseAwRepresentativeHere = .true.
+    !$acc update device(UseAlfvenWaveRepresentative)
+  end subroutine wave_energy_to_representative
+  !============================================================================
+  subroutine representative_to_wave_energy
+    ! Convert dimensionless representative functions to Alfven wave turbulence
+    ! energy densities. Switch the logical
+    ! UseAwRepresentativeHere off.
+    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, nI, nJ, nK
+    use ModVarIndexes, ONLY: IonFirst_, iRho_I, WDiff_, WaveFirst_, WaveLast_
+    use ModAdvance,    ONLY: State_VGB
+    integer :: iBlock, i, j, k
+    real    :: SqrtRho
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.Used_GB(i,j,k,iBlock))CYCLE
+          SqrtRho = PoyntingFluxPerB*sqrt( &
+               State_VGB(iRho_I(IonFirst_),i,j,k,iBlock) )
+          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+               SqrtRho*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+          if(WDiff_>1)State_VGB(WDiff_,i,j,k,iBlock) = &
+               SqrtRho*State_VGB(WDiff_,i,j,k,iBlock)
+       end do; end do; end do
+    end do
+    UseAwRepresentativeHere = .false.
+    !$acc update device(UseAlfvenWaveRepresentative)
+  end subroutine representative_to_wave_energy
+  !============================================================================
+end module ModAwTurbulence
+!==============================================================================
