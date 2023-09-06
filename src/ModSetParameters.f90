@@ -733,6 +733,7 @@ contains
              ! This only makes sense if entropies are used
              UseEntropy = .true.
              UseElectronEntropy = .true.
+             UseElectronEnergy = .true.
           end if
           if(.not.UseElectronPressure .and. .not.UseAnisoPressure .and. &
                UseStrict) call stop_mpi('#SHOCKHEATING needs Pe or Ppar')
