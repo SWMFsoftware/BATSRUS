@@ -38,7 +38,7 @@ contains
     use ModCoronalHeating, ONLY: get_coronal_heat_factor,&
          UseUnsignedFluxModel
     use ModWaves,  ONLY: UseAlfvenWaveRepresentative
-    use ModAwTurbulence, ONLY:           &
+    use ModTurbulence, ONLY:           &
          wave_energy_to_representative, representative_to_wave_energy
     use ModMessagePass, ONLY: exchange_messages
     use ModTimeStepControl, ONLY: calc_timestep

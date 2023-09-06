@@ -17,9 +17,9 @@ module ModThreadedLC
        jThreadMin=>jMin_, jThreadMax=>jMax_,                             &
        kThreadMin=>kMin_, kThreadMax=>kMax_
   use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
-  use ModAwTurbulence,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
+  use ModTurbulence,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
        ImbalanceMax
-  use ModAwTurbulence,   ONLY: QeRatio
+  use ModTurbulence,   ONLY: QeRatio
   use ModPhysics, ONLY: Z => AverageIonCharge
   use ModConst, ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModCoordTransform, ONLY: determinant, inverse_matrix
@@ -791,7 +791,7 @@ contains
     !==========================================================================
     subroutine get_res_heating(nIterIn)
 
-      use ModAwTurbulence,  ONLY: rMinWaveReflection
+      use ModTurbulence,  ONLY: rMinWaveReflection
 
       integer, intent(in)::nIterIn
       integer:: iPoint

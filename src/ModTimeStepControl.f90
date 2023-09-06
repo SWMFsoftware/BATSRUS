@@ -121,7 +121,7 @@ contains
          UseElectronPressure, DoUpdate_V
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B
     use ModCoronalHeating, ONLY: get_block_heating
-    use ModAwTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VC
+    use ModTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VC
     use ModChromosphere, ONLY: get_tesi_c, TeSi_C
     use ModPhysics, ONLY: InvGammaMinus1
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &

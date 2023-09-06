@@ -21,7 +21,6 @@ OBJECTS = \
 	ModAdvanceExplicit.o \
 	ModAdvectPoints.o \
 	ModAMR.o \
-	ModAwTurbulence.o \
 	ModB0.o \
 	ModBatsrusMethods.o \
 	ModBatsrusUtility.o \
@@ -106,6 +105,7 @@ OBJECTS = \
 	ModTransitionRegion.o \
 	ModThreadedLC.o \
 	ModTimeStepControl.o \
+	ModTurbulence.o \
 	ModUaCoupling.o \
 	ModUserEmpty.o \
 	ModUserInterface.o \

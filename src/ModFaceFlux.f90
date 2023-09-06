@@ -486,7 +486,7 @@ contains
     use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
     use ModMultiFluid, ONLY: UseMultiIon
     use ModWaves, ONLY: UseAlfvenWaves
-    use ModAwTurbulence, ONLY: UseAwRepresentativeHere
+    use ModTurbulence, ONLY: UseAwRepresentativeHere
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
 
@@ -1177,14 +1177,14 @@ contains
          AlfvenPlusFirst_, AlfvenPlusLast_, &
          GammaWave, UseWavePressure, UseAlfvenWaves, &
          UseWavePressureLtd
-    use ModAwTurbulence, ONLY: UseAwRepresentativeHere
+    use ModTurbulence, ONLY: UseAwRepresentativeHere
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
          iRho, iRhoUx, iRhoUy, iRhoUz, iUx, iUy, iUz, iEnergy, iP, &
          IsIon_I, nIonFluid, UseMultiIon, ChargePerMass_I, select_fluid
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_GB
-    use ModAwTurbulence, ONLY: PoyntingFluxPerB
+    use ModTurbulence, ONLY: PoyntingFluxPerB
 
     real, intent(in) :: State_V(nVar)      ! input primitive state
 
@@ -1640,7 +1640,7 @@ contains
       use ModElectricField, ONLY: UseJCrossBForce
       use ModPhysics, ONLY: InvGamma, InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
-      use ModAwTurbulence, ONLY: UseReynoldsDecomposition, SigmaD, &
+      use ModTurbulence, ONLY: UseReynoldsDecomposition, SigmaD, &
            UseTransverseTurbulence,  PoyntingFluxPerB, UseAwRepresentativeHere
 
       real, intent(in) :: State_V(:)
@@ -1919,7 +1919,7 @@ contains
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModPhysics, ONLY: InvGamma, InvGammaMinus1_I
       use ModMultiFluid, ONLY: iPpar
-      use ModAwTurbulence, ONLY: UseReynoldsDecomposition, &
+      use ModTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD, PoyntingFluxPerB
       use ModWaves
 
@@ -3158,7 +3158,7 @@ contains
       use ModPhysics,  ONLY: InvGammaMinus1_I, Gamma_I, InvGammaMinus1
       use ModMultiFluid, ONLY: iRhoUx, iRhoUz, iUx, iUz
       use ModWaves,    ONLY: UseWavePressure, GammaWave
-      use ModAwTurbulence, ONLY: PoyntingFluxPerB
+      use ModTurbulence, ONLY: PoyntingFluxPerB
 
       real :: Rho, Un, p, pTotal, e, StateStar_V(nVar)
       real :: RhoSide,UnSide
@@ -3854,7 +3854,7 @@ contains
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe, SignB_, &
            UseMagFriction, MagFrictionCoef
-      use ModAwTurbulence, ONLY: UseReynoldsDecomposition, &
+      use ModTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD
 
       real, intent(in) :: State_V(:)

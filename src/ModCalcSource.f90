@@ -153,7 +153,7 @@ contains
     use ModIonElectron,   ONLY: ion_electron_source_impl
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating
-    use ModAwTurbulence,  ONLY: &
+    use ModTurbulence,  ONLY: &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          KarmanTaylorBeta2AlphaRatio, &

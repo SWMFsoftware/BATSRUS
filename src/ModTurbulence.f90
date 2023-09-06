@@ -2,7 +2,7 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-module ModAwTurbulence
+module ModTurbulence
 
   use BATL_lib, ONLY: test_start, test_stop
   use ModBatsrusUtility, ONLY: stop_mpi
@@ -870,5 +870,5 @@ contains
     !$acc update device(UseAlfvenWaveRepresentative)
   end subroutine representative_to_wave_energy
   !============================================================================
-end module ModAwTurbulence
+end module ModTurbulence
 !==============================================================================

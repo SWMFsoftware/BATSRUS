@@ -344,7 +344,7 @@ contains
     use ModMain,           ONLY: FaceBCType
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
-    use ModAwTurbulence,   ONLY: SigmaD
+    use ModTurbulence,   ONLY: SigmaD
 #ifdef _OPENACC
     use ModUtilities,      ONLY: norm2
 #endif
@@ -656,7 +656,7 @@ contains
 
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
-    use ModAwTurbulence,   ONLY: SigmaD
+    use ModTurbulence,   ONLY: SigmaD
 #ifdef _OPENACC
     use ModUtilities,      ONLY: norm2
 #endif

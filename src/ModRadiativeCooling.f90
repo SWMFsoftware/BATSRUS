@@ -236,7 +236,7 @@ contains
     use ModGeometry, ONLY: r_GB
     use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
     use ModPhysics,  ONLY: UnitX_, Si2No_V,NameStar,RadiusStar,MassStar
-    use ModAwTurbulence, ONLY: CoronalHeating_C
+    use ModTurbulence, ONLY: CoronalHeating_C
 
     real,    intent(in):: TeSi_C(1:nI,1:nJ,1:nK)
     integer, intent(in):: iBlock

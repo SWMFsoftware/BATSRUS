@@ -174,7 +174,7 @@ contains
     use ModNumConst,   ONLY: cTwoPi
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModCoronalHeating, ONLY: UseCoronalHeating
-    use ModAwTurbulence, ONLY: UseTurbulentCascade
+    use ModTurbulence, ONLY: UseTurbulentCascade
     use ModRadiativeCooling, ONLY: UseRadCooling
     use ModResistivity,  ONLY: UseHeatExchange, UseResistivity
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
@@ -954,7 +954,7 @@ contains
          InvGammaElectronMinus1, GammaMinus1_I, ReducedMass_II, &
          CollisionCoef_II, GammaMinus1, InvGammaMinus1
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
-    use ModAwTurbulence, ONLY: turbulent_cascade, apportion_coronal_heating
+    use ModTurbulence, ONLY: turbulent_cascade, apportion_coronal_heating
     use ModRadiativeCooling, ONLY: get_radiative_cooling, extension_factor
     use ModChromosphere, ONLY: DoExtendTransitionRegion, TeSi_C, get_tesi_c
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
