@@ -26,18 +26,19 @@ contains
   subroutine update_state(iBlock)
 
     use ModMain, ONLY: nStep, iStage, Cfl, UseUserUpdateStates, UseBufferGrid
-    use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Ehot_, SignB_, &
+    use ModVarIndexes, ONLY: &
+         nVar, Rho_, RhoUx_, RhoUz_, Ehot_, SignB_, &
          NameVar_V, nFluid, WDiff_, p_, Ppar_
-    use ModAdvance, ONLY: State_VGB, StateOld_VGB, DTMAX_CB, &
-         Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, &
-         UseAnisoPressure
+    use ModAdvance, ONLY: &
+         State_VGB, StateOld_VGB, DTMAX_CB, &
+         Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, UseAnisoPressure
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
     use ModTurbulence, ONLY: UseReynoldsDecomposition
     use ModEnergy, ONLY: limit_pressure
-    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
-         update_heatflux_collisionless
+    use ModHeatFluxCollisionless, ONLY: &
+         UseHeatFluxCollisionless, update_heatflux_collisionless
     use ModBuffer, ONLY: fix_buffer_grid
     use BATL_lib, ONLY: nI, nJ, nK
     use ModUserInterface ! user_update_states
@@ -138,10 +139,12 @@ contains
     use ModMain, ONLY: &
          IsTimeAccurate, iStage, nStage, Dt, Cfl, UseB0, UseBufferGrid, &
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
-    use ModPhysics, ONLY: Gamma, GammaMinus1, InvGamma, Gamma_I, InvGamma_I, &
-         InvGammaElectron, GammaElectron, InvGammaElectronMinus1, RhoMin_I
+    use ModPhysics, ONLY: &
+         Gamma, GammaMinus1, InvGamma, Gamma_I, InvGamma_I, &
+         InvGammaElectron, GammaElectron, InvGammaElectronMinus1, RhoMin_I, &
+         ShockLeft_V, ShockRight_V
     use ModSemiImplVar, ONLY: UseStableImplicit
-    use ModVarIndexes, ONLY: pe_, p_
+    use ModVarIndexes, ONLY: Pe_, p_
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
          IsDynamicPointImplicit, update_point_implicit
     use ModMultiIon, ONLY: multi_ion_source_impl, &
@@ -902,12 +905,17 @@ contains
                WeightPar = PparShockHeatingFraction
             else
                ! Evaluate b.n
-               ! rho^2*du = rho*d(rho u) - rho*u*drho
-               ! u_D = State_VGB(RhoUx_:RhoUz_,i+1,j,k,iBlock) &
-               !     /State_VGB(Rho_,i+1,j,k,iBlock) &
-               !     -State_VGB(RhoUx_:RhoUz_,i-1,j,k,iBlock) &
-               !     /State_VGB(Rho_,i-1,j,k,iBlock)
-               u_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+               ! Get b from left or right state
+               if(ShockLeft_V(Rho_) < ShockRight_V(Rho_))then
+                  b_D = ShockLeft_V(Bx_:Bz_)
+               else
+                  b_D = ShockRight_V(Bx_:Bz_)
+               endif
+               ! Get n from change in u: rho^2*du = rho*d(rho u) - rho*u*drho
+               u_D = State_VGB(Rho_,i,j,k,iBlock) &
+                    *Source_VC(RhoUx_:RhoUz_,i,j,k) &
+                    - State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
+                    *Source_VC(Rho_,i,j,k)
                ! For parallel shock |u.b|=1 and all heating goes into Ppar,
                ! for perpendicular shock |u.b|=0 no heating goes into Ppar.
                WeightPar = abs(sum(u_D*b_D))/(norm2(b_D)*norm2(u_D) + 1e-30)
