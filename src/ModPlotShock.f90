@@ -75,8 +75,7 @@ contains
     dLon = (LonMax - LonMin)/max(1, nLon - 1)
     dLat = (LatMax - LatMin)/max(1, nLat - 1)
 
-    ! The 0 element is to count the number of blocks that
-    ! contribute to a plot variable.
+    ! The 0 element is for the radius.
     allocate(PlotVar_VII(0:nPlotVar,nLon,nLat))
     PlotVar_VII = 0.0
 
@@ -177,7 +176,7 @@ contains
                      MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
              end do
 
-             ! First plot variable is DivuDx
+             ! 0th plot variable is radius, and next plot variable is DivuDx
              if(PlotVar_V(1) < PlotVar_VII(1,j,k))then
                 PlotVar_VII(0,j,k) = r
                 PlotVar_VII(1:,j,k) = PlotVar_V
@@ -203,6 +202,9 @@ contains
     integer :: iVar, iLon, iLat, iError, nVarAll, jProc
     character(len=500) :: NameVar
 
+    real, allocatable :: PlotVarWeight_VII(:,:,:)
+    real, allocatable :: DivuDx_II(:,:), DivuDxMin_II(:,:)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_shock'
     !--------------------------------------------------------------------------
@@ -216,20 +218,35 @@ contains
     ! Allocate variable
 
     if(nProc > 1)then
-       allocate(PlotVar_VIIP(0:nPlotVar,nLon,nLat,nProc))
-       PlotVar_VIIP = 0.0
-       nVarAll = (nPlotVar+1) * nLon * nLat
+       allocate(DivuDx_II(nLon,nLat), DivuDxMin_II(nLon,nLat), &
+            PlotVarWeight_VII(0:nPlotVar+1,nLon,nLat))
+       PlotVarWeight_VII = 0.0
 
-       call MPI_gather(PlotVar_VII, nVarAll, MPI_REAL, &
-            PlotVar_VIIP, nVarAll, MPI_REAL, 0, iComm, iError)
+       ! Find smallest DivuDx for each lon-lat index
+       DivuDx_II = PlotVar_VII(1,:,:)
+       call MPI_allreduce(DivuDx_II, DivuDxMin_II, nLon*nLat, MPI_REAL, MPI_MIN, &
+            iComm, iError)
+
+       ! Assign weight 1 to the plot variables at the minimum value
+       do iLat = 1, nLat; do iLon = 1, nLon
+          if(DivuDxMin_II(iLon,iLat) == DivuDx_II(iLon,iLat))then
+             PlotVarWeight_VII(0:nPlotVar,iLon,iLat) = PlotVar_VII(:,iLon,iLat)
+             PlotVarWeight_VII(nPlotVar+1,iLon,iLat) = 1.0
+          end if
+       end do; end do
+
+       ! Add up weighted plot variables and the weights
+       call MPI_reduce_real_array(PlotVarWeight_VII, size(PlotVarWeight_VII), MPI_SUM, &
+            0, iComm, iError)
 
        if(iProc ==0) then
           do iLat = 1, nLat; do iLon = 1, nLon
-             jProc = minloc(PlotVar_VIIP(1,iLon,iLat,:), DIM=1)
-             PlotVar_VII(:,iLon,iLat) = PlotVar_VIIP(:,iLon,iLat,jProc)
+             ! Divide by total weight (usually 1)
+             PlotVar_VII(:,iLon,iLat) = PlotVarWeight_VII(0:nPlotVar,iLon,iLat) &
+                  /PlotVarWeight_VII(nPlotVar+1,iLon,iLat)
           enddo; enddo
        endif
-       deallocate(PlotVar_VIIP)
+       deallocate(PlotVarWeight_VII, DivuDx_II, DivuDxMin_II)
     endif
 
     ! Save results to disk
