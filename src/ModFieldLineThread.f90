@@ -196,7 +196,7 @@ contains
   !============================================================================
   subroutine init
 
-    use ModAwTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
+    use ModTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB
     integer :: iBlock ! Loop variable
     !--------------------------------------------------------------------------
@@ -559,7 +559,7 @@ contains
     use ModPhysics,  ONLY: Si2No_V, No2Si_V,&
                            UnitTemperature_, UnitX_, UnitB_
     use ModNumConst, ONLY: cTolerance
-    use ModAwTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
+    use ModTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB
     use BATL_lib,    ONLY: MaxDim, xyz_to_coord, r_
     integer, intent(in) :: iBlock
@@ -1162,7 +1162,7 @@ contains
          UnitEnergyDens_
     use ModVarIndexes,      ONLY: Rho_, p_, Pe_, Bx_, Bz_, nVar
     use ModWaves,           ONLY: WaveFirst_, WaveLast_
-    use  ModAwTurbulence,   ONLY:PoyntingFluxPerB
+    use  ModTurbulence,   ONLY:PoyntingFluxPerB
     !INPUT:
     ! MHD state vector
     real,    intent(in) :: State_V(nVar)
@@ -1223,7 +1223,7 @@ contains
     use BATL_lib,          ONLY: iNode_B, CellSize_DB
     use ModB0,             ONLY: get_b0
     use ModWaves,          ONLY: UseWavePressure
-    use ModAwTurbulence,   ONLY: PoyntingFluxPerB
+    use ModTurbulence,   ONLY: PoyntingFluxPerB
 
     integer, intent(in) :: iBlock, nPlotVar
     character(LEN=20)   :: NamePlotVar_V(nPlotVar)

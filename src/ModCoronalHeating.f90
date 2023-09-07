@@ -14,7 +14,7 @@ module ModCoronalHeating
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
-  use ModAwTurbulence
+  use ModTurbulence
   use omp_lib
 
   implicit none
