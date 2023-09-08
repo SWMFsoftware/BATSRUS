@@ -38,9 +38,6 @@ module ModPlotShock
   ! Local results container:
   ! Array of values written to file:
   real, allocatable :: PlotVar_VII(:,:,:)
-  real, allocatable :: PlotVar_VIIP(:,:,:,:)
-
-  character(len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
 contains
   !============================================================================
@@ -199,7 +196,7 @@ contains
     integer,          intent(in) :: iFile, nPlotvar
     character(len=*), intent(in) :: NameFile, NameVar_V(nPlotVar), NameUnit
 
-    integer :: iVar, iLon, iLat, iError, nVarAll, jProc
+    integer :: iVar, iLon, iLat, iError
     character(len=500) :: NameVar
 
     real, allocatable :: PlotVarWeight_VII(:,:,:)
@@ -224,7 +221,8 @@ contains
 
        ! Find smallest DivuDx for each lon-lat index
        DivuDx_II = PlotVar_VII(1,:,:)
-       call MPI_allreduce(DivuDx_II, DivuDxMin_II, nLon*nLat, MPI_REAL, MPI_MIN, &
+       call MPI_allreduce(DivuDx_II, DivuDxMin_II, nLon*nLat, MPI_REAL, &
+            MPI_MIN, &
             iComm, iError)
 
        ! Assign weight 1 to the plot variables at the minimum value
@@ -236,13 +234,14 @@ contains
        end do; end do
 
        ! Add up weighted plot variables and the weights
-       call MPI_reduce_real_array(PlotVarWeight_VII, size(PlotVarWeight_VII), MPI_SUM, &
-            0, iComm, iError)
+       call MPI_reduce_real_array(PlotVarWeight_VII, size(PlotVarWeight_VII), &
+            MPI_SUM, 0, iComm, iError)
 
        if(iProc ==0) then
           do iLat = 1, nLat; do iLon = 1, nLon
              ! Divide by total weight (usually 1)
-             PlotVar_VII(:,iLon,iLat) = PlotVarWeight_VII(0:nPlotVar,iLon,iLat) &
+             PlotVar_VII(:,iLon,iLat) = &
+                  PlotVarWeight_VII(0:nPlotVar,iLon,iLat) &
                   /PlotVarWeight_VII(nPlotVar+1,iLon,iLat)
           enddo; enddo
        endif
