@@ -1344,7 +1344,7 @@ contains
       !------------------------------------------------------------------------
       if(.not.allocated(Alfven_VFD)) &
            allocate(Alfven_VFD(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim))
-      
+
       if(IsNewBlock)then
          call get_alfven_speed(Alfven_VFD)
          IsNewBlock = .false.
