@@ -1230,6 +1230,105 @@ contains
 
     end subroutine calc_grad_u
     !==========================================================================
+    subroutine get_mass_weighted_speed(U_VFD)
+
+      use ModAdvance, ONLY: &
+           LeftState_VX, LeftState_VY, LeftState_VZ,  &
+           RightState_VX, RightState_VY, RightState_VZ
+
+      real, intent(out) :: U_VFD(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+
+      integer :: i, j, k
+      real :: RhoLeft, RhoRight
+
+      character(len=*), parameter:: NameSub = 'get_mass_weighted_speed'
+      !------------------------------------------------------------------------
+
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+         if(nIonFluid > 1)then
+            RhoLeft = sum(LeftState_VX(iRhoIon_I,i,j,k))
+            RhoRight = sum(RightState_VX(iRhoIon_I,i,j,k))
+            U_VFD(x_,i,j,k,Dim1_) = 0.5*( &
+                 sum(LeftState_VX(iRhoIon_I,i,j,k) &
+                 *   LeftState_VX(iUxIon_I,i,j,k))/RhoLeft + &
+                 sum(RightState_VX(iRhoIon_I,i,j,k) &
+                 *   RightState_VX(iUxIon_I,i,j,k))/RhoRight)
+            U_VFD(y_,i,j,k,Dim1_) = 0.5*( &
+                 sum(LeftState_VX(iRhoIon_I,i,j,k) &
+                 *   LeftState_VX(iUyIon_I,i,j,k))/RhoLeft + &
+                 sum(RightState_VX(iRhoIon_I,i,j,k) &
+                 *   RightState_VX(iUyIon_I,i,j,k))/RhoRight)
+            U_VFD(z_,i,j,k,Dim1_) = 0.5*( &
+                 sum(LeftState_VX(iRhoIon_I,i,j,k) &
+                 *   LeftState_VX(iUzIon_I,i,j,k))/RhoLeft + &
+                 sum(RightState_VX(iRhoIon_I,i,j,k) &
+                 *   RightState_VX(iUzIon_I,i,j,k))/RhoRight)
+         else
+            U_VFD(:,i,j,k,Dim1_) = &
+                 0.5*(LeftState_VX(Ux_:Uz_,i,j,k) &
+                 +    RightState_VX(Ux_:Uz_,i,j,k))
+         end if
+      end do; end do; end do
+
+      if(nJ > 1)then
+         do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+            if(nIonFluid > 1)then
+               RhoLeft = sum(LeftState_VY(iRhoIon_I,i,j,k))
+               RhoRight = sum(RightState_VY(iRhoIon_I,i,j,k))
+               U_VFD(x_,i,j,k,Dim2_) = 0.5*( &
+                    sum(LeftState_VY(iRhoIon_I,i,j,k) &
+                    *   LeftState_VY(iUxIon_I,i,j,k))/RhoLeft + &
+                    sum(RightState_VY(iRhoIon_I,i,j,k) &
+                    *   RightState_VY(iUxIon_I,i,j,k))/RhoRight)
+               U_VFD(y_,i,j,k,Dim2_) = 0.5*( &
+                    sum(LeftState_VY(iRhoIon_I,i,j,k) &
+                    *   LeftState_VY(iUyIon_I,i,j,k))/RhoLeft + &
+                    sum(RightState_VY(iRhoIon_I,i,j,k) &
+                    *   RightState_VY(iUyIon_I,i,j,k))/RhoRight)
+               U_VFD(z_,i,j,k,Dim2_) = 0.5*( &
+                    sum(LeftState_VY(iRhoIon_I,i,j,k) &
+                    *   LeftState_VY(iUzIon_I,i,j,k))/RhoLeft + &
+                    sum(RightState_VY(iRhoIon_I,i,j,k) &
+                    *   RightState_VY(iUzIon_I,i,j,k))/RhoRight)
+            else
+               U_VFD(:,i,j,k,Dim2_) = &
+                    0.5*(LeftState_VY(Ux_:Uz_,i,j,k) &
+                    +    RightState_VY(Ux_:Uz_,i,j,k))
+            end if
+         end do; end do; end do
+      end if
+
+      if(nK > 1)then
+         do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+            if(nIonFluid > 1)then
+               RhoLeft = sum(LeftState_VZ(iRhoIon_I,i,j,k))
+               RhoRight = sum(RightState_VZ(iRhoIon_I,i,j,k))
+               U_VFD(x_,i,j,k,Dim3_) = 0.5*( &
+                    sum(LeftState_VZ(iRhoIon_I,i,j,k) &
+                    *   LeftState_VZ(iUxIon_I,i,j,k))/RhoLeft + &
+                    sum(RightState_VZ(iRhoIon_I,i,j,k) &
+                    *   RightState_VZ(iUxIon_I,i,j,k))/RhoRight)
+               U_VFD(y_,i,j,k,Dim3_) = 0.5*( &
+                    sum(LeftState_VZ(iRhoIon_I,i,j,k) &
+                    *   LeftState_VZ(iUyIon_I,i,j,k))/RhoLeft + &
+                    sum(RightState_VZ(iRhoIon_I,i,j,k) &
+                    *   RightState_VZ(iUyIon_I,i,j,k))/RhoRight)
+               U_VFD(z_,i,j,k,Dim3_) = 0.5*( &
+                    sum(LeftState_VZ(iRhoIon_I,i,j,k) &
+                    *   LeftState_VZ(iUzIon_I,i,j,k))/RhoLeft + &
+                    sum(RightState_VZ(iRhoIon_I,i,j,k) &
+                    *   RightState_VZ(iUzIon_I,i,j,k))/RhoRight)
+            else
+               U_VFD(:,i,j,k,Dim3_) = &
+                    0.5*(LeftState_VZ(Ux_:Uz_,i,j,k) &
+                    +    RightState_VZ(Ux_:Uz_,i,j,k))
+            end if
+
+         end do; end do; end do
+      end if
+
+    end subroutine get_mass_weighted_speed
+    !==========================================================================
     subroutine calc_grad_alfven(GradAlfven_DD, i, j, k, iBlock, IsNewBlock)
 
       use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, Dim1_, Dim2_, Dim3_
@@ -1238,11 +1337,14 @@ contains
       logical, intent(inout) :: IsNewBlock
       real,   intent(out) :: GradAlfven_DD(nDim,MaxDim)
 
-      real, save :: Alfven_VFD(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+      real, allocatable, save :: Alfven_VFD(:,:,:,:,:)
       integer :: iDir
 
       character(len=*), parameter:: NameSub = 'calc_grad_alfven'
       !------------------------------------------------------------------------
+      if(.not.allocated(Alfven_VFD)) &
+           allocate(Alfven_VFD(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim))
+      
       if(IsNewBlock)then
          call get_alfven_speed(Alfven_VFD)
          IsNewBlock = .false.
@@ -1319,8 +1421,8 @@ contains
               + RightState_VX(Bx_:Bz_,i,j,k))
          if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
          if(nIonFluid > 1)then
-            Rho = 0.5*(sum(LeftState_VX(iRho_I(IonFirst_:IonLast_),i,j,k) &
-                 + RightState_VX(iRho_I(IonFirst_:IonLast_),i,j,k)))
+            Rho = 0.5*(sum(LeftState_VX(iRhoIon_I,i,j,k) &
+                 + RightState_VX(iRhoIon_I,i,j,k)))
          else
             Rho = 0.5*(LeftState_VX(Rho_,i,j,k) + RightState_VX(Rho_,i,j,k))
          end if
@@ -1333,8 +1435,8 @@ contains
                  + RightState_VY(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
             if(nIonFluid > 1)then
-               Rho = 0.5*(sum(LeftState_VY(iRho_I(IonFirst_:IonLast_),i,j,k) &
-                    + RightState_VY(iRho_I(IonFirst_:IonLast_),i,j,k)))
+               Rho = 0.5*(sum(LeftState_VY(iRhoIon_I,i,j,k) &
+                    + RightState_VY(iRhoIon_I,i,j,k)))
             else
                Rho = 0.5*(LeftState_VY(Rho_,i,j,k) + RightState_VY(Rho_,i,j,k))
             end if
@@ -1348,8 +1450,8 @@ contains
                  + RightState_VZ(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
             if(nIonFluid > 1)then
-               Rho = 0.5*(sum(LeftState_VZ(iRho_I(IonFirst_:IonLast_),i,j,k) &
-                    + RightState_VZ(iRho_I(IonFirst_:IonLast_),i,j,k)))
+               Rho = 0.5*(sum(LeftState_VZ(iRhoIon_I,i,j,k) &
+                    + RightState_VZ(iRhoIon_I,i,j,k)))
             else
                Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) + RightState_VZ(Rho_,i,j,k))
             end if
