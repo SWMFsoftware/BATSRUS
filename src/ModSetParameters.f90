@@ -3910,7 +3910,7 @@ contains
       !$acc update device(Gamma, GammaMinus1, InvGammaMinus1)
       !$acc update device(GammaElectron, GammaElectronMinus1)
       !$acc update device(InvGammaElectronMinus1)
-      
+
       !$acc update device(GammaWave)
 
       !$acc update device(UseBody, B1rCoef)

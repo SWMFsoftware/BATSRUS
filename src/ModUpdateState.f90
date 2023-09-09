@@ -20,7 +20,7 @@ module ModUpdateState
   public:: update_check         ! check and correct update if necessary
   public:: fix_anisotropy       ! fix pressure anisotropy after update
   public:: check_nan            ! Check State_VGB for NaNs
-  
+
 contains
   !============================================================================
   subroutine update_state(iBlock)
@@ -418,7 +418,7 @@ contains
 
       UseAnisoShockHeating = &
            PparShockHeatingFraction /= 0.0 .and. .not.UseNonConservative
-      
+
       ! Allocate ion (perpendicular) entropy array
       if( (UseAnisoShockHeating .or. UseElectronShockHeating) &
            .and. .not.allocated(s_C)) allocate(s_C(nI,nJ,nK))
@@ -960,9 +960,9 @@ contains
             ! Energy weights (GammaPerp-1 = 1, GammaPar - 1 = 2)
             Wpar  = WeightSpar*FactorPerp
             Wperp = WeightSperp*2*FactorPar
-            
+
             if(.not.UseElectronShockHeating)then
-               ! Solution for Epar 
+               ! Solution for Epar
                Epar  = (Spp + Wpar*Eth)/(Wpar + Wperp)
                State_VGB(Ppar_,i,j,k,iBlock) = Epar*2
             else
