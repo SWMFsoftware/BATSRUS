@@ -38,23 +38,21 @@ module ModPhysics
   ! adiabatic index (gamma) and derived values for fluids
   real:: Gamma_I(nFluid)          = Gamma0
   real:: GammaMinus1_I(nFluid)    = Gamma0 - 1.0
-  real:: InvGamma_I(nFluid)       = 1.0/Gamma0
   real:: InvGammaMinus1_I(nFluid) = 1.0/(Gamma0 - 1.0)
-  !$acc declare create(Gamma_I, GammaMinus1_I, InvGamma_I, InvGammaMinus1_I)
+  !$acc declare create(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
 
   ! adiabatic index (gamma) and derived values for the first/total fluid
   real :: Gamma          = Gamma0
   real :: GammaMinus1    = Gamma0 - 1.0
-  real :: InvGamma       = 1.0/Gamma0
   real :: InvGammaMinus1 = 1.0/(Gamma0 - 1.0)
-  !$acc declare create(Gamma, GammaMinus1, InvGamma, InvGammaMinus1)
+  !$acc declare create(Gamma, GammaMinus1, InvGammaMinus1)
 
   ! adiabatic index (gamma) and derived values for electrons
   real :: GammaElectron          = Gamma0
-  real :: InvGammaElectron       = 1.0/Gamma0
   real :: GammaElectronMinus1    = Gamma0 - 1.0
   real :: InvGammaElectronMinus1 = 1.0/(Gamma0 - 1.0)
   !$acc declare create(GammaElectron, GammaElectronMinus1)
+  !$acc declare create(InvGammaElectronMinus1)
 
   ! gamma of the waves
   real :: GammaWave = 1.5

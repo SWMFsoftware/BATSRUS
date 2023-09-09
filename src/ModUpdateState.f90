@@ -20,7 +20,7 @@ module ModUpdateState
   public:: update_check         ! check and correct update if necessary
   public:: fix_anisotropy       ! fix pressure anisotropy after update
   public:: check_nan            ! Check State_VGB for NaNs
-
+  
 contains
   !============================================================================
   subroutine update_state(iBlock)
@@ -140,9 +140,9 @@ contains
          IsTimeAccurate, iStage, nStage, Dt, Cfl, UseB0, UseBufferGrid, &
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
     use ModPhysics, ONLY: &
-         Gamma, GammaMinus1, InvGamma, Gamma_I, InvGamma_I, &
-         InvGammaElectron, GammaElectron, InvGammaElectronMinus1, RhoMin_I, &
-         ShockLeft_V, ShockRight_V
+         Gamma, GammaMinus1, InvGammaMinus1, Gamma_I, GammaMinus1_I, &
+         GammaElectron, GammaElectronMinus1, InvGammaElectronMinus1, &
+         ShockLeft_V, ShockRight_V, RhoMin_I
     use ModSemiImplVar, ONLY: UseStableImplicit
     use ModVarIndexes, ONLY: Pe_, p_
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
@@ -163,6 +163,11 @@ contains
     use ModPui, ONLY: UsePui, pui_advection_diffusion
 
     integer, intent(in) :: iBlock
+
+    real, parameter:: cThird = 1./3.
+
+    ! Named indexes for entropies
+    integer, parameter:: s_ = p_, Se_ = Pe_, Sperp_ = p_, Spar_ = Ppar_
 
     integer :: i, j, k, iVar
     integer, parameter:: iGang=1
@@ -233,21 +238,21 @@ contains
              Source_VC(iPparIon_I,i,j,k) = Coeff2*Source_VC(iPparIon_I,i,j,k)
           end do; end do; end do
        else
-          ! Modify pressure source terms to entropy source if necessary
-          ! ds/dp = (1/gamma)*p^(1/gammaE-1)
+          ! Modify pressure source term to entropy source term
+          ! S(s) = S(p)/Rho^(gamma-1)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Source_VC(iP_I,i,j,k) = Source_VC(iP_I,i,j,k)*InvGamma_I &
-                  * State_VGB(iP_I,i,j,k,iBlock)**(InvGamma_I - 1.0)
+             Source_VC(iP_I,i,j,k) = Source_VC(iP_I,i,j,k) &
+                  *State_VGB(iRho_I,i,j,k,iBlock)**(-GammaMinus1_I)
           end do; end do; end do
        end if
     end if
 
     ! Modify electron pressure source term to electron entropy if necessary
-    ! d(Se)/d(Pe) = Pe^(1/gammaE-1)/gammaE
+    ! S(Se) = S(Pe)/rho^(gammaE-1)
     if(UseElectronPressure .and. UseElectronEntropy)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)*InvGammaElectron &
-               * State_VGB(Pe_,i,j,k,iBlock)**(InvGammaElectron - 1.0)
+          Source_VC(Se_,i,j,k) = Source_VC(Pe_,i,j,k) &
+               *State_VGB(Rho_,i,j,k,iBlock)**(-GammaElectronMinus1)
        end do; end do; end do
     end if
 
@@ -390,44 +395,47 @@ contains
       ! Allocatable storage for classical 4th order Runge-Kutta scheme
       real, allocatable, save:: Rk4_VCB(:,:,:,:,:)
 
-      real, parameter:: cThird = 1./3.
-
-      ! true if the update is State=StateOld+Source
+      ! true if the update is State = StateOld + Source
       logical :: DoAddToStateOld
 
       ! true if shock heating is applied to electrons, anisotropic ion pressure
       logical:: UseElectronShockHeating, UseAnisoShockHeating
 
-      real:: Coeff1, Coeff2, b_D(3), u_D(3), FullB2, FullB
-      real:: dP, Sperp, WeightPar
+      real:: Coeff1, Coeff2, b_D(3), u_D(3), FullB2, FullB, Rho
+      real:: Eth, Sperp, Sie, Spp, Ei, Ee, Epar, Eperp
+      real:: FactorI, FactorE, FactorPar, FactorPerp
+      real:: WeightSi, WeightSe, WeightSpar, WeightSperp, Wi, We, Wpar, Wperp
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
-      real, allocatable, save:: pAdiab_C(:,:,:)
+      real, allocatable, save:: s_C(:,:,:)
       !------------------------------------------------------------------------
       DoAddToStateOld = UseHalfStep .or. nStage == 1 .or. nStage == 4
+
+      WeightSe = PeShockHeatingFraction; WeightSi = 1 - WeightSe
 
       UseElectronShockHeating = &
            PeShockHeatingFraction > 0.0 .and. .not.UseNonConservative
 
       UseAnisoShockHeating = &
            PparShockHeatingFraction /= 0.0 .and. .not.UseNonConservative
-
-      ! Allocate arrays as needed
+      
+      ! Allocate ion (perpendicular) entropy array
       if( (UseAnisoShockHeating .or. UseElectronShockHeating) &
-           .and. .not.allocated(pAdiab_C))allocate(pAdiab_C(nI,nJ,nK))
+           .and. .not.allocated(s_C)) allocate(s_C(nI,nJ,nK))
 
       if(UseElectronShockHeating .and. .not.UseAnisoPressure)then
-         ! Calculate adiabatic update for isotropic pressure
-         ! using entropy s = p^(1/gamma)
+         ! Calculate updated entropy for isotropic pressure
          if(DoAddToStateOld)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               pAdiab_C(i,j,k) = max(0.0, Source_VC(p_,i,j,k) + &
-                    StateOld_VGB(p_,i,j,k,iBlock)**InvGamma)**Gamma
+               s_C(i,j,k) = Source_VC(s_,i,j,k) + &
+                    StateOld_VGB(p_,i,j,k,iBlock) &
+                    *StateOld_VGB(Rho_,i,j,k,iBlock)**(-GammaMinus1)
             end do; end do; end do
          else
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               pAdiab_C(i,j,k) = max(0.0, Source_VC(p_,i,j,k) + &
-                    State_VGB(p_,i,j,k,iBlock)**InvGamma)**Gamma
+               s_C(i,j,k) = Source_VC(s_,i,j,k) + &
+                    State_VGB(p_,i,j,k,iBlock) &
+                    *State_VGB(Rho_,i,j,k,iBlock)**(-GammaMinus1)
             end do; end do; end do
          end if
       end if
@@ -485,28 +493,26 @@ contains
                        Coeff2*State_VGB(iPparIon_I,i,j,k,iBlock)
                end if
                if(UseAnisoShockHeating)then
-                  ! update total magnetic field and perpendicular entropy
-                  b_D   = b_D   + Source_VC(Bx_:Bz_,i,j,k)
-                  Sperp = Sperp + Source_VC(p_,i,j,k)
-                  ! Convert perpendicular entropy to perpendicular pressure
-                  ! The parallel pressure will be added later
-                  pAdiab_C(i,j,k) = Sperp*norm2(b_D)
+                  ! Store updated perpendicular entropy
+                  s_C(i,j,k) = Sperp + Source_VC(Sperp_,i,j,k)
                   if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
-                       write(*,*) NameSub,' Sperp, SperpNew, pPerpAdiabNew=', &
-                       Sperp - Source_VC(p_,i,j,k), Sperp, pAdiab_C(i,j,k)
+                       write(*,*) NameSub,' Sperp, SperpNew=', &
+                       Sperp - Source_VC(p_,i,j,k), Sperp
                end if
             end do; end do; end do
          else if(UseNonConservative)then
             ! Convert ion pressure to entropy
-            ! s = p^(1/Gamma)
+            ! s = p/rho^(Gamma-1)
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
                StateOld_VGB(iP_I,i,j,k,iBlock) = &
-                    StateOld_VGB(iP_I,i,j,k,iBlock)**InvGamma_I
+                    StateOld_VGB(iP_I,i,j,k,iBlock) &
+                    *StateOld_VGB(iRho_I,i,j,k,iBlock)**(-GammaMinus1_I)
                ! State_VGB is not used in 1-stage and HalfStep schemes
                if(.not.UseHalfStep .and. nStage > 1) &
                     State_VGB(iP_I,i,j,k,iBlock) = &
-                    State_VGB(iP_I,i,j,k,iBlock)**InvGamma_I
+                    State_VGB(iP_I,i,j,k,iBlock) &
+                    *State_VGB(iRho_I,i,j,k,iBlock)**(-GammaMinus1_I)
             end do; end do; end do
          end if
       endif
@@ -557,16 +563,17 @@ contains
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron pressure to entropy
          ! This has to be after call pressure_to_energy for UseElectronEnergy
-         ! Se = Pe^(1/GammaE)
+         ! Se = Pe/Rho^(GammaE-1)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
-                 StateOld_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
+                 StateOld_VGB(Pe_,i,j,k,iBlock) &
+                 *StateOld_VGB(Rho_,i,j,k,iBlock)**(-GammaElectronMinus1)
             ! State_VGB is not used in 1-stage and HalfStep schemes
             if(.not.UseHalfStep .and. nStage > 1) &
-                 State_VGB(Pe_,i,j,k,iBlock) = &
-                 State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectron
+                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+                 *State_VGB(Rho_,i,j,k,iBlock)**(-GammaElectronMinus1)
          end do; end do; end do
       end if
 
@@ -704,15 +711,15 @@ contains
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron entropy back to pressure
          ! This has to be before call energy_to_pressure for UseElectronEnergy
-         ! Pe = Se^GammaE
+         ! Pe = Se*Rho^(GammaE-1)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-            StateOld_VGB(Pe_,i,j,k,iBlock) = &
-                 StateOld_VGB(Pe_,i,j,k,iBlock)**GammaElectron
+            StateOld_VGB(Pe_,i,j,k,iBlock) = StateOld_VGB(Se_,i,j,k,iBlock) &
+                 *StateOld_VGB(Rho_,i,j,k,iBlock)**GammaElectronMinus1
             if(State_VGB(Pe_,i,j,k,iBlock) > 0.0) &
-                 State_VGB(Pe_,i,j,k,iBlock) = &
-                 State_VGB(Pe_,i,j,k,iBlock)**GammaElectron
+                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Se_,i,j,k,iBlock) &
+                 *State_VGB(Rho_,i,j,k,iBlock)**GammaElectronMinus1
          end do; end do; end do
       end if
 
@@ -757,24 +764,24 @@ contains
             end do; end do; end do
          elseif(UseNonConservative)then
             ! Convert entropy back to pressure
-            ! p = s^Gamma
+            ! p = s*rho^(Gamma-1)
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-               StateOld_VGB(iP_I,i,j,k,iBlock) = &
-                    StateOld_VGB(iP_I,i,j,k,iBlock)**Gamma_I
-               where(State_VGB(iP_I,i,j,k,iBlock) > 0.0) &
-                    State_VGB(iP_I,i,j,k,iBlock) = &
-                    State_VGB(iP_I,i,j,k,iBlock)**Gamma_I
+               StateOld_VGB(iP_I,i,j,k,iBlock) = StateOld_VGB(iP_I,i,j,k,iBlock)&
+                    *StateOld_VGB(iRho_I,i,j,k,iBlock)**GammaMinus1_I
+               State_VGB(iP_I,i,j,k,iBlock) = State_VGB(iP_I,i,j,k,iBlock) &
+                    *State_VGB(iRho_I,i,j,k,iBlock)**GammaMinus1_I
             end do; end do; end do
          end if
       end if
 
       if(UseMultiSpecies)then
          ! Fix negative species densities
-         State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBlock) = &
-              max(0.0,&
-              State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBlock))
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) = &
+                 max(0.0, State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock))
+         end do; end do; end do
 
          if(DoReplaceDensity)then
             ! Add up species densities to total density
@@ -859,28 +866,33 @@ contains
            NameSub, ' after pressure/energy update        =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
-      if(UseAnisoShockHeating)then
-         ! Add parallel pressure to the perpendicular pressure (adiabatic)
-         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            pAdiab_C(i,j,k) = &
-                 cThird*(2*pAdiab_C(i,j,k) + State_VGB(Ppar_,i,j,k,iBlock))
-         end do; end do; end do
-      end if
-
-      if(UseElectronShockHeating)then
+      if(UseElectronShockHeating .and. .not.UseAnisoPressure)then
          ! Distribute shock heating between ions and electrons
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
-              NameSub,' before shock heating Pe, P, pAdiab=', &
+              NameSub,' before shock heating Pe, P, s=', &
               State_VGB(Pe_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
-              pAdiab_C(iTest,jTest,kTest)
+              s_C(iTest,jTest,kTest)
+
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            ! Fraction of non-adiabatic ion heating going to the electrons
-            dP = PeShockHeatingFraction &
-                 *(State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k))
-            State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - dP
-            State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-                 + InvGammaElectronMinus1*GammaMinus1*dP
+            Rho = State_VGB(Rho_,i,j,k,iBlock)
+            FactorI = Rho**(-GammaMinus1)
+            FactorE = Rho**(-GammaElectronMinus1)
+            ! Thermal energy density from total energy update
+            Eth =  State_VGB(P_,i,j,k,iBlock)*InvGammaMinus1 &
+                 + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
+            ! From entropy updates We*Si - Wi*Se
+            Sie =  WeightSe*s_C(i,j,k) &
+                 - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
+            ! Energy weights
+            We = WeightSe*GammaMinus1*FactorI
+            Wi = WeightSi*GammaElectronMinus1*FactorE
+            ! Solution for energy densities
+            Ei = (Sie + Wi*Eth)/(We + Wi)
+            Ee = Eth - Ei
+            ! Convert to pressures
+            State_VGB(p_,i,j,k,iBlock)  = Ei*GammaMinus1
+            State_VGB(Pe_,i,j,k,iBlock) = Ee*GammaElectronMinus1
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' after shock heating Pe, P=', &
@@ -889,20 +901,21 @@ contains
       end if
 
       if(UseAnisoShockHeating)then
-         ! Distribute ion shock heating between parallel and perpendicular
-         ! pressures
+         ! Distribute shock heating between parallel and perpendicular
+         ! pressures and electron pressure if present
          if(DoTest) write(*,'(2x,2a,4es20.12)') &
-              NameSub,' Ppar, P, pAdiab=', &
+              NameSub,' Ppar, P, Sperp=', &
               State_VGB(Ppar_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
-              pAdiab_C(iTest,jTest,kTest)
+              s_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            dP = State_VGB(p_,i,j,k,iBlock) - pAdiab_C(i,j,k)
+            Rho = State_VGB(Rho_,i,j,k,iBlock)
             b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
             if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
             FullB = norm2(b_D)
+
             if(PparShockHeatingFraction > 0.)then
-               WeightPar = PparShockHeatingFraction
+               WeightSpar = PparShockHeatingFraction
             else
                ! Evaluate b.n
                ! Get b from left or right state
@@ -918,14 +931,50 @@ contains
                     *Source_VC(Rho_,i,j,k)
                ! For parallel shock |u.b|=1 and all heating goes into Ppar,
                ! for perpendicular shock |u.b|=0 no heating goes into Ppar.
-               WeightPar = abs(sum(u_D*b_D))/(norm2(b_D)*norm2(u_D) + 1e-30)
+               WeightSpar = abs(sum(u_D*b_D))/(norm2(b_D)*norm2(u_D) + 1e-30)
+               ! Make sure none of the weights are zero
+               if(UseElectronPressure) &
+                    WeightSpar = min(0.999, max(0.001, WeightSpar))
             end if
-            ! Final weight is wPar/(wPar + (1-wPar)*2B^3/rho^2)
-            dP = dP * WeightPar/(WeightPar + (1 - WeightPar)*2*FullB**3 &
-                 /State_VGB(Rho_,i,j,k,iBlock)**2)
-            ! dPpar = (GammaPar-1)*dP/(Gamma-1) = 2*dP/(5/3-1) = 3*dP
-            State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                 + 3*dP
+            WeightSperp = 1 - WeightSpar
+
+            ! Conversion from pressures to entropies
+            FactorPar  = FullB**2/Rho**2
+            FactorPerp = 1/FullB
+            ! Thermal energy density from total energy update
+            Eth = State_VGB(P_,i,j,k,iBlock)*InvGammaMinus1
+            ! Combined entropy from entropy update
+            Spp = WeightSperp*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
+                 - WeightSpar*s_C(i,j,k)
+            if(UseElectronShockHeating)then
+               Eth = Eth + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
+               ! Conversion from electron pressure to electron entropy
+               FactorE = Rho**(-GammaElectronMinus1)
+               ! Combined entropy: Sie = We*Sperp - Wi*Se
+               Sie =  WeightSe*s_C(i,j,k) &
+                    - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
+               ! Energy weights for Ee and Eperp (GammaPerp - 1 = 1)
+               Wi = WeightSi*GammaElectronMinus1*FactorE
+               We = WeightSe*FactorPerp
+            end if
+            ! Energy weights (GammaPerp-1 = 1, GammaPar - 1 = 2)
+            Wpar  = WeightSpar*FactorPerp
+            Wperp = WeightSperp*2*FactorPar
+            
+            if(.not.UseElectronShockHeating)then
+               ! Solution for Epar 
+               Epar  = (Spp + Wpar*Eth)/(Wpar + Wperp)
+               State_VGB(Ppar_,i,j,k,iBlock) = Epar*2
+            else
+               ! Solution for three energy densities
+               Eperp = (Wperp*Sie + Wi*Spp + Wperp*Wi*Eth) &
+                    /  (Wperp*Wi + Wperp*We + Wi*Wpar)
+               Epar = (Wpar*Eperp - Spp)/Wperp
+               Ee   = (We*Eperp - Sie)/Wi
+               ! Convert to pressures
+               State_VGB(Ppar_,i,j,k,iBlock) = Epar*2
+               State_VGB(Pe_,i,j,k,iBlock)   = Ee*GammaElectronMinus1
+            end if
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' after shock heating Ppar, P=', &

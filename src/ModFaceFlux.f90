@@ -1170,7 +1170,7 @@ contains
 
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModPhysics,  ONLY: &
-         GammaMinus1, GammaElectronMinus1, GammaElectron, InvGammaElectron
+         GammaMinus1, GammaElectronMinus1, GammaElectron
     use ModAdvance,  ONLY: &
          UseElectronPressure, UseElectronEntropy, UseEntropy, UseAnisoPe
     use ModWaves,    ONLY: AlfvenMinusFirst_, AlfvenMinusLast_,&
@@ -1308,8 +1308,8 @@ contains
 
     ! Set flux for electron pressure
     if(UseElectronPressure)then
-       if(UseElectronEntropy) &
-            StateCons_V(Pe_) = State_V(Pe_)**InvGammaElectron
+       if(UseElectronEntropy) StateCons_V(Pe_) = &
+            State_V(Pe_)*State_V(Rho_)**(-GammaElectronMinus1)
        Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
 
        if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
@@ -1431,7 +1431,7 @@ contains
     !==========================================================================
     subroutine get_boris_flux
 
-      use ModPhysics, ONLY: InvGamma, InvGammaMinus1
+      use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       ! Variables for conservative state and flux calculation
@@ -1547,7 +1547,7 @@ contains
             ! Parallel entropy Spar = Ppar * B^2/rho^2
             StateCons_V(Ppar_) = State_V(Ppar_)*FullB2/Rho**2
             ! Perpendicular entropy Sperp = Pperp/FullB
-            StateCons_V(p_) = 0.5*(3*State_V(p_) - State_V(Ppar_)) &
+            StateCons_V(p_) = 0.5*(3*p - State_V(Ppar_)) &
                  /sqrt(max(1e-30, FullB2))
          end if
          Flux_V(Ppar_)   = Un*StateCons_V(Ppar_)
@@ -1555,8 +1555,8 @@ contains
          Flux_V(Energy_) = Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
       else if(UseEntropy) then
-         ! s = p^1/g
-         StateCons_V(p_) = State_V(p_)**InvGamma
+         ! s = p/rho^g-1
+         StateCons_V(p_) = p*Rho**(-GammaMinus1)
          ! u_i * s
          Flux_V(p_)  = Un*StateCons_V(p_)
       else
@@ -1638,7 +1638,7 @@ contains
          FullBx, FullBy, FullBz, FullBn, HallUn)
 
       use ModElectricField, ONLY: UseJCrossBForce
-      use ModPhysics, ONLY: InvGamma, InvGammaMinus1
+      use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModTurbulence, ONLY: UseReynoldsDecomposition, SigmaD, &
            UseTransverseTurbulence,  PoyntingFluxPerB, UseAwRepresentativeHere
@@ -1724,7 +1724,7 @@ contains
             ! Parallel entropy Spar = Ppar * B^2/rho^2
             StateCons_V(Ppar_) = State_V(Ppar_)*FullB2/Rho**2
             ! Perpendicular entropy Sperp = Pperp/FullB
-            StateCons_V(p_) = 0.5*(3*State_V(p_) - State_V(Ppar_)) &
+            StateCons_V(p_) = 0.5*(3*p - State_V(Ppar_)) &
                  /sqrt(max(1e-30, FullB2))
          end if
          ! f_i[Ppar] = u_i*Ppar or f_i[Spar] = u_i*Spar
@@ -1743,8 +1743,8 @@ contains
             write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
          end if
       else if(UseEntropy)then
-         ! s = p^1/g
-         StateCons_V(p_) = State_V(p_)**InvGamma
+         ! s = p/rho^(g-1)
+         StateCons_V(p_) = p*Rho**(-GammaMinus1)
          ! u_i * s
          Flux_V(p_)  = Un*StateCons_V(p_)
       else
@@ -1917,7 +1917,7 @@ contains
     subroutine get_hd_flux
 
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
-      use ModPhysics, ONLY: InvGamma, InvGammaMinus1_I
+      use ModPhysics, ONLY: InvGammaMinus1_I
       use ModMultiFluid, ONLY: iPpar
       use ModTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD, PoyntingFluxPerB
@@ -1959,11 +1959,10 @@ contains
                pWave = (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
             end if
             if(UseReynoldsDecomposition)then
-               if(WDiff_>1)then
+               if(WDiff_ > 1)then
                   wD = State_V(WDiff_)
                else
-                  wD = SigmaD*&
-                       sum(State_V(WaveFirst_:WaveLast_))
+                  wD = SigmaD*sum(State_V(WaveFirst_:WaveLast_))
                end if
                if(UseTransverseTurbulence)then
                   pWave = pWave + (GammaWave-1)*wD
@@ -2026,7 +2025,7 @@ contains
             ! Parallel entropy Spar = Ppar * B^2/rho^2
             StateCons_V(iPpar) = State_V(iPpar)*FullB2/Rho**2
             ! Perpendicular entropy Sperp = Pperp/FullB
-            StateCons_V(iP) = 0.5*(3*State_V(iP) - State_V(iPpar)) &
+            StateCons_V(iP) = 0.5*(3*p - State_V(iPpar)) &
                  /sqrt(max(1e-30, FullB2))
          end if
          Flux_V(iPpar) = Un*StateCons_V(iPpar)
@@ -2046,8 +2045,8 @@ contains
             write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
          end if
       elseif(UseEntropy)then
-         ! s = p^1/g
-         StateCons_V(iP) = State_V(iP)**InvGamma
+         ! s = p*rho^(g-1)
+         StateCons_V(iP) = p*Rho**(-GammaMinus1)
          ! u_i * s
          Flux_V(iP)  = Un*StateCons_V(iP)
       else
@@ -4641,7 +4640,7 @@ contains
   !============================================================================
   subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
 
-    use ModPhysics, ONLY: Gamma,GammaMinus1,InvGammaMinus1
+    use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1
 
     real, intent(out):: Flux_V(nFlux)
     real, intent(in):: StateLeftCons_V(:), StateRightCons_V(:)
