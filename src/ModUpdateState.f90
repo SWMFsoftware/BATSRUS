@@ -769,7 +769,8 @@ contains
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-               StateOld_VGB(iP_I,i,j,k,iBlock) = StateOld_VGB(iP_I,i,j,k,iBlock)&
+               StateOld_VGB(iP_I,i,j,k,iBlock) = &
+                    StateOld_VGB(iP_I,i,j,k,iBlock) &
                     *StateOld_VGB(iRho_I,i,j,k,iBlock)**GammaMinus1_I
                State_VGB(iP_I,i,j,k,iBlock) = State_VGB(iP_I,i,j,k,iBlock) &
                     *State_VGB(iRho_I,i,j,k,iBlock)**GammaMinus1_I
