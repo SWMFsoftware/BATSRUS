@@ -6,6 +6,7 @@ module ModUpdateState
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
        iVarTest, iComm, Used_GB, CellVolume_GB, Xyz_DGB
+  use ModBatsrusUtility, ONLY: error_report, stop_mpi
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
   use ModB0, ONLY: B0_DGB
 
@@ -951,8 +952,8 @@ contains
                ! Conversion from electron pressure to electron entropy
                FactorE = Rho**(-GammaElectronMinus1)
                ! Combined entropy: Sie = We*Sperp - Wi*Se
-               Sie =  WeightSe*s_C(i,j,k) &
-                    - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
+               Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
+                    - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE 
                ! Energy weights for Ee and Eperp (GammaPerp - 1 = 1)
                Wi = WeightSi*GammaElectronMinus1*FactorE
                We = WeightSe*FactorPerp
@@ -967,13 +968,23 @@ contains
                State_VGB(Ppar_,i,j,k,iBlock) = Epar*2
             else
                ! Solution for three energy densities
-               Eperp = (Wperp*Sie + Wi*Spp + Wperp*Wi*Eth) &
-                    /  (Wperp*Wi + Wperp*We + Wi*Wpar)
-               Epar = (Wpar*Eperp - Spp)/Wperp
-               Ee   = (We*Eperp - Sie)/Wi
+               Epar = (Wpar*Sie + Wi*Spp + Wi*Wpar*Eth) &
+                    / (Wperp*Wi + Wpar*We + Wi*Wpar)
+               Ee   = (We*Epar - Sie)/Wi
+               Eperp= (Wperp*Epar - Spp)/Wpar
+
+               if(abs(Epar + Eperp + Ee - Eth) > 1e-10)then
+                  write(*,*)'Epar, Eperp, Ee, Eth=', Epar, Eperp, Ee, Eth
+                  write(*,*)'WeightSi, Se, Sie   =', WeightSi, WeightSe, Sie, &
+                       We*Epar - Wi*Ee
+                  write(*,*)'WeightSPar,SPerp,Spp=', &
+                       WeightSpar, WeightSperp, Spp, Wperp*Epar - Wpar*Eperp
+                  call stop_mpi('DEBUG')
+               end if
                ! Convert to pressures
                State_VGB(Ppar_,i,j,k,iBlock) = Epar*2
                State_VGB(Pe_,i,j,k,iBlock)   = Ee*GammaElectronMinus1
+               State_VGB(p_,i,j,k,iBlock)    = (Eth - Ee)*GammaMinus1
             end if
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
@@ -1059,7 +1070,6 @@ contains
          PercentPLimit_I, PercentRhoLimit_I
     use ModNumConst, ONLY: cTiny
     use ModMultiIon, ONLY: DoRestrictMultiIon, IsMultiIon_CB
-    use ModBatsrusUtility, ONLY: error_report, stop_mpi
     use BATL_lib, ONLY: iProc, nProc, nI, nJ, nK, nBlock, Unused_B
     use ModMpi
 
@@ -1868,7 +1878,6 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: r_GB
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, Xyz_DGB, iProc
-    use ModBatsrusUtility, ONLY: stop_mpi
     use, intrinsic :: ieee_arithmetic
 
     character(len=*), intent(in):: NameSub
