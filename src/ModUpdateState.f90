@@ -720,7 +720,7 @@ contains
                  *StateOld_VGB(Rho_,i,j,k,iBlock)**GammaElectronMinus1
             if(State_VGB(Pe_,i,j,k,iBlock) > 0.0) &
                  State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Se_,i,j,k,iBlock) &
-                 *State_VGB(Rho_,i,j,k,iBlock)**GammaElectronMinus1
+                 *max(0.0, State_VGB(Rho_,i,j,k,iBlock))**GammaElectronMinus1
          end do; end do; end do
       end if
 
