@@ -954,7 +954,7 @@ contains
                FactorE = Rho**(-GammaElectronMinus1)
                ! Combined entropy: Sie = We*Sperp - Wi*Se
                Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
-                    - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE 
+                    - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
                ! Energy weights for Ee and Eperp (GammaPerp - 1 = 1)
                Wi = WeightSi*GammaElectronMinus1*FactorE
                We = WeightSe*FactorPerp
