@@ -1160,7 +1160,7 @@ contains
       real,   intent(out) :: GradU_DD(nDim,MaxDim)
       logical, optional, intent(inout) :: IsNewBlock
       logical, optional, intent(in) :: UseMassWeightedIn
-      
+
       real, allocatable, save :: U_VFD(:,:,:,:,:)
       integer :: iDir
       logical :: UseMassWeighted

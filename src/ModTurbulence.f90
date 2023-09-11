@@ -92,7 +92,7 @@ contains
 
     character(len=*), intent(in):: NameCommand
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'read_aw_turbulence_param'
+    character(len=*), parameter:: NameSub = 'read_turbulence_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     select case(NameCommand)
@@ -124,7 +124,7 @@ contains
        UseWavePressure = WaveFirst_ > 1
        UseAlfvenWaveDissipation = .true.
        UseReynoldsDecomposition = .true.
-       
+
        call read_var('UseTransverseTurbulence', UseTransverseTurbulence)
        call read_var('SigmaD', SigmaD)
        ! "historically" our  Lperp = Usmanov's \Lambda/KarmanTaylorAlpha
@@ -139,7 +139,7 @@ contains
             KarmanTaylorAlpha
        !
        ! Commands in the parameter file
-       ! 
+       !
     case('#LIMITIMBALANCE')
        call read_var('ImbalanceMax',ImbalanceMax)
        ImbalanceMax2 = ImbalanceMax**2
@@ -174,13 +174,13 @@ contains
           call stop_mpi(NameSub//': unknown TypeHeatPartitioning = '&
                // TypeHeatPartitioning)
        end select
-       
+
     case("#HIGHBETASTOCHASTIC")
        ! Correction for stochastic heating when Beta_proton is between 1 and 30
        ! KAWs are non-propagating for Beta_proton > 30.
        call read_var('StochasticExponent2', StochasticExponent2)
        call read_var('StochasticAmplitude2', StochasticAmplitude2)
-       
+
     case("#ALIGNMENTANGLE")
        call read_var('UseAlignmentAngle', UseAlignmentAngle)
     case("#NONLINAWDISSIPATION")
@@ -189,7 +189,7 @@ contains
        call stop_mpi(NameSub//': unknown command = ' &
             // NameCommand)
     end select
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine read_turbulence_param
   !============================================================================
@@ -201,15 +201,15 @@ contains
     use ModWaves,       ONLY: UseAlfvenWaves
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'init_coronal_heating'
+    character(len=*), parameter:: NameSub = 'init_turbulence'
     !--------------------------------------------------------------------------
     if(.not.DoInit)RETURN
     DoInit = .false.
-    
+
     if(UseAlfvenWaves.and.                   &
          .not.allocated(AlfvenWaveSpeed_C))  &
          allocate(AlfvenWaveSpeed_C(nI,nJ,nK))
-    
+
     if(UseAlfvenWaveDissipation)then
        LperpTimesSqrtB = LperpTimesSqrtBSi &
             *Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
@@ -217,7 +217,7 @@ contains
 
     PoyntingFluxPerB = PoyntingFluxPerBSi &
          *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
-    
+
     ! if multi-ion, then use lookup table to determine the linear Landau
     ! and transit-time damping of kinetic Alfven waves
     if(UseMultiIon .and. UseStochasticHeating)then
@@ -231,16 +231,16 @@ contains
   !============================================================================
   subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, &
        WaveDissipationRate_V, CoronalHeating)
-    
+
     use ModAdvance, ONLY: State_VGB
     use ModB0,      ONLY: B0_DGB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
-    
+
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out)   :: WaveDissipationRate_V(WaveFirst_:WaveLast_), &
          CoronalHeating
-    
+
     real :: EwavePlus, EwaveMinus, FullB_D(3), FullB, Coef
     character(len=*), parameter:: NameSub = 'calc_alfven_wave_dissipation'
     !--------------------------------------------------------------------------
@@ -250,9 +250,9 @@ contains
        FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end if
     FullB = norm2(FullB_D)
-    
+
     Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
-    
+
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
