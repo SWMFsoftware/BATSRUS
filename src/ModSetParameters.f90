@@ -128,6 +128,7 @@ contains
     use ModMagnetogram, ONLY: read_magnetogram_param
     use ModCoronalHeating,  ONLY: read_coronal_heating_param, &
          init_coronal_heating, UseCoronalHeating
+    use ModTurbulence, ONLY: read_turbulence_param
     use ModTurbulence,    ONLY: UseAlfvenWaveDissipation
     use ModFieldLineThread, ONLY: read_thread_param
     use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc_param
@@ -2743,10 +2744,13 @@ contains
              call read_ldem(NamePlotDir)
           end if
 
-       case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
-            "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
-            "#HIGHBETASTOCHASTIC", "#ALIGNMENTANGLE", "#NONLINAWDISSIPATION")
+       case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING")
           call read_coronal_heating_param(NameCommand)
+          
+       case("#HEATPARTITIONING", "#HIGHBETASTOCHASTIC",  "#ALIGNMENTANGLE", &
+            "#NONLINAWDISSIPATION", "#LIMITIMBALANCE", "#AWREPRESENTATIVE", &
+            "#POYNTINGFLUX")
+       call read_turbulence_param(NameCommand)
 
        case("#RADIATIVECOOLING")
           call read_var('UseRadCooling', UseRadCooling)

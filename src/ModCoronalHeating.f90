@@ -11,9 +11,7 @@ module ModCoronalHeating
   use ModUtilities, ONLY: norm2
 #endif
   use ModMain,       ONLY: nI, nJ, nK
-  use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
-  use ModMultiFluid, ONLY: IonFirst_, IonLast_
   use ModTurbulence
   use omp_lib
 
@@ -22,19 +20,13 @@ module ModCoronalHeating
 
   PRIVATE  ! except
 
+  public :: read_coronal_heating_param ! call read_turbulence, if needed
+  public :: init_coronal_heating       ! call init_turbulence if needed
   public :: get_coronal_heat_factor
   public :: get_coronal_heating
   public :: get_block_heating
-  ! public :: apportion_coronal_heating
-  ! public :: wave_energy_to_representative
-  ! public :: representative_to_wave_energy
-  ! public :: get_wave_reflection
-  public :: init_coronal_heating
-  public :: read_coronal_heating_param
-  ! public :: turbulent_cascade
 
   logical, public :: UseCoronalHeating = .false.
-  character(len=lStringLine) :: TypeCoronalHeating
 
   ! Exponential Model ---------
   ! Variables and parameters for various heating models
@@ -56,22 +48,10 @@ module ModCoronalHeating
   ! Normalization constant for Abbett Model
   real :: HeatNormalization = 1.0
 
-  ! public :: UseAlfvenWaveDissipation, LperpTimesSqrtB
-
-  ! public :: UseTurbulentCascade, rMinWaveReflection
-
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
   real :: HeatChCgs = 5.0e-7
   real :: DecayLengthCh = 0.7
-
-  ! Alfven wave speed array, cell-centered
-  real, public, allocatable :: AlfvenWaveSpeed_C(:,:,:)
-  !$omp threadprivate(AlfvenWaveSpeed_C)
-
-  ! public :: CoronalHeating_C, WaveDissipationRate_VC
-
-  ! public :: UseAlignmentAngle, Cdiss_C
 
   logical :: DoInit = .true.
 
@@ -89,14 +69,105 @@ module ModCoronalHeating
   real, public :: DtUpdateFlux = -1.0
   real, public :: UnsignedFluxHeight = -99999.0
 
-  ! public :: QeRatio
-  ! public :: UseReynoldsDecomposition, UseTransverseTurbulence, SigmaD
-  ! public :: KarmanTaylorAlpha, KarmanTaylorBeta2AlphaRatio
-
 contains
   !============================================================================
-  subroutine get_coronal_heat_factor
+  subroutine read_coronal_heating_param(NameCommand)
+    ! Read heating parameters, call read_turbulence_param if needed
+    use ModAdvance,    ONLY: UseAnisoPressure
+    use ModReadParam,  ONLY: read_var, lStringLine
+    use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
+         UseAlfvenWaveRepresentative
 
+    integer :: iFluid
+
+    character(len=*), intent(in):: NameCommand
+    character(len=lStringLine) :: TypeCoronalHeating
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_coronal_heating_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    select case(NameCommand)
+    case("#CORONALHEATING")
+       call read_var('TypeCoronalHeating', TypeCoronalHeating)
+
+       ! Initialize logicals
+       UseCoronalHeating = .true.
+       UseUnsignedFluxModel = .false.
+       UseExponentialHeating= .false.
+       UseAlfvenWaveDissipation = .false.
+       UseTurbulentCascade = .false.
+       UseReynoldsDecomposition = .false.
+
+       select case(TypeCoronalHeating)
+       case('F','none')
+          UseCoronalHeating = .false.
+       case('exponential')
+          DoInit = .true.
+          UseExponentialHeating = .true.
+          call read_var('DecayLengthExp', DecayLengthExp)
+          call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
+       case('unsignedflux','Abbett')
+          UseUnsignedFluxModel = .true.
+          call read_var('DecayLength', DecayLength)
+          call read_var('HeatNormalization', HeatNormalization)
+       case('alfvenwavedissipation', 'turbulentcascade', 'usmanov')
+          call read_turbulence_param(TypeCoronalHeating)
+       case default
+          call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
+               // TypeCoronalHeating)
+       end select
+    case("#ACTIVEREGIONHEATING")
+       call read_var('UseArComponent', UseArComponent)
+       if(UseArComponent) then
+          call read_var('ArHeatFactorCgs', ArHeatFactorCgs)
+          call read_var('ArHeatB0', ArHeatB0)
+          call read_var('DeltaArHeatB0', DeltaArHeatB0)
+       endif
+
+    case("#LONGSCALEHEATING")
+       call read_var('DoChHeat', DoChHeat)
+       if(DoChHeat)then
+          call read_var('HeatChCgs', HeatChCgs)
+          call read_var('DecayLengthCh', DecayLengthCh)
+       end if
+    case default
+       call stop_mpi(NameSub//': unknown command = ' &
+            // NameCommand)
+    end select
+
+    call test_stop(NameSub, DoTest)
+  end subroutine read_coronal_heating_param
+  !============================================================================
+  subroutine init_coronal_heating
+    ! Convert dimensional heating parameters
+    use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_
+    use ModWaves,       ONLY: UseAlfvenWaves
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_coronal_heating'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(UseAlfvenWaves)call init_turbulence
+    if(.not.DoInit)then
+       call test_stop(NameSub, DoTest)
+       RETURN
+    end if
+    DoInit = .false.
+
+    if(UseExponentialHeating)then
+       HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
+            *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+    end if
+
+    call test_stop(NameSub, DoTest)
+  end subroutine init_coronal_heating
+  !============================================================================
+  subroutine get_coronal_heat_factor
+    ! Integrate heat function with a unit factor, then multiply by
+    ! the total heating and divide by volume
+    ! With thus calculated factor, the integral of coronal heating
+    ! function equals the prescribed (for example, stemming from
+    ! the unsigned flux) total heating
     use ModAdvance,     ONLY: State_VGB, Bz_
     use ModGeometry,    ONLY: IsNoBody_B, Used_GB, TypeGeometry
     use ModMagnetogram, ONLY: get_magnetogram_field
@@ -237,22 +308,9 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_coronal_heat_factor
   !============================================================================
-  subroutine get_coronal_heating(i, j, k, iBlock, CoronalHeating)
-
-    integer, intent(in) :: i, j, k, iBlock
-    real, intent(out) :: CoronalHeating
-
-    real :: HeatFunction
-    character(len=*), parameter:: NameSub = 'get_coronal_heating'
-    !--------------------------------------------------------------------------
-    call get_heat_function(i, j, k, iBlock, HeatFunction)
-
-    CoronalHeating = HeatFactor*HeatFunction
-
-  end subroutine get_coronal_heating
-  !============================================================================
   subroutine get_heat_function(i, j, k, iBlock, HeatFunction)
-
+    ! Is defined with some arbitrary factor, becomes the coronal
+    ! heating once multiplied by the heat factor calculated above
     use ModMain, ONLY: UseB0, z_
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use ModB0, ONLY: B0_DGB
@@ -295,8 +353,23 @@ contains
 
   end subroutine get_heat_function
   !============================================================================
-  subroutine get_photosphere_field(iBlock, Bz_C, BzCgs_II)
+  subroutine get_coronal_heating(i, j, k, iBlock, CoronalHeating)
+    ! Calculate the coronal heating by applying a proper factor
+    ! to a somewhat arbitrarily defind heating function
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out) :: CoronalHeating
 
+    real :: HeatFunction
+    character(len=*), parameter:: NameSub = 'get_coronal_heating'
+    !--------------------------------------------------------------------------
+    call get_heat_function(i, j, k, iBlock, HeatFunction)
+
+    CoronalHeating = HeatFactor*HeatFunction
+
+  end subroutine get_coronal_heating
+  !============================================================================
+  subroutine get_photosphere_field(iBlock, Bz_C, BzCgs_II)
+    ! Internal program used in calculating heat factor
     use ModMain,      ONLY: nI, nJ, nK, z_
     use ModInterpolate, ONLY: find_cell
     use ModPhysics,   ONLY: No2Si_V, UnitB_
@@ -330,7 +403,7 @@ contains
   end subroutine get_photosphere_field
   !============================================================================
   subroutine get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
-
+    ! Internal program used in calculating the heat factor
     use ModAdvance,     ONLY: State_VGB
     use ModGeometry,    ONLY: r_GB
     use ModMain,        ONLY: nJ, nK, r_
@@ -386,163 +459,6 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_photosphere_unsignedflux
-  !============================================================================
-  subroutine read_coronal_heating_param(NameCommand)
-
-    use ModAdvance,    ONLY: UseAnisoPressure
-    use ModReadParam,  ONLY: read_var
-    use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
-         UseAlfvenWaveRepresentative
-
-    integer :: iFluid
-
-    character(len=*), intent(in):: NameCommand
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'read_coronal_heating_param'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    select case(NameCommand)
-    case("#CORONALHEATING")
-       call read_var('TypeCoronalHeating', TypeCoronalHeating)
-
-       ! Initialize logicals
-       UseCoronalHeating = .true.
-       UseUnsignedFluxModel = .false.
-       UseExponentialHeating= .false.
-       UseAlfvenWaveDissipation = .false.
-       UseTurbulentCascade = .false.
-       UseReynoldsDecomposition = .false.
-
-       select case(TypeCoronalHeating)
-       case('F','none')
-          UseCoronalHeating = .false.
-       case('exponential')
-          DoInit = .true.
-          UseExponentialHeating = .true.
-          call read_var('DecayLengthExp', DecayLengthExp)
-          call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
-       case('unsignedflux','Abbett')
-          UseUnsignedFluxModel = .true.
-          call read_var('DecayLength', DecayLength)
-          call read_var('HeatNormalization', HeatNormalization)
-       case('alfvenwavedissipation')
-          UseAlfvenWaves  = WaveFirst_ > 1
-          UseWavePressure = WaveFirst_ > 1
-          UseAlfvenWaveDissipation = .true.
-          DoInit = .true.
-          call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-          call read_var('Crefl', Crefl)
-       case('turbulentcascade')
-          UseAlfvenWaves  = WaveFirst_ > 1
-          UseWavePressure = WaveFirst_ > 1
-          UseAlfvenWaveDissipation = .true.
-          UseTurbulentCascade = .true.
-          DoInit = .true.
-          call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-          call read_var('rMinWaveReflection', rMinWaveReflection)
-          if(WDiff_>1)then
-             call read_var(&
-                  'UseReynoldsDecomposition', UseReynoldsDecomposition)
-          else
-             call read_var(&
-                  'UseReynoldsDecomposition', UseNewLimiter4Reflection)
-          end if
-       case('usmanov')
-          UseAlfvenWaves  = WaveFirst_ > 1
-          UseWavePressure = WaveFirst_ > 1
-          UseAlfvenWaveDissipation = .true.
-          UseReynoldsDecomposition = .true.
-
-          call read_var('UseTransverseTurbulence', UseTransverseTurbulence)
-          call read_var('SigmaD', SigmaD)
-          ! "historically" our  Lperp = Usmanov's \Lambda/KarmanTaylorAlpha
-          ! Therefore, we solve an equation for Lperp introduced in this way,
-          ! so that KarmanTaylorAlpha is not present in any equation ...
-          call read_var('KarmanTaylorAlpha', KarmanTaylorAlpha)
-          ! KarmanTaylorBeta is present in non-linear term in the evolution
-          ! equation for Lperp via its ratio to KarmanTaylorAlpha ...
-          call read_var('KarmanTaylorBeta', KarmanTaylorBeta2AlphaRatio)
-          ! Therefore
-          KarmanTaylorBeta2AlphaRatio = KarmanTaylorBeta2AlphaRatio / &
-               KarmanTaylorAlpha
-       case default
-          call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
-               // TypeCoronalHeating)
-       end select
-    case("#POYNTINGFLUX")
-       DoInit = .true.
-       call read_var('PoyntingFluxPerBSi', PoyntingFluxPerBSi)
-
-    case("#ACTIVEREGIONHEATING")
-       call read_var('UseArComponent', UseArComponent)
-       if(UseArComponent) then
-          call read_var('ArHeatFactorCgs', ArHeatFactorCgs)
-          call read_var('ArHeatB0', ArHeatB0)
-          call read_var('DeltaArHeatB0', DeltaArHeatB0)
-       endif
-
-    case("#LONGSCALEHEATING")
-       call read_var('DoChHeat', DoChHeat)
-       if(DoChHeat)then
-          call read_var('HeatChCgs', HeatChCgs)
-          call read_var('DecayLengthCh', DecayLengthCh)
-       end if
-
-    case("#HEATPARTITIONING", "#HIGHBETASTOCHASTIC",  "#ALIGNMENTANGLE", &
-         "#NONLINAWDISSIPATION", "#LIMITIMBALANCE", "#AWREPRESENTATIVE")
-       call read_aw_turbulence_param(NameCommand)
-    case default
-       call stop_mpi(NameSub//': unknown command = ' &
-            // NameCommand)
-    end select
-
-    call test_stop(NameSub, DoTest)
-  end subroutine read_coronal_heating_param
-  !============================================================================
-  subroutine init_coronal_heating
-
-    use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, &
-         UnitX_, UnitU_
-    use ModMultiFluid,  ONLY: UseMultiIon, nIonFluid
-    use ModLookupTable, ONLY: i_lookup_table
-    use ModWaves,       ONLY: UseAlfvenWaves
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'init_coronal_heating'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    if(.not.DoInit) RETURN
-    DoInit = .false.
-
-    if(UseExponentialHeating)then
-       HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
-            *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
-    end if
-
-    if(UseAlfvenWaves.and.                   &
-         .not.allocated(AlfvenWaveSpeed_C))  &
-         allocate(AlfvenWaveSpeed_C(nI,nJ,nK))
-
-    if(UseAlfvenWaveDissipation)then
-       LperpTimesSqrtB = LperpTimesSqrtBSi &
-            *Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
-    end if
-
-    PoyntingFluxPerB = PoyntingFluxPerBSi &
-         *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
-
-    ! if multi-ion, then use lookup table to determine the linear Landau
-    ! and transit-time damping of kinetic Alfven waves
-    if(UseMultiIon .and. UseStochasticHeating)then
-       iTableHeatPartition = i_lookup_table('heatpartition')
-       if(.not. iTableHeatPartition > 0) &
-            call stop_mpi('Heat partition table required for multi-ion')
-       if(nIonFluid /= 2) &
-            call stop_mpi('multi-ion heat partitioning only works for 2 ions')
-    end if
-
-    call test_stop(NameSub, DoTest)
-  end subroutine init_coronal_heating
   !============================================================================
   subroutine get_block_heating(iBlock)
     ! Calculate two arrays: CoronalHeating_C  and   WaveDissipationRate_VC
