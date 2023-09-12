@@ -218,7 +218,7 @@ contains
 
     ! Variables needed for outer heliosphere turbulence
     real :: GradAlfven_DD(nDim,MaxDim)
-    logical :: IsNewBlockAlfven
+    logical :: IsNewBlockAlfven, IsNewBlockMassWeighted
 
     ! Variables used to calculate sources for Reynolds decomposition:
     !
@@ -461,6 +461,8 @@ contains
        if(UseReynoldsDecomposition)then
           DoTestCell = .false.
           IsNewBlockAlfven = .true.
+          IsNewBlockMassWeighted = .true.
+
           if(UseTransverseTurbulence)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -478,7 +480,13 @@ contains
                 bDotGradVAlfven  = &
                      dot_product(b_D, matmul(b_D(1:nDim), GradAlfven_DD))
                 ! Calculate gradient tensor of velocity
-                call calc_grad_U(GradU_DD, i, j, k, iBlock)
+                if(UseMultiIon)then
+                   ! Center-of-mass velocity
+                   call calc_grad_U(GradU_DD, i, j, k, iBlock, &
+                        IsNewBlockMassWeighted, UseMassWeightedIn=.true.)
+                else
+                   call calc_grad_U(GradU_DD, i, j, k, iBlock)
+                end if
                 ! Calculate bb : grad u
                 bDotbDotGradU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
@@ -1143,88 +1151,155 @@ contains
 
     end function div_u
     !==========================================================================
-    subroutine calc_grad_u(GradU_DD, i, j, k, iBlock)
+    subroutine calc_grad_u(GradU_DD, i, j, k, iBlock,  &
+         IsNewBlock, UseMassWeightedIn)
 
       use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, Dim1_, Dim2_, Dim3_
 
       integer, intent(in) :: i, j, k, iBlock
       real,   intent(out) :: GradU_DD(nDim,MaxDim)
+      logical, optional, intent(inout) :: IsNewBlock
+      logical, optional, intent(in) :: UseMassWeightedIn
 
+      real, allocatable, save :: U_VFD(:,:,:,:,:)
       integer :: iDir
+      logical :: UseMassWeighted
 
       character(len=*), parameter:: NameSub = 'calc_grad_u'
       !------------------------------------------------------------------------
       GradU_DD = 0.0
 
-      if (DoTestCell) then
-         write(*,*) 'iFluid =', iFluid
-         write(*,*) 'ux_D =', LeftState_VX(iUx:iUz,i+1,j,  k)
-         write(*,*) 'ux_D =', LeftState_VX(iUx:iUz,i,  j,  k)
-         write(*,*) 'uy_D =', LeftState_VY(iUx:iUz,i,  j+1,k)
-         write(*,*) 'uy_D =', LeftState_VY(iUx:iUz,i,  j,  k)
-         write(*,*) 'uz_D =', LeftState_VZ(iUx:iUz,i,  j,  k+1)
-         write(*,*) 'uz_D =', LeftState_VZ(iUx:iUz,i,  j,  k)
+      if(present(UseMassWeightedIn))then
+         UseMassWeighted = UseMassWeightedIn
+      else
+         UseMassWeighted = .false.
       end if
 
-      ! Calculate gradient tensor of velocity
-      if(IsCartesian) then
-         GradU_DD(Dim1_,:) = &
-              ( LeftState_VX(iUx:iUz,i+1,j,k)   &
-              + RightState_VX(iUx:iUz,i+1,j,k)  &
-              - LeftState_VX(iUx:iUz,i,j,k)     &
-              - RightState_VX(iUx:iUz,i,j,k) )  &
-              /(2*CellSize_DB(Dim1_,iBlock))
+      if(UseMassWeighted)then
+         if(.not.allocated(U_VFD)) &
+              allocate(U_VFD(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim))
 
-         if(nJ > 1) GradU_DD(Dim2_,:) = &
-              ( LeftState_VY(iUx:iUz,i,j+1,k)   &
-              + RightState_VY(iUx:iUz,i,j+1,k)  &
-              - LeftState_VY(iUx:iUz,i,j,k)     &
-              - RightState_VY(iUx:iUz,i,j,k) )  &
-              /(2*CellSize_DB(Dim2_,iBlock))
+         if(IsNewBlock)then
+            call get_mass_weighted_speed(U_VFD)
+            IsNewBlock = .false.
+         end if
 
-         if(nK > 1) GradU_DD(Dim3_,:) = &
-              ( LeftState_VZ(iUx:iUz,i,j,k+1)   &
-              + RightState_VZ(iUx:iUz,i,j,k+1)  &
-              - LeftState_VZ(iUx:iUz,i,j,k)     &
-              - RightState_VZ(iUx:iUz,i,j,k) )  &
-              /(2*CellSize_DB(Dim3_,iBlock))
+         if(IsCartesian) then
+            GradU_DD(Dim1_,:) = &
+                 (U_VFD(:,i+1,j,k,Dim1_) - U_VFD(:,i,j,k,Dim1_)) &
+                 /CellSize_DB(Dim1_,iBlock)
 
-      else if(IsRzGeometry) then
-         call stop_mpi(NameSub//': RZ geometry to be implemented')
+            if(nJ > 1) GradU_DD(Dim2_,:) = &
+                 (U_VFD(:,i,j+1,k,Dim2_) - U_VFD(:,i,j,k,Dim2_)) &
+                 /CellSize_DB(Dim2_,iBlock)
+
+            if(nK > 1) GradU_DD(Dim3_,:) = &
+                 (U_VFD(:,i,j,k+1,Dim3_) - U_VFD(:,i,j,k,Dim3_)) &
+                 /CellSize_DB(Dim3_,iBlock)
+
+         else if(IsRzGeometry) then
+            call stop_mpi(NameSub//': RZ geometry to be implemented')
+         else
+            do iDir = 1, MaxDim
+               GradU_DD(:,iDir) = &
+                    U_VFD(iDir,i+1,j,k,Dim1_) &
+                    *FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
+                    - U_VFD(iDir,i,j,k,Dim1_) &
+                    *FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
+
+               if(nJ == 1) CYCLE
+
+               GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
+                    U_VFD(iDir,i,j+1,k,Dim2_) &
+                    *FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
+                    + U_VFD(iDir,i,j,k,Dim2_) &
+                    *FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
+
+               if(nK == 1) CYCLE
+
+               GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
+                    U_VFD(iDir,i,j,k+1,Dim3_) &
+                    *FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
+                    + U_VFD(iDir,i,j,k,Dim3_) &
+                    *FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
+            end do
+
+            GradU_DD = GradU_DD / CellVolume_GB(i,j,k,iBlock)
+         end if
+
       else
-         do iDir = 1, MaxDim
-            iVar = iUx - 1 + iDir
 
-            GradU_DD(:,iDir) = &
-                 0.5*(LeftState_VX(iVar,i+1,j,k) &
-                 + RightState_VX(iVar,i+1,j,k))* &
-                 FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
-                 - 0.5*(LeftState_VX(iVar,i,j,k) &
-                 + RightState_VX(iVar,i,j,k))* &
-                 FaceNormal_DDFB(:,1,i,j,k,iBlock)
+         if (DoTestCell) then
+            write(*,*) 'iFluid =', iFluid
+            write(*,*) 'ux_D =', LeftState_VX(iUx:iUz,i+1,j,  k)
+            write(*,*) 'ux_D =', LeftState_VX(iUx:iUz,i,  j,  k)
+            write(*,*) 'uy_D =', LeftState_VY(iUx:iUz,i,  j+1,k)
+            write(*,*) 'uy_D =', LeftState_VY(iUx:iUz,i,  j,  k)
+            write(*,*) 'uz_D =', LeftState_VZ(iUx:iUz,i,  j,  k+1)
+            write(*,*) 'uz_D =', LeftState_VZ(iUx:iUz,i,  j,  k)
+         end if
 
-            if(nJ == 1) CYCLE
+         ! Calculate gradient tensor of velocity
+         if(IsCartesian) then
+            GradU_DD(Dim1_,:) = &
+                 ( LeftState_VX(iUx:iUz,i+1,j,k)   &
+                 + RightState_VX(iUx:iUz,i+1,j,k)  &
+                 - LeftState_VX(iUx:iUz,i,j,k)     &
+                 - RightState_VX(iUx:iUz,i,j,k) )  &
+                 /(2*CellSize_DB(Dim1_,iBlock))
 
-            GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 0.5*(LeftState_VY(iVar,i,j+1,k) &
-                 + RightState_VY(iVar,i,j+1,k))* &
-                 FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                 - 0.5*(LeftState_VY(iVar,i,j,k) &
-                 + RightState_VY(iVar,i,j,k))* &
-                 FaceNormal_DDFB(:,2,i,j,k,iBlock)
+            if(nJ > 1) GradU_DD(Dim2_,:) = &
+                 ( LeftState_VY(iUx:iUz,i,j+1,k)   &
+                 + RightState_VY(iUx:iUz,i,j+1,k)  &
+                 - LeftState_VY(iUx:iUz,i,j,k)     &
+                 - RightState_VY(iUx:iUz,i,j,k) )  &
+                 /(2*CellSize_DB(Dim2_,iBlock))
 
-            if(nK == 1) CYCLE
+            if(nK > 1) GradU_DD(Dim3_,:) = &
+                 ( LeftState_VZ(iUx:iUz,i,j,k+1)   &
+                 + RightState_VZ(iUx:iUz,i,j,k+1)  &
+                 - LeftState_VZ(iUx:iUz,i,j,k)     &
+                 - RightState_VZ(iUx:iUz,i,j,k) )  &
+                 /(2*CellSize_DB(Dim3_,iBlock))
 
-            GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 0.5*(LeftState_VZ(iVar,i,j,k+1) &
-                 + RightState_VZ(iVar,i,j,k+1))* &
-                 FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                 - 0.5*(LeftState_VZ(iVar,i,j,k) &
-                 + RightState_VZ(iVar,i,j,k))* &
-                 FaceNormal_DDFB(:,3,i,j,k,iBlock)
-         end do
+         else if(IsRzGeometry) then
+            call stop_mpi(NameSub//': RZ geometry to be implemented')
+         else
+            do iDir = 1, MaxDim
+               iVar = iUx - 1 + iDir
 
-         GradU_DD = GradU_DD / CellVolume_GB(i,j,k,iBlock)
+               GradU_DD(:,iDir) = &
+                    0.5*(LeftState_VX(iVar,i+1,j,k) &
+                    + RightState_VX(iVar,i+1,j,k))* &
+                    FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
+                    - 0.5*(LeftState_VX(iVar,i,j,k) &
+                    + RightState_VX(iVar,i,j,k))* &
+                    FaceNormal_DDFB(:,1,i,j,k,iBlock)
+
+               if(nJ == 1) CYCLE
+
+               GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
+                    0.5*(LeftState_VY(iVar,i,j+1,k) &
+                    + RightState_VY(iVar,i,j+1,k))* &
+                    FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
+                    - 0.5*(LeftState_VY(iVar,i,j,k) &
+                    + RightState_VY(iVar,i,j,k))* &
+                    FaceNormal_DDFB(:,2,i,j,k,iBlock)
+
+               if(nK == 1) CYCLE
+
+               GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
+                    0.5*(LeftState_VZ(iVar,i,j,k+1) &
+                    + RightState_VZ(iVar,i,j,k+1))* &
+                    FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                    - 0.5*(LeftState_VZ(iVar,i,j,k) &
+                    + RightState_VZ(iVar,i,j,k))* &
+                    FaceNormal_DDFB(:,3,i,j,k,iBlock)
+            end do
+
+            GradU_DD = GradU_DD / CellVolume_GB(i,j,k,iBlock)
+
+         end if
 
       end if
 

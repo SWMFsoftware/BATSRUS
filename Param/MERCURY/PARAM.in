@@ -4,6 +4,10 @@ Param/MERCURY/PARAM.in: MESSENGER M2 flyby run using the new layered inner bound
 #PLANET
 MERCURY			NamePlanet
 
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
+
 #ROTATION
 F			UseRotation
 

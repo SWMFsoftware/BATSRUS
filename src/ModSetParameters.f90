@@ -128,6 +128,7 @@ contains
     use ModMagnetogram, ONLY: read_magnetogram_param
     use ModCoronalHeating,  ONLY: read_coronal_heating_param, &
          init_coronal_heating, UseCoronalHeating
+    use ModTurbulence, ONLY: read_turbulence_param
     use ModTurbulence,    ONLY: UseAlfvenWaveDissipation
     use ModFieldLineThread, ONLY: read_thread_param
     use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc_param
@@ -2307,7 +2308,6 @@ contains
              call read_var('Gamma_I', Gamma_I(iFluid))
           end do
           ! Derived values for fluids
-          InvGamma_I    = 1.0/Gamma_I
           GammaMinus1_I = Gamma_I - 1.0
           where(GammaMinus1_I /= 0.0)
              InvGammaMinus1_I = 1.0 / GammaMinus1_I
@@ -2325,21 +2325,18 @@ contains
 
           ! Scalar values for the first fluid for simpler code
           Gamma          = Gamma_I(1)
-          InvGamma       = InvGamma_I(1)
           GammaMinus1    = GammaMinus1_I(1)
           InvGammaMinus1 = InvGammaMinus1_I(1)
 
           if(UseElectronPressure)then
              call read_var('GammaElectron',  GammaElectron)
              ! Derived values for electron
-             InvGammaElectron       = 1.0/GammaElectron
              GammaElectronMinus1    = GammaElectron - 1.0
              InvGammaElectronMinus1 = 1.0 / GammaElectronMinus1
           else
              ! Default values for electrons are the same as first fluid
              ! so ideal MHD works as expected
              GammaElectron          = Gamma
-             InvGammaElectron       = InvGamma
              GammaElectronMinus1    = GammaMinus1
              InvGammaElectronMinus1 = InvGammaMinus1
           end if
@@ -2747,10 +2744,13 @@ contains
              call read_ldem(NamePlotDir)
           end if
 
-       case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
-            "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
-            "#HIGHBETASTOCHASTIC", "#ALIGNMENTANGLE", "#NONLINAWDISSIPATION")
+       case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING")
           call read_coronal_heating_param(NameCommand)
+
+       case("#HEATPARTITIONING", "#HIGHBETASTOCHASTIC",  "#ALIGNMENTANGLE", &
+            "#NONLINAWDISSIPATION", "#LIMITIMBALANCE", "#AWREPRESENTATIVE", &
+            "#POYNTINGFLUX")
+       call read_turbulence_param(NameCommand)
 
        case("#RADIATIVECOOLING")
           call read_var('UseRadCooling', UseRadCooling)
@@ -3910,10 +3910,10 @@ contains
 
       !$acc update device(UseUserUpdateStates)
 
-      !$acc update device(Gamma_I, GammaMinus1_I, InvGamma_I, InvGammaMinus1_I)
-      !$acc update device(Gamma, GammaMinus1, InvGamma, InvGammaMinus1)
-
+      !$acc update device(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
+      !$acc update device(Gamma, GammaMinus1, InvGammaMinus1)
       !$acc update device(GammaElectron, GammaElectronMinus1)
+      !$acc update device(InvGammaElectronMinus1)
 
       !$acc update device(GammaWave)
 
