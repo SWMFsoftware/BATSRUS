@@ -1212,7 +1212,7 @@ contains
                GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
                     U_VFD(iDir,i,j+1,k,Dim2_) &
                     *FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
-                    + U_VFD(iDir,i,j,k,Dim2_) &
+                    - U_VFD(iDir,i,j,k,Dim2_) &
                     *FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
 
                if(nK == 1) CYCLE
@@ -1220,7 +1220,7 @@ contains
                GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
                     U_VFD(iDir,i,j,k+1,Dim3_) &
                     *FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
-                    + U_VFD(iDir,i,j,k,Dim3_) &
+                    - U_VFD(iDir,i,j,k,Dim3_) &
                     *FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
             end do
 
@@ -1456,7 +1456,7 @@ contains
             GradAlfven_DD(:,iDir) = GradAlfven_DD(:,iDir) + &
                  Alfven_VFD(iDir,i,j+1,k,Dim2_) &
                  *FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
-                 + Alfven_VFD(iDir,i,j,k,Dim2_) &
+                 - Alfven_VFD(iDir,i,j,k,Dim2_) &
                  *FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
 
             if(nK == 1) CYCLE
@@ -1464,7 +1464,7 @@ contains
             GradAlfven_DD(:,iDir) = GradAlfven_DD(:,iDir) + &
                  Alfven_VFD(iDir,i,j,k+1,Dim3_) &
                  *FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
-                 + Alfven_VFD(iDir,i,j,k,Dim3_) &
+                 - Alfven_VFD(iDir,i,j,k,Dim3_) &
                  *FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
          end do
 
