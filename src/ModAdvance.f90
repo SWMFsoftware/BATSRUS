@@ -102,7 +102,7 @@ module ModAdvance
 
   ! Use update check (in explicit or implicit scheme)
   logical:: UseUpdateCheck = .false.
-  
+
   ! The percentage limit for species to be checked in update check
   real :: SpeciesPercentCheck = 1.0
 

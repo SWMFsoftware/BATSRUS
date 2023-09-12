@@ -28,14 +28,14 @@ module ModUpdateState
 
   ! Update check parameters
   real :: PercentRhoLimit_I(2), PercentPLimit_I(2)
-  
+
   ! The fraction of non-adiabatic heating put into Pe and Ppar
   real:: PeShockHeatingFraction = 0.0, PparShockHeatingFraction = 0.0
   ! Solve for Pe and Ppar together?
   logical:: DoHeatTogether = .false.
   ! If the non-adiabative fraction is between these limits, do not heat
   real:: NonAdiabaticFractionMin = 0.0, NonAdiabaticFractionMax = 0.0
-  
+
 contains
   !============================================================================
   subroutine read_update_param(NameCommand, UseStrict)
@@ -44,7 +44,7 @@ contains
 
     character(len=*), intent(in):: NameCommand
     logical,          intent(in):: UseStrict
-    
+
     character(len=*), parameter:: NameSub = 'read_update_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
@@ -1016,7 +1016,7 @@ contains
                   FactorE = Rho**(-GammaElectronMinus1)
                   ! Combined entropy: Sie = We*Sperp - Wi*Se
                   Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
-                       - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE 
+                       - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
                   ! Energy weights for Ee and Eperp (GammaPerp - 1 = 1)
                   Wi = WeightSi*GammaElectronMinus1*FactorE
                   We = WeightSe*FactorPerp
