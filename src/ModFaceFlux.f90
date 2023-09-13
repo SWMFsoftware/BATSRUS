@@ -1220,17 +1220,6 @@ contains
        FullBn  = B0n + Bn
     end if
 
-    if(UseMultiIon)then
-       ! Pe has to be returned for multiion only
-       if(UseElectronPressure )then
-          Pe = State_V(Pe_)
-       else
-          Pe = sum(State_V(iPIon_I))*ElectronPressureRatio
-       end if
-    else
-       Pe = 0.0
-    end if
-
     ! Make sure this is initialized
     HallUn = 0.0
 
@@ -1296,7 +1285,8 @@ contains
        Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
 
        if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
-    elseif(UseMhdMomentumFlux)then
+    elseif(UseMhdMomentumFlux.and.UseMultiIon)then
+       Pe = sum(State_V(iPIon_I))*ElectronPressureRatio
        MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + Pe*NormalX
        MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + Pe*NormalY
        MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + Pe*NormalZ
