@@ -1,4 +1,5 @@
-Integrals of charge exchange interacting with a Maxwellian ion using the Maher and Tinsley 1977 Cross Section. sCSum and SDU are sqrt ofsum of sound speeds sqrd and velocity diff [km/s]^1/2.0 0.0 2 0 3
+Integrals of charge exchange interacting with a Maxwellian ion using the Maher and Tinsley 1977 Cross Section. sCSum and SDU are sqrt ofsum of sound speeds sqrd and velocity diff [km/s]^1/2.
+0 0.0 2 0 3
 101 101
 sCSum sDU Density Momentum Energy
         1.000000        0.000000    1.286353e-42    0.000000e+00    1.232239e-42
