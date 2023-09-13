@@ -1195,7 +1195,7 @@ contains
     real:: FluxBx, FluxBy, FluxBz, AlfvenSpeed
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
     real:: Pe
-    
+
     integer:: iVar, iFluid
 
     ! Calculate conservative state

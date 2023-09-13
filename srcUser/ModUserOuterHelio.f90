@@ -155,7 +155,6 @@ module ModUser
   real :: CrossA1 = 2.2835E-7
   real :: CrossA2 = 1.062E-8
 
-
   ! Velocity, temperature, Mach number and radius limits for the populations
   real :: TempPop1LimitDim = 1e5    ! [K]
   real :: uPop1LimitDim    = 100.0  ! [km/s]
@@ -293,20 +292,18 @@ contains
        case("#ELECTRONIMPACT")
           call read_var("UseElectronImpact", UseElectronImpact)
 
-
        case("#CROSSSECTION")
           call read_var('NameCrossSection', NameCrossSection)
           select case(NameCrossSection)
 
-             
           case('LindsayStebbings')
              CrossA1 = 2.2835E-7
              CrossA2 = 1.062E-8
 
           case('MaherTinsley')
              CrossA1 = 1.64E-7
-             CrossA2 = 6.95E-9             
-             
+             CrossA2 = 6.95E-9
+
           case('UserCrossSection')
              call read_var('a1', CrossA1)
              call read_var('a2', CrossA2)
@@ -2229,7 +2226,6 @@ contains
        where(UseSource_I(Neu_:)) &
              SigmaN_I = ((CrossA1 - CrossA2*log(UStar_I*100.))**2)*1.E-4
 
-       
        if(.not.IsMhd)then
           ! For Pu3
           where(UseSource_I(Neu_:)) &
