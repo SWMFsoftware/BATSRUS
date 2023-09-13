@@ -9,11 +9,13 @@ module ModUpdateState
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
   use ModB0, ONLY: B0_DGB
+  use ModAdvance
 
   implicit none
 
   private ! except
 
+  public:: read_update_param    ! read commands for update
   public:: update_state         ! call user_update_state or update_state_normal
   public:: update_state_normal  ! normal update of state variables
   public:: update_b0            ! update time varying B0 field
@@ -22,7 +24,62 @@ module ModUpdateState
   public:: fix_anisotropy       ! fix pressure anisotropy after update
   public:: check_nan            ! Check State_VGB for NaNs
 
+  ! Local variables
+
+  ! Update check parameters
+  real :: PercentRhoLimit_I(2), PercentPLimit_I(2)
+
+  ! The fraction of non-adiabatic heating put into Pe and Ppar
+  real:: PeShockHeatingFraction = 0.0, PparShockHeatingFraction = 0.0
+  ! Solve for Pe and Ppar together?
+  logical:: DoHeatTogether = .false.
+  ! If the non-adiabative fraction is between these limits, do not heat
+  real:: NonAdiabaticFractionMin = 0.0, NonAdiabaticFractionMax = 0.0
+
 contains
+  !============================================================================
+  subroutine read_update_param(NameCommand, UseStrict)
+
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+    logical,          intent(in):: UseStrict
+
+    character(len=*), parameter:: NameSub = 'read_update_param'
+    !--------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#UPDATECHECK")
+       call read_var("UseUpdateCheck",UseUpdateCheck)
+       if(UseUpdateCheck)then
+          call read_var("RhoMinPercent", PercentRhoLimit_I(1))
+          call read_var("RhoMaxPercent", PercentRhoLimit_I(2))
+          call read_var("pMinPercent",   PercentPLimit_I(1))
+          call read_var("pMaxPercent",   PercentPLimit_I(2))
+       end if
+    case("#SHOCKHEATING")
+       if(.not.UseElectronPressure .and. .not.UseAnisoPressure .and. &
+            UseStrict) call stop_mpi('#SHOCKHEATING needs Pe or Ppar')
+       if(UseElectronPressure) call read_var("PeShockHeatingFraction", &
+            PeShockHeatingFraction)
+       if(UseAnisoPressure) call read_var("PparShockHeatingFraction", &
+            PparShockHeatingFraction)
+       if(PeShockHeatingFraction /= 0.and.PparShockHeatingFraction /= 0)then
+          call read_var("DoHeatTogether", DoHeatTogether)
+          if(DoHeatTogether)then
+             call read_var("NonAdiabaticFractionMin", NonAdiabaticFractionMin)
+             call read_var("NonAdiabaticFractionMax", NonAdiabaticFractionMax)
+          end if
+       end if
+       if(PeShockHeatingFraction /= 0)then
+          UseElectronEntropy = .true.
+          UseElectronEnergy = .true.
+          UseEntropy = .true.
+       end if
+       if(PparShockHeatingFraction /= 0) UseEntropy = .true.
+    case default
+       call stop_mpi(NameSub//': unknown command='//NameCommand)
+    end select
+  end subroutine read_update_param
   !============================================================================
   subroutine update_state(iBlock)
 
@@ -30,9 +87,6 @@ contains
     use ModVarIndexes, ONLY: &
          nVar, Rho_, RhoUx_, RhoUz_, Ehot_, SignB_, &
          NameVar_V, nFluid, WDiff_, p_, Ppar_
-    use ModAdvance, ONLY: &
-         State_VGB, StateOld_VGB, DTMAX_CB, &
-         Flux_VXI, Flux_VYI, Flux_VZI, Source_VC, UseAnisoPressure
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, iUnitCons_V
     use ModChGL, ONLY: UseChGL, update_chgl
@@ -136,7 +190,6 @@ contains
   !============================================================================
   subroutine update_state_normal(iBlock)
 
-    use ModAdvance
     use ModMain, ONLY: &
          IsTimeAccurate, iStage, nStage, Dt, Cfl, UseB0, UseBufferGrid, &
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
@@ -403,7 +456,7 @@ contains
       logical:: UseElectronShockHeating, UseAnisoShockHeating
 
       real:: Coeff1, Coeff2, b_D(3), u_D(3), FullB2, FullB, Rho
-      real:: Eth, Sperp, Sie, Spp, Ei, Ee, Epar, Eperp
+      real:: Eth, Ead, Ena, Sperp, Sie, Spp, Ei, Ee, Epar, Eperp
       real:: FactorI, FactorE, FactorPar, FactorPerp
       real:: WeightSi, WeightSe, WeightSpar, WeightSperp, Wi, We, Wpar, Wperp
       integer:: iFluid, iRho
@@ -945,25 +998,43 @@ contains
             FactorPerp = 1/FullB
             ! Thermal energy density from total energy update
             Eth = State_VGB(P_,i,j,k,iBlock)*InvGammaMinus1
+            ! Adiabatic thermal energy
+            Ead = 0.5*State_VGB(Ppar_,i,j,k,iBlock) + s_C(i,j,k)*FullB
+            ! Relative non-adiabatic heating/cooling
+            Ena = (Eth - Ead)/Eth
+            ! Don't do anything for Ena between these limits
+            if(  Ena >= NonAdiabaticFractionMin .and. &
+                 Ena <= NonAdiabaticFractionMax) CYCLE
             ! Combined entropy from entropy update
             Spp = WeightSperp*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
                  - WeightSpar*s_C(i,j,k)
             if(UseElectronShockHeating)then
-               Eth = Eth + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
-               ! Conversion from electron pressure to electron entropy
-               FactorE = Rho**(-GammaElectronMinus1)
-               ! Combined entropy: Sie = We*Sperp - Wi*Se
-               Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
-                    - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
-               ! Energy weights for Ee and Eperp (GammaPerp - 1 = 1)
-               Wi = WeightSi*GammaElectronMinus1*FactorE
-               We = WeightSe*FactorPerp
+               if(DoHeatTogether)then
+                  Eth = Eth &
+                       + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
+                  ! Conversion from electron pressure to electron entropy
+                  FactorE = Rho**(-GammaElectronMinus1)
+                  ! Combined entropy: Sie = We*Sperp - Wi*Se
+                  Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
+                       - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
+                  ! Energy weights for Ee and Eperp (GammaPerp - 1 = 1)
+                  Wi = WeightSi*GammaElectronMinus1*FactorE
+                  We = WeightSe*FactorPerp
+               else
+                  ! Move part of the non-adiabatic energy into the electrons
+                  Ena = WeightSe*Ena*Eth
+                  State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+                       + GammaElectronMinus1*Ena
+                  State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                       - GammaMinus1*Ena
+                  Eth = Eth - Ena
+               end if
             end if
             ! Energy weights (GammaPerp-1 = 1, GammaPar - 1 = 2)
             Wpar  = WeightSpar*FactorPerp
             Wperp = WeightSperp*2*FactorPar
 
-            if(.not.UseElectronShockHeating)then
+            if(.not. (UseElectronShockHeating .and. DoHeatTogether))then
                ! Solution for Epar
                Epar  = (Spp + Wpar*Eth)/(Wpar + Wperp)
                State_VGB(Ppar_,i,j,k,iBlock) = Epar*2
@@ -1027,7 +1098,6 @@ contains
   subroutine update_te0
 
     use ModPhysics, ONLY: UnitTemperature_,Si2No_V
-    use ModAdvance, ONLY: State_VGB,  nI, nJ, nK
     use ModMain,    ONLY: nBlock, Unused_B, UseERadInput
     use ModVarIndexes, ONLY: Te0_
     use ModUserInterface ! user_material_properties
@@ -1066,9 +1136,6 @@ contains
     use ModImplicit, ONLY: UsePartImplicit
     use ModVarIndexes, ONLY: p_, Rho_, nVar, SpeciesFirst_, SpeciesLast_, &
          NameVar_V, DefaultState_V
-    use ModAdvance, ONLY: State_VGB, StateOld_VGB, DtMax_CB, &
-         UseMultiIon, UseMultiSpecies, SpeciesPercentCheck, &
-         PercentPLimit_I, PercentRhoLimit_I
     use ModNumConst, ONLY: cTiny
     use ModMultiIon, ONLY: DoRestrictMultiIon, IsMultiIon_CB
     use BATL_lib, ONLY: iProc, nProc, nI, nJ, nK, nBlock, Unused_B
@@ -1552,7 +1619,6 @@ contains
     use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0, &
          IsTimeAccurate, Cfl, dt
     use ModB0,      ONLY: B0_DGB
-    use ModAdvance, ONLY: State_VGB, DtMax_CB, DoUpdate_V
     use ModPhysics, ONLY: UseConstantTau_I, TauInstability_I, &
          IonMassPerCharge, TauGlobal_I
     use ModMultiFluid, ONLY: select_fluid, iP, iPpar
@@ -1681,8 +1747,6 @@ contains
     use ModMain,          ONLY: nBlock, Unused_B,      &
          tSimulation, NameThisComp, IsTimeAccurate, DoThreads_B
     use ModPhysics,       ONLY: ThetaTilt, UseBody2Orbit
-    use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
-         iTypeUpdate, UpdateFast_
     use ModUpdateStateFast, ONLY: update_b0_fast
     use ModGeometry,      ONLY: IsBody_B
     use CON_axes,         ONLY: get_axes
@@ -1772,8 +1836,6 @@ contains
     ! individual fluids equal to their number density weighted average.
 
     use ModSize,       ONLY: nI, nJ, nK
-    use ModAdvance,    ONLY: State_VGB, &
-         UseSingleIonVelocity, UseSingleIonTemperature
     use ModMultiFluid, ONLY: nIonFluid, IonFirst_, IonLast_, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, MassIon_I, MassFluid_I
 
@@ -1858,7 +1920,6 @@ contains
   subroutine fix_wdiff(iBlock)
     use ModVarIndexes, ONLY: WDiff_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
-    use ModAdvance, ONLY : State_VGB
 
     integer, intent(in) :: iBlock
     integer :: i, j, k
@@ -1876,7 +1937,6 @@ contains
   subroutine check_nan(NameSub, iError)
 
     use ModVarIndexes, ONLY: nVar, NameVar_V
-    use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: r_GB
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, Xyz_DGB, iProc
     use, intrinsic :: ieee_arithmetic

@@ -37,8 +37,9 @@ contains
     use ModPartImplicit, ONLY: read_part_impl_param, init_mod_part_impl
     use ModLinearSolver, ONLY: UseAccurateSum
     use ModImplHypre, ONLY: hypre_read_param
-    use ModPhysics
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
+    use ModUpdateState, ONLY: read_update_param
+    use ModPhysics
     use ModConstrainDivB, ONLY: init_mod_ct, DoInitConstrainB
     use ModBlockData, ONLY: init_mod_block_data, clean_block_data
     use BATL_lib, ONLY: &
@@ -725,19 +726,9 @@ contains
           call read_var('UseElectronEntropy', UseElectronEntropy)
           call read_var('UseElectronEnergy',  UseElectronEnergy)
 
-       case("#SHOCKHEATING")
-          if(UseElectronPressure) call read_var("PeShockHeatingFraction", &
-               PeShockHeatingFraction)
-          if(UseAnisoPressure) call read_var("PparShockHeatingFraction", &
-               PparShockHeatingFraction)
-          if(PeShockHeatingFraction /= 0.or.PparShockHeatingFraction /= 0)then
-             ! This only makes sense if entropies are used
-             UseEntropy = .true.
-             UseElectronEntropy = .true.
-             UseElectronEnergy = .true.
-          end if
-          if(.not.UseElectronPressure .and. .not.UseAnisoPressure .and. &
-               UseStrict) call stop_mpi('#SHOCKHEATING needs Pe or Ppar')
+       case("#UPDATECHECK", "#SHOCKHEATING")
+          call read_update_param(NameCommand, UseStrict)
+
        case("#ANISOTROPICPRESSURE")
           do iFluid = IonFirst_, nFluid
              call read_var('UseConstantTau', UseConstantTau_I(iFluid))
@@ -1808,15 +1799,6 @@ contains
             "#CONTROLDECREASE", "#CONTROLINCREASE", &
             "#CONTROLFACTOR", "#CONTROLVAR", "#CONTROLINIT")
           call read_time_step_control_param(NameCommand)
-
-       case("#UPDATECHECK")
-          call read_var("UseUpdateCheck",UseUpdateCheck)
-          if(UseUpdateCheck)then
-             call read_var("RhoMinPercent", PercentRhoLimit_I(1))
-             call read_var("RhoMaxPercent", PercentRhoLimit_I(2))
-             call read_var("pMinPercent",   PercentPLimit_I(1))
-             call read_var("pMaxPercent",   PercentPLimit_I(2))
-          end if
 
        case("#PROLONGATION")
           call read_var('nOrderProlong', nOrderProlong)
