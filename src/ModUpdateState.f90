@@ -457,6 +457,7 @@ contains
 
       real:: Coeff1, Coeff2, b_D(3), u_D(3), FullB2, FullB, Rho
       real:: Eth, Ead, Ena, Sperp, Sie, Spp, Ei, Ee, Epar, Eperp
+      real:: EeOld, EparOld, EperpOld
       real:: FactorI, FactorE, FactorPar, FactorPerp
       real:: WeightSi, WeightSe, WeightSpar, WeightSperp, Wi, We, Wpar, Wperp
       integer:: iFluid, iRho
@@ -937,7 +938,7 @@ contains
             Eth =  State_VGB(P_,i,j,k,iBlock)*InvGammaMinus1 &
                  + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
             ! From entropy updates We*Si - Wi*Se
-            Sie =  WeightSe*s_C(i,j,k) &
+            Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
                  - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
             ! Energy weights
             We = WeightSe*GammaMinus1*FactorI
@@ -1003,8 +1004,8 @@ contains
             ! Relative non-adiabatic heating/cooling
             Ena = (Eth - Ead)/Eth
             ! Don't do anything for Ena between these limits
-            if(  Ena >= NonAdiabaticFractionMin .and. &
-                 Ena <= NonAdiabaticFractionMax) CYCLE
+            !if(  Ena >= NonAdiabaticFractionMin .and. &
+            !     Ena <= NonAdiabaticFractionMax) CYCLE
             ! Combined entropy from entropy update
             Spp = WeightSperp*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
                  - WeightSpar*s_C(i,j,k)
@@ -1019,7 +1020,7 @@ contains
                        - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
                   ! Energy weights for Ee and Eperp (GammaPerp - 1 = 1)
                   Wi = WeightSi*GammaElectronMinus1*FactorE
-                  We = WeightSe*FactorPerp
+                  We = WeightSe*FactorPar*2
                else
                   ! Move part of the non-adiabatic energy into the electrons
                   Ena = WeightSe*Ena*Eth
@@ -1045,7 +1046,10 @@ contains
                Ee   = (We*Epar - Sie)/Wi
                Eperp= (Wperp*Epar - Spp)/Wpar
 
-               if(abs(Epar + Eperp + Ee - Eth) > 1e-10)then
+               if(  abs(Epar + Eperp + Ee - Eth) > 1e-10 .or. &
+                    abs(We*Epar - Wi*Ee - Sie) > 1e-10 .or. &
+                    abs(Wperp*Epar - Wpar*Eperp - Spp) > 1e-10 &
+                    )then
                   write(*,*)'Epar, Eperp, Ee, Eth=', Epar, Eperp, Ee, Eth
                   write(*,*)'WeightSi, Se, Sie   =', WeightSi, WeightSe, Sie, &
                        We*Epar - Wi*Ee
@@ -1053,11 +1057,29 @@ contains
                        WeightSpar, WeightSperp, Spp, Wperp*Epar - Wpar*Eperp
                   call stop_mpi('DEBUG')
                end if
+
+               if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest)then
+                  write(*,*) NameSub,' Eth, Ead, Ena=', Eth, Ead, Ena
+                  EeOld = State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
+                  EparOld = State_VGB(Ppar_,i,j,k,iBlock)*0.5
+                  EperpOld = State_VGB(p_,i,j,k,iBlock)*InvGammaMinus1 &
+		       - State_VGB(Ppar_,i,j,k,iBlock)*0.5
+                  write(*,*) NameSub,' Old Ee, Epar, Eperp=', &
+                       EeOld, EparOld, EperpOld
+                  write(*,*) NameSub,' New Ee, Epar, Eperp=', Ee, Epar, Eperp
+                  write(*,*) NameSub,' OldSie=', We*EparOld - Wi*EeOld
+                  write(*,*) NameSub,' NewSie=', We*Epar - Wi*Ee
+                  write(*,*) NameSub,' OldSpp=', Wperp*EparOld - Wpar*EperpOld
+                  write(*,*) NameSub,' NewSpp=', Wperp*Epar - Wpar*Eperp
+                  write(*,*) NameSub,' Sie, Spp =', Sie, Spp
+               end if
+
                ! Convert to pressures
                State_VGB(Ppar_,i,j,k,iBlock) = Epar*2
                State_VGB(Pe_,i,j,k,iBlock)   = Ee*GammaElectronMinus1
                State_VGB(p_,i,j,k,iBlock)    = (Eth - Ee)*GammaMinus1
             end if
+            
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' after shock heating Ppar, P=', &
