@@ -1165,8 +1165,7 @@ contains
 
   end subroutine set_cell_values_common
   !============================================================================
-  subroutine get_physical_flux(State_V, StateCons_V, Flux_V, Un_I, &
-       En, Pe, Pwave)
+  subroutine get_physical_flux(State_V, StateCons_V, Flux_V, Un_I, En)
 
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModPhysics,  ONLY: &
@@ -1184,7 +1183,6 @@ contains
          IsIon_I, nIonFluid, UseMultiIon, ChargePerMass_I, select_fluid
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_GB
-    use ModTurbulence, ONLY: PoyntingFluxPerB
 
     real, intent(in) :: State_V(nVar)      ! input primitive state
 
@@ -1192,12 +1190,11 @@ contains
     real, intent(out):: Flux_V(nFlux)      ! fluxes for all states
     real, intent(out):: Un_I(nFluid+1)     ! normal velocities
     real, intent(out):: En                 ! normal electric field
-    real, intent(out):: Pe                 ! electron pressure for multiion
-    real, intent(out):: Pwave
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz, AlfvenSpeed
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
+    real:: Pe
 
     integer:: iVar, iFluid
 
@@ -1210,9 +1207,6 @@ contains
     ! Make sure normal electric field is initialized
     En = 0.0
 
-    ! Initialize wave pressure
-    Pwave = 0.0
-
     ! Set magnetic variables
     if(UseB)then
        Bx = State_V(Bx_)
@@ -1224,28 +1218,6 @@ contains
        Bn      = Bx*NormalX  + By*NormalY  + Bz*NormalZ
        B0n     = B0x*NormalX + B0y*NormalY + B0z*NormalZ
        FullBn  = B0n + Bn
-    end if
-
-    if(UseMultiIon)then
-       ! Pe has to be returned for multiion only
-       if(UseElectronPressure )then
-          Pe = State_V(Pe_)
-       else
-          Pe = sum(State_V(iPIon_I))*ElectronPressureRatio
-       end if
-       if(UseWavePressure)then
-          if(UseWavePressureLtd)then
-             Pwave = (GammaWave - 1)*State_V(Ew_)
-          else
-             Pwave = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
-          end if
-          ! Covert the representative function to a real pressure if needed
-          if(UseAwRepresentativeHere)Pwave=Pwave*PoyntingFluxPerB*&
-               sqrt(State_V(iRho_I(IonFirst_)))
-       end if
-
-    else
-       Pe = 0.0
     end if
 
     ! Make sure this is initialized
@@ -1313,7 +1285,8 @@ contains
        Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
 
        if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
-    elseif(UseMhdMomentumFlux)then
+    elseif(UseMhdMomentumFlux.and.UseMultiIon)then
+       Pe = sum(State_V(iPIon_I))*ElectronPressureRatio
        MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + Pe*NormalX
        MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + Pe*NormalY
        MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + Pe*NormalZ
@@ -2121,13 +2094,11 @@ contains
     real :: State_V(nVar)
     real :: Cmax
     real :: DiffBn_D(3), DiffE
-    real :: EnLeft, EnRight, PeLeft, PeRight, PwaveLeft, PwaveRight, Jx, Jy, Jz
+    real :: EnLeft, EnRight, Jx, Jy, Jz
     real :: uLeft_D(3), uRight_D(3)
     real :: B0_D(3), dB0_D(3), Current_D(3)
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
     real :: DissipationFlux_V(p_+1) ! MHD variables + energy
-    real :: Pe                      ! electron pressure -> grad Pe
-    real :: Pwave
     real :: GradPe_D(3)
     real :: InvElectronDens
     integer :: i, j, k, iFluid
@@ -2307,19 +2278,19 @@ contains
        StateRight_V(Ux_:Uz_) = State_V(Ux_:Uz_)
     end if
     if(DoSimple) call get_physical_flux(State_V, StateLeftCons_V, Flux_V, &
-         Unormal_I, Enormal, Pe, Pwave)
+         Unormal_I, Enormal)
     if(DoLf .or. DoHll .or. DoLfdw .or. DoHlldw .or. DoAw .or. &
          DoRoe .or. DoRoeOld .or. &
          DoLfNeutral .or. DoHllNeutral .or. DoLfdwNeutral .or. &
          DoHlldwNeutral .or. DoAwNeutral .or. DoHllcNeutral)then
        ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, StateLeftCons_V, FluxLeft_V, &
-            UnLeft_I, EnLeft, PeLeft, PwaveLeft)
+            UnLeft_I, EnLeft)
 
        if(UseMhdMomentumFlux) MhdFluxLeft_V  = MhdFlux_V
 
        call get_physical_flux(StateRight_V, StateRightCons_V, FluxRight_V, &
-            UnRight_I, EnRight, PeRight, PwaveRight)
+            UnRight_I, EnRight)
 
        if(UseMhdMomentumFlux) MhdFluxRight_V = MhdFlux_V
 
@@ -2524,8 +2495,6 @@ contains
          Enormal = 0.5*(EnLeft + EnRight)
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               0.5*(UnLeft_I(eFluid_) + UnRight_I(eFluid_))
-         if(UseMultiIon)&
-              Pe = 0.5*(PeLeft + PeRight)
       end if
 
       if (DoTestCell) then
@@ -2599,8 +2568,6 @@ contains
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + &
               WeightLeft *UnLeft_I(eFluid_)
-         if(UseMultiIon)&
-              Pe = WeightRight*PeRight   + WeightLeft*PeLeft
       end if
 
       ! The following should be calculated last to avoid overwriting
@@ -2754,8 +2721,6 @@ contains
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + &
               WeightLeft *UnLeft_I(eFluid_)
-         if(UseMultiIon)&
-              Pe = WeightRight*PeRight + WeightLeft*PeLeft
       end if
     end subroutine dominant_wave_flux
     !==========================================================================
@@ -2804,8 +2769,6 @@ contains
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + &
               WeightLeft *UnLeft_I(eFluid_)
-         if(UseMultiIon)&
-              Pe = WeightRight*PeRight + WeightLeft*PeLeft
       end if
     end subroutine artificial_wind
     !==========================================================================
@@ -2866,7 +2829,7 @@ contains
 
       if(sL >= 0.) then
          call get_physical_flux(StateLeft_V, &
-              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
+              StateCons_V, Flux_V, Unormal_I, Enormal)
 
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
          RETURN
@@ -2874,7 +2837,7 @@ contains
 
       if(sR <= 0.) then
          call get_physical_flux(StateRight_V, &
-              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
+              StateCons_V, Flux_V, Unormal_I, Enormal)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
          RETURN
       end if
@@ -3217,10 +3180,10 @@ contains
          ! Temporary solution, should be the monotone numerical flux with
          ! modified StateLeft_V and/or StateRight_V
          call get_physical_flux(StateLeft_V, StateLeftCons_V, &
-              FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
+              FluxLeft_V, UnLeft_I, EnLeft)
 
          call get_physical_flux(StateRight_V, StateRightCons_V, &
-              FluxRight_V, UnRight_I, EnRight, PeRight, PwaveRight)
+              FluxRight_V, UnRight_I, EnRight)
 
          call artificial_wind
          RETURN
@@ -3335,8 +3298,8 @@ contains
 
       RhoL = StateLeft_V(Rho_)
       RhoR = StateRight_V(Rho_)
-      TotalPresL = StateLeft_V(p_)  + PeLeft  + PwaveLeft
-      TotalPresR = StateRight_V(p_) + PeRight + PwaveRight
+      TotalPresL = StateLeft_V(p_)  !!! + PeLeft  + PwaveLeft
+      TotalPresR = StateRight_V(p_) !!!+ PeRight + PwaveRight
 
       ! Rotate vector variables into a coordinate system orthogonal to the face
       call rotate_state_vectors
@@ -3436,7 +3399,7 @@ contains
     real:: rFF_I(nFFReal)
 
     ! These are calculated but not used
-    real:: Un_I(nFluid+1), En, Pe, Pwave
+    real:: Un_I(nFluid+1), En
 
     real, allocatable, save:: Flux_VD(:,:)
     !$omp threadprivate( Flux_VD )
@@ -3498,7 +3461,7 @@ contains
 
                 ! Get the flux
                 call get_physical_flux(Primitive_V, &
-                     Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
+                     Conservative_V, Flux_V, Un_I, En)
 
                 if(.not. UseHighFDGeometry) then
                    FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area

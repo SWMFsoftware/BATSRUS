@@ -199,6 +199,9 @@ T			UseOhNeutralBc
 -0.080			VLISW_By_dim
 -0.2988			VLISW_Bz_dim
 
+#CROSSSECTION
+LindsayStebbings	NameCrossSection
+
 #REGIONS
 SingleIon		NameRegionFormula
 6.E5			TempPop1LimitDim

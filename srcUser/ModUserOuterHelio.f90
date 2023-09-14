@@ -149,6 +149,12 @@ module ModUser
   integer, parameter:: MultiIon_=3, LevelSet_ = 4
   integer :: iRegionFormula = SingleIon_
 
+  ! Cross Section Formulas
+  character(len=20) :: NameCrossSection
+  ! Default Cross Section is Lindsay Stebbings
+  real :: CrossA1 = 2.2835E-7
+  real :: CrossA2 = 1.062E-8
+
   ! Velocity, temperature, Mach number and radius limits for the populations
   real :: TempPop1LimitDim = 1e5    ! [K]
   real :: uPop1LimitDim    = 100.0  ! [km/s]
@@ -285,6 +291,27 @@ contains
 
        case("#ELECTRONIMPACT")
           call read_var("UseElectronImpact", UseElectronImpact)
+
+       case("#CROSSSECTION")
+          call read_var('NameCrossSection', NameCrossSection)
+          select case(NameCrossSection)
+
+          case('LindsayStebbings')
+             CrossA1 = 2.2835E-7
+             CrossA2 = 1.062E-8
+
+          case('MaherTinsley')
+             CrossA1 = 1.64E-7
+             CrossA2 = 6.95E-9
+
+          case('UserCrossSection')
+             call read_var('a1', CrossA1)
+             call read_var('a2', CrossA2)
+
+          case default
+             call stop_mpi(NameSub//': unknown NameCrossSection = ' &
+                     // NameCrossSection)
+          end select
 
        case("#REGIONS")
           call read_var('NameRegionFormula', NameRegionFormula)
@@ -2193,20 +2220,20 @@ contains
        ! Sigma has units of m^2
 
        ! For SW
-       ! Cross Section from Lindsay and Stebbings, 2005
+       ! Cross Section is by default Lindsay Stebbings but can be changed
        where(UseSource_I(Neu_:)) &
-             Sigma_I = ((2.2835E-7 - (1.062E-8)*log(UStarM_I*100.))**2)*1.E-4
+             Sigma_I = ((CrossA1 - CrossA2*log(UStarM_I*100.))**2)*1.E-4
        where(UseSource_I(Neu_:)) &
-             SigmaN_I = ((2.2835E-7 - (1.062E-8)*log(UStar_I*100.))**2)*1.E-4
+             SigmaN_I = ((CrossA1 - CrossA2*log(UStar_I*100.))**2)*1.E-4
 
        if(.not.IsMhd)then
           ! For Pu3
           where(UseSource_I(Neu_:)) &
                 SigmaPu3_I = &
-                ((2.2835E-7 - (1.062E-8)*log(UStarMPu3_I*100.))**2)*(1.E-4)
+                ((CrossA1 - CrossA2*log(UStarMPu3_I*100.))**2)*(1.E-4)
           where(UseSource_I(Neu_:)) &
                 SigmaNPu3_I = &
-                ((2.2835E-7 - (1.062E-8)*log(UStarPu3_I*100.))**2)*(1.E-4)
+                ((CrossA1 - CrossA2*log(UStarPu3_I*100.))**2)*(1.E-4)
        end if
 
        ! Calculate Rate = \nu * nH * mp where nH is the neutral density

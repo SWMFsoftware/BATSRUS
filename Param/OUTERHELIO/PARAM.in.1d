@@ -129,6 +129,9 @@ SingleIon		NameRegionFormula
 50.0                    rPop3Limit
 0.5                     MachPop4Limit
 
+#CROSSSECTION
+MaherTinsley	NameCrossSection
+
 #SOURCES
 T                       UseIonSource
 T                       UseNeuSource
@@ -138,13 +141,15 @@ T                       UseNe4Source
 
 #USERINPUTEND -------------------------------------
 
-#LOOKUPTABLE
-ChargeExchange		NameTable
-load			NameCommand
-Param/OUTERHELIO/ExchangeRate.dat		NameFile
-ascii			TypeFile
 
 #STOP
 -1			MaxIteration
 5 year			tSimulationMax
 
+#END
+
+#LOOKUPTABLE
+ChargeExchange		NameTable
+load			NameCommand
+Param/OUTERHELIO/ChargeExchangeRate_LS.dat		NameFile
+ascii			TypeFile
