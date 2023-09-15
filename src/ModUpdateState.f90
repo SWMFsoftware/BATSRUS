@@ -31,10 +31,6 @@ module ModUpdateState
 
   ! The fraction of non-adiabatic heating put into Pe and Ppar
   real:: PeShockHeatingFraction = 0.0, PparShockHeatingFraction = 0.0
-  ! Solve for Pe and Ppar together?
-  logical:: DoHeatTogether = .false.
-  ! If the non-adiabative fraction is between these limits, do not heat
-  real:: NonAdiabaticFractionMin = 0.0, NonAdiabaticFractionMax = 0.0
 
 contains
   !============================================================================
@@ -63,13 +59,6 @@ contains
             PeShockHeatingFraction)
        if(UseAnisoPressure) call read_var("PparShockHeatingFraction", &
             PparShockHeatingFraction)
-       if(PeShockHeatingFraction /= 0.and.PparShockHeatingFraction /= 0)then
-          call read_var("DoHeatTogether", DoHeatTogether)
-          if(DoHeatTogether)then
-             call read_var("NonAdiabaticFractionMin", NonAdiabaticFractionMin)
-             call read_var("NonAdiabaticFractionMax", NonAdiabaticFractionMax)
-          end if
-       end if
        if(PeShockHeatingFraction /= 0)then
           UseElectronEntropy = .true.
           UseElectronEnergy = .true.
@@ -456,7 +445,7 @@ contains
       logical:: UseElectronShockHeating, UseAnisoShockHeating
 
       real:: Coeff1, Coeff2, b_D(3), u_D(3), FullB2, FullB, Rho
-      real:: Eth, Ead, Ena, Sperp, Sie, Spp, Ei, Ee, Epar, Eperp
+      real:: Eth, Ead, Sperp, Sie, Spp, Ei, Ee, Epar
       real:: FactorI, FactorE, FactorPar, FactorPerp
       real:: WeightSi, WeightSe, WeightSpar, WeightSperp, Wi, We, Wpar, Wperp
       integer:: iFluid, iRho
@@ -937,7 +926,7 @@ contains
             Eth =  State_VGB(P_,i,j,k,iBlock)*InvGammaMinus1 &
                  + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
             ! From entropy updates We*Si - Wi*Se
-            Sie =  WeightSe*s_C(i,j,k) &
+            Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
                  - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
             ! Energy weights
             We = WeightSe*GammaMinus1*FactorI
@@ -998,43 +987,26 @@ contains
             FactorPerp = 1/FullB
             ! Thermal energy density from total energy update
             Eth = State_VGB(P_,i,j,k,iBlock)*InvGammaMinus1
-            ! Adiabatic thermal energy
-            Ead = 0.5*State_VGB(Ppar_,i,j,k,iBlock) + s_C(i,j,k)*FullB
-            ! Relative non-adiabatic heating/cooling
-            Ena = (Eth - Ead)/Eth
-            ! Don't do anything for Ena between these limits
-            if(  Ena >= NonAdiabaticFractionMin .and. &
-                 Ena <= NonAdiabaticFractionMax) CYCLE
-            ! Combined entropy from entropy update
+            ! Combined entropy
             Spp = WeightSperp*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
                  - WeightSpar*s_C(i,j,k)
             if(UseElectronShockHeating)then
-               if(DoHeatTogether)then
-                  Eth = Eth &
-                       + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
-                  ! Conversion from electron pressure to electron entropy
-                  FactorE = Rho**(-GammaElectronMinus1)
-                  ! Combined entropy: Sie = We*Sperp - Wi*Se
-                  Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
-                       - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
-                  ! Energy weights for Ee and Eperp (GammaPerp - 1 = 1)
-                  Wi = WeightSi*GammaElectronMinus1*FactorE
-                  We = WeightSe*FactorPerp
-               else
-                  ! Move part of the non-adiabatic energy into the electrons
-                  Ena = WeightSe*Ena*Eth
-                  State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-                       + GammaElectronMinus1*Ena
-                  State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-                       - GammaMinus1*Ena
-                  Eth = Eth - Ena
-               end if
+               Eth = Eth &
+                    + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
+               ! Conversion from electron pressure to electron entropy
+               FactorE = Rho**(-GammaElectronMinus1)
+               ! Combined entropy: Sie = We*Sperp - Wi*Se
+               Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
+                    - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
+               ! Energy weights for Ee and Eperp (GammaPerp - 1 = 1)
+               Wi = WeightSi*GammaElectronMinus1*FactorE
+               We = WeightSe*FactorPar*2
             end if
             ! Energy weights (GammaPerp-1 = 1, GammaPar - 1 = 2)
             Wpar  = WeightSpar*FactorPerp
             Wperp = WeightSperp*2*FactorPar
 
-            if(.not. (UseElectronShockHeating .and. DoHeatTogether))then
+            if(.not. UseElectronShockHeating)then
                ! Solution for Epar
                Epar  = (Spp + Wpar*Eth)/(Wpar + Wperp)
                State_VGB(Ppar_,i,j,k,iBlock) = Epar*2
@@ -1043,21 +1015,12 @@ contains
                Epar = (Wpar*Sie + Wi*Spp + Wi*Wpar*Eth) &
                     / (Wperp*Wi + Wpar*We + Wi*Wpar)
                Ee   = (We*Epar - Sie)/Wi
-               Eperp= (Wperp*Epar - Spp)/Wpar
-
-               if(abs(Epar + Eperp + Ee - Eth) > 1e-10)then
-                  write(*,*)'Epar, Eperp, Ee, Eth=', Epar, Eperp, Ee, Eth
-                  write(*,*)'WeightSi, Se, Sie   =', WeightSi, WeightSe, Sie, &
-                       We*Epar - Wi*Ee
-                  write(*,*)'WeightSPar,SPerp,Spp=', &
-                       WeightSpar, WeightSperp, Spp, Wperp*Epar - Wpar*Eperp
-                  call stop_mpi('DEBUG')
-               end if
                ! Convert to pressures
                State_VGB(Ppar_,i,j,k,iBlock) = Epar*2
                State_VGB(Pe_,i,j,k,iBlock)   = Ee*GammaElectronMinus1
                State_VGB(p_,i,j,k,iBlock)    = (Eth - Ee)*GammaMinus1
             end if
+
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' after shock heating Ppar, P=', &
