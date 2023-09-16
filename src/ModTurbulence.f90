@@ -13,6 +13,8 @@ module ModTurbulence
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
+  use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
+       UseAlfvenWaveRepresentative
   use omp_lib
 
   implicit none
@@ -85,8 +87,6 @@ contains
 
     use ModAdvance,    ONLY: UseAnisoPressure
     use ModReadParam,  ONLY: read_var
-    use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
-         UseAlfvenWaveRepresentative
 
     integer :: iFluid
 
@@ -198,7 +198,6 @@ contains
     use ModPhysics,     ONLY: Si2No_V, UnitB_, UnitX_, UnitU_, UnitEnergyDens_
     use ModMultiFluid,  ONLY: UseMultiIon, nIonFluid
     use ModLookupTable, ONLY: i_lookup_table
-    use ModWaves,       ONLY: UseAlfvenWaves
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_turbulence'
