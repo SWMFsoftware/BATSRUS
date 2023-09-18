@@ -1278,7 +1278,7 @@ contains
        Flux_V(iVar) = Un_I(1)*State_V(iVar)
     end do
     ! Overwrite Lperp_ for multi-ion
-    if(Lperp_ > 1 .and.UseMultiIon) Flux_V(Lperp) = HallUn*State_V(Lperp_)
+    if(Lperp_ > 1 .and.UseMultiIon) Flux_V(Lperp_) = HallUn*State_V(Lperp_)
 
     ! Set flux for electron pressure
     if(UseElectronPressure)then
