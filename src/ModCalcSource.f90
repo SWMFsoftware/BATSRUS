@@ -1599,7 +1599,7 @@ contains
             call get_uplus(RightState_VZ(:,i,j,k+1), uPlusRight1_DD(:,3))
             call get_uplus(RightState_VZ(:,i,j,k), uPlusRight_DD(:,3)   )
          end if
-         
+
          do iDir = 1, MaxDim
             GradU_DD(:,iDir) = &
                  0.5*(uPlusLeft1_DD(iDir,1) + uPlusRight1_DD(iDir,1))* &
