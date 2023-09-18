@@ -1543,14 +1543,14 @@ contains
       !------------------------------------------------------------------------
       GradU_DD = 0.0
 
-      ! Obtain the uPlus_D on the corresponding faces
-      call get_uplus(LeftState_VX( :,i+1,j,k), uPlusLeft1_D )
-      call get_uplus(LeftState_VX( :,i,  j,k), uPlusLeft_D  )
-      call get_uplus(RightState_VX(:,i+1,j,k), uPlusRight1_D)
-      call get_uplus(RightState_VX(:,i,  j,k), uPlusRight_D )
-
       ! Calculate gradient tensor of u_plus
       if(IsCartesian) then
+         ! Obtain the uPlus_D on the corresponding faces
+         call get_uplus(LeftState_VX( :,i+1,j,k), uPlusLeft1_D )
+         call get_uplus(LeftState_VX( :,i,  j,k), uPlusLeft_D  )
+         call get_uplus(RightState_VX(:,i+1,j,k), uPlusRight1_D)
+         call get_uplus(RightState_VX(:,i,  j,k), uPlusRight_D )
+
          GradU_DD(Dim1_,:) = &
               (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D)  &
               /(2*CellSize_DB(Dim1_,iBlock))
