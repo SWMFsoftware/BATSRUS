@@ -163,7 +163,7 @@ F                       UsePhotoionization
 #LOOKUPTABLE
 ChargeExchange		NameTable
 load			NameCommand
-Param/OUTERHELIO/ExchangeRate.dat		NameFile
+Param/OUTERHELIO/ChargeExchangeRate_LS.dat		NameFile
 ascii			TypeFile
 
 #STOP
