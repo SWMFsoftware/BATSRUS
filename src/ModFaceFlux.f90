@@ -1277,6 +1277,8 @@ contains
     do iVar = ScalarFirst_, ScalarLast_
        Flux_V(iVar) = Un_I(1)*State_V(iVar)
     end do
+    ! Overwrite Lperp_ for multi-ion
+    if(Lperp_ > 1 .and.UseMultiIon) Flux_V(Lperp) = HallUn*State_V(Lperp_)
 
     ! Set flux for electron pressure
     if(UseElectronPressure)then
@@ -1300,13 +1302,23 @@ contains
           ! is calculated
           AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
 
-          do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
-             Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
-          end do
+          if(UseMultiIon)then
+             do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
+                Flux_V(iVar) = (HallUn + AlfvenSpeed)*State_V(iVar)
+             end do
 
-          do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
-             Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
-          end do
+             do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
+                Flux_V(iVar) = (HallUn - AlfvenSpeed)*State_V(iVar)
+             end do
+          else
+             do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
+                Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
+             end do
+
+             do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
+                Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
+             end do
+          end if
        else
           do iVar = AlfvenPlusFirst_, AlfvenMinusLast_
              Flux_V(iVar) = Un_I(IonFirst_)*State_V(iVar)
