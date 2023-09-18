@@ -1526,7 +1526,7 @@ contains
       ! This routine calculates the gradient tensor of uPlus_D, which is used
       ! in anisotropic Pe.
 
-      use BATL_lib, ONLY: Dim1_, Dim2_, Dim3_
+      use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, Dim1_, Dim2_, Dim3_
 
       integer, intent(in) :: i, j, k, iBlock
       real,   intent(out) :: GradU_DD(nDim,MaxDim)
@@ -1534,6 +1534,10 @@ contains
       ! uPlus_D on the left and right faces
       real :: uPlusLeft_D(3),  uPlusRight_D(3)
       real :: uPlusLeft1_D(3), uPlusRight1_D(3)
+
+      integer :: iDir
+      real :: uPlusLeft_DD(3,nDim),  uPlusRight_DD(3,nDim)
+      real :: uPlusLeft1_DD(3,nDim), uPlusRight1_DD(3,nDim)
 
       character(len=*), parameter:: NameSub = 'calc_grad_uplus'
       !------------------------------------------------------------------------
@@ -1566,9 +1570,9 @@ contains
          if(nK > 1) then
             ! Obtain the uPlus_D on the corresponding faces
             call get_uplus(LeftState_VZ( :,i,j,k+1), uPlusLeft1_D )
-            call get_uplus(LeftState_VZ( :,i,j,k), uPlusLeft_D  )
+            call get_uplus(LeftState_VZ( :,i,j,k), uPlusLeft_D    )
             call get_uplus(RightState_VZ(:,i,j,k+1), uPlusRight1_D)
-            call get_uplus(RightState_VZ(:,i,j,k), uPlusRight_D )
+            call get_uplus(RightState_VZ(:,i,j,k), uPlusRight_D   )
 
             GradU_DD(Dim3_,:) = &
                  (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
@@ -1578,7 +1582,50 @@ contains
       else if(IsRzGeometry) then
          call stop_mpi(NameSub//': RZ geometry to be implemented')
       else
-         call stop_mpi(NameSub//': spherical to be implemented')
+
+         call get_uplus(LeftState_VX( :,i+1,j,k), uPlusLeft1_DD(:,1) )
+         call get_uplus(LeftState_VX( :,i,  j,k), uPlusLeft_DD(:,1)  )
+         call get_uplus(RightState_VX(:,i+1,j,k), uPlusRight1_DD(:,1))
+         call get_uplus(RightState_VX(:,i,  j,k), uPlusRight_DD(:,1) )
+         if(nJ > 1)then
+            call get_uplus(LeftState_VY( :,i,j+1,k), uPlusLeft1_DD(:,2) )
+            call get_uplus(LeftState_VY( :,i,j,  k), uPlusLeft_DD(:,2)  )
+            call get_uplus(RightState_VY(:,i,j+1,k), uPlusRight1_DD(:,2))
+            call get_uplus(RightState_VY(:,i,j,  k), uPlusRight_DD(:,2) )
+         end if
+         if(nK > 1)then
+            call get_uplus(LeftState_VZ( :,i,j,k+1), uPlusLeft1_DD(:,3) )
+            call get_uplus(LeftState_VZ( :,i,j,k), uPlusLeft_DD(:,3)  )
+            call get_uplus(RightState_VZ(:,i,j,k+1), uPlusRight1_DD(:,3))
+            call get_uplus(RightState_VZ(:,i,j,k), uPlusRight_DD(:,3)   )
+         end if
+         
+         do iDir = 1, MaxDim
+            GradU_DD(:,iDir) = &
+                 0.5*(uPlusLeft1_DD(iDir,1) + uPlusRight1_DD(iDir,1))* &
+                 FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
+                 - 0.5*(uPlusLeft_DD(iDir,1) + uPlusRight_DD(iDir,1))* &
+                 FaceNormal_DDFB(:,1,i,j,k,iBlock)
+
+            if(nJ == 1) CYCLE
+
+            GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
+                 0.5*(uPlusLeft1_DD(iDir,2) + uPlusRight1_DD(iDir,2))* &
+                 FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
+                 - 0.5*(uPlusLeft_DD(iDir,2) + uPlusRight_DD(iDir,2))* &
+                 FaceNormal_DDFB(:,2,i,j,k,iBlock)
+
+            if(nK == 1) CYCLE
+
+            GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
+                 0.5*(uPlusLeft1_DD(iDir,3) + uPlusRight1_DD(iDir,3))* &
+                 FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                 - 0.5*(uPlusLeft_DD(iDir,3) + uPlusRight_DD(iDir,3))* &
+                 FaceNormal_DDFB(:,3,i,j,k,iBlock)
+         end do
+
+         GradU_DD = GradU_DD / CellVolume_GB(i,j,k,iBlock)
+
       end if
 
     end subroutine calc_grad_uplus
