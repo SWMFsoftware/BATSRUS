@@ -479,7 +479,11 @@ contains
                 bDotGradVAlfven  = &
                      dot_product(b_D, matmul(b_D(1:nDim), GradAlfven_DD))
                 ! Calculate gradient tensor of velocity
-                call calc_grad_U(GradU_DD, i, j, k, iBlock)
+                if(UseMultiIon)then
+                   call calc_grad_uplus(GradU_DD, i, j, k, iBlock)
+                else
+                   call calc_grad_U(GradU_DD, i, j, k, iBlock)
+                end if
                 ! Calculate bb : grad u
                 bDotbDotGradU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
