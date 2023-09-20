@@ -1583,45 +1583,45 @@ contains
          call stop_mpi(NameSub//': RZ geometry to be implemented')
       else
 
-         call get_uplus(LeftState_VX( :,i+1,j,k), uPlusLeft1_DD(:,1) )
-         call get_uplus(LeftState_VX( :,i,  j,k), uPlusLeft_DD(:,1)  )
-         call get_uplus(RightState_VX(:,i+1,j,k), uPlusRight1_DD(:,1))
-         call get_uplus(RightState_VX(:,i,  j,k), uPlusRight_DD(:,1) )
+         call get_uplus(LeftState_VX( :,i+1,j,k), uPlusLeft1_DD(:,Dim1_) )
+         call get_uplus(LeftState_VX( :,i,  j,k), uPlusLeft_DD(:,Dim1_)  )
+         call get_uplus(RightState_VX(:,i+1,j,k), uPlusRight1_DD(:,Dim1_))
+         call get_uplus(RightState_VX(:,i,  j,k), uPlusRight_DD(:,Dim1_) )
          if(nJ > 1)then
-            call get_uplus(LeftState_VY( :,i,j+1,k), uPlusLeft1_DD(:,2) )
-            call get_uplus(LeftState_VY( :,i,j,  k), uPlusLeft_DD(:,2)  )
-            call get_uplus(RightState_VY(:,i,j+1,k), uPlusRight1_DD(:,2))
-            call get_uplus(RightState_VY(:,i,j,  k), uPlusRight_DD(:,2) )
+            call get_uplus(LeftState_VY( :,i,j+1,k), uPlusLeft1_DD(:,Dim2_) )
+            call get_uplus(LeftState_VY( :,i,j,  k), uPlusLeft_DD(:,Dim2_)  )
+            call get_uplus(RightState_VY(:,i,j+1,k), uPlusRight1_DD(:,Dim2_))
+            call get_uplus(RightState_VY(:,i,j,  k), uPlusRight_DD(:,Dim2_) )
          end if
          if(nK > 1)then
-            call get_uplus(LeftState_VZ( :,i,j,k+1), uPlusLeft1_DD(:,3) )
-            call get_uplus(LeftState_VZ( :,i,j,k), uPlusLeft_DD(:,3)  )
-            call get_uplus(RightState_VZ(:,i,j,k+1), uPlusRight1_DD(:,3))
-            call get_uplus(RightState_VZ(:,i,j,k), uPlusRight_DD(:,3)   )
+            call get_uplus(LeftState_VZ( :,i,j,k+1), uPlusLeft1_DD(:,Dim3_) )
+            call get_uplus(LeftState_VZ( :,i,j,k), uPlusLeft_DD(:,Dim3_)  )
+            call get_uplus(RightState_VZ(:,i,j,k+1), uPlusRight1_DD(:,Dim3_))
+            call get_uplus(RightState_VZ(:,i,j,k), uPlusRight_DD(:,Dim3_)   )
          end if
 
          do iDir = 1, MaxDim
             GradU_DD(:,iDir) = &
-                 0.5*(uPlusLeft1_DD(iDir,1) + uPlusRight1_DD(iDir,1))* &
-                 FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
-                 - 0.5*(uPlusLeft_DD(iDir,1) + uPlusRight_DD(iDir,1))* &
-                 FaceNormal_DDFB(:,1,i,j,k,iBlock)
+                 0.5*(uPlusLeft1_DD(iDir,Dim1_)+uPlusRight1_DD(iDir,Dim1_))* &
+                 FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
+                 - 0.5*(uPlusLeft_DD(iDir,Dim1_)+uPlusRight_DD(iDir,Dim1_))* &
+                 FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
 
             if(nJ == 1) CYCLE
 
             GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 0.5*(uPlusLeft1_DD(iDir,2) + uPlusRight1_DD(iDir,2))* &
-                 FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                 - 0.5*(uPlusLeft_DD(iDir,2) + uPlusRight_DD(iDir,2))* &
-                 FaceNormal_DDFB(:,2,i,j,k,iBlock)
+                 0.5*(uPlusLeft1_DD(iDir,Dim2_)+uPlusRight1_DD(iDir,Dim2_))* &
+                 FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
+                 - 0.5*(uPlusLeft_DD(iDir,Dim2_)+uPlusRight_DD(iDir,Dim2_))* &
+                 FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
 
             if(nK == 1) CYCLE
 
             GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 0.5*(uPlusLeft1_DD(iDir,3) + uPlusRight1_DD(iDir,3))* &
-                 FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                 - 0.5*(uPlusLeft_DD(iDir,3) + uPlusRight_DD(iDir,3))* &
-                 FaceNormal_DDFB(:,3,i,j,k,iBlock)
+                 0.5*(uPlusLeft1_DD(iDir,Dim3_)+uPlusRight1_DD(iDir,Dim3_))* &
+                 FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
+                 - 0.5*(uPlusLeft_DD(iDir,Dim3_)+uPlusRight_DD(iDir,Dim3_))* &
+                 FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
          end do
 
          GradU_DD = GradU_DD / CellVolume_GB(i,j,k,iBlock)
