@@ -1273,6 +1273,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(SwhEnergy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1323,6 +1324,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Pu3Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1373,6 +1375,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(SwhEnergy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1423,6 +1426,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Pu3Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1504,6 +1508,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1553,6 +1558,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              PlotVar_G = 0.0
@@ -1601,6 +1607,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
