@@ -1804,7 +1804,7 @@ contains
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
-         Flux_V(Energy_)= Flux_V(Energy_) &
+         if(IsMhd) Flux_V(Energy_)= Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
          ! Don't we need Flux_V(PePar_)?
          if(DoTestCell)then
@@ -1828,7 +1828,7 @@ contains
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
-         Flux_V(Energy_)= Flux_V(Energy_) &
+         if(IsMhd) Flux_V(Energy_)= Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
       end if
 
@@ -1836,6 +1836,7 @@ contains
            FullBx, FullBy, FullBz, FullBn, HallUn)
 
       if(.not.IsMhd)RETURN
+
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
       if(UseJCrossBForce)Flux_V(RhoUx_:RhoUz_) = &
            Flux_V(RhoUx_:RhoUz_) + MagneticForce_D
