@@ -769,12 +769,14 @@ contains
     real :: Ux, Uy, Uz, U2
 
     real, dimension(nFluid) :: &
-         Ux_I, Uy_I, Uz_I, U2_I, Temp_I, &
-         UThS_I, URelS_I, URelSdim_I, UStar_I, Sigma_I, Rate_I, &
-         UStarM_I, SigmaN_I, RateN_I, &
-         I0xp_I, I0px_I, I2xp_I, I2px_I, &
-         JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
-         Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
+         Ux_I=0.0, Uy_I=0.0, Uz_I=0.0, U2_I=0.0, Temp_I=0.0, &
+         UThS_I=0.0, URelS_I=0.0, URelSdim_I=0.0, UStar_I=0.0, &
+         Sigma_I=0.0, Rate_I=0.0, UStarM_I=1.0, SigmaN_I=0.0, RateN_I=0.0, &
+         I0xp_I=0.0, I0px_I=0.0, I2xp_I=0.0, I2px_I=0.0, &
+         JxpUx_I=0.0, JxpUy_I=0.0, JxpUz_I=0.0, &
+         JpxUx_I=0.0, JpxUy_I=0.0, JpxUz_I=0.0, &
+         Kxp_I=0.0, Kpx_I=0.0, Qepx_I=0.0, &
+         QmpxUx_I=0.0, QmpxUy_I=0.0, QmpxUz_I=0.0
 
     integer :: i, j, k
 
@@ -815,12 +817,6 @@ contains
        URelS_I(Neu_) = (Ux_I(Neu_) - Ux_I(1))**2 &
             + (Uy_I(Neu_) - Uy_I(1))**2 &
             + (Uz_I(Neu_) - Uz_I(1))**2
-       URelS_I(Ne2_) = (Ux_I(Ne2_) - Ux_I(1))**2 &
-            + (Uy_I(Ne2_) - Uy_I(1))**2 &
-            + (Uz_I(Ne2_) - Uz_I(1))**2
-       URelS_I(Ne3_) = (Ux_I(Ne3_) - Ux_I(1))**2 &
-            + (Uy_I(Ne3_) - Uy_I(1))**2 &
-            + (Uz_I(Ne3_) - Uz_I(1))**2
        URelS_I(Ne4_) = (Ux_I(Ne4_) - Ux_I(1))**2 &
             + (Uy_I(Ne4_) - Uy_I(1))**2 &
             + (Uz_I(Ne4_) - Uz_I(1))**2
@@ -833,18 +829,12 @@ contains
        !  URelSdim_I  = URelS_I * No2Si_V(UnitU_)**2
        URelSdim_I(1)    = 0.0
        URelSdim_I(Neu_) = URelS_I(Neu_) * No2Si_V(UnitU_)**2
-       URelSdim_I(Ne2_) = URelS_I(Ne2_) * No2Si_V(UnitU_)**2
-       URelSdim_I(Ne3_) = URelS_I(Ne3_) * No2Si_V(UnitU_)**2
        URelSdim_I(Ne4_) = URelS_I(Ne4_) * No2Si_V(UnitU_)**2
 
        ! UStar_I has units of m/s
        UStar_I(1)    = 0.0
        UStar_I(Neu_) &
             = sqrt(URelSdim_I(Neu_) + (4/cPi)*(UThS_I(Neu_) +UThS_I(1)))
-       UStar_I(Ne2_) &
-            = sqrt(URelSdim_I(Ne2_) + (4./cPi)*(UThS_I(Ne2_) +UThS_I(1)))
-       UStar_I(Ne3_) &
-            = sqrt(URelSdim_I(Ne3_) + (4./cPi)*(UThS_I(Ne3_) +UThS_I(1)))
        UStar_I(Ne4_) &
             = sqrt(URelSdim_I(Ne4_) + (4./cPi)*(UThS_I(Ne4_) +UThS_I(1)))
 
@@ -854,10 +844,6 @@ contains
        UStarM_I(1)    = 1.0
        UStarM_I(Neu_) = &
             sqrt(URelSdim_I(Neu_) + (64./(9.*cPi))*(UThS_I(Neu_) +UThS_I(1)))
-       UStarM_I(Ne2_) = &
-            sqrt(URelSdim_I(Ne2_) + (64./(9.*cPi))*(UThS_I(Ne2_) +UThS_I(1)))
-       UStarM_I(Ne3_) = &
-            sqrt(URelSdim_I(Ne3_) + (64./(9.*cPi))*(UThS_I(Ne3_) +UThS_I(1)))
        UStarM_I(Ne4_) = &
             sqrt(URelSdim_I(Ne4_) + (64./(9.*cPi))*(UThS_I(Ne4_) +UThS_I(1)))
 
@@ -872,14 +858,6 @@ contains
             ((1.64E-7 - (6.95E-9)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
        SigmaN_I(Neu_) = &
             ((1.64E-7 - (6.95E-9)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
-       Sigma_I(Ne2_)  = &
-            ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
-       SigmaN_I(Ne2_) = &
-            ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne2_)*100.))**2)*(1.E-4)
-       Sigma_I(Ne3_)  = &
-            ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne3_)*100.))**2)*(1.E-4)
-       SigmaN_I(Ne3_) = &
-            ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne3_)*100.))**2)*(1.E-4)
        Sigma_I(Ne4_)  = &
             ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
        SigmaN_I(Ne4_) = &
@@ -896,12 +874,6 @@ contains
        Rate_I(Neu_) = &
             Sigma_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStarM_I(Neu_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       Rate_I(Ne2_) = &
-            Sigma_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStarM_I(Ne2_) &
-            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       Rate_I(Ne3_) = &
-            Sigma_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStarM_I(Ne3_) &
-            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        Rate_I(Ne4_) = &
             Sigma_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStarM_I(Ne4_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
@@ -909,12 +881,6 @@ contains
        RateN_I(1)    = 0.0
        RateN_I(Neu_) = &
             SigmaN_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStar_I(Neu_) &
-            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       RateN_I(Ne2_) = &
-            SigmaN_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStar_I(Ne2_) &
-            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       RateN_I(Ne3_) = &
-            SigmaN_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStar_I(Ne3_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        RateN_I(Ne4_) = &
             SigmaN_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStar_I(Ne4_) &
@@ -967,18 +933,12 @@ contains
        QmpxUz_I(1) = 0.0
 
        QmpxUx_I(Neu_) = (Ux_I(Neu_) - Ux_I(1))*Rate_I(Neu_)
-       QmpxUx_I(Ne2_) = (Ux_I(Ne2_) - Ux_I(1))*Rate_I(Ne2_)
-       QmpxUx_I(Ne3_) = (Ux_I(Ne3_) - Ux_I(1))*Rate_I(Ne3_)
        QmpxUx_I(Ne4_) = (Ux_I(Ne4_) - Ux_I(1))*Rate_I(Ne4_)
 
        QmpxUy_I(Neu_) = (Uy_I(Neu_) - Uy_I(1))*Rate_I(Neu_)
-       QmpxUy_I(Ne2_) = (Uy_I(Ne2_) - Uy_I(1))*Rate_I(Ne2_)
-       QmpxUy_I(Ne3_) = (Uy_I(Ne3_) - Uy_I(1))*Rate_I(Ne3_)
        QmpxUy_I(Ne4_) = (Uy_I(Ne4_) - Uy_I(1))*Rate_I(Ne4_)
 
        QmpxUz_I(Neu_) = (Uz_I(Neu_) - Uz_I(1))*Rate_I(Neu_)
-       QmpxUz_I(Ne2_) = (Uz_I(Ne2_) - Uz_I(1))*Rate_I(Ne2_)
-       QmpxUz_I(Ne3_) = (Uz_I(Ne3_) - Uz_I(1))*Rate_I(Ne3_)
        QmpxUz_I(Ne4_) = (Uz_I(Ne4_) - Uz_I(1))*Rate_I(Ne4_)
 
        ! For SW or Ion
