@@ -992,8 +992,7 @@ contains
 
       use ModGeometry, ONLY: &
            xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
-      use ModFieldLineThread, ONLY: &
-           IsUniformGrid, dCoord1Uniform, rChromo=>rBody
+      use ModFieldLineThread, ONLY: dCoord1Inv, DoPlotThreads, rChromo=>rBody
       use BATL_lib,           ONLY: xyz_to_coord, &
            get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 
@@ -1105,7 +1104,7 @@ contains
             CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
             CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
             if(present(UseThreads))then
-               if(IsUniformGrid)CellSize_D(r_) = dCoord1Uniform
+               if(DoPlotThreads)CellSize_D(r_) = 1/dCoord1Inv
             end if
             if(DoTest)then
                write(*,*)NameSub,': new iBlock=', iBlock

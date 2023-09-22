@@ -10564,30 +10564,20 @@ preferred).
 
 <command name="PLOTTHREADS">
   <parameter name="DoPlotThreads"      type="logical" default="T"/>
-  <parameter name="nGUniform"          type="integer" default="10"/>
-  <parameter name="UseTriangulation"   type="logical" default="T"/> 
+  <parameter name="nGUniform"          type="integer" default="10"/> 
   <parameter name="DoTRCorrection"     type="logical" default="T"/>
   <parameter name="UsePlanarTriangles" type="logical" default="F"/>
    
 #PLOTTHREADS
 T	DoPlotThreads
 10      nGUniform
-T       UseTriangulation
 T       UseTRCorrection
 F	UsePlanarTriangles  
 
 Used for plotting images in the solar corona. The threaded gap
 contributes to the line-of-site integrals determining the intensity of
-the image pixel, if DoPlotThreads is true. If nUniform is greater or
-equal than 1, the threaded gap is split into nGUniform intervals
-uniformly in the first generalized coordinate. Otherwise, the grid for
-plotting continues the grid of the block near the inner boundary, as
-extra ghost cells.
-
-If UseTriangulation is false, the threads are approximated with
-straight radial lines, otherwise data from the actual curved threads
-are interpolated to a uniform spherical grid using a triangulation on
-a unit spherical grid.
+the image pixel, if DoPlotThreads is true. The threaded gap is split into
+nGUniform intervals uniformly in the first generalized coordinate. 
 
 If UseTRCorrection is true correct the contribution frop the threaded
 gap to the LOS plots is corrected to account for the contribution from
