@@ -65,33 +65,31 @@ year			NameMaxTimeUnit
 #GRID
 10			nRootBlock1 (radial direction)
 10			nRootBlock2 (longitude direction)
-2			nRootBlock3 (latitude direction)
+1			nRootBlock3 (latitude direction)
 -100.0			xMin
 100.0			xMax
 -100.0			yMin
 100.0			yMax
--100.0			zMin
-100.0			zMax
+-0.5			zMin
+0.5			zMax
 
 #GRIDBLOCKALL
 1000			MaxBlock
 
 #GRIDGEOMETRYLIMIT
-spherical_lnr		TypeGeometry
+cylindrical_lnr		TypeGeometry
 1.0			Coord1Min (radius)
 75.0			Coord1Max
 0.0			Coord2Min (longitude)
 360.0			Coord2Max
--1.0			Coord3Min (latitude)
-1.0			Coord3Max
+-0.5			Coord3Min (z)
+0.5			Coord3Max
 
 #OUTERBOUNDARY
 none			TypeBc1 rMin
 user			TypeBc2 rMax
 periodic		TypeBc3 LonMin (azimuthal)
 periodic		TypeBc4 LonMax
-periodic		TypeBc5 LatMin (altitude)
-periodic		TypeBc6 LatMax
 
 #INNERBOUNDARY
 user			TypeBcBody
@@ -149,7 +147,7 @@ T			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
 #USERSWITCH
-+ic +init +update +source		StringSwitch
++ic +update +source		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
