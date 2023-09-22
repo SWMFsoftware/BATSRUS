@@ -949,8 +949,8 @@ contains
        I2px_I = Rate_I*(UStar_I/UStarM_I)*UThS_I/No2Si_V(UnitU_)**2
        I2xp_I = RateN_I*UThS_I(1)/No2Si_V(UnitU_)**2
        I2px_I = RateN_I*UThS_I/No2Si_V(UnitU_)**2
-       I2xp_I = 0.0 ! Excluding Population 2 -TBK
-       I2xp_I = 0.0
+!       I2xp_I = 0.0 ! Excluding Population 2 -TBK
+!       I2px_I = 0.0
        ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
 
        JxpUx_I  = Ux_I(1)*Rate_I
