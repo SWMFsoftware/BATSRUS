@@ -83,7 +83,7 @@ module ModFieldLineThread
      integer,pointer :: nPoint_II(:,:)
      ! Distance between the true and ghost cell centers.
      real, pointer :: DeltaR_II(:,:)
-     real, pointer :: SignB_II(:,:)     
+     real, pointer :: SignB_II(:,:)
      ! PSi, TeSi amd TiSi stored at gird iMin:iMax,0:nJ+1,0:nK+1
      real, pointer :: State_VG(:,:,:,:)
   end type BoundaryThreads
@@ -183,7 +183,7 @@ contains
     use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz
     integer :: iBlock ! Loop variable
     real :: CoordChromo_D(MaxDim), Xyz_D(MaxDim)
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(IsInitialized)RETURN
     IsInitialized = .true.
     if(DoPlotThreads)then
@@ -1543,7 +1543,7 @@ contains
     real, parameter :: North_D(3)   = [0.0, 0.0, +1.0]
     real, parameter :: South_D(3)   = [0.0, 0.0, -1.0]
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'triangulate_thread_for_plot'
+    character(len=*), parameter:: NameSub = 'save_threads_for_plot'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     allocate(iList_I(6*nThread), iPointer_I(6*nThread), iEnd_I(nThread+2))
