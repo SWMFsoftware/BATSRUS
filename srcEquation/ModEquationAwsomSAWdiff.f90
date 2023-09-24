@@ -10,9 +10,10 @@ module ModVarIndexes
        Redefine3 => WaveLast_, &
        Redefine4 => Erad_, &
        Redefine5 => Pe_, &
-       Redefine6 => Ehot_,&
-       Redefine7 => SignB_,&
-       Redefine8 => WDiff_
+       Redefine6 => Ehot_, &
+       Redefine7 => SignB_, &
+       Redefine8 => SaMhd_, &
+       Redefine9 => WDiff_
 
   implicit none
 
@@ -49,7 +50,7 @@ module ModVarIndexes
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
        WDiff_     = WaveLast_ + 1,      &
-       SignB_     = nVar-2,             &
+       SignB_     = nVar-2, SaMhd_ = SignB_, &
        Pe_        = nVar-1,             &
        p_         = nVar,               &
        Energy_    = nVar+1
@@ -83,33 +84,33 @@ module ModVarIndexes
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
        0.0, & ! WDiff_
-       0.0, & ! SignB_ or SaMhd_
+       0.0, & ! SaMhd_
        1.0, & ! Pe_
        1.0, & ! p_
        1.0 ]  ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=4) :: NameVar_V(nVar+1) = [ &
-       'Rho ', & ! Rho_
-       'Mx  ', & ! RhoUx_
-       'My  ', & ! RhoUy_
-       'Mz  ', & ! RhoUz_
-       'Bx  ', & ! Bx_
-       'By  ', & ! By_
-       'Bz  ', & ! Bz_
-       'Ehot', & ! Ehot_
-       ('I?? ', iWave=WaveFirst_,WaveLast_), &
-       'wD  ', & ! WDiff_
-       'Sign', & ! SignB_
-       'Pe  ', & ! Pe_
-       'p   ', & ! p_
-       'e   ' ] ! Energy_
+  character(len=5) :: NameVar_V(nVar+1) = [ &
+       'Rho  ', & ! Rho_
+       'Mx   ', & ! RhoUx_
+       'My   ', & ! RhoUy_
+       'Mz   ', & ! RhoUz_
+       'Bx   ', & ! Bx_
+       'By   ', & ! By_
+       'Bz   ', & ! Bz_
+       'Ehot ', & ! Ehot_
+       ('I??  ', iWave=WaveFirst_,WaveLast_), &
+       'wD   ', & ! WDiff_
+       'BperM', & ! SaMhd_
+       'Pe   ', & ! Pe_
+       'p    ', & ! p_
+       'e    ' ] ! Energy_
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = WDiff_ , ScalarLast_ = SignB_
+  integer, parameter :: ScalarFirst_ = WDiff_ , ScalarLast_ = SaMhd_
 
 end module ModVarIndexes
 !==============================================================================

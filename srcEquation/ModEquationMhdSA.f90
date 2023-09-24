@@ -32,7 +32,7 @@ module ModVarIndexes
        Bx_    = 5,    &
        By_    = 6,    &
        Bz_    = 7,    &
-       SignB_ = 8, SaMhd_ = 8, &
+       SignB_ = 8, SaMhd_ = SignB_, &
        p_     = nVar, &
        Energy_= nVar+1
 
@@ -70,7 +70,7 @@ module ModVarIndexes
        'Bx   ', & ! Bx_
        'By   ', & ! By_
        'Bz   ', & ! Bz_
-       'SaMhd', & ! SaMhd_
+       'BperM', & ! SaMhd_
        'p    ', & ! p_
        'e    '  ] ! Energy_
 
