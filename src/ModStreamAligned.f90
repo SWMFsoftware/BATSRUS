@@ -13,7 +13,7 @@ module ModSaMhd
   ! u and B are parallel everywhere.
   !
   ! Conservation of mass flux along a flux tube implies that
-  ! s = rho*u/B is constant along field lines, where 1/B is proportional
+  ! 1/s = rho*u/B is constant along field lines, where 1/B is proportional
   ! to the cross section of the flux tube. So one can solve for the scalar s
   ! instead of the magnetic field vector, and obtain B as B = s*rho*u
 
@@ -115,11 +115,11 @@ contains
           ! (surface of metal with pronounced skin-effect) the tangential
           ! electric and magnetic field vectors are related with the boundary
           ! condition:
-          ! \delta B_t \propto n x E_t, where E_t = Bn n x U_t - Un n x B_t
+          ! delta B_t ~ n x E_t, where E_t = Bn n x U_t - Un n x B_t
           ! Note: the unit vetor of normal is directed toward the metal, i.e.
           ! from the MHD domain toward the SaMhd domain.
           !
-          ! Hence, \delta B = (-Bn U_t + Un B_t)/Impedance
+          ! Hence, delta B = (-Bn U_t + Un B_t)/Impedance
           ! (-FullBn*Ut_D + Un*FullBt_D)/ &
           ! The estimate for impedance is as follows:
           ! sqrt(max(1.0e-30, Un**2 + FullBn**2/StateLeft_V(Rho_)))
@@ -144,7 +144,7 @@ contains
                GeometricFactor*Ut_D*UDotB/(VA2 + UPar2)
        else
           ! the magnetic field is solved as
-          ! \mathbf{B} = (\rho s)\mathbf{U}
+          ! B = s rho U
           B_D = State_VGB(SaMhd_,i,j,k,iBlock)*       &
                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
                State_VGB(Rho_,i,j,k,iBlock)
@@ -177,8 +177,7 @@ contains
        end if
     end if
     if(R > RMinSaMhd)then
-       ! the magnetic field is solved as
-       ! \mathbf{B} = (\rho s)\mathbf{U}
+       ! the magnetic field is solved as ! B = s rho u
        State_V(Bx_:Bz_) = State_V(SaMhd_)*State_V(Ux_:Uz_)
        if(UseB0)then
           call get_b0(Xyz_D, B0_D)
