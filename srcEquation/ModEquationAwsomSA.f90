@@ -13,7 +13,6 @@ module ModVarIndexes
        Redefine6 => Ehot_,&
        Redefine7 => SignB_, &
        Refefine8 => BperM_
-       
 
   implicit none
 
