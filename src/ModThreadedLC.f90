@@ -12,10 +12,8 @@ module ModThreadedLC
        HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
   use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
-       UseTriangulation, PSi_, TeSi_, TiSi_, AMajor_, AMinor_,           &
-       DoInit_, Done_, Enthalpy_, Heat_, Restart_,                       &
-       jThreadMin=>jMin_, jThreadMax=>jMax_,                             &
-       kThreadMin=>kMin_, kThreadMax=>kMax_
+       PSi_, TeSi_, TiSi_, AMajor_, AMinor_,                             &
+       DoInit_, Done_, Enthalpy_, Heat_, Restart_
   use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
   use ModTurbulence,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
        ImbalanceMax
@@ -1145,7 +1143,6 @@ contains
     use ModMain,       ONLY: nStep, nIteration, tSimulation
     use ModAdvance,      ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nJ, nK
-    use BATL_size, ONLY:  nJ, nK
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, UnitB_, InvGammaElectronMinus1
     use ModVarIndexes,   ONLY: Rho_, p_, Bx_, Bz_, &
@@ -1167,7 +1164,7 @@ contains
     ! before setting the BC
     integer:: iAction
 
-    integer :: i, j, k, iMajor, iMinor, kStart, kEnd, jStart, jEnd
+    integer :: i, j, k, iMajor, iMinor
     real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
     real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: TiSiIn, PiSiOut
@@ -1191,31 +1188,17 @@ contains
     do k = MinK, MaxK; do j = MinJ, maxJ; do i = 1 - nGhost, 0
        State_VG(:, i,j,k) = State_VG(:,1, j, k)
     end do; end do; end do
-    if((.not.DoPlotTHreads).or.UseTriangulation)then
-       ! In this case only the threads originating from
-       ! the physical cells are needed
-       kStart =  1; jStart =  1
-       kEnd   = nK; jEnd   = nJ
-    else
-       ! For graphic we need threads originating from
-       ! both physical cells and from one layer of ghost
-       ! cells in j- and k- direction
-       kStart = kThreadMin
-       kEnd   = kThreadMax
-       jStart = jThreadMin
-       jEnd   = jThreadMax
-    end if
 
     ! Fill in the temperature array
     if(UseIdealEos)then
-       do k = kStart, kEnd; do j = jStart, jEnd
+       do k = 1, nK; do j = 1, nJ
           Te_G(0:1,j,k) = TeFraction*State_VGB(iP,1,j,k,iBlock) &
                /State_VGB(Rho_,1,j,k,iBlock)
        end do; end do
     else
        call stop_mpi('Generic EOS is not applicable with threads')
     end if
-    do k = kStart, kEnd; do j = jStart, jEnd
+    do k = 1, nK; do j = 1, nJ
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))

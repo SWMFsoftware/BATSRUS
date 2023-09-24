@@ -452,11 +452,7 @@ contains
       if(PuiFirst_ > 1) VarsGhostFace_V(PuiFirst_:PuiLast_) = 0.0
 
       if(UseAlfvenWaves)then
-         if(nIonFluid > 1)then
-            Rho = sum(VarsGhostFace_V(iRho_I(IonFirst_:IonLast_)))
-         else
-            Rho = VarsGhostFace_V(Rho_)
-         end if
+         Rho = VarsGhostFace_V(Rho_)
 
          Ewave = Rho*DeltaU**2/(1.0 +  SigmaD)
          if(Bsph_D(1) > 0.0)then
@@ -603,16 +599,11 @@ contains
        if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 0.0
 
        if(UseAlfvenWaves)then
-          if(nIonFluid > 1)then
-             Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
-          else
-             Rho = State_VGB(Rho_,i,j,k,iBlock)
-          end if
-
           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
 
           ! Set Lperp to a large value of 1 AU in ISW
-          if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = Rho
+          if(Lperp_ > 1) &
+               State_VGB(Lperp_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
        end if
     end do; end do; end do
 
@@ -841,13 +832,8 @@ contains
        if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 0.0
 
        if(UseAlfvenWaves)then
-          if(nIonFluid > 1)then
-             Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
-             RhoBody = SwhRho + Pu3Rho
-          else
-             Rho = State_VGB(Rho_,i,j,k,iBlock)
-             RhoBody = SwhRho
-          end if
+          Rho = State_VGB(Rho_,i,j,k,iBlock)
+          RhoBody = SwhRho
 
           Ewave = Rho*DeltaU**2/(1.0 + SigmaD)*sqrt(Rho/RhoBody)
 
@@ -1287,6 +1273,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(SwhEnergy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1337,6 +1324,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Pu3Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1387,6 +1375,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(SwhEnergy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1437,6 +1426,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Pu3Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1518,6 +1508,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS
@@ -1567,6 +1558,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              PlotVar_G = 0.0
@@ -1615,6 +1607,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Energy_)&
                       *No2Io_V(UnitEnergydens_)
                 end select
+                PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
           else
              ! For kinetic, sources in ExtraSource_ICB, or get from FLEKS

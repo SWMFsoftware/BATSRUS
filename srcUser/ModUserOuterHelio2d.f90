@@ -455,8 +455,8 @@ contains
       ! u_theta component ignored
       !   could be included if periodic in Latitude is required
       Vsph_D = [ VarsGhostFace_V(Ux_), 0.0, VarsGhostFace_V(Uy_) ]
-      Bsph_D = [ VarsGhostFace_V(Bx_), -VarsGhostFace_V(Bz_), &
-           VarsGhostFace_V(By_) ]
+      Bsph_D = [ VarsGhostFace_V(Bx_), &
+           -VarsGhostFace_V(Bz_), VarsGhostFace_V(By_) ]
 
       ! Convert to X,Y,Z components
       VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
@@ -769,12 +769,14 @@ contains
     real :: Ux, Uy, Uz, U2
 
     real, dimension(nFluid) :: &
-         Ux_I, Uy_I, Uz_I, U2_I, Temp_I, &
-         UThS_I, URelS_I, URelSdim_I, UStar_I, Sigma_I, Rate_I, &
-         UStarM_I, SigmaN_I, RateN_I, &
-         I0xp_I, I0px_I, I2xp_I, I2px_I, &
-         JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
-         Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
+         Ux_I=0.0, Uy_I=0.0, Uz_I=0.0, U2_I=0.0, Temp_I=0.0, &
+         UThS_I=0.0, URelS_I=0.0, URelSdim_I=0.0, UStar_I=0.0, &
+         Sigma_I=0.0, Rate_I=0.0, UStarM_I=1.0, SigmaN_I=0.0, RateN_I=0.0, &
+         I0xp_I=0.0, I0px_I=0.0, I2xp_I=0.0, I2px_I=0.0, &
+         JxpUx_I=0.0, JxpUy_I=0.0, JxpUz_I=0.0, &
+         JpxUx_I=0.0, JpxUy_I=0.0, JpxUz_I=0.0, &
+         Kxp_I=0.0, Kpx_I=0.0, Qepx_I=0.0, &
+         QmpxUx_I=0.0, QmpxUy_I=0.0, QmpxUz_I=0.0
 
     integer :: i, j, k
 
@@ -815,12 +817,6 @@ contains
        URelS_I(Neu_) = (Ux_I(Neu_) - Ux_I(1))**2 &
             + (Uy_I(Neu_) - Uy_I(1))**2 &
             + (Uz_I(Neu_) - Uz_I(1))**2
-       URelS_I(Ne2_) = (Ux_I(Ne2_) - Ux_I(1))**2 &
-            + (Uy_I(Ne2_) - Uy_I(1))**2 &
-            + (Uz_I(Ne2_) - Uz_I(1))**2
-       URelS_I(Ne3_) = (Ux_I(Ne3_) - Ux_I(1))**2 &
-            + (Uy_I(Ne3_) - Uy_I(1))**2 &
-            + (Uz_I(Ne3_) - Uz_I(1))**2
        URelS_I(Ne4_) = (Ux_I(Ne4_) - Ux_I(1))**2 &
             + (Uy_I(Ne4_) - Uy_I(1))**2 &
             + (Uz_I(Ne4_) - Uz_I(1))**2
@@ -833,18 +829,12 @@ contains
        !  URelSdim_I  = URelS_I * No2Si_V(UnitU_)**2
        URelSdim_I(1)    = 0.0
        URelSdim_I(Neu_) = URelS_I(Neu_) * No2Si_V(UnitU_)**2
-       URelSdim_I(Ne2_) = URelS_I(Ne2_) * No2Si_V(UnitU_)**2
-       URelSdim_I(Ne3_) = URelS_I(Ne3_) * No2Si_V(UnitU_)**2
        URelSdim_I(Ne4_) = URelS_I(Ne4_) * No2Si_V(UnitU_)**2
 
        ! UStar_I has units of m/s
        UStar_I(1)    = 0.0
        UStar_I(Neu_) &
             = sqrt(URelSdim_I(Neu_) + (4/cPi)*(UThS_I(Neu_) +UThS_I(1)))
-       UStar_I(Ne2_) &
-            = sqrt(URelSdim_I(Ne2_) + (4./cPi)*(UThS_I(Ne2_) +UThS_I(1)))
-       UStar_I(Ne3_) &
-            = sqrt(URelSdim_I(Ne3_) + (4./cPi)*(UThS_I(Ne3_) +UThS_I(1)))
        UStar_I(Ne4_) &
             = sqrt(URelSdim_I(Ne4_) + (4./cPi)*(UThS_I(Ne4_) +UThS_I(1)))
 
@@ -854,10 +844,6 @@ contains
        UStarM_I(1)    = 1.0
        UStarM_I(Neu_) = &
             sqrt(URelSdim_I(Neu_) + (64./(9.*cPi))*(UThS_I(Neu_) +UThS_I(1)))
-       UStarM_I(Ne2_) = &
-            sqrt(URelSdim_I(Ne2_) + (64./(9.*cPi))*(UThS_I(Ne2_) +UThS_I(1)))
-       UStarM_I(Ne3_) = &
-            sqrt(URelSdim_I(Ne3_) + (64./(9.*cPi))*(UThS_I(Ne3_) +UThS_I(1)))
        UStarM_I(Ne4_) = &
             sqrt(URelSdim_I(Ne4_) + (64./(9.*cPi))*(UThS_I(Ne4_) +UThS_I(1)))
 
@@ -872,14 +858,6 @@ contains
             ((1.64E-7 - (6.95E-9)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
        SigmaN_I(Neu_) = &
             ((1.64E-7 - (6.95E-9)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
-       Sigma_I(Ne2_)  = &
-            ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
-       SigmaN_I(Ne2_) = &
-            ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne2_)*100.))**2)*(1.E-4)
-       Sigma_I(Ne3_)  = &
-            ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne3_)*100.))**2)*(1.E-4)
-       SigmaN_I(Ne3_) = &
-            ((1.64E-7 - (6.95E-9)*log(UStar_I(Ne3_)*100.))**2)*(1.E-4)
        Sigma_I(Ne4_)  = &
             ((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
        SigmaN_I(Ne4_) = &
@@ -896,12 +874,6 @@ contains
        Rate_I(Neu_) = &
             Sigma_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStarM_I(Neu_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       Rate_I(Ne2_) = &
-            Sigma_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStarM_I(Ne2_) &
-            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       Rate_I(Ne3_) = &
-            Sigma_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStarM_I(Ne3_) &
-            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        Rate_I(Ne4_) = &
             Sigma_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStarM_I(Ne4_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
@@ -909,12 +881,6 @@ contains
        RateN_I(1)    = 0.0
        RateN_I(Neu_) = &
             SigmaN_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStar_I(Neu_) &
-            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       RateN_I(Ne2_) = &
-            SigmaN_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStar_I(Ne2_) &
-            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-       RateN_I(Ne3_) = &
-            SigmaN_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStar_I(Ne3_) &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        RateN_I(Ne4_) = &
             SigmaN_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStar_I(Ne4_) &
@@ -949,8 +915,8 @@ contains
        I2px_I = Rate_I*(UStar_I/UStarM_I)*UThS_I/No2Si_V(UnitU_)**2
        I2xp_I = RateN_I*UThS_I(1)/No2Si_V(UnitU_)**2
        I2px_I = RateN_I*UThS_I/No2Si_V(UnitU_)**2
-       I2xp_I = 0.0 ! Excluding Population 2 -TBK
-       I2xp_I = 0.0
+!       I2xp_I = 0.0 ! Excluding Population 2 -TBK
+!       I2px_I = 0.0
        ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
 
        JxpUx_I  = Ux_I(1)*Rate_I
@@ -967,18 +933,12 @@ contains
        QmpxUz_I(1) = 0.0
 
        QmpxUx_I(Neu_) = (Ux_I(Neu_) - Ux_I(1))*Rate_I(Neu_)
-       QmpxUx_I(Ne2_) = (Ux_I(Ne2_) - Ux_I(1))*Rate_I(Ne2_)
-       QmpxUx_I(Ne3_) = (Ux_I(Ne3_) - Ux_I(1))*Rate_I(Ne3_)
        QmpxUx_I(Ne4_) = (Ux_I(Ne4_) - Ux_I(1))*Rate_I(Ne4_)
 
        QmpxUy_I(Neu_) = (Uy_I(Neu_) - Uy_I(1))*Rate_I(Neu_)
-       QmpxUy_I(Ne2_) = (Uy_I(Ne2_) - Uy_I(1))*Rate_I(Ne2_)
-       QmpxUy_I(Ne3_) = (Uy_I(Ne3_) - Uy_I(1))*Rate_I(Ne3_)
        QmpxUy_I(Ne4_) = (Uy_I(Ne4_) - Uy_I(1))*Rate_I(Ne4_)
 
        QmpxUz_I(Neu_) = (Uz_I(Neu_) - Uz_I(1))*Rate_I(Neu_)
-       QmpxUz_I(Ne2_) = (Uz_I(Ne2_) - Uz_I(1))*Rate_I(Ne2_)
-       QmpxUz_I(Ne3_) = (Uz_I(Ne3_) - Uz_I(1))*Rate_I(Ne3_)
        QmpxUz_I(Ne4_) = (Uz_I(Ne4_) - Uz_I(1))*Rate_I(Ne4_)
 
        ! For SW or Ion
@@ -1257,9 +1217,11 @@ contains
     if(DoTest)write(*,*) NameSub,': coordinate system ', &
          TypeGeometry
 
-    if(TypeGeometry == "spherical_lnr")then
+    if(TypeGeometry == "spherical_lnr" .or. &
+       TypeGeometry == "spherical")then
        call user_update_states_sph(iBlock)
-    else if(TypeGeometry == "cylindrical_lnr")then
+    else if(TypeGeometry == "cylindrical_lnr" .or. &
+       TypeGeometry == "cylindrical")then
        call user_update_states_cyl(iBlock)
     else
        write(*,*) NameSub,': user_update_states not implemented for ', &
@@ -1293,8 +1255,10 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(DoTest)write(*,*)' Initial value: ', &
+    if(DoTest)then
+       write(*,*)NameSub,': State_VGB(iVar) initial value: ', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+    end if
 
     DtFactor = (Cfl*iStage)/nStage
 
@@ -1310,16 +1274,23 @@ contains
        rFace_I = exp(rFace_I)
     end if
 
+    if(DoTest)write(*,*)NameSub,': Source_VC(iVar) before normal update: ',&
+         Source_VC(iVarTest,iTest,jTest,kTest)
+
     ! Perform normal update.
     call update_state_normal(iBlock)
 
-    if(DoTest)write(*,*)' After normal update:', &
+    if(DoTest)write(*,*)NameSub,': Source_VC(iVar) after normal update: ',&
+         Source_VC(iVarTest,iTest,jTest,kTest)
+
+    if(DoTest)write(*,*)NameSub,': State_VGB(iVar) after normal update: ',&
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
     if(DoConserveNeutrals)then
        call pressure_to_energy(iBlock, State_VGB)
        call pressure_to_energy(iBlock, StateOld_VGB)
-       if(DoTest)write(*,*)' After pressure to energy:', &
+       if(DoTest)write(*,*)NameSub, &
+            ': State_VGB(iVar) after pressure_to_energy:', &
             State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
     endif
 
@@ -1346,7 +1317,8 @@ contains
 
              if(DoTest .and. iVar == iVarTest .and. i == iTest .and. &
                   j == jTest .and. k == kTest) &
-                  write(*,*)' Before flux subtraction: ', &
+                  write(*,*)NameSub, &
+                  ': State_VGB(iVar) before flux subtraction: ', &
                   State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
              ! Remove flux added by update_state_normal
@@ -1359,7 +1331,8 @@ contains
 
              if(DoTest .and. iVar == iVarTest .and. i == iTest .and. &
                   j == jTest .and. k == kTest) &
-                  write(*,*)' After flux subtraction: ', &
+                  write(*,*)NameSub, &
+                  ': State_VGB(iVar) after flux subtraction: ', &
                   State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
              ! No Z flux for Pop I and Pop IV (horizontal flow)
@@ -1370,8 +1343,8 @@ contains
                   + Flux_VYI(iVarFlux,i,j,k,1) - Flux_VYI(iVarFlux,i,j+1,k,1) )
 
              if(DoTest .and. iVar == iVarTest .and. i == iTest .and. &
-                  j == jTest .and. k == kTest)write(*,*)' Flux Update: ', &
-                  UpdateFlux
+                  j == jTest .and. k == kTest)write(*,*)NameSub, &
+                  ': Flux Update: ', UpdateFlux
 
              ! Add updated flux back to state.
              State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock) + &
@@ -1379,7 +1352,8 @@ contains
 
              if(DoTest .and. iVar == iVarTest .and. i == iTest .and. &
                   j == jTest .and. k == kTest) &
-                  write(*,*)' After flux addition: ', &
+                  write(*,*)NameSub, &
+                  ': State_VGB(iVar) after flux addition: ', &
                   State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
           end if
@@ -1396,7 +1370,7 @@ contains
        call energy_to_pressure(iBlock, StateOld_VGB)
     endif
 
-    if(DoTest)write(*,*)' Final value: ', &
+    if(DoTest)write(*,*)NameSub,': State_VGB(iVar) after correction: ', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
     call test_stop(NameSub, DoTest)
@@ -1416,6 +1390,8 @@ contains
 
     integer,intent(in):: iBlock
     integer:: i, j, k, iVar, iVarFlux, iFluid
+    real:: RhoInv, r2Inv
+    real:: Xy_D(2)
     real:: DtFactor, DtLocal, InvVolume
     real:: rCell_I(nI), rFace_I(nI+1), FactorL, FactorR
     real:: UpdateFlux
@@ -1425,10 +1401,80 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(DoTest)write(*,*)' Initial value: ', &
-         State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+    if(DoTest)then
+       write(*,*)NameSub,': State_VGB(iVar) initial value: ', &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+    end if
 
     DtFactor = (Cfl*iStage)/nStage
+
+    if(DoTest)write(*,*)NameSub, &
+         ': Source_VC(iVar) before geometric correction: ', &
+         Source_VC(iVarTest,iTest,jTest,kTest)
+
+    ! Account for geometric differences between spherical (ion)
+    ! grid and cylindrical (neutrals) grid.
+    do k = 1,nK; do j = 1,nJ; do i = 1,nI
+
+       ! The following geometrical source terms are added for the MHD equations
+       ! Source[mr]  =(p+B^2/2-Bphi**2+mphi**2/rho)/radius
+       ! Source[mphi]=(-mphi*mr/rho+Bphi*Br)/radius(if no angular momentum fix)
+       ! Source[Bphi]=((Bphi*mr-Br*mphi)/rho)/radius
+       ! These terms are converted to [x,y,z] for simplicity.
+
+       RhoInv = 1/State_VGB(Rho_,i,j,k,iBlock)
+       r2Inv = 1/r_GB(i,j,k,iBlock)**2
+       Xy_D = Xyz_DGB(1:2,i,j,k,iBlock)
+
+       ! Source[mr] = (p+mphi**2/rho)/radius
+       ! Source[mx] = x/r * (p+mphi**2/rho)/r
+       ! Source[my] = y/r * (p+mphi**2/rho)/r
+       Source_VC(RhoUx_:RhoUy_,i,j,k) = Source_VC(RhoUx_:RhoUy_,i,j,k) &
+            + (State_VGB(P_,i,j,k,iBlock) &
+            + RhoInv*State_VGB(RhoUz_,i,j,k,iBlock)**2)*Xy_D*r2Inv
+
+       ! Source[mphi] = (-mphi*mr/rho)/radius
+       ! Source[mz] = (-mphi*(x*mx+y*my)/radius/rho)/radius
+       Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
+            - State_VGB(RhoUz_,i,j,k,iBlock) &
+            * sum(Xy_D * State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock))*RhoInv*r2Inv
+
+       ! Source[mr] = (B^2/2-Bphi**2)/radius
+       ! Source[mx] = x/r * (B^2/2-Bphi**2)/radius
+       ! Source[my] = y/r * (B^2/2-Bphi**2)/radius
+       Source_VC(RhoUx_:RhoUy_,i,j,k) = Source_VC(RhoUx_:RhoUy_,i,j,k) + &
+            (0.5 * sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) &
+            - State_VGB(Bz_,i,j,k,iBlock)**2) * Xy_D * r2Inv
+
+       ! Source[mphi]=Bphi*Br/radius
+       ! Source[mz]=Bz*sqrt(Bx**2+By**2)/radius
+       Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
+            + State_VGB(Bz_,i,j,k,iBlock) &
+            * sum(Xy_D*State_VGB(Bx_:By_,i,j,k,iBlock))*r2Inv
+
+       ! Source[Bphi]=((Bphi*mr-Br*mphi)/rho)/radius
+       ! Source[Bz]=((Bz*(x*mx+y*my)/r - (x*Bx+y*By)*mz/r)/rho)/radius
+       Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
+            + (State_VGB(Bz_,i,j,k,iBlock) &
+            * sum(Xy_D*State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock)) &
+            - sum(Xy_D*State_VGB(Bx_:By_,i,j,k,iBlock)) &
+            * State_VGB(RhoUz_,i,j,k,iBlock)) &
+            * RhoInv * r2Inv
+
+    end do; end do; end do ! i,j,k
+
+    if(DoTest)write(*,*)NameSub,': Source_VC(iVar) after flux correction: ',&
+         Source_VC(iVarTest,iTest,jTest,kTest)
+
+    ! Perform normal update.
+    call update_state_normal(iBlock)
+
+    if(DoTest)then
+       write(*,*)NameSub,': Source_VC(iVar) after normal update: ',&
+         Source_VC(iVarTest,iTest,jTest,kTest)
+       write(*,*)NameSub,': State_VGB(iVar) after normal update: ', &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+    end if
 
     ! Precalculate radial distances of cell centers and faces.
     do i = 1, nI
@@ -1442,13 +1488,48 @@ contains
        rFace_I = exp(rFace_I)
     end if
 
-    ! Perform normal update.
-    call update_state_normal(iBlock)
+    ! Account for geometric differences between spherical (ion)
+    ! grid and cylindrical (neutrals) grid.
+    do k = 1,nK; do j = 1,nJ; do i = 1,nI
+       DtLocal = DtFactor*DtMax_CB(i,j,k,iBlock)
+       InvVolume = 1/CellVolume_GB(i,j,k,iBlock)
 
-    if(DoTest)write(*,*)' After normal update:', &
-         State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+       ! Ratios of face area to cell volumes at r1, r2 of cell
+       FactorL = rFace_I(i)/rCell_I(i)
+       FactorR = rFace_I(i+1)/rCell_I(i)
 
-    if(DoTest)write(*,*)' Final value: ', &
+       ! Correct fluxes for ion population.
+       do iVar = Rho_, P_
+          ! Change from pressure var to energy var, if necessary.
+          iVarFlux = iVar
+
+          ! Remove flux added by update_state_normal
+          State_VGB(iVar,i,j,k,iBlock) = &
+               State_VGB(iVar,i,j,k,iBlock) - &
+               DtLocal * InvVolume * &
+               ( Flux_VXI(iVarFlux,i,j,k,1) - Flux_VXI(iVarFlux,i+1,j,k,1) &
+               + Flux_VYI(iVarFlux,i,j,k,1) - Flux_VYI(iVarFlux,i,j+1,k,1) &
+               + Flux_VZI(iVarFlux,i,j,k,1) - Flux_VZI(iVarFlux,i,j,k+1,1))
+
+          ! Z flux is accounted for by the source terms above.
+          ! The X flux is modified to compensate for the latitude width
+          ! The Y flux actually stays the same.
+          UpdateFlux = DtLocal * InvVolume * &
+               ( FactorL*Flux_VXI(iVarFlux,i,j,k,1) &
+               - FactorR*Flux_VXI(iVarFlux,i+1,j,k,1) &
+               + Flux_VYI(iVarFlux,i,j,k,1) - Flux_VYI(iVarFlux,i,j+1,k,1) )
+
+          ! Add updated flux back to state.
+          State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock) + &
+               UpdateFlux
+       end do
+    end do; end do; end do
+
+    ! Set Ne2 and Ne3 back to previous state.
+    State_VGB(Ne2Rho_:Ne3P_,:,:,:,iBlock) = &
+         StateOld_VGB(Ne2Rho_:Ne3P_,:,:,:,iBlock)
+
+    if(DoTest)write(*,*)NameSub,': State_VGB(iVar) after face correction', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
     call test_stop(NameSub, DoTest)

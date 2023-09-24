@@ -1277,6 +1277,8 @@ contains
     do iVar = ScalarFirst_, ScalarLast_
        Flux_V(iVar) = Un_I(1)*State_V(iVar)
     end do
+    ! Overwrite Lperp_ for multi-ion
+    if(Lperp_ > 1 .and.UseMultiIon) Flux_V(Lperp_) = HallUn*State_V(Lperp_)
 
     ! Set flux for electron pressure
     if(UseElectronPressure)then
@@ -1300,13 +1302,23 @@ contains
           ! is calculated
           AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
 
-          do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
-             Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
-          end do
+          if(UseMultiIon)then
+             do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
+                Flux_V(iVar) = (HallUn + AlfvenSpeed)*State_V(iVar)
+             end do
 
-          do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
-             Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
-          end do
+             do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
+                Flux_V(iVar) = (HallUn - AlfvenSpeed)*State_V(iVar)
+             end do
+          else
+             do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
+                Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
+             end do
+
+             do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
+                Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
+             end do
+          end if
        else
           do iVar = AlfvenPlusFirst_, AlfvenMinusLast_
              Flux_V(iVar) = Un_I(IonFirst_)*State_V(iVar)
@@ -1792,7 +1804,7 @@ contains
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
-         Flux_V(Energy_)= Flux_V(Energy_) &
+         if(IsMhd) Flux_V(Energy_)= Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
          ! Don't we need Flux_V(PePar_)?
          if(DoTestCell)then
@@ -1816,7 +1828,7 @@ contains
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
-         Flux_V(Energy_)= Flux_V(Energy_) &
+         if(IsMhd) Flux_V(Energy_)= Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
       end if
 
@@ -1824,6 +1836,7 @@ contains
            FullBx, FullBy, FullBz, FullBn, HallUn)
 
       if(.not.IsMhd)RETURN
+
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
       if(UseJCrossBForce)Flux_V(RhoUx_:RhoUz_) = &
            Flux_V(RhoUx_:RhoUz_) + MagneticForce_D

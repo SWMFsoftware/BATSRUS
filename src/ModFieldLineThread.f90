@@ -9,7 +9,7 @@ module ModFieldLineThread
 #endif
   use BATL_lib,      ONLY: &
        test_start, test_stop, jTest, kTest, iBlockTest, &
-       iProc, nProc, iComm, nJ, nK, jDim_, kDim_, MaxBlock
+       iProc, nProc, iComm, nJ, nK, jDim_, kDim_, MaxBlock, CoordMin_D, r_
   use ModAdvance,    ONLY: UseElectronPressure
   use ModMain,       ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,         ONLY: get_b0
@@ -22,8 +22,8 @@ module ModFieldLineThread
   SAVE
 
   PRIVATE ! Except
-  integer, public, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
-  integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
+  integer, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
+  integer, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
 
   ! rBody here is set to one keeping a capability to set
   ! the face-formulated boundary condition by modifying
@@ -31,7 +31,6 @@ module ModFieldLineThread
   real, public, parameter :: rBody = 1.0
 
   logical, public, allocatable:: IsAllocatedThread_B(:)
-  ! Named indexes for local use only
 
   ! In the boundary blocks the physical cells near the boundary are connected
   ! to the photosphere with these threads
@@ -74,7 +73,10 @@ module ModFieldLineThread
      ! The type of last update for the thread solution
      integer :: iAction
 
-     !  Thread solution: temperature and pressure SI and amplitudes of waves
+     !  Thread solution: temperatures and pressure SI and amplitudes of waves
+     !  First index - enumerates state variable
+     !  Second index - number of point along a thread
+     !  Third and Fourth - enumerate j and k index of threads in the block
      real, pointer :: State_VIII(:,:,:,:)
 
      ! number of points
@@ -82,14 +84,11 @@ module ModFieldLineThread
      ! Distance between the true and ghost cell centers.
      real, pointer :: DeltaR_II(:,:)
      real, pointer :: SignB_II(:,:)
-     ! For visualization:
-     !\ Index of the last cell in radial direction
-     integer :: iMin
-     ! Inverse mesh size for the grid covering threaded gap
-     real    :: dCoord1Inv
-     !\ PSi, TeSi amd TiSi for iMin:iMax,0:nJ+1,0:nK+1 as the first step
+     ! PSi, TeSi amd TiSi stored at gird iMin:iMax,0:nJ+1,0:nK+1
      real, pointer :: State_VG(:,:,:,:)
   end type BoundaryThreads
+  ! For visualization:
+
   ! Conponenets of array stored at each thread for visualization
   integer, public, parameter :: PSi_=1, A2Major_ = 2, AMajor_ = 2, &
        A2Minor_ = 3 , AMinor_ = 3, TeSi_=4, TiSi_ = TeSi_ + min(1, Pe_-1)
@@ -100,8 +99,6 @@ module ModFieldLineThread
   ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
   real, public    :: TeFraction, TiFraction, PeFraction
   integer, public :: iP
-
-  !
   ! CoefXi/sqrt(VAlfven[NoDim]) is dXi/ds[NoDim]
   ! While setting thread,  we use only the
   ! thread-dependent factor in DXi, namely,
@@ -120,8 +117,6 @@ module ModFieldLineThread
 
   logical, public :: DoPlotThreads = .true.
 
-  logical, public :: UseTriangulation = .true.
-
   ! Interolate with planar vs spherical triangles
   logical         :: UsePlanarTriangles = .false.
 
@@ -134,21 +129,8 @@ module ModFieldLineThread
   ! Number of GhostCells in a uniform grid covering a threaded gap
   integer :: nGUniform = 10
 
-  ! The following logical is .true., if nUniform >=1
-  logical, public :: IsUniformGrid = .true.
-
-  ! Resolution along radial direction, if the grid is uniform
-  real,    public :: dCoord1Uniform  = -1.0
-  real,    public :: Coord1TopThread = -1.0
-
-  ! The cell-centered grid starts at i=1, if nUniform <=0 (no uniform grid)
-  ! The uniform grid starts at i=0, if nUniform>=1.
-  integer :: iMax = 0
-
-  ! For the cell-centered grid,  the normalized radial gen coordinate
-  ! equals -0.5 for i=0.
-  ! The uniform grid starts at normalized coordinate equal to 0 at i=0.
-  real   :: Coord1Norm0 = 0.0
+  ! Inverse mesh size for the grid covering threaded gap
+  real, public :: dCoord1Inv = -1.0
 
   ! Public members
   public :: BoundaryThreads
@@ -198,10 +180,22 @@ contains
 
     use ModTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB
+    use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz
     integer :: iBlock ! Loop variable
+    real :: CoordChromo_D(MaxDim), Xyz_D(MaxDim)
     !--------------------------------------------------------------------------
     if(IsInitialized)RETURN
     IsInitialized = .true.
+    if(DoPlotThreads)then
+       ! Gen coords for the low corona boundary
+       call coord_to_xyz(CoordMin_D, Xyz_D)
+       ! Projection onto the photosphere level
+       Xyz_D = Xyz_D/norm2(Xyz_D)*rBody
+       ! Generalized coords of the latter.
+       call xyz_to_coord(Xyz_D, CoordChromo_D)
+       ! Inverse of the  mesh of the gap-covering grid uniform in gen coords
+       dCoord1Inv = nGUniform/(CoordMin_D(r_)  - CoordChromo_D(r_))
+    end if
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then
        ! Pe = ne*Te (dimensionless) and n=rho/ionmass
@@ -283,36 +277,22 @@ contains
        call read_var('DoPlotThreads', DoPlotThreads)
        if(.not.DoPlotThreads)RETURN
        call read_var('nGUniform', nGUniform)
-       if(nGUniform > 0)then
-          ! Use uniform grid
-          IsUniformGrid = .true.
-          iMax = 0
-          Coord1Norm0 = 0.0
-          call read_var('UseTriangulation', UseTriangulation)
-
-          ! If the non-uniform grid is used extending the existing block
-          ! adaptive grid, the grid normally does not even reach the
-          ! chromosphere height, so that the contribution from the TR is
-          ! not worth while quantifying. With the uniform grid, this
-          ! option is available.
-          call read_var('UseTRCorrection', UseTRCorrection)
-
-          ! When the triangulation is done, interpolation may be done with
-          ! two ways to find the interpolation weights: via the areas of
-          ! spherical triangles, or via areas of planar triangles on a plane
-          ! latter is the "original" passing through three nodes of the
-          ! interpolation stencil (the interpolation mechanism by Renka, who
-          ! proved its good theretical properties, such as continuity of
-          ! the interpolated valiable across the boundary of interpolation
-          ! stencil). The "original" algorithm is applied if the following
-          ! logical is set to .true.
-          call read_var('UsePlanarTriangles', UsePlanarTriangles)
-
-       else
-          IsUniformGrid = .false.
-          iMax = 1
-          Coord1Norm0 = -0.50
-       end if
+       ! If the non-uniform grid is used extending the existing block
+       ! adaptive grid, the grid normally does not even reach the
+       ! chromosphere height, so that the contribution from the TR is
+       ! not worth while quantifying. With the uniform grid, this
+       ! option is available.
+       call read_var('UseTRCorrection', UseTRCorrection)
+       ! When the triangulation is done, interpolation may be done with
+       ! two ways to find the interpolation weights: via the areas of
+       ! spherical triangles, or via areas of planar triangles on a plane
+       ! latter is the "original" passing through three nodes of the
+       ! interpolation stencil (the interpolation mechanism by Renka, who
+       ! proved its good theretical properties, such as continuity of
+       ! the interpolated valiable across the boundary of interpolation
+       ! stencil). The "original" algorithm is applied if the following
+       ! logical is set to .true.
+       call read_var('UsePlanarTriangles', UsePlanarTriangles)
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
@@ -342,8 +322,6 @@ contains
     nullify(BoundaryThreads_B(iBlock)%SignB_II)
     nullify(BoundaryThreads_B(iBlock)%State_VG)
     BoundaryThreads_B(iBlock)%iAction    = Done_
-    BoundaryThreads_B(iBlock)%iMin       = 0
-    BoundaryThreads_B(iBlock)%DCoord1Inv = 0.0
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine nullify_thread_b
@@ -399,6 +377,7 @@ contains
                call deallocate_thread_b(iBlock)
           CYCLE
        end if
+       ! If not DoThreads_B CYCLE
        if(.not.DoThreads_B(iBlock))then
           if(IsAllocatedThread_B(iBlock).and.&
                DiLevel_EB(1,iBlock)/=Unset_)&
@@ -416,63 +395,61 @@ contains
        ! Allocate threads if needed
        if(.not.IsAllocatedThread_B(iBlock))then
           allocate(BoundaryThreads_B(iBlock)%LengthSi_III(&
-               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+               -nPointThreadMax:0,1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%LengthSi_III = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%BDsFaceInvSi_III(&
-               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+               -nPointThreadMax:0,1:nJ, 1:nK))
           BoundaryThreads_B(iBlock)%BDsFaceInvSi_III = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%DsCellOverBSi_III(&
-               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+               -nPointThreadMax:0,1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%DsCellOverBSi_III = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%TMax_II(&
-               jMin_:jMax_, kMin_:kMax_))
+               1:nJ, 1:nK))
           BoundaryThreads_B(iBlock)%TMax_II = &
                1.0e8*Si2No_V(UnitTemperature_)
 
           allocate(BoundaryThreads_B(iBlock)%Xi_III(&
-               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+               -nPointThreadMax:0,1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%Xi_III = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%B_III(&
-               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+               -nPointThreadMax:0,1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%B_III = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%RInv_III(&
-               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+               -nPointThreadMax:0,1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%RInv_III = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%Coord_DIII(3,&
-               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+               -nPointThreadMax:0,1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%Coord_DIII = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%TGrav_III(&
-               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+               -nPointThreadMax:0,1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%TGrav_III = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%State_VIII(PSi_:TiSi_,&
-               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+               -nPointThreadMax:0,1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%State_VIII(TeSi_:TiSi_,:,:,:) = -1
           BoundaryThreads_B(iBlock)%State_VIII(PSi_:A2Minor_,:,:,:) = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%nPoint_II(&
-               jMin_:jMax_, kMin_:kMax_))
+               1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%nPoint_II = -1
 
           allocate(BoundaryThreads_B(iBlock)%DeltaR_II(&
-               jMin_:jMax_, kMin_:kMax_))
+               1:nJ,1:nK))
           BoundaryThreads_B(iBlock)%DeltaR_II = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%SignB_II(&
-               jMin_:jMax_, kMin_:kMax_))
+               1:nJ, 1:nK))
           BoundaryThreads_B(iBlock)%SignB_II = 0.0
 
-          call set_gc_grid(iBlock, BoundaryThreads_B(iBlock)%iMin,&
-               BoundaryThreads_B(iBlock)%dCoord1Inv)
           allocate(BoundaryThreads_B(iBlock)%State_VG(&
-               PSi_:TiSi_, BoundaryThreads_B(iBlock)%iMin:1,&
+               PSi_:TiSi_, -nGUniform:1,&
                jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock)%State_VG = 0.0
 
@@ -482,7 +459,7 @@ contains
        ! on updating B_0 field
        call set_threads_b(iBlock)
        nBlockSet = nBlockSet + 1
-       do k = kMin_, kMax_; do j = jMin_, jMax_
+       do k = 1, nK; do j = 1, nJ
           nPointMin = min(nPointMin, BoundaryThreads_B(iBlock)%nPoint_II(j,k))
        end do; end do
     end do
@@ -505,48 +482,10 @@ contains
        write(*,*)'Set threads in ',nBlockSetAll,' blocks on iteration ', &
             nStep, ' is called from '//NameCaller
        write(*,*)'nPointMin = ',nPointMinAll
-       if(IsUniformGrid)then
-          write(*,*)'dCoord1Uniform =', dCoord1Uniform
-       end if
+       write(*,*)'dCoord1Uniform =', 1/dCoord1Inv
        if(nProc<=4)write(*,*)'Number of threads on different PEs: ', nThread_P
     end if
     call test_stop(NameSub, DoTest)
-
-  contains
-    !==========================================================================
-    subroutine set_gc_grid(iBlock, iMin, dCoord1Inv)
-
-      use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz, &
-           CoordMin_DB, CellSize_DB, r_
-      integer, intent(in) :: iBlock
-      integer, intent(out):: iMin
-      real,    intent(out):: dCoord1Inv
-      real :: Coord_D(MaxDim), Xyz_D(MaxDim)
-      !------------------------------------------------------------------------
-      ! Gen coords for the low block corner
-      call coord_to_xyz(CoordMin_DB(:, iBlock), Xyz_D)
-      ! Projection onto the photosphere level
-      Xyz_D = Xyz_D/norm2(Xyz_D)*rBody
-      ! Generalized coords of the latter.
-      call xyz_to_coord(Xyz_D, Coord_D)
-      ! Minimal index of the ghost cells, in radial direction
-      ! (equals 0 if there is only 1 ghost cell)
-      if(nGUniform > 0)then
-         iMin = -nGUniform
-         if(dCoord1Uniform < 0.0)then
-            dCoord1Uniform = (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
-                 nGUniform
-            Coord1TopThread = CoordMin_DB(r_, iBlock)
-         end if
-         dCoord1Inv = 1.0/dCoord1Uniform
-      else
-         iMin = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
-              CellSize_DB(r_, iBlock) )
-         dCoord1Inv = 1.0/CellSize_DB(r_, iBlock)
-      end if
-
-    end subroutine set_gc_grid
-    !==========================================================================
   end subroutine set_threads
   !============================================================================
   subroutine set_threads_b(iBlock)
@@ -603,7 +542,7 @@ contains
     BoundaryThreads_B(iBlock)%DeltaR_II = 1.0
 
     ! Loop over the thread starting points
-    do k = kMin_, kMax_; do j = jMin_, jMax_
+    do k = 1, nK; do j = 1, nJ
        ! First, take magnetic field in the ghost cell
        ! Starting points for all threads are in the centers
        ! of  physical cells near the boundary
@@ -628,7 +567,7 @@ contains
        BoundaryThreads_B(iBlock)%Coord_DIII(:,0, j, k) = Coord_D
 
        Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
-       COARSEN: do nTrial=1,nCoarseMax ! Ds is increased to 0.002 or 0.016
+       COARSEN: do nTrial=1,nCoarseMax
           ! Set initial Ds or increase Ds, if previous trial fails
           Ds = Ds * 2
           iPoint = 0
@@ -973,7 +912,7 @@ contains
     call get_restart_file_name(iBlock, NameThisComp//'/restartIN/')
     call open_file(file=NameRestartFile, status='old', &
          form='UNFORMATTED', NameCaller=NameSub)
-    do k = kMin_,kMax_; do j = jMin_, jMax_
+    do k = 1, nK; do j = 1, nJ
        read(UnitTmp_, iostat = iError)RealNPoint
        if(iError>0)then
           write(*,*)'Error in reading nPoint in Block=', iBlock
@@ -999,69 +938,6 @@ contains
 
   end subroutine read_thread_restart
   !============================================================================
-  subroutine save_threads_for_plot
-
-    ! For each block near the inner boundary save the density and temperature
-    ! in the ghost grid extended toward the photosphere level
-
-    use BATL_lib, ONLY: nBlock, Unused_B, &
-         CoordMin_DB, CellSize_DB, r_
-    use ModInterpolate, ONLY: linear
-    integer :: i, j, k, iBlock, nPoint
-    real    :: State_VI(PSi_:TiSi_, 1-nPointThreadMax:0), Coord1
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'save_threads_for_plot'
-    !--------------------------------------------------------------------------
-    if(UseTriangulation)then
-       call triangulate_thread_for_plot
-       RETURN
-    end if
-    call test_start(NameSub, DoTest)
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock))CYCLE
-       if(.not.IsAllocatedThread_B(iBlock))CYCLE
-       do k = kMin_, kMax_; do j = jMin_, jMax_
-          nPoint = BoundaryThreads_B(iBlock)%nPoint_II(j,k)
-          ! Fill in an array with NeSi and TeSi values
-          State_VI(PSi_, 1 - nPoint:0) = &
-               BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)
-          !  Use geometric average of the face value for
-          !  the wave amplitude to get the cell-centered aplitude squared
-          State_VI(A2Major_, 1 - nPoint:0) = &
-               BoundaryThreads_B(iBlock)%State_VIII(A2Major_,1-nPoint:0,j,k) *&
-               BoundaryThreads_B(iBlock)%State_VIII(A2Major_,-nPoint:-1,j,k)
-          State_VI(A2Minor_, 1 - nPoint:0) = &
-               BoundaryThreads_B(iBlock)%State_VIII(A2Minor_,1-nPoint:0,j,k) *&
-               BoundaryThreads_B(iBlock)%State_VIII(A2Minor_,-nPoint:-1,j,k)
-          State_VI(TeSi_, 1 - nPoint:0) = &
-               BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k)
-          if(UseElectronPressure)then
-             State_VI(TiSi_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k)
-          end if
-
-          do i = BoundaryThreads_B(iBlock)%iMin, iMax
-             ! Generalized radial coordinate of the grid point
-             Coord1 = CoordMin_DB(r_, iBlock) + &
-                  (real(i) + Coord1Norm0)/&
-                  BoundaryThreads_B(iBlock)%dCoord1Inv
-             ! interpolate Te and Ne to the ghost cell center:
-             BoundaryThreads_B(iBlock)%State_VG(:, i, j, k)  = &
-                  linear(&
-                  a_VI = State_VI(:, 1 - nPoint:0),            &
-                  nVar = TiSi_,                                &
-                  iMin = 1 - nPoint,                           &
-                  iMax = 0,                                    &
-                  x = Coord1,                                  &
-                  x_I = BoundaryThreads_B(iBlock)%Coord_DIII(r_,&
-                  1 - nPoint:0, j, k),                         &
-                  DoExtrapolate = .false.)
-          end do
-       end do; end do
-    end do
-
-  end subroutine save_threads_for_plot
-  !============================================================================
   subroutine interpolate_thread_state(Coord_D, iBlock, State_V)
 
     use ModAdvance,     ONLY: nVar
@@ -1085,33 +961,31 @@ contains
          (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock)) &
          /CellSize_DB(r_+1:,iBlock)
 
-    if(IsUniformGrid.and.(Coord_D(r_) > CoordMin_DB(r_,iBlock)))then
+    if(Coord_D(r_) > CoordMin_DB(r_,iBlock))then
        ! The point is in between the uniform grid and the first layer pf
        ! physical cells, the width of this gap being the half cell size
        CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*2/&
             CellSize_DB(r_,iBlock)
        ! Interpolate the state on threads to the given location
        StateThread_V = interpolate_vector(                        &
-            a_VC=BoundaryThreads_B(iBlock)%State_VG(:,iMax:1,:,:),&
+            a_VC=BoundaryThreads_B(iBlock)%State_VG(:,0:1,:,:),&
             nVar=TiSi_,                                           &
             nDim=3,                                               &
-            Min_D=[iMax, jMin_, kMin_],                           &
+            Min_D=[0, jMin_, kMin_],                              &
             Max_D=[1, jMax_, kMax_],                              &
             x_D=CoordNorm_D,                                      &
             DoExtrapolate=.false.                                 )
     else
-       ! Along radial coordinate the resolution and location of the grid
-       ! may be different for uniform or non-uniform grid
        CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*&
-            BoundaryThreads_B(iBlock)%dCoord1Inv - Coord1Norm0
+            dCoord1Inv
        ! Interpolate the state on threads to the given location
        StateThread_V = interpolate_vector(                        &
             a_VC=BoundaryThreads_B(iBlock)%State_VG(:,            &
-            BoundaryThreads_B(iBlock)%iMin:iMax,:,:),             &
+            -nGUniform:0,:,:),                                    &
             nVar=TiSi_,                                           &
             nDim=3,                                               &
-            Min_D=[BoundaryThreads_B(iBlock)%iMin, jMin_, kMin_], &
-            Max_D=[iMax, jMax_, kMax_],                           &
+            Min_D=[-nGUniform, jMin_, kMin_],                     &
+            Max_D=[0, jMax_, kMax_],                              &
             x_D=CoordNorm_D,                                      &
             DoExtrapolate=.false.                                 )
     end if
@@ -1505,7 +1379,7 @@ contains
        call get_restart_file_name(iBlock, NameThisComp//'/restartOUT/')
        call open_file(file=NameRestartFile, form='UNFORMATTED',&
             NameCaller=NameSub)
-       do k = kMin_,kMax_; do j = jMin_, jMax_
+       do k = 1, nK; do j = 1, nJ
           nPoint = BoundaryThreads_B(iBlock)%nPoint_II(j,k)
           write(UnitTmp_)real(nPoint)
           write(UnitTmp_)&
@@ -1634,7 +1508,7 @@ contains
 
   end subroutine get_thread_point
   !============================================================================
-  subroutine triangulate_thread_for_plot
+  subroutine save_threads_for_plot
 
     use BATL_lib,               ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, x_, y_, z_, Xyz_DGB
@@ -1669,17 +1543,15 @@ contains
     real, parameter :: North_D(3)   = [0.0, 0.0, +1.0]
     real, parameter :: South_D(3)   = [0.0, 0.0, -1.0]
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'triangulate_thread_for_plot'
+    character(len=*), parameter:: NameSub = 'save_threads_for_plot'
     !--------------------------------------------------------------------------
-    if(.not.IsUniformGrid)call stop_mpi(&
-         'Triangulation does dot work for non-uniform grid in threaded gap')
     call test_start(NameSub, DoTest)
     allocate(iList_I(6*nThread), iPointer_I(6*nThread), iEnd_I(nThread+2))
     do i = -nGUniform, 0
 
        ! Generalized radial coordinate of the grid points
        ! Coord1TopThread is the SC low boundary
-       Coord1 = Coord1TopThread + real(i)*dCoord1Uniform
+       Coord1 = CoordMin_D(r_) + real(i)/dCoord1Inv
 
        call get_thread_point(Coord1, State_VI(:,2:nThread+1))
        ! Convert lon and lat to Cartesian coordinates on a unit sphere
@@ -1776,7 +1648,7 @@ contains
     end do
     call test_stop(NameSub, DoTest)
 
-  end subroutine triangulate_thread_for_plot
+  end subroutine save_threads_for_plot
   !============================================================================
   subroutine get_tr_los_image(Xyz_D, DirLos_D, iBlock, nPlotVar, &
        NamePlotVar_V, iTableEuv, iTableSxr, iTableGen, PixIntensity_V)
@@ -1886,8 +1758,7 @@ contains
 
       ! Interpolate the state on threads to the given location
       StateThread_V = interpolate_vector(                                 &
-           a_VC=BoundaryThreads_B(iBlock)%State_VG(:,                     &
-           BoundaryThreads_B(iBlock)%iMin,:,:),                           &
+           a_VC=BoundaryThreads_B(iBlock)%State_VG(:,-nGUniform,:,:),     &
            nVar=TiSi_,                                                    &
            nDim=2,                                                        &
            Min_D=[jMin_, kMin_],                                          &
