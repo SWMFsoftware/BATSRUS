@@ -381,7 +381,7 @@ contains
     use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          x_, y_, z_, MaxBlock
     use ModMain,       ONLY: nBlock, UseB0, Unused_B, DoThinCurrentSheet
-    use ModSaMhd,       ONLY: UseSaMhd
+    use ModSaMhd,      ONLY: UseSaMhd
     use ModGeometry,   ONLY: r_GB, Used_GB
     use ModAdvance,    ONLY: State_VGB, StateOld_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_

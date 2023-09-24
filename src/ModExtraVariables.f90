@@ -11,7 +11,7 @@ module ModExtraVariables
   integer, parameter :: Hyp_ = 1
   integer, parameter :: Erad_ = 1, ExtraEint_ = 1
   integer, parameter :: Ew_  = 1
-  integer, parameter :: SignB_ = 1
+  integer, parameter :: SignB_ = 1, SaMhd_ = 1
   integer, parameter :: Te0_   = 1
   integer, parameter :: Ehot_ = 1
 

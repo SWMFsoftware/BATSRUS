@@ -5,7 +5,7 @@ module ModVarIndexes
 
   use ModSingleFluid
   use ModExtraVariables, &
-       Redefine1 => SignB_
+       Redefine1 => SignB_, Redefined2 => SaMhd_
 
   implicit none
 
@@ -62,17 +62,17 @@ module ModVarIndexes
        1.0 ]  ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=4) :: NameVar_V(nVar+1) = [ &
-       'Rho ', & ! Rho_
-       'Mx  ', & ! RhoUx_
-       'My  ', & ! RhoUy_
-       'Mz  ', & ! RhoUz_
-       'Bx  ', & ! Bx_
-       'By  ', & ! By_
-       'Bz  ', & ! Bz_
+  character(len=5) :: NameVar_V(nVar+1) = [ &
+       'Rho  ', & ! Rho_
+       'Mx   ', & ! RhoUx_
+       'My   ', & ! RhoUy_
+       'Mz   ', & ! RhoUz_
+       'Bx   ', & ! Bx_
+       'By   ', & ! By_
+       'Bz   ', & ! Bz_
        'SaMhd', & ! SaMhd_
-       'p   ', & ! p_
-       'e   '  ] ! Energy_
+       'p    ', & ! p_
+       'e    '  ] ! Energy_
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
