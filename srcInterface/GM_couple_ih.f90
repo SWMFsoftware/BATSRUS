@@ -198,7 +198,7 @@ contains
          AnisoPressure_, ElectronPressure_,&
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, iVar_V, &
-         DoCoupleVar_V, nVarCouple, ChGL_, ChGLCouple_
+         DoCoupleVar_V, nVarCouple, SaMhd_, SaMhdCouple_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModInterpolate,    ONLY: trilinear
     use BATL_lib,       ONLY: iProc, &
@@ -353,7 +353,7 @@ contains
 
        if(DoCoupleVar_V(CollisionlessHeatFlux_)) Buffer_V(iEhotCouple) = &
             StateInPoint_V(Ehot_)*No2Si_V(UnitEnergyDens_)
-       if(DoCoupleVar_V(ChGL_))Buffer_V(iVar_V(ChGLCouple_)) = &
+       if(DoCoupleVar_V(SaMhd_))Buffer_V(iVar_V(SaMhdCouple_)) = &
             StateInPoint_V(SignB_)*No2Si_V(UnitB_)/No2Si_V(UnitU_)
 
        ! DONE - fill the buffer grid

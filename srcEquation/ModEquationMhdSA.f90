@@ -32,7 +32,7 @@ module ModVarIndexes
        Bx_    = 5,    &
        By_    = 6,    &
        Bz_    = 7,    &
-       SignB_ = 8, ChGL_ = 8, &
+       SignB_ = 8, SaMhd_ = 8, &
        p_     = nVar, &
        Energy_= nVar+1
 
@@ -57,7 +57,7 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! ChGL_
+       0.0, & ! SaMhd_
        1.0, & ! p_
        1.0 ]  ! Energy_
 
@@ -70,7 +70,7 @@ module ModVarIndexes
        'Bx  ', & ! Bx_
        'By  ', & ! By_
        'Bz  ', & ! Bz_
-       'ChGL', & ! ChGL_
+       'SaMhd', & ! SaMhd_
        'p   ', & ! p_
        'e   '  ] ! Energy_
 
@@ -78,7 +78,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = ChGL_, ScalarLast_ = ChGL_
+  integer, parameter :: ScalarFirst_ = SaMhd_, ScalarLast_ = SaMhd_
 
 end module ModVarIndexes
 !==============================================================================

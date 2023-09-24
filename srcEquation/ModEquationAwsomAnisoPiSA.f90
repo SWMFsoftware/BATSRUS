@@ -79,7 +79,7 @@ module ModVarIndexes
        0.0, & ! Bz_
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
-       0.0, & ! SignB_ or ChGL_
+       0.0, & ! SignB_ or SaMhd_
        1.0, & ! Pe_
        1.0, & ! Ppar_
        1.0, & ! p_

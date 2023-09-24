@@ -381,7 +381,7 @@ contains
     use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          x_, y_, z_, MaxBlock
     use ModMain,       ONLY: nBlock, UseB0, Unused_B, DoThinCurrentSheet
-    use ModChGL,       ONLY: UseChGL
+    use ModSaMhd,       ONLY: UseSaMhd
     use ModGeometry,   ONLY: r_GB, Used_GB
     use ModAdvance,    ONLY: State_VGB, StateOld_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
@@ -567,7 +567,7 @@ contains
                   MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
 
           case('currentsheet')
-             if(SignB_>1 .and. (DoThinCurrentSheet.or.UseChGL))then
+             if(SignB_>1 .and. (DoThinCurrentSheet.or.UseSaMhd))then
                 if(maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))>0 .and. &
                      minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))<0)then
                    Crit_IB(iCrit,iBlock) = 1.0

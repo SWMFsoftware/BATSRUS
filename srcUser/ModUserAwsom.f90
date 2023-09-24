@@ -313,7 +313,7 @@ contains
     use ModPhysics,    ONLY: rBody, GBody, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_, SignB_, Lperp_
-    use ModChGL,       ONLY: UseChGL
+    use ModSaMhd,       ONLY: UseSaMhd
     use ModWaves, ONLY: UseAlfvenWaves
 
     integer, intent(in) :: iBlock
@@ -442,7 +442,7 @@ contains
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
 
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-       if(UseChGL)State_VGB(SignB_,i,j,k,iBlock) = &
+       if(UseSaMhd)State_VGB(SignB_,i,j,k,iBlock) = &
             sum(B0_DGB(1:3,i,j,k,iBlock)*r_D) / (r*Usound)
        if(UseTurbulentCascade.and.Lperp_>1)&
             State_VGB(Lperp_,i,j,k,iBlock) = LperpTimesSqrtB

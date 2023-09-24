@@ -276,7 +276,7 @@ contains
   subroutine read_restart_files
 
     use ModBuffer, ONLY: DoRestartBuffer, read_buffer_restart
-    use ModChGL,   ONLY: UseChGL
+    use ModSaMhd,   ONLY: UseSaMhd
     integer :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_restart_files'
@@ -332,7 +332,7 @@ contains
           do iBlock = 1, nBlock
              if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
           end do
-       elseif(.not.UseChGL)then
+       elseif(.not.UseSaMhd)then
           do iBlock = 1, nBlock
              if (.not.Unused_B(iBlock)) State_VGB(SignB_,:,:,:,iBlock) = 0
           end do
