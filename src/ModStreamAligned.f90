@@ -18,7 +18,7 @@ module ModSaMhd
   ! instead of the magnetic field vector, and obtain B as B = s*rho*u
 
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, SaMhd_, Rho_, &
+  use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, BperM_, Rho_, &
        nVar, Ux_, Uz_
   use BATL_lib, ONLY: MaxDim
   use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
@@ -51,8 +51,8 @@ contains
     !--------------------------------------------------------------------------
     call read_var('UseSaMhd', UseSaMhd)
     if(.not.UseSaMhd)RETURN
-    if(SaMhd_==1)call stop_mpi(&
-            'Reconfigure the code with setting meaningful value for SaMhd_')
+    if(BperM_==1)call stop_mpi(&
+            'Reconfigure the code with setting meaningful value for BperM_')
     call read_var('RSourceSaMhd', RSourceSaMhd)
     call read_var('RMinSaMhd', RMinSaMhd)
   end subroutine read_samhd_param
@@ -68,11 +68,11 @@ contains
        ! The SaMhd ratio is calculated in terms of U, B
        RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
        if(RhoU2 ==0.0)then
-          State_VGB(SaMhd_,i,j,k,iBlock) = 0
+          State_VGB(BperM_,i,j,k,iBlock) = 0
        else
           B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
-          State_VGB(SaMhd_,i,j,k,iBlock) =                   &
+          State_VGB(BperM_,i,j,k,iBlock) =                   &
                (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*         &
                sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
        end if
@@ -94,11 +94,11 @@ contains
           ! The SaMhd ratio is calculated in terms of U, B
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
-             State_VGB(SaMhd_,i,j,k,iBlock) = 0
+             State_VGB(BperM_,i,j,k,iBlock) = 0
           else
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
              if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
-             State_VGB(SaMhd_,i,j,k,iBlock) =                 &
+             State_VGB(BperM_,i,j,k,iBlock) =                 &
                   (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
                   sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
           end if
@@ -106,7 +106,7 @@ contains
           if(iStage/=nStage)CYCLE
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
-             State_VGB(SaMhd_,i,j,k,iBlock) = 0
+             State_VGB(BperM_,i,j,k,iBlock) = 0
              CYCLE
           end if
           ! The Leontowich BC (see L. D. Landau and E. M. Lifshits,
@@ -137,7 +137,7 @@ contains
           VA2 = B2/Rho
           U_D = U_D - GeometricFactor*Ut_D*VA2/(VA2 + UPar2)
           B_D = B_D + GeometricFactor*Ut_D*UDotB/(VA2 + UPar2)
-          State_VGB(SaMhd_,i,j,k,iBlock) = sum(U_D*B_D)/max(sum(U_D**2), 1e-30)
+          State_VGB(BperM_,i,j,k,iBlock) = sum(U_D*B_D)/max(sum(U_D**2), 1e-30)
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = Rho*U_D
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
@@ -145,7 +145,7 @@ contains
        else
           ! the magnetic field is solved as
           ! B = s rho U
-          B_D = State_VGB(SaMhd_,i,j,k,iBlock)*       &
+          B_D = State_VGB(BperM_,i,j,k,iBlock)*       &
                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
                State_VGB(Rho_,i,j,k,iBlock)
           if(UseB0)B_D = B_D - B0_DGB(:,i,j,k,iBlock)
@@ -171,14 +171,14 @@ contains
        ! The SaMhd ratio is calculated in terms of U, B
        U2 = sum(State_V(Ux_:Uz_)**2)
        if(U2 ==0.0)then
-          State_V(SaMhd_) = 0
+          State_V(BperM_) = 0
        else
-          State_V(SaMhd_) = sum(State_V(Bx_:Bz_)*State_V(Ux_:Uz_))/U2
+          State_V(BperM_) = sum(State_V(Bx_:Bz_)*State_V(Ux_:Uz_))/U2
        end if
     end if
     if(R > RMinSaMhd)then
        ! the magnetic field is solved as ! B = s rho u
-       State_V(Bx_:Bz_) = State_V(SaMhd_)*State_V(Ux_:Uz_)
+       State_V(Bx_:Bz_) = State_V(BperM_)*State_V(Ux_:Uz_)
        if(UseB0)then
           call get_b0(Xyz_D, B0_D)
           State_V(Bx_:Bz_) = State_V(Bx_:Bz_) - B0_D
@@ -199,9 +199,9 @@ contains
     logical, intent(in) :: DoResChangeOnly
 
     ! Logical is true in the points of SaMhd model
-    logical             :: IsSaMhd_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    logical             :: IsBperM_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !--------------------------------------------------------------------------
-    IsSaMhd_G = r_GB(:,:,:,iBlock) > rMinSaMhd
+    IsBperM_G = r_GB(:,:,:,iBlock) > rMinSaMhd
     if (.not.DoResChangeOnly)then
        call correct_faceX(&
             1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
@@ -235,7 +235,7 @@ contains
       ! B0_DX field or zero
       real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
       !------------------------------------------------------------------------
-      if(.not.any(IsSaMhd_G(iMin-1:iMax,jMin:jMax,kMin:kMax)))RETURN
+      if(.not.any(IsBperM_G(iMin-1:iMax,jMin:jMax,kMin:kMax)))RETURN
       if(UseB0)then
          B0_DIII = B0_DX(:,iMin:iMax,jMin:jMax,kMin:kMax)
       else
@@ -243,21 +243,21 @@ contains
       end if
       do k = kMin, kMax; do j = jMin, jMax
          i = iMin - 1
-         if(IsSaMhd_G(i,j,k))LeftState_VX(Bx_:Bz_,i+1,j,k) =              &
-              LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(SaMhd_,i+1,j,k)-&
+         if(IsBperM_G(i,j,k))LeftState_VX(Bx_:Bz_,i+1,j,k) =              &
+              LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(BperM_,i+1,j,k)-&
               B0_DIII(:,i+1,j,k)
          do i = iMin, iMax -1
-            if(.not.IsSaMhd_G(i,j,k))CYCLE
+            if(.not.IsBperM_G(i,j,k))CYCLE
             LeftState_VX(Bx_:Bz_,i+1,j,k) =                              &
-                 LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(SaMhd_,i+1,j,k)-&
+                 LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(BperM_,i+1,j,k)-&
                  B0_DIII(:,i+1,j,k)
             RightState_VX(Bx_:Bz_,i,j,k) =                               &
-                 RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(SaMhd_,i,j,k)-  &
+                 RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(BperM_,i,j,k)-  &
                  B0_DIII(:,i,j,k)
          end do
          i = iMax
-         if(IsSaMhd_G(i,j,k))RightState_VX(Bx_:Bz_,i,j,k) =               &
-              RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(SaMhd_,i,j,k)-  &
+         if(IsBperM_G(i,j,k))RightState_VX(Bx_:Bz_,i,j,k) =               &
+              RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(BperM_,i,j,k)-  &
               B0_DIII(:,i,j,k)
       end do; end do
 
@@ -273,7 +273,7 @@ contains
       ! B0_DY field or zero
       real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
       !------------------------------------------------------------------------
-      if(.not.any(IsSaMhd_G(iMin:iMax,jMin-1:jMax,kMin:kMax)))RETURN
+      if(.not.any(IsBperM_G(iMin:iMax,jMin-1:jMax,kMin:kMax)))RETURN
       if(UseB0)then
          B0_DIII = B0_DY(:,iMin:iMax,jMin:jMax,kMin:kMax)
       else
@@ -282,23 +282,23 @@ contains
       do k = kMin, kMax
          j = jMin - 1
          do i = iMin, iMax
-            if(IsSaMhd_G(i,j,k))LeftState_VY(Bx_:Bz_,i,j+1,k) =              &
-                 LeftState_VY(Ux_:Uz_,i,j+1,k)*LeftState_VY(SaMhd_,i,j+1,k)-&
+            if(IsBperM_G(i,j,k))LeftState_VY(Bx_:Bz_,i,j+1,k) =              &
+                 LeftState_VY(Ux_:Uz_,i,j+1,k)*LeftState_VY(BperM_,i,j+1,k)-&
                  B0_DIII(:,i,j+1,k)
          end do
          do j = jMin, jMax - 1; do i = iMin, iMax
-            if(.not.IsSaMhd_G(i,j,k))CYCLE
+            if(.not.IsBperM_G(i,j,k))CYCLE
             LeftState_VY(Bx_:Bz_,i,j+1,k) =                                 &
-                 LeftState_VY(Ux_:Uz_,i,j+1,k)*LeftState_VY(SaMhd_,i,j+1,k)-&
+                 LeftState_VY(Ux_:Uz_,i,j+1,k)*LeftState_VY(BperM_,i,j+1,k)-&
               B0_DIII(:,i,j+1,k)
             RightState_VY(Bx_:Bz_,i,j,k) =                                  &
-              RightState_VY(Ux_:Uz_,i,j,k)*RightState_VY(SaMhd_,i,j,k)-     &
+              RightState_VY(Ux_:Uz_,i,j,k)*RightState_VY(BperM_,i,j,k)-     &
               B0_DIII(:,i,j,k)
          end do; end do
          j = jMax
          do i = iMin, iMax
-            if(IsSaMhd_G(i,j,k))RightState_VY(Bx_:Bz_,i,j,k) =               &
-              RightState_VY(Ux_:Uz_,i,j,k)*RightState_VY(SaMhd_,i,j,k)-     &
+            if(IsBperM_G(i,j,k))RightState_VY(Bx_:Bz_,i,j,k) =               &
+              RightState_VY(Ux_:Uz_,i,j,k)*RightState_VY(BperM_,i,j,k)-     &
               B0_DIII(:,i,j,k)
          end do
       end do
@@ -315,7 +315,7 @@ contains
       ! B0_DZ field or zero
       real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
       !------------------------------------------------------------------------
-      if(.not.any(IsSaMhd_G(iMin:iMax,jMin:jMax,kMin-1:kMax)))RETURN
+      if(.not.any(IsBperM_G(iMin:iMax,jMin:jMax,kMin-1:kMax)))RETURN
       if(UseB0)then
          B0_DIII = B0_DZ(:,iMin:iMax,jMin:jMax,kMin:kMax)
       else
@@ -323,23 +323,23 @@ contains
       end if
       k = kMin - 1
       do  j = jMin, jMax; do i = iMin, iMax
-         if(IsSaMhd_G(i,j,k))LeftState_VZ(Bx_:Bz_,i,j,k+1) =              &
-              LeftState_VZ(Ux_:Uz_,i,j,k+1)*LeftState_VZ(SaMhd_,i,j,k+1)-&
+         if(IsBperM_G(i,j,k))LeftState_VZ(Bx_:Bz_,i,j,k+1) =              &
+              LeftState_VZ(Ux_:Uz_,i,j,k+1)*LeftState_VZ(BperM_,i,j,k+1)-&
               B0_DIII(:,i,j,k+1)
       end do; end do
       do k = kMin, kMax - 1; do j = jMin, jMax; do i = iMin, iMax
-         if(.not.IsSaMhd_G(i,j,k))CYCLE
+         if(.not.IsBperM_G(i,j,k))CYCLE
          LeftState_VZ(Bx_:Bz_,i,j,k+1) =                                 &
-              LeftState_VZ(Ux_:Uz_,i,j,k+1)*LeftState_VZ(SaMhd_,i,j,k+1)-&
+              LeftState_VZ(Ux_:Uz_,i,j,k+1)*LeftState_VZ(BperM_,i,j,k+1)-&
               B0_DIII(:,i,j,k+1)
          RightState_VZ(Bx_:Bz_,i,j,k) =                                  &
-              RightState_VZ(Ux_:Uz_,i,j,k)*RightState_VZ(SaMhd_,i,j,k) - &
+              RightState_VZ(Ux_:Uz_,i,j,k)*RightState_VZ(BperM_,i,j,k) - &
               B0_DIII(:,i,j,k)
       end do; end do; end do
       k = kMax
       do  j = jMin, jMax; do i = iMin, iMax
-         if(IsSaMhd_G(i,j,k))RightState_VZ(Bx_:Bz_,i,j,k) =               &
-              RightState_VZ(Ux_:Uz_,i,j,k)*RightState_VZ(SaMhd_,i,j,k) - &
+         if(IsBperM_G(i,j,k))RightState_VZ(Bx_:Bz_,i,j,k) =               &
+              RightState_VZ(Ux_:Uz_,i,j,k)*RightState_VZ(BperM_,i,j,k) - &
               B0_DIII(:,i,j,k)
       end do; end do
 
@@ -363,11 +363,11 @@ contains
     if(r_GB(iLeft,jLeft,kLeft,iBlockFace) < RMinSaMhd.and.&
          r_GB(iFace,jFace,kFace,iBlockFace) >= RMinSaMhd)then
        FullB_D  = StateLeft_V(Bx_:Bz_) + [B0x, B0y, B0z]
-       StateLeft_V(SaMhd_) = sum(StateLeft_V(Ux_:Uz_)*FullB_D)/U2
+       StateLeft_V(BperM_) = sum(StateLeft_V(Ux_:Uz_)*FullB_D)/U2
     elseif(r_GB(iFace,jFace,kFace,iBlockFace) < RMinSaMhd.and.&
          r_GB(iLeft,jLeft,kLeft,iBlockFace) >= RMinSaMhd)then
        FullB_D  = StateRight_V(Bx_:Bz_) + [B0x, B0y, B0z]
-       StateRight_V(SaMhd_) = sum(StateRight_V(Ux_:Uz_)*FullB_D)/U2
+       StateRight_V(BperM_) = sum(StateRight_V(Ux_:Uz_)*FullB_D)/U2
     end if
 #endif
 

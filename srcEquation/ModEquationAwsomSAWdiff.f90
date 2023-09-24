@@ -12,7 +12,7 @@ module ModVarIndexes
        Redefine5 => Pe_, &
        Redefine6 => Ehot_, &
        Redefine7 => SignB_, &
-       Redefine8 => SaMhd_, &
+       Redefine8 => BperM_, &
        Redefine9 => WDiff_
 
   implicit none
@@ -50,7 +50,7 @@ module ModVarIndexes
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
        WDiff_     = WaveLast_ + 1,      &
-       SignB_     = nVar-2, SaMhd_ = SignB_, &
+       SignB_     = nVar-2, BperM_ = SignB_, &
        Pe_        = nVar-1,             &
        p_         = nVar,               &
        Energy_    = nVar+1
@@ -84,7 +84,7 @@ module ModVarIndexes
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
        0.0, & ! WDiff_
-       0.0, & ! SaMhd_
+       0.0, & ! BperM_
        1.0, & ! Pe_
        1.0, & ! p_
        1.0 ]  ! Energy_
@@ -101,7 +101,7 @@ module ModVarIndexes
        'Ehot ', & ! Ehot_
        ('I??  ', iWave=WaveFirst_,WaveLast_), &
        'wD   ', & ! WDiff_
-       'BperM', & ! SaMhd_
+       'BperM', & ! BperM_
        'Pe   ', & ! Pe_
        'p    ', & ! p_
        'e    ' ] ! Energy_
@@ -110,7 +110,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = WDiff_ , ScalarLast_ = SaMhd_
+  integer, parameter :: ScalarFirst_ = WDiff_ , ScalarLast_ = BperM_
 
 end module ModVarIndexes
 !==============================================================================
