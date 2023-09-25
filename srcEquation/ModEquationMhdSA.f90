@@ -5,7 +5,7 @@ module ModVarIndexes
 
   use ModSingleFluid
   use ModExtraVariables, &
-       Redefine1 => SignB_, Redefined2 => BperM_
+       Redefine1 => SignB_, Redefined2 => BperU_
 
   implicit none
 
@@ -32,7 +32,7 @@ module ModVarIndexes
        Bx_    = 5,    &
        By_    = 6,    &
        Bz_    = 7,    &
-       SignB_ = 8, BperM_ = SignB_, &
+       SignB_ = 8, BperU_ = SignB_, &
        p_     = nVar, &
        Energy_= nVar+1
 
@@ -57,7 +57,7 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! BperM_
+       0.0, & ! BperU_
        1.0, & ! p_
        1.0 ]  ! Energy_
 
@@ -70,7 +70,7 @@ module ModVarIndexes
        'Bx   ', & ! Bx_
        'By   ', & ! By_
        'Bz   ', & ! Bz_
-       'BperM', & ! BperM_
+       'BperM', & ! BperU_
        'p    ', & ! p_
        'e    '  ] ! Energy_
 
@@ -78,7 +78,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = BperM_, ScalarLast_ = BperM_
+  integer, parameter :: ScalarFirst_ = BperU_, ScalarLast_ = BperU_
 
 end module ModVarIndexes
 !==============================================================================
