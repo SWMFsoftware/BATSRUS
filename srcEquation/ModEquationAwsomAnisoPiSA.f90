@@ -97,7 +97,7 @@ module ModVarIndexes
        'Bz   ', & ! Bz_
        'Ehot ', & ! Ehot_
        ('I??  ', iWave=WaveFirst_,WaveLast_), &
-       'BperM', & ! BperU_
+       'BperU', & ! BperU_
        'Pe   ', & ! Pe_
        'Ppar ', & ! Ppar_
        'p    ', & ! p_

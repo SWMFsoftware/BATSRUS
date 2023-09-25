@@ -101,7 +101,7 @@ module ModVarIndexes
        'Ehot ', & ! Ehot_
        ('I??  ', iWave=WaveFirst_,WaveLast_), &
        'wD   ', & ! WDiff_
-       'BperM', & ! BperU_
+       'BperU', & ! BperU_
        'Pe   ', & ! Pe_
        'p    ', & ! p_
        'e    ' ] ! Energy_

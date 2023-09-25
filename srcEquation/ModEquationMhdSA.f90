@@ -70,7 +70,7 @@ module ModVarIndexes
        'Bx   ', & ! Bx_
        'By   ', & ! By_
        'Bz   ', & ! Bz_
-       'BperM', & ! BperU_
+       'BperU', & ! BperU_
        'p    ', & ! p_
        'e    '  ] ! Energy_
 
