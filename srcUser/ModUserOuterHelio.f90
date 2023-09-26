@@ -192,7 +192,7 @@ module ModUser
   real :: DeltaUSi = 10.0, DeltaU = 0.0
   real :: LperpTimesSqrtBSi = 1.5e5, LperpTimesSqrtB = 0.0
   real :: TurbulencePerPu3Source = 0.25
-  
+
   ! Ionization energy for neutral atomic hydrogen
   ! Needed for electron impact ionization
   real :: IonizationEnergyDim = cRyToEv*cEv
@@ -358,7 +358,7 @@ contains
           call read_var('DeltaUSi', DeltaUSi)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('TurbulencePerPu3Source', TurbulencePerPu3Source)
-          
+
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
