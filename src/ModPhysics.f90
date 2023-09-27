@@ -1127,7 +1127,7 @@ contains
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos, &
          UseEfield, UseAnisoPe
     use ModMain,    ONLY: UseB
-    ! use ModChGL,    ONLY: UseChGL
+    ! use ModSaMhd,    ONLY: UseSaMhd
 
     integer :: iVar, iFluid
 

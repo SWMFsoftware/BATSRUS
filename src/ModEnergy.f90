@@ -20,7 +20,7 @@ module ModEnergy
        InvGammaElectronMinus1, pMin_I, PeMin, Tmin_I, TeMin
   use BATL_lib, ONLY: &
        nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, Used_GB
-  use ModChGL,     ONLY: UseChGL, rMinChGL
+  use ModSaMhd,     ONLY: UseSaMhd, rMinSaMhd
   use ModGeometry, ONLY: r_GB
 
   implicit none
@@ -90,7 +90,7 @@ contains
 
           ! Done with all fluids except first MHD fluid
           if(iFluid > 1 .or. .not. IsMhd) CYCLE
-          if(UseChGL .and. r_GB(i,j,k,iBlock) > rMinChGL)CYCLE
+          if(UseSaMhd .and. r_GB(i,j,k,iBlock) > rMinSaMhd)CYCLE
           ! Add magnetic energy density
           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
@@ -158,7 +158,7 @@ contains
        end if
        ! Add magnetic energy if needed
        if(IsMhd .and. iFluid == 1                                  &
-            .and..not.(UseChGL.and.r_GB(i,j,k,iBlock) > rMinChGL) &
+            .and..not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
             ) Energy_G(i,j,k) = Energy_G(i,j,k) &
             + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
@@ -252,7 +252,7 @@ contains
           end if
 
           if(iFluid == 1 .and. IsMhd                                 &
-               .and..not.(UseChGL.and.r_GB(i,j,k,iBlock) > rMinChGL) &
+               .and..not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
                ) then
              ! Deal with first MHD fluid
              ! Subtract the magnetic energy density
@@ -313,7 +313,7 @@ contains
 
           ! Subtract the magnetic energy density
           if(iFluid == 1 .and. IsMhd                                 &
-               .and..not.(UseChGL.and.r_GB(i,j,k,iBlock) > rMinChGL)&
+               .and..not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd)&
                ) then
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)

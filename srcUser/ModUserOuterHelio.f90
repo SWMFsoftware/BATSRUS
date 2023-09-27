@@ -191,6 +191,7 @@ module ModUser
   ! Wave turbulence
   real :: DeltaUSi = 10.0, DeltaU = 0.0
   real :: LperpTimesSqrtBSi = 1.5e5, LperpTimesSqrtB = 0.0
+  real :: TurbulencePerPu3Source = 0.25
 
   ! Ionization energy for neutral atomic hydrogen
   ! Needed for electron impact ionization
@@ -356,6 +357,7 @@ contains
        case("#TURBULENCE")
           call read_var('DeltaUSi', DeltaUSi)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+          call read_var('TurbulencePerPu3Source', TurbulencePerPu3Source)
 
        case default
           if(iProc==0) call stop_mpi( &
@@ -1988,6 +1990,9 @@ contains
   subroutine calc_charge_exchange_source( &
      i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
 
+    use ModTurbulence, ONLY: KarmanTaylorAlpha, KarmanTaylorBeta2AlphaRatio
+    use ModWaves, ONLY: UseAlfvenWaves
+
     ! Calculate the charge exchange source terms for one cell.
 
     integer, intent(in):: i,j,k,iBlock
@@ -2019,6 +2024,8 @@ contains
        Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
 
     real, dimension(3,Neu_:Ne4_):: Umean_DI, UMeanPu3_DI
+
+    real :: AlfvenSpeed, SourceTurbulence
 
     !--------------------------------------------------------------------------
     SourceCx_V = 0.0
@@ -2541,6 +2548,27 @@ contains
                     - JpxUz_I(Ne3_)- Jpu3xUz_I(Ne3_)
              SourceCx_V(Pu3Energy_)= sum(Qepu3x_I) + sum(Kpx_I) &
                     - Kpu3x_I(Ne3_) - Kpx_I(Ne3_)
+
+             if(UseAlfvenWaves)then
+                AlfvenSpeed = sqrt(sum(State_V(Bx_:Bz_)**2)/State_V(Rho_))
+                SourceTurbulence = 0.5*TurbulencePerPu3Source*AlfvenSpeed*( &
+                     I0px_I(Neu_)*sqrt(URelS_I(Neu_)) + &
+                     I0px_I(Ne2_)*sqrt(URelS_I(Ne2_)) + &
+                     I0px_I(Ne4_)*sqrt(URelS_I(Ne4_)) + &
+                     I0xpu3_I(Neu_)*sqrt(URelSPu3_I(Neu_)) + &
+                     I0xpu3_I(Ne2_)*sqrt(URelSPu3_I(Ne2_)) + &
+                     I0xpu3_I(Ne4_)*sqrt(URelSPu3_I(Ne4_)) )
+
+                SourceCx_V(Pu3Energy_) = SourceCx_V(Pu3Energy_) &
+                     - SourceTurbulence
+                SourceCx_V(WaveFirst_:WaveLast_) = 0.5*SourceTurbulence
+
+                if(Lperp_ > 1) SourceCx_V(Lperp_) = &
+                     -KarmanTaylorBeta2AlphaRatio/KarmanTaylorAlpha &
+                     *State_V(Lperp_)*SourceTurbulence &
+                     /max(1e-30,sum(State_V(WaveFirst_:WaveLast_)))
+             end if
+
              SourceCx_V(Pu3P_) = (Gamma-1)* ( SourceCx_V(Pu3Energy_) &
                     - sum(U_DI(:,Pu3_)*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
                     + 0.5*U2_I(Pu3_)*SourceCx_V(Pu3Rho_) )

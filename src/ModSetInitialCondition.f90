@@ -160,7 +160,7 @@ contains
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, &
          UseShockTube, ShockPosition, iUnitPrim_V, Io2No_V, Gamma_I
     use ModUserInterface ! user_set_ics
-    use ModChGL,          ONLY: UseChGL, init_chgl
+    use ModSaMhd,          ONLY: UseSaMhd, init_samhd
     use ModConstrainDivB, ONLY: constrain_ics
     use ModMultiFluid
     use ModRestartFile, ONLY: UseRestartWithFullB
@@ -377,9 +377,9 @@ contains
              if(DoTest)write(*,*) NameSub,': rot vel State=', &
                   State_VGB(:,iTest,jTest,kTest,iBlockTest)
           end if
-          if(UseChGL)then
-             call init_chgl(iBlock)
-             if(DoTest)write(*,*) NameSub,': chgl State=', &
+          if(UseSaMhd)then
+             call init_samhd(iBlock)
+             if(DoTest)write(*,*) NameSub,': samhd State=', &
                   State_VGB(:,iTest,jTest,kTest,iBlockTest)
           end if
        end if ! not IsRestart

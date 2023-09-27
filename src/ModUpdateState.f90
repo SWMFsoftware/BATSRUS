@@ -78,7 +78,7 @@ contains
          NameVar_V, nFluid, WDiff_, p_, Ppar_
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, iUnitCons_V
-    use ModChGL, ONLY: UseChGL, update_chgl
+    use ModSaMhd, ONLY: UseSaMhd, update_samhd
     use ModTurbulence, ONLY: UseReynoldsDecomposition
     use ModEnergy, ONLY: limit_pressure
     use ModHeatFluxCollisionless, ONLY: &
@@ -161,7 +161,7 @@ contains
        call update_heatflux_collisionless(iBlock)
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
-    if(SignB_ > 1 .and. UseChGL)call update_chgl(iBlock, iStage)
+    if(SignB_ > 1 .and. UseSaMhd)call update_samhd(iBlock, iStage)
     if(UseReynoldsDecomposition.and.WDiff_>1)call fix_wdiff(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' final for nStep =', nStep

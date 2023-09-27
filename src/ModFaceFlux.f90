@@ -232,13 +232,13 @@ module ModFaceFlux
   real, public :: rFace = 0.0
   !$omp threadprivate( rFace )
 
-  ! IsChGLDomain= .true. means that at least from one side of the face
+  ! IsSaMhdDomain= .true. means that at least from one side of the face
   ! the stream-aligned MHD is solved. The characteristic speeds should be
   ! solved within the framework of stream-aligned MHD.
-  ! IsChGLInterface = .true. means that from one side of the face the
+  ! IsSaMhdInterface = .true. means that from one side of the face the
   ! pure MHD is used and from the other one is the stream-aligned MHD.
-  logical, public :: IsChGLInterface = .false., IsChGLDomain = .false.
-  !$omp threadprivate( IsChGLInterface, IsChGLDomain )
+  logical, public :: IsSaMhdInterface = .false., IsSaMhdDomain = .false.
+  !$omp threadprivate( IsSaMhdInterface, IsSaMhdDomain )
 
   ! Variables needed by viscosity
   real :: ViscoCoeff
@@ -1061,7 +1061,7 @@ contains
   subroutine set_cell_values_common
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_GB
-    use ModChGL,     ONLY: UseChGL, rMinChGL
+    use ModSaMhd,     ONLY: UseSaMhd, rMinSaMhd
 
     real :: r
 
@@ -1071,15 +1071,15 @@ contains
     rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
          Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
 
-    if(UseChGL)then
-       ! Check if this face is in the ChGL  domain
-       IsChGLDomain = rMinChGL < max(r_GB(&
+    if(UseSaMhd)then
+       ! Check if this face is in the SaMhd  domain
+       IsSaMhdDomain = rMinSaMhd < max(r_GB(&
             iFace,jFace,kFace,iBlockFace),r_GB(iLeft,jLeft,kLeft,iBlockFace))
-       ! Check if this face is the part of ChGL  domain boundary
-       IsChGLInterface = IsChGLDomain.and.rMinChGL>=min(r_GB(&
+       ! Check if this face is the part of SaMhd  domain boundary
+       IsSaMhdInterface = IsSaMhdDomain.and.rMinSaMhd>=min(r_GB(&
             iFace,jFace,kFace,iBlockFace),r_GB(iLeft,jLeft,kLeft,iBlockFace))
     else
-       IsChGLInterface = .false.; IsChGLDomain = .false.
+       IsSaMhdInterface = .false.; IsSaMhdDomain = .false.
     end if
     Area2 = AreaX**2 + AreaY**2 + AreaZ**2
     if(Area2 < 1e-30)then
@@ -2100,7 +2100,7 @@ contains
          iRho, iP, iEnergy, iRhoIon_I, iPIon_I, MassIon_I, select_fluid
     use ModUserInterface ! user_material_properties
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
-    use ModChGL,         ONLY: aligning_bc
+    use ModSaMhd,         ONLY: aligning_bc
 
     real, intent(out):: Flux_V(nFaceValue)
 
@@ -2278,7 +2278,7 @@ contains
           DiffBb = sum(DiffBn_D**2)
        end if
     end if
-    if(IsChGLInterface)call aligning_bc(iFace, jFace, kFace, iBlockFace, &
+    if(IsSaMhdInterface)call aligning_bc(iFace, jFace, kFace, iBlockFace, &
          iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                   &
          StateLeft_V, StateRight_V)
 #endif
@@ -3851,7 +3851,7 @@ contains
       real:: dB1DotFullB
 
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
-           B1B0L, B1B0R, cChGLLeft, cChGLRight
+           B1B0L, B1B0R, cSaMhdLeft, cSaMhdRight
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
       integer:: jFluid
@@ -4156,23 +4156,23 @@ contains
             Cleft_I(1)   = Cleft_I(1)  - Fast
             Cright_I(1)  = Cright_I(1) + Fast
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
-         elseif(IsChGLDomain)then
+         elseif(IsSaMhdDomain)then
             ! Stream-aligned MHD is at least from one side of the face
-            call get_chgl_speed(U1n=UnLeft, U2n=UnRight,                &
+            call get_samhd_speed(U1n=UnLeft, U2n=UnRight,                &
                  Ut2 = max(0.0, sum(State_V(Ux_:Uz_)**2 ) - Un**2),     &
                  InvRho = InvRho,                                       &
                  Sound2 = Sound2,                                       &
                  Alpha  = State_V(SignB_),                              &
-                 cChGLLeft = Cleft_I(1), cChGLRight = Cright_I(1),      &
+                 cSaMhdLeft = Cleft_I(1), cSaMhdRight = Cright_I(1),      &
                  Fast2 = Fast2, Alfven2Normal = Alfven2Normal)
-            if(IsChGLInterface)then
+            if(IsSaMhdInterface)then
                ! From the other side of interface there is pure MHD
                ! Choose the estimate for speed to be applicable in both
-               ! neighboring control volumes, handled by ChGL and regular MHD
+               ! neighboring control volumes, handled by SaMhd and regular MHD
                CLeft_I(1)   = min( min(UnLeft, UnRight) - Fast, & ! MHD
-                    CLeft_I(1)  )                                 ! ChGL
+                    CLeft_I(1)  )                                 ! SaMhd
                CRight_I(1)  = max( max(UnLeft, UnRight) + Fast, & ! MHD
-                    CRight_I(1) )                                 ! ChGL
+                    CRight_I(1) )                                 ! SaMhd
             end if
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
             CmaxDt_I(1)  = Cmax_I(1)
@@ -4182,27 +4182,27 @@ contains
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
             CmaxDt_I(1) = Cmax_I(1)
          end if
-      elseif(IsChGLDomain)then
+      elseif(IsSaMhdDomain)then
          ! Stream-aligned MHD is at least from one side of the face
-         call get_chgl_speed(U1n=UnMin, U2n=UnMax,                   &
+         call get_samhd_speed(U1n=UnMin, U2n=UnMax,                   &
               Ut2 = max(sum( State_V(Ux_:Uz_)**2 ) - Un**2, 0.0),    &
               InvRho = InvRho,                                       &
               Sound2 = Sound2,                                       &
               Alpha  = State_V(SignB_),                              &
-              cChGLLeft = cChGLLeft, cChGLRight = cChGLRight)
-         if(IsChGLInterface)then
+              cSaMhdLeft = cSaMhdLeft, cSaMhdRight = cSaMhdRight)
+         if(IsSaMhdInterface)then
             ! From the other side of interface there is pure MHD
             ! Choose the estimate for speed to be applicable in both
-            ! neighboring control volumes, handled by ChGL and regular MHD
-            cChGLLeft  = min( UnMin - Fast, cChGLLeft )
-            cChGLRight = max( UnMax + Fast, cChGLRight )
+            ! neighboring control volumes, handled by SaMhd and regular MHD
+            cSaMhdLeft  = min( UnMin - Fast, cSaMhdLeft )
+            cSaMhdRight = max( UnMax + Fast, cSaMhdRight )
          end if
          if(present(Cmax_I))then
-            Cmax_I(1)    = max(cChGLRight, -cChGLLeft)
+            Cmax_I(1)    = max(cSaMhdRight, -cSaMhdLeft)
             CmaxDt_I(1) = Cmax_I(1)
          end if
-         if(present(Cleft_I))  Cleft_I(1)  = cChGLLeft
-         if(present(Cright_I)) Cright_I(1) = cChGLRight
+         if(present(Cleft_I))  Cleft_I(1)  = cSaMhdLeft
+         if(present(Cright_I)) Cright_I(1) = cSaMhdRight
       else
          if(present(Cmax_I))then
             if(HallCoeff > 0.0)then
@@ -4221,45 +4221,45 @@ contains
 #endif
     end subroutine get_mhd_speed
     !==========================================================================
-    subroutine get_chgl_speed(U1n, U2n, Ut2, InvRho, Sound2, Alpha, &
-         cChGLLeft, cChGLRight, Fast2, Alfven2Normal)
+    subroutine get_samhd_speed(U1n, U2n, Ut2, InvRho, Sound2, Alpha, &
+         cSaMhdLeft, cSaMhdRight, Fast2, Alfven2Normal)
       real, intent(in)    :: U1n, U2n ! Two estimates for normal speed
       real, intent(in)    :: Ut2      ! Tangential velocity squared
       real, intent(in)    :: InvRho   ! Inverse density
       real, intent(inout) :: Sound2   ! Misc
-      real, intent(in)    :: Alpha    ! ChGL ratio
+      real, intent(in)    :: Alpha    ! SaMhd ratio
       ! Left and right  perturbation speed
-      real, intent(out)   :: cChGLLeft, cChGLRight
+      real, intent(out)   :: cSaMhdLeft, cSaMhdRight
       real, intent(in), optional :: Fast2, Alfven2Normal
-      real :: U1nChGL, U2nChGL, ChGL2OverRho, ChGLFast2
+      real :: U1nSaMhd, U2nSaMhd, SaMhd2OverRho, SaMhdFast2
       ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
       !------------------------------------------------------------------------
 #ifndef SCALAR
-      ChGL2OverRho = InvRho*Alpha**2
+      SaMhd2OverRho = InvRho*Alpha**2
       ! Magetosonic speed squared:
-      ChGLFast2     = Sound2 + Ut2*ChGL2OverRho
-      if(present(Fast2))ChGLFast2 = max(ChGLFast2, Fast2 - Alfven2Normal)
-      ChGL2OverRho   = 0.5*ChGL2OverRho
-      U1nChGL   = U1n*ChGL2OverRho
-      U2nChGL   = U2n*ChGL2OverRho
-      cChGLLeft    = min(U1n - max(U1nChGL,0.0)& ! Corrected Un
-           - sqrt( max(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
-           U2n - max(U2nChGL,0.0)              & ! Corrected Un
-           - sqrt( max(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
+      SaMhdFast2     = Sound2 + Ut2*SaMhd2OverRho
+      if(present(Fast2))SaMhdFast2 = max(SaMhdFast2, Fast2 - Alfven2Normal)
+      SaMhd2OverRho   = 0.5*SaMhd2OverRho
+      U1nSaMhd   = U1n*SaMhd2OverRho
+      U2nSaMhd   = U2n*SaMhd2OverRho
+      cSaMhdLeft    = min(U1n - max(U1nSaMhd,0.0)& ! Corrected Un
+           - sqrt( max(U1nSaMhd,0.0)**2 + SaMhdFast2),  & ! sound
+           U2n - max(U2nSaMhd,0.0)              & ! Corrected Un
+           - sqrt( max(U2nSaMhd,0.0)**2 + SaMhdFast2) )   ! sound
       if(UseAlfvenWaveSpeed)&
-           cChGLLeft  = min(cChGLLeft,    &
-           U1n - sqrt(2*U1n*U1nChGL),          & ! Alfven wave
-           U2n - sqrt(2*U2n*U2nChGL))            ! (left)
-      cChGLRight  = max(U1n - min(U1nChGL, 0.0)& ! Corrected Un
-           + sqrt( min(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
-           U2n - min(U2nChGL, 0.0)             & ! Corrected Un
-           + sqrt( min(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
+           cSaMhdLeft  = min(cSaMhdLeft,    &
+           U1n - sqrt(2*U1n*U1nSaMhd),          & ! Alfven wave
+           U2n - sqrt(2*U2n*U2nSaMhd))            ! (left)
+      cSaMhdRight  = max(U1n - min(U1nSaMhd, 0.0)& ! Corrected Un
+           + sqrt( min(U1nSaMhd,0.0)**2 + SaMhdFast2),  & ! sound
+           U2n - min(U2nSaMhd, 0.0)             & ! Corrected Un
+           + sqrt( min(U2nSaMhd,0.0)**2 + SaMhdFast2) )   ! sound
       if(UseAlfvenWaveSpeed)&
-           cChGLRight = max(cChGLRight,  &
-           U1n + sqrt(2*U1n*U1nChGL),          & ! Alfven wave
-           U2n + sqrt(2*U2n*U2nChGL))            ! (Right)
+           cSaMhdRight = max(cSaMhdRight,  &
+           U1n + sqrt(2*U1n*U1nSaMhd),          & ! Alfven wave
+           U2n + sqrt(2*U2n*U2nSaMhd))            ! (Right)
 #endif
-    end subroutine get_chgl_speed
+    end subroutine get_samhd_speed
     !==========================================================================
     subroutine get_hd_speed
       use ModAdvance, ONLY: UseElectronPressure, State_VGB

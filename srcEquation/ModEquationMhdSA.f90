@@ -5,7 +5,7 @@ module ModVarIndexes
 
   use ModSingleFluid
   use ModExtraVariables, &
-       Redefine1 => SignB_
+       Redefine1 => SignB_, Redefined2 => BperU_
 
   implicit none
 
@@ -32,7 +32,7 @@ module ModVarIndexes
        Bx_    = 5,    &
        By_    = 6,    &
        Bz_    = 7,    &
-       SignB_ = 8, ChGL_ = 8, &
+       SignB_ = 8, BperU_ = SignB_, &
        p_     = nVar, &
        Energy_= nVar+1
 
@@ -57,28 +57,28 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! ChGL_
+       0.0, & ! BperU_
        1.0, & ! p_
        1.0 ]  ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=4) :: NameVar_V(nVar+1) = [ &
-       'Rho ', & ! Rho_
-       'Mx  ', & ! RhoUx_
-       'My  ', & ! RhoUy_
-       'Mz  ', & ! RhoUz_
-       'Bx  ', & ! Bx_
-       'By  ', & ! By_
-       'Bz  ', & ! Bz_
-       'ChGL', & ! ChGL_
-       'p   ', & ! p_
-       'e   '  ] ! Energy_
+  character(len=5) :: NameVar_V(nVar+1) = [ &
+       'Rho  ', & ! Rho_
+       'Mx   ', & ! RhoUx_
+       'My   ', & ! RhoUy_
+       'Mz   ', & ! RhoUz_
+       'Bx   ', & ! Bx_
+       'By   ', & ! By_
+       'Bz   ', & ! Bz_
+       'BperU', & ! BperU_
+       'p    ', & ! p_
+       'e    '  ] ! Energy_
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = ChGL_, ScalarLast_ = ChGL_
+  integer, parameter :: ScalarFirst_ = BperU_, ScalarLast_ = BperU_
 
 end module ModVarIndexes
 !==============================================================================

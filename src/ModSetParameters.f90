@@ -138,7 +138,7 @@ contains
     use ModChromosphere, ONLY: read_chromosphere_param
     use ModWaves, ONLY: read_waves_param, check_waves
     use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
-    use ModChGL, ONLY: read_chgl_param
+    use ModSaMhd, ONLY: read_samhd_param
     ! END CORONA SPECIFIC
     use ModCoarseAxis, ONLY: read_coarse_axis_param
     use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
@@ -2688,7 +2688,7 @@ contains
           call read_var('DoThinCurrentSheet', DoThinCurrentSheet)
 
        case("#ALIGNBANDU")
-          call read_chgl_param
+          call read_samhd_param
 
           ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 
