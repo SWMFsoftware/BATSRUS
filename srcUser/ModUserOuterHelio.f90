@@ -560,6 +560,7 @@ contains
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModCellBoundary, ONLY: iMin, iMax, jMin, jMax, kMin, kMax
+    use ModTurbulence,   ONLY: KarmanTaylorAlpha
     use ModWaves,        ONLY: UseAlfvenWaves
 
     ! The ISM enters at the east boundary (negative x)
@@ -606,7 +607,8 @@ contains
 
           ! Set Lperp to a large value of 1 AU in ISW
           if(Lperp_ > 1) &
-               State_VGB(Lperp_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
+               State_VGB(Lperp_,i,j,k,iBlock) = &
+               State_VGB(Rho_,i,j,k,iBlock)/KarmanTaylorAlpha
        end if
     end do; end do; end do
 
