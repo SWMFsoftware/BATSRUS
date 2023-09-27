@@ -356,9 +356,10 @@ contains
 
        case("#TURBULENCE")
           call read_var('DeltaUSi', DeltaUSi)
+          ! Our LperpTimesSqrtBSi is L_\perp*\sqrt(B)/KarmanTaylorAlpha
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('TurbulencePerPu3Source', TurbulencePerPu3Source)
-
+          
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
