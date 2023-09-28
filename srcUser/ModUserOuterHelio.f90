@@ -356,6 +356,7 @@ contains
 
        case("#TURBULENCE")
           call read_var('DeltaUSi', DeltaUSi)
+          ! Our LperpTimesSqrtBSi is L_\perp*\sqrt(B)/KarmanTaylorAlpha
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('TurbulencePerPu3Source', TurbulencePerPu3Source)
 
@@ -559,6 +560,7 @@ contains
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModCellBoundary, ONLY: iMin, iMax, jMin, jMax, kMin, kMax
+    use ModTurbulence,   ONLY: KarmanTaylorAlpha
     use ModWaves,        ONLY: UseAlfvenWaves
 
     ! The ISM enters at the east boundary (negative x)
@@ -605,7 +607,8 @@ contains
 
           ! Set Lperp to a large value of 1 AU in ISW
           if(Lperp_ > 1) &
-               State_VGB(Lperp_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
+               State_VGB(Lperp_,i,j,k,iBlock) = &
+               State_VGB(Rho_,i,j,k,iBlock)/KarmanTaylorAlpha
        end if
     end do; end do; end do
 
@@ -1988,7 +1991,7 @@ contains
   end subroutine calc_source_inputs
   !============================================================================
   subroutine calc_charge_exchange_source( &
-     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
+       i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
 
     use ModTurbulence, ONLY: KarmanTaylorAlpha, KarmanTaylorBeta2AlphaRatio
     use ModWaves, ONLY: UseAlfvenWaves
@@ -2005,23 +2008,23 @@ contains
 
     real:: uDim_DI(3,nFLuid)
     real, dimension(Neu_:Ne4_,5):: SrcLookI_II, SrcLookN_II, &
-       SrcLookPu3_II, SrcLookNPu3_II
+         SrcLookPu3_II, SrcLookNPu3_II
 
     ! For Ion/SWH
     real, dimension(Neu_:Ne4_) :: &
-       URelS_I, URelSdim_I, UTh2Sum_I, UStar_I, Sigma_I, Rate_I, &
-       UStarM_I, SigmaN_I, RateN_I, RateE_I, &
-       I0xp_I, I0px_I, I2xp_I, I2px_I, &
-       JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
-       Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
+         URelS_I, URelSdim_I, UTh2Sum_I, UStar_I, Sigma_I, Rate_I, &
+         UStarM_I, SigmaN_I, RateN_I, RateE_I, &
+         I0xp_I, I0px_I, I2xp_I, I2px_I, &
+         JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
+         Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
 
     ! For PU3
     real, dimension(Neu_:Ne4_):: &
-       URelSPu3_I, URelSPu3dim_I, UTh2SumPu3_I, UStarPu3_I, SigmaPu3_I, &
-       RatePu3_I, UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, RateEPu3_I, &
-       I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, &
-       Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
-       Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
+         URelSPu3_I, URelSPu3dim_I, UTh2SumPu3_I, UStarPu3_I, SigmaPu3_I, &
+         RatePu3_I, UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, RateEPu3_I, &
+         I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, &
+         Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
+         Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
 
     real, dimension(3,Neu_:Ne4_):: Umean_DI, UMeanPu3_DI
 
@@ -2222,18 +2225,18 @@ contains
        ! For SW
        ! Cross Section is by default Lindsay Stebbings but can be changed
        where(UseSource_I(Neu_:)) &
-             Sigma_I = ((CrossA1 - CrossA2*log(UStarM_I*100.))**2)*1.E-4
+            Sigma_I = ((CrossA1 - CrossA2*log(UStarM_I*100.))**2)*1.E-4
        where(UseSource_I(Neu_:)) &
-             SigmaN_I = ((CrossA1 - CrossA2*log(UStar_I*100.))**2)*1.E-4
+            SigmaN_I = ((CrossA1 - CrossA2*log(UStar_I*100.))**2)*1.E-4
 
        if(.not.IsMhd)then
           ! For Pu3
           where(UseSource_I(Neu_:)) &
-                SigmaPu3_I = &
-                ((CrossA1 - CrossA2*log(UStarMPu3_I*100.))**2)*(1.E-4)
+               SigmaPu3_I = &
+               ((CrossA1 - CrossA2*log(UStarMPu3_I*100.))**2)*(1.E-4)
           where(UseSource_I(Neu_:)) &
-                SigmaNPu3_I = &
-                ((CrossA1 - CrossA2*log(UStarPu3_I*100.))**2)*(1.E-4)
+               SigmaNPu3_I = &
+               ((CrossA1 - CrossA2*log(UStarPu3_I*100.))**2)*(1.E-4)
        end if
 
        ! Calculate Rate = \nu * nH * mp where nH is the neutral density
@@ -2525,29 +2528,29 @@ contains
           if (Ne3_ == iFluidProduced_C(i,j,k)) then
              ! in Pop III region
              SourceCx_V(SWHRho_)    = -sum(I0px_I) &
-                    + I0px_I(Ne3_) + I0xpu3_I(Ne3_)
+                  + I0px_I(Ne3_) + I0xpu3_I(Ne3_)
              SourceCx_V(SWHRhoUx_)  = -sum(JxpUx_I) &
-                    + JpxUx_I(Ne3_) + Jpu3xUx_I(Ne3_)
+                  + JpxUx_I(Ne3_) + Jpu3xUx_I(Ne3_)
              SourceCx_V(SWHRhoUy_)  = -sum(JxpUy_I) &
-                    + JpxUy_I(Ne3_) + Jpu3xUy_I(Ne3_)
+                  + JpxUy_I(Ne3_) + Jpu3xUy_I(Ne3_)
              SourceCx_V(SWHRhoUz_)  = -sum(JxpUz_I) &
-                    + JpxUz_I(Ne3_) + Jpu3xUz_I(Ne3_)
+                  + JpxUz_I(Ne3_) + Jpu3xUz_I(Ne3_)
              SourceCx_V(SWHEnergy_) = -sum(Kxp_I) &
-                    + Kpx_I(Ne3_) + Kpu3x_I(Ne3_)
+                  + Kpx_I(Ne3_) + Kpu3x_I(Ne3_)
              SourceCx_V(SWHp_) = (Gamma-1)* ( SourceCx_V(SWHEnergy_) &
-                    - sum(U_DI(:,SWH_)*SourceCx_V(SWHRhoUx_:SWHRhoUz_)) &
-                    + 0.5*U2_I(SWH_)*SourceCx_V(SWHRho_) )
+                  - sum(U_DI(:,SWH_)*SourceCx_V(SWHRhoUx_:SWHRhoUz_)) &
+                  + 0.5*U2_I(SWH_)*SourceCx_V(SWHRho_) )
 
              SourceCx_V(Pu3Rho_) = sum(I0px_I) &
-                    - I0px_I(Ne3_) - I0xpu3_I(Ne3_)
+                  - I0px_I(Ne3_) - I0xpu3_I(Ne3_)
              SourceCx_V(Pu3RhoUx_) = sum(Qmpu3xUx_I) + sum(JpxUx_I) &
-                    - JpxUx_I(Ne3_) - Jpu3xUx_I(Ne3_)
+                  - JpxUx_I(Ne3_) - Jpu3xUx_I(Ne3_)
              SourceCx_V(Pu3RhoUy_) = sum(Qmpu3xUy_I) + sum(JpxUy_I) &
-                    - JpxUy_I(Ne3_) -Jpu3xUy_I(Ne3_)
+                  - JpxUy_I(Ne3_) -Jpu3xUy_I(Ne3_)
              SourceCx_V(Pu3RhoUz_) = sum(Qmpu3xUz_I) + sum(JpxUz_I) &
-                    - JpxUz_I(Ne3_)- Jpu3xUz_I(Ne3_)
+                  - JpxUz_I(Ne3_)- Jpu3xUz_I(Ne3_)
              SourceCx_V(Pu3Energy_)= sum(Qepu3x_I) + sum(Kpx_I) &
-                    - Kpu3x_I(Ne3_) - Kpx_I(Ne3_)
+                  - Kpu3x_I(Ne3_) - Kpx_I(Ne3_)
 
              if(UseAlfvenWaves)then
                 AlfvenSpeed = sqrt(sum(State_V(Bx_:Bz_)**2)/State_V(Rho_))
@@ -2564,14 +2567,14 @@ contains
                 SourceCx_V(WaveFirst_:WaveLast_) = 0.5*SourceTurbulence
 
                 if(Lperp_ > 1) SourceCx_V(Lperp_) = &
-                     -KarmanTaylorBeta2AlphaRatio/KarmanTaylorAlpha &
+                     -KarmanTaylorBeta2AlphaRatio &
                      *State_V(Lperp_)*SourceTurbulence &
                      /max(1e-30,sum(State_V(WaveFirst_:WaveLast_)))
              end if
 
              SourceCx_V(Pu3P_) = (Gamma-1)* ( SourceCx_V(Pu3Energy_) &
-                    - sum(U_DI(:,Pu3_)*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
-                    + 0.5*U2_I(Pu3_)*SourceCx_V(Pu3Rho_) )
+                  - sum(U_DI(:,Pu3_)*SourceCx_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                  + 0.5*U2_I(Pu3_)*SourceCx_V(Pu3Rho_) )
 
              ! end of Region 3
           else
