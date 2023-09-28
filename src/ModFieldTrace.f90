@@ -176,7 +176,7 @@ module ModFieldTrace
   ! Flow variables to be integrated (rho and P) other than the magnetic field
   real, allocatable :: Extra_VGB(:,:,:,:,:)
 
-  ! Integral_I for a local Trace_DSNB segment
+  ! Integral_I for a local trace segment
   real, allocatable :: RayIntegral_V(:)
 
   ! Temporary array for extracting b.grad(B1) info
@@ -288,7 +288,7 @@ contains
     !--------------------------------------------------------------------------
     if(all(Pos_DI(3,:) > CLOSEDRAY))then
 
-       ! Check if the first direction of the Trace_DSNB ends on the ionosphere
+       ! Check if the first direction of the trace ends on the ionosphere
        if(Pos_DI(1,1)**2 + Pos_DI(2,1)**2 <= rIonosphere2) then
           iDir = 2
        else
@@ -345,7 +345,7 @@ contains
     elseif(Ray_DI(3,1)==BODYRAY)then
        Ray_DI(3,:)=-1.     ! Cells inside body
     elseif(Ray_DI(3,1)==LoopRay .and.  Ray_DI(3,2)==LoopRay) then
-       Ray_DI(3,:)=-2.     ! Loop Trace_DSNB within block
+       Ray_DI(3,:)=-2.     ! Loop within block
     else
        Ray_DI(3,:)=-3.     ! Strange status
     end if
@@ -431,18 +431,17 @@ contains
        iPeInvB = nExtraIntegral
     end if
 
-    ! Number of Integral_I for a local Trace_DSNB segment:
+    ! Number of Integral_I for a local trace segment:
     !    InvB_, Z0x_, Z0y_, Z0b_ and extras
     nLocalIntegral = nExtraIntegral + 4
 
-    ! Indexes for the final position of the Trace_DSNB
+    ! Indexes for the final position of the trace
     iXEnd = nLocalIntegral + 1; iYEnd = iXEnd + 1; iZEnd = iYEnd + 1
     iLength = iZEnd + 1
 
     ! Number of reals stored in the RayIntegral_VII and RayResult_VII arrays
     nRayIntegral = iLength
 
-    ! Initialize Trace_DSNB (write_logfile may use it before first tracing)
     allocate(Extra_VGB(nExtraIntegral,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(RayIntegral_V(1:nLocalIntegral))
 
@@ -491,7 +490,7 @@ contains
     use BATL_lib,         ONLY: Xyz_DGB, message_pass_cell
     use ModMpi
 
-    ! Indices corresponding to the starting point and directon of Trace_DSNB
+    ! Indices corresponding to the starting point and directon of traces
     integer :: i, j, k, iBlock, iRay
 
     ! Testing and timing
@@ -563,7 +562,7 @@ contains
              if(DoTestRay) &
                   write(*,*)'calling follow_ray iProc,iRay=', iProc, iRay
 
-             ! Follow Trace_DSNB in direction iRay
+             ! Trace in direction iRay
              call follow_ray(iRay, [i,j,k,iBlock], Xyz_DGB(:,i,j,k,iBlock))
 
           end do ! iRay
@@ -616,26 +615,26 @@ contains
   !============================================================================
   subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
-    ! Follow Trace_DSNB in direction iRayIn (1 is parallel with the field,
-    !                                 2 is anti-parallel,
-    !                                 0 means that no Trace_DSNB is passed
+    ! Trace in direction iRayIn (1 is parallel with the field,
+    !                            2 is anti-parallel,
+    !                            0 means that nothing is traced
     ! Always follow rays received from other PE-s.
     !
-    ! The passed Trace_DSNB is identified by the index array i_D.
+    ! The passed trace is identified by the index array i_D.
     ! The meaning of i_D d depends on the context:
-    !  3 cell + 1 block index for 3D Trace_DSNB tracing
-    !  1 latitude + 1 longitude index for Trace_DSNB integration
-    !  1 linear index for Trace_DSNB extraction.
+    !  3 cell + 1 block index for 3D tracing
+    !  1 latitude + 1 longitude index for 2D integration
+    !  1 linear index for 1D extraction.
     !
-    ! The rays are followed until the Trace_DSNB hits the outer or inner
+    ! The rays are followed until they hit the outer or inner
     ! boundary of the computational domain. The results are saved into
     ! arrays defined in ModFieldTrace or into files based on the logicals
     ! in ModFieldtrace (more than one of these can be true):
     !
-    ! If DoTraceRay, follow the Trace_DSNB from cell centers of the 3D grid,
+    ! If DoTraceRay, trace from cell centers of the 3D grid,
     !    and save the final position into
     !    ModFieldTrace::Trace_DSNB(:,iRayIn,i_D(1),i_D(2),i_D(3),i_D(4)) on the
-    !    processor that started the Trace_DSNB trace.
+    !    processor that started the trace.
     !
     ! If DoMapRay, map the rays down to the ionosphere, save spherical
     !    coordinates (in SMG) into
@@ -662,27 +661,27 @@ contains
 
     ! local variables
 
-    ! Cell, block and PE indexes for initial position and Trace_DSNB direction
+    ! Cell, block and PE indexes for initial position and trace direction
     integer :: iStart, jStart, kStart, iBlockStart, iProcStart, iRay
     integer :: iStart_D(4)
 
-    ! Current position of the Trace_DSNB
+    ! Current position of the trace
     integer :: iBlockRay
     real    :: XyzRay_D(3)
 
-    ! Current length of Trace_DSNB
+    ! Current length of trace
     real    :: RayLength
 
-    ! Is the Trace_DSNB trace Done
+    ! Is the trace Done
     logical :: DoneRay
 
-    ! Shall we get Trace_DSNB from other PE-s
+    ! Shall we get rays from other PE-s
     logical :: DoGet
 
     ! Did we get rays from other PE-s
     logical :: IsFound
 
-    ! Is the Trace_DSNB parallel with the vector field
+    ! Is the trace parallel with the vector field
     logical :: IsParallel
 
     integer, parameter :: MaxCount = 1000
@@ -700,7 +699,7 @@ contains
 
     if(iRayIn /= 0)then
 
-       ! Store starting indexes and Trace_DSNB direction
+       ! Store starting indexes and trace direction
        iStart = i_D(1); jStart = i_D(2); kStart = i_D(3);
        iBlockStart = i_D(4); iProcStart = iProc
        iRay   = iRayIn
@@ -759,10 +758,10 @@ contains
                         'Storing recv trace iProc,iRay,i,j,k,iBlock,trace=',&
                         iProc,iRay,iStart,jStart,kStart,iBlockStart,XyzRay_D
 
-                   ! Get another Trace_DSNB from the others
+                   ! Get another trace from the other processors
                    CYCLE GETRAY
                 else
-                   ! Find block for the received Trace_DSNB
+                   ! Find block for the received trace
                    call find_grid_block(XyzRay_D,jProc,iBlockRay)
 
                    if(jProc /= iProc)call stop_mpi(&
@@ -836,9 +835,9 @@ contains
           kStart      = iStart_D(3)
           iBlockStart = iStart_D(4)
 
-          Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
+          Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart) = XyzRay_D
 
-          ! Get another Trace_DSNB from the others
+          ! Get another trace from the others
           CYCLE GETRAYFINAL
        end if
        EXIT GETRAYFINAL
@@ -853,7 +852,7 @@ contains
       !------------------------------------------------------------------------
       if(DoIntegrateRay)RayIntegral_V = 0.0
 
-      ! Follow the Trace_DSNB through the local blocks
+      ! Trace through the local blocks
       BLOCK: do iCount = 1, MaxCount
 
          if(iCount < MaxCount)then
@@ -964,7 +963,7 @@ contains
             kStart      = iStart_D(3)
             iBlockStart = iStart_D(4)
 
-            Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
+            Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart) = XyzRay_D
 
             if(DoTestRay)write(*,*) &
                  'Storing into iProc,iBlock,i,j,k,iRay,Xyz=',&
@@ -1424,7 +1423,7 @@ contains
             iProc,iBlock,nSegment,IndCur_D
 
        if(DoCheckOpen)then
-          if(all(Trace_DSNB(1,iRay,i1:i2,j1:j2,k1:k2,iBlock)==OPENRAY))then
+          if(all(Trace_DSNB(1,iRay,i1:i2,j1:j2,k1:k2,iBlock) == OPENRAY))then
              nOpen=nOpen+1
              iFace = RayOpen_
              EXIT FOLLOW

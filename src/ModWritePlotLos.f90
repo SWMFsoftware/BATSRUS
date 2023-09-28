@@ -1024,12 +1024,12 @@ contains
       iDimMin = r_
       if(present(UseThreads))then
          ! Integration through the threaded gap
-         ! The part of Trace_DSNB passing through the threaded gap does not
+         ! The part of LOS line passing through the threaded gap does not
          ! contribute to the integral if UseThreads = .false.
          if(.not.UseThreads)RETURN
          ! In the threaded gap, the radial coordinate is allowed to go beyond
          ! the block boundary and the domain boundary. The criterion for the
-         ! Trace_DSNB pass to a new block should ignore this coordinate.
+         ! LOS line pass to a new block should ignore this coordinate.
          iDimMin = r_ + 1
       end if
       if(DoTest .and. iProc == 0) then
