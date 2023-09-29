@@ -94,11 +94,11 @@ module ModFieldLineThread
        A2Minor_ = 3 , AMinor_ = 3, TeSi_=4, TiSi_ = TeSi_ + min(1, Pe_-1)
 
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
-  ! Te = TeFraction*State_V(iP)/State_V(Rho_)
-  ! Pe = PeFraction*State_V(iP)
+  ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
+  ! Pe = PeFraction*State_V(iPe)
   ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
   real, public    :: TeFraction, TiFraction, PeFraction
-  integer, public :: iP
+  integer, public :: iPe
   ! CoefXi/sqrt(VAlfven[NoDim]) is dXi/ds[NoDim]
   ! While setting thread,  we use only the
   ! thread-dependent factor in DXi, namely,
@@ -206,7 +206,7 @@ contains
        ! so that Pi = (rho/ionmass)*Ti
        ! TiFraction is defined such that Ti = Pi/rho * TiFraction
        TiFraction = MassIon_I(1)
-       iP = Pe_
+       iPe = Pe_
        PeFraction = 1.0
     else
        ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
@@ -214,11 +214,11 @@ contains
        ! TeFraction is defined such that Te = p/rho * TeFraction
        TeFraction = MassIon_I(1)/(1 + Z)
        TiFraction = TeFraction
-       iP = p_
+       iPe = p_
        PeFraction = Z/(1.0 + Z)
     end if
-    ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
-    ! Pe = PeFraction*State_V(iP)
+    ! Therefore Te = TeFraction*State_V(iPe)/State_V(Rho_)
+    ! Pe = PeFraction*State_V(iPe)
     !
     CoefXi = PoyntingFluxPerB/LperpTimesSqrtB**2
 
@@ -939,7 +939,9 @@ contains
   end subroutine read_thread_restart
   !============================================================================
   subroutine interpolate_thread_state(Coord_D, iBlock, State_V)
-
+    ! Interpolate the state at the point with coords Coord_D from
+    ! BoundaryThreads_B(iBlock)%State_VG(:,:,:)
+    ! array, then convert to MHD
     use ModAdvance,     ONLY: nVar
     use BATL_lib,       ONLY: &
          MinIJK_D, MaxIJK_D, CoordMin_DB, CellSize_DB, r_
@@ -954,7 +956,6 @@ contains
     ! Interpolated state vector
     real,    intent(out):: State_V(nVar)
     real                :: StateThread_V(PSi_:TiSi_), CoordNorm_D(3)
-
     character(len=*), parameter:: NameSub = 'interpolate_thread_state'
     !--------------------------------------------------------------------------
     CoordNorm_D(r_+1:) = 0.5 + &
@@ -989,20 +990,25 @@ contains
             x_D=CoordNorm_D,                                      &
             DoExtrapolate=.false.                                 )
     end if
-    call state_thread_to_mhd(StateThread_V, State_V)
+    call state_thread_to_mhd(Coord_D, StateThread_V, State_V)
 
   end subroutine interpolate_thread_state
   !============================================================================
-  subroutine state_thread_to_mhd(StateThread_V, State_V)
-
+  subroutine state_thread_to_mhd(Coord_D, StateThread_V, State_V)
+    ! Convert the state stored in the State_VG array to
+    ! the MHD state vector
+    use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz
     use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
     use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_
     !INPUT:
+    ! Coordinates to determine the magnetic field
+    real,    intent(in) :: Coord_D(MaxDim)
     real,    intent(in) :: StateThread_V(PSi_:TiSi_)
     ! MHD state vector
     real,    intent(out):: State_V(nVar)
     ! Dimensionless plasma parameters
     real :: pTotal, Te, Ti
+    real :: Xyz_D(MaxDim), B0_D(MaxDim)
     ! Nullify momentum and field components of the state vector
     character(len=*), parameter:: NameSub = 'state_thread_to_mhd'
     !--------------------------------------------------------------------------
@@ -1013,21 +1019,27 @@ contains
     if(UseElectronPressure)then
        Ti  = StateThread_V(TiSi_)*Si2No_V(UnitTemperature_)
        ! Use the following equations
-       ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+       ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
        ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
-       ! and State_V(iP) + State_V(p_) = pTotal
+       ! and State_V(iPe) + State_V(p_) = pTotal
        State_V(Rho_) = pTotal/(Te/TeFraction + Ti/TiFraction)
-       State_V(p_)   = Te/TeFraction*State_V(Rho_)
-       State_V(iP)   = Ti/TiFraction*State_V(Rho_)
+       State_V(p_)   = Ti/TiFraction*State_V(Rho_)
+       State_V(iPe)   = Te/TeFraction*State_V(Rho_)
     else
        State_V(p_)   = pTotal
        ! Use equation
-       ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+       ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
        State_V(Rho_) = TeFraction*pTotal/Te
     end if
-    State_V(WaveFirst_) = StateThread_V(A2Major_)
-    State_V(WaveLast_ ) = StateThread_V(A2Minor_)
-
+    call coord_to_xyz(Coord_D, Xyz_D)
+    call get_b0(Xyz_D,B0_D)
+    if(sum(B0_D*Xyz_D) <  0.0)then
+       State_V(WaveLast_ ) = StateThread_V(A2Major_)
+       State_V(WaveFirst_) = StateThread_V(A2Minor_)
+    else
+       State_V(WaveFirst_) = StateThread_V(A2Major_)
+       State_V(WaveLast_ ) = StateThread_V(A2Minor_)
+    end if
   end subroutine state_thread_to_mhd
   !============================================================================
   subroutine state_mhd_to_thread(State_V, Xyz_D, B0_D, StateThread_V)
@@ -1060,7 +1072,7 @@ contains
     end if
     StateThread_V(A2Major_:A2Minor_) = StateThread_V(A2Major_:A2Minor_)/&
             (sqrt(State_V(Rho_))* PoyntingFluxPerB)
-    StateThread_V(TeSi_) = TeFraction*State_V(iP)/State_V(Rho_)         &
+    StateThread_V(TeSi_) = TeFraction*State_V(iPe)/State_V(Rho_)         &
          *No2Si_V(UnitTemperature_)
     if(useElectronPressure)then
        StateThread_V(TiSi_) = TiFraction*State_V(p_)    &
@@ -1237,8 +1249,8 @@ contains
           end if
        case('te')
           ! Use the following equation
-          ! Te = TeFraction*State_V(iP)/State_V(Rho_)
-          PlotVar_V(iVar) = TeFraction*State_V(iP)/State_V(Rho_)
+          ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
+          PlotVar_V(iVar) = TeFraction*State_V(iPe)/State_V(Rho_)
        case('ti')
           ! Use the following equation
           ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
@@ -1418,22 +1430,6 @@ contains
   end subroutine get_restart_file_name
   !============================================================================
   !==========================ROUTINES USED FOR TRIANGULATION===================
-  subroutine broadcast_buffer(nVar, Buff_VI)
-
-    use ModMpi
-    integer, intent(in) :: nVar
-    real, intent(inout) :: Buff_VI(nVar, nThread)
-    integer             :: iBuff, iProcBCast, iError
-    !--------------------------------------------------------------------------
-    iBuff = 0
-    do iProcBCast = 0, nProc-1
-       if(nThread_P(iProcBCast)==0)CYCLE
-       call MPI_BCAST(Buff_VI(:, iBuff+1:iBuff+nThread_P(iProcBCast)),&
-            nVar*nThread_P(iProcBCast), MPI_REAL, iProcBCast, iComm, iError)
-       iBuff = iBuff + nThread_P(iProcBCast)
-    end do
-
-  end subroutine broadcast_buffer
   !============================================================================
   subroutine get_thread_point(Coord1, State_VI)
 
@@ -1505,7 +1501,23 @@ contains
     end do
     call broadcast_buffer(nVar=Lat_+TiSi_, Buff_VI=State_VI)
     call test_stop(NameSub, DoTest)
-
+  contains
+    subroutine broadcast_buffer(nVar, Buff_VI)
+      
+      use ModMpi
+      integer, intent(in) :: nVar
+      real, intent(inout) :: Buff_VI(nVar, nThread)
+      integer             :: iBuff, iProcBCast, iError
+      !------------------------------------------------------------------------
+      iBuff = 0
+      do iProcBCast = 0, nProc-1
+         if(nThread_P(iProcBCast)==0)CYCLE
+         call MPI_BCAST(Buff_VI(:, iBuff+1:iBuff+nThread_P(iProcBCast)),&
+              nVar*nThread_P(iProcBCast), MPI_REAL, iProcBCast, iComm, iError)
+         iBuff = iBuff + nThread_P(iProcBCast)
+      end do
+      
+    end subroutine broadcast_buffer
   end subroutine get_thread_point
   !============================================================================
   subroutine save_threads_for_plot
