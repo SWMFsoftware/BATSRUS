@@ -1696,14 +1696,6 @@ contains
 
           PlotVar_GV(1:nI,1:nJ,1:nK,iVar) &
                = Trace_DSNB(i3,j3,1:nI,1:nJ,1:nK,iBlock)
-
-          ! Now load the face ghost cells with the first computation
-          ! cell on each face.  This is a bad approximation but is
-          ! needed for Tecplot.  It will be fixed later using message
-          ! passing
-          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) &
-               = Trace_DSNB(i3,j3,1:nI,1:nJ,1:nK,iBlock)
-
           ! GRID INFORMATION
        case('crit1')
           ! call calc_error_amr_criteria(nVar, State_VGB)
