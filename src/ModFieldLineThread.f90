@@ -235,22 +235,6 @@ contains
 
   end subroutine init
   !============================================================================
-  subroutine clean
-    integer :: iBlock ! Loop variable
-    !--------------------------------------------------------------------------
-    if(.not.IsInitialized)RETURN
-    IsInitialized = .false.
-    deallocate(DoThreads_B)
-    do iBlock = 1, MaxBlock
-       if(IsAllocatedThread_B(iBlock))&
-            call deallocate_thread_b(iBlock)
-    end do
-    deallocate(IsAllocatedThread_B)
-    deallocate(  BoundaryThreads_B)
-    deallocate(nThread_P)
-
-  end subroutine clean
-  !============================================================================
   subroutine read_thread_param(NameCommand, iSession)
 
     use ModReadParam, ONLY: read_var
