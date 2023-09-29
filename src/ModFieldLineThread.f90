@@ -1412,7 +1412,6 @@ contains
   end subroutine get_restart_file_name
   !============================================================================
   !==========================ROUTINES USED FOR TRIANGULATION===================
-  !============================================================================
   subroutine get_thread_point(Coord1, State_VI)
 
     ! Calculate coordinates (lon, lat) of the intersection point of threads
@@ -1484,8 +1483,9 @@ contains
     call broadcast_buffer(nVar=Lat_+TiSi_, Buff_VI=State_VI)
     call test_stop(NameSub, DoTest)
   contains
+    !==========================================================================
     subroutine broadcast_buffer(nVar, Buff_VI)
-      
+
       use ModMpi
       integer, intent(in) :: nVar
       real, intent(inout) :: Buff_VI(nVar, nThread)
@@ -1498,8 +1498,9 @@ contains
               nVar*nThread_P(iProcBCast), MPI_REAL, iProcBCast, iComm, iError)
          iBuff = iBuff + nThread_P(iProcBCast)
       end do
-      
+
     end subroutine broadcast_buffer
+    !==========================================================================
   end subroutine get_thread_point
   !============================================================================
   subroutine save_threads_for_plot
