@@ -254,8 +254,6 @@ contains
                'UseFieldLineThreads can be set ON in the first session only')
           call read_var('nPointThreadMax', nPointThreadMax)
           call read_var('DsThreadMin', DsThreadMin)
-       else
-          call clean
        end if
     case('#PLOTTHREADS')
        call read_var('DoPlotThreads', DoPlotThreads)
