@@ -28,7 +28,7 @@ module GM_couple_pw
   ! These are interpolated then to the GM grid
   real, allocatable :: CoordXyzPw_DI(:,:), CoordXyPw_DI(:,:), StateGm_VI(:,:),&
        CoordXyzPw1_DI(:,:), CoordXyzPw2_DI(:,:), &
-       StateGm1_VI(:,:),StateGm2_VI(:,:)
+       StateGm1_VI(:,:), StateGm2_VI(:,:)
 
   integer, allocatable :: iLst1_I(:), lPtr1_I(:), lEnd1_I(:),&
        iLst2_I(:), lPtr2_I(:), lEnd2_I(:)
