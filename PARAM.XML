@@ -8519,6 +8519,7 @@ Multiply the densities obtained from the polar wind model with RhoPwCoef.
 This may improve Dst for Geospace + PWOM configuration.
 
 Default value is RhoPwCoef=1.0.
+</command>
 </commandgroup>
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
