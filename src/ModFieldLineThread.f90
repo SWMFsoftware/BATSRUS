@@ -123,8 +123,8 @@ module ModFieldLineThread
   ! Add contribution from the transition region to the LOS plots
   logical, public :: UseTRCorrection = .true.
 
-  ! Number of threads, originating from physical cells
-  integer :: nThread = -1
+  ! Number of all threads, originating from physical cells
+  integer :: nThreadAll
 
   ! Number of GhostCells in a uniform grid covering a threaded gap
   integer :: nGUniform = 10
@@ -344,8 +344,7 @@ contains
     use ModMpi
     character(len=*), intent(in) :: NameCaller
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
-    integer:: iError
-    real   :: dCoord1UniformPe = -1.0
+    integer:: iError, nThreadLoc
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_threads'
     !--------------------------------------------------------------------------
@@ -446,26 +445,27 @@ contains
        end do; end do
     end do
     ! Number of threads (originating from physical cells) at the given PE
-    nThread = count(IsAllocatedThread_B(1:nBlock))*nJ*nK
+    nThreadLoc = count(IsAllocatedThread_B(1:nBlock))*nJ*nK
     if(nProc==1)then
        nBlockSetAll = nBlockSet
        nPointMinAll = nPointMin
-       nThread_P(0) = nThread
+       nThread_P(0) = nThreadLoc
+       nThreadAll   = nThreadLoc
     else
        call MPI_ALLREDUCE(nBlockSet, nBlockSetAll, 1, MPI_INTEGER, MPI_SUM,&
             iComm, iError)
        call MPI_REDUCE(nPointMin, nPointMinAll, 1, MPI_INTEGER, MPI_MIN,&
             0, iComm, iError)
-       call MPI_ALLGATHER(nThread, 1, MPI_INTEGER, nThread_P, 1, MPI_INTEGER,&
-            iComm, iError)
-       nThread = sum(nThread_P)
+       call MPI_ALLGATHER(nThreadLoc, 1, MPI_INTEGER, nThread_P, 1, &
+            MPI_INTEGER, iComm, iError)
+       nThreadAll = sum(nThread_P)
     end if
     if(nBlockSetAll > 0.and.iProc==0)then
        write(*,*)'Set threads in ',nBlockSetAll,' blocks on iteration ', &
             nStep, ' is called from '//NameCaller
        write(*,*)'nPointMin = ',nPointMinAll
        write(*,*)'dCoord1Uniform =', 1/dCoord1Inv
-       if(nProc<=4)write(*,*)'Number of threads on different PEs: ', nThread_P
+       if(nProc<=8)write(*,*)'Number of threads on different PEs: ', nThread_P
     end if
     call test_stop(NameSub, DoTest)
   end subroutine set_threads
@@ -1423,7 +1423,7 @@ contains
     use ModInterpolate, ONLY: linear
     use ModNumConst, ONLY: cHalfPi
     real,  intent(in) :: Coord1
-    real, intent(out) :: State_VI(2+TiSi_, nThread)
+    real, intent(out) :: State_VI(2+TiSi_, nThreadAll)
     integer :: i, j, k, iBlock, nPoint, iBuff
     integer, parameter:: Lon_ = 1, Lat_ = 2
     real    :: StateThread_VI(2+TiSi_, 1-nPointThreadMax:0)
@@ -1488,7 +1488,7 @@ contains
 
       use ModMpi
       integer, intent(in) :: nVar
-      real, intent(inout) :: Buff_VI(nVar, nThread)
+      real, intent(inout) :: Buff_VI(nVar, nThreadAll)
       integer             :: iBuff, iProcBCast, iError
       !------------------------------------------------------------------------
       iBuff = 0
@@ -1520,19 +1520,19 @@ contains
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
     integer, parameter :: Lon_ = 1, Lat_=2
-    real    :: State_VI(Lat_+TiSi_,nThread+2), State_V(TiSi_), &
+    real    :: State_VI(Lat_+TiSi_,nThreadAll+2), State_V(TiSi_), &
          Coord_D(Lon_:Lat_)
-    real    :: Xyz_DI(3,nThread+2), Xyz_D(3)
+    real    :: Xyz_DI(3,nThreadAll+2), Xyz_D(3)
 
     ! Data for interpolation: stencil and weights
     real    :: Weight_I(3)
     integer :: iStencil_I(3), iError
 
-    ! Triangulation data
-    integer, allocatable :: iList_I(:), iPointer_I(:), iEnd_I(:)
-
     ! Local Ligicals
     logical :: IsTriangleFound = .false.
+    ! Triangulation data
+    integer, allocatable, save :: iList_I(:), iPointer_I(:), iEnd_I(:)
+    integer, save :: nThreadOld = 0
 
     ! Add two triangulation nodes at the poles:
     real, parameter :: North_D(3)   = [0.0, 0.0, +1.0]
@@ -1541,36 +1541,41 @@ contains
     character(len=*), parameter:: NameSub = 'save_threads_for_plot'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    allocate(iList_I(6*nThread), iPointer_I(6*nThread), iEnd_I(nThread+2))
+    
+    if(nThreadOld/=nThreadAll)then
+       if(allocated(iList_I))deallocate(iList_I, iPointer_I, iEnd_I)
+       allocate(iList_I(6*nThreadAll), iPointer_I(6*nThreadAll), &
+            iEnd_I(nThreadAll+2))
+       nThreadOld = nThreadAll
+    end if
     do i = -nGUniform, 0
 
        ! Generalized radial coordinate of the grid points
-       ! Coord1TopThread is the SC low boundary
        Coord1 = CoordMin_D(r_) + real(i)/dCoord1Inv
 
-       call get_thread_point(Coord1, State_VI(:,2:nThread+1))
+       call get_thread_point(Coord1, State_VI(:,2:nThreadAll+1))
+       
        ! Convert lon and lat to Cartesian coordinates on a unit sphere
-
-       call trans( n=nThread,&
-            rlat=State_VI(2,2:nThread+1), &
-            rlon=State_VI(1,2:nThread+1), &
-            x= Xyz_DI(x_,2:nThread+1), &
-            y= Xyz_DI(y_,2:nThread+1), &
-            z=Xyz_DI(z_,2:nThread+1))
+       call trans( n=nThreadAll,&
+            rlat=State_VI(2,2:nThreadAll+1), &
+            rlon=State_VI(1,2:nThreadAll+1), &
+            x= Xyz_DI(x_,2:nThreadAll+1), &
+            y= Xyz_DI(y_,2:nThreadAll+1), &
+            z=Xyz_DI(z_,2:nThreadAll+1))
 
        ! Add two grid nodes at the poles:
        Xyz_DI(:,1)             = South_D     ! = [0.0, 0.0, -1.0]
-       Xyz_DI(:,    nThread+2) = North_D     ! = [0.0, 0.0, +1.0]
+       Xyz_DI(:,    nThreadAll+2) = North_D     ! = [0.0, 0.0, +1.0]
 
        ! Triangulate
-       call trmesh(nThread+2, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
+       call trmesh(nThreadAll+2, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
             iList_I, iPointer_I, iEnd_I, iError)
        if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
 
        ! Fix states at the polar nodes:
        ! North:
        call fix_state(iNodeToFix =          1,&
-                      nNode      =  nThread+2,&
+                      nNode      =  nThreadAll+2,&
                       iList_I    =    iList_I,&
                       iPointer_I = iPointer_I,&
                       iEnd_I     =     iEnd_I,&
@@ -1578,8 +1583,8 @@ contains
                       nVar       =      TiSi_,&
                       State_VI   = State_VI(3:,:))
        ! South:
-       call fix_state(iNodeToFix =  nThread+2,&
-                      nNode      =  nThread+2,&
+       call fix_state(iNodeToFix =  nThreadAll+2,&
+                      nNode      =  nThreadAll+2,&
                       iList_I    =    iList_I,&
                       iPointer_I = iPointer_I,&
                       iEnd_I     =     iEnd_I,&
@@ -1603,11 +1608,11 @@ contains
              ! Find a triangle into which this vector falls and the
              ! interpolation weights
              if(UsePlanarTriangles)then
-                call find_triangle_orig(Xyz_D, nThread+2, Xyz_DI, &
+                call find_triangle_orig(Xyz_D, nThreadAll+2, Xyz_DI, &
                      iList_I, iPointer_I, iEnd_I,                 &
                      Weight_I, IsTriangleFound, iStencil_I)
              else
-                call find_triangle_sph( Xyz_D, nThread+2, Xyz_DI, &
+                call find_triangle_sph( Xyz_D, nThreadAll+2, Xyz_DI, &
                      iList_I, iPointer_I, iEnd_I,                 &
                      Weight_I(1), Weight_I(2), Weight_I(3),       &
                      IsTriangleFound,                             &
@@ -1626,7 +1631,6 @@ contains
           end do; end do    ! j,k
        end do       ! iBlock
     end do          ! i
-    deallocate(iList_I, iPointer_I, iEnd_I)
 
     ! One extra layer passing through physical cell centers (i=1)
     do iBlock = 1, nBlock
