@@ -22,9 +22,6 @@ module ModFieldLineThread
   SAVE
 
   PRIVATE ! Except
-  integer, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
-  integer, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
-
   ! rBody here is set to one keeping a capability to set
   ! the face-formulated boundary condition by modifying
   ! rBody
@@ -88,7 +85,9 @@ module ModFieldLineThread
      real, pointer :: State_VG(:,:,:,:)
   end type BoundaryThreads
   ! For visualization:
-
+  ! Indexes for array State_VG(PSi_:TiSi_,-nGUniform:1,jMin_:jMax_,kMin_:kMax_)
+  integer, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
+  integer, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
   ! Conponenets of array stored at each thread for visualization
   integer, public, parameter :: PSi_=1, A2Major_ = 2, AMajor_ = 2, &
        A2Minor_ = 3 , AMinor_ = 3, TeSi_=4, TiSi_ = TeSi_ + min(1, Pe_-1)
@@ -973,101 +972,59 @@ contains
             DoExtrapolate=.false.                                 )
     end if
     call state_thread_to_mhd(Coord_D, StateThread_V, State_V)
-
+  contains
+    !==========================================================================
+    subroutine state_thread_to_mhd(Coord_D, StateThread_V, State_V)
+      ! Convert the state stored in the State_VG array to
+      ! the MHD state vector
+      use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz
+      use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
+      use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_
+      use ModTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB
+      !INPUT:
+      ! Coordinates to determine the magnetic field
+      real,    intent(in) :: Coord_D(MaxDim)
+      real,    intent(in) :: StateThread_V(PSi_:TiSi_)
+      ! MHD state vector
+      real,    intent(out):: State_V(nVar)
+      ! Dimensionless plasma parameters
+      real :: pTotal, Te, Ti
+      real :: Xyz_D(MaxDim), B0_D(MaxDim), Aux
+      ! Nullify momentum and field components of the state vector
+      character(len=*), parameter:: NameSub = 'state_thread_to_mhd'
+      !------------------------------------------------------------------------
+      State_V = 0.0
+      ! Transform Si parameters to diminsionless ones:
+      pTotal = StateThread_V(PSi_) *Si2No_V(UnitEnergyDens_ )
+      Te     = StateThread_V(TeSi_)*Si2No_V(UnitTemperature_)
+      if(UseElectronPressure)then
+         Ti  = StateThread_V(TiSi_)*Si2No_V(UnitTemperature_)
+         ! Use the following equations
+         ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
+         ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
+         ! and State_V(iPe) + State_V(p_) = pTotal
+         State_V(Rho_) = pTotal/(Te/TeFraction + Ti/TiFraction)
+         State_V(p_)   = Ti/TiFraction*State_V(Rho_)
+         State_V(iPe)   = Te/TeFraction*State_V(Rho_)
+      else
+         State_V(p_)   = pTotal
+         ! Use equation
+         ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
+         State_V(Rho_) = TeFraction*pTotal/Te
+      end if
+      Aux = PoyntingFluxPerB*sqrt(State_V(Rho_))
+      call coord_to_xyz(Coord_D, Xyz_D)
+      call get_b0(Xyz_D,B0_D)
+      if(sum(B0_D*Xyz_D) <  0.0)then
+         State_V(WaveLast_ ) = StateThread_V(A2Major_)*Aux
+         State_V(WaveFirst_) = StateThread_V(A2Minor_)*Aux
+      else
+         State_V(WaveFirst_) = StateThread_V(A2Major_)*Aux
+         State_V(WaveLast_ ) = StateThread_V(A2Minor_)*Aux
+      end if
+    end subroutine state_thread_to_mhd
+    !==========================================================================
   end subroutine interpolate_thread_state
-  !============================================================================
-  subroutine state_thread_to_mhd(Coord_D, StateThread_V, State_V)
-    ! Convert the state stored in the State_VG array to
-    ! the MHD state vector
-    use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz
-    use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
-    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_
-    use ModTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB
-    !INPUT:
-    ! Coordinates to determine the magnetic field
-    real,    intent(in) :: Coord_D(MaxDim)
-    real,    intent(in) :: StateThread_V(PSi_:TiSi_)
-    ! MHD state vector
-    real,    intent(out):: State_V(nVar)
-    ! Dimensionless plasma parameters
-    real :: pTotal, Te, Ti
-    real :: Xyz_D(MaxDim), B0_D(MaxDim), Aux
-    ! Nullify momentum and field components of the state vector
-    character(len=*), parameter:: NameSub = 'state_thread_to_mhd'
-    !--------------------------------------------------------------------------
-    State_V = 0.0
-    ! Transform Si parameters to diminsionless ones:
-    pTotal = StateThread_V(PSi_) *Si2No_V(UnitEnergyDens_ )
-    Te     = StateThread_V(TeSi_)*Si2No_V(UnitTemperature_)
-    if(UseElectronPressure)then
-       Ti  = StateThread_V(TiSi_)*Si2No_V(UnitTemperature_)
-       ! Use the following equations
-       ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
-       ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
-       ! and State_V(iPe) + State_V(p_) = pTotal
-       State_V(Rho_) = pTotal/(Te/TeFraction + Ti/TiFraction)
-       State_V(p_)   = Ti/TiFraction*State_V(Rho_)
-       State_V(iPe)   = Te/TeFraction*State_V(Rho_)
-    else
-       State_V(p_)   = pTotal
-       ! Use equation
-       ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
-       State_V(Rho_) = TeFraction*pTotal/Te
-    end if
-    Aux = PoyntingFluxPerB*sqrt(State_V(Rho_))
-    call coord_to_xyz(Coord_D, Xyz_D)
-    call get_b0(Xyz_D,B0_D)
-    if(sum(B0_D*Xyz_D) <  0.0)then
-       State_V(WaveLast_ ) = StateThread_V(A2Major_)*Aux
-       State_V(WaveFirst_) = StateThread_V(A2Minor_)*Aux
-    else
-       State_V(WaveFirst_) = StateThread_V(A2Major_)*Aux
-       State_V(WaveLast_ ) = StateThread_V(A2Minor_)*Aux
-    end if
-  end subroutine state_thread_to_mhd
-  !============================================================================
-  subroutine state_mhd_to_thread(State_V, Xyz_D, B0_D, StateThread_V)
-
-    use ModPhysics,        ONLY: No2Si_V, UnitTemperature_, &
-         UnitEnergyDens_
-    use ModVarIndexes,      ONLY: Rho_, p_, Pe_, Bx_, Bz_, nVar
-    use ModWaves,           ONLY: WaveFirst_, WaveLast_
-    use  ModTurbulence,   ONLY:PoyntingFluxPerB
-    !INPUT:
-    ! MHD state vector
-    real,    intent(in) :: State_V(nVar)
-    ! Cartesian coords and B0 field to idenify major and minor waves
-    real,    intent(in) :: Xyz_D(3), B0_D(3)
-    !OUTPUT:
-    ! Thread state vector
-    real,    intent(out):: StateThread_V(PSi_:TiSi_)
-    !LOCALS:
-    ! Total magnetic field
-    real :: BTotal_D(3)
-    !--------------------------------------------------------------------------
-#ifndef SCALAR
-    BTotal_D = State_V(Bx_:Bz_) + B0_D
-    if(sum(BTotal_D*Xyz_D) <  0.0)then
-       StateThread_V(A2Major_) = State_V(WaveLast_ )
-       StateThread_V(A2Minor_) = State_V(WaveFirst_)
-    else
-       StateThread_V(A2Major_) = State_V(WaveFirst_)
-       StateThread_V(A2Minor_) = State_V(WaveLast_ )
-    end if
-    StateThread_V(A2Major_:A2Minor_) = StateThread_V(A2Major_:A2Minor_)/&
-         (sqrt(State_V(Rho_))* PoyntingFluxPerB)
-    StateThread_V(TeSi_) = TeFraction*State_V(iPe)/State_V(Rho_)         &
-         *No2Si_V(UnitTemperature_)
-    if(useElectronPressure)then
-       StateThread_V(TiSi_) = TiFraction*State_V(p_)    &
-            /State_V(Rho_)*No2Si_V(UnitTemperature_)
-       StateThread_V(PSi_) = (State_V(p_)+State_V(Pe_)) &
-            *No2Si_V(UnitEnergyDens_)
-    else
-       StateThread_V(PSi_) = State_V(p_)*No2Si_V(UnitEnergyDens_)
-    end if
-#endif
-  end subroutine state_mhd_to_thread
   !============================================================================
   subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, &
        State_V, PlotVar_V)
@@ -1439,15 +1396,12 @@ contains
     real    :: Weight_I(3)
     integer :: iStencil_I(3), iError
 
-    ! Local Ligicals
+    ! Local Logicals
     logical :: IsTriangleFound = .false.
     ! Triangulation data
     integer, allocatable, save :: iList_I(:), iPointer_I(:), iEnd_I(:)
     integer, save :: nThreadOld = 0
 
-    ! Add two triangulation nodes at the poles:
-    real, parameter :: North_D(3)   = [0.0, 0.0, +1.0]
-    real, parameter :: South_D(3)   = [0.0, 0.0, -1.0]
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'save_threads_for_plot'
     !--------------------------------------------------------------------------
@@ -1472,11 +1426,11 @@ contains
             rlon=State_VI(1,2:nThreadAll+1), &
             x= Xyz_DI(x_,2:nThreadAll+1), &
             y= Xyz_DI(y_,2:nThreadAll+1), &
-            z=Xyz_DI(z_,2:nThreadAll+1))
+            z= Xyz_DI(z_,2:nThreadAll+1))
 
        ! Add two grid nodes at the poles:
-       Xyz_DI(:,1)             = South_D     ! = [0.0, 0.0, -1.0]
-       Xyz_DI(:,    nThreadAll+2) = North_D     ! = [0.0, 0.0, +1.0]
+       Xyz_DI(:,1)            = [0.0, 0.0, -1.0]
+       Xyz_DI(:,nThreadAll+2) = [0.0, 0.0, +1.0]
 
        ! Triangulate
        call trmesh(nThreadAll+2, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
@@ -1485,13 +1439,13 @@ contains
 
        ! Fix states at the polar nodes:
        ! North:
-       call fix_state(iNodeToFix =          1,&
+       call fix_state(iNodeToFix =   1,&
             nNode      =  nThreadAll+2,&
-            iList_I    =    iList_I,&
-            iPointer_I = iPointer_I,&
-            iEnd_I     =     iEnd_I,&
-            Xyz_DI     =     Xyz_DI,&
-            nVar       =      TiSi_,&
+            iList_I    =    iList_I,   &
+            iPointer_I = iPointer_I,   &
+            iEnd_I     =     iEnd_I,   &
+            Xyz_DI     =     Xyz_DI,   &
+            nVar       =      TiSi_,   &
             State_VI   = State_VI(3:,:))
        ! South:
        call fix_state(iNodeToFix =  nThreadAll+2,&
@@ -1565,8 +1519,7 @@ contains
       ! with the spherical surface at the first generalized coordinate value
       ! equal to input Coord1
 
-      use BATL_lib, ONLY: nBlock, Unused_B, &
-           CoordMin_DB, CellSize_DB, r_
+      use BATL_lib, ONLY: nBlock, Unused_B, CoordMin_DB, CellSize_DB, r_
       use ModInterpolate, ONLY: linear
       use ModNumConst, ONLY: cHalfPi
       real,  intent(in) :: Coord1
@@ -1647,6 +1600,49 @@ contains
       end do
 
     end subroutine broadcast_buffer
+    !==========================================================================
+    subroutine state_mhd_to_thread(State_V, Xyz_D, B0_D, StateThread_V)
+
+      use ModPhysics,        ONLY: No2Si_V, UnitTemperature_, &
+           UnitEnergyDens_
+      use ModVarIndexes,      ONLY: Rho_, p_, Pe_, Bx_, Bz_, nVar
+      use ModWaves,           ONLY: WaveFirst_, WaveLast_
+      use  ModTurbulence,   ONLY:PoyntingFluxPerB
+      !INPUT:
+      ! MHD state vector
+      real,    intent(in) :: State_V(nVar)
+      ! Cartesian coords and B0 field to idenify major and minor waves
+      real,    intent(in) :: Xyz_D(3), B0_D(3)
+      !OUTPUT:
+      ! Thread state vector
+      real,    intent(out):: StateThread_V(PSi_:TiSi_)
+      !LOCALS:
+      ! Total magnetic field
+      real :: BTotal_D(3)
+      !------------------------------------------------------------------------
+#ifndef SCALAR
+      BTotal_D = State_V(Bx_:Bz_) + B0_D
+      if(sum(BTotal_D*Xyz_D) <  0.0)then
+         StateThread_V(A2Major_) = State_V(WaveLast_ )
+         StateThread_V(A2Minor_) = State_V(WaveFirst_)
+      else
+         StateThread_V(A2Major_) = State_V(WaveFirst_)
+         StateThread_V(A2Minor_) = State_V(WaveLast_ )
+      end if
+      StateThread_V(A2Major_:A2Minor_) = StateThread_V(A2Major_:A2Minor_)/&
+           (sqrt(State_V(Rho_))* PoyntingFluxPerB)
+      StateThread_V(TeSi_) = TeFraction*State_V(iPe)/State_V(Rho_)        &
+           *No2Si_V(UnitTemperature_)
+      if(useElectronPressure)then
+         StateThread_V(TiSi_) = TiFraction*State_V(p_)    &
+              /State_V(Rho_)*No2Si_V(UnitTemperature_)
+         StateThread_V(PSi_) = (State_V(p_)+State_V(Pe_)) &
+              *No2Si_V(UnitEnergyDens_)
+      else
+         StateThread_V(PSi_) = State_V(p_)*No2Si_V(UnitEnergyDens_)
+      end if
+#endif
+    end subroutine state_mhd_to_thread
     !==========================================================================
   end subroutine save_threads_for_plot
   !============================================================================
