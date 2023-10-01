@@ -1560,10 +1560,12 @@ contains
                !  the wave amplitude to get the cell-centered aplitude squared
                StateThread_VI(2+A2Major_, 1 - nPoint:0) = &
                     StateThread_VI(2+AMajor_, 1 - nPoint:0)*&
-                    BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:-1,j,k)
+                    BoundaryThreads_B(iBlock) &
+                    %State_VIII(AMajor_,-nPoint:-1,j,k)
                StateThread_VI(2+A2Minor_, 1 - nPoint:0) = &
                     StateThread_VI(2+AMinor_, 1 - nPoint:0)*&
-                    BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:-1,j,k)
+                    BoundaryThreads_B(iBlock) &
+                    %State_VIII(AMinor_,-nPoint:-1,j,k)
                ! Now we find the intersection point of the thread with the
                ! spherical surface at given radial gen coordinate, Coord1
                ! and interpolate the state vector to this point
@@ -1574,14 +1576,15 @@ contains
                     iMin = 1 - nPoint,                           &
                     iMax = 0,                                    &
                     x = Coord1,                                  &
-                    x_I = BoundaryThreads_B(iBlock)%Coord_DIII(r_,&
-                    1 - nPoint:0, j, k),                         &
+                    x_I = BoundaryThreads_B(iBlock)              &
+                    %Coord_DIII(r_,1-nPoint:0,j,k),              &
                     DoExtrapolate = .false.)
             end do
          end do
       end do
       call broadcast_buffer(nVar=Lat_+TiSi_, Buff_VI=State_VI)
       call test_stop(NameSub, DoTest)
+
     end subroutine get_thread_point
     !==========================================================================
     subroutine broadcast_buffer(nVar, Buff_VI)
@@ -1642,6 +1645,7 @@ contains
          StateThread_V(PSi_) = State_V(p_)*No2Si_V(UnitEnergyDens_)
       end if
 #endif
+
     end subroutine state_mhd_to_thread
     !==========================================================================
   end subroutine save_threads_for_plot
