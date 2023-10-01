@@ -1185,7 +1185,7 @@ contains
 
     call timing_start('set_thread_bc')
     ! Start from floating boundary values
-    do k = MinK, MaxK; do j = MinJ, maxJ; do i = 1 - nGhost, 0
+    do k = 1, nK; do j = 1, nJ; do i = 1 - nGhost, 0
        State_VG(:, i,j,k) = State_VG(:,1, j, k)
     end do; end do; end do
 
