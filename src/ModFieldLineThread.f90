@@ -114,7 +114,7 @@ module ModFieldLineThread
 
   public:: UseFieldLineThreads
 
-  logical, public :: DoPlotThreads = .true.
+  logical, public :: DoPlotThreads = .false.
 
   ! Interolate with planar vs spherical triangles
   logical         :: UsePlanarTriangles = .false.
@@ -249,6 +249,7 @@ contains
     case("#FIELDLINETHREAD")
        call read_var('UseFieldLineThreads', UseFieldLineThreads)
        if(UseFieldLineThreads)then
+          DoPlotThreads = .true.
           if(iSession/=1)call stop_mpi(&
                'UseFieldLineThreads can be set ON in the first session only')
           call read_var('nPointThreadMax', nPointThreadMax)

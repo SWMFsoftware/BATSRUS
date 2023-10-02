@@ -865,9 +865,9 @@ contains
   contains
     !==========================================================================
     subroutine integrate_image
-      use ModFieldLineThread, ONLY: UseFieldLineThreads, rChromo=>rBody,      &
+      use ModFieldLineThread, ONLY: rChromo=>rBody,                      &
            get_tr_los_image, DoPlotThreads, UseTRCorrection
-      real:: Distance
+      real:: DistancePixToObs
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, DiscrChromo = -1.0, SqrtDiscr
       real:: XyzIntersect_D(3), XyzTR_D(3)
@@ -897,9 +897,10 @@ contains
 
             ! Vector from pixel center to observer
             LosPix_D = - XyzPix_D + ObsPos_D
-            Distance = norm2(LosPix_D)
+            DistancePixToObs = norm2(LosPix_D)
             ! Unit vector pointing from pixel center to observer
-            LosPix_D = LosPix_D/Distance
+            LosPix_D = LosPix_D/DistancePixToObs
+            ! Unit vector in the direction of integration (+/-LosPix_D) 
             LosDir_D = LosPix_D
 
             ! Calculate whether there are intersections with the rInner sphere
@@ -910,7 +911,8 @@ contains
             !                  = XyzPix_D^2 + 2 d XyzPix_D.LosPix_D + d^2
             ! where we use that LosPix_D is a unit vector.
             ! This can be rearranged to
-            ! 0 = d^2 + 2 p d + q
+            ! 0 = d^2 + 2 p d + q,
+            ! p = XyzPix_D.LosPix_D,    q = XyzPix_D^2 - (rInner+cTiny)^2
             ! solved for d = -p + sqrt(p^2 - q) where only the positive root
             ! is needed, as LosPix_D points toward the observer.
             ! If there is an intersection, we set the starting point to
@@ -923,15 +925,16 @@ contains
                  - XyzPix2  + (rInner + cTiny)**2
 
             if (Discriminant > 0) then
-               ! Only consider the intersection facing the observer
+               ! Consider the intersection facing the observer
                SqrtDiscr = sqrt(Discriminant)
+               ! Distance from the pixel to the intersection point
                d = - LosDotXyzPix + SqrtDiscr
                XyzIntersect_D = XyzPix_D + d*LosPix_D
                ! Integrate from the intersection point to observer
 
-               call integrate_line(XyzIntersect_D, Distance - d)
+               call integrate_line(XyzIntersect_D, DistancePixToObs - d)
 
-               if(UseFieldLineThreads)then
+               if(DoPlotThreads)then
                   ! The discriminant controlling intersection with
                   ! the chromosphere
                   DiscrChromo = LosDotXyzPix**2 - XyzPix2 + rChromo**2
@@ -943,7 +946,7 @@ contains
                      SqrtDiscr = sqrt(DiscrChromo)
                      dChromo = - LosDotXyzPix + SqrtDiscr
                      call integrate_line(XyzIntersect_D, d - dChromo, &
-                          UseThreads = DoPlotThreads)
+                          IsThreadedGap = .true.)
                      ! LOS ntersection with the top of Transition Region
                      if(UseTRCorrection.and.DoPlotThreads.and.          &
                           (UseEuv .or. UseSxr .or. UseTableGen))then
@@ -967,14 +970,14 @@ contains
                      ! boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
                      dMirror = 2*SqrtDiscr
                      call integrate_line(XyzIntersect_D, dMirror, &
-                          UseThreads = DoPlotThreads)
+                          IsThreadedGap = .true.)
                      XyzIntersect_D = XyzIntersect_D + dMirror*LosPix_D
                      call integrate_line(XyzIntersect_D, 1e30)
                   end if
                end if
             else
                ! No intersection, integrate from pixel to observer
-               call integrate_line(XyzPix_D, Distance)
+               call integrate_line(XyzPix_D, DistancePixToObs)
 
                ! Integrate in the other direction too if no intesection
                LosPix_D = -LosPix_D
@@ -986,7 +989,7 @@ contains
 
     end subroutine integrate_image
     !==========================================================================
-    subroutine integrate_line(XyzStartIn_D, LengthMax, UseThreads)
+    subroutine integrate_line(XyzStartIn_D, LengthMax, IsThreadedGap)
 
       ! Integrate variables from XyzStartIn_D in the direction LosPix_D
 
@@ -998,14 +1001,14 @@ contains
 
       real, intent(in):: XyzStartIn_D(3)
       real, intent(in):: LengthMax
-      logical, optional, intent(in) :: UseThreads
+      logical, optional, intent(in) :: IsThreadedGap
 
       real:: Length          ! Total length of integral
       real:: Ds              ! Length of line segment
 
       real:: XyzLos_D(3)    ! Coordinate of center of line segment
       integer:: iNode, iDimMin = 1
-      real, dimension(MaxDim):: XyzStart_D, &
+      real, dimension(MaxDim):: &
            PositionMin_D, PositionMax_D, &
            CoordMaxBlock_D, CoordBlock_D, CoordSizeBlock_D, &
            CoordSize_D, CoordLos_D, &
@@ -1022,16 +1025,7 @@ contains
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
       iDimMin = r_
-      if(present(UseThreads))then
-         ! Integration through the threaded gap
-         ! The part of LOS line passing through the threaded gap does not
-         ! contribute to the integral if UseThreads = .false.
-         if(.not.UseThreads)RETURN
-         ! In the threaded gap, the radial coordinate is allowed to go beyond
-         ! the block boundary and the domain boundary. The criterion for the
-         ! LOS line pass to a new block should ignore this coordinate.
-         iDimMin = r_ + 1
-      end if
+      if(present(IsThreadedGap))iDimMin = r_ + 1
       if(DoTest .and. iProc == 0) then
          write(*,'(2a, 3f10.7, a, f10.7)')NameSub, ' XyzStartIn_D=', &
               XyzStartIn_D, ', Distance = ', norm2(XyzStartIn_D)
@@ -1043,13 +1037,13 @@ contains
       CoordSize_D = CoordMax_D - CoordMin_D
       DsTiny = cTiny*(xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
 
-      XyzStart_D = XyzStartIn_D
+!      XyzStart_D = XyzStartIn_D
 
       ! Initial length of segment
       Ds = DsTiny
 
       ! Initialize "new" position as the starting point
-      XyzLosNew_D = XyzStart_D
+      XyzLosNew_D = XyzStartIn_D
       call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
 
       ! Initialize block boundaries so that point is surely outside
@@ -1069,7 +1063,7 @@ contains
          ! Move to new position
          XyzLos_D   = XyzLosNew_D
          CoordLos_D = CoordLosNew_D
-         if(.not.present(UseThreads)) then
+         if(.not.present(IsThreadedGap)) then
             ! Stop integration if we reached the edge of the domain
             if(  any(CoordLosNew_D > CoordMax_D) .or. &
                  any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
@@ -1085,7 +1079,7 @@ contains
          ! Check if we are still in the same block or not
          if(  any(CoordLos_D(iDimMin:) < CoordMinBlock_D(iDimMin:)) .or. &
               any(CoordLos_D(iDimMin:) > CoordMaxBlock_D(iDimMin:)))then
-            if(present(UseThreads))then
+            if(present(IsThreadedGap))then
                ! Find new block/node, increase the radial coordinate to
                ! put the point above the inner boundary
                call find_grid_block((rInner + cTiny)*XyzLos_D/norm2(XyzLos_D),&
@@ -1103,9 +1097,7 @@ contains
             CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) ! Center
             CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
             CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
-            if(present(UseThreads))then
-               if(DoPlotThreads)CellSize_D(r_) = 1/dCoord1Inv
-            end if
+            if(present(IsThreadedGap))CellSize_D(r_) = 1/dCoord1Inv
             if(DoTest)then
                write(*,*)NameSub,': new iBlock=', iBlock
                write(*, '(A, 3E12.5)')NameSub//': CoordMin=', CoordMinBlock_D
@@ -1166,12 +1158,13 @@ contains
             ! Reduce the integration step near the end of segment
             ! and add contribution from this segment to the image
             if(iProc == iProcFound)&
-                 call add_segment(LengthMax - Length, XyzLosNew_D, UseThreads)
+                 call add_segment(LengthMax - Length, XyzLosNew_D, &
+                 IsThreadedGap)
             RETURN
          else
             if(iProc == iProcFound)then
                ! Add contribution from this segment to the image
-               call add_segment(Ds, XyzLosNew_D, UseThreads)
+               call add_segment(Ds, XyzLosNew_D,IsThreadedGap)
             end if
 
             ! Move XyzLosNew to the end of the segment
