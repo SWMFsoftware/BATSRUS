@@ -28,15 +28,17 @@ module ModFieldTraceFast
 
   private ! except
   public:: trace_field_grid           ! trace field from 3D MHD grid cells
-  public:: Trace_DSNB                        ! inherited from ModFieldTrace
+  public:: Trace_DSNB                 ! inherited from ModFieldTrace
+  public:: calc_squash_factor         ! calculate squashing factor
+  public:: SquashFactor_CB            ! squashing factor
 
   ! Local variables
   logical, parameter:: DoDebug = .false.
 
   ! Trace_DINB contains the x,y,z coordinates for the foot point of a given
   ! field line for both directions, eg.
-  ! Trace_DINB(2,1,i,j,k,iBlock) is the y StringCoord for direction 1
-  ! trace for node i,j,k of block iBlock.
+  ! Trace_DINB(2,1,i,j,k,iBlock) is the y coordinate for direction 1
+  ! for node i,j,k of block iBlock.
 
   real, allocatable :: Trace_DINB(:,:,:,:,:,:)
   !$acc declare create(Trace_DINB)
@@ -2574,8 +2576,71 @@ contains
 
     end subroutine prolong_ray
     !==========================================================================
-
   end subroutine ray_pass_old
+  !============================================================================
+  subroutine calc_squash_factor
+    ! Calculatte squashing factor
+
+    use ModCoordTransform, ONLY: lonlat_to_xyz
+
+    real, parameter:: SquashMin = -1.0, SquashMax = 100.0
+    
+    integer:: i, j, k, iBlock, iStatus
+    real:: LonLat_D(2), Status_I(5)
+    real, allocatable:: Trace_IGB(:,:,:,:,:)
+    !--------------------------------------------------------------------------
+    call trace_field_grid
+
+    allocate(Trace_IGB(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBlock))
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          iStatus = nint(Trace_DSNB(3,1,i,j,k,iBlock))
+          if(iStatus < 0)then
+             Trace_IGB(:,i,j,k,iBlock) = -1e30
+          else
+             ! Convert Lat-Lon into X-Y-Z unit vectors to avoid discontinuity
+             LonLat_D = Trace_DSNB(2:1:-1,1,i,j,k,iBlock)
+             call lonlat_to_xyz(LonLat_D, Trace_IGB(1:3,i,j,k,iBlock))
+             LonLat_D = Trace_DSNB(5:4:-1,1,i,j,k,iBlock)
+             call lonlat_to_xyz(LonLat_D, Trace_IGB(4:6,i,j,k,iBlock))
+             ! Store status into last element as 1, 10, 100, 1000
+             ! so that jumps in status are properly identified
+             ! even if there are averages of up to 8 cells.
+             Trace_IGB(7,i,j,k,iBlock) = 10**iStatus
+          end if
+       end do; end do; end do
+    end do
+
+    ! Fill in ghost cells
+    call message_pass_cell(7, Trace_IGB)
+
+    if(.not.allocated(SquashFactor_CB)) &
+         allocate(SquashFactor_CB(nI,nJ,nK,MaxBlock))
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! Calculate Jacobian based on footpoints Trace_IGB
+          ! of lon-lat neighbors. For now take plane orthogonal
+          ! to the radial direction
+          Status_I(1)   = Trace_IGB(7,i,j,k,iBlock)
+          Status_I(2:3) = Trace_IGB(7,i,j-1:j+1:2,k,iBlock)
+          Status_I(4:5) = Trace_IGB(7,i,j,k-1:k+1:2,iBlock)
+          if(any(Status_I < 0)) then
+             SquashFactor_CB(i,j,k,iBlock) = SquashMin
+             CYCLE
+          end if
+          if(maxval(abs(Status_I - Status_I(1))) > 0.1) then
+             SquashFactor_CB(i,j,k,iBlock) = SquashMax
+             CYCLE
+          end if
+       end do; end do; end do
+    end do
+    
+    deallocate(Trace_IGB)
+  end subroutine calc_squash_factor
   !============================================================================
 end module ModFieldTraceFast
 !==============================================================================

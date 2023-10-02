@@ -34,7 +34,7 @@ module ModFieldTrace
   public:: write_plot_ieb             !
   public:: write_plot_lcb             ! write plot with last closed B lines
   public:: write_plot_equator         !
-
+  
   ! Public for ModFieldTraceFast only
   public:: trace_grid_accurate        ! trace field from 3D MHD grid cells
   public:: xyz_to_latlonstatus        ! convert to lat, lon, status
@@ -56,6 +56,9 @@ module ModFieldTrace
   real, public, allocatable :: Trace_DSNB(:,:,:,:,:,:)
   !$acc declare create(Trace_DSNB)
 
+  ! Squash factor
+  real, public, allocatable :: SquashFactor_CB(:,:,:,:)
+  
   ! Integral_I added up for all the local Trace_DSNB segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
   ! The second and third indexes correspond to the latitude and longitude of
