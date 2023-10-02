@@ -900,7 +900,7 @@ contains
             DistancePixToObs = norm2(LosPix_D)
             ! Unit vector pointing from pixel center to observer
             LosPix_D = LosPix_D/DistancePixToObs
-            ! Unit vector in the direction of integration (+/-LosPix_D) 
+            ! Unit vector in the direction of integration (+/-LosPix_D)
             LosDir_D = LosPix_D
 
             ! Calculate whether there are intersections with the rInner sphere

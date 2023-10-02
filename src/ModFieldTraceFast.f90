@@ -2584,7 +2584,7 @@ contains
     use ModCoordTransform, ONLY: lonlat_to_xyz
 
     real, parameter:: SquashMin = -1.0, SquashMax = 100.0
-    
+
     integer:: i, j, k, iBlock, iStatus
     real:: LonLat_D(2), Status_I(5)
     real, allocatable:: Trace_IGB(:,:,:,:,:)
@@ -2638,7 +2638,7 @@ contains
           end if
        end do; end do; end do
     end do
-    
+
     deallocate(Trace_IGB)
   end subroutine calc_squash_factor
   !============================================================================

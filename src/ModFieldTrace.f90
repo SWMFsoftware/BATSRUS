@@ -34,7 +34,7 @@ module ModFieldTrace
   public:: write_plot_ieb             !
   public:: write_plot_lcb             ! write plot with last closed B lines
   public:: write_plot_equator         !
-  
+
   ! Public for ModFieldTraceFast only
   public:: trace_grid_accurate        ! trace field from 3D MHD grid cells
   public:: xyz_to_latlonstatus        ! convert to lat, lon, status
@@ -58,7 +58,7 @@ module ModFieldTrace
 
   ! Squash factor
   real, public, allocatable :: SquashFactor_CB(:,:,:,:)
-  
+
   ! Integral_I added up for all the local Trace_DSNB segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
   ! The second and third indexes correspond to the latitude and longitude of
@@ -239,9 +239,9 @@ contains
 
     real :: rLonLat_D(3)
 
+    ! Check if this direction has a valid footpoint
     character(len=*), parameter:: NameSub = 'xyz_to_latlon'
     !--------------------------------------------------------------------------
-    ! Check if this direction has a valid footpoint
     if(Pos_D(1) > ClosedRay)then
 
        ! Convert GM position into SM coordinates
@@ -329,7 +329,7 @@ contains
           call xyz_to_latlon(Ray_DI(:,iRay))
        end do
     end if
-    
+
     ! Convert 3rd element into a status variable
     if(Ray_DI(3,1) > ClosedRay .and. Ray_DI(3,2) > ClosedRay)then
        Ray_DI(3,:) = 3      ! Fully closed
