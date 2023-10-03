@@ -59,7 +59,7 @@ module ModFieldTrace
   ! Squash factor
   real, public, allocatable :: SquashFactor_CB(:,:,:,:)
 
-  ! Integral_I added up for all the local Trace_DSNB segments
+  ! Integral_I added up for all the local trace segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
   ! The second and third indexes correspond to the latitude and longitude of
   ! the iM/RCM grid
@@ -86,9 +86,9 @@ module ModFieldTrace
   ! These indexes depend on multi-ion
   integer, public:: iPeInvB, iXEnd, iYEnd, iZEnd, iLength
 
-  ! Various values indicating the end state of a Trace_DSNB
-  real, public :: ClosedRay, OpenRay, BODYRAY, LoopRay, NoRay, OUTRAY
-  !$acc declare create(ClosedRay, OpenRay, BODYRAY, LoopRay, NoRay, OUTRAY)
+  ! Various values indicating the end state of a trace
+  real, public :: ClosedRay, OpenRay, BodyRay, LoopRay, NoRay, OutRay
+  !$acc declare create(ClosedRay, OpenRay, BodyRay, LoopRay, NoRay, OutRay)
 
   ! Select between fast less accurate and slower but more accurate algorithms
   logical, public:: UseAccurateTrace    = .false.
@@ -118,10 +118,10 @@ module ModFieldTrace
   logical, public:: IsBVectorField = .true.
   !$acc declare create(IsBVectorField)
 
-  ! Minimum number of time steps between two Trace_DSNB traces on the same grid
+  ! Minimum number of time steps between two traces on the same grid
   integer, public :: DnRaytrace = 1
 
-  ! Named parameters for Trace_DSNB status
+  ! Named parameters for trace status
   ! These values all must be less than 1, because 1..6 correspond to the
   ! six faces of the block. The ordering of these values is arbitrary.
   integer, public, parameter ::       &
@@ -155,7 +155,7 @@ module ModFieldTrace
   ! How often shall we synchronize PE-s for the accurate algorithms
   real         :: DtExchangeRay = 0.1
 
-  ! Maximum length of Trace_DSNB
+  ! Maximum length of trace
   real :: RayLengthMax = 200.
 
   ! Testing
@@ -167,7 +167,7 @@ module ModFieldTrace
   ! Number of rays found to be open based on the neighbors
   integer      :: nOpen
 
-  ! ----------- Variables for Integral_I along the Trace_DSNB -----------------
+  ! ----------- Variables for Integral_I along the trace -----------------
 
   ! Number of Integral_I depends on UseMultiIon and UseAnisPressure
   integer:: nRayIntegral
@@ -339,7 +339,7 @@ contains
        Ray_DI(3,:) = 1      ! Half closed in negative direction
     elseif(maxval(abs(Ray_DI(3,:) - OpenRay)) < 0.01) then
        Ray_DI(3,:) = 0      ! Fully open
-    elseif(abs(Ray_DI(3,1) - BODYRAY) < 0.01)then
+    elseif(abs(Ray_DI(3,1) - BodyRay) < 0.01)then
        Ray_DI(3,:) = -1     ! Cells inside body
     elseif(maxval(abs(Ray_DI(3,:) - LoopRay)) < 0.01) then
        Ray_DI(3,:) = -2     ! Loop within block
@@ -393,16 +393,16 @@ contains
 
     ClosedRay = xMinBox - 1
     OpenRay   = xMinBox - 2
-    BODYRAY   = xMinBox - 3
+    BodyRay   = xMinBox - 3
     LoopRay   = xMinBox - 4
     NoRay     = xMinBox - 100
-    OUTRAY    = xMinBox - 200
+    OutRay    = xMinBox - 200
 
     if(DoTest)then
        write(*,*) 'rTrace, rTrace2          =', rTrace, rTrace2
        write(*,*) 'rIonosphere, rIonosphere2=', rIonosphere, rIonosphere2
        write(*,*) 'rInner, rInner2          =', rInner, rInner2
-       write(*,*) 'ClosedRay,OpenRay,OUTRAY =', ClosedRay, OpenRay, OUTRAY
+       write(*,*) 'ClosedRay,OpenRay,OutRay =', ClosedRay, OpenRay, OutRay
     end if
 
     if(.not.allocated(b_DGB)) &
@@ -450,7 +450,7 @@ contains
 
     UseSmg = TypeCoordSystem == 'GSM' .or. TypeCoordSystem == 'GSE'
 
-    !$acc update device(ClosedRay, OpenRay, BODYRAY, LoopRay, NoRay, OUTRAY)
+    !$acc update device(ClosedRay, OpenRay, BodyRay, LoopRay, NoRay, OutRay)
     !$acc update device(rIonosphere, rIonosphere2, DoMapEquatorRay)
     !$acc update device(rInner, rInner2, rTrace, rTrace2)
     call test_stop(NameSub, DoTest)
@@ -551,9 +551,9 @@ contains
              ! Short cut for inner and false cells
              if(r_GB(i,j,k,iBlock) < rInner .or. &
                   .not.Used_GB(i,j,k,iBlock))then
-                Trace_DSNB(:,:,i,j,k,iBlock)=BODYRAY
+                Trace_DSNB(:,:,i,j,k,iBlock)=BodyRay
                 if(DoTestRay) &
-                     write(*,*)'Shortcut BODYRAY iProc,iRay=', iProc, iRay
+                     write(*,*)'Shortcut BodyRay iProc,iRay=', iProc, iRay
                 CYCLE
              end if
 
@@ -904,6 +904,7 @@ contains
             end if
          case(RayOpen_)
             ! The trace reached the outer boundary (or expected to do so)
+            XyzRay_D = OpenRay
             if(DoTestRay)write(*,*)&
                  'follow_ray finished at outer boundary, iProc,iRay,Xyz=', &
                  iProc, iRay, XyzRay_D
@@ -916,9 +917,9 @@ contains
 
          case(RayBody_)
             ! The trace hit a body
-            XyzRay_D = BODYRAY
+            XyzRay_D = BodyRay
             if(DoTestRay)write(*,*)&
-                 'follow_ray finished with BODYRAY, iProc,iRay=', iProc, iRay
+                 'follow_ray finished with BodyRay, iProc,iRay=', iProc, iRay
 
          case(RayIono_)
             ! The trace hit the ionosphere
