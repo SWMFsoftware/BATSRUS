@@ -905,7 +905,7 @@ contains
          case(RayOpen_)
             ! The trace reached the outer boundary (or expected to do so)
             ! Field line integration relies on XyzRay_D to be set to OpenRay
-            if(DoIntegrateRay) XyzRay_D = OpenRay
+            if(DoIntegrateRay .or. DoMapRay) XyzRay_D = OpenRay
             if(DoTestRay)write(*,*)&
                  'follow_ray finished at outer boundary, iProc,iRay,Xyz=', &
                  iProc, iRay, XyzRay_D
