@@ -159,9 +159,9 @@ contains
          KarmanTaylorBeta2AlphaRatio, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
          LperpTimesSqrtB, rMinWaveReflection
-    use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
+    use ModRadiativeCooling, ONLY: RadCooling_C, UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
-    use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
+    use ModChromosphere,  ONLY: DoExtendTransitionRegion,      &
          UseChromosphereHeating, get_tesi_c, TeSi_C
     use ModFaceFlux,      ONLY: Pe_G
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
