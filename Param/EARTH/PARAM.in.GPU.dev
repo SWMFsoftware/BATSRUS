@@ -152,7 +152,7 @@ T			DoSaveLogfile
 VAR			StringLog
 -1			DnSaveLogfile
 4.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst phi1 theta1 phi2 theta2 status		NameLogVars
+dt rho mx my mz p bx by bz pmin pmax dst lon1 lat1 lon2 lat2 status		NameLogVars
 
 #UPDATE
 fast			TypeUpdate
