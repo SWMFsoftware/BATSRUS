@@ -865,7 +865,7 @@ contains
   contains
     !==========================================================================
     subroutine integrate_image
-      use ModFieldLineThread, ONLY: rChromo=>rBody,                      &
+      use ModFieldLineThread, ONLY: rChromo,                      &
            get_tr_los_image, DoPlotThreads, UseTRCorrection
       real:: DistancePixToObs
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
@@ -995,7 +995,7 @@ contains
 
       use ModGeometry, ONLY: &
            xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
-      use ModFieldLineThread, ONLY: dCoord1Inv, DoPlotThreads, rChromo=>rBody
+      use ModFieldLineThread, ONLY: dCoord1Inv, DoPlotThreads, rChromo
       use BATL_lib,           ONLY: xyz_to_coord, &
            get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 

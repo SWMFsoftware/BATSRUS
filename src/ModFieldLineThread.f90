@@ -22,10 +22,8 @@ module ModFieldLineThread
   SAVE
 
   PRIVATE ! Except
-  ! rBody here is set to one keeping a capability to set
-  ! the face-formulated boundary condition by modifying
-  ! rBody
-  real, public, parameter :: rBody = 1.0
+  ! Chromosphere top boundary
+  real, public, parameter :: rChromo = 1.0
 
   logical, public, allocatable:: IsAllocatedThread_B(:)
 
@@ -196,7 +194,7 @@ contains
        ! Gen coords for the low corona boundary
        call coord_to_xyz(CoordMin_D, Xyz_D)
        ! Projection onto the photosphere level
-       Xyz_D = Xyz_D/norm2(Xyz_D)*rBody
+       Xyz_D = Xyz_D/norm2(Xyz_D)*rChromo
        ! Generalized coords of the latter.
        call xyz_to_coord(Xyz_D, CoordChromo_D)
        ! Inverse of the  mesh of the gap-covering grid uniform in gen coords
@@ -567,8 +565,8 @@ contains
           B0_D = B0Start_D
           R = RStart
           if(nTrial==nCoarseMax)then
-             CosBRMin = ( (RStart**2-rBody**2)/nPointThreadMax +Ds**2)/&
-                  (2*rBody*Ds)
+             CosBRMin = ( (RStart**2-rChromo**2)/nPointThreadMax +Ds**2)/&
+                  (2*rChromo*Ds)
              if(CosBRMin>0.9)call stop_mpi('Increase nPointThreadMax')
           end if
           POINTS: do
@@ -598,7 +596,7 @@ contains
              ! 3. New grid point:
              Xyz_D = Xyz_D - Ds*DirB_D
              R = norm2(Xyz_D)
-             if(R <= rBody)EXIT COARSEN
+             if(R <= rChromo)EXIT COARSEN
              if(R > RStart)CYCLE COARSEN
              ! Store a point
              XyzOld_D = Xyz_D
@@ -616,7 +614,7 @@ contains
              BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k) = B0
           end do POINTS
        end do COARSEN
-       if(R > rBody)then
+       if(R > rChromo)then
           write(*,*)'iPoint, R=', iPoint, R
           call stop_mpi('Thread did not reach the photosphere!')
        end if
@@ -662,10 +660,10 @@ contains
        ! Calculate more accurately the intersection point
        ! with the photosphere surface
        ROld = 1/BoundaryThreads_B(iBlock)%RInv_III(1-iPoint, j, k)
-       Aux = (ROld - RBody) / (ROld -R)
+       Aux = (ROld - rChromo) / (ROld -R)
        Xyz_D = (1 - Aux)*XyzOld_D +  Aux*Xyz_D
        ! Store the last point
-       BoundaryThreads_B(iBlock)%RInv_III(-iPoint, j, k) = 1/RBody
+       BoundaryThreads_B(iBlock)%RInv_III(-iPoint, j, k) = 1/rChromo
        call get_b0(Xyz_D, B0_D)
        B0 = norm2(B0_D)
        BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k) = B0
