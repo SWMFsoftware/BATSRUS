@@ -34,11 +34,11 @@ module ModThreadedLC
        GravHydroStat != cGravPot*MassIon_I(1)/(Z + 1)
 
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
-  ! Te = TeFraction*State_V(iP)/State_V(Rho_)
-  ! Pe = PeFraction*State_V(iP)
+  ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
+  ! Pe = PeFraction*State_V(iPe)
   ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
   use ModFieldLineThread, ONLY:  &
-       TeFraction, TiFraction,  iP, PeFraction
+       TeFraction, TiFraction,  iPe, PeFraction
 
   implicit none
   SAVE
@@ -1185,14 +1185,14 @@ contains
 
     call timing_start('set_thread_bc')
     ! Start from floating boundary values
-    do k = MinK, MaxK; do j = MinJ, maxJ; do i = 1 - nGhost, 0
+    do k = 1, nK; do j = 1, nJ; do i = 1 - nGhost, 0
        State_VG(:, i,j,k) = State_VG(:,1, j, k)
     end do; end do; end do
 
     ! Fill in the temperature array
     if(UseIdealEos)then
        do k = 1, nK; do j = 1, nJ
-          Te_G(0:1,j,k) = TeFraction*State_VGB(iP,1,j,k,iBlock) &
+          Te_G(0:1,j,k) = TeFraction*State_VGB(iPe,1,j,k,iBlock) &
                /State_VGB(Rho_,1,j,k,iBlock)
        end do; end do
     else
@@ -1229,7 +1229,7 @@ contains
        U = sum(U_D*BDir_D)
        U = sign(min(abs(U), UAbsMax), U)
 
-       PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)&
+       PeSi = PeFraction*State_VGB(iPe, 1, j, k, iBlock)&
             *(Te_G(0,j,k)/Te_G(1,j,k))*No2Si_V(UnitEnergyDens_)
        TiSiIn = TiFraction*State_VGB(p_,1,j,k,iBlock) &
             /State_VGB(Rho_,1,j,k,iBlock)*No2Si_V(UnitTemperature_)
@@ -1252,12 +1252,12 @@ contains
           CYCLE
        end if
 
-       State_VG(iP,0,j,k) = PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction
+       State_VG(iPe,0,j,k) = PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction
        ! Extrapolation of pressure
-       State_VG(iP, 1-nGhost:-1,j,k) = State_VG(iP,0,j,k)**2/&
-            State_VG(iP,1,j,k)
+       State_VG(iPe, 1-nGhost:-1,j,k) = State_VG(iPe,0,j,k)**2/&
+            State_VG(iPe,1,j,k)
        ! Assign ion pressure (if separate from electron one)
-       if(iP/=p_)then
+       if(iPe/=p_)then
           State_VG(p_,0,j,k) = PiSiOut*Si2No_V(UnitEnergyDens_)
           State_VG(p_,1-nGhost:-1,j,k) = State_VG(p_,0,j,k)**2/&
                State_VG(p_,1,j,k)
@@ -1304,7 +1304,7 @@ contains
           if(UseHeatFluxCollisionless)then
              call get_gamma_collisionless(Xyz_DGB(:,1,j,k,iBlock), GammaHere)
              State_VG(Ehot_,1-nGhost:0,j,k) = &
-                  State_VG(iP,1-nGhost:0,j,k)*&
+                  State_VG(iPe,1-nGhost:0,j,k)*&
                   (1.0/(GammaHere - 1) - InvGammaElectronMinus1)
           else
              State_VG(Ehot_,1-nGhost:0,j,k) = 0.0

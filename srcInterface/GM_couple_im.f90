@@ -345,7 +345,7 @@ contains
   !============================================================================
   subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
-    ! Do Trace_DSNB tracing for iM/RAM_SCB.
+    ! Do field line tracing for iM/RAM_SCB.
     ! Provide total number of points along rays
     ! and the number of variables to pass to iM
 
@@ -536,7 +536,7 @@ contains
           MhdHpP_II= RayResult_VII(HpPInvB_,:,:)
           MhdOpP_II= RayResult_VII(OpPInvB_,:,:)
        end if
-       ! Put impossible values if the Trace_DSNB is not closed
+       ! Put impossible values if the field line is not closed
        if(.not.DoMultiFluidIMCoupling)then
           where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
              MhdXeq_II     = NoValue

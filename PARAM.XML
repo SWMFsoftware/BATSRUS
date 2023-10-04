@@ -8509,6 +8509,17 @@ The default action is to not couple density or pressure from PS.
 
 </command>
 
+<command name="PWCOUPLING">
+  <parameter name="RhoPwCoef" type="real" min="1" default="1"/>
+
+#PWCOUPLING
+2.0                RhoPwCoef
+
+Multiply the densities obtained from the polar wind model with RhoPwCoef.
+This may improve Dst for Geospace + PWOM configuration.
+
+Default value is RhoPwCoef=1.0.
+</command>
 </commandgroup>
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

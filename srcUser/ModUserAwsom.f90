@@ -69,6 +69,8 @@ module ModUser
   real    :: Lon0, Lon1, Lat0, Lat1
   real    :: tStartStitch = -1.0, tStopStitch = -1.0
 
+  logical :: UseFloatRadialVelocity = .false.
+
   ! Rotating boundary condition
   real:: FlowSpeedJet =0.0, FlowSpeedJetSi =0.0
   real:: tBeginJet = 0.0, tEndJet = 0.0
@@ -175,6 +177,9 @@ contains
              call read_var('Latitude0', Lat0Deg)
              call read_var('Latitude1', Lat1Deg)
           end if
+
+       case("#FLOATRADIALVELOCITY")
+          call read_var('UseFloatRadialVelocity', UseFloatRadialVelocity)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -1116,23 +1121,38 @@ contains
           iRho = iRho_I(iFluid)
           iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
-          do k = MinK, MaxK; do j = MinJ, MaxJ
-             ! Note that the Bdir_D calculation does not include the
-             ! CME part below
-             FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
-                  + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
-             Bdir_D = FullB_D/max(1e-15, norm2(FullB_D))
+          if(UseFloatRadialVelocity)then
+             do k = MinK, MaxK; do j = MinJ, MaxJ
+                ! Copy radial velocity component. Reflect the other components
+                U = sum(State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock)*Runit_D) &
+                     /State_VGB(iRho,1,j,k,iBlock)
+                do i = MinI, 0
+                   U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
+			/State_VGB(iRho,1-i,j,k,iBlock)
+                   U_D = U_D - sum(U_D*Runit_D)*Runit_D
+                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                        (U*Runit_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
+                end do
+             end do; end do
+          else
+             do k = MinK, MaxK; do j = MinJ, MaxJ
+                ! Note that the Bdir_D calculation does not include the
+                ! CME part below
+                FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
+                     + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
+                Bdir_D = FullB_D/max(1e-15, norm2(FullB_D))
 
-             ! Copy field-aligned velocity component.
-             ! Reflect the other components
-             do i = MinI, 0
-                U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
-                     /State_VGB(iRho,1-i,j,k,iBlock)
-                U   = sum(U_D*Bdir_D); U_D = U_D - U*Bdir_D
-                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-                     (U*Bdir_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
-             end do
-          end do; end do
+                ! Copy field-aligned velocity component.
+                ! Reflect the other components
+                do i = MinI, 0
+                   U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
+                        /State_VGB(iRho,1-i,j,k,iBlock)
+                   U   = sum(U_D*Bdir_D); U_D = U_D - U*Bdir_D
+                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                        (U*Bdir_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
+                end do
+             end do; end do
+          end if
        end do
 
        ! start of CME part

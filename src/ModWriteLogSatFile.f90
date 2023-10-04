@@ -27,7 +27,6 @@ module ModWriteLogSatFile
 
 contains
   !============================================================================
-
   subroutine write_logfile(iSatIn, iFile, TimeSatHeaderIn)
 
     use ModMain
@@ -397,7 +396,7 @@ contains
     use ModPhysics, ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
          ElectronPressureRatio, InvGammaElectronMinus1
     use ModVarIndexes
-    use ModAdvance,  ONLY: Tmp1_GB, Tmp2_GB, State_VGB, DivB1_GB
+    use ModAdvance,  ONLY: Tmp1_GB, Tmp2_GB, State_VGB, StateOld_VGB, DivB1_GB
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
     use ModGeometry, ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, &
@@ -410,7 +409,7 @@ contains
          iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, x_, y_, &
          integrate_grid, maxval_grid, minval_grid, MinIJK_D, &
-         MaxIJK_D, nDim, xyz_to_coord
+         MaxIJK_D, nDim, xyz_to_coord, CellSize_DB, CellVolume_GB
     use BATL_tree,       ONLY: find_tree_cell, iTree_IA, Block_, Proc_
     use BATL_geometry,   ONLY: CoordMin_D, DomainSize_D
     use ModInterpolate,  ONLY: interpolate_vector
@@ -1174,6 +1173,37 @@ contains
             LogVar_I(iVarTot) = StateIntegral_V(Ew_)/DomainVolume
          end if
 
+      case('totv')
+         if(tSimulation <= 0.0)then
+            LogVar_I(iVarTot) = 0.0
+         else
+            do iBlock = 1, nBlock
+               if (Unused_B(iBlock)) CYCLE
+               Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
+                    abs( State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) &
+                    - StateOld_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock))/Dt
+            end do
+            LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)
+         endif
+      case('tv')
+         do iBlock = 1, nBlock
+            if (Unused_B(iBlock)) CYCLE
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
+                 abs( State_VGB(Rho_,2:nI+1,1:nJ,1:nK,iBlock) &
+                 - State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock))
+            if(nDim > 1) Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
+                 Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) + &
+                 abs( State_VGB(Rho_,1:nI,2:nJ+1,1:nK,iBlock) &
+                 - State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock))
+            if(nDim > 2) Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
+                 Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) + &
+                 abs( State_VGB(Rho_,1:nI,1:nJ,2:nK+1,iBlock) &
+                 - State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock))
+            ! Cancel out the cell volume in the integral
+            Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) &
+                 & /CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
+         end do
+         LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)
       case default
          ! Check if the variable name is one of the state variables
          NameLogVarLower = NameLogVar_I(iVar)

@@ -1780,10 +1780,13 @@ contains
     call set_b0_reschange
     if(UseFieldLineThreads)then
        if(UseBody2Orbit)then
-          ! Nullify DoThread array, set in set_b0
+          ! Nullify DoThread array, set in set_b0, since the field close to
+          ! the star does not change
           DoThreads_B = .false.
        else
+          ! Reconstruct threads in the updated B0 field
           call set_threads(NameSub)
+          ! Recalculate the boundary condition got from the updated threads
           call exchange_messages
        end if
     end if

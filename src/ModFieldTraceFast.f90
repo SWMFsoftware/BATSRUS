@@ -28,15 +28,17 @@ module ModFieldTraceFast
 
   private ! except
   public:: trace_field_grid           ! trace field from 3D MHD grid cells
-  public:: Trace_DSNB                        ! inherited from ModFieldTrace
+  public:: Trace_DSNB                 ! inherited from ModFieldTrace
+  public:: calc_squash_factor         ! calculate squashing factor
+  public:: SquashFactor_CB            ! squashing factor
 
   ! Local variables
   logical, parameter:: DoDebug = .false.
 
   ! Trace_DINB contains the x,y,z coordinates for the foot point of a given
   ! field line for both directions, eg.
-  ! Trace_DINB(2,1,i,j,k,iBlock) is the y StringCoord for direction 1
-  ! trace for node i,j,k of block iBlock.
+  ! Trace_DINB(2,1,i,j,k,iBlock) is the y coordinate for direction 1
+  ! for node i,j,k of block iBlock.
 
   real, allocatable :: Trace_DINB(:,:,:,:,:,:)
   !$acc declare create(Trace_DINB)
@@ -102,7 +104,7 @@ contains
   !============================================================================
   subroutine trace_field_grid
 
-    ! This parallel Trace_DSNB tracing algorithm was developed at the U.of M.
+    ! This parallel tracing algorithm was developed at the U.of M.
     ! by G. Toth and D. De Zeeuw. An overview of the scheme can be found in
     !
     ! D. L. De Zeeuw, S. Sazykin, R. A. Wolf, T. I. Gombosi,
@@ -195,7 +197,7 @@ contains
     ! Face index for the final point of the Trace_DSNB
     integer :: iFace
 
-    ! Current position of Trace_DSNB in normalized and physical coordinates
+    ! Current position of tracing in normalized and physical coordinates
     real :: Gen_D(3)
 
     ! Cell indices corresponding to current or final Gen_D position
@@ -210,7 +212,7 @@ contains
     ! Cell indices
     integer :: i, j, k, i0, j0, k0, iCount
 
-    ! Indices corresponding to the starting point of the Trace_DSNB
+    ! Indices corresponding to the starting point of the trace
     integer :: iX, iY, iZ
 
     ! Current block and direction indices
@@ -504,7 +506,7 @@ contains
           !$acc update device(UsePreferredInterpolation)
        end if
 
-    end do ! Trace_DSNB iteration
+    end do ! trace iteration
 
     call timing_stop("trace_iter")
 
@@ -551,19 +553,19 @@ contains
 #ifndef _OPENACC
           ! Some optimization for fully open blocks
           if(.not.DoCheckInside)then
-             if(all(Trace_DINB(1,iRay,:,:,:,iBlock)==OPENRAY))then
-                Trace_DSNB(:,iRay,:,:,:,iBlock)=OPENRAY
+             if(all(Trace_DINB(1,iRay,:,:,:,iBlock) == OPENRAY))then
+                Trace_DSNB(:,iRay,:,:,:,iBlock) = OPENRAY
                 CYCLE
              end if
           end if
 #endif
           !$acc loop vector collapse(3) private(GenIni_D, Gen_D, Weight_I)
-          do iZ=1,nK; do iY=1,nJ; do iX=1,nI
+          do iZ = 1, nK; do iY = 1, nJ; do iX = 1, nI
 
              ! Shortcuts for inner and false cells
              if(r_GB(iX,iY,iZ,iBlock) < rInner .or. &
                   .not.Used_GB(iX,iY,iZ,iBlock))then
-                Trace_DSNB(:,iRay,iX,iY,iZ,iBlock)=BODYRAY
+                Trace_DSNB(:,iRay,iX,iY,iZ,iBlock) = BODYRAY
 
                 if(DoTestRay)write(*,*)'BODYRAY'
 
@@ -626,7 +628,7 @@ contains
     call timing_stop('trace_grid_fast3')
 
     if(DoTime.and.iProc==0)then
-       write(*,'(a)',ADVANCE='NO') 'Total Trace_DSNB tracing time:'
+       write(*,'(a)',ADVANCE='NO') 'Total tracing time:'
        call timing_show('ray_trace',1)
     end if
     call barrier_mpi
@@ -789,11 +791,11 @@ contains
     logical function do_follow_iono(Xyz_D, iRay)
       !$acc routine seq
 
-      ! Follow Trace_DSNB inside ionosphere starting from Xyz_D which
+      ! Trace inside ionosphere starting from Xyz_D which
       ! is given in real coordinates and use analytic mapping.
       ! On return Xyz_D contains the final coordinates.
       ! Return true if it was successfully integrated down to rIonosphere,
-      ! return false if the Trace_DSNB exited rTrace or too many integration
+      ! return false if the trace exited rTrace or too many integration
       ! steps were Done
 
       use ModPhysics,  ONLY: DipoleStrengthSi ! only the sign is needed
@@ -837,13 +839,13 @@ contains
          iRay, iBlock) result(iFaceOut)
       !$acc routine seq
 
-      ! Follow Trace_DSNB starting at initial position GenIn_D in direction
+      ! Trace starting at initial position GenIn_D in direction
       ! iRay until we hit the wall of the control volume or the ionosphere.
-      ! Return 1,2,3,4,5,6 if the Trace_DSNB hit the block faces
-      ! Return RayIono_   if the Trace_DSNB hit the ionosphere
-      ! Return RayLoop_   if the Trace_DSNB did not hit anything
-      ! Return RayOut_    if the Trace_DSNB goes out of the box immediately
-      ! Return RayBody_   if the Trace_DSNB goes into or is inside a body
+      ! Return 1,2,3,4,5,6 if the trace hit the block faces
+      ! Return RayIono_   if the trace hit the ionosphere
+      ! Return RayLoop_   if the trace did not hit anything
+      ! Return RayOut_    if the trace goes out of the box immediately
+      ! Return RayBody_   if the trace goes into or is inside a body
 
       ! Arguments
 
@@ -875,7 +877,7 @@ contains
       ! Line length, max, step size, limits, next step size, back to surface
       real :: s, sMax, Ds, DsMax, DsMin, DsNext, DsTiny, DsBack
 
-      ! counter for Trace_DSNB integration
+      ! counter for integration
       integer :: nSegment
       integer, parameter:: MaxSegment = 10*(nI+nJ+nK)
 
@@ -899,7 +901,7 @@ contains
       ! Accuracy in terms of Gen_D in normalized coordinates
       DxOpt=0.01
 
-      ! Length and maximum length of Trace_DSNB within control volume
+      ! Length and maximum length of trace within control volume
       s = 0
       sMax = 10*maxval(GenMax_D - GenMin_D)
       nSegment = 0
@@ -977,7 +979,7 @@ contains
          call interpolate_bb_node(GenIni_D, bIni_D, iBlock)
          GenMid_D = GenIni_D + 0.5*Ds*bIni_D
 
-         ! Check if the Trace_DSNB is pointing outwards
+         ! Check if the trace is pointing outwards
          if(nSegment==0.and.IsSurfacePoint)then
             if(DoTestRay)write(*,*)'me,iBlock,GenIni_D,bIni_D=', &
                  iProc, iBlock, GenIni_D, bIni_D
@@ -987,7 +989,7 @@ contains
 
                if(DoTestRay)then
                   write(*,*)'me,iBlock,GenMid_D=', iProc, iBlock, GenMid_D
-                  write(*,*)'Trace_DSNB points outwards: me,iBlock,Ds,Xyz_D=',&
+                  write(*,*)'trace points outwards: me,iBlock,Ds,Xyz_D=',&
                        iProc, iBlock, Ds,&
                        Xyz_DGB(:,1,1,1,iBlock) &
                        + CellSize_DB(:,iBlock)*(GenMid_D - 1)
@@ -1055,7 +1057,7 @@ contains
               write(*,*)'me,iBlock,nSegment,s,Gen_D=', &
               iProc, iBlock, nSegment, s, Gen_D
 
-         ! Check if the Trace_DSNB hit the wall of the control volume
+         ! Check if the trace hit the wall of the control volume
          if(any(Gen_D < GenMin_D) .or. any(Gen_D > GenMax_D))then
 
             ! Hit the wall, backup so that Gen_D is almost exactly on the wall
@@ -1066,7 +1068,7 @@ contains
                Gen_D = Gen_D - DsBack*bMid_D
             end if
 
-            ! Find out which wall the Trace_DSNB hit
+            ! Find out which wall was hit
             if    (Gen_D(1)<=GenMin_D(1))then; iFaceOut=1
             elseif(Gen_D(2)<=GenMin_D(2))then; iFaceOut=3
             elseif(Gen_D(3)<=GenMin_D(3))then; iFaceOut=5
@@ -1117,12 +1119,12 @@ contains
          i2, j2, k2, IsSurfacePoint, Trace_D, Gen_D, Weight_I, UseRay)
       !$acc routine seq
 
-      ! Assign value to Trace_D(3) based on Trace_DSNB intersection
+      ! Assign value to Trace_D(3) based on trace intersection
       ! given by the global variables iFace and position Gen_D(3)
       !
-      ! iRay is 1 if Trace_DSNB points in positive B direction and 2 otherwise
+      ! iRay is 1 if trace points in positive B direction and 2 otherwise
       !
-      ! IsSurfacePoint is true if the Trace_DSNB was started from the block
+      ! IsSurfacePoint is true if the tracing was started from the block
       ! face and false if it was started from a cell center
 
       integer, intent(in)    :: iFace, iRay, iBlock, iX, iY, iZ
@@ -1149,28 +1151,28 @@ contains
 
       select case(iFace)
       case(RayOut_)
-         ! The Trace_DSNB points outward
+         ! The trace points outward
          Trace_D = OUTRAY
 
          if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=OUTRAY'
 
          RETURN
       case(RayLoop_)
-         ! The Trace_DSNB did not hit the wall of the block
+         ! The trace did not hit the wall of the block
          Trace_D = LoopRay
 
          if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=LoopRay'
 
          RETURN
       case(RayBody_)
-         ! The Trace_DSNB hit a body
+         ! The trace hit a body
          Trace_D = BODYRAY
 
          if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=BODYRAY'
 
          RETURN
       case(RayIono_)
-         ! The Trace_DSNB hit the ionosphere
+         ! The trace hit the ionosphere
          Trace_D = Gen_D
 
          if(DoTestRay)write(*,*)&
@@ -1202,7 +1204,7 @@ contains
          e1 = Gen_D(3) - k1 + 0.5
 
       case(5, 6)
-         ! The Trace_DSNB hit the bot or top wall
+         ! The trace hit the bottom or top wall
          if(iFace == 5)then
             k1 = 1
          else
@@ -1358,12 +1360,12 @@ contains
        i=1
        do iCount = 1, 9999999
           if(i>n)then
-             ! New type of Trace_DSNB
-             n=i
-             TraceFirst_DI(:,i)=Trace_DI(:,j)
-             WeightSum_I(i) =WeightTmp_I(j)
-             if(TraceFirst_DI(1,i)>CLOSEDRAY)&
-                  TraceSum_DI(:,i)=WeightTmp_I(j)*Trace_DI(:,j)
+             ! New type of trace
+             n = i
+             TraceFirst_DI(:,i) = Trace_DI(:,j)
+             WeightSum_I(i) = WeightTmp_I(j)
+             if(TraceFirst_DI(1,i) > CLOSEDRAY)&
+                  TraceSum_DI(:,i) = WeightTmp_I(j)*Trace_DI(:,j)
              EXIT
           end if
 
@@ -1371,10 +1373,10 @@ contains
           dTrace=sum(abs(Trace_DI(:,j)-TraceFirst_DI(:,i)))
 
           if(dTrace<dTraceMax)then
-             ! Same type of Trace_DSNB, cummulate it
+             ! Same type of trace, cummulate it
 
-             WeightSum_I(i)=WeightSum_I(i)+WeightTmp_I(j)
-             if(TraceFirst_DI(1,i)>CLOSEDRAY)&
+             WeightSum_I(i) = WeightSum_I(i) + WeightTmp_I(j)
+             if(TraceFirst_DI(1,i) > CLOSEDRAY)&
                   TraceSum_DI(:,i) = TraceSum_DI(:,i) &
                   + WeightTmp_I(j)*Trace_DI(:,j)
              EXIT
@@ -1389,7 +1391,7 @@ contains
     end do ! j
 
     if(n == 1)then
-       ! Only one type of Trace_DSNB is interpolated
+       ! Only one type of trace is interpolated
        if(TraceFirst_DI(1,1)>CLOSEDRAY)then
           ! get result (WeightSum_I can be less than 1! )
           Trace_D=TraceSum_DI(:,1)/WeightSum_I(1)
@@ -1467,7 +1469,7 @@ contains
     !! acc routine vector
 
     ! For faces that are shared with a coarser neighbor, interpolate for all
-    ! points which are not coinciding and where the Trace_DSNB is going out.
+    ! points which are not coinciding and where the trace is going out.
     !
     ! a at IsOdd  j and even k requires interpolation in direction k
     ! b at even j and IsOdd  k requires interpolation in direction j
@@ -1837,7 +1839,7 @@ contains
            iError
 
       ! Maximum size of the RESTRICTED Trace_DINB layer to be received
-      ! for the 6 Trace_DSNB variables (3 StringCoord*2 Trace_DSNB dir.)
+      ! for the 6 trace variables (3 coordinates * 2 trace directions)
       integer, parameter :: MaxSizeR = &
            6*max((nI/2+1)*(nJ/2+1),(nI/2+1)*(nK/2+1),(nJ/2+1)*(nK/2+1))
 
@@ -2386,7 +2388,7 @@ contains
       !$acc routine vector
 
       ! For faces that are shared with a coarser neighbor, interpolate for all
-      ! points which are not coinciding and where the Trace_DSNB is going out.
+      ! points which are not coinciding and where the trace is going out.
       !
       ! a at IsOdd  j and even k requires interpolation in direction k
       ! b at even j and IsOdd  k requires interpolation in direction j
@@ -2574,8 +2576,71 @@ contains
 
     end subroutine prolong_ray
     !==========================================================================
-
   end subroutine ray_pass_old
+  !============================================================================
+  subroutine calc_squash_factor
+    ! Calculatte squashing factor
+
+    use ModCoordTransform, ONLY: lonlat_to_xyz
+
+    real, parameter:: SquashMin = -1.0, SquashMax = 100.0
+
+    integer:: i, j, k, iBlock, iStatus
+    real:: LonLat_D(2), Status_I(5)
+    real, allocatable:: Trace_IGB(:,:,:,:,:)
+    !--------------------------------------------------------------------------
+    call trace_field_grid
+
+    allocate(Trace_IGB(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBlock))
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          iStatus = nint(Trace_DSNB(3,1,i,j,k,iBlock))
+          if(iStatus < 0)then
+             Trace_IGB(:,i,j,k,iBlock) = -1e30
+          else
+             ! Convert Lat-Lon into X-Y-Z unit vectors to avoid discontinuity
+             LonLat_D = Trace_DSNB(2:1:-1,1,i,j,k,iBlock)
+             call lonlat_to_xyz(LonLat_D, Trace_IGB(1:3,i,j,k,iBlock))
+             LonLat_D = Trace_DSNB(5:4:-1,1,i,j,k,iBlock)
+             call lonlat_to_xyz(LonLat_D, Trace_IGB(4:6,i,j,k,iBlock))
+             ! Store status into last element as 1, 10, 100, 1000
+             ! so that jumps in status are properly identified
+             ! even if there are averages of up to 8 cells.
+             Trace_IGB(7,i,j,k,iBlock) = 10**iStatus
+          end if
+       end do; end do; end do
+    end do
+
+    ! Fill in ghost cells
+    call message_pass_cell(7, Trace_IGB)
+
+    if(.not.allocated(SquashFactor_CB)) &
+         allocate(SquashFactor_CB(nI,nJ,nK,MaxBlock))
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! Calculate Jacobian based on footpoints Trace_IGB
+          ! of lon-lat neighbors. For now take plane orthogonal
+          ! to the radial direction
+          Status_I(1)   = Trace_IGB(7,i,j,k,iBlock)
+          Status_I(2:3) = Trace_IGB(7,i,j-1:j+1:2,k,iBlock)
+          Status_I(4:5) = Trace_IGB(7,i,j,k-1:k+1:2,iBlock)
+          if(any(Status_I < 0)) then
+             SquashFactor_CB(i,j,k,iBlock) = SquashMin
+             CYCLE
+          end if
+          if(maxval(abs(Status_I - Status_I(1))) > 0.1) then
+             SquashFactor_CB(i,j,k,iBlock) = SquashMax
+             CYCLE
+          end if
+       end do; end do; end do
+    end do
+
+    deallocate(Trace_IGB)
+  end subroutine calc_squash_factor
   !============================================================================
 end module ModFieldTraceFast
 !==============================================================================

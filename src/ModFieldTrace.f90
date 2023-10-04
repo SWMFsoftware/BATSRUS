@@ -56,7 +56,10 @@ module ModFieldTrace
   real, public, allocatable :: Trace_DSNB(:,:,:,:,:,:)
   !$acc declare create(Trace_DSNB)
 
-  ! Integral_I added up for all the local Trace_DSNB segments
+  ! Squash factor
+  real, public, allocatable :: SquashFactor_CB(:,:,:,:)
+
+  ! Integral_I added up for all the local trace segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
   ! The second and third indexes correspond to the latitude and longitude of
   ! the iM/RCM grid
@@ -83,9 +86,9 @@ module ModFieldTrace
   ! These indexes depend on multi-ion
   integer, public:: iPeInvB, iXEnd, iYEnd, iZEnd, iLength
 
-  ! Various values indicating the end state of a Trace_DSNB
-  real, public :: CLOSEDRAY, OPENRAY, BODYRAY, LoopRay, NoRay, OUTRAY
-  !$acc declare create(CLOSEDRAY, OPENRAY, BODYRAY, LoopRay, NoRay, OUTRAY)
+  ! Various values indicating the end state of a trace
+  real, public :: ClosedRay, OpenRay, BodyRay, LoopRay, NoRay, OutRay
+  !$acc declare create(ClosedRay, OpenRay, BodyRay, LoopRay, NoRay, OutRay)
 
   ! Select between fast less accurate and slower but more accurate algorithms
   logical, public:: UseAccurateTrace    = .false.
@@ -115,10 +118,10 @@ module ModFieldTrace
   logical, public:: IsBVectorField = .true.
   !$acc declare create(IsBVectorField)
 
-  ! Minimum number of time steps between two Trace_DSNB traces on the same grid
+  ! Minimum number of time steps between two traces on the same grid
   integer, public :: DnRaytrace = 1
 
-  ! Named parameters for Trace_DSNB status
+  ! Named parameters for trace status
   ! These values all must be less than 1, because 1..6 correspond to the
   ! six faces of the block. The ordering of these values is arbitrary.
   integer, public, parameter ::       &
@@ -152,7 +155,7 @@ module ModFieldTrace
   ! How often shall we synchronize PE-s for the accurate algorithms
   real         :: DtExchangeRay = 0.1
 
-  ! Maximum length of Trace_DSNB
+  ! Maximum length of trace
   real :: RayLengthMax = 200.
 
   ! Testing
@@ -164,7 +167,7 @@ module ModFieldTrace
   ! Number of rays found to be open based on the neighbors
   integer      :: nOpen
 
-  ! ----------- Variables for Integral_I along the Trace_DSNB -----------------
+  ! ----------- Variables for Integral_I along the trace -----------------
 
   ! Number of Integral_I depends on UseMultiIon and UseAnisPressure
   integer:: nRayIntegral
@@ -176,7 +179,7 @@ module ModFieldTrace
   ! Flow variables to be integrated (rho and P) other than the magnetic field
   real, allocatable :: Extra_VGB(:,:,:,:,:)
 
-  ! Integral_I for a local Trace_DSNB segment
+  ! Integral_I for a local trace segment
   real, allocatable :: RayIntegral_V(:)
 
   ! Temporary array for extracting b.grad(B1) info
@@ -228,37 +231,31 @@ contains
   subroutine xyz_to_latlon(Pos_D)
     !$acc routine seq
     use ModNumConst, ONLY: cTiny, cRadToDeg
+    use ModCoordTransform, ONLY: xyz_to_rlonlat
 
     ! Convert xyz coordinates to latitude and longitude (in degrees)
     ! Put the latitude and longitude into the 1st and 2nd elements
     real, intent(inout) :: Pos_D(3)
 
-    real :: x, y, z
+    real :: rLonLat_D(3)
 
+    ! Check if this direction has a valid footpoint
     character(len=*), parameter:: NameSub = 'xyz_to_latlon'
     !--------------------------------------------------------------------------
-    ! Check if this direction is connected to the ionosphere or not
-    if(Pos_D(1) > CLOSEDRAY)then
+    if(Pos_D(1) > ClosedRay)then
 
-       ! Convert GM position into iM position
+       ! Convert GM position into SM coordinates
        Pos_D = matmul(Pos_D, GmSm_DD)
 
-       ! Store input coordinates
-       x = Pos_D(1); y = Pos_D(2); z = Pos_D(3)
+       call xyz_to_rlonlat(Pos_D, rLonLat_D)
 
-       ! Make sure that asin will work, -1<= z <=1
-       z = max(-1.0+cTiny, z)
-       z = min( 1.0-cTiny, z)
-
-       ! Calculate  -90 < latitude = asin(z)  <  90
-       Pos_D(1) = cRadToDeg * asin(z)
-
-       ! Calculate -180 < longitude = atan2(y,x) < 180
-       if(abs(x) < cTiny .and. abs(y) < cTiny) x = 1.0
-       Pos_D(2) = cRadToDeg * atan2(y,x)
-
-       ! Get rid of negative longitude angles
-       if(Pos_D(2) < 0.0) Pos_D(2) = Pos_D(2) + 360.0
+       Pos_D(1) = rLonLat_D(3)*cRadToDeg ! latitude in degrees
+       Pos_D(2) = rLonLat_D(2)*cRadToDeg ! longitude in degrees
+       if(rLonLat_D(1) < 1.1*rInner)then
+          Pos_D(3) = rLonLat_D(1)
+       else
+          Pos_D(3) = OpenRay
+       end if
 
     else
        ! Impossible values
@@ -286,9 +283,9 @@ contains
 
     character(len=*), parameter:: NameSub = 'xyz_to_rphi'
     !--------------------------------------------------------------------------
-    if(all(Pos_DI(3,:) > CLOSEDRAY))then
+    if(all(Pos_DI(3,:) > ClosedRay))then
 
-       ! Check if the first direction of the Trace_DSNB ends on the ionosphere
+       ! Check if the first direction of the trace ends on the ionosphere
        if(Pos_DI(1,1)**2 + Pos_DI(2,1)**2 <= rIonosphere2) then
           iDir = 2
        else
@@ -328,35 +325,36 @@ contains
     if(DoMapEquatorRay)then
        call xyz_to_rphi(Ray_DI)
     else
-       do iRay=1,2
+       do iRay = 1, 2
           call xyz_to_latlon(Ray_DI(:,iRay))
        end do
     end if
-    ! Convert 3rd element into a status variable
 
-    if(Ray_DI(3,1)>CLOSEDRAY .and. Ray_DI(3,2)>CLOSEDRAY)then
-       Ray_DI(3,:)=3.      ! Fully closed
-    elseif(Ray_DI(3,1)>CLOSEDRAY .and. Ray_DI(3,2)==OPENRAY)then
-       Ray_DI(3,:)=2.      ! Half closed in positive direction
-    elseif(Ray_DI(3,2)>CLOSEDRAY .and. Ray_DI(3,1)==OPENRAY)then
-       Ray_DI(3,:)=1.      ! Half closed in negative direction
-    elseif(Ray_DI(3,1)==OPENRAY .and. Ray_DI(3,2)==OPENRAY) then
-       Ray_DI(3,:)=0.      ! Fully open
-    elseif(Ray_DI(3,1)==BODYRAY)then
-       Ray_DI(3,:)=-1.     ! Cells inside body
-    elseif(Ray_DI(3,1)==LoopRay .and.  Ray_DI(3,2)==LoopRay) then
-       Ray_DI(3,:)=-2.     ! Loop Trace_DSNB within block
+    ! Convert 3rd element into a status variable
+    if(Ray_DI(3,1) > ClosedRay .and. Ray_DI(3,2) > ClosedRay)then
+       Ray_DI(3,:) = 3      ! Fully closed
+    elseif(Ray_DI(3,1) > ClosedRay .and. abs(Ray_DI(3,2) - OpenRay) < 0.01)then
+       Ray_DI(3,:) = 2      ! Half closed in positive direction
+    elseif(Ray_DI(3,2) > ClosedRay .and. abs(Ray_DI(3,1) - OpenRay) < 0.01)then
+       Ray_DI(3,:) = 1      ! Half closed in negative direction
+    elseif(maxval(abs(Ray_DI(3,:) - OpenRay)) < 0.01) then
+       Ray_DI(3,:) = 0      ! Fully open
+    elseif(abs(Ray_DI(3,1) - BodyRay) < 0.01)then
+       Ray_DI(3,:) = -1     ! Cells inside body
+    elseif(maxval(abs(Ray_DI(3,:) - LoopRay)) < 0.01) then
+       Ray_DI(3,:) = -2     ! Loop within block
     else
-       Ray_DI(3,:)=-3.     ! Strange status
+       Ray_DI(3,:) = -3     ! Strange status
     end if
 
   end subroutine xyz_to_latlonstatus
   !============================================================================
   subroutine init_mod_field_trace
 
-    use ModPhysics, ONLY: DipoleStrengthSi
-    use ModAdvance, ONLY: UseElectronPressure
-    use ModMain,    ONLY: DoMultiFluidIMCoupling
+    use ModPhysics,  ONLY: DipoleStrengthSi
+    use ModAdvance,  ONLY: UseElectronPressure
+    use ModMain,     ONLY: DoMultiFluidIMCoupling
+    use ModGeometry, ONLY: xMinBox
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_field_trace'
@@ -393,18 +391,18 @@ contains
     end if
     rInner2 = rInner**2
 
-    CLOSEDRAY= -(rInner + 0.05)
-    OPENRAY  = -(rInner + 0.1)
-    BODYRAY  = -(rInner + 0.2)
-    LoopRay  = -(rInner + 0.3)
-    NoRay    = -(rInner + 100.0)
-    OUTRAY   = -(rInner + 200.0)
+    ClosedRay = xMinBox - 1
+    OpenRay   = xMinBox - 2
+    BodyRay   = xMinBox - 3
+    LoopRay   = xMinBox - 4
+    NoRay     = xMinBox - 100
+    OutRay    = xMinBox - 200
 
     if(DoTest)then
        write(*,*) 'rTrace, rTrace2          =', rTrace, rTrace2
        write(*,*) 'rIonosphere, rIonosphere2=', rIonosphere, rIonosphere2
        write(*,*) 'rInner, rInner2          =', rInner, rInner2
-       write(*,*) 'CLOSEDRAY,OPENRAY,OUTRAY =', CLOSEDRAY, OPENRAY, OUTRAY
+       write(*,*) 'ClosedRay,OpenRay,OutRay =', ClosedRay, OpenRay, OutRay
     end if
 
     if(.not.allocated(b_DGB)) &
@@ -431,18 +429,17 @@ contains
        iPeInvB = nExtraIntegral
     end if
 
-    ! Number of Integral_I for a local Trace_DSNB segment:
+    ! Number of Integral_I for a local trace segment:
     !    InvB_, Z0x_, Z0y_, Z0b_ and extras
     nLocalIntegral = nExtraIntegral + 4
 
-    ! Indexes for the final position of the Trace_DSNB
+    ! Indexes for the final position of the trace
     iXEnd = nLocalIntegral + 1; iYEnd = iXEnd + 1; iZEnd = iYEnd + 1
     iLength = iZEnd + 1
 
     ! Number of reals stored in the RayIntegral_VII and RayResult_VII arrays
     nRayIntegral = iLength
 
-    ! Initialize Trace_DSNB (write_logfile may use it before first tracing)
     allocate(Extra_VGB(nExtraIntegral,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(RayIntegral_V(1:nLocalIntegral))
 
@@ -453,7 +450,7 @@ contains
 
     UseSmg = TypeCoordSystem == 'GSM' .or. TypeCoordSystem == 'GSE'
 
-    !$acc update device(CLOSEDRAY, OPENRAY, BODYRAY, LoopRay, NoRay, OUTRAY)
+    !$acc update device(ClosedRay, OpenRay, BodyRay, LoopRay, NoRay, OutRay)
     !$acc update device(rIonosphere, rIonosphere2, DoMapEquatorRay)
     !$acc update device(rInner, rInner2, rTrace, rTrace2)
     call test_stop(NameSub, DoTest)
@@ -491,7 +488,7 @@ contains
     use BATL_lib,         ONLY: Xyz_DGB, message_pass_cell
     use ModMpi
 
-    ! Indices corresponding to the starting point and directon of Trace_DSNB
+    ! Indices corresponding to the starting point and directon of traces
     integer :: i, j, k, iBlock, iRay
 
     ! Testing and timing
@@ -554,16 +551,16 @@ contains
              ! Short cut for inner and false cells
              if(r_GB(i,j,k,iBlock) < rInner .or. &
                   .not.Used_GB(i,j,k,iBlock))then
-                Trace_DSNB(:,:,i,j,k,iBlock)=BODYRAY
+                Trace_DSNB(:,:,i,j,k,iBlock)=BodyRay
                 if(DoTestRay) &
-                     write(*,*)'Shortcut BODYRAY iProc,iRay=', iProc, iRay
+                     write(*,*)'Shortcut BodyRay iProc,iRay=', iProc, iRay
                 CYCLE
              end if
 
              if(DoTestRay) &
                   write(*,*)'calling follow_ray iProc,iRay=', iProc, iRay
 
-             ! Follow Trace_DSNB in direction iRay
+             ! Trace in direction iRay
              call follow_ray(iRay, [i,j,k,iBlock], Xyz_DGB(:,i,j,k,iBlock))
 
           end do ! iRay
@@ -614,28 +611,28 @@ contains
 
   end subroutine finish_ray
   !============================================================================
-  subroutine follow_ray(iRayIn,i_D,XyzIn_D)
+  subroutine follow_ray(iRayIn, i_D, XyzIn_D)
 
-    ! Follow Trace_DSNB in direction iRayIn (1 is parallel with the field,
-    !                                 2 is anti-parallel,
-    !                                 0 means that no Trace_DSNB is passed
+    ! Trace in direction iRayIn (1 is parallel with the field,
+    !                            2 is anti-parallel,
+    !                            0 means that nothing is traced
     ! Always follow rays received from other PE-s.
     !
-    ! The passed Trace_DSNB is identified by the index array i_D.
+    ! The passed trace is identified by the index array i_D.
     ! The meaning of i_D d depends on the context:
-    !  3 cell + 1 block index for 3D Trace_DSNB tracing
-    !  1 latitude + 1 longitude index for Trace_DSNB integration
-    !  1 linear index for Trace_DSNB extraction.
+    !  3 cell + 1 block index for 3D tracing
+    !  1 latitude + 1 longitude index for 2D integration
+    !  1 linear index for 1D extraction.
     !
-    ! The rays are followed until the Trace_DSNB hits the outer or inner
+    ! The rays are followed until they hit the outer or inner
     ! boundary of the computational domain. The results are saved into
     ! arrays defined in ModFieldTrace or into files based on the logicals
     ! in ModFieldtrace (more than one of these can be true):
     !
-    ! If DoTraceRay, follow the Trace_DSNB from cell centers of the 3D grid,
+    ! If DoTraceRay, trace from cell centers of the 3D grid,
     !    and save the final position into
     !    ModFieldTrace::Trace_DSNB(:,iRayIn,i_D(1),i_D(2),i_D(3),i_D(4)) on the
-    !    processor that started the Trace_DSNB trace.
+    !    processor that started the trace.
     !
     ! If DoMapRay, map the rays down to the ionosphere, save spherical
     !    coordinates (in SMG) into
@@ -662,27 +659,27 @@ contains
 
     ! local variables
 
-    ! Cell, block and PE indexes for initial position and Trace_DSNB direction
+    ! Cell, block and PE indexes for initial position and trace direction
     integer :: iStart, jStart, kStart, iBlockStart, iProcStart, iRay
     integer :: iStart_D(4)
 
-    ! Current position of the Trace_DSNB
+    ! Current position of the trace
     integer :: iBlockRay
     real    :: XyzRay_D(3)
 
-    ! Current length of Trace_DSNB
+    ! Current length of trace
     real    :: RayLength
 
-    ! Is the Trace_DSNB trace Done
+    ! Is the trace Done
     logical :: DoneRay
 
-    ! Shall we get Trace_DSNB from other PE-s
+    ! Shall we get rays from other PE-s
     logical :: DoGet
 
     ! Did we get rays from other PE-s
     logical :: IsFound
 
-    ! Is the Trace_DSNB parallel with the vector field
+    ! Is the trace parallel with the vector field
     logical :: IsParallel
 
     integer, parameter :: MaxCount = 1000
@@ -700,7 +697,7 @@ contains
 
     if(iRayIn /= 0)then
 
-       ! Store starting indexes and Trace_DSNB direction
+       ! Store starting indexes and trace direction
        iStart = i_D(1); jStart = i_D(2); kStart = i_D(3);
        iBlockStart = i_D(4); iProcStart = iProc
        iRay   = iRayIn
@@ -719,23 +716,23 @@ contains
     end if
 
     ! If iRayIn==0 there are no more local rays to follow so get from other PEs
-    DoGet = iRayIn==0
+    DoGet = iRayIn == 0
     IsFound = .true.
 
     RAYS: do
 
        if(DoGet)then
           GETRAY: do
-             call ray_get(IsFound,iProcStart,iStart_D,XyzRay_D,RayLength,&
-                  IsParallel,DoneRay)
+             call ray_get(IsFound, iProcStart, iStart_D, XyzRay_D, RayLength, &
+                  IsParallel, DoneRay)
 
              if(IsFound)then
                 if(DoTest)call set_dotestray
 
                 if(IsParallel)then
-                   iRay=1
+                   iRay = 1
                 else
-                   iRay=2
+                   iRay = 2
                 end if
                 if(DoTestRay)write(*,*)'Recv trace iProc,iRay,Done,XyzRay_D=',&
                      iProc, iRay, DoneRay, XyzRay_D
@@ -759,10 +756,10 @@ contains
                         'Storing recv trace iProc,iRay,i,j,k,iBlock,trace=',&
                         iProc,iRay,iStart,jStart,kStart,iBlockStart,XyzRay_D
 
-                   ! Get another Trace_DSNB from the others
+                   ! Get another trace from the other processors
                    CYCLE GETRAY
                 else
-                   ! Find block for the received Trace_DSNB
+                   ! Find block for the received trace
                    call find_grid_block(XyzRay_D,jProc,iBlockRay)
 
                    if(jProc /= iProc)call stop_mpi(&
@@ -836,9 +833,9 @@ contains
           kStart      = iStart_D(3)
           iBlockStart = iStart_D(4)
 
-          Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
+          Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart) = XyzRay_D
 
-          ! Get another Trace_DSNB from the others
+          ! Get another trace from the others
           CYCLE GETRAYFINAL
        end if
        EXIT GETRAYFINAL
@@ -853,7 +850,7 @@ contains
       !------------------------------------------------------------------------
       if(DoIntegrateRay)RayIntegral_V = 0.0
 
-      ! Follow the Trace_DSNB through the local blocks
+      ! Trace through the local blocks
       BLOCK: do iCount = 1, MaxCount
 
          if(iCount < MaxCount)then
@@ -907,27 +904,28 @@ contains
             end if
          case(RayOpen_)
             ! The trace reached the outer boundary (or expected to do so)
-            XyzRay_D = OPENRAY
+            XyzRay_D = OpenRay
             if(DoTestRay)write(*,*)&
-                 'follow_ray finished with OPENRAY, iProc,iRay=',iProc,iRay
+                 'follow_ray finished at outer boundary, iProc,iRay,Xyz=', &
+                 iProc, iRay, XyzRay_D
 
          case(RayLoop_)
             ! The trace did not hit the wall of the block
             XyzRay_D = LoopRay
             if(DoTestRay)write(*,*)&
-                 'follow_ray finished with LoopRay, iProc,iRay=',iProc,iRay
+                 'follow_ray finished with LoopRay, iProc,iRay=', iProc, iRay
 
          case(RayBody_)
             ! The trace hit a body
-            XyzRay_D = BODYRAY
+            XyzRay_D = BodyRay
             if(DoTestRay)write(*,*)&
-                 'follow_ray finished with BODYRAY, iProc,iRay=',iProc,iRay
+                 'follow_ray finished with BodyRay, iProc,iRay=', iProc, iRay
 
          case(RayIono_)
             ! The trace hit the ionosphere
             if(DoTestRay)write(*,'(a,2i4,3es12.4)')&
                  'follow_this_ray finished on the ionosphere '// &
-                 'at iProc,iRay,Xyz=',iProc,iRay,XyzRay_D
+                 'at iProc,iRay,Xyz=', iProc, iRay, XyzRay_D
 
          case(RayEquator_)
             ! The trace hit the SM equatorial plane
@@ -964,7 +962,7 @@ contains
             kStart      = iStart_D(3)
             iBlockStart = iStart_D(4)
 
-            Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
+            Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart) = XyzRay_D
 
             if(DoTestRay)write(*,*) &
                  'Storing into iProc,iBlock,i,j,k,iRay,Xyz=',&
@@ -1044,7 +1042,7 @@ contains
 
     use ModMain, ONLY: nI, nJ, nK
     use ModGeometry, ONLY: Coord111_DB, XyzMax_D, XyzMin_D, &
-         rMin_B, xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
+         rMin_B, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
     use CON_planet, ONLY: DipoleStrength
     use ModMultiFLuid
     use BATL_lib, ONLY: xyz_to_coord, Xyz_DGB, CellSize_DB
@@ -1096,9 +1094,6 @@ contains
     ! True if rMin_B < rTrace
     logical :: DoCheckInnerBc
 
-    ! True if the block already containes open rays
-    logical :: DoCheckOpen
-
     ! Counter for entering do_follow_iono
     integer :: nIono
 
@@ -1140,10 +1135,6 @@ contains
     else
        DoCheckInnerBc = rMin_B(iBlock) < 1.2*rTrace
     end if
-
-    ! Set flag if checking for open rays is useful
-    DoCheckOpen = .false.
-    ! !! any(Trace_DSNB(1,iRay,1:nI,1:nJ,1:nK,iBlock)==OPENRAY)
 
     ! Set the boundaries of the control volume in block coordinates
     ! We go out to the first ghost cell centers for sake of speed and to avoid
@@ -1422,14 +1413,6 @@ contains
        if(DoTestRay.and.DoDebug)&
             write(*,*)'me,iBlock,nSegment,IndCur_D=', &
             iProc,iBlock,nSegment,IndCur_D
-
-       if(DoCheckOpen)then
-          if(all(Trace_DSNB(1,iRay,i1:i2,j1:j2,k1:k2,iBlock)==OPENRAY))then
-             nOpen=nOpen+1
-             iFace = RayOpen_
-             EXIT FOLLOW
-          end if
-       end if
 
        ! Check if we got inside the ionosphere
        if(DoCheckInnerBc)then
@@ -2535,13 +2518,13 @@ contains
                 iPointMax = iPointMax + 1
              end do
 
-             ! Note: we DoSkip one of the repeated starting point!
+             ! Note: we skip one of the repeated starting point!
              nPointUp = iPointMid - iPointMin
              nPointDn = iPointMax - iPointMid
              nPointAll= nPointDn + nPointUp
 
-             ! DoSkip all (half)open field lines
-             if(any(RayMap_DSII(1,:,iR,iLon) < CLOSEDRAY))then
+             ! Skip all (half)open field lines
+             if(any(RayMap_DSII(1,:,iR,iLon) < ClosedRay))then
                 ! Set impossible values (density cannot be zero)
                 StateMinB_VII(:,iR,iLon)  = 0.0
                 ! Set coordinates to starting position in the SM Z=0 plane
@@ -2875,7 +2858,7 @@ contains
 
     if(iProc == 0)then
        do iLon = 1, nLon; do iR = 1, nRadius; do iSide = 1, 2
-          if(RayMap_DSII(1,iSide,iR,iLon) < CLOSEDRAY) CYCLE
+          if(RayMap_DSII(1,iSide,iR,iLon) < ClosedRay) CYCLE
           Xyz_D = RayMap_DSII(:,iSide,iR,iLon)
           if(UseSmg) Xyz_D = matmul(Xyz_D,GmSm_DD)
           call xyz_to_sph(Xyz_D, RayMap_DSII(:,iSide,iR,iLon))
@@ -3394,11 +3377,11 @@ contains
           yV = Radius*sin(cDegToRad*Lon)
 
           zL=0.;  zU=zUs*iDirZ
-          DoSkip=.false.
-          do iD=1,nD
+          DoSkip = .false.
+          do iD = 1, nD
              if(DoSkip) CYCLE
 
-             iLC=-9
+             iLC = -9
 
              ! Create in SM coords
              XyzPt_DI(1,:) = xV
@@ -3519,7 +3502,7 @@ contains
                             write(UnitTmp_, *) XyzIono_D
                          end if
                       end do
-                      do i=jMid-1,jStart+1,-1
+                      do i = jMid-1, jStart+1, -1
                          PlotVar_V = PlotVar_VI(:, i)
                          Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
                          if(DoSaveIntegral)then
@@ -3528,7 +3511,7 @@ contains
                             write(UnitTmp_, *) Xyz_D
                          end if
                       end do
-                      do i=jMid,jEnd
+                      do i = jMid, jEnd
                          PlotVar_V = PlotVar_VI(:, i)
                          Xyz_D = PlotVar_V(2:4) * Si2No_V(UnitX_)
                          if(DoSaveIntegral)then
@@ -3537,7 +3520,7 @@ contains
                             write(UnitTmp_, *) Xyz_D
                          end if
                       end do
-                      do i=nTP-1,0,-1
+                      do i = nTP-1, 0, -1
                          ! Map from last point to the ionosphere
                          call map_planet_field(tSimulation, Xyz_D, 'GSM NORM',&
                               RadiusIono+i*.1, XyzIono_D, iHemisphere)
@@ -3558,12 +3541,12 @@ contains
              if(allocated(RayResult_VII))   deallocate(RayResult_VII)
 
              ! set new zL and zU
-             call MPI_Bcast(iLC,1,MPI_INTEGER,0,iComm,iError)
+             call MPI_Bcast(iLC, 1, MPI_INTEGER, 0, iComm, iError)
              if(iLC == -9)then
-                DoSkip=.true.
+                DoSkip = .true.
              elseif(iLC == nPts)then
-                zL=   zUs*iDirZ
-                zU=2.*zUs*iDirZ
+                zL =   zUs*iDirZ
+                zU = 2*zUs*iDirZ
              else
                 zL = zPt_I(iLC)
                 zU = zPt_I(iLC+1)
@@ -3579,6 +3562,7 @@ contains
 
     if(DoTest)write(*,*)NameSub,': finished'
     call test_stop(NameSub, DoTest)
+
   end subroutine write_plot_lcb
   !============================================================================
   subroutine write_plot_ieb(iFile)
@@ -3598,10 +3582,10 @@ contains
 
     integer, intent(in) :: iFile
 
-    character (len=80) :: NameFile, String
-    character (len=2) :: StringCoord
-    character (len=1) :: StringNorS
-    integer :: i,j,k, nLat,nLon, nLine, nTP, iStart,iEnd, iLat,iLon, iMap
+    character(len=80) :: NameFile, String
+    character(len=2) :: StringCoord
+    character(len=1) :: StringNorS
+    integer :: i, j, k, nLat, nLon, nLine, nTP, iStart,iEnd, iLat,iLon, iMap
     integer :: iPoint, nPoint, nVarOut, iHemisphere, nFile
     real :: PlotVar_V(0:4+nVar)
     real :: Radius, Lat,Lon, Theta,Phi, LonOC
@@ -3618,19 +3602,19 @@ contains
 
     if(DoTest)write(*,*)NameSub,': starting'
 
-    nLat=181
-    nLon=36
+    nLat = 181
+    nLon = 36
     if(.not.allocated(IeLat_I)) allocate(IeLat_I(nLat), IeLon_I(nLon))
 
     ! Load grid and convert to lat-lon in degrees
-    do i=1,nLat
-       IeLat_I(i) = 90.-1.*(i-1)
+    do i = 1, nLat
+       IeLat_I(i) = 90 - (i-1)
     end do
-    do i=1,nLon
+    do i = 1, nLon
        IeLon_I(i) = 10.*(i-1)
     end do
     Radius = (6378.+100.)/6378.
-    nTP=int( (rBody-Radius)/.1 )
+    nTP = 10*(rBody-Radius)
 
     call integrate_field_from_sphere(nLat, nLon, IeLat_I, IeLon_I, Radius, &
          'extract_I')
@@ -3647,7 +3631,7 @@ contains
           allocate(PlotVar_VI(0:nVarOut, nPoint))
           call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
-          do nFile=1,4
+          do nFile = 1, 4
 
              if(nFile==1)then
                 StringCoord = 'SM';  StringNorS = 'N'
@@ -3675,13 +3659,13 @@ contains
                   'VARIABLES="X [R]", "Y [R]", "Z [R]", "Lat", "Lon", "iMap"'
 
              k = 0
-             LonOC = -1.
+             LonOC = -1
              do iPoint = 1, nPoint
                 nLine = PlotVar_VI(0,iPoint)
                 if(k /= nLine)then
 
                    ! finish previous line
-                   if(k/=0)then
+                   if(k /= 0)then
                       iEnd = iPoint-1
                       DoMapDown = .false.
                       Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
@@ -3709,7 +3693,7 @@ contains
                       Xyz_D=XyzIono_D
                       if(StringCoord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
                       write(UnitTmp_, *) Xyz_D,Lat,Lon,iMap
-                      do i=1,nTP
+                      do i = 1, nTP
                          ! Map from the ionosphere to rBody
                          call map_planet_field(tSimulation, XyzIono_D, &
                               'SMG NORM', &
@@ -3718,7 +3702,7 @@ contains
                               Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
                          write(UnitTmp_, *) Xyz_D,Lat,Lon,iMap
                       end do
-                      do i=iStart,iEnd
+                      do i = iStart, iEnd
                          ! Convert vectors to SM coordinates
                          PlotVar_V = PlotVar_VI(:, i)
                          PlotVar_V(2:4) = matmul(Gsm2Smg_DD,PlotVar_V(2:4))
@@ -3789,7 +3773,7 @@ contains
                 Xyz_D=XyzIono_D
                 if(StringCoord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
                 write(UnitTmp_, *) Xyz_D,Lat,Lon,iMap
-                do i=1,nTP
+                do i = 1, nTP
                    ! Map from the ionosphere to rBody
                    call map_planet_field(tSimulation, XyzIono_D, &
                         'SMG NORM', &
@@ -3797,7 +3781,7 @@ contains
                    if(StringCoord == 'GM') Xyz_D = matmul(Smg2Gsm_DD,Xyz_D)
                    write(UnitTmp_, *) Xyz_D,Lat,Lon,iMap
                 end do
-                do i=iStart,iEnd
+                do i = iStart, iEnd
                    ! Convert vectors to SM coordinates
                    PlotVar_V = PlotVar_VI(:, i)
                    PlotVar_V(2:4) = matmul(Gsm2Smg_DD,PlotVar_V(2:4))
@@ -3808,7 +3792,7 @@ contains
                 end do
                 if(DoMapDown)then
                    Xyz_D=PlotVar_V(2:4)
-                   do i=nTP,0,-1
+                   do i = nTP, 0, -1
                       ! Map from the ionosphere to rBody
                       call map_planet_field(tSimulation, Xyz_D, &
                            'SMG NORM', &
@@ -3834,6 +3818,7 @@ contains
     if(DoTest)write(*,*)NameSub,': finished'
 
     call test_stop(NameSub, DoTest)
+
   end subroutine write_plot_ieb
   !============================================================================
 end module ModFieldTrace

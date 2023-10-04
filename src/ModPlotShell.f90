@@ -9,7 +9,6 @@ module ModPlotShell
 
   use ModIO
   use ModNumConst,        ONLY: cRadtoDeg, cDegToRad, cTiny
-  use ModFieldLineThread, ONLY: DoPlotThreads, rChromo=>rBody
   use ModGeometry,        ONLY: RadiusMin
   implicit none
 
@@ -39,9 +38,6 @@ module ModPlotShell
 
   ! Coordinate conversion matrix
   real:: PlotToGm_DD(3,3)
-
-  ! If  .true., the part of the grid is in the threaded gap
-  logical :: UseThreadedGap = .false.
 
   character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
@@ -109,9 +105,6 @@ contains
     dLon = (LonMax - LonMin)/max(1, nLon - 1)
     dLat = (LatMax - LatMin)/max(1, nLat - 1)
 
-    ! In the ASWoM-R the grid points within the threaded gap are allowed
-    UseThreadedGap = DoPlotThreads .and. rMin < RadiusMin
-
     ! The 0 element is to count the number of blocks that
     ! contribute to a plot variable.
     allocate(PlotVar_VIII(0:nPlotVar,nR,nLon,nLat))
@@ -141,7 +134,8 @@ contains
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
     use ModMain,            ONLY: UseB0
-    use ModFieldLineThread, ONLY: interpolate_thread_state, set_thread_plotvar
+    use ModFieldLineThread, ONLY: DoPlotThreads, rChromo=>rBody, &
+         interpolate_thread_state, set_thread_plotvar
     use ModGeometry,    ONLY: rMin_B
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
@@ -174,7 +168,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     ! Does this block include grid points in the threaded gap?
-    IsThreadedBlock = UseThreadedGap .and. DiLevel_EB(1,iBlock) == Unset_
+    IsThreadedBlock = DoPlotThreads .and. DiLevel_EB(1,iBlock) == Unset_
     if(IsThreadedBlock)then
        ! Don't check radial coordinate to see if the point is outside the block
        iDirMin = r_ + 1
