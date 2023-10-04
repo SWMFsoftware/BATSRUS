@@ -1037,8 +1037,6 @@ contains
       CoordSize_D = CoordMax_D - CoordMin_D
       DsTiny = cTiny*(xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
 
-!      XyzStart_D = XyzStartIn_D
-
       ! Initial length of segment
       Ds = DsTiny
 
@@ -1108,14 +1106,15 @@ contains
 
          ! Check if mid point will be inside the block. If not, reduce Ds
          IsEdge = .false.
-         do
+         REFINEDS:do
             ! Move to the middle of the segment
             XyzLosNew_D = XyzLos_D + 0.5*Ds*LosPix_D
             call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
 
             ! Check if midpoint is inside block + 1 cell size
             dCoord_D = abs(CoordLosNew_D - CoordBlock_D)
-            if(all(2*dCoord_D(iDimMin:) <= CoordSizeBlock_D(iDimMin:))) EXIT
+            if(all(2*dCoord_D(iDimMin:) <= CoordSizeBlock_D(iDimMin:)))&
+                 EXIT REFINEDS
 
             ! Reduce Ds but make sure that 2*Ds is still outside.
             Ds = Ds*0.5
@@ -1126,7 +1125,7 @@ contains
 
             ! Make sure we don't try to increase the step below
             IsEdge = .true.
-         end do
+         end do REFINEDS
 
          ! Check how big the largest change is in the generalized coordinates
          Step = maxval(abs(CoordLosNew_D - CoordLos_D)/CellSize_D)
@@ -1175,7 +1174,7 @@ contains
 
     end subroutine integrate_line
     !==========================================================================
-    subroutine add_segment(Ds, XyzLos_D, UseThreads)
+    subroutine add_segment(Ds, XyzLos_D, IsThreadedGap)
 
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
@@ -1193,7 +1192,7 @@ contains
 
       real, intent(in):: Ds          ! Length of line segment
       real, intent(in):: XyzLos_D(3) ! location of center of line segment
-      logical, optional, intent(in) :: UseThreads
+      logical, optional, intent(in) :: IsThreadedGap
 
       real :: x, y, z, r
       real :: aLos, bLos, cLos, dLos
@@ -1291,10 +1290,9 @@ contains
       if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
          !`Interpolate state vector in the point with gen coords
          ! equal to GenLos_D
-         if(present(UseThreads)  & ! This point is in the threaded gap OR the
-              .or.(DoPlotThreads.and.& ! gap is used AND point is close to it
-              GenLos_D(1) < CoordMin_D(1) + &
-              0.50*CellSize_D(1) ))then
+         if(present(IsThreadedGap)  & ! This point is in the threaded gap
+             .or.(DoPlotThreads.and.& ! gap is used AND point is close to it
+              GenLos_D(1) < CoordMin_D(1) + 0.50*CellSize_D(1) ))then
             ! Interpolate within the threaded gap
             call interpolate_thread_state(GenLos_D, iBlock, State_V)
          else
@@ -1374,7 +1372,7 @@ contains
          !  accounted for by multiplying this by Ne**2, Ne being in psrticles
          !  per cm3
          ResponseFactor = Ne**2*1.0e-26*(1.0e2*No2Si_V(UnitX_))
-         if(present(UseThreads))then
+         if(present(IsThreadedGap))then
             ! The head conduction is not modified, the whole response is true:
             FractionTrue = 1.0
          else
