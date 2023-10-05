@@ -1189,6 +1189,7 @@ contains
       use ModIO,          ONLY: TempMin_I
       use ModUserInterface ! user_set_plot_var
       use ModGeometry,    ONLY: r_GB
+      use ModChromosphere, ONLY: extension_factor, DoExtendTransitionRegion
 
       real, intent(in):: Ds          ! Length of line segment
       real, intent(in):: XyzLos_D(3) ! location of center of line segment
@@ -1219,15 +1220,6 @@ contains
       ! Added for EUV synth and sph geometry
       real :: GenLos_D(3)
       real :: ResponseFactor, EuvResponse_W(3), SxrResponse_W(2)
-
-      ! parameters for temperature cuttoff of EUV/SXR response
-      ! idea is to neglect most of the broadened transition region
-      ! since broadening introduces unphysical column depth (by orders of
-      ! magnitude) which can cause it to be large enough to produce an
-      ! unwanted contribution
-      real :: TeCutSi = 4.0e+5
-      real :: DeltaTeCutSi = 3.0e+4
-      real :: FractionTrue
 
       ! DEM/EM calculation
       real :: LogTeSi
@@ -1372,13 +1364,10 @@ contains
          !  accounted for by multiplying this by Ne**2, Ne being in psrticles
          !  per cm3
          ResponseFactor = Ne**2*1.0e-26*(1.0e2*No2Si_V(UnitX_))
-         if(present(IsThreadedGap))then
-            ! The head conduction is not modified, the whole response is true:
-            FractionTrue = 1.0
-         else
-            ! calculate temperature cutoff to neglect widened transition region
-            FractionTrue = 0.5*(1.0 + tanh((TeSi - TeCutSi)/DeltaTeCutSi))
-         end if
+         ! if the head conduction is modified, apply the reduction factor
+         ! to properly reduce a contribution from  widened transition region
+         if(DoExtendTransitionRegion)&
+              ResponseFactor = ResponseFactor/extension_factor(TeSi)
          ! !! There should be just one table, not three!!!
          if (UseEuv) then
             ! now interpolate EUV response values from a lookup table
@@ -1386,7 +1375,6 @@ contains
                  call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
             call interpolate_lookup_table(iTableEUV, TeSi, Ne, &
                  EuvResponse_W, DoExtrapolate=.true.)
-            EuvResponse_W = EuvResponse_W * FractionTrue
          end if
 
          if (UseSxr) then
@@ -1395,7 +1383,6 @@ contains
                  call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
             call interpolate_lookup_table(iTableSXR, TeSi, Ne, &
                  SxrResponse_W, DoExtrapolate=.true.)
-            SxrResponse_W = SxrResponse_W * FractionTrue
          end if
 
          if (UseTableGen) then
@@ -1405,7 +1392,6 @@ contains
             ! now interpolate the entire table
             call interpolate_lookup_table(iTableGen, TeSi, Ne, &
                  InterpValues_I, DoExtrapolate=.true.)
-            InterpValues_I = InterpValues_I * FractionTrue
 
             ! if using a generalized table can do it vector style
             ImagePe_VIII(:,iPix,jPix,1) = ImagePe_VIII(:,iPix,jPix,1) + &
