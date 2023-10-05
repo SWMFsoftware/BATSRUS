@@ -134,7 +134,7 @@ contains
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
     use ModMain,            ONLY: UseB0
-    use ModFieldLineThread, ONLY: DoPlotThreads, rChromo=>rBody, &
+    use ModFieldLineThread, ONLY: DoPlotThreads, rChromo, &
          interpolate_thread_state, set_thread_plotvar
     use ModGeometry,    ONLY: rMin_B
     use ModInterpolate, ONLY: trilinear

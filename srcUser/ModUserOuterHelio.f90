@@ -2570,6 +2570,14 @@ contains
                      -KarmanTaylorBeta2AlphaRatio &
                      *State_V(Lperp_)*SourceTurbulence &
                      /max(1e-30,sum(State_V(WaveFirst_:WaveLast_)))
+
+                ! PUI-turbulence sinks for L_- and L_+ only
+                if(LcorrFirst_ > 1) &
+                     SourceCx_V(LcorrFirst_:LcorrFirst_+nWave-1) = &
+                     -KarmanTaylorBeta2AlphaRatio &
+                     *State_V(LcorrFirst_:LcorrFirst_+nWave-1) &
+                     *0.5*SourceTurbulence &
+                     /max(1e-30,State_V(WaveFirst_:WaveLast_))
              end if
 
              SourceCx_V(Pu3P_) = (Gamma-1)* ( SourceCx_V(Pu3Energy_) &

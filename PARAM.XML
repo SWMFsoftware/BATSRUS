@@ -10629,6 +10629,19 @@ Default values are shown.
 
 </command>
 
+<command name="CHROMOEVAPORATION">
+  <parameter name="UseChromoEvaporation" type="logical" default="T"/>
+
+#CHROMOEVAPORATION
+F	  UseChromoEvaporation
+
+By default, this logical is .false. the entholpy increase needed to
+heat the plasma flow across the transition region to the top temperature
+is neglected. If logical set is true, the energy frlux to/from the first control
+volume is accounted for
+
+</command>
+
 <command name="TRANSITIONREGION">
   <parameter name="DoExtendTransitionRegion" type="logical" default="F"/>
   <parameter name="TeTransitionRegionSi" type="real"        default="3.0E+5" />

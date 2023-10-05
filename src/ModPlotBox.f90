@@ -170,7 +170,7 @@ contains
     use ModPhysics,     ONLY: rBody
     use ModMain,        ONLY: UseBody
     use ModFieldLineThread, ONLY: interpolate_thread_state, &
-         set_thread_plotvar, DoPlotThreads, rChromo=>rBody
+         set_thread_plotvar, DoPlotThreads, rChromo
     use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
     use ModVarIndexes, ONLY: nVar
     use ModParallel,   ONLY: DiLevel_EB, Unset_

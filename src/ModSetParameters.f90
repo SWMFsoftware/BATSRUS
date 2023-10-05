@@ -2743,7 +2743,7 @@ contains
        case("#TRANSITIONREGION")
           call read_cooling_param
 
-       case("#FIELDLINETHREAD", '#PLOTTHREADS')
+       case("#FIELDLINETHREAD", '#PLOTTHREADS', '#CHROMOEVAPORATION')
           call read_thread_param(NameCommand, iSession)
 
        case("#THREADEDBC")

@@ -2581,12 +2581,16 @@ contains
   subroutine calc_squash_factor
     ! Calculatte squashing factor
 
-    use ModCoordTransform, ONLY: lonlat_to_xyz
+    use ModCoordTransform, ONLY: &
+         lonlat_to_xyz, cross_product, inverse_matrix, determinant
 
     real, parameter:: SquashMin = -1.0, SquashMax = 100.0
 
-    integer:: i, j, k, iBlock, iStatus
+    integer:: i, j, k, n, iBlock, iStatus
     real:: LonLat_D(2), Status_I(5)
+    real:: Xyz_DS(3,2), dXyzDj_DS(3,2), dXyzDk_DS(3,2)
+    real:: Base1_DS(3,2), Base2_DS(3,2)
+    real:: Jacobian_IIS(2,2,2), Jacobian_II(2,2)
     real, allocatable:: Trace_IGB(:,:,:,:,:)
     !--------------------------------------------------------------------------
     call trace_field_grid
@@ -2622,20 +2626,54 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          ! Calculate Jacobian based on footpoints Trace_IGB
-          ! of lon-lat neighbors. For now take plane orthogonal
-          ! to the radial direction
+          ! Check if the cell and its 4 neighbors in Lon-Lat direction
+          ! have footpoints at both ends and have same "status"
           Status_I(1)   = Trace_IGB(7,i,j,k,iBlock)
           Status_I(2:3) = Trace_IGB(7,i,j-1:j+1:2,k,iBlock)
           Status_I(4:5) = Trace_IGB(7,i,j,k-1:k+1:2,iBlock)
           if(any(Status_I < 0)) then
+             ! Some of the cells have no footpoints
              SquashFactor_CB(i,j,k,iBlock) = SquashMin
              CYCLE
           end if
           if(maxval(abs(Status_I - Status_I(1))) > 0.1) then
+             ! The cells have different status
              SquashFactor_CB(i,j,k,iBlock) = SquashMax
              CYCLE
           end if
+          ! Calculate Jacobian based on footpoints Trace_IGB
+          Xyz_DS(:,1)  = Trace_IGB(1:3,i,j,k,iBlock)
+          Xyz_DS(:,2)  = Trace_IGB(4:6,i,j,k,iBlock)
+          dXyzDj_DS(:,1) = Trace_IGB(1:3,i,j+1,k,iBlock) &
+               -           Trace_IGB(1:3,i,j-1,k,iBlock)
+          dXyzDj_DS(:,2) = Trace_IGB(4:6,i,j+1,k,iBlock) &
+               -           Trace_IGB(4:6,i,j-1,k,iBlock)
+          dXyzDk_DS(:,1) = Trace_IGB(1:3,i,j,k+1,iBlock) &
+               -           Trace_IGB(1:3,i,j,k-1,iBlock)
+          dXyzDk_DS(:,2) = Trace_IGB(4:6,i,j,k+1,iBlock) &
+               -           Trace_IGB(4:6,i,j,k-1,iBlock)
+          do n = 1, 2
+             ! Normalize the footpoints
+             Xyz_DS(:,n) = Xyz_DS(:,n)/norm2(Xyz_DS(:,n))
+             ! Remove radial part of dXyzDj
+             DxyzDj_DS(:,n) = dXyzDj_DS(:,n) - &
+                  Xyz_DS(:,n)*sum(dXyzDj_DS(:,n)*Xyz_DS(:,n))
+             ! First base vector
+             Base1_DS(:,n) = dXyzDj_DS(:,n)/norm2(dXyzDj_DS(:,n))
+             ! Second base vector
+             Base2_DS(:,n) = cross_product(Xyz_DS(:,n), Base1_DS(:,n))
+             ! Jacobian matrix
+             Jacobian_IIS(1,1,n) = sum(dXyzDj_DS(:,n)*Base1_DS(:,n))
+             Jacobian_IIS(2,1,n) = 0.0
+             Jacobian_IIS(1,2,n) = sum(dXyzDk_DS(:,n)*Base1_DS(:,n))
+             Jacobian_IIS(2,2,n) = sum(dXyzDk_DS(:,n)*Base2_DS(:,n))
+          end do
+          ! Total Jacobian from one end point to other end point
+          Jacobian_II = matmul(Jacobian_IIS(:,:,1), &
+               inverse_matrix(2, Jacobian_IIS(:,:,2)))
+          ! Calculate the squashing factor
+          SquashFactor_CB(i,j,k,iBlock) = sum(Jacobian_II**2) &
+               / abs(determinant(Jacobian_II, 2))
        end do; end do; end do
     end do
 
