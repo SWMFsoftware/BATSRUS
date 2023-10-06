@@ -1046,7 +1046,7 @@ contains
     use ModPhysics, ONLY: BodyRho_I, BodyP_I, OmegaBody, FaceState_VI, &
          ElectronPressureRatio, RhoBody2, pBody2, rBody2
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
-    use ModFieldTrace, ONLY: Trace_DSNB
+    use ModFieldTrace, ONLY: Trace_DSNB, SquashFactor_CB
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
          IsDimensionalPlot_I, Plot_, DLambda_I, LambdaMax_I, LambdaMin_I
@@ -1678,6 +1678,9 @@ contains
              where(.not.Used_GB(:,:,:,iBlock)) PlotVar_GV(:,:,:,iVar) = 0.0
           endif
 
+       case('squash')
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = SquashFactor_CB(:,:,:,iBlock)
+
        case('theta1','req1','theta2','req2','phi1','phi2','status', &
             'lon1', 'lat1', 'lon2', 'lat2')
           ! BASIC RAYTRACE variables
@@ -2248,7 +2251,7 @@ contains
        case('lon1', 'lat1', 'lon2', 'lat2', 'thetaup', 'thetadn', &
             'theta1', 'phi1', 'theta2', 'phi2') ! backward compatible
           NameUnit = NameIdlUnit_V(UnitAngle_)
-       case('status','f1x','f1y','f1z','f2x','f2y','f2z')
+       case('status','f1x','f1y','f1z','f2x','f2y','f2z','squash')
           NameUnit = '--'
           ! GRID INFORMATION
        case('proc','blk','node','impl','evolve')
