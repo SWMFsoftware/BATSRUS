@@ -10768,7 +10768,7 @@ A negative value means that the B0 field is not updated.
 	     default="0"/>
 
 #HELIODIPOLE
--0.0003                 HelioDipoleStrengthSi [Telsa]
+-0.0003                 HelioDipoleStrengthSi [Tesla]
  0.0                    HelioDipoleTilt     [deg]
 
 Variable HelioDipoleStrengthSi defines the equatorial field strength in Tesla,
