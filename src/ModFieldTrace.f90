@@ -139,6 +139,9 @@ module ModFieldTrace
 
   ! Local variables --------------------------------
 
+  ! If true, calculate B0 with get_b0, otherwise interpolate
+  logical, parameter:: DoGetB0 = .false.
+    
   ! Possible tasks
   logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
   logical :: DoMapRay       = .false. ! map rays down to the ionosphere
@@ -483,7 +486,7 @@ contains
     use CON_ray_trace,    ONLY: ray_init
     use ModMain
     use ModAdvance,       ONLY: State_VGB, Bx_, Bz_
-    use ModB0,            ONLY: B0_DGB
+    use ModB0,            ONLY: B0_DGB, get_b0
     use ModGeometry,      ONLY: r_GB, Used_GB
     use BATL_lib,         ONLY: Xyz_DGB, message_pass_cell
     use ModMpi
@@ -520,7 +523,7 @@ contains
     end do
     ! Fill in ghost cells with first order prolongation
     call message_pass_cell(3, b_DGB, nProlongOrderIn=1)
-    if(UseB0)then
+    if(UseB0 .and. .not. DoGetB0)then
        ! Add B0
        do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
           b_DGB(:,:,:,:,iBlock) = &
@@ -1041,7 +1044,8 @@ contains
     ! Return RayBody_    if the trace goes into or is inside a body
     ! Return RayOpen_    if the trace goes outside the computational box
 
-    use ModMain, ONLY: nI, nJ, nK
+    use ModMain, ONLY: nI, nJ, nK, UseB0
+    use ModB0, ONLY: get_b0
     use ModGeometry, ONLY: Coord111_DB, XyzMax_D, XyzMin_D, &
          rMin_B, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
     use CON_planet, ONLY: DipoleStrength
@@ -1189,7 +1193,7 @@ contains
        XyzIni_D = XyzCur_D
 
        ! Half step
-       call interpolate_b(IndIni_D, b_D, bNormIni_D)
+       call interpolate_b(XyzIni_D, IndIni_D, b_D, bNormIni_D)
        if(sum(bNormIni_D**2) < 0.5)then
           iFace = RayLoop_
           EXIT FOLLOW
@@ -1230,7 +1234,7 @@ contains
                    IndMid_D = max(GenMin_D - 0.1, IndMid_D)
                    IndMid_D = min(GenMax_D + 0.1, IndMid_D)
                    call interpolate_xyz(IndMid_D, XyzMid_D)
-                   call interpolate_b(IndMid_D, b_D, bNormMid_D)
+                   call interpolate_b(XyzMid_D, IndMid_D, b_D, bNormMid_D)
                    IndCur_D = IndMid_D; XyzCur_D = XyzMid_D
 
                    ! We exited the block and have a good location to
@@ -1255,7 +1259,7 @@ contains
 
           bNormMid_D = bNormIni_D
           ! In case interpolation would give zero vector
-          call interpolate_b(IndMid_D, b_D, bNormMid_D)
+          call interpolate_b(XyzMid_D, IndMid_D, b_D, bNormMid_D)
 
           ! Calculate the difference between 1st and 2nd order integration
           ! and take ratio relative to DxOpt
@@ -1316,7 +1320,7 @@ contains
                          IndMid_D = max(GenMin_D-0.1, IndMid_D)
                          IndMid_D = min(GenMax_D+0.1, IndMid_D)
                          call interpolate_xyz(IndMid_D, XyzMid_D)
-                         call interpolate_b(IndMid_D, b_D, bNormMid_D)
+                         call interpolate_b(XyzMid_D, IndMid_D, b_D, bNormMid_D)
                          IndCur_D=IndMid_D; XyzCur_D=XyzMid_D
 
                          ! We exited block and have good location to continued
@@ -1613,27 +1617,26 @@ contains
 
     end function do_stop_at_sm_equator
     !==========================================================================
-    subroutine interpolate_b(IndIn_D,b_D,bNorm_D)
+    subroutine interpolate_b(XyzIn_D, IndIn_D, b_D, bNorm_D)
 
       ! Interpolate the magnetic field at normalized location IndIn_D
       ! and return the result in b_D.
       ! The direction of b_D (normalized to a unit vector) is returned
       ! in bNorm_D if the magnitude of b_D is not zero.
 
-      real, intent(in) :: IndIn_D(3)  ! location
+      real, intent(in) :: XyzIn_D(3)  ! location in true coordinates
+      real, intent(in) :: IndIn_D(3)  ! location in normalized coordinates
       real, intent(out):: b_D(3)      ! interpolated magnetic field
       real, intent(out):: bNorm_D(3)  ! unit magnetic field vector
 
       ! local variables
 
-      real :: Dir0_D(3)
-
+      real :: Dir0_D(3), b0_D(3)
       !------------------------------------------------------------------------
-
       ! Determine cell indices corresponding to location IndIn_D
-      i1=floor(IndIn_D(1)); i2=i1+1
-      j1=floor(IndIn_D(2)); j2=j1+1
-      k1=floor(IndIn_D(3)); k2=k1+1
+      i1 = floor(IndIn_D(1)); i2=i1+1
+      j1 = floor(IndIn_D(2)); j2=j1+1
+      k1 = floor(IndIn_D(3)); k2=k1+1
 
       ! Distance relative to the cell centers
       Dx1 = IndIn_D(1) - i1; Dx2 = 1.0 - Dx1
@@ -1650,6 +1653,11 @@ contains
            +     Dy2*(Dz1*b_DGB(:,i1,j1,k2,iBlock)   &
            +          Dz2*b_DGB(:,i1,j1,k1,iBlock)))
 
+      if(UseB0 .and. DoGetB0)then
+         call get_b0(XyzIn_D, b0_D)
+         b_D = b_D + b0_D
+      end if
+      
       ! Set bNorm_D as a unit vector. It will be zero if b_D is zero.
       if(.not.(UseOldMethodOfRayTrace .and. IsCartesianGrid))then
          bNorm_D = b_D/max(1e-30, norm2(b_D))
