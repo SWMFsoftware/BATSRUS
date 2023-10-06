@@ -6,7 +6,7 @@ module ModFieldTraceFast
 
   use ModKind
   use ModFieldTrace
-  use ModMain, ONLY: UseB0, TypeCoordSystem, tSimulation
+  use ModMain, ONLY: UseB0, TypeCoordSystem, tSimulation, nStep
   use ModB0, ONLY: B0_DGB, get_b0, get_b0_dipole
   use ModAdvance, ONLY: State_VGB, Bx_, Bz_, iTypeUpdate, UpdateSlow_
   use BATL_lib, ONLY: &
@@ -113,7 +113,7 @@ contains
     !
     ! Details of the algorithm are to be published later
 
-    use ModMain,     ONLY: nStep, iNewGrid, iNewDecomposition, tSimulation
+    use ModMain,     ONLY: iNewGrid, iNewDecomposition, tSimulation
     use ModPhysics,  ONLY: set_dipole
     use CON_axes,    ONLY: transform_matrix
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
@@ -295,11 +295,11 @@ contains
 
     ! Interpolate the B1 field to the nodes
     !$acc parallel loop gang present(b_DNB)
-    do iBlock=1, nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
        !$acc loop vector collapse(3)
-       do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+       do k=1, nK+1; do j=1, nJ+1; do i=1, nI+1
           do iDim = 1, 3
              b_DNB(iDim,i,j,k,iBlock) = &
                   sum(b_DGB(iDim,i-1:i,j-1:j,k-1:k,iBlock))*0.125
@@ -1607,7 +1607,6 @@ contains
     !           R restricted (to be sent to a coarser block)
     !           S subface    (one quarter of a face)
 
-    use ModMain, ONLY: Unused_B
     use ModParallel, ONLY: DiLevel_EB
 
     ! Local variables
@@ -2584,15 +2583,26 @@ contains
     use ModCoordTransform, ONLY: &
          lonlat_to_xyz, cross_product, inverse_matrix, determinant
 
+    ! Last time the squashing factor has been calculated
+    integer :: nStepLast = -1
+
     real, parameter:: SquashMin = -1.0, SquashMax = 100.0
 
     integer:: i, j, k, n, iBlock, iStatus
     real:: LonLat_D(2), Status_I(5)
-    real:: Xyz_DS(3,2), dXyzDj_DS(3,2), dXyzDk_DS(3,2)
+    real:: Xyz_DS(3,2), DxyzDj_DS(3,2), DxyzDk_DS(3,2)
     real:: Base1_DS(3,2), Base2_DS(3,2)
     real:: Jacobian_IIS(2,2,2), Jacobian_II(2,2)
     real, allocatable:: Trace_IGB(:,:,:,:,:)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_squash_factor'
     !--------------------------------------------------------------------------
+    if(nStep == nStepLast) RETURN
+    nStepLast = nStep
+
+    call test_start(NameSub, DoTest)
+    
     call trace_field_grid
 
     allocate(Trace_IGB(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBlock))
@@ -2641,32 +2651,31 @@ contains
              SquashFactor_CB(i,j,k,iBlock) = SquashMax
              CYCLE
           end if
-          ! Calculate Jacobian based on footpoints Trace_IGB
+          ! Calculate Jacobian based on footpoints in Trace_IGB
           Xyz_DS(:,1)  = Trace_IGB(1:3,i,j,k,iBlock)
           Xyz_DS(:,2)  = Trace_IGB(4:6,i,j,k,iBlock)
-          dXyzDj_DS(:,1) = Trace_IGB(1:3,i,j+1,k,iBlock) &
+          DxyzDj_DS(:,1) = Trace_IGB(1:3,i,j+1,k,iBlock) &
                -           Trace_IGB(1:3,i,j-1,k,iBlock)
-          dXyzDj_DS(:,2) = Trace_IGB(4:6,i,j+1,k,iBlock) &
+          DxyzDj_DS(:,2) = Trace_IGB(4:6,i,j+1,k,iBlock) &
                -           Trace_IGB(4:6,i,j-1,k,iBlock)
-          dXyzDk_DS(:,1) = Trace_IGB(1:3,i,j,k+1,iBlock) &
+          DxyzDk_DS(:,1) = Trace_IGB(1:3,i,j,k+1,iBlock) &
                -           Trace_IGB(1:3,i,j,k-1,iBlock)
-          dXyzDk_DS(:,2) = Trace_IGB(4:6,i,j,k+1,iBlock) &
+          DxyzDk_DS(:,2) = Trace_IGB(4:6,i,j,k+1,iBlock) &
                -           Trace_IGB(4:6,i,j,k-1,iBlock)
+          ! Loop over the two ends
           do n = 1, 2
-             ! Normalize the footpoints
-             Xyz_DS(:,n) = Xyz_DS(:,n)/norm2(Xyz_DS(:,n))
-             ! Remove radial part of dXyzDj
-             DxyzDj_DS(:,n) = dXyzDj_DS(:,n) - &
-                  Xyz_DS(:,n)*sum(dXyzDj_DS(:,n)*Xyz_DS(:,n))
-             ! First base vector
-             Base1_DS(:,n) = dXyzDj_DS(:,n)/norm2(dXyzDj_DS(:,n))
-             ! Second base vector
+             ! Remove radial part of DxyzDj
+             DxyzDj_DS(:,n) = DxyzDj_DS(:,n) - &
+                  Xyz_DS(:,n)*sum(DxyzDj_DS(:,n)*Xyz_DS(:,n))
+             ! First base vector parallel with DxyzDj_DS
+             Base1_DS(:,n) = DxyzDj_DS(:,n)/norm2(DxyzDj_DS(:,n))
+             ! Second base vector perpendicular to DxyzDj_DS
              Base2_DS(:,n) = cross_product(Xyz_DS(:,n), Base1_DS(:,n))
              ! Jacobian matrix
-             Jacobian_IIS(1,1,n) = sum(dXyzDj_DS(:,n)*Base1_DS(:,n))
+             Jacobian_IIS(1,1,n) = sum(DxyzDj_DS(:,n)*Base1_DS(:,n))
              Jacobian_IIS(2,1,n) = 0.0
-             Jacobian_IIS(1,2,n) = sum(dXyzDk_DS(:,n)*Base1_DS(:,n))
-             Jacobian_IIS(2,2,n) = sum(dXyzDk_DS(:,n)*Base2_DS(:,n))
+             Jacobian_IIS(1,2,n) = sum(DxyzDk_DS(:,n)*Base1_DS(:,n))
+             Jacobian_IIS(2,2,n) = sum(DxyzDk_DS(:,n)*Base2_DS(:,n))
           end do
           ! Total Jacobian from one end point to other end point
           Jacobian_II = matmul(Jacobian_IIS(:,:,1), &
@@ -2674,10 +2683,36 @@ contains
           ! Calculate the squashing factor
           SquashFactor_CB(i,j,k,iBlock) = sum(Jacobian_II**2) &
                / abs(determinant(Jacobian_II, 2))
+
+          if(DoTest .and. SquashFactor_CB(i,j,k,iBlock) > 34000.0)then
+             write(*,*) NameSub, ': huge squash factor=', &
+                  SquashFactor_CB(i,j,k,iBlock)
+             write(*,*) NameSub, ': i,j,k,iBlock=', i, j, k, iBlock
+             write(*,*)	NameSub, ': Xyz     =', Xyz_DGB(:,i,j,k,iBlock)
+             write(*,*)	NameSub, ': Xyz(j+1)=', Xyz_DGB(:,i,j+1,k,iBlock)
+             write(*,*)	NameSub, ': Xyz(j-1)=', Xyz_DGB(:,i,j-1,k,iBlock)
+             write(*,*)	NameSub, ': Xyz(k+1)=', Xyz_DGB(:,i,j,k+1,iBlock)
+             write(*,*)	NameSub, ': Xyz(k-1)=', Xyz_DGB(:,i,j,k-1,iBlock)
+             write(*,*) NameSub, ': Jacobian_II=', Jacobian_II
+             write(*,*)	NameSub, ': Jacobian_IIS(1)=', Jacobian_IIS(:,:,1)
+             write(*,*)	NameSub, ': Jacobian_IIS(2)=', Jacobian_IIS(:,:,2)
+             write(*,*) NameSub, ': Base1_DS(1)=', Base1_DS(:,1)
+             write(*,*) NameSub, ': Base2_DS(1)=', Base2_DS(:,1)
+             write(*,*) NameSub, ': Base1_DS(2)=', Base1_DS(:,2)
+             write(*,*) NameSub, ': Base2_DS(2)=', Base2_DS(:,2)
+             write(*,*) NameSub, ': Trace     =', Trace_IGB(:,i,j,k,iBlock)
+             write(*,*) NameSub, ': Trace(j+1)=', Trace_IGB(:,i,j+1,k,iBlock)
+             write(*,*) NameSub, ': Trace(j-1)=', Trace_IGB(:,i,j-1,k,iBlock)
+             write(*,*) NameSub, ': Trace(k+1)=', Trace_IGB(:,i,j,k+1,iBlock)
+             write(*,*) NameSub, ': Trace(k-1)=', Trace_IGB(:,i,j,k-1,iBlock)
+             call stop_mpi('DEBUG')
+          end if
        end do; end do; end do
     end do
 
     deallocate(Trace_IGB)
+    call test_stop(NameSub, DoTest)
+    
   end subroutine calc_squash_factor
   !============================================================================
 end module ModFieldTraceFast
