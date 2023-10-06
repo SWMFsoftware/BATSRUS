@@ -141,7 +141,7 @@ module ModFieldTrace
 
   ! If true, calculate B0 with get_b0, otherwise interpolate
   logical, parameter:: DoGetB0 = .false.
-    
+
   ! Possible tasks
   logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
   logical :: DoMapRay       = .false. ! map rays down to the ionosphere
@@ -1632,8 +1632,8 @@ contains
       ! local variables
 
       real :: Dir0_D(3), b0_D(3)
-      !------------------------------------------------------------------------
       ! Determine cell indices corresponding to location IndIn_D
+      !------------------------------------------------------------------------
       i1 = floor(IndIn_D(1)); i2=i1+1
       j1 = floor(IndIn_D(2)); j2=j1+1
       k1 = floor(IndIn_D(3)); k2=k1+1
@@ -1657,7 +1657,7 @@ contains
          call get_b0(XyzIn_D, b0_D)
          b_D = b_D + b0_D
       end if
-      
+
       ! Set bNorm_D as a unit vector. It will be zero if b_D is zero.
       if(.not.(UseOldMethodOfRayTrace .and. IsCartesianGrid))then
          bNorm_D = b_D/max(1e-30, norm2(b_D))

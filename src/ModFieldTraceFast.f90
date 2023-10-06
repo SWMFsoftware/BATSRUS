@@ -2602,7 +2602,7 @@ contains
     nStepLast = nStep
 
     call test_start(NameSub, DoTest)
-    
+
     call trace_field_grid
 
     allocate(Trace_IGB(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBlock))
@@ -2712,7 +2712,7 @@ contains
 
     deallocate(Trace_IGB)
     call test_stop(NameSub, DoTest)
-    
+
   end subroutine calc_squash_factor
   !============================================================================
 end module ModFieldTraceFast
