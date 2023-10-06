@@ -48,13 +48,8 @@ module ModGroundMagPerturb
   real, allocatable  :: PosMagnetometer_II(:,:)
   character(len=100) :: NameMagInputFile
   character(len=3)   :: TypeCoordMag='MAG' ! coords for magnetometer list
-  character(len=3)   :: TypeCoordGrid='SMG'! coords for magnetometer grid
+  character(len=3)   :: TypeCoordGrid0='SMG'! coords for magnetometer grid
   character(len=7)   :: TypeMagFileOut='single '
-
-  ! Variables for grid of magnetometers:
-  integer:: nGridMag = 0
-
-  character(len=7):: TypeGridFileOut='single'
 
   ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
   real, allocatable:: IeMagPerturb_DII(:,:,:)
@@ -70,9 +65,21 @@ module ModGroundMagPerturb
   integer          :: iUnitMag = -1, iUnitGrid = -1 ! To be removed !!!
   character(len=3), allocatable :: NameMag_I(:)
 
-  ! Description of the magnetometer grid
-  integer:: nGridLon = 0, nGridLat = 0
-  real   :: GridLatMax, GridLatMin, GridLonMin, GridLonMax
+  ! Description of the magnetometer grid files
+  integer, public:: nMagGridFile
+  integer:: iMagGridFile, nTmpStrGrid
+  integer, allocatable:: nGridLon_I(:) , nGridLat_I(:), nGridMag_I(:)
+  real, allocatable   :: GridLatMax_I(:), GridLatMin_I(:), &
+       GridLonMin_I(:), GridLonMax_I(:)
+  character(len=20), allocatable:: StrGridFileOut_I(:)
+  character(len=7),  allocatable:: TypeGridFileOut_I(:)
+  character(len=10), allocatable:: NameGridFileOut_I(:)
+  character(len=3),  allocatable:: TypeCoordGrid_I(:)
+  character(len=7)::  TmpStrGrid_I(2)
+
+  ! Description of the first magnetometer grid for supermag
+  integer:: nGridLon0 = 0, nGridLat0 = 0
+  real   :: GridLatMax0, GridLatMin0, GridLonMin0, GridLonMax0
 
   ! Output for magnetometer grid
   real, allocatable:: MagOut_VII(:,:,:)
@@ -124,6 +131,7 @@ contains
 
     use ModIO, ONLY: magfile_, maggridfile_, indexfile_, DnOutput_I, DtOutput_I
     use ModReadParam, ONLY: read_var
+    use ModUtilities, ONLY: split_string
 
     character(len=*), intent(in) :: NameCommand
 
@@ -160,16 +168,57 @@ contains
 
     case("#MAGNETOMETERGRID")
        DoSaveGridmag = .true.
-       call read_var('TypeFileMagGrid', TypeGridFileOut)
-       call read_var('TypeCoordMagGrid',TypeCoordGrid)
-       call read_var('nLonMagGrid',     nGridLon)
-       call read_var('nLatMagGrid',     nGridLat)
-       call read_var('LonMinMagGrid',   GridLonMin)
-       call read_var('LonMaxMagGrid',   GridLonMax)
-       call read_var('LatMinMagGrid',   GridLatMin)
-       call read_var('LatMaxMagGrid',   GridLatMax)
-       call read_var('DnSaveMagGrid',   DnOutput_I(maggridfile_))
-       call read_var('DtSaveMagGrid',   DtOutput_I(maggridfile_))
+       ! deallocate al the arrays first...
+       if(allocated(nGridLon_I)) deallocate(nGridLon_I)
+       if(allocated(nGridLat_I)) deallocate(nGridLat_I)
+       if(allocated(GridLatMax_I)) deallocate(GridLatMax_I)
+       if(allocated(GridLatMin_I)) deallocate(GridLatMin_I)
+       if(allocated(GridLonMax_I)) deallocate(GridLonMax_I)
+       if(allocated(GridLonMin_I)) deallocate(GridLonMin_I)
+       if(allocated(StrGridFileOut_I)) deallocate(StrGridFileOut_I)
+       if(allocated(TypeGridFileOut_I)) deallocate(TypeGridFileOut_I)
+       if(allocated(NameGridFileOut_I)) deallocate(NameGridFileOut_I)
+       if(allocated(TypeCoordGrid_I))  deallocate(TypeCoordGrid_I)
+
+       call read_var('nMagGridFile', nMagGridFile)
+       allocate(nGridLon_I(nMagGridFile),nGridLat_I(nMagGridFile), &
+            GridLatMax_I(nMagGridFile),GridLatMin_I(nMagGridFile), &
+            GridLonMax_I(nMagGridFile),GridLonMin_I(nMagGridFile), &
+            StrGridFileOut_I(nMagGridFile), TypeCoordGrid_I(nMagGridFile), &
+            NameGridFileOut_I(nMagGridFile), TypeGridFileOut_I(nMagGridFile), &
+            nGridMag_I(nMagGridFile))
+       do iMagGridFile = 1, nMagGridFile
+          call read_var('StrGridFileOut_I',StrGridFileOut_I(iMagGridFile))
+          call read_var('TypeCoordGrid_I', TypeCoordGrid_I(iMagGridFile))
+          call read_var('nGridLon_I',      nGridLon_I(iMagGridFile))
+          call read_var('nGridLat_I',      nGridLat_I(iMagGridFile))
+          call read_var('GridLonMin_I',    GridLonMin_I(iMagGridFile))
+          call read_var('GridLonMax_I',    GridLonMax_I(iMagGridFile))
+          call read_var('GridLatMin_I',    GridLatMin_I(iMagGridFile))
+          call read_var('GridLatMax_I',    GridLatMax_I(iMagGridFile))
+          call read_var('DnSaveMagGrid_I', DnOutput_I(maggridfile_+iMagGridFile-1))
+          call read_var('DtSaveMagGrid_I', DtOutput_I(maggridfile_+iMagGridFile-1))
+          ! get the name of the plot and the type
+          call split_string(StrGridFileOut_I(iMagGridFile), &
+               TmpStrGrid_I, nTmpStrGrid)
+          ! only two elements!
+          if (nTmpStrGrid /= 2) call stop_mpi(NameSub// &
+               ': StrGridFileOut_I must have two elements!!')
+          NameGridFileOut_I(iMagGridFile) = TmpStrGrid_I(1)
+          TypeGridFileOut_I(iMagGridFile) = TmpStrGrid_I(2)
+          ! single is not supported for mag grid files
+          if (TypeGridFileOut_I(iMagGridFile) == 'single') call stop_mpi( &
+               NameSub//': single is not supported for this plot!')
+       end do
+       ! TypeCoordGrid0 is used in ground_mag_perturb_fac, why???
+       TypeCoordGrid0  = TypeCoordGrid_I(1)
+       ! supermag takes the first mag grid by default
+       nGridLon0 = nGridLon_I(1)
+       nGridLat0 = nGridLat_I(1)
+       GridLonMax0 = GridLonMax_I(1)
+       GridLonMin0 = GridLonMin_I(1)
+       GridLatMax0 = GridLatMax_I(1)
+       GridLatMin0 = GridLatMin_I(1)
 
     case('#GEOMAGINDICES')
        DoWriteIndices = .true. ! Activate geoindices output file.
@@ -187,12 +236,12 @@ contains
           write(*,*)'Warning: MagnetometerGrid must be saved to compute ', &
                'SuperMAG indices. Setting DoWriteSupermagIndices to False.'
           DoWriteSuper = .false.
-       elseif(GridLatMax < 80 .or. GridLatMin > 40)then
+       elseif(GridLatMax0 < 80 .or. GridLatMin0 > 40)then
           ! Latitude must include +40 to +80 for SuperMAG calculation.
           write(*,*)'Warning: MagnetometerGrid must cover latitude range', &
                ' [+40, +80]. Setting DoWriteSupermagIndices to False.'
           DoWriteSuper = .false.
-       elseif(GridLonMax < 350 .or. GridLonMin > 10)then
+       elseif(GridLonMax0 < 350 .or. GridLonMin0 > 10)then
           ! Longitude should be [0, 360]
           ! allow 20 deg of leeway in case pole is covered (see manual)
           write(*,*)'Warning: MagnetometerGrid must cover longitude ', &
@@ -212,7 +261,7 @@ contains
     ! file format is selected).
 
     integer :: iLat, iLon, iMag
-    real    :: dLat, dLon
+    real    :: dLat, dLon, LonMaxLocal, LonMinLocal, LatMaxLocal, LatMinLocal
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_magperturb'
@@ -233,13 +282,16 @@ contains
     if(DoReadMagnetometerFile) call check_mag_input_file
 
     ! Update total number of magnetometers (shared between GM and IE)
-    nGridMag  = nGridLat * nGridLon
-    nMagTotal = nMagnetometer + nGridMag + nIndexMag
+    nGridMag_I = nGridLat_I * nGridLon_I
+    nMagTotal = nMagnetometer + sum(nGridMag_I) + nIndexMag
 
     if(DoTest)then
        write(*,*) NameSub//'Number of magnetometers:'
        write(*,*) '     Stations: ', nMagnetometer
-       write(*,*) '     GridMags: ', nGridMag
+       do iMagGridFile = 1, nMagGridFile
+          write(*,*) '     iMagGridFile, GridMag: ', &
+               iMagGridFile, nGridMag_I(iMagGridFile)
+       end do
        write(*,*) '     IndexMags:', nIndexMag
        write(*,*) '     TOTAL:    ', nMagTotal
     end if
@@ -260,58 +312,76 @@ contains
 
     ! Calculate magnetometer grid spacing.
     if(DoSaveGridMag)then
-       if( GridLonMin+360. == GridLonMax)then
-          ! If spanning the globe, do not include both 0 and 360.
-          dLon = (GridLonMax - GridLonMin)/max(1, nGridLon)
-          GridLonMax = GridLonMax - dLon
-       else
-          ! If not spanning the globe, grid goes end-to-end
-          dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
-       endif
-       dLat = (GridLatMax - GridLatMin)/max(1, nGridLat-1)
-       if(DoTest) then
-          write(*,*)NameSub//' nLon and nLat = ', nGridLon, nGridLat
-          write(*,*)NameSub//' Lon and Lat spacing = ', dLon, dLat
-       end if
-
-       ! Set up the grid.
+       ! set the starting index...
        iMag = nMagnetometer
-       do iLat = 1, nGridLat
-          do iLon = 1, nGridLon
-             iMag = iMag + 1
-             PosMagnetometer_II(1,iMag) = GridLatMin + (iLat-1)*dLat
-             PosMagnetometer_II(2,iMag) = GridLonMin + (iLon-1)*dLon
-             write(NameMag_I(iMag), '(i3.3)')  iMag
-             if(DoTest) write(*,*) 'Mag Num, lat, lon: ', &
-                  iMag, PosMagnetometer_II(:,iMag)
+
+       ! loop through all files
+       do iMagGridFile = 1, nMagGridFile
+          ! tmp vars for lon min/max
+          LonMinLocal = GridLonMin_I(iMagGridFile)
+          LonMaxLocal = GridLonMax_I(iMagGridFile)
+          LatMinLocal = GridLatMin_I(iMagGridFile)
+          LatMaxLocal = GridLatMax_I(iMagGridFile)
+
+          ! Lon direction
+          if(LonMinLocal +360. == LonMaxLocal) then
+             ! If spanning the globe, do not include both 0 and 360.
+             dLon = (LonMaxLocal - LonMinLocal) &
+                  /max(1, nGridLon_I(iMagGridFile))
+
+             ! Adjust the Lon max
+             GridLonMax_I(iMagGridFile) = GridLonMax_I(iMagGridFile) - dLon
+          else
+             ! If not spanning the globe, grid goes end-to-end
+             dLon = (LonMaxLocal - LonMinLocal) &
+                  /max(1, nGridLon_I(iMagGridFile)-1)
+          endif
+
+          ! Lat direction
+          dLat = (LatMaxLocal - LatMinLocal) &
+               /max(1, nGridLat_I(iMagGridFile)-1)
+
+          if(DoTest) then
+             write(*,*)NameSub//' nLon and nLat = ', nGridLon0, nGridLat0
+             write(*,*)NameSub//' Lon and Lat spacing = ', dLon, dLat
+          end if
+
+          ! Set up the grid.
+          do iLat = 1, nGridLat_I(iMagGridFile)
+             do iLon = 1, nGridLon_I(iMagGridFile)
+                iMag = iMag + 1
+                PosMagnetometer_II(1,iMag) = LatMinLocal + (iLat-1)*dLat
+                PosMagnetometer_II(2,iMag) = LonMinLocal + (iLon-1)*dLon
+                write(NameMag_I(iMag), '(i3.3)')  iMag
+                if(DoTest) write(*,*) 'Mag Num, lat, lon: ', &
+                     iMag, PosMagnetometer_II(:,iMag)
+             end do
           end do
        end do
     end if
 
     ! Add IndexMag info to share to IE:
-    if(DoCalcKp)then
-       iMag = nMagnetometer+nGridMag
-       PosMagnetometer_II(1, iMag+1       :iMag+nKpMag)        = KpLat
-       PosMagnetometer_II(1, iMag+nKpMag+1:iMag+nKpMag+nAeMag) = AeLat
-       PosMagnetometer_II(2, iMag+1:iMag+nKpMag+nAeMag) = LonIndex_I*cRadToDeg
-       NameMag_I(iMag+1:iMag+nKpMag) = 'KP_'
-    end if
+    ! if(DoCalcKp)then
+    !    iMag = nMagnetometer+nGridMag0
+    !    PosMagnetometer_II(1, iMag+1       :iMag+nKpMag)        = KpLat
+    !    PosMagnetometer_II(1, iMag+nKpMag+1:iMag+nKpMag+nAeMag) = AeLat
+    !    PosMagnetometer_II(2, iMag+1:iMag+nKpMag+nAeMag) = LonIndex_I*cRadToDeg
+    !    NameMag_I(iMag+1:iMag+nKpMag) = 'KP_'
+    ! end if
 
     ! Initialize SuperMAG indices file.
     if(DoWriteSuper) call init_supermag
 
-    if(DoTest)then
-       write(*,*) NameSub//'Magnetometer positions to send to IE: '
-       do iMag=1,nMagTotal
-          write(*,*)'  iMag, Lat, Lon =', iMag, PosMagnetometer_II(:,iMag)
-       end do
-    end if
+    ! if(DoTest)then
+    !    write(*,*) NameSub//'Magnetometer positions to send to IE: '
+    !    do iMag=1,nMagTotal
+    !       write(*,*)'  iMag, Lat, Lon =', iMag, PosMagnetometer_II(:,iMag)
+    !    end do
+    ! end if
 
-    ! Open files:
+    ! Open files for 'single' type output, which is for stations ONLY
     if (DoSaveMags .and. iProc == 0) &
          call open_magnetometer_output_file('stat')
-    if (DoSaveGridMag .and. iProc == 0) &
-         call open_magnetometer_output_file('grid')
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_magperturb
@@ -680,10 +750,10 @@ contains
           iMag0 = nMagnetometer
        case('kp')
           iGroup = 3
-          iMag0 = nMagnetometer + nGridMag
+          iMag0 = nMagnetometer + sum(nGridMag_I)
        case('ae')
           iGroup = 4
-          iMag0 = nMagnetometer + nGridMag
+          iMag0 = nMagnetometer + sum(nGridMag_I)
           if(DoCalcKp) iMag0 = iMag0 + nKpMag
        case default
           call stop_mpi(NameSub//': unknown NameGroup='//NameGroup)
@@ -756,7 +826,7 @@ contains
           case(2)
              ! grid
              UseFastFacIntegral_I(iGroup) = &
-                  TypeCoordGrid == 'MAG' .or. TypeCoordGrid == 'GEO'
+                  TypeCoordGrid0 == 'MAG' .or. TypeCoordGrid0 == 'GEO'
           case(3,4)
              ! Kp and Ae indexes
              UseFastFacIntegral_I(iGroup) = TypeCoordIndex == 'MAG'
@@ -1333,10 +1403,9 @@ contains
        iEnd         = nMagnetometer
        TypeFileNow = TypeMagFileOut
     else if(NameGroup == 'grid')then
-       StringPrefix = 'gridMags'
-       iStart       = nMagnetometer
-       iEnd         = nMagnetometer+nGridMag
-       TypeFileNow  = TypeGridFileOut
+       ! As this routine is for 'single' format only, 'grid' does
+       ! not support it
+       RETURN
     else
        call stop_mpi('open_magnetometer_output_files: unrecognized ' // &
             'magnetometer group: '//NameGroup)
@@ -1378,8 +1447,6 @@ contains
     ! Save file IO unit.
     if(NameGroup == 'stat')then
        iUnitMag=iUnitNow
-    else if(NameGroup == 'grid')then
-       iUnitGrid=iUnitNow
     end if
 
     call flush_unit(iUnitNow)
@@ -1430,7 +1497,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_geoindices
   !============================================================================
-  subroutine write_magnetometers(NameGroup)
+  subroutine write_magnetometers(NameGroup, iFileIn)
     ! Write ground magnetometer field perturbations to file. Values, IO units,
     ! and other information is gathered from module level variables.
 
@@ -1443,8 +1510,9 @@ contains
     ! NameGroup determines which group of magnetometers will be written
     ! to file: regular stations ('stat') or grid magnetometers ('grid').
     character(len=4), intent(in) :: NameGroup
+    integer, optional, intent(in) :: iFileIn
 
-    integer :: iMag, iError, iStart, iEnd, iUnitOut, nMagNow
+    integer :: iMag, iError, iStart, iEnd, iUnitOut, nMagNow, iFileLocal
 
     character(len=3):: TypeCoordNow
     character(len=6):: TypeFileNow
@@ -1461,6 +1529,9 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    ! only for mag grid file, the actual index is + 1
+    if(present(iFileIn)) iFileLocal = iFileIn + 1
+
     ! Configure output to cover specific magnetometer group:
     if (NameGroup == 'stat') then
        iStart       = 0
@@ -1469,11 +1540,17 @@ contains
        TypeCoordNow = TypeCoordMag
        TypeFileNow  = TypeMagFileOut
     else if (NameGroup == 'grid') then
-       iStart       = nMagnetometer
-       iEnd         = nMagnetometer+nGridMag
+       if (iFileLocal == 1) then
+          iStart    = nMagnetometer
+       else
+          ! the starting should be the sum of nGridMag of
+          ! previous mag grid files
+          iStart    = nMagnetometer + sum(nGridMag_I(1:iFileLocal-1))
+       end if
+       iEnd         = nMagnetometer + nGridMag_I(iFileLocal)
        iUnitOut     = iUnitGrid
-       TypeCoordNow = TypeCoordGrid
-       TypeFileNow  = TypeGridFileOut  ! should be "2d"
+       TypeCoordNow = TypeCoordGrid_I(iFileLocal)
+       TypeFileNow  = TypeGridFileOut_I(iFileLocal)  ! should be "2d"
     else
        call stop_mpi(NameSub// &
             ': Unrecognized magnetometer group: '//NameGroup)
@@ -1586,7 +1663,8 @@ contains
           call write_mag_step
        case('ascii', 'real4', 'real8', 'tec')
           call write_mag_grid
-          if(DoWriteSuper) call write_supermag
+          ! only write supermag for the first mag grid
+          if(DoWriteSuper .and. iFileLocal == 1) call write_supermag
        case('station')
           call stop_mpi(NameSub//': separate mag files not implemented yet.')
        end select
@@ -1624,8 +1702,8 @@ contains
 
       ! Find SML/SMU indices in latutude range.
       iMag = 0
-      do iLat = 1, nGridLat
-         do iLon = 1, nGridLon
+      do iLat = 1, nGridLat0
+         do iLon = 1, nGridLon0
             iMag = iMag + 1
             MagOut_VII( 1: 3,iLon,iLat) = dBTotal_DI(:,iMag)
             call xyz_to_lonlat(MagSmXyz_DI(:,iMag), LonLat_D)
@@ -1670,17 +1748,22 @@ contains
       integer ::  iTime_I(7), iLon, iLat, iMag
       real:: LonLat_D(2)
 
+      character(len=20 ):: StrPrefixLocal
       character(len=100):: NameFile
       !------------------------------------------------------------------------
+      if(iFileLocal > nMagGridFile) RETURN ! skip
+
       if(allocated(MagOut_VII))then
-         if(size(MagOut_VII) /= nGridMag*nVar) deallocate(MagOut_VII)
+         if(size(MagOut_VII) /= nGridMag_I(iFileLocal)*nVar) &
+              deallocate(MagOut_VII)
       end if
       if(.not.allocated(MagOut_VII)) &
-           allocate(MagOut_VII(nVar,nGridLon,nGridLat))
+           allocate(MagOut_VII(nVar,nGridLon_I(iFileLocal),  &
+           nGridLat_I(iFileLocal)))
 
       iMag = 0
-      do iLat = 1, nGridLat
-         do iLon = 1, nGridLon
+      do iLat = 1, nGridLat_I(iFileLocal)
+         do iLon = 1, nGridLon_I(iFileLocal)
             iMag = iMag + 1
             MagOut_VII( 1: 3,iLon,iLat) = dBTotal_DI(:,iMag)
             MagOut_VII( 4: 6,iLon,iLat) = dBMhd_DI(:,iMag)
@@ -1696,23 +1779,26 @@ contains
          end do
       end do
 
+      StrPrefixLocal = 'mag_grid_'//trim(NameGridFileOut_I(iFileLocal))
       if(IsLogNameE)then
          ! Event date added to magnetic perturbation grid file name
          call get_date_time(iTime_I)
-         write(NameFile, '(a, i4.4, 2i2.2, "-", 3i2.2, a)') &
-              trim(NamePlotDir)//'mag_grid_e', iTime_I(1:6), '.out'
+         write(NameFile, '(a, i4.4, 2i2.2, "-", 3i2.2, a)')  &
+              trim(NamePlotDir)//trim(StrPrefixLocal)//'_e', &
+              iTime_I(1:6), '.out'
       else
          write(NameFile,'(a, i8.8, a)') &
-              trim(NamePlotDir)//'mag_grid_n', nStep, '.out'
+              trim(NamePlotDir)//trim(StrPrefixLocal)//'_n', &
+              nStep, '.out'
       end if
 
-      call save_plot_file(NameFile, TypeFileIn=TypeFileNow, &
+      call save_plot_file(NameFile, TypeFileIn=TypeFileNow,  &
            StringHeaderIn = "Magnetometer grid ("//TypeCoordNow//") [deg] "// &
            "dB (North-East-Down) [nT]", &
            TimeIn = tSimulation, &
            NameVarIn = NameVar, &
-           CoordMinIn_D = [ GridLonMin, GridLatMin ], &
-           CoordMaxIn_D = [ GridLonMax, GridLatMax ], &
+           CoordMinIn_D=[GridLonMin_I(iFileLocal), GridLatMin_I(iFileLocal)], &
+           CoordMaxIn_D=[GridLonMax_I(iFileLocal), GridLatMax_I(iFileLocal)], &
            VarIn_VII=MagOut_VII)
 
     end subroutine write_mag_grid
