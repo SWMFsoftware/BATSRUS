@@ -991,7 +991,8 @@ contains
       use ModWriteTecplot,      ONLY: assign_node_numbers
       use ModFieldTrace,        ONLY: &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
-      use ModFieldTraceFast,    ONLY: trace_field_grid, Trace_DSNB
+      use ModFieldTraceFast,    ONLY: &
+           trace_field_grid, Trace_DSNB, calc_squash_factor
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
       use ModAdvance,           ONLY: State_VGB
@@ -1059,61 +1060,64 @@ contains
             DoExchangeAgain = .true.
          end if
 
-         if(index(TypePlot_I(iFile),'los')>0) then
+         if(index(TypePlot_I(iFile),'los') > 0) then
             IsFound = .true.
             call write_plot_los(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'pnt')>0) then
+         if(index(TypePlot_I(iFile),'pnt') > 0) then
             IsFound = .true.
             call write_plot_particle(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'rfr')>0) then
+         if(index(TypePlot_I(iFile),'rfr') > 0) then
             IsFound = .true.
             call write_plot_radiowave(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'lin')>0) then
+         if(index(TypePlot_I(iFile),'lin') > 0) then
             IsFound = .true.
             call write_plot_line(iFile)
          end if
 
-         if(  index(TypePlot_I(iFile),'eqr')>0 .or. &
-              index(TypePlot_I(iFile),'eqb')>0) then
+         if(  index(TypePlot_I(iFile),'eqr') > 0 .or. &
+              index(TypePlot_I(iFile),'eqb') > 0) then
             IsFound = .true.
             call write_plot_equator(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'ieb')>0) then
+         if(index(TypePlot_I(iFile),'ieb') > 0) then
             IsFound = .true.
             call write_plot_ieb(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'lcb')>0) then
+         if(index(TypePlot_I(iFile),'lcb') > 0) then
             IsFound = .true.
             call write_plot_lcb(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'buf')>0)then
+         if(index(TypePlot_I(iFile),'buf') > 0)then
             IsFound = .true.
             if(TypeSaveIn/='INITIAL')call plot_buffer(iFile)
          end if
 
-         if(TypePlot_I(iFile)/='nul' .and. .not.IsFound ) then
+         if(TypePlot_I(iFile) /= 'nul' .and. .not.IsFound ) then
             ! Assign node numbers for tec plots
-            if( index(TypePlotFormat_I(iFile),'tec')>0 &
+            if( index(TypePlotFormat_I(iFile),'tec') > 0 &
                  .and. DoAssignNodeNumbers)then
                call assign_node_numbers
                DoAssignNodeNumbers = .false.
             end if
 
-            if(  index(TypePlot_I(iFile),'ray')>0 .or. &
-                 index(StringPlotVar_I(iFile),'status')>0)then
+            if(  index(TypePlot_I(iFile),'ray') > 0 .or. &
+                 index(StringPlotVar_I(iFile),'status') > 0)then
                call trace_field_grid
                call sync_cpu_gpu('update on CPU', NameSub, &
                     Trace_DICB=Trace_DSNB)
             end if
+
+            if(index(StringPlotVar_I(iFile),'squash') > 0) &
+                 call calc_squash_factor
 
             call timing_start('save_plot')
             call write_plot(iFile)
