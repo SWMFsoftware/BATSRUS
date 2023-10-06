@@ -171,7 +171,8 @@ rundir:
 		cp ${SCRIPTDIR}/Restart.pl  ${RUNDIR}/; \
 		cp ${SCRIPTDIR}/Resubmit.pl ${RUNDIR}/; \
 		cd ${RUNDIR}; ln -s ${BINDIR}/${DEFAULT_EXE} .; \
-		ln -s ${COMPONENT}/* .;                          \
+		ln -s ${COMPONENT}/* .; \
+		rm -f plots; ln -s ${COMPONENT}/IO2 plots; \
 	fi);
 
 rundir_rh:
