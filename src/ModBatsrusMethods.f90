@@ -921,13 +921,15 @@ contains
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
       use ModAdvance, ONLY: State_VGB
+      use ModGroundMagPerturb, ONLY: nMagGridFile
       logical :: DoPlotThread
       !------------------------------------------------------------------------
       DoPlotThread = DoPlotThreads
       do iFile = 1, nFile
          ! We want to use the IE magnetic perturbations that were passed
          ! in the last coupling together with the current GM perturbations.
-         if( (iFile == magfile_ .or. iFile == maggridfile_) &
+         if( (iFile == magfile_ .or. &
+              (iFile >= maggridfile_ .and. iFile < maggridfile_+nMagGridFile))&
               .neqv. TypeSave == 'BEGINSTEP') CYCLE
 
          if(DnOutput_I(iFile) >= 0)then
@@ -983,7 +985,7 @@ contains
       use ModWriteLogSatFile,   ONLY: write_logfile
       use ModGroundMagPerturb, ONLY: &
            DoSaveMags, DoSaveGridmag, write_magnetometers, &
-           DoWriteIndices, write_geoindices
+           DoWriteIndices, write_geoindices, nMagGridFile
       use ModParticleFieldLine, ONLY: write_plot_particle
       use ModWritePlot,         ONLY: write_plot
       use ModWritePlotLos,      ONLY: write_plot_los
@@ -1221,12 +1223,12 @@ contains
             call timing_stop('save_magnetometer')
          end if
 
-      elseif(iFile == maggridfile_) then
+      elseif(iFile >= maggridfile_ .and. iFile < maggridfile_+nMagGridFile)then
          ! Case for grid magnetometer files
          if(.not. DoSaveGridmag) RETURN
          if(IsTimeAccurate) then
             call timing_start('grid_magnetometer')
-            call write_magnetometers('grid')
+            call write_magnetometers('grid', iFile-maggridfile_)
             call timing_stop('grid_magnetometer')
          end if
 
@@ -1238,9 +1240,9 @@ contains
       nStepOutputLast_I(iFile) = nStep
 
       if(iProc==0 .and. lVerbose>0 .and. &
-           iFile /= logfile_ .and. iFile /= magfile_ &
-           .and. iFile /= indexfile_ .and. iFile /= maggridfile_ &
-           .and. (iFile <= satellite_ .or. iFile > satellite_+nSatellite))then
+           ! seems only for restart, plot and the first satellite files???
+           iFile == restart_ .or. (iFile >= plot_ .and. iFile <= satellite_) &
+           .or. iFile > satellite_+nSatellite) then
          if(IsTimeAccurate)then
             call write_prefix;
             write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
