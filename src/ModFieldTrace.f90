@@ -1320,7 +1320,8 @@ contains
                          IndMid_D = max(GenMin_D-0.1, IndMid_D)
                          IndMid_D = min(GenMax_D+0.1, IndMid_D)
                          call interpolate_xyz(IndMid_D, XyzMid_D)
-                         call interpolate_b(XyzMid_D, IndMid_D, b_D, bNormMid_D)
+                         call interpolate_b(XyzMid_D, IndMid_D, b_D, &
+                              bNormMid_D)
                          IndCur_D=IndMid_D; XyzCur_D=XyzMid_D
 
                          ! We exited block and have good location to continued
