@@ -283,9 +283,17 @@ contains
     ! Check number of magnetometers in the magnetometer file
     if(DoReadMagnetometerFile) call check_mag_input_file
 
-    ! Update total number of magnetometers (shared between GM and IE)
-    nGridMag_I = nGridLat_I * nGridLon_I
-    nMagTotal = nMagnetometer + sum(nGridMag_I) + nIndexMag
+    ! Number of points in each magnetometer grid
+    if(allocated(nGridMag_I))then
+       nGridMag_I = nGridLat_I * nGridLon_I
+    else
+       ! The array needs to be allocated and set to zero
+       allocate(nGridMag_I(1))
+       nGridMag_I = 0
+    end if
+    
+    ! Update total number of magnetometers
+    nMagTotal = nMagnetometer + nIndexMag + sum(nGridMag_I)
 
     if(DoTest)then
        write(*,*) NameSub//'Number of magnetometers:'
