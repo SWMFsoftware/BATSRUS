@@ -36,11 +36,12 @@ module ModGroundMagPerturb
   logical, public :: DoWriteIndices=.false., DoWriteSuper=.false.
   logical, public :: DoCalcKp=.false., DoCalcAe=.false.
   logical, public           :: IsFirstCalc=.true., IsSecondCalc=.true.
-  integer, public           :: iSizeKpWindow = 0 ! Size of MagHistory_II
+  integer, public           :: iSizeKpWindow = 0 ! Size of MagHistory_DII
   integer, public, parameter:: nKpMag = 24, nAeMag = 24
   real, public, allocatable :: MagHistory_DII(:,:,:)  ! Mag time history.
   real, public              :: AeIndex_I(4)
   real, public              :: SuperIndex_I(4) ! SuperMAG indices
+  integer, public           :: nMagGridFile ! Number of magnetometer grids
 
   ! Local variables ------
 
@@ -66,16 +67,13 @@ module ModGroundMagPerturb
   character(len=3), allocatable :: NameMag_I(:)
 
   ! Description of the magnetometer grid files
-  integer, public:: nMagGridFile
-  integer:: iMagGridFile, nTmpStrGrid
+  integer:: iMagGridFile
   integer, allocatable:: nGridLon_I(:) , nGridLat_I(:), nGridMag_I(:)
   real, allocatable   :: GridLatMax_I(:), GridLatMin_I(:), &
        GridLonMin_I(:), GridLonMax_I(:)
-  character(len=20), allocatable:: StrGridFileOut_I(:)
   character(len=7),  allocatable:: TypeGridFileOut_I(:)
   character(len=10), allocatable:: NameGridFileOut_I(:)
   character(len=3),  allocatable:: TypeCoordGrid_I(:)
-  character(len=7)::  TmpStrGrid_I(2)
 
   ! Description of the first magnetometer grid for supermag
   integer:: nGridLon0 = 0, nGridLat0 = 0
@@ -135,6 +133,10 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
+    character(len=20):: String
+    character(len=7):: String_I(2)
+    integer:: n
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_magperturb_param'
     !--------------------------------------------------------------------------
@@ -175,7 +177,6 @@ contains
        if(allocated(GridLatMin_I)) deallocate(GridLatMin_I)
        if(allocated(GridLonMax_I)) deallocate(GridLonMax_I)
        if(allocated(GridLonMin_I)) deallocate(GridLonMin_I)
-       if(allocated(StrGridFileOut_I)) deallocate(StrGridFileOut_I)
        if(allocated(TypeGridFileOut_I)) deallocate(TypeGridFileOut_I)
        if(allocated(NameGridFileOut_I)) deallocate(NameGridFileOut_I)
        if(allocated(TypeCoordGrid_I))  deallocate(TypeCoordGrid_I)
@@ -184,11 +185,11 @@ contains
        allocate(nGridLon_I(nMagGridFile),nGridLat_I(nMagGridFile), &
             GridLatMax_I(nMagGridFile),GridLatMin_I(nMagGridFile), &
             GridLonMax_I(nMagGridFile),GridLonMin_I(nMagGridFile), &
-            StrGridFileOut_I(nMagGridFile), TypeCoordGrid_I(nMagGridFile), &
+            TypeCoordGrid_I(nMagGridFile), &
             NameGridFileOut_I(nMagGridFile), TypeGridFileOut_I(nMagGridFile), &
             nGridMag_I(nMagGridFile))
        do iMagGridFile = 1, nMagGridFile
-          call read_var('StrGridFileOut_I',StrGridFileOut_I(iMagGridFile))
+          call read_var('StrGridFileOut_I', String)
           call read_var('TypeCoordGrid_I', TypeCoordGrid_I(iMagGridFile))
           call read_var('nGridLon_I',      nGridLon_I(iMagGridFile))
           call read_var('nGridLat_I',      nGridLat_I(iMagGridFile))
@@ -196,16 +197,17 @@ contains
           call read_var('GridLonMax_I',    GridLonMax_I(iMagGridFile))
           call read_var('GridLatMin_I',    GridLatMin_I(iMagGridFile))
           call read_var('GridLatMax_I',    GridLatMax_I(iMagGridFile))
-          call read_var('DnSaveMagGrid_I', DnOutput_I(maggridfile_+iMagGridFile-1))
-          call read_var('DtSaveMagGrid_I', DtOutput_I(maggridfile_+iMagGridFile-1))
+          call read_var('DnSaveMagGrid_I', &
+               DnOutput_I(maggridfile_+iMagGridFile-1))
+          call read_var('DtSaveMagGrid_I', &
+               DtOutput_I(maggridfile_+iMagGridFile-1))
           ! get the name of the plot and the type
-          call split_string(StrGridFileOut_I(iMagGridFile), &
-               TmpStrGrid_I, nTmpStrGrid)
+          call split_string(String, String_I, n)
           ! only two elements!
-          if (nTmpStrGrid /= 2) call stop_mpi(NameSub// &
+          if (n /= 2) call stop_mpi(NameSub// &
                ': StrGridFileOut_I must have two elements!!')
-          NameGridFileOut_I(iMagGridFile) = TmpStrGrid_I(1)
-          TypeGridFileOut_I(iMagGridFile) = TmpStrGrid_I(2)
+          NameGridFileOut_I(iMagGridFile) = String_I(1)
+          TypeGridFileOut_I(iMagGridFile) = String_I(2)
           ! single is not supported for mag grid files
           if (TypeGridFileOut_I(iMagGridFile) == 'single') call stop_mpi( &
                NameSub//': single is not supported for this plot!')
@@ -360,24 +362,8 @@ contains
        end do
     end if
 
-    ! Add IndexMag info to share to IE:
-    ! if(DoCalcKp)then
-    !    iMag = nMagnetometer+nGridMag0
-    !    PosMagnetometer_II(1, iMag+1       :iMag+nKpMag)        = KpLat
-    !    PosMagnetometer_II(1, iMag+nKpMag+1:iMag+nKpMag+nAeMag) = AeLat
-    !    PosMagnetometer_II(2, iMag+1:iMag+nKpMag+nAeMag) = LonIndex_I*cRadToDeg
-    !    NameMag_I(iMag+1:iMag+nKpMag) = 'KP_'
-    ! end if
-
     ! Initialize SuperMAG indices file.
     if(DoWriteSuper) call init_supermag
-
-    ! if(DoTest)then
-    !    write(*,*) NameSub//'Magnetometer positions to send to IE: '
-    !    do iMag=1,nMagTotal
-    !       write(*,*)'  iMag, Lat, Lon =', iMag, PosMagnetometer_II(:,iMag)
-    !    end do
-    ! end if
 
     ! Open files for 'single' type output, which is for stations ONLY
     if (DoSaveMags .and. iProc == 0) &
@@ -480,13 +466,12 @@ contains
   subroutine init_supermag
 
     ! Initialize variables, arrays, and output file.
-    use ModNumConst,  ONLY: cDegToRad, cTwoPi
     use ModUtilities, ONLY: flush_unit, open_file
     use ModMain,      ONLY: nStep
     use ModIoUnit,    ONLY: io_unit_new
     use ModIO,        ONLY: NamePlotDir, IsLogNameE
 
-    integer            :: i, iTime_I(7)
+    integer            :: iTime_I(7)
     character(len=100) :: NameFile
 
     logical:: DoTest
@@ -1748,7 +1733,7 @@ contains
       integer ::  iTime_I(7), iLon, iLat, iMag
       real:: LonLat_D(2)
 
-      character(len=20 ):: StrPrefixLocal
+      character(len=20 ):: NameStart
       character(len=100):: NameFile
       !------------------------------------------------------------------------
       if(iFileLocal > nMagGridFile) RETURN ! skip
@@ -1779,17 +1764,15 @@ contains
          end do
       end do
 
-      StrPrefixLocal = 'mag_grid_'//trim(NameGridFileOut_I(iFileLocal))
+      NameStart = 'mag_grid_'//NameGridFileOut_I(iFileLocal)
       if(IsLogNameE)then
          ! Event date added to magnetic perturbation grid file name
          call get_date_time(iTime_I)
          write(NameFile, '(a, i4.4, 2i2.2, "-", 3i2.2, a)')  &
-              trim(NamePlotDir)//trim(StrPrefixLocal)//'_e', &
-              iTime_I(1:6), '.out'
+              trim(NamePlotDir)//trim(NameStart)//'_e', iTime_I(1:6), '.out'
       else
          write(NameFile,'(a, i8.8, a)') &
-              trim(NamePlotDir)//trim(StrPrefixLocal)//'_n', &
-              nStep, '.out'
+              trim(NamePlotDir)//trim(NameStart)//'_n', nStep, '.out'
       end if
 
       call save_plot_file(NameFile, TypeFileIn=TypeFileNow,  &
