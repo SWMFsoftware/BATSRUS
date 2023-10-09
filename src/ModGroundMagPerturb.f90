@@ -291,7 +291,7 @@ contains
        allocate(nGridMag_I(1))
        nGridMag_I = 0
     end if
-    
+
     ! Update total number of magnetometers
     nMagTotal = nMagnetometer + nIndexMag + sum(nGridMag_I)
 

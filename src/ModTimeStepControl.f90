@@ -380,7 +380,7 @@ contains
        call MPI_allreduce(DtMinPE, DtMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
 #else
 !       DtMin = DtMinPe
-!Multi-GPU runs are the same as multi-CPU runs. Dt is pushed after this sub.
+! Multi-GPU runs are the same as multi-CPU runs. Dt is pushed after this sub.
        call MPI_allreduce(DtMinPE, DtMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
 #endif
 
