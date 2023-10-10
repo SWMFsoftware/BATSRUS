@@ -193,7 +193,7 @@ module ModUser
   real :: CrossHelicity = -0.8
   real :: LperpTimesSqrtBSi = 1.5e5, LperpTimesSqrtB = 0.0
   real :: TurbulencePerPu3Source = 0.25
-  
+
   ! Ionization energy for neutral atomic hydrogen
   ! Needed for electron impact ionization
   real :: IonizationEnergyDim = cRyToEv*cEv
