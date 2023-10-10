@@ -190,9 +190,10 @@ module ModUser
 
   ! Wave turbulence
   real :: DeltaUSi = 10.0, DeltaU = 0.0
+  real :: CrossHelicity = -0.8
   real :: LperpTimesSqrtBSi = 1.5e5, LperpTimesSqrtB = 0.0
   real :: TurbulencePerPu3Source = 0.25
-
+  
   ! Ionization energy for neutral atomic hydrogen
   ! Needed for electron impact ionization
   real :: IonizationEnergyDim = cRyToEv*cEv
@@ -356,6 +357,7 @@ contains
 
        case("#TURBULENCE")
           call read_var('DeltaUSi', DeltaUSi)
+          call read_var('CrossHelicity', CrossHelicity)
           ! Our LperpTimesSqrtBSi is L_\perp*\sqrt(B)/KarmanTaylorAlpha
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('TurbulencePerPu3Source', TurbulencePerPu3Source)
@@ -459,11 +461,11 @@ contains
 
          Ewave = Rho*DeltaU**2/(1.0 +  SigmaD)
          if(Bsph_D(1) > 0.0)then
-            VarsGhostFace_V(WaveFirst_) = Ewave
-            VarsGhostFace_V(WaveLast_) = 0.0
+            VarsGhostFace_V(WaveFirst_) = Ewave*0.5*(1.0 - CrossHelicity)
+            VarsGhostFace_V(WaveLast_)  = Ewave*0.5*(1.0 + CrossHelicity)
          else
-            VarsGhostFace_V(WaveFirst_) = 0.0
-            VarsGhostFace_V(WaveLast_) = Ewave
+            VarsGhostFace_V(WaveFirst_) = Ewave*0.5*(1.0 + CrossHelicity)
+            VarsGhostFace_V(WaveLast_)  = Ewave*0.5*(1.0 - CrossHelicity)
          end if
 
          if(Lperp_ > 1) VarsGhostFace_V(Lperp_) = &
@@ -845,14 +847,12 @@ contains
           if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                * Xyz_DGB(x_:z_,i,j,k,iBlock))>0.0)then
              ! Positive propagating waves
-             State_VGB(WaveFirst_,i,j,k,iBlock) = Ewave
-             State_VGB(WaveLast_,i,j,k,iBlock) = &
-                  1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
+             State_VGB(WaveFirst_,i,j,k,iBlock) = Ewave*0.5*(1.0-CrossHelicity)
+             State_VGB(WaveLast_,i,j,k,iBlock)  = Ewave*0.5*(1.0+CrossHelicity)
           else
              ! Negative propagating waves
-             State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
-             State_VGB(WaveFirst_,i,j,k,iBlock) = &
-	          1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
+             State_VGB(WaveFirst_,i,j,k,iBlock) = Ewave*0.5*(1.0+CrossHelicity)
+             State_VGB(WaveLast_,i,j,k,iBlock)  = Ewave*0.5*(1.0-CrossHelicity)
           end if
 
           if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = &
@@ -2554,7 +2554,7 @@ contains
 
              if(UseAlfvenWaves)then
                 if(iTableChargeExchange > 0) then
-                   ! relative velocities are not yet calculated                 
+                   ! relative velocities are not yet calculated
                    where(UseSource_I(Neu_:)) &
 			URelS_I = (U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
                         + (U_DI(y_,Neu_:) - U_DI(y_,Ion_))**2 &

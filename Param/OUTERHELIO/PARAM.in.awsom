@@ -253,6 +253,7 @@ T			UsePu3Heating
 
 #TURBULENCE
 10.0			DeltaUSi
+-1.0			CrossHelicity
 1.5e5			LperpTimesSqrtBSi
 2.5e-4			TurbulencePerPu3Source
 
