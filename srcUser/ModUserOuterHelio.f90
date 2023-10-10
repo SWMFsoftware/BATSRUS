@@ -2553,6 +2553,19 @@ contains
                   - Kpu3x_I(Ne3_) - Kpx_I(Ne3_)
 
              if(UseAlfvenWaves)then
+                if(iTableChargeExchange > 0) then
+                   ! relative velocities are not yet calculated                 
+                   where(UseSource_I(Neu_:)) &
+			URelS_I = (U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
+                        + (U_DI(y_,Neu_:) - U_DI(y_,Ion_))**2 &
+                        + (U_DI(z_,Neu_:) - U_DI(z_,Ion_))**2
+
+                   where(UseSource_I(Neu_:)) &
+                        URelSPu3_I = (U_DI(x_,Neu_:) - U_DI(x_,Pu3_))**2 &
+                        + (U_DI(y_,Neu_:) - U_DI(y_,Pu3_))**2 &
+                        + (U_DI(z_,Neu_:) - U_DI(z_,Pu3_))**2
+		end if
+
                 AlfvenSpeed = sqrt(sum(State_V(Bx_:Bz_)**2)/State_V(Rho_))
                 SourceTurbulence = 0.5*TurbulencePerPu3Source*AlfvenSpeed*( &
                      I0px_I(Neu_)*sqrt(URelS_I(Neu_)) + &

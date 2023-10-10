@@ -254,7 +254,7 @@ T			UsePu3Heating
 #TURBULENCE
 10.0			DeltaUSi
 1.5e5			LperpTimesSqrtBSi
-0.25			TurbulencePerPu3Source
+2.5e-4			TurbulencePerPu3Source
 
 #USERINPUTEND -------------------------------------
 
