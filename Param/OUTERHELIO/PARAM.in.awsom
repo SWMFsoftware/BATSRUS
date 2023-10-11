@@ -249,13 +249,13 @@ MultiIon                NameRegionFormula
 #PU3HEATING
 T			UsePu3Heating
 1e7			TempPu3Si [K]
-20.0			FactorPu3 1/[au yr]
+10.0			FactorPu3 1/[au yr]
 
 #TURBULENCE
 10.0			DeltaUSi
--1.0			CrossHelicity
+-0.8			CrossHelicity
 1.5e5			LperpTimesSqrtBSi
-2.5e-4			TurbulencePerPu3Source
+1.0e-7			TurbulencePerPu3Source
 
 #USERINPUTEND -------------------------------------
 
@@ -273,21 +273,12 @@ ascii			TypeFile
 
 #TIMESTEPPING
 2			nStage
-0.6			CflExpl
+0.2			CflExpl
 
 #SCHEME
 2			nOrder
 Linde			TypeFlux
 minmod			TypeLimiter
-
-#STOP
-20			MaxIteration
--1.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#TIMEACCURATE
-T			IsTimeAccurate
 
 #USERSWITCH
 +source_expl +perturb		StringSwitch
@@ -305,17 +296,14 @@ T			UseSourceNe4
 #USERINPUTEND -------------------------------------
 
 #STOP
-30			MaxIteration
+20			MaxIteration
 -1.0			tSimulationMax
 
 #RUN ##########################################################################
 
-#SCHEME
-2			nOrder
-Linde			TypeFlux
-mc3			TypeLimiter
-1.2			LimiterBeta
+#TIMEACCURATE
+T			IsTimeAccurate
 
 #STOP
-40			MaxIteration
+30			MaxIteration
 -1.0			tSimulationMax
