@@ -6,19 +6,29 @@ module ModFieldTrace
 
   use BATL_lib, ONLY: &
        test_start, test_stop, &
-       iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm, &
+       iTest, jTest, kTest, iBlockTest, iProcTest, iProc, nProc, iComm, &
        IsNeighbor_P, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       MaxBlock, x_, y_, z_, IsCartesianGrid
+       nBlock, MaxBlock, Unused_B, x_, y_, z_, &
+       Xyz_DGB, CellSize_DB, CoordMin_DB, IsCartesianGrid, &
+       find_grid_block, xyz_to_coord, message_pass_cell
+  use ModB0, ONLY: B0_DGB, get_b0
   use ModBatsrusUtility, ONLY: get_time_string, stop_mpi
+  use ModCoordTransform, ONLY: &
+       xyz_to_rlonlat, rlonlat_to_xyz, xyz_to_sph, sph_to_xyz
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModMain, ONLY: TypeCoordSystem
+  use ModMain, ONLY: &
+       TypeCoordSystem, nStep, tSimulation, IsTimeAccurate, UseB0, UseRayTrace
+  use ModMessagePass, ONLY: exchange_messages
   use ModPhysics, ONLY: rBody
-  use ModNumConst, ONLY: i_DD
+  use ModNumConst, ONLY: &
+       i_DD, cPi, cTwoPi, cHalfPi, cRadToDeg, cDegToRad, cTiny
   use ModKind, ONLY: Real8_
   use ModIO,   ONLY: iUnitOut, write_prefix
+  use ModPlotFile, ONLY: save_plot_file
   use ModUpdateStateFast, ONLY: sync_cpu_gpu
+  use ModMpi
 
   implicit none
   save
@@ -37,6 +47,7 @@ module ModFieldTrace
 
   ! Public for ModFieldTraceFast only
   public:: trace_grid_accurate        ! trace field from 3D MHD grid cells
+  public:: trace_field_sphere         ! trace field from spherical surface
   public:: xyz_to_latlonstatus        ! convert to lat, lon, status
 
   ! extracting variables (in SI units?) along the field trace
@@ -142,6 +153,9 @@ module ModFieldTrace
   ! If true, calculate B0 with get_b0, otherwise interpolate
   logical, parameter:: DoGetB0 = .false.
 
+  ! Reduce step size and tolerance with this factor
+  real:: AccuracyFactor = 1.0
+
   ! Possible tasks
   logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
   logical :: DoMapRay       = .false. ! map rays down to the ionosphere
@@ -168,7 +182,6 @@ module ModFieldTrace
   real(Real8_) :: CpuTimeStartRay
 
   ! Number of rays found to be open based on the neighbors
-  integer      :: nOpen
 
   ! ----------- Variables for Integral_I along the trace -----------------
 
@@ -198,7 +211,6 @@ contains
   !============================================================================
   subroutine read_field_trace_param(NameCommand)
 
-    use ModMain,      ONLY: UseRaytrace
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in):: NameCommand
@@ -233,8 +245,6 @@ contains
   !============================================================================
   subroutine xyz_to_latlon(Pos_D)
     !$acc routine seq
-    use ModNumConst, ONLY: cTiny, cRadToDeg
-    use ModCoordTransform, ONLY: xyz_to_rlonlat
 
     ! Convert xyz coordinates to latitude and longitude (in degrees)
     ! Put the latitude and longitude into the 1st and 2nd elements
@@ -270,7 +280,6 @@ contains
   !============================================================================
   subroutine xyz_to_rphi(Pos_DI)
     !$acc routine seq
-    use ModNumConst, ONLY: cRadToDeg
 
     ! Convert X,Y coordinates into radial distance in the XY plane
     ! and longitude (in degrees) for closed rays
@@ -486,10 +495,7 @@ contains
     use CON_ray_trace,    ONLY: ray_init
     use ModMain
     use ModAdvance,       ONLY: State_VGB, Bx_, Bz_
-    use ModB0,            ONLY: B0_DGB, get_b0
     use ModGeometry,      ONLY: r_GB, Used_GB
-    use BATL_lib,         ONLY: Xyz_DGB, message_pass_cell
-    use ModMpi
 
     ! Indices corresponding to the starting point and directon of traces
     integer :: i, j, k, iBlock, iRay
@@ -639,7 +645,7 @@ contains
     !
     ! If DoMapRay, map the rays down to the ionosphere, save spherical
     !    coordinates (in SMG) into
-    !    ModFieldTrace::RayMap_DSII(4,i_D(1),i_D(2),i_D(3))
+    !    ModFieldTrace::RayMap_DSII(3,i_D(1),i_D(2),i_D(3))
     !
     ! If DoIntegrateRay, do integration along the rays and
     !    save the Integral_I into ModFieldTrace::RayIntegral_VII(i_D(1),i_D(2))
@@ -649,12 +655,6 @@ contains
     !
 
     use CON_ray_trace, ONLY: ray_exchange, ray_get, ray_put
-
-    use ModKind
-    use BATL_lib, ONLY: find_grid_block, &
-         CellSize_DB, CoordMin_DB
-
-    use ModMpi
 
     integer, intent(in) :: iRayIn     ! trace direction, 0 if no trace passed
     integer, intent(in) :: i_D(4)     ! general index array for start position
@@ -1044,13 +1044,10 @@ contains
     ! Return RayBody_    if the trace goes into or is inside a body
     ! Return RayOpen_    if the trace goes outside the computational box
 
-    use ModMain, ONLY: nI, nJ, nK, UseB0
-    use ModB0, ONLY: get_b0
     use ModGeometry, ONLY: Coord111_DB, XyzMax_D, XyzMin_D, &
          rMin_B, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
     use CON_planet, ONLY: DipoleStrength
     use ModMultiFLuid
-    use BATL_lib, ONLY: xyz_to_coord, Xyz_DGB, CellSize_DB
 
     ! Arguments
 
@@ -1093,8 +1090,7 @@ contains
     real :: DsMax, DsMin, DsTiny
 
     ! counter for trace integration
-    integer :: nSegment
-    integer :: nSegmentMax=10*(nI+nJ+nK)
+    integer :: nSegment, MaxSegment
 
     ! True if rMin_B < rTrace
     logical :: DoCheckInnerBc
@@ -1164,13 +1160,15 @@ contains
        DsTiny= 1.e-6
     else
        DsMax = sum(abs(Xyz_DGB(:,nI,nJ,nK,iBlock)-Xyz_DGB(:,1,1,1,iBlock))) &
-            /(nI + nJ + nK - 3)
+            /(nI + nJ + nK - 3)/AccuracyFactor
        DsMin = DsMax*0.05
        DsTiny= DsMax*1.e-6
     end if
 
+    MaxSegment = AccuracyFactor*10*(nI+nJ+nK)
+
     ! Initial value
-    DsNext=sign(DsMax,1.5-iRay)
+    DsNext=sign(DsMax, 1.5-iRay)
 
     ! Accuracy in terms of a kind of normalized coordinates
     DxOpt = 0.01*DsMax
@@ -1528,7 +1526,7 @@ contains
        end if
 
        ! Check if we have integrated for too long
-       if( nSegment > nSegmentMax .or. Length > RayLengthMax )then
+       if( nSegment > MaxSegment .or. Length > RayLengthMax )then
           ! Seems to be a closed loop within a block
           if(DoTestRay) &
                write(*,*)'CLOSED LOOP at me,iBlock,IndCur_D,XyzCur_D=', &
@@ -1734,7 +1732,6 @@ contains
 
       use CON_planet_field, ONLY: map_planet_field
       use CON_planet,       ONLY: get_planet
-      use ModMain, ONLY: tSimulation
 
       integer :: iHemisphere
       real    :: x_D(3), DipoleStrength=0.0
@@ -1766,8 +1763,6 @@ contains
       use ModPhysics, ONLY: No2Si_V, UnitX_, UnitB_, UnitElectric_, iUnitPrim_V
       use ModAdvance, ONLY: State_VGB, nVar, Bx_, Bz_, Efield_DGB
       use ModElectricField, ONLY: Epot_DGB
-      use ModMain, ONLY: UseB0
-      use ModB0,   ONLY: get_b0
       use ModInterpolate, ONLY: trilinear
 
       real, intent(in) :: x_D(3)   ! normalized coordinates
@@ -1903,11 +1898,9 @@ contains
     ! It works well for simple problems,
     ! but it does not seem to improve the performance for realistic grids
 
-    use ModMain, ONLY: MaxBlock, nBlock, nI, nJ, nK, Unused_B
     use ModPhysics, ONLY: SolarWindBx, SolarWindBy, SolarWindBz
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, Coord111_DB
     use ModSort, ONLY: sort_quick
-    use ModMpi, ONLY: MPI_WTIME
 
     integer :: iStart, iEnd, iStride, jStart, jEnd, jStride, &
          kStart, kEnd, kStride
@@ -2008,17 +2001,10 @@ contains
     use CON_ray_trace, ONLY: ray_init
     use CON_planet_field, ONLY: map_planet_field
     use CON_axes, ONLY: transform_matrix
-    use ModMain,    ONLY: nBlock, Unused_B, tSimulation, UseB0
     use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, UseMultiSpecies, nSpecies
-    use ModB0,      ONLY: B0_DGB
-    use ModMpi
-    use BATL_lib,          ONLY: message_pass_cell, find_grid_block
-    use ModNumConst,       ONLY: cDegToRad, cTiny
-    use ModCoordTransform, ONLY: sph_to_xyz
     use CON_line_extract,  ONLY: line_init, line_collect, line_clean
     use CON_planet,        ONLY: DipoleStrength
     use ModMultiFluid
-    use ModMessagePass,    ONLY: exchange_messages
 
     integer, intent(in):: nLat, nLon
     real,    intent(in):: Lat_I(nLat), Lon_I(nLon), Radius
@@ -2218,13 +2204,9 @@ contains
     use CON_ray_trace,     ONLY: ray_init
     use CON_axes,          ONLY: transform_matrix
     use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-    use ModMain,           ONLY: nBlock, tSimulation, UseB0, Unused_B
     use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_, &
          UseMultiSpecies, nSpecies
-    use ModB0,             ONLY: B0_DGB
-    use ModMpi
     use ModMultiFluid
-    use BATL_lib,          ONLY: find_grid_block
 
     integer, intent(in):: nPts
     real,    intent(in):: XyzPt_DI(3,nPts)
@@ -2359,15 +2341,13 @@ contains
   !============================================================================
   subroutine write_plot_equator(iFile)
 
-    use ModMain, ONLY: nStep, IsTimeAccurate, tSimulation, NamePrimitive_V
+    use ModMain, ONLY: NamePrimitive_V
     use ModIo, ONLY: &
          StringDateOrTime, NamePlotDir, PlotRange_EI, TypePlot_I, TypeFile_I
     use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
     use ModIoUnit,         ONLY: UnitTmp_
-    use ModPlotFile,       ONLY: save_plot_file
     use CON_line_extract,  ONLY: line_get, line_clean
     use CON_axes,          ONLY: transform_matrix
-    use ModNumConst,       ONLY: cDegToRad
     use ModInterpolate,    ONLY: fit_parabola
     use ModUtilities,      ONLY: open_file, close_file
 
@@ -2661,21 +2641,12 @@ contains
   subroutine trace_field_equator(nRadius, nLon, Radius_I, Longitude_I, &
        DoMessagePass)
 
-    use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, Unused_B
     use CON_ray_trace, ONLY: ray_init
     use CON_axes,      ONLY: transform_matrix
-    use ModMain,       ONLY: nBlock, tSimulation, UseB0
     use ModAdvance,    ONLY: nVar, State_VGB, Bx_, Bz_
-    use ModB0,         ONLY: B0_DGB
     use ModGeometry,       ONLY: CellSize_DB
     use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-    use ModCoordTransform, ONLY: xyz_to_sph
-    use ModMessagePass,    ONLY: exchange_messages
     use ModElectricField,  ONLY: calc_inductive_e
-
-    use BATL_lib,          ONLY: message_pass_cell, find_grid_block, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, iComm
-    use ModMpi
 
     integer, intent(in):: nRadius, nLon
     real,    intent(in):: Radius_I(nRadius), Longitude_I(nLon)
@@ -2896,11 +2867,7 @@ contains
 
     use CON_ray_trace, ONLY: ray_init
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_
-    use ModB0,       ONLY: B0_DGB
-    use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0
     use ModGeometry, ONLY: CellSize_DB, x_, y_, z_
-    use ModMpi,      ONLY: MPI_WTIME
-    use BATL_lib,    ONLY: find_grid_block
 
     integer, intent(in) :: nLine
     logical, intent(in) :: IsParallel_I(nLine)
@@ -3010,8 +2977,7 @@ contains
          NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, &
          IsSingleLine_I
     use ModWriteTecplot, ONLY: set_tecplot_var_string
-    use ModMain, ONLY: &
-         nStep, IsTimeAccurate, tSimulation, NamePrimitive_V
+    use ModMain, ONLY: NamePrimitive_V
     use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file, join_string
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
@@ -3239,7 +3205,6 @@ contains
   !============================================================================
   subroutine xyz_to_ijk(XyzIn_D, IndOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
 
-    use ModNumConst,  ONLY: cPi, cTwoPi
     use BATL_lib,     ONLY: Phi_, Theta_, x_, y_, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsPeriodicCoord_D, &
          CoordMin_D, CoordMax_D, xyz_to_coord
@@ -3306,14 +3271,10 @@ contains
     use ModIoUnit,         ONLY: UnitTmp_
     use ModUtilities,      ONLY: open_file, close_file
     use ModAdvance,        ONLY: nVar
-    use ModMain,           ONLY: tSimulation, IsTimeAccurate, nStep
-    use ModNumConst,       ONLY: cDegToRad
     use ModPhysics,        ONLY: &
          Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_
     use ModIO,             ONLY: &
          StringDateOrTime, NamePlotDir, PlotRange_EI, TypePlot_I, IsPlotNameN
-    use ModNumConst,       ONLY: i_DD
-    use ModMpi
 
     integer, intent(in) :: iFile
 
@@ -3583,12 +3544,8 @@ contains
     use ModIoUnit,         ONLY: UnitTmp_
     use ModUtilities,      ONLY: open_file, close_file
     use ModAdvance,        ONLY: nVar
-    use ModMain,           ONLY: tSimulation, IsTimeAccurate, nStep
-    use ModNumConst,       ONLY: cDegToRad
     use ModPhysics,        ONLY: Si2No_V, UnitX_
-    use ModCoordTransform, ONLY: sph_to_xyz
     use ModIO,             ONLY: StringDateOrTime, NamePlotDir
-    use ModNumConst,       ONLY: i_DD
 
     integer, intent(in) :: iFile
 
@@ -3830,6 +3787,112 @@ contains
     call test_stop(NameSub, DoTest)
 
   end subroutine write_plot_ieb
+  !============================================================================
+  subroutine trace_field_sphere(nLon, nLat, Radius)
+
+    use CON_ray_trace, ONLY: ray_init
+    use ModAdvance,    ONLY: State_VGB, Bx_, Bz_
+
+    integer, intent(in):: nLon, nLat
+    real, intent(in):: Radius
+
+    integer:: iLon, iLat, iBlock, iRay, iProcFound, iBlockFound, iError
+    real:: Xyz_D(3), rLonLat_D(3), B0_D(3)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'trace_field_sphere'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    AccuracyFactor  = 100.0
+    DoMapRay        = .true.
+    DoTraceRay      = .false.
+    DoIntegrateRay  = .false.
+    DoExtractRay    = .false.
+    DoExtractState  = .false.
+    DoExtractUnitSi = .false.
+    nRay_D = [1, nLon, nLat, 0]
+    NameVectorField = 'B'
+
+    if(allocated(RayMap_DSII)) deallocate(RayMap_DSII)
+    allocate(RayMap_DSII(3,nRay_D(1),nRay_D(2),nRay_D(3)))
+    RayMap_DSII = 0.0
+
+    call ray_init(iComm)
+
+    ! Copy magnetic field into b_DGB
+    do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
+       b_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+       ! Add B0
+       if(UseB0) b_DGB(:,:,:,:,iBlock) = &
+            b_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+    end do
+
+    rLonLat_D(1) = Radius
+    do iLon = 1, nLon
+       rLonLat_D(2) = (iLon - 1)*cTwoPi/(nLon - 1)
+       do iLat = 1, nLat
+          rLonLat_D(3) = iLat*cPi/(nLat + 1) - cHalfPi
+
+          ! Convert to SMG coordinates on the surface of the ionosphere
+          call rlonlat_to_xyz(rLonLat_D, Xyz_D)
+
+          call get_b0(Xyz_D, b0_D)
+
+          if(sum(Xyz_D*b0_D) > 0)then
+             iRay = 1
+          else
+             iRay = 2
+          end if
+
+          ! Find processor and block for the location
+          call find_grid_block(Xyz_D, iProcFound, iBlockFound)
+
+          ! If location is on this PE, follow and integrate trace
+          if(iProc == iProcFound)then
+
+             if(DoTest .and. iLat==iLatTest .and. iLon==iLonTest)then
+                write(*,'(a,3i3,a,i3,a,i4)') &
+                     NameSub//': iLon, iLat, iRay=', iLon, iLat, iRay, &
+                     ' found on iProc=',iProc,' iBlock=', iBlockFound
+                write(*,'(a,3es12.4)') NameSub//': rLonLat_D=', rLonLat_D
+                write(*,'(a,3es12.4)') NameSub//': Xyz_D    =', Xyz_D
+                write(*,'(a,3es12.4)') NameSub//': B0_D     =', B0_D
+             end if
+
+             call follow_ray(iRay, [1, iLon, iLat, iBlockFound], Xyz_D)
+
+          end if
+       end do
+    end do
+    ! Do remaining rays obtained from other PE-s
+    call finish_ray
+
+    ! Collect the trace mapping info to processor 0
+    if(nProc > 1) call MPI_allreduce( MPI_IN_PLACE, RayMap_DSII, &
+         size(RayMap_DSII), MPI_REAL, MPI_SUM, iComm, iError)
+
+    if(DoTest .and. iProc ==0)then
+       write(*,*) NameSub,': RayMap(1)=', RayMap_DSII(:,1,iLonTest,iLatTest)
+       if(iProc == 0) call save_plot_file( &
+            "map.out", &
+            StringHeaderIn = "Field line mapping", &
+            TimeIn  = tSimulation, &
+            nStepIn = nStep, &
+            ParamIn_I = [Radius], &
+            NameVarIn = "Lon Lat x1 y1 z1 radius", &
+            CoordMinIn_D = [0., 180/(nLat + 1.0) - 90], &
+            CoordMaxIn_D = [360., 180*nLat/(nLat + 1.0) - 90], &
+            VarIn_VII  = RayMap_DSII(:,1,:,:))
+    end if
+
+    AccuracyFactor = 1.0
+
+    call test_stop(NameSub, DoTest)
+
+    call stop_mpi('DEBUG')
+
+  end subroutine trace_field_sphere
   !============================================================================
 end module ModFieldTrace
 !==============================================================================
