@@ -2603,9 +2603,11 @@ contains
 
     call test_start(NameSub, DoTest)
 
+    call trace_field_sphere(120, 60, 1.0)
+
     call trace_field_grid
 
-    allocate(Trace_IGB(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBlock))
+    allocate(Trace_IGB(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -2617,7 +2619,7 @@ contains
              ! Convert Lat-Lon into X-Y-Z unit vectors to avoid discontinuity
              LonLat_D = Trace_DSNB(2:1:-1,1,i,j,k,iBlock)
              call lonlat_to_xyz(LonLat_D, Trace_IGB(1:3,i,j,k,iBlock))
-             LonLat_D = Trace_DSNB(5:4:-1,1,i,j,k,iBlock)
+             LonLat_D = Trace_DSNB(2:1:-1,2,i,j,k,iBlock)
              call lonlat_to_xyz(LonLat_D, Trace_IGB(4:6,i,j,k,iBlock))
              ! Store status into last element as 1, 10, 100, 1000
              ! so that jumps in status are properly identified
