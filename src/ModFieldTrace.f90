@@ -239,6 +239,9 @@ contains
        call read_var('DoMapEquatorTrace', DoMapEquatorRay)
     case("#TRACEIE", "#IE")
        call read_var('DoTraceIE', DoTraceIE)
+    case("#TRACETEST")
+       call read_var("iLonTest", iLonTest)
+       call read_var("iLatTest", iLatTest)
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -3965,7 +3968,7 @@ contains
     ! Convert footpoint coordinates to Squash-Lon-Lat
     do iLon = 1, nLon; do iLat = 1, nLat
        Xyz_D = RayMap_DSII(:,1,iLon,iLat)
-       if(Xyz_D(1) < CLOSEDRAY) then
+       if(Xyz_D(1) < ClosedRay) then
           ! Impossible values for open field lines
           RayMap_DSII(2:3,1,iLon,iLat) = -100.0
        else
