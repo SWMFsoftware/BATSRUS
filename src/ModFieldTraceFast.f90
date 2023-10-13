@@ -2603,7 +2603,7 @@ contains
 
     call test_start(NameSub, DoTest)
 
-    call trace_field_sphere(120, 60, 1.0)
+    call trace_field_sphere(1.0, 360, 180)
 
     call trace_field_grid
 
