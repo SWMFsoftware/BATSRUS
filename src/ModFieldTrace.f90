@@ -70,7 +70,7 @@ module ModFieldTrace
   ! Squash factor
   real, public, allocatable :: SquashFactor_II(:,:), SquashFactor_CB(:,:,:,:)
   real, public:: SquashFactorMax = 100.0
-  
+
   ! Integral_I added up for all the local trace segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
   ! The second and third indexes correspond to the latitude and longitude of
@@ -3964,7 +3964,7 @@ contains
        end if
 
     end do; end do
-    
+
     ! Convert footpoint coordinates to Squash-Lon-Lat
     do iLon = 1, nLon; do iLat = 1, nLat
        Xyz_D = RayMap_DSII(:,1,iLon,iLat)
@@ -3978,7 +3978,7 @@ contains
        ! Set first coordinate to the squash factor
        RayMap_DSII(1,1,iLon,iLat) = SquashFactor_II(iLon,iLat)
     end do; end do
-    
+
     if(DoTest .and. iProc ==0)then
        write(*,*) NameSub,': RayMap(1)=', RayMap_DSII(:,1,iLonTest,iLatTest)
        if(iProc == 0) call save_plot_file( &
