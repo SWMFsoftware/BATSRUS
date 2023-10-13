@@ -1240,13 +1240,12 @@ contains
       nStepOutputLast_I(iFile) = nStep
 
       if(iProc==0 .and. lVerbose>0 .and. &
-           ! seems only for restart, plot and the first satellite files???
-           iFile == restart_ .or. (iFile >= plot_ .and. iFile <= satellite_) &
-           .or. iFile > satellite_+nSatellite) then
+           (iFile == restart_ .or. &
+           (iFile >= plot_ .and. iFile < plot_+MaxPlotfile))) then
          if(IsTimeAccurate)then
             call write_prefix;
             write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
-                 'saved iFile=',iFile,' type=',trim(TypePlot_I(iFile)),&
+                 'saved iFile=',iFile,' type=',trim(TypeFile_I(iFile)),&
                  ' at nStep=',nStep,' time=', &
                  int(                            tSimulation/3600.),':', &
                  int((tSimulation &
