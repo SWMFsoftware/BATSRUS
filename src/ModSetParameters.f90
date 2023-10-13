@@ -1941,7 +1941,7 @@ contains
           call read_var('SwTminDim', SwTminDim)
 
        case("#TRACE", "#TRACELIMIT", "#TRACERADIUS", "#TRACEEQUATOR", &
-            "#TRACEIE", &
+            "#TRACEIE", "#TRACEACCURACY", &
             "#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
           call read_field_trace_param(NameCommand)
        case("#PWCOUPLING")
