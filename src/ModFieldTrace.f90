@@ -14,7 +14,7 @@ module ModFieldTrace
   use ModB0, ONLY: B0_DGB, get_b0
   use ModBatsrusUtility, ONLY: get_time_string, stop_mpi, barrier_mpi
   use ModCoordTransform, ONLY: &
-       xyz_to_rlonlat, rlonlat_to_xyz, xyz_to_sph, sph_to_xyz
+       xyz_to_rlonlat, rlonlat_to_xyz, xyz_to_sph, sph_to_xyz, cross_product
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -68,8 +68,9 @@ module ModFieldTrace
   !$acc declare create(Trace_DSNB)
 
   ! Squash factor
-  real, public, allocatable :: SquashFactor_CB(:,:,:,:)
-
+  real, public, allocatable :: SquashFactor_II(:,:), SquashFactor_CB(:,:,:,:)
+  real, public:: SquashFactorMax = 100.0
+  
   ! Integral_I added up for all the local trace segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
   ! The second and third indexes correspond to the latitude and longitude of
@@ -205,7 +206,7 @@ module ModFieldTrace
   real, allocatable :: CurvatureB_GB(:,:,:,:)
   logical:: DoExtractCurvatureB = .false.
 
-  integer :: iLatTest = 1, iLonTest = 1
+  integer :: iLatTest = 60, iLonTest = 1
 
 contains
   !============================================================================
@@ -232,6 +233,8 @@ contains
        call read_var('rIonosphere', rIonosphere)
     case("#TRACELIMIT", "#RAYTRACELIMIT")
        call read_var('TraceLengthMax', RayLengthMax)
+    case("#TRACEACCURACY")
+       call read_var('AccuracyFactor', AccuracyFactor)
     case("#TRACEEQUATOR", "#RAYTRACEEQUATOR")
        call read_var('DoMapEquatorTrace', DoMapEquatorRay)
     case("#TRACEIE", "#IE")
@@ -801,7 +804,6 @@ contains
        if(iRayIn>0)then
           ! If there are still local rays, exchange only occasionally
           CpuTimeNow = MPI_WTIME()
-
           if(CpuTimeNow - CpuTimeStartRay > DtExchangeRay)then
              ! This PE is not Done yet, so pass .false.
              call ray_exchange(.false., DoneAll, IsNeighbor_P)
@@ -3788,22 +3790,37 @@ contains
 
   end subroutine write_plot_ieb
   !============================================================================
-  subroutine trace_field_sphere(nLon, nLat, Radius)
+  subroutine trace_field_sphere(Radius, nLonIn, nLatIn)
 
     use CON_ray_trace, ONLY: ray_init
     use ModAdvance,    ONLY: State_VGB, Bx_, Bz_
 
-    integer, intent(in):: nLon, nLat
     real, intent(in):: Radius
+    integer, intent(in):: nLonIn, nLatIn
 
-    integer:: iLon, iLat, iBlock, iRay, iProcFound, iBlockFound, iError
+    integer:: nLon, nLat, iLon, iLat, iBlock, iRay
+    integer:: iProcFound, iBlockFound, iError
+    real:: dLon, dLat, AccuracyFactorOrig
     real:: Xyz_D(3), rLonLat_D(3), B0_D(3)
+
+    ! Squash factor related variables
+    integer:: DiLon, iLon1, iLon2, iLat1, iLat2
+    real:: Xyz1_D(3), Xyz2_D(3), Xyz3_D(3), Xyz4_D(3), Base1_D(3), Base2_D(3)
+    real:: Jacobian_II(2,2), CosLat, DxyzDlon_D(3), DxyzDlat_D(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'trace_field_sphere'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    nLon = nLonIn + 1 ! extra periodic cell in the Lon direction
+    nLat = nLatIn - 1 ! no poles in the Lat directoin
+
+    ! Longitude and latitude resolution
+    dLon = cTwoPi/nLonIn
+    dLat = cPi/nLatIn
+
+    AccuracyFactorOrig = AccuracyFactor
     AccuracyFactor  = 100.0
     DoMapRay        = .true.
     DoTraceRay      = .false.
@@ -3828,11 +3845,15 @@ contains
             b_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
     end do
 
+    ! Fixed radial distance
     rLonLat_D(1) = Radius
+    CpuTimeStartRay = MPI_WTIME()
     do iLon = 1, nLon
-       rLonLat_D(2) = (iLon - 1)*cTwoPi/(nLon - 1)
+       ! Longitude
+       rLonLat_D(2) = (iLon - 1)*dLon
        do iLat = 1, nLat
-          rLonLat_D(3) = iLat*cPi/(nLat + 1) - cHalfPi
+          ! Latitude
+          rLonLat_D(3) = iLat*dLat - cHalfPi
 
           ! Convert to SMG coordinates on the surface of the ionosphere
           call rlonlat_to_xyz(rLonLat_D, Xyz_D)
@@ -3872,6 +3893,89 @@ contains
     if(nProc > 1) call MPI_allreduce( MPI_IN_PLACE, RayMap_DSII, &
          size(RayMap_DSII), MPI_REAL, MPI_SUM, iComm, iError)
 
+    ! Calculate squash factor. Add poles for interpolation.
+    if(.not.allocated(SquashFactor_II)) &
+         allocate(SquashFactor_II(nLon,0:nLat+1))
+
+    do iLon = 1, nLon; do iLat = 1, nLat
+       SquashFactor_II(iLon,iLat) = SquashFactorMax
+       Xyz_D = RayMap_DSII(:,1,iLon,iLat)
+       if(Xyz_D(1) < ClosedRay) CYCLE
+       CosLat = cos(iLat*dLat - cHalfPi)
+       if(CosLat == 0.0)write(*,*)'iLon, iLat, dLat, iLat*dLat - cHalfPi=', &
+            iLon, iLat, dLat, iLat*dLat - cHalfPi
+       DiLon = 1 ! for now
+       iLon1 = iLon - DiLon; if(iLon1 < 1)    iLon1 = iLon1 + nLonIn
+       Xyz1_D = RayMap_DSII(:,1,iLon1,iLat)
+       if(Xyz1_D(1) < ClosedRay) CYCLE
+       iLon2 = iLon + DiLon; if(iLon2 > nLon) iLon2 = iLon2 - nLonIn
+       Xyz2_D = RayMap_DSII(:,1,iLon2,iLat)
+       if(Xyz2_D(1) < ClosedRay) CYCLE
+       iLat1 = max(iLat - 1, 1)
+       Xyz3_D = RayMap_DSII(:,1,iLon,iLat1)
+       if(Xyz3_D(1) < ClosedRay) CYCLE
+       iLat2 = min(iLat + 1, nLat)
+       Xyz4_D = RayMap_DSII(:,1,iLon,iLat2)
+       if(Xyz4_D(1) < ClosedRay) CYCLE
+       ! Make sure footpoints are normalized
+       Xyz_D = Xyz_D/norm2(Xyz_D)
+       Xyz1_D = Xyz1_D/norm2(Xyz1_D)
+       Xyz2_D = Xyz2_D/norm2(Xyz2_D)
+       Xyz3_D = Xyz3_D/norm2(Xyz3_D)
+       Xyz4_D = Xyz4_D/norm2(Xyz4_D)
+       ! Calculate derivatives
+       DxyzDlon_D = (Xyz2_D - Xyz1_D)/(2*DiLon*dLon*CosLat)
+       DxyzDlat_D = (Xyz4_D - Xyz3_D)/((iLat2 - iLat1)*dLat)
+       ! Remove radial part of Dxyz
+       DxyzDlon_D = DxyzDlon_D - Xyz_D*sum(DxyzDlon_D*Xyz_D)
+       DxyzDlat_D = DxyzDlat_D - Xyz_D*sum(DxyzDlat_D*Xyz_D)
+       ! First base vector parallel with DxyzDLon_D
+       Base1_D = DxyzDLon_D/norm2(DxyzDLon_D)
+       ! Second base vector perpendicular to Base1_D
+       Base2_D = cross_product(Xyz_D, Base1_D)
+       ! Jacobian matrix
+       Jacobian_II(1,1) = sum(DxyzDLon_D*Base1_D)
+       Jacobian_II(2,1) = sum(DxyzDLon_D*Base2_D) ! 0.0
+       Jacobian_II(1,2) = sum(DxyzDLat_D*Base1_D)
+       Jacobian_II(2,2) = sum(DxyzDLat_D*Base2_D)
+       ! Calculate the squashing factor
+       SquashFactor_II(iLon,iLat) = min(SquashFactorMax, &
+            0.5*sum(Jacobian_II**2) &
+            /max(1e-30, abs(Jacobian_II(1,1)*Jacobian_II(2,2))))
+
+       if(DoTest .and. iLat==iLatTest .and. iLon==iLonTest)then
+          write(*,'(a,3i4)') &
+               NameSub//': iLon, iLat, DiLon=', iLon, iLat, DiLon
+          write(*,'(a,3es12.4)') NameSub//': Xyz_D    =', Xyz_D
+          write(*,'(a,3es12.4)') NameSub//': Xyz1_D   =', Xyz1_D
+          write(*,'(a,3es12.4)') NameSub//': Xyz2_D   =', Xyz2_D
+          write(*,'(a,3es12.4)') NameSub//': Xyz3_D   =', Xyz3_D
+          write(*,'(a,3es12.4)') NameSub//': Xyz4_D   =', Xyz4_D
+          write(*,'(a,3es12.4)') NameSub//': DxyzDlon =', DxyzDlon_D
+          write(*,'(a,3es12.4)') NameSub//': DxyzDlat =', DxyzDlat_D
+          write(*,'(a,3es12.4)') NameSub//': Base1_D  =', Base1_D
+          write(*,'(a,3es12.4)') NameSub//': Base2_D  =', Base2_D
+          write(*,'(a,4es12.4)') NameSub//': Jacobian =', Jacobian_II
+          write(*,'(a,es12.4)')  NameSub//': Squash   =', &
+               SquashFactor_II(iLon,iLat)
+       end if
+
+    end do; end do
+    
+    ! Convert footpoint coordinates to Squash-Lon-Lat
+    do iLon = 1, nLon; do iLat = 1, nLat
+       Xyz_D = RayMap_DSII(:,1,iLon,iLat)
+       if(Xyz_D(1) < CLOSEDRAY) then
+          ! Impossible values for open field lines
+          RayMap_DSII(2:3,1,iLon,iLat) = -100.0
+       else
+          call xyz_to_rlonlat(Xyz_D, rLonLat_D)
+          RayMap_DSII(2:3,1,iLon,iLat) = rLonLat_D(2:3)*cRadToDeg
+       end if
+       ! Set first coordinate to the squash factor
+       RayMap_DSII(1,1,iLon,iLat) = SquashFactor_II(iLon,iLat)
+    end do; end do
+    
     if(DoTest .and. iProc ==0)then
        write(*,*) NameSub,': RayMap(1)=', RayMap_DSII(:,1,iLonTest,iLatTest)
        if(iProc == 0) call save_plot_file( &
@@ -3880,13 +3984,13 @@ contains
             TimeIn  = tSimulation, &
             nStepIn = nStep, &
             ParamIn_I = [Radius], &
-            NameVarIn = "Lon Lat x1 y1 z1 radius", &
+            NameVarIn = "Lon Lat Squash Lon1 Lat1 radius", &
             CoordMinIn_D = [0., 180/(nLat + 1.0) - 90], &
             CoordMaxIn_D = [360., 180*nLat/(nLat + 1.0) - 90], &
             VarIn_VII  = RayMap_DSII(:,1,:,:))
     end if
 
-    AccuracyFactor = 1.0
+    AccuracyFactor = AccuracyFactorOrig
 
     call test_stop(NameSub, DoTest)
 
