@@ -100,6 +100,8 @@ contains
     call integrate_field_from_sphere(&
          iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, NameVar)
 
+    DoExtractUnitSi = .false.
+    
     call line_get(nVarLine, nPointLine)
 
     nVarLine = 4 ! We only pass line index, length, B and radial distance to iM
@@ -405,44 +407,47 @@ contains
 
     call trace_field_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
 
-    if(iProc /= 0) RETURN
+    if(iProc == 0)then
 
-    ! Put the extracted data into BufferLine_VI
-    call line_get(nVarExtract, nPointLine)
-    ! The +1 is for the line index
-    nVarLine = nVarExtract + 1
-    allocate(StateLine_VI(nVarLine, nPointLine))
-    ! Get all the line data and clean up
-    call line_get(nVarExtract, nPointLine, StateLine_VI, DoSort=.true.)
-    call line_clean
+       ! Put the extracted data into BufferLine_VI
+       call line_get(nVarExtract, nPointLine)
+       ! The +1 is for the line index
+       nVarLine = nVarExtract + 1
+       allocate(StateLine_VI(nVarLine, nPointLine))
+       ! Get all the line data and clean up
+       call line_get(nVarExtract, nPointLine, StateLine_VI, DoSort=.true.)
+       call line_clean
 
-    ! Transformation matrix between the SM and GM coordinates
-    SmGm_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
-    do iPoint = 1, nPointLine
-       StateLine_VI(3:5,iPoint)  = &
-            matmul(SmGm_DD, StateLine_VI(3:5,iPoint)) ! X,Y,Z
-       do iFluid = 1, nFluid
-          iUx5 = iUx_I(iFluid)+5; iUz5 = iUz_I(iFluid)+5
-          StateLine_VI(iUx5:iUz5,iPoint)  = &
-               matmul(SmGm_DD, StateLine_VI(iUx5:iUz5,iPoint)) ! velocity
-       end do
-       StateLine_VI(Bx_+5:Bz_+5,iPoint)= &
-            matmul(SmGm_DD, StateLine_VI(Bx_+5:Bz_+5,iPoint)) ! mag field
+       ! Transformation matrix between the SM and GM coordinates
+       SmGm_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
+       do iPoint = 1, nPointLine
+          StateLine_VI(3:5,iPoint)  = &
+               matmul(SmGm_DD, StateLine_VI(3:5,iPoint)) ! X,Y,Z
+          do iFluid = 1, nFluid
+             iUx5 = iUx_I(iFluid)+5; iUz5 = iUz_I(iFluid)+5
+             StateLine_VI(iUx5:iUz5,iPoint)  = &
+                  matmul(SmGm_DD, StateLine_VI(iUx5:iUz5,iPoint)) ! velocity
+          end do
+          StateLine_VI(Bx_+5:Bz_+5,iPoint)= &
+               matmul(SmGm_DD, StateLine_VI(Bx_+5:Bz_+5,iPoint)) ! mag field
 
-       ! b.grad(B1)
-       if(DoExtractBGradB1) &
-            StateLine_VI(nVar+6:nVar+8,iPoint) = &
-            matmul(SmGm_DD, StateLine_VI(nVar+6:nVar+8,iPoint))
+          ! b.grad(B1)
+          if(DoExtractBGradB1) &
+               StateLine_VI(nVar+6:nVar+8,iPoint) = &
+               matmul(SmGm_DD, StateLine_VI(nVar+6:nVar+8,iPoint))
 
-       ! E and Epot
-       if(DoExtractEfield)then
-          StateLine_VI(nVar+9:nVar+11,iPoint) = &
-               matmul(SmGm_DD, StateLine_VI(nVar+9:nVar+11,iPoint))
-          StateLine_VI(nVar+12:nVar+14,iPoint) = &
-               matmul(SmGm_DD, StateLine_VI(nVar+12:nVar+14,iPoint))
-       end if
+          ! E and Epot
+          if(DoExtractEfield)then
+             StateLine_VI(nVar+9:nVar+11,iPoint) = &
+                  matmul(SmGm_DD, StateLine_VI(nVar+9:nVar+11,iPoint))
+             StateLine_VI(nVar+12:nVar+14,iPoint) = &
+                  matmul(SmGm_DD, StateLine_VI(nVar+12:nVar+14,iPoint))
+          end if
+       end do ! iPoint
+    end if ! iProc == 0
 
-    end do
+    DoExtractBGradB1 = .false.
+    DoExtractEfield  = .false.
 
   end subroutine GM_get_for_im_trace
   !============================================================================
@@ -479,7 +484,7 @@ contains
 
     use ModFieldTrace, ONLY: RayResult_VII, RayIntegral_VII, &
          InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
-         HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, iXEnd, CLOSEDRAY, &
+         HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, iXEnd, ClosedRay, &
          integrate_field_from_sphere
     use ModGroundMagPerturb, ONLY: DoCalcKp, kP
 
@@ -538,7 +543,7 @@ contains
        end if
        ! Put impossible values if the field line is not closed
        if(.not.DoMultiFluidIMCoupling)then
-          where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
+          where(RayResult_VII(iXEnd,:,:) <= ClosedRay)
              MhdXeq_II     = NoValue
              MhdYeq_II     = NoValue
              MhdSumVol_II = 0.0
@@ -547,7 +552,7 @@ contains
              MhdBeq_II     = NoValue
           end where
        else
-          where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
+          where(RayResult_VII(iXEnd,:,:) <= ClosedRay)
              MhdXeq_II     = NoValue
              MhdYeq_II     = NoValue
              MhdSumVol_II = 0.0
@@ -789,6 +794,8 @@ contains
        IsImPpar_I(1) = .true.
     end if
 
+    DoMapEquatorRay = .false.
+
     !$acc update device(ImLat_I, ImLon_I)
     !$acc update device(ImP_III, ImRho_III, ImPpar_III)
     !$acc update device(ImBmin_II)
@@ -957,24 +964,24 @@ contains
 
     do iDensity=1,nDensity
        if (IsImRho_I(iDensity)) then
-          ImRho_III     (:,:,iDensity) = Buffer_IIV(:,:,iRhoIm_I(iDensity))
+          ImRho_III(:,:,iDensity) = Buffer_IIV(:,:,iRhoIm_I(iDensity))
        else
-          ImRho_III     (:,:,iDensity) = -1.0
+          ImRho_III(:,:,iDensity) = -1.0
        endif
     enddo
 
     do iFluid=1,nFluid
        if (IsImP_I(iFluid)) then
-          ImP_III     (:,:,iFluid) = Buffer_IIV(:,:,iPIm_I(iFluid))
-          iNewPIm  = iNewPIm + 1
+          ImP_III(:,:,iFluid) = Buffer_IIV(:,:,iPIm_I(iFluid))
+          iNewPIm = iNewPIm + 1
        else
-          ImP_III     (:,:,iFluid) = -1.0
+          ImP_III(:,:,iFluid) = -1.0
        endif
 
        if (IsImPpar_I(iFluid) .and. DoAnisoPressureIMCoupling) then
-          ImPpar_III     (:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
+          ImPpar_III(:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
        else
-          ImPpar_III     (:,:,iFluid) = -1.0
+          ImPpar_III(:,:,iFluid) = -1.0
        endif
 
     enddo
@@ -1088,6 +1095,7 @@ contains
   end subroutine GM_put_from_im_cimi
   !============================================================================
   subroutine allocate_gm_im(iSizeIn,jSizeIn)
+
     use CON_comp_param, ONLY: IM_
 
     integer, intent(in) :: iSizeIn, jSizeIn
@@ -1172,10 +1180,10 @@ contains
 
     character(len=80) :: NameFile
     integer :: j2, nCall=0
-    real :: TmpT, TmpV1,TmpV2, LonShift,TmpHpT,TmpOpT
+    real :: TmpT, TmpV1,TmpV2, LonShift, TmpHpT, TmpOpT
     !--------------------------------------------------------------------------
 
-    nCall=nCall+1
+    nCall = nCall + 1
 
     ! write values to plot file
     write(NameFile,'(a,i6.6,a,i4.4,a)') &
@@ -1248,7 +1256,7 @@ contains
           end if
        end do
     end do
-    CLOSE(UnitTmp_)
+    close(UnitTmp_)
 
   end subroutine write_integrated_data_tec
   !============================================================================
@@ -1264,8 +1272,8 @@ contains
     nCall = nCall+1
     write(NameFile,'(a,i6.6,a,i4.4,a)')"rayValues_n=",nStep,"_",nCall,".out"
 
-    OPEN (UNIT=UnitTmp_, FILE=NameFile, STATUS='unknown', &
-         iostat =iError)
+    open (UNIT=UnitTmp_, FILE=NameFile, STATUS='unknown', &
+         iostat = iError)
     if (iError /= 0) call CON_stop("Can not open raytrace File "//NameFile)
     write(UnitTmp_,'(a79)')            'Raytrace Values_var22'
     write(UnitTmp_,'(i7,1pe13.5,3i3)') nStep,tSimulation,2,1,7
@@ -1296,7 +1304,7 @@ contains
             MhdBeq_II(i,1),     &
             MhdFluxError_II(i,1)
     end do
-    CLOSE(UnitTmp_)
+    close(UnitTmp_)
 
   end subroutine write_integrated_data_idl
   !============================================================================
@@ -1432,18 +1440,18 @@ contains
     ! which is useful when the equatorial grid is plotted
     do j=1,jsize
        i = int(MhdLatBoundary_I(j))
-       MhdBeq_II    (1:i-1,j) = -1.
-       MhdXeq_II    (1:i-1,j) = MhdXeq_II(i,j)
-       MhdYeq_II    (1:i-1,j) = MhdYeq_II(i,j)
+       MhdBeq_II(1:i-1,j) = -1.
+       MhdXeq_II(1:i-1,j) = MhdXeq_II(i,j)
+       MhdYeq_II(1:i-1,j) = MhdYeq_II(i,j)
        MhdSumVol_II(1:i-1,j) = -1.
        if(DoMultiFluidIMCoupling)then
           MhdHpRho_II(1:i-1,j) = -1.
           MhdOpRho_II(1:i-1,j) = -1.
-          MhdHpP_II  (1:i-1,j) = -1.
-          MhdOpP_II  (1:i-1,j) = -1.
+          MhdHpP_II(1:i-1,j) = -1.
+          MhdOpP_II(1:i-1,j) = -1.
        else
           MhdSumRho_II(1:i-1,j) = -1.
-          MhdSumP_II  (1:i-1,j) = -1.
+          MhdSumP_II(1:i-1,j) = -1.
        endif
     end do
 
