@@ -68,7 +68,7 @@ module ModFieldTrace
   !$acc declare create(Trace_DSNB)
 
   ! Squash factor
-  real, public, allocatable :: SquashFactor_II(:,:), SquashFactor_CB(:,:,:,:)
+  real, public, allocatable :: SquashFactor_II(:,:), SquashFactor_GB(:,:,:,:)
   real, public:: SquashFactorMax = 100.0
 
   ! Integral_I added up for all the local trace segments
@@ -158,8 +158,9 @@ module ModFieldTrace
   real:: AccuracyFactor = 1.0
 
   ! Possible tasks
-  logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
+  logical :: DoTraceRay     = .false. ! trace rays from all cell centers
   logical :: DoMapRay       = .false. ! map rays down to the ionosphere
+  logical :: DoMapOpen      = .false. ! map open rays to outer boundary
   logical :: DoExtractRay   = .false. ! extract info along the rays into arrays
   logical :: DoIntegrateRay = .false. ! integrate some functions along the rays
 
@@ -518,9 +519,6 @@ contains
 
     ! Initialize constants
     DoTraceRay     = .true.
-    DoMapRay       = .false.
-    DoIntegrateRay = .false.
-    DoExtractRay   = .false.
     nRay_D         = [ nI, nJ, nK, nBlock ]
     NameVectorField = 'B'
 
@@ -588,7 +586,7 @@ contains
     ! Convert x, y, z to latitude and longitude, and status
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
           call xyz_to_latlonstatus(Trace_DSNB(:,:,i,j,k,iBlock))
 
@@ -612,6 +610,8 @@ contains
        call timing_show('ray_trace', 1)
     end if
 
+    DoTraceRay = .false.
+    
     if(DoTest)write(*,*) NameSub,' finished'
 
     call test_stop(NameSub, DoTest)
@@ -911,9 +911,10 @@ contains
                !     'GM_ERROR in follow_ray: continues in same BLOCK')
             end if
          case(RayOpen_)
-            ! The trace reached the outer boundary (or expected to do so)
+            ! The trace reached the outer boundary 
             ! Field line integration relies on XyzRay_D to be set to OpenRay
-            if(DoIntegrateRay .or. DoMapRay) XyzRay_D = OpenRay
+            if(DoIntegrateRay .or. (DoMapRay .and. .not.DoMapOpen)) &
+                 XyzRay_D = OpenRay
             if(DoTestRay)write(*,*)&
                  'follow_ray finished at outer boundary, iProc,iRay,Xyz=', &
                  iProc, iRay, XyzRay_D
@@ -2051,8 +2052,6 @@ contains
     ! Initialize some basic variables
     DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
     DoExtractRay   = index(NameVar, '_I') > 0
-    DoTraceRay     = .false.
-    DoMapRay       = .false.
 
     if(DoTest)write(*,*)NameSub,' DoIntegrateRay,DoExtractRay,DoTraceRay=',&
          DoIntegrateRay,DoExtractRay,DoTraceRay
@@ -2201,7 +2200,13 @@ contains
 
     call timing_stop(NameSub)
 
+    DoIntegrateRay = .false.
+    DoExtractRay   = .false.
+    DoExtractState = .false.
+    DoExtractUnitSi= .false.
+
     call test_stop(NameSub, DoTest)
+
   end subroutine integrate_field_from_sphere
   !============================================================================
   subroutine integrate_field_from_points(nPts, XyzPt_DI, NameVar)
@@ -2246,8 +2251,6 @@ contains
     ! Initialize some basic variables
     DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
     DoExtractRay   = index(NameVar, '_I') > 0
-    DoTraceRay     = .false.
-    DoMapRay       = .false.
 
     if(DoTest)write(*,*)NameSub,' DoIntegrateRay,DoExtractRay,DoTraceRay=',&
          DoIntegrateRay,DoExtractRay,DoTraceRay
@@ -2341,7 +2344,13 @@ contains
 
     call timing_stop('integrate_ray_1d')
 
+    DoIntegrateRay = .false.
+    DoExtractRay   = .false.
+    DoExtractState = .false.
+    DoExtractUnitSi= .false.
+
     call test_stop(NameSub, DoTest)
+
   end subroutine integrate_field_from_points
   !============================================================================
   subroutine write_plot_equator(iFile)
@@ -2640,7 +2649,10 @@ contains
 
     deallocate(RayMap_DSII)
 
+    DoExtractCurvatureB = .false.
+
     call test_stop(NameSub, DoTest)
+
   end subroutine write_plot_equator
   !============================================================================
   subroutine trace_field_equator(nRadius, nLon, Radius_I, Longitude_I, &
@@ -2693,9 +2705,7 @@ contains
     DoTestRay = .false.
 
     ! Initialize some basic variables
-    DoIntegrateRay = .false.
     DoExtractRay   = .true.
-    DoTraceRay     = .false.
     DoMapRay       = .true.
 
     if(DoExtractBGradB1)then
@@ -2854,14 +2864,18 @@ contains
     end if
 
     if(DoExtractBGradB1) deallocate(bGradB1_DGB)
-
     if(DoExtractCurvatureB) deallocate(CurvatureB_GB, b_DG)
-
     if(DoMessagePass)call exchange_messages
 
     call timing_stop(NameSub)
 
+    DoExtractRay   = .false.
+    DoMapRay       = .false.
+    DoExtractState = .false.
+    DoExtractUnitSi= .false.
+
     call test_stop(NameSub, DoTest)
+
   end subroutine trace_field_equator
   !============================================================================
   subroutine extract_field_lines(nLine, IsParallel_I, Xyz_DI)
@@ -2891,10 +2905,7 @@ contains
     call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
     ! Initialize trace parameters
-    DoTraceRay     = .false.
-    DoMapRay       = .false.
-    DoIntegrateRay = .false.
-    DoExtractRay   = .true.
+    DoExtractRay  = .true.
     nRay_D = [ nLine, 0, 0, 0 ]
 
     ! (Re)initialize CON_ray_trace
@@ -2970,7 +2981,10 @@ contains
     ! Do remaining rays obtained from other PE-s
     call finish_ray
 
+    DoExtractRay = .false.
+
     call test_stop(NameSub, DoTest)
+
   end subroutine extract_field_lines
   !============================================================================
   subroutine write_plot_line(iFile)
@@ -3017,8 +3031,8 @@ contains
             NameVectorField//' for iPlotFile=',iPlotFile
        RETURN
     end select
-    DoExtractState = index(TypePlot_I(iFile),'pos')<1
-    DoExtractUnitSi= IsDimensionalPlot_I(iFile)
+    DoExtractState  = index(TypePlot_I(iFile),'pos') < 1
+    DoExtractUnitSi = IsDimensionalPlot_I(iFile)
 
     ! Set the number lines and variables to be extracted
     nLine     = nLine_I(iPlotFile)
@@ -3205,7 +3219,11 @@ contains
 
     deallocate(PlotVar_VI)
 
+    DoExtractState  = .false.
+    DoExtractUnitSi = .false.
+
     call test_stop(NameSub, DoTest)
+
   end subroutine write_plot_line
   !============================================================================
   subroutine xyz_to_ijk(XyzIn_D, IndOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
@@ -3801,7 +3819,7 @@ contains
     real, intent(in):: Radius
     integer, intent(in):: nLonIn, nLatIn
 
-    integer:: nLon, nLat, iLon, iLat, iBlock, iRay
+    integer:: nLon, nLat, iLon, iLat, i, j, k, iBlock, iRay
     integer:: iProcFound, iBlockFound, iError
     real:: dLon, dLat, AccuracyFactorOrig
     real:: Xyz_D(3), rLonLat_D(3), B0_D(3)
@@ -3826,11 +3844,7 @@ contains
     AccuracyFactorOrig = AccuracyFactor
     AccuracyFactor  = 100.0
     DoMapRay        = .true.
-    DoTraceRay      = .false.
-    DoIntegrateRay  = .false.
-    DoExtractRay    = .false.
-    DoExtractState  = .false.
-    DoExtractUnitSi = .false.
+    DoMapOpen       = .true.
     nRay_D = [1, nLon, nLat, 0]
     NameVectorField = 'B'
 
@@ -3841,13 +3855,17 @@ contains
     call ray_init(iComm)
 
     ! Copy magnetic field into b_DGB
-    do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
-       b_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
-       ! Add B0
-       if(UseB0) b_DGB(:,:,:,:,iBlock) = &
-            b_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          b_DGB(:,i,j,k,iBlock) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          ! Add B0
+          if(UseB0) b_DGB(:,i,j,k,iBlock) = &
+               b_DGB(:,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+       end do; end do; end do       
     end do
-
+    call message_pass_cell(3, b_DGB)
+    
     ! Fixed radial distance
     rLonLat_D(1) = Radius
     CpuTimeStartRay = MPI_WTIME()
@@ -3938,7 +3956,7 @@ contains
        Base2_D = cross_product(Xyz_D, Base1_D)
        ! Jacobian matrix
        Jacobian_II(1,1) = sum(DxyzDLon_D*Base1_D)
-       Jacobian_II(2,1) = sum(DxyzDLon_D*Base2_D) ! 0.0
+       Jacobian_II(2,1) = 0.0
        Jacobian_II(1,2) = sum(DxyzDLat_D*Base1_D)
        Jacobian_II(2,2) = sum(DxyzDLat_D*Base2_D)
        ! Calculate the squashing factor
@@ -3965,22 +3983,27 @@ contains
 
     end do; end do
 
-    ! Convert footpoint coordinates to Squash-Lon-Lat
-    do iLon = 1, nLon; do iLat = 1, nLat
-       Xyz_D = RayMap_DSII(:,1,iLon,iLat)
-       if(Xyz_D(1) < ClosedRay) then
-          ! Impossible values for open field lines
-          RayMap_DSII(2:3,1,iLon,iLat) = -100.0
-       else
-          call xyz_to_rlonlat(Xyz_D, rLonLat_D)
-          RayMap_DSII(2:3,1,iLon,iLat) = rLonLat_D(2:3)*cRadToDeg
-       end if
-       ! Set first coordinate to the squash factor
-       RayMap_DSII(1,1,iLon,iLat) = SquashFactor_II(iLon,iLat)
-    end do; end do
+    ! Average squash factor to the poles. Do not use repeated longitude.
+    SquashFactor_II(:,0)      = sum(SquashFactor_II(1:nLonIn,1))/nLonIn
+    SquashFactor_II(:,nLat+1) = sum(SquashFactor_II(1:nLonIn,nLat))/nLonIn
 
     if(DoTest .and. iProc ==0)then
        write(*,*) NameSub,': RayMap(1)=', RayMap_DSII(:,1,iLonTest,iLatTest)
+
+       ! Convert footpoint coordinates to Squash-Lon-Lat
+       do iLon = 1, nLon; do iLat = 1, nLat
+          Xyz_D = RayMap_DSII(:,1,iLon,iLat)
+          if(Xyz_D(1) < ClosedRay) then
+             ! Impossible values for open field lines
+             RayMap_DSII(2:3,1,iLon,iLat) = -100.0
+          else
+             call xyz_to_rlonlat(Xyz_D, rLonLat_D)
+             RayMap_DSII(2:3,1,iLon,iLat) = rLonLat_D(2:3)*cRadToDeg
+          end if
+          ! Set first coordinate to the squash factor
+          RayMap_DSII(1,1,iLon,iLat) = SquashFactor_II(iLon,iLat)
+       end do; end do
+
        if(iProc == 0) call save_plot_file( &
             "map.out", &
             StringHeaderIn = "Field line mapping", &
@@ -3993,12 +4016,11 @@ contains
             VarIn_VII  = RayMap_DSII(:,1,:,:))
     end if
 
+    DoMapRay        = .false.
+    DoMapOpen       = .false.
     AccuracyFactor = AccuracyFactorOrig
 
     call test_stop(NameSub, DoTest)
-
-    call barrier_mpi
-    call stop_mpi('DEBUG')
 
   end subroutine trace_field_sphere
   !============================================================================

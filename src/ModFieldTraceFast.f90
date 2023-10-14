@@ -30,7 +30,7 @@ module ModFieldTraceFast
   public:: trace_field_grid           ! trace field from 3D MHD grid cells
   public:: Trace_DSNB                 ! inherited from ModFieldTrace
   public:: calc_squash_factor         ! calculate squashing factor
-  public:: SquashFactor_CB            ! squashing factor
+  public:: SquashFactor_GB            ! squashing factor
 
   ! Local variables
   logical, parameter:: DoDebug = .false.
@@ -2580,20 +2580,14 @@ contains
   subroutine calc_squash_factor
     ! Calculatte squashing factor
 
-    use ModCoordTransform, ONLY: &
-         lonlat_to_xyz, cross_product, inverse_matrix, determinant
+    use ModInterpolate, ONLY: bilinear
 
     ! Last time the squashing factor has been calculated
     integer :: nStepLast = -1
-
-    real, parameter:: SquashMin = -1.0, SquashMax = 100.0
-
-    integer:: i, j, k, n, iBlock, iStatus
-    real:: LonLat_D(2), Status_I(5)
-    real:: Xyz_DS(3,2), DxyzDj_DS(3,2), DxyzDk_DS(3,2)
-    real:: Base1_DS(3,2), Base2_DS(3,2)
-    real:: Jacobian_IIS(2,2,2), Jacobian_II(2,2)
-    real, allocatable:: Trace_IGB(:,:,:,:,:)
+    integer :: nLonSquash = 360, nLatSquash = 180
+    
+    integer:: i, j, k, iSide, iBlock, iStatus
+    real:: Lon, Lat, Squash
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_squash_factor'
@@ -2603,116 +2597,39 @@ contains
 
     call test_start(NameSub, DoTest)
 
-    call trace_field_sphere(1.0, 360, 180)
+    call trace_field_sphere(1.0, nLonSquash, nLatSquash)
 
     call trace_field_grid
 
-    allocate(Trace_IGB(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(.not.allocated(SquashFactor_GB)) then
+       allocate(SquashFactor_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       SquashFactor_GB = 0.0
+    end if
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           iStatus = nint(Trace_DSNB(3,1,i,j,k,iBlock))
-          if(iStatus < 0)then
-             Trace_IGB(:,i,j,k,iBlock) = -1e30
-          else
-             ! Convert Lat-Lon into X-Y-Z unit vectors to avoid discontinuity
-             LonLat_D = Trace_DSNB(2:1:-1,1,i,j,k,iBlock)
-             call lonlat_to_xyz(LonLat_D, Trace_IGB(1:3,i,j,k,iBlock))
-             LonLat_D = Trace_DSNB(2:1:-1,2,i,j,k,iBlock)
-             call lonlat_to_xyz(LonLat_D, Trace_IGB(4:6,i,j,k,iBlock))
-             ! Store status into last element as 1, 10, 100, 1000
-             ! so that jumps in status are properly identified
-             ! even if there are averages of up to 8 cells.
-             Trace_IGB(7,i,j,k,iBlock) = 10**iStatus
-          end if
+          do iSide = 1, 2
+             ! Take footpoints at the inner boundary only
+             if(iSide /= iStatus .and. iStatus /= 3) CYCLE
+             ! Normalized longitude and latitude
+             ! 1...nLonSquash+1
+             Lon = Trace_DSNB(2,iSide,i,j,k,iBlock)*nLonSquash/360.0 + 1
+             ! 0...nLatSquash
+             Lat = (Trace_DSNB(1,iSide,i,j,k,iBlock) + 90)*nLatSquash/180.0
+             Squash =  bilinear(SquashFactor_II, &
+                  1, nLonSquash+1, 0, nLatSquash, [Lon, Lat])
+             if(iStatus == 3) Squash = 0.5*Squash ! Average two sides
+             SquashFactor_GB(i,j,k,iBlock) = SquashFactor_GB(i,j,k,iBlock) &
+                  + Squash
+          end do
        end do; end do; end do
     end do
 
     ! Fill in ghost cells
-    call message_pass_cell(7, Trace_IGB)
+    call message_pass_cell(SquashFactor_GB)
 
-    if(.not.allocated(SquashFactor_CB)) &
-         allocate(SquashFactor_CB(nI,nJ,nK,MaxBlock))
-
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          ! Check if the cell and its 4 neighbors in Lon-Lat direction
-          ! have footpoints at both ends and have same "status"
-          Status_I(1)   = Trace_IGB(7,i,j,k,iBlock)
-          Status_I(2:3) = Trace_IGB(7,i,j-1:j+1:2,k,iBlock)
-          Status_I(4:5) = Trace_IGB(7,i,j,k-1:k+1:2,iBlock)
-          if(any(Status_I < 0)) then
-             ! Some of the cells have no footpoints
-             SquashFactor_CB(i,j,k,iBlock) = SquashMin
-             CYCLE
-          end if
-          if(maxval(abs(Status_I - Status_I(1))) > 0.1) then
-             ! The cells have different status
-             SquashFactor_CB(i,j,k,iBlock) = SquashMax
-             CYCLE
-          end if
-          ! Calculate Jacobian based on footpoints in Trace_IGB
-          Xyz_DS(:,1)  = Trace_IGB(1:3,i,j,k,iBlock)
-          Xyz_DS(:,2)  = Trace_IGB(4:6,i,j,k,iBlock)
-          DxyzDj_DS(:,1) = Trace_IGB(1:3,i,j+1,k,iBlock) &
-               -           Trace_IGB(1:3,i,j-1,k,iBlock)
-          DxyzDj_DS(:,2) = Trace_IGB(4:6,i,j+1,k,iBlock) &
-               -           Trace_IGB(4:6,i,j-1,k,iBlock)
-          DxyzDk_DS(:,1) = Trace_IGB(1:3,i,j,k+1,iBlock) &
-               -           Trace_IGB(1:3,i,j,k-1,iBlock)
-          DxyzDk_DS(:,2) = Trace_IGB(4:6,i,j,k+1,iBlock) &
-               -           Trace_IGB(4:6,i,j,k-1,iBlock)
-          ! Loop over the two ends
-          do n = 1, 2
-             ! Remove radial part of DxyzDj
-             DxyzDj_DS(:,n) = DxyzDj_DS(:,n) - &
-                  Xyz_DS(:,n)*sum(DxyzDj_DS(:,n)*Xyz_DS(:,n))
-             ! First base vector parallel with DxyzDj_DS
-             Base1_DS(:,n) = DxyzDj_DS(:,n)/norm2(DxyzDj_DS(:,n))
-             ! Second base vector perpendicular to DxyzDj_DS
-             Base2_DS(:,n) = cross_product(Xyz_DS(:,n), Base1_DS(:,n))
-             ! Jacobian matrix
-             Jacobian_IIS(1,1,n) = sum(DxyzDj_DS(:,n)*Base1_DS(:,n))
-             Jacobian_IIS(2,1,n) = 0.0
-             Jacobian_IIS(1,2,n) = sum(DxyzDk_DS(:,n)*Base1_DS(:,n))
-             Jacobian_IIS(2,2,n) = sum(DxyzDk_DS(:,n)*Base2_DS(:,n))
-          end do
-          ! Total Jacobian from one end point to other end point
-          Jacobian_II = matmul(Jacobian_IIS(:,:,1), &
-               inverse_matrix(2, Jacobian_IIS(:,:,2)))
-          ! Calculate the squashing factor
-          SquashFactor_CB(i,j,k,iBlock) = sum(Jacobian_II**2) &
-               / abs(determinant(Jacobian_II, 2))
-
-          if(DoTest .and. SquashFactor_CB(i,j,k,iBlock) > 34000.0)then
-             write(*,*) NameSub, ': huge squash factor=', &
-                  SquashFactor_CB(i,j,k,iBlock)
-             write(*,*) NameSub, ': i,j,k,iBlock=', i, j, k, iBlock
-             write(*,*)	NameSub, ': Xyz     =', Xyz_DGB(:,i,j,k,iBlock)
-             write(*,*)	NameSub, ': Xyz(j+1)=', Xyz_DGB(:,i,j+1,k,iBlock)
-             write(*,*)	NameSub, ': Xyz(j-1)=', Xyz_DGB(:,i,j-1,k,iBlock)
-             write(*,*)	NameSub, ': Xyz(k+1)=', Xyz_DGB(:,i,j,k+1,iBlock)
-             write(*,*)	NameSub, ': Xyz(k-1)=', Xyz_DGB(:,i,j,k-1,iBlock)
-             write(*,*) NameSub, ': Jacobian_II=', Jacobian_II
-             write(*,*)	NameSub, ': Jacobian_IIS(1)=', Jacobian_IIS(:,:,1)
-             write(*,*)	NameSub, ': Jacobian_IIS(2)=', Jacobian_IIS(:,:,2)
-             write(*,*) NameSub, ': Base1_DS(1)=', Base1_DS(:,1)
-             write(*,*) NameSub, ': Base2_DS(1)=', Base2_DS(:,1)
-             write(*,*) NameSub, ': Base1_DS(2)=', Base1_DS(:,2)
-             write(*,*) NameSub, ': Base2_DS(2)=', Base2_DS(:,2)
-             write(*,*) NameSub, ': Trace     =', Trace_IGB(:,i,j,k,iBlock)
-             write(*,*) NameSub, ': Trace(j+1)=', Trace_IGB(:,i,j+1,k,iBlock)
-             write(*,*) NameSub, ': Trace(j-1)=', Trace_IGB(:,i,j-1,k,iBlock)
-             write(*,*) NameSub, ': Trace(k+1)=', Trace_IGB(:,i,j,k+1,iBlock)
-             write(*,*) NameSub, ': Trace(k-1)=', Trace_IGB(:,i,j,k-1,iBlock)
-             call stop_mpi('DEBUG')
-          end if
-       end do; end do; end do
-    end do
-
-    deallocate(Trace_IGB)
     call test_stop(NameSub, DoTest)
 
   end subroutine calc_squash_factor

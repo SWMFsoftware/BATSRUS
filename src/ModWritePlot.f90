@@ -1046,7 +1046,7 @@ contains
     use ModPhysics, ONLY: BodyRho_I, BodyP_I, OmegaBody, FaceState_VI, &
          ElectronPressureRatio, RhoBody2, pBody2, rBody2
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
-    use ModFieldTrace, ONLY: Trace_DSNB, SquashFactor_CB
+    use ModFieldTrace, ONLY: Trace_DSNB, SquashFactor_GB
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
          IsDimensionalPlot_I, Plot_, DLambda_I, LambdaMax_I, LambdaMin_I
@@ -1679,7 +1679,7 @@ contains
           endif
 
        case('squash')
-          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = SquashFactor_CB(:,:,:,iBlock)
+          PlotVar_GV(:,:,:,iVar) = SquashFactor_GB(:,:,:,iBlock)
 
        case('theta1','req1','theta2','req2','phi1','phi2','status', &
             'lon1', 'lat1', 'lon2', 'lat2')
