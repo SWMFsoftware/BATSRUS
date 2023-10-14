@@ -1023,9 +1023,9 @@ contains
 
          if(.not.DoSaveLogfile)RETURN
 
-         call timing_start('DoSaveLogfile')
+         call timing_start('write_logfile')
          call write_logfile(0, iFile)
-         call timing_stop('DoSaveLogfile')
+         call timing_stop('write_logfile')
 
       elseif(iFile>plot_ .and. iFile<=plot_+nplotfile) then
          ! Case for plot files
@@ -1241,11 +1241,11 @@ contains
 
       if(iProc==0 .and. lVerbose>0 .and. &
            (iFile == restart_ .or. &
-           (iFile >= plot_ .and. iFile < plot_+MaxPlotfile))) then
+           (iFile > plot_ .and. iFile <= plot_+MaxPlotfile))) then
          if(IsTimeAccurate)then
             call write_prefix;
             write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
-                 'saved iFile=',iFile,' type=',trim(TypeFile_I(iFile)),&
+                 'saved iFile=',iFile,' type=',trim(TypePlot_I(iFile)),&
                  ' at nStep=',nStep,' time=', &
                  int(                            tSimulation/3600.),':', &
                  int((tSimulation &

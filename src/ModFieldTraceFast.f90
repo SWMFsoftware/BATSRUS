@@ -314,10 +314,10 @@ contains
     !$acc update device(b_DNB)
 
 #ifndef _OPENACC
-    if(DoTest)write(*,*)'Trace_DINB normalized B'
+    if(DoTest)write(*,*) NameSub,' normalized B'
     if(DoTime.and.iProc==0)then
-       write(*,'(a)',ADVANCE='NO') 'setup and normalization:'
-       call timing_show('ray_trace',1)
+       write(*,'(a)',ADVANCE='NO') NameSub//' setup and normalization:'
+       call timing_show('trace_field_grid', 1)
     end if
 
     if(DoTest)write(*,*)NameSub,' starting iterations to obtain Trace_DINB'
@@ -462,7 +462,7 @@ contains
 
        if(DoTime .and. iProc == 0 .and. nIterTrace == 1)then
           write(*,'(a)',ADVANCE='NO') 'first iteration:'
-          call timing_show('ray_trace',1)
+          call timing_show('trace_field_grid', 1)
        end if
 
        ! Check for significant changes and loop rays in Trace_DINB
@@ -532,7 +532,7 @@ contains
 
     if(DoTime.and.iProc==0)then
        write(*,'(i5,a)') nIterTrace,' iterations:'
-       call timing_show('ray_trace',1)
+       call timing_show('trace_field_grid',1)
        call timing_show('ray_pass',2)
     end if
 
@@ -628,8 +628,8 @@ contains
     call timing_stop('trace_grid_fast3')
 
     if(DoTime.and.iProc==0)then
-       write(*,'(a)',ADVANCE='NO') 'Total tracing time:'
-       call timing_show('ray_trace',1)
+       write(*,'(a)',ADVANCE='NO') NameSub//' total tracing time:'
+       call timing_show('trace_field_grid', 1)
     end if
     call barrier_mpi
     call test_stop(NameSub, DoTest)

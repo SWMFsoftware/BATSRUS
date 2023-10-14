@@ -544,10 +544,10 @@ contains
     ! Initial values
     Trace_DSNB = NoRay
 
-    if(DoTest)write(*,*)'Trace_DINB normalized B'
+    if(DoTest)write(*,*) NameSub,' normalized B'
     if(DoTime.and.iProc==0)then
        write(*,'(a)',ADVANCE='NO') 'setup and normalization:'
-       call timing_show('ray_trace',1)
+       call timing_show('trace_field_grid', 1)
     end if
 
     ! This loop order seems to give optimal speed
@@ -606,8 +606,8 @@ contains
          Trace_DSNB(:,:,iTest,jTest,kTest,iBlockTest)
 
     if(DoTime.and.iProc==0)then
-       write(*,'(a)',ADVANCE='NO') 'Total Trace_DSNB tracing time:'
-       call timing_show('ray_trace', 1)
+       write(*,'(a)',ADVANCE='NO') NameSub//': total tracing time:'
+       call timing_show('trace_field_grid', 1)
     end if
 
     DoTraceRay = .false.
