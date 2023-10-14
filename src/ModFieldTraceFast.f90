@@ -2585,7 +2585,7 @@ contains
     ! Last time the squashing factor has been calculated
     integer :: nStepLast = -1
     integer :: nLonSquash = 360, nLatSquash = 180
-    
+
     integer:: i, j, k, iSide, iBlock, iStatus
     real:: Lon, Lat, Squash
 

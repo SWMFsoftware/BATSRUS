@@ -101,7 +101,7 @@ contains
          iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, NameVar)
 
     DoExtractUnitSi = .false.
-    
+
     call line_get(nVarLine, nPointLine)
 
     nVarLine = 4 ! We only pass line index, length, B and radial distance to iM

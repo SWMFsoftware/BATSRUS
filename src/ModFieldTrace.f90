@@ -611,7 +611,7 @@ contains
     end if
 
     DoTraceRay = .false.
-    
+
     if(DoTest)write(*,*) NameSub,' finished'
 
     call test_stop(NameSub, DoTest)
@@ -911,7 +911,7 @@ contains
                !     'GM_ERROR in follow_ray: continues in same BLOCK')
             end if
          case(RayOpen_)
-            ! The trace reached the outer boundary 
+            ! The trace reached the outer boundary
             ! Field line integration relies on XyzRay_D to be set to OpenRay
             if(DoIntegrateRay .or. (DoMapRay .and. .not.DoMapOpen)) &
                  XyzRay_D = OpenRay
@@ -3862,10 +3862,10 @@ contains
           ! Add B0
           if(UseB0) b_DGB(:,i,j,k,iBlock) = &
                b_DGB(:,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
-       end do; end do; end do       
+       end do; end do; end do
     end do
     call message_pass_cell(3, b_DGB)
-    
+
     ! Fixed radial distance
     rLonLat_D(1) = Radius
     CpuTimeStartRay = MPI_WTIME()
