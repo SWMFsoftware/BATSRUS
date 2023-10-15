@@ -1207,7 +1207,7 @@ contains
       real :: SinOmega, CosOmega, Cos2Theta, Sin2Omega, Cos2Omega, Logarithm
 
       ! Coordinates and radial distance squared
-      real :: xLos, yLos, zLos, rLos, rLos2 
+      real :: xLos, yLos, zLos, rLos, rLos2
       real :: CoordNorm_D(3) ! Normalized coordinates of current point
 
       real :: State_V(nVar)  ! State at the center of the segment center
@@ -1455,7 +1455,7 @@ contains
             Value = LogSquash*exp(-rLos/0.12)
 
          case('squash.2')
-            Value = LogSquash*exp(-rLos/0.2)            
+            Value = LogSquash*exp(-rLos/0.2)
 
          case('euv171')
             ! EUV 171
