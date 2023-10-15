@@ -2587,7 +2587,7 @@ contains
     integer :: nLonSquash = 360, nLatSquash = 180
 
     integer:: i, j, k, iSide, iBlock, iStatus
-    real:: Lon, Lat, Squash
+    real:: Lon, Lat, Squash, SquashFactor
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_squash_factor'
@@ -2597,19 +2597,24 @@ contains
 
     call test_start(NameSub, DoTest)
 
-    call trace_field_sphere(1.0, nLonSquash, nLatSquash)
+    call trace_field_sphere
+    if(DoTest)then
+       write(*,*) NameSub,' minval(SquashFactor_II)=', minval(SquashFactor_II)
+       write(*,*) NameSub,' maxval(SquashFactor_II)=', maxval(SquashFactor_II)
+    end if
 
     call trace_field_grid
 
     if(.not.allocated(SquashFactor_GB)) then
        allocate(SquashFactor_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-       SquashFactor_GB = 0.0
+       SquashFactor_GB = 1.0
     end if
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           iStatus = nint(Trace_DSNB(3,1,i,j,k,iBlock))
+          SquashFactor = 0.0
           do iSide = 1, 2
              ! Take footpoints at the inner boundary only
              if(iSide /= iStatus .and. iStatus /= 3) CYCLE
@@ -2618,18 +2623,22 @@ contains
              Lon = Trace_DSNB(2,iSide,i,j,k,iBlock)*nLonSquash/360.0 + 1
              ! 0...nLatSquash
              Lat = (Trace_DSNB(1,iSide,i,j,k,iBlock) + 90)*nLatSquash/180.0
-             Squash =  bilinear(SquashFactor_II, &
+             Squash = bilinear(SquashFactor_II, &
                   1, nLonSquash+1, 0, nLatSquash, [Lon, Lat])
              if(iStatus == 3) Squash = 0.5*Squash ! Average two sides
-             SquashFactor_GB(i,j,k,iBlock) = SquashFactor_GB(i,j,k,iBlock) &
-                  + Squash
+             SquashFactor = SquashFactor + Squash
           end do
+          if(SquashFactor > 0) SquashFactor_GB(i,j,k,iBlock) = SquashFactor
        end do; end do; end do
     end do
 
     ! Fill in ghost cells
     call message_pass_cell(SquashFactor_GB)
 
+    if(DoTest)then
+       write(*,*) NameSub,' minval(SquashFactor_GB)=',minval(SquashFactor_GB)
+       write(*,*) NameSub,' maxval(SquashFactor_GB)=',maxval(SquashFactor_GB)
+    end if
     call test_stop(NameSub, DoTest)
 
   end subroutine calc_squash_factor
