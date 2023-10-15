@@ -90,6 +90,7 @@ contains
          set_satellite_positions
     use ModSpectrum, ONLY : spectrum_read_table, spectrum_calc_flux, &
          clean_mod_spectrum
+    use ModFieldTrace, ONLY: SquashFactor_GB
 
     ! Arguments
 
@@ -183,6 +184,9 @@ contains
     real               :: LosDir_D(3)
     real,allocatable   :: Spectrum_I(:)
     real               :: LambdaMin, LambdaMax, cPix
+
+    ! Squash factor calculation
+    logical:: UseSquashFactor = .false.
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
@@ -481,6 +485,9 @@ contains
     ! Do we need to calculate density (also for white light and polarization)
     UseRho = UseScattering .or. any(NamePlotVar_V(1:nPlotVar) == 'rho') &
          .or. UseEuv .or. UseSxr .or. UseTableGen .or. UseSpm
+
+    ! Do we calculate the squash factor
+    UseSquashFactor = any(NamePlotVar_V(1:nPlotVar) == 'squash')
 
     if(DoTiming)call timing_start('los_block_loop')
 
@@ -1224,6 +1231,8 @@ contains
       ! DEM/EM calculation
       real :: LogTeSi
 
+      ! Squash factor calculation
+      real :: SquashFactor
       !------------------------------------------------------------------------
       rLos2= sum(XyzLos_D**2)
       xLos = XyzLos_D(1)
@@ -1401,6 +1410,10 @@ contains
          endif
       end if
 
+      if(UseSquashFactor) &
+           SquashFactor = interpolate_scalar(SquashFactor_GB(:,:,:,iBlock), &
+           nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+
       do iVar = 1, nPlotVar
          Value = 0.0 ! initialize to 0 so that if statements below work right
          NameVar = NamePlotVar_V(iVar)
@@ -1420,6 +1433,9 @@ contains
             if(rLos2 > 1.0) Value = &
                  Rho*( (1.0 - MuLimbDarkening)*aLos &
                  + MuLimbDarkening*bLos)*Cos2Theta
+
+         case('squash')
+            Value = alog10(SquashFactor)
 
          case('euv171')
             ! EUV 171
@@ -2016,8 +2032,6 @@ contains
          NameVar = NamePlotVar_V(iVar)
 
          select case(NameVar)
-         case('len')
-            Image_VIII(iVar,:,:,1) = Image_VIII(iVar,:,:,1)*No2Si_V(UnitX_)
          case('rho')
             Image_VIII(iVar,:,:,1) = Image_VIII(iVar,:,:,1) &
                  *No2Si_V(UnitRho_)*No2Si_V(UnitX_)
