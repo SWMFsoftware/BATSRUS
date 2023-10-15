@@ -487,7 +487,7 @@ contains
          .or. UseEuv .or. UseSxr .or. UseTableGen .or. UseSpm
 
     ! Do we calculate the squash factor
-    UseSquashFactor = any(NamePlotVar_V(1:nPlotVar) == 'squash')
+    UseSquashFactor = any(index(NamePlotVar_V(1:nPlotVar), 'squash') > 0)
 
     if(DoTiming)call timing_start('los_block_loop')
 
@@ -1206,7 +1206,8 @@ contains
       real :: aLos, bLos, cLos, dLos
       real :: SinOmega, CosOmega, Cos2Theta, Sin2Omega, Cos2Omega, Logarithm
 
-      real :: xLos, yLos, zLos, rLos2 ! Coordinates and radial distance squared
+      ! Coordinates and radial distance squared
+      real :: xLos, yLos, zLos, rLos, rLos2 
       real :: CoordNorm_D(3) ! Normalized coordinates of current point
 
       real :: State_V(nVar)  ! State at the center of the segment center
@@ -1231,13 +1232,14 @@ contains
       ! DEM/EM calculation
       real :: LogTeSi
 
-      ! Squash factor calculation
-      real :: SquashFactor
+      ! 10-based logarithm of the squash factor
+      real :: LogSquash
       !------------------------------------------------------------------------
-      rLos2= sum(XyzLos_D**2)
-      xLos = XyzLos_D(1)
-      yLos = XyzLos_D(2)
-      zLos = XyzLos_D(3)
+      xLos  = XyzLos_D(1)
+      yLos  = XyzLos_D(2)
+      zLos  = XyzLos_D(3)
+      rLos  = norm2(XyzLos_D)
+      rLos2 = rLos**2
 
       if(UseScattering .and. rLos2 > 1.0)then
          ! See Hundhausen, A.J. 1993, JGR, 98(A8), 13177, doi:10.1029/93JA00157
@@ -1410,9 +1412,9 @@ contains
          endif
       end if
 
-      if(UseSquashFactor) &
-           SquashFactor = interpolate_scalar(SquashFactor_GB(:,:,:,iBlock), &
-           nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+      if(UseSquashFactor) LogSquash = alog10( &
+           interpolate_scalar(SquashFactor_GB(:,:,:,iBlock), &
+           nDim, MinIJK_D, MaxIJK_D, CoordNorm_D))
 
       do iVar = 1, nPlotVar
          Value = 0.0 ! initialize to 0 so that if statements below work right
@@ -1435,7 +1437,25 @@ contains
                  + MuLimbDarkening*bLos)*Cos2Theta
 
          case('squash')
-            Value = alog10(SquashFactor)
+            Value = LogSquash
+
+         case('squash-3')
+            Value = LogSquash*rLos**(-3)
+
+         case('squash-2')
+            Value = LogSquash*rLos**(-2)
+
+         case('squash-15')
+            Value = LogSquash*rLos**(-1.5)
+
+         case('squash.03')
+            Value = LogSquash*exp(-rLos/0.03)
+
+         case('squash.12')
+            Value = LogSquash*exp(-rLos/0.12)
+
+         case('squash.2')
+            Value = LogSquash*exp(-rLos/0.2)            
 
          case('euv171')
             ! EUV 171
