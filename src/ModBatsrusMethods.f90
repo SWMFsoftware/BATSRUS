@@ -1062,6 +1062,9 @@ contains
             DoExchangeAgain = .true.
          end if
 
+         if(index(StringPlotVar_I(iFile),'squash') > 0) &
+              call calc_squash_factor
+
          if(index(TypePlot_I(iFile),'los') > 0) then
             IsFound = .true.
             call write_plot_los(iFile)
@@ -1117,9 +1120,6 @@ contains
                call sync_cpu_gpu('update on CPU', NameSub, &
                     Trace_DICB=Trace_DSNB)
             end if
-
-            if(index(StringPlotVar_I(iFile),'squash') > 0) &
-                 call calc_squash_factor
 
             call timing_start('save_plot')
             call write_plot(iFile)
