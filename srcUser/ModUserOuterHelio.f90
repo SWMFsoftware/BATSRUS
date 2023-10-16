@@ -2642,9 +2642,6 @@ contains
     !--------------------------------------------------------------------------
     SourcePh_V = 0.0
 
-    ! Only defined for Single Ion (for now)
-    if(.not.IsMhd) RETURN
-
     State_V = State_VGB(:,i,j,k,iBlock)
     r = r_GB(i,j,k,iBlock)
 
