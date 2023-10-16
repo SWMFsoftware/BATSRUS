@@ -2622,7 +2622,7 @@ contains
   end subroutine calc_charge_exchange_source
   !============================================================================
   subroutine calc_photoion_source( &
-     i,j,k,iBlock,U_DI,U2_I,SourcePh_V)
+       i,j,k,iBlock,U_DI,U2_I,SourcePh_V)
 
     ! Calculate the photoionization source terms for one cell.
 
@@ -2634,7 +2634,7 @@ contains
     integer :: iFluid
     real :: r
     real, dimension(Neu_:Ne4_):: RatePh_I, I0xpPh_I, JxpUxPh_I, JxpUyPh_I, &
-            JxpUzPh_I, ExpPh_I, KxpPh_I
+         JxpUzPh_I, ExpPh_I, KxpPh_I
     real :: State_V(nVar)
 
     ! Chika. Photoionization rate
@@ -2675,36 +2675,50 @@ contains
     ! Equation 4 Fahr et al. 2000
 
     ExpPh_I = 0.5*U2_I(Neu_:) + State_V(iP_I(Neu_:))/&
-               State_V(iRho_I(Neu_:))/(GammaMinus1)
+         State_V(iRho_I(Neu_:))/(GammaMinus1)
 
     ! Chika: Energy source term
     ! Table 2 Fahr et al. 2000
     KxpPh_I = RatePh_I*ExpPh_I
 
     do iFluid = Neu_, Ne4_
-        if(.not.UseSource_I(iFluid)) CYCLE
-        call select_fluid(iFluid)
-        SourcePh_V(iRho)    = -I0xpPh_I(iFluid)
-        SourcePh_V(iRhoUx)  = -JxpUxPh_I(iFluid)
-        SourcePh_V(iRhoUy)  = -JxpUyPh_I(iFluid)
-        SourcePh_V(iRhoUz)  = -JxpUzPh_I(iFluid)
-        SourcePh_V(iEnergy) = -KxpPh_I(iFluid)
+       if(.not.UseSource_I(iFluid)) CYCLE
+       call select_fluid(iFluid)
+       SourcePh_V(iRho)    = -I0xpPh_I(iFluid)
+       SourcePh_V(iRhoUx)  = -JxpUxPh_I(iFluid)
+       SourcePh_V(iRhoUy)  = -JxpUyPh_I(iFluid)
+       SourcePh_V(iRhoUz)  = -JxpUzPh_I(iFluid)
+       SourcePh_V(iEnergy) = -KxpPh_I(iFluid)
 
-        SourcePh_V(iP) = (Gamma-1)* ( SourcePh_V(iEnergy) &
-             - sum(U_DI(:,iFluid)*SourcePh_V(iRhoUx:iRhoUz)) &
-             + 0.5*U2_I(iFluid)*SourcePh_V(iRho) )
+       SourcePh_V(iP) = (Gamma-1)* ( SourcePh_V(iEnergy) &
+            - sum(U_DI(:,iFluid)*SourcePh_V(iRhoUx:iRhoUz)) &
+            + 0.5*U2_I(iFluid)*SourcePh_V(iRho) )
     end do
 
-    if(UseSource_I(Ion_))then
-        SourcePh_V(Rho_)    = sum(I0xpPh_I)
-        SourcePh_V(RhoUx_)  = sum(JxpUxPh_I)
-        SourcePh_V(RhoUy_)  = sum(JxpUyPh_I)
-        SourcePh_V(RhoUz_)  = sum(JxpUzPh_I)
-        SourcePh_V(Energy_) = sum(KxpPh_I)
+    if(IsMhd)then
+       if(UseSource_I(Ion_))then
+          SourcePh_V(Rho_)    = sum(I0xpPh_I)
+          SourcePh_V(RhoUx_)  = sum(JxpUxPh_I)
+          SourcePh_V(RhoUy_)  = sum(JxpUyPh_I)
+          SourcePh_V(RhoUz_)  = sum(JxpUzPh_I)
+          SourcePh_V(Energy_) = sum(KxpPh_I)
 
-        SourcePh_V(P_) = (Gamma-1)* ( SourcePh_V(Energy_) &
-             - sum(U_DI(:,Ion_)*SourcePh_V(RhoUx_:RhoUz_)) &
-             + 0.5*U2_I(Ion_)*SourcePh_V(Rho_) )
+          SourcePh_V(P_) = (Gamma-1)* ( SourcePh_V(Energy_) &
+               - sum(U_DI(:,Ion_)*SourcePh_V(RhoUx_:RhoUz_)) &
+               + 0.5*U2_I(Ion_)*SourcePh_V(Rho_) )
+       end if
+    else
+       if(UseSource_I(Pu3_))then
+          SourcePh_V(Pu3Rho_)    = sum(I0xpPh_I)
+          SourcePh_V(Pu3RhoUx_)  = sum(JxpUxPh_I)
+          SourcePh_V(Pu3RhoUy_)  = sum(JxpUyPh_I)
+          SourcePh_V(Pu3RhoUz_)  = sum(JxpUzPh_I)
+          SourcePh_V(Pu3Energy_) = sum(KxpPh_I)
+
+          SourcePh_V(Pu3P_) = (Gamma-1)* ( SourcePh_V(Pu3Energy_) &
+               - sum(U_DI(:,Pu3_)*SourcePh_V(Pu3RhoUx_:Pu3RhoUz_)) &
+               + 0.5*U2_I(Pu3_)*SourcePh_V(Pu3Rho_) )
+       end if
     end if
 
   end subroutine calc_photoion_source
