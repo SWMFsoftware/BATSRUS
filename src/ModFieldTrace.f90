@@ -207,7 +207,7 @@ module ModFieldTrace
   real, allocatable :: CurvatureB_GB(:,:,:,:)
   logical:: DoExtractCurvatureB = .false.
 
-  integer :: iLatTest = 60, iLonTest = 1
+  integer :: iLatTest = 1, iLonTest = 1
 
   ! Variables for squash factor calculation
   integer:: nLonSquash = 360, nLatSquash = 180
@@ -2049,8 +2049,6 @@ contains
 
     if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,&
          ' with nLat, nLon, Radius=',nLat,nLon,Radius
-
-    iLatTest = 49; iLonTest = 1
 
     call timing_start(NameSub)
 

@@ -4538,7 +4538,7 @@ indices are not calculated.
       <parameter name="ObsPosY" type="real" default="0"/>
       <parameter name="ObsPosZ" type="real" default="0"/>
       <parameter name="OffsetAngle" type="real"
-		 min="-89" max="89" default="0"/>
+		 min="-360" max="360" default="0"/>
       <parameter name="rSizeImage" type="real" min="0" default="32"/>
       <parameter name="xOffset" type="real" default="0"/>
       <parameter name="yOffset" type="real" default="0"/>
@@ -4731,7 +4731,7 @@ los tbl idl_real4       StringPlot ! line of sight plot using table
 -215.			ObsPosX
 0.			ObsPosY
 0.			ObsPosZ
-0.                      OffsetAngle
+5.0                     OffsetAngle ! rotate around with 5 degree resolution
 32.			rSizeImage
 0.			xOffset
 0.			yOffset
@@ -4889,7 +4889,7 @@ T                       UseDoppler
 0.0                     DLambdaIns
 F                       UseIonFrac
 F                       UseIonTemp
-los nbi idl_ascii       StringPlot                                                        
+los nbi idl_ascii       StringPlot
 4                       DnSavePlot               
 -1.                     DtSavePlot
 HGR                     TypeCoord
@@ -5189,9 +5189,12 @@ zeros.  The image plane always contains the origin of the
 computational domain (usually the center of the Sun).  By default the
 image plane is orthogonal to the observers position relative to the
 origin. The image plane can be rotated around the Z axis with an
-offset angle. By default the center of the image is the observer
-projected onto the image plane, but the center of the image can be
-offset.  Since the central object (the Sun) contains extremely large
+offset angle. If OffsetAngle is positive, a series of images are
+created covering the full circle with the OffsetAngle resolution.
+If OffsetAngle is negative, only one rotated image is created.
+By default the center of the image is the observer projected onto
+the image plane, but the center of the image can be offset.
+Since the central object (the Sun) contains extremely large
 values, an occultational disk is used to block the lines of sight
 going through the Sun.  The variables which control the direction of
 the lines of sight and the grid position and resolution are the
