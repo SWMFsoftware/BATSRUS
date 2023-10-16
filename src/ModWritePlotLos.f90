@@ -65,20 +65,20 @@ contains
     !               also added EUV (3-filters)
     !               and Soft-Xray synthesis capability
 
-    use ModMain,    ONLY : nI, nJ, nK, nStep, tSimulation, Unused_B, &
+    use ModMain,    ONLY: nI, nJ, nK, nStep, tSimulation, Unused_B, &
          IsTimeAccurate, nBlock, NameThisComp, TypeCoordSystem,            &
          UseBody, StartTime, iStartTime_I, rLowerModel, rUpperModel
     use ModGeometry, ONLY: &
          Coord111_DB, nMirror_D, RadiusMin, rMin_B
-    use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
+    use ModPhysics, ONLY: No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
          UnitTemperature_, UnitT_
     use ModIO
     use ModIoUnit, ONLY: UnitTmp_
-    use ModAdvance, ONLY : State_VGB
-    use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance
+    use ModAdvance, ONLY: State_VGB
+    use ModNumConst, ONLY: cTiny, cUnit_DD, cTolerance, cTwoPi
     use ModMpi
-    use CON_axes, ONLY : transform_matrix
-    use ModCoordTransform, ONLY : rot_matrix_z, cross_product
+    use CON_axes, ONLY: transform_matrix
+    use ModCoordTransform, ONLY: rot_matrix_z, cross_product
     use ModUtilities, ONLY: lower_case, split_string, join_string, &
          open_file, close_file
     use ModPlotFile, ONLY: save_plot_file
@@ -88,7 +88,7 @@ contains
          IsCartesianGrid, IsCartesian, IsRzGeometry
     use ModSatelliteFile, ONLY: nSatellite, NameSat_I, XyzSat_DI,  &
          set_satellite_positions
-    use ModSpectrum, ONLY : spectrum_read_table, spectrum_calc_flux, &
+    use ModSpectrum, ONLY: spectrum_read_table, spectrum_calc_flux, &
          clean_mod_spectrum
     use ModFieldTrace, ONLY: SquashFactor_GB
 
@@ -106,7 +106,7 @@ contains
 
     ! Plot variables
     integer, parameter :: MaxParam=10
-    real, allocatable :: ImagePe_VIII(:,:,:,:), Image_VIII(:,:,:,:)
+    real, allocatable :: Image_VIII(:,:,:,:)
 
     real :: Param_I(MaxParam)
     character (len=20) :: NameParam_I(MaxParam)
@@ -137,15 +137,6 @@ contains
 
     character(len=500) :: NameAllVar, StringHeadLine
     character(len=500) :: StringUnitTec, StringUnitIdl
-    character(len=5)   :: StringExtension
-    character(len=40)  :: StringFormat
-
-    ! extra variables needed for auxiliarry data writing with tec output
-    ! (style copied from write_plot_tec)
-    character(len=23) :: StringDateTime0, StringDateTime
-    character(len=80) :: StringFormatTime
-    character(len=80) :: StringTmp
-    integer           :: iTime_I(7)
 
     ! block and variable Indices
     integer :: iBlock, iMirror, jMirror, kMirror, iVar
@@ -182,11 +173,14 @@ contains
     logical            :: UseFlux = .false., UseNbi = .false., UsePhx = .false.
     integer            :: nLambda = 1, kPix
     real               :: LosDir_D(3)
-    real,allocatable   :: Spectrum_I(:)
+    real, allocatable  :: Spectrum_I(:)
     real               :: LambdaMin, LambdaMax, cPix
 
     ! Squash factor calculation
     logical:: UseSquashFactor = .false.
+
+    ! Rotation
+    integer:: iPict, nPict = 1
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
@@ -259,6 +253,9 @@ contains
        OffsetAngle     = OffsetAngle_I(iFile)
     end if
 
+    ! Pixel size for node based pixel grid
+    SizePix_D = 2*HalfSizeImage_D/(nPix_D - 1)
+
     select case(TypeSatPos_I(iFile))
     case('sta', 'stb', 'earth')
 
@@ -288,20 +285,9 @@ contains
     ! Rotate observation point from HGI system to the current coordinate system
     ObsPos_D    = matmul(FromObs_DD, ObsPos_DI(:,iFile))
     ObsDistance = norm2(ObsPos_D)
+
     ! Normalize line of sight vector pointing towards the origin
     Los_D       = -ObsPos_D/ObsDistance
-
-    ! Rotation with offset angle
-    Los_D = matmul( rot_matrix_z(OffsetAngle), Los_D)
-
-    ! Observer distance from image plane
-    ObsDistance = abs(sum(ObsPos_D*Los_D))
-
-    ! Make zero components slightly different from zero
-    where(abs(Los_D) < cTiny) Los_D = sign(cTiny, Los_D)
-
-    ! Pixel size for node based pixel grid
-    SizePix_D = 2*HalfSizeImage_D/(nPix_D - 1)
 
     if(DoTest) then
        write(*,*) 'ObsPos         =', ObsPos_D
@@ -315,8 +301,8 @@ contains
     StringUnitTec = ''
     StringUnitIdl = ''
 
-    TypePlot=TypePlot_I(iFile)
-    StringPlotVar=StringPlotVar_I(iFile)
+    TypePlot = TypePlot_I(iFile)
+    StringPlotVar = StringPlotVar_I(iFile)
 
     if(DoTest)write(*,*)'iFile=',iFile,' TypePlot_I=',TypePlot, &
          ' form = ',TypePlotFormat_I(iFile)
@@ -408,42 +394,12 @@ contains
        end if
     endif
 
-    ! Create unit vectors aUnit_D and bUnit_D orthogonal to the
-    ! central line of sight to setup the coordinate system in the viewing plane
-    ! We use cross products of the LOS vector with one of the principal
-    ! directions (0,0,1) or (0,1,0) to make sure that the viewing plane is
-    ! aligned with the original Cartesian coordinates. In case the viewing
-    ! is roughly along the X or Y axis, we want bUnit_D to point along +Z,
-    ! for viewing along the Z axis, we want bUnit_D to point along +Y:
-    ! a = LOS x (0,0,1), b = a x LOS ensures that b is roughly aligned with +Z
-    ! a = LOS x (0,1,0), b = a x LOS ensures that b is roughly aligned with +Y
-    if(abs(Los_D(3)) < maxval(abs(Los_D(1:2))))then
-       aUnit_D = cross_product(Los_D, [0.,0.,1.])
-       IsAlignedZ = .true.
-    else
-       ! Viewing along the Z axis more or less
-       aUnit_D = cross_product(Los_D, [0.,1.,0.])
-    end if
-    aUnit_D = aUnit_D/norm2(aUnit_D)
-    bUnit_D = cross_product(aUnit_D, Los_D)
-    bUnit_D = bUnit_D/norm2(bUnit_D)
-
-    ! 3D vector pointing from the origin to the image center
-    ImageCenter_D = ObsPos_D + ObsDistance*Los_D &
-         + aOffset*aUnit_D + bOffset*bUnit_D
-
-    ! Make offset to be relative to the Sun (and not the projected observer)
-    aOffset = dot_product(ImageCenter_D, aUnit_D)
-    bOffset = dot_product(ImageCenter_D, bUnit_D)
-
     ! !! aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
     if(UseDEM)then
        nLogTeDEM = &
             nint((LogTeMaxDEM_I(iFile)-LogTeMinDEM_I(iFile))/&
             DLogTeDEM_I(IFile))+1
-       allocate( &
-            ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM), &
-            Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM))
+       allocate(Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM))
     elseif(UseFlux .or. UsePhx)then
        if(LambdaMax_I(iFile)==LambdaMin_I(iFile))then
           nLambda=100
@@ -451,20 +407,14 @@ contains
           nLambda = &
                nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(iFile))+1
        endif
-       allocate( &
-            ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
-            Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
+       allocate(Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
             Spectrum_I(nLambda))
     else
        nLambda = &
             nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(iFile))+1
-       allocate( &
-            ImagePe_VIII(nPlotVar,nPix_D(1),nPix_D(2),1), &
-            Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),1))
+       allocate(Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),1))
        if(UseNbi)allocate(Spectrum_I(1))
     end if
-
-    ImagePe_VIII = 0.0
 
     ! Do we need to apply scattering
     UseScattering = any(NamePlotVar_V(1:nPlotVar) == 'wl') &
@@ -489,378 +439,100 @@ contains
     ! Do we calculate the squash factor
     UseSquashFactor = any(index(NamePlotVar_V(1:nPlotVar), 'squash') > 0)
 
-    if(DoTiming)call timing_start('los_block_loop')
-
-    if(UseLosSimple .or. .not.IsCartesianGrid)then
-       call integrate_image
+    if(OffsetAngle > 0)then
+       ! Rotate around a full circle
+       nPict = nint(cTwoPi / OffsetAngle)
     else
-       ! loop over blocks
-       do iBlock = 1, nBlock
-
-          if (Unused_B(iBlock)) CYCLE
-
-          CellSize_D = CellSize_DB(:,iBlock)
-
-          do iMirror = 1, nMirror_D(1)
-             XyzBlockSign_D(1) = 3 - 2*iMirror
-             do jMirror = 1, nMirror_D(2)
-                XyzBlockSign_D(2) = 3 - 2*jMirror
-                do kMirror = 1, nMirror_D(3)
-                   XyzBlockSign_D(3) = 3 - 2*kMirror
-
-                   call integrate_block
-
-                end do    ! kMirror
-             end do    ! jMirror
-          end do    ! iMirror
-       end do       ! iBlock loop
+       ! Zero or negative angle
+       nPict = 1
     end if
 
-    if(DoTiming)call timing_stop('los_block_loop')
-    !   if(TypePlotFormat_I(iFile) /= 'hdf') then
-    !       ! add up the pixels from all PE-s to root proc
-    if(nProc > 1)then
-       if(UseDEM)then
-          call MPI_REDUCE(ImagePe_VIII, Image_VIII, &
-               nPix_D(1)*nPix_D(2)*nPlotVar*nLogTeDEM, &
-               MPI_REAL, MPI_SUM, 0, iComm, iError)
-       elseif(UseFlux .or. UsePhx)then
-          call MPI_REDUCE(ImagePe_VIII, Image_VIII, &
-               nPix_D(1)*nPix_D(2)*nPlotVar*nLambda, &
-               MPI_REAL, MPI_SUM, 0, iComm, iError)
+    do iPict = 1, nPict
+
+       ! Rotation with offset angle
+       Los_D = matmul( rot_matrix_z(OffsetAngle), Los_D)
+       Obspos_D = matmul( rot_matrix_z(OffsetAngle), ObsPos_D)
+
+       ! Make zero components slightly different from zero
+       where(abs(Los_D) < cTiny) Los_D = sign(cTiny, Los_D)
+
+       ! Create unit vectors aUnit_D and bUnit_D orthogonal to the central
+       ! line of sight to setup the coordinate system in the viewing plane
+       ! We use cross products of the LOS vector with one of the principal
+       ! directions (0,0,1) or (0,1,0) to make sure that the viewing plane is
+       ! aligned with the original Cartesian coordinates. In case the viewing
+       ! is roughly along the X or Y axis, we want bUnit_D to point along +Z,
+       ! for viewing along the Z axis, we want bUnit_D to point along +Y:
+       ! a = LOS x (0,0,1), b = a x LOS then b is roughly aligned with +Z
+       ! a = LOS x (0,1,0), b = a x LOS then b is roughly aligned with +Y
+       if(abs(Los_D(3)) < maxval(abs(Los_D(1:2))))then
+          aUnit_D = cross_product(Los_D, [0.,0.,1.])
+          IsAlignedZ = .true.
        else
-          call MPI_REDUCE(ImagePe_VIII, Image_VIII, nPix_D(1)*nPix_D(2)*&
-               nPlotVar, MPI_REAL, MPI_SUM, 0, iComm, iError)
+          ! Viewing along the Z axis more or less
+          aUnit_D = cross_product(Los_D, [0.,1.,0.])
        end if
-    else
-       Image_VIII = ImagePe_VIII
-    end if
+       aUnit_D = aUnit_D/norm2(aUnit_D)
+       bUnit_D = cross_product(aUnit_D, Los_D)
+       bUnit_D = bUnit_D/norm2(bUnit_D)
 
-    if(UseFlux .or. UseNbi .or. UsePhx) call clean_mod_spectrum
+       ! 3D vector pointing from the origin to the image center
+       ImageCenter_D = aOffset*aUnit_D + bOffset*bUnit_D
 
-    if(iProc==0) then
+       if(DoTiming)call timing_start('los_block_loop')
 
-       if(IsDimensionalPlot_I(iFile) .and. .not. UseSpm)&
-            call dimensionalize_plotvar_los
+       ! initialize image
+       Image_VIII = 0.0
 
-       if(DoTiming)call timing_start('los_save_plot')
-
-       select case(TypePlotFormat_I(iFile))
-       case('tec','tcp')
-          StringExtension='.dat'
-       case('idl')
-          StringExtension='.out'
-       case('hdf')
-          StringExtension='.batl'
-       end select
-
-       if (iFile-plot_ > 9) then
-          StringFormat='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
+       if(UseLosSimple .or. .not.IsCartesianGrid)then
+          call integrate_image
        else
-          StringFormat='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
+          ! loop over blocks
+          do iBlock = 1, nBlock
+
+             if (Unused_B(iBlock)) CYCLE
+
+             CellSize_D = CellSize_DB(:,iBlock)
+
+             do iMirror = 1, nMirror_D(1)
+                XyzBlockSign_D(1) = 3 - 2*iMirror
+                do jMirror = 1, nMirror_D(2)
+                   XyzBlockSign_D(2) = 3 - 2*jMirror
+                   do kMirror = 1, nMirror_D(3)
+                      XyzBlockSign_D(3) = 3 - 2*kMirror
+
+                      call integrate_block
+
+                   end do    ! kMirror
+                end do    ! jMirror
+             end do    ! iMirror
+          end do       ! iBlock loop
        end if
 
-       ! the plot time is stored in the hdf5 files and displayed in VisIt.
-       ! if you don not include it in the NameFile VisIt will automacially
-       ! group all the los files.
-       if(IsTimeAccurate .and. TypePlotFormat_I(iFile) /= 'hdf')then
-          call get_time_string
-          write(NameFile,StringFormat) &
-               trim(TypePlot)//"_",&
-               iFile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
-               StringExtension
-       else
-          write(NameFile,StringFormat) &
-               trim(TypePlot)//"_",&
-               iFile-plot_,"_n",nStep,StringExtension
+       if(DoTiming)call timing_stop('los_block_loop')
+
+       if(nProc > 1)then
+          if(UseDEM)then
+             call MPI_reduce_real_array(Image_VIII, size(Image_VIII), &
+                  MPI_SUM, 0, iComm, iError)
+          elseif(UseFlux .or. UsePhx)then
+             call MPI_reduce_real_array(Image_VIII, size(Image_VIII), &
+                  MPI_SUM, 0, iComm, iError)
+          else
+             call MPI_reduce_real_array(Image_VIII, size(Image_VIII), &
+                  MPI_SUM, 0, iComm, iError)
+          end if
        end if
 
-       ! write header file
+       if(iProc == 0) call save_los_file
 
-       if(TypePlotFormat_I(iFile)=='tec' .or. &
-            TypePlotFormat_I(iFile)=='tcp') then
-          call open_file(FILE=NameFile)
-
-          if(UseDEM)then
-             write(UnitTmp_,*) 'DEM integrals'
-          elseif(UseNbi)then
-             write(UnitTmp_,*) 'Narrowband Image'
-          elseif(UseFlux)then
-             write(UnitTmp_,*) 'Spectrum flux'
-          elseif(UsePhx)then
-             write(UnitTmp_,*) 'Flux with Photoexcitation'
-          else
-             write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
-          end if
-
-          write(UnitTmp_,'(a)')trim(StringUnitTec)
-
-          if(UseDEM)then
-             write(UnitTmp_,*) 'ZONE T="DEM Image"', &
-                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=',&
-                  nLogTeDEM,', F=POINT'
-          elseif(UseNbi)then
-             write(UnitTmp_,*) 'ZONE T="NBI Image"', &
-                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=1, F=POINT'
-          elseif(UseFlux)then
-             write(UnitTmp_,*) 'ZONE T="Spectrum Image"', &
-                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=',nLambda,', F=POINT'
-          elseif(UsePhx)then
-             write(UnitTmp_,*) 'ZONE T="PHX Image"', &
-                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=',nLambda,', F=POINT'
-          else
-             write(UnitTmp_,*) 'ZONE T="LOS Image"', &
-                  ', I=',nPix_D(1),', J=',nPix_D(2),', K=1, F=POINT'
-          endif
-
-          ! Write Auxilliary header info, which is useful for EUV images.
-          ! Makes it easier to identify, and automatically process synthetic
-          ! images from different instruments/locations
-          StringFormatTime = &
-               '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
-          call get_date_time(iTime_I)
-          write(StringDateTime0,StringFormatTime) iStartTime_I
-          write(StringDateTime ,StringFormatTime) iTime_I
-
-          ! TIMEEVENT
-          write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA TIMEEVENT="',trim(StringDateTime),'"'
-
-          ! TIMEEVENTSTART
-          write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA TIMEEVENTSTART="',trim(StringDateTime0),'"'
-
-          ! TIMESECONDSABSOLUTE
-          ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-          write(StringTmp,'(E20.13)')StartTime+tSimulation
-          write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
-
-          ! ITER
-          write(StringTmp,'(i12)')nStep
-          write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
-
-          ! NAMELOSTABLE
-          if(UseTableGen) write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA NAMELOSTABLE="',trim(NameLosTable_I(iFile)),'"'
-          if(UseNbi)write(UnitTmp_,'(a,a,a)') &
-               'AUXDATA NAMELOSTABLE="',trim(NameNbiTable_I(iFile)),'"'
-          if(UseFlux .or. UsePhx)write(UnitTmp_,'(a,E20.13,a)') &
-               'AUXDATA LAMBDAMIN="',LambdaMin_I(iFile),'"'
-
-          if(UseDEM .or. UseNbi .or. UseNbi .or. UsePhx)then
-             write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
-             write(UnitTmp_,'(a,a,a)') &
-                  'AUXDATA TYPECOORD="',trim(TypeCoordPlot_I(iFile)),'"'
-             write(UnitTmp_,'(a,a,a)') &
-                  'AUXDATA OBSPOSXYZ="',trim(adjustl(StringTmp)),'"'
-          else
-             ! HGIXYZ
-             write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
-             write(UnitTmp_,'(a,a,a)') &
-                  'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
-          end if
-
-          ! Write point values
-          if(UseDEM)then
-             do iPix = 1, nPix_D(1)
-                aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
-                do jPix = 1, nPix_D(2)
-                   bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
-                   do kPix = 1,nLogTeDEM
-                      cPix = (kPix - 1) * DLogTeDEM_I(iFile) + &
-                           LogTeMinDEM_I(iFile)
-                      if (IsDimensionalPlot_I(iFile)) then
-                         write(UnitTmp_,fmt="(30(E14.6))") &
-                              aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_),&
-                              cPix*No2Io_V(UnitT_),&
-                              Image_VIII(1:nPlotVar,iPix,jPix,kPix)
-                      else
-                         write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, cPix,&
-                              Image_VIII(1:nPlotVar,iPix,jPix,kPix)
-                      end if
-                   end do
-                end do
-             end do
-          elseif(UseFlux)then
-             do iPix = 1, nPix_D(1)
-                aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
-                do jPix = 1, nPix_D(2)
-                   bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
-                   do kPix = 1,nLambda
-                      cPix = (kPix - 1) * DLambda_I(iFile) + LambdaMin_I(iFile)
-                      if (IsDimensionalPlot_I(iFile)) then
-                         write(UnitTmp_,fmt="(30(E14.6))") &
-                              aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), &
-                              cPix,Image_VIII(1:nPlotVar,iPix,jPix,kPix)
-                      else
-                         write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, cPix,&
-                              Image_VIII(1:nPlotVar,iPix,jPix,kPix)
-                      end if
-                   end do
-                end do
-             end do
-          else
-             do iPix = 1, nPix_D(1)
-                aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
-                do jPix = 1, nPix_D(2)
-                   bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
-                   if (IsDimensionalPlot_I(iFile)) then
-                      write(UnitTmp_,fmt="(30(E14.6))") &
-                           aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), &
-                           Image_VIII(1:nPlotVar,iPix,jPix,1)
-                   else
-                      write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, &
-                           Image_VIII(1:nPlotVar,iPix,jPix,1)
-                   end if
-                end do
-             end do
-          end if
-
-          call close_file
-       else
-          ! description of file contains units, physics and dimension
-          if(UseDEM)then
-             StringHeadLine = 'DEM integrals'
-          elseif(UseNbi)then
-             StringHeadLine = 'Narrowband Image'
-          elseif(UseFlux)then
-             StringHeadLine = 'Spectrum flux'
-          elseif(UsePhx)then
-             StringHeadLine = 'Flux with Photoexcitation'
-          else
-             StringHeadLine = 'LOS integrals'
-          end if
-          ! Write Auxilliary header info, which is useful for EUV images.
-          ! Makes it easier to identify, and automatically process synthetic
-          ! images from different instruments/locations
-
-          write(StringFormatTime,*)&
-               '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
-          call get_date_time(iTime_I)
-          write(StringDateTime0,StringFormatTime) iStartTime_I
-          write(StringDateTime ,StringFormatTime) iTime_I
-
-          ! Optimize the amount of information required in the header
-
-          ! TIMEEVENT and TIMEEVENTSTART
-          StringHeadLine = trim(StringHeadline)// &
-               ' TIMEEVENT='//trim(StringDateTime)// &
-               ' TIMEEVENTSTART='//StringDateTime0
-
-          ! TIMESECONDSABSOLUTE
-          ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-          ! write(StringTmp,'(E20.13)')StartTime+tSimulation
-          ! StringHeadLine = trim(StringHeadLine)//&
-          !      '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
-
-          if (UseTableGen) then
-             ! NAMELOSTABLE_I
-             StringHeadLine = trim(StringHeadLine)//' NAMELOSTABLE='//&
-                  NameLosTable_I(iFile)
-          endif
-
-          ! Set image size and dimensionalize if necessary
-          aPix = HalfSizeImage_D(1)
-          bPix = HalfSizeImage_D(2)
-          if (IsDimensionalPlot_I(iFile)) then
-             aPix = aPix * No2Io_V(UnitX_)
-             bPix = bPix * No2Io_V(UnitX_)
-             aOffset = aOffset*No2Io_V(UnitX_)
-             bOffset = bOffset*No2Io_V(UnitX_)
-          end if
-
-          ! If one line is to be used only, fux needs an artificial wvlinterval
-          if(LambdaMax_I(iFile)==LambdaMin_I(iFile))then
-             LambdaMax = LambdaMax_I(iFile)+nLambda*0.5*DLambda_I(IFile)
-             LambdaMin = LambdaMin_I(iFile)-nLambda*0.5*DLambda_I(IFile)
-          else
-             LambdaMax = LambdaMax_I(iFile)
-             LambdaMin = LambdaMin_I(iFile)
-          end if
-
-          select case(TypePlotFormat_I(iFile))
-          case('idl')
-             if(UseDEM)then
-                call save_plot_file(NameFile, &
-                     TypeFileIn = TypeFile_I(iFile), &
-                     StringHeaderIn = StringHeadLine, &
-                     nStepIn = nStep, &
-                     TimeIn = tSimulation, &
-                     ParamIn_I = Param_I(1:neqpar), &
-                     NameVarIn = NameAllVar, &
-                     NameUnitsIn = StringUnitIdl,&
-                     nDimIn = 3, &
-                     CoordMinIn_D = &
-                     [aOffset-aPix, bOffset-bPix, LogTeMinDEM_I(iFile)], &
-                     CoordMaxIn_D = &
-                     [aOffset+aPix, bOffset+bPix, LogTeMaxDEM_I(iFile)], &
-                     VarIn_VIII = Image_VIII(:,:,:,:))
-             elseif(UseNbi)then
-                call save_plot_file(NameFile, &
-                     TypeFileIn = TypeFile_I(iFile), &
-                     StringHeaderIn = StringHeadLine, &
-                     nStepIn = nStep, &
-                     TimeIn = tSimulation, &
-                     ParamIn_I = Param_I(1:neqpar), &
-                     NameVarIn = NameAllVar, &
-                     NameUnitsIn = StringUnitIdl,&
-                     nDimIn = 2, &
-                     CoordMinIn_D = &
-                     [aOffset-aPix, bOffset-bPix], &
-                     CoordMaxIn_D = &
-                     [aOffset+aPix, bOffset+bPix], &
-                     VarIn_VII = Image_VIII(:,:,:,1))
-             elseif(UseFlux .or. UsePhx)then
-                call save_plot_file(NameFile, &
-                     TypeFileIn = TypeFile_I(iFile), &
-                     StringHeaderIn = StringHeadLine, &
-                     nStepIn = nStep, &
-                     TimeIn = tSimulation, &
-                     ParamIn_I = Param_I(1:neqpar), &
-                     NameVarIn = NameAllVar, &
-                     NameUnitsIn = StringUnitIdl,&
-                     nDimIn = 3, &
-                     CoordMinIn_D = &
-                     [aOffset-aPix, bOffset-bPix, LambdaMin], &
-                     CoordMaxIn_D = &
-                     [aOffset+aPix, bOffset+bPix, LambdaMax], &
-                     VarIn_VIII = Image_VIII(:,:,:,:))
-             else
-                call save_plot_file(NameFile, &
-                     TypeFileIn = TypeFile_I(iFile), &
-                     StringHeaderIn = StringHeadLine, &
-                     nStepIn = nStep, &
-                     TimeIn = tSimulation, &
-                     ParamIn_I = Param_I(1:neqpar), &
-                     NameVarIn = NameAllVar, &
-                     nDimIn = 2, &
-                     CoordMinIn_D = [-aPix, -aPix], &
-                     CoordMaxIn_D = [+aPix, +aPix], &
-                     VarIn_VII = Image_VIII(:,:,:,1))
-             endif
-          case('hdf')
-             call save_plot_file(NameFile, &
-                  TypeFileIn = 'hdf5', &
-                  StringHeaderIn = StringHeadLine, &
-                  nStepIn = nStep, &
-                  TimeIn = tSimulation, &
-                  ParamIn_I = Param_I(1:neqpar), &
-                  NameVarIn_I = NamePlotVar_V, &
-                  NameUnitsIn = StringUnitIdl,&
-                  nDimIn = 2, &
-                  CoordMinIn_D = [-aPix, -aPix], &
-                  CoordMaxIn_D = [+aPix, +aPix], &
-                  VarIn_VII = Image_VIII(:,:,:,1))
-          end select
-       end if
-    end if  ! iProc==0
-    if(DoTiming)call timing_stop('los_save_plot')
+    end do ! iPict
 
     call barrier_mpi
 
-    deallocate(ImagePe_VIII, Image_VIII)
+    if(UseFlux .or. UseNbi .or. UsePhx) call clean_mod_spectrum
+
+    deallocate(Image_VIII)
     if(UseFlux .or. UseNbi .or. UsePhx)deallocate(Spectrum_I)
     if(UseTableGen) deallocate(InterpValues_I)
 
@@ -969,8 +641,7 @@ contains
                              iTableEuv = iTableEuv,                     &
                              iTableSxr = iTableSxr,                     &
                              iTableGen = iTableGen,                     &
-                             PixIntensity_V  = ImagePe_VIII(1:nPlotVar,  &
-                             iPix, jPix,1))
+                             PixIntensity_V=Image_VIII(1:nPlotVar,iPix,jPix,1))
                      end if
                   else
                      ! Distance between two intersections with the low
@@ -1294,7 +965,7 @@ contains
          !`Interpolate state vector in the point with gen coords
          ! equal to GenLos_D
          if(present(IsThreadedGap)  & ! This point is in the threaded gap
-             .or.(DoPlotThreads.and.& ! gap is used AND point is close to it
+              .or.(DoPlotThreads.and.& ! gap is used AND point is close to it
               GenLos_D(1) < CoordMin_D(1) + 0.50*CellSize_D(1) ))then
             ! Interpolate within the threaded gap
             call interpolate_thread_state(GenLos_D, iBlock, State_V)
@@ -1323,7 +994,7 @@ contains
             call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
                  UseNbi, Spectrum_I(:))
          end if
-         ImagePe_VIII(1,iPix,jPix,:)=ImagePe_VIII(1,iPix,jPix,:)+Spectrum_I(:)
+         Image_VIII(1,iPix,jPix,:) = Image_VIII(1,iPix,jPix,:)+Spectrum_I(:)
          RETURN
       end if
 
@@ -1358,10 +1029,10 @@ contains
                  iTe > nLogTeDEM)RETURN
 
             ! Integrate DEM and EM values
-            ImagePe_VIII(DEM_,iPix,jPix,iTe) = &
-                 ImagePe_VIII(DEM_,iPix,jPix,iTe) + Ne**2 * Ds&
+            Image_VIII(DEM_,iPix,jPix,iTe) = &
+                 Image_VIII(DEM_,iPix,jPix,iTe) + Ne**2 * Ds&
                  * (1.0e2*No2Si_V(UnitX_)) / (DLogTeDEM_I(iFile)*TeSi*log(10.))
-            ImagePe_VIII(EM_,iPix,jPix,iTe) = ImagePe_VIII(EM_,iPix,jPix,iTe)&
+            Image_VIII(EM_,iPix,jPix,iTe) = Image_VIII(EM_,iPix,jPix,iTe)&
                  + Ne**2 * Ds&
                  * SizePix_D(1)*SizePix_D(2) * (1.0e2*No2Si_V(UnitX_))**3
             RETURN
@@ -1405,7 +1076,7 @@ contains
                  InterpValues_I, DoExtrapolate=.true.)
 
             ! if using a generalized table can do it vector style
-            ImagePe_VIII(:,iPix,jPix,1) = ImagePe_VIII(:,iPix,jPix,1) + &
+            Image_VIII(:,iPix,jPix,1) = Image_VIII(:,iPix,jPix,1) + &
                  InterpValues_I*ResponseFactor*Ds
 
             RETURN
@@ -1524,7 +1195,7 @@ contains
             end if
          end select
 
-         ImagePe_VIII(iVar,iPix,jPix,1) = ImagePe_VIII(iVar,iPix,jPix,1) &
+         Image_VIII(iVar,iPix,jPix,1) = Image_VIII(iVar,iPix,jPix,1) &
               + Value*Ds
 
       end do ! iVar
@@ -2042,8 +1713,8 @@ contains
     !==========================================================================
     subroutine dimensionalize_plotvar_los
 
-      use ModConst,   ONLY : cSigmaThomson
-      use ModPhysics, ONLY : No2Si_V, UnitX_, UnitRho_
+      use ModConst,   ONLY: cSigmaThomson
+      use ModPhysics, ONLY: No2Si_V, UnitX_, UnitRho_
 
       !------------------------------------------------------------------------
       if (UseTableGen) RETURN
@@ -2105,6 +1776,351 @@ contains
 
     end subroutine los_cut_backside
     !==========================================================================
+    subroutine save_los_file
+
+      real:: aOffsetDim, bOffsetDim
+
+      character(len=40):: StringFormat
+      character(len=23):: StringDateTime0, StringDateTime
+      character(len=80):: StringFormatTime
+      character(len=80):: StringTmp
+      character(len=5) :: StringExtensionOrig
+      character(len=10):: StringExtension
+
+      integer:: iTime_I(7)
+
+      character(len=*), parameter:: NameSub = 'save_los_file'
+      !------------------------------------------------------------------------
+      if(DoTiming)call timing_start(NameSub)
+
+      if(IsDimensionalPlot_I(iFile) .and. .not. UseSpm) &
+           call dimensionalize_plotvar_los
+
+      select case(TypePlotFormat_I(iFile))
+      case('tec','tcp')
+         StringExtensionOrig ='.dat'
+      case('idl')
+         StringExtensionOrig ='.out'
+      case('hdf')
+         StringExtensionOrig ='.batl'
+      end select
+
+      ! add the picture index
+      if(nPict > 1) then
+         write(StringExtension, "(a,i3.3,a)") "-", iPict, StringExtensionOrig
+      else
+         StringExtension = StringExtensionOrig
+      end if
+
+      if (iFile-plot_ > 9) then
+         StringFormat='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
+      else
+         StringFormat='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
+      end if
+
+      ! the plot time is stored in the hdf5 files and displayed in VisIt.
+      ! if you don not include it in the NameFile VisIt will automacially
+      ! group all the los files.
+      if(IsTimeAccurate .and. TypePlotFormat_I(iFile) /= 'hdf')then
+         call get_time_string
+         write(NameFile, StringFormat) &
+              trim(TypePlot)//"_",&
+              iFile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
+              StringExtension
+      else
+         write(NameFile, StringFormat) &
+              trim(TypePlot)//"_",&
+              iFile-plot_,"_n",nStep,StringExtension
+      end if
+
+      write(*,*) NameSub,' writing ',trim(NameFile)
+
+      ! write header file
+
+      if(TypePlotFormat_I(iFile) == 'tec' .or. &
+           TypePlotFormat_I(iFile) == 'tcp') then
+         call open_file(FILE=NameFile)
+
+         if(UseDEM)then
+            write(UnitTmp_,*) 'DEM integrals'
+         elseif(UseNbi)then
+            write(UnitTmp_,*) 'Narrowband Image'
+         elseif(UseFlux)then
+            write(UnitTmp_,*) 'Spectrum flux'
+         elseif(UsePhx)then
+            write(UnitTmp_,*) 'Flux with Photoexcitation'
+         else
+            write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
+         end if
+
+         write(UnitTmp_,'(a)')trim(StringUnitTec)
+
+         if(UseDEM)then
+            write(UnitTmp_,*) 'ZONE T="DEM Image"', &
+                 ', I=',nPix_D(1),', J=',nPix_D(2),', K=',&
+                 nLogTeDEM,', F=POINT'
+         elseif(UseNbi)then
+            write(UnitTmp_,*) 'ZONE T="NBI Image"', &
+                 ', I=',nPix_D(1),', J=',nPix_D(2),', K=1, F=POINT'
+         elseif(UseFlux)then
+            write(UnitTmp_,*) 'ZONE T="Spectrum Image"', &
+                 ', I=',nPix_D(1),', J=',nPix_D(2),', K=',nLambda,', F=POINT'
+         elseif(UsePhx)then
+            write(UnitTmp_,*) 'ZONE T="PHX Image"', &
+                 ', I=',nPix_D(1),', J=',nPix_D(2),', K=',nLambda,', F=POINT'
+         else
+            write(UnitTmp_,*) 'ZONE T="LOS Image"', &
+                 ', I=',nPix_D(1),', J=',nPix_D(2),', K=1, F=POINT'
+         endif
+
+         ! Write Auxilliary header info, which is useful for EUV images.
+         ! Makes it easier to identify, and automatically process synthetic
+         ! images from different instruments/locations
+         StringFormatTime = &
+              '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+         call get_date_time(iTime_I)
+         write(StringDateTime0,StringFormatTime) iStartTime_I
+         write(StringDateTime ,StringFormatTime) iTime_I
+
+         ! TIMEEVENT
+         write(UnitTmp_,'(a,a,a)') &
+              'AUXDATA TIMEEVENT="',trim(StringDateTime),'"'
+
+         ! TIMEEVENTSTART
+         write(UnitTmp_,'(a,a,a)') &
+              'AUXDATA TIMEEVENTSTART="',trim(StringDateTime0),'"'
+
+         ! TIMESECONDSABSOLUTE
+         ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
+         write(StringTmp,'(E20.13)')StartTime+tSimulation
+         write(UnitTmp_,'(a,a,a)') &
+              'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
+
+         ! ITER
+         write(StringTmp,'(i12)')nStep
+         write(UnitTmp_,'(a,a,a)') &
+              'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
+
+         ! NAMELOSTABLE
+         if(UseTableGen) write(UnitTmp_,'(a,a,a)') &
+              'AUXDATA NAMELOSTABLE="',trim(NameLosTable_I(iFile)),'"'
+         if(UseNbi)write(UnitTmp_,'(a,a,a)') &
+              'AUXDATA NAMELOSTABLE="',trim(NameNbiTable_I(iFile)),'"'
+         if(UseFlux .or. UsePhx)write(UnitTmp_,'(a,E20.13,a)') &
+              'AUXDATA LAMBDAMIN="',LambdaMin_I(iFile),'"'
+
+         if(UseDEM .or. UseNbi .or. UseNbi .or. UsePhx)then
+            write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+            write(UnitTmp_,'(a,a,a)') &
+                 'AUXDATA TYPECOORD="',trim(TypeCoordPlot_I(iFile)),'"'
+            write(UnitTmp_,'(a,a,a)') &
+                 'AUXDATA OBSPOSXYZ="',trim(adjustl(StringTmp)),'"'
+         else
+            ! HGIXYZ
+            write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+            write(UnitTmp_,'(a,a,a)') &
+                 'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
+         end if
+
+         ! Write point values
+         if(UseDEM)then
+            do iPix = 1, nPix_D(1)
+               aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+               do jPix = 1, nPix_D(2)
+                  bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+                  do kPix = 1,nLogTeDEM
+                     cPix = (kPix - 1) * DLogTeDEM_I(iFile) + &
+                          LogTeMinDEM_I(iFile)
+                     if (IsDimensionalPlot_I(iFile)) then
+                        write(UnitTmp_,fmt="(30(E14.6))") &
+                             aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_),&
+                             cPix*No2Io_V(UnitT_),&
+                             Image_VIII(1:nPlotVar,iPix,jPix,kPix)
+                     else
+                        write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, cPix,&
+                             Image_VIII(1:nPlotVar,iPix,jPix,kPix)
+                     end if
+                  end do
+               end do
+            end do
+         elseif(UseFlux)then
+            do iPix = 1, nPix_D(1)
+               aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+               do jPix = 1, nPix_D(2)
+                  bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+                  do kPix = 1,nLambda
+                     cPix = (kPix - 1) * DLambda_I(iFile) + LambdaMin_I(iFile)
+                     if (IsDimensionalPlot_I(iFile)) then
+                        write(UnitTmp_,fmt="(30(E14.6))") &
+                             aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), &
+                             cPix,Image_VIII(1:nPlotVar,iPix,jPix,kPix)
+                     else
+                        write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, cPix,&
+                             Image_VIII(1:nPlotVar,iPix,jPix,kPix)
+                     end if
+                  end do
+               end do
+            end do
+         else
+            do iPix = 1, nPix_D(1)
+               aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
+               do jPix = 1, nPix_D(2)
+                  bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
+                  if (IsDimensionalPlot_I(iFile)) then
+                     write(UnitTmp_,fmt="(30(E14.6))") &
+                          aPix*No2Io_V(UnitX_), bPix*No2Io_V(UnitX_), &
+                          Image_VIII(1:nPlotVar,iPix,jPix,1)
+                  else
+                     write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, &
+                          Image_VIII(1:nPlotVar,iPix,jPix,1)
+                  end if
+               end do
+            end do
+         end if
+
+         call close_file
+      else
+         ! description of file contains units, physics and dimension
+         if(UseDEM)then
+            StringHeadLine = 'DEM integrals'
+         elseif(UseNbi)then
+            StringHeadLine = 'Narrowband Image'
+         elseif(UseFlux)then
+            StringHeadLine = 'Spectrum flux'
+         elseif(UsePhx)then
+            StringHeadLine = 'Flux with Photoexcitation'
+         else
+            StringHeadLine = 'LOS integrals'
+         end if
+         ! Write Auxilliary header info, which is useful for EUV images.
+         ! Makes it easier to identify, and automatically process synthetic
+         ! images from different instruments/locations
+
+         write(StringFormatTime,*)&
+              '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+         call get_date_time(iTime_I)
+         write(StringDateTime0,StringFormatTime) iStartTime_I
+         write(StringDateTime ,StringFormatTime) iTime_I
+
+         ! Optimize the amount of information required in the header
+
+         ! TIMEEVENT and TIMEEVENTSTART
+         StringHeadLine = trim(StringHeadline)// &
+              ' TIMEEVENT='//trim(StringDateTime)// &
+              ' TIMEEVENTSTART='//StringDateTime0
+
+         ! TIMESECONDSABSOLUTE
+         ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
+         ! write(StringTmp,'(E20.13)')StartTime+tSimulation
+         ! StringHeadLine = trim(StringHeadLine)//&
+         !      '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
+
+         if (UseTableGen) then
+            ! NAMELOSTABLE_I
+            StringHeadLine = trim(StringHeadLine)//' NAMELOSTABLE='//&
+                 NameLosTable_I(iFile)
+         endif
+
+         ! Set image size and dimensionalize if necessary
+         if (IsDimensionalPlot_I(iFile)) then
+            aPix = HalfSizeImage_D(1) * No2Io_V(UnitX_)
+            bPix = HalfSizeImage_D(2) * No2Io_V(UnitX_)
+            aOffsetDim = aOffset*No2Io_V(UnitX_)
+            bOffsetDim = bOffset*No2Io_V(UnitX_)
+         else
+            aPix = HalfSizeImage_D(1)
+            bPix = HalfSizeImage_D(2)
+            aOffsetDim = aOffset
+            bOffsetDim = bOffset
+         end if
+
+         ! If one line is to be used only, fux needs an artificial wvlinterval
+         if(LambdaMax_I(iFile)==LambdaMin_I(iFile))then
+            LambdaMax = LambdaMax_I(iFile) + nLambda*0.5*DLambda_I(IFile)
+            LambdaMin = LambdaMin_I(iFile) - nLambda*0.5*DLambda_I(IFile)
+         else
+            LambdaMax = LambdaMax_I(iFile)
+            LambdaMin = LambdaMin_I(iFile)
+         end if
+
+         select case(TypePlotFormat_I(iFile))
+         case('idl')
+            if(UseDEM)then
+               call save_plot_file(NameFile, &
+                    TypeFileIn = TypeFile_I(iFile), &
+                    StringHeaderIn = StringHeadLine, &
+                    nStepIn = nStep, &
+                    TimeIn = tSimulation, &
+                    ParamIn_I = Param_I(1:neqpar), &
+                    NameVarIn = NameAllVar, &
+                    NameUnitsIn = StringUnitIdl,&
+                    nDimIn = 3, &
+                    CoordMinIn_D = &
+                    [aOffsetDim-aPix, bOffsetDim-bPix, LogTeMinDEM_I(iFile)], &
+                    CoordMaxIn_D = &
+                    [aOffsetDim+aPix, bOffsetDim+bPix, LogTeMaxDEM_I(iFile)], &
+                    VarIn_VIII = Image_VIII(:,:,:,:))
+            elseif(UseNbi)then
+               call save_plot_file(NameFile, &
+                    TypeFileIn = TypeFile_I(iFile), &
+                    StringHeaderIn = StringHeadLine, &
+                    nStepIn = nStep, &
+                    TimeIn = tSimulation, &
+                    ParamIn_I = Param_I(1:neqpar), &
+                    NameVarIn = NameAllVar, &
+                    NameUnitsIn = StringUnitIdl,&
+                    nDimIn = 2, &
+                    CoordMinIn_D = [aOffsetDim-aPix, bOffsetDim-bPix], &
+                    CoordMaxIn_D = [aOffsetDim+aPix, bOffsetDim+bPix], &
+                    VarIn_VII = Image_VIII(:,:,:,1))
+            elseif(UseFlux .or. UsePhx)then
+               call save_plot_file(NameFile, &
+                    TypeFileIn = TypeFile_I(iFile), &
+                    StringHeaderIn = StringHeadLine, &
+                    nStepIn = nStep, &
+                    TimeIn = tSimulation, &
+                    ParamIn_I = Param_I(1:neqpar), &
+                    NameVarIn = NameAllVar, &
+                    NameUnitsIn = StringUnitIdl,&
+                    nDimIn = 3, &
+                    CoordMinIn_D = &
+                    [aOffsetDim-aPix, bOffsetDim-bPix, LambdaMin], &
+                    CoordMaxIn_D = &
+                    [aOffsetDim+aPix, bOffsetDim+bPix, LambdaMax], &
+                    VarIn_VIII = Image_VIII(:,:,:,:))
+            else
+               call save_plot_file(NameFile, &
+                    TypeFileIn = TypeFile_I(iFile), &
+                    StringHeaderIn = StringHeadLine, &
+                    nStepIn = nStep, &
+                    TimeIn = tSimulation, &
+                    ParamIn_I = Param_I(1:neqpar), &
+                    NameVarIn = NameAllVar, &
+                    nDimIn = 2, &
+                    CoordMinIn_D = [-aPix, -aPix], &
+                    CoordMaxIn_D = [+aPix, +aPix], &
+                    VarIn_VII = Image_VIII(:,:,:,1))
+            endif
+         case('hdf')
+            call save_plot_file(NameFile, &
+                 TypeFileIn = 'hdf5', &
+                 StringHeaderIn = StringHeadLine, &
+                 nStepIn = nStep, &
+                 TimeIn = tSimulation, &
+                 ParamIn_I = Param_I(1:neqpar), &
+                 NameVarIn_I = NamePlotVar_V, &
+                 NameUnitsIn = StringUnitIdl,&
+                 nDimIn = 2, &
+                 CoordMinIn_D = [-aPix, -aPix], &
+                 CoordMaxIn_D = [+aPix, +aPix], &
+                 VarIn_VII = Image_VIII(:,:,:,1))
+         end select
+      end if
+      if(DoTiming)call timing_stop(NameSub)
+
+    end subroutine save_los_file
+    !==========================================================================
+
   end subroutine write_plot_los
   !============================================================================
   subroutine get_los_variable_tec(iFile, nPlotVar, NamePlotVar_V, &
@@ -2112,7 +2128,7 @@ contains
 
     ! Using plot var information set the units for Tecplot files
 
-    use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
+    use ModPhysics, ONLY: NameTecUnit_V, UnitX_, UnitU_
     use ModIO, ONLY: IsDimensionalPlot_I,TypePlot_I
 
     ! Arguments
@@ -2273,8 +2289,8 @@ contains
 
     ! Based on plot_var information set the header string with unit names
 
-    use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
-    use ModIO, ONLY : IsDimensionalPlot_I, TypePlot_I
+    use ModPhysics, ONLY: NameIdlUnit_V, UnitX_, UnitU_
+    use ModIO, ONLY: IsDimensionalPlot_I, TypePlot_I
 
     ! Arguments
 

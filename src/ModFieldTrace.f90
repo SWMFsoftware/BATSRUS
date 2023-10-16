@@ -211,7 +211,7 @@ module ModFieldTrace
 
   ! Variables for squash factor calculation
   integer:: nLonSquash = 360, nLatSquash = 180
-  real:: AccuracyFactorSquash = 100.0
+  real:: AccuracyFactorSquash = 20.0
 
 contains
   !============================================================================
@@ -516,12 +516,13 @@ contains
     integer :: i, j, k, iBlock, iRay
 
     ! Testing and timing
-    logical :: DoTime = .true.
+    logical :: DoTime
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'trace_grid_accurate'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+    DoTime = DoTest
 
     if (DoTest) write(*,*) NameSub,' starting'
 

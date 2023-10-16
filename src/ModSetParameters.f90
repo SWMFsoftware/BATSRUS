@@ -1158,8 +1158,8 @@ contains
                    ! read max dimensions of the 2d image plane
                    call read_var('rSizeImage', rSizeImage_I(iFile))
                    ! read the position of image origin relative to grid origin
-                   call read_var('xOffset_I', xOffset_I(iFile))
-                   call read_var('yOffset_I', yOffset_I(iFile))
+                   call read_var('xOffset', xOffset_I(iFile))
+                   call read_var('yOffset', yOffset_I(iFile))
                    ! read the occulting radius
                    call read_var('rOccult', rOccult_I(iFile))
                    ! read the limb darkening parameter
@@ -1660,11 +1660,11 @@ contains
                 if (index(TypePlot_I(iFile), 'los') >0) then
                    write(*,*) ' OffsetAngle_I =', OffsetAngle_I(iFile)
                    write(*,*) ' rSizeImage_I =', rSizeImage_I(iFile)
-                   write(*,*) ' xOffset_I      =', xOffset_I(iFile)
-                   write(*,*) ' yOffset_I      =', yOffset_I(iFile)
+                   write(*,*) ' xOffset_I =', xOffset_I(iFile)
+                   write(*,*) ' yOffset_I =', yOffset_I(iFile)
                    write(*,*) ' rOccult_I=', rOccult_I(iFile)
-                   write(*,*) ' MuLimbDarkening       =', MuLimbDarkening
-                   write(*,*) ' nPixel_I      =', nPixel_I(iFile)
+                   write(*,*) ' MuLimbDarkening =', MuLimbDarkening
+                   write(*,*) ' nPixel_I =', nPixel_I(iFile)
                    write(*,*) ' NameLosTable_I =', NameLosTable_I(iFile)
                 end if
              end do
