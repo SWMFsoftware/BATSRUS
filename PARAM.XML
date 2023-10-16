@@ -8279,7 +8279,6 @@ For rTrace the default is the larger of the ionosphere and body radii.
 If there is no ionosphere and no body then the default is rTrace=-1.
 </command>
 
-  
 <command name="TRACELIMIT" alias="RAYTRACELIMIT">
   <parameter name="TraceLengthMax" type="real" default="200"/>
 
@@ -8291,7 +8290,53 @@ This avoid tracing extremely long field lines that are not used later.
 The default is 200 units.
 </command>
 
+<command name="TRACEACCURACY">
+  <parameter name="AccuracyFactor" type="real" min="1" default="1"/>
 
+#TRACEACCURACY
+5.0                      AccuracyFactor
+
+Set the accuracy of the tracing algorithm. The default accuracy is optimized
+for speed. Setting AccuracyFactor to a larger value reduces the step size
+proportionally. Factor 5 may avoid failed tracing. Factor 20 is close to fully
+converged accuracy. The higher accuracy means that more time is spent on the
+field line tracing.
+
+Default is AccuracyFactor=1.
+</command>
+
+<command name="SQUASHFACTOR">
+  <parameter name="nLonSquash" type="integer" min="1" default="360"/>
+  <parameter name="nLatSquash" type="integer" min="1" default="180"/>
+  <parameter name="AccuracyFactorSquash" type="real" min="1" default="20"/>
+
+#SQUASHFACTOR
+360                     nLonSquash
+180                     nLatSquash
+20.0                    AccuracyFactorSquash
+
+Set the resolution of the spherical grid at the inner boundary
+on which the squash factor is calculated. Also set the accuracy
+of the tracing used for the squash factor calculation.
+
+Default values are shown above.
+</command>
+
+<command name="TRACETEST">
+  <parameter name="iLonTest" type="integer" min="1" default="1"/>
+  <parameter name="iLatTest" type="integer" min="1" default="1"/>
+
+#TRACETEST
+35                      iLonTest  
+10                      iLatTest
+
+Set the longitude and latitude indexes of the tested trace.
+This is useful to test an individual trace line starting from
+a spherical or cylindrical grid. The subroutine to be tested
+still needs to be set with the #TEST command.
+
+Default values are 1 for both indexes.
+</command>
 
 <command name="TRACEIE" alias="IE">
   <parameter name="DoTraceIE" type="logical" default="F"/>
