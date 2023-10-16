@@ -1620,6 +1620,13 @@ contains
                 IsDimensionalPlot_I(iFile) = .true.
                 StringPlotVar_I(iFile)='intensity'
                 StringPlotParam_I(iFile)='rbody'
+             elseif(   index(StringPlot,'LGQ') > 0 &
+                  .or. index(StringPlot,'lgq') > 0)then
+                TypePlotVar = 'lgq'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'LGQ') > 0
+                StringPlotVar_I(iFile) = &
+                     'squash.03 squash.12 squash.2 squash-15 squash-2 squash-3'
+                StringPlotParam_I(iFile)='rbody'
              else
                 call stop_mpi('Variable definition missing from StringPlot=' &
                      //StringPlot)

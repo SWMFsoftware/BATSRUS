@@ -4470,6 +4470,8 @@ indices are not calculated.
 	<option name="Raw vars. scaled" value="raw"/>
 	<option name="Ray tracing vars."  value="RAY"/>
 	<option name="Ray tracing scaled" value="ray"/>
+	<option name="Squash factor vars."  value="LGQ"/>
+	<option name="Squash factor scaled" value="lgq"/>
 	<option name="Flux variables"    value="FLX"/>
 	<option name="Flux vars. scaled" value="flx"/>
 	<option name="Solar variables"    value="SOL"/>
@@ -5072,6 +5074,8 @@ values or as non-dimensional values:
          pars:
  'sol' - vars: wl pb                                          (PlotArea='los' only)
          pars: mu
+ 'lgq' - vars: squash.03 squash.12 squash.2 squash-15 squash-2 squash-3  (PlotArea='los' only)
+	 pars: rbody
  'euv' - vars: euv171 euv195 euv284                           (PlotArea='los' only)
          pars: mu
  'sxr' - vars: sxr                                            (PlotArea='los' only)
