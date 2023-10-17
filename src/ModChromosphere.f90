@@ -85,6 +85,7 @@ contains
          AverageIonCharge, PePerPtotal
     use ModMultifluid, ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface
+    use ModGeometry,   ONLY: r_GB
 
     integer, intent(in)  :: iBlock
     real,    intent(out) :: TeSi_C(1:nI,1:nJ,1:nK)
@@ -126,8 +127,8 @@ contains
     if(any(TeSi_C < 0)) then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if (TeSi_C(i,j,k) < 0) then
-               write(*,*) NameSub, ' Te is negative at Xyz_DGB =', &
-               Xyz_DGB(:,i,j,k,iBlock)
+               write(*,*) NameSub, ' Te is negative at Xyz_DGB, r_GB =', &
+               Xyz_DGB(:,i,j,k,iBlock), r_GB(i,j,k,iBlock)
                if(UseMultiIon) then
                   write(*,*) "UseMultiIon=T, Pe =", &
                        State_VGB(Pe_,i,j,k,iBlock), &

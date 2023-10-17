@@ -559,6 +559,7 @@ contains
     use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
+    use ModGeometry,     ONLY: r_GB
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
     real, intent(in) :: State_V(nVar), Normal_D(3)
@@ -611,7 +612,7 @@ contains
     if (TeSi <= 0) then
        write(*,*) NameSub, ' Te <= 0 at iDir,iFace,jFace,kFace,iBlock =', &
             iDir,iFace,jFace,kFace,iBlock, ', and Xyz_DGB =',             &
-            Xyz_DGB(:,iFace,jFace,kFace,iBlock)
+            Xyz_DGB(:,iFace,jFace,kFace,iBlock), r_GB(iFace,jFace,kFace,iBlock)
        write(*,*) NameSub, ' State_V =', State_V
        call stop_mpi('Te is negative')
     endif
