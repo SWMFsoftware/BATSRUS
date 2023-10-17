@@ -128,7 +128,7 @@ contains
   !============================================================================
   subroutine init_threaded_lc
 
-    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iComm
     use ModLookupTable,     ONLY: i_lookup_table
     use ModConst,           ONLY: cElectronMass, &
          cEps, cElectronCharge, cTwoPi, cProtonMass
@@ -182,7 +182,7 @@ contains
     allocate(Main_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax));  Main_VVI = 0
 
     ! Initialize transition region model:
-    call init_tr(Z=Z, TeChromoSi = TeChromosphereSi)
+    call init_tr(Z=Z, TeChromoSi = TeChromosphereSi, iComm=iComm)
     !
     ! Initialize thread structure
     !

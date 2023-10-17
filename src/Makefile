@@ -8,7 +8,7 @@ include ../Makefile.def
 
 SEARCHDIR = -I${SHAREDIR} \
 	-I../srcBATL -I${MAGNETOGRAMDIR} -I${DEMTDIR} -I${EMPIRICALEEDIR} \
-	-I${CRASHDIR}
+	-I${EMPIRICALSCDIR} -I${CRASHDIR}
 
 include ../Makefile.conf
 -include Makefile.DEPEND
@@ -102,7 +102,6 @@ OBJECTS = \
 	ModSolarwind.o \
 	ModSpectrum.o \
 	ModStreamAligned.o \
-	ModTransitionRegion.o \
 	ModThreadedLC.o \
 	ModTimeStepControl.o \
 	ModTurbulence.o \
@@ -199,6 +198,7 @@ ${EXE}: ${OBJECTS_EXE}
 		ar -x ${LIBDIR}/libMAGNETOGRAM.a; \
 		ar -x ${LIBDIR}/libDEMT.a; \
 		ar -x ${LIBDIR}/libEMPIRICALEE.a; \
+		ar -x ${LIBDIR}/libEMPIRICALSC.a; \
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
@@ -227,6 +227,7 @@ ${CRASHEXE}: ${OBJECTS_EXE} ${LIBCRASH}
 		ar -x ${LIBDIR}/libMAGNETOGRAM.a; \
 		ar -x ${LIBDIR}/libDEMT.a; \
 		ar -x ${LIBDIR}/libEMPIRICALEE.a; \
+		ar -x ${LIBDIR}/libEMPIRICALSC.a; \
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBCRASH}; \
 		ar -x ${LIBSHARE}
