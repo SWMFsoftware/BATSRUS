@@ -2705,7 +2705,7 @@ contains
             - sum(U_DI(:,Pu3_)*SourcePh_V(Pu3RhoUx_:Pu3RhoUz_)) &
             + 0.5*U2_I(Pu3_)*SourcePh_V(Pu3Rho_) )
     end if
- 
+
   end subroutine calc_photoion_source
   !============================================================================
   subroutine calc_electron_impact_source( &

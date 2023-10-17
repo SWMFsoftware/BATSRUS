@@ -3928,7 +3928,7 @@ contains
        if(Xyz_D(1) < ClosedRay) CYCLE
        CosLat = cos(iLat*dLat - cHalfPi)
        ! Increase DiLon as CosLat is getting smaller
-       DiLon = min(nLon/8 + 1, nint(0.6/CosLat)) 
+       DiLon = min(nLon/8 + 1, nint(0.6/CosLat))
        iLon1 = iLon - DiLon; if(iLon1 < 1)    iLon1 = iLon1 + nLonSquash
        Xyz1_D = RayMap_DSII(:,1,iLon1,iLat)
        if(Xyz1_D(1) < ClosedRay) CYCLE

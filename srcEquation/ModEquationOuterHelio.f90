@@ -48,11 +48,11 @@ module ModVarIndexes
         LevelHP_   =  8, &
         p_         =  9,              SWHP_  = 9, &
         Pu3P_      =  9, &
-        NeuRho_    = 10, &            
+        NeuRho_    = 10, &
         NeuRhoUx_  = 11, NeuUx_ = 11, &
         NeuRhoUy_  = 12, NeuUy_ = 12, &
         NeuRhoUz_  = 13, NeuUz_ = 13, &
-        NeuP_      = 14, &             
+        NeuP_      = 14, &
         Ne2Rho_    = 15, &
         Ne2RhoUx_  = 16, Ne2Ux_ = 16, &
         Ne2RhoUy_  = 17, Ne2Uy_ = 17, &
