@@ -80,7 +80,7 @@ module ModUser
 
   ! Named indexes for fluids
   integer, parameter :: SWH_ = 1, Ion_ = 1, &
-       Pu3_ = min(nFluid,2), Neu_ = min(nFluid,IonLast_+1), &
+       Pu3_ = nIonFluid, Neu_ = min(nFluid,IonLast_+1), &
        Ne2_ = min(nFluid,IonLast_+2), Ne3_ = min(nFluid,IonLast_+3), &
        Ne4_= min(nFluid,IonLast_+4)
 
@@ -1818,16 +1818,16 @@ contains
 
        ! Calculate Rho, U, U^2, Temp, and UTh^2 for source terms
        call calc_source_inputs( &
-          i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UTh2Si_I)
+            i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UTh2Si_I)
 
        ! Charge Exchange
        call calc_charge_exchange_source( &
-          i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
+            i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
 
        ! Photoionization
        if(UsePhotoion)then
           call calc_photoion_source( &
-             i,j,k,iBlock,U_DI,U2_I,SourcePh_V)
+               i,j,k,iBlock,U_DI,U2_I,SourcePh_V)
        else
           SourcePh_V = 0.0
        end if
@@ -2649,7 +2649,7 @@ contains
     ! 8E-8 has units 1/s
     ! r0 = 1 AU
     where(UseSource_I(Neu_:)) &
-         RatePh_I = 8E-8*(1/(r+1e-10))**2*State_V(iRho_I(Neu_:)) &
+         RatePh_I = 8E-8*(1/(r+1e-10))**2 * State_V(iRho_I(Neu_:)) &
          * No2Si_V(UnitT_)
 
     ! Chika: Source terms for single ion
@@ -2678,46 +2678,34 @@ contains
     ! Table 2 Fahr et al. 2000
     KxpPh_I = RatePh_I*ExpPh_I
 
-    do iFluid = Neu_, Ne4_
-       if(.not.UseSource_I(iFluid)) CYCLE
-       call select_fluid(iFluid)
-       SourcePh_V(iRho)    = -I0xpPh_I(iFluid)
-       SourcePh_V(iRhoUx)  = -JxpUxPh_I(iFluid)
-       SourcePh_V(iRhoUy)  = -JxpUyPh_I(iFluid)
-       SourcePh_V(iRhoUz)  = -JxpUzPh_I(iFluid)
-       SourcePh_V(iEnergy) = -KxpPh_I(iFluid)
+    if(UseNeutralFluid)then
+       do iFluid = Neu_, Ne4_
+          if(.not.UseSource_I(iFluid)) CYCLE
+          call select_fluid(iFluid)
+          SourcePh_V(iRho)    = -I0xpPh_I(iFluid)
+          SourcePh_V(iRhoUx)  = -JxpUxPh_I(iFluid)
+          SourcePh_V(iRhoUy)  = -JxpUyPh_I(iFluid)
+          SourcePh_V(iRhoUz)  = -JxpUzPh_I(iFluid)
+          SourcePh_V(iEnergy) = -KxpPh_I(iFluid)
 
-       SourcePh_V(iP) = (Gamma-1)* ( SourcePh_V(iEnergy) &
-            - sum(U_DI(:,iFluid)*SourcePh_V(iRhoUx:iRhoUz)) &
-            + 0.5*U2_I(iFluid)*SourcePh_V(iRho) )
-    end do
-
-    if(IsMhd)then
-       if(UseSource_I(Ion_))then
-          SourcePh_V(Rho_)    = sum(I0xpPh_I)
-          SourcePh_V(RhoUx_)  = sum(JxpUxPh_I)
-          SourcePh_V(RhoUy_)  = sum(JxpUyPh_I)
-          SourcePh_V(RhoUz_)  = sum(JxpUzPh_I)
-          SourcePh_V(Energy_) = sum(KxpPh_I)
-
-          SourcePh_V(P_) = (Gamma-1)* ( SourcePh_V(Energy_) &
-               - sum(U_DI(:,Ion_)*SourcePh_V(RhoUx_:RhoUz_)) &
-               + 0.5*U2_I(Ion_)*SourcePh_V(Rho_) )
-       end if
-    else
-       if(UseSource_I(Pu3_))then
-          SourcePh_V(Pu3Rho_)    = sum(I0xpPh_I)
-          SourcePh_V(Pu3RhoUx_)  = sum(JxpUxPh_I)
-          SourcePh_V(Pu3RhoUy_)  = sum(JxpUyPh_I)
-          SourcePh_V(Pu3RhoUz_)  = sum(JxpUzPh_I)
-          SourcePh_V(Pu3Energy_) = sum(KxpPh_I)
-
-          SourcePh_V(Pu3P_) = (Gamma-1)* ( SourcePh_V(Pu3Energy_) &
-               - sum(U_DI(:,Pu3_)*SourcePh_V(Pu3RhoUx_:Pu3RhoUz_)) &
-               + 0.5*U2_I(Pu3_)*SourcePh_V(Pu3Rho_) )
-       end if
+          SourcePh_V(iP) = (Gamma-1)* ( SourcePh_V(iEnergy) &
+               - sum(U_DI(:,iFluid)*SourcePh_V(iRhoUx:iRhoUz)) &
+               + 0.5*U2_I(iFluid)*SourcePh_V(iRho) )
+       end do
     end if
 
+    if(UseSource_I(Pu3_))then
+       SourcePh_V(Pu3Rho_)    = sum(I0xpPh_I)
+       SourcePh_V(Pu3RhoUx_)  = sum(JxpUxPh_I)
+       SourcePh_V(Pu3RhoUy_)  = sum(JxpUyPh_I)
+       SourcePh_V(Pu3RhoUz_)  = sum(JxpUzPh_I)
+       SourcePh_V(Pu3Energy_) = sum(KxpPh_I)
+
+       SourcePh_V(Pu3P_) = (Gamma-1)* ( SourcePh_V(Pu3Energy_) &
+            - sum(U_DI(:,Pu3_)*SourcePh_V(Pu3RhoUx_:Pu3RhoUz_)) &
+            + 0.5*U2_I(Pu3_)*SourcePh_V(Pu3Rho_) )
+    end if
+ 
   end subroutine calc_photoion_source
   !============================================================================
   subroutine calc_electron_impact_source( &

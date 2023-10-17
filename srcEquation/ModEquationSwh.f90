@@ -38,11 +38,11 @@ module ModVarIndexes
   ! Extra indexes are also declared for sake of compilation with
   ! ModUserOuterhelio written for multi-fluid neutrals
   integer, parameter :: &
-       Pu3Rho_    = nVar  , &
-       Pu3RhoUx_  = nVar-2, Pu3Ux_ = Pu3RhoUx_, &
-       Pu3RhoUy_  = nVar-1, Pu3Uy_ = Pu3RhoUy_, &
-       Pu3RhoUz_  = nVar  , Pu3Uz_ = Pu3RhoUz_, &
-       Pu3P_      = nVar  , Pu3Energy_ = nVar,  &
+       Pu3Rho_    = Rho_  , &
+       Pu3RhoUx_  = RhoUx_, Pu3Ux_ = Pu3RhoUx_, &
+       Pu3RhoUy_  = RhoUy_, Pu3Uy_ = Pu3RhoUy_, &
+       Pu3RhoUz_  = RhoUz_, Pu3Uz_ = Pu3RhoUz_, &
+       Pu3P_      = p_    , Pu3Energy_ = Energy_,  &
        NeuRho_    = nVar  , &
        NeuRhoUx_  = nVar-2, NeuUx_ = NeuRhoUx_, &
        NeuRhoUy_  = nVar-1, NeuUy_ = NeuRhoUy_, &
