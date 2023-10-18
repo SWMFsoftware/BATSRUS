@@ -69,7 +69,7 @@ module ModVarIndexes
         Ne4P_      = 28, &
         Energy_    = nVar+1,          SWHEnergy_ = nVar+1, &
         Pu3Energy_ = nVar+1, &
-        NeuEnergy_ = nVar+2,
+        NeuEnergy_ = nVar+2, &
         Ne2Energy_ = nVar+3, &
         Ne3Energy_ = nVar+4, &
         Ne4Energy_ = nVar+5
