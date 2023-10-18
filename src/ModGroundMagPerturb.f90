@@ -1540,7 +1540,7 @@ contains
           ! previous mag grid files
           iStart    = nMagnetometer + sum(nGridMag_I(1:iFileLocal-1))
        end if
-       iEnd         = nMagnetometer + nGridMag_I(iFileLocal)
+       iEnd         = nMagnetometer + sum(nGridMag_I(1:iFileLocal))
        iUnitOut     = iUnitGrid
        TypeCoordNow = TypeCoordGrid_I(iFileLocal)
        TypeFileNow  = TypeGridFileOut_I(iFileLocal)  ! should be "2d"
