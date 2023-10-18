@@ -1120,13 +1120,13 @@ contains
             Value = LogSquash*rLos**(-1.5)
 
          case('squash.03')
-            Value = LogSquash*exp(-rLos/0.03)
+            Value = LogSquash*exp(-(rLos-1)/0.03)
 
          case('squash.12')
-            Value = LogSquash*exp(-rLos/0.12)
+            Value = LogSquash*exp(-(rLos-1)/0.12)
 
          case('squash.2')
-            Value = LogSquash*exp(-rLos/0.2)
+            Value = LogSquash*exp(-(rLos-1)/0.2)
 
          case('euv171')
             ! EUV 171
