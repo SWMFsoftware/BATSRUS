@@ -101,8 +101,9 @@ contains
     ! File specific parameters
     integer :: nPix_D(2) ! Narrowband images have nPix*nPix pixels
     ! Spectrum images are rectangular
-    real    :: aOffset, bOffset, rSizeImage, rSizeImage2, &
-         HalfSizeImage_D(2),rOccult, rOccult2, OffsetAngle
+    real    :: aOffset, bOffset, aOffsetOrig, bOffsetOrig, &
+         rSizeImage, rSizeImage2, &
+         HalfSizeImage_D(2), rOccult, rOccult2, OffsetAngle
 
     ! Plot variables
     integer, parameter :: MaxParam=10
@@ -230,10 +231,11 @@ contains
 
     if(UseFlux .or. UseNbi .or. UsePhx) &
          call spectrum_read_table(iFile, UseNbi, UsePhx)
+
+    aOffsetOrig     = xOffset_I(iFile)
+    bOffsetOrig     = yOffset_I(iFile)
     if(UseSpm)then
        nPix_D          = nint(PlotRange_EI(1:2,iFile)/PlotDx_DI(1:2,iFile))+1
-       aOffset         = xOffset_I(iFile)
-       bOffset         = yOffset_I(iFile)
        rSizeImage      = 0
        rSizeImage2     = 0
        HalfSizeImage_D = 0.5*PlotRange_EI(1:2,iFile)
@@ -243,8 +245,6 @@ contains
     else
        ! Set file specific parameters
        nPix_D          = nPixel_I(iFile)
-       aOffset         = xOffset_I(iFile)
-       bOffset         = yOffset_I(iFile)
        rSizeImage      = rSizeImage_I(iFile)
        rSizeImage2     = rSizeImage**2
        HalfSizeImage_D = rSizeImage
@@ -293,7 +293,7 @@ contains
        write(*,*) 'ObsPos         =', ObsPos_D
        write(*,*) 'Los_D          =', Los_D
        write(*,*) 'HalfSizeImage_D =', HalfSizeImage_D
-       write(*,*) 'aOffset,bOffset =', aOffset, bOffset
+       write(*,*) 'aOffset,bOffset =', aOffsetOrig, bOffsetOrig
        write(*,*) 'SizePix_D        =', SizePix_D
        write(*,*) 'nPix_D           =', nPix_D
     end if
@@ -451,9 +451,17 @@ contains
 
        ! Rotation with offset angle
        Los_D = matmul( rot_matrix_z(OffsetAngle), Los_D)
-       Obspos_D = matmul( rot_matrix_z(OffsetAngle), ObsPos_D)
-
+       if(OffsetAngle > 0.0)then
+          ! Rotate everything
+          Obspos_D = matmul( rot_matrix_z(OffsetAngle), ObsPos_D)
+       elseif(OffsetAngle < 0.0)then
+          ! Rotate Los_D only, so ObsDistance needs to be recalculated
+          ObsDistance = abs(sum(ObsPos_D*Los_D))
+       end if
        ! Make zero components slightly different from zero
+       ! This operation may break the ObsPos_D + ObsDistance*Los_D = 0 identity
+       ! even when OffsetAngle is zero.
+       
        where(abs(Los_D) < cTiny) Los_D = sign(cTiny, Los_D)
 
        ! Create unit vectors aUnit_D and bUnit_D orthogonal to the central
@@ -477,8 +485,13 @@ contains
        bUnit_D = bUnit_D/norm2(bUnit_D)
 
        ! 3D vector pointing from the origin to the image center
-       ImageCenter_D = aOffset*aUnit_D + bOffset*bUnit_D
+       ImageCenter_D = ObsPos_D + ObsDistance*Los_D + &
+            aOffsetOrig*aUnit_D + bOffsetOrig*bUnit_D
 
+       ! Make offset to be relative to the Sun (and not the projected observer)
+       aOffset = dot_product(ImageCenter_D, aUnit_D)
+       bOffset = dot_product(ImageCenter_D, bUnit_D)
+       
        if(DoTiming)call timing_start('los_block_loop')
 
        ! initialize image
@@ -1778,8 +1791,6 @@ contains
     !==========================================================================
     subroutine save_los_file
 
-      real:: aOffsetDim, bOffsetDim
-
       character(len=40):: StringFormat
       character(len=23):: StringDateTime0, StringDateTime
       character(len=80):: StringFormatTime
@@ -2025,13 +2036,11 @@ contains
          if (IsDimensionalPlot_I(iFile)) then
             aPix = HalfSizeImage_D(1) * No2Io_V(UnitX_)
             bPix = HalfSizeImage_D(2) * No2Io_V(UnitX_)
-            aOffsetDim = aOffset*No2Io_V(UnitX_)
-            bOffsetDim = bOffset*No2Io_V(UnitX_)
+            aOffset = aOffset*No2Io_V(UnitX_)
+            bOffset = bOffset*No2Io_V(UnitX_)
          else
             aPix = HalfSizeImage_D(1)
             bPix = HalfSizeImage_D(2)
-            aOffsetDim = aOffset
-            bOffsetDim = bOffset
          end if
 
          ! If one line is to be used only, fux needs an artificial wvlinterval
@@ -2056,9 +2065,9 @@ contains
                     NameUnitsIn = StringUnitIdl,&
                     nDimIn = 3, &
                     CoordMinIn_D = &
-                    [aOffsetDim-aPix, bOffsetDim-bPix, LogTeMinDEM_I(iFile)], &
+                    [aOffset-aPix, bOffset-bPix, LogTeMinDEM_I(iFile)], &
                     CoordMaxIn_D = &
-                    [aOffsetDim+aPix, bOffsetDim+bPix, LogTeMaxDEM_I(iFile)], &
+                    [aOffset+aPix, bOffset+bPix, LogTeMaxDEM_I(iFile)], &
                     VarIn_VIII = Image_VIII(:,:,:,:))
             elseif(UseNbi)then
                call save_plot_file(NameFile, &
@@ -2070,8 +2079,8 @@ contains
                     NameVarIn = NameAllVar, &
                     NameUnitsIn = StringUnitIdl,&
                     nDimIn = 2, &
-                    CoordMinIn_D = [aOffsetDim-aPix, bOffsetDim-bPix], &
-                    CoordMaxIn_D = [aOffsetDim+aPix, bOffsetDim+bPix], &
+                    CoordMinIn_D = [aOffset-aPix, bOffset-bPix], &
+                    CoordMaxIn_D = [aOffset+aPix, bOffset+bPix], &
                     VarIn_VII = Image_VIII(:,:,:,1))
             elseif(UseFlux .or. UsePhx)then
                call save_plot_file(NameFile, &
@@ -2083,10 +2092,8 @@ contains
                     NameVarIn = NameAllVar, &
                     NameUnitsIn = StringUnitIdl,&
                     nDimIn = 3, &
-                    CoordMinIn_D = &
-                    [aOffsetDim-aPix, bOffsetDim-bPix, LambdaMin], &
-                    CoordMaxIn_D = &
-                    [aOffsetDim+aPix, bOffsetDim+bPix, LambdaMax], &
+                    CoordMinIn_D = [aOffset-aPix, bOffset-bPix, LambdaMin], &
+                    CoordMaxIn_D = [aOffset+aPix, bOffset+bPix, LambdaMax], &
                     VarIn_VIII = Image_VIII(:,:,:,:))
             else
                call save_plot_file(NameFile, &
