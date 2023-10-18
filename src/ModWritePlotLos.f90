@@ -461,7 +461,7 @@ contains
        ! Make zero components slightly different from zero
        ! This operation may break the ObsPos_D + ObsDistance*Los_D = 0 identity
        ! even when OffsetAngle is zero.
-       
+
        where(abs(Los_D) < cTiny) Los_D = sign(cTiny, Los_D)
 
        ! Create unit vectors aUnit_D and bUnit_D orthogonal to the central
@@ -491,7 +491,7 @@ contains
        ! Make offset to be relative to the Sun (and not the projected observer)
        aOffset = dot_product(ImageCenter_D, aUnit_D)
        bOffset = dot_product(ImageCenter_D, bUnit_D)
-       
+
        if(DoTiming)call timing_start('los_block_loop')
 
        ! initialize image
