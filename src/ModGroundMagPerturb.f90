@@ -49,7 +49,6 @@ module ModGroundMagPerturb
   real, allocatable  :: PosMagnetometer_II(:,:)
   character(len=100) :: NameMagInputFile
   character(len=3)   :: TypeCoordMag='MAG' ! coords for magnetometer list
-  character(len=3)   :: TypeCoordGrid0='SMG'! coords for magnetometer grid
   character(len=7)   :: TypeMagFileOut='single '
 
   ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
@@ -212,8 +211,6 @@ contains
           if (TypeGridFileOut_I(iMagGridFile) == 'single') call stop_mpi( &
                NameSub//': single is not supported for this plot!')
        end do
-       ! TypeCoordGrid0 is used in ground_mag_perturb_fac, why???
-       TypeCoordGrid0  = TypeCoordGrid_I(1)
        ! supermag takes the first mag grid by default
        nGridLon0 = nGridLon_I(1)
        nGridLat0 = nGridLat_I(1)
@@ -836,8 +833,8 @@ contains
              ! file is calculated
              if (iFileLocal == nMagGridFile)                &
                   UseFastFacIntegral_I(iGroup) =            &
-                  TypeCoordGrid_I(iFileLocal) == 'MAG' .or. &
-                  TypeCoordGrid_I(iFileLocal) == 'GEO'
+                  all(TypeCoordGrid_I == 'MAG') .or.        &
+                  all(TypeCoordGrid_I == 'GEO')
           case(3,4)
              ! Kp and Ae indexes
              UseFastFacIntegral_I(iGroup) = TypeCoordIndex == 'MAG'
