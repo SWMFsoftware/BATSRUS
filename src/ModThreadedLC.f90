@@ -8,6 +8,7 @@ module ModThreadedLC
   use ModUtilities, ONLY: norm2
 #endif
   use BATL_lib, ONLY: test_start, test_stop, iProc, Xyz_DGB
+  use ModChromosphere,    ONLY: TeChromosphereSi
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
        HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
@@ -127,16 +128,16 @@ contains
   !============================================================================
   subroutine init_threaded_lc
 
-    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iComm
     use ModLookupTable,     ONLY: i_lookup_table
     use ModConst,           ONLY: cElectronMass, &
          cEps, cElectronCharge, cTwoPi, cProtonMass
     use ModMultiFluid,      ONLY: MassIon_I
-    use ModFieldLineThread, ONLY:  nPointThreadMax, init_thread=>init
+    use ModFieldLineThread, ONLY:  nPointThreadMax, init_thread=>init, &
+         UseChromoEvaporation
     use ModPhysics,         ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
     use ModVarIndexes,      ONLY: Pe_, p_
-    use ModChromosphere,    ONLY: TeChromosphereSi
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_threaded_lc'
@@ -181,7 +182,7 @@ contains
     allocate(Main_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax));  Main_VVI = 0
 
     ! Initialize transition region model:
-    call init_tr(Z=Z, TeChromoSi = TeChromosphereSi)
+    call init_tr(Z=Z, TeChromoSi = TeChromosphereSi, iComm=iComm)
     !
     ! Initialize thread structure
     !
@@ -590,7 +591,9 @@ contains
       ! Initialization
       TeSiStart_I(1:nPoint) = TeSi_I(1:nPoint)
       TiSiStart_I(1:nPoint) = TiSi_I(1:nPoint)
+      ! dCons = kappa(Te)dTe=> Cons = 2/7 kappa*Te
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.5
+
       SpecHeat_I(1:nPoint-1) = InvGammaMinus1*Z*                     &
            BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
            PSi_I(1:nPoint-1)/(Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))
@@ -604,6 +607,8 @@ contains
       DeltaIonEnergy_I = 0.0
       PressureTRCoef = 1.0; FluxConst = 0.0
       call get_res_heating(nIterIn=nIterHere)
+      ! Constant particle flux per B times k_B
+      ! k_B n_i (= P_tot/(ZTe + Ti)) U/B Normalize per Flux2B costant ratio
       if(USi>0)then
          FluxConst    = USi * PSi_I(nPoint)/&
               ((Z*TeSiIn + TiSiIn)*PoyntingFluxPerBSi*&

@@ -83,6 +83,7 @@ BATSRUS: GITINFO
 	cd ${MAGNETOGRAMDIR}; $(MAKE) LIB
 	cd ${DEMTDIR}; $(MAKE) LIB
 	cd ${EMPIRICALEEDIR}; $(MAKE) LIB
+	cd ${EMPIRICALSCDIR}; $(MAKE) LIB
 	cd srcBATL; $(MAKE) LIB
 	cd src; $(MAKE) LIB
 	cd src; make BATSRUS
@@ -93,6 +94,7 @@ CRASH: GITINFO
 	cd ${MAGNETOGRAMDIR}; $(MAKE) LIB
 	cd ${DEMTDIR}; $(MAKE) LIB
 	cd ${EMPIRICALEEDIR}; $(MAKE) LIB
+	cd ${EMPIRICALSCDIR}; $(MAKE) LIB
 	cd ${CRASHDIR}; $(MAKE) LIB
 	cd srcBATL; $(MAKE) LIB
 	cd src; $(MAKE) LIB
@@ -171,7 +173,8 @@ rundir:
 		cp ${SCRIPTDIR}/Restart.pl  ${RUNDIR}/; \
 		cp ${SCRIPTDIR}/Resubmit.pl ${RUNDIR}/; \
 		cd ${RUNDIR}; ln -s ${BINDIR}/${DEFAULT_EXE} .; \
-		ln -s ${COMPONENT}/* .;                          \
+		ln -s ${COMPONENT}/* .; \
+		rm -f plots; ln -s ${COMPONENT}/IO2 plots; \
 	fi);
 
 rundir_rh:

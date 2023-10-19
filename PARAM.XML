@@ -4320,56 +4320,68 @@ Default is no magnetic perturbation calculation.
 </command>
 
 <command name="MAGNETOMETERGRID">
-  <parameter name="TypeFileMagGrid" type="string" input="select">
-    <option name="ascii" default="T"/>
-    <option name="tec"/>
-    <option name="real4"/>
-    <option name="real8"/>
+  <parameter name="nMagGridFile" type="integer"             default="2"/>
+  <parameter name="StrGridFileOut_I" type="string" input="select">
+    <option name="global ascii" default="T"/>
+    <option name="global tec"/>
+    <option name="global real4"/>
+    <option name="us real8"/>
   </parameter>
-  <parameter name="TypeCoordMagGrid" type="string" input="select">
+  <parameter name="TypeCoordGrid_I" type="string" input="select">
     <option name="GEO" default="T"/>
     <option name="MAG"/>
     <option name="SMG"/>
   </parameter>
-  <parameter name="nLonMagGrid" type="integer"            default="360"/>
-  <parameter name="nLatMagGrid" type="integer"            default="171"/>
-  <parameter name="LonMinMagGrid" type="real"             default="0"/>
-  <parameter name="LonMaxMagGrid" type="real"             default="360"/>
-  <parameter name="LatMinMagGrid" type="real"             default="-85"/>
-  <parameter name="LatMaxMagGrid" type="real"             default="85"/>
-  <parameter name="DnSaveMagGrid" type="integer" min="-1" default="-1"/>
-  <parameter name="DtSaveMagGrid" type="real"    min="-1" default="-1"/>
+  <parameter name="nGridLon_I" type="integer"               default="360"/>
+  <parameter name="nGridLat_I" type="integer"               default="171"/>
+  <parameter name="GridLonMin_I" type="real"                default="0"/>
+  <parameter name="GridLonMax_I" type="real"                default="360"/>
+  <parameter name="GridLatMin_I" type="real"                default="-85"/>
+  <parameter name="GridLatMax_I" type="real"                default="85"/>
+  <parameter name="DnSaveMagGrid_I" type="integer" min="-1" default="-1"/>
+  <parameter name="DtSaveMagGrid_I" type="real"    min="-1" default="-1"/>
 
 #MAGNETOMETERGRID
-ascii			TypeFileMagGrid (ascii, tec, real4, real8)
-GEO			TypeCoordMagGrid (GEO, MAG, SMG)
-360			nLonMagGrid
-171			nLatMagGrid
-0.			LonMinMagGrid
-360.			LonMaxMagGrid
--85.			LatMinMagGrid
-85.			LatMaxMagGrid
--1			DnSaveMagGrid
-60.0			DtSaveMagGrid
+2                       nMagGridFile
+global ascii		StrGridFileOut_I (ascii, tec, real4, real8)
+GEO			TypeCoordGrid_I (GEO, MAG, SMG)
+360			nGridLon_I
+171			nGridLat_I
+0.			GridLonMin_I
+360.			GridLonMax_I
+-85.			GridLatMin_I
+85.			GridLatMax_I
+-1			DnSaveMagGrid_I
+60.0			DtSaveMagGrid_I
+us real4		StrGridFileOut_I (ascii, tec, real4, real8)
+GEO			TypeCoordGrid_I (GEO, MAG, SMG)
+320			nGridLon_I
+171			nGridLat_I
+200.			GridLonMin_I
+360.			GridLonMax_I
+0.			GridLatMin_I
+85.			GridLatMax_I
+-1			DnSaveMagGrid_I
+30.0			DtSaveMagGrid_I
 
-This command allows calculating and saving magnetic perturbations on a
-longitude-latitude grid.
+This command allows calculating and saving magnetic perturbations on multiple
+longitude-latitude grids.
 
-TypeFileMagGrid specifies the file format, which can be 'ascii' (text file),
+StrGridFileOut_I specifies the file name and format, which can be 'ascii' (text file),
 'tec' (Tecplot text file), 'real4' (single precision binary) or
 'real8' (double precision binary).
 The coordinate system of the grid (not the output) can be set to GEO
 (geographic), MAG (geomagnetic) or SMG (solar magnetic) coordinates.
 
 The number of grid points in the longitude and latitude directions is
-given by nLonMagGrid and nLatMagGrid, respectively.  The longitudes
-span from from LonMinMagGrid to LonMaxMagGrid, while the latitudes
-span from LatMinMagGrid to LatMaxMagGrid.  If the longitude spans 360
+given by nGridLon_I and nGridLat_I, respectively.  The longitudes
+span from from GridLonMin_I to GridLonMax_I, while the latitudes
+span from GridLatMin_I to GridLatMax_I.  If the longitude spans 360
 degrees, the stations will be arranged so that the equivalent
 longitudes of 0 and 360 are not repeated.  However, if -90 or +90
 degrees is used for the maximum/minimum latitude, the polar stations
 will be repeated nLonMagGrid times, so choose limits wisely.  The 2D
-output files are saved every DnSaveMagGrid steps or DtSaveMagGrid
+output files are saved every DnSaveMagGrid_I steps or DtSaveMagGrid_I
 seconds.
 
 No magnetometer grid file is saved by default.
@@ -4458,6 +4470,8 @@ indices are not calculated.
 	<option name="Raw vars. scaled" value="raw"/>
 	<option name="Ray tracing vars."  value="RAY"/>
 	<option name="Ray tracing scaled" value="ray"/>
+	<option name="Squash factor vars."  value="LGQ"/>
+	<option name="Squash factor scaled" value="lgq"/>
 	<option name="Flux variables"    value="FLX"/>
 	<option name="Flux vars. scaled" value="flx"/>
 	<option name="Solar variables"    value="SOL"/>
@@ -4526,7 +4540,7 @@ indices are not calculated.
       <parameter name="ObsPosY" type="real" default="0"/>
       <parameter name="ObsPosZ" type="real" default="0"/>
       <parameter name="OffsetAngle" type="real"
-		 min="-89" max="89" default="0"/>
+		 min="-360" max="360" default="0"/>
       <parameter name="rSizeImage" type="real" min="0" default="32"/>
       <parameter name="xOffset" type="real" default="0"/>
       <parameter name="yOffset" type="real" default="0"/>
@@ -4719,7 +4733,7 @@ los tbl idl_real4       StringPlot ! line of sight plot using table
 -215.			ObsPosX
 0.			ObsPosY
 0.			ObsPosZ
-0.                      OffsetAngle
+5.0                     OffsetAngle ! rotate around with 5 degree resolution
 32.			rSizeImage
 0.			xOffset
 0.			yOffset
@@ -4877,7 +4891,7 @@ T                       UseDoppler
 0.0                     DLambdaIns
 F                       UseIonFrac
 F                       UseIonTemp
-los nbi idl_ascii       StringPlot                                                        
+los nbi idl_ascii       StringPlot
 4                       DnSavePlot               
 -1.                     DtSavePlot
 HGR                     TypeCoord
@@ -5060,6 +5074,8 @@ values or as non-dimensional values:
          pars:
  'sol' - vars: wl pb                                          (PlotArea='los' only)
          pars: mu
+ 'lgq' - vars: squash.03 squash.12 squash.2 squash-15 squash-2 squash-3  (PlotArea='los' only)
+	 pars: rbody
  'euv' - vars: euv171 euv195 euv284                           (PlotArea='los' only)
          pars: mu
  'sxr' - vars: sxr                                            (PlotArea='los' only)
@@ -5177,9 +5193,12 @@ zeros.  The image plane always contains the origin of the
 computational domain (usually the center of the Sun).  By default the
 image plane is orthogonal to the observers position relative to the
 origin. The image plane can be rotated around the Z axis with an
-offset angle. By default the center of the image is the observer
-projected onto the image plane, but the center of the image can be
-offset.  Since the central object (the Sun) contains extremely large
+offset angle. If OffsetAngle is positive, a series of images are
+created covering the full circle with the OffsetAngle resolution.
+If OffsetAngle is negative, only one rotated image is created.
+By default the center of the image is the observer projected onto
+the image plane, but the center of the image can be offset.
+Since the central object (the Sun) contains extremely large
 values, an occultational disk is used to block the lines of sight
 going through the Sun.  The variables which control the direction of
 the lines of sight and the grid position and resolution are the
@@ -8267,7 +8286,6 @@ For rTrace the default is the larger of the ionosphere and body radii.
 If there is no ionosphere and no body then the default is rTrace=-1.
 </command>
 
-  
 <command name="TRACELIMIT" alias="RAYTRACELIMIT">
   <parameter name="TraceLengthMax" type="real" default="200"/>
 
@@ -8279,7 +8297,53 @@ This avoid tracing extremely long field lines that are not used later.
 The default is 200 units.
 </command>
 
+<command name="TRACEACCURACY">
+  <parameter name="AccuracyFactor" type="real" min="1" default="1"/>
 
+#TRACEACCURACY
+5.0                      AccuracyFactor
+
+Set the accuracy of the tracing algorithm. The default accuracy is optimized
+for speed. Setting AccuracyFactor to a larger value reduces the step size
+proportionally. Factor 5 may avoid failed tracing. Factor 20 is close to fully
+converged accuracy. The higher accuracy means that more time is spent on the
+field line tracing.
+
+Default is AccuracyFactor=1.
+</command>
+
+<command name="SQUASHFACTOR">
+  <parameter name="nLonSquash" type="integer" min="1" default="360"/>
+  <parameter name="nLatSquash" type="integer" min="1" default="180"/>
+  <parameter name="AccuracyFactorSquash" type="real" min="1" default="20"/>
+
+#SQUASHFACTOR
+360                     nLonSquash
+180                     nLatSquash
+20.0                    AccuracyFactorSquash
+
+Set the resolution of the spherical grid at the inner boundary
+on which the squash factor is calculated. Also set the accuracy
+of the tracing used for the squash factor calculation.
+
+Default values are shown above.
+</command>
+
+<command name="TRACETEST">
+  <parameter name="iLonTest" type="integer" min="1" default="1"/>
+  <parameter name="iLatTest" type="integer" min="1" default="1"/>
+
+#TRACETEST
+35                      iLonTest  
+10                      iLatTest
+
+Set the longitude and latitude indexes of the tested trace.
+This is useful to test an individual trace line starting from
+a spherical or cylindrical grid. The subroutine to be tested
+still needs to be set with the #TEST command.
+
+Default values are 1 for both indexes.
+</command>
 
 <command name="TRACEIE" alias="IE">
   <parameter name="DoTraceIE" type="logical" default="F"/>
@@ -10768,7 +10832,7 @@ A negative value means that the B0 field is not updated.
 	     default="0"/>
 
 #HELIODIPOLE
--0.0003                 HelioDipoleStrengthSi [Telsa]
+-0.0003                 HelioDipoleStrengthSi [Tesla]
  0.0                    HelioDipoleTilt     [deg]
 
 Variable HelioDipoleStrengthSi defines the equatorial field strength in Tesla,

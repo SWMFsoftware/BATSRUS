@@ -326,7 +326,7 @@ contains
     if(iProc==0) then
 
        if (IsDimensionalPlot_I(iFile))  &
-            call normalize_logvar(nLogVar,NameLogVar_I, nLogR, LogR_I, &
+            call normalize_logvar(nLogVar, NameLogVar_I, nLogR, LogR_I, &
             nLogTot, LogVar_I)
 
        ! first output the appropriate time data
@@ -537,7 +537,7 @@ contains
     end if
 
     iVarTot = 0
-    do iVar=1,nLogVar
+    do iVar = 1, nLogVar
 
        iVarTot = iVarTot + 1
        call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
@@ -1226,11 +1226,10 @@ contains
          else
             call user_get_log_var(LogVar_I(iVarTot), NameLogVarLower)
          end if
-
       end select
+
     end subroutine set_log_var
     !==========================================================================
-
     subroutine set_sat_var
 
       use ModAdvance,   ONLY: UseMultiSpecies
@@ -1239,7 +1238,6 @@ contains
 
       integer :: jVar
       character(len=lNameLogVar) :: NameLogVarLower
-
       !------------------------------------------------------------------------
       if (iProc/=0) RETURN
 
@@ -1345,12 +1343,11 @@ contains
          if(iProc==0)write(*,*)'WARNING in var_sat: unknown variable ',&
               NameLogVar,' for iSat = ',iSat
       end select
+
     end subroutine set_sat_var
     !==========================================================================
-
   end subroutine set_logvar
   !============================================================================
-
   subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
        LogR_I,nLogTot,LogVar_I)
 
@@ -1371,7 +1368,7 @@ contains
     call test_start(NameSub, DoTest)
 
     iVarTot = 0
-    do iVar=1,nLogVar
+    do iVar = 1, nLogVar
 
        iVarTot = iVarTot+1
        NameLogVar = NameLogVar_I(iVar)
@@ -1459,9 +1456,9 @@ contains
        end select
     end do ! iVar
     call test_stop(NameSub, DoTest)
+
   end subroutine normalize_logvar
   !============================================================================
-
   real function calc_sphere(TypeAction, nTheta, Radius, Array_GB)
 
     ! This function calculates the integral of the incomming variable Array_GB
@@ -1708,24 +1705,20 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-
     real function minmod(x,y)
       real, intent(in) :: x,y
       !------------------------------------------------------------------------
       minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
     end function minmod
     !==========================================================================
-
     real function maxmod(x,y)
       real, intent(in) :: x,y
       !------------------------------------------------------------------------
       maxmod = max(abs(x),abs(y))
     end function maxmod
     !==========================================================================
-
   end function calc_sphere
   !============================================================================
-
   real function integrate_circle(Radius, z, Array_GB)
 
     ! This function calculates the integral of the incoming variable Array_GB
@@ -1826,24 +1819,20 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-
     real function minmod(x,y)
       real, intent(in) :: x,y
       !------------------------------------------------------------------------
       minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
     end function minmod
     !==========================================================================
-
     real function maxmod(x,y)
       real, intent(in) :: x,y
       !------------------------------------------------------------------------
       maxmod = max(abs(x),abs(y))
     end function maxmod
     !==========================================================================
-
   end function integrate_circle
   !============================================================================
-
   subroutine collect_satellite_data(Xyz_D, StateCurrent_V)
 
     use ModVarIndexes, ONLY: nVar
@@ -1889,9 +1878,9 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
+
   end subroutine collect_satellite_data
   !============================================================================
-
   subroutine satellite_test
 
     use ModVarIndexes
@@ -1928,9 +1917,9 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
+
   end subroutine satellite_test
   !============================================================================
-
   subroutine normalize_name_log_var(NameIn, NameOut)
 
     ! Normalize the logvar name to lower case and
@@ -1968,7 +1957,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine normalize_name_log_var
   !============================================================================
-
   subroutine integrate_domain(Sum_V, Pressure_GB)
 
     ! Since the State_VGB variable has the variables in the first index,
@@ -2040,6 +2028,7 @@ contains
     call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
+
   end subroutine integrate_domain
   !============================================================================
   subroutine fill_edge_corner(Array_G)
@@ -2049,7 +2038,6 @@ contains
     use BATL_lib, ONLY: nDim, nI, nJ, nK, j0_, nJp1_,k0_, nKp1_
 
     real, intent(inout) :: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
-
     !--------------------------------------------------------------------------
     if(nDim == 1) RETURN
 
@@ -2087,6 +2075,5 @@ contains
 
   end subroutine fill_edge_corner
   !============================================================================
-
 end module ModWriteLogSatFile
 !==============================================================================

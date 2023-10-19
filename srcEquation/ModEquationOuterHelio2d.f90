@@ -34,19 +34,24 @@ module ModVarIndexes
    ! The energies are handled as an extra variable, so that we can use
    ! both conservative and non-conservative scheme and switch between  them.
    integer, parameter :: &
-        Rho_       =  1,             SWHRho_   = 1, &
-        RhoUx_     =  2, Ux_ = 2,    SWHRhoUx_ = 2, SWHUx_ = 2, &
-        RhoUy_     =  3, Uy_ = 3,    SWHRhoUy_ = 3, SWHUy_ = 3, &
-        RhoUz_     =  4, Uz_ = 4,    SWHRhoUz_ = 4, SWHUz_ = 4, &
+        Rho_       =  1,              SWHRho_   = 1, &
+        Pu3Rho_    =  1, &
+        RhoUx_     =  2, Ux_ = 2,     SWHRhoUx_ = 2, SWHUx_ = 2, &
+        Pu3RhoUx_  =  2, Pu3Ux_ = 2, &
+        RhoUy_     =  3, Uy_ = 3,     SWHRhoUy_ = 3, SWHUy_ = 3, &
+        Pu3RhoUy_  =  3, Pu3Uy_ = 3, &
+        RhoUz_     =  4, Uz_ = 4,     SWHRhoUz_ = 4, SWHUz_ = 4, &
+        Pu3RhoUz_  =  4, Pu3Uz_ = 4, &
         Bx_        =  5, &
         By_        =  6, &
         Bz_        =  7, &
         p_         =  8,              SWHP_  = 8, &
-        NeuRho_    =  9,              Pu3Rho_    =  9, &
-        NeuRhoUx_  = 10, NeuUx_ = 10, Pu3RhoUx_  = 10, Pu3Ux_ = 10, &
-        NeuRhoUy_  = 11, NeuUy_ = 11, Pu3RhoUy_  = 11, Pu3Uy_ = 11, &
-        NeuRhoUz_  = 12, NeuUz_ = 12, Pu3RhoUz_  = 12, Pu3Uz_ = 12, &
-        NeuP_      = 13,              Pu3P_      = 13, &
+        Pu3P_      =  8, &
+        NeuRho_    =  9,              &
+        NeuRhoUx_  = 10, NeuUx_ = 10, &
+        NeuRhoUy_  = 11, NeuUy_ = 11, &
+        NeuRhoUz_  = 12, NeuUz_ = 12, &
+        NeuP_      = 13,              &
         Ne2Rho_    = 14, &
         Ne2RhoUx_  = 15, Ne2Ux_ = 15, &
         Ne2RhoUy_  = 16, Ne2Uy_ = 16, &
@@ -63,7 +68,8 @@ module ModVarIndexes
         Ne4RhoUz_  = 27, Ne4Uz_ = 27, &
         Ne4P_      = 28, &
         Energy_    = nVar+1,          SWHEnergy_ = nVar+1, &
-        NeuEnergy_ = nVar+2,          Pu3Energy_ = nVar+2, &
+        Pu3Energy_ = nVar+1, &
+        NeuEnergy_ = nVar+2, &
         Ne2Energy_ = nVar+3, &
         Ne3Energy_ = nVar+4, &
         Ne4Energy_ = nVar+5

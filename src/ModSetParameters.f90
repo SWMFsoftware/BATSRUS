@@ -1158,8 +1158,8 @@ contains
                    ! read max dimensions of the 2d image plane
                    call read_var('rSizeImage', rSizeImage_I(iFile))
                    ! read the position of image origin relative to grid origin
-                   call read_var('xOffset_I', xOffset_I(iFile))
-                   call read_var('yOffset_I', yOffset_I(iFile))
+                   call read_var('xOffset', xOffset_I(iFile))
+                   call read_var('yOffset', yOffset_I(iFile))
                    ! read the occulting radius
                    call read_var('rOccult', rOccult_I(iFile))
                    ! read the limb darkening parameter
@@ -1620,6 +1620,13 @@ contains
                 IsDimensionalPlot_I(iFile) = .true.
                 StringPlotVar_I(iFile)='intensity'
                 StringPlotParam_I(iFile)='rbody'
+             elseif(   index(StringPlot,'LGQ') > 0 &
+                  .or. index(StringPlot,'lgq') > 0)then
+                TypePlotVar = 'lgq'
+                IsDimensionalPlot_I(iFile) = index(StringPlot,'LGQ') > 0
+                StringPlotVar_I(iFile) = &
+                     'squash.03 squash.12 squash.2 squash-15 squash-2 squash-3'
+                StringPlotParam_I(iFile)='rbody'
              else
                 call stop_mpi('Variable definition missing from StringPlot=' &
                      //StringPlot)
@@ -1660,11 +1667,11 @@ contains
                 if (index(TypePlot_I(iFile), 'los') >0) then
                    write(*,*) ' OffsetAngle_I =', OffsetAngle_I(iFile)
                    write(*,*) ' rSizeImage_I =', rSizeImage_I(iFile)
-                   write(*,*) ' xOffset_I      =', xOffset_I(iFile)
-                   write(*,*) ' yOffset_I      =', yOffset_I(iFile)
+                   write(*,*) ' xOffset_I =', xOffset_I(iFile)
+                   write(*,*) ' yOffset_I =', yOffset_I(iFile)
                    write(*,*) ' rOccult_I=', rOccult_I(iFile)
-                   write(*,*) ' MuLimbDarkening       =', MuLimbDarkening
-                   write(*,*) ' nPixel_I      =', nPixel_I(iFile)
+                   write(*,*) ' MuLimbDarkening =', MuLimbDarkening
+                   write(*,*) ' nPixel_I =', nPixel_I(iFile)
                    write(*,*) ' NameLosTable_I =', NameLosTable_I(iFile)
                 end if
              end do
@@ -1941,7 +1948,7 @@ contains
           call read_var('SwTminDim', SwTminDim)
 
        case("#TRACE", "#TRACELIMIT", "#TRACERADIUS", "#TRACEEQUATOR", &
-            "#TRACEIE", &
+            "#TRACEIE", "#TRACEACCURACY", "#TRACETEST", "#SQUASHFACTOR", &
             "#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
           call read_field_trace_param(NameCommand)
        case("#PWCOUPLING")

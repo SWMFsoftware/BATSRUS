@@ -375,12 +375,10 @@ contains
           end if
        endif
 
-#ifndef _OPENACC
        ! Set Dt to minimum time step over all the PE-s
+       ! Multi-GPU runs are the same as multi-CPU runs. Dt is updated after
+       ! this call.
        call MPI_allreduce(DtMinPE, DtMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
-#else
-       DtMin = DtMinPe
-#endif
 
        Dt = DtMin
 

@@ -2028,7 +2028,7 @@ test_earth_check:
 		Param/EARTH/TestOutput/earth_cartesian_ref.out \
 		>> test_earth_gpu.diff)
 	-@(${DIFFNUM} -t -r=2e-4 -a=1e-4 \
-		${TESTDIR}/RESULTS/GM/mag_grid_n00000025.out \
+		${TESTDIR}/RESULTS/GM/mag_grid_global_n00000025.out \
 		Param/EARTH/TestOutput/earth_cartesian_mag_grid.out.gz \
 		>> test_earth_gpu.diff)
 	ls -l test_earth_gpu.diff

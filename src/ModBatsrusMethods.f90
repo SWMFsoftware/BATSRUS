@@ -921,13 +921,15 @@ contains
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
       use ModAdvance, ONLY: State_VGB
+      use ModGroundMagPerturb, ONLY: nMagGridFile
       logical :: DoPlotThread
       !------------------------------------------------------------------------
       DoPlotThread = DoPlotThreads
       do iFile = 1, nFile
          ! We want to use the IE magnetic perturbations that were passed
          ! in the last coupling together with the current GM perturbations.
-         if( (iFile == magfile_ .or. iFile == maggridfile_) &
+         if( (iFile == magfile_ .or. &
+              (iFile >= maggridfile_ .and. iFile < maggridfile_+nMagGridFile))&
               .neqv. TypeSave == 'BEGINSTEP') CYCLE
 
          if(DnOutput_I(iFile) >= 0)then
@@ -983,7 +985,7 @@ contains
       use ModWriteLogSatFile,   ONLY: write_logfile
       use ModGroundMagPerturb, ONLY: &
            DoSaveMags, DoSaveGridmag, write_magnetometers, &
-           DoWriteIndices, write_geoindices
+           DoWriteIndices, write_geoindices, nMagGridFile
       use ModParticleFieldLine, ONLY: write_plot_particle
       use ModWritePlot,         ONLY: write_plot
       use ModWritePlotLos,      ONLY: write_plot_los
@@ -991,7 +993,8 @@ contains
       use ModWriteTecplot,      ONLY: assign_node_numbers
       use ModFieldTrace,        ONLY: &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
-      use ModFieldTraceFast,    ONLY: trace_field_grid, Trace_DSNB
+      use ModFieldTraceFast,    ONLY: &
+           trace_field_grid, Trace_DSNB, calc_squash_factor
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
       use ModAdvance,           ONLY: State_VGB
@@ -1020,9 +1023,9 @@ contains
 
          if(.not.DoSaveLogfile)RETURN
 
-         call timing_start('DoSaveLogfile')
+         call timing_start('write_logfile')
          call write_logfile(0, iFile)
-         call timing_stop('DoSaveLogfile')
+         call timing_stop('write_logfile')
 
       elseif(iFile>plot_ .and. iFile<=plot_+nplotfile) then
          ! Case for plot files
@@ -1059,57 +1062,60 @@ contains
             DoExchangeAgain = .true.
          end if
 
-         if(index(TypePlot_I(iFile),'los')>0) then
+         if(index(StringPlotVar_I(iFile),'squash') > 0) &
+              call calc_squash_factor
+
+         if(index(TypePlot_I(iFile),'los') > 0) then
             IsFound = .true.
             call write_plot_los(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'pnt')>0) then
+         if(index(TypePlot_I(iFile),'pnt') > 0) then
             IsFound = .true.
             call write_plot_particle(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'rfr')>0) then
+         if(index(TypePlot_I(iFile),'rfr') > 0) then
             IsFound = .true.
             call write_plot_radiowave(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'lin')>0) then
+         if(index(TypePlot_I(iFile),'lin') > 0) then
             IsFound = .true.
             call write_plot_line(iFile)
          end if
 
-         if(  index(TypePlot_I(iFile),'eqr')>0 .or. &
-              index(TypePlot_I(iFile),'eqb')>0) then
+         if(  index(TypePlot_I(iFile),'eqr') > 0 .or. &
+              index(TypePlot_I(iFile),'eqb') > 0) then
             IsFound = .true.
             call write_plot_equator(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'ieb')>0) then
+         if(index(TypePlot_I(iFile),'ieb') > 0) then
             IsFound = .true.
             call write_plot_ieb(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'lcb')>0) then
+         if(index(TypePlot_I(iFile),'lcb') > 0) then
             IsFound = .true.
             call write_plot_lcb(iFile)
          end if
 
-         if(index(TypePlot_I(iFile),'buf')>0)then
+         if(index(TypePlot_I(iFile),'buf') > 0)then
             IsFound = .true.
             if(TypeSaveIn/='INITIAL')call plot_buffer(iFile)
          end if
 
-         if(TypePlot_I(iFile)/='nul' .and. .not.IsFound ) then
+         if(TypePlot_I(iFile) /= 'nul' .and. .not.IsFound ) then
             ! Assign node numbers for tec plots
-            if( index(TypePlotFormat_I(iFile),'tec')>0 &
+            if( index(TypePlotFormat_I(iFile),'tec') > 0 &
                  .and. DoAssignNodeNumbers)then
                call assign_node_numbers
                DoAssignNodeNumbers = .false.
             end if
 
-            if(  index(TypePlot_I(iFile),'ray')>0 .or. &
-                 index(StringPlotVar_I(iFile),'status')>0)then
+            if(  index(TypePlot_I(iFile),'ray') > 0 .or. &
+                 index(StringPlotVar_I(iFile),'status') > 0)then
                call trace_field_grid
                call sync_cpu_gpu('update on CPU', NameSub, &
                     Trace_DICB=Trace_DSNB)
@@ -1217,12 +1223,12 @@ contains
             call timing_stop('save_magnetometer')
          end if
 
-      elseif(iFile == maggridfile_) then
+      elseif(iFile >= maggridfile_ .and. iFile < maggridfile_+nMagGridFile)then
          ! Case for grid magnetometer files
          if(.not. DoSaveGridmag) RETURN
          if(IsTimeAccurate) then
             call timing_start('grid_magnetometer')
-            call write_magnetometers('grid')
+            call write_magnetometers('grid', iFile-maggridfile_)
             call timing_stop('grid_magnetometer')
          end if
 
@@ -1234,9 +1240,8 @@ contains
       nStepOutputLast_I(iFile) = nStep
 
       if(iProc==0 .and. lVerbose>0 .and. &
-           iFile /= logfile_ .and. iFile /= magfile_ &
-           .and. iFile /= indexfile_ .and. iFile /= maggridfile_ &
-           .and. (iFile <= satellite_ .or. iFile > satellite_+nSatellite))then
+           (iFile == restart_ .or. &
+           (iFile > plot_ .and. iFile <= plot_+MaxPlotfile))) then
          if(IsTimeAccurate)then
             call write_prefix;
             write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &

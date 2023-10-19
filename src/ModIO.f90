@@ -16,6 +16,7 @@ module ModIO
   ! note that:
   !     MaxFile > MaxPlotFile + MaxSatelliteFile + extras
   ! is required. MaxSatelliteFile is defined in ModSatelliteFile.f90
+  integer, parameter :: MaxMagGridFile=5
   integer, parameter :: MaxPlotFile=25
   integer, parameter :: MaxParcel=100
   integer, parameter :: MaxFile = 450
@@ -28,7 +29,8 @@ module ModIO
   ! Named indexes for output files
   integer, parameter :: &
        restart_=1, logfile_=2, magfile_=3, indexfile_=4, maggridfile_=5, &
-       plot_=5, parcel_=plot_+MaxPlotfile, satellite_ = parcel_+MaxParcel
+       plot_=maggridfile_+MaxMagGridFile, parcel_=plot_+MaxPlotfile,     &
+       satellite_ = parcel_+MaxParcel
 
   ! I/O
   integer             :: iUnitOut = STDOUT_
