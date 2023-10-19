@@ -21,9 +21,6 @@ module ModThreadedLC
   use ModTurbulence,   ONLY: QeRatio
   use ModPhysics, ONLY: Z => AverageIonCharge
   use ModConst, ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
-  use ModCoordTransform, ONLY: determinant, inverse_matrix
-  use ModLinearAdvection, ONLY:  &
-       lin_advection_source_plus, lin_advection_source_minus
   use omp_lib
 
   !   Hydrostatic equilibrium in an isothermal corona:
@@ -963,7 +960,7 @@ contains
   end subroutine solve_boundary_thread
   !============================================================================
   subroutine tridiag_block33(n,Lower_VVI,Main_VVI,Upper_VVI,Res_VI,Weight_VI)
-
+    use ModCoordTransform, ONLY: determinant, inverse_matrix
     ! This routine solves three-diagonal system of equations:
     !
     !  ||m_1 u_1  0....        || ||w_1|| ||r_1||
@@ -973,7 +970,7 @@ contains
     !  ||.............0 l_n m_n|| ||w_n|| ||r_n||
     !
     ! Prototype: Numerical Recipes, Chapter 2.6, p.40.
-    ! Here each of the compenets w_i and r_i are 3-component states and
+    ! Here each of the components w_i and r_i are 3-component vectors and
     ! m_i, l_i, u_i are 3*3 matrices                                       !
 
     integer, intent(in):: n
