@@ -829,12 +829,9 @@ contains
              UseFastFacIntegral_I(iGroup) = &
                   TypeCoordMag == 'MAG' .or. TypeCoordMag == 'GEO'
           case(2)
-             ! grid, only set this to be true after the last mag grid
-             ! file is calculated
-             if (iFileLocal == nMagGridFile)                &
-                  UseFastFacIntegral_I(iGroup) =            &
-                  all(TypeCoordGrid_I == 'MAG') .or.        &
-                  all(TypeCoordGrid_I == 'GEO')
+             ! magnetometer grids
+             UseFastFacIntegral_I(iGroup) = &
+                  all(TypeCoordGrid_I == 'MAG' .or. TypeCoordGrid_I == 'GEO')
           case(3,4)
              ! Kp and Ae indexes
              UseFastFacIntegral_I(iGroup) = TypeCoordIndex == 'MAG'
