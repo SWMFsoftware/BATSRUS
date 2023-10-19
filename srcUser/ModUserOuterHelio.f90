@@ -55,7 +55,7 @@ module ModUser
   use ModVarIndexes
   use ModMultiFluid
   use ModCurrent, ONLY: get_current
-  
+
   use ModUserEmpty,                                     &
        IMPLEMENTED1  => user_read_inputs,               &
        IMPLEMENTED2  => user_set_face_boundary,         &
