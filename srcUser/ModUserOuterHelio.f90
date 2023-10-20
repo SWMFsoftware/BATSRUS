@@ -204,6 +204,7 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam
+    use ModTurbulence, ONLY: KarmanTaylorAlpha
 
     character (len=100) :: NameCommand
 
@@ -358,8 +359,9 @@ contains
        case("#TURBULENCE")
           call read_var('DeltaUSi', DeltaUSi)
           call read_var('CrossHelicity', CrossHelicity)
-          ! Our LperpTimesSqrtBSi is L_\perp*\sqrt(B)/KarmanTaylorAlpha
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+          ! Our LperpTimesSqrtBSi is L_\perp*\sqrt(B)/KarmanTaylorAlpha
+          LperpTimesSqrtBSi = LperpTimesSqrtBSi/KarmanTaylorAlpha
           call read_var('TurbulencePerPu3Source', TurbulencePerPu3Source)
 
        case default
@@ -1993,7 +1995,7 @@ contains
   subroutine calc_charge_exchange_source( &
        i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceCx_V)
 
-    use ModTurbulence, ONLY: KarmanTaylorAlpha, KarmanTaylorBeta2AlphaRatio
+    use ModTurbulence, ONLY: KarmanTaylorBeta2AlphaRatio
     use ModWaves, ONLY: UseAlfvenWaves
 
     ! Calculate the charge exchange source terms for one cell.

@@ -49,7 +49,6 @@ module ModGroundMagPerturb
   real, allocatable  :: PosMagnetometer_II(:,:)
   character(len=100) :: NameMagInputFile
   character(len=3)   :: TypeCoordMag='MAG' ! coords for magnetometer list
-  character(len=3)   :: TypeCoordGrid0='SMG'! coords for magnetometer grid
   character(len=7)   :: TypeMagFileOut='single '
 
   ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
@@ -212,8 +211,6 @@ contains
           if (TypeGridFileOut_I(iMagGridFile) == 'single') call stop_mpi( &
                NameSub//': single is not supported for this plot!')
        end do
-       ! TypeCoordGrid0 is used in ground_mag_perturb_fac, why???
-       TypeCoordGrid0  = TypeCoordGrid_I(1)
        ! supermag takes the first mag grid by default
        nGridLon0 = nGridLon_I(1)
        nGridLat0 = nGridLat_I(1)
@@ -579,7 +576,7 @@ contains
   end subroutine ground_mag_perturb
   !============================================================================
   subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, &
-       MagPerturbFac_DI, MagPerturbMhd_DI)
+       MagPerturbFac_DI, MagPerturbMhd_DI, iFileIn)
 
     ! For nMag magnetometers at locations Xyz_DI, calculate the 3-component
     ! pertubation of the magnetic field (returned as MagPerturbFac_DI) due
@@ -618,6 +615,7 @@ contains
     real,    intent(in) :: Xyz_DI(3,nMag)
     real,    intent(out):: MagPerturbFac_DI(3,nMag)
     real,  intent(inout):: MagPerturbMhd_DI(3,nMag)
+    integer, optional, intent(in) :: iFileIn
 
     real,    parameter:: rIonosphere = 1.01725 ! rEarth + iono_height
     integer, parameter:: nTheta =181, nPhi =180, nR = 30
@@ -648,6 +646,7 @@ contains
     integer, parameter:: nGroup = 4   ! number of magnetometer groups
     integer:: iGroup = 1              ! group index
     integer:: iMag0                   ! magnetometer index shift
+    integer:: iFileLocal              ! the file index for magnetometer grid
 
     ! becomes true once the first integration was done for the group
     logical:: UseFastFacIntegral_I(nGroup) = .false.
@@ -663,6 +662,13 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start('ground_db_fac')
+
+    if(present(iFileIn)) then
+       ! already adjusted in write_magnetometers!
+       iFileLocal = iFileIn
+    else
+       iFileLocal = 0
+    end if
 
     DoConvertCoord = TypeCoordFacGrid == 'MAG'
     if(DoConvertCoord) &
@@ -740,7 +746,13 @@ contains
           iMag0 = 0
        case('grid')
           iGroup = 2
-          iMag0 = nMagnetometer
+          if (iFileLocal == 1) then
+             iMag0 = nMagnetometer
+          else if (iFileLocal > 1) then
+             iMag0 = nMagnetometer + sum(nGridMag_I(1:iFileLocal-1))
+          else
+             call stop_mpi(NameSub//': iFileLocal cannot <=0!!')
+          end if
        case('kp')
           iGroup = 3
           iMag0 = nMagnetometer + sum(nGridMag_I)
@@ -817,9 +829,9 @@ contains
              UseFastFacIntegral_I(iGroup) = &
                   TypeCoordMag == 'MAG' .or. TypeCoordMag == 'GEO'
           case(2)
-             ! grid
+             ! magnetometer grids
              UseFastFacIntegral_I(iGroup) = &
-                  TypeCoordGrid0 == 'MAG' .or. TypeCoordGrid0 == 'GEO'
+                  all(TypeCoordGrid_I == 'MAG' .or. TypeCoordGrid_I == 'GEO')
           case(3,4)
              ! Kp and Ae indexes
              UseFastFacIntegral_I(iGroup) = TypeCoordIndex == 'MAG'
@@ -1523,7 +1535,11 @@ contains
     call test_start(NameSub, DoTest)
 
     ! only for mag grid file, the actual index is + 1
-    if(present(iFileIn)) iFileLocal = iFileIn + 1
+    if(present(iFileIn)) then
+       iFileLocal = iFileIn + 1
+    else
+       iFileLocal = 0
+    end if
 
     ! Configure output to cover specific magnetometer group:
     if (NameGroup == 'stat') then
@@ -1595,7 +1611,7 @@ contains
     if(.not.UseSurfaceIntegral) &
          call ground_mag_perturb(nMagNow, MagGmXyz_DI, dBMhd_DI)
     call ground_mag_perturb_fac(NameGroup, nMagNow, MagSmXyz_DI, &
-         dBFac_DI, dBMhd_DI)
+         dBFac_DI, dBMhd_DI, iFileLocal)
     call calc_ie_mag_perturb(nMagNow, MagSmXyz_DI, dBHall_DI, dBPedersen_DI)
 
     ! Collect the variables from all the PEs
