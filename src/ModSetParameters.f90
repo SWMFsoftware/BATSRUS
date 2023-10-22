@@ -587,11 +587,15 @@ contains
           call read_var('DoWriteCallSequence', DoWriteCallSequence)
 
        case("#VERBOSE", "#TEST", "#TESTXYZ", "#TEST2XYZ", "#TESTIJK", &
-            "#TEST2IJK", "#TESTVAR", "#TESTDIM", "#TESTSIDE", "#TESTPIX")
+            "#TEST2IJK", "#TESTVAR", "#TESTDIM", "#TESTSIDE")
           call read_test_param(NameCommand)
           if(NameCommand == "#TESTVAR") call get_iVar(NameVarTest, iVarTest)
           if(NameCommand == "#TEST" .and. IsStandAlone) &
                StringTestSwmf = StringTest
+
+       case("#TESTPIX")
+          call read_var('iPixTest', iPixTest)
+          call read_var('jPixTest', jPixTest)
 
        case("#STRICT")
           call read_var('UseStrict', UseStrict)

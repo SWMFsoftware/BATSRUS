@@ -253,6 +253,8 @@ module ModMain
 
   ! Variables for debugging.
 
+  integer :: iPixTest =-1, jPixTest = -1              ! pixel to test
+
   ! Shall we be strict about errors in the input parameter file
   logical :: UseStrict=.true.
 
