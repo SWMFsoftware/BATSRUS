@@ -587,7 +587,7 @@ contains
           call read_var('DoWriteCallSequence', DoWriteCallSequence)
 
        case("#VERBOSE", "#TEST", "#TESTXYZ", "#TEST2XYZ", "#TESTIJK", &
-            "#TEST2IJK", "#TESTVAR", "#TESTDIM", "#TESTSIDE")
+            "#TEST2IJK", "#TESTVAR", "#TESTDIM", "#TESTSIDE", "#TESTPIX")
           call read_test_param(NameCommand)
           if(NameCommand == "#TESTVAR") call get_iVar(NameVarTest, iVarTest)
           if(NameCommand == "#TEST" .and. IsStandAlone) &
