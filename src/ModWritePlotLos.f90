@@ -76,7 +76,7 @@ contains
     use ModIO
     use ModIoUnit, ONLY: UnitTmp_
     use ModAdvance, ONLY: State_VGB
-    use ModNumConst, ONLY: cTiny, cUnit_DD, cTolerance, cTwoPi
+    use ModNumConst, ONLY: cTiny, nByteReal, cUnit_DD, cTolerance, cTwoPi
     use ModMpi
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: rot_matrix_z, cross_product
@@ -656,7 +656,8 @@ contains
                              iTableEuv = iTableEuv,                     &
                              iTableSxr = iTableSxr,                     &
                              iTableGen = iTableGen,                     &
-                             PixIntensity_V=Image_VIII(1:nPlotVar,iPix,jPix,1))
+                             PixIntensity_V=Image_VIII(1:nPlotVar,iPix,jPix,&
+                             1), DoTestIn = DoTest)
                      end if
                   else
                      ! Distance between two intersections with the low
@@ -708,7 +709,9 @@ contains
            XyzLosNew_D, CoordLosNew_D, dCoord_D
 
       real, parameter:: StepMax = 1.0, StepMin = 0.5, StepGood = 0.75
-      real:: Step, DsTiny
+      real:: Step, DsTiny, DsStart
+      ! 1e-6 in single precision, 1d-9 in double precision
+      real,parameter :: cTinyStepFactor = 0.0010*(1000.0*cTiny)**(nByteReal/4)
       logical:: IsEdge
 
       logical :: DoTest = .false., DoTestMe = .false.
@@ -729,11 +732,14 @@ contains
       end if
 
       CoordSize_D = CoordMax_D - CoordMin_D
-      DsTiny = cTiny*(xMaxBox - xMinBox + yMaxBox - yMinBox + &
-           zMaxBox - zMinBox)
-
+      ! Previous version: DsTiny \approx  420 km which is not tiny
+      ! DsTiny = cTiny*&
+      ! New version:
+      DsStart = cTiny*&
+           (xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
+      DsTiny = DsStart*(cTinyStepFactor/cTiny)
       ! Initial length of segment
-      Ds = DsTiny
+      Ds = DsStart
 
       ! Initialize "new" position as the starting point
       XyzLosNew_D = XyzStartIn_D
@@ -743,7 +749,7 @@ contains
       CoordMinBlock_D = CoordMax_D
       CoordMaxBlock_D = CoordMin_D
 
-      if(DoTest.and.iProc==0) write(*,*) NameSub,': initial Ds=',Ds
+      if(DoTestMe) write(*,'(a,es14.6)') NameSub//':  Ds=',Ds
 
       Length = -Ds
       LOOPLINE: do
@@ -768,7 +774,7 @@ contains
                  ': Algorithm failed: zero integration step')
          end if
          if(DoTestMe)write(*,'(a,a,6es14.6)') NameSub,&
-              ' inside: Ds, Length, XyzLos, R=',&
+              ': Ds, Length, XyzLos, R=',&
               Ds, Length, XyzLos_D, norm2(XyzLos_D)
 
          ! Check if we are still in the same block or not
@@ -818,7 +824,11 @@ contains
 
             ! Don't integrate this segment if it is very small
             ! Since we took half of Ds, XyzLosNew is at the end
-            if(Ds < DsTiny)CYCLE LOOPLINE
+            if(Ds < DsTiny)then
+               if(DoTestMe)write(*,'(a,es14.6)')&
+                    'Too small step at the block boundary=', Ds
+               CYCLE LOOPLINE
+            end if
 
             ! Make sure we don't try to increase the step below
             IsEdge = .true.
@@ -847,7 +857,11 @@ contains
                Ds = Ds*0.5
 
                ! Don't integrate this segment if it is very small
-               if(Ds < DsTiny)CYCLE LOOPLINE
+               if(Ds < DsTiny)then
+                  if(DoTestMe)write(*,'(a,es14.6)')&
+                       'Too small step at the block boundary=', Ds
+                  CYCLE LOOPLINE
+               end if
             end do
          end if
          if(Length + Ds >= LengthMax)then
@@ -855,7 +869,7 @@ contains
             ! and add contribution from this segment to the image
             if(iProc == iProcFound)&
                  call add_segment(LengthMax - Length, XyzLosNew_D, &
-                 IsThreadedGap)
+                 IsThreadedGap, DoTest)
             if(DoTestMe)then
                XyzLosNew_D = XyzLos_D + (LengthMax - Length)*LosPix_D
                write(*,'(a,6es14.6)')&
@@ -867,7 +881,7 @@ contains
          else
             if(iProc == iProcFound)then
                ! Add contribution from this segment to the image
-               call add_segment(Ds, XyzLosNew_D,IsThreadedGap)
+               call add_segment(Ds, XyzLosNew_D,IsThreadedGap,DoTest)
             end if
 
             ! Move XyzLosNew to the end of the segment
@@ -878,7 +892,7 @@ contains
 
     end subroutine integrate_line
     !==========================================================================
-    subroutine add_segment(Ds, XyzLos_D, IsThreadedGap)
+    subroutine add_segment(Ds, XyzLos_D, IsThreadedGap, DoTest)
 
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
@@ -898,6 +912,7 @@ contains
       real, intent(in):: Ds          ! Length of line segment
       real, intent(in):: XyzLos_D(3) ! location of center of line segment
       logical, optional, intent(in) :: IsThreadedGap
+      logical, optional, intent(in) :: DoTest
 
       real :: x, y, z, r
       real :: aLos, bLos, cLos, dLos
@@ -994,7 +1009,7 @@ contains
               .or.(DoPlotThreads.and.& ! gap is used AND point is close to it
               GenLos_D(1) < CoordMin_D(1) + 0.50*CellSize_D(1) ))then
             ! Interpolate within the threaded gap
-            call interpolate_thread_state(GenLos_D, iBlock, State_V)
+            call interpolate_thread_state(GenLos_D, iBlock, State_V, DoTest)
          else
             ! Interpolate in the physical domain
             State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &

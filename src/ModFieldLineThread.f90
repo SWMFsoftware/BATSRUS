@@ -927,7 +927,7 @@ contains
 
   end subroutine read_thread_restart
   !============================================================================
-  subroutine interpolate_thread_state(Coord_D, iBlock, State_V)
+  subroutine interpolate_thread_state(Coord_D, iBlock, State_V, DoTestIn)
     ! Interpolate the state at the point with coords Coord_D from
     ! BoundaryThreads_B(iBlock)%State_VG(:,:,:)
     ! array, then convert to MHD
@@ -944,9 +944,17 @@ contains
 
     ! Interpolated state vector
     real,    intent(out):: State_V(nVar)
+    Logical, optional, intent(in) :: DoTestIn
     real                :: StateThread_V(PSi_:TiSi_), CoordNorm_D(3)
+    logical :: DoTest = .false.
     character(len=*), parameter:: NameSub = 'interpolate_thread_state'
     !--------------------------------------------------------------------------
+
+    if(present(DoTestIn))then
+       DoTest = DoTestIn
+    else
+       DoTest = .false.
+    end if
     CoordNorm_D(r_+1:) = 0.5 + &
          (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock)) &
          /CellSize_DB(r_+1:,iBlock)
@@ -979,6 +987,8 @@ contains
             x_D=CoordNorm_D,                                      &
             DoExtrapolate=.false.                                 )
     end if
+    if(DoTest)write(*,'(a,4es14.6)')NameSub//': PSi, a2+/-, TeSi=',&
+         StateThread_V(PSi_:TeSi_)
     call state_thread_to_mhd(Coord_D, StateThread_V, State_V)
   contains
     !==========================================================================
@@ -1659,7 +1669,8 @@ contains
   end subroutine save_threads_for_plot
   !============================================================================
   subroutine get_tr_los_image(Xyz_D, DirLos_D, iBlock, nPlotVar, &
-       NamePlotVar_V, iTableEuv, iTableSxr, iTableGen, PixIntensity_V)
+       NamePlotVar_V, iTableEuv, iTableSxr, iTableGen, PixIntensity_V,&
+       DoTestIn)
 
     ! Using a tabulated analytical solution for the Transition Region (TR),
     ! the contribution to the LOS image from the TR is calculated.
@@ -1681,6 +1692,8 @@ contains
     ! Tables, in which the emissivity in different ion lines
     ! is tabulated:
     integer, intent(in) :: iTableEuv, iTableSxr, iTableGen
+
+    logical, optional :: DoTestIn
 
     ! Logicals specifying the use of tables
     logical :: UseEuv, UseSxr, UseGenTable
@@ -1710,7 +1723,15 @@ contains
 
     ! Contribution to the image
     real :: PlotVar_V(nPlotVar)
+    logical :: DoTest = .false.
+    
     !--------------------------------------------------------------------------
+
+    if(present(DoTestIn))then
+       DoTest = DoTestIn
+    else
+       DoTest = .false.
+    end if
     ! Radial direction:
     DirR_D = Xyz_D/norm2(Xyz_D)
 
