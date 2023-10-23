@@ -4376,11 +4376,13 @@ GEO			TypeCoordGrid_I (GEO, MAG, SMG)
 30.0			DtSaveMagGrid_I
 
 This command allows calculating and saving magnetic perturbations on multiple
-longitude-latitude grids.
+longitude-latitude grids. nMagGridFile specifies the number of magnetometer
+grid outputs.
 
-StrGridFileOut_I specifies the file name and format, which can be 'ascii' (text file),
-'tec' (Tecplot text file), 'real4' (single precision binary) or
-'real8' (double precision binary).
+StrGridFileOut_I specifies the region name (part of the file name) and format.
+The region name can be any arbitrary string that the user can name for the
+region, and the format can be 'ascii' (text file), 'tec' (Tecplot text file),
+'real4' (single precision binary) or 'real8' (double precision binary).
 The coordinate system of the grid (not the output) can be set to GEO
 (geographic), MAG (geomagnetic) or SMG (solar magnetic) coordinates.
 
