@@ -251,6 +251,9 @@ F			UsePu3Heating
 1e7			TempPu3Si [K]
 10.0			FactorPu3 1/[au yr]
 
+#PHOTOIONIZATION
+T			UsePhotoionization
+
 #TURBULENCE
 10.0			DeltaUSi
 -0.8			CrossHelicity
