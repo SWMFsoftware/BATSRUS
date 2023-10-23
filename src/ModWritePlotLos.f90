@@ -7,7 +7,7 @@ module ModWritePlotLos
 #endif
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, nProc, iComm
-  use ModMain, ONLY: iPixTest, jPixTest
+  use ModMain, ONLY: iPi jPi
   use ModBatsrusUtility, ONLY: &
        barrier_mpi, stop_mpi, get_date_time, get_time_string
 
@@ -560,7 +560,8 @@ contains
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, DiscrChromo = -1.0, SqrtDiscr
       real:: XyzIntersect_D(3), XyzTR_D(3)
-      logical :: DoTest = .false., DoTestMe = .false.
+      logical:: DoTest
+      character(len=*), parameter:: NameSub = 'integrate_image'
       !------------------------------------------------------------------------
 
       ! Loop over pixels
@@ -571,7 +572,7 @@ contains
 
          do iPix = 1, nPix_D(1)
             DoTest = iPix==iPixTest.and.jPix==jPixTest
-            DoTestMe = DoTest.and.iProc==0
+            DoTest = DoTest.and.iProc==0
             ! X position of the pixel on the image plane
             aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
 
@@ -642,7 +643,7 @@ contains
                      if(UseTRCorrection.and.DoPlotThreads.and.          &
                           (UseEuv .or. UseSxr .or. UseTableGen))then
                         XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
-                        if(DoTestMe)write(*,'(a,4es14.6)')&
+                        if(DoTest)write(*,'(a,4es14.6)')&
                              'Calculate TR contribution at Xyz, R=',&
                              XyzTR_D, norm2(XyzTR_D)
                         call find_grid_block((rInner + cTiny)*XyzTR_D/  &
@@ -712,15 +713,14 @@ contains
       real:: Step, DsTiny, DsStart
       logical:: IsEdge
 
-      logical :: DoTest = .false., DoTestMe = .false.
-
+      logical:: DoTest
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
       iDimMin = r_
       if(present(IsThreadedGap))iDimMin = r_ + 1
       DoTest = iPix==iPixTest .and. jPix==iPixTest
-      DoTestMe = DoTest.and.iProc==0
-      if(DoTestMe) then
+      DoTest = DoTest.and.iProc==0
+      if(DoTest) then
          write(*,'(2a, 3es14.6, a, es14.6)')NameSub, ' XyzStartIn_D=', &
               XyzStartIn_D, ', heliocentric distance = ', norm2(XyzStartIn_D)
          write(*,'(2a, 3es14.6, a, es14.6)')NameSub, ' End point coords=',&
@@ -750,7 +750,7 @@ contains
       CoordMinBlock_D = CoordMax_D
       CoordMaxBlock_D = CoordMin_D
 
-      if(DoTestMe) write(*,'(a,es14.6)') NameSub//':  Ds=',Ds
+      if(DoTest) write(*,'(a,es14.6)') NameSub//':  Ds=',Ds
 
       Length = -Ds
       LOOPLINE: do
@@ -774,7 +774,7 @@ contains
             call stop_mpi(NameSub//&
                  ': Algorithm failed: zero integration step')
          end if
-         if(DoTestMe)write(*,'(a,a,6es14.6)') NameSub,&
+         if(DoTest)write(*,'(a,a,6es14.6)') NameSub,&
               ': Ds, Length, XyzLos, R=',&
               Ds, Length, XyzLos_D, norm2(XyzLos_D)
 
@@ -800,7 +800,7 @@ contains
             CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
             CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
             if(present(IsThreadedGap))CellSize_D(r_) = 1/dCoord1Inv
-            if(DoTestMe)then
+            if(DoTest)then
                write(*,'(a,a,i5)')NameSub,': new iBlock=', iBlock
                write(*, '(a, 3es14.6)')NameSub//': CoordMin=', CoordMinBlock_D
                write(*, '(a, 3es14.6)')NameSub//': CoordMax=', CoordMaxBlock_D
@@ -826,7 +826,7 @@ contains
             ! Don't integrate this segment if it is very small
             ! Since we took half of Ds, XyzLosNew is at the end
             if(Ds < DsTiny)then
-               if(DoTestMe)write(*,'(a,es14.6)')&
+               if(DoTest)write(*,'(a,es14.6)')&
                     'Too small step at the block boundary=', Ds
                CYCLE LOOPLINE
             end if
@@ -859,7 +859,7 @@ contains
 
                ! Don't integrate this segment if it is very small
                if(Ds < DsTiny)then
-                  if(DoTestMe)write(*,'(a,es14.6)')&
+                  if(DoTest)write(*,'(a,es14.6)')&
                        'Too small step at the block boundary=', Ds
                   CYCLE LOOPLINE
                end if
@@ -871,7 +871,7 @@ contains
             if(iProc == iProcFound)&
                  call add_segment(LengthMax - Length, XyzLosNew_D, &
                  IsThreadedGap, DoTest)
-            if(DoTestMe)then
+            if(DoTest)then
                XyzLosNew_D = XyzLos_D + (LengthMax - Length)*LosPix_D
                write(*,'(a,6es14.6)')&
                     'Last point, Ds, DsActual, Xyz, R=',&

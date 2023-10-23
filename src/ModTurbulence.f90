@@ -281,10 +281,10 @@ contains
     real :: FullB_D(3), FullB, Coef
     real :: EwavePlus, EwaveMinus
 
-    character(len=*), parameter:: NameSub = 'turbulent_cascade'
-    !--------------------------------------------------------------------------
     ! Low-frequency cascade due to small-scale nonlinearities
 
+    character(len=*), parameter:: NameSub = 'turbulent_cascade'
+    !--------------------------------------------------------------------------
     if(Lperp_ > 1 .and. .not.UseTurbulentCascade)then
        ! Usmanov's model for Lperp = \Lambda/KarmanTaylorAlpha
        ! Note that Lperp is multiplied with the density

@@ -946,10 +946,10 @@ contains
     real,    intent(out):: State_V(nVar)
     Logical, optional, intent(in) :: DoTestIn
     real                :: StateThread_V(PSi_:TiSi_), CoordNorm_D(3)
-    logical :: DoTest = .false.
+
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'interpolate_thread_state'
     !--------------------------------------------------------------------------
-
     if(present(DoTestIn))then
        DoTest = DoTestIn
     else
@@ -1723,8 +1723,9 @@ contains
 
     ! Contribution to the image
     real :: PlotVar_V(nPlotVar)
-    logical :: DoTest = .false.
-    
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_tr_los_image'
     !--------------------------------------------------------------------------
 
     if(present(DoTestIn))then

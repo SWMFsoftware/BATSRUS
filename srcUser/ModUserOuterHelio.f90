@@ -2628,7 +2628,7 @@ contains
 
     use ModTurbulence, ONLY: KarmanTaylorBeta2AlphaRatio
     use ModWaves,      ONLY: UseAlfvenWaves
-    
+
     ! Calculate the photoionization source terms for one cell.
 
     integer, intent(in):: i,j,k,iBlock
@@ -2643,7 +2643,7 @@ contains
     real :: State_V(nVar)
 
     real :: AlfvenSpeed, SourceTurbulence
-    
+
     ! Chika. Photoionization rate
     character(len=*), parameter:: NameSub = 'calc_photoion_source'
     !--------------------------------------------------------------------------
@@ -2718,7 +2718,7 @@ contains
           AlfvenSpeed = sqrt(sum(State_V(Bx_:Bz_)**2)/State_V(Rho_))
           SourceTurbulence = 0.5*TurbulencePerPu3Source*AlfvenSpeed &
                *sum(I0xpPh_I*sqrt(URelSPu3_I))
-          
+
           SourcePh_V(Pu3Energy_) = SourcePh_V(Pu3Energy_) &
                - SourceTurbulence
           SourcePh_V(WaveFirst_:WaveLast_) = 0.5*SourceTurbulence
