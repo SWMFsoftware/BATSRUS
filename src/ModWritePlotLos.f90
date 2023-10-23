@@ -710,8 +710,6 @@ contains
 
       real, parameter:: StepMax = 1.0, StepMin = 0.5, StepGood = 0.75
       real:: Step, DsTiny, DsStart
-      ! 1e-6 in single precision, 1d-9 in double precision
-      real,parameter :: cTinyStepFactor = 0.0010*(1000.0*cTiny)**(nByteReal/4)
       logical:: IsEdge
 
       logical :: DoTest = .false., DoTestMe = .false.
@@ -737,7 +735,10 @@ contains
       ! New version:
       DsStart = cTiny*&
            (xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
-      DsTiny = DsStart*(cTinyStepFactor/cTiny)
+
+      DsTiny = DsStart
+      if(nByteReal == 8) DsTiny = DsStart*1e-3
+
       ! Initial length of segment
       Ds = DsStart
 
