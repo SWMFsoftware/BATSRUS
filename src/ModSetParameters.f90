@@ -593,7 +593,7 @@ contains
           if(NameCommand == "#TEST" .and. IsStandAlone) &
                StringTestSwmf = StringTest
 
-       case("#TESTPIX")
+       case("#TESTPIXEL")
           call read_var('iPixTest', iPixTest)
           call read_var('jPixTest', jPixTest)
 

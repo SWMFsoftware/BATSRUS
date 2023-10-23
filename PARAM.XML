@@ -685,15 +685,15 @@ UpdateStateFast code only, where the sides are done with multiple threads
 on the GPU. Default value is shown.
 </command>
 
-<command name="TESTPIX">
+<command name="TESTPIXEL">
   <parameter name="iPixTest" type="integer"/>
   <parameter name="jPixTest" type="integer"/>
 
-#TESTPIX
+#TESTPIXEL
 200                     iPixTest
 200                     jPixTest
 
-Indexes of a pixel at the LOS synthetic image for which to test an output
+Indexes of the test pixel of the LOS plot.
 </command>
 
 <command name="STRICT" multiple="T">
