@@ -751,7 +751,7 @@ contains
 
        ! BODYDENSITY
        write(iUnitHere) 'AUXDATA BODYNUMDENSITY="',&
-            BodyNDim_I(IonFirst_), '"', CharNewLine
+            real2str(BodyNDim_I(IonFirst_), "f8.2"), '"', CharNewLine
 
        ! BORIS
        if(UseBorisCorrection .or. UseBorisSimple) then
