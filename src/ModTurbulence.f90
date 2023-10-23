@@ -273,13 +273,12 @@ contains
     use ModB0, ONLY: B0_DGB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,  Lperp_
-    use ModMultiFluid, ONLY: iRho_I, IonFirst_, nIonFluid
 
     integer, intent(in) :: i, j, k, iBlock
-    real, intent(out)   :: CoronalHeating, WaveDissipationRate_V(&
-         WaveFirst_:WaveLast_)
+    real, intent(out)   :: CoronalHeating, &
+         WaveDissipationRate_V(WaveFirst_:WaveLast_)
 
-    real :: FullB_D(3), FullB, Coef, Rho
+    real :: FullB_D(3), FullB, Coef
     real :: EwavePlus, EwaveMinus
 
     character(len=*), parameter:: NameSub = 'turbulent_cascade'
@@ -289,12 +288,8 @@ contains
     if(Lperp_ > 1 .and. .not.UseTurbulentCascade)then
        ! Usmanov's model for Lperp = \Lambda/KarmanTaylorAlpha
        ! Note that Lperp is multiplied with the density
-       if(nIonFluid > 1)then
-          Rho = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
-       else
-          Rho = State_VGB(Rho_,i,j,k,iBlock)
-       end if
-       Coef = sqrt(Rho)*2.0/State_VGB(Lperp_,i,j,k,iBlock)
+       Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock))*2.0 &
+            /State_VGB(Lperp_,i,j,k,iBlock)
     else
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -310,7 +305,7 @@ contains
        else
           FullB = norm2(FullB_D)
        end if
-       Coef = 2.0*sqrt(FullB/State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
+       Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))
        if(Lperp_>1)then
           ! The model for SC and IH, Lperp_ state variable is Lperp*sqrt(B)
           Coef = Coef/State_VGB(Lperp_,i,j,k,iBlock)
