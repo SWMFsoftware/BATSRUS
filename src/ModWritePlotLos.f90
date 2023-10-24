@@ -560,7 +560,9 @@ contains
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, DiscrChromo = -1.0, SqrtDiscr
       real:: XyzIntersect_D(3), XyzTR_D(3)
-      logical :: DoTest = .false., DoTestPe0 = .false.
+      logical :: DoTestPe0 = .false.
+      logical:: DoTest
+      character(len=*), parameter:: NameSub = 'integrate_image'
       !------------------------------------------------------------------------
 
       ! Loop over pixels
@@ -712,8 +714,9 @@ contains
       real:: Step, DsTiny
       logical:: IsEdge
 
-      logical :: DoTest = .false., DoTestPe0 = .false.
+      logical :: DoTestPe0 = .false.
 
+      logical:: DoTest
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
       iDimMin = r_

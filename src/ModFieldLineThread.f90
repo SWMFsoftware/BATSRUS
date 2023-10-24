@@ -1727,7 +1727,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_tr_los_image'
     !--------------------------------------------------------------------------
-
     if(present(DoTestIn))then
        DoTest = DoTestIn
     else
