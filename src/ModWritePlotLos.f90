@@ -709,9 +709,7 @@ contains
            XyzLosNew_D, CoordLosNew_D, dCoord_D
 
       real, parameter:: StepMax = 1.0, StepMin = 0.5, StepGood = 0.75
-      real:: Step, DsTiny, DsStart
-      ! 1e-6 in single precision, 1d-9 in double precision
-      real,parameter :: cTinyStepFactor = 0.0010*(1000.0*cTiny)**(nByteReal/4)
+      real:: Step, DsTiny
       logical:: IsEdge
 
       logical :: DoTest = .false., DoTestPe0 = .false.
@@ -732,14 +730,11 @@ contains
       end if
 
       CoordSize_D = CoordMax_D - CoordMin_D
-      ! Previous version: DsTiny \approx  420 km which is not tiny
-      ! DsTiny = cTiny*&
-      ! New version:
-      DsStart = cTiny*&
-           (xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
-      DsTiny = DsStart*(cTinyStepFactor/cTiny)
       ! Initial length of segment
-      Ds = DsStart
+      Ds = cTiny*&
+           (xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
+      DsTiny = Ds
+      if(nByteReal == 8) DsTiny = 0.001*Ds
 
       ! Initialize "new" position as the starting point
       XyzLosNew_D = XyzStartIn_D
