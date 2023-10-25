@@ -547,7 +547,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModSize, ONLY: MaxDim
     use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_
-    
+
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: CurlU_D(MaxDim)
 
