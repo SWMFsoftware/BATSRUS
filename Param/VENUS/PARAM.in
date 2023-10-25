@@ -1,4 +1,5 @@
-!- PARAM.in:  Example input file for BATSRUS --
+#DESCRIPTION
+Param/VENUS/PARAM.in		StringDescription
 
 #NORMALIZATION
 SOLARWIND		TypeNormalization

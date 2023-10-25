@@ -2561,21 +2561,13 @@ contains
 			URelS_I = (U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
                         + (U_DI(y_,Neu_:) - U_DI(y_,Ion_))**2 &
                         + (U_DI(z_,Neu_:) - U_DI(z_,Ion_))**2
-
-                   where(UseSource_I(Neu_:)) &
-                        URelSPu3_I = (U_DI(x_,Neu_:) - U_DI(x_,Pu3_))**2 &
-                        + (U_DI(y_,Neu_:) - U_DI(y_,Pu3_))**2 &
-                        + (U_DI(z_,Neu_:) - U_DI(z_,Pu3_))**2
 		end if
 
                 AlfvenSpeed = sqrt(sum(State_V(Bx_:Bz_)**2)/State_V(Rho_))
                 SourceTurbulence = 0.5*TurbulencePerPu3Source*AlfvenSpeed*( &
-                     I0px_I(Neu_)*sqrt(URelS_I(Neu_)) + &
-                     I0px_I(Ne2_)*sqrt(URelS_I(Ne2_)) + &
-                     I0px_I(Ne4_)*sqrt(URelS_I(Ne4_)) + &
-                     I0xpu3_I(Neu_)*sqrt(URelSPu3_I(Neu_)) + &
-                     I0xpu3_I(Ne2_)*sqrt(URelSPu3_I(Ne2_)) + &
-                     I0xpu3_I(Ne4_)*sqrt(URelSPu3_I(Ne4_)) )
+                     (I0px_I(Neu_) + I0xpu3_I(Neu_))*sqrt(URelS_I(Neu_)) + &
+                     (I0px_I(Ne2_) + I0xpu3_I(Ne2_))*sqrt(URelS_I(Ne2_)) + &
+                     (I0px_I(Ne4_) + I0xpu3_I(Ne4_))*sqrt(URelS_I(Ne4_)) )
 
                 SourceCx_V(Pu3Energy_) = SourceCx_V(Pu3Energy_) &
                      - SourceTurbulence
@@ -2626,6 +2618,9 @@ contains
   subroutine calc_photoion_source( &
        i,j,k,iBlock,U_DI,U2_I,SourcePh_V)
 
+    use ModTurbulence, ONLY: KarmanTaylorBeta2AlphaRatio
+    use ModWaves,      ONLY: UseAlfvenWaves
+
     ! Calculate the photoionization source terms for one cell.
 
     integer, intent(in):: i,j,k,iBlock
@@ -2636,8 +2631,10 @@ contains
     integer :: iFluid
     real :: r
     real, dimension(Neu_:Ne4_):: RatePh_I, I0xpPh_I, JxpUxPh_I, JxpUyPh_I, &
-         JxpUzPh_I, ExpPh_I, KxpPh_I
+         JxpUzPh_I, ExpPh_I, KxpPh_I, URelS_I
     real :: State_V(nVar)
+
+    real :: AlfvenSpeed, SourceTurbulence
 
     ! Chika. Photoionization rate
     character(len=*), parameter:: NameSub = 'calc_photoion_source'
@@ -2702,6 +2699,35 @@ contains
        SourcePh_V(Pu3RhoUy_)  = sum(JxpUyPh_I)
        SourcePh_V(Pu3RhoUz_)  = sum(JxpUzPh_I)
        SourcePh_V(Pu3Energy_) = sum(KxpPh_I)
+
+       if(UseAlfvenWaves)then
+          URelS_I = 0
+          where(UseSource_I(Neu_:)) &
+               URelS_I = (U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
+               + (U_DI(y_,Neu_:) - U_DI(y_,Ion_))**2 &
+               + (U_DI(z_,Neu_:) - U_DI(z_,Ion_))**2
+
+          AlfvenSpeed = sqrt(sum(State_V(Bx_:Bz_)**2)/State_V(Rho_))
+          SourceTurbulence = 0.5*TurbulencePerPu3Source*AlfvenSpeed &
+               *sum(I0xpPh_I*sqrt(URelS_I))
+
+          SourcePh_V(Pu3Energy_) = SourcePh_V(Pu3Energy_) &
+               - SourceTurbulence
+          SourcePh_V(WaveFirst_:WaveLast_) = 0.5*SourceTurbulence
+
+          if(Lperp_ > 1) SourcePh_V(Lperp_) = &
+               -KarmanTaylorBeta2AlphaRatio &
+               *State_V(Lperp_)*SourceTurbulence &
+               /max(1e-30,sum(State_V(WaveFirst_:WaveLast_)))
+
+          ! PUI-turbulence sinks for L_- and L_+ only
+          if(LcorrFirst_ > 1) &
+               SourcePh_V(LcorrFirst_:LcorrFirst_+nWave-1) = &
+               -KarmanTaylorBeta2AlphaRatio &
+               *State_V(LcorrFirst_:LcorrFirst_+nWave-1) &
+               *0.5*SourceTurbulence &
+               /max(1e-30,State_V(WaveFirst_:WaveLast_))
+       end if
 
        SourcePh_V(Pu3P_) = (Gamma-1)* ( SourcePh_V(Pu3Energy_) &
             - sum(U_DI(:,Pu3_)*SourcePh_V(Pu3RhoUx_:Pu3RhoUz_)) &

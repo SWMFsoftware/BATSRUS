@@ -1,6 +1,9 @@
 #INCLUDE
 GM/restartIN/restart.H
 
+#DESCRIPTION
+Param/VENUS/PARAM.in.restartread		StringDescription
+
 #VERBOSE
 1			lVerbose
 

@@ -7,6 +7,7 @@ module ModWritePlotLos
 #endif
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, nProc, iComm
+  use ModMain, ONLY: iPixTest, jPixTest
   use ModBatsrusUtility, ONLY: &
        barrier_mpi, stop_mpi, get_date_time, get_time_string
 
@@ -75,7 +76,7 @@ contains
     use ModIO
     use ModIoUnit, ONLY: UnitTmp_
     use ModAdvance, ONLY: State_VGB
-    use ModNumConst, ONLY: cTiny, cUnit_DD, cTolerance, cTwoPi
+    use ModNumConst, ONLY: cTiny, nByteReal, cUnit_DD, cTolerance, cTwoPi
     use ModMpi
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: rot_matrix_z, cross_product
@@ -289,13 +290,13 @@ contains
     ! Normalize line of sight vector pointing towards the origin
     Los_D       = -ObsPos_D/ObsDistance
 
-    if(DoTest) then
-       write(*,*) 'ObsPos         =', ObsPos_D
-       write(*,*) 'Los_D          =', Los_D
-       write(*,*) 'HalfSizeImage_D =', HalfSizeImage_D
-       write(*,*) 'aOffset,bOffset =', aOffsetOrig, bOffsetOrig
-       write(*,*) 'SizePix_D        =', SizePix_D
-       write(*,*) 'nPix_D           =', nPix_D
+    if(DoTest.and.iProc==0) then
+       write(*,'(a,3es14.6)') 'ObsPos         =', ObsPos_D
+       write(*,'(a,3es14.6)') 'Los_D          =', Los_D
+       write(*,'(a,3es14.6)') 'HalfSizeImage_D =', HalfSizeImage_D
+       write(*,'(a,2es14.6)') 'aOffset,bOffset =', aOffsetOrig, bOffsetOrig
+       write(*,'(a,3es14.6)') 'SizePix_D        =', SizePix_D
+       write(*,'(a,2i5)') 'nPix_D           =', nPix_D
     end if
 
     StringUnitTec = ''
@@ -304,7 +305,8 @@ contains
     TypePlot = TypePlot_I(iFile)
     StringPlotVar = StringPlotVar_I(iFile)
 
-    if(DoTest)write(*,*)'iFile=',iFile,' TypePlot_I=',TypePlot, &
+    if(DoTest.and.iProc==0)&
+         write(*,'(a,i4,a,a,a,a)')'iFile=',iFile,' TypePlot_I=',TypePlot, &
          ' form = ',TypePlotFormat_I(iFile)
 
     call lower_case(StringPlotVar)
@@ -316,11 +318,14 @@ contains
     iTableEuv = -1; iTableSxr = -1; iTableGen =  -1
     ! For generalized Los Table check NamePlotVar_V for string 'tbl'
     UseTableGen = any(NamePlotVar_V(1:nPlotVar)== 'tbl')
-
+    if(DoTest.and.iProc==0.and.UseTableGen)write(*,'(a,a)')'Use table=',&
+         trim(NameLosTable_I(iFile))
     if(UseTableGen) then
        iTableGen = i_lookup_table(trim(NameLosTable_I(iFile)))
        if (iTableGen <=0) &
             call stop_mpi('Need to load #LOOKUPTABLE for TBL response!')
+       if(DoTest .and. iProc==0) write(*,'(a,a)') 'NameVar in the table: ', &
+            trim(Table_I(iTableGen)%NameVar)
        ! split the variable list string read in the table
        call split_string(Table_I(iTableGen)%NameVar, MaxPlotvarLos, &
             NameTableVar_V, nTableVar)
@@ -330,18 +335,10 @@ contains
 
        ! redefine StringPlotVar with correct table info
        call join_string(nPlotVar, NamePlotVar_V, StringPlotVar)
-       if(DoTest .and. iProc==0) then
-          write(*,*) 'plot variables, UseRho=', trim(StringPlotVar), UseRho
-          write(*,*) 'nPlotVar, PlotVarNames_V=', &
-               nPlotVar,NamePlotVar_V(1:nPlotVar)
-       end if
 
        ! allocate the vector that will contain the interpolated values
        if(.not.allocated(InterpValues_I)) &
             allocate(InterpValues_I(nPlotVar))
-
-       if(DoTest .and. iProc==0) write(*,*) 'NameVar: ', &
-            Table_I(iTableGen)%NameVar
     endif
 
     if(UseDEM)then
@@ -356,27 +353,26 @@ contains
     NameAllVar = trim(NameAllVar)//' '//trim(StringPlotVar)//' ' &
          //StringPlotParam_I(iFile)
 
-    if(DoTest .and. iProc==0) write(*,*) 'NameAllVar: ', NameAllVar
+    if(DoTest .and. iProc==0) write(*,'(a,a)') 'NameAllVar: ', trim(NameAllVar)
 
     if(DoTest .and. iProc==0) then
-       write(*,*) 'plot variables, UseRho=', StringPlotVar, UseRho
-       write(*,*) 'nPlotVar, PlotVarNames_V=', &
-            nPlotVar,NamePlotVar_V(1:nPlotVar)
+       write(*,*) 'UseRho=', UseRho
+       write(*,*) 'nPlotVar=', nPlotVar
     end if
 
     ! Get the headers that contain variables names and units
     select case(TypePlotFormat_I(iFile))
     case('tec', 'tcp')
        call get_los_variable_tec(iFile,nPlotVar,NamePlotVar_V,StringUnitTec)
-       if(DoTest .and. iProc==0) write(*,*)StringUnitTec
+       if(DoTest .and. iProc==0) write(*,'(a)')trim(StringUnitTec)
     case('idl')
        call get_los_unit_idl(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, &
             .false.)
-       if(DoTest .and. iProc==0) write(*,*)StringUnitIdl
+       if(DoTest .and. iProc==0) write(*,'(a)')trim(StringUnitIdl)
     case('hdf')
        call get_los_unit_idl(iFile,nPlotVar,NamePlotVar_V,StringUnitIdl, &
             .true.)
-       if(DoTest .and. iProc==0) write(*,*)StringUnitIdl
+       if(DoTest .and. iProc==0) write(*,'(a)')trim(StringUnitIdl)
     end select
 
     if(UseTableGen) then
@@ -385,12 +381,14 @@ contains
           StringUnitTec = trim(StringUnitTec) &
                //', "'//trim(NamePlotVar_V(iVar))//'"'
        enddo
-       if(DoTest .and. iProc==0) write(*,*)'StringUnitTec: ',StringUnitTec
+       if(DoTest.and.iProc==0)&
+            write(*,'(a)')'StringUnitTec='//trim(StringUnitTec)
 
        if(TypePlotFormat_I(iFile) /= 'hdf') then
           call join_string(nPlotVar, NamePlotVar_V, StringPlotVar)
           StringUnitIdl = 'x y '//StringPlotVar
-          if(DoTest .and. iProc==0) write(*,*)'StringUnitIdl: ',StringUnitIdl
+          if(DoTest .and. iProc==0)&
+               write(*,'(a)')'StringUnitIdl: '//trim(StringUnitIdl)
        end if
     endif
 
@@ -498,6 +496,7 @@ contains
        Image_VIII = 0.0
 
        if(UseLosSimple .or. .not.IsCartesianGrid)then
+          if(DoTest.and.iProc==0)write(*,'(a)')'Start call_integrate_image'
           call integrate_image
        else
           ! loop over blocks
@@ -549,8 +548,6 @@ contains
     if(UseFlux .or. UseNbi .or. UsePhx)deallocate(Spectrum_I)
     if(UseTableGen) deallocate(InterpValues_I)
 
-    if(DoTest)write(*,*) NameSub,' finished'
-
     call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
@@ -563,6 +560,9 @@ contains
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, DiscrChromo = -1.0, SqrtDiscr
       real:: XyzIntersect_D(3), XyzTR_D(3)
+      logical :: DoTestPe0 = .false.
+      logical:: DoTest
+      character(len=*), parameter:: NameSub = 'integrate_image'
       !------------------------------------------------------------------------
 
       ! Loop over pixels
@@ -572,7 +572,8 @@ contains
          bPix = (jPix - 1) * SizePix_D(2) - HalfSizeImage_D(2)
 
          do iPix = 1, nPix_D(1)
-
+            DoTest = iPix==iPixTest.and.jPix==jPixTest
+            DoTestPe0 = DoTest.and.iProc==0
             ! X position of the pixel on the image plane
             aPix = (iPix - 1) * SizePix_D(1) - HalfSizeImage_D(1)
 
@@ -643,6 +644,9 @@ contains
                      if(UseTRCorrection.and.DoPlotThreads.and.          &
                           (UseEuv .or. UseSxr .or. UseTableGen))then
                         XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
+                        if(DoTestPe0)write(*,'(a,4es14.6)')&
+                             'Calculate TR contribution at Xyz, R=',&
+                             XyzTR_D, norm2(XyzTR_D)
                         call find_grid_block((rInner + cTiny)*XyzTR_D/  &
                              norm2(XyzTR_D),iProcFound, iBlock)
                         if( iProc==iProcFound)call get_tr_los_image(&
@@ -654,7 +658,8 @@ contains
                              iTableEuv = iTableEuv,                     &
                              iTableSxr = iTableSxr,                     &
                              iTableGen = iTableGen,                     &
-                             PixIntensity_V=Image_VIII(1:nPlotVar,iPix,jPix,1))
+                             PixIntensity_V=Image_VIII(1:nPlotVar,iPix,jPix,&
+                             1), DoTestIn = DoTest)
                      end if
                   else
                      ! Distance between two intersections with the low
@@ -709,27 +714,30 @@ contains
       real:: Step, DsTiny
       logical:: IsEdge
 
-      logical, parameter :: DoTest = .false.
+      logical :: DoTestPe0 = .false.
 
-      ! DoTest = iPix==200 .and. jPix==200
-
+      logical:: DoTest
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
       iDimMin = r_
       if(present(IsThreadedGap))iDimMin = r_ + 1
-      if(DoTest .and. iProc == 0) then
-         write(*,'(2a, 3f10.7, a, f10.7)')NameSub, ' XyzStartIn_D=', &
-              XyzStartIn_D, ', Distance = ', norm2(XyzStartIn_D)
-         write(*,'(2a, 3f10.7, a, f10.7)')NameSub, ' End point coordinates=',&
-              XyzStartIn_D + LengthMax*LosPix_D, ', Distance = ', norm2(&
+      DoTest = iPix==iPixTest .and. jPix==iPixTest
+      DoTestPe0 = DoTest.and.iProc==0
+      if(DoTestPe0) then
+         write(*,'(2a, 3es14.6, a, es14.6)')NameSub, ' XyzStartIn_D=', &
+              XyzStartIn_D, ', heliocentric distance = ', norm2(XyzStartIn_D)
+         write(*,'(2a, 3es14.6, a, es14.6)')NameSub, ' End point coords=',&
+              XyzStartIn_D + LengthMax*LosPix_D, &
+              ', heliocentric distance = ', norm2(&
               XyzStartIn_D + LengthMax*LosPix_D)
       end if
 
       CoordSize_D = CoordMax_D - CoordMin_D
-      DsTiny = cTiny*(xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
-
       ! Initial length of segment
-      Ds = DsTiny
+      Ds = cTiny*&
+           (xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
+      DsTiny = Ds
+      if(nByteReal == 8) DsTiny = 0.001*Ds
 
       ! Initialize "new" position as the starting point
       XyzLosNew_D = XyzStartIn_D
@@ -739,7 +747,7 @@ contains
       CoordMinBlock_D = CoordMax_D
       CoordMaxBlock_D = CoordMin_D
 
-      if(DoTest) write(*,*) NameSub,': initial Ds=',Ds
+      if(DoTestPe0) write(*,'(a,es14.6)') NameSub//':  Ds=',Ds
 
       Length = -Ds
       LOOPLINE: do
@@ -763,7 +771,9 @@ contains
             call stop_mpi(NameSub//&
                  ': Algorithm failed: zero integration step')
          end if
-         if(DoTest)write(*,*) NameSub,' inside: Ds, Length=', Ds, Length
+         if(DoTestPe0)write(*,'(a,a,6es14.6)') NameSub,&
+              ': Ds, Length, XyzLos, R=',&
+              Ds, Length, XyzLos_D, norm2(XyzLos_D)
 
          ! Check if we are still in the same block or not
          if(  any(CoordLos_D(iDimMin:) < CoordMinBlock_D(iDimMin:)) .or. &
@@ -787,10 +797,10 @@ contains
             CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
             CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
             if(present(IsThreadedGap))CellSize_D(r_) = 1/dCoord1Inv
-            if(DoTest)then
-               write(*,*)NameSub,': new iBlock=', iBlock
-               write(*, '(A, 3E12.5)')NameSub//': CoordMin=', CoordMinBlock_D
-               write(*, '(A, 3E12.5)')NameSub//': CoordMax=', CoordMaxBlock_D
+            if(DoTestPe0)then
+               write(*,'(a,a,i5)')NameSub,': new iBlock=', iBlock
+               write(*, '(a, 3es14.6)')NameSub//': CoordMin=', CoordMinBlock_D
+               write(*, '(a, 3es14.6)')NameSub//': CoordMax=', CoordMaxBlock_D
             end if
 
          end if
@@ -812,7 +822,11 @@ contains
 
             ! Don't integrate this segment if it is very small
             ! Since we took half of Ds, XyzLosNew is at the end
-            if(Ds < DsTiny)CYCLE LOOPLINE
+            if(Ds < DsTiny)then
+               if(DoTestPe0)write(*,'(a,es14.6)')&
+                    'Too small step at the block boundary=', Ds
+               CYCLE LOOPLINE
+            end if
 
             ! Make sure we don't try to increase the step below
             IsEdge = .true.
@@ -841,7 +855,11 @@ contains
                Ds = Ds*0.5
 
                ! Don't integrate this segment if it is very small
-               if(Ds < DsTiny)CYCLE LOOPLINE
+               if(Ds < DsTiny)then
+                  if(DoTestPe0)write(*,'(a,es14.6)')&
+                       'Too small step at the block boundary=', Ds
+                  CYCLE LOOPLINE
+               end if
             end do
          end if
          if(Length + Ds >= LengthMax)then
@@ -849,12 +867,19 @@ contains
             ! and add contribution from this segment to the image
             if(iProc == iProcFound)&
                  call add_segment(LengthMax - Length, XyzLosNew_D, &
-                 IsThreadedGap)
+                 IsThreadedGap, DoTest)
+            if(DoTestPe0)then
+               XyzLosNew_D = XyzLos_D + (LengthMax - Length)*LosPix_D
+               write(*,'(a,6es14.6)')&
+                    'Last point, Ds, DsActual, Xyz, R=',&
+                    Ds, LengthMax - Length, XyzLosNew_D,&
+                    norm2(XyzLosNew_D)
+            end if
             RETURN
          else
             if(iProc == iProcFound)then
                ! Add contribution from this segment to the image
-               call add_segment(Ds, XyzLosNew_D,IsThreadedGap)
+               call add_segment(Ds, XyzLosNew_D,IsThreadedGap,DoTest)
             end if
 
             ! Move XyzLosNew to the end of the segment
@@ -865,7 +890,7 @@ contains
 
     end subroutine integrate_line
     !==========================================================================
-    subroutine add_segment(Ds, XyzLos_D, IsThreadedGap)
+    subroutine add_segment(Ds, XyzLos_D, IsThreadedGap, DoTest)
 
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
@@ -885,6 +910,7 @@ contains
       real, intent(in):: Ds          ! Length of line segment
       real, intent(in):: XyzLos_D(3) ! location of center of line segment
       logical, optional, intent(in) :: IsThreadedGap
+      logical, optional, intent(in) :: DoTest
 
       real :: x, y, z, r
       real :: aLos, bLos, cLos, dLos
@@ -981,7 +1007,7 @@ contains
               .or.(DoPlotThreads.and.& ! gap is used AND point is close to it
               GenLos_D(1) < CoordMin_D(1) + 0.50*CellSize_D(1) ))then
             ! Interpolate within the threaded gap
-            call interpolate_thread_state(GenLos_D, iBlock, State_V)
+            call interpolate_thread_state(GenLos_D, iBlock, State_V, DoTest)
          else
             ! Interpolate in the physical domain
             State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &

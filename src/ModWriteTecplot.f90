@@ -750,8 +750,8 @@ contains
             int2str(nJ),' x',int2str(nK),'"', CharNewLine
 
        ! BODYDENSITY
-       write(iUnitHere, '(a,(f5.2),2a)') 'AUXDATA BODYNUMDENSITY="',&
-            BodyNDim_I(IonFirst_), '"', CharNewLine
+       write(iUnitHere) 'AUXDATA BODYNUMDENSITY="',&
+            real2str(BodyNDim_I(IonFirst_), "f8.2"), '"', CharNewLine
 
        ! BORIS
        if(UseBorisCorrection .or. UseBorisSimple) then

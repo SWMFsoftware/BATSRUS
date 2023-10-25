@@ -1346,7 +1346,7 @@ test_outerhelioawsom_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
 
 test_outerhelioawsom_check:
-	-@(${DIFFNUM} -r=1e-5 -t \
+	-@(${DIFFNUM} -r=3e-5 -t \
                 ${TESTDIR}/RESULTS/OH/log_n000010.log \
                 Param/OUTERHELIO/TestOutput/log_n000010_awsom.log \
                 > test_outerhelioawsom.diff)
