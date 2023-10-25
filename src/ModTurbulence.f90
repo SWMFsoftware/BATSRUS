@@ -340,8 +340,7 @@ contains
          get_tesi_c, TeSi_C
     use ModGeometry, ONLY: Used_GB, r_GB
     use ModMain, ONLY: UseB0
-    use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModMultiFluid, ONLY: iRho_I, IonFirst_
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
     integer, intent(in) :: iBlock
     logical, optional, intent(inout):: IsNewBlock
@@ -381,7 +380,7 @@ contains
        FullB = norm2(FullB_D)
        b_D = FullB_D/max(1e-15, FullB)
 
-       Rho = State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)
+       Rho = State_VGB(Rho_,i,j,k,iBlock)
 
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
@@ -496,8 +495,7 @@ contains
            RightState_VX, RightState_VY, RightState_VZ
       use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
       use ModMain, ONLY: UseB0
-      use ModVarIndexes, ONLY: Bx_, Bz_
-      use ModMultiFluid, ONLY: iRho_I, IonFirst_
+      use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
       integer :: i, j, k
       real :: Rho, FullB_D(3)
@@ -506,8 +504,8 @@ contains
          FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
               + RightState_VX(Bx_:Bz_,i,j,k))
          if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
-         Rho = 0.5*(LeftState_VX(iRho_I(IonFirst_),i,j,k) &
-              +     RightState_VX(iRho_I(IonFirst_),i,j,k))
+         Rho = 0.5*(LeftState_VX(Rho_,i,j,k) &
+              +     RightState_VX(Rho_,i,j,k))
          LogAlfven_FD(i,j,k,x_) = 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
       end do; end do; end do
 
@@ -516,8 +514,8 @@ contains
             FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
                  + RightState_VY(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
-            Rho = 0.5*(LeftState_VY(iRho_I(IonFirst_),i,j,k) &
-                 +     RightState_VY(iRho_I(IonFirst_),i,j,k))
+            Rho = 0.5*(LeftState_VY(Rho_,i,j,k) &
+                 +     RightState_VY(Rho_,i,j,k))
             LogAlfven_FD(i,j,k,Dim2_) = &
                  0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
          end do; end do; end do
@@ -528,8 +526,8 @@ contains
             FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
                  + RightState_VZ(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
-            Rho = 0.5*(LeftState_VZ(iRho_I(IonFirst_),i,j,k) &
-                 +     RightState_VZ(iRho_I(IonFirst_),i,j,k))
+            Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) &
+                 +     RightState_VZ(Rho_,i,j,k))
             LogAlfven_FD(i,j,k,Dim3_) = &
                  0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
          end do; end do; end do
@@ -548,8 +546,8 @@ contains
          RightState_VX, RightState_VY, RightState_VZ
     use ModCoordTransform, ONLY: cross_product
     use ModSize, ONLY: MaxDim
-    use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, IonFirst_
-
+    use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_
+    
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: CurlU_D(MaxDim)
 
@@ -562,54 +560,48 @@ contains
        DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
 
        CurlU_D(x_) = &
-            DyInvHalf*(LeftState_VY(iUz_I(IonFirst_),i,j+1,k)  &
-            +          RightState_VY(iUz_I(IonFirst_),i,j+1,k) &
-            -          LeftState_VY(iUz_I(IonFirst_),i,j,k)    &
-            -          RightState_VY(iUz_I(IonFirst_),i,j,k))  &
-            - DzInvHalf*(LeftState_VZ(iUy_I(IonFirst_),i,j,k+1)  &
-            +            RightState_VZ(iUy_I(IonFirst_),i,j,k+1) &
-            -            LeftState_VZ(iUy_I(IonFirst_),i,j,k)    &
-            -            RightState_VZ(iUy_I(IonFirst_),i,j,k))
+            DyInvHalf*(LeftState_VY(Uz_,i,j+1,k)    &
+            +          RightState_VY(Uz_,i,j+1,k)   &
+            -          LeftState_VY(Uz_,i,j,k)      &
+            -          RightState_VY(Uz_,i,j,k))    &
+            - DzInvHalf*(LeftState_VZ(Uy_,i,j,k+1)  &
+            +            RightState_VZ(Uy_,i,j,k+1) &
+            -            LeftState_VZ(Uy_,i,j,k)    &
+            -            RightState_VZ(Uy_,i,j,k))
 
        CurlU_D(y_) = &
-            DzInvHalf*(LeftState_VZ(iUx_I(IonFirst_),i,j,k+1)  &
-            +          RightState_VZ(iUx_I(IonFirst_),i,j,k+1) &
-            -          LeftState_VZ(iUx_I(IonFirst_),i,j,k)    &
-            -          RightState_VZ(iUx_I(IonFirst_),i,j,k))  &
-            - DxInvHalf*(LeftState_VX(iUz_I(IonFirst_),i+1,j,k)  &
-            +            RightState_VX(iUz_I(IonFirst_),i+1,j,k) &
-            -            LeftState_VX(iUz_I(IonFirst_),i,j,k)    &
-            -            RightState_VX(iUz_I(IonFirst_),i,j,k))
+            DzInvHalf*(LeftState_VZ(Ux_,i,j,k+1)    &
+            +          RightState_VZ(Ux_,i,j,k+1)   &
+            -          LeftState_VZ(Ux_,i,j,k)      &
+            -          RightState_VZ(Ux_,i,j,k))    &
+            - DxInvHalf*(LeftState_VX(Uz_,i+1,j,k)  &
+            +            RightState_VX(Uz_,i+1,j,k) &
+            -            LeftState_VX(Uz_,i,j,k)    &
+            -            RightState_VX(Uz_,i,j,k))
 
        CurlU_D(z_) = &
-            DxInvHalf*(LeftState_VX(iUy_I(IonFirst_),i+1,j,k)  &
-            +          RightState_VX(iUy_I(IonFirst_),i+1,j,k) &
-            -          LeftState_VX(iUy_I(IonFirst_),i,j,k)    &
-            -          RightState_VX(iUy_I(IonFirst_),i,j,k))  &
-            - DyInvHalf*(LeftState_VY(iUx_I(IonFirst_),i,j+1,k)  &
-            +            RightState_VY(iUx_I(IonFirst_),i,j+1,k) &
-            -            LeftState_VY(iUx_I(IonFirst_),i,j,k)    &
-            -            RightState_VY(iUx_I(IonFirst_),i,j,k))
+            DxInvHalf*(LeftState_VX(Uy_,i+1,j,k)    &
+            +          RightState_VX(Uy_,i+1,j,k)   &
+            -          LeftState_VX(Uy_,i,j,k)      &
+            -          RightState_VX(Uy_,i,j,k))    &
+            - DyInvHalf*(LeftState_VY(Ux_,i,j+1,k)  &
+            +            RightState_VY(Ux_,i,j+1,k) &
+            -            LeftState_VY(Ux_,i,j,k)    &
+            -            RightState_VY(Ux_,i,j,k))
     else
        CurlU_D(:) = &
-            + cross_product( FaceNormal_DDFB(:,1,i+1,j,k,iBlock),       &
-            LeftState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i+1,j,k)     &
-            + RightState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i+1,j,k)) &
-            - cross_product( FaceNormal_DDFB(:,1,i  ,j,k,iBlock),       &
-            LeftState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i  ,j,k)     &
-            + RightState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i  ,j,k)) &
-            + cross_product( FaceNormal_DDFB(:,2,i,j+1,k,iBlock),       &
-            LeftState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j+1,k)     &
-            + RightState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j+1,k)) &
-            - cross_product( FaceNormal_DDFB(:,2,i,j  ,k,iBlock),       &
-            LeftState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j  ,k)     &
-            + RightState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j  ,k)) &
-            + cross_product( FaceNormal_DDFB(:,3,i,j,k+1,iBlock),       &
-            LeftState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k+1)     &
-            + RightState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k+1)) &
-            - cross_product( FaceNormal_DDFB(:,3,i,j,k  ,iBlock),       &
-            LeftState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k)     &
-            + RightState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k))
+            + cross_product( FaceNormal_DDFB(:,1,i+1,j,k,iBlock),           &
+            LeftState_VX(Ux_:Uz_,i+1,j,k) + RightState_VX(Ux_:Uz_,i+1,j,k)) &
+            - cross_product( FaceNormal_DDFB(:,1,i  ,j,k,iBlock),           &
+            LeftState_VX(Ux_:Uz_,i,j,k) + RightState_VX(Ux_:Uz_,i,j,k))     &
+            + cross_product( FaceNormal_DDFB(:,2,i,j+1,k,iBlock),           &
+            LeftState_VY(Ux_:Uz_,i,j+1,k) + RightState_VY(Ux_:Uz_,i,j+1,k)) &
+            - cross_product( FaceNormal_DDFB(:,2,i,j  ,k,iBlock),           &
+            LeftState_VY(Ux_:Uz_,i,j,k) + RightState_VY(Ux_:Uz_,i,j,k))     &
+            + cross_product( FaceNormal_DDFB(:,3,i,j,k+1,iBlock),           &
+            LeftState_VZ(Ux_:Uz_,i,j,k+1) + RightState_VZ(Ux_:Uz_,i,j,k+1)) &
+            - cross_product( FaceNormal_DDFB(:,3,i,j,k  ,iBlock),           &
+            LeftState_VZ(Ux_:Uz_,i,j,k) + RightState_VZ(Ux_:Uz_,i,j,k))
 
        CurlU_D(:) = 0.5*CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
     end if
@@ -623,7 +615,7 @@ contains
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
 
-    use ModVarIndexes, ONLY: nVar, Lperp_
+    use ModVarIndexes, ONLY: nVar, Lperp_, Rho_
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: IonMassPerCharge, pMin_I, TMin_I
     use ModAdvance, ONLY: nVar, UseAnisoPressure, Bx_, Bz_, Pe_
@@ -901,7 +893,8 @@ contains
     ! UseAwRepresentativeHere on.
     use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB
-    use ModVarIndexes, ONLY: IonFirst_, iRho_I, WDiff_, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: Rho_, WDiff_, WaveFirst_, WaveLast_
+
     integer :: iBlock, i, j, k
     real    :: InvSqrtRho
     !--------------------------------------------------------------------------
@@ -910,7 +903,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock))CYCLE
           InvSqrtRho = 1/(  PoyntingFluxPerB*&
-               sqrt( State_VGB(iRho_I(IonFirst_),i,j,k,iBlock) )  )
+               sqrt( State_VGB(Rho_,i,j,k,iBlock) )  )
           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
                InvSqrtRho*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
           if(WDiff_>1)State_VGB(WDiff_,i,j,k,iBlock) = &
@@ -926,8 +919,9 @@ contains
     ! energy densities. Switch the logical
     ! UseAwRepresentativeHere off.
     use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, nI, nJ, nK
-    use ModVarIndexes, ONLY: IonFirst_, iRho_I, WDiff_, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: Rho_, WDiff_, WaveFirst_, WaveLast_
     use ModAdvance,    ONLY: State_VGB
+
     integer :: iBlock, i, j, k
     real    :: SqrtRho
     !--------------------------------------------------------------------------
@@ -936,7 +930,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock))CYCLE
           SqrtRho = PoyntingFluxPerB*sqrt( &
-               State_VGB(iRho_I(IonFirst_),i,j,k,iBlock) )
+               State_VGB(Rho_,i,j,k,iBlock) )
           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
                SqrtRho*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
           if(WDiff_>1)State_VGB(WDiff_,i,j,k,iBlock) = &
