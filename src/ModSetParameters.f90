@@ -102,7 +102,8 @@ contains
          read_solar_wind_file, normalize_solar_wind_data
     use ModSatelliteFile, ONLY: nSatellite, NameFileSat_I, NameSat_I, &
          read_satellite_parameters, read_satellite_input_files
-    use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
+    use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb,&
+         nMagGridFile
     use ModCalcSource, ONLY: read_source_param
     use ModFaceFlux, ONLY: read_face_flux_param, init_mod_face_flux, &
          TypeFluxNeutral, UseClimit, DoBurgers
@@ -2183,11 +2184,11 @@ contains
 
        case("#MAGNETOMETERGRID")
           call read_magperturb_param(NameCommand)
-          nFile = max(nFile, maggridfile_)
+          nFile = max(nFile, maggridfile_+nMagGridFile)
 
        case('#SUPERMAGINDICES')
           call read_magperturb_param(NameCommand)
-          nFile = max(nFile, maggridfile_)
+          nFile = max(nFile, maggridfile_+nMagGridFile)
 
        case("#GRIDGEOMETRY", "#GRIDGEOMETRYLIMIT")
           if(.not.is_first_session())CYCLE READPARAM
