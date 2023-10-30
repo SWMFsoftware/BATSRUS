@@ -312,7 +312,7 @@ contains
     ! The only other place iBoundary_GB is updated on GPU is in fix_block_
     ! geometry. There is at least one instance (in ModLoadBalance) where
     ! fix_boundary_ghost_cell is called AFTER fix_block_geometry.
-    
+
     if(DoTest) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
          iBoundary_GB(iTest-2:iTest+2,jTest,kTest,iBlockTest)
 
