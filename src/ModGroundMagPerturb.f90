@@ -830,7 +830,8 @@ contains
                   TypeCoordMag == 'MAG' .or. TypeCoordMag == 'GEO'
           case(2)
              ! magnetometer grids
-             UseFastFacIntegral_I(iGroup) = &
+             if (iFileLocal == nMagGridFile)     &
+                  UseFastFacIntegral_I(iGroup) = &
                   all(TypeCoordGrid_I == 'MAG' .or. TypeCoordGrid_I == 'GEO')
           case(3,4)
              ! Kp and Ae indexes
