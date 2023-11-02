@@ -1129,9 +1129,14 @@ contains
                 do i = MinI, 0
                    U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
 			/State_VGB(iRho,1-i,j,k,iBlock)
-                   U_D = U_D - sum(U_D*Runit_D)*Runit_D
-                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-                        (U*Runit_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
+                   if(U < 0.0)then
+                      State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                           - U_D*State_VGB(iRho,i,j,k,iBlock)
+                   else
+                      U_D = U_D - sum(U_D*Runit_D)*Runit_D
+                      State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                           (U*Runit_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
+                   end if
                 end do
              end do; end do
           else

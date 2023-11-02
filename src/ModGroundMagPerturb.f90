@@ -650,6 +650,8 @@ contains
 
     ! becomes true once the first integration was done for the group
     logical:: UseFastFacIntegral_I(nGroup) = .false.
+    ! for multiple mag grid files
+    logical, allocatable, save:: UseFastFacIntegralMagGrid_I(:)
 
     ! Coordinate system for the grid that collects the FAC
     logical         :: DoConvertCoord
@@ -666,6 +668,11 @@ contains
     if(present(iFileIn)) then
        ! already adjusted in write_magnetometers!
        iFileLocal = iFileIn
+       ! initialize for multiple mag grid files...
+       if (.not.allocated(UseFastFacIntegralMaggrid_I)) then
+          allocate(UseFastFacIntegralMagGrid_I(nMagGridFile))
+          UseFastFacIntegralMagGrid_I = .false.
+       end if
     else
        iFileLocal = 0
     end if
@@ -829,9 +836,13 @@ contains
              UseFastFacIntegral_I(iGroup) = &
                   TypeCoordMag == 'MAG' .or. TypeCoordMag == 'GEO'
           case(2)
-             ! magnetometer grids
+             ! each magnetometer grid file
+             UseFastFacIntegralMagGrid_I(iFileLocal) =       &
+                  TypeCoordGrid_I(iFileLocal) == 'MAG' .or.  &
+                  TypeCoordGrid_I(iFileLocal) == 'GEO'
+             ! only true if integrals have been done for all mag grid files.
              UseFastFacIntegral_I(iGroup) = &
-                  all(TypeCoordGrid_I == 'MAG' .or. TypeCoordGrid_I == 'GEO')
+                  all(UseFastFacIntegralMagGrid_I)
           case(3,4)
              ! Kp and Ae indexes
              UseFastFacIntegral_I(iGroup) = TypeCoordIndex == 'MAG'
