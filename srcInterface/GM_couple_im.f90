@@ -325,7 +325,7 @@ contains
     do iSat = 1, nSats
        ! Update satellite position.
        call GM_trace_sat(XyzSat_DI(1:3,iSat), SatRay_D)
-       
+
        call get_point_data( &
             0.0, XyzSat_DI(:,iSat), 1, nBlock, Bx_, Bz_, StateSat_V)
 

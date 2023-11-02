@@ -782,7 +782,7 @@ contains
 
     ! Trace position SatXyz_D and return result in SatRay_D on Proc 0
     ! All other processors return 0-s
-    
+
     real, intent(in) :: SatXyz_D(3) ! Satellite Position
     real, intent(out):: SatRay_D(3)
     real :: SatXyzIono_D(3), SatXyzEnd_D(3), SatXyzEnd2_D(3),B2

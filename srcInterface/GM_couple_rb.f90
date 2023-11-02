@@ -416,12 +416,12 @@ contains
        call get_point_data(0.0, XyzSat_DI(:,iSat), 1, nBlock, Bx_, Bz_, &
             StateSat_V)
        call collect_satellite_data(XyzSat_DI(:,iSat), 3, StateSat_V)
-       
+
        ! Store results in Buffer_III
        if (iProc == 0) then
           B0Sat_D = 0.0
           if(UseB0) call get_b0(XyzSat_DI(:,iSat), B0Sat_D)
-          
+
           Buffer_III(1:3,1,iSat)  = XyzSat_DI(1:3,iSat)
           ! Buffer_III(1:3,2,iSat) = sat_RayVarsSum(1:3)
           Buffer_III(1:3,2,iSat)  = SatRay_D
