@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!^CMP FILE iM
+!^CMP FILE IM
 
 module GM_couple_im
 
@@ -314,7 +314,7 @@ contains
 
     ! Internal variables
     real ::SatRay_D(3)
-    real :: StateSat_V(0:nVar+3), B0Sat_D(3)
+    real :: StateSat_V(0:3), B0Sat_D(3)
     integer :: iSat
 
     character(len=*), parameter:: NameSub = 'GM_get_sat_for_im_crcm'
@@ -328,7 +328,8 @@ contains
 
        call get_point_data( &
             0.0, XyzSat_DI(:,iSat), 1, nBlock, Bx_, Bz_, StateSat_V)
-       call collect_satellite_data(XyzSat_DI(:,iSat), StateSat_V)
+
+       call collect_satellite_data(XyzSat_DI(:,iSat), 3, StateSat_V)
 
        ! Store results in Buffer_III from processor zero
        if (iProc == 0) then
@@ -339,7 +340,7 @@ contains
           B0Sat_D = 0.0
           if(UseB0) call get_b0(XyzSat_DI(:,iSat), B0Sat_D)
           Buffer_III(4,2,iSat)   = &
-               sum( (StateSat_V(Bx_:Bz_) + B0Sat_D)**2 ) * No2Si_V(UnitB_)**2
+               sum( (StateSat_V(1:3) + B0Sat_D)**2 ) * No2Si_V(UnitB_)**2
        end if
     end do
 

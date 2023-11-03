@@ -770,19 +770,22 @@ contains
   !============================================================================
   subroutine GM_trace_sat(SatXyz_D, SatRay_D)
 
-    use ModFieldTrace,  ONLY: DoExtractState, DoExtractUnitSi, &
+    use ModFieldTrace, ONLY: DoExtractState, DoExtractUnitSi, &
          extract_field_lines, rIonosphere
     use ModVarIndexes, ONLY: nVar
-    use ModMain,      ONLY:tSimulation,TypeCoordSystem
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
     use ModNumConst,  ONLY: cRadToDeg
     use CON_axes,     ONLY: transform_matrix
     use CON_planet_field, ONLY: map_planet_field
     use ModPhysics,   ONLY: rBody
 
+    ! Trace position SatXyz_D and return result in SatRay_D on Proc 0
+    ! All other processors return 0-s
+
     real, intent(in) :: SatXyz_D(3) ! Satellite Position
-    real, intent(out)   :: SatRay_D(3)
-    real :: SatXyzIono_D(3),SatXyzEnd_D(3),SatXyzEnd2_D(3),B2
+    real, intent(out):: SatRay_D(3)
+    real :: SatXyzIono_D(3), SatXyzEnd_D(3), SatXyzEnd2_D(3),B2
 
     integer            :: nStateVar
     integer            :: nPoint
@@ -796,17 +799,14 @@ contains
     real    :: Rsat, Rxy2
     ! Conversion matrix between SM and GM coordinates
     ! (to be safe initialized to unit matrix)
-    real :: GmSm_DD(3,3) = reshape( [ &
-         1.,0.,0., &
-         0.,1.,0., &
-         0.,0.,1. ], [3,3] )
+    real :: GmSm_DD(3,3)
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'GM_trace_sat'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    DoExtractState = .true.
-    DoExtractUnitSi= .false.
+    DoExtractState  = .true.
+    DoExtractUnitSi = .false.
 
     ! Set the number lines and variables to be extracted
     nLine     = 1
@@ -856,13 +856,15 @@ contains
        end if
 
        call line_clean
+       DoExtractState  = .false.
 
-       ! Only iProc 0 stores result
+       ! Only iProc 0 returns actual result. The rest sends back 0.
+       SatRay_D = 0.0
        if(iProc /= 0) RETURN
 
        SatXyzEnd2_D = PlotVar_VI(2:4,nPoint)
 
-       B2=sum(PlotVar_VI(5:7,1)**2)
+       B2 = sum(PlotVar_VI(5:7,1)**2)
 
        deallocate(PlotVar_VI)
 
@@ -870,12 +872,8 @@ contains
        !  if(iProc /= 0) RETURN
 
        ! Check that line is closed
-       if (sum(SatXyzEnd_D(:)**2.0) > 8.0*rIonosphere**2.0 .or. &
-            sum(SatXyzEnd2_D(:)**2.0) > 8.0*rIonosphere**2.0) then
-          IsOpen=.true.
-       else
-          IsOpen=.false.
-       endif
+       IsOpen =  sum(SatXyzEnd_D**2)  > 8*rIonosphere**2 &
+            .or. sum(SatXyzEnd2_D**2) > 8*rIonosphere**2
 
        if (.not. IsOpen) then
           call map_planet_field(tSimulation, SatXyzEnd_D, &
@@ -883,7 +881,7 @@ contains
                iHemisphere)
 
           ! Transformation matrix between the SM(G) and GM coordinates
-          GmSm_DD = transform_matrix(tSimulation,'SMG',TypeCoordSystem)
+          GmSm_DD = transform_matrix(tSimulation, 'SMG', TypeCoordSystem)
           ! Convert GM position into RB position
           SatXyzIono_D = matmul(SatXyzIono_D, GmSm_DD)
 
@@ -892,7 +890,7 @@ contains
           SatRay_D(1) = cRadToDeg * asin(SatXyzIono_D(3)/rIonosphere)
           ! Calculate 0 < longitude = atan2(y,x) < 360
           SatRay_D(2) =  &
-               modulo(cRadToDeg *atan2(SatXyzIono_D(2),SatXyzIono_D(1)),360.0)
+               modulo(cRadToDeg*atan2(SatXyzIono_D(2), SatXyzIono_D(1)), 360.0)
 
           ! set closed flag
           SatRay_D(3) = 3.0
@@ -900,24 +898,24 @@ contains
           SatRay_D(1) = -100.0
           SatRay_D(2) = -200.0
           SatRay_D(3) = 0.0
-
        endif
     else
        ! When planet is inside rBody use dipole assumption
-       Rsat = norm2(SatXyz_D(1:3))
+       Rsat = norm2(SatXyz_D)
        Rxy2 = sum(SatXyz_D(1:2)**2)
        if(Rxy2 > 0.0)then
-          SatRay_D(1) = acos(1/sqrt(Rsat**3.0/Rxy2))*cRadToDeg
+          SatRay_D(1) = acos(1/sqrt(Rsat**3/Rxy2))*cRadToDeg
        else
           SatRay_D(1) = 90.0
        endif
 
        SatRay_D(2) =  &
-            modulo(cRadToDeg *atan2(SatXyz_D(2),SatXyz_D(1)),360.0)
+            modulo(cRadToDeg*atan2(SatXyz_D(2), SatXyz_D(1)), 360.0)
        ! set closed flag
        SatRay_D(3) = 3.0
     endif
     call test_stop(NameSub, DoTest)
+
   end subroutine GM_trace_sat
   !============================================================================
 end module ModSatelliteFile

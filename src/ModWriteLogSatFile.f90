@@ -464,8 +464,9 @@ contains
           B0Sat_D = 0.0
        end if
 
-       call get_point_data(0.0,XyzSat_DI(:,iSat),1,nBlock,1,nVar+3,StateSat_V)
-       call collect_satellite_data(XyzSat_DI(:,iSat),StateSat_V)
+       call get_point_data(0.0, XyzSat_DI(:,iSat), 1,nBlock, 1, nVar+3, &
+            StateSat_V)
+       call collect_satellite_data(XyzSat_DI(:,iSat), nVar+3, StateSat_V)
 
        if (UseRotatingFrame) then
           StateSat_V(rhoUx_)=StateSat_V(rhoUx_) &
@@ -1833,9 +1834,8 @@ contains
     !==========================================================================
   end function integrate_circle
   !============================================================================
-  subroutine collect_satellite_data(Xyz_D, StateCurrent_V)
+  subroutine collect_satellite_data(Xyz_D, nVar, StateCurrent_V)
 
-    use ModVarIndexes, ONLY: nVar
     use ModMpi
 
     real, intent(in) :: Xyz_D(3) ! The position of the interpolated state
@@ -1850,7 +1850,8 @@ contains
     !     returned state is -777.0
     ! The rest of the elements contain the globally interpolated state.
 
-    real, intent(inout) :: StateCurrent_V(0:nVar+3)
+    integer, intent(in) :: nVar
+    real, intent(inout) :: StateCurrent_V(0:nVar)
 
     ! local variables
 
@@ -1862,18 +1863,18 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     ! Collect contributions from all the processors to PE 0
-    if(nProc > 1)call MPI_reduce_real_array(StateCurrent_V, nVar+4, MPI_SUM, &
+    if(nProc > 1)call MPI_reduce_real_array(StateCurrent_V, nVar+1, MPI_SUM, &
          0, iComm, iError)
 
     ! Check total weight and divide by it if necessary
     if(iProc==0)then
        Weight = StateCurrent_V(0)
-       if(Weight<=0.0)then
-          write(*,*)'collect_satellite_data WARNING total weight =',&
-               Weight,' at Xyz_D=',Xyz_D
+       if(Weight <= 0.0)then
+          write(*,*) NameSub, ' WARNING total weight =', Weight, &
+               ' at Xyz_D=',Xyz_D
           StateCurrent_V = -777.0
        elseif(abs(Weight - 1) > 1.e-5)then
-          StateCurrent_V(1:nVar+3) = StateCurrent_V(1:nVar+3) / Weight
+          StateCurrent_V(1:nVar) = StateCurrent_V(1:nVar) / Weight
        end if
     end if
 
@@ -1897,8 +1898,9 @@ contains
     State_VGB(By_,:,:,:,:) = Xyz_DGB(z_,:,:,:,:)
     State_VGB(Bz_,:,:,:,:) = Xyz_DGB(x_,:,:,:,:)
 
-    call get_point_data(0.0,[xTest,yTest,zTest],1,nBlock,1,nVar+3,State_V)
-    call collect_satellite_data([xTest,yTest,zTest],State_V)
+    call get_point_data(0.0, [xTest,yTest,zTest], 1, nBlock, 1, nVar+3, &
+         State_V)
+    call collect_satellite_data([xTest,yTest,zTest], nVar+3, State_V)
 
     if(iProc==0)then
        if(max(abs(State_V(Bx_)-yTest),abs(State_V(By_)-zTest),&

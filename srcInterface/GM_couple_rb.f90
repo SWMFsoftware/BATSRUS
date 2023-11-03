@@ -402,8 +402,7 @@ contains
 
     real ::SatRay_D(3)
 
-    real :: StateSat_V(0:nVar+3), B0Sat_D(3)
-    real :: Bx,By,Bz,B2
+    real :: StateSat_V(0:3), B0Sat_D(3)
     integer :: iSat
     character(len=*), parameter:: NameSub = 'GM_get_sat_for_rb'
     !--------------------------------------------------------------------------
@@ -412,36 +411,22 @@ contains
 
     do iSat=1, nSats
        ! Update satellite position.
-       ! call set_satellite_flags(iSat)
-       ! call get_satellite_ray(iSat, sat_RayVars)
-       !
-       !! Reduce values from all
-       ! call MPI_reduce(sat_RayVars, sat_RayVarsSum, 5, MPI_REAL, MPI_SUM, &
-       !     0, iComm, iError)
-       !
-       ! write(*,*) 'sat_RayVars',sat_RayVars
-       call GM_trace_sat(XyzSat_DI(1:3,iSat),SatRay_D)
-       ! Determine magnetic field magnitude at satellite B=B0+B1
-       if(UseB0)then
-          call get_b0(XyzSat_DI(:,iSat), B0Sat_D)
-       else
-          B0Sat_D=0.00
-       end if
-       call get_point_data(0.0,XyzSat_DI(:,iSat),1,nBlock,1,nVar+3,StateSat_V)
-       call collect_satellite_data(XyzSat_DI(:,iSat),StateSat_V)
+       call GM_trace_sat(XyzSat_DI(:,iSat), SatRay_D)
 
-       Bx = StateSat_V(Bx_)+B0Sat_D(1)
-       By = StateSat_V(By_)+B0Sat_D(2)
-       Bz = StateSat_V(Bz_)+B0Sat_D(3)
-
-       B2 = (Bx**2.0 + By**2.0 + Bz**2.0) * (No2Si_V(UnitB_))**2.0
+       call get_point_data(0.0, XyzSat_DI(:,iSat), 1, nBlock, Bx_, Bz_, &
+            StateSat_V)
+       call collect_satellite_data(XyzSat_DI(:,iSat), 3, StateSat_V)
 
        ! Store results in Buffer_III
        if (iProc == 0) then
+          B0Sat_D = 0.0
+          if(UseB0) call get_b0(XyzSat_DI(:,iSat), B0Sat_D)
+
           Buffer_III(1:3,1,iSat)  = XyzSat_DI(1:3,iSat)
           ! Buffer_III(1:3,2,iSat) = sat_RayVarsSum(1:3)
           Buffer_III(1:3,2,iSat)  = SatRay_D
-          Buffer_III(4,2,iSat)    = B2
+          Buffer_III(4,2,iSat)    = &
+               sum( (StateSat_V(1:3) + B0Sat_D)**2 ) * No2Si_V(UnitB_)**2
        end if
     end do
 
