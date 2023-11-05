@@ -296,12 +296,15 @@ contains
   subroutine set_b0_face(iBlock)
 
     ! Calculate the face centered B0 for block iBlock
-
-    use ModParallel, ONLY: DiLevel_EB
-    use BATL_lib,    ONLY: nDim
+    use ModMain,  ONLY: UseFieldLineThreads
+    use ModParallel, ONLY: DiLevel_EB, Unset_
+    use BATL_lib,    ONLY: nDim, CoordMin_DB, CellSize_DB, coord_to_xyz
 
     integer,intent(in)::iBlock
-
+    ! Coords and Xyz for
+    real :: Coord_D(3), Xyz_D(3)
+    ! Loop variables
+    integer :: j, k
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_b0_face'
     !--------------------------------------------------------------------------
@@ -346,6 +349,16 @@ contains
             B0_DZ(:,1:nI,1:nJ,1   ) = B0ResChangeZ_DIIEB(:,:,:,5,iBlock)
        if(DiLevel_EB(6,iBlock) == -1) &
             B0_DZ(:,1:nI,1:nJ,1+nK) = B0ResChangeZ_DIIEB(:,:,:,6,iBlock)
+    end if
+    if(DiLevel_EB(1,iBlock) /= Unset_.and.UseFieldLineThreads)then
+       do k = 1, nK; do j = 1, nJ
+          ! Face center
+          Coord_D = CoordMin_DB(:,iBlock) +  [0.0, &
+               (j - 0.50)*CellSize_DB(2,iBlock),    &
+               (k - 0.50)*CellSize_DB(3,iBlock)]
+          call coord_to_xyz(Coord_D, Xyz_D)
+          call get_b0(Xyz_D, B0_DX(:,1 ,j,k))
+       end do; end do
     end if
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_face
