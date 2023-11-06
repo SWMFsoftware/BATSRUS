@@ -255,7 +255,7 @@ F			UsePu3Heating
 T			UsePhotoionization
 
 #TURBULENCE
-10.0			DeltaUSi
+30.0			DeltaUDim
 -0.8			CrossHelicity
 1.5e5			LperpTimesSqrtBSi
 0.06			TurbulencePerPu3Source
