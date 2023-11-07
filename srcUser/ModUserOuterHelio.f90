@@ -189,7 +189,7 @@ module ModUser
   real, allocatable :: FluidSource_ICB(:,:,:,:,:)
 
   ! Wave turbulence
-  real :: DeltaUSi = 10.0, DeltaU = 0.0
+  real :: DeltaUDim = 10.0, DeltaU = 0.0
   real :: CrossHelicity = -0.8
   real :: LperpTimesSqrtBSi = 1.5e5, LperpTimesSqrtB = 0.0
   real :: TurbulencePerPu3Source = 0.25
@@ -357,7 +357,7 @@ contains
           end select
 
        case("#TURBULENCE")
-          call read_var('DeltaUSi', DeltaUSi)
+          call read_var('DeltaUDim', DeltaUDim)
           call read_var('CrossHelicity', CrossHelicity)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           ! Our LperpTimesSqrtBSi is L_\perp*\sqrt(B)/KarmanTaylorAlpha
@@ -3206,7 +3206,7 @@ contains
     UseAlfvenWaves  = WaveFirst_ > 1
     UseWavePressure = WaveFirst_ > 1
 
-    DeltaU = DeltaUSi*Si2No_V(UnitU_)
+    DeltaU = DeltaUDim*Io2No_V(UnitU_)
     LperpTimesSqrtB = LperpTimesSqrtBSi*Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
 
     ! normalization of SWH and VLISW and Neutrals
