@@ -35,7 +35,7 @@ module ModUser
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iProc, nI, nJ, nK, &
-       nBlock, Unused_B
+       nBlock, MaxBlock, Unused_B
   use ModMain, ONLY: &
        body1_, tSimulation, iStartTime_I
   use ModPhysics,  ONLY: &
@@ -1911,7 +1911,7 @@ contains
       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
 
       if(.not.allocated(FluidSource_ICB)) &
-           allocate(FluidSource_ICB(nVar+nFluid,nI,nJ,nK,nBlock))
+           allocate(FluidSource_ICB(nVar+nFluid,nI,nJ,nK,MaxBlock))
       FluidSource_ICB(:,i,j,k,iBlock) = Source_V
 
       if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
