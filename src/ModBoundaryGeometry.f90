@@ -299,14 +299,20 @@ contains
 #ifdef _OPENACC
     if(nOrderProlong > 1)then
        call message_pass_cell(iBoundary_GB, &
-            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max',&
-            UseOpenACCIn=.true.)
+            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
+!       call message_pass_cell(iBoundary_GB, &
+!            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max',&
+!            UseOpenACCIn=.true.)
     else
        call message_pass_cell(iBoundary_GB, &
             nProlongOrderIn=1, nCoarseLayerIn=2, &
             DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max',&
-            UseOpenACCIn=.true.)
+            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
+!       call message_pass_cell(iBoundary_GB, &
+!            nProlongOrderIn=1, nCoarseLayerIn=2, &
+!            DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
+!            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max',&
+!            UseOpenACCIn=.true.)
     end if
 #else
     if(nOrderProlong > 1)then
