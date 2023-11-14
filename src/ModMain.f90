@@ -356,7 +356,6 @@ module ModMain
 #else
   logical, parameter:: UseOpenACC = .false.
 #endif
-  
 
 contains
   !============================================================================
