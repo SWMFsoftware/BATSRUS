@@ -350,6 +350,13 @@ module ModMain
 
   real, allocatable :: UaState_VCB(:,:,:,:,:)
 
+  ! Logical is true if compiled with OpenACC
+#ifdef _OPENACC
+  logical, parameter:: UseOpenACC = .true.
+#else
+  logical, parameter:: UseOpenACC = .false.
+#endif
+
 contains
   !============================================================================
   subroutine init_mod_main

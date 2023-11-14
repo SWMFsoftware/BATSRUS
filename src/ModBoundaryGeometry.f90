@@ -273,7 +273,7 @@ contains
     ! Recalculate Used_GB information in ghost cells if grid changed.
 
     use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
-             nIteration, nOrderProlong
+             nIteration, nOrderProlong, UseOpenACC
     use ModGeometry, ONLY: Used_GB, IsBody_B
     use BATL_lib, ONLY: message_pass_cell
 
@@ -296,35 +296,17 @@ contains
     ! boundary cells are set based on the state variables read from a restart
     ! file that has no ghost cell information saved. This can only happen
     ! at the very beginning of a run when nIteration == 0.
-#ifdef _OPENACC
     if(nOrderProlong > 1)then
        call message_pass_cell(iBoundary_GB, &
-            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
-!       call message_pass_cell(iBoundary_GB, &
-!            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max',&
-!            UseOpenACCIn=.true.)
+            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max',&
+            UseOpenACCIn=UseOpenACC)
     else
        call message_pass_cell(iBoundary_GB, &
             nProlongOrderIn=1, nCoarseLayerIn=2, &
             DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
-!       call message_pass_cell(iBoundary_GB, &
-!            nProlongOrderIn=1, nCoarseLayerIn=2, &
-!            DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-!            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max',&
-!            UseOpenACCIn=.true.)
+            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max',&
+            UseOpenACCIn=.true.)
     end if
-#else
-    if(nOrderProlong > 1)then
-       call message_pass_cell(iBoundary_GB, &
-            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
-    else
-       call message_pass_cell(iBoundary_GB, &
-            nProlongOrderIn=1, nCoarseLayerIn=2, &
-            DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-            DoResChangeOnlyIn=nIteration>0, NameOperatorIn='max')
-    end if
-#endif
     !$acc update device(iBoundary_GB)
     ! We probably need to update iBoundary_GB after message passing on CPU.
     ! The only other place iBoundary_GB is updated on GPU is in fix_block_
