@@ -93,10 +93,6 @@ T
 
 #USERINPUTEND -------------------------------------
 
-#MHDIONS
-T			DoAddRho
-T			DoAddRhoU
-
 #PLASMA
 1.0			FluidMass H [amu]
 32.0			FluidMass O2 [amu]
@@ -113,13 +109,8 @@ T			DoAddRhoU
 1e-11			LowPressureRatio
 F			DoRestrictMultiIon
 
-! For nyx or dc only
-#RESTARTOUTFILE
-block			StringRestartOutFile
-
 #SAVERESTART
 F			DoSaveRestart
-
 
 #SAVEPLOT
 3			nPlotFile

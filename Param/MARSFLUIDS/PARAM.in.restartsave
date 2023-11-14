@@ -152,12 +152,7 @@ issiC
 F
 T
 
-
 #USERINPUTEND -------------------------------------
-
-#MHDIONS
-T			DoAddRho
-T			DoAddRhoU
 
 #PLASMA
 1.0			FluidMass H [amu]
@@ -170,16 +165,10 @@ T			DoAddRhoU
 1.0			IonCharge CO2 [e]
 1.0			ElectronTemperatureRatio
 
-
-
 #MULTIION
 1e-9			LowDensityRatio
 1e-11			LowPressureRatio
 F			DoRestrictMultiIon
-
-! For nyx or dc only
-#RESTARTOUTFILE
-block			StringRestartOutFile
 
 #SAVERESTART
 T			DoSaveRestart
