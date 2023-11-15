@@ -174,9 +174,6 @@ F			DoRestrictMultiIon
 #SAVERESTART
 F			DoSaveRestart
 
-#SAVEINITIAL
-T			DoSaveInitial
-
 #SAVEPLOT
 3			nPlotFile
 x=0 MHD idl		StringPlot
