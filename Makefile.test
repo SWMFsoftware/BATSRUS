@@ -88,6 +88,7 @@ test_extra_help:
 	@echo "    test_mars                  (run Mars test)"
 	@echo "    test_mars_start            (run first mars test)"
 	@echo "    test_mars_restart          (run mars restart test)"
+	@echo "    test_marsfluids            (run Mars multifluid test)"
 	@echo "    test_mercurysph            (run Mercury test)"
 	@echo "    test_saturn                (run Saturn test)"
 	@echo "    test_titan                 (run Titan tests)"
@@ -154,6 +155,7 @@ test_extra:
 	./Config.pl -nohypre
 	-@($(MAKE) test_titan TESTDIR=run_test_titan)
 	-@($(MAKE) test_mars TESTDIR=run_test_mars)
+	-@($(MAKE) test_marsfluids TESTDIR=run_test_marsfluids)
 	-@($(MAKE) test_venus TESTDIR=run_test_venus)
 	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
 	-@($(MAKE) test_ganymede TESTDIR=run_test_ganymede)
