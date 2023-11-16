@@ -513,9 +513,13 @@ contains
                 Source_VC(WaveLast_ ,i,j,k) = Source_VC(WaveLast_ ,i,j,k) &
                      - 0.5*ModeConversionMinus*wD
 
-                ! Energy source related to the Alfven wave source above
-                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
-                     (ModeConversionPlus + ModeConversionMinus)*wD
+                if(.not.UseMultiIon)then
+                   ! Energy source related to the Alfven wave source above
+                   ! For multi ion it is done in ModMultiIon
+                   Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                        + 0.5*(ModeConversionPlus + ModeConversionMinus)*wD
+                end if
+
                 if(WDiff_>1) &
                      Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k)    &
                      - ModeConversionMinus * &
@@ -555,9 +559,13 @@ contains
                 Source_VC(WaveLast_, i,j,k) = Source_VC(WaveLast_ ,i,j,k) &
                      - 0.5*ModeConversionMinus*wD
 
-                ! Energy source related to the Alfven wave source above
-                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + 0.5*&
-                     (ModeConversionPlus + ModeConversionMinus)*wD
+                if(.not.UseMultiIon)then
+                   ! Energy source related to the Alfven wave source above
+                   ! For multi ion it is done in ModMultiIon
+                   Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                        + 0.5*(ModeConversionPlus + ModeConversionMinus)*wD
+                end if
+
                 if(WDiff_>1) &
                      Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) -&
                      Source_VC(WaveFirst_,i,j,k)*ModeConversionMinus   -&

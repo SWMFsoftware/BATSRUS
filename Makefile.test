@@ -88,6 +88,7 @@ test_extra_help:
 	@echo "    test_mars                  (run Mars test)"
 	@echo "    test_mars_start            (run first mars test)"
 	@echo "    test_mars_restart          (run mars restart test)"
+	@echo "    test_marsfluids            (run Mars multifluid test)"
 	@echo "    test_mercurysph            (run Mercury test)"
 	@echo "    test_saturn                (run Saturn test)"
 	@echo "    test_titan                 (run Titan tests)"
@@ -154,6 +155,7 @@ test_extra:
 	./Config.pl -nohypre
 	-@($(MAKE) test_titan TESTDIR=run_test_titan)
 	-@($(MAKE) test_mars TESTDIR=run_test_mars)
+	-@($(MAKE) test_marsfluids TESTDIR=run_test_marsfluids)
 	-@($(MAKE) test_venus TESTDIR=run_test_venus)
 	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
 	-@($(MAKE) test_ganymede TESTDIR=run_test_ganymede)
@@ -1620,7 +1622,7 @@ test_marsfluids_start:
 	$(MAKE) test_marsfluids_check
 
 test_marsfluids_compile:
-	./Config.pl ${OPENMP} -u=MarsFluids -e=MhdMarsFluids -ng=2 -g=6,6,6
+	./Config.pl -noopenmp -u=MarsFluidsOrig -e=MhdMarsFluids -ng=2 -g=6,6,6
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1629,7 +1631,7 @@ test_marsfluids_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_marsfluids_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_marsfluids_check:
@@ -1644,14 +1646,13 @@ test_marsfluids_restart:
 	$(MAKE) test_marsfluids_restart_save
 	@echo "test_marsfluids_restart_read..." >> test_marsfluids_restart.diff
 	$(MAKE) test_marsfluids_restart_read
-	@echo "test_marsfluids_restart_check..." >> test_marsfluids_restart.diff
+	@echo "test_marsfluids_restart_check..." >>test_marsfluids_restart.diff
 	$(MAKE) test_marsfluids_restart_check
-
 
 test_marsfluids_restart_save:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartsave PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_marsfluids
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
@@ -1659,7 +1660,7 @@ test_marsfluids_restart_read:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartread PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
