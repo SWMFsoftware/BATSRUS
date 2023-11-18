@@ -334,7 +334,7 @@ contains
           ! do nothing
        else
           if(index(StringTime,'step')>0) &
-               write(iUnit,'(i7)',ADVANCE='NO') nStep
+               write(iUnit,'(i8)',ADVANCE='NO') nStep
           if(index(StringTime,'date')>0) then
              call get_date_time(iTime_I)
              write(iUnit,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') &
