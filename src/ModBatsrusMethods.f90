@@ -1244,7 +1244,7 @@ contains
            (iFile > plot_ .and. iFile <= plot_+MaxPlotfile))) then
          if(IsTimeAccurate)then
             call write_prefix;
-            write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
+            write(iUnitOut,'(a,i2,a,a,a,i8,a,i4,a,i2.2,a,i2.2,a)') &
                  'saved iFile=',iFile,' type=',trim(TypePlot_I(iFile)),&
                  ' at nStep=',nStep,' time=', &
                  int(                            tSimulation/3600.),':', &
@@ -1253,7 +1253,7 @@ contains
                  int( tSimulation-(  60.*int(tSimulation/  60.))), &
                  ' h:m:s'
          else
-            call write_prefix; write(iUnitOut,'(a,i2,a,a,a,i7)') &
+            call write_prefix; write(iUnitOut,'(a,i2,a,a,a,i8)') &
                  'saved iFile=',iFile,' type=',TypePlot_I(iFile), &
                  ' at nStep=',nStep
          end if

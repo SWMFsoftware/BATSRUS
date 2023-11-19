@@ -284,9 +284,9 @@ contains
           endif
        end if
        CpuTimeAdvance=timing_func_d('sum/iter',2,'advance','BATSRUS')
-       write (*,'(i6,a,i6,a,f10.2)') nIteration,' of ', &
+       write (*,'(i8,a,i8,a,f10.2)') nIteration,' of ', &
             nIterExpect+nIteration,  &
-            ' iterations completed.   Expected time to completion:', &
+            ' iterations done.   Expected time to completion:', &
             CpuTimeAdvance*nIterExpect
        write(*,*)
     end if
