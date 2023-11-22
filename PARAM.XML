@@ -177,8 +177,8 @@ accurate in time depending on the value of nStage set in the
 For spherical grids the #FIXAXIS command does not work with the subcycling
 algorithm, on the other hand the #COARSENAXIS command can be used.
 
-See also the #PARTSTEADY and #TIMESTEPLIMIT commands for related
-time stepping algorithms.
+See also the #PARTSTEADY, #PARTLOCALTIMESTEP and #TIMESTEPLIMIT commands
+for related time stepping algorithms.
 
 The default is using a uniform time step for the whole domain.
 </command>
@@ -2879,6 +2879,21 @@ MHD scheme which works similarly to the hybrid one and can work together
 with hybrid. Requires nStage=3.
 </command>
 
+<command name="PARTLOCALTIMESTEP">
+  <parameter name="rLocalTimeStep" type="real" default="-1.0"/>
+
+#PARTLOCALTIMESTEP
+1.1                     rLocalTimeStep  
+
+Use local time stepping inside radial distance rLocalTimeStep and
+time accurate mode in the rest of the domain. The global time step Dt
+is only limited by the cells outside rLocalTimeStep. Inside rLocalTimeStep
+each cell advances with the smaller of Dt and the locally stable time step.
+This method can speed up the calculation when near the inner boundary the
+solution is quasi-steady state.
+
+Default value is rLocalTimeStep=-1, so the scheme is not used.
+</command>
 
 <command name="TIMESTEPLIMIT">
   <parameter name="UseDtLimit" type="logical"      default="F" />
