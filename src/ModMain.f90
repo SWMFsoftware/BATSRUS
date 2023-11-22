@@ -75,6 +75,9 @@ module ModMain
   logical :: UseDtLimit
   real    :: DtLimit, DtLimitOrig, DtLimitDim
 
+  ! Part local time step
+  real    :: rLocalTimeStep = -1.0
+
   ! Local time stepping (subcycling)
   logical:: UseLocalTimeStep    = .false.
   logical:: UseLocalTimeStepNew = .false. ! if just switched on

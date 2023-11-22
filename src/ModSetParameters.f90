@@ -634,6 +634,9 @@ contains
        case("#LOCALTIMESTEP", "#SUBCYCLING")
           call read_localstep_param(NameCommand, iSession)
 
+       case("#PARTLOCALTIMESTEP")
+          call read_var('rLocalTimeStep', rLocalTimeStep)
+
        case( "#TIMESTEPLIMIT")
           call               read_var('UseDtLimit', UseDtLimit)
           if(UseDtLimit)call read_var('DtLimitDim', DtLimitDim)
