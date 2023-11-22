@@ -58,7 +58,6 @@ contains
 
   end subroutine read_coarse_axis_param
   !============================================================================
-
   subroutine calc_coarse_axis_timestep(iBlock,iHemisphere)
     !$acc routine vector
 
@@ -96,10 +95,9 @@ contains
 
     do kLayer = 1, nCoarseLayer
        k = k + kStride; jMerge = jMerge*2
-
        do j = 1, nJ/jMerge
           jStart = (j-1)*jMerge + 1; jLast = j*jMerge
-          do i = 1,nI
+          do i = 1, nI
              if(any(.not. Used_GB(i,jStart:jLast,k,iBlock))) then
                 DtMax_CB(i,jStart:jLast,k,iBlock) = 0
              else
@@ -113,7 +111,7 @@ contains
 
                 DtMax_CB(i,jStart:jLast,k,iBlock) = &
                      jMerge*CellVolume_GB(i,jStart,k,iBlock) / Vdt
-          end if
+             end if
           end do
        end do
     end do
@@ -122,7 +120,6 @@ contains
 
   end subroutine calc_coarse_axis_timestep
   !============================================================================
-
   subroutine coarsen_axis_cells
 
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B
@@ -152,9 +149,9 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
-       if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
+       if(CoordMax_DB(Lat_,iBlock) > cHalfPi - 1e-8)then
           k = nK - nCoarseLayer; kStride =  1; jMerge = 1
-       elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
+       elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi + 1e-8)then
           k =  1 + nCoarseLayer; kStride = -1; jMerge = 1
        else
           CYCLE
@@ -162,14 +159,16 @@ contains
 
        !$acc loop
        do kLayer = 1, nCoarseLayer
+          ! Should we try to parallelize the kLayer and j loops?
+          ! k = k0 + kLayer*kStride; jMerge = 2**kLayer
           k = k + kStride; jMerge = jMerge*2
 
           !$acc loop
           do j = 1, nJ/jMerge
              jStart = (j-1)*jMerge + 1; jLast = j*jMerge
              !$acc loop vector collapse(2) independent
-             do i = 1,nI
-                do iVar = 1,nVar
+             do i = 1, nI
+                do iVar = 1, nVar
                    State_VGB(iVar,i,jStart:jLast,k,iBlock) = &
                         sum(State_VGB(iVar,i,jStart:jLast,k,iBlock))/jMerge
                 end do
