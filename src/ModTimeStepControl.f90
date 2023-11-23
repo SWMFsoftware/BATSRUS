@@ -49,7 +49,6 @@ module ModTimeStepControl
 
 contains
   !============================================================================
-
   subroutine read_time_step_control_param(NameCommand)
 
     use ModMain,       ONLY: NameVarLower_V
@@ -109,17 +108,16 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_time_step_control_param
   !============================================================================
-
   subroutine calc_timestep(iBlock)
     !$acc routine vector
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, DtFixed, DtMax_B, Cfl, &
-         UseDtLimit, DtLimit, IsTimeAccurate
+         UseDtLimit, DtLimit, rLocalTimeStep, IsTimeAccurate
     use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure, DoUpdate_V
-    use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B, r_GB
     use ModCoronalHeating, ONLY: get_block_heating
     use ModTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VC
     use ModChromosphere, ONLY: get_tesi_c, TeSi_C
@@ -231,19 +229,19 @@ contains
 #endif
 
     ! Compute maximum stable time step for this solution block
-    if(IsNoBody_B(iBlock)) then
+    if(IsNoBody_B(iBlock) .and. rLocalTimeStep < 0) then
        DtBlock = DtMax_CB(1,1,1,iBlock)
        !$acc loop vector independent collapse(3) reduction(min:DtBlock)
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           DtBlock = min(DtBlock, DtMax_CB(i,j,k,iBlock))
        end do; end do; end do
        DtMax_B(iBlock) = DtBlock
     else
-       ! If the block has no true cells, set DtMax_B=1.0E20
+       ! If the block has unused cells, initialize DtMax_B=1.0E20
        DtBlock = 1e20
        !$acc loop vector independent collapse(3) reduction(min:DtBlock)
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          if (Used_GB(i,j,k,iBlock)) &
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(Used_GB(i,j,k,iBlock) .and. r_GB(i,j,k,iBlock) > rLocalTimeStep) &
                DtBlock = min(DtBlock, DtMax_CB(i,j,k,iBlock))
        end do; end do; end do
        DtMax_B(iBlock) = DtBlock
@@ -289,14 +287,13 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_timestep
   !============================================================================
-
   subroutine set_global_timestep(TimeSimulationLimit)
 
     use ModMain
     use ModAdvance,  ONLY: DtMax_CB, State_VGB, rho_, Bx_, Bz_, P_, &
          iTypeAdvance_B, ExplBlock_
     use ModB0,       ONLY: B0_DGB
-    use ModGeometry, ONLY: Used_GB, IsNoBody_B
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B, r_GB
     use ModImplicit, ONLY: UsePartImplicit
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, No2Io_V, &
          UnitX_, UnitU_, UnitT_, UnitB_, UnitRho_, UnitP_, Gamma
@@ -345,14 +342,14 @@ contains
           ! run
           DtMinPE = huge(DtMax_B(1))
           !$acc parallel loop independent reduction(min:DtMinPE)
-          do iBlock=1,nBlock
+          do iBlock = 1, nBlock
              if (iTypeAdvance_B(iBlock) == ExplBlock_) &
                   DtMinPE = min(DtMinPE, DtMax_B(iBlock))
           end do
           if(UseMaxTimeStep) then
              DtMax = -huge(DtMax_B(1))
              !$acc parallel loop independent reduction(max:DtMax)
-             do iBlock=1,nBlock
+             do iBlock = 1, nBlock
                 if (iTypeAdvance_B(iBlock) == ExplBlock_) &
                      DtMax = max(DtMax, DtMax_B(iBlock))
              end do
@@ -360,7 +357,7 @@ contains
        else
           DtMinPE = huge(DtMax_B(1))
           !$acc parallel loop independent reduction(min:DtMinPE)
-          do iBlock=1,nBlock
+          do iBlock = 1, nBlock
              if (.not.Unused_B(iBlock)) &
                   DtMinPE = min(DtMinPE, DtMax_B(iBlock))
           end do
@@ -368,7 +365,7 @@ contains
           if(UseMaxTimeStep) then
              DtMax = -huge(DtMax_B(1))
              !$acc parallel loop independent reduction(max:DtMax)
-             do iBlock=1,nBlock
+             do iBlock = 1, nBlock
                 if (.not.Unused_B(iBlock)) DtMax = max(DtMax, DtMax_B(iBlock))
              end do
              DtMax = min(DtMax, DtLimit/Cfl)
@@ -478,7 +475,18 @@ contains
              DtMax_B(iBlock) = DtMax / 2**iTimeLevel_A(iNode_B(iBlock))
           end if
           DtMax_CB(:,:,:,iBlock) = DtMax_B(iBlock)
+       else if(rLocalTimeStep > 0)then
+          ! Set global time step outside rLocalTimeStep, limit by Dt inside
+          !$acc loop collapse(3)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(r_GB(i,j,k,iBlock) > rLocalTimeStep)then
+                DtMax_CB(i,j,k,iBlock) = Dt
+             else
+                DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), Dt)
+             end if
+          end do; end do; end do
        else
+          ! Set each cell to global time step
           !$acc loop collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              DtMax_CB(i,j,k,iBlock) = Dt
@@ -510,7 +518,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_global_timestep
   !============================================================================
-
   subroutine control_time_step
 
     use ModMain,     ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
@@ -627,6 +634,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine control_time_step
   !============================================================================
-
 end module ModTimeStepControl
 !==============================================================================
