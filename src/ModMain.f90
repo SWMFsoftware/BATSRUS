@@ -77,6 +77,7 @@ module ModMain
 
   ! Part local time step
   real    :: rLocalTimeStep = -1.0
+  !$acc declare create(rLocalTimeStep)
 
   ! Local time stepping (subcycling)
   logical:: UseLocalTimeStep    = .false.
