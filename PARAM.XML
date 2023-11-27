@@ -433,6 +433,9 @@ point northward as usual.
 <command name="UPDATEB0" if="$_IsStandAlone">
   <parameter name="DtUpdateB0" type="real" min="-1" default="0.0001" />
 
+#UPDATEB0
+0.0001			DtUpdateB0
+
 The DtUpdateB0 variable determines how often the position of
 the magnetic axis is recalculated. A negative value indicates that
 the motion of the magnetic axis during the course of the simulation
