@@ -1260,10 +1260,11 @@ contains
     !    case the code will stop excution).
 
     use ModVarIndexes, ONLY: nVar, NameVar_V, p_, Pe_, DefaultState_V, &
-         ChargeStateFirst_, ChargeStateLast_
+         ChargeStateFirst_, ChargeStateLast_, nChargeStateAll
     use ModAdvance,    ONLY: UseElectronPressure
     use ModMain,       ONLY: UseStrict, NameVarLower_V
-
+    use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, iP_I
+    
     integer :: i, j, k, iVar, iVarRead, iBlock, iVarPeRestart
     integer :: iVarMatch_V(nVar) = 0
     logical :: UseElectronPressureRestart = .false.
@@ -1384,11 +1385,20 @@ contains
                 end do; end do ; end do
              end do
           case default
-             if(ChargeStateLast_ > 1 .and. iVar >= ChargeStateFirst_ .and. &
-                  iVar <= ChargeStateLast_)then
-                if(iProc == 0 .and. iVar == ChargeStateFirst_)write(*,*)&
-                     'charge state variable initialized via user action !!!'
-                CYCLE
+             if(nChargeStateAll > 1)then
+                if(UseMultiIon)then
+                   if(iVar>p_ .and. iVar<=iP_I(nIonFluid))then
+                      if(iProc==0 .and. iVar==iP_I(nIonFluid)) write(*,*) &
+                           'charge state vars initialized via user action !!!'
+                      CYCLE
+                   end if
+                else
+                   if(iVar>=ChargeStateFirst_ .and. iVar<=ChargeStateLast_)then
+                      if(iProc == 0 .and. iVar==ChargeStateFirst_) write(*,*) &
+                           'charge state vars initialized via user action !!!'
+                      CYCLE
+                   end if
+                end if
              end if
              if(iProc==0) &
                   write(*,*) 'WARNING!!! : the state variable ', &
