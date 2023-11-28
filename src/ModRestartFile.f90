@@ -1264,7 +1264,7 @@ contains
     use ModAdvance,    ONLY: UseElectronPressure
     use ModMain,       ONLY: UseStrict, NameVarLower_V
     use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, iP_I
-    
+
     integer :: i, j, k, iVar, iVarRead, iBlock, iVarPeRestart
     integer :: iVarMatch_V(nVar) = 0
     logical :: UseElectronPressureRestart = .false.
