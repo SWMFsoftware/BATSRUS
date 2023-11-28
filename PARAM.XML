@@ -8324,8 +8324,8 @@ If there is no ionosphere and no body then the default is rTrace=-1.
 50			TraceLengthMax
 
 TraceLengthMax provides the maximum length for tracing a field/stream line.
-This avoid tracing extremely long field lines that are not used later.
-The default is 200 units.
+Setting a small limit can avoid tracing extremely long field lines that are
+not used later. The default is 200 units.
 </command>
 
 <command name="TRACEACCURACY">
