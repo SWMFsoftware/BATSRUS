@@ -1471,8 +1471,8 @@ contains
     ! For faces that are shared with a coarser neighbor, interpolate for all
     ! points which are not coinciding and where the trace is going out.
     !
-    ! a at IsOdd  j and even k requires interpolation in direction k
-    ! b at even j and IsOdd  k requires interpolation in direction j
+    ! a at odd  j and even k requires interpolation in direction k
+    ! b at even j and odd  k requires interpolation in direction j
     ! c at even j and even k requires interpolation in both directions
 
     ! (1,5)           (5,5)
@@ -1547,7 +1547,7 @@ contains
        do k=1,nfaceK
           if(mod(k,2)==1)then
              do j=2,nfaceJ,2
-                ! Case b: even j and IsOdd k
+                ! Case b: even j and odd k
 
                 if(IjkTrace_DII(iRay,j,k) /= RayOut_) CYCLE
 
@@ -1557,7 +1557,7 @@ contains
              end do
           else
              do j=1,nJ+1,2
-                ! Case a: IsOdd j and even k
+                ! Case a: odd j and even k
 
                 if(IjkTrace_DII(iRay,j,k) /= RayOut_) CYCLE
 
@@ -2389,8 +2389,8 @@ contains
       ! For faces that are shared with a coarser neighbor, interpolate for all
       ! points which are not coinciding and where the trace is going out.
       !
-      ! a at IsOdd  j and even k requires interpolation in direction k
-      ! b at even j and IsOdd  k requires interpolation in direction j
+      ! a at odd  j and even k requires interpolation in direction k
+      ! b at even j and odd  k requires interpolation in direction j
       ! c at even j and even k requires interpolation in both directions
 
       ! (1,5)           (5,5)
@@ -2501,7 +2501,7 @@ contains
 
             if(mod(k,2)==1)then
                do j=2,nfaceJ,2
-                  ! Case b: even j and IsOdd k
+                  ! Case b: even j and odd k
 
                   if(IjkTrace_DII(iRay,j,k)/=RayOut_)CYCLE
 
@@ -2513,7 +2513,7 @@ contains
                end do
             else
                do j=1,nJ+1,2
-                  ! Case a: IsOdd j and even k
+                  ! Case a: odd j and even k
 
                   if(IjkTrace_DII(iRay,j,k)/=RayOut_)CYCLE
 

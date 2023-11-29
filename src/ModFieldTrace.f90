@@ -178,7 +178,7 @@ module ModFieldTrace
   real :: RayLengthMax = 200.
 
   ! Testing
-  logical :: DoTestRay=.false.
+  logical :: DoTestRay = .false.
 
   ! Base time for timed exchanges between rays
   real(Real8_) :: CpuTimeStartRay
@@ -418,12 +418,12 @@ contains
     end if
     rInner2 = rInner**2
 
-    ClosedRay = xMinBox - 1
-    OpenRay   = xMinBox - 2
-    BodyRay   = xMinBox - 3
-    LoopRay   = xMinBox - 4
-    NoRay     = xMinBox - 100
-    OutRay    = xMinBox - 200
+    ClosedRay = xMinBox - 100
+    OpenRay   = xMinBox - 101
+    BodyRay   = xMinBox - 102
+    LoopRay   = xMinBox - 103
+    NoRay     = xMinBox - 104
+    OutRay    = xMinBox - 105
 
     if(DoTest)then
        write(*,*) 'rTrace, rTrace2          =', rTrace, rTrace2
@@ -553,8 +553,8 @@ contains
     ! Initial values
     Trace_DSNB = NoRay
 
-    if(DoTest)write(*,*) NameSub,' normalized B'
-    if(DoTime.and.iProc==0)then
+    if(DoTest) write(*,*) NameSub,' normalized B'
+    if(DoTime .and. iProc==0)then
        write(*,'(a)',ADVANCE='NO') 'setup and normalization:'
        call timing_show('trace_field_grid', 1)
     end if
@@ -566,10 +566,10 @@ contains
           if(Unused_B(iBlock))CYCLE
 
           DoTestRay = DoTest .and. &
-               all( [i,j,k,iBlock,iProc]== &
-               [iTest,jTest,kTest,iBlockTest,iProcTest] )
+               all( [i, j, k, iBlock, iProc] == &
+               [iTest, jTest, kTest, iBlockTest, iProcTest] )
 
-          do iRay = 1,2
+          do iRay = 1, 2
              ! Short cut for inner and false cells
              if(r_GB(i,j,k,iBlock) < rInner .or. &
                   .not.Used_GB(i,j,k,iBlock))then
@@ -2061,7 +2061,7 @@ contains
     DoExtractRay   = index(NameVar, '_I') > 0
 
     if(DoTest)write(*,*)NameSub,' DoIntegrateRay,DoExtractRay,DoTraceRay=',&
-         DoIntegrateRay,DoExtractRay,DoTraceRay
+         DoIntegrateRay, DoExtractRay, DoTraceRay
 
     if(DoExtractRay)then
        nRay_D  = [ nLat, nLon, 0, 0 ]
@@ -2260,7 +2260,7 @@ contains
     DoExtractRay   = index(NameVar, '_I') > 0
 
     if(DoTest)write(*,*)NameSub,' DoIntegrateRay,DoExtractRay,DoTraceRay=',&
-         DoIntegrateRay,DoExtractRay,DoTraceRay
+         DoIntegrateRay, DoExtractRay, DoTraceRay
 
     if(DoExtractRay)then
        nRay_D  = [ 2, nPts, 0, 0 ]
