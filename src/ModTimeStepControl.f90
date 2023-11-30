@@ -337,8 +337,8 @@ contains
 
     if(DoTest)write(*,*) NameSub, &
          ' starting with TimeSimulationLimit, DtMax_B, DtMax_CB=', &
-         TimeSimulationLimit, DtMax_B(iBlockTest), &
-         DtMax_CB(iTest,jTest,kTest,iBlockTest)
+         TimeSimulationLimit, DtMax_B(iBlockTest)*No2Io_V(UnitT_), &
+         DtMax_CB(iTest,jTest,kTest,iBlockTest)*No2Io_V(UnitT_)
 
     if(UseMaxTimeStep)then
        if(.not.allocated(iTimeLevel_A)) allocate(iTimeLevel_A(MaxNode))
@@ -520,7 +520,8 @@ contains
     !$acc update device(Dt)
 
     if(DoTest)write(*,*) NameSub,' finished with Dt, DtMax_B, DtMax_CB=', &
-         Dt, DtMax_B(iBlockTest), DtMax_CB(iTest,jTest,kTest,iBlockTest)
+         Dt*No2Io_V(UnitT_), DtMax_B(iBlockTest)*No2Io_V(UnitT_), &
+         DtMax_CB(iTest,jTest,kTest,iBlockTest)*No2Io_V(UnitT_)
 
     call test_stop(NameSub, DoTest)
   end subroutine set_global_timestep
