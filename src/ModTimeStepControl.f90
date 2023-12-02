@@ -278,14 +278,14 @@ contains
        end do; end do; end do
     end if
 
-    ! Limit local time step by global time step (we could limit this to 
+    ! Limit local time step by global time step (we could limit this to
     if(present(IsPartLocal) .and. Dt > 0)then
        !$acc loop vector collapse(3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           DtMax_CB(i,j,k,iBlock) = min(Dt/Cfl, DtMax_CB(i,j,k,iBlock))
        end do; end do; end do
     end if
-    
+
 #ifndef _OPENACC
     if(DoTest .and. UseDtFixed) &
          write(*,*) NameSub,' after UseDtFixed, DtMax_CB =', &
