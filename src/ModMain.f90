@@ -74,7 +74,7 @@ module ModMain
   ! Limited time step
   logical :: UseDtLimit
   real    :: DtLimit, DtLimitOrig, DtLimitDim
-  !$acc declare create(DtLimit)
+  !$acc declare create(UseDtLimit, DtLimit)
 
   ! Part local time step
   real    :: rLocalTimeStep = -1.0
