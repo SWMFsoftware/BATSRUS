@@ -108,11 +108,12 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_time_step_control_param
   !============================================================================
-  subroutine calc_timestep(iBlock)
+  subroutine calc_timestep(iBlock, IsPartLocal)
     !$acc routine vector
+
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
-    use ModMain, ONLY: UseDtFixed, DtFixed, DtMax_B, Cfl, &
+    use ModMain, ONLY: UseDtFixed, Dt, DtFixed, DtMax_B, Cfl, &
          UseDtLimit, DtLimit, rLocalTimeStep, IsTimeAccurate
     use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
@@ -128,7 +129,11 @@ contains
     use ModCoarseAxis, ONLY: UseCoarseAxis, calc_coarse_axis_timestep,&
          NorthHemiSph_, SouthHemiSph_
 
+    ! Calculate stable time step DtMax_CB for each cell in block iBlock.
+    ! If IsPartLocal is present, limit DtMax_CB with Dt/Cfl.
+
     integer, intent(in) :: iBlock
+    logical, optional, intent(in):: IsPartLocal
 
     integer:: i, j, k, Di, Dk, iGang
     real:: Vdt, DtBlock
@@ -265,11 +270,23 @@ contains
        end do; end do; end do
     endif
 
-#ifndef _OPENACC
     ! Limit local time step so that Cfl*DtMax_CB <= DtLimit,
-    if(UseDtLimit) &
-         DtMax_CB(:,:,:,iBlock) = min(DtLimit/Cfl, DtMax_CB(:,:,:,iBlock))
+    if(UseDtLimit)then
+       !$acc loop vector collapse(3)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          DtMax_CB(i,j,k,iBlock) = min(DtLimit/Cfl, DtMax_CB(i,j,k,iBlock))
+       end do; end do; end do
+    end if
 
+    ! Limit local time step by global time step (we could limit this to
+    if(present(IsPartLocal) .and. Dt > 0)then
+       !$acc loop vector collapse(3)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          DtMax_CB(i,j,k,iBlock) = min(Dt/Cfl, DtMax_CB(i,j,k,iBlock))
+       end do; end do; end do
+    end if
+
+#ifndef _OPENACC
     if(DoTest .and. UseDtFixed) &
          write(*,*) NameSub,' after UseDtFixed, DtMax_CB =', &
          DtMax_CB(iTest,jTest,kTest,iBlock)
@@ -320,8 +337,8 @@ contains
 
     if(DoTest)write(*,*) NameSub, &
          ' starting with TimeSimulationLimit, DtMax_B, DtMax_CB=', &
-         TimeSimulationLimit, DtMax_B(iBlockTest), &
-         DtMax_CB(iTest,jTest,kTest,iBlockTest)
+         TimeSimulationLimit, DtMax_B(iBlockTest)*No2Io_V(UnitT_), &
+         DtMax_CB(iTest,jTest,kTest,iBlockTest)*No2Io_V(UnitT_)
 
     if(UseMaxTimeStep)then
        if(.not.allocated(iTimeLevel_A)) allocate(iTimeLevel_A(MaxNode))
@@ -475,16 +492,6 @@ contains
              DtMax_B(iBlock) = DtMax / 2**iTimeLevel_A(iNode_B(iBlock))
           end if
           DtMax_CB(:,:,:,iBlock) = DtMax_B(iBlock)
-       else if(rLocalTimeStep > 0)then
-          ! Set global time step outside rLocalTimeStep, limit by Dt inside
-          !$acc loop collapse(3)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(r_GB(i,j,k,iBlock) > rLocalTimeStep)then
-                DtMax_CB(i,j,k,iBlock) = Dt
-             else
-                DtMax_CB(i,j,k,iBlock) = min(DtMax_CB(i,j,k,iBlock), Dt)
-             end if
-          end do; end do; end do
        else
           ! Set each cell to global time step
           !$acc loop collapse(3)
@@ -513,7 +520,8 @@ contains
     !$acc update device(Dt)
 
     if(DoTest)write(*,*) NameSub,' finished with Dt, DtMax_B, DtMax_CB=', &
-         Dt, DtMax_B(iBlockTest), DtMax_CB(iTest,jTest,kTest,iBlockTest)
+         Dt*No2Io_V(UnitT_), DtMax_B(iBlockTest)*No2Io_V(UnitT_), &
+         DtMax_CB(iTest,jTest,kTest,iBlockTest)*No2Io_V(UnitT_)
 
     call test_stop(NameSub, DoTest)
   end subroutine set_global_timestep

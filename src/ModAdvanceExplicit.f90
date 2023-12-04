@@ -27,7 +27,7 @@ contains
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: DiLevel_EB
-    use ModGeometry,   ONLY: IsBody_B, IsNoBody_B
+    use ModGeometry,   ONLY: IsBody_B, IsNoBody_B, rMin_B
     use ModBlockData,  ONLY: set_block_data
     use ModPhysics,    ONLY: No2Si_V, UnitT_, &
          update_angular_velocity, OmegaBody_D, UseBody2Orbit
@@ -177,23 +177,30 @@ contains
 
              ! With known magnetic field and electric field in the
              ! comoving frame update ion velocities at the half time-step
-             if(UseFlic.and.iStage>=2)call advance_ion_current(iBlock)
+             if(UseFlic .and. iStage >= 2)call advance_ion_current(iBlock)
+
              ! Electric field in the comoving frame is calculated
              ! and, probably used, in calc_sorces. Add -UxB, to get field
              ! in the global coordinate frame
-             if(UseChargedParticles.and.UseMhdMomentumFlux)&
+             if(UseChargedParticles .and. UseMhdMomentumFlux) &
                   call correct_efield_block(iBlock)
-             ! In the course of second stage in the FLIC scheme nothing
-             ! is updated instead of the (multi)ion currents, which are
-             ! updated by advance_ion_current.
-             if(UseFlic.and.iStage==2)CYCLE
-             ! Calculate time step (both local and global
-             ! for the block) used in multi-stage update
-             ! for steady state calculations.
-             ! Also calculate time step when UseDtLimit is true.
-             if((.not.IsTimeAccurate .or. UseDtLimit).and. iStage == 1 &
-                  .and. DoCalcTimestep) call calc_timestep(iBlock)
 
+             ! In the second stage in the FLIC scheme nothing is updated
+             ! except for the (multi)ion currents in advance_ion_current.
+             if(UseFlic .and. iStage==2) CYCLE
+
+             if(DoCalcTimestep .and. iStage == 1)then
+                ! Calculate time step (both local and global
+                ! for the block) used in multi-stage update
+                ! for steady state calculations.
+                ! Also calculate time step when UseDtLimit is true.
+                if(.not.IsTimeAccurate .or. UseDtLimit) &
+                     call calc_timestep(iBlock)
+
+                ! Set local time step inside rLocalTimeStep
+                if(IsTimeAccurate .and. rMin_B(iBlock) < rLocalTimeStep) &
+                     call calc_timestep(iBlock, IsPartLocal=.true.)
+             end if
              ! Update solution state in each cell.
              call timing_start('update_state')
              call update_state(iBlock)
@@ -214,7 +221,7 @@ contains
              ! for time accurate calculations.
              ! For time accurate with UseDtLimit, do not
              ! calculate time step.
-             if( IsTimeAccurate .and. .not.UseDtLimit.and. &
+             if( IsTimeAccurate .and. .not.UseDtLimit .and. &
                   iStage == nStage .and. DoCalcTimestep)&
                   call calc_timestep(iBlock)
 
