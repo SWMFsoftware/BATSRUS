@@ -1400,14 +1400,13 @@ contains
     use ModCoordTransform,      ONLY: rlonlat_to_xyz
     use ModConst,               ONLY: cTiny, cRadToDeg, cPi
 
-    real    :: Coord1
     integer :: i, j, k, iBlock, nPoint
 
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
     integer, parameter :: Lon_ = 1, Lat_=2
-    real    :: State_VI(Lat_+TiSi_,nThreadAll+2,-nGUniform:0), State_V(TiSi_), &
-         Coord_D(Lon_:Lat_)
+    real    :: State_VII(Lat_+TiSi_,nThreadAll+2,-nGUniform:0), &
+         State_V(TiSi_), Coord_D(Lon_:Lat_)
     real    :: Xyz_DI(3,nThreadAll+2,-nGUniform:0), Xyz_D(3)
 
     ! Data for interpolation: stencil and weights
@@ -1433,17 +1432,12 @@ contains
             iEnd_I(nThreadAll+2,-nGUniform:0))
        nThreadOld = nThreadAll
     end if
+    call get_thread_point(State_VII(:,2:nThreadAll+1,:))
     do i = -nGUniform, 0
-
-       ! Generalized radial coordinate of the grid points
-       Coord1 = CoordMin_D(r_) + real(i)/dCoord1Inv
-
-       call get_thread_point(Coord1, State_VI(:,2:nThreadAll+1,i))
-
        ! Convert lon and lat to Cartesian coordinates on a unit sphere
        call trans( n=nThreadAll,&
-            rlat=State_VI(2,2:nThreadAll+1,i), &
-            rlon=State_VI(1,2:nThreadAll+1,i), &
+            rlat=State_VII(2,2:nThreadAll+1,i), &
+            rlon=State_VII(1,2:nThreadAll+1,i), &
             x= Xyz_DI(x_,2:nThreadAll+1,i), &
             y= Xyz_DI(y_,2:nThreadAll+1,i), &
             z= Xyz_DI(z_,2:nThreadAll+1,i))
@@ -1467,7 +1461,7 @@ contains
             iEnd_I     =     iEnd_I(:,i), &
             Xyz_DI     =     Xyz_DI(:,:,i), &
             nVar       =      TiSi_,      &
-            State_VI   = State_VI(3:,:,i))
+            State_VI   = State_VII(3:,:,i))
        ! South:
        call fix_state(iNodeToFix =  nThreadAll+2,&
             nNode      =  nThreadAll+2,   &
@@ -1476,7 +1470,7 @@ contains
             iEnd_I     =     iEnd_I(:,i), &
             Xyz_DI     =     Xyz_DI(:,:,i), &
             nVar       =      TiSi_,      &
-            State_VI   = State_VI(3:,:,i))
+            State_VI   = State_VII(3:,:,i))
     end do
 
     ! Now, interpolate state vector to the points of a grid used for
@@ -1512,9 +1506,9 @@ contains
 
              ! interpolate  state vector to a grid point of a uniform grid
              BoundaryThreads_B(iBlock)%State_VG(:, i, j, k)  = &
-                  State_VI(3:, iStencil_I(1),i)*Weight_I(1) + &
-                  State_VI(3:, iStencil_I(2),i)*Weight_I(2) + &
-                  State_VI(3:, iStencil_I(3),i)*Weight_I(3)
+                  State_VII(3:, iStencil_I(1),i)*Weight_I(1) + &
+                  State_VII(3:, iStencil_I(2),i)*Weight_I(2) + &
+                  State_VII(3:, iStencil_I(3),i)*Weight_I(3)
           end do          ! i
        end do; end do    ! j,k
     end do       ! iBlock
@@ -1536,7 +1530,7 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-    subroutine get_thread_point(Coord1, State_VI)
+    subroutine get_thread_point(State_VII)
 
       ! Calculate coordinates (lon, lat) of the intersection point of threads
       ! with the spherical surface at the first generalized coordinate value
@@ -1545,8 +1539,8 @@ contains
       use BATL_lib, ONLY: nBlock, Unused_B, CoordMin_DB, CellSize_DB, r_
       use ModInterpolate, ONLY: linear
       use ModNumConst, ONLY: cHalfPi
-      real,  intent(in) :: Coord1
-      real, intent(out) :: State_VI(2+TiSi_, nThreadAll)
+      real :: Coord1
+      real, intent(out) :: State_VII(2+TiSi_, nThreadAll,-nGUniform:0)
       integer :: i, j, k, iBlock, nPoint, iBuff
       integer, parameter:: Lon_ = 1, Lat_ = 2
       real    :: StateThread_VI(2+TiSi_, 1-nPointThreadMax:0)
@@ -1557,7 +1551,7 @@ contains
       call test_start(NameSub, DoTest)
       ! Initialize output array
 
-      State_VI = 0.0
+      State_VII = 0.0
 
       ! Start value for Buffer index numerating the points related to given PE
       if(iProc==0)then
@@ -1589,39 +1583,44 @@ contains
                     StateThread_VI(2+AMinor_, 1 - nPoint:0)*&
                     BoundaryThreads_B(iBlock) &
                     %State_VIII(AMinor_,-nPoint:-1,j,k)
-               ! Now we find the intersection point of the thread with the
-               ! spherical surface at given radial gen coordinate, Coord1
-               ! and interpolate the state vector to this point
-               State_VI(:,iBuff)  = &
-                    linear(&
-                    a_VI =  StateThread_VI(:, 1 - nPoint:0),     &
-                    nVar = Lat_ + TiSi_,                         &
-                    iMin = 1 - nPoint,                           &
-                    iMax = 0,                                    &
-                    x = Coord1,                                  &
-                    x_I = BoundaryThreads_B(iBlock)              &
-                    %Coord_DIII(r_,1-nPoint:0,j,k),              &
-                    DoExtrapolate = .false.)
-            end do
-         end do
-      end do
-      call broadcast_buffer(nVar=Lat_+TiSi_, Buff_VI=State_VI)
+               do i = -nGUniform, 0
+                  ! Generalized radial coordinate of the plot grid point
+                  Coord1 = CoordMin_D(r_) + real(i)/dCoord1Inv
+                  ! Now we find the intersection point of the thread with the
+                  ! spherical surface at given radial gen coordinate, Coord1
+                  ! and interpolate the state vector to this point
+                  State_VII(:,iBuff,i)  = &
+                       linear(&
+                       a_VI =  StateThread_VI(:, 1 - nPoint:0),     &
+                       nVar = Lat_ + TiSi_,                         &
+                       iMin = 1 - nPoint,                           &
+                       iMax = 0,                                    &
+                       x = Coord1,                                  &
+                       x_I = BoundaryThreads_B(iBlock)              &
+                       %Coord_DIII(r_,1-nPoint:0,j,k),              &
+                       DoExtrapolate = .false.)
+               end do ! i
+            end do ! j
+         end do ! k
+      end do ! iBlock
+      call broadcast_buffer(nVar=Lat_+TiSi_, Buff_VII=State_VII)
       call test_stop(NameSub, DoTest)
 
     end subroutine get_thread_point
     !==========================================================================
-    subroutine broadcast_buffer(nVar, Buff_VI)
+    subroutine broadcast_buffer(nVar, Buff_VII)
 
       use ModMpi
       integer, intent(in) :: nVar
-      real, intent(inout) :: Buff_VI(nVar, nThreadAll)
+      real, intent(inout) :: Buff_VII(nVar, nThreadAll,-nGUniform:0)
       integer             :: iBuff, iProcBCast, iError
       !------------------------------------------------------------------------
       iBuff = 0
       do iProcBCast = 0, nProc-1
          if(nThread_P(iProcBCast)==0)CYCLE
-         call MPI_BCAST(Buff_VI(:, iBuff+1:iBuff+nThread_P(iProcBCast)),&
-              nVar*nThread_P(iProcBCast), MPI_REAL, iProcBCast, iComm, iError)
+         call MPI_BCAST(Buff_VII(:, iBuff+1:iBuff+nThread_P(iProcBCast),:),&
+              (nGUniform + 1)*nVar*nThread_P(iProcBCast), MPI_REAL, &
+              iProcBCast, iComm, iError)
          iBuff = iBuff + nThread_P(iProcBCast)
       end do
 
