@@ -1406,9 +1406,9 @@ contains
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
     integer, parameter :: Lon_ = 1, Lat_=2
-    real    :: State_VI(Lat_+TiSi_,nThreadAll+2), State_V(TiSi_), &
+    real    :: State_VI(Lat_+TiSi_,nThreadAll+2,-nGUniform:0), State_V(TiSi_), &
          Coord_D(Lon_:Lat_)
-    real    :: Xyz_DI(3,nThreadAll+2), Xyz_D(3)
+    real    :: Xyz_DI(3,nThreadAll+2,-nGUniform:0), Xyz_D(3)
 
     ! Data for interpolation: stencil and weights
     real    :: Weight_I(3)
@@ -1417,7 +1417,7 @@ contains
     ! Local Logicals
     logical :: IsTriangleFound = .false.
     ! Triangulation data
-    integer, allocatable, save :: iList_I(:), iPointer_I(:), iEnd_I(:)
+    integer, allocatable, save :: iList_I(:,:), iPointer_I(:,:), iEnd_I(:,:)
     integer, save :: nThreadOld = 0
 
     logical:: DoTest
@@ -1427,8 +1427,10 @@ contains
 
     if(nThreadOld/=nThreadAll)then
        if(allocated(iList_I))deallocate(iList_I, iPointer_I, iEnd_I)
-       allocate(iList_I(6*nThreadAll), iPointer_I(6*nThreadAll), &
-            iEnd_I(nThreadAll+2))
+       allocate(&
+            iList_I(6*nThreadAll,-nGUniform:0),    &
+            iPointer_I(6*nThreadAll,-nGUniform:0), &
+            iEnd_I(nThreadAll+2,-nGUniform:0))
        nThreadOld = nThreadAll
     end if
     do i = -nGUniform, 0
@@ -1436,67 +1438,69 @@ contains
        ! Generalized radial coordinate of the grid points
        Coord1 = CoordMin_D(r_) + real(i)/dCoord1Inv
 
-       call get_thread_point(Coord1, State_VI(:,2:nThreadAll+1))
+       call get_thread_point(Coord1, State_VI(:,2:nThreadAll+1,i))
 
        ! Convert lon and lat to Cartesian coordinates on a unit sphere
        call trans( n=nThreadAll,&
-            rlat=State_VI(2,2:nThreadAll+1), &
-            rlon=State_VI(1,2:nThreadAll+1), &
-            x= Xyz_DI(x_,2:nThreadAll+1), &
-            y= Xyz_DI(y_,2:nThreadAll+1), &
-            z= Xyz_DI(z_,2:nThreadAll+1))
+            rlat=State_VI(2,2:nThreadAll+1,i), &
+            rlon=State_VI(1,2:nThreadAll+1,i), &
+            x= Xyz_DI(x_,2:nThreadAll+1,i), &
+            y= Xyz_DI(y_,2:nThreadAll+1,i), &
+            z= Xyz_DI(z_,2:nThreadAll+1,i))
 
        ! Add two grid nodes at the poles:
-       Xyz_DI(:,1)            = [0.0, 0.0, -1.0]
-       Xyz_DI(:,nThreadAll+2) = [0.0, 0.0, +1.0]
+       Xyz_DI(:,1,i)            = [0.0, 0.0, -1.0]
+       Xyz_DI(:,nThreadAll+2,i) = [0.0, 0.0, +1.0]
 
        ! Triangulate
-       call trmesh(nThreadAll+2, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
-            iList_I, iPointer_I, iEnd_I, iError)
+       call trmesh(nThreadAll+2, &
+            Xyz_DI(x_,:,i), Xyz_DI(y_,:,i), Xyz_DI(z_,:,i), &
+            iList_I(:,i), iPointer_I(:,i), iEnd_I(:,i), iError)
        if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
 
        ! Fix states at the polar nodes:
        ! North:
-       call fix_state(iNodeToFix =   1,&
-            nNode      =  nThreadAll+2,&
-            iList_I    =    iList_I,   &
-            iPointer_I = iPointer_I,   &
-            iEnd_I     =     iEnd_I,   &
-            Xyz_DI     =     Xyz_DI,   &
-            nVar       =      TiSi_,   &
-            State_VI   = State_VI(3:,:))
+       call fix_state(iNodeToFix =   1,   &
+            nNode      =  nThreadAll+2,   &
+            iList_I    =    iList_I(:,i), &
+            iPointer_I = iPointer_I(:,i), &
+            iEnd_I     =     iEnd_I(:,i), &
+            Xyz_DI     =     Xyz_DI(:,:,i), &
+            nVar       =      TiSi_,      &
+            State_VI   = State_VI(3:,:,i))
        ! South:
        call fix_state(iNodeToFix =  nThreadAll+2,&
-            nNode      =  nThreadAll+2,&
-            iList_I    =    iList_I,&
-            iPointer_I = iPointer_I,&
-            iEnd_I     =     iEnd_I,&
-            Xyz_DI     =     Xyz_DI,&
-            nVar       =      TiSi_,&
-            State_VI   = State_VI(3:,:))
+            nNode      =  nThreadAll+2,   &
+            iList_I    =    iList_I(:,i), &
+            iPointer_I = iPointer_I(:,i), &
+            iEnd_I     =     iEnd_I(:,i), &
+            Xyz_DI     =     Xyz_DI(:,:,i), &
+            nVar       =      TiSi_,      &
+            State_VI   = State_VI(3:,:,i))
+    end do
 
-       ! Now, interpolate state vector to the points of a grid used for
-       ! plotting
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock))CYCLE
-          if(.not.IsAllocatedThread_B(iBlock))CYCLE
-
-          do k = kMin_, kMax_; do j = jMin_, jMax_
-             Coord_D = CoordMin_DB(2:,iBlock) + &
-                  CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
-             ! Transform longitude and latitude to the unit vector
-             call rlonlat_to_xyz(1.0, Coord_D(Lon_), Coord_D(Lat_), &
-                  Xyz_D)
-
+    ! Now, interpolate state vector to the points of a grid used for
+    ! plotting
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       if(.not.IsAllocatedThread_B(iBlock))CYCLE
+       
+       do k = kMin_, kMax_; do j = jMin_, jMax_
+          Coord_D = CoordMin_DB(2:,iBlock) + &
+               CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
+          ! Transform longitude and latitude to the unit vector
+          call rlonlat_to_xyz(1.0, Coord_D(Lon_), Coord_D(Lat_), &
+               Xyz_D)
+          do i = -nGUniform, 0
              ! Find a triangle into which this vector falls and the
              ! interpolation weights
              if(UsePlanarTriangles)then
-                call find_triangle_orig(Xyz_D, nThreadAll+2, Xyz_DI, &
-                     iList_I, iPointer_I, iEnd_I,                 &
+                call find_triangle_orig(Xyz_D, nThreadAll+2, Xyz_DI(:,:,i), &
+                     iList_I(:,i), iPointer_I(:,i), iEnd_I(:,i),            &
                      Weight_I, IsTriangleFound, iStencil_I)
              else
-                call find_triangle_sph( Xyz_D, nThreadAll+2, Xyz_DI, &
-                     iList_I, iPointer_I, iEnd_I,                 &
+                call find_triangle_sph( Xyz_D, nThreadAll+2, Xyz_DI(:,:,i), &
+                     iList_I(:,i), iPointer_I(:,i), iEnd_I(:,i),            &
                      Weight_I(1), Weight_I(2), Weight_I(3),       &
                      IsTriangleFound,                             &
                      iStencil_I(1), iStencil_I(2), iStencil_I(3))
@@ -1508,12 +1512,13 @@ contains
 
              ! interpolate  state vector to a grid point of a uniform grid
              BoundaryThreads_B(iBlock)%State_VG(:, i, j, k)  = &
-                  State_VI(3:, iStencil_I(1))*Weight_I(1) + &
-                  State_VI(3:, iStencil_I(2))*Weight_I(2) + &
-                  State_VI(3:, iStencil_I(3))*Weight_I(3)
-          end do; end do    ! j,k
-       end do       ! iBlock
-    end do          ! i
+                  State_VI(3:, iStencil_I(1),i)*Weight_I(1) + &
+                  State_VI(3:, iStencil_I(2),i)*Weight_I(2) + &
+                  State_VI(3:, iStencil_I(3),i)*Weight_I(3)
+          end do          ! i
+       end do; end do    ! j,k
+    end do       ! iBlock
+    
 
     ! One extra layer passing through physical cell centers (i=1)
     do iBlock = 1, nBlock
