@@ -153,9 +153,11 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   ! Put into a temporary array StateGm_VI
   if(Xyz_D(3) < 0 .and. nLinePw2 /=0) then
+     ! Southern polar cap
      allocate(StateGm_VI(1:iUGmLast, nPoint2))
      StateGm_VI = StateGm2_VI(:,nLinePw1+1:nLinePw1+nPoint2)
   else
+     ! Northern polar cap
      allocate(StateGm_VI(1:iUGmLast, nPoint1))
      StateGm_VI = StateGm1_VI(:,1:nPoint1)
   end if

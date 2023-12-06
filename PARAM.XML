@@ -1950,7 +1950,7 @@ Possible values for TypeBcBody are:
                     is applied above 55 degrees latitude.  See #OUTFLOWCRITERIA for more information.
 'polarwind'       - same as ionosphere, but in the polar region use
                     the density and velocity from PW component if coupled,
-                    or apply values read from the #POLARWIND command
+                    or apply values read from the #POLARBOUNDARY command
 'buffergrid'      - IH(OH) component obtains inner boundary from the SC(IH)
 		    component, through a buffer grid. The buffer grid is set
 		    by the #BUFFERGRID or #HELIOBUFFERGRID commands. In
@@ -2180,7 +2180,7 @@ select from multiple boundary conditions implemented in the user module.
 
 <command name="POLARBOUNDARY">
   <parameter name="PolarNDim" type="real" min="0"     default="20"/>
-  <parameter name="PolarTDim" type="real" min="0"     default="1e5"/>
+  <parameter name="PolarTDim" type="real" min="-1"    default="1e5"/>
   <parameter name="PolarUDim" type="real" min="0"     default="1"/>
   <parameter name="PolarLatitude" type="real" min="0" default="75"/>
 #POLARBOUNDARY
@@ -2188,16 +2188,17 @@ select from multiple boundary conditions implemented in the user module.
 100000.0	PolarTDim [K]      for fluid 1
 1.0		PolarUDim [km/s]   for fluid 1
 2.0		PolarNDim [amu/cc] for fluid 2
-20000.0		PolarTDim [K]      for fluid 2
+-1.0		PolarTDim [K]      for fluid 2
 1.5		PolarUDim [km/s]   for fluid 2
 75.0		PolarLatitude [deg]
 
-This command defines the boundary conditions in the polar region. The number
-density, temperature and velocity can be given (for all fluids in multifluid
-calculations). This mimics polar wind like inner boundary
-conditions when GM is not coupled with the PW component.
-The PolarLatitude parameter determines the latitudinal extent
-of the polar boundary where the outflow is defined.
+This command defines the boundary conditions in the polar region. The
+number density, temperature and velocity can be given (for all fluids
+in multifluid calculations). Negative temperature value sets the
+pressure float.  This mimics polar wind like inner boundary conditions
+when GM is not coupled with the PW component.  The PolarLatitude
+parameter determines the latitudinal extent of the polar boundary
+where the outflow is defined.
 </command>
 
 <command name="CPCPBOUNDARY">

@@ -839,24 +839,6 @@ contains
                       * FBC%VarsGhostFace_V(iRho_I(IonFirst_)) &
                       /MassFluid_I(IonFirst_)
 
-                 ! for the 'all' fluid
-                 FBC%VarsGhostFace_V(Rho_) = sum(FBC%VarsGhostFace_V( &
-                      iRho_I(IonFirst_:iIonSecond)))
-                 FBC%VarsGhostFace_V(iUx_I(1))  = sum(FBC%VarsGhostFace_V( &
-                      iRho_I(IonFirst_:iIonSecond)) &
-                      * FBC%VarsGhostFace_V(iUx_I(IonFirst_:iIonSecond)))&
-                      /sum(FBC%VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
-                 FBC%VarsGhostFace_V(iUy_I(1))  = sum(FBC%VarsGhostFace_V( &
-                      iRho_I(IonFirst_:iIonSecond)) &
-                      * FBC%VarsGhostFace_V(iUy_I(IonFirst_:iIonSecond)))&
-                      /sum(FBC%VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
-                 FBC%VarsGhostFace_V(iUz_I(1))  = sum(FBC%VarsGhostFace_V( &
-                      iRho_I(IonFirst_:iIonSecond)) &
-                      * FBC%VarsGhostFace_V(iUz_I(IonFirst_:iIonSecond)))&
-                      /sum(FBC%VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
-                 FBC%VarsGhostFace_V(P_)        = sum(FBC%VarsGhostFace_V( &
-                      iP_I(IonFirst_:iIonSecond)))
-
               end if ! polar cap region
            end if ! ionosphereoutflow type of innerboundary
 
@@ -872,25 +854,25 @@ contains
            if(IsPolarFace)then
               ! polarwind type conditions
               if(UsePw)then
-                 ! Get density/ies and velocity from polarwind code
+                 ! Get density/ies and velocity/ies from polarwind code
                  call read_pw_buffer(FBC%FaceCoords_D, nVar, &  !^CMP IF PW
                       FBC%VarsGhostFace_V)                      !^CMP IF PW
-
-                 ! Reapply floating conditions on P and B
-                 FBC%VarsGhostFace_V(iP_I)    = FBC%VarsTrueFace_V(iP_I)
-                 FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsTrueFace_V(Bx_:Bz_)
               else
                  ! Use variables set in the #POLARBOUNDARY command
                  FBC%VarsGhostFace_V(iRho_I) = PolarRho_I
-
                  ! Align flow with the magnetic field
                  bUnit_D = FBC%B0Face_D / norm2(FBC%B0Face_D)
                  ! Make sure it points outward
                  if(sum(bUnit_D*FBC%FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
-                 FBC%VarsGhostFace_V(iUx_I)  = PolarU_I*bUnit_D(x_)
-                 FBC%VarsGhostFace_V(iUy_I)  = PolarU_I*bUnit_D(y_)
-                 FBC%VarsGhostFace_V(iUz_I)  = PolarU_I*bUnit_D(z_)
-                 FBC%VarsGhostFace_V(iP_I)   = PolarP_I
+                 ! Add 2*PolarU_I to the ghost face to set 0.5*(true+ghost)
+                 FBC%VarsGhostFace_V(iUx_I)  = FBC%VarsGhostFace_V(iUx_I) &
+                      + 2*PolarU_I*bUnit_D(x_)
+                 FBC%VarsGhostFace_V(iUy_I)  = FBC%VarsGhostFace_V(iUy_I) &
+                      + 2*PolarU_I*bUnit_D(y_)
+                 FBC%VarsGhostFace_V(iUz_I)  = FBC%VarsGhostFace_V(iUz_I) &
+                      + 2*PolarU_I*bUnit_D(z_)
+                 ! Only set pressure where PolarP_I is positive
+                 where(PolarP_I > 0.0) FBC%VarsGhostFace_V(iP_I) = PolarP_I
               end if
            end if ! IsPolarFace
 
