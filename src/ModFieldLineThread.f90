@@ -1478,7 +1478,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        if(.not.IsAllocatedThread_B(iBlock))CYCLE
-       
+
        do k = kMin_, kMax_; do j = jMin_, jMax_
           Coord_D = CoordMin_DB(2:,iBlock) + &
                CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
@@ -1512,7 +1512,6 @@ contains
           end do          ! i
        end do; end do    ! j,k
     end do       ! iBlock
-    
 
     ! One extra layer passing through physical cell centers (i=1)
     do iBlock = 1, nBlock
