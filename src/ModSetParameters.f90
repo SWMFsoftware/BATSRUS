@@ -2885,12 +2885,12 @@ contains
                end if
                if(UseMultiIon)then
                   call select_fluid(iIon)
-                  NameVar_V(iRho)    = NameChargeState//'Rho'
-                  NameVar_V(iRhoUx)  = NameChargeState//'Mx'
-                  NameVar_V(iRhoUy)  = NameChargeState//'My'
-                  NameVar_V(iRhoUz)  = NameChargeState//'Mz'
-                  NameVar_V(iP)      = NameChargeState//'P'
-                  NameVar_V(iEnergy) = NameChargeState//'E'
+                  NameVar_V(iRho)    = trim(NameChargeState)//'Rho'
+                  NameVar_V(iRhoUx)  = trim(NameChargeState)//'Mx'
+                  NameVar_V(iRhoUy)  = trim(NameChargeState)//'My'
+                  NameVar_V(iRhoUz)  = trim(NameChargeState)//'Mz'
+                  NameVar_V(iP)      = trim(NameChargeState)//'P'
+                  NameVar_V(iEnergy) = trim(NameChargeState)//'E'
                   iIon = iIon + 1
                else
                   NameVar_V(iVar) = NameChargeState
@@ -2899,7 +2899,7 @@ contains
             end do
          end do
       end if
-      
+
       ! space separated NameVar string containing all variable names
       call join_string(nVar, NameVar_V, NameVarCouple)
 
