@@ -2828,7 +2828,8 @@ contains
     !==========================================================================
     subroutine set_namevar
 
-      use ModMultiFluid, ONLY: extract_fluid_name
+      use ModMultiFluid, ONLY: extract_fluid_name, select_fluid, &
+           iRho, iRhoUx, iRhouy, iRhoUz, iP, iEnergy
       use ModUtilities,  ONLY: join_string
 
       integer :: iWave, iPui, iMaterial, iFluid, lConservative, lPrimitive
@@ -2839,7 +2840,7 @@ contains
       character(len=50) :: String, NameFluid
       character(len=500):: StringConservative, StringPrimitivePlot
       character(len=500):: StringPrimitiveOrig
-      integer           :: iVar, iElement, iChargeState
+      integer           :: iVar, iElement, iChargeState, iIon
       character(len=4)  :: NameChargestate
       !------------------------------------------------------------------------
       ! Fix the NameVar_V string for waves
@@ -2867,8 +2868,12 @@ contains
       end if
 
       ! Fix the NameVar_V string for charge states
-      if(ChargeStateLast_ > 1)then
-         iVar = ChargeStateFirst_
+      if(nChargeStateAll > 1)then
+         if(UseMultiIon)then
+            iIon = 2
+         else
+            iVar = ChargeStateFirst_
+         end if
          do iElement = 1, nElement
             do iChargeState = 1, nChargeState_I(iElement)
                if(nChargeState_I(iElement) < 10) then
@@ -2878,12 +2883,23 @@ contains
                   write(NameChargestate,'(a,i2.2)')&
                        trim(NameElement_I(iElement)),iChargeState
                end if
-               NameVar_V(iVar) = NameChargeState
-               iVar = iVar + 1
+               if(UseMultiIon)then
+                  call select_fluid(iIon)
+                  NameVar_V(iRho)    = NameChargeState//'Rho'
+                  NameVar_V(iRhoUx)  = NameChargeState//'Mx'
+                  NameVar_V(iRhoUy)  = NameChargeState//'My'
+                  NameVar_V(iRhoUz)  = NameChargeState//'Mz'
+                  NameVar_V(iP)      = NameChargeState//'P'
+                  NameVar_V(iEnergy) = NameChargeState//'E'
+                  iIon = iIon + 1
+               else
+                  NameVar_V(iVar) = NameChargeState
+                  iVar = iVar + 1
+               end if
             end do
          end do
       end if
-
+      
       ! space separated NameVar string containing all variable names
       call join_string(nVar, NameVar_V, NameVarCouple)
 
