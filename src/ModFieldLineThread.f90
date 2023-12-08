@@ -1424,9 +1424,9 @@ contains
     real    :: Xyz_D(3)
     ! Local Logicals
     logical :: IsTriangleFound = .false.
+
     character(len=*), parameter:: NameSub = 'set_triangulation'
     !--------------------------------------------------------------------------
-
     call get_thread_point(Lat_, Coord_DII, DoCoord = .true. )
     do i = -nGUniform, 0
        ! Convert lon and lat to Cartesian coordinates on a unit sphere
@@ -1447,7 +1447,7 @@ contains
             iList_II(:,i), iPointer_II(:,i), iEnd_II(:,i), iError)
        if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
     end do
-    
+
     ! Now, calculate interpolation weights at the points of a grid used for
     ! plotting
     iBuff = 0
