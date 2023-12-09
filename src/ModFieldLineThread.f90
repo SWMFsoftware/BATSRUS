@@ -1536,10 +1536,13 @@ contains
           iBuff = iBuff + 1
           do i = -nGUniform, 0
              ! interpolate  state vector to a grid point of a uniform grid
-             BoundaryThreads_B(iBlock)%State_VG(:, i, j, k)  = &
-                  State_VII(:,iStencil_III(1,iBuff,i),i)*Weight_III(1,iBuff,i)+&
-                  State_VII(:,iStencil_III(2,iBuff,i),i)*Weight_III(2,iBuff,i)+&
-                  State_VII(:,iStencil_III(3,ibuff,i),i)*Weight_III(3,iBuff,i)
+             BoundaryThreads_B(iBlock)%State_VG(:,i,j,k) = &
+                  State_VII(:,iStencil_III(1,iBuff,i),i) &
+                  *Weight_III(1,iBuff,i) + &
+                  State_VII(:,iStencil_III(2,iBuff,i),i) &
+                  *Weight_III(2,iBuff,i) + &
+                  State_VII(:,iStencil_III(3,ibuff,i),i) &
+                  *Weight_III(3,iBuff,i)
           end do          ! i
        end do; end do    ! j,k
     end do       ! iBlock
