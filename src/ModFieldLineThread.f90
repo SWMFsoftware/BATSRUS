@@ -127,7 +127,7 @@ module ModFieldLineThread
   integer :: nGUniform = 10
 
   real,    allocatable :: Weight_III(:,:,:), Xyz_DII(:,:,:)
-  integer, allocatable :: Stencil_III(:,:,:), iList_II(:,:),    &
+  integer, allocatable :: iStencil_III(:,:,:), iList_II(:,:),    &
          iPointer_II(:,:), iEnd_II(:,:)
 
   ! Inverse mesh size for the grid covering threaded gap
@@ -472,12 +472,12 @@ contains
        nThreadAll = sum(nThread_P)
     end if
     if(allocated(Weight_III))deallocate(Weight_III, Xyz_DII, &
-         Stencil_III, iList_II, iPointer_II, iEnd_II)
+         iStencil_III, iList_II, iPointer_II, iEnd_II)
     nPlotPoint = count(IsAllocatedThread_B(1:nBlock))*(jMax_ - jMin_ + 1)*&
          (kMax_ - kMin_ +1)
     allocate(Weight_III(3, nPlotPoint, -nGUniform:0))
     allocate(Xyz_DII(3,nThreadAll+2,-nGUniform:0))
-    allocate(Stencil_III(3, nPlotPoint, -nGUniform:0))
+    allocate(iStencil_III(3, nPlotPoint, -nGUniform:0))
     allocate(iList_II(6*nThreadAll,-nGUniform:0),    &
          iPointer_II(6*nThreadAll,-nGUniform:0),     &
          iEnd_II(nThreadAll+2,-nGUniform:0) )
@@ -1469,14 +1469,14 @@ contains
                 call find_triangle_orig(Xyz_D, nThreadAll+2, Xyz_DII(:,:,i),&
                      iList_II(:,i), iPointer_II(:,i), iEnd_II(:,i),         &
                      Weight_III(:,iBuff,i), IsTriangleFound,                &
-                     Stencil_III(:,iBuff,i))
+                     iStencil_III(:,iBuff,i))
              else
                 call find_triangle_sph( Xyz_D, nThreadAll+2, Xyz_DII(:,:,i),&
                      iList_II(:,i), iPointer_II(:,i), iEnd_II(:,i),         &
                      Weight_III(1,iBuff,i), Weight_III(2,iBuff,i),          &
                      Weight_III(3,iBuff,i), IsTriangleFound,                &
-                     Stencil_III(1,iBuff,i), Stencil_III(2,iBuff,i),        &
-                     Stencil_III(3,iBuff,i))
+                     iStencil_III(1,iBuff,i), iStencil_III(2,iBuff,i),        &
+                     iStencil_III(3,iBuff,i))
              end if
              if(.not.IsTriangleFound)then
                 write(*,*)'At the location x,y,z=', Xyz_D
@@ -1536,10 +1536,13 @@ contains
           iBuff = iBuff + 1
           do i = -nGUniform, 0
              ! interpolate  state vector to a grid point of a uniform grid
-             BoundaryThreads_B(iBlock)%State_VG(:, i, j, k)  = &
-                  State_VII(:,Stencil_III(1,iBuff,i),i)*Weight_III(1,iBuff,i)+&
-                  State_VII(:,Stencil_III(2,iBuff,i),i)*Weight_III(2,iBuff,i)+&
-                  State_VII(:,Stencil_III(3,ibuff,i),i)*Weight_III(3,iBuff,i)
+             BoundaryThreads_B(iBlock)%State_VG(:,i,j,k) = &
+                  State_VII(:,iStencil_III(1,iBuff,i),i) &
+                  *Weight_III(1,iBuff,i) + &
+                  State_VII(:,iStencil_III(2,iBuff,i),i) &
+                  *Weight_III(2,iBuff,i) + &
+                  State_VII(:,iStencil_III(3,ibuff,i),i) &
+                  *Weight_III(3,iBuff,i)
           end do          ! i
        end do; end do    ! j,k
     end do       ! iBlock
