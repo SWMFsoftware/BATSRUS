@@ -79,7 +79,7 @@ module ModTurbulence
   logical :: UseTransverseTurbulence = .true.
   real    :: SigmaD = -1.0/3.0
   real    :: KarmanTaylorAlpha = 1.0
-  real    :: KarmanTaylorBeta2AlphaRatio = 1.0
+  real    :: KarmanTaylorBeta2AlphaRatio = 0.5
   logical, private:: DoInit = .true.
 contains
   !============================================================================
@@ -133,13 +133,7 @@ contains
        call read_var('KarmanTaylorAlpha', KarmanTaylorAlpha)
        ! KarmanTaylorBeta is present in non-linear term in the evolution
        ! equation for Lperp via its ratio to KarmanTaylorAlpha ...
-       call read_var('KarmanTaylorBeta', KarmanTaylorBeta2AlphaRatio)
-       ! Therefore
-       KarmanTaylorBeta2AlphaRatio = KarmanTaylorBeta2AlphaRatio / &
-            KarmanTaylorAlpha
-       !
-       ! Commands in the parameter file
-       !
+       call read_var('KarmanTaylorBeta2AlphaRatio',KarmanTaylorBeta2AlphaRatio)
     case('#LIMITIMBALANCE')
        call read_var('ImbalanceMax',ImbalanceMax)
        ImbalanceMax2 = ImbalanceMax**2

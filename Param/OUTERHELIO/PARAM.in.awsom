@@ -197,7 +197,7 @@ usmanov			TypeCoronalHeating
 T			UseTransverseTurbulence
 -1/3			SigmaD
 0.03			KarmanTaylorAlpha
-0.015			KarmanTaylorBeta
+0.5			KarmanTaylorBeta2AlphaRatio
 
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
