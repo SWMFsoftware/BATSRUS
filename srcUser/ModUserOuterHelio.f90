@@ -46,7 +46,7 @@ module ModUser
        UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
        UnitTemperature_, UnitT_, UnitRhoU_
   use ModConst, ONLY: cAU, cProtonMass, cElectronMass, cBoltzmann, cEV, &
-          cRyToEv, cSecondPerYear
+       cRyToEv, cSecondPerYear
   use ModTimeConvert, ONLY: n_day_of_year
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModAdvance, ONLY: &
@@ -66,7 +66,9 @@ module ModUser
        IMPLEMENTED8  => user_action,                    &
        IMPLEMENTED10 => user_set_plot_var,              &
        IMPLEMENTED12 => user_calc_sources_expl,         &
-       IMPLEMENTED14 => user_init_session
+       IMPLEMENTED14 => user_init_session,              &
+       IMPLEMENTED15 => user_calc_sources_impl,         &
+       IMPLEMENTED16 => user_init_point_implicit
 
   include 'user_module.h' ! list of public methods
 
@@ -313,7 +315,7 @@ contains
 
           case default
              call stop_mpi(NameSub//': unknown NameCrossSection = ' &
-                     // NameCrossSection)
+                  // NameCrossSection)
           end select
 
        case("#REGIONS")
@@ -353,7 +355,7 @@ contains
 
           case default
              call stop_mpi(NameSub//': unknown NameRegionFormula = ' &
-                     // NameRegionFormula)
+                  // NameRegionFormula)
           end select
 
        case("#TURBULENCE")
@@ -970,7 +972,7 @@ contains
       use BATL_lib,       ONLY: Xyz_DGB
       use ModCoordTransform, ONLY: rot_xyz_sph
       use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
-                                get_lookup_table
+           get_lookup_table
 
       integer,intent(in):: i, j, k, iBlock
 
@@ -987,9 +989,9 @@ contains
       real :: IndexMax_I(2)
       !------------------------------------------------------------------------
       if(iTableSolarWind < 0)then
-          iTableSolarWind = i_lookup_table('solarwind2d')
-          if(iTableSolarWind < 0) call CON_stop(NameSub// &
-             ' : could not find lookup table solarwind2d.')
+         iTableSolarWind = i_lookup_table('solarwind2d')
+         if(iTableSolarWind < 0) call CON_stop(NameSub// &
+              ' : could not find lookup table solarwind2d.')
       end if
 
       x = Xyz_DGB(1,i,j,k,iBlock)
@@ -1262,9 +1264,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srswhcx')
                    PlotVar_G(i,j,k) = Source_V(SwhRho_)*No2Io_V(UnitRho_)
@@ -1278,7 +1280,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(SwhP_)*No2Io_V(UnitP_)
                 case('seswhcx')
                    PlotVar_G(i,j,k) = Source_V(SwhEnergy_)&
-                      *No2Io_V(UnitEnergydens_)
+                        *No2Io_V(UnitEnergydens_)
                 end select
                 PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
@@ -1313,9 +1315,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srpuicx')
                    PlotVar_G(i,j,k) = Source_V(Pu3Rho_)*No2Io_V(UnitRho_)
@@ -1329,7 +1331,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Pu3P_)*No2Io_V(UnitP_)
                 case('sepuicx')
                    PlotVar_G(i,j,k) = Source_V(Pu3Energy_)&
-                      *No2Io_V(UnitEnergydens_)
+                        *No2Io_V(UnitEnergydens_)
                 end select
                 PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
@@ -1364,9 +1366,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_electron_impact_source( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srswhimp')
                    PlotVar_G(i,j,k) = Source_V(SwhRho_)*No2Io_V(UnitRho_)
@@ -1380,7 +1382,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(SwhP_)*No2Io_V(UnitP_)
                 case('seswhimp')
                    PlotVar_G(i,j,k) = Source_V(SwhEnergy_)&
-                      *No2Io_V(UnitEnergydens_)
+                        *No2Io_V(UnitEnergydens_)
                 end select
                 PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
@@ -1415,9 +1417,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_electron_impact_source( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srpuiimp')
                    PlotVar_G(i,j,k) = Source_V(Pu3Rho_)*No2Io_V(UnitRho_)
@@ -1431,7 +1433,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(Pu3P_)*No2Io_V(UnitP_)
                 case('sepuiimp')
                    PlotVar_G(i,j,k) = Source_V(Pu3Energy_)&
-                      *No2Io_V(UnitEnergydens_)
+                        *No2Io_V(UnitEnergydens_)
                 end select
                 PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
@@ -1497,9 +1499,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_charge_exchange_source( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srcx')
                    PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
@@ -1513,7 +1515,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(P_)*No2Io_V(UnitP_)
                 case('secx')
                    PlotVar_G(i,j,k) = Source_V(Energy_)&
-                      *No2Io_V(UnitEnergydens_)
+                        *No2Io_V(UnitEnergydens_)
                 end select
                 PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
@@ -1547,9 +1549,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_photoion_source( &
-                   i,j,k,iBlock,U_DI,U2_I,Source_V)
+                     i,j,k,iBlock,U_DI,U2_I,Source_V)
                 select case(NameVar)
                 case('srph')
                    PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
@@ -1563,7 +1565,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(P_)*No2Io_V(UnitP_)
                 case('seph')
                    PlotVar_G(i,j,k) = Source_V(Energy_)&
-                      *No2Io_V(UnitEnergydens_)
+                        *No2Io_V(UnitEnergydens_)
                 end select
                 PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
@@ -1596,9 +1598,9 @@ contains
              call select_region(iBlock)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call calc_source_inputs( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,TempSi_I,UThS_I)
                 call calc_electron_impact_source( &
-                   i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
+                     i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UThS_I,Source_V)
                 select case(NameVar)
                 case('srimp')
                    PlotVar_G(i,j,k) = Source_V(Rho_)*No2Io_V(UnitRho_)
@@ -1612,7 +1614,7 @@ contains
                    PlotVar_G(i,j,k) = Source_V(P_)*No2Io_V(UnitP_)
                 case('seimp')
                    PlotVar_G(i,j,k) = Source_V(Energy_)&
-                      *No2Io_V(UnitEnergydens_)
+                        *No2Io_V(UnitEnergydens_)
                 end select
                 PlotVar_G(i,j,k) = PlotVar_G(i,j,k)/No2Io_V(UnitT_)
              end do; end do; end do
@@ -1837,7 +1839,7 @@ contains
        ! Electron Impact Ionization
        if(UseElectronImpact)then
           call calc_electron_impact_source( &
-             i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceImp_V)
+               i,j,k,iBlock,NumDensSi_I,U_DI,U2_I,UTh2Si_I,SourceImp_V)
        else
           SourceImp_V = 0.0
        end if
@@ -1945,7 +1947,7 @@ contains
   end subroutine user_calc_sources_expl
   !============================================================================
   subroutine calc_source_inputs( &
-     i, j, k, iBlock, NumDensSi_I, U_DI, U2_I, TempSi_I, UTh2Si_I)
+       i, j, k, iBlock, NumDensSi_I, U_DI, U2_I, TempSi_I, UTh2Si_I)
 
     ! Calculate parameters to pass to source terms
 
@@ -2737,7 +2739,7 @@ contains
   end subroutine calc_photoion_source
   !============================================================================
   subroutine calc_electron_impact_source( &
-     i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceImp_V)
+       i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceImp_V)
 
     ! Calculate the electron impact source terms for one cell.
     ! Requires a separate electron pressure
@@ -2749,7 +2751,7 @@ contains
 
     integer :: iFluid
     real, dimension(Neu_:Ne4_):: SrcImpRho_I, SrcImpRhoUx_I, &
-            SrcImpRhoUy_I, SrcImpRhoUz_I, SrcImpEnergy_I
+         SrcImpRhoUy_I, SrcImpRhoUz_I, SrcImpEnergy_I
     real :: uSi_DI(3,nFluid)
     real :: State_V(nVar)
     real :: RhoEl, NumDensEl, UthSElSi, RhoIonTot, NumDensElSi
@@ -2803,10 +2805,10 @@ contains
     if(iTableElectronImpact > 0)then
        do iFluid = Neu_, Ne4_
           call get_collision( &
-             ElectronImpact_, &
-             Rho_I(iFluid), UThS_I(iFluid), uSi_DI(:,iFluid), &
-             NumDensElSi, UThSElSi, UElSi_D, &
-             SrcImp_II(iFluid,:))
+               ElectronImpact_, &
+               Rho_I(iFluid), UThS_I(iFluid), uSi_DI(:,iFluid), &
+               NumDensElSi, UThSElSi, UElSi_D, &
+               SrcImp_II(iFluid,:))
        enddo
     end if
 
@@ -2818,17 +2820,17 @@ contains
 
     ! Neutral source terms
     do iFluid = Neu_, Ne4_
-        if(.not.UseSource_I(iFluid)) CYCLE
-        call select_fluid(iFLuid)
-        SourceImp_V(iRho)    = -SrcImpRho_I(iFluid)
-        SourceImp_V(iRhoUx)  = -SrcImpRhoUx_I(iFluid)
-        SourceImp_V(iRhoUy)  = -SrcImpRhoUy_I(iFluid)
-        SourceImp_V(iRhoUz)  = -SrcImpRhoUz_I(iFluid)
-        SourceImp_V(iEnergy) = -SrcImpEnergy_I(iFluid)
+       if(.not.UseSource_I(iFluid)) CYCLE
+       call select_fluid(iFLuid)
+       SourceImp_V(iRho)    = -SrcImpRho_I(iFluid)
+       SourceImp_V(iRhoUx)  = -SrcImpRhoUx_I(iFluid)
+       SourceImp_V(iRhoUy)  = -SrcImpRhoUy_I(iFluid)
+       SourceImp_V(iRhoUz)  = -SrcImpRhoUz_I(iFluid)
+       SourceImp_V(iEnergy) = -SrcImpEnergy_I(iFluid)
 
-        SourceImp_V(iP) = (Gamma-1)* ( SourceImp_V(iEnergy) &
-             - sum(U_DI(:,iFluid)*SourceImp_V(iRhoUx:iRhoUz)) &
-             + 0.5*U2_I(iFluid)*SourceImp_V(iRho) )
+       SourceImp_V(iP) = (Gamma-1)* ( SourceImp_V(iEnergy) &
+            - sum(U_DI(:,iFluid)*SourceImp_V(iRhoUx:iRhoUz)) &
+            + 0.5*U2_I(iFluid)*SourceImp_V(iRho) )
     end do
 
     ! Plasma source terms
@@ -2842,17 +2844,17 @@ contains
           SourceImp_V(Energy_) = sum(SrcImpEnergy_I)
 
           SourceImp_V(P_) = GammaMinus1*( SourceImp_V(Energy_) &
-             - sum(U_DI(:,Ion_)*SourceImp_V(RhoUx_:RhoUz_)) &
-             + 0.5*U2_I(Ion_)*SourceImp_V(Rho_) )
+               - sum(U_DI(:,Ion_)*SourceImp_V(RhoUx_:RhoUz_)) &
+               + 0.5*U2_I(Ion_)*SourceImp_V(Rho_) )
 
           ! Electron pressure source term
           ! Ionization Energy * total ionization rate
           ! + thermal energy from new electron
           SourceImp_V(Pe_) = GammaElectronMinus1*( &
-                  -SourceImp_V(Rho_)*IonizationEnergy &
-                  + (cElectronMass/cProtonMass)* ( SourceImp_V(Energy_) &
-                  - sum(UEl_D*SourceImp_V(RhoUx_:RhoUz_)) &
-                  + 0.5*sum(UEl_D**2)*SourceImp_V(Rho_) ) )
+               -SourceImp_V(Rho_)*IonizationEnergy &
+               + (cElectronMass/cProtonMass)* ( SourceImp_V(Energy_) &
+               - sum(UEl_D*SourceImp_V(RhoUx_:RhoUz_)) &
+               + 0.5*sum(UEl_D**2)*SourceImp_V(Rho_) ) )
        end if
     else
        ! Multi Ion
@@ -2906,13 +2908,13 @@ contains
           ! + thermal energy from new electron.
           ! (nVar+IonFirst_:nVar+IonLast_) corresponds to the ion energy terms
           SourceImp_V(Pe_) = GammaElectronMinus1*( &
-                  -sum(SourceImp_V(iRhoIon_I))*IonizationEnergy &
-                  + (cElectronMass/cProtonMass)&
-                  *( sum(SourceImp_V(nVar+IonFirst_:nVar+IonLast_)) &
-                  - UEl_D(x_)*sum(SourceImp_V(iRhoUxIon_I)) &
-                  - UEl_D(y_)*sum(SourceImp_V(iRhoUyIon_I)) &
-                  - UEl_D(z_)*sum(SourceImp_V(iRhoUzIon_I)) &
-                  + 0.5*sum(UEl_D**2)*sum(SourceImp_V(iRhoIon_I)) ) )
+               -sum(SourceImp_V(iRhoIon_I))*IonizationEnergy &
+               + (cElectronMass/cProtonMass)&
+               *( sum(SourceImp_V(nVar+IonFirst_:nVar+IonLast_)) &
+               - UEl_D(x_)*sum(SourceImp_V(iRhoUxIon_I)) &
+               - UEl_D(y_)*sum(SourceImp_V(iRhoUyIon_I)) &
+               - UEl_D(z_)*sum(SourceImp_V(iRhoUzIon_I)) &
+               + 0.5*sum(UEl_D**2)*sum(SourceImp_V(iRhoIon_I)) ) )
 
        end if
     end if
@@ -3275,28 +3277,28 @@ contains
 
     ! Set table index for iTableSolarWind with table name solarwind2d
     if(iTableSolarWind < 0)then
-         iTableSolarWind=i_lookup_table('solarwind2d')
+       iTableSolarWind=i_lookup_table('solarwind2d')
 
-         if(iTableSolarWind > 0)then
-            call get_lookup_table(iTableSolarWind,Time=TableStart, &
-                 IndexMax_I=IndexMax_I)
+       if(iTableSolarWind > 0)then
+          call get_lookup_table(iTableSolarWind,Time=TableStart, &
+               IndexMax_I=IndexMax_I)
 
-            ! Calculate start of run in unit [years]
-            ! based on #STARTTIME command  !!! to be improved
-            RunStart = iStartTime_I(1) + &
-                 n_day_of_year(iStartTime_I(1), iStartTime_I(2), &
-                 iStartTime_I(3))*2.74E-3 + iStartTime_I(4)*1.14E-4 &
-                 + iStartTime_I(5)*1.9E-6 + iStartTime_I(6)/cSecondPerYear
+          ! Calculate start of run in unit [years]
+          ! based on #STARTTIME command  !!! to be improved
+          RunStart = iStartTime_I(1) + &
+               n_day_of_year(iStartTime_I(1), iStartTime_I(2), &
+               iStartTime_I(3))*2.74E-3 + iStartTime_I(4)*1.14E-4 &
+               + iStartTime_I(5)*1.9E-6 + iStartTime_I(6)/cSecondPerYear
 
-            !(1) Find the offset between the #STARTTIME of the run and
-            ! start time of the lookup table.
-            !(2) If RunStart is out of range of the lookup table time range
-            ! Offset defaults to zero.
-            if(RunStart >= TableStart .and. RunStart <= &
-            TableStart+(IndexMax_I(2)/cSecondPerYear))then
-               Offset = Runstart - TableStart ! years
-            end if
-         end if
+          !(1) Find the offset between the #STARTTIME of the run and
+          ! start time of the lookup table.
+          !(2) If RunStart is out of range of the lookup table time range
+          ! Offset defaults to zero.
+          if(RunStart >= TableStart .and. RunStart <= &
+               TableStart+(IndexMax_I(2)/cSecondPerYear))then
+             Offset = Runstart - TableStart ! years
+          end if
+       end if
     end if
 
     if(iTableElectronImpact < 0) &
@@ -3304,17 +3306,17 @@ contains
 
     ! Normalize ionization energy for electron impact
     IonizationEnergy = IonizationEnergyDim*Si2No_V(UnitEnergyDens_) &
-            /Si2No_V(UnitN_)
+         /Si2No_V(UnitN_)
 
     call test_stop(NameSub, DoTest)
 
   end subroutine user_init_session
   !============================================================================
   subroutine get_collision( iTypeCollision, &
-     NumDensA, Cs2A, uA_D, NumDensB, Cs2B, uB_D, &
-     SourceA_V, SourceB_V)
+       NumDensA, Cs2A, uA_D, NumDensB, Cs2B, uB_D, &
+       SourceA_V, SourceB_V)
 
-     use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table
+    use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table
 
     integer, intent(in):: iTypeCollision
     real, intent(in):: NumDensA  ! fluid A number density
@@ -3339,22 +3341,22 @@ contains
     select case(iTypeCollision)
 
     case(ChargeExchange_)
-            if(iTableChargeExchange < 0)then
-                    iTableChargeExchange = i_lookup_table('ChargeExchange')
-                    if(iTableChargeExchange < 0) call CON_stop(NameSub// &
-             ' : could not find lookup table ChargeExchange. Fix PARAM.in')
-            end if
-            iTableCollision = iTableChargeExchange
+       if(iTableChargeExchange < 0)then
+          iTableChargeExchange = i_lookup_table('ChargeExchange')
+          if(iTableChargeExchange < 0) call CON_stop(NameSub// &
+               ' : could not find lookup table ChargeExchange. Fix PARAM.in')
+       end if
+       iTableCollision = iTableChargeExchange
     case(ElectronImpact_)
-            if(iTableElectronImpact < 0)then
-                    iTableElectronImpact = i_lookup_table('ElectronImpact')
-                    if(iTableElectronImpact < 0) call CON_stop(NameSub// &
-             ' : could not find lookup table ElectronImpact. Fix PARAM.in')
-            end if
-            iTableCollision = iTableElectronImpact
+       if(iTableElectronImpact < 0)then
+          iTableElectronImpact = i_lookup_table('ElectronImpact')
+          if(iTableElectronImpact < 0) call CON_stop(NameSub// &
+               ' : could not find lookup table ElectronImpact. Fix PARAM.in')
+       end if
+       iTableCollision = iTableElectronImpact
     case default
-            call CON_stop(NameSub// &
-                    ' : unexpected collision type.')
+       call CON_stop(NameSub// &
+            ' : unexpected collision type.')
     end select
 
     Cs2Sum = Cs2A + CS2B        ! Sum of square thermal speeds
@@ -3381,9 +3383,9 @@ contains
     SourceA_V(5)    = WorkPerCs2*Cs2A + 0.5*sum(ForcePerU*uA_D**2)
 
     if(present(SourceB_V)) then
-        SourceB_V(1)    = MassRate
-        SourceB_V(2:4)  = ForcePerU*uB_D
-        SourceB_V(5)    = WorkPerCs2*Cs2B + 0.5*sum(ForcePerU*uB_D**2)
+       SourceB_V(1)    = MassRate
+       SourceB_V(2:4)  = ForcePerU*uB_D
+       SourceB_V(5)    = WorkPerCs2*Cs2B + 0.5*sum(ForcePerU*uB_D**2)
     endif
 
     if(iTypeCollision /= ChargeExchange_ .or. DoFixChargeExchange) then
@@ -3393,14 +3395,14 @@ contains
 
        SourceA_V(2:4)  = SourceA_V(2:4) + Umean_D*(MassRate - ForcePerU)
        SourceA_V(5)    = SourceA_V(5) &
-               + Cs2A*Cs2B*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
-               + 0.5*Umean2*(MassRate - ForcePerU)
+            + Cs2A*Cs2B*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
+            + 0.5*Umean2*(MassRate - ForcePerU)
 
        if (present(SourceB_V)) then
-           SourceB_V(2:4)  = SourceB_V(2:4) + Umean_D*(MassRate - ForcePerU)
-           SourceB_V(5)    = SourceB_V(5) &
-                   + Cs2A*Cs2B*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
-                   + 0.5*Umean2*(MassRate - ForcePerU)
+          SourceB_V(2:4)  = SourceB_V(2:4) + Umean_D*(MassRate - ForcePerU)
+          SourceB_V(5)    = SourceB_V(5) &
+               + Cs2A*Cs2B*(0.75*MassRate - WorkPerCs2)/Cs2Sum &
+               + 0.5*Umean2*(MassRate - ForcePerU)
        endif
     endif
 
@@ -3413,10 +3415,10 @@ contains
        SourceA_V      = SourceA_V     *No2Si_V(UnitT_) ! same as /Si2No_V
 
        if (present(SourceB_V)) then
-           SourceB_V(1)   = SourceB_V(1)  *Si2No_V(UnitRho_)
-           SourceB_V(2:4) = SourceB_V(2:4)*Si2No_V(UnitRhoU_)
-           SourceB_V(5)   = SourceB_V(5)  *Si2No_V(UnitEnergyDens_)
-           SourceB_V      = SourceB_V     *No2Si_V(UnitT_)
+          SourceB_V(1)   = SourceB_V(1)  *Si2No_V(UnitRho_)
+          SourceB_V(2:4) = SourceB_V(2:4)*Si2No_V(UnitRhoU_)
+          SourceB_V(5)   = SourceB_V(5)  *Si2No_V(UnitEnergyDens_)
+          SourceB_V      = SourceB_V     *No2Si_V(UnitT_)
        endif
     else
        ! AMPS prefers to get rate of change for number density
@@ -3427,6 +3429,164 @@ contains
 
   end subroutine get_collision
   !============================================================================
+
+  subroutine user_calc_sources_impl(iBlock)
+
+    use ModPhysics, ONLY: ReducedMass_II, CollisionCoef_II, MassIonElectron_I
+
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
+
+    real :: State_V(nVar), Source_V(nVar+nFluid)
+
+    integer :: iIon, jIon, iIonLast, iRhoUx, iRhoUz, iP, iEnergy
+    real :: ReducedTemp, CollisionRate, Coef
+    real :: Du2
+    real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I
+    real, dimension(nIonFluid+1) :: Ux_I, Uy_I, Uz_I, P_I, N_I, T_I
+    real :: U_D(3), Du_D(3), Me_D(3)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
+    iIonLast = nIonFluid
+    if(UseElectronPressure) iIonLast = nIonFluid+1
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+       State_V = State_VGB(:,i,j,k,iBlock)
+
+       RhoIon_I = State_V(iRhoIon_I)
+       Ux_I(:nIonFluid) = State_V(iRhoUxIon_I)/RhoIon_I
+       Uy_I(:nIonFluid) = State_V(iRhoUyIon_I)/RhoIon_I
+       Uz_I(:nIonFluid) = State_V(iRhoUzIon_I)/RhoIon_I
+       P_I(:nIonFluid)  = State_V(iPIon_I)
+       N_I(:nIonFluid)  = RhoIon_I/MassIon_I
+       T_I(:nIonFluid)  = P_I(:nIonFluid)/N_I(:nIonFluid)
+
+       if(UseElectronPressure)then
+          ChargeDensIon_I = ChargeIon_I*N_I(:nIonFluid)
+          P_I(nIonFluid+1) = State_V(Pe_)
+          N_I(nIonFluid+1) = sum(ChargeDensIon_I)
+          T_I(nIonFluid+1) = P_I(nIonFluid+1)/N_I(nIonFluid+1)
+          Ux_I(nIonFluid+1) = sum(ChargeDensIon_I*Ux_I(:nIonFluid)) &
+               /N_I(nIonFluid+1)
+          Uy_I(nIonFluid+1) = sum(ChargeDensIon_I*Uy_I(:nIonFluid)) &
+               /N_I(nIonFluid+1)
+          Uz_I(nIonFluid+1) = sum(ChargeDensIon_I*Uz_I(:nIonFluid)) &
+               /N_I(nIonFluid+1)
+       end if
+
+       Source_V = 0.0
+
+       do iIon = 1, iIonLast
+
+          if(iIon == nIonFluid+1)then
+             Me_D = 0.0
+             iP = Pe_
+          else
+             iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
+             iP = iPIon_I(iIon)
+          end if
+
+          do jIon = 1, iIonLast
+             if(iIon == jIon) CYCLE
+
+             ReducedTemp = (MassIonElectron_I(jIon)*T_I(iIon) &
+                  + MassIonElectron_I(iIon)*T_I(jIon)) &
+                  /(MassIonElectron_I(iIon) + MassIonElectron_I(jIon))
+
+             ! Turbulence modifies the collision rate, but we do not
+             ! incorporate that here
+             CollisionRate = CollisionCoef_II(iIon,jIon) &
+                  *N_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
+
+             Du_D = [ Ux_I(jIon) - Ux_I(iIon), Uy_I(jIon) - Uy_I(iIon), &
+                  Uz_I(jIon) - Uz_I(iIon) ]
+
+             Du2 = sum(Du_D**2)
+
+             Coef = N_I(iIon)*ReducedMass_II(iIon,jIon)*CollisionRate
+
+             if(iIon == nIonFluid+1)then
+                Me_D = Me_D + MassIonElectron_I(nIonFluid+1) &
+                     *N_I(nIonFluid+1)*CollisionRate*Du_D
+             else
+                Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
+                     + RhoIon_I(iIon)*CollisionRate*Du_D
+             end if
+
+             Source_V(iP) = Source_V(iP) &
+                  + Coef*(2.0*(T_I(jIon) - T_I(iIon)) &
+                  /MassIonElectron_I(jIon) + (2.0/3.0)*Du2)
+          end do
+       end do
+
+       do iIon = 1, nIonFluid
+          iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
+          iP = iPIon_I(iIon)
+          iEnergy = Energy_ - 1 + iIon
+
+          if(UseElectronPressure) Source_V(iRhoUx:iRhoUz) &
+               = Source_V(iRhoUx:iRhoUz) + ChargeDensIon_I(iIon) &
+               /N_I(nIonFluid+1)*Me_D
+
+          U_D = [ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) ]
+          Source_V(iEnergy) = Source_V(iEnergy) &
+               + InvGammaMinus1*Source_V(iP) &
+               + sum(U_D*Source_V(iRhoUx:iRhoUz))
+       end do
+
+       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
+
+    end do; end do; end do
+
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine user_calc_sources_impl
+  !============================================================================
+
+  subroutine user_init_point_implicit
+
+    use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
+
+    logical :: IsPointImpl_V(nVar)
+    integer :: iVar, iPointImplVar, nPointImplVar
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_point_implicit'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    IsPointImpl_V = .false.
+
+    IsPointImpl_V(iRhoUxIon_I) = .true.
+    IsPointImpl_V(iRhoUyIon_I) = .true.
+    IsPointImpl_V(iRhoUzIon_I) = .true.
+    IsPointImpl_V(iPIon_I)     = .true.
+    if(UseElectronPressure) IsPointImpl_V(Pe_) = .true.
+
+    ! Tell the point implicit scheme if dS/dU will be set analytically
+    ! If this is set to true the DsDu_VVC matrix has to be set below.
+    IsPointImplMatrixSet = .false.
+
+    nPointImplVar = count(IsPointImpl_V)
+
+    allocate(iVarPointImpl_I(nPointImplVar))
+
+    iPointImplVar = 0
+    do iVar = 1, nVar
+       if(.not. IsPointImpl_V(iVar)) CYCLE
+       iPointImplVar = iPointImplVar + 1
+       iVarPointImpl_I(iPointImplVar) = iVar
+    end do
+
+  end subroutine user_init_point_implicit
+  !============================================================================
+
 end module ModUser
 !==============================================================================
 subroutine get_charge_exchange_wrapper( &

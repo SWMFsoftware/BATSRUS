@@ -10353,7 +10353,7 @@ Default value for PoyntingFluxPerBSi is 1.0E-6.
     <parameter name="UseTransverseTurbulence" type="logical" default="T"/>
     <parameter name="SigmaD"                  type="real"    default="-1/3"/>
     <parameter name="KarmanTaylorAlpha"       type="real"    default="1.0"/>
-    <parameter name="KarmanTaylorBeta"        type="real"    default="1.0"/>
+    <parameter name="KarmanTaylorBeta2AlphaRatio" type="real" default="0.5"/>
   </if>
   
 #CORONALHEATING
@@ -10383,7 +10383,7 @@ usmanov                 TypeCoronalHeating
 T                       UseTransverseTurbulence (read for usmanov only)
 -1/3                    SigmaD (read for usmanov only)
 1.0                     KarmanTaylorAlpha (read for usmanov only)
-1.0                     KarmanTaylorBeta (read for usmanov only)
+0.5                     KarmanTaylorBeta2AlphaRatio (read for usmanov only)
 
 If UseCoronalHeating is false, no CoronalHeating is included.
 If UseCoronalHeating is true, then one can select a simple exponential scale
