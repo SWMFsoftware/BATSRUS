@@ -3546,8 +3546,8 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources_impl
-
   !============================================================================
+
   subroutine user_init_point_implicit
 
     use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I
@@ -3555,7 +3555,7 @@ contains
 
     logical :: IsPointImpl_V(nVar)
     integer :: iVar, iPointImplVar, nPointImplVar
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_point_implicit'
     !--------------------------------------------------------------------------
@@ -3585,6 +3585,7 @@ contains
     end do
 
   end subroutine user_init_point_implicit
+  !============================================================================
 
 end module ModUser
 !==============================================================================
