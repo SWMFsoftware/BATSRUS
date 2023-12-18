@@ -1357,6 +1357,28 @@ contains
           Var_G = log10(State_VGB(P_,:,:,:,iBlock))
           call calc_gradient(iBlock, Var_G, nG, GradPe_DG)
           PlotVar_GV(:,:,:,iVar) = sqrt(sum(GradPe_DG**2, DIM=1))
+       case('gradpx', 'gradpy', 'gradpz', 'gradpr')
+          if(.not. allocated(GradPe_DG)) &
+               allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          if(.not. allocated(Var_G)) &
+               allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          ! pressure gradient
+          Var_G = State_VGB(P_,:,:,:,iBlock)
+          call calc_gradient(iBlock, Var_G, nG, GradPe_DG)
+          select case(String)
+          case('gradpx')
+             PlotVar_GV(:,:,:,iVar) = GradPe_DG(1,:,:,:)
+          case('gradpy')
+             PlotVar_GV(:,:,:,iVar) = GradPe_DG(2,:,:,:)
+          case('gradpz')
+             PlotVar_GV(:,:,:,iVar) = GradPe_DG(3,:,:,:)
+          case('gradpr')
+             do k = Mink,MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                PlotVar_GV(i,j,k,iVar) = &
+                     sum(GradPe_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
+                     / max(1e-30, r_GB(i,j,k,iBlock))
+             end do; end do; end do
+          end select
        case('normx')
           call set_shock_var
           PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = ShockNorm_DC(1,:,:,:)
@@ -2103,7 +2125,8 @@ contains
        case('divu')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                /No2Io_V(UnitT_)
-       case('gradpex','gradpey','gradpez','gradper')
+       case('gradpex', 'gradpey', 'gradpez', 'gradper', &
+            'gradpx', 'gradpy', 'gradpz', 'gradpr')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitP_)/No2Si_V(UnitX_)
        case('jx','jy','jz','jr',&
@@ -2230,7 +2253,8 @@ contains
           NameUnit = NameIdlUnit_V(UnitTemperature_)
        case('ux','uy','uz','ur','uxrot','uyrot','uzrot')
           NameUnit = NameIdlUnit_V(UnitU_)
-       case('gradpex','gradpey','gradpez','gradper')
+       case('gradpex', 'gradpey', 'gradpez', 'gradper', &
+            'gradpx', 'gradpy', 'gradpz', 'gradpr')
           NameUnit = 'nPa/m'
        case('jx','jy','jz','jr',&
             'jx1','jy1','jz1','jx2','jy2','jz2', &
