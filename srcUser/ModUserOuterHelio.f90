@@ -3444,7 +3444,7 @@ contains
     real :: ReducedTemp, CollisionRate, Coef
     real :: Du2
     real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I
-    real, dimension(nIonFluid+1) :: Ux_I, Uy_I, Uz_I, P_I, N_I, T_I
+    real, dimension(nIonFluid+1) :: Ux_I, Uy_I, Uz_I, P_I, NumDens_I, T_I
     real :: U_D(3), Du_D(3), Me_D(3)
 
     logical:: DoTest
@@ -3464,20 +3464,20 @@ contains
        Uy_I(:nIonFluid) = State_V(iRhoUyIon_I)/RhoIon_I
        Uz_I(:nIonFluid) = State_V(iRhoUzIon_I)/RhoIon_I
        P_I(:nIonFluid)  = State_V(iPIon_I)
-       N_I(:nIonFluid)  = RhoIon_I/MassIon_I
-       T_I(:nIonFluid)  = P_I(:nIonFluid)/N_I(:nIonFluid)
+       NumDens_I(:nIonFluid)  = RhoIon_I/MassIon_I
+       T_I(:nIonFluid)  = P_I(:nIonFluid)/NumDens_I(:nIonFluid)
 
        if(UseElectronPressure)then
-          ChargeDensIon_I = ChargeIon_I*N_I(:nIonFluid)
+          ChargeDensIon_I = ChargeIon_I*NumDens_I(:nIonFluid)
           P_I(nIonFluid+1) = State_V(Pe_)
-          N_I(nIonFluid+1) = sum(ChargeDensIon_I)
-          T_I(nIonFluid+1) = P_I(nIonFluid+1)/N_I(nIonFluid+1)
+          NumDens_I(nIonFluid+1) = sum(ChargeDensIon_I)
+          T_I(nIonFluid+1) = P_I(nIonFluid+1)/NumDens_I(nIonFluid+1)
           Ux_I(nIonFluid+1) = sum(ChargeDensIon_I*Ux_I(:nIonFluid)) &
-               /N_I(nIonFluid+1)
+               /NumDens_I(nIonFluid+1)
           Uy_I(nIonFluid+1) = sum(ChargeDensIon_I*Uy_I(:nIonFluid)) &
-               /N_I(nIonFluid+1)
+               /NumDens_I(nIonFluid+1)
           Uz_I(nIonFluid+1) = sum(ChargeDensIon_I*Uz_I(:nIonFluid)) &
-               /N_I(nIonFluid+1)
+               /NumDens_I(nIonFluid+1)
        end if
 
        Source_V = 0.0
@@ -3502,18 +3502,18 @@ contains
              ! Turbulence modifies the collision rate, but we do not
              ! incorporate that here
              CollisionRate = CollisionCoef_II(iIon,jIon) &
-                  *N_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
+                  *NumDens_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
 
              Du_D = [ Ux_I(jIon) - Ux_I(iIon), Uy_I(jIon) - Uy_I(iIon), &
                   Uz_I(jIon) - Uz_I(iIon) ]
 
              Du2 = sum(Du_D**2)
 
-             Coef = N_I(iIon)*ReducedMass_II(iIon,jIon)*CollisionRate
+             Coef = NumDens_I(iIon)*ReducedMass_II(iIon,jIon)*CollisionRate
 
              if(iIon == nIonFluid+1)then
                 Me_D = Me_D + MassIonElectron_I(nIonFluid+1) &
-                     *N_I(nIonFluid+1)*CollisionRate*Du_D
+                     *NumDens_I(nIonFluid+1)*CollisionRate*Du_D
              else
                 Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
                      + RhoIon_I(iIon)*CollisionRate*Du_D
@@ -3532,7 +3532,7 @@ contains
 
           if(UseElectronPressure) Source_V(iRhoUx:iRhoUz) &
                = Source_V(iRhoUx:iRhoUz) + ChargeDensIon_I(iIon) &
-               /N_I(nIonFluid+1)*Me_D
+               /NumDens_I(nIonFluid+1)*Me_D
 
           U_D = [ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) ]
           Source_V(iEnergy) = Source_V(iEnergy) &
