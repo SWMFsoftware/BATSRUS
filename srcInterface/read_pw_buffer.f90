@@ -14,7 +14,8 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   use ModMultiFluid,     ONLY: UseMultiIon, nIonFluid, &
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
   use ModTriangulateSpherical, ONLY: find_triangle_sph
-  use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_, RhoPwCoef, BodyRho_I
+  use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_, RhoPwCoef, &
+       BodyRho_I, BodyRhoSpecies_I
   use ModB0,             ONLY: get_b0
   use CON_planet_field,  ONLY: map_planet_field
 
@@ -181,13 +182,13 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   else
      if(UseMultiSpecies) then
         ! Interpolate species densities and put total into Rho_
-        State_V(SpeciesFirst_:SpeciesLast_) = RhoPwCoef* &
+        State_V(SpeciesFirst_:SpeciesLast_) = &
+             max(BodyRhoSpecies_I, RhoPwCoef* &
              ( Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) &
              + Area2*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode2) &
-             + Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3) )
+             + Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3) ) )
 
-        State_V(Rho_) = max(BodyRho_I(1), &
-             sum(State_V(SpeciesFirst_:SpeciesLast_)))
+        State_V(Rho_) = sum(State_V(SpeciesFirst_:SpeciesLast_))
      else
         ! For simple MHD the StateGm_VI contains the total density
         State_V(Rho_) = max(BodyRho_I(1), RhoPwCoef* &
