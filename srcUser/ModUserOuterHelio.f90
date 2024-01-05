@@ -187,9 +187,6 @@ module ModUser
   ! Freeze neutrals (with user_update_states)
   logical, parameter:: DoFreezeNeutral=.false.
 
-  ! variable to hold sources from charge-exchange with neutral fluids
-  real, allocatable :: FluidSource_ICB(:,:,:,:,:)
-
   ! Wave turbulence
   real :: DeltaUDim = 10.0, DeltaU = 0.0
   real :: CrossHelicity = -0.8
@@ -1176,60 +1173,6 @@ contains
     if(.not.IsMhd)then
        IsFound = .true.
        select case(NameVar)
-       case('sRho')
-          NameTecVar = 'sRho'
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRho_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-
-       case('sRhoux')
-          NameTecVar = 'sRhoUx'
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRhoUx_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-
-       case('sRhouy')
-          NameTecVar = 'sRhoUy'
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRhoUy_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-       case('sRhouz')
-          NameTecVar = 'sRhoUz'
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRhoUz_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-       case('senergy')
-          NameTecVar = 'senergy'
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHEnergy_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-       case('sRhopui')
-          NameTecVar = 'sRhoPUI'
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3Rho_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-       case('sRhouxpui')
-          NameTecVar = 'sRhoUxPUI'
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3RhoUx_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-
-       case('sRhouypui')
-          NameTecVar = 'sRhoUyPUI'
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3RhoUy_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-
-       case('sRhouzpui')
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3RhoUz_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-
-       case('senergypui')
-          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3Energy_,:,:,:,iBlock)
-          NameIdlUnit = '1/s'
-          NameTecUnit = '1/s'
-
        case('fluid')
           if(UseNeutralFluid)then
              call select_region(iBlock)
@@ -1468,9 +1411,6 @@ contains
     else
        IsFound = .true.
        select case(NameVar)
-       case('sRho')
-          NameTecVar = 'SRho'
-          PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
        case('fluid')
           if(UseNeutralFluid)then
              call select_region(iBlock)
@@ -1911,10 +1851,6 @@ contains
       Source_V = Source_V + SourceCx_V + SourcePh_V + SourceImp_V
 
       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
-
-      if(.not.allocated(FluidSource_ICB)) &
-           allocate(FluidSource_ICB(nVar+nFluid,nI,nJ,nK,MaxBlock))
-      FluidSource_ICB(:,i,j,k,iBlock) = Source_V
 
       if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
 
