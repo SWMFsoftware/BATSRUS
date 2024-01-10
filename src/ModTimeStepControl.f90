@@ -111,18 +111,17 @@ contains
   subroutine calc_timestep(iBlock, IsPartLocal)
     !$acc routine vector
 
-    use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, Dt, DtFixed, DtMax_B, Cfl, &
-         UseDtLimit, DtLimit, rLocalTimeStep, IsTimeAccurate
+         UseDtLimit, DtLimit, rLocalTimeStep
     use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
-         UseElectronPressure, DoUpdate_V
+         DoUpdate_V
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B, r_GB
     use ModCoronalHeating, ONLY: get_block_heating
     use ModTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VC
     use ModChromosphere, ONLY: get_tesi_c, TeSi_C
-    use ModPhysics, ONLY: InvGammaMinus1
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
     use ModNumConst, ONLY: cHalfPi
@@ -139,7 +138,7 @@ contains
     real:: Vdt, DtBlock
 
     ! Variables for time step control due to loss terms
-    real :: Einternal, Source, DtLoss
+    real :: DtLoss
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_timestep'
@@ -310,7 +309,7 @@ contains
     use ModAdvance,  ONLY: DtMax_CB, State_VGB, rho_, Bx_, Bz_, P_, &
          iTypeAdvance_B, ExplBlock_
     use ModB0,       ONLY: B0_DGB
-    use ModGeometry, ONLY: Used_GB, IsNoBody_B, r_GB
+    use ModGeometry, ONLY: Used_GB, IsNoBody_B
     use ModImplicit, ONLY: UsePartImplicit
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, No2Io_V, &
          UnitX_, UnitU_, UnitT_, UnitB_, UnitRho_, UnitP_, Gamma
@@ -325,7 +324,6 @@ contains
     integer :: iError, Ijk_D(3), i, j, k
     real    :: DtMinPe, Cmax, Cmax_C(nI,nJ,nK)
 
-    real :: DtDim
 
     ! DtMax_CB is already set in calc_timestep,
     ! and Dt=DtLimit is set in set_parameters

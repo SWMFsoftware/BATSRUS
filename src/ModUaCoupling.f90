@@ -4,8 +4,7 @@
 
 module ModUaCoupling
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop
+  use BATL_lib, ONLY: 
 
   ! Routines related to the coupline with the Upper Atmosphere component
 

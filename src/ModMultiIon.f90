@@ -18,7 +18,6 @@ module ModMultiIon
 
   use ModMultiFluid
   use ModMain, ONLY: UseUserSourceImpl
-  use ModSize, ONLY: nI, nJ, nK
   use ModGeometry, ONLY: Used_GB
 
   use ModUserInterface ! user_calc_sources_impl, user_init_point_implicit
@@ -162,14 +161,10 @@ contains
 
     use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, UseB0
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
-    use ModAdvance, ONLY: State_VGB, Source_VC, UseAnisoPe, Efield_DGB, &
-         bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
+    use ModAdvance, ONLY: State_VGB, Source_VC, Efield_DGB
     use ModB0,      ONLY: B0_DGB
-    use ModPhysics, ONLY: InvClight2, ElectronTemperatureRatio
-    use ModCoordTransform, ONLY: cross_product
-    use ModWaves,   ONLY: UseWavePressure
-    use BATL_lib,   ONLY: IsCartesianGrid, FaceNormal_DDFB, CellVolume_GB, &
-         CellSize_DB, nDim
+    use ModPhysics, ONLY: InvClight2
+    use BATL_lib,   ONLY: 
 
     integer, intent(in) :: iBlock
 
@@ -180,7 +175,6 @@ contains
     real, dimension(MaxDim)   :: FullB_D
     real, dimension(nIonFluid):: ForceX_I, ForceY_I, ForceZ_I, ChargeDens_I
     real :: InvElectronDens
-    real :: vInv
 
     ! Alfven Lorentz factor for Boris correction
     real :: Ga2

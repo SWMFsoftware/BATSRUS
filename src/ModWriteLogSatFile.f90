@@ -75,7 +75,7 @@ contains
 
     ! Coordinate system transformation
     real:: Convert_DD(3,3)
-    integer:: iVar, iBlock
+    integer:: iVar
 
     ! Event date for NameFile
     character(len=19) :: StringDateTime
@@ -88,8 +88,6 @@ contains
     character(len=2):: StringIParcel
 
     ! NaN detection variables
-    integer :: iVarLog, k
-    real :: Value
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
@@ -399,17 +397,17 @@ contains
     use ModAdvance,  ONLY: Tmp1_GB, Tmp2_GB, State_VGB, StateOld_VGB, DivB1_GB
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
-    use ModGeometry, ONLY: r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, &
+    use ModGeometry, ONLY: xMinBox, xMaxBox, yMinBox, yMaxBox, &
          zMinBox, zMaxBox, DomainVolume
     use ModFieldTrace, ONLY: Trace_DSNB
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
-    use ModIO, ONLY: write_myname, lNameLogVar,Parcel_DI
+    use ModIO, ONLY: lNameLogVar,Parcel_DI
     use ModMultiFluid, ONLY: UseMultiIon, &
          iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, x_, y_, &
          integrate_grid, maxval_grid, minval_grid, MinIJK_D, &
-         MaxIJK_D, nDim, xyz_to_coord, CellSize_DB, CellVolume_GB
+         MaxIJK_D, nDim, xyz_to_coord, CellVolume_GB
     use BATL_tree,       ONLY: find_tree_cell, iTree_IA, Block_, Proc_
     use BATL_geometry,   ONLY: CoordMin_D, DomainSize_D
     use ModInterpolate,  ONLY: interpolate_vector

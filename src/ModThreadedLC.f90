@@ -126,15 +126,12 @@ contains
   subroutine init_threaded_lc
 
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iComm
-    use ModLookupTable,     ONLY: i_lookup_table
     use ModConst,           ONLY: cElectronMass, &
          cEps, cElectronCharge, cTwoPi, cProtonMass
     use ModMultiFluid,      ONLY: MassIon_I
-    use ModFieldLineThread, ONLY:  nPointThreadMax, init_thread=>init, &
-         UseChromoEvaporation
+    use ModFieldLineThread, ONLY:  nPointThreadMax, init_thread=>init
     use ModPhysics,         ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
-    use ModVarIndexes,      ONLY: Pe_, p_
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_threaded_lc'
@@ -552,7 +549,6 @@ contains
       use ModMain,     ONLY: cfl, Dt, IsTimeAccurate
       use ModAdvance,  ONLY: DtMax_CB, nJ, nK
       use ModPhysics,  ONLY: UnitT_, No2Si_V
-      use ModMultiFluid,      ONLY: MassIon_I
 
       ! Advances the thread solution
       ! If IsTimeAccurateThread, the solution is advanced through the time
@@ -1154,7 +1150,6 @@ contains
     use ModWaves,        ONLY: WaveFirst_, WaveLast_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
-    use ModFieldLineThread, ONLY: DoPlotThreads
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState

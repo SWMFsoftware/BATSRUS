@@ -7,7 +7,7 @@ module ModFieldTraceFast
   use ModKind
   use ModFieldTrace
   use ModMain, ONLY: UseB0, TypeCoordSystem, tSimulation, nStep
-  use ModB0, ONLY: B0_DGB, get_b0, get_b0_dipole
+  use ModB0, ONLY: B0_DGB, get_b0
   use ModAdvance, ONLY: State_VGB, Bx_, Bz_, iTypeUpdate, UpdateSlow_
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
@@ -204,7 +204,6 @@ contains
     integer :: i1,j1,k1,i2,j2,k2
 
     ! Distance between Gen_D and i1,j1,k1, and i2,j2,k2
-    real :: Dx1, Dy1, Dz1, Dx2, Dy2, Dz2
 
     ! Weights for surface interpolation
     real :: Weight_I(4)
@@ -1857,7 +1856,6 @@ contains
       ! BATL related
       integer:: iNode, iDim, iSideFace
 
-      integer:: iS, jS, kS, iR, jR, kR, iRay
 #ifdef _OPENACC
       !------------------------------------------------------------------------
       do iFace=iFaceMin,iFaceMax

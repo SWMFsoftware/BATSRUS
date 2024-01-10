@@ -24,7 +24,7 @@ module ModRestartFile
        read_pic_status_file, DoRestartPicStatus, AdaptPic
   use ModImplicit, ONLY: UseImplicit, &
        nStepPrev, ImplOld_VCB, DtPrev
-  use ModKind,       ONLY: Real4_, Real8_, Int8_
+  use ModKind,       ONLY: Real4_, Real8_
   use ModIoUnit,     ONLY: UnitTmp_
   use ModUtilities,  ONLY: open_file, close_file
   use ModGroundMagPerturb, ONLY: DoWriteIndices
@@ -186,7 +186,7 @@ contains
   !============================================================================
   subroutine write_restart_files
 
-    use ModB0,       ONLY: UseB0, add_b0, subtract_b0, B0_DGB
+    use ModB0,       ONLY: UseB0, add_b0, subtract_b0
     use ModGeometry, ONLY: Used_GB
     use ModMain,     ONLY: UseFieldLineThreads, UseBufferGrid
     use ModFieldLineThread, ONLY: save_thread_restart

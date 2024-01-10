@@ -6,7 +6,7 @@ module ModPartImplicit
 
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, &
-       iProcTest, iVarTest, iProc, nProc, iComm
+       iVarTest, iProc, nProc, iComm
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
 
   use ModImplicit
@@ -395,7 +395,6 @@ contains
          nStep, tSimulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
          iNewDecomposition
     use ModVarIndexes, ONLY: Rho_
-    use ModMultifluid, ONLY: select_fluid, nFluid, iP
     use ModAdvance, ONLY : State_VGB, StateOld_VGB, &
          DtMax_CB, Tmp1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
@@ -415,7 +414,7 @@ contains
     use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
     use ModMpi
 
-    integer :: i, j, k, iVar, iBlock, iBlockImpl, iFluid
+    integer :: i, j, k, iVar, iBlock, iBlockImpl
     integer :: nIterNewton
     integer :: iError, iError1
     real    :: NormX, NormLocal_V(nVar)
@@ -1951,7 +1950,7 @@ contains
     real,  intent(out):: &
          Var_VGB(nVar,iMin:iMax,jMin:jMax,kMin:kMax,MaxBlockImpl)
 
-    integer :: iBlockImpl, iBlock, i, j, k, iFluid
+    integer :: iBlockImpl, iBlock, i, j, k
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'explicit2implicit'
@@ -2002,7 +2001,7 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
     use ModEnergy,     ONLY: energy_to_pressure_cell
     use ModAdvance,    ONLY: nVar, State_VGB
-    use ModMultiFluid, ONLY: nFluid, iRho, iRho_I, iP_I, iP
+    use ModMultiFluid, ONLY: nFluid, iRho, iRho_I
     use ModPhysics,    ONLY: RhoMin_I
 
     real,    intent(in) :: Var_VC(:,:,:,:) ! dimension(nVar,nI,nJ,nK)
@@ -2039,7 +2038,6 @@ contains
   !============================================================================
   subroutine implicit2explicit(Var_VCB)
 
-    use ModMain, ONLY: nI,nJ,nK
     use ModAdvance, ONLY: State_VGB
 
     real :: Var_VCB(:,:,:,:,:)   ! dimension(nVar,nI,nJ,nK,MaxBlockImpl)
@@ -2212,7 +2210,7 @@ contains
     ! subroutine get_physical_flux from ModFaceFlux.
 
     use ModVarIndexes, ONLY: nVar, Energy_
-    use ModMain,     ONLY: MaxDim, x_, y_, z_, RhoUx_, RhoUz_
+    use ModMain,     ONLY: x_, y_, z_
     use ModAdvance,  ONLY: nFlux
     use ModFaceFlux, ONLY: &
          set_block_values, set_cell_values, get_physical_flux
@@ -2284,7 +2282,7 @@ contains
   subroutine get_cmax_face(Var_VF, B0_DF, nFaceI, nFaceJ, nFaceK, &
        iDim, iBlock,Cmax_F)
 
-    use ModMain,     ONLY: MaxDim, x_, y_, z_
+    use ModMain,     ONLY: x_, y_, z_
     use ModFaceFlux, ONLY: &
          set_block_values, set_cell_values, get_speed_max
 #ifndef _OPENACC

@@ -227,7 +227,7 @@ contains
     use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
     use ModMultiFluid, ONLY: select_fluid, nFluid, iRho, iRhoUx
     use ModFaceGradient, ONLY: get_face_gradient_field
-    use ModMain, ONLY: iMinFace, jMinFace, kMinFace, x_
+    use ModMain, ONLY: x_
     use ModFaceFluxParameters
 
     integer, intent(in) :: iDimFace, iFace, jFace,kFace,iBlockFace

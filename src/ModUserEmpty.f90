@@ -71,8 +71,6 @@ contains
     ! user_initial_perturbation can be applied after restart, while
     ! user_set_ICs cannot.
 
-    use ModMain, ONLY: nBlockMax
-    integer::iBlock
     character(len=*), parameter:: NameSub = 'user_initial_perturbation'
     !--------------------------------------------------------------------------
     UseUserPerturbation = .false. ! if not implemented
@@ -201,7 +199,6 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModSize, ONLY: nI, nJ, nK
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar

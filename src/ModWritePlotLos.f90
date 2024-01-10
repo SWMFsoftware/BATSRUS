@@ -691,7 +691,7 @@ contains
 
       use ModGeometry, ONLY: &
            xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
-      use ModFieldLineThread, ONLY: dCoord1Inv, DoPlotThreads, rChromo
+      use ModFieldLineThread, ONLY: dCoord1Inv
       use BATL_lib,           ONLY: xyz_to_coord, &
            get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 

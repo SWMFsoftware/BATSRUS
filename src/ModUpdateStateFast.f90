@@ -16,7 +16,7 @@ module ModUpdateStateFast
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-       Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
+       Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB, Vdt_, iTypeUpdate, UpdateFast_, UseRotatingFrame, &
        UseElectronPressure
@@ -25,7 +25,6 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
-       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, iSideTest, &
        Unset_, test_start, test_stop
   use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
@@ -33,7 +32,7 @@ module ModUpdateStateFast
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
        OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
        GammaElectronMinus1, GammaElectron
-  use ModMain, ONLY: Dt, DtMax_B, Cfl, nStep, tSimulation, &
+  use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
        UseGravity
   use ModB0, ONLY: B0_DGB, get_b0_dipole
@@ -41,7 +40,6 @@ module ModUpdateStateFast
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB
   use ModSolarWind, ONLY: get_solar_wind_point
-  use ModUtilities, ONLY: CON_stop
   use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
@@ -185,7 +183,7 @@ contains
   subroutine update_state_fast
 
     ! Apply cell boundary conditions and update one stage
-    integer:: i, j, k, iBlock, iGang, iVar
+    integer:: i, j, k, iBlock, iGang
     logical:: IsBodyBlock
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
@@ -331,7 +329,7 @@ contains
     logical, intent(in):: IsBodyBlock
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar
-    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), ForcePerRho_D(3)
+    real:: DivU, DivB, DivE, DtLocal, Change_V(nFlux), ForcePerRho_D(3)
 
     logical:: IsConserv
 
@@ -692,7 +690,7 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang, iVar
+    integer:: iGang
     logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
@@ -752,7 +750,7 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang, iVar
+    integer:: iGang
     logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
@@ -812,7 +810,7 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang, iVar
+    integer:: iGang
     logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
@@ -1946,7 +1944,6 @@ contains
 
     real :: AreaInvCdiff, Cproduct, Bn
 
-    integer:: iVar
     !--------------------------------------------------------------------------
     if(DoLf)then
        ! Rusanov scheme

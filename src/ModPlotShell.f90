@@ -4,12 +4,11 @@
 module ModPlotShell
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iBlockTest, iProc, nProc, iComm
+       test_start, test_stop, iProc, nProc, iComm
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModIO
-  use ModNumConst,        ONLY: cRadtoDeg, cDegToRad, cTiny
-  use ModGeometry,        ONLY: RadiusMin
+  use ModNumConst,        ONLY: cRadtoDeg, cDegToRad
   implicit none
 
   SAVE
@@ -133,7 +132,6 @@ contains
   subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_GV)
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
-    use ModMain,            ONLY: UseB0
     use ModFieldLineThread, ONLY: DoPlotThreads, rChromo, &
          interpolate_thread_state, set_thread_plotvar
     use ModGeometry,    ONLY: rMin_B

@@ -137,14 +137,14 @@ contains
     ! Assumes that ghost cells are set
     ! This will NOT work for Hall MHD
 
-    use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, Ex_, Ez_
+    use ModVarIndexes, ONLY: Bx_, Bz_, Ex_, Ez_
     use ModAdvance,    ONLY: State_VGB, UseEfield
     use ModB0,         ONLY: UseB0, B0_DGB
     use ModCoordTransform, ONLY: cross_product
     use ModMultiFluid,     ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iRhoIon_I, ChargePerMass_I
     use ModCurrent,        ONLY: get_current
-    use BATL_lib,          ONLY: x_, y_, z_, CellVolume_GB
+    use BATL_lib,          ONLY: x_, y_, z_
 
     integer, intent(in):: iBlock
     logical, optional, intent(in) :: DoHallCurrentIn
@@ -223,7 +223,7 @@ contains
     use ModMultiFluid,     ONLY: &!
          iRhoIon_I, ChargePerMass_I, nIonFluid
     use BATL_lib,   ONLY: CellVolume_GB
-    use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, nVar
+    use ModVarIndexes, ONLY: Bx_, Bz_, nVar
 
     integer, intent(in):: iBlock
     integer:: i, j, k
@@ -310,13 +310,13 @@ contains
     ! of reference. To achive this, -v x B is added, v being a
     ! the ion velocity (averaged charge velocity).
 
-    use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_
+    use ModVarIndexes, ONLY: Bx_, Bz_
     use ModAdvance,    ONLY: State_VGB
     use ModB0,         ONLY: UseB0, B0_DGB
     use ModCoordTransform, ONLY: cross_product
     use ModMultiFluid,     ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iRhoIon_I, ChargePerMass_I
-    use BATL_lib,          ONLY: x_, y_, z_, CellVolume_GB
+    use BATL_lib,          ONLY: x_, y_, z_
 
     integer, intent(in):: iBlock
 

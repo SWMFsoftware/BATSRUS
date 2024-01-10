@@ -6,7 +6,7 @@ module ModWritePlotRadiowave
   use ModRadioWaveImage, ONLY: ray_bunch_intensity, nRay,      &
        Intensity_I, check_allocate,  rIntegration2, StateIn_VI,&
        SlopeX_, SlopeZ_
-  use BATL_lib, ONLY: test_start, test_stop, x_, y_, z_, iProc
+  use BATL_lib, ONLY: test_start, test_stop, x_, z_, iProc
   use ModBatsrusUtility, ONLY: get_time_string
   implicit none
   SAVE
@@ -31,8 +31,6 @@ contains
          TypePlot_I, TypePlotFormat_I, plot_, ObsPos_DI, &
          nPixelX_I, nPixelY_I, xSizeImage_I, ySizeImage_I, &
          NamePlotDir, StringDateOrTime, MaxPlotRadioFreq
-    use ModUtilities, ONLY: open_file, close_file
-    use ModIoUnit, ONLY: UnitTmp_
     use ModPlotFile, ONLY: save_plot_file
     use ModCellGradient, ONLY: calc_gradient_ghost
     use ModAdvance, ONLY: State_VGB
@@ -72,7 +70,6 @@ contains
     ! Distance from the radiotelescope to the integration sphere
     real :: ObservToIntSphereDist
     ! Intersection point of the line of sight with the integration sphere
-    real :: XyzAtIntSphere_D(MaxDim)
     !  Number of frequencies read from StringRadioFrequency_I(iFile)
     integer :: nFreq
     ! Frequencies in Hertz:

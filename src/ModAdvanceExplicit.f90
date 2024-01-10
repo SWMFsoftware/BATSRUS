@@ -27,10 +27,10 @@ contains
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: DiLevel_EB
-    use ModGeometry,   ONLY: IsBody_B, IsNoBody_B, rMin_B
+    use ModGeometry,   ONLY: IsBody_B, rMin_B
     use ModBlockData,  ONLY: set_block_data
     use ModPhysics,    ONLY: No2Si_V, UnitT_, &
-         update_angular_velocity, OmegaBody_D, UseBody2Orbit
+         update_angular_velocity, UseBody2Orbit
     use ModCalcSource, ONLY: calc_source
     use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
          nCorrectedFaceValues, CorrectedFlux_VXB, &
@@ -56,7 +56,6 @@ contains
          UseHybrid, trace_particles, get_state_from_vdf, advance_ion_current
     use ModViscosity, ONLY: UseArtificialVisco
     use omp_lib
-    use ModImplicit, ONLY: UseSemiImplicit
 
     logical, intent(in) :: DoCalcTimestep
 
@@ -333,7 +332,6 @@ contains
   !============================================================================
   subroutine update_secondbody
     use ModMain,     ONLY:  nBlock, Unused_B, body2_, iNewGrid
-    use ModConst,    ONLY: cTwoPi
     use ModPhysics,  ONLY: rBody2, xBody2, yBody2, zBody2, &
          set_second_body_coord
     use ModMessagePass,      ONLY: exchange_messages

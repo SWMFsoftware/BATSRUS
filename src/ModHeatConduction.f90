@@ -12,7 +12,6 @@ module ModHeatConduction
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxRegion, &
        rCollisional, rCollisionless
   use ModFaceFluxParameters
-  use ModMultiFluid, ONLY: nIonFluid
   use BATL_size, ONLY: nDim, MaxDim
   use omp_lib
 
@@ -824,7 +823,6 @@ contains
 
     ! Non-split operator, (almost) explicit ei heat energy exchange
 
-    use ModConst,      ONLY: cElectronMass, cProtonMass
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
     use ModGeometry,   ONLY: Used_GB
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, CollisionCoef_II
@@ -940,7 +938,7 @@ contains
     ! Operator split, semi-implicit subroutines
 
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_, &
-         WaveFirst_, WaveLast_, WDiff_
+         WaveFirst_, WaveLast_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, DtMax_CB, Source_VCB
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
@@ -948,11 +946,11 @@ contains
          iTeImpl
     use ModMain,         ONLY: Dt, IsTimeAccurate, Cfl
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I,&
-         IonFirst_, IonLast_, nIonFluid
+         IonFirst_, IonLast_
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
          UnitEnergyDens_, UnitN_, UnitT_, AverageIonCharge, &
-         InvGammaElectronMinus1, GammaMinus1_I, ReducedMass_II, &
+         InvGammaElectronMinus1, &
          CollisionCoef_II, GammaMinus1, InvGammaMinus1
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModTurbulence, ONLY: turbulent_cascade, apportion_coronal_heating

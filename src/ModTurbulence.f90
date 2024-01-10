@@ -330,8 +330,7 @@ contains
     use BATL_size, ONLY: nDim, nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0, ONLY: B0_DGB
-    use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
-         get_tesi_c, TeSi_C
+    use ModChromosphere,  ONLY: 
     use ModGeometry, ONLY: Used_GB, r_GB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
@@ -540,7 +539,7 @@ contains
          RightState_VX, RightState_VY, RightState_VZ
     use ModCoordTransform, ONLY: cross_product
     use ModSize, ONLY: MaxDim
-    use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_
+    use ModVarIndexes, ONLY: Ux_, Uy_, Uz_
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: CurlU_D(MaxDim)
@@ -609,7 +608,7 @@ contains
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
 
-    use ModVarIndexes, ONLY: nVar, Lperp_, Rho_
+    use ModVarIndexes, ONLY: nVar, Lperp_
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: IonMassPerCharge, pMin_I, TMin_I
     use ModAdvance, ONLY: nVar, UseAnisoPressure, Bx_, Bz_, Pe_

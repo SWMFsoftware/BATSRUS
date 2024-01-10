@@ -1082,7 +1082,7 @@ contains
   !============================================================================
   subroutine check_nan_semi
 
-    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, Xyz_DGB, iProc
+    use BATL_lib, ONLY: nI, nJ, nK, Xyz_DGB, iProc
     use ModAdvance, ONLY: State_VGB
     use, intrinsic :: ieee_arithmetic
 

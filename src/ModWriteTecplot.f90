@@ -728,7 +728,6 @@ contains
     character(len=8)  :: StringDate
     character(len=10) :: StringTime
     integer :: iUnitHere
-    character(:), allocatable :: String
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_tecplot_auxdata'

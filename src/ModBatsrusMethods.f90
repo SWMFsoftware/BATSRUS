@@ -7,7 +7,7 @@ module ModBatsrusMethods
   ! This module contains the top level methods for BATSRUS
 
   use BATL_lib, ONLY: test_start, test_stop, lVerbose,&
-       iTest, jTest, kTest, iBlockTest, iVarTest, iProc, iProcTest
+       iProc
   use ModUpdateStateFast, ONLY: sync_cpu_gpu
   use ModBatsrusUtility, ONLY: stop_mpi
 
@@ -86,7 +86,6 @@ contains
       use ModLoadBalance, ONLY: load_balance
       use ModAMR, ONLY: DoSetAmrLimits, set_amr_limits
       use CON_axes, ONLY: transform_matrix, dLongitudeHgr, dLongitudeHgi
-      use ModUtilities, ONLY : upper_case
       use ModNumConst, ONLY: cTwoPi
 
       ! local variables
@@ -501,7 +500,7 @@ contains
          Parcel_DI, nParcel
     use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
-    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure, State_VGB
+    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
     use ModAdvanceExplicit, ONLY: advance_explicit, update_secondbody
     use ModAdvectPoints, ONLY: advect_all_points, advect_points
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
@@ -920,7 +919,6 @@ contains
     !==========================================================================
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
-      use ModAdvance, ONLY: State_VGB
       use ModGroundMagPerturb, ONLY: nMagGridFile
       logical :: DoPlotThread
       !------------------------------------------------------------------------
