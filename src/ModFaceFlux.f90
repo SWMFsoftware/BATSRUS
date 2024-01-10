@@ -34,6 +34,11 @@ module ModFaceFlux
        UseLowOrder, IsLowOrderOnly_B, DoUpdate_V
   use ModFaceFluxParameters
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
+  use ModWaves, ONLY:
+  use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
+       AlfvenPlusFirst_, AlfvenPlusLast_, &
+       GammaWave, UseWavePressure, UseWavePressureLtd
+  
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        HallFactor_DF, set_hall_factor_face, &
        set_ion_mass_per_charge, UseBiermannBattery
@@ -485,7 +490,6 @@ contains
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
     use ModMultiFluid, ONLY: UseMultiIon
-    use ModWaves, ONLY: UseAlfvenWaves
     use ModTurbulence, ONLY: UseAwRepresentativeHere
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
@@ -1172,10 +1176,6 @@ contains
          GammaMinus1, GammaElectronMinus1, GammaElectron
     use ModAdvance,  ONLY: &
          UseElectronPressure, UseElectronEntropy, UseEntropy, UseAnisoPe
-    use ModWaves,    ONLY: AlfvenMinusFirst_, AlfvenMinusLast_,&
-         AlfvenPlusFirst_, AlfvenPlusLast_, &
-         GammaWave, UseWavePressure, UseAlfvenWaves, &
-         UseWavePressureLtd
     use ModTurbulence, ONLY: UseAwRepresentativeHere
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
@@ -1859,6 +1859,8 @@ contains
          ! Correct the momentum using the (1+VA2/c^2)
          Gamma2 = 1 + (FullBx**2 + FullBy**2 + FullBz**2)/Rho*InvClight2Face
          StateCons_V(RhoUx_:RhoUz_) = StateCons_V(RhoUx_:RhoUz_)*Gamma2
+         if(UseAlfvenWaves) StateCons_V(WaveFirst_:WaveLast_) = &
+              StateCons_V(WaveFirst_:WaveLast_)*Gamma2
       end if
 
     end subroutine get_mhd_flux
@@ -1907,7 +1909,6 @@ contains
       use ModMultiFluid, ONLY: iPpar
       use ModTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD, PoyntingFluxPerB
-      use ModWaves
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal, PeAdd, pWave, wD, SqrtRho
@@ -3132,7 +3133,6 @@ contains
            UnStar, pStar, exact_rs_set_gamma, exact_rs_sample, exact_rs_pu_star
       use ModPhysics,  ONLY: InvGammaMinus1_I, Gamma_I, InvGammaMinus1
       use ModMultiFluid, ONLY: iRhoUx, iRhoUz, iUx, iUz
-      use ModWaves,    ONLY: UseWavePressure, GammaWave
       use ModTurbulence, ONLY: PoyntingFluxPerB
 
       real :: Rho, Un, p, pTotal, e, StateStar_V(nVar)
@@ -3513,8 +3513,6 @@ contains
          iRhoIon_I, iUxIon_I, iUzIon_I, iPIon_I, &
          ElectronFirst_, IonFirst_, &
          nIonFluid, nTrueIon, UseMultiIon, ChargePerMass_I
-    use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
-         GammaWave
     use ModMain,    ONLY: Climit
     use ModPhysics, ONLY: Clight
     use ModAdvance, ONLY: State_VGB
