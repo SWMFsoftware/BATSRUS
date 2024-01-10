@@ -572,7 +572,6 @@ contains
       integer:: iFlux
       integer:: iGang
 
-      logical:: IsFF_I(nFFLogic)
       integer:: iFF_I(nFFInt)
       real:: rFF_I(nFFReal) ! , CmaxDt0, Flux0
       !------------------------------------------------------------------------
@@ -691,7 +690,6 @@ contains
       integer:: iFlux
       integer:: iGang
 
-      logical:: IsFF_I(nFFLogic)
       integer:: iFF_I(nFFInt)
       real:: rFF_I(nFFReal) !, CmaxDt0, Flux0
       !------------------------------------------------------------------------
@@ -806,7 +804,6 @@ contains
       integer:: iFlux
       integer:: iGang
 
-      logical:: IsFF_I(nFFLogic)
       integer:: iFF_I(nFFInt)
       real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
@@ -1173,7 +1170,7 @@ contains
 
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModPhysics,  ONLY: &
-         GammaMinus1, GammaElectronMinus1, GammaElectron
+         GammaMinus1, GammaElectronMinus1
     use ModAdvance,  ONLY: &
          UseElectronPressure, UseElectronEntropy, UseEntropy, UseAnisoPe
     use ModTurbulence, ONLY: UseAwRepresentativeHere
@@ -1283,7 +1280,8 @@ contains
     ! Set flux for electron pressure
     if(UseElectronPressure)then
        if(UseElectronEntropy) StateCons_V(Pe_) = &
-            State_V(Pe_)*State_V(Rho_)**(-GammaElectronMinus1)
+            State_V(Pe_)*sum(State_V(iRhoIon_I)*ChargePerMass_I) &
+            **(-GammaElectronMinus1)
        Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
 
        if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
@@ -1647,7 +1645,6 @@ contains
       ! Energy difference (in the standard argo, Rho*sigma_D*Z^2/2
       real :: wD
 
-      real, dimension(nIonFluid) :: Ux_I, Uy_I, Uz_I, RhoUn_I
       real :: MagneticForce_D(RhoUx_:RhoUz_)
       ! Extract primitive variables
       !------------------------------------------------------------------------
@@ -2519,7 +2516,6 @@ contains
     end subroutine lax_friedrichs_flux
     !==========================================================================
     subroutine harten_lax_vanleer_flux
-      use ModMultiFluid, ONLY: iUxIon_I, iUzIon_I
 
       real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I

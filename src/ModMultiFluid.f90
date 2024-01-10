@@ -12,40 +12,40 @@ module ModMultiFluid
   implicit none
   save
 
-  ! Convenient parameters for the ion fluids
-  logical, parameter:: UseMultiIon = IonLast_ > IonFirst_ .and. Ex_ == 1
+  ! This has to be at least 1 even if there are no ion fluids
+  integer, parameter:: nIonFluid = IonLast_
 
-  ! Logical for signaling neutral fluid(s) beyond the ions (IonLast_>=1)
-  logical, parameter:: UseNeutralFluid = nFluid > IonLast_
+  ! Convenient parameters for the ion fluids
+  logical, parameter:: UseMultiIon = nIonFluid > 1 .and. Ex_ == 1
+
+  ! Logical for signaling neutral fluid(s) beyond the ions
+  logical, parameter:: UseNeutralFluid = nFluid > nIonFluid
 
   ! Index for the first neutral fluid (as long as it exists)
-  integer, parameter:: NeutralFirst_ = min(IonLast_+1, 100*(B_-U_)+1)
-
-  ! This has to be at least 1 even if there are no ion fluids
-  integer, parameter:: nIonFluid = IonLast_ - IonFirst_ + 1
+  integer, parameter:: NeutralFirst_ = min(nIonFluid+1, 100*(B_-U_)+1)
 
   ! The number of true ion fluids if UseEfield
   integer, parameter:: nTrueIon  = nIonFluid - nElectronFluid
 
   ! Index points to the first electron fluid if UseEfield
-  integer, parameter:: ElectronFirst_ = min(nTrueIon+1,nIonFluid)
+  integer, parameter:: ElectronFirst_ = min(nTrueIon+1, nIonFluid)
 
   integer, parameter:: iUx_I(nFluid) = iRhoUx_I(1:nFluid)
   integer, parameter:: iUy_I(nFluid) = iRhoUy_I(1:nFluid)
   integer, parameter:: iUz_I(nFluid) = iRhoUz_I(1:nFluid)
 
-  integer, parameter:: iRhoIon_I(nIonFluid)   = iRho_I(IonFirst_:IonLast_)
-  integer, parameter:: iRhoUxIon_I(nIonFluid) = iRhoUx_I(IonFirst_:IonLast_)
-  integer, parameter:: iRhoUyIon_I(nIonFluid) = iRhoUy_I(IonFirst_:IonLast_)
-  integer, parameter:: iRhoUzIon_I(nIonFluid) = iRhoUz_I(IonFirst_:IonLast_)
-  integer, parameter:: iUxIon_I(nIonFluid)    = iRhoUx_I(IonFirst_:IonLast_)
-  integer, parameter:: iUyIon_I(nIonFluid)    = iRhoUy_I(IonFirst_:IonLast_)
-  integer, parameter:: iUzIon_I(nIonFluid)    = iRhoUz_I(IonFirst_:IonLast_)
-  integer, parameter:: iPIon_I(nIonFluid)     = iP_I(IonFirst_:IonLast_)
+  integer, parameter:: iRhoIon_I(nIonFluid)   = iRho_I(1:nIonFluid)
+  integer, parameter:: iRhoUxIon_I(nIonFluid) = iRhoUx_I(1:nIonFluid)
+  integer, parameter:: iRhoUyIon_I(nIonFluid) = iRhoUy_I(1:nIonFluid)
+  integer, parameter:: iRhoUzIon_I(nIonFluid) = iRhoUz_I(1:nIonFluid)
+  integer, parameter:: iUxIon_I(nIonFluid)    = iRhoUx_I(1:nIonFluid)
+  integer, parameter:: iUyIon_I(nIonFluid)    = iRhoUy_I(1:nIonFluid)
+  integer, parameter:: iUzIon_I(nIonFluid)    = iRhoUz_I(1:nIonFluid)
+  integer, parameter:: iPIon_I(nIonFluid)     = iP_I(1:nIonFluid)
 
   integer, private:: iF
   logical, parameter:: IsIon_I(nFluid) = &
-       [ (iF >= IonFirst_ .and. iF <=IonLast_, iF=1, nFluid) ]
+       [ (iF >= 1 .and. iF <= nIonFluid, iF=1, nFluid) ]
 
   ! The ion masses (adjustable)
   real :: MassIon_I(nIonFluid)
