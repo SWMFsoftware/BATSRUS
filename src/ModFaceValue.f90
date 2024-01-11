@@ -127,10 +127,8 @@ module ModFaceValue
   real:: Cell2_I(1-nG:MaxIJK+nG)
 
   real, allocatable:: FaceL_I(:), FaceR_I(:)
-  !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
-  !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
-  !$acc declare create(iMin, iMax, jMin, jMax, kMin, kMax)
-  !$acc declare create(Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG)
+  !$omp threadprivate( Cell_I, Cell2_I, FaceL_I, FaceR_I)
+  !$acc declare create(Cell_I, Cell2_I, FaceL_I, FaceR_I)
 
   real:: LowOrderCrit_I(1:MaxIJK+1)
   !$omp threadprivate( LowOrderCrit_I )
@@ -1578,7 +1576,6 @@ contains
     subroutine get_facex_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
-      !$omp threadprivate( State_VX )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -1676,7 +1673,6 @@ contains
 
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
-      !$omp threadprivate( State_VY )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -1774,7 +1770,6 @@ contains
 
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
-      !$omp threadprivate( State_VZ )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
