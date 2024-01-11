@@ -596,7 +596,7 @@ contains
           if(DoTest)call write_source('After UseAlfvenWaveDissipation')
        end if ! UseAlfvenWaveDissipation
 
-       if(UseCoronalHeating)then
+       if(UseCoronalHeating .and. DoUpdate_V(p_))then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(UseElectronPressure)then
                 call apportion_coronal_heating(i, j, k, iBlock, &
