@@ -164,7 +164,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Source_VC, Efield_DGB
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: InvClight2
-    use BATL_lib,   ONLY: 
+    use BATL_lib,   ONLY:
 
     integer, intent(in) :: iBlock
 

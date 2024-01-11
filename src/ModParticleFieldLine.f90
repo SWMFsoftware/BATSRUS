@@ -616,8 +616,8 @@ contains
       real:: RndUnif1, RndUnif2, RndGauss1, RndGauss2
       ! seed for random number generator
       integer, save:: iSeed=0
-      !------------------------------------------------------------------------
       ! first, find perpendicular directions
+      !------------------------------------------------------------------------
       DirPerp1_D = cross_product([1.0,0.0,0.0],Dir_D)
       if(all(DirPerp1_D == 0.0))&
            DirPerp1_D = cross_product([0.0,1.0,0.0],Dir_D)

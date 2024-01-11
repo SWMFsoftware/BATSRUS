@@ -85,7 +85,6 @@ contains
 
     ! advection+diffusion in PUI velocity space
 
-
     integer, intent(in) :: iBlock
 
     logical:: DoTest

@@ -3,7 +3,10 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSetParameters
 
-  use BATL_lib, ONLY: 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest, iVarTest
+
+  use BATL_lib, ONLY:
 
   implicit none
 

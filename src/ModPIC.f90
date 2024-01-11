@@ -600,7 +600,6 @@ contains
     use ModUtilities,   ONLY: open_file, close_file
     use ModIoUnit,      ONLY: UnitTmp_
 
-
     character(len=100) :: NameFile
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_pic_status_file'
@@ -665,7 +664,6 @@ contains
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, &
          iNode_B, MaxNode
 
-
     integer:: iBlock, i, j, k
 
     logical:: IsPicBlock
@@ -702,7 +700,6 @@ contains
     ! Find blocks that overlap with active PIC region(s).
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, &
          iNode_B, MaxNode
-
 
     integer:: iBlock, i, j, k
 
@@ -1109,7 +1106,6 @@ contains
 
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
-
 
     integer, intent(in) :: iBlock,i,j,k
 

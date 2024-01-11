@@ -74,7 +74,6 @@ contains
     ! Read heating parameters, call read_turbulence_param if needed
     use ModReadParam,  ONLY: read_var, lStringLine
 
-
     character(len=*), intent(in):: NameCommand
     character(len=lStringLine) :: TypeCoronalHeating
     logical:: DoTest

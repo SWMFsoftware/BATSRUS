@@ -1834,7 +1834,6 @@ contains
     !==========================================================================
     subroutine set_plot_var
 
-
       integer :: iVar ! Loop variables
 
       ! Electron density in particles per cm3:

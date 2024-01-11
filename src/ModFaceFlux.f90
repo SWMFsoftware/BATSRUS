@@ -38,7 +38,7 @@ module ModFaceFlux
   use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
        AlfvenPlusFirst_, AlfvenPlusLast_, &
        GammaWave, UseWavePressure, UseWavePressureLtd
-  
+
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        HallFactor_DF, set_hall_factor_face, &
        set_ion_mass_per_charge, UseBiermannBattery

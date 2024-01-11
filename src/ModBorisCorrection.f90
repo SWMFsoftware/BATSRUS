@@ -248,7 +248,7 @@ contains
       ! Reduce propagation speed of w+- by Factor
       if(UseAlfvenWaves) State_V(WaveFirst_:WaveLast_) = &
            Factor*State_V(WaveFirst_:WaveLast_)
-      
+
     end subroutine mhd_to_boris_simple_cell
     !==========================================================================
 #endif
@@ -366,7 +366,7 @@ contains
       ! Reduce propagation speed of w+- by Factor
       if(UseAlfvenWaves) State_V(WaveFirst_:WaveLast_) = &
            Factor*State_V(WaveFirst_:WaveLast_)
-      
+
     end subroutine boris_simple_to_mhd_cell
     !==========================================================================
 #endif

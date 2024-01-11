@@ -4,7 +4,7 @@
 
 module ModUaCoupling
 
-  use BATL_lib, ONLY: 
+  use BATL_lib, ONLY:
 
   ! Routines related to the coupline with the Upper Atmosphere component
 

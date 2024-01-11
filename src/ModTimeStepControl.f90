@@ -324,7 +324,6 @@ contains
     integer :: iError, Ijk_D(3), i, j, k
     real    :: DtMinPe, Cmax, Cmax_C(nI,nJ,nK)
 
-
     ! DtMax_CB is already set in calc_timestep,
     ! and Dt=DtLimit is set in set_parameters
     logical:: DoTest

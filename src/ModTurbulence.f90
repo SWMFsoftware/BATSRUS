@@ -330,7 +330,7 @@ contains
     use BATL_size, ONLY: nDim, nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0, ONLY: B0_DGB
-    use ModChromosphere,  ONLY: 
+    use ModChromosphere,  ONLY:
     use ModGeometry, ONLY: Used_GB, r_GB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
