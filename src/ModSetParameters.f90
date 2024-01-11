@@ -3937,7 +3937,7 @@ contains
 
       !$acc update device(GammaWave)
 
-      !$acc update device(UseBody, B1rCoef)
+      !$acc update device(UseBody)
 
       !$acc update device(UseRotatingBc)
 
