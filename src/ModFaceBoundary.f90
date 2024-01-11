@@ -107,7 +107,7 @@ contains
 
     case("#MAGNETICINNERBOUNDARY")
        call read_var('B1rCoef', B1rCoef)
-
+       !$acc update device(B1rCoef)
     case default
        call stop_mpi(NameSub//': unknown command = '//NameCommand)
     end select
