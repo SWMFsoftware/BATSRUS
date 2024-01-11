@@ -35,6 +35,9 @@ module ModUpdateStateFast
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
        UseGravity
+#ifdef _OPENACC
+  use ModMain, ONLY: nStep
+#endif
   use ModB0, ONLY: B0_DGB, get_b0_dipole
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
@@ -282,24 +285,19 @@ contains
           if(nConservCrit > 0) write(*,*)NameSub,' IsConserv=', &
                IsConserv_CB(iTest,jTest,kTest,iBlock)
           write(*,*)
-          do iVar=1,nVar
-             !#ifdef _OPENACC
-             write(*,*)' ',NameVar_V(iVar), '(TestCell)  =',&
+          do iVar = 1, nVar
+             write(*,*)' ', NameVar_V(iVar), '(TestCell)  =',&
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-             !#else
-             !   write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-             !     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-             !#endif
           end do
-!          switch on to test first ghost cell in the i direction
-!          do iVar=1,nVar
-!             write(*,*)' ',NameVar_V(iVar), '(RightCell)  =',&
-!                  State_VGB(iVar,iTest+1,jTest,kTest,iBlockTest)
-!          end do
-!          do iVar=1,nVar
-!             write(*,*)' ',NameVar_V(iVar), '(LeftCell)  =',&
-!                  State_VGB(iVar,iTest-1,jTest,kTest,iBlockTest)
-!          end do
+          ! switch on to test first ghost cell in the i direction
+          ! do iVar=1,nVar
+          !    write(*,*)' ',NameVar_V(iVar), '(RightCell)  =',&
+          !         State_VGB(iVar,iTest+1,jTest,kTest,iBlockTest)
+          ! end do
+          ! do iVar=1,nVar
+          !    write(*,*)' ',NameVar_V(iVar), '(LeftCell)  =',&
+          !         State_VGB(iVar,iTest-1,jTest,kTest,iBlockTest)
+          ! end do
        end if
 #endif
 
