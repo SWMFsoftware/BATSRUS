@@ -69,9 +69,6 @@ contains
     ! Perform multi-stage update of solution for this time (iteration) step
     call timing_start(NameSub)
 
-    ! OPTIMIZE: Is there a better place to update IsNoBody_B? --Yuxi
-    !$acc update device(IsNoBody_B)
-
     if(UseBody2Orbit) call update_secondbody
     if(UseAlfvenWaveRepresentative)call wave_energy_to_representative
     STAGELOOP: do iStage = 1, nStage
@@ -85,10 +82,7 @@ contains
 
        if(UseResistivity) call set_resistivity
 
-       if(UseRotatingBc)then
-          call update_angular_velocity
-          !$acc update device(OmegaBody_D)
-       end if
+       if(UseRotatingBc) call update_angular_velocity
 
        if(iStage==1)then
           if(UseArtificialVisco .or. UseAdaptiveLowOrder) &
