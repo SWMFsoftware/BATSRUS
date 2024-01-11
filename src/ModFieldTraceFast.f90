@@ -201,7 +201,7 @@ contains
     real :: Gen_D(3)
 
     ! Cell indices corresponding to current or final Gen_D position
-    integer :: i1,j1,k1,i2,j2,k2
+    integer :: i1, j1, k1, i2, j2, k2
 
     ! Distance between Gen_D and i1,j1,k1, and i2,j2,k2
 
@@ -715,12 +715,16 @@ contains
       ! Interpolate normalized field b_D at normalized location Gen_D
       ! Interpolate B1 from nodes, take B0 from analytic expression
 
+#ifdef _OPENACC
+      use ModB0, ONLY: get_b0_dipole
+#endif
+      
       real, intent(in) :: Gen_D(3)
       real, intent(out):: b_D(3)
       integer, intent(in):: iBlock
       real :: b
 
-      integer :: i1,j1,k1,i2,j2,k2
+      integer :: i1, j1, k1, i2, j2, k2
 
       ! Distance between Gen_D and i1,j1,k1, and i2,j2,k2
       real :: Dx1, Dy1, Dz1, Dx2, Dy2, Dz2
@@ -1826,6 +1830,7 @@ contains
       integer :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
       integer :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
       integer :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
+      integer:: iS, jS, kS, iR, jR, kR, iRay
 #endif
 
       ! Descriptors for neighbor
