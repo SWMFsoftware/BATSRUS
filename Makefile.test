@@ -1937,7 +1937,7 @@ test_cometfluids_start:
 
 # OpenMP run fails for NAGFOR on 4 cores * 2 threads
 test_cometfluids_compile:
-	./Config.pl -noopenmp -u=Comet3FluidsPe -e=MhdComet3FluidsPe -ng=2 -g=8,8,8
+	./Config.pl -noopenmp -u=Comet3FluidsPe -e=Comet3FluidsPe -ng=2 -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -2261,7 +2261,7 @@ test_cometCGfluids_start:
 	$(MAKE) test_cometCGfluids_check
 
 test_cometCGfluids_compile:
-	./Config.pl -noopenmp -u=CometCGfluids -e=MhdCometCG3FluidsPe -ng=2 -g=4,4,4
+	./Config.pl -noopenmp -u=CometCGfluids -e=CometCG3FluidsPe -ng=2 -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
