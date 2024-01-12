@@ -145,7 +145,7 @@ contains
     ! END CORONA SPECIFIC
     use ModCoarseAxis, ONLY: read_coarse_axis_param
     use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
-         UseBorisRegion, init_mod_boris_correction
+         UseBorisSimple, UseBorisRegion, init_mod_boris_correction
     use ModUserInterface ! user_read_inputs, user_init_session
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
@@ -388,7 +388,7 @@ contains
        call init_mod_boundary_cells
        call init_mod_nodes
 
-       if(UseB .and. UseBorisCorrection) call init_mod_boris_correction
+       if(UseB .and. (UseBorisCorrection .or. UseBorisSimple)) call init_mod_boris_correction
        if(UseB0)            call init_mod_b0
        if(UseRaytrace)      call init_mod_field_trace
        if(UseConstrainB)    call init_mod_ct
