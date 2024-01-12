@@ -718,7 +718,7 @@ contains
 #ifdef _OPENACC
       use ModB0, ONLY: get_b0_dipole
 #endif
-      
+
       real, intent(in) :: Gen_D(3)
       real, intent(out):: b_D(3)
       integer, intent(in):: iBlock
@@ -730,9 +730,9 @@ contains
       real :: Dx1, Dy1, Dz1, Dx2, Dy2, Dz2
 
       real :: Xyz_D(3)
-      !------------------------------------------------------------------------
 
       ! Determine cell indices corresponding to location Gen_D
+      !------------------------------------------------------------------------
       i1 = floor(Gen_D(1)+0.5); i2 = i1 + 1
       j1 = floor(Gen_D(2)+0.5); j2 = j1 + 1
       k1 = floor(Gen_D(3)+0.5); k2 = k1 + 1
