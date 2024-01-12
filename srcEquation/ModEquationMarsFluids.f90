@@ -55,8 +55,7 @@ module ModVarIndexes
        CO2pRhoUy_ = 21, &
        CO2pRhoUz_ = 22, &
        CO2pP_     = 23, &
-       Energy_    = nVar,   &  ! for Energy_+iFluid expressions
-       HpEnergy_  = nVar+1, &
+       Energy_    = nVar+1, HpEnergy_  = nVar+1, & 
        O2pEnergy_ = nVar+2, &
        OpEnergy_  = nVar+3, &
        CO2pEnergy_= nVar+4
