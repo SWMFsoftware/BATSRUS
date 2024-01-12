@@ -63,11 +63,10 @@ contains
   !============================================================================
   subroutine init_mod_boris_correction
 
-    use ModMain, ONLY: &
-         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
-
     ! Get signed indexes for Boris region(s)
 
+    use ModMain, ONLY: &
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     !--------------------------------------------------------------------------
     call get_region_indexes(StringBorisRegion, iRegionBoris_I)
     UseBorisRegion = allocated(iRegionBoris_I)
@@ -688,7 +687,12 @@ contains
     ! including ghost cells
 
     integer, intent(in):: iBlock
+    logical:: DoTest
+    character(len=*), parameter:: NameSub='set_clight_cell'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    if(DoTest) write(*,*) NameSub,': UseBorisRegion =',UseBorisRegion
+    
     if(.not.allocated(Clight_G)) &
          allocate(Clight_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
@@ -702,6 +706,7 @@ contains
     else
        Clight_G = cLightSpeed * Si2No_V(UnitU_)
     end if
+    if(DoTest) write(*,*) NameSub,': Clight = ',Clight_G(iTest,jTest,kTest)
 
     !$acc update device(Clight_G)
   end subroutine set_clight_cell
