@@ -234,8 +234,8 @@ contains
 
     use ModGeometry, ONLY: xMaxBox
     use ModMain, ONLY: tSimulation,TypeCoordSystem
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
-         MassFluid_I, IonFirst_, nVar
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
+         p_, MassFluid_I, nVar
 
     use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_, rBody
     use ModSolarwind, ONLY: get_solar_wind_point
@@ -345,8 +345,7 @@ contains
 
     call get_solar_wind_point(tSimulation, [xMaxBox, 0.0, 0.0], SolarWind_V)
 
-    Buffer_IIV(1,:,6) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_) &
-         *No2Si_V(UnitN_)
+    Buffer_IIV(1,:,6) = SolarWind_V(Rho_)/MassFluid_I(1) * No2Si_V(UnitN_)
     Buffer_IIV(2,:,6) = SolarWind_V(RhoUx_) * No2Si_V(UnitU_)
     Buffer_IIV(3,:,6) = SolarWind_V(RhoUy_) * No2Si_V(UnitU_)
     Buffer_IIV(4,:,6) = SolarWind_V(RhoUz_) * No2Si_V(UnitU_)
