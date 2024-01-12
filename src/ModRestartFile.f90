@@ -376,9 +376,9 @@ contains
          UnitX_, UnitU_, UnitRho_, &
          rBody, rCurrents, BodyNDim_I, BodyNSpeciesDim_I, BodyTDim_I, &
          rBody2, xBody2, yBody2, zBody2, UseBody2Orbit, Body2NDim, Body2TDim, &
-         nVar, nFluid, IonFirst_
+         nVar, nFluid
 
-    ! If nFluid or IonFirst_ is taken directly from ModVarIndexes,
+    ! If nFluid is taken directly from ModVarIndexes,
     ! the PGF90 compiler fails.
     use ModVarIndexes, ONLY: NameEquation
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
@@ -561,9 +561,9 @@ contains
                   BodyNSpeciesDim_I(iSpecies), cTab//cTab//'BodyNDim'
           end do
           write(UnitTmp_,'(es22.15,a)') &
-               BodyTDim_I(IonFirst_), cTab//cTab//'BodyTDim'
+               BodyTDim_I(1), cTab//cTab//'BodyTDim'
        else
-          do iFluid = IonFirst_, nFluid
+          do iFluid = 1, nFluid
              write(UnitTmp_,'(es22.15,a)') &
                   BodyNDim_I(iFluid), cTab//cTab//'BodyNDim'
              write(UnitTmp_,'(es22.15,a)') &

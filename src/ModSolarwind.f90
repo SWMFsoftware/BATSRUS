@@ -498,10 +498,10 @@ contains
 
           ! Set fluid density
           if(.not.IsInput_V(iRho)) then
-             if(iFluid == IonFirst_)then
+             if(iFluid == 1)then
                 ! By default the solar wind contains the first ion fluid
                 Solarwind_V(iRho) = Solarwind_V(Rho_)* &
-                     (1.0 - LowDensityRatio*(nFluid - IonFirst_))
+                     (1.0 - LowDensityRatio*(nFluid - 1))
              else
                 ! Other ion fluids are set to a very small fraction
                 Solarwind_V(iRho) = Solarwind_V(Rho_)*LowDensityRatio

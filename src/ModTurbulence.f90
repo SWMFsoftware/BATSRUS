@@ -12,7 +12,7 @@ module ModTurbulence
   use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
-  use ModMultiFluid, ONLY: IonFirst_, IonLast_
+  use ModMultiFluid, ONLY: nIonFluid
   use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
        UseAlfvenWaveRepresentative
   use omp_lib
@@ -54,8 +54,8 @@ module ModTurbulence
 
   ! Switch whether to use uniform heat partition
   logical :: UseUniformHeatPartition = .false.
-  real :: QionRatio_I(IonFirst_:IonLast_) = 0.6
-  real :: QionParRatio_I(IonFirst_:IonLast_) = 0.0
+  real :: QionRatio_I(nIonFluid) = 0.6
+  real :: QionParRatio_I(nIonFluid) = 0.0
   real :: QeRatio = 0.4
 
   ! Dimensionless parameters for stochastic heating
@@ -150,11 +150,11 @@ contains
        select case(TypeHeatPartitioning)
        case('uniform')
           UseUniformHeatPartition = .true.
-          do iFluid = IonFirst_, IonLast_
+          do iFluid = 1, nIonFluid
              call read_var('QionRatio', QionRatio_I(iFluid))
           end do
           if(UseAnisoPressure)then
-             do iFluid = IonFirst_, IonLast_
+             do iFluid = 1, nIonFluid
                 call read_var('QionParRatio', QionParRatio_I(iFluid))
              end do
           end if
@@ -617,7 +617,7 @@ contains
          TeSi_C
     use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
          nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
-         iPparIon_I, IonFirst_
+         iPparIon_I
     use ModLookupTable, ONLY: interpolate_lookup_table
 
     integer, intent(in) :: i, j, k, iBlock
@@ -627,7 +627,7 @@ contains
     real, intent(out) :: QPerQtotal_I(nIonFluid), &
          QparPerQtotal_I(nIonFluid), QePerQtotal
 
-    integer :: iIon, iPrev, iFluid
+    integer :: iPrev, iFluid
     real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
     real :: B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon, DeltaB, Delta
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
@@ -667,24 +667,23 @@ contains
 
        Valfven = B/sqrt(RhoProton)
 
-       do iIon = 1, nIonFluid
-          iFluid = IonFirst_ - 1 + iIon
+       do iFluid = 1, nIonFluid
 
           pMin = 0.0
           if(Tmin_I(iFluid) < 0.0)then
              if(pMin_I(iFluid) >= 0.0) pMin = pMin_I(iFluid)
           else
-             pMin = State_V(iRhoIon_I(iIon))/MassIon_I(iIon)*Tmin_I(iFluid)
+             pMin = State_V(iRhoIon_I(iFluid))/MassIon_I(iFluid)*Tmin_I(iFluid)
              if(pMin_I(iFluid) >= 0.0) pMin = max(pMin_I(iFluid), pMin)
           end if
           pMin = max(pMin, 1e-30)
 
-          P_I(iIon) = max(pMin, State_V(iPIon_I(iIon)))
+          P_I(iFluid) = max(pMin, State_V(iPIon_I(iFluid)))
           if(UseAnisoPressure)then
-             Ppar_I(iIon) = min(max(pMin, &
-                  State_V(iPparIon_I(iFluid))), (3*P_I(iIon)-2*pMin))
+             Ppar_I(iFluid) = min(max(pMin, &
+                  State_V(iPparIon_I(iFluid))), (3*P_I(iFluid)-2*pMin))
           else
-             Ppar_I(iIon) = P_I(iIon)
+             Ppar_I(iFluid) = P_I(iFluid)
           end if
        end do
 
@@ -761,22 +760,22 @@ contains
 
        ! Stochasting heating contributes to perpendicular ion heating.
        ! Loop in reverse order for cascade power subtraction.
-       do iIon = nIonFluid, 1, -1
+       do iFluid = nIonFluid, 1, -1
 
-          Ppar = Ppar_I(iIon)
-          Pperp = 0.5*(3*P_I(iIon) - Ppar)
+          Ppar = Ppar_I(iFluid)
+          Pperp = 0.5*(3*P_I(iFluid) - Ppar)
 
           ! Perpendicular ion thermal speed
-          Vperp = sqrt(2.0*Pperp/State_V(iRhoIon_I(iIon)))
+          Vperp = sqrt(2.0*Pperp/State_V(iRhoIon_I(iFluid)))
 
-          GyroRadiusTimesB_I(iIon) = Vperp &
-               *IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon)
+          GyroRadiusTimesB_I(iFluid) = Vperp &
+               *IonMassPerCharge*MassIon_I(iFluid)/ChargeIon_I(iFluid)
 
-          InvGyroRadius = B/GyroRadiusTimesB_I(iIon)
+          InvGyroRadius = B/GyroRadiusTimesB_I(iFluid)
 
-          if(iIon == nIonFluid)then
-             Qmajor_I(iIon) = Qmajor
-             Qminor_I(iIon) = Qminor
+          if(iFluid == nIonFluid)then
+             Qmajor_I(iFluid) = Qmajor
+             Qminor_I(iFluid) = Qminor
 
              if(Lperp_ > 1)then
                 LperpInvGyroRad = InvGyroRadius*State_V(Lperp_)/RhoProton
@@ -787,7 +786,7 @@ contains
              WmajorGyro = Wmajor/sqrt(LperpInvGyroRad)
              WminorGyro = Wminor/sqrt(LperpInvGyroRad)
           else
-             iPrev = iIon + 1
+             iPrev = iFluid + 1
 
              QmajorFraction_I(iPrev) = &
                   DampingPerp_I(iPrev)*CascadeTimeMajor_I(iPrev) &
@@ -797,9 +796,9 @@ contains
                   /(1.0 + DampingPerp_I(iPrev)*CascadeTimeMinor_I(iPrev))
 
              ! Subtract what was used for stochastic heating of alphas
-             Qmajor_I(iIon) = &
+             Qmajor_I(iFluid) = &
                   Qmajor_I(iPrev)*(1.0 - QmajorFraction_I(iPrev))
-             Qminor_I(iIon) = &
+             Qminor_I(iFluid) = &
                   Qminor_I(iPrev)*(1.0 - QminorFraction_I(iPrev))
 
              ! Reduce similarly the cascade power and exploit non-alignment
@@ -808,18 +807,18 @@ contains
              WmajorGyro = WmajorGyro &
                   *( (1.0 - QmajorFraction_I(iPrev))**2 &
                   /(1.0 - QminorFraction_I(iPrev)) )**(2.0/3.0) &
-                  *sqrt(GyroRadiusTimesB_I(iIon)/GyroRadiusTimesB_I(iPrev))
+                  *sqrt(GyroRadiusTimesB_I(iFluid)/GyroRadiusTimesB_I(iPrev))
              WminorGyro = WminorGyro &
                   *( (1.0 - QminorFraction_I(iPrev))**2 &
                   /(1.0 - QmajorFraction_I(iPrev)) )**(2.0/3.0) &
-                  *sqrt(GyroRadiusTimesB_I(iIon)/GyroRadiusTimesB_I(iPrev))
+                  *sqrt(GyroRadiusTimesB_I(iFluid)/GyroRadiusTimesB_I(iPrev))
           end if
 
           Wgyro = WmajorGyro + WminorGyro
 
           ! Cascade timescale at the gyroscale
-          CascadeTimeMajor_I(iIon) = WmajorGyro/max(Qmajor_I(iIon),1e-30)
-          CascadeTimeMinor_I(iIon) = WminorGyro/max(Qminor_I(iIon),1e-30)
+          CascadeTimeMajor_I(iFluid) = WmajorGyro/max(Qmajor_I(iFluid),1e-30)
+          CascadeTimeMinor_I(iFluid) = WminorGyro/max(Qminor_I(iFluid),1e-30)
 
           ! For protons the following would be DeltaU and DeltaB at ion gyro
           ! radius, except that we assumed that the Alfven ratio is one.
@@ -832,11 +831,11 @@ contains
           ! Damping rate for stochastic heating.
           ! It interpolates between the beta<1 and 1<beta<30 version.
           ! This formula is at the moment only suitable for protons.
-          DampingPerp_I(iIon) = (StochasticAmplitude &
+          DampingPerp_I(iFluid) = (StochasticAmplitude &
                *exp(-StochasticExponent/max(Epsilon,1e-15)) &
                + StochasticAmplitude2*sqrt(BetaProton) &
                *exp(-StochasticExponent2/max(Delta,1e-15))) &
-               *State_V(iRhoIon_I(iIon))*DeltaU**3 &
+               *State_V(iRhoIon_I(iFluid))*DeltaU**3 &
                *InvGyroRadius/max(Wgyro,1e-15)
        end do
 

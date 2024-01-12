@@ -237,8 +237,8 @@ contains
        Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) + ForceZ_I
 
        ! Calculate ion energy sources = u_s.Force_s
-       Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) = &
-            Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) + &
+       Source_VC(nVar+1:nVar+nIonFluid,i,j,k) = &
+            Source_VC(nVar+1:nVar+nIonFluid,i,j,k) + &
             ( State_V(iRhoUxIon_I)*ForceX_I &
             + State_V(iRhoUyIon_I)*ForceY_I &
             + State_V(iRhoUzIon_I)*ForceZ_I &
@@ -619,10 +619,9 @@ contains
           Source_VC(iRhoUx:iRhoUz,i,j,k) = Source_VC(iRhoUx:iRhoUz,i,j,k) &
                + Force_D
 
-          iEnergy = Energy_-2+iIon+IonFirst_
+          iEnergy = Energy_ - 1 + iIon
           Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
-               + sum(Force_D*uIon_D) &
-               + InvGammaMinus1_I(IonFirst_+iIon-1)*Heating
+               + sum(Force_D*uIon_D) + InvGammaMinus1_I(iIon)*Heating
 
        end do
 

@@ -950,7 +950,7 @@ contains
              UseLogLimiter_V(iP_I(iFluid))   = .true.
           end do
           if(UseAnisoPressure)then
-             do iFluid = IonFirst_, IonLast_
+             do iFluid = 1, nIonFluid
                 UseLogLimiter_V(iPparIon_I(iFluid)) = .true.
              end do
           end if

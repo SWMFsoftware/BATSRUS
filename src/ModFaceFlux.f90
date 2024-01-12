@@ -1310,16 +1310,16 @@ contains
              end do
           else
              do iVar = AlfvenPlusFirst_, AlfvenPlusLast_
-                Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
+                Flux_V(iVar) = (Un_I(1) + AlfvenSpeed)*State_V(iVar)
              end do
 
              do iVar = AlfvenMinusFirst_, AlfvenMinusLast_
-                Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
+                Flux_V(iVar) = (Un_I(1) - AlfvenSpeed)*State_V(iVar)
              end do
           end if
        else
           do iVar = AlfvenPlusFirst_, AlfvenMinusLast_
-             Flux_V(iVar) = Un_I(IonFirst_)*State_V(iVar)
+             Flux_V(iVar) = Un_I(1)*State_V(iVar)
           end do
        end if
     end if
@@ -2095,7 +2095,8 @@ contains
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V, cLight
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModMultiFluid, ONLY: UseMultiIon, NeutralFirst_, ChargeIon_I, &
-         iRho, iP, iEnergy, iRhoIon_I, iPIon_I, MassIon_I, select_fluid
+         iRho, iP, iEnergy, iRhoIon_I, iPIon_I, MassIon_I, select_fluid, &
+         nIonFluid
     use ModUserInterface ! user_material_properties
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
     use ModSaMhd,         ONLY: aligning_bc
@@ -2331,7 +2332,7 @@ contains
 
     ! Calculate ion fluxes first (all ion fluids together)
     if(UseB)then
-       iFluidMin = 1; iFluidMax = IonLast_
+       iFluidMin = 1; iFluidMax = nIonFluid
        iVarMin = iRho_I(iFluidMin); iVarMax = iP_I(iFluidMax)
        iEnergyMin = nVar + iFluidMin; iEnergyMax = nVar + iFluidMax
 
@@ -3507,8 +3508,7 @@ contains
 
     use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP, &
          iRhoIon_I, iUxIon_I, iUzIon_I, iPIon_I, &
-         ElectronFirst_, IonFirst_, &
-         nIonFluid, nTrueIon, UseMultiIon, ChargePerMass_I
+         ElectronFirst_, nIonFluid, nTrueIon, UseMultiIon, ChargePerMass_I
     use ModMain,    ONLY: Climit
     use ModPhysics, ONLY: Clight
     use ModAdvance, ONLY: State_VGB
@@ -3557,7 +3557,7 @@ contains
                   Cright_I, UnLeft, UnRight, UseAwSpeed)
           endif
 
-       elseif(iFluid > 1 .and. iFluid <= IonLast_)then
+       elseif(iFluid > 1 .and. iFluid <= nIonFluid)then
           if(present(Cleft_I))  Cleft_I(iFluid)  = Cleft_I(1)
           if(present(Cright_I)) Cright_I(iFluid) = Cright_I(1)
           if(present(Cmax_I))   Cmax_I(iFluid)   = Cmax_I(1)
@@ -4001,7 +4001,7 @@ contains
          if(.not. IsMhd .and. .not. UseEfield)then
             ! Most likely the parallel and perpendicular sound speeds should be
             ! added up here !!!
-            do jFluid = IonFirst_+1, IonLast_
+            do jFluid = 2, nIonFluid
                Ppar1 = State_V(iPparIon_I(jFluid))
                Ppar  = Ppar + Ppar1
                Pperp = Pperp + 0.5*(3*State_V(iP_I(jFluid)) - Ppar1)
@@ -4012,9 +4012,9 @@ contains
          ! be added up to the total pressure, as well as the electron
          ! pressure multiplies by MultiIonFactor
          if (UseEfield) then
-            p    = sum(State_V(iPIon_I(IonFirst_:nTrueIon))) + &
+            p    = sum(State_V(iPIon_I(1:nTrueIon))) + &
                  sum(State_V(iPIon_I(ElectronFirst_:)))*MultiIonFactor
-            Ppar = sum(State_V(iPparIon_I(IonFirst_:nTrueIon))) + &
+            Ppar = sum(State_V(iPparIon_I(1:nTrueIon))) + &
                  sum(State_V(iPparIon_I(ElectronFirst_:)))*MultiIonFactor
             Pperp = 0.5*(3*p - Ppar)
          end if

@@ -863,9 +863,8 @@ contains
     use ModFieldTrace, ONLY: rTrace
     use ModResistivity, ONLY: Eta0Si
     use ModIO
-    use ModMain, ONLY: dt
-    use ModMultiFluid, ONLY: nFluid, nIonFluid, IonFirst_, &
-         MassFluid_I, ChargeIon_I
+    use ModMain, ONLY: Dt
+    use ModMultiFluid, ONLY: nFluid, nIonFluid,MassFluid_I, ChargeIon_I
     use BATL_lib, ONLY: nRoot_D, nI, nJ, nK
     use ModUtilities, ONLY: split_string, lower_case
 
@@ -892,21 +891,21 @@ contains
        case('g', 'g1', 'gamma')
           Param_I(iPar) = Gamma
        case('g2')
-          Param_I(iPar) = Gamma_I(min(IonFirst_+1,nFluid))
+          Param_I(iPar) = Gamma_I(min(2, nFluid))
        case('g3')
-          Param_I(iPar) = Gamma_I(min(IonFirst_+2,nFluid))
+          Param_I(iPar) = Gamma_I(min(3, nFluid))
        case('g4')
-          Param_I(iPar) = Gamma_I(min(IonFirst_+3,nFluid))
+          Param_I(iPar) = Gamma_I(min(4, nFluid))
        case('g5')
-          Param_I(iPar) = Gamma_I(min(IonFirst_+4,nFluid))
+          Param_I(iPar) = Gamma_I(min(5, nFluid))
        case('g6')
-          Param_I(iPar) = Gamma_I(min(IonFirst_+5,nFluid))
+          Param_I(iPar) = Gamma_I(min(6, nFluid))
        case('g7')
-          Param_I(iPar) = Gamma_I(min(IonFirst_+6,nFluid))
+          Param_I(iPar) = Gamma_I(min(7, nFluid))
        case('g8')
-          Param_I(iPar) = Gamma_I(min(IonFirst_+7,nFluid))
+          Param_I(iPar) = Gamma_I(min(8, nFluid))
        case('g9')
-          Param_I(iPar) = Gamma_I(min(IonFirst_+8,nFluid))
+          Param_I(iPar) = Gamma_I(min(9, nFluid))
        case('ge')
           Param_I(iPar) = GammaElectron
        case('c','clight')
@@ -981,23 +980,23 @@ contains
              Param_I(iPar) = No2Si_V(UnitRho_)
           end if
        case('mi','m1')
-          Param_I(iPar) = MassFluid_I(IonFirst_)
+          Param_I(iPar) = MassFluid_I(1)
        case('m2')
-          Param_I(iPar) = MassFluid_I(min(IonFirst_+1,nFluid))
+          Param_I(iPar) = MassFluid_I(min(2, nFluid))
        case('m3')
-          Param_I(iPar) = MassFluid_I(min(IonFirst_+2,nFluid))
+          Param_I(iPar) = MassFluid_I(min(3, nFluid))
        case('m4')
-          Param_I(iPar) = MassFluid_I(min(IonFirst_+3,nFluid))
+          Param_I(iPar) = MassFluid_I(min(4, nFluid))
        case('m5')
-          Param_I(iPar) = MassFluid_I(min(IonFirst_+4,nFluid))
+          Param_I(iPar) = MassFluid_I(min(5, nFluid))
        case('m6')
-          Param_I(iPar) = MassFluid_I(min(IonFirst_+5,nFluid))
+          Param_I(iPar) = MassFluid_I(min(6, nFluid))
        case('m7')
-          Param_I(iPar) = MassFluid_I(min(IonFirst_+6,nFluid))
+          Param_I(iPar) = MassFluid_I(min(7, nFluid))
        case('m8')
-          Param_I(iPar) = MassFluid_I(min(IonFirst_+7,nFluid))
+          Param_I(iPar) = MassFluid_I(min(8, nFluid))
        case('m9')
-          Param_I(iPar) = MassFluid_I(min(IonFirst_+8,nFluid))
+          Param_I(iPar) = MassFluid_I(min(9, nFluid))
        case('me')
           Param_I(iPar) = MassFluid_I(nIonFluid)
        case('q1')

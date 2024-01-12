@@ -82,9 +82,9 @@ module ModUser
 
   ! Named indexes for fluids
   integer, parameter :: SWH_ = 1, Ion_ = 1, &
-       Pu3_ = nIonFluid, Neu_ = min(nFluid,IonLast_+1), &
-       Ne2_ = min(nFluid,IonLast_+2), Ne3_ = min(nFluid,IonLast_+3), &
-       Ne4_= min(nFluid,IonLast_+4)
+       Pu3_ = nIonFluid, Neu_ = min(nFluid,nIonFluid+1), &
+       Ne2_ = min(nFluid,nIonFluid+2), Ne3_ = min(nFluid,nIonFluid+3), &
+       Ne4_= min(nFluid,nIonFluid+4)
 
   logical :: UseSource_I(SWH_:Ne4_) = .true.
   logical :: UsePhotoion = .false.
@@ -2842,11 +2842,11 @@ contains
           ! Electron pressure source term
           ! ionization Energy * total ionization rate
           ! + thermal energy from new electron.
-          ! (nVar+IonFirst_:nVar+IonLast_) corresponds to the ion energy terms
+          ! (nVar+1:nVar+nIonFluid) corresponds to the ion energy terms
           SourceImp_V(Pe_) = GammaElectronMinus1*( &
                -sum(SourceImp_V(iRhoIon_I))*IonizationEnergy &
                + (cElectronMass/cProtonMass)&
-               *( sum(SourceImp_V(nVar+IonFirst_:nVar+IonLast_)) &
+               *( sum(SourceImp_V(nVar+1:nVar+nIonFluid)) &
                - UEl_D(x_)*sum(SourceImp_V(iRhoUxIon_I)) &
                - UEl_D(y_)*sum(SourceImp_V(iRhoUyIon_I)) &
                - UEl_D(z_)*sum(SourceImp_V(iRhoUzIon_I)) &

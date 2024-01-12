@@ -7,6 +7,7 @@ module ModMain
   use ModKind
   use ModSize
   use ModVarIndexes
+  use ModMultiFluid, ONLY: nIonFluid
   use ModNumConst, ONLY: cPi, cTwoPi
 
   ! Total number of used blocks on all processors
@@ -112,7 +113,7 @@ module ModMain
 
   logical :: UseRaytrace            = UseB
   logical :: DoMultiFluidIMCoupling = &
-       IonLast_ > IonFirst_ .or. SpeciesLast_ > SpeciesFirst_
+       nIonFluid > 1 .or. SpeciesLast_ > SpeciesFirst_
   logical :: DoAnisoPressureIMCoupling = .false.
   !$acc declare create(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
 

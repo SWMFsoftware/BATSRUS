@@ -62,7 +62,7 @@ module ModMultiFluid
        iRhoUx = RhoUx_, iUx = RhoUx_,  &
        iRhoUy = RhoUy_, iUy = RhoUy_,  &
        iRhoUz = RhoUz_, iUz = RhoUz_,  &
-       iPpar  = iPparIon_I(IonFirst_), &
+       iPpar  = iPparIon_I(1),         &
        iP     = P_,                    &
        iEnergy= nVar+1
   !$omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )

@@ -702,18 +702,18 @@ contains
           call read_hall_param(NameCommand)
 
        case("#MINIMUMDENSITY")
-          do iFluid = IonFirst_, nFluid
+          do iFluid = 1, nFluid
              call read_var('RhoMinDim', RhoMinDim_I(iFluid))
           end do
 
        case("#MINIMUMPRESSURE")
-          do iFluid = IonFirst_, nFluid
+          do iFluid = 1, nFluid
              call read_var('pMinDim', pMinDim_I(iFluid))
           end do
           if(UseElectronPressure) call read_var('PeMinDim', PeMinDim)
 
        case("#MINIMUMTEMPERATURE")
-          do iFluid = IonFirst_, nFluid
+          do iFluid = 1, nFluid
              call read_var('TMinDim', TMinDim_I(iFluid))
           end do
           if(UseElectronPressure) call read_var('TeMinDim', TeMinDim)
@@ -740,7 +740,7 @@ contains
           call read_update_param(NameCommand, UseStrict)
 
        case("#ANISOTROPICPRESSURE")
-          do iFluid = IonFirst_, nFluid
+          do iFluid = 1, nFluid
              call read_var('UseConstantTau', UseConstantTau_I(iFluid))
              call read_var('TauInstabilitySi', TauInstabilitySi_I(iFluid))
              call read_var('TauGlobalSi', TauGlobalSi_I(iFluid))
@@ -1989,7 +1989,7 @@ contains
              call read_var('DoFixPolarRegion',   DoFixPolarRegion)
              if(DoFixPolarRegion)then
                 call read_var('rFixPolarRegion', rFixPolarRegion)
-                do iFluid = IonFirst_, nFluid
+                do iFluid = 1, nFluid
                    call read_var('PolarNDim',  PolarNDim_I(iFluid))
                    call read_var('PolarTDim',  PolarTDim_I(iFluid))
                 end do
@@ -2082,7 +2082,7 @@ contains
        case("#USERINPUTBEGIN")
           call user_read_inputs
           ! Make sure that MassIon_I is consistent with MassFluid_I
-          MassIon_I = MassFluid_I(IonFirst_:IonLast_)
+          MassIon_I = MassFluid_I(1:nIonFluid)
 
        case("#CODEVERSION")
           if(.not.is_first_session())CYCLE READPARAM
@@ -2308,7 +2308,7 @@ contains
 
        case("#GAMMA")
           if(.not.is_first_session())CYCLE READPARAM
-          do iFluid = IonFirst_, nFluid
+          do iFluid = 1, nFluid
              call read_var('Gamma_I', Gamma_I(iFluid))
           end do
           ! Derived values for fluids
@@ -2357,10 +2357,10 @@ contains
                 call read_var('ChargeSpecies', ChargeSpecies_I(iSpecies))
              enddo
           else
-             do iFluid = IonFirst_, nFluid
+             do iFluid = 1, nFluid
                 call read_var('MassFluid', MassFluid_I(iFluid))
              end do
-             MassIon_I = MassFluid_I(IonFirst_:IonLast_)
+             MassIon_I = MassFluid_I(1:nIonFluid)
              do iFluid = 1, nIonFluid
                 call read_var('ChargeIon', ChargeIon_I(iFluid))
              end do
@@ -2429,9 +2429,9 @@ contains
                 do iSpecies = 1, nSpecies
                    call read_var('BodyNDim', BodyNSpeciesDim_I(iSpecies))
                 end do
-                call read_var('BodyTDim', BodyTDim_I(IonFirst_))
+                call read_var('BodyTDim', BodyTDim_I(1))
              else
-                do iFluid = IonFirst_, nFluid
+                do iFluid = 1, nFluid
                    call read_var('BodyNDim', BodyNDim_I(iFluid))
                    call read_var('BodyTDim', BodyTDim_I(iFluid))
                 end do
@@ -2441,7 +2441,7 @@ contains
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('rCorona', rBody) ! Inner boundary radius
           ! Read densities and temperatures
-          do iFluid = IonFirst_, nFluid
+          do iFluid = 1, nFluid
              call read_var('CoronaNDim', BodyNDim_I(iFluid))
              call read_var('CoronaTDim', BodyTDim_I(iFluid))
           end do
@@ -2725,7 +2725,7 @@ contains
        case("#OHBOUNDARY")
           call read_var('DoOhNeutralBc', DoOhNeutralBc)
           if(DoOhNeutralBc)then
-             do iFluid = IonLast_+1, nFluid
+             do iFluid = nIonFluid+1, nFluid
                 call read_var('RhoBcFactor', RhoBcFactor_I(iFluid))
                 call read_var('uBcFactor', uBcFactor_I(iFluid))
              end do
@@ -3164,7 +3164,7 @@ contains
       Body2NDim   = 1.0    ! n/cc
       Body2TDim   = 10000.0! K
       !$acc update device(Body2NDim, Body2TDim)
-      MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
+      MassIon_I = MassFluid_I(1:nIonFluid) ! Ion masses
 
       call init_mod_amr
 
@@ -3182,8 +3182,8 @@ contains
          ! Boundary Conditions
          ! Default boundary type is 'none'.
          BodyTDim_I            = 1.5E6    ! K
-         BodyNDim_I(IonFirst_) = 1.5E8    ! /cc  protons
-         BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
+         BodyNDim_I(1) = 1.5E8    ! /cc  protons
+         BodyNDim_I(2:nFluid) = BodyNDim_I(1)*cTiny
 
          ! Normalization and I/O units
          TypeNormalization     = "SOLARWIND"
@@ -3214,9 +3214,9 @@ contains
          ! Set anisotropic pressure instability defaults for first ion fluid
          if(NameThisComp == 'SC' .or. NameThisComp == 'IH')then
             if(UseAnisoPressure)then
-               UseConstantTau_I(IonFirst_) = .false.
-               TauInstabilitySi_I(IonFirst_) = -1.0
-               TauGlobalSi_I(IonFirst_) = 1e5
+               UseConstantTau_I(1) = .false.
+               TauInstabilitySi_I(1) = -1.0
+               TauGlobalSi_I(1) = 1e5
             end if
          end if
 
@@ -4363,22 +4363,20 @@ contains
          end if
          if(rBody > 0) StringParam = trim(StringParam)//' r'
          if(any(Gamma_I /= Gamma))then
-            do iFluid = IonFirst_, nFluid
-               write(StringParam,'(a,i1)') trim(StringParam)//' g', &
-                    iFluid - IonFirst_ + 1
+            do iFluid = 1, nFluid
+               write(StringParam,'(a,i1)') trim(StringParam)//' g', iFluid
             end do
          else
             StringParam = trim(StringParam)//' g'
          end if
          if(GammaElectron /= Gamma) StringParam = trim(StringParam)//' ge'
          if(any(MassFluid_I /= 1))then
-            do iFluid = IonFirst_, nFluid
+            do iFluid = 1, nFluid
                if(UseEfield .and. iFluid == nIonFluid)then
                   ! Last fluid is assumed to be the electrons
                   StringParam = trim(StringParam)//' me'
                else
-                  write(StringParam,'(a,i1)') trim(StringParam)//' m', &
-                       iFluid - IonFirst_ + 1
+                  write(StringParam,'(a,i1)') trim(StringParam)//' m', iFluid
                end if
             end do
          end if

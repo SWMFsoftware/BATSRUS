@@ -77,7 +77,7 @@ contains
     use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, &
          UseSplitSemiImplicit, TypeSemiImplicit
     use ModPointImplicit, ONLY: UsePointImplicit
-    use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid
+    use ModMultiFluid, ONLY: UseNeutralFluid
     use ModFaceFlux,   ONLY: TypeFluxNeutral
     use CON_planet,    ONLY: NamePlanet, IsPlanetModified, &
          Planet_, NewPlanet_, &
@@ -148,7 +148,7 @@ contains
     if(UseBody)then
        call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
             'rBody:       ', rBody,      ', rPlanet:   ',rPlanetSi
-       do iFluid = IonFirst_, nFluid
+       do iFluid = 1, nFluid
           call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
                'BodyNDim:    ',BodyNDim_I(iFluid), &
                ', BodyTDim:  ',BodyTDim_I(iFluid)

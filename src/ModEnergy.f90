@@ -9,7 +9,7 @@ module ModEnergy
   use ModVarIndexes, ONLY: &
        nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Hyp_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: &
-       nFluid, IonLast_, iRho, iRhoUx, iRhoUz, iP, iP_I, &
+       nFluid, nIonFluid, iRho, iRhoUx, iRhoUz, iP, iP_I, &
        UseNeutralFluid, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
   use ModAdvance, ONLY: &
@@ -73,13 +73,13 @@ contains
     FLUIDLOOP: do iFluid = 1, nFluid
 
        ! If all neutrals are non-conservative exit from the loop
-       if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
+       if(iFluid > nIonFluid .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
 
        if(nFluid > 1) call select_fluid(iFluid)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          if(UseNonConservative .and. iFluid <= IonLast_)then
+          if(UseNonConservative .and. iFluid <= nIonFluid)then
              if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
           end if
           ! Convert to hydro energy density
@@ -240,13 +240,13 @@ contains
     FLUIDLOOP: do iFluid = 1, nFluid
 
        ! If all neutrals are non-conservative exit from the loop
-       if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
+       if(iFluid > nIonFluid .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
 
        if(nFluid > 1) call select_fluid(iFluid)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          if(UseNonConservative .and. iFluid <= IonLast_)then
+          if(UseNonConservative .and. iFluid <= nIonFluid)then
              ! Apply conservative criteria for the ions
              if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
           end if
