@@ -12,9 +12,6 @@ module ModMultiFluid
   implicit none
   save
 
-  ! This has to be at least 1 even if there are no ion fluids
-  integer, parameter:: nIonFluid = IonLast_
-
   ! Convenient parameters for the ion fluids
   logical, parameter:: UseMultiIon = nIonFluid > 1 .and. Ex_ == 1
 

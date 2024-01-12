@@ -28,8 +28,7 @@ module ModVarIndexes
   integer, parameter :: nVar = 24
 
   integer, parameter :: nFluid    = 4
-  integer, parameter :: IonFirst_ = 1
-  integer, parameter :: IonLast_  = 4
+  integer, parameter :: nIonFluid = 4
   logical, parameter :: IsMhd     = .false.
   real               :: MassFluid_I(1:4) = [ 1.0, 1.0, 16.0, 1.0 ]
 
@@ -81,7 +80,7 @@ module ModVarIndexes
        iRhoUz_I(nFluid) = [RhoUz_, HpPsRhoUz_, OpRhoUz_, HpRhoUz_], &
        iP_I(nFluid)     = [p_,     HpPsP_,     OpP_,     HpP_]
 
-  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2,3,4]
+  integer, parameter :: iPparIon_I(nIonFluid) = [1,2,3,4]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

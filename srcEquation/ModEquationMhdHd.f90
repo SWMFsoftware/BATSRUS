@@ -19,8 +19,7 @@ module ModVarIndexes
   integer, parameter :: nVar = 13
 
   integer, parameter :: nFluid      = 2       ! 1 ion and 1 neutral fluid
-  integer, parameter :: IonFirst_   = 1
-  integer, parameter :: IonLast_    = 1
+  integer, parameter :: nIonFluid   = 1
   logical, parameter :: IsMhd       = .true.  ! the first fluid obeys MHD
   real               :: MassFluid_I(nFluid) = [ 1.0, 1.0 ]
 

@@ -7,7 +7,6 @@ module ModMain
   use ModKind
   use ModSize
   use ModVarIndexes
-  use ModMultiFluid, ONLY: nIonFluid
   use ModNumConst, ONLY: cPi, cTwoPi
 
   ! Total number of used blocks on all processors

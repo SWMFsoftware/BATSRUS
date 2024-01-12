@@ -8,8 +8,7 @@ module ModSingleFluid
   implicit none
 
   integer,          parameter :: nFluid    = 1
-  integer,          parameter :: IonFirst_ = 1
-  integer,          parameter :: IonLast_  = 1
+  integer,          parameter :: nIonFluid = 1
   logical,          parameter :: IsMhd     = .true.
   character(len=1), parameter :: NameFluid_I(nFluid) = [' ']
 
