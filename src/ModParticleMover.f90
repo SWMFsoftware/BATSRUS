@@ -11,14 +11,14 @@ module ModParticleMover
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModMain,         ONLY: NameThisComp, UseB0
   use ModB0,           ONLY: get_b0, B0_DGB
-  use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB, &
+  use ModAdvance,      ONLY: Efield_DGB, State_VGB, &
        UseAnisoPressure
   use ModVarIndexes,   ONLY: Bx_, Bz_
   use ModMultiFluid,   ONLY: iPParIon_I, &
-          iRhoIon_I, iPIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I
+          iRhoIon_I, iPIon_I, iRhoUxIon_I, iRhoUzIon_I
   use ModParticles,    ONLY: gen_allocate_particles=>allocate_particles, &
        gen_deallocate_particles=>deallocate_particles
-  use BATL_particles,  ONLY: Particle_I, put_particles, &
+  use BATL_particles,  ONLY: Particle_I, &
        mark_undefined, check_particle_location, &
        set_pointer_to_particles
   use ModGeometry,     ONLY: Used_GB
@@ -152,7 +152,7 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
-    integer :: iLoop, nCell
+    integer :: iLoop
     integer :: nTestParticles = 1
     ! Arrays to read A and Z for different ion particles
     real, allocatable :: Mass_I(:)
@@ -256,7 +256,6 @@ contains
 
     use ModPhysics,    ONLY: ElectronCharge
     use ModMultiFluid, ONLY: ChargePerMass_I
-    integer :: iLoop
     !--------------------------------------------------------------------------
     if(.not.DoNormalize)RETURN
     DoNormalize = .false.   ! Do not repeat normalization
@@ -314,15 +313,13 @@ contains
   !============================================================================
   subroutine trace_particles(Dt, DoBorisStepIn)
 
-    use ModMain,    ONLY: nI, nJ, nK
     use BATL_particles, ONLY: &
          batl_trace_particles=>trace_particles
     use BATL_pass_face_field, ONLY: add_ghost_cell_field
     real,    intent(in) :: Dt            ! Time step
     logical, intent(in) :: DoBorisStepIn ! If velocity is advanced or not
 
-    integer :: iLoop, nParticle, iBlock, i, j, k
-    real, dimension(3) :: FullB_D, u_D
+    integer :: iLoop, nParticle
 
     !--------------------------------------------------------------------------
     DoBorisStep = DoBorisStepIn
@@ -392,7 +389,7 @@ contains
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
     real   :: Weight_I(2**nDim)
     ! Particle mass and momentum
-    real   :: Mass, Moments_V(Rho_:P23_)
+    real   :: Moments_V(Rho_:P23_)
     ! Misc
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
@@ -640,7 +637,6 @@ contains
   !============================================================================
   subroutine set_boundary_vdf(iBlock)
 
-    use BATL_lib,    ONLY: iNode_B, IsCartesianGrid
     use ModParallel, ONLY: Unset_, DiLevel_EB
     integer, intent(in) :: iBlock
     logical :: DoSkip_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -697,13 +693,13 @@ contains
     ! Sorts of ions and particles
     integer :: iIon, iKind
     ! loop variables
-    integer:: iLoop, iParticle, iSide, i, j, k, iDim
+    integer:: iLoop, iParticle, i, j, k, iDim
     ! Cartesian and generalized coordinates
     real :: Xyz_D(MaxDim), Coord_D(MaxDim)
     ! Loop indexes gathered to an array
     integer:: Ijk_D(MaxDim) ![i,j,k]
     ! Interpolated MHD parameters at the particle location
-    real :: P, Rho, RhoU_D(MaxDim), InvRho, uThermal2, PPar, PPerp, &
+    real :: P, Rho, RhoU_D(MaxDim), InvRho, uThermal2, PPar, &
          FullB_D(MaxDim), UPar2,  UPar, uThermal_D(MaxDim)
     ! Random numbers
     real :: RndUnif, RndUnif1, RndUnif2
@@ -832,7 +828,6 @@ contains
   !============================================================================
   subroutine advance_ion_current(iBlock)
 
-    use ModMain, ONLY: iStage
     integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
     call stop_mpi('The subroutine is under development')

@@ -361,7 +361,7 @@ contains
   subroutine pic_init_region
 
     use BATL_lib,     ONLY: nDim, find_grid_block, MaxDim, &
-         x_, y_, z_, nI, nJ, nK, nBlock, MaxBlock, MaxNode, Unused_B, Unset_
+         x_, y_, z_, nI, nJ, nK, Unset_
     use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
     use ModHallResist, ONLY: HallFactorMax, UseHallResist, &
          HallFactor_C, set_hall_factor_cell
@@ -383,7 +383,6 @@ contains
     real:: IonMassPerChargeSi
 
     integer :: iProcPic, iBlockPic, iCell_D(MaxDim), iError
-    integer :: nByteInt, nByteChar
     real:: PicMiddle_D(MaxDim)
 
     logical:: DoTest
@@ -601,8 +600,6 @@ contains
     use ModUtilities,   ONLY: open_file, close_file
     use ModIoUnit,      ONLY: UnitTmp_
 
-    integer:: iError
-
     character(len=100) :: NameFile
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_pic_status_file'
@@ -664,12 +661,10 @@ contains
   subroutine pic_find_node
 
     ! Find blocks that overlap with PIC region(s).
-    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, &
-         Xyz_DGB, iNode_B, MaxNode
+    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, &
+         iNode_B, MaxNode
 
-    real:: Xyz_D(nDim), Pic_D(nDim)
-
-    integer:: iBlock, i, j, k, iNode
+    integer:: iBlock, i, j, k
 
     logical:: IsPicBlock
 
@@ -703,12 +698,10 @@ contains
   subroutine pic_find_active_node
 
     ! Find blocks that overlap with active PIC region(s).
-    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, &
-         Xyz_DGB, iNode_B, MaxNode
+    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, &
+         iNode_B, MaxNode
 
-    real:: Xyz_D(nDim), Pic_D(nDim)
-
-    integer:: iBlock, i, j, k, iNode
+    integer:: iBlock, i, j, k
 
     logical:: IsActivePicBlock
 
@@ -747,28 +740,24 @@ contains
   subroutine pic_set_cell_status
 
     use BATL_lib, ONLY: &
-         nDim, x_, y_, z_, find_grid_block, iNode_B,&
-         nI, nJ, nK, Xyz_DGB, Xyz_DNB, nBlock, Unused_B,&
-         block_inside_regions, CoordMin_DB, CoordMax_DB,&
+         nDim, x_, y_, z_,&
+         Xyz_DNB, nBlock, Unused_B,&
+         CoordMin_DB, CoordMax_DB,&
          nIJK_D, IsCartesianGrid, xyz_to_coord, CellSize_DB
-    use BATL_Region, ONLY: points_inside_region, &
+    use BATL_Region, ONLY: &
          is_point_inside_regions
-    use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_
     use ModMain
     use ModMpi
 
-    integer:: iStatus, iError
-    integer:: nX, nY, nZ, i, j, k, iRegion, nExtend, iDim, &
+    integer:: iError
+    integer:: nX, nY, nZ, i, j, k, iRegion, iDim, &
          iP, jP, kP, iPExt, jPExt, kPExt
 
-    real:: r
     real:: XyzMinBlock_D(MaxDim), XyzMaxBlock_D(MaxDim),&
          XyzMinPic_D(nDim), XyzMaxPic_D(nDim)
 
-    real:: XyzPic_D(nDim)=0.0, XyzMhd_D(MaxDim)=0.0,&
-         XyzPatchMhd_D(MaxDim)=0.0, XyzMhdExtend_D(nDim)=0.0,&
-         Coord_D(MaxDim)
-    integer:: iBlock, iBlockFound, iProcFound, iCell_D(MaxDim)
+    real:: XyzMhd_D(MaxDim)=0.0, XyzPatchMhd_D(MaxDim)=0.0, Coord_D(MaxDim)
+    integer:: iBlock, iCell_D(MaxDim)
     integer:: iPatch_D(3) = 0, iPatchCell_D(3) = 0,&
          iPatchMin_D(3) = 0, iPatchMax_D(3) = 0
 
@@ -1096,7 +1085,6 @@ contains
     integer, intent(in) :: iBlock,i,j,k
 
     integer:: iStatus
-    integer:: iRegion
     real:: Xyz_D(nDim)
     logical :: IsInside
 
@@ -1119,14 +1107,9 @@ contains
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
 
-    use BATL_lib, ONLY: nDim, Xyz_DGB
-
     integer, intent(in) :: iBlock,i,j,k
 
     integer:: iStatus
-    integer:: iRegion
-    real:: Xyz_D(nDim)
-    logical :: IsInside
 
     character(len=*), parameter:: NameSub = 'i_status_pic_criteria'
     !--------------------------------------------------------------------------
@@ -1303,18 +1286,16 @@ contains
     ! the patch index in iPatchOut_D
 
     use BATL_lib,        ONLY: nDim, nI, nJ, nK, nG, nBlock, MaxBlock, &
-         x_, y_, z_, iNode_B, Unused_B, iProc, MaxNode, &
-         block_inside_regions, get_region_indexes, Xyz_DGB, &
+         x_, y_, z_, iNode_B, Unused_B, iProc, &
          message_pass_cell, CellSize_DB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: State_VGB, Bx_, By_, Bz_, Rho_, &
-         x_, y_, z_, Ux_, Uy_, Uz_, p_, RhoUx_, RhoUy_, RhoUz_
+    use ModAdvance,      ONLY: State_VGB, Bx_, Bz_, Rho_, &
+         x_, y_, z_, Ux_, Uz_, p_, RhoUx_, RhoUz_
     use ModCurrent,      ONLY: get_current
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
     use ModB0,           ONLY: UseB0, B0_DGB
-    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_, &
+    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitU_, &
          UnitP_, UnitRho_, Gamma
-    use ModCoordTransform, ONLY: cross_product
     use ModMain,         ONLY: iNewGrid, iNewDecomposition
 
     integer :: iBlock, i, j, k, iCriteria
@@ -1322,7 +1303,6 @@ contains
     real :: CritJB, CritJBperp, CritEntropy, CriteriaValue
     real, allocatable :: Current_D(:), Ufield_DGB(:,:,:,:,:),&
          DivU_CB(:,:,:,:), CurrentCrossB_D(:)
-    real :: Current, bNorm
     logical:: IsSatisfyAllCrit
 
     logical:: DoTest

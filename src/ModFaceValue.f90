@@ -9,10 +9,10 @@ module ModFaceValue
        iDimTest
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       x_, y_, z_, nDim, jDim_, kDim_, MaxDim
+       x_, y_, z_, nDim, MaxDim
   use ModVarIndexes
   use ModGeometry, ONLY: Used_GB, IsBody_B
-  use ModAdvance, ONLY: nFlux, UseFDFaceFlux, UseLowOrder, &
+  use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion, IsLowOrderOnly_B, UseAdaptiveLowOrder, &
        State_VGB, Primitive_VGI,  &
        LeftState_VX,  &  ! Face Left  X
@@ -123,17 +123,12 @@ module ModFaceValue
   logical:: UseLowOrder_I(1:MaxIJK+1)
 
   ! variables for the PPM4 limiter
-  integer:: iMin, iMax, jMin, jMax, kMin, kMax
   real:: Cell_I(1-nG:MaxIJK+nG)
   real:: Cell2_I(1-nG:MaxIJK+nG)
-  real:: Face_I(0:MaxIJK+2)
 
   real, allocatable:: FaceL_I(:), FaceR_I(:)
-  real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-  !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
-  !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
-  !$acc declare create(iMin, iMax, jMin, jMax, kMin, kMax)
-  !$acc declare create(Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG)
+  !$omp threadprivate( Cell_I, Cell2_I, FaceL_I, FaceR_I)
+  !$acc declare create(Cell_I, Cell2_I, FaceL_I, FaceR_I)
 
   real:: LowOrderCrit_I(1:MaxIJK+1)
   !$omp threadprivate( LowOrderCrit_I )
@@ -624,7 +619,7 @@ contains
   subroutine get_face_accurate2d(iSideIn, iBlock)
 
     integer, intent(in):: iSideIn, iBlock
-    integer:: i, j, k
+    integer:: i, j
     integer:: iGang
     !--------------------------------------------------------------------------
     iGang = 1
@@ -872,28 +867,25 @@ contains
 
     use ModPhysics, ONLY: GammaWave
     use ModB0
-    use ModAdvance, ONLY: &
-         Flux_VXI, Flux_VYI, Flux_VZI, UnFirst_, &
-         UseElectronPressure, UseWavePressure, UseAnisoPressure, UseAnisoPe, &
+    use ModAdvance, ONLY: UseElectronPressure, UseWavePressure, &
+         UseAnisoPressure, UseAnisoPe, &
          LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
 
     use ModParallel, ONLY : DiLevel_EB
 
     use ModViscosity, ONLY: UseArtificialVisco
 
-    use BATL_lib, ONLY: CellFace_DB
     use ModSaMhd,  ONLY: UseSaMhd, correct_samhd_face_value
 
     logical, intent(in):: DoResChangeOnly
     logical, intent(in):: DoMonotoneRestrict
     integer, intent(in):: iBlock
 
-    integer:: i, j, k, iSide, iFluid, iFlux, iVar
+    integer:: i, j, k, iSide, iFluid, iVar
 
     ! Number of cells needed to get the face values
     integer:: nStencil
 
-    real:: State_V(nVar), Energy
     integer:: iVarSmoothLast, iVarSmooth
 
     integer:: IArguments_I(MaxDim)
@@ -1584,8 +1576,6 @@ contains
     subroutine get_facex_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
-      real, allocatable, save:: State_VX(:,:,:,:)
-      !$omp threadprivate( State_VX )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -1683,8 +1673,6 @@ contains
 
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
-      real, allocatable, save:: State_VY(:,:,:,:)
-      !$omp threadprivate( State_VY )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -1782,8 +1770,6 @@ contains
 
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
 
-      real, allocatable, save:: State_VZ(:,:,:,:)
-      !$omp threadprivate( State_VZ )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -1896,7 +1882,7 @@ contains
     !==========================================================================
     subroutine get_facey_first(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
-      integer:: i, j, k, iVar
+      integer:: i, j, k
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1
@@ -1916,7 +1902,7 @@ contains
     !==========================================================================
     subroutine get_facez_first(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
-      integer:: i, j, k, iVar
+      integer:: i, j, k
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1

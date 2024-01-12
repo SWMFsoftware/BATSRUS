@@ -285,7 +285,7 @@ contains
     ! Calculate div B using simple finite differences
     ! Do corrections for mesh refinement
 
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_
+    use ModVarIndexes, ONLY: Bx_, Bz_
     use ModAdvance, ONLY: State_VGB
     use ModMain, ONLY: UseConstrainB
     use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
@@ -297,7 +297,7 @@ contains
     real, intent(out) :: DivB_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    integer :: iBlock, i, j, k
+    integer :: iBlock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_get_divb'
@@ -434,7 +434,7 @@ contains
     real, intent(out) :: LaplacePhi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    integer :: iDim, iBlock
+    integer :: iBlock
     integer :: i,j,k
     real :: Phi_III(-1:1,-1:1,-1:1), InvDx2, InvDy2, InvDz2
     logical:: DoTest
@@ -666,7 +666,7 @@ contains
     ! Correct B field by gradient of Phi_GB
 
     use ModMain, ONLY : nI,nJ,nK
-    use ModVarIndexes, ONLY : Bx_,By_,Bz_
+    use ModVarIndexes, ONLY : Bx_,Bz_
     use ModAdvance,    ONLY : State_VGB
     use ModGeometry,   ONLY : Used_GB
     use ModMain, ONLY : UseConstrainB
@@ -681,7 +681,7 @@ contains
 
     ! Local variables
     integer :: iBlock, i, j, k
-    real    :: DxInvHalf, DyInvHalf, DzInvHalf, DxInv, DyInv, DzInv
+    real    :: DxInv, DyInv, DzInv
     real    :: dB_D(3), Ratio, dBRatioMax
 
     logical:: DoTest

@@ -183,8 +183,8 @@ contains
          IsTimeAccurate, iStage, nStage, Dt, Cfl, UseB0, UseBufferGrid, &
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
     use ModPhysics, ONLY: &
-         Gamma, GammaMinus1, InvGammaMinus1, Gamma_I, GammaMinus1_I, &
-         GammaElectron, GammaElectronMinus1, InvGammaElectronMinus1, &
+         GammaMinus1, InvGammaMinus1, GammaMinus1_I, &
+         GammaElectronMinus1, InvGammaElectronMinus1, &
          ShockLeft_V, ShockRight_V, RhoMin_I
     use ModSemiImplVar, ONLY: UseStableImplicit
     use ModVarIndexes, ONLY: Pe_, p_
@@ -201,8 +201,9 @@ contains
     use ModUserInterface
     use ModBuffer,      ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, HypEDecay
-    use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoUxIon_I, iRhoUyIon_I, &
-         iRhoUzIon_I, iPIon_I, nIonFluid, UseNeutralFluid, DoConserveNeutrals
+    use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoIon_I, &
+         iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I, &
+         nIonFluid, UseNeutralFluid, DoConserveNeutrals
     use ModPui, ONLY: UsePui, pui_advection_diffusion
 
     integer, intent(in) :: iBlock
@@ -295,7 +296,8 @@ contains
     if(UseElectronPressure .and. UseElectronEntropy)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Source_VC(Se_,i,j,k) = Source_VC(Pe_,i,j,k) &
-               *State_VGB(Rho_,i,j,k,iBlock)**(-GammaElectronMinus1)
+               *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+               **(-GammaElectronMinus1)
        end do; end do; end do
     end if
 
@@ -445,7 +447,7 @@ contains
       logical:: UseElectronShockHeating, UseAnisoShockHeating
 
       real:: Coeff1, Coeff2, b_D(3), u_D(3), FullB2, FullB, Rho
-      real:: Eth, Ead, Sperp, Sie, Spp, Ei, Ee, Epar
+      real:: Eth, Sperp, Sie, Spp, Ei, Ee, Epar
       real:: FactorI, FactorE, FactorPar, FactorPerp
       real:: WeightSi, WeightSe, WeightSpar, WeightSperp, Wi, We, Wpar, Wperp
       integer:: iFluid, iRho
@@ -583,23 +585,23 @@ contains
       if(.not.UseNonConservative)then
          do k = 1, nK; do j = 1, nJ; do i =1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-            Source_VC(iP_I(1:IonLast_),i,j,k) = &
-                 Source_VC(Energy_:Energy_+IonLast_-1,i,j,k)
+            Source_VC(iPIon_I,i,j,k) = &
+                 Source_VC(Energy_:Energy_+nIonFluid-1,i,j,k)
          end do; end do; end do
       elseif(nConservCrit > 0)then
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
-            Source_VC(iP_I(1:IonLast_),i,j,k) = &
-                 Source_VC(Energy_:Energy_+IonLast_-1,i,j,k)
+            Source_VC(iPIon_I,i,j,k) = &
+                 Source_VC(Energy_:Energy_+nIonFluid-1,i,j,k)
          end do; end do; end do
       end if
       ! Neutrals next
       if(UseNeutralFluid .and. DoConserveNeutrals)then
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-            Source_VC(iP_I(IonLast_+1:),i,j,k) = &
-                 Source_VC(Energy_+IonLast_:,i,j,k)
+            Source_VC(iP_I(nIonFluid+1:),i,j,k) = &
+                 Source_VC(Energy_+nIonFluid:,i,j,k)
          end do; end do; end do
       end if
 
@@ -612,11 +614,13 @@ contains
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock) &
-                 *StateOld_VGB(Rho_,i,j,k,iBlock)**(-GammaElectronMinus1)
+                 *sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+                 **(-GammaElectronMinus1)
             ! State_VGB is not used in 1-stage and HalfStep schemes
             if(.not.UseHalfStep .and. nStage > 1) &
                  State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-                 *State_VGB(Rho_,i,j,k,iBlock)**(-GammaElectronMinus1)
+                 *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+                 **(-GammaElectronMinus1)
          end do; end do; end do
       end if
 
@@ -759,10 +763,13 @@ contains
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = StateOld_VGB(Se_,i,j,k,iBlock) &
-                 *StateOld_VGB(Rho_,i,j,k,iBlock)**GammaElectronMinus1
+                 *sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+                 **GammaElectronMinus1
             if(State_VGB(Pe_,i,j,k,iBlock) > 0.0) &
                  State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Se_,i,j,k,iBlock) &
-                 *max(0.0, State_VGB(Rho_,i,j,k,iBlock))**GammaElectronMinus1
+                 *max(0.0, &
+                 sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)) &
+                 **GammaElectronMinus1
          end do; end do; end do
       end if
 
@@ -1802,8 +1809,9 @@ contains
     ! individual fluids equal to their number density weighted average.
 
     use ModSize,       ONLY: nI, nJ, nK
-    use ModMultiFluid, ONLY: nIonFluid, IonFirst_, IonLast_, &
-         iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, MassIon_I, MassFluid_I
+    use ModMultiFluid, ONLY: nIonFluid, iRhoIon_I, &
+         iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I, &
+         MassIon_I
 
     integer, intent(in) :: iBlock
 
@@ -1817,14 +1825,14 @@ contains
 
     if(DoTest)then
        write(*,*) NameSub,': ion fluid velocities and temperatures before fix:'
-       do iFluid = IonFirst_, IonLast_
+       do iFluid = 1, nIonFluid
           write(*,*)'iIonFluid,ux,uy,uz,T=', &
-               State_VGB(iRhoUx_I(iFluid):iRhoUz_I(iFluid),&
+               State_VGB(iRhoUxIon_I(iFluid):iRhoUzIon_I(iFluid),&
                iTest,jTest,kTest,iBlock) &
-               / State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock), &
-               State_VGB(iP_I(iFluid),iTest,jTest,kTest,iBlock)    &
-               *MassFluid_I(iFluid) &
-               /State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock)
+               / State_VGB(iRhoIon_I(iFluid),iTest,jTest,kTest,iBlock), &
+               State_VGB(iPIon_I(iFluid),iTest,jTest,kTest,iBlock)    &
+               *MassIon_I(iFluid) &
+               /State_VGB(iRhoIon_I(iFluid),iTest,jTest,kTest,iBlock)
        end do
     end if
 
@@ -1833,18 +1841,18 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Calcualate average velocity from total momentum and density
-          RhoInv= 1/sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
-          Ux = RhoInv*sum(State_VGB(iRhoUx_I(IonFirst_:IonLast_),i,j,k,iBlock))
-          Uy = RhoInv*sum(State_VGB(iRhoUy_I(IonFirst_:IonLast_),i,j,k,iBlock))
-          Uz = RhoInv*sum(State_VGB(iRhoUz_I(IonFirst_:IonLast_),i,j,k,iBlock))
+          RhoInv= 1/sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
+          Ux = RhoInv*sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
+          Uy = RhoInv*sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
+          Uz = RhoInv*sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
 
           ! Reset the momentum of all ion fluids
-          State_VGB(iRhoUx_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
-               Ux*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
-          State_VGB(iRhoUy_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
-               Uy*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
-          State_VGB(iRhoUz_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
-               Uz*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
+          State_VGB(iRhoUxIon_I,i,j,k,iBlock) = &
+               Ux*State_VGB(iRhoIon_I,i,j,k,iBlock)
+          State_VGB(iRhoUyIon_I,i,j,k,iBlock) = &
+               Uy*State_VGB(iRhoIon_I,i,j,k,iBlock)
+          State_VGB(iRhoUzIon_I,i,j,k,iBlock) = &
+               Uz*State_VGB(iRhoIon_I,i,j,k,iBlock)
 
        end do; end do; end do
     end if
@@ -1854,29 +1862,27 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Number density
-          NumDens_I = &
-               State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)/MassIon_I
+          NumDens_I = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
 
           ! Average temperature = sum(p)/sum(n) = sum(p)/sum(rho/M)
-          Temp = sum(State_VGB(iP_I(IonFirst_:IonLast_),i,j,k,iBlock)) &
-               / sum(NumDens_I)
+          Temp = sum(State_VGB(iPIon_I,i,j,k,iBlock)) / sum(NumDens_I)
 
           ! Reset the pressure of all ion fluids
-          State_VGB(iP_I(IonFirst_:IonLast_),i,j,k,iBlock) = Temp*NumDens_I
+          State_VGB(iPIon_I,i,j,k,iBlock) = Temp*NumDens_I
 
        end do; end do; end do
     end if
 
     if(DoTest)then
        write(*,*) NameSub,': ion fluid velocities and temperatures after fix:'
-       do iFluid = IonFirst_, IonLast_
+       do iFluid = 1, nIonFluid
           write(*,*)'iIonFluid,ux,uy,uz,T=', &
-               State_VGB(iRhoUx_I(iFluid):iRhoUz_I(iFluid),&
+               State_VGB(iRhoUxIon_I(iFluid):iRhoUzIon_I(iFluid),&
                iTest,jTest,kTest,iBlock) &
-               / State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock), &
-               State_VGB(iP_I(iFluid),iTest,jTest,kTest,iBlock)    &
-               *MassFluid_I(iFluid) &
-               /State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock)
+               / State_VGB(iRhoIon_I(iFluid),iTest,jTest,kTest,iBlock), &
+               State_VGB(iPIon_I(iFluid),iTest,jTest,kTest,iBlock)    &
+               *MassIon_I(iFluid) &
+               /State_VGB(iRhoIon_I(iFluid),iTest,jTest,kTest,iBlock)
        end do
     end if
 

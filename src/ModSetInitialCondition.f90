@@ -5,7 +5,7 @@
 module ModSetInitialCondition
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iProc, iBlockTest, iTest, jTest, kTest
+       test_start, test_stop, iBlockTest, iTest, jTest, kTest
 
   use ModVarIndexes, ONLY: nVar
   use ModMain, ONLY: NamePrimitive_V

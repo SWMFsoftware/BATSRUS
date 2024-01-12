@@ -5,13 +5,13 @@
 module ModPlotBox
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iBlockTest, iProc, nProc, iComm
+       test_start, test_stop, iProc, nProc, iComm
   use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   use ModIO, ONLY: PlotDx_DI, PlotRange_EI, PlotNormal_DI, TypeCoordPlot_I, &
-       TypePlotFormat_I, TypeFile_I, TypePlot_I, ObsPos_DI, IsObsBox_I, &
+       TypePlotFormat_I, TypeFile_I, ObsPos_DI, IsObsBox_I, &
        MaxPlotvar, StringPlotVar, DimFactor_V, StringPlotVar_I
   use ModNumConst,        ONLY: cDegToRad, cTwoPi
   use ModCoordTransform,  ONLY: xyz_to_lonlat

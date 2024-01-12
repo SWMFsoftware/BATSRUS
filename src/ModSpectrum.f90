@@ -50,7 +50,7 @@ contains
     use ModIoUnit,      ONLY: io_unit_new
     use ModUtilities,   ONLY: open_file, close_file
     use ModIO,          ONLY: NameSpmTable_I, UseUnobserved_I, UseDoppler_I, &
-         LambdaMin_I, LambdaMax_I, NameNbiTable_I, DLambda_I, TempMin_I, &
+         LambdaMin_I, LambdaMax_I, NameNbiTable_I, DLambda_I, &
          NamePhxTable_I, UseIonFrac_I
     ! response function
     use ModPlotFile,    ONLY: read_plot_file

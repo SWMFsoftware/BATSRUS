@@ -11,7 +11,6 @@ module ModSatelliteFile
   use ModUtilities, ONLY: open_file, close_file
   use ModBatsrusUtility, ONLY: get_time_string, stop_mpi
   use ModMain, ONLY: StartTime
-  use ModTimeConvert,   ONLY: time_int_to_real
 
   implicit none
   save
@@ -248,7 +247,6 @@ contains
   !============================================================================
   subroutine set_satellite_file_status(iSat,TypeStatus)
     use ModIoUnit, ONLY: io_unit_new
-    use ModIO,     ONLY: NamePlotDir, StringDateOrTime
 
     integer, intent(in) :: iSat
     character(LEN=*),intent(in) :: TypeStatus

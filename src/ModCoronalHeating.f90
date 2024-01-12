@@ -11,7 +11,6 @@ module ModCoronalHeating
   use ModUtilities, ONLY: norm2
 #endif
   use ModMain,       ONLY: nI, nJ, nK
-  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
   use ModTurbulence
   use omp_lib
 
@@ -73,12 +72,7 @@ contains
   !============================================================================
   subroutine read_coronal_heating_param(NameCommand)
     ! Read heating parameters, call read_turbulence_param if needed
-    use ModAdvance,    ONLY: UseAnisoPressure
     use ModReadParam,  ONLY: read_var, lStringLine
-    use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
-         UseAlfvenWaveRepresentative
-
-    integer :: iFluid
 
     character(len=*), intent(in):: NameCommand
     character(len=lStringLine) :: TypeCoronalHeating

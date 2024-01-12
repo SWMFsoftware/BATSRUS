@@ -1314,6 +1314,7 @@ contains
        call get_axes(tSimulation, RotAxisGsmOut_D=RotAxis_D)
        OmegaBody_D = OmegaBody * RotAxis_D
     end select
+    !$acc update device(OmegaBody_D)
 
   end subroutine update_angular_velocity
   !============================================================================

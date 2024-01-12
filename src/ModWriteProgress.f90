@@ -4,7 +4,7 @@
 
 module ModWriteProgress
 
-  use BATL_lib,     ONLY: test_start, test_stop, lVerbose
+  use BATL_lib,     ONLY: test_start, test_stop
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif

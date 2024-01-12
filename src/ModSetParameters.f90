@@ -4,7 +4,9 @@
 module ModSetParameters
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, StringTest, iVarTest
+
+  use BATL_lib, ONLY:
 
   implicit none
 
@@ -123,7 +125,7 @@ contains
     use ModPIC, ONLY: pic_read_param, AdaptPic
     use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I, &
          ion_electron_init_point_impl
-    use ModFaceBoundary, ONLY: read_face_boundary_param, B1rCoef
+    use ModFaceBoundary, ONLY: read_face_boundary_param
     use ModPUI, ONLY: read_pui_param, init_mod_pui, UsePui
     ! BEGIN CORONA SPECIFIC
     use EEE_ModMain, ONLY: EEE_set_parameters
@@ -3935,7 +3937,7 @@ contains
 
       !$acc update device(GammaWave)
 
-      !$acc update device(UseBody, B1rCoef)
+      !$acc update device(UseBody)
 
       !$acc update device(UseRotatingBc)
 

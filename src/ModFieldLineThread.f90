@@ -186,7 +186,7 @@ contains
   !============================================================================
   subroutine init
 
-    use ModTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
+    use ModTurbulence, ONLY: PoyntingFluxPerB, &
          LPerpTimesSqrtB
     use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz
     integer :: iBlock ! Loop variable
@@ -246,10 +246,8 @@ contains
   subroutine read_thread_param(NameCommand, iSession)
 
     use ModReadParam, ONLY: read_var
-    use ModMain,      ONLY: NameThisComp
     character(len=*), intent(in):: NameCommand
     integer, intent(in):: iSession
-    integer :: iBlock, iError
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_thread_param'
     !--------------------------------------------------------------------------
@@ -502,9 +500,8 @@ contains
     use ModPhysics,  ONLY: Si2No_V, No2Si_V,&
          UnitTemperature_, UnitX_, UnitB_
     use ModNumConst, ONLY: cTolerance
-    use ModTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
-         LPerpTimesSqrtB
-    use BATL_lib,    ONLY: MaxDim, xyz_to_coord, r_
+    use ModTurbulence, ONLY:PoyntingFluxPerBSi
+    use BATL_lib,    ONLY: MaxDim, xyz_to_coord
     integer, intent(in) :: iBlock
     ! Locals:
     ! Loop variable: (j,k) enumerate the cells at which
@@ -843,7 +840,7 @@ contains
     subroutine limit_temperature(BLength, TMax)
 
       use ModPhysics,      ONLY: UnitX_, Si2No_V, UnitB_
-      use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
+      use ModLookupTable,  ONLY: interpolate_lookup_table
       real, intent(in)  :: BLength
       real, intent(out) :: TMax
       real :: HeatFluxXLength, Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
@@ -948,7 +945,7 @@ contains
     ! array, then convert to MHD
     use ModAdvance,     ONLY: nVar
     use BATL_lib,       ONLY: &
-         MinIJK_D, MaxIJK_D, CoordMin_DB, CellSize_DB, r_
+         CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: interpolate_vector
 
     ! Coords of the point in which to interpolate
@@ -1010,10 +1007,10 @@ contains
     subroutine state_thread_to_mhd(Coord_D, StateThread_V, State_V)
       ! Convert the state stored in the State_VG array to
       ! the MHD state vector
-      use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz
+      use BATL_lib, ONLY: MaxDim, coord_to_xyz
       use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
       use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_
-      use ModTurbulence, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB
+      use ModTurbulence, ONLY: PoyntingFluxPerB
       !INPUT:
       ! Coordinates to determine the magnetic field
       real,    intent(in) :: Coord_D(MaxDim)
@@ -1066,19 +1063,17 @@ contains
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModVarIndexes
-    use ModAdvance, ONLY : DtMax_CB, UseElectronPressure, &
+    use ModAdvance, ONLY : UseElectronPressure, &
          UseMultiSpecies
     use ModGeometry
-    use ModPhysics,       ONLY: BodyRho_I, BodyP_I, OmegaBody,  &
+    use ModPhysics,       ONLY: OmegaBody,  &
          ElectronPressureRatio, InvGammaMinus1_I, Si2No_V, UnitB_
     use ModUtilities,     ONLY: lower_case
     use ModIO,            ONLY: NameVarUserTec_I, NameUnitUserTec_I, &
          NameUnitUserIdl_I
-    use ModNumConst,      ONLY: cTiny
     use ModMultiFluid,    ONLY: extract_fluid_name,      &
          UseMultiIon, nIonFluid, iPpar, iPFluid=>iP,   &
-         IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, &
-         ChargeIon_I
+         IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I
     use ModCoordTransform, ONLY: cross_product
     use BATL_lib,          ONLY: iNode_B, CellSize_DB
     use ModB0,             ONLY: get_b0
@@ -1407,20 +1402,18 @@ contains
   subroutine set_triangulation
 
     use BATL_lib,               ONLY: nBlock, Unused_B, &
-         CoordMin_DB, CellSize_DB, x_, y_, z_, Xyz_DGB
-    use ModB0,                  ONLY: B0_DGB
-    use ModAdvance,             ONLY: State_VGB
+         CoordMin_DB, CellSize_DB, x_, y_, z_
     use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph, &
-         find_triangle_orig, fix_state
+         find_triangle_orig
     use ModCoordTransform,      ONLY: rlonlat_to_xyz
 
-    integer :: i, j, k, iBlock, nPoint, iBuff, iError
+    integer :: i, j, k, iBlock, iBuff, iError
 
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
     integer, parameter :: Lon_ = 1, Lat_=2
     real    :: Coord_DII(Lat_,nThreadAll,-nGUniform:0),          &
-         State_V(TiSi_), Coord_D(Lon_:Lat_)
+         Coord_D(Lon_:Lat_)
     real    :: Xyz_D(3)
     ! Local Logicals
     logical :: IsTriangleFound = .false.
@@ -1614,9 +1607,8 @@ contains
     ! with the spherical surface at the first generalized coordinate value
     ! equal to input Coord1
 
-    use BATL_lib, ONLY: nBlock, Unused_B, CoordMin_DB, CellSize_DB, r_
+    use BATL_lib, ONLY: nBlock, Unused_B, r_
     use ModInterpolate, ONLY: linear
-    use ModNumConst, ONLY: cHalfPi
     real :: Coord1
     integer, intent(in) :: nVar
     real, intent(out) :: State_VII(nVar, nThreadAll,-nGUniform:0)
@@ -1842,12 +1834,9 @@ contains
     !==========================================================================
     subroutine set_plot_var
 
-      use ModConst, ONLY: cBoltzmann
-
-      integer ::  i, iVar ! Loop variables
+      integer :: iVar ! Loop variables
 
       ! Electron density in particles per cm3:
-      real    :: NeCgs
       !------------------------------------------------------------------------
       if(UseGenTable)then
          call integrate_emission(TeSi, PeSi, iTableGen, nPlotVar, PlotVar_V)

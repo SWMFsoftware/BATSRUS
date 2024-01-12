@@ -5,8 +5,7 @@
 module ModMessagePass
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iProc, iTest, jTest, kTest, iBlockTest, &
-       iProcTest, iVarTest
+       test_start, test_stop
 
   ! Message passing to fill in ghost cells.
   !
@@ -34,7 +33,7 @@ contains
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
     use ModMain, ONLY : nBlock, Unused_B, &
          IsTimeLoop, &
-         UseConstrainB, UseProjection, &
+         UseConstrainB, &
          nOrder, nOrderProlong, TypeMessagePass, &
          UseHighResChange, UseBufferGrid, UseResistivePlanet
     use ModVarIndexes

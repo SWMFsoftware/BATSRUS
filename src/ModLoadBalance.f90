@@ -5,8 +5,8 @@
 module ModLoadBalance
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iBlockTest, iProcTest, lVerbose, &
-       iProc, nProc, iComm
+       test_start, test_stop, StringTest, iBlockTest, iProcTest, &
+       iProc, iComm
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModMain, ONLY: UseConstrainB, UseB0, UseIM

@@ -5,7 +5,7 @@ module ModRadioWaveImage
 
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModConst, ONLY: cPi, cElectronMass, cElectronChargeSquaredJm
-  use BATL_lib, ONLY: iProc, nProc, iComm, MaxDim, nDim, x_, y_, z_
+  use BATL_lib, ONLY: nProc, iComm, MaxDim, nDim, x_, z_
   use ModParticles, ONLY: allocate_particles,&
        mark_undefined, Particle_I, check_particle_location,&
        put_particles, trace_particles, interpolate_grid_amr_gc
@@ -386,7 +386,7 @@ contains
 
       use ModUserInterface ! user_material_properties
       use ModCoordTransform, ONLY: cross_product
-      use ModWaves,      ONLY: nWave, WaveFirst_, WaveLast_, FrequencySi_W
+      use ModWaves,      ONLY: nWave, WaveLast_, FrequencySi_W
 
       ! Omega = \nabla n/n\times d\vec{x}/ds
       ! Analogous to the magnetic field times q/m in the

@@ -40,13 +40,12 @@ contains
   !============================================================================
   subroutine read_ion_electron_param(NameCommand)
 
-    use ModMain,      ONLY: NameVarLower_V
     use ModReadParam, ONLY: read_var
     use ModUtilities, ONLY: split_string
 
     character(len=*), intent(in):: NameCommand
 
-    integer :: iVar, jVar, nVarUseCmax
+    integer :: iVar, nVarUseCmax
     character(len=200) :: StringVarUseCmax
     character(len=20)  :: NameVarUseCmax_I(nVar)
 

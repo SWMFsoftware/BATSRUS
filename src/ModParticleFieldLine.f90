@@ -18,14 +18,14 @@ module ModParticleFieldLine
   ! - particle methods
 
   use BATL_lib, ONLY: &
-       MaxDim, nDim, MaxBlock, nI, nJ, nK, nBlock,     &
-       Xyz_DGB, CellVolume_GB, Unused_B, &
+       MaxDim, nDim,     &
+       CellVolume_GB, &
        Particle_I, trace_particles,                           &
        mark_undefined, check_particle_location, put_particles
   use ModParticles, ONLY: allocate_particles
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
   use ModAdvance, ONLY: State_VGB
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_
   use ModMain, ONLY: NameThisComp
 
   implicit none
@@ -145,7 +145,6 @@ contains
     character(len=*), intent(in) :: NameCommand
 
     character(len=100) :: StringInitMode
-    character(len=100) :: StringOrderMode
     integer:: iLine, iDim ! loop variables
 
     logical:: DoTest
@@ -270,7 +269,6 @@ contains
     integer :: nLineThisProc! number of new field lines initialized locally
     integer :: nLineAllProc ! number of new field lines initialized on all PEs
     integer :: nParticleOld ! number of already existing regular particles
-    integer :: nParticleAll ! number of all particles on all PEs
 
     ! mode of tracing (see description below)
     integer:: iTraceMode
@@ -410,7 +408,6 @@ contains
     logical, intent(out):: IsEndOfSegment
 
     ! cosine of angle between direction of field and radial direction
-    real:: CosBR
 
     ! whether to schedule a particle for message pass
     logical:: DoMove, IsGone
@@ -525,7 +522,7 @@ contains
     !==========================================================================
     subroutine stage2
       ! radii and vector of radial direction
-      real :: ROld, RNew, DirR_D(MaxDim)
+      real :: DirR_D(MaxDim)
       !------------------------------------------------------------------------
       ! get the direction of the magnetic field in the middle
       call get_b_dir(iParticle, DirB_D, IsBody = IsEndOfSegment)
@@ -604,8 +601,6 @@ contains
     subroutine apply_random_walk(Dir_D)
       use ModCoordTransform, ONLY: cross_product
       use ModRandomNumber, ONLY: random_real
-      use ModPhysics, ONLY: No2Si_V, UnitX_
-      use ModConst, ONLY: cAu
       use ModNumConst, ONLY: cTwoPi
       ! add components perpendicular to the current direction of the line
       ! to achieve the effect of field line random walk
@@ -621,8 +616,8 @@ contains
       real:: RndUnif1, RndUnif2, RndGauss1, RndGauss2
       ! seed for random number generator
       integer, save:: iSeed=0
-      !------------------------------------------------------------------------
       ! first, find perpendicular directions
+      !------------------------------------------------------------------------
       DirPerp1_D = cross_product([1.0,0.0,0.0],Dir_D)
       if(all(DirPerp1_D == 0.0))&
            DirPerp1_D = cross_product([0.0,1.0,0.0],Dir_D)

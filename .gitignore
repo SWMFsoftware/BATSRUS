@@ -5,6 +5,7 @@
 *.diff
 *.exe
 *~
+*_orig_
 *.speed
 *.protex
 *.aux

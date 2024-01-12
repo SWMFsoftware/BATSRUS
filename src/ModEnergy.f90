@@ -4,16 +4,16 @@
 module ModEnergy
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
+       test_start, test_stop
   use ModExtraVariables, ONLY: Pepar_
   use ModVarIndexes, ONLY: &
-       nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, Hyp_, p_, Pe_, IsMhd
+       nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Hyp_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: &
-       nFluid, IonLast_, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, &
+       nFluid, IonLast_, iRho, iRhoUx, iRhoUz, iP, iP_I, &
        UseNeutralFluid, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
   use ModAdvance, ONLY: &
-       State_VGB, StateOld_VGB, UseElectronPressure, UseElectronEnergy
+       State_VGB, UseElectronPressure, UseElectronEnergy
   use ModConservative, ONLY: UseNonConservative, nConservCrit, IsConserv_CB
   use ModPhysics, ONLY: &
        GammaMinus1_I, InvGammaMinus1_I, InvGammaMinus1, &
@@ -348,7 +348,7 @@ contains
     integer, intent(in) :: iFluidMin, iFluidMax
 
     integer:: i, j, k, iFluid
-    real :: NumDens, p, pMin, Ne
+    real :: NumDens, pMin, Ne
 
     character(len=*), parameter:: NameSub = 'limit_pressure'
     !--------------------------------------------------------------------------

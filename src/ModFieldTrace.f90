@@ -12,7 +12,7 @@ module ModFieldTrace
        Xyz_DGB, CellSize_DB, CoordMin_DB, IsCartesianGrid, &
        find_grid_block, xyz_to_coord, message_pass_cell
   use ModB0, ONLY: B0_DGB, get_b0
-  use ModBatsrusUtility, ONLY: get_time_string, stop_mpi, barrier_mpi
+  use ModBatsrusUtility, ONLY: get_time_string, stop_mpi
   use ModCoordTransform, ONLY: &
        xyz_to_rlonlat, rlonlat_to_xyz, xyz_to_sph, sph_to_xyz, cross_product
 #ifdef _OPENACC

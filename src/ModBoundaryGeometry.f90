@@ -239,7 +239,7 @@ contains
     end if
 
     if(iBlock == nBlock) then
-       !$acc update device(Used_GB, IsBody_B, iBoundary_GB)
+       !$acc update device(Used_GB, IsBody_B, IsNoBody_B, iBoundary_GB)
        !$acc update device(IsBoundary_B)
     end if
 

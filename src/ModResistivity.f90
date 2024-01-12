@@ -815,13 +815,13 @@ contains
 
     use BATL_lib,        ONLY: store_face_flux, IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, CellFace_DB, FaceNormal_DDFB, &
-         nG, i0_, j0_, k0_, nIp1_, nJp1_, nKp1_
+         i0_, j0_, k0_, nIp1_, nJp1_, nKp1_
     use ModFaceGradient, ONLY: get_face_curl
     use ModImplicit,     ONLY: nVarSemi, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModNumConst,     ONLY: i_DD
     use ModSize,         ONLY: x_, y_, z_
-    use ModGeometry,     ONLY: Used_GB, IsNoBody_B
+    use ModGeometry,     ONLY: Used_GB
     use ModHallResist,   ONLY: HallCmaxFactor
     use ModCellGradient, ONLY: calc_cell_curl_ghost
     use ModCoordTransform, ONLY: determinant

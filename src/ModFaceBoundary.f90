@@ -9,7 +9,6 @@ module ModFaceBoundary
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModVarIndexes, ONLY: nVar
   use ModMultiFluid
   use ModAdvance,    ONLY: nSpecies
   use ModNumConst,   ONLY: cDegToRad
@@ -108,7 +107,7 @@ contains
 
     case("#MAGNETICINNERBOUNDARY")
        call read_var('B1rCoef', B1rCoef)
-
+       !$acc update device(B1rCoef)
     case default
        call stop_mpi(NameSub//': unknown command = '//NameCommand)
     end select
@@ -205,7 +204,7 @@ contains
     use ModIeCoupling, ONLY: logvar_ionosphere, calc_inner_bc_velocity
 
     use CON_axes,      ONLY: transform_matrix
-    use BATL_lib,      ONLY: Xyz_DGB, iProc
+    use BATL_lib,      ONLY: Xyz_DGB
 
     type(FaceBCType), intent(inout):: FBC
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
@@ -448,14 +447,13 @@ contains
 
       use ModPhysics, ONLY: xBody2, yBody2, zBody2, vBody2_D, OmegaBody_D
       use ModAdvance, ONLY: UseMultiSpecies
-      use ModPhysics, ONLY: FaceState_VI, Si2No_V, No2Si_V, UnitX_, UnitN_, &
+      use ModPhysics, ONLY: FaceState_VI, Si2No_V, No2Si_V, UnitN_, &
            UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_, &
            UseOutflowPressure, pOutflow
       use ModCurrent, ONLY: get_point_data
       use ModMain
       use ModMultiFluid
       use CON_planet_field, ONLY: get_planet_field, map_planet_field
-      use CON_planet, ONLY: OmegaOrbit
       use ModConst,   ONLY: cElectronCharge, cBoltzmann,cProtonMass
       use ModPlanetConst, ONLY: Earth_, rPlanet_I
       use ModUtilities

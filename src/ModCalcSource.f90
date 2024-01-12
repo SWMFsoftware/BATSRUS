@@ -158,7 +158,7 @@ contains
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          KarmanTaylorBeta2AlphaRatio, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
-         LperpTimesSqrtB, rMinWaveReflection
+         rMinWaveReflection
     use ModRadiativeCooling, ONLY: RadCooling_C, UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion,      &
@@ -596,7 +596,7 @@ contains
           if(DoTest)call write_source('After UseAlfvenWaveDissipation')
        end if ! UseAlfvenWaveDissipation
 
-       if(UseCoronalHeating)then
+       if(UseCoronalHeating .and. DoUpdate_V(p_))then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(UseElectronPressure)then
                 call apportion_coronal_heating(i, j, k, iBlock, &
@@ -1163,7 +1163,6 @@ contains
       integer, intent(in) :: i, j, k, iBlock
       real,   intent(out) :: GradU_DD(nDim,MaxDim)
 
-      real, allocatable, save :: U_VFD(:,:,:,:,:)
       integer :: iDir
 
       character(len=*), parameter:: NameSub = 'calc_grad_u'
@@ -1370,7 +1369,7 @@ contains
       integer, intent(in) :: iVar, iBlock
       logical, optional, intent(in) :: DoLimitTimeStep
       real :: Source_C(nI,nJ,nK), VectorComp, VectDotArea
-      integer :: iDir, i, j, k
+      integer :: i, j, k
 
       character(len=*), parameter:: NameSub = 'vect_dot_grad_state'
       !------------------------------------------------------------------------

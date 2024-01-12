@@ -6,9 +6,10 @@ module ModBorisCorrection
 
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, &
-       Ux_, Uy_, Uz_, p_, IsMhd
+       Ux_, Uy_, Uz_, p_, WaveFirst_, WaveLast_, IsMhd
   use ModConst, ONLY: cLightSpeed
   use ModPhysics, ONLY: c2Light, InvClight2, ClightFactor, Si2No_V, UnitU_
+  use ModWaves, ONLY: UseAlfvenWaves
   use ModCoordTransform, ONLY: cross_product
   use ModMain,    ONLY: UseB0, UseHalfStep, nStage
   use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
@@ -107,7 +108,7 @@ contains
        call read_var('UseBorisCorrection', UseBorisCorrection)
        if(UseBorisCorrection) then
           call read_var('ClightFactor', CLightFactor)
-          if(IsMhd .and. nIonFluid == 1)then
+          if(IsMhd .and. nIonFluid == 1 .and. .not.UseAlfvenWaves)then
              UseBorisSimple = .false.
           else
              ! For non-MHD equations only simplified Boris correction
@@ -244,6 +245,10 @@ contains
       Factor = 1 + sum(b_D**2)*InvClight2Cell/State_V(Rho_)
       State_V(RhoUx_:RhoUz_) = Factor*State_V(RhoUx_:RhoUz_)
 
+      ! Reduce propagation speed of w+- by Factor
+      if(UseAlfvenWaves) State_V(WaveFirst_:WaveLast_) = &
+           Factor*State_V(WaveFirst_:WaveLast_)
+
     end subroutine mhd_to_boris_simple_cell
     !==========================================================================
 #endif
@@ -355,8 +360,12 @@ contains
       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
 
       ! Gombosi et al. 2001, eq(38) with vA^2 = B^2/Rho
-      Factor = 1 + sum(b_D**2)/(State_V(Rho_)*cLight2Cell)
-      State_V(RhoUx_:RhoUz_) = State_V(RhoUx_:RhoUz_)/Factor
+      Factor = 1/(1 + sum(b_D**2)/(State_V(Rho_)*cLight2Cell))
+      State_V(RhoUx_:RhoUz_) = Factor*State_V(RhoUx_:RhoUz_)
+
+      ! Reduce propagation speed of w+- by Factor
+      if(UseAlfvenWaves) State_V(WaveFirst_:WaveLast_) = &
+           Factor*State_V(WaveFirst_:WaveLast_)
 
     end subroutine boris_simple_to_mhd_cell
     !==========================================================================

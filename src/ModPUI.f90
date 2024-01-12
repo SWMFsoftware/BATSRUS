@@ -85,8 +85,6 @@ contains
 
     ! advection+diffusion in PUI velocity space
 
-    use ModWaves,           ONLY: DivU_C
-
     integer, intent(in) :: iBlock
 
     logical:: DoTest
