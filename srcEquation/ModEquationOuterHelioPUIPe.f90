@@ -25,7 +25,7 @@ module ModVarIndexes
   logical, parameter :: IsMhd     = .false.
   real               :: MassFluid_I(nFluid) = 1.0
 
-  ! SWH is the Solar wind hydrogen fluid, 
+  ! SWH is the Solar wind hydrogen fluid,
   ! Pu3 are pick up ions produced in region 3 (see mod user),
   ! and Neu, Ne2, Ne3, Ne4 are neutrals produced in the corresponding regions
 

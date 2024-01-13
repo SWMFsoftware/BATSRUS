@@ -688,11 +688,11 @@ contains
 
     integer, intent(in):: iBlock
     logical:: DoTest
-    character(len=*), parameter:: NameSub='set_clight_cell'
+    character(len=*), parameter:: NameSub = 'set_clight_cell'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     if(DoTest) write(*,*) NameSub,': UseBorisRegion =',UseBorisRegion
-    
+
     if(.not.allocated(Clight_G)) &
          allocate(Clight_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
