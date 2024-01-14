@@ -388,7 +388,8 @@ contains
        call init_mod_boundary_cells
        call init_mod_nodes
 
-       if(UseB .and. (UseBorisCorrection .or. UseBorisSimple)) call init_mod_boris_correction
+       if(UseB .and. (UseBorisCorrection .or. UseBorisSimple)) &
+            call init_mod_boris_correction
        if(UseB0)            call init_mod_b0
        if(UseRaytrace)      call init_mod_field_trace
        if(UseConstrainB)    call init_mod_ct
