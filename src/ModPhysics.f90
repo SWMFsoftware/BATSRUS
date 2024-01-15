@@ -531,8 +531,8 @@ contains
     !$acc update device(RhoBody2,pBody2)
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization
-    do iBoundary=SolidBc_,zMaxBc_
-       FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
+    do iBoundary = SolidBc_, zMaxBc_
+       FaceState_VI(:,iBoundary) = DefaultState_V(1:nVar)
     end do
 
     ! For bodies:
@@ -621,7 +621,7 @@ contains
           FaceState_VI( iP,xMinBc_:zMaxBc_) = SolarWindP/pCoef &
                *(1.0 - LowDensityRatio*(nIonFluid-1))
 
-          do iFluid = 1, nFluid
+          do iFluid = 2, nFluid
              call select_fluid(iFluid)
              FaceState_VI(iRho,xMinBc_:zMaxBc_) = SolarWindRho*LowDensityRatio
              FaceState_VI( iUx,xMinBc_:zMaxBc_) = SolarWindUx
