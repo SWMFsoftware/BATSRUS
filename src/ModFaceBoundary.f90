@@ -79,7 +79,7 @@ contains
        call read_var('FluxBeta',        FluxBeta)
 
     case("#POLARBOUNDARY")
-       do iFluid = 1, nIonFluid
+       do iFluid = 1, nFluid
           call read_var('PolarNDim',  PolarNDim_I(iFluid))
           call read_var('PolarTDim',  PolarTDim_I(iFluid))
           call read_var('PolarUDim',  PolarUDim_I(iFluid))
