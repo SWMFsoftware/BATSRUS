@@ -1606,14 +1606,18 @@ contains
       end if
 
       if(DoTestCell)then
-         write(*,*)'ChargeDens_I,InvElectronDens,InvRho=', &
-              ChargeDens_I, InvElectronDens, InvRho
-         write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
-         if(HallCoeff > 0.0) write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
-         write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
-         write(*,*)'B0x,y,z   =',B0x,B0y,B0z
-         write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
+         write(*,*)'ChargeDens_I, InvElectronDens=', &
+              ChargeDens_I, InvElectronDens
+         write(*,*)'UxyzPlus  =',UxPlus, UyPlus, UzPlus
+         if(HallCoeff > 0.0)then
+            write(*,*)'InvRho    =', InvRho
+            write(*,*)'HallUxyz  =', HallUx, HallUy, HallUz
+         end if
+         write(*,*)'FullBxyz  =', FullBx, FullBy, FullBz
+         write(*,*)'B0x,y,z   =', B0x, B0y, B0z
+         write(*,*)'Flux(Bxyz)=', Flux_V(Bx_:Bz_)
       end if
+
     end subroutine get_magnetic_flux
     !==========================================================================
     subroutine get_mhd_flux(State_V, Un, Flux_V, &
