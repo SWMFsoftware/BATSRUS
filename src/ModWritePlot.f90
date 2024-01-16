@@ -951,9 +951,9 @@ contains
           Param_I(iPar) = rTrace
        case('dt')
           if(IsDimensionalPlot_I(iFile))then
-             Param_I(iPar) = dt*No2Io_V(UnitT_)
+             Param_I(iPar) = Dt*No2Io_V(UnitT_)
           else
-             Param_I(iPar) = dt
+             Param_I(iPar) = Dt
           end if
        case('xsi')
           if(IsDimensionalPlot_I(iFile))then
@@ -1762,8 +1762,8 @@ contains
           PlotVar_GV(:,:,:,iVar) = CellSize_DB(y_,iBlock)
        case('dz','dlat')
           PlotVar_GV(:,:,:,iVar) = CellSize_DB(z_,iBlock)
-       case('dt')
-          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = DtMax_CB(1:nI,1:nJ,1:nK,iBlock)
+       case('dt', 'dtmax')
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = DtMax_CB(:,:,:,iBlock)
        case('dtblk')
           PlotVar_GV(:,:,:,iVar) = DtMax_B(iBlock)
           ! if(.not.IsNoBody_B(iBlock))then
@@ -2155,13 +2155,13 @@ contains
                *No2Io_V(UnitDivB_)
 
           ! GRID INFORMATION
-       case('dt','dtblk')
+       case('dt', 'dtmax', 'dtblk')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitT_)
-       case('x','y','z','r','dx','dr','dy','dz','req1','req2')
+       case('x', 'y', 'z', 'r', 'dx', 'dr', 'dy', 'dz', 'req1', 'req2')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitX_)
-       case('dphi','dlon','dlat')
+       case('dphi', 'dlon', 'dlat')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar)*cRadToDeg
 
           ! DEFAULT CASE
@@ -2279,9 +2279,9 @@ contains
           ! GRID INFORMATION
        case('proc','blk','node','impl','evolve')
           NameUnit = '1'
-       case('dt', 'dtblk')
+       case('dt', 'dtblk', 'dtmax')
           NameUnit = NameIdlUnit_V(UnitT_)
-       case('x','y','z','r','dx','dr','dy','dz','req1','req2')
+       case('x', 'y', 'z', 'r', 'dx', 'dr', 'dy', 'dz', 'req1', 'req2')
           NameUnit = NameIdlUnit_V(UnitX_)
        case('dphi','dlon','dlat')
           NameUnit = NameIdlUnit_V(UnitAngle_)
