@@ -12,9 +12,6 @@ module ModMultiFluid
   implicit none
   save
 
-  ! This has to be at least 1 even if there are no ion fluids
-  integer, parameter:: nIonFluid = IonLast_
-
   ! Convenient parameters for the ion fluids
   logical, parameter:: UseMultiIon = nIonFluid > 1 .and. Ex_ == 1
 
@@ -62,7 +59,7 @@ module ModMultiFluid
        iRhoUx = RhoUx_, iUx = RhoUx_,  &
        iRhoUy = RhoUy_, iUy = RhoUy_,  &
        iRhoUz = RhoUz_, iUz = RhoUz_,  &
-       iPpar  = iPparIon_I(IonFirst_), &
+       iPpar  = iPparIon_I(1),         &
        iP     = P_,                    &
        iEnergy= nVar+1
   !$omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )

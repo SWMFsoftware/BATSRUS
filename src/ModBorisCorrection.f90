@@ -63,11 +63,10 @@ contains
   !============================================================================
   subroutine init_mod_boris_correction
 
-    use ModMain, ONLY: &
-         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
-
     ! Get signed indexes for Boris region(s)
 
+    use ModMain, ONLY: &
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     !--------------------------------------------------------------------------
     call get_region_indexes(StringBorisRegion, iRegionBoris_I)
     UseBorisRegion = allocated(iRegionBoris_I)
@@ -83,9 +82,7 @@ contains
     !$acc update device(UseBorisCorrection)
   end subroutine init_mod_boris_correction
   !============================================================================
-
   subroutine clean_mod_boris_correction
-
     !--------------------------------------------------------------------------
     if(allocated(EDotFA_X)) deallocate(EDotFA_X)
     if(allocated(EDotFA_Y)) deallocate(EDotFA_Y)
@@ -93,7 +90,6 @@ contains
 
   end subroutine clean_mod_boris_correction
   !============================================================================
-
   subroutine read_boris_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
@@ -108,7 +104,7 @@ contains
        call read_var('UseBorisCorrection', UseBorisCorrection)
        if(UseBorisCorrection) then
           call read_var('ClightFactor', CLightFactor)
-          if(IsMhd .and. nIonFluid == 1 .and. .not.UseAlfvenWaves)then
+          if(IsMhd .and. nIonFluid == 1)then
              UseBorisSimple = .false.
           else
              ! For non-MHD equations only simplified Boris correction
@@ -202,10 +198,11 @@ contains
       real, intent(inout):: State_V(nVar)
       integer, intent(in):: i, j, k, iBlock
 
-      real:: Rho, b_D(3), u_D(3)
+      real:: Rho, b_D(3), B2, u_D(3)
       !------------------------------------------------------------------------
       b_D = State_V(Bx_:Bz_)
       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+      B2 = sum(b_D**2)
 
       Rho = State_V(Rho_)
       u_D = State_V(RhoUx_:RhoUz_)/Rho
@@ -214,14 +211,19 @@ contains
       !
       ! RhoUBoris = RhoU + (RhoU B^2 - B RhoU.B)/(Rho c^2)
       !           = U*(Rho + B^2/c^2 - B U.B/c^2
-      State_V(RhoUx_:RhoUz_) = u_D*(Rho + sum(b_D**2)*InvClight2Cell) &
+      State_V(RhoUx_:RhoUz_) = u_D*(Rho + B2*InvClight2Cell) &
            - b_D*sum(u_D*b_D)*InvClight2Cell
+
+      ! Reduce propagation speed of w+- by (1 + vA^2/c^2)
+      if(UseAlfvenWaves) State_V(WaveFirst_:WaveLast_) = &
+           (1 + B2*InvClight2Cell/Rho)*State_V(WaveFirst_:WaveLast_)
 
       ! No need to set energy for non-conservative scheme
       if(UseNonConservative)then
          if(nConservCrit == 0) RETURN
          if(.not.IsConserv_CB(i,j,k,iBlock)) RETURN
       end if
+
       ! e_Boris = e + (UxB)^2/(2 c^2)   eq 92
       State_V(p_) = State_V(p_) &
            + 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2Cell
@@ -318,10 +320,11 @@ contains
       ! for conservative scheme.
       ! Use B0=B0_D in the total magnetic field if present.
 
-      real:: RhoC2, b_D(3), RhoUBoris_D(3), u_D(3)
+      real:: RhoC2, b_D(3), RhoUBoris_D(3), u_D(3), B2
       !------------------------------------------------------------------------
       b_D = State_V(Bx_:Bz_)
       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+      B2 = sum(b_D**2)
 
       RhoC2       = State_V(Rho_)*cLight2Cell
       RhoUBoris_D = State_V(RhoUx_:RhoUz_)
@@ -332,7 +335,11 @@ contains
       !      = (RhoUBoris*Rho*c^2 + B*B.RhoUBoris)/(Rho*c^2 + B^2)
 
       State_V(RhoUx_:RhoUz_) =(RhoC2*RhoUBoris_D + b_D*sum(b_D*RhoUBoris_D)) &
-           /(RhoC2 + sum(b_D**2))
+           /(RhoC2 + B2)
+
+      ! Reduce propagation speed of w+- by (1 + vA^2/c^2)
+      if(UseAlfvenWaves) State_V(WaveFirst_:WaveLast_) = &
+           State_V(WaveFirst_:WaveLast_)/(1 + B2*InvClight2Cell/State_V(Rho_))
 
       ! No need to set energy for non-conservative scheme
       if(UseNonConservative)then
@@ -354,7 +361,6 @@ contains
       ! Use B0=B0_D in the total magnetic field if present.
 
       real:: b_D(3), Factor
-
       !------------------------------------------------------------------------
       b_D = State_V(Bx_:Bz_)
       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
@@ -432,7 +438,6 @@ contains
 
   end subroutine add_boris_source
   !============================================================================
-
   subroutine boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
     ! Convert face centered Boris momenta to MHD velocities
@@ -688,7 +693,12 @@ contains
     ! including ghost cells
 
     integer, intent(in):: iBlock
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_clight_cell'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    if(DoTest) write(*,*) NameSub,': UseBorisRegion =',UseBorisRegion
+
     if(.not.allocated(Clight_G)) &
          allocate(Clight_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
@@ -702,6 +712,7 @@ contains
     else
        Clight_G = cLightSpeed * Si2No_V(UnitU_)
     end if
+    if(DoTest) write(*,*) NameSub,': Clight = ',Clight_G(iTest,jTest,kTest)
 
     !$acc update device(Clight_G)
   end subroutine set_clight_cell
@@ -728,6 +739,5 @@ contains
     !$acc update device(Clight_DF)
   end subroutine set_clight_face
   !============================================================================
-
 end module ModBorisCorrection
 !==============================================================================

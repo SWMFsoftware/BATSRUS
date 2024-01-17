@@ -206,8 +206,8 @@ contains
     real :: Visco, Tmp, ViscoCoeff
 
     ! Coronal Heating
-    real :: QPerQtotal_I(IonFirst_:IonLast_)
-    real :: QparPerQtotal_I(IonFirst_:IonLast_)
+    real :: QPerQtotal_I(nIonFluid)
+    real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
 
     ! Variables for multi-ion MHD
@@ -354,7 +354,7 @@ contains
              end do; end do; end do
 
              if(DoTest .and. UseAnisoPressure .and. &
-                  (iVarTest == iPparIon_I(IonFirst_) .or. iVarTest == p_)) &
+                  (iVarTest == iPparIon_I(1) .or. iVarTest == p_)) &
                   call write_source('After bDotbDotGradU')
 
           end if
@@ -609,13 +609,13 @@ contains
 
                 Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
                      + CoronalHeating_C(i,j,k)*QPerQtotal_I &
-                     *GammaMinus1_I(IonFirst_:IonLast_)
-                Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) = &
-                     Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) &
+                     *GammaMinus1_I(1:nIonFluid)
+                Source_VC(Energy_:Energy_-1+nIonFluid,i,j,k) = &
+                     Source_VC(Energy_:Energy_-1+nIonFluid,i,j,k) &
                      + CoronalHeating_C(i,j,k)*QPerQtotal_I
 
                 if(UseAnisoPressure)then
-                   do iFluid = IonFirst_, IonLast_
+                   do iFluid = 1, nIonFluid
                       Source_VC(iPparIon_I(iFluid),i,j,k) = &
                            Source_VC(iPparIon_I(iFluid),i,j,k) &
                            + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid)*2

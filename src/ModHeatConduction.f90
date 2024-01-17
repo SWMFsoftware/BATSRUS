@@ -945,8 +945,8 @@ contains
     use ModImplicit,     ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
          iTeImpl
     use ModMain,         ONLY: Dt, IsTimeAccurate, Cfl
-    use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I,&
-         IonFirst_, IonLast_
+    use ModMultifluid,   ONLY: UseMultiIon, nIonFluid, iRhoIon_I, MassIon_I, &
+         ChargeIon_I
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
          UnitEnergyDens_, UnitN_, UnitT_, AverageIonCharge, &
@@ -995,8 +995,8 @@ contains
     real :: dQidTe1, dQidTi1, Qi1, TeTiCoef1, TeTiCoef2
     real :: CoronalHeating
     real :: WaveDissipationRate_V(WaveFirst_:WaveLast_)
-    real :: QPerQtotal_I(IonFirst_:IonLast_)
-    real :: QparPerQtotal_I(IonFirst_:IonLast_)
+    real :: QPerQtotal_I(nIonFluid)
+    real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
     real :: Tpar, CollisionRate, IsotropizationCoef, DenominatorPar
 
@@ -1141,7 +1141,7 @@ contains
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipationRate_V, CoronalHeating, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-             Qi = CoronalHeating*QPerQtotal_I(IonFirst_)
+             Qi = CoronalHeating*QPerQtotal_I(1)
              Qe = CoronalHeating*QePerQtotal
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + Deltap
@@ -1152,7 +1152,7 @@ contains
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipationRate_V, CoronalHeating, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-             QiTiR = CoronalHeating*QPerQtotal_I(IonFirst_)
+             QiTiR = CoronalHeating*QPerQtotal_I(1)
              QeTiR = CoronalHeating*QePerQtotal
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - 2*Deltap
@@ -1163,7 +1163,7 @@ contains
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipationRate_V, CoronalHeating, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-             QiTiL = CoronalHeating*QPerQtotal_I(IonFirst_)
+             QiTiL = CoronalHeating*QPerQtotal_I(1)
              QeTiL = CoronalHeating*QePerQtotal
 
              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + Deltap
@@ -1181,7 +1181,7 @@ contains
                      State_VGB(:,i,j,k,iBlock), &
                      WaveDissipationRate_V, CoronalHeating, &
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-                QiTeR = CoronalHeating*QPerQtotal_I(IonFirst_)
+                QiTeR = CoronalHeating*QPerQtotal_I(1)
                 QeTeR = CoronalHeating*QePerQtotal
 
                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
@@ -1194,7 +1194,7 @@ contains
                      State_VGB(:,i,j,k,iBlock), &
                      WaveDissipationRate_V, CoronalHeating, &
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-                QiTeL = CoronalHeating*QPerQtotal_I(IonFirst_)
+                QiTeL = CoronalHeating*QPerQtotal_I(1)
                 QeTeL = CoronalHeating*QePerQtotal
 
                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
@@ -1789,7 +1789,7 @@ contains
          get_gamma_collisionless
     use BATL_lib,    ONLY: Xyz_DGB
     use ModUserInterface ! user_material_properties
-    use ModMultiFluid, ONLY: UseMultiIon, IonFirst_
+    use ModMultiFluid, ONLY: UseMultiIon
 
     integer, intent(in) :: iBlock, iBlockSemi
     real, intent(in) :: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
@@ -1811,7 +1811,7 @@ contains
        pMin = PeMin
     else
        iP = p_
-       pMin = pMin_I(IonFirst_)
+       pMin = pMin_I(1)
     end if
 
     DtLocal = Dt

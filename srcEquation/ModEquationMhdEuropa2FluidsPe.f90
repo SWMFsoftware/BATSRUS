@@ -24,8 +24,7 @@ module ModVarIndexes
   integer, parameter :: nVar = 14
 
   integer, parameter :: nFluid    = 2
-  integer, parameter :: IonFirst_ = 1        ! First individual ion fluid
-  integer, parameter :: IonLast_  = 2        ! Last individual ion fluid
+  integer, parameter :: nIonFluid = 2        ! Last individual ion fluid
   logical, parameter :: IsMhd     = .false.  ! Does not do ideal MHD
   real               :: MassFluid_I(nFluid) = [ 16.0, 32.0 ]
 
@@ -64,7 +63,7 @@ module ModVarIndexes
        iRhoUy_I(nFluid)=[OpRhoUy_, O2pRhoUy_ ],&
        iRhoUz_I(nFluid)=[OpRhoUz_, O2pRhoUz_ ],&
        iP_I(nFluid)    =[OpP_,     O2pP_ ],&
-       iPparIon_I(IonFirst_:IonLast_) = [1,2]
+       iPparIon_I(nIonFluid) = [1,2]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

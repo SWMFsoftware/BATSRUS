@@ -19,10 +19,9 @@ module ModVarIndexes
   integer, parameter :: nVar = 23
 
   integer, parameter :: nFluid    = 4
-  integer, parameter :: IonFirst_ = 1        ! First individual ion fluid
-  integer, parameter :: IonLast_  = 4        ! Last individual ion fluid
-  logical, parameter :: IsMhd     = .false.  ! First total ion fluid obeys MHD
-  real               :: MassFluid_I(1:nFluid) = [ 1.0, 32.0, 16.0, 44.0 ]
+  integer, parameter :: nIonFluid = 4        ! Last individual ion fluid
+  logical, parameter :: IsMhd     = .false.  ! Multi-ion is not MHD
+  real               :: MassFluid_I(nFluid) = [ 1.0, 32.0, 16.0, 44.0 ]
 
   character (len=6), parameter :: NameFluid_I(nFluid) = &
        [ 'Hp  ', 'O2p ', 'Op  ', 'CO2p' ]
@@ -32,19 +31,14 @@ module ModVarIndexes
   ! The energies are handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       Rho_       =  1,          &
-       RhoUx_     =  2, Ux_ = 2, &
-       RhoUy_     =  3, Uy_ = 3, &
-       RhoUz_     =  4, Uz_ = 4, &
+       Rho_       =  1,          HpRho_   = 1, &
+       RhoUx_     =  2, Ux_ = 2, HpRhoUx_ = 2, &
+       RhoUy_     =  3, Uy_ = 3, HpRhoUy_ = 3, &
+       RhoUz_     =  4, Uz_ = 4, HpRhoUz_ = 4, &
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
-       p_         =  8, &
-       HpRho_     =  1, &
-       HpRhoUx_   =  2, &
-       HpRhoUy_   =  3, &
-       HpRhoUz_   =  4, &
-       HpP_       =  8, &
+       p_         =  8, HpP_ = 8, &
        O2pRho_    =  9, &
        O2pRhoUx_  = 10, &
        O2pRhoUy_  = 11, &
@@ -60,8 +54,7 @@ module ModVarIndexes
        CO2pRhoUy_ = 21, &
        CO2pRhoUz_ = 22, &
        CO2pP_     = 23, &
-       Energy_    = nVar,   &  ! for Energy_+iFluid expressions
-       HpEnergy_  = nVar+1, &
+       Energy_    = nVar+1, HpEnergy_  = nVar+1, &
        O2pEnergy_ = nVar+2, &
        OpEnergy_  = nVar+3, &
        CO2pEnergy_= nVar+4
@@ -77,7 +70,7 @@ module ModVarIndexes
        iRhoUz_I(nFluid)=[HpRhoUz_, O2pRhoUz_, OpRhoUz_, CO2pRhoUz_],&
        iP_I(nFluid)    =[HpP_,     O2pP_,     OpP_ ,    CO2pP_ ]
 
-  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2,3,4]
+  integer, parameter :: iPparIon_I(nIonFluid) = [1,2,3,4]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

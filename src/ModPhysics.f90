@@ -14,7 +14,7 @@ module ModPhysics
        cElectronMass
   use ModMain, ONLY: TypeCoordSystem, body2_, SolidBc_, xMinBc_, zMaxBc_, &
        Coord1MinBc_, Coord3MaxBc_ , NameVarLower_V
-  use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
+  use ModVarIndexes, ONLY: nVar, nFluid, SpeciesFirst_, SpeciesLast_
   use ModAdvance, ONLY: UseMultiSpecies, nSpecies
   use ModMultiFluid, ONLY: nIonFluid
   use CON_star, ONLY: NameStar, RadiusStar, MassStar, RotPeriodStar
@@ -133,7 +133,7 @@ module ModPhysics
   !$acc declare create(OmegaBody, gBody)
 
   ! The dimensional quantities are given for individual ion and neutral fluids
-  real, dimension(IonFirst_:nFluid) :: &
+  real, dimension(nFluid) :: &
        BodyNDim_I = 1.0, BodyTDim_I = 1.0, &
        PolarNDim_I= 1.0, PolarTDim_I= 1.0, PolarUDim_I = 0.0
 
@@ -347,8 +347,8 @@ contains
           MassBodySi  = mSun
           ! RotPeriodSi is set in set_defaults and may be read from PARAM.in
        endif
-       SolarWindNDim = BodyNDim_I(IonFirst_)    ! SOLARWIND normalization only
-       SolarWindTempDim = BodyTDim_I(IonFirst_) ! SOLARWIND normalization only
+       SolarWindNDim = BodyNDim_I(1)    ! SOLARWIND normalization only
+       SolarWindTempDim = BodyTDim_I(1) ! SOLARWIND normalization only
        if(NameThisComp == 'EE' .and. IsCartesian)then
           rPlanetSi = 1000.0  ! 1 km
           NamePlanetRadius = 'km'
@@ -359,7 +359,7 @@ contains
     MassBody2Si = 0.0
     !$acc update device(MassBody2Si)
     ! Make sure that MassIon_I is consistent with MassFluid_I
-    MassIon_I = MassFluid_I(IonFirst_:IonLast_)
+    MassIon_I = MassFluid_I(1:nIonFluid)
 
     ! Call set_units, which set the quantities for converting from
     ! normalized to  dimensional quantities and vice versa.  Also
@@ -496,28 +496,28 @@ contains
        BodyRhoSpecies_I = BodyNSpeciesDim_I*Io2No_V(UnitN_)*MassSpecies_V
        BodyRho_I(1) = sum(BodyRhoSpecies_I)
        BodyP_I(1)   = sum(BodyNSpeciesDim_I)*Io2No_V(UnitN_) &
-            *BodyTDim_I(IonFirst_)*Io2No_V(UnitTemperature_)
+            *BodyTDim_I(1)*Io2No_V(UnitTemperature_)
     else
        ! The normalized quantities extend to the first MHD fluid too
-       BodyRho_I(IonFirst_:) = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
-       BodyP_I(IonFirst_:)   = BodyNDim_I*Io2No_V(UnitN_)*BodyTDim_I &
-            * Io2No_V(UnitTemperature_)
+       BodyRho_I = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
+       BodyP_I   = BodyNDim_I*Io2No_V(UnitN_)*BodyTDim_I &
+            *Io2No_V(UnitTemperature_)
     end if
 
-    PolarRho_I(IonFirst_:) = PolarNDim_I*Io2No_V(UnitN_)*MassFluid_I
-    PolarP_I(IonFirst_:)   = PolarNDim_I*Io2No_V(UnitN_)*PolarTDim_I &
+    PolarRho_I = PolarNDim_I*Io2No_V(UnitN_)*MassFluid_I
+    PolarP_I   = PolarNDim_I*Io2No_V(UnitN_)*PolarTDim_I &
          * Io2No_V(UnitTemperature_)
-    PolarU_I(IonFirst_:)   = PolarUDim_I*Io2No_V(UnitU_)
+    PolarU_I   = PolarUDim_I*Io2No_V(UnitU_)
 
     if(UseMultiIon .and. IsMhd)then
        ! Add up ion fluids for total ion fluid
-       BodyRho_I(1)  = sum(BodyRho_I(IonFirst_:IonLast_))
-       BodyP_I(1)    = sum(BodyP_I(IonFirst_:IonLast_))
-       PolarRho_I(1) = sum(PolarRho_I(IonFirst_:IonLast_))
-       PolarP_I(1)   = sum(PolarP_I(IonFirst_:IonLast_))
+       BodyRho_I(1)  = sum(BodyRho_I(1:nIonFluid))
+       BodyP_I(1)    = sum(BodyP_I(1:nIonFluid))
+       PolarRho_I(1) = sum(PolarRho_I(1:nIonFluid))
+       PolarP_I(1)   = sum(PolarP_I(1:nIonFluid))
        PolarU_I(1)   = &
-            sum(PolarRho_I(IonFirst_:IonLast_)*PolarU_I(IonFirst_:IonLast_)) &
-            /sum(PolarRho_I(IonFirst_:IonLast_))
+            sum(PolarRho_I(1:nIonFluid)*PolarU_I(1:nIonFluid)) &
+            /sum(PolarRho_I(1:nIonFluid))
     end if
 
     if(.not.UseElectronPressure .and. IsMhd) then
@@ -531,8 +531,8 @@ contains
     !$acc update device(RhoBody2,pBody2)
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization
-    do iBoundary=SolidBc_,zMaxBc_
-       FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
+    do iBoundary = SolidBc_, zMaxBc_
+       FaceState_VI(:,iBoundary) = DefaultState_V(1:nVar)
     end do
 
     ! For bodies:
@@ -551,7 +551,7 @@ contains
     endif
 
     if(UseElectronPressure)then
-       FaceState_VI(Pe_,Body1_) = sum(BodyP_I(IonFirst_:IonLast_))
+       FaceState_VI(Pe_,Body1_) = sum(BodyP_I(1:nIonFluid))
        FaceState_VI(Pe_,Body2_) = pBody2
     end if
 
@@ -610,7 +610,7 @@ contains
           ! wind. The other ions carry the rest. The neutrals are not included.
           ! We preserve the temperature of the solar wind, so the pressure
           ! changes proportionally to the density.
-          iFluid = IonFirst_
+          iFluid = 1
           call select_fluid(iFluid)
           FaceState_VI(iRho,xMinBc_:zMaxBc_) = &
                SolarWindRho*(1 - LowDensityRatio*(nIonFluid - 1))
@@ -621,7 +621,7 @@ contains
           FaceState_VI( iP,xMinBc_:zMaxBc_) = SolarWindP/pCoef &
                *(1.0 - LowDensityRatio*(nIonFluid-1))
 
-          do iFluid = IonFirst_+1, nFluid
+          do iFluid = 2, nFluid
              call select_fluid(iFluid)
              FaceState_VI(iRho,xMinBc_:zMaxBc_) = SolarWindRho*LowDensityRatio
              FaceState_VI( iUx,xMinBc_:zMaxBc_) = SolarWindUx
@@ -670,8 +670,8 @@ contains
           end if
 
           ! Finally convert number density to mass density
-          FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary) = &
-               FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary)*MassFluid_I
+          FaceState_VI(iRho_I,iBoundary) = &
+               FaceState_VI(iRho_I,iBoundary)*MassFluid_I
        end if
 
     end do
@@ -712,8 +712,8 @@ contains
           end if
 
           ! Finally convert number density to mass density
-          CellState_VI(iRho_I(IonFirst_:nFluid),iBoundary) = &
-               CellState_VI(iRho_I(IonFirst_:nFluid),iBoundary)*MassFluid_I
+          CellState_VI(iRho_I,iBoundary) = &
+               CellState_VI(iRho_I,iBoundary)*MassFluid_I
        end if
     end do
 
@@ -1202,7 +1202,7 @@ contains
     end if
 
     if(UseAnisoPressure)then
-       do iFluid = IonFirst_, IonLast_
+       do iFluid = 1, nIonFluid
           UnitUser_V(iPparIon_I(iFluid))        = No2Io_V(UnitP_)
           NameUnitUserTec_V(iPparIon_I(iFluid)) = NameTecUnit_V(UnitP_)
           NameUnitUserIdl_V(iPparIon_I(iFluid)) = NameIdlUnit_V(UnitP_)

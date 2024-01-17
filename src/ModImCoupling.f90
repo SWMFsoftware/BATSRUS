@@ -173,12 +173,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 #endif
-    ! iIonSecond = min(IonFirst_+1, IonLast_)
-    ! if (DoMultiFluidIMCoupling) then
-    !   nIons = iIonSecond
-    ! else
-    !   nIons = 1
-    ! end if
 
     ! Maximum latitude (ascending or descending) of the IM grid
     LatMaxIm = max(ImLat_I(1), ImLat_I(iSize))
@@ -421,8 +415,6 @@ contains
     if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN
 
     call timing_start(NameSub)
-
-    ! iIonSecond = min(IonFirst_+1, IonLast_)
 
     ! Set density floor in normalized units
     if(DoCoupleImDensity) RhoMinIm = Io2No_V(UnitRho_)*RhoMinDimIm

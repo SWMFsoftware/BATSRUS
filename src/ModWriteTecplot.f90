@@ -717,7 +717,6 @@ contains
          ThetaTilt, Rbody, ClightFactor, BodyNDim_I, Gamma_I
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModAdvance, ONLY : TypeFlux
-    use ModMultiFluid, ONLY: IonFirst_
     use ModIoUnit, ONLY: UnitTmp_
     use ModIO, ONLY: StringDateOrTime, DoSaveTecBinary
     use ModNumConst, ONLY : cRadToDeg
@@ -750,7 +749,7 @@ contains
 
        ! BODYDENSITY
        write(iUnitHere) 'AUXDATA BODYNUMDENSITY="',&
-            real2str(BodyNDim_I(IonFirst_), "f8.2"), '"', CharNewLine
+            real2str(BodyNDim_I(1), "f8.2"), '"', CharNewLine
 
        ! BORIS
        if(UseBorisCorrection .or. UseBorisSimple) then
@@ -854,7 +853,7 @@ contains
 
        ! BODYDENSITY
        write(iUnitHere,'(a,(f12.2),a)') &
-            'AUXDATA BODYNUMDENSITY="',BodyNDim_I(IonFirst_),'"'
+            'AUXDATA BODYNUMDENSITY="',BodyNDim_I(1),'"'
 
        ! BORIS
        if(UseBorisCorrection .or. UseBorisSimple)then

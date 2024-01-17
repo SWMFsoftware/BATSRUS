@@ -30,8 +30,7 @@ module ModVarIndexes
   integer, private :: iWave
 
   integer, parameter :: nFluid    = 2
-  integer, parameter :: IonFirst_ = 1
-  integer, parameter :: IonLast_  = 2
+  integer, parameter :: nIonFluid = 2
   logical, parameter :: IsMhd     = .false.
   real :: MassFluid_I(nFluid) = [ 1.0, 4.0 ]
 
@@ -83,7 +82,7 @@ module ModVarIndexes
   integer, parameter :: iRhoUz_I(nFluid) = [RhoUz_, He2pRhoUz_]
   integer, parameter :: iP_I(nFluid)     = [p_,     He2pP_]
 
-  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [Ppar_, He2pPpar_]
+  integer, parameter :: iPparIon_I(nIonFluid) = [Ppar_, He2pPpar_]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

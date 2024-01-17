@@ -884,10 +884,9 @@ sub current_settings{
     my $nSpecies;
     $nSpecies = $Value{"SpeciesLast_"} - $Value{"SpeciesFirst_"} + 1
 	if $Value{"SpeciesLast_"} and $Value{"SpeciesFirst_"};
-    my $nIonFluid = $Value{"IonLast_"} - $Value{"IonFirst_"} + 1;
-    my $nFluid    = $Value{"nFluid"}   - $Value{"IonFirst_"} + 1;
-    my $nNeutralFluid;
-    $nNeutralFluid = $nFluid - $Value{"IonLast_"} if $Value{"IonLast_"};
+    my $nIonFluid = ($Value{"nIonFluid"} or 1);
+    my $nFluid    = ($Value{"nFluid"} or 1);
+    my $nNeutralFluid = $nFluid - $nIonFluid;
 
     $Settings .= "Charge states of elements   : $ChargeState\n"
 	if $ChargeState;

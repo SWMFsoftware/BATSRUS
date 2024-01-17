@@ -665,7 +665,7 @@ contains
          RhoUx_, RhoUz_, Ehot_
     use ModFaceValue, ONLY: calc_face_value
     use ModB0, ONLY: set_b0_face
-    use ModMultiFluid, ONLY: IonFirst_, IonLast_
+    use ModMultiFluid, ONLY: nIonFluid
     use BATL_lib, ONLY: nDim, nG, MaxDim, FaceNormal_DDFB, CellVolume_GB, &
          Xyz_DGB
     use ModHeatConduction, ONLY: get_heat_flux
@@ -691,8 +691,8 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
-    real :: QPerQtotal_I(IonFirst_:IonLast_)
-    real :: QparPerQtotal_I(IonFirst_:IonLast_)
+    real :: QPerQtotal_I(nIonFluid)
+    real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
     real :: Coef
     logical :: IsNewBlockAlfven
@@ -796,10 +796,9 @@ contains
                 PlotVar_G(i,j,k) = QePerQtotal
              case('qparbyq')
                 if(UseAnisoPressure) &
-                     PlotVar_G(i,j,k) = QparPerQtotal_I(IonFirst_)
+                     PlotVar_G(i,j,k) = QparPerQtotal_I(1)
              case('qperpbyq')
-                PlotVar_G(i,j,k) = &
-                     QPerQtotal_I(IonFirst_) - QparPerQtotal_I(IonFirst_)
+                PlotVar_G(i,j,k) = QPerQtotal_I(1) - QparPerQtotal_I(1)
              end select
           end do; end do; end do
        end if
@@ -959,8 +958,8 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, Ehot_, &
-         RhoUx_, RhoUz_, Ppar_, WaveFirst_, WaveLast_, IonFirst_, nFluid
-    use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, IonLast_, iRho_I, &
+         RhoUx_, RhoUz_, Ppar_, WaveFirst_, WaveLast_, nFluid
+    use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I, iRho_I, &
          MassFluid_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I, iPparIon_I, IsIon_I
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModPhysics,    ONLY: AverageIonCharge, UnitRho_, UnitB_, UnitP_, &
@@ -1057,7 +1056,7 @@ contains
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = Bt1_D
           end do
 
-          do iFluid = IonFirst_, nFluid
+          do iFluid = 1, nFluid
              iRho = iRho_I(iFluid)
 
              do i = MinI, 0
@@ -1117,7 +1116,7 @@ contains
           end if
 
        end do; end do
-       do iFluid = IonFirst_, IonLast_
+       do iFluid = 1, nIonFluid
           iRho = iRho_I(iFluid)
           iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 

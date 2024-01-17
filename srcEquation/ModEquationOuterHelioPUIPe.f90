@@ -21,13 +21,12 @@ module ModVarIndexes
   integer, parameter :: nVar = 35
 
   integer, parameter :: nFluid    = 6
-  integer, parameter :: IonFirst_ = 1
-  integer, parameter :: IonLast_  = 2
+  integer, parameter :: nIonFluid = 2
   logical, parameter :: IsMhd     = .false.
   real               :: MassFluid_I(nFluid) = 1.0
 
-  ! All is total ion fluid, SWH is the Solar wind hydrogen fluid, Pu3
-  ! are pick up ions produced in region 3 (see mod user),
+  ! SWH is the Solar wind hydrogen fluid,
+  ! Pu3 are pick up ions produced in region 3 (see mod user),
   ! and Neu, Ne2, Ne3, Ne4 are neutrals produced in the corresponding regions
 
   character (len=3), parameter :: &
@@ -98,7 +97,7 @@ module ModVarIndexes
        iP_I(nFluid)     &
        = [ P_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_     ]
 
-  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2]
+  integer, parameter :: iPparIon_I(nIonFluid) = [1,2]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

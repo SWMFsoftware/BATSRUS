@@ -54,7 +54,7 @@ contains
 
     use ModReadParam,  ONLY: read_var
     use ModMain,       ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
-    use ModMultiFluid, ONLY: nFluid, IonFirst_
+    use ModMultiFluid, ONLY: nIonFluid, nFluid
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
 
     character(len=*), intent(in):: NameCommand
@@ -79,7 +79,7 @@ contains
        call read_var('FluxBeta',        FluxBeta)
 
     case("#POLARBOUNDARY")
-       do iFluid = IonFirst_, nFluid
+       do iFluid = 1, nFluid
           call read_var('PolarNDim',  PolarNDim_I(iFluid))
           call read_var('PolarTDim',  PolarTDim_I(iFluid))
           call read_var('PolarUDim',  PolarUDim_I(iFluid))
@@ -269,9 +269,8 @@ contains
             if (nIonFluid /= 2) call stop_mpi(NameSub// &
                  ': MUST be two fluids for Young BC.')
 
-            RhoCpcp_I(1)         = BodyNDim_I(IonFirst_)*Io2No_V(UnitRho_)
-            RhoCpcp_I(nIonFluid) = BodyNDim_I(IonFirst_)*RatioOH*16        &
-                 *Io2No_V(UnitRho_)
+            RhoCpcp_I(1)         = BodyNDim_I(1)*Io2No_V(UnitRho_)
+            RhoCpcp_I(nIonFluid) = BodyNDim_I(1)*RatioOH*16*Io2No_V(UnitRho_)
          else
             ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
             ! is both light and very minor.
@@ -279,7 +278,7 @@ contains
             FracO = RatioOH  * FracH
 
             ! fixed H+ density
-            RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(1+16*ratioOH)
+            RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(1)*(1+16*RatioOH)
          end if
 
       endif
@@ -670,7 +669,7 @@ contains
               if(.not. (UseIe .and. UseMultiIon)) call stop_mpi( &
                    'ionosphereoutflow should have IE coupled and multifluid')
 
-              iIonSecond = min(IonFirst_ + 1, IonLast_)
+              iIonSecond = min(2, nIonFluid)
 
               if (TypeCoordSystem /= 'SMG') then
                  SmgFaceCoords_D = matmul(transform_matrix(TimeBc, &
@@ -757,7 +756,7 @@ contains
                     ! get the velocity along B, superpose the parallel
                     ! velocity and the thermal velocity
                     Ub_V(1) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
-                         (MassFluid_I(IonFirst_)*cProtonMass))) &
+                         (MassFluid_I(1)*cProtonMass))) &
                          * Si2No_V(UnitU_)
                     Ub_V(2) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
                          (MassFluid_I(iIonSecond)*cProtonMass))) &
@@ -809,33 +808,32 @@ contains
                  endif
 
                  ! get the densities
-                 FBC%VarsGhostFace_V(iRho_I(IonFirst_))  = &
-                      FluxPw/Ub_V(1)* MassFluid_I(IonFirst_)
+                 FBC%VarsGhostFace_V(Rho_) = &
+                      FluxPw/Ub_V(1)* MassFluid_I(1)
                  FBC%VarsGhostFace_V(iRho_I(iIonSecond)) = &
                       FluxIono/Ub_V(2) * MassFluid_I(iIonSecond)
 
                  ! Make sure it points outward
                  if(sum(bUnit_D*FBC%FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
 
-                 FBC%VarsGhostFace_V(iUx_I(IonFirst_)) = Ub_V(1)*bUnit_D(x_)
-                 FBC%VarsGhostFace_V(iUy_I(IonFirst_)) = Ub_V(1)*bUnit_D(y_)
-                 FBC%VarsGhostFace_V(iUz_I(IonFirst_)) = Ub_V(1)*bUnit_D(z_)
+                 FBC%VarsGhostFace_V(Ux_) = Ub_V(1)*bUnit_D(x_)
+                 FBC%VarsGhostFace_V(Uy_) = Ub_V(1)*bUnit_D(y_)
+                 FBC%VarsGhostFace_V(Uz_) = Ub_V(1)*bUnit_D(z_)
 
                  FBC%VarsGhostFace_V(iUx_I(iIonSecond))= Ub_V(2)*bUnit_D(x_)
                  FBC%VarsGhostFace_V(iUy_I(iIonSecond))= Ub_V(2)*bUnit_D(y_)
                  FBC%VarsGhostFace_V(iUz_I(iIonSecond))= Ub_V(2)*bUnit_D(z_)
 
                  ! get the pressure
-                 FBC%VarsGhostFace_V(iP_I(iIonSecond))   =  2./3.*eCap*&
+                 FBC%VarsGhostFace_V(iP_I(iIonSecond)) = 2./3.*eCap*&
                       cElectronCharge / cBoltzmann &
                       * Si2No_V(UnitTemperature_)  &
                       * FBC%VarsGhostFace_V(iRho_I(iIonSecond)) &
                       /MassFluid_I(iIonSecond)
-                 FBC%VarsGhostFace_V(iP_I(IonFirst_))   =  2./3.*eCap*&
+                 FBC%VarsGhostFace_V(p_) =  2./3.*eCap*&
                       cElectronCharge / cBoltzmann &
                       * Si2No_V(UnitTemperature_)  &
-                      * FBC%VarsGhostFace_V(iRho_I(IonFirst_)) &
-                      /MassFluid_I(IonFirst_)
+                      * FBC%VarsGhostFace_V(Rho_)/MassFluid_I(1)
 
               end if ! polar cap region
            end if ! ionosphereoutflow type of innerboundary
@@ -951,7 +949,7 @@ contains
               FBC%VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
                    FBC%VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
 
-              do iFluid = IonLast_+2, nFluid
+              do iFluid = nIonFluid+2, nFluid
                  if(sum(FBC%VarsTrueFace_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid))*&
                       FBC%FaceCoords_D) <= 0.0)then
                     FBC%VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &

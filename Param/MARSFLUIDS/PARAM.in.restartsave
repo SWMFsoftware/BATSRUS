@@ -175,6 +175,9 @@ T			DoSaveRestart
 2000			DnSaveRestart
 -1.0			DtSaveRestart
 
+#SAVEINITIAL
+T			DoSaveInitial
+
 #SAVEPLOT
 3			nPlotFile
 x=0 MHD idl		StringPlot

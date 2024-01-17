@@ -112,7 +112,7 @@ module ModMain
 
   logical :: UseRaytrace            = UseB
   logical :: DoMultiFluidIMCoupling = &
-       IonLast_ > IonFirst_ .or. SpeciesLast_ > SpeciesFirst_
+       nIonFluid > 1 .or. SpeciesLast_ > SpeciesFirst_
   logical :: DoAnisoPressureIMCoupling = .false.
   !$acc declare create(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
 
