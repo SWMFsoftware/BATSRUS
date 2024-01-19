@@ -172,6 +172,9 @@ ascii			TypeFile
 
 #RUN ##########################################################################
 
+#UPDATECHECK
+F			UseUpdateCheck
+
 #LOOKUPTABLE
 solarwind2d		NameTable
 load			NameCommand
