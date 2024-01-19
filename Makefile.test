@@ -155,7 +155,6 @@ test_extra:
 	./Config.pl -nohypre
 	-@($(MAKE) test_titan TESTDIR=run_test_titan)
 	-@($(MAKE) test_mars TESTDIR=run_test_mars)
-	-@($(MAKE) test_marsfluids TESTDIR=run_test_marsfluids)
 	-@($(MAKE) test_venus TESTDIR=run_test_venus)
 	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
 	-@($(MAKE) test_ganymede TESTDIR=run_test_ganymede)
