@@ -486,23 +486,26 @@ contains
             MPI_INTEGER, iComm, iError)
        nThreadAll = sum(nThread_P)
     end if
-    if(allocated(Weight_III))deallocate(Weight_III, Xyz_DII, &
-         iStencil_III, iList_II, iPointer_II, iEnd_II)
-    nPlotPoint = count(IsAllocatedThread_B(1:nBlock))*(jMax_ - jMin_ + 1)*&
-         (kMax_ - kMin_ +1)
-    allocate(Weight_III(3, nPlotPoint, -nGUniform:0))
-    allocate(Xyz_DII(3,nThreadAll+2,-nGUniform:0))
-    allocate(iStencil_III(3, nPlotPoint, -nGUniform:0))
-    allocate(iList_II(6*nThreadAll,-nGUniform:0),    &
-         iPointer_II(6*nThreadAll,-nGUniform:0),     &
-         iEnd_II(nThreadAll+2,-nGUniform:0) )
-    call set_triangulation
-    if(nBlockSetAll > 0.and.iProc==0)then
-       write(*,*)'Set threads in ',nBlockSetAll,' blocks on iteration ', &
-            nStep, ' is called from '//NameCaller
-       write(*,*)'nPointMin = ',nPointMinAll
-       write(*,*)'dCoord1Uniform =', 1/dCoord1Inv
-       if(nProc<=8)write(*,*)'Number of threads on different PEs: ', nThread_P
+    if(nBlockSetAll > 0)then
+       if(allocated(Weight_III))deallocate(Weight_III, Xyz_DII, &
+            iStencil_III, iList_II, iPointer_II, iEnd_II)
+       nPlotPoint = count(IsAllocatedThread_B(1:nBlock))*(jMax_ - jMin_ + 1)*&
+            (kMax_ - kMin_ +1)
+       allocate(Weight_III(3, nPlotPoint, -nGUniform:0))
+       allocate(Xyz_DII(3,nThreadAll+2,-nGUniform:0))
+       allocate(iStencil_III(3, nPlotPoint, -nGUniform:0))
+       allocate(iList_II(6*nThreadAll,-nGUniform:0),    &
+            iPointer_II(6*nThreadAll,-nGUniform:0),     &
+            iEnd_II(nThreadAll+2,-nGUniform:0) )
+       call set_triangulation
+       if(iProc==0)then
+          write(*,*)'Set threads in ',nBlockSetAll,' blocks on iteration ', &
+               nStep, ' is called from '//NameCaller
+          write(*,*)'nPointMin = ',nPointMinAll
+          write(*,*)'dCoord1Uniform =', 1/dCoord1Inv
+          if(nProc<=8)&
+               write(*,*)'Number of threads on different PEs: ', nThread_P
+       end if
     end if
     call test_stop(NameSub, DoTest)
   end subroutine set_threads
@@ -1398,12 +1401,15 @@ contains
     use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph, &
          find_triangle_orig
     use ModCoordTransform,      ONLY: rlonlat_to_xyz
+    use ModMpi
 
     integer :: i, j, k, iBlock, iBuff, iError
 
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
     integer, parameter :: Lon_ = 1, Lat_=2
+    integer :: iPE  ! Loop variable
+    integer :: iSliceFirst_P(0:nProc-1), iSliceLast_P(0:nProc-1), nSlice
     real    :: Coord_DII(Lat_,nThreadAll,-nGUniform:0),          &
          Coord_D(Lon_:Lat_)
     real    :: Xyz_D(3)
@@ -1425,7 +1431,15 @@ contains
        ! Add two grid nodes at the poles:
        Xyz_DII(:,1,i)            = [0.0, 0.0, -1.0]
        Xyz_DII(:,nThreadAll+2,i) = [0.0, 0.0, +1.0]
+    end do
+    do iPE = 0, nProc - 1
+       iSliceFirst_P(iPE) = iPE*(nGUniform + 1)/nProc - nGUniform
+       iSliceLast_P(iPE) = (iPE +1)*(nGUniform + 1)/nProc - (nGUniform+1)
+    end do
+    iList_II = 0; iPointer_II = 0; iEnd_II = 0
 
+    do i = iSliceFirst_P(iProc), iSliceLast_P(iProc)
+    ! do i = -nGUniform, 0
        ! Triangulate
        call trmesh(nThreadAll+2, &
             Xyz_DII(x_,:,i), Xyz_DII(y_,:,i), Xyz_DII(z_,:,i), &
@@ -1433,6 +1447,19 @@ contains
        if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
     end do
 
+    do iPE = 0, nProc - 1
+       nSlice = 1 -  iSliceFirst_P(iPE) + iSliceLast_P(iPE)
+       if(nSlice < 1)CYCLE
+       call MPI_BCAST(iList_II(:,iSliceFirst_P(iPE):iSliceLast_P(iPE)),&
+            6*nThreadAll*nSlice, MPI_INTEGER, &
+            iPE, iComm, iError)
+       call MPI_BCAST(iPointer_II(:,iSliceFirst_P(iPE):iSliceLast_P(iPE)),&
+            6*nThreadAll*nSlice, MPI_INTEGER, &
+            iPE, iComm, iError)
+       call MPI_BCAST(iEnd_II(:,iSliceFirst_P(iPE):iSliceLast_P(iPE)),&
+            (nThreadAll + 2)*nSlice, MPI_INTEGER, &
+            iPE, iComm, iError)
+    end do
     ! Now, calculate interpolation weights at the points of a grid used for
     ! plotting
     iBuff = 0
