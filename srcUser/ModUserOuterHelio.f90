@@ -765,7 +765,7 @@ contains
           State_VGB(Rho_,i,j,k,iBlock) = VliswRho
           State_VGB(P_,i,j,k,iBlock)   = VliswP
           if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = VliswP
-             
+
           State_VGB(RhoUx_,i,j,k,iBlock) = VliswUx*VliswRho
           State_VGB(RhoUy_,i,j,k,iBlock) = VliswUy*VliswRho
           State_VGB(RhoUz_,i,j,k,iBlock) = VliswUz*VliswRho
