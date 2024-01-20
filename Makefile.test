@@ -63,7 +63,7 @@ test_help:
 	@echo "    test_outerhelio2d          (run 2D Outer Heliosphere test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_outerhelio_1d         (run 1D Outer Heliosphere test)"
-	@echo "    test_outerhelioawsom       (run 1D Outer Heliosphere w/ Turb test)"
+	@echo "    test_outerhelioawsom       (run Outer Heliosphere w/ Turb test)"
 	@echo "    test_outerheliopui         (run Outer Heliosphere w/ PUIs test)"
 	@echo "    test_outerheliopui_1d      (run 1D Outer Heliosphere w/ PUIs test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"

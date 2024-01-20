@@ -757,30 +757,28 @@ contains
        if(UseElectronPressure) &
             State_VGB(Pe_,i,j,k,iBlock) = SwhPe * (rBody/r)**(2*Gamma)
 
-       if(UseColdCloud) then
-          !! for studies of Heliosphere in cold cloud
-          if (r > rBody) then
-             State_VGB(Bx_,i,j,k,iBlock) =  VliswBx
-             State_VGB(By_,i,j,k,iBlock) =  VliswBy
-             State_VGB(Bz_,i,j,k,iBlock) =  VliswBz
+       if(UseColdCloud .and. r > rBody .or. r > 100.0) then
+          State_VGB(Bx_,i,j,k,iBlock) =  VliswBx
+          State_VGB(By_,i,j,k,iBlock) =  VliswBy
+          State_VGB(Bz_,i,j,k,iBlock) =  VliswBz
 
-             State_VGB(Rho_,i,j,k,iBlock) = VliswRho
-             State_VGB(P_,i,j,k,iBlock)   = VliswP
+          State_VGB(Rho_,i,j,k,iBlock) = VliswRho
+          State_VGB(P_,i,j,k,iBlock)   = VliswP
+          if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = VliswP
 
-             State_VGB(RhoUx_,i,j,k,iBlock) = VliswUx*VliswRho
-             State_VGB(RhoUy_,i,j,k,iBlock) = VliswUy*VliswRho
-             State_VGB(RhoUz_,i,j,k,iBlock) = VliswUz*VliswRho
-          endif
+          State_VGB(RhoUx_,i,j,k,iBlock) = VliswUx*VliswRho
+          State_VGB(RhoUy_,i,j,k,iBlock) = VliswUy*VliswRho
+          State_VGB(RhoUz_,i,j,k,iBlock) = VliswUz*VliswRho
        end if
 
        if(UseNeutralFluid)then
           if(UseColdCloud)then
              ! PopI for studies of Heliosphere in cold cloud
-             State_VGB(NeuRho_,i,j,k,iBlock)  = VliswRho
-             State_VGB(NeuP_,i,j,k,iBlock) =   VliswP
-             State_VGB(NeuRhoUx_,i,j,k,iBlock)= VliswUx*VliswRho
-             State_VGB(NeuRhoUy_,i,j,k,iBlock)= VliswUy*VliswRho
-             State_VGB(NeuRhoUz_,i,j,k,iBlock)= VliswUz*VliswRho
+             State_VGB(NeuRho_,i,j,k,iBlock)   = VliswRho
+             State_VGB(NeuP_,i,j,k,iBlock)     = VliswP
+             State_VGB(NeuRhoUx_,i,j,k,iBlock) = VliswUx*VliswRho
+             State_VGB(NeuRhoUy_,i,j,k,iBlock) = VliswUy*VliswRho
+             State_VGB(NeuRhoUz_,i,j,k,iBlock) = VliswUz*VliswRho
           else
              ! PopI
              ! Set to small fraction of incoming ISW density and pressure

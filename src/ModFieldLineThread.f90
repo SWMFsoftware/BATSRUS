@@ -155,6 +155,8 @@ module ModFieldLineThread
 
   ! Saves thread state into restart
   public :: save_thread_restart
+  ! interface procedure to easy calcylate the CME field
+  public :: b_cme_d
 
   ! The number of grid spaces which are covered by the TR model
   ! the smaller is this number, the better the TR assumption work
@@ -344,6 +346,21 @@ contains
 
   end subroutine deallocate_thread_b
   !============================================================================
+  function b_cme_d(Xyz_D)
+    use EEE_ModMain, ONLY: EEE_get_state_BC
+    use ModPhysics,  ONLY: Si2No_V, UnitB_
+    use BATL_lib,    ONLY: MaxDim
+    use ModMain,     ONLY: nStep, nIteration, tSimulation
+    real :: b_cme_d(MaxDim)
+    real, intent(in) ::Xyz_D(MaxDim)
+    ! CME parameters, if needed
+    real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
+    !--------------------------------------------------------------------------
+    call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+         tSimulation, nStep, nIteration)
+    b_cme_d = Bcme_D*Si2No_V(UnitB_)
+  end function b_cme_d
+  !============================================================================
   subroutine set_threads(NameCaller)
 
     use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock
@@ -469,23 +486,26 @@ contains
             MPI_INTEGER, iComm, iError)
        nThreadAll = sum(nThread_P)
     end if
-    if(allocated(Weight_III))deallocate(Weight_III, Xyz_DII, &
-         iStencil_III, iList_II, iPointer_II, iEnd_II)
-    nPlotPoint = count(IsAllocatedThread_B(1:nBlock))*(jMax_ - jMin_ + 1)*&
-         (kMax_ - kMin_ +1)
-    allocate(Weight_III(3, nPlotPoint, -nGUniform:0))
-    allocate(Xyz_DII(3,nThreadAll+2,-nGUniform:0))
-    allocate(iStencil_III(3, nPlotPoint, -nGUniform:0))
-    allocate(iList_II(6*nThreadAll,-nGUniform:0),    &
-         iPointer_II(6*nThreadAll,-nGUniform:0),     &
-         iEnd_II(nThreadAll+2,-nGUniform:0) )
-    call set_triangulation
-    if(nBlockSetAll > 0.and.iProc==0)then
-       write(*,*)'Set threads in ',nBlockSetAll,' blocks on iteration ', &
-            nStep, ' is called from '//NameCaller
-       write(*,*)'nPointMin = ',nPointMinAll
-       write(*,*)'dCoord1Uniform =', 1/dCoord1Inv
-       if(nProc<=8)write(*,*)'Number of threads on different PEs: ', nThread_P
+    if(nBlockSetAll > 0)then
+       if(allocated(Weight_III))deallocate(Weight_III, Xyz_DII, &
+            iStencil_III, iList_II, iPointer_II, iEnd_II)
+       nPlotPoint = count(IsAllocatedThread_B(1:nBlock))*(jMax_ - jMin_ + 1)*&
+            (kMax_ - kMin_ +1)
+       allocate(Weight_III(3, nPlotPoint, -nGUniform:0))
+       allocate(Xyz_DII(3,nThreadAll+2,-nGUniform:0))
+       allocate(iStencil_III(3, nPlotPoint, -nGUniform:0))
+       allocate(iList_II(6*nThreadAll,-nGUniform:0),    &
+            iPointer_II(6*nThreadAll,-nGUniform:0),     &
+            iEnd_II(nThreadAll+2,-nGUniform:0) )
+       call set_triangulation
+       if(iProc==0)then
+          write(*,*)'Set threads in ',nBlockSetAll,' blocks on iteration ', &
+               nStep, ' is called from '//NameCaller
+          write(*,*)'nPointMin = ',nPointMinAll
+          write(*,*)'dCoord1Uniform =', 1/dCoord1Inv
+          if(nProc<=8)&
+               write(*,*)'Number of threads on different PEs: ', nThread_P
+       end if
     end if
     call test_stop(NameSub, DoTest)
   end subroutine set_threads
@@ -493,12 +513,9 @@ contains
   subroutine set_threads_b(iBlock)
 
     use EEE_ModCommonVariables, ONLY: UseCme
-    use EEE_ModMain,            ONLY: EEE_get_state_BC
-    use ModMain,       ONLY: nStep, nIteration, tSimulation, &
-         DoThreadRestart
+    use ModPhysics,  ONLY: No2Si_V, UnitTemperature_, UnitX_, UnitB_
+    use ModMain,       ONLY: DoThreadRestart
     use ModGeometry, ONLY: Xyz_DGB
-    use ModPhysics,  ONLY: Si2No_V, No2Si_V,&
-         UnitTemperature_, UnitX_, UnitB_
     use ModNumConst, ONLY: cTolerance
     use ModTurbulence, ONLY:PoyntingFluxPerBSi
     use BATL_lib,    ONLY: MaxDim, xyz_to_coord
@@ -522,8 +539,6 @@ contains
     ! Coordinates and magnetic field in the midpoint
     ! within the framework of the Runge-Kutta scheme
     real :: XyzAux_D(MaxDim), B0Aux_D(MaxDim)
-    ! CME parameters, if needed
-    real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
     ! Aux
     real :: ROld, Aux
     real :: DirB_D(MaxDim), DirR_D(MaxDim), XyzOld_D(MaxDim)
@@ -550,13 +565,8 @@ contains
        XyzStart_D = Xyz_DGB(:, 1, j, k, iBlock)
        ! Calculate a field in the starting point
        call get_b0(XyzStart_D, B0Start_D)
-       if(UseCME)then
-          call EEE_get_state_BC(XyzStart_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-               tSimulation, nStep, nIteration)
-          Bcme_D = Bcme_D*Si2No_V(UnitB_)
-          B0Start_D = B0Start_D + Bcme_D
-       end if
-
+       ! Account for the CME field as needed
+       if(UseCme)B0Start_D = B0Start_D + b_cme_d(XyzStart_D)
        SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
        BoundaryThreads_B(iBlock)%SignB_II(j, k) = SignBr
        B0Start = norm2(B0Start_D)
@@ -597,12 +607,7 @@ contains
 
              ! 2. Magnetic field in this point:
              call get_b0(XyzAux_D, B0Aux_D)
-             if(UseCME)then
-                call EEE_get_state_BC(XyzAux_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-                     tSimulation, nStep, nIteration)
-                Bcme_D = Bcme_D*Si2No_V(UnitB_)
-                B0Aux_D = B0Aux_D + Bcme_D
-             end if
+             if(UseCme)B0Aux_D = B0Aux_D + b_cme_d(XyzAux_D)
              DirB_D = SignBr*B0Aux_D/max(norm2(B0Aux_D), cTolerance**2)
              if(nTrial==nCoarseMax)call limit_cosBR
              ! 3. New grid point:
@@ -616,12 +621,7 @@ contains
              call xyz_to_coord(Xyz_D, Coord_D)
              BoundaryThreads_B(iBlock)%Coord_DIII(:,-iPoint, j, k) = Coord_D
              call get_b0(Xyz_D, B0_D)
-             if(UseCME)then
-                call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-                     tSimulation, nStep, nIteration)
-                Bcme_D = Bcme_D*Si2No_V(UnitB_)
-                B0_D = B0_D + Bcme_D
-             end if
+             if(UseCME)B0_D = B0_D + b_cme_d(Xyz_D)
              B0 = norm2(B0_D)
              BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k) = B0
           end do POINTS
@@ -1008,9 +1008,10 @@ contains
       ! Convert the state stored in the State_VG array to
       ! the MHD state vector
       use BATL_lib, ONLY: MaxDim, coord_to_xyz
-      use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
+      use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_, Bx_
       use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_
       use ModTurbulence, ONLY: PoyntingFluxPerB
+      use EEE_ModCommonVariables, ONLY: UseCme
       !INPUT:
       ! Coordinates to determine the magnetic field
       real,    intent(in) :: Coord_D(MaxDim)
@@ -1019,7 +1020,7 @@ contains
       real,    intent(out):: State_V(nVar)
       ! Dimensionless plasma parameters
       real :: pTotal, Te, Ti
-      real :: Xyz_D(MaxDim), B0_D(MaxDim), Aux
+      real :: Xyz_D(MaxDim), B0_D(MaxDim), Aux, BCme_D(MaxDim)
       ! Nullify momentum and field components of the state vector
       character(len=*), parameter:: NameSub = 'state_thread_to_mhd'
       !------------------------------------------------------------------------
@@ -1045,6 +1046,10 @@ contains
       Aux = PoyntingFluxPerB*sqrt(State_V(Rho_))
       call coord_to_xyz(Coord_D, Xyz_D)
       call get_b0(Xyz_D,B0_D)
+      if(UseCme)then
+         State_V(Bx_:Bx_+MaxDim-1)=b_cme_d(Xyz_D)
+         B0_D = B0_D + State_V(Bx_:Bx_+MaxDim-1)
+      end if
       if(sum(B0_D*Xyz_D) <  0.0)then
          State_V(WaveLast_ ) = StateThread_V(A2Major_)*Aux
          State_V(WaveFirst_) = StateThread_V(A2Minor_)*Aux
@@ -1060,8 +1065,6 @@ contains
        State_V, PlotVar_V)
 
     use ModMain
-    use EEE_ModCommonVariables, ONLY: UseCme
-    use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModVarIndexes
     use ModAdvance, ONLY : UseElectronPressure, &
          UseMultiSpecies
@@ -1093,8 +1096,6 @@ contains
     real:: Tmp1Var, Tmp2Var
 
     integer :: iVar, jVar, iIon, iFluid
-    ! CME parameters, if needed
-    real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
     ! Conversion coefficients from the squared Alfven wave amplitude to
     ! energy densities
     real :: SignBr, Wave0, Wave1
@@ -1107,12 +1108,6 @@ contains
     ! Calculate B0 and BFull
     B0_D = 0.0
     if(UseB0)call get_b0(Xyz_D, B0_D)
-    if(UseCME)then
-       call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-            tSimulation, nStep, nIteration)
-       Bcme_D = Bcme_D*Si2No_V(UnitB_)
-       B0_D = B0_D + Bcme_D
-    end if
     FullB_D = State_V(Bx_:Bz_) + B0_D
 
     ! Convert the squared Alfven wave amplitudes to
@@ -1406,12 +1401,15 @@ contains
     use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph, &
          find_triangle_orig
     use ModCoordTransform,      ONLY: rlonlat_to_xyz
+    use ModMpi
 
     integer :: i, j, k, iBlock, iBuff, iError
 
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
     integer, parameter :: Lon_ = 1, Lat_=2
+    integer :: iPE  ! Loop variable
+    integer :: iSliceFirst_P(0:nProc-1), iSliceLast_P(0:nProc-1), nSlice
     real    :: Coord_DII(Lat_,nThreadAll,-nGUniform:0),          &
          Coord_D(Lon_:Lat_)
     real    :: Xyz_D(3)
@@ -1433,7 +1431,15 @@ contains
        ! Add two grid nodes at the poles:
        Xyz_DII(:,1,i)            = [0.0, 0.0, -1.0]
        Xyz_DII(:,nThreadAll+2,i) = [0.0, 0.0, +1.0]
+    end do
+    do iPE = 0, nProc - 1
+       iSliceFirst_P(iPE) = iPE*(nGUniform + 1)/nProc - nGUniform
+       iSliceLast_P(iPE) = (iPE +1)*(nGUniform + 1)/nProc - (nGUniform+1)
+    end do
+    iList_II = 0; iPointer_II = 0; iEnd_II = 0
 
+    do i = iSliceFirst_P(iProc), iSliceLast_P(iProc)
+    ! do i = -nGUniform, 0
        ! Triangulate
        call trmesh(nThreadAll+2, &
             Xyz_DII(x_,:,i), Xyz_DII(y_,:,i), Xyz_DII(z_,:,i), &
@@ -1441,6 +1447,19 @@ contains
        if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
     end do
 
+    do iPE = 0, nProc - 1
+       nSlice = 1 -  iSliceFirst_P(iPE) + iSliceLast_P(iPE)
+       if(nSlice < 1)CYCLE
+       call MPI_BCAST(iList_II(:,iSliceFirst_P(iPE):iSliceLast_P(iPE)),&
+            6*nThreadAll*nSlice, MPI_INTEGER, &
+            iPE, iComm, iError)
+       call MPI_BCAST(iPointer_II(:,iSliceFirst_P(iPE):iSliceLast_P(iPE)),&
+            6*nThreadAll*nSlice, MPI_INTEGER, &
+            iPE, iComm, iError)
+       call MPI_BCAST(iEnd_II(:,iSliceFirst_P(iPE):iSliceLast_P(iPE)),&
+            (nThreadAll + 2)*nSlice, MPI_INTEGER, &
+            iPE, iComm, iError)
+    end do
     ! Now, calculate interpolation weights at the points of a grid used for
     ! plotting
     iBuff = 0
