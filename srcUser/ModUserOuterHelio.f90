@@ -203,7 +203,6 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam
-    use ModTurbulence, ONLY: KarmanTaylorAlpha
 
     character (len=100) :: NameCommand
 
@@ -359,8 +358,6 @@ contains
           call read_var('DeltaUDim', DeltaUDim)
           call read_var('CrossHelicity', CrossHelicity)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-          ! Our LperpTimesSqrtBSi is L_\perp*\sqrt(B)/KarmanTaylorAlpha
-          LperpTimesSqrtBSi = LperpTimesSqrtBSi/KarmanTaylorAlpha
           call read_var('TurbulencePerPu3Source', TurbulencePerPu3Source)
 
        case default
@@ -3145,6 +3142,7 @@ contains
     use ModLookupTable,   ONLY: i_lookup_table, get_lookup_table
     use ModWaves,         ONLY: UseWavePressure, UseAlfvenWaves
     use ModVarIndexes,    ONLY: WaveFirst_
+    use ModTurbulence,    ONLY: KarmanTaylorAlpha
 
     real:: IndexMax_I(2)
 
@@ -3157,7 +3155,9 @@ contains
     UseWavePressure = WaveFirst_ > 1
 
     DeltaU = DeltaUDim*Io2No_V(UnitU_)
-    LperpTimesSqrtB = LperpTimesSqrtBSi*Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+    ! Our LperpTimesSqrtBSi is L_\perp*\sqrt(B)/KarmanTaylorAlpha
+    LperpTimesSqrtB = LperpTimesSqrtBSi/KarmanTaylorAlpha &
+         *Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
 
     ! normalization of SWH and VLISW and Neutrals
 
