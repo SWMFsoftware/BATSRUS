@@ -683,17 +683,20 @@ contains
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
     use ModTurbulence,   ONLY: SigmaD
+    use ModVarIndexes,     ONLY: Ehot_
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
 #ifdef _OPENACC
     use ModUtilities,      ONLY: norm2
 #endif
 
     integer, intent(in) :: iBlock
 
-    integer :: i,j,k
+    integer :: i,j,k, iP
     real :: x, y, z, r
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3), vPUI_D(3), vPUISph_D(3)
     real :: SinTheta, SignZ
-    real :: Ewave, Rho, RhoBody
+    real :: Ewave, Rho, RhoBody, GammaTmp
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
 
     logical :: DoTestCell
@@ -856,6 +859,17 @@ contains
 
           if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = &
                Rho*LperpTimesSqrtB/sqrt(norm2(B_D))
+       end if
+
+       if(Ehot_ > 1)then
+          if(UseHeatFluxCollisionless)then
+             iP = p_; if(UseElectronPressure) iP = Pe_
+             call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
+             State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                  *(1.0/(GammaTmp - 1) - InvGammaMinus1)
+          else
+             State_VGB(Ehot_,i,j,k,iBlock) = 0.0
+          end if
        end if
 
        if(DoTestCell)then
