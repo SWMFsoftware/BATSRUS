@@ -629,13 +629,13 @@ contains
           State_VGB(Ne4P_,i,j,k,iBlock)     = PNeutralsISW
        end do; end do; end do
 
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          State_VGB(NeuRho_,i,j,k,iBlock)   = 0.01*RhoNeutralsISW
-          State_VGB(NeuRhoUx_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UxNeutralsISW
-          State_VGB(NeuRhoUy_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UyNeutralsISW
-          State_VGB(NeuRhoUz_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UzNeutralsISW
-          State_VGB(NeuP_,i,j,k,iBlock)     = 0.01*PNeutralsISW
-       end do; end do; end do
+       ! do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+       !   State_VGB(NeuRho_,i,j,k,iBlock)   = 0.01*RhoNeutralsISW
+       !   State_VGB(NeuRhoUx_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UxNeutralsISW
+       !   State_VGB(NeuRhoUy_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UyNeutralsISW
+       !   State_VGB(NeuRhoUz_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UzNeutralsISW
+       !   State_VGB(NeuP_,i,j,k,iBlock)     = 0.01*PNeutralsISW
+       ! end do; end do; end do
 
        !
        ! In general you should specify as many values as many incoming
@@ -645,7 +645,7 @@ contains
 
        !
        ! PopII and III supersonic outflow
-       do iVar = Ne2Rho_, Ne3P_
+       do iVar = NeuRho_, Ne3P_
           select case(iSide)
           case(1)
              do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -750,12 +750,12 @@ contains
        ! density and pressure
        State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
        State_VGB(LevelHP_,i,j,k,iBlock) = State_VGB(SWHRho_,i,j,k,iBlock)
-       State_VGB(SWHP_,i,j,k,iBlock) = SwhP   * (rBody/r)**(2*Gamma)
+       State_VGB(SWHP_,i,j,k,iBlock) = SwhP   * (rBody/r)**2
        State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
             State_VGB(SWHRho_,i,j,k,iBlock)*v_D
 
        if(UseElectronPressure) &
-            State_VGB(Pe_,i,j,k,iBlock) = SwhPe * (rBody/r)**(2*Gamma)
+            State_VGB(Pe_,i,j,k,iBlock) = SwhPe * (rBody/r)**2
 
        if(UseColdCloud .and. r > rBody .or. r > 100.0) then
           State_VGB(Bx_,i,j,k,iBlock) =  VliswBx
@@ -830,7 +830,7 @@ contains
        ! No production yet
        if(.not.IsMhd)then
           State_VGB(Pu3Rho_,i,j,k,iBlock) = Pu3Rho * (rBody/r)**2
-          State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P   * (rBody/r)**(2*Gamma)
+          State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P   * (rBody/r)**2
           State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock) = &
                State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
        end if
