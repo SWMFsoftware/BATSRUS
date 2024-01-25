@@ -613,7 +613,7 @@ contains
     end do; end do; end do
 
     if(UseNeutralFluid)then
-       !
+
        ! PopIV is the one one coming with the ISW
        ! The separation between Pop IV and Pop I is arbitrary so
        ! we took the separation as Vlad in x=-1500AU
@@ -626,21 +626,11 @@ contains
           State_VGB(Ne4P_,i,j,k,iBlock)     = PNeutralsISW
        end do; end do; end do
 
-       ! do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-       !   State_VGB(NeuRho_,i,j,k,iBlock)   = 0.01*RhoNeutralsISW
-       !   State_VGB(NeuRhoUx_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UxNeutralsISW
-       !   State_VGB(NeuRhoUy_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UyNeutralsISW
-       !   State_VGB(NeuRhoUz_,i,j,k,iBlock) = 0.01*RhoNeutralsISW*UzNeutralsISW
-       !   State_VGB(NeuP_,i,j,k,iBlock)     = 0.01*PNeutralsISW
-       ! end do; end do; end do
-
-       !
        ! In general you should specify as many values as many incoming
        ! characteristic waves are present. For a neutral fluid this
        ! is 0 for supersonic outflow, 1 for subsonic outflow,
        ! 4 for subsonic inflow and 5 for supersonic inflow.
 
-       !
        ! PopII and III supersonic outflow
        do iVar = NeuRho_, Ne3P_
           select case(iSide)
