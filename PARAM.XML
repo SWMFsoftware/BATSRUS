@@ -8910,7 +8910,7 @@ By default the whole PIC region is active (possibly limited by #PICREGIONMAX).
 #GAMMA
 4/3			Gamma for fluid 1
 1.4			Gamma for fluid 2
-5/3			Gamma for electrons (if UseElectronPressure)
+5/3			GammaElectron (if UseElectronPressure)
 
 The adiabatic index gamma = c_p/c_v (ratio of the specific heats for
 fixed pressure and fixed volume). The gamma values have to be given for
