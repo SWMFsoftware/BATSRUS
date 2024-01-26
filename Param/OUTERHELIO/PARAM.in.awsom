@@ -204,6 +204,10 @@ uniform			TypeHeatPartitioning
 0.6			QionRatio
 0.0			QionRatio
 
+#HEATFLUXCOLLISIONLESS
+T			UseHeatFluxCollisionless
+1.05			CollisionlessAlpha
+
 #USERINPUTBEGIN -----------------------------------
 
 #GLOBALHELIOSPHERE

@@ -4,15 +4,16 @@
 module ModVarIndexes
 
   use ModExtraVariables, &
-       Redefine1 => nWave, &
-       Redefine2 => WaveFirst_, &
-       Redefine3 => WaveLast_, &
-       Redefine4 => Lperp_, &
-       Redefine5 => Pe_, &
-       Redefine6 => nPui, &
-       Redefine7 => PuiFirst_, &
-       Redefine8 => PuiLast_, &
-       Redefine9 => iPparIon_I
+       Redefine1  => nWave, &
+       Redefine2  => WaveFirst_, &
+       Redefine3  => WaveLast_, &
+       Redefine4  => Lperp_, &
+       Redefine5  => Pe_, &
+       Redefine6  => Ehot_, &
+       Redefine7  => nPui, &
+       Redefine8  => PuiFirst_, &
+       Redefine9  => PuiLast_, &
+       Redefine10 => iPparIon_I
 
   implicit none
 
@@ -36,7 +37,7 @@ module ModVarIndexes
   integer, parameter :: nPui = 1
 
   ! Number of variables without energy:
-  integer, parameter :: nVar = 36 + nWave + nPui
+  integer, parameter :: nVar = 37 + nWave + nPui
 
   ! 2 ion fluid and 4 neutral fluids
   integer, parameter :: nFluid    = 6
@@ -62,14 +63,15 @@ module ModVarIndexes
        Bx_        = 5, &
        By_        = 6, &
        Bz_        = 7, &
-       WaveFirst_ = 8, &
+       Ehot_      = 8, &
+       WaveFirst_ = 9, &
        WaveLast_  = WaveFirst_+nWave-1, &
        Lperp_     = WaveLast_+1, &
        PuiFirst_  = Lperp_+1, &
        PuiLast_   = PuiFirst_+nPui-1, &
        LevelHP_   = PuiLast_+1, &
        Pe_        = PuiLast_+2, &
-       p_         = Pe_+1,                SWHP_     = Pe_+1, &
+       p_         = Pe_+1,                SWHP_     = p_, &
        Pu3Rho_    = p_+1, &
        Pu3RhoUx_  = p_+2, Pu3Ux_ = p_+2, &
        Pu3RhoUy_  = p_+3, Pu3Uy_ = p_+3, &
@@ -129,6 +131,7 @@ module ModVarIndexes
        1.0,           & ! SWHRho_
        0.0, 0.0, 0.0, & ! SWHRhoUx_ .. SWHRhoUz_
        0.0, 0.0, 0.0, & ! Bx_ .. Bz_
+       0.0,           & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0,           & ! Lperp_
        (1.0, iPui=PuiFirst_,PuiLast_), &
@@ -162,6 +165,7 @@ module ModVarIndexes
        'Rho   ', & ! SWHRho_
        'Mx    ', 'My    ', 'Mz    ', & ! RhoUx_ RhoUz_
        'Bx    ', 'By    ', 'Bz    ', & ! Bx_  Bz_
+       'Ehot  ',                     & ! Ehot_
        ('I??   ', iWave=WaveFirst_,WaveLast_), &
        'Lperp ',                     & ! Lperp_
        ('F??   ', iPui=PuiFirst_,PuiLast_), &
