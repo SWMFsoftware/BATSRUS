@@ -919,21 +919,26 @@ contains
 
       if(UseElectronShockHeating .and. .not.UseAnisoPressure)then
          ! Distribute shock heating between ions and electrons
-         if(DoTest)write(*,'(2x,2a,3es20.12)') &
-              NameSub,' before shock heating Pe, P, s=', &
-              State_VGB(Pe_,iTest,jTest,kTest,iBlock), &
-              State_VGB(p_,iTest,jTest,kTest,iBlock), &
-              s_C(iTest,jTest,kTest)
-
+         if(DoTest)then
+            write(*,'(2x,2a,3es20.12)') &
+                 NameSub,' before shock heating Pe, P, s=', &
+                 State_VGB(p_,iTest,jTest,kTest,iBlock), &
+                 State_VGB(Pe_,iTest,jTest,kTest,iBlock), &
+                 s_C(iTest,jTest,kTest)
+            write(*,*) 'initial Rho, Ei, Ee=', &
+                 State_VGB(Rho_,iTest,jTest,kTest,iBlock), &
+                 State_VGB(p_,iTest,jTest,kTest,iBlock)*InvGammaMinus1, &
+                 State_VGB(Pe_,iTest,jTest,kTest,iBlock)*InvGammaElectronMinus1
+         end if
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             Rho = State_VGB(Rho_,i,j,k,iBlock)
             FactorI = Rho**(-GammaMinus1)
             FactorE = Rho**(-GammaElectronMinus1)
             ! Thermal energy density from total energy update
-            Eth =  State_VGB(P_,i,j,k,iBlock)*InvGammaMinus1 &
+            Eth =  State_VGB(p_,i,j,k,iBlock)*InvGammaMinus1 &
                  + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
             ! From entropy updates We*Si - Wi*Se
-            Sie =  WeightSe*State_VGB(Ppar_,i,j,k,iBlock)*FactorPar &
+            Sie =  WeightSe*s_C(i,j,k) &
                  - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
             ! Energy weights
             We = WeightSe*GammaMinus1*FactorI
@@ -944,11 +949,18 @@ contains
             ! Convert to pressures
             State_VGB(p_,i,j,k,iBlock)  = Ei*GammaMinus1
             State_VGB(Pe_,i,j,k,iBlock) = Ee*GammaElectronMinus1
+            if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
+               write(*,*)'Eth,      Sie=     ', Eth, Sie
+               write(*,*)'FactorI,  FactorE= ', FactorI, FactorE
+               write(*,*)'WeightSi, WeightSe=', WeightSi, WeightSe
+               write(*,*)'Wi,       We=      ', Wi, We
+               write(*,*)'Ei,       Ee=      ', Ei, Ee
+            end if
          end do; end do; end do
          if(DoTest)write(*,'(2x,2a,3es20.12)') &
               NameSub,' after shock heating Pe, P=', &
-              State_VGB(Pe_,iTest,jTest,kTest,iBlock), &
-              State_VGB(p_,iTest,jTest,kTest,iBlock)
+              State_VGB(p_,iTest,jTest,kTest,iBlock), &
+              State_VGB(Pe_,iTest,jTest,kTest,iBlock)
       end if
 
       if(UseAnisoShockHeating)then
