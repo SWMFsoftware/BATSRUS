@@ -669,7 +669,7 @@ contains
 
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
-    use ModTurbulence,   ONLY: SigmaD
+    use ModTurbulence,     ONLY: SigmaD, KarmanTaylorAlpha
     use ModVarIndexes,     ONLY: Ehot_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
@@ -828,24 +828,34 @@ contains
        if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 0.0
 
        if(UseAlfvenWaves)then
-          Rho = State_VGB(Rho_,i,j,k,iBlock)
-          RhoBody = SwhRho
-
-          Ewave = Rho*DeltaU**2/(1.0 + SigmaD)*sqrt(Rho/RhoBody)
-
-          if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-               * Xyz_DGB(x_:z_,i,j,k,iBlock))>0.0)then
-             ! Positive propagating waves
-             State_VGB(WaveFirst_,i,j,k,iBlock) = Ewave*0.5*(1.0-CrossHelicity)
-             State_VGB(WaveLast_,i,j,k,iBlock)  = Ewave*0.5*(1.0+CrossHelicity)
+          if(r>100)then
+             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
+             if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = &
+                  VliswRho/KarmanTaylorAlpha
           else
-             ! Negative propagating waves
-             State_VGB(WaveFirst_,i,j,k,iBlock) = Ewave*0.5*(1.0+CrossHelicity)
-             State_VGB(WaveLast_,i,j,k,iBlock)  = Ewave*0.5*(1.0-CrossHelicity)
-          end if
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
+             RhoBody = SwhRho
 
-          if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = &
-               Rho*LperpTimesSqrtB/sqrt(norm2(B_D))
+             Ewave = Rho*DeltaU**2/(1.0 + SigmaD)*sqrt(Rho/RhoBody)
+
+             if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+                  * Xyz_DGB(x_:z_,i,j,k,iBlock))>0.0)then
+                ! Positive propagating waves
+                State_VGB(WaveFirst_,i,j,k,iBlock) = &
+                     Ewave*0.5*(1.0-CrossHelicity)
+                State_VGB(WaveLast_,i,j,k,iBlock)  = &
+                     Ewave*0.5*(1.0+CrossHelicity)
+             else
+                ! Negative propagating waves
+                State_VGB(WaveFirst_,i,j,k,iBlock) = &
+                     Ewave*0.5*(1.0+CrossHelicity)
+	        State_VGB(WaveLast_,i,j,k,iBlock)  = &
+                     Ewave*0.5*(1.0-CrossHelicity)
+             end if
+
+             if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = &
+                  Rho*LperpTimesSqrtB/sqrt(norm2(B_D))
+          end if
        end if
 
        if(Ehot_ > 1)then
