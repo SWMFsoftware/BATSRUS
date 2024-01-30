@@ -25,7 +25,8 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
-       Unset_, test_start, test_stop
+       Unset_, test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
+       iVarTest, iDimTest, iSideTest
   use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
@@ -186,7 +187,7 @@ contains
   subroutine update_state_fast
 
     ! Apply cell boundary conditions and update one stage
-    integer:: i, j, k, iBlock, iGang
+    integer:: i, j, k, iBlock, iGang, iVar
     logical:: IsBodyBlock
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
@@ -327,7 +328,7 @@ contains
     logical, intent(in):: IsBodyBlock
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar
-    real:: DivU, DivB, DivE, DtLocal, Change_V(nFlux), ForcePerRho_D(3)
+    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), ForcePerRho_D(3)
 
     logical:: IsConserv
 
@@ -688,7 +689,7 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang
+    integer:: iGang, iVar
     logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
@@ -748,7 +749,7 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang
+    integer:: iGang, iVar
     logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
@@ -808,7 +809,7 @@ contains
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
-    integer:: iGang
+    integer:: iGang, iVar
     logical:: DoTestSide
 #ifndef _OPENACC
     !--------------------------------------------------------------------------
@@ -1942,6 +1943,7 @@ contains
 
     real :: AreaInvCdiff, Cproduct, Bn
 
+    integer :: iVar
     !--------------------------------------------------------------------------
     if(DoLf)then
        ! Rusanov scheme
