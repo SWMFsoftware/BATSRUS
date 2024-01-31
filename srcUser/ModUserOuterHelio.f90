@@ -2647,7 +2647,8 @@ contains
        SourcePh_V(Pu3RhoUz_)  = sum(JxpUzPh_I)
        SourcePh_V(Pu3Energy_) = sum(KxpPh_I)
 
-       if(UseAlfvenWaves)then
+       ! Limit to Region 3
+       if(UseAlfvenWaves .and. Ne3_ == iFluidProduced_C(i,j,k))then
           URelS_I = 0
           where(UseSource_I(Neu_:)) &
                URelS_I = (U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
