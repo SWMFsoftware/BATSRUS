@@ -40,7 +40,7 @@ module ModUser
        body1_, tSimulation, iStartTime_I
   use ModPhysics,  ONLY: &
        Gamma, GammaMinus1, GammaElectronMinus1, InvGammaMinus1, &
-       InvGammaElectronMinus1, &
+       InvGammaElectronMinus1, GammaMinus1_I, InvGammaMinus1_I, &
        UnitX_, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
        NameTecUnit_V, NameIdlUnit_V, UnitEnergyDens_, &
        UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
@@ -2618,7 +2618,7 @@ contains
     ! Equation 4 Fahr et al. 2000
 
     ExpPh_I = 0.5*U2_I(Neu_:) + State_V(iP_I(Neu_:))/&
-         State_V(iRho_I(Neu_:))/(GammaMinus1)
+         State_V(iRho_I(Neu_:))*InvGammaMinus1_I(Neu_:)
 
     ! Chika: Energy source term
     ! Table 2 Fahr et al. 2000
@@ -2634,52 +2634,95 @@ contains
           SourcePh_V(iRhoUz)  = -JxpUzPh_I(iFluid)
           SourcePh_V(iEnergy) = -KxpPh_I(iFluid)
 
-          SourcePh_V(iP) = (Gamma-1)* ( SourcePh_V(iEnergy) &
+          SourcePh_V(iP) = GammaMinus1_I(iFluid)* ( SourcePh_V(iEnergy) &
                - sum(U_DI(:,iFluid)*SourcePh_V(iRhoUx:iRhoUz)) &
                + 0.5*U2_I(iFluid)*SourcePh_V(iRho) )
        end do
     end if
 
-    if(UseSource_I(Pu3_))then
-       SourcePh_V(Pu3Rho_)    = sum(I0xpPh_I)
-       SourcePh_V(Pu3RhoUx_)  = sum(JxpUxPh_I)
-       SourcePh_V(Pu3RhoUy_)  = sum(JxpUyPh_I)
-       SourcePh_V(Pu3RhoUz_)  = sum(JxpUzPh_I)
-       SourcePh_V(Pu3Energy_) = sum(KxpPh_I)
-
-       ! Limit to Region 3
-       if(UseAlfvenWaves .and. Ne3_ == iFluidProduced_C(i,j,k))then
-          URelS_I = 0
-          where(UseSource_I(Neu_:)) &
-               URelS_I = (U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
-               + (U_DI(y_,Neu_:) - U_DI(y_,Ion_))**2 &
-               + (U_DI(z_,Neu_:) - U_DI(z_,Ion_))**2
-
-          AlfvenSpeed = sqrt(sum(State_V(Bx_:Bz_)**2)/State_V(Rho_))
-          SourceTurbulence = 0.5*TurbulencePerPu3Source*AlfvenSpeed &
-               *sum(I0xpPh_I*sqrt(URelS_I))
-
-          SourcePh_V(Pu3Energy_) = SourcePh_V(Pu3Energy_) &
-               - SourceTurbulence
-          SourcePh_V(WaveFirst_:WaveLast_) = 0.5*SourceTurbulence
-
-          if(Lperp_ > 1) SourcePh_V(Lperp_) = &
-               -KarmanTaylorBeta2AlphaRatio &
-               *State_V(Lperp_)*SourceTurbulence &
-               /max(1e-30,sum(State_V(WaveFirst_:WaveLast_)))
-
-          ! PUI-turbulence sinks for L_- and L_+ only
-          if(LcorrFirst_ > 1) &
-               SourcePh_V(LcorrFirst_:LcorrFirst_+nWave-1) = &
-               -KarmanTaylorBeta2AlphaRatio &
-               *State_V(LcorrFirst_:LcorrFirst_+nWave-1) &
-               *0.5*SourceTurbulence &
-               /max(1e-30,State_V(WaveFirst_:WaveLast_))
+    ! Ion source terms
+    if(IsMhd)then
+       ! Single Ion
+       if(UseSource_I(Ion_))then
+          SourcePh_V(Rho_)    = sum(I0xpPh_I)
+          SourcePh_V(RhoUx_)  = sum(JxpUxPh_I)
+          SourcePh_V(RhoUy_)  = sum(JxpUyPh_I)
+          SourcePh_V(RhoUz_)  = sum(JxpUzPh_I)
+          SourcePh_V(Energy_) = sum(KxpPh_I)
+          SourcePh_V(p_) = GammaMinus1* ( SourcePh_V(Energy_) &
+               - sum(U_DI(:,Ion_)*SourcePh_V(RhoUx_:RhoUz_)) &
+               + 0.5*U2_I(Ion_)*SourcePh_V(Rho_) )
        end if
+    else
+       ! Multi Ion
+       if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
+          ! Region 3: only make Pu3 in region before TS
+          if(Ne3_ == iFluidProduced_C(i,j,k))then
+             ! in Pop III region
+	     SourcePh_V(SWHRho_)    = I0xpPh_I(Ne3_)
+             SourcePh_V(SWHRhoUx_)  = JxpUxPh_I(Ne3_)
+             SourcePh_V(SWHRhoUy_)  = JxpUyPh_I(Ne3_)
+             SourcePh_V(SWHRhoUz_)  = JxpUzPh_I(Ne3_)
+             SourcePh_V(SWHEnergy_) = KxpPh_I(Ne3_)
+             SourcePh_V(SWHp_) = GammaMinus1_I(SWH_)*( SourcePh_V(SWHEnergy_) &
+                  - sum(U_DI(:,SWH_)*SourcePh_V(SWHRhoUx_:SWHRhoUz_)) &
+                  + 0.5*U2_I(SWH_)*SourcePh_V(SWHRho_) )
 
-       SourcePh_V(Pu3P_) = (Gamma-1)* ( SourcePh_V(Pu3Energy_) &
-            - sum(U_DI(:,Pu3_)*SourcePh_V(Pu3RhoUx_:Pu3RhoUz_)) &
-            + 0.5*U2_I(Pu3_)*SourcePh_V(Pu3Rho_) )
+             SourcePh_V(Pu3Rho_)   = sum(I0xpPh_I) - I0xpPh_I(Ne3_)
+             SourcePh_V(Pu3RhoUx_) = sum(JxpUxPh_I) - JxpUxPh_I(Ne3_)
+             SourcePh_V(Pu3RhoUy_) = sum(JxpUyPh_I) - JxpUyPh_I(Ne3_)
+             SourcePh_V(Pu3RhoUz_) = sum(JxpUzPh_I) - JxpUzPh_I(Ne3_)
+             SourcePh_V(Pu3Energy_)= sum(KxpPh_I) - KxpPh_I(Ne3_)
+
+             if(UseAlfvenWaves)then
+                URelS_I = 0
+                where(UseSource_I(Neu_:)) &
+                     URelS_I = (U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
+                     + (U_DI(y_,Neu_:) - U_DI(y_,Ion_))**2 &
+                     + (U_DI(z_,Neu_:) - U_DI(z_,Ion_))**2
+
+                AlfvenSpeed = sqrt(sum(State_V(Bx_:Bz_)**2)/State_V(Rho_))
+
+                SourceTurbulence = 0.5*TurbulencePerPu3Source*AlfvenSpeed*( &
+                     I0xpPh_I(Neu_)*sqrt(URelS_I(Neu_)) + &
+                     I0xpPh_I(Ne2_)*sqrt(URelS_I(Ne2_)) + &
+                     I0xpPh_I(Ne4_)*sqrt(URelS_I(Ne4_)) )
+                
+                SourcePh_V(Pu3Energy_) = SourcePh_V(Pu3Energy_) &
+                     - SourceTurbulence
+                SourcePh_V(WaveFirst_:WaveLast_) = 0.5*SourceTurbulence
+
+                if(Lperp_ > 1) SourcePh_V(Lperp_) = &
+                     -KarmanTaylorBeta2AlphaRatio &
+                     *State_V(Lperp_)*SourceTurbulence &
+                     /max(1e-30,sum(State_V(WaveFirst_:WaveLast_)))
+
+                ! PUI-turbulence sinks for L_- and L_+ only
+                if(LcorrFirst_ > 1) &
+                     SourcePh_V(LcorrFirst_:LcorrFirst_+nWave-1) = &
+                     -KarmanTaylorBeta2AlphaRatio &
+                     *State_V(LcorrFirst_:LcorrFirst_+nWave-1) &
+                     *0.5*SourceTurbulence &
+                     /max(1e-30,State_V(WaveFirst_:WaveLast_))
+             end if
+
+             SourcePh_V(Pu3P_) = GammaMinus1_I(Pu3_)*( SourcePh_V(Pu3Energy_) &
+                  - sum(U_DI(:,Pu3_)*SourcePh_V(Pu3RhoUx_:Pu3RhoUz_)) &
+                  + 0.5*U2_I(Pu3_)*SourcePh_V(Pu3Rho_) )
+
+             ! end of Region 3
+          else
+             SourcePh_V(SwhRho_)    = sum(I0xpPh_I)
+             SourcePh_V(SwhRhoUx_)  = sum(JxpUxPh_I)
+             SourcePh_V(SwhRhoUy_)  = sum(JxpUyPh_I)
+             SourcePh_V(SwhRhoUz_)  = sum(JxpUzPh_I)
+             SourcePh_V(SwhEnergy_) = sum(KxpPh_I)
+
+             SourcePh_V(SWHp_) = GammaMinus1_I(SWH_)*( SourcePh_V(SWHEnergy_) &
+                  - sum(U_DI(:,SWH_)*SourcePh_V(SWHRhoUx_:SWHRhoUz_)) &
+                  + 0.5*U2_I(SWH_)*SourcePh_V(SWHRho_) )
+          end if
+       end if
     end if
 
   end subroutine calc_photoion_source
