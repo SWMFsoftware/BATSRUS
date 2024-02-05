@@ -2687,7 +2687,7 @@ contains
                      I0xpPh_I(Neu_)*sqrt(URelS_I(Neu_)) + &
                      I0xpPh_I(Ne2_)*sqrt(URelS_I(Ne2_)) + &
                      I0xpPh_I(Ne4_)*sqrt(URelS_I(Ne4_)) )
-                
+
                 SourcePh_V(Pu3Energy_) = SourcePh_V(Pu3Energy_) &
                      - SourceTurbulence
                 SourcePh_V(WaveFirst_:WaveLast_) = 0.5*SourceTurbulence
