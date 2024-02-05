@@ -9294,7 +9294,8 @@ anomalous resistivity with a critical current, or a user defined resistivity.
 
 For TypeResistivity='Spitzer' the resistivity is very low in space plasma.
 The only parameter read is the CoulombLogarithm parameter with
-typical values in the range of 10 to 30.
+typical values in the range of 10 to 30. Note that this can also be
+set with the #COULOMBLOG command.
 
 For TypeResistivity='constant' the resistivity is uniformly set to
 the parameter Eta0Si.
@@ -9312,6 +9313,15 @@ subroutine user_read_inputs of the ModUser file.
 The default is UseResistivity=.false.
 </command>
 
+<command name="COULOMBLOG">
+  <parameter name="CoulombLog" type="real" min="0" default="20.0"/>
+#COULOMBLOG
+20.0			CoulombLog  
+
+Set the Coulomb logarithm for Spitzer resistivity and heat conduction.
+Default value is shown.
+</command>
+  
 <command name="RESISTIVITYOPTIONS">
   <parameter name="UseResistiveFlux" type="logical" default="T"/>
   <parameter name="UseJouleHeating"  type="logical" default="T"/>
@@ -9858,11 +9868,12 @@ Both heat conduction formulations are field-aligned and are only applied
 to the electrons.
 
 For TypeHeatConduction='spitzer' a spatially uniform Coulomb logarithm
-of 20 is assumed, resulting in a heat conduction coefficient of
+of 20 is assumed by default, resulting in a heat conduction coefficient of
 \begin{verbatim}
 9.2e-12 W m^-1 K^-7/2.
 \end{verbatim}
-Fully ionized hydrogen plasma is assumed.
+Fully ionized hydrogen plasma is assumed. The Coulomb logarithm can
+be modified with the #COULOMBLOG command.
 
 For TypeHeatConduction='user' the heat conduction coefficient of the
 field-aligned heat conduction is read from the user_material_properties
@@ -9921,11 +9932,11 @@ Both heat conduction formulations are field-aligned and are only applied to
 the protons.
 
 For TypeIonHeatConduction='spitzer' a spatially uniform Coulomb logarithm
-of 20 is assumed, resulting in a heat conduction coefficient of
+of 20 is assumed by default, resulting in a heat conduction coefficient of
 \begin{verbatim}
 2.6e-13 W m^-1 K^-7/2
 \end{verbatim}
-for protons.
+for protons. A non-default value can be set with the #COULOMBLOG command.
 
 For TypeIonHeatConduction='user' the heat conduction coefficient of the
 field-aligned heat conduction is read from the user_material_properties
