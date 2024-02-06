@@ -4,6 +4,14 @@
 
 subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
+  ! For the location CoordIn_D of the inner face boundary of GM
+  ! return the primitive State_V (densities and velocities)
+  ! in normalized units.
+  ! Interpolation is performed with spherical triangulation.
+  ! Either use northern hemisphere only, or both hemispheres if available.
+  ! If CoordIn_D is not covered by the triangulation then
+  ! State_V (intent inout) is not modified.
+  
   use GM_couple_pw
   use CON_coupler,       ONLY: PW_, Grid_C
   use CON_axes,          ONLY: transform_matrix
