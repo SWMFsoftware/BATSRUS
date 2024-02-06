@@ -15,7 +15,7 @@ module ModPhysics
   use ModMain, ONLY: TypeCoordSystem, body2_, SolidBc_, xMinBc_, zMaxBc_, &
        Coord1MinBc_, Coord3MaxBc_ , NameVarLower_V
   use ModVarIndexes, ONLY: nVar, nFluid, SpeciesFirst_, SpeciesLast_
-  use ModAdvance, ONLY: UseMultiSpecies, nSpecies
+  use ModAdvance, ONLY: UseMultiSpecies, nSpecies, nIonDensity
   use ModMultiFluid, ONLY: nIonFluid
   use CON_star, ONLY: NameStar, RadiusStar, MassStar, RotPeriodStar
 
@@ -137,14 +137,17 @@ module ModPhysics
        BodyNDim_I = 1.0, BodyTDim_I = 1.0, &
        PolarNDim_I= 1.0, PolarTDim_I= 1.0, PolarUDim_I = 0.0
 
-  ! The normalized quantities include the total ion fluid (if present)
+  ! The normalized quantities
   real, dimension(nFluid) :: &
        BodyRho_I = 1.0, BodyP_I = 1.0, &
        PolarRho_I= 1.0, PolarP_I= 1.0, PolarU_I=0.0
   !$acc declare create(PolarRho_I, PolarP_I)
 
-  ! Coefficient for PW passed densities
-  real:: RhoPwCoef = 1.0
+  ! Lower limit on densities obtained from PW model
+  real:: PolarRhoMin_I(nIonDensity) = 0.0
+  
+  ! Limit PW passed densities by body values?
+  logical:: DoLimitRhoPw = .false.
 
   ! Number and mass densities for multi-species equations
   real:: BodyNSpeciesDim_I(nSpecies) = -1.0, BodyRhoSpecies_I(nSpecies) = -1.0
@@ -497,11 +500,13 @@ contains
        BodyRho_I(1) = sum(BodyRhoSpecies_I)
        BodyP_I(1)   = sum(BodyNSpeciesDim_I)*Io2No_V(UnitN_) &
             *BodyTDim_I(1)*Io2No_V(UnitTemperature_)
+       if(DoLimitRhoPw) PolarRhoMin_I(1:nSpecies) = BodyRhoSpecies_I
     else
        ! The normalized quantities extend to the first MHD fluid too
        BodyRho_I = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
        BodyP_I   = BodyNDim_I*Io2No_V(UnitN_)*BodyTDim_I &
             *Io2No_V(UnitTemperature_)
+       if(DoLimitRhoPw) PolarRhoMin_I(1:nIonFluid) = BodyRho_I(1:nIonFluid)
     end if
 
     PolarRho_I = PolarNDim_I*Io2No_V(UnitN_)*MassFluid_I

@@ -4,10 +4,9 @@
 
 module ModIeCoupling
 
-  use BATL_lib,      ONLY: test_start, test_stop, iProc, nProc
+  use BATL_lib, ONLY: test_start, test_stop, iProc, nProc
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModAdvance,    ONLY: nSpecies
-  use ModMultiFluid, ONLY: nIonFluid
+  use ModAdvance, ONLY: nIonDensity
   use ModCoordTransform, ONLY: xyz_to_dir, sph_to_xyz, cross_product
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
@@ -53,9 +52,6 @@ module ModIeCoupling
 
   ! Cross polar cap potentials
   real, public:: CpcpNorth = 0.0, CpcpSouth = 0.0
-
-  ! Number of densities (ion fluids or ion species)
-  integer, parameter, public:: nIonDensity = max(nIonFluid, nSpecies)
 
   ! CPCP dependent densities at the inner boundary
   logical, public:: UseCpcpBc = .false.
