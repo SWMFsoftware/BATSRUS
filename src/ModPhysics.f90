@@ -509,17 +509,6 @@ contains
          * Io2No_V(UnitTemperature_)
     PolarU_I   = PolarUDim_I*Io2No_V(UnitU_)
 
-    if(UseMultiIon .and. IsMhd)then
-       ! Add up ion fluids for total ion fluid
-       BodyRho_I(1)  = sum(BodyRho_I(1:nIonFluid))
-       BodyP_I(1)    = sum(BodyP_I(1:nIonFluid))
-       PolarRho_I(1) = sum(PolarRho_I(1:nIonFluid))
-       PolarP_I(1)   = sum(PolarP_I(1:nIonFluid))
-       PolarU_I(1)   = &
-            sum(PolarRho_I(1:nIonFluid)*PolarU_I(1:nIonFluid)) &
-            /sum(PolarRho_I(1:nIonFluid))
-    end if
-
     if(.not.UseElectronPressure .and. IsMhd) then
        BodyP_I(1)  = BodyP_I(1)*(1 + ElectronPressureRatio)
        PolarP_I(1) = PolarP_I(1)*(1 + ElectronPressureRatio)
@@ -631,9 +620,6 @@ contains
              FaceState_VI( iP,xMinBc_:zMaxBc_) = SolarWindP/pCoef &
                   *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
           end do
-          ! Fix total pressure if necessary (density and temperature are kept)
-          if(UseMultiIon .and. IsMhd) FaceState_VI(P_,xMinBc_:zMaxBc_) = &
-               pCoef*sum(FaceState_VI(iPIon_I,xMinBc_))
        end if
     end if
 
