@@ -4,18 +4,25 @@
 
 subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
+  ! For the location CoordIn_D of the inner face boundary of GM
+  ! return the primitive State_V (densities and velocities)
+  ! in normalized units.
+  ! Interpolation is performed with spherical triangulation.
+  ! Either use northern hemisphere only, or both hemispheres if available.
+  ! If CoordIn_D is not covered by the triangulation then
+  ! State_V (intent inout) is not modified.
+
   use GM_couple_pw
   use CON_coupler,       ONLY: PW_, Grid_C
   use CON_axes,          ONLY: transform_matrix
   use ModMain,           ONLY: TypeCoordSystem, tSimulation
   use ModVarIndexes,     ONLY: Rho_, Ux_, Uy_, Uz_, &
-       SpeciesFirst_, SpeciesLast_, IsMhd
-  use ModAdvance,        ONLY: UseMultiSpecies
+       SpeciesFirst_, SpeciesLast_, nIonFluid
+  use ModAdvance,        ONLY: UseMultiSpecies, nSpecies
   use ModMultiFluid,     ONLY: UseMultiIon, nIonFluid, &
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
   use ModTriangulateSpherical, ONLY: find_triangle_sph
-  use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_, RhoPwCoef, &
-       BodyRho_I, BodyRhoSpecies_I
+  use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_, PolarRhoMin_I
   use ModB0,             ONLY: get_b0
   use CON_planet_field,  ONLY: map_planet_field
 
@@ -166,7 +173,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   ! interpolate values
   if(UseMultiIon)then
-     State_V(iRhoIon_I) = max(BodyRho_I, RhoPwCoef* &
+     State_V(iRhoIon_I) = max(PolarRhoMin_I(1:nIonFluid), &
           ( Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) &
           + Area2*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode2) &
           + Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3) ) )
@@ -183,7 +190,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      if(UseMultiSpecies) then
         ! Interpolate species densities and put total into Rho_
         State_V(SpeciesFirst_:SpeciesLast_) = &
-             max(BodyRhoSpecies_I, RhoPwCoef* &
+             max(PolarRhoMin_I(1:nSpecies), &
              ( Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) &
              + Area2*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode2) &
              + Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3) ) )
@@ -191,17 +198,17 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
         State_V(Rho_) = sum(State_V(SpeciesFirst_:SpeciesLast_))
      else
         ! For simple MHD the StateGm_VI contains the total density
-        State_V(Rho_) = max(BodyRho_I(1), RhoPwCoef* &
-             ( Area1*StateGm_VI(iRhoGmFirst, iNode1) &
-             + Area2*StateGm_VI(iRhoGmFirst, iNode2) &
-             + Area3*StateGm_VI(iRhoGmFirst, iNode3) ) )
+        State_V(Rho_) = max(PolarRhoMin_I(1), &
+             ( Area1*StateGm_VI(iRhoGmFirst,iNode1) &
+             + Area2*StateGm_VI(iRhoGmFirst,iNode2) &
+             + Area3*StateGm_VI(iRhoGmFirst,iNode3) ) )
      end if
 
      ! Add field aligned velocity to set (True+Ghost)/2.
      State_V(Ux_:Uz_) = State_V(Ux_:Uz_) + 2*B0_D * ( &
-          Area1*StateGm_VI(iUGmFirst, iNode1) + &
-          Area2*StateGm_VI(iUGmFirst, iNode2) + &
-          Area3*StateGm_VI(iUGmFirst, iNode3))
+          Area1*StateGm_VI(iUGmFirst,iNode1) + &
+          Area2*StateGm_VI(iUGmFirst,iNode2) + &
+          Area3*StateGm_VI(iUGmFirst,iNode3))
 
   end if
 
@@ -211,8 +218,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      write(*,*)'XyzPw_D       =', XyzPw_D
      write(*,*)'XyzPw_D       =', Xyz_D
      write(*,*)'Area1,2,3     =', Area1, Area2, Area3
-     write(*,*)'sum(Area1,2,3)     =', Area1 + Area2 + Area3
-     write(*,*)'RhoPwCoef     =', RhoPwCoef
+     write(*,*)'sum(Area1,2,3)=', Area1 + Area2 + Area3
      write(*,*)'State_V(Rho_) =', State_V(Rho_)*No2Io_V(UnitRho_)
      write(*,*)'B0_D          =', B0_D
      write(*,*)'State_V(Ux:Uz)=', State_V(Ux_:Uz_)*No2Io_V(UnitU_)

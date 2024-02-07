@@ -10,10 +10,9 @@ module ModFaceBoundary
   use ModUtilities, ONLY: norm2
 #endif
   use ModMultiFluid
-  use ModAdvance,    ONLY: nSpecies
+  use ModAdvance,    ONLY: nSpecies, nIonDensity
   use ModNumConst,   ONLY: cDegToRad
-  use ModIeCoupling, ONLY: UseCpcpBc, Rho0Cpcp_I, RhoPerCpcp_I, RhoCpcp_I, &
-       nIonDensity
+  use ModIeCoupling, ONLY: UseCpcpBc, Rho0Cpcp_I, RhoPerCpcp_I, RhoCpcp_I
   use ModBuffer,     ONLY: get_from_spher_buffer_grid
   use ModMain
 

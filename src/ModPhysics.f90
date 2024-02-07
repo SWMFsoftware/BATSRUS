@@ -15,7 +15,7 @@ module ModPhysics
   use ModMain, ONLY: TypeCoordSystem, body2_, SolidBc_, xMinBc_, zMaxBc_, &
        Coord1MinBc_, Coord3MaxBc_ , NameVarLower_V
   use ModVarIndexes, ONLY: nVar, nFluid, SpeciesFirst_, SpeciesLast_
-  use ModAdvance, ONLY: UseMultiSpecies, nSpecies
+  use ModAdvance, ONLY: UseMultiSpecies, nSpecies, nIonDensity
   use ModMultiFluid, ONLY: nIonFluid
   use CON_star, ONLY: NameStar, RadiusStar, MassStar, RotPeriodStar
 
@@ -137,14 +137,17 @@ module ModPhysics
        BodyNDim_I = 1.0, BodyTDim_I = 1.0, &
        PolarNDim_I= 1.0, PolarTDim_I= 1.0, PolarUDim_I = 0.0
 
-  ! The normalized quantities include the total ion fluid (if present)
+  ! The normalized quantities
   real, dimension(nFluid) :: &
        BodyRho_I = 1.0, BodyP_I = 1.0, &
        PolarRho_I= 1.0, PolarP_I= 1.0, PolarU_I=0.0
   !$acc declare create(PolarRho_I, PolarP_I)
 
-  ! Coefficient for PW passed densities
-  real:: RhoPwCoef = 1.0
+  ! Lower limit on densities obtained from PW model
+  real:: PolarRhoMin_I(nIonDensity) = 0.0
+
+  ! Limit PW passed densities by body values?
+  logical:: DoLimitRhoPw = .false.
 
   ! Number and mass densities for multi-species equations
   real:: BodyNSpeciesDim_I(nSpecies) = -1.0, BodyRhoSpecies_I(nSpecies) = -1.0
@@ -497,28 +500,19 @@ contains
        BodyRho_I(1) = sum(BodyRhoSpecies_I)
        BodyP_I(1)   = sum(BodyNSpeciesDim_I)*Io2No_V(UnitN_) &
             *BodyTDim_I(1)*Io2No_V(UnitTemperature_)
+       if(DoLimitRhoPw) PolarRhoMin_I(1:nSpecies) = BodyRhoSpecies_I
     else
        ! The normalized quantities extend to the first MHD fluid too
        BodyRho_I = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
        BodyP_I   = BodyNDim_I*Io2No_V(UnitN_)*BodyTDim_I &
             *Io2No_V(UnitTemperature_)
+       if(DoLimitRhoPw) PolarRhoMin_I(1:nIonFluid) = BodyRho_I(1:nIonFluid)
     end if
 
     PolarRho_I = PolarNDim_I*Io2No_V(UnitN_)*MassFluid_I
     PolarP_I   = PolarNDim_I*Io2No_V(UnitN_)*PolarTDim_I &
          * Io2No_V(UnitTemperature_)
     PolarU_I   = PolarUDim_I*Io2No_V(UnitU_)
-
-    if(UseMultiIon .and. IsMhd)then
-       ! Add up ion fluids for total ion fluid
-       BodyRho_I(1)  = sum(BodyRho_I(1:nIonFluid))
-       BodyP_I(1)    = sum(BodyP_I(1:nIonFluid))
-       PolarRho_I(1) = sum(PolarRho_I(1:nIonFluid))
-       PolarP_I(1)   = sum(PolarP_I(1:nIonFluid))
-       PolarU_I(1)   = &
-            sum(PolarRho_I(1:nIonFluid)*PolarU_I(1:nIonFluid)) &
-            /sum(PolarRho_I(1:nIonFluid))
-    end if
 
     if(.not.UseElectronPressure .and. IsMhd) then
        BodyP_I(1)  = BodyP_I(1)*(1 + ElectronPressureRatio)
@@ -631,9 +625,6 @@ contains
              FaceState_VI( iP,xMinBc_:zMaxBc_) = SolarWindP/pCoef &
                   *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
           end do
-          ! Fix total pressure if necessary (density and temperature are kept)
-          if(UseMultiIon .and. IsMhd) FaceState_VI(P_,xMinBc_:zMaxBc_) = &
-               pCoef*sum(FaceState_VI(iPIon_I,xMinBc_))
        end if
     end if
 

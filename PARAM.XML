@@ -8608,15 +8608,15 @@ The default action is to not couple density or pressure from PS.
 </command>
 
 <command name="PWCOUPLING">
-  <parameter name="RhoPwCoef" type="real" min="1" default="1"/>
+  <parameter name="DoLimitRhoPw" type="logical" default="F"/>
 
 #PWCOUPLING
-2.0                RhoPwCoef
+F			DoLimitRhoPw
 
-Multiply the densities obtained from the polar wind model with RhoPwCoef.
-This may improve Dst for Geospace + PWOM configuration.
+If DoLimitRhoPw is true, limit the PW supplied densities by the body densities
+from below.
 
-Default value is RhoPwCoef=1.0.
+Default is false.
 </command>
 </commandgroup>
 
