@@ -145,7 +145,7 @@ module ModPhysics
 
   ! Lower limit on densities obtained from PW model
   real:: PolarRhoMin_I(nIonDensity) = 0.0
-  
+
   ! Limit PW passed densities by body values?
   logical:: DoLimitRhoPw = .false.
 

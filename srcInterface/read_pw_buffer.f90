@@ -11,7 +11,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   ! Either use northern hemisphere only, or both hemispheres if available.
   ! If CoordIn_D is not covered by the triangulation then
   ! State_V (intent inout) is not modified.
-  
+
   use GM_couple_pw
   use CON_coupler,       ONLY: PW_, Grid_C
   use CON_axes,          ONLY: transform_matrix

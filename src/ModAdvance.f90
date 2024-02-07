@@ -72,7 +72,7 @@ module ModAdvance
 
   ! Number of ion densities (either multi-species or multi-ion)
   integer, parameter:: nIonDensity = max(nSpecies, nIonFluid)
-  
+
   ! Named index for electron pressure and velocity
   integer, parameter:: eFluid_ = nFluid + 1
 
