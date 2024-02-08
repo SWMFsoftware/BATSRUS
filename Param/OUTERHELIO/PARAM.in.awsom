@@ -262,9 +262,7 @@ F			UsePu3Heating
 
 #PHOTOIONIZATION
 T			UsePhotoionization
-
-#PHOTOIONIZATIONRATE
-1.5e-7			PhotoionRate
+1.5e-7			PhotoionizationRate
 
 #TURBULENCE
 8.0			DeltaUDim
