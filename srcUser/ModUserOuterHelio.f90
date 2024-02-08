@@ -193,6 +193,10 @@ module ModUser
   real :: LperpTimesSqrtBSi = 1.5e5, LperpTimesSqrtB = 0.0
   real :: TurbulencePerPu3Source = 0.25
 
+  ! Photoionization rate at 1AU (unit is 1/s)
+  ! Below is the rate of Fahr et al.
+  real :: PhotoionRate = 8e-8
+
   ! Ionization energy for neutral atomic hydrogen
   ! Needed for electron impact ionization
   real :: IonizationEnergyDim = cRyToEv*cEv
@@ -279,6 +283,9 @@ contains
           ! If not specified in PARAM.in, it will be false
           call read_var('UsePhotoionization', UsePhotoion)
 
+       case("#PHOTOIONIZATIONRATE")
+          call read_var('PhotoionRate', PhotoionRate)
+                    
        case("#COLDCLOUD")
           call read_var('UseColdCloud', UseColdCloud)
           call read_var('DoInitializeCloud', DoInitializeCloud)
@@ -2595,7 +2602,7 @@ contains
     ! 8E-8 has units 1/s
     ! r0 = 1 AU
     where(UseSource_I(Neu_:)) &
-         RatePh_I = 8E-8*(1/(r+1e-10))**2 * State_V(iRho_I(Neu_:)) &
+         RatePh_I = PhotoionRate*(1/(r+1e-10))**2 * State_V(iRho_I(Neu_:)) &
          * No2Si_V(UnitT_)
 
     ! Chika: Source terms for single ion
