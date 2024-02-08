@@ -119,6 +119,11 @@ Linde			TypeFluxNeutral
 #NONCONSERVATIVE
 F			UseNonConservative
 
+#CONSERVATIVECRITERIA
+1			nConservCrit
+radius			TypeConservCrit
+50			rConserv
+
 #SCHEME
 1			nOrder
 Linde			TypeFlux
@@ -196,7 +201,7 @@ T			UseOhNeutralBc
 usmanov			TypeCoronalHeating
 T			UseTransverseTurbulence
 -1/3			SigmaD
-0.03			KarmanTaylorAlpha
+0.128			KarmanTaylorAlpha
 0.5			KarmanTaylorBeta2AlphaRatio
 
 #HEATPARTITIONING
@@ -253,15 +258,15 @@ MultiIon                NameRegionFormula
 #PU3HEATING
 F			UsePu3Heating
 1e7			TempPu3Si [K]
-10.0			FactorPu3 1/[au yr]
+2.0			FactorPu3 1/[au yr]
 
 #PHOTOIONIZATION
 T			UsePhotoionization
 
 #TURBULENCE
-30.0			DeltaUDim
--0.8			CrossHelicity
-1.5e5			LperpTimesSqrtBSi
+8.0			DeltaUDim
+-0.1			CrossHelicity
+1.07e4			LperpTimesSqrtBSi
 0.06			TurbulencePerPu3Source
 
 #USERINPUTEND -------------------------------------
@@ -308,8 +313,33 @@ T			UseSourceNe4
 
 #RUN ##########################################################################
 
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.6			CflExpl
+
+#USERSWITCH
++source_impl		StringSwitch
+
+#POINTIMPLICIT
+T			UsePointImplicit
+1.0			BetaPointImplicit
+F			IsAsymmetric
+T			DoNormalizeCell
+
+#COULOMBLOG
+30			CoulombLog
+
 #TIMEACCURATE
 T			IsTimeAccurate
+
+#PARTLOCALTIMESTEP
+75			rLocalTimeStep
 
 #STOP
 30			MaxIteration
