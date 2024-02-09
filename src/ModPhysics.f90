@@ -144,7 +144,7 @@ module ModPhysics
   !$acc declare create(PolarRho_I, PolarP_I)
 
   ! Lower limit on densities obtained from PW model
-  real:: PolarRhoMin_I(nIonDensity) = 0.0
+  real:: PolarRhoMin_I(nIonDensity)
 
   ! Limit PW passed densities by body values?
   logical:: DoLimitRhoPw = .false.
@@ -494,6 +494,8 @@ contains
     SolarWindRhoDim = SolarWindRho*No2Io_V(UnitRho_)
     SolarWindPDim   = SolarWindP*No2Io_V(UnitP_)
 
+    ! No lower limit on polar wind density by default
+    PolarRhoMin_I = 0.0
     if(UseMultiSpecies)then
        ! Species body densities
        BodyRhoSpecies_I = BodyNSpeciesDim_I*Io2No_V(UnitN_)*MassSpecies_V
