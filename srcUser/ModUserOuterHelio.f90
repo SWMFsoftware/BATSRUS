@@ -823,10 +823,15 @@ contains
        ! start with PUI's only to 100 AU
        ! if (r <= rPop3Limit) then
 
-       ! No production yet
        if(.not.IsMhd)then
-          State_VGB(Pu3Rho_,i,j,k,iBlock) = Pu3Rho * (rBody/r)**2
-          State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P   * (rBody/r)**2
+          if(r < rBody)then
+             State_VGB(Pu3Rho_,i,j,k,iBlock) = Pu3Rho
+             State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P
+          else
+             ! No production yet
+             State_VGB(Pu3Rho_,i,j,k,iBlock) = Pu3Rho * (rBody/r)**2
+             State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P   * (rBody/r)**2
+          end if
           State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock) = &
                State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
        end if
