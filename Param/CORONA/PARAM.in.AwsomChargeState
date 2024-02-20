@@ -285,9 +285,9 @@ F			UseIonFrac
 T                       UseParcel
 F                       UseParcelTable
 1                       nParcel
-0.0508514               x1
--1.01483                y1
--0.0888                 z1
+0.0508514               xParcel
+-1.01483                yParcel
+-0.0888                 zParcel
 VAR                     StringParcel
 1                       DnOutput
 -10                     DtOutput
