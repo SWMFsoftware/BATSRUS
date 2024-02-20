@@ -4219,7 +4219,7 @@ example), the start and end times should be set for all of them.
     <parameter name="EndTimeParcel" type="real" min="0" default="0" />
   </if>
   <parameter name="NameParcelVars" type="string" length="$lLine"
-	     if="$NameParcelVar =~ /var/i" />
+	     if="$NameParcelVars =~ /var/i" />
 
 #PARCEL
 T                       UseParcel
