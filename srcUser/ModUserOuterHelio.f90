@@ -202,6 +202,8 @@ module ModUser
   real :: IonizationEnergyDim = cRyToEv*cEv
   real :: IonizationEnergy = 0
 
+  logical :: UseSingleIonVelocityRegion3 = .false.
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -365,6 +367,10 @@ contains
           call read_var('CrossHelicity', CrossHelicity)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('TurbulencePerPu3Source', TurbulencePerPu3Source)
+
+       case("#SINGLEIONVELOCITYREGION3")
+          call read_var('UseSingleIonVelocityRegion3', &
+               UseSingleIonVelocityRegion3)
 
        case default
           if(iProc==0) call stop_mpi( &
@@ -947,12 +953,36 @@ contains
     integer,intent(in):: iBlock
 
     integer:: i, j, k
+    real :: RhoInv, Ux, Uy, Uz
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     call update_state_normal(iBlock)
+
+    if(UseSingleIonVelocityRegion3)then
+       call select_region(iBlock)
+       do k=1, nK; do j=1, nJ; do i=1, nI
+          if(Ne3_ == iFluidProduced_C(i,j,k))then
+
+             ! Calcualate average velocity from total momentum and density
+             RhoInv= 1/sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
+             Ux = RhoInv*sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
+             Uy = RhoInv*sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
+             Uz = RhoInv*sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+
+             ! Reset the momentum of all ion fluids
+             State_VGB(iRhoUxIon_I,i,j,k,iBlock) = &
+                  Ux*State_VGB(iRhoIon_I,i,j,k,iBlock)
+             State_VGB(iRhoUyIon_I,i,j,k,iBlock) = &
+                  Uy*State_VGB(iRhoIon_I,i,j,k,iBlock)
+             State_VGB(iRhoUzIon_I,i,j,k,iBlock) = &
+                  Uz*State_VGB(iRhoIon_I,i,j,k,iBlock)
+          end if
+       end do; end do; end do
+    end if
+
     if(DoFreezeNeutral)then
        ! Set neutrals back to previous state
        do k=1,nK; do j=1,nJ; do i=1,nI
