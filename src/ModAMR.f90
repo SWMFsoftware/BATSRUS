@@ -167,7 +167,7 @@ contains
   !============================================================================
   subroutine prepare_amr(DoFullMessagePass, TypeAmr)
 
-    use ModMain,     ONLY: nBlockMax
+    use ModMain,     ONLY: nBlockMax, DtMax_B
     use ModAdvance,  ONLY: iTypeAdvance_BP, nVar, State_VGB
     use BATL_lib,    ONLY: &
          MaxNode, nNode, iTree_IA, Status_, Used_, Proc_, Block_, MaxBlock, &
@@ -195,6 +195,8 @@ contains
     if(DoProfileAmr) call timing_stop('amr::exchange_true')
 
     call sync_cpu_gpu('update on CPU', NameSub, State_VGB)
+    ! For GPU runs, update Dt_MaxB on CPU before AMR is needed.
+    !$acc update host(DtMax_B)
 
     if(UsePartSteady)then
        ! Convert iTypeAdvance_BP to _A ! should use _A all the time
@@ -271,6 +273,7 @@ contains
             Used_GB=Used_GB, UseHighOrderAMRIn=UseHighOrderAMR, &
             DefaultStateIn_V=DefaultState_V)
     end if
+
     if(DoProfileAmr) call timing_stop('amr::regrid_batl')
 
     ! This should be eliminated by using iTypeAdvance_A everywhere !!!
@@ -356,6 +359,8 @@ contains
     ! Send new grid info and B0 to GPU. State_VGB is done by exchange_messages.
     call sync_cpu_gpu_amr
     call sync_cpu_gpu('update on GPU', NameSub, B0_DGB=B0_DGB)
+    ! consider updating DtMax_B in sync_cpu_gpu in future
+    !$acc update device(DtMax_B)
 
     ! redo message passing
     if(DoProfileAmr) call timing_start('amr::exchange_false')

@@ -561,6 +561,13 @@ contains
        DtLocal = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
     end if
 
+#ifdef TESTACC
+    if(DoTestUpdate .and. i==iTest .and. j==jTest .and. k==kTest &
+         .and. iBlock == iBlockTest)then
+       write(*,*)'DtLocal, Dt, iStage', DtLocal, Dt, iStage
+    end if
+#endif
+
     ! Update state
     if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
     if(iStage == 1)then
@@ -643,6 +650,7 @@ contains
        write(*,*) &
             'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
             Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+       write(*,*)'DtLocal=', DtLocal
        write(*,*)'Change_V=', Change_V(iVarTest)
        write(*,*)'CellVolume=', CellVolume_GB(iTest,jTest,kTest,iBlockTest)
        write(*,*)'source=', Change_V(iVarTest) &
