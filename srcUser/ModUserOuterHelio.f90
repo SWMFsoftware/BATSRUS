@@ -2630,7 +2630,7 @@ contains
     SourcePh_V = 0.0
 
     RatePh_I = 0.0
-    
+
     State_V = State_VGB(:,i,j,k,iBlock)
     r = r_GB(i,j,k,iBlock)
 
