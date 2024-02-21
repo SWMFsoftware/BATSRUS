@@ -4189,6 +4189,98 @@ For more than one satellite (two satellites in the above given
 example), the start and end times should be set for all of them.
 </command>
 
+<command name="PARCEL" if="$_IsFirstSession">
+  <parameter name="UseParcel" type="logical" default="F"/>
+  <if expr="$UseParcel">
+    <parameter name="UseParcelTable" type="logical" default="F"/>
+    <if expr="not $UseParcelTable">
+      <parameter name="nParcel" type="integer" min="0" default="0" />
+      <for from="1" to="$nParcel">
+	<parameter name="xParcel" type="real"/>
+	<parameter name="yParcel" type="real" />
+	<parameter name="zParcel" type="real" />
+      </for>
+    </if>
+    <parameter name="StringParcel" type="string" input="select">
+      <option name="MHD variables"    value="MHD" default="T" />
+      <option name="MHD vars. scaled" value="mhd" />
+      <option name="All variables"    value="FUL" />
+      <option name="All vars. scaled" value="ful" />
+      <option name="Set variables"    value="VAR" />
+      <option name="Set vars. scaled" value="var" />
+    </parameter>
+    <parameter name="DnOutput" type="integer" default="1" />
+    <parameter name="DtOutput" type="real"    default="-1" />
+    <if expr="$DnOutput &gt; 0">
+      <parameter name="nStartParcel" type="integer" min="0" default="0" />
+      <parameter name="nEndParcel" type="integer" min="$nStartParcel" />
+    </if>
+    <if expr="$DtOutput &gt; 0">
+      <parameter name="StartTimeParcel" type="real" min="0" default="0" />
+      <parameter name="EndTimeParcel" type="real" min="$StartTimeParcel" />
+    </if>
+    <parameter name="NameParcelVars" type="string" length="$lLine"
+	       if="$StringParcel =~ /var/i" />
+  </if>
+
+#PARCEL
+T                       UseParcel ! Rest is read if true
+F                       UseParcelTable
+2                       nParcel ! if UseParcelTable=F
+0.0508514               xParcel 1
+-1.01483                yParcel 1
+-0.0888                 zParcel 1
+-0.178076               xParcel 2
+0.442199                yParcel 2
+-0.901742               zParcel 2
+VAR                     StringParcelVar
+1                       DnOutput
+-10                     DtOutput
+1                       nStartParcel !StartTimeParcel if DtOutput > 0
+4                       nEndParcel   !EndTimeParcel if DtOutput > 0
+rho ux pe o(9)          NameParcelVars ! if StringParcelVar = var/VAR
+
+The numerical solution can be extracted along one or more plasma parcel
+trajectories. The number of trajectories is defined by the
+nParcel parameter (default is 0).
+
+For each parcel the StringParcel parameter determines what
+is saved into the file(s). Possible values are
+\begin{verbatim}
+StringParcel   = mhd, ful or var (normalized units)
+                 MHD, FUL or VAR (I/O units)
+\end{verbatim}
+The capitalization of StringParcel controls whether the variables
+are written in normalized units (lower case) or I/O units (UPPER CASE).
+If StringParcel is set to var or VAR, then the list of plot variables are read
+as the last parameter.
+
+The DnOutput and DtOutput parameters determine the frequency of
+extracting values along the parcels' trajectories.
+
+The extracted information is saved into the files named
+\begin{verbatim}
+PLOTDIR/pcl_ID_TIMESTAMP.pcl
+\end{verbatim}
+where TIMESTAMP contains the time step or the iteration number
+information and ID is the ID between 1 and nParcel 
+of the file.  The pcl files have a very simple
+format:
+\begin{verbatim}
+arbitrary header line that can define for example the units
+name1 name2 name3 ... nameN
+value1 value2 value3 ... valueN
+value1 value2 value3 ... valueN
+value1 value2 value3 ... valueN
+...
+\end{verbatim}
+The number variables as well as the number of data lines are arbitrary.
+The IDL macros getlog and plotlog can be used for visualization of one
+or more logfiles.
+
+The default is UseParcel=F, i.e. no Lagrangian data is saved.
+</command>
+
 <command name="MAGPERTURBINTEGRAL">
   <parameter name="UseSurfaceIntegral" type="logical" default="F"/>
   <parameter name="UseFastFacIntegral" type="logical" default="F"/>

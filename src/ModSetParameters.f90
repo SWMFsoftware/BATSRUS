@@ -777,15 +777,15 @@ contains
                 call read_var('nParcel', nParcel)
                 nfile = max(nFile, parcel_+nParcel)
                 do iParcel = 1, nParcel
-                   call read_var('Parcel_DI(1,iParcel)', Parcel_DI(1,iParcel))
-                   call read_var('Parcel_DI(2,iParcel)', Parcel_DI(2,iParcel))
-                   call read_var('Parcel_DI(3,iParcel)', Parcel_DI(3,iParcel))
+                   call read_var('xParcel', Parcel_DI(1,iParcel))
+                   call read_var('yParcel', Parcel_DI(2,iParcel))
+                   call read_var('zParcel', Parcel_DI(3,iParcel))
                 end do
              end if
              call read_var('StringParcel', StringParcel)
-             call read_var('DnParcel', DnOutput_I(parcel_+1))
+             call read_var('DnOutput', DnOutput_I(parcel_+1))
              DnOutput_I(parcel_+1:parcel_+nParcel)=DnOutput_I(parcel_+1)
-             call read_var('DtParcel', DtOutput_I(parcel_+1))
+             call read_var('DtOutput', DtOutput_I(parcel_+1))
              DtOutput_I(parcel_+1:parcel_+nParcel)=DtOutput_I(parcel_+1)
              if(DnOutput_I(parcel_+1) > 0)then
                 call read_var('nStartParcel', nStartParcel)
@@ -812,24 +812,24 @@ contains
                      'Dt or Dn must be positive')
              endif
 
-             if(index(StringParcel,'VAR')>0 .or. &
-                  index(StringParcel,'var')>0 )then
+             if(index(StringParcel,'VAR') > 0 .or. &
+                  index(StringParcel,'var') > 0 )then
                 TypePlotVar='var'
                 IsDimensionalPlot_I(parcel_+1:parcel_+nParcel) = &
-                     index(StringParcel,'VAR')>0
+                     index(StringParcel, 'VAR') > 0
                 call read_var('NameParcelVars', StringParcelVar)
-             elseif(index(StringParcel,'MHD')>0 .or. &
-                  index(StringParcel,'mhd')>0)then
-                TypePlotVar='mhd'
+             elseif(index(StringParcel, 'MHD') > 0 .or. &
+                  index(StringParcel, 'mhd') > 0)then
+                TypePlotVar = 'mhd'
                 IsDimensionalPlot_I(parcel_+1:parcel_+nParcel) = &
-                     index(StringParcel,'MHD')>0
-                StringParcelVar=NamePrimitiveVarPlot//' jx jy jz'
-             elseif(index(StringParcel,'FUL')>0 .or. &
-                  index(StringParcel,'ful')>0)then
-                TypePlotVar='ful'
+                     index(StringParcel, 'MHD') > 0
+                StringParcelVar = NamePrimitiveVarPlot//' jx jy jz'
+             elseif(index(StringParcel, 'FUL') > 0 .or. &
+                  index(StringParcel, 'ful') > 0)then
+                TypePlotVar = 'ful'
                 IsDimensionalPlot_I(parcel_+1:parcel_+nParcel) = &
-                     index(StringParcel,'FUL')>0
-                StringParcelVar=&
+                     index(StringParcel,'FUL') > 0
+                StringParcelVar = &
                      NamePrimitiveVarPlot//' b1x b1y b1z e jx jy jz'
              else
                 call stop_mpi(&
