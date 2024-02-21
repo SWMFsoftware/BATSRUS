@@ -282,18 +282,18 @@ PHOTOEXC_6376.2900.dat		NamePhxTable
 F			UseIonFrac
 
 #PARCEL
-T                       UseParcel
-F                       UseParcelTable
-1                       nParcel
-0.0508514               xParcel
--1.01483                yParcel
--0.0888                 zParcel
-VAR                     StringParcel
-1                       DnOutput
--10                     DtOutput
-1                       nStartParcel !StartTimeParcel if Dt>0
-4                       nEndParcel   !EndTimeParcel id Dt>0
-rho ux pe o(9)          NameParcelVars
+T			UseParcel
+F			UseParcelTable
+1			nParcel
+0.0508514		xParcel
+-1.01483		yParcel
+-0.0888			zParcel
+VAR			StringParcel
+1			DnOutput
+-10			DtOutput
+1			nStartParcel !StartTimeParcel if Dt>0
+4			nEndParcel   !EndTimeParcel id Dt>0
+rho ux pe o(9)		NameParcelVars
 
 #OUTERBOUNDARY		DLambda
 user			TypeBc1   user for spherical and user_outerbcs
