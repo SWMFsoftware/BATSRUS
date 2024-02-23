@@ -35,7 +35,7 @@ module ModUpdateStateFast
        GammaElectronMinus1, GammaElectron
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
-       UseGravity
+       UseGravity, nStep
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
 #endif
