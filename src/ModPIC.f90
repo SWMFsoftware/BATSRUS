@@ -203,7 +203,8 @@ contains
        end do
 
     case("#PICREGIONMAX")
-       call read_var('StringPicRegionLimit', StringPicRegionLimit)
+       call read_var('StringPicRegionLimit', StringPicRegionLimit, &
+            IsLowerCase=.true.)
        if (StringPicRegionLimit /= 'none') then
             call get_region_indexes(StringPicRegionLimit, &
             iRegionPicLimit_I)
@@ -212,7 +213,8 @@ contains
        end if
 
     case("#PICREGIONMIN")
-       call read_var('StringPicRegion', StringPicRegion)
+       call read_var('StringPicRegion', StringPicRegion, &
+            IsLowerCase=.true.)
        if (StringPicRegion /= 'none') then
             call get_region_indexes(StringPicRegion, iRegionPic_I)
             ! if PICREGIONMIN is presented, set PICADAPT=True

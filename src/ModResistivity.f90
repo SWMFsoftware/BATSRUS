@@ -127,7 +127,8 @@ contains
     case('#RESISTIVITYSCHEME')
        call read_var('UseCentralDifference', UseCentralDifference)
     case("#RESISTIVITYREGION", "#RESISTIVEREGION")
-       call read_var('StringResistRegion', StringResistRegion)
+       call read_var('StringResistRegion', StringResistRegion, &
+            IsLowerCase=.true.)
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select

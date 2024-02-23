@@ -130,7 +130,7 @@ contains
        call read_var('HallCmaxFactor', HallCmaxFactor)
 
     case("#HALLREGION")
-       call read_var('StringHallRegion', StringHallRegion)
+       call read_var('StringHallRegion', StringHallRegion, IsLowerCase=.true.)
 
     case("#BIERMANNBATTERY")
        call read_var("UseBiermannBattery", UseBiermannBattery)

@@ -208,7 +208,8 @@ contains
        call read_var('UsePtotalLtd', UsePtotalLtd)
 
     case("#LOWORDERREGION")
-       call read_var('StringLowOrderRegion', StringLowOrderRegion)
+       call read_var('StringLowOrderRegion', StringLowOrderRegion, &
+            IsLowerCase=.true.)
        UseLowOrderRegion = .true.
     case("#ADAPTIVELOWORDER")
        call read_var('UseAdaptiveLowOrder', UseAdaptiveLowOrder)

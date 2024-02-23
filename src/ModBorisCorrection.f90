@@ -126,7 +126,8 @@ contains
        end if
 
     case("#BORISREGION")
-       call read_var('StringBorisRegion', StringBorisRegion)
+       call read_var('StringBorisRegion', StringBorisRegion, &
+            IsLowerCase=.true.)
 
     case default
        call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
