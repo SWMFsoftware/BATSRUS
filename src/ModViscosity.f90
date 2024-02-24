@@ -81,7 +81,8 @@ contains
        if(UseArtificialVisco)call read_var('AlphaVisco', AlphaVisco)
        if(UseArtificialVisco)call read_var('BetaVisco', BetaVisco)
     case('#VISCOSITYREGION')
-       call read_var('StringViscosityRegion', StringViscoRegion)
+       call read_var('StringViscosityRegion', StringViscoRegion, &
+            IsLowerCase=.true.)
     case default
        call stop_mpi(NameSub//' unknown command='//NameCommand)
     end select

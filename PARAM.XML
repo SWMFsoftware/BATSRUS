@@ -7251,7 +7251,7 @@ The default is the second order Rusanov scheme with the minmod limiter.
 
 <command name="LOWORDERREGION">
 	 <parameter name="StringLowOrderRegion" type="string" length="$lLine"
-	 	    default="none"/>
+	 	    case="lower" default="none"/>
 
 #LOWORDERREGION
 +nearbody +faraway		StringLowOrderRegion
@@ -8074,7 +8074,7 @@ Default is UseBorisSimple=.false.
 
 <command name="BORISREGION">
   <parameter name="NameBorisRegion" type="string" length="$lLine"
-	     default="none"/>
+	     case="lower" default="none"/>
 
 #BORISREGION
 +nearbody       NameBorisRegion
@@ -9314,7 +9314,7 @@ Default is no viscosity.
 
 <command name="VISCOSITYREGION">
   <parameter name="StringViscoRegion" type="string" length="$lLine"
-	     default="none"/>
+	     case="lower" default="none"/>
 
 #VISCOSITYREGION
 +magnetotail -nearbody		StringViscoRegion
@@ -9435,7 +9435,7 @@ The defaults are true for all three logicals.
 
 <command name="RESISTIVEREGION" alias="RESISTIVITYREGION">
   <parameter name="StringResistRegion" type="string" length="$lLine"
-	     default="none"/>
+	     case="lower" default="none"/>
 
 #RESISTIVEREGION
 +magnetotail -nearbody		StringResistRegion
@@ -9492,7 +9492,7 @@ Default is UseHallResist false.
 
 <command name="HALLREGION">
   <parameter name="StringHallRegion" type="string" length="$lLine"
-	     default="none"/>
+	     case="lower" default="none"/>
 
 #HALLREGION
 +magnetotail -nearbody		StringHallRegion

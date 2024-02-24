@@ -1025,8 +1025,14 @@ contains
       if(UseFlux .or. UseNbi .or. UsePhx)then
          Spectrum_I=0.
          if(UsePhx)then
-            r = interpolate_scalar(r_GB(:,:,:,iBlock), &
-                 nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+            if(present(IsThreadedGap) .or. (DoPlotThreads .and. &
+                 GenLos_D(1) < CoordMin_D(1) + 0.50*CellSize_D(1)))then
+               r = norm2(XyzBlockSign_D*XyzLos_D)
+            else
+               r = interpolate_scalar(r_GB(:,:,:,iBlock), &
+                    nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+            end if
+
             call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
                  UseNbi, Spectrum_I(:), r)
          else
