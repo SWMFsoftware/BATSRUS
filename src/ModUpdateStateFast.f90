@@ -192,6 +192,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
+    call timing_start(NameSub)
+    
 #ifndef SCALAR
     call test_start('update_state',   DoTestUpdate)
     call test_start('calc_face_flux', DoTestFlux)
@@ -316,6 +318,8 @@ contains
     if(DoTestAny)write(*,*) &
          '==========================================================='
 #endif
+    call timing_stop(NameSub)
+    
   end subroutine update_state_fast
   !============================================================================
 #ifndef SCALAR
