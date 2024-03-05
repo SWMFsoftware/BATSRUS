@@ -3604,7 +3604,7 @@ The commands in this group only work in stand alone mode.
 
 #STOP
 100			MaxIteration
-1 week			tSimulationMax [sec]
+1 week			tSimulationMax
 
 This command is only used in stand alone mode.
 

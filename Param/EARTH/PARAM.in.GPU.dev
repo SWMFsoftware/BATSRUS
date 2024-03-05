@@ -121,16 +121,16 @@ F			DoSaveRestart
 
 #MAGNETOMETERGRID
 1			nMagGridFile
-global ascii		StrGridFileOut_I
-GEO			TypeCoordGrid_I
-36			nGridLon_I
-18			nGridLat_I
-0.			GridLonMin_I
-360.			GridLonMax_I
--85.			GridLatMin_I
-85.			GridLatMax_I
--1			DnSaveMagGrid_I
-1 min			DtSaveMagGrid_I
+global ascii		StrGridFileOut
+GEO			TypeCoordGrid
+36			nGridLon
+18			nGridLat
+0.			GridLonMin
+360.			GridLonMax
+-85.			GridLatMin
+85.			GridLatMax
+-1			DnSaveMagGrid
+1 min			DtSaveMagGrid
 
 #SAVEINITIAL
 T			DoSaveInitial
