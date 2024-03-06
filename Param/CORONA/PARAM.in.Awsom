@@ -337,9 +337,6 @@ readbstrap		TypeBStrap
 11.976710014764566		bStrappingDim
 none			TypeCharge
 
-#HELIOUPDATEB0
-1.0			DtUpdateB0
-
 #STOP
 -1			MaxIteration
 8.0			tSimulationMax
@@ -348,7 +345,7 @@ none			TypeCharge
 
 ! perturb again with new TD14 CME
 #USERSWITCH
-+perturb		StringSwitch
++perturb +b0		StringSwitch
 
 #CME
 T			UseCme
@@ -367,6 +364,9 @@ cancelflux		TypeBStrap
 5.9916085277386298E+02		bQStrapFraction ! Increased to notice effect
 0.4			qDistance
 10			UChargeX
+
+#HELIOUPDATEB0
+1.0			DtUpdateB0
 
 #STOP
 -1			MaxIteration
