@@ -52,7 +52,7 @@ CHECKGRIDSIZE
 1.225			StateVar Rho
 0.0			StateVar Ux
 0.0			StateVar Uy
-0.0                     Uz
+0.0                     StateVar Uz
 0.07			StateVar Bx
 0.0			StateVar By
 0.0			StateVar Bz
@@ -63,7 +63,7 @@ CHECKGRIDSIZE
 0.0			StateVar HypE
 2.45e-3			StateVar Ppar
 2.45e-3			StateVar P
-1.225/25	StateVar   	ElRho
+1.225/25		StateVar ElRho
 0.0			StateVar ElUx
 0.0			StateVar ElUy
 0.0			StateVar ElUz
@@ -71,19 +71,19 @@ CHECKGRIDSIZE
 4.9e-4			StateVar ElP
 
 #PLASMA
-1.0                     IonMass
-1/25.0                 ElectronMass
-1.0                     IonCharge
--1.0                    ElectronCharge
-0.2                     ElectronTemperatureRatio
+1.0			IonMass
+1/25			ElectronMass
+1.0			IonCharge
+-1.0			ElectronCharge
+0.2			ElectronTemperatureRatio
 
 #LIGHTSPEED
-1.0                    cLightDim
+1.0			cLightDim
 
 #USERINPUTBEGIN -----------------
 
 #GEM
-0.1                    Apert   amplitude of perturbation
+0.1			Apert   amplitude of perturbation
 
 #STANDARDGEM
 T
@@ -108,20 +108,20 @@ F                       UseUniformPressure
 #USERINPUTEND ---------------------
 
 #OUTERBOUNDARY
-periodic		xMinBc
-periodic		xMaxBc
-reflect			yMinBc
-reflect			yMaxBc
-float			zMinBc
-float			zMaxBc
+periodic		TypeBc1
+periodic		TypeBc2
+reflect			TypeBc3
+reflect			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #ANISOTROPICPRESSURE
-T                       UseConstantTau_I
-1e-5                    TauInstabilitySi_I
-1e-5                    TauGlobalSi_I
-T                       UseConstantTau_I
-1e-5                    TauInstabilitySi_I
-1e-5                    TauGlobalSi_I
+T                       UseConstantTau
+1e-5                    TauInstabilitySi
+1e-5                    TauGlobalSi
+T                       UseConstantTau
+1e-5                    TauInstabilitySi
+1e-5                    TauGlobalSi
 
 #SCHEME
 2			nOrder
@@ -135,10 +135,10 @@ T			UseHyperbolicDivb
 0.1			HypDecay
 
 #POINTIMPLICIT
-T
-1.0
-F
-T
+T			UsePointImplicit
+1.0			BetaPointImplicit
+F			IsAsymmetric
+T			DoNormalizeCell
 
 #TIMESTEPPING
 2                       nStage
@@ -161,11 +161,11 @@ z=0 VAR idl_real8       PlotString
 -1           	        DnSavePlot
 5.0             	DtSavePlot
 0.0	        	DxSavePlot
-{mhd} absdivb
-g
+{mhd} absdivb		NameVars
+g			NamePars
 
 #STOP
--10
-700.0
+-10			MaxIteration
+700.0			tSimulationMax
 
 #END ############################################################

@@ -188,17 +188,17 @@ contains
             NameGridFileOut_I(nMagGridFile), TypeGridFileOut_I(nMagGridFile), &
             nGridMag_I(nMagGridFile))
        do iMagGridFile = 1, nMagGridFile
-          call read_var('StrGridFileOut_I', String)
-          call read_var('TypeCoordGrid_I', TypeCoordGrid_I(iMagGridFile))
-          call read_var('nGridLon_I',      nGridLon_I(iMagGridFile))
-          call read_var('nGridLat_I',      nGridLat_I(iMagGridFile))
-          call read_var('GridLonMin_I',    GridLonMin_I(iMagGridFile))
-          call read_var('GridLonMax_I',    GridLonMax_I(iMagGridFile))
-          call read_var('GridLatMin_I',    GridLatMin_I(iMagGridFile))
-          call read_var('GridLatMax_I',    GridLatMax_I(iMagGridFile))
-          call read_var('DnSaveMagGrid_I', &
+          call read_var('StrGridFileOut', String)
+          call read_var('TypeCoordGrid', TypeCoordGrid_I(iMagGridFile))
+          call read_var('nGridLon',      nGridLon_I(iMagGridFile))
+          call read_var('nGridLat',      nGridLat_I(iMagGridFile))
+          call read_var('GridLonMin',    GridLonMin_I(iMagGridFile))
+          call read_var('GridLonMax',    GridLonMax_I(iMagGridFile))
+          call read_var('GridLatMin',    GridLatMin_I(iMagGridFile))
+          call read_var('GridLatMax',    GridLatMax_I(iMagGridFile))
+          call read_var('DnSaveMagGrid', &
                DnOutput_I(maggridfile_+iMagGridFile-1))
-          call read_var('DtSaveMagGrid_I', &
+          call read_var('DtSaveMagGrid', &
                DtOutput_I(maggridfile_+iMagGridFile-1))
           ! get the name of the plot and the type
           call split_string(String, String_I, n)

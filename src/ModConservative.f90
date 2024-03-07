@@ -129,11 +129,11 @@ contains
              case default
                 if(UseStrict)then
                    call stop_mpi(NameSub//&
-                        ' ERROR: unknown TypeConservCrit_I=' &
+                        ' ERROR: unknown TypeConservCrit=' &
                         //TypeConservCrit_I(i))
                 else
                    if(iProc==0)write(*,'(a)') NameSub // &
-                        ' WARNING: ignoring unknown TypeConservCrit_I=',&
+                        ' WARNING: ignoring unknown TypeConservCrit=',&
                         trim(TypeConservCrit_I(i))//' !!!'
                 end if
              end select
