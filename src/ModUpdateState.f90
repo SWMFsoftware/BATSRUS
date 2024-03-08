@@ -184,7 +184,7 @@ contains
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
     use ModPhysics, ONLY: &
          GammaMinus1, InvGammaMinus1, GammaMinus1_I, &
-         GammaElectronMinus1, InvGammaElectronMinus1, &
+         GammaElectronMinus1, InvGammaElectronMinus1, GammaElectron, &
          ShockLeft_V, ShockRight_V, RhoMin_I
     use ModSemiImplVar, ONLY: UseStableImplicit
     use ModVarIndexes, ONLY: Pe_, p_
@@ -219,7 +219,8 @@ contains
     ! These variables have to be double precision for accurate Boris scheme
     real:: DtLocal, DtFactor, SourceIonEnergy_I(nIonFluid)
     real:: Coeff1, Coeff2, b_D(3), FullB2, FullB
-
+    real:: Ne
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
     !--------------------------------------------------------------------------
@@ -295,9 +296,12 @@ contains
     ! S(Se) = S(Pe)/rho^(gammaE-1)
     if(UseElectronPressure .and. UseElectronEntropy)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          Source_VC(Se_,i,j,k) = Source_VC(Pe_,i,j,k) &
-               *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
-               **(-GammaElectronMinus1)
+          Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
+          Source_VC(Se_,i,j,k) = &
+               Source_VC(Pe_,i,j,k)*Ne**(-GammaElectronMinus1) &
+               - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock) &
+               *Ne**(-GammaElectron) &
+               *sum(ChargePerMass_I*Source_VC(iRhoIon_I,i,j,k))
        end do; end do; end do
     end if
 
