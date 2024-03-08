@@ -283,7 +283,7 @@ contains
              Source_VC(iPparIon_I,i,j,k) = Coeff2*Source_VC(iPparIon_I,i,j,k) &
                   -2*State_VGB(iPparIon_I,i,j,k,iBlock)*FullB2 &
                   /State_VGB(iRhoIon_I,i,j,k,iBlock)**3 &
-                  *Source_VC(iRho_I,i,j,k)
+                  *Source_VC(iRhoIon_I,i,j,k)
           end do; end do; end do
        else
           ! Modify pressure source term to entropy source term
