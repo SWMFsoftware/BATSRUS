@@ -220,7 +220,7 @@ contains
     real:: DtLocal, DtFactor, SourceIonEnergy_I(nIonFluid)
     real:: Coeff1, Coeff2, b_D(3), FullB2, FullB
     real:: Ne
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
     !--------------------------------------------------------------------------
