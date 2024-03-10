@@ -4502,6 +4502,7 @@ region, and the format can be 'ascii' (text file), 'tec' (Tecplot text file),
 'real4' (single precision binary) or 'real8' (double precision binary).
 The coordinate system of the grid (not the output) can be set to GEO
 (geographic), MAG (geomagnetic) or SMG (solar magnetic) coordinates.
+The region name can be any user specified string, e.g., usa, europe, global, etc.
 
 The number of grid points in the longitude and latitude directions is
 given by nGridLon and nGridLat, respectively.  The longitudes
