@@ -4444,7 +4444,7 @@ Default is no magnetic perturbation calculation.
 <command name="MAGNETOMETERGRID">
   <parameter name="nMagGridFile" type="integer" default="2"/>
   <for from="1" to="$nMagGridFile">
-    <parameter name="StrGridFileOut" type="string" input="select">
+    <parameter name="StrGridFileOut" type="strings" min="2" max="2" input="select">
       <option name="global ascii" default="T"/>
       <option name="global tec"/>
       <option name="global real4"/>
