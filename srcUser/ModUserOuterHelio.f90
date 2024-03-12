@@ -75,6 +75,7 @@ module ModUser
   ! Needed for coupling with PT through the C wrapper
   public:: get_collision
   public:: get_region
+  public:: get_lat_dep_sw
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserFile = "ModUserOuterHelio.f90"
@@ -1011,90 +1012,53 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
-    !==========================================================================
+
+
     subroutine calc_time_dep_sw(i,j,k,iBlock)
 
       ! Time dependent solar wind from a lookup table
 
       use BATL_lib,       ONLY: Xyz_DGB
       use ModCoordTransform, ONLY: rot_xyz_sph
-      use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
-           get_lookup_table
 
       integer,intent(in):: i, j, k, iBlock
 
       ! variables for Solar Cycle
-      real :: Rho, Ur, Temp, p, x, y, z, r, Latitude
+      real :: Rho, Ur, Temp, p, x, y, z, r
       real :: Bsph_D(3), Vsph_D(3)
       ! merav
       real :: v_D(3),vPUI_D(3), vPUISph_D(3)
       real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD,Sph_D)
-
-      real :: TimeCycle ! holds the time [s] from the start time of run
-      real :: Value_I(3)
       real :: SinTheta
-      real :: IndexMax_I(2)
+
       !------------------------------------------------------------------------
-      if(iTableSolarWind < 0)then
-         iTableSolarWind = i_lookup_table('solarwind2d')
-         if(iTableSolarWind < 0) call CON_stop(NameSub// &
-              ' : could not find lookup table solarwind2d.')
-      end if
 
       x = Xyz_DGB(1,i,j,k,iBlock)
       y = Xyz_DGB(2,i,j,k,iBlock)
       z = Xyz_DGB(3,i,j,k,iBlock)
-      r = r_GB(i,j,k,iBlock)
+
+
+      
+      call get_lat_dep_sw(x,y,z,Rho,Ur,Temp,Bsph_D)
+
+      p = 2.0*Rho*Temp
+      
 
       XyzSph_DD = rot_xyz_sph(x,y,z)
 
-      ! calculate the latitude of the cell
-      SinTheta = sqrt(x**2+y**2)/r
-
-      ! calculating latitude of the cell
-      Latitude = cRadToDeg*asin(z/r)
-
-      ! calculating time relative to the solar cycle
-      call get_lookup_table(iTableSolarWind,IndexMax_I=IndexMax_I)
-      TimeCycle = modulo(tSimulation + (Offset*cSecondPerYear) , IndexMax_I(2))
-
-      ! interpolating the value of Rho, Vr, and Temp
-      ! at the cell from the lookup table
-      call interpolate_lookup_table(iTableSolarWind, Latitude, TimeCycle, &
-           Value_I)
-
-      Ur  = Value_I(1)*Io2No_V(UnitU_)
-      Rho = Value_I(2)*Io2No_V(UnitRho_)
-      Temp= Value_I(3)*Io2No_V(UnitTemperature_)
-      p = 2.0*Rho*Temp
-
+      
       ! Spherical velocity, Vr, Vtheta, Vphi constant with  radial distance
       Vsph_D    = [ Ur, 0.0, 0.0 ]
 
-      ! monopole with By negative and a time varying B
-      ! time-dependent behavior of B taken from Michael et al. 2015
-      Bsph_D(1) = (sqrt(0.5)/rBody**2)*(9.27638+ &
-           7.60832d-8*TimeCycle-1.91555*sin(1.28737d-8*TimeCycle)+ &
-           0.144184*sin(2.22823d-8*TimeCycle)+ &
-           47.7758*sin(2.18788d-10*TimeCycle)+ &
-           83.5522*sin(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_) ! Br
-      Bsph_D(2) =  0.0                             ! Btheta
-      Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt*SwhUx/Ur ! Bphi for vary B
-
-      ! Scale density, pressure, and magnetic field with radial distance
-      Rho       = Rho*(rBody/r)**2
-      p         = p*(rBody/r)**(2*Gamma)
-      Bsph_D(1) = Bsph_D(1)*(rBody/r)**2
-      Bsph_D(3) = Bsph_D(3)*(rBody/r)
+      ! momentum
+      v_D = matmul(XyzSph_DD, Vsph_D)
+      State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = Rho*v_D
 
       ! Spherical magnetic field converted to Cartesian components
       State_VGB(Bx_:Bz_,i,j,k,iBlock) = matmul(XyzSph_DD, Bsph_D)
 
       ! density
       State_VGB(SWHRho_,i,j,k,iBlock) = Rho
-      ! momentum
-      v_D = matmul(XyzSph_DD, Vsph_D)
-      State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = Rho*v_D
       ! pressures
       if(UseElectronPressure)then
          State_VGB(SWHP_,i,j,k,iBlock) = 0.5*p
@@ -3346,6 +3310,76 @@ contains
 
   end subroutine user_init_session
   !============================================================================
+
+  subroutine get_lat_dep_sw(x,y,z,Rho,Ur,Temp,Bsph_D)
+
+    use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
+         get_lookup_table
+
+      
+    real, intent(in):: x     ! X position to sample
+    real, intent(in):: y     ! Y position to sample
+    real, intent(in):: z     ! Z position to sample
+    real, intent(out):: Rho  ! Rho at X,Y,Z according to table
+    real, intent(out):: Ur   ! Radial U at X,Y,Z according to table
+    real, intent(out):: Temp ! Temp at X,Y,Z according to table
+    real, intent(out):: Bsph_D(3)   ! B at X,Y,Z according to table
+
+    real ::  Latitude, SinTheta, TimeCycle
+    
+    real :: IndexMax_I(2)
+    real :: Value_I(3)
+    real :: r
+    character(len=*), parameter:: NameSub = 'get_lat_dep_sw'
+    
+    r = sqrt(x**2 + y**2 + z**2)
+
+
+    ! calculating latitude of the cell
+    Latitude = cRadToDeg*asin(z/r)
+    
+    ! calculate the latitude of the cell
+    SinTheta = sqrt(x**2+y**2)/r
+
+    if(iTableSolarWind < 0)then
+       iTableSolarWind = i_lookup_table('solarwind2d')
+       if(iTableSolarWind < 0) call CON_stop(NameSub// &
+            ' : could not find lookup table solarwind2d.')
+    end if
+            
+    ! calculating time relative to the solar cycle
+    call get_lookup_table(iTableSolarWind,IndexMax_I=IndexMax_I)
+
+    TimeCycle = modulo(tSimulation + (Offset*cSecondPerYear) , IndexMax_I(2))
+
+    ! interpolating the value of Rho, Vr, and Temp
+    ! at the cell from the lookup table
+    call interpolate_lookup_table(iTableSolarWind, Latitude, TimeCycle, &
+         Value_I)
+
+    Ur  = Value_I(1)*Io2No_V(UnitU_)
+    Rho = Value_I(2)*Io2No_V(UnitRho_)
+    Temp= Value_I(3)*Io2No_V(UnitTemperature_)
+
+    ! monopole with By negative and a time varying B
+    ! time-dependent behavior of B taken from Michael et al. 2015
+    Bsph_D(1) = (sqrt(0.5)/rBody**2)*(9.27638+ &
+         7.60832d-8*TimeCycle-1.91555*sin(1.28737d-8*TimeCycle)+ &
+         0.144184*sin(2.22823d-8*TimeCycle)+ &
+         47.7758*sin(2.18788d-10*TimeCycle)+ &
+         83.5522*sin(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_) ! Br
+    Bsph_D(2) =  0.0                             ! Btheta
+    Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt*SwhUx/Ur ! Bphi for vary B
+
+    ! Scale density, pressure, and magnetic field with radial distance
+    Rho       = Rho*(rBody/r)**2
+    Temp      = Temp*(rBody/r)**(2*Gamma-2)
+    Bsph_D(1) = Bsph_D(1)*(rBody/r)**2
+    Bsph_D(3) = Bsph_D(3)*(rBody/r)
+
+      
+  end subroutine get_lat_dep_sw
+
   subroutine get_collision( iTypeCollision, &
        NumDensA, Cs2A, uA_D, NumDensB, Cs2B, uB_D, &
        SourceA_V, SourceB_V)
@@ -3672,3 +3706,29 @@ subroutine get_charge_exchange_region( &
 
 end subroutine get_charge_exchange_region
 !==============================================================================
+    
+  
+      
+
+  
+!==============================================================================
+subroutine get_lat_dep_sw_wrapper( &
+     x,y,z,Rho,Ur,Temp,Bsph_D) &
+     bind(c, name='get_lat_dep_sw_wrapper')
+
+  ! C wrapper for coupling with AMPS
+
+  use ModUser, ONLY: get_lat_dep_sw
+
+  real, intent(in):: x   ! fluid A bulk velocity
+  real, intent(in):: y  ! fluid B number density
+  real, intent(in):: z      ! fluid B thermal speed squared
+  real, intent(out):: Rho ! mass,momentum,energy sources for fluid A
+  real, intent(out):: Ur ! mass,momentum,energy sources for fluid A
+  real, intent(out):: Temp ! mass,momentum,energy sources for fluid A
+  real, intent(out):: Bsph_D(3)
+
+  !----------------------------------------------------------------------------
+  call get_lat_dep_sw(x,y,z,Rho,Ur,Temp,Bsph_D)
+  
+end subroutine get_lat_dep_sw_wrapper
