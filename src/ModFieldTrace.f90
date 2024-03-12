@@ -381,7 +381,7 @@ contains
     use ModPhysics,  ONLY: DipoleStrengthSi
     use ModAdvance,  ONLY: UseElectronPressure
     use ModMain,     ONLY: DoMultiFluidIMCoupling
-    use ModGeometry, ONLY: xMinBox
+    use ModGeometry, ONLY: xMinBox, RadiusMin
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_field_trace'
@@ -400,8 +400,8 @@ contains
     end if
 
     if(rTrace == 0.0)then
-       if(rBody > 0.0)then
-          rTrace = max(rBody, rIonosphere)
+       if(rBody > 0.0 .or. RadiusMin > 0.0)then
+          rTrace = max(rBody, rIonosphere, RadiusMin)
        else
           rTrace = -1.0
        end if
@@ -3871,7 +3871,7 @@ contains
     call message_pass_cell(3, b_DGB)
 
     ! Fixed radial distance
-    rLonLat_D(1) = 1.0
+    rLonLat_D(1) = rTrace
     CpuTimeStartRay = MPI_WTIME()
     do iLon = 1, nLon
        ! Longitude
