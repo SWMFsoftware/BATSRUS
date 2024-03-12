@@ -1012,7 +1012,7 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
-
+    !==========================================================================
 
     subroutine calc_time_dep_sw(i,j,k,iBlock)
 
@@ -1032,21 +1032,16 @@ contains
       real :: SinTheta
 
       !------------------------------------------------------------------------
-
       x = Xyz_DGB(1,i,j,k,iBlock)
       y = Xyz_DGB(2,i,j,k,iBlock)
       z = Xyz_DGB(3,i,j,k,iBlock)
 
-
-      
       call get_lat_dep_sw(x,y,z,Rho,Ur,Temp,Bsph_D)
 
       p = 2.0*Rho*Temp
-      
 
       XyzSph_DD = rot_xyz_sph(x,y,z)
 
-      
       ! Spherical velocity, Vr, Vtheta, Vphi constant with  radial distance
       Vsph_D    = [ Ur, 0.0, 0.0 ]
 
@@ -3316,7 +3311,6 @@ contains
     use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
          get_lookup_table
 
-      
     real, intent(in):: x     ! X position to sample
     real, intent(in):: y     ! Y position to sample
     real, intent(in):: z     ! Z position to sample
@@ -3326,18 +3320,18 @@ contains
     real, intent(out):: Bsph_D(3)   ! B at X,Y,Z according to table
 
     real ::  Latitude, SinTheta, TimeCycle
-    
+
     real :: IndexMax_I(2)
     real :: Value_I(3)
     real :: r
-    character(len=*), parameter:: NameSub = 'get_lat_dep_sw'
-    
-    r = sqrt(x**2 + y**2 + z**2)
 
+    character(len=*), parameter:: NameSub = 'get_lat_dep_sw'
+    !--------------------------------------------------------------------------
+    r = sqrt(x**2 + y**2 + z**2)
 
     ! calculating latitude of the cell
     Latitude = cRadToDeg*asin(z/r)
-    
+
     ! calculate the latitude of the cell
     SinTheta = sqrt(x**2+y**2)/r
 
@@ -3346,7 +3340,7 @@ contains
        if(iTableSolarWind < 0) call CON_stop(NameSub// &
             ' : could not find lookup table solarwind2d.')
     end if
-            
+
     ! calculating time relative to the solar cycle
     call get_lookup_table(iTableSolarWind,IndexMax_I=IndexMax_I)
 
@@ -3377,8 +3371,8 @@ contains
     Bsph_D(1) = Bsph_D(1)*(rBody/r)**2
     Bsph_D(3) = Bsph_D(3)*(rBody/r)
 
-      
   end subroutine get_lat_dep_sw
+  !============================================================================
 
   subroutine get_collision( iTypeCollision, &
        NumDensA, Cs2A, uA_D, NumDensB, Cs2B, uB_D, &
@@ -3706,12 +3700,7 @@ subroutine get_charge_exchange_region( &
 
 end subroutine get_charge_exchange_region
 !==============================================================================
-    
-  
-      
 
-  
-!==============================================================================
 subroutine get_lat_dep_sw_wrapper( &
      x,y,z,Rho,Ur,Temp,Bsph_D) &
      bind(c, name='get_lat_dep_sw_wrapper')
@@ -3730,5 +3719,6 @@ subroutine get_lat_dep_sw_wrapper( &
 
   !----------------------------------------------------------------------------
   call get_lat_dep_sw(x,y,z,Rho,Ur,Temp,Bsph_D)
-  
+
 end subroutine get_lat_dep_sw_wrapper
+!==============================================================================

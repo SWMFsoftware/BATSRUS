@@ -49,7 +49,6 @@ module ModFaceBoundary
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
 
-
 contains
   !============================================================================
   subroutine read_face_boundary_param(NameCommand)
