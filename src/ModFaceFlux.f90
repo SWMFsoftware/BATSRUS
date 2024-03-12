@@ -1906,7 +1906,7 @@ contains
     subroutine get_hd_flux
 
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
-      use ModPhysics, ONLY: InvGammaMinus1_I
+      use ModPhysics, ONLY: InvGammaMinus1_I, GammaMinus1_I
       use ModMultiFluid, ONLY: iPpar
       use ModTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD, PoyntingFluxPerB
@@ -2034,7 +2034,7 @@ contains
          end if
       elseif(UseEntropy)then
          ! s = p*rho^(g-1)
-         StateCons_V(iP) = p*Rho**(-GammaMinus1)
+         StateCons_V(iP) = p*Rho**(-GammaMinus1_I(iFluid))
          ! u_i * s
          Flux_V(iP)  = Un*StateCons_V(iP)
       else
