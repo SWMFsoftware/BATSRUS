@@ -388,13 +388,14 @@ contains
 
     use ModMain, ONLY: iNewGrid, iNewDecomposition, TauCoupleIm, &
          IsTimeAccurate, Dt, RhoMinDimIm
-    use ModAdvance, ONLY: State_VGB
-    use ModVarIndexes, ONLY: Ppar_
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure
+    use ModVarIndexes, ONLY: Ppar_, Pe_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModFieldTraceFast, ONLY: trace_field_grid, Trace_DSNB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
+    use ModFaceBoundary, ONLY: RatioPe2P
 
     real :: Factor
 
@@ -497,12 +498,21 @@ contains
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 do iFluid = 1, nFluid! nIons
                    if (.not. IsImP_I(iFluid)) CYCLE
-                   if(pIm_ICB(iFluid,i,j,k,iBlock) > 0.0) &
+                   if(pIm_ICB(iFluid,i,j,k,iBlock) > 0.0) then
                         State_VGB(iP_I(iFluid),i,j,k,iBlock) = &
                         State_VGB(iP_I(iFluid),i,j,k,iBlock)   &
                         + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
                         * (pIm_ICB(iFluid,i,j,k,iBlock) - &
                         State_VGB(iP_I(iFluid),i,j,k,iBlock))
+                        ! if solving electron pressure/entropy equation
+                        ! applying RCM Pe (a ratio of Pi)
+                        if(UseElectronPressure .and. iFluid == 1)&
+                             State_VGB(Pe_,i,j,k,iBlock) = &
+                             State_VGB(Pe_,i,j,k,iBlock)   &
+                             + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
+                             * (RatioPe2P * pIm_ICB(iFluid,i,j,k,iBlock) - &
+                             State_VGB(Pe_,i,j,k,iBlock))
+                   end if
                 end do
              end do; end do; end do
 
@@ -545,11 +555,19 @@ contains
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 do iFluid = 1, nFluid! nIons
                    if (.not. IsImP_I(iFluid)) CYCLE
-                   if(pIm_ICB(iFluid,i,j,k,iBlock) > 0.0) &
-                        State_VGB(iP_I(iFluid),i,j,k,iBlock) = Factor* &
-                        (TauCoupleIM &
-                        *State_VGB(iP_I(iFluid),i,j,k,iBlock)+&
-                        pIm_ICB(iFluid,i,j,k,iBlock))
+                   if(pIm_ICB(iFluid,i,j,k,iBlock) > 0.0) then
+                      State_VGB(iP_I(iFluid),i,j,k,iBlock) = Factor* &
+                      (TauCoupleIM &
+                      *State_VGB(iP_I(iFluid),i,j,k,iBlock)+&
+                      pIm_ICB(iFluid,i,j,k,iBlock))
+                      ! if solving electron pressure/entropy equation
+                      ! applying RCM Pe (a ratio of Pi)
+                      if(UseElectronPressure .and. iFluid == 1) &
+                           State_VGB(Pe_,i,j,k,iBlock) = Factor* &
+                           (TauCoupleIM &
+                           *State_VGB(Pe_,i,j,k,iBlock)+&
+                           RatioPe2P*pIm_ICB(iFluid,i,j,k,iBlock))
+                   end if
                 end do
              end do; end do; end do
 
