@@ -2731,6 +2731,9 @@ contains
   subroutine calc_electron_impact_source( &
        i,j,k,iBlock,Rho_I,U_DI,U2_I,UThS_I,SourceImp_V)
 
+    use ModTurbulence, ONLY: KarmanTaylorBeta2AlphaRatio
+    use ModWaves,      ONLY: UseAlfvenWaves
+
     ! Calculate the electron impact source terms for one cell.
     ! Requires a separate electron pressure
 
@@ -2741,12 +2744,14 @@ contains
 
     integer :: iFluid
     real, dimension(Neu_:Ne4_):: SrcImpRho_I, SrcImpRhoUx_I, &
-         SrcImpRhoUy_I, SrcImpRhoUz_I, SrcImpEnergy_I
+         SrcImpRhoUy_I, SrcImpRhoUz_I, SrcImpEnergy_I, URelS_I
     real :: uSi_DI(3,nFluid)
     real :: State_V(nVar)
     real :: RhoEl, NumDensEl, UthSElSi, RhoIonTot, NumDensElSi
     real :: UIonMean_D(3), UEl_D(3), UElSi_D(3), Current_D(3)
     real :: SrcImp_II(Neu_:Ne4_,5)
+
+    real :: AlfvenSpeed, SourceTurbulence
 
     ! Requires a separate electron pressure
     character(len=*), parameter:: NameSub = 'calc_electron_impact_source'
@@ -2875,6 +2880,38 @@ contains
                   - SrcImpRhoUz_I(Ne3_)
              SourceImp_V(Pu3Energy_) = sum(SrcImpEnergy_I) &
                   - SrcImpEnergy_I(Ne3_)
+
+             if(UseAlfvenWaves)then
+                URelS_I = 0
+                where(UseSource_I(Neu_:)) &
+                     URelS_I = (U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
+                     + (U_DI(y_,Neu_:) - U_DI(y_,Ion_))**2 &
+                     + (U_DI(z_,Neu_:) - U_DI(z_,Ion_))**2
+
+                AlfvenSpeed = sqrt(sum(State_V(Bx_:Bz_)**2)/State_V(Rho_))
+
+                SourceTurbulence = 0.5*TurbulencePerPu3Source*AlfvenSpeed*( &
+                     SrcImpRho_I(Neu_)*sqrt(URelS_I(Neu_)) + &
+                     SrcImpRho_I(Ne2_)*sqrt(URelS_I(Ne2_)) + &
+                     SrcImpRho_I(Ne4_)*sqrt(URelS_I(Ne4_)) )
+
+                SourceImp_V(Pu3Energy_) = SourceImp_V(Pu3Energy_) &
+                     - SourceTurbulence
+                SourceImp_V(WaveFirst_:WaveLast_) = 0.5*SourceTurbulence
+
+                if(Lperp_ > 1) SourceImp_V(Lperp_) = &
+                     -KarmanTaylorBeta2AlphaRatio &
+                     *State_V(Lperp_)*SourceTurbulence &
+                     /max(1e-30,sum(State_V(WaveFirst_:WaveLast_)))
+
+                ! PUI-turbulence sinks for L_- and L_+ only
+                if(LcorrFirst_ > 1) &
+                     SourceImp_V(LcorrFirst_:LcorrFirst_+nWave-1) = &
+                     -KarmanTaylorBeta2AlphaRatio &
+                     *State_V(LcorrFirst_:LcorrFirst_+nWave-1) &
+                     *0.5*SourceTurbulence &
+                     /max(1e-30,State_V(WaveFirst_:WaveLast_))
+             end if
 
              SourceImp_V(Pu3P_) = GammaMinus1*( SourceImp_V(Pu3Energy_) &
                   - sum(U_DI(:,Pu3_)*SourceImp_V(Pu3RhoUx_:Pu3RhoUz_)) &
