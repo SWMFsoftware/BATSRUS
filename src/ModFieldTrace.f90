@@ -3880,11 +3880,11 @@ contains
           ! Latitude
           rLonLat_D(3) = iLat*dLat - cHalfPi
 
-          ! Convert to SMG coordinates on the surface of the ionosphere
+          ! Convert to Cartesian coordinates
           call rlonlat_to_xyz(rLonLat_D, Xyz_D)
 
+          ! Set iRay=1 for the field pointing outward
           call get_b0(Xyz_D, b0_D)
-
           if(sum(Xyz_D*b0_D) > 0)then
              iRay = 1
           else
