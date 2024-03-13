@@ -35,6 +35,12 @@ module ModFaceBoundary
   logical, public:: UseYoungBc = .false.
   real,    public:: F107Young  = 150.0
 
+  ! The lower bound of pe/p at inner boundary when the electron
+  ! pressure equation is used.
+  ! The default 1.0 / 7.8 is an empirical value from RCM, this value
+  ! is also used in ModImCoupling to change the electron pressure
+  real,    public :: RatioPe2P = 1.0 / 7.8
+
   ! Local variables
 
   ! Values for configuring empirical ionospheric outflow boundary conditions:
@@ -42,10 +48,6 @@ module ModFaceBoundary
 
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
-
-  ! The lower bound of pe/p at inner boundary when the electron
-  ! pressure equation is used.
-  real :: RatioPe2P = 0
 
 contains
   !============================================================================

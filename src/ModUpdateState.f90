@@ -218,7 +218,7 @@ contains
 
     ! These variables have to be double precision for accurate Boris scheme
     real:: DtLocal, DtFactor, SourceIonEnergy_I(nIonFluid)
-    real:: Coeff1, Coeff2, b_D(3), FullB2, FullB
+    real:: Coeff1, b_D(3), FullB2, FullB
     real:: Ne
 
     logical:: DoTest
@@ -279,11 +279,13 @@ contains
                   (3*Source_VC(iPIon_I,i,j,k) - Source_VC(iPparIon_I,i,j,k))
 
              ! Source(Spar) = Source(Ppar)*(B^2/rho^2)
-             Coeff2 = FullB2/State_VGB(Rho_,i,j,k,iBlock)**2
-             Source_VC(iPparIon_I,i,j,k) = Coeff2*Source_VC(iPparIon_I,i,j,k) &
-                  -2*State_VGB(iPparIon_I,i,j,k,iBlock)*FullB2 &
-                  /State_VGB(iRhoIon_I,i,j,k,iBlock)**3 &
-                  *Source_VC(iRhoIon_I,i,j,k)
+             !                - 2*Ppar*B^2/rho^3*Source(rho)
+             Source_VC(iPparIon_I,i,j,k) = &
+                  FullB2/State_VGB(iRhoIon_I,i,j,k,iBlock)**2 &
+                  *( Source_VC(iPparIon_I,i,j,k) &
+                  - 2*State_VGB(iPparIon_I,i,j,k,iBlock) &
+                  /State_VGB(iRhoIon_I,i,j,k,iBlock) &
+                  *Source_VC(iRhoIon_I,i,j,k) )
           end do; end do; end do
        else
           ! Modify pressure source term to entropy source term
@@ -521,9 +523,9 @@ contains
                end if
 
                ! Spar = Ppar*(B^2/rho^2)
-               Coeff2 = FullB2/StateOld_VGB(Rho_,i,j,k,iBlock)**2
                StateOld_VGB(iPparIon_I,i,j,k,iBlock) = &
-                    Coeff2*StateOld_VGB(iPparIon_I,i,j,k,iBlock)
+                    FullB2/StateOld_VGB(iRhoIon_I,i,j,k,iBlock)**2 &
+                    *StateOld_VGB(iPparIon_I,i,j,k,iBlock)
 
                ! State_VGB is not used in 1-stage and HalfStep schemes
                if(.not.UseHalfStep .and. nStage > 1) then
@@ -543,9 +545,9 @@ contains
                           -          State_VGB(pPar_,i,j,k,iBlock))
                   end if
                   ! Spar = Ppar*(B^2/rho^2)
-                  Coeff2 = FullB2/State_VGB(Rho_,i,j,k,iBlock)**2
                   State_VGB(iPparIon_I,i,j,k,iBlock) = &
-                       Coeff2*State_VGB(iPparIon_I,i,j,k,iBlock)
+                       FullB2/State_VGB(iRhoIon_I,i,j,k,iBlock)**2 &
+                       *State_VGB(iPparIon_I,i,j,k,iBlock)
                end if
                if(UseAnisoShockHeating)then
                   ! Store updated perpendicular entropy
@@ -794,9 +796,9 @@ contains
                FullB  = sqrt(FullB2)
                ! Convert parallel and perpendicular entropies back to pressures
                ! Ppar = Spar*(rho^2/B^2)
-               Coeff1 = StateOld_VGB(Rho_,i,j,k,iBlock)**2/FullB2
                StateOld_VGB(iPparIon_I,i,j,k,iBlock) = &
-                    Coeff1*StateOld_VGB(iPparIon_I,i,j,k,iBlock)
+                    StateOld_VGB(iRhoIon_I,i,j,k,iBlock)**2/FullB2 &
+                    *StateOld_VGB(iPparIon_I,i,j,k,iBlock)
 
                ! P = (Ppar + 2*Sperp*B)/3
                if(UseNonConservative) &
@@ -808,9 +810,9 @@ contains
                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                FullB2 = max(1e-30, sum(b_D**2))
                FullB  = sqrt(FullB2)
-               Coeff1 = State_VGB(Rho_,i,j,k,iBlock)**2/FullB2
                State_VGB(iPparIon_I,i,j,k,iBlock) = &
-                    Coeff1*State_VGB(iPparIon_I,i,j,k,iBlock)
+                    State_VGB(iRhoIon_I,i,j,k,iBlock)**2/FullB2 &
+                    *State_VGB(iPparIon_I,i,j,k,iBlock)
                ! P = (Ppar + 2*Sperp*B)/3
                if(UseNonConservative)then
                   if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
