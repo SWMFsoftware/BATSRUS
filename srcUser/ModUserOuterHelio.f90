@@ -3747,7 +3747,7 @@ subroutine get_solar_wind(x,y,z,NumDen,Ur,Temp,B_D) &
   use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitX_, UnitN_, UnitU_, &
        UnitTemperature_, UnitB_
 
-  real, intent(in)::  x, y, z    ! Position in SI unit. [m]    
+  real, intent(in)::  x, y, z    ! Position in SI unit. [m]
   real, intent(out):: NumDen    ! Solar wind density [#/m^3]
   real, intent(out):: Ur        ! Solar wind speed [m/s]
   real, intent(out):: Temp      ! Solar wind temperature [K]
@@ -3759,8 +3759,8 @@ subroutine get_solar_wind(x,y,z,NumDen,Ur,Temp,B_D) &
   x0 = x * Si2No_V(UnitX_)
   y0 = y * Si2No_V(UnitX_)
   z0 = z * Si2No_V(UnitX_)
-  
-  call get_lat_dep_sw(x0,y0,z0,NumDen,Ur,Temp,B_D)    
+
+  call get_lat_dep_sw(x0,y0,z0,NumDen,Ur,Temp,B_D)
 
   ! Convert to SI units
   NumDen  = NumDen * No2Si_V(UnitN_)
