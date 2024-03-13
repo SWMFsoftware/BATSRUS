@@ -3701,24 +3701,35 @@ subroutine get_charge_exchange_region( &
 end subroutine get_charge_exchange_region
 !==============================================================================
 
-subroutine get_lat_dep_sw_wrapper( &
-     x,y,z,Rho,Ur,Temp,Bsph_D) &
-     bind(c, name='get_lat_dep_sw_wrapper')
+subroutine get_solar_wind(x,y,z,NumDen,Ur,Temp,B_D) &
+     bind(c, name='get_solar_wind')
 
   ! C wrapper for coupling with AMPS
 
   use ModUser, ONLY: get_lat_dep_sw
+  use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitX_, UnitN_, UnitU_, &
+       UnitTemperature_, UnitB_
 
-  real, intent(in):: x   ! fluid A bulk velocity
-  real, intent(in):: y  ! fluid B number density
-  real, intent(in):: z      ! fluid B thermal speed squared
-  real, intent(out):: Rho ! mass,momentum,energy sources for fluid A
-  real, intent(out):: Ur ! mass,momentum,energy sources for fluid A
-  real, intent(out):: Temp ! mass,momentum,energy sources for fluid A
-  real, intent(out):: Bsph_D(3)
+  real, intent(in)::  x, y, z    ! Position in SI unit. [m]    
+  real, intent(out):: NumDen    ! Solar wind density [#/m^3]
+  real, intent(out):: Ur        ! Solar wind speed [m/s]
+  real, intent(out):: Temp      ! Solar wind temperature [K]
+  real, intent(out):: B_D(3)    ! Solar wind B field [T]
 
+  real :: x0, y0, z0
   !----------------------------------------------------------------------------
-  call get_lat_dep_sw(x,y,z,Rho,Ur,Temp,Bsph_D)
+  ! Convert from SI to normalized units
+  x0 = x * Si2No_V(UnitX_)
+  y0 = y * Si2No_V(UnitX_)
+  z0 = z * Si2No_V(UnitX_)
+  
+  call get_lat_dep_sw(x0,y0,z0,NumDen,Ur,Temp,B_D)    
 
-end subroutine get_lat_dep_sw_wrapper
+  ! Convert to SI units
+  NumDen  = NumDen * No2Si_V(UnitN_)
+  Ur   = Ur  * No2Si_V(UnitU_)
+  Temp = Temp* No2Si_V(UnitTemperature_)
+  B_D  = B_D * No2Si_V(UnitB_)
+
+end subroutine get_solar_wind
 !==============================================================================
