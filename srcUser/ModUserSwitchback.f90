@@ -18,8 +18,7 @@ module ModUser
 
   include 'user_module.h' ! list of public methods
 
-  ! user routine Version number and descriptive string
-  real,             parameter :: VersionUserModule = 1.0
+  ! user module info
   character(len=*), parameter :: NameUserFile = "ModUserSwitchback.f90"
   character(len=*), parameter :: NameUserModule = "Switchback"
 

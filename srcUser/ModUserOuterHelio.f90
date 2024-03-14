@@ -77,7 +77,6 @@ module ModUser
   public:: get_region
   public:: get_lat_dep_sw
 
-  real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserFile = "ModUserOuterHelio.f90"
   character (len=*), parameter :: NameUserModule = "Outer Heliosphere"
 

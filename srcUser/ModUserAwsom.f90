@@ -26,7 +26,6 @@ module ModUser
 
   include 'user_module.h' ! list of public methods
 
-  real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserFile = "ModUserAwsom.f90"
   character (len=*), parameter :: NameUserModule = 'AWSoM(R) model'
 
