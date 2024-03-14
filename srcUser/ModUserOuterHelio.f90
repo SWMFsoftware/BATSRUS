@@ -1054,6 +1054,8 @@ contains
 
       ! density
       State_VGB(SWHRho_,i,j,k,iBlock) = Rho
+      ! Level set function
+      State_VGB(LevelHP_,i,j,k,iBlock) = Rho
       ! pressures
       if(UseElectronPressure)then
          State_VGB(SWHP_,i,j,k,iBlock) = 0.5*p
