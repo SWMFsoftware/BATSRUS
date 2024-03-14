@@ -43,9 +43,8 @@ contains
          " University of Michigan, 1995-2017"
     write(iUnitOut,*)
     if(IsStandAlone)then
-       call write_prefix; write(iUnitOut,'(a,f4.2,a,i6,a,i3,a)') &
-            ' BATSRUS version ',CodeVersion, &
-            ' is running as '//NameThisComp//' on ', nProc, &
+       call write_prefix; write(iUnitOut,'(a,i6,a,i3,a)') &
+            ' BATSRUS is running as '//NameThisComp//' on ', nProc, &
             ' PE(s) with up to', nThread, ' threads/PE'
        write(iUnitOut,*)
     end if
@@ -54,8 +53,8 @@ contains
     call write_prefix; write(iUnitOut,'(a)') &
          ' EQUATION FILE: '//NameEquationFile
     call set_user_version
-    call write_prefix; write(iUnitOut,'(a,f5.2)') &
-         ' USER MODULE:   '//trim(NameUserModule), VersionUserModule
+    call write_prefix; write(iUnitOut,'(a)') &
+         ' USER MODULE:   '//trim(NameUserModule)
     call write_prefix; write(iUnitOut,'(a)') &
          ' USER FILE:     '//trim(NameUserFile)
     write(iUnitOut,*)

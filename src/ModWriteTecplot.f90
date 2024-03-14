@@ -710,7 +710,7 @@ contains
   subroutine write_tecplot_auxdata(iUnitIn)
 
     use ModMain, ONLY : IsTimeAccurate, nStep, nOrder, UseRotatingBc, &
-         TypeCoordSystem, CodeVersion
+         TypeCoordSystem
     use ModGeometry, ONLY: nUsedCell
     use ModFaceValue, ONLY: TypeLimiter, LimiterBeta
     use ModPhysics, ONLY : &
@@ -773,7 +773,7 @@ contains
 
        ! CODEVERSION
        write(iUnitHere) 'AUXDATA CODEVERSION="BATSRUS', &
-            real2str(CodeVersion, "f5.2"), '"', CharNewLine
+            real2str(9.9, "f5.2"), '"', CharNewLine
 
        ! COORDSYSTEM
        write(iUnitHere) &
@@ -874,7 +874,7 @@ contains
 
        ! CODEVERSION
        write(iUnitHere,'(a,f5.2,a)') &
-            'AUXDATA CODEVERSION="BATSRUS',CodeVersion,'"'
+            'AUXDATA CODEVERSION="BATSRUS',9.9,'"'
 
        ! COORDSYSTEM
        write(iUnitHere,'(a,a,a)') &

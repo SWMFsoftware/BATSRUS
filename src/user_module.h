@@ -9,7 +9,6 @@
   SAVE ! save all module variables
 
   private ! except  
-  public :: VersionUserModule
   public :: NameUserFile
   public :: NameUserModule
   public :: user_set_boundary_cells

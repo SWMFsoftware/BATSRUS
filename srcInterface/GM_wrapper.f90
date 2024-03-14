@@ -110,7 +110,7 @@ contains
     use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use ModSetParameters, ONLY: set_parameters
     use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
-    use ModMain, ONLY : CodeVersion, NameThisComp, &
+    use ModMain, ONLY : NameThisComp, &
          IsTimeAccurate, tSimulation, StartTime, iStartTime_I, UseRotatingBc
     use ModB0, ONLY: DtUpdateB0, DoUpdateB0
     use CON_physics, ONLY: get_time, get_planet
@@ -132,8 +132,7 @@ contains
     case('VERSION')
        call put(CompInfo,                              &
             Use        =.true.,                        &
-            NameVersion='BATSRUS (Univ. of Michigan)', &
-            Version    =CodeVersion)
+            NameVersion='BATSRUS (Univ. of Michigan)')
     case('MPI')
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc, &
             nThread=nThread, Name=NameThisComp)

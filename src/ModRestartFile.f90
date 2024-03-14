@@ -12,7 +12,7 @@ module ModRestartFile
        IsRestart, DoSaveRestart
   use ModMain,       ONLY: &
        nBlockAll,      &
-       nStep, tSimulation, DtMax_B, Cfl, CodeVersion, nByteReal, &
+       nStep, tSimulation, DtMax_B, Cfl, nByteReal, &
        NameThisComp, nIteration, DoThinCurrentSheet, NameVarCouple
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
   use ModAdvance,    ONLY: State_VGB
@@ -368,7 +368,7 @@ contains
 
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem, nBlockAll, &
          UseBody, UseBody2, IsTimeAccurate, iStartTime_I, IsStandAlone,       &
-         UseBufferGrid, NameUserModule, VersionUserModule
+         UseBufferGrid, NameUserModule
     use ModPhysics,    ONLY: &
          SolarWindNDim, SolarWindTempDim, SolarWindUxDim, SolarWindUyDim, &
          SolarWindUzDim, SolarWindBxDim, SolarWindByDim, SolarWindBzDim, &
@@ -409,13 +409,8 @@ contains
 
     call open_file(file=NameFile, NameCaller=NameSub)
 
-    write(UnitTmp_,'(a)')'#CODEVERSION'
-    write(UnitTmp_,'(f5.2,a)')CodeVersion, cTab//cTab//cTab//'CodeVersion'
-    write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#USERMODULE'
     call write_string_tabs_name(trim(NameUserModule), 'NameUserModule')
-    write(UnitTmp_,'(f5.2,a)') &
-         VersionUserModule, cTab//cTab//cTab//'VersionUserModule'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#COMPONENT'
     write(UnitTmp_,'(a)')NameThisComp//cTab//cTab//cTab//'NameComp'
@@ -772,9 +767,6 @@ contains
          ' could not read data from '//trim(NameFile))
 
     call close_file
-
-    if(CodeVersion>5.60 .and. CodeVersion <7.00) &
-         DtMax_B(iBlock)=DtMax_B(iBlock)/cfl
 
     if(any(CellSize_DB(:,iBlock) < 0  &
          .or. DtMax_B(iBlock) < 0 .or. tSimulationRead < 0))then
