@@ -202,7 +202,7 @@ ${EXE}: ${OBJECTS_EXE}
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
-		${LBLAS} ${HDFLIB} ${Lflag1} ${HYPRELIB} ${SPICELIB}
+		${LBLAS} ${HDFLIB} ${LflagMpi} ${HYPRELIB} ${SPICELIB}
 
 # Compilation of CRASH ############
 
@@ -232,7 +232,7 @@ ${CRASHEXE}: ${OBJECTS_EXE} ${LIBCRASH}
 		ar -x ${LIBCRASH}; \
 		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${CRASHEXE} ${OBJECTS_EXE} Tmp_/*.o \
-		${LBLAS} ${HDFLIB} ${Lflag1} ${HYPRELIB}
+		${LBLAS} ${HDFLIB} ${LflagMpi} ${HYPRELIB}
 
 #########################################################################
 
