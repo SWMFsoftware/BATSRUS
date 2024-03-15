@@ -2084,6 +2084,9 @@ contains
           ! Make sure that MassIon_I is consistent with MassFluid_I
           MassIon_I = MassFluid_I(1:nIonFluid)
 
+       case("#CODEVERSION")
+          ! Only kept for backward compatibility. 
+
        case("#CHANGEVARIABLES")
           call read_var('DoChangeRestartVariables', DoChangeRestartVariables)
           if (DoChangeRestartVariables) UseStrict = .false.

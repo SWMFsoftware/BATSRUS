@@ -772,8 +772,7 @@ contains
             CharNewLine
 
        ! CODEVERSION
-       write(iUnitHere) 'AUXDATA CODEVERSION="BATSRUS', &
-            real2str(9.9, "f5.2"), '"', CharNewLine
+       write(iUnitHere) 'AUXDATA CODEVERSION="BATSRUS"', CharNewLine
 
        ! COORDSYSTEM
        write(iUnitHere) &
@@ -873,8 +872,7 @@ contains
        write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLSUSED="',nUsedCell,'"'
 
        ! CODEVERSION
-       write(iUnitHere,'(a,f5.2,a)') &
-            'AUXDATA CODEVERSION="BATSRUS',9.9,'"'
+       write(iUnitHere,'(a)') 'AUXDATA CODEVERSION="BATSRUS"'
 
        ! COORDSYSTEM
        write(iUnitHere,'(a,a,a)') &

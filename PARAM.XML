@@ -743,8 +743,8 @@ Excessive debug output can be controlled by the global okdebug parameter
 #CODEVERSION
 7.50                    CodeVersion
 
-Checks CodeVersion. Prints a WARNING if it differs from the CodeVersion
-defined in ModMain.f90.
+This command is obsolete. It is only kept to be compatible with older
+restart files. Code version is now controlled by Git references.
 </command>
 
 <command name="USERMODULE" if="$_IsFirstSession">
