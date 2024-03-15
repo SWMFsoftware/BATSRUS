@@ -46,9 +46,9 @@ module ModHdf5
 contains
   !============================================================================
   subroutine stop_hdf5(String)
+
     character(len=*), intent(in):: String
     integer:: iError, nError
-
     !--------------------------------------------------------------------------
     write(*,*)'iError in ModHdf5: ', String
     call MPI_abort(MPI_COMM_WORLD, nError, iError)
@@ -373,7 +373,6 @@ contains
 
   end subroutine init_hdf5_plot
   !============================================================================
-
   subroutine write_var_hdf5(iFile, TypePlot, iBlock, iH5Index, nPlotVar, &
        PlotVar_GV, &
        xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
@@ -1019,13 +1018,13 @@ contains
 
   end subroutine write_plot_hdf5
   !============================================================================
-
   subroutine write_real_plot_metadata(iFileID,IsDimensionalPlot, IsXZero)
 
-    use ModMain, only : tSimulation, CodeVersion
-    use BATL_lib, only : nLevelMax, nDim
-    use ModGeometry, only : xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
+    use ModMain, ONLY : tSimulation
+    use BATL_lib, ONLY : nLevelMax, nDim
+    use ModGeometry, ONLY : xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
     use ModPhysics, ONLY : No2Io_V, UnitX_
+
     integer(HID_T), intent(in) :: iFileID
     integer(HSIZE_T) :: iData
     integer :: i
@@ -1090,18 +1089,17 @@ contains
     end if
     iData = iData -1
 
-    !-------------------------------------------------------------------
     ! write the real Metadata
     call  write_hdf5_data(iFileID, "Real Plot Metadata", 1, [iData],&
          Rank1RealData=MetaData_I)
 
     call test_stop(NameSub, DoTest)
+
   end subroutine write_real_plot_metadata
   !============================================================================
-
   subroutine write_real_sim_metadata(iFileID,IsDimensionalPlot)
 
-    use ModMain, only : tSimulation, CodeVersion
+    use ModMain, only : tSimulation
     use BATL_lib, only : nLevelMax, nDim
     use ModGeometry, only : xMinBox,xMaxBox,yMinBox,yMaxBox,zMinBox,zMaxBox
     use ModPhysics, ONLY : No2Io_V, UnitX_
@@ -1163,16 +1161,15 @@ contains
        !    attName(3) = 'zmax'
        MetaData_I(iData) = zMaxBox
     end if
-    !-------------------------------------------------------------------
+
     ! write the real Metadata
     call  write_hdf5_data(iFileID, "Real Simulation Metadata", 1, [iData],&
-         Rank1RealData=MetaData_I, RealAttribute1=CodeVersion,&
-         NameRealAttribute1="CodeVersion")
+         Rank1RealData=MetaData_I)
 
     call test_stop(NameSub, DoTest)
+
   end subroutine write_real_sim_metadata
   !============================================================================
-
   subroutine write_integer_plot_metadata(iFileID,nPlotVar,IsCutFile)
 
     use BATL_lib, only : nDimAmr, nLevelMax, IsPeriodic_D
@@ -1273,7 +1270,6 @@ contains
     iData = iData + 1
     IntMetaData_I(iData) = nPlotVar
 
-    !-------------------------------------------------------------------
     ! write the integer Metadata
     call  write_hdf5_data(iFileID, "Integer Plot Metadata", 1, [iData],&
          Rank1IntegerData=IntMetaData_I)
@@ -1282,8 +1278,8 @@ contains
 
   end subroutine write_integer_plot_metadata
   !============================================================================
-
   subroutine write_integer_sim_metadata(iFileID, nPlotVar)
+
     ! Not read by plugin at this time  Only exists so that one looking at
     ! the file may know something about the simulation that created it
 
@@ -1328,7 +1324,6 @@ contains
     !    attName(2) = "Time Step"
     !    iData = iData + 1
 
-    !-------------------------------------------------------------------
     ! write the integer Metadata
     call  write_hdf5_data(iFileID, "Integer Sim Metadata", 1, [iData],&
          Rank1IntegerData=IntMetaData_I)
@@ -1336,13 +1331,13 @@ contains
 
   end subroutine write_integer_sim_metadata
   !============================================================================
-
   real function minmod(x,y)
+
     real, intent(in) :: x,y
     !--------------------------------------------------------------------------
     minmod = max(0.0, min(abs(x), sign(1.0,x)*y))
+
   end function minmod
   !============================================================================
-
 end module ModHdf5
 !==============================================================================
