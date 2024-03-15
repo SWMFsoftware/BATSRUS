@@ -2085,7 +2085,7 @@ contains
           MassIon_I = MassFluid_I(1:nIonFluid)
 
        case("#CODEVERSION")
-          ! Only kept for backward compatibility. 
+          ! Only kept for backward compatibility.
 
        case("#CHANGEVARIABLES")
           call read_var('DoChangeRestartVariables', DoChangeRestartVariables)
