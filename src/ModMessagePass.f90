@@ -18,9 +18,6 @@ module ModMessagePass
 
   public:: exchange_messages   ! fill ghost cells and (re)calculate energies
 
-  ! Set to true if there is a need for extra message passing
-  logical, public:: DoExtraMessagePass = .false.
-
   ! True if it is sufficient to fill in the fine ghost cells with a single
   ! layer of the coarse cell values. Set in ModSetParameters.
   logical, public:: DoOneCoarserLayer = .true.
@@ -86,12 +83,7 @@ contains
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(DoExtraMessagePass)then
-       if(DoTest) write(*,*) NameSub,': doing extra message pass'
-       ! Switch off request
-       DoExtraMessagePass = .false.
-    end if
-
+    
     ! This way of doing periodic BC for wedge is not perfect.
     ! It does not work for AMR or semi-implicit scheme with vectors.
     ! But it works for a number of simple but useful applications.

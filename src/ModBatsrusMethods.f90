@@ -515,7 +515,7 @@ contains
     use ModParticleFieldLine, ONLY: UseParticles, advect_particle_line
     use ModLaserHeating,    ONLY: add_laser_heating
     use ModVarIndexes, ONLY: Te0_
-    use ModMessagePass, ONLY: exchange_messages, DoExtraMessagePass
+    use ModMessagePass, ONLY: exchange_messages
     use ModB0, ONLY: DoUpdateB0, DtUpdateB0
     use ModResistivity, ONLY: &
          UseResistivity, UseHeatExchange, calc_heat_exchange
@@ -559,10 +559,6 @@ contains
     ! We are advancing in time.
     IsTimeLoop = .true.
     !$acc update device(IsTimeLoop)
-
-    ! Exchange messages if some information was received
-    ! from another SWMF component, for example.
-    if(DoExtraMessagePass) call exchange_messages
 
     ! Some files should be saved at the beginning of the time step
     call BATS_save_files('BEGINSTEP')
