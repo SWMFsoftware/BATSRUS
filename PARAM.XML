@@ -738,14 +738,7 @@ F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 Excessive debug output can be controlled by the global okdebug parameter
 </command>
 
-<command name="CODEVERSION" if="$_IsFirstSession">
-  <parameter name="CodeVersion" min="0" default="7.50" type="real" />
-#CODEVERSION
-7.50                    CodeVersion
 
-This command is obsolete. It is only kept to be compatible with older
-restart files. Code version is now controlled by Git references.
-</command>
 
 <command name="USERMODULE" if="$_IsFirstSession">
   <parameter name="NameUserModule" type="string" length="$lLine"
