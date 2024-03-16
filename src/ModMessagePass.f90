@@ -24,7 +24,7 @@ module ModMessagePass
   ! True if it is sufficient to fill in the fine ghost cells with a single
   ! layer of the coarse cell values. Set in ModSetParameters.
   logical, public:: DoOneCoarserLayer = .true.
-
+  character(len=*), parameter:: NameMod = 'ModMessagePass'
 contains
   !============================================================================
   subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In, UseBufferIn)
@@ -119,9 +119,10 @@ contains
 
     UseHighResChangeNow = nOrder==5 .and. UseHighResChange
 
-    if(DoTest)write(*,*) NameSub, &
-         ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
-         DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
+    if(DoTest)write(*,*) NameMod//':'//NameSub, &
+         ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers,'//&
+         ' UseBuffer=', DoResChangeOnly, UseOrder2, DoRestrictFace, &
+         DoTwoCoarseLayers, UseBuffer
 
     call timing_start('exch_msgs')
 
