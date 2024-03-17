@@ -862,7 +862,7 @@ contains
     select case(TypeSave)
     case('INITIAL')
        ! Do not save current step or time
-       nStepOutputLast_I = nStep
+       where(DnOutput_I >= 0 .or. DtOutput_I > 0.0)nStepOutputLast_I = nStep
 
        ! Initialize last save times
        where(DtOutput_I>0.) &
@@ -873,16 +873,17 @@ contains
           if(DoSaveInitial)then
              ! Save all (except restart files)
              nStepOutputLast_I = -1
-             iTimeOutputLast_I = -1.0
+             iTimeOutputLast_I = -1
           else
              ! Save only those with a positive time frequency
              where(DtOutput_I>0.)
                 nStepOutputLast_I = -1
-                iTimeOutputLast_I = -1.0
+                iTimeOutputLast_I = -1
              end where
           end if
           ! Do not save restart file in any case
-          nStepOutputLast_I(restart_) = nStep
+          if(DnOutput_I(restart_) >= 0 .or. DtOutput_I(restart_) > 0.0)&
+               nStepOutputLast_I(restart_) = nStep
           call save_files
        end if
        ! Set back to default value (for next session)
@@ -1005,7 +1006,8 @@ contains
 
       real :: tSimulationBackup = 0.0
       !------------------------------------------------------------------------
-      if(nStep<=nStepOutputLast_I(iFile) .and. DnOutput_I(iFile)>0) RETURN
+      if(nStep<=nStepOutputLast_I(iFile) .and.&
+           (DnOutput_I(iFile)>=0 .or. DtOutput_I(iFile)>0.0)) RETURN
       call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
       if(iFile==restart_) then
          ! Case for restart file
