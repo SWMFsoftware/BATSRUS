@@ -381,7 +381,7 @@ contains
     use ModPhysics,  ONLY: DipoleStrengthSi
     use ModAdvance,  ONLY: UseElectronPressure
     use ModMain,     ONLY: DoMultiFluidIMCoupling
-    use ModGeometry, ONLY: xMinBox, RadiusMin
+    use ModGeometry, ONLY: xMinBox
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_field_trace'
@@ -400,8 +400,8 @@ contains
     end if
 
     if(rTrace == 0.0)then
-       if(rBody > 0.0 .or. RadiusMin > 0.0)then
-          rTrace = max(rBody, rIonosphere, RadiusMin)
+       if(rBody > 0.0)then
+          rTrace = max(rBody, rIonosphere)
        else
           rTrace = -1.0
        end if
@@ -3820,8 +3820,12 @@ contains
   !============================================================================
   subroutine trace_field_sphere
 
+    ! Trace field lines from a spherical surface and 
+    ! calculate squashing factor. 
+
+    use ModGeometry, ONLY: RadiusMin
+    use ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use CON_ray_trace, ONLY: ray_init
-    use ModAdvance,    ONLY: State_VGB, Bx_, Bz_
 
     integer:: nLon, nLat, iLon, iLat, i, j, k, iBlock, iRay
     integer:: iProcFound, iBlockFound, iError
@@ -3871,7 +3875,7 @@ contains
     call message_pass_cell(3, b_DGB)
 
     ! Fixed radial distance
-    rLonLat_D(1) = rTrace
+    rLonLat_D(1) = max(1.0, rTrace, RadiusMin)
     CpuTimeStartRay = MPI_WTIME()
     do iLon = 1, nLon
        ! Longitude
@@ -3915,7 +3919,7 @@ contains
     call finish_ray
 
     ! Collect the trace mapping info to processor 0
-    if(nProc > 1) call MPI_allreduce( MPI_IN_PLACE, RayMap_DSII, &
+    if(nProc > 1) call MPI_allreduce(MPI_IN_PLACE, RayMap_DSII, &
          size(RayMap_DSII), MPI_REAL, MPI_SUM, iComm, iError)
 
     ! Calculate squash factor. Add poles for interpolation.
@@ -3955,7 +3959,7 @@ contains
 !          CYCLE
 !       end if
        ! Normalize footpoints to the unit sphere
-       Xyz_D = Xyz_D/r_I(0)
+       Xyz_D  = Xyz_D/r_I(0)
        Xyz1_D = Xyz1_D/r_I(1)
        Xyz2_D = Xyz2_D/r_I(2)
        Xyz3_D = Xyz3_D/r_I(3)
