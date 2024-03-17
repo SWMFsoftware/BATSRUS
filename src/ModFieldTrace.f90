@@ -3820,8 +3820,8 @@ contains
   !============================================================================
   subroutine trace_field_sphere
 
-    ! Trace field lines from a spherical surface and 
-    ! calculate squashing factor. 
+    ! Trace field lines from a spherical surface and
+    ! calculate squashing factor.
 
     use ModGeometry, ONLY: RadiusMin
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_
