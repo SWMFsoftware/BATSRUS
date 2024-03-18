@@ -1000,7 +1000,7 @@ contains
 
        if(iTableSolarWind > 0)then
           ! Calculate the time dependent solar wind
-          call calc_time_dep_sw(i,j,k,iBlock)
+          call calc_time_dep_sw(i, j, k, iBlock)
        else
           ! Retain initial condition for all ions inside body
           State_VGB(1:iP_I(nIonFluid),i,j,k,iBlock) = &
@@ -1012,12 +1012,11 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
-
-    subroutine calc_time_dep_sw(i,j,k,iBlock)
+    subroutine calc_time_dep_sw(i, j, k, iBlock)
 
       ! Time dependent solar wind from a lookup table
 
-      use BATL_lib,       ONLY: Xyz_DGB
+      use BATL_lib, ONLY: Xyz_DGB
       use ModCoordTransform, ONLY: rot_xyz_sph
 
       integer,intent(in):: i, j, k, iBlock
@@ -1029,20 +1028,20 @@ contains
       real :: v_D(3),vPUI_D(3), vPUISph_D(3)
       real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD,Sph_D)
       real :: SinTheta
-
       !------------------------------------------------------------------------
       x = Xyz_DGB(1,i,j,k,iBlock)
       y = Xyz_DGB(2,i,j,k,iBlock)
       z = Xyz_DGB(3,i,j,k,iBlock)
 
-      call get_lat_dep_sw(x,y,z,Rho,Ur,Temp,Bsph_D)
+      call get_lat_dep_sw(x, y, z, Rho, Ur, Temp, Bsph_D)
 
-      p = 2.0*Rho*Temp
+      ! Include electron pressure (!?)
+      p = 2*Rho*Temp
 
       XyzSph_DD = rot_xyz_sph(x,y,z)
 
       ! Spherical velocity, Vr, Vtheta, Vphi constant with  radial distance
-      Vsph_D    = [ Ur, 0.0, 0.0 ]
+      Vsph_D = [ Ur, 0.0, 0.0 ]
 
       ! momentum
       v_D = matmul(XyzSph_DD, Vsph_D)
@@ -1070,7 +1069,7 @@ contains
          State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock) = &
               State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
          ! PUI pressure
-         State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3P   * (rBody/r)**(2*Gamma)
+         State_VGB(Pu3P_,i,j,k,iBlock) = Pu3P * (rBody/r)**(2*Gamma)
       end if
 
     end subroutine calc_time_dep_sw
@@ -3342,12 +3341,13 @@ contains
     call test_stop(NameSub, DoTest)
 
   end subroutine user_init_session
-  !============================================================================
-
-  subroutine get_lat_dep_sw(x,y,z,Rho,Ur,Temp,Bsph_D)
+  !===========================================================================
+  subroutine get_lat_dep_sw(x, y, z, Rho, Ur, Temp, Bsph_D)
 
     use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table, &
          get_lookup_table
+
+    ! Calculate latitude and time dependent solar wind and IMF at x,y,z
 
     real, intent(in):: x     ! X position to sample
     real, intent(in):: y     ! Y position to sample
@@ -3380,7 +3380,7 @@ contains
     end if
 
     ! calculating time relative to the solar cycle
-    call get_lookup_table(iTableSolarWind,IndexMax_I=IndexMax_I)
+    call get_lookup_table(iTableSolarWind, IndexMax_I=IndexMax_I)
 
     TimeCycle = modulo(tSimulation + (Offset*cSecondPerYear) , IndexMax_I(2))
 
@@ -3411,7 +3411,6 @@ contains
 
   end subroutine get_lat_dep_sw
   !============================================================================
-
   subroutine get_collision( iTypeCollision, &
        NumDensA, Cs2A, uA_D, NumDensB, Cs2B, uB_D, &
        SourceA_V, SourceB_V)
@@ -3529,7 +3528,6 @@ contains
 
   end subroutine get_collision
   !============================================================================
-
   subroutine user_calc_sources_impl(iBlock)
 
     use ModPhysics, ONLY: ReducedMass_II, CollisionCoef_II, MassIonElectron_I
@@ -3647,7 +3645,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources_impl
   !============================================================================
-
   subroutine user_init_point_implicit
 
     use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I
@@ -3686,7 +3683,6 @@ contains
 
   end subroutine user_init_point_implicit
   !============================================================================
-
 end module ModUser
 !==============================================================================
 subroutine get_charge_exchange_wrapper( &
@@ -3737,8 +3733,7 @@ subroutine get_charge_exchange_region( &
 
 end subroutine get_charge_exchange_region
 !==============================================================================
-
-subroutine get_solar_wind(x,y,z,NumDen,Ur,Temp,B_D) &
+subroutine get_solar_wind(x, y, z, NumDen, Ur, Temp, B_D) &
      bind(c, name='get_solar_wind')
 
   ! C wrapper for coupling with AMPS
@@ -3747,7 +3742,7 @@ subroutine get_solar_wind(x,y,z,NumDen,Ur,Temp,B_D) &
   use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitX_, UnitN_, UnitU_, &
        UnitTemperature_, UnitB_
 
-  real, intent(in)::  x, y, z    ! Position in SI unit. [m]
+  real, intent(in)::  x, y, z   ! Position in SI unit. [m]
   real, intent(out):: NumDen    ! Solar wind density [#/m^3]
   real, intent(out):: Ur        ! Solar wind speed [m/s]
   real, intent(out):: Temp      ! Solar wind temperature [K]
@@ -3756,17 +3751,17 @@ subroutine get_solar_wind(x,y,z,NumDen,Ur,Temp,B_D) &
   real :: x0, y0, z0
   !----------------------------------------------------------------------------
   ! Convert from SI to normalized units
-  x0 = x * Si2No_V(UnitX_)
-  y0 = y * Si2No_V(UnitX_)
-  z0 = z * Si2No_V(UnitX_)
+  x0 = x*Si2No_V(UnitX_)
+  y0 = y*Si2No_V(UnitX_)
+  z0 = z*Si2No_V(UnitX_)
 
-  call get_lat_dep_sw(x0,y0,z0,NumDen,Ur,Temp,B_D)
+  call get_lat_dep_sw(x0, y0, z0, NumDen, Ur, Temp, B_D)
 
   ! Convert to SI units
-  NumDen  = NumDen * No2Si_V(UnitN_)
-  Ur   = Ur  * No2Si_V(UnitU_)
-  Temp = Temp* No2Si_V(UnitTemperature_)
-  B_D  = B_D * No2Si_V(UnitB_)
+  NumDen = NumDen*No2Si_V(UnitN_)
+  Ur     = Ur    *No2Si_V(UnitU_)
+  Temp   = Temp  *No2Si_V(UnitTemperature_)
+  B_D    = B_D   *No2Si_V(UnitB_)
 
 end subroutine get_solar_wind
 !==============================================================================
