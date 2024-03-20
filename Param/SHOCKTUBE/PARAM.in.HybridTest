@@ -8,8 +8,7 @@ MHD			NameEquation
 8      			nVar
 
 #USERMODULE
-Hybrid Code
-0.1             	VersionUserModule
+Hybrid Code		NameUserModule
 
 #CHECKGRIDSIZE
 4                       nI

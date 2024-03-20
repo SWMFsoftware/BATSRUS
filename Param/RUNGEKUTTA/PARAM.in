@@ -4,7 +4,6 @@ Param/RUNGEKUTTA/PARAM.in: Verification test for Runge-Kutta time integration
 ! Only the friction term is needed from this module.
 #USERMODULE
 EXAMPLE FOR POINT IMPLICIT SOURCE, Toth
-1.0
 
 #PLANET
 NONE			NamePlanet
