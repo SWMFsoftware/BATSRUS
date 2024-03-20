@@ -47,8 +47,7 @@ module ModUser
 
   include 'user_module.h' ! list of public methods
 
-  ! user routine Version number and descriptive string
-  real,              parameter :: VersionUserModule = 1.4
+  ! user module info
   character(len=*), parameter :: NameUserFile = "ModUserWaves.f90"
   character(len=*), parameter :: NameUserModule = "Waves"
 

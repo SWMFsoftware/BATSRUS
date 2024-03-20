@@ -211,7 +211,6 @@ contains
 
     ! Variables for checking the user module
     character(len=lStringLine) :: NameUserModuleRead='?'
-    real                       :: VersionUserModuleRead=0.0
 
     ! Variables for user switches
     character(len=lStringLine) :: StringSwitch
@@ -2086,12 +2085,7 @@ contains
           MassIon_I = MassFluid_I(1:nIonFluid)
 
        case("#CODEVERSION")
-          if(.not.is_first_session())CYCLE READPARAM
-          call read_var('CodeVersion', CodeVersionRead)
-          if(abs(CodeVersionRead-CodeVersion)>0.005.and.iProc==0)&
-               write(*,'(a,f6.3,a,f6.3,a)')NameSub//&
-               ' WARNING: CodeVersion in file=', CodeVersionRead,&
-               ' but '//NameThisComp//' version is ', CodeVersion,' !!!'
+          ! Only kept for backward compatibility.
 
        case("#CHANGEVARIABLES")
           call read_var('DoChangeRestartVariables', DoChangeRestartVariables)
@@ -2297,13 +2291,11 @@ contains
        case("#USERMODULE")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('NameUserModule', NameUserModuleRead)
-          call read_var('VersionUserModule', VersionUserModuleRead)
-          if(NameUserModuleRead /= NameUserModule .or. &
-               abs(VersionUserModule-VersionUserModuleRead)>0.001 .and. &
+          if(NameUserModuleRead /= NameUserModule .and. &
                .not. DoChangeRestartVariables) then
-             if(iProc==0)write(*,'(4a,f5.2)') NameSub, &
+             if(iProc==0)write(*,'(3a)') NameSub, &
                   ' WARNING: code is compiled with user module ', &
-                  NameUserModule,' version', VersionUserModule
+                  trim(NameUserModule)
              if(UseStrict)call stop_mpi('Select the correct user module!')
           end if
 
@@ -3088,8 +3080,6 @@ contains
 
       ! Set defaults for restart files
       call init_mod_restart_file
-
-      CodeVersionRead = -1.
 
       ! Default coordinate systems
       select case(NameThisComp)

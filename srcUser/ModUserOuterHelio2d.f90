@@ -42,7 +42,6 @@ module ModUser
 
   include 'user_module.h' ! list of public methods
 
-  real,              parameter :: VersionUserModule = 2.3
   character (len=*), parameter :: NameUserFile = "ModUserOuterHelio2d.f90"
   character (len=*), parameter :: NameUserModule = "2D Outer Heliosphere"
 

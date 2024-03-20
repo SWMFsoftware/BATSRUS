@@ -18,13 +18,10 @@ module ModMessagePass
 
   public:: exchange_messages   ! fill ghost cells and (re)calculate energies
 
-  ! Set to true if there is a need for extra message passing
-  logical, public:: DoExtraMessagePass = .false.
-
   ! True if it is sufficient to fill in the fine ghost cells with a single
   ! layer of the coarse cell values. Set in ModSetParameters.
   logical, public:: DoOneCoarserLayer = .true.
-
+  character(len=*), parameter:: NameMod = 'ModMessagePass'
 contains
   !============================================================================
   subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In, UseBufferIn)
@@ -86,11 +83,6 @@ contains
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(DoExtraMessagePass)then
-       if(DoTest) write(*,*) NameSub,': doing extra message pass'
-       ! Switch off request
-       DoExtraMessagePass = .false.
-    end if
 
     ! This way of doing periodic BC for wedge is not perfect.
     ! It does not work for AMR or semi-implicit scheme with vectors.
@@ -119,9 +111,10 @@ contains
 
     UseHighResChangeNow = nOrder==5 .and. UseHighResChange
 
-    if(DoTest)write(*,*) NameSub, &
-         ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
-         DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
+    if(DoTest)write(*,*) NameMod//':'//NameSub, &
+         ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers,'//&
+         ' UseBuffer=', DoResChangeOnly, UseOrder2, DoRestrictFace, &
+         DoTwoCoarseLayers, UseBuffer
 
     call timing_start('exch_msgs')
 
