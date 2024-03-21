@@ -28,9 +28,8 @@ contains
 
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
-    use ModMain, ONLY : nBlock, Unused_B, &
-         IsTimeLoop, &
-         UseConstrainB, &
+    use ModMain, ONLY : &
+         IsTimeLoop, UseConstrainB, iNewDecomposition, &
          nOrder, nOrderProlong, TypeMessagePass, &
          UseHighResChange, UseBufferGrid, UseResistivePlanet
     use ModVarIndexes
@@ -45,7 +44,7 @@ contains
     use ModUpdateStateFast, ONLY: set_boundary_fast, sync_cpu_gpu
 
     use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, Unused_B, Xyz_DGB, &
          IsSpherical, IsRLonLat, IsPeriodic_D, IsPeriodicCoord_D
     use ModMpi
 
@@ -158,15 +157,34 @@ contains
 
     if (UseOrder2 .or. nOrderProlong > 1) then
        call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
+       ! Only gathers grid information (iDecomposition) for GPU
+       ! implementation
+#ifdef _OPENACC
+       call message_pass_cell(nVar, State_VGB,&
+            DoResChangeOnlyIn=DoResChangeOnlyIn,&
+            UseOpenACCIn=.true., iDecomposition=iNewDecomposition)
+            ! UseOpenACCIn=.true.)
+#else
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseOpenACCIn=.true.)
+#endif
     elseif (TypeMessagePass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
        nWidth = nG; if(nOrder == 1 .and. ShockSlope == 0.0)  nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
        call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
+#ifdef _OPENACC
+       call message_pass_cell(nVar, State_VGB, &
+            nWidthIn=nWidth, nProlongOrderIn=1, &
+            nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
+            DoResChangeOnlyIn=DoResChangeOnlyIn, &
+            UseHighResChangeIn=UseHighResChangeNow,&
+            DefaultState_V=DefaultState_V, &
+            UseOpenACCIn=.true., &
+            iDecomposition=iNewDecomposition)
+#else
        call message_pass_cell(nVar, State_VGB, &
             nWidthIn=nWidth, nProlongOrderIn=1, &
             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
@@ -174,12 +192,25 @@ contains
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V, &
             UseOpenACCIn=.true.)
+#endif
     else
        ! Pass corners if necessary
        DoSendCorner = nOrder > 1 .and. UseAccurateResChange
        ! Pass one layer if possible
        nWidth = nG;      if(nOrder == 1)       nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
+#ifdef _OPENACC
+       call message_pass_cell(nVar, State_VGB, &
+            nWidthIn=nWidth, &
+            nProlongOrderIn=1, &
+            nCoarseLayerIn=nCoarseLayer,&
+            DoSendCornerIn=DoSendCorner, &
+            DoRestrictFaceIn=DoRestrictFace,&
+            DoResChangeOnlyIn=DoResChangeOnlyIn,&
+            UseHighResChangeIn=UseHighResChangeNow,&
+            DefaultState_V=DefaultState_V, &
+            iDecomposition=iNewDecomposition)
+#else
        call message_pass_cell(nVar, State_VGB, &
             nWidthIn=nWidth, &
             nProlongOrderIn=1, &
@@ -189,6 +220,7 @@ contains
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V)
+#endif
     end if
     ! If the grid changed, fix iBoundary_GB
     ! This could/should be done where the grid is actually being changed,
