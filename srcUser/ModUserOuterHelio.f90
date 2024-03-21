@@ -111,7 +111,7 @@ module ModUser
   real :: TempPu3Si, FactorPu3, HeatPu3
 
   logical :: UseElectronHeating = .false.
-  real :: TempHeatElectronSi, FactorHeatElectron
+  real :: PressureHeatElectronIo, FactorHeatElectron
 
   integer :: iTableSolarWind = -1 ! initialization is needed
   integer :: iTableChargeExchange = -1
@@ -266,7 +266,7 @@ contains
 
        case("#ELECTRONHEATING")
           call read_var('UseElectronHeating', UseElectronHeating)
-          call read_var('TempHeatElectronSi', TempHeatElectronSi)
+          call read_var('PressureHeatElectronIo', PressureHeatElectronIo)
           call read_var('FactorHeatElectron', FactorHeatElectron)
           ! convert from 1/[au yr] to 1/[au s]
           FactorHeatElectron = FactorHeatElectron/cSecondPerYear
@@ -1650,7 +1650,7 @@ contains
 
     real :: U2_I(nFluid), TempSi_I(nFluid)
     real :: NumDensSi_I(nFluid), UTh2Si_I(nFluid)
-    real :: HeatElectron, NumDensElectron, TempElectron
+    real :: HeatElectron
 
     real :: U_DI(3,nFluid)
 
@@ -1809,16 +1809,11 @@ contains
 
        if(UseElectronPressure .and. UseElectronHeating)then
           ! Heating electrons
-          ! Electron number density
-          NumDensElectron = sum(State_V(iRhoIon_I)/MassIon_I)
-          ! Electron Temperature
-          TempElectron = State_V(Pe_)/NumDensElectron
 
-          ! HeatElectron = Ne*(TeHeat - Te)/(gamma-1) * (r-rBody)*FactorHeatE
+          ! HeatElectron = (PeHeat - Pe)*(r-rBody)*FactorHeatE
           ! in normalized units, so FactorHeatE has units of 1/(AU s)
           HeatElectron = &
-               InvGammaElectronMinus1*NumDensElectron*&
-               (TempHeatElectronSi*Si2No_V(UnitTemperature_) - TempElectron)*&
+               (PressureHeatElectronIo*Io2No_V(UnitP_) - State_V(Pe_))*&
                (r_GB(i,j,k,iBlock) - rBody)*FactorHeatElectron/Si2No_V(UnitT_)
 
        else
