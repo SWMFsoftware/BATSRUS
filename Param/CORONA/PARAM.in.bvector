@@ -14,7 +14,6 @@ VERBOSE
 
 #USERMODULE
 Sharp model		NameUserModule
- 1.00			VersionUserModule
 
 ! Magnetofriction solves for B field only
 #UPDATEVAR

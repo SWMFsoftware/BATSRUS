@@ -7,7 +7,6 @@ Three-Ion-fluid Pe MHD for Europa		NameEquation
 
 #USERMODULE
 Three-Ion-fluid Pe MHD for Europa, Harris & Jia		NameUserModule
-1.00			VersionUserModule
 
 #MOON
 EUROPA			NamePlanet

@@ -1,7 +1,8 @@
 #DESCRIPTION
 Param/SIXMOMENT/PARAM.in.shock: Six-moment test		StringDescription
 
-USERMODULE: Waves
+#USERMODULE
+Waves			NameUserModule
 
 #TESTXYZ
 0.01			xTest
