@@ -1036,7 +1036,8 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY : DtMax_CB, State_VGB, DivB1_GB, &
          ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure, &
-         UseMultiSpecies, LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
+         UseMultiSpecies, LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB, &
+         StateOld_VGB
     use ModConservative, ONLY: IsConserv_CB, UseNonconservative
     use ModLoadBalance, ONLY: iTypeBalance_A
     use ModB0, ONLY: B0_DGB
@@ -1230,6 +1231,21 @@ contains
        case('bzr')
           PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = BzFace_GB(1:nI,1:nJ,2:nK+1,iBlock)
           !
+       case('dbxdt')
+          if(Dt > 0) then
+             PlotVar_GV(:,:,:,iVar) = (State_VGB(Bx_,:,:,:,iBlock) - &
+                  StateOld_VGB(Bx_,:,:,:,iBlock))/Dt
+          end if
+       case('dbydt')
+          if(Dt > 0) then
+             PlotVar_GV(:,:,:,iVar) = (State_VGB(By_,:,:,:,iBlock) - &
+                  StateOld_VGB(By_,:,:,:,iBlock))/Dt
+          end if
+       case('dbzdt')
+          if(Dt > 0) then
+             PlotVar_GV(:,:,:,iVar) = (State_VGB(Bz_,:,:,:,iBlock) - &
+                  StateOld_VGB(Bz_,:,:,:,iBlock))/Dt
+          end if
        case('e')
           call get_fluid_energy_block(iBlock, iFluid, PlotVar_GV(:,:,:,iVar))
           ! Add 0.5*( (B0+B1)^2 - B1^2 ) so the energy contains B0
@@ -2094,6 +2110,9 @@ contains
             )
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitB_)
+       case('dbxdt', 'dbydt', 'dbzdt')
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitB_)/No2Io_V(UnitT_)
        case('elaser')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
