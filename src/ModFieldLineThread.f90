@@ -155,7 +155,7 @@ module ModFieldLineThread
 
   ! Saves thread state into restart
   public :: save_thread_restart
-  ! interface procedure to easy calcylate the CME field
+  ! interface procedure to easy calculate the CME field
   public :: b_cme_d
 
   ! The number of grid spaces which are covered by the TR model
