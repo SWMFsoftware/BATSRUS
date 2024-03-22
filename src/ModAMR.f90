@@ -292,6 +292,7 @@ contains
     end if
 
     if(DoProfileAmr) call timing_start('amr::set_batsrus_grid')
+    ! This sets iNewGrid and iNewDecomposition
     call set_batsrus_grid
     if(DoProfileAmr) call timing_stop('amr::set_batsrus_grid')
 
