@@ -713,7 +713,13 @@ sub set_charge_state{
 			    'ti','v','cr','mn','fe','co','ni','cu','zn');
 
     my @ValidChargeStateAll = (2..31);
-    
+
+    my @MassElement = (1.0, 4.003, 6.94, 9.012, 10.81, 12.011, 14.007, 15.999,
+		       18.998, 20.18, 22.99, 24.305, 26.982, 28.085, 30.974,
+		       32.06, 35.45, 39.948, 39.098, 40.078, 44.956, 47.867,
+		       50.942, 51.996, 54.938, 55.845, 58.933, 58.693, 63.546,
+		       65.38);
+
     # Separate input into array
     my @ChargeStateIn;
     @ChargeStateIn = split('\+', $ChargeStateNew);
@@ -740,11 +746,13 @@ sub set_charge_state{
     # Get Z+1 for each element
     my $cs = 1;
     my @nChargeState_I = ();
+    my @MassElement_I = ();
     foreach my $elem_j (@ValidChargeState) {
 	$cs = $cs+1;
 	foreach my $elem_i (@Element_I) {
 	    if($elem_i eq $elem_j){
 		push @nChargeState_I, $cs;
+		push @MassElement_I, $MassElement[$cs-2];
 	    }
 	}
     }
@@ -757,6 +765,9 @@ sub set_charge_state{
     my $nChargeState_I = join(",", @nChargeState_I);
     $nChargeState_I = " \[$nChargeState_I\]";
 
+    my $MassElement_I = join(",",@MassElement_I);
+    $MassElement_I = " \[$MassElement_I\]";
+    
     # Element names have length 2, convert array to string
     foreach (@Element_I){
 	s/^(.)$/$1 /; $_ = "'$_'";
@@ -779,6 +790,7 @@ sub set_charge_state{
 	s/\b(nElement\s*=[^0-9]*)(\d+)/$1$nElement/i;
 	s/\b(nChargeState_I\(1:nElement\)\s*=)(.*)/$1$nChargeState_I/i;
 	s/\b(NameElement_I\(1:nElement\)\s*=)(.*)/$1$NameElement_I/i;
+	s/\b(MassElement_I\(1:nElement\)\s*=)(.*)/$1$MassElement_I/i;
         print;
     }
     print "Set charge state in $EquationMod\n" if $Verbose;
