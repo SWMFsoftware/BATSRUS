@@ -934,7 +934,7 @@ test_awsom_large_gpu_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsom_large_gpu_run:
-	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_awsom_large_gpu_check:
@@ -2019,7 +2019,7 @@ test_earth_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_earth_run:
-	cd ${TESTDIR}; ${SERIAL} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_earth_check:
