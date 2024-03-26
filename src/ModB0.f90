@@ -538,7 +538,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     ! set B0_DX, B0_DY, B0_DZ for this block
-    call set_b0_face(iBlock)
+    ! call set_b0_face(iBlock)
 
     if(IsCartesian)then
        if(nDim == 2)then
