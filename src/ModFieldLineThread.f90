@@ -23,7 +23,7 @@ module ModFieldLineThread
 
   PRIVATE ! Except
   ! Chromosphere top boundary
-  real, public, parameter :: rChromo = 1.0
+  public :: rChromo
 
   logical, public, allocatable:: IsAllocatedThread_B(:)
 
@@ -846,7 +846,7 @@ contains
       !------------------------------------------------------------------------
       HeatFluxXLength = 2*PoyntingFluxPerBSi*&
            BLength*No2Si_V(UnitX_)*No2Si_V(UnitB_)
-      call interpolate_lookup_table(iTable=iTableTR,&
+      call interpolate_lookup_table(iTable=iTableTR, Arg2In=0.0, &
            iVal=HeatFluxLength_, &
            ValIn=HeatFluxXLength,&
            Value_V=Value_V,      &

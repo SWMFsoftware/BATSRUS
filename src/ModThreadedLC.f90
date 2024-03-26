@@ -317,7 +317,7 @@ contains
     ! Initialize all output parameters from 0D solution
     write(NameTiming,'(a,i2.2)')'set_thread',j + nJ*(k - 1)
     call timing_start(NameTiming)
-    call interpolate_lookup_table(iTableTR, TeSiIn, Value_V, &
+    call interpolate_lookup_table(iTableTR, TeSiIn, 0.0, Value_V, &
          DoExtrapolate=.false.)
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
@@ -366,7 +366,7 @@ contains
        ! As a first approximation, recover Te from the analytical solution
        TeSi_I(nPoint) = TeSiIn; TiSi_I(nPoint) = TiSiIn
        do iPoint = nPoint-1, 1, -1
-          call interpolate_lookup_table(&
+          call interpolate_lookup_table(Arg2In=0.0, &
                iTable=iTableTR,         &
                iVal=LengthPAvrSi_,      &
                ValIn=PeSiOut/SqrtZ*     &
@@ -614,7 +614,7 @@ contains
       ! 5/2*U*Pi*(Z+1)/Ti
       EnthalpyFlux = FluxConst*(InvGammaMinus1 +1)*(1 + Z)
       ! Calculate flux to TR and its temperature derivative
-      call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), 0.0, Value_V, &
            DoExtrapolate=.false.)
 
       do iIter = 1,nIterHere
@@ -753,7 +753,7 @@ contains
          ! Calculate TR pressure
          ! For next iteration calculate TR heat flux and
          ! its temperature derivative
-         call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
+         call interpolate_lookup_table(iTableTR, TeSi_I(1), 0.0, Value_V, &
               DoExtrapolate=.false.)
          ! Set pressure for updated temperature
          Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
@@ -940,7 +940,7 @@ contains
             write(*,*)'TeSi_I=',TeSi_I(1:nPoint)
             call stop_mpi('Stop!!!')
          end if
-         call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), &
+         call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), 0.0, &
               Value_V, &
               DoExtrapolate=.false.)
          ResCooling_I(iPoint) = &
