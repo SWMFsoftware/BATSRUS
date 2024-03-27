@@ -682,9 +682,6 @@ contains
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
     use ModTurbulence,     ONLY: SigmaD, KarmanTaylorAlpha
-    use ModVarIndexes,     ONLY: Ehot_
-    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
-         get_gamma_collisionless
 #ifdef _OPENACC
     use ModUtilities,      ONLY: norm2
 #endif
@@ -872,17 +869,6 @@ contains
 
              if(Lperp_ > 1) State_VGB(Lperp_,i,j,k,iBlock) = &
                   Rho*LperpTimesSqrtB/sqrt(norm2(B_D))
-          end if
-       end if
-
-       if(Ehot_ > 1)then
-          if(UseHeatFluxCollisionless)then
-             iP = p_; if(UseElectronPressure) iP = Pe_
-             call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
-             State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                  *(1.0/(GammaTmp - 1) - InvGammaMinus1)
-          else
-             State_VGB(Ehot_,i,j,k,iBlock) = 0.0
           end if
        end if
 

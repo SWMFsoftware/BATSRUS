@@ -122,7 +122,7 @@ F			UseNonConservative
 #CONSERVATIVECRITERIA
 1			nConservCrit
 radius			TypeConservCrit
-50			rConserv
+70			rConserv
 
 #SCHEME
 1			nOrder
@@ -209,29 +209,25 @@ uniform			TypeHeatPartitioning
 0.6			QionRatio
 0.0			QionRatio
 
-#HEATFLUXCOLLISIONLESS
-T			UseHeatFluxCollisionless
-1.05			CollisionlessAlpha
-
 #USERINPUTBEGIN -----------------------------------
 
 #GLOBALHELIOSPHERE
-30.			rBody
+1.			rBody
 
 #SOLARWINDH
-0.00874			SWH_rho_dim [n/cc]
-2.0E4			SWH_T_dim [K]
+7.866			SWH_rho_dim [n/cc]
+6E4			SWH_T_dim [K]
 417.07			SWH_Ux_dim [km/s]
 0.0			SWH_Uy_dim [km/s]
 0.0			SWH_Uz_dim [km/s]
-7.17E-03		SWH_Bx_dim [nT]
+6.453			SWH_Bx_dim [nT]
 0.0			SWH_By_dim [nT]
 0.0			SWH_Bz_dim [nT]
-2.0E4			SWH_Te_dim [K]
+3E4			SWH_Te_dim [K]
 
 #PICKUPION3
-9.45E-4			PU3_rho_dim [n/cc]
-8.20E6			PU3_T_dim [K]
+5.13E-7			PU3_rho_dim [n/cc]
+8.2E6			PU3_T_dim [K]
 417.07			PU3_Ux_dim [km/s]
 0			PU3_Uy_dim [km/s]
 0			PU3_Uz_dim [km/s]
@@ -255,27 +251,31 @@ MultiIon                NameRegionFormula
 100.0                   uPop1LimitDim
 1.0                     MachPop1Limit
 
-#PU3HEATING
-F			UsePu3Heating
-1e7			TempPu3Si [K]
-2.0			FactorPu3 1/[au yr]
-
 #PHOTOIONIZATION
 T			UsePhotoionization
-1.5e-7			PhotoionizationRate
+8e-8			PhotoionizationRate
+
+#ELECTRONIMPACT
+T			UseElectronImpact
 
 #TURBULENCE
-8.0			DeltaUDim
--0.1			CrossHelicity
-1.07e4			LperpTimesSqrtBSi
-0.06			TurbulencePerPu3Source
+20.0			DeltaUDim
+-0.38			CrossHelicity
+1.5E5			LperpTimesSqrtBSi
+0.25			TurbulencePerPu3Source
 
 #USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
 ChargeExchange		NameTable
 load			NameCommand
-Param/OUTERHELIO/ChargeExchangeRate_LS.dat		NameFile
+Param/OUTERHELIO/ChargeExchangeRate_LS.dat	NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+ElectronImpact		NameTable
+load			NameCommand
+Param/OUTERHELIO/ElectronImpactRate.dat		NameFile
 ascii			TypeFile
 
 #STOP
@@ -323,18 +323,6 @@ mc3			TypeLimiter
 #TIMESTEPPING
 2			nStage
 0.6			CflExpl
-
-#USERSWITCH
-+source_impl		StringSwitch
-
-#POINTIMPLICIT
-T			UsePointImplicit
-1.0			BetaPointImplicit
-F			IsAsymmetric
-T			DoNormalizeCell
-
-#COULOMBLOG
-30			CoulombLog
 
 #TIMEACCURATE
 T			IsTimeAccurate
