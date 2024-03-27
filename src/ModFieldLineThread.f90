@@ -23,7 +23,7 @@ module ModFieldLineThread
 
   PRIVATE ! Except
   ! Chromosphere top boundary
-  real, public, parameter :: rChromo = 1.0
+  public :: rChromo
 
   logical, public, allocatable:: IsAllocatedThread_B(:)
 
@@ -498,7 +498,7 @@ contains
             iPointer_II(6*nThreadAll,-nGUniform:0),     &
             iEnd_II(nThreadAll+2,-nGUniform:0) )
        call set_triangulation
-       if(iProc==0)then
+       if(nBlockSetAll > 0.and.iProc==0)then
           write(*,*)'Set threads in ',nBlockSetAll,' blocks on iteration ', &
                nStep, ' is called from '//NameCaller
           write(*,*)'nPointMin = ',nPointMinAll
@@ -604,7 +604,6 @@ contains
              DirB_D = SignBr*B0_D/max(B0, cTolerance)
              if(nTrial==nCoarseMax)call limit_cosBR
              XyzAux_D = Xyz_D - 0.50*Ds*DirB_D
-
              ! 2. Magnetic field in this point:
              call get_b0(XyzAux_D, B0Aux_D)
              if(UseCme)B0Aux_D = B0Aux_D + b_cme_d(XyzAux_D)
@@ -847,7 +846,7 @@ contains
       !------------------------------------------------------------------------
       HeatFluxXLength = 2*PoyntingFluxPerBSi*&
            BLength*No2Si_V(UnitX_)*No2Si_V(UnitB_)
-      call interpolate_lookup_table(iTable=iTableTR,&
+      call interpolate_lookup_table(iTable=iTableTR, Arg2In=0.0, &
            iVal=HeatFluxLength_, &
            ValIn=HeatFluxXLength,&
            Value_V=Value_V,      &
