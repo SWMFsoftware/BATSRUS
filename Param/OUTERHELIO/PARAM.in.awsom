@@ -269,7 +269,7 @@ T			UseElectronImpact
 #LOOKUPTABLE
 ChargeExchange		NameTable
 load			NameCommand
-Param/OUTERHELIO/ChargeExchangeRate_LS.dat	NameFile
+Param/OUTERHELIO/ChargeExchangeRate_LS.dat		NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
