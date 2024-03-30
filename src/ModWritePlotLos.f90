@@ -345,8 +345,6 @@ contains
        NameAllVar='x y logTe'
     elseif(UseFlux .or. UsePhx)then
        NameAllVar='x y lambda'
-    elseif(UseNbi)then
-       NameAllVar='x y intensity'
     else
        NameAllVar='x y'
     end if
@@ -524,16 +522,8 @@ contains
        if(DoTiming)call timing_stop('los_block_loop')
 
        if(nProc > 1)then
-          if(UseDEM)then
-             call MPI_reduce_real_array(Image_VIII, size(Image_VIII), &
-                  MPI_SUM, 0, iComm, iError)
-          elseif(UseFlux .or. UsePhx)then
-             call MPI_reduce_real_array(Image_VIII, size(Image_VIII), &
-                  MPI_SUM, 0, iComm, iError)
-          else
-             call MPI_reduce_real_array(Image_VIII, size(Image_VIII), &
-                  MPI_SUM, 0, iComm, iError)
-          end if
+          call MPI_reduce_real_array(Image_VIII, size(Image_VIII), &
+               MPI_SUM, 0, iComm, iError)
        end if
 
        if(iProc == 0) call save_los_file
