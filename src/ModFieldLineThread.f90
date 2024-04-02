@@ -174,12 +174,6 @@ module ModFieldLineThread
   ! eefect of gravity on the hydrostatic equilibrium
   real,public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
 
-  ! By default, this logical is .false. the entholpy increase needed to
-  ! heat the plasma flow across the transition region to the top temperature
-  ! If logical set is true, the energy frlux to/from the first control
-  ! volume is accounted for
-  logical, public :: UseChromoEvaporation = .false.
-
   logical :: IsInitialized = .false.
 
   character(len=100) :: NameRestartFile
@@ -285,7 +279,7 @@ contains
        ! logical is set to .true.
        call read_var('UsePlanarTriangles', UsePlanarTriangles)
     case('#CHROMOEVAPORATION')
-       call read_var('UseChromoEvaporation',UseChromoEvaporation)
+       call read_tr_param('#CHROMOEVAPORATION')
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
