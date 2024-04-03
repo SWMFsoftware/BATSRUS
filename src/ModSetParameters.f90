@@ -1306,6 +1306,9 @@ contains
                          MuLimbDarkening                   = 0.5
 
                          select case(trim(NameInstrument))
+                         case('c1')
+                            rSizeImage_I(iFileInstrument)  = 6.0
+                            rOccult_I(iFileInstrument)     = 1.0
                          case('c2')
                             rSizeImage_I(iFileInstrument)  = 6.0
                             rOccult_I(iFileInstrument)     = 2.0
