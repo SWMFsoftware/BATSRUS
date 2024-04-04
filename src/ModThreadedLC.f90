@@ -1270,12 +1270,12 @@ contains
        do i = 1-nGhost, 0
           B1_D = (2.-i) * State_VG(Bx_:Bz_, i, j, k) - &
                  (1.-i) * State_VG(Bx_:Bz_, i, j, k)
-          
+
           State_VG(Bx_:Bz_, i, j, k) = B1_D - DirR_D*sum(DirR_D*B1_D)
-          
+
           if(UseCME)then
-             !State_VG(Bx_:Bz_, i, j, k) = b_cme_d(Xyz_DGB(:,i,j,k,iBlock))
-             
+             ! State_VG(Bx_:Bz_, i, j, k) = b_cme_d(Xyz_DGB(:,i,j,k,iBlock))
+
              call EEE_get_state_BC(Xyz_DGB(:,i,j,k,iBlock), &
                   RhoCme, Ucme_D, Bcme_D, pCme, &
                   tSimulation, nStep, nIteration)

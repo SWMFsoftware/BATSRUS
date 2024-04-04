@@ -441,7 +441,7 @@ contains
     ! Do we calculate the squash factor
     UseSquashFactor = any(index(NamePlotVar_V(1:nPlotVar), 'squash') > 0)
     DoPlotThread = DoPlotThreads .and. .not. UseSquashFactor
-    
+
     if(OffsetAngle > 0)then
        ! Rotate around a full circle
        nPict = nint(cTwoPi / OffsetAngle)
