@@ -2583,6 +2583,7 @@ contains
   subroutine calc_squash_factor
     ! Calculatte squashing factor
 
+    use ModGeometry, ONLY: RadiusMin
     use ModInterpolate, ONLY: bilinear
 
     ! Last time the squashing factor has been calculated
@@ -2590,7 +2591,7 @@ contains
     integer :: nLonSquash = 360, nLatSquash = 180
 
     integer:: i, j, k, iSide, iBlock, iStatus
-    real:: Lon, Lat, Squash, SquashFactor
+    real:: Lon, Lat, Squash, SquashFactor, rTraceOrig
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_squash_factor'
@@ -2600,6 +2601,10 @@ contains
 
     call test_start(NameSub, DoTest)
 
+    ! Fix rTrace if necessary
+    rTraceOrig = rTrace
+    rTrace = max(rTraceOrig, RadiusMin*1.001)
+
     call trace_field_sphere
     if(DoTest)then
        write(*,*) NameSub,' minval(SquashFactor_II)=', minval(SquashFactor_II)
@@ -2607,6 +2612,9 @@ contains
     end if
 
     call trace_field_grid
+
+    ! Restore rTrace
+    rTrace = rTraceOrig
 
     if(.not.allocated(SquashFactor_GB)) then
        allocate(SquashFactor_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
