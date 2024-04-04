@@ -16,6 +16,7 @@ module ModThreadedLC
        PSi_, TeSi_, TiSi_, AMajor_, AMinor_,                             &
        DoInit_, Done_, Enthalpy_, Heat_, Restart_
   use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
+  use ModTransitionRegion, ONLY: ChromoEvapCoef
   use ModTurbulence,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
        ImbalanceMax
   use ModTurbulence,   ONLY: QeRatio
@@ -317,8 +318,8 @@ contains
     ! Initialize all output parameters from 0D solution
     write(NameTiming,'(a,i2.2)')'set_thread',j + nJ*(k - 1)
     call timing_start(NameTiming)
-    call interpolate_lookup_table(iTableTR, TeSiIn, 0.0, Value_V, &
-         DoExtrapolate=.false.)
+    call interpolate_lookup_table(iTableTR, TeSiIn, &
+         ChromoEvapCoef*USiIn/TeSiIn, Value_V, DoExtrapolate=.false.)
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
     PeSiOut        = Value_V(LengthPAvrSi_)*SqrtZ/&
