@@ -10772,12 +10772,14 @@ preferred).
 
 <command name="PLOTTHREADS">
   <parameter name="DoPlotThreads"      type="logical" default="T"/>
-  <parameter name="nGUniform"          type="integer" default="10"/> 
-  <parameter name="DoTRCorrection"     type="logical" default="T"/>
-  <parameter name="UsePlanarTriangles" type="logical" default="F"/>
-   
+  <if expr="$DoPlotThreads">
+    <parameter name="nGUniform"          type="integer" default="10"/> 
+    <parameter name="DoTRCorrection"     type="logical" default="T"/>
+    <parameter name="UsePlanarTriangles" type="logical" default="F"/>
+  </if>
+
 #PLOTTHREADS
-T	DoPlotThreads
+T	DoPlotThreads (read rest if true)
 10      nGUniform
 T       UseTRCorrection
 F	UsePlanarTriangles  
