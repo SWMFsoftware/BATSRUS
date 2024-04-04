@@ -1138,6 +1138,7 @@ contains
        iImplBlock)
 
     use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModFieldLineThread,     ONLY: b_cme_d
     use ModMain,       ONLY: nStep, nIteration, tSimulation
     use ModAdvance,      ONLY: State_VGB
