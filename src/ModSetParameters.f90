@@ -1309,6 +1309,7 @@ contains
                          case('c1')
                             rSizeImage_I(iFileInstrument)  = 6.0
                             rOccult_I(iFileInstrument)     = 1.0
+                            nPixel_I(iFileInstrument)      = 2048
                          case('c2')
                             rSizeImage_I(iFileInstrument)  = 6.0
                             rOccult_I(iFileInstrument)     = 2.0
