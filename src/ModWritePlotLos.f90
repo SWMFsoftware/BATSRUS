@@ -92,6 +92,9 @@ contains
     use ModSpectrum, ONLY: spectrum_read_table, spectrum_calc_flux, &
          clean_mod_spectrum
     use ModFieldTrace, ONLY: SquashFactor_GB
+    use ModFieldLineThread, ONLY: &
+         DoPlotThreads, rChromo, get_tr_los_image, UseTRCorrection, &
+         dCoord1Inv, interpolate_thread_state
 
     ! Arguments
 
@@ -180,6 +183,9 @@ contains
 
     ! Squash factor calculation
     logical:: UseSquashFactor = .false.
+    ! DoPlotThread is true if DoPlotThreads=T and UseSquashFactor=F
+    ! because the squash factor is not calculated in the thread region.
+    logical:: DoPlotThread = .false.
 
     ! Rotation
     integer:: iPict, nPict = 1
@@ -434,6 +440,7 @@ contains
 
     ! Do we calculate the squash factor
     UseSquashFactor = any(index(NamePlotVar_V(1:nPlotVar), 'squash') > 0)
+    DoPlotThread = DoPlotThreads .and. .not. UseSquashFactor
 
     if(OffsetAngle > 0)then
        ! Rotate around a full circle
@@ -544,8 +551,7 @@ contains
   contains
     !==========================================================================
     subroutine integrate_image
-      use ModFieldLineThread, ONLY: rChromo,                      &
-           get_tr_los_image, DoPlotThreads, UseTRCorrection
+
       real:: DistancePixToObs
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, DiscrChromo = -1.0, SqrtDiscr
@@ -554,7 +560,6 @@ contains
       logical:: DoTest
       character(len=*), parameter:: NameSub = 'integrate_image'
       !------------------------------------------------------------------------
-
       ! Loop over pixels
       do jPix = 1, nPix_D(2)
 
@@ -617,7 +622,7 @@ contains
 
                call integrate_line(XyzIntersect_D, DistancePixToObs - d)
 
-               if(DoPlotThreads)then
+               if(DoPlotThread)then
                   ! The discriminant controlling intersection with
                   ! the chromosphere
                   DiscrChromo = LosDotXyzPix**2 - XyzPix2 + rChromo**2
@@ -631,7 +636,7 @@ contains
                      call integrate_line(XyzIntersect_D, d - dChromo, &
                           IsThreadedGap = .true.)
                      ! LOS ntersection with the top of Transition Region
-                     if(UseTRCorrection.and.DoPlotThreads.and.          &
+                     if(UseTRCorrection .and. DoPlotThread .and.      &
                           (UseEuv .or. UseSxr .or. UseTableGen))then
                         XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
                         if(DoTestPe0)write(*,'(a,4es14.6)')&
@@ -681,7 +686,6 @@ contains
 
       use ModGeometry, ONLY: &
            xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
-      use ModFieldLineThread, ONLY: dCoord1Inv
       use BATL_lib,           ONLY: xyz_to_coord, &
            get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 
@@ -885,8 +889,7 @@ contains
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
       use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
-      use ModFieldLineThread, ONLY: interpolate_thread_state, DoPlotThreads
-      use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
+      use ModMultiFluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
            iRhoIon_I, iPIon_I
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
       use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_, Bx_, Bz_
@@ -991,11 +994,11 @@ contains
       ! Interpolate state if it is needed by any of the plot variables
       DoneStateInterpolate = .false.
       if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
-         !`Interpolate state vector in the point with gen coords
+         ! Interpolate state vector in the point with gen coords
          ! equal to GenLos_D
-         if(present(IsThreadedGap)  & ! This point is in the threaded gap
-              .or.(DoPlotThreads.and.& ! gap is used AND point is close to it
-              GenLos_D(1) < CoordMin_D(1) + 0.50*CellSize_D(1) ))then
+         if(present(IsThreadedGap) .or. (DoPlotThread .and. &
+              GenLos_D(1) < CoordMin_D(1) + 0.5*CellSize_D(1) )) then
+            ! point is inside gap or gap is used and the point is close to it
             ! Interpolate within the threaded gap
             call interpolate_thread_state(GenLos_D, iBlock, State_V, DoTest)
          else
@@ -1015,8 +1018,8 @@ contains
       if(UseFlux .or. UseNbi .or. UsePhx)then
          Spectrum_I=0.
          if(UsePhx)then
-            if(present(IsThreadedGap) .or. (DoPlotThreads .and. &
-                 GenLos_D(1) < CoordMin_D(1) + 0.50*CellSize_D(1)))then
+            if(present(IsThreadedGap) .or. (DoPlotThread .and. &
+                 GenLos_D(1) < CoordMin_D(1) + 0.5*CellSize_D(1)))then
                r = norm2(XyzBlockSign_D*XyzLos_D)
             else
                r = interpolate_scalar(r_GB(:,:,:,iBlock), &

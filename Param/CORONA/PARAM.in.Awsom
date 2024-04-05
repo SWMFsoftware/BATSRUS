@@ -223,8 +223,13 @@ periodic		TypeBc6
 #TRACEACCURACY
 5.0			AccuracyFactor
 
+#SQUASHFACTOR
+720                     nLonSquash
+360                     nLatSquash
+20.0                    AccuracyFactorSquash
+
 #SAVEPLOT
-5			nPlotFile 1
+6			nPlotFile 1
 x=0 VAR idl		StringPlot
 20			DnSavePlot 5000
 10.0			DtSavePlot
@@ -255,6 +260,20 @@ cut RAY idl		StringPlot
 -90.0			Coord3MinCut
 +90.0			Coord3MaxCut
 0.0			DxSavePlot
+los LGQ idl		StringPlot
+-1  			DnSavePlot
+60.0			DtSavePlot
+-215.0			ObsPosX
+0.0			ObsPosY
+0.0			ObsPosZ
+20.0			OffsetAngle
+6.0			rSizeImage
+0.0			xOffset
+0.0			yOffset
+0.0			rOccult
+0.0			MuLimbDarkening
+300			nPix
+
 
 x=0 VAR tec		StringPlot
 10000			DnSavePlot
