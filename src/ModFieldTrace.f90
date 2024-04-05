@@ -432,8 +432,10 @@ contains
        write(*,*) 'ClosedRay,OpenRay,OutRay =', ClosedRay, OpenRay, OutRay
     end if
 
-    if(.not.allocated(b_DGB)) &
-         allocate(b_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(.not.allocated(b_DGB)) then
+       allocate(b_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       b_DGB = 0.0
+    end if
 
     if(.not.allocated(Trace_DSNB))then
        allocate(Trace_DSNB(3,2,nI+1,nJ+1,nK+1,MaxBlock))
