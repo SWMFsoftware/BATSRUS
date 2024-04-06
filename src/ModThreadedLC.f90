@@ -10,7 +10,7 @@ module ModThreadedLC
   use BATL_lib, ONLY: test_start, test_stop, iProc, Xyz_DGB
   use ModChromosphere,    ONLY: TeChromosphereSi
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
-       HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &
+       HeatCondParSi, LengthPavrSi_, uLengthPavrSi_, UHeat_, HeatFluxLength_,&
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
   use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
        PSi_, TeSi_, TiSi_, AMajor_, AMinor_,                             &
@@ -294,7 +294,7 @@ contains
          DTeOverDsSiOut, PeSiOut, PiSiOut, RhoNoDimOut, AMajorOut
 
     ! Arrays needed to use lookup table
-    real    :: Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
+    real    :: Value_V(LengthPavrSi_:uLengthPavrSi_)
     ! Limited Speed
     real    :: USi
     !---------Used in 1D numerical model------------------------

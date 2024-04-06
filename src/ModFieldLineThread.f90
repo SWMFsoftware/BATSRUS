@@ -836,7 +836,7 @@ contains
       use ModLookupTable,  ONLY: interpolate_lookup_table
       real, intent(in)  :: BLength
       real, intent(out) :: TMax
-      real :: HeatFluxXLength, Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
+      real :: HeatFluxXLength, Value_V(LengthPavrSi_:uLengthPavrSi_)
       !------------------------------------------------------------------------
       HeatFluxXLength = 2*PoyntingFluxPerBSi*&
            BLength*No2Si_V(UnitX_)*No2Si_V(UnitB_)
