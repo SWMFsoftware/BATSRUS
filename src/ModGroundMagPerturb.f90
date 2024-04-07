@@ -181,9 +181,9 @@ contains
        if(allocated(TypeCoordGrid_I))  deallocate(TypeCoordGrid_I)
 
        call read_var('nMagGridFile', nMagGridFile)
-       allocate(nGridLon_I(nMagGridFile),nGridLat_I(nMagGridFile), &
-            GridLatMax_I(nMagGridFile),GridLatMin_I(nMagGridFile), &
-            GridLonMax_I(nMagGridFile),GridLonMin_I(nMagGridFile), &
+       allocate(nGridLon_I(nMagGridFile), nGridLat_I(nMagGridFile), &
+            GridLatMax_I(nMagGridFile), GridLatMin_I(nMagGridFile), &
+            GridLonMax_I(nMagGridFile), GridLonMin_I(nMagGridFile), &
             TypeCoordGrid_I(nMagGridFile), &
             NameGridFileOut_I(nMagGridFile), TypeGridFileOut_I(nMagGridFile), &
             nGridMag_I(nMagGridFile))
