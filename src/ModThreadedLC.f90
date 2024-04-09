@@ -324,9 +324,9 @@ contains
     logical :: DoCheckConvHere
 
     character(len=12) :: NameTiming
+    ! Initialize all output parameters from 0D solution
     character(len=*), parameter:: NameSub = 'solve_boundary_thread'
     !--------------------------------------------------------------------------
-    ! Initialize all output parameters from 0D solution
     write(NameTiming,'(a,i2.2)')'set_thread',j + nJ*(k - 1)
     call timing_start(NameTiming)
 
