@@ -269,7 +269,8 @@ contains
     ! inner boundary of the global solar corona to the photosphere
 
     use ModAdvance,          ONLY: nJ
-    use ModTransitionRegion, ONLY: HeatCondParSi
+    use ModTransitionRegion, ONLY: HeatCondParSi, &
+         UseChromoEvap, ChromoEvapCoef
     use ModPhysics,      ONLY: InvGammaMinus1,&
          No2Si_V, UnitX_,Si2No_V, UnitB_, UnitTemperature_
     use ModLookupTable,  ONLY: interpolate_lookup_table
@@ -309,6 +310,16 @@ contains
 
     ! Electron heat condution flux from Low Corona to TR:
     real :: HeatFlux2TR
+    ! Particle flux to/from TR:
+    ! u*concentration*cBoltzmann*LengthTr
+    real :: uLengthPavr
+    ! Argument of the lookup table: speed at the minimum Te (1e4 K):
+    real :: uMinSi
+    !
+    ! Constant particle flux per B times k_B
+    ! k_B n_i (= P_tot/(ZTe + Ti)) U/B Normalize per Flux2B costant ratio
+    real :: FluxConst
+
     integer :: nIterHere
     logical :: DoCheckConvHere
 
@@ -318,8 +329,19 @@ contains
     ! Initialize all output parameters from 0D solution
     write(NameTiming,'(a,i2.2)')'set_thread',j + nJ*(k - 1)
     call timing_start(NameTiming)
-    call interpolate_lookup_table(iTableTR, TeSiIn, &
-         ChromoEvapCoef*USiIn/TeSiIn, Value_V, DoExtrapolate=.false.)
+
+    nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
+
+    ! Constant particle flux per B times k_B
+    ! k_B n_i (= P_tot/(ZTe + Ti)) U/B Normalize per Flux2B costant ratio
+    FluxConst    = USiIn * PeSiIn/&
+         (TeSiIn*PoyntingFluxPerBSi*&
+         BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+    uLengthPavr = ChromoEvapCoef*FluxConst/( SqrtZ*&
+         BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(-nPoint,j,k) )
+    call interpolate_lookup_table(iTableTR, uLengthPavrSi_, uLengthPavr, &
+         Value_V=Value_V, Arg1In = TeSiIn, Arg2Out = uMinSi, &
+         DoExtrapolate=.false.)
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
     PeSiOut        = Value_V(LengthPAvrSi_)*SqrtZ/&
@@ -338,7 +360,6 @@ contains
          BoundaryThreads_B(iBlock) % TMax_II(j,k)*No2Si_V(UnitTemperature_)
     ConsMax = cTwoSevenths*HeatCondParSi*TeSiMax**3.5
 
-    nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
     if(iAction/=DoInit_)then
        ! Retrieve temperature and pressure distribution
        TeSi_I(1:nPoint) &
@@ -367,7 +388,7 @@ contains
        ! As a first approximation, recover Te from the analytical solution
        TeSi_I(nPoint) = TeSiIn; TiSi_I(nPoint) = TiSiIn
        do iPoint = nPoint-1, 1, -1
-          call interpolate_lookup_table(Arg2In=0.0, &
+          call interpolate_lookup_table(Arg2In=uMinSi, &
                iTable=iTableTR,         &
                iVal=LengthPAvrSi_,      &
                ValIn=PeSiOut/SqrtZ*     &
@@ -564,7 +585,7 @@ contains
       integer :: iPoint, iIter
 
       ! Enthalpy correction coefficients
-      real    :: EnthalpyFlux, FluxConst
+      real    :: EnthalpyFlux
       real    :: ElectronEnthalpyFlux, IonEnthalpyFlux
 
       ! Correction accounting for the Enthlpy flux from the TR
@@ -615,7 +636,10 @@ contains
       ! 5/2*U*Pi*(Z+1)/Ti
       EnthalpyFlux = FluxConst*(InvGammaMinus1 +1)*(1 + Z)
       ! Calculate flux to TR and its temperature derivative
-      call interpolate_lookup_table(iTableTR, TeSi_I(1), 0.0, Value_V, &
+      uLengthPavr = ChromoEvapCoef*FluxConst/( SqrtZ*&
+           BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(-nPoint,j,k) )
+      call interpolate_lookup_table(iTableTR, uLengthPavrSi_, uLengthPavr, &
+           Value_V=Value_V, Arg1In = TeSi_I(1), Arg2Out = uMinSi, &
            DoExtrapolate=.false.)
 
       do iIter = 1,nIterHere
@@ -754,7 +778,10 @@ contains
          ! Calculate TR pressure
          ! For next iteration calculate TR heat flux and
          ! its temperature derivative
-         call interpolate_lookup_table(iTableTR, TeSi_I(1), 0.0, Value_V, &
+         uLengthPavr = ChromoEvapCoef*FluxConst/( SqrtZ*&
+              BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(-nPoint,j,k) )
+         call interpolate_lookup_table(iTableTR, uLengthPavrSi_, uLengthPavr,&
+              Value_V=Value_V, Arg1In = TeSi_I(1), Arg2Out = uMinSi, &
               DoExtrapolate=.false.)
          ! Set pressure for updated temperature
          Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
