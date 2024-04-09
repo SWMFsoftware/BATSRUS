@@ -31,13 +31,16 @@ module ModImCoupling
   real, public, allocatable :: ImLat_I(:), ImLon_I(:)
   !$acc declare create(ImLat_I, ImLon_I)
   real, public, allocatable :: &
-       ImP_III(:,:,:), ImRho_III(:,:,:), ImPpar_III(:,:,:)
+       ImPe_II(:,:), ImP_III(:,:,:), ImRho_III(:,:,:), ImPpar_III(:,:,:)
   !$acc declare create(ImP_III, ImRho_III, ImPpar_III)
   real, public, allocatable :: ImBmin_II(:,:)
   !$acc declare create(ImBmin_II)
 
-  logical, public, allocatable :: IsImRho_I(:), IsImP_I(:), IsImPpar_I(:)
+  logical, public, allocatable :: &
+       IsImRho_I(:), IsImP_I(:), IsImPpar_I(:)
   !$acc declare create(IsImRho_I, IsImP_I, IsImPpar_I)
+
+  logical, public :: isImPe
 
   ! number of passed variables (densities and pressures)
   integer, public :: nVarCouple=0
@@ -60,6 +63,7 @@ module ModImCoupling
 
   integer :: nBlockLast = -1
   real, allocatable :: RhoIm_ICB(:,:,:,:,:)
+  real, allocatable :: PeIM_CB(:,:,:,:)
   real, allocatable :: pIm_ICB(:,:,:,:,:)
   real, allocatable :: TauCoeffIm_CB(:,:,:,:)
   real, allocatable :: PparIm_ICB(:,:,:,:,:)
@@ -85,6 +89,7 @@ contains
     allocate(&
          ImLat_I(iSize), &
          ImLon_I(jSize), &
+         ImPe_II(iSize, jSize), &
          ImP_III(iSize,jSize,nFluid), &
          IsImP_I(nFluid), IsImPpar_I(nFluid))
 
@@ -126,11 +131,13 @@ contains
        nBlockLast = nBlock
 
        if (allocated(RhoIm_ICB)) deallocate(RhoIm_ICB)
+       if (allocated(PeIM_CB)) deallocate(PeIM_CB)
        if (allocated(pIm_ICB)) deallocate(pIm_ICB)
        if (allocated(TauCoeffIm_CB)) deallocate(TauCoeffIm_CB)
        if (allocated(PparIm_ICB)) deallocate(PparIm_ICB)
 
        allocate(pIm_ICB(nFluid,nI,nJ,nK,nBlock))
+       allocate(PeIM_CB(nI,nJ,nK,nBlock))
        allocate(TauCoeffIm_CB(nI,nJ,nK,nBlock))
        if(DoCoupleImDensity) &
             allocate(RhoIm_ICB(nDensity,nI,nJ,nK,nBlock))
@@ -148,7 +155,7 @@ contains
     use ModPhysics,  ONLY : &
          Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
     use ModGeometry, ONLY : r_GB, Xyz_DGB, z_
-    use ModAdvance,  ONLY : State_VGB, RhoUz_, Bx_, Bz_
+    use ModAdvance,  ONLY : State_VGB, RhoUz_, Bx_, Bz_, UseElectronPressure
     use ModB0,       ONLY: B0_DGB
 
     integer, intent(in)  :: iBlock
@@ -193,6 +200,7 @@ contains
 
        ! Default is negative, which means that do not nudge GM values
        pIm_ICB(:,i,j,k,iBlock)   = -1.0
+       PeIM_CB(i,j,k,iBlock)     = -1.0
        BminIm_C(i,j,k)   = -1.0
        if(DoCoupleImDensity) &
             RhoIm_ICB(:,i,j,k,iBlock) = -1.0
@@ -280,6 +288,19 @@ contains
                 end if
              end do DENSITY
           endif
+
+          ! store the electron pressure value from IM
+          if(.not. IsImPe) CYCLE
+          if(UseElectronPressure .and. &
+             ImPe_II(iLat1,iLon1) > 0.0 .and. &
+             ImPe_II(iLat2,iLon1) > 0.0 .and. &
+             ImPe_II(iLat1,iLon2) > 0.0 .and. &
+             ImPe_II(iLat2,iLon2) > 0.0) &
+               PeIM_CB(i,j,k,iBlock) = Si2No_V(UnitP_)*( &
+                           LonWeight1*( LatWeight1*ImPe_II(iLat1,iLon1) &
+                           +            LatWeight2*ImPe_II(iLat2,iLon1) ) + &
+                           LonWeight2*( LatWeight1*ImPe_II(iLat1,iLon2) &
+                           +            LatWeight2*ImPe_II(iLat2,iLon2) ) )
 
           FLUID: do iFluid=1,nFluid
              ! check if fluid is available from IM, if not cycle to next
@@ -505,12 +526,12 @@ contains
                         * (pIm_ICB(iFluid,i,j,k,iBlock) - &
                         State_VGB(iP_I(iFluid),i,j,k,iBlock))
                         ! if solving electron pressure/entropy equation
-                        ! applying RCM Pe (a ratio of Pi)
+                        ! applying RCM Pe
                         if(UseElectronPressure .and. iFluid == 1)&
                              State_VGB(Pe_,i,j,k,iBlock) = &
                              State_VGB(Pe_,i,j,k,iBlock)   &
                              + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
-                             * (RatioPe2P * pIm_ICB(iFluid,i,j,k,iBlock) - &
+                             * (PeIm_CB(i,j,k,iBlock) - &
                              State_VGB(Pe_,i,j,k,iBlock))
                    end if
                 end do
@@ -561,12 +582,12 @@ contains
                       *State_VGB(iP_I(iFluid),i,j,k,iBlock)+&
                       pIm_ICB(iFluid,i,j,k,iBlock))
                       ! if solving electron pressure/entropy equation
-                      ! applying RCM Pe (a ratio of Pi)
+                      ! applying RCM Pe
                       if(UseElectronPressure .and. iFluid == 1) &
                            State_VGB(Pe_,i,j,k,iBlock) = Factor* &
                            (TauCoupleIM &
                            *State_VGB(Pe_,i,j,k,iBlock)+&
-                           RatioPe2P*pIm_ICB(iFluid,i,j,k,iBlock))
+                           PeIm_CB(i,j,k,iBlock))
                    end if
                 end do
              end do; end do; end do
