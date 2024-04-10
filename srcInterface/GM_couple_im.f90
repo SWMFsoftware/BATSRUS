@@ -763,24 +763,22 @@ contains
     ! initialize
     IsImRho_I(:)  = .false.
     IsImP_I(:)    = .false.
-    IsImPe        = .false.
     IsImPpar_I(:) = .false.
 
     ! Store iM variable for internal use
-    ImP_III     (:,:,1) = Buffer_IIV(:,:,pres_)
-    ImPe_II     (:,:)   = Buffer_IIV(:,:,pe_)
-    if(.not. UseElectronPressure) then
-      ImP_III(:,:,1) = Buffer_IIV(:,:,pres_) + Buffer_IIV(:,:,pe_)
+    ImP_III(:,:,1) = Buffer_IIV(:,:,pres_)
+    if(UseElectronPressure)then
+       ImPe_II(:,:) = Buffer_IIV(:,:,pe_)
+    else
+       ! Add electron pressure to ion pressure if there is no electron pressure
+       ! This should NOT be done for multifluid ???!!!
+       ImP_III(:,:,1) = ImP_III(:,:,1) + Buffer_IIV(:,:,pe_)
     end if
- !   IM_p    = Buffer_IIV(:,:,pres_)
-
-    ImRho_III     (:,:,1) = Buffer_IIV(:,:,dens_)
-!    IM_dens = Buffer_IIV(:,:,dens_)
+    ImRho_III(:,:,1) = Buffer_IIV(:,:,dens_)
     iNewPIm  = iNewPIm + 1
 
     IsImRho_I(1)  = .true.
     IsImP_I(1)    = .true.
-    IsImPe        = .true.
     IsImPpar_I(1) = .false.
 
     ! for multifluid
