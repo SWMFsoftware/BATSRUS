@@ -9,8 +9,10 @@ module ModImCoupling
 
   use ModMain, ONLY: DoAnisoPressureIMCoupling, &
        DoCoupleImPressure, DoCoupleImDensity
-  use ModAdvance,    ONLY: UseAnisoPressure
-  use ModVarIndexes, ONLY: nFluid
+  use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
+       UseMultiSpecies, nSpecies, State_VGB
+  use ModVarIndexes, ONLY: nFluid, Rho_, RhoUz_, Bx_, Bz_, Pe_, Ppar_, &
+       SpeciesFirst_
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -39,8 +41,6 @@ module ModImCoupling
   logical, public, allocatable :: &
        IsImRho_I(:), IsImP_I(:), IsImPpar_I(:)
   !$acc declare create(IsImRho_I, IsImP_I, IsImPpar_I)
-
-  logical, public :: isImPe
 
   ! number of passed variables (densities and pressures)
   integer, public :: nVarCouple=0
@@ -72,8 +72,7 @@ module ModImCoupling
 contains
   !============================================================================
   subroutine im_pressure_init(iSizeIn,jSizeIn)
-    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
-    use ModVarIndexes, ONLY: Rho_, SpeciesFirst_
+
     use ModMultiFluid, ONLY: iRho_I
 
     integer, intent(in):: iSizeIn, jSizeIn ! size of IM grid
@@ -87,11 +86,10 @@ contains
     iSize = iSizeIn
     jSize = jSizeIn
     allocate(&
-         ImLat_I(iSize), &
-         ImLon_I(jSize), &
-         ImPe_II(iSize, jSize), &
+         ImLat_I(iSize), ImLon_I(jSize), &
          ImP_III(iSize,jSize,nFluid), &
          IsImP_I(nFluid), IsImPpar_I(nFluid))
+    if(UseElectronPressure) allocate(ImPe_II(iSize,jSize))
 
     if (UseMultiSpecies) then
        allocate(ImRho_III(iSize,jSize,nSpecies+1), IsImRho_I(nSpecies+1))
@@ -99,8 +97,8 @@ contains
        allocate(ImRho_III(iSize,jSize,nFluid), IsImRho_I(nFluid))
     endif
 
-    allocate(ImPpar_III(iSize,jSize,nFluid), &
-         ImBmin_II(iSize,jSize))
+    if(UseAnisoPressure) &
+         allocate(ImPpar_III(iSize,jSize,nFluid), ImBmin_II(iSize,jSize))
 
     ! Set array of density indexes:
     ! nSpecies for multispecies, nFluid for multifluid
@@ -155,7 +153,6 @@ contains
     use ModPhysics,  ONLY : &
          Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
     use ModGeometry, ONLY : r_GB, Xyz_DGB, z_
-    use ModAdvance,  ONLY : State_VGB, RhoUz_, Bx_, Bz_, UseElectronPressure
     use ModB0,       ONLY: B0_DGB
 
     integer, intent(in)  :: iBlock
@@ -290,17 +287,16 @@ contains
           endif
 
           ! store the electron pressure value from IM
-          if(.not. IsImPe) CYCLE
           if(UseElectronPressure .and. &
              ImPe_II(iLat1,iLon1) > 0.0 .and. &
              ImPe_II(iLat2,iLon1) > 0.0 .and. &
              ImPe_II(iLat1,iLon2) > 0.0 .and. &
              ImPe_II(iLat2,iLon2) > 0.0) &
-               PeIM_CB(i,j,k,iBlock) = Si2No_V(UnitP_)*( &
-                           LonWeight1*( LatWeight1*ImPe_II(iLat1,iLon1) &
-                           +            LatWeight2*ImPe_II(iLat2,iLon1) ) + &
-                           LonWeight2*( LatWeight1*ImPe_II(iLat1,iLon2) &
-                           +            LatWeight2*ImPe_II(iLat2,iLon2) ) )
+             PeIM_CB(i,j,k,iBlock) = Si2No_V(UnitP_)*( &
+             LonWeight1*( LatWeight1*ImPe_II(iLat1,iLon1) &
+             +            LatWeight2*ImPe_II(iLat2,iLon1) ) + &
+             LonWeight2*( LatWeight1*ImPe_II(iLat1,iLon2) &
+             +            LatWeight2*ImPe_II(iLat2,iLon2) ) )
 
           FLUID: do iFluid=1,nFluid
              ! check if fluid is available from IM, if not cycle to next
@@ -409,8 +405,6 @@ contains
 
     use ModMain, ONLY: iNewGrid, iNewDecomposition, TauCoupleIm, &
          IsTimeAccurate, Dt, RhoMinDimIm
-    use ModAdvance, ONLY: State_VGB, UseElectronPressure
-    use ModVarIndexes, ONLY: Ppar_, Pe_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
