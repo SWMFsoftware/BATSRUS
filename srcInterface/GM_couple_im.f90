@@ -44,28 +44,24 @@ module GM_couple_im
   ! Information about the iM grid: 2D non-uniform regular grid
   real, allocatable, dimension(:) :: ImLat_I, ImLon_I
 
-  integer :: i,j, i0
+  integer:: i,j,i0
 
-  real, save, dimension(:), allocatable :: &
-       MhdLatBoundary_I
+  real, save, allocatable :: MhdLatBoundary_I(:)
   real, save, dimension(:,:), allocatable :: &
        MhdSumVol_II, MhdTmp_II, &
        MhdSumRho_II, MhdHpRho_II, MhdOpRho_II, &
        MhdSumPe_II, MhdSumP_II, MhdHpP_II, MhdOpP_II, &
-       MhdBeq_II, &
-       MhdXeq_II, &
-       MhdYeq_II, &
-       MhdFluxError_II
+       MhdBeq_II, MhdXeq_II, MhdYeq_II, MhdFluxError_II
   real, parameter :: NoValue=-99999.
-  real :: Beq
-  real :: Colat,Ci,Cs,FCiCs,Factor,Vol,Ri,s2,s6,s8,Factor1,Factor2
+  real:: Beq
+  real:: Colat, Ci, Cs, FCiCs, Factor, Vol, Ri, s2, s6, s8, Factor1, Factor2
 
-  integer :: iError
+  integer:: iError
 
-  logical :: DoTestTec, DoTestIdl
+  logical:: DoTestTec, DoTestIdl
 
   ! This is for the GM-iM/RAM coupling
-  real, allocatable :: StateLine_VI(:,:)
+  real, allocatable:: StateLine_VI(:,:)
 
 contains
   !============================================================================
@@ -496,12 +492,6 @@ contains
     real :: Radius
 
     logical :: DoTest, DoTestMe
-
-    ! these variables are ONLY used for keeping
-    ! the current GM-IM coupling result
-    real, parameter :: x_h = 0.8, x_o = 0.2
-    real, parameter :: xmass (3) = [ 9.1E-31, 1.67E-27, 16*1.67E-27 ]
-
     character(len=*), parameter:: NameSub = 'GM_get_for_im'
     !--------------------------------------------------------------------------
     if(DoMultiFluidIMCoupling)then
@@ -552,10 +542,16 @@ contains
        end if
 
        if(UseElectronPressure) then
-         MhdSumPe_II= RayResult_VII(iPeInvB,:,:)
+          MhdSumPe_II= RayResult_VII(iPeInvB,:,:)
+       elseif(DoMultiFluidIMCoupling)then
+          ! This factor is from RCM
+          Factor = 1/7.8
+          MhdSumPe_II = Factor*MhdHpP_II
        else
-         MhdSumPe_II= MhdSumP_II * (xmass(2)*x_h + xmass(3)*x_o) &
-                     / xmass(1) / (1.0 + 1.0 / 7.8) / 7.8
+          ! This value is from RCM with x_h = 0.8, x_o = 0.2:
+          ! (xmass(2)*x_h + xmass(3)*x_o)/xmass(2)/(1 + 1/7.8)/7.8
+          Factor = 1/2.2
+          MhdSumPe_II = Factor*MhdSumP_II
        end if
 
        ! Put impossible values if the field line is not closed
