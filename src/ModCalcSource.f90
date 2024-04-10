@@ -828,7 +828,7 @@ contains
     !   +curl(B0) x B0    - add this if curl B0 is not 0
 
     ! Calculate the source terms formulated via B0
-    if(UseB0) call set_b0_source(iBlock)
+    if(UseB0) call set_b0_source(iBlock, DoSkipSetB0Face=.true.)
 
     if(UseB .and. UseDivbSource)then
 

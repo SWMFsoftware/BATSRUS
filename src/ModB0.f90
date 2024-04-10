@@ -517,7 +517,7 @@ contains
   end subroutine set_b0_reschange
   !============================================================================
 
-  subroutine set_b0_source(iBlock)
+  subroutine set_b0_source(iBlock, DoSkipSetB0Face)
 
     ! Calculate div(B0) and curl(B0) for block iBlock
 
@@ -527,6 +527,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in):: iBlock
+    logical, optional, intent(in) :: DoSkipSetB0Face
 
     integer:: i, j, k
     real:: DxInv, DyInv, DzInv
@@ -537,8 +538,9 @@ contains
     if(.not.(UseB0 .and. UseB0Source)) RETURN
     call test_start(NameSub, DoTest, iBlock)
 
-    ! set B0_DX, B0_DY, B0_DZ for this block
-    ! call set_b0_face(iBlock)
+    ! set B0_DX, B0_DY, B0_DZ for this block.
+    ! Skip, if calculated before
+    if(.not.present(DoSkipSetB0Face))call set_b0_face(iBlock)
 
     if(IsCartesian)then
        if(nDim == 2)then
