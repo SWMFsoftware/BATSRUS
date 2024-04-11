@@ -811,13 +811,13 @@ contains
        ! IM_ppar = Buffer_IIV(:,:,parpres_)
        ImBmin_II = Buffer_IIV(:,:,bmin_)
        IsImPpar_I(1) = .true.
+       !$acc update device(ImBmin_II, ImPpar_III)
     end if
 
     DoMapEquatorRay = .false.
 
     !$acc update device(ImLat_I, ImLon_I)
-    !$acc update device(ImP_III, ImRho_III, ImPpar_III)
-    !$acc update device(ImBmin_II)
+    !$acc update device(ImP_III, ImRho_III)
     !$acc update device(IsImRho_I, IsImP_I, IsImPpar_I)
 
     ! if(DoTest)call write_im_vars_tec  ! TecPlot output
@@ -931,10 +931,10 @@ contains
        IsImPpar_I(:)=.false.
 
        do iDensity = 1, nDensity
-          do iVarIm = 1,nVarIM-1
+          do iVarIm = 1, nVarIM - 1
              ! get Density index for buffer
-             if(trim(string_to_lower(NameVar_V(iDens_I(iDensity)))) &
-                  == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
+             if(string_to_lower(NameVar_V(iDens_I(iDensity))) &
+                  == string_to_lower(NameVarIm_V(iVarIm)) ) then
                 ! found a match. set iM fluid index
                 iRhoIm_I(iDensity)  = iVarIm
                 IsImRho_I(iDensity) = .true.
@@ -949,8 +949,8 @@ contains
        do iFluid = 1, nFluid
           do iVarIm = 1,nVarIM-1
              ! get Pressure index for Buffer
-             if(trim(string_to_lower(NameVar_V(iP_I(iFluid)))) &
-                  == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
+             if(string_to_lower(NameVar_V(iP_I(iFluid))) &
+                  == string_to_lower(NameVarIm_V(iVarIm)) ) then
                 ! found a match. set iM fluid index
                 iPIm_I(iFluid)  = iVarIm
                 IsImP_I(iFluid) = .true.
@@ -962,8 +962,8 @@ contains
 
              if (DoAnisoPressureIMCoupling) then
                 ! get Par Pressure index for Buffer
-                if(trim(string_to_lower(NameVar_V(iPparIon_I(iFluid)))) &
-                     == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
+                if(string_to_lower(NameVar_V(iPparIon_I(iFluid))) &
+                     == string_to_lower(NameVarIm_V(iVarIm)) ) then
                    ! found a match. set iM fluid index
                    iPparIm_I(iFluid)  = iVarIm
                    IsImPpar_I(iFluid) = .true.
@@ -997,44 +997,32 @@ contains
           ImP_III(:,:,iFluid) = -1.0
        endif
 
-       if (IsImPpar_I(iFluid) .and. DoAnisoPressureIMCoupling) then
-          ImPpar_III(:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
-       else
-          ImPpar_III(:,:,iFluid) = -1.0
-       endif
-
+       if (IsImPpar_I(iFluid) .and. DoAnisoPressureIMCoupling) &
+            ImPpar_III(:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
     enddo
     ! for anisotropic pressure
-    if(DoAnisoPressureIMCoupling)then
-       ImBmin_II = Buffer_IIV(:,:,nVarIm)
-    end if
-!    write(*,*) 'GM max min ppar',maxval(ImPpar_III),minval(ImPpar_III)
-!    write(*,*) 'GM max min p',maxval(ImP_III),minval(ImP_III)
+    if(DoAnisoPressureIMCoupling) &
+         ImBmin_II = Buffer_IIV(:,:,nVarIm)
 
     if(DoTest)call write_im_vars_tec  ! TecPlot output
     if(DoTest)call write_im_vars_idl  ! IDL     output
 
   contains
     !==========================================================================
-    function string_to_lower( String ) result (StringNew)
+    function string_to_lower(String) result (StringNew)
 
-      character(len=*)           :: String
-      character(len=len(String)) :: StringNew
+      use ModUtilities, ONLY: lower_case
+      character(len=*)      :: String
 
-      integer                    :: i
-      integer                    :: k
+      character(len(String)):: StringNew
       !------------------------------------------------------------------------
       StringNew = String
-      do i = 1, len(String)
-         k = iachar(String(i:i))
-         if ( k >= iachar('A') .and. k <= iachar('Z') ) then
-            k = k + iachar('a') - iachar('A')
-            StringNew(i:i) = achar(k)
-         endif
-      enddo
+      call lower_case(StringNew)
+
     end function string_to_lower
     !==========================================================================
     subroutine write_im_vars_tec
+
       integer :: j2
       real :: LonShift
       !------------------------------------------------------------------------
