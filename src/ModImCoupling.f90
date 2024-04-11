@@ -287,17 +287,17 @@ contains
           endif
 
           ! store the electron pressure value from IM
-          if(UseElectronPressure .and. &
-             ImPe_II(iLat1,iLon1) > 0.0 .and. &
-             ImPe_II(iLat2,iLon1) > 0.0 .and. &
-             ImPe_II(iLat1,iLon2) > 0.0 .and. &
-             ImPe_II(iLat2,iLon2) > 0.0) &
-             PeIM_CB(i,j,k,iBlock) = Si2No_V(UnitP_)*( &
-             LonWeight1*( LatWeight1*ImPe_II(iLat1,iLon1) &
-             +            LatWeight2*ImPe_II(iLat2,iLon1) ) + &
-             LonWeight2*( LatWeight1*ImPe_II(iLat1,iLon2) &
-             +            LatWeight2*ImPe_II(iLat2,iLon2) ) )
-
+          if(UseElectronPressure)then
+             if(  ImPe_II(iLat1,iLon1) > 0.0 .and. &
+                  ImPe_II(iLat2,iLon1) > 0.0 .and. &
+                  ImPe_II(iLat1,iLon2) > 0.0 .and. &
+                  ImPe_II(iLat2,iLon2) > 0.0) &
+                  PeIM_CB(i,j,k,iBlock) = Si2No_V(UnitP_)*( &
+                  LonWeight1*( LatWeight1*ImPe_II(iLat1,iLon1) &
+                  +            LatWeight2*ImPe_II(iLat2,iLon1) ) + &
+                  LonWeight2*( LatWeight1*ImPe_II(iLat1,iLon2) &
+                  +            LatWeight2*ImPe_II(iLat2,iLon2) ) )
+          end if
           FLUID: do iFluid=1,nFluid
              ! check if fluid is available from IM, if not cycle to next
              if (.not. IsImP_I(iFluid)) CYCLE FLUID
