@@ -6,7 +6,7 @@
 module GM_couple_im
 
   ! Coupling with inner magnetosphere models (IM)
-  
+
   use BATL_lib, ONLY: iProc, iComm
   use ModUtilities, ONLY: CON_set_do_test
   use ModMpi
@@ -547,7 +547,7 @@ contains
        if(UseElectronPressure) then
           MhdSumPe_II= RayResult_VII(iPeInvB,:,:)
        elseif(DoMultiFluidIMCoupling)then
-          
+
           ! This factor is from RCM
           Factor = 1/7.8
           MhdSumPe_II = Factor*MhdHpP_II
