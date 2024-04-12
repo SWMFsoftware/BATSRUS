@@ -26,7 +26,7 @@ module ModUser
 
   character (len=*), parameter :: NameUserFile = "ModUserJupiter.f90"
   character (len=*), parameter :: &
-       NameUserModule = 'Jupiter Magnetosphere, 2020'
+       NameUserModule = 'Jupiter Magnetosphere, Xianzhe Jia and Yash Sarkango'
 
   ! User input variables
   logical :: UseMassLoading = .false.
