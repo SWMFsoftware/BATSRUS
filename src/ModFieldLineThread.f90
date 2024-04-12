@@ -671,11 +671,13 @@ contains
        BoundaryThreads_B(iBlock)%RInv_III(-iPoint, j, k) = 1/rChromo
        call get_b0(Xyz_D, B0_D)
        B0 = norm2(B0_D)
+       ! Last point for magnetic field (-nPoint-1, j, k)
        BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k) = B0
        ! Store the number of points. This will be the number of temperature
        ! nodes such that the first one is on the top of the TR, the last
        ! one is in the center of physical cell
        nPoint = iPoint + 1 - nIntervalTR
+       iPoint = nPoint - 1 + nIntervalTR ! nPoint + 1
        BoundaryThreads_B(iBlock)%nPoint_II(j,k) = nPoint
        BoundaryThreads_B(iBlock)%TGrav_III(2-nPoint:0,j,k) = &
             GravHydroStat*&
@@ -683,35 +685,39 @@ contains
             BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-1,j,k))
 
        ! Store the lengths
+       ! First non-zero Length at the point (-nPoint,j,k)
        BoundaryThreads_B(iBlock)%LengthSi_III(1-iPoint, j, k) = &
             Ds*Aux*No2Si_V(UnitX_)
+       ! First contribution for all integrals from the (shorter) interval
+       ! between points -nPoint-1 and -nPoint
        IntegralBdS = &
             Ds*Aux*0.50*(                                         &
             BoundaryThreads_B(iBlock)%B_III(-iPoint, j, k) +    &
             BoundaryThreads_B(iBlock)%B_III(1-iPoint, j, k) )
-       iPoint = iPoint - 1
+       iPoint = iPoint - 1 ! nPoint
        !     |           |
        !-iPoint-1      -iPoint
        iInterval = 1
        do while(iInterval < nIntervalTR)
+          ! Contribution from the interval -nPoint, 1-nPoint
           BoundaryThreads_B(iBlock)%LengthSi_III(1-iPoint, j, k) =     &
                BoundaryThreads_B(iBlock)%LengthSi_III(-iPoint, j, k) + &
                Ds*No2Si_V(UnitX_)
           IntegralBdS = IntegralBdS + Ds*0.50*(&
                BoundaryThreads_B(iBlock)%B_III( -iPoint, j, k) +       &
                BoundaryThreads_B(iBlock)%B_III(1-iPoint, j, k) )
-          iPoint = iPoint - 1
-          iInterval = iInterval + 1
+          iPoint = iPoint - 1  ! nPoint -1
+          iInterval = iInterval + 1   ! For nInterval = 2 exit the loop
        end do
        !     |            |...........|           Temperature nodes
        !-iPoint-nInterval          -iPoint
        !                        x           x            Flux nodes
        !                    -iPoint-1    -iPoint
-       ! Here, iPoint is the current value, equal to nPoint-1, nPoint being the
-       ! stored value. Now, LengthSi = Ds*(nInterval - 1 + Aux), as long as the
-       ! first interval is shorter than Ds. Then, BDsFaceInvSi is the
-       ! dimensionless and not inverted integral of Bds over the first
-       ! intervals.
+       ! Here, iPoint is the current value, equal to nPoint-1, nPoint being
+       ! the stored value. Now, LengthSi = Ds*(nInterval - 1 + Aux), as long
+       ! as the first interval is shorter than Ds. Then, BDsFaceInvSi at the
+       ! face -nPoint stores the inverse of the distance to the 1-nPoint, and
+       ! field at the same point
 
        BoundaryThreads_B(iBlock)%BDsFaceInvSi_III(-1-iPoint, j, k) = 1/  &
             (BoundaryThreads_B(iBlock)%LengthSi_III(-iPoint, j, k)*  &

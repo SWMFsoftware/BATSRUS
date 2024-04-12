@@ -44,28 +44,24 @@ module GM_couple_im
   ! Information about the iM grid: 2D non-uniform regular grid
   real, allocatable, dimension(:) :: ImLat_I, ImLon_I
 
-  integer :: i,j, i0
+  integer:: i,j,i0
 
-  real, save, dimension(:), allocatable :: &
-       MhdLatBoundary_I
+  real, save, allocatable :: MhdLatBoundary_I(:)
   real, save, dimension(:,:), allocatable :: &
        MhdSumVol_II, MhdTmp_II, &
        MhdSumRho_II, MhdHpRho_II, MhdOpRho_II, &
-       MhdSumP_II, MhdHpP_II, MhdOpP_II, &
-       MhdBeq_II, &
-       MhdXeq_II, &
-       MhdYeq_II, &
-       MhdFluxError_II
+       MhdSumPe_II, MhdSumP_II, MhdHpP_II, MhdOpP_II, &
+       MhdBeq_II, MhdXeq_II, MhdYeq_II, MhdFluxError_II
   real, parameter :: NoValue=-99999.
-  real :: Beq
-  real :: Colat,Ci,Cs,FCiCs,Factor,Vol,Ri,s2,s6,s8,Factor1,Factor2
+  real:: Beq
+  real:: Colat, Ci, Cs, FCiCs, Factor, Vol, Ri, s2, s6, s8, Factor1, Factor2
 
-  integer :: iError
+  integer:: iError
 
-  logical :: DoTestTec, DoTestIdl
+  logical:: DoTestTec, DoTestIdl
 
   ! This is for the GM-iM/RAM coupling
-  real, allocatable :: StateLine_VI(:,:)
+  real, allocatable:: StateLine_VI(:,:)
 
 contains
   !============================================================================
@@ -483,9 +479,10 @@ contains
   subroutine GM_get_for_im(Buffer_IIV,KpOut,iSizeIn,jSizeIn,nVar,NameVar)
 
     use ModFieldTrace, ONLY: RayResult_VII, RayIntegral_VII, &
-         InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
+         InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, iPeInvB, &
          HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, iXEnd, ClosedRay, &
          integrate_field_from_sphere
+    use ModAdvance, ONLY: UseElectronPressure
     use ModGroundMagPerturb, ONLY: DoCalcKp, kP
 
     integer,          intent(in) :: iSizeIn, jSizeIn, nVar
@@ -495,19 +492,21 @@ contains
     real :: Radius
 
     logical :: DoTest, DoTestMe
-
     character(len=*), parameter:: NameSub = 'GM_get_for_im'
     !--------------------------------------------------------------------------
     if(DoMultiFluidIMCoupling)then
-       if(NameVar /= 'vol:z0x:z0y:bmin:Hprho:Oprho:Hpp:Opp') &
+       if(NameVar /= 'vol:z0x:z0y:bmin:Hprho:Oprho:Hpp:Opp:pe') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     else
-       if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
+       if(NameVar /= 'vol:z0x:z0y:bmin:rho:p:pe') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     end if
     call CON_set_do_test(NameSub//'_tec', DoTestTec, DoTestMe)
     call CON_set_do_test(NameSub//'_idl', DoTestIdl, DoTestMe)
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    if(iPeInvB /= 7 .and. iPeInvB /= 9) &
+      call CON_stop(NameSub//' invalid IPeInvB')
 
     ! Allocate arrays
     call allocate_gm_im(iSizeIn, jSizeIn)
@@ -517,12 +516,12 @@ contains
     if(.not. DoMultiFluidIMCoupling)then
        call integrate_field_from_sphere(&
             iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, &
-            'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
+            'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,PeInvB')
     else
        call integrate_field_from_sphere(&
             iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,HpRhoInvB,OpRhoInvB,&
-            &HppInvB,OppInvB')
+            &HppInvB,OppInvB,PeInvB')
        ! but not pass Rhoinvb, Pinvb to iM
     end if
 
@@ -541,6 +540,20 @@ contains
           MhdHpP_II= RayResult_VII(HpPInvB_,:,:)
           MhdOpP_II= RayResult_VII(OpPInvB_,:,:)
        end if
+
+       if(UseElectronPressure) then
+          MhdSumPe_II= RayResult_VII(iPeInvB,:,:)
+       elseif(DoMultiFluidIMCoupling)then
+          ! This factor is from RCM
+          Factor = 1/7.8
+          MhdSumPe_II = Factor*MhdHpP_II
+       else
+          ! This value is from RCM with x_h = 0.8, x_o = 0.2:
+          ! (xmass(2)*x_h + xmass(3)*x_o)/xmass(2)/(1 + 1/7.8)/7.8
+          Factor = 1/2.2
+          MhdSumPe_II = Factor*MhdSumP_II
+       end if
+
        ! Put impossible values if the field line is not closed
        if(.not.DoMultiFluidIMCoupling)then
           where(RayResult_VII(iXEnd,:,:) <= ClosedRay)
@@ -548,6 +561,7 @@ contains
              MhdYeq_II     = NoValue
              MhdSumVol_II = 0.0
              MhdSumRho_II = 0.0
+             MhdSumPe_II  = 0.0
              MhdSumP_II   = 0.0
              MhdBeq_II     = NoValue
           end where
@@ -558,6 +572,7 @@ contains
              MhdSumVol_II = 0.0
              MhdHpRho_II = 0.0
              MhdOpRho_II = 0.0
+             MhdSumPe_II = 0.0
              MhdHpP_II   = 0.0
              MhdOpP_II   = 0.0
              MhdBeq_II     = NoValue
@@ -603,7 +618,7 @@ contains
           Buffer_IIV(:,:,HpPInvB_)   = MhdHpP_II
           Buffer_IIV(:,:,OpPInvB_)   = MhdOpP_II
        end if
-
+       Buffer_IIV(:,:,iPeInvB)       = MhdSumPe_II
     end if
 
   end subroutine GM_get_for_im
@@ -684,7 +699,7 @@ contains
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
     use ModVarIndexes, ONLY: nFluid, iRho_I, iP_I, iPparIon_I,SpeciesFirst_, &
          SpeciesLast_
-    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
+    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies, UseElectronPressure
 
     character(len=80):: NameFile
 
@@ -693,8 +708,8 @@ contains
     character(len=*), intent(in) :: NameVar
     character(len=lNameVersion) :: NameVersionIm
     integer :: nCells_D(2), iError, i,j
-    integer, parameter :: pres_=1, dens_=2, parpres_=3, bmin_=4, &
-         Hpres_=3,Opres_=4,Hdens_=5,Odens_=6
+    integer, parameter :: pe_=1, pres_=2, dens_=3, parpres_=4, bmin_=5, &
+         Hpres_=4,Opres_=5,Hdens_=6,Odens_=7
 
     logical :: DoTest, DoTestMe
 
@@ -703,13 +718,13 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoMultiFluidIMCoupling)then
-       if(NameVar /= 'p:rho:Hpp:Opp:Hprho:Oprho') &
+       if(NameVar /= 'pe:p:rho:Hpp:Opp:Hprho:Oprho') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     else if(DoAnisoPressureIMCoupling)then
-       if(NameVar /= 'p:rho:ppar:bmin') &
+       if(NameVar /= 'pe:p:rho:ppar:bmin') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     else
-       if(NameVar /= 'p:rho') &
+       if(NameVar /= 'pe:p:rho') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     end if
 
@@ -751,11 +766,15 @@ contains
     IsImPpar_I(:) = .false.
 
     ! Store iM variable for internal use
-    ImP_III     (:,:,1) = Buffer_IIV(:,:,pres_)
- !   IM_p    = Buffer_IIV(:,:,pres_)
-
-    ImRho_III     (:,:,1) = Buffer_IIV(:,:,dens_)
-!    IM_dens = Buffer_IIV(:,:,dens_)
+    ImP_III(:,:,1) = Buffer_IIV(:,:,pres_)
+    if(UseElectronPressure)then
+       ImPe_II(:,:) = Buffer_IIV(:,:,pe_)
+    else
+       ! Add electron pressure to ion pressure if there is no electron pressure
+       ! This should NOT be done for multifluid ???!!!
+       ImP_III(:,:,1) = ImP_III(:,:,1) + Buffer_IIV(:,:,pe_)
+    end if
+    ImRho_III(:,:,1) = Buffer_IIV(:,:,dens_)
     iNewPIm  = iNewPIm + 1
 
     IsImRho_I(1)  = .true.
@@ -792,13 +811,13 @@ contains
        ! IM_ppar = Buffer_IIV(:,:,parpres_)
        ImBmin_II = Buffer_IIV(:,:,bmin_)
        IsImPpar_I(1) = .true.
+       !$acc update device(ImBmin_II, ImPpar_III)
     end if
 
     DoMapEquatorRay = .false.
 
     !$acc update device(ImLat_I, ImLon_I)
-    !$acc update device(ImP_III, ImRho_III, ImPpar_III)
-    !$acc update device(ImBmin_II)
+    !$acc update device(ImP_III, ImRho_III)
     !$acc update device(IsImRho_I, IsImP_I, IsImPpar_I)
 
     ! if(DoTest)call write_im_vars_tec  ! TecPlot output
@@ -912,10 +931,10 @@ contains
        IsImPpar_I(:)=.false.
 
        do iDensity = 1, nDensity
-          do iVarIm = 1,nVarIM-1
+          do iVarIm = 1, nVarIM - 1
              ! get Density index for buffer
-             if(trim(string_to_lower(NameVar_V(iDens_I(iDensity)))) &
-                  == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
+             if(string_to_lower(NameVar_V(iDens_I(iDensity))) &
+                  == string_to_lower(NameVarIm_V(iVarIm)) ) then
                 ! found a match. set iM fluid index
                 iRhoIm_I(iDensity)  = iVarIm
                 IsImRho_I(iDensity) = .true.
@@ -930,8 +949,8 @@ contains
        do iFluid = 1, nFluid
           do iVarIm = 1,nVarIM-1
              ! get Pressure index for Buffer
-             if(trim(string_to_lower(NameVar_V(iP_I(iFluid)))) &
-                  == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
+             if(string_to_lower(NameVar_V(iP_I(iFluid))) &
+                  == string_to_lower(NameVarIm_V(iVarIm)) ) then
                 ! found a match. set iM fluid index
                 iPIm_I(iFluid)  = iVarIm
                 IsImP_I(iFluid) = .true.
@@ -943,8 +962,8 @@ contains
 
              if (DoAnisoPressureIMCoupling) then
                 ! get Par Pressure index for Buffer
-                if(trim(string_to_lower(NameVar_V(iPparIon_I(iFluid)))) &
-                     == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
+                if(string_to_lower(NameVar_V(iPparIon_I(iFluid))) &
+                     == string_to_lower(NameVarIm_V(iVarIm)) ) then
                    ! found a match. set iM fluid index
                    iPparIm_I(iFluid)  = iVarIm
                    IsImPpar_I(iFluid) = .true.
@@ -978,44 +997,32 @@ contains
           ImP_III(:,:,iFluid) = -1.0
        endif
 
-       if (IsImPpar_I(iFluid) .and. DoAnisoPressureIMCoupling) then
-          ImPpar_III(:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
-       else
-          ImPpar_III(:,:,iFluid) = -1.0
-       endif
-
+       if (IsImPpar_I(iFluid) .and. DoAnisoPressureIMCoupling) &
+            ImPpar_III(:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
     enddo
     ! for anisotropic pressure
-    if(DoAnisoPressureIMCoupling)then
-       ImBmin_II = Buffer_IIV(:,:,nVarIm)
-    end if
-!    write(*,*) 'GM max min ppar',maxval(ImPpar_III),minval(ImPpar_III)
-!    write(*,*) 'GM max min p',maxval(ImP_III),minval(ImP_III)
+    if(DoAnisoPressureIMCoupling) &
+         ImBmin_II = Buffer_IIV(:,:,nVarIm)
 
     if(DoTest)call write_im_vars_tec  ! TecPlot output
     if(DoTest)call write_im_vars_idl  ! IDL     output
 
   contains
     !==========================================================================
-    function string_to_lower( String ) result (StringNew)
+    function string_to_lower(String) result (StringNew)
 
-      character(len=*)           :: String
-      character(len=len(String)) :: StringNew
+      use ModUtilities, ONLY: lower_case
+      character(len=*)      :: String
 
-      integer                    :: i
-      integer                    :: k
+      character(len(String)):: StringNew
       !------------------------------------------------------------------------
       StringNew = String
-      do i = 1, len(String)
-         k = iachar(String(i:i))
-         if ( k >= iachar('A') .and. k <= iachar('Z') ) then
-            k = k + iachar('a') - iachar('A')
-            StringNew(i:i) = achar(k)
-         endif
-      enddo
+      call lower_case(StringNew)
+
     end function string_to_lower
     !==========================================================================
     subroutine write_im_vars_tec
+
       integer :: j2
       real :: LonShift
       !------------------------------------------------------------------------
@@ -1119,6 +1126,7 @@ contains
        if(allocated(MhdSumRho_II))      deallocate(MhdSumRho_II)
        if(allocated(MhdSumP_II))        deallocate(MhdSumP_II)
     end if
+    if(allocated(MhdSumPe_II))          deallocate(MhdSumPe_II)
 
     iSize = iSizeIn
     jSize = jSizeIn
@@ -1153,6 +1161,8 @@ contains
        MhdSumRho_II = 0.
        MhdSumP_II = 0.
     end if
+    allocate(MhdSumPe_II(isize,jsize))
+    MhdSumPe_II = 0.
 
     allocate( MhdBeq_II(isize,jsize))
     MhdBeq_II = 0.
@@ -1318,11 +1328,13 @@ contains
           MhdOpRho_II = MhdOpRho_II/MhdSumVol_II
           MhdHpP_II   = MhdHpP_II/MhdSumVol_II
           MhdOpP_II   = MhdOpP_II/MhdSumVol_II
+          MhdSumPe_II = MhdSumPe_II/MhdSumVol_II
        end where
     else
        where(MhdSumVol_II>0.)
           MhdSumP_II   = MhdSumP_II/MhdSumVol_II
           MhdSumRho_II = MhdSumRho_II/MhdSumVol_II
+          MhdSumPe_II = MhdSumPe_II/MhdSumVol_II
        end where
     end if
 
@@ -1453,6 +1465,7 @@ contains
           MhdSumRho_II(1:i-1,j) = -1.
           MhdSumP_II(1:i-1,j) = -1.
        endif
+       MhdSumPe_II(1:i-1,j) = -1.
     end do
 
     ! Dimensionalize values
@@ -1468,22 +1481,26 @@ contains
           MhdOpRho_II = MhdOpRho_II * No2Si_V(UnitRho_)
           MhdHpP_II   = MhdHpP_II * No2Si_V(UnitP_)
           MhdOpP_II   = MhdOpP_II * No2Si_V(UnitP_)
+          MhdSumPe_II = MhdSumPe_II * No2Si_V(UnitP_)
        elsewhere
           MhdSumVol_II = -1.
           MhdHpRho_II = -1.
           MhdOpRho_II = -1.
           MhdHpP_II   = -1.
           MhdOpP_II   = -1.
+          MhdSumPe_II = -1.
        end where
     else
        where(MhdSumVol_II > 0.)
           MhdSumVol_II = MhdSumVol_II / No2Si_V(UnitB_)
           MhdSumRho_II = MhdSumRho_II * No2Si_V(UnitRho_)
           MhdSumP_II   = MhdSumP_II   * No2Si_V(UnitP_)
+          MhdSumPe_II  = MhdSumPe_II  * No2Si_V(UnitP_)
        elsewhere
           MhdSumVol_II = -1.
           MhdSumRho_II = -1.
           MhdSumP_II   = -1.
+          MhdSumPe_II  = -1.
        end where
     end if
 

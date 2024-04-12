@@ -96,7 +96,8 @@ module ModFieldTrace
        HpRhoInvB_=5, HpPInvB_=6, OpRhoInvB_=7, OpPInvB_=8
 
   ! These indexes depend on multi-ion
-  integer, public:: iPeInvB, iXEnd, iYEnd, iZEnd, iLength
+  integer, public:: iPeInvB = 9 ! or 7
+  integer, public:: iXEnd, iYEnd, iZEnd, iLength
 
   ! Various values indicating the end state of a trace
   real, public :: ClosedRay, OpenRay, BodyRay, LoopRay, NoRay, OutRay
@@ -453,14 +454,23 @@ contains
        nExtraIntegral = 2
     end if
 
-    if(UseElectronPressure)then
-       nExtraIntegral = nExtraIntegral + 1
-       iPeInvB = nExtraIntegral
-    end if
+    ! electron pressure is the last extra integral
+    if(UseElectronPressure) nExtraIntegral = nExtraIntegral + 1
 
     ! Number of Integral_I for a local trace segment:
     !    InvB_, Z0x_, Z0y_, Z0b_ and extras
     nLocalIntegral = nExtraIntegral + 4
+
+    ! the electron pressure is the last local integral
+    ! iPeInvB is only used GM-IM coupling, either 7 or 9
+    ! notice that even iPeInvB looks overlapped with iXEnd
+    ! when UseElectronPressure = .false., it is not used in this module
+    ! for indexing variabls
+    if(UseElectronPressure) then
+       iPeInvB = nLocalIntegral
+    else
+       iPeInvB = nLocalIntegral + 1
+    end if
 
     ! Indexes for the final position of the trace
     iXEnd = nLocalIntegral + 1; iYEnd = iXEnd + 1; iZEnd = iYEnd + 1
@@ -2018,7 +2028,8 @@ contains
     use CON_ray_trace, ONLY: ray_init
     use CON_planet_field, ONLY: map_planet_field
     use CON_axes, ONLY: transform_matrix
-    use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, UseMultiSpecies, nSpecies
+    use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, &
+                           UseMultiSpecies, nSpecies, UseElectronPressure
     use CON_line_extract,  ONLY: line_init, line_collect, line_clean
     use CON_planet,        ONLY: DipoleStrength
     use ModMultiFluid
@@ -2114,6 +2125,11 @@ contains
                    Extra_VGB(2*iFluid  ,i,j,k,iBlock) = &
                         State_VGB(iPIon_I(iFluid),i,j,k,iBlock)
                 end do
+             end if
+             if(UseElectronPressure) then
+               ! Pe index is the nExtraIntegral
+               Extra_VGB(nExtraIntegral,i,j,k,iBlock) = &
+                  State_VGB(Pe_,i,j,k,iBlock)
              end if
           end do; end do; end do
        end do
