@@ -39,6 +39,9 @@ test_help:
 	@echo "    test_awsom_large_gpu       (run large AWSoM corona test on GPU)"
 	@echo "    test_bvector               (run Bvector Solar Corona test)"
 	@echo "    test_bx0                   (run 3D bx0 isosurface plot test)"
+	@echo "    test_comet                 (run comet test)"
+	@echo "    test_cometCGhd             (run comet CG hd test)"
+	@echo "    test_cometCGfluids         (run comet CG fluids test)"
 	@echo "    test_earth                 (run Cartesian Earth test)"	
 	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_fastwave              (run 3D fast wave test on GPU)"
@@ -46,15 +49,23 @@ test_help:
 	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
 	@echo "    test_fivemoment_shock      (run 5-moment shock wave test)"
 	@echo "    test_fivemoment_langmuir   (run 5-moment Langmuir wave test)"
+	@echo "    test_fluxemergence         (run flux emergence test)"
 	@echo "    test_func                  (run functionality tests)"
 	@echo "    test_hallmhd               (run Hall MHD test)"
+	@echo "    test_jupiter               (run Jupiter test)"
 	@echo "    test_L1toBC                (run L1 to BC propagation test)"
 	@echo "    test_magnetometer          (run magnetometer test)"
+	@echo "    test_mars                  (run Mars test)"
+	@echo "    test_mars_start            (run first mars test)"
+	@echo "    test_mars_restart          (run mars restart test)"
+	@echo "    test_marsfluids            (run Mars multifluid test)"
+	@echo "    test_mercurysph            (run Mercury test)"
 	@echo "    test_mhdnoncons            (run non-conservative MHD test)"
 	@echo "    test_multifluid            (run multi-fluid test)"
 	@echo "    test_multiion              (run multi-ion test)"
 	@echo "    test_partsteady            (run part steady test)"
 	@echo "    test_region2d              (run 2D BATL region test)"
+	@echo "    test_saturn                (run Saturn test)"
 	@echo "    test_shockramp             (run shockramp test)"
 	@echo "    test_shockround            (run shocktube test on roundcube)"
 	@echo "    test_shocktube             (run shocktube test)"
@@ -67,34 +78,23 @@ test_help:
 	@echo "    test_outerheliopui         (run Outer Heliosphere w/ PUIs test)"
 	@echo "    test_outerheliopui_1d      (run 1D Outer Heliosphere w/ PUIs test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"
+	@echo "    test_titan                 (run Titan tests)"
+	@echo "    test_titan_start           (run first Titan test)"
+	@echo "    test_titan_restart         (run titan restart test)"
 	@echo "    test_twofluidmhd           (run two-fluid test)"
+	@echo "    test_venus                 (run Venus test)"
 	@echo "    test_viscosity             (run viscosity test)"
 	-@(if [ -d srcUserExtra ]; then ${MAKE} test_extra_help; fi)
 
 test_extra_help:
 	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
 	@echo "    test_awsomchargestate      (run corona with charge state test)"
-	@echo "    test_comet                 (run comet test)"
-	@echo "    test_cometCGhd             (run comet CG hd test)"
-	@echo "    test_cometCGfluids         (run comet CG fluids test)"
 	@echo "    test_eosgodunov            (run EOS/Godunov test)"
 	@echo "    test_europa2fluidspe       (run 2-ion-fluid+Pe Europa test)"
 	@echo "    test_europa3fluidspe       (run 3-ion-fluid+Pe Europa test)"
-	@echo "    test_fluxemergence         (run flux emergence test)"
 	@echo "    test_ganymede              (run Ganymede test)"
 	@echo "    test_graydiffusion         (run gray-diffusion set test)"
-	@echo "    test_jupiter               (run Jupiter test)"
 	@echo "    test_laserpackage          (run CRASH laser package test)"
-	@echo "    test_mars                  (run Mars test)"
-	@echo "    test_mars_start            (run first mars test)"
-	@echo "    test_mars_restart          (run mars restart test)"
-	@echo "    test_marsfluids            (run Mars multifluid test)"
-	@echo "    test_mercurysph            (run Mercury test)"
-	@echo "    test_saturn                (run Saturn test)"
-	@echo "    test_titan                 (run Titan tests)"
-	@echo "    test_titan_start           (run first Titan test)"
-	@echo "    test_titan_restart         (run titan restart test)"
-	@echo "    test_venus                 (run Venus test)"
 
 test: 
 	@rm -f *.diff
@@ -128,6 +128,15 @@ test:
 	-@($(MAKE) test_outerhelioawsom TESTDIR=run_test_outerhelioawsom)
 	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
 	-@($(MAKE) test_outerheliopui_1d TESTDIR=run_test_outerheliopui_1d)
+	-@($(MAKE) test_comet TESTDIR=run_test_comet)
+	-@($(MAKE) test_cometCGhd TESTDIR=run_test_cometCGhd)
+	-@($(MAKE) test_cometCGfluids TESTDIR=run_test_cometCGfluids)
+	-@($(MAKE) test_mars TESTDIR=run_test_mars)
+	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
+	-@($(MAKE) test_saturn TESTDIR=run_test_saturn)
+	-@($(MAKE) test_jupiter TESTDIR=run_test_jupiter)
+	-@($(MAKE) test_titan TESTDIR=run_test_titan)
+	-@($(MAKE) test_venus TESTDIR=run_test_venus)
 	-@($(MAKE) test_func TESTDIR=run_test_func)
 	-@(if [ -d srcUserExtra ]; then ${MAKE} test_extra; fi)
 	./Config.pl -noopenmp
@@ -153,16 +162,7 @@ test_extra:
 	./Config.pl -nohdf5
 	-@($(MAKE) test_laserpackage TESTDIR=run_test_laserpackage)
 	./Config.pl -nohypre
-	-@($(MAKE) test_titan TESTDIR=run_test_titan)
-	-@($(MAKE) test_mars TESTDIR=run_test_mars)
-	-@($(MAKE) test_venus TESTDIR=run_test_venus)
-	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
 	-@($(MAKE) test_ganymede TESTDIR=run_test_ganymede)
-	-@($(MAKE) test_saturn TESTDIR=run_test_saturn)
-	-@($(MAKE) test_jupiter TESTDIR=run_test_jupiter)
-	-@($(MAKE) test_comet TESTDIR=run_test_comet)
-	-@($(MAKE) test_cometCGhd TESTDIR=run_test_cometCGhd)
-	-@($(MAKE) test_cometCGfluids TESTDIR=run_test_cometCGfluids)
 	-@($(MAKE) test_europa2fluidspe TESTDIR=run_test_europa2fluidspe)
 	-@($(MAKE) test_europa3fluidspe TESTDIR=run_test_europa3fluidspe)
 
