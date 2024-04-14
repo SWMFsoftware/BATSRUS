@@ -34,7 +34,7 @@ module ModImCoupling
   !$acc declare create(ImLat_I, ImLon_I)
   real, public, allocatable :: &
        ImPe_II(:,:), ImP_III(:,:,:), ImRho_III(:,:,:), ImPpar_III(:,:,:)
-  !$acc declare create(ImP_III, ImRho_III, ImPpar_III)
+  !$acc declare create(ImPe_II, ImP_III, ImRho_III, ImPpar_III)
   real, public, allocatable :: ImBmin_II(:,:)
   !$acc declare create(ImBmin_II)
 
@@ -63,11 +63,11 @@ module ModImCoupling
 
   integer :: nBlockLast = -1
   real, allocatable :: RhoIm_ICB(:,:,:,:,:)
-  real, allocatable :: PeIM_CB(:,:,:,:)
+  real, allocatable :: PeIm_CB(:,:,:,:)
   real, allocatable :: pIm_ICB(:,:,:,:,:)
   real, allocatable :: TauCoeffIm_CB(:,:,:,:)
   real, allocatable :: PparIm_ICB(:,:,:,:,:)
-  !$acc declare create(RhoIm_ICB, pIm_ICB, TauCoeffIm_CB, PparIm_ICB)
+  !$acc declare create(RhoIm_ICB, PeIm_CB, pIm_ICB, TauCoeffIm_CB, PparIm_ICB)
 
 contains
   !============================================================================
