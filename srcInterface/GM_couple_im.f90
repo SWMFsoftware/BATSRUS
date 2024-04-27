@@ -485,7 +485,7 @@ contains
          InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, iPeInvB, &
          HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, iXEnd, ClosedRay, &
          integrate_field_from_sphere
-    use ModAdvance, ONLY: UseElectronPressure
+    use ModAdvance, ONLY: UseElectronPressure, UseMultiSpecies
     use ModGroundMagPerturb, ONLY: DoCalcKp, Kp
 
     integer,          intent(in) :: iSizeIn, jSizeIn, nVar
@@ -546,16 +546,14 @@ contains
 
        if(UseElectronPressure) then
           MhdSumPe_II= RayResult_VII(iPeInvB,:,:)
-       elseif(DoMultiFluidIMCoupling)then
-
+       elseif(DoMultiFluidIMCoupling .or. UseMultiSpecies)then
           ! This factor is from RCM
           Factor = 1/7.8
           MhdSumPe_II = Factor*MhdHpP_II
        else
-          ! This value is from RCM with x_h = 0.8, x_o = 0.2:
-          ! (xmass(2)*x_h + xmass(3)*x_o)/xmass(2)/(1 + 1/7.8)/7.8
-          Factor = 1/2.2
-          MhdSumPe_II = Factor*MhdSumP_II
+          ! This factor is from RCM
+          MhdSumP_II = MhdSumP_II/(1 + 1/7.8)
+          MhdSumPe_II = MhdSumP_II/7.8 ! notice MhdSumP_II has been changed!
        end if
 
        ! Put impossible values if the field line is not closed
@@ -773,10 +771,10 @@ contains
     ImP_III(:,:,1) = Buffer_IIV(:,:,pres_)
     if(UseElectronPressure)then
        ImPe_II = Buffer_IIV(:,:,pe_)
-    else
+    elseif(.not.DoMultiFluidIMCoupling .or. UseMultiSpecies) then
        ! Add electron pressure to ion pressure if there is no electron pressure
        ! This should NOT be done for multifluid ???!!!
-       ImP_III(:,:,1) = ImP_III(:,:,1) + Buffer_IIV(:,:,pe_)
+       ImP_III(:,:,1) = Buffer_IIV(:,:,pres_) + Buffer_IIV(:,:,pe_)
     end if
     ImRho_III(:,:,1) = Buffer_IIV(:,:,dens_)
     iNewPIm  = iNewPIm + 1
