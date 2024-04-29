@@ -13,6 +13,7 @@ module GM_couple_im
   use ModNumConst, ONLY: cRadToDeg, cDegToRad, cHalfPi
   use CON_coupler, ONLY: Grid_C, ncell_id, &
        nVarBuffer_CC, iVarSource_VCC, GM_, IM_, lComp_I
+  use CON_planet, ONLY: RadiusPlanet, IonosphereHeight
 
   use ModMain, ONLY: nStep, &
        DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
@@ -22,6 +23,9 @@ module GM_couple_im
 
   use ModImCoupling, ONLY: nVarCouple, iVarCouple_V
   use ModUtilities, ONLY: CON_stop
+#ifdef _OPENACC
+  use ModUtilities, ONLY: norm2
+#endif
 
   implicit none
 
@@ -38,23 +42,26 @@ module GM_couple_im
   public:: GM_put_from_im           ! from IM
   public:: GM_put_from_im_cimi      ! from IM/CIMI
 
-  character(len=*), parameter :: NameMod='GM_couple_im'
+  character(len=*), parameter:: NameMod='GM_couple_im'
 
-  ! IM Grid size
-  integer :: nCells_D(2), iSize,jSize
+  ! For some reason the RCM and CRCM use 100km for ionosphere height
+  real, parameter:: IonosphereHeightIm = 100e3
+
+  ! IM grid size
+  integer:: nCells_D(2), iSize,jSize
 
   ! Information about the IM grid: 2D non-uniform regular grid
   real, allocatable:: ImLat_I(:), ImLon_I(:)
 
-  integer:: i,j,i0
+  integer:: i, j, i0
 
-  real, save, allocatable :: MhdLatBoundary_I(:)
-  real, save, dimension(:,:), allocatable :: &
+  real, save, allocatable:: MhdLatBoundary_I(:)
+  real, save, dimension(:,:), allocatable:: &
        MhdSumVol_II, MhdTmp_II, &
        MhdSumRho_II, MhdHpRho_II, MhdOpRho_II, &
        MhdSumPe_II, MhdSumP_II, MhdHpP_II, MhdOpP_II, &
        MhdBeq_II, MhdXeq_II, MhdYeq_II, MhdFluxError_II
-  real, parameter :: NoValue=-99999.
+  real, parameter:: NoValue=-99999.
   real:: Beq
   real:: Colat, Ci, Cs, FCiCs, Factor, Vol, Ri, s2, s6, s8, Factor1, Factor2
 
@@ -79,17 +86,18 @@ contains
     use CON_line_extract, ONLY: line_get
     use CON_planet, ONLY: RadiusPlanet, IonosphereHeight
 
-    integer, intent(in)           :: iSizeIn, jSizeIn, nDensityIn
-    character (len=*), intent(in) :: NameVar
-    integer, intent(out)          :: nVarLine, nPointLine
-    real :: Radius
+    integer, intent(in)         :: iSizeIn, jSizeIn, nDensityIn
+    character(len=*), intent(in):: NameVar
+    integer, intent(out)        :: nVarLine, nPointLine
+    real:: Radius
 
     character(len=*), parameter:: NameSub = 'GM_get_for_im_trace_crcm'
     !--------------------------------------------------------------------------
     ! Allocate arrays
     call allocate_gm_im(iSizeIn, jSizeIn)
 
-    Radius = (RadiusPlanet + IonosphereHeight) / RadiusPlanet
+    ! In ModPlanetConst IonosphereHeight = 110km, not 100
+    ! Radius = (RadiusPlanet + IonosphereHeight) / RadiusPlanet
 
     ! The CRCM ionosphere radius at 100km altitude in normalized units
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
@@ -131,26 +139,21 @@ contains
 
     integer, intent(in) :: iSizeIn, jSizeIn, nDensityIn, nVarIn
     real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn), KpOut, AeOut
-
     integer, intent(in) :: nPointLine, nVarLine
-    real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
-
-    ! solar wind values
+    real,    intent(out):: BufferLine_VI(nVarLine,nPointLine)
     real,    intent(out):: BufferSolarWind_V(8)
+    character(len=*), intent(in):: NameVar
 
-    character (len=*), intent(in):: NameVar
+    integer:: nVarExtract, nPoint, iPoint, iStartPoint
+    real, allocatable:: Buffer_VI(:,:)
+    integer:: iLat,iLon,iLine,iLocBmin,iIon
+    real:: SmGm_DD(3,3), XyzBminSm_D(3), XyzEndSm_D(3), XyzEndSmIono_D(3)
+    real:: SolarWind_V(nVar)
+    character(len=100):: NameOut
 
-    integer :: nVarExtract, nPoint, iPoint, iStartPoint
-    real, allocatable :: Buffer_VI(:,:)
-
-    integer :: iLat,iLon,iLine,iLocBmin,iIon
-    real    :: SmGm_DD(3,3), XyzBminSm_D(3), XyzEndSm_D(3), XyzEndSmIono_D(3)
-    real    :: SolarWind_V(nVar)
-    character(len=100) :: NameOut
-
-    real :: RadiusIono
-    integer :: iHemisphere
-    logical :: DoTest, DoTestMe
+    real:: RadiusIono
+    integer:: iHemisphere
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_get_for_im_crcm'
     !--------------------------------------------------------------------------
     if(iProc /= 0) RETURN
@@ -198,10 +201,9 @@ contains
        iLon = (iLine-1)/iSizeIn + 1
 
        BufferLine_VI(1,iPoint) = iLine
-       BufferLine_VI(2,iPoint) = Buffer_VI(1,iPoint)                 ! Length
-       BufferLine_VI(3,iPoint) = sqrt(sum(Buffer_VI(2:4,iPoint)**2)) ! |r|
-       BufferLine_VI(4,iPoint) = &
-            sqrt(sum(Buffer_VI(4+Bx_:4+Bz_,iPoint)**2))       ! |B|
+       BufferLine_VI(2,iPoint) = Buffer_VI(1,iPoint)                  ! Length
+       BufferLine_VI(3,iPoint) = norm2(Buffer_VI(2:4,iPoint))         ! |r|
+       BufferLine_VI(4,iPoint) = norm2(Buffer_VI(4+Bx_:4+Bz_,iPoint)) ! |B|
 
        ! Find the location of minimum B, Bmin, and other variables at Bmin
        ! for each field line
@@ -234,8 +236,8 @@ contains
                   RadiusIono, XyzEndSmIono_D, iHemisphere)
 
              ! SmLat of conjugate point
-             Buffer_IIV(iLat,iLon,4) = 90.0-acos(XyzEndSmIono_D(3)&
-                  /sqrt(sum(XyzEndSmIono_D**2)))*cRadToDeg
+             Buffer_IIV(iLat,iLon,4) = 90.0 - acos(XyzEndSmIono_D(3)&
+                  /norm2(XyzEndSmIono_D))*cRadToDeg
 
              ! SmLon of conjugate point
              Buffer_IIV(iLat,iLon,5) = &
@@ -291,7 +293,7 @@ contains
 
   end subroutine GM_get_for_im_crcm
   !============================================================================
-  subroutine GM_get_sat_for_im_crcm(Buffer_III, Name_I, nSats)
+  subroutine GM_get_sat_for_im_crcm(Buffer_III, Name_I, nSat)
 
     ! Subroutine to update and collect satellite locations for IM tracing
 
@@ -306,21 +308,21 @@ contains
     use ModMPI
 
     ! Arguments
-    integer, intent(in)               :: nSats
-    real, intent(out)                 :: Buffer_III(4,2,nSats)
-    character (len=100), intent(out)  :: Name_I(nSats)
+    integer, intent(in):: nSat
+    real,   intent(out):: Buffer_III(4,2,nSat)
+    character(len=100), intent(out):: Name_I(nSat)
 
     ! Internal variables
-    real ::SatRay_D(3)
-    real :: StateSat_V(0:3), B0Sat_D(3)
-    integer :: iSat
+    real:: SatRay_D(3)
+    real:: StateSat_V(0:3), B0Sat_D(3)
+    integer:: iSat
 
     character(len=*), parameter:: NameSub = 'GM_get_sat_for_im_crcm'
     !--------------------------------------------------------------------------
     ! Store satellite names in Buffer_I (known on all processors)
-    Name_I = NameFileSat_I(1:nSats)
+    Name_I = NameFileSat_I(1:nSat)
 
-    do iSat = 1, nSats
+    do iSat = 1, nSat
        ! Update satellite position.
        call GM_trace_sat(XyzSat_DI(1:3,iSat), SatRay_D)
 
@@ -362,16 +364,16 @@ contains
     use ModFieldTrace,    ONLY: DoExtractBGradB1, DoExtractEfield, &
          trace_field_equator
 
-    integer, intent(in)           :: nRadius, nLon
-    integer, intent(out)          :: nVarLine, nPointLine
-    character (len=*), intent(out):: NameVar
+    integer, intent(in)         :: nRadius, nLon
+    integer, intent(out)        :: nVarLine, nPointLine
+    character(len=*), intent(out):: NameVar
 
-    real, allocatable, save :: RadiusIm_I(:), LongitudeIm_I(:)
+    real, allocatable, save:: RadiusIm_I(:), LongitudeIm_I(:)
 
-    integer :: nVarExtract, iPoint, iUx5, iUz5, iFluid
-    real    :: SmGm_DD(3,3)
+    integer:: nVarExtract, iPoint, iUx5, iUz5, iFluid
+    real:: SmGm_DD(3,3)
 
-    character(len=lNameVersion) :: NameVersionIm
+    character(len=lNameVersion):: NameVersionIm
     character(len=*), parameter:: NameSub = 'GM_get_for_im_trace'
     !--------------------------------------------------------------------------
 
@@ -455,12 +457,12 @@ contains
 
     use ModFieldTrace, ONLY: RayMap_DSII
 
-    integer, intent(in) :: nRadius, nLon
+    integer, intent(in):: nRadius, nLon
     real,    intent(out):: MapOut_DSII(3,2,nRadius,nLon)
-    integer, intent(in) :: nPointLine, nVarLine
-    real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+    integer, intent(in):: nPointLine, nVarLine
+    real, intent(out) :: BufferLine_VI(nVarLine, nPointLine)
 
-    logical :: DoTest, DoTestMe
+    logical:: DoTest, DoTestMe
 
     ! This routine should be called from processor 0 only
     character(len=*), parameter:: NameSub = 'GM_get_for_im_line'
@@ -488,13 +490,13 @@ contains
     use ModAdvance, ONLY: UseElectronPressure, UseMultiSpecies
     use ModGroundMagPerturb, ONLY: DoCalcKp, Kp
 
-    integer,          intent(in) :: iSizeIn, jSizeIn, nVar
+    integer,          intent(in):: iSizeIn, jSizeIn, nVar
     real,             intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVar), KpOut
-    character(len=*), intent(in) :: NameVar
+    character(len=*), intent(in):: NameVar
 
-    real :: Radius
+    real:: Radius
 
-    logical :: DoTest, DoTestMe
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_get_for_im'
     !--------------------------------------------------------------------------
     if(DoMultiFluidIMCoupling)then
@@ -625,7 +627,7 @@ contains
 
   end subroutine GM_get_for_im
   !============================================================================
-  subroutine GM_satinit_for_im(nSats)
+  subroutine GM_satinit_for_im(nSat)
 
     ! This subroutine collects the number of satellite files for use in
     ! SWMF GM and IM coupling.
@@ -635,20 +637,20 @@ contains
     use ModSatelliteFile, ONLY: nSatellite
 
     ! Subroutine Arguments:
-    integer,           intent(out) :: nSats
+    integer,           intent(out):: nSat
     !--------------------------------------------------------------------------
 
     ! If IM sat tracing is on, collect the number of satellites to trace.
-    ! If IM sat tracing is off, set nSats to zero.
+    ! If IM sat tracing is off, set nSat to zero.
     if (DoImSatTrace) then
-       nSats = nSatellite
+       nSat = nSatellite
     else
-       nSats = 0
+       nSat = 0
     endif
 
   end subroutine GM_satinit_for_im
   !============================================================================
-  subroutine GM_get_sat_for_im(Buffer_III, Name_I, nSats)
+  subroutine GM_get_sat_for_im(Buffer_III, Name_I, nSat)
 
     ! Subroutine to update and collect satellite locations for IM tracing
 
@@ -658,21 +660,21 @@ contains
     use ModMPI
 
     ! Arguments
-    integer, intent(in)               :: nSats
-    real, intent(out)                 :: Buffer_III(3,2,nSats)
-    character (len=100), intent(out)  :: Name_I(nSats)
+    integer, intent(in)             :: nSat
+    real, intent(out)               :: Buffer_III(3,2,nSat)
+    character(len=100), intent(out):: Name_I(nSat)
 
     ! Internal variables
 
-    real :: SatTrace_I(5), SatTraceSum_I(5)
+    real:: SatTrace_I(5), SatTraceSum_I(5)
 
-    integer :: iSat, iError
+    integer:: iSat, iError
     character(len=*), parameter:: NameSub = 'GM_get_sat_for_im'
     !--------------------------------------------------------------------------
     ! Store satellite names in Buffer_I
-    Name_I = NameFileSat_I(1:nSats)
+    Name_I = NameFileSat_I(1:nSat)
 
-    do iSat = 1, nSats
+    do iSat = 1, nSat
        ! Update satellite position.
        call set_satellite_flags(iSat)
        call get_satellite_ray(iSat, SatTrace_I)
@@ -705,15 +707,15 @@ contains
 
     character(len=80):: NameFile
 
-    integer, intent(in) :: iSizeIn,jSizeIn,nVar
-    real, intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVar)
-    character(len=*), intent(in) :: NameVar
-    character(len=lNameVersion) :: NameVersionIm
-    integer :: nCells_D(2), iError, i,j
-    integer, parameter :: pe_=1, pres_=2, dens_=3, parpres_=4, bmin_=5, &
+    integer, intent(in):: iSizeIn,jSizeIn,nVar
+    real, intent(in):: Buffer_IIV(iSizeIn,jSizeIn,nVar)
+    character(len=*), intent(in):: NameVar
+    character(len=lNameVersion):: NameVersionIm
+    integer:: nCells_D(2), iError, i,j
+    integer, parameter:: pe_=1, pres_=2, dens_=3, parpres_=4, bmin_=5, &
          Hpres_=4,Opres_=5,Hdens_=6,Odens_=7
 
-    logical :: DoTest, DoTestMe
+    logical:: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'GM_put_from_im'
     !--------------------------------------------------------------------------
@@ -837,25 +839,25 @@ contains
     use ModUtilities,       ONLY: split_string
     character(len=80):: NameFile
 
-    integer, intent(in) :: iSizeIn,jSizeIn,nVarIm
-    real, intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIm)
+    integer, intent(in):: iSizeIn,jSizeIn,nVarIm
+    real, intent(in):: Buffer_IIV(iSizeIn,jSizeIn,nVarIm)
 
-    integer :: iFluid, iVarIm
+    integer:: iFluid, iVarIm
     ! list of first nVarIm-1 variables provided by IM
-    character(len=*), intent(in) :: NameVarIm
+    character(len=*), intent(in):: NameVarIm
 
-    character(len=lNameVersion) :: NameVersionIm
-    integer :: nCells_D(2), iError, i,j
+    character(len=lNameVersion):: NameVersionIm
+    integer:: nCells_D(2), iError, i, j
 
-    integer,allocatable, save :: iRhoIm_I(:),  iPIm_I(:),  iPparIm_I(:)
+    integer, allocatable, save:: iRhoIm_I(:), iPIm_I(:), iPparIm_I(:)
 
-    character (len=15),allocatable :: NameVarIm_V(:)
+    character(len=15), allocatable:: NameVarIm_V(:)
 
-    integer, save :: nDensity
-    integer, allocatable, save :: iDens_I(:)
-    integer :: iDensity
-    logical,save :: IsFirstCall = .true.
-    logical :: DoTest, DoTestMe
+    integer, save:: nDensity
+    integer, allocatable, save:: iDens_I(:)
+    integer:: iDensity
+    logical,save:: IsFirstCall = .true.
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_put_from_im_cimi'
     !--------------------------------------------------------------------------
 
@@ -1008,7 +1010,7 @@ contains
     function string_to_lower(String) result (StringNew)
 
       use ModUtilities, ONLY: lower_case
-      character(len=*)      :: String
+      character(len=*), intent(in):: String
 
       character(len(String)):: StringNew
       !------------------------------------------------------------------------
@@ -1019,8 +1021,8 @@ contains
     !==========================================================================
     subroutine write_im_vars_tec
 
-      integer :: j2
-      real :: LonShift
+      integer:: j2
+      real:: LonShift
       !------------------------------------------------------------------------
       if(iProc /= 0)RETURN
 
@@ -1101,7 +1103,7 @@ contains
 
     use CON_comp_param, ONLY: IM_
 
-    integer, intent(in) :: iSizeIn, jSizeIn
+    integer, intent(in):: iSizeIn, jSizeIn
 
     character(len=*), parameter:: NameSub = 'allocate_gm_im'
     !--------------------------------------------------------------------------
@@ -1184,9 +1186,9 @@ contains
 
     use ModIoUnit, ONLY: UnitTmp_
 
-    character(len=80) :: NameFile
-    integer :: j2, nCall=0
-    real :: TmpT, TmpV1,TmpV2, LonShift, TmpHpT, TmpOpT
+    character(len=80):: NameFile
+    integer:: j2, nCall=0
+    real:: TmpT, TmpV1,TmpV2, LonShift, TmpHpT, TmpOpT
     !--------------------------------------------------------------------------
 
     nCall = nCall + 1
@@ -1270,8 +1272,8 @@ contains
 
     use ModIoUnit, ONLY: UnitTmp_
     use ModMain,   ONLY: tSimulation
-    CHARACTER (LEN=100) :: NameFile
-    integer :: nCall = 0
+    character(len=100):: NameFile
+    integer:: nCall = 0
     !--------------------------------------------------------------------------
 
     ! write values to plot file
@@ -1316,7 +1318,7 @@ contains
   !============================================================================
   subroutine process_integrated_data
 
-    integer :: iLoc_I(1),iEquator,iNorthPole
+    integer:: iLoc_I(1),iEquator,iNorthPole
     !--------------------------------------------------------------------------
     if(DoMultiFluidIMCoupling)then
        where(MhdSumVol_II>0.)
@@ -1432,7 +1434,7 @@ contains
           if(MhdSumVol_II(i,j) < 1.1E-8 .or. &
                abs(MhdXeq_II(i,j)) > 200.0 .or. &
                abs(MhdYeq_II(i,j)) > 200.0 ) then
-             i0=i+1
+             i0 = i + 1
              EXIT
           end if
        end do
@@ -1446,7 +1448,7 @@ contains
     ! Set impossible values for open fieldlines
     ! except for Xeq and Yeq where the last closed values are used
     ! which is useful when the equatorial grid is plotted
-    do j=1,jsize
+    do j = 1, jSize
        i = int(MhdLatBoundary_I(j))
        MhdBeq_II(1:i-1,j) = -1.
        MhdXeq_II(1:i-1,j) = MhdXeq_II(i,j)
@@ -1542,7 +1544,7 @@ contains
     character(len=*), optional, intent(in):: NameSub
 
     ! indexes of registered components
-    integer :: iGm, iIm
+    integer:: iGm, iIm
     !--------------------------------------------------------------------------
     ! Store buffer variable indexes
     iGm = lComp_I(GM_)
