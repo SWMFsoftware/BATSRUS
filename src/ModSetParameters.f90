@@ -2378,7 +2378,7 @@ contains
 
           if(NameCommand == "#ELECTRONPRESSURERATIO") &
                call read_var('InnerBcPeRatio', RatioPe2P)
-          
+
        case("#MULTISPECIES")
           call read_var('DoReplaceDensity', DoReplaceDensity)
           call read_var('SpeciesPercentCheck',SpeciesPercentCheck)

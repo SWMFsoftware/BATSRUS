@@ -90,9 +90,9 @@ contains
     integer, intent(out)        :: nVarLine, nPointLine
     real:: Radius
 
+    ! Allocate arrays
     character(len=*), parameter:: NameSub = 'GM_get_for_im_trace_crcm'
     !--------------------------------------------------------------------------
-    ! Allocate arrays
     call allocate_gm_im(iSizeIn, jSizeIn)
 
     ! The CRCM ionosphere radius at 100km altitude in normalized units
@@ -693,9 +693,8 @@ contains
     use CON_comp_param, ONLY: lNameVersion
     use ModImCoupling                              ! Storage for IM pressure
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
-    use ModVarIndexes, ONLY: 
+    use ModVarIndexes, ONLY:
     use ModAdvance,    ONLY: UseMultiSpecies, UseElectronPressure
-
 
     integer, intent(in):: iSizeIn,jSizeIn,nVar
     real, intent(in):: Buffer_IIV(iSizeIn,jSizeIn,nVar)
