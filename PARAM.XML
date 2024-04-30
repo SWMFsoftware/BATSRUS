@@ -1969,18 +1969,33 @@ spherical coordinates case.
 Default value for TypeBcBody2 is 'none'.
 </command>
 
-<command name="INNERBCPE">
-  <parameter name="RatioPe2P" type="real" default="0"/>
+<command name="#ELECTRONPRESSURERATIO">
+  <parameter name="ElectronTemperatureRatio" type="real" min="0" default="0"/>
+  <parameter name="InnerBcPeRatio" type="real" min="0" default="0.1282"/>
 
-#INNERBCPE
-0.1             RatioPe2P
+#ELECTRONPRESSURERATIO
+1.0             ElectronTemperatureRatio  
+1/7.8           InnerBcPeRatio
 
+The ElectronTemperatureRatio is the same as the last parameter of the
+#PLASMA command. It is used to set the electron pressure at the outer
+boundary and for the initial condition. 
+
+The InnerBcPeRatio is the electron pressure ratio assumed at or near the inner
+boundary. This parameter is used in two different ways.
+When BATSRUS solves for the electron pressure as a separate variable,
+it is used for inner boundary conditions for Pe.
 When 'ionosphere', 'polarwind' or 'ionosphereoutflow' inner boundary is used,
 the electron pressure is set to be float at the inner boundary by default.
 In order to avoid extremely low electron pressure in the inner magnetosphere,
-this command ensures the ratio between the electron pressure and ion pressure at
-the inner boundary is at least RatioRe2P. The default value of RatioPe2P is 0.
+this command ensures the ratio between the electron pressure and ion pressure
+at the inner boundary is at least InnerBcPeRatio.
 
+When BATSRUS does not solve for electron pressure, the InnerBcPeRatio constant
+is used in the coupling with RCM to set the electron pressure passed to RCM
+to InnerBcPeRatio times the pressure of the first ion fluid.
+
+The default values are ElectronTemperatureRatio=0 and InnerBcPeRatio=1/7.8.
 </command>
 
 <command name="OUTFLOWCRITERIA">
@@ -9083,7 +9098,10 @@ be determined accurately as n = sum(RhoSpecies_V/(ProtonMass*MassSpecies_V)).
 The default ion/molecular masses are given in the equation module.
 The default ion charges are always 1.
 The default electron temperature ratio is zero, i.e. the electron
-pressure is assumed to be negligible relative to the (total) ion pressure.
+pressure is assumed to be negligible relative to the (total) ion pressure,
+however in the solar wind boundary the electron pressure is set to equal
+to the first ion pressure.
+
 This default is backwards compatible with previous versions of the code.
 
 </command>

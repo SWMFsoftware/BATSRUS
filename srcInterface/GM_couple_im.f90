@@ -13,7 +13,7 @@ module GM_couple_im
   use ModNumConst, ONLY: cRadToDeg, cDegToRad, cHalfPi
   use CON_coupler, ONLY: Grid_C, ncell_id, &
        nVarBuffer_CC, iVarSource_VCC, GM_, IM_, lComp_I
-  use CON_planet, ONLY: RadiusPlanet, IonosphereHeight
+  use CON_planet, ONLY: RadiusPlanet
 
   use ModMain, ONLY: nStep, &
        DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
@@ -84,7 +84,6 @@ contains
 
     use ModFieldTrace, ONLY: DoExtractUnitSi, integrate_field_from_sphere
     use CON_line_extract, ONLY: line_get
-    use CON_planet, ONLY: RadiusPlanet, IonosphereHeight
 
     integer, intent(in)         :: iSizeIn, jSizeIn, nDensityIn
     character(len=*), intent(in):: NameVar
@@ -96,11 +95,8 @@ contains
     ! Allocate arrays
     call allocate_gm_im(iSizeIn, jSizeIn)
 
-    ! In ModPlanetConst IonosphereHeight = 110km, not 100
-    ! Radius = (RadiusPlanet + IonosphereHeight) / RadiusPlanet
-
     ! The CRCM ionosphere radius at 100km altitude in normalized units
-    Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
+    Radius = (RadiusPlanet + IonosphereHeightIm)/RadiusPlanet
 
     DoExtractUnitSi = .true.
 
@@ -123,19 +119,17 @@ contains
     use ModIoUnit, ONLY: UnitTmp_
     use ModMain, ONLY: tSimulation, TypeCoordSystem
     use ModVarIndexes, ONLY: &
-         Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, Ppar_, &
-         iRho_I, iP_I, MassFluid_I, nVar
+         Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, &
+         MassFluid_I, nVar
     use ModPhysics, ONLY: No2Si_V, &
          UnitN_, UnitU_, UnitB_, UnitP_, rBody
     use ModSolarwind, ONLY: get_solar_wind_point
-    use ModConst, ONLY: cProtonMass
     use ModNumConst, ONLY: cRadToDeg
     use ModGroundMagPerturb, ONLY: DoCalcKp, Kp, DoCalcAe, AeIndex_I
     use CON_planet_field,  ONLY: map_planet_field
 
     use CON_line_extract, ONLY: line_get, line_clean
     use CON_axes,         ONLY: transform_matrix
-    use CON_planet,       ONLY: RadiusPlanet
 
     integer, intent(in) :: iSizeIn, jSizeIn, nDensityIn, nVarIn
     real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn), KpOut, AeOut
@@ -146,7 +140,7 @@ contains
 
     integer:: nVarExtract, nPoint, iPoint, iStartPoint
     real, allocatable:: Buffer_VI(:,:)
-    integer:: iLat,iLon,iLine,iLocBmin,iIon
+    integer:: iLat,iLon,iLine,iLocBmin
     real:: SmGm_DD(3,3), XyzBminSm_D(3), XyzEndSm_D(3), XyzEndSmIono_D(3)
     real:: SolarWind_V(nVar)
     character(len=100):: NameOut
@@ -160,7 +154,7 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! The CRCM ionosphere radius in normalized units
-    RadiusIono = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
+    RadiusIono = (RadiusPlanet + IonosphereHeightIm)/RadiusPlanet
 
     ! If Kp is being calculated, share it.  Otherwise, share -1.
     if(DoCalcKp) then
@@ -302,7 +296,7 @@ contains
     use ModWriteLogSatFile, ONLY: collect_satellite_data
     use ModMain,          ONLY: UseB0, nBlock
     use ModPhysics,       ONLY: No2Si_V, UnitB_
-    use ModVarIndexes,    ONLY: nVar, Bx_, Bz_
+    use ModVarIndexes,    ONLY: Bx_, Bz_
     use ModB0,            ONLY: get_b0
     use ModCurrent,       ONLY: get_point_data
     use ModMPI
@@ -489,6 +483,7 @@ contains
          integrate_field_from_sphere
     use ModAdvance, ONLY: UseElectronPressure, UseMultiSpecies
     use ModGroundMagPerturb, ONLY: DoCalcKp, Kp
+    use ModFaceBoundary, ONLY: RatioPe2P
 
     integer,          intent(in):: iSizeIn, jSizeIn, nVar
     real,             intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVar), KpOut
@@ -517,7 +512,7 @@ contains
     call allocate_gm_im(iSizeIn, jSizeIn)
 
     ! The RCM ionosphere radius at 100km altitude in normalized units
-    Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
+    Radius = (RadiusPlanet + IonosphereHeightIm)/RadiusPlanet
     if(.not. DoMultiFluidIMCoupling)then
        call integrate_field_from_sphere(&
             iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, &
@@ -549,13 +544,12 @@ contains
        if(UseElectronPressure) then
           MhdSumPe_II= RayResult_VII(iPeInvB,:,:)
        elseif(DoMultiFluidIMCoupling .or. UseMultiSpecies)then
-          ! This factor is from RCM
-          Factor = 1/7.8
-          MhdSumPe_II = Factor*MhdHpP_II
+          ! Fraction of Pe relative to HpP (first fluid)
+          MhdSumPe_II = RatioPe2P*MhdHpP_II
        else
-          ! This factor is from RCM
-          MhdSumP_II = MhdSumP_II/(1 + 1/7.8)
-          MhdSumPe_II = MhdSumP_II/7.8 ! notice MhdSumP_II has been changed!
+          ! Split total pressure into ion and electron pressures
+          MhdSumP_II = MhdSumP_II/(1 + RatioPe2P)
+          MhdSumPe_II = MhdSumP_II*RatioPe2P ! notice MhdSumP_II has changed!
        end if
 
        ! Put impossible values if the field line is not closed
@@ -698,20 +692,16 @@ contains
     use CON_world,      ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
     use ModImCoupling                              ! Storage for IM pressure
-    use ModMain, ONLY : nStep,tSimulation
-    use ModIoUnit, ONLY: UnitTmp_
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
-    use ModVarIndexes, ONLY: nFluid, iRho_I, iP_I, iPparIon_I,SpeciesFirst_, &
-         SpeciesLast_
-    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies, UseElectronPressure
+    use ModVarIndexes, ONLY: 
+    use ModAdvance,    ONLY: UseMultiSpecies, UseElectronPressure
 
-    character(len=80):: NameFile
 
     integer, intent(in):: iSizeIn,jSizeIn,nVar
     real, intent(in):: Buffer_IIV(iSizeIn,jSizeIn,nVar)
     character(len=*), intent(in):: NameVar
     character(len=lNameVersion):: NameVersionIm
-    integer:: nCells_D(2), iError, i,j
+    integer:: nCells_D(2)
     integer, parameter:: pe_=1, pres_=2, dens_=3, parpres_=4, bmin_=5, &
          Hpres_=4,Opres_=5,Hdens_=6,Odens_=7
 
@@ -834,7 +824,7 @@ contains
     use BATL_lib, ONLY: iProc
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
     use ModVarIndexes, ONLY: nFluid, iRho_I, iP_I, iPparIon_I,SpeciesFirst_, &
-         SpeciesLast_,NameVar_V
+         NameVar_V
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
     use ModUtilities,       ONLY: split_string
     character(len=80):: NameFile
@@ -1343,7 +1333,7 @@ contains
     ! add contribution to V from the part of the field line that
     ! goes inside the body. If the field-line tracer did not
     ! return a good value, we will compute total V assuming dipole.
-    Ri=(6378.+100.)/6378.
+    Ri = (RadiusPlanet + IonosphereHeightIm)/RadiusPlanet
     Factor = 2. * (Ri**4) / abs(Bdp)
     do i=1,isize
        Colat = (90.0 - ImLat_I(i))*cDegToRad
