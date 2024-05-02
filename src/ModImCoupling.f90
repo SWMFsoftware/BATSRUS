@@ -410,15 +410,10 @@ contains
          iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModFieldTraceFast, ONLY: trace_field_grid, Trace_DSNB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
-    use ModFaceBoundary, ONLY: RatioPe2P
 
     real :: Factor
-
     real :: RhoMinIm
-
     real :: InvRho, Rho
-
-    ! integer :: iIonSecond, nIons
     integer :: i, j, k, iBlock, iFluid, iDens
 
     logical:: DoTest

@@ -125,7 +125,7 @@ contains
     use ModPIC, ONLY: pic_read_param, AdaptPic
     use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I, &
          ion_electron_init_point_impl
-    use ModFaceBoundary, ONLY: read_face_boundary_param
+    use ModFaceBoundary, ONLY: read_face_boundary_param, RatioPe2P
     use ModPUI, ONLY: read_pui_param, init_mod_pui, UsePui
     ! BEGIN CORONA SPECIFIC
     use EEE_ModMain, ONLY: EEE_set_parameters
@@ -2345,22 +2345,24 @@ contains
        case("#LOOKUPTABLE")
           call read_lookup_table_param
 
-       case("#PLASMA")
-          if(UseMultiSpecies) then
-             do iSpecies = SpeciesFirst_, SpeciesLast_
-                call read_var('MassSpecies', MassSpecies_V(iSpecies))
-             enddo
-             do iSpecies = SpeciesFirst_, SpeciesLast_
-                call read_var('ChargeSpecies', ChargeSpecies_I(iSpecies))
-             enddo
-          else
-             do iFluid = 1, nFluid
-                call read_var('MassFluid', MassFluid_I(iFluid))
-             end do
-             MassIon_I = MassFluid_I(1:nIonFluid)
-             do iFluid = 1, nIonFluid
-                call read_var('ChargeIon', ChargeIon_I(iFluid))
-             end do
+       case("#PLASMA", "#ELECTRONPRESSURERATIO")
+          if(NameCommand == "#PLASMA")then
+             if(UseMultiSpecies) then
+                do iSpecies = SpeciesFirst_, SpeciesLast_
+                   call read_var('MassSpecies', MassSpecies_V(iSpecies))
+                enddo
+                do iSpecies = SpeciesFirst_, SpeciesLast_
+                   call read_var('ChargeSpecies', ChargeSpecies_I(iSpecies))
+                enddo
+             else
+                do iFluid = 1, nFluid
+                   call read_var('MassFluid', MassFluid_I(iFluid))
+                end do
+                MassIon_I = MassFluid_I(1:nIonFluid)
+                do iFluid = 1, nIonFluid
+                   call read_var('ChargeIon', ChargeIon_I(iFluid))
+                end do
+             endif
           endif
 
           call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
@@ -2373,6 +2375,9 @@ contains
           end if
 
           PePerPtotal = ElectronPressureRatio/(1 + ElectronPressureRatio)
+
+          if(NameCommand == "#ELECTRONPRESSURERATIO") &
+               call read_var('InnerBcPeRatio', RatioPe2P)
 
        case("#MULTISPECIES")
           call read_var('DoReplaceDensity', DoReplaceDensity)
