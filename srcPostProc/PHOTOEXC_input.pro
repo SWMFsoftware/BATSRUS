@@ -96,6 +96,75 @@ pro PHOTOEXC_input,abund_unity=abund_unity,rmax=rmax,Nr=Nr,zElem=zElem,zIon=zIon
 
 ;     PHOTOEXC_input,zElem=20,zIon=15,wvl=5695.0850  
 ;5695.0850    Ca XV             2s2 2p2 3P0 - 2s2 2p2 3P1
+
+;     PHOTOEXC_input,zElem=28,zIon=11,wvl=24307.2441  
+;24307.2441   Ni XI            3s2 3p5 3d 3F4 - 3s2 3p5 3d 3F3
+
+;     PHOTOEXC_input,zElem=20,zIon=13,wvl=22609.0000  
+;22609.0000   Ca XIII          2s2 2p4 3P1 - 2s2 2p4 3P0
+
+;     PHOTOEXC_input,zElem=14,zIon=7,wvl=24826.0000  
+;24826.0000   Si VII            2s2 2p4 3P2 - 2s2 2p4 3P1
+
+;     PHOTOEXC_input,zElem=14,zIon=9,wvl=25846.0000   
+;25846.0000   Si IX             2s2 2p2 3P1 - 2s2 2p2 3P2
+
+;     PHOTOEXC_input,zElem=26,zIon=9,wvl=28562.4512  
+;28562.4512   Fe IX            3s2 3p5 3d 3F4 - 3s2 3p5 3d 3F3
+
+;     PHOTOEXC_input,zElem=12,zIon=8,wvl=30284.6758  
+;30284.6758   Mg VIII          2s2 2p 2P1/2 - 2s2 2p 2P3/2
+
+;     PHOTOEXC_input,zElem=16,zIon=9,wvl=37552.0000  
+;37552.0000   S IX             2s2 2p4 3P1 - 2s2 2p4 3P0
+
+;     PHOTOEXC_input,zElem=14,zIon=9,wvl=39293.0000 
+;39293.0000   Si IX            2s2 2p2 3P0 - 2s2 2p2 3P1
+
+;     PHOTOEXC_input,zElem=18,zIon=13,wvl= 10149.0000 
+;10149.0000  Ar XIII             2s2 2p2 3P0 - 2s2 2p2 3P1
+
+;     PHOTOEXC_input,zElem=16,zIon=13,wvl= 10301.0000
+;10301.0000   3.19e-03 S XIII        6.40   2s 2p 3P1 - 2s 2p 3P2
+
+;     PHOTOEXC_input,zElem=16,zIon=11,wvl= 13927.0000    
+;13927.0000   1.91e-02 S XI          6.25   2s2 2p2 3P1 - 2s2 2p2 3P2  
+
+;     PHOTOEXC_input,zElem=20,zIon=12,wvl=3328.4519   
+;3328.4519    2.59e-02 Ca XII        -      2s2.2p5 2P3/2 - 2s2.2p5 2P1/2
+  
+;     PHOTOEXC_input,zElem=26,zIon=13,wvl=3388.9109     
+;3388.9109    2.56e-01 Fe XIII       -      3s2 3p2 3P2 - 3s2 3p2 1D2
+
+;     PHOTOEXC_input,zElem=26,zIon=10,wvl=3455.2710      
+;3455.2710    5.18e-01 Fe X          -      3s2 3p4 3d 4D7/2 - 3s2 3p4 3d 4F9/2
+
+;     PHOTOEXC_input,zElem=28,zIon=16,wvl=3602.2539
+;3602.2539    6.11e-08 Ni XVI        -      3s2.3p 2P1/2 - 3s2.3p 2P3/2
+
+;     PHOTOEXC_input,zElem=20,zIon=13,wvl=4087.4719     
+;4087.4719    1.59e-04 Ca XIII       -      2s2 2p4 3P2 - 2s2 2p4 3P1
+
+;     PHOTOEXC_input,zElem=28,zIon=12,wvl=4232.0879      
+;4232.0879    2.02e-01 Ni XII        -      3s2 3p5 2P3/2 - 3s2 3p5 2P1/2
+
+;     PHOTOEXC_input,zElem=18,zIon=14,wvl=4413.8032     
+;4413.8032    4.38e-09 Ar XIV        -      2s2 2p 2P1/2 - 2s2 2p 2P3/2
+
+;     PHOTOEXC_input,zElem=28,zIon=13,wvl=5117.2358      
+;5117.2358    6.68e-03 Ni XIII       -      3s2.3p4 3P2 - 3s2.3p4 3P1
+  
+;     PHOTOEXC_input,zElem=20,zIon=15,wvl=5445.4370                                      
+;5445.4370    5.01e-11 Ca XV         -      2s2 2p2 3P1 - 2s2 2p2 3P2
+
+;     PHOTOEXC_input,zElem=16,zIon=11,wvl=19201.0000      
+;19201.0000   9.09e-04 S XI          -      2s2 2p2 3P0 - 2s2 2p2 3P1
+  
+;     PHOTOEXC_input,zElem=18,zIon=11,wvl=6918.7871                                   
+;6918.7871    8.02e-03 Ar XI         -      2s2 2p4 3P2 - 2s2 2p4 3P1
+
+;     PHOTOEXC_input,zElem=18,zIon=10,wvl=5535.5488     
+;5535.5488    1.19e-01 Ar X          -      2s2.2p5 2P3/2 - 2s2.2p5 2P1/2  
   
 ; CHIANTI version
   Result = CH_GET_VERSION()
@@ -109,7 +178,7 @@ pro PHOTOEXC_input,abund_unity=abund_unity,rmax=rmax,Nr=Nr,zElem=zElem,zIon=zIon
   read_ioneq,ioneqfile,t_ioneq,ioneq,ref
 
 ; Input the abundance file
-  abundancefile= !xuvtop+'/abundance/sun_coronal_1992_feldman.abund'
+  abundancefile= !xuvtop+'/abundance/sun_coronal_2021_chianti.abund'
   if keyword_set(abund_unity) then abundance=fltarr(nElement)+1.0d0
   if not keyword_set(abund_unity) then read_abund,abundancefile,abundance,ref
 
