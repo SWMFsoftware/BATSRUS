@@ -166,7 +166,7 @@ contains
          j0_, nJp1_, k0_, nKp1_
     use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
-         cEps, cElectronCharge
+         cEps, cElectronCharge, kappa_0_e
     use ModImplicit,   ONLY: UseSemiImplicit, nVarSemi, iTeImpl
     use ModMain,       ONLY: MaxBlock, UseHeatConduction, UseIonHeatConduction
     use ModMultiFluid, ONLY: UseMultiIon, MassIon_I
@@ -234,9 +234,7 @@ contains
 
     ! electron heat conduct coefficient for single charged ions
     ! = 9.2e-12 W/(m*K^(7/2))
-    HeatCondParSi = 3.2*3.0*cTwoPi/CoulombLog &
-         *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
-         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
+    HeatCondParSi = kappa_0_e(CoulombLog)
 
     ! unit HeatCondParSi is W/(m*K^(7/2))
     HeatCondPar = HeatCondParSi &
