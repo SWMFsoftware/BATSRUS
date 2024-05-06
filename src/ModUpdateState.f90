@@ -470,11 +470,10 @@ contains
 
       WeightSe = PeShockHeatingFraction; WeightSi = 1 - WeightSe
 
-      UseElectronShockHeating = &
-           PeShockHeatingFraction > 0.0 .and. .not.UseNonConservative
+      UseElectronShockHeating = PeShockHeatingFraction > 0.0
 
-      UseAnisoShockHeating = &
-           PparShockHeatingFraction /= 0.0 .and. .not.UseNonConservative
+      ! Negative PparShockHeatingFraction uses formula to set heating fraction
+      UseAnisoShockHeating = PparShockHeatingFraction /= 0.0
 
       ! Allocate ion (perpendicular) entropy array
       if( (UseAnisoShockHeating .or. UseElectronShockHeating) &
@@ -943,6 +942,11 @@ contains
                  State_VGB(Pe_,iTest,jTest,kTest,iBlock)*InvGammaElectronMinus1
          end if
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+            if(UseNonConservative)then
+               ! Only apply shockheating where the scheme is conservative
+               if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
+            end if
             Rho = State_VGB(Rho_,i,j,k,iBlock)
             FactorI = Rho**(-GammaMinus1)
             FactorE = Rho**(-GammaElectronMinus1)
@@ -973,7 +977,7 @@ contains
               NameSub,' after shock heating Pe, P=', &
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
               State_VGB(Pe_,iTest,jTest,kTest,iBlock)
-      end if
+      end if ! UseElectronShockHeating .and. .not. UseAnisoPressure
 
       if(UseAnisoShockHeating)then
          ! Distribute shock heating between parallel and perpendicular
@@ -984,6 +988,11 @@ contains
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
               s_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+            if(UseNonConservative)then
+               ! Only apply shockheating where the scheme is conservative
+               if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
+            end if
             Rho = State_VGB(Rho_,i,j,k,iBlock)
             b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
             if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
@@ -1057,7 +1066,8 @@ contains
               NameSub,' after shock heating Ppar, P=', &
               State_VGB(Ppar_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock)
-      end if
+
+      end if ! UseAnisoShockHeating
 
     end subroutine update_explicit
     !==========================================================================
