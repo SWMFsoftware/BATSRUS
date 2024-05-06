@@ -42,6 +42,7 @@ contains
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
     use ModUpdateState, ONLY: read_update_param
     use ModPhysics
+    use ModTransitionRegion, ONLY: CoulombLogTr=>CoulombLog
     use ModConstrainDivB, ONLY: init_mod_ct, DoInitConstrainB
     use ModBlockData, ONLY: init_mod_block_data, clean_block_data
     use BATL_lib, ONLY: &
@@ -761,6 +762,8 @@ contains
 
        case("#COULOMBLOG")
           call read_var('CoulombLog', CoulombLog)
+          ! Synchronize with the value used in the TR model
+          if(NameThisComp=='SC')CoulombLogTr = CoulombLog
 
        case("#PARTICLELINE","#PARTICLELINERANDOMWALK")
           call read_particle_line_param(NameCommand)
