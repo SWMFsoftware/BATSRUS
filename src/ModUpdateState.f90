@@ -820,7 +820,7 @@ contains
                   IsNonConservative = IsNonConservative .and. &
                        .not. IsConserv_CB(i,j,k,iBlock)
                end if
-                  
+
                ! P = (Ppar + 2*Sperp*B)/3
                if(IsNonConservative) &
                     StateOld_VGB(iPIon_I,i,j,k,iBlock) = cThird* &

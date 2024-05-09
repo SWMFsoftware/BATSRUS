@@ -474,7 +474,7 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
           !$acc loop vector collapse(3) reduction(.and.:DoneChange,DoneLoop)
-          do k = 1,nK+1; do j = 1,nJ+1; do i = 1,nI+1             
+          do k = 1,nK+1; do j = 1,nJ+1; do i = 1,nI+1
              DoneChange = DoneChange .and. &
                   all(abs(Trace_DSNB(:,:,i,j,k,iBlock) &
                   -       Trace_DINB(:,:,i,j,k,iBlock)) < dTraceMin)
@@ -488,9 +488,9 @@ contains
        ! update host here; but acc directives don't seem to be needed as acc
        ! may automatically handle DoneChange and DoneLoop in the reduction
        ! clause - Yifu
-       
+
        !$acc update host(DoneLoop, DoneChange)
-       
+
        if(nProc > 1)then
           Done_I = [DoneChange, DoneLoop]
           call MPI_allreduce(MPI_IN_PLACE, Done_I, 2, MPI_LOGICAL, &
@@ -980,7 +980,7 @@ contains
                end if
             end if
          end if
-         
+
          ! Integrate with 2nd order scheme
          Ds = DsNext
          GenIni_D = Gen_D
@@ -1010,7 +1010,7 @@ contains
             end if
          end if
 
-         do iInner = 1, 10            
+         do iInner = 1, 10
             ! Full step
             call interpolate_bb_node(GenMid_D, bMid_D, iBlock)
 
@@ -1024,7 +1024,7 @@ contains
 
             ! Make sure that Ds does not change more than a factor of 2 or 0.5
             DxRel = max(0.5, min(2., DxRel))
-            
+
             if(DxRel > 1.)then
                ! Not accurate enough, decrease Ds if possible
 
@@ -1816,16 +1816,16 @@ contains
       end select
 
     end subroutine setsubrange_ray
-#ifdef _OPENACC 
+    !==========================================================================
+#ifdef _OPENACC
     ! Note for OPENACC: the following acc subroutines have to be placed before
     ! ray_pass_faces to prevent a compilation error, as for nvfortran 20.x
     ! (frontera)
     ! buffer <-> rayface subroutine for cpu or gpu
-    !==========================================================================
     subroutine rayface2buf(Trace_DINB, iMin, iMax, jMin, jMax, kMin, kMax,&
          iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP)
       !$acc routine vector
-      !use BATL_lib, ONLY: nI, nJ, nK, MaxBlock, nProc
+      ! use BATL_lib, ONLY: nI, nJ, nK, MaxBlock, nProc
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer, intent(in) :: iBlock, iSide, jProc, MaxSizeR
@@ -1834,7 +1834,7 @@ contains
       ! real, intent(in) :: Trace_DINB(:,:,:,:,:,:)
       ! real, intent(inout) :: BufferS_IBIP(:,:,:,0:)
 
-      integer :: iTrace, i, j, k, iRay, iDim      
+      integer :: iTrace, i, j, k, iRay, iDim
       ! put ray into buf for equal resolution, or put prolonged ray into buf
       !------------------------------------------------------------------------
       !$acc loop vector collapse(5) private(iTrace)
@@ -1844,7 +1844,7 @@ contains
               (iRay-1)*3 + iDim
 
          BufferS_IBIP(iTrace,iBlock,iSide,jProc) = &
-              Trace_DINB(iDim,iRay,i,j,k,iBlock)         
+              Trace_DINB(iDim,iRay,i,j,k,iBlock)
       end do; end do; end do; end do; end do
     end subroutine rayface2buf
     !==========================================================================
@@ -1869,15 +1869,15 @@ contains
               (iRay-1)*3 + iDim + (iSubFaceIn-1)*MaxSizeR
 
          BufferS_IBIP(iTrace,iBlock,iSide,jProc) = &
-              Trace_DINB(iDim,iRay,i,j,k,iBlock)         
-      end do; end do; end do; end do; end do      
+              Trace_DINB(iDim,iRay,i,j,k,iBlock)
+      end do; end do; end do; end do; end do
     end subroutine subrayface2buf
     !==========================================================================
     subroutine buf2rayface_parallel(BufferR_IBIP,Trace_DINB,MaxSizeR,&
          iMin,iMax,jMin,jMax,kMin,kMax,&
          iBlock,jBlock,jSide,jProc)
       !$acc routine vector
-      
+
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
       integer, intent(in) :: iBlock,jBlock,jSide,jProc
       real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
@@ -1903,7 +1903,7 @@ contains
     subroutine buf2sparserayface_parallel(BufferR_IBIP,Trace_DINB,MaxSizeR,&
          iMin,iMax,jMin,jMax,kMin,kMax,iBlock,jBlock,jSide,jProc)
       !$acc routine vector
-      
+
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
       integer, intent(in) :: iBlock,jBlock,jSide,jProc
       real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
@@ -1930,7 +1930,7 @@ contains
     subroutine buf2subrayface_parallel(BufferR_IBIP,Trace_DINB,MaxSizeR,&
          iMin,iMax,jMin,jMax,kMin,kMax,iBlock,jBlock,jSide,jProc,iSubFaceIn)
       !$acc routine vector
-      
+
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
       integer, intent(in) :: iBlock,jBlock,jSide,jProc,iSubFaceIn
       real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
@@ -1952,8 +1952,8 @@ contains
                  Trace_DINB(iDim,iRay,i,j,k,iBlock))
          end do; end do;end do; end do; end do;
     end subroutine buf2subrayface_parallel
-#else
     !==========================================================================
+#else
      subroutine buf2rayface(Buffer_DIN,iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
@@ -2016,7 +2016,7 @@ contains
       integer, intent(in):: iDir, iFaceMin,iFaceMax
       logical, intent(in):: DoEqual,DoRestrict,DoProlong
 
-      ! acc declare create clauses for local variables are turned off here 
+      ! acc declare create clauses for local variables are turned off here
       ! as before. OPENACC can automate these, while what OPENACC can automate
       ! should be determined case-by-case.
 
@@ -2060,7 +2060,7 @@ contains
       ! Receive Buffer_IIBI to hold 4 incoming RESTRICTED Trace_DINB values
       ! for all blocks and for both sides
       real :: Buffer_IIBI(MaxSizeR,4,MaxBlock,2)
-      
+
       ! Equal and restricted values to be sent are stored in these buffers
       real, allocatable :: BufEqual_DIC(:,:,:,:,:), BufRestrict_DIC(:,:,:,:,:)
 #else
@@ -2113,7 +2113,7 @@ contains
                  iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
                  iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
                  iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
-            
+
             select case(DiLevel)
             case(0)
                if(.not.DoEqual)CYCLE
@@ -2206,7 +2206,7 @@ contains
                   jProc = jProc_IEB(iSubFace,iFace,iBlock)
                   jBlock = jBlock_IEB(iSubFace,iFace,iBlock)
                   iSize1 = iSizeR
-                  
+
                   call setsubrange_ray(.true., iFace, iSubFace, &
                        iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
                        iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
@@ -2245,7 +2245,7 @@ contains
             end select ! DiLevel
          end do ! iBlock
       end do ! iFace
-      
+
       if(nProc>1) then
          iRequestS = 0
          iSize1 = MaxSizeR * 4 * MaxBlock * 2
@@ -2289,16 +2289,16 @@ contains
                  iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
 
             ! Q: what is the convention for iSide? we have jSide = iSide
-            
+
             jSide = iSide
-            
+
             if(DoDebug.and.DoTest)write(*,*)&
                  'setranges_ray for buf2ray Done: me, iFace=',iProc, iFace
-            
+
             !$acc parallel loop gang
             do iBlock = 1, nBlock
                if(Unused_B(iBlock))CYCLE
-               
+
                select case(DiLevel_EB(jFace,iBlock))
                case(0)
                   jProc = jProc_IEB(1,jFace,iBlock)
