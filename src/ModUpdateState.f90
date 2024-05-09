@@ -561,6 +561,10 @@ contains
             ! s = p/rho^(Gamma-1)
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+               if(nConservCrit > 0)then
+                  ! Do not convert to entropy in conservative cells
+                  if(IsConserv_CB(i,j,k,iBlock)) CYCLE
+               end if
                StateOld_VGB(iP_I,i,j,k,iBlock) = &
                     StateOld_VGB(iP_I,i,j,k,iBlock) &
                     *StateOld_VGB(iRho_I,i,j,k,iBlock)**(-GammaMinus1_I)
@@ -570,8 +574,8 @@ contains
                     State_VGB(iP_I,i,j,k,iBlock) &
                     *State_VGB(iRho_I,i,j,k,iBlock)**(-GammaMinus1_I)
             end do; end do; end do
-         end if
-      endif
+         end if ! UseAnisoPressure
+      endif ! UseEntropy
 
       ! Convert pressure to energy for the conservative scheme
       call pressure_to_energy(iBlock, StateOld_VGB)
@@ -828,7 +832,10 @@ contains
             ! p = s*rho^(Gamma-1)
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-
+               if(nConservCrit > 0)then
+                  ! Do not convert entropy back in conservative cells
+                  if(IsConserv_CB(i,j,k,iBlock)) CYCLE
+               end if
                StateOld_VGB(iP_I,i,j,k,iBlock) = &
                     StateOld_VGB(iP_I,i,j,k,iBlock) &
                     *StateOld_VGB(iRho_I,i,j,k,iBlock)**GammaMinus1_I
