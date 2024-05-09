@@ -7396,13 +7396,13 @@ The default is using the conservative equations.
 </command>
 
 <command name="CONSERVATIVECRITERIA">
-  <parameter name="nConservCrit" type="integer" min="0" max="3" default="1"/>
+  <parameter name="nConservCrit" type="integer" min="0" max="3" default="0"/>
   <for from="1" to="$nConservCrit">
     <parameter name="TypeConservCrit" type="string" case="lower"
 	       input="select">
       <option name="radius"	value="r/radius" default="T"/>
       <option name="parabola"	value="parabola/paraboloid" />
-      <option name="p"				    />
+      <option name="p"				            />
       <option name="grad P"	value="gradp"		    />
     </parameter>
     <parameter name="rConserv" type="real" min="$rBody"
