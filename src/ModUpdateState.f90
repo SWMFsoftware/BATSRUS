@@ -291,6 +291,10 @@ contains
           ! Modify pressure source term to entropy source term
           ! S(s) = S(p)/Rho^(gamma-1)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(nConservCrit > 0)then
+                ! only non-conservative cells need the ion entropy source
+                if(IsConserv_CB(i,j,k,iBlock)) CYCLE
+             end if
              Source_VC(iP_I,i,j,k) = Source_VC(iP_I,i,j,k) &
                   *State_VGB(iRho_I,i,j,k,iBlock)**(-GammaMinus1_I) &
                   - GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock) &
@@ -453,7 +457,10 @@ contains
       real, allocatable, save:: Rk4_VCB(:,:,:,:,:)
 
       ! true if the update is State = StateOld + Source
-      logical :: DoAddToStateOld
+      logical:: DoAddToStateOld
+
+      ! True if the cell is non-conservative
+      logical:: IsNonConservative
 
       ! true if shock heating is applied to electrons, anisotropic ion pressure
       logical:: UseElectronShockHeating, UseAnisoShockHeating
@@ -509,7 +516,12 @@ contains
                FullB  = sqrt(max(1e-30, FullB2))
                ! Sperp = Pperp/B = 0.5*(3*p-Ppar)/B
                Coeff1 = 0.5/FullB
-               if(UseNonConservative)then
+               IsNonConservative = UseNonConservative
+               if(nConservCrit > 0)then
+                  IsNonConservative = IsNonConservative .and. &
+                       .not. IsConserv_CB(i,j,k,iBlock)
+               end if
+               if(IsNonConservative)then
                   StateOld_VGB(iPIon_I,i,j,k,iBlock) = &
                        Coeff1*(3*StateOld_VGB(iPIon_I,i,j,k,iBlock) &
                        -       StateOld_VGB(iPparIon_I,i,j,k,iBlock))
@@ -535,7 +547,7 @@ contains
 
                   ! Sperp = Pperp/B = 0.5*(3*p-Ppar)/B
                   Coeff1 = 0.5/FullB
-                  if(UseNonConservative)then
+                  if(IsNonConservative)then
                      State_VGB(iPIon_I,i,j,k,iBlock) = &
                           Coeff1*(3*State_VGB(iPIon_I,i,j,k,iBlock) &
                           -       State_VGB(iPparIon_I,i,j,k,iBlock))
@@ -548,7 +560,7 @@ contains
                        FullB2/State_VGB(iRhoIon_I,i,j,k,iBlock)**2 &
                        *State_VGB(iPparIon_I,i,j,k,iBlock)
                end if
-               if(UseAnisoShockHeating)then
+               if(UseAnisoShockHeating .and. .not.IsNonConservative)then
                   ! Store updated perpendicular entropy
                   s_C(i,j,k) = Sperp + Source_VC(Sperp_,i,j,k)
                   if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
@@ -803,8 +815,14 @@ contains
                     StateOld_VGB(iRhoIon_I,i,j,k,iBlock)**2/FullB2 &
                     *StateOld_VGB(iPparIon_I,i,j,k,iBlock)
 
+               IsNonConservative = UseNonConservative
+               if(nConservCrit > 0)then
+                  IsNonConservative = IsNonConservative .and. &
+                       .not. IsConserv_CB(i,j,k,iBlock)
+               end if
+                  
                ! P = (Ppar + 2*Sperp*B)/3
-               if(UseNonConservative) &
+               if(IsNonConservative) &
                     StateOld_VGB(iPIon_I,i,j,k,iBlock) = cThird* &
                     ( StateOld_VGB(iPparIon_I,i,j,k,iBlock) &
                     + 2*FullB*StateOld_VGB(iPIon_I,i,j,k,iBlock))
@@ -817,7 +835,7 @@ contains
                     State_VGB(iRhoIon_I,i,j,k,iBlock)**2/FullB2 &
                     *State_VGB(iPparIon_I,i,j,k,iBlock)
                ! P = (Ppar + 2*Sperp*B)/3
-               if(UseNonConservative)then
+               if(IsNonConservative)then
                   if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
                        write(*,*) NameSub,' SperpNew, pPerpAdiabNew=',&
                        State_VGB(p_,i,j,k,iBlock), &
@@ -891,7 +909,8 @@ contains
 
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-            if(UseNonConservative)then
+            if(nConservCrit > 0)then
+               ! Do not change pressure in non-conservative cells
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
@@ -950,7 +969,7 @@ contains
          end if
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-            if(UseNonConservative)then
+            if(nConservCrit > 0)then
                ! Only apply shockheating where the scheme is conservative
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
@@ -996,7 +1015,7 @@ contains
               s_C(iTest,jTest,kTest)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-            if(UseNonConservative)then
+            if(nConservCrit > 0)then
                ! Only apply shockheating where the scheme is conservative
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
