@@ -1297,7 +1297,7 @@ contains
                State_VG(Bx_:Bz_, i, j, k) + DirR_D*sum(DirR_D*&
                b_cme_d(Xyz_DGB(:,i,j,k,iBlock)))
           ! State_VG(Bx_:Bz_, i, j, k) = b_cme_d(Xyz_DGB(:,i,j,k,iBlock))
-          
+
           ! Gnost cell value of velocity: keep the velocity projection
           ! onto the magnetic field, if UseAlignedVelocity=.true.
           ! Reflect the other components
