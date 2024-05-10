@@ -14,7 +14,7 @@ module ModFieldTraceFast
        iTest, jTest, kTest, iBlockTest, iProc, iComm, nProc, &
        nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, MaxBlock, Unused_B, IsCartesianGrid, x_, y_, z_, &
-       iNode_B, iTree_IA, Coord0_,  Xyz_DGB, CellSize_DB, &
+       iNode_B, iTree_IA, Coord0_, Xyz_DGB, CellSize_DB, &
        message_pass_cell, message_pass_node
   use ModBatsrusUtility, ONLY: barrier_mpi, error_report, stop_mpi
 
@@ -182,6 +182,7 @@ contains
     integer :: nIterTrace
     ! check for changes and loop rays in the iterative scheme
     logical :: DoneChange, DoneLoop, Done_I(2)
+    !$acc declare create(DoneLoop, DoneChange)
     real    :: dTraceMin
     !$acc declare create(nIterTrace)
 
@@ -255,7 +256,6 @@ contains
 
     !$acc parallel loop gang
     do iBlock = 1, nBlock
-
        ! Q: Should we have i,j,k loops here?
        ! A: Since this kernel is already short and fast, replacing the
        !    following array operations with loops does not improve speed.
@@ -285,7 +285,6 @@ contains
             Trace_DINB(:,:,:,:,   1,iBlock) = OPENRAY
        if(DiLevel_EB(6,iBlock)==Unset_) &
             Trace_DINB(:,:,:,:,nK+1,iBlock) = OPENRAY
-
     end do
 
 #ifndef _OPENACC
@@ -327,12 +326,10 @@ contains
     UsePreferredInterpolation = .false.
     nIterTrace = 0
     !$acc update device(UsePreferredInterpolation, nIterTrace)
-
     call timing_stop('trace_grid_fast1')
 
     call timing_start("trace_iter")
     do
-
        if(DoTest)write(*,*)'nIterTrace=',nIterTrace
 
        if(nIterTrace>=MaxIterTrace)EXIT
@@ -340,7 +337,6 @@ contains
        call timing_start("trace_iter1")
        !$acc parallel loop gang
        do iBlock = 1, nBlock
-
           !$acc loop vector collapse(3)
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
              ! Store Trace_DINB into Trace_DSNB
@@ -378,6 +374,7 @@ contains
                 do iRay = 1, 2
                    ! Follow Trace_DSNB in direction iRay
                    GenIni_D = [iX-0.5, iY-0.5, iZ-0.5]
+
                    iFace = follow_fast(.true., Gen_D, GenIni_D, &
                         DoCheckInside, iRay, iBlock)
 
@@ -448,6 +445,7 @@ contains
              end if ! nIterTrace==0
           end do; end do; end do ! iZ, iY, iX
        end do ! iBlock
+
        call timing_stop("trace_iter1")
 
        ! Exchange Trace_DINB information
@@ -467,8 +465,12 @@ contains
        ! Check for significant changes and loop rays in Trace_DINB
        call timing_start('trace_check')
 
+       !$acc parallel
        DoneChange = .true.; DoneLoop = .true.
-       !$acc parallel loop gang reduction(.and.:DoneChange,DoneLoop)
+       !$acc end parallel
+
+       !$acc parallel
+       !$acc loop gang reduction(.and.:DoneChange,DoneLoop)
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
           !$acc loop vector collapse(3) reduction(.and.:DoneChange,DoneLoop)
@@ -481,6 +483,13 @@ contains
                   Trace_DINB(1,2,i,j,k,iBlock) > LoopRay
           end do; end do; end do
        end do
+       !$acc end parallel
+
+       ! update host here; but acc directives don't seem to be needed as acc
+       ! may automatically handle DoneChange and DoneLoop in the reduction
+       ! clause - Yifu
+
+       !$acc update host(DoneLoop, DoneChange)
 
        if(nProc > 1)then
           Done_I = [DoneChange, DoneLoop]
@@ -541,7 +550,7 @@ contains
     call timing_start('trace_grid_fast2')
 
     ! Assign face Trace_DSNB values to cell centers
-    !$acc parallel loop gang
+    !$acc parallel loop gang private(DoCheckInside)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
@@ -919,11 +928,9 @@ contains
       ! FIXME: test_swpc_pc fails with upper limit MaxSegment
       ! Integration loop
       do iOuter = 1, 9999999 ! MaxSegment
-
          ! Check if we are inside the ionosphere
          if(DoCheckInside)then
             ! Convert Gen_D to real coordinates Xyz_D
-
             Xyz_D = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
 
             r2 = sum(Xyz_D**2)
@@ -980,6 +987,7 @@ contains
 
          ! Half step
          call interpolate_bb_node(GenIni_D, bIni_D, iBlock)
+
          GenMid_D = GenIni_D + 0.5*Ds*bIni_D
 
          ! Check if the trace is pointing outwards
@@ -1050,7 +1058,6 @@ contains
                EXIT
             end if
          end do
-
          Gen_D = GenIni_D + bMid_D*Ds
 
          nSegment = nSegment+1
@@ -1110,7 +1117,6 @@ contains
          end if
 
       end do
-
       if(DoTestRay)write(*,*) &
            'Finished follow_fast at me,iBlock,nSegment,iFaceOut,Gen_D,Xyz_D=',&
            iProc,iBlock,nSegment,iFaceOut,Gen_D,&
@@ -1634,7 +1640,9 @@ contains
 
     do iDir = 1, 3
        ! Send messages for both faces
+       ! write(*,*)'me, ray_pass_faces is starting, ',iDir, iProc
        call ray_pass_faces(iDir,2*iDir-1,2*iDir,.true.,.true.,.true.)
+       ! write(*,*)'me, ray_pass_faces is finished, ',iDir, iProc
     end do ! iDir
 
     if(DoTest)write(*,*)'ray_pass starting prolongation'
@@ -1809,6 +1817,196 @@ contains
 
     end subroutine setsubrange_ray
     !==========================================================================
+#ifdef _OPENACC
+    ! Note for OPENACC: the following acc subroutines have to be placed before
+    ! ray_pass_faces to prevent a compilation error, as for nvfortran 20.x
+    ! (frontera)
+    ! buffer <-> rayface subroutine for cpu or gpu
+    subroutine rayface2buf(Trace_DINB, iMin, iMax, jMin, jMax, kMin, kMax,&
+         iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP)
+      !$acc routine vector
+      ! use BATL_lib, ONLY: nI, nJ, nK, MaxBlock, nProc
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in) :: iBlock, iSide, jProc, MaxSizeR
+      real, intent(in) ::Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+      real, intent(inout):: BufferS_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+      ! real, intent(in) :: Trace_DINB(:,:,:,:,:,:)
+      ! real, intent(inout) :: BufferS_IBIP(:,:,:,0:)
+
+      integer :: iTrace, i, j, k, iRay, iDim
+      ! put ray into buf for equal resolution, or put prolonged ray into buf
+      !------------------------------------------------------------------------
+      !$acc loop vector collapse(5) private(iTrace)
+      do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax; do iRay=1,2; do iDim=1,3
+         iTrace = (k-kMin)*(jMax-jMin+1)*(iMax-iMin+1)*6 +&
+              (j-jMin)*(iMax-iMin+1)*6 + (i-iMin)*6 + &
+              (iRay-1)*3 + iDim
+
+         BufferS_IBIP(iTrace,iBlock,iSide,jProc) = &
+              Trace_DINB(iDim,iRay,i,j,k,iBlock)
+      end do; end do; end do; end do; end do
+    end subroutine rayface2buf
+    !==========================================================================
+    subroutine subrayface2buf(Trace_DINB, iMin, iMax, jMin, jMax, kMin, kMax,&
+         iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP, iSubFaceIn)
+      !$acc routine vector
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in) :: iBlock, iSide, jProc, MaxSizeR
+      real, intent(in) ::Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+      real, intent(inout):: BufferS_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+
+      integer, intent(in):: iSubFaceIn
+
+      integer :: iTrace, i, j, k, iRay, iDim
+      ! put restrited ray into buffer
+      !------------------------------------------------------------------------
+      !$acc loop vector collapse(5) private(iTrace)
+      do k=kMin,kMax,2; do j=jMin,jMax,2; do i=iMin,iMax,2;&
+           do iRay=1,2; do iDim=1,3
+         iTrace = (k-kMin)/2*((jMax-jMin)/2+1)*((iMax-iMin)/2+1)*6 +&
+              (j-jMin)/2*((iMax-iMin)/2+1)*6 + (i-iMin)/2*6 + &
+              (iRay-1)*3 + iDim + (iSubFaceIn-1)*MaxSizeR
+
+         BufferS_IBIP(iTrace,iBlock,iSide,jProc) = &
+              Trace_DINB(iDim,iRay,i,j,k,iBlock)
+      end do; end do; end do; end do; end do
+    end subroutine subrayface2buf
+    !==========================================================================
+    subroutine buf2rayface_parallel(BufferR_IBIP,Trace_DINB,MaxSizeR,&
+         iMin,iMax,jMin,jMax,kMin,kMax,&
+         iBlock,jBlock,jSide,jProc)
+      !$acc routine vector
+
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
+      integer, intent(in) :: iBlock,jBlock,jSide,jProc
+      real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+      real, intent(inout):: &
+           Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+
+      integer :: i,j,k,iDim,iRay,iTrace
+      ! Take maximum of Trace_DINB and buf (more positive values are more real)
+      ! for the full face
+      !------------------------------------------------------------------------
+      !$acc loop vector collapse(5) private(iTrace)
+      do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax;do iRay = 1,2; do iDim=1,3
+         iTrace = (k-kMin)*(jMax-jMin+1)*(iMax-iMin+1)*6 +&
+              (j-jMin)*(iMax-iMin+1)*6 + (i-iMin)*6 + &
+              (iRay-1)*3 + iDim
+
+         Trace_DINB(iDim,iRay,i,j,k,iBlock) = &
+              max(BufferR_IBIP(iTrace,jBlock,jSide,jProc),&
+              Trace_DINB(iDim,iRay,i,j,k,iBlock))
+      end do; end do; end do; end do; end do;
+    end subroutine buf2rayface_parallel
+    !==========================================================================
+    subroutine buf2sparserayface_parallel(BufferR_IBIP,Trace_DINB,MaxSizeR,&
+         iMin,iMax,jMin,jMax,kMin,kMax,iBlock,jBlock,jSide,jProc)
+      !$acc routine vector
+
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
+      integer, intent(in) :: iBlock,jBlock,jSide,jProc
+      real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+      real, intent(inout):: &
+           Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+
+      integer :: i,j,k,iDim,iRay,iTrace
+      ! Take maximum of Trace_DINB and buf (more positive values are more real)
+      ! for a factor of 2 coarser grid
+      !------------------------------------------------------------------------
+      !$acc loop vector collapse(5) private(iTrace)
+      do k=kMin,kMax,2; do j=jMin,jMax,2; do i=iMin,iMax,2;&
+           do iRay = 1,2; do iDim=1,3
+         iTrace = (k-kMin)/2*((jMax-jMin)/2+1)*((iMax-iMin)/2+1)*6 +&
+              (j-jMin)/2*((iMax-iMin)/2+1)*6 + (i-iMin)/2*6 + &
+              (iRay-1)*3 + iDim
+
+         Trace_DINB(iDim,iRay,i,j,k,iBlock) = &
+              max(BufferR_IBIP(iTrace,jBlock,jSide,jProc),&
+              Trace_DINB(iDim,iRay,i,j,k,iBlock))
+      end do; end do; end do; end do; end do;
+    end subroutine buf2sparserayface_parallel
+    !==========================================================================
+    subroutine buf2subrayface_parallel(BufferR_IBIP,Trace_DINB,MaxSizeR,&
+         iMin,iMax,jMin,jMax,kMin,kMax,iBlock,jBlock,jSide,jProc,iSubFaceIn)
+      !$acc routine vector
+
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
+      integer, intent(in) :: iBlock,jBlock,jSide,jProc,iSubFaceIn
+      real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+      real, intent(inout):: &
+           Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+
+      integer :: i,j,k,iDim,iRay,iTrace
+      ! Take maximum of Trace_DINB and buf (more positive values are more real)
+      ! buf is from a factor of 2 finer grid
+      !------------------------------------------------------------------------
+      !$acc loop vector collapse(5) private(iTrace)
+      do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax;do iRay = 1,2; do iDim=1,3
+            iTrace = (k-kMin)*((jMax-jMin)+1)*((iMax-iMin)+1)*6 +&
+                 (j-jMin)*((iMax-iMin)+1)*6 + (i-iMin)*6 + &
+                 (iRay-1)*3 + iDim + (iSubFaceIn-1)*MaxSizeR
+
+            Trace_DINB(iDim,iRay,i,j,k,iBlock) = &
+                 max(BufferR_IBIP(iTrace,jBlock,jSide,jProc),&
+                 Trace_DINB(iDim,iRay,i,j,k,iBlock))
+         end do; end do;end do; end do; end do;
+    end subroutine buf2subrayface_parallel
+    !==========================================================================
+#else
+     subroutine buf2rayface(Buffer_DIN,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
+      real, intent(inout):: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
+      ! Take maximum of Trace_DINB and buf (more positive values are more real)
+      ! for the full face
+
+      !------------------------------------------------------------------------
+      Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,iBlock) &
+           = max(Buffer_DIN, &
+           Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,iBlock))
+
+    end subroutine buf2rayface
+    !==========================================================================
+    subroutine buf2sparserayface( &
+         Buffer_DIN, iMin, iMax, jMin, jMax, kMin, kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      real, intent(inout):: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
+
+      ! Take maximum of Trace_DINB and buf (more positive values are more real)
+      ! for a factor of 2 coarser grid
+      !------------------------------------------------------------------------
+      Trace_DINB(:,:,iMinG:iMaxG:2,jMinG:jMaxG:2,kMinG:kMaxG:2,iBlock) = &
+           max(Buffer_DIN,&
+           Trace_DINB(:,:,iMinG:iMaxG:2,jMinG:jMaxG:2,kMinG:kMaxG:2,iBlock))
+
+    end subroutine buf2sparserayface
+    !==========================================================================
+    subroutine buf2subrayface(Buffer_DIN, iFace, iSubFace, &
+         iMin, iMax, jMin, jMax, kMin, kMax)
+
+      integer, intent(in) :: iFace, iSubFace, iMin,iMax,jMin,jMax,kMin,kMax
+      real, intent(inout) :: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
+
+      ! Set subface range to write into
+      !------------------------------------------------------------------------
+      call setsubrange_ray(.false., iFace, iSubFace, &
+           iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+           iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+           iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
+           iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
+
+      ! Take maximum of Trace_DINB and buf (more positive values are more real)
+      ! for the appropriate subface
+
+      Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock) = &
+           max(Buffer_DIN, &
+           Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock))
+
+    end subroutine buf2subrayface
+    !==========================================================================
+#endif
     subroutine ray_pass_faces(&
          iDir, iFaceMin, iFaceMax, DoEqual, DoRestrict, DoProlong)
 
@@ -1818,24 +2016,37 @@ contains
       integer, intent(in):: iDir, iFaceMin,iFaceMax
       logical, intent(in):: DoEqual,DoRestrict,DoProlong
 
+      ! acc declare create clauses for local variables are turned off here
+      ! as before. OPENACC can automate these, while what OPENACC can automate
+      ! should be determined case-by-case.
+
       ! Face, neighbor's face and side indexes
-      integer :: iFace, jFace, iSide
+      integer :: iFace, jFace, iSide, jSide
+      ! acc declare create(iFace, jFace, iSide, jSide)
 
       ! number of subfaces (1 or 4), subface (1..nSubFace)
       integer ::  nSubFace, iSubFace
+      ! acc declare create(nSubFace, iSubFace)
 
 #ifdef _OPENACC
       ! Array ranges for outgoing, incoming, restricted and subfaces
       integer :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
+      ! acc declare create(iMinO,iMaxO,jMinO,jMaxO,kMinO,kMaxO)
       integer :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
+      ! acc declare create(iMinG,iMaxG,jMinG,jMaxG,kMinG,kMaxG)
       integer :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
+      ! acc declare create(iMinR,iMaxR,jMinR,jMaxR,kMinR,kMaxR)
       integer :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
+      ! acc declare create(iMinS,iMaxS,jMinS,jMaxS,kMinS,kMaxS)
+      ! The above overwrites module variables in Ray_Pass_Old
       integer:: iS, jS, kS, iR, jR, kR, iRay
 #endif
 
       ! Descriptors for neighbor
       integer :: jProc, jBlock, DiLevel
+      ! acc declare create(jProc, jBlock, DiLevel)
 
+      ! MPI variables and buffers for cpu and gpu codes
 #ifndef _OPENACC
       ! MPI variables
       integer :: iTag, iRequest, nRecvRequest, iRecvRequest_I(MaxBlock*6), &
@@ -1852,17 +2063,46 @@ contains
 
       ! Equal and restricted values to be sent are stored in these buffers
       real, allocatable :: BufEqual_DIC(:,:,:,:,:), BufRestrict_DIC(:,:,:,:,:)
+#else
+      ! MPI variables
+      integer :: iRequestR, iRequestS, iProcSend, iError
+      integer, allocatable :: iRequestR_I(:), iRequestS_I(:)
 
+      ! Maximum size of the RESTRICTED Trace_DINB layer to be received
+      ! for the 6 trace variables (3 coordinates * 2 trace directions)
+      ! setting MaxSizeR as a parameter causes a nvfortran bug!!!
+      integer :: MaxSizeR = &
+           6*max((nI/2+1)*(nJ/2+1),(nI/2+1)*(nK/2+1),(nJ/2+1)*(nK/2+1))
+      ! acc declare create(MaxSizeR)
+
+      ! Receive Buffer_IIBI to hold 4 incoming RESTRICTED Trace_DINB values
+      ! for all blocks and for both sides
+      real, allocatable :: BufferS_IBIP(:,:,:,:)
+      real, allocatable :: BufferR_IBIP(:,:,:,:)
+      !$acc declare create(BufferS_IBIP, BufferR_IBIP)
 #endif
-
       ! Actual size of messages: full, restricted/sparse and actual face
       integer :: iSize, iSizeR, iSize1
+      ! acc declare create(iSize, iSizeR, iSize1)
 
       ! BATL related
       integer:: iNode, iDim, iSideFace
-
+      ! acc declare create(iNode, iDim, iSideFace)
 #ifdef _OPENACC
       !------------------------------------------------------------------------
+      ! on 1 gpu: finish local copy; on >1 gpus: fill in send buffer
+      if(nProc>1)then
+         if (.not. allocated(BufferS_IBIP))&
+              allocate(BufferS_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1))
+         if (.not. allocated(BufferR_IBIP))&
+              allocate(BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1))
+         !$acc update device(BufferS_IBIP, BufferR_IBIP)
+         if (.not. allocated(iRequestS_I)) &
+              allocate(iRequestS_I(1:nProc-1))
+         if (.not. allocated(iRequestR_I)) &
+              allocate(iRequestR_I(1:nProc-1))
+      end if
+
       do iFace=iFaceMin,iFaceMax
          !$acc parallel loop gang
          do iBlock = 1, nBlock
@@ -1878,8 +2118,10 @@ contains
             case(0)
                if(.not.DoEqual)CYCLE
 
-               jProc=jProc_IEB(1,iFace,iBlock)
-               jBlock=jBlock_IEB(1,iFace,iBlock)
+               jProc = jProc_IEB(1,iFace,iBlock)
+               jBlock = jBlock_IEB(1,iFace,iBlock)
+               iSize1 = iSize
+
                if(jProc==iProc)then
                   ! Local copy
 
@@ -1894,13 +2136,16 @@ contains
                           Trace_DINB(:,:,iS,jS,kS,iBlock))
                   end do; end do; end do
                else
-                  ! To be implemented
+                  call rayface2buf(Trace_DINB,iMinO,iMaxO,jMinO,jMaxO,&
+                       kMinO,kMaxO,iBlock,iSide,jProc,MaxSizeR,&
+                       BufferS_IBIP)
                end if
             case(1)
                if(.not.DoRestrict)CYCLE
 
-               jProc=jProc_IEB(1,iFace,iBlock)
-               jBlock=jBlock_IEB(1,iFace,iBlock)
+               jProc = jProc_IEB(1,iFace,iBlock)
+               jBlock = jBlock_IEB(1,iFace,iBlock)
+               iSize1 = iSizeR
                ! Subface index =1,2,3, or 4 with respect to the coarse neighbor
 
                ! iSubFace = iSubFace_IA(iFace,iNode_B(iBlock))
@@ -1947,9 +2192,12 @@ contains
                         !$acc end atomic
                      end do; end do
                   end do; end do; end do
-
                else
-                  ! To be implemented
+                  ! write(*,*)'!!! do_restrict is starting, me',iProc
+                  call subrayface2buf(Trace_DINB, iMinO, iMaxO, jMinO, jMaxO, &
+                       kMinO, kMaxO, iBlock, iSide, jProc, MaxSizeR, &
+                       BufferS_IBIP, iSubFace)
+                  ! write(*,*)'!!! do_restrict is finished, me', iProc
                end if
             case(-1)
                if(.not.DoProlong)CYCLE
@@ -1957,6 +2205,7 @@ contains
                do iSubFace = 1, 4
                   jProc = jProc_IEB(iSubFace,iFace,iBlock)
                   jBlock = jBlock_IEB(iSubFace,iFace,iBlock)
+                  iSize1 = iSizeR
 
                   call setsubrange_ray(.true., iFace, iSubFace, &
                        iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
@@ -1981,9 +2230,10 @@ contains
                            end do
                         end do
                      end do
-
                   else
-                     ! To be implemented
+                     call rayface2buf(Trace_DINB, iMinS, iMaxS, jMinS, jMaxS, &
+                          kMinS, kMaxS, iBlock, iSide, jProc, MaxSizeR, &
+                          BufferS_IBIP)
                   end if
                end do ! iSubFace
 
@@ -1996,6 +2246,106 @@ contains
          end do ! iBlock
       end do ! iFace
 
+      if(nProc>1) then
+         iRequestS = 0
+         iSize1 = MaxSizeR * 4 * MaxBlock * 2
+
+         !$acc host_data use_device(BufferS_IBIP)
+         do iProcSend = 0, nProc-1
+            if(iProcSend == iProc) CYCLE
+            iRequestS = iRequestS+1
+            call MPI_isend(BufferS_IBIP(1,1,1,iProcSend),iSize1,MPI_REAL,&
+                 iProcSend,10,iComm,iRequestS_I(iRequestS),iError)
+         end do
+         !$acc end host_data
+
+         iRequestR = 0
+         !$acc host_data use_device(BufferR_IBIP)
+         do iProcSend = 0, nProc-1
+            if(iProcSend == iProc) CYCLE
+            iRequestR = iRequestR + 1
+            call MPI_irecv(BufferR_IBIP(1,1,1,iProcSend),iSize1,MPI_REAL,&
+                 iProcSend,10,iComm,iRequestR_I(iRequestR),iError)
+         end do
+         !$acc end host_data
+
+         if(iRequestS > 0) then
+            call MPI_waitall(iRequestS, iRequestS_I, MPI_STATUSES_IGNORE, &
+                 iError)
+         end if
+         if(iRequestR > 0) then
+            call MPI_waitall(iRequestR, iRequestR_I, MPI_STATUSES_IGNORE, &
+                 iError)
+         end if
+
+         ! retrieve rays from buffer
+         ! on the receiving buffer, iBlock -> jBlock, but jSide = iSide
+         do iFace = iFaceMin, iFaceMax
+
+            ! Set index ranges for the face
+            call setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
+                 iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+                 iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+                 iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
+
+            ! Q: what is the convention for iSide? we have jSide = iSide
+
+            jSide = iSide
+
+            if(DoDebug.and.DoTest)write(*,*)&
+                 'setranges_ray for buf2ray Done: me, iFace=',iProc, iFace
+
+            !$acc parallel loop gang
+            do iBlock = 1, nBlock
+               if(Unused_B(iBlock))CYCLE
+
+               select case(DiLevel_EB(jFace,iBlock))
+               case(0)
+                  jProc = jProc_IEB(1,jFace,iBlock)
+                  jBlock = jBlock_IEB(1,jFace,iBlock)
+                  iSize1 = iSize
+                  if(DoDebug.and.DoTest)&
+                       write(*,*)'buf2rayface: me, iBlock, jBlock=',&
+                       iProc,iBlock,jBlock
+                  if(DoEqual.and.jProc/=iProc) then
+                     call buf2rayface_parallel(BufferR_IBIP,Trace_DINB,&
+                          MaxSizeR,iMinG,iMaxG,jMinG,jMaxG,kMinG,kMaxG,&
+                          iBlock,jBlock,jSide,jProc)
+                  end if
+               case(1) ! neighbour is coarser
+                  jProc = jProc_IEB(1,jFace,iBlock)
+                  jBlock = jBlock_IEB(1,jFace,iBlock)
+                  if(DoDebug.and.DoTest)&
+                       write(*,*)'buf2sparserayface: me, iBlock=',iProc,iBlock
+                  if(DoProlong.and.jProc/=iProc)then
+                     call buf2sparserayface_parallel(BufferR_IBIP,Trace_DINB,&
+                          MaxSizeR,iMinG,iMaxG,jMinG,jMaxG,kMinG,kMaxG,&
+                          iBlock,jBlock,jSide,jProc)
+                  end if
+               case(-1)
+                  if(DoRestrict)then
+                     do iSubFace=1,4
+                        jProc = jProc_IEB(iSubFace,jFace,iBlock)
+                        jBlock = jBlock_IEB(iSubFace,jFace,iBlock)
+                        if(DoDebug.and.DoTest)&
+                             write(*,*)'buf2subrayface: me,iSubFace,iBlock=',&
+                             iProc,iSubFace,iBlock
+                        if(jProc/=iProc)then
+                           call setsubrange_ray(.false., iFace, iSubFace, &
+                                iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+                                iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+                                iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
+                                iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
+                           call buf2subrayface_parallel(BufferR_IBIP,&
+                                Trace_DINB,MaxSizeR,iMinS,iMaxS,jMinS,jMaxS,&
+                                kMinS,kMaxS,iBlock,jBlock,jSide,jProc,iSubFace)
+                        end if
+                     end do
+                  end if
+               end select ! DiLevel
+            end do ! iBlock
+         end do ! iFace
+      end if ! nProc > 1
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #else
       ! CPU version
@@ -2332,60 +2682,6 @@ contains
 
     end subroutine ray_pass_faces
     !==========================================================================
-#ifndef _OPENACC
-    subroutine buf2rayface(Buffer_DIN,iMin,iMax,jMin,jMax,kMin,kMax)
-
-      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
-      real, intent(inout):: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
-      ! Take maximum of Trace_DINB and buf (more positive values are more real)
-      ! for the full face
-
-      !------------------------------------------------------------------------
-      Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,iBlock) &
-           = max(Buffer_DIN, &
-           Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,iBlock))
-
-    end subroutine buf2rayface
-    !==========================================================================
-    subroutine buf2sparserayface( &
-         Buffer_DIN, iMin, iMax, jMin, jMax, kMin, kMax)
-
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
-      real, intent(inout):: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
-
-      ! Take maximum of Trace_DINB and buf (more positive values are more real)
-      ! for a factor of 2 coarser grid
-      !------------------------------------------------------------------------
-      Trace_DINB(:,:,iMinG:iMaxG:2,jMinG:jMaxG:2,kMinG:kMaxG:2,iBlock) = &
-           max(Buffer_DIN,&
-           Trace_DINB(:,:,iMinG:iMaxG:2,jMinG:jMaxG:2,kMinG:kMaxG:2,iBlock))
-
-    end subroutine buf2sparserayface
-    !==========================================================================
-    subroutine buf2subrayface(Buffer_DIN, iFace, iSubFace, &
-         iMin, iMax, jMin, jMax, kMin, kMax)
-
-      integer, intent(in) :: iFace, iSubFace, iMin,iMax,jMin,jMax,kMin,kMax
-      real, intent(inout) :: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
-
-      ! Set subface range to write into
-      !------------------------------------------------------------------------
-      call setsubrange_ray(.false., iFace, iSubFace, &
-           iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-           iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-           iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
-           iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
-
-      ! Take maximum of Trace_DINB and buf (more positive values are more real)
-      ! for the appropriate subface
-
-      Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock) = &
-           max(Buffer_DIN, &
-           Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock))
-
-    end subroutine buf2subrayface
-    !==========================================================================
-#endif
     subroutine prolong_ray(iFace,iBlock)
       !$acc routine vector
 
@@ -2583,7 +2879,6 @@ contains
   subroutine calc_squash_factor
     ! Calculatte squashing factor
 
-    use ModGeometry, ONLY: RadiusMin
     use ModInterpolate, ONLY: bilinear
 
     ! Last time the squashing factor has been calculated
@@ -2591,7 +2886,7 @@ contains
     integer :: nLonSquash = 360, nLatSquash = 180
 
     integer:: i, j, k, iSide, iBlock, iStatus
-    real:: Lon, Lat, Squash, SquashFactor, rTraceOrig
+    real:: Lon, Lat, Squash, SquashFactor
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_squash_factor'
@@ -2601,10 +2896,6 @@ contains
 
     call test_start(NameSub, DoTest)
 
-    ! Fix rTrace if necessary
-    rTraceOrig = rTrace
-    rTrace = max(rTraceOrig, RadiusMin*1.001)
-
     call trace_field_sphere
     if(DoTest)then
        write(*,*) NameSub,' minval(SquashFactor_II)=', minval(SquashFactor_II)
@@ -2612,9 +2903,6 @@ contains
     end if
 
     call trace_field_grid
-
-    ! Restore rTrace
-    rTrace = rTraceOrig
 
     if(.not.allocated(SquashFactor_GB)) then
        allocate(SquashFactor_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))

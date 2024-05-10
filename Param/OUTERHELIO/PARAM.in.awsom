@@ -199,7 +199,7 @@ T			UseOhNeutralBc
 
 #CORONALHEATING
 usmanov			TypeCoronalHeating
-T			UseTransverseTurbulence
+F			UseTransverseTurbulence
 -1/3			SigmaD
 0.128			KarmanTaylorAlpha
 0.5			KarmanTaylorBeta2AlphaRatio

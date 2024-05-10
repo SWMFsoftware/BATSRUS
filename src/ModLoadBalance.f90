@@ -6,7 +6,7 @@ module ModLoadBalance
 
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iBlockTest, iProcTest, &
-       iProc, iComm
+       iProc, iComm, sync_cpu_gpu_amr
   use ModBatsrusUtility, ONLY: stop_mpi
 
   use ModMain, ONLY: UseConstrainB, UseB0, UseIM
@@ -560,6 +560,7 @@ contains
 
        ! Go up to nBlockMax instead of nBlock (! ) to clean up beyond nBlock
        iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
+
        do iNode = 1, nNode
           if(iTree_IA(Status_,iNode) /= Used_) CYCLE
           iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode)) = &
@@ -598,6 +599,11 @@ contains
     ! When load balancing is done Skipped and Unused blocks coincide
     Unused_BP(1:nBlockMax,:) = &
          iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
+
+    ! Yifu: More variables than Unused_BP, CellSize_DB, Xyz_DGB are not updated
+    ! after load balancing. It is safe to call the sync sub for amr here.
+    ! acc update device(Unused_BP, CellSize_DB, Xyz_DGB)
+    call sync_cpu_gpu_amr
 
     call find_test_cell
 
