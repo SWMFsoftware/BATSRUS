@@ -841,7 +841,6 @@ sub current_settings{
 
     open(FILE, $UserMod) or die "$ERROR Could not open $UserMod\n";
     my $Module='???';
-    my $Version='???';
     my $NameFile='???';
     while(<FILE>){
 	if(/NameUserModule/){
@@ -852,10 +851,9 @@ sub current_settings{
 	    $Module =~ s/[\'\"].*\n//;  # remove trailing quotation marks
 	}
         $NameFile = $1 if /NameUserFile\s*=.*ModUser(.*)\.f90/;
-	$Version = $1 if /VersionUserModule\s*=\s*([\d\.]+)/;
     }
     close(FILE);
-    $Settings .= "UserModule = $NameFile: $Module, ver $Version\n";
+    $Settings .= "UserModule = $NameFile: $Module\n";
 
     open(FILE, $EquationMod) or die "$ERROR Could not open $EquationMod\n";
     my $Equation='???';

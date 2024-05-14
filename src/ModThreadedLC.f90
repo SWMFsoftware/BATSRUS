@@ -127,8 +127,8 @@ contains
   subroutine init_threaded_lc
 
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iComm
-    use ModConst,           ONLY: cElectronMass, &
-         cEps, cElectronCharge, cTwoPi, cProtonMass
+    use ModConst,           ONLY: te_ti_exchange_rate! cElectronMass, &
+         ! cEps, cElectronCharge, cTwoPi, cProtonMass
     use ModMultiFluid,      ONLY: MassIon_I
     use ModFieldLineThread, ONLY:  nPointThreadMax, init_thread=>init
     use ModPhysics,         ONLY: &
@@ -177,7 +177,7 @@ contains
     allocate(Main_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax));  Main_VVI = 0
 
     ! Initialize transition region model:
-    call init_tr(Z=Z, TeChromoSi = TeChromosphereSi, iComm=iComm)
+    call init_tr(zIn=Z, TeChromoSi = TeChromosphereSi, iComm=iComm)
     !
     ! Initialize thread structure
     !
@@ -207,12 +207,7 @@ contains
     ! re-usable and can be also applied to calculate the resistivity:
     ! \eta = m \nu_{ei}/(e**2 Ne)
     !
-    cExchangeRateSi = &
-         CoulombLog/sqrt(cElectronMass)*  &
-         ( cElectronCharge**2 / cEps)**2 /&! effective ei collision frequency
-         ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &
-         *(2*cElectronMass/cProtonMass)  /&! *energy exchange per ei collision
-         cBoltzmann
+    cExchangeRateSi = te_ti_exchange_rate(CoulombLog)/cBoltzmann
     ! Dimensionless temperature floor
     TeMin = TeSiMin*Si2No_V(UnitTemperature_)
 
@@ -1165,7 +1160,6 @@ contains
        iImplBlock)
 
     use EEE_ModCommonVariables, ONLY: UseCme
-    use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModFieldLineThread,     ONLY: b_cme_d
     use ModMain,       ONLY: nStep, nIteration, tSimulation
     use ModAdvance,      ONLY: State_VGB
@@ -1295,25 +1289,15 @@ contains
             /State_VG(Rho_,1,j,k)
 
        do i = 1-nGhost, 0
-          B1_D = (2.-i) * State_VG(Bx_:Bz_, i, j, k) - &
-                 (1.-i) * State_VG(Bx_:Bz_, i, j, k)
+          B1_D = State_VG(Bx_:Bz_, 1-i, j, k)
 
           State_VG(Bx_:Bz_, i, j, k) = B1_D - DirR_D*sum(DirR_D*B1_D)
 
-          if(UseCME)then
-             ! State_VG(Bx_:Bz_, i, j, k) = b_cme_d(Xyz_DGB(:,i,j,k,iBlock))
+          if(UseCME)State_VG(Bx_:Bz_, i, j, k) = &
+               State_VG(Bx_:Bz_, i, j, k) + DirR_D*sum(DirR_D*&
+               b_cme_d(Xyz_DGB(:,i,j,k,iBlock)))
+          ! State_VG(Bx_:Bz_, i, j, k) = b_cme_d(Xyz_DGB(:,i,j,k,iBlock))
 
-             call EEE_get_state_BC(Xyz_DGB(:,i,j,k,iBlock), &
-                  RhoCme, Ucme_D, Bcme_D, pCme, &
-                  tSimulation, nStep, nIteration)
-             Bcme_D = Bcme_D*Si2No_V(UnitB_)
-             State_VG(Bx_:Bz_, i, j, k) = &
-                  State_VG(Bx_:Bz_, i, j, k) + DirR_D*sum(DirR_D*Bcme_D)
-          else
-             ! Ghost cell value of the magnetic field: cancel radial B1 field
-             B1_D = State_VG(Bx_:Bz_, 1-i, j, k)
-             State_VG(Bx_:Bz_, i, j, k) = B1_D - DirR_D*sum(DirR_D*B1_D)
-          end if
           ! Gnost cell value of velocity: keep the velocity projection
           ! onto the magnetic field, if UseAlignedVelocity=.true.
           ! Reflect the other components
