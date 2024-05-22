@@ -4,7 +4,7 @@
 
 module ModTurbulence
 
-  use BATL_lib, ONLY: test_start, test_stop
+  use BATL_lib, ONLY: test_start, test_stop, MaxDim
   use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
@@ -14,14 +14,14 @@ module ModTurbulence
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
   use ModMultiFluid, ONLY: nIonFluid
   use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
-       UseAlfvenWaveRepresentative
+       UseAwRepresentative
   use omp_lib
 
   implicit none
   SAVE
 
-  logical :: UseAwRepresentativeHere = .false.
-  !$acc declare create(UseAwRepresentativeHere)
+  logical :: IsOnAwRepresentative = .false.
+  !$acc declare create(IsOnAwRepresentative)
 
   logical :: UseTurbulentCascade = .false.
   real    :: rMinWaveReflection = 0.0
@@ -44,9 +44,9 @@ module ModTurbulence
        1:nI,1:nJ,1:nK)
   !$omp threadprivate( CoronalHeating_C, WaveDissipationRate_VC )
 
-  ! Alfven wave speed array, cell-centere
-  real, public, allocatable :: AlfvenWaveSpeed_C(:,:,:)
-  !$omp threadprivate(AlfvenWaveSpeed_C)
+  ! Alfven wave speed array, cell-centered
+  real, public, allocatable :: AlfvenWaveVel_DC(:,:,:,:)
+  !$omp threadprivate(AlfvenWaveVel_DC)
 
   character(len=lStringLine) :: TypeHeatPartitioning
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
@@ -137,9 +137,6 @@ contains
     case('#LIMITIMBALANCE')
        call read_var('ImbalanceMax',ImbalanceMax)
        ImbalanceMax2 = ImbalanceMax**2
-    case('#AWREPRESENTATIVE')
-       call read_var('UseAlfvenWaveRepresentative',&
-            UseAlfvenWaveRepresentative)
     case("#POYNTINGFLUX")
        DoInit = .true.
        call read_var('PoyntingFluxPerBSi', PoyntingFluxPerBSi)
@@ -201,8 +198,8 @@ contains
     DoInit = .false.
 
     if(UseAlfvenWaves.and.                   &
-         .not.allocated(AlfvenWaveSpeed_C))  &
-         allocate(AlfvenWaveSpeed_C(nI,nJ,nK))
+         .not.allocated(AlfvenWaveVel_DC))  &
+         allocate(AlfvenWaveVel_DC(MaxDim,nI,nJ,nK))
 
     if(UseAlfvenWaveDissipation)then
        LperpTimesSqrtB = LperpTimesSqrtBSi &
@@ -223,6 +220,27 @@ contains
     end if
   end subroutine init_turbulence
   !============================================================================
+  subroutine set_alfven_wave_vel_vect(iBlock)
+    use ModAdvance, ONLY: State_VGB
+    use ModB0,      ONLY: B0_DGB
+    use ModMain, ONLY: UseB0
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
+    integer, intent(in) :: iBlock
+    real :: FullB_D(3)
+    integer :: i, j, k
+    character(len=*), parameter:: NameSub = 'calc_alfven_wave_dissipation'
+    !--------------------------------------------------------------------------
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(UseB0)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       else
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+       AlfvenWaveVel_DC(:,i,j,k) = FullB_D/&
+            sqrt(State_VGB(Rho_,i,j,k,iBlock))
+    end do; end do; end do
+  end subroutine set_alfven_wave_vel_vect
+  !============================================================================
   subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, &
        WaveDissipationRate_V, CoronalHeating)
 
@@ -235,18 +253,23 @@ contains
     real, intent(out)   :: WaveDissipationRate_V(WaveFirst_:WaveLast_), &
          CoronalHeating
 
-    real :: EwavePlus, EwaveMinus, FullB_D(3), FullB, Coef
+    real :: EwavePlus, EwaveMinus, FullB_D(3), FullB, Coef, SqrtRho
     character(len=*), parameter:: NameSub = 'calc_alfven_wave_dissipation'
     !--------------------------------------------------------------------------
-    if(UseB0)then
-       FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    if(IsOnAwRepresentative)then
+       Coef = 2*sqrt(PoyntingFluxPerB*norm2(AlfvenWaveVel_DC(:,i,j,k)))&
+            /LperpTimesSqrtB
+       SqrtRho = PoyntingFluxPerB*sqrt(State_VGB(Rho_,i,j,k,iBlock))
     else
-       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       if(UseB0)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       else
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+       FullB = norm2(FullB_D)
+       Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
+       SqrtRho = 1.0
     end if
-    FullB = norm2(FullB_D)
-
-    Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
-
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
@@ -256,7 +279,7 @@ contains
     WaveDissipationRate_V(WaveLast_) = Coef* &
          sqrt(max(EwavePlus,Crefl**2*EwaveMinus))
 
-    CoronalHeating = sum(&
+    CoronalHeating = SqrtRho*sum(&
          WaveDissipationRate_V*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
   end subroutine calc_alfven_wave_dissipation
@@ -273,7 +296,7 @@ contains
     real, intent(out)   :: CoronalHeating, &
          WaveDissipationRate_V(WaveFirst_:WaveLast_)
 
-    real :: FullB_D(3), FullB, Coef
+    real :: FullB_D(3), FullB, Coef, SqrtRho
     real :: EwavePlus, EwaveMinus
 
     ! Low-frequency cascade due to small-scale nonlinearities
@@ -285,6 +308,9 @@ contains
        ! Note that Lperp is multiplied with the density
        Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock))*2.0 &
             /State_VGB(Lperp_,i,j,k,iBlock)
+    elseif(IsOnAwRepresentative)then
+       Coef = 2*sqrt(PoyntingFluxPerB*norm2(AlfvenWaveVel_DC(:,i,j,k)))
+       SqrtRho = PoyntingFluxPerB*sqrt(State_VGB(Rho_,i,j,k,iBlock))
     else
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -308,6 +334,7 @@ contains
           ! Lperp*sqrt(B) is constant (Hollweg's model)
           Coef = Coef/LperpTimesSqrtB
        end if
+       SqrtRho = 1.0
     end if
 
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
@@ -316,9 +343,8 @@ contains
     WaveDissipationRate_V(WaveFirst_) = Coef*sqrt(EwaveMinus)
     WaveDissipationRate_V(WaveLast_) = Coef*sqrt(EwavePlus)
 
-    CoronalHeating = sum(&
+    CoronalHeating = SqrtRho*sum(&
          WaveDissipationRate_V*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-
   end subroutine turbulent_cascade
   !============================================================================
   subroutine get_wave_reflection(iBlock, IsNewBlock)
@@ -641,7 +667,7 @@ contains
          CascadeTimeMajor_I, CascadeTimeMinor_I, Qmajor_I, Qminor_I, &
          QperpPerQtotal_I, GyroRadiusTimesB_I
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te, Pp
-    real :: Value_I(6)
+    real :: Value_I(6), SqrtRho
 
 #ifndef SCALAR
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
@@ -690,7 +716,11 @@ contains
 
        Wplus  = State_V(WaveFirst_)
        Wminus = State_V(WaveLast_)
-
+       if(IsOnAwRepresentative)then
+          SqrtRho = PoyntingFluxPerB*sqrt(RhoProton)
+          Wplus = WPlus*SqrtRho; Wminus = Wminus*SqrtRho
+       end if
+       
        Wmajor = max(Wplus, Wminus)
        Wminor = min(Wplus, Wminus)
 
@@ -905,7 +935,8 @@ contains
     ! Convert Alfven wave turbulence energy densities to
     ! dimensionless representative functions. Switch the logical
     ! UseAwRepresentativeHere on.
-    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, nI, nJ, nK
+    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes, ONLY: Rho_, WDiff_, WaveFirst_, WaveLast_
 
@@ -914,7 +945,7 @@ contains
     !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           if(.not.Used_GB(i,j,k,iBlock))CYCLE
           InvSqrtRho = 1/(  PoyntingFluxPerB*&
                sqrt( State_VGB(Rho_,i,j,k,iBlock) )  )
@@ -924,17 +955,16 @@ contains
                InvSqrtRho*State_VGB(WDiff_,i,j,k,iBlock)
        end do; end do; end do
     end do
-    UseAwRepresentativeHere = .true.
-    !$acc update device(UseAlfvenWaveRepresentative)
+    IsOnAwRepresentative = .true.
+    !$acc update device(IsOnAwRepresentative)
   end subroutine wave_energy_to_representative
   !============================================================================
   subroutine representative_to_wave_energy
     ! Convert dimensionless representative functions to Alfven wave turbulence
-    ! energy densities. Switch the logical
-    ! UseAwRepresentativeHere off.
-    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock, nI, nJ, nK
+    ! energy densities. Switch of the logical IsOnAwRepresentative
+    use BATL_lib,      ONLY: Unused_B, Used_GB, nBlock
     use ModVarIndexes, ONLY: Rho_, WDiff_, WaveFirst_, WaveLast_
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, StateOld_VGB
 
     integer :: iBlock, i, j, k
     real    :: SqrtRho
@@ -947,12 +977,18 @@ contains
                State_VGB(Rho_,i,j,k,iBlock) )
           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
                SqrtRho*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
-          if(WDiff_>1)State_VGB(WDiff_,i,j,k,iBlock) = &
-               SqrtRho*State_VGB(WDiff_,i,j,k,iBlock)
+          StateOld_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+               SqrtRho*StateOld_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+          if(WDiff_>1)then
+             State_VGB(WDiff_,i,j,k,iBlock) = &
+                  SqrtRho*State_VGB(WDiff_,i,j,k,iBlock)
+             StateOld_VGB(WDiff_,i,j,k,iBlock) = &
+                  SqrtRho*StateOld_VGB(WDiff_,i,j,k,iBlock)
+          end if
        end do; end do; end do
     end do
-    UseAwRepresentativeHere = .false.
-    !$acc update device(UseAlfvenWaveRepresentative)
+    IsOnAwRepresentative = .false.
+    !$acc update device(IsOnAwRepresentative)
   end subroutine representative_to_wave_energy
   !============================================================================
 end module ModTurbulence

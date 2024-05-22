@@ -8,7 +8,8 @@ module ModUser
 
   use ModMain, ONLY: nI, nJ,nK
   use ModChromosphere, ONLY: tChromoSi=>TeChromosphereSi
-  use ModTurbulence, ONLY: PoyntingFluxPerB, PoyntingFluxPerBSi
+  use ModTurbulence, ONLY: PoyntingFluxPerB, PoyntingFluxPerBSi, &
+       IsOnAwRepresentative
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -1089,11 +1090,13 @@ contains
              ! Te = T_s and ne = sum(q_s n_s)
              if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = &
                   sum(ChargeIon_I*State_VGB(iPIon_I,i,j,k,iBlock))
-
              ! Outgoing wave energy
-             State_VGB(iMajor,i,j,k,iBlock) = PoyntingFluxPerB &
-                  *sqrt(State_VGB(iRho,i,j,k,iBlock))
-
+             if(IsOnAwRepresentative)then
+                State_VGB(iMajor,i,j,k,iBlock) = 1
+             else
+                State_VGB(iMajor,i,j,k,iBlock) = PoyntingFluxPerB &
+                     *sqrt(State_VGB(iRho,i,j,k,iBlock))
+             end if
              ! Ingoing wave energy
              State_VGB(iMinor,i,j,k,iBlock) = 0.0
           end do
@@ -1593,9 +1596,13 @@ contains
     end if
 
     FullBr = sum((FBC%B0Face_D + FBC%VarsGhostFace_V(Bx_:Bz_))*rUnit_D)
-
+    
     ! Ewave \propto sqrt(rho) for U << Ualfven
-    Ewave = PoyntingFluxPerB*sqrt(FBC%VarsGhostFace_V(Rho_))
+    if(IsOnAwRepresentative)then
+       Ewave = 1.0
+    else
+       Ewave = PoyntingFluxPerB*sqrt(FBC%VarsGhostFace_V(Rho_))
+    end if
     if (FullBr > 0. ) then
        FBC%VarsGhostFace_V(WaveFirst_) = Ewave
        FBC%VarsGhostFace_V(WaveLast_) = 0.0

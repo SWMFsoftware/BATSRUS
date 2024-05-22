@@ -489,7 +489,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseAlfvenWaveDissipation)then
-
+       if(IsOnAwRepresentative)call set_alfven_wave_vel_vect(iBlock)
        if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &

@@ -1,6 +1,23 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+module ModVarIndexes1d
+  use ModVarIndexes
+  implicit none
+  integer, parameter :: p1d_      = p_ - 5
+  integer, parameter :: nVar1     = p1d_
+  integer, parameter :: Energy1d_ = nVar1 + 1
+  integer, parameter :: ScalarFirst1d_ = max(2, ScalarFirst_ - 5)
+  integer, parameter :: ScalarLast1d_  = max(1, ScalarLast_  - 5)
+  integer, parameter :: Ehot1d_ = max(Ehot_-5,1)
+  integer, parameter :: Pe1d_   = max(Pe_-5,1)
+  integer, parameter :: WaveFirst1d_ = max(WaveFirst_-5,1)
+  integer, parameter :: WaveLast1d_  = max(WaveLast_ -5,1)
+  integer, parameter :: WDiff1d_     = max(WDiff_    -5,1)
+  integer, parameter :: BperU1d_     = max(BperU_    -5,1)
+  integer, parameter :: Ppar1d_      = max(Ppar_     -5,1)
+end module ModVarIndexes1d
+!==============================================================================
 module ModFieldLineThread
 
   use ModBatsrusUtility, ONLY: stop_mpi
@@ -79,6 +96,12 @@ module ModFieldLineThread
      ! Distance between the true and ghost cell centers.
      real, pointer :: DeltaR_II(:,:)
      real, pointer :: SignB_II(:,:)
+     ! Direction and sign Br of the magnetic field at the face
+     real, pointer :: bDirFace_DII(:,:,:)
+     real, pointer :: SignBFace_II(:,:)
+     integer, pointer :: iStencil_III(:,:,:)
+     real, pointer :: Weight_III(:,:,:)
+     real, pointer :: DsSi_III(:,:,:)
      ! PSi, TeSi amd TiSi stored at gird iMin:iMax,0:nJ+1,0:nK+1
      real, pointer :: State_VG(:,:,:,:)
   end type BoundaryThreads
@@ -307,6 +330,10 @@ contains
     nullify(BoundaryThreads_B(iBlock)%nPoint_II)
     nullify(BoundaryThreads_B(iBlock)%DeltaR_II)
     nullify(BoundaryThreads_B(iBlock)%SignB_II)
+    nullify(BoundaryThreads_B(iBlock)%SignBFace_II)
+    nullify(BoundaryThreads_B(iBlock)%bDirFace_DII)
+    nullify(BoundaryThreads_B(iBlock)%iStencil_III)
+    nullify(BoundaryThreads_B(iBlock)%Weight_III)
     nullify(BoundaryThreads_B(iBlock)%State_VG)
     BoundaryThreads_B(iBlock)%iAction    = Done_
     call test_stop(NameSub, DoTest, iBlock)
@@ -333,6 +360,10 @@ contains
     deallocate(BoundaryThreads_B(iBlock)%nPoint_II)
     deallocate(BoundaryThreads_B(iBlock)%DeltaR_II)
     deallocate(BoundaryThreads_B(iBlock)%SignB_II)
+    deallocate(BoundaryThreads_B(iBlock)%SignBFace_II)
+    deallocate(BoundaryThreads_B(iBlock)%bDirFace_DII)
+    deallocate(BoundaryThreads_B(iBlock)%iStencil_III)
+    deallocate(BoundaryThreads_B(iBlock)%Weight_III)
     deallocate(BoundaryThreads_B(iBlock)%State_VG)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
@@ -357,7 +388,7 @@ contains
   !============================================================================
   subroutine set_threads(NameCaller)
 
-    use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock
+    use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock, MaxDim
     use ModParallel, ONLY: DiLevel_EB, Unset_
     use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
     use ModMain,     ONLY: nStep
@@ -449,6 +480,22 @@ contains
                1:nJ, 1:nK))
           BoundaryThreads_B(iBlock)%SignB_II = 0.0
 
+          allocate(BoundaryThreads_B(iBlock)%SignBFace_II(&
+               1:nJ, 1:nK))
+          BoundaryThreads_B(iBlock)%SignBFace_II = 0.0
+
+          allocate(BoundaryThreads_B(iBlock)%bDirFace_DII(MaxDim,&
+               1:nJ, 1:nK))
+          BoundaryThreads_B(iBlock)%bDirFace_DII = 0.0
+
+          allocate(BoundaryThreads_B(iBlock)%iStencil_III(2,&
+               1:nJ, 1:nK))
+          BoundaryThreads_B(iBlock)%iStencil_III = 0
+
+          allocate(BoundaryThreads_B(iBlock)%Weight_III(MaxDim,&
+               1:nJ, 1:nK))
+          BoundaryThreads_B(iBlock)%Weight_III = 0.0
+
           allocate(BoundaryThreads_B(iBlock)%State_VG(&
                PSi_:TiSi_, -nGUniform:1,&
                jMin_:jMax_, kMin_:kMax_))
@@ -512,7 +559,9 @@ contains
     use ModGeometry, ONLY: Xyz_DGB
     use ModNumConst, ONLY: cTolerance
     use ModTurbulence, ONLY:PoyntingFluxPerBSi
-    use BATL_lib,    ONLY: MaxDim, xyz_to_coord
+    use ModCoordTransform, ONLY: rot_xyz_rlonlat
+    use BATL_lib,    ONLY: MaxDim, xyz_to_coord, coord_to_xyz, CoordMin_DB, &
+         CellSize_DB
     integer, intent(in) :: iBlock
     ! Locals:
     ! Loop variable: (j,k) enumerate the cells at which
@@ -520,7 +569,7 @@ contains
     ! values at the photospheric end and the maximal
     ! value of this index is 0 for the thread point
     ! at the physical cell center.
-    integer :: j, k, iPoint, nTrial, iInterval, nPoint
+    integer :: j, k, iPoint, nTrial, iInterval, nPoint, j1, k1
 
     ! Length interval, ! Heliocentric distance
     real :: Ds, R, RStart
@@ -536,6 +585,10 @@ contains
     ! Aux
     real :: ROld, Aux
     real :: DirB_D(MaxDim), DirR_D(MaxDim), XyzOld_D(MaxDim)
+    ! Conversion matrix and r-lon-lat bector of direction
+    real :: XyzRlonlat_DD(MaxDim,MaxDim), bRlonlat_D(MaxDim)
+    ! Mesh size along r, Lon, Lat
+    real :: Dr, DsLon, DsLat, Weight_I(MaxDim)
     real :: CosBRMin = 1.0
     real :: BdS,  IntegralBdS
     integer, parameter :: nCoarseMax = 2
@@ -553,6 +606,40 @@ contains
 
     ! Loop over the thread starting points
     do k = 1, nK; do j = 1, nJ
+       ! Face center
+       Coord_D = CoordMin_DB(:,iBlock) +  [0.0, &
+            (j - 0.50)*CellSize_DB(2,iBlock),    &
+            (k - 0.50)*CellSize_DB(3,iBlock)]
+       call coord_to_xyz(Coord_D, Xyz_D)
+       call get_b0(Xyz_D, B0_D)
+       ! Account for the CME field as needed
+       if(UseCme)B0_D = B0_D + b_cme_d(Xyz_D)
+       B0 = norm2(B0_D)
+       if(B0==0.0)call stop_mpi('Zero magnetic field at the boundary')
+       B0_D = B0_D/B0
+       XyzRlonlat_DD =  rot_xyz_rlonlat(Coord_D(2), Coord_D(3))
+       bRlonlat_D = matmul(B0_D,XyzRlonlat_DD)
+       SignBr = sign(1.0,bRlonlat_D(r_))
+       BoundaryThreads_B(iBlock)%SignB_II(j, k) = SignBr
+       B0_D = SignBr*B0_D
+       BoundaryThreads_B(iBlock)%bDirFace_DII(:,j, k) = B0_D
+       bRlonlat_D = SignBr*bRlonlat_D
+       ! Distance to the nearest cell center
+       Dr = norm2(Xyz_DGB(:, 1, j, k, iBlock) - Xyz_D)
+       j1 = j + nint(sign(1.0,bRlonlat_D(2)))
+       ! Distance from the first stencil point to the second one
+       DsLon = norm2(Xyz_DGB(:, 1, j1, k, iBlock) - &
+            Xyz_DGB(:, 1, j, k, iBlock))
+       k1 = k + nint(sign(1.0,bRlonlat_D(3)))
+       ! Distance from the first stencil point to the third one
+       DsLat = norm2(Xyz_DGB(:, 1, j, k1, iBlock) - &
+            Xyz_DGB(:, 1, j, k, iBlock))
+       Weight_I(2:3) = abs(bRlonlat_D(2:3))/[DsLon, DsLat]
+       Aux = max(bRlonlat_D(1)/Dr, Weight_I(2) + Weight_I(3))
+       Weight_I(2:3) = Weight_I(2:3)/Aux
+       Weight_I(1) = max(1 - Weight_I(2) - Weight_I(3), 0.0)
+       BoundaryThreads_B(iBlock)%Weight_III(:,j, k) = Weight_I
+       BoundaryThreads_B(iBlock)%iStencil_III(:,j, k) = [j1, k1]
        ! First, take magnetic field in the ghost cell
        ! Starting points for all threads are in the centers
        ! of  physical cells near the boundary
@@ -943,8 +1030,7 @@ contains
     ! BoundaryThreads_B(iBlock)%State_VG(:,:,:)
     ! array, then convert to MHD
     use ModAdvance,     ONLY: nVar
-    use BATL_lib,       ONLY: &
-         CoordMin_DB, CellSize_DB, r_
+    use BATL_lib,       ONLY: CoordMin_DB, CellSize_DB
     use ModInterpolate, ONLY: interpolate_vector
 
     ! Coords of the point in which to interpolate
@@ -1625,7 +1711,7 @@ contains
     ! with the spherical surface at the first generalized coordinate value
     ! equal to input Coord1
 
-    use BATL_lib, ONLY: nBlock, Unused_B, r_
+    use BATL_lib, ONLY: nBlock, Unused_B
     use ModInterpolate, ONLY: linear
     real :: Coord1
     integer, intent(in) :: nVar
@@ -1822,7 +1908,7 @@ contains
     !==========================================================================
     subroutine get_te_ptot(TeSi, PTotSi)
 
-      use BATL_lib,       ONLY: xyz_to_coord, CellSize_DB, CoordMin_DB, r_
+      use BATL_lib,       ONLY: xyz_to_coord, CellSize_DB, CoordMin_DB
       use ModInterpolate, ONLY: interpolate_vector
       ! OUTPUT:
       real, intent(out) :: TeSi, PTotSi

@@ -356,6 +356,7 @@ contains
          UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModTurbulence,  ONLY: IsOnAwRepresentative, PoyntingFluxPerB 
 
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
@@ -423,6 +424,8 @@ contains
        Zminus2  = State_V(WaveLast_)*No2Si_V(UnitEnergyDens_) * 4.0 / Rho
        ! Calculate the non-thermal broadening
        Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
+       if(IsOnAwRepresentative)&
+            Unth2 = Unth2*PoyntingFluxPerB*sqrt(State_V(Rho_))
     end if
 
     ! Convert from kg m^-3 to kg cm^-3 (*1e-6)

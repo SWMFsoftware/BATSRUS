@@ -49,8 +49,8 @@ module ModWaves
   ! 3. 0 <= \tilde{w}_\pm <= 1 inequalities hold.
   ! To use the representative functions model, turn on the logical as follows:
 
-  Logical :: UseAlfvenWaveRepresentative = .false.
-  !$acc declare create(UseAlfvenWaveRepresentative)
+  Logical :: UseAwRepresentative = .false.
+  !$acc declare create(UseAwRepresentative)
   real :: FreqMinSI = -1.0
   real :: FreqMaxSI = -1.0
 
@@ -144,9 +144,9 @@ contains
        call read_var('UseWavePressureLtd',UseWavePressureLtd)
        !$acc update device(UseWavePressure, UseWavePressureLtd)
 
-    case("#WAVEREPRESENTATIVE")
-       call read_var('UseAlfvenWaveRepresentative',UseAlfvenWaveRepresentative)
-       !$acc update device(UseAlfvenWaveRepresentative)
+    case("#AWREPRESENTATIVE")
+       call read_var('UseAwRepresentative',UseAwRepresentative)
+       !$acc update device(UseAwRepresentative)
 
     case("#FREQUENCY")
        call read_var('FreqMinSI',FreqMinSI)

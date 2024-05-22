@@ -21,7 +21,7 @@ module ModFaceValue
        RightState_VY, &  ! Face Right Y
        LeftState_VZ,  &  ! Face Left  Z
        RightState_VZ     ! Face Right Z
-
+  use ModTurbulence, ONLY: PoyntingFluxPerB, IsOnAwRepresentative
   use ModBorisCorrection, ONLY: &
        boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z, &
        UseBorisRegion, set_clight_cell, set_clight_face, Clight_G
@@ -1422,14 +1422,27 @@ contains
          end do; end do; end do
       end if
       if(UseWavePressure)then
-         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VX(p_,i,j,k) = LeftState_VX(p_,i,j,k) &
-                 - (GammaWave-1) &
-                 *sum(LeftState_VX(WaveFirst_:WaveLast_,i,j,k))
-            RightState_VX(p_,i,j,k) = RightState_VX(p_,i,j,k) &
-                 - (GammaWave-1) &
-                 *sum(RightState_VX(WaveFirst_:WaveLast_,i,j,k))
-         end do; end do; end do
+         if(IsOnAwRepresentative)then
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+               LeftState_VX(p_,i,j,k) = LeftState_VX(p_,i,j,k) &
+                    - (GammaWave-1)*PoyntingFluxPerB*&
+                    sqrt(LeftState_VX(Rho_,i,j,k)) &
+                    *sum(LeftState_VX(WaveFirst_:WaveLast_,i,j,k))
+               RightState_VX(p_,i,j,k) = RightState_VX(p_,i,j,k) &
+                    - (GammaWave-1)*PoyntingFluxPerB*&
+                    sqrt(RightState_VX(Rho_,i,j,k)) &
+                    *sum(RightState_VX(WaveFirst_:WaveLast_,i,j,k))
+            end do; end do; end do
+         else
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+               LeftState_VX(p_,i,j,k) = LeftState_VX(p_,i,j,k) &
+                    - (GammaWave-1) &
+                    *sum(LeftState_VX(WaveFirst_:WaveLast_,i,j,k))
+               RightState_VX(p_,i,j,k) = RightState_VX(p_,i,j,k) &
+                    - (GammaWave-1) &
+                    *sum(RightState_VX(WaveFirst_:WaveLast_,i,j,k))
+            end do; end do; end do
+         end if
       end if
 
     end subroutine ptotal_to_p_facex
@@ -1449,14 +1462,27 @@ contains
          end do; end do; end do
       end if
       if(UseWavePressure)then
-         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VY(p_,i,j,k) = LeftState_VY(p_,i,j,k) &
-                 - (GammaWave-1) &
-                 *sum(LeftState_VY(WaveFirst_:WaveLast_,i,j,k))
-            RightState_VY(p_,i,j,k) = RightState_VY(p_,i,j,k) &
-                 - (GammaWave-1) &
-                 *sum(RightState_VY(WaveFirst_:WaveLast_,i,j,k))
-         end do; end do; end do
+         if(IsOnAwRepresentative)then
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+               LeftState_VY(p_,i,j,k) = LeftState_VY(p_,i,j,k) &
+                    - (GammaWave-1)*PoyntingFluxPerB*&
+                    sqrt(LeftState_VY(Rho_,i,j,k)) &
+                    *sum(LeftState_VY(WaveFirst_:WaveLast_,i,j,k))
+               RightState_VY(p_,i,j,k) = RightState_VY(p_,i,j,k) &
+                    - (GammaWave-1)*PoyntingFluxPerB*&
+                    sqrt(RightState_VY(Rho_,i,j,k)) &
+                    *sum(RightState_VY(WaveFirst_:WaveLast_,i,j,k))
+            end do; end do; end do
+         else
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+               LeftState_VY(p_,i,j,k) = LeftState_VY(p_,i,j,k) &
+                    - (GammaWave-1) &
+                    *sum(LeftState_VY(WaveFirst_:WaveLast_,i,j,k))
+               RightState_VY(p_,i,j,k) = RightState_VY(p_,i,j,k) &
+                    - (GammaWave-1) &
+                    *sum(RightState_VY(WaveFirst_:WaveLast_,i,j,k))
+            end do; end do; end do
+         end if
       end if
 
     end subroutine ptotal_to_p_facey
@@ -1476,14 +1502,27 @@ contains
          end do; end do; end do
       end if
       if(UseWavePressure)then
-         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VZ(p_,i,j,k) = LeftState_VZ(p_,i,j,k) &
-                 - (GammaWave-1) &
-                 *sum(LeftState_VZ(WaveFirst_:WaveLast_,i,j,k))
-            RightState_VZ(p_,i,j,k) = RightState_VZ(p_,i,j,k) &
-                 - (GammaWave-1) &
-                 *sum(RightState_VZ(WaveFirst_:WaveLast_,i,j,k))
-         end do; end do; end do
+         if(IsOnAwRepresentative)then
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+               LeftState_VZ(p_,i,j,k) = LeftState_VZ(p_,i,j,k) &
+                    - (GammaWave-1)*PoyntingFluxPerB*&
+                    sqrt(LeftState_VZ(Rho_,i,j,k)) &
+                    *sum(LeftState_VZ(WaveFirst_:WaveLast_,i,j,k))
+               RightState_VZ(p_,i,j,k) = RightState_VZ(p_,i,j,k) &
+                    - (GammaWave-1)*PoyntingFluxPerB*&
+                    sqrt(RightState_VZ(Rho_,i,j,k)) &
+                    *sum(RightState_VZ(WaveFirst_:WaveLast_,i,j,k))
+            end do; end do; end do
+         else
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+               LeftState_VZ(p_,i,j,k) = LeftState_VZ(p_,i,j,k) &
+                    - (GammaWave-1) &
+                    *sum(LeftState_VZ(WaveFirst_:WaveLast_,i,j,k))
+               RightState_VZ(p_,i,j,k) = RightState_VZ(p_,i,j,k) &
+                    - (GammaWave-1) &
+                    *sum(RightState_VZ(WaveFirst_:WaveLast_,i,j,k))
+            end do; end do; end do
+         end if
       end if
 
     end subroutine ptotal_to_p_facez
@@ -1556,9 +1595,16 @@ contains
                  + Primitive_VGI(Pe_,i,j,k,iGang)
          end if
          if(UseWavePressure)then
-            Primitive_VGI(p_,i,j,k,iGang) = Primitive_VGI(p_,i,j,k,iGang) &
-                 + (GammaWave-1) &
-                 *sum(Primitive_VGI(WaveFirst_:WaveLast_,i,j,k,iGang))
+            if(IsOnAwRepresentative)then
+               Primitive_VGI(p_,i,j,k,iGang) = Primitive_VGI(p_,i,j,k,iGang) &
+                    + (GammaWave-1)*PoyntingFluxPerB*&
+                    Primitive_VGI(Rho_,i,j,k,iGang)&
+                    *sum(Primitive_VGI(WaveFirst_:WaveLast_,i,j,k,iGang))
+            else
+               Primitive_VGI(p_,i,j,k,iGang) = Primitive_VGI(p_,i,j,k,iGang) &
+                    + (GammaWave-1) &
+                    *sum(Primitive_VGI(WaveFirst_:WaveLast_,i,j,k,iGang))
+            end if
          end if
       end if
 

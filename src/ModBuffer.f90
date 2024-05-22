@@ -138,10 +138,11 @@ contains
     use CON_axes,      ONLY: transform_matrix, transform_velocity
     use ModAdvance,    ONLY: UseB
     use ModWaves,      ONLY: UseAlfvenWaves
+    use ModTurbulence, ONLY: IsOnAwRepresentative, PoyntingFluxPerB
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitU_, UnitX_,  &
          xBody2,  yBody2, zBody2
     use ModVarIndexes, ONLY: Ux_, Uz_, RhoUx_, RhoUz_, SignB_,  Rho_,&
-         WaveFirst_, WaveLast_, Bx_, Bz_
+         WaveFirst_, WaveLast_, Bx_, Bz_, wDiff_
     use ModCoordTransform, ONLY: xyz_to_rlonlat
     integer,intent(in) :: nVar
     real,   intent(in) :: XyzTarget_D(MaxDim)   ! Input coordinates
@@ -152,8 +153,10 @@ contains
     real              :: Xyz_D(MaxDim)
     ! Cartesian coords of mapped point within the source model
     real              :: XyzSource_D(MaxDim)
-    ! Sphhherical coords of mapped point within the source model
+    ! Spherical coords of mapped point within the source model
     real              :: Sph_D(MaxDim)
+    ! To use AW representatives
+    real              :: SqrtRhoInv
 
     !--------------------------------------------------------------------------
     Xyz_D = XyzTarget_D
@@ -206,6 +209,11 @@ contains
        else
           State_V(SignB_) = 0.0
        end if
+    end if
+    if(IsOnAwRepresentative)then
+       SqrtRhoInv = 1/(PoyntingFluxPerB*sqrt(State_V(Rho_)))
+       State_V(WaveFirst_:WaveLast_) = SqrtRhoInv*State_V(WaveFirst_:WaveLast_)
+       if(wDiff_>1)State_V(WDiff_) = SqrtRhoInv*State_V(WDiff_)
     end if
   end subroutine get_from_spher_buffer_grid
   !============================================================================
