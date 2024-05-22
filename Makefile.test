@@ -87,7 +87,6 @@ test_help:
 	-@(if [ -d srcUserExtra ]; then ${MAKE} test_extra_help; fi)
 
 test_extra_help:
-	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
 	@echo "    test_awsomchargestate      (run corona with charge state test)"
 	@echo "    test_eosgodunov            (run EOS/Godunov test)"
 	@echo "    test_europa2fluidspe       (run 2-ion-fluid+Pe Europa test)"
@@ -944,44 +943,6 @@ test_awsom_large_gpu_check:
 		> test_awsom_large_gpu.diff)
 	ls -l test_awsom_large_gpu.diff
 
-
-# TEST 1D CORONA WITH AWSOM-MULTIFLUID SETTING
-
-test_awsomfluids:
-	@echo "test_awsomfluids_compile..." > test_awsomfluids.diff
-	$(MAKE) test_awsomfluids_compile
-	@echo "test_awsomfluids_rundir..." >> test_awsomfluids.diff
-	$(MAKE) test_awsomfluids_rundir
-	@echo "test_awsomfluids_run..." >> test_awsomfluids.diff
-	$(MAKE) test_awsomfluids_run
-	@echo "test_awsomfluids_check..." >> test_awsomfluids.diff
-	$(MAKE) test_awsomfluids_check
-
-# Test fails on Pleiades with OpenMP
-
-test_awsomfluids_compile:
-	./Config.pl -f -noopenmp -e=AwsomFluidsAnisoPi -u=AwsomIons -ng=2 -g=6,2,2
-	$(MAKE) BATSRUS
-	make PIDL
-
-test_awsomfluids_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
-	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomFluids PARAM.in
-	cd ${TESTDIR}; cp ../data/CORONA/HeatPartition.dat.gz .
-	cd ${TESTDIR}; gunzip HeatPartition.dat.gz
-	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test_awsomfluids_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
-
-test_awsomfluids_check:
-	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
-		${TESTDIR}/RESULTS/SC/1d__mhd_1_n00000100.out \
-		Param/CORONA/TestOutput/1d__mhd_awsomfluids.out \
-		> test_awsomfluids.diff)
-	ls -l test_awsomfluids.diff
 
 # TEST CORONA WITH CHARGE STATES
 
