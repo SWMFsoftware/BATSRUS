@@ -356,7 +356,7 @@ contains
          UseDoppler_I, UseAlfven_I, TempMin_I, LambdaMax_I
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModLookupTable, ONLY: interpolate_lookup_table
-    use ModTurbulence,  ONLY: IsOnAwRepresentative, PoyntingFluxPerB 
+    use ModTurbulence,  ONLY: IsOnAwRepresentative, PoyntingFluxPerB
 
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)

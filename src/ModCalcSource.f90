@@ -447,7 +447,7 @@ contains
           ! The -div(u Pwave) is implemented as a flux in ModFaceFlux.
           ! Here we add the Pwave div(u) source term
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
-          
+
           ! Add "geometrical source term" p/r to the radial momentum
           ! equation. The "radial" direction is along the Y axis
           ! NOTE: here we have to use signed radial distance!
@@ -660,7 +660,7 @@ contains
             iBlock   = iBlock,           &
             DoLimitTimeStep = .true.)
     end if
-       
+
     if(UsePui) call add_pui_source(iBlock)
 
     if(UseRadCooling)then

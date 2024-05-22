@@ -228,7 +228,7 @@ contains
     integer, intent(in) :: iBlock
     real :: FullB_D(3)
     integer :: i, j, k
-    character(len=*), parameter:: NameSub = 'calc_alfven_wave_dissipation'
+    character(len=*), parameter:: NameSub = 'set_alfven_wave_vel_vect'
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(UseB0)then
@@ -720,7 +720,7 @@ contains
           SqrtRho = PoyntingFluxPerB*sqrt(RhoProton)
           Wplus = WPlus*SqrtRho; Wminus = Wminus*SqrtRho
        end if
-       
+
        Wmajor = max(Wplus, Wminus)
        Wminor = min(Wplus, Wminus)
 

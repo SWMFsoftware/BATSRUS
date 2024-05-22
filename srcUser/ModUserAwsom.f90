@@ -1596,7 +1596,7 @@ contains
     end if
 
     FullBr = sum((FBC%B0Face_D + FBC%VarsGhostFace_V(Bx_:Bz_))*rUnit_D)
-    
+
     ! Ewave \propto sqrt(rho) for U << Ualfven
     if(IsOnAwRepresentative)then
        Ewave = 1.0
