@@ -308,6 +308,7 @@ contains
        ! Note that Lperp is multiplied with the density
        Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock))*2.0 &
             /State_VGB(Lperp_,i,j,k,iBlock)
+       SqrtRho = 1.0
     elseif(IsOnAwRepresentative)then
        Coef = 2*sqrt(PoyntingFluxPerB*norm2(AlfvenWaveVel_DC(:,i,j,k)))
        SqrtRho = PoyntingFluxPerB*sqrt(State_VGB(Rho_,i,j,k,iBlock))
