@@ -3973,7 +3973,7 @@ contains
        if(any(r_I < 1e-6)) CYCLE
        ! This is needed to avoid floating point exception in debug mode.
        r_I = max(1e-6, r_I)
-       
+
        ! Check if all or no footpoints are on the inner boundary
        ! if(any(abs(r_I - rInner) > 0.1)) CYCLE
        ! if(any(abs(r_I - rInner) < 0.1) .and. any(abs(r_I - rInner) > 0.1)) &
