@@ -3970,12 +3970,18 @@ contains
        r_I(3) = norm2(Xyz3_D)
        r_I(4) = norm2(Xyz4_D)
 
+       if(any(r_I < 1e-6)) CYCLE
+       ! This is needed to avoid floating point exception in debug mode.
+       r_I = max(1e-6, r_I)
+       
        ! Check if all or no footpoints are on the inner boundary
-!       if(any(abs(r_I - rInner) > 0.1)) CYCLE
-!       if(any(abs(r_I - rInner) < 0.1) .and. any(abs(r_I - rInner) > 0.1))then
-!          SquashFactor_II(iLon,iLat) = 10.0
-!          CYCLE
-!       end if
+       ! if(any(abs(r_I - rInner) > 0.1)) CYCLE
+       ! if(any(abs(r_I - rInner) < 0.1) .and. any(abs(r_I - rInner) > 0.1)) &
+       ! then
+       !     SquashFactor_II(iLon,iLat) = 10.0
+       !     CYCLE
+       ! end if
+
        ! Normalize footpoints to the unit sphere
        Xyz_D  = Xyz_D/r_I(0)
        Xyz1_D = Xyz1_D/r_I(1)
