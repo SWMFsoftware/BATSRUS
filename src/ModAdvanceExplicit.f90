@@ -37,7 +37,7 @@ contains
          CorrectedFlux_VYB, CorrectedFlux_VZB, DoConserveFlux
     use ModCoronalHeating, ONLY: get_coronal_heat_factor,&
          UseUnsignedFluxModel
-    use ModWaves,  ONLY: UseAlfvenWaveRepresentative
+    use ModWaves,  ONLY: UseAwRepresentative
     use ModTurbulence, ONLY:           &
          wave_energy_to_representative, representative_to_wave_energy
     use ModMessagePass, ONLY: exchange_messages
@@ -70,7 +70,7 @@ contains
     call timing_start(NameSub)
 
     if(UseBody2Orbit) call update_secondbody
-    if(UseAlfvenWaveRepresentative)call wave_energy_to_representative
+    if(UseAwRepresentative)call wave_energy_to_representative
     STAGELOOP: do iStage = 1, nStage
        !$acc update device(iStage)
        if(DoTest) write(*,*)NameSub,' starting stage=',iStage
@@ -315,7 +315,7 @@ contains
 
     end do STAGELOOP  ! Multi-stage solution update loop.
     iStage = nStage
-    if(UseAlfvenWaveRepresentative)call representative_to_wave_energy
+    if(UseAwRepresentative)call representative_to_wave_energy
     call timing_stop(NameSub)
 
     if(DoTest)write(*,*)NameSub,' finished'

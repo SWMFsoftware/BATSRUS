@@ -2757,8 +2757,7 @@ contains
           call read_coronal_heating_param(NameCommand)
 
        case("#HEATPARTITIONING", "#HIGHBETASTOCHASTIC",  "#ALIGNMENTANGLE", &
-            "#NONLINAWDISSIPATION", "#LIMITIMBALANCE", "#AWREPRESENTATIVE", &
-            "#POYNTINGFLUX")
+            "#NONLINAWDISSIPATION", "#LIMITIMBALANCE", "#POYNTINGFLUX")
           call read_turbulence_param(NameCommand)
 
        case("#RADIATIVECOOLING")
@@ -2781,7 +2780,7 @@ contains
 
        case("#ADVECTWAVES", "#ALFVENWAVES", "#WAVEPRESSURE", &
             "#FREQUENCY", "#SPECTRUM", "#WAVEREFLECTION",    &
-            "#WAVEREPRESENTATIVE")
+            "#AWREPRESENTATIVE")
           call read_waves_param(NameCommand)
 
        case("#LASERPULSE", "#LASERBEAM", "#LASERBEAMS", "#LASERBEAMPROFILE", &

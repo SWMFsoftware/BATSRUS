@@ -490,7 +490,7 @@ contains
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
     use ModMultiFluid, ONLY: UseMultiIon
-    use ModTurbulence, ONLY: UseAwRepresentativeHere
+    use ModTurbulence, ONLY: IsOnAwRepresentative
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
 
@@ -516,7 +516,7 @@ contains
     IsNewBlockVisco        = .true.
     IsNewBlockAlfven       = .true.
 
-    UseAlfvenWaveSpeed = UseAlfvenWaves.and..not.UseAwRepresentativeHere
+    UseAlfvenWaveSpeed = UseAlfvenWaves.and..not.IsOnAwRepresentative
     !$acc update device(UseAlfvenWaveSpeed)
 
     if(UseHallResist)then
@@ -1173,7 +1173,7 @@ contains
          GammaMinus1, GammaElectronMinus1
     use ModAdvance,  ONLY: &
          UseElectronPressure, UseElectronEntropy, UseEntropy, UseAnisoPe
-    use ModTurbulence, ONLY: UseAwRepresentativeHere
+    use ModTurbulence, ONLY: IsOnAwRepresentative
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
          iRho, iRhoUx, iRhoUy, iRhoUz, iUx, iUy, iUz, iEnergy, iP, &
@@ -1628,7 +1628,7 @@ contains
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModTurbulence, ONLY: UseReynoldsDecomposition, SigmaD, &
-           UseTransverseTurbulence,  PoyntingFluxPerB, UseAwRepresentativeHere
+           UseTransverseTurbulence,  PoyntingFluxPerB, IsOnAwRepresentative
 
       real, intent(in) :: State_V(:)
       real, intent(out) :: Un
@@ -1658,7 +1658,7 @@ contains
       Uz      = State_V(Uz_)
       p       = State_V(p_)
       ! A factor to convert representative functions to a real wave energy
-      if(UseAwRepresentativeHere)SqrtRho = sqrt(Rho)*PoyntingFluxPerB
+      if(IsOnAwRepresentative)SqrtRho = sqrt(Rho)*PoyntingFluxPerB
       ! Hydrodynamic part of fluxes
 
       ! Normal direction
@@ -1770,7 +1770,7 @@ contains
             end if
          end if
          ! Convert representative functions to a real wave pressure if needed
-         if(UseAwRepresentativeHere) pWave = SqrtRho*pWave
+         if(IsOnAwRepresentative) pWave = SqrtRho*pWave
          pExtra = pExtra + pWave
       end if
       ! Calculate some intermediate values for flux calculations
@@ -1825,7 +1825,7 @@ contains
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
          DpPerB = -wD*FullBn/max(1e-30, FullB2)
          ! Convert representative functions to a real wave pressure if needed
-         if(UseAwRepresentativeHere)DpPerB = DpPerB*SqrtRho
+         if(IsOnAwRepresentative)DpPerB = DpPerB*SqrtRho
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
@@ -1922,7 +1922,7 @@ contains
       Uz  = State_V(iUz)
       p   = State_V(iP)
       ! A factor to convert representative functions to a real wave energy
-      if(UseAwRepresentativeHere)SqrtRho = sqrt(Rho)*PoyntingFluxPerB
+      if(IsOnAwRepresentative)SqrtRho = sqrt(Rho)*PoyntingFluxPerB
       ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
       ! anisotropic Pe, Peperp contributes
       if (UseElectronPressure .and. .not. UseAnisoPe) then
@@ -1958,7 +1958,7 @@ contains
                   pWave = pWave + (GammaWave-1)*wD/3
                end if
             end if
-            if(UseAwRepresentativeHere)pWave = pWave*SqrtRho
+            if(IsOnAwRepresentative)pWave = pWave*SqrtRho
             pTotal = pTotal + pWave
          end if
       end if

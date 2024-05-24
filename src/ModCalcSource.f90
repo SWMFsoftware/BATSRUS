@@ -156,9 +156,9 @@ contains
     use ModTurbulence,  ONLY: &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
-         KarmanTaylorBeta2AlphaRatio, &
+         KarmanTaylorBeta2AlphaRatio, IsOnAwRepresentative, PoyntingFluxPerB, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
-         rMinWaveReflection
+         rMinWaveReflection, AlfvenWaveVel_DC
     use ModRadiativeCooling, ONLY: RadCooling_C, UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion,      &
@@ -234,6 +234,10 @@ contains
 
     ! To calculate above coefficients:
     real :: bDotbDotGradU, bDotGradVAlfven
+
+    ! Normalization factor if the representative functions are used for
+    ! Alfven waves
+    real :: SqrtRho
 
     logical:: DoTestCell
 
@@ -401,10 +405,9 @@ contains
        if(DoTest)call write_source('After UseSpeedMin')
     end if ! UseSpeedMin
 
-    if(UseWavePressure)then
+    if(UseWavePressure.and..not.IsOnAwRepresentative)then
        ! Back reaction of the Alfven wave pressure on
-       ! the wave turbulence equations as well as
-       ! its contribution to the wave energy source
+       ! the wave turbulence equations
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
@@ -425,23 +428,31 @@ contains
           end do
           if(WDiff_>1)Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
                - DivU*(GammaWave - 1)*State_VGB(WDiff_,i,j,k,iBlock)
+       end do; end do; end do
+       if(DoTest.and.UseMultiIon)call write_source('After UseWavePressure')
+    end if ! UseAlfvenWavePressure
+    if(UseWavePressure.and..not.UseMultiIon)then
+       ! Back reaction of the Alfven wave pressure on
+       ! the wave turbulence equations as well as
+       ! its contribution to the wave energy source
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+          DivU = div_u(UnFirst_,i, j, k, iGang)
+          Pwave = (GammaWave - 1) &
+               *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+          if(IsOnAwRepresentative)Pwave = Pwave*PoyntingFluxPerB*&
+               sqrt(State_VGB(Rho_,i,j,k,iBlock))
+          ! The energy equation contains the work of the wave pressure
+          ! -u.grad Pwave = -div(u Pwave) + Pwave div(u)
+          ! The -div(u Pwave) is implemented as a flux in ModFaceFlux.
+          ! Here we add the Pwave div(u) source term
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
 
-          if(.not.UseMultiIon)then
-             Pwave = (GammaWave - 1) &
-                  *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-
-             ! The energy equation contains the work of the wave pressure
-             ! -u.grad Pwave = -div(u Pwave) + Pwave div(u)
-             ! The -div(u Pwave) is implemented as a flux in ModFaceFlux.
-             ! Here we add the Pwave div(u) source term
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
-
-             ! Add "geometrical source term" p/r to the radial momentum
-             ! equation. The "radial" direction is along the Y axis
-             ! NOTE: here we have to use signed radial distance!
-             if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = &
-                  Source_VC(RhoUy_,i,j,k) + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
-          end if
+          ! Add "geometrical source term" p/r to the radial momentum
+          ! equation. The "radial" direction is along the Y axis
+          ! NOTE: here we have to use signed radial distance!
+          if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = &
+               Source_VC(RhoUy_,i,j,k) + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
        end do; end do; end do
        if(DoTest)call write_source('After UseWavePressure')
     end if ! UseAlfvenWavePressure
@@ -516,8 +527,14 @@ contains
                 if(.not.UseMultiIon)then
                    ! Energy source related to the Alfven wave source above
                    ! For multi ion it is done in ModMultiIon
-                   Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                        + 0.5*(ModeConversionPlus + ModeConversionMinus)*wD
+                   if(IsOnAwRepresentative)then
+                      Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                           + 0.5*(ModeConversionPlus + ModeConversionMinus) &
+                           *wD*PoyntingFluxPerB*State_VGB(Rho_,i,j,k,iBlock)
+                   else
+                      Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                           + 0.5*(ModeConversionPlus + ModeConversionMinus)*wD
+                   end if
                 end if
 
                 if(WDiff_>1) &
@@ -630,6 +647,18 @@ contains
           end do; end do; end do
           if(DoTest)call write_source('After UseCoronalHeating')
        end if ! UseCoronalHeating
+    end if
+    if(IsOnAwRepresentative)then
+       call vect_dot_grad_state(&
+            Vector_DC= AlfvenWaveVel_DC, &
+            iVar     = WaveFirst_,       &
+            iBlock   = iBlock,           &
+            DoLimitTimeStep = .false.)
+       call vect_dot_grad_state(&
+            Vector_DC= -AlfvenWaveVel_DC,&
+            iVar     = WaveLast_,        &
+            iBlock   = iBlock,           &
+            DoLimitTimeStep = .true.)
     end if
 
     if(UsePui) call add_pui_source(iBlock)
