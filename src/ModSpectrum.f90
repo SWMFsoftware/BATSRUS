@@ -357,7 +357,8 @@ contains
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModTurbulence,  ONLY: IsOnAwRepresentative, PoyntingFluxPerB
-
+    use ModChromosphere, ONLY: extension_factor, DoExtendTransitionRegion
+    
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
     logical, intent(in)   :: UseNbi
@@ -373,7 +374,7 @@ contains
     real                           :: Zplus2, Zminus2, CosAlpha, SinAlpha
     real                           :: B_D(3)
     real                           :: Unth2, Uth2
-    real                           :: Gint, LogNe, LogTe, Rho
+    real                           :: Gint, LogNe, LogTe, Rho, TeSi
     real                           :: Tlos, Ulos
     real                           :: Aion
     real                           :: LocalState_V(nVar)
@@ -433,10 +434,11 @@ contains
     ! 1 : 0.83  electron to proton ratio is assumed
     LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
     if(UseElectronPressure)then
-       LogTe = log10(State_V(Pe_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
+       TeSi = State_V(Pe_)/State_V(Rho_)*No2Si_V(UnitTemperature_)
     else
-       LogTe = log10(State_V(p_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
+       TeSi = State_V(p_)/State_V(Rho_)*No2Si_V(UnitTemperature_)
     end if
+    LogTe = log10(TeSi)
     Ulos = sum(State_V(Ux_:Uz_)*LosDir_D)/State_V(Rho_)*No2Si_V(UnitU_)
 
     if(UseIonFrac .and. ChargeStateFirst_>1)then
@@ -544,6 +546,8 @@ contains
 
        FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * Ds*No2Si_V(UnitX_) * 1e2
 
+       if(DoExtendTransitionRegion) FluxMono = FluxMono/extension_factor(TeSi)
+       
        ! Disperse line onto lamba bins
        ! Find the starting/ending wavelength bins
        ! Find the corresponding wavelength bin for starting wavelength
@@ -592,7 +596,8 @@ contains
     use ModAdvance, ONLY: UseElectronPressure
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModIO, ONLY: DLambda_I, LambdaMin_I, LambdaMax_I
-
+    use ModChromosphere, ONLY: extension_factor, DoExtendTransitionRegion
+    
     real, intent(in)      :: State_V(nVar)
     integer,intent(in)    :: iFile, nLambda
     logical, intent(in)   :: UseNbi
@@ -600,7 +605,7 @@ contains
     real, intent(in), optional :: r
 
     integer                        :: iNMin, jTMin, iNMax, jTMax
-    real                           :: Gint, LogNe, LogTe, Rho
+    real                           :: Gint, LogNe, LogTe, Rho, TeSi
     real                           :: LocalState_V(nVar)
     ! For H:He 10:1 fully ionized plasma the proton:electron ratio is
     ! 1/(1+2*0.1)
@@ -628,11 +633,12 @@ contains
 
     LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
     if(UseElectronPressure)then
-       LogTe = log10(State_V(Pe_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
+       TeSi = State_V(Pe_)/State_V(Rho_)*No2Si_V(UnitTemperature_)
     else
-       LogTe = log10(State_V(p_)/State_V(Rho_)* No2Si_V(UnitTemperature_))
+       TeSi = State_V(p_)/State_V(Rho_)*No2Si_V(UnitTemperature_)
     end if
-
+    LogTe = log10(TeSi)
+    
     if(UseIonFrac .and. ChargeStateFirst_>1)then
        ! Normalize charge states to get fractions
        LocalState_V = State_V
@@ -729,6 +735,9 @@ contains
 
        if(UseNbi)then
           FluxMono = Gint * (10.0**LogNe)**2
+
+          if(DoExtendTransitionRegion) &
+               FluxMono = FluxMono/extension_factor(TeSi)
 
           ! Disperse line onto lamba bins
           ! Find the starting/ending wavelength bins
