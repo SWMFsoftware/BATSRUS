@@ -358,7 +358,7 @@ contains
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModTurbulence,  ONLY: IsOnAwRepresentative, PoyntingFluxPerB
     use ModChromosphere, ONLY: extension_factor, DoExtendTransitionRegion
-    
+
     integer, intent(in)   :: iFile, nLambda
     real, intent(in)      :: State_V(nVar), Ds, LosDir_D(3)
     logical, intent(in)   :: UseNbi
@@ -547,7 +547,7 @@ contains
        FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * Ds*No2Si_V(UnitX_) * 1e2
 
        if(DoExtendTransitionRegion) FluxMono = FluxMono/extension_factor(TeSi)
-       
+
        ! Disperse line onto lamba bins
        ! Find the starting/ending wavelength bins
        ! Find the corresponding wavelength bin for starting wavelength
@@ -597,7 +597,7 @@ contains
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModIO, ONLY: DLambda_I, LambdaMin_I, LambdaMax_I
     use ModChromosphere, ONLY: extension_factor, DoExtendTransitionRegion
-    
+
     real, intent(in)      :: State_V(nVar)
     integer,intent(in)    :: iFile, nLambda
     logical, intent(in)   :: UseNbi
@@ -638,7 +638,7 @@ contains
        TeSi = State_V(p_)/State_V(Rho_)*No2Si_V(UnitTemperature_)
     end if
     LogTe = log10(TeSi)
-    
+
     if(UseIonFrac .and. ChargeStateFirst_>1)then
        ! Normalize charge states to get fractions
        LocalState_V = State_V
