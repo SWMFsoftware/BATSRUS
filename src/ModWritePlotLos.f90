@@ -918,6 +918,7 @@ contains
       real :: Te, TeSi       ! Electron temperature
       real :: Ne             ! Electron number density
       real :: Value          ! Value of the LOS variable at the point
+      real :: DsLocal
 
       ! Variables for user defined LOS variables
       integer :: iBlockLast = -1, iVarLast = -1
@@ -1065,6 +1066,10 @@ contains
 
             if(LogTeSi < LogTeMinDEM_I(iFile) .or. &
                  iTe > nLogTeDEM)RETURN
+
+            DsLocal = Ds
+            if(DoExtendTransitionRegion) &
+                 DsLocal = DsLocal/extension_factor(TeSi)
 
             ! Integrate DEM and EM values
             Image_VIII(DEM_,iPix,jPix,iTe) = &
