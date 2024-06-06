@@ -9,11 +9,12 @@ module ModEnergy
   use ModVarIndexes, ONLY: &
        nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Hyp_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: &
-       nFluid, nIonFluid, iRho, iRhoUx, iRhoUz, iP, iP_I, &
-       UseNeutralFluid, DoConserveNeutrals, &
-       select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
+       nFluid, nIonFluid, iRho, iRhoUx, iRhoUz, iP, iP_I, iPIon_I, &
+       UseMultiIon, UseNeutralFluid, DoConserveNeutrals, &
+       select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I, &
+       iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I
   use ModAdvance, ONLY: &
-       State_VGB, UseElectronPressure, UseElectronEnergy
+       State_VGB, UseElectronPressure, UseElectronEnergy, UseTotalIonEnergy
   use ModConservative, ONLY: UseNonConservative, nConservCrit, IsConserv_CB
   use ModPhysics, ONLY: &
        GammaMinus1_I, InvGammaMinus1_I, InvGammaMinus1, &
@@ -89,12 +90,13 @@ contains
                /State_VGB(iRho,i,j,k,iBlock)
 
           ! Done with all fluids except first MHD fluid
-          if(iFluid > 1 .or. .not. IsMhd) CYCLE
-          if(UseSaMhd .and. r_GB(i,j,k,iBlock) > rMinSaMhd)CYCLE
+          if(iFluid > 1 .or. .not.(UseTotalIonEnergy .or. IsMhd)) CYCLE
+          if(UseSaMhd .and. r_GB(i,j,k,iBlock) > rMinSaMhd) CYCLE
           ! Add magnetic energy density
           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
 
+          ! Add electron energy density if needed
           if(UseElectronPressure .and. UseElectronEnergy) &
                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
@@ -107,6 +109,13 @@ contains
        end do; end do; end do
 
     end do FLUIDLOOP
+
+    if(UseMultiIon .and. UseTotalIonEnergy)then
+       ! Add up all ion energy densities into the first energy
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          State_VGB(p_,i,j,k,iBlock) = sum(State_VGB(iPIon_I,i,j,k,iBlock))
+       end do; end do; end do
+    end if
 
     call test_stop(NameSub, DoTest, iBlock)
 #endif
@@ -150,20 +159,31 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
           Energy_G(i,j,k) = 0.0
+       elseif(UseMultiIon .and. UseTotalIonEnergy .and. iFluid == 1)then
+          ! Add up all ion fluid hydro energies
+          Energy_G(i,j,k) = sum( &
+               InvGammaMinus1_I(1:nIonFluid)*State_VGB(iPIon_I,i,j,k,iBlock) &
+               + 0.5*(State_VGB(iRhoUxIon_I,i,j,k,iBlock)**2  &
+               +      State_VGB(iRhoUyIon_I,i,j,k,iBlock)**2  &
+               +      State_VGB(iRhoUzIon_I,i,j,k,iBlock)**2) &
+               /State_VGB(iRhoIon_I,i,j,k,iBlock))
        else
+          ! Hydro energy of a single fluid
           Energy_G(i,j,k) = &
-               InvGammaMinus1*State_VGB(iP,i,j,k,iBlock)           &
+               InvGammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock) &
                + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
                /State_VGB(iRho,i,j,k,iBlock)
        end if
        ! Add magnetic energy if needed
-       if(IsMhd .and. iFluid == 1                                  &
+       if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy)          &
             .and..not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
             ) Energy_G(i,j,k) = Energy_G(i,j,k) &
             + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+       ! Add electron energy density if needed
        if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
             Energy_G(i,j,k) = Energy_G(i,j,k) &
             + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
+
     end do; end do; end do
 
   end subroutine get_fluid_energy_block
@@ -191,15 +211,23 @@ contains
                /State_VG(iRho,i,j,k)
 
           ! Add magnetic energy density
-          if(iFluid == 1 .and. IsMhd)&
+          if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy))&
                State_VG(iP,i,j,k) = State_VG(iP,i,j,k) &
                + 0.5*sum(State_VG(Bx_:Bz_,i,j,k)**2)
 
+          ! Add electron thermal energy if needed
           if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
                State_VG(iP,i,j,k) = State_VG(iP,i,j,k) &
                + State_VG(Pe_,i,j,k)*InvGammaElectronMinus1
        end do; end do; end do
     end do
+
+    if(UseMultiIon .and. UseTotalIonEnergy)then
+       ! Add up ion energy densities
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          State_VG(p_,i,j,k) = sum(State_VG(iPIon_I,i,j,k))
+       end do; end do; end do
+    end if
 #endif
   end subroutine pressure_to_energy_block
   !============================================================================
@@ -265,9 +293,15 @@ contains
                   - 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
           end if
 
+          ! Subtract electron thermal energy if needed
           if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                - State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
+
+          ! Subtract hydro energy densities of fluids 2..nIonFluid if needed
+          if(UseMultiIon .and. UseTotalIonEnergy .and. iFluid == 1) &
+               State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+               - sum(State_VGB(iPIon_I(2:),i,j,k,iBlock))
 
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &
@@ -312,16 +346,22 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Subtract the magnetic energy density
-          if(iFluid == 1 .and. IsMhd                                 &
-               .and..not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd)&
+          if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy) &
+               .and..not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
                ) then
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
           end if
 
+          ! Subtract electron energy if needed
           if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                - State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
+
+          ! Subtract hydro energy densities of fluids 2..nIonFluid if needed
+          if(UseMultiIon .and. UseTotalIonEnergy .and. iFluid == 1) &
+               State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+               - sum(State_VGB(iPIon_I(2:),i,j,k,iBlock))
 
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &

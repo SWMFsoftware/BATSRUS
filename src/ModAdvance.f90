@@ -98,6 +98,9 @@ module ModAdvance
   logical:: UseEntropy  = .false. !!! UseAnisoPressure
   !$acc declare create(UseEntropy)
 
+  ! Use total ion energy equation
+  logical:: UseTotalIonEnergy = .false.
+
   logical:: UseWavePressure = .false.
   !$acc declare create(UseWavePressure)
 
