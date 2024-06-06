@@ -732,7 +732,7 @@ contains
 
        case("#ENTROPY")
           call read_var('UseEntropy', UseEntropy)
-          if(UseMultiIon)call read_var('UseTotalIonEnergy', UseTotalIonEnergy))
+          if(UseMultiIon)call read_var('UseTotalIonEnergy', UseTotalIonEnergy)
 
        case("#ELECTRONENTROPY")
           call read_var('UseElectronEntropy', UseElectronEntropy)

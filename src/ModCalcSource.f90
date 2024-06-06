@@ -937,7 +937,7 @@ contains
                   SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)  &
                   -DivB1_GB(i,j,k,iBlock)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
 
-             if(.not. IsMhd .and. .not.UseFullIonEnergy) CYCLE
+             if(.not.IsMhd .and. .not.UseTotalIonEnergy) CYCLE
              Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
                   -DivFullB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                   *U_D)
