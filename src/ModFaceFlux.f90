@@ -1849,7 +1849,7 @@ contains
 
       if(UseElectronEnergy) Flux_V(Energy_) = Flux_V(Energy_) &
            + Un*InvGammaElectronMinus1*State_V(Pe_)
-      
+
       ! Correct energy flux, so that the electron contribution to the energy
       ! flux is U_e*p_e. We add (U_e-U_ion)*p_e.
       if((nIonFluid == 1 .or. UseTotalIonEnergy) .and. iFluid == 1 &
