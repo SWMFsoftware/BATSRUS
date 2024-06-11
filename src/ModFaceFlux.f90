@@ -31,9 +31,12 @@ module ModFaceFlux
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
        FluxCenter_VGD, DoCorrectFace, &
-       UseLowOrder, IsLowOrderOnly_B, DoUpdate_V
+       UseLowOrder, IsLowOrderOnly_B, DoUpdate_V, &
+       UseElectronEnergy, UseTotalIonEnergy
   use ModFaceFluxParameters
-  use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
+  use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal, GammaElectron, &
+       GammaElectronMinus1, InvGammaElectronMinus1, Gamma, GammaMinus1, &
+       InvGammaMinus1, Gamma_I, InvGammaMinus1_I, GammaMinus1_I
   use ModWaves, ONLY:
   use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
        AlfvenPlusFirst_, AlfvenPlusLast_, &
@@ -910,7 +913,6 @@ contains
       ! for more details.
 
       use ModAdvance, ONLY: State_VGB
-      use ModPhysics, ONLY: Gamma_I
       use ModMultiFluid, ONLY: select_fluid, iRho, iRhoUx, iRhoUz, iP
       use ModEnergy, ONLY: energy_i
 
@@ -1169,8 +1171,6 @@ contains
   subroutine get_physical_flux(State_V, StateCons_V, Flux_V, Un_I, En)
 
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
-    use ModPhysics,  ONLY: &
-         GammaMinus1, GammaElectronMinus1
     use ModAdvance,  ONLY: &
          UseElectronPressure, UseElectronEntropy, UseEntropy, UseAnisoPe
     use ModTurbulence, ONLY: IsOnAwRepresentative
@@ -1414,7 +1414,6 @@ contains
     !==========================================================================
     subroutine get_boris_flux
 
-      use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       ! Variables for conservative state and flux calculation
@@ -1625,7 +1624,6 @@ contains
          FullBx, FullBy, FullBz, FullBn, HallUn)
 
       use ModElectricField, ONLY: UseJCrossBForce
-      use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModTurbulence, ONLY: UseReynoldsDecomposition, SigmaD, &
            UseTransverseTurbulence,  PoyntingFluxPerB, IsOnAwRepresentative
@@ -1849,11 +1847,19 @@ contains
            + Un*pExtra                      & ! Work of electrons and waves
            + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz ! Poynting
 
+      if(UseElectronEnergy) Flux_V(Energy_) = Flux_V(Energy_) &
+           + Un*InvGammaElectronMinus1*State_V(Pe_)
+      
       ! Correct energy flux, so that the electron contribution to the energy
       ! flux is U_e*p_e. We add (U_e-U_ion)*p_e.
-      if(UseElectronPressure .and. nIonFluid == 1 .and. iFluid == 1)then
-         if(HallCoeff > 0) &
-              Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*State_V(Pe_)
+      if((nIonFluid == 1 .or. UseTotalIonEnergy) .and. iFluid == 1 &
+           .and. HallCoeff > 0)then
+         if(UseElectronEnergy)then
+            Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*State_V(Pe_) &
+                 *GammaElectron*InvGammaElectronMinus1
+         else
+            Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*State_V(Pe_)
+         end if
       end if
 
       if(UseBorisSimple)then
@@ -1906,7 +1912,6 @@ contains
     subroutine get_hd_flux
 
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
-      use ModPhysics, ONLY: InvGammaMinus1_I, GammaMinus1_I
       use ModMultiFluid, ONLY: iPpar
       use ModTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD, PoyntingFluxPerB
@@ -2608,8 +2613,6 @@ contains
     !==========================================================================
     subroutine dominant_wave_flux(DoLf)
 
-      use ModPhysics,  ONLY: Gamma_I
-
       logical, intent(in):: DoLf
 
       real, dimension(nFluid):: CleftStateLeft_I, CleftStateHat_I, &
@@ -2790,7 +2793,6 @@ contains
     subroutine hlld_flux
       ! The HLLD scheme works for single ion fluid only
 
-      use ModPhysics, ONLY: InvGammaMinus1, GammaMinus1
       use ModNumConst, ONLY: cTiny
 
       ! Rotated flux for vector variables
@@ -3132,7 +3134,6 @@ contains
       use ModAdvance,  ONLY: UseElectronPressure
       use ModExactRS,  ONLY: wR, wL, RhoL, RhoR, pL, pR, UnL, UnR, &
            UnStar, pStar, exact_rs_set_gamma, exact_rs_sample, exact_rs_pu_star
-      use ModPhysics,  ONLY: InvGammaMinus1_I, Gamma_I, InvGammaMinus1
       use ModMultiFluid, ONLY: iRhoUx, iRhoUz, iUx, iUz
       use ModTurbulence, ONLY: PoyntingFluxPerB
 
@@ -3689,7 +3690,6 @@ contains
   contains
     !==========================================================================
     subroutine get_boris_speed
-      use ModPhysics, ONLY: Gamma, GammaElectron
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
@@ -3821,8 +3821,7 @@ contains
          UnLeft, UnRight, UseAwSpeed)
 
       use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0, UseB0MomentumFlux
-      use ModPhysics,  ONLY: ElectronPressureRatio, &
-           GammaElectron, GammaMinus1, Gamma_I
+      use ModPhysics,  ONLY: ElectronPressureRatio
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe, SignB_, &
@@ -4261,7 +4260,6 @@ contains
     !==========================================================================
     subroutine get_hd_speed
       use ModAdvance, ONLY: UseElectronPressure, State_VGB
-      use ModPhysics, ONLY: Gamma_I, GammaElectron
 
       real :: InvRho, Sound2, Sound, Un, GammaP
 
@@ -4613,8 +4611,6 @@ contains
   end subroutine rotate_flux_vector
   !============================================================================
   subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
-
-    use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1
 
     real, intent(out):: Flux_V(nFlux)
     real, intent(in):: StateLeftCons_V(:), StateRightCons_V(:)
