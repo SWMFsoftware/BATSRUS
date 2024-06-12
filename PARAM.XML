@@ -6814,20 +6814,17 @@ Default for DnRefine is -1, i.e. no run time refinement.
 <command name="AMRCRITERIA">
   <parameter name="nRefineCrit" type="integer" min="0" max="3" default="0" />
   <for from="1" to="$nRefineCrit">
-    <parameter name="TypeRefine" type="string" case="lower"
-	       input="select">
-      <option name="grad T"		value="gradt"        />
+    <parameter name="TypeRefine" type="string" case="lower" input="select">
       <option name="grad P"		value="gradp"        />
       <option name="grad log(Rho)"	value="gradlogrho"   />
       <option name="grad log(p)" 	value="gradlogp"     />
-      <option name="grad E"		value="grade"	     />
-      <option name="curl U" 		value="curlu"        />
-      <option name="curl B"		value="curlB/curlb"  />
+      <option name="p jump ratio"       value="pjumpratio"   />
+      <option name="current"            value="j"            />
       <option name="current squared"    value="j2"           />
       <option name="current sheet"      value="currentsheet" />
-      <option name="div U"		value="divu"	     />
+      <option name="-div U"		value="-divu"	     />
+      <option name="-div U*dx"		value="-divudx"	     />
       <option name="Transient"          value="transient"    />
-      <option name="R_currents"         value="rcurrents"    />
       <option name="User defined"       value="user"         />
     </parameter>
     <parameter name="CoarsenLimit" type="real" />
@@ -6878,16 +6875,15 @@ all the blocks limited by the minimum and maximum levels only
 then the criteria can be chosen from the following list
 (all criteria are based on the maximum over the cells in the grid block):
 \begin{verbatim}
-  'gradT'		- gradient of temperature
   'gradP'		- gradient of pressure
-  'gradlogrho'		- gradient of log10(rho)
   'gradlogP'		- gradient of log10(P)
-  'gradE'		- gradient of electric field magnitude
-  'curlV','curlU' 	- magnitude of curl of velocity
-  'curlB'		- magnitude of current
+  'pjumpratio'          - pmax/pmin in neighboring cells
+  'gradlogrho'		- gradient of log10(rho)
+  'J'		        - magnitude of current
   'J2'                  - current squared
   'currentsheet'        - current sheet (radial B changes sign)
-  'divU', 'divV'	- divergence of velocity
+  '-divU'	        - divergence of velocity times -1
+  '-divUdX'	        - divergence of velocity times cell size times -1
   'user'                - criteria defined in the user module
   'transient'           - criteria is defined by the TypeTransient parameter.
 \end{verbatim}
