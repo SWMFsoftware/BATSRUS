@@ -8,9 +8,12 @@ module ModAMR
        test_start, test_stop, lVerbose, sync_cpu_gpu_amr
   use ModUpdateStateFast, ONLY: sync_cpu_gpu
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModCellGradient, ONLY: calc_gradient
+  use ModCellGradient, ONLY: calc_gradient, calc_divergence
   use ModFreq
-
+#ifdef _OPENACC
+  use ModUtilities, ONLY: norm2
+#endif
+  
   implicit none
   SAVE
 
@@ -229,7 +232,7 @@ contains
   !============================================================================
   subroutine do_amr
 
-    use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
+    use ModMain, ONLY : nIJK, MaxBlock, nBlock, nBlockMax, nBlockALL,&
          UseB, DtMax_B, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
          UseLocalTimeStep
     use ModGeometry, ONLY: CellSizeMin, CellSizeMax, Used_GB, nUsedCell, &
@@ -384,18 +387,18 @@ contains
   !============================================================================
   subroutine amr_criteria(Crit_IB)
 
-    use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         x_, y_, z_, MaxBlock
     use ModMain,       ONLY: nBlock, UseB0, Unused_B, DoThinCurrentSheet
     use ModSaMhd,      ONLY: UseSaMhd
-    use ModGeometry,   ONLY: r_GB, Used_GB
+    use ModGeometry,   ONLY: r_GB
     use ModAdvance,    ONLY: State_VGB, StateOld_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
     use ModB0,         ONLY: B0_DGB
     use ModPhysics,    ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
          UnitTemperature_, UnitElectric_, rCurrents
     use ModCurrent,    ONLY: get_current
-    use BATL_lib,      ONLY: Xyz_DGB, is_masked_amr_criteria
+    use BATL_lib,      ONLY: Xyz_DGB, Xyz_DNB, nDim, nI, nJ, nK, nG, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_, MaxBlock, Used_GB, &
+         is_masked_amr_criteria
     use ModNumConst,   ONLY: cTiny
     use ModVarIndexes, ONLY: SignB_
     use ModUserInterface ! user_amr_criteria
@@ -409,12 +412,8 @@ contains
 
     real, allocatable, save, dimension(:,:,:):: &
          Var_G, Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, p_G
-
-    ! X, Y and Z derivatives for vectors and scalars
-    real, dimension(1:nI,1:nJ,1:nK) :: &
-         GradXVarX_C, GradXVarY_C, GradXVarZ_C, GradX_C, &
-         GradYVarX_C, GradYVarY_C, GradYVarZ_C, GradY_C, &
-         GradZVarX_C, GradZVarY_C, GradZVarZ_C, GradZ_C
+    real, allocatable, save:: u_DG(:,:,:,:), DivU_C(:,:,:), &
+         GradX_C(:,:,:), GradY_C(:,:,:), GradZ_C(:,:,:)
 
     real:: Current_D(3)
 
@@ -435,7 +434,8 @@ contains
          Bx_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),    &
          By_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),    &
          Bz_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),    &
-         p_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+         p_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+         GradX_C(nI,nJ,nK), GradY_C(nI,nJ,nK), GradZ_C(nI,nJ,nK))
 
     ! initialize all criteria to zero
     Crit_IB = 0.0
@@ -465,112 +465,83 @@ contains
              Crit_IB(iCrit,iBlock) = &
                   sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2)) &
                   *No2Io_V(UnitTemperature_)
+
           case('gradlogrho')
              ! Log of density gradient.
              Var_G = log10(Rho_G)
              call calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
              Crit_IB(iCrit,iBlock) = &
                   sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
+
+          case('-divu', '-divudx')
+             if(.not.allocated(u_DG)) &
+                  allocate(u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+                  DivU_C(nI,nJ,nK))
+             ! Calculate velocity
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                u_DG(:,i,j,k) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
+                     State_VGB(Rho_,i,j,k,iBlock)
+             end do; end do; end do
+             ! Calculate div(u)
+             call calc_divergence(iBlock, u_DG, nG, DivU_C, &
+                  UseBodyCellIn=.true.)
+             if(NameAmrCrit_I(iCrit) == 'divudx')then
+                ! Multiply by cell size (lengt of main diagonal)
+                do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                   DivU_C(i,j,k) = DivU_C(i,j,k)* &
+                        norm2(Xyz_DNB(:,i+1,j+1,k+1,iBlock) &
+                        -     Xyz_DNB(:,i,j,k,iBlock))
+                end do; end do; end do
+             end if
+             ! Use negative sign, so that we can find shocks
+             Crit_IB(iCrit,iBlock) = -minval(DivU_C)*No2Io_V(UnitU_)
+
+          case('pjumpratio')
+             ! Calculate the maximum jump in neighboring cells.
+             Crit_IB(iCrit,iBlock) = 0
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                Crit_IB(iCrit,iBlock) = max(Crit_IB(iCrit,iBlock), &
+                     maxval(p_G(i-1:i+1,j,k))/minval(p_G(i-1:i+1,j,k)) )
+                if(nDim == 1) CYCLE
+                Crit_IB(iCrit,iBlock) = max(Crit_IB(iCrit,iBlock), &
+                     maxval(p_G(i,j-1:j+1,k))/minval(p_G(i,j-1:j+1,k)) )
+                if(nDim == 2) CYCLE
+                Crit_IB(iCrit,iBlock) = max(Crit_IB(iCrit,iBlock), &
+                     maxval(p_G(i,j,k-1:k+1))/minval(p_G(i,j,k-1:k+1)) )
+             end do; end do; end do
+
           case('gradlogp')
              ! Log of pressure gradient
              Var_G = log10(p_G)
-             call calc_gradient( iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
+             call calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
              Crit_IB(iCrit,iBlock) = &
                   sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
 
           case('gradp')
              ! Pressure gradient 2.
-             call calc_gradient(iBlock, p_G, GradX_C,GradY_C,GradZ_C)
+             call calc_gradient(iBlock, p_G, GradX_C, GradY_C, GradZ_C)
              Crit_IB(iCrit,iBlock) = &
                   sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2)) &
                   * No2Io_V(UnitP_)
 
-          case('grade')
-             ! Electric field gradient.
-             if(UseB0)then
-                Var_G = sqrt( &
-                     ( -((RhoUy_G/Rho_G)* &
-                     (Bz_G+B0_DGB(z_,:,:,:,iBlock)) - &
-                     (RhoUz_G/Rho_G)* &
-                     (By_G+B0_DGB(y_,:,:,:,iBlock))) )**2 + &
-                     ( -((RhoUz_G/Rho_G)* &
-                     (Bx_G+B0_DGB(x_,:,:,:,iBlock)) - &
-                     (RhoUx_G/Rho_G)* &
-                     (Bz_G+B0_DGB(z_,:,:,:,iBlock))) )**2 + &
-                     ( -((RhoUx_G/Rho_G)* &
-                     (By_G+B0_DGB(y_,:,:,:,iBlock)) - &
-                     (RhoUy_G/Rho_G)* &
-                     (Bx_G+B0_DGB(x_,:,:,:,iBlock))) )**2 )
-             else
-                Var_G = sqrt( &
-                     (RhoUy_G*Bz_G - RhoUz_G*By_G)**2 + &
-                     (RhoUz_G*Bx_G - RhoUx_G*Bz_G)**2 + &
-                     (RhoUx_G*By_G - RhoUy_G*Bx_G)**2 )/Rho_G
-             end if
-             call calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
-             Crit_IB(iCrit,iBlock) = &
-                  sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2)) &
-                  * No2Io_V(UnitElectric_)
-
-          case('curlv', 'curlu')
-             ! Curl of velocity
-             call calc_gradient(iBlock, RhoUx_G/Rho_G, &
-                  GradXVarX_C, GradYVarX_C, GradZVarX_C)
-             call calc_gradient(iBlock, RhoUy_G/Rho_G, &
-                  GradXVarY_C, GradYVarY_C, GradZVarY_C)
-             call calc_gradient(iBlock, RhoUz_G/Rho_G, &
-                  GradXVarZ_C, GradYVarZ_C, GradZVarZ_C)
-             Crit_IB(iCrit,iBlock) = sqrt(maxval( &
-                  (GradYVarZ_C - GradZVarY_C)**2 + &
-                  (GradZVarX_C - GradXVarZ_C)**2 + &
-                  (GradXVarY_C - GradYVarX_C)**2)) &
-                  * No2Io_V(UnitU_)
-
-          case('curlb')
-             ! Curl of magnetic field (current)
-             call calc_gradient(iBlock, Bx_G, &
-                  GradXVarX_C, GradYVarX_C, GradZVarX_C)
-             call calc_gradient(iBlock, By_G, &
-                  GradXVarY_C, GradYVarY_C, GradZVarY_C)
-             call calc_gradient(iBlock, Bz_G, &
-                  GradXVarZ_C, GradYVarZ_C, GradZVarZ_C)
-             Crit_IB(iCrit,iBlock) = sqrt(maxval( &
-                  (GradYVarZ_C - GradZVarY_C)**2 + &
-                  (GradZVarX_C - GradXVarZ_C)**2 + &
-                  (GradXVarY_C - GradYVarX_C)**2)) &
-                  *No2Io_V(UnitJ_)
+          case('j')
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call  get_current(i, j, k, iBlock, Current_D)
+                Crit_IB(iCrit,iBlock) = max(Crit_IB(iCrit,iBlock), &
+                     norm2(Current_D))
+             end do; end do; end do
+             ! Dimensionalize
+             Crit_IB(iCrit,iBlock) = Crit_IB(iCrit,iBlock)*No2Io_V(UnitJ_)
 
           case('j2')
              Crit_IB(iCrit,iBlock) = 0.0
-             do k=1,nK; do j=1,nJ; do i=1,nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call  get_current(i, j, k, iBlock, Current_D)
                 Crit_IB(iCrit,iBlock) = max(Crit_IB(iCrit,iBlock),&
                      sum(Current_D**2))
              end do;end do;end do
-             Crit_IB(iCrit,iBlock) = Crit_IB(iCrit,iBlock) &
-                  *No2Io_V(UnitJ_)**2
-
-          case('divu','divv')
-             ! Divergence of velocity (this is REALLY INEFFICIENT !!! )
-             call calc_gradient( iBlock, RhoUx_G/Rho_G, &
-                  GradXVarX_C, GradYVarX_C, GradZVarX_C)
-             call calc_gradient( iBlock, RhoUy_G/Rho_G, &
-                  GradXVarY_C,GradYVarY_C,GradZVarY_C)
-             call calc_gradient( iBlock, RhoUz_G/Rho_G, &
-                  GradXVarZ_C,GradYVarZ_C,GradZVarZ_C)
-
-             Crit_IB(iCrit,iBlock) = &
-                  maxval(abs(GradXVarX_C + GradYVarY_C + GradZVarZ_C)) &
-                  *No2Io_V(UnitU_)
-
-          case('rcurrents')
-             ! Inverse distance from Rcurrents, squared
-             ! The new geometric methods are better, but this is kept
-             ! so that the tests keep running
-             Var_G(1:nI,1:nJ,1:nK) = 1.0/((max(cTiny, &
-                  abs(Rcurrents - r_GB(1:nI,1:nJ,1:nK,iBlock))))**2)
-             Crit_IB(iCrit,iBlock) = maxval(Var_G(1:nI,1:nJ,1:nK),&
-                  MASK=Used_GB(1:nI,1:nJ,1:nK,iBlock))
+             ! Dimensionalize
+             Crit_IB(iCrit,iBlock) = Crit_IB(iCrit,iBlock)*No2Io_V(UnitJ_)**2
 
           case('currentsheet')
              if(SignB_>1 .and. (DoThinCurrentSheet.or.UseSaMhd))then
@@ -623,18 +594,23 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-
     subroutine trace_transient(NameCrit, RefineCrit)
 
       character(len=*), intent(in) :: NameCrit
       real, intent(out) :: RefineCrit
 
-      real, dimension(nI,nJ,nK) :: Tmp_C, RhoOld_C, RhoUxOld_C, &
+      real, allocatable, dimension(:,:,:), save :: &
+           Tmp_C, RhoOld_C, RhoUxOld_C, &
            RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, pOld_C
-
+      
       character(len=*), parameter:: NameSub = 'trace_transient'
       !------------------------------------------------------------------------
-      do k=1,nK; do j=1,nJ; do i=1,nI
+      if(.not.allocated(Tmp_C)) allocate( &
+           Tmp_C(nI,nJ,nK), RhoOld_C(nI,nJ,nK), pOld_C(nI,nJ,nK), &
+           RhoUxOld_C(nI,nJ,nK), RhoUyOld_C(nI,nJ,nK), RhoUzOld_C(nI,nJ,nK), &
+           BxOld_C(nI,nJ,nK), ByOld_C(nI,nJ,nK), BzOld_C(nI,nJ,nK))
+
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
          RhoOld_C(i,j,k)  = StateOld_VGB(rho_,i,j,k,iBlock)
          RhoUxOld_C(i,j,k)= StateOld_VGB(rhoUx_,i,j,k,iBlock)
          RhoUyOld_C(i,j,k)= StateOld_VGB(rhoUy_,i,j,k,iBlock)
