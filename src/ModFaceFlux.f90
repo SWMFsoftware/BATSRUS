@@ -1243,7 +1243,7 @@ contains
                 call get_hd_flux
              else
                 ! Momentum and energy fluxes now include the electric field
-                ! They need to be reassigned to HDFlux_V accordingly
+                ! They need to be reassigned to MhdFlux_V accordingly
                 call get_mhd_flux(State_V, Un, Flux_V, &
                      StateCons_V, Bx, By, Bz, &
                      Bn, B0n, FullBx, FullBy, FullBz, FullBn, HallUn)
