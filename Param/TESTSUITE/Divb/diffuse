@@ -1,7 +1,0 @@
-#DIVB
-F			UseDivbSource
-T			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
-
-#END
