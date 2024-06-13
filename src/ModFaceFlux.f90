@@ -1871,7 +1871,7 @@ contains
       ! Add magnetic energy
       StateCons_V(Energy_) = e + 0.5*B2
 
-      ! f_i[e]=(u_i*(ptotal + e + (n x E) . B) since div(E x B) = curl(E) . B 
+      ! f_i[e]=(u_i*(ptotal + e + (n x E) . B) since div(E x B) = curl(E) . B
       Flux_V(Energy_) = Flux_V(Energy_) & ! hydro energy flux
            + Un*pExtra                  & ! work of electrons and waves
            + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz ! Poynting flux

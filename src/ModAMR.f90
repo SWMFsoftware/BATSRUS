@@ -13,7 +13,7 @@ module ModAMR
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  
+
   implicit none
   SAVE
 
@@ -602,7 +602,7 @@ contains
       real, allocatable, dimension(:,:,:), save :: &
            Tmp_C, RhoOld_C, RhoUxOld_C, &
            RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, pOld_C
-      
+
       character(len=*), parameter:: NameSub = 'trace_transient'
       !------------------------------------------------------------------------
       if(.not.allocated(Tmp_C)) allocate( &
