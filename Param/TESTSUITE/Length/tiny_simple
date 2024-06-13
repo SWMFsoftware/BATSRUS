@@ -1,23 +1,16 @@
 #END_COMP GM ##################################################################
 
 #STOP
-10
--1.0
+10			MaxIteration
+-1.0			tSimulationMax
 
 #RUN ##########################################################################
 
 #STOP
-20
--1.0
+20			MaxIteration
+-1.0			tSimulationMax
 
 #BEGIN_COMP GM ################################################################
-
-AMR
-15                      DnRefine
-T                       DoAutomaticRefinement 
-10.                     PercentCoarsen
-30.                     PercentRefine
-99999                   MaxBlockAll
 
 #DOAMR
 T                       DoAmr
@@ -25,22 +18,13 @@ T                       DoAmr
 -1                      DtAmr
 F                       IsStrictAmr
 
-#AMRLIMIT
-40.                     PercentCoarsen
-5.71                    PercentRefine
-999999                  MaxBlockAll
-1e-8                    DiffCriteriaLevel
-
-#AMRCRITERIA
-3                       nRefineCrit (number of refinement criteria: 1,2 or 3)
-curlB                   TypeRefine
--1.0                    CoarsenLimit  ! Only if UseBatl is true
--1.0                    RefineLimit   ! Only if UseBatl is true
+AMRCRITERIA
+2                       nRefineCrit (number of refinement criteria: 1,2 or 3)
+j                       TypeRefine
+-1.0                    CoarsenLimit
+-1.0                    RefineLimit
 gradlogP		TypeRefine
--1.0                    CoarsenLimit  ! Only if UseBatl is true
--1.0                    RefineLimit   ! Only if UseBatl is true
-Rcurrents		TypeRefine
--1.0                    CoarsenLimit  ! Only if UseBatl is true
--1.0                    RefineLimit   ! Only if UseBatl is true
+-1.0                    CoarsenLimit
+-1.0                    RefineLimit
 
 #END
