@@ -1636,13 +1636,14 @@ contains
       real, intent(inout) :: HallUn
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e
+      real :: Rho, Ux, Uy, Uz, p, Pe, e
       real :: pPerp    ! in anisotropic case is not the same as p
       real :: pWave    ! Contribution from waves to pressure
       real :: pExtra   ! Electrons and waves act on ions via electr.field
       real :: SqrtRho  ! Square root of density times PoyntingFluxPerB
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2
+      real, dimension(nIonFluid):: Ux_I, Uy_I, Uz_I, p_I, e_I
 
       ! Energy difference (in the standard argo, Rho*sigma_D*Z^2/2
       real :: wD
@@ -1655,20 +1656,27 @@ contains
       Uy      = State_V(Uy_)
       Uz      = State_V(Uz_)
       p       = State_V(p_)
+      if(UseElectronPressure) Pe = State_V(Pe_)
+
       ! A factor to convert representative functions to a real wave energy
       if(IsOnAwRepresentative)SqrtRho = sqrt(Rho)*PoyntingFluxPerB
       ! Hydrodynamic part of fluxes
 
       ! Normal direction
-      Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
+      Un = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
 
       ! f_n[rho] = Rho*U_i
       Flux_V(Rho_) = Rho*Un
 
-      pPerp = p
       ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2
       !        = p + bb/2 + (p - ppar)/2
-      if(UseAnisoPressure) pPerp = p + 0.5*(p - State_V(Ppar_))
+      if(UseAnisoPressure)then
+         ! Perp = (3*p - Ppar)/2
+         pPerp = 1.5*p - 0.5*State_V(Ppar_)
+      else
+         ! Isotropic case
+         pPerp = p
+      end if
 
       ! Calculate conservative state for momentum
       StateCons_V(RhoUx_)  = Rho*Ux
@@ -1682,10 +1690,30 @@ contains
       Flux_V(RhoUy_) = Un*Rho*Uy + pPerp*NormalY
       Flux_V(RhoUz_) = Un*Rho*Uz + pPerp*NormalZ
 
-      ! Calculate hydrodynamic energy density and flux
-      e = InvGammaMinus1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
+      ! Calculate hydrodynamic energy density, including electron energy
+      if(UseTotalIonEnergy)then
+         Ux_I = State_V(iUxIon_I)
+         Uy_I = State_V(iUyIon_I)
+         Uz_I = State_V(iUzIon_I)
+         p_I  = State_V(iPIon_I)
+         ! Hydro energies
+         e_I = GammaMinus1_I(1:nIonFluid)*p_I &
+              + 0.5*State_V(iRhoIon_I)*(Ux_I**2 + Uy_I**2 + Uz_I**2)
+         ! Total hydro energy
+         e = sum(e_I)
+      else
+         e = InvGammaMinus1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
+      end if
+      if(UseElectronEnergy) e = e + InvGammaElectronMinus1*Pe
       StateCons_V(Energy_) = e
-      Flux_V(Energy_) = Un*(e + pPerp)
+      ! Calculate energy flux
+      if(UseTotalIonEnergy)then
+         ! Is this correct for anisotropic case???
+         Flux_V(Energy_) = sum( &
+              (Ux_I*NormalX + Uy_I*NormalY + Uz_I*NormalZ)*(e_I + p_I))
+      else
+         Flux_V(Energy_) = Un*(e + pPerp)
+      end if
       ! Correct momentum and energy hydro fluxes for anisotroic pressure
       if(UseAnisoPressure)then
          if (DoTestCell) then
@@ -1743,9 +1771,9 @@ contains
       if (UseElectronPressure) then
          if (UseAnisoPe) then
             ! Peperp = (3*pe - Pepar)/2
-            pExtra = pExtra + (3*State_V(Pe_) - State_V(Pepar_))/2.0
+            pExtra = pExtra + 1.5*State_V(Pe_) - 0.5*State_V(Pepar_)
          else
-            pExtra = pExtra + State_V(Pe_)
+            pExtra = pExtra + Pe
          end if
       end if
       if(UseWavePressure)then
@@ -1755,16 +1783,15 @@ contains
             pWave = (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
          end if
          if(UseReynoldsDecomposition)then
-            if(WDiff_>1)then
+            if(WDiff_ > 1)then
                wD = State_V(WDiff_)
             else
-               wD = SigmaD*&
-                    sum(State_V(WaveFirst_:WaveLast_))
+               wD = SigmaD*sum(State_V(WaveFirst_:WaveLast_))
             end if
             if(UseTransverseTurbulence)then
-               pWave = pWave + (GammaWave-1)*wD
+               pWave = pWave + (GammaWave - 1)*wD
             else
-               pWave = pWave + (GammaWave-1)*wD/3
+               pWave = pWave + (GammaWave - 1)*wD/3
             end if
          end if
          ! Convert representative functions to a real wave pressure if needed
@@ -1797,7 +1824,7 @@ contains
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
          ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
          ! In anisotropic electron case, only (Pepar - Pperp) contributes
-         DpPerB = 1.5*(State_V(Pepar_) - State_V(Pe_))*FullBn&
+         DpPerB = 1.5*(State_V(Pepar_) - Pe)*FullBn&
               /max(1e-30, FullB2)
 
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
@@ -1834,31 +1861,31 @@ contains
       call get_magnetic_flux(State_V, Flux_V, &
            FullBx, FullBy, FullBz, FullBn, HallUn)
 
-      if(.not.IsMhd)RETURN
+      ! Check if magnetic energy should be included at all
+      if(.not.IsMhd .and. .not.UseTotalIonEnergy) RETURN
 
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
-      if(UseJCrossBForce)Flux_V(RhoUx_:RhoUz_) = &
+      if(UseJCrossBForce) Flux_V(RhoUx_:RhoUz_) = &
            Flux_V(RhoUx_:RhoUz_) + MagneticForce_D
+
       ! Add magnetic energy
       StateCons_V(Energy_) = e + 0.5*B2
 
-      ! f_i[e]=(u_i*(ptotal + e + (b_k*B0_k)) - (b_i+B0_i)*(b_k*u_k))
-      Flux_V(Energy_) = Flux_V(Energy_) &
-           + Un*pExtra                      & ! Work of electrons and waves
-           + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz ! Poynting
-
-      if(UseElectronEnergy) Flux_V(Energy_) = Flux_V(Energy_) &
-           + Un*InvGammaElectronMinus1*State_V(Pe_)
+      ! f_i[e]=(u_i*(ptotal + e + (n x E) . B) since div(E x B) = curl(E) . B 
+      Flux_V(Energy_) = Flux_V(Energy_) & ! hydro energy flux
+           + Un*pExtra                  & ! work of electrons and waves
+           + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz ! Poynting flux
 
       ! Correct energy flux, so that the electron contribution to the energy
       ! flux is U_e*p_e. We add (U_e-U_ion)*p_e.
-      if((nIonFluid == 1 .or. UseTotalIonEnergy) .and. iFluid == 1 &
-           .and. HallCoeff > 0)then
+      if(UseElectronPressure .and. (nIonFluid == 1 .or. UseTotalIonEnergy) &
+           .and. iFluid == 1 .and. HallCoeff > 0)then
          if(UseElectronEnergy)then
-            Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*State_V(Pe_) &
+            ! There are two terms: Ue*Pe/(gamma-1) and Ue*Pe
+            Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*Pe &
                  *GammaElectron*InvGammaElectronMinus1
          else
-            Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*State_V(Pe_)
+            Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*Pe
          end if
       end if
 
@@ -1934,7 +1961,7 @@ contains
          PeAdd = State_V(Pe_)
       elseif (UseAnisoPe) then
          ! Peperp = (3*pe - Pepar)/2
-         PeAdd = (3*State_V(Pe_) - State_V(Pepar_))/2.0
+         PeAdd = (3*Pe - State_V(Pepar_))/2.0
       end if
 
       ! Calculate energy
