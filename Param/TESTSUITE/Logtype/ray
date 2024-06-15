@@ -1,9 +1,0 @@
-
-#SAVELOGFILE
-T			DoSaveLogfile
-VAR			StringLogfile
-#INCLUDE
-Logs
-rho mx my mz p bx by bz lat1 lat2 lon1 lon2 status
-
-#END

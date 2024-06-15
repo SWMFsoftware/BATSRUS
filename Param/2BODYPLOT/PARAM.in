@@ -15,12 +15,12 @@ F			DoSaveRestart
 T			IsTimeAccurate
 
 #STARTTIME
-2000			iYear
-3			iMonth
-21			iDay
-10			iHour
-45			iMinute
-0			iSecond
+1998			iYear
+05			iMonth
+04			iDay
+02			iHour
+00			iMinute
+00			iSecond
 
 ! align rotation and magnetic axes with z axis
 #IDEALAXES
@@ -171,7 +171,7 @@ RAW			StringLog
 
 #SOLARWINDFILE
 T			UseSolarWindFile
-GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat		NameSolarWindFile
+Param/EARTH/imf19980504.dat		NameSolarWindFile
 
 #SCHEME
 1			nOrder
@@ -204,27 +204,18 @@ r			TypeConservCrit
 
 #DOAMR
 T			DoAmr
-30			DnAmr
+50			DnAmr
 -1			DtAmr
-F			IsStrictAmr
-
-#AMRLIMIT
-10.			PercentCoarsen
-4.29			PercentRefine
-800			MaxBlockAll
-1.e-8			DiffCriteriaLevel
+T			IsStrictAmr
 
 ! Since we use #AMRLIMIT above, the CoarsenLimit and RefineLimit
 ! parameters are set to negative values below (seems to matter).
 
 #AMRCRITERIA
-2			nRefineCrit
-curlB			TypeRefine
--1.			CoarsenLimit
--1.			RefineLimit
-gradlogP		TypeRefine
--1. 			CoarsenLimit
--1.			RefineLimit
+1			nRefineCrit
+pjumpratio		TypeRefine
+1.3 			CoarsenLimit
+2.0			RefineLimit
 
 ! A shell around rcurrents
 #GRIDLEVEL

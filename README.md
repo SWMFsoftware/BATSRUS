@@ -13,49 +13,38 @@ user manual please follow the instructions below.
 
 # Obtain BATSRUS
 
-Get the full source code from GitHub/SWMFsoftware or the open-source code from
-GitHub/MSTEM-QUDA.
+Get the full source code from GitHub/SWMFsoftware after
+uploading your machine's ssh key to github.
 
 The minimum requirement is the `BATSRUS` repository. 
 
+# Getting SWMF from GitHub/SWMFsoftware
+
+Read the
+[Git instructions](https://github.com/SWMFsoftware/SWMF/blob/master/doc/Git_instructions.pdf)
+about (optional) registration, passwordless access, mail notifications, and
+using the [gitclone](https://github.com/SWMFsoftware/share/blob/master/Scripts/gitclone) script.
+
+## Clone the BATSRUS repository
+
+```
+cd {where_you_want_to_have_batsrus}
+gitclone BATSRUS
+```
+
 You may also need the open-source `SWMF_data` repository that contains
-large data files for BATSRUS in the `GM/BATSRUS/data/` and `SC/BATSRUS/data/`
-subdirectories. The other subdirectories can be removed to save disk space.
+large data files in GM/BATSRUS and SC/BATSRUS subdirectories for BATSRUS.
+The other subdirectories in SWMF_data can be removed to save disk space.
 The `SWMF_data` should be put into the home directory:
 
 ```
 cd
-git clone https://github.com/SWMFsoftware/SWMF_data --depth=1
+gitclone SWMF_data
 ```
 
 Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
 are in the `CRASH_data` repository that is available to registered users.
 If needed, it has to be placed into the home directory.
-
-# Getting the open-source MSTEM-QUDA/BATSRUS from GitHub
-
-Clone BATSRUS from GitHub/MSTEM-QUDA
-
-```
-cd {where_you_want_to_have_mstem-quda}
-git clone https://github.com/MSTEM-QUDA/BATSRUS
-```
-
-The rest of the repositories (share, util, srcBATL ...)
-will be cloned from GitHub/MSTEM-QUDA during the installation.
-
-# Getting the full BATSRUS from GitHub/SWMFsoftware (requires access)
-
-Read the
-[Git instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/Git_instructions.pdf)
-about registering, passwordless access, mail notifications, and
-using the [gitclone](https://github.com/SWMFsoftware/share/blob/master/Scripts/gitclone) script.
-
-## Clone the BATSRUS distribution
-```
-cd {where_you_want_to_have_batsrus}
-gitclone BATSRUS
-```
 
 ## Clone the CRASH_data repository into the home directory if needed
 ```
@@ -66,10 +55,11 @@ gitclone CRASH_data
 # Install BATSRUS
 
 Many machines used by UofM are already recognized by the 
-`share/Scripts/Config.pl` script, which is called by all other `Config.pl`
-scripts in the SWMF.
+`share/Scripts/Config.pl` script, which is called by the `Config.pl`
+scripts in BATSRUS.
 For these platform/compiler combinations installation is very simple:
 ```
+cd BATSRUS
 ./Config.pl -install
 ```
 On other platforms the Fortran (and C) compilers should be explicitly given.

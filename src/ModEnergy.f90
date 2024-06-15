@@ -175,9 +175,9 @@ contains
                /State_VGB(iRho,i,j,k,iBlock)
        end if
        ! Add magnetic energy if needed
-       if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy)          &
-            .and..not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
-            ) Energy_G(i,j,k) = Energy_G(i,j,k) &
+       if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy)             &
+            .and..not.(UseSaMhd .and. r_GB(i,j,k,iBlock) > rMinSaMhd)) &
+            Energy_G(i,j,k) = Energy_G(i,j,k) &
             + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        ! Add electron energy density if needed
        if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
@@ -203,7 +203,6 @@ contains
        if(nFluid > 1) call select_fluid(iFluid)
 
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-
           ! Convert to hydro energy density
           State_VG(iP,i,j,k) =                             &
                InvGammaMinus1_I(iFluid)*State_VG(iP,i,j,k) &
