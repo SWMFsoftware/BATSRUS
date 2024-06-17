@@ -4,21 +4,19 @@
 module ModFaceFlux
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iDimTest, iProc
-  use ModBatsrusUtility, ONLY: stop_mpi, error_report
-  use ModSize,       ONLY:x_, y_, z_, nI, nJ, nK, &
-       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim
-  use ModMain,       ONLY: UseB, UseB0, cLimit
-  use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction
-  use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection, &
-       EDotFA_X, EDotFA_Y, EDotFA_Z                     ! out: E.Area
-  use ModGeometry,   ONLY: Used_GB
-  use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
+       test_start, test_stop, iTest, jTest, kTest, iDimTest, iProc, &
+       x_, y_, z_, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim, &
+       Used_GB, IsCartesianGrid, IsCartesian, IsRzGeometry, &
        Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
        UseHighFDGeometry, correct_face_value
+  use ModBatsrusUtility, ONLY: stop_mpi, error_report
+  use ModMain, ONLY: UseB, UseB0, cLimit,  UseRadDiffusion, UseHeatConduction
+  use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection, &
+       UseBorisRegion, set_clight_face, Clight_DF, &
+       EDotFA_X, EDotFA_Y, EDotFA_Z ! out: E.Area
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! in: face/cell centered B0
   use ModAdvance, ONLY: &
-       State_VGB,                                   &
+       State_VGB,                                   &! in: cell centered state
        LeftState_VX, LeftState_VY, LeftState_VZ,    &! in: left  face state
        RightState_VX, RightState_VY, RightState_VZ, &! in: right face state
        Flux_VXI, Flux_VYI, Flux_VZI,                &! out: flux*Area
@@ -37,11 +35,9 @@ module ModFaceFlux
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal, GammaElectron, &
        GammaElectronMinus1, InvGammaElectronMinus1, Gamma, GammaMinus1, &
        InvGammaMinus1, Gamma_I, InvGammaMinus1_I, GammaMinus1_I
-  use ModWaves, ONLY:
   use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
        AlfvenPlusFirst_, AlfvenPlusLast_, &
        GammaWave, UseWavePressure, UseWavePressureLtd
-
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        HallFactor_DF, set_hall_factor_face, &
        set_ion_mass_per_charge, UseBiermannBattery
@@ -50,10 +46,9 @@ module ModFaceFlux
   use ModResistivity, ONLY: UseResistiveFlux, Eta_GB
   use ModIonElectron, ONLY: iVarUseCmax_I
   use ModVarIndexes
-  use ModNumConst
+  use ModNumConst, ONLY: cSqrtHalf, cTiny
   use ModViscosity, ONLY: UseViscosity, Visco_DDI,&
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
-  use ModBorisCorrection, ONLY: UseBorisRegion, set_clight_face, Clight_DF
   use omp_lib
 
   implicit none
