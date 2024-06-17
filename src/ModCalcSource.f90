@@ -73,9 +73,9 @@ contains
     ! For UseB true and UseB0 false the sources are added if
     ! UseDivBSource is true
     !
-    ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(div B)
-    ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(div B)
-    ! Source_V(Energy_) = -dot_product(B_D*U_D)*(div B)
+    ! Source_V(Mx_:Mz_) = -B_D*div B
+    ! Source_V(Bx_:Bz_) = -U_D*div B
+    ! Source_V(Energy_) = -(B_D.U_D)*div B
     !
     ! Comments: 1a. divB is calculated in terms of the face values of B
     !           1b. other variables are cell-centered
@@ -87,8 +87,8 @@ contains
     !    since 2001-2002) are added if UseB0Source is true:
     ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(div B1 + div B0) - B0*(div B1)- &
     !                      (curl B0) x B1
-    ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(div B1 + div B0)
-    ! Source_V(Energy_) = -B_D.U_D*(div B1 + div B0)
+    ! Source_V(Bx_:Bz_) = -U_D*(div B1 + div B0)
+    ! Source_V(Energy_) = -(B_D.U_D)*(div B1 + div B0)
     ! Comment: 2a. divB is calculated in terms of the face values of B1
     !          2b. B0*(div B1) is calculated together with (div B1), and
     !              different contrributions to (div B1) are multiplied by face-
@@ -105,7 +105,7 @@ contains
     !    since 2001-2002) are added if UseB0Source is true:
     ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(div B1 + div B0) - B0*(div B1)- &
     !                      (curl B0) x B1
-    ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(div B1 + div B0)
+    ! Source_V(Bx_:Bz_) = -U_D*(div B1 + div B0)
     ! Source_V(Energy_) = -(B_D.U_D)*(div B1 + div B0)
     ! Comment: 2a. divB is calculated in terms of the face values of B1
     !          2b. B0*(div B1) is calculated together with (div B1), and
@@ -211,7 +211,7 @@ contains
     real :: QePerQtotal
 
     ! Variables for multi-ion MHD
-    real :: InvElectronDens, uPlus_D(3), U_D(3)
+    real :: InvElectronDens, uPlus_D(3), u_D(3)
 
     ! Variables for Minimum radial speed
     real :: Ur, Rho, rUnit_D(3), Force_D(3)
@@ -894,7 +894,7 @@ contains
        end if
 
        if(DoTest)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,iBlockTest)
-       if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_)&
+       if(DoTest .and. iVarTest >= RhoUx_ .and. iVarTest <= RhoUz_)&
             call write_source('After B0B1 source')
 
        ! Add contributions to other source terms
@@ -915,16 +915,20 @@ contains
                   *State_VGB(iRhoUzIon_I(1:nTrueIon),i,j,k,iBlock))
 
              Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
-                  -DivB1_GB(i,j,k,iBlock)*uPlus_D
+                  - DivB1_GB(i,j,k,iBlock)*uPlus_D
+
+             ! Total ion energy contains magnetic energy
+             if(UseTotalIonEnergy) Source_VC(Energy_,i,j,k) = &
+                  Source_VC(Energy_,i,j,k) - DivB1_GB(i,j,k,iBlock) &
+                  *sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*uPlus_D)
           else
              RhoInv = 1.0/State_VGB(Rho_,i,j,k,iBlock)
-             U_D = RhoInv*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+             u_D = RhoInv*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
              DivFullB = DivB1_GB(i,j,k,iBlock)
              ! We can choose to adveect/clean div B1 or div (B1 + B0)
              if(UseDivFullBSource)DivFullB = DivFullB + DivB0_C(i,j,k)
              ! Add magnetic charge advection to the induction equuation
-             Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
-                  -DivFullB*U_D
+             Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) - DivFullB*u_D
 
              if(.not. UseMhdMomentumFlux) CYCLE
 
@@ -939,9 +943,7 @@ contains
 
              if(.not.IsMhd .and. .not.UseTotalIonEnergy) CYCLE
              Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                  -DivFullB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-                  *U_D)
-
+                  - DivFullB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*u_D)
           end if
 
        end do; end do; end do
@@ -1000,8 +1002,8 @@ contains
                /State_VGB(rho_,i,j,k,iBlock)
        end do; end do; end do
 
-       if(DoTest .and. &
-            (iVarTest==Energy_.or.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_))&
+       if(DoTest .and. (iVarTest == Energy_ &
+            .or. iVarTest >= RhoUx_ .and. iVarTest<=RhoUz_)) &
             call write_source('After curl B0')
     end if ! UseB .and. UseCurlB0 .and. UseMhdMomentumFlux
 
@@ -1065,8 +1067,7 @@ contains
                      + Gbody*State_VGB(iRhoUGrav,i,j,k,iBlock)
              end do; end do; end do
           end if
-          if(DoTest.and. &
-               (iVarTest == Energy_ .or. &
+          if(DoTest .and. (iVarTest == Energy_ .or. &
                iVarTest >= iRhoUx .and. iVarTest <= iRhoUz))then
              call write_source('After gravity')
           end if
@@ -2081,8 +2082,7 @@ contains
          Force_D = Friction*(FrictionU_D - u_D)*Rho
          Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
               + Force_D
-         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-              + sum(Force_D*u_D)
+         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + sum(Force_D*u_D)
       end do; end do; end do
 
     end subroutine calc_friction
