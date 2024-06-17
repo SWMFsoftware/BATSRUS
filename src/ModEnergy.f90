@@ -97,7 +97,7 @@ contains
           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
 
-          ! Add electron energy density if needed 
+          ! Add electron energy density if needed
           if(UseElectronPressure .and. UseElectronEnergy) &
                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
