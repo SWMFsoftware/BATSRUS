@@ -1692,7 +1692,7 @@ contains
          Uz_I = State_V(iUzIon_I)
          p_I  = State_V(iPIon_I)
          ! Hydro energies
-         e_I = GammaMinus1_I(1:nIonFluid)*p_I &
+         e_I = InvGammaMinus1_I(1:nIonFluid)*p_I &
               + 0.5*State_V(iRhoIon_I)*(Ux_I**2 + Uy_I**2 + Uz_I**2)
          ! Total hydro energy
          e = sum(e_I)
@@ -1856,7 +1856,7 @@ contains
       call get_magnetic_flux(State_V, Flux_V, &
            FullBx, FullBy, FullBz, FullBn, HallUn)
 
-      ! Check if magnetic energy should be included at all
+      ! Check if magnetic force and energy should be included at all
       if(.not.IsMhd .and. .not.UseTotalIonEnergy) RETURN
 
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
