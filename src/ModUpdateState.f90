@@ -122,8 +122,9 @@ contains
             0.5*(3*State_VGB(p_,iTest,jTest,kTest,iBlockTest) &
             -    State_VGB(Ppar_,iTest,jTest,kTest,iBlockTest))
        iVarLast = iVarTest
-       if(iVarTest == nVar) iVarLast = iVarTest+1
-       do iVar = iVarTest, iVarLast
+       ! if test var is pressure, show energy too
+       if(iVarTest == p_) iVarLast = nVar + 1
+       do iVar = iVarTest, iVarLast, max(1, iVarLast - iVarTest)
           write(*,*)'Fluxes and sources for ', NameVar_V(iVar)
           write(*,'(2x,a,2es23.15)') &
                'X fluxes L,R =',Flux_VXI(iVar,iTest,jTest,kTest,iGang) ,&
