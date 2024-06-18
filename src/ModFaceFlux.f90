@@ -1217,7 +1217,7 @@ contains
 
     do iFluid = iFluidMin, iFluidMax
 
-       if(iFluid == 1 .and. IsMhd)then
+       if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy))then
           ! Calculate MHD flux for first fluid
           if(UseBorisCorrection)then
              call get_boris_flux
@@ -1355,7 +1355,7 @@ contains
           Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
 
           ! add B.dB/dt term to energy equation
-          if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
+          if(IsMhd .or. UseTotalIonEnergy) Flux_V(Energy_) = Flux_V(Energy_) &
                + Bx*FluxBx + By*FluxBy + Bz*FluxBz
        end if
 
@@ -1370,7 +1370,7 @@ contains
           Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
 
           ! add B.dB/dt term to energy equation
-          if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
+          if(IsMhd .or. UseTotalIonEnergy) Flux_V(Energy_) = Flux_V(Energy_) &
                + Bx*FluxBx + By*FluxBy + Bz*FluxBz
        end if
 
@@ -1380,7 +1380,8 @@ contains
           Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) + SpeedHyp*Normal_D*Hyp
           Flux_V(Hyp_)    = SpeedHyp*Bn
 
-          if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) + SpeedHyp*Bn*Hyp
+          if(IsMhd .or. UseTotalIonEnergy) &
+               Flux_V(Energy_) = Flux_V(Energy_) + SpeedHyp*Bn*Hyp
        elseif(Hyp_ > 1)then
           Flux_V(Hyp_) = 0.0
        end if
@@ -1840,7 +1841,7 @@ contains
          end if
       end if
 
-      if(UseWavePressure.and.UseReynoldsDecomposition &
+      if(UseWavePressure .and. UseReynoldsDecomposition &
            .and. UseTransverseTurbulence)then
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
          DpPerB = -wD*FullBn/max(1e-30, FullB2)
