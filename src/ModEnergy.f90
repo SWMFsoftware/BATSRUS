@@ -9,7 +9,8 @@ module ModEnergy
   use ModVarIndexes, ONLY: &
        nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Hyp_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: &
-       nFluid, nIonFluid, iRho, iRhoUx, iRhoUz, iP, iP_I, iPIon_I, &
+       nFluid, nIonFluid, iRho, iRhoUx, iRhoUz, &
+       iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iP, iP_I, iPIon_I, &
        UseMultiIon, UseNeutralFluid, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I, &
        iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I
@@ -92,7 +93,7 @@ contains
           ! Done with all fluids except first MHD fluid
           if(iFluid > 1 .or. .not.(UseTotalIonEnergy .or. IsMhd)) CYCLE
           if(UseSaMhd .and. r_GB(i,j,k,iBlock) > rMinSaMhd) CYCLE
-          ! Add magnetic energy density
+          ! Add magnetic energy density for fluid 1
           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
 
@@ -113,6 +114,10 @@ contains
     if(UseMultiIon .and. UseTotalIonEnergy)then
        ! Add up all ion energy densities into the first energy
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+          if(UseNonConservative)then
+             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
+          end if
           State_VGB(p_,i,j,k,iBlock) = sum(State_VGB(iPIon_I,i,j,k,iBlock))
        end do; end do; end do
     end if
@@ -123,13 +128,18 @@ contains
   !============================================================================
   real function energy_i(State_V, iFluid)
 
-    ! Return energy of fluid iFluid from State_V
+    ! Return energy of fluid iFluid from conservative State_V
 
     real, intent(in):: State_V(nVar)
     integer, intent(in):: iFluid
 #ifndef SCALAR
     !--------------------------------------------------------------------------
-    if(iFluid == 1 .and. IsMhd) then
+    if(iFluid == 1 .and. UseMultiIon .and. UseTotalIonEnergy)then
+       energy_i = sum(InvGammaMinus1_I(1:nIonFluid)*State_V(iPIon_I) + 0.5* &
+            ( State_V(iRhoUxIon_I)**2 + State_V(iRhoUyIon_I)**2 &
+            + State_V(iRhoUzIon_I)**2 &
+            )/State_V(iRhoIon_I)) + 0.5*sum(State_V(Bx_:Bz_)**2)
+    elseif(iFluid == 1 .and. IsMhd) then
        ! MHD energy density
        energy_i = InvGammaMinus1*State_V(p_) + 0.5* &
             ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
@@ -278,8 +288,8 @@ contains
              if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
           end if
 
-          if(iFluid == 1 .and. IsMhd                                 &
-               .and..not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
+          if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy)           &
+               .and. .not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
                ) then
              ! Deal with first MHD fluid
              ! Subtract the magnetic energy density

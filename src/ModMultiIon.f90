@@ -161,7 +161,7 @@ contains
 
     use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, UseB0
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
-    use ModAdvance, ONLY: State_VGB, Source_VC, Efield_DGB
+    use ModAdvance, ONLY: State_VGB, Source_VC, Efield_DGB, UseTotalIonEnergy
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: InvClight2
     use BATL_lib,   ONLY:
@@ -236,6 +236,10 @@ contains
        Source_VC(iRhoUyIon_I,i,j,k) = Source_VC(iRhoUyIon_I,i,j,k) + ForceY_I
        Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) + ForceZ_I
 
+       if(UseTotalIonEnergy)then
+          ForceX_I(1) = 0.0; ForceY_I(1) = 0.0;ForceZ_I(1) = 0.0
+       end if
+
        ! Calculate ion energy sources = u_s.Force_s
        Source_VC(nVar+1:nVar+nIonFluid,i,j,k) = &
             Source_VC(nVar+1:nVar+nIonFluid,i,j,k) + &
@@ -274,7 +278,7 @@ contains
     use ModPointImplicit, ONLY:  UsePointImplicit, UseUserPointImplicit_B, &
          IsPointImplPerturbed, DsDu_VVC
     use ModMain,    ONLY: nI, nJ, nK, UseB0, UseFlic
-    use ModAdvance, ONLY: State_VGB, Source_VC
+    use ModAdvance, ONLY: State_VGB, Source_VC, UseTotalIonEnergy
     use ModB0,      ONLY: B0_DGB
     use BATL_lib,   ONLY: Xyz_DGB
     use ModPhysics, ONLY: ElectronCharge, InvGammaMinus1_I, &
@@ -301,7 +305,7 @@ contains
     real :: Ga2
 
     integer :: i, j, k, iIon, jIon, iRhoUx, iRhoUz, iP, iEnergy
-    real :: AverageTemp, TemperatureCoef, Heating
+    real :: AverageTemp, TemperatureCoef
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
     ! Artificial friction
@@ -346,7 +350,7 @@ contains
        end do
     end if
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
         if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
@@ -476,7 +480,6 @@ contains
                 end do
              end if
           end if
-          Heating = 0.0
 
           if(CollisionCoefDim > 0.0 .or. TauCutOffDim > 0.0)then
              do jIon = 1, nIonFluid
@@ -535,7 +538,7 @@ contains
                         * ( InvUCutOff2 * Du2 ) ** nPowerCutOff
                 end if
 
-                Force_D = Force_D + CollisionRate * (uIon2_D - uIon_D)
+                Force_D = Force_D + CollisionRate*(uIon2_D - uIon_D)
 
                 if(DoTestCell)then
                    write(*,'(2a,es16.8)') &
@@ -610,8 +613,9 @@ contains
                 end if
              end do
 
-             iP = iPIon_I(iIon)
-             Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) + Heating
+             ! No heating
+             ! iP = iPIon_I(iIon)
+             ! Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) + Heating
 
           end if
 
@@ -619,9 +623,11 @@ contains
           Source_VC(iRhoUx:iRhoUz,i,j,k) = Source_VC(iRhoUx:iRhoUz,i,j,k) &
                + Force_D
 
+          ! Total force is zero for the total ion energy
+          if(iIon == 1 .and. UseTotalIonEnergy) CYCLE
           iEnergy = Energy_ - 1 + iIon
           Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
-               + sum(Force_D*uIon_D) + InvGammaMinus1_I(iIon)*Heating
+               + sum(Force_D*uIon_D)
 
        end do
 
