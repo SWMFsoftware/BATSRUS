@@ -233,10 +233,10 @@ contains
     real :: InvElectronDens
     logical :: DoTestCell
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     Efield_DGB(:,:,:,:,iBlock) = 0.0
