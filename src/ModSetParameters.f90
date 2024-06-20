@@ -1910,7 +1910,7 @@ contains
 
        case("#LORENTZFORCE")
           call read_var('UseJCrossBForce', UseJCrossBForce)
-          
+
        case("#HYPERBOLICDIVE", "#CORRECTELECTRONFLUID", "#CORRECTEFIELD", &
             "#CMAXDIFFUSION")
           call read_ion_electron_param(NameCommand)
