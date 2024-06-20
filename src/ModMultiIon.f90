@@ -149,15 +149,11 @@ contains
 
     ! Add non-stiff source terms specific to multi-ion MHD
     !
-    ! 1. d(rho u_s)/dt +=     (n_s/n_e)*grad p_e
-    !    d(e_s)/dt     += u_s.(n_s/n_e)*grad p_e
+    !    d(rho u_s)/dt +=     (n_s/n_e)*E
+    !    d(e_s)/dt     += u_s.(n_s/n_e)*E
     !
-    !    where s is the index of the ion fluid,
-    !    p_e is the electron pressure and
-    !    n_e is the electron number density.
-    !    The electron pressure may be solved for (UseElectronPressure is true)
-    !    or can be a fixed fraction (ElectronTemperatureRatio) of the total
-    !    pressure.
+    !    where s is the index of the ion fluid, and E is the electric
+    !    field in the comoving frame.
 
     use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, UseB0
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
@@ -167,9 +163,6 @@ contains
     use BATL_lib,   ONLY:
 
     integer, intent(in) :: iBlock
-
-    ! For multi-ion MHD the gradient of electron pressure appears in
-    ! all the individual ion momentum equations as -n_i/n_e * grad Pe
 
     real :: State_V(nVar)
     real, dimension(MaxDim)   :: FullB_D

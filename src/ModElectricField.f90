@@ -50,8 +50,7 @@ module ModElectricField
   ! Logical, which controls, if the electric field in the frame of reference
   ! comoving with an average ions, is calculated via the momentum flux (in a
   ! conservative manner) or as J x B force.
-  logical, public :: UseJCrossBForce = UseB .and. &
-       (UseMultiIon .or. .not.IsMhd)
+  logical, public:: UseJCrossBForce = UseB .and. (UseMultiIon .or. .not.IsMhd)
   !$acc declare create(UseJCrossBForce)
 
   ! Make Efield available through this module too
@@ -215,17 +214,18 @@ contains
   end subroutine get_electric_field_block
   !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
-    use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMhd_VC,&
+
+    use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMhd_VC, &
          State_VGB, bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModMain,    ONLY: MaxDim, UseB0
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModCoordTransform, ONLY: cross_product
-    use ModMultiFluid,     ONLY: &!
-         iRhoIon_I, ChargePerMass_I, nIonFluid
-    use BATL_lib,   ONLY: CellVolume_GB
+    use ModMultiFluid,     ONLY: iRhoIon_I, ChargePerMass_I, nIonFluid
+    use BATL_lib, ONLY: CellVolume_GB
     use ModVarIndexes, ONLY: Bx_, Bz_, nVar
 
     integer, intent(in):: iBlock
+
     integer:: i, j, k
     real :: State_V(nVar), vInv
     real :: ChargeDens_I(nIonFluid)
@@ -233,10 +233,10 @@ contains
     real :: InvElectronDens
     logical :: DoTestCell
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     Efield_DGB(:,:,:,:,iBlock) = 0.0
@@ -278,12 +278,12 @@ contains
 
           if(DoTestCell) write(*,'(2a,15es16.8)') NameSub,': Force_D      =', &
                Force_D
-          Force_D = Force_D + vInv*&
-               (MhdFlux_VX(:,i,j,k)  - MhdFlux_VX(:,i+1,j,k) )
-          if(nDim > 1) Force_D = Force_D + vInv*&
-               (MhdFlux_VY(:,i,j,k)  - MhdFlux_VY(:,i,j+1,k) )
-          if(nDim > 2) Force_D = Force_D + vInv*&
-               (MhdFlux_VZ(:,i,j,k)  - MhdFlux_VZ(:,i,j,k+1)  )
+          Force_D = Force_D &
+               + vInv*(MhdFlux_VX(:,i,j,k)  - MhdFlux_VX(:,i+1,j,k))
+          if(nDim > 1) Force_D = Force_D &
+               + vInv*(MhdFlux_VY(:,i,j,k)  - MhdFlux_VY(:,i,j+1,k))
+          if(nDim > 2) Force_D = Force_D &
+               + vInv*(MhdFlux_VZ(:,i,j,k)  - MhdFlux_VZ(:,i,j,k+1))
           if(DoTestCell)write(*,'(2a,15es16.8)') &
                NameSub,': after grad Pwave, Force_D =', Force_D
           Efield_DGB(:,i,j,k,iBlock) = InvElectronDens*Force_D

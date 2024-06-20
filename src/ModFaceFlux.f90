@@ -1280,7 +1280,8 @@ contains
        Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
 
        if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
-    elseif(UseMhdMomentumFlux.and.UseMultiIon)then
+    elseif(UseMhdMomentumFlux .and. UseMultiIon &
+         .and. ElectronPressureRatio > 0)then
        Pe = sum(State_V(iPIon_I))*ElectronPressureRatio
        MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + Pe*NormalX
        MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + Pe*NormalY
@@ -1799,15 +1800,14 @@ contains
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
       pTotal  = 0.5*B2 + B0B1
       ! Magnetic force
-      MagneticForce_D(RhoUx_) =  - Bn*FullBx - B0n*Bx + pTotal*NormalX
-      MagneticForce_D(RhoUy_) =  - Bn*FullBy - B0n*By + pTotal*NormalY
-      MagneticForce_D(RhoUz_) =  - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+      MagneticForce_D(RhoUx_) =  -Bn*FullBx - B0n*Bx + pTotal*NormalX
+      MagneticForce_D(RhoUy_) =  -Bn*FullBy - B0n*By + pTotal*NormalY
+      MagneticForce_D(RhoUz_) =  -Bn*FullBz - B0n*Bz + pTotal*NormalZ
       ! Add a gradient of extra pressure to momentum flux
-      MhdFlux_V(RhoUx_) =  pExtra*NormalX
-      MhdFlux_V(RhoUy_) =  pExtra*NormalY
-      MhdFlux_V(RhoUz_) =  pExtra*NormalZ
-      if(.not.UseJCrossBForce)&
-           MhdFlux_V = MhdFlux_V + MagneticForce_D
+      MhdFlux_V(RhoUx_) = pExtra*NormalX
+      MhdFlux_V(RhoUy_) = pExtra*NormalY
+      MhdFlux_V(RhoUz_) = pExtra*NormalZ
+      if(.not.UseJCrossBForce) MhdFlux_V = MhdFlux_V + MagneticForce_D
       ! Correction for anisotropic electron pressure
       if(UseAnisoPe)then
          if (DoTestCell) then
@@ -1860,9 +1860,12 @@ contains
       ! Check if magnetic force and energy should be included at all
       if(.not.IsMhd .and. .not.UseTotalIonEnergy) RETURN
 
-      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
-      if(UseJCrossBForce) Flux_V(RhoUx_:RhoUz_) = &
-           Flux_V(RhoUx_:RhoUz_) + MagneticForce_D
+      if(IsMhd)then
+         ! This is only valid for single ion fluid
+         Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
+         if(UseJCrossBForce) Flux_V(RhoUx_:RhoUz_) = &
+              Flux_V(RhoUx_:RhoUz_) + MagneticForce_D
+      end if
 
       ! Add magnetic energy
       StateCons_V(Energy_) = e + 0.5*B2
@@ -2607,7 +2610,7 @@ contains
          if(UseMhdMomentumFlux)&
               MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
               +           WeightRight*MhdFluxRight_V
-         Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
+         Enormal = WeightRight*EnRight + WeightLeft*EnLeft
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + &
               WeightLeft *UnLeft_I(eFluid_)
@@ -2806,7 +2809,7 @@ contains
          if(UseMhdMomentumFlux)&
               MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
               +           WeightRight*MhdFluxRight_V
-         Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
+         Enormal = WeightRight*EnRight + WeightLeft*EnLeft
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + &
               WeightLeft *UnLeft_I(eFluid_)
