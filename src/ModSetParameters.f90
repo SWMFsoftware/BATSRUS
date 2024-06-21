@@ -73,6 +73,7 @@ contains
          TypeLimiter5, UseCweno, &
          iVarSmooth_V, iVarSmoothIndex_I, &
          StringLowOrderRegion, iRegionLowOrder_I
+    use ModElectricField, ONLY: UseJCrossBForce
     use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
          RelativeEps_V, AbsoluteEps_V
     use ModBoundaryGeometry, ONLY: init_mod_boundary_cells, &
@@ -1906,6 +1907,9 @@ contains
 
        case("#DBTRICK")
           call read_var('UseDbTrick', UseDbTrick)
+
+       case("#LORENTZFORCE")
+          call read_var('UseJCrossBForce', UseJCrossBForce)
 
        case("#HYPERBOLICDIVE", "#CORRECTELECTRONFLUID", "#CORRECTEFIELD", &
             "#CMAXDIFFUSION")

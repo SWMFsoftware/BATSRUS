@@ -35,6 +35,7 @@ module ModElectricField
   use ModLinearSolver, ONLY: LinearSolverParamType, solve_linear_multiblock
   use ModVarIndexes,   ONLY: IsMhd
   use ModMultiFluid,   ONLY: UseMultiIon
+
   implicit none
   SAVE
 
@@ -47,10 +48,11 @@ module ModElectricField
   public:: calc_div_e               ! Calculate div(E)
   public:: calc_inductive_e         ! Calculate Eind
   public:: get_num_electric_field   ! Calculate numerical E from fluxes
+
   ! Logical, which controls, if the electric field in the frame of reference
   ! comoving with an average ions, is calculated via the momentum flux (in a
   ! conservative manner) or as J x B force.
-  logical, public:: UseJCrossBForce = UseB .and. (UseMultiIon .or. .not.IsMhd)
+  logical, public:: UseJCrossBForce = UseB .and. .not.IsMhd
   !$acc declare create(UseJCrossBForce)
 
   ! Make Efield available through this module too
