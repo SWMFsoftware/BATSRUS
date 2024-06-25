@@ -239,7 +239,7 @@ contains
     use ModB0,        ONLY: B0_DGB
 
     ! This subroutine needs to be described here!!!
-    
+
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
