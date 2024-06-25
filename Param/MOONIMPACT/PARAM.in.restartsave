@@ -1,0 +1,200 @@
+#DESCRIPTION
+Param/MOONIMPACT/PARAM.in.restartsave: Moon Impact test		StringDescription
+
+#PLANET
+Moon			NamePlanet
+
+#DIPOLE
+1.0e-6			DipoleStrengthSi [T]
+
+#MAGNETICAXIS
+T			IsMagAxisPrimary (rest of parameters read if true)
+90.0			MagAxisTheta
+180.0			MagAxisPhi
+
+#MAGNETICCENTER
+0.0			MagCenterX
+0.0			MagCenterY
+0.0			MagCenterZ
+
+#ROTATION
+F			UseRotation
+
+#GRAVITY
+T			UseGravity
+0			iDirGravity
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+500			DnSaveRestart
+-1			DtSaveRestart
+
+#UPDATECHECK
+F			UseUpdateCheck
+
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
+#GRID
+8			nRootBlock1
+4			nRootBlock2
+4			nRootBlock3
+-5.0			xMin
+ 5.0			xMax
+-5.0			yMin
+ 5.0			yMax
+-5.0			zMin
+ 5.0			zMax
+
+#LIMITRADIUS
+0.2			rMin
+10.5			rMax
+
+#GRIDRESOLUTION
+1			Resolution
+initial			StringShape
+
+GRIDLEVEL
+2			nLevel
+box_gen			StringShape
+0.9			rmin
+0.0			LonMin
+-90.0			LatMin
+1.4			rmax
+360.0			LonMax
+90.0			LatMax
+
+#GRIDBLOCKALL
+30000			MaxBlock
+
+#HYPERBOLICDIVB
+T			UseHyperbolicDivb
+500.0			SpeedHypDim
+0.1 HypDecay		HypDecay
+
+#COORDSYSTEM
+GSE			TypeCoordSystem
+
+#BODY
+F			UseBody
+
+#FIXAXIS
+T			DoFixAxis
+2.5			rFixAxis
+1.5			r2FixAxis
+
+#SOLARWIND
+1.2			SwNDim
+2e5			SwTDim
+0.0			SwUxDim
+0.0			SwUyDim
+400.0			SwUzDim
+30.0			SwBxDim
+0.0			SwByDim
+0.0			SwBzDim
+
+#PLASMA
+21.0			FluidMass
+1			IonCharge
+1.0			ElectronTemperatureRatio
+
+#KRYLOV
+GMRES			TypeKrylov
+nul			TypeInitKrylov
+0.001			ErrorMaxKrylov
+1000			MaxMatvecKrylov
+
+#MINIMUMPRESSURE
+0.001			pMinDim
+
+#MINIMUMDENSITY
+0.1			RhoMinDim
+
+#OUTERBOUNDARY
+float			TypeBc1
+inflow			TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
+
+#RESISTIVITY
+T			UseResistivity
+user			TypeResistivity
+0.0			Eta0Si
+
+#USERSWITCH
++init +ic  		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#USEIMPACT
+F			UseImpact
+
+#RESISTIVEPLANET
+5e-11			PlanetDensitySi
+1E-11			PlanetPressureSi
+1.0                     PlanetRadius
+6			nResistivPoints
+1.075			Radius
+0.0			Resistivity
+0.95			Radius
+1e12			Resistivety
+0.85			Radius
+8e8			Resistivety
+0.54			Radius
+8e7			Resistivity
+0.3			Radius
+8e6			Resistivity
+0.20			Radius
+8.e4			Resistivity
+
+#MOVESURFACE
+8			RootBlocks
+6			CellsPerBlock
+0.2			rMinUser
+10.5			rMaxUser
+1			RefineLevel
+
+#USERINPUTEND -------------------------------------
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder
+Sokolov			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
+
+#SEMIIMPLICIT
+F			UseSemiImplicit
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile [sec]
+rho dt p ux uy uz bx by bz		NameLogVars
+
+#SAVETECPLOT
+T			DoSaveOneTecFile
+
+#SAVEPLOT
+1			nPlotFile
+y=0 VAR tcp		StringPlot
+1000			DnSavePlot
+5.0			DtSavePlot
+{MHD} b1x b1y b1z eta e temp absdivb dt		NameVars
+g rbody			NamePars
+
+#STOP
+300			MaxIteration
+-1.0			tSimulationMax
