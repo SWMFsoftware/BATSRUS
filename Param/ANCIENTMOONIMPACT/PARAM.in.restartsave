@@ -1,0 +1,209 @@
+#DESCRIPTION
+Param/ANCIENTMOONIMPACT/PARAM.in.restartsave: Ancient Moon Impact test		StringDescription
+
+#ECHO
+T			DoEcho
+
+#PLANET
+Moon		NamePlanet
+
+#DIPOLE
+1.0e-6   DipoleStrength [T]
+
+#MAGNETICAXIS
+T       IsMagAxisPrimary (rest of parameters read if true)
+90.0       MagAxisTheta
+180.0     MagAxisPhi
+
+#MAGNETICCENTER
+0.0 MagCenterX
+0.0 MagCenterY
+0.0 MagCenterZ
+
+#ROTATION
+F   UseRotation
+
+#GRAVITY
+T   UseGravity
+0   iDirGravity
+
+#TIMEACCURATE
+F   DoTimeAccurate
+
+#SAVERESTART
+T   DoSaveRestart
+500
+-1
+
+#UPDATECHECK
+F   UseUpdateCheck
+
+#GRIDGEOMETRY
+spherical_lnr    TypeGeometry
+
+#GRID
+8			proc_dims(1)           nRootBlockX
+4                       proc_dims(2)           nRootBlockY
+4                       proc_dims(3),          nRootBlockZ
+-5.0                    x1            xMin
+5.0                   x2            xMax
+-5.0                    y1            yMin
+5.0                    y2            yMax
+-5.0                  z1            zMin
+5.0                    z2            zMax
+
+#LIMITRADIUS
+0.2                     rMin
+10.5                   rMax > (sqrt(100^2+100^2+100^2))
+
+#GRIDRESOLUTION
+1   AreaResolution
+initial
+
+GRIDLEVEL
+2			AreaResolution		nLevelArea
+box_gen			TypeRegion		StringShape
+0.9			rmin		XyzMinBox
+0.0			LonMin		XyzMinBox
+-90.0			LatMin		XyzMinBox
+2.0			rmax		XyzMaxBox
+360.0			LonMax		XyzMaxBox
+90.0			LatMax		XyzMaxBox
+
+#GRIDBLOCKALL
+30000		MaxBlock
+
+#HYPERBOLICDIVB
+T   UseHyperbolicDivb
+500.0   SpeedHypDim
+0.1 HypDecay
+
+#COORDSYSTEM
+GSE
+
+#BODY
+F   UseBody
+
+#FIXAXIS
+T   DoFixAxis
+2.5
+1.5
+
+#SOLARWIND
+1.2 SwNDim
+2e5 SwTDim
+0.0 SwUxDim
+0.0 SwUyDim
+400.0   SwUzDim
+30.0    SwBxDim
+0.0 SwByDim
+0.0 SwBzDim
+
+#PLASMA
+21.0    FluidMass
+1   AverageIonCharge
+1.0/1.0     ElectronTemperatureRatio
+
+#KRYLOV
+GMRES			TypeKrylov  (GMRES, BICGSTAB, CG)
+nul             	TypeInitKrylov (nul, old, explicit, scaled)		TypeKrylovInit
+0.001          		ErrorMaxKrylov
+1000             	MaxMatvecKrylov
+
+#MINIMUMPRESSURE
+0.001			pMinDim
+
+#MINIMUMDENSITY
+0.1			RhoMinDim
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0			nConservCrit
+
+#OUTERBOUNDARY
+float		TypeCellBc1
+inflow		TypeCellBc2
+periodic		TypeCellBc3
+periodic		TypeCellBc4
+periodic        TypeCellBc5
+periodic		TypeCellBc6
+
+#RESISTIVITY
+T			UseResistivity
+user			TypeResistivity
+0.0			Eta0Si
+
+#USERSWITCH
++init +ic  	StringSwitch
+
+#USERINPUTBEGIN --------------------
+
+#USEIMPACT
+F		UseImpact
+
+#RESISTIVEPLANET
+5e-11			PlanetDensitySi
+1E-11			PlanetPressureSi
+1.0                     PlanetRadius
+6                       nResistivPoints
+1.075                    Radius
+0.0                   Resistivity		Resistivety
+0.95                    Radius
+1e12		Resistivety
+0.85		Radius
+8e8		Resistivety
+0.54                     Radius
+8e7                    Resistivity		Resistivety
+0.3                    Radius
+8e6                     Resistivity		Resistivety
+0.20                    Radius
+8.e4                     Resistivity		Resistivety
+
+#MOVESURFACE
+8	RootBlocks
+6   CellsPerBlock
+0.2 rMinUser
+10.5 rMaxUser
+1   RefineLevel
+
+#USERINPUTEND ----------------------
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExlp		CflExpl
+
+#SCHEME
+2                       nOrder (1 or 2)
+Sokolov                 TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3                     TypeLimiter
+1.5                     LimiterBeta
+
+#SEMIIMPLICIT
+F			UseSemiImplicit
+
+#SAVEINITIAL
+T   DoSaveInitial
+
+#SAVELOGFILE
+T       DoSaveLogfile
+VAR   StringLog
+1       DnSaveLogfile
+-1.     DtSaveLogfile [sec]
+rho dt p ux uy uz bx by bz
+
+#SAVETECPLOT
+T   DoSaveOneTecFile
+
+#SAVEPLOT
+1			nPlotFile
+y=0 VAR tcp     StringPlot
+1000		DnSavePlot
+5.0			DtSavePlot
+rho ux uy uz b1x b1y b1z bx by bz p eta jx jy jz e temp absdivb dt		NameVars
+g rbody			NamePars
+
+#STOP
+300			MaxIteration
+-1			tSimulationMax
