@@ -71,7 +71,7 @@ box_gen			StringShape
 #HYPERBOLICDIVB
 T			UseHyperbolicDivb
 500.0			SpeedHypDim
-0.1 HypDecay		HypDecay
+0.1			HypDecay
 
 #COORDSYSTEM
 GSE			TypeCoordSystem
