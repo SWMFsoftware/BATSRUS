@@ -1,0 +1,229 @@
+#INCLUDE
+GM/restartIN/restart.H
+
+#DESCRIPTION
+Param/MOONIMPACT/PARAM.in.restartread: Moon Impact test		StringDescription
+
+#DIPOLE
+1.0e-6			DipoleStrengthSi [T]
+
+#MAGNETICAXIS
+T			IsMagAxisPrimary (rest of parameters read if true)
+90.0			MagAxisTheta
+180.0			MagAxisPhi
+
+#MAGNETICCENTER
+0.0			MagCenterX
+0.0			MagCenterY
+0.0			MagCenterZ
+
+#ROTATION
+F			UseRotation
+
+#GRAVITY
+T			UseGravity
+0			iDirGravity
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#SAVERESTART
+F			DoSaveRestart
+
+#UPDATECHECK
+F			UseUpdateCheck
+
+#HYPERBOLICDIVB
+T			UseHyperbolicDivb
+500.0			SpeedHypDim
+0.1			HypDecay
+
+#COORDSYSTEM
+GSE			TypeCoordSystem
+
+#BODY
+F			UseBody
+
+#FIXAXIS
+T			DoFixAxis
+2.5			rFixAxis
+1.5			r2FixAxis
+
+#COARSEAXIS
+T			UseCoarseAxis
+1			nCoarseLayer
+
+#BORIS
+F			UseBorisCorrection
+
+#PLASMA
+21.0			FluidMass
+1			IonCharge
+1.0/1.0			ElectronTemperatureRatio
+
+#KRYLOV
+GMRES			TypeKrylov
+nul			TypeInitKrylov
+0.001			ErrorMaxKrylov
+1000			MaxMatvecKrylov
+
+TEST
+krylov			StringTest
+
+#MINIMUMPRESSURE
+0.001			pMinDim
+
+#MINIMUMDENSITY
+0.1			RhoMinDim
+
+#REGION
+poles			NameRegion
+doubleconez tapered		StringShape
+0.0			xPosition
+0.0			yPosition
+0.0			zPosition
+3.0			Height
+0.6			Radius
+0.2			Taper
+
+LOWORDERREGION
++poles
+
+ADAPTIVELOWORDER
+T			UseAdaptiveLowOrder
+1			nLowOrder
+2.0			PCritLow
+1.5			PCritHigh
+1e6			VelCrit
+
+#OUTERBOUNDARY
+float			TypeBc1
+inflow			TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
+
+BOXBOUNDARY
+fixed			TypeBcXmin
+fixed			TypeBcXmax
+fixed			TypeBcYmin
+fixed			TypeBcYmax
+fixed			TypeBcZmin
+fixed			TypeBcZmax
+
+BOUNDARYSTATE
+coord1max xMinBox xMaxBox yMinBox yMaxBox zMinBox zMaxBox 		StringBoundary
+26.0			BoundaryStateDim_V Rho
+0.0			BoundaryStateDim_V Ux
+0.0			BoundaryStateDim_V Uy
+400.0			BoundaryStateDim_V Uz
+30.0			BoundaryStateDim_V Bx
+0.0			BoundaryStateDim_V By
+0.0			BoundaryStateDim_V Bz
+0.0			BoundaryStateDim_V Hyp
+.00138			BoundaryStateDim_V p		P
+
+BOUNDARYSTATE
+coord1min		StringBoundary
+0.1			BoundaryStateDim_V Rho
+0.0			BoundaryStateDim_V Ux
+0.0			BoundaryStateDim_V Uy
+0.0			BoundaryStateDim_V Uz
+5.0			BoundaryStateDim_V Bx
+0.0			BoundaryStateDim_V By
+0.0			BoundaryStateDim_V Bz
+0.0			BoundaryStateDim_V Hyp
+0.0			BoundaryStateDim_V p		P
+
+#RESISTIVITY
+T			UseResistivity
+user			TypeResistivity
+0.0			Eta0Si
+
+#USERSWITCH
++init +ic  		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#USEIMPACT
+T			UseImpact
+
+#RESISTIVEPLANET
+5e-11			PlanetDensitySi
+1E-11			PlanetPressureSi
+1.0                     PlanetRadius
+6                       nResistivPoints
+1.075			Radius
+0.0			Resistivity
+0.95                    Radius
+1e12			Resistivety
+0.85			Radius
+8e8			Resistivety
+0.54			Radius
+8e7                    	Resistivity
+0.3                    	Radius
+8e6                     Resistivity
+0.20                    Radius
+8.e4			Resistivity
+
+#MOVESURFACE
+8			RootBlocks
+6			CellsPerBlock
+0.2			rMinUser
+10.5			rMaxUser
+1			RefineLevel
+
+#USERINPUTEND -------------------------------------
+
+#TIMESTEPPING
+2			nStage
+0.4			CflExpl
+
+#SCHEME
+2			nOrder
+Sokolov			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
+
+SOLIDSTATE
+T			UseSolidState
+user			TypeBcSolid
+sphere			TypeSolidGeometry
+1.0			rSolid
+5e-3			SolidLimitDt
+
+#SEMIIMPLICIT
+T			UseSemiImplicit
+resistivity		TypeSemiImplicit
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile [sec]
+rho dt p ux uy uz bx by bz		NameLogVars
+
+#SAVETECPLOT
+T			DoSaveOneTecFile
+
+#SAVEPLOT
+1			nPlotFile
+y=0 VAR tcp		StringPlot
+-1			DnSavePlot
+50.0			DtSavePlot
+{MHD} b1x b1y b1z eta e temp absdivb dt loworder lowcritx lowcrity lowcritz		NameVars
+g rbody			NamePars
+
+3d VAR tcp		StringPlot
+-1000			DnSavePlot
+120.0			DtSavePlot
+{MHD} b1x b1y b1z eta jx jy jz e temp absdivb dt loworder		NameVars
+g rbody			NamePars
+
+#STOP
+-1			MaxIteration
+1.0			tSimulationMax
