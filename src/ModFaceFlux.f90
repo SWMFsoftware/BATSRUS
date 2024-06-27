@@ -2098,12 +2098,19 @@ contains
 
     real:: Un, RhoFace
     !--------------------------------------------------------------------------
-    Un = 0.5* &
-         ( State_VGB(U_+iDim,iLeft,jLeft,kLeft,iBlockFace)    &
-         / State_VGB(Rho_,   iLeft,jLeft,kLeft,iBlockFace)    &
-         + State_VGB(U_+iDim,iRight,jRight,kRight,iBlockFace) &
-         / State_VGB(Rho_,   iRight,jRight,kRight,iBlockFace))
-
+    if(IsCartesian)then
+       Un = 0.5* &
+            ( State_VGB(U_+iDim,iLeft,jLeft,kLeft,iBlockFace)    &
+            / State_VGB(Rho_,   iLeft,jLeft,kLeft,iBlockFace)    &
+            + State_VGB(U_+iDim,iRight,jRight,kRight,iBlockFace) &
+            / State_VGB(Rho_,   iRight,jRight,kRight,iBlockFace))
+    else
+       Un = 0.5*( &
+            sum(Normal_D*State_VGB(Ux_:Uz_,iLeft,jLeft,kLeft,iBlockFace)) &
+            / State_VGB(Rho_,iLeft,jLeft,kLeft,iBlockFace) +   &
+            sum(Normal_D*State_VGB(Ux_:Uz_,iRight,jRight,kRight,iBlockFace)) &
+            / State_VGB(Rho_,iRight,jRight,kRight,iBlockFace))
+    end if
     if(Un > 0)then
        RhoFace = StateLeft_V(Rho_)
     else

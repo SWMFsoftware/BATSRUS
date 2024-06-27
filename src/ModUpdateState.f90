@@ -149,7 +149,7 @@ contains
     end if
 
     ! Note must copy state to old state only if iStage is 1.
-    if(iStage==1) &
+    if(iStage == 1) &
          StateOld_VGB(:,:,:,:,iBlock) = State_VGB(:,:,:,:,iBlock)
 
     ! The first call may set UseUserUpdateStates to false
@@ -318,7 +318,7 @@ contains
        end do; end do; end do
     end if
 
-    do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar+nFluid
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar+nFluid
        DtLocal = DtFactor*DtMax_CB(i,j,k,iBlock)
        Source_VC(iVar,i,j,k) = &
             DtLocal* (Source_VC(iVar,i,j,k) + &
@@ -383,7 +383,7 @@ contains
                 ! Tests show that putting the energy source terms after
                 ! the point implicit update is more stable than putting
                 ! the source terms in ModCalcSource.
-                do k=1,nK; do j=1,nJ; do i=1,nI
+                do k = 1, nK; do j = 1, nJ; do i = 1, nI
                    DtLocal = DtFactor*DtMax_CB(i,j,k,iBlock)
 
                    SourceIonEnergy_I = ChargePerMass_I* (         &
@@ -611,7 +611,7 @@ contains
       ! Move energy source terms to pressure index as needed
       ! Ions first
       if(.not.UseNonConservative)then
-         do k = 1, nK; do j = 1, nJ; do i =1, nI
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             Source_VC(iPIon_I,i,j,k) = &
                  Source_VC(Energy_:Energy_+nIonFluid-1,i,j,k)
@@ -701,20 +701,20 @@ contains
          select case(iStage)
          case(1)
             ! Rk4 = U1 = Un + Dt/2*Rn
-            do k=1,nK; do j=1,nJ; do i=1,nI
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
                Rk4_VCB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock)
             end do; end do; end do
          case(2)
             ! U2 = Un + Dt/2*R1
             ! Rk4 = Rk4 + 2*U2 = 3*Un + Dt/2*Rn + Dt*R1
-            do k=1,nK; do j=1,nJ; do i=1,nI
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
                Rk4_VCB(:,i,j,k,iBlock) = Rk4_VCB(:,i,j,k,iBlock) &
                     + 2*State_VGB(:,i,j,k,iBlock)
             end do; end do; end do
          case(3)
             ! U3 = Un + Dt*R2
             ! Rk4 = Rk4 + U3 - 4Un = Dt/2*Rn + Dt*R1 + Dt*R2
-            do k=1,nK; do j=1,nJ; do i=1,nI
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
                Rk4_VCB(:,i,j,k,iBlock) = Rk4_VCB(:,i,j,k,iBlock) &
                     + State_VGB(:,i,j,k,iBlock) &
                     - 4*StateOld_VGB(:,i,j,k,iBlock)
@@ -722,7 +722,7 @@ contains
          case(4)
             ! U4 = Un + Dt/6*R3
             ! Un+1 = U4 + Rk4/3 = Un + Dt/6*(Rn + 2*R1 + 2*R2 + R3)
-            do k=1,nK; do j=1,nJ; do i=1,nI
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
                State_VGB(:,i,j,k,iBlock) = &
                     + State_VGB(:,i,j,k,iBlock) &
                     + cThird*Rk4_VCB(:,i,j,k,iBlock)
@@ -889,7 +889,7 @@ contains
          do iFluid = 1, nFluid
             if(RhoMin_I(iFluid) < 0) CYCLE
             iRho = iRho_I(iFluid)
-            do k=1,nK; do j=1,nJ; do i=1,nI
+            do k = 1, nK; do j = 1, nJ; do i = 1, nI
                State_VGB(iRho,i,j,k,iBlock) = max(RhoMin_I(iFluid), &
                     State_VGB(iRho,i,j,k,iBlock))
             end do; end do; end do
@@ -901,8 +901,8 @@ contains
       end if
 
       if(DoUpdate_V(p_) .and. &
-           (UseDbTrickNow .and. (nStage==2 .and. iStage==1 &
-           .or.               nStage==1 .and. .not.IsTimeAccurate))) then
+           (UseDbTrickNow .and. (nStage == 2 .and. iStage == 1 &
+           .or. nStage == 1 .and. .not.IsTimeAccurate))) then
 
          ! A desparate attempt to maintain positivity by adding dB^2/2 to the
          ! energy. This is fine for steady state, and is 2nd order accurate
@@ -1110,7 +1110,7 @@ contains
          iVarSemi = p_
       endif
 
-      do k=1,nK; do j=1,nJ; do i=1,nI
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
          ! DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
 
          ! For the first iteration, dt = 0;
@@ -1145,7 +1145,7 @@ contains
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i,j,k,iBlock, TeOut=Te0SI)
           State_VGB(Te0_,i,j,k,iBlock) = Te0SI * Si2No_V(UnitTemperature_)
@@ -1271,7 +1271,7 @@ contains
              !$omp      reduction(max:pChangeLimit_S)
              do iBlock = 1, nBlock
                 if(Unused_B(iBlock)) CYCLE
-                do k=1,nK; do j=1,nJ; do i=1,nI
+                do k = 1, nK; do j = 1, nJ; do i = 1, nI
                    do iVar = 1, nVar
                       if(DefaultState_V(iVar) == 0.0) CYCLE
 
@@ -1357,7 +1357,7 @@ contains
              if(Unused_B(iBlock)) CYCLE
 
              ! Fix the update in the cells
-             do k=1,nK; do j=1,nJ; do i=1,nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 call fix_update(i,j,k,iBlock,TimeFraction)
              end do; end do; end do
           end do
@@ -1390,7 +1390,7 @@ contains
        !$omp reduction(min:TimeFractionReport)
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              TimeFractionCell = 1.
              do nCheck = 1, MaxCheck
                 DoneUpdateCheck = .true.
@@ -1506,7 +1506,7 @@ contains
           !$omp parallel do private(i,j,k)
           do iBlock = 1,nBlock
              if(Unused_B(iBlock))CYCLE
-             do k=1,nK; do j=1,nJ; do i=1,nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock))CYCLE
                 if(abs(100. * abs( min( 0., &
                      (State_VGB(Rho_,i,j,k,iBlock)-&
@@ -1670,7 +1670,7 @@ contains
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           do iFluid = 1, nFluid
              if(nFluid > 1) call select_fluid(iFluid)
@@ -1816,7 +1816,7 @@ contains
        end if
     end if
 
-    do iBlock=1,nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
        ! Save total magnetic field into Bx, By ,Bz
@@ -1898,7 +1898,7 @@ contains
     end if
 
     if(UseSingleIonVelocity) then
-       do k=1, nK; do j=1, nJ; do i=1, nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Calcualate average velocity from total momentum and density
@@ -1919,7 +1919,7 @@ contains
     end if
 
     if(UseSingleIonTemperature) then
-       do k=1, nK; do j=1, nJ; do i=1, nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Number density
