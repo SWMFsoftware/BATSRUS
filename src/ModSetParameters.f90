@@ -2446,6 +2446,8 @@ contains
                    call read_var('BodyTDim', BodyTDim_I(iFluid))
                 end do
              end if
+          else
+             rBody = 0.0
           end if
        case("#CORONA")
           if(.not.is_first_session())CYCLE READPARAM
@@ -3182,9 +3184,9 @@ contains
       select case(NameThisComp)
       case('SC', 'IH', 'OH', 'EE')
          ! Body parameters
-         UseGravity = .true.
-         Rbody      = 1.0
-         Rcurrents  =-1.0
+         UseGravity  = .true.
+         Rbody       =  1.0
+         Rcurrents   = -1.0
          RotPeriodSi = RotationPeriodSun
          ! Boundary Conditions
          ! Default boundary type is 'none'.
