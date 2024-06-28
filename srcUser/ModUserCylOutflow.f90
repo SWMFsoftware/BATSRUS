@@ -28,7 +28,7 @@ module ModUser
 
   ! Outflow parameters
   real:: u0 = 0.0, u1 = 1.0, Exponent = 1.0
-  
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -93,7 +93,7 @@ contains
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     ! Set "false" cells that are surrounded by the "extra" face boundary
- 
+
     integer, intent(in):: iBlock, iSide
     character(len=*), intent(in):: TypeBc
     logical, intent(out):: IsFound
@@ -101,13 +101,13 @@ contains
     integer:: iPict, iPictLast = 0
     character(len(NameFileIni)):: NameFile
     character(len=3):: NamePict
-    
-    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
+
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
     if(iBlock /= 1) call stop_mpi(NameSub//' only works for 1 block')
     if(iSide /= 1) RETURN
     IsFound = .true.
-    
+
     ! Increase iPict from 0 to 1 when tSimulation reaches 1/64
     iPict = ceiling(64*tSimulation)
     if(iPict > iPictLast)then
@@ -123,7 +123,7 @@ contains
             / State_VGB(Rho_,MinI:0,1:nJ,1,1)
        State_VGB(Uy_,MinI:0,1:nJ,1,1) = State_VGB(RhoUy_,MinI:0,1:nJ,1,1) &
             / State_VGB(Rho_,MinI:0,1:nJ,1,1)
-       
+
        ! Copy ghost cells to density
        State_VGB(Rho_,MinI:0,1:nJ,1,1) = State_VGB(p_,MinI:0,1:nJ,1,1) &
             *r_GB(MinI:0,1:nJ,1,1)**Exponent
