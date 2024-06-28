@@ -2119,7 +2119,7 @@ test_moonimpact_start:
 	$(MAKE) test_moonimpact_check
 
 test_moonimpact_compile:
-	./Config.pl -u=MoonImpact -e=MhdHyp -ng=2 -g=6,6,6
+	./Config.pl -noopenmp -u=MoonImpact -e=MhdHyp -ng=2 -g=6,6,6
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -2129,7 +2129,7 @@ test_moonimpact_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_moonimpact_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_moonimpact_check:
@@ -2150,14 +2150,14 @@ test_moonimpact_restart:
 test_moonimpact_restart_save:
 	cd ${TESTDIR}; cp Param/MOONIMPACT/PARAM.in.restartsave PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartSave
 
 test_moonimpact_restart_read:
 	cd ${TESTDIR}; cp Param/MOONIMPACT/PARAM.in.restartread PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartRead
 
 test_moonimpact_restart_check:
