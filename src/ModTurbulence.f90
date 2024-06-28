@@ -13,6 +13,7 @@ module ModTurbulence
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
   use ModMultiFluid, ONLY: nIonFluid
+  use ModTransitionRegion, ONLY: PoyntingFluxPerBSi, LperpTimesSqrtBSi
   use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
        UseAwRepresentative
   use omp_lib
@@ -28,13 +29,12 @@ module ModTurbulence
   logical :: UseNewLimiter4Reflection
 
   ! The Poynting flux to magnetic field ratio (one of the input parameters
-  ! in SI unins and diminsionless:
-  real :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
+  ! dimensionless):
+  real :: PoyntingFluxPerB
   real :: ImbalanceMax = 2.0, ImbalanceMax2 = 4.0
 
   ! Alfven wave dissipation
   logical :: UseAlfvenWaveDissipation = .false.
-  real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real    :: LperpTimesSqrtB
   real :: Crefl = 0.04
 
