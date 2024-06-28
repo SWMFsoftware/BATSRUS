@@ -1,4 +1,4 @@
-Config.pl -e=Hd -u=CylOutflow -g=10,10,1
+Config.pl -e=Hd -u=CylOutflow -g=124,512,1
 
 #DESCRIPTION
 Param/CYLOUTFLOW/PARAM.in: Radial Outflow		StringDescription
