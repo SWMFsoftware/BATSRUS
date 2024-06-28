@@ -11,7 +11,7 @@ module ModUser
        IMPLEMENTED6 => user_set_cell_boundary
 
   use ModMain, ONLY: tSimulation
-  use ModAdvance, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, p_, State_VGB
+  use ModAdvance, ONLY: Rho_, Ux_, Uy_, RhoUx_, RhoUy_, RhoUz_, p_, State_VGB
   use ModGeometry, ONLY: r_GB
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModPlotFile, ONLY: read_plot_file
@@ -117,9 +117,23 @@ contains
        write(*,*) NameSub, ' reading file ', NameFile
        ! Read into pressure variable
        call read_plot_file(NameFile, VarOut_II=State_VGB(p_,MinI:nI,1:nJ,1,1))
+
+       ! Convert momentum to velocity
+       State_VGB(Ux_,MinI:0,1:nJ,1,1) = State_VGB(RhoUx_,MinI:0,1:nJ,1,1) &
+            / State_VGB(Rho_,MinI:0,1:nJ,1,1)
+       State_VGB(Uy_,MinI:0,1:nJ,1,1) = State_VGB(RhoUy_,MinI:0,1:nJ,1,1) &
+            / State_VGB(Rho_,MinI:0,1:nJ,1,1)
+       
        ! Copy ghost cells to density
        State_VGB(Rho_,MinI:0,1:nJ,1,1) = State_VGB(p_,MinI:0,1:nJ,1,1) &
             *r_GB(MinI:0,1:nJ,1,1)**Exponent
+
+       ! Convert back to momentum
+       State_VGB(Ux_,MinI:0,1:nJ,1,1) = State_VGB(RhoUx_,MinI:0,1:nJ,1,1) &
+            * State_VGB(Rho_,MinI:0,1:nJ,1,1)
+       State_VGB(Uy_,MinI:0,1:nJ,1,1) = State_VGB(RhoUy_,MinI:0,1:nJ,1,1) &
+            * State_VGB(Rho_,MinI:0,1:nJ,1,1)
+
     end if
 
   end subroutine user_set_cell_boundary
