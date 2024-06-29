@@ -1,0 +1,99 @@
+Config.pl -e=Hd -u=CylOutflow -g=124,512,1
+
+#DESCRIPTION
+Param/CYLOUTFLOW/PARAM.in: Radial Outflow		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#GRIDBLOCKALL
+2			MaxBlock
+
+#GRID
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-25.0			xMin
+ 25.0			xMax
+-25.0			yMin
+ 25.0			yMax
+-0.5			zMin
+ 0.5			zMax
+
+#GRIDGEOMETRY
+cylindrical		TypeGeometry
+
+#LIMITRADIUS
+4.13804			rMin
+23.5433			rMax
+
+BUMP
+Rho			NameVar
+10.0			Amplitude
+3.0			WidthX
+3.0			WidthY
+-1.0			WidthZ
+5.0			CenterX
+6.0			CenterY
+0.0			CenterZ
+2			nPower
+
+#USERINPUTBEGIN -----------------------------------
+
+#OUTFLOW
+10.0			u0
+0.0			u1
+-1.0			Exponent
+
+#USERINPUTEND -------------------------------------
+
+#UPDATEVAR
+Rho			StringVarUpdate
+
+#OUTERBOUNDARY
+user			TypeBc1 rMin
+float			TypeBc2 rMax
+periodic		TypeBc3 PhiMin
+periodic		TypeBc4 PhiMax
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+2.0			LimiterBeta
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#PLOTFILENAME
+second			NameMaxTimeUnit
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 hd idl		StringPlot
+-1			DnSavePlot
+0.1			DtSavePlot
+0.0			DxSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+1.0			tSimulationMax
