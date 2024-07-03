@@ -287,9 +287,8 @@ contains
                ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl
           if(nConservCrit > 0) write(*,*)NameSub,' IsConserv=', &
                IsConserv_CB(iTest,jTest,kTest,iBlock)
-          write(*,*)
           do iVar = 1, nVar
-             write(*,*)' ', NameVar_V(iVar), '(TestCell)  =',&
+             write(*,*)NameVar_V(iVar), '(TestCell)  =',&
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
           end do
           ! switch on to test first ghost cell in the i direction
