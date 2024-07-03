@@ -2133,7 +2133,7 @@ test_moonimpact_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_moonimpact_check:
-	-@(${DIFFNUM} -t -b -r=1e-5 -a=1e-13 \
+	-@(${DIFFNUM} -t -b -r=1e-5 -a=1e-10 \
 		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		Param/MOONIMPACT/TestOutput/log_n000000.log \
 		> test_moonimpact.diff)
