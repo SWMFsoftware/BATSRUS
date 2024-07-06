@@ -10,7 +10,7 @@ module ModThreadedLC
   use BATL_lib, ONLY: test_start, test_stop, iProc, Xyz_DGB
   use ModChromosphere,    ONLY: TeChromosphereSi
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
-       HeatCondParSi, LengthPavrSi_, uLengthPavrSi_, UHeat_, HeatFluxLength_,&
+       HeatCondParSi, LengthPavrSi_, UHeat_, HeatFluxLength_,&
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
   use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
        PSi_, TeSi_, TiSi_, AMajor_, AMinor_,                             &
@@ -290,7 +290,7 @@ contains
          DTeOverDsSiOut, PeSiOut, PiSiOut, RhoNoDimOut, AMajorOut
 
     ! Arrays needed to use lookup table
-    real    :: Value_V(LengthPavrSi_:uLengthPavrSi_)
+    real    :: Value_V(LengthPavrSi_:DlogLambdaOverDlogT_)
     ! Limited Speed
     real    :: USi
     !---------Used in 1D numerical model------------------------
@@ -305,11 +305,6 @@ contains
 
     ! Electron heat condution flux from Low Corona to TR:
     real :: HeatFlux2TR
-    ! Particle flux to/from TR:
-    ! u*concentration*cBoltzmann*LengthTr
-    real :: uLengthPavr
-    ! Argument of the lookup table: speed at the minimum Te (1e4 K):
-    real :: uMinSi
     !
     ! Constant particle flux per B times k_B
     ! k_B n_i (= P_tot/(ZTe + Ti)) U/B Normalize per Flux2B costant ratio
@@ -332,11 +327,8 @@ contains
     FluxConst    = USiIn * PeSiIn/&
          (TeSiIn*PoyntingFluxPerBSi*&
          BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-    uLengthPavr = ChromoEvapCoef*FluxConst/( SqrtZ*&
-         BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(-nPoint,j,k) )
-    call interpolate_lookup_table(iTableTR, uLengthPavrSi_, uLengthPavr, &
-         Value_V=Value_V, Arg1In = TeSiIn, Arg2Out = uMinSi, &
-         DoExtrapolate=.false.)
+    call interpolate_lookup_table(iTableTR, TeSiIn, 0.0, &
+         Value_V=Value_V, DoExtrapolate=.false.)
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
     PeSiOut        = Value_V(LengthPAvrSi_)*SqrtZ/&
@@ -383,7 +375,7 @@ contains
        ! As a first approximation, recover Te from the analytical solution
        TeSi_I(nPoint) = TeSiIn; TiSi_I(nPoint) = TiSiIn
        do iPoint = nPoint-1, 1, -1
-          call interpolate_lookup_table(Arg2In=uMinSi, &
+          call interpolate_lookup_table(Arg2In=0.0, &
                iTable=iTableTR,         &
                iVal=LengthPAvrSi_,      &
                ValIn=PeSiOut/SqrtZ*     &
@@ -631,11 +623,8 @@ contains
       ! 5/2*U*Pi*(Z+1)/Ti
       EnthalpyFlux = FluxConst*(InvGammaMinus1 +1)*(1 + Z)
       ! Calculate flux to TR and its temperature derivative
-      uLengthPavr = ChromoEvapCoef*FluxConst/( SqrtZ*&
-           BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(-nPoint,j,k) )
-      call interpolate_lookup_table(iTableTR, uLengthPavrSi_, uLengthPavr, &
-           Value_V=Value_V, Arg1In = TeSi_I(1), Arg2Out = uMinSi, &
-           DoExtrapolate=.false.)
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), 0.0, &
+           Value_V=Value_V, DoExtrapolate=.false.)
 
       do iIter = 1,nIterHere
          ! Iterations
@@ -773,11 +762,8 @@ contains
          ! Calculate TR pressure
          ! For next iteration calculate TR heat flux and
          ! its temperature derivative
-         uLengthPavr = ChromoEvapCoef*FluxConst/( SqrtZ*&
-              BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(-nPoint,j,k) )
-         call interpolate_lookup_table(iTableTR, uLengthPavrSi_, uLengthPavr,&
-              Value_V=Value_V, Arg1In = TeSi_I(1), Arg2Out = uMinSi, &
-              DoExtrapolate=.false.)
+         call interpolate_lookup_table(iTableTR, TeSi_I(1), 0.0, &
+              Value_V=Value_V, DoExtrapolate=.false.)
          ! Set pressure for updated temperature
          Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
          call set_pressure
