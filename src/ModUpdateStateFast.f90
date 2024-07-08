@@ -2132,8 +2132,8 @@ contains
                   iSideTest
           end if
           write(*,*)'BB =', &
-               sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
-               +[B0_D(1), B0_D(2), B0_D(3)])**2), iSideTest
+               sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + B0_D &
+               )**2), iSideTest
        end if
        write(*,*)
        write(*,*) 'Area=', Area, iSideTest
