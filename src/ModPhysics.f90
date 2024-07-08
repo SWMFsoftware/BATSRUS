@@ -782,6 +782,8 @@ contains
 
     !$acc update device(PolarRho_I, PolarP_I)
 
+    !$acc update device(ChargePerMass_I)
+
     call test_stop(NameSub, DoTest)
 
   end subroutine set_physics_constants
