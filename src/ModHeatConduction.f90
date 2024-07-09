@@ -374,7 +374,7 @@ contains
        iTeImpl = 1
     end if
 
-   !$acc update(TiFraction, TeFraction)
+   !$acc update device(TiFraction, TeFraction)
 
     call test_stop(NameSub, DoTest)
   end subroutine init_heat_conduction
@@ -918,9 +918,9 @@ contains
           HeatExchangePeP = DtLocal*PePImpl &
                *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
 
+#ifndef _OPENACC          
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
-#ifndef _OPENACC
              HeatExchangePePpar = DtLocal*PePImpl &
                   *(State_VGB(Ppar_,i,j,k,iBlock) &
                   - State_VGB(Pe_,i,j,k,iBlock))
@@ -941,12 +941,12 @@ contains
 
                 State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
                      - HeatExchangePePpar - HeatExchangePPpar
-#endif
              else
                 State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
                      - HeatExchangePePpar
              end if
           end if
+#endif
 
           ! Heat exchange for the ions
           State_VGB(P_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock) &
