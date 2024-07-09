@@ -58,6 +58,7 @@ module ModHeatConduction
   ! electron/ion temperature used for calculating heat flux
   real, allocatable :: Te_GI(:,:,:,:), Ti_GI(:,:,:,:)
   !$omp threadprivate( Te_GI, Ti_GI )
+  !$acc declare create(Te_GI, Ti_GI)
 
   ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
   ! so that p=rho/massion *T*(1+ne/n Te/T)
@@ -857,6 +858,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_ei_heat_exchange'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+    call timing_start(NameSub)
     HeatExchange = 0.0
     HeatExchangePeP = 0.0
     HeatExchangePePpar = 0.0
@@ -959,6 +961,7 @@ contains
 
     end do
 
+    call timing_stop(NameSub)    
     call test_stop(NameSub, DoTest)
   end subroutine calc_ei_heat_exchange
   !============================================================================

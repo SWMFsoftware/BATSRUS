@@ -79,6 +79,7 @@ module ModPhysics
   real :: MassIonElectron_I(nIonFluid+1)
   real :: ReducedMass_II(nIonFluid+1,nIonFluid+1)
   real :: CollisionCoef_II(nIonFluid+1,nIonFluid+1)
+  !$acc declare create(CollisionCoef_II)
 
   ! Ion charge for multi-species.
   real :: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
@@ -783,6 +784,8 @@ contains
     !$acc update device(PolarRho_I, PolarP_I)
 
     !$acc update device(MassIon_I, ChargeIon_I, ChargePerMass_I)
+
+    !$acc update device(CollisionCoef_II)
 
     call test_stop(NameSub, DoTest)
 
