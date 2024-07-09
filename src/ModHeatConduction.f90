@@ -57,13 +57,14 @@ module ModHeatConduction
 
   ! electron/ion temperature used for calculating heat flux
   real, allocatable :: Te_GI(:,:,:,:), Ti_GI(:,:,:,:)
-  !$omp threadprivate( Te_GI, Ti_GI )   
+  !$omp threadprivate( Te_GI, Ti_GI )
 
   ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
   ! so that p=rho/massion *T*(1+ne/n Te/T)
   ! TiFraction is defined such that Ti = p/rho * TiFraction
   ! TeFraction is defined such that Te = p/rho * TeFraction
   real :: TiFraction, TeFraction
+  !$acc declare create(TiFraction, TeFraction)
 
   ! Array needed for second order interpolation of ghost cells
   real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
@@ -372,6 +373,8 @@ contains
 
        iTeImpl = 1
     end if
+
+   !$acc update(TiFraction, TeFraction)
 
     call test_stop(NameSub, DoTest)
   end subroutine init_heat_conduction
@@ -858,6 +861,7 @@ contains
     HeatExchangePeP = 0.0
     HeatExchangePePpar = 0.0
 
+   !$acc parallel loop gang independent
     do iBlock = 1, nBlock
 
 #ifdef _OPENACC
@@ -865,33 +869,40 @@ contains
 #else
        iGang = 1
 #endif
-       
+
        if (Unused_B(iBlock)) CYCLE
        ! For the electron flux limiter, we need Te in the ghostcells
        if(UseMultiIon)then
+         !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Te_GI(i,j,k,iGang) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
                   ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
           end do; end do; end do
        elseif(UseIdealEos)then
+         !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Te_GI(i,j,k,iGang) = TeFraction &
                   *State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
        else
+#ifndef _OPENACC
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, TeOut = TeSi)
              Te_GI(i,j,k,iGang) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
+#endif
        end if
+
+#ifndef _OPENACC
        ! More work is to be done for if .not.UseIdealEos or UseMultion
        if(.not.UseIdealEos)call stop_mpi(&
             'No explicit ei heat exchange for non-idealized plasmas')
 
        if(UseMultiion)call stop_mpi(&
             'No explicit ei heat exchange for non-idealized plasmas')
-
+#endif
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
@@ -909,6 +920,7 @@ contains
 
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
+#ifndef _OPENACC
              HeatExchangePePpar = DtLocal*PePImpl &
                   *(State_VGB(Ppar_,i,j,k,iBlock) &
                   - State_VGB(Pe_,i,j,k,iBlock))
@@ -929,6 +941,7 @@ contains
 
                 State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
                      - HeatExchangePePpar - HeatExchangePPpar
+#endif
              else
                 State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
                      - HeatExchangePePpar
@@ -1043,7 +1056,6 @@ contains
        iGang = 1
 #endif
 
-       
        if(DoCalcDelta) then
           ! For the electron flux limiter, we need Te in the ghostcells
           if(UseMultiIon)then
