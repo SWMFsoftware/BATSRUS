@@ -782,7 +782,7 @@ contains
 
     !$acc update device(PolarRho_I, PolarP_I)
 
-    !$acc update device(ChargePerMass_I)
+    !$acc update device(MassIon_I, ChargeIon_I, ChargePerMass_I)
 
     call test_stop(NameSub, DoTest)
 

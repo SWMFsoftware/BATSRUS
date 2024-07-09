@@ -48,7 +48,7 @@ module ModMultiFluid
   real :: MassIon_I(nIonFluid)
   real :: ChargeIon_I(nIonFluid)=1.0
   real :: ChargePerMass_I(nIonFluid) = 1.0
-  !$acc declare create(ChargePerMass_I)
+  !$acc declare create(MassIon_I, ChargeIon_I, ChargePerMass_I)
 
   ! Allow using fully non-conservative scheme for the neutral fluids
   logical :: DoConserveNeutrals    = .true.
