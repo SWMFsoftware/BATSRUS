@@ -920,7 +920,7 @@ contains
           HeatExchangePeP = DtLocal*PePImpl &
                *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
 
-#ifndef _OPENACC          
+#ifndef _OPENACC
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
              HeatExchangePePpar = DtLocal*PePImpl &
@@ -961,7 +961,7 @@ contains
 
     end do
 
-    call timing_stop(NameSub)    
+    call timing_stop(NameSub)
     call test_stop(NameSub, DoTest)
   end subroutine calc_ei_heat_exchange
   !============================================================================
