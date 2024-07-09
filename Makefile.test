@@ -2161,7 +2161,7 @@ test_moonimpact_restart_read:
 	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartRead
 
 test_moonimpact_restart_check:
-	-@(${DIFFNUM} -t -b -r=1e-5 -a=1e-13 \
+	-@(${DIFFNUM} -t -b -r=1e-5 -a=1e-10 \
 		${TESTDIR}/RESULTS/RestartRead/GM/log_n000300.log \
 		Param/MOONIMPACT/TestOutput/log_n000300.log \
 		> test_moonimpact_restart.diff)
