@@ -1880,7 +1880,7 @@ contains
       if(UseElectronPressure .and. (nIonFluid == 1 .or. UseTotalIonEnergy) &
            .and. iFluid == 1 .and. HallCoeff > 0)then
          if(UseElectronEnergy)then
-            ! There are two terms: Ue*Pe/(gamma-1) and Ue*Pe
+            ! There are two terms: Ue*Pe/(ge-1) + Ue*Pe = Ue*Pe*ge/(ge-1)
             Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*Pe &
                  *GammaElectron*InvGammaElectronMinus1
          else

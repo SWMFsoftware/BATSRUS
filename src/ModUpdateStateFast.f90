@@ -14,7 +14,8 @@ module ModUpdateStateFast
        UseElectronEntropy
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
-  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid
+  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
+      ChargePerMass_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
@@ -585,9 +586,12 @@ contains
             State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
             IsConserv)
 
+       ! Convert electron pressure to entropy.
        if(UseElectronPressure .and. UseElectronEntropy) &
             State_VGB(Pe_,i,j,k,iBlock) = &
-            State_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
+            State_VGB(Pe_,i,j,k,iBlock)*&
+            sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+            **(-GammaElectronMinus1)
 
        State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
             + DtLocal*Change_V(1:nVar)
@@ -603,9 +607,12 @@ contains
             StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
             IsConserv)
 
+       ! Convert electron pressure to entropy
        if(UseElectronPressure .and. UseElectronEntropy) &
-            StateOld_VGB(Pe_,i,j,k,iBlock) = &
-            StateOld_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
+          StateOld_VGB(Pe_,i,j,k,iBlock) = &
+         StateOld_VGB(Pe_,i,j,k,iBlock)*&
+         sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+         **(-GammaElectronMinus1)
 
        State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
             + DtLocal*Change_V(1:nVar)
@@ -615,8 +622,11 @@ contains
     if(UseBorisCorrection) call boris_to_mhd( &
          State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
 
+    ! Convert entropy to pressure
     if(UseElectronPressure .and. UseElectronEntropy) &
-         State_VGB(Pe_,i,j,k,iBlock)=State_VGB(Pe_,i,j,k,iBlock)**GammaElectron
+         State_VGB(Pe_,i,j,k,iBlock)=State_VGB(Pe_,i,j,k,iBlock) &
+         *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+         **GammaElectronMinus1
 
     ! Check minimum density
     if(UseRhoMin)then
@@ -1550,8 +1560,10 @@ contains
          + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux
 
     if(UseElectronPressure)then
-       if(UseElectronEntropy) &
-            StateCons_V(Pe_) = State_V(Pe_)**(1/GammaElectron)
+       if(UseElectronEntropy) StateCons_V(Pe_) = &
+            State_V(Pe_)*sum(State_V(iRhoIon_I)*ChargePerMass_I) &
+            **(-GammaElectronMinus1)
+
        Flux_V(Pe_) = Un*StateCons_V(Pe_)
     end if
 
@@ -2120,8 +2132,8 @@ contains
                   iSideTest
           end if
           write(*,*)'BB =', &
-               sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)))**2), &
-               iSideTest
+               sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + B0_D &
+               )**2), iSideTest
        end if
        write(*,*)
        write(*,*) 'Area=', Area, iSideTest
