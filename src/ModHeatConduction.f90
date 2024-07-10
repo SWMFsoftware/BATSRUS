@@ -192,12 +192,14 @@ contains
     call test_start(NameSub, DoTest)
     if(.not.UseSemiImplicit)then
        if(UseHeatConduction .or. UseResistivity .and. UseHeatExchange)then
-          if(.not.allocated(Te_GI))allocate(Te_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
+          if(.not.allocated(Te_GI))&
+               allocate(Te_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
        else
           if(allocated(Te_GI))deallocate(Te_GI)
        end if
        if(UseIonHeatConduction)then
-          if(.not.allocated(Ti_GI))allocate(Ti_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
+          if(.not.allocated(Ti_GI))&
+               allocate(Ti_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
        else
           if(allocated(Ti_GI))deallocate(Ti_GI)
        end if
