@@ -51,7 +51,8 @@ F			UseHeatFluxCollisionless
 F			UseHeatFluxRegion
 
 #HEATCONDUCTION
-F			UseHeatConduction
+T			UseHeatConduction
+spitzer			TypeHeatConduction
 
 #SEMIIMPLICIT
 F			UseSemiImplicit

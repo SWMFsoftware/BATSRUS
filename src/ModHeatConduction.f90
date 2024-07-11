@@ -56,14 +56,16 @@ module ModHeatConduction
   real :: ElectronIonCollisionCoef
 
   ! electron/ion temperature used for calculating heat flux
-  real, allocatable :: Te_G(:,:,:), Ti_G(:,:,:)
-  !$omp threadprivate( Te_G, Ti_G )
+  real, allocatable :: Te_GI(:,:,:,:), Ti_GI(:,:,:,:)
+  !$omp threadprivate( Te_GI, Ti_GI )
+  !$acc declare create(Te_GI, Ti_GI)
 
   ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
   ! so that p=rho/massion *T*(1+ne/n Te/T)
   ! TiFraction is defined such that Ti = p/rho * TiFraction
   ! TeFraction is defined such that Te = p/rho * TeFraction
   real :: TiFraction, TeFraction
+  !$acc declare create(TiFraction, TeFraction)
 
   ! Array needed for second order interpolation of ghost cells
   real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
@@ -163,7 +165,7 @@ contains
   subroutine init_heat_conduction
 
     use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
-         j0_, nJp1_, k0_, nKp1_
+         j0_, nJp1_, k0_, nKp1_, nGang
     use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge, kappa_0_e
@@ -190,14 +192,16 @@ contains
     call test_start(NameSub, DoTest)
     if(.not.UseSemiImplicit)then
        if(UseHeatConduction .or. UseResistivity .and. UseHeatExchange)then
-          if(.not.allocated(Te_G))allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          if(.not.allocated(Te_GI))&
+               allocate(Te_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
        else
-          if(allocated(Te_G))deallocate(Te_G)
+          if(allocated(Te_GI))deallocate(Te_GI)
        end if
        if(UseIonHeatConduction)then
-          if(.not.allocated(Ti_G))allocate(Ti_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          if(.not.allocated(Ti_GI))&
+               allocate(Ti_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
        else
-          if(allocated(Ti_G))deallocate(Ti_G)
+          if(allocated(Ti_GI))deallocate(Ti_GI)
        end if
     end if
 
@@ -305,7 +309,7 @@ contains
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             HeatCoef_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
             Bb_DDG(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
-            Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
+            Te_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang) )
 
        if(UseHeatFluxLimiter) &
             allocate(FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_))
@@ -373,6 +377,8 @@ contains
        iTeImpl = 1
     end if
 
+   !$acc update device(TiFraction, TeFraction)
+
     call test_stop(NameSub, DoTest)
   end subroutine init_heat_conduction
   !============================================================================
@@ -402,6 +408,7 @@ contains
     logical, intent(inout):: IsNewBlockHeatCond
 
     integer :: i, j, k, iP, iFace_D(3)
+    integer :: iGang
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi, NumDensL, NumDensR, GammaTmp
     real :: x_D(3)
@@ -422,6 +429,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
+#ifdef _OPENACC
+    iGang = iBlock
+#else
+    iGang = 1
+#endif
+
     if(UseFieldLineThreads)then
        UseFirstOrderBc = IsBoundary_B(iBlock)
     else
@@ -442,7 +455,7 @@ contains
     if(IsNewBlockHeatCond)then
        if(UseMultiIon)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
+             Te_GI(i,j,k,iGang) = State_VGB(Pe_,i,j,k,iBlock) &
                   /sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
           end do; end do; end do
        elseif(UseIdealEos)then
@@ -450,20 +463,20 @@ contains
           if(UseElectronPressure)  iP = Pe_
 
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Te_G(i,j,k) = TeFraction*State_VGB(iP,i,j,k,iBlock) &
+             Te_GI(i,j,k,iGang) = TeFraction*State_VGB(iP,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
        else
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              call user_material_properties( &
                   State_VGB(:,i,j,k,iBlock), i, j, k, iBlock, TeOut=TeSi)
-             Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+             Te_GI(i,j,k,iGang) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
        end if
     end if
 
     call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
-         IsNewBlockHeatCond, Te_G, FaceGrad_D, &
+         IsNewBlockHeatCond, Te_GI(:,:,:,iGang), FaceGrad_D, &
          UseFirstOrderBcIn=UseFirstOrderBc)
 
     if(UseLeftStateOnly)then
@@ -679,7 +692,7 @@ contains
     real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
     real,    intent(out):: HeatCondCoefNormal, HeatFlux
     logical, intent(inout):: IsNewBlockIonHeatCond
-    integer :: i, j, k
+    integer :: i, j, k, iGang
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), CvL, CvR
 
@@ -687,10 +700,16 @@ contains
     !--------------------------------------------------------------------------
 #ifndef SCALAR
 
+#ifdef _OPENACC
+      iGang = iBlock
+#else
+      iGang = 1
+#endif
+
     if(IsNewBlockIonHeatCond)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Ti_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
+             Ti_GI(i,j,k,iGang) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
        else
@@ -700,7 +719,7 @@ contains
     end if
 
     call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
-         IsNewBlockIonHeatCond, Ti_G, FaceGrad_D)
+         IsNewBlockIonHeatCond, Ti_GI(:,:,:,iGang), FaceGrad_D)
 
     call get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
          StateLeft_V, Normal_D, HeatCondL_D)
@@ -835,43 +854,59 @@ contains
     real :: HeatExchange, IsotropizationCoef
     real :: PePImpl, PPparImpl
     real :: HeatExchangePeP, HeatExchangePePpar, HeatExchangePPpar
-    integer:: i, j, k, iBlock
+    integer :: i, j, k, iBlock, iGang
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_ei_heat_exchange'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+    call timing_start(NameSub)
     HeatExchange = 0.0
     HeatExchangePeP = 0.0
     HeatExchangePePpar = 0.0
 
+   !$acc parallel loop gang independent
     do iBlock = 1, nBlock
+
+#ifdef _OPENACC
+       iGang = iBlock
+#else
+       iGang = 1
+#endif
+
        if (Unused_B(iBlock)) CYCLE
        ! For the electron flux limiter, we need Te in the ghostcells
        if(UseMultiIon)then
+         !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
+             Te_GI(i,j,k,iGang) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
                   ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
           end do; end do; end do
        elseif(UseIdealEos)then
+         !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Te_G(i,j,k) = TeFraction &
+             Te_GI(i,j,k,iGang) = TeFraction &
                   *State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
        else
+#ifndef _OPENACC
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, TeOut = TeSi)
-             Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+             Te_GI(i,j,k,iGang) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
+#endif
        end if
+
+#ifndef _OPENACC
        ! More work is to be done for if .not.UseIdealEos or UseMultion
        if(.not.UseIdealEos)call stop_mpi(&
             'No explicit ei heat exchange for non-idealized plasmas')
 
        if(UseMultiion)call stop_mpi(&
             'No explicit ei heat exchange for non-idealized plasmas')
-
+#endif
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
@@ -879,7 +914,7 @@ contains
 
           ! For a hydrogen only, for ideal EOS only
           HeatExchange = 2.0*CollisionCoef_II(1,nIonFluid+1) &
-               *State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
+               *State_VGB(Rho_,i,j,k,iBlock)/Te_GI(i,j,k,iGang)**1.5
 
           ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
           PePImpl = HeatExchange / (1 + 2.0*DtLocal*HeatExchange)
@@ -887,6 +922,7 @@ contains
           HeatExchangePeP = DtLocal*PePImpl &
                *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
 
+#ifndef _OPENACC
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
              HeatExchangePePpar = DtLocal*PePImpl &
@@ -914,6 +950,7 @@ contains
                      - HeatExchangePePpar
              end if
           end if
+#endif
 
           ! Heat exchange for the ions
           State_VGB(P_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock) &
@@ -926,6 +963,7 @@ contains
 
     end do
 
+    call timing_stop(NameSub)
     call test_stop(NameSub, DoTest)
   end subroutine calc_ei_heat_exchange
   !============================================================================
@@ -976,7 +1014,7 @@ contains
     real :: StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real :: State_V(nVar)
 
-    integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP
+    integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP, iGang
     real :: GammaTmp
     real :: DtLocal
     real :: NumDens, NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
@@ -1017,20 +1055,26 @@ contains
        iBlock = iBlockFromSemi_B(iBlockSemi)
        IsNewBlockTe = .true.
 
+#ifdef _OPENACC
+       iGang = iBlock
+#else
+       iGang = 1
+#endif
+
        if(DoCalcDelta) then
           ! For the electron flux limiter, we need Te in the ghostcells
           if(UseMultiIon)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 State_V = State_VGB(:,i,j,k,iBlock)
                 State_V(iP) = State_V(iP) + Source_VCB(iP,i,j,k,iBlock)
-                Te_G(i,j,k) = State_V(Pe_)/sum( &
+                Te_GI(i,j,k,iGang) = State_V(Pe_)/sum( &
                      ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
              end do; end do; end do
           elseif(UseIdealEos)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 State_V = State_VGB(:,i,j,k,iBlock)
                 State_V(iP) = State_V(iP) + Source_VCB(iP,i,j,k,iBlock)
-                Te_G(i,j,k) = TeFraction &
+                Te_GI(i,j,k,iGang) = TeFraction &
                      *State_V(iP)/State_V(Rho_)
              end do; end do; end do
           else
@@ -1039,30 +1083,30 @@ contains
                 State_V(iP) = State_V(iP) + Source_VCB(iP,i,j,k,iBlock)
                 call user_material_properties(State_V, &
                      i, j, k, iBlock, TeOut = TeSi)
-                Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+                Te_GI(i,j,k,iGang) = TeSi*Si2No_V(UnitTemperature_)
              end do; end do; end do
           end if
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             StarSemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
+             StarSemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_GI(i,j,k,iGang)
           enddo; enddo; enddo
        endif ! DoCalcDelta
 
        ! For the electron flux limiter, we need Te in the ghostcells
        if(UseMultiIon)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
+             Te_GI(i,j,k,iGang) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
                   ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
           end do; end do; end do
        elseif(UseIdealEos)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Te_G(i,j,k) = TeFraction &
+             Te_GI(i,j,k,iGang) = TeFraction &
                   *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
        else
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, TeOut = TeSi)
-             Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+             Te_GI(i,j,k,iGang) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
        end if
 
@@ -1072,13 +1116,13 @@ contains
        ! Store the electron temperature in SemiAll_VCB and the
        ! specific heat in DconsDsemiAll_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
+          SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_GI(i,j,k,iGang)
           if(DoCalcDelta) &
                DeltaSemiAll_VCB(:,i,j,k,iBlockSemi) = &
                StarSemiAll_VCB(:,i,j,k,iBlockSemi) - &
                SemiAll_VCB(:,i,j,k,iBlockSemi)
 
-          TeSi = Te_G(i,j,k)*No2Si_V(UnitTemperature_)
+          TeSi = Te_GI(i,j,k,iGang)*No2Si_V(UnitTemperature_)
 
           if(UseIdealEos)then
              if(UseMultiIon)then
@@ -1103,11 +1147,11 @@ contains
              if(UseElectronPressure .and. .not.UseMultiIon)then
                 Natomic = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
                 ! We apply the energy exchange rate for temperature,
-                ! Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
+                ! Ni*cTeTiExchangeRate/Te_GI(i,j,k,iGang)**1.5
                 ! to the electron energy density, therefore,we multiply by
                 ! Ne/(\gamma -1)
                 TeTiCoef = InvGammaElectronMinus1*(AverageIonCharge*Natomic)* &
-                     (cTeTiExchangeRate*Natomic/Te_G(i,j,k)**1.5)
+                     (cTeTiExchangeRate*Natomic/Te_GI(i,j,k,iGang)**1.5)
              end if
 
           else
@@ -1222,7 +1266,7 @@ contains
 
              Cvi = InvGammaElectronMinus1*Natomic
              Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
-             Te = Te_G(i,j,k)
+             Te = Te_GI(i,j,k,iGang)
 
              TeTiCoef1 = TeTiCoef/Cvi
              Qi1 = Qi/Cvi
@@ -1246,7 +1290,7 @@ contains
                   .not.UseMultiIon)then
                 Cvi = InvGammaMinus1*Natomic
                 CviPar = 0.5*Natomic
-                Te = Te_G(i,j,k)
+                Te = Te_GI(i,j,k,iGang)
                 Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
                 Tpar = State_VGB(Ppar_,i,j,k,iBlock)/Natomic
                 CollisionRate = CollisionCoef_II(1,1) &
@@ -1372,7 +1416,7 @@ contains
 
              if(UseHeatFluxLimiter)then
                 call get_face_gradient(iDim, i, j, k, iBlock, IsNewBlockTe, &
-                     Te_G, GradTe_D)
+                     Te_GI(:,:,:,iGang), GradTe_D)
 
                 GradTe = 0.0
                 do iDir = 1, nDim
