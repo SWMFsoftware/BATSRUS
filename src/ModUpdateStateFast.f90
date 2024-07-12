@@ -1076,7 +1076,8 @@ contains
        Area = CellFace_DB(iDir,iBlock)
     else
        Area = CellFace_DFB(iDir,i,j,k,iBlock)
-       if(Area == 0.0)then
+       if(Area < 1e-15)then
+         Area = 0
           Normal_D = [1.0, 0.0, 0.0]
           RETURN
        end if
