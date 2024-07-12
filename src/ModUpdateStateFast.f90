@@ -666,8 +666,7 @@ contains
        write(*,*)'DtLocal=', DtLocal
        write(*,*)'Change_V=', Change_V(iVarTest)
        write(*,*)'CellVolume=', CellVolume_GB(iTest,jTest,kTest,iBlockTest)
-       write(*,*)'source=', Change_V(iVarTest) &
-            /CellVolume_GB(iTest,jTest,kTest,iBlockTest) - DivF
+       write(*,*)'source=', Change_V(iVarTest) - DivF
        write(*,*)'fluxes=', DivF
        !#else
        ! write(*,'(2x,a,2es23.15)') &
