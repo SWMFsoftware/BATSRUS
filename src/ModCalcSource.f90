@@ -2045,9 +2045,7 @@ contains
 
       if(DoTest)write(*,*)NameSub,' after k divbint, divb1=', &
            DivBInternal_C(iTest,jTest,kTest), &
-           DivB1_GB(iTest,jTest,kTest,iBlockTest)
-
-      if(iTypeUpdate == UpdateSlow_) DivBInternal_C = 0.0
+           DivB1_GB(iTest,jTest,kTest,iBlockTest)      
       
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
