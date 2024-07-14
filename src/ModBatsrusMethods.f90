@@ -1006,8 +1006,8 @@ contains
 
       real :: tSimulationBackup = 0.0
       !------------------------------------------------------------------------
-      if(nStep<=nStepOutputLast_I(iFile) .and.&
-           (DnOutput_I(iFile)>=0 .or. DtOutput_I(iFile)>0.0)) RETURN
+      if(nStep <= nStepOutputLast_I(iFile) .and.&
+           (DnOutput_I(iFile) >= 0 .or. DtOutput_I(iFile) > 0.0)) RETURN
       call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
       if(iFile==restart_) then
          ! Case for restart file
