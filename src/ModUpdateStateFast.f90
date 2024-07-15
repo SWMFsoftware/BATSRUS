@@ -1163,9 +1163,8 @@ contains
        if(Unused_B(iBlock)) CYCLE
        if(.not.IsBoundary_B(iBlock)) CYCLE
 
-
-       !call set_cell_boundary_fast(iBlock, nVar, State_VGB(:,:,:,:,iBlock))
-       !cycle
+       ! call set_cell_boundary_fast(iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+       ! cycle
 
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI

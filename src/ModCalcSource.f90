@@ -1920,12 +1920,12 @@ contains
          DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
          if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
-         
+
          if(iTypeUpdate == UpdateSlow_) then
             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
                  -B0_DGB(:,i,j,k,iBlock)*B1nJumpL &
-                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpR                     
+                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpR
          else if(UseDivFullBSource)then
             ! The face surface magnetic charge is multiplied by
             ! the full face field. Accordingly, -B1 div B1 source is
@@ -1974,7 +1974,7 @@ contains
             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
                  -B0_DGB(:,i,j,k,iBlock)*B1nJumpL &
-                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpR            
+                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpR
          else if(UseDivFullBSource)then
             ! The face surface magnetic charge is multiplied by
             ! the full face field. Accordingly, -B1 div B1 source is
@@ -2025,7 +2025,7 @@ contains
             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
                  -B0_DGB(:,i,j,k,iBlock)*B1nJumpL &
-                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpR                                 
+                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpR
          else if(UseDivFullBSource)then
                ! The face surface magnetic charge is multiplied by
                ! the full face field. Accordingly, -B1 div B1 source is
@@ -2045,8 +2045,8 @@ contains
 
       if(DoTest)write(*,*)NameSub,' after k divbint, divb1=', &
            DivBInternal_C(iTest,jTest,kTest), &
-           DivB1_GB(iTest,jTest,kTest,iBlockTest)      
-      
+           DivB1_GB(iTest,jTest,kTest,iBlockTest)
+
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
