@@ -1162,7 +1162,7 @@ contains
        if(.not.IsBoundary_B(iBlock)) CYCLE
 
        !$acc loop vector collapse(3) independent
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           ! Apply boundary conditions to external ghost cells
           if(i == 1 .and. DiLevel_EB(1,iBlock) == Unset_)then
              call set_boundary1(j,k,iBlock)
