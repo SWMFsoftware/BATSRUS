@@ -61,6 +61,18 @@ module ModSemiImplVar
   ! This array is indexed with normal block index and has nG ghost cells
   real, allocatable:: SemiState_VGB(:,:,:,:,:)  ! Semi-implicit vars
 
+  ! These arrays with *Semi_* and *SemiAll_* are indexed by compact iBlockSemi
+  ! and have a single ghost cell at most.
+  ! The SemiAll_ variables are indexed from 1..nVarSemiAll
+  real, allocatable:: DconsDsemiAll_VCB(:,:,:,:,:) ! dCons/dSemi derivatives
+  real, allocatable:: SemiAll_VCB(:,:,:,:,:)       ! Semi-implicit vars
+  real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl vars
+  real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
+  real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
+
+  ! Store Difference of U^* (after explicit update)  and U^n.
+  real, allocatable:: DeltaSemiAll_VCB(:,:,:,:,:)
+
 end module ModSemiImplVar
 !==============================================================================
 
