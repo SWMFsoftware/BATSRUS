@@ -308,9 +308,7 @@ contains
                DeltaSemiAll_VCB=DeltaSemiAll_VCB, &
                DoCalcDeltaIn=UseStableImplicit)
     case('parcond')
-       call get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB, &
-            DeltaSemiAll_VCB=DeltaSemiAll_VCB, &
-            DoCalcDeltaIn=UseStableImplicit)
+       call get_impl_heat_cond_state
     case('resistivity','resist','resisthall')
        call get_impl_resistivity_state(SemiAll_VCB)
     case default
