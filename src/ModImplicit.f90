@@ -29,6 +29,7 @@ module ModSemiImplVar
 
   ! Index range of semi-implicit variables solved together
   integer, public:: iVarSemiMin, iVarSemiMax
+  !$acc declare create(iVarSemiMin, iVarSemiMax)
 
   ! Number of semi-implicit variables solved together
   integer, public:: nVarSemi

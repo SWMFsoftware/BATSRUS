@@ -55,7 +55,11 @@ T			UseHeatConduction
 spitzer			TypeHeatConduction
 
 #SEMIIMPLICIT
-F			UseSemiImplicit
+T			UseSemiImplicit
+parcond			TypeSemiImplicit
+
+#TEST
+krylov			StringTest
 
 #CORONALHEATING
 none			TypeCoronalHeating

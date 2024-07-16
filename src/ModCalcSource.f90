@@ -1920,7 +1920,13 @@ contains
          DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
          if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
-         if(UseDivFullBSource)then
+
+         if(iTypeUpdate == UpdateSlow_) then
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpL &
+                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpR
+         else if(UseDivFullBSource)then
             ! The face surface magnetic charge is multiplied by
             ! the full face field. Accordingly, -B1 div B1 source is
             ! not added later if UseDivFullBSource=.true.
@@ -1963,7 +1969,13 @@ contains
               + B1nJumpL + B1nJumpR
 
          if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
-         if(UseDivFullBSource)then
+
+         if(iTypeUpdate == UpdateSlow_) then
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpL &
+                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpR
+         else if(UseDivFullBSource)then
             ! The face surface magnetic charge is multiplied by
             ! the full face field. Accordingly, -B1 div B1 source is
             ! not added later if UseDivFullBSource=.true.
@@ -2008,7 +2020,13 @@ contains
                  + B1nJumpL + B1nJumpR
 
             if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
-            if(UseDivFullBSource)then
+
+         if(iTypeUpdate == UpdateSlow_) then
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpL &
+                 -B0_DGB(:,i,j,k,iBlock)*B1nJumpR
+         else if(UseDivFullBSource)then
                ! The face surface magnetic charge is multiplied by
                ! the full face field. Accordingly, -B1 div B1 source is
                ! not added later if UseDivFullBSource=.true.
