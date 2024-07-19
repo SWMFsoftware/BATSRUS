@@ -1042,7 +1042,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    DoCalcDelta = UseStableImplicit    
+    DoCalcDelta = UseStableImplicit
 
     TeEpsilon = TeEpsilonSi*Si2No_V(UnitTemperature_)
 
