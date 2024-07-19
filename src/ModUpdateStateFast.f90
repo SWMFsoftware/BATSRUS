@@ -1348,7 +1348,8 @@ contains
     end if
   end subroutine set_boundary6
   !============================================================================
-  subroutine set_cell_boundary_fast(iBlock, nVarState, State_VG, IsImplBlockIn, IsLinearIn)
+  subroutine set_cell_boundary_fast(iBlock, nVarState, State_VG, &
+       IsImplBlockIn, IsLinearIn)
     !$acc routine vector
 
     integer, intent(in) :: iBlock, nVarState
