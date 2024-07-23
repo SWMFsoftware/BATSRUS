@@ -26,21 +26,6 @@ module ModSemiImplicit
   ! The index of the variable currently being solved for
   integer, public:: iVarSemi
 
-  ! These arrays with *Semi_* and *SemiAll_* are indexed by compact iBlockSemi
-  ! and have a single ghost cell at most.
-  ! The SemiAll_ variables are indexed from 1..nVarSemiAll
-  real, allocatable:: DconsDsemiAll_VCB(:,:,:,:,:) ! dCons/dSemi derivatives
-  real, allocatable:: SemiAll_VCB(:,:,:,:,:)       ! Semi-implicit vars
-  real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl vars
-  real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
-  real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
-
-  ! Store Difference of U^* (after explicit update)  and U^n.
-  real, allocatable:: DeltaSemiAll_VCB(:,:,:,:,:)
-
-  ! Linear arrays for RHS, unknowns, pointwise Jacobi preconditioner
-  real, allocatable:: Rhs_I(:), x_I(:), JacobiPrec_I(:)
-
   ! Default parameters for the semi-implicit linear solver
   type(LinearSolverParamType), public:: SemiParam = LinearSolverParamType( &
        .true.,      &! DoPrecond
@@ -54,6 +39,9 @@ module ModSemiImplicit
        100,         &! nKrylovVector
        .false.,     &! UseInitialGuess
        -1.0, -1, -1) ! Error, nMatvec, iError (return values)
+
+  ! Linear arrays for RHS, unknowns, pointwise Jacobi preconditioner
+  real, allocatable:: Rhs_I(:), x_I(:), JacobiPrec_I(:)
 
   ! Index of the test block
   integer:: iBlockSemiTest = 1
@@ -320,9 +308,7 @@ contains
                DeltaSemiAll_VCB=DeltaSemiAll_VCB, &
                DoCalcDeltaIn=UseStableImplicit)
     case('parcond')
-       call get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB, &
-            DeltaSemiAll_VCB=DeltaSemiAll_VCB, &
-            DoCalcDeltaIn=UseStableImplicit)
+       call get_impl_heat_cond_state
     case('resistivity','resist','resisthall')
        call get_impl_resistivity_state(SemiAll_VCB)
     case default

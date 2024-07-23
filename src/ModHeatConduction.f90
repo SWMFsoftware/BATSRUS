@@ -968,8 +968,7 @@ contains
   end subroutine calc_ei_heat_exchange
   !============================================================================
 
-  subroutine get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB, &
-       DeltaSemiAll_VCB, DoCalcDeltaIn)
+  subroutine get_impl_heat_cond_state
 
     ! Operator split, semi-implicit subroutines
 
@@ -1002,12 +1001,14 @@ contains
     use ModMain,         ONLY: UseFieldLineThreads
     use ModGeometry,     ONLY: IsBoundary_B
     use ModParallel,     ONLY: Unset_, DiLevel_EB
+    use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB, &
+         DeltaSemiAll_VCB, UseStableImplicit
 
-    real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    real, optional, intent(out):: &
-         DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    logical, optional, intent(in):: DoCalcDeltaIn
+   !  real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+   !  real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+   !  real, optional, intent(out):: &
+   !       DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+   !  logical, optional, intent(in):: DoCalcDeltaIn
 
     logical :: DoCalcDelta
     ! Set it as allocatable
@@ -1041,8 +1042,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    DoCalcDelta = .false.
-    if(present(DoCalcDeltaIn)) DoCalcDelta=DoCalcDeltaIn
+    DoCalcDelta = UseStableImplicit
 
     TeEpsilon = TeEpsilonSi*Si2No_V(UnitTemperature_)
 
