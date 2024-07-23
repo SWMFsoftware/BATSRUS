@@ -91,9 +91,6 @@ module ModHeatConduction
 
   real:: cTeTiExchangeRate
 
-  ! Fixing isotropization
-  logical, public :: UseFixIsotropization = .true.
-
   ! radiative cooling
   logical :: DoRadCooling = .false.
 
@@ -144,9 +141,6 @@ contains
                   //TypeIonHeatConduction)
           end select
        end if
-
-    case("#FIXISOTROPIZATION")
-       call read_var('UseFixIsotropization', UseFixIsotropization)
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -309,8 +303,7 @@ contains
             allocate(FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_))
        !$omp end parallel
 
-       if(UseFixIsotropization .and. UseAnisoPressure &
-            .and. .not.UseMultiIon)then
+       if(UseAnisoPressure .and. .not.UseMultiIon)then
           allocate(PointCoef_VCB(6,nI,nJ,nK,MaxBlock))
        else
           if(UseElectronPressure .and. .not.UseMultiIon)then
@@ -894,26 +887,21 @@ contains
                   *(State_VGB(Ppar_,i,j,k,iBlock) &
                   - State_VGB(Pe_,i,j,k,iBlock))
 
-             if(UseFixIsotropization)then
-                Ti = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-                IsotropizationCoef = CollisionCoef_II(1,1) &
-                     *State_VGB(Rho_,i,j,k,iBlock)/Ti**1.5
+             Ti = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             IsotropizationCoef = CollisionCoef_II(1,1) &
+                  *State_VGB(Rho_,i,j,k,iBlock)/Ti**1.5
 
-                PPparImpl = (IsotropizationCoef + HeatExchange &
-                     *DtLocaL*(HeatExchange + IsotropizationCoef)) &
-                     /(1 + DtLocaL*(HeatExchange + IsotropizationCoef)) &
-                     /(1 + 2.0*DtLocal*HeatExchange)
+             PPparImpl = (IsotropizationCoef + HeatExchange &
+                  *DtLocaL*(HeatExchange + IsotropizationCoef)) &
+                  /(1 + DtLocaL*(HeatExchange + IsotropizationCoef)) &
+                  /(1 + 2.0*DtLocal*HeatExchange)
 
-                HeatExchangePPpar = DtLocal*PPparImpl &
-                     *(State_VGB(Ppar_,i,j,k,iBlock) &
-                     - State_VGB(P_,i,j,k,iBlock))
+             HeatExchangePPpar = DtLocal*PPparImpl &
+                  *(State_VGB(Ppar_,i,j,k,iBlock) &
+                  - State_VGB(P_,i,j,k,iBlock))
 
-                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                     - HeatExchangePePpar - HeatExchangePPpar
-             else
-                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                     - HeatExchangePePpar
-             end if
+             State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
+                  - HeatExchangePePpar - HeatExchangePPpar
           end if
 #endif
 
@@ -1135,8 +1123,7 @@ contains
 
           if(.not.IsTimeAccurate) DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
 
-          if(UseAnisoPressure .and. UseFixIsotropization .and. &
-               .not.UseMultiIon)then
+          if(UseAnisoPressure .and. .not.UseMultiIon)then
              Cvi = InvGammaMinus1*Natomic
              CviPar = 0.5*Natomic
              Te = Te_GI(i,j,k,iGang)
@@ -1207,7 +1194,6 @@ contains
                      0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon)
              end if
           end if
-
 
        end do; end do; end do
 
@@ -1513,7 +1499,7 @@ contains
        end do; end do; end do
     end do
 
-    if(UseAnisoPressure.and.UseFixIsotropization.and..not.UseMultiIon)then
+    if(UseAnisoPressure .and. .not.UseMultiIon)then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
@@ -1591,7 +1577,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(UseAnisoPressure.and.UseFixIsotropization.and..not.UseMultiIon)then
+    if(UseAnisoPressure .and. .not.UseMultiIon)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                + PointCoef_VCB(1,i,j,k,iBlock)
@@ -1747,8 +1733,7 @@ contains
 
        end if
 
-       if(UseAnisoPressure .and. UseFixIsotropization.and. &
-            .not.UseMultiIon)then
+       if(UseAnisoPressure .and. .not.UseMultiIon)then
           Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
                + PointCoef_VCB(3,i,j,k,iBlock) &
                *(NewSemiAll_VC(iTeImpl,i,j,k) - OldSemiAll_VC(iTeImpl,i,j,k))&

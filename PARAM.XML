@@ -10021,19 +10021,6 @@ The default is UseHeatConduction=.false.
 
 </command>
 
-<command name="FIXISOTROPIZATION">
-  <parameter name="UseFixIsotropization"    type="logical" default="F"/>
-
-#FIXISOTROPIZATION
-F                       UseFixIsotropization
-
-If UseFixIsotropization is true, an addtional term is added to isotropize
-the proton temperature anisotropy due to Coulomb collisions.
-
-The default is UseFixIsotropization=.false.
-
-</command>
-
 <command name="IONHEATCONDUCTION">
   <parameter name="UseIonHeatConduction"    type="logical" default="F"/>
   <if expr="$UseIonHeatConduction">
