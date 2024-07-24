@@ -1170,42 +1170,48 @@ contains
        if(DiLevel_EB(1,iBlock) == Unset_) then  
           !$acc loop vector collapse(3) independent               
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0                       
-            call set_boundary_general(i,j,k,1,j,k,iBlock,iTypeCellBc_I(1))
+            call set_boundary_general(i,j,k,1,j,k,iBlock,iTypeCellBc_I(1),&
+             nVar, State_VGB(:,:,:,:,iBlock))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(2,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI             
-            call set_boundary_general(i,j,k,nI,j,k,iBlock,iTypeCellBc_I(2))
+            call set_boundary_general(i,j,k,nI,j,k,iBlock,iTypeCellBc_I(2),&
+             nVar, State_VGB(:,:,:,:,iBlock))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(3,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
           do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI             
-            call set_boundary_general(i,j,k,i,1,k,iBlock,iTypeCellBc_I(3))
+            call set_boundary_general(i,j,k,i,1,k,iBlock,iTypeCellBc_I(3),&
+             nVar, State_VGB(:,:,:,:,iBlock))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(4,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
           do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI             
-            call set_boundary_general(i,j,k,i,nJ,k,iBlock,iTypeCellBc_I(4))
+            call set_boundary_general(i,j,k,i,nJ,k,iBlock,iTypeCellBc_I(4),&
+             nVar, State_VGB(:,:,:,:,iBlock))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(5,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
           do k = 0, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI             
-            call set_boundary_general(i,j,k,i,j,1,iBlock,iTypeCellBc_I(5))
+            call set_boundary_general(i,j,k,i,j,1,iBlock,iTypeCellBc_I(5),&
+             nVar, State_VGB(:,:,:,:,iBlock))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(6,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
           do k = nK+1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI             
-            call set_boundary_general(i,j,k,i,j,nK,iBlock,iTypeCellBc_I(6))
+            call set_boundary_general(i,j,k,i,j,nK,iBlock,iTypeCellBc_I(6),&
+             nVar, State_VGB(:,:,:,:,iBlock))
           end do; end do; end do
        end if
     end do
@@ -1213,17 +1219,19 @@ contains
   end subroutine set_boundary_fast
   !============================================================================
 #ifndef SCALAR
-  subroutine set_boundary_general(i, j, k, iSend, jSend, kSend, iBlock, iTypeBC)
+  subroutine set_boundary_general(i, j, k, iSend, jSend, kSend, iBlock, iTypeBC, nVarState, State_VG)
     !$acc routine seq    
 
-    integer, intent(in):: i, j, k, iSend, jSend, kSend, iBlock, iTypeBC
+    integer, intent(in):: i, j, k, iSend, jSend, kSend, iBlock
+    integer, intent(in):: iTypeBC, nVarState
+    real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !--------------------------------------------------------------------------
     if(iTypeBC == FloatBc_)then       
-       State_VGB(:,i,j,k,iBlock) = State_VGB(:,iSend,jSend,kSend,iBlock)       
+       State_VG(:,i,j,k) = State_VG(:,iSend,jSend,kSend)       
     else       
-       State_VGB(:,i,j,k,iBlock) = CellState_VI(:,1)
-       if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)       
+       State_VG(:,i,j,k) = CellState_VI(:,1)
+       if(UseB0) State_VG(Bx_:Bz_,i,j,k) = &
+            State_VG(Bx_:Bz_,i,j,k) - B0_DGB(:,i,j,k,iBlock)       
     end if
   end subroutine set_boundary_general
   !============================================================================
