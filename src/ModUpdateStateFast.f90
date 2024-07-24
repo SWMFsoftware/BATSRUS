@@ -1169,48 +1169,42 @@ contains
 
        if(DiLevel_EB(1,iBlock) == Unset_) then  
           !$acc loop vector collapse(3) independent               
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0          
-             !call set_boundary1(i, j,k,iBlock)
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0                       
             call set_boundary_general(i,j,k,1,j,k,iBlock,iTypeCellBc_I(1))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(2,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
-             !call set_boundary2(i,j,k,iBlock)
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI             
             call set_boundary_general(i,j,k,nI,j,k,iBlock,iTypeCellBc_I(2))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(3,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
-          do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI
-             ! call set_boundary3(i,j,k,iBlock)
+          do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI             
             call set_boundary_general(i,j,k,i,1,k,iBlock,iTypeCellBc_I(3))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(4,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
-          do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
-             ! call set_boundary4(i,j,k,iBlock)
+          do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI             
             call set_boundary_general(i,j,k,i,nJ,k,iBlock,iTypeCellBc_I(4))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(5,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
-          do k = 0, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             ! call set_boundary5(i,j,k,iBlock)
+          do k = 0, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI             
             call set_boundary_general(i,j,k,i,j,1,iBlock,iTypeCellBc_I(5))
           end do; end do; end do
        end if
 
        if(DiLevel_EB(6,iBlock) == Unset_) then
           !$acc loop vector collapse(3) independent            
-          do k = nK+1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             ! call set_boundary6(i,j,k,iBlock)
+          do k = nK+1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI             
             call set_boundary_general(i,j,k,i,j,nK,iBlock,iTypeCellBc_I(6))
           end do; end do; end do
        end if
@@ -1232,94 +1226,6 @@ contains
             State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)       
     end if
   end subroutine set_boundary_general
-  !============================================================================
-  subroutine set_boundary1(i, j, k, iBlock)
-    !$acc routine seq
-
-    ! Apply boundary condition on side 1
-
-    integer, intent(in):: i, j, k, iBlock    
-    !--------------------------------------------------------------------------
-    if(iTypeCellBc_I(1) == FloatBc_)then       
-       State_VGB(:,i,j,k,iBlock) = State_VGB(:,1,j,k,iBlock)       
-    else       
-       State_VGB(:,i,j,k,iBlock) = CellState_VI(:,1)
-       if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)       
-    end if
-  end subroutine set_boundary1
-  !============================================================================
-  subroutine set_boundary2(i, j, k, iBlock)
-    !$acc routine seq
-
-    ! Apply boundary condition on side 2
-
-    integer, intent(in):: i, j, k, iBlock    
-    !--------------------------------------------------------------------------
-    if(iTypeCellBc_I(2) == FloatBc_)then
-       State_VGB(:,i,j,k,iBlock) = State_VGB(:,nI,j,k,iBlock)
-    else       
-       State_VGB(:,i,j,k,iBlock) = CellState_VI(:,2)
-       if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-    end if
-  end subroutine set_boundary2
-  !============================================================================
-  subroutine set_boundary3(i, j, k, iBlock)
-    !$acc routine seq    
-
-    integer, intent(in):: i, j, k, iBlock
-    !--------------------------------------------------------------------------
-    if(iTypeCellBc_I(3) == FloatBc_)then
-       State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,1,k,iBlock)
-    else       
-       State_VGB(:,i,j,k,iBlock) = CellState_VI(:,3)
-       if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)       
-    end if
-  end subroutine set_boundary3
-  !============================================================================
-  subroutine set_boundary4(i, j, k, iBlock)
-    !$acc routine seq
-
-    integer, intent(in):: i, j, k, iBlock
-    !--------------------------------------------------------------------------
-    if(iTypeCellBc_I(4) == FloatBc_)then
-       State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,nJ,k,iBlock)       
-    else       
-       State_VGB(:,i,j,k,iBlock) = CellState_VI(:,4)
-       if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)       
-    end if
-  end subroutine set_boundary4
-  !============================================================================
-  subroutine set_boundary5(i, j, k, iBlock)
-    !$acc routine seq
-
-    integer, intent(in):: i, j, k, iBlock
-    !--------------------------------------------------------------------------
-    if(iTypeCellBc_I(5) == FloatBc_)then       
-       State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,1,iBlock)       
-    else
-       State_VGB(:,i,j,k,iBlock) = CellState_VI(:,5)
-       if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)      
-    end if
-  end subroutine set_boundary5
-  !============================================================================
-  subroutine set_boundary6(i, j, k, iBlock)
-    !$acc routine seq    
-
-    integer, intent(in):: i, j, k, iBlock    
-    !--------------------------------------------------------------------------
-    if(iTypeCellBc_I(6) == FloatBc_)then       
-       State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,nK,iBlock)       
-    else       
-       State_VGB(:,i,j,k,iBlock) = CellState_VI(:,6)
-       if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)       
-    end if
-  end subroutine set_boundary6
   !============================================================================
   subroutine set_cell_boundary_fast(iBlock, nVarState, State_VG, &
        IsImplBlockIn, IsLinearIn)
