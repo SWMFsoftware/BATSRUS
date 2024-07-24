@@ -9,7 +9,7 @@ module ModWriteLogSatFile
        iProc, nProc, iComm
   use ModBatsrusUtility, ONLY: get_date_time, stop_mpi
   use ModUpdateState, ONLY: check_nan
-  use,intrinsic :: ieee_arithmetic
+  use, intrinsic:: ieee_arithmetic
 
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
@@ -19,7 +19,7 @@ module ModWriteLogSatFile
 
   private ! except
 
-  integer :: iFluid ! to make iFluid local in this module
+  integer:: iFluid ! to make iFluid local in this module
 
   public:: write_logfile          ! write one line into the log file
   public:: collect_satellite_data ! collect data from multiple processors
@@ -27,6 +27,22 @@ module ModWriteLogSatFile
 
 contains
   !============================================================================
+  real function minmod(x, y)
+
+    real, intent(in):: x, y
+    !------------------------------------------------------------------------
+    minmod = max(0.0, min(abs(x), sign(1.0, x)*y))
+
+  end function minmod
+  !==========================================================================
+  real function maxmod(x, y)
+
+    real, intent(in):: x, y
+    !------------------------------------------------------------------------
+    maxmod = max(abs(x), abs(y))
+
+  end function maxmod
+  !==========================================================================
   subroutine write_logfile(iSatIn, iFile, TimeSatHeaderIn)
 
     use ModMain
@@ -44,47 +60,47 @@ contains
 
     ! Arguments
 
-    integer, intent(in) :: iFile
+    integer, intent(in):: iFile
 
     ! iSatIn = 0 -> write logfile
     ! iSatIn >=1 -> write satellite output files (number = isat)
-    integer, intent(in) :: iSatIn
+    integer, intent(in):: iSatIn
 
-    real, optional, intent(in) :: TimeSatHeaderIn
+    real, optional, intent(in):: TimeSatHeaderIn
 
     ! Logfile variables
-    integer, parameter :: MaxLogVar=200
-    integer, parameter :: MaxLogR = 10
-    real :: LogVar_I(MaxLogVar)
-    character (len=lNameLogVar) :: NameLogVar_I(MaxLogVar)
-    character (len=lNameLogVar) :: NameLogVar
-    character (len=10) :: NameLogR_I(MaxLogR)
-    real :: LogR_I(MaxLogR)
-    integer :: nLogVar, nLogR, nLogTot, i, j, iSat
-    integer :: nFluxVar       ! number of flux variables used
-    integer :: iUnit          ! local unit number
-    real :: Xyz_D(3)
-    character (LEN=500) :: NameAll
-    character (LEN=100) :: StringTime
+    integer, parameter:: MaxLogVar=200
+    integer, parameter:: MaxLogR = 10
+    real:: LogVar_I(MaxLogVar)
+    character (len=lNameLogVar):: NameLogVar_I(MaxLogVar)
+    character (len=lNameLogVar):: NameLogVar
+    character (len=10):: NameLogR_I(MaxLogR)
+    real:: LogR_I(MaxLogR)
+    integer:: nLogVar, nLogR, nLogTot, i, j, iSat
+    integer:: nFluxVar       ! number of flux variables used
+    integer:: iUnit          ! local unit number
+    real:: Xyz_D(3)
+    character (LEN=500):: NameAll
+    character (LEN=100):: StringTime
 
-    logical :: DoWritePosition
-    real :: pMin, pMax
-    integer :: iLoc_I(5)
-    integer :: iTime_I(7) ! integer time: year,month,day,hour,minute,sec,msec
-    integer :: iError
+    logical:: DoWritePosition
+    real:: pMin, pMax
+    integer:: iLoc_I(5)
+    integer:: iTime_I(7) ! integer time: year,month,day,hour,minute,sec,msec
+    integer:: iError
 
     ! Coordinate system transformation
     real:: Convert_DD(3,3)
     integer:: iVar
 
     ! Event date for NameFile
-    character(len=19) :: StringDateTime
+    character(len=19):: StringDateTime
 
     ! Header for the sat file in time accurate
     real:: TimeSatHeader
 
     ! Parcel variables
-    integer         :: iParcel, iUnitParcel_I(MaxParcel)=-1
+    integer        :: iParcel, iUnitParcel_I(MaxParcel)=-1
     character(len=2):: StringIParcel
 
     ! NaN detection variables
@@ -133,14 +149,14 @@ contains
           if(index(NameLogVar_I(i),'pnt')>0 .or.  &
                index(NameLogVar_I(i),'test')>0)  DoWritePosition = .true.
        end do
-       if (nFluxVar >0) then
+       if (nFluxVar > 0) then
           call split_string(StringLogRadius, MaxLogR, NameLogR_I, nLogR)
           do i=1,nLogR
              read(NameLogR_I(i),*) LogR_I(i)
           end do
        end if
        StringTime = TypeLogTime
-    elseif (iSatIn>=1) then
+    elseif (iSatIn >= 1) then
        iSat = iSatIn
        if (.not. DoTrackSatellite_I(iSat)) RETURN
        call split_string(StringSatVar_I(iSat), MaxLogVar, &
@@ -193,14 +209,14 @@ contains
        end if
     end if
 
-    do i=1,nLogVar
+    do i = 1, nLogVar
        if(index(NameLogVar_I(i),'flx')>0) then
-          do j=1,nLogR
+          do j = 1, nLogR
              NameAll = trim(NameAll)//' '//trim(NameLogVar_I(i))//'_R='// &
-                  trim(NameLogR_I(j))
+                  NameLogR_I(j)
           end do
        else
-          NameAll = trim(NameAll)//' '//trim(NameLogVar_I(i))
+          NameAll = trim(NameAll)//' '//NameLogVar_I(i)
        end if
     end do
 
@@ -299,7 +315,8 @@ contains
           endif
        endif
     endif
-    call set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSatIn)
+    call set_logvar(nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I, &
+         iSatIn)
 
     ! this write statement seems to be necessary for
     ! NAG compiler in debugging mode
@@ -323,9 +340,8 @@ contains
     ! WRITE OUT THE LINE INTO THE LOGFILE OR THE SATELLITE FILE
     if(iProc==0) then
 
-       if (IsDimensionalPlot_I(iFile))  &
-            call normalize_logvar(nLogVar, NameLogVar_I, nLogR, LogR_I, &
-            nLogTot, LogVar_I)
+       if (IsDimensionalPlot_I(iFile)) call normalize_logvar( &
+            nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I)
 
        ! first output the appropriate time data
        if(index(StringTime,'none')>0) then
@@ -335,8 +351,7 @@ contains
                write(iUnit,'(i8)',ADVANCE='NO') nStep
           if(index(StringTime,'date')>0) then
              call get_date_time(iTime_I)
-             write(iUnit,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') &
-                  iTime_I
+             write(iUnit,'(i5,5(1X,i2.2),1X,i3.3)', ADVANCE='NO') iTime_I
           end if
           if(index(StringTime,'time')>0) then
              ! note that tSimulation is in SI units.
@@ -413,30 +428,30 @@ contains
     use ModInterpolate,  ONLY: interpolate_vector
     use ModMPI
 
-    integer, intent(in)                     :: nLogVar, nLogR, nLogTot, iSat
-    character (len=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
-    real, intent(in)                        :: LogR_I(nLogR)
-    real, intent(out)                       :: LogVar_I(nLogTot)
+    integer, intent(in)                    :: nLogVar, nLogR, nLogTot, iSat
+    character (len=lNameLogVar), intent(in):: NameLogVar_I(nLogVar)
+    real, intent(in)                       :: LogR_I(nLogR)
+    real, intent(out)                      :: LogVar_I(nLogTot)
 
-    character (len=lNameLogVar) :: NameLogVar
+    character (len=lNameLogVar):: NameLogVar
 
-    real :: StateIntegral_V(nVar)
-    real :: SatRayVar_I(5)
+    real:: StateIntegral_V(nVar)
+    real:: SatRayVar_I(5)
 
-    integer :: iVar, iR, iVarTot, iBlock
-    integer :: i, j, k
-    integer :: iError
-    real :: r
+    integer:: iVar, iR, iVarTot, iBlock
+    integer:: i, j, k
+    integer:: iError
+    real:: r
 
     ! StateSat_V contains the weight (0), the state (1:nVar),
     ! and the currents (nVar+1:nVar+3) at the position of the satellite
     ! B0Sat_D contains B0 at the satellite
-    real :: StateSat_V(0:nVar+3), B0Sat_D(3)
+    real:: StateSat_V(0:nVar+3), B0Sat_D(3)
 
     ! Parcel part
-    integer :: iParcel, iParcelBlock, iParcelProc, iParcelNode
-    integer :: iParcelCell_D(3)
-    real    :: Coord_D(3),ParcelCellDistance_D(3)
+    integer:: iParcel, iParcelBlock, iParcelProc, iParcelNode
+    integer:: iParcelCell_D(3)
+    real   :: Coord_D(3),ParcelCellDistance_D(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_logvar'
@@ -574,13 +589,13 @@ contains
       use ModChromosphere, ONLY: get_tesi_c, TeSi_C
 
       ! Local variables
-      real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, Value
-      real :: Current_D(3)
-      real :: FullB_DG(3,0:nI+1,0:nJ+1,0:nK+1)
-      real :: Convert_DD(3,3)
+      real:: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, Value
+      real:: Current_D(3)
+      real:: FullB_DG(3,0:nI+1,0:nJ+1,0:nK+1)
+      real:: Convert_DD(3,3)
 
-      integer :: jVar
-      character(len=lNameLogVar) :: NameLogVarLower
+      integer:: jVar
+      character(len=lNameLogVar):: NameLogVarLower
       !------------------------------------------------------------------------
       select case(NameLogVar)
       case('volume')
@@ -601,7 +616,7 @@ contains
          ! Divide by nProc so that adding up the processors can work
          LogVar_I(iVarTot) = maxval_grid(Tmp2_GB)/nProc
       case('urmin')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  ( State_VGB(iRhoUx, 1:nI,1:nJ,1:nK,iBlock)   &
@@ -616,7 +631,7 @@ contains
          ! Divide by nProc so that adding up the processors can work
          LogVar_I(iVarTot) = minval_grid(Tmp1_GB)/nProc
       case('urmax')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  ( State_VGB(iRhoUx, 1:nI,1:nJ,1:nK,iBlock)   &
@@ -631,7 +646,7 @@ contains
          ! Divide by nProc so that adding up the processors can work
          LogVar_I(iVarTot) = maxval_grid(Tmp1_GB)/nProc
       case('ux')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock) / &
@@ -639,7 +654,7 @@ contains
          end do
          LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('uy')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock) / &
@@ -647,7 +662,7 @@ contains
          end do
          LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('uz')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock) / &
@@ -655,7 +670,7 @@ contains
          end do
          LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('pperp')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  ( 3*State_VGB(iP,1:nI,1:nJ,1:nK,iBlock) &
@@ -663,7 +678,7 @@ contains
          end do
          LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('ekinx')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)**2/&
@@ -671,7 +686,7 @@ contains
          end do
          LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('ekiny')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)**2/&
@@ -679,7 +694,7 @@ contains
          end do
          LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('ekinz')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2/&
@@ -687,7 +702,7 @@ contains
          end do
          LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('ekin')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) = &
                  (State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)**2+&
@@ -697,7 +712,7 @@ contains
          end do
          LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('eth')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) &
                  = State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)
@@ -705,7 +720,7 @@ contains
          LogVar_I(iVarTot) &
               = InvGammaMinus1_I(iFluid)*integrate_grid(Tmp1_GB)/DomainVolume
       case('eeth')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) &
                  = State_VGB(Pe_,1:nI,1:nJ,1:nK,iBlock)
@@ -713,7 +728,7 @@ contains
          LogVar_I(iVarTot) &
               = InvGammaElectronMinus1*integrate_grid(Tmp1_GB)/DomainVolume
       case('eb')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             if(UseB0)then
                do k = 1, nK; do j=1, nJ; do i=1, nI
@@ -733,7 +748,7 @@ contains
          end do
          LogVar_I(iVarTot) = 0.5*integrate_grid(Tmp1_GB)/DomainVolume
       case('egrav')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (Unused_B(iBlock)) CYCLE
             Tmp1_GB(1:nI,1:nJ,1:nK,iBlock) &
                  = State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock) &
@@ -741,7 +756,7 @@ contains
          end do
          LogVar_I(iVarTot) = integrate_grid(Tmp1_GB)/DomainVolume
       case('radcool')
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if (UnUsed_B(iBlock))CYCLE
             call get_tesi_c(iBlock, TeSi_C)
             do k = 1, nK; do j=1,nJ; do i=1, nI
@@ -876,7 +891,7 @@ contains
          ! Only the Z component is calculated here: z * div B/R**3
 
          ! Calculate
-         do iBlock=1,nBlock
+         do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                if ( r_GB(i,j,k,iBlock) < rCurrents .or. &
@@ -1036,7 +1051,7 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            do iBlock=1,nBlock
+            do iBlock = 1, nBlock
                if(Unused_B(iBlock)) CYCLE
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                   Tmp1_GB(i,j,k,iBlock) = &
@@ -1064,7 +1079,7 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            do iBlock=1,nBlock
+            do iBlock = 1, nBlock
                if(Unused_B(iBlock)) CYCLE
                FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                if(UseB0)FullB_DG = FullB_DG &
@@ -1084,7 +1099,7 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            do iBlock=1,nBlock
+            do iBlock = 1, nBlock
                if(Unused_B(iBlock))CYCLE
                FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                if(UseB0)FullB_DG = FullB_DG &
@@ -1105,7 +1120,7 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            do iBlock=1,nBlock
+            do iBlock = 1, nBlock
                if(Unused_B(iBlock))CYCLE
                FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                if(UseB0)FullB_DG = FullB_DG &
@@ -1235,8 +1250,8 @@ contains
       use ModUtilities, ONLY: lower_case
       use ModIO,        ONLY : lNameLogVar
 
-      integer :: jVar
-      character(len=lNameLogVar) :: NameLogVarLower
+      integer:: jVar
+      character(len=lNameLogVar):: NameLogVarLower
       !------------------------------------------------------------------------
       if (iProc/=0) RETURN
 
@@ -1340,26 +1355,26 @@ contains
          end do
          LogVar_I(iVarTot) = -777.0
          if(iProc==0)write(*,*)'WARNING in var_sat: unknown variable ',&
-              NameLogVar,' for iSat = ',iSat
+              NameLogVar, ' for iSat = ', iSat
       end select
 
     end subroutine set_sat_var
     !==========================================================================
   end subroutine set_logvar
   !============================================================================
-  subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
-       LogR_I,nLogTot,LogVar_I)
+  subroutine normalize_logvar( &
+       nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I)
 
     use ModPhysics
     use ModIO, ONLY: lNameLogVar
 
-    integer, intent(in) :: nLogVar, nLogR, nLogTot
-    character (LEN=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
-    real, intent(inout) :: LogVar_I(nLogTot)
-    real, intent(in) :: LogR_I(nLogR)
+    integer, intent(in):: nLogVar, nLogR, nLogTot
+    character (LEN=lNameLogVar), intent(in):: NameLogVar_I(nLogVar)
+    real, intent(inout):: LogVar_I(nLogTot)
+    real, intent(in):: LogR_I(nLogR)
 
-    character (len=lNameLogVar) :: NameLogVar
-    integer :: iVar, iVarTot, jVar
+    character (len=lNameLogVar):: NameLogVar
+    integer:: iVar, iVarTot, jVar
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'normalize_logvar'
@@ -1475,27 +1490,27 @@ contains
 
     ! Arguments
 
-    character(len=*), intent(in) :: TypeAction
+    character(len=*), intent(in):: TypeAction
     integer, intent(in):: nTheta
     real,    intent(in):: Radius
     real,    intent(in):: Array_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    real :: Result, Darea0, Darea, Average
+    real:: Result, Darea0, Darea, Average
 
     ! Indices and coordinates
-    integer :: iBlock,i,j,k,i1,i2
-    integer :: MaxPhi, nPhi
-    real    :: x, y, z, InvDxyz_D(3)
-    real    :: Dr
-    real    :: xMin, xMax, yMin, yMax, zMin, zMax, rMin, rMax
-    real    :: dTheta, dPhi, Phi, Theta, SinTheta
+    integer:: iBlock,i,j,k,i1,i2
+    integer:: MaxPhi, nPhi
+    real   :: x, y, z, InvDxyz_D(3)
+    real   :: Dr
+    real   :: xMin, xMax, yMin, yMax, zMin, zMax, rMin, rMax
+    real   :: dTheta, dPhi, Phi, Theta, SinTheta
 
-    real :: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
+    real:: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
 
     ! Store cartesian coordinates for sake of efficiency
     ! The x and y depend on iPhi,iTheta while z only depends on iTheta
-    !  real, allocatable :: x_II(:,:), y_II(:,:), z_I(:), SinTheta_I(:)
+    !  real, allocatable:: x_II(:,:), y_II(:,:), z_I(:), SinTheta_I(:)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_sphere'
@@ -1537,9 +1552,9 @@ contains
           ! Find the radial index just after Radius
           i2=0
           do while ( Radius > r_GB(i2,1,1,iBlock))
-             i2 = i2+1
+             i2 = i2 + 1
           end do
-          i1=i2-1
+          i1 = i2 - 1
 
           Dr = (Radius - r_GB(i1, 1, 1, iBlock)) &
                /(r_GB(i2, 1, 1, iBlock) - r_GB(i1, 1, 1, iBlock))
@@ -1702,20 +1717,7 @@ contains
     call timing_stop('calc_sphere_'//TypeAction)
 
     call test_stop(NameSub, DoTest)
-  contains
-    !==========================================================================
-    real function minmod(x,y)
-      real, intent(in) :: x,y
-      !------------------------------------------------------------------------
-      minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
-    end function minmod
-    !==========================================================================
-    real function maxmod(x,y)
-      real, intent(in) :: x,y
-      !------------------------------------------------------------------------
-      maxmod = max(abs(x),abs(y))
-    end function maxmod
-    !==========================================================================
+
   end function calc_sphere
   !============================================================================
   real function integrate_circle(Radius, z, Array_GB)
@@ -1735,19 +1737,19 @@ contains
 
     ! Arguments
 
-    real, intent(in) :: Array_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    real, intent(in) :: Radius, z
+    real, intent(in):: Array_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(in):: Radius, z
 
     ! Local variables
-    real :: Integral, Average
+    real:: Integral, Average
 
     ! Indices and coordinates
-    integer :: iBlock,i
-    integer :: nPhi
-    real :: xMin,xMax,yMin,yMax,zMin,zMax
-    real :: x, y, InvDxyz_D(3)
-    real :: dPhi,Phi
-    real :: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
+    integer:: iBlock,i
+    integer:: nPhi
+    real:: xMin, xMax, yMin, yMax, zMin, zMax
+    real:: x, y, InvDxyz_D(3)
+    real:: dPhi,Phi
+    real:: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'integrate_circle'
@@ -1816,27 +1818,15 @@ contains
     integrate_circle = Integral*Radius*dPhi
 
     call test_stop(NameSub, DoTest)
+
   contains
-    !==========================================================================
-    real function minmod(x,y)
-      real, intent(in) :: x,y
-      !------------------------------------------------------------------------
-      minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
-    end function minmod
-    !==========================================================================
-    real function maxmod(x,y)
-      real, intent(in) :: x,y
-      !------------------------------------------------------------------------
-      maxmod = max(abs(x),abs(y))
-    end function maxmod
-    !==========================================================================
   end function integrate_circle
   !============================================================================
   subroutine collect_satellite_data(Xyz_D, nVar, StateCurrent_V)
 
     use ModMpi
 
-    real, intent(in) :: Xyz_D(3) ! The position of the interpolated state
+    real, intent(in):: Xyz_D(3) ! The position of the interpolated state
 
     ! On input StateCurrent_V contains the weight and the interpolated state
     ! on a given PE.
@@ -1848,13 +1838,13 @@ contains
     !     returned state is -777.0
     ! The rest of the elements contain the globally interpolated state.
 
-    integer, intent(in) :: nVar
-    real, intent(inout) :: StateCurrent_V(0:nVar)
+    integer, intent(in):: nVar
+    real, intent(inout):: StateCurrent_V(0:nVar)
 
     ! local variables
 
-    real    :: Weight
-    integer :: iError
+    real   :: Weight
+    integer:: iError
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'collect_satellite_data'
@@ -1886,7 +1876,7 @@ contains
     use ModAdvance,      ONLY: State_VGB
     use ModCurrent,      ONLY: get_point_data
     use BATL_lib,        ONLY: Xyz_DGB, x_, y_, z_, nBlock, iProc
-    real :: State_V(0:nVar+3)
+    real:: State_V(0:nVar+3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'satellite_test'
@@ -1928,9 +1918,9 @@ contains
     use ModUtilities, ONLY: lower_case
     use ModMultiFluid, ONLY: extract_fluid_name
 
-    character(len=*), intent(in)  :: NameIn
-    character(len=*), intent(out) :: NameOut
-    integer :: l
+    character(len=*), intent(in) :: NameIn
+    character(len=*), intent(out):: NameOut
+    integer:: l
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'normalize_name_log_var'
@@ -1971,12 +1961,12 @@ contains
          IsCartesian, CellVolume_B, CellVolume_GB
 
     ! Arguments
-    real, intent(out) :: Sum_V(nVar)
-    real, intent(out) :: Pressure_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real, intent(out):: Sum_V(nVar)
+    real, intent(out):: Pressure_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables:
-    integer :: i, j, k, iBlock, iVar
-    real    :: CellVolume
+    integer:: i, j, k, iBlock, iVar
+    real   :: CellVolume
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'integrate_domain'
@@ -2037,7 +2027,7 @@ contains
 
     use BATL_lib, ONLY: nDim, nI, nJ, nK, j0_, nJp1_,k0_, nKp1_
 
-    real, intent(inout) :: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
+    real, intent(inout):: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
     !--------------------------------------------------------------------------
     if(nDim == 1) RETURN
 
