@@ -91,12 +91,6 @@ module ModHeatConduction
 
   real:: cTeTiExchangeRate
 
-  ! coronal heating
-  logical :: UseImplicitCoronalHeating = .false.
-
-  ! Fixing isotropization
-  logical, public :: UseFixIsotropization = .true.
-
   ! radiative cooling
   logical :: DoRadCooling = .false.
 
@@ -147,12 +141,6 @@ contains
                   //TypeIonHeatConduction)
           end select
        end if
-
-    case("#IMPLICITCORONALHEATING")
-       call read_var('UseImplicitCoronalHeating', UseImplicitCoronalHeating)
-
-    case("#FIXISOTROPIZATION")
-       call read_var('UseFixIsotropization', UseFixIsotropization)
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -315,37 +303,7 @@ contains
             allocate(FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_))
        !$omp end parallel
 
-       if(UseImplicitCoronalHeating)then
-          if(.not.UseCoronalHeating)then
-             call stop_mpi(NameSub//&
-                  'Turn on coronal heating for implicit coronal heating')
-          end if
-          if(.not.UseElectronPressure)then
-             call stop_mpi(NameSub//&
-                  'Implicit coronal heating only works with electron pressure')
-          end if
-          if(UseAnisoPressure)then
-             call stop_mpi(NameSub//&
-                  'Implicit coronal heating does not work with aniso pressure')
-          end if
-          if(.not.UseTurbulentCascade)then
-             call stop_mpi(NameSub//&
-                  'Implicit coronal heating only works with turbulent cascade')
-          end if
-
-          allocate(PointCoef_VCB(4,nI,nJ,nK,MaxBlock))
-
-          UseHeatExchange = .false.
-          DoRadCooling = UseRadCooling
-          UseRadCooling = .false.
-          UseCoronalHeating = .false.
-       elseif(UseFixIsotropization .and. UseAnisoPressure &
-            .and. .not.UseMultiIon)then
-          if(UseImplicitCoronalHeating)then
-             call stop_mpi(NameSub//'Implicit coronal heating '// &
-                  'does not work with fixing isotropization')
-          end if
-
+       if(UseAnisoPressure .and. .not.UseMultiIon)then
           allocate(PointCoef_VCB(6,nI,nJ,nK,MaxBlock))
        else
           if(UseElectronPressure .and. .not.UseMultiIon)then
@@ -377,7 +335,7 @@ contains
        iTeImpl = 1
     end if
 
-   !$acc update device(TiFraction, TeFraction)
+    !$acc update device(TiFraction, TeFraction)
 
     call test_stop(NameSub, DoTest)
   end subroutine init_heat_conduction
@@ -701,9 +659,9 @@ contains
 #ifndef SCALAR
 
 #ifdef _OPENACC
-      iGang = iBlock
+    iGang = iBlock
 #else
-      iGang = 1
+    iGang = 1
 #endif
 
     if(IsNewBlockIonHeatCond)then
@@ -865,7 +823,7 @@ contains
     HeatExchangePeP = 0.0
     HeatExchangePePpar = 0.0
 
-   !$acc parallel loop gang independent
+    !$acc parallel loop gang independent
     do iBlock = 1, nBlock
 
 #ifdef _OPENACC
@@ -877,13 +835,13 @@ contains
        if (Unused_B(iBlock)) CYCLE
        ! For the electron flux limiter, we need Te in the ghostcells
        if(UseMultiIon)then
-         !$acc loop vector collapse(3) independent
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Te_GI(i,j,k,iGang) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
                   ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
           end do; end do; end do
        elseif(UseIdealEos)then
-         !$acc loop vector collapse(3) independent
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Te_GI(i,j,k,iGang) = TeFraction &
                   *State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
@@ -929,26 +887,21 @@ contains
                   *(State_VGB(Ppar_,i,j,k,iBlock) &
                   - State_VGB(Pe_,i,j,k,iBlock))
 
-             if(UseFixIsotropization)then
-                Ti = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-                IsotropizationCoef = CollisionCoef_II(1,1) &
-                     *State_VGB(Rho_,i,j,k,iBlock)/Ti**1.5
+             Ti = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             IsotropizationCoef = CollisionCoef_II(1,1) &
+                  *State_VGB(Rho_,i,j,k,iBlock)/Ti**1.5
 
-                PPparImpl = (IsotropizationCoef + HeatExchange &
-                     *DtLocaL*(HeatExchange + IsotropizationCoef)) &
-                     /(1 + DtLocaL*(HeatExchange + IsotropizationCoef)) &
-                     /(1 + 2.0*DtLocal*HeatExchange)
+             PPparImpl = (IsotropizationCoef + HeatExchange &
+                  *DtLocaL*(HeatExchange + IsotropizationCoef)) &
+                  /(1 + DtLocaL*(HeatExchange + IsotropizationCoef)) &
+                  /(1 + 2.0*DtLocal*HeatExchange)
 
-                HeatExchangePPpar = DtLocal*PPparImpl &
-                     *(State_VGB(Ppar_,i,j,k,iBlock) &
-                     - State_VGB(P_,i,j,k,iBlock))
+             HeatExchangePPpar = DtLocal*PPparImpl &
+                  *(State_VGB(Ppar_,i,j,k,iBlock) &
+                  - State_VGB(P_,i,j,k,iBlock))
 
-                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                     - HeatExchangePePpar - HeatExchangePPpar
-             else
-                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                     - HeatExchangePePpar
-             end if
+             State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
+                  - HeatExchangePePpar - HeatExchangePPpar
           end if
 #endif
 
@@ -1004,11 +957,11 @@ contains
     use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB, &
          DeltaSemiAll_VCB, UseStableImplicit
 
-   !  real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-   !  real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-   !  real, optional, intent(out):: &
-   !       DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-   !  logical, optional, intent(in):: DoCalcDeltaIn
+    !  real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    !  real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    !  real, optional, intent(out):: &
+    !       DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    !  logical, optional, intent(in):: DoCalcDeltaIn
 
     logical :: DoCalcDelta
     ! Set it as allocatable
@@ -1110,9 +1063,6 @@ contains
           end do; end do; end do
        end if
 
-       if(UseImplicitCoronalHeating .and. DoExtendTransitionRegion) &
-            call get_tesi_c(iBlock, TeSi_C)
-
        ! Store the electron temperature in SemiAll_VCB and the
        ! specific heat in DconsDsemiAll_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1173,90 +1123,26 @@ contains
 
           if(.not.IsTimeAccurate) DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
 
-          if(UseImplicitCoronalHeating)then
-             Deltap = Natomic*TeEpsilon
-             call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_V, CoronalHeating)
-             Coef = extension_factor(TeSi)
-             CoronalHeating = CoronalHeating/Coef
-             call apportion_coronal_heating(i, j, k, iBlock, &
-                  State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_V, CoronalHeating, &
-                  QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-             Qi = CoronalHeating*QPerQtotal_I(1)
-             Qe = CoronalHeating*QePerQtotal
-
-             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + Deltap
-             call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_V, CoronalHeating)
-             CoronalHeating = CoronalHeating/Coef
-             call apportion_coronal_heating(i, j, k, iBlock, &
-                  State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_V, CoronalHeating, &
-                  QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-             QiTiR = CoronalHeating*QPerQtotal_I(1)
-             QeTiR = CoronalHeating*QePerQtotal
-
-             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) - 2*Deltap
-             call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_V, CoronalHeating)
-             CoronalHeating = CoronalHeating/Coef
-             call apportion_coronal_heating(i, j, k, iBlock, &
-                  State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_V, CoronalHeating, &
-                  QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-             QiTiL = CoronalHeating*QPerQtotal_I(1)
-             QeTiL = CoronalHeating*QePerQtotal
-
-             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + Deltap
-             dQidTi = 0.5*(QiTiR  - QiTiL)/TeEpsilon
-             dQedTi = 0.5*(QeTiR  - QeTiL)/TeEpsilon
-
-             if(UseElectronPressure)then
-                State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-                     + Deltap
-                TeSi_C(i,j,k) = TeSi_C(i,j,k) + TeEpsilonSi
-                call turbulent_cascade(i, j, k, iBlock, &
-                     WaveDissipationRate_V, CoronalHeating)
-                CoronalHeating = CoronalHeating/extension_factor(TeSi_C(i,j,k))
-                call apportion_coronal_heating(i, j, k, iBlock, &
-                     State_VGB(:,i,j,k,iBlock), &
-                     WaveDissipationRate_V, CoronalHeating, &
-                     QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-                QiTeR = CoronalHeating*QPerQtotal_I(1)
-                QeTeR = CoronalHeating*QePerQtotal
-
-                State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-                     - 2*Deltap
-                TeSi_C(i,j,k) = TeSi_C(i,j,k) -2*TeEpsilonSi
-                call turbulent_cascade(i, j, k, iBlock, &
-                     WaveDissipationRate_V, CoronalHeating)
-                CoronalHeating = CoronalHeating/extension_factor(TeSi_C(i,j,k))
-                call apportion_coronal_heating(i, j, k, iBlock, &
-                     State_VGB(:,i,j,k,iBlock), &
-                     WaveDissipationRate_V, CoronalHeating, &
-                     QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-                QiTeL = CoronalHeating*QPerQtotal_I(1)
-                QeTeL = CoronalHeating*QePerQtotal
-
-                State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-                     + Deltap
-                TeSi_C(i,j,k) = TeSi_C(i,j,k) + TeEpsilonSi
-                dQidTe = 0.5*(QiTeR  - QiTeL)/TeEpsilon
-                dQedTe = 0.5*(QeTeR  - QeTeL)/TeEpsilon
-             else
-                dQidTe = 0.0
-                dQedTe = 0.0
-             end if
+          if(UseAnisoPressure .and. .not.UseMultiIon)then
+             Cvi = InvGammaMinus1*Natomic
+             CviPar = 0.5*Natomic
+             Te = Te_GI(i,j,k,iGang)
+             Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
+             Tpar = State_VGB(Ppar_,i,j,k,iBlock)/Natomic
+             CollisionRate = CollisionCoef_II(1,1) &
+                  *Natomic/(Ti*sqrt(Ti))
+             IsotropizationCoef = 0.5*Natomic*CollisionRate
+             DenominatorPar =  CviPar/DtLocal + 0.5*GammaMinus1*TeTiCoef &
+                  + IsotropizationCoef
 
              if(DoRadCooling)then
                 call get_radiative_cooling(i, j, k, iBlock, TeSi, &
                      RadCool, NameCaller=NameSub, &
-		     Xyz_D=Xyz_DGB(:,i,j,k,iBlock))
-                call get_radiative_cooling(i, j, k, iBlock, TeSi+TeEpsilonSi, &
-                     RadCoolEpsilonR)
-                call get_radiative_cooling(i, j, k, iBlock, TeSi-TeEpsilonSi, &
-                     RadCoolEpsilonL)
+                     Xyz_D=Xyz_DGB(:,i,j,k,iBlock))
+                call get_radiative_cooling(i, j, k, iBlock, &
+                     TeSi+TeEpsilonSi, RadCoolEpsilonR)
+                call get_radiative_cooling(i, j, k, iBlock, &
+                     TeSi-TeEpsilonSi, RadCoolEpsilonL)
                 RadCoolDeriv = min(0.0, &
                      0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon)
              else
@@ -1264,99 +1150,48 @@ contains
                 RadCoolDeriv = 0.0
              end if
 
-             Cvi = InvGammaElectronMinus1*Natomic
-             Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
-             Te = Te_GI(i,j,k,iGang)
-
-             TeTiCoef1 = TeTiCoef/Cvi
-             Qi1 = Qi/Cvi
-             dQidTe1 = dQidTe/Cvi
-             dQidTi1 = dQidTi/Cvi
-             Denominator = 1.0 + (TetiCoef1-dQidTi1)*DtLocal
-             TeTiCoef2 = (TeTiCoef + dQedTi)/Denominator
-
              PointCoef_VCB(1,i,j,k,iBlock) = &
-                  TeTiCoef2*DtLocal*(TeTiCoef1 + dQidTe1) &
-                  -TeTiCoef + dQedTe + RadCoolDeriv
+                  -TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi) + RadCoolDeriv
              PointCoef_VCB(2,i,j,k,iBlock) = &
-                  (-TeTiCoef2*DtLocal*TeTiCoef1 + TeTiCoef)*(Ti - Te) &
-                  + TeTiCoef2*DtLocal*Qi1 + Qe + RadCool
+                  TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi)*(Ti - Te) + RadCool
              PointCoef_VCB(3,i,j,k,iBlock) = &
-                  DtLocal*(TeTiCoef + dQidTe)/Denominator
+                  Cvi*TeTiCoef/(Cvi/DtLocal + TeTiCoef)
              PointCoef_VCB(4,i,j,k,iBlock) = &
-                  DtLocal*(TeTiCoef*(Te - Ti) + Qi)/Denominator
+                  PointCoef_VCB(3,i,j,k,iBlock)*(Te - Ti)
+             PointCoef_VCB(5,i,j,k,iBlock) = &
+                  CviPar/DenominatorPar*(0.5*GammaMinus1*TeTiCoef &
+                  + TeTiCoef*IsotropizationCoef/(Cvi/DtLocal + TeTiCoef))
+             PointCoef_VCB(6,i,j,k,iBlock) = &
+                  PointCoef_VCB(5,i,j,k,iBlock)*(Te - Tpar) &
+                  + CviPar/DenominatorPar*(IsotropizationCoef &
+                  - TeTiCoef*IsotropizationCoef/(Cvi/DtLocal + TeTiCoef)) &
+                  *(Ti - Tpar)
           else
-             if(UseAnisoPressure .and. UseFixIsotropization .and. &
-                  .not.UseMultiIon)then
-                Cvi = InvGammaMinus1*Natomic
-                CviPar = 0.5*Natomic
-                Te = Te_GI(i,j,k,iGang)
-                Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
-                Tpar = State_VGB(Ppar_,i,j,k,iBlock)/Natomic
-                CollisionRate = CollisionCoef_II(1,1) &
-                     *Natomic/(Ti*sqrt(Ti))
-                IsotropizationCoef = 0.5*Natomic*CollisionRate
-                DenominatorPar =  CviPar/DtLocal + 0.5*GammaMinus1*TeTiCoef &
-                     + IsotropizationCoef
-
-                if(DoRadCooling)then
-                   call get_radiative_cooling(i, j, k, iBlock, TeSi, &
-                        RadCool, NameCaller=NameSub, &
-                        Xyz_D=Xyz_DGB(:,i,j,k,iBlock))
-                   call get_radiative_cooling(i, j, k, iBlock, &
-                        TeSi+TeEpsilonSi, RadCoolEpsilonR)
-                   call get_radiative_cooling(i, j, k, iBlock, &
-                        TeSi-TeEpsilonSi, RadCoolEpsilonL)
-                   RadCoolDeriv = min(0.0, &
-                        0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon)
-                else
-                   RadCool = 0.0
-                   RadCoolDeriv = 0.0
-                end if
-
+             if(UseElectronPressure .and. .not.UseMultiIon)then
+                Cvi = InvGammaElectronMinus1*Natomic
                 PointCoef_VCB(1,i,j,k,iBlock) = &
-                     -TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi) + RadCoolDeriv
-                PointCoef_VCB(2,i,j,k,iBlock) = &
-                     TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi)*(Ti - Te) + RadCool
-                PointCoef_VCB(3,i,j,k,iBlock) = &
-                     Cvi*TeTiCoef/(Cvi/DtLocal + TeTiCoef)
-                PointCoef_VCB(4,i,j,k,iBlock) = &
-                     PointCoef_VCB(3,i,j,k,iBlock)*(Te - Ti)
-                PointCoef_VCB(5,i,j,k,iBlock) = &
-                     CviPar/DenominatorPar*(0.5*GammaMinus1*TeTiCoef &
-                     + TeTiCoef*IsotropizationCoef/(Cvi/DtLocal + TeTiCoef))
-                PointCoef_VCB(6,i,j,k,iBlock) = &
-                     PointCoef_VCB(5,i,j,k,iBlock)*(Te - Tpar) &
-                     + CviPar/DenominatorPar*(IsotropizationCoef &
-                     - TeTiCoef*IsotropizationCoef/(Cvi/DtLocal + TeTiCoef)) &
-                    *(Ti - Tpar)
-             else
-                if(UseElectronPressure .and. .not.UseMultiIon)then
-                   Cvi = InvGammaElectronMinus1*Natomic
-                   PointCoef_VCB(1,i,j,k,iBlock) = &
-                        TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi)
-                   PointImpl_VCB(1,i,j,k,iBlock) = &
-                        State_VGB(p_,i,j,k,iBlock)/Natomic
-                   if(UseAnisoPressure)then
-                      CviPar = 0.5*Natomic
-                      PointCoef_VCB(2,i,j,k,iBlock) = &
-                           TeTiCoef/(1.0 + DtLocal*TeTiCoef/CviPar)
-                      PointImpl_VCB(2,i,j,k,iBlock) = &
-                           State_VGB(Ppar_,i,j,k,iBlock)/Natomic
-                   end if
+                     TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi)
+                PointImpl_VCB(1,i,j,k,iBlock) = &
+                     State_VGB(p_,i,j,k,iBlock)/Natomic
+                if(UseAnisoPressure)then
+                   CviPar = 0.5*Natomic
+                   PointCoef_VCB(2,i,j,k,iBlock) = &
+                        TeTiCoef/(1.0 + DtLocal*TeTiCoef/CviPar)
+                   PointImpl_VCB(2,i,j,k,iBlock) = &
+                        State_VGB(Ppar_,i,j,k,iBlock)/Natomic
                 end if
+             end if
 
-                if(DoRadCooling)then
-                   call get_radiative_cooling(i, j, k, iBlock, TeSi, &
-                        CoolHeat_CB(i,j,k,iBlock), NameCaller=NameSub, &
-                        Xyz_D=Xyz_DGB(:,i,j,k,iBlock))
-                   call get_radiative_cooling(i, j, k, iBlock, &
-                        TeSi+TeEpsilonSi, RadCoolEpsilonR)
-                   call get_radiative_cooling(i, j, k, iBlock, &
-                        TeSi-TeEpsilonSi, RadCoolEpsilonL)
-                   CoolHeatDeriv_CB(i,j,k,iBlock) = min(0.0, &
-                        0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon)
-                end if
+             if(DoRadCooling)then
+                call get_radiative_cooling(i, j, k, iBlock, TeSi, &
+                     CoolHeat_CB(i,j,k,iBlock), NameCaller=NameSub, &
+                     Xyz_D=Xyz_DGB(:,i,j,k,iBlock))
+                call get_radiative_cooling(i, j, k, iBlock, &
+                     TeSi+TeEpsilonSi, RadCoolEpsilonR)
+                call get_radiative_cooling(i, j, k, iBlock, &
+                     TeSi-TeEpsilonSi, RadCoolEpsilonL)
+                CoolHeatDeriv_CB(i,j,k,iBlock) = min(0.0, &
+                     0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon)
              end if
           end if
 
@@ -1664,8 +1499,7 @@ contains
        end do; end do; end do
     end do
 
-    if(UseImplicitCoronalHeating .or. &
-         (UseAnisoPressure.and.UseFixIsotropization.and..not.UseMultiIon))then
+    if(UseAnisoPressure .and. .not.UseMultiIon)then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
@@ -1743,8 +1577,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(UseImplicitCoronalHeating .or. &
-         (UseAnisoPressure.and.UseFixIsotropization.and..not.UseMultiIon))then
+    if(UseAnisoPressure .and. .not.UseMultiIon)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                + PointCoef_VCB(1,i,j,k,iBlock)
@@ -1900,9 +1733,7 @@ contains
 
        end if
 
-       if(UseImplicitCoronalHeating .or. &
-            (UseAnisoPressure .and. UseFixIsotropization.and. &
-            .not.UseMultiIon))then
+       if(UseAnisoPressure .and. .not.UseMultiIon)then
           Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
                + PointCoef_VCB(3,i,j,k,iBlock) &
                *(NewSemiAll_VC(iTeImpl,i,j,k) - OldSemiAll_VC(iTeImpl,i,j,k))&

@@ -399,7 +399,7 @@ contains
     use ModResistivity, ONLY: UseResistivity, UseHeatExchange
     use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit, TypeSemiImplicit
     use ModRadDiffusion, ONLY: init_rad_diffusion
-    use ModHeatConduction, ONLY: init_heat_conduction, UseFixIsotropization
+    use ModHeatConduction, ONLY: init_heat_conduction
     use ModParticleFieldLine, ONLY: UseParticles, init_particle_line
     use ModRestartFile, ONLY: UseRestartOutSeries
     use ModMessagePass, ONLY: exchange_messages
@@ -457,8 +457,8 @@ contains
     if(UsePic) call pic_init_region
 
     if(UseHeatConduction .or. UseIonHeatConduction .or. &
-         UseAnisoPressure .and. UseFixIsotropization &
-         .and. UseResistivity .and. UseHeatExchange .and. UseElectronPressure)&
+         UseAnisoPressure .and. UseResistivity .and. &
+         UseHeatExchange .and. UseElectronPressure)&
          call init_heat_conduction
 
     if(UseParticles) &
@@ -522,7 +522,7 @@ contains
     use ModMultiFluid, ONLY: UseMultiIon
     use ModLocalTimeStep, ONLY: advance_localstep
     use ModPartImplicit, ONLY: advance_part_impl
-    use ModHeatConduction, ONLY: calc_ei_heat_exchange, UseFixIsotropization
+    use ModHeatConduction, ONLY: calc_ei_heat_exchange
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModLoadBalance, ONLY: load_balance_blocks
@@ -628,7 +628,7 @@ contains
           if(.not.UseSemiImplicit)call calc_ei_heat_exchange
        elseif(UseResistivity .and. UseHeatExchange &
             .and. UseElectronPressure)then
-          if(UseAnisoPressure .and. UseFixIsotropization)then
+          if(UseAnisoPressure)then
              call calc_ei_heat_exchange
           else
              call calc_heat_exchange

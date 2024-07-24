@@ -107,7 +107,7 @@ contains
          nIterFirst_I=100000, nIterLast_I=-1
     real, dimension(MaxError):: &
          ErrorMin_I=1e30, ErrorMax_I=-1e30, &
-         ErrorMean_I=0., ErrorLast_I=0., ErrorLastSum_I
+         ErrorMean_I=0., ErrorLast_I=0., ErrorLastSum_I=0.
 
     integer, allocatable :: nError_P(:)
     character(len=60), allocatable :: StringError_IP(:,:)

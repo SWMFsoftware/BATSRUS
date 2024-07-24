@@ -75,9 +75,6 @@ load			NameCommand
 Param/CORONA/RadCoolCorona_8.0.dat		NameFile
 ascii			TypeFile
 
-#FIXISOTROPIZATION
-T			UseFixIsotropization
-
 #TRANSITIONREGION
 T			DoExtendTransitionRegion
 2.2e5			TeTransitionRegionSi
