@@ -1817,9 +1817,7 @@ contains
 
     integrate_circle = Integral*Radius*dPhi
 
-    call test_stop(NameSub, DoTest)
-
-  contains
+    call test_stop(NameSub, DoTest)  
     !==========================================================================
   end function integrate_circle
   !============================================================================
