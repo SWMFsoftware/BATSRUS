@@ -1,3 +1,6 @@
+#DESCRIPTION
+Param/MULTIION/PARAM.in: multiion shocktube test		StringDescription
+
 #POINTIMPLICIT
 T			UsePointImplicit
 0.5			BetaPointImplicit
