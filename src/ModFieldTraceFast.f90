@@ -1626,11 +1626,11 @@ contains
     integer :: iFace, iBlock
 
 #ifndef _OPENACC
-      ! Array ranges for outgoing, incoming, restricted and subfaces
-      integer :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
-      integer :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
-      integer :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
-      integer :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
+    ! Array ranges for outgoing, incoming, restricted and subfaces
+    integer :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
+    integer :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
+    integer :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
+    integer :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
 #endif
 
     logical:: DoTest
@@ -1943,18 +1943,18 @@ contains
       !------------------------------------------------------------------------
       !$acc loop vector collapse(5) private(iTrace)
       do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax;do iRay = 1,2; do iDim=1,3
-            iTrace = (k-kMin)*((jMax-jMin)+1)*((iMax-iMin)+1)*6 +&
-                 (j-jMin)*((iMax-iMin)+1)*6 + (i-iMin)*6 + &
-                 (iRay-1)*3 + iDim + (iSubFaceIn-1)*MaxSizeR
+         iTrace = (k-kMin)*((jMax-jMin)+1)*((iMax-iMin)+1)*6 +&
+              (j-jMin)*((iMax-iMin)+1)*6 + (i-iMin)*6 + &
+              (iRay-1)*3 + iDim + (iSubFaceIn-1)*MaxSizeR
 
-            Trace_DINB(iDim,iRay,i,j,k,iBlock) = &
-                 max(BufferR_IBIP(iTrace,jBlock,jSide,jProc),&
-                 Trace_DINB(iDim,iRay,i,j,k,iBlock))
-         end do; end do;end do; end do; end do;
+         Trace_DINB(iDim,iRay,i,j,k,iBlock) = &
+              max(BufferR_IBIP(iTrace,jBlock,jSide,jProc),&
+              Trace_DINB(iDim,iRay,i,j,k,iBlock))
+      end do; end do;end do; end do; end do;
     end subroutine buf2subrayface_parallel
     !==========================================================================
 #else
-     subroutine buf2rayface(Buffer_DIN,iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine buf2rayface(Buffer_DIN,iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       real, intent(inout):: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
