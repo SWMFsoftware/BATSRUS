@@ -23,14 +23,14 @@ module ModPhysics
   save
   public
 
-  public :: set_physics_constants
-  public :: init_mhd_variables
-  public :: init_vector_variables
-  public :: set_dimensional_factor
-  public :: set_dipole
+  public:: set_physics_constants
+  public:: init_mhd_variables
+  public:: init_vector_variables
+  public:: set_dimensional_factor
+  public:: set_dipole
 
-  private :: set_units
-  private :: set_unit_conversion_array_indices
+  private:: set_units
+  private:: set_unit_conversion_array_indices
 
   ! default adiabatic index value
   real, parameter:: Gamma0 = 5./3.
@@ -42,78 +42,78 @@ module ModPhysics
   !$acc declare create(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
 
   ! adiabatic index (gamma) and derived values for the first/total fluid
-  real :: Gamma          = Gamma0
-  real :: GammaMinus1    = Gamma0 - 1.0
-  real :: InvGammaMinus1 = 1.0/(Gamma0 - 1.0)
+  real:: Gamma          = Gamma0
+  real:: GammaMinus1    = Gamma0 - 1.0
+  real:: InvGammaMinus1 = 1.0/(Gamma0 - 1.0)
   !$acc declare create(Gamma, GammaMinus1, InvGammaMinus1)
 
   ! adiabatic index (gamma) and derived values for electrons
-  real :: GammaElectron          = Gamma0
-  real :: GammaElectronMinus1    = Gamma0 - 1.0
-  real :: InvGammaElectronMinus1 = 1.0/(Gamma0 - 1.0)
+  real:: GammaElectron          = Gamma0
+  real:: GammaElectronMinus1    = Gamma0 - 1.0
+  real:: InvGammaElectronMinus1 = 1.0/(Gamma0 - 1.0)
   !$acc declare create(GammaElectron, GammaElectronMinus1)
   !$acc declare create(InvGammaElectronMinus1)
 
   ! gamma of the waves
-  real :: GammaWave = 1.5
+  real:: GammaWave = 1.5
   !$acc declare create(GammaWave)
 
   ! electron charge in normalized units (actually proton charge/mass)
-  real :: ElectronCharge
+  real:: ElectronCharge
 
   ! electron gyro-frequency coefficient in normalized units
-  real :: ElectronGyroFreqCoef
+  real:: ElectronGyroFreqCoef
 
   ! Coulomb logarithm (spatially independent)
-  real :: CoulombLog = 20.0
+  real:: CoulombLog = 20.0
 
   ! plasma parameters
-  real :: AverageIonCharge         = 1.0
-  real :: ElectronTemperatureRatio = 0.0
-  real :: ElectronPressureRatio    = 0.0
-  real :: PePerPtotal              = 0.0
-  real :: IonMassPerCharge         = 1.0
+  real:: AverageIonCharge         = 1.0
+  real:: ElectronTemperatureRatio = 0.0
+  real:: ElectronPressureRatio    = 0.0
+  real:: PePerPtotal              = 0.0
+  real:: IonMassPerCharge         = 1.0
   !$acc declare create(ElectronPressureRatio, PePerPtotal)
 
   ! Quantities for reduced mass and collision frequencies
-  real :: MassIonElectron_I(nIonFluid+1)
-  real :: ReducedMass_II(nIonFluid+1,nIonFluid+1)
-  real :: CollisionCoef_II(nIonFluid+1,nIonFluid+1)
+  real:: MassIonElectron_I(nIonFluid+1)
+  real:: ReducedMass_II(nIonFluid+1,nIonFluid+1)
+  real:: CollisionCoef_II(nIonFluid+1,nIonFluid+1)
   !$acc declare create(CollisionCoef_II)
 
   ! Ion charge for multi-species.
-  real :: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
+  real:: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
 
   ! Artificial speed of light set by #LIGHTSPEED
-  real :: ClightDim = -1.0
+  real:: ClightDim = -1.0
 
   ! speed of light, inverse, square, inverse of square, reduction factor
-  real :: Clight, InvClight, C2light, InvClight2
-  real :: ClightFactor = 1.0
+  real:: Clight, InvClight, C2light, InvClight2
+  real:: ClightFactor = 1.0
   !$acc declare create(C2light, InvClight, InvClight2, ClightFactor)
 
   ! normalized radiation constant (Erad = cRadiationNo*Trad**4)
-  real :: cRadiationNo
+  real:: cRadiationNo
 
   ! the dipole moment for body2
-  real :: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0
+  real:: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0
 
-  real :: OmegaBody_D(3)
+  real:: OmegaBody_D(3)
   !$acc declare create(OmegaBody_D)
 
   ! Monopole and dipole magnetic field
-  real :: MonopoleStrength=0.0, MonopoleStrengthSi=0.0
-  real :: Bdp=0.0, DipoleStrengthSi=0.0
-  real :: Dipole_D(3)
+  real:: MonopoleStrength=0.0, MonopoleStrengthSi=0.0
+  real:: Bdp=0.0, DipoleStrengthSi=0.0
+  real:: Dipole_D(3)
   !$acc declare create(Bdp, DipoleStrengthSi, Dipole_D)
 
-  real :: ThetaTilt=0.0, &                ! tilt angle of magnetic axis
+  real:: ThetaTilt=0.0, &                ! tilt angle of magnetic axis
        SinThetaTilt=0.0, CosThetaTilt=1.0 ! NOW ONLY IH SHOULD USE THIS !!!
 
   !$acc declare create(SinThetaTilt, CosThetaTilt)
 
   ! Far field solar wind solution variables.
-  real :: SolarWindTempDim=0.0, &
+  real:: SolarWindTempDim=0.0, &
        SolarWindRho=0.0, SolarWindRhoDim=0.0, &
        SolarWindN=0.0,   SolarWindNDim=0.0  , &
        SolarWindP=0.0  , SolarWindPDim=0.0  , &
@@ -124,22 +124,22 @@ module ModPhysics
        SolarWindBy=0.0 , SolarWindByDim=0.0 , &
        SolarWindBz=0.0 , SolarWindBzDim=0.0
 
-  real :: SwTminDim = -1.0
+  real:: SwTminDim = -1.0
 
   ! General Body parameters
   character(len=2):: NamePlanetRadius = 'R ' ! can be 'km' if there is no body
-  real :: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
-  real :: gBody=0.0
-  real :: RotPeriodSi=0.0, OmegaBody=0.0
+  real:: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
+  real:: gBody=0.0
+  real:: RotPeriodSi=0.0, OmegaBody=0.0
   !$acc declare create(OmegaBody, gBody)
 
   ! The dimensional quantities are given for individual ion and neutral fluids
-  real, dimension(nFluid) :: &
+  real, dimension(nFluid):: &
        BodyNDim_I = 1.0, BodyTDim_I = 1.0, &
        PolarNDim_I= 1.0, PolarTDim_I= 1.0, PolarUDim_I = 0.0
 
   ! The normalized quantities
-  real, dimension(nFluid) :: &
+  real, dimension(nFluid):: &
        BodyRho_I = 1.0, BodyP_I = 1.0, &
        PolarRho_I= 1.0, PolarP_I= 1.0, PolarU_I=0.0
   !$acc declare create(PolarRho_I, PolarP_I)
@@ -154,48 +154,48 @@ module ModPhysics
   real:: BodyNSpeciesDim_I(nSpecies) = -1.0, BodyRhoSpecies_I(nSpecies) = -1.0
 
   ! Density ratio of major and minor ions/neutrals (e.g. in the solar wind)
-  real :: LowDensityRatio = 0.0001
+  real:: LowDensityRatio = 0.0001
 
   ! Minimum threshold for electron pressure and extra internal energy
-  real :: PeMinSi = -1.1e5, PeMinDim = -1.0, PeMin
-  real :: TeMinDim = -1.0, TeMin
-  real :: ExtraEintMinSi = 0.0, ExtraEintMin
+  real:: PeMinSi = -1.1e5, PeMinDim = -1.0, PeMin
+  real:: TeMinDim = -1.0, TeMin
+  real:: ExtraEintMinSi = 0.0, ExtraEintMin
 
   ! Minimum threshold for MHD density and pressure
-  real :: RhoMinDim_I(nFluid) = -1.0, RhoMin_I(nFluid)
-  real :: pMinDim_I(nFluid)   = -1.0, pMin_I(nFluid)
-  real :: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
-  logical :: UseRhoMin, UsePMin
+  real:: RhoMinDim_I(nFluid) = -1.0, RhoMin_I(nFluid)
+  real:: pMinDim_I(nFluid)   = -1.0, pMin_I(nFluid)
+  real:: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
+  logical:: UseRhoMin, UsePMin
   !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
 
   ! Minimum threshold for radial velocity
-  real :: SpeedMinDim, SpeedMin, rSpeedMin
-  real :: TauSpeedMinDim, TauSpeedMin
-  logical :: UseSpeedMin = .false.
+  real:: SpeedMinDim, SpeedMin, rSpeedMin
+  real:: TauSpeedMinDim, TauSpeedMin
+  logical:: UseSpeedMin = .false.
 
   ! Boundary pressure for subsonic outflow
-  logical :: UseOutflowPressure = .false.
+  logical:: UseOutflowPressure = .false.
   !$acc declare create(UseOutflowPressure)
-  real :: pOutflowSi = -1.0, pOutflow = -1.0
+  real:: pOutflowSi = -1.0, pOutflow = -1.0
   !$acc declare create(pOutflow)
 
   ! Relaxation time for anisotropic pressure
-  logical :: UseConstantTau_I(nFluid)   =  nIonFluid > 1
-  real    :: TauInstabilitySi_I(nFluid) = -1.0, TauInstability_I(nFluid)
-  real    :: TauGlobalSi_I(nFluid)      = -1.0, TauGlobal_I(nFluid)
+  logical:: UseConstantTau_I(nFluid)   =  nIonFluid > 1
+  real:: TauInstabilitySi_I(nFluid) = -1.0, TauInstability_I(nFluid)
+  real:: TauGlobalSi_I(nFluid)      = -1.0, TauGlobal_I(nFluid)
 
   ! General variables for the second body
 
   ! Radius and center coordinates
-  real :: rBody2=0.0, xBody2=0.0, yBody2=0.0, zBody2=0.0, vBody2_D(3) = 0.0
+  real:: rBody2=0.0, xBody2=0.0, yBody2=0.0, zBody2=0.0, vBody2_D(3) = 0.0
   !$acc declare create(rBody2, xBody2, yBody2, zBody2, vBody2_D)
 
   ! Dimensional and diminsionless parameters on the seconnd body boundary
-  real :: Body2NDim = 0.0, Body2TDim = 0.0, RhoBody2 = 0.0, pBody2 = 0.0
+  real:: Body2NDim = 0.0, Body2TDim = 0.0, RhoBody2 = 0.0, pBody2 = 0.0
   !$acc declare create(Body2NDim, Body2TDim, RhoBody2, pBody2)
 
   ! Second body mass and gravity force parameter derived from it
-  real   :: MassBody2Si, gBody2 = 0.0
+  real:: MassBody2Si, gBody2 = 0.0
   !$acc declare create(MassBody2Si,gBody2)
   ! Logical determining if the orbit elements from CON_planet are used to
   ! trace a second body.
@@ -203,17 +203,17 @@ module ModPhysics
   !$acc declare create(UseBody2Orbit)
 
   ! Variables for two-state shock tube problems
-  logical :: UseShockTube = .false.
-  real :: ShockLeftDim_V(nVar)=0.0, ShockRightDim_V(nVar)=0.0
-  real :: ShockLeft_V(nVar)=0.0, ShockRight_V(nVar)=0.0 ! physical units
-  real :: ShockPosition = 0.0, ShockSlope = 0.0
+  logical:: UseShockTube = .false.
+  real:: ShockLeftDim_V(nVar)=0.0, ShockRightDim_V(nVar)=0.0
+  real:: ShockLeft_V(nVar)=0.0, ShockRight_V(nVar)=0.0 ! physical units
+  real:: ShockPosition = 0.0, ShockSlope = 0.0
 
   ! Options for using Boundary State:
   ! 0 - not use boundary state (by default).
   ! 1 - use boundary sate (#BOUNDARYSTATE).
   ! 2 - use boundary state in num dens and temperature (#BOUNDARYSTATE_NT).
-  integer :: iFaceBoundaryState_I(SolidBc_:zMaxBc_)          = 0
-  integer :: iCellBoundaryState_I(Coord1MinBc_:Coord3MaxBc_) = 0
+  integer:: iFaceBoundaryState_I(SolidBc_:zMaxBc_)          = 0
+  integer:: iCellBoundaryState_I(Coord1MinBc_:Coord3MaxBc_) = 0
 
   ! State for the boundary conditions
   real::  FaceState_VI(nVar,SolidBc_:zMaxBc_), &
@@ -224,36 +224,36 @@ module ModPhysics
   !$acc declare create(CellState_VI)
 
   ! Units for normalization of variables
-  character (len=20) :: TypeNormalization="PLANETARY"
+  character(len=20):: TypeNormalization="PLANETARY"
 
   ! Type of units used for I/O (input params, log files, plot files, etc.)
-  character (len=20) :: TypeIoUnit = "PLANETARY"
+  character(len=20):: TypeIoUnit = "PLANETARY"
 
   ! Named indexes for I/O variable units
-  integer, parameter :: nIoUnit = 18
+  integer, parameter:: nIoUnit = 18
 
-  integer, parameter :: UnitX_           = 1
-  integer, parameter :: UnitU_           = 2
-  integer, parameter :: UnitRho_         = 3
-  integer, parameter :: UnitT_           = 4
-  integer, parameter :: UnitN_           = 5
-  integer, parameter :: UnitP_           = 6
-  integer, parameter :: UnitB_           = 7
-  integer, parameter :: UnitRhoU_        = 8
-  integer, parameter :: UnitEnergyDens_  = 9
-  integer, parameter :: UnitPoynting_    = 10
-  integer, parameter :: UnitJ_           = 11
-  integer, parameter :: UnitElectric_    = 12
-  integer, parameter :: UnitTemperature_ = 13
-  integer, parameter :: UnitDivB_        = 14
-  integer, parameter :: UnitAngle_       = 15
-  integer, parameter :: UnitMass_        = 16
-  integer, parameter :: UnitCharge_      = 17
-  integer, parameter :: UnitUnity_       = 18
+  integer, parameter:: UnitX_           = 1
+  integer, parameter:: UnitU_           = 2
+  integer, parameter:: UnitRho_         = 3
+  integer, parameter:: UnitT_           = 4
+  integer, parameter:: UnitN_           = 5
+  integer, parameter:: UnitP_           = 6
+  integer, parameter:: UnitB_           = 7
+  integer, parameter:: UnitRhoU_        = 8
+  integer, parameter:: UnitEnergyDens_  = 9
+  integer, parameter:: UnitPoynting_    = 10
+  integer, parameter:: UnitJ_           = 11
+  integer, parameter:: UnitElectric_    = 12
+  integer, parameter:: UnitTemperature_ = 13
+  integer, parameter:: UnitDivB_        = 14
+  integer, parameter:: UnitAngle_       = 15
+  integer, parameter:: UnitMass_        = 16
+  integer, parameter:: UnitCharge_      = 17
+  integer, parameter:: UnitUnity_       = 18
 
   ! Conversion between units: e.g. VarSi = VarNo*No2Si_V(UnitVar_)
   ! The following should always be true: No2Si_V*Si2Io_V = No2Io_V
-  real, dimension(nIoUnit) :: &
+  real, dimension(nIoUnit):: &
        Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V
   !$acc declare create(Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V)
 
@@ -265,16 +265,16 @@ module ModPhysics
 
   ! Names of the user (I/O) units for IDL and TECPlot output
   ! for all variables including energies
-  character(len=20), allocatable :: NameUnitUserIdl_V(:), NameUnitUserTec_V(:)
+  character(len=20), allocatable:: NameUnitUserIdl_V(:), NameUnitUserTec_V(:)
 
   ! The user defined units for the variables including energies
-  real, allocatable :: UnitUser_V(:)
+  real, allocatable:: UnitUser_V(:)
 
   ! Some strange logical used in calc_heat_flux
-  logical :: UseDefaultUnits = .false.
+  logical:: UseDefaultUnits = .false.
 
   ! Number and indexes of vector variables in State_VGB
-  integer :: nVectorVar=0
+  integer:: nVectorVar=0
   integer, allocatable:: iVectorVar_I(:) ! Index of first components
 
 contains
@@ -318,10 +318,10 @@ contains
          UseEfield, UseAnisoPe
     use BATL_lib, ONLY: IsCartesian
 
-    real :: MassBodySi
-    real :: pCoef
-    real :: Charge_I(nIonFluid+1)
-    integer :: i, iBoundary, iFluid, iIon, jIon
+    real:: MassBodySi
+    real:: pCoef
+    real:: Charge_I(nIonFluid+1)
+    integer:: i, iBoundary, iFluid, iIon, jIon
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_physics_constants'
@@ -1059,8 +1059,8 @@ contains
     use ModVarIndexes
     use ModMultiFluid
 
-    integer :: iVar
-    character (len=len(NameVar_V)) :: NameVar
+    integer:: iVar
+    character(len=len(NameVar_V)):: NameVar
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_unit_conversion_array_indices'
     !--------------------------------------------------------------------------
@@ -1127,7 +1127,7 @@ contains
     use ModMain,    ONLY: UseB
     ! use ModSaMhd,    ONLY: UseSaMhd
 
-    integer :: iVar, iFluid
+    integer:: iVar, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mhd_variables'
@@ -1163,8 +1163,8 @@ contains
     do iFluid = 1, nFluid
        if(nFluid > 1) call select_fluid(iFluid)
        UnitUser_V(iRho)          = No2Io_V(UnitRho_)
-       NameUnitUserTec_V(iRho)          = NameTecUnit_V(UnitRho_)
-       NameUnitUserIdl_V(iRho)          = NameIdlUnit_V(UnitRho_)
+       NameUnitUserTec_V(iRho)   = NameTecUnit_V(UnitRho_)
+       NameUnitUserIdl_V(iRho)   = NameIdlUnit_V(UnitRho_)
 #ifndef SCALAR
        UnitUser_V(iRhoUx:iRhoUz) = No2Io_V(UnitRhoU_)
        UnitUser_V(iP)            = No2Io_V(UnitP_)
@@ -1318,18 +1318,19 @@ contains
   !============================================================================
   subroutine set_dimensional_factor(nPlotVar, NameVar_V, &
        DimFactor_V, DimFactorBody_V)
+
     use ModVarIndexes, ONLY: DefaultState_V
     use ModUtilities,  ONLY: lower_case
     use ModMultiFluid, ONLY: extract_fluid_name
 
-    integer, intent(in) :: nPlotVar
-    character (LEN=10), intent(in) :: NameVar_V(nPlotVar)
-    real,              intent(out) :: DimFactor_V(nPlotVar)
-    real, optional,    intent(out) :: DimFactorBody_V(nPlotVar)
+    integer, intent(in):: nPlotVar
+    character(len=10), intent(in):: NameVar_V(nPlotVar)
+    real,              intent(out):: DimFactor_V(nPlotVar)
+    real, optional,    intent(out):: DimFactorBody_V(nPlotVar)
 
-    character (len=10)  :: String, NamePlotVar
+    character(len=10):: String, NamePlotVar
 
-    integer :: iVar, jVar
+    integer:: iVar, jVar
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_dimensional_factor'
@@ -1361,15 +1362,12 @@ contains
        case('rhoux','mx','rhouy','my','rhouz','mz','rhour','mr' )
           DimFactor_V(iVar) = No2Io_V(UnitRhoU_)
        case('bx','by','bz','br','b1x','b1y','b1z','b1r' &
-            ,'bxl','bxr','byl','byr','bzl','bzr' &
-            )
+            ,'bxl','bxr','byl','byr','bzl','bzr')
           DimFactor_V(iVar) = No2Io_V(UnitB_)
        case('elaser')
-          DimFactor_V(iVar) =  &
-               No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
+          DimFactor_V(iVar) = No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
        case('e','e1','ew','erad')
-          DimFactor_V(iVar) =  &
-               No2Io_V(UnitEnergyDens_)
+          DimFactor_V(iVar) = No2Io_V(UnitEnergyDens_)
        case('p','pth','pperp','peperp')
           DimFactor_V(iVar) =  No2Io_V(UnitP_)
           if(present(DimFactorBody_V))&
@@ -1429,15 +1427,17 @@ contains
           ! no normalization
        end select
     end do ! iVar
+
   end subroutine set_dimensional_factor
   !============================================================================
   subroutine set_second_body_coord
+
     use ModMain, ONLY:tSimulation, StartTime, TypeCoordSystem
     use CON_axes,      ONLY: transform_matrix
     use CON_planet, ONLY: orbit_in_hgi
     ! Second body location in HGI
-    real    :: XyzBody2Hgi_D(3), XyzBody2_D(3), vBody2Hgi_D(3)
-    real    :: Transform_DD(3,3)
+    real:: XyzBody2Hgi_D(3), XyzBody2_D(3), vBody2Hgi_D(3)
+    real:: Transform_DD(3,3)
     !--------------------------------------------------------------------------
     call orbit_in_hgi(StartTime + tSimulation,XyzBody2Hgi_D,vBody2Hgi_D)
     ! Convert to the coordinate system of the model, if needed
@@ -1449,6 +1449,7 @@ contains
     zBody2 = XyzBody2_D(3)
     vBody2_D = matmul(Transform_DD, vBody2Hgi_D)*Si2No_V(UnitU_)
     !$acc update device(xBody2, yBody2, zBody2, vBody2_D)
+
   end subroutine set_second_body_coord
   !============================================================================
 end module ModPhysics
