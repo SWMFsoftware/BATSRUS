@@ -1817,8 +1817,7 @@ contains
 
     integrate_circle = Integral*Radius*dPhi
 
-    call test_stop(NameSub, DoTest)  
-    !==========================================================================
+    call test_stop(NameSub, DoTest)
   end function integrate_circle
   !============================================================================
   subroutine collect_satellite_data(Xyz_D, nVar, StateCurrent_V)
