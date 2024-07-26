@@ -50,6 +50,7 @@ module ModUpdateStateFast
   use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
+  use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
 
@@ -1168,122 +1169,111 @@ contains
   !============================================================================
 #ifndef SCALAR
   subroutine set_cell_boundary_for_block(iBlock, nVarState, State_VG, &
-       IsImplBlockIn, IsLinearIn)
+       IsLinearIn)
     !$acc routine vector
 
     integer, intent(in) :: iBlock, nVarState
     real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    logical, intent(in), optional:: IsImplBlockIn, IsLinearIn
+
+    ! Present only for semi-implicit scheme
+    logical, intent(in), optional:: IsLinearIn
 
     integer :: i, j, k, iSide
     integer :: iTypeBC
-    logical :: IsImplBlock, IsLinear
-
+    logical :: IsLinear
     !--------------------------------------------------------------------------
     if(Unused_B(iBlock)) RETURN
     if(.not.IsBoundary_B(iBlock)) RETURN
 
-    IsImplBlock = .false.
-    if(present(IsImplBlockIn)) IsImplBlock = IsImplBlockIn
-
-    IsLinear = .true.
+    ! Default is false, because explicit scheme does not use linear BC
+    IsLinear = .false.
     if(present(IsLinearIn)) IsLinear = IsLinearIn
 
     ! x left
     iSide = 1
-    iTypeBC = iTypeCellBc_I(iSide)
-    if(IsImplBlock) iTypeBC = -abs(iTypeBC)
     if(DiLevel_EB(iSide,iBlock) == Unset_) then
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
-          call set_boundary_for_cell(iSide,i,j,k,1,j,k,iBlock,iTypeBC,&
-               nVar, State_VG)
+          call set_boundary_for_cell(iSide, i, j, k, 1, j, k, &
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
        end do; end do; end do
     end if
 
     ! x right
     iSide = 2
-    iTypeBC = iTypeCellBc_I(iSide)
-    if(IsImplBlock) iTypeBC = -abs(iTypeBC)
     if(DiLevel_EB(iSide,iBlock) == Unset_) then
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
-          call set_boundary_for_cell(iSide,i,j,k,nI,j,k,iBlock,iTypeBC,&
-               nVar, State_VG)
+          call set_boundary_for_cell(iSide, i, j, k, nI, j, k, &
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
        end do; end do; end do
     end if
 
     ! y left
     iSide = 3
-    iTypeBC = iTypeCellBc_I(iSide)
-    if(IsImplBlock) iTypeBC = -abs(iTypeBC)
-    if(DiLevel_EB(iSide,iBlock) == Unset_) then
+    if(DiLevel_EB(iSide,iBlock) == Unset_ .and. nDim >= 2) then
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI
-          call set_boundary_for_cell(iSide,i,j,k,i,1,k,iBlock,iTypeBC,&
-               nVar, State_VG)
+          call set_boundary_for_cell(iSide, i, j, k, i, 1, k, &
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
        end do; end do; end do
     end if
 
     ! y right
     iSide = 4
-    iTypeBC = iTypeCellBc_I(iSide)
-    if(IsImplBlock) iTypeBC = -abs(iTypeBC)
-    if(DiLevel_EB(iSide,iBlock) == Unset_) then
+    if(DiLevel_EB(iSide,iBlock) == Unset_ .and. nDim >= 2) then
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
-          call set_boundary_for_cell(iSide,i,j,k,i,nJ,k,iBlock,iTypeBC,&
-               nVar, State_VG)
+          call set_boundary_for_cell(iSide, i, j, k, i, nJ, k, &
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
        end do; end do; end do
     end if
 
     ! z left
     iSide = 5
-    iTypeBC = iTypeCellBc_I(iSide)
-    if(IsImplBlock) iTypeBC = -abs(iTypeBC)
-    if(DiLevel_EB(iSide,iBlock) == Unset_) then
+    if(DiLevel_EB(iSide,iBlock) == Unset_ .and. nDim == 3) then
        !$acc loop vector collapse(3) independent
        do k = MinK, 0; do j = MinJ, MaxJ; do i = MinI, MaxI
-          call set_boundary_for_cell(iSide,i,j,k,i,j,1,iBlock,iTypeBC,&
-               nVar, State_VG)
+          call set_boundary_for_cell(iSide, i, j, k, i, j, 1, &
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
        end do; end do; end do
     end if
 
     ! z right
     iSide = 6
-    iTypeBC = iTypeCellBc_I(iSide)
-    if(IsImplBlock) iTypeBC = -abs(iTypeBC)
-    if(DiLevel_EB(iSide,iBlock) == Unset_) then
+    if(DiLevel_EB(iSide,iBlock) == Unset_ .and. nDim == 3) then
        !$acc loop vector collapse(3) independent
        do k = nK+1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          call set_boundary_for_cell(iSide,i,j,k,i,j,nK,iBlock,iTypeBC,&
-               nVar, State_VG)
+          call set_boundary_for_cell(iSide, i, j, k, i, j, nK, &
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
        end do; end do; end do
     end if
   end subroutine set_cell_boundary_for_block
   !============================================================================
 
   subroutine set_boundary_for_cell(iSide, i, j, k, iSend, jSend, kSend, &
-       iBlock, iTypeBC, nVarState, State_VG)
+       iBlock, iTypeBC, IsLinear, nVarState, State_VG)
     !$acc routine seq
 
     integer, intent(in):: iSide, i, j, k, iSend, jSend, kSend, iBlock
     integer, intent(in):: iTypeBC, nVarState
+    logical, intent(in):: IsLinear
     real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !--------------------------------------------------------------------------
-    if(iTypeBC == FloatBc_)then
-       State_VG(:,i,j,k) = State_VG(:,iSend,jSend,kSend)
-    elseif(iTypeBC == FloatSemiBC_)then
+    if(IsLinear)then
        State_VG(iVarSemiMin:iVarSemiMax,i,j,k) = 0.0
+    elseif(iTypeBC == FloatBc_)then
+       State_VG(:,i,j,k) = State_VG(:,iSend,jSend,kSend)
     elseif(iTypeBC == VaryBC_ .or. &
          iTypeBC == FixedBC_ .or. &
-         iTypeBC == InFlowBC_) then 
+         iTypeBC == InFlowBC_) then
        State_VG(:,i,j,k) = CellState_VI(:,iSide)
        if(UseB0) State_VG(Bx_:Bz_,i,j,k) = &
             State_VG(Bx_:Bz_,i,j,k) - B0_DGB(:,i,j,k,iBlock)
     else
-
+       call stop_mpi('set_boundary_for_cell: Unimplemented boundary type')
     end if
+ 
   end subroutine set_boundary_for_cell
   !============================================================================
   subroutine set_face(VarsTrueFace_V, VarsGhostFace_V, &
