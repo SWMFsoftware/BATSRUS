@@ -1273,7 +1273,7 @@ contains
     else
        call stop_mpi('set_boundary_for_cell: Unimplemented boundary type')
     end if
- 
+
   end subroutine set_boundary_for_cell
   !============================================================================
   subroutine set_face(VarsTrueFace_V, VarsGhostFace_V, &
