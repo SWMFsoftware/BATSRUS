@@ -1159,7 +1159,8 @@ contains
 
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock
-       call set_cell_boundary_for_block(iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+       call set_cell_boundary_for_block(iBlock, nVar, &
+            State_VGB(:,:,:,:,iBlock))
     end do
 #endif
   end subroutine set_boundary_fast
@@ -1256,7 +1257,8 @@ contains
   end subroutine set_cell_boundary_for_block
   !============================================================================
 
-  subroutine set_boundary_for_cell(i, j, k, iSend, jSend, kSend, iBlock, iTypeBC, nVarState, State_VG)
+  subroutine set_boundary_for_cell(i, j, k, iSend, jSend, kSend, iBlock, &
+       iTypeBC, nVarState, State_VG)
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iSend, jSend, kSend, iBlock
