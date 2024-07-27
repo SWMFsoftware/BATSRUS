@@ -21,8 +21,7 @@ module ModUpdateStateFast
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB, Vdt_, iTypeUpdate, UpdateFast_, UseRotatingFrame, &
        UseElectronPressure
-  use ModCellBoundary, ONLY: FloatBC_, VaryBC_, FloatSemiBC_, &
-       InFlowBC_, FixedBC_
+  use ModCellBoundary, ONLY: FloatBC_, VaryBC_, InFlowBC_, FixedBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
@@ -1179,7 +1178,6 @@ contains
     logical, intent(in), optional:: IsLinearIn
 
     integer :: i, j, k, iSide
-    integer :: iTypeBC
     logical :: IsLinear
     !--------------------------------------------------------------------------
     if(Unused_B(iBlock)) RETURN
