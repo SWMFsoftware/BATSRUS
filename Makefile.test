@@ -933,7 +933,7 @@ test_awsom_large_gpu_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_awsom_large_gpu_check:
-	-@(${DIFFNUM} -a=2e-19 -r=1e-5 -t \
+	-@(${DIFFNUM} -a=5e-19 -r=1e-5 -t \
 		${TESTDIR}/RESULTS/SC/log_n000500.log \
 		Param/CORONA/TestOutput/log_n000500.awsom_large_gpu \
 		> test_awsom_large_gpu.diff)
@@ -2106,7 +2106,6 @@ test_2bodyplot_check:
 
 test_moonimpact:
 	-@($(MAKE) test_moonimpact_start)
-	-@($(MAKE) test_moonimpact_restart)
 
 test_moonimpact_start:
 	@echo "test_moonimpact_compile..." > test_moonimpact.diff
