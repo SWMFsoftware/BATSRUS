@@ -971,7 +971,6 @@ contains
            NameSub, ' after pressure/energy update        =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
-
       if(UseIonShockHeating .and. .not.UseElectronShockHeating)then
          ! Distribute shock heating between first and second ion fluids
          if(DoTest)then

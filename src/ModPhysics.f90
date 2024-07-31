@@ -45,7 +45,7 @@ module ModPhysics
   real:: GammaIon_I(nIonFluid)          = Gamma0
   real:: GammaMinus1Ion_I(nIonFluid)    = Gamma0 - 1.0
   real:: InvGammaMinus1Ion_I(nIonFluid) = 1.0/(Gamma0 - 1.0)
-  
+
   ! adiabatic index (gamma) and derived values for the first/total fluid
   real:: Gamma          = Gamma0
   real:: GammaMinus1    = Gamma0 - 1.0
