@@ -357,6 +357,41 @@ test_fastwave_2d_check:
                 > test_fastwave_2d_gpu.diff)
 	ls -l test_fastwave_2d_gpu.diff
 
+### 2D HEAT CONDUCTION TEST ###
+
+test_heatcond_2d:
+	@echo "test_heatcond_2d_compile..." > test_heatcond_2d_gpu.diff
+	$(MAKE) test_heatcond_2d_compile
+	@echo "test_heatcond_2d_rundir..." >> test_heatcond_2d_gpu.diff
+	$(MAKE) test_heatcond_2d_rundir
+	@echo "test_heatcond_2d_run..." >> test_heatcond_2d_gpu.diff
+	$(MAKE) test_heatcond_2d_run
+	@echo "test_heatcond_2d_check..." >> test_heatcond_2d_gpu.diff
+	$(MAKE) test_heatcond_2d_check
+
+test_heatcond_2d_compile:
+	./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -u=Default -e=MhdPe -ng=2 -g=8,4,1
+	./Config.pl -opt=Param/CORONA/PARAM.in.heat.cond
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_heatcond_2d_rundir:test_rundir
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.heat.cond PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_heatcond_2d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
+
+test_heatcond_2d_check:
+	-@(${DIFFNUM} -t -r=1e-9 -a=1e-9 \
+                ${TESTDIR}/RESULT/GM/z=0_mhd_1_t00000000_n00000002.out \
+                Param/CORONA/TestOutput/heatcond_2d_ref.out \
+                > test_heatcond_2d_gpu.diff)
+	ls -l test_heatcond_2d_gpu.diff
+
+
 ### SHOCKRAMP TEST ###
 
 test_shockramp:
