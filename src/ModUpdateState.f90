@@ -31,6 +31,8 @@ module ModUpdateState
 
   ! The fraction of non-adiabatic heating put into Pe and Ppar
   real:: PeShockHeatingFraction = 0.0, PparShockHeatingFraction = 0.0
+  ! The fraction of non-adiabatic heating put into first ion fluid
+  real:: PiShockHeatingFraction = 0.0
 
 contains
   !============================================================================
@@ -59,15 +61,23 @@ contains
             PeShockHeatingFraction)
        if(UseAnisoPressure) call read_var("PparShockHeatingFraction", &
             PparShockHeatingFraction)
+       ! This could be generalized to arbitrary ion fluids
+       if(nIonFluid == 2) call read_var("PiShockHeatingFraction", &
+            PiShockHeatingFraction)
        if(PeShockHeatingFraction /= 0)then
           UseElectronEntropy = .true.
           UseElectronEnergy = .true.
           UseEntropy = .true.
        end if
        if(PparShockHeatingFraction /= 0) UseEntropy = .true.
+       if(PiShockHeatingFraction /= 0)then
+          UseEntropy = .true.
+          UseTotalIonEnergy = .true.
+       end if
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
+
   end subroutine read_update_param
   !============================================================================
   subroutine update_state(iBlock)

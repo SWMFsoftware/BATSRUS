@@ -9710,10 +9710,13 @@ UseEntropy=T and UseTotalIonEnergy=T in the multiion case.
 	     min="0" max="1" default="0" if="$UsePe"/>
   <parameter name="PparShockHeatingFraction" type="real"
 	     min="-1" max="1" default="0" if="$UsePpar"/>
+  <parameter name="PiShockHeatingFraction" type="real"
+	     min="0" max="1" default="0" if="$nIonFluid == 2"/>
 
 #SHOCKHEATING
 0.5                     PeShockHeatingFraction (read if electron pressure is used)
 1.0                     PparShockHeatingFraction (read if ion pressure is anisotropic)
+0.4                     PiShockHeatingFraction (read if nIonFluid=2)
 
 If PeShockHeatingFraction is positive, a fraction of the non-adiabatic
 heating is deposited into the electron thermal energy Pe/(GammaE-1), and the
@@ -9721,14 +9724,25 @@ same amount of energy is removed from the ion thermal energy P/(Gamma-1).
 If PparShockHeatingFraction is positive, a fraction of the non-adiabatic
 heating is deposited into the parallel ion energy, and the same
 amount of energy is removed from the perpendicular ion energy.
-If PeShockHeatingFraction is negative, then the fraction of heating going into
+If PparShockHeatingFraction is negative, then the fraction of heating going into
 the parallel pressure is abs(b.u), where b and u are the unit vectors for
-the magnetic field and velocity, respectively. 
-If the command is used, both UseEntropy and UseElectronEntropy are set to true
+the magnetic field and velocity, respectively.
+If PiShockHeatingFraction is positive, a fraction of the non-adiabatic
+heating is deposited into the first ion fluid and the res
+If the command is used, UseEntropy, UseTotalIonEnergy and UseElectronEntropy are set to true
 (see #ENTROPY and #ELECTRONENTROPY).
 
+Note that the fractions describe ratio of entropy, not energy. For isotropic pressure
+and the same gamma for ions and electrons the entropies and energy densities are
+closely related, $p/(\gamma-1)$ vs $p/\rho^{\gamma-1}$, but for anisotropic ion
+pressure the relations depend on the magnetic field too, which makes things complicated.
+
 Default values are 0, which means that all shock heating goes to the (perpendicular)
-ion pressure.
+ion pressure. For the multiion case, total energy is only conserved if UseTotalIonEnergy
+is set to true (either here or in the #ENTROPY command), otherwise the magnetic energy
+is ignored. Solving for individual ion energies will transfer some shock heating into
+both ion fluids, but it may not be the correct distribution. This can be improved by
+using this command and prescribing the energy distribution. 
 </command>
 
 <command name="ANISOTROPICPRESSURE">
