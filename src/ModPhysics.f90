@@ -35,12 +35,17 @@ module ModPhysics
   ! default adiabatic index value
   real, parameter:: Gamma0 = 5./3.
 
-  ! adiabatic index (gamma) and derived values for fluids
+  ! adiabatic index (gamma) and derived values for all fluids
   real:: Gamma_I(nFluid)          = Gamma0
   real:: GammaMinus1_I(nFluid)    = Gamma0 - 1.0
   real:: InvGammaMinus1_I(nFluid) = 1.0/(Gamma0 - 1.0)
   !$acc declare create(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
 
+  ! adiabatic index (gamma) and derived values for ion fluids
+  real:: GammaIon_I(nIonFluid)          = Gamma0
+  real:: GammaMinus1Ion_I(nIonFluid)    = Gamma0 - 1.0
+  real:: InvGammaMinus1Ion_I(nIonFluid) = 1.0/(Gamma0 - 1.0)
+  
   ! adiabatic index (gamma) and derived values for the first/total fluid
   real:: Gamma          = Gamma0
   real:: GammaMinus1    = Gamma0 - 1.0

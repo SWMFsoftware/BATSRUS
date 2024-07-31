@@ -2332,6 +2332,11 @@ contains
                   ': for gamma=1 UseNonConservative is set to TRUE'
           endif
 
+          ! Values for the ion fluids
+          GammaIon_I          = Gamma_I(1:nIonFluid)
+          GammaMinus1Ion_I    = GammaMinus1_I(1:nIonFluid)
+          InvGammaMinus1Ion_I = InvGammaMinus1_I(1:nIonFluid)
+
           ! Scalar values for the first fluid for simpler code
           Gamma          = Gamma_I(1)
           GammaMinus1    = GammaMinus1_I(1)
