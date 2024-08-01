@@ -314,8 +314,6 @@ contains
                 allocate(PointCoef_VCB(1,nI,nJ,nK,MaxBlock))
                 allocate(PointImpl_VCB(1,nI,nJ,nK,MaxBlock))
              end if
-
-             UseHeatExchange = .false.
           end if
 
           if(UseRadCooling)then
@@ -982,7 +980,7 @@ contains
     real :: QeTiR, QeTiL, QiTiR, QiTiL, QeTeR, QeTeL, QiTeR, QiTeL
     real :: Deltap, Coef, Denominator
     real :: RadCool, RadCoolDeriv
-    real :: dQidTe1, dQidTi1, Qi1, TeTiCoef1, TeTiCoef2
+    real :: dQidTe1, dQidTi1, Qi1
     real :: CoronalHeating
     real :: WaveDissipationRate_V(WaveFirst_:WaveLast_)
     real :: QPerQtotal_I(nIonFluid)
@@ -1080,6 +1078,7 @@ contains
 
           TeSi = Te_GI(i,j,k,iGang)*No2Si_V(UnitTemperature_)
 
+          TeTiCoef = 0.0   ! in case heat exchange is switched off
           if(UseIdealEos)then
              if(UseMultiIon)then
                 ! Electron number density
@@ -1102,7 +1101,7 @@ contains
                      = InvGammaElectronMinus1*NumDens
              end if
 
-             if(UseElectronPressure .and. .not.UseMultiIon)then
+             if(UseElectronPressure .and. UseHeatExchange .and. .not.UseMultiIon)then
                 Natomic = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
                 ! We apply the energy exchange rate for temperature,
                 ! Ni*cTeTiExchangeRate/Te_GI(i,j,k,iGang)**1.5
@@ -1120,7 +1119,7 @@ contains
                      NatomicOut = NatomicSi, TeTiRelaxOut = TeTiRelaxSi)
 
                 Natomic = NatomicSi*Si2No_V(UnitN_)
-                TeTiCoef = Natomic*TeTiRelaxSi/Si2No_V(UnitT_)
+                if(UseHeatExchange) TeTiCoef = Natomic*TeTiRelaxSi/Si2No_V(UnitT_)
              else
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi)
