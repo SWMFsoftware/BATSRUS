@@ -928,7 +928,7 @@ contains
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_, &
          WaveFirst_, WaveLast_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
-         UseAnisoPressure, DtMax_CB, Source_VCB
+         UseAnisoPressure, DtMax_CB, Source_VCB, iTypeUpdate, UpdateOrig_
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
     use ModImplicit,     ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
          iTeImpl
@@ -1071,10 +1071,12 @@ contains
        ! specific heat in DconsDsemiAll_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_GI(i,j,k,iGang)
+#ifndef _OPENACC          
           if(DoCalcDelta) &
                DeltaSemiAll_VCB(:,i,j,k,iBlockSemi) = &
                StarSemiAll_VCB(:,i,j,k,iBlockSemi) - &
                SemiAll_VCB(:,i,j,k,iBlockSemi)
+#endif               
 
           TeSi = Te_GI(i,j,k,iGang)*No2Si_V(UnitTemperature_)
 
@@ -1183,6 +1185,7 @@ contains
                      TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi)
                 PointImpl_VCB(1,i,j,k,iBlock) = &
                      State_VGB(p_,i,j,k,iBlock)/Natomic
+#ifndef _OPENACC                     
                 if(UseAnisoPressure)then
                    CviPar = 0.5*Natomic
                    PointCoef_VCB(2,i,j,k,iBlock) = &
@@ -1190,6 +1193,7 @@ contains
                    PointImpl_VCB(2,i,j,k,iBlock) = &
                         State_VGB(Ppar_,i,j,k,iBlock)/Natomic
                 end if
+#endif                
              end if
 
 #ifndef _OPENACC             
@@ -1212,7 +1216,9 @@ contains
        ! The following is because we entered the semi-implicit solve with
        ! first order ghost cells.
        State2_VG = State_VGB(:,:,:,:,iBlock)
-       call set_block_field2(iBlock, nVar, State1_VG, State2_VG)
+
+      if(iTypeUpdate == UpdateOrig_) &
+         call set_block_field2(iBlock, nVar, State1_VG, State2_VG)
 
        ! Calculate the cell centered heat conduction tensor
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
