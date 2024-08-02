@@ -1,0 +1,211 @@
+#DESCRIPTION
+Heat conduction		StringDescription
+
+#UPDATE
+fast			TypeUpdate
+
+#TIMING
+T			UseTiming
+-1			DnTiming  ! every session
+-1			nDepthTiming
+cumu			TypeTimingReport
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+! Use a small No2UnitX to 'increase' the heat conductivity
+#NORMALIZATION
+READ			TypeNormalization
+1.0e-25			No2SiUnitX   (only read if TypeNormalization=READ)
+1.0			No2SiUnitU   (only read if TypeNormalization=READ)
+1.0			No2SiUnitRho (only read if TypeNormalization=READ)
+
+#CONSERVEFLUX
+F			DoConserveFlux
+
+#GRID
+2			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-32			xMin
+ 32			xMax
+-16			yMin
+ 16			yMax
+-1			zMin
+ 1			zMax
+
+
+GRIDLEVEL
+1			nLevel
+initial			StringShape
+
+GRIDLEVEL
+1			nLevel
+box			StringShape
+-1.0			xMinBox
+ 1.0			yMinBox
+-1.0			zMinBox
+ 1.0			xMaxBox
+-1.0			yMaxBox
+ 1.0			zMaxBox
+
+#GRIDBLOCKALL
+8			MaxBlock
+
+SHOCKPOSITION
+0.0			ShockPosition
+1.0			ShockSlope
+
+#UNIFORMSTATE
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+1.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+1.0			StateVar pe
+1.0			StateVar p
+
+rho			= 1
+By			= 0.04
+cA			= By/sqrt(rho)   = 0.04
+cS			= sqrt(2*p/rho)  = 0.03
+cF			= sqrt(cA^2+cS^2)= 0.05
+lambda= 32
+t			= lambda/(cF) = 640.0
+
+p = pe = 2.25e-4
+vth			= sqrt(p/rho) = 0.015
+me = mi/25
+vthe  = 5*vth		= 0.075
+dx = 0.4
+dtmax = dx/vthe		= 5.333
+dt			= 0.2*dtmax   = 1.066
+
+#WAVE
+Rho			NameVar
+1000.0			Width
+0.5			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+WAVE
+Ux			NameVar
+1000.0			Width
+0.005			Amplitude (rho1/rho0)*cF
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+! This perturbation should NOT exist for a fast wave.
+! It is introduced for code development/test purpose only.
+WAVE
+Uz			NameVar
+1000.0			Width
+0.0001			Amplitude (rho1/rho0)*cF
+-1.0			LambdaX
+-1.0			LambdaY
+32.0			LambdaZ
+0.0			Phase
+
+Add a small div B error for sake of testing
+WAVE
+Bx			NameVar
+1000.0			Width
+0.0004			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+WAVE
+By			NameVar
+1000.0			Width
+0.004			Amplitude (rho1/rho0)*b0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+WAVE
+p			NameVar
+10000.0			Width
+7.5e-5			Amplitude (rho1/rho0)*5/3*p0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
+T			UseElectronEnergy
+
+PLASMA
+1.0			FluidMass [amu] H+
+1.0			IonCharge [e]   H+
+0.5			ElectronTemperatureRatio
+
+#HEATCONDUCTION
+T			UseHeatConduction
+spitzer			TypeHeatConduction
+
+#SEMIIMPLICIT
+T			UseSemiImplicit
+parcond			TypeSemiImplicit
+
+#TEST
+krylov			StringTest
+
+#RESISTIVITYOPTIONS
+F			UseResistiveFlux
+F			UseJouleHeating
+F			UseHeatExchange
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+1			DtFixedDim [sec] (read if UseDtFixed is true)
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+-1			DnSaveLogfile
+100.0			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 mhd idl_ascii		StringPlot
+1			DnSavePlot
+-1.0			DtSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+2e-25			tSimulationMax
+
