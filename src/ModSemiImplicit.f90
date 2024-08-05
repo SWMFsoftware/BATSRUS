@@ -12,6 +12,7 @@ module ModSemiImplicit
   use ModSemiImplVar
   use ModImplicit, ONLY: nStencil
   use ModLinearSolver, ONLY: LinearSolverParamType
+  use ModAdvance, ONLY: iTypeUpdate, UpdateOrig_
 
   implicit none
   save
@@ -250,7 +251,7 @@ contains
     ! Advance semi-implicit terms
 
     use ModMain, ONLY: IsTimeAccurate
-    use ModAdvance, ONLY: DoFixAxis, State_VGB
+    use ModAdvance, ONLY: DoFixAxis, State_VGB, DtMax_CB
     use ModB0, ONLY: B0_DGB
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModGeometry, ONLY: Used_GB
@@ -265,7 +266,8 @@ contains
          get_impl_resistivity_state, update_impl_resistivity
     use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Heat_
     use ModFixAxisCells, ONLY: fix_axis_cells
-    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, nIJK
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, nIJK, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModEnergy, ONLY: limit_pressure
     ! use omp_lib
 
@@ -285,6 +287,9 @@ contains
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
+    !$acc update host(State_VGB)
+    !$acc update host(DtMax_CB)
+    
     if(TypeSemiImplicit(1:6) /= 'resist')then
        ! All used blocks are solved for with the semi-implicit scheme
        ! except for (Hall) resistivity
@@ -419,14 +424,19 @@ contains
     if(UseCoarseAxis)call coarsen_axis_cells
     ! Exchange messages, so ghost cells of all blocks are updated
     if(UseFieldLineThreads) call advance_threads(Heat_)
+
+
+    !$acc update device(State_VGB)
     call exchange_messages
+    !$acc update host(State_VGB)
+    
 
     if(DoTest) write(*,*)NameSub,' final test var, B0=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
     call timing_stop(NameSub)
-
+    
     call test_stop(NameSub, DoTest)
   end subroutine advance_semi_impl
   !============================================================================
@@ -514,8 +524,11 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+       if(iTypeUpdate == UpdateOrig_) then
+          ! TODO: make the following call works on GPU
+          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+       end if
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -652,8 +665,11 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+       if(iTypeUpdate == UpdateOrig_) then
+          ! TODO: make the following call works on GPU
+          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+       end if
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
