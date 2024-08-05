@@ -78,9 +78,9 @@ module ModHeatConduction
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
   ! Arrays to build the Heat conduction dyad
-  real, allocatable :: HeatCoef_GI(:,:,:,:), Bb_DDG(:,:,:,:,:)
-  !$omp threadprivate( HeatCoef_GI, Bb_DDG ,iGang)
-  !$acc declare create(HeatCoef_GI)   
+  real, allocatable :: HeatCoef_GI(:,:,:,:), Bb_DDGI(:,:,:,:,:,:)
+  !$omp threadprivate( HeatCoef_GI, Bb_DDGI ,iGang,iGang)
+  !$acc declare create(HeatCoef_GI, Bb_DDGI)   
 
   ! Arrays needed for the heat flux limiter
   real, allocatable :: FreeStreamFlux_G(:,:,:)
@@ -296,7 +296,7 @@ contains
             State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             HeatCoef_GI(0:nI+1,j0_:nJp1_,k0_:nKp1_,nGang), &
-            Bb_DDG(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
+            Bb_DDGI(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nGang), &
             Te_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang) )
 
        if(UseHeatFluxLimiter) &
@@ -1231,30 +1231,30 @@ contains
           ! First order BC at the outer boundaries
           if(DiLevel_EB(1,iBlock)==Unset_)then
              HeatCoef_GI(0,:,:,iGang) = HeatCoef_GI(1,:,:,iGang)
-             Bb_DDG(:,:,0,:,:) = Bb_DDG(:,:,1,:,:)
+             Bb_DDGI(:,:,0,:,:,iGang) = Bb_DDGI(:,:,1,:,:,iGang)
           end if
           if(DiLevel_EB(2,iBlock)==Unset_)then
              HeatCoef_GI(nI+1,:,:,iGang) = HeatCoef_GI(nI,:,:,iGang)
-             Bb_DDG(:,:,nI+1,:,:) = Bb_DDG(:,:,nI,:,:)
+             Bb_DDGI(:,:,nI+1,:,:,iGang) = Bb_DDGI(:,:,nI,:,:,iGang)
           end if
           if(nDim>=2)then
              if(DiLevel_EB(3,iBlock)==Unset_)then
                 HeatCoef_GI(:,0,:,iGang) = HeatCoef_GI(:,1,:,iGang)
-                Bb_DDG(:,:,:,0,:) = Bb_DDG(:,:,:,1,:)
+                Bb_DDGI(:,:,:,0,:,iGang) = Bb_DDGI(:,:,:,1,:,iGang)
              end if
              if(DiLevel_EB(4,iBlock)==Unset_)then
                 HeatCoef_GI(:,nJ+1,:,iGang) = HeatCoef_GI(:,nJ,:,iGang)
-                Bb_DDG(:,:,:,nJ+1,:) = Bb_DDG(:,:,:,nJ,:)
+                Bb_DDGI(:,:,:,nJ+1,:,iGang) = Bb_DDGI(:,:,:,nJ,:,iGang)
              end if
           end if
           if(nDim==3)then
              if(DiLevel_EB(5,iBlock)==Unset_)then
                 HeatCoef_GI(:,:,0,iGang) = HeatCoef_GI(:,:,1,iGang)
-                Bb_DDG(:,:,:,:,0) = Bb_DDG(:,:,:,:,1)
+                Bb_DDGI(:,:,:,:,0,iGang) = Bb_DDGI(:,:,:,:,1,iGang)
              end if
              if(DiLevel_EB(6,iBlock)==Unset_)then
                 HeatCoef_GI(:,:,nK+1,iGang) = HeatCoef_GI(:,:,nK,iGang)
-                Bb_DDG(:,:,:,:,nK+1) = Bb_DDG(:,:,:,:,nK)
+                Bb_DDGI(:,:,:,:,nK+1,iGang) = Bb_DDGI(:,:,:,:,nK,iGang)
              end if
           end if
        end if
@@ -1265,8 +1265,8 @@ contains
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-             Bb_DD = 0.5*(Bb_DDG(:nDim,:nDim,i,j,k) &
-                  +       Bb_DDG(:nDim,:nDim,i-Di,j-Dj,k-Dk))
+             Bb_DD = 0.5*(Bb_DDGI(:nDim,:nDim,i,j,k,iGang) &
+                  +       Bb_DDGI(:nDim,:nDim,i-Di,j-Dj,k-Dk,iGang))
 
              HeatCoef = 0.5*(HeatCoef_GI(i,j,k,iGang) + HeatCoef_GI(i-Di,j-Dj,k-Dk,iGang))
 
@@ -1331,12 +1331,12 @@ contains
       real, intent(in) :: State_V(nVar)
       integer, intent(in) :: i, j, k, iBlock
 
-      ! Set HeatCoef_GI(i,j,k,iGang) and Bb_DDG(:,iDim,i,j,k) tensor and optionally
+      ! Set HeatCoef_GI(i,j,k,iGang) and Bb_DDGI(:,iDim,i,j,k,iGang) tensor and optionally
       ! the free stream flux FreeStreamFlux_G(i,j,k) for the cell center
       ! indexed by i,j,k of block iBlock based on its state State_V.
       ! The actual heat conduction tensor is
-      ! HeatCoef_GI(i,j,k,iGang)*Bb_DDG(:,iDim,i,j,k)
-      ! so in general Bb_DDG(:,iDim,i,j,k) is the sum of the bb tensor AND
+      ! HeatCoef_GI(i,j,k,iGang)*Bb_DDGI(:,iDim,i,j,k,iGang)
+      ! so in general Bb_DDGI(:,iDim,i,j,k,iGang) is the sum of the bb tensor AND
       ! an isotropic part. The isotropic part can be set as a fraction
       ! of the field aligned heat conduction.
 
@@ -1456,14 +1456,14 @@ contains
                  1/(1 + ElectronCollisionRate/(Bnorm*ElectronGyroFreqCoef))
          end if
          do iDim = 1, 3
-            Bb_DDG(:,iDim,i,j,k) = ( &
+            Bb_DDGI(:,iDim,i,j,k,iGang) = ( &
                  FractionFieldAligned*Bunit_D*Bunit_D(iDim) &
                  + (1.0 - FractionFieldAligned)*i_DD(:,iDim) )
          end do
 #endif
       else
          do iDim = 1, 3
-            Bb_DDG(:,iDim,i,j,k) = Bunit_D*Bunit_D(iDim)
+            Bb_DDGI(:,iDim,i,j,k,iGang) = Bunit_D*Bunit_D(iDim)
          end do
       end if
 
