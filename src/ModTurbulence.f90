@@ -13,7 +13,8 @@ module ModTurbulence
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, WDiff_, Lperp_
   use ModMultiFluid, ONLY: nIonFluid
-  use ModTransitionRegion, ONLY: PoyntingFluxPerBSi, LperpTimesSqrtBSi
+  use ModTransitionRegion, ONLY: PoyntingFluxPerBSi, LperpTimesSqrtBSi, &
+       rMinWaveReflection
   use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
        UseAwRepresentative
   use omp_lib
@@ -25,7 +26,6 @@ module ModTurbulence
   !$acc declare create(IsOnAwRepresentative)
 
   logical :: UseTurbulentCascade = .false.
-  real    :: rMinWaveReflection = 0.0
   logical :: UseNewLimiter4Reflection
 
   ! The Poynting flux to magnetic field ratio (one of the input parameters
