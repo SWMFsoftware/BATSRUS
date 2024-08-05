@@ -1097,14 +1097,15 @@ contains
                      = InvGammaElectronMinus1*NumDens
              end if
 
-             if(UseElectronPressure .and. UseHeatExchange .and. &
-                  .not.UseMultiIon)then
+             if(UseElectronPressure .and. .not.UseMultiIon)then
                 Natomic = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
+                
                 ! We apply the energy exchange rate for temperature,
                 ! Ni*cTeTiExchangeRate/Te_GI(i,j,k,iGang)**1.5
                 ! to the electron energy density, therefore,we multiply by
                 ! Ne/(\gamma -1)
-                TeTiCoef = InvGammaElectronMinus1*(AverageIonCharge*Natomic)* &
+                if(UseHeatExchange) TeTiCoef = &
+                     InvGammaElectronMinus1*(AverageIonCharge*Natomic)* &
                      (cTeTiExchangeRate*Natomic/Te_GI(i,j,k,iGang)**1.5)
              end if
 
