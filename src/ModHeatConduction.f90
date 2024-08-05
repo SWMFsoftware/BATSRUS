@@ -78,8 +78,10 @@ module ModHeatConduction
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
   ! Arrays to build the Heat conduction dyad
-  real, allocatable :: HeatCoef_G(:,:,:), Bb_DDG(:,:,:,:,:)
-  !$omp threadprivate( HeatCoef_G, Bb_DDG )
+  real, allocatable :: HeatCoef_GI(:,:,:,:), Bb_DDG(:,:,:,:,:)
+  !$omp threadprivate( HeatCoef_GI, Bb_DDG ,iGang)
+  !$acc declare create(HeatCoef_GI)   
+
   ! Arrays needed for the heat flux limiter
   real, allocatable :: FreeStreamFlux_G(:,:,:)
   !$omp threadprivate( FreeStreamFlux_G )
@@ -293,7 +295,7 @@ contains
             State1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
-            HeatCoef_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
+            HeatCoef_GI(0:nI+1,j0_:nJp1_,k0_:nKp1_,nGang), &
             Bb_DDG(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
             Te_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang) )
 
@@ -1228,30 +1230,30 @@ contains
        if(UseFieldLineThreads.and.IsBoundary_B(iBlock))then
           ! First order BC at the outer boundaries
           if(DiLevel_EB(1,iBlock)==Unset_)then
-             HeatCoef_G(0,:,:) = HeatCoef_G(1,:,:)
+             HeatCoef_GI(0,:,:,iGang) = HeatCoef_GI(1,:,:,iGang)
              Bb_DDG(:,:,0,:,:) = Bb_DDG(:,:,1,:,:)
           end if
           if(DiLevel_EB(2,iBlock)==Unset_)then
-             HeatCoef_G(nI+1,:,:) = HeatCoef_G(nI,:,:)
+             HeatCoef_GI(nI+1,:,:,iGang) = HeatCoef_GI(nI,:,:,iGang)
              Bb_DDG(:,:,nI+1,:,:) = Bb_DDG(:,:,nI,:,:)
           end if
           if(nDim>=2)then
              if(DiLevel_EB(3,iBlock)==Unset_)then
-                HeatCoef_G(:,0,:) = HeatCoef_G(:,1,:)
+                HeatCoef_GI(:,0,:,iGang) = HeatCoef_GI(:,1,:,iGang)
                 Bb_DDG(:,:,:,0,:) = Bb_DDG(:,:,:,1,:)
              end if
              if(DiLevel_EB(4,iBlock)==Unset_)then
-                HeatCoef_G(:,nJ+1,:) = HeatCoef_G(:,nJ,:)
+                HeatCoef_GI(:,nJ+1,:,iGang) = HeatCoef_GI(:,nJ,:,iGang)
                 Bb_DDG(:,:,:,nJ+1,:) = Bb_DDG(:,:,:,nJ,:)
              end if
           end if
           if(nDim==3)then
              if(DiLevel_EB(5,iBlock)==Unset_)then
-                HeatCoef_G(:,:,0) = HeatCoef_G(:,:,1)
+                HeatCoef_GI(:,:,0,iGang) = HeatCoef_GI(:,:,1,iGang)
                 Bb_DDG(:,:,:,:,0) = Bb_DDG(:,:,:,:,1)
              end if
              if(DiLevel_EB(6,iBlock)==Unset_)then
-                HeatCoef_G(:,:,nK+1) = HeatCoef_G(:,:,nK)
+                HeatCoef_GI(:,:,nK+1,iGang) = HeatCoef_GI(:,:,nK,iGang)
                 Bb_DDG(:,:,:,:,nK+1) = Bb_DDG(:,:,:,:,nK)
              end if
           end if
@@ -1266,7 +1268,7 @@ contains
              Bb_DD = 0.5*(Bb_DDG(:nDim,:nDim,i,j,k) &
                   +       Bb_DDG(:nDim,:nDim,i-Di,j-Dj,k-Dk))
 
-             HeatCoef = 0.5*(HeatCoef_G(i,j,k) + HeatCoef_G(i-Di,j-Dj,k-Dk))
+             HeatCoef = 0.5*(HeatCoef_GI(i,j,k,iGang) + HeatCoef_GI(i-Di,j-Dj,k-Dk,iGang))
 
 #ifndef _OPENACC
              if(UseHeatFluxLimiter)then
@@ -1329,11 +1331,11 @@ contains
       real, intent(in) :: State_V(nVar)
       integer, intent(in) :: i, j, k, iBlock
 
-      ! Set HeatCoef_G(i,j,k) and Bb_DDG(:,iDim,i,j,k) tensor and optionally
+      ! Set HeatCoef_GI(i,j,k,iGang) and Bb_DDG(:,iDim,i,j,k) tensor and optionally
       ! the free stream flux FreeStreamFlux_G(i,j,k) for the cell center
       ! indexed by i,j,k of block iBlock based on its state State_V.
       ! The actual heat conduction tensor is
-      ! HeatCoef_G(i,j,k)*Bb_DDG(:,iDim,i,j,k)
+      ! HeatCoef_GI(i,j,k,iGang)*Bb_DDG(:,iDim,i,j,k)
       ! so in general Bb_DDG(:,iDim,i,j,k) is the sum of the bb tensor AND
       ! an isotropic part. The isotropic part can be set as a fraction
       ! of the field aligned heat conduction.
@@ -1417,7 +1419,7 @@ contains
       end if
 #endif
 
-      HeatCoef_G(i,j,k) = HeatCoef
+      HeatCoef_GI(i,j,k,iGang) = HeatCoef
 
 #ifndef _OPENACC
       if(UseHeatFluxLimiter)then
