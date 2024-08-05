@@ -450,8 +450,9 @@ contains
          nWave, WaveFirst_, WaveLast_, Source_VCB
     use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: &
-         nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
-         TypeSemiImplicit, SemiImplCoeff, iTeImpl, iErImplFirst, iErImplLast
+         nVarSemiAll, nBlockSemi, iBlockFromSemi_B, TypeSemiImplicit, &
+         SemiImplCoeff, iTeImpl, iErImplFirst, iErImplLast, &
+         StarSemiAll_VCB
     use ModMain,     ONLY: x_, y_, z_, nI, nJ, nK, Dt
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: InvGammaMinus1, Clight, cRadiationNo, UnitN_, &
@@ -483,9 +484,7 @@ contains
     integer :: iDim, Di, Dj, Dk, iDiff
     real :: Coeff, InvDCoord_D(nDim)
 
-    real :: PlanckSi_W(nWave), Planck_W(nWave)
-
-    real :: StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    real :: PlanckSi_W(nWave), Planck_W(nWave)    
 
     ! Temporary radiation energy array needed by set_block_field
     real :: Erad1_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)

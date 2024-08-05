@@ -194,6 +194,8 @@ contains
 
     allocate(DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
 
+    allocate(StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
+    
     ! Variables for the flux correction
     if( (TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then

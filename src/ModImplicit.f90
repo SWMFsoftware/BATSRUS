@@ -69,7 +69,8 @@ module ModSemiImplVar
   real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl vars
   real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
   real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
-
+  real, allocatable:: StarSemiAll_VCB(:,:,:,:,:)
+  
   ! Store Difference of U^* (after explicit update)  and U^n.
   real, allocatable:: DeltaSemiAll_VCB(:,:,:,:,:)
 

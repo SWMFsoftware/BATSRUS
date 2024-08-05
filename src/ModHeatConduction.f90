@@ -958,9 +958,10 @@ contains
     !  logical, optional, intent(in):: DoCalcDeltaIn
 
     logical :: DoCalcDelta
-    ! Set it as allocatable
-    real :: StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+
+#ifndef _OPENACC    
     real :: State_V(nVar)
+#endif    
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP, iGang
     real :: GammaTmp
