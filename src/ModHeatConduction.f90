@@ -80,7 +80,7 @@ module ModHeatConduction
   ! Arrays to build the Heat conduction dyad
   real, allocatable :: HeatCoef_GI(:,:,:,:), Bb_DDGI(:,:,:,:,:,:)
   !$omp threadprivate( HeatCoef_GI, Bb_DDGI ,iGang,iGang)
-  !$acc declare create(HeatCoef_GI, Bb_DDGI)   
+  !$acc declare create(HeatCoef_GI, Bb_DDGI)
 
   ! Arrays needed for the heat flux limiter
   real, allocatable :: FreeStreamFlux_G(:,:,:)
@@ -961,9 +961,9 @@ contains
 
     logical :: DoCalcDelta
 
-#ifndef _OPENACC    
+#ifndef _OPENACC
     real :: State_V(nVar)
-#endif    
+#endif
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP, iGang
     real :: GammaTmp
@@ -1102,7 +1102,7 @@ contains
 
              if(UseElectronPressure .and. .not.UseMultiIon)then
                 Natomic = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
-                
+
                 ! We apply the energy exchange rate for temperature,
                 ! Ni*cTeTiExchangeRate/Te_GI(i,j,k,iGang)**1.5
                 ! to the electron energy density, therefore,we multiply by

@@ -484,7 +484,7 @@ contains
     integer :: iDim, Di, Dj, Dk, iDiff
     real :: Coeff, InvDCoord_D(nDim)
 
-    real :: PlanckSi_W(nWave), Planck_W(nWave)    
+    real :: PlanckSi_W(nWave), Planck_W(nWave)
 
     ! Temporary radiation energy array needed by set_block_field
     real :: Erad1_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)

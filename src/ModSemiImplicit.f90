@@ -195,7 +195,7 @@ contains
     allocate(DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
 
     allocate(StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
-    
+
     ! Variables for the flux correction
     if( (TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
@@ -291,7 +291,7 @@ contains
 
     !$acc update host(State_VGB)
     !$acc update host(DtMax_CB)
-    
+
     if(TypeSemiImplicit(1:6) /= 'resist')then
        ! All used blocks are solved for with the semi-implicit scheme
        ! except for (Hall) resistivity
@@ -427,18 +427,16 @@ contains
     ! Exchange messages, so ghost cells of all blocks are updated
     if(UseFieldLineThreads) call advance_threads(Heat_)
 
-
     !$acc update device(State_VGB)
     call exchange_messages
     !$acc update host(State_VGB)
-    
 
     if(DoTest) write(*,*)NameSub,' final test var, B0=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
     call timing_stop(NameSub)
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine advance_semi_impl
   !============================================================================
