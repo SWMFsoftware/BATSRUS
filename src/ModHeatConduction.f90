@@ -916,6 +916,176 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine calc_ei_heat_exchange
   !============================================================================
+  subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
+
+    use BATL_lib,      ONLY: Xyz_DGB
+    use ModAdvance,    ONLY: UseIdealEos, UseElectronPressure
+    use ModB0,         ONLY: B0_DGB
+    use ModConst,      ONLY: cBoltzmann, cElectronmass
+    use ModGeometry,   ONLY: r_GB
+    use ModMain,       ONLY: UseB0
+    use ModNumConst,   ONLY: cTolerance, i_DD
+    use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, UseMultiIon
+    use ModPhysics,    ONLY: UnitTemperature_, AverageIonCharge, &
+         UnitPoynting_, ElectronGyroFreqCoef, UnitN_, Si2No_V, No2Si_V
+    use ModRadDiffusion, ONLY: HeatFluxLimiter, UseHeatFluxLimiter
+    use ModVarIndexes, ONLY: Bx_, Bz_, p_, Pe_, Rho_
+    use ModRadiativeCooling, ONLY: &
+         DoExtendTransitionRegion, extension_factor
+    use ModUserInterface ! user_material_properties
+
+    real, intent(in) :: State_V(nVar)
+    integer, intent(in) :: i, j, k, iBlock
+
+    ! Set HeatCoef_GI(i,j,k,iGang) and Bb_DDGI(:,iDim,i,j,k,iGang) tensor and optionally
+    ! the free stream flux FreeStreamFlux_G(i,j,k) for the cell center
+    ! indexed by i,j,k of block iBlock based on its state State_V.
+    ! The actual heat conduction tensor is
+    ! HeatCoef_GI(i,j,k,iGang)*Bb_DDGI(:,iDim,i,j,k,iGang)
+    ! so in general Bb_DDGI(:,iDim,i,j,k,iGang) is the sum of the bb tensor AND
+    ! an isotropic part. The isotropic part can be set as a fraction
+    ! of the field aligned heat conduction.
+
+    real :: TeSi, Te, NatomicSi, Ne, NeSi, Zav
+    real :: HeatCoefSi, HeatCoef
+    real :: Factor, r
+    real :: Bnorm, B_D(3), Bunit_D(3)
+    integer :: iDim, iP
+    integer :: iGang
+
+    character(len=*), parameter:: NameSub = 'get_heat_cond_tensor'
+    !--------------------------------------------------------------------------
+#ifdef _OPENACC
+       iGang = iBlock
+#else
+       iGang = 1
+#endif
+
+    iP = p_
+    if(UseElectronPressure) iP = Pe_
+
+    if(UseIdealEos)then
+       if(UseMultiIon)then
+          Te = State_V(Pe_)/sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
+          Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
+       else
+          Te = TeFraction*State_V(iP)/State_V(Rho_)
+          Ne = AverageIonCharge*State_V(Rho_)/MassIon_I(1)
+       end if
+       TeSi = Te*No2Si_V(UnitTemperature_)
+       NeSi = Ne*No2Si_V(UnitN_)
+
+    else
+#ifndef _OPENACC
+       call user_material_properties(State_V, i, j, k, iBlock, &
+            TeOut=TeSi, NatomicOut=NatomicSi, AverageIonChargeOut=Zav)
+
+       NeSi = Zav*NatomicSi
+       Ne = NeSi*Si2No_V(UnitN_)
+       Te = TeSi*Si2No_V(UnitTemperature_)
+#endif
+    end if
+
+    if (TeSi < 0) then
+       write(*,*) NameSub, ' Te is negative at: ', &
+            Xyz_DGB(:,i,j,k,iBlock)
+       call stop_mpi('Te is negative')
+    endif
+
+#ifndef _OPENACC
+    if(DoWeakFieldConduction)then
+       ! Initialize these public variables. The user can change them in
+       ! user_material_properties when HeatCondOut is present
+       ElectronCollisionRate = 0.0
+       FractionFieldAligned  = -1.0
+    end if
+#endif
+
+    if(DoUserHeatConduction .or. .not.UseIdealEos)then
+#ifndef _OPENACC
+       call user_material_properties(State_V, i, j, k, iBlock, &
+            TeIn=TeSi, HeatCondOut=HeatCoefSi)
+       if(HeatCoefSi < 0.0)then
+          ! Spitzer conductivity if user sets negative HeatCoefSi
+          HeatCoef = HeatCondPar*Te**2.5
+       else
+          HeatCoef = HeatCoefSi*Si2NoHeatCoef
+       end if
+#endif
+    else
+       ! Spitzer form for collisional regime
+       HeatCoef = HeatCondPar*Te**2.5
+    end if
+
+#ifndef _OPENACC
+    ! Artificial modified heat conduction for a smoother transition
+    ! region, Linker et al. (2001)
+    if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
+
+    if(UseHeatFluxRegion)then
+       r = r_GB(i,j,k,iBlock)
+       if(rCollisionless < 0.0)then
+          Factor = 1.0/((r/rCollisional)**2 + 1)
+       elseif(r <= rCollisional)then
+          Factor = 1.0
+       else
+          Factor = exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
+       end if
+       HeatCoef = Factor*HeatCoef
+    end if
+#endif
+
+    HeatCoef_GI(i,j,k,iGang) = HeatCoef
+
+#ifndef _OPENACC
+    if(UseHeatFluxLimiter)then
+       FreeStreamFlux_G(i,j,k) = HeatFluxLimiter &
+            *NeSi*cBoltzmann*TeSi*sqrt(cBoltzmann*TeSi/cElectronMass) &
+            *Si2No_V(UnitPoynting_)
+    end if
+#endif
+
+    if(UseB0)then
+       B_D = State_V(Bx_:Bz_) + B0_DGB(:,i,j,k,iBlock)
+    else
+       B_D = State_V(Bx_:Bz_)
+    end if
+
+    ! The magnetic field should nowhere be zero. The following fix will
+    ! turn the magnitude of the field direction to zero.
+    Bnorm = norm2(B_D)
+    Bunit_D = B_D / max( Bnorm, cTolerance )
+
+    if(DoWeakFieldConduction)then
+#ifndef _OPENACC
+       ! If the user did not set the field-aligned fraction, calculate it as
+       ! FractionFieldAligned = 1/(1 + ElectronCollisionRate/OmegaElectron)
+       ! OmegaElectron = B*q_e/m_e = B*ElectronGyroFreqCoef
+       ! The collision rate is the sum of the user supplied value
+       ! (can be the neutral-electron rate) and
+       ! the ion-electron collision rate
+       if(FractionFieldAligned < 0.0)then
+          ElectronCollisionRate = ElectronCollisionRate + &
+               ElectronIonCollisionCoef* &
+               sum(State_V(iRhoIon_I)/MassIon_I*ChargeIon_I**2)/Te**1.5
+          FractionFieldAligned = &
+               1/(1 + ElectronCollisionRate/(Bnorm*ElectronGyroFreqCoef))
+       end if
+       do iDim = 1, 3
+          Bb_DDGI(:,iDim,i,j,k,iGang) = ( &
+               FractionFieldAligned*Bunit_D*Bunit_D(iDim) &
+               + (1.0 - FractionFieldAligned)*i_DD(:,iDim) )
+       end do
+#endif
+    else
+       do iDim = 1, 3
+          Bb_DDGI(:,iDim,i,j,k,iGang) = Bunit_D*Bunit_D(iDim)
+       end do
+    end if
+
+  end subroutine get_heat_cond_tensor
+  !============================================================================
+
   subroutine get_impl_heat_cond_state
 
     ! Operator split, semi-implicit subroutines
@@ -1310,165 +1480,6 @@ contains
     end do
 
     call test_stop(NameSub, DoTest)
-  contains
-    !==========================================================================
-    subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
-
-      use BATL_lib,      ONLY: Xyz_DGB
-      use ModB0,         ONLY: B0_DGB
-      use ModConst,      ONLY: cBoltzmann, cElectronmass
-      use ModGeometry,   ONLY: r_GB
-      use ModMain,       ONLY: UseB0
-      use ModNumConst,   ONLY: cTolerance
-      use ModPhysics,    ONLY: UnitTemperature_, AverageIonCharge, &
-           UnitPoynting_, ElectronGyroFreqCoef
-      use ModRadDiffusion, ONLY: HeatFluxLimiter
-      use ModVarIndexes, ONLY: Bx_, Bz_
-      use ModRadiativeCooling, ONLY: &
-           DoExtendTransitionRegion, extension_factor
-      use ModUserInterface ! user_material_properties
-
-      real, intent(in) :: State_V(nVar)
-      integer, intent(in) :: i, j, k, iBlock
-
-      ! Set HeatCoef_GI(i,j,k,iGang) and Bb_DDGI(:,iDim,i,j,k,iGang) tensor and optionally
-      ! the free stream flux FreeStreamFlux_G(i,j,k) for the cell center
-      ! indexed by i,j,k of block iBlock based on its state State_V.
-      ! The actual heat conduction tensor is
-      ! HeatCoef_GI(i,j,k,iGang)*Bb_DDGI(:,iDim,i,j,k,iGang)
-      ! so in general Bb_DDGI(:,iDim,i,j,k,iGang) is the sum of the bb tensor AND
-      ! an isotropic part. The isotropic part can be set as a fraction
-      ! of the field aligned heat conduction.
-
-      real :: TeSi, Te, NatomicSi, Ne, NeSi, Zav
-      real :: HeatCoefSi, HeatCoef
-      real :: Factor, r
-      real :: Bnorm, B_D(3), Bunit_D(3)
-      integer :: iDim
-
-      ! Calculate Ne, NeSi, Te, TeSi
-      !------------------------------------------------------------------------
-      if(UseIdealEos)then
-         if(UseMultiIon)then
-            Te = State_V(Pe_)/sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
-            Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
-         else
-            Te = TeFraction*State_V(iP)/State_V(Rho_)
-            Ne = AverageIonCharge*State_V(Rho_)/MassIon_I(1)
-         end if
-         TeSi = Te*No2Si_V(UnitTemperature_)
-         NeSi = Ne*No2Si_V(UnitN_)
-
-      else
-#ifndef _OPENACC
-         call user_material_properties(State_V, i, j, k, iBlock, &
-              TeOut=TeSi, NatomicOut=NatomicSi, AverageIonChargeOut=Zav)
-
-         NeSi = Zav*NatomicSi
-         Ne = NeSi*Si2No_V(UnitN_)
-         Te = TeSi*Si2No_V(UnitTemperature_)
-#endif
-      end if
-
-      if (TeSi < 0) then
-         write(*,*) NameSub, ' Te is negative at: ', &
-              Xyz_DGB(:,i,j,k,iBlock)
-         call stop_mpi('Te is negative')
-      endif
-
-#ifndef _OPENACC
-      if(DoWeakFieldConduction)then
-         ! Initialize these public variables. The user can change them in
-         ! user_material_properties when HeatCondOut is present
-         ElectronCollisionRate = 0.0
-         FractionFieldAligned  = -1.0
-      end if
-#endif
-
-      if(DoUserHeatConduction .or. .not.UseIdealEos)then
-#ifndef _OPENACC
-         call user_material_properties(State_V, i, j, k, iBlock, &
-              TeIn=TeSi, HeatCondOut=HeatCoefSi)
-         if(HeatCoefSi < 0.0)then
-            ! Spitzer conductivity if user sets negative HeatCoefSi
-            HeatCoef = HeatCondPar*Te**2.5
-         else
-            HeatCoef = HeatCoefSi*Si2NoHeatCoef
-         end if
-#endif
-      else
-         ! Spitzer form for collisional regime
-         HeatCoef = HeatCondPar*Te**2.5
-      end if
-
-#ifndef _OPENACC
-      ! Artificial modified heat conduction for a smoother transition
-      ! region, Linker et al. (2001)
-      if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
-
-      if(UseHeatFluxRegion)then
-         r = r_GB(i,j,k,iBlock)
-         if(rCollisionless < 0.0)then
-            Factor = 1.0/((r/rCollisional)**2 + 1)
-         elseif(r <= rCollisional)then
-            Factor = 1.0
-         else
-            Factor = exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
-         end if
-         HeatCoef = Factor*HeatCoef
-      end if
-#endif
-
-      HeatCoef_GI(i,j,k,iGang) = HeatCoef
-
-#ifndef _OPENACC
-      if(UseHeatFluxLimiter)then
-         FreeStreamFlux_G(i,j,k) = HeatFluxLimiter &
-              *NeSi*cBoltzmann*TeSi*sqrt(cBoltzmann*TeSi/cElectronMass) &
-              *Si2No_V(UnitPoynting_)
-      end if
-#endif
-
-      if(UseB0)then
-         B_D = State_V(Bx_:Bz_) + B0_DGB(:,i,j,k,iBlock)
-      else
-         B_D = State_V(Bx_:Bz_)
-      end if
-
-      ! The magnetic field should nowhere be zero. The following fix will
-      ! turn the magnitude of the field direction to zero.
-      Bnorm = norm2(B_D)
-      Bunit_D = B_D / max( Bnorm, cTolerance )
-
-      if(DoWeakFieldConduction)then
-#ifndef _OPENACC
-         ! If the user did not set the field-aligned fraction, calculate it as
-         ! FractionFieldAligned = 1/(1 + ElectronCollisionRate/OmegaElectron)
-         ! OmegaElectron = B*q_e/m_e = B*ElectronGyroFreqCoef
-         ! The collision rate is the sum of the user supplied value
-         ! (can be the neutral-electron rate) and
-         ! the ion-electron collision rate
-         if(FractionFieldAligned < 0.0)then
-            ElectronCollisionRate = ElectronCollisionRate + &
-                 ElectronIonCollisionCoef* &
-                 sum(State_V(iRhoIon_I)/MassIon_I*ChargeIon_I**2)/Te**1.5
-            FractionFieldAligned = &
-                 1/(1 + ElectronCollisionRate/(Bnorm*ElectronGyroFreqCoef))
-         end if
-         do iDim = 1, 3
-            Bb_DDGI(:,iDim,i,j,k,iGang) = ( &
-                 FractionFieldAligned*Bunit_D*Bunit_D(iDim) &
-                 + (1.0 - FractionFieldAligned)*i_DD(:,iDim) )
-         end do
-#endif
-      else
-         do iDim = 1, 3
-            Bb_DDGI(:,iDim,i,j,k,iGang) = Bunit_D*Bunit_D(iDim)
-         end do
-      end if
-
-    end subroutine get_heat_cond_tensor
-    !==========================================================================
 #endif
   end subroutine get_impl_heat_cond_state
   !============================================================================
