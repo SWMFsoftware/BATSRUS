@@ -8,7 +8,6 @@ module ModAdvance
 
   use ModSize
   use ModVarIndexes
-  use ModSemiImplVar, ONLY: UseStableImplicit
   use ModMultiFluid, ONLY: UseMultiIon
   use ModMain,       ONLY: UseB, UseRotatingFrame, UseGravity, &
        iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
@@ -269,10 +268,6 @@ contains
        allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        Efield_DGB = 0.0
     end if
-    if(UseStableImplicit) then
-       allocate(Source_VCB(nVar, nI, nJ, nK, MaxBlock))
-       Source_VCB = 0.0
-    endif
 
 #ifdef _OPENACC
     nGang = MaxBlock

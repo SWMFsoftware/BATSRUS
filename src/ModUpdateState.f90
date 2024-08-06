@@ -198,7 +198,6 @@ contains
          GammaMinus1Ion_I, InvGammaMinus1Ion_I, &
          GammaElectronMinus1, InvGammaElectronMinus1, GammaElectron, &
          ShockLeft_V, ShockRight_V, RhoMin_I
-    use ModSemiImplVar, ONLY: UseStableImplicit
     use ModVarIndexes, ONLY: Pe_, p_
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
          IsDynamicPointImplicit, update_point_implicit
@@ -441,8 +440,6 @@ contains
     if(UseEfield .and. HypEDecay > 0 .and. iStage == nStage) &
          State_VGB(HypE_,1:nI,1:nJ,1:nK,iBlock) = &
          State_VGB(HypE_,1:nI,1:nJ,1:nK,iBlock)*(1 - HypEDecay)
-
-    if(UseStableImplicit) call deduct_expl_source
 
     if(UseBufferGrid) call fix_buffer_grid(iBlock)
 
@@ -1159,32 +1156,6 @@ contains
       end if ! UseAnisoShockHeating
 
     end subroutine update_explicit
-    !==========================================================================
-    subroutine deduct_expl_source()
-
-      integer:: iVarSemi, i, j, k
-
-      character(len=*), parameter:: NameSub = 'deduct_expl_source'
-      !------------------------------------------------------------------------
-      if(UseElectronPressure) then
-         iVarSemi  = pe_
-      else
-         iVarSemi = p_
-      endif
-
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         ! DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
-
-         ! For the first iteration, dt = 0;
-         ! if(DtLocal < 1e-15) CYCLE
-         Source_VCB(iVarSemi,i,j,k,iBlock) = &
-              State_VGB(iVarSemi,i,j,k,iBlock) - &
-              StateOld_VGB(iVarSemi,i,j,k,iBlock)
-         State_VGB(iVarSemi,i,j,k,iBlock) = &
-              StateOld_VGB(iVarSemi,i,j,k,iBlock)
-      end do; end do; end do
-
-    end subroutine deduct_expl_source
     !==========================================================================
   end subroutine update_state_normal
   !============================================================================

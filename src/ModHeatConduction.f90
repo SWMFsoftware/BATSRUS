@@ -1120,16 +1120,8 @@ contains
     use ModGeometry,     ONLY: IsBoundary_B
     use ModParallel,     ONLY: Unset_, DiLevel_EB
     use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB, &
-         DeltaSemiAll_VCB, UseStableImplicit, StarSemiAll_VCB
+         DeltaSemiAll_VCB
     use ModResistivity,  ONLY: UseHeatExchange
-
-    !  real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    !  real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    !  real, optional, intent(out):: &
-    !       DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    !  logical, optional, intent(in):: DoCalcDeltaIn
-
-    logical :: DoCalcDelta
 
 #ifndef _OPENACC
     real :: State_V(nVar)
@@ -1162,7 +1154,6 @@ contains
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    DoCalcDelta = UseStableImplicit
 
     TeEpsilon = TeEpsilonSi*Si2No_V(UnitTemperature_)
 
@@ -1179,38 +1170,6 @@ contains
        iGang = iBlock
 #else
        iGang = 1
-#endif
-
-#ifndef _OPENACC
-       if(DoCalcDelta) then
-          ! For the electron flux limiter, we need Te in the ghostcells
-          if(UseMultiIon)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                State_V = State_VGB(:,i,j,k,iBlock)
-                State_V(iP) = State_V(iP) + Source_VCB(iP,i,j,k,iBlock)
-                Te_GI(i,j,k,iGang) = State_V(Pe_)/sum( &
-                     ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
-             end do; end do; end do
-          elseif(UseIdealEos)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                State_V = State_VGB(:,i,j,k,iBlock)
-                State_V(iP) = State_V(iP) + Source_VCB(iP,i,j,k,iBlock)
-                Te_GI(i,j,k,iGang) = TeFraction &
-                     *State_V(iP)/State_V(Rho_)
-             end do; end do; end do
-          else
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                State_V = State_VGB(:,i,j,k,iBlock)
-                State_V(iP) = State_V(iP) + Source_VCB(iP,i,j,k,iBlock)
-                call user_material_properties(State_V, &
-                     i, j, k, iBlock, TeOut = TeSi)
-                Te_GI(i,j,k,iGang) = TeSi*Si2No_V(UnitTemperature_)
-             end do; end do; end do
-          end if
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             StarSemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_GI(i,j,k,iGang)
-          enddo; enddo; enddo
-       endif ! DoCalcDelta
 #endif
 
        ! For the electron flux limiter, we need Te in the ghostcells
@@ -1238,13 +1197,6 @@ contains
        ! specific heat in DconsDsemiAll_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_GI(i,j,k,iGang)
-#ifndef _OPENACC
-          if(DoCalcDelta) &
-               DeltaSemiAll_VCB(:,i,j,k,iBlockSemi) = &
-               StarSemiAll_VCB(:,i,j,k,iBlockSemi) - &
-               SemiAll_VCB(:,i,j,k,iBlockSemi)
-#endif
-
           TeSi = Te_GI(i,j,k,iGang)*No2Si_V(UnitTemperature_)
 
           TeTiCoef = 0.0   ! in case heat exchange is switched off

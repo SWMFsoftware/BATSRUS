@@ -20,10 +20,6 @@ module ModSemiImplVar
   ! Do the semi-implicit blocks change dynamically?
   logical, public:: IsDynamicSemiImpl = .false.
 
-  ! Make the explicit steady state a solution for the semi-impl. discretization
-  ! Only implemented for heat conduction right now.
-  logical, public:: UseStableImplicit = .false.
-
   ! Number of all semi-implicit variables
   integer, public:: nVarSemiAll
 
@@ -69,7 +65,6 @@ module ModSemiImplVar
   real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl vars
   real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
   real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
-  real, allocatable:: StarSemiAll_VCB(:,:,:,:,:)
 
   ! Store Difference of U^* (after explicit update)  and U^n.
   real, allocatable:: DeltaSemiAll_VCB(:,:,:,:,:)

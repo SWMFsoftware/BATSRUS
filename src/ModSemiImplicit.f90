@@ -66,9 +66,6 @@ contains
        call read_var('UseSemiImplicit', UseSemiImplicit)
        if(UseSemiImplicit) call read_var('TypeSemiImplicit', TypeSemiImplicit)
 
-    case("#SEMIIMPLICITSTABLE")
-       call read_var('UseStableImplicit',UseStableImplicit)
-
     case("#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF")
        call read_var('SemiImplCoeff', SemiImplCoeff)
 
@@ -107,11 +104,6 @@ contains
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
-
-    if(UseSemiImplicit .and. UseStableImplicit .and. &
-         (TypeSemiImplicit /= 'cond' .and. TypeSemiImplicit /='parcond')) &
-         call stop_mpi(NameSub//' StableImplicit is not available for '&
-         //TypeSemiImplicit)
 
     call test_stop(NameSub, DoTest)
   end subroutine read_semi_impl_param
@@ -193,8 +185,6 @@ contains
     allocate(JacSemi_VVCIB(nVarSemi,nVarSemi,nI,nJ,nK,nStencil,MaxBlock))
 
     allocate(DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
-
-    allocate(StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
 
     ! Variables for the flux correction
     if( (TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
@@ -312,8 +302,7 @@ contains
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
           call get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &
-               DeltaSemiAll_VCB=DeltaSemiAll_VCB, &
-               DoCalcDeltaIn=UseStableImplicit)
+               DeltaSemiAll_VCB=DeltaSemiAll_VCB)
     case('parcond')
        call get_impl_heat_cond_state
     case('resistivity','resist','resisthall')
@@ -570,22 +559,6 @@ contains
                *CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end do
-
-    if(UseStableImplicit) then
-       DtLocal = dt
-       do iBlockSemi = 1, nBlockSemi
-          iBlock = iBlockFromSemi_B(iBlockSemi)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not. IsTimeAccurate .or. UseDtLimit) &
-                  DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
-             RhsSemi_VCB(:,i,j,k,iBlockSemi) = &
-                  RhsSemi_VCB(:,i,j,k,iBlockSemi) &
-                  + DeltaSemiAll_VCB(:,i,j,k,iBlockSemi) &
-                  *DconsDsemiAll_VCB(:,i,j,k,iBlockSemi) &
-                  *CellVolume_GB(i,j,k,iBlock)/DtLocal
-          end do; end do; end do
-       enddo
-    endif
 
     if(DoTest) then
        do iBlockSemi=1,nBlockSemi
