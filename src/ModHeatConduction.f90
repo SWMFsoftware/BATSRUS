@@ -950,7 +950,7 @@ contains
     use ModGeometry,     ONLY: IsBoundary_B
     use ModParallel,     ONLY: Unset_, DiLevel_EB
     use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB, &
-         DeltaSemiAll_VCB, UseStableImplicit
+         DeltaSemiAll_VCB, UseStableImplicit, StarSemiAll_VCB
     use ModResistivity,  ONLY: UseHeatExchange
 
     !  real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
