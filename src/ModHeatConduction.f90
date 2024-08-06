@@ -937,9 +937,9 @@ contains
     real, intent(in) :: State_V(nVar)
     integer, intent(in) :: i, j, k, iBlock
 
-    ! Set HeatCoef_GI(i,j,k,iGang) and Bb_DDGI(:,iDim,i,j,k,iGang) tensor and optionally
-    ! the free stream flux FreeStreamFlux_G(i,j,k) for the cell center
-    ! indexed by i,j,k of block iBlock based on its state State_V.
+    ! Set HeatCoef_GI(i,j,k,iGang) and Bb_DDGI(:,iDim,i,j,k,iGang) tensor and
+    ! optionally the free stream flux FreeStreamFlux_G(i,j,k) for the cell
+    ! center indexed by i,j,k of block iBlock based on its state State_V.
     ! The actual heat conduction tensor is
     ! HeatCoef_GI(i,j,k,iGang)*Bb_DDGI(:,iDim,i,j,k,iGang)
     ! so in general Bb_DDGI(:,iDim,i,j,k,iGang) is the sum of the bb tensor AND
@@ -1438,7 +1438,8 @@ contains
              Bb_DD = 0.5*(Bb_DDGI(:nDim,:nDim,i,j,k,iGang) &
                   +       Bb_DDGI(:nDim,:nDim,i-Di,j-Dj,k-Dk,iGang))
 
-             HeatCoef = 0.5*(HeatCoef_GI(i,j,k,iGang) + HeatCoef_GI(i-Di,j-Dj,k-Dk,iGang))
+             HeatCoef = 0.5*(HeatCoef_GI(i,j,k,iGang) &
+                  + HeatCoef_GI(i-Di,j-Dj,k-Dk,iGang))
 
 #ifndef _OPENACC
              if(UseHeatFluxLimiter)then
