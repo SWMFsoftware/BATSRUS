@@ -447,7 +447,7 @@ contains
          CellSize_DB, CellFace_DFB, CellVolume_B
     use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,  ONLY: State_VGB, UseElectronPressure, &
-         nWave, WaveFirst_, WaveLast_, Source_VCB
+         nWave, WaveFirst_, WaveLast_
     use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: &
          nVarSemiAll, nBlockSemi, iBlockFromSemi_B, TypeSemiImplicit, &
@@ -460,7 +460,6 @@ contains
     use ModGeometry, ONLY: TypeGeometry
     use ModParallel, ONLY: Unset_, DiLevel_EB
     use ModUserInterface ! user_material_properties
-    use ModVarIndexes, ONLY: nVar
 
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
@@ -491,9 +490,6 @@ contains
     logical :: IsNewBlockTe
     ! Logical for the radiation diffusion
     logical :: IsNewBlockRadDiffusion
-
-    real :: State_V(nVar)
-    integer :: iVarSemi
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_rad_diff_state'

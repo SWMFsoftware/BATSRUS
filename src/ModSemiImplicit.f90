@@ -243,7 +243,7 @@ contains
     ! Advance semi-implicit terms
 
     use ModMain, ONLY: IsTimeAccurate
-    use ModAdvance, ONLY: DoFixAxis, State_VGB, DtMax_CB
+    use ModAdvance, ONLY: DoFixAxis, State_VGB
     use ModB0, ONLY: B0_DGB
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModGeometry, ONLY: Used_GB
@@ -258,8 +258,7 @@ contains
          get_impl_resistivity_state, update_impl_resistivity
     use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Heat_
     use ModFixAxisCells, ONLY: fix_axis_cells
-    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, nIJK, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, nIJK
     use ModEnergy, ONLY: limit_pressure
     ! use omp_lib
 
@@ -469,8 +468,6 @@ contains
   !============================================================================
   subroutine get_semi_impl_rhs(SemiAll_VCB, RhsSemi_VCB)
 
-    use ModAdvance,        ONLY: DtMax_CB
-    use ModMain,           ONLY: IsTimeAccurate, dt, Cfl, UseDtLimit
     use ModGeometry,       ONLY: IsBoundary_B, Xyz_DGB, Used_GB
     use ModSize,           ONLY: nI, nJ, nK
     use ModCellBoundary,   ONLY: set_cell_boundary
@@ -481,8 +478,6 @@ contains
     real, intent(out):: RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
 
     integer :: iBlockSemi, iBlock, i, j, k
-
-    real :: DtLocal
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_semi_impl_rhs'

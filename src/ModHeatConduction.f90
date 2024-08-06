@@ -162,8 +162,6 @@ contains
     use ModMultiFluid, ONLY: UseMultiIon, MassIon_I
     use ModNumConst,   ONLY: cTwoPi
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
-    use ModCoronalHeating, ONLY: UseCoronalHeating
-    use ModTurbulence, ONLY: UseTurbulentCascade
     use ModRadiativeCooling, ONLY: UseRadCooling
     use ModResistivity,  ONLY: UseHeatExchange, UseResistivity
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
@@ -1090,15 +1088,14 @@ contains
 
     ! Operator split, semi-implicit subroutines
 
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_, &
-         WaveFirst_, WaveLast_
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
-         UseAnisoPressure, DtMax_CB, Source_VCB, iTypeUpdate, UpdateOrig_
+         UseAnisoPressure, DtMax_CB, iTypeUpdate, UpdateOrig_
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
-    use ModImplicit,     ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
+    use ModImplicit,     ONLY: nBlockSemi, iBlockFromSemi_B, &
          iTeImpl
     use ModMain,         ONLY: Dt, IsTimeAccurate, Cfl
-    use ModMultifluid,   ONLY: UseMultiIon, nIonFluid, iRhoIon_I, MassIon_I, &
+    use ModMultifluid,   ONLY: UseMultiIon, iRhoIon_I, MassIon_I, &
          ChargeIon_I
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
@@ -1106,9 +1103,7 @@ contains
          InvGammaElectronMinus1, &
          CollisionCoef_II, GammaMinus1, InvGammaMinus1
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
-    use ModTurbulence, ONLY: turbulent_cascade, apportion_coronal_heating
-    use ModRadiativeCooling, ONLY: get_radiative_cooling, extension_factor
-    use ModChromosphere, ONLY: DoExtendTransitionRegion, TeSi_C, get_tesi_c
+    use ModRadiativeCooling, ONLY: get_radiative_cooling
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
          CellFace_DB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB
     use BATL_size,       ONLY: nI, nJ, nK, j0_, nJp1_, k0_, nKp1_, &
@@ -1119,12 +1114,10 @@ contains
     use ModMain,         ONLY: UseFieldLineThreads
     use ModGeometry,     ONLY: IsBoundary_B
     use ModParallel,     ONLY: Unset_, DiLevel_EB
-    use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB, &
-         DeltaSemiAll_VCB
+    use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB
     use ModResistivity,  ONLY: UseHeatExchange
 
 #ifndef _OPENACC
-    real :: State_V(nVar)
 #endif
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP, iGang
@@ -1137,16 +1130,8 @@ contains
     real :: Bb_DD(nDim,nDim)
     logical :: IsNewBlockTe
 
-    real :: Te, Ti, Qe, Qi, dQedTe, dQedTi, dQidTe, dQidTi
-    real :: QeTiR, QeTiL, QiTiR, QiTiL, QeTeR, QeTeL, QiTeR, QiTeL
-    real :: Deltap, Coef, Denominator
+    real :: Te, Ti
     real :: RadCool, RadCoolDeriv
-    real :: dQidTe1, dQidTi1, Qi1
-    real :: CoronalHeating
-    real :: WaveDissipationRate_V(WaveFirst_:WaveLast_)
-    real :: QPerQtotal_I(nIonFluid)
-    real :: QparPerQtotal_I(nIonFluid)
-    real :: QePerQtotal
     real :: Tpar, CollisionRate, IsotropizationCoef, DenominatorPar
 
 #ifndef SCALAR
