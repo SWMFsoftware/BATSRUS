@@ -79,7 +79,7 @@ module ModHeatConduction
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
   ! Arrays to build the Heat conduction dyad
   real, allocatable :: HeatCoef_GI(:,:,:,:), Bb_DDGI(:,:,:,:,:,:)
-  !$omp threadprivate( HeatCoef_GI, Bb_DDGI ,iGang,iGang)
+  !$omp threadprivate( HeatCoef_GI, Bb_DDGI)
   !$acc declare create(HeatCoef_GI, Bb_DDGI)
 
   ! Arrays needed for the heat flux limiter
