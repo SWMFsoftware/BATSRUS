@@ -56,6 +56,7 @@ module ModSemiImplVar
 
   ! This array is indexed with normal block index and has nG ghost cells
   real, allocatable:: SemiState_VGB(:,:,:,:,:)  ! Semi-implicit vars
+  !$acc declare create(SemiState_VGB)
 
   ! These arrays with *Semi_* and *SemiAll_* are indexed by compact iBlockSemi
   ! and have a single ghost cell at most.
