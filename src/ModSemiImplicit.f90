@@ -243,7 +243,7 @@ contains
     ! Advance semi-implicit terms
 
     use ModMain, ONLY: IsTimeAccurate
-    use ModAdvance, ONLY: DoFixAxis, State_VGB
+    use ModAdvance, ONLY: DoFixAxis, State_VGB, DtMax_CB
     use ModB0, ONLY: B0_DGB
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModGeometry, ONLY: Used_GB
