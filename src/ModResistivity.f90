@@ -40,6 +40,7 @@ module ModResistivity
   !$acc declare create(UseResistiveFlux)
   logical, public           :: UseJouleHeating  = .true.
   logical, public           :: UseHeatExchange  = .true.
+  !$acc declare create(UseHeatExchange)
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
   !$acc declare create(Eta_GB)
@@ -100,6 +101,7 @@ contains
        call read_var("UseResistiveFlux", DoResistiveFlux)
        call read_var("UseJouleHeating",  UseJouleHeating)
        call read_var("UseHeatExchange",  UseHeatExchange)
+       !$acc update device(UseHeatExchange)
     case("#RESISTIVITY")
        call read_var('UseResistivity',UseResistivity)
        if(UseResistivity)then

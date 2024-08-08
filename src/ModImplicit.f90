@@ -36,6 +36,7 @@ module ModSemiImplVar
 
   ! Named indices for semi-implicit variables
   integer, public :: iTeImpl=0, iErImplFirst=0, iErImplLast=0, iEradImpl=0
+  !$acc declare create(iTeImpl)
 
   ! Number of semi-implicit grid blocks
   integer, public:: nBlockSemi = -1
@@ -64,7 +65,9 @@ module ModSemiImplVar
   ! and have a single ghost cell at most.
   ! The SemiAll_ variables are indexed from 1..nVarSemiAll
   real, allocatable:: DconsDsemiAll_VCB(:,:,:,:,:) ! dCons/dSemi derivatives
+  !$acc declare create(DconsDsemiAll_VCB)
   real, allocatable:: SemiAll_VCB(:,:,:,:,:)       ! Semi-implicit vars
+  !$acc declare create(SemiAll_VCB)
   real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl vars
   real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
   real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
