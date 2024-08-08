@@ -12,6 +12,7 @@ module ModSemiImplVar
   logical, public:: UseSemiImplicit = .false.
   logical, public:: UseSplitSemiImplicit = .false.
   character(len=40), public:: TypeSemiImplicit = 'none'
+  !$acc declare create(TypeSemiImplicit)
 
   ! Do semi-implicit Hall and/or regular resistivity
   logical:: UseSemiHallResist  = .false.
@@ -22,6 +23,7 @@ module ModSemiImplVar
 
   ! Number of all semi-implicit variables
   integer, public:: nVarSemiAll
+  !$acc declare create(nVarSemiAll)
 
   ! Index range of semi-implicit variables solved together
   integer, public:: iVarSemiMin, iVarSemiMax
@@ -29,6 +31,7 @@ module ModSemiImplVar
 
   ! Number of semi-implicit variables solved together
   integer, public:: nVarSemi
+  !$acc declare create(nVarSemi)
 
   ! Number of vectors and indexes of first components among semi-impl vars
   integer, public:: nVectorSemi = 0
