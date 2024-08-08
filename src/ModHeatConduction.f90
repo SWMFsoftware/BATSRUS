@@ -34,6 +34,7 @@ module ModHeatConduction
   ! Variables for setting the field-aligned heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'spitzer'
   logical :: DoUserHeatConduction
+  !$acc declare create(DoUserHeatConduction)
   character(len=20), public :: TypeIonHeatConduction = 'spitzer'
   logical :: DoUserIonHeatConduction
 
@@ -45,9 +46,11 @@ module ModHeatConduction
 
   ! Parameters for heat conduction in regions of weak magnetic field
   logical :: DoWeakFieldConduction = .false.
+  !$acc declare create(DoWeakFieldConduction)
 
   ! Dimensionless heat conduction coefficients
   real :: HeatCondPar, IonHeatCondPar
+  !$acc declare create(HeatCondPar)
 
   ! Unit conversion factor for heat conduction coefficients
   real :: Si2NoHeatCoef
@@ -129,6 +132,7 @@ contains
 
     case("#WEAKFIELDCONDUCTION")
        call read_var('DoWeakFieldConduction', DoWeakFieldConduction)
+       !$acc update device(DoWeakFieldConduction)
 
     case("#IONHEATCONDUCTION")
        call read_var('UseIonHeatConduction', UseIonHeatConduction)
@@ -332,6 +336,8 @@ contains
     end if
 
     !$acc update device(TiFraction, TeFraction)
+    !$acc update device(HeatCondPar)
+    !$acc update device(DoUserHeatConduction)
 
     call test_stop(NameSub, DoTest)
   end subroutine init_heat_conduction
@@ -915,7 +921,7 @@ contains
   end subroutine calc_ei_heat_exchange
   !============================================================================
   subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
-
+    ! a$acc routine seq
     use BATL_lib,      ONLY: Xyz_DGB
     use ModAdvance,    ONLY: UseIdealEos, UseElectronPressure
     use ModB0,         ONLY: B0_DGB
@@ -926,11 +932,14 @@ contains
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, UseMultiIon
     use ModPhysics,    ONLY: UnitTemperature_, AverageIonCharge, &
          UnitPoynting_, ElectronGyroFreqCoef, UnitN_, Si2No_V, No2Si_V
-    use ModRadDiffusion, ONLY: HeatFluxLimiter, UseHeatFluxLimiter
     use ModVarIndexes, ONLY: Bx_, Bz_, p_, Pe_, Rho_
+
+#ifndef _OPENACC
+    use ModRadDiffusion, ONLY: HeatFluxLimiter, UseHeatFluxLimiter
     use ModRadiativeCooling, ONLY: &
          DoExtendTransitionRegion, extension_factor
     use ModUserInterface ! user_material_properties
+#endif
 
     real, intent(in) :: State_V(nVar)
     integer, intent(in) :: i, j, k, iBlock
@@ -954,9 +963,9 @@ contains
     character(len=*), parameter:: NameSub = 'get_heat_cond_tensor'
     !--------------------------------------------------------------------------
 #ifdef _OPENACC
-       iGang = iBlock
+    iGang = iBlock
 #else
-       iGang = 1
+    iGang = 1
 #endif
 
     iP = p_
@@ -984,13 +993,13 @@ contains
 #endif
     end if
 
+#ifndef _OPENACC
     if (TeSi < 0) then
        write(*,*) NameSub, ' Te is negative at: ', &
             Xyz_DGB(:,i,j,k,iBlock)
        call stop_mpi('Te is negative')
     endif
 
-#ifndef _OPENACC
     if(DoWeakFieldConduction)then
        ! Initialize these public variables. The user can change them in
        ! user_material_properties when HeatCondOut is present
@@ -1140,22 +1149,23 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    TeEpsilon = TeEpsilonSi*Si2No_V(UnitTemperature_)
-
-    iP = p_
-    if(UseElectronPressure) iP = Pe_
-
-    DtLocal = Dt
-
+    !!!!$ acc parallel loop gang independent private(iBlock) present(nBlockSemi, iBlockFromSemi_B)
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
-       IsNewBlockTe = .true.
 
 #ifdef _OPENACC
        iGang = iBlock
 #else
+       IsNewBlockTe = .true.
        iGang = 1
 #endif
+
+       TeEpsilon = TeEpsilonSi*Si2No_V(UnitTemperature_)
+
+       iP = p_
+       if(UseElectronPressure) iP = Pe_
+
+       DtLocal = Dt
 
        ! For the electron flux limiter, we need Te in the ghostcells
        if(UseMultiIon)then

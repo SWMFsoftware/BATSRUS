@@ -39,9 +39,11 @@ module ModSemiImplVar
 
   ! Number of semi-implicit grid blocks
   integer, public:: nBlockSemi = -1
+  !$acc declare create(nBlockSemi)
 
   ! Conversion from compact block index iBlockSemi to normal index iBlock
   integer, public, allocatable:: iBlockFromSemi_B(:)
+  !$acc declare create(iBlockFromSemi_B)
 
   ! Arrays for flux correction at resolution changes
   real, public, allocatable, dimension(:,:,:,:,:) :: &
