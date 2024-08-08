@@ -441,17 +441,17 @@ contains
   ! Semi-implicit interface
 
   subroutine get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &
-       DeltaSemiAll_VCB, DoCalcDeltaIn)
+       DeltaSemiAll_VCB)
 
     use BATL_lib,    ONLY: message_pass_cell, IsCartesian, IsRzGeometry, &
          CellSize_DB, CellFace_DFB, CellVolume_B
     use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,  ONLY: State_VGB, UseElectronPressure, &
-         nWave, WaveFirst_, WaveLast_, Source_VCB
+         nWave, WaveFirst_, WaveLast_
     use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: &
-         nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
-         TypeSemiImplicit, SemiImplCoeff, iTeImpl, iErImplFirst, iErImplLast
+         nVarSemiAll, nBlockSemi, iBlockFromSemi_B, TypeSemiImplicit, &
+         SemiImplCoeff, iTeImpl, iErImplFirst, iErImplLast
     use ModMain,     ONLY: x_, y_, z_, nI, nJ, nK, Dt
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: InvGammaMinus1, Clight, cRadiationNo, UnitN_, &
@@ -460,15 +460,11 @@ contains
     use ModGeometry, ONLY: TypeGeometry
     use ModParallel, ONLY: Unset_, DiLevel_EB
     use ModUserInterface ! user_material_properties
-    use ModVarIndexes, ONLY: nVar
 
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, optional, intent(out):: &
          DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    logical, optional, intent(in):: DoCalcDeltaIn
-
-    logical :: DoCalcDelta
 
     integer :: iBlockSemi, iBlock, i, j, k
     real :: OpacityEmissionSi_W(nWave), OpacityEmission_W(nWave)
@@ -485,8 +481,6 @@ contains
 
     real :: PlanckSi_W(nWave), Planck_W(nWave)
 
-    real :: StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-
     ! Temporary radiation energy array needed by set_block_field
     real :: Erad1_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     ! Temporary electron temperature array needed by set_block_field
@@ -497,15 +491,10 @@ contains
     ! Logical for the radiation diffusion
     logical :: IsNewBlockRadDiffusion
 
-    real :: State_V(nVar)
-    integer :: iVarSemi
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_rad_diff_state'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    DoCalcDelta = .false.
-    if(present(DoCalcDeltaIn)) DoCalcDelta=DoCalcDeltaIn
 
     ! For the electron flux limiter, we need Te in the ghostcells
     if(UseHeatFluxLimiter)then
@@ -524,35 +513,6 @@ contains
 
        IsNewBlockRadDiffusion = .true.
        IsNewBlockTe = .true.
-
-       if(DoCalcDelta) then
-          iVarSemi = p_
-          if(iTeImpl > 0)then
-             ! The ghost cells in Te_G are only needed for the electron heat
-             ! flux limiter.
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                State_V = State_VGB(:,i,j,k,iBlock)
-                State_V(iVarSemi) = State_V(iVarSemi) &
-                     + Source_VCB(iVarSemi,i,j,k,iBlock)
-                call user_material_properties(&
-                     State_V, &
-                     i, j, k, iBlock, TeOut = TeSi)
-                Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
-             end do; end do; end do
-
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                StarSemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
-             end do; end do; end do
-          end if
-
-          if(iErImplFirst > 0)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                StarSemiAll_VCB(iErImplFirst:iErImplLast,i,j,k,iBlockSemi) = &
-                     State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) + &
-                     Source_VCB(WaveFirst_:WaveLast_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-       endif
 
        !---------------------Begin calc SemiAll_VCB----------
        if(iTeImpl > 0)then
@@ -576,14 +536,6 @@ contains
           end do; end do; end do
        end if
        !------------------End calc SemiAll_VCB------------------
-
-       if(DoCalcDelta) then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             DeltaSemiAll_VCB(:,i,j,k,iBlockSemi) = &
-                  StarSemiAll_VCB(:,i,j,k,iBlockSemi) - &
-                  SemiAll_VCB(:,i,j,k,iBlockSemi)
-          end do; end do; end do
-       endif
 
        InvDx2 = 0.5/CellSize_DB(x_,iBlock)
        InvDy2 = 0.5/CellSize_DB(y_,iBlock)

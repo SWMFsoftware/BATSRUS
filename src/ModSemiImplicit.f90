@@ -12,6 +12,7 @@ module ModSemiImplicit
   use ModSemiImplVar
   use ModImplicit, ONLY: nStencil
   use ModLinearSolver, ONLY: LinearSolverParamType
+  use ModAdvance, ONLY: iTypeUpdate, UpdateOrig_
 
   implicit none
   save
@@ -65,9 +66,6 @@ contains
        call read_var('UseSemiImplicit', UseSemiImplicit)
        if(UseSemiImplicit) call read_var('TypeSemiImplicit', TypeSemiImplicit)
 
-    case("#SEMIIMPLICITSTABLE")
-       call read_var('UseStableImplicit',UseStableImplicit)
-
     case("#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF")
        call read_var('SemiImplCoeff', SemiImplCoeff)
 
@@ -106,11 +104,6 @@ contains
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
-
-    if(UseSemiImplicit .and. UseStableImplicit .and. &
-         (TypeSemiImplicit /= 'cond' .and. TypeSemiImplicit /='parcond')) &
-         call stop_mpi(NameSub//' StableImplicit is not available for '&
-         //TypeSemiImplicit)
 
     call test_stop(NameSub, DoTest)
   end subroutine read_semi_impl_param
@@ -250,7 +243,7 @@ contains
     ! Advance semi-implicit terms
 
     use ModMain, ONLY: IsTimeAccurate
-    use ModAdvance, ONLY: DoFixAxis, State_VGB
+    use ModAdvance, ONLY: DoFixAxis, State_VGB, DtMax_CB
     use ModB0, ONLY: B0_DGB
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModGeometry, ONLY: Used_GB
@@ -285,6 +278,9 @@ contains
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
+    !$acc update host(State_VGB)
+    !$acc update host(DtMax_CB)
+
     if(TypeSemiImplicit(1:6) /= 'resist')then
        ! All used blocks are solved for with the semi-implicit scheme
        ! except for (Hall) resistivity
@@ -305,8 +301,7 @@ contains
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
           call get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &
-               DeltaSemiAll_VCB=DeltaSemiAll_VCB, &
-               DoCalcDeltaIn=UseStableImplicit)
+               DeltaSemiAll_VCB=DeltaSemiAll_VCB)
     case('parcond')
        call get_impl_heat_cond_state
     case('resistivity','resist','resisthall')
@@ -419,7 +414,10 @@ contains
     if(UseCoarseAxis)call coarsen_axis_cells
     ! Exchange messages, so ghost cells of all blocks are updated
     if(UseFieldLineThreads) call advance_threads(Heat_)
+
+    !$acc update device(State_VGB)
     call exchange_messages
+    !$acc update host(State_VGB)
 
     if(DoTest) write(*,*)NameSub,' final test var, B0=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
@@ -470,8 +468,6 @@ contains
   !============================================================================
   subroutine get_semi_impl_rhs(SemiAll_VCB, RhsSemi_VCB)
 
-    use ModAdvance,        ONLY: DtMax_CB
-    use ModMain,           ONLY: IsTimeAccurate, dt, Cfl, UseDtLimit
     use ModGeometry,       ONLY: IsBoundary_B, Xyz_DGB, Used_GB
     use ModSize,           ONLY: nI, nJ, nK
     use ModCellBoundary,   ONLY: set_cell_boundary
@@ -482,8 +478,6 @@ contains
     real, intent(out):: RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
 
     integer :: iBlockSemi, iBlock, i, j, k
-
-    real :: DtLocal
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_semi_impl_rhs'
@@ -514,8 +508,11 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+       if(iTypeUpdate == UpdateOrig_) then
+          ! TODO: make the following call works on GPU
+          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+       end if
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -557,22 +554,6 @@ contains
                *CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end do
-
-    if(UseStableImplicit) then
-       DtLocal = dt
-       do iBlockSemi = 1, nBlockSemi
-          iBlock = iBlockFromSemi_B(iBlockSemi)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not. IsTimeAccurate .or. UseDtLimit) &
-                  DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
-             RhsSemi_VCB(:,i,j,k,iBlockSemi) = &
-                  RhsSemi_VCB(:,i,j,k,iBlockSemi) &
-                  + DeltaSemiAll_VCB(:,i,j,k,iBlockSemi) &
-                  *DconsDsemiAll_VCB(:,i,j,k,iBlockSemi) &
-                  *CellVolume_GB(i,j,k,iBlock)/DtLocal
-          end do; end do; end do
-       enddo
-    endif
 
     if(DoTest) then
        do iBlockSemi=1,nBlockSemi
@@ -652,8 +633,11 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+       if(iTypeUpdate == UpdateOrig_) then
+          ! TODO: make the following call works on GPU
+          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+       end if
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
