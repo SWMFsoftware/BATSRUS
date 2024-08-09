@@ -12,7 +12,6 @@ module ModSemiImplicit
   use ModSemiImplVar
   use ModImplicit, ONLY: nStencil
   use ModLinearSolver, ONLY: LinearSolverParamType
-  use ModAdvance, ONLY: iTypeUpdate, UpdateOrig_
 
   implicit none
   save
@@ -290,6 +289,7 @@ contains
           nBlockSemi = nBlockSemi + 1
           iBlockFromSemi_B(nBlockSemi) = iBlock
        end do
+       !$acc update device(iBlockFromSemi_B, nBlockSemi)
        DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0
     else
        ! For (Hall) resistivity the number of semi-implicit blocks will be
@@ -508,11 +508,11 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       if(iTypeUpdate == UpdateOrig_) then
-          ! TODO: make the following call works on GPU
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
-       end if
+       !$acc update device(SemiState_VGB)
+       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
+            UseOpenACCIn=.true.)
+       !$acc update host(SemiState_VGB)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -633,11 +633,11 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       if(iTypeUpdate == UpdateOrig_) then
-          ! TODO: make the following call works on GPU
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
-       end if
+       !$acc update device(SemiState_VGB)
+       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
+            UseOpenACCIn=.true.)
+       !$acc update host(SemiState_VGB)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)

@@ -39,9 +39,11 @@ module ModSemiImplVar
 
   ! Number of semi-implicit grid blocks
   integer, public:: nBlockSemi = -1
+  !$acc declare create(nBlockSemi)
 
   ! Conversion from compact block index iBlockSemi to normal index iBlock
   integer, public, allocatable:: iBlockFromSemi_B(:)
+  !$acc declare create(iBlockFromSemi_B)
 
   ! Arrays for flux correction at resolution changes
   real, public, allocatable, dimension(:,:,:,:,:) :: &
@@ -56,6 +58,7 @@ module ModSemiImplVar
 
   ! This array is indexed with normal block index and has nG ghost cells
   real, allocatable:: SemiState_VGB(:,:,:,:,:)  ! Semi-implicit vars
+  !$acc declare create(SemiState_VGB)
 
   ! These arrays with *Semi_* and *SemiAll_* are indexed by compact iBlockSemi
   ! and have a single ghost cell at most.

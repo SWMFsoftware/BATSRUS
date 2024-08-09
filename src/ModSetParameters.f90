@@ -2385,6 +2385,7 @@ contains
           if(nIonFluid==1 .and. .not. UseMultiSpecies)then
              AverageIonCharge = ChargeIon_I(1)
              ElectronPressureRatio = ElectronTemperatureRatio*AverageIonCharge
+             !$acc update device(AverageIonCharge)
           end if
 
           PePerPtotal = ElectronPressureRatio/(1 + ElectronPressureRatio)
