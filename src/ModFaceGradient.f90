@@ -574,7 +574,7 @@ contains
   !============================================================================
   subroutine set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, &
        UseFirstOrderBcIn)
-    !$acc routine vector       
+    !$acc routine vector
 
     use ModMain, ONLY: x_, y_, z_
     use ModNumConst, ONLY: i_DD
@@ -793,7 +793,7 @@ contains
     real :: InvDx, InvDy, InvDz
     real, allocatable :: Var1_IG(:,:,:,:)
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
-    
+
     real, save :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     character(len=*), parameter:: NameSub = 'get_face_gradient_field'

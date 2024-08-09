@@ -435,7 +435,7 @@ contains
 
   subroutine get_semi_impl_rhs_block(iBlock, SemiState_VG, RhsSemi_VC, &
        IsLinear)
-    !!$acc routine vector
+    !!$ acc routine vector
 
     use BATL_lib,          ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
     use ModLinearSolver,   ONLY: UsePDotADotP
@@ -451,34 +451,34 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_semi_impl_rhs_block'
     !--------------------------------------------------------------------------
-#ifndef _OPENACC    
+#ifndef _OPENACC
     call test_start(NameSub, DoTest, iBlock)
-#endif    
+#endif
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
 #ifndef _OPENACC
        if(.not.IsLinear) UsePDotADotP = .false.
        call get_rad_diffusion_rhs(iBlock, SemiState_VG, &
             RhsSemi_VC, IsLinear=IsLinear)
-#endif       
+#endif
     case('parcond')
        call get_heat_conduction_rhs(iBlock, SemiState_VG, &
             RhsSemi_VC, IsLinear=IsLinear)
     case('resistivity','resist','resisthall')
-#ifndef _OPENACC       
+#ifndef _OPENACC
        call get_resistivity_rhs(iBlock, SemiState_VG, &
             RhsSemi_VC, IsLinear=IsLinear)
-#endif       
+#endif
     case default
-#ifndef _OPENACC       
+#ifndef _OPENACC
        call stop_mpi(NameSub//': no get_rhs implemented for' &
             //TypeSemiImplicit)
-#endif       
+#endif
     end select
 
-#ifndef _OPENACC    
+#ifndef _OPENACC
     call test_stop(NameSub, DoTest, iBlock)
-#endif    
+#endif
   end subroutine get_semi_impl_rhs_block
   !============================================================================
   subroutine get_semi_impl_rhs(RhsSemi_VCB)
@@ -510,7 +510,7 @@ contains
        end do; end do; end do
     end do
     !$omp end parallel do
-    
+
     !$omp parallel do private( iBlock )
     !$acc parallel loop gang independent private(iBlock)
     do iBlockSemi=1,nBlockSemi
@@ -544,18 +544,18 @@ contains
             //TypeSemiImplicit)
     end select
 
-    !!$acc parallel loop gang independent private(iBlock) &
-    !!$acc present(RhsSemi_VCB)
+    !!$ acc parallel loop gang independent private(iBlock) &
+    !!$ acc present(RhsSemi_VCB)
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
-#ifndef _OPENACC       
-       ! TODO: Make sure the bc is set correctly on GPU. 
+#ifndef _OPENACC
+       ! TODO: Make sure the bc is set correctly on GPU.
        ! Apply boundary conditions (1 layer of outer ghost cells)
        if(IsBoundary_B(iBlock))&
             call set_cell_boundary(1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
-#endif       
+#endif
 
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
@@ -565,7 +565,7 @@ contains
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
-       
+
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
 
