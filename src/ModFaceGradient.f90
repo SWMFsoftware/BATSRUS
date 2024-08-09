@@ -752,6 +752,7 @@ contains
           DcoordDxyz_DDFD(y_,:,i,nJ+1,k,y_) = Dxyz_D
        end do; end do
     end if
+    if(nK==1)RETURN
     if(DiLevel_EB(5,iBlock)==Unset_)then
        !$acc loop vector collapse(2) independent private(Dxyz_D)
        do j=1,nJ; do i=1,nI
@@ -760,13 +761,12 @@ contains
           DcoordDxyz_DDFD(z_,:,i,j,1,z_) = Dxyz_D
        end do; end do
     end if
-    if(nK==1)RETURN
     if(DiLevel_EB(6,iBlock)==Unset_)then
        !$acc loop vector collapse(2) independent private(Dxyz_D)
        do j=1,nJ; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,j,nK + 1,iBlock) - Xyz_DGB(:,i,j,nK,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(z_,iBlock)/sum(Dxyz_D**2))
-          DcoordDxyz_DDFD(z_,:,i,j,nK +1,z_) = Dxyz_D
+          DcoordDxyz_DDFD(z_,:,i,j,nK+1,z_) = Dxyz_D
        end do; end do
     end if
 
@@ -793,7 +793,8 @@ contains
     real :: InvDx, InvDy, InvDz
     real, allocatable :: Var1_IG(:,:,:,:)
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
-    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
+    
+    real, save :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     character(len=*), parameter:: NameSub = 'get_face_gradient_field'
     !--------------------------------------------------------------------------
