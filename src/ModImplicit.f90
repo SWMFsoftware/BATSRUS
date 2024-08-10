@@ -12,6 +12,7 @@ module ModSemiImplVar
   logical, public:: UseSemiImplicit = .false.
   logical, public:: UseSplitSemiImplicit = .false.
   character(len=40), public:: TypeSemiImplicit = 'none'
+  !$acc declare create(TypeSemiImplicit)
 
   ! Do semi-implicit Hall and/or regular resistivity
   logical:: UseSemiHallResist  = .false.
@@ -22,6 +23,7 @@ module ModSemiImplVar
 
   ! Number of all semi-implicit variables
   integer, public:: nVarSemiAll
+  !$acc declare create(nVarSemiAll)
 
   ! Index range of semi-implicit variables solved together
   integer, public:: iVarSemiMin, iVarSemiMax
@@ -29,6 +31,7 @@ module ModSemiImplVar
 
   ! Number of semi-implicit variables solved together
   integer, public:: nVarSemi
+  !$acc declare create(nVarSemi)
 
   ! Number of vectors and indexes of first components among semi-impl vars
   integer, public:: nVectorSemi = 0
@@ -36,6 +39,7 @@ module ModSemiImplVar
 
   ! Named indices for semi-implicit variables
   integer, public :: iTeImpl=0, iErImplFirst=0, iErImplLast=0, iEradImpl=0
+  !$acc declare create(iTeImpl)
 
   ! Number of semi-implicit grid blocks
   integer, public:: nBlockSemi = -1
@@ -64,7 +68,9 @@ module ModSemiImplVar
   ! and have a single ghost cell at most.
   ! The SemiAll_ variables are indexed from 1..nVarSemiAll
   real, allocatable:: DconsDsemiAll_VCB(:,:,:,:,:) ! dCons/dSemi derivatives
+  !$acc declare create(DconsDsemiAll_VCB)
   real, allocatable:: SemiAll_VCB(:,:,:,:,:)       ! Semi-implicit vars
+  !$acc declare create(SemiAll_VCB)
   real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl vars
   real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
   real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner

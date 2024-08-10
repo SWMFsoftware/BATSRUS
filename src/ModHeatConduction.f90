@@ -80,6 +80,7 @@ module ModHeatConduction
 
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
+  !$acc declare create(HeatCond_DFDB)
   ! Arrays to build the Heat conduction dyad
   real, allocatable :: HeatCoef_GI(:,:,:,:), Bb_DDGI(:,:,:,:,:,:)
   !$omp threadprivate( HeatCoef_GI, Bb_DDGI)
@@ -91,10 +92,13 @@ module ModHeatConduction
 
   ! electron-ion energy exchange, coronal heating and radiative cooling
   real, allocatable :: PointCoef_VCB(:,:,:,:,:)
+  !$acc declare create(PointCoef_VCB)
   ! ion temperatures
   real, allocatable :: PointImpl_VCB(:,:,:,:,:)
+  !$acc declare create(PointImpl_VCB)
 
   real:: cTeTiExchangeRate
+  !$acc declare create(cTeTiExchangeRate)
 
   ! radiative cooling
   logical :: DoRadCooling = .false.
@@ -335,9 +339,10 @@ contains
        iTeImpl = 1
     end if
 
-    !$acc update device(TiFraction, TeFraction)
+    !$acc update device(TiFraction, TeFraction, cTeTiExchangeRate)
     !$acc update device(HeatCondPar)
     !$acc update device(DoUserHeatConduction)
+    !$acc update device(iTeImpl)
 
     call test_stop(NameSub, DoTest)
   end subroutine init_heat_conduction
@@ -1147,9 +1152,13 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
     !--------------------------------------------------------------------------
+
     call test_start(NameSub, DoTest)
 
-    !!!!$ acc parallel loop gang independent private(iBlock) present(nBlockSemi, iBlockFromSemi_B)
+    !$acc parallel loop gang independent &
+    !$acc private(iBlock, iDim, Di, Dj, Dk, iGang) &
+    !$acc private(TeEpsilon, iP) & ! Do not have to be private
+    !$acc present(nBlockSemi, iBlockFromSemi_B)
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -1165,15 +1174,15 @@ contains
        iP = p_
        if(UseElectronPressure) iP = Pe_
 
-       DtLocal = Dt
-
        ! For the electron flux limiter, we need Te in the ghostcells
        if(UseMultiIon)then
+          !$acc loop vector collapse(3) independent
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Te_GI(i,j,k,iGang) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
                   ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
           end do; end do; end do
        elseif(UseIdealEos)then
+          !$acc loop vector collapse(3) independent
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Te_GI(i,j,k,iGang) = TeFraction &
                   *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
@@ -1190,6 +1199,8 @@ contains
 
        ! Store the electron temperature in SemiAll_VCB and the
        ! specific heat in DconsDsemiAll_VCB
+       !$acc loop vector collapse(3) independent &
+       !$acc private(TeSi, TeTiCoef, NumDens, Natomic, DtLocal, Cvi)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_GI(i,j,k,iGang)
           TeSi = Te_GI(i,j,k,iGang)*No2Si_V(UnitTemperature_)
@@ -1249,6 +1260,7 @@ contains
 #endif
           end if
 
+          DtLocal = Dt
           if(.not.IsTimeAccurate) DtLocal = Cfl*DtMax_CB(i,j,k,iBlock)
 
           if(UseAnisoPressure .and. .not.UseMultiIon)then
@@ -1331,17 +1343,27 @@ contains
 
        end do; end do; end do
 
+#ifndef _OPENACC
+
        ! The following is because we entered the semi-implicit solve with
        ! first order ghost cells.
        State2_VG = State_VGB(:,:,:,:,iBlock)
 
-      if(iTypeUpdate == UpdateOrig_) &
-         call set_block_field2(iBlock, nVar, State1_VG, State2_VG)
+       if(iTypeUpdate == UpdateOrig_) &
+            call set_block_field2(iBlock, nVar, State1_VG, State2_VG)
 
        ! Calculate the cell centered heat conduction tensor
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           call get_heat_cond_tensor(State2_VG(:,i,j,k), i, j, k, iBlock)
        end do; end do; end do
+#else
+
+       ! Calculate the cell centered heat conduction tensor
+       !$acc loop vector collapse(3) independent
+       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+          call get_heat_cond_tensor(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
+       end do; end do; end do
+#endif
 
 #ifndef _OPENACC
        if(UseFieldLineThreads.and.IsBoundary_B(iBlock))then
@@ -1381,6 +1403,8 @@ contains
        ! and multiply with the area
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+          !$acc loop vector collapse(3) independent &
+          !$acc private(Bb_DD, HeatCoef, iDir)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
              Bb_DD = 0.5*(Bb_DDGI(:nDim,:nDim,i,j,k,iGang) &
                   +       Bb_DDGI(:nDim,:nDim,i-Di,j-Dj,k-Dk,iGang))
@@ -1426,6 +1450,12 @@ contains
        end do
 
     end do
+
+    !$acc update host(DconsDsemiAll_VCB)
+    !$acc update host(SemiAll_VCB)
+    !$acc update host(PointCoef_VCB)
+    !$acc update host(PointImpl_VCB)
+    !$acc update host(HeatCond_DFDB)
 
     call test_stop(NameSub, DoTest)
 #endif

@@ -288,6 +288,8 @@ contains
     iPointSemi  = 1
 
     !$acc update device(GammaWave)
+    !$acc update device(iTeImpl)
+
     call test_stop(NameSub, DoTest)
   end subroutine init_rad_diffusion
   !============================================================================

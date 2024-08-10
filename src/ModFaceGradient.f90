@@ -574,6 +574,7 @@ contains
   !============================================================================
   subroutine set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, &
        UseFirstOrderBcIn)
+    !$acc routine vector
 
     use ModMain, ONLY: x_, y_, z_
     use ModNumConst, ONLY: i_DD
@@ -624,6 +625,7 @@ contains
        UseFirstOrderBc =  .false.
     end if
 
+    !$acc loop vector collapse(3) independent
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=1,nI
        TransGrad_DDG(:,1,i,j,k)=  &
             ( dP1* (Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)) &
@@ -631,6 +633,7 @@ contains
     end do; end do; end do
 
     if(nJ > 1)then
+       !$acc loop vector collapse(3) independent
        do k=MinK,MaxK; do j=1,nJ; do i=MinI,MaxI
           TransGrad_DDG(:,2,i,j,k)=  &
                ( dP1* (Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
@@ -639,6 +642,7 @@ contains
     end if
 
     if(nK > 1)then
+       !$acc loop vector collapse(3) independent
        do k=1,nK; do j=MinJ,MaxJ; do i=MinI,MaxI
           TransGrad_DDG(:,3,i,j,k)=  &
                ( dP1* (Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
@@ -647,6 +651,7 @@ contains
     end if
 
     ! coord1 face
+    !$acc loop vector collapse(3) independent private(DxyzDcoord_DD)
     do k=1,nK; do j=1,nJ; do i=1,nI+1
        ! DxyzDcoord along coord1 face
        DxyzDcoord_DD(:,1) = InvDx* &
@@ -672,6 +677,7 @@ contains
 
     ! coord2 face
     if(nJ > 1)then
+       !$acc loop vector collapse(3) independent private(DxyzDcoord_DD)
        do k=1,nK; do j=1,nJ+1; do i=1,nI
           ! DxyzDcoord along coord2 face
           DxyzDcoord_DD(:,1) = InvDx* &
@@ -696,6 +702,7 @@ contains
 
     ! coord3 face
     if(nK > 1)then
+       !$acc loop vector collapse(3) independent private(DxyzDcoord_DD)
        do k=1,nK+1; do j=1,nJ; do i=1,nI
           ! DxyzDcoord along coord3 face
           DxyzDcoord_DD(:,1) = InvDx* &
@@ -713,6 +720,7 @@ contains
     end if
     if(.not.UseFirstOrderBc)RETURN
     if(DiLevel_EB(1,iBlock)==Unset_)then
+       !$acc loop vector collapse(2) independent private(Dxyz_D)
        do k=1,nK; do j=1,nJ
           Dxyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(x_,iBlock)/sum(Dxyz_D**2))
@@ -720,6 +728,7 @@ contains
        end do; end do
     end if
     if(DiLevel_EB(2,iBlock)==Unset_)then
+       !$acc loop vector collapse(2) independent private(Dxyz_D)
        do k=1,nK; do j=1,nJ
           Dxyz_D = Xyz_DGB(:,nI + 1,j,k,iBlock) - Xyz_DGB(:,nI,j,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(x_,iBlock)/sum(Dxyz_D**2))
@@ -728,6 +737,7 @@ contains
     end if
     if(nJ==1)RETURN
     if(DiLevel_EB(3,iBlock)==Unset_)then
+       !$acc loop vector collapse(2) independent private(Dxyz_D)
        do k=1,nK; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,1,k,iBlock) - Xyz_DGB(:,i,0,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(y_,iBlock)/sum(Dxyz_D**2))
@@ -735,25 +745,28 @@ contains
        end do; end do
     end if
     if(DiLevel_EB(4,iBlock)==Unset_)then
+       !$acc loop vector collapse(2) independent private(Dxyz_D)
        do k=1,nK; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,nJ + 1,k,iBlock) - Xyz_DGB(:,i,nJ,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(y_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(y_,:,i,nJ+1,k,y_) = Dxyz_D
        end do; end do
     end if
+    if(nK==1)RETURN
     if(DiLevel_EB(5,iBlock)==Unset_)then
+       !$acc loop vector collapse(2) independent private(Dxyz_D)
        do j=1,nJ; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,j,1,iBlock) - Xyz_DGB(:,i,j,0,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(z_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(z_,:,i,j,1,z_) = Dxyz_D
        end do; end do
     end if
-    if(nK==1)RETURN
     if(DiLevel_EB(6,iBlock)==Unset_)then
+       !$acc loop vector collapse(2) independent private(Dxyz_D)
        do j=1,nJ; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,j,nK + 1,iBlock) - Xyz_DGB(:,i,j,nK,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(z_,iBlock)/sum(Dxyz_D**2))
-          DcoordDxyz_DDFD(z_,:,i,j,nK +1,z_) = Dxyz_D
+          DcoordDxyz_DDFD(z_,:,i,j,nK+1,z_) = Dxyz_D
        end do; end do
     end if
 
@@ -780,7 +793,8 @@ contains
     real :: InvDx, InvDy, InvDz
     real, allocatable :: Var1_IG(:,:,:,:)
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
-    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
+
+    real, save :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     character(len=*), parameter:: NameSub = 'get_face_gradient_field'
     !--------------------------------------------------------------------------

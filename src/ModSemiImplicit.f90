@@ -42,6 +42,7 @@ module ModSemiImplicit
 
   ! Linear arrays for RHS, unknowns, pointwise Jacobi preconditioner
   real, allocatable:: Rhs_I(:), x_I(:), JacobiPrec_I(:)
+  !$acc declare create(Rhs_I)
 
   ! Index of the test block
   integer:: iBlockSemiTest = 1
@@ -64,6 +65,7 @@ contains
     case('#SEMIIMPLICIT', '#SEMIIMPL')
        call read_var('UseSemiImplicit', UseSemiImplicit)
        if(UseSemiImplicit) call read_var('TypeSemiImplicit', TypeSemiImplicit)
+       !$acc update device(TypeSemiImplicit)
 
     case("#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF")
        call read_var('SemiImplCoeff', SemiImplCoeff)
@@ -207,6 +209,7 @@ contains
     end if
 
     !$acc update device(iVarSemiMin,iVarSemiMax)
+    !$acc update device(nVarSemiAll, nVarSemi)
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_semi_impl
   !============================================================================
@@ -290,6 +293,7 @@ contains
           iBlockFromSemi_B(nBlockSemi) = iBlock
        end do
        !$acc update device(iBlockFromSemi_B, nBlockSemi)
+       ! Is it really necessary to initialize DconsDsemiAll_VCB? --YC
        DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0
     else
        ! For (Hall) resistivity the number of semi-implicit blocks will be
@@ -337,7 +341,7 @@ contains
        end if
 
        ! Set right hand side
-       call get_semi_impl_rhs(SemiAll_VCB, Rhs_I)
+       call get_semi_impl_rhs(Rhs_I)
 
        ! Calculate Jacobian matrix if required
        if(SemiParam%DoPrecond)then
@@ -431,6 +435,7 @@ contains
 
   subroutine get_semi_impl_rhs_block(iBlock, SemiState_VG, RhsSemi_VC, &
        IsLinear)
+    !!$ acc routine vector
 
     use BATL_lib,          ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
     use ModLinearSolver,   ONLY: UsePDotADotP
@@ -446,35 +451,45 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_semi_impl_rhs_block'
     !--------------------------------------------------------------------------
+#ifndef _OPENACC
     call test_start(NameSub, DoTest, iBlock)
+#endif
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
+#ifndef _OPENACC
        if(.not.IsLinear) UsePDotADotP = .false.
        call get_rad_diffusion_rhs(iBlock, SemiState_VG, &
             RhsSemi_VC, IsLinear=IsLinear)
+#endif
     case('parcond')
        call get_heat_conduction_rhs(iBlock, SemiState_VG, &
             RhsSemi_VC, IsLinear=IsLinear)
     case('resistivity','resist','resisthall')
+#ifndef _OPENACC
        call get_resistivity_rhs(iBlock, SemiState_VG, &
             RhsSemi_VC, IsLinear=IsLinear)
+#endif
     case default
+#ifndef _OPENACC
        call stop_mpi(NameSub//': no get_rhs implemented for' &
             //TypeSemiImplicit)
+#endif
     end select
 
+#ifndef _OPENACC
     call test_stop(NameSub, DoTest, iBlock)
+#endif
   end subroutine get_semi_impl_rhs_block
   !============================================================================
-  subroutine get_semi_impl_rhs(SemiAll_VCB, RhsSemi_VCB)
+  subroutine get_semi_impl_rhs(RhsSemi_VCB)
 
     use ModGeometry,       ONLY: IsBoundary_B, Xyz_DGB, Used_GB
     use ModSize,           ONLY: nI, nJ, nK
     use ModCellBoundary,   ONLY: set_cell_boundary
     use BATL_lib,          ONLY: message_pass_cell, message_pass_face, &
          apply_flux_correction_block, CellVolume_GB
+    use BATL_size,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
-    real, intent(in) :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, intent(out):: RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
 
     integer :: iBlockSemi, iBlock, i, j, k
@@ -485,10 +500,22 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Fill in SemiState so it can be message passed
-    SemiState_VGB = 0.0
     !$omp parallel do private( iBlock )
+    !$acc parallel loop gang independent private(iBlock)
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
+       !$acc loop vector collapse(3) independent
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          SemiState_VGB(:,i,j,k,iBlock) = 0.0
+       end do; end do; end do
+    end do
+    !$omp end parallel do
+
+    !$omp parallel do private( iBlock )
+    !$acc parallel loop gang independent private(iBlock)
+    do iBlockSemi=1,nBlockSemi
+       iBlock = iBlockFromSemi_B(iBlockSemi)
+       !$acc loop vector collapse(3) independent
        do k=1,nK; do j=1,nJ; do i=1,nI
           SemiState_VGB(:,i,j,k,iBlock) = &
                SemiAll_VCB(iVarSemiMin:iVarSemiMax,i,j,k,iBlockSemi)
@@ -508,7 +535,6 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       !$acc update device(SemiState_VGB)
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
             UseOpenACCIn=.true.)
@@ -518,13 +544,18 @@ contains
             //TypeSemiImplicit)
     end select
 
+    !!$ acc parallel loop gang independent private(iBlock) &
+    !!$ acc present(RhsSemi_VCB)
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
+#ifndef _OPENACC
+       ! TODO: Make sure the bc is set correctly on GPU.
        ! Apply boundary conditions (1 layer of outer ghost cells)
        if(IsBoundary_B(iBlock))&
             call set_cell_boundary(1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
+#endif
 
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
@@ -1052,7 +1083,7 @@ contains
   end subroutine get_semi_impl_jacobian
   !============================================================================
   subroutine check_nan_semi
-
+#ifndef _OPENACC
     use BATL_lib, ONLY: nI, nJ, nK, Xyz_DGB, iProc
     use ModAdvance, ONLY: State_VGB
     use, intrinsic :: ieee_arithmetic
@@ -1085,7 +1116,7 @@ contains
           end do
        end do; end do; end do
     end do
-
+#endif
   end subroutine check_nan_semi
   !============================================================================
 end module ModSemiImplicit
