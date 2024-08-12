@@ -435,13 +435,16 @@ contains
 
   subroutine get_semi_impl_rhs_block(iBlock, SemiState_VG, RhsSemi_VC, &
        IsLinear)
-    !!$ acc routine vector
+    !$acc routine vector
 
     use BATL_lib,          ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+    use ModHeatConduction, ONLY: get_heat_conduction_rhs
+
+#ifndef _OPENACC    
     use ModLinearSolver,   ONLY: UsePDotADotP
     use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
-    use ModHeatConduction, ONLY: get_heat_conduction_rhs
     use ModResistivity,    ONLY: get_resistivity_rhs
+#endif    
 
     integer, intent(in):: iBlock
     real, intent(inout):: SemiState_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -511,6 +514,7 @@ contains
     end do
     !$omp end parallel do
 
+
     !$omp parallel do private( iBlock )
     !$acc parallel loop gang independent private(iBlock)
     do iBlockSemi=1,nBlockSemi
@@ -537,18 +541,19 @@ contains
     case('parcond','resistivity','resist','resisthall')
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
-            UseOpenACCIn=.true.)
-       !$acc update host(SemiState_VGB)
+            UseOpenACCIn=.true.)       
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
     end select
 
-    !!$ acc parallel loop gang independent private(iBlock) &
-    !!$ acc present(RhsSemi_VCB)
+    !$acc parallel loop gang independent private(iBlock) &
+    !$acc present(RhsSemi_VCB)
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
+#ifndef _OPENACC
+       ! TODO: Make sure the bc is set correctly on GPU.
 #ifndef _OPENACC
        ! TODO: Make sure the bc is set correctly on GPU.
        ! Apply boundary conditions (1 layer of outer ghost cells)
@@ -556,15 +561,18 @@ contains
             call set_cell_boundary(1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
 #endif
+#endif
 
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
     end do
+    !$acc update host(RhsSemi_VCB, SemiState_VGB)
 
     if( (TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+
 
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)

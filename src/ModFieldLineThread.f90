@@ -281,6 +281,7 @@ contains
           call read_var('nPointThreadMax', nPointThreadMax)
           call read_var('DsThreadMin', DsThreadMin)
        end if
+       !$acc update device(UseFieldLineThreads)
     case('#PLOTTHREADS')
        call read_var('DoPlotThreads', DoPlotThreads)
        if(.not.DoPlotThreads)RETURN
