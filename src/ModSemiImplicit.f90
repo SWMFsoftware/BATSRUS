@@ -342,6 +342,7 @@ contains
 
        ! Set right hand side
        call get_semi_impl_rhs(Rhs_I)
+       !$acc update host(Rhs_I)
 
        ! Calculate Jacobian matrix if required
        if(SemiParam%DoPrecond)then
@@ -566,14 +567,13 @@ contains
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
     end do
-    !$acc update host(RhsSemi_VCB, SemiState_VGB)
 
+#ifndef _OPENACC    
     if( (TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
-
-
+            
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -584,10 +584,13 @@ contains
                Flux_VZB=FluxImpl_VZB)
        end do
     end if
+#endif    
 
     ! Multiply with cell volume (makes matrix symmetric)
+    !$acc parallel loop gang independent private(iBlock)    
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           RhsSemi_VCB(:,i,j,k,iBlockSemi) = RhsSemi_VCB(:,i,j,k,iBlockSemi) &
                *CellVolume_GB(i,j,k,iBlock)
