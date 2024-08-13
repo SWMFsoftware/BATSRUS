@@ -69,6 +69,7 @@ contains
 
     case("#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF")
        call read_var('SemiImplCoeff', SemiImplCoeff)
+       !$acc update device(SemiImplCoeff)
 
     case("#SEMIPRECONDITIONER", "#SEMIPRECOND")
        call read_var('DoPrecond',   SemiParam%DoPrecond)
@@ -210,6 +211,7 @@ contains
 
     !$acc update device(iVarSemiMin,iVarSemiMax)
     !$acc update device(nVarSemiAll, nVarSemi)
+    !$acc update device(UseSplitSemiImplicit)
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_semi_impl
   !============================================================================
@@ -987,12 +989,15 @@ contains
   !============================================================================
 
   subroutine get_semi_impl_jacobian_block(iBlock, JacSemi_VVCI)
-
+    !$acc routine vector
+    
     use BATL_lib,          ONLY: nI, nJ, nK
-    use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
     use ModHeatConduction, ONLY: add_jacobian_heat_cond
+#ifndef _OPENACC    
+    use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
     use ModResistivity,    ONLY: add_jacobian_resistivity, &
          add_jacobian_hall_resist
+#endif    
 
     integer, intent(in) :: iBlock
     real,    intent(out):: JacSemi_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
@@ -1006,17 +1011,23 @@ contains
 
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
+#ifndef _OPENACC           
        call add_jacobian_rad_diff(iBlock, nVarSemi, JacSemi_VVCI)
+#endif       
     case('parcond')
        call add_jacobian_heat_cond(iBlock, nVarSemi, JacSemi_VVCI)
     case('resistivity','resist','resisthall')
+#ifndef _OPENACC           
        if(UseSemiResistivity) &
             call add_jacobian_resistivity(iBlock, nVarSemi, JacSemi_VVCI)
        if(UseSemiHallResist) &
             call add_jacobian_hall_resist(iBlock, nVarSemi, JacSemi_VVCI)
+#endif              
     case default
+#ifndef _OPENACC           
        call stop_mpi(NameSub//': no add_jacobian implemented for' &
             //TypeSemiImplicit)
+#endif              
     end select
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -1047,6 +1058,7 @@ contains
     if(SemiParam%TypePrecond=='HYPRE') UseNoOverlap = .false.
 
     !$omp parallel do private( iBlock, Coeff, DtLocal )
+    !$acc parallel loop gang independent private( iBlock, Coeff, DtLocal )
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -1056,6 +1068,7 @@ contains
 
        ! Form A = Volume*(1/dt - SemiImplCoeff*dR/dU)
        !    symmetrized for sake of CG
+       !$acc loop vector collapse(4) independent
        do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           Coeff = -SemiImplCoeff*CellVolume_GB(i,j,k,iBlock)
@@ -1063,6 +1076,7 @@ contains
                Coeff * JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi)
        end do; end do; end do; end do
        DtLocal = dt
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.IsTimeAccurate .or. UseDtLimit) &
                DtLocal = max(1.0e-30, Cfl*DtMax_CB(i,j,k,iBlock))
@@ -1080,11 +1094,15 @@ contains
           end if
        end do; end do; end do
 
+#ifndef _OPENACC       
        if(SemiParam%TypePrecond == 'HYPRE') &
             call hypre_set_matrix_block(iBlockSemi, &
             JacSemi_VVCIB(1,1,1,1,1,1,iBlockSemi))
+#endif       
     end do
     !$omp end parallel do
+
+    !$acc update host(JacSemi_VVCIB)
 
     if(SemiParam%TypePrecond == 'HYPRE') call hypre_set_matrix(.true.)
 
