@@ -59,6 +59,7 @@ module ModUpdateStateFast
   public:: update_state_fast     ! Fast update of State_VGB
   public:: update_b0_fast        ! Fast update of B0
   public:: set_boundary_fast     ! set cell based boundary for State_VGB
+  public:: set_cell_boundary_for_block ! set cell bounary for a block
 
   logical, parameter:: UseAlfvenWaves  = WaveFirst_ > 1
 
