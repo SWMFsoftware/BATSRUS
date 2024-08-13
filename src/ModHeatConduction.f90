@@ -927,7 +927,7 @@ contains
   end subroutine calc_ei_heat_exchange
   !============================================================================
   subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
-    ! a$acc routine seq
+    !$acc routine seq
     use BATL_lib,      ONLY: Xyz_DGB
     use ModAdvance,    ONLY: UseIdealEos, UseElectronPressure
     use ModB0,         ONLY: B0_DGB
