@@ -517,7 +517,6 @@ contains
     end do
     !$omp end parallel do
 
-
     !$omp parallel do private( iBlock )
     !$acc parallel loop gang independent private(iBlock)
     do iBlockSemi=1,nBlockSemi
