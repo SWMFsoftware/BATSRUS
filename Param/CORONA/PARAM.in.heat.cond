@@ -171,6 +171,9 @@ spitzer			TypeHeatConduction
 T			UseSemiImplicit
 parcond			TypeSemiImplicit
 
+#SEMIPRECONDITIONER
+F               DoPrecond (rest of parameters are read if true)
+
 #TEST
 krylov			StringTest
 
