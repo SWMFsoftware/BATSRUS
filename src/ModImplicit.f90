@@ -11,6 +11,7 @@ module ModSemiImplVar
 
   logical, public:: UseSemiImplicit = .false.
   logical, public:: UseSplitSemiImplicit = .false.
+  !$acc declare create(UseSplitSemiImplicit)
   character(len=40), public:: TypeSemiImplicit = 'none'
   !$acc declare create(TypeSemiImplicit)
 
@@ -59,6 +60,7 @@ module ModSemiImplVar
 
   ! Coefficient of the implicit part: 1 - Backward Euler, 0.5 - trapezoidal
   real, public:: SemiImplCoeff = 1.0
+  !$acc declare create(SemiImplCoeff)
 
   ! This array is indexed with normal block index and has nG ghost cells
   real, allocatable:: SemiState_VGB(:,:,:,:,:)  ! Semi-implicit vars
@@ -74,6 +76,7 @@ module ModSemiImplVar
   real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl vars
   real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
   real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
+  !$acc declare create(JacSemi_VVCIB)
 
   ! Store Difference of U^* (after explicit update)  and U^n.
   real, allocatable:: DeltaSemiAll_VCB(:,:,:,:,:)
@@ -120,6 +123,7 @@ module ModImplicit
 
   ! Shall we zero out contribution from ghost cells
   logical :: UseNoOverlap = .true.
+  !$acc declare create(UseNoOverlap)
 
   ! True while doing the implicit update
   logical :: IsImplicitUpdate = .false.

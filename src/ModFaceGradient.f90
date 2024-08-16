@@ -946,6 +946,7 @@ contains
   !============================================================================
   subroutine get_face_gradient(iDir, i, j, k, iBlock, IsNewBlock, Scalar_G,  &
        FaceGrad_D, UseFirstOrderBcIn)
+    !$acc routine seq
 
     ! calculate the cell face gradient of Scalar_G
 
@@ -959,9 +960,11 @@ contains
     real, intent(out) :: FaceGrad_D(3)
     logical, optional, intent(in):: UseFirstOrderBcIn
 
+#ifndef _OPENACC
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
     real, save :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
     !$omp threadprivate( DcoordDxyz_DDFD )
+#endif
 
     ! Limits for the cell index for the cells involoved in calculating
     ! the vector components of gradient, which are parallel to the face
@@ -972,7 +975,10 @@ contains
     integer :: iD, iU, jD, jU, kD, kU
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     real :: InvDx, InvDy, InvDz
+
+#ifndef _OPENACC
     real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+#endif
 
     ! If UseFirstOrderBc, then near the domain boundary the
     ! ghost cell value is only used to calculate the gradient
@@ -990,6 +996,7 @@ contains
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
 
+#ifndef _OPENACC
     if(IsNewBlock)then
        call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
        if(.not.IsCartesianGrid) &
@@ -997,6 +1004,8 @@ contains
             UseFirstOrderBcIn)
        IsNewBlock = .false.
     end if
+#endif
+
     if(present(UseFirstOrderBcIn))then
        UseFirstOrderBc = UseFirstOrderBcIn
     else
@@ -1145,11 +1154,13 @@ contains
        call stop_mpi('DEBUG')
     end select
 
+#ifndef _OPENACC
     ! multiply by the coordinate transformation matrix to obtain the
     ! cartesian gradient from the partial derivatives dScalar/dGencoord
     if(.not.IsCartesianGrid) then
        FaceGrad_D = matmul(FaceGrad_D, DcoordDxyz_DDFD(:,:,i,j,k,iDir))
     end if
+#endif
 
   end subroutine get_face_gradient
   !============================================================================

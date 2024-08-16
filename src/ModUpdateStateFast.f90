@@ -59,6 +59,7 @@ module ModUpdateStateFast
   public:: update_state_fast     ! Fast update of State_VGB
   public:: update_b0_fast        ! Fast update of B0
   public:: set_boundary_fast     ! set cell based boundary for State_VGB
+  public:: set_cell_boundary_for_block ! set cell bounary for a block
 
   logical, parameter:: UseAlfvenWaves  = WaveFirst_ > 1
 
@@ -1193,7 +1194,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
           call set_boundary_for_cell(iSide, i, j, k, 1, j, k, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1203,7 +1204,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
           call set_boundary_for_cell(iSide, i, j, k, nI, j, k, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1213,7 +1214,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI
           call set_boundary_for_cell(iSide, i, j, k, i, 1, k, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1223,7 +1224,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
           call set_boundary_for_cell(iSide, i, j, k, i, nJ, k, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1233,7 +1234,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, 0; do j = MinJ, MaxJ; do i = MinI, MaxI
           call set_boundary_for_cell(iSide, i, j, k, i, j, 1, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1243,7 +1244,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = nK+1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           call set_boundary_for_cell(iSide, i, j, k, i, j, nK, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVar, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
        end do; end do; end do
     end if
   end subroutine set_cell_boundary_for_block

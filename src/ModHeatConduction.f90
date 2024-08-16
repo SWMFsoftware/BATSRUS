@@ -75,8 +75,9 @@ module ModHeatConduction
   !$omp threadprivate( State1_VG, State2_VG )
 
   ! Heat flux for operator split scheme
-  real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
-  !$omp threadprivate( FluxImpl_VFD )
+  real, allocatable :: FluxImpl_VFDI(:,:,:,:,:,:)
+  !$omp threadprivate( FluxImpl_VFDI )
+  !$acc declare create(FluxImpl_VFDI)
 
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
@@ -300,7 +301,7 @@ contains
        allocate( &
             State1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
-            FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
+            FluxImpl_VFDI(nVarSemi,nI+1,nJ+1,nK+1,nDim,nGang), &
             HeatCoef_GI(0:nI+1,j0_:nJp1_,k0_:nKp1_,nGang), &
             Bb_DDGI(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nGang), &
             Te_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang) )
@@ -926,7 +927,7 @@ contains
   end subroutine calc_ei_heat_exchange
   !============================================================================
   subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
-    ! a$acc routine seq
+    !$acc routine seq
     use BATL_lib,      ONLY: Xyz_DGB
     use ModAdvance,    ONLY: UseIdealEos, UseElectronPressure
     use ModB0,         ONLY: B0_DGB
@@ -1462,8 +1463,12 @@ contains
   end subroutine get_impl_heat_cond_state
   !============================================================================
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
+    !$acc routine vector
 
-    use BATL_lib,        ONLY: store_face_flux, CellVolume_GB
+#ifndef _OPENACC
+    use BATL_lib,        ONLY: store_face_flux
+#endif
+    use BATL_lib,        ONLY: CellVolume_GB
     use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
     use ModFaceGradient, ONLY: get_face_gradient
@@ -1480,7 +1485,7 @@ contains
     real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 
-    integer :: iDim, i, j, k, Di, Dj, Dk
+    integer :: iDim, i, j, k, Di, Dj, Dk, iGang
     real :: FaceGrad_D(MaxDim)
     logical :: IsNewBlockHeatCond, UseFirstOrderBc
 
@@ -1492,9 +1497,16 @@ contains
     IsNewBlockHeatCond = .true.
     UseFirstOrderBc = UseFieldLineThreads.and.IsBoundary_B(iBlock)
 
+#ifdef _OPENACC
+    iGang = iBlock
+#else
+    iGang = 1
+#endif
+
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+       !$acc loop vector collapse(3) independent private(FaceGrad_D)
        do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
 
           ! Second-order accurate electron temperature gradient
@@ -1502,65 +1514,75 @@ contains
                IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D, &
                UseFirstOrderBcIn=UseFirstOrderBC)
 
-          FluxImpl_VFD(iTeImpl,i,j,k,iDim) = &
+          FluxImpl_VFDI(iTeImpl,i,j,k,iDim,iGang) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
 
        end do; end do; end do
     end do
 
+#ifndef _OPENACC
     ! Store the fluxes at resolution changes for restoring conservation
-    call store_face_flux(iBlock, nVarSemi, FluxImpl_VFD, &
+    call store_face_flux(iBlock, nVarSemi, FluxImpl_VFDI(:,:,:,:,:,iGang), &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+#endif
 
-    Rhs_VC = 0.0
+    !$acc loop vector collapse(3)
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       Rhs_VC(:,i,j,k) = 0.0
+    end do; end do; end do
 
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+       !$acc loop vector collapse(3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) &
-               -(FluxImpl_VFD(:,i+Di,j+Dj,k+Dk,iDim) &
-               - FluxImpl_VFD(:,i,j,k,iDim))/CellVolume_GB(i,j,k,iBlock)
+               -(FluxImpl_VFDI(:,i+Di,j+Dj,k+Dk,iDim,iGang) &
+               - FluxImpl_VFDI(:,i,j,k,iDim,iGang))/CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end do
 
     if(UseAnisoPressure .and. .not.UseMultiIon)then
        if(IsLinear)then
+          !$acc loop vector collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
                   + PointCoef_VCB(1,i,j,k,iBlock)*StateImpl_VG(iTeImpl,i,j,k)
           end do; end do; end do
        else
+          !$acc loop vector collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
                   + PointCoef_VCB(2,i,j,k,iBlock)
           end do; end do; end do
        end if
     else
-       if(IsLinear)then
-          if(DoRadCooling)then
+#ifndef _OPENACC
+       if(DoRadCooling)then
+          if(IsLinear)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
                      + CoolHeatDeriv_CB(i,j,k,iBlock) &
                      *StateImpl_VG(iTeImpl,i,j,k)
              end do; end do; end do
-          end if
-       else
-          if(DoRadCooling)then
+          else
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) + CoolHeat_CB(i,j,k,iBlock)
              end do; end do; end do
           end if
        end if
+#endif
 
        ! Point implicit source terms due to electron-ion energy exchange
        if(UseElectronPressure .and. .not.UseMultiIon)then
           if(IsLinear)then
+             !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
                      - PointCoef_VCB(1,i,j,k,iBlock) &
                      *StateImpl_VG(iTeImpl,i,j,k)
              end do; end do; end do
           else
+             !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
                      + PointCoef_VCB(1,i,j,k,iBlock)&
@@ -1575,12 +1597,15 @@ contains
   end subroutine get_heat_conduction_rhs
   !============================================================================
   subroutine add_jacobian_heat_cond(iBlock, nVarImpl, Jacobian_VVCI)
+    !$acc routine vector
 
     ! This code can only be called from the semi-implicit scheme
     ! since this works on temperature and not energy or pressure,
 
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
+#ifndef _OPENACC
     use ModFaceGradient, ONLY: set_block_jacobian_face
+#endif
     use ModImplicit,     ONLY: UseNoOverlap, nStencil, iTeImpl
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
@@ -1593,7 +1618,10 @@ contains
 
     integer :: i, j, k, iDim, Di, Dj, Dk
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
+
+#ifndef _OPENACC
     real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
+#endif
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_jacobian_heat_cond'
@@ -1601,41 +1629,51 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseAnisoPressure .and. .not.UseMultiIon)then
+#ifndef _OPENACC
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                + PointCoef_VCB(1,i,j,k,iBlock)
        end do; end do; end do
+#endif
     else
        ! Contributions due to electron-ion energy exchange
        if(UseElectronPressure .and. .not.UseMultiIon)then
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                   - PointCoef_VCB(1,i,j,k,iBlock)
           end do; end do; end do
        end if
 
+#ifndef _OPENACC
        if(DoRadCooling)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                   + CoolHeatDeriv_CB(i,j,k,iBlock)
           end do; end do; end do
        end if
+#endif
     end if
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
 
+#ifndef _OPENACC
     if(.not.IsCartesianGrid) &
          call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
+#endif
 
     ! the transverse diffusion is ignored in the Jacobian
     do iDim = 1, nDim
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+       !$acc loop vector collapse(3) independent &
+       !$acc private(Coeff, DiffLeft, DiffRight)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
           if(IsCartesianGrid)then
              DiffLeft = Coeff*HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)
              DiffRight = Coeff*HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
           else
+#ifndef _OPENACC
              InvDxyzVol_D = DcoordDxyz_DDFD(iDim,:nDim,i,j,k,iDim)*Coeff
              DiffLeft = sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyzVol_D)
 
@@ -1643,6 +1681,7 @@ contains
                   *Coeff
              DiffRight = &
                   sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyzVol_D)
+#endif
           end if
 
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &

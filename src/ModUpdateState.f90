@@ -56,7 +56,8 @@ contains
        end if
     case("#SHOCKHEATING")
        if(.not.UseElectronPressure .and. .not.UseAnisoPressure .and. &
-            UseStrict) call stop_mpi('#SHOCKHEATING needs Pe or Ppar')
+            .not. UseMultiIon .and. UseStrict) &
+            call stop_mpi('#SHOCKHEATING needs Pe or Ppar')
        if(UseElectronPressure) call read_var("PeShockHeatingFraction", &
             PeShockHeatingFraction)
        if(UseAnisoPressure) call read_var("PparShockHeatingFraction", &
@@ -970,6 +971,8 @@ contains
 
       if(UseIonShockHeating .and. .not.UseElectronShockHeating)then
          ! Distribute shock heating between first and second ion fluids
+         Weight_I(1) = 1 - PiShockHeatingFraction
+         Weight_I(nIonFluid) = 1 - Weight_I(1)
          if(DoTest)then
             write(*,'(2x,2a,3es20.12)') &
                  NameSub,' before shock heating P_I, s=', &

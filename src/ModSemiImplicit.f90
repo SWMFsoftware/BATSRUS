@@ -69,6 +69,7 @@ contains
 
     case("#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF")
        call read_var('SemiImplCoeff', SemiImplCoeff)
+       !$acc update device(SemiImplCoeff)
 
     case("#SEMIPRECONDITIONER", "#SEMIPRECOND")
        call read_var('DoPrecond',   SemiParam%DoPrecond)
@@ -210,6 +211,7 @@ contains
 
     !$acc update device(iVarSemiMin,iVarSemiMax)
     !$acc update device(nVarSemiAll, nVarSemi)
+    !$acc update device(UseSplitSemiImplicit)
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_semi_impl
   !============================================================================
@@ -342,6 +344,7 @@ contains
 
        ! Set right hand side
        call get_semi_impl_rhs(Rhs_I)
+       !$acc update host(Rhs_I)
 
        ! Calculate Jacobian matrix if required
        if(SemiParam%DoPrecond)then
@@ -435,13 +438,16 @@ contains
 
   subroutine get_semi_impl_rhs_block(iBlock, SemiState_VG, RhsSemi_VC, &
        IsLinear)
-    !!$ acc routine vector
+    !$acc routine vector
 
     use BATL_lib,          ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+    use ModHeatConduction, ONLY: get_heat_conduction_rhs
+
+#ifndef _OPENACC
     use ModLinearSolver,   ONLY: UsePDotADotP
     use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
-    use ModHeatConduction, ONLY: get_heat_conduction_rhs
     use ModResistivity,    ONLY: get_resistivity_rhs
+#endif
 
     integer, intent(in):: iBlock
     real, intent(inout):: SemiState_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -538,17 +544,18 @@ contains
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
             UseOpenACCIn=.true.)
-       !$acc update host(SemiState_VGB)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
     end select
 
-    !!$ acc parallel loop gang independent private(iBlock) &
-    !!$ acc present(RhsSemi_VCB)
+    !$acc parallel loop gang independent private(iBlock) &
+    !$acc present(RhsSemi_VCB)
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
+#ifndef _OPENACC
+       ! TODO: Make sure the bc is set correctly on GPU.
 #ifndef _OPENACC
        ! TODO: Make sure the bc is set correctly on GPU.
        ! Apply boundary conditions (1 layer of outer ghost cells)
@@ -556,11 +563,13 @@ contains
             call set_cell_boundary(1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
 #endif
+#endif
 
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
     end do
 
+#ifndef _OPENACC
     if( (TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
@@ -576,10 +585,13 @@ contains
                Flux_VZB=FluxImpl_VZB)
        end do
     end if
+#endif
 
     ! Multiply with cell volume (makes matrix symmetric)
+    !$acc parallel loop gang independent private(iBlock)
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           RhsSemi_VCB(:,i,j,k,iBlockSemi) = RhsSemi_VCB(:,i,j,k,iBlockSemi) &
                *CellVolume_GB(i,j,k,iBlock)
@@ -610,12 +622,13 @@ contains
 
     ! Calculate y_I = A.x_I where A is the linearized semi-implicit operator
 
-    use ModAdvance,  ONLY: DtMax_CB
+    use ModAdvance,  ONLY: DtMax_CB, iTypeUpdate, UpdateFast_
     use ModGeometry, ONLY: IsBoundary_B
     use ModMain, ONLY: dt, IsTimeAccurate, Cfl, UseDtLimit
     use ModSize, ONLY: nI, nJ, nK
     use ModLinearSolver,   ONLY: UsePDotADotP, pDotADotPPe
     use ModCellBoundary,   ONLY: set_cell_boundary
+    use ModUpdateStateFast, ONLY: set_cell_boundary_for_block
     use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
          apply_flux_correction_block, CellVolume_GB, nIJK
 
@@ -679,9 +692,17 @@ contains
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
-       if(IsBoundary_B(iBlock)) &
-            call set_cell_boundary( 1, iBlock, nVarSemi, &
-            SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.true.)
+       if(IsBoundary_B(iBlock)) then
+          if(iTypeUpdate >= UpdateFast_) then
+             call set_cell_boundary_for_block(iBlock, nVarSemi, &
+                  SemiState_VGB(:,:,:,:,iBlock), .true.)
+          else
+#ifndef _OPENACC
+             call set_cell_boundary( 1, iBlock, nVarSemi, &
+                  SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.true.)
+#endif
+          end if
+       end if
 
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             ResSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.true.)
@@ -976,12 +997,15 @@ contains
   !============================================================================
 
   subroutine get_semi_impl_jacobian_block(iBlock, JacSemi_VVCI)
+    !$acc routine vector
 
     use BATL_lib,          ONLY: nI, nJ, nK
-    use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
     use ModHeatConduction, ONLY: add_jacobian_heat_cond
+#ifndef _OPENACC
+    use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
     use ModResistivity,    ONLY: add_jacobian_resistivity, &
          add_jacobian_hall_resist
+#endif
 
     integer, intent(in) :: iBlock
     real,    intent(out):: JacSemi_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
@@ -995,17 +1019,23 @@ contains
 
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
+#ifndef _OPENACC
        call add_jacobian_rad_diff(iBlock, nVarSemi, JacSemi_VVCI)
+#endif
     case('parcond')
        call add_jacobian_heat_cond(iBlock, nVarSemi, JacSemi_VVCI)
     case('resistivity','resist','resisthall')
+#ifndef _OPENACC
        if(UseSemiResistivity) &
             call add_jacobian_resistivity(iBlock, nVarSemi, JacSemi_VVCI)
        if(UseSemiHallResist) &
             call add_jacobian_hall_resist(iBlock, nVarSemi, JacSemi_VVCI)
+#endif
     case default
+#ifndef _OPENACC
        call stop_mpi(NameSub//': no add_jacobian implemented for' &
             //TypeSemiImplicit)
+#endif
     end select
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -1036,6 +1066,7 @@ contains
     if(SemiParam%TypePrecond=='HYPRE') UseNoOverlap = .false.
 
     !$omp parallel do private( iBlock, Coeff, DtLocal )
+    !$acc parallel loop gang independent private( iBlock, Coeff, DtLocal )
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -1045,6 +1076,7 @@ contains
 
        ! Form A = Volume*(1/dt - SemiImplCoeff*dR/dU)
        !    symmetrized for sake of CG
+       !$acc loop vector collapse(4) independent
        do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           Coeff = -SemiImplCoeff*CellVolume_GB(i,j,k,iBlock)
@@ -1052,6 +1084,7 @@ contains
                Coeff * JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi)
        end do; end do; end do; end do
        DtLocal = dt
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.IsTimeAccurate .or. UseDtLimit) &
                DtLocal = max(1.0e-30, Cfl*DtMax_CB(i,j,k,iBlock))
@@ -1069,11 +1102,15 @@ contains
           end if
        end do; end do; end do
 
+#ifndef _OPENACC
        if(SemiParam%TypePrecond == 'HYPRE') &
             call hypre_set_matrix_block(iBlockSemi, &
             JacSemi_VVCIB(1,1,1,1,1,1,iBlockSemi))
+#endif
     end do
     !$omp end parallel do
+
+    !$acc update host(JacSemi_VVCIB)
 
     if(SemiParam%TypePrecond == 'HYPRE') call hypre_set_matrix(.true.)
 
