@@ -644,8 +644,8 @@ contains
     character(len=*), parameter:: NameSub = 'semi_impl_matvec'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call timing_start(NameSub)    
-       
+    call timing_start(NameSub)
+
     ! Fill in StateSemi so it can be message passed
     n = 0
     !$omp parallel do private( iBlock,n )
@@ -665,7 +665,7 @@ contains
     ! Message pass to fill in ghost cells
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
-#ifndef _OPENACC       
+#ifndef _OPENACC
        if(UseAccurateRadiation)then
           UsePDotADotP = .false.
 
@@ -681,7 +681,7 @@ contains
                nProlongOrderIn=1, DoSendCornerIn=.false., &
                DoRestrictFaceIn=.true.)
        end if
-#endif       
+#endif
     case('parcond','resistivity','resist','resisthall')
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
@@ -708,11 +708,11 @@ contains
 #endif
           end if
        end if
-       
+
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             ResSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.true.)
 
-#ifndef _OPENACC                 
+#ifndef _OPENACC
        if(UsePDotADotP)then
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
           DtLocal = Dt
@@ -742,12 +742,12 @@ contains
              enddo; enddo; enddo
           end if
        end if
-#endif                    
+#endif
 
     end do
     !$omp end parallel do
-    
-#ifndef _OPENACC    
+
+#ifndef _OPENACC
     if((TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
@@ -765,11 +765,11 @@ contains
        end do
        !$omp end parallel do
     end if
-#endif    
+#endif
 
     n = 0
     if(UseSplitSemiImplicit)then
-#ifndef _OPENACC       
+#ifndef _OPENACC
        !$omp parallel do private( iBlock, DtLocal, Volume, n )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
@@ -787,14 +787,14 @@ contains
           end do; enddo; enddo
        end do
        !$omp end parallel do
-#endif       
+#endif
     else
        !$omp parallel do private( iBlock,DtLocal,n,Volume )
        !$acc parallel loop gang independent private( iBlock, n )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
-          !$acc loop vector collapse(3) independent private(DtLocal, Volume, n0)          
+          !$acc loop vector collapse(3) independent private(DtLocal, Volume, n0)
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.IsTimeAccurate .or. UseDtLimit) then
                 DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
