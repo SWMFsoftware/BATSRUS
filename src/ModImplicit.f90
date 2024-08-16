@@ -75,6 +75,7 @@ module ModSemiImplVar
   !$acc declare create(SemiAll_VCB)
   real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl vars
   real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
+  !$acc declare create(ResSemi_VCB)
   real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
   !$acc declare create(JacSemi_VVCIB)
 
