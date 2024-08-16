@@ -101,7 +101,7 @@ Save ASCII IDL file for comparison with reference solution
 
 #SAVEPLOT
 1			nPlotFile
-idl_ascii 1d MHD	StringPlot
+idl_ascii 1d MHD		StringPlot
 -1			DnSavePlot
 0.1			DtSavePlot
 0.0			DxSavePlot
