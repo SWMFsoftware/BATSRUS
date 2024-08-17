@@ -42,7 +42,7 @@ module ModSemiImplicit
 
   ! Linear arrays for RHS, unknowns, pointwise Jacobi preconditioner
   real, allocatable:: Rhs_I(:), x_I(:), JacobiPrec_I(:)
-  !$acc declare create(Rhs_I)
+  !$acc declare create(Rhs_I, x_I)
 
   ! Index of the test block
   integer:: iBlockSemiTest = 1
@@ -350,6 +350,7 @@ contains
        if(SemiParam%DoPrecond)then
           call timing_start('impl_jacobian')
           call get_semi_impl_jacobian
+          !$acc update host(JacSemi_VVCIB)
           call timing_stop('impl_jacobian')
        endif
 
@@ -636,7 +637,7 @@ contains
     real,    intent(in) :: x_I(MaxN)
     real,    intent(out):: y_I(MaxN)
 
-    integer :: iBlockSemi, iBlock, i, j, k, iVar, n
+    integer :: iBlockSemi, iBlock, i, j, k, iVar, n, n0
     real :: Volume, DtLocal
 
     logical:: DoTest
@@ -648,12 +649,15 @@ contains
     ! Fill in StateSemi so it can be message passed
     n = 0
     !$omp parallel do private( iBlock,n )
+    !$acc parallel loop gang independent private( iBlock, n )
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
-       n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
+       n = (iBlockSemi-1)*nIJK*nVarSemi
+       !$acc loop vector collapse(4) independent private(n0)
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVarSemi
-          n = n + 1
-          SemiState_VGB(iVar,i,j,k,iBlock) = x_I(n)
+          ! n = n + 1
+          n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )
+          SemiState_VGB(iVar,i,j,k,iBlock) = x_I(n0)
        end do; end do; end do; end do
     end do
     !$omp end parallel do
@@ -661,6 +665,7 @@ contains
     ! Message pass to fill in ghost cells
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
+#ifndef _OPENACC
        if(UseAccurateRadiation)then
           UsePDotADotP = .false.
 
@@ -676,12 +681,11 @@ contains
                nProlongOrderIn=1, DoSendCornerIn=.false., &
                DoRestrictFaceIn=.true.)
        end if
+#endif
     case('parcond','resistivity','resist','resisthall')
-       !$acc update device(SemiState_VGB)
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
             UseOpenACCIn=.true.)
-       !$acc update host(SemiState_VGB)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -689,6 +693,7 @@ contains
 
     n = 0
     !$omp parallel do private( iBlock,n,DtLocal,Volume )
+    !$acc parallel loop gang independent private( iBlock)
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -707,6 +712,7 @@ contains
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             ResSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.true.)
 
+#ifndef _OPENACC
        if(UsePDotADotP)then
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
           DtLocal = Dt
@@ -736,10 +742,12 @@ contains
              enddo; enddo; enddo
           end if
        end if
+#endif
 
     end do
     !$omp end parallel do
 
+#ifndef _OPENACC
     if((TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
@@ -757,9 +765,11 @@ contains
        end do
        !$omp end parallel do
     end if
+#endif
 
     n = 0
     if(UseSplitSemiImplicit)then
+#ifndef _OPENACC
        !$omp parallel do private( iBlock, DtLocal, Volume, n )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
@@ -777,20 +787,26 @@ contains
           end do; enddo; enddo
        end do
        !$omp end parallel do
+#endif
     else
        !$omp parallel do private( iBlock,DtLocal,n,Volume )
+       !$acc parallel loop gang independent private( iBlock, n )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
-          DtLocal = dt
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
+          !$acc loop vector collapse(3) independent private(DtLocal, Volume, n0)
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(.not.IsTimeAccurate .or. UseDtLimit) &
-                  DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
+             if(.not.IsTimeAccurate .or. UseDtLimit) then
+                DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
+             else
+                DtLocal = dt
+             endif
              Volume = CellVolume_GB(i,j,k,iBlock)
              do iVar=1,nVarSemi
-                n = n + 1
-                y_I(n) = Volume* &
-                     (x_I(n)*DconsDsemiAll_VCB(iVar,i,j,k,iBlockSemi)/DtLocal &
+                ! n = n + 1
+                n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )
+                y_I(n0) = Volume* &
+                     (x_I(n0)*DconsDsemiAll_VCB(iVar,i,j,k,iBlockSemi)/DtLocal &
                      - SemiImplCoeff * ResSemi_VCB(iVar,i,j,k,iBlockSemi))
              enddo
           enddo; enddo; enddo
@@ -1109,8 +1125,6 @@ contains
 #endif
     end do
     !$omp end parallel do
-
-    !$acc update host(JacSemi_VVCIB)
 
     if(SemiParam%TypePrecond == 'HYPRE') call hypre_set_matrix(.true.)
 
