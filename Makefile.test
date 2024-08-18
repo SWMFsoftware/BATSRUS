@@ -546,7 +546,7 @@ test_hallmhd_rundir: test_rundir
 
 test_hallmhd_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_hallmhd_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=2e-7 \
@@ -578,7 +578,7 @@ test_hybrid_rundir: test_rundir
 
 test_hybrid_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_hybrid_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=2e-7 \
@@ -643,7 +643,7 @@ test_twofluidmhd_rundir: test_rundir
 
 test_twofluidmhd_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_twofluidmhd_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-13 \
@@ -753,7 +753,7 @@ test_multiion_rundir: test_rundir
 
 test_multiion_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test_multiion_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
@@ -785,7 +785,7 @@ test_mhdnoncons_rundir: test_rundir
 
 test_mhdnoncons_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test_mhdnoncons_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
@@ -820,7 +820,7 @@ test_eosgodunov_rundir: test_rundir
 
 test_eosgodunov_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_eosgodunov_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=3e-7 \
@@ -2224,7 +2224,7 @@ test_anisotropic_rundir: test_rundir
 
 test_anisotropic_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_anisotropic_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
@@ -2363,7 +2363,7 @@ test_europa3fluidspe_rundir: test_rundir
 
 test_europa3fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_europa3fluidspe_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
@@ -2443,7 +2443,7 @@ test_fivemoment_alfven_rundir: test_rundir
 
 test_fivemoment_alfven_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_fivemoment_alfven_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10 \
@@ -2473,7 +2473,7 @@ test_fivemoment_shock_rundir: test_rundir
 
 test_fivemoment_shock_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_fivemoment_shock_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10 \
@@ -2503,7 +2503,7 @@ test_fivemoment_langmuir_rundir: test_rundir
 
 test_fivemoment_langmuir_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_fivemoment_langmuir_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10       \
