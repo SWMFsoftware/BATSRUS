@@ -595,7 +595,7 @@ contains
   subroutine get_impl_resistivity_state(SemiAll_VCB)
 
     ! Interface for (Semi-)implicit collisional and Hall resistivity
-    
+
     use ModAdvance,    ONLY: State_VGB
     use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
     use ModVarIndexes, ONLY: Bx_, Bz_
