@@ -794,7 +794,8 @@ contains
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
-          !$acc loop vector collapse(3) independent private(DtLocal, Volume, n0)
+          !$acc loop vector collapse(3) independent &
+          !$acc private(DtLocal, Volume, n0)
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.IsTimeAccurate .or. UseDtLimit) then
                 DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
@@ -806,7 +807,7 @@ contains
                 ! n = n + 1
                 n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )
                 y_I(n0) = Volume* &
-                     (x_I(n0)*DconsDsemiAll_VCB(iVar,i,j,k,iBlockSemi)/DtLocal &
+                     (x_I(n0)*DconsDsemiAll_VCB(iVar,i,j,k,iBlockSemi)/DtLocal&
                      - SemiImplCoeff * ResSemi_VCB(iVar,i,j,k,iBlockSemi))
              enddo
           enddo; enddo; enddo
