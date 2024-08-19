@@ -369,7 +369,7 @@ contains
        !$omp parallel do private( n )
        do iBlockSemi = 1, nBlockSemi
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iVar = iVarSemiMin, iVarSemiMax
                 n = n + 1
                 if(Used_GB(i,j,k,iBlockFromSemi_B(iBlockSemi)))then
@@ -523,7 +523,7 @@ contains
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        !$acc loop vector collapse(3) independent
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           SemiState_VGB(:,i,j,k,iBlock) = &
                SemiAll_VCB(iVarSemiMin:iVarSemiMax,i,j,k,iBlockSemi)
        end do; end do; end do
@@ -606,7 +606,7 @@ contains
              write(*,*) NameSub, &
                   ' iBlock, iBlockSemi, sum(Rhs**2)=', iBlock, iBlockSemi, &
                   sum(RhsSemi_VCB(:,:,:,:,iBlockSemi)**2)
-             do k=1,nK; do j=1,nJ; do i=1,nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 write(*,*) NameSub, &
                      ' i,j,k,True,Xyz,Rhs=', &
                      i,j,k, Used_GB(i,j,k,iBlock), Xyz_DGB(:,i,j,k,iBlock), &
@@ -654,8 +654,7 @@ contains
        iBlock = iBlockFromSemi_B(iBlockSemi)
        n = (iBlockSemi-1)*nIJK*nVarSemi
        !$acc loop vector collapse(4) independent private(n0)
-       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVarSemi
-          ! n = n + 1
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVarSemi
           n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )
           SemiState_VGB(iVar,i,j,k,iBlock) = x_I(n0)
        end do; end do; end do; end do
@@ -717,27 +716,24 @@ contains
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
           DtLocal = Dt
           if(UseSplitSemiImplicit)then
-             do k=1,nK; do j=1,nJ; do i=1,nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.IsTimeAccurate .or. UseDtLimit) &
                      DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
-                Volume = CellVolume_GB(i,j,k,iBlock)/DtLocal
+                Volume = CellVolume_GB(i,j,k,iBlock)/(DtLocal*SemiImplCoeff)
                 n = n + 1
                 pDotADotPPe = pDotADotPPe +  &
                      Volume*x_I(n)**2 &
-                     *DconsDsemiAll_VCB(iVarSemi,i,j,k,iBlockSemi) &
-                     /(DtLocal * SemiImplCoeff)
+                     *DconsDsemiAll_VCB(iVarSemi,i,j,k,iBlockSemi)
              end do; enddo; enddo
           else
-             do k=1,nK; do j=1,nJ; do i=1,nI
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.IsTimeAccurate .or. UseDtLimit) &
                      DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
-                Volume = CellVolume_GB(i,j,k,iBlock) ! !! /DtLocal ???
-                do iVar=1,nVarSemi
+                Volume = CellVolume_GB(i,j,k,iBlock)/(DtLocal*SemiImplCoeff)
+                do iVar = 1, nVarSemi
                    n = n + 1
-                   pDotADotPPe = pDotADotPPe +  &
-                        Volume*x_I(n)**2 &
-                        *DconsDsemiAll_VCB(iVar,i,j,k,iBlockSemi) &
-                        /(DtLocal * SemiImplCoeff)
+                   pDotADotPPe = pDotADotPPe + Volume*x_I(n)**2 &
+                        *DconsDsemiAll_VCB(iVar,i,j,k,iBlockSemi)
                 enddo
              enddo; enddo; enddo
           end if
@@ -773,17 +769,17 @@ contains
        !$omp parallel do private( iBlock, DtLocal, Volume, n )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
-          DtLocal = dt
+          DtLocal = Dt
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
 
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.IsTimeAccurate .or. UseDtLimit) &
                   DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
              Volume = CellVolume_GB(i,j,k,iBlock)
              n = n + 1
              y_I(n) = Volume* &
-                  (x_I(n)*DconsDsemiAll_VCB(iVarSemi,i,j,k,iBlockSemi)/DtLocal&
-                  - SemiImplCoeff * ResSemi_VCB(1,i,j,k,iBlockSemi))
+                  (x_I(n)*DconsDsemiAll_VCB(iVarSemi,i,j,k,iBlockSemi) &
+                  /DtLocal - SemiImplCoeff*ResSemi_VCB(1,i,j,k,iBlockSemi))
           end do; enddo; enddo
        end do
        !$omp end parallel do
@@ -791,19 +787,19 @@ contains
     else
        !$omp parallel do private( iBlock,DtLocal,n,Volume )
        !$acc parallel loop gang independent private( iBlock, n )
-       do iBlockSemi=1,nBlockSemi
+       do iBlockSemi = 1, nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
           !$acc loop vector collapse(3) independent &
           !$acc private(DtLocal, Volume, n0)
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.IsTimeAccurate .or. UseDtLimit) then
                 DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
              else
-                DtLocal = dt
+                DtLocal = Dt
              endif
              Volume = CellVolume_GB(i,j,k,iBlock)
-             do iVar=1,nVarSemi
+             do iVar = 1, nVarSemi
                 ! n = n + 1
                 n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )
                 y_I(n0) = Volume* &
@@ -963,7 +959,7 @@ contains
        end select
 
        ! Loop over variables to be perturbed
-       do iVar=1,nVarSemi
+       do iVar = 1, nVarSemi
 
           ! Perturb the variable
           SemiPert_VG(iVar,iPert,jPert,kPert) &
