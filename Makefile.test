@@ -1842,7 +1842,7 @@ test_ganymede_check:
 		> test_ganymede.diff)
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6\
 	   ${TESTDIR}/RESULTS/GM/y=0_var_1_n00000005.out \
-	   data/GANYMEDE/REFy=0.out.gz > \
+	   data/GANYMEDE/REFy=0.out.gz \
 	   	>> test_ganymede.diff)
 	ls -l test_ganymede.diff
 
