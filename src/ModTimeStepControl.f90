@@ -355,6 +355,8 @@ contains
           ! Implicit blocks are not taken into account for partially implicit
           ! run
           DtMinPE = huge(DtMax_B(1))
+          ! OPENACC only updates the reduction variable once
+          !$acc update device(DtMinPe)
           !$acc parallel loop independent reduction(min:DtMinPE)
           do iBlock = 1, nBlock
              if (iTypeAdvance_B(iBlock) == ExplBlock_) &
@@ -362,6 +364,7 @@ contains
           end do
           if(UseMaxTimeStep) then
              DtMax = -huge(DtMax_B(1))
+             !$acc update device(DtMax)
              !$acc parallel loop independent reduction(max:DtMax)
              do iBlock = 1, nBlock
                 if (iTypeAdvance_B(iBlock) == ExplBlock_) &
@@ -370,6 +373,7 @@ contains
           end if
        else
           DtMinPE = huge(DtMax_B(1))
+          !$acc update device(DtMinPE)
           !$acc parallel loop independent reduction(min:DtMinPE)
           do iBlock = 1, nBlock
              if (.not.Unused_B(iBlock)) &
@@ -378,6 +382,7 @@ contains
 
           if(UseMaxTimeStep) then
              DtMax = -huge(DtMax_B(1))
+             !$acc update device(DtMax)
              !$acc parallel loop independent reduction(max:DtMax)
              do iBlock = 1, nBlock
                 if (.not.Unused_B(iBlock)) DtMax = max(DtMax, DtMax_B(iBlock))
