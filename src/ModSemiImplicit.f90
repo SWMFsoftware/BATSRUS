@@ -250,7 +250,6 @@ contains
     use ModAdvance, ONLY: DoFixAxis, State_VGB, DtMax_CB
     use ModB0, ONLY: B0_DGB
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
-    use ModGeometry, ONLY: Used_GB
     use ModImplHypre, ONLY: hypre_initialize, hypre_preconditioner
     use ModLinearSolver, ONLY: solve_linear_multiblock
     use ModMessagePass, ONLY: exchange_messages
@@ -262,7 +261,7 @@ contains
          get_impl_resistivity_state, update_impl_resistivity
     use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Heat_
     use ModFixAxisCells, ONLY: fix_axis_cells
-    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, nIJK
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Used_GB, Unused_B, nIJK
     use ModEnergy, ONLY: limit_pressure
     ! use omp_lib
 
@@ -441,13 +440,13 @@ contains
        IsLinear)
     !$acc routine vector
 
-    use BATL_lib,          ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
     use ModHeatConduction, ONLY: get_heat_conduction_rhs
 
 #ifndef _OPENACC
-    use ModLinearSolver,   ONLY: UsePDotADotP
-    use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
-    use ModResistivity,    ONLY: get_resistivity_rhs
+    use ModLinearSolver, ONLY: UsePDotADotP
+    use ModRadDiffusion, ONLY: get_rad_diffusion_rhs
+    use ModResistivity, ONLY: get_resistivity_rhs
 #endif
 
     integer, intent(in):: iBlock
@@ -490,12 +489,11 @@ contains
   !============================================================================
   subroutine get_semi_impl_rhs(RhsSemi_VCB)
 
-    use ModGeometry,       ONLY: IsBoundary_B, Xyz_DGB, Used_GB
-    use ModSize,           ONLY: nI, nJ, nK
-    use ModCellBoundary,   ONLY: set_cell_boundary
-    use BATL_lib,          ONLY: message_pass_cell, message_pass_face, &
-         apply_flux_correction_block, CellVolume_GB
-    use BATL_size,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModGeometry, ONLY: IsBoundary_B
+    use ModCellBoundary, ONLY: set_cell_boundary
+    use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         Used_GB, nBlock, Xyz_DGB, CellVolume_GB, &
+         message_pass_cell, message_pass_face, apply_flux_correction_block
 
     real, intent(out):: RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
 
@@ -506,21 +504,21 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! Fill in SemiState so it can be message passed
-    !$omp parallel do private( iBlock )
-    !$acc parallel loop gang independent private(iBlock)
-    do iBlockSemi=1,nBlockSemi
-       iBlock = iBlockFromSemi_B(iBlockSemi)
+    ! Initialize SemiState_VGB=0 so it can be message passed
+    !$omp parallel do private
+    !$acc parallel loop gang independent
+    do iBlock = 1, nBlock
        !$acc loop vector collapse(3) independent
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           SemiState_VGB(:,i,j,k,iBlock) = 0.0
        end do; end do; end do
     end do
     !$omp end parallel do
 
+    ! Set SemiState_VGB from SemiAll_VCB in semi-implicit blocks
     !$omp parallel do private( iBlock )
     !$acc parallel loop gang independent private(iBlock)
-    do iBlockSemi=1,nBlockSemi
+    do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -552,7 +550,7 @@ contains
 
     !$acc parallel loop gang independent private(iBlock) &
     !$acc present(RhsSemi_VCB)
-    do iBlockSemi=1,nBlockSemi
+    do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
 #ifndef _OPENACC
@@ -576,7 +574,7 @@ contains
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
-       do iBlockSemi=1,nBlockSemi
+       do iBlockSemi = 1, nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
 
           ! there are no ghost cells for RhsSemi_VCB
@@ -590,7 +588,7 @@ contains
 
     ! Multiply with cell volume (makes matrix symmetric)
     !$acc parallel loop gang independent private(iBlock)
-    do iBlockSemi=1,nBlockSemi
+    do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -600,8 +598,8 @@ contains
     end do
 
     if(DoTest) then
-       do iBlockSemi=1,nBlockSemi
-          iBlock=iBlockFromSemi_B(iBlockSemi)
+       do iBlockSemi = 1, nBlockSemi
+          iBlock = iBlockFromSemi_B(iBlockSemi)
           if(iBlockSemi == iBlockSemiTest)then
              write(*,*) NameSub, &
                   ' iBlock, iBlockSemi, sum(Rhs**2)=', iBlock, iBlockSemi, &
@@ -623,15 +621,15 @@ contains
 
     ! Calculate y_I = A.x_I where A is the linearized semi-implicit operator
 
-    use ModAdvance,  ONLY: DtMax_CB, iTypeUpdate, UpdateFast_
+    use ModAdvance, ONLY: DtMax_CB, iTypeUpdate, UpdateFast_
     use ModGeometry, ONLY: IsBoundary_B
-    use ModMain, ONLY: dt, IsTimeAccurate, Cfl, UseDtLimit
-    use ModSize, ONLY: nI, nJ, nK
-    use ModLinearSolver,   ONLY: UsePDotADotP, pDotADotPPe
-    use ModCellBoundary,   ONLY: set_cell_boundary
+    use ModMain, ONLY: Dt, IsTimeAccurate, Cfl, UseDtLimit
+    use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
+    use ModCellBoundary, ONLY: set_cell_boundary
     use ModUpdateStateFast, ONLY: set_cell_boundary_for_block
-    use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
-         apply_flux_correction_block, CellVolume_GB, nIJK
+    use BATL_lib, ONLY: nI, nJ, nK, nIJK,  CellVolume_GB, &
+         message_pass_cell, message_pass_face, &
+         apply_flux_correction_block
 
     integer, intent(in) :: MaxN
     real,    intent(in) :: x_I(MaxN)
@@ -650,7 +648,7 @@ contains
     n = 0
     !$omp parallel do private( iBlock,n )
     !$acc parallel loop gang independent private( iBlock, n )
-    do iBlockSemi=1,nBlockSemi
+    do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        n = (iBlockSemi-1)*nIJK*nVarSemi
        !$acc loop vector collapse(4) independent private(n0)
@@ -693,7 +691,7 @@ contains
     n = 0
     !$omp parallel do private( iBlock,n,DtLocal,Volume )
     !$acc parallel loop gang independent private( iBlock)
-    do iBlockSemi=1,nBlockSemi
+    do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
        if(IsBoundary_B(iBlock)) then
@@ -750,7 +748,7 @@ contains
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
        !$omp parallel do private( iBlock )
-       do iBlockSemi=1,nBlockSemi
+       do iBlockSemi = 1, nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
 
           ! zero ghost cells for ResSemi_VCB
@@ -767,7 +765,7 @@ contains
     if(UseSplitSemiImplicit)then
 #ifndef _OPENACC
        !$omp parallel do private( iBlock, DtLocal, Volume, n )
-       do iBlockSemi=1,nBlockSemi
+       do iBlockSemi = 1, nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           DtLocal = Dt
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
@@ -850,9 +848,9 @@ contains
     ! Multiply Vec with the preconditioner matrix.
     ! This routine is used by the Preconditioned Conjugate Gradient method
 
-    use BATL_size,       ONLY: nDim, nI, nJ, nK
+    use BATL_lib, ONLY: nDim, nI, nJ, nK
     use ModLinearSolver, ONLY: precond_left_multiblock
-    use ModImplHypre,    ONLY: hypre_preconditioner
+    use ModImplHypre, ONLY: hypre_preconditioner
 
     integer, intent(in)   :: MaxN
     real,    intent(inout):: Vec_I(MaxN)
@@ -1058,11 +1056,10 @@ contains
   subroutine get_semi_impl_jacobian
 
     use ModAdvance, ONLY: DtMax_CB
-    use ModMain,    ONLY: nI, nJ, nK, Dt, IsTimeAccurate, Cfl, UseDtLimit
-    use ModGeometry, ONLY: Used_GB
+    use ModMain,    ONLY: Dt, IsTimeAccurate, Cfl, UseDtLimit
     use ModImplicit, ONLY: UseNoOverlap
     use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix
-    use BATL_lib, ONLY: CellVolume_GB
+    use BATL_lib, ONLY: nI, nJ, nK, Used_GB, CellVolume_GB
 
     integer :: iBlockSemi, iBlock, i, j, k, iStencil, iVar
     real    :: Coeff, DtLocal
@@ -1096,7 +1093,7 @@ contains
           JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi) = &
                Coeff * JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi)
        end do; end do; end do; end do
-       DtLocal = dt
+       DtLocal = Dt
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.IsTimeAccurate .or. UseDtLimit) &
