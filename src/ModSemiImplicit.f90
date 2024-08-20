@@ -505,7 +505,7 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Initialize SemiState_VGB=0 so it can be message passed
-    !$omp parallel do private
+    !$omp parallel do
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock
        !$acc loop vector collapse(3) independent
