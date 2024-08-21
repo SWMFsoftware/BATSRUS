@@ -138,7 +138,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_resistivity_param
   !============================================================================
-
   subroutine init_mod_resistivity
 
     use ModPhysics, ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
@@ -200,7 +199,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_resistivity
   !============================================================================
-
   subroutine set_resistivity
 
     use ModMain,    ONLY: nBlock, Unused_B
@@ -252,7 +250,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_resistivity
   !============================================================================
-
   subroutine spitzer_resistivity(iBlock, Eta_G)
 
     use ModConst,   ONLY: cProtonMass, cElectronCharge
@@ -294,7 +291,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine spitzer_resistivity
   !============================================================================
-
   subroutine anomalous_resistivity(iBlock, Eta_G)
 
     ! Compute current dependent anomalous resistivity
@@ -328,7 +324,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine anomalous_resistivity
   !============================================================================
-
   subroutine raeder_resistivity(iBlock, Eta_G)
 
     ! Compute resistivity based on Raeder's formula
@@ -381,7 +376,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine raeder_resistivity
   !============================================================================
-
   subroutine calc_resistivity_source(iBlock)
 
     use ModMain,       ONLY: x_
@@ -491,7 +485,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_resistivity_source
   !============================================================================
-
   subroutine calc_heat_exchange
 
     use ModMain,       ONLY: Cfl, nBlock, Unused_B
@@ -599,10 +592,9 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine calc_heat_exchange
   !============================================================================
-
-  ! Interface for (Semi-)implicit collisional and Hall resistivity
-
   subroutine get_impl_resistivity_state(SemiAll_VCB)
+
+    ! Interface for (Semi-)implicit collisional and Hall resistivity
 
     use ModAdvance,    ONLY: State_VGB
     use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
@@ -660,7 +652,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_impl_resistivity_state
   !============================================================================
-
   subroutine init_impl_resistivity
 
     use BATL_lib,        ONLY: IsCartesian, message_pass_cell, &
@@ -811,9 +802,9 @@ contains
     !$omp end parallel do
 
     call test_stop(NameSub, DoTest)
+
   end subroutine init_impl_hall_resist
   !============================================================================
-
   subroutine get_resistivity_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use BATL_lib,        ONLY: store_face_flux, IsCartesian, IsRzGeometry, &
@@ -1125,7 +1116,6 @@ contains
       real :: InvJac_DD(3,3)
 
       ! Calculate the inverse Jacobian matrix
-
       !------------------------------------------------------------------------
       InvJac_DD(:,1) = InvDxHalf *&
            (Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
@@ -1135,10 +1125,8 @@ contains
            (Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
     end function inv_jac_dd
     !==========================================================================
-
   end subroutine get_resistivity_rhs
   !============================================================================
-
   subroutine add_jacobian_resistivity(iBlock, nVarImpl, Jacobian_VVCI)
 
     ! Calculate the Jacobian for the preconditioning of
@@ -1278,7 +1266,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_jacobian_resistivity
   !============================================================================
-
   subroutine add_jacobian_hall_resist(iBlock, nVarImpl, Jacobian_VVCI)
 
     ! Preconditioner for the induction equation in Hall MHD
@@ -1520,7 +1507,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_jacobian_hall_resist
   !============================================================================
-
   subroutine update_impl_resistivity(iBlock, NewSemiAll_VC)
 
     use ModAdvance,    ONLY: State_VGB
@@ -1546,6 +1532,5 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_impl_resistivity
   !============================================================================
-
 end module ModResistivity
 !==============================================================================
