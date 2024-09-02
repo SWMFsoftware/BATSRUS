@@ -1276,9 +1276,15 @@ contains
 
        do i = 1-nGhost, 0
           B1_D = State_VG(Bx_:Bz_, 1-i, j, k)
-
+          ! Horizontal magnetic field in the physical cell equals
+          ! B1_D - DirR_D*sum(DirR_D*B1_D)
           State_VG(Bx_:Bz_, i, j, k) = B1_D - DirR_D*sum(DirR_D*B1_D)
-
+          ! CME vertical field equals:
+          ! CME_vertical = sum(DirR_D*b_cme_d(Xyz_DGB(:,i,j,k,iBlock)))
+          ! Horizontal CME magnetic field equals
+          ! CME_horizontal = b_cme_d - DirR_D*CME_vertical
+          ! Jump in horizontal MF is equal to
+          ! Horizontal field in the physical cell - CME_horizontal
           if(UseCME)State_VG(Bx_:Bz_, i, j, k) = &
                State_VG(Bx_:Bz_, i, j, k) + DirR_D*sum(DirR_D*&
                b_cme_d(Xyz_DGB(:,i,j,k,iBlock)))
@@ -1286,8 +1292,33 @@ contains
 
           ! Gnost cell value of velocity: keep the velocity projection
           ! onto the magnetic field, if UseAlignedVelocity=.true.
-          ! Reflect the other components
+          ! Reflect the other components (To be revised)
           U_D = State_VG(RhoUx_:RhoUz_,1-i,j,k)/State_VG(Rho_,1-i,j,k)
+          ! Horizontal velocity in the physical cell
+          ! U_D - DirR_D*sum(DirR_D*U_D)
+          ! Stream aligned speed: magnitude:
+          ! U   = sum(U_D*BDir_D)
+          ! Stream aligned velocity vector:
+          ! U*BDir_D
+          ! Vertical stream aligned velocity:
+          ! U*sum(BDir_D*DirR_D)
+          ! Horizontal stream aligned velocity
+          ! U*(BDir_D - DirR_D*sum(BDir_D*DirR_D))
+          ! Jump in horizontal velocity is equal to:
+          ! Horizontal velocity in the physical cell - &
+          !        Horizontal stream aligned velocity
+          ! Characteristic BC:
+          ! 1. Find Elzasser variable in the physical cell from two
+          !    jumps, for the pertubation propagating downward;
+          ! 2. Find the increment in the horizontal field and velocity,
+          !    in the ghost cell, assuming that the Elzasser variable
+          !    for downward propagating wave equals that in the physical
+          !    cell, the upward propagating wave amplitude being equal to 0;
+          ! 3. Add the increment in the horizontal field to b_cme_d, this is
+          !    the magnetic field in the ghost cell;
+          ! 4. Add the increment in the horizontal velocity to the field
+          !    aligned velocity vector, this is the velocity vector in the
+          !    ghost cell.
           if(UseAlignedVelocity)then
              U   = sum(U_D*BDir_D); U_D = U_D - U*BDir_D
              U   = sign(min(abs(U), UAbsMax), U)
