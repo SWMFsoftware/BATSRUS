@@ -3204,7 +3204,7 @@ contains
          TypeNormalization     = "SOLARWIND"
          TypeIoUnit            = "HELIOSPHERIC"
 
-         if(NameThisComp == "OH")then
+         if(NameThisComp == "OH" .or. index(NameUserFile,'OuterHelio') > 0)then
             TypeNormalization = "OUTERHELIO"
             TypeIoUnit        = "OUTERHELIO"
          end if
@@ -3236,7 +3236,8 @@ contains
          end if
 
          ! Set heat exchange for IH (it shouldn't do much)
-         if(NameThisComp == 'IH')then
+         if(NameThisComp == 'IH' &
+              .and. index(NameUserFile,'OuterHelio') == 0)then
             if(UseElectronPressure .and. nIonFluid == 1)then
                UseResistivity = .true.
                TypeResistivity = 'user'
@@ -3733,7 +3734,8 @@ contains
          end if
       end if
 
-      if(TypeCoordSystem == 'HGI' .and. NameThisComp /= 'OH' &
+      if(TypeCoordSystem == 'HGI' .and. (NameThisComp /= 'OH' &
+           .and. index(NameUserFile,'OuterHelio') == 0) &
            .and. .not.IsTimeAccurate)then
          if(iProc == 0)then
             write(*,'(a)') NameSub//&
