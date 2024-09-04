@@ -328,8 +328,8 @@ contains
   subroutine deallocate_thread_b(iBlock)
 
     integer, intent(in) :: iBlock
-    logical:: DoTest
     integer :: j, k
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'deallocate_thread_b'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
