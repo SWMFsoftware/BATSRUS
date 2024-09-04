@@ -239,7 +239,7 @@ T			IsTimeAccurate
 
 #STITCH
 1.4E12			ZetaSI
-2			iMaxStitch
+1.0			rStitch
 0.0			tStartStitch
 5.0			tStopStitch
 
