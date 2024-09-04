@@ -62,8 +62,7 @@ module ModUser
   real    :: UniformB0Si_D(3) = 0.0
 
   ! STITCH
-  real    :: ZetaSI = 0.0, Zeta
-  integer :: iMaxStitch
+  real    :: ZetaSI = 0.0, Zeta, rStitch = 1.0
   logical :: UseStitchRegion
   real    :: Lon0Deg, Lon1Deg, Lat0Deg, Lat1Deg
   real    :: Lon0, Lon1, Lat0, Lat1
@@ -165,7 +164,7 @@ contains
 
        case("#STITCH")
           call read_var('ZetaSI', ZetaSI)
-          call read_var('iMaxStitch', iMaxStitch)
+          call read_var('rStitch', rStitch)
           call read_var('tStartStitch', tStartStitch)
           call read_var('tStopStitch', tStopStitch)
 
@@ -2062,7 +2061,6 @@ contains
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMain, ONLY: UseB0, tSimulation
     use ModCoordTransform, ONLY: rot_xyz_rlonlat, xyz_to_lonlat
-    use ModParallel, ONLY: Unset_, DiLevel_EB
     use BATL_size, ONLY: nK, nJ
     use BATL_lib, ONLY: CellFace_DFB, Xyz_DGB
     use ModGeometry, ONLY: r_GB
@@ -2076,18 +2074,26 @@ contains
     real :: BXyzJLeft_D(3), BXyzJRight_D(3), BXyzKLeft_D(3), BXyzKRight_D(3)
     real :: BrJLeft, BrJRight, BrKLeft, BrKRight
     !--------------------------------------------------------------------------
-    ! Only add the STITCH source term in cells next to the inner boundary.
-    ! Works only in spherical coordinates.
-    if(DiLevel_EB(1,iBlock) /= Unset_) RETURN
-
+    ! STITCH
     if(tSimulation < tStartStitch .or. tSimulation > tStopStitch) RETURN
+
+    ! Only add the STITCH source term in first cell above rStitch
+    ! Works only in spherical coordinates.
+    if(.not.(r_GB(0,1,1,iBlock)<rStitch .and. r_GB(nI,1,1,iBlock)>rStitch)) &
+         RETURN
+
+    ! Find index i for first cell above rStitch
+    ! Blocks have typically small index range in first direction, we just loop
+    do i = 1, nI
+       if (r_GB(i,1,1,iBlock) > rStitch) EXIT
+    end do
 
     ZetaJLeft = Zeta
     ZetaJRight = Zeta
     ZetaKLeft = Zeta
     ZetaKRight = Zeta
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, iMaxStitch
+    do k = 1, nK; do j = 1, nJ
 
        XyzSph_DD = rot_xyz_rlonlat(Xyz_DGB(:,i,j,k,iBlock))
 
@@ -2134,7 +2140,7 @@ contains
        dBXyz_D = matmul(XyzSph_DD, dBSph_D)
 
        Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) + dBXyz_D
-    end do; end do; end do
+    end do; end do
 
   contains
     !==========================================================================
