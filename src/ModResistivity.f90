@@ -11,9 +11,8 @@ module ModResistivity
 #endif
   ! Resistivity related variables and methods
 
-  use ModSize,   ONLY: MaxBlock
   use BATL_size, ONLY: nDim, Maxdim, nI, nJ, nK, &
-       MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
 
   use ModImplicit, ONLY: UseSemiHallResist, UseSemiResistivity
 
@@ -35,52 +34,52 @@ module ModResistivity
   public:: add_jacobian_hall_resist
   public:: update_impl_resistivity
 
-  logical, public           :: UseResistivity   = .false.
-  logical, public           :: UseResistiveFlux = .false.
+  logical, public:: UseResistivity   = .false.
+  logical, public:: UseResistiveFlux = .false.
   !$acc declare create(UseResistiveFlux)
-  logical, public           :: UseJouleHeating  = .true.
-  logical, public           :: UseHeatExchange  = .true.
+  logical, public:: UseJouleHeating  = .true.
+  logical, public:: UseHeatExchange  = .true.
   !$acc declare create(UseHeatExchange)
-  character(len=30), public :: TypeResistivity='none'
-  real, public, allocatable :: Eta_GB(:,:,:,:)
+  character(len=30), public:: TypeResistivity='none'
+  real, public, allocatable:: Eta_GB(:,:,:,:)
   !$acc declare create(Eta_GB)
-  real, public              :: Eta0=0.0, Eta0Si=0.0
-  real, public              :: Si2NoEta
+  real, public:: Eta0=0.0, Eta0Si=0.0
+  real, public:: Si2NoEta
 
   ! Local variables
-  logical :: DoMessagePassResistivity=.false.
-  logical :: UseCentralDifference =.false.
+  logical:: DoMessagePassResistivity=.false.
+  logical:: UseCentralDifference =.false.
 
-  real :: EtaPerpSpitzerSi=0.0
-  real :: CoulombLogarithm=20.0
-  real :: Eta0AnomSi=0.0, Eta0Anom
-  real :: EtaMaxAnomSi=0.0, EtaMaxAnom
-  real :: JcritAnomSi=1.0, JcritInv
-  real :: EtaCoeff=0.0
-  real :: JoverBCrit=0.0
+  real:: EtaPerpSpitzerSi=0.0
+  real:: CoulombLogarithm=20.0
+  real:: Eta0AnomSi=0.0, Eta0Anom
+  real:: EtaMaxAnomSi=0.0, EtaMaxAnom
+  real:: JcritAnomSi=1.0, JcritInv
+  real:: EtaCoeff=0.0
+  real:: JoverBCrit=0.0
 
   ! Description of the region where resistivity is used
   character(len=200):: StringResistRegion ='none'
 
   ! Indexes of regions defined with the #REGION commands
-  integer, allocatable :: iRegionResist_I(:)
+  integer, allocatable:: iRegionResist_I(:)
 
   ! resistivity pre-multiplied by the face area vector
-  real, allocatable :: Eta_DFDB(:,:,:,:,:,:)
+  real, allocatable:: Eta_DFDB(:,:,:,:,:,:)
 
   ! B/ne vector for Hall Resistivity
-  real, allocatable :: Bne_DFDB(:,:,:,:,:,:)
+  real, allocatable:: Bne_DFDB(:,:,:,:,:,:)
 
   ! Whistler diffusion coefficients.
-  real, allocatable :: WhistlerCoeff_FDB(:,:,:,:,:)
+  real, allocatable:: WhistlerCoeff_FDB(:,:,:,:,:)
 
   ! Named indices for semi-implicit variables
-  integer, public, parameter :: BxImpl_ = 1, ByImpl_ = 2, BzImpl_ = 3
+  integer, public, parameter:: BxImpl_ = 1, ByImpl_ = 2, BzImpl_ = 3
 
   ! Include resistive fluxes at all?
-  logical, public :: DoResistiveFlux=.true.
+  logical, public:: DoResistiveFlux=.true.
 
-  character(len=*), private, parameter :: NameMod = 'ModResistivity'
+  character(len=*), private, parameter:: NameMod = 'ModResistivity'
 contains
   !============================================================================
   subroutine read_resistivity_param(NameCommand)
@@ -206,7 +205,7 @@ contains
 
     real, allocatable:: ResistFactor_G(:,:,:)
 
-    integer :: iBlock
+    integer:: iBlock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_resistivity'
@@ -216,7 +215,7 @@ contains
          allocate(ResistFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     !$omp parallel do private(ResistFactor_G)
-    do iBlock=1,nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        select case(TypeResistivity)
        case('constant')
@@ -260,11 +259,11 @@ contains
 
     ! Compute Spitzer-type, classical resistivity
 
-    integer, intent(in) :: iBlock
+    integer, intent(in):: iBlock
     real,    intent(out):: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
 
-    real :: EtaSi, Coef, B0_DG(3,MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
-    integer :: i, j, k
+    real:: EtaSi, Coef, B0_DG(3,MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
+    integer:: i, j, k
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'spitzer_resistivity'
@@ -297,11 +296,11 @@ contains
 
     use ModCurrent, ONLY: get_current
 
-    integer, intent(in) :: iBlock
+    integer, intent(in):: iBlock
     real,    intent(out):: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
 
-    real :: Current_D(3), AbsJ
-    integer :: i, j, k
+    real:: Current_D(3), AbsJ
+    integer:: i, j, k
 
     ! Compute the magnitude of the current density |J|
     logical:: DoTest
@@ -336,11 +335,11 @@ contains
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMain, ONLY: UseB0
 
-    integer, intent(in) :: iBlock
+    integer, intent(in):: iBlock
     real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    real :: Current_D(3), AbsJ, AbsB, JoverB, b_D(3)
-    integer :: i, j, k, l, m, n
+    real:: Current_D(3), AbsJ, AbsB, JoverB, b_D(3)
+    integer:: i, j, k, l, m, n
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'raeder_resistivity'
@@ -378,9 +377,7 @@ contains
   !============================================================================
   subroutine calc_resistivity_source(iBlock)
 
-    use ModMain,       ONLY: x_
-    use ModGeometry,   ONLY: Used_GB
-    use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB
+    use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB, x_, Used_GB
     use ModCurrent,    ONLY: get_current
     use ModPhysics,    ONLY: GammaElectronMinus1, InvGammaElectronMinus1
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, By_, Bz_, Energy_
@@ -391,11 +388,11 @@ contains
     integer, intent(in):: iBlock
 
     ! Variables needed for Joule heating
-    real :: Current_D(3), JouleHeating
+    real:: Current_D(3), JouleHeating
 
-    integer :: i, j, k
+    integer:: i, j, k
 
-    logical :: DoTestCell
+    logical:: DoTestCell
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_resistivity_source'
@@ -404,7 +401,7 @@ contains
 
     JouleHeating = 0.0
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. &
@@ -487,16 +484,16 @@ contains
   !============================================================================
   subroutine calc_heat_exchange
 
-    use ModMain,       ONLY: Cfl, nBlock, Unused_B
-    use ModGeometry,   ONLY: Used_GB
+    use ModMain,       ONLY: Cfl
     use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: DtMax_CB, State_VGB, UseAnisoPressure, UseAnisoPe
+    use BATL_lib,      ONLY: nBlock, Unused_B, Used_GB
 
-    real :: DtLocal
-    real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
-    integer :: i, j, k, iBlock
-    logical :: DoTestCell
+    real:: DtLocal
+    real:: HeatExchange, HeatExchangePeP, HeatExchangePePpar
+    integer:: i, j, k, iBlock
+    logical:: DoTestCell
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_heat_exchange'
     !--------------------------------------------------------------------------
@@ -510,10 +507,10 @@ contains
 
     !$omp parallel do private(DoTestCell,DtLocal) &
     !$omp private(HeatExchange,HeatExchangePeP,HeatExchangePePpar)
-    do iBlock=1,nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           DoTestCell = DoTest .and. iBlock == iBlockTest .and. &
@@ -619,7 +616,7 @@ contains
 
     ! Collect the semi-implicit blocks
     nBlockSemi = 0
-    do iBlock=1,nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
        ! Check if the block needs to be advanced with semi-implicit scheme
@@ -638,9 +635,9 @@ contains
     end do
 
     !$omp parallel do
-    do iBlockSemi=1,nBlockSemi
+    do iBlockSemi = 1, nBlockSemi
        ! Store the magnetic field in SemiAll_VCB
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           SemiAll_VCB(BxImpl_:BzImpl_,i,j,k,iBlockSemi) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlockFromSemi_B(iBlockSemi))
        end do; end do; end do
@@ -654,13 +651,13 @@ contains
   !============================================================================
   subroutine init_impl_resistivity
 
-    use BATL_lib,        ONLY: IsCartesian, message_pass_cell, &
+    use BATL_lib, ONLY: IsCartesian, message_pass_cell, &
          CellFace_DB, FaceNormal_DDFB, nBlock, Unused_B
-    use ModNumConst,     ONLY: i_DD
+    use ModNumConst, ONLY: i_DD
 
-    integer :: iDim, i, j, k, Di, Dj, Dk, iBlock
-    real :: Eta
-    real :: FaceNormal_D(nDim)
+    integer:: iDim, i, j, k, Di, Dj, Dk, iBlock
+    real:: Eta
+    real:: FaceNormal_D(nDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_impl_resistivity'
@@ -676,17 +673,17 @@ contains
     call message_pass_cell(Eta_GB, DoSendCornerIn=.false.)
 
     !$omp parallel do private( Di,Dj,Dk,FaceNormal_D,Eta )
-    do iBlock=1,nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
        Eta_DFDB(:,:,:,:,:,iBlock) = 0.0
 
-       do iDim=1,nDim
+       do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           if(IsCartesian)then
              FaceNormal_D = 0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
           end if
-          do k=1,nK+Dk; do j=1,nJ+Dj; do i=1,nI+Di
+          do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
              if(.not.IsCartesian) &
                   FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
 
@@ -714,13 +711,13 @@ contains
     use ModHallResist,   ONLY: UseHallResist, &
          set_hall_factor_face, HallFactor_DF, IsHallBlock, HallCmaxFactor
 
-    integer :: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
+    integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
 
-    real :: HallCoeff, Rho, b_D(MaxDim)
+    real:: HallCoeff, Rho, b_D(MaxDim)
 
-    real :: InvDxyz
+    real:: InvDxyz
 
-    real :: FaceNormal_D(nDim)
+    real:: FaceNormal_D(nDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_impl_hall_resist'
@@ -737,7 +734,7 @@ contains
          allocate(WhistlerCoeff_FDB(nI+1,nJ+1,nK+1,nDim,MaxBlock))
 
     !$omp parallel do private(InvDxyz,FaceNormal_D,Rho,b_D)
-    do iBlock=1,nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
        Bne_DFDB(:,:,:,:,:,iBlock) = 0.0
@@ -746,13 +743,13 @@ contains
        call set_hall_factor_face(iBlock)
        if(.not.IsHallBlock) CYCLE
 
-       do iDim=1,nDim
+       do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           if(HallCmaxFactor > 0 .and. IsCartesian) then
              InvDxyz = 1./CellSize_DB(iDim,iBlock)
              FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
           end if
-          do k=1,nK+Dk; do j=1,nJ+Dj; do i=1,nI+Di
+          do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
 
              ! Check if the Hall coefficient is positive for this face
              HallCoeff = HallFactor_DF(iDim,i,j,k)
@@ -807,35 +804,33 @@ contains
   !============================================================================
   subroutine get_resistivity_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
-    use BATL_lib,        ONLY: store_face_flux, IsCartesian, IsRzGeometry, &
+    use BATL_lib, ONLY: store_face_flux, IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, CellFace_DB, FaceNormal_DDFB, &
-         i0_, j0_, k0_, nIp1_, nJp1_, nKp1_
+         i0_, j0_, k0_, nIp1_, nJp1_, nKp1_, x_, y_, z_, Used_GB
     use ModFaceGradient, ONLY: get_face_curl
-    use ModImplicit,     ONLY: nVarSemi, &
+    use ModImplicit, ONLY: nVarSemi, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
-    use ModNumConst,     ONLY: i_DD
-    use ModSize,         ONLY: x_, y_, z_
-    use ModGeometry,     ONLY: Used_GB
-    use ModHallResist,   ONLY: HallCmaxFactor
+    use ModNumConst, ONLY: i_DD
+    use ModHallResist, ONLY: HallCmaxFactor
     use ModCellGradient, ONLY: calc_cell_curl_ghost
     use ModCoordTransform, ONLY: determinant
 
-    integer, intent(in) :: iBlock
-    real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
-    logical, intent(in) :: IsLinear
+    integer, intent(in):: iBlock
+    real, intent(inout):: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, intent(out)  :: Rhs_VC(nVarSemi,nI,nJ,nK)
+    logical, intent(in):: IsLinear
 
     ! resistive flux for operator split scheme
-    real :: FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim)
+    real:: FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim)
 
-    real :: DetJ, InvDxHalf, InvDyHalf, InvDzHalf
-    real, allocatable :: Egen_DG(:,:,:,:)
-    real :: dBgen_D(3)
-    real :: InvJac_DD(3,3)
-    integer :: iDim, i, j, k, Di, Dj, Dk
-    real    :: Current_D(MaxDim), Jx, InvDy2, FaceNormal_D(nDim)
-    real    :: Jnormal, BneNormal
-    logical :: IsNewBlock
+    real:: DetJ, InvDxHalf, InvDyHalf, InvDzHalf
+    real, allocatable:: Egen_DG(:,:,:,:)
+    real:: dBgen_D(3)
+    real:: InvJac_DD(3,3)
+    integer:: iDim, i, j, k, Di, Dj, Dk
+    real   :: Current_D(MaxDim), Jx, InvDy2, FaceNormal_D(nDim)
+    real   :: Jnormal, BneNormal
+    logical:: IsNewBlock
 
     logical:: DoTestCell
     logical:: DoTest
@@ -1038,7 +1033,7 @@ contains
 
        ! Central difference update of RHS of induction equation
        if(IsCartesian)then
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              Rhs_VC(BxImpl_,i,j,k) = &
@@ -1054,7 +1049,7 @@ contains
                   (Egen_DG(y_,i+1,j,k) - Egen_DG(y_,i-1,j,k)) * InvDxHalf
           end do; end do; end do
        else
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
              InvJac_DD = inv_jac_dd(i,j,k,iBlock)
@@ -1110,10 +1105,10 @@ contains
 
   contains
     !==========================================================================
-    function inv_jac_dd(i,j,k,iBlock) RESULT(InvJac_DD)
+    function inv_jac_dd(i, j, k, iBlock) RESULT(InvJac_DD)
 
-      integer, intent(in) :: i,j,k,iBlock
-      real :: InvJac_DD(3,3)
+      integer, intent(in):: i, j, k, iBlock
+      real:: InvJac_DD(3,3)
 
       ! Calculate the inverse Jacobian matrix
       !------------------------------------------------------------------------
@@ -1132,22 +1127,21 @@ contains
     ! Calculate the Jacobian for the preconditioning of
     ! collisional resistivity.
 
-    use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB, Used_GB
     use ModFaceGradient, ONLY: set_block_jacobian_face
-    use ModImplicit,     ONLY: UseNoOverlap, nStencil
-    use ModNumConst,     ONLY: i_DD
-    use ModGeometry,     ONLY: Used_GB
-    use ModAdvance,      ONLY: B_
+    use ModImplicit, ONLY: UseNoOverlap, nStencil
+    use ModNumConst, ONLY: i_DD
+    use ModAdvance, ONLY: B_
 
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
-    integer :: iB
-    integer :: iDim, iDir, jDir, i, j, k, Di, Dj, Dk
-    integer :: iVar, jVar
-    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
-    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
+    integer:: iB
+    integer:: iDim, iDir, jDir, i, j, k, Di, Dj, Dk
+    integer:: iVar, jVar
+    real:: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
+    real:: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_jacobian_resistivity'
@@ -1271,14 +1265,13 @@ contains
     ! Preconditioner for the induction equation in Hall MHD
     ! Based on Toth et al. "Hall MHD on Block Adaptive Grids", JCP 2008
 
-    use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB,&
-         CellVolume_GB
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
+         CellVolume_GB, Used_GB
     use ModFaceGradient, ONLY: set_block_jacobian_face
-    use ModImplicit,     ONLY: nStencil, UseNoOverlap
-    use ModNumConst,     ONLY: i_DD, iLeviCivita_III
-    use ModGeometry,     ONLY: Used_GB
-    use ModAdvance,      ONLY: B_
-    use ModHallResist,   ONLY: HallCmaxFactor
+    use ModImplicit, ONLY: nStencil, UseNoOverlap
+    use ModNumConst, ONLY: i_DD, iLeviCivita_III
+    use ModAdvance,  ONLY: B_
+    use ModHallResist, ONLY: HallCmaxFactor
 
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
@@ -1448,7 +1441,7 @@ contains
                    iSub = 2*iFace   ! stencil index of subdiagonal elements
                    iSup = iSub + 1  ! stencil index of superdiagonal elements
 
-                   do k=1,nK; do j=1,nJ; do i=1,nI
+                   do k = 1, nK; do j = 1, nJ; do i = 1, nI
                       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
                       ! Index for the opposite face of the cell
@@ -1509,22 +1502,22 @@ contains
   !============================================================================
   subroutine update_impl_resistivity(iBlock, NewSemiAll_VC)
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModImplicit,   ONLY: nVarSemiAll
+    use ModAdvance, ONLY: State_VGB
+    use ModImplicit, ONLY: nVarSemiAll
     use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModGeometry,   ONLY: Used_GB
+    use BATL_lib, ONLY: Used_GB
 
     integer, intent(in):: iBlock
     real,    intent(in):: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
 
-    integer :: i, j, k
+    integer:: i, j, k
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_impl_resistivity'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = NewSemiAll_VC(BxImpl_:BzImpl_,i,j,k)
     end do; end do; end do
