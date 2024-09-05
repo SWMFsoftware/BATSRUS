@@ -997,7 +997,7 @@ contains
             w_I = Weight_I*GammaMinus1Ion_I*Factor_I
 
             ! Solution for energy densities
-            e_I(1)         = (Sii + w_I(1)*Eth)/sum(w_I)
+            e_I(1)         = (Sii + w_I(nIonFluid)*Eth)/sum(w_I)
             e_I(nIonFluid) = Eth - e_I(1)
             ! Convert to pressures
             State_VGB(iPIon_I,i,j,k,iBlock)  = e_I*GammaMinus1Ion_I
