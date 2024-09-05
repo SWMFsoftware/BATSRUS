@@ -1,23 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-module ModVarIndexes1d
-  use ModVarIndexes
-  implicit none
-  integer, parameter :: p1d_      = p_ - 5
-  integer, parameter :: nVar1     = p1d_
-  integer, parameter :: Energy1d_ = nVar1 + 1
-  integer, parameter :: ScalarFirst1d_ = max(2, ScalarFirst_ - 5)
-  integer, parameter :: ScalarLast1d_  = max(1, ScalarLast_  - 5)
-  integer, parameter :: Ehot1d_ = max(Ehot_-5,1)
-  integer, parameter :: Pe1d_   = max(Pe_-5,1)
-  integer, parameter :: WaveFirst1d_ = max(WaveFirst_-5,1)
-  integer, parameter :: WaveLast1d_  = max(WaveLast_ -5,1)
-  integer, parameter :: WDiff1d_     = max(WDiff_    -5,1)
-  integer, parameter :: BperU1d_     = max(BperU_    -5,1)
-  integer, parameter :: Ppar1d_      = max(Ppar_     -5,1)
-end module ModVarIndexes1d
-!==============================================================================
 module ModFieldLineThread
 
   use ModBatsrusUtility, ONLY: stop_mpi
@@ -104,6 +87,7 @@ module ModFieldLineThread
      real, pointer :: DsSi_III(:,:,:)
      ! PSi, TeSi amd TiSi stored at gird iMin:iMax,0:nJ+1,0:nK+1
      real, pointer :: State_VG(:,:,:,:)
+     type(OpenThread), allocatable :: OpenThreads_II(:,:)
   end type BoundaryThreads
   ! For visualization:
   ! Indexes for array State_VG(PSi_:TiSi_,-nGUniform:1,jMin_:jMax_,kMin_:kMax_)
@@ -344,6 +328,7 @@ contains
   subroutine deallocate_thread_b(iBlock)
 
     integer, intent(in) :: iBlock
+    integer :: j, k
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'deallocate_thread_b'
     !--------------------------------------------------------------------------
@@ -366,6 +351,10 @@ contains
     deallocate(BoundaryThreads_B(iBlock)%iStencil_III)
     deallocate(BoundaryThreads_B(iBlock)%Weight_III)
     deallocate(BoundaryThreads_B(iBlock)%State_VG)
+    do k = 1, nK; do j = 1, nJ
+       call deallocate_thread(BoundaryThreads_B(iBlock)%OpenThreads_II(j,k))
+    end do; end do
+    deallocate(BoundaryThreads_B(iBlock)%OpenThreads_II)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
     call test_stop(NameSub, DoTest, iBlock)
@@ -386,6 +375,25 @@ contains
          tSimulation, nStep, nIteration)
     b_cme_d = Bcme_D*Si2No_V(UnitB_)
   end function b_cme_d
+  !============================================================================
+  subroutine get_field(Xyz_D, B_D)
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain, ONLY: EEE_get_state_BC
+    use ModPhysics,  ONLY: No2Si_V, UnitB_
+    use BATL_lib,    ONLY: MaxDim
+    use ModMain,     ONLY: nStep, nIteration, tSimulation
+    real, intent(in)  :: Xyz_D(MaxDim)
+    real, intent(out) :: B_D(MaxDim)
+    ! CME parameters, if needed
+    real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
+    !--------------------------------------------------------------------------
+    call get_b0(Xyz_D, B_D)
+    B_D = B_D*No2Si_V(UnitB_)
+    if(.not.UseCme)RETURN
+    call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+         tSimulation, nStep, nIteration)
+    B_D = B_D + Bcme_D
+  end subroutine get_field
   !============================================================================
   subroutine set_threads(NameCaller)
 
@@ -501,6 +509,8 @@ contains
                PSi_:TiSi_, -nGUniform:1,&
                jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock)%State_VG = 0.0
+
+          allocate(BoundaryThreads_B(iBlock)%OpenThreads_II(1:nJ, 1:nK))
 
           IsAllocatedThread_B(iBlock) = .true.
        end if
@@ -641,6 +651,12 @@ contains
        Weight_I(1) = max(1 - Weight_I(2) - Weight_I(3), 0.0)
        BoundaryThreads_B(iBlock)%Weight_III(:,j, k) = Weight_I
        BoundaryThreads_B(iBlock)%iStencil_III(:,j, k) = [j1, k1]
+       call set_thread(&
+            XyzIn_D = Xyz_D,&
+            FaceArea = 1.0, &  ! ??? TBD
+            OpenThread1 = BoundaryThreads_B(iBlock)%OpenThreads_II(j,k), &
+            xyz_to_coord = xyz_to_coord,&
+            get_field = get_field)
        ! First, take magnetic field in the ghost cell
        ! Starting points for all threads are in the centers
        ! of  physical cells near the boundary

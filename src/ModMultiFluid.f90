@@ -3,6 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModMultiFluid
 
+  ! Definitions related to multi-ion and multi-fluid features
+
   use BATL_lib, ONLY: &
        test_start, test_stop
 
@@ -27,35 +29,43 @@ module ModMultiFluid
   ! Index points to the first electron fluid if UseEfield
   integer, parameter:: ElectronFirst_ = min(nTrueIon+1, nIonFluid)
 
-  integer, parameter:: iUx_I(nFluid) = iRhoUx_I(1:nFluid)
-  integer, parameter:: iUy_I(nFluid) = iRhoUy_I(1:nFluid)
-  integer, parameter:: iUz_I(nFluid) = iRhoUz_I(1:nFluid)
+  ! Indexes for velocities (same as momentum)
+  integer, parameter:: iUx_I(nFluid) = iRhoUx_I
+  integer, parameter:: iUy_I(nFluid) = iRhoUy_I
+  integer, parameter:: iUz_I(nFluid) = iRhoUz_I
 
+  ! Indexes for ion fluids
   integer, parameter:: iRhoIon_I(nIonFluid)   = iRho_I(1:nIonFluid)
   integer, parameter:: iRhoUxIon_I(nIonFluid) = iRhoUx_I(1:nIonFluid)
   integer, parameter:: iRhoUyIon_I(nIonFluid) = iRhoUy_I(1:nIonFluid)
   integer, parameter:: iRhoUzIon_I(nIonFluid) = iRhoUz_I(1:nIonFluid)
-  integer, parameter:: iUxIon_I(nIonFluid)    = iRhoUx_I(1:nIonFluid)
-  integer, parameter:: iUyIon_I(nIonFluid)    = iRhoUy_I(1:nIonFluid)
-  integer, parameter:: iUzIon_I(nIonFluid)    = iRhoUz_I(1:nIonFluid)
+  integer, parameter:: iUxIon_I(nIonFluid)    = iUx_I(1:nIonFluid)
+  integer, parameter:: iUyIon_I(nIonFluid)    = iUy_I(1:nIonFluid)
+  integer, parameter:: iUzIon_I(nIonFluid)    = iUz_I(1:nIonFluid)
   integer, parameter:: iPIon_I(nIonFluid)     = iP_I(1:nIonFluid)
+
+  ! Definition for entropy indexes (same as pressures)
+  ! Perpendicular entropy is used for the isotropic case
+  integer, parameter:: iS_I(nFluid)           = iP_I
+  integer, parameter:: iSperpIon_I(nIonFluid) = iPIon_I
+  integer, parameter:: iSparIon_I(nIonFluid)  = iPparIon_I
 
   integer, private:: iF
   logical, parameter:: IsIon_I(nFluid) = &
        [ (iF >= 1 .and. iF <= nIonFluid, iF=1, nFluid) ]
 
   ! The ion masses (adjustable)
-  real :: MassIon_I(nIonFluid)
-  real :: ChargeIon_I(nIonFluid)=1.0
-  real :: ChargePerMass_I(nIonFluid) = 1.0
+  real:: MassIon_I(nIonFluid) = 1.0
+  real:: ChargeIon_I(nIonFluid) = 1.0
+  real:: ChargePerMass_I(nIonFluid) = 1.0
   !$acc declare create(MassIon_I, ChargeIon_I, ChargePerMass_I)
 
   ! Allow using fully non-conservative scheme for the neutral fluids
-  logical :: DoConserveNeutrals    = .true.
+  logical:: DoConserveNeutrals = .true.
   !$acc declare create(DoConserveNeutrals)
 
   ! Variables that are set for the selected fluid
-  integer ::                           &
+  integer::                           &
        iRho   = Rho_,                  &
        iRhoUx = RhoUx_, iUx = RhoUx_,  &
        iRhoUy = RhoUy_, iUy = RhoUy_,  &
@@ -68,15 +78,15 @@ module ModMultiFluid
   !$acc declare create( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
   !$acc declare create( iUx, iUy, iUz )
 
-  character (len=20) :: NameFluid = ''
+  character(len=20):: NameFluid = ''
   !$omp threadprivate( NameFluid )
 
   ! Variables for setting fluid boundary condition separately from MHD
   ! variables.
-  logical :: IsFullyCoupledfluid = .true. , DoOhNeutralBc = .false.
-  real    :: RhoBcFactor_I(nFluid) = 1.0, uBcFactor_I(nFluid) = 1.
+  logical:: IsFullyCoupledfluid = .true. , DoOhNeutralBc = .false.
+  real:: RhoBcFactor_I(nFluid) = 1.0, uBcFactor_I(nFluid) = 1.
 
-  real    :: RhoNeutralsISW=0.0, RhoNeuWindDim=0.0 , &
+  real:: RhoNeutralsISW = 0.0, RhoNeuWindDim = 0.0 , &
        PNeutralsISW=0.0  , pNeuWindDim=0.0  , &
        UxNeutralsISW=0.0 , UxNeuWindDim=0.0 , &
        UyNeutralsISW=0.0 , UyNeuWindDim=0.0 , &
@@ -86,12 +96,10 @@ module ModMultiFluid
 
 contains
   !============================================================================
-
   subroutine select_fluid(iFluidIn)
 
-    integer :: iFluidIn
+    integer:: iFluidIn
     !--------------------------------------------------------------------------
-
     if(nFluid == 1) RETURN
 
     iRho   = iRho_I(iFluidIn)
@@ -117,11 +125,11 @@ contains
 
     use ModUtilities, ONLY: lower_case
 
-    character(len=*), intent(inout) :: String
-    integer, optional, intent(out) :: iFluidOut
+    character(len=*), intent(inout):: String
+    integer, optional, intent(out):: iFluidOut
 
-    integer :: i, l, iFluid
-    character(:), allocatable :: StringEnd
+    integer:: i, l, iFluid
+    character(:), allocatable:: StringEnd
 
     character(len=*), parameter:: NameSub = 'extract_fluid_name'
     !--------------------------------------------------------------------------
@@ -150,6 +158,5 @@ contains
 
   end subroutine extract_fluid_name
   !============================================================================
-
 end module ModMultiFluid
 !==============================================================================
