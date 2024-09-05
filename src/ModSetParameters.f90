@@ -540,6 +540,7 @@ contains
 
        case("#DESCRIPTION")
           call check_stand_alone
+          call read_var('StringDescription', StringLine)
 
        case("#BEGIN_COMP","#END_COMP")
           call check_stand_alone
