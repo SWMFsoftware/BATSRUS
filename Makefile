@@ -42,7 +42,6 @@ help:
 	@echo '    INTERPOLATE (INTERPOLATE.exe interpolates points from *.outs movies)'
 	@echo '    SNAPSHOT   (SNAPSHOT.exe extract snapshots from *.outs movies)'
 	@echo '    SPECTRUM   (SPECTRUM.exe calculates spectra from solar corona output on regular grid)'
-	@echo '    SPECTRUM2  (SPECTRUM2.exe calculates spectra from solar corona output on original grid)'
 	@echo '    EARTH_TRAJ (EARTH_TRAJ.exe creates Earth trajectory file for heliosphere)'
 	@echo '    TIME_CONV  (TIME_CONV.exe converts the Carrington time to the usual one)'
 	@echo ' '
@@ -128,12 +127,6 @@ SPECTRUM:
 	cd srcPostProc; make SPECTRUM
 	@echo ' '
 	@echo Program SPECTRUM has been brought up to date.
-	@echo ' '
-
-SPECTRUM2: BATSRUS
-	cd srcPostProc; make SPECTRUM2
-	@echo ' '
-	@echo Program SPECTRUM2 has been brought up to date.
 	@echo ' '
 
 EARTH_TRAJ:
