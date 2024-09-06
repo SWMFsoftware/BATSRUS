@@ -1002,16 +1002,27 @@ contains
             ! Convert to pressures
             State_VGB(iPIon_I,i,j,k,iBlock)  = e_I*GammaMinus1Ion_I
             if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
-               write(*,*)'Eth, Sii=     ', Eth, Sii
+               write(*,*)'Old Eth, Sii=     ', Eth, Sii
                write(*,*)'Factor_I= ', Factor_I
                write(*,*)'Weight_I=', Weight_I
                write(*,*)'w_I     =', w_I
                write(*,*)'e_I     =', e_I
             end if
          end do; end do; end do
-         if(DoTest)write(*,'(2x,2a,3es20.12)') &
-              NameSub,' after shock heating P_I=', &
-              State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
+         if(DoTest)then
+            write(*,*) NameSub,' after shock heating P_I=', &
+                 State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
+            write(*,*) 'New s_I=', State_VGB(iPIon_I,iTest,jTest,kTest,iBlock) &
+                 *State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock)**(-GammaMinus1Ion_I)
+            write(*,*) 'New Eth, Sii=', &
+                 sum(State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)*InvGammaMinus1Ion_I),&
+                 Weight_I(1)*State_VGB(p_,iTest,jTest,kTest,iBlock) &
+                 *State_VGB(Rho_,iTest,jTest,kTest,iBlock)**(-GammaMinus1Ion_I(1)) &
+                 - Weight_I(nIonFluid) &
+                 *State_VGB(iPIon_I(nIonFluid),iTest,jTest,kTest,iBlock) & 
+                 *State_VGB(iRhoIon_I(nIonFluid),iTest,jTest,kTest,iBlock) &
+                 **(-GammaMinus1Ion_I(nIonFluid))
+         end if
 
       end if ! UseIonShockHeating .and. .not.  UseElectronShockHeating
 

@@ -9719,23 +9719,29 @@ UseEntropy=T and UseTotalIonEnergy=T in the multiion case.
 0.4                     PiShockHeatingFraction (read if nIonFluid=2)
 
 If PeShockHeatingFraction is positive, a fraction of the non-adiabatic
-heating is deposited into the electron thermal energy Pe/(GammaE-1), and the
-same amount of energy is removed from the ion thermal energy P/(Gamma-1).
-If PparShockHeatingFraction is positive, a fraction of the non-adiabatic
-heating is deposited into the parallel ion energy, and the same
-amount of energy is removed from the perpendicular ion energy.
-If PparShockHeatingFraction is negative, then the fraction of heating going into
-the parallel pressure is abs(b.u), where b and u are the unit vectors for
-the magnetic field and velocity, respectively.
-If PiShockHeatingFraction is positive, a fraction of the non-adiabatic
-heating is deposited into the first ion fluid and the res
-If the command is used, UseEntropy, UseTotalIonEnergy and UseElectronEntropy are set to true
-(see #ENTROPY and #ELECTRONENTROPY).
+heating is deposited into the electron thermal energy Pe/(GammaE-1),
+and the same amount of energy is removed from the ion thermal energy
+P/(Gamma-1).  If PparShockHeatingFraction is positive, a fraction of
+the non-adiabatic heating is deposited into the parallel ion energy,
+and the same amount of energy is removed from the perpendicular ion
+energy.  If PparShockHeatingFraction is negative, then the fraction of
+heating going into the parallel pressure is abs(b.u), where b and u
+are the unit vectors for the magnetic field and velocity,
+respectively.  If PiShockHeatingFraction is positive, a fraction of
+the non-adiabatic heating is deposited into the first ion fluid and
+the res If the command is used, UseEntropy, UseTotalIonEnergy and
+UseElectronEntropy are set to true (see #ENTROPY and #ELECTRONENTROPY).
 
-Note that the fractions describe ratio of entropy, not energy. For isotropic pressure
-and the same gamma for ions and electrons the entropies and energy densities are
-closely related, $p/(\gamma-1)$ vs $p/\rho^{\gamma-1}$, but for anisotropic ion
-pressure the relations depend on the magnetic field too, which makes things complicated.
+Note that the fractions describe ratio of entropies, not energies.
+The scheme conserves the total energy and the linear combination of
+entropies Weight2*Entropy1 - Weight1*Entropy2, where Weight1 and
+Weight2=1-Weight2 are obtained from the various fractions defined by
+the command, while Entropy1 and Entropy2 are the volumetric (per mass)
+entropy densities, for example $p/rho^\gamma$ for the isotropic case.
+For isotropic pressure and the same gamma for ions and electrons
+the entropies and thermal energy densities $p/(\gamma-1)$ are closely
+related. For anisotropic ion pressure the entropy densities depend on
+the magnetic field too, which makes things complicated.
 
 Default values are 0, which means that all shock heating goes to the (perpendicular)
 ion pressure. For the multiion case, total energy is only conserved if UseTotalIonEnergy
