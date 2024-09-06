@@ -1019,7 +1019,7 @@ contains
                  Weight_I(1)*State_VGB(p_,iTest,jTest,kTest,iBlock) &
                  *State_VGB(Rho_,iTest,jTest,kTest,iBlock)**(-GammaMinus1Ion_I(1)) &
                  - Weight_I(nIonFluid) &
-                 *State_VGB(iPIon_I(nIonFluid),iTest,jTest,kTest,iBlock) & 
+                 *State_VGB(iPIon_I(nIonFluid),iTest,jTest,kTest,iBlock) &
                  *State_VGB(iRhoIon_I(nIonFluid),iTest,jTest,kTest,iBlock) &
                  **(-GammaMinus1Ion_I(nIonFluid))
          end if
