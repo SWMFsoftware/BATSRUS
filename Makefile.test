@@ -204,16 +204,16 @@ test_fluxemergence_run:
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_1d
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_1d
+	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS/run_1d
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.3D PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_3d
 	cd ${TESTDIR}; ./Restart.pl
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_3d
+	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS/run_3d
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; \
+	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS/run_restart; \
 				mv runlog_restart RESULTS/run_restart
 
 test_fluxemergence_check:
@@ -246,7 +246,7 @@ test_shocktube_rundir: test_rundir
 
 test_shocktube_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_shocktube_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
@@ -278,7 +278,7 @@ test_shockround_rundir: test_rundir
 
 test_shockround_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_shockround_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
@@ -313,7 +313,7 @@ test_shocktube_1d_rundir: test_rundir
 
 test_shocktube_1d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_shocktube_1d_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
@@ -348,7 +348,7 @@ test_fastwave_2d_rundir:test_rundir
 
 test_fastwave_2d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_fastwave_2d_check:
 	-@(${DIFFNUM} -t -r=1e-3 -a=1e-6 \
@@ -382,7 +382,7 @@ test_heatcond_2d_rundir:test_rundir
 
 test_heatcond_2d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_heatcond_2d_check:
 	-@(${DIFFNUM} -t -r=1e-9 -a=1e-9 \
@@ -415,7 +415,7 @@ test_shockramp_rundir: test_rundir
 
 test_shockramp_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_shockramp_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
@@ -449,7 +449,7 @@ test_fastwave_rundir: test_rundir
 
 test_fastwave_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_fastwave_check:
 	-@(${DIFFNUM} -t -r=1e-3 -a=1e-6 \
@@ -481,7 +481,7 @@ test_bx0_rundir: test_rundir
 
 test_bx0_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_bx0_check:
 	-@(${DIFFNUM} -t -r=1e-3 -a=1e-6 \
@@ -513,7 +513,7 @@ test_partsteady_rundir: test_rundir
 
 test_partsteady_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_partsteady_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
@@ -546,7 +546,7 @@ test_hallmhd_rundir: test_rundir
 
 test_hallmhd_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_hallmhd_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=2e-7 \
@@ -578,7 +578,7 @@ test_hybrid_rundir: test_rundir
 
 test_hybrid_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_hybrid_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=2e-7 \
@@ -611,7 +611,7 @@ test_viscosity_rundir: test_rundir
 
 test_viscosity_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_viscosity_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
@@ -643,7 +643,7 @@ test_twofluidmhd_rundir: test_rundir
 
 test_twofluidmhd_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_twofluidmhd_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-13 \
@@ -676,7 +676,7 @@ test_multifluid_rundir: test_rundir
 
 test_multifluid_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_multifluid_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
@@ -753,7 +753,7 @@ test_multiion_rundir: test_rundir
 
 test_multiion_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test_multiion_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
@@ -785,7 +785,7 @@ test_mhdnoncons_rundir: test_rundir
 
 test_mhdnoncons_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test_mhdnoncons_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
@@ -820,7 +820,7 @@ test_eosgodunov_rundir: test_rundir
 
 test_eosgodunov_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_eosgodunov_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=3e-7 \
@@ -854,7 +854,7 @@ test_laserpackage_rundir: test_rundir
 
 test_laserpackage_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_laserpackage_check:
 	-@(${DIFFNUM} -t -r=2e-5 \
@@ -888,7 +888,7 @@ test_graydiffusion_rundir: test_rundir
 
 test_graydiffusion_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_graydiffusion_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-4 \
@@ -928,7 +928,7 @@ test_awsom_gpu_rundir:
 
 test_awsom_gpu_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 	
 test_awsom_gpu_check:
 	-@(${DIFFNUM} -a=5e-19 -r=5e-5 -t \
@@ -965,7 +965,7 @@ test_awsom_large_gpu_rundir:
 
 test_awsom_large_gpu_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 	
 test_awsom_large_gpu_check:
 	-@(${DIFFNUM} -a=5e-19 -r=1e-5 -t \
@@ -1010,7 +1010,7 @@ test_awsomchargestate_rundir:
 
 test_awsomchargestate_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -g -M -replace RESULTS
 
 test_awsomchargestate_check:
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
@@ -1078,7 +1078,7 @@ test_bvector_rundir:
 
 test_bvector_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 	
 test_bvector_check:
 	-@(${DIFFNUM} -t -a=1e-26 -r=2e-5 \
@@ -1113,7 +1113,7 @@ test_awsom_bvector_rundir:
 
 test_awsom_bvector_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 	
 test_awsom_bvector_check:
 	-@(${DIFFNUM} -t -a=1e-26 -r=2e-5 \
@@ -1150,7 +1150,7 @@ test_awsom_rundir:
 
 test_awsom_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 	
 test_awsom_check:
 	-@(${DIFFNUM} -t -a=2e-27 -r=2e-5 \
@@ -1187,7 +1187,7 @@ test_stitch_rundir:
 
 test_stitch_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 	
 test_stitch_check:
 	-@(${DIFFNUM} -t -a=4e-15 \
@@ -1227,7 +1227,7 @@ test_outerhelio2d_rundir:
 
 test_outerhelio2d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 	cd ${TESTDIR}; ${BINDIR}/INTERPOLATE.exe < INTERPOLATE.in
 
 test_outerhelio2d_check:
@@ -1272,7 +1272,7 @@ test_outerhelio_run:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.restart ./PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS
 
 test_outerhelio_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
@@ -1306,7 +1306,7 @@ test_outerhelio_1d_rundir:
 
 test_outerhelio_1d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS
 
 test_outerhelio_1d_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
@@ -1340,7 +1340,7 @@ test_outerhelioawsom_rundir:
 
 test_outerhelioawsom_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS
 
 test_outerhelioawsom_check:
 	-@(${DIFFNUM} -r=3e-5 -t \
@@ -1379,7 +1379,7 @@ test_outerheliopui_run:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui.restart ./PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS/
+	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS/
 
 test_outerheliopui_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
@@ -1413,7 +1413,7 @@ test_outerheliopui_1d_rundir:
 
 test_outerheliopui_1d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_outerheliopui_1d_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
@@ -1451,7 +1451,7 @@ test_titan_rundir: test_rundir
 
 test_titan_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_titan_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-15 \
@@ -1472,16 +1472,14 @@ test_titan_restart_save:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartsave PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_titan
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartSave
 
 test_titan_restart_read:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartread PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartRead
 
 test_titan_restart_check:
 	cd ${TESTDIR}/RESULTS; \
@@ -1522,7 +1520,7 @@ test_mars_rundir: test_rundir
 
 test_mars_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_mars_check:
 	-@(${DIFFNUM} -b -r=1e-5 \
@@ -1543,16 +1541,14 @@ test_mars_restart_save:
 	cd ${TESTDIR}; cp Param/MARS/PARAM.in.restartsave PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_mars
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartSave
 
 test_mars_restart_read:
 	cd ${TESTDIR}; cp Param/MARS/PARAM.in.restartread PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartRead
 
 test_mars_restart_check:
 	cd ${TESTDIR}/RESULTS; \
@@ -1591,7 +1587,7 @@ test_marsfluids_rundir: test_rundir
 
 test_marsfluids_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_marsfluids_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-15 \
@@ -1612,16 +1608,14 @@ test_marsfluids_restart_save:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartsave PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_marsfluids
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartSave
 
 test_marsfluids_restart_read:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartread PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartRead
 
 test_marsfluids_restart_check:
 	cd ${TESTDIR}/RESULTS; \
@@ -1661,7 +1655,7 @@ test_venus_rundir: test_rundir
 
 test_venus_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_venus_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-17 \
@@ -1682,16 +1676,14 @@ test_venus_restart_save:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartsave PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_venus
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartSave
 
 test_venus_restart_read:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartread PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartRead
 
 test_venus_restart_check:
 	cd ${TESTDIR}/RESULTS; \
@@ -1729,7 +1721,7 @@ test_saturn_rundir: test_rundir
 
 test_saturn_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_saturn_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-17 \
@@ -1761,7 +1753,7 @@ test_jupiter_rundir: test_rundir
 
 test_jupiter_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_jupiter_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-16 \
@@ -1794,7 +1786,7 @@ test_mercurysph_rundir: test_rundir
 
 test_mercurysph_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -g -M -replace RESULTS
 
 # Sort the files by numerical values of the first three columns (coordinates)
 test_mercurysph_check:
@@ -1833,7 +1825,7 @@ test_ganymede_rundir: test_rundir
 test_ganymede_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -g -M -replace RESULTS
 
 test_ganymede_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-6 \
@@ -1869,7 +1861,7 @@ test_comet_rundir: test_rundir
 
 test_comet_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_comet_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-10 \
@@ -1906,7 +1898,7 @@ test_cometfluids_rundir: test_rundir
 
 test_cometfluids_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_cometfluids_check:
 	-@(${DIFFNUM} -t -r=8e-5 \
@@ -1927,16 +1919,14 @@ test_cometfluids_restart_save:
 	cd ${TESTDIR}; cp Param/COMET3FLUIDSPE/PARAM.in.restartsave PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_cometfluids
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartSave
 
 test_cometfluids_restart_read:
 	cd ${TESTDIR}; cp Param/COMET3FLUIDSPE/PARAM.in.restartread PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartRead
 
 test_cometfluids_restart_check:
 	cd ${TESTDIR}/RESULTS; \
@@ -1976,7 +1966,7 @@ test_earth_rundir: test_rundir
 
 test_earth_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test_earth_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-13 \
@@ -2022,7 +2012,7 @@ test_earthsph_rundir: test_rundir
 
 test_earthsph_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_earthsph_check:
 	-@(${DIFFNUM} -b -r=1e-5 \
@@ -2054,7 +2044,7 @@ test_amr_rundir: test_rundir
 
 test_amr_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_amr_check:
 	-@(${DIFFNUM} -b -a=1e-8 -r=1e-12 \
@@ -2086,7 +2076,7 @@ test_amrsph_rundir: test_rundir
 
 test_amrsph_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_amrsph_check:
 	-@(${DIFFNUM} -b -a=1e-8 -r=1e-12\
@@ -2119,7 +2109,7 @@ test_2bodyplot_rundir: test_rundir
 test_2bodyplot_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -g -M -replace RESULTS
 
 # Sort the files by numerical values of the first three columns (coordinates)
 test_2bodyplot_check:
@@ -2164,7 +2154,7 @@ test_moonimpact_rundir: test_rundir
 
 test_moonimpact_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_moonimpact_check:
 	-@(${DIFFNUM} -t -b -r=1e-5 -a=1e-10 \
@@ -2224,7 +2214,7 @@ test_anisotropic_rundir: test_rundir
 
 test_anisotropic_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_anisotropic_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
@@ -2258,7 +2248,7 @@ test_cometCGhd_rundir: test_rundir
 
 test_cometCGhd_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_cometCGhd_check:
 	-@(${DIFFNUM} -t -r=8e-5 \
@@ -2296,7 +2286,7 @@ test_cometCGfluids_rundir: test_rundir
 
 test_cometCGfluids_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_cometCGfluids_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=1e-12 \
@@ -2329,7 +2319,7 @@ test_europa2fluidspe_rundir: test_rundir
 
 test_europa2fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -replace RESULTS
 
 test_europa2fluidspe_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
@@ -2363,7 +2353,7 @@ test_europa3fluidspe_rundir: test_rundir
 
 test_europa3fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_europa3fluidspe_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
@@ -2395,15 +2385,15 @@ test_region2d_rundir: test_rundir
 
 test_region2d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS/2d
+	cd ${TESTDIR}; ./PostProc.pl -replace RESULTS/2d
 	cd ${TESTDIR}; cp Param/REGION/PARAM.in.cyl PARAM.in
 	-./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl
+	cd ${TESTDIR}; ./PostProc.pl -replace RESULTS/cyl
 	cd ${TESTDIR}; cp Param/REGION/PARAM.in.cyl_lnr PARAM.in
 	-./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl_lnr
+	cd ${TESTDIR}; ./PostProc.pl -replace RESULTS/cyl_lnr
 
 test_region2d_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-6 \
@@ -2443,7 +2433,7 @@ test_fivemoment_alfven_rundir: test_rundir
 
 test_fivemoment_alfven_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test_fivemoment_alfven_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10 \
@@ -2473,7 +2463,7 @@ test_fivemoment_shock_rundir: test_rundir
 
 test_fivemoment_shock_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test_fivemoment_shock_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10 \
@@ -2503,7 +2493,7 @@ test_fivemoment_langmuir_rundir: test_rundir
 
 test_fivemoment_langmuir_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test_fivemoment_langmuir_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10       \
@@ -2536,7 +2526,7 @@ test_L1toBC_rundir: test_rundir
 
 test_L1toBC_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_L1toBC_check:
 	-@(${DIFFNUM} -b \

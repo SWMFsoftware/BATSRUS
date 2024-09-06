@@ -208,7 +208,12 @@ contains
     use EEE_ModMain,   ONLY: EEE_initialize
     use BATL_lib,      ONLY: iComm
     use ModMain,       ONLY: tSimulation, TypeCellBc_I, TypeFaceBc_I, &
-         Body1_
+         Body1_, UseFieldLineThreads
+    use ModTransitionRegion, ONLY: check_tr_param
+    use ModGeometry,   ONLY: RadiusMin
+    use ModTurbulence, ONLY: rMinWaveReflection, QionRatio_I, QionParRatio_I,&
+         UseStochasticHeating, StochasticExponent, StochasticAmplitude, &
+         StochasticExponent2, StochasticAmplitude2
     use ModIO,         ONLY: write_prefix, iUnitOut
     use ModWaves,      ONLY: UseWavePressure, UseAlfvenWaves
     use ModAdvance,    ONLY: UseElectronPressure
@@ -222,6 +227,7 @@ contains
          UnitX_, UnitT_, Gamma, UnitEnergyDens_, UnitU_
 
     real, parameter :: CoulombLog = 20.0
+    real :: QparPerQtotal, QperpPerQtotal
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
@@ -295,7 +301,36 @@ contains
        Lat0 = Lat0Deg*cDegToRad
        Lat1 = Lat1Deg*cDegToRad
     end if
-
+    if(UseFieldLineThreads)then
+       if(UseStochasticHeating)then
+          call check_tr_param(&
+               rMaxIn = RadiusMin, & ! Max radius of TR gap = MinRadius (SC)
+               rMinReflectionTrIn = rMinWaveReflection, &
+               TempInnerIn = tCoronaSi,                 &
+               PressInnerIn = 2*cBoltzmann*tCoronaSi*CoronaN, &
+               UseStochasticHeatingIn = UseStochasticHeating, &
+               StochasticExponentIn = StochasticExponent,     &
+               StochasticAmplitudeIn = StochasticAmplitude,   &
+               StochasticExponent2In = StochasticExponent2,   &
+               StochasticAmplitude2In = StochasticAmplitude2)
+       else
+          if(QionParRatio_I(1)==0.0)then
+             QparPerQtotal = QionRatio_I(1)/3
+             QperpPerQtotal = 2*QparPerQtotal
+          else
+             QparPerQtotal = QionParRatio_I(1)
+             QperpPerQtotal = QionRatio_I(1) - QionParRatio_I(1)
+          end if
+          call check_tr_param(&
+               rMaxIn = RadiusMin, & ! Max radius of TR gap = MinRadius (SC)
+               rMinReflectionTrIn = rMinWaveReflection, &
+               TempInnerIn = tCoronaSi,                 &
+               PressInnerIn = 2*cBoltzmann*tCoronaSi*CoronaN, &
+               UseStochasticHeatingIn = UseStochasticHeating, &
+               QparPerQtotalIn = QparPerQtotal, &
+               QperpPerQtotalIn = QperpPerQtotal)
+       end if
+    end if
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session finished'

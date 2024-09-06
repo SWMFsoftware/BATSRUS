@@ -34,6 +34,9 @@ PLANETARY		TypeNormalization
 -1.			zMin
  1.			zMax
 
+#SHOCKHEATING
+0.9			PiShockHeatingFraction
+
 ! 90 per cent H+ and 10 percent O+
 #SHOCKTUBE
 0.9			LeftState Rho
@@ -65,9 +68,9 @@ PLANETARY		TypeNormalization
 
 #PLASMA
 1.0			FluidMass H+
-32.0			FluidMass O+
+32.0			FluidMass O2++
 1.0			IonCharge H+
-2.0			IonCharge O+
+2.0			IonCharge O2++
 0.0			ElectronTemperatureRatio
 
 Sheared boundary condition is used for non-zero shock slope
