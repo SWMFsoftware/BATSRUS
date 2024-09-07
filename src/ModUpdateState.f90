@@ -1012,12 +1012,16 @@ contains
          if(DoTest)then
             write(*,*) NameSub,' after shock heating P_I=', &
                  State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
-            write(*,*) 'New s_I=', State_VGB(iPIon_I,iTest,jTest,kTest,iBlock) &
-                 *State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock)**(-GammaMinus1Ion_I)
+            write(*,*) 'New s_I=', &
+                 State_VGB(iPIon_I,iTest,jTest,kTest,iBlock) &
+                 *State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock) &
+                 **(-GammaMinus1Ion_I)
             write(*,*) 'New Eth, Sii=', &
-                 sum(State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)*InvGammaMinus1Ion_I),&
+                 sum(State_VGB(iPIon_I,iTest,jTest,kTest,iBlock) &
+                 *InvGammaMinus1Ion_I),&
                  Weight_I(1)*State_VGB(p_,iTest,jTest,kTest,iBlock) &
-                 *State_VGB(Rho_,iTest,jTest,kTest,iBlock)**(-GammaMinus1Ion_I(1)) &
+                 *State_VGB(Rho_,iTest,jTest,kTest,iBlock) &
+                 **(-GammaMinus1Ion_I(1)) &
                  - Weight_I(nIonFluid) &
                  *State_VGB(iPIon_I(nIonFluid),iTest,jTest,kTest,iBlock) &
                  *State_VGB(iRhoIon_I(nIonFluid),iTest,jTest,kTest,iBlock) &
