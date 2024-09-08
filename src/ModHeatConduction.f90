@@ -1450,7 +1450,7 @@ contains
           end do; end do; end do
        end do
 
-    end do    
+    end do
 
     call test_stop(NameSub, DoTest)
 #endif
@@ -1703,7 +1703,7 @@ contains
   subroutine update_impl_heat_cond(iBlock, iBlockSemi, &
        NewSemiAll_VC, OldSemiAll_VC, DconsDsemiAll_VC)
     !$acc routine vector
-    
+
     ! The use ModVarIndexes has to be next to use ModAdvance for sake
     ! of the extremely advanced PGF90 12.9 compiler
 
@@ -1717,12 +1717,12 @@ contains
          InvGammaMinus1, GammaMinus1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin, pMin_I, PeMin
     use BATL_lib,    ONLY: Xyz_DGB
-    use ModMultiFluid, ONLY: UseMultiIon    
+    use ModMultiFluid, ONLY: UseMultiIon
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless
-#ifndef _OPENACC    
-    use ModHeatFluxCollisionless, ONLY: get_gamma_collisionless    
+#ifndef _OPENACC
+    use ModHeatFluxCollisionless, ONLY: get_gamma_collisionless
     use ModUserInterface ! user_material_properties
-#endif    
+#endif
 
     integer, intent(in) :: iBlock, iBlockSemi
     real, intent(in) :: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)

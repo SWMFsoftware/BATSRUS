@@ -279,8 +279,9 @@ contains
       ! The use of matrix:
       ! 1. Complete matrix
       !    State2Tr_VV(RhoUx_:RhoUz_,RhoUtr_) = b_face*No2Si_V(UnitRhoU_)
-      ! 2. State_VC(:,0) = matmul(State_VGB(:,i,j,k,iBlock),State2Tr_VV)   
+      ! 2. State_VC(:,0) = matmul(State_VGB(:,i,j,k,iBlock),State2Tr_VV)
     end subroutine set_transform_matrices
+    !==========================================================================
   end subroutine init
   !============================================================================
   subroutine read_thread_param(NameCommand, iSession)

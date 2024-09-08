@@ -326,7 +326,7 @@ contains
     end if
 
     ! Re-initialize HYPRE preconditioner
-    if(SemiParam%TypePrecond == 'HYPRE') call hypre_initialize   
+    if(SemiParam%TypePrecond == 'HYPRE') call hypre_initialize
 
     ! For nVarSemi = 1,  loop through all semi-implicit variables one-by-one
     ! For nVarSemi = nVarSemiAll, do all (semi-)implicit variables together
@@ -339,7 +339,7 @@ contains
        end if
 
        ! Set right hand side
-       call get_semi_impl_rhs(Rhs_I)              
+       call get_semi_impl_rhs(Rhs_I)
 
        ! Calculate Jacobian matrix if required
        if(SemiParam%DoPrecond)then
@@ -367,7 +367,7 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iVar = iVarSemiMin, iVarSemiMax
                 if(Used_GB(i,j,k,iBlockFromSemi_B(iBlockSemi)))then
-                   n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )      
+                   n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )
                    NewSemiAll_VCB(iVar,i,j,k,iBlockSemi) = &
                         SemiAll_VCB(iVar,i,j,k,iBlockSemi) + x_I(n0)
                 else
@@ -387,34 +387,34 @@ contains
        iBlock = iBlockFromSemi_B(iBlockSemi)
        select case(TypeSemiImplicit)
        case('radiation', 'radcond', 'cond')
-#ifndef _OPENACC          
+#ifndef _OPENACC
           call update_impl_rad_diff(iBlock, iBlockSemi, &
                NewSemiAll_VCB(:,:,:,:,iBlockSemi), &
                SemiAll_VCB(:,:,:,:,iBlockSemi), &
                DconsDsemiAll_VCB(:,:,:,:,iBlockSemi))
-#endif          
+#endif
        case('parcond')
           call update_impl_heat_cond(iBlock, iBlockSemi, &
                NewSemiAll_VCB(:,:,:,:,iBlockSemi), &
                SemiAll_VCB(:,:,:,:,iBlockSemi), &
                DconsDsemiAll_VCB(:,:,:,:,iBlockSemi))
        case('resistivity','resist','resisthall')
-#ifndef _OPENACC                    
+#ifndef _OPENACC
           call update_impl_resistivity(iBlock, &
                NewSemiAll_VCB(:,:,:,:,iBlockSemi))
-#endif                    
+#endif
        case default
-#ifndef _OPENACC                    
+#ifndef _OPENACC
           call stop_mpi(NameSub//': no update_impl implemented for' &
                //TypeSemiImplicit)
-#endif                    
+#endif
        end select
-#ifndef _OPENACC                           
+#ifndef _OPENACC
        call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1)
-#endif       
+#endif
     end do
     !$omp end parallel do
-    
+
     ! call cpu_time(finish)
 
     ! print '("Time = ",f6.3," seconds.")',finish-start
