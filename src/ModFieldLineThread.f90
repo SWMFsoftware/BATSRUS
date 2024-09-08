@@ -16,7 +16,9 @@ module ModFieldLineThread
   use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModVarIndexes, ONLY: Pe_, p_
   use ModMultiFluid, ONLY: MassIon_I
-  use ModTransitionRegion
+  use ModTransitionRegion, ONLY: OpenThread, init_thread, deallocate_thread, &
+       rChromo, LengthPavrSi_, dLogLambdaOverDlogT_, HeatFluxLength_, &
+       check_tr_table, iTableTr, set_thread, integrate_emission, read_tr_param
 
   implicit none
   SAVE
