@@ -163,6 +163,7 @@ module ModPhysics
 
   ! Minimum threshold for electron pressure and extra internal energy
   real:: PeMinSi = -1.1e5, PeMinDim = -1.0, PeMin
+  !$acc declare create(PeMin)
   real:: TeMinDim = -1.0, TeMin
   real:: ExtraEintMinSi = 0.0, ExtraEintMin
 
@@ -782,7 +783,7 @@ contains
     !$acc update device(CellState_VI)
     !$acc update device(FaceState_VI)
 
-    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
+    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, PeMin)
     !$acc update device(OmegaBody, Bdp)
     !$acc update device(gBody)
 
