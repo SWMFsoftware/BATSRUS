@@ -497,7 +497,7 @@ contains
                1:nJ, 1:nK))
           BoundaryThreads_B(iBlock)%bDirFace_DII = 0.0
 
-          allocate(BoundaryThreads_B(iBlock)%iStencil_III(2,&
+          allocate(BoundaryThreads_B(iBlock)%iStencil_III(2:3,&
                1:nJ, 1:nK))
           BoundaryThreads_B(iBlock)%iStencil_III = 0
 
@@ -511,7 +511,9 @@ contains
           BoundaryThreads_B(iBlock)%State_VG = 0.0
 
           allocate(BoundaryThreads_B(iBlock)%OpenThreads_II(1:nJ, 1:nK))
-
+          do k = 1, nK; do j = 1, nJ
+             call init_thread(BoundaryThreads_B(iBlock)%OpenThreads_II(j,k))
+          end do; end do
           IsAllocatedThread_B(iBlock) = .true.
        end if
        ! The threads are now set in a just created block, or
@@ -657,6 +659,12 @@ contains
             OpenThread1 = BoundaryThreads_B(iBlock)%OpenThreads_II(j,k), &
             xyz_to_coord = xyz_to_coord,&
             get_field = get_field)
+       ! Assign the distance from the intersection point of the field line
+       ! with the i=1 coordinate plane to the face center
+       BoundaryThreads_B(iBlock)%OpenThreads_II(j,k)%LengthSi_G(0) = &
+            norm2(Xyz_DGB(:,1,j,k,iBlock)*Weight_I(1) + &
+            Xyz_DGB(:,1,j1,k,iBlock)*Weight_I(2) +      &
+            Xyz_DGB(:,1,j,k1,iBlock)*Weight_I(3) - Xyz_D)*No2Si_V(UnitX_)
        ! First, take magnetic field in the ghost cell
        ! Starting points for all threads are in the centers
        ! of  physical cells near the boundary
