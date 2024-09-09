@@ -265,7 +265,7 @@ contains
     use ModEnergy, ONLY: limit_pressure
     ! use omp_lib
 
-    integer :: iBlockSemi, iBlock, iError1, i, j, k, iVar, n
+    integer :: iBlockSemi, iBlock, iError1, i, j, k, iVar, n, n0
 
     logical :: DoTestKrylov
 
@@ -280,9 +280,6 @@ contains
     if(DoTest) write(*,*)NameSub,' starting with test var, B0=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
-
-    !$acc update host(State_VGB)
-    !$acc update host(DtMax_CB)
 
     if(TypeSemiImplicit(1:6) /= 'resist')then
        ! All used blocks are solved for with the semi-implicit scheme
@@ -343,7 +340,6 @@ contains
 
        ! Set right hand side
        call get_semi_impl_rhs(Rhs_I)
-       !$acc update host(Rhs_I)
 
        ! Calculate Jacobian matrix if required
        if(SemiParam%DoPrecond)then
@@ -363,17 +359,17 @@ contains
             call error_report(NameSub//': Krylov solver failed, Krylov error',&
             SemiParam%Error, iError1, .true.)
 
-       ! NewSemiAll_VCB = SemiAll_VCB + Solution
-       n=0
        !$omp parallel do private( n )
+       !$acc parallel loop gang independent private(n)
        do iBlockSemi = 1, nBlockSemi
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
+          !$acc loop vector independent private(n0)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iVar = iVarSemiMin, iVarSemiMax
-                n = n + 1
                 if(Used_GB(i,j,k,iBlockFromSemi_B(iBlockSemi)))then
+                   n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )
                    NewSemiAll_VCB(iVar,i,j,k,iBlockSemi) = &
-                        SemiAll_VCB(iVar,i,j,k,iBlockSemi) + x_I(n)
+                        SemiAll_VCB(iVar,i,j,k,iBlockSemi) + x_I(n0)
                 else
                    NewSemiAll_VCB(iVar,i,j,k,iBlockSemi) = &
                         SemiAll_VCB(iVar,i,j,k,iBlockSemi)
@@ -386,27 +382,36 @@ contains
 
     ! Put back semi-implicit result into the explicit code
     !$omp parallel do private(iBlock)
+    !$acc parallel loop gang private(iBlock)
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        select case(TypeSemiImplicit)
        case('radiation', 'radcond', 'cond')
+#ifndef _OPENACC
           call update_impl_rad_diff(iBlock, iBlockSemi, &
                NewSemiAll_VCB(:,:,:,:,iBlockSemi), &
                SemiAll_VCB(:,:,:,:,iBlockSemi), &
                DconsDsemiAll_VCB(:,:,:,:,iBlockSemi))
+#endif
        case('parcond')
           call update_impl_heat_cond(iBlock, iBlockSemi, &
                NewSemiAll_VCB(:,:,:,:,iBlockSemi), &
                SemiAll_VCB(:,:,:,:,iBlockSemi), &
                DconsDsemiAll_VCB(:,:,:,:,iBlockSemi))
        case('resistivity','resist','resisthall')
+#ifndef _OPENACC
           call update_impl_resistivity(iBlock, &
                NewSemiAll_VCB(:,:,:,:,iBlockSemi))
+#endif
        case default
+#ifndef _OPENACC
           call stop_mpi(NameSub//': no update_impl implemented for' &
                //TypeSemiImplicit)
+#endif
        end select
+#ifndef _OPENACC
        call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1)
+#endif
     end do
     !$omp end parallel do
 
@@ -422,9 +427,7 @@ contains
     ! Exchange messages, so ghost cells of all blocks are updated
     if(UseFieldLineThreads) call advance_threads(Heat_)
 
-    !$acc update device(State_VGB)
     call exchange_messages
-    !$acc update host(State_VGB)
 
     if(DoTest) write(*,*)NameSub,' final test var, B0=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &

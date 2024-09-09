@@ -14,9 +14,12 @@ module ModFieldLineThread
   use ModMain,       ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,         ONLY: get_b0
   use ModPhysics,    ONLY: Z => AverageIonCharge
-  use ModVarIndexes, ONLY: Pe_, p_
+  use ModVarIndexes, ONLY: Pe_, p_, nVar
   use ModMultiFluid, ONLY: MassIon_I
-  use ModTransitionRegion
+  use ModTransitionRegion, ONLY: OpenThread, init_thread, deallocate_thread, &
+       rChromo, LengthPavrSi_, dLogLambdaOverDlogT_, HeatFluxLength_, &
+       check_tr_table, iTableTr, set_thread, integrate_emission, &
+       read_tr_param, RhoTr_=>Rho_, WminorTr_=>Wminor_
 
   implicit none
   SAVE
@@ -179,8 +182,8 @@ module ModFieldLineThread
   ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r))
   ! The plasma properties dependent coefficient needed to evaluate the
   ! eefect of gravity on the hydrostatic equilibrium
-  real,public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
-
+  real, public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
+  real, public :: State2Tr_VV(1:nVar,RhoTr_:WminorTr_)
   logical :: IsInitialized = .false.
 
   character(len=100) :: NameRestartFile
@@ -243,7 +246,42 @@ contains
     do iBlock = 1, MaxBlock
        call nullify_thread_b(iBlock)
     end do
-
+    call set_transform_matrices
+  contains
+    !==========================================================================
+    subroutine set_transform_matrices
+      use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, P_, Pe_, Ppar_, &
+           WaveFirst_, WaveLast_
+      use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitRhoU_, UnitP_
+      use ModTransitionRegion, ONLY: Utr_=>U_, RhoUtr_=>RhoU_, Ptr_=>P_, &
+           PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_, WmajorTr_=>Wmajor_
+      use ModAdvance, ONLY: UseAnisoPressure
+      !------------------------------------------------------------------------
+      State2Tr_VV(1:nVar,RhoTr_:WminorTr_) = 0.0
+      State2Tr_VV(Rho_,RhoTr_) = No2Si_V(UnitRho_)
+      if(UseElectronPressure)then
+         if(UseAnisoPressure)then
+            State2Tr_VV(Ppar_,PparTr_) = No2Si_V(UnitP_)
+         else
+            State2Tr_VV(P_,PparTr_) = No2Si_V(UnitP_)
+         end if
+         State2Tr_VV(P_,Ptr_) = No2Si_V(UnitP_)
+         State2Tr_VV(Pe_,PeParTr_) = No2Si_V(UnitP_)
+         State2Tr_VV(Pe_,PeTr_) = No2Si_V(UnitP_)
+      else
+         State2Tr_VV(P_,PparTr_) = (1 - PeFraction)*No2Si_V(UnitP_)
+         State2Tr_VV(P_,Ptr_) = (1 - PeFraction)*No2Si_V(UnitP_)
+         State2Tr_VV(P_,PeParTr_) =  PeFraction*No2Si_V(UnitP_)
+         State2Tr_VV(P_,PeTr_) = PeFraction*No2Si_V(UnitP_)
+      end if
+      State2Tr_VV(WaveFirst_,WmajorTr_) = No2Si_V(UnitP_)
+      State2Tr_VV(WaveLast_,WminorTr_) = No2Si_V(UnitP_)
+      ! The use of matrix:
+      ! 1. Complete matrix
+      !    State2Tr_VV(RhoUx_:RhoUz_,RhoUtr_) = b_face*No2Si_V(UnitRhoU_)
+      ! 2. State_VC(:,0) = matmul(State_VGB(:,i,j,k,iBlock),State2Tr_VV)
+    end subroutine set_transform_matrices
+    !==========================================================================
   end subroutine init
   !============================================================================
   subroutine read_thread_param(NameCommand, iSession)
