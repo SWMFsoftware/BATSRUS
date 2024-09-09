@@ -28,7 +28,7 @@ module ModHeatFluxCollisionless
   logical, public :: UseHeatFluxCollisionless = .false.
   real :: CollisionlessAlpha = 1.05
   !$acc declare create(UseHeatFluxCollisionless)
-  
+
 contains
   !============================================================================
 
