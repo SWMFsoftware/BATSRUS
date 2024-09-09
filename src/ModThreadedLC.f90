@@ -130,7 +130,7 @@ contains
     use ModConst,           ONLY: te_ti_exchange_rate! cElectronMass, &
          ! cEps, cElectronCharge, cTwoPi, cProtonMass
     use ModMultiFluid,      ONLY: MassIon_I
-    use ModFieldLineThread, ONLY:  nPointThreadMax, init_thread=>init
+    use ModFieldLineThread, ONLY:  nPointThreadMax, init
     use ModPhysics,         ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
 
@@ -181,7 +181,7 @@ contains
     !
     ! Initialize thread structure
     !
-    call init_thread
+    call init
 
     !
     ! In hydrogen palsma, the electron-ion heat exchange is described by
