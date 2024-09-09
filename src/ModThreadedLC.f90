@@ -130,7 +130,7 @@ contains
     use ModConst,           ONLY: te_ti_exchange_rate! cElectronMass, &
          ! cEps, cElectronCharge, cTwoPi, cProtonMass
     use ModMultiFluid,      ONLY: MassIon_I
-    use ModFieldLineThread, ONLY:  nPointThreadMax, init
+    use ModFieldLineThread, ONLY:  nPointThreadMax, init_threads
     use ModPhysics,         ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
 
@@ -181,7 +181,7 @@ contains
     !
     ! Initialize thread structure
     !
-    call init
+    call init_threads
 
     !
     ! In hydrogen palsma, the electron-ion heat exchange is described by
@@ -1146,19 +1146,24 @@ contains
        iImplBlock)
 
     use EEE_ModCommonVariables, ONLY: UseCme
-    use ModFieldLineThread,     ONLY: b_cme_d
+    use ModFieldLineThread,     ONLY: b_cme_d, State2Tr_VV
     use ModMain,       ONLY: nStep, nIteration, tSimulation
     use ModAdvance,      ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nJ, nK
-    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
+    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitRhoU_,&
          UnitEnergyDens_, UnitU_, UnitX_, UnitB_, InvGammaElectronMinus1
     use ModVarIndexes,   ONLY: Rho_, p_, Bx_, Bz_, &
-         RhoUx_, RhoUz_, EHot_, WDiff_
+         RhoUx_, RhoUz_, EHot_, WDiff_, nVar
     use ModImplicit,     ONLY: iTeImpl
     use ModB0,           ONLY: B0_DGB
     use ModWaves,        ONLY: WaveFirst_, WaveLast_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
+    use ModTransitionRegion, ONLY: RhoTr_=>Rho_, Utr_=>U_, RhoUtr_=>RhoU_, &
+         Ptr_=>P_, PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_,   &
+         PperpTr_=>Pperp_, PePerpTr_=>PePerp_, WminorTr_=>Wminor_, &
+         WmajorTr_=>Wmajor_
+    use ModConst, ONLY: cMu
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
@@ -1170,7 +1175,8 @@ contains
     ! before setting the BC
     integer:: iAction
 
-    integer :: i, j, k, iMajor, iMinor
+    integer :: i, j, k, iMajor, iMinor, j1, k1
+    real :: Weight_I(3), State_V(nVarState), StateTr_V(WminorTr_), SignBr
     real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
     real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: TiSiIn, PiSiOut
@@ -1205,6 +1211,26 @@ contains
        call stop_mpi('Generic EOS is not applicable with threads')
     end if
     do k = 1, nK; do j = 1, nJ
+       bDir_D = BoundaryThreads_B(iBlock) % bDirFace_DII(:,j,k)
+       j1 = BoundaryThreads_B(iBlock) % iStencil_III(2,j,k)
+       k1 = BoundaryThreads_B(iBlock) % iStencil_III(3,j,k)
+       Weight_I = BoundaryThreads_B(iBlock) % Weight_III(:,j,k)
+       State_V = Weight_I(1)*State_VG(:,1,j,k) + &
+            Weight_I(2)*State_VG(:,1,j1,k)     + &
+            Weight_I(3)*State_VG(:,1,j,k1)
+       if(nVarState==nVar)then
+          State2Tr_VV(RhoUx_:RhoUz_,RhoUtr_) = bDir_D*No2Si_V(UnitRhoU_)
+          StateTr_V = matmul(State_V,State2Tr_VV)
+          StateTr_V(Utr_) = StateTr_V(RhoUtr_)/StateTr_V(RhoTr_)
+          if(BoundaryThreads_B(iBlock) %SignBface_II(j,k) >0)then
+             StateTr_V(WmajorTr_:WminorTr_) = StateTr_V(WmajorTr_:WminorTr_)/&
+                  (PoyntingFluxPerBSi*sqrt(cMu*StateTr_V(RhoTr_)))
+          else
+             StateTr_V(WmajorTr_:WminorTr_) = &
+                  StateTr_V( [WminorTr_, WminorTr_] )/&
+                  (PoyntingFluxPerBSi*sqrt(cMu*StateTr_V(RhoTr_)))
+          end if
+       end if
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))

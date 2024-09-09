@@ -16,9 +16,10 @@ module ModFieldLineThread
   use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModVarIndexes, ONLY: Pe_, p_, nVar
   use ModMultiFluid, ONLY: MassIon_I
-  use ModTransitionRegion, ONLY: OpenThread, init_thread, deallocate_thread, &
+  use ModTransitionRegion, ONLY: OpenThread, allocate_thread_arr, &
+       deallocate_thread_arr, &
        rChromo, LengthPavrSi_, dLogLambdaOverDlogT_, HeatFluxLength_, &
-       check_tr_table, iTableTr, set_thread, integrate_emission, &
+       iTableTr, set_thread, integrate_emission, &
        read_tr_param, RhoTr_=>Rho_, WminorTr_=>Wminor_
 
   implicit none
@@ -145,9 +146,8 @@ module ModFieldLineThread
 
   ! Public members
   public :: BoundaryThreads
-  public :: init                      ! Initializes module
+  public :: init_threads      ! Initializes module
   public :: read_thread_param         ! Read parameters of threads
-  public :: check_tr_table            ! Calculate a table for transition region
   public :: set_threads       ! (Re)Sets threads in the inner boundary blocks
 
   ! Called prior to different invokes of set_cell_boundary, to determine
@@ -183,14 +183,15 @@ module ModFieldLineThread
   ! The plasma properties dependent coefficient needed to evaluate the
   ! eefect of gravity on the hydrostatic equilibrium
   real, public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
-  real, public :: State2Tr_VV(1:nVar,RhoTr_:WminorTr_)
+  real, public, dimension(1:nVar,RhoTr_:WminorTr_) :: State2Tr_VV, Face2Tr_VV
+  real, public, dimension(RhoTr_:WminorTr_,1:nVar) :: Tr2State_VV, Tr2Face_FF
   logical :: IsInitialized = .false.
 
   character(len=100) :: NameRestartFile
 
 contains
   !============================================================================
-  subroutine init
+  subroutine init_threads
 
     use ModTurbulence, ONLY: PoyntingFluxPerB, &
          LPerpTimesSqrtB
@@ -251,38 +252,55 @@ contains
     !==========================================================================
     subroutine set_transform_matrices
       use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, P_, Pe_, Ppar_, &
-           WaveFirst_, WaveLast_
+           WaveFirst_, WaveLast_, Ux_, Uz_
       use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitRhoU_, UnitP_
-      use ModTransitionRegion, ONLY: Utr_=>U_, RhoUtr_=>RhoU_, Ptr_=>P_, &
-           PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_, WmajorTr_=>Wmajor_
+      use ModTransitionRegion, ONLY: Utr_=>U_, RhoUtr_=>RhoU_, &
+           Ptr_=>P_, PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_,   &
+           PperpTr_=>Pperp_, PePerpTr_=>PePerp_, WmajorTr_=>Wmajor_
       use ModAdvance, ONLY: UseAnisoPressure
       !------------------------------------------------------------------------
       State2Tr_VV(1:nVar,RhoTr_:WminorTr_) = 0.0
+      Face2Tr_VV(1:nVar,RhoTr_:WminorTr_) = 0.0
       State2Tr_VV(Rho_,RhoTr_) = No2Si_V(UnitRho_)
+      Face2Tr_VV(Rho_,RhoTr_) = No2Si_V(UnitRho_)
       if(UseElectronPressure)then
          if(UseAnisoPressure)then
             State2Tr_VV(Ppar_,PparTr_) = No2Si_V(UnitP_)
+            Face2Tr_VV(Ppar_,PparTr_)  = No2Si_V(UnitP_)
+            Face2Tr_VV(Ppar_,PperpTr_) = -0.50*No2Si_V(UnitP_)
+            Face2Tr_VV(P_,PperpTr_) = 1.50*No2Si_V(UnitP_)
          else
             State2Tr_VV(P_,PparTr_) = No2Si_V(UnitP_)
+            Face2Tr_VV(P_,PparTr_) =  No2Si_V(UnitP_)
+            Face2Tr_VV(P_,PperpTr_) =  No2Si_V(UnitP_)
          end if
          State2Tr_VV(P_,Ptr_) = No2Si_V(UnitP_)
          State2Tr_VV(Pe_,PeParTr_) = No2Si_V(UnitP_)
          State2Tr_VV(Pe_,PeTr_) = No2Si_V(UnitP_)
+         Face2Tr_VV(Pe_,PeParTr_) = No2Si_V(UnitP_)
+         Face2Tr_VV(Pe_,PePerpTr_) = No2Si_V(UnitP_)
       else
          State2Tr_VV(P_,PparTr_) = (1 - PeFraction)*No2Si_V(UnitP_)
          State2Tr_VV(P_,Ptr_) = (1 - PeFraction)*No2Si_V(UnitP_)
          State2Tr_VV(P_,PeParTr_) =  PeFraction*No2Si_V(UnitP_)
          State2Tr_VV(P_,PeTr_) = PeFraction*No2Si_V(UnitP_)
+         Face2Tr_VV(P_,PparTr_) = (1 - PeFraction)*No2Si_V(UnitP_)
+         Face2Tr_VV(P_,PperpTr_) = (1 - PeFraction)*No2Si_V(UnitP_)
+         Face2Tr_VV(P_,PeParTr_) =  PeFraction*No2Si_V(UnitP_)
+         Face2Tr_VV(P_,PePerpTr_) = PeFraction*No2Si_V(UnitP_)
       end if
       State2Tr_VV(WaveFirst_,WmajorTr_) = No2Si_V(UnitP_)
       State2Tr_VV(WaveLast_,WminorTr_) = No2Si_V(UnitP_)
-      ! The use of matrix:
+      ! The use of matrix State2Tr:
       ! 1. Complete matrix
       !    State2Tr_VV(RhoUx_:RhoUz_,RhoUtr_) = b_face*No2Si_V(UnitRhoU_)
       ! 2. State_VC(:,0) = matmul(State_VGB(:,i,j,k,iBlock),State2Tr_VV)
+      ! The use of matrix Face2Tr:
+      ! 1. Complete matrix
+      !    Face2Tr_VV(Ux_:Uz_,Utr_) = b_face*No2Si_V(UnitU_)
+      ! 2. rFace_VF(:,0) = matmul(RightFace_VFX(:,i,j,k),Face2Tr_VV)
     end subroutine set_transform_matrices
-    !==========================================================================
-  end subroutine init
+  end subroutine init_threads
   !============================================================================
   subroutine read_thread_param(NameCommand, iSession)
 
@@ -389,10 +407,8 @@ contains
     deallocate(BoundaryThreads_B(iBlock)%iStencil_III)
     deallocate(BoundaryThreads_B(iBlock)%Weight_III)
     deallocate(BoundaryThreads_B(iBlock)%State_VG)
-    do k = 1, nK; do j = 1, nJ
-       call deallocate_thread(BoundaryThreads_B(iBlock)%OpenThreads_II(j,k))
-    end do; end do
-    deallocate(BoundaryThreads_B(iBlock)%OpenThreads_II)
+    call deallocate_thread_arr(&
+         BoundaryThreads_B(iBlock)%OpenThreads_II, nJ, nK)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
     call test_stop(NameSub, DoTest, iBlock)
@@ -548,10 +564,9 @@ contains
                jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock)%State_VG = 0.0
 
-          allocate(BoundaryThreads_B(iBlock)%OpenThreads_II(1:nJ, 1:nK))
-          do k = 1, nK; do j = 1, nJ
-             call init_thread(BoundaryThreads_B(iBlock)%OpenThreads_II(j,k))
-          end do; end do
+          call allocate_thread_arr(&
+               BoundaryThreads_B(iBlock)%OpenThreads_II, nJ, nK)
+
           IsAllocatedThread_B(iBlock) = .true.
        end if
        ! The threads are now set in a just created block, or
@@ -671,7 +686,7 @@ contains
        XyzRlonlat_DD =  rot_xyz_rlonlat(Coord_D(2), Coord_D(3))
        bRlonlat_D = matmul(B0_D,XyzRlonlat_DD)
        SignBr = sign(1.0,bRlonlat_D(r_))
-       BoundaryThreads_B(iBlock)%SignB_II(j, k) = SignBr
+       BoundaryThreads_B(iBlock)%SignBface_II(j, k) = SignBr
        B0_D = SignBr*B0_D
        BoundaryThreads_B(iBlock)%bDirFace_DII(:,j, k) = B0_D
        bRlonlat_D = SignBr*bRlonlat_D
