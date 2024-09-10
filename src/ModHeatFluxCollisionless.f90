@@ -27,6 +27,7 @@ module ModHeatFluxCollisionless
   ! Parameters for collisionless heat conduction
   logical, public :: UseHeatFluxCollisionless = .false.
   real :: CollisionlessAlpha = 1.05
+  !$acc declare create(UseHeatFluxCollisionless)
 
 contains
   !============================================================================

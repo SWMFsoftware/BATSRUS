@@ -1749,6 +1749,8 @@ contains
 
     DtLocal = Dt
 
+    !$acc loop vector independent &
+    !$acc private(DeltaEinternal, Einternal, EinternalSi, PressureSi)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
