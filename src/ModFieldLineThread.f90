@@ -154,7 +154,7 @@ module ModFieldLineThread
   ! how the solution on the thread should be (or not be) advanced:
   ! after hydro stage or after the heat conduction stage etc
   public :: advance_threads
-
+  public :: advance_threaded_block_expl
   ! Correspondent named indexes
   integer,public,parameter:: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2, &
        Restart_=3
@@ -162,7 +162,7 @@ module ModFieldLineThread
   public :: interpolate_thread_state  ! Interpolate state from State_VG
   public :: set_thread_plotvar        ! Plot variables for "shell" plots
   public :: get_tr_los_image          ! Correction for TR on LOS images
-
+  public :: is_threaded_block         ! Mark blocks near internal boundary
   ! Saves thread state into restart
   public :: save_thread_restart
   ! interface procedure to easy calculate the CME field
@@ -302,6 +302,16 @@ contains
     end subroutine set_transform_matrices
     !==========================================================================
   end subroutine init_threads
+  !============================================================================
+  logical function is_threaded_block(iBlock)
+
+    use ModConst, ONLY: cTiny
+    use BATL_lib, ONLY: CoordMin_D, CoordMin_DB
+    integer, intent(in) :: iBlock
+    !--------------------------------------------------------------------------
+    is_threaded_block = &
+         abs(CoordMin_D(1) - CoordMin_DB(1,iBlock)) < cTiny
+  end function is_threaded_block
   !============================================================================
   subroutine read_thread_param(NameCommand, iSession)
 
@@ -476,14 +486,14 @@ contains
        ! If not DoThreads_B CYCLE
        if(.not.DoThreads_B(iBlock))then
           if(IsAllocatedThread_B(iBlock).and.&
-               DiLevel_EB(1,iBlock)/=Unset_)&
+               .not.is_threaded_block(iBlock))&
                call deallocate_thread_b(iBlock)
           CYCLE
        end if
        DoThreads_B(iBlock) = .false.
        ! Check if the block is at the inner boundary
        ! Otherwise CYCLE
-       if(DiLevel_EB(1,iBlock)/=Unset_)then
+       if(.not.is_threaded_block(iBlock))then
           if(IsAllocatedThread_B(iBlock))&
                call deallocate_thread_b(iBlock)
           CYCLE
@@ -1059,6 +1069,19 @@ contains
     call test_stop(NameSub, DoTest)
 
   end subroutine advance_threads
+  !============================================================================
+  subroutine advance_threaded_block_expl(iBlock, iStage, &
+                        RightState_VX,       &
+                        LeftState_VX,        &
+                        DtIn)
+    
+    integer, intent(in) :: iBlock, iStage
+    real, intent(in)    :: RightState_VX(nVar, 1:nJ, 1:nK)
+    real, intent(inout) :: LeftState_VX(nVar, 1:nJ, 1:nK)
+    real, optional, intent(in) :: DtIn
+    !--------------------------------------------------------------------------
+    RETURN   ! TBD!!!
+  end subroutine advance_threaded_block_expl
   !============================================================================
   subroutine read_thread_restart(iBlock)
 

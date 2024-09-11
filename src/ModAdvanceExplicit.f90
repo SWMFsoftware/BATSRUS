@@ -23,7 +23,8 @@ contains
     use ModFaceValue,  ONLY: calc_face_value, calc_cell_norm_velocity, &
          set_low_order_face
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
-         UseAdaptiveLowOrder, UseMhdMomentumFlux, iTypeUpdate, UpdateFast_
+         UseAdaptiveLowOrder, UseMhdMomentumFlux, iTypeUpdate, UpdateFast_,  &
+         LeftState_VX,  RightState_VX
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: DiLevel_EB
@@ -45,7 +46,8 @@ contains
     use BATL_lib, ONLY: message_pass_face, IsAnyAxis
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
-         UseFieldLineThreads, advance_threads, Enthalpy_
+         UseFieldLineThreads, advance_threads, Enthalpy_, is_threaded_block, &
+         advance_threaded_block_expl
     use ModUpdateStateFast, ONLY: update_state_fast
     use ModUpdateState, ONLY: update_check, update_state, check_nan
     use ModConstrainDivB, ONLY: &
@@ -152,7 +154,18 @@ contains
              call timing_stop('calc_facevalues')
              if(IsBody_B(iBlock)) &
                   call set_face_boundary(iBlock, tSimulation,.false.)
-
+             if(UseFieldLineThreads.and.is_threaded_block(iBlock))then
+                if(IsTimeAccurate)then
+                   call advance_threaded_block_expl(iBlock, iStage, &
+                        RightState_VX(:,1, 1:nJ, 1:nK),       &
+                        LeftState_VX(:,1, 1:nJ, 1:nK),        &
+                        DtIn = Dt*No2Si_V(UnitT_))
+                else
+                   call advance_threaded_block_expl(iBlock, iStage, &
+                        RightState_VX(:, 1, 1:nJ, 1:nK),       &
+                        LeftState_VX(:, 1, 1:nJ, 1:nK))
+                end if
+             end if
              ! Compute interface fluxes for each cell.
              call timing_start('calc_fluxes')
              call calc_face_flux(.false., iBlock)
