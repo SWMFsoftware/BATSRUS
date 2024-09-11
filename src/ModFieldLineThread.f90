@@ -1074,7 +1074,7 @@ contains
                         RightState_VX,       &
                         LeftState_VX,        &
                         DtIn)
-    
+
     integer, intent(in) :: iBlock, iStage
     real, intent(in)    :: RightState_VX(nVar, 1:nJ, 1:nK)
     real, intent(inout) :: LeftState_VX(nVar, 1:nJ, 1:nK)
