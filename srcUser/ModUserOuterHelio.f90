@@ -68,7 +68,8 @@ module ModUser
        IMPLEMENTED12 => user_calc_sources_expl,         &
        IMPLEMENTED14 => user_init_session,              &
        IMPLEMENTED15 => user_calc_sources_impl,         &
-       IMPLEMENTED16 => user_init_point_implicit
+       IMPLEMENTED16 => user_init_point_implicit,       &
+       IMPLEMENTED17 => user_set_boundary_cells
 
   include 'user_module.h' ! list of public methods
 
@@ -3664,6 +3665,29 @@ contains
 
   end subroutine user_init_point_implicit
   !============================================================================
+  subroutine user_set_boundary_cells(iBlock)
+
+    use ModMain, ONLY: NameThisComp, ExtraBc_
+    use ModBuffer, ONLY: BufferMin_D, BufferMax_D, BuffR_
+    use ModBoundaryGeometry, ONLY: iBoundary_GB
+
+    ! Set "false" cells that are surrounded by the "extra" face boundary
+
+    integer,intent(in)::iBlock
+
+    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    if(NameThisComp == 'IH') then
+       where(r_GB(:,:,:,iBlock) > BufferMax_D(BuffR_)) &
+            iBoundary_GB(:,:,:,iBlock) = ExtraBc_
+    end if
+    if(NameThisComp == 'OH') then
+       where(r_GB(:,:,:,iBlock) < BufferMin_D(BuffR_)) &
+            iBoundary_GB(:,:,:,iBlock) = ExtraBc_
+    end if
+
+  end subroutine user_set_boundary_cells
+
 end module ModUser
 !==============================================================================
 subroutine get_charge_exchange_wrapper( &
