@@ -184,7 +184,7 @@ module ModFieldLineThread
   ! eefect of gravity on the hydrostatic equilibrium
   real, public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
   real, public, dimension(1:nVar,RhoTr_:WminorTr_) :: State2Tr_VV, Face2Tr_VV
-  real, public, dimension(RhoTr_:WminorTr_,1:nVar) :: Tr2State_VV, Tr2Face_FF
+  real, public, dimension(RhoTr_:WminorTr_,1:nVar) :: Tr2State_VV, Tr2Face_VV
   logical :: IsInitialized = .false.
 
   character(len=100) :: NameRestartFile
