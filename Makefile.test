@@ -757,7 +757,7 @@ test_multiion_run:
 
 test_multiion_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
-		${TESTDIR}/RESULTS/GM/1d_*t02.*.out \
+		${TESTDIR}/RESULTS/GM/1d_*t00.2*.out \
 		Param/MULTIION/TestOutput/1d_t2.out \
 		> test_multiion.diff)
 	ls -l test_multiion.diff

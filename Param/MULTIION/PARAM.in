@@ -1,6 +1,9 @@
 #DESCRIPTION
 Param/MULTIION/PARAM.in: multiion shocktube test		StringDescription
 
+#SHOCKHEATING
+-0.9			PiShockHeatingFraction
+
 #POINTIMPLICIT
 T			UsePointImplicit
 0.5			BetaPointImplicit
@@ -12,9 +15,13 @@ NONE			NamePlanet
 
 ! Use planetary units so that the multi-ion effects are in reasonable range
 #IOUNITS
+NONE
+
 PLANETARY		TypeIoUnit
 
 #NORMALIZATION
+NONE
+
 PLANETARY		TypeNormalization
 
 #CHECKGRIDSIZE
@@ -34,49 +41,46 @@ PLANETARY		TypeNormalization
 -1.			zMin
  1.			zMax
 
-#SHOCKHEATING
-0.9			PiShockHeatingFraction
-
 ! 90 per cent H+ and 10 percent O+
 #SHOCKTUBE
-0.9			LeftState Rho
-0.			LeftState Ux
+18.0			LeftState Rho H
+-100.			LeftState Ux
 0.			LeftState Uy
 0.			LeftState Uz
-1.0			LeftState Bx
-0.1			LeftState By
-0.			LeftState Bz
-0.9e-4			LeftState P
-0.1			LeftState RhoO2
-0.			LeftState Ux
+0.0			LeftState Bx
+0.0			LeftState By
+-16.0			LeftState Bz
+1e6			LeftState P
+2.0			LeftState Rho He
+-100.			LeftState Ux
 0.			LeftState Uy
 0.			LeftState Uz
-0.1e-4			LeftState P
-0.9			RightState rho
-0.			RightState Ux
+1e5			LeftState P
+4.5			RightState Rho H
+-400.			RightState Ux
 0.			RightState Uy
 0.			RightState Uz
-1.0			RightState Bx
--0.1			RightState By
-0.			RightState Bz
-0.9e-4			RightState P
-0.1			RightState RhoO2
-0.			RightState Ux
+0.0			RightState Bx
+0.0			RightState By
+-4.0			RightState Bz
+1e5			RightState P
+0.5			RightState Rho He
+-400.			RightState Ux
 0.			RightState Uy
 0.			RightState Uz
-0.1e-4			RightState P
+1e4			RightState P
 
 #PLASMA
 1.0			FluidMass H+
-32.0			FluidMass O2++
+4.0			FluidMass He+
 1.0			IonCharge H+
-2.0			IonCharge O2++
+1.0			IonCharge He+
 0.0			ElectronTemperatureRatio
 
 Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY
-periodic		TypeBc1
-periodic		TypeBc2
+float			TypeBc1
+float			TypeBc2
 
 #TIMESTEPPING
 2			nStage
@@ -106,11 +110,10 @@ Save ASCII IDL file for comparison with reference solution
 1			nPlotFile
 idl_ascii 1d MHD		StringPlot
 -1			DnSavePlot
-0.1			DtSavePlot
+0.05			DtSavePlot
 0.0			DxSavePlot
 
 The grid size is 256, so the final time corresponds to the usual 0.1
 #STOP
 -1			MaxIteration
-2.0			tSimulationMax
-
+0.2			tSimulationMax
