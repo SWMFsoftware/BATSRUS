@@ -15,14 +15,10 @@ NONE			NamePlanet
 
 ! Use planetary units so that the multi-ion effects are in reasonable range
 #IOUNITS
-NONE
-
-PLANETARY		TypeIoUnit
+NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE
-
-PLANETARY		TypeNormalization
+NONE			TypeNormalization
 
 #CHECKGRIDSIZE
 64			nI
