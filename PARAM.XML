@@ -9711,25 +9711,35 @@ UseEntropy=T and UseTotalIonEnergy=T in the multiion case.
   <parameter name="PparShockHeatingFraction" type="real"
 	     min="-1" max="1" default="0" if="$UsePpar"/>
   <parameter name="PiShockHeatingFraction" type="real"
-	     min="0" max="1" default="0" if="$nIonFluid == 2"/>
+	     min="-1" max="1" default="0" if="$nIonFluid == 2"/>
 
 #SHOCKHEATING
-0.5                     PeShockHeatingFraction (read if electron pressure is used)
-1.0                     PparShockHeatingFraction (read if ion pressure is anisotropic)
-0.4                     PiShockHeatingFraction (read if nIonFluid=2)
+0.5      PeShockHeatingFraction (read if electron pressure is used)
+1.0      PparShockHeatingFraction (read if ion pressure is anisotropic)
+-0.4     PiShockHeatingFraction (read if nIonFluid=2)
 
-If PeShockHeatingFraction is positive, a fraction of the non-adiabatic
+If electron pressure is solved for and PeShockHeatingFraction is
+set to a positive value, a fraction of the non-adiabatic
 heating is deposited into the electron thermal energy Pe/(GammaE-1),
 and the same amount of energy is removed from the ion thermal energy
-P/(Gamma-1).  If PparShockHeatingFraction is positive, a fraction of
+P/(Gamma-1).
+
+If anisotropic ion pressure is solved for and PparShockHeatingFraction
+is set to a positive value, then a fraction of
 the non-adiabatic heating is deposited into the parallel ion energy,
 and the same amount of energy is removed from the perpendicular ion
 energy.  If PparShockHeatingFraction is negative, then the fraction of
 heating going into the parallel pressure is abs(b.u), where b and u
 are the unit vectors for the magnetic field and velocity,
-respectively.  If PiShockHeatingFraction is positive, a fraction of
-the non-adiabatic heating is deposited into the first ion fluid and
-the res If the command is used, UseEntropy, UseTotalIonEnergy and
+respectively.
+
+If multiple ion fluids are solved for and PiShockHeatingFraction is
+set to a positive value, then a fraction of the non-adiabatic heating
+is deposited into the second ion fluid and the rest into the first ion
+fluid. If PiShockHeatingFraction is set to a negative value, then
+the fluid weights are multiplied with the densities.
+
+If this command is used, UseEntropy, UseTotalIonEnergy and
 UseElectronEntropy are set to true (see #ENTROPY and #ELECTRONENTROPY).
 
 Note that the fractions describe ratio of entropies, not energies.
