@@ -1077,8 +1077,8 @@ contains
     real, intent(in)    :: RightState_VII(nVar,nJ,nK)
     real, intent(inout) :: LeftState_VII(nVar,nJ,nK)
     real, optional, intent(in) :: DtIn
-    !--------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
   end subroutine advance_threaded_block_expl
   !============================================================================
   subroutine read_thread_restart(iBlock)
