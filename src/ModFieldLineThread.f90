@@ -1070,17 +1070,15 @@ contains
 
   end subroutine advance_threads
   !============================================================================
-  subroutine advance_threaded_block_expl(iBlock, iStage, &
-                        RightState_VX,       &
-                        LeftState_VX,        &
-                        DtIn)
+  subroutine advance_threaded_block_expl( &
+       iBlock, iStage, RightState_VII, LeftState_VII, DtIn)
 
     integer, intent(in) :: iBlock, iStage
-    real, intent(in)    :: RightState_VX(nVar, 1:nJ, 1:nK)
-    real, intent(inout) :: LeftState_VX(nVar, 1:nJ, 1:nK)
+    real, intent(in)    :: RightState_VII(nVar,nJ,nK)
+    real, intent(inout) :: LeftState_VII(nVar,nJ,nK)
     real, optional, intent(in) :: DtIn
     !--------------------------------------------------------------------------
-    RETURN   ! TBD!!!
+
   end subroutine advance_threaded_block_expl
   !============================================================================
   subroutine read_thread_restart(iBlock)
