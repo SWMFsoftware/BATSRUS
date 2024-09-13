@@ -667,7 +667,7 @@ contains
 
           DivUpui_C(i,j,k) = div_u(UnFirst_+nIonFluid-1, i, j, k, iGang)
        end do; end do; end do
-       
+
        call add_pui_source(iBlock)
     end if
 

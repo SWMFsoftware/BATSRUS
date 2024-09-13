@@ -100,7 +100,7 @@ contains
     real :: Cfl_I(nPui), F_I(0:nPui+1)
 
     integer :: i, j, k
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pui_advection_diffusion'
     !--------------------------------------------------------------------------
