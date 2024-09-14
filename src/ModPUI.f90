@@ -3,9 +3,11 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModPUI
 
-  use BATL_lib, ONLY: test_start, test_stop
-  use ModVarIndexes, ONLY: nPui, PuiFirst_, PuiLast_
+  use BATL_lib,          ONLY: test_start, test_stop
+  use ModVarIndexes,     ONLY: nPui, PuiFirst_, PuiLast_
   use ModBatsrusUtility, ONLY: stop_mpi
+  use ModSize,           ONLY: nI, nJ, nK
+
   implicit none
   save
 
@@ -26,6 +28,8 @@ module ModPUI
   real :: Vpui_I(PuiFirst_:PuiLast_)
 
   real :: DeltaLogVpui
+
+  real, public :: DivUpui_C(nI,nJ,nK) = 0.0
 
 contains
   !============================================================================
@@ -85,12 +89,46 @@ contains
 
     ! advection+diffusion in PUI velocity space
 
+    use ModAdvance,         ONLY: State_VGB, DtMax_CB
+    use ModGeometry,        ONLY: Used_GB
+    use ModLinearAdvection, ONLY: advance_lin_advection_plus, &
+         advance_lin_advection_minus
+    use ModMain,            ONLY: Cfl
+
     integer, intent(in) :: iBlock
+
+    real :: Cfl_I(nPui), F_I(0:nPui+1)
+
+    integer :: i, j, k
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pui_advection_diffusion'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    ! Boundary conditions
+    F_I(0) = 0.0; F_I(nPui+1) = 0.0
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+
+       Cfl_I = abs(DivUpui_C(i,j,k))/3/DeltaLogVpui*Cfl*DtMax_CB(i,j,k,iBlock)
+
+       F_I(1:nPui) = max(State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock), 1e-30)
+
+       if(DivUpui_C(i,j,k) > 0.0)then
+          F_I(nPui + 1) = F_I(nPui)
+          call advance_lin_advection_minus( Cfl_I, nPui, 1, 1, F_I, &
+               UseConservativeBC= .true.)
+       else
+          F_I(0) = F_I(1)
+          call advance_lin_advection_plus( Cfl_I, nPui, 1, 1, F_I, &
+               UseConservativeBC= .true.)
+       end if
+
+       State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = F_I(1:nPui)
+
+    end do; end do; end do
 
     call test_stop(NameSub, DoTest)
   end subroutine pui_advection_diffusion
