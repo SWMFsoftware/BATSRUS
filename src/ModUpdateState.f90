@@ -1000,8 +1000,9 @@ contains
             if(PiShockHeatingFraction < 0.0)then
                Weight1 = abs(PiShockHeatingFraction)
                Weight2 = 1 - Weight1
-               Rho1    = State_VGB(Rho_,i,j,k,iBlock)
-               Rho2    = State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock)
+               Rho1    = State_VGB(Rho_,i,j,k,iBlock)**(2 - Gamma_I(1))
+               Rho2    = State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock) &
+                    **(2 - Gamma_I(nIonFluid))
                ! Modifies weights so non-adiabatic heating
                ! is proportional to mass density (power gamma-1?!)
                ! Weight_I(1) multiplies s1 and -Weight_I(2) multiplies s2:
