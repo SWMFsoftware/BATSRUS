@@ -141,6 +141,14 @@ contains
             Area_I(iArea)%DoRotate = .true.
             Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
                  TypeCoordSystem, TypeCoordTmp)
+            ! if (iProc == 0) then
+            !    write(*,*) '---------------------------------------------------'
+            !    write(*,*) NameSub, ' grid_setup: iArea =', iArea
+            !    write(*,*) 'tSimulation             =', tSimulation
+            !    write(*,*) 'Area_I(iArea)%DoRotate  =', Area_I(iArea)%DoRotate
+            !    write(*,*) 'Area_I(iArea)%Rotate_DD =', Area_I(iArea)%Rotate_DD
+            !    write(*,*) '---------------------------------------------------'
+            ! end if
          else
             call stop_mpi(NameSub//': TypeCoordIn, TypeCoordSystem ='// &
                  TypeCoordTmp//' '//TypeCoordSystem)
@@ -536,8 +544,13 @@ contains
     use ModFreq, ONLY: is_time_to
     use ModPic, ONLY: AdaptPic, calc_pic_criteria, &
          pic_set_cell_status, iPicGrid, iPicDecomposition
+    use BATL_region, only: Area_I, nArea
+    use CON_axes, ONLY: transform_matrix
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
+
+    integer:: iArea
+    character(len=3):: TypeCoordTmp
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_advance'
@@ -715,6 +728,27 @@ contains
     ! Adapt grid
     if(is_time_to(AdaptGrid, nStep, tSimulation, IsTimeAccurate)) then
        call timing_start(NameThisComp//'_amr')
+
+       ! adjust if Area_I(iArea)%TypeCoordIn == GSE, so that the cone
+       ! direction can be updated
+       do iArea=1,nArea
+          TypeCoordTmp = Area_I(iArea)%TypeCoordIn
+          if (TypeCoordTmp /= 'GSE') CYCLE
+
+          ! Rotate if TypeCoordIn == GSE
+          Area_I(iArea)%DoRotate = .true.
+          Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
+               TypeCoordSystem, TypeCoordTmp)
+          ! if (iProc == 0) then
+          !    write(*,*) '----------------------------------------------------'
+          !    write(*,*) NameSub, ' Adapt grid: iArea =', iArea
+          !    write(*,*) 'tSimulation             =', tSimulation
+          !    write(*,*) 'Area_I(iArea)%DoRotate  =', Area_I(iArea)%DoRotate
+          !    write(*,*) 'Area_I(iArea)%Rotate_DD =', Area_I(iArea)%Rotate_DD
+          !    write(*,*) '----------------------------------------------------'
+          ! end if
+       end do
+
        if(iProc==0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) &
                '----------------- AMR START at nStep=', nStep
