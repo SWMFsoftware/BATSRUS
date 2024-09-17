@@ -31,10 +31,8 @@ module ModUpdateState
 
   ! The fraction of non-adiabatic heating put into Pe and Ppar
   real:: PeShockHeatingFraction = 0.0, PparShockHeatingFraction = 0.0
-  ! The fraction of non-adiabatic heating put into the second ion fluid
-  real:: PiShockHeatingFraction = 0.0
-  ! Multiply weights by Rho^(2-gamma) to compensate for different densities
-  logical:: UseIonDensityWeight = .false.
+  ! The fraction of non-adiabatic heating put into the 2 to nIonFluid fluids
+  real:: PiShockHeatingFraction_I(nIonFluid) = 0.0
 
 contains
   !============================================================================
@@ -45,6 +43,8 @@ contains
     character(len=*), intent(in):: NameCommand
     logical,          intent(in):: UseStrict
 
+    integer:: iFluid
+    
     character(len=*), parameter:: NameSub = 'read_update_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
@@ -65,15 +65,19 @@ contains
        if(UseAnisoPressure) &
             call read_var("PparShockHeatingFraction", PparShockHeatingFraction)
        ! This could be generalized to arbitrary number of ion fluids
-       if(nIonFluid == 2) &
-            call read_var("PiShockHeatingFraction", PiShockHeatingFraction)
+       if(nIonFluid > 1) then
+          do iFluid = 2, nIonFluid
+             call read_var("PiShockHeatingFraction", &
+                  PiShockHeatingFraction_I(iFluid))
+          end do
+       end if
        if(PeShockHeatingFraction /= 0)then
           UseElectronEntropy = .true.
           UseElectronEnergy = .true.
           UseEntropy = .true.
        end if
        if(PparShockHeatingFraction /= 0) UseEntropy = .true.
-       if(PiShockHeatingFraction /= 0)then
+       if(sum(PiShockHeatingFraction_I) /= 0)then
           UseEntropy = .true.
           UseTotalIonEnergy = .true.
        end if
@@ -501,7 +505,7 @@ contains
 
       ! Multi-ion shock heating parameters
       ! Negative PiShockHeatingFraction uses additional density weighting
-      UseIonShockHeating = PiShockHeatingFraction /= 0.0
+      UseIonShockHeating = sum(PiShockHeatingFraction_I) /= 0.0
 
       ! Allocate ion (perpendicular) entropy array for each ion fluid
       if( (UseAnisoShockHeating .or. UseElectronShockHeating &
@@ -979,9 +983,9 @@ contains
 
       if(UseIonShockHeating .and. .not.UseElectronShockHeating)then
          ! Distribute shock heating between first and second ion fluids
-         if(PiShockHeatingFraction > 0.0)then
+         if(PiShockHeatingFraction_I(nIonFluid) > 0.0)then
             ! Fixed weights: PiShockHeatingFraction is weight of fluid 2
-            Weight_I(1) = PiShockHeatingFraction
+            Weight_I(1) = PiShockHeatingFraction_I(nIonFluid)
             Weight_I(nIonFluid) = 1 - Weight_I(1)
          end if
          if(DoTest)then
@@ -998,8 +1002,8 @@ contains
                ! Only apply shockheating where the scheme is conservative
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
-            if(PiShockHeatingFraction < 0.0)then
-               Weight2 = abs(PiShockHeatingFraction)
+            if(PiShockHeatingFraction_I(nIonFluid) < 0.0)then
+               Weight2 = abs(PiShockHeatingFraction_I(nIonFluid))
                Weight1 = 1 - Weight2
                Rho1    = State_VGB(Rho_,i,j,k,iBlock)**(2 - Gamma_I(1))
                Rho2    = State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock) &
