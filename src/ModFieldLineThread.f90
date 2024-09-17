@@ -148,6 +148,7 @@ module ModFieldLineThread
   public :: BoundaryThreads
   public :: init_threads      ! Initializes module
   public :: read_thread_param         ! Read parameters of threads
+  public :: deallocate_thread_b
   public :: set_threads       ! (Re)Sets threads in the inner boundary blocks
 
   ! Called prior to different invokes of set_cell_boundary, to determine
@@ -156,7 +157,7 @@ module ModFieldLineThread
   public :: advance_threads
   public :: advance_threaded_block_expl
   ! Correspondent named indexes
-  integer,public,parameter:: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2, &
+  integer, public, parameter :: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2, &
        Restart_=3
   public :: save_threads_for_plot     ! Get  State_VG array
   public :: interpolate_thread_state  ! Interpolate state from State_VG
@@ -258,6 +259,7 @@ contains
            Ptr_=>P_, PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_,   &
            PperpTr_=>Pperp_, PePerpTr_=>PePerp_, WmajorTr_=>Wmajor_
       use ModAdvance, ONLY: UseAnisoPressure
+      use ModWaves,   ONLY: UseAwRepresentative
       !------------------------------------------------------------------------
       State2Tr_VV(1:nVar,RhoTr_:WminorTr_) = 0.0
       Face2Tr_VV(1:nVar,RhoTr_:WminorTr_) = 0.0
@@ -289,8 +291,18 @@ contains
          Face2Tr_VV(P_,PeParTr_) =  PeFraction*No2Si_V(UnitP_)
          Face2Tr_VV(P_,PePerpTr_) = PeFraction*No2Si_V(UnitP_)
       end if
-      State2Tr_VV(WaveFirst_,WmajorTr_) = No2Si_V(UnitP_)
-      State2Tr_VV(WaveLast_,WminorTr_) = No2Si_V(UnitP_)
+      if(UseAwRepresentative)then
+         ! Wave amplitudes in SC are dimensionless
+         State2Tr_VV(WaveFirst_,WmajorTr_) = 1.0
+         State2Tr_VV(WaveLast_,WminorTr_) = 1.0
+         Face2Tr_VV(WaveFirst_,WmajorTr_) = 1.0
+         Face2Tr_VV(WaveLast_,WminorTr_) = 1.0
+      else
+         State2Tr_VV(WaveFirst_,WmajorTr_) = No2Si_V(UnitP_)
+         State2Tr_VV(WaveLast_,WminorTr_) = No2Si_V(UnitP_)
+         Face2Tr_VV(WaveFirst_,WmajorTr_) = No2Si_V(UnitP_)
+         Face2Tr_VV(WaveLast_,WminorTr_) = No2Si_V(UnitP_)
+      end if
       ! The use of matrix State2Tr:
       ! 1. Complete matrix
       !    State2Tr_VV(RhoUx_:RhoUz_,RhoUtr_) = b_face*No2Si_V(UnitRhoU_)
@@ -298,7 +310,7 @@ contains
       ! The use of matrix Face2Tr:
       ! 1. Complete matrix
       !    Face2Tr_VV(Ux_:Uz_,Utr_) = b_face*No2Si_V(UnitU_)
-      ! 2. rFace_VF(:,0) = matmul(RightFace_VFX(:,i,j,k),Face2Tr_VV)
+      ! 2. rFace_VF(:,0) = matmul(RightState_VX(:,i,j,k),Face2Tr_VV)
     end subroutine set_transform_matrices
     !==========================================================================
   end subroutine init_threads
@@ -1070,15 +1082,61 @@ contains
 
   end subroutine advance_threads
   !============================================================================
-  subroutine advance_threaded_block_expl( &
-       iBlock, iStage, RightState_VII, LeftState_VII, DtIn)
+  subroutine advance_threaded_block_expl(iBlock, iStage, &
+       RightState_VII, LeftState_VII, DtIn)
+
+    use ModWaves,        ONLY: WaveFirst_, WaveLast_, UseAwRepresentative
+    use ModTransitionRegion, ONLY: RhoTr_=>Rho_, Utr_=>U_, RhoUtr_=>RhoU_, &
+         Ptr_=>P_, PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_,   &
+         PperpTr_=>Pperp_, PePerpTr_=>PePerp_, WminorTr_=>Wminor_, &
+         WmajorTr_=>Wmajor_, advance_thread_expl, PoyntingFluxPerBsi
+    use ModConst, ONLY: cMu
+    use ModPhysics,      ONLY: No2Si_V, UnitU_
+    use ModVarIndexes,   ONLY: Ux_, Uz_
+
 
     integer, intent(in) :: iBlock, iStage
-    real, intent(in)    :: RightState_VII(nVar,nJ,nK)
-    real, intent(inout) :: LeftState_VII(nVar,nJ,nK)
+    real, intent(in)    :: RightState_VII(nVar, 1:nJ, 1:nK)
+    real, intent(inout) :: LeftState_VII(nVar, 1:nJ, 1:nK)
     real, optional, intent(in) :: DtIn
 
+    ! Loop variables
+    integer :: j, k
+    ! Direction of magnetic field at the boundary
+    real :: bDir_D(3)
+    ! Face values in the TR model
+    real :: RightFace0_V(RhoTr_:WminorTr_)
+    real :: LeftFace0_V(RhoTr_:WminorTr_)
     !--------------------------------------------------------------------------
+
+    do k = 1, nK; do j = 1, nJ
+       bDir_D = BoundaryThreads_B(iBlock) % bDirFace_DII(:,j,k)
+       Face2Tr_VV(Ux_:Uz_,RhoUtr_) = bDir_D*No2Si_V(UnitU_)
+       RightFace0_V = matmul(RightState_VII(:, j, k),Face2Tr_VV)
+       if(BoundaryThreads_B(iBlock) %SignBface_II(j,k) < 0)&
+            RightFace0_V(WmajorTr_:WminorTr_) = &
+            RightFace0_V( [WminorTr_, WminorTr_] )
+       if(.not.UseAwRepresentative)&
+            RightFace0_V(WmajorTr_:WminorTr_) = &
+            RightFace0_V(WmajorTr_:WminorTr_)/&
+            (PoyntingFluxPerBSi*sqrt(cMu*RightFace0_V(RhoTr_)))
+       if(present(DtIn))then
+          call advance_thread_expl(        &
+               iStage = iStage,            &
+               OpenThread1 = BoundaryThreads_B(iBlock)%OpenThreads_II(j,k), &
+               IsTimeAccurate = .true.,    &
+               RightFace0_V = RightFace0_V,&
+               LeftFace0_V = LeftFace0_V,  &
+               DtIn = DtIn                 )
+       else
+          call advance_thread_expl(        &
+               iStage = iStage,            &
+               OpenThread1 = BoundaryThreads_B(iBlock)%OpenThreads_II(j,k), &
+               IsTimeAccurate = .false.,   &
+               RightFace0_V = RightFace0_V,&
+               LeftFace0_V = LeftFace0_V   )
+       end if
+    end do; end do
   end subroutine advance_threaded_block_expl
   !============================================================================
   subroutine read_thread_restart(iBlock)
