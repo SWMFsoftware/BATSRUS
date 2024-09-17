@@ -100,7 +100,7 @@ contains
       call set_batsrus_grid
 
       ! adjust if Area_I(iArea)%TypeCoordIn == hgr/hgi/GSE
-      do iArea=1,nArea
+      do iArea = 1, nArea
          TypeCoordTmp = Area_I(iArea)%TypeCoordIn
          if (TypeCoordTmp == '' .or. TypeCoordTmp == TypeCoordSystem) CYCLE
 
@@ -109,7 +109,7 @@ contains
             if (Area_I(iArea)%NameShape == 'brick_coord') then
                ! if NameShape is 'brick_coord' adjust the Longitude for the box
                Area_I(iArea)%Center_D(Phi_) = &
-                    Area_I(iArea)%Center_D(Phi_)-dLongitudeHgr
+                    Area_I(iArea)%Center_D(Phi_) - dLongitudeHgr
                ! If Center_D < 0, then Center_D += 2*Pi
                if (Area_I(iArea)%Center_D(Phi_) < 0) &
                     Area_I(iArea)%Center_D(Phi_) =   &
@@ -125,7 +125,7 @@ contains
             if (Area_I(iArea)%NameShape == 'brick_coord') then
                ! if NameShape is 'brick_coord' adjust the Longitude for the box
                Area_I(iArea)%Center_D(Phi_) = &
-                    Area_I(iArea)%Center_D(Phi_)-dLongitudeHgi
+                    Area_I(iArea)%Center_D(Phi_) - dLongitudeHgi
                ! If Center_D < 0, then Center_D += 2*Pi
                if (Area_I(iArea)%Center_D(Phi_) < 0) &
                     Area_I(iArea)%Center_D(Phi_) =   &
@@ -141,14 +141,6 @@ contains
             Area_I(iArea)%DoRotate = .true.
             Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
                  TypeCoordSystem, TypeCoordTmp)
-            ! if (iProc == 0) then
-            !    write(*,*) '---------------------------------------------------'
-            !    write(*,*) NameSub, ' grid_setup: iArea =', iArea
-            !    write(*,*) 'tSimulation             =', tSimulation
-            !    write(*,*) 'Area_I(iArea)%DoRotate  =', Area_I(iArea)%DoRotate
-            !    write(*,*) 'Area_I(iArea)%Rotate_DD =', Area_I(iArea)%Rotate_DD
-            !    write(*,*) '---------------------------------------------------'
-            ! end if
          else
             call stop_mpi(NameSub//': TypeCoordIn, TypeCoordSystem ='// &
                  TypeCoordTmp//' '//TypeCoordSystem)
@@ -731,7 +723,7 @@ contains
 
        ! adjust if Area_I(iArea)%TypeCoordIn == GSE, so that the cone
        ! direction can be updated
-       do iArea=1,nArea
+       do iArea = 1, nArea
           TypeCoordTmp = Area_I(iArea)%TypeCoordIn
           if (TypeCoordTmp /= 'GSE') CYCLE
 
@@ -739,14 +731,6 @@ contains
           Area_I(iArea)%DoRotate = .true.
           Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
                TypeCoordSystem, TypeCoordTmp)
-          ! if (iProc == 0) then
-          !    write(*,*) '----------------------------------------------------'
-          !    write(*,*) NameSub, ' Adapt grid: iArea =', iArea
-          !    write(*,*) 'tSimulation             =', tSimulation
-          !    write(*,*) 'Area_I(iArea)%DoRotate  =', Area_I(iArea)%DoRotate
-          !    write(*,*) 'Area_I(iArea)%Rotate_DD =', Area_I(iArea)%Rotate_DD
-          !    write(*,*) '----------------------------------------------------'
-          ! end if
        end do
 
        if(iProc==0 .and. lVerbose > 0)then
