@@ -44,7 +44,7 @@ contains
     logical,          intent(in):: UseStrict
 
     integer:: iFluid
-    
+
     character(len=*), parameter:: NameSub = 'read_update_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)

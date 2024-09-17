@@ -1094,7 +1094,6 @@ contains
     use ModPhysics,      ONLY: No2Si_V, UnitU_
     use ModVarIndexes,   ONLY: Ux_, Uz_
 
-
     integer, intent(in) :: iBlock, iStage
     real, intent(in)    :: RightState_VII(nVar, 1:nJ, 1:nK)
     real, intent(inout) :: LeftState_VII(nVar, 1:nJ, 1:nK)
@@ -1107,8 +1106,8 @@ contains
     ! Face values in the TR model
     real :: RightFace0_V(RhoTr_:WminorTr_)
     real :: LeftFace0_V(RhoTr_:WminorTr_)
-    !--------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ
        bDir_D = BoundaryThreads_B(iBlock) % bDirFace_DII(:,j,k)
        Face2Tr_VV(Ux_:Uz_,RhoUtr_) = bDir_D*No2Si_V(UnitU_)
