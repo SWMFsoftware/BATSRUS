@@ -118,6 +118,9 @@ contains
     State_V(PuiFirst_:PuiLast_) = State_V(PuiFirst_:PuiLast_) &
          /sum(State_V(PuiFirst_:PuiLast_))*RhoPui
 
+    State_V(PuiFirst_:PuiLast_) = State_V(PuiFirst_:PuiLast_) &
+         /(Vpui_I**2*DeltaVpui_I)
+    
   end subroutine set_pui_state
   !============================================================================
   subroutine pui_advection_diffusion(iBlock)
