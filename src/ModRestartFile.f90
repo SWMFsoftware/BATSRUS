@@ -1252,11 +1252,12 @@ contains
     !    case the code will stop excution).
 
     use ModVarIndexes, ONLY: nVar, NameVar_V, p_, Pe_, DefaultState_V, &
-         ChargeStateFirst_, ChargeStateLast_, nChargeStateAll
+         ChargeStateFirst_, ChargeStateLast_, nChargeStateAll, nPui
     use ModAdvance,    ONLY: UseElectronPressure
     use ModMain,       ONLY: UseStrict, NameVarLower_V
     use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, iP_I
-
+    use ModPUI,        ONLY: set_pui_state
+    
     integer :: i, j, k, iVar, iVarRead, iBlock, iVarPeRestart
     integer :: iVarMatch_V(nVar) = 0
     logical :: UseElectronPressureRestart = .false.
@@ -1377,6 +1378,13 @@ contains
                 end do; end do ; end do
              end do
           case default
+             if(nPui > 1)then
+                do iBlock = 1,nBlock
+                   do i =1,nI ; do j=1,nJ; do k=1,nK
+                      call set_pui_state(State_VGB(:,i,j,k,iBlock))
+                   end do; end do ; end do
+                end do
+             end if
              if(nChargeStateAll > 1)then
                 if(UseMultiIon)then
                    if(iVar>p_ .and. iVar<=iP_I(nIonFluid))then
