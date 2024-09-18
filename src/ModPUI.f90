@@ -20,7 +20,7 @@ module ModPUI
   public :: add_pui_source
 
   integer, parameter, public :: Pu3_ = nIonFluid
-  
+
   real :: VpuiMinSi = 10.0, VpuiMin
   real :: VpuiMaxSi = 6000.0, VpuiMax
 
@@ -94,11 +94,11 @@ contains
 
     use ModMultiFluid, ONLY: iRhoIon_I, iPIon_I
     use ModVarIndexes, ONLY: nVar
-    
+
     real, intent(inout) :: State_V(nVar)
 
     real :: RhoPui, Ppui
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_pui_state'
     !--------------------------------------------------------------------------
@@ -106,7 +106,7 @@ contains
        State_V(PuiFirst_:PuiLast_) = 0.0
        RETURN
     end if
-    
+
     RhoPui = State_V(iRhoIon_I(Pu3_))
     Ppui = State_V(iPIon_I(Pu3_))
 
@@ -120,7 +120,7 @@ contains
 
     State_V(PuiFirst_:PuiLast_) = State_V(PuiFirst_:PuiLast_) &
          /(Vpui_I**2*DeltaVpui_I)
-    
+
   end subroutine set_pui_state
   !============================================================================
   subroutine pui_advection_diffusion(iBlock)

@@ -159,7 +159,7 @@ module ModFieldLineThread
   public :: set_thread_plotvar        ! Plot variables for "shell" plots
   public :: get_tr_los_image          ! Correction for TR on LOS images
   public :: is_threaded_block         ! Mark blocks near internal boundary
-  public :: beta_thread               ! Accounts for grid sizes in TR and SC 
+  public :: beta_thread               ! Accounts for grid sizes in TR and SC
   ! Saves thread state into restart
   public :: save_thread_restart
   ! interface procedure to easy calculate the CME field
@@ -606,12 +606,12 @@ contains
        BoundaryThreads_B(iBlock)%SignB_II(j, k) = SignBr
        B0Start = norm2(B0Start_D)
        BoundaryThreads_B(iBlock)%B_III(0, j, k) = B0Start
-       
+
        RStart = norm2(XyzStart_D)
        BoundaryThreads_B(iBlock)%RInv_III(0, j, k) = 1/RStart
        call xyz_to_coord(XyzStart_D, Coord_D)
        BoundaryThreads_B(iBlock)%Coord_DIII(:,0, j, k) = Coord_D
-       
+
        Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
        COARSEN: do nTrial=1,nCoarseMax
           ! Set initial Ds or increase Ds, if previous trial fails

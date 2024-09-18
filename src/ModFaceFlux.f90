@@ -1176,7 +1176,7 @@ contains
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_GB
     use ModPUI,      ONLY: Pu3_
-    
+
     real, intent(in) :: State_V(nVar)      ! input primitive state
 
     real, intent(out):: StateCons_V(nFlux) ! conservative states with energy

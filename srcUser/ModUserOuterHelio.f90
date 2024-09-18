@@ -392,7 +392,7 @@ contains
     use ModUtilities,      ONLY: norm2
 #endif
     use ModPUI,            ONLY: set_pui_state
-    
+
     type(FaceBCType), intent(inout):: FBC
 
     ! local variables
@@ -577,7 +577,7 @@ contains
     use ModTurbulence,   ONLY: KarmanTaylorAlpha
     use ModWaves,        ONLY: UseAlfvenWaves
     use ModPUI,          ONLY: set_pui_state
-    
+
     ! The ISM enters at the east boundary (negative x)
     ! February 08, 2018 - added the possibility for using user conditions in
     ! other boundaries as well
@@ -689,7 +689,7 @@ contains
     use ModUtilities,      ONLY: norm2
 #endif
     use ModPUI,            ONLY: set_pui_state
-    
+
     integer, intent(in) :: iBlock
 
     integer :: i,j,k, iP
