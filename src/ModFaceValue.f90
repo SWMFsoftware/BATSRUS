@@ -1968,6 +1968,8 @@ contains
     end subroutine get_facez_first
     !==========================================================================
     subroutine get_facex_second(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
+
+      use ModFieldLineThread, ONLY: beta_thread, is_threaded_block
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer::i1, iMinSharp, iMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -1975,6 +1977,7 @@ contains
       real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
       real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
       integer:: i, j, k
+      real :: BetaThread
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1
@@ -2025,6 +2028,21 @@ contains
             RightState_VX(:,i,j,k) &
                  = Primitive_VI(:,i ) - dVarLimR_VI(:,i )*(1-LowOrderCrit_I(i))
          end do
+         if(is_threaded_block(iBlock))then
+            ! The cell center on thread may be closer/farther to the boundary
+            ! face then the true cell center in SC. The correction factor
+            ! acconts for this difference in such a way, that the half of
+            ! difference, Primitive_VI(:,0) - Primitive_VI(:,1) with the
+            ! corrected Primitive_VI(:,0) gives the second order coorection
+            ! for the face values.
+            BetaThread = beta_thread(j, k, iBlock)
+            Primitive_VI(:,0) = Primitive_VI(:,1) + &
+                 (2/BetaThread)*(Primitive_VI(:,0) - Primitive_VI(:,1))
+            call limiter(2, 1, min(LimiterBeta,BetaThread),&
+                 Primitive_VI, dVarLimL_VI, dVarLimR_VI)
+            RightState_VX(:,1,j,k) &
+                 = Primitive_VI(:,1 ) - dVarLimR_VI(:,1 )
+         end if
       end do; end do
 
       if(DoLimitMomentum) &
