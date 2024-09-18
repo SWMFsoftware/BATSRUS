@@ -19,7 +19,7 @@ module ModPUI
   public :: pui_advection_diffusion
   public :: add_pui_source
 
-  integer, parameter :: Pu3_ = nIonFluid
+  integer, parameter, public :: Pu3_ = nIonFluid
   
   real :: VpuiMinSi = 10.0, VpuiMin
   real :: VpuiMaxSi = 6000.0, VpuiMax

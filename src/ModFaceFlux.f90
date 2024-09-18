@@ -1175,7 +1175,8 @@ contains
          IsIon_I, nIonFluid, UseMultiIon, ChargePerMass_I, select_fluid
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_GB
-
+    use ModPUI,      ONLY: Pu3_
+    
     real, intent(in) :: State_V(nVar)      ! input primitive state
 
     real, intent(out):: StateCons_V(nFlux) ! conservative states with energy
@@ -1269,6 +1270,12 @@ contains
     do iVar = ScalarFirst_, ScalarLast_
        Flux_V(iVar) = Un_I(1)*State_V(iVar)
     end do
+    if(nPui > 1)then
+       ! PUI scalar advect with second fluid's velocity
+       do iVar = PuiFirst_, PuiLast_
+          Flux_V(iVar) = Un_I(Pu3_)*State_V(iVar)
+       end do
+    end if
     ! Overwrite Lperp_ for multi-ion
     if(Lperp_ > 1 .and.UseMultiIon) Flux_V(Lperp_) = HallUn*State_V(Lperp_)
 
