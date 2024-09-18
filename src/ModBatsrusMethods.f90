@@ -100,7 +100,7 @@ contains
       call set_batsrus_grid
 
       ! adjust if Area_I(iArea)%TypeCoordIn == hgr/hgi/GSE
-      do iArea=1,nArea
+      do iArea = 1, nArea
          TypeCoordTmp = Area_I(iArea)%TypeCoordIn
          if (TypeCoordTmp == '' .or. TypeCoordTmp == TypeCoordSystem) CYCLE
 
@@ -109,7 +109,7 @@ contains
             if (Area_I(iArea)%NameShape == 'brick_coord') then
                ! if NameShape is 'brick_coord' adjust the Longitude for the box
                Area_I(iArea)%Center_D(Phi_) = &
-                    Area_I(iArea)%Center_D(Phi_)-dLongitudeHgr
+                    Area_I(iArea)%Center_D(Phi_) - dLongitudeHgr
                ! If Center_D < 0, then Center_D += 2*Pi
                if (Area_I(iArea)%Center_D(Phi_) < 0) &
                     Area_I(iArea)%Center_D(Phi_) =   &
@@ -125,7 +125,7 @@ contains
             if (Area_I(iArea)%NameShape == 'brick_coord') then
                ! if NameShape is 'brick_coord' adjust the Longitude for the box
                Area_I(iArea)%Center_D(Phi_) = &
-                    Area_I(iArea)%Center_D(Phi_)-dLongitudeHgi
+                    Area_I(iArea)%Center_D(Phi_) - dLongitudeHgi
                ! If Center_D < 0, then Center_D += 2*Pi
                if (Area_I(iArea)%Center_D(Phi_) < 0) &
                     Area_I(iArea)%Center_D(Phi_) =   &
@@ -536,8 +536,13 @@ contains
     use ModFreq, ONLY: is_time_to
     use ModPic, ONLY: AdaptPic, calc_pic_criteria, &
          pic_set_cell_status, iPicGrid, iPicDecomposition
+    use BATL_region, only: Area_I, nArea
+    use CON_axes, ONLY: transform_matrix
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
+
+    integer:: iArea
+    character(len=3):: TypeCoordTmp
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_advance'
@@ -715,6 +720,19 @@ contains
     ! Adapt grid
     if(is_time_to(AdaptGrid, nStep, tSimulation, IsTimeAccurate)) then
        call timing_start(NameThisComp//'_amr')
+
+       ! adjust if Area_I(iArea)%TypeCoordIn == GSE, so that the cone
+       ! direction can be updated
+       do iArea = 1, nArea
+          TypeCoordTmp = Area_I(iArea)%TypeCoordIn
+          if (TypeCoordTmp /= 'GSE') CYCLE
+
+          ! Rotate if TypeCoordIn == GSE
+          Area_I(iArea)%DoRotate = .true.
+          Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
+               TypeCoordSystem, TypeCoordTmp)
+       end do
+
        if(iProc==0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) &
                '----------------- AMR START at nStep=', nStep

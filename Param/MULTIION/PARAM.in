@@ -2,7 +2,7 @@
 Param/MULTIION/PARAM.in: multiion shocktube test		StringDescription
 
 #SHOCKHEATING
--0.9			PiShockHeatingFraction
+-0.5			PiShockHeatingFraction
 
 #POINTIMPLICIT
 T			UsePointImplicit
@@ -39,7 +39,7 @@ NONE			TypeNormalization
 
 ! 90 per cent H+ and 10 percent O+
 #SHOCKTUBE
-18.0			LeftState Rho H
+18.0			LeftState Rho H+
 -100.			LeftState Ux
 0.			LeftState Uy
 0.			LeftState Uz
@@ -47,12 +47,12 @@ NONE			TypeNormalization
 0.0			LeftState By
 -16.0			LeftState Bz
 1e6			LeftState P
-2.0			LeftState Rho He
+1.8			LeftState Rho O+
 -100.			LeftState Ux
 0.			LeftState Uy
 0.			LeftState Uz
 1e5			LeftState P
-4.5			RightState Rho H
+4.5			RightState Rho H+
 -400.			RightState Ux
 0.			RightState Uy
 0.			RightState Uz
@@ -60,7 +60,7 @@ NONE			TypeNormalization
 0.0			RightState By
 -4.0			RightState Bz
 1e5			RightState P
-0.5			RightState Rho He
+0.45			RightState Rho O+
 -400.			RightState Ux
 0.			RightState Uy
 0.			RightState Uz
@@ -68,9 +68,9 @@ NONE			TypeNormalization
 
 #PLASMA
 1.0			FluidMass H+
-4.0			FluidMass He+
+16.0			FluidMass O+
 1.0			IonCharge H+
-1.0			IonCharge He+
+1.0			IonCharge O+
 0.0			ElectronTemperatureRatio
 
 Sheared boundary condition is used for non-zero shock slope

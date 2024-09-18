@@ -9737,7 +9737,9 @@ If multiple ion fluids are solved for and PiShockHeatingFraction is
 set to a positive value, then a fraction of the non-adiabatic heating
 is deposited into the second ion fluid and the rest into the first ion
 fluid. If PiShockHeatingFraction is set to a negative value, then
-the fluid weights are multiplied with the densities.
+the fluid weights are multiplied with the densities to the (2-gamma)
+power, which results in correct heating of two fluids with equal
+velocities and temperatures.
 
 If this command is used, UseEntropy, UseTotalIonEnergy and
 UseElectronEntropy are set to true (see #ENTROPY and #ELECTRONENTROPY).

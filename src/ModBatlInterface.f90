@@ -258,7 +258,8 @@ contains
 
     use ModMain, ONLY: UseB0
     use ModB0, ONLY: set_b0_reschange
-    use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
+    use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads, &
+         deallocate_thread_b, IsAllocatedThread_B
     use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B,&
          set_amr_geometry
     use ModResistivity, ONLY: UseResistivity, set_resistivity
@@ -276,6 +277,9 @@ contains
 
        ! If nothing happened to the block, no need to do anything
        if(iAmrChange_B(iBlock) < AmrMoved_) CYCLE
+       if(UseFieldLineThreads)then
+          if(IsAllocatedThread_B(iBlock))call deallocate_thread_b(iBlock)
+       end if
 
        ! Update all kinds of extra block variables
        call calc_other_vars(iBlock)

@@ -1156,13 +1156,13 @@ contains
          RhoUx_, RhoUz_, EHot_, WDiff_, nVar
     use ModImplicit,     ONLY: iTeImpl
     use ModB0,           ONLY: B0_DGB
-    use ModWaves,        ONLY: WaveFirst_, WaveLast_
+    use ModWaves,        ONLY: WaveFirst_, WaveLast_, UseAwRepresentative
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModTransitionRegion, ONLY: RhoTr_=>Rho_, Utr_=>U_, RhoUtr_=>RhoU_, &
          Ptr_=>P_, PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_,   &
          PperpTr_=>Pperp_, PePerpTr_=>PePerp_, WminorTr_=>Wminor_, &
-         WmajorTr_=>Wmajor_
+         WmajorTr_=>Wmajor_, advance_thread_semi_impl
     use ModConst, ONLY: cMu
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
@@ -1197,7 +1197,7 @@ contains
 
     call timing_start('set_thread_bc')
     ! Start from floating boundary values
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = 1 - nGhost, 0
+    do k = 1, nK; do j = 1, nJ; do i = 1 - nGhost, 0
        State_VG(:, i,j,k) = State_VG(:,1, j, k)
     end do; end do; end do
 
@@ -1222,13 +1222,20 @@ contains
           State2Tr_VV(RhoUx_:RhoUz_,RhoUtr_) = bDir_D*No2Si_V(UnitRhoU_)
           StateTr_V = matmul(State_V,State2Tr_VV)
           StateTr_V(Utr_) = StateTr_V(RhoUtr_)/StateTr_V(RhoTr_)
-          if(BoundaryThreads_B(iBlock) %SignBface_II(j,k) >0)then
+          if(BoundaryThreads_B(iBlock) %SignBface_II(j,k) < 0)&
+               StateTr_V(WmajorTr_:WminorTr_) = &
+               StateTr_V( [WminorTr_, WminorTr_] )
+          if(.not.UseAwRepresentative)&
              StateTr_V(WmajorTr_:WminorTr_) = StateTr_V(WmajorTr_:WminorTr_)/&
-                  (PoyntingFluxPerBSi*sqrt(cMu*StateTr_V(RhoTr_)))
-          else
-             StateTr_V(WmajorTr_:WminorTr_) = &
-                  StateTr_V( [WminorTr_, WminorTr_] )/&
-                  (PoyntingFluxPerBSi*sqrt(cMu*StateTr_V(RhoTr_)))
+             (PoyntingFluxPerBSi*sqrt(cMu*StateTr_V(RhoTr_)))
+          TeSi = TeFraction*State_V(iPe) / State_V(Rho_)*&
+               No2Si_V(UnitTemperature_)
+          BoundaryThreads_B(iBlock)%OpenThreads_II(j, k)%State_VG(:, 0) = &
+               StateTr_V
+          if(iAction==Heat_)then
+             BoundaryThreads_B(iBlock)%OpenThreads_II(j, k)%Te_G(0) = TeSi
+             call advance_thread_semi_impl(&
+                  BoundaryThreads_B(iBlock)%OpenThreads_II(j, k))
           end if
        end if
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
@@ -1371,7 +1378,6 @@ contains
        end if
     end do; end do
     BoundaryThreads_B(iBlock)%iAction = Done_
-
     call timing_stop('set_thread_bc')
 
   end subroutine set_field_line_thread_bc
