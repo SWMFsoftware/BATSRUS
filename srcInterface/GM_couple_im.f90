@@ -171,7 +171,7 @@ contains
     endif
 
     ! Set buffer variable indexes
-    if(.not.allocated(iVarCouple_V)) call set_buffer_indexes(nVarIn-5, NameSub)
+    if(.not.allocated(iVarCouple_V)) call set_buffer_indexes(nVarIn-20, NameSub)
 
     ! Initialize buffer_iiv
     Buffer_IIV = 0.0
@@ -237,8 +237,15 @@ contains
              Buffer_IIV(iLat,iLon,5) = &
                   atan2(XyzEndSm_D(2),XyzEndSmIono_D(1))*cRadToDeg
 
+             ! pass 5 xyz points around minB for curvature calc in cimi
+             Buffer_IIV(iLat,iLon,6:8)= Buffer_VI(2:4,iLocBmin-2)
+             Buffer_IIV(iLat,iLon,9:11)= Buffer_VI(2:4,iLocBmin-1)
+             Buffer_IIV(iLat,iLon,12:14)= Buffer_VI(2:4,iLocBmin)
+             Buffer_IIV(iLat,iLon,15:17)= Buffer_VI(2:4,iLocBmin+1)
+             Buffer_IIV(iLat,iLon,18:20)= Buffer_VI(2:4,iLocBmin+2)
+             
              ! Put coupled variables (densities and pressures) into buffer
-             Buffer_IIV(iLat,iLon,6:) = Buffer_VI(4+iVarCouple_V,iLocBmin)
+             Buffer_IIV(iLat,iLon,21:) = Buffer_VI(4+iVarCouple_V,iLocBmin)
 
              ! write(*,*) 'iVarCouple_V in GM_copuple_im'
              ! write(*,*) iVarCouple_V
@@ -284,7 +291,7 @@ contains
        enddo
        close(UnitTmp_)
     end if
-
+    
   end subroutine GM_get_for_im_crcm
   !============================================================================
   subroutine GM_get_sat_for_im_crcm(Buffer_III, Name_I, nSat)
@@ -339,6 +346,7 @@ contains
     end do
 
   end subroutine GM_get_sat_for_im_crcm
+
   !============================================================================
   subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
