@@ -64,11 +64,11 @@ module ModVarIndexes
        Bz_        = 7, &
        WaveFirst_ = 8, &
        WaveLast_  = WaveFirst_+nWave-1, &
-       Lperp_     = WaveLast_+1, &
-       PuiFirst_  = Lperp_+1, &
+       PuiFirst_  = WaveLast_+1, &
        PuiLast_   = PuiFirst_+nPui-1, &
-       LevelHP_   = PuiLast_+1, &
-       Pe_        = PuiLast_+2, &
+       Lperp_     = PuiLast_+1, &
+       LevelHP_   = Lperp_+1, &
+       Pe_        = LevelHP_+1, &
        p_         = Pe_+1,                SWHP_     = p_, &
        Pu3Rho_    = p_+1, &
        Pu3RhoUx_  = p_+2, Pu3Ux_ = p_+2, &
@@ -130,8 +130,8 @@ module ModVarIndexes
        0.0, 0.0, 0.0, & ! SWHRhoUx_ .. SWHRhoUz_
        0.0, 0.0, 0.0, & ! Bx_ .. Bz_
        (1.0, iWave=WaveFirst_,WaveLast_), &
-       1.0,           & ! Lperp_
        (1.0, iPui=PuiFirst_,PuiLast_), &
+       1.0,           & ! Lperp_
        0.0,           & ! LevelHP_
        1.0,           & ! Pe_
        1.0,           & ! SWHP_
@@ -163,8 +163,8 @@ module ModVarIndexes
        'Mx    ', 'My    ', 'Mz    ', & ! RhoUx_ RhoUz_
        'Bx    ', 'By    ', 'Bz    ', & ! Bx_  Bz_
        ('I??   ', iWave=WaveFirst_,WaveLast_), &
-       'Lperp ',                     & ! Lperp_
        ('F??   ', iPui=PuiFirst_,PuiLast_), &
+       'Lperp ',                     & ! Lperp_
        'HPLim ',                     & ! LevelHP_
        'Pe    ',                     & ! Pe_
        'P     ',                     & ! p_

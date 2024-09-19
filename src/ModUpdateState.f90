@@ -223,7 +223,7 @@ contains
          iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iPIon_I, iSperpion_I, iSparIon_I, &
          nIonFluid, UseNeutralFluid, DoConserveNeutrals
-    use ModPui, ONLY: UsePui, pui_advection_diffusion
+    use ModPui, ONLY: pui_advection_diffusion
 
     integer, intent(in) :: iBlock
 
@@ -949,7 +949,7 @@ contains
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       end if
 
-      if(UsePui) call pui_advection_diffusion(iBlock)
+      if(nPui > 1) call pui_advection_diffusion(iBlock)
 
       if(UseWavePressure)then
          if(DoAdvectWaves .and. iStage==nStage .and. nWave>2)&

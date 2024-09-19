@@ -11,7 +11,7 @@ module ModThreadedLC
   use ModChromosphere,    ONLY: TeChromosphereSi
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
        HeatCondParSi, LengthPavrSi_, UHeat_, HeatFluxLength_,&
-       DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
+       DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_, init_tr
   use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
        PSi_, TeSi_, TiSi_, AMajor_, AMinor_,                             &
        DoInit_, Done_, Enthalpy_, Heat_, Restart_
@@ -1146,7 +1146,7 @@ contains
        iImplBlock)
 
     use EEE_ModCommonVariables, ONLY: UseCme
-    use ModFieldLineThread,     ONLY: b_cme_d, State2Tr_VV
+    use ModFieldLineThread,     ONLY: b_cme_d
     use ModMain,       ONLY: nStep, nIteration, tSimulation
     use ModAdvance,      ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nJ, nK
@@ -1211,33 +1211,6 @@ contains
        call stop_mpi('Generic EOS is not applicable with threads')
     end if
     do k = 1, nK; do j = 1, nJ
-       bDir_D = BoundaryThreads_B(iBlock) % bDirFace_DII(:,j,k)
-       j1 = BoundaryThreads_B(iBlock) % iStencil_III(2,j,k)
-       k1 = BoundaryThreads_B(iBlock) % iStencil_III(3,j,k)
-       Weight_I = BoundaryThreads_B(iBlock) % Weight_III(:,j,k)
-       State_V = Weight_I(1)*State_VG(:,1,j,k) + &
-            Weight_I(2)*State_VG(:,1,j1,k)     + &
-            Weight_I(3)*State_VG(:,1,j,k1)
-       if(nVarState==nVar)then
-          State2Tr_VV(RhoUx_:RhoUz_,RhoUtr_) = bDir_D*No2Si_V(UnitRhoU_)
-          StateTr_V = matmul(State_V,State2Tr_VV)
-          StateTr_V(Utr_) = StateTr_V(RhoUtr_)/StateTr_V(RhoTr_)
-          if(BoundaryThreads_B(iBlock) %SignBface_II(j,k) < 0)&
-               StateTr_V(WmajorTr_:WminorTr_) = &
-               StateTr_V( [WminorTr_, WminorTr_] )
-          if(.not.UseAwRepresentative)&
-             StateTr_V(WmajorTr_:WminorTr_) = StateTr_V(WmajorTr_:WminorTr_)/&
-             (PoyntingFluxPerBSi*sqrt(cMu*StateTr_V(RhoTr_)))
-          TeSi = TeFraction*State_V(iPe) / State_V(Rho_)*&
-               No2Si_V(UnitTemperature_)
-          BoundaryThreads_B(iBlock)%OpenThreads_II(j, k)%State_VG(:, 0) = &
-               StateTr_V
-          if(iAction==Heat_)then
-             BoundaryThreads_B(iBlock)%OpenThreads_II(j, k)%Te_G(0) = TeSi
-             call advance_thread_semi_impl(&
-                  BoundaryThreads_B(iBlock)%OpenThreads_II(j, k))
-          end if
-       end if
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))

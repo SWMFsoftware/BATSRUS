@@ -387,10 +387,11 @@ contains
     use ModMain,           ONLY: FaceBCType
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
-    use ModTurbulence,   ONLY: SigmaD
+    use ModTurbulence,     ONLY: SigmaD
 #ifdef _OPENACC
     use ModUtilities,      ONLY: norm2
 #endif
+    use ModPUI,            ONLY: set_pui_state
 
     type(FaceBCType), intent(inout):: FBC
 
@@ -465,7 +466,7 @@ contains
          VarsGhostFace_V(Pu3Ux_:Pu3Uz_) = matmul(XyzSph_DD, VPUIsph_D)
       end if
 
-      if(PuiFirst_ > 1) VarsGhostFace_V(PuiFirst_:PuiLast_) = 0.0
+      if(PuiFirst_ > 1) call set_pui_state(VarsGhostFace_V)
 
       if(UseAlfvenWaves)then
          Rho = VarsGhostFace_V(Rho_)
@@ -575,6 +576,7 @@ contains
     use ModCellBoundary, ONLY: iMin, iMax, jMin, jMax, kMin, kMax
     use ModTurbulence,   ONLY: KarmanTaylorAlpha
     use ModWaves,        ONLY: UseAlfvenWaves
+    use ModPUI,          ONLY: set_pui_state
 
     ! The ISM enters at the east boundary (negative x)
     ! February 08, 2018 - added the possibility for using user conditions in
@@ -613,7 +615,7 @@ contains
           State_VGB(Pu3P_,    i,j,k,iBlock) = 1E-5*VliswP
        end if
 
-       if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 0.0
+       if(PuiFirst_ > 1) call set_pui_state(State_VGB(:,i,j,k,iBlock))
 
        if(UseAlfvenWaves)then
           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
@@ -686,6 +688,7 @@ contains
 #ifdef _OPENACC
     use ModUtilities,      ONLY: norm2
 #endif
+    use ModPUI,            ONLY: set_pui_state
 
     integer, intent(in) :: iBlock
 
@@ -840,7 +843,7 @@ contains
                State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
        end if
 
-       if(PuiFirst_ > 1) State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) = 0.0
+       if(PuiFirst_ > 1) call set_pui_state(State_VGB(:,i,j,k,iBlock))
 
        if(UseAlfvenWaves)then
           if(r>100)then

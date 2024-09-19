@@ -17,10 +17,10 @@ module ModFieldLineThread
   use ModVarIndexes, ONLY: Pe_, p_, nVar
   use ModMultiFluid, ONLY: MassIon_I
   use ModTransitionRegion, ONLY: OpenThread, allocate_thread_arr, &
-       deallocate_thread_arr, &
+       deallocate_thread_arr, nPointThreadMax, DsThreadMin=>Ds0, &
        rChromo, LengthPavrSi_, dLogLambdaOverDlogT_, HeatFluxLength_, &
        iTableTr, set_thread, integrate_emission, &
-       read_tr_param, RhoTr_=>Rho_, WminorTr_=>Wminor_
+       read_tr_param
 
   implicit none
   SAVE
@@ -83,15 +83,11 @@ module ModFieldLineThread
      ! Distance between the true and ghost cell centers.
      real, pointer :: DeltaR_II(:,:)
      real, pointer :: SignB_II(:,:)
-     ! Direction and sign Br of the magnetic field at the face
-     real, pointer :: bDirFace_DII(:,:,:)
-     real, pointer :: SignBFace_II(:,:)
      integer, pointer :: iStencil_III(:,:,:)
      real, pointer :: Weight_III(:,:,:)
      real, pointer :: DsSi_III(:,:,:)
      ! PSi, TeSi amd TiSi stored at gird iMin:iMax,0:nJ+1,0:nK+1
      real, pointer :: State_VG(:,:,:,:)
-     type(OpenThread), allocatable :: OpenThreads_II(:,:)
   end type BoundaryThreads
   ! For visualization:
   ! Indexes for array State_VG(PSi_:TiSi_,-nGUniform:1,jMin_:jMax_,kMin_:kMax_)
@@ -116,8 +112,7 @@ module ModFieldLineThread
 
   type(BoundaryThreads), public, allocatable :: BoundaryThreads_B(:)
 
-  integer,public :: nPointThreadMax = 100
-  real           :: DsThreadMin = 0.002
+  public :: nPointThreadMax
 
   real, parameter:: TeGlobalMaxSi = 1.80e7
 
@@ -164,6 +159,7 @@ module ModFieldLineThread
   public :: set_thread_plotvar        ! Plot variables for "shell" plots
   public :: get_tr_los_image          ! Correction for TR on LOS images
   public :: is_threaded_block         ! Mark blocks near internal boundary
+  public :: beta_thread               ! Accounts for grid sizes in TR and SC
   ! Saves thread state into restart
   public :: save_thread_restart
   ! interface procedure to easy calculate the CME field
@@ -184,8 +180,6 @@ module ModFieldLineThread
   ! The plasma properties dependent coefficient needed to evaluate the
   ! eefect of gravity on the hydrostatic equilibrium
   real, public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
-  real, public, dimension(1:nVar,RhoTr_:WminorTr_) :: State2Tr_VV, Face2Tr_VV
-  real, public, dimension(RhoTr_:WminorTr_,1:nVar) :: Tr2State_VV, Tr2Face_VV
   logical :: IsInitialized = .false.
 
   character(len=100) :: NameRestartFile
@@ -248,71 +242,6 @@ contains
     do iBlock = 1, MaxBlock
        call nullify_thread_b(iBlock)
     end do
-    call set_transform_matrices
-  contains
-    !==========================================================================
-    subroutine set_transform_matrices
-      use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, P_, Pe_, Ppar_, &
-           WaveFirst_, WaveLast_, Ux_, Uz_
-      use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitRhoU_, UnitP_
-      use ModTransitionRegion, ONLY: Utr_=>U_, RhoUtr_=>RhoU_, &
-           Ptr_=>P_, PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_,   &
-           PperpTr_=>Pperp_, PePerpTr_=>PePerp_, WmajorTr_=>Wmajor_
-      use ModAdvance, ONLY: UseAnisoPressure
-      use ModWaves,   ONLY: UseAwRepresentative
-      !------------------------------------------------------------------------
-      State2Tr_VV(1:nVar,RhoTr_:WminorTr_) = 0.0
-      Face2Tr_VV(1:nVar,RhoTr_:WminorTr_) = 0.0
-      State2Tr_VV(Rho_,RhoTr_) = No2Si_V(UnitRho_)
-      Face2Tr_VV(Rho_,RhoTr_) = No2Si_V(UnitRho_)
-      if(UseElectronPressure)then
-         if(UseAnisoPressure)then
-            State2Tr_VV(Ppar_,PparTr_) = No2Si_V(UnitP_)
-            Face2Tr_VV(Ppar_,PparTr_)  = No2Si_V(UnitP_)
-            Face2Tr_VV(Ppar_,PperpTr_) = -0.50*No2Si_V(UnitP_)
-            Face2Tr_VV(P_,PperpTr_) = 1.50*No2Si_V(UnitP_)
-         else
-            State2Tr_VV(P_,PparTr_) = No2Si_V(UnitP_)
-            Face2Tr_VV(P_,PparTr_) =  No2Si_V(UnitP_)
-            Face2Tr_VV(P_,PperpTr_) =  No2Si_V(UnitP_)
-         end if
-         State2Tr_VV(P_,Ptr_) = No2Si_V(UnitP_)
-         State2Tr_VV(Pe_,PeParTr_) = No2Si_V(UnitP_)
-         State2Tr_VV(Pe_,PeTr_) = No2Si_V(UnitP_)
-         Face2Tr_VV(Pe_,PeParTr_) = No2Si_V(UnitP_)
-         Face2Tr_VV(Pe_,PePerpTr_) = No2Si_V(UnitP_)
-      else
-         State2Tr_VV(P_,PparTr_) = (1 - PeFraction)*No2Si_V(UnitP_)
-         State2Tr_VV(P_,Ptr_) = (1 - PeFraction)*No2Si_V(UnitP_)
-         State2Tr_VV(P_,PeParTr_) =  PeFraction*No2Si_V(UnitP_)
-         State2Tr_VV(P_,PeTr_) = PeFraction*No2Si_V(UnitP_)
-         Face2Tr_VV(P_,PparTr_) = (1 - PeFraction)*No2Si_V(UnitP_)
-         Face2Tr_VV(P_,PperpTr_) = (1 - PeFraction)*No2Si_V(UnitP_)
-         Face2Tr_VV(P_,PeParTr_) =  PeFraction*No2Si_V(UnitP_)
-         Face2Tr_VV(P_,PePerpTr_) = PeFraction*No2Si_V(UnitP_)
-      end if
-      if(UseAwRepresentative)then
-         ! Wave amplitudes in SC are dimensionless
-         State2Tr_VV(WaveFirst_,WmajorTr_) = 1.0
-         State2Tr_VV(WaveLast_,WminorTr_) = 1.0
-         Face2Tr_VV(WaveFirst_,WmajorTr_) = 1.0
-         Face2Tr_VV(WaveLast_,WminorTr_) = 1.0
-      else
-         State2Tr_VV(WaveFirst_,WmajorTr_) = No2Si_V(UnitP_)
-         State2Tr_VV(WaveLast_,WminorTr_) = No2Si_V(UnitP_)
-         Face2Tr_VV(WaveFirst_,WmajorTr_) = No2Si_V(UnitP_)
-         Face2Tr_VV(WaveLast_,WminorTr_) = No2Si_V(UnitP_)
-      end if
-      ! The use of matrix State2Tr:
-      ! 1. Complete matrix
-      !    State2Tr_VV(RhoUx_:RhoUz_,RhoUtr_) = b_face*No2Si_V(UnitRhoU_)
-      ! 2. State_VC(:,0) = matmul(State_VGB(:,i,j,k,iBlock),State2Tr_VV)
-      ! The use of matrix Face2Tr:
-      ! 1. Complete matrix
-      !    Face2Tr_VV(Ux_:Uz_,Utr_) = b_face*No2Si_V(UnitU_)
-      ! 2. rFace_VF(:,0) = matmul(RightState_VX(:,i,j,k),Face2Tr_VV)
-    end subroutine set_transform_matrices
-    !==========================================================================
   end subroutine init_threads
   !============================================================================
   logical function is_threaded_block(iBlock)
@@ -324,6 +253,13 @@ contains
     is_threaded_block = &
          abs(CoordMin_D(1) - CoordMin_DB(1,iBlock)) < cTiny
   end function is_threaded_block
+  !============================================================================
+  real function beta_thread(j,k, iBlock)
+
+    integer, intent(in) :: j,k, iBlock
+    !--------------------------------------------------------------------------
+    beta_thread = 2.0  ! TBD!
+  end function beta_thread
   !============================================================================
   subroutine read_thread_param(NameCommand, iSession)
 
@@ -394,8 +330,6 @@ contains
     nullify(BoundaryThreads_B(iBlock)%nPoint_II)
     nullify(BoundaryThreads_B(iBlock)%DeltaR_II)
     nullify(BoundaryThreads_B(iBlock)%SignB_II)
-    nullify(BoundaryThreads_B(iBlock)%SignBFace_II)
-    nullify(BoundaryThreads_B(iBlock)%bDirFace_DII)
     nullify(BoundaryThreads_B(iBlock)%iStencil_III)
     nullify(BoundaryThreads_B(iBlock)%Weight_III)
     nullify(BoundaryThreads_B(iBlock)%State_VG)
@@ -425,13 +359,9 @@ contains
     deallocate(BoundaryThreads_B(iBlock)%nPoint_II)
     deallocate(BoundaryThreads_B(iBlock)%DeltaR_II)
     deallocate(BoundaryThreads_B(iBlock)%SignB_II)
-    deallocate(BoundaryThreads_B(iBlock)%SignBFace_II)
-    deallocate(BoundaryThreads_B(iBlock)%bDirFace_DII)
     deallocate(BoundaryThreads_B(iBlock)%iStencil_III)
     deallocate(BoundaryThreads_B(iBlock)%Weight_III)
     deallocate(BoundaryThreads_B(iBlock)%State_VG)
-    call deallocate_thread_arr(&
-         BoundaryThreads_B(iBlock)%OpenThreads_II, nJ, nK)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
     call test_stop(NameSub, DoTest, iBlock)
@@ -452,25 +382,6 @@ contains
          tSimulation, nStep, nIteration)
     b_cme_d = Bcme_D*Si2No_V(UnitB_)
   end function b_cme_d
-  !============================================================================
-  subroutine get_field(Xyz_D, B_D)
-    use EEE_ModCommonVariables, ONLY: UseCme
-    use EEE_ModMain, ONLY: EEE_get_state_BC
-    use ModPhysics,  ONLY: No2Si_V, UnitB_
-    use BATL_lib,    ONLY: MaxDim
-    use ModMain,     ONLY: nStep, nIteration, tSimulation
-    real, intent(in)  :: Xyz_D(MaxDim)
-    real, intent(out) :: B_D(MaxDim)
-    ! CME parameters, if needed
-    real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
-    !--------------------------------------------------------------------------
-    call get_b0(Xyz_D, B_D)
-    B_D = B_D*No2Si_V(UnitB_)
-    if(.not.UseCme)RETURN
-    call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-         tSimulation, nStep, nIteration)
-    B_D = B_D + Bcme_D
-  end subroutine get_field
   !============================================================================
   subroutine set_threads(NameCaller)
 
@@ -566,14 +477,6 @@ contains
                1:nJ, 1:nK))
           BoundaryThreads_B(iBlock)%SignB_II = 0.0
 
-          allocate(BoundaryThreads_B(iBlock)%SignBFace_II(&
-               1:nJ, 1:nK))
-          BoundaryThreads_B(iBlock)%SignBFace_II = 0.0
-
-          allocate(BoundaryThreads_B(iBlock)%bDirFace_DII(MaxDim,&
-               1:nJ, 1:nK))
-          BoundaryThreads_B(iBlock)%bDirFace_DII = 0.0
-
           allocate(BoundaryThreads_B(iBlock)%iStencil_III(2:3,&
                1:nJ, 1:nK))
           BoundaryThreads_B(iBlock)%iStencil_III = 0
@@ -586,10 +489,6 @@ contains
                PSi_:TiSi_, -nGUniform:1,&
                jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock)%State_VG = 0.0
-
-          call allocate_thread_arr(&
-               BoundaryThreads_B(iBlock)%OpenThreads_II, nJ, nK)
-
           IsAllocatedThread_B(iBlock) = .true.
        end if
        ! The threads are now set in a just created block, or
@@ -695,52 +594,6 @@ contains
 
     ! Loop over the thread starting points
     do k = 1, nK; do j = 1, nJ
-       ! Face center
-       Coord_D = CoordMin_DB(:,iBlock) +  [0.0, &
-            (j - 0.50)*CellSize_DB(2,iBlock),    &
-            (k - 0.50)*CellSize_DB(3,iBlock)]
-       call coord_to_xyz(Coord_D, Xyz_D)
-       call get_b0(Xyz_D, B0_D)
-       ! Account for the CME field as needed
-       if(UseCme)B0_D = B0_D + b_cme_d(Xyz_D)
-       B0 = norm2(B0_D)
-       if(B0==0.0)call stop_mpi('Zero magnetic field at the boundary')
-       B0_D = B0_D/B0
-       XyzRlonlat_DD =  rot_xyz_rlonlat(Coord_D(2), Coord_D(3))
-       bRlonlat_D = matmul(B0_D,XyzRlonlat_DD)
-       SignBr = sign(1.0,bRlonlat_D(r_))
-       BoundaryThreads_B(iBlock)%SignBface_II(j, k) = SignBr
-       B0_D = SignBr*B0_D
-       BoundaryThreads_B(iBlock)%bDirFace_DII(:,j, k) = B0_D
-       bRlonlat_D = SignBr*bRlonlat_D
-       ! Distance to the nearest cell center
-       Dr = norm2(Xyz_DGB(:, 1, j, k, iBlock) - Xyz_D)
-       j1 = j + nint(sign(1.0,bRlonlat_D(2)))
-       ! Distance from the first stencil point to the second one
-       DsLon = norm2(Xyz_DGB(:, 1, j1, k, iBlock) - &
-            Xyz_DGB(:, 1, j, k, iBlock))
-       k1 = k + nint(sign(1.0,bRlonlat_D(3)))
-       ! Distance from the first stencil point to the third one
-       DsLat = norm2(Xyz_DGB(:, 1, j, k1, iBlock) - &
-            Xyz_DGB(:, 1, j, k, iBlock))
-       Weight_I(2:3) = abs(bRlonlat_D(2:3))/[DsLon, DsLat]
-       Aux = max(bRlonlat_D(1)/Dr, Weight_I(2) + Weight_I(3))
-       Weight_I(2:3) = Weight_I(2:3)/Aux
-       Weight_I(1) = max(1 - Weight_I(2) - Weight_I(3), 0.0)
-       BoundaryThreads_B(iBlock)%Weight_III(:,j, k) = Weight_I
-       BoundaryThreads_B(iBlock)%iStencil_III(:,j, k) = [j1, k1]
-       call set_thread(&
-            XyzIn_D = Xyz_D,&
-            FaceArea = 1.0, &  ! ??? TBD
-            OpenThread1 = BoundaryThreads_B(iBlock)%OpenThreads_II(j,k), &
-            xyz_to_coord = xyz_to_coord,&
-            get_field = get_field)
-       ! Assign the distance from the intersection point of the field line
-       ! with the i=1 coordinate plane to the face center
-       BoundaryThreads_B(iBlock)%OpenThreads_II(j,k)%LengthSi_G(0) = &
-            norm2(Xyz_DGB(:,1,j,k,iBlock)*Weight_I(1) + &
-            Xyz_DGB(:,1,j1,k,iBlock)*Weight_I(2) +      &
-            Xyz_DGB(:,1,j,k1,iBlock)*Weight_I(3) - Xyz_D)*No2Si_V(UnitX_)
        ! First, take magnetic field in the ghost cell
        ! Starting points for all threads are in the centers
        ! of  physical cells near the boundary
@@ -1085,57 +938,11 @@ contains
   subroutine advance_threaded_block_expl(iBlock, iStage, &
        RightState_VII, LeftState_VII, DtIn)
 
-    use ModWaves,        ONLY: WaveFirst_, WaveLast_, UseAwRepresentative
-    use ModTransitionRegion, ONLY: RhoTr_=>Rho_, Utr_=>U_, RhoUtr_=>RhoU_, &
-         Ptr_=>P_, PeTr_=>Pe_, PparTr_=>Ppar_, PeParTr_=>PePar_,   &
-         PperpTr_=>Pperp_, PePerpTr_=>PePerp_, WminorTr_=>Wminor_, &
-         WmajorTr_=>Wmajor_, advance_thread_expl, PoyntingFluxPerBsi
-    use ModConst, ONLY: cMu
-    use ModPhysics,      ONLY: No2Si_V, UnitU_
-    use ModVarIndexes,   ONLY: Ux_, Uz_
-
     integer, intent(in) :: iBlock, iStage
     real, intent(in)    :: RightState_VII(nVar, 1:nJ, 1:nK)
     real, intent(inout) :: LeftState_VII(nVar, 1:nJ, 1:nK)
     real, optional, intent(in) :: DtIn
-
-    ! Loop variables
-    integer :: j, k
-    ! Direction of magnetic field at the boundary
-    real :: bDir_D(3)
-    ! Face values in the TR model
-    real :: RightFace0_V(RhoTr_:WminorTr_)
-    real :: LeftFace0_V(RhoTr_:WminorTr_)
-
     !--------------------------------------------------------------------------
-    do k = 1, nK; do j = 1, nJ
-       bDir_D = BoundaryThreads_B(iBlock) % bDirFace_DII(:,j,k)
-       Face2Tr_VV(Ux_:Uz_,RhoUtr_) = bDir_D*No2Si_V(UnitU_)
-       RightFace0_V = matmul(RightState_VII(:, j, k),Face2Tr_VV)
-       if(BoundaryThreads_B(iBlock) %SignBface_II(j,k) < 0)&
-            RightFace0_V(WmajorTr_:WminorTr_) = &
-            RightFace0_V( [WminorTr_, WminorTr_] )
-       if(.not.UseAwRepresentative)&
-            RightFace0_V(WmajorTr_:WminorTr_) = &
-            RightFace0_V(WmajorTr_:WminorTr_)/&
-            (PoyntingFluxPerBSi*sqrt(cMu*RightFace0_V(RhoTr_)))
-       if(present(DtIn))then
-          call advance_thread_expl(        &
-               iStage = iStage,            &
-               OpenThread1 = BoundaryThreads_B(iBlock)%OpenThreads_II(j,k), &
-               IsTimeAccurate = .true.,    &
-               RightFace0_V = RightFace0_V,&
-               LeftFace0_V = LeftFace0_V,  &
-               DtIn = DtIn                 )
-       else
-          call advance_thread_expl(        &
-               iStage = iStage,            &
-               OpenThread1 = BoundaryThreads_B(iBlock)%OpenThreads_II(j,k), &
-               IsTimeAccurate = .false.,   &
-               RightFace0_V = RightFace0_V,&
-               LeftFace0_V = LeftFace0_V   )
-       end if
-    end do; end do
   end subroutine advance_threaded_block_expl
   !============================================================================
   subroutine read_thread_restart(iBlock)

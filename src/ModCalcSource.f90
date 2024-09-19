@@ -175,7 +175,7 @@ contains
     use ModViscosity,     ONLY: &
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
-    use ModPUI, ONLY: UsePui, add_pui_source, DivUpui_C
+    use ModPUI, ONLY: add_pui_source, DivUpui_C, Pu3_
     use ModUserInterface, ONLY: user_calc_sources_expl, user_calc_sources_impl
 
     integer, intent(in):: iBlock
@@ -661,11 +661,15 @@ contains
             DoLimitTimeStep = .true.)
     end if
 
-    if(UsePui)then
+    if(nPui > 1)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-          DivUpui_C(i,j,k) = div_u(UnFirst_+nIonFluid-1, i, j, k, iGang)
+          DivUpui_C(i,j,k) = div_u(UnFirst_+Pu3_-1, i, j, k, iGang)
+
+          Source_VC(PuiFirst_:PuiLast_,i,j,k) = &
+               Source_VC(PuiFirst_:PuiLast_,i,j,k) &
+               + State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock)*DivUpui_C(i,j,k)
        end do; end do; end do
 
        call add_pui_source(iBlock)

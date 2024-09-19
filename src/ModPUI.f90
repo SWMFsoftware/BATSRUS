@@ -4,7 +4,7 @@
 module ModPUI
 
   use BATL_lib,          ONLY: test_start, test_stop
-  use ModVarIndexes,     ONLY: nPui, PuiFirst_, PuiLast_
+  use ModVarIndexes,     ONLY: nPui, PuiFirst_, PuiLast_, nIonFluid
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModSize,           ONLY: nI, nJ, nK
 
@@ -15,17 +15,18 @@ module ModPUI
 
   public :: read_pui_param
   public :: init_mod_pui
+  public :: set_pui_state
   public :: pui_advection_diffusion
   public :: add_pui_source
 
-  logical, parameter, public :: UsePui = PuiFirst_ > 1
+  integer, parameter, public :: Pu3_ = nIonFluid
 
   real :: VpuiMinSi = 10.0, VpuiMin
   real :: VpuiMaxSi = 6000.0, VpuiMax
 
   ! Logarithmic velocity grid for the PUIs.
   ! The bin centered velocities are:
-  real :: Vpui_I(PuiFirst_:PuiLast_)
+  real :: Vpui_I(nPui), DeltaVpui_I(nPui)
 
   real :: DeltaLogVpui
 
@@ -73,17 +74,54 @@ contains
     DeltaLogVpui = log(VpuiMax/VpuiMin)/nPui
 
     ! Bin centered PUI velocities on log grid
-    Vpui_I(PuiFirst_) = VpuiMinSi*exp(0.5*DeltaLogVpui)
-
-    do iPui = PuiFirst_ + 1, PuiLast_
+    Vpui_I(1) = VpuiMin*exp(0.5*DeltaLogVpui)
+    do iPui = 2, nPui
        Vpui_I(iPui) = Vpui_I(iPui-1)*exp(DeltaLogVpui)
     end do
 
-    if(UsePui .and. WaveFirst_==1) &
+    DeltaVpui_I(1) = VpuiMin*(exp(DeltaLogVpui) - 1.0)
+    do iPui = 2, nPui
+       DeltaVpui_I(iPui) = DeltaVpui_I(iPui-1)*exp(DeltaLogVpui)
+    end do
+
+    if(nPui > 1 .and. WaveFirst_==1) &
          call stop_mpi(NameSub//": PUI can only run together with turbulence")
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_pui
+  !============================================================================
+  subroutine set_pui_state(State_V)
+
+    use ModMultiFluid, ONLY: iRhoIon_I, iPIon_I
+    use ModVarIndexes, ONLY: nVar
+
+    real, intent(inout) :: State_V(nVar)
+
+    real :: RhoPui, Ppui
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_pui_state'
+    !--------------------------------------------------------------------------
+    if(PuiFirst_ > 1 .and. nPui == 1)then
+       State_V(PuiFirst_:PuiLast_) = 0.0
+       RETURN
+    end if
+
+    RhoPui = State_V(iRhoIon_I(Pu3_))
+    Ppui = State_V(iPIon_I(Pu3_))
+
+    ! 4.0*cPi*Vpui_I**2*DeltaVpui_I*(RhoPui/(cTwoPi*Ppui))**1.5 &
+    !    *exp(-0.5*RhoPui*Vpui_I**2/Ppui)
+    State_V(PuiFirst_:PuiLast_) = &
+         exp(-0.5*RhoPui*Vpui_I**2/Ppui)*Vpui_I**2*DeltaVpui_I
+
+    State_V(PuiFirst_:PuiLast_) = State_V(PuiFirst_:PuiLast_) &
+         /sum(State_V(PuiFirst_:PuiLast_))*RhoPui
+
+    State_V(PuiFirst_:PuiLast_) = State_V(PuiFirst_:PuiLast_) &
+         /(Vpui_I**2*DeltaVpui_I)
+
+  end subroutine set_pui_state
   !============================================================================
   subroutine pui_advection_diffusion(iBlock)
 
