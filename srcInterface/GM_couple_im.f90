@@ -243,7 +243,7 @@ contains
              Buffer_IIV(iLat,iLon,12:14)= Buffer_VI(2:4,iLocBmin)
              Buffer_IIV(iLat,iLon,15:17)= Buffer_VI(2:4,iLocBmin+1)
              Buffer_IIV(iLat,iLon,18:20)= Buffer_VI(2:4,iLocBmin+2)
-             
+
              ! Put coupled variables (densities and pressures) into buffer
              Buffer_IIV(iLat,iLon,21:) = Buffer_VI(4+iVarCouple_V,iLocBmin)
 
@@ -291,7 +291,7 @@ contains
        enddo
        close(UnitTmp_)
     end if
-    
+
   end subroutine GM_get_for_im_crcm
   !============================================================================
   subroutine GM_get_sat_for_im_crcm(Buffer_III, Name_I, nSat)
@@ -346,8 +346,8 @@ contains
     end do
 
   end subroutine GM_get_sat_for_im_crcm
-
   !============================================================================
+
   subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
     ! Do field line tracing for IM/RAM_SCB.
