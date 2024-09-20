@@ -1969,7 +1969,9 @@ contains
     !==========================================================================
     subroutine get_facex_second(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
-      use ModFieldLineThread, ONLY: beta_thread, is_threaded_block
+      use ModFieldLineThread, ONLY: UseFieldLineThreads, &
+           beta_thread, is_threaded_block
+
       integer,intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer::i1, iMinSharp, iMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -2028,6 +2030,7 @@ contains
             RightState_VX(:,i,j,k) &
                  = Primitive_VI(:,i ) - dVarLimR_VI(:,i )*(1-LowOrderCrit_I(i))
          end do
+         if(.not. UseFieldLineThreads) CYCLE
          if(is_threaded_block(iBlock))then
             ! The cell center on thread may be closer/farther to the boundary
             ! face then the true cell center in SC. The correction factor
