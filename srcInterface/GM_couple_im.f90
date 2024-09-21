@@ -171,7 +171,8 @@ contains
     endif
 
     ! Set buffer variable indexes
-    if(.not.allocated(iVarCouple_V)) call set_buffer_indexes(nVarIn-20, NameSub)
+    if(.not.allocated(iVarCouple_V)) &
+         call set_buffer_indexes(nVarIn - 20, NameSub)
 
     ! Initialize buffer_iiv
     Buffer_IIV = 0.0
