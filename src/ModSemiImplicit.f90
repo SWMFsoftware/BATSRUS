@@ -367,7 +367,8 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iVar = iVarSemiMin, iVarSemiMax
                 if(Used_GB(i,j,k,iBlockFromSemi_B(iBlockSemi)))then
-                   n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )
+                   n0 = n + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1))) + &
+                        (iVar - iVarSemiMin + 1)
                    NewSemiAll_VCB(iVar,i,j,k,iBlockSemi) = &
                         SemiAll_VCB(iVar,i,j,k,iBlockSemi) + x_I(n0)
                 else
