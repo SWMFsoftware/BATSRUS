@@ -17,7 +17,7 @@ module ModFieldLineThread
   use ModVarIndexes, ONLY: Pe_, p_, nVar
   use ModMultiFluid, ONLY: MassIon_I
   use ModTransitionRegion, ONLY: OpenThread, allocate_thread_arr, &
-       deallocate_thread_arr, nPointThreadMax, DsThreadMin=>Ds0, &
+       deallocate_thread_arr, nPointThreadMax=>nPointMax, DsThreadMin=>Ds0, &
        rChromo, LengthPavrSi_, dLogLambdaOverDlogT_, HeatFluxLength_, &
        iTableTr, set_thread, integrate_emission, &
        read_tr_param
