@@ -8,15 +8,14 @@ module ModThreadedLC
   use ModUtilities, ONLY: norm2
 #endif
   use BATL_lib, ONLY: test_start, test_stop, iProc
-  
+
   use ModFieldLineThread,  ONLY: BoundaryThreads, Threads_B,             &
        PeFraction, iPe, DoInit_, Done_, Heat_, put_bc_to_sc,             &
        init_threaded_lc=>init_threads, relax_initial_state, get_bc_from_sc
-  use omp_lib 
+  use omp_lib
 
   implicit none
   SAVE
-
 
   ! Two logicals with self-explained names
   logical        :: UseAlignedVelocity = .true.
@@ -128,7 +127,7 @@ contains
              State_VG(:, i,j,k) = State_VG(:,0, j, k)
           end do
        end do; end do
-    case default 
+    case default
        do k = 1, nK; do j = 1, nJ
           call prolong_state(j,k)
           call get_bc_from_sc(&
@@ -139,7 +138,7 @@ contains
           do i = 1 - nGhost, -1
              State_VG(:, i,j,k) = State_VG(:,0, j, k)
           end do
-       end do; end do       
+       end do; end do
     end select
     if(WDiff_>1)State_VG(WDiff_,1-nGhost:0, 1:nJ, 1:nK) = 0.0
     if(Ehot_ > 1)then

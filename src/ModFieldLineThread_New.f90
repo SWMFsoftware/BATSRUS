@@ -45,14 +45,14 @@ module ModFieldLineThread
   ! Indexes for array State_VG(PSi_:TiSi_,-nGUniform:1,jMin_:jMax_,kMin_:kMax_)
   integer, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
   integer, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
- 
+
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
   ! Te = TeFraction*State_V(iPe)/State_V(Rho_)
   ! Pe = PeFraction*State_V(iPe)
   ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
   real    :: TeFraction, TiFraction, PeFraction
   integer :: iPe
-  public  :: iPe, PeFraction 
+  public  :: iPe, PeFraction
 
   type(BoundaryThreads), public, allocatable :: Threads_B(:)
 
@@ -132,6 +132,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_threads'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(IsInitialized)RETURN
     IsInitialized = .true.
 
@@ -180,6 +181,7 @@ contains
        call nullify_thread_b(iBlock)
     end do
     call set_transform_matrices
+    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
     subroutine set_transform_matrices
@@ -300,7 +302,7 @@ contains
     integer, intent(in) :: iBlock
     real, intent(inout) :: HeatFlux_II(1:nJ,1:nK)
     integer :: j, k
-    real, parameter :: cTwoSeventh = 2.0/7.0 
+    real, parameter :: cTwoSeventh = 2.0/7.0
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ
        HeatFlux_II(j,k) = heat_flux(Threads_B(iBlock)%Threads_II(j,k))
@@ -650,7 +652,6 @@ contains
     use ModConst,        ONLY: cMu
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitU_, UnitB_
     use ModVarIndexes,   ONLY: Ux_, Uz_, Bx_, Bz_, Rho_
-
 
     integer, intent(in) :: iBlock, iStage
     real, intent(in)    :: RightState_VII(nVar, 1:nJ, 1:nK)
@@ -1608,11 +1609,11 @@ contains
     ! Local variables
     ! Magnetic field at the point XYZ_D, and its direction vector:
     real :: B0_D(MaxDim), DirB_D(MaxDim)
-    
+
     ! Coords of the point in which to interpolate
     real :: Coord_D(MaxDim), CoordNorm_D(2)
     real :: State_V(nVar)
- 
+
     ! Radial direction:
     real :: DirR_D(MaxDim)
 
