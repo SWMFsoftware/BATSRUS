@@ -174,8 +174,10 @@ make -j test_shocktube MPIRUN= NTHREAD=4
 
 # Compiling for GPUs
 
-You will need a development implementation of the message passing module to
-run in parallel on GPUs. Replace the file before compilation:
+We are working on merging the GPU version of the message passing module with 
+the CPU version. Currently, you will need a development implementation of 
+the message passing module to run in parallel on GPUs. Replace the file 
+before compilation:
 ```
 cp srcBATL/BATL_pass_cell_gpu_parallel.f90 srcBATL/BATL_pass_cell.f90
 ```
