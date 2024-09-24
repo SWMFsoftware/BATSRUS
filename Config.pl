@@ -30,14 +30,31 @@ if($SWMFsoftware){
     $gitclone = "share/Scripts/githubclone";
 }
 
+my $result;
 # Git clone missing directories as needed. Start with share/ to get $gitclone.
 if (not -f $config and not -f "../../$config"){
-    `git clone $remote/share; git clone $remote/util`;
+    print "Cloning share\n";
+    $result = `git clone $remote/share 2>&1`;
+    die $result unless -f $config;
+    if(not -d "util"){
+	print "Cloning util\n";
+	$result = `git clone $remote/util 2>&1`;
+	die $result unless -d "util";
+    }
 }
 # The component ID is hidden from Rename.pl
 if ($Component eq "G"."M"){
-    `$gitclone srcBATL` if not -d "srcBATL";
-    `$gitclone srcUserExtra` if not -d "srcUserExtra" and $SWMFsoftware;
+    if(not -d "srcBATL"){
+	print "Cloning srcBATL\n";
+	$result = `$gitclone srcBATL 2>&1`;
+	die $result if not -d "srcBATL";
+    }
+    if($SWMFsoftware and not -d "srcUserExtra"){
+	print "Cloning srcUserExtra\n";
+	`$gitclone srcUserExtra 2>&1`;
+	print "Cannot clone srcUserExtra...no access...\n"
+	    if not -d "srcUserExtra";
+    }
 }
 
 my $MakefileConf = 'Makefile.conf';
