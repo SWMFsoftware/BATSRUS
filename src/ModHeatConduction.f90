@@ -1473,6 +1473,8 @@ contains
     use ModMultiFluid,   ONLY: UseMultiIon
     use ModMain,         ONLY: UseFieldLineThreads
     use ModGeometry,     ONLY: IsBoundary_B
+    use ModFieldLineThread, ONLY: UseFieldLineThreads, is_threaded_block, &
+         thread_heat_flux
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1513,7 +1515,9 @@ contains
 
        end do; end do; end do
     end do
-
+    if(UseFieldLineThreads.and.is_threaded_block(iBlock).and.(.not.IsLinear))&
+         call thread_heat_flux(iBlock,  &
+         FluxImpl_VFDI(iTeImpl,1,1:nJ,1:nK,1,iGang))
 #ifndef _OPENACC
     ! Store the fluxes at resolution changes for restoring conservation
     call store_face_flux(iBlock, nVarSemi, FluxImpl_VFDI(:,:,:,:,:,iGang), &

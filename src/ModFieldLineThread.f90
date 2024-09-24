@@ -19,8 +19,7 @@ module ModFieldLineThread
   use ModTransitionRegion, ONLY: OpenThread, allocate_thread_arr, &
        deallocate_thread_arr, nPointThreadMax=>nPointMax, DsThreadMin=>Ds0, &
        rChromo, LengthPavrSi_, dLogLambdaOverDlogT_, HeatFluxLength_, &
-       iTableTr, set_thread, integrate_emission, &
-       read_tr_param
+       iTableTr, set_thread, integrate_emission, read_tr_param
 
   implicit none
   SAVE
@@ -160,6 +159,7 @@ module ModFieldLineThread
   public :: get_tr_los_image          ! Correction for TR on LOS images
   public :: is_threaded_block         ! Mark blocks near internal boundary
   public :: beta_thread               ! Accounts for grid sizes in TR and SC
+  public :: thread_heat_flux          ! Conserved heat flux to/from thread
   ! Saves thread state into restart
   public :: save_thread_restart
   ! interface procedure to easy calculate the CME field
@@ -260,6 +260,12 @@ contains
     !--------------------------------------------------------------------------
     beta_thread = 2.0  ! TBD!
   end function beta_thread
+  !============================================================================
+  subroutine thread_heat_flux(iBlock, HeatFlux_II)
+    integer, intent(in) :: iBlock
+    real, intent(inout) :: HeatFlux_II(1:nJ,1:nK)
+    !--------------------------------------------------------------------------
+  end subroutine thread_heat_flux
   !============================================================================
   subroutine read_thread_param(NameCommand, iSession)
 
@@ -1536,7 +1542,7 @@ contains
                      iList_II(:,i), iPointer_II(:,i), iEnd_II(:,i),         &
                      Weight_III(1,iBuff,i), Weight_III(2,iBuff,i),          &
                      Weight_III(3,iBuff,i), IsTriangleFound,                &
-                     iStencil_III(1,iBuff,i), iStencil_III(2,iBuff,i),        &
+                     iStencil_III(1,iBuff,i), iStencil_III(2,iBuff,i),      &
                      iStencil_III(3,iBuff,i))
              end if
              if(.not.IsTriangleFound)then
@@ -1689,9 +1695,6 @@ contains
     character(len=*), parameter:: NameSub = 'get_thread_point'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    ! Initialize output array
-
-    State_VII = 0.0
 
     ! Start value for Buffer index numerating the points related to given PE
     if(iProc==0)then
