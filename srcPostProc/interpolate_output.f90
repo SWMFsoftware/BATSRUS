@@ -561,29 +561,31 @@ contains
        end do
        call close_file
 
-       ! the file containing the maximum dB and dB/dt in neighboring cells
-       call open_file(FILE=trim(NameDirOut)//NameMag_I(iPoint)//'_nbor.txt')
-       write(UnitTmp_, '(a)') &
-            '# Maximum dB [nT] and dB/dt [nT/s] in neighboring cells'
-       write(UnitTmp_, '(a)') &
-            '# computed from magnetosphere and ionosphere currents'
-       write(UnitTmp_, '(a,2f10.3)') &
-            '# '//NameCoordPoint//' lon, lat=', CoordPoint_DI(:,iPoint)
-       if(NameCoordIn /= NameCoordPoint) write(UnitTmp_, '(a,2f10.3)') &
-            '# '//NameCoordIn//' lon, lat=', CoordIn_DI(:,iPoint)
-       write(UnitTmp_, '(a, 2i4)') &
-            '# Di, Dj=', Di, Dj
-       write(UnitTmp_, '(a)') &
-            '# Station: '//NameMag_I(iPoint)
-       write(UnitTmp_, '(a)') &
-            'Year Month Day Hour Min Sec '// &
-            'dB dBdt SmLon SmLat'
-       do iSnapshot = 1, nSnapshot
-          write(UnitTmp_,'(i4,5i3,4f10.3)') &
-               iTime_II(:,iSnapshot), InterpNbor_VII(:,iSnapshot,iPoint)
-       end do
-       call close_file
-end do
+       if(Di + Dj > 0)then
+          ! the file containing the maximum dB and dB/dt in neighboring cells
+          call open_file(FILE=trim(NameDirOut)//NameMag_I(iPoint)//'_nbor.txt')
+          write(UnitTmp_, '(a)') &
+               '# Maximum dB [nT] and dB/dt [nT/s] in neighboring cells'
+          write(UnitTmp_, '(a)') &
+               '# computed from magnetosphere and ionosphere currents'
+          write(UnitTmp_, '(a,2f10.3)') &
+               '# '//NameCoordPoint//' lon, lat=', CoordPoint_DI(:,iPoint)
+          if(NameCoordIn /= NameCoordPoint) write(UnitTmp_, '(a,2f10.3)') &
+               '# '//NameCoordIn//' lon, lat=', CoordIn_DI(:,iPoint)
+          write(UnitTmp_, '(a, 2i4)') &
+               '# Di, Dj=', Di, Dj
+          write(UnitTmp_, '(a)') &
+               '# Station: '//NameMag_I(iPoint)
+          write(UnitTmp_, '(a)') &
+               'Year Month Day Hour Min Sec '// &
+               'dB dBdt SmLon SmLat'
+          do iSnapshot = 1, nSnapshot
+             write(UnitTmp_,'(i4,5i3,4f10.3)') &
+                  iTime_II(:,iSnapshot), InterpNbor_VII(:,iSnapshot,iPoint)
+          end do
+          call close_file
+       end if
+    end do
 
     deallocate(iTime_II, Interp_VG, Interp_VII)
 
