@@ -999,6 +999,7 @@ contains
        NameIdlUnit_V(UnitJ_)           = 'uA/m2'
        NameIdlUnit_V(UnitDivB_)        = 'G/cm'
        NameIdlUnit_V(UnitTemperature_) = 'K'
+       NameIdlUnit_V(UnitAngle_)       = 'deg'
 
     case("OUTERHELIO")
        Io2Si_V(UnitX_)           = cAU                       ! R
