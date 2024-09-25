@@ -1515,8 +1515,8 @@ contains
 
        end do; end do; end do
     end do
-    
-#ifndef _OPENACC    
+
+#ifndef _OPENACC
     if(UseFieldLineThreads.and.is_threaded_block(iBlock).and.(.not.IsLinear))&
          call thread_heat_flux(iBlock,  &
          FluxImpl_VFDI(iTeImpl,1,1:nJ,1:nK,1,iGang))

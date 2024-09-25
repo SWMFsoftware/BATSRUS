@@ -17,7 +17,6 @@ module ModThreadedLC
   implicit none
   SAVE
 
-
   ! Redundant
   logical        :: UseAlignedVelocity = .true.
   logical        :: DoConvergenceCheck = .false.
