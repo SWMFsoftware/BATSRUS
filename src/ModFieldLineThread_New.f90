@@ -920,7 +920,7 @@ contains
             x_D=CoordNorm_D,                                      &
             DoExtrapolate=.false.                                 )
     end if
-    if(DoTest)write(*,'(a,4es14.6)')NameSub//': State_V=',&
+    if(DoTest)write(*,'(a,100es14.6)')NameSub//': State_V=',&
          State_V(:)
   end subroutine interpolate_thread_state
   !============================================================================
