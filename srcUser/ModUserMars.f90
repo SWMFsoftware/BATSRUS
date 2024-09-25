@@ -162,7 +162,7 @@ module ModUser
   logical :: UseChargeEx=.true.
   logical :: UseChapman=.false.
 
-  integer, parameter:: NLong=73, NLat=36, MaxAlt=21
+  integer, parameter:: NLong=72, NLat=36, MaxAlt=81
   real :: Long_I(NLong), Lat_I(NLat), Alt_I(MaxAlt)
   real :: Temp(NLong, NLat, MaxAlt)
   real :: Den_CO2(NLong, NLat, MaxAlt)!,Den_CO2_dim(NLong, NLat, NAlt)
@@ -361,6 +361,8 @@ contains
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
+
+       ! This does not work in first session with debug flag
        UseUserPointImplicit_B(iBlock) = &
           r_GB(1,1,1,iBlock) <= rPointImplicit .and. &
           r_GB(nI,1,1,iBlock) > rBody
