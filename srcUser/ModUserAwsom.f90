@@ -524,6 +524,8 @@ contains
     use BATL_lib,      ONLY: integrate_grid, Xyz_DGB
     use ModGeometry,   ONLY: r_GB
     use ModWriteLogSatFile, ONLY: calc_sphere
+    use ModCoordTransform, ONLY: cross_product
+    use ModCurrent, ONLY: get_current
 
     real, intent(out) :: VarValue
     character(len=10), intent(in) :: TypeVar
@@ -531,7 +533,7 @@ contains
 
     integer :: iBlock, i, j, k
     real :: UnitEnergy, Wmajor, Wminor
-    real :: FullB_D(3), SignBr, rUnit_D(3), Rho, Ur, Var
+    real :: FullB_D(3), SignBr, rUnit_D(3), Rho, Ur, Var, Current_D(3), b_D(3)
     logical:: DoTest
 
     character(len=*), parameter:: NameSub = 'user_get_log_var'
@@ -568,6 +570,31 @@ contains
           end if
        end do
        VarValue = UnitEnergy*0.5*integrate_grid(Tmp1_GB)
+
+    case('emag1')
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          Tmp1_GB(:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)**2 &
+               + State_VGB(By_,:,:,:,iBlock)**2 &
+               + State_VGB(Bz_,:,:,:,iBlock)**2
+       end do
+       VarValue = 0.5*integrate_grid(Tmp1_GB)
+
+    case('absjxb')
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k = 1,nK ; do j = 1,nJ ; do i = 1,nI
+
+             if(UseB0) then
+                b_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             else
+                b_D =  State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             endif
+             call get_current(i, j, k, iBlock, Current_D)
+             Tmp1_GB(i,j,k,iBlock) =  norm2(cross_product(current_D, b_D))
+          enddo; enddo; enddo
+       end do
+       VarValue = integrate_grid(Tmp1_GB)
 
     case('vol')
        do iBlock = 1, nBlock
