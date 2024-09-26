@@ -69,17 +69,6 @@ T			UseForceFreeB0
 #USERSWITCH
 +init +ic 		StringSwitch
 
-! This should be removed
-#USERINPUTBEGIN -----------------------------------
-
-#ARSMOOTHEXT
-8.0			ExtLonLeft
-8.0			ExtLonRight
-5.0			ExtLatBelow
-5.0			ExtLatAbove
-
-#USERINPUTEND -------------------------------------
-
 #POYNTINGFLUX
 0.3e6			PoyntingFluxPerBSi
 
