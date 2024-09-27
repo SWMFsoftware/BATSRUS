@@ -1,6 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 module ModFieldLineThread
 
   use ModBatsrusUtility, ONLY: stop_mpi
@@ -185,6 +186,7 @@ contains
   contains
     !==========================================================================
     subroutine set_transform_matrices
+
       use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, P_, Pe_, Ppar_, &
            WaveFirst_, WaveLast_, Ux_, Uz_
       use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitRhoU_, UnitP_, Si2No_V
@@ -263,6 +265,7 @@ contains
       Tr2State_VV(WminorTr_,WaveLast_) = 1.0
       Tr2Face_VV(WmajorTr_,WaveFirst_) = 1.0
       Tr2Face_VV(WminorTr_,WaveLast_) = 1.0
+
     end subroutine set_transform_matrices
     !==========================================================================
   end subroutine init_threads
@@ -275,6 +278,7 @@ contains
     !--------------------------------------------------------------------------
     is_threaded_block = &
          abs(CoordMin_D(1) - CoordMin_DB(1,iBlock)) < cTiny
+
   end function is_threaded_block
   !============================================================================
   real function beta_thread(j,k, iBlock)
@@ -293,6 +297,7 @@ contains
          Threads_B(iBlock)%Threads_II(j,k)%Coord_DF(r_,0) - &
          Threads_B(iBlock)%Threads_II(j,k)%Coord_DF(r_,-1))/&
          CellSize_DB(r_,iBlock)
+
   end function beta_thread
   !============================================================================
   subroutine thread_heat_flux(iBlock, HeatFlux_II)
@@ -791,8 +796,8 @@ contains
     GhostState_V = matmul(OpenThread1%State_VG(:,-1),Tr2State_VV)
     SignBr = sign(1.0, OpenThread1%OpenFlux)
     if(SignBr < 0.0)&
-         GhostState_V([WaveFirst_,WaveLast_]) = &
-         GhostState_V([WaveLast_,WaveFirst_])
+         GhostState_V(WaveFirst_:WaveLast_) = &
+         GhostState_V(WaveLast_:WaveFirst_:-1)
     SqrtRho = sqrt(GhostState_V(Rho_))
     if(.not.UseAwRepresentative)&
          GhostState_V(WaveFirst_:WaveLast_) = &
@@ -1229,8 +1234,9 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_restart_file_name
   !============================================================================
-  !==========================ROUTINES USED FOR TRIANGULATION===================
   subroutine set_triangulation
+
+    ! triangulation
 
     use BATL_lib,               ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, x_, y_, z_
@@ -1239,7 +1245,7 @@ contains
     use ModCoordTransform,      ONLY: rlonlat_to_xyz
     use ModMpi
 
-    integer :: i, j, k, iBlock, iBuff, iError, Loc_I(1)
+    integer :: i, j, k, iBlock, iBuff, iError
 
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
@@ -1330,13 +1336,13 @@ contains
                 Dist2_I = (Xyz_DII(1,:,i) - Xyz_D(1))**2 + &
                      (Xyz_DII(2,:,i) - Xyz_D(2))**2 +      &
                      (Xyz_DII(3,:,i) - Xyz_D(3))**2
-                Loc_I = minloc(Dist2_I)
                 Weight_III(:,iBuff,i) = cThird
-                iStencil_III(:,iBuff,i) = Loc_I(1)
+                iStencil_III(:,iBuff,i) = minloc(Dist2_I, DIM=1)
              end if
           end do          ! i
        end do; end do    ! j,k
     end do       ! iBlock
+
   end subroutine set_triangulation
   !============================================================================
   subroutine save_threads_for_plot
@@ -1533,8 +1539,8 @@ contains
                    State_VII(:,iBuff,i) = State_V
                 end do ! i
                 if(Threads_B(iBlock)%Threads_II(j,k)%OpenFlux < 0.0)&
-                     State_VII([WaveFirst_,WaveLast_],iBuff,:) = &
-                     State_VII([WaveLast_,WaveFirst_],iBuff,:)
+                     State_VII(WaveFirst_:WaveLast_,iBuff,:) = &
+                     State_VII(WaveLast_:WaveFirst_:-1,iBuff,:)
                 if(.not.UseAwRepresentative)then
                    do iPoint = -nGUniform, 0
                       State_VII(WaveFirst_:WaveLast_,iBuff,iPoint) =     &
