@@ -920,7 +920,7 @@ contains
             x_D=CoordNorm_D,                                      &
             DoExtrapolate=.false.                                 )
     end if
-    if(DoTest)write(*,'(a,4es14.6)')NameSub//': State_V=',&
+    if(DoTest)write(*,'(a,100es14.6)')NameSub//': State_V=',&
          State_V(:)
   end subroutine interpolate_thread_state
   !============================================================================
@@ -1239,7 +1239,7 @@ contains
     use ModCoordTransform,      ONLY: rlonlat_to_xyz
     use ModMpi
 
-    integer :: i, j, k, iBlock, iBuff, iError, loc(1)
+    integer :: i, j, k, iBlock, iBuff, iError, Loc_I(1)
 
     ! Coordinates and state vector at the point of intersection of thread with
     ! the spherical coordinate  surface of the grid for plotting
@@ -1330,9 +1330,9 @@ contains
                 Dist2_I = (Xyz_DII(1,:,i) - Xyz_D(1))**2 + &
                      (Xyz_DII(2,:,i) - Xyz_D(2))**2 +      &
                      (Xyz_DII(3,:,i) - Xyz_D(3))**2
-                loc = minloc(Dist2_I)
+                Loc_I = minloc(Dist2_I)
                 Weight_III(:,iBuff,i) = cThird
-                iStencil_III(:,iBuff,i) = loc(1)
+                iStencil_III(:,iBuff,i) = Loc_I(1)
              end if
           end do          ! i
        end do; end do    ! j,k
@@ -1430,8 +1430,8 @@ contains
     integer :: i, j, k, iBlock, nCell, iBuff, iPoint
     integer, parameter:: Lon_ = 1, Lat_ = 2
     real    :: StateThread_V(RhoTr_:WminorTr_), State_V(nVar)
-    real    :: Coord_F(-nPointThreadMax:0), Coord_I(-nPointThreadMax:0), &
-        Aux_VG(2*MaxDim,-nPointThreadMax:0), Aux_V(2*MaxDim), DsM1, Ds0
+    real    :: CoordFace_I(-nPointThreadMax:0), Coord_I(-nPointThreadMax:0), &
+        UandB_VI(2*MaxDim,-nPointThreadMax:0), UandB_V(2*MaxDim), DsM1, Ds0
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_thread_point'
     !--------------------------------------------------------------------------
@@ -1455,7 +1455,7 @@ contains
              nCell = Threads_B(iBlock)%Threads_II(j,k)%nCell
              ! Fill in an array for this thread with lon,lat values
              ! of the grid points on the thread
-             Coord_F(-nCell:0) = Threads_B(iBlock)%&
+             CoordFace_I(-nCell:0) = Threads_B(iBlock)%&
                   Threads_II(j,k)% Coord_DF(r_,-nCell:0)
              if(present(DoCoord))then
                 do i = -nGUniform, 0
@@ -1472,21 +1472,21 @@ contains
                         iMin = -nCell,                               &
                         iMax = 0,                                    &
                         x = Coord1,                                  &
-                        x_I = Coord_F(-nCell:0),                     &
+                        x_I = CoordFace_I(-nCell:0),                 &
                         DoExtrapolate = .false.)
                 end do ! i
              else
                 Coord_I(-nCell:-1) = 0.50*&
-                     (Coord_F(-nCell:-1) + Coord_F(1-nCell:0))
-                Coord_F(-nCell:-1) = Coord_I(-nCell:-1)
+                     (CoordFace_I(-nCell:-1) + CoordFace_I(1-nCell:0))
+                CoordFace_I(-nCell:-1) = Coord_I(-nCell:-1)
                 Coord_I(0) = CoordMin_D(r_) + 0.50*CellSize_DB(r_,iBlock)
                 do iPoint = -nCell, -1
-                   Aux_VG(1:MaxDim,iPoint) = &
+                   UandB_VI(1:MaxDim,iPoint) = &
                         Threads_B(iBlock)%Threads_II(j,k)%        &
                         DirB_DG(:,iPoint)*                        &
                         Threads_B(iBlock)%Threads_II(j,k)%        &
                         State_VG(Utr_,iPoint)
-                   Aux_VG(MaxDim+1:2*MaxDim,iPoint) =             &
+                   UandB_VI(MaxDim+1:2*MaxDim,iPoint) =           &
                         Threads_B(iBlock)%Threads_II(j,k)%        &
                         B1_DG(:,iPoint)
                 end do
@@ -1495,12 +1495,12 @@ contains
                 ! Distance from 0 ghost cell to 0 face
                 Ds0 = Threads_B(iBlock)%Threads_II(j,k)%Ds_G(0)
                 ! Interpolate velocity value to 0 face
-                Aux_VG(1:MaxDim,0) = Threads_B(iBlock)%Threads_II(j,k)%  &
+                UandB_VI(1:MaxDim,0) = Threads_B(iBlock)%Threads_II(j,k)%  &
                      DirB_DG(:,0)*(Threads_B(iBlock)%Threads_II(j,k)%    &
                      State_VG(Utr_,-1)*Ds0 +                             &
                      Threads_B(iBlock)%Threads_II(j,k)%                  &
                      State_VG(Utr_,0)*DsM1)/(Ds0 + DsM1)
-                Aux_VG(MaxDim+1:2*MaxDim,0) =                  &
+                UandB_VI(MaxDim+1:2*MaxDim,0) =                  &
                      Threads_B(iBlock)%Threads_II(j,k)%B1_DG(:,0)
                 Tr2State_VV(Utr_,RhoUx_:RhoUz_) = 0
                 do i = -nGUniform, 0
@@ -1519,16 +1519,17 @@ contains
                         x_I = Coord_I(-nCell:0),                     &
                         DoExtrapolate = .false.)
                    State_V = matmul(StateThread_V, Tr2State_VV)
-                   Aux_V(:) = linear(a_VI =Aux_VG(:,-nCell:0),       &
+                   UandB_V(:) = linear(a_VI = UandB_VI(:,-nCell:0),  &
                         nVar = 2*MaxDim,                             &
                         iMin = -nCell,                               &
                         iMax = 0,                                    &
                         x = Coord1,                                  &
-                        x_I = Coord_F(-nCell:0),                     &
+                        x_I = CoordFace_I(-nCell:0),                 &
                         DoExtrapolate = .false.)
-                   State_V(RhoUx_:RhoUz_) = Aux_V(1:MaxDim)*Si2No_V(UnitU_)*&
-                        State_V(Rho_)
-                   State_V(Bx_:Bz_) = Aux_V(MaxDim+1:2*MaxDim)*Si2No_V(UnitB_)
+                   State_V(RhoUx_:RhoUz_) = UandB_V(1:MaxDim)*&
+                        Si2No_V(UnitU_)*State_V(Rho_)
+                   State_V(Bx_:Bz_) = UandB_V(MaxDim+1:2*MaxDim)*&
+                        Si2No_V(UnitB_)
                    State_VII(:,iBuff,i) = State_V
                 end do ! i
                 if(Threads_B(iBlock)%Threads_II(j,k)%OpenFlux < 0.0)&

@@ -2136,7 +2136,7 @@ contains
        case('eta','visco')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *(No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
-       case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight', &
+       case('ux', 'uy', 'uz', 'uxrot', 'uyrot', 'uzrot', 'ur', 'clight', &
             'divudx')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitU_)
@@ -2269,7 +2269,7 @@ contains
           NameUnit = NameIdlUnit_V(UnitN_)
        case('t','temp')
           NameUnit = NameIdlUnit_V(UnitTemperature_)
-       case('ux','uy','uz','ur','uxrot','uyrot','uzrot')
+       case('ux', 'uy', 'uz', 'ur', 'uxrot', 'uyrot', 'uzrot', 'divudx')
           NameUnit = NameIdlUnit_V(UnitU_)
        case('gradpex', 'gradpey', 'gradpez', 'gradper', &
             'gradpx', 'gradpy', 'gradpz', 'gradpr')

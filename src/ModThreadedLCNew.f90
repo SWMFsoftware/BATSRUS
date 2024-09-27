@@ -17,11 +17,9 @@ module ModThreadedLC
   implicit none
   SAVE
 
-  ! Two logicals with self-explained names
+  ! Redundant
   logical        :: UseAlignedVelocity = .true.
   logical        :: DoConvergenceCheck = .false.
-  ! See above about usage of the latter constant
-  integer, parameter:: Impl_=4
 
   integer:: nIter = 20
   real   :: cTol = 1.0e-6
