@@ -18,21 +18,23 @@ our @Arguments = @ARGV;
 
 # Figure out remote git server
 my $remote = `git config remote.origin.url`; $remote =~ s/\/BATSRUS(.git)?\n//;
-my $SWMFsoftware = ($remote =~ /SWMFsoftware/);
 
 #print "remote=$remote SWMFsoftware=$SWMFsoftware\n";
 
 my $config   = "share/Scripts/Config.pl";
-my $gitclone;
-if($SWMFsoftware){
-    $gitclone = "share/Scripts/gitclone -s";
-}else{
-    $gitclone = "share/Scripts/githubclone";
+my $gitclone = "share/Scripts/gitclone -s";
+my $MakefileConf = 'Makefile.conf';
+
+# Use ../../share and ../../Makefile.conf if present and needed
+if (not -f $config and -f "../../$config"){
+    $config = "../../$config";
+    $gitclone = "../../$gitclone";
+    $MakefileConf = "../../$MakefileConf";
 }
 
 my $result;
 # Git clone missing directories as needed. Start with share/ to get $gitclone.
-if (not -f $config and not -f "../../$config"){
+if (not -f $config){
     print "Cloning share\n";
     $result = `git clone $remote/share 2>&1`;
     die $result unless -f $config;
@@ -42,28 +44,17 @@ if (not -f $config and not -f "../../$config"){
 	die $result unless -d "util";
     }
 }
+
+# Install srcBATL if not present
+my $SrcBatl = 'srcBATL';
 # The component ID is hidden from Rename.pl
-if ($Component eq "G"."M"){
-    if(not -d "srcBATL"){
-	print "Cloning srcBATL\n";
-	$result = `$gitclone srcBATL 2>&1`;
-	die $result if not -d "srcBATL";
-    }
-    if($SWMFsoftware and not -d "srcUserExtra"){
-	print "Cloning srcUserExtra\n";
-	`$gitclone srcUserExtra 2>&1`;
-	print "Cannot clone srcUserExtra...no access...\n"
-	    if not -d "srcUserExtra";
-    }
+if ($Component eq "G"."M" and not -d $SrcBatl){
+    print "$gitclone $SrcBatl\n";
+    $result = `$gitclone $SrcBatl 2>&1`;
+    die $result if not -d $SrcBatl;
 }
 
-my $MakefileConf = 'Makefile.conf';
-if(-f $config){
-    require $config;
-}else{
-    require "../../$config";
-    $MakefileConf = "../../$MakefileConf";
-}
+require $config;
 
 # Variables inherited from share/Scripts/Config.pl
 our %Remaining; # Unprocessed arguments
@@ -75,6 +66,7 @@ our $Show;
 our $ShowGridSize;
 our $NewGridSize;
 our $NewGhostCell;
+our $Install;
 
 &print_help if $Help;
 
@@ -94,7 +86,7 @@ my $Equation;
 my $UserModule;
 
 # Grid size variables
-my $NameBatlFile = "srcBATL/BATL_size.f90";
+my $NameBatlFile = $SrcBatl.'/BATL_size.f90';
 my $GridSize;
 my $GhostCell;
 my ($nI, $nJ, $nK, $nG);
@@ -115,8 +107,17 @@ my $OptFile     = "src/ModOptimizeParam.f90";
 my $OptFileOrig = "src/ModOptimizeParam_orig.f90";
 my $Opt;
 
-# For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
+# For BATSRUS clones src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
+
+# Attempt installing srcUserExtra (may or may not be available)
+# The component ID is hidden from Rename.pl
+if ($Install and $Component eq "G"."M" and not -d $SrcUserExtra){
+    print "$gitclone $SrcUserExtra\n";
+    `$gitclone $SrcUserExtra 2>&1`;
+    print "Cannot clone $SrcUserExtra ...no access...\n"
+	if not -d $SrcUserExtra;
+}
 
 # Read previous grid size, equation and user module
 &get_settings;
