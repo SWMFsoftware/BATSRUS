@@ -1314,6 +1314,30 @@ contains
              PlotVar_GV(:,:,:,iVar) = &
                   State_VGB(iRhoUx,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
           end if
+       case('uxup')
+          call set_shock_var
+          if (UseRotatingFrame) then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                PlotVar_GV(i,j,k,iVar) = &
+                     StateUp_VC(iRhoUx,i,j,k)/StateUp_VC(iRho,i,j,k) &
+                     - OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
+             end do; end do; end do
+          else
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
+                  StateUp_VC(iRhoUx,:,:,:)/StateUp_VC(iRho,:,:,:)
+          end if
+       case('uxdn')
+          call set_shock_var
+          if (UseRotatingFrame) then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                PlotVar_GV(i,j,k,iVar) = &
+                     StateDn_VC(iRhoUx,i,j,k)/StateDn_VC(iRho,i,j,k) &
+                     - OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
+             end do; end do; end do
+          else
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
+                  StateDn_VC(iRhoUx,:,:,:)/StateDn_VC(iRho,:,:,:)
+          end if
        case('uy')
           if (UseRotatingFrame) then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1326,15 +1350,47 @@ contains
              PlotVar_GV(:,:,:,iVar) = &
                   State_VGB(iRhoUy,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
           end if
+       case('uyup')
+          call set_shock_var
+          if (UseRotatingFrame) then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                PlotVar_GV(i,j,k,iVar) = &
+                     StateUp_VC(iRhoUy,i,j,k)/StateUp_VC(iRho,i,j,k) &
+                     + OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
+             end do; end do; end do
+          else
+             PlotVar_GV(:,:,:,iVar) = &
+                  StateUp_VC(iRhoUy,:,:,:)/StateUp_VC(iRho,:,:,:)
+          end if
+       case('uydn')
+          call set_shock_var
+          if (UseRotatingFrame) then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                PlotVar_GV(i,j,k,iVar) = &
+                     StateDn_VC(iRhoUy,i,j,k)/StateDn_VC(iRho,i,j,k) &
+                     + OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
+             end do; end do; end do
+          else
+             PlotVar_GV(:,:,:,iVar) = &
+                  StateDn_VC(iRhoUy,:,:,:)/StateDn_VC(iRho,:,:,:)
+          end if
        case('uxrot')
           PlotVar_GV(:,:,:,iVar) = &
                State_VGB(iRhoUx,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
        case('uyrot')
           PlotVar_GV(:,:,:,iVar) = &
                State_VGB(iRhoUy,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
-       case('uz','uzrot')
+       case('uz', 'uzrot')
           PlotVar_GV(:,:,:,iVar) = &
                State_VGB(iRhoUz,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
+       case('uzup')
+          call set_shock_var
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
+               StateUp_VC(iRhoUz,:,:,:)/StateUp_VC(iRho,:,:,:)
+       case('uzdn')
+          call set_shock_var
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
+               StateDn_VC(iRhoUz,:,:,:)/StateDn_VC(iRho,:,:,:)
        case('divu')
           allocate(u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           ! Calculate velocity
@@ -1924,8 +1980,17 @@ contains
        case default
           ! Check if the name is one of the state variable names
           do jVar = 1, nVar
-             if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
-             PlotVar_GV(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBlock)
+             if(NamePlotVar == NameVarLower_V(jVar))then
+                PlotVar_GV(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBlock)
+             elseif(NamePlotVar == trim(NameVarLower_V(jVar))//'dn')then
+                call set_shock_var
+                PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = StateDn_VC(jVar,:,:,:)
+             elseif(NamePlotVar == trim(NameVarLower_V(jVar))//'up')then
+                call set_shock_var
+                PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = StateUp_VC(jVar,:,:,:)
+             else
+                CYCLE
+             end if
              if(DefaultState_V(jVar) > 0.0) &
                   PlotVarBody_V(iVar) = FaceState_VI(jVar,body1_)
              EXIT
@@ -2097,7 +2162,7 @@ contains
 
           ! BASIC MHD variables
 
-       case('rho')
+       case('rho', 'rhoup', 'rhodn')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitRho_)
           PlotVarBody_V(iVar) = PlotVarBody_V(iVar) &
@@ -2105,9 +2170,9 @@ contains
        case('rhoux','mx','rhouy','my','rhouz','mz','rhour','mr' )
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitRhoU_)
-       case('bx','by','bz','br','b1x','b1y','b1z','b1r' &
-            ,'bxl','bxr','byl','byr','bzl','bzr' &
-            )
+       case('bx', 'by', 'bz', 'br', 'b1x', 'b1y', 'b1z', 'b1r', &
+            'bxl', 'bxr', 'byl', 'byr', 'bzl', 'bzr', &
+            'bxup', 'byup', 'bzup', 'bxdn', 'bydn', 'bzdn')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitB_)
        case('dbxdt', 'dbydt', 'dbzdt')
@@ -2116,10 +2181,10 @@ contains
        case('elaser')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
-       case('e','e1','ew','erad')
+       case('e', 'e1', 'ew', 'erad')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitEnergyDens_)
-       case('p','pth','pperp','peperp')
+       case('p', 'pth', 'pperp', 'peperp', 'pup', 'pdn')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitP_)
           PlotVarBody_V(iVar) = PlotVarBody_V(iVar) &
@@ -2137,7 +2202,7 @@ contains
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *(No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
        case('ux', 'uy', 'uz', 'uxrot', 'uyrot', 'uzrot', 'ur', 'clight', &
-            'divudx')
+            'divudx', 'uxup', 'uyup', 'uzup', 'uxdn', 'uydn', 'uzdn')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitU_)
        case('divu')
@@ -2166,10 +2231,10 @@ contains
           ! Divergence of electric field has SI units of V/m^2
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Si_V(UnitElectric_)/No2Si_V(UnitX_)
-       case('pvecx','pvecy','pvecz','pvecr','b2ur')
+       case('pvecx', 'pvecy', 'pvecz', 'pvecr', 'b2ur')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitPoynting_)
-       case('divb','divb_cd','divb_ct','absdivb')
+       case('divb', 'divb_cd', 'divb_ct', 'absdivb')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitDivB_)
 
@@ -2255,21 +2320,23 @@ contains
        call extract_fluid_name(String)
 
        select case(String)
-       case('rho')
+       case('rho', 'rhoup', 'rhodn')
           NameUnit = NameIdlUnit_V(UnitRho_)
-       case('rhoux','mx','rhouy','rhoUz','rhouz','mz','rhour','mr')
+       case('rhoux', 'mx', 'rhouy', 'rhoUz', 'rhouz', 'mz', 'rhour', 'mr')
           NameUnit = NameIdlUnit_V(UnitRhoU_)
-       case('bx','by','bz','b1x','b1y','b1z','br','b1r')
+       case('bx', 'by', 'bz', 'b1x', 'b1y', 'b1z', 'br', 'b1r', &
+            'bxup', 'byup', 'bzup', 'bxdn', 'bydn', 'bzdn')
           NameUnit = NameIdlUnit_V(UnitB_)
        case('e','ew','erad')
           NameUnit = NameIdlUnit_V(UnitEnergydens_)
-       case('p','pth','pperp','peperp')
+       case('p','pth','pperp','peperp', 'pup', 'pdn')
           NameUnit = NameIdlUnit_V(UnitP_)
        case('n')
           NameUnit = NameIdlUnit_V(UnitN_)
        case('t','temp')
           NameUnit = NameIdlUnit_V(UnitTemperature_)
-       case('ux', 'uy', 'uz', 'ur', 'uxrot', 'uyrot', 'uzrot', 'divudx')
+       case('ux', 'uy', 'uz', 'ur', 'uxrot', 'uyrot', 'uzrot', 'divudx', &
+            'uxup', 'uyup', 'uzup', 'uxdn', 'uydn', 'uzdn')
           NameUnit = NameIdlUnit_V(UnitU_)
        case('gradpex', 'gradpey', 'gradpez', 'gradper', &
             'gradpx', 'gradpy', 'gradpz', 'gradpr')
@@ -2293,7 +2360,7 @@ contains
        case('lon1', 'lat1', 'lon2', 'lat2', 'thetaup', 'thetadn', &
             'theta1', 'phi1', 'theta2', 'phi2') ! backward compatible
           NameUnit = NameIdlUnit_V(UnitAngle_)
-       case('status','f1x','f1y','f1z','f2x','f2y','f2z','squash')
+       case('status', 'squash', 'comprho', 'normx', 'normy', 'normz')
           NameUnit = '--'
           ! GRID INFORMATION
        case('proc','blk','node','impl','evolve')
