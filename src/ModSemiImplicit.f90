@@ -344,8 +344,7 @@ contains
        ! Calculate Jacobian matrix if required
        if(SemiParam%DoPrecond)then
           call timing_start('impl_jacobian')
-          call get_semi_impl_jacobian
-          !$acc update host(JacSemi_VVCIB)
+          call get_semi_impl_jacobian          
           call timing_stop('impl_jacobian')
        endif
 
