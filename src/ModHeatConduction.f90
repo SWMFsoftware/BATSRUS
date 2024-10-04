@@ -1350,7 +1350,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           State2_VGI(:,i,j,k,iGang) = State_VGB(:,i,j,k,iBlock)
-       end do; end do; end do       
+       end do; end do; end do
 
        call set_block_field2(iBlock, nVar, &
             State1_VGI(:,:,:,:,iGang), State2_VGI(:,:,:,:,iGang))
