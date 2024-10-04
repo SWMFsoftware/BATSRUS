@@ -27,7 +27,7 @@ READ			TypeNormalization
 F			DoConserveFlux
 
 #GRID
-2			nRootBlock1
+4			nRootBlock1
 2			nRootBlock2
 1			nRootBlock3
 -32			xMin
@@ -38,11 +38,11 @@ F			DoConserveFlux
  1			zMax
 
 
-GRIDLEVEL
+#GRIDLEVEL
 1			nLevel
 initial			StringShape
 
-GRIDLEVEL
+#GRIDLEVEL
 1			nLevel
 box			StringShape
 -1.0			xMinBox
@@ -53,7 +53,7 @@ box			StringShape
  1.0			zMaxBox
 
 #GRIDBLOCKALL
-8			MaxBlock
+64			MaxBlock
 
 SHOCKPOSITION
 0.0			ShockPosition
@@ -171,8 +171,8 @@ spitzer			TypeHeatConduction
 T			UseSemiImplicit
 parcond			TypeSemiImplicit
 
-#SEMIPRECONDITIONER
-F               DoPrecond (rest of parameters are read if true)
+SEMIPRECONDITIONER
+F			DoPrecond (rest of parameters are read if true)
 
 #TEST
 krylov			StringTest
@@ -185,7 +185,7 @@ F			UseHeatExchange
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#FIXEDTIMESTEP
+FIXEDTIMESTEP
 T			UseDtFixed
 1			DtFixedDim [sec] (read if UseDtFixed is true)
 
@@ -210,5 +210,5 @@ z=0 mhd idl_ascii		StringPlot
 
 #STOP
 -1			MaxIteration
-2e-25			tSimulationMax
+1e-25			tSimulationMax
 

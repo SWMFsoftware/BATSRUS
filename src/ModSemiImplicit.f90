@@ -345,7 +345,6 @@ contains
        if(SemiParam%DoPrecond)then
           call timing_start('impl_jacobian')
           call get_semi_impl_jacobian
-          !$acc update host(JacSemi_VVCIB)
           call timing_stop('impl_jacobian')
        endif
 
