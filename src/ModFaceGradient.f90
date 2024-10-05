@@ -28,6 +28,7 @@ module ModFaceGradient
 contains
   !============================================================================
   subroutine set_block_field2(iBlock, nVar, Field1_VG, Field_VG)
+    !$acc routine vector
 
     ! correct the ghostcells of the given scalar/vector field on iBlock
     ! using second order interpolation
@@ -52,6 +53,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     Field1_VG = Field_VG
 
+    !$acc loop seq
     do kSide = -1,1;
        if(nK == 1 .and. kSide /= 0) CYCLE
        do jSide = -1,1
@@ -105,6 +107,7 @@ contains
           !
           ! The corner and coarse cell center are then interpolated
 
+          !$acc loop vector collapse(2) private(jP, kP)
           do k1=1, nK, 2; do j1=1, nJ, 2;
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
                 jP = 3*j2 - 2*j1 -1
@@ -127,6 +130,7 @@ contains
           Field_VG(:,nI+1,1,1) = &
                (2*Field1_VG(:,nI+1,1,1) + Field1_VG(:,nI,1,1))/3
        else
+          !$acc loop vector collapse(2) private(jP, kP)
           do k1=1, nK, 2; do j1=1, nJ, 2;
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
                 jP = 3*j2 - 2*j1 -1
@@ -147,6 +151,7 @@ contains
     if(nJ == 1) RETURN
 
     if(DiLevel_EB(3,iBlock) == 1)then
+       !$acc loop vector collapse(2) private(iP, kP)
        do k1=1, nK, 2; do i1=1, nI, 2;
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              iP = 3*i2 - 2*i1 -1
@@ -164,6 +169,7 @@ contains
     end if
 
     if(DiLevel_EB(4,iBlock) == 1)then
+       !$acc loop vector collapse(2) private(iP, kP)
        do k1=1, nK, 2; do i1=1, nI, 2;
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              iP = 3*i2 - 2*i1 -1
@@ -181,6 +187,7 @@ contains
     end if
 
     if(nK > 1 .and. DiLevel_EB(5,iBlock) == 1)then
+       !$acc loop vector collapse(2) private(iP, jP)
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           iP = 3*i2 - 2*i1 -1
           jP = 3*j2 - 2*j1 -1
@@ -195,6 +202,7 @@ contains
     end if
 
     if(nK > 1 .and. DiLevel_EB(6,iBlock) == 1)then
+       !$acc loop vector collapse(2) private(iP, jP)
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           iP = 3*i2 - 2*i1 -1
           jP = 3*j2 - 2*j1 -1
@@ -219,6 +227,7 @@ contains
 
        i1=1; if(iSide==1) i1=nI; iC = i1+iSide
        j1=1; if(jSide==1) j1=nJ; jC = j1+jSide
+       !$acc loop vector collapse(1) private(kP)
        do k1 = 1, nK, 2 ; do k2 = k1, k1 + min(nK-1,1)
           if(nK == 1) then
              kP = 1
@@ -247,6 +256,7 @@ contains
 
        j1=1; if(jSide==1) j1=nJ; jC = j1+jSide
        k1=1; if(kSide==1) k1=nK; kC = k1+kSide
+       !$acc loop vector collapse(1) private(iP)
        do i1 = 1,nI,2; do i2 = i1, i1+1
           iP = 3*i2 - 2*i1 -1
           if(IsEqualLevel_G(iP,jC,kC))then
@@ -267,6 +277,7 @@ contains
 
        i1=1; if(iSide==1) i1=nI; iC = i1+iSide
        k1=1; if(kSide==1) k1=nK; kC = k1+kSide
+       !$acc loop vector collapse(1) private(jP)
        do j1 = 1, nJ, 2; do j2 = j1, j1+1
           jP = 3*j2 - 2*j1 -1
           if(IsEqualLevel_G(iC,jP,kC))then

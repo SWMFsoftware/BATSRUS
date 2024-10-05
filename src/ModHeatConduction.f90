@@ -71,8 +71,9 @@ module ModHeatConduction
   !$acc declare create(TiFraction, TeFraction)
 
   ! Array needed for second order interpolation of ghost cells
-  real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
-  !$omp threadprivate( State1_VG, State2_VG )
+  real, allocatable :: State1_VGI(:,:,:,:,:), State2_VGI(:,:,:,:,:)
+  !$omp threadprivate( State1_VGI, State2_VGI )
+  !$acc declare create(State1_VGI, State2_VGI)
 
   ! Heat flux for operator split scheme
   real, allocatable :: FluxImpl_VFDI(:,:,:,:,:,:)
@@ -299,8 +300,8 @@ contains
        allocate(HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
        !$omp end single
        allocate( &
-            State1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
-            State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+            State1_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang), &
+            State2_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang), &
             FluxImpl_VFDI(nVarSemi,nI+1,nJ+1,nK+1,nDim,nGang), &
             HeatCoef_GI(0:nI+1,j0_:nJp1_,k0_:nKp1_,nGang), &
             Bb_DDGI(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,nGang), &
@@ -1344,27 +1345,21 @@ contains
 
        end do; end do; end do
 
-#ifndef _OPENACC
-
        ! The following is because we entered the semi-implicit solve with
        ! first order ghost cells.
-       State2_VG = State_VGB(:,:,:,:,iBlock)
-
-       if(iTypeUpdate == UpdateOrig_) &
-            call set_block_field2(iBlock, nVar, State1_VG, State2_VG)
-
-       ! Calculate the cell centered heat conduction tensor
-       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          call get_heat_cond_tensor(State2_VG(:,i,j,k), i, j, k, iBlock)
+       !$acc loop vector collapse(3) independent
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          State2_VGI(:,i,j,k,iGang) = State_VGB(:,i,j,k,iBlock)
        end do; end do; end do
-#else
+
+       call set_block_field2(iBlock, nVar, &
+            State1_VGI(:,:,:,:,iGang), State2_VGI(:,:,:,:,iGang))
 
        ! Calculate the cell centered heat conduction tensor
        !$acc loop vector collapse(3) independent
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          call get_heat_cond_tensor(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
+          call get_heat_cond_tensor(State2_VGI(:,i,j,k,iGang), i, j, k, iBlock)
        end do; end do; end do
-#endif
 
 #ifndef _OPENACC
        if(UseFieldLineThreads.and.IsBoundary_B(iBlock))then
