@@ -2125,7 +2125,7 @@ contains
        if (IsDimensionalPlot_I(iFile)) then
           StringVarTec = 'VARIABLES ="x '// trim(NameTecUnit_V(UnitX_)) // &
                '", " y '                // trim(NameTecUnit_V(UnitX_)) // &
-               '", " z '               // trim(NameTecUnit_V(UnitX_))
+               '", " z '               // NameTecUnit_V(UnitX_)
        else
           StringVarTec = 'VARIABLES ="x", "y", "z'
        end if
@@ -2138,12 +2138,20 @@ contains
           StringVarTec = 'VARIABLES ="R", "Lon", "Lat'
        end if
 
+    elseif(TypePlot(1:3) == 'shk')then
+       if (IsDimensionalPlot_I(iFile)) then
+          StringVarTec = 'VARIABLES =", "Lon [deg]", "Lat [deg]", "R ' &
+               // NameTecUnit_V(UnitX_)
+       else
+          StringVarTec = 'VARIABLES ="Lon", "Lat", "R'
+       end if
+
     else
        if (IsDimensionalPlot_I(iFile)) then
           StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
-               // '", "Y ' // trim(NameTecUnit_V(UnitX_))
+               // '", "Y ' // NameTecUnit_V(UnitX_)
           if(nDim==3) StringVarTec = trim(StringVarTec) &
-               // '", "Z ' // trim(NameTecUnit_V(UnitX_))
+               // '", "Z ' // NameTecUnit_V(UnitX_)
        else
           if(nDim==2) StringVarTec = 'VARIABLES = "X", "Y'
           if(nDim==3) StringVarTec = 'VARIABLES = "X", "Y", "Z'
