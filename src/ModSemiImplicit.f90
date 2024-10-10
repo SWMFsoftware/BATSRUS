@@ -544,9 +544,9 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       if(iTypeUpdate == UpdateOrig_) then        
+       if(iTypeUpdate == UpdateOrig_) then
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
+               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
                UseOpenACCIn=.true.)
        else
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
@@ -690,9 +690,9 @@ contains
        end if
 #endif
     case('parcond','resistivity','resist','resisthall')
-       if(iTypeUpdate == UpdateOrig_) then        
+       if(iTypeUpdate == UpdateOrig_) then
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
+               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
                UseOpenACCIn=.true.)
        else
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &

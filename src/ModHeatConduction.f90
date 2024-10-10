@@ -1513,12 +1513,12 @@ contains
     end do
 
 #ifndef _OPENACC
-    if(iTypeUpdate == UpdateOrig_) then 
+    if(iTypeUpdate == UpdateOrig_) then
        if( UseFieldLineThreads .and. is_threaded_block(iBlock) &
             .and. (.not.IsLinear) )&
             call thread_heat_flux(iBlock,  &
             FluxImpl_VFDI(iTeImpl,1,1:nJ,1:nK,1,iGang))
-       
+
        ! Store the fluxes at resolution changes for restoring conservation
        call store_face_flux(iBlock, nVarSemi, FluxImpl_VFDI(:,:,:,:,:,iGang), &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
