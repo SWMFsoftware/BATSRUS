@@ -497,6 +497,7 @@ contains
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          Used_GB, nBlock, Xyz_DGB, CellVolume_GB, &
          message_pass_cell, message_pass_face, apply_flux_correction_block
+    use ModAdvance, ONLY: iTypeUpdate, UpdateOrig_
 
     real, intent(out):: RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
 
@@ -543,9 +544,14 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
-            UseOpenACCIn=.true.)
+       if(iTypeUpdate == UpdateOrig_) then        
+          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
+               UseOpenACCIn=.true.)
+       else
+          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+               nProlongOrderIn=1, UseOpenACCIn=.true.)
+       endif
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -572,7 +578,8 @@ contains
     end do
 
 #ifndef _OPENACC
-    if( (TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
+    if( (iTypeUpdate == UpdateOrig_ .and. &
+         TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
@@ -624,7 +631,7 @@ contains
 
     ! Calculate y_I = A.x_I where A is the linearized semi-implicit operator
 
-    use ModAdvance, ONLY: DtMax_CB, iTypeUpdate, UpdateFast_
+    use ModAdvance, ONLY: DtMax_CB, iTypeUpdate, UpdateFast_, UpdateOrig_
     use ModGeometry, ONLY: IsBoundary_B
     use ModMain, ONLY: Dt, IsTimeAccurate, Cfl, UseDtLimit
     use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
@@ -683,9 +690,14 @@ contains
        end if
 #endif
     case('parcond','resistivity','resist','resisthall')
-       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
-            UseOpenACCIn=.true.)
+       if(iTypeUpdate == UpdateOrig_) then        
+          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true., &
+               UseOpenACCIn=.true.)
+       else
+          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+               nProlongOrderIn=1, UseOpenACCIn=.true.)
+       endif
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -745,7 +757,8 @@ contains
     !$omp end parallel do
 
 #ifndef _OPENACC
-    if((TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
+    if((iTypeUpdate == UpdateOrig_ .and.  &
+         TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
