@@ -1106,7 +1106,7 @@ contains
 
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
-         UseAnisoPressure, DtMax_CB, iTypeUpdate, UpdateOrig_
+         UseAnisoPressure, DtMax_CB
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
     use ModImplicit,     ONLY: nBlockSemi, iBlockFromSemi_B, &
          iTeImpl
@@ -1459,7 +1459,8 @@ contains
 #endif
     use BATL_lib,        ONLY: CellVolume_GB
     use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
+    use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure, &
+         iTypeUpdate, UpdateOrig_
     use ModFaceGradient, ONLY: get_face_gradient
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
@@ -1512,12 +1513,16 @@ contains
     end do
 
 #ifndef _OPENACC
-    if(UseFieldLineThreads.and.is_threaded_block(iBlock).and.(.not.IsLinear))&
-         call thread_heat_flux(iBlock,  &
-         FluxImpl_VFDI(iTeImpl,1,1:nJ,1:nK,1,iGang))
-    ! Store the fluxes at resolution changes for restoring conservation
-    call store_face_flux(iBlock, nVarSemi, FluxImpl_VFDI(:,:,:,:,:,iGang), &
-         FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+    if(iTypeUpdate == UpdateOrig_) then
+       if( UseFieldLineThreads .and. is_threaded_block(iBlock) &
+            .and. (.not.IsLinear) )&
+            call thread_heat_flux(iBlock,  &
+            FluxImpl_VFDI(iTeImpl,1,1:nJ,1:nK,1,iGang))
+
+       ! Store the fluxes at resolution changes for restoring conservation
+       call store_face_flux(iBlock, nVarSemi, FluxImpl_VFDI(:,:,:,:,:,iGang), &
+            FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+    endif
 #endif
 
     !$acc loop vector collapse(3)

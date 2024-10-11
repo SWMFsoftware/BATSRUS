@@ -2303,11 +2303,16 @@ contains
     if( (TypePlot(1:3) == 'cut' .and. IsRLonLat) .or. &
          TypePlot(1:3) == 'shl' .or. TypePlot(1:3) == 'sln' .or. &
          TypePlot(1:3) == 'slg' ) then
+       ! r Lon Lat
        StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
+    elseif(TypePlot(1:3) == 'shk') then
+       ! Lon Lat r
+       StringUnitIdl = 'deg deg '//NameIdlUnit_V(UnitX_)
     elseif(TypePlot(1:3) == 'cut' .and. IsCylindrical)then
-          StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
-               trim(NameIdlUnit_V(UnitX_))//' deg'
+       StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
+            trim(NameIdlUnit_V(UnitX_))//' deg'
     else
+       ! x y z
        StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
             trim(NameIdlUnit_V(UnitX_))//' '//trim(NameIdlUnit_V(UnitX_))
     end if
