@@ -544,14 +544,9 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       if(iTypeUpdate == UpdateOrig_) then
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
-               UseOpenACCIn=.true.)
-       else
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, UseOpenACCIn=.true.)
-       endif
+       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
+            UseOpenACCIn=.true.)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -690,14 +685,9 @@ contains
        end if
 #endif
     case('parcond','resistivity','resist','resisthall')
-       if(iTypeUpdate == UpdateOrig_) then
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
-               UseOpenACCIn=.true.)
-       else
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, UseOpenACCIn=.true.)
-       endif
+       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
+            UseOpenACCIn=.true.)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
