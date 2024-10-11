@@ -2255,6 +2255,15 @@ contains
        case('rhour','mr')
           NameTecVar = 'Rho U_r'//NameTecFluid
           NameUnit   = NameTecUnit_V(UnitRhoU_)
+       case('rhounup')
+          NameTecVar = 'Rho U_n_up'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitRhoU_)
+       case('rhoundn')
+          NameTecVar = 'Rho U_n_dn'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitRhoU_)
+       case('ushk')
+          NameTecVar = 'U_shk'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitU_)
        case('br')
           NameTecVar = 'B_r'
           NameUnit   = NameTecUnit_V(UnitB_)

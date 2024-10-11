@@ -1090,6 +1090,7 @@ contains
     real, intent(out)  :: PlotVarBody_V(nPlotVar)
     logical, intent(out):: UsePlotVarBody_V(nPlotVar)
 
+    integer, parameter :: RhoUn_ = 0 ! Only used here for vec{U}*vec{n}
     character (len=10) :: String, NamePlotVar
 
     real:: FullB2, FullBRhoU
@@ -1391,6 +1392,11 @@ contains
           call set_shock_var
           PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
                StateDn_VC(iRhoUz,:,:,:)/StateDn_VC(iRho,:,:,:)
+       case('ushk')
+          call set_shock_var
+          PlotVar_GV(:,:,:,iVar) = &
+               (StateDn_VC(RhoUn_,:,:,:) - StateUp_VC(RhoUn_,:,:,:))/ &
+               (StateDn_VC(Rho_,:,:,:) - StateUp_VC(Rho_,:,:,:))
        case('divu')
           allocate(u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           ! Calculate velocity
@@ -1979,7 +1985,7 @@ contains
           end do; end do; end do
        case default
           ! Check if the name is one of the state variable names
-          do jVar = 1, nVar
+          do jVar = 0, nVar
              if(NamePlotVar == NameVarLower_V(jVar))then
                 PlotVar_GV(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBlock)
              elseif(NamePlotVar == trim(NameVarLower_V(jVar))//'dn')then
@@ -2030,8 +2036,9 @@ contains
       integer:: i, j, k
       !------------------------------------------------------------------------
       if(allocated(ShockNorm_DC)) RETURN
+      ! rho*Un is at nVar+1
       allocate(ShockNorm_DC(3,nI,nJ,nK), &
-           StateDn_VC(nVar,nI,nJ,nK), StateUp_VC(nVar,nI,nJ,nK))
+           StateDn_VC(0:nVar,nI,nJ,nK), StateUp_VC(0:nVar,nI,nJ,nK))
 
       ! Calculate shock normal from density gradient (no ghost cells)
       call calc_gradient(iBlock, State_VGB(rho_,:,:,:,iBlock), 0, ShockNorm_DC)
@@ -2047,7 +2054,7 @@ contains
             ShockNorm_DC(:,i,j,k) = -ShockNorm_DC(:,i,j,k)/Length
          end if
 
-         ! Caclulate upstream and downstream states
+         ! Calculate upstream and downstream states
          ! Shock normal vector
          s_D = ShockNorm_DC(:,i,j,k)
 
@@ -2102,10 +2109,23 @@ contains
             write(*,*)'NormUp_D        =', NormUp_D
             write(*,*)'NormDn_D        =', NormDn_D
          end if
-         StateUp_VC(:,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
+         StateUp_VC(1:nVar,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormUp_D)
-         StateDn_VC(:,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
+         StateDn_VC(1:nVar,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
+         ! Rho * U_n
+         StateUp_VC(RhoUn_,i,j,k) = trilinear( &
+              sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)* &
+              reshape(spread(NormUp_D, DIM=2, &
+              NCOPIES=(MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)), &
+              [3, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1]), DIM=1), &
+              1, MaxI-MinI+1, 1, MaxJ-MinJ+1, 1, MaxK-MinK+1, NormUp_D)
+         StateDn_VC(RhoUn_,i,j,k) = trilinear( &
+              sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)* &
+              reshape(spread(NormDn_D, DIM=2, &
+              NCOPIES=(MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)), &
+              [3, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1]), DIM=1), &
+              1, MaxI-MinI+1, 1, MaxJ-MinJ+1, 1, MaxK-MinK+1, NormDn_D)
          if(UseB0)then
             ! Set full field in Bx_:Bz_
             StateUp_VC(Bx_:Bz_,i,j,k) = trilinear(FullB_DG, &
@@ -2202,9 +2222,12 @@ contains
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *(No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
        case('ux', 'uy', 'uz', 'uxrot', 'uyrot', 'uzrot', 'ur', 'clight', &
-            'divudx', 'uxup', 'uyup', 'uzup', 'uxdn', 'uydn', 'uzdn')
+            'divudx', 'uxup', 'uyup', 'uzup', 'uxdn', 'uydn', 'uzdn', 'ushk')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitU_)
+       case('rhounup', 'rhoundn')
+          PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
+               *No2Io_V(UnitU_)*No2Io_V(UnitRho_)
        case('divu')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                /No2Io_V(UnitT_)
@@ -2341,8 +2364,10 @@ contains
        case('t','temp')
           NameUnit = NameIdlUnit_V(UnitTemperature_)
        case('ux', 'uy', 'uz', 'ur', 'uxrot', 'uyrot', 'uzrot', 'divudx', &
-            'uxup', 'uyup', 'uzup', 'uxdn', 'uydn', 'uzdn')
+            'uxup', 'uyup', 'uzup', 'uxdn', 'uydn', 'uzdn', 'ushk')
           NameUnit = NameIdlUnit_V(UnitU_)
+       case('rhounup', 'rhoundn')
+          NameUnit = NameIdlUnit_V(UnitU_)//"*"// NameIdlUnit_V(UnitRhoU_)
        case('gradpex', 'gradpey', 'gradpez', 'gradper', &
             'gradpx', 'gradpy', 'gradpz', 'gradpr')
           NameUnit = 'nPa/m'
