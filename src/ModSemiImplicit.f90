@@ -559,15 +559,11 @@ contains
 
 #ifndef _OPENACC
        ! TODO: Make sure the bc is set correctly on GPU.
-#ifndef _OPENACC
-       ! TODO: Make sure the bc is set correctly on GPU.
        ! Apply boundary conditions (1 layer of outer ghost cells)
        if(IsBoundary_B(iBlock))&
             call set_cell_boundary(1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
 #endif
-#endif
-
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
     end do
