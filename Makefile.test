@@ -146,6 +146,7 @@ test_small_gpu:
 	-@($(MAKE) test_fastwave_2d TESTDIR=run_test_fastwave_2d)
 	-@($(MAKE) test_earth TESTDIR=run_test_earth)
 	-@($(MAKE) test_awsom_gpu TESTDIR=run_test_awsom_gpu)
+	-@($(MAKE) test_heatcond_2d TESTDIR=run_test_heatcond_2d)
 
 test_gpu: test_small_gpu
 	-@($(MAKE) test_awsom_large_gpu TESTDIR=run_test_awsom_large_gpu)
