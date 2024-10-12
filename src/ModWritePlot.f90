@@ -2044,15 +2044,14 @@ contains
 
       real:: Length, d1, d2, d3, dMax
       real:: d_D(3), s_D(3), NormUp_D(3), NormDn_D(3)
-      real, allocatable:: RhoUnUp_C(:,:,:), RhoUnDn_C(:,:,:)
+      real, allocatable:: RhoUn_C(:,:,:)
       integer:: i, j, k
       !------------------------------------------------------------------------
       if(allocated(ShockNorm_DC)) RETURN
       ! rho*Un is at nVar+1
       allocate(ShockNorm_DC(3,nI,nJ,nK), &
            StateDn_VC(0:nVar,nI,nJ,nK), StateUp_VC(0:nVar,nI,nJ,nK))
-      allocate(RhoUnUp_C(MinI:MaxI, MinJ:MaxJ, MinK:MaxK), &
-           RhoUnDn_C(MinI:MaxI, MinJ:MaxJ, MinK:MaxK))
+      allocate(RhoUn_C(MinI:MaxI, MinJ:MaxJ, MinK:MaxK))
 
       ! Calculate shock normal from density gradient (no ghost cells)
       call calc_gradient(iBlock, State_VGB(Rho_,:,:,:,iBlock), 0, ShockNorm_DC)
@@ -2128,17 +2127,13 @@ contains
          StateDn_VC(1:nVar,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
          ! Rho * U_n
-         RhoUnUp_C = sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)* &
-              reshape(spread(NormUp_D, DIM=2, &
+         RhoUn_C = sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)* &
+              reshape(spread(ShockNorm_DC(:,i,j,k), DIM=2, &
               NCOPIES=(MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)), &
               [3, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1]), DIM=1)
-         RhoUnDn_C = sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)* &
-              reshape(spread(NormDn_D, DIM=2, &
-              NCOPIES=(MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)), &
-              [3, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1]), DIM=1)
-         StateUp_VC(RhoUn_,i,j,k) = trilinear(RhoUnUp_C, &
+         StateUp_VC(RhoUn_,i,j,k) = trilinear(RhoUn_C, &
               MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormUp_D)
-         StateDn_VC(RhoUn_,i,j,k) = trilinear(RhoUnDn_C, &
+         StateDn_VC(RhoUn_,i,j,k) = trilinear(RhoUn_C, &
               MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
          if(UseB0)then
             ! Set full field in Bx_:Bz_
@@ -2149,7 +2144,7 @@ contains
          end if
       end do; end do; end do
 
-      deallocate(RhoUnUp_C, RhoUnDn_C)
+      deallocate(RhoUn_C)
 
     end subroutine set_shock_var
     !==========================================================================
@@ -2525,3 +2520,6 @@ contains
   !============================================================================
 end module ModWritePlot
 !==============================================================================
+
+
+
