@@ -544,14 +544,9 @@ contains
                DoRestrictFaceIn=.true.)
        end if
     case('parcond','resistivity','resist','resisthall')
-       if(iTypeUpdate == UpdateOrig_) then
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
-               UseOpenACCIn=.true.)
-       else
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, UseOpenACCIn=.true.)
-       endif
+       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
+            UseOpenACCIn=.true.)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -564,15 +559,11 @@ contains
 
 #ifndef _OPENACC
        ! TODO: Make sure the bc is set correctly on GPU.
-#ifndef _OPENACC
-       ! TODO: Make sure the bc is set correctly on GPU.
        ! Apply boundary conditions (1 layer of outer ghost cells)
        if(IsBoundary_B(iBlock))&
             call set_cell_boundary(1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
 #endif
-#endif
-
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
     end do
@@ -690,14 +681,9 @@ contains
        end if
 #endif
     case('parcond','resistivity','resist','resisthall')
-       if(iTypeUpdate == UpdateOrig_) then
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
-               UseOpenACCIn=.true.)
-       else
-          call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, UseOpenACCIn=.true.)
-       endif
+       call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
+            nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
+            UseOpenACCIn=.true.)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)

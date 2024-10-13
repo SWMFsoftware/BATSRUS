@@ -1461,7 +1461,7 @@ contains
     use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure, &
          iTypeUpdate, UpdateOrig_
-    use ModFaceGradient, ONLY: get_face_gradient
+    use ModFaceGradient, ONLY: get_face_gradient, set_block_field3
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModMain,         ONLY: nI, nJ, nK
@@ -1481,6 +1481,8 @@ contains
     real :: FaceGrad_D(MaxDim)
     logical :: IsNewBlockHeatCond, UseFirstOrderBc
 
+    real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_heat_conduction_rhs'
     !--------------------------------------------------------------------------
@@ -1495,6 +1497,8 @@ contains
     iGang = 1
 #endif
 
+    call set_block_field3(iBlock, 1, Scalar1_G, StateImpl_VG)
+
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
@@ -1504,8 +1508,7 @@ contains
           ! Second-order accurate electron temperature gradient
           call get_face_gradient(iDim, i, j, k, iBlock, &
                IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D, &
-               UseFirstOrderBcIn=UseFirstOrderBC)
-
+               UseFirstOrderBcIn=UseFirstOrderBC, DoCorrectIn=.false.)
           FluxImpl_VFDI(iTeImpl,i,j,k,iDim,iGang) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
 
