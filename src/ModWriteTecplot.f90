@@ -1386,8 +1386,8 @@ contains
                 iBlock  = iTree_IA(Block_,iNode)
                 iPE = iTree_IA(Proc_,iNode)
                 if(iProc == iPE)then
-                   if((CutValue - PlotXYZNodes_DNB(1,1,1,1,iBlock))* &
-                        (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,1,iBlock)) &
+                   if((CutValue - PlotXYZNodes_DNB(1,1,1,2,iBlock))* &
+                        (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,2,iBlock)) &
                         <= 0)then
                       nBlockCut = nBlockCut + 1
                       iBlockCut_A(iBlockALL) = nBlockCut
@@ -1413,20 +1413,20 @@ contains
                 iBlock = iTree_IA(Block_,iNode)
                 iPE = iTree_IA(Proc_,iNode)
                 if(iProc == iPE)then
-                   if(  (CutValue - PlotXYZNodes_DNB(1,1,1,1,iBlock))* &
-                        (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,1,iBlock)) &
+                   if(  (CutValue - PlotXYZNodes_DNB(1,1,1,2,iBlock))* &
+                        (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,2,iBlock)) &
                         <= 0)then
                       ! Find cut interpolation factors
                       do j = 1, nJ
-                         if ((CutValue - PlotXYZNodes_DNB(1,1,j,1,iBlock))* &
-                              (CutValue - PlotXYZNodes_DNB(1,1,j+1,1,iBlock)) &
+                         if ((CutValue - PlotXYZNodes_DNB(1,1,j,2,iBlock))* &
+                              (CutValue - PlotXYZNodes_DNB(1,1,j+1,2,iBlock)) &
                               <= 0) then
                             Ijk1 = j
                             Ijk2 = j + 1
                             Factor2 = &
-                                 (CutValue - PlotXYZNodes_DNB(1,1,j,1,iBlock))&
-                                 /(PlotXYZNodes_DNB(1,1,j+1,1,iBlock) &
-                                 - PlotXYZNodes_DNB(1,1,j,1,iBlock))
+                                 (CutValue - PlotXYZNodes_DNB(1,1,j,2,iBlock))&
+                                 /(PlotXYZNodes_DNB(1,1,j+1,2,iBlock) &
+                                 - PlotXYZNodes_DNB(1,1,j,2,iBlock))
                             Factor1 = 1 - Factor2
                             EXIT
                          end if
@@ -1469,7 +1469,7 @@ contains
                 iNode = iNodeMorton_I(iBlockAll)
                 iBlock = iTree_IA(Block_,iNode)
                 iPE = iTree_IA(Proc_,iNode)
-                if(iProc==iPE)then
+                if(iProc == iPE)then
                    if ( CutValue >  PlotXYZNodes_DNB(2,1,1,1,iBlock) .and. &
                         CutValue <= PlotXYZNodes_DNB(2,1,1+nJ,1,iBlock))then
                       nBlockCut = nBlockCut + 1
@@ -1496,8 +1496,8 @@ contains
                 iBlock  = iTree_IA(Block_,iNode)
                 iPE = iTree_IA(Proc_,iNode)
                 if(iProc == iPE)then
-                   if ( CutValue> PlotXYZNodes_DNB(2,1,1   ,1,iBlock) .and. &
-                        CutValue<=PlotXYZNodes_DNB(2,1,1+nJ,1,iBlock)  )then
+                   if ( CutValue> PlotXYZNodes_DNB(2,1,1,1,iBlock) .and. &
+                        CutValue <= PlotXYZNodes_DNB(2,1,1+nJ,1,iBlock))then
                       ! Find cut interpolation factors
                       do j = 1, nJ
                          if(CutValue > PlotXYZNodes_DNB(2,1,j,1,iBlock) .and.&
@@ -1546,8 +1546,8 @@ contains
                 iBlock = iTree_IA(Block_,iNode)
                 iPE = iTree_IA(Proc_,iNode)
                 if(iProc == iPE)then
-                   if(  (CutValue - PlotXYZNodes_DNB(2,1,1,1,iBlock))* &
-                        (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,1,iBlock)) &
+                   if(  (CutValue - PlotXYZNodes_DNB(2,1,1,2,iBlock))* &
+                        (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,2,iBlock)) &
                         <= 0)then
                       nBlockCut = nBlockCut + 1
                       iBlockCut_A(iBlockALL) = nBlockCut
@@ -1573,20 +1573,20 @@ contains
                 iBlock = iTree_IA(Block_,iNode)
                 iPE = iTree_IA(Proc_,iNode)
                 if(iProc == iPE)then
-                   if(  (CutValue - PlotXYZNodes_DNB(2,1,1,1,iBlock))* &
-                        (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,1,iBlock)) &
+                   if(  (CutValue - PlotXYZNodes_DNB(2,1,1,2,iBlock))* &
+                        (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,2,iBlock)) &
                         <= 0)then
                       ! Find cut interpolation factors
                       do j = 1, nJ
-                         if(  (CutValue - PlotXYZNodes_DNB(2,1,j,1,iBlock))* &
-                              (CutValue - PlotXYZNodes_DNB(2,1,j+1,1,iBlock)) &
+                         if(  (CutValue - PlotXYZNodes_DNB(2,1,j,2,iBlock))* &
+                              (CutValue - PlotXYZNodes_DNB(2,1,j+1,2,iBlock)) &
                               <= 0)then
                             Ijk1 = j
                             Ijk2 = j + 1
                             Factor2 = (CutValue &
-                                 - PlotXYZNodes_DNB(2,1,j,1,iBlock)) &
-                                 /( PlotXYZNodes_DNB(2,1,j+1,1,iBlock) &
-                                 -  PlotXYZNodes_DNB(2,1,j,1,iBlock))
+                                 - PlotXYZNodes_DNB(2,1,j,2,iBlock)) &
+                                 /( PlotXYZNodes_DNB(2,1,j+1,2,iBlock) &
+                                 -  PlotXYZNodes_DNB(2,1,j,2,iBlock))
                             Factor1 = 1 - Factor2
                             EXIT
                          end if
