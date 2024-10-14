@@ -1316,28 +1316,12 @@ contains
           end if
        case('uxup')
           call set_shock_var
-          if (UseRotatingFrame) then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar_GV(i,j,k,iVar) = &
-                     StateUp_VC(iRhoUx,i,j,k)/StateUp_VC(iRho,i,j,k) &
-                     - OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
-             end do; end do; end do
-          else
-             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
-                  StateUp_VC(iRhoUx,:,:,:)/StateUp_VC(iRho,:,:,:)
-          end if
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
+               StateUp_VC(iRhoUx,:,:,:)/StateUp_VC(iRho,:,:,:)
        case('uxdn')
           call set_shock_var
-          if (UseRotatingFrame) then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar_GV(i,j,k,iVar) = &
-                     StateDn_VC(iRhoUx,i,j,k)/StateDn_VC(iRho,i,j,k) &
-                     - OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
-             end do; end do; end do
-          else
-             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
-                  StateDn_VC(iRhoUx,:,:,:)/StateDn_VC(iRho,:,:,:)
-          end if
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
+               StateDn_VC(iRhoUx,:,:,:)/StateDn_VC(iRho,:,:,:)
        case('uy')
           if (UseRotatingFrame) then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1352,28 +1336,12 @@ contains
           end if
        case('uyup')
           call set_shock_var
-          if (UseRotatingFrame) then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar_GV(i,j,k,iVar) = &
-                     StateUp_VC(iRhoUy,i,j,k)/StateUp_VC(iRho,i,j,k) &
-                     + OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
-             end do; end do; end do
-          else
-             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
-                  StateUp_VC(iRhoUy,:,:,:)/StateUp_VC(iRho,:,:,:)
-          end if
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
+               StateUp_VC(iRhoUy,:,:,:)/StateUp_VC(iRho,:,:,:)
        case('uydn')
           call set_shock_var
-          if (UseRotatingFrame) then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                PlotVar_GV(i,j,k,iVar) = &
-                     StateDn_VC(iRhoUy,i,j,k)/StateDn_VC(iRho,i,j,k) &
-                     + OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
-             end do; end do; end do
-          else
-             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
-                  StateDn_VC(iRhoUy,:,:,:)/StateDn_VC(iRho,:,:,:)
-          end if
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
+               StateDn_VC(iRhoUy,:,:,:)/StateDn_VC(iRho,:,:,:)
        case('uxrot')
           PlotVar_GV(:,:,:,iVar) = &
                State_VGB(iRhoUx,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
@@ -2131,12 +2099,24 @@ contains
               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormUp_D)
          StateDn_VC(:,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
+
          if(UseB0)then
             ! Set full field in Bx_:Bz_
             StateUp_VC(Bx_:Bz_,i,j,k) = trilinear(FullB_DG, &
                  3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormUp_D)
             StateDn_VC(Bx_:Bz_,i,j,k) = trilinear(FullB_DG, &
                  3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
+         end if
+         if(UseRotatingFrame)then
+            ! Fix the momenta to refer to the inertial system
+            StateUp_VC(iRhoUx_I,i,j,k) = StateUp_VC(iRhoUx_I,i,j,k) - &
+                 StateUp_VC(iRho_I,i,j,k)*OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
+            StateDn_VC(iRhoUx_I,i,j,k) = StateDn_VC(iRhoUx_I,i,j,k) - &
+                 StateDn_VC(iRho_I,i,j,k)*OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
+            StateUp_VC(iRhoUy_I,i,j,k) = StateUp_VC(iRhoUy_I,i,j,k) + &
+                 StateUp_VC(iRho_I,i,j,k)*OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
+            StateDn_VC(iRhoUy_I,i,j,k) = StateDn_VC(iRhoUy_I,i,j,k) + &
+                 StateDn_VC(iRho_I,i,j,k)*OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
          end if
       end do; end do; end do
 
