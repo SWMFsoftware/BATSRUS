@@ -1090,7 +1090,6 @@ contains
     real, intent(out)  :: PlotVarBody_V(nPlotVar)
     logical, intent(out):: UsePlotVarBody_V(nPlotVar)
 
-    integer, parameter :: RhoUn_ = 0 ! Only used here for vec{U}*vec{n}
     character (len=10) :: String, NamePlotVar
 
     real:: FullB2, FullBRhoU
@@ -1360,7 +1359,7 @@ contains
                      + OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
              end do; end do; end do
           else
-             PlotVar_GV(:,:,:,iVar) = &
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
                   StateUp_VC(iRhoUy,:,:,:)/StateUp_VC(iRho,:,:,:)
           end if
        case('uydn')
@@ -1372,7 +1371,7 @@ contains
                      + OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
              end do; end do; end do
           else
-             PlotVar_GV(:,:,:,iVar) = &
+             PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = &
                   StateDn_VC(iRhoUy,:,:,:)/StateDn_VC(iRho,:,:,:)
           end if
        case('uxrot')
@@ -1394,20 +1393,26 @@ contains
                StateDn_VC(iRhoUz,:,:,:)/StateDn_VC(iRho,:,:,:)
        case('rhounup')
           call set_shock_var
-          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = StateUp_VC(RhoUn_,:,:,:)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = sum( &
+               StateUp_VC(iRhoUx:iRhoUz,:,:,:)*ShockNorm_DC(:,:,:,:), DIM=1)
        case('rhoundn')
           call set_shock_var
-          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = StateDn_VC(RhoUn_,:,:,:)
+          PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = sum( &
+               StateDn_VC(iRhoUx:iRhoUz,:,:,:)*ShockNorm_DC(:,:,:,:), DIM=1)
        case('ushk')
           call set_shock_var
-          where(abs(StateDn_VC(Rho_,:,:,:) - StateUp_VC(Rho_,:,:,:)) < 1.0e-30)
-             PlotVar_GV(:,:,:,iVar) = &
-                  (StateDn_VC(RhoUn_,:,:,:) - StateUp_VC(RhoUn_,:,:,:))*1.0e+30
-          elsewhere
-             PlotVar_GV(:,:,:,iVar) = &
-                  (StateDn_VC(RhoUn_,:,:,:) - StateUp_VC(RhoUn_,:,:,:))/ &
-                  (StateDn_VC(Rho_,:,:,:) - StateUp_VC(Rho_,:,:,:))
-          end where
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(abs(StateDn_VC(Rho_,i,j,k)-StateUp_VC(Rho_,i,j,k))<1.0e-30)then
+                PlotVar_GV(i,j,k,iVar) = &
+                     norm2(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock))/ &
+                     State_VGB(iRho,i,j,k,iBlock) ! Ushk=U if no rho gradient
+             else
+                PlotVar_GV(i,j,k,iVar) = &
+                     (sum((StateDn_VC(iRhoUx:iRhoUz,i,j,k) - &
+                     StateUp_VC(iRhoUx:iRhoUz,i,j,k))*ShockNorm_DC(:,i,j,k)))/&
+                     (StateDn_VC(Rho_,i,j,k) - StateUp_VC(Rho_,i,j,k))
+             end if
+          end do; end do; end do
        case('divu')
           allocate(u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
           ! Calculate velocity
@@ -2044,14 +2049,12 @@ contains
 
       real:: Length, d1, d2, d3, dMax
       real:: d_D(3), s_D(3), NormUp_D(3), NormDn_D(3)
-      real, allocatable:: RhoUn_C(:,:,:)
       integer:: i, j, k
       !------------------------------------------------------------------------
       if(allocated(ShockNorm_DC)) RETURN
       ! rho*Un is at nVar+1
       allocate(ShockNorm_DC(3,nI,nJ,nK), &
-           StateDn_VC(0:nVar,nI,nJ,nK), StateUp_VC(0:nVar,nI,nJ,nK))
-      allocate(RhoUn_C(MinI:MaxI, MinJ:MaxJ, MinK:MaxK))
+           StateDn_VC(nVar,nI,nJ,nK), StateUp_VC(nVar,nI,nJ,nK))
 
       ! Calculate shock normal from density gradient (no ghost cells)
       call calc_gradient(iBlock, State_VGB(Rho_,:,:,:,iBlock), 0, ShockNorm_DC)
@@ -2122,19 +2125,10 @@ contains
             write(*,*)'NormUp_D        =', NormUp_D
             write(*,*)'NormDn_D        =', NormDn_D
          end if
-         StateUp_VC(1:nVar,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
+         StateUp_VC(:,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormUp_D)
-         StateDn_VC(1:nVar,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
+         StateDn_VC(:,i,j,k) = trilinear(State_VGB(:,:,:,:,iBlock), &
               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
-         ! Rho * U_n
-         RhoUn_C = sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)* &
-              reshape(spread(ShockNorm_DC(:,i,j,k), DIM=2, &
-              NCOPIES=(MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)), &
-              [3, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1]), DIM=1)
-         StateUp_VC(RhoUn_,i,j,k) = trilinear(RhoUn_C, &
-              MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormUp_D)
-         StateDn_VC(RhoUn_,i,j,k) = trilinear(RhoUn_C, &
-              MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
          if(UseB0)then
             ! Set full field in Bx_:Bz_
             StateUp_VC(Bx_:Bz_,i,j,k) = trilinear(FullB_DG, &
@@ -2143,8 +2137,6 @@ contains
                  3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, NormDn_D)
          end if
       end do; end do; end do
-
-      deallocate(RhoUn_C)
 
     end subroutine set_shock_var
     !==========================================================================
