@@ -1394,23 +1394,25 @@ contains
        case('rhounup')
           call set_shock_var
           PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = sum( &
-               StateUp_VC(iRhoUx:iRhoUz,:,:,:)*ShockNorm_DC(:,:,:,:), DIM=1)
+               StateUp_VC(iRhoUx:iRhoUz,:,:,:)*ShockNorm_DC, DIM=1)
        case('rhoundn')
           call set_shock_var
           PlotVar_GV(1:nI,1:nJ,1:nK,iVar) = sum( &
-               StateDn_VC(iRhoUx:iRhoUz,:,:,:)*ShockNorm_DC(:,:,:,:), DIM=1)
+               StateDn_VC(iRhoUx:iRhoUz,:,:,:)*ShockNorm_DC, DIM=1)
        case('ushk')
           call set_shock_var
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(abs(StateDn_VC(Rho_,i,j,k)-StateUp_VC(Rho_,i,j,k))<1.0e-30)then
+             if(abs(StateDn_VC(iRho,i,j,k) &
+                  - StateUp_VC(iRho,i,j,k)) < 1e-30)then
+                ! Ushk=U if no rho gradient
                 PlotVar_GV(i,j,k,iVar) = &
                      norm2(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock))/ &
-                     State_VGB(iRho,i,j,k,iBlock) ! Ushk=U if no rho gradient
+                     State_VGB(iRho,i,j,k,iBlock)
              else
                 PlotVar_GV(i,j,k,iVar) = &
-                     (sum((StateDn_VC(iRhoUx:iRhoUz,i,j,k) - &
-                     StateUp_VC(iRhoUx:iRhoUz,i,j,k))*ShockNorm_DC(:,i,j,k)))/&
-                     (StateDn_VC(Rho_,i,j,k) - StateUp_VC(Rho_,i,j,k))
+                     sum((StateDn_VC(iRhoUx:iRhoUz,i,j,k) - &
+                     StateUp_VC(iRhoUx:iRhoUz,i,j,k))*ShockNorm_DC(:,i,j,k))/&
+                     (StateDn_VC(iRho,i,j,k) - StateUp_VC(iRho,i,j,k))
              end if
           end do; end do; end do
        case('divu')
@@ -2052,7 +2054,7 @@ contains
       integer:: i, j, k
       !------------------------------------------------------------------------
       if(allocated(ShockNorm_DC)) RETURN
-      ! rho*Un is at nVar+1
+
       allocate(ShockNorm_DC(3,nI,nJ,nK), &
            StateDn_VC(nVar,nI,nJ,nK), StateUp_VC(nVar,nI,nJ,nK))
 
