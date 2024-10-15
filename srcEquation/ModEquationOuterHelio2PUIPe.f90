@@ -23,6 +23,7 @@ module ModVarIndexes
   integer, parameter :: nFluid    = 7
   integer, parameter :: nIonFluid = 3
   logical, parameter :: IsMhd     = .false.
+  logical, parameter :: Is2PUI    = .true.
   real               :: MassFluid_I(nFluid) = 1.0
 
   ! SWH is the Solar wind hydrogen fluid,
