@@ -166,7 +166,7 @@ contains
              if(any(CoordNorm_D < 0.4999)) CYCLE
              if(any(CoordNorm_D > nIjk_D + 0.5001)) CYCLE
 
-             do iVar=1, nPlotVar
+             do iVar = 1, nPlotVar
                 ! Interpolate up to ghost cells.
                 ! compute the interpolated values at the current location
                 PlotVar_V(iVar) = trilinear(PlotVar_GV(:,:,:,iVar),&
