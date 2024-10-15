@@ -372,7 +372,7 @@ test_heatcond_2d:
 
 test_heatcond_2d_compile:
 	./Config.pl -noopenmp ${OPENACC}
-	./Config.pl -u=Default -e=MhdPe -ng=2 -f -g=4,2,1
+	./Config.pl -u=Default -e=MhdPe -ng=2 -f -g=4,4,1
 	./Config.pl -opt=Param/CORONA/PARAM.in.heat.cond
 	$(MAKE) BATSRUS
 	make PIDL

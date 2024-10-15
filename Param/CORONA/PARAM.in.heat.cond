@@ -28,12 +28,12 @@ F			DoConserveFlux
 
 #GRID
 4			nRootBlock1
-2			nRootBlock2
+4			nRootBlock2
 1			nRootBlock3
 -32			xMin
  32			xMax
--16			yMin
- 16			yMax
+-32			yMin
+ 32			yMax
 -1			zMin
  1			zMax
 
