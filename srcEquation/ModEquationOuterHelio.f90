@@ -23,6 +23,7 @@ module ModVarIndexes
    integer, parameter :: nFluid    = 5
    integer, parameter :: nIonFluid = 1
    logical, parameter :: IsMhd     = .true.
+   logical, parameter :: Is2PUI    = .false.
    real               :: MassFluid_I(nFluid) = [ 1.0, 1.0, 1.0, 1.0, 1.0 ]
 
    character (len=3), parameter :: &
