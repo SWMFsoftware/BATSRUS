@@ -311,7 +311,7 @@ contains
     integer :: i1, j1, k1, i2, j2, k2, iC, jC, kC, iSide, jSide, kSide
     integer :: iL, iR, jL, jR, kL, kR
     integer :: iP, iM, jP, jM, kP, kM, iVar
-    integer :: i, j, k
+    integer :: i, j, k, di, dj, dk
 
     real :: Fc_V(nVar) ! interpolated coarse cell value
 
@@ -377,9 +377,10 @@ contains
                max(Field1_VG(:,0,1,1), Field_VG(:,1,1,1))), &
                min(Field1_VG(:,0,1,1), Field_VG(:,1,1,1)))
        else
-          !$acc loop vector collapse(2) private(jP, jM, kP, kM, Fc_V, k2, j2)
+          !$acc loop vector collapse(4) private(jP, jM, kP, kM, Fc_V, k2, j2)
           do k1=1, nK, 2; do j1=1, nJ, 2;
-             do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
+             do dk = 0, min(1, nK-1); do dj = 0, 1
+                k2 = k1 + dk; j2 = j1 + dj
                 jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
                 if(nK == 1)then
                    kP = 1; kM = 1
@@ -410,9 +411,10 @@ contains
                max(Field1_VG(:,nI+1,1,1), Field_VG(:,nI,1,1))), &
                min(Field1_VG(:,nI+1,1,1), Field_VG(:,nI,1,1)))
        else
-          !$acc loop vector collapse(2) private(jP, jM, kP, kM, Fc_V, k2, j2)
+          !$acc loop vector collapse(4) private(jP, jM, kP, kM, Fc_V, k2, j2)
           do k1=1, nK, 2; do j1=1, nJ, 2
-             do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
+             do dk = 0,min(1,nK-1); do dj = 0,1
+                k2 = k1 + dk; j2 = j1 + dj
                 jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
                 if(nK == 1)then
                    kP = 1; kM = 1
@@ -436,9 +438,10 @@ contains
     if(nJ == 1) RETURN
 
     if(DiLevel_EB(3,iBlock) == 1)then
-       !$acc loop vector collapse(2) private(iP, iM, kP, kM, Fc_V, k2, j2)
+       !$acc loop vector collapse(4) private(iP, iM, kP, kM, Fc_V, k2, i2)
        do k1=1, nK, 2; do i1=1, nI, 2
-          do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
+          do dk = 0,min(1,nK-1); do di = 0,1
+             k2 = k1 + dk; i2 = i1 + di
              iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
              if(nK == 1)then
                 kP = 1; kM = 1
@@ -459,9 +462,10 @@ contains
     end if
 
     if(DiLevel_EB(4,iBlock) == 1)then
-       !$acc loop vector collapse(2) private(iP, iM, kP, kM, Fc_V, k2, j2)
+       !$acc loop vector collapse(4) private(iP, iM, kP, kM, Fc_V, k2, i2)
        do k1=1, nK, 2; do i1=1, nI, 2
-          do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
+          do dk = 0,min(1,nK-1); do di = 0,1
+             k2 = k1 + dk; i2 = i1 + di
              iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
              if(nK == 1)then
                 kP = 1; kM = 1
@@ -482,8 +486,9 @@ contains
     end if
 
     if(nK > 1 .and. DiLevel_EB(5,iBlock) == 1)then
-       !$acc loop vector collapse(2) private(iP, iM, jP, jM, Fc_V, i2, j2)
-       do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
+       !$acc loop vector collapse(4) private(iP, iM, jP, jM, Fc_V, i2, j2)
+       do j1=1, nJ, 2; do i1=1, nI, 2; do dj = 0, 1; do di = 0, 1
+          j2 = j1 + dj; i2 = i1 + di
           iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
           jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
           Fc_V = c0*Field1_VG(:,i2,j2,k0_) &
@@ -499,8 +504,9 @@ contains
     end if
 
     if(nK > 1 .and. DiLevel_EB(6,iBlock) == 1)then
-       !$acc loop vector collapse(2) private(iP, iM, jP, jM, Fc_V, i2, j2)
-       do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
+       !$acc loop vector collapse(4) private(iP, iM, jP, jM, Fc_V, i2, j2)
+       do j1=1, nJ, 2; do i1=1, nI, 2; do dj = 0, 1; do di = 0, 1
+          j2 = j1 + dj; i2 = i1 + di          
           iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
           jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
           Fc_V = c0*Field1_VG(:,i2,j2,nKp1_) &
@@ -526,8 +532,9 @@ contains
 
        i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
-       !$acc loop vector collapse(1) private(kP, kM, Fc_V, k2)
-       do k1 = 1, nK, 2 ; do k2 = k1, k1 + min(1,nK-1)
+       !$acc loop vector collapse(2) private(kP, kM, Fc_V, k2)
+       do k1 = 1, nK, 2 ; do dk = 0,  min(1,nK-1)
+          k2 = k1 + dk
           if(nK == 1)then
              kP = 1; kM = 1
           else
@@ -557,8 +564,9 @@ contains
 
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
-       !$acc loop vector collapse(1) private(iP, iM, Fc_V, i2)
-       do i1 = 1,nI,2; do i2 = i1, i1+1
+       !$acc loop vector collapse(2) private(iP, iM, Fc_V, i2)
+       do i1 = 1,nI,2; do di = 0, 1
+          i2 = i1 + di
           iP = 3*i2 - 2*i1 -1 ; iM = 4*i1 -3*i2 +2
           Fc_V = c0*Field1_VG(:,i2,jC,kC) &
                + p0*Field1_VG(:,iP,jC,kC) &
@@ -580,8 +588,9 @@ contains
 
        i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
-       !$acc loop vector collapse(1) private(jP, jM, Fc_V, j2)
-       do j1 = 1, nJ, 2; do j2 = j1, j1+1
+       !$acc loop vector collapse(2) private(jP, jM, Fc_V, j2)
+       do j1 = 1, nJ, 2; do dj = 0, 1
+          j2 = j1 + dj
           jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
           Fc_V = c0*Field1_VG(:,iC,j2,kC) &
                + p0*Field1_VG(:,iC,jP,kC) &
