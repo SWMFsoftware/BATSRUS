@@ -93,9 +93,9 @@ module ModVarIndexes
   ! These arrays are needed for multifluid
   integer, parameter :: &
        iRho_I(nFluid)   &
-       = [ Rho_,   Pu3Rho_,   Pu2Rho_, &  
+       = [ Rho_,   Pu3Rho_,   Pu2Rho_, &
        NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   ], iRhoUx_I(nFluid) &
-       = [ RhoUx_, Pu3RhoUx_, Pu2RhoUx_, & 
+       = [ RhoUx_, Pu3RhoUx_, Pu2RhoUx_, &
        NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], iRhoUy_I(nFluid) &
        = [ RhoUy_, Pu3RhoUy_, Pu2RhoUy_, &
        NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], iRhoUz_I(nFluid) &

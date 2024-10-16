@@ -35,7 +35,7 @@ module ModUpdateState
   logical:: UseElectronShockHeating = .false.
   logical:: UseAnisoShockHeating = .false.
   logical:: UseIonShockHeating = .false.
-  
+
 contains
   !============================================================================
   subroutine read_update_param(NameCommand, UseStrict)
