@@ -376,7 +376,7 @@ contains
                min(Field1_VG(:,0,1,1), Field_VG(:,1,1,1)))
        else
           !$acc loop vector collapse(4) private(jP, jM, kP, kM, k2, j2)
-          do k1=1, nK, 2; do j1=1, nJ, 2;
+          do k1=1, nK, 2; do j1=1, nJ, 2
              do Dk = 0, min(1, nK-1); do Dj = 0, 1
                 k2 = k1 + Dk; j2 = j1 + Dj
                 jP = 3*j2 - 2*j1 -1 ; jM = 4*j1 -3*j2 +2
