@@ -224,8 +224,8 @@ contains
     use ModUserInterface
     use ModBuffer,      ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, HypEDecay
-    use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoIon_I, &
-         iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
+    use ModMultiFluid,  ONLY: MassIon_I, ChargePerMass_I, &
+         iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iPIon_I, iSperpion_I, iSparIon_I, &
          nIonFluid, UseNeutralFluid, DoConserveNeutrals
     use ModPui, ONLY: pui_advection_diffusion
@@ -508,17 +508,20 @@ contains
       if((UseIonShockHeating .or. UseElectronShockHeating) &
            .and. .not.UseAnisoPressure)then
          ! Calculate updated entropies for isotropic ion pressures
+         ! Convert from mass density to number density
          if(DoAddToStateOld)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               s_IC(:,i,j,k) = Source_VC(iSperpIon_I,i,j,k) + &
-                    StateOld_VGB(iPIon_I,i,j,k,iBlock) &
-                    *StateOld_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
+               s_IC(:,i,j,k) = MassIon_I**GammaMinus1Ion_I &
+                    *(Source_VC(iSperpIon_I,i,j,k) &
+                    + StateOld_VGB(iPIon_I,i,j,k,iBlock) &
+                    *StateOld_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I))
             end do; end do; end do
          else
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               s_IC(:,i,j,k) = Source_VC(iSperpIon_I,i,j,k) + &
-                    State_VGB(iPIon_I,i,j,k,iBlock) &
-                    *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
+               s_IC(:,i,j,k) = MassIon_I**GammaMinus1Ion_I &
+                    *(Source_VC(iSperpIon_I,i,j,k)  &
+                    + State_VGB(iPIon_I,i,j,k,iBlock) &
+                    *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I))
             end do; end do; end do
          end if
       end if
@@ -994,27 +997,28 @@ contains
                ! Only apply shockheating where the scheme is conservative
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
-            Rho1 = State_VGB(Rho_,i,j,k,iBlock)**(2 - Gamma)
+            Rho1 = (State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1))**(2 - Gamma)
             do iFluid = 2, nIonFluid
                 if(PiShockHeatingFraction_I(iFluid) > 0.0) CYCLE
                 ! Modify weights so non-adiabatic heating
                 ! is proportional to mass density**(2-gamma)
                 Weight2 = abs(PiShockHeatingFraction_I(iFluid))
                 Weight1 = 1 - Weight2
-                Rho2 = State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock) &
-                     **(2 - Gamma_I(iFluid))
+                Rho2 = (State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock) &
+                     /MassIon_I(iFluid))**(2 - Gamma_I(iFluid))
 
                 ! Multiplicative factor for s_1
                 Weight_I(iFluid) = Rho2*Weight2/(Rho1*Weight1 + Rho2*Weight2)
             end do
             ! Total ion thermal energy density from total energy update
-            Eth =  sum(State_VGB(iPIon_I,i,j,k,iBlock)*InvGammaMinus1Ion_I)
+            Eth = sum(State_VGB(iPIon_I,i,j,k,iBlock)*InvGammaMinus1Ion_I)
             ! Linear combination of entropies: W_i*s_1 - (1-W_i)*s_i
             Si1_I(2:nIonFluid) = Weight_I(2:nIonFluid)*s_IC(1,i,j,k) &
                  - (1 - Weight_I(2:nIonFluid))*s_IC(2:,i,j,k)
             ! Factor c_i = e_i/s_i
             Factor_I(1:nIonFluid) = GammaMinus1Ion_I &
-                 *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
+                 *(State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I) &
+                 **(-GammaMinus1Ion_I)
 
             ! Calculate Alpha_I and Beta_I in e_i = Alpha_I e_1 - Beta_I
             Alpha_I = 1/(max(1e-30, 1 - Weight_I)*Factor_I(2:))
