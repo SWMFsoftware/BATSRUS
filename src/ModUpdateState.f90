@@ -488,7 +488,7 @@ contains
       real:: Eth, Sperp, Sie, Spp, Ei, Ee, Epar
       real:: FactorI, FactorE, FactorPar, FactorPerp
       real:: WeightSi, WeightSe, WeightSpar, WeightSperp, Wi, We, Wpar, Wperp
-      real, dimension(nIonFluid+1):: e_I=0.0, Factor_I=1.0
+      real, dimension(nIonFluid+1):: Num_I=0.0, e_I=0.0, Factor_I=1.0
       real, dimension(2:nIonFluid+1):: Si1_I=0.0, Weight_I=0.0, Alpha_I, Beta_I
       real:: Weight1, Weight2, Rho1, Rho2
       integer:: iFluid, iRho
@@ -997,15 +997,15 @@ contains
                ! Only apply shockheating where the scheme is conservative
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
-            Rho1 = (State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1))**(2 - Gamma)
+            Num_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
+            Rho1 = Num_I(1)**(2 - Gamma)
             do iFluid = 2, nIonFluid
                 if(PiShockHeatingFraction_I(iFluid) > 0.0) CYCLE
                 ! Modify weights so non-adiabatic heating
                 ! is proportional to mass density**(2-gamma)
                 Weight2 = abs(PiShockHeatingFraction_I(iFluid))
                 Weight1 = 1 - Weight2
-                Rho2 = (State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock) &
-                     /MassIon_I(iFluid))**(2 - Gamma_I(iFluid))
+                Rho2 = Num_I(iFluid)**(2 - Gamma_I(iFluid))
 
                 ! Multiplicative factor for s_1
                 Weight_I(iFluid) = Rho2*Weight2/(Rho1*Weight1 + Rho2*Weight2)
@@ -1016,9 +1016,8 @@ contains
             Si1_I(2:nIonFluid) = Weight_I(2:nIonFluid)*s_IC(1,i,j,k) &
                  - (1 - Weight_I(2:nIonFluid))*s_IC(2:,i,j,k)
             ! Factor c_i = e_i/s_i
-            Factor_I(1:nIonFluid) = GammaMinus1Ion_I &
-                 *(State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I) &
-                 **(-GammaMinus1Ion_I)
+            Factor_I(1:nIonFluid) = &
+                 GammaMinus1Ion_I*Num_I(1:nIonFluid)**(-GammaMinus1Ion_I)
 
             ! Calculate Alpha_I and Beta_I in e_i = Alpha_I e_1 - Beta_I
             Alpha_I = 1/(max(1e-30, 1 - Weight_I)*Factor_I(2:))
@@ -1032,7 +1031,7 @@ contains
             ! Convert to pressures
             State_VGB(iPIon_I,i,j,k,iBlock) = e_I(1:nIonFluid)*GammaMinus1Ion_I
 
-            if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
+	    if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
                write(*,*)'Old Eth, Si1=', Eth, Si1_I
                write(*,*)'Factor_I=', Factor_I
                write(*,*)'Weight_I=', Weight_I
@@ -1041,10 +1040,11 @@ contains
                write(*,*)'e_I     =', e_I
                write(*,*)'New p_I =', State_VGB(iPIon_I,i,j,k,iBlock)
                write(*,*)'New s_I =', State_VGB(iPIon_I,i,j,k,iBlock) &
-                 *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
+                 *Num_I(1:nIonFluid)**(-GammaMinus1Ion_I)
                write(*,*)'New Eth =', sum(State_VGB(iPIon_I,i,j,k,iBlock) &
                     *InvGammaMinus1Ion_I)
             end if
+
          end do; end do; end do
 
       end if ! UseIonShockHeating .and. .not.  UseElectronShockHeating
