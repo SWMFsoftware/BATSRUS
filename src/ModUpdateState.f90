@@ -1025,6 +1025,9 @@ contains
             e_I(1)  = (Eth + sum(Beta_I))/(1 + sum(Alpha_I))
             e_I(2:) = Alpha_I*e_I(1) - Beta_I
 
+            ! Convert to pressures
+            State_VGB(iPIon_I,i,j,k,iBlock) = e_I(1:nIonFluid)*GammaMinus1Ion_I
+
             if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
                write(*,*)'Old Eth, Si1=', Eth, Si1_I
                write(*,*)'Factor_I=', Factor_I
@@ -1032,31 +1035,13 @@ contains
                write(*,*)'Alpha_I =', Alpha_I
                write(*,*)'Beta_I  =', Beta_I
                write(*,*)'e_I     =', e_I
+               write(*,*)'New p_I =', State_VGB(iPIon_I,i,j,k,iBlock)
+               write(*,*)'New s_I =', State_VGB(iPIon_I,i,j,k,iBlock) &
+                 *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
+               write(*,*)'New Eth =', sum(State_VGB(iPIon_I,i,j,k,iBlock) &
+                    *InvGammaMinus1Ion_I)
             end if
-
-            ! Convert to pressures
-            State_VGB(iPIon_I,i,j,k,iBlock) = e_I(1:nIonFluid)*GammaMinus1Ion_I
-
          end do; end do; end do
-         if(DoTest)then
-            write(*,*) NameSub,' after shock heating P_I=', &
-                 State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
-            write(*,*) 'New s_I=', &
-                 State_VGB(iPIon_I,iTest,jTest,kTest,iBlock) &
-                 *State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock) &
-                 **(-GammaMinus1Ion_I)
-            write(*,*) 'New Eth, Sii=', &
-                 sum(State_VGB(iPIon_I,iTest,jTest,kTest,iBlock) &
-                 *InvGammaMinus1Ion_I),&
-                 Weight_I(nIonFluid) &
-                 *State_VGB(p_,iTest,jTest,kTest,iBlock) &
-                 *State_VGB(Rho_,iTest,jTest,kTest,iBlock) &
-                 **(-GammaMinus1Ion_I(1)) &
-                 - (1-Weight_I(nIonFluid)) &
-                 *State_VGB(iPIon_I(nIonFluid),iTest,jTest,kTest,iBlock) &
-                 *State_VGB(iRhoIon_I(nIonFluid),iTest,jTest,kTest,iBlock) &
-                 **(-GammaMinus1Ion_I(nIonFluid))
-         end if
 
       end if ! UseIonShockHeating .and. .not.  UseElectronShockHeating
 
