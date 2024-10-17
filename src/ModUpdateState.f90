@@ -986,7 +986,7 @@ contains
          ! PiShockHeatingFraction_I are weights of fluids 2...nIon+1
          ! This may be modified below using density coefficients
          Weight_I = PiShockHeatingFraction_I
-         
+
          if(DoTest)then
             write(*,*) NameSub,' before shock heating P_I=', &
                  State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
@@ -1030,7 +1030,7 @@ contains
                  Si1_I(nIonFluid+1) = Weight_I(nIonFluid+1)*s_IC(1,i,j,k) &
                  - (1 - Weight_I(nIonFluid+1))*State_VGB(Pe_,i,j,k,iBlock) &
                  *Num_I(nIonFluid+1)**(-GammaElectronMinus1)
-                 
+
             ! Factor c_i = e_i/s_i
             Factor_I(1:nIonFluid) = &
                  GammaMinus1Ion_I*Num_I(1:nIonFluid)**(-GammaMinus1Ion_I)
