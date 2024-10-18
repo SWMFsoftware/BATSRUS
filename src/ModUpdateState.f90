@@ -988,11 +988,22 @@ contains
          Weight_I = PiShockHeatingFraction_I
 
          if(DoTest)then
-            write(*,*) NameSub,' before shock heating P_I=', &
-                 State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
-            write(*,*) NameSub, ' RhoIon_I=', &
+            write(*,*) NameSub, ' before shock heating RhoIon_I=', &
                  State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock)
-            write(*,*) NameSub,' sIon_I=', s_IC(:,iTest,jTest,kTest)
+            if(UseElectronShockHeating)then
+               write(*,*) NameSub,' pIon_I, Pe=', &
+                    State_VGB(iPIon_I,iTest,jTest,kTest,iBlock), &
+                    State_VGB(Pe_,iTest,jTest,kTest,iBlock)
+               write(*,*) NameSub,' sIon_I, Se=', s_IC(:,iTest,jTest,kTest), &
+                    State_VGB(Pe_,iTest,jTest,kTest,iBlock)/ &
+                    sum(ChargePerMass_I* &
+                    State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock)) &
+                    **(-GammaElectronMinus1)
+            else
+               write(*,*) NameSub,' pIon_I=', &
+                    State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
+               write(*,*) NameSub,' sIon_I=', s_IC(:,iTest,jTest,kTest)
+            end if
          end if
 
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1007,14 +1018,17 @@ contains
                  = sum(Num_I(1:nIonFluid)*ChargeIon_I)
             ! Modify ion weights if required
             if(any(PiShockHeatingFraction_I < 0)) Rho1 = Num_I(1)**(2 - Gamma)
-            do iFluid = 2, nIonFluid
+            do iFluid = 2, nIonFluid + 1
                 if(PiShockHeatingFraction_I(iFluid) >= 0.0) CYCLE
                 ! Modify weights so non-adiabatic heating
                 ! is proportional to number density**(2-gamma)
                 Weight2 = abs(PiShockHeatingFraction_I(iFluid))
                 Weight1 = 1 - Weight2
-                Rho2 = Num_I(iFluid)**(2 - Gamma_I(iFluid))
-
+                if(iFluid <= nIonFluid)then
+                   Rho2 = Num_I(iFluid)**(2 - Gamma_I(iFluid))
+                else
+                   Rho2 = Num_I(iFluid)**(2 - GammaElectron)
+                end if
                 ! Multiplicative factor for s_1
                 Weight_I(iFluid) = Rho2*Weight2/(Rho1*Weight1 + Rho2*Weight2)
             end do
