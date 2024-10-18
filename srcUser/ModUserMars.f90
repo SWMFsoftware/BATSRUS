@@ -162,7 +162,7 @@ module ModUser
   logical :: UseChargeEx=.true.
   logical :: UseChapman=.false.
 
-  integer, parameter:: NLong=72, NLat=36, MaxAlt=81
+  integer, parameter:: NLong=73, NLat=36, MaxAlt=21
   real :: Long_I(NLong), Lat_I(NLat), Alt_I(MaxAlt)
   real :: Temp(NLong, NLat, MaxAlt)
   real :: Den_CO2(NLong, NLat, MaxAlt)!,Den_CO2_dim(NLong, NLat, NAlt)
@@ -361,8 +361,6 @@ contains
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-
-       ! This does not work in first session with debug flag
        UseUserPointImplicit_B(iBlock) = &
           r_GB(1,1,1,iBlock) <= rPointImplicit .and. &
           r_GB(nI,1,1,iBlock) > rBody
@@ -1022,6 +1020,58 @@ contains
        RateDim_I(O_hv__Op_em_) = 2.734e-7
        RateDim_I(H_hv__Hp_em_) = 8.59e-8
 
+    case('permax')  ! for solar maximum at perihelion
+       Tnu_body_dim = 137.3      ! neutral temperature
+       BodynDenNuSpDim_I(CO2_)= 5.658e12
+       BodynDenNuSpDim_I(O_)= 9.472e9
+       BodynDenNuSpDim_I(H_)= 1.321e6
+       BodynDenNuSpDim_I(Oh_)= 7.811e4
+       BodynDenNuSpDim_I(Ohx_)= 4.715e3
+       BodynDenNuSpDim_I(Hx_)= 4.630e4
+       BodynDenNuSpDim_I(Ox_)= 5.156e8
+       BodynDenNuSpDim_I(CO2x_)= 6.723e10
+
+       HNuSpeciesDim_I(O_)=14.19 ! scale height in KM
+       HNuSpeciesDim_I(Ox_)=54.74
+       HNuSpeciesDim_I(Oh_)=290.5
+       HNuSpeciesDim_I(Ohx_)=2436.6
+
+       HNuSpeciesDim_I(CO2_)=6.83
+       HNuSpeciesDim_I(CO2x_)=18.63
+
+       HNuSpeciesDim_I(H_)=13.133
+       HNuSpeciesDim_I(Hx_)=614.3
+
+       RateDim_I(CO2_hv__CO2p_em_)=8.89e-7
+       RateDim_I(O_hv__Op_em_) = 3.35e-7
+       RateDim_I(H_hv__Hp_em_) = 9.29e-8
+
+    case('aphmax')  ! for solar maximum at aphelion
+       Tnu_body_dim = 130.5      ! neutral temperature
+       BodynDenNuSpDim_I(CO2_)= 3.422e12
+       BodynDenNuSpDim_I(O_)= 6.732e9
+       BodynDenNuSpDim_I(H_)= 2.610e6
+       BodynDenNuSpDim_I(Oh_)= 5.031e4
+       BodynDenNuSpDim_I(Ohx_)= 3.296e3
+       BodynDenNuSpDim_I(Hx_)= 1.207e4
+       BodynDenNuSpDim_I(Ox_)= 5.192e8
+       BodynDenNuSpDim_I(CO2x_)= 9.828e10
+
+       HNuSpeciesDim_I(O_)=12.49 ! scale height in KM
+       HNuSpeciesDim_I(Ox_)=45.45
+       HNuSpeciesDim_I(Oh_)=290.5
+       HNuSpeciesDim_I(Ohx_)=2436.6
+
+       HNuSpeciesDim_I(CO2_)=6.29
+       HNuSpeciesDim_I(CO2x_)=15.55
+
+       HNuSpeciesDim_I(H_)=13.133
+       HNuSpeciesDim_I(Hx_)=605.4
+
+       RateDim_I(CO2_hv__CO2p_em_)=5.92e-7
+       RateDim_I(O_hv__Op_em_) = 2.20e-7
+       RateDim_I(H_hv__Hp_em_) = 7.90e-8
+
     case('solarmin')  ! for solar min condition
 
        Tnu_body_dim = 117.0      ! neutral temperature
@@ -1050,6 +1100,119 @@ contains
        RateDim_I(O_hv__Op_em_) = 8.89e-8
        RateDim_I(H_hv__Hp_em_) = 5.58e-8
 
+    case('permin')  ! for solar minimum at perihelion
+
+       Tnu_body_dim = 119.9      ! neutral temperature
+
+       BodynDenNuSpDim_I(CO2_)= 1.479e12
+       BodynDenNuSpDim_I(O_)= 3.808e9
+       BodynDenNuSpDim_I(H_)= 1.81e6
+       BodynDenNuSpDim_I(Oh_)= 2.41e4
+       BodynDenNuSpDim_I(Ohx_)= 1.81e3
+       BodynDenNuSpDim_I(Hx_)= 5.97e5
+       BodynDenNuSpDim_I(Ox_)= 5.25e8
+       BodynDenNuSpDim_I(CO2x_)= 1.85e11
+
+       HNuSpeciesDim_I(O_)=10.09  ! scale height in km
+       HNuSpeciesDim_I(Ox_)=33.32
+       HNuSpeciesDim_I(Oh_)=290.5
+       HNuSpeciesDim_I(Ohx_)=2436.6
+
+       HNuSpeciesDim_I(CO2_)=5.48
+       HNuSpeciesDim_I(CO2x_)=11.50
+
+       HNuSpeciesDim_I(H_)=13.133
+       HNuSpeciesDim_I(Hx_)=590.8
+
+       RateDim_I(CO2_hv__CO2p_em_)=3.01e-7
+       RateDim_I(O_hv__Op_em_) = 1.09e-7
+       RateDim_I(H_hv__Hp_em_) = 6.03e-8
+
+    case('aphmin')  ! for solar minimum at aphelion
+
+       Tnu_body_dim = 114.0      ! neutral temperature
+
+       BodynDenNuSpDim_I(CO2_)= 8.945e11
+       BodynDenNuSpDim_I(O_)= 2.707e9
+       BodynDenNuSpDim_I(H_)= 1.61e7
+       BodynDenNuSpDim_I(Oh_)= 1.56e4
+       BodynDenNuSpDim_I(Ohx_)= 1.27e3
+       BodynDenNuSpDim_I(Hx_)= 1.56e6
+       BodynDenNuSpDim_I(Ox_)= 5.29e8
+       BodynDenNuSpDim_I(CO2x_)= 2.71e11
+
+       HNuSpeciesDim_I(O_)=8.88  ! scale height in km
+       HNuSpeciesDim_I(Ox_)=27.66
+       HNuSpeciesDim_I(Oh_)=290.5
+       HNuSpeciesDim_I(Ohx_)=2436.6
+
+       HNuSpeciesDim_I(CO2_)=5.05
+       HNuSpeciesDim_I(CO2x_)=9.60
+
+       HNuSpeciesDim_I(H_)=13.133
+       HNuSpeciesDim_I(Hx_)=582.2
+
+       RateDim_I(CO2_hv__CO2p_em_)=2.00e-7
+       RateDim_I(O_hv__Op_em_) = 7.16e-8
+       RateDim_I(H_hv__Hp_em_) = 5.13e-8
+
+    case('permaxex')  ! for solar maximum at perihelion
+       ! Ionization rates increased by 3 orders of magnitude
+       
+       Tnu_body_dim = 137.3      ! neutral temperature
+       BodynDenNuSpDim_I(CO2_)= 5.658e12
+       BodynDenNuSpDim_I(O_)= 9.472e9
+       BodynDenNuSpDim_I(H_)= 1.321e6
+       BodynDenNuSpDim_I(Oh_)= 7.811e4
+       BodynDenNuSpDim_I(Ohx_)= 4.715e3
+       BodynDenNuSpDim_I(Hx_)= 4.630e4
+       BodynDenNuSpDim_I(Ox_)= 5.156e8
+       BodynDenNuSpDim_I(CO2x_)= 6.723e10
+
+       HNuSpeciesDim_I(O_)=14.19 ! scale height in KM
+       HNuSpeciesDim_I(Ox_)=54.74
+       HNuSpeciesDim_I(Oh_)=290.5
+       HNuSpeciesDim_I(Ohx_)=2436.6
+
+       HNuSpeciesDim_I(CO2_)=6.83
+       HNuSpeciesDim_I(CO2x_)=18.63
+
+       HNuSpeciesDim_I(H_)=13.133
+       HNuSpeciesDim_I(Hx_)=614.3
+
+       RateDim_I(CO2_hv__CO2p_em_)=8.89e-3
+       RateDim_I(O_hv__Op_em_) = 3.35e-3
+       RateDim_I(H_hv__Hp_em_) = 9.29e-4
+
+    case('aphminex')  ! for solar minimum at aphelion
+       ! Ionization rates decreased by nine orders of magnitude
+
+       Tnu_body_dim = 114.0      ! neutral temperature
+
+       BodynDenNuSpDim_I(CO2_)= 8.945e11
+       BodynDenNuSpDim_I(O_)= 2.707e9
+       BodynDenNuSpDim_I(H_)= 1.61e7
+       BodynDenNuSpDim_I(Oh_)= 1.56e4
+       BodynDenNuSpDim_I(Ohx_)= 1.27e3
+       BodynDenNuSpDim_I(Hx_)= 1.56e6
+       BodynDenNuSpDim_I(Ox_)= 5.29e8
+       BodynDenNuSpDim_I(CO2x_)= 2.71e11
+
+       HNuSpeciesDim_I(O_)=8.88  ! scale height in km
+       HNuSpeciesDim_I(Ox_)=27.66
+       HNuSpeciesDim_I(Oh_)=290.5
+       HNuSpeciesDim_I(Ohx_)=2436.6
+
+       HNuSpeciesDim_I(CO2_)=5.05
+       HNuSpeciesDim_I(CO2x_)=9.60
+
+       HNuSpeciesDim_I(H_)=13.133
+       HNuSpeciesDim_I(Hx_)=582.2
+
+       RateDim_I(CO2_hv__CO2p_em_)=2.00e-16
+       RateDim_I(O_hv__Op_em_) = 7.16e-17
+       RateDim_I(H_hv__Hp_em_) = 5.13e-17
+       
     case ('earlymars1')
        Tnu_body_dim = 180.0      ! neutral temperature
        ! increase to 1000k to exobase
