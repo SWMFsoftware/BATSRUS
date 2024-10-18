@@ -744,7 +744,7 @@ test_multiion:
 	$(MAKE) test_multiion_check
 
 test_multiion_compile:
-	./Config.pl -noopenmp -u=Default -e=MultiIon -ng=2 -g=64,1,1
+	./Config.pl -noopenmp -u=Default -e=MultiIonPe -ng=2 -g=64,1,1
 	$(MAKE) BATSRUS
 	make PIDL
 
