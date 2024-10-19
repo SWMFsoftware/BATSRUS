@@ -29,10 +29,12 @@ module ModUpdateState
   ! Update check parameters
   real :: PercentRhoLimit_I(2), PercentPLimit_I(2)
 
-  ! The fraction of non-adiabatic heating put into Pe and Ppar
+  ! The fraction of non-adiabatic heating put into Pe, Ppar and minor ions
   real:: PeShockHeatingFraction = 0.0, PparShockHeatingFraction = 0.0
-  ! The fraction of non-adiabatic heating put into the 2 to nIonFluid fluids
-  real:: PiShockHeatingFraction_I(nIonFluid) = 0.0
+  real:: PiShockHeatingFraction_I(2:nIonFluid+1) = 0.0
+  logical:: UseElectronShockHeating = .false.
+  logical:: UseAnisoShockHeating = .false.
+  logical:: UseIonShockHeating = .false.
 
 contains
   !============================================================================
@@ -64,23 +66,32 @@ contains
             call read_var("PeShockHeatingFraction", PeShockHeatingFraction)
        if(UseAnisoPressure) &
             call read_var("PparShockHeatingFraction", PparShockHeatingFraction)
-       ! This could be generalized to arbitrary number of ion fluids
        if(nIonFluid > 1) then
           do iFluid = 2, nIonFluid
              call read_var("PiShockHeatingFraction", &
                   PiShockHeatingFraction_I(iFluid))
           end do
        end if
-       if(PeShockHeatingFraction /= 0)then
+       ! Logicals
+       UseElectronShockHeating = PeShockHeatingFraction /= 0
+       UseAnisoShockHeating = PparShockHeatingFraction /= 0
+       UseIonShockHeating = sum(abs(PiShockHeatingFraction_I)) /= 0
+       ! Switch on entropy and energy options as needed
+       if(UseElectronShockHeating)then
           UseElectronEntropy = .true.
           UseElectronEnergy = .true.
           UseEntropy = .true.
        end if
-       if(PparShockHeatingFraction /= 0) UseEntropy = .true.
-       if(sum(PiShockHeatingFraction_I) /= 0)then
+       if(UseAnisoShockHeating) UseEntropy = .true.
+       if(UseIonShockHeating)then
           UseEntropy = .true.
           UseTotalIonEnergy = .true.
        end if
+
+       ! To simplify formulas in isotropic shock heating the
+       ! the electrons are treated as nIonFluid+1
+       PiShockHeatingFraction_I(nIonFluid+1) = PeShockHeatingFraction
+
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -201,7 +212,7 @@ contains
          IsTimeAccurate, iStage, nStage, Dt, Cfl, UseB0, UseBufferGrid, &
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
     use ModPhysics, ONLY: &
-         GammaMinus1, InvGammaMinus1, Gamma_I, GammaMinus1_I, &
+         Gamma, GammaMinus1, InvGammaMinus1, Gamma_I, GammaMinus1_I, &
          GammaMinus1Ion_I, InvGammaMinus1Ion_I, &
          GammaElectronMinus1, InvGammaElectronMinus1, GammaElectron, &
          ShockLeft_V, ShockRight_V, RhoMin_I
@@ -219,8 +230,8 @@ contains
     use ModUserInterface
     use ModBuffer,      ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, HypEDecay
-    use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoIon_I, &
-         iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
+    use ModMultiFluid,  ONLY: MassIon_I, ChargeIon_I, ChargePerMass_I, &
+         iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iPIon_I, iSperpion_I, iSparIon_I, &
          nIonFluid, UseNeutralFluid, DoConserveNeutrals
     use ModPui, ONLY: pui_advection_diffusion
@@ -479,33 +490,18 @@ contains
       ! True if the cell is non-conservative
       logical:: IsNonConservative
 
-      ! true if shock heating is applied to electrons, anisotropic ion pressure
-      logical:: UseIonShockHeating, UseElectronShockHeating, &
-           UseAnisoShockHeating
-
       real:: Coeff1, Coeff2, b_D(3), u_D(3), FullB2, FullB, Rho
-      real:: Eth, Sperp, Sii, Sie, Spp, Ei, Ee, Epar
+      real:: Eth, Sperp, Sie, Spp, Ei, Ee, Epar
       real:: FactorI, FactorE, FactorPar, FactorPerp
       real:: WeightSi, WeightSe, WeightSpar, WeightSperp, Wi, We, Wpar, Wperp
-      real, dimension(nIonFluid):: e_I, Weight_I, w_I, Factor_I
+      real, dimension(nIonFluid+1):: Num_I=0.0, e_I=0.0, Factor_I=1.0
+      real, dimension(2:nIonFluid+1):: Si1_I=0.0, Weight_I=0.0, Alpha_I, Beta_I
       real:: Weight1, Weight2, Rho1, Rho2
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
       real, allocatable, save:: s_IC(:,:,:,:)
       !------------------------------------------------------------------------
       DoAddToStateOld = UseHalfStep .or. nStage == 1 .or. nStage == 4
-
-      ! Electron shock heating parameters
-      UseElectronShockHeating = PeShockHeatingFraction > 0.0
-      WeightSe = PeShockHeatingFraction; WeightSi = 1 - WeightSe
-
-      ! Anisotropic shock heating parameters
-      ! Negative PparShockHeatingFraction uses formula to set heating fraction
-      UseAnisoShockHeating = PparShockHeatingFraction /= 0.0
-
-      ! Multi-ion shock heating parameters
-      ! Negative PiShockHeatingFraction uses additional density weighting
-      UseIonShockHeating = sum(PiShockHeatingFraction_I) /= 0.0
 
       ! Allocate ion (perpendicular) entropy array for each ion fluid
       if( (UseAnisoShockHeating .or. UseElectronShockHeating &
@@ -515,17 +511,20 @@ contains
       if((UseIonShockHeating .or. UseElectronShockHeating) &
            .and. .not.UseAnisoPressure)then
          ! Calculate updated entropies for isotropic ion pressures
+         ! Convert from mass density to number density
          if(DoAddToStateOld)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               s_IC(:,i,j,k) = Source_VC(iSperpIon_I,i,j,k) + &
-                    StateOld_VGB(iPIon_I,i,j,k,iBlock) &
-                    *StateOld_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
+               s_IC(:,i,j,k) = MassIon_I**GammaMinus1Ion_I &
+                    *(Source_VC(iSperpIon_I,i,j,k) &
+                    + StateOld_VGB(iPIon_I,i,j,k,iBlock) &
+                    *StateOld_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I))
             end do; end do; end do
          else
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               s_IC(:,i,j,k) = Source_VC(iSperpIon_I,i,j,k) + &
-                    State_VGB(iPIon_I,i,j,k,iBlock) &
-                    *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
+               s_IC(:,i,j,k) = MassIon_I**GammaMinus1Ion_I &
+                    *(Source_VC(iSperpIon_I,i,j,k)  &
+                    + State_VGB(iPIon_I,i,j,k,iBlock) &
+                    *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I))
             end do; end do; end do
          end if
       end if
@@ -981,19 +980,30 @@ contains
            NameSub, ' after pressure/energy update        =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
-      if(UseIonShockHeating .and. .not.UseElectronShockHeating)then
-         ! Distribute shock heating between first and second ion fluids
-         if(PiShockHeatingFraction_I(nIonFluid) > 0.0)then
-            ! Fixed weights: PiShockHeatingFraction is weight of fluid 2
-            Weight_I(1) = PiShockHeatingFraction_I(nIonFluid)
-            Weight_I(nIonFluid) = 1 - Weight_I(1)
-         end if
+      if((UseIonShockHeating .or. UseElectronShockHeating) &
+           .and. .not.UseAnisoShockHeating)then
+         ! Distribute shock heating among ion fluids
+         ! PiShockHeatingFraction_I are weights of fluids 2...nIon+1
+         ! This may be modified below using density coefficients
+         Weight_I = PiShockHeatingFraction_I
+
          if(DoTest)then
-            write(*,*) NameSub,' before shock heating P_I=', &
-                 State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
-            write(*,*) NameSub, ' RhoIon_I=', &
+            write(*,*) NameSub, ' before shock heating RhoIon_I=', &
                  State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock)
-            write(*,*) NameSub,' sIon_I=', s_IC(:,iTest,jTest,kTest)
+            if(UseElectronShockHeating)then
+               write(*,*) NameSub,' pIon_I, Pe=', &
+                    State_VGB(iPIon_I,iTest,jTest,kTest,iBlock), &
+                    State_VGB(Pe_,iTest,jTest,kTest,iBlock)
+               write(*,*) NameSub,' sIon_I, Se=', s_IC(:,iTest,jTest,kTest), &
+                    State_VGB(Pe_,iTest,jTest,kTest,iBlock)/ &
+                    sum(ChargePerMass_I* &
+                    State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock)) &
+                    **(-GammaElectronMinus1)
+            else
+               write(*,*) NameSub,' pIon_I=', &
+                    State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
+               write(*,*) NameSub,' sIon_I=', s_IC(:,iTest,jTest,kTest)
+            end if
          end if
 
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1002,111 +1012,87 @@ contains
                ! Only apply shockheating where the scheme is conservative
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
-            if(PiShockHeatingFraction_I(nIonFluid) < 0.0)then
-               Weight2 = abs(PiShockHeatingFraction_I(nIonFluid))
-               Weight1 = 1 - Weight2
-               Rho1    = State_VGB(Rho_,i,j,k,iBlock)**(2 - Gamma_I(1))
-               Rho2    = State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock) &
-                    **(2 - Gamma_I(nIonFluid))
-               ! Modifies weights so non-adiabatic heating
-               ! is proportional to mass density**(2-gamma)
-               ! Weight_I(1) multiplies s1 and -Weight_I(2) multiplies s2:
-               Weight_I(1) = Rho2*Weight2/(Rho1*Weight1 + Rho2*Weight2)
-               Weight_I(nIonFluid) = 1 - Weight_I(1)
-            end if
-            Factor_I = State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
+            ! Number densities for ions and electrons
+            Num_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
+            if(UseElectronShockHeating) Num_I(nIonFluid+1) &
+                 = sum(Num_I(1:nIonFluid)*ChargeIon_I)
+            ! Modify ion weights if required
+            if(any(PiShockHeatingFraction_I < 0)) Rho1 = Num_I(1)**(2 - Gamma)
+            do iFluid = 2, nIonFluid + 1
+                if(PiShockHeatingFraction_I(iFluid) >= 0.0) CYCLE
+                ! Modify weights so non-adiabatic heating
+                ! is proportional to number density**(2-gamma)
+                Weight2 = abs(PiShockHeatingFraction_I(iFluid))
+                Weight1 = 1 - Weight2
+                if(iFluid <= nIonFluid)then
+                   Rho2 = Num_I(iFluid)**(2 - Gamma_I(iFluid))
+                else
+                   Rho2 = Num_I(iFluid)**(2 - GammaElectron)
+                end if
+                ! Multiplicative factor for s_1
+                Weight_I(iFluid) = Rho2*Weight2/(Rho1*Weight1 + Rho2*Weight2)
+            end do
             ! Total ion thermal energy density from total energy update
-            Eth =  sum(State_VGB(iPIon_I,i,j,k,iBlock)*InvGammaMinus1Ion_I)
-            ! From entropy updates W1*Si1 - W2*Si2
-            Sii =  Weight_I(1)*s_IC(1,i,j,k) &
-                 - Weight_I(nIonFluid)*s_IC(nIonFluid,i,j,k)
-            ! Energy weights: w_I(1) multiplies e1, w_I(2) multiplies e2
-            w_I = Weight_I*GammaMinus1Ion_I*Factor_I
-
-            ! Solution for energy densities
-            e_I(1)         = (Sii + w_I(nIonFluid)*Eth)/sum(w_I)
-            e_I(nIonFluid) = Eth - e_I(1)
-            ! Convert to pressures
-            State_VGB(iPIon_I,i,j,k,iBlock)  = e_I*GammaMinus1Ion_I
-            if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
-               write(*,*)'Old Eth, Sii=     ', Eth, Sii
-               write(*,*)'Factor_I= ', Factor_I
-               write(*,*)'Weight_I=', Weight_I
-               write(*,*)'w_I     =', w_I
-               write(*,*)'e_I     =', e_I
-            end if
-         end do; end do; end do
-         if(DoTest)then
-            write(*,*) NameSub,' after shock heating P_I=', &
-                 State_VGB(iPIon_I,iTest,jTest,kTest,iBlock)
-            write(*,*) 'New s_I=', &
-                 State_VGB(iPIon_I,iTest,jTest,kTest,iBlock) &
-                 *State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock) &
-                 **(-GammaMinus1Ion_I)
-            write(*,*) 'New Eth, Sii=', &
-                 sum(State_VGB(iPIon_I,iTest,jTest,kTest,iBlock) &
-                 *InvGammaMinus1Ion_I),&
-                 Weight_I(1)*State_VGB(p_,iTest,jTest,kTest,iBlock) &
-                 *State_VGB(Rho_,iTest,jTest,kTest,iBlock) &
-                 **(-GammaMinus1Ion_I(1)) &
-                 - Weight_I(nIonFluid) &
-                 *State_VGB(iPIon_I(nIonFluid),iTest,jTest,kTest,iBlock) &
-                 *State_VGB(iRhoIon_I(nIonFluid),iTest,jTest,kTest,iBlock) &
-                 **(-GammaMinus1Ion_I(nIonFluid))
-         end if
-
-      end if ! UseIonShockHeating .and. .not.  UseElectronShockHeating
-
-      if(UseElectronShockHeating .and. .not.UseAnisoPressure)then
-         ! Distribute shock heating between ions and electrons
-         if(DoTest)then
-            write(*,'(2x,2a,3es20.12)') &
-                 NameSub,' before shock heating Pe, P, sIon_I=', &
-                 State_VGB(p_,iTest,jTest,kTest,iBlock), &
-                 State_VGB(Pe_,iTest,jTest,kTest,iBlock), &
-                 s_IC(:,iTest,jTest,kTest)
-            write(*,*) 'initial Rho, Ei, Ee=', &
-                 State_VGB(Rho_,iTest,jTest,kTest,iBlock), &
-                 State_VGB(p_,iTest,jTest,kTest,iBlock)*InvGammaMinus1, &
-                 State_VGB(Pe_,iTest,jTest,kTest,iBlock)*InvGammaElectronMinus1
-         end if
-         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-            if(nConservCrit > 0)then
-               ! Only apply shockheating where the scheme is conservative
-               if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
-            end if
-            Rho = State_VGB(Rho_,i,j,k,iBlock)
-            FactorI = Rho**(-GammaMinus1)
-            FactorE = Rho**(-GammaElectronMinus1)
-            ! Thermal energy density from total energy update
-            Eth =  State_VGB(p_,i,j,k,iBlock)*InvGammaMinus1 &
+            Eth = sum(State_VGB(iPIon_I,i,j,k,iBlock)*InvGammaMinus1Ion_I)
+            if(UseElectronShockHeating) Eth = Eth &
                  + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
-            ! From entropy updates We*Si - Wi*Se
-            Sie =  WeightSe*s_IC(1,i,j,k) &
-                 - WeightSi*State_VGB(Pe_,i,j,k,iBlock)*FactorE
-            ! Energy weights
-            We = WeightSe*GammaMinus1*FactorI
-            Wi = WeightSi*GammaElectronMinus1*FactorE
+            ! Linear combination of entropies: W_i*s_1 - (1-W_i)*s_i
+            Si1_I(2:nIonFluid) = Weight_I(2:nIonFluid)*s_IC(1,i,j,k) &
+                 - (1 - Weight_I(2:nIonFluid))*s_IC(2:,i,j,k)
+            ! Electron pressure was obtained from electron entropy equation
+            if(UseElectronShockHeating) &
+                 Si1_I(nIonFluid+1) = Weight_I(nIonFluid+1)*s_IC(1,i,j,k) &
+                 - (1 - Weight_I(nIonFluid+1))*State_VGB(Pe_,i,j,k,iBlock) &
+                 *Num_I(nIonFluid+1)**(-GammaElectronMinus1)
+
+            ! Factor c_i = e_i/s_i
+            Factor_I(1:nIonFluid) = &
+                 GammaMinus1Ion_I*Num_I(1:nIonFluid)**(-GammaMinus1Ion_I)
+            if(UseElectronShockHeating) Factor_I(nIonFluid+1) = &
+                 GammaElectronMinus1*Num_I(nIonFluid+1)**(-GammaElectronMinus1)
+
+            ! Calculate Alpha_I and Beta_I in e_i = Alpha_I e_1 - Beta_I
+            Alpha_I = 1/(max(1e-30, 1 - Weight_I)*Factor_I(2:))
+            Beta_I  = Si1_I*Alpha_I
+            Alpha_I = Factor_I(1)*Weight_I*Alpha_I
+
             ! Solution for energy densities
-            Ei = (Sie + Wi*Eth)/(We + Wi)
-            Ee = Eth - Ei
+            e_I(1)  = (Eth + sum(Beta_I))/(1 + sum(Alpha_I))
+            e_I(2:) = Alpha_I*e_I(1) - Beta_I
+
             ! Convert to pressures
-            State_VGB(p_,i,j,k,iBlock)  = Ei*GammaMinus1
-            State_VGB(Pe_,i,j,k,iBlock) = Ee*GammaElectronMinus1
-            if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
-               write(*,*)'Eth,      Sie=     ', Eth, Sie
-               write(*,*)'FactorI,  FactorE= ', FactorI, FactorE
-               write(*,*)'WeightSi, WeightSe=', WeightSi, WeightSe
-               write(*,*)'Wi,       We=      ', Wi, We
-               write(*,*)'Ei,       Ee=      ', Ei, Ee
+            State_VGB(iPIon_I,i,j,k,iBlock) = e_I(1:nIonFluid)*GammaMinus1Ion_I
+            if(UseElectronShockHeating) State_VGB(Pe_,i,j,k,iBlock) &
+                 = e_I(nIonFluid+1)*GammaElectronMinus1
+
+	    if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
+               write(*,*)'Old Eth, Si1=', Eth, Si1_I
+               write(*,*)'Factor_I=', Factor_I
+               write(*,*)'Weight_I=', Weight_I
+               write(*,*)'Alpha_I =', Alpha_I
+               write(*,*)'Beta_I  =', Beta_I
+               write(*,*)'e_I     =', e_I
+               if(UseElectronPressure)then
+                  write(*,*)'New p_I, Pe =', State_VGB(iPIon_I,i,j,k,iBlock), &
+                       State_VGB(Pe_,i,j,k,iBlock)
+                  write(*,*)'New s_I, Se =', State_VGB(iPIon_I,i,j,k,iBlock) &
+                       *Num_I(1:nIonFluid)**(-GammaMinus1Ion_I), &
+                       State_VGB(Pe_,i,j,k,iBlock) &
+                       *Num_I(nIonFluid+1)**(-GammaElectronMinus1)
+                  write(*,*)'New Eth =', sum(State_VGB(iPIon_I,i,j,k,iBlock) &
+                       *InvGammaMinus1Ion_I) + State_VGB(Pe_,i,j,k,iBlock) &
+                       *InvGammaElectronMinus1
+               else
+                  write(*,*)'New p_I =', State_VGB(iPIon_I,i,j,k,iBlock)
+                  write(*,*)'New s_I =', State_VGB(iPIon_I,i,j,k,iBlock) &
+                       *Num_I(1:nIonFluid)**(-GammaMinus1Ion_I)
+                  write(*,*)'New Eth =', sum(State_VGB(iPIon_I,i,j,k,iBlock) &
+                       *InvGammaMinus1Ion_I)
+               end if
             end if
          end do; end do; end do
-         if(DoTest)write(*,'(2x,2a,3es20.12)') &
-              NameSub,' after shock heating Pe, P=', &
-              State_VGB(p_,iTest,jTest,kTest,iBlock), &
-              State_VGB(Pe_,iTest,jTest,kTest,iBlock)
-      end if ! UseElectronShockHeating .and. .not. UseAnisoPressure
+
+      end if ! (UseIon .or. UseElectronShockHeating).and. .not. UseAniso
 
       if(UseAnisoShockHeating)then
          ! Distribute shock heating between parallel and perpendicular
@@ -1116,6 +1102,9 @@ contains
               State_VGB(Ppar_,iTest,jTest,kTest,iBlock), &
               State_VGB(p_,iTest,jTest,kTest,iBlock), &
               s_IC(1,iTest,jTest,kTest)
+         ! Electron shock heating parameters are same for all cells
+         WeightSe = PeShockHeatingFraction; WeightSi = 1 - WeightSe
+         WeightSpar = PparShockHeatingFraction
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             if(nConservCrit > 0)then
@@ -1127,9 +1116,7 @@ contains
             if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
             FullB = norm2(b_D)
 
-            if(PparShockHeatingFraction > 0.)then
-               WeightSpar = PparShockHeatingFraction
-            else
+            if(PparShockHeatingFraction < 0.)then
                ! Evaluate b.n
                ! Get b from left or right state
                if(ShockLeft_V(Rho_) < ShockRight_V(Rho_))then

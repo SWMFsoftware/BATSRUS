@@ -151,5 +151,3 @@ SingleIon		NameRegionFormula
 #STOP
 -1			MaxIteration
 5 year			tSimulationMax
-
-#END

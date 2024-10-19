@@ -1,7 +1,8 @@
 #DESCRIPTION
-Param/MULTIION/PARAM.in: multiion shocktube test		StringDescription
+Param/MULTIION/PARAM.in: multiion+Pe shocktube test		StringDescription
 
 #SHOCKHEATING
+0.25			PeShockHeatingFraction
 -0.5			PiShockHeatingFraction
 
 #POINTIMPLICIT
@@ -46,6 +47,7 @@ NONE			TypeNormalization
 0.0			LeftState Bx
 0.0			LeftState By
 -16.0			LeftState Bz
+1e6			LeftState Pe
 1e6			LeftState P
 1.8			LeftState Rho O+
 -100.			LeftState Ux
@@ -59,6 +61,7 @@ NONE			TypeNormalization
 0.0			RightState Bx
 0.0			RightState By
 -4.0			RightState Bz
+1e4			RightState Pe
 1e5			RightState P
 0.45			RightState Rho O+
 -400.			RightState Ux
@@ -66,14 +69,6 @@ NONE			TypeNormalization
 0.			RightState Uz
 1e4			RightState P
 
-#PLASMA
-1.0			FluidMass H+
-16.0			FluidMass O+
-1.0			IonCharge H+
-1.0			IonCharge O+
-0.0			ElectronTemperatureRatio
-
-Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY
 float			TypeBc1
 float			TypeBc2
@@ -109,7 +104,6 @@ idl_ascii 1d MHD		StringPlot
 0.05			DtSavePlot
 0.0			DxSavePlot
 
-The grid size is 256, so the final time corresponds to the usual 0.1
 #STOP
 -1			MaxIteration
 0.2			tSimulationMax

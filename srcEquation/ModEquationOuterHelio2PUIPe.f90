@@ -23,7 +23,6 @@ module ModVarIndexes
   integer, parameter :: nFluid    = 7
   integer, parameter :: nIonFluid = 3
   logical, parameter :: IsMhd     = .false.
-  logical, parameter :: Is2PUI    = .true.
   real               :: MassFluid_I(nFluid) = 1.0
 
   ! SWH is the Solar wind hydrogen fluid,
@@ -94,15 +93,16 @@ module ModVarIndexes
   ! These arrays are needed for multifluid
   integer, parameter :: &
        iRho_I(nFluid)   &
-       = [ Rho_,   Pu3Rho_,   Pu2Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   ], &
-       iRhoUx_I(nFluid) &
-       = [ RhoUx_, Pu3RhoUx_, Pu2RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], &
-       iRhoUy_I(nFluid) &
-       = [ RhoUy_, Pu3RhoUy_, Pu2RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], &
-       iRhoUz_I(nFluid) &
-       = [ RhoUz_, Pu3RhoUz_, Pu2RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
-       iP_I(nFluid)     &
-       = [ P_,     Pu3P_,     Pu2P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_     ]
+       = [ Rho_,   Pu3Rho_,   Pu2Rho_, &
+       NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   ], iRhoUx_I(nFluid) &
+       = [ RhoUx_, Pu3RhoUx_, Pu2RhoUx_, &
+       NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], iRhoUy_I(nFluid) &
+       = [ RhoUy_, Pu3RhoUy_, Pu2RhoUy_, &
+       NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], iRhoUz_I(nFluid) &
+       = [ RhoUz_, Pu3RhoUz_, Pu2RhoUz_, &
+       NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], iP_I(nFluid) &
+       = [ P_,     Pu3P_,     Pu2P_, &
+       NeuP_,      Ne2P_,     Ne3P_,     Ne4P_     ]
 
   integer, parameter :: iPparIon_I(nIonFluid) = [1,2,3]
 
