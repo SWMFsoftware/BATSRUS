@@ -9707,7 +9707,7 @@ UseEntropy=T and UseTotalIonEnergy=T in the multiion case.
 
 <command name="SHOCKHEATING">
   <parameter name="PeShockHeatingFraction" type="real"
-	     min="0" max="1" default="0" if="$UsePe"/>
+	     min="-1" max="1" default="0" if="$UsePe"/>
   <parameter name="PparShockHeatingFraction" type="real"
 	     min="-1" max="1" default="0" if="$UsePpar"/>
   <for from="2" to="$nIonFluid">
@@ -9722,10 +9722,11 @@ UseEntropy=T and UseTotalIonEnergy=T in the multiion case.
 -0.1     PiShockHeatingFraction for ion fluid 3 (if exists)
 
 If electron pressure is solved for and PeShockHeatingFraction is
-set to a positive value, a fraction of the non-adiabatic
-heating is deposited into the electron thermal energy Pe/(GammaE-1),
-and the same amount of energy is removed from the ion thermal energy
-P/(Gamma-1).
+set to a positive value, this fraction of the non-adiabatic
+heating is deposited into the electron thermal energy Pe/(GammaE-1)
+between the electrons and the first ion fluid. For a negative value
+the weights are multiplied by the number densities to the (2-gamma)
+power.
 
 If anisotropic ion pressure is solved for and PparShockHeatingFraction
 is set to a positive value, then a fraction of
@@ -9737,13 +9738,13 @@ are the unit vectors for the magnetic field and velocity,
 respectively.
 
 If multiple ion fluids are solved for and PiShockHeatingFraction is
-set to a positive value for ion fluids 2..., then a fraction of the
-non-adiabatic heating is deposited into the that ion fluid and the
-rest into the first ion fluid.
+set to a positive value for ion fluid iFluid (2...nIonFluid), then this
+fraction of the non-adiabatic heating is deposited into fluid iFluid
+between the first and iFluid-th ion fluids.
 If PiShockHeatingFraction is set to a negative value, then
-the fluid weights are multiplied with the densities to the (2-gamma)
+the fluid weights are multiplied with the number densities to the (2-gamma)
 power, which results in correct heating of two fluids with equal
-velocities and temperatures.
+ion masses, velocities and temperatures but different number densities.
 
 If this command is used, UseEntropy, UseTotalIonEnergy and
 UseElectronEntropy are set to true (see #ENTROPY and #ELECTRONENTROPY).
@@ -9752,7 +9753,7 @@ Note that the fractions describe ratio of entropies, not energies.
 The scheme conserves the total energy and the linear combination of
 entropies Weight2*Entropy1 - Weight1*Entropy2, where Weight1 and
 Weight2=1-Weight1 are obtained from the various fractions defined by
-the command, while Entropy1 and Entropy2 are the volumetric (per mass)
+the command, while Entropy1 and Entropy2 are the volumetric
 entropy densities, for example $p/rho^\gamma$ for the isotropic case.
 For isotropic pressure and the same gamma for ions and electrons
 the entropies and thermal energy densities $p/(\gamma-1)$ are closely
