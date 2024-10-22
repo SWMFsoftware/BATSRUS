@@ -1158,7 +1158,7 @@ contains
 
     case('permaxex')  ! for solar maximum at perihelion
        ! Ionization rates increased by 3 orders of magnitude
-       
+
        Tnu_body_dim = 137.3      ! neutral temperature
        BodynDenNuSpDim_I(CO2_)= 5.658e12
        BodynDenNuSpDim_I(O_)= 9.472e9
@@ -1212,7 +1212,7 @@ contains
        RateDim_I(CO2_hv__CO2p_em_)=2.00e-16
        RateDim_I(O_hv__Op_em_) = 7.16e-17
        RateDim_I(H_hv__Hp_em_) = 5.13e-17
-       
+
     case ('earlymars1')
        Tnu_body_dim = 180.0      ! neutral temperature
        ! increase to 1000k to exobase
