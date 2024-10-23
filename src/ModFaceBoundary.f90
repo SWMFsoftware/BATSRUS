@@ -946,7 +946,7 @@ contains
 
               ! Pop III has the velocity and temperature of ions at inner
               ! boundary, the density is taken to be a fraction of the ions
-
+              iFluid = nIonFluid + 1
               FBC%VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
                    FBC%VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
 
