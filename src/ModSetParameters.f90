@@ -260,8 +260,8 @@ contains
 
     if(IsUninitialized)then
        call set_namevar
-       call set_defaults
        call set_user_version
+       call set_defaults
        IsUninitialized=.false.
     end if
 
