@@ -938,7 +938,8 @@ contains
            if (DoOhNeutralBc) then
               ! Get face BCs for neutrals in the outerheliosphere
               ! (based on M. Opher)
-              ! Pop I is going through the inner BCs
+
+              ! PopI flows through the boundary
 
               ! PopII leaves the domain at a supersonic velocity
               ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
@@ -946,16 +947,15 @@ contains
 
               ! Pop III has the velocity and temperature of ions at inner
               ! boundary, the density is taken to be a fraction of the ions
-              iFluid = nIonFluid + 1
-              FBC%VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
-                   FBC%VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
-
-              do iFluid = nIonFluid+2, nFluid
-                 if(sum(FBC%VarsTrueFace_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid))*&
+              do iFluid = nIonFluid+1, nFluid
+                 if(iFluid == nIonFluid+1 .or. sum( &
+                      FBC%VarsTrueFace_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid))*&
                       FBC%FaceCoords_D) <= 0.0)then
+                    ! Either Pop I or inflow: float BC
                     FBC%VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
                          FBC%VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
                  else
+                    ! Outflow for Pop II and above
                     FBC%VarsGhostFace_V(iRho_I(iFluid)) = &
                          FBC%VarsGhostFace_V(Rho_)*RhoBcFactor_I(iFluid)
                     FBC%VarsGhostFace_V(iP_I(iFluid)) = &
