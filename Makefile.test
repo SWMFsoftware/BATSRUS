@@ -1426,8 +1426,8 @@ test_outerheliopui_1d_check:
 ### TESTS FOR MODELING TITAN ###
 
 test_titan:
-	-@($(MAKE) test_titan_start)
-	-@($(MAKE) test_titan_restart)
+	@($(MAKE) test_titan_start)
+	@($(MAKE) test_titan_restart)
 
 test_titan_start:
 	@echo "test_titan_compile..." > test_titan.diff
@@ -1495,8 +1495,8 @@ test_titan_restart_check:
 ### TESTS FOR MODELING MARS ###
 
 test_mars:
-	-@($(MAKE) test_mars_start)
-	-@($(MAKE) test_mars_restart)
+	@($(MAKE) test_mars_start)
+	@($(MAKE) test_mars_restart)
 
 test_mars_start:
 	@echo "test_mars_compile..." > test_mars.diff
@@ -1564,8 +1564,8 @@ test_mars_restart_check:
 ### TESTS FOR MODELING MARSFLUIDS ###
 
 test_marsfluids:
-	-@($(MAKE) test_marsfluids_start)
-	-@($(MAKE) test_marsfluids_restart)
+	@($(MAKE) test_marsfluids_start)
+	@($(MAKE) test_marsfluids_restart)
 
 test_marsfluids_start:
 	@echo "test_marsfluids_compile..." > test_marsfluids.diff
@@ -1632,8 +1632,8 @@ test_marsfluids_restart_check:
 ### TESTS FOR MODELING VENUS ###
 
 test_venus:
-	-@($(MAKE) test_venus_start)
-	-@($(MAKE) test_venus_restart)
+	@($(MAKE) test_venus_start)
+	@($(MAKE) test_venus_restart)
 
 test_venus_start:
 	@echo "test_venus_compile..." > test_venus.diff
@@ -1699,9 +1699,6 @@ test_venus_restart_check:
 ### TESTS FOR MODELING SATURN ###
 
 test_saturn:
-	-@($(MAKE) test_saturn_start)
-
-test_saturn_start:
 	@echo "test_saturn_compile..." > test_saturn.diff
 	$(MAKE) test_saturn_compile
 	@echo "test_saturn_rundir..." >> test_saturn.diff
@@ -1874,8 +1871,8 @@ test_comet_check:
 ### TEST FOR COMET3FLUIDSPE ###
 
 test_cometfluids:
-	-@($(MAKE) test_cometfluids_start)
-	-@($(MAKE) test_cometfluids_restart)
+	@($(MAKE) test_cometfluids_start)
+	@($(MAKE) test_cometfluids_restart)
 
 test_cometfluids_start:
 	@echo "test_cometfluids_compile..." > test_cometfluids.diff
@@ -1941,9 +1938,6 @@ test_cometfluids_restart_check:
 ### TESTS FOR MODELING EARTH WITH CARTESIAN GRID ###
 
 test_earth:
-	-@($(MAKE) test_earth_start)
-
-test_earth_start:
 	@echo "test_earth_compile..." > test_earth_gpu.diff
 	$(MAKE) test_earth_compile
 	@echo "test_earth_rundir..." >> test_earth_gpu.diff
@@ -2131,9 +2125,6 @@ test_2bodyplot_check:
 ### TESTS FOR MODELING MOON IMPACT###
 
 test_moonimpact:
-	-@($(MAKE) test_moonimpact_start)
-
-test_moonimpact_start:
 	@echo "test_moonimpact_compile..." > test_moonimpact.diff
 	$(MAKE) test_moonimpact_compile
 	@echo "test_moonimpact_rundir..." >> test_moonimpact.diff
@@ -2163,34 +2154,6 @@ test_moonimpact_check:
 		Param/MOONIMPACT/TestOutput/log_n000000.log \
 		> test_moonimpact.diff)
 	ls -l test_moonimpact.diff
-
-test_moonimpact_restart:
-	@echo "test_moonimpact_restart_save..." > test_moonimpact_restart.diff
-	$(MAKE) test_moonimpact_restart_save
-	@echo "test_moonimpact_restart_read..." >> test_moonimpact_restart.diff
-	$(MAKE) test_moonimpact_restart_read
-	@echo "test_moonimpact_restart_check..." >> test_moonimpact_restart.diff
-	$(MAKE) test_moonimpact_restart_check
-
-test_moonimpact_restart_save:
-	cd ${TESTDIR}; cp Param/MOONIMPACT/PARAM.in.restartsave PARAM.in
-	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartSave
-
-test_moonimpact_restart_read:
-	cd ${TESTDIR}; cp Param/MOONIMPACT/PARAM.in.restartread PARAM.in
-	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
-	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS/RestartRead
-
-test_moonimpact_restart_check:
-	-@(${DIFFNUM} -t -b -r=1e-5 -a=1e-10 \
-		${TESTDIR}/RESULTS/RestartRead/GM/log_n000300.log \
-		Param/MOONIMPACT/TestOutput/log_n000300.log \
-		> test_moonimpact_restart.diff)
-	ls -l test_moonimpact*.diff
 
 ### ALFVEN WAVE TEST FOR SINGLE FLUID MHD WITH ANISOTROPIC PRESSURE ###
 
