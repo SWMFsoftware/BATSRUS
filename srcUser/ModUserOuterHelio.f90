@@ -3727,7 +3727,7 @@ subroutine get_charge_exchange_region( &
   integer, intent(out):: iRegion
   real, intent(in)    :: r, RhoDim, U2Dim, USW2Dim, TempDim, TempPu2Dim,&
        Mach2, MachSW2, MachPUI2, LevelHP
-  
+
   logical :: DoReIndex
   !----------------------------------------------------------------------------
   DoReIndex = .true.
