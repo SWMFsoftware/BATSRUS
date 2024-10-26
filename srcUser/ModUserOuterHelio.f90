@@ -3718,19 +3718,18 @@ subroutine get_charge_exchange_wrapper( &
 end subroutine get_charge_exchange_wrapper
 !==============================================================================
 subroutine get_charge_exchange_region( &
-     iRegion, r, RhoDim, U2Dim, TempDim, Mach2, LevelHP) &
+     iRegion, r, RhoDim, U2Dim, USW2Dim, TempDim, TempPu2Dim, &
+     Mach2, MachPUI2, MachSW2, LevelHP) &
      bind(c, name='get_charge_exchange_region')
 
   use ModUser, ONLY: get_region
 
   integer, intent(out):: iRegion
-  real, intent(in)    :: r, RhoDim, U2Dim, TempDim, Mach2, LevelHP
+  real, intent(in)    :: r, RhoDim, U2Dim, USW2Dim, TempDim, TempPu2Dim,&
+       Mach2, MachSW2, MachPUI2, LevelHP
 
-  real :: MachPUI2, MachSW2
   logical :: DoReIndex
   !----------------------------------------------------------------------------
-  MachPUI2 = 0
-  MachSW2 = 0
   DoReIndex = .true.
 
   call get_region(iRegion, r, RhoDim, U2Dim, TempDim, &
