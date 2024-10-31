@@ -3103,6 +3103,8 @@ contains
       !------------------------------------------------------------------------
       NamePlotDir(1:2) = NameThisComp
 
+      UseOuterHelio = index(NameUserFile,'OuterHelio') > 0
+      
       ! Set defaults for restart files
       call init_mod_restart_file
 
@@ -3205,7 +3207,7 @@ contains
          TypeNormalization     = "SOLARWIND"
          TypeIoUnit            = "HELIOSPHERIC"
 
-         if(NameThisComp == "OH" .or. index(NameUserFile,'OuterHelio') > 0)then
+         if(NameThisComp == "OH" .or. UseOuterHelio)then
             TypeNormalization = "OUTERHELIO"
             TypeIoUnit        = "OUTERHELIO"
          end if
@@ -3237,8 +3239,7 @@ contains
          end if
 
          ! Set heat exchange for IH (it shouldn't do much)
-         if(NameThisComp == 'IH' &
-              .and. index(NameUserFile,'OuterHelio') == 0)then
+         if(NameThisComp == 'IH' .and. .not.UseOuterHelio)then
             if(UseElectronPressure .and. nIonFluid == 1)then
                UseResistivity = .true.
                TypeResistivity = 'user'
@@ -3736,7 +3737,7 @@ contains
       end if
 
       if(TypeCoordSystem == 'HGI' .and. (NameThisComp /= 'OH' &
-           .and. index(NameUserFile,'OuterHelio') == 0) &
+           .and. .not.UseOuterHelio) &
            .and. .not.IsTimeAccurate)then
          if(iProc == 0)then
             write(*,'(a)') NameSub//&

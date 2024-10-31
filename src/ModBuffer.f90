@@ -61,6 +61,7 @@ contains
     !--------------------------------------------------------------------------
     if(allocated(BufferState_VG))deallocate(BufferState_VG)
     allocate(BufferState_VG(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1))
+    BufferState_VG = 0.0
     ! Calculate grid spacing and save
     nCell_D = [nRBuff, nLonBuff, nLatBuff]
     dSphBuff_D = (BufferMax_D - BufferMin_D)/real(nCell_D)
@@ -496,8 +497,9 @@ contains
     ! restore old values in the domain covered by the buffer grid
     use ModGeometry, ONLY:r_GB
     use BATL_lib,  ONLY: Xyz_DGB
-    use ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B
+    use ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B, UseOuterHelio
     use ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
+    
     integer  :: iBlock
     integer  :: i,j,k
     real     :: x_D(MaxDim), rBuffMax
@@ -510,27 +512,31 @@ contains
 
        ! Fill in the physical cells, which are outside the buffer grid
        ! When testing, do not fill cells outside the buffer
-       do k = 1, nK; do j = 1 , nJ; do i = 1, nI
-          if(r_GB(i,j,k,iBlock) < rBuffMax)CYCLE
+       if(UseOuterHelio)then
+          call user_set_ics(iBlock)
+       else
+          do k = 1, nK; do j = 1 , nJ; do i = 1, nI
+             if(r_GB(i,j,k,iBlock) < rBuffMax)CYCLE
 
-          ! For each grid point, get the values at the base (buffer)
-          x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/r_GB(i,j,k,iBlock)
+             ! For each grid point, get the values at the base (buffer)
+             x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/r_GB(i,j,k,iBlock)
 
-          ! The grid point values are extracted from the base values
-          call get_from_spher_buffer_grid(&
-               x_D, nVar, State_VGB(:,i,j,k,iBlock))
+             ! The grid point values are extracted from the base values
+             call get_from_spher_buffer_grid(&
+                  x_D, nVar, State_VGB(:,i,j,k,iBlock))
 
-          ! Transform primitive variables to conservative ones:
-          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
-               State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
-               State_VGB(rho_,i,j,k,iBlock)
+             ! Transform primitive variables to conservative ones:
+             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
+                  State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
+                  State_VGB(rho_,i,j,k,iBlock)
 
-          ! Scale as (r/R)^2:
-          State_VGB(:,i,j,k,iBlock)=&
-               State_VGB(:,i,j,k,iBlock)*&
-               (rBuffMax/r_GB(i,j,k,iBlock))**2
+             ! Scale as (r/R)^2:
+             State_VGB(:,i,j,k,iBlock)=&
+                  State_VGB(:,i,j,k,iBlock)*&
+                  (rBuffMax/r_GB(i,j,k,iBlock))**2
 
-       end do; end do; end do
+          end do; end do; end do
+       end if
     end do
   end subroutine match_ibc
   !============================================================================
