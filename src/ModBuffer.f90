@@ -499,7 +499,7 @@ contains
     use BATL_lib,  ONLY: Xyz_DGB
     use ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B, UseOuterHelio
     use ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
-    
+
     integer  :: iBlock
     integer  :: i,j,k
     real     :: x_D(MaxDim), rBuffMax

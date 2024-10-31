@@ -929,7 +929,7 @@ contains
     !--------------------------------------------------------------------------
     if(.not.UseNeutralFluid) &
          call CON_stop(NameSub//': no neutral fluids present')
-          
+
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if( Unused_B(iBlock) ) CYCLE

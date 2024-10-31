@@ -3104,7 +3104,7 @@ contains
       NamePlotDir(1:2) = NameThisComp
 
       UseOuterHelio = index(NameUserFile,'OuterHelio') > 0
-      
+
       ! Set defaults for restart files
       call init_mod_restart_file
 

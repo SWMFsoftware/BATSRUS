@@ -84,7 +84,7 @@ module ModMain
 
   ! Logical for if outer helio sphere model is used
   logical :: UseOuterHelio = .false.
-  
+
   ! To split the LOS intergration span between the models
   real    :: rLowerModel = 0.0, rUpperModel = 1000.0
 
