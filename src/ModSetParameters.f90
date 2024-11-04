@@ -3928,10 +3928,7 @@ contains
       !$acc update device(UseTvdResChange, UseAccurateResChange)
 
       !$acc update device(TypeLimiter, LimiterBeta)
-      !$acc update device(nOrderProlong)
-      !$acc update device(UseHighResChange)
-      !$acc update device(UseSimpleProlongation)
-
+      
       !$acc update device(TypeCellBc_I, iTypeCellBc_I)
 
       !$acc update device(UseOutflowPressure)
