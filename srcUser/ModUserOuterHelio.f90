@@ -682,6 +682,8 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
+    use ModMain,           ONLY: UseBufferGrid
+    use ModBuffer,         ONLY: BufferMax_D, BuffR_
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
     use ModTurbulence,     ONLY: SigmaD, KarmanTaylorAlpha
@@ -710,6 +712,20 @@ contains
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
 
+       r = r_GB(i,j,k,iBlock)
+
+       if(UseColdCloud .and. UseBufferGrid .and. r < BufferMax_D(BuffR_))then
+          State_VGB(NeuRho_,i,j,k,iBlock)   = VliswRho
+          State_VGB(NeuP_,i,j,k,iBlock)     = VliswP
+          State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3 * RhoNeutralsISW
+          State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3 * PNeutralsISW
+          State_VGB(Ne3Rho_,i,j,k,iBlock) = 0.1*State_VGB(SWHRho_,i,j,k,iBlock)
+          State_VGB(Ne3P_,i,j,k,iBlock)   = 0.1*State_VGB(SWHP_,i,j,k,iBlock)
+          State_VGB(Ne4Rho_,i,j,k,iBlock)  =RhoNeutralsISW
+          State_VGB(Ne4P_,i,j,k,iBlock) = PNeutralsISW
+          CYCLE
+       end if
+
        if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
@@ -717,7 +733,6 @@ contains
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
        z = Xyz_DGB(z_,i,j,k,iBlock)
-       r = r_GB(i,j,k,iBlock)
 
        XyzSph_DD = rot_xyz_sph(x,y,z)
 
