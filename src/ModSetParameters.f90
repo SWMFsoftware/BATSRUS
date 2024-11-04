@@ -3162,11 +3162,9 @@ contains
 
       UseB0Source     = UseB0 .and. nDim > 1
 
-      TypeMessagePass = 'all'
+      IsDimensionalPlot_I = .true.
 
-      IsDimensionalPlot_I      = .true.
-
-      IsRestart           = .false.
+      IsRestart = .false.
 
       ! Give some "reasonable" default values
 
