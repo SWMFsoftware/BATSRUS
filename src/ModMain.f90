@@ -219,7 +219,7 @@ module ModMain
   !$acc declare create(nOrderProlong)
 
   ! Message passing mode ('all' or 'allopt' ...)
-  character(len=10) :: TypeMessagePass = 'allopt'
+  character(len=10) :: TypeMessagePass = 'all'
 
   ! Source terms
 

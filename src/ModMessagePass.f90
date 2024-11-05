@@ -112,8 +112,9 @@ contains
 
     if(DoTest)write(*,*) NameMod//':'//NameSub, &
          ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers,'//&
-         ' UseBuffer=', DoResChangeOnly, UseOrder2, DoRestrictFace, &
-         DoTwoCoarseLayers, UseBuffer
+         ' UseBuffer, nOrderProlong, TypeMessagePass=', &
+         DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers, &
+         UseBuffer, nOrderProlong, trim(TypeMessagePass)
 
     call timing_start('exch_msgs')
 
@@ -157,25 +158,17 @@ contains
 
     if (UseOrder2 .or. nOrderProlong > 1) then
        call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
-       ! Only gathers grid information (iDecomposition) for GPU
-       ! implementation
-#ifdef _OPENACC
+       if(DoTest) write(*,*) NameSub,' call 1 of message_pass_cell'
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseOpenACCIn=.true., iDecomposition=iNewDecomposition)
-            ! UseOpenACCIn=.true.)
-#else
-       call message_pass_cell(nVar, State_VGB,&
-            DoResChangeOnlyIn=DoResChangeOnlyIn,&
-            UseOpenACCIn=.true.)
-#endif
     elseif (TypeMessagePass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
        nWidth = nG; if(nOrder == 1 .and. ShockSlope == 0.0)  nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
        call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
-#ifdef _OPENACC
+       if(DoTest) write(*,*) NameSub,' call 2 of message_pass_cell'
        call message_pass_cell(nVar, State_VGB, &
             nWidthIn=nWidth, nProlongOrderIn=1, &
             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
@@ -184,22 +177,13 @@ contains
             DefaultState_V=DefaultState_V, &
             UseOpenACCIn=.true., &
             iDecomposition=iNewDecomposition)
-#else
-       call message_pass_cell(nVar, State_VGB, &
-            nWidthIn=nWidth, nProlongOrderIn=1, &
-            nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
-            DoResChangeOnlyIn=DoResChangeOnlyIn, &
-            UseHighResChangeIn=UseHighResChangeNow,&
-            DefaultState_V=DefaultState_V, &
-            UseOpenACCIn=.true.)
-#endif
     else
        ! Pass corners if necessary
        DoSendCorner = nOrder > 1 .and. UseAccurateResChange
        ! Pass one layer if possible
        nWidth = nG;      if(nOrder == 1)       nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
-#ifdef _OPENACC
+       if(DoTest) write(*,*) NameSub,' call 3 of message_pass_cell'
        call message_pass_cell(nVar, State_VGB, &
             nWidthIn=nWidth, &
             nProlongOrderIn=1, &
@@ -209,18 +193,8 @@ contains
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V, &
+            UseOpenACCIn=.true., &
             iDecomposition=iNewDecomposition)
-#else
-       call message_pass_cell(nVar, State_VGB, &
-            nWidthIn=nWidth, &
-            nProlongOrderIn=1, &
-            nCoarseLayerIn=nCoarseLayer,&
-            DoSendCornerIn=DoSendCorner, &
-            DoRestrictFaceIn=DoRestrictFace,&
-            DoResChangeOnlyIn=DoResChangeOnlyIn,&
-            UseHighResChangeIn=UseHighResChangeNow,&
-            DefaultState_V=DefaultState_V)
-#endif
     end if
     ! If the grid changed, fix iBoundary_GB
     ! This could/should be done where the grid is actually being changed,

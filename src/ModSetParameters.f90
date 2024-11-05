@@ -3162,11 +3162,9 @@ contains
 
       UseB0Source     = UseB0 .and. nDim > 1
 
-      TypeMessagePass = 'all'
+      IsDimensionalPlot_I = .true.
 
-      IsDimensionalPlot_I      = .true.
-
-      IsRestart           = .false.
+      IsRestart = .false.
 
       ! Give some "reasonable" default values
 
@@ -3930,9 +3928,6 @@ contains
       !$acc update device(UseTvdResChange, UseAccurateResChange)
 
       !$acc update device(TypeLimiter, LimiterBeta)
-      !$acc update device(nOrderProlong)
-      !$acc update device(UseHighResChange)
-      !$acc update device(UseSimpleProlongation)
 
       !$acc update device(TypeCellBc_I, iTypeCellBc_I)
 
