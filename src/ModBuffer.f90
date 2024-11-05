@@ -510,32 +510,33 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
-       ! Fill in the physical cells, which are outside the buffer grid
-       ! When testing, do not fill cells outside the buffer
-       do k = 1, nK; do j = 1 , nJ; do i = 1, nI
-          if(r_GB(i,j,k,iBlock) < rBuffMax)CYCLE
+       if(UseOuterHelio)then
+          call user_set_ics(iBlock)
+       else
+          ! Fill in the physical cells, which are outside the buffer grid
+          ! When testing, do not fill cells outside the buffer
+          do k = 1, nK; do j = 1 , nJ; do i = 1, nI
+             if(r_GB(i,j,k,iBlock) < rBuffMax)CYCLE
 
-          ! For each grid point, get the values at the base (buffer)
-          x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/r_GB(i,j,k,iBlock)
+             ! For each grid point, get the values at the base (buffer)
+             x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/r_GB(i,j,k,iBlock)
 
-          ! The grid point values are extracted from the base values
-          call get_from_spher_buffer_grid(&
-               x_D, nVar, State_VGB(:,i,j,k,iBlock))
+             ! The grid point values are extracted from the base values
+             call get_from_spher_buffer_grid(&
+                  x_D, nVar, State_VGB(:,i,j,k,iBlock))
 
-          ! Transform primitive variables to conservative ones:
-          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
-               State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
-               State_VGB(rho_,i,j,k,iBlock)
+             ! Transform primitive variables to conservative ones:
+             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
+                  State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
+                  State_VGB(rho_,i,j,k,iBlock)
 
-          ! Scale as (r/R)^2:
-          State_VGB(:,i,j,k,iBlock)=&
-               State_VGB(:,i,j,k,iBlock)*&
-               (rBuffMax/r_GB(i,j,k,iBlock))**2
+             ! Scale as (r/R)^2:
+             State_VGB(:,i,j,k,iBlock)=&
+                  State_VGB(:,i,j,k,iBlock)*&
+                  (rBuffMax/r_GB(i,j,k,iBlock))**2
 
-       end do; end do; end do
-
-       if(UseOuterHelio) call user_set_ics(iBlock)
-
+          end do; end do; end do
+       end if
     end do
   end subroutine match_ibc
   !============================================================================
