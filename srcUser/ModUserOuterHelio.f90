@@ -683,7 +683,6 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModMain,           ONLY: UseBufferGrid
-    use ModBuffer,         ONLY: BufferMax_D, BuffR_
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModWaves,          ONLY: UseAlfvenWaves
     use ModTurbulence,     ONLY: SigmaD, KarmanTaylorAlpha
@@ -711,21 +710,6 @@ contains
     if(OmegaSun == 0.0)call set_omega_parker_tilt
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-
-       r = r_GB(i,j,k,iBlock)
-
-       if(UseColdCloud .and. UseBufferGrid .and. r < BufferMax_D(BuffR_))then
-          State_VGB(NeuRho_,i,j,k,iBlock)   = VliswRho
-          State_VGB(NeuP_,i,j,k,iBlock)     = VliswP
-          State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3 * RhoNeutralsISW
-          State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3 * PNeutralsISW
-          State_VGB(Ne3Rho_,i,j,k,iBlock) = 0.1*State_VGB(SWHRho_,i,j,k,iBlock)
-          State_VGB(Ne3P_,i,j,k,iBlock)   = 0.1*State_VGB(SWHP_,i,j,k,iBlock)
-          State_VGB(Ne4Rho_,i,j,k,iBlock)  =RhoNeutralsISW
-          State_VGB(Ne4P_,i,j,k,iBlock) = PNeutralsISW
-          CYCLE
-       end if
-
        if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
@@ -733,60 +717,67 @@ contains
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
        z = Xyz_DGB(z_,i,j,k,iBlock)
+       r = r_GB(i,j,k,iBlock)
 
-       XyzSph_DD = rot_xyz_sph(x,y,z)
+       if(UseColdCloud .and. UseBufferGrid)then
+          b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          v_D = State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) &
+               /State_VGB(SWHRho_,i,j,k,iBlock)
+       else
+          XyzSph_DD = rot_xyz_sph(x,y,z)
 
-       ! theta is the angle measured from the pole
-       SinTheta = sqrt(x**2+y**2)/r
+          ! theta is the angle measured from the pole
+          SinTheta = sqrt(x**2+y**2)/r
 
-       ! calculating the Parker B field spherical components Bsph_D
+          ! calculating the Parker B field spherical components Bsph_D
 
-       ! good for polarity of 1997       SignZ = sign(1.0, z)
-       SignZ = sign(1.0,z)  ! good for 2005
+          ! good for polarity of 1997       SignZ = sign(1.0, z)
+          SignZ = sign(1.0,z)  ! good for 2005
 
-       ! Bsph_D(1) = SignZ*SwhBx*(rBody/r)**2  ! Br
-       ! Bsph_D(2) = 0.0                        ! Btheta
-       ! Bsph_D(3) = -SignZ*SwhBx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
+          ! Bsph_D(1) = SignZ*SwhBx*(rBody/r)**2  ! Br
+          ! Bsph_D(2) = 0.0                        ! Btheta
+          ! Bsph_D(3) = -SignZ*SwhBx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
 
-       ! monopole
-       Bsph_D(1) = SwhBx*(rBody/r)**2  ! Br
-       Bsph_D(2) = 0.0                        ! Btheta
-       Bsph_D(3) = SwhBx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
+          ! monopole
+          Bsph_D(1) = SwhBx*(rBody/r)**2  ! Br
+          Bsph_D(2) = 0.0                        ! Btheta
+          Bsph_D(3) = SwhBx*SinTheta*ParkerTilt*(rBody/r) ! Bphi
 
-       Vsph_D = [ SwhUx, 0., 0. ]
-       vPUISph_D = [ Pu3Ux, 0., 0. ]
+          Vsph_D = [ SwhUx, 0., 0. ]
+          vPUISph_D = [ Pu3Ux, 0., 0. ]
 
-       ! magnetic field components in cartesian coordinates
-       b_D = matmul(XyzSph_DD, Bsph_D)
+          ! magnetic field components in cartesian coordinates
+          b_D = matmul(XyzSph_DD, Bsph_D)
 
-       State_VGB(Bx_:Bz_,i,j,k,iBlock) = b_D
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = b_D
 
-       ! velocity components in cartesian coordinates
-       v_D    = matmul(XyzSph_DD, Vsph_D)
-       vPUI_D = matmul(XyzSph_DD, VPUIsph_D)
+          ! velocity components in cartesian coordinates
+          v_D    = matmul(XyzSph_DD, Vsph_D)
+          vPUI_D = matmul(XyzSph_DD, VPUIsph_D)
 
-       ! density and pressure
-       State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
-       State_VGB(LevelHP_,i,j,k,iBlock) = State_VGB(SWHRho_,i,j,k,iBlock)
-       State_VGB(SWHP_,i,j,k,iBlock) = SwhP   * (rBody/r)**2
-       State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
-            State_VGB(SWHRho_,i,j,k,iBlock)*v_D
+          ! density and pressure
+          State_VGB(SWHRho_,i,j,k,iBlock) = SwhRho * (rBody/r)**2
+          State_VGB(LevelHP_,i,j,k,iBlock) = State_VGB(SWHRho_,i,j,k,iBlock)
+          State_VGB(SWHP_,i,j,k,iBlock) = SwhP   * (rBody/r)**2
+          State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = &
+               State_VGB(SWHRho_,i,j,k,iBlock)*v_D
 
-       if(UseElectronPressure) &
-            State_VGB(Pe_,i,j,k,iBlock) = SwhPe * (rBody/r)**2
+          if(UseElectronPressure) &
+               State_VGB(Pe_,i,j,k,iBlock) = SwhPe * (rBody/r)**2
 
-       if(UseColdCloud .and. r > rBody .or. r > 100.0) then
-          State_VGB(Bx_,i,j,k,iBlock) =  VliswBx
-          State_VGB(By_,i,j,k,iBlock) =  VliswBy
-          State_VGB(Bz_,i,j,k,iBlock) =  VliswBz
+          if(UseColdCloud .and. r > rBody .or. r > 100.0) then
+             State_VGB(Bx_,i,j,k,iBlock) =  VliswBx
+             State_VGB(By_,i,j,k,iBlock) =  VliswBy
+             State_VGB(Bz_,i,j,k,iBlock) =  VliswBz
 
-          State_VGB(Rho_,i,j,k,iBlock) = VliswRho
-          State_VGB(P_,i,j,k,iBlock)   = VliswP
-          if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = VliswP
+             State_VGB(Rho_,i,j,k,iBlock) = VliswRho
+             State_VGB(P_,i,j,k,iBlock)   = VliswP
+             if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = VliswP
 
-          State_VGB(RhoUx_,i,j,k,iBlock) = VliswUx*VliswRho
-          State_VGB(RhoUy_,i,j,k,iBlock) = VliswUy*VliswRho
-          State_VGB(RhoUz_,i,j,k,iBlock) = VliswUz*VliswRho
+             State_VGB(RhoUx_,i,j,k,iBlock) = VliswUx*VliswRho
+             State_VGB(RhoUy_,i,j,k,iBlock) = VliswUy*VliswRho
+             State_VGB(RhoUz_,i,j,k,iBlock) = VliswUz*VliswRho
+          end if
        end if
 
        if(UseNeutralFluid)then
@@ -929,7 +920,7 @@ contains
     !--------------------------------------------------------------------------
     if(.not.UseNeutralFluid) &
          call CON_stop(NameSub//': no neutral fluids present')
-
+          
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if( Unused_B(iBlock) ) CYCLE
