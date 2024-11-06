@@ -510,11 +510,11 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
-       ! Fill in the physical cells, which are outside the buffer grid
-       ! When testing, do not fill cells outside the buffer
        if(UseOuterHelio)then
           call user_set_ics(iBlock)
        else
+          ! Fill in the physical cells, which are outside the buffer grid
+          ! When testing, do not fill cells outside the buffer
           do k = 1, nK; do j = 1 , nJ; do i = 1, nI
              if(r_GB(i,j,k,iBlock) < rBuffMax)CYCLE
 
