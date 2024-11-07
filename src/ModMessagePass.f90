@@ -96,7 +96,7 @@ contains
     DoResChangeOnly = .false.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
-    UseOrder2=.false.
+    UseOrder2 = .false.
     if(present(UseOrder2In)) UseOrder2 = UseOrder2In
 
     UseBuffer = IsTimeLoop.and.UseBufferGrid
@@ -106,9 +106,9 @@ contains
     if(UseConstrainB) DoRestrictFace = .false.
 
     DoTwoCoarseLayers = &
-         nOrder>1 .and. nOrderProlong==1 .and. .not. DoOneCoarserLayer
+         nOrder > 1 .and. nOrderProlong == 1 .and. .not. DoOneCoarserLayer
 
-    UseHighResChangeNow = nOrder==5 .and. UseHighResChange
+    UseHighResChangeNow = nOrder == 5 .and. UseHighResChange
 
     if(DoTest)write(*,*) NameMod//':'//NameSub, &
          ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers,'//&
@@ -263,6 +263,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine exchange_messages
   !============================================================================
-
 end module ModMessagePass
 !==============================================================================
