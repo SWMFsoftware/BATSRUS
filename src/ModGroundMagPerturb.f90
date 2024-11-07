@@ -9,7 +9,7 @@ module ModGroundMagPerturb
 
   use ModKind,           ONLY: Real4_
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
-  use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
+  use ModPhysics,        ONLY: rCurrents, No2Io_V, UnitB_, UnitJ_
   use ModCoordTransform, ONLY: &
        sph_to_xyz, rot_xyz_sph, xyz_to_lonlat
   use ModFaceBoundary,   ONLY: RatioOH, UseYoungBc, F107Young
@@ -282,7 +282,7 @@ contains
 
     ! Number of points in each magnetometer grid
     if(allocated(nGridMag_I))then
-       nGridMag_I = nGridLat_I * nGridLon_I
+       nGridMag_I = nGridLat_I*nGridLon_I
     else
        ! The array needs to be allocated and set to zero
        allocate(nGridMag_I(1))
@@ -307,8 +307,8 @@ contains
     if(nMagTotal == 0) RETURN
 
     ! Allocate/initialize arrays:
-    allocate(NameMag_I(nMagTotal))
-    allocate(PosMagnetometer_II(2,nMagTotal), IeMagPerturb_DII(3,2,nMagTotal) )
+    allocate(NameMag_I(nMagTotal), &
+         PosMagnetometer_II(2,nMagTotal), IeMagPerturb_DII(3,2,nMagTotal))
     IeMagPerturb_DII = 0.0
 
     ! Load magnetometer stations, names, coord systems from file:
@@ -599,10 +599,13 @@ contains
     ! NOTE: The surface integral includes the external (IMF) field as well.
 
     use ModMain,            ONLY: tSimulation, nStep
-    use CON_planet_field,   ONLY: get_planet_field, map_planet_field, &
-         map_planet_field_fast
-    use ModB0,              ONLY: get_b0_dipole
+    use CON_planet_field,   ONLY: map_planet_field_fast
+#ifndef _OPENACC
+    use CON_planet_field,   ONLY: map_planet_field, get_planet_field
     use ModAdvance,         ONLY: iTypeUpdate, UpdateSlow_
+    use ModPhysics,         ONLY: Si2No_V
+#endif
+    use ModB0,              ONLY: get_b0_dipole
     use ModNumConst,        ONLY: cPi, cTwoPi
     use ModCurrent,         ONLY: calc_field_aligned_current
     use CON_axes,           ONLY: transform_matrix
@@ -729,20 +732,20 @@ contains
 
        ! Allocate storage for all magnetometers
        if(.not.allocated(LineContrib_DII))then
-          nLineProc = 1 + (nTheta*nPhi-1)/nProc
+          nLineProc = 1 + (nTheta*nPhi - 1)/nProc
           allocate(LineContrib_DII(3,nMagTotal,nLineProc))
           LineContrib_DII = 0.0
           !$acc update device(LineContrib_DII)
-          if(iProc==0) write(*,*) NameSub, &
-               ' allocated LineContrib_DII(3,',nMagTotal,',',nLineProc,')'
+          if(iProc == 0) write(*,*) NameSub, &
+               ' allocated LineContrib_DII(3,', nMagTotal, ',', nLineProc, ')'
        end if
 
        if(UseSurfaceIntegral .and. .not.allocated(InvDist2_DII))then
           allocate(InvDist2_DII(3,nMagTotal,nLineProc))
           InvDist2_DII = 0.0
           !$acc update device(InvDist2_DII)
-          if(iProc==0) write(*,*) NameSub, &
-               ' allocated InvDist2_DII(3,',nMagTotal,',',nLineProc,')'
+          if(iProc == 0) write(*,*) NameSub, &
+               ' allocated InvDist2_DII(3,', nMagTotal, ',', nLineProc, ')'
        end if
 
        ! Set group index iGroup and
@@ -784,16 +787,15 @@ contains
        !$acc present(Fac_II, Br_II, Bt_DII) &
        !$acc present(InvDist2_DII, LineContrib_DII) &
        !$acc private(Bt_D)
-       do iTheta = 1, nTheta
-          do iPhi = 1, nPhi
-#ifndef _OPENACC
-             iLine = iLine + 1
-             if(mod(iLine, nProc) /= iProc)CYCLE
 
+       !$acc loop seq
+       do iTheta = 1, nTheta
+          !$acc loop seq
+          do iPhi = 1, nPhi
+             iLine = iLine + 1
+             ! Each processor does only every nProc-th line
+             if(mod(iLine, nProc) /= iProc)CYCLE
              iLineProc = iLineProc + 1
-#else
-             iLineProc = iPhi + nPhi*(iTheta-1)
-#endif
 
              if(UseSurfaceIntegral)then
                 Br   = Br_II(iTheta,iPhi)
@@ -857,12 +859,13 @@ contains
 
        !$acc parallel &
        !$acc  default(none) &
-       !$acc  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D,&
-       !$acc  Pert_D) &
+       !$acc  private(iLineProc, XyzMid_D, b_D, Bt_D, InvDist2_D, &
+       !$acc  XyzRcurrents_D, Pert_D) &
        !$acc  copyin(SmToFacGrid_DD,Xyz_DI) &
        !$acc  present(Fac_II,Bt_DII,Br_II) &
        !$acc  present(InvDist2_DII, LineContrib_DII) &
        !$acc  present(MagPerturbFac_DI, MagPerturbMhd_DI)
+       !$acc loop seq
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle
@@ -875,30 +878,22 @@ contains
           dSurface  = rCurrents**2*SinTheta*dTheta*dPhi
           dVolCoeff = dR*dSurface
 
+          !$acc loop seq
           do iPhi = 1, nPhi
 
              Phi = (iPhi-1) * dPhi
 
              ! If the FAC is under certain threshold, do nothing
-             ! This  should be commented out for testing the volume
-#ifndef _OPENACC
+             ! This should be commented out for testing the volume
              if (Fac_II(iTheta,iPhi) == 0.0 &
                   .and. .not.(UseFastFacIntegral.or.UseSurfaceIntegral)) CYCLE
 
              iLine = iLine + 1
-
              ! do parallel computation among the processors
              if(mod(iLine, nProc) /= iProc)CYCLE
-#endif
 
              ! Count local line index
-             if(UseFastFacIntegral) then
-#ifndef _OPENACC
-                iLineProc = iLineProc + 1
-#else
-                iLineProc = iPhi + nPhi*(iTheta-1)
-#endif
-             end if
+             if(UseFastFacIntegral) iLineProc = iLineProc + 1
 
              call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
 
@@ -1105,11 +1100,11 @@ contains
     end do
 
     ! MPI Reduce to head node.
-    if(nProc>1) call MPI_reduce_real_array(dBsum_DI, size(dBsum_DI), &
+    if(nProc > 1) call MPI_reduce_real_array(dBsum_DI, size(dBsum_DI), &
          MPI_SUM, 0, iComm, iError)
 
     ! Head node calculates K-values and shares them with all other nodes.
-    if(iProc==0)then
+    if(iProc == 0)then
        ! Shift MagHistory to make room for new measurements.
        MagHistory_DII(:,:,1:iSizeKpWindow-1) = &
             MagHistory_DII(:,:,2:iSizeKpWindow)
@@ -1229,11 +1224,11 @@ contains
     end do
 
     ! MPI Reduce to head node.
-    if(nProc>1) call MPI_reduce_real_array(dBsum_DI, size(dBsum_DI), &
+    if(nProc > 1) call MPI_reduce_real_array(dBsum_DI, size(dBsum_DI), &
          MPI_SUM, 0, iComm, iError)
 
     ! Now, calculate AE indices on head node only.
-    if(iProc==0) then
+    if(iProc == 0) then
        AeIndex_I(1) = minval(dBsum_DI(1,:))          ! AL Index
        AeIndex_I(2) = maxval(dBsum_DI(1,:))          ! AU Index
        AeIndex_I(3) = AeIndex_I(2) - AeIndex_I(1)    ! AE Index
@@ -1642,7 +1637,7 @@ contains
     end if
 
     ! convert perturbation into output format and write them out
-    if(iProc==0)then
+    if(iProc == 0)then
        do iMag = 1, nMagNow
           ! Convert from SMG components to North-East-Down components
           ! except for the "DST" station at the center of the Earth.
