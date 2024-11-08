@@ -168,7 +168,8 @@ contains
              DxyzLo_D(iDim) = Dxyz_D(iDim)
           end select
           ! Check if point is inside the buffer zone on the lower side
-          if(Xyz_D(iDim)<Coord111_DB(iDim,iBlock) - DxyzLo_D(iDim)) CYCLE BLOCK
+          if(Xyz_D(iDim) < Coord111_DB(iDim,iBlock) - DxyzLo_D(iDim)) &
+               CYCLE BLOCK
 
           ! Block at the upper index side
           select case(DiLevel_EB(2*iDim,iBlock))
@@ -229,21 +230,21 @@ contains
 
                 WeightXyz = WeightX*WeightY*WeightZ
 
-                if(WeightXyz>0.0)then
+                if(WeightXyz > 0.0)then
                    ! Add up the weight
                    StateCurrent_V(0) = StateCurrent_V(0) + WeightXyz
 
                    ! Add contibutions from the old state if required
                    if(WeightOldState > 0.0) &
-                        StateCurrent_V(1:nState) = StateCurrent_V(1:nState) + &
-                        WeightXyz * WeightOldState * &
-                        StateOld_VGB(iVarMin:iStateMax,i,j,k,iBlock)
+                        StateCurrent_V(1:nState) = StateCurrent_V(1:nState) &
+                        + WeightXyz*WeightOldState &
+                        *StateOld_VGB(iVarMin:iStateMax,i,j,k,iBlock)
 
                    ! Add contibutions from the current state if required
                    if(WeightOldState < 1.0) &
-                        StateCurrent_V(1:nState) = StateCurrent_V(1:nState) + &
-                        WeightXyz * (1 - WeightOldState) * &
-                        State_VGB(iVarMin:iStateMax,i,j,k,iBlock)
+                        StateCurrent_V(1:nState) = StateCurrent_V(1:nState) &
+                        + WeightXyz*(1 - WeightOldState) &
+                        *State_VGB(iVarMin:iStateMax,i,j,k,iBlock)
 
                    ! The current is always based on the new state
                    if(iVarMax == nVar + 3)then
@@ -684,16 +685,16 @@ contains
        if(present(Phi_I))then
           Phi = Phi_I(j)
        else
-          Phi = (j-1) * dPhi
+          Phi = (j-1)*dPhi
        end if
 
        if(present(Theta_I))then
           Theta = Theta_I(i)
        else
-          Theta = (i-1) * dTheta
+          Theta = (i-1)*dTheta
        end if
 
-       call sph_to_xyz(rIn,Theta,Phi, XyzIn_D)
+       call sph_to_xyz(rIn, Theta, Phi, XyzIn_D)
 
        if (DoMap)then
 #ifdef _OPENACC
@@ -727,28 +728,32 @@ contains
 #endif
 
        ! Extract currents and magnetic field for this position
-       if(iTypeUpdate >= UpdateFast_)then
-          call get_point_data_fast(Xyz_D, b_D, Current_D)
-          bCurrent_VII(0,  i,j) = 1.0          ! Weight
-          bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
-          bCurrent_VII(4:6,i,j) = Current_D    ! Currents
-       else
+
+!!! DEBUG
+!       if(iTypeUpdate >= UpdateFast_)then
+!          call get_point_data_fast(Xyz_D, b_D, Current_D)
+!          bCurrent_VII(0,  i,j) = 1.0          ! Weight
+!          bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
+!          bCurrent_VII(4:6,i,j) = Current_D    ! Currents
+!       else
           call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
           bCurrent_VII(0,  i,j) = State_V(Bx_-1)         ! Weight
           bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &   ! B1 + Weight*B0
                State_V(Bx_-1)*B0_D
           bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
-       end if
+!       end if
 
     end do; end do
 
-#ifndef _OPENACC
-    if(nProc > 1) call MPI_reduce_real_array(bCurrent_VII, &
-         size(bCurrent_VII), MPI_SUM, 0, iComm, iError)
-#endif
+    if(nProc > 1)then
+       !$acc host_data use_device(bCurrent_VII)
+       call MPI_reduce_real_array(bCurrent_VII, &
+            size(bCurrent_VII), MPI_SUM, 0, iComm, iError)
+       !$acc end host_data
+    end if
 
     ! Map the field aligned current to rIn sphere
-    if(iProc==0)then
+    if(iProc == 0)then
        !$acc parallel loop vector collapse(2) &
        !$acc private(b_D, Current_D, XyzIn_D, Xyz_D, bIn_D, rUnit_D, bUnit_D)
        do j = 1, nPhi; do i = 1, nTheta
@@ -756,18 +761,18 @@ contains
           if(present(Phi_I))then
              Phi = Phi_I(j)
           else
-             Phi = (j-1) * dPhi
+             Phi = (j-1)*dPhi
           end if
 
           if(present(Theta_I))then
              Theta = Theta_I(i)
           else
-             Theta = (i-1) * dTheta
+             Theta = (i-1)*dTheta
           end if
 
           ! Divide MHD values by the total weight if it exceeds 1.0
           if(bCurrent_VII(0,i,j) > 1.0) bCurrent_VII(:,i,j) = &
-               bCurrent_VII(:,i,j) / bCurrent_VII(0,i,j)
+               bCurrent_VII(:,i,j)/bCurrent_VII(0,i,j)
 
           ! Extract magnetic field and current
           b_D = bCurrent_VII(1:3,i,j)

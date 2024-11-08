@@ -25,7 +25,6 @@ module GM_couple_ie
 
 contains
   !============================================================================
-
   subroutine GM_get_info_for_ie(nVar, NameVar_I)
 
     use ModMain,             ONLY: TypeFaceBc_I, body1_
@@ -67,7 +66,6 @@ contains
 
   end subroutine GM_get_info_for_ie
   !============================================================================
-
   subroutine GM_get_for_ie(Buffer_IIV, iSize, jSize, nVar)
 
     ! Send the following information from GM to IE on the IE grid:
@@ -76,7 +74,7 @@ contains
 
     use CON_axes, ONLY: transform_matrix
     use ModMain, ONLY: tSimulation, TypeCoordSystem
-    use ModCurrent,            ONLY: calc_field_aligned_current
+    use ModCurrent, ONLY: calc_field_aligned_current
     use ModFieldTrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
          InvB_, RhoInvB_, pInvB_, iXEnd, iYEnd, iZEnd, CLOSEDRAY, GmSm_DD,&
          integrate_field_from_sphere
@@ -91,17 +89,18 @@ contains
     integer, intent(in) :: iSize, jSize, nVar
     real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
 
-    integer :: i, j
-    real :: Radius, Phi, Theta
+    integer:: i, j
+    real:: Radius, Phi, Theta
     real, allocatable:: FieldAlignedCurrent_II(:,:)
     real, allocatable:: IeLat_I(:), IeLon_I(:)
-    real :: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
-    logical :: DoTest, DoTestMe
+    real:: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
+    logical:: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'GM_get_for_ie'
     !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest, DoTestMe)
-    if(DoTest)write(*,*)NameSub,': starting'
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    if(DoTest)write(*,*)NameSub,': iSize,jSize,nVar,DoTraceIe=', &
+         iSize, jSize, nVar, DoTraceIe
 
     call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
 
@@ -117,16 +116,13 @@ contains
     call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
          FieldAlignedCurrent_II, &
          Theta_I=ThetaIono_I, Phi_I=PhiIono_I, IsRadial=.true.)
-
-    ! Take radial component of FAC and put it into the buffer sent to IE
-    ! The resulting FAC_r will be positive for radially outgoing current
-    ! and negative for radially inward going currents.
-    if(iProc==0)then
+    if(iProc == 0)then
        ! initialize all elements to zero on proc 0, others should not use it
        Buffer_IIV = 0.0
 
        ! Save the latitude boundary information to the equator
        Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)*No2Si_V(UnitJ_)
+       if(DoTest)write(*,*)NameSub, ': sum(FAC**2)=', sum(Buffer_IIV(:,:,1)**2)
     end if
 
     deallocate(FieldAlignedCurrent_II)
@@ -165,42 +161,45 @@ contains
           GmSm_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
 
           ! Loop to compute deltas
-          do j=1,jSize
-             do i=1,iSize
-                Lat = -IeLat_I(i)
-                Lon =  IeLon_I(j)
-                if(RayResult_VII(InvB_,i,j)>1.e-10)then
-                   XyzIono_D(1)=RayResult_VII(iXEnd,i,j)
-                   XyzIono_D(2)=RayResult_VII(iYEnd,i,j)
-                   XyzIono_D(3)=RayResult_VII(iZEnd,i,j)
-                   XyzIono_D = matmul(GmSm_DD,XyzIono_D)
-                   call xyz_to_sph(XyzIono_D, RtpIono_D)
-                   Lat=90.-RtpIono_D(2)*cRadToDeg
-                   Lon=    RtpIono_D(3)*cRadToDeg
-                end if
+          do j = 1, jSize; do i = 1, iSize
+             Lat = -IeLat_I(i)
+             Lon =  IeLon_I(j)
+             if(RayResult_VII(InvB_,i,j) > 1e-10)then
+                XyzIono_D(1) = RayResult_VII(iXEnd,i,j)
+                XyzIono_D(2) = RayResult_VII(iYEnd,i,j)
+                XyzIono_D(3) = RayResult_VII(iZEnd,i,j)
+                XyzIono_D = matmul(GmSm_DD,XyzIono_D)
+                call xyz_to_sph(XyzIono_D, RtpIono_D)
+                Lat = 90 - RtpIono_D(2)*cRadToDeg
+                Lon =      RtpIono_D(3)*cRadToDeg
+             end if
+             ! Shift to closer to local value, even if outside 0-360
+             if( (IeLon_I(j)-Lon) < -180) Lon = Lon - 360
+             if( (IeLon_I(j)-Lon) >  180) Lon = Lon + 360
 
-                ! Shift to closer to local value, even if outside 0-360
-                if( (IeLon_I(j)-Lon)<-180. ) Lon = Lon-360.
-                if( (IeLon_I(j)-Lon)> 180. ) Lon = Lon+360.
+             ! Compute deltas
+             dLat = abs(Lat) - abs(IeLat_I(i))
+             dLon =     Lon  -     IeLon_I(j)
 
-                ! Compute deltas
-                dLat = abs(Lat) - abs(IeLat_I(i))
-                dLon =     Lon  -     IeLon_I(j)
-
-                ! Put into exchange buffer
-                Buffer_IIV(i,j,5) = dLat
-                Buffer_IIV(i,j,6) = dLon
-             end do
-          end do
+             ! Put into exchange buffer
+             Buffer_IIV(i,j,5) = dLat
+             Buffer_IIV(i,j,6) = dLon
+          end do; end do
+          if(DoTest)then
+             write(*,*)NameSub, ': sum(Buf2**2)=', sum(Buffer_IIV(:,:,2)**2)
+             write(*,*)NameSub, ': sum(Buf3**2)=', sum(Buffer_IIV(:,:,3)**2)
+             write(*,*)NameSub, ': sum(Buf4**2)=', sum(Buffer_IIV(:,:,4)**2)
+             write(*,*)NameSub, ': sum(Buf5**2)=', sum(Buffer_IIV(:,:,5)**2)
+             write(*,*)NameSub, ': sum(Buf6**2)=', sum(Buffer_IIV(:,:,6)**2)
+          end if
        end if
        deallocate(IeLat_I, IeLon_I, RayIntegral_VII, RayResult_VII)
     end if
 
-    if(DoTest)write(*,*)NameSub,': finished'
+    if(DoTest)write(*,*)NameSub,' finished'
 
   end subroutine GM_get_for_ie
   !============================================================================
-
   subroutine GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar, NameVar_I)
 
     ! Receive nVar variables listed in NameVar_I from IE on the IE grid
@@ -220,7 +219,7 @@ contains
     character(len=*), parameter:: NameSub = 'GM_put_from_ie'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
-    if(DoTest)write(*,*)NameSub,': iSize,jSiz,nVare=', iSize, jSize, nVar
+    if(DoTest)write(*,*)NameSub,': iSize,jSiz,nVar=', iSize, jSize, nVar
 
     if(nThetaIono < 1) call init_ie_grid( &
          Grid_C(IE_) % Coord1_I, &
@@ -271,10 +270,9 @@ contains
        end select
     end do
 
-    if(DoTest)write(*,*)NameSub,': done'
+    if(DoTest)write(*,*)NameSub,' finished'
 
   end subroutine GM_put_from_ie
   !============================================================================
-
 end module GM_couple_ie
 !==============================================================================

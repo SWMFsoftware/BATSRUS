@@ -646,13 +646,13 @@ contains
     !$acc parallel copyin(ThetaIono_I, PhiIono_I, SinTheta_I, &
     !$acc   rIonosphere, dThetaIono, dPhiIono, HallJ_DII, PedersenJ_DII) &
     !$acc   copy(dBHall_DI, dBPedersen_DI)
+    !$acc loop seq collapse(2)
     do j = 1, nPhiIono-1; do i = 2, nThetaIono-1
 
-#ifndef _OPENACC
        iLine = iLine + 1
        ! distribute the work among the BATSRUS processors
        if(mod(iLine, nProc) /= iProc)CYCLE
-#endif
+
        ! Get Cartesian coordinates for the ionospheric grid point
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
 
