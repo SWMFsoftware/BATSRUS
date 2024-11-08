@@ -119,7 +119,7 @@ mc3			TypeLimiter
 #SAVERESTART
 F			DoSaveRestart
 
-MAGNETOMETERGRID
+#MAGNETOMETERGRID
 1			nMagGridFile
 global ascii		StrGridFileOut
 GEO			TypeCoordGrid
