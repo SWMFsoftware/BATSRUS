@@ -51,9 +51,6 @@ module ModGroundMagPerturb
   character(len=3)   :: TypeCoordMag='MAG' ! coords for magnetometer list
   character(len=7)   :: TypeMagFileOut='single '
 
-  ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
-  real, allocatable:: IeMagPerturb_DII(:,:,:)
-
   ! Fast algorithms:
   real(Real4_), allocatable:: LineContrib_DII(:,:,:), InvDist2_DII(:,:,:)
   !$acc declare create(LineContrib_DII, InvDist2_DII)
@@ -307,9 +304,7 @@ contains
     if(nMagTotal == 0) RETURN
 
     ! Allocate/initialize arrays:
-    allocate(NameMag_I(nMagTotal), &
-         PosMagnetometer_II(2,nMagTotal), IeMagPerturb_DII(3,2,nMagTotal))
-    IeMagPerturb_DII = 0.0
+    allocate(NameMag_I(nMagTotal), PosMagnetometer_II(2,nMagTotal))
 
     ! Load magnetometer stations, names, coord systems from file:
     if(DoReadMagnetometerFile)then
@@ -726,8 +721,6 @@ contains
     !     CoordMinIn_D = [1.0, -89.5], CoordMaxIn_D = [359., 89.5], &
     !     VarIn_II=transpose(Fac_II))
 
-    iLine = -1
-
     if(UseFastFacIntegral)then
 
        ! Allocate storage for all magnetometers
@@ -780,7 +773,6 @@ contains
     !$acc copy(MagPerturbMhd_DI, MagPerturbFac_DI)
     if(UseFastFacIntegral_I(iGroup))then
        call timing_start('ground_fast_int')
-       iLineProc = 0
        !$acc parallel &
        !$acc default(none) &
        !$acc present(MagPerturbMhd_DI,MagPerturbFac_DI) &
@@ -788,6 +780,8 @@ contains
        !$acc present(InvDist2_DII, LineContrib_DII) &
        !$acc private(Bt_D)
 
+       iLine = -1
+       iLineProc = 0
        !$acc loop seq
        do iTheta = 1, nTheta
           !$acc loop seq
@@ -817,7 +811,6 @@ contains
 
              !$acc loop gang worker vector
              do iMag = 1, nMag
-
                 ! Add contribution from this line to this magnetometer
                 MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                      FacRcurrents * LineContrib_DII(:,iMag+iMag0,iLineProc)
@@ -829,7 +822,6 @@ contains
     else
        call timing_start('ground_slow_int')
        if(UseFastFacIntegral)then
-          iLineProc = 0
           ! Next time the integrals can be reused
           ! if the station group corotates with the dipole
           select case(iGroup)
@@ -859,12 +851,14 @@ contains
 
        !$acc parallel &
        !$acc  default(none) &
-       !$acc  private(iLineProc, XyzMid_D, b_D, Bt_D, InvDist2_D, &
+       !$acc  private(XyzMid_D, b_D, Bt_D, InvDist2_D, &
        !$acc  XyzRcurrents_D, Pert_D) &
        !$acc  copyin(SmToFacGrid_DD,Xyz_DI) &
        !$acc  present(Fac_II,Bt_DII,Br_II) &
        !$acc  present(InvDist2_DII, LineContrib_DII) &
        !$acc  present(MagPerturbFac_DI, MagPerturbMhd_DI)
+       iLine = -1
+       iLineProc = 0
        !$acc loop seq
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
@@ -1659,7 +1653,6 @@ contains
              dBHall_DI(:,iMag)    = matmul(dBHall_DI(:,iMag), SmgNed_DD)
              dBPedersen_DI(:,iMag)= matmul(dBPedersen_DI(:,iMag), SmgNed_DD)
           end if
-
        end do
 
        ! convert the magnetic perturbations to I/O units
@@ -1922,7 +1915,6 @@ contains
     if(iProc==0 .and. DoSaveMags .and. TypeMagFileOut /= 'step') &
          close(iUnitMag)
     if(iProc==0 .and. DoWriteIndices) close(iUnitIndices)
-    if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
     if (allocated(NameMag_I))        deallocate(NameMag_I)
     if (allocated(MagHistory_DII))   deallocate(MagHistory_DII)
     if (allocated(LineContrib_DII))  deallocate(LineContrib_DII)
