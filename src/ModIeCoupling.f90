@@ -538,7 +538,7 @@ contains
          HallJ_DII(3,nThetaIono,nPhiIono), &
          PedersenJ_DII(3,nThetaIono,nPhiIono))
 
-    do j =1, nPhiIono; do i = 2, nThetaIono-1
+    do j = 1, nPhiIono; do i = 2, nThetaIono-1
 
        ! Calculate magnetic field direction for the Hall current
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
@@ -561,9 +561,9 @@ contains
        ! Perdersen current: jP = sigmaP*E
        PedersenJ_DII(:,i,j) = SigmaPedersen_II(i,j)*eIono_D
 
-       if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug)then
+       if(DoDebug .and. iProc == 0 .and. i == iDebug .and. j == jDebug)then
           write(*,*)NameSub,': i,j,Theta,Phi=', &
-               i,j,ThetaIono_I(i),PhiIono_I(j)
+               i, j, ThetaIono_I(i), PhiIono_I(j)
           write(*,*)NameSub,': rIonosphere, dTheta, dPhi, sin(theta)=', &
                rIonosphere*No2Si_V(UnitX_), dThetaIono, dPhiIono, SinTheta_I(i)
           write(*,*)NameSub,': SigmaH,SigmaP=', &
@@ -605,11 +605,11 @@ contains
 
     use ModNumConst, ONLY: cPi
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitX_
-    use ModMain,    ONLY: tSimulation
+    use ModMain, ONLY: tSimulation
 
-    integer,intent(in) :: nMag
-    real,   intent(in) :: XyzSm_DI(3,nMag)
-    real,   intent(out):: dBHall_DI(3,nMag), dBPedersen_DI(3,nMag)
+    integer, intent(in) :: nMag
+    real,    intent(in) :: XyzSm_DI(3,nMag)
+    real,    intent(out):: dBHall_DI(3,nMag), dBPedersen_DI(3,nMag)
 
     real:: XyzIono_D(3), dXyz_D(3)
     integer:: iMag, i, j, iLine
@@ -641,11 +641,11 @@ contains
 
     ! Loop over the ionosphere grid, but skip the poles
     ! and the ghost cell in the Phi direction (j=nPhi)
-    iLine = 0
 
     !$acc parallel copyin(ThetaIono_I, PhiIono_I, SinTheta_I, &
     !$acc   rIonosphere, dThetaIono, dPhiIono, HallJ_DII, PedersenJ_DII) &
     !$acc   copy(dBHall_DI, dBPedersen_DI)
+    iLine = 0
     !$acc loop seq collapse(2)
     do j = 1, nPhiIono-1; do i = 2, nThetaIono-1
 

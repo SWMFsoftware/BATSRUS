@@ -1972,12 +1972,12 @@ test_earth_check:
 		${TESTDIR}/RESULTS/GM/y=0_var_2_t00000001*.out \
 		Param/EARTH/TestOutput/earth_cartesian_ref.out \
 		>> test_earth_gpu.diff)
+	-@(${DIFFNUM} -t -r=2e-4 -a=1e-4 \
+		${TESTDIR}/RESULTS/GM/mag_grid_global_n00000025.out \
+		Param/EARTH/TestOutput/earth_cartesian_mag_grid.out.gz \
+		>> test_earth_gpu.diff)
 	ls -l test_earth_gpu.diff
-#	 	-@(${DIFFNUM} -t -r=2e-4 -a=1e-4 \
-#		${TESTDIR}/RESULTS/GM/mag_grid_global_n00000025.out \
-#		Param/EARTH/TestOutput/earth_cartesian_mag_grid.out.gz \
-#		>> test_earth_gpu.diff)
-	
+
 ### TESTS FOR MODELING EARTH WITH SPHERICAL GRID ###
 
 test_earthsph:

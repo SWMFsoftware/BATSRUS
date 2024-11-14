@@ -2120,7 +2120,7 @@ contains
 
     use ModAdvance, ONLY: Source_VC, State_VGB
     use ModB0, ONLY: B0_DGB
-    use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModVarIndexes, ONLY: Bx_, Bz_, Energy_
     use ModMain, ONLY: UseB0, tSimulation
     use ModCoordTransform, ONLY: rot_xyz_rlonlat, xyz_to_lonlat
     use BATL_size, ONLY: nK, nJ
@@ -2202,6 +2202,8 @@ contains
        dBXyz_D = matmul(XyzSph_DD, dBSph_D)
 
        Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) + dBXyz_D
+       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+            + sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*dBXyz_D)
     end do; end do
 
   contains
