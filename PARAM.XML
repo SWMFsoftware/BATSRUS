@@ -126,6 +126,26 @@ to accelerate the convergence towards steady state.
 The default is time accurate mode.
 </command>
 
+<command name="TIMEWARP">
+  <parameter name="UseTimeWarp" type="logical" default="F"/>
+  <parameter name="uTimeWarp" type="real" min="0" default="0"
+	     if="$UseTimeWarp"/>
+
+#TIMEWARP
+F                   UseTimeWarp
+10.0                uWarp   read if UseTimeWarp
+
+For now this feature is experimental. The goal is to solve
+the equations in a coordinate system where time is
+shifted with the X (or R) coordinate as t' = t + x/uWarp,
+where uWarp is a positive speed larger than the fastest
+characteristic speed. This works only of the flow is
+supersonic/superfast, so all characterisitcs are moving
+towards positive X (or R).
+
+The default is UseTimeWarp false.
+</command>
+
 <command name="SUBCYCLING" alias="LOCALTIMESTEP">
   <parameter name="UseSubcycling" type="logical" default="F" />
   <parameter name="UseMaxTimeStep" type="logical" default="T"

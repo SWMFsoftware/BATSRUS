@@ -73,9 +73,9 @@ F			DoSaveRestart
 
 #SAVEPLOT
 1			nPlotFile
-1d HD idl		StringPlot
+1d HD idl_ascii		StringPlot
 -1			DnSavePlot
-1.0			DtSavePlot
+10.0			DtSavePlot
 0.0			DxSavePlot
 
 The grid size is 256, so the final time corresponds to the usual 0.1
