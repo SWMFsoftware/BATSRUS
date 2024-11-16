@@ -740,7 +740,7 @@ contains
           call read_var('UseElectronEntropy', UseElectronEntropy)
           call read_var('UseElectronEnergy',  UseElectronEnergy)
 
-       case("#UPDATECHECK", "#SHOCKHEATING")
+       case("#UPDATECHECK", "#SHOCKHEATING", "#TIMEWARP")
           call read_update_param(NameCommand, UseStrict)
 
        case("#ANISOTROPICPRESSURE")
