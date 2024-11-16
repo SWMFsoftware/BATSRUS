@@ -23,8 +23,14 @@ module ModUpdateState
   public:: update_check         ! check and correct update if necessary
   public:: fix_anisotropy       ! fix pressure anisotropy after update
   public:: check_nan            ! Check State_VGB for NaNs
+  public:: state_to_warp_cell   ! Convert to time warped variables
+
+  ! Time warp parameters
+  logical, public:: UseTimeWarp = .false.
+  real, public:: uWarp = -1    ! should be dimensional and put into ModPhysics
 
   ! Local variables
+  real:: TempWarp = -1 ! dimensionless temperature of isothermal hydro
 
   ! Update check parameters
   real :: PercentRhoLimit_I(2), PercentPLimit_I(2)
@@ -35,11 +41,6 @@ module ModUpdateState
   logical:: UseElectronShockHeating = .false.
   logical:: UseAnisoShockHeating = .false.
   logical:: UseIonShockHeating = .false.
-
-  ! Time warp parameters
-  logical:: UseTimeWarp = .false.
-  real:: uWarp = -1    ! should be dimensional and put into ModPhysics
-  real:: TempWarp = -1 ! dimensionless temperature of isothermal hydro
 
 contains
   !============================================================================
@@ -2089,7 +2090,6 @@ contains
 
     integer, intent(in):: iBlock
 
-    real:: Flux_V(nVar), Rho, RhoUx, p
     integer:: i, j, k
 
     character(len=*), parameter:: NameSub = 'state_to_warp'
@@ -2100,24 +2100,25 @@ contains
        call state_to_warp_cell(State_VGB(:,i,j,k,iBlock))
     end do; end do; end do
 
-  contains
-    !==========================================================================
-    subroutine state_to_warp_cell(State_V)
-
-      real, intent(inout):: State_V(nVar)
-      !------------------------------------------------------------------------
-      ! Store temperature
-      if(TempWarp < 0) TempWarp = State_V(p_)/State_V(Rho_)
-      ! Calculate flux
-      Flux_V = 0.0
-      Flux_V(Rho_)   = State_V(RhoUx_)
-      Flux_V(RhoUx_) = State_V(RhoUx_)**2/State_V(Rho_) + State_V(p_)
-      Flux_V(p_)     = State_V(RhoUx_)*TempWarp
-      ! Convert to warp variables
-      State_V = State_V - Flux_V/uWarp
-    end subroutine state_to_warp_cell
-    !==========================================================================
   end subroutine state_to_warp
+  !==========================================================================
+  subroutine state_to_warp_cell(State_V)
+
+    real, intent(inout):: State_V(nVar)
+
+    real:: Flux_V(nVar)
+    !------------------------------------------------------------------------
+    ! Store temperature
+    if(TempWarp < 0) TempWarp = State_V(p_)/State_V(Rho_)
+    ! Calculate flux
+    Flux_V = 0.0
+    Flux_V(Rho_)   = State_V(RhoUx_)
+    Flux_V(RhoUx_) = State_V(RhoUx_)**2/State_V(Rho_) + State_V(p_)
+    Flux_V(p_)     = State_V(RhoUx_)*TempWarp
+    ! Convert to warp variables
+    State_V = State_V - Flux_V/uWarp
+
+  end subroutine state_to_warp_cell
   !============================================================================
   subroutine warp_to_state(iBlock)
 
