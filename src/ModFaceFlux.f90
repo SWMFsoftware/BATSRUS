@@ -1176,6 +1176,7 @@ contains
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_GB
     use ModPUI,      ONLY: Pu3_
+    use ModUpdateState, ONLY: UseTimeWarp, state_to_warp_cell
 
     real, intent(in) :: State_V(nVar)      ! input primitive state
 
@@ -1223,8 +1224,7 @@ contains
           if(UseBorisCorrection)then
              call get_boris_flux
           else
-             call get_mhd_flux(State_V, Un, Flux_V, StateCons_V, Bx, By, Bz,&
-                  Bn, B0n, FullBx, FullBy, FullBz, FullBn, HallUn)
+             call get_mhd_flux
           end if
        elseif(DoBurgers) then
           call get_burgers_flux
@@ -1240,9 +1240,7 @@ contains
              else
                 ! Momentum and energy fluxes now include the electric field
                 ! They need to be reassigned to MhdFlux_V accordingly
-                call get_mhd_flux(State_V, Un, Flux_V, &
-                     StateCons_V, Bx, By, Bz, &
-                     Bn, B0n, FullBx, FullBy, FullBz, FullBn, HallUn)
+                call get_mhd_flux
              end if
           else
              ! Calculate HD flux for individual ion and neutral fluids
@@ -1263,6 +1261,9 @@ contains
 
     end do
 
+    ! Convert conservative variables
+    if(UseTimeWarp .and. iDimFace == 1) call state_to_warp_cell(StateCons_V)
+    
     ! The extra fluxes should be added at the same time as fluid 1 fluxes
     if(iFluidMin /= 1) RETURN
 
@@ -1414,6 +1415,7 @@ contains
     ! Set the normal electron velocity used for Hall MHD and/or
     ! the electron pressure source term
     Un_I(eFluid_) = HallUn
+
   contains
     !==========================================================================
     subroutine get_boris_flux
@@ -1623,21 +1625,12 @@ contains
 
     end subroutine get_magnetic_flux
     !==========================================================================
-    subroutine get_mhd_flux(State_V, Un, Flux_V, &
-         StateCons_V, Bx, By, Bz, Bn, B0n, &
-         FullBx, FullBy, FullBz, FullBn, HallUn)
+    subroutine get_mhd_flux
 
       use ModElectricField, ONLY: UseJCrossBForce
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModTurbulence, ONLY: UseReynoldsDecomposition, SigmaD, &
            UseTransverseTurbulence,  PoyntingFluxPerB, IsOnAwRepresentative
-
-      real, intent(in) :: State_V(:)
-      real, intent(out) :: Un
-      real, intent(out) :: Flux_V(:)
-      real, intent(inout) :: StateCons_V(:)
-      real, intent(in) :: Bx, By, Bz, Bn, B0n, FullBx, FullBy, FullBz, FullBn
-      real, intent(inout) :: HallUn
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, Pe, e
@@ -3557,6 +3550,7 @@ contains
     use ModMain,    ONLY: Climit
     use ModPhysics, ONLY: Clight
     use ModAdvance, ONLY: State_VGB
+    use ModUpdateState, ONLY: UseTimeWarp, uWarp
 
     real,    intent(in) :: State_V(nVar)
 
@@ -3598,8 +3592,7 @@ contains
              ! displacement current.
              call get_boris_speed
           else
-             call get_mhd_speed(State_V, CmaxDt_I, Cmax_I, Cleft_I, &
-                  Cright_I, UnLeft, UnRight, UseAwSpeed)
+             call get_mhd_speed
           endif
 
        elseif(iFluid > 1 .and. iFluid <= nIonFluid)then
@@ -3621,6 +3614,15 @@ contains
        end if
 
     end do
+
+    if(UseTimeWarp .and. iDimFace == 1)then
+       if(present(Cmax_I))then
+          Cmax_I   = Cmax_I*uWarp/(uWarp - Cmax_I)
+          CmaxDt_I = CmaxDt_I*uWarp/(uWarp - CmaxDt_I)
+       end if
+       if(present(Cright_I)) &
+            Cright_I = Cright_I*uWarp/(uWarp - Cright_I)
+    end if
 
     if(UseEfield .and. iFluidMin <= nIonFluid)then
        ! The light speed in the five-moment equations should exceed
@@ -3725,8 +3727,8 @@ contains
           ! advanced with the implicit scheme, so set CmaxDt to a huge number
           if(Climit < CmaxDt) CmaxDt = 1e30
        end if
-
     end if
+    
   contains
     !==========================================================================
     subroutine get_boris_speed
@@ -3857,8 +3859,7 @@ contains
 #endif
     end subroutine get_boris_speed
     !==========================================================================
-    subroutine get_mhd_speed(State_V, CmaxDt_I, Cmax_I, Cleft_I, Cright_I, &
-         UnLeft, UnRight, UseAwSpeed)
+    subroutine get_mhd_speed
 
       use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0, UseB0MomentumFlux
       use ModPhysics,  ONLY: ElectronPressureRatio
@@ -3868,14 +3869,6 @@ contains
            UseMagFriction, MagFrictionCoef
       use ModTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD
-
-      real, intent(in) :: State_V(:)
-      real, optional, intent(out) :: CmaxDt_I(:)
-      real, optional, intent(out) :: Cmax_I(:)
-      real, optional, intent(out) :: Cleft_I(nFluid)  ! maximum left speed
-      real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
-      real, optional, intent(in) :: UnLeft, UnRight
-      logical, optional, intent(in) :: UseAwSpeed
 
       real:: UnMin, UnMax
       real:: Rho, InvRho, GammaPe, GammaWavePw, Sound2, Ppar, p, p1
