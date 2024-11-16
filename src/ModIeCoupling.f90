@@ -642,9 +642,9 @@ contains
     ! Loop over the ionosphere grid, but skip the poles
     ! and the ghost cell in the Phi direction (j=nPhi)
 
-    !$acc parallel copyin(ThetaIono_I, PhiIono_I, SinTheta_I, &
-    !$acc   rIonosphere, dThetaIono, dPhiIono, HallJ_DII, PedersenJ_DII) &
-    !$acc   copy(dBHall_DI, dBPedersen_DI)
+    !$acc parallel copyin(nMag, XyzSm_DI, ThetaIono_I, PhiIono_I, SinTheta_I, &
+    !$acc rIonosphere, dThetaIono, dPhiIono, HallJ_DII, PedersenJ_DII) &
+    !$acc copy(dBHall_DI, dBPedersen_DI)
     iLine = 0
     !$acc loop seq collapse(2)
     do j = 1, nPhiIono-1; do i = 2, nThetaIono-1
@@ -662,7 +662,8 @@ contains
        ! CHECK
        ! Surface = Surface + Coef0
 
-       !$acc loop gang worker vector private(dXyz_D, Coef)
+       ! acc loop gang worker vector private(dXyz_D, Coef)
+       !$acc loop vector private(dXyz_D, Coef)
        do iMag = 1, nMag
           ! Distance vector between magnetometer position
           ! and ionosphere surface element

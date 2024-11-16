@@ -4399,8 +4399,10 @@ contains
                if(UseEfield .and. iFluid == nIonFluid)then
                   ! Last fluid is assumed to be the electrons
                   StringParam = trim(StringParam)//' qe'
-               else
+               elseif(iFluid <= 9)then
                   write(StringParam,'(a,i1)') trim(StringParam)//' q', iFluid
+               else
+                  write(StringParam,'(a,i2)') trim(StringParam)//' q', iFluid
                end if
             end do
          end if
