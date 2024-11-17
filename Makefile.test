@@ -287,7 +287,7 @@ test_timewarp_1d_run:
 
 test_timewarp_1d_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/1d_*140_*.out \
+		${TESTDIR}/RESULT/GM/1d_*020_*.out \
 		Param/SHOCKTUBE/TestOutput/timewarp.out \
 		> test_timewarp_1d.diff)
 	ls -l test_timewarp_1d.diff
@@ -319,7 +319,7 @@ test_timewarp_2d_run:
 
 test_timewarp_2d_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/2d_*140_*.out \
+		${TESTDIR}/RESULT/GM/2d_*100_*.out \
 		Param/SHOCKTUBE/TestOutput/timewarp2d.out.gz \
 		> test_timewarp_2d.diff)
 	ls -l test_timewarp_2d.diff

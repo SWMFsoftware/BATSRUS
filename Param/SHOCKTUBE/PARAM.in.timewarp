@@ -85,5 +85,5 @@ F			DoSaveRestart
 The grid size is 256, so the final time corresponds to the usual 0.1
 #STOP
 -1			MaxIteration
-100.0			tSimulationMax
+20.0			tSimulationMax
 

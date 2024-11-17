@@ -97,5 +97,5 @@ F			DoSaveRestart
 
 #STOP
 -1			MaxIteration
-100.0			tSimulationMax
+60.0			tSimulationMax
 
