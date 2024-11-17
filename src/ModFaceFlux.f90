@@ -1263,7 +1263,7 @@ contains
 
     ! Convert conservative variables
     if(UseTimeWarp .and. iDimFace == 1) call state_to_warp_cell(StateCons_V)
-    
+
     ! The extra fluxes should be added at the same time as fluid 1 fluxes
     if(iFluidMin /= 1) RETURN
 
@@ -3728,7 +3728,7 @@ contains
           if(Climit < CmaxDt) CmaxDt = 1e30
        end if
     end if
-    
+
   contains
     !==========================================================================
     subroutine get_boris_speed

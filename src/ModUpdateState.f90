@@ -2101,14 +2101,14 @@ contains
     end do; end do; end do
 
   end subroutine state_to_warp
-  !==========================================================================
+  !============================================================================
   subroutine state_to_warp_cell(State_V)
 
     real, intent(inout):: State_V(nVar)
 
     real:: Flux_V(nVar)
-    !------------------------------------------------------------------------
     ! Store temperature
+    !--------------------------------------------------------------------------
     if(TempWarp < 0) TempWarp = State_V(p_)/State_V(Rho_)
     ! Calculate flux
     Flux_V = 0.0
