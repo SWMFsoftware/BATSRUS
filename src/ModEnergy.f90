@@ -240,16 +240,14 @@ contains
 #endif
   end subroutine pressure_to_energy_block
   !============================================================================
-  subroutine energy_to_pressure(iBlock, State_VGB, IsOld)
+  subroutine energy_to_pressure(iBlock, State_VGB)
 
     ! Convert energy to pressure in State_VGB depending on
     ! the value of UseNonConservative and IsConserv_CB
-    ! Do not limit pressure if IsOld is present (argument is StateOld_VGB)
 
     integer, intent(in):: iBlock
     real, intent(inout):: &
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    logical, intent(in), optional:: IsOld
 
     integer:: i, j, k, iFluid
     logical:: DoTest
@@ -260,11 +258,9 @@ contains
     if(UseNonConservative .and. nConservCrit <= 0 .and. &
          .not. (UseNeutralFluid .and. DoConserveNeutrals))then
 
-       if(.not.present(IsOld))then
-          ! Make sure pressure is larger than floor value
-          ! write(*,*) NameSub,' !!! call limit_pressure'
-          call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
-       end if
+       ! Make sure pressure is larger than floor value
+       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+
        RETURN
     end if
 
@@ -321,11 +317,8 @@ contains
 
     end do FLUIDLOOP
 
-    if(.not.present(IsOld))then
-       ! Make sure final pressure is larger than floor value
-       ! write(*,*) NameSub,' !!! call limit_pressure'
-       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
-    end if
+    ! Make sure final pressure is larger than floor value
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
 
     call test_stop(NameSub, DoTest, iBlock)
 #endif
