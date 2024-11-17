@@ -259,6 +259,8 @@ contains
   !============================================================================
   subroutine boris_to_mhd(iBlock)
 
+    ! Convert State_VGB back to classical MHD variables
+    
     integer, intent(in):: iBlock
 
     integer:: i, j, k
@@ -279,7 +281,7 @@ contains
     end if
 
     if(UseBorisCorrection)then
-       ! Convert StateOld_VGB and State_VGB back from
+       ! Convert State_VGB back from
        ! semi-relativistic to classical MHD variables
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -289,19 +291,15 @@ contains
              InvClight2Cell = 1/Clight2Cell
           end if
 
-          call boris_to_mhd_cell(StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
           call boris_to_mhd_cell(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
 
        end do; end do; end do
     elseif(UseBorisSimple)then
-       ! Convert mometum in StateOld_VGB and State_VGB back from
-       ! enhanced momentum
+       ! Convert mometum in State_VGB back from enhanced momentum
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           if(UseBorisRegion) Clight2Cell = Clight_G(i,j,k)**2
-
-          call boris_simple_to_mhd_cell(StateOld_VGB(:,i,j,k,iBlock))
           call boris_simple_to_mhd_cell(State_VGB(:,i,j,k,iBlock))
 
        end do; end do; end do
