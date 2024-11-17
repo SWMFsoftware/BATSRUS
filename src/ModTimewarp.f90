@@ -8,22 +8,25 @@ module ModTimeWarp
   use ModGeometry, ONLY: r_GB
   use ModVarIndexes, ONLY: nVar, Rho_, RhoU_, RhoUx_, RhoUz_, p_
   use ModBatsrusUtility, ONLY: stop_mpi
-  use BATL_lib, ONLY: Used_GB, Xyz_DGB
+  use BATL_lib, ONLY: Used_GB, Xyz_DGB, nI, nJ, nK
+
+  implicit none
   
   SAVE
   
   private ! except
 
-  public:: read_timewarp_param  ! read parameters
-  public:: state_to_warp_cell   ! Convert one cell to time warped variables
-  public:: state_to_warp        ! Convert a block to time warped variables
-  public:: warp_to_state        ! Convert a block from warp to state variables
+  public:: read_timewarp_param ! read parameters
+  public:: state_to_warp_cell  ! Convert one cell to time warped variables
+  public:: state_to_warp       ! Convert a block to time warped variables
+  public:: warp_to_state       ! Convert a block from warp to state variables
 
   ! Time warp parameters
-  logical, public:: UseTimeWarp = .false.    ! Use time warp scheme
-  logical, public:: UseWarpCmax = .true.     ! Use warp numerical diffusion
-  integer, public:: iDimWarp = 0             ! 0 is for radial direction
-  real, public:: uWarpDim = 0.0, uWarp = 0.0 ! Dimensional and
+  logical, public:: UseTimeWarp = .false. ! Use time warp scheme
+  logical, public:: UseWarpCmax = .true.  ! Use warp numerical diffusion
+  integer, public:: iDimWarp = 0          ! 0 is for radial direction
+  real, public::    uWarpDim = 0.0        ! Dimensional warp speed
+  real, public::    uWarp = 0.0           ! Normalized warp speed
 
   ! Local variables
   real:: TempWarp = -1.0 ! dimensionless temperature of isothermal hydro
@@ -101,7 +104,8 @@ contains
     else
        ! X direction is warped
        Flux_V(Rho_) = State_V(RhoU_+iDimWarp)
-       Flux_V(RhoUx_) = State_V(RhoU_+iDimWarp)**2/State_V(Rho_) + State_V(p_)
+       Flux_V(RhoU_+iDimWarp) = State_V(RhoU_+iDimWarp)**2/State_V(Rho_) &
+            + State_V(p_)
     end if
     ! Convert to warp variables
     State_V = State_V - Flux_V/uWarp
