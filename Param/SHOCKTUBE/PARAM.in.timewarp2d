@@ -40,27 +40,27 @@ T			UseNonConservative
 0.			LeftState Ux
 0.			LeftState Uy
 0.			LeftState Uz
-1.			LeftState p
+0.5			LeftState p
 
 #BUMP
 Rho			NameVar
 5.0			Amplitude
 20.0			WidthX
-25.0			WidthY
+20.0			WidthY
 -1.0			WidthZ
-5.0			CenterX
-3.0			CenterY
+0.0			CenterX
+0.0			CenterY
 0.0			CenterZ
 0			nPower
 
 #BUMP
 p			NameVar
-5.0			Amplitude
+2.5			Amplitude
 20.0			WidthX
-25.0			WidthY
+20.0			WidthY
 -1.0			WidthZ
-5.0			CenterX
-3.0			CenterY
+0.0			CenterX
+0.0			CenterY
 0.0			CenterZ
 0			nPower
 
