@@ -133,7 +133,7 @@ The default is time accurate mode.
 
 #TIMEWARP
 T			UseTimeWarp
-10.0			uWarp
+10.0			uWarp (read if UseTimeWarp is true)
 
 For now this feature is experimental. The goal is to solve
 the equations in a coordinate system where time is
@@ -154,7 +154,7 @@ The default is UseTimeWarp false.
 
 #WARPDIM
 1			iDimWarp
-                    
+
 Direction of time warping, it it is switched on (see #TIMEWARP).
 The iDimWarp=0 setting means radial direction, while 1 to 3
 corresponds to the X, Y, and Z directions, respectively.
@@ -167,7 +167,7 @@ Default is 0.
 
 #WARPCMAX
 F			UseWarpCmax
-   
+
 If UseWarpCmax is true then use the maximum speed of the warped variables
 times the jump in the warped variables in the numerical flux.
 If UseWarpCmax is false, use the original maximum speed with the jump
@@ -10924,14 +10924,14 @@ Default values are shown above.
     <option name="limited"  default="T"/>
   </parameter>
   <parameter name="Tolerance" type="real" min="0" default="1e-6"/>
-  <parameter name="MaxIter" type="integer" min="1" default="20"/>
-	 
+  <parameter name="MaxIteration" type="integer" min="1" default="20"/>
+
 #THREADEDBC
-T	  UseAlignedVelocity
-F         DoConvergenceCheck
-limited   TypeBc             first/second/limited
-1e-6      Tolerance          (optional)
-20        MaxIteration       (optional)
+T			UseAlignedVelocity
+F			DoConvergenceCheck
+limited			TypeBc (first/second/limited)
+1e-6			Tolerance
+20			MaxIteration
 
 This command sets things for the threaded field line algorithm.
 Ask Igor Sokolov if you want to learn more.
