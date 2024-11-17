@@ -1176,7 +1176,7 @@ contains
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_GB
     use ModPUI,      ONLY: Pu3_
-    use ModUpdateState, ONLY: UseTimeWarp, state_to_warp_cell
+    use ModUpdateState, ONLY: UseTimeWarp, iDimWarp, state_to_warp_cell
 
     real, intent(in) :: State_V(nVar)      ! input primitive state
 
@@ -1262,8 +1262,8 @@ contains
     end do
 
     ! Convert conservative variables
-    if(UseTimeWarp .and. iDimFace == 1) call state_to_warp_cell(StateCons_V)
-
+    if(UseTimeWarp .and. iDimWarp == 0 .or. iDimWarp == iDimFace) &
+         call state_to_warp_cell(StateCons_V, iFace, jFace, kFace, iBlockFace)
     ! The extra fluxes should be added at the same time as fluid 1 fluxes
     if(iFluidMin /= 1) RETURN
 
@@ -2180,10 +2180,9 @@ contains
     end if
 
     ! Calculateing stress tensor for viscosity Visco_DDI
-    if(ViscoCoeff > 0.0)then
-       call get_viscosity_tensor(iDimFace, iFace, jFace, kFace,&
-            iBlockFace,iFluidMin,iFluidMax,ViscoCoeff,IsNewBlockVisco)
-    end if
+    if(ViscoCoeff > 0.0) &
+         call get_viscosity_tensor( iDimFace, iFace, jFace, kFace, &
+         iBlockFace, iFluidMin, iFluidMax, ViscoCoeff, IsNewBlockVisco)
 
     if(Eta > 0.0)then
        EtaJx = Eta*Jx
@@ -3550,7 +3549,7 @@ contains
     use ModMain,    ONLY: Climit
     use ModPhysics, ONLY: Clight
     use ModAdvance, ONLY: State_VGB
-    use ModUpdateState, ONLY: UseTimeWarp, uWarp
+    use ModUpdateState, ONLY: UseTimeWarp, iDimWarp, uWarp
 
     real,    intent(in) :: State_V(nVar)
 
@@ -3615,7 +3614,7 @@ contains
 
     end do
 
-    if(UseTimeWarp .and. iDimFace == 1)then
+    if(UseTimeWarp .and. iDimWarp == 0 .or. iDimFace == iDimWarp)then
        if(present(Cmax_I))then
           Cmax_I   = Cmax_I*uWarp/(uWarp - Cmax_I)
           CmaxDt_I = CmaxDt_I*uWarp/(uWarp - CmaxDt_I)

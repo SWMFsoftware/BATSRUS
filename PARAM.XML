@@ -128,20 +128,25 @@ The default is time accurate mode.
 
 <command name="TIMEWARP">
   <parameter name="UseTimeWarp" type="logical" default="F"/>
+  <parameter name="iDimWarp" type="integer" min="0" max="3" default="0"/>
   <parameter name="uTimeWarp" type="real" min="0" default="0"
 	     if="$UseTimeWarp"/>
 
 #TIMEWARP
-F                   UseTimeWarp
-10.0                uWarp   read if UseTimeWarp
+T			UseTimeWarp
+0			iDimWarp   (rest read if UseTimeWarp is true)
+10.0			uWarp
 
 For now this feature is experimental. The goal is to solve
 the equations in a coordinate system where time is
 shifted with the X (or R) coordinate as t' = t + x/uWarp,
 where uWarp is a positive speed larger than the fastest
-characteristic speed. This works only of the flow is
-supersonic/superfast, so all characterisitcs are moving
-towards positive X (or R).
+characteristic speed in dimensional units.
+Time warping works only if the flow is supersonic/superfast at the
+outer boundaries, so all characterisitcs are moving
+towards positive X (or R). If iDimWarp is set to 1, the
+warpspeed is in the X direction, while iDimWarp = 0 means
+that the warp speed is radial.
 
 The default is UseTimeWarp false.
 </command>
