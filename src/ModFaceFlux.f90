@@ -49,7 +49,8 @@ module ModFaceFlux
   use ModNumConst, ONLY: cSqrtHalf, cTiny
   use ModViscosity, ONLY: UseViscosity, Visco_DDI,&
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
-  use ModUpdateState, ONLY: UseTimeWarp, iDimWarp, uWarp, state_to_warp_cell
+  use ModTimewarp, ONLY: UseTimeWarp, UseWarpCmax, iDimWarp, uWarp, &
+       state_to_warp_cell
   use omp_lib
 
   implicit none
@@ -1270,7 +1271,7 @@ contains
     end do
 
     ! Convert conservative variables to Warp variables
-    if(UseTimeWarp) &
+    if(UseTimeWarp .and. UseWarpCmax) &
          call state_to_warp_cell(StateCons_V, iFace, jFace, kFace, iBlockFace)
 
     ! The extra fluxes should be added at the same time as fluid 1 fluxes
@@ -3640,12 +3641,12 @@ contains
 
     if(UseTimeWarp .and. NormalWarp > 0.0)then
        if(present(Cmax_I))then
-          Cmax_I   = Cmax_I*uWarp/(uWarp - NormalWarp*Cmax_I)
+          if(UseWarpCmax) Cmax_I = Cmax_I*uWarp/(uWarp - NormalWarp*Cmax_I)
           CmaxDt_I = CmaxDt_I*uWarp/(uWarp - NormalWarp*CmaxDt_I)
        end if
-       if(present(Cright_I)) &
+       if(present(Cright_I) .and. UseWarpCmax) &
             Cright_I = Cright_I*uWarp/(uWarp - NormalWarp*Cright_I)
-       if(present(Cleft_I)) &
+       if(present(Cleft_I) .and. UseWarpCmax) &
             Cleft_I = Cleft_I*uWarp/(uWarp - NormalWarp*Cleft_I)
     end if
 

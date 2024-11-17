@@ -14,8 +14,11 @@ NONE			TypeNormalization
 
 #TIMEWARP
 T			UseTimeWarp
-1			iDimWarp
 8.0			uWarp
+
+#WARPDIM
+1			iDimWarp
+
 
 #GRIDBLOCKALL
 10			MaxBlock

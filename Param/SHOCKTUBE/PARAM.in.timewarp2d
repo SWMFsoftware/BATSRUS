@@ -12,7 +12,6 @@ NONE			TypeNormalization
 
 #TIMEWARP
 T			UseTimeWarp
-0			iDimWarp
 2.5			uWarp
 
 #GRIDBLOCKALL

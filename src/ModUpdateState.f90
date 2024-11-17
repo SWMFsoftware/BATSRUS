@@ -24,15 +24,8 @@ module ModUpdateState
   public:: update_check         ! check and correct update if necessary
   public:: fix_anisotropy       ! fix pressure anisotropy after update
   public:: check_nan            ! Check State_VGB for NaNs
-  public:: state_to_warp_cell   ! Convert to time warped variables
-
-  ! Time warp parameters
-  logical, public:: UseTimeWarp = .false.
-  integer, public:: iDimWarp = 0
-  real, public:: uWarpDim = 0.0, uWarp = 0.0
 
   ! Local variables
-  real:: TempWarp = -1.0 ! dimensionless temperature of isothermal hydro
 
   ! Update check parameters
   real :: PercentRhoLimit_I(2), PercentPLimit_I(2)
@@ -100,13 +93,6 @@ contains
        ! the electrons are treated as nIonFluid+1
        PiShockHeatingFraction_I(nIonFluid+1) = PeShockHeatingFraction
 
-    case("#TIMEWARP")
-       call read_var("UseTimeWarp", UseTimeWarp)
-       if(UseTimeWarp)then
-          call read_var("iDimWarp", iDimWarp)
-          call read_var("uWarpDim", uWarpDim)
-          uWarp = -1.0
-       end if
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -492,6 +478,7 @@ contains
 
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
+      use ModTimewarp, ONLY: UseTimeWarp, state_to_warp, warp_to_state
 
       integer, intent(in):: iBlock
       logical, intent(in):: DoTest
@@ -2088,121 +2075,5 @@ contains
     end do
 
   end subroutine check_nan
-  !============================================================================
-  subroutine state_to_warp(iBlock)
-
-    ! Convert from State to State - Flux_x/uWarp
-    ! Isothermal HD only
-
-    integer, intent(in):: iBlock
-
-    integer:: i, j, k
-
-    character(len=*), parameter:: NameSub = 'state_to_warp'
-    !--------------------------------------------------------------------------
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-       call state_to_warp_cell(StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
-       call state_to_warp_cell(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
-    end do; end do; end do
-
-  end subroutine state_to_warp
-  !==========================================================================
-  subroutine state_to_warp_cell(State_V, i, j, k, iBlock)
-
-    use ModPhysics, ONLY: Io2No_V, UnitU_
-    real, intent(inout):: State_V(nVar)
-    integer, intent(in):: i, j, k, iBlock
-
-    real:: Flux_V(nVar), Norm_D(3), RhoUr
-    !------------------------------------------------------------------------
-    ! Store temperature
-    !--------------------------------------------------------------------------
-    if(TempWarp < 0) TempWarp = State_V(p_)/State_V(Rho_)
-    ! Store normalized warp speed
-    if(uWarp < 0) uWarp = uWarpDim*Io2No_V(UnitU_)
-    ! Calculate flux
-    Flux_V = 0.0
-    if(iDimWarp == 1)then
-       ! X direction is warped
-       Flux_V(Rho_) = State_V(RhoUx_)
-       Flux_V(RhoUx_) = State_V(RhoUx_)**2/State_V(Rho_) + State_V(p_)
-    else
-       ! radial direction is warped
-       Norm_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
-       RhoUr = sum(State_V(RhoUx_:RhoUz_)*Norm_D)
-       Flux_V(Rho_) = RhoUr
-       Flux_V(RhoUx_:RhoUz_) = RhoUr*State_V(RhoUx_:RhoUz_)/State_V(Rho_) &
-            + State_V(p_)*Norm_D
-       Flux_V(p_) = RhoUr*TempWarp
-    end if
-    ! Convert to warp variables
-    State_V = State_V - Flux_V/uWarp
-
-  end subroutine state_to_warp_cell
-  !============================================================================
-  subroutine warp_to_state(iBlock)
-
-    ! Convert from State - uWarp*Flux_x back to State
-    ! Isothermal HD only
-
-    integer, intent(in):: iBlock
-
-    integer:: i, j, k
-    character(len=*), parameter:: NameSub = 'warp_to_state'
-    !--------------------------------------------------------------------------
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-       ! StateOld could be stored instead of recalculated !!!
-       call warp_to_state_cell(StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
-       call warp_to_state_cell(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
-
-    end do; end do; end do
-
-  contains
-    !==========================================================================
-    subroutine warp_to_state_cell(State_V, i, j, k, iBlock)
-
-      real, intent(inout):: State_V(nVar)
-      integer, intent(in):: i, j, k, iBlock
-
-      real:: RhoWarp, Norm_D(3), RhoUWarp, a, b, c, d, Rho
-      !------------------------------------------------------------------------
-      RhoWarp   = State_V(Rho_)
-      if(iDimWarp == 1)then
-         RhoUWarp = State_V(RhoUx_)
-      else
-         Norm_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
-         RhoUWarp = sum(State_V(RhoUx_:RhoUz_)*Norm_D)
-      end if
-      ! Coefficients of quadratic equation a*Rho^2 + b*rho + c = 0
-      a = TempWarp/uWarp**2
-      b = -(RhoWarp - RhoUWarp/uWarp)
-      c = RhoWarp**2
-      ! Determinant
-      d = b**2 - 4*a*c
-      if(d < 0)then
-         write(*,*) NameSub,': i,j,k,iBlock=', i, j, k, iBlock
-         write(*,*) NameSub,': Xyz_D=', Xyz_DGB(:,i,j,k,iBlock)
-         write(*,*) NameSub,': State_V=', State_V
-         write(*,*) NameSub,': RhoWarp,RhoUWarp,TempWarp=', &
-              RhoWarp, RhoUWarp, TempWarp
-         write(*,*) NameSub,': a,b,c,d=', a, b, c, d
-         if(d < 0) call stop_mpi(NameSub//': negative determinant')
-      end if
-      ! We take the larger root (to be checked)
-      Rho = (-b - sqrt(b**2 - 4*a*c))/(2*a)
-      State_V(Rho_) = Rho
-      if(iDimWarp == 1)then
-         State_V(RhoUx_) = uWarp*(Rho - RhoWarp)
-      else
-         State_V(RhoUx_:RhoUz_) = uWarp*(Rho - RhoWarp)*Norm_D
-      end if
-      State_V(p_) = TempWarp*Rho
-
-    end subroutine warp_to_state_cell
-    !==========================================================================
-  end subroutine warp_to_state
-  !============================================================================
 end module ModUpdateState
 !==============================================================================

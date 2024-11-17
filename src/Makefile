@@ -104,6 +104,7 @@ OBJECTS = \
 	ModStreamAligned.o \
 	ModThreadedLC.o \
 	ModTimeStepControl.o \
+	ModTimewarp.o \
 	ModTurbulence.o \
 	ModUaCoupling.o \
 	ModUserEmpty.o \
