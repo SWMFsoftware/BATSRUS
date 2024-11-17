@@ -744,7 +744,7 @@ contains
        case("#UPDATECHECK", "#SHOCKHEATING")
           call read_update_param(NameCommand, UseStrict)
 
-       case("#TIMEWARP", "#WARPDIM", "#WARPCMAX")
+       case("#TIMEWARP", "#WARPDIM", "#WARPCMAX", "#WARPSCHEME")
           call read_timewarp_param(NameCommand)
           
        case("#ANISOTROPICPRESSURE")

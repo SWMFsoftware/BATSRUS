@@ -4,16 +4,16 @@ module ModTimeWarp
   ! uWarp must be faster than the fastest wave speed in the radial direction
   ! All characteristics need to point in the positive r direction
 
-  use ModAdvance, ONLY: StateOld_VGB, State_VGB
+  use ModAdvance, ONLY: StateOld_VGB, StateOld_VG, State_VGB
   use ModGeometry, ONLY: r_GB
   use ModVarIndexes, ONLY: nVar, Rho_, RhoU_, RhoUx_, RhoUz_, p_
   use ModBatsrusUtility, ONLY: stop_mpi
-  use BATL_lib, ONLY: Used_GB, Xyz_DGB, nI, nJ, nK
+  use BATL_lib, ONLY: Used_GB, Xyz_DGB, nI, nJ, nK, iProc
 
   implicit none
-  
+
   SAVE
-  
+
   private ! except
 
   public:: read_timewarp_param ! read parameters
@@ -31,6 +31,11 @@ module ModTimeWarp
   ! Local variables
   real:: TempWarp = -1.0 ! dimensionless temperature of isothermal hydro
 
+  ! Iterative scheme
+  logical:: UseIteration = .false.
+  integer:: MaxIteration = 0
+  real:: Tolerance = 0.0, IterationCoef = 0.0
+
 contains
   !============================================================================
   subroutine read_timewarp_param(NameCommand)
@@ -46,16 +51,23 @@ contains
        call read_var("UseTimeWarp", UseTimeWarp)
        if(UseTimeWarp)then
           call read_var("uWarpDim", uWarpDim)
-          uWarp = -1.0
+          uWarp = -1.0 ! force recalculation of uWarp
        end if
     case("#WARPDIM")
        call read_var("iDimWarp", iDimWarp)
     case("#WARPCMAX")
        call read_var("UseWarpCmax", UseWarpCmax)
+    case("#WARPSCHEME")
+       call read_var("UseIteration", UseIteration)
+       if(UseIteration)then
+          call read_var("Tolerance", Tolerance)
+          call read_var("MaxIteration", MaxIteration)
+          call read_var("IterationCoef", IterationCoef)
+       end if
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
-    
+
   end subroutine read_timewarp_param
   !============================================================================
   subroutine state_to_warp(iBlock)
@@ -76,7 +88,7 @@ contains
     end do; end do; end do
 
   end subroutine state_to_warp
-  !==========================================================================
+  !============================================================================
   subroutine state_to_warp_cell(State_V, i, j, k, iBlock)
 
     use ModPhysics, ONLY: Io2No_V, UnitU_
@@ -85,7 +97,6 @@ contains
     integer, intent(in):: i, j, k, iBlock
 
     real:: Flux_V(nVar), Norm_D(3), RhoUr
-    !------------------------------------------------------------------------
     ! Store temperature
     !--------------------------------------------------------------------------
     if(TempWarp < 0) TempWarp = State_V(p_)/State_V(Rho_)
@@ -124,15 +135,55 @@ contains
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-       ! StateOld could be stored instead of recalculated !!!
-       call warp_to_state_cell(StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
-       call warp_to_state_cell(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
-
+       if(UseIteration)then
+          call warp_to_state_cell1(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
+       else
+          call warp_to_state_cell2(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
+       end if
     end do; end do; end do
 
   contains
     !==========================================================================
-    subroutine warp_to_state_cell(State_V, i, j, k, iBlock)
+    subroutine warp_to_state_cell1(Warp_V, i, j, k, iBlock)
+
+      ! Iterative conversion from warp state to regular state
+
+      real, intent(inout):: Warp_V(nVar)
+      integer, intent(in):: i, j, k, iBlock
+
+      integer:: iIter
+      real:: StateIter_V(nVar), WarpIter_V(nVar)
+      !------------------------------------------------------------------------
+      StateIter_V = StateOld_VG(:,i,j,k) ! initial guess
+      ! Iterate to obtain the solution
+      do iIter = 1, MaxIteration
+         WarpIter_V = StateIter_V
+         ! Convert StateIter_V to WarpIter_V = StateIter_V - F_r/uWarp
+         call state_to_warp_cell(WarpIter_V, i, j, k, iBlock)
+         ! Check if we reached the desired accuracy
+         if(all(abs(Warp_V - WarpIter_V) <= Tolerance*abs(Warp_V))) EXIT
+
+         ! Nudge the solution based on the error
+         StateIter_V = StateIter_V + IterationCoef*(Warp_V - WarpIter_V)
+      end do
+      if(iIter > MaxIteration)then
+         write(*,*) NameSub,': Warning, iteration did not succeed at'
+         write(*,*) NameSub,': i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+         write(*,*) NameSub,': Xyz_D=', Xyz_DGB(:,i,j,k,iBlock)
+         write(*,*) NameSub,': StateOld_V =', StateOld_VG(:,i,j,k)
+         write(*,*) NameSub,': StateIter_V=', StateIter_V
+         write(*,*) NameSub,': Warp_V     =', Warp_V
+         write(*,*) NameSub,': WarpIter_V =', WarpIter_V
+      end if
+
+      ! Return the iterative solution
+      Warp_V = StateIter_V
+
+    end subroutine warp_to_state_cell1
+    !==========================================================================
+    subroutine warp_to_state_cell2(State_V, i, j, k, iBlock)
+
+      ! Analytic conversion for isothermal hydrodynamics
 
       real, intent(inout):: State_V(nVar)
       integer, intent(in):: i, j, k, iBlock
@@ -171,8 +222,9 @@ contains
       end if
       State_V(p_) = TempWarp*Rho
 
-    end subroutine warp_to_state_cell
+    end subroutine warp_to_state_cell2
     !==========================================================================
   end subroutine warp_to_state
   !============================================================================
 end module ModTimeWarp
+!==============================================================================
