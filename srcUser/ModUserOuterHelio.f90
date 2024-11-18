@@ -104,7 +104,7 @@ module ModUser
   ! Time-dependent variables
   ! Meant for allowing variable start time
   ! for time dependent run
-  real :: TableStart = 0.0
+  real :: SwLT_Start = 0.0
   real :: RunStart = 0.0
   real :: Offset = 0.0
 
@@ -115,6 +115,7 @@ module ModUser
   real :: PressureHeatElectronIo, FactorHeatElectron
 
   integer :: iTableSolarWind = -1 ! initialization is needed
+  integer :: iTableMagIntensity = -1
   integer :: iTableChargeExchange = -1
   integer :: iTableElectronImpact = -1
 
@@ -3294,7 +3295,7 @@ contains
        iTableSolarWind=i_lookup_table('solarwind2d')
 
        if(iTableSolarWind > 0)then
-          call get_lookup_table(iTableSolarWind,Time=TableStart, &
+          call get_lookup_table(iTableSolarWind,Time=SwLT_Start, &
                IndexMax_I=IndexMax_I)
 
           ! Calculate start of run in unit [years]
@@ -3308,9 +3309,9 @@ contains
           ! start time of the lookup table.
           !(2) If RunStart is out of range of the lookup table time range
           ! Offset defaults to zero.
-          if(RunStart >= TableStart .and. RunStart <= &
-               TableStart+(IndexMax_I(2)/cSecondPerYear))then
-             Offset = Runstart - TableStart ! years
+          if(RunStart >= SwLT_Start .and. RunStart <= &
+               SwLT_Start+(IndexMax_I(2)/cSecondPerYear))then
+             Offset = Runstart - SwLT_Start ! years
           end if
        end if
     end if
@@ -3341,10 +3342,11 @@ contains
     real, intent(out):: Temp ! Temp at X,Y,Z according to table
     real, intent(out):: Bsph_D(3)   ! B at X,Y,Z according to table
 
-    real ::  Latitude, SinTheta, TimeCycle
+    real ::  Latitude, SinTheta, MagLT_Start, MagLT_dt
+    real ::  TimeCycleSW, TimeCycleB
 
-    real :: IndexMax_I(2)
-    real :: Value_I(3)
+    real :: IndexMax_I(2), Param_I(1)
+    real :: ValueSW_I(3), ValueB_I(1)
     real :: r
 
     character(len=*), parameter:: NameSub = 'get_lat_dep_sw'
@@ -3356,6 +3358,9 @@ contains
 
     ! calculate the latitude of the cell
     SinTheta = sqrt(x**2+y**2)/r
+    
+    ! Make sure that OmegaSun and ParkerTilt are set
+    if(OmegaSun == 0.0) call set_omega_parker_tilt
 
     if(iTableSolarWind < 0)then
        iTableSolarWind = i_lookup_table('solarwind2d')
@@ -3364,28 +3369,46 @@ contains
     end if
 
     ! calculating time relative to the solar cycle
-    call get_lookup_table(iTableSolarWind, IndexMax_I=IndexMax_I)
+    call get_lookup_table(iTableSolarWind, IndexMax_I=IndexMax_I, &
+            Param_I = Param_I)
 
-    TimeCycle = modulo(tSimulation + (Offset*cSecondPerYear) , IndexMax_I(2))
+    TimeCycleSW = modulo(tSimulation + (Offset*cSecondPerYear) , IndexMax_I(2))
 
     ! interpolating the value of Rho, Vr, and Temp
     ! at the cell from the lookup table
-    call interpolate_lookup_table(iTableSolarWind, Latitude, TimeCycle, &
-         Value_I)
+    call interpolate_lookup_table(iTableSolarWind, Latitude, TimeCycleSW, &
+         ValueSW_I, DoExtrapolate=.false.)
 
-    Ur  = Value_I(1)*Io2No_V(UnitU_)
-    Rho = Value_I(2)*Io2No_V(UnitRho_)
-    Temp= Value_I(3)*Io2No_V(UnitTemperature_)
+    Ur  = ValueSW_I(1)*Io2No_V(UnitU_)
+    Rho = ValueSw_I(2)*Io2No_V(UnitRho_)
+    Temp= ValueSW_I(3)*Io2No_V(UnitTemperature_)
 
-    ! monopole with By negative and a time varying B
-    ! time-dependent behavior of B taken from Michael et al. 2015
-    Bsph_D(1) = (sqrt(0.5)/rBody**2)*(9.27638+ &
-         7.60832d-8*TimeCycle-1.91555*sin(1.28737d-8*TimeCycle)+ &
-         0.144184*sin(2.22823d-8*TimeCycle)+ &
-         47.7758*sin(2.18788d-10*TimeCycle)+ &
-         83.5522*sin(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_) ! Br
-    Bsph_D(2) =  0.0                             ! Btheta
-    Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt*SwhUx/Ur ! Bphi for vary B
+    ! Chika. If TD magnetic lookup table is present
+    ! read in values from the table
+    iTableMagIntensity = i_lookup_table('MagIntensity')
+
+    if(iTableMagIntensity > 0)then ! Use time-dependent magnetic field
+       ! Make sure lookup tables are sampling the same times
+
+       call get_lookup_table(iTableMagIntensity,Time=MagLT_Start)
+       MagLT_dt = (SwLT_Start - MagLT_Start)*cSecondPerYear
+       TimeCycleB = TimeCycleSW + MagLT_dt
+
+       call interpolate_lookup_table(iTableMagIntensity, TimeCycleB, &
+           ValueB_I, DoExtrapolate=.false.)
+
+       Bsph_D(1) = (SQRT(0.5)*ValueB_I(1))/rBody**2 &
+                   *Io2No_V(UnitB_)                     ! Br scaled from 1 AU
+       Bsph_D(2) =  0.0                                 ! Btheta
+       Bsph_D(3) =  Bsph_D(1)*SinTheta*ParkerTilt &
+                   *SwhUx/Ur                            !Bphi scaled from 1 AU
+    else
+       Bsph_D(1) = SwhBx ! Br
+       Bsph_D(2) =  0.0                             ! Btheta
+       Bsph_D(3) = SwhBx*SinTheta*ParkerTilt*SwhUx/Ur ! Bphi for vary B
+
+    end if
+
 
     ! Scale density, pressure, and magnetic field with radial distance
     Rho       = Rho*(rBody/r)**2
