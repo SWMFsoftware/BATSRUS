@@ -611,9 +611,11 @@ contains
     real,    intent(in) :: XyzSm_DI(3,nMag)
     real,    intent(out):: dBHall_DI(3,nMag), dBPedersen_DI(3,nMag)
 
-    real:: XyzIono_D(3), dXyz_D(3)
+    real:: XyzIono_D(3), dXyz_D(3), Cross1_D(3), Cross2_D(3)
     integer:: iMag, i, j, iLine
     real:: Coef0, Coef
+    !$acc declare create(XyzIono_D, dXyz_D, Cross1_D, Cross2_D, Coef0, &
+    !$acc Coef, iLine)
     ! real:: Surface ! CHECK integral
 
     logical:: DoTest
@@ -645,11 +647,14 @@ contains
     !$acc parallel copyin(nMag, XyzSm_DI, ThetaIono_I, PhiIono_I, SinTheta_I, &
     !$acc rIonosphere, dThetaIono, dPhiIono, HallJ_DII, PedersenJ_DII) &
     !$acc copy(dBHall_DI, dBPedersen_DI)
-    iLine = 0
-    !$acc loop seq collapse(2)
-    do j = 1, nPhiIono-1; do i = 2, nThetaIono-1
 
-       iLine = iLine + 1
+    ! acc loop gang collapse(2) reduction(+:dBHall_DI,dBPedersen_DI) 
+
+    !$acc loop seq collapse(2) &
+    !$acc private(XyzIono_D, Coef0)
+    do j = 1, nPhiIono - 1; do i = 2, nThetaIono - 1
+
+       iLine = (j - 1)*(nThetaIono - 2) + i - 1
        ! distribute the work among the BATSRUS processors
        if(mod(iLine, nProc) /= iProc)CYCLE
 
@@ -663,7 +668,9 @@ contains
        ! Surface = Surface + Coef0
 
        ! acc loop gang worker vector private(dXyz_D, Coef)
-       !$acc loop vector private(dXyz_D, Coef)
+       ! acc reduction(+:dBHall_DI,dBPedersen_DI)
+
+       !$acc loop vector gang private(dXyz_D, Coef, Cross1_D, Cross2_D)
        do iMag = 1, nMag
           ! Distance vector between magnetometer position
           ! and ionosphere surface element
@@ -673,10 +680,26 @@ contains
           Coef = Coef0/norm2(dXyz_D)**3
 
           ! Do Biot-Savart integral: dB = j x d/(4pi|d|^3) dA  (mu0=1)
-          dBHall_DI(:,iMag)     = dBHall_DI(:,iMag) + &
-               Coef*cross_prod(HallJ_DII(:,i,j), dXyz_D)
-          dBPedersen_DI(:,iMag) = dBPedersen_DI(:,iMag) + &
-               Coef*cross_prod(PedersenJ_DII(:,i,j), dXyz_D)
+          Cross1_D = cross_prod(HallJ_DII(:,i,j), dXyz_D)
+          Cross2_D = cross_prod(PedersenJ_DII(:,i,j), dXyz_D)
+          !$acc atomic update
+          dBHall_DI(1,iMag)     = dBHall_DI(1,iMag) + Coef*Cross1_D(1)
+          !$acc end atomic
+          !$acc atomic update
+          dBHall_DI(2,iMag)     = dBHall_DI(2,iMag) + Coef*Cross1_D(2)
+          !$acc end atomic
+          !$acc atomic update
+          dBHall_DI(3,iMag)     = dBHall_DI(3,iMag) + Coef*Cross1_D(3)
+          !$acc end atomic
+          !$acc atomic update
+          dBPedersen_DI(1,iMag) = dBPedersen_DI(1,iMag) + Coef*Cross2_D(1)
+          !$acc end atomic
+          !$acc atomic update
+          dBPedersen_DI(2,iMag) = dBPedersen_DI(2,iMag) + Coef*Cross2_D(2)
+          !$acc end atomic
+          !$acc atomic update
+          dBPedersen_DI(3,iMag) = dBPedersen_DI(3,iMag) + Coef*Cross2_D(3)
+          !$acc end atomic
 
 #ifndef _OPENACC
           if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug.and.iMag==1)then
