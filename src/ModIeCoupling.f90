@@ -611,10 +611,10 @@ contains
     real,    intent(in) :: XyzSm_DI(3,nMag)
     real,    intent(out):: dBHall_DI(3,nMag), dBPedersen_DI(3,nMag)
 
-    real:: XyzIono_D(3), dXyz_D(3), Cross1_D(3), Cross2_D(3)
+    real:: XyzIono_D(3), dXyz_D(3), Cross_D(3)
     integer:: iMag, i, j, iLine
     real:: Coef0, Coef
-    !$acc declare create(XyzIono_D, dXyz_D, Cross1_D, Cross2_D, Coef0, &
+    !$acc declare create(XyzIono_D, dXyz_D, Cross_D, Coef0, &
     !$acc Coef, iLine)
     ! real:: Surface ! CHECK integral
 
@@ -651,7 +651,7 @@ contains
     ! acc loop gang collapse(2) reduction(+:dBHall_DI,dBPedersen_DI) 
 
     !$acc loop vector gang collapse(3) &
-    !$acc private(XyzIono_D, Coef0, dXyz_D, Coef, Cross1_D, Cross2_D)
+    !$acc private(XyzIono_D, Coef0, dXyz_D, Coef, Cross_D)
     do j = 1, nPhiIono - 1; do i = 2, nThetaIono - 1
        do iMag = 1, nMag
 
@@ -679,25 +679,25 @@ contains
           Coef = Coef0/norm2(dXyz_D)**3
 
           ! Do Biot-Savart integral: dB = j x d/(4pi|d|^3) dA  (mu0=1)
-          Cross1_D = cross_prod(HallJ_DII(:,i,j), dXyz_D)
-          Cross2_D = cross_prod(PedersenJ_DII(:,i,j), dXyz_D)
+          Cross_D = cross_prod(HallJ_DII(:,i,j), dXyz_D)
           !$acc atomic update
-          dBHall_DI(1,iMag)     = dBHall_DI(1,iMag) + Coef*Cross1_D(1)
+          dBHall_DI(1,iMag)     = dBHall_DI(1,iMag) + Coef*Cross_D(1)
           !$acc end atomic
           !$acc atomic update
-          dBHall_DI(2,iMag)     = dBHall_DI(2,iMag) + Coef*Cross1_D(2)
+          dBHall_DI(2,iMag)     = dBHall_DI(2,iMag) + Coef*Cross_D(2)
           !$acc end atomic
           !$acc atomic update
-          dBHall_DI(3,iMag)     = dBHall_DI(3,iMag) + Coef*Cross1_D(3)
+          dBHall_DI(3,iMag)     = dBHall_DI(3,iMag) + Coef*Cross_D(3)
+          !$acc end atomic
+          Cross_D = cross_prod(PedersenJ_DII(:,i,j), dXyz_D)
+          !$acc atomic update
+          dBPedersen_DI(1,iMag) = dBPedersen_DI(1,iMag) + Coef*Cross_D(1)
           !$acc end atomic
           !$acc atomic update
-          dBPedersen_DI(1,iMag) = dBPedersen_DI(1,iMag) + Coef*Cross2_D(1)
+          dBPedersen_DI(2,iMag) = dBPedersen_DI(2,iMag) + Coef*Cross_D(2)
           !$acc end atomic
           !$acc atomic update
-          dBPedersen_DI(2,iMag) = dBPedersen_DI(2,iMag) + Coef*Cross2_D(2)
-          !$acc end atomic
-          !$acc atomic update
-          dBPedersen_DI(3,iMag) = dBPedersen_DI(3,iMag) + Coef*Cross2_D(3)
+          dBPedersen_DI(3,iMag) = dBPedersen_DI(3,iMag) + Coef*Cross_D(3)
           !$acc end atomic
 
 #ifndef _OPENACC
