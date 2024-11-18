@@ -811,7 +811,7 @@ contains
 
       ! Recover StateOld_VGB
       StateOld_VGB(:,:,:,:,iBlock) = StateOld_VG
-      
+
       if(UseTimeWarp) call warp_to_state(iBlock)
 
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
@@ -2061,5 +2061,6 @@ contains
     end do
 
   end subroutine check_nan
+  !============================================================================
 end module ModUpdateState
 !==============================================================================

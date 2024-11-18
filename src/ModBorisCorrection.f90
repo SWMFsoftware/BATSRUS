@@ -260,7 +260,7 @@ contains
   subroutine boris_to_mhd(iBlock)
 
     ! Convert State_VGB back to classical MHD variables
-    
+
     integer, intent(in):: iBlock
 
     integer:: i, j, k
