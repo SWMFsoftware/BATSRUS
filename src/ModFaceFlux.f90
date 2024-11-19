@@ -194,7 +194,7 @@ module ModFaceFlux
   real :: MhdFlux_V(RhoUx_:RhoUz_)
   real :: MhdFluxLeft_V(RhoUx_:RhoUz_)
   real :: MhdFluxRight_V(RhoUx_:RhoUz_)
-  !$omp threadprivate(M hdFlux_V, MhdFluxLeft_V, MhdFluxRight_V )
+  !$omp threadprivate(MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V )
 
   ! normal electric field -> divE
   real :: Enormal
