@@ -91,7 +91,7 @@ contains
   subroutine state_to_warp_cell(State_V, i, j, k, iBlock, IsConservIn)
 
     use ModConservative, ONLY: UseNonConservative, nConservCrit, IsConserv_CB
-    use ModPhysics, ONLY: Io2No_V, UnitU_
+    use ModPhysics, ONLY: Io2No_V, UnitU_, GammaMinus1
 
     integer:: e_ = p_
 
@@ -120,7 +120,8 @@ contains
     ! To be replaced with call energy_to_pressure1(Prim_V, i, j, k, iBlock)
     InvRho = 1/State_V(Rho_)
     if(IsConserv)then
-       p = State_V(e_) - 0.5*InvRho*sum(State_V(RhoUx_:RhoUz_)**2)
+       p = GammaMinus1* &
+            (State_V(e_) - 0.5*InvRho*sum(State_V(RhoUx_:RhoUz_)**2))
     else
        p = State_V(p_)
     end if
