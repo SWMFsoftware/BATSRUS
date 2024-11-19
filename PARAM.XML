@@ -10924,14 +10924,14 @@ Default values are shown above.
     <option name="limited"  default="T"/>
   </parameter>
   <parameter name="Tolerance" type="real" min="0" default="1e-6"/>
-  <parameter name="MaxIteration" type="integer" min="1" default="20"/>
+  <parameter name="MaxIter" type="integer" min="1" default="20"/>
 
 #THREADEDBC
 T			UseAlignedVelocity
 F			DoConvergenceCheck
 limited			TypeBc (first/second/limited)
 1e-6			Tolerance
-20			MaxIteration
+20			MaxIter
 
 This command sets things for the threaded field line algorithm.
 Ask Igor Sokolov if you want to learn more.
