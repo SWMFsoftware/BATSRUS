@@ -119,7 +119,7 @@ T			UseOhNeutralBc
 #GLOBALHELIOSPHERE
 1.0			rBody
 
-#SOLARWINDH              
+#SOLARWINDH
 7.866                    SWH_rho_dim [n/cc]
 1.007E5                 SWH_T_dim [K]
 433.                  SWH_Ux_dim [km/s]
@@ -185,8 +185,8 @@ ascii			TypeFile
 T  			IsTimeAccurate
 
 #FIXEDTIMESTEP
-T                       UseDtFixed
-0.01 year                     DtFixedDim [sec] (read if UseDtFixed is true)
+T			UseDtFixed
+0.01 year		DtFixedDim [sec] (read if UseDtFixed is true)
 
 #SAVEPLOT
 1			nPlotFile
@@ -196,20 +196,18 @@ y=0 MHD idl		StringPlot
 -1.0			DxSavePlot
 
 #MINIMUMPRESSURE
-1.E-23                  pMinDim
-1.E-23                  pMinDim for Neu
-1.E-23                  pMinDim for Ne2
-1.E-23                  pMinDim for Ne3
-1.E-23                  pMinDim for Ne4
-1.E-23                  pMinDim for electrons?
+1.E-23			pMinDim
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
 
 #MINIMUMDENSITY
-1.E-9           rhoMinDim
-1.E-9           rhoMinDim for Neu
-1.E-9           rhoMinDim for Ne2
-1.E-9           rhoMinDim for Ne3
-1.E-9           rhoMinDim for Ne4
-1.E-9           rhoMinDim for electrons?
+1.E-9			RhoMinDim
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
 
 #USERINPUTBEGIN -----------------------------------
 

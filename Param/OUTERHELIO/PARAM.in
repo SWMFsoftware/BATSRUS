@@ -179,7 +179,7 @@ T			UseOhNeutralBc
 #GLOBALHELIOSPHERE
 1.0			rBody
 
-#SOLARWINDH              
+#SOLARWINDH
 7.866                    SWH_rho_dim [n/cc]
 1.007E5                 SWH_T_dim [K]
 433.                  SWH_Ux_dim [km/s]
