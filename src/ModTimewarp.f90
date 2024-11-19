@@ -88,14 +88,19 @@ contains
 
   end subroutine state_to_warp
   !============================================================================
-  subroutine state_to_warp_cell(State_V, i, j, k, iBlock)
+  subroutine state_to_warp_cell(State_V, i, j, k, iBlock, IsConservIn)
 
+    use ModConservative, ONLY: UseNonConservative, nConservCrit, IsConserv_CB
     use ModPhysics, ONLY: Io2No_V, UnitU_
+
+    integer:: e_ = p_
 
     real, intent(inout):: State_V(nVar)
     integer, intent(in):: i, j, k, iBlock
+    logical, optional, intent(in):: IsConservIn
 
-    real:: Flux_V(nVar), Norm_D(3), RhoUr, InvRho, p
+    real:: Flux_V(nVar), Norm_D(3), InvRho, RhoUr, Ur, p
+    logical:: IsConserv
     !--------------------------------------------------------------------------
     if(.not.UseIteration)then
        ! Store temperature for isothermal hydro with analytic warp_to_state
@@ -104,23 +109,45 @@ contains
     ! Store normalized warp speed
     if(uWarp < 0) uWarp = uWarpDim*Io2No_V(UnitU_)
 
-    ! Calculate flux
-    Flux_V = 0.0
+    if(present(IsConservIn))then
+       IsConserv = IsConservIn
+    else
+       IsConserv = .not.UseNonConservative
+       if(UseNonConservative .and. nConservCrit > 0)then
+          IsConserv = IsConserv_CB(i,j,k,iBlock)
+       end if
+    end if
+    ! To be replaced with call energy_to_pressure1(Prim_V, i, j, k, iBlock)
     InvRho = 1/State_V(Rho_)
-    p = State_V(p_)
+    if(IsConserv)then
+       p = State_V(e_) - 0.5*InvRho*sum(State_V(RhoUx_:RhoUz_)**2)
+    else
+       p = State_V(p_)
+    end if
+    ! Get the warp direction
     if(iDimWarp == 0)then
        ! radial direction is warped
        Norm_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
-       RhoUr = sum(State_V(RhoUx_:RhoUz_)*Norm_D)
-       Flux_V(Rho_) = RhoUr
-       Flux_V(RhoUx_:RhoUz_) = RhoUr*InvRho*State_V(RhoUx_:RhoUz_) + p*Norm_D
-       Flux_V(p_) = RhoUr*InvRho*p
     else
-       ! iDim direction is warped
-       Flux_V(Rho_) = State_V(RhoU_+iDimWarp)
-       Flux_V(RhoU_+iDimWarp) = InvRho*State_V(RhoU_+iDimWarp)**2 + p
-       Flux_V(p_) = State_V(RhoU_+iDimWarp)*InvRho*p
+       ! iDimWarp direction is warped
+       Norm_D = 0.0
+       Norm_D(iDimWarp) = 1.0
     end if
+    ! To be replaced with call get_physical_flux(State_V, Norm_V, ... Flux_V)
+    RhoUr = sum(State_V(RhoUx_:RhoUz_)*Norm_D)
+    Ur = InvRho*RhoUr
+    ! Density flux
+    Flux_V(Rho_) = RhoUr
+    ! Momentum flux
+    Flux_V(RhoUx_:RhoUz_) = Ur*State_V(RhoUx_:RhoUz_) + p*Norm_D
+    if(IsConserv)then
+       ! Energy flux
+       Flux_V(e_) = Ur*(p + State_V(e_))
+    else
+       ! Pressure flux
+       Flux_V(p_) = Ur*p
+    end if
+
     ! Convert to warp variables
     State_V = State_V - Flux_V/uWarp
 
@@ -183,9 +210,6 @@ contains
          write(*,*) NameSub,': Warp_V     =', Warp_V
          write(*,*) NameSub,': WarpIter_V =', WarpIter_V
       end if
-
-      ! Fix pressure?
-      ! StateIter_V(p_) = TempWarp*StateIter_V(Rho_)
 
       ! Return the iterative solution
       Warp_V = StateIter_V
