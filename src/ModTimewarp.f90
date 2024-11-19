@@ -201,7 +201,7 @@ contains
          ! Nudge the solution based on the error
          StateIter_V = StateIter_V + matmul(Jac_VV, Warp_V - WarpIter_V)
       end do
-      if(iIter > MaxIteration)then
+      if(iIter > MaxIteration .and. MaxIteration > 1)then
          write(*,*) NameSub,': Warning, iteration did not succeed at'
          write(*,*) NameSub,': i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
          write(*,*) NameSub,': Xyz_D=', Xyz_DGB(:,i,j,k,iBlock)
