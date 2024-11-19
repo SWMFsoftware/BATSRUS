@@ -128,8 +128,7 @@ The default is time accurate mode.
 
 <command name="TIMEWARP">
   <parameter name="UseTimeWarp" type="logical" default="F"/>
-  <parameter name="uWarp" type="real" min="0" default="0"
-	     if="$UseTimeWarp"/>
+  <parameter name="uWarp" type="real" min="0" default="0" if="$UseTimeWarp"/>
 
 #TIMEWARP
 T			UseTimeWarp
@@ -175,7 +174,31 @@ in the original variables.
 
 Default value is true.
 </command>
-   
+
+<command name="WARPSCHEME">
+  <parameter name="UseIteration" type="logical" default="T"/>
+  <if expr="$UseIteration">
+    <parameter name="Tolerance" type="real" min="0" default="1e-8"/>
+    <parameter name="MaxIteration" type="integer" min="1" default="20"/>
+  </if>
+#WARPSCHEME
+T			UseIteration
+1e-8			Tolerance     (rest is read if UseIteration is true)
+20			MaxIteration
+
+If UseIteration is false, the conversion from the warped variables
+W=U-F_r/uWarp back to normal state variable U is analytic.
+Currently this option only works for isothermal hydrodynamics.
+
+If UseIteration is true, then an iterative scheme is used.
+The Tolerance parameter sets if the iterative solution Witer is close
+enough to W. Iis now a simple constant for all variables in W.
+MaxIteration limits the number of iterations performed to reach
+the tolerance. If MaxIteration is 1 then the scheme is linearized in dU/dW.
+
+Default values are shown above.
+</command>
+
 <command name="SUBCYCLING" alias="LOCALTIMESTEP">
   <parameter name="UseSubcycling" type="logical" default="F" />
   <parameter name="UseMaxTimeStep" type="logical" default="T"
