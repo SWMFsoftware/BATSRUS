@@ -1133,8 +1133,6 @@ contains
     use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB
     use ModResistivity,  ONLY: UseHeatExchange
 
-#ifndef _OPENACC
-#endif
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP, iGang
     real :: GammaTmp
