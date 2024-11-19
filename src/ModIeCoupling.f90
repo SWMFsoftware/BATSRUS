@@ -648,7 +648,7 @@ contains
     !$acc rIonosphere, dThetaIono, dPhiIono, HallJ_DII, PedersenJ_DII) &
     !$acc copy(dBHall_DI, dBPedersen_DI)
 
-    ! acc loop gang collapse(2) reduction(+:dBHall_DI,dBPedersen_DI) 
+    ! acc loop gang collapse(2) reduction(+:dBHall_DI,dBPedersen_DI)
 
     !$acc loop vector gang collapse(3) &
     !$acc private(XyzIono_D, Coef0, dXyz_D, Coef, Cross_D)

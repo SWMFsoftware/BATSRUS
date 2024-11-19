@@ -3358,7 +3358,7 @@ contains
 
     ! calculate the latitude of the cell
     SinTheta = sqrt(x**2+y**2)/r
-    
+
     ! Make sure that OmegaSun and ParkerTilt are set
     if(OmegaSun == 0.0) call set_omega_parker_tilt
 
@@ -3401,14 +3401,13 @@ contains
                    *Io2No_V(UnitB_)                     ! Br scaled from 1 AU
        Bsph_D(2) =  0.0                                 ! Btheta
        Bsph_D(3) =  Bsph_D(1)*SinTheta*ParkerTilt &
-                   *SwhUx/Ur                            !Bphi scaled from 1 AU
+                   *SwhUx/Ur                            ! Bphi scaled from 1 AU
     else
        Bsph_D(1) = SwhBx ! Br
        Bsph_D(2) =  0.0                             ! Btheta
        Bsph_D(3) = SwhBx*SinTheta*ParkerTilt*SwhUx/Ur ! Bphi for vary B
 
     end if
-
 
     ! Scale density, pressure, and magnetic field with radial distance
     Rho       = Rho*(rBody/r)**2
