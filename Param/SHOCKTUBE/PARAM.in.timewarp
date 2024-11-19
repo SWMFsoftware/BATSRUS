@@ -19,7 +19,6 @@ T			UseTimeWarp
 #WARPDIM
 1			iDimWarp
 
-
 #GRIDBLOCKALL
 10			MaxBlock
 
@@ -34,20 +33,14 @@ T			UseTimeWarp
 -0.5			zMin
  0.5			zMax
 
-#NONCONSERVATIVE
-T			UseNonConservative
-
-#GAMMA
-1.0			Gamma
-
 #SHOCKTUBE
 1.			LeftState Rho
 3.			LeftState Ux
 0.			LeftState Uy
 0.			LeftState Uz
 1.			LeftState p
-0.1			RightState Rho
-2.			RightState Ux
+0.125			RightState Rho
+3.			RightState Ux
 0.			RightState Uy
 0.			RightState Uz
 0.1			RightState p
@@ -79,11 +72,9 @@ F			DoSaveRestart
 1			nPlotFile
 1d HD idl_ascii		StringPlot
 -1			DnSavePlot
-10.0			DtSavePlot
+1.0			DtSavePlot
 0.0			DxSavePlot
 
-The grid size is 256, so the final time corresponds to the usual 0.1
 #STOP
 -1			MaxIteration
 20.0			tSimulationMax
-
