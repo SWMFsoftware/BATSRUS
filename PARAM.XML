@@ -128,7 +128,7 @@ The default is time accurate mode.
 
 <command name="TIMEWARP">
   <parameter name="UseTimeWarp" type="logical" default="F"/>
-  <parameter name="uTimeWarp" type="real" min="0" default="0"
+  <parameter name="uWarp" type="real" min="0" default="0"
 	     if="$UseTimeWarp"/>
 
 #TIMEWARP
