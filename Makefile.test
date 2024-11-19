@@ -318,7 +318,7 @@ test_timewarp_2d_run:
 	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_timewarp_2d_check:
-	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULT/GM/2d_*100_*.out \
 		Param/SHOCKTUBE/TestOutput/timewarp2d.out.gz \
 		> test_timewarp_2d.diff)

@@ -1,6 +1,6 @@
-module ModTimeWarp
+module ModTimewarp
 
-  ! Chang time variable from t to t' = t + r/uWarp
+  ! Change time variable from t to t' = t + r/uWarp
   ! uWarp must be faster than the fastest wave speed in the radial direction
   ! All characteristics need to point in the positive r direction
 
@@ -32,9 +32,9 @@ module ModTimeWarp
   real:: TempWarp = -1.0 ! dimensionless temperature of isothermal hydro
 
   ! Iterative scheme
-  logical:: UseIteration = .false.
-  integer:: MaxIteration = 0
-  real:: Tolerance = 0.0, IterationCoef = 0.0
+  logical:: UseIteration = .true.
+  integer:: MaxIteration = 20
+  real:: Tolerance = 1e-8
 
 contains
   !============================================================================
@@ -62,7 +62,6 @@ contains
        if(UseIteration)then
           call read_var("Tolerance", Tolerance)
           call read_var("MaxIteration", MaxIteration)
-          call read_var("IterationCoef", IterationCoef)
        end if
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
@@ -72,8 +71,8 @@ contains
   !============================================================================
   subroutine state_to_warp(iBlock)
 
-    ! Convert from State to State - Flux_x/uWarp
-    ! Isothermal HD only
+    ! Convert from State to State - Flux_r/uWarp
+    ! HD only for now
 
     integer, intent(in):: iBlock
 
@@ -96,27 +95,31 @@ contains
     real, intent(inout):: State_V(nVar)
     integer, intent(in):: i, j, k, iBlock
 
-    real:: Flux_V(nVar), Norm_D(3), RhoUr
-    ! Store temperature
+    real:: Flux_V(nVar), Norm_D(3), RhoUr, InvRho, p
     !--------------------------------------------------------------------------
-    if(TempWarp < 0) TempWarp = State_V(p_)/State_V(Rho_)
+    if(.not.UseIteration)then
+       ! Store temperature for isothermal hydro with analytic warp_to_state
+       if(TempWarp < 0) TempWarp = State_V(p_)/State_V(Rho_)
+    end if
     ! Store normalized warp speed
     if(uWarp < 0) uWarp = uWarpDim*Io2No_V(UnitU_)
+
     ! Calculate flux
     Flux_V = 0.0
+    InvRho = 1/State_V(Rho_)
+    p = State_V(p_)
     if(iDimWarp == 0)then
        ! radial direction is warped
        Norm_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
        RhoUr = sum(State_V(RhoUx_:RhoUz_)*Norm_D)
        Flux_V(Rho_) = RhoUr
-       Flux_V(RhoUx_:RhoUz_) = RhoUr*State_V(RhoUx_:RhoUz_)/State_V(Rho_) &
-            + State_V(p_)*Norm_D
-       Flux_V(p_) = RhoUr*TempWarp
+       Flux_V(RhoUx_:RhoUz_) = RhoUr*InvRho*State_V(RhoUx_:RhoUz_) + p*Norm_D
+       Flux_V(p_) = RhoUr*InvRho*p
     else
-       ! X direction is warped
+       ! iDim direction is warped
        Flux_V(Rho_) = State_V(RhoU_+iDimWarp)
-       Flux_V(RhoU_+iDimWarp) = State_V(RhoU_+iDimWarp)**2/State_V(Rho_) &
-            + State_V(p_)
+       Flux_V(RhoU_+iDimWarp) = InvRho*State_V(RhoU_+iDimWarp)**2 + p
+       Flux_V(p_) = State_V(RhoU_+iDimWarp)*InvRho*p
     end if
     ! Convert to warp variables
     State_V = State_V - Flux_V/uWarp
@@ -151,20 +154,25 @@ contains
       real, intent(inout):: Warp_V(nVar)
       integer, intent(in):: i, j, k, iBlock
 
+      real:: Jac_VV(nVar,nVar)
+
       integer:: iIter
       real:: StateIter_V(nVar), WarpIter_V(nVar)
       !------------------------------------------------------------------------
       StateIter_V = StateOld_VG(:,i,j,k) ! initial guess
       ! Iterate to obtain the solution
       do iIter = 1, MaxIteration
-         WarpIter_V = StateIter_V
          ! Convert StateIter_V to WarpIter_V = StateIter_V - F_r/uWarp
+         WarpIter_V = StateIter_V
          call state_to_warp_cell(WarpIter_V, i, j, k, iBlock)
          ! Check if we reached the desired accuracy
-         if(all(abs(Warp_V - WarpIter_V) <= Tolerance*abs(Warp_V))) EXIT
+         if(all(abs(Warp_V - WarpIter_V) <= &
+              Tolerance*(abs(Warp_V) + abs(WarpIter_V)))) EXIT
+
+         call get_jacobian(StateIter_V, WarpIter_V, Jac_VV)
 
          ! Nudge the solution based on the error
-         StateIter_V = StateIter_V + IterationCoef*(Warp_V - WarpIter_V)
+         StateIter_V = StateIter_V + matmul(Jac_VV, Warp_V - WarpIter_V)
       end do
       if(iIter > MaxIteration)then
          write(*,*) NameSub,': Warning, iteration did not succeed at'
@@ -176,10 +184,41 @@ contains
          write(*,*) NameSub,': WarpIter_V =', WarpIter_V
       end if
 
+      ! Fix pressure?
+      ! StateIter_V(p_) = TempWarp*StateIter_V(Rho_)
+
       ! Return the iterative solution
       Warp_V = StateIter_V
 
     end subroutine warp_to_state_cell1
+    !==========================================================================
+    subroutine get_jacobian(State_V, Warp_V, Jac_VV)
+
+      ! Calculate dU/dW as the inverse of dW/dU
+
+      use ModCoordTransform, ONLY: inverse_matrix
+      use ModNumConst, ONLY: i_DD
+
+      real, intent(in):: State_V(nVar), Warp_V(nVar)
+      real, intent(out):: Jac_VV(nVar,nVar)
+
+      real:: StateEps_V(nVar), WarpEps_V(nVar)
+      real, parameter:: Eps = 1e-6
+
+      integer:: iVar
+      !------------------------------------------------------------------------
+      ! Calculate dW/dU numerically
+      do iVar = 1, nVar
+         StateEps_V = State_V
+         StateEps_V(iVar) = StateEps_V(iVar) + Eps
+         WarpEps_V = StateEps_V
+         call state_to_warp_cell(WarpEps_V, i, j, k, iBlock)
+         Jac_VV(:,iVar) = (WarpEps_V - Warp_V)/Eps
+      end do
+      ! dU/dW = inverse(dW/dU)
+      Jac_VV = inverse_matrix(nVar, Jac_VV)
+
+    end subroutine get_jacobian
     !==========================================================================
     subroutine warp_to_state_cell2(State_V, i, j, k, iBlock)
 
@@ -226,5 +265,5 @@ contains
     !==========================================================================
   end subroutine warp_to_state
   !============================================================================
-end module ModTimeWarp
+end module ModTimewarp
 !==============================================================================
