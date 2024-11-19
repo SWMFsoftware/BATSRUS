@@ -14,6 +14,9 @@ NONE			TypeNormalization
 T			UseTimeWarp
 2.5			uWarp
 
+#WARPSCHEME
+F			UseIteration
+
 #GRIDBLOCKALL
 100			MaxBlock
 
