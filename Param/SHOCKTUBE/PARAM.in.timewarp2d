@@ -14,9 +14,6 @@ NONE			TypeNormalization
 T			UseTimeWarp
 2.5			uWarp
 
-#WARPSCHEME
-F			UseIteration
-
 #GRIDBLOCKALL
 100			MaxBlock
 
@@ -31,18 +28,12 @@ F			UseIteration
 -0.5			zMin
  0.5			zMax
 
-#NONCONSERVATIVE
-T			UseNonConservative
-
-#GAMMA
-1.0			Gamma
-
 #UNIFORMSTATE
-1.			LeftState Rho
-0.			LeftState Ux
-0.			LeftState Uy
-0.			LeftState Uz
-0.5			LeftState p
+1.			StateVar Rho
+0.			StateVar Ux
+0.			StateVar Uy
+0.			StateVar Uz
+0.5			StateVar p
 
 #BUMP
 Rho			NameVar
@@ -57,7 +48,7 @@ Rho			NameVar
 
 #BUMP
 p			NameVar
-2.5			Amplitude
+4.0			Amplitude
 20.0			WidthX
 20.0			WidthY
 -1.0			WidthZ
@@ -74,7 +65,7 @@ float			TypeBc4
 
 #TIMESTEPPING
 2			nStage
-0.8			CflExpl
+0.4			CflExpl
 
 #SCHEME
 2			nOrder
@@ -100,5 +91,5 @@ F			DoSaveRestart
 
 #STOP
 -1			MaxIteration
-60.0			tSimulationMax
+30.0			tSimulationMax
 

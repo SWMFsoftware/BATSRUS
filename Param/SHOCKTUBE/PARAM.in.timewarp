@@ -14,7 +14,7 @@ NONE			TypeNormalization
 
 #TIMEWARP
 T			UseTimeWarp
-8.0			uWarp
+6.0			uWarp
 
 #WARPDIM
 1			iDimWarp
@@ -77,4 +77,4 @@ F			DoSaveRestart
 
 #STOP
 -1			MaxIteration
-20.0			tSimulationMax
+9.0			tSimulationMax
