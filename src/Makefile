@@ -80,6 +80,7 @@ OBJECTS = \
 	ModParticles.o \
 	ModPartImplicit.o \
 	ModPartSteady.o \
+	ModPhysicalFlux.o \
 	ModPhysics.o \
 	ModPIC.o \
 	ModPlotBox.o \
