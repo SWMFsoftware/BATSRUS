@@ -127,6 +127,7 @@ module ModAdvance
   ! Block cell-centered MHD solution old state
   real, allocatable :: StateOld_VGB(:,:,:,:,:), StateOld_VG(:,:,:,:)
   !$acc declare create(StateOld_VGB, StateOld_VG)
+  !$omp threadprivate(StateOld_VG)
 
   ! Temporary storage on cell centers
   real, allocatable :: Tmp1_GB(:,:,:,:)
