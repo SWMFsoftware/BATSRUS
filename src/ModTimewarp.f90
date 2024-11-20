@@ -162,6 +162,7 @@ contains
     integer:: i, j, k
     character(len=*), parameter:: NameSub = 'warp_to_state'
     !--------------------------------------------------------------------------
+    call timing_start(NameSub)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
        if(UseIteration)then
@@ -170,6 +171,7 @@ contains
           call warp_to_state_cell2(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
        end if
     end do; end do; end do
+    call timing_stop(NameSub)
 
   contains
     !==========================================================================
