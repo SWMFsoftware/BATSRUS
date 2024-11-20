@@ -2,7 +2,7 @@ module ModPhysicalFlux
 
   use ModVarIndexes
   use ModBatsrusUtility, ONLY: stop_mpi
-  
+
   implicit none
 
   ! Calculate the physical flux from the input variables.
@@ -70,7 +70,7 @@ module ModPhysicalFlux
   ! This is an output of get_physical_flux
   real :: MhdFlux_V(RhoUx_:RhoUz_)
   !$omp threadprivate(MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V)
-  
+
 contains
   !============================================================================
   subroutine get_physical_flux(State_V, StateCons_V, Flux_V, Un_I, En)
@@ -104,7 +104,7 @@ contains
     use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
        AlfvenPlusFirst_, AlfvenPlusLast_, &
        GammaWave, UseWavePressure, UseWavePressureLtd
-    use ModTimewarp, ONLY: UseTimewarp, UseWarpCmax
+    use ModTimewarp, ONLY: UseTimewarp, UseWarpCmax, state_to_warp_cell
     use ModTurbulence, ONLY: IsOnAwRepresentative
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
@@ -119,7 +119,7 @@ contains
     real, intent(out):: Flux_V(nFlux)      ! fluxes for all states
     real, intent(out):: Un_I(nFluid+1)     ! normal velocities
     real, intent(out):: En                 ! normal electric field
-    
+
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz, AlfvenSpeed
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
@@ -198,8 +198,8 @@ contains
     end do
 
     ! Convert conservative variables to Warp variables
-!    if(UseTimeWarp .and. UseWarpCmax) call state_to_warp_cell(StateCons_V, &
-!         iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
+    if(UseTimeWarp .and. UseWarpCmax) call state_to_warp_cell(StateCons_V, &
+         iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
 
     ! The extra fluxes should be added at the same time as fluid 1 fluxes
     if(iFluidMin /= 1) RETURN
@@ -370,7 +370,7 @@ contains
       Uz      = State_V(Uz_)
       p       = State_V(p_)
       InvClight2Face = InvClightFace**2
-      
+
       ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
       ! anisotropic Pe, Peperp contributes
       if (UseElectronPressure .and. .not. UseAnisoPe) then
@@ -527,7 +527,7 @@ contains
       UnPlus = UxPlus*NormalX + UyPlus*NormalY + UzPlus*NormalZ
 
       if(HallCoeff > 0.0)then
-         ! The ion mass per charge that is contained in HallCoef 
+         ! The ion mass per charge that is contained in HallCoef
          ! (and HallJ*) is normalized to be divided with the total
          ! mass density.
          InvRho = 1/sum(State_V(iRhoIon_I))
@@ -996,7 +996,7 @@ contains
             write(*,*) NameSub, ' after aniso flux:'
             write(*,*) 'DpPerB =', DpPerB
             write(*,*) 'FullBx =', FullBx*DpPerB
-            write(*,*) 'FullBy =', FullBy*DpPerB            
+            write(*,*) 'FullBy =', FullBy*DpPerB
             write(*,*) 'FullBz =', FullBz*DpPerB
             write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
             write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)

@@ -105,7 +105,7 @@ module ModFaceFlux
 
   integer, public :: iTestSide = -1
   !$omp threadprivate(iTestSide)
-  
+
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
   integer, parameter :: nFluxMhd = 9
@@ -138,13 +138,13 @@ module ModFaceFlux
 
   real :: InvDxyz
   !$omp threadprivate(InvDxyz)
-  
+
   ! Solve scalar advection equation
   logical :: UseScalar = .false.
 
   logical :: DoClightWarning     = .true.
   real    :: FactorClightWarning = 2.0
-  
+
   ! Direction of the face iDimFace = iDim
   integer :: iDimFace
   !$omp threadprivate( iDimFace )
