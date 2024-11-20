@@ -1133,7 +1133,6 @@ contains
     use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB
     use ModResistivity,  ONLY: UseHeatExchange
 
-
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP, iGang
     real :: GammaTmp
     real :: DtLocal
@@ -1455,11 +1454,12 @@ contains
 #ifndef _OPENACC
     use BATL_lib,        ONLY: store_face_flux
 #endif
-    use BATL_lib,        ONLY: CellVolume_GB
+    use BATL_lib,        ONLY: CellVolume_GB, IsCartesianGrid
     use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure, &
          iTypeUpdate, UpdateOrig_
-    use ModFaceGradient, ONLY: get_face_gradient, set_block_field3
+    use ModFaceGradient, ONLY: get_face_gradient_simple, set_block_field3, &
+         set_block_jacobian_face
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModMain,         ONLY: nI, nJ, nK
@@ -1477,16 +1477,18 @@ contains
 
     integer :: iDim, i, j, k, Di, Dj, Dk, iGang
     real :: FaceGrad_D(MaxDim)
-    logical :: IsNewBlockHeatCond, UseFirstOrderBc
+    logical :: UseFirstOrderBc
 
     real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_heat_conduction_rhs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    IsNewBlockHeatCond = .true.
     UseFirstOrderBc = UseFieldLineThreads.and.IsBoundary_B(iBlock)
 
 #ifdef _OPENACC
@@ -1496,6 +1498,9 @@ contains
 #endif
 
     call set_block_field3(iBlock, 1, Scalar1_G, StateImpl_VG)
+    if(.not.IsCartesianGrid) &
+         call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, &
+         UseFirstOrderBc)
 
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
@@ -1504,9 +1509,9 @@ contains
        do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
 
           ! Second-order accurate electron temperature gradient
-          call get_face_gradient(iDim, i, j, k, iBlock, &
-               IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D, &
-               UseFirstOrderBcIn=UseFirstOrderBC, DoCorrectIn=.false.)
+          call get_face_gradient_simple(iDim, i, j, k, iBlock, &
+               StateImpl_VG, FaceGrad_D, DcoordDxyz_DDFD, &
+               UseFirstOrderBcIn=UseFirstOrderBC)
           FluxImpl_VFDI(iTeImpl,i,j,k,iDim,iGang) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
 
