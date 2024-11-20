@@ -2212,10 +2212,10 @@ contains
     use ModVarIndexes, ONLY: nVar, Energy_
     use ModMain,     ONLY: x_, y_, z_
     use ModAdvance,  ONLY: nFlux
-    use ModFaceFlux, ONLY: &
-         set_block_values, set_cell_values, get_physical_flux
 #ifndef _OPENACC
-    use ModFaceFlux, ONLY: iFace, jFace, kFace, DoTestCell, &
+    use ModFaceFlux, ONLY: &
+         set_block_values, set_cell_values, get_physical_flux, &
+         iFace, jFace, kFace, DoTestCell, &
          HallJx, HallJy, HallJz, UseHallGradPe, B0x, B0y, B0z, Area
 #endif
     use ModHallResist, ONLY: UseHallResist, HallJ_CD
