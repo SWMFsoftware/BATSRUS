@@ -1603,9 +1603,7 @@ contains
     ! since this works on temperature and not energy or pressure,
 
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
-#ifndef _OPENACC
     use ModFaceGradient, ONLY: set_block_jacobian_face
-#endif
     use ModImplicit,     ONLY: UseNoOverlap, nStencil, iTeImpl
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
@@ -1619,9 +1617,7 @@ contains
     integer :: i, j, k, iDim, Di, Dj, Dk
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
 
-#ifndef _OPENACC
     real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
-#endif
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_jacobian_heat_cond'
@@ -1657,23 +1653,20 @@ contains
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
 
-#ifndef _OPENACC
     if(.not.IsCartesianGrid) &
          call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
-#endif
 
     ! the transverse diffusion is ignored in the Jacobian
     do iDim = 1, nDim
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        !$acc loop vector collapse(3) independent &
-       !$acc private(Coeff, DiffLeft, DiffRight)
+       !$acc private(Coeff, DiffLeft, DiffRight, InvDxyzVol_D)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
           if(IsCartesianGrid)then
              DiffLeft = Coeff*HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)
              DiffRight = Coeff*HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
           else
-#ifndef _OPENACC
              InvDxyzVol_D = DcoordDxyz_DDFD(iDim,:nDim,i,j,k,iDim)*Coeff
              DiffLeft = sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyzVol_D)
 
@@ -1681,7 +1674,6 @@ contains
                   *Coeff
              DiffRight = &
                   sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyzVol_D)
-#endif
           end if
 
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
