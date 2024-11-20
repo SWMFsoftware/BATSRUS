@@ -74,9 +74,6 @@ module ModFaceFlux
   ! Neutral fluids may use different flux function
   character(len=10), public:: TypeFluxNeutral = 'default'
 
-  real, public:: Area = 0.0
-  !$omp threadprivate(Area)
-
   ! Logicals so we don't need string comparisons
   logical, public:: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
        DoAw, DoRoeOld, DoRoe
@@ -158,6 +155,7 @@ module ModFaceFlux
   real, public :: CmaxDt
   !$omp threadprivate( CmaxDt )
 
+  real, public:: Area = 0.0
   real :: Area2, AreaX, AreaY, AreaZ
   !$omp threadprivate(Area, Area2, AreaX, AreaY, AreaZ)
 

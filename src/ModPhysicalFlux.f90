@@ -25,7 +25,7 @@ module ModPhysicalFlux
   ! Variables needed for Hall resistivity
   real :: HallCoeff = 0.0
   real :: HallJx = 0.0, HallJy = 0.0, HallJz = 0.0
-  !$omp threadprivate(HallCoeff, HallJx, HallJy, HallJz, UseHallGradPe)
+  !$omp threadprivate(HallCoeff, HallJx, HallJy, HallJz)
 
   ! Variables needed for Biermann battery term
   logical, public :: UseHallGradPe = .false.
@@ -69,7 +69,7 @@ module ModPhysicalFlux
 
   ! This is an output of get_physical_flux
   real :: MhdFlux_V(RhoUx_:RhoUz_)
-  !$omp threadprivate(MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V)
+  !$omp threadprivate(MhdFlux_V)
 
 contains
   !============================================================================
