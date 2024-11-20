@@ -63,8 +63,12 @@ module ModPointImplicit
 
   private ! except
 
-  public:: init_mod_point_impl
-  public:: clean_mod_point_impl
+  public:: init_mod_point_impl       ! initialize module
+  public:: clean_mod_point_impl      ! clean module
+  public:: update_point_implicit     ! do update with point implicit scheme
+  public:: read_point_implicit_param ! read parameters
+  public:: init_point_implicit_num   ! initialize solver
+  public:: linear_equation_solver    ! solve a linear problem
 
   ! Default is true for multi-ion and ion-electron equations
   logical, public:: UsePointImplicit = UseMultiIon .or. UseEfield
@@ -90,10 +94,6 @@ module ModPointImplicit
        EpsPointImpl_V(:)          ! absolute perturbation per variable
   real, public    :: EpsPointImpl ! relative perturbation
   !$omp threadprivate( DsDu_VVC )
-
-  public:: update_point_implicit    ! do update with point implicit scheme
-  public:: read_point_implicit_param
-  public:: init_point_implicit_num
 
   ! Local variables
   ! Number of point implicit variables
@@ -525,29 +525,34 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_point_implicit
   !============================================================================
-  subroutine linear_equation_solver(nVar, Matrix_VV, Rhs_V)
+  subroutine linear_equation_solver(nVar, Matrix_VV, Rhs_V, DoLuIn)
 
     integer, intent(in) :: nVar
     real, intent(inout) :: Matrix_VV(nVar, nVar)
     real, intent(inout) :: Rhs_V(nVar)
+    logical, intent(in), optional:: DoLuIn
 
     ! This routine solves the system of Nvar linear equations:
     !
-    !               Matrix_VV*dUCell = Rhs_V.
+    !               Matrix_VV*X = Rhs_V.
     !
     ! The result is returned in Rhs_V, the matrix is overwritten
     ! with the LU decomposition.
     !
-    ! The routine performs a lower-upper (LU) decomposition of the
-    ! square matrix Matrix_VV of rank Nvar and then uses forward and
-    ! backward substitution to obtain the solution vector dUCell.
+    ! 1. The routine performs a lower-upper (LU) decomposition of the
+    ! square matrix Matrix_VV of rank Nvar unless DoLuIn is present and false.
     ! Crout's method with partial implicit pivoting is used to perform
     ! the decompostion.
+    !
+    ! 2. Apply forward and backward substitution to obtain the solution
+    ! vector X returned into Rhs_V.
 
+    logical:: DoLu
     integer, parameter :: MaxVar = 100
     real, parameter :: cTiny=1.0E-20
 
-    integer :: iL, iI, iLMax, jL, kL, lL, i_I(MaxVar)
+    integer :: i_I(MaxVar) = 0            ! pivoting, saved from LU
+    integer :: iL, iI, iLMax, jL, kL, lL
     real    :: Scaling_I(MaxVar), LhsMax, LhsTemp, TotalSum
 
     character(len=*), parameter:: NameSub = 'linear_equation_solver'
@@ -555,58 +560,62 @@ contains
     if(nVar > MaxVar) call stop_mpi(&
          'ERROR in ModPointImplicit linear solver: MaxVar is too small')
 
-    ! Loop through each row to get implicit Scaling_I
-    ! information.
-    do iL = 1, nVar
-       LhsMax = 0.0
-       do jL = 1, nVar
-          if (abs(Matrix_VV(iL,jL)) > LhsMax) LhsMax = abs(Matrix_VV(iL,jL))
-       end do
-       Scaling_I(iL) = 1.0/LhsMax
-    end do
+    DoLu = .true.
+    if(present(DoLuIn)) DoLU = DoLuIn
 
-    ! Peform the LU decompostion using Crout's method.
-    do jL = 1, nVar
-       do iL = 1, jL-1
-          TotalSum = Matrix_VV(iL,jL)
-          do kL = 1, iL-1
-             TotalSum = TotalSum-Matrix_VV(iL,kL)*Matrix_VV(kL,jL)
+    if(DoLu)then
+       ! Loop through each row to get implicit Scaling_I information.
+       do iL = 1, nVar
+          LhsMax = 0.0
+          do jL = 1, nVar
+             if (abs(Matrix_VV(iL,jL)) > LhsMax) LhsMax = abs(Matrix_VV(iL,jL))
           end do
-          Matrix_VV(iL,jL) = TotalSum
+          Scaling_I(iL) = 1.0/LhsMax
        end do
-       LhsMax = 0.0
-       do iL = jL, nVar
-          TotalSum = Matrix_VV(iL,jL)
-          do kL = 1, jL-1
-             TotalSum = TotalSum-Matrix_VV(iL,kL)*Matrix_VV(kL,jL)
+
+       ! Peform the LU decompostion using Crout's method.
+       do jL = 1, nVar
+          do iL = 1, jL-1
+             TotalSum = Matrix_VV(iL,jL)
+             do kL = 1, iL-1
+                TotalSum = TotalSum-Matrix_VV(iL,kL)*Matrix_VV(kL,jL)
+             end do
+             Matrix_VV(iL,jL) = TotalSum
           end do
-          Matrix_VV(iL,jL) = TotalSum
-          LhsTemp = Scaling_I(iL)*abs(TotalSum)
-          if (LhsTemp >=  LhsMax) then
-             iLMax = iL
-             LhsMax = LhsTemp
+          LhsMax = 0.0
+          do iL = jL, nVar
+             TotalSum = Matrix_VV(iL,jL)
+             do kL = 1, jL-1
+                TotalSum = TotalSum - Matrix_VV(iL,kL)*Matrix_VV(kL,jL)
+             end do
+             Matrix_VV(iL,jL) = TotalSum
+             LhsTemp = Scaling_I(iL)*abs(TotalSum)
+             if (LhsTemp >=  LhsMax) then
+                iLMax = iL
+                LhsMax = LhsTemp
+             end if
+          end do
+          if (jL /=  iLMax) then
+             do kL = 1, nVar
+                LhsTemp = Matrix_VV(iLMax,kL)
+                Matrix_VV(iLMax,kL) = Matrix_VV(jL,kL)
+                Matrix_VV(jL,kL) = LhsTemp
+             end do
+             Scaling_I(iLMax) = Scaling_I(jL)
+          end if
+          i_I(jL) = iLMax
+          if (abs(Matrix_VV(jL,jL)) == 0.0) Matrix_VV(jL,jL) = cTiny
+          if (jL /=  nVar) then
+             LhsTemp = 1.0/Matrix_VV(jL,jL)
+             do iL = jL+1, nVar
+                Matrix_VV(iL,jL) = Matrix_VV(iL,jL)*LhsTemp
+             end do
           end if
        end do
-       if (jL /=  iLMax) then
-          do kL = 1, nVar
-             LhsTemp = Matrix_VV(iLMax,kL)
-             Matrix_VV(iLMax,kL) = Matrix_VV(jL,kL)
-             Matrix_VV(jL,kL) = LhsTemp
-          end do
-          Scaling_I(iLMax) = Scaling_I(jL)
-       end if
-       i_I(jL) = iLMax
-       if (abs(Matrix_VV(jL,jL)) == 0.0) Matrix_VV(jL,jL) = cTiny
-       if (jL /=  nVar) then
-          LhsTemp = 1.0/Matrix_VV(jL,jL)
-          do iL = jL+1, nVar
-             Matrix_VV(iL,jL) = Matrix_VV(iL,jL)*LhsTemp
-          end do
-       end if
-    end do
 
-    ! Peform the forward and back substitution to obtain
-    ! the solution vector.
+    end if ! DoLu
+
+    ! Peform forward and back substitution to obtain the solution vector.
     iI = 0
     do iL = 1, nVar
        lL = i_I(iL)
@@ -614,7 +623,7 @@ contains
        Rhs_V(lL) = Rhs_V(iL)
        if (iI /=  0) then
           do jL = iI, iL-1
-             TotalSum = TotalSum-Matrix_VV(iL,jL)*Rhs_V(jL)
+             TotalSum = TotalSum - Matrix_VV(iL,jL)*Rhs_V(jL)
           end do
        else if (TotalSum /=  0.0) then
           iI = iL
@@ -624,7 +633,7 @@ contains
     do iL = nVar, 1, -1
        TotalSum = Rhs_V(iL)
        do jL = iL+1, nVar
-          TotalSum = TotalSum-Matrix_VV(iL,jL)*Rhs_V(jL)
+          TotalSum = TotalSum - Matrix_VV(iL,jL)*Rhs_V(jL)
        end do
        Rhs_V(iL) = TotalSum/Matrix_VV(iL,iL)
     end do
