@@ -6,6 +6,7 @@ module ModUpdateState
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
        iVarTest, iComm, Used_GB, CellVolume_GB, Xyz_DGB
+  use ModGeometry, ONLY: r_GB
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
   use ModB0, ONLY: B0_DGB
@@ -477,6 +478,7 @@ contains
 
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
+      use ModTimewarp, ONLY: UseTimeWarp, state_to_warp, warp_to_state
 
       integer, intent(in):: iBlock
       logical, intent(in):: DoTest
@@ -486,6 +488,9 @@ contains
 
       ! true if the update is State = StateOld + Source
       logical:: DoAddToStateOld
+
+      ! true if StateOld is changed before the update
+      logical:: DoChangeStateOld
 
       ! True if the cell is non-conservative
       logical:: IsNonConservative
@@ -502,6 +507,9 @@ contains
       real, allocatable, save:: s_IC(:,:,:,:)
       !------------------------------------------------------------------------
       DoAddToStateOld = UseHalfStep .or. nStage == 1 .or. nStage == 4
+
+      ! Store StateOld so it can be recovered after the update
+      StateOld_VG = StateOld_VGB(:,:,:,:,iBlock)
 
       ! Allocate ion (perpendicular) entropy array for each ion fluid
       if( (UseAnisoShockHeating .or. UseElectronShockHeating &
@@ -632,6 +640,8 @@ contains
               NameSub, ' after mhd_to_boris                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
+
+      if(UseTimeWarp) call state_to_warp(iBlock)
 
       ! Move energy source terms to pressure index as needed
       ! Ions first
@@ -799,6 +809,11 @@ contains
            NameSub, ' after flux/source                   =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
+      ! Recover StateOld_VGB
+      StateOld_VGB(:,:,:,:,iBlock) = StateOld_VG
+
+      if(UseTimeWarp) call warp_to_state(iBlock)
+
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          ! Convert relativistic momentum/energy back to classical
          call boris_to_mhd(iBlock)
@@ -814,10 +829,6 @@ contains
          ! Pe = Se*Rho^(GammaE-1)
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-
-            StateOld_VGB(Pe_,i,j,k,iBlock) = StateOld_VGB(Se_,i,j,k,iBlock) &
-                 *sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
-                 **GammaElectronMinus1
             if(State_VGB(Pe_,i,j,k,iBlock) > 0.0) &
                  State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Se_,i,j,k,iBlock) &
                  *max(0.0, &
@@ -831,27 +842,12 @@ contains
          if(UseAnisoPressure)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
                if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-               b_D = StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)
-               if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-               FullB2 = max(1e-30, sum(b_D**2))
-               FullB  = sqrt(FullB2)
-               ! Convert parallel and perpendicular entropies back to pressures
-               ! Ppar = (rho^2/B^2)*Spar
-               StateOld_VGB(iPparIon_I,i,j,k,iBlock) = &
-                    StateOld_VGB(iRhoIon_I,i,j,k,iBlock)**2/FullB2 &
-                    *StateOld_VGB(iSparIon_I,i,j,k,iBlock)
 
                IsNonConservative = UseNonConservative
                if(nConservCrit > 0)then
                   IsNonConservative = IsNonConservative .and. &
                        .not. IsConserv_CB(i,j,k,iBlock)
                end if
-
-               ! P = (Ppar + 2*Sperp*B)/3
-               if(IsNonConservative) &
-                    StateOld_VGB(iPIon_I,i,j,k,iBlock) = cThird* &
-                    ( StateOld_VGB(iPparIon_I,i,j,k,iBlock) &
-                    + 2*FullB*StateOld_VGB(iPIon_I,i,j,k,iBlock))
 
                b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
@@ -860,6 +856,7 @@ contains
                State_VGB(iPparIon_I,i,j,k,iBlock) = &
                     State_VGB(iRhoIon_I,i,j,k,iBlock)**2/FullB2 &
                     *State_VGB(iPparIon_I,i,j,k,iBlock)
+
                ! P = (Ppar + 2*Sperp*B)/3
                if(IsNonConservative)then
                   if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest) &
@@ -880,9 +877,6 @@ contains
                   ! Do not convert entropy back in conservative cells
                   if(IsConserv_CB(i,j,k,iBlock)) CYCLE
                end if
-               StateOld_VGB(iP_I,i,j,k,iBlock) = &
-                    StateOld_VGB(iP_I,i,j,k,iBlock) &
-                    *StateOld_VGB(iRho_I,i,j,k,iBlock)**GammaMinus1_I
                State_VGB(iP_I,i,j,k,iBlock) = State_VGB(iP_I,i,j,k,iBlock) &
                     *State_VGB(iRho_I,i,j,k,iBlock)**GammaMinus1_I
             end do; end do; end do
@@ -974,7 +968,6 @@ contains
 
       ! Convert energy back to pressure as needed
       call energy_to_pressure(iBlock, State_VGB)
-      call energy_to_pressure(iBlock, StateOld_VGB, IsOld=.true.)
 
       if(DoTest)write(*,'(2x,2a,es20.12)') &
            NameSub, ' after pressure/energy update        =', &

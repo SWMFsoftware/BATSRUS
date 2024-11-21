@@ -148,6 +148,7 @@ contains
     use ModCoarseAxis, ONLY: read_coarse_axis_param
     use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
          UseBorisSimple, UseBorisRegion, init_mod_boris_correction
+    use ModTimewarp, ONLY: read_timewarp_param
     use ModUserInterface ! user_read_inputs, user_init_session
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
@@ -742,6 +743,9 @@ contains
 
        case("#UPDATECHECK", "#SHOCKHEATING")
           call read_update_param(NameCommand, UseStrict)
+
+       case("#TIMEWARP", "#WARPDIM", "#WARPCMAX", "#WARPSCHEME")
+          call read_timewarp_param(NameCommand)
 
        case("#ANISOTROPICPRESSURE")
           do iFluid = 1, nFluid

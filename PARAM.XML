@@ -126,6 +126,79 @@ to accelerate the convergence towards steady state.
 The default is time accurate mode.
 </command>
 
+<command name="TIMEWARP">
+  <parameter name="UseTimeWarp" type="logical" default="F"/>
+  <parameter name="uWarp" type="real" min="0" default="0" if="$UseTimeWarp"/>
+
+#TIMEWARP
+T			UseTimeWarp
+10.0			uWarp (read if UseTimeWarp is true)
+
+For now this feature is experimental. The goal is to solve
+the equations in a coordinate system where time is
+shifted with the X (or R) coordinate as t' = t + x/uWarp,
+where uWarp is a positive speed larger than the fastest
+characteristic speed in dimensional units.
+Time warping works only if the flow is supersonic/superfast at the
+outer boundaries, so all characterisitcs are moving
+towards positive X (or R). If iDimWarp is set to 1, the
+warpspeed is in the X direction, while iDimWarp = 0 means
+that the warp speed is radial.
+
+The default is UseTimeWarp false.
+</command>
+
+<command name="WARPDIM">
+  <parameter name="iDimWarp" type="integer" min="0" max="3" default="0"/>
+
+#WARPDIM
+1			iDimWarp
+
+Direction of time warping, it it is switched on (see #TIMEWARP).
+The iDimWarp=0 setting means radial direction, while 1 to 3
+corresponds to the X, Y, and Z directions, respectively.
+
+Default is 0.
+</command>
+
+<command name="WARPCMAX">
+   <parameter name="UseWarpCmax" type="logical" default="T"/>
+
+#WARPCMAX
+F			UseWarpCmax
+
+If UseWarpCmax is true then use the maximum speed of the warped variables
+times the jump in the warped variables in the numerical flux.
+If UseWarpCmax is false, use the original maximum speed with the jump
+in the original variables.
+
+Default value is true.
+</command>
+
+<command name="WARPSCHEME">
+  <parameter name="UseIteration" type="logical" default="T"/>
+  <if expr="$UseIteration">
+    <parameter name="Tolerance" type="real" min="0" default="1e-8"/>
+    <parameter name="MaxIteration" type="integer" min="1" default="20"/>
+  </if>
+#WARPSCHEME
+T			UseIteration
+1e-8			Tolerance     (rest is read if UseIteration is true)
+20			MaxIteration
+
+If UseIteration is false, the conversion from the warped variables
+W=U-F_r/uWarp back to normal state variable U is analytic.
+Currently this option only works for isothermal hydrodynamics.
+
+If UseIteration is true, then an iterative scheme is used.
+The Tolerance parameter sets if the iterative solution Witer is close
+enough to W. Iis now a simple constant for all variables in W.
+MaxIteration limits the number of iterations performed to reach
+the tolerance. If MaxIteration is 1 then the scheme is linearized in dU/dW.
+
+Default values are shown above.
+</command>
+
 <command name="SUBCYCLING" alias="LOCALTIMESTEP">
   <parameter name="UseSubcycling" type="logical" default="F" />
   <parameter name="UseMaxTimeStep" type="logical" default="T"
@@ -10875,13 +10948,13 @@ Default values are shown above.
   </parameter>
   <parameter name="Tolerance" type="real" min="0" default="1e-6"/>
   <parameter name="MaxIter" type="integer" min="1" default="20"/>
-	 
+
 #THREADEDBC
-T	  UseAlignedVelocity
-F         DoConvergenceCheck
-limited   TypeBc             first/second/limited
-1e-6      Tolerance          (optional)
-20        MaxIteration       (optional)
+T			UseAlignedVelocity
+F			DoConvergenceCheck
+limited			TypeBc (first/second/limited)
+1e-6			Tolerance
+20			MaxIter
 
 This command sets things for the threaded field line algorithm.
 Ask Igor Sokolov if you want to learn more.

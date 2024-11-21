@@ -177,17 +177,17 @@ T			UseOhNeutralBc
 #USERINPUTBEGIN -----------------------------------
 
 #GLOBALHELIOSPHERE
-30.			rBody
+1.0			rBody
 
 #SOLARWINDH
-0.00874			SWH_N_dim [n/cc]
-1.0868E5		SWH_T_dim [K]
-417.07			SWH_Ux_dim [km/s]
-0.0			SWH_Uy_dim [km/s]
-0.0			SWH_Uz_dim [km/s]
-7.17E-03		SWH_Bx_dim [nT]
-0.0			SWH_By_dim [nT]
-0.0			SWH_Bz_dim [nT]
+7.866                    SWH_rho_dim [n/cc]
+1.007E5                 SWH_T_dim [K]
+433.                  SWH_Ux_dim [km/s]
+0.0                     SWH_Uy_dim [km/s]
+0.0                     SWH_Uz_dim [km/s]
+6.453                     SWH_Bx_dim [nT]
+0.0                     SWH_By_dim [nT]
+0.0                     SWH_Bz_dim [nT]
 
 #VLISW
 0.06			VLISW_N_dim [n/cc]
@@ -204,7 +204,7 @@ LindsayStebbings	NameCrossSection
 
 #REGIONS
 SingleIon		NameRegionFormula
-6.E5			TempPop1LimitDim
+3.27E5			TempPop1LimitDim
 100.0			uPop1LimitDim
 0.9			MachPop2Limit
 1.5			MachPop3Limit

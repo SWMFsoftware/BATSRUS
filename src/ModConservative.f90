@@ -21,6 +21,7 @@ module ModConservative
   public:: set_non_conservative   ! set fully non-conservative scheme
   public:: select_conservative    ! select cells to use conservative update
   public:: read_conservative_param
+  public:: is_conserv             ! return true for conservative cell
 
   ! Conservative/Non-conservative parameters
   logical, public :: UseNonConservative = .false.
@@ -153,6 +154,32 @@ contains
     end select
 
   end subroutine read_conservative_param
+  !============================================================================
+  logical function is_conserv(i, j, k, iBlock, iFluid)
+
+    use ModMultiFluid, ONLY: nIonFluid, UseNeutralFluid, DoConserveNeutrals
+
+    ! Return true if cell is conservative for fluid iFluid (default is 1)
+
+    integer, intent(in):: i, j, k, iBlock
+    integer, intent(in), optional:: iFluid
+    !--------------------------------------------------------------------------
+    ! Check for neutral fluid first
+    if(UseNeutralFluid .and. present(iFluid))then
+       if(iFluid > nIonFluid)then
+          is_conserv = DoConserveNeutrals
+          RETURN
+       end if
+    end if
+    if(nConservCrit < 1)then
+       ! pure conservative or non-conservative
+       is_conserv = .not.UseNonConservative
+    else
+       ! mixed conservative / non-conservative
+       is_conserv = IsConserv_CB(i,j,k,iBlock)
+    end if
+
+  end function is_conserv
   !============================================================================
   subroutine select_conservative
 

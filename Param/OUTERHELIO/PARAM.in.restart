@@ -117,17 +117,17 @@ T			UseOhNeutralBc
 #USERINPUTBEGIN -----------------------------------
 
 #GLOBALHELIOSPHERE
-30.			rBody
+1.0			rBody
 
 #SOLARWINDH
-0.00874			SWH_N_dim [n/cc]
-1.0868E5		SWH_T_dim [K]
-417.07			SWH_Ux_dim [km/s]
-0.0			SWH_Uy_dim [km/s]
-0.0			SWH_Uz_dim [km/s]
-7.17E-03		SWH_Bx_dim [nT]
-0.0			SWH_By_dim [nT]
-0.0			SWH_Bz_dim [nT]
+7.866                    SWH_rho_dim [n/cc]
+1.007E5                 SWH_T_dim [K]
+433.                  SWH_Ux_dim [km/s]
+0.0                     SWH_Uy_dim [km/s]
+0.0                     SWH_Uz_dim [km/s]
+6.453                     SWH_Bx_dim [nT]
+0.0                     SWH_By_dim [nT]
+0.0                     SWH_Bz_dim [nT]
 
 #VLISW
 0.06			VLISW_N_dim [n/cc]
@@ -141,7 +141,7 @@ T			UseOhNeutralBc
 
 #REGIONS
 SingleIon		NameRegionFormula
-6.E5			TempPop1LimitDim
+3.27E5			TempPop1LimitDim
 100.0			uPop1LimitDim
 0.9			MachPop2Limit
 1.5			MachPop3Limit
@@ -184,25 +184,43 @@ ascii			TypeFile
 #TIMEACCURATE
 T  			IsTimeAccurate
 
+#FIXEDTIMESTEP
+T			UseDtFixed
+0.01 year		DtFixedDim [sec] (read if UseDtFixed is true)
+
 #SAVEPLOT
 1			nPlotFile
 y=0 MHD idl		StringPlot
 -1			DnSavePlot
-0.001 year		DtSavePlot
+0.1 year		DtSavePlot
 -1.0			DxSavePlot
+
+#MINIMUMPRESSURE
+1.E-23			pMinDim
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
+
+#MINIMUMDENSITY
+1.E-9			RhoMinDim
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
 
 #USERINPUTBEGIN -----------------------------------
 
 #REGIONS
 LevelSet		NameRegionFormula
 0                       LevelHPLimit
-1			MachPop2Limit
-1			MachPop4Limit
+1.5			MachPop2Limit
+1.2			MachPop4Limit
 
 #USERINPUTEND -------------------------------------
 
 #STOP
 -1			MaxIteration
-0.01 year		tSimulationMax
+0.5 year		tSimulationMax
 
 #END

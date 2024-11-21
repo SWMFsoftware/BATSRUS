@@ -611,9 +611,11 @@ contains
     real,    intent(in) :: XyzSm_DI(3,nMag)
     real,    intent(out):: dBHall_DI(3,nMag), dBPedersen_DI(3,nMag)
 
-    real:: XyzIono_D(3), dXyz_D(3)
+    real:: XyzIono_D(3), dXyz_D(3), Cross_D(3)
     integer:: iMag, i, j, iLine
     real:: Coef0, Coef
+    !$acc declare create(XyzIono_D, dXyz_D, Cross_D, Coef0, &
+    !$acc Coef, iLine)
     ! real:: Surface ! CHECK integral
 
     logical:: DoTest
@@ -645,26 +647,30 @@ contains
     !$acc parallel copyin(nMag, XyzSm_DI, ThetaIono_I, PhiIono_I, SinTheta_I, &
     !$acc rIonosphere, dThetaIono, dPhiIono, HallJ_DII, PedersenJ_DII) &
     !$acc copy(dBHall_DI, dBPedersen_DI)
-    iLine = 0
-    !$acc loop seq collapse(2)
-    do j = 1, nPhiIono-1; do i = 2, nThetaIono-1
 
-       iLine = iLine + 1
-       ! distribute the work among the BATSRUS processors
-       if(mod(iLine, nProc) /= iProc)CYCLE
+    ! acc loop gang collapse(2) reduction(+:dBHall_DI,dBPedersen_DI)
 
-       ! Get Cartesian coordinates for the ionospheric grid point
-       call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
-
-       ! 1/4pi times the area of a surface element
-       Coef0 = 1/(4*cPi)*rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)
-
-       ! CHECK
-       ! Surface = Surface + Coef0
-
-       ! acc loop gang worker vector private(dXyz_D, Coef)
-       !$acc loop vector private(dXyz_D, Coef)
+    !$acc loop vector gang collapse(3) &
+    !$acc private(XyzIono_D, Coef0, dXyz_D, Coef, Cross_D)
+    do j = 1, nPhiIono - 1; do i = 2, nThetaIono - 1
        do iMag = 1, nMag
+
+          iLine = (j - 1)*(nThetaIono - 2) + i - 1
+          ! distribute the work among the BATSRUS processors
+          if(mod(iLine, nProc) /= iProc)CYCLE
+
+          ! Get Cartesian coordinates for the ionospheric grid point
+          call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
+
+          ! 1/4pi times the area of a surface element
+          Coef0 = 1/(4*cPi)*rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)
+
+          ! CHECK
+          ! Surface = Surface + Coef0
+
+          ! acc loop gang worker vector private(dXyz_D, Coef)
+          ! acc reduction(+:dBHall_DI,dBPedersen_DI)
+
           ! Distance vector between magnetometer position
           ! and ionosphere surface element
           dXyz_D = XyzSm_DI(:,iMag) - XyzIono_D
@@ -673,10 +679,26 @@ contains
           Coef = Coef0/norm2(dXyz_D)**3
 
           ! Do Biot-Savart integral: dB = j x d/(4pi|d|^3) dA  (mu0=1)
-          dBHall_DI(:,iMag)     = dBHall_DI(:,iMag) + &
-               Coef*cross_prod(HallJ_DII(:,i,j), dXyz_D)
-          dBPedersen_DI(:,iMag) = dBPedersen_DI(:,iMag) + &
-               Coef*cross_prod(PedersenJ_DII(:,i,j), dXyz_D)
+          Cross_D = cross_prod(HallJ_DII(:,i,j), dXyz_D)
+          !$acc atomic update
+          dBHall_DI(1,iMag)     = dBHall_DI(1,iMag) + Coef*Cross_D(1)
+          !$acc end atomic
+          !$acc atomic update
+          dBHall_DI(2,iMag)     = dBHall_DI(2,iMag) + Coef*Cross_D(2)
+          !$acc end atomic
+          !$acc atomic update
+          dBHall_DI(3,iMag)     = dBHall_DI(3,iMag) + Coef*Cross_D(3)
+          !$acc end atomic
+          Cross_D = cross_prod(PedersenJ_DII(:,i,j), dXyz_D)
+          !$acc atomic update
+          dBPedersen_DI(1,iMag) = dBPedersen_DI(1,iMag) + Coef*Cross_D(1)
+          !$acc end atomic
+          !$acc atomic update
+          dBPedersen_DI(2,iMag) = dBPedersen_DI(2,iMag) + Coef*Cross_D(2)
+          !$acc end atomic
+          !$acc atomic update
+          dBPedersen_DI(3,iMag) = dBPedersen_DI(3,iMag) + Coef*Cross_D(3)
+          !$acc end atomic
 
 #ifndef _OPENACC
           if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug.and.iMag==1)then
@@ -684,8 +706,8 @@ contains
              write(*,*)NameSub,': XyzSm,XyzIono=', &
                   XyzSm_DI(:,iMag)*No2Si_V(UnitX_), XyzIono_D*No2Si_V(UnitX_)
              write(*,*)NameSub,': rIono**2, dTheta, dPhi, sinTheta=', &
-                   rIonosphere**2*No2Si_V(UnitX_)**2, &
-                   dThetaIono, dPhiIono, SinTheta_I(i)
+                  rIonosphere**2*No2Si_V(UnitX_)**2, &
+                  dThetaIono, dPhiIono, SinTheta_I(i)
              write(*,*)NameSub,': dArea, r3    =', &
                   rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)&
                   *No2Si_V(UnitX_)**2, &

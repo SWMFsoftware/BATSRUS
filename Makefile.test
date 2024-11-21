@@ -70,6 +70,8 @@ test_help:
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shocktube_1d          (run 1D shocktube test on GPU)"
 	@echo "    test_stitch                (run STITCH test)"
+	@echo "    test_timewarp_1d           (run 1D time warp test)"
+	@echo "    test_timewarp_2d           (run 2D time warp test)"
 	@echo "    test_outerhelio2d          (run 2D Outer Heliosphere test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_outerhelio_1d         (run 1D Outer Heliosphere test)"
@@ -102,6 +104,8 @@ test:
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
 	-@($(MAKE) test_shockround TESTDIR=run_test_shockround)
+	-@($(MAKE) test_timewarp_1d TESTDIR=run_test_timewarp_1d)
+	-@($(MAKE) test_timewarp_2d TESTDIR=run_test_timewarp_2d)
 	-@($(MAKE) test_shockramp TESTDIR=run_test_shockramp)
 	-@($(MAKE) test_partsteady TESTDIR=run_test_partsteady)
 	-@($(MAKE) test_hallmhd TESTDIR=run_test_hallmhd)
@@ -255,6 +259,70 @@ test_shocktube_check:
 		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out \
 		> test_shocktube.diff)
 	ls -l test_shocktube.diff
+
+### TIMEWARP SHOCK TUBE TEST ###
+
+test_timewarp_1d:
+	@echo "test_timewarp_1d_compile..." > test_timewarp_1d.diff
+	$(MAKE) test_timewarp_1d_compile
+	@echo "test_timewarp_1d_rundir..." >> test_timewarp_1d.diff
+	$(MAKE) test_timewarp_1d_rundir
+	@echo "test_timewarp_1d_run..." >> test_timewarp_1d.diff
+	$(MAKE) test_timewarp_1d_run
+	@echo "test_timewarp_1d_check..." >> test_timewarp_1d.diff
+	$(MAKE) test_timewarp_1d_check
+
+test_timewarp_1d_compile:
+	./Config.pl -noopenmp -u=Default -e=Hd -ng=2 -g=64,1,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_timewarp_1d_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.timewarp PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_timewarp_1d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
+
+test_timewarp_1d_check:
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
+		${TESTDIR}/RESULT/GM/1d_*009_*.out \
+		Param/SHOCKTUBE/TestOutput/timewarp.out \
+		> test_timewarp_1d.diff)
+	ls -l test_timewarp_1d.diff
+
+### TIMEWARP 2D TEST ###
+
+test_timewarp_2d:
+	@echo "test_timewarp_2d_compile..." > test_timewarp_2d.diff
+	$(MAKE) test_timewarp_2d_compile
+	@echo "test_timewarp_2d_rundir..." >> test_timewarp_2d.diff
+	$(MAKE) test_timewarp_2d_rundir
+	@echo "test_timewarp_2d_run..." >> test_timewarp_2d.diff
+	$(MAKE) test_timewarp_2d_run
+	@echo "test_timewarp_2d_check..." >> test_timewarp_2d.diff
+	$(MAKE) test_timewarp_2d_check
+
+test_timewarp_2d_compile:
+	./Config.pl -noopenmp -u=Default -e=Hd -ng=2 -g=64,64,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_timewarp_2d_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.timewarp2d PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_timewarp_2d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
+
+test_timewarp_2d_check:
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULT/GM/2d_*030_*.out \
+		Param/SHOCKTUBE/TestOutput/timewarp2d.out.gz \
+		> test_timewarp_2d.diff)
+	ls -l test_timewarp_2d.diff
 
 ### ROUND CUBE SHOCK TUBE TEST ###
 

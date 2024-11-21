@@ -1,0 +1,95 @@
+#DESCRIPTION
+isothermal shocktube		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#TIMEWARP
+T			UseTimeWarp
+2.5			uWarp
+
+#GRIDBLOCKALL
+100			MaxBlock
+
+#GRID
+4			nRootBlock1
+4			nRootBlock2
+1			nRootBlock3
+-100.			xMin
+ 100.			xMax
+-100.			yMin
+ 100.			yMax
+-0.5			zMin
+ 0.5			zMax
+
+#UNIFORMSTATE
+1.			StateVar Rho
+0.			StateVar Ux
+0.			StateVar Uy
+0.			StateVar Uz
+0.5			StateVar p
+
+#BUMP
+Rho			NameVar
+5.0			Amplitude
+20.0			WidthX
+20.0			WidthY
+-1.0			WidthZ
+0.0			CenterX
+0.0			CenterY
+0.0			CenterZ
+0			nPower
+
+#BUMP
+p			NameVar
+4.0			Amplitude
+20.0			WidthX
+20.0			WidthY
+-1.0			WidthZ
+0.0			CenterX
+0.0			CenterY
+0.0			CenterZ
+0			nPower
+
+#OUTERBOUNDARY
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+
+#TIMESTEPPING
+2			nStage
+0.4			CflExpl
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVEPLOT
+1			nPlotFile
+2d HD idl_ascii		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+30.0			tSimulationMax
+

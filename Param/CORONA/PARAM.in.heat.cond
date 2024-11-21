@@ -26,6 +26,9 @@ READ			TypeNormalization
 #CONSERVEFLUX
 F			DoConserveFlux
 
+#GRIDGEOMETRY
+rotatedcartesian		TypeGeometry
+
 #GRID
 4			nRootBlock1
 4			nRootBlock2
@@ -36,6 +39,11 @@ F			DoConserveFlux
  32			yMax
 -1			zMin
  1			zMax
+
+
+#SHOCKPOSITION
+0.0			ShockPosition
+3/4			ShockSlope
 
 #GRIDLEVEL
 1			nLevel
@@ -133,4 +141,4 @@ z=0 mhd idl_ascii		StringPlot
 
 #STOP
 -1			MaxIteration
-1e-25			tSimulationMax
+1e-24			tSimulationMax

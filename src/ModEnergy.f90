@@ -16,9 +16,9 @@ module ModEnergy
        iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I
   use ModAdvance, ONLY: &
        State_VGB, UseElectronPressure, UseElectronEnergy, UseTotalIonEnergy
-  use ModConservative, ONLY: UseNonConservative, nConservCrit, IsConserv_CB
+  use ModConservative, ONLY: is_conserv, UseNonConservative, nConservCrit
   use ModPhysics, ONLY: &
-       GammaMinus1_I, InvGammaMinus1_I, InvGammaMinus1, &
+       GammaMinus1_I, InvGammaMinus1_I, GammaMinus1, InvGammaMinus1, &
        InvGammaElectronMinus1, pMin_I, PeMin, Tmin_I, TeMin
   use BATL_lib, ONLY: &
        nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, Used_GB
@@ -34,6 +34,7 @@ module ModEnergy
   public:: pressure_to_energy       ! p -> e conditionally for explicit
   public:: pressure_to_energy_block ! p -> e in a block for part implicit
   public:: energy_i                 ! energy of fluid iFluid from State_V
+  public:: pressure_i               ! pressure of fluid iFluid from Cons_V
   public:: get_fluid_energy_block   ! energy of fluid in a grid block
   public:: limit_pressure           ! Enforce minimum pressure and temperature
 
@@ -45,6 +46,7 @@ module ModEnergy
 contains
   !============================================================================
   subroutine pressure_to_energy(iBlock, State_VGB)
+
     ! Calculate energy from pressure depending on
     ! the value of UseNonConservative and IsConserv_CB
 
@@ -81,9 +83,7 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          if(UseNonConservative .and. iFluid <= nIonFluid)then
-             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
-          end if
+          if(iFluid <= nIonFluid .and. .not.is_conserv(i, j, k, iBlock)) CYCLE
           ! Convert to hydro energy density
           State_VGB(iP,i,j,k,iBlock) =                             &
                InvGammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock) &
@@ -115,9 +115,7 @@ contains
        ! Add up all ion energy densities into the first energy
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          if(UseNonConservative)then
-             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
-          end if
+          if(.not. is_conserv(i, j, k, iBlock)) CYCLE
           State_VGB(p_,i,j,k,iBlock) = sum(State_VGB(iPIon_I,i,j,k,iBlock))
        end do; end do; end do
     end if
@@ -126,14 +124,21 @@ contains
 #endif
   end subroutine pressure_to_energy
   !============================================================================
-  real function energy_i(State_V, iFluid)
+  real function energy_i(State_V, iFluidIn)
 
-    ! Return energy of fluid iFluid from conservative State_V
+    ! Return energy of fluid iFluid from primitive State_V
+    ! Default fluid is iFluid = 1.
 
     real, intent(in):: State_V(nVar)
-    integer, intent(in):: iFluid
+    integer, intent(in), optional:: iFluidIn
+
+    integer:: iFluid
 #ifndef SCALAR
     !--------------------------------------------------------------------------
+    iFluid = 1
+    if(present(iFluidIn)) iFluid = iFluidIn
+
+    ! The input State_V has pressures
     if(iFluid == 1 .and. UseMultiIon .and. UseTotalIonEnergy)then
        energy_i = sum(InvGammaMinus1_I(1:nIonFluid)*State_V(iPIon_I) + 0.5* &
             ( State_V(iRhoUxIon_I)**2 + State_V(iRhoUyIon_I)**2 &
@@ -154,6 +159,40 @@ contains
          energy_i = energy_i + State_V(Pe_)*InvGammaElectronMinus1
 #endif
   end function energy_i
+  !============================================================================
+  real function pressure_i(State_V, iFluidIn)
+
+    ! Return pressure of fluid iFluid from conservative State_V.
+    ! Default fluid is iFluid = 1.
+
+    real, intent(in):: State_V(nVar)
+    integer, intent(in), optional:: iFluidIn
+
+    integer:: iFluid
+#ifndef SCALAR
+    !--------------------------------------------------------------------------
+    iFluid = 1
+    if(present(iFluidIn)) iFluid = iFluidIn
+
+    ! The input State_V has energies (total ion energy is not handled yet!)
+    if(iFluid == 1 .and. IsMhd) then
+       ! Start from energy
+       pressure_i = State_V(p_)
+       ! Subtract electron energy
+       if(UseElectronPressure .and. UseElectronEnergy) &
+            pressure_i = pressure_i - State_V(Pe_)*InvGammaElectronMinus1
+       ! Subtract kinetic and magnetic energies and conver to pressure
+       pressure_i = GammaMinus1*(pressure_i - 0.5* &
+            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
+            - sum(State_V(Bx_:Bz_)**2) ) )
+    else
+       ! Hydro energy density
+       if(nFluid > 1) call select_fluid(iFluid)
+       pressure_i = GammaMinus1_I(iFluid)*(State_V(iP) &
+            - 0.5*sum(State_V(iRhoUx:iRhoUz)**2)/State_V(iRho))
+    end if
+#endif
+  end function pressure_i
   !============================================================================
   subroutine get_fluid_energy_block(iBlock, iFluid, Energy_G)
 
@@ -240,16 +279,14 @@ contains
 #endif
   end subroutine pressure_to_energy_block
   !============================================================================
-  subroutine energy_to_pressure(iBlock, State_VGB, IsOld)
+  subroutine energy_to_pressure(iBlock, State_VGB)
 
     ! Convert energy to pressure in State_VGB depending on
     ! the value of UseNonConservative and IsConserv_CB
-    ! Do not limit pressure if IsOld is present (argument is StateOld_VGB)
 
     integer, intent(in):: iBlock
     real, intent(inout):: &
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    logical, intent(in), optional:: IsOld
 
     integer:: i, j, k, iFluid
     logical:: DoTest
@@ -260,11 +297,9 @@ contains
     if(UseNonConservative .and. nConservCrit <= 0 .and. &
          .not. (UseNeutralFluid .and. DoConserveNeutrals))then
 
-       if(.not.present(IsOld))then
-          ! Make sure pressure is larger than floor value
-          ! write(*,*) NameSub,' !!! call limit_pressure'
-          call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
-       end if
+       ! Make sure pressure is larger than floor value
+       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+
        RETURN
     end if
 
@@ -283,10 +318,7 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          if(UseNonConservative .and. iFluid <= nIonFluid)then
-             ! Apply conservative criteria for the ions
-             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
-          end if
+          if(iFluid <= nIonFluid .and..not.is_conserv(i, j, k, iBlock)) CYCLE
 
           if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy)           &
                .and. .not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
@@ -321,11 +353,8 @@ contains
 
     end do FLUIDLOOP
 
-    if(.not.present(IsOld))then
-       ! Make sure final pressure is larger than floor value
-       ! write(*,*) NameSub,' !!! call limit_pressure'
-       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
-    end if
+    ! Make sure final pressure is larger than floor value
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
 
     call test_stop(NameSub, DoTest, iBlock)
 #endif

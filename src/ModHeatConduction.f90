@@ -1133,9 +1133,6 @@ contains
     use ModSemiImplVar,  ONLY: SemiAll_VCB, DconsDsemiAll_VCB
     use ModResistivity,  ONLY: UseHeatExchange
 
-#ifndef _OPENACC
-#endif
-
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP, iGang
     real :: GammaTmp
     real :: DtLocal
@@ -1457,11 +1454,12 @@ contains
 #ifndef _OPENACC
     use BATL_lib,        ONLY: store_face_flux
 #endif
-    use BATL_lib,        ONLY: CellVolume_GB
+    use BATL_lib,        ONLY: CellVolume_GB, IsCartesianGrid
     use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure, &
          iTypeUpdate, UpdateOrig_
-    use ModFaceGradient, ONLY: get_face_gradient, set_block_field3
+    use ModFaceGradient, ONLY: get_face_gradient_simple, set_block_field3, &
+         set_block_jacobian_face
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModMain,         ONLY: nI, nJ, nK
@@ -1479,16 +1477,18 @@ contains
 
     integer :: iDim, i, j, k, Di, Dj, Dk, iGang
     real :: FaceGrad_D(MaxDim)
-    logical :: IsNewBlockHeatCond, UseFirstOrderBc
+    logical :: UseFirstOrderBc
 
     real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_heat_conduction_rhs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    IsNewBlockHeatCond = .true.
     UseFirstOrderBc = UseFieldLineThreads.and.IsBoundary_B(iBlock)
 
 #ifdef _OPENACC
@@ -1498,6 +1498,9 @@ contains
 #endif
 
     call set_block_field3(iBlock, 1, Scalar1_G, StateImpl_VG)
+    if(.not.IsCartesianGrid) &
+         call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, &
+         UseFirstOrderBc)
 
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
@@ -1506,9 +1509,9 @@ contains
        do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
 
           ! Second-order accurate electron temperature gradient
-          call get_face_gradient(iDim, i, j, k, iBlock, &
-               IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D, &
-               UseFirstOrderBcIn=UseFirstOrderBC, DoCorrectIn=.false.)
+          call get_face_gradient_simple(iDim, i, j, k, iBlock, &
+               StateImpl_VG, FaceGrad_D, DcoordDxyz_DDFD, &
+               UseFirstOrderBcIn=UseFirstOrderBC)
           FluxImpl_VFDI(iTeImpl,i,j,k,iDim,iGang) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
 
@@ -1605,9 +1608,7 @@ contains
     ! since this works on temperature and not energy or pressure,
 
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
-#ifndef _OPENACC
     use ModFaceGradient, ONLY: set_block_jacobian_face
-#endif
     use ModImplicit,     ONLY: UseNoOverlap, nStencil, iTeImpl
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
@@ -1621,9 +1622,7 @@ contains
     integer :: i, j, k, iDim, Di, Dj, Dk
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
 
-#ifndef _OPENACC
     real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
-#endif
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_jacobian_heat_cond'
@@ -1659,23 +1658,20 @@ contains
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
 
-#ifndef _OPENACC
     if(.not.IsCartesianGrid) &
          call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
-#endif
 
     ! the transverse diffusion is ignored in the Jacobian
     do iDim = 1, nDim
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        !$acc loop vector collapse(3) independent &
-       !$acc private(Coeff, DiffLeft, DiffRight)
+       !$acc private(Coeff, DiffLeft, DiffRight, InvDxyzVol_D)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
           if(IsCartesianGrid)then
              DiffLeft = Coeff*HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)
              DiffRight = Coeff*HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
           else
-#ifndef _OPENACC
              InvDxyzVol_D = DcoordDxyz_DDFD(iDim,:nDim,i,j,k,iDim)*Coeff
              DiffLeft = sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyzVol_D)
 
@@ -1683,7 +1679,6 @@ contains
                   *Coeff
              DiffRight = &
                   sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyzVol_D)
-#endif
           end if
 
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &

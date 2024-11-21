@@ -80,6 +80,7 @@ OBJECTS = \
 	ModParticles.o \
 	ModPartImplicit.o \
 	ModPartSteady.o \
+	ModPhysicalFlux.o \
 	ModPhysics.o \
 	ModPIC.o \
 	ModPlotBox.o \
@@ -104,6 +105,7 @@ OBJECTS = \
 	ModStreamAligned.o \
 	ModThreadedLC.o \
 	ModTimeStepControl.o \
+	ModTimewarp.o \
 	ModTurbulence.o \
 	ModUaCoupling.o \
 	ModUserEmpty.o \
