@@ -15,8 +15,7 @@ module ModPhysicalFlux
   !$omp threadprivate(B0x, B0y, B0z)
 
   real :: Normal_D(3) = [1.0, 0.0, 0.0]
-  real :: NormalX = 1.0, NormalY = 0.0, NormalZ = 0.0
-  !$omp threadprivate(Normal_D, NormalX, NormalY, NormalZ)
+  !$omp threadprivate(Normal_D)
 
   ! Variables for normal resistivity
   real :: EtaJx = 0.0, EtaJy = 0.0, EtaJz = 0.0, Eta = 0.0
@@ -123,6 +122,7 @@ contains
     real, intent(out):: Un_I(nFluid+1)     ! normal velocities
     real, intent(out):: En                 ! normal electric field
 
+    real :: NormalX, NormalY, NormalZ
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz, AlfvenSpeed
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
@@ -134,6 +134,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_physical_flux'
     !--------------------------------------------------------------------------
     StateCons_V(1:nVar)  = State_V
+    NormalX = Normal_D(1); NormalY = Normal_D(2); NormalZ = Normal_D(3)
 
 #ifndef SCALAR
 

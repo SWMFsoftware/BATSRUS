@@ -169,11 +169,12 @@ module ModFaceFlux
 
   ! Variables for rotated coordinate system (n is normal to face)
   real :: NormalWarp = 0.0  ! normal vector projected to the warp direction
+  real :: NormalX = 1.0, NormalY = 0.0, NormalZ = 0.0
   real :: Tangent1_D(3), Tangent2_D(3)
   real :: B0n, B0t1, B0t2
   real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
   real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
-  !$omp threadprivate( NormalWarp )
+  !$omp threadprivate( NormalX, NormalY, NormalZ, NormalWarp )
   !$omp threadprivate( Tangent1_D, Tangent2_D )
   !$omp threadprivate( B0n, B0t1, B0t2 )
   !$omp threadprivate( UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L )
