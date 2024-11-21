@@ -108,7 +108,6 @@ contains
     use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
        AlfvenPlusFirst_, AlfvenPlusLast_, &
        GammaWave, UseWavePressure, UseWavePressureLtd
-    use ModTimewarp, ONLY: UseTimewarp, UseWarpCmax, state_to_warp_cell
     use ModTurbulence, ONLY: IsOnAwRepresentative
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
@@ -200,10 +199,6 @@ contains
        Un_I(iFluid) = Un
 
     end do
-
-    ! Convert conservative variables to Warp variables
-    if(UseTimeWarp .and. UseWarpCmax) call state_to_warp_cell(StateCons_V, &
-         iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
 
     ! The extra fluxes should be added at the same time as fluid 1 fluxes
     if(iFluidMin /= 1) RETURN
