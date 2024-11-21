@@ -102,12 +102,16 @@ contains
     ! Convert state into warp variable (either pressure or energy)
 
     use ModPhysics, ONLY: Io2No_V, UnitU_, GammaMinus1
+    use ModAdvance, ONLY: nFlux, nFluid, RhoUx_, RhoUz_, Ux_, Uz_
+    use ModPhysicalFLux, ONLY: Normal_D, get_physical_flux
 
     real, intent(inout):: State_V(nVar)
     integer, intent(in):: i, j, k, iBlock
     logical, intent(in):: IsConserv
 
-    real:: Flux_V(nVar), Norm_D(3), InvRho, RhoUr, Ur, p
+    real:: InvRho, Prim_V(nVar), Flux_V(nFlux)
+    ! for now. Should become optional arguments
+    real:: Un_I(nFluid+1), En, StateCons_V(nFlux), NormalOld_D(3)
     !--------------------------------------------------------------------------
     if(.not.UseIteration)then
        ! Store temperature for isothermal hydro with analytic warp_to_state
@@ -116,39 +120,33 @@ contains
     ! Store normalized warp speed
     if(uWarp < 0) uWarp = uWarpDim*Io2No_V(UnitU_)
 
+    ! Convert to primitive variables
     InvRho = 1/State_V(Rho_)
-    if(IsConserv)then
-       p = pressure_i(State_V)
-    else
-       p = State_V(p_)
-    end if
+    Prim_V = State_V
+    Prim_V(Ux_:Uz_) = InvRho*State_V(RhoUx_:RhoUz_)
+    if(IsConserv) Prim_V(p_) = pressure_i(State_V)
 
+    ! Store current Normal_D (why??)
+    NormalOld_D = Normal_D
     ! Get the warp direction
     if(iDimWarp == 0)then
        ! radial direction is warped
-       Norm_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
+       Normal_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
     else
        ! iDimWarp direction is warped
-       Norm_D = 0.0
-       Norm_D(iDimWarp) = 1.0
+       Normal_D = 0.0
+       Normal_D(iDimWarp) = 1.0
     end if
-    ! To be replaced with call get_physical_flux(State_V, Norm_V, ... Flux_V)
-    RhoUr = sum(State_V(RhoUx_:RhoUz_)*Norm_D)
-    Ur = InvRho*RhoUr
-    ! Density flux
-    Flux_V(Rho_) = RhoUr
-    ! Momentum flux
-    Flux_V(RhoUx_:RhoUz_) = Ur*State_V(RhoUx_:RhoUz_) + p*Norm_D
-    if(IsConserv)then
-       ! Energy flux Ur*(p + e)
-       Flux_V(e_) = Ur*(p + State_V(e_))
-    else
-       ! Pressure flux Ur*p (the source term is not playing a role)
-       Flux_V(p_) = Ur*p
-    end if
+    ! Get the flux in the warp direction
+    call get_physical_flux(Prim_V, StateCons_V, Flux_V, Un_I, En)
+    ! Put energy flux into pressure if conservative
+    if(IsConserv)Flux_V(p_) = Flux_V(nVar+1)
+
+    ! Recover Normal_D ??
+    Normal_D = NormalOld_D
 
     ! Convert to warp variables
-    State_V = State_V - Flux_V/uWarp
+    State_V = State_V - Flux_V(1:nVar)/uWarp
 
   end subroutine state_to_warp_cell
   !============================================================================
