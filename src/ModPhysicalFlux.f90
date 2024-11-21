@@ -67,6 +67,10 @@ module ModPhysicalFlux
   integer :: iBlockFace = 1
   !$omp threadprivate(iBlockFace)
 
+  ! 1D Burgers' equation, works for Hd equations.
+  logical:: DoBurgers = .false.
+  !$acc declare create(DoBurgers)
+
   ! This is an output of get_physical_flux
   real :: MhdFlux_V(RhoUx_:RhoUz_)
   !$omp threadprivate(MhdFlux_V)
@@ -162,8 +166,8 @@ contains
           else
              call get_mhd_flux
           end if
-!       elseif(DoBurgers) then
-!          call get_burgers_flux
+       elseif(DoBurgers) then
+          call get_burgers_flux
        else
           ! If there is no MHD fluid, calculate fluxes for magnetic field
           ! (and E field) together with hydro fluxes for the first fluid

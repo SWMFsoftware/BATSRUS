@@ -68,7 +68,7 @@ module ModFaceFlux
   ! Inherited from ModPhysicalFlux
   public :: get_physical_flux
   public :: B0x, B0y, B0z, DoTestCell, iFace, jFace, kFace, &
-       HallJx, HallJy, HallJz, UseHallGradPe
+       HallJx, HallJy, HallJz, UseHallGradPe, DoBurgers
   private ! except
 
   ! Neutral fluids may use different flux function
@@ -87,10 +87,6 @@ module ModFaceFlux
 
   logical :: UseAlfvenWaveSpeed
   !$acc declare create(UseAlfvenWaveSpeed)
-
-  ! 1D Burgers' equation, works for Hd equations.
-  logical, public:: DoBurgers = .false.
-  !$acc declare create(DoBurgers)
 
   logical :: UseLindeFix
   !$acc declare create(UseLindeFix)
