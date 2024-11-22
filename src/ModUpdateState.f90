@@ -641,7 +641,7 @@ contains
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
 
-      if(UseTimeWarp) call state_to_warp(iBlock)
+      if(UseTimeWarp) call state_to_warp(iBlock, DoAddToStateOld)
 
       ! Move energy source terms to pressure index as needed
       ! Ions first

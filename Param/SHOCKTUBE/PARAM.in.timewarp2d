@@ -65,7 +65,7 @@ float			TypeBc4
 
 #TIMESTEPPING
 2			nStage
-0.4			CflExpl
+0.8			CflExpl
 
 #SCHEME
 2			nOrder
