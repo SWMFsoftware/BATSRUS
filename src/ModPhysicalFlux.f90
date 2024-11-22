@@ -78,22 +78,15 @@ contains
   !============================================================================
   subroutine get_physical_flux(State_V, StateCons_V, Flux_V, Un_I, En)
 
+    ! Calculate physical flux from State_V (contains primitive variables)
+
     use ModMain, ONLY: UseB, UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModAdvance, ONLY: &
-       State_VGB,                                   &! in: cell centered state
-       LeftState_VX, LeftState_VY, LeftState_VZ,    &! in: left  face state
-       RightState_VX, RightState_VY, RightState_VZ, &! in: right face state
-       Flux_VXI, Flux_VYI, Flux_VZI,                &! out: flux*Area
-       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, &! out: B x Area for J
-       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ,          &! out: MHD momentum flux
-       UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
+       UseMhdMomentumFlux, UseElectronPressure, &
        nFlux,   &                        ! number of fluxes: nVar+nFluid
-       nFaceValue, &                     ! number of all face values
-       UnFirst_, UnLast_, Vdt_, &        ! indexes for face values
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
-       FluxCenter_VGD, DoCorrectFace, &
-       UseLowOrder, IsLowOrderOnly_B, DoUpdate_V, &
+       DoUpdate_V, &
        UseEntropy, UseElectronEntropy, UseElectronEnergy, UseTotalIonEnergy, &
        UseAnisoPe
     use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection
@@ -650,6 +643,7 @@ contains
       else
          Flux_V(Energy_) = Un*(e + pPerp)
       end if
+
       ! Correct momentum and energy hydro fluxes for anisotroic pressure
       if(UseAnisoPressure)then
          if (DoTestCell) then
@@ -765,7 +759,7 @@ contains
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
-         if(IsMhd) Flux_V(Energy_)= Flux_V(Energy_) &
+         if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
          ! Don't we need Flux_V(PePar_)?
          if(DoTestCell)then
