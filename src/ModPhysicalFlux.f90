@@ -208,7 +208,7 @@ contains
     do iVar = ScalarFirst_, ScalarLast_
        Flux_V(iVar) = Un_I(1)*State_V(iVar)
     end do
-    if(nPui > 1)then
+    if(PuiFirst_ > 1)then
        ! PUI scalar advect with second fluid's velocity
        do iVar = PuiFirst_, PuiLast_
           Flux_V(iVar) = Un_I(Pu3_)*State_V(iVar)
