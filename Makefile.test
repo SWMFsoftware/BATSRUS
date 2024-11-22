@@ -273,7 +273,7 @@ test_timewarp_1d:
 	$(MAKE) test_timewarp_1d_check
 
 test_timewarp_1d_compile:
-	./Config.pl -noopenmp -u=Default -e=Hd -ng=2 -g=64,1,1
+	./Config.pl -noopenmp -u=Default -e=Mhd -ng=2 -g=64,1,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -287,8 +287,8 @@ test_timewarp_1d_run:
 
 test_timewarp_1d_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/1d_*009_*.out \
-		Param/SHOCKTUBE/TestOutput/timewarp.out \
+		${TESTDIR}/RESULT/GM/1d_*008_*.out \
+		Param/SHOCKTUBE/TestOutput/timewarp1d.out \
 		> test_timewarp_1d.diff)
 	ls -l test_timewarp_1d.diff
 
