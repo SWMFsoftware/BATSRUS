@@ -2639,6 +2639,14 @@ contains
     if(UseTimeWarp .and. NormalWarp > 0.0)then
        if(present(Cmax_I))then
           if(UseWarpCmax) Cmax_I = Cmax_I*uWarp/(uWarp - NormalWarp*Cmax_I)
+          if(maxval(CmaxDt_I) > uWarp)then
+             write(*,*)NameSub,': iFace,jFace,kFace,iBlockFace=', &
+                  iFace, jFace, kFace, iBlockFace
+             write(*,*)NameSub,': Xyz=', &
+                  Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
+             write(*,*)NameSub,': uWarp, Cmax_I=', uWarp, Cmax_I
+             call stop_mpi('Increase uWarp')
+          end if
           CmaxDt_I = CmaxDt_I*uWarp/(uWarp - NormalWarp*CmaxDt_I)
        end if
        ! Sign of NormalWarp might be needed here ?
