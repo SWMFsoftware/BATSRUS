@@ -10,7 +10,7 @@ module ModTimewarp
        p_, Energy_, Bx_, Bz_
   use ModConservative, ONLY: is_conserv
   use ModEnergy, ONLY: energy_i, pressure_i
-  use ModBatsrusUtility, ONLY: stop_mpi
+  use ModBatsrusUtility, ONLY: stop_mpi, error_report
   use BATL_lib, ONLY: Used_GB, Xyz_DGB, nI, nJ, nK, iProc
 
   implicit none
@@ -39,8 +39,9 @@ module ModTimewarp
 
   ! Iterative scheme
   logical:: UseIteration = .true.
-  integer:: MaxIteration = 20
-  real:: Tolerance = 1e-8
+  integer:: MaxIteration = 20, DnJacobian = 1
+  real:: Tolerance = 1e-10
+  real:: EpsRel = 1e-6, EpsAbs = 1e-10
 
 contains
   !============================================================================
@@ -68,6 +69,9 @@ contains
        if(UseIteration)then
           call read_var("Tolerance", Tolerance)
           call read_var("MaxIteration", MaxIteration)
+          call read_var("DnJacobian", DnJacobian)
+          call read_var("EpsRel", EpsRel)
+          call read_var("EpsAbs", EpsAbs)
        end if
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
@@ -229,9 +233,9 @@ contains
 
       real:: Jac_VV(nVar,nVar)
 
-      integer:: iIter
-      real:: StateIter_V(nVar), WarpIter_V(nVar), dIter_V(nVar)
-      logical:: IsConserv
+      integer:: iIter, iError = -1
+      real:: StateIter_V(nVar), WarpIter_V(nVar), dIter_V(nVar), Error
+      logical:: IsConserv, DoLu
       !------------------------------------------------------------------------
       ! StateOld_VG has pressures
       StateIter_V = StateOld_VG(:,i,j,k)
@@ -250,25 +254,37 @@ contains
               Tolerance*(abs(Warp_V) + abs(WarpIter_V)))) EXIT
 
          ! Get dW/dU matrix
-         call get_jacobian(StateIter_V, WarpIter_V, Jac_VV, IsConserv)
+         if(modulo(iIter - 1, DnJacobian) == 0)then
+            call get_jacobian(StateIter_V, WarpIter_V, Jac_VV, IsConserv)
+            DoLu = .true.
+         else
+            DoLu = .false.
+         end if
 
          ! Newton iteration: U_(k+1) = U_k + (dW/dU)^(-1).(W - W_k)
          ! Find solution to Jac_VV*dU = dW
          dIter_V = Warp_V - WarpIter_V
-         call linear_equation_solver(nVar, Jac_VV, dIter_V)
+         call linear_equation_solver(nVar, Jac_VV, dIter_V, DoLuIn=DoLu)
 
          ! Update iteration
          StateIter_V = StateIter_V + dIter_V
 
       end do
       if(iIter > MaxIteration .and. MaxIteration > 1)then
-         write(*,*) NameSub,': Warning, iteration did not succeed at'
-         write(*,*) NameSub,': i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
-         write(*,*) NameSub,': Xyz_D=', Xyz_DGB(:,i,j,k,iBlock)
-         write(*,*) NameSub,': StateOld_V =', StateOld_VG(:,i,j,k)
-         write(*,*) NameSub,': StateIter_V=', StateIter_V
-         write(*,*) NameSub,': Warp_V     =', Warp_V
-         write(*,*) NameSub,': WarpIter_V =', WarpIter_V
+         if(iError < 0)then
+            write(*,*) NameSub,': Warning, iteration did not succeed at'
+            write(*,*) NameSub,': i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+            write(*,*) NameSub,': Xyz_D=', Xyz_DGB(:,i,j,k,iBlock)
+            write(*,*) NameSub,': StateOld_V =', StateOld_VG(:,i,j,k)
+            write(*,*) NameSub,': StateIter_V=', StateIter_V
+            write(*,*) NameSub,': Warp_V     =', Warp_V
+            write(*,*) NameSub,': WarpIter_V =', WarpIter_V
+         end if
+         Error = maxval(abs(Warp_V - WarpIter_V) &
+              /        (abs(Warp_V) + abs(WarpIter_V) + 1e-30))
+         call error_report(NameSub// &
+              ": Timewarp iteration failed, relative error", Error, &
+              iError, .false.)
       end if
 
       ! Return the iterative solution
@@ -287,13 +303,14 @@ contains
       logical, intent(in):: IsConserv
 
       real:: StateEps_V(nVar), WarpEps_V(nVar)
-      real, parameter:: Eps = 1e-6
+      real:: Eps
 
       integer:: iVar
       !------------------------------------------------------------------------
       do iVar = 1, nVar
          ! Perturb iVar in State
          StateEps_V = State_V
+         Eps = abs(State_V(iVar))*EpsRel + EpsAbs
          StateEps_V(iVar) = StateEps_V(iVar) + Eps
          ! Calculate perturbed warped variable
          WarpEps_V = StateEps_V
