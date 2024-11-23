@@ -497,7 +497,8 @@ contains
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          Used_GB, nBlock, Xyz_DGB, CellVolume_GB, &
          message_pass_cell, message_pass_face, apply_flux_correction_block
-    use ModAdvance, ONLY: iTypeUpdate, UpdateOrig_
+    use ModAdvance, ONLY: iTypeUpdate, UpdateOrig_, UpdateFast_
+    use ModUpdateStateFast, ONLY: set_cell_boundary_for_block
 
     real, intent(out):: RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
 
@@ -557,13 +558,19 @@ contains
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
+       if(IsBoundary_B(iBlock)) then
+          if(iTypeUpdate >= UpdateFast_) then
+             call set_cell_boundary_for_block(iBlock, nVarSemi, &
+                  SemiState_VGB(:,:,:,:,iBlock), .false.)
+          else
 #ifndef _OPENACC
-       ! TODO: Make sure the bc is set correctly on GPU.
-       ! Apply boundary conditions (1 layer of outer ghost cells)
-       if(IsBoundary_B(iBlock))&
-            call set_cell_boundary(1, iBlock, nVarSemi, &
-            SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
+             ! Apply boundary conditions (1 layer of outer ghost cells)
+             call set_cell_boundary(1, iBlock, nVarSemi, &
+                  SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
 #endif
+          end if
+       end if
+
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
     end do

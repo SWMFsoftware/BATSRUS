@@ -52,6 +52,7 @@ module ModFaceFlux
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
   use ModTimewarp, ONLY: UseTimewarp, UseWarpCmax, iDimWarp, uWarp, &
        state_to_warp_cell
+
   use omp_lib
 
   implicit none
@@ -68,7 +69,7 @@ module ModFaceFlux
   ! Inherited from ModPhysicalFlux
   public :: get_physical_flux
   public :: B0x, B0y, B0z, DoTestCell, iFace, jFace, kFace, &
-       HallJx, HallJy, HallJz, UseHallGradPe
+       HallJx, HallJy, HallJz, UseHallGradPe, DoBurgers
   private ! except
 
   ! Neutral fluids may use different flux function
@@ -87,10 +88,6 @@ module ModFaceFlux
 
   logical :: UseAlfvenWaveSpeed
   !$acc declare create(UseAlfvenWaveSpeed)
-
-  ! 1D Burgers' equation, works for Hd equations.
-  logical, public:: DoBurgers = .false.
-  !$acc declare create(DoBurgers)
 
   logical :: UseLindeFix
   !$acc declare create(UseLindeFix)
@@ -171,12 +168,13 @@ module ModFaceFlux
   !$omp threadprivate( StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V )
 
   ! Variables for rotated coordinate system (n is normal to face)
-  real :: NormalWarp
+  real :: NormalWarp = 0.0  ! normal vector projected to the warp direction
+  real :: NormalX = 1.0, NormalY = 0.0, NormalZ = 0.0
   real :: Tangent1_D(3), Tangent2_D(3)
   real :: B0n, B0t1, B0t2
   real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
   real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
-  !$omp threadprivate( NormalWarp )
+  !$omp threadprivate( NormalX, NormalY, NormalZ, NormalWarp )
   !$omp threadprivate( Tangent1_D, Tangent2_D )
   !$omp threadprivate( B0n, B0t1, B0t2 )
   !$omp threadprivate( UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L )
@@ -1344,10 +1342,18 @@ contains
        call get_physical_flux(StateLeft_V, StateLeftCons_V, FluxLeft_V, &
             UnLeft_I, EnLeft)
 
-       if(UseMhdMomentumFlux) MhdFluxLeft_V  = MhdFlux_V
+       if(UseMhdMomentumFlux) MhdFluxLeft_V = MhdFlux_V
 
        call get_physical_flux(StateRight_V, StateRightCons_V, FluxRight_V, &
             UnRight_I, EnRight)
+
+       if(UseTimewarp .and. UseWarpCmax)then
+          ! Convert conservative variables to Warp variables
+          call state_to_warp_cell(nFlux, StateLeftCons_V, &
+               iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
+          call state_to_warp_cell(nFlux, StateRightCons_V, &
+               iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
+       end if
 
        if(UseMhdMomentumFlux) MhdFluxRight_V = MhdFlux_V
 
@@ -2521,7 +2527,7 @@ contains
                 end if
 
                 ! Get the flux
-                call get_physical_flux(&
+                call get_physical_flux( &
                      Primitive_V, Conservative_V, Flux_V, Un_I, En)
 
                 if(.not. UseHighFDGeometry) then
@@ -2635,10 +2641,12 @@ contains
           if(UseWarpCmax) Cmax_I = Cmax_I*uWarp/(uWarp - NormalWarp*Cmax_I)
           CmaxDt_I = CmaxDt_I*uWarp/(uWarp - NormalWarp*CmaxDt_I)
        end if
+       ! Sign of NormalWarp might be needed here ?
        if(present(Cright_I) .and. UseWarpCmax) &
             Cright_I = Cright_I*uWarp/(uWarp - NormalWarp*Cright_I)
+       ! Cleft is negative when it matters, so sign is swapped
        if(present(Cleft_I) .and. UseWarpCmax) &
-            Cleft_I = Cleft_I*uWarp/(uWarp - NormalWarp*Cleft_I)
+            Cleft_I = Cleft_I*uWarp/(uWarp + NormalWarp*Cleft_I)
     end if
 
     if(UseEfield .and. iFluidMin <= nIonFluid)then

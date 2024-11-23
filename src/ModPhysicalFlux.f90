@@ -15,8 +15,7 @@ module ModPhysicalFlux
   !$omp threadprivate(B0x, B0y, B0z)
 
   real :: Normal_D(3) = [1.0, 0.0, 0.0]
-  real :: NormalX = 1.0, NormalY = 0.0, NormalZ = 0.0
-  !$omp threadprivate(Normal_D, NormalX, NormalY, NormalZ)
+  !$omp threadprivate(Normal_D)
 
   ! Variables for normal resistivity
   real :: EtaJx = 0.0, EtaJy = 0.0, EtaJz = 0.0, Eta = 0.0
@@ -67,6 +66,10 @@ module ModPhysicalFlux
   integer :: iBlockFace = 1
   !$omp threadprivate(iBlockFace)
 
+  ! 1D Burgers' equation, works for Hd equations.
+  logical:: DoBurgers = .false.
+  !$acc declare create(DoBurgers)
+
   ! This is an output of get_physical_flux
   real :: MhdFlux_V(RhoUx_:RhoUz_)
   !$omp threadprivate(MhdFlux_V)
@@ -75,22 +78,15 @@ contains
   !============================================================================
   subroutine get_physical_flux(State_V, StateCons_V, Flux_V, Un_I, En)
 
+    ! Calculate physical flux from State_V (contains primitive variables)
+
     use ModMain, ONLY: UseB, UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModAdvance, ONLY: &
-       State_VGB,                                   &! in: cell centered state
-       LeftState_VX, LeftState_VY, LeftState_VZ,    &! in: left  face state
-       RightState_VX, RightState_VY, RightState_VZ, &! in: right face state
-       Flux_VXI, Flux_VYI, Flux_VZI,                &! out: flux*Area
-       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, &! out: B x Area for J
-       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ,          &! out: MHD momentum flux
-       UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
+       UseMhdMomentumFlux, UseElectronPressure, &
        nFlux,   &                        ! number of fluxes: nVar+nFluid
-       nFaceValue, &                     ! number of all face values
-       UnFirst_, UnLast_, Vdt_, &        ! indexes for face values
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
-       FluxCenter_VGD, DoCorrectFace, &
-       UseLowOrder, IsLowOrderOnly_B, DoUpdate_V, &
+       DoUpdate_V, &
        UseEntropy, UseElectronEntropy, UseElectronEnergy, UseTotalIonEnergy, &
        UseAnisoPe
     use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection
@@ -104,7 +100,6 @@ contains
     use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
        AlfvenPlusFirst_, AlfvenPlusLast_, &
        GammaWave, UseWavePressure, UseWavePressureLtd
-    use ModTimewarp, ONLY: UseTimewarp, UseWarpCmax, state_to_warp_cell
     use ModTurbulence, ONLY: IsOnAwRepresentative
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
@@ -120,6 +115,7 @@ contains
     real, intent(out):: Un_I(nFluid+1)     ! normal velocities
     real, intent(out):: En                 ! normal electric field
 
+    real :: NormalX, NormalY, NormalZ
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz, AlfvenSpeed
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
@@ -131,6 +127,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_physical_flux'
     !--------------------------------------------------------------------------
     StateCons_V(1:nVar)  = State_V
+    NormalX = Normal_D(1); NormalY = Normal_D(2); NormalZ = Normal_D(3)
 
 #ifndef SCALAR
 
@@ -162,8 +159,8 @@ contains
           else
              call get_mhd_flux
           end if
-!       elseif(DoBurgers) then
-!          call get_burgers_flux
+       elseif(DoBurgers) then
+          call get_burgers_flux
        else
           ! If there is no MHD fluid, calculate fluxes for magnetic field
           ! (and E field) together with hydro fluxes for the first fluid
@@ -197,10 +194,6 @@ contains
 
     end do
 
-    ! Convert conservative variables to Warp variables
-    if(UseTimeWarp .and. UseWarpCmax) call state_to_warp_cell(StateCons_V, &
-         iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
-
     ! The extra fluxes should be added at the same time as fluid 1 fluxes
     if(iFluidMin /= 1) RETURN
 
@@ -208,7 +201,7 @@ contains
     do iVar = ScalarFirst_, ScalarLast_
        Flux_V(iVar) = Un_I(1)*State_V(iVar)
     end do
-    if(nPui > 1)then
+    if(PuiFirst_ > 1)then
        ! PUI scalar advect with second fluid's velocity
        do iVar = PuiFirst_, PuiLast_
           Flux_V(iVar) = Un_I(Pu3_)*State_V(iVar)
@@ -650,6 +643,7 @@ contains
       else
          Flux_V(Energy_) = Un*(e + pPerp)
       end if
+
       ! Correct momentum and energy hydro fluxes for anisotroic pressure
       if(UseAnisoPressure)then
          if (DoTestCell) then
@@ -765,7 +759,7 @@ contains
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
-         if(IsMhd) Flux_V(Energy_)= Flux_V(Energy_) &
+         if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
          ! Don't we need Flux_V(PePar_)?
          if(DoTestCell)then

@@ -6,7 +6,8 @@ module ModTimewarp
 
   use ModAdvance, ONLY: StateOld_VGB, StateOld_VG, State_VGB
   use ModGeometry, ONLY: r_GB
-  use ModVarIndexes, ONLY: nVar, Rho_, RhoU_, RhoUx_, RhoUz_, p_
+  use ModVarIndexes, ONLY: nVar, Rho_, RhoU_, RhoUx_, RhoUz_, &
+       p_, Energy_, Bx_, Bz_
   use ModConservative, ONLY: is_conserv
   use ModEnergy, ONLY: energy_i, pressure_i
   use ModBatsrusUtility, ONLY: stop_mpi
@@ -74,12 +75,13 @@ contains
 
   end subroutine read_timewarp_param
   !============================================================================
-  subroutine state_to_warp(iBlock)
+  subroutine state_to_warp(iBlock, DoStateOldOnly)
 
-    ! Convert from State to State - Flux_r/uWarp
-    ! HD only for now
+    ! Convert from StateOld to StateOld - Flux_r/uWarp
+    ! If DoStateOldOnly is false, then also do State_VGB
 
     integer, intent(in):: iBlock
+    logical, intent(in):: DoStateOldOnly
 
     integer:: i, j, k
     logical:: IsConserv
@@ -89,25 +91,33 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
        IsConserv = is_conserv(i, j, k, iBlock)
-       call state_to_warp_cell(StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock, &
-            IsConserv)
-       call state_to_warp_cell(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock, &
-            IsConserv)
+       call state_to_warp_cell( &
+            nVar, StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock, IsConserv)
+       if(.not.DoStateOldOnly) call state_to_warp_cell( &
+            nVar, State_VGB(:,i,j,k,iBlock), i, j, k, iBlock, IsConserv)
     end do; end do; end do
 
   end subroutine state_to_warp
   !============================================================================
-  subroutine state_to_warp_cell(State_V, i, j, k, iBlock, IsConserv)
+  subroutine state_to_warp_cell(nVarState, State_V, i, j, k, iBlock, IsConserv)
 
     ! Convert state into warp variable (either pressure or energy)
 
     use ModPhysics, ONLY: Io2No_V, UnitU_, GammaMinus1
+    use ModAdvance, ONLY: nFlux, nFluid, RhoUx_, RhoUz_, Ux_, Uz_
+    use ModPhysicalFLux, ONLY: Normal_D, get_physical_flux
 
-    real, intent(inout):: State_V(nVar)
+    integer, intent(in):: nVarState
+    real, intent(inout):: State_V(nVarState)
     integer, intent(in):: i, j, k, iBlock
     logical, intent(in):: IsConserv
 
-    real:: Flux_V(nVar), Norm_D(3), InvRho, RhoUr, Ur, p
+    real:: InvRho, Prim_V(nVar), Flux_V(nFlux)
+    ! for now. Should become optional arguments
+    real:: Un_I(nFluid+1), En, StateCons_V(nFlux), NormalOld_D(3)
+
+    ! Debug
+    real:: p, RhoUr, Ur, Br, B2, Flux2_V(nFlux)
     !--------------------------------------------------------------------------
     if(.not.UseIteration)then
        ! Store temperature for isothermal hydro with analytic warp_to_state
@@ -116,39 +126,72 @@ contains
     ! Store normalized warp speed
     if(uWarp < 0) uWarp = uWarpDim*Io2No_V(UnitU_)
 
+    ! Convert to primitive variables
     InvRho = 1/State_V(Rho_)
-    if(IsConserv)then
-       p = pressure_i(State_V)
-    else
-       p = State_V(p_)
-    end if
+    Prim_V = State_V(1:nVar)
+    Prim_V(Ux_:Uz_) = InvRho*State_V(RhoUx_:RhoUz_)
+    ! Convert energy to pressure if necessary
+    if(IsConserv .and. nVarState == nVar) Prim_V(p_) = pressure_i(State_V)
 
+    ! Store current Normal_D (why??)
+    NormalOld_D = Normal_D
     ! Get the warp direction
     if(iDimWarp == 0)then
        ! radial direction is warped
-       Norm_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
+       Normal_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
     else
        ! iDimWarp direction is warped
-       Norm_D = 0.0
-       Norm_D(iDimWarp) = 1.0
+       Normal_D = 0.0
+       Normal_D(iDimWarp) = 1.0
     end if
-    ! To be replaced with call get_physical_flux(State_V, Norm_V, ... Flux_V)
-    RhoUr = sum(State_V(RhoUx_:RhoUz_)*Norm_D)
-    Ur = InvRho*RhoUr
-    ! Density flux
-    Flux_V(Rho_) = RhoUr
-    ! Momentum flux
-    Flux_V(RhoUx_:RhoUz_) = Ur*State_V(RhoUx_:RhoUz_) + p*Norm_D
-    if(IsConserv)then
-       ! Energy flux Ur*(p + e)
-       Flux_V(e_) = Ur*(p + State_V(e_))
-    else
-       ! Pressure flux Ur*p (the source term is not playing a role)
-       Flux_V(p_) = Ur*p
-    end if
+    ! Get the flux in the warp direction
+    call get_physical_flux(Prim_V, StateCons_V, Flux_V, Un_I, En)
+
+    ! DEBUG
+!    if(IsConserv .and. nVarState == nVar)then
+!       p = pressure_i(State_V)
+!    else
+!       p = State_V(p_)
+!    end if
+!    RhoUr = sum(Normal_D*State_V(RhoUx_:RhoUz_))
+!    Ur    = InvRho*RhoUr
+!    B2    = sum(State_V(Bx_:Bz_)**2)
+!    Br    = sum(Normal_D*State_V(Bx_:Bz_))
+!
+!    Flux2_V(Rho_) = RhoUr
+!    Flux2_V(RhoUx_:RhoUz_) = Ur*State_V(RhoUx_:RhoUz_) &
+!         + (p + 0.5*B2)*Normal_D - State_V(Bx_:Bz_)*Br
+!    Flux2_V(Bx_:Bz_) = Ur*State_V(Bx_:Bz_) &
+!         - InvRho*State_V(RhoUx_:RhoUz_)*Br
+!    Flux2_V(p_) = Ur*p
+!
+!    Flux2_V(Energy_) = Ur*(p + State_V(nVarState) - 0.5*B2) &
+!         + sum(State_V(Bx_:Bz_)*Flux_V(Bx_:Bz_))
+!    !   - Br*InvRho*sum(State_V(Bx_:Bz_)*State_V(RhoUx_:RhoUz_))
+!
+!    if(maxval(abs(Flux2_V(1:nVarState) - Flux_V(1:nVarState))) > 1e-6)then
+!       write(*,*)'i,j,k,iBlock,IsConserv=', i, j, k,iBlock
+!       write(*,*)'nVarState, IsConserv=', nVarState, IsConserv
+!       write(*,*)'Normal =', Normal_D
+!       write(*,*)'Flux_V =', Flux_V(1:nVarState)
+!       write(*,*)'Flux2_V=', Flux2_V(1:nVarState)
+!       write(*,*)'State_V=', State_V
+!       write(*,*)'Prim_V =', Prim_V
+!       write(*,*)'Ur,Br,p=', Ur, Br, p
+!       write(*,*)'U(pt+e)=',Ur*(p + State_V(p_) + 0.5*B2)
+!       write(*,*)'Br B.u =',Br*InvRho* &
+!            sum(State_V(Bx_:Bz_)*State_V(RhoUx_:RhoUz_))
+!       call stop_mpi('DEBUG')
+!    end if
+
+    ! Recover Normal_D ??
+    Normal_D = NormalOld_D
+
+    ! Put energy flux into pressure flux if necessary
+    if(IsConserv .and. nVarState == nVar) Flux_V(p_) = Flux_V(nVar+1)
 
     ! Convert to warp variables
-    State_V = State_V - Flux_V/uWarp
+    State_V = State_V - Flux_V(1:nVarState)/uWarp
 
   end subroutine state_to_warp_cell
   !============================================================================
@@ -201,7 +244,7 @@ contains
       do iIter = 1, MaxIteration
          ! Convert StateIter_V to WarpIter_V = StateIter_V - F_r/uWarp
          WarpIter_V = StateIter_V
-         call state_to_warp_cell(WarpIter_V, i, j, k, iBlock, IsConserv)
+         call state_to_warp_cell(nVar, WarpIter_V, i, j, k, iBlock, IsConserv)
          ! Check if we reached the desired accuracy
          if(all(abs(Warp_V - WarpIter_V) <= &
               Tolerance*(abs(Warp_V) + abs(WarpIter_V)))) EXIT
@@ -254,7 +297,7 @@ contains
          StateEps_V(iVar) = StateEps_V(iVar) + Eps
          ! Calculate perturbed warped variable
          WarpEps_V = StateEps_V
-         call state_to_warp_cell(WarpEps_V, i, j, k, iBlock, IsConserv)
+         call state_to_warp_cell(nVar, WarpEps_V, i, j, k, iBlock, IsConserv)
          ! Calculate derivative
          Jac_VV(:,iVar) = (WarpEps_V - Warp_V)/Eps
       end do

@@ -192,7 +192,7 @@ test_fluxemergence:
 	$(MAKE) test_fluxemergence_check
 
 test_fluxemergence_compile:
-	./Config.pl ${OPENMP} -e=MhdEosRad -u=Ee -ng=2 -g=10,10,10
+	./Config.pl -noopenmp -e=MhdEosRad -u=Ee -ng=2 -g=10,10,10
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -208,16 +208,16 @@ test_fluxemergence_rundir:
 test_fluxemergence_run:
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_1d
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_1d
 	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS/run_1d
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.3D PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_3d
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_3d
 	cd ${TESTDIR}; ./Restart.pl
 	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS/run_3d
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_restart
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS/run_restart; \
 				mv runlog_restart RESULTS/run_restart
 
@@ -241,7 +241,7 @@ test_shocktube:
 	$(MAKE) test_shocktube_check
 
 test_shocktube_compile:
-	./Config.pl ${OPENMP} -u=Default -e=MhdHyp -ng=2 -g=64,4,1
+	./Config.pl -noopenmp -u=Default -e=MhdHyp -ng=2 -g=64,4,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -250,7 +250,7 @@ test_shocktube_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_shocktube_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_shocktube_check:
@@ -273,7 +273,7 @@ test_timewarp_1d:
 	$(MAKE) test_timewarp_1d_check
 
 test_timewarp_1d_compile:
-	./Config.pl -noopenmp -u=Default -e=Hd -ng=2 -g=64,1,1
+	./Config.pl -noopenmp -u=Default -e=Mhd -ng=2 -g=64,1,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -287,8 +287,8 @@ test_timewarp_1d_run:
 
 test_timewarp_1d_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/1d_*009_*.out \
-		Param/SHOCKTUBE/TestOutput/timewarp.out \
+		${TESTDIR}/RESULT/GM/1d_*008_*.out \
+		Param/SHOCKTUBE/TestOutput/timewarp1d.out \
 		> test_timewarp_1d.diff)
 	ls -l test_timewarp_1d.diff
 
@@ -572,7 +572,7 @@ test_partsteady:
 	$(MAKE) test_partsteady_check
 
 test_partsteady_compile:
-	./Config.pl ${OPENMP} -u=Default -e=MhdHyp -ng=2 -g=4,4,1
+	./Config.pl -noopenmp -u=Default -e=MhdHyp -ng=2 -g=4,4,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -581,7 +581,7 @@ test_partsteady_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_partsteady_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_partsteady_check:
@@ -911,8 +911,8 @@ test_laserpackage:
 	$(MAKE) test_laserpackage_check
 
 test_laserpackage_compile:
-	./Config.pl -noopenmp -e=Crash -u=Crash -ng=2 -g=8,8,1 -nMaterial=5 -nWave=30
-	./Config.pl -hypre
+	./Config.pl -e=Crash -u=Crash -ng=2 -g=8,8,1 -nMaterial=5 -nWave=30
+	./Config.pl -noopenmp -hypre
 	$(MAKE) CRASH
 	make PIDL
 
@@ -2340,7 +2340,8 @@ test_europa2fluidspe:
 	$(MAKE) test_europa2fluidspe_check
 
 test_europa2fluidspe_compile:
-	./Config.pl ${OPENMP} -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -ng=2 -g=4,4,4
+	./Config.pl -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -ng=2 -g=4,4,4
+	./Config.pl -noopenmp
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -2350,7 +2351,7 @@ test_europa2fluidspe_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_europa2fluidspe_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -replace RESULTS
 
 test_europa2fluidspe_check:
@@ -2374,7 +2375,8 @@ test_europa3fluidspe:
 
 # OpenMP randomly fails for nagfor NP=4 NTHREAD=2
 test_europa3fluidspe_compile:
-	./Config.pl ${OPENMP} -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -ng=2 -g=4,4,4
+	./Config.pl -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -ng=2 -g=4,4,4
+	./Config.pl -noopenmp
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -2384,7 +2386,7 @@ test_europa3fluidspe_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_europa3fluidspe_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_europa3fluidspe_check:
@@ -2485,7 +2487,7 @@ test_fivemoment_shock:
 	$(MAKE) test_fivemoment_shock_check
 
 test_fivemoment_shock_compile:
-	./Config.pl ${OPENMP} -u=Default -e=FiveMoment -ng=2 -g=100,1,1
+	./Config.pl -noopenmp -u=Default -e=FiveMoment -ng=2 -g=100,1,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -2494,7 +2496,7 @@ test_fivemoment_shock_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fivemoment_shock_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test_fivemoment_shock_check:
