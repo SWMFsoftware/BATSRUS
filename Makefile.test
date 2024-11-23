@@ -278,7 +278,7 @@ test_timewarp_1d_compile:
 	make PIDL
 
 test_timewarp_1d_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.timewarp PARAM.in
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.timewarp1d PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_timewarp_1d_run:
