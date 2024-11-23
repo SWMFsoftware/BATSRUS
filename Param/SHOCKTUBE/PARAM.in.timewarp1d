@@ -1,0 +1,88 @@
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.timewarp1d		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#TIMEWARP
+T			UseTimeWarp
+6.0			uWarp
+
+#WARPDIM
+1			iDimWarp
+
+! This works for 1D HLL scheme with superfast flow (it has no diffusion)
+#WARPCMAX
+F			UseWarpCmax
+
+#GRIDBLOCKALL
+10			MaxBlock
+
+#GRID
+8			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+ -10.			xMin
+ 246.			xMax
+-0.5			yMin
+ 0.5			yMax
+-0.5			zMin
+ 0.5			zMax
+
+#SHOCKTUBE
+1.			LeftState Rho
+3.			LeftState Ux
+0.			LeftState Uy
+0.			LeftState Uz
+0.1			LeftState Bx
+0.2			LeftState Bx
+0.0			LeftState Bx
+1.			LeftState p
+0.125			RightState Rho
+3.			RightState Ux
+0.			RightState Uy
+0.			RightState Uz
+0.1			RightState Bx
+0.02			RightState By
+0.0			RightState Bz
+0.1			RightState p
+
+#OUTERBOUNDARY
+none			TypeBc1
+float			TypeBc2
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVEPLOT
+1			nPlotFile
+1d HD idl_ascii		StringPlot
+-1			DnSavePlot
+1.0			DtSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+8.0			tSimulationMax
