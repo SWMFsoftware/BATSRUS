@@ -164,7 +164,7 @@ contains
 !    Flux2_V(Bx_:Bz_) = Ur*State_V(Bx_:Bz_) &
 !         - InvRho*State_V(RhoUx_:RhoUz_)*Br
 !    Flux2_V(p_) = Ur*p
-!    
+!
 !    Flux2_V(Energy_) = Ur*(p + State_V(nVarState) - 0.5*B2) &
 !         + sum(State_V(Bx_:Bz_)*Flux_V(Bx_:Bz_))
 !    !   - Br*InvRho*sum(State_V(Bx_:Bz_)*State_V(RhoUx_:RhoUz_))
@@ -183,7 +183,7 @@ contains
 !            sum(State_V(Bx_:Bz_)*State_V(RhoUx_:RhoUz_))
 !       call stop_mpi('DEBUG')
 !    end if
-    
+
     ! Recover Normal_D ??
     Normal_D = NormalOld_D
 
