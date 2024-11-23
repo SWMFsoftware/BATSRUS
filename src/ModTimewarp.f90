@@ -12,7 +12,7 @@ module ModTimewarp
   use ModEnergy, ONLY: energy_i, pressure_i
   use ModPhysics, ONLY: Io2No_V, UnitU_
   use ModBatsrusUtility, ONLY: stop_mpi, error_report
-  use BATL_lib, ONLY: Used_GB, Xyz_DGB, nI, nJ, nK
+  use BATL_lib, ONLY: Used_GB, Xyz_DGB, nI, nJ, nK, test_start, test_stop
 
   implicit none
 
@@ -21,6 +21,7 @@ module ModTimewarp
   private ! except
 
   public:: read_timewarp_param ! read parameters
+  public:: init_mod_timewarp   ! initialized module
   public:: state_to_warp_cell  ! Convert one cell to time warped variables
   public:: state_to_warp       ! Convert a block to time warped variables
   public:: warp_to_state       ! Convert a block from warp to state variables
@@ -70,6 +71,19 @@ contains
 
   end subroutine read_timewarp_param
   !============================================================================
+  subroutine init_mod_timewarp
+
+    ! Store normalized warp speed
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mod_timewarp'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    uWarp = uWarpDim*Io2No_V(UnitU_)
+    if(DoTest) write(*,*) NameSub,': uWarp, uWarpDim=', uWarp, uWarpDim
+    call test_stop(NameSub, DoTest)
+
+  end subroutine init_mod_timewarp
+  !============================================================================
   subroutine state_to_warp(iBlock, DoStateOldOnly)
 
     ! Convert from StateOld to StateOld - Flux_r/uWarp
@@ -111,11 +125,8 @@ contains
     real:: InvRho, Prim_V(nVar), Flux_V(nFlux)
     ! for now. Should become optional arguments
     real:: Un_I(nFluid+1), En, StateCons_V(nFlux), NormalOld_D(3)
-    !--------------------------------------------------------------------------
-    ! Store normalized warp speed
-    if(uWarp < 0) uWarp = uWarpDim*Io2No_V(UnitU_)
-
     ! Convert to primitive variables
+    !--------------------------------------------------------------------------
     Prim_V = State_V(1:nVar)
     do iFluid = 1, nFluid
        ! Convert momenta to velocities
