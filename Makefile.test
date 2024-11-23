@@ -1917,7 +1917,7 @@ test_comet:
 	$(MAKE) test_comet_check
 
 test_comet_compile:
-	./Config.pl ${OPENMP} -u=Comet6Sp -e=MhdComet -ng=2 -g=8,8,8
+	./Config.pl -noopenmp -u=Comet6Sp -e=MhdComet -ng=2 -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1926,7 +1926,7 @@ test_comet_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_comet_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_comet_check:
