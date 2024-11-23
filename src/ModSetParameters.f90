@@ -148,7 +148,7 @@ contains
     use ModCoarseAxis, ONLY: read_coarse_axis_param
     use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
          UseBorisSimple, UseBorisRegion, init_mod_boris_correction
-    use ModTimewarp, ONLY: read_timewarp_param
+    use ModTimewarp, ONLY: UseTimewarp, read_timewarp_param, init_mod_timewarp
     use ModUserInterface ! user_read_inputs, user_init_session
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
@@ -433,31 +433,6 @@ contains
 
        call user_action("initialize module")
 
-       if(UseChargedParticles)then
-          if(.not.IsTimeAccurate)then
-             if(iProc==0)write(*,*)'To trace particles, use time-accurate!'
-             call stop_mpi('Correct parameter file!!')
-          end if
-          if(.not.UseB)then
-             if(iProc==0)write(*,*)'To trace particles use MHD!'
-             call stop_mpi('Correct parameter file!!')
-          end if
-          if(IsMhd.and.UseHybrid)then
-             if(iProc==0)write(*,*)'Single fluid MHD cant be hybrid'
-             call stop_mpi('Correct parameter file or set IsMhd=.false.')
-          end if
-          if(UseHybrid.and..not.UseFlic)then
-             if(iProc==0) &
-                  write(*,*) NameSub,':UseHybrid=.true., set UseFlic=.true.'
-          end if
-          call normalize_particle_param
-       end if
-       if(UseFlic.and.nStage/=3)then
-          if(iProc==0) &
-               write(*,*) NameSub,':UseFlic=.true., set nStage to 3'
-          nStage = 3
-       end if
-
        ! Normalization of solar wind data requires normalization in set_physics
        if (DoReadSolarwindFile) call normalize_solar_wind_data
 
@@ -480,6 +455,8 @@ contains
 
        if(nPui > 1) call init_mod_pui
 
+       if(UseTimewarp) call init_mod_timewarp
+       
        call check_waves
 
        if((iProc==0 .or. UseTimingAll) .and. IsStandAlone)then
@@ -500,12 +477,12 @@ contains
 
        if(iTypeUpdate >= UpdateFast_ .and. iProc == 0) &
             call check_optimize_param
-
+       
        IsFirstSession = .false.
 
        RETURN
     case('read','Read','READ')
-       if(iProc==0)then
+       if(iProc == 0)then
           write(*,*) NameSub,': READ iSession =',iSession,&
                ' iLine=',i_line_read(),' nLine =',n_line_read()
        end if
@@ -3920,6 +3897,31 @@ contains
             end if
             UseBody2Orbit = .false.
          end if
+      end if
+
+      if(UseChargedParticles)then
+         if(.not.IsTimeAccurate)then
+            if(iProc==0)write(*,*)'To trace particles, use time-accurate!'
+            call stop_mpi('Correct parameter file!!')
+         end if
+         if(.not.UseB)then
+            if(iProc==0)write(*,*)'To trace particles use MHD!'
+            call stop_mpi('Correct parameter file!!')
+         end if
+         if(IsMhd .and. UseHybrid)then
+            if(iProc==0)write(*,*)'Single fluid MHD cannot be hybrid'
+            call stop_mpi('Correct parameter file or set IsMhd=.false.')
+         end if
+         if(UseHybrid.and..not.UseFlic)then
+            if(iProc==0) &
+                 write(*,*) NameSub,': UseHybrid=.true., set UseFlic=.true.'
+         end if
+         call normalize_particle_param
+      end if
+      if(UseFlic .and. nStage /= 3)then
+         if(iProc==0) &
+              write(*,*) NameSub,': UseFlic=.true., set nStage to 3'
+         nStage = 3
       end if
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
