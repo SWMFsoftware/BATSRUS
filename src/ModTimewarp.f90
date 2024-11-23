@@ -271,20 +271,24 @@ contains
 
       end do
       if(iIter > MaxIteration .and. MaxIteration > 1)then
-         if(iError < 0)then
-            write(*,*) NameSub,': Warning, iteration did not succeed at'
-            write(*,*) NameSub,': i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
-            write(*,*) NameSub,': Xyz_D=', Xyz_DGB(:,i,j,k,iBlock)
-            write(*,*) NameSub,': StateOld_V =', StateOld_VG(:,i,j,k)
-            write(*,*) NameSub,': StateIter_V=', StateIter_V
-            write(*,*) NameSub,': Warp_V     =', Warp_V
-            write(*,*) NameSub,': WarpIter_V =', WarpIter_V
-         end if
+         ! Check if we reached a reasonable accuracy
          Error = maxval(abs(Warp_V - WarpIter_V) &
               /        (abs(Warp_V) + abs(WarpIter_V) + 1e-30))
-         call error_report(NameSub// &
-              ": Timewarp iteration failed, relative error", Error, &
-              iError, .false.)
+         if(Error > 1e-6)then
+            ! If not, report the error
+            if(iError < 0)then
+               ! Write out details for the first time when iError is not set
+               write(*,*) NameSub,': i,j,k,iBlock=', i, j, k, iBlock
+               write(*,*) NameSub,': Xyz_D=', Xyz_DGB(:,i,j,k,iBlock)
+               write(*,*) NameSub,': StateOld_V =', StateOld_VG(:,i,j,k)
+               write(*,*) NameSub,': StateIter_V=', StateIter_V
+               write(*,*) NameSub,': Warp_V     =', Warp_V
+               write(*,*) NameSub,': WarpIter_V =', WarpIter_V
+            end if
+            call error_report(NameSub// &
+                 ": Timewarp iteration failed, relative error", Error, &
+                 iError, .true.)
+         end if
       end if
 
       ! Return the iterative solution
