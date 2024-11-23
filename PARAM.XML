@@ -174,27 +174,22 @@ Default value is true.
 </command>
 
 <command name="WARPSCHEME">
-  <parameter name="UseIteration" type="logical" default="T"/>
-  <if expr="$UseIteration">
-    <parameter name="Tolerance" type="real" min="0" default="1e-8"/>
-    <parameter name="MaxIteration" type="integer" min="1" default="20"/>
-    <parameter name="DnJacobian" type="integer" min="1" default="1"/>
-    <parameter name="EpsRel" type="real" min="0" default="1e-6"/>
-    <parameter name="EpsAbs" type="real" min="0" default="1e-8"/>
-  </if>
+  <parameter name="Tolerance" type="real" min="0" default="1e-8"/>
+  <parameter name="MaxIteration" type="integer" min="1" default="20"/>
+  <parameter name="DnJacobian" type="integer" min="1" default="1"/>
+  <parameter name="EpsRel" type="real" min="0" default="1e-6"/>
+  <parameter name="EpsAbs" type="real" min="0" default="1e-8"/>
+
 #WARPSCHEME
-T			UseIteration
-1e-8			Tolerance     (rest is read if UseIteration is true)
+1e-8			Tolerance
 20			MaxIteration
 1			DnJacobian
 1e-6			EpsRel
 1e-8			EpsAbs
 
-If UseIteration is false, the conversion from the warped variables
-W=U-F_r/uWarp back to normal state variable U is analytic.
-Currently this option only works for isothermal hydrodynamics.
-
-If UseIteration is true, then a Newton iterative scheme is used to find W.
+The conversion from the warped variables
+W=U-F_r/uWarp back to normal state variable U 
+uses a Newton iterative scheme.
 
 The Tolerance parameter sets if the iterative solution Witer is close
 enough to W, abs(W-Witer).le.Tolerance*[abs(W)+abs(Witer)], to finish
