@@ -12,7 +12,10 @@ NONE			TypeNormalization
 
 #TIMEWARP
 T			UseTimeWarp
-2.5			uWarpDim
+5.0			uWarpDim
+
+WARPCMAX
+F			UseWarpCmax
 
 #GRIDBLOCKALL
 100			MaxBlock
@@ -28,37 +31,15 @@ T			UseTimeWarp
 -0.5			zMin
  0.5			zMax
 
-#UNIFORMSTATE
-1.			StateVar Rho
-0.			StateVar Ux
-0.			StateVar Uy
-0.			StateVar Uz
-0.1			StateVar Bx
-0.2			StateVar By
-0.3			StateVar Bz
-0.5			StateVar p
+#BODY
+T			UseBody
+10.0			rBody
+-1.0			rCurrents (to be removed)
+10.0			BodyNDim
+0.107722		BodyTDim (p/rho at r=10)
 
-#BUMP
-Rho			NameVar
-5.0			Amplitude
-20.0			WidthX
-20.0			WidthY
--1.0			WidthZ
-0.0			CenterX
-0.0			CenterY
-0.0			CenterZ
-0			nPower
-
-#BUMP
-p			NameVar
-4.0			Amplitude
-20.0			WidthX
-20.0			WidthY
--1.0			WidthZ
-0.0			CenterX
-0.0			CenterY
-0.0			CenterZ
-0			nPower
+#ROTATION
+F			UseRotation
 
 #OUTERBOUNDARY
 float			TypeBc1
@@ -66,13 +47,64 @@ float			TypeBc2
 float			TypeBc3
 float			TypeBc4
 
+#INNERBOUNDARY
+radialstate		TypeBcBody
+
+#RADIALSTATE
+100.0			Amplitude Rho
+-1.0			ExponentR Rho
+3.0			Amplitude Ur
+0.0			ExponentR Ur
+0.0			Amplitude Ulon
+0.0			Amplitude Ulat
+1.0			Amplitude Br
+-1.0			ExponentR Br
+-0.01			Amplitude Blon
+0.0			ExponentR Blon
+0.0			Amplitude Blat
+50.0			Amplitude p
+-5/3			ExponentR p (-Gamma)
+
+#BUMP
+Rho			NameVar
+10.0			Amplitude
+5.0			WidthX
+40.0			WidthY
+-1.0			WidthZ
+-20.0			CenterX
+0.0			CenterY
+0.0			CenterZ
+2			nPower
+
+#BUMP
+p			NameVar
+8.0			Amplitude
+5.0			WidthX
+40.0			WidthY
+-1.0			WidthZ
+-20.0			CenterX
+0.0			CenterY
+0.0			CenterZ
+2			nPower
+
+#BUMP
+Bz			NameVar
+-0.5			Amplitude
+10.0			WidthX
+40.0			WidthY
+-1.0			WidthZ
+-20.0			CenterX
+0.0			CenterY
+0.0			CenterZ
+2			nPower
+
 #TIMESTEPPING
 2			nStage
-0.7			CflExpl
+0.8			CflExpl
 
 #SCHEME
 2			nOrder
-Rusanov			TypeFlux
+Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -87,12 +119,11 @@ F			DoSaveRestart
 
 #SAVEPLOT
 1			nPlotFile
-2d HD idl_ascii		StringPlot
+z=0 HD idl_ascii		StringPlot
 -1			DnSavePlot
-10.0			DtSavePlot
+0.5			DtSavePlot
 0.0			DxSavePlot
 
 #STOP
 -1			MaxIteration
-30.0			tSimulationMax
-
+6.0			tSimulationMax
