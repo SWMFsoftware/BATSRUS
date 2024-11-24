@@ -20,7 +20,9 @@ module ModPhysics
   use CON_star, ONLY: NameStar, RadiusStar, MassStar, RotPeriodStar
 
   implicit none
-  save
+
+  SAVE
+
   public
 
   public:: set_physics_constants
@@ -1277,7 +1279,7 @@ contains
 
     ! Set number and indexes of vector variables
 
-    use ModMain,    ONLY: UseB
+    use ModMain, ONLY: UseB
     use ModVarIndexes
 
     logical:: DoTest
