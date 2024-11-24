@@ -456,7 +456,7 @@ contains
        if(nPui > 1) call init_mod_pui
 
        if(UseTimewarp) call init_mod_timewarp
-       
+
        call check_waves
 
        if((iProc==0 .or. UseTimingAll) .and. IsStandAlone)then
@@ -477,7 +477,7 @@ contains
 
        if(iTypeUpdate >= UpdateFast_ .and. iProc == 0) &
             call check_optimize_param
-       
+
        IsFirstSession = .false.
 
        RETURN
