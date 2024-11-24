@@ -1974,6 +1974,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
   <parameter name="TypeBcBody" type="string" case="lower"
 	     input="select">
     <option name="absorb"			/>
+    <option name="radialstate"                  />
     <option name="reflect"			/>
     <option name="reflectb"			/>
     <option name="reflectall"			/>
@@ -1996,6 +1997,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 	       input="select">
       <option name="absorb"			/>
       <option name="fixed"			/>
+      <option name="radialstate"                />
       <option name="reflect"	default="T" 	/>
       <option name="reflectb"			/>
       <option name="reflectall"			/>
@@ -2038,6 +2040,7 @@ although not all those options are meaningful.
 Possible values for TypeBcBody are:
 \begin{verbatim}
 'absorb'          - float all variables but reflect Vr if Vr > 0
+'radialstate'     - fixed with the state defined by #RADIALSTATE
 'reflect'         - reflect all components of velocity relative to corotation,
                     reflect the normal component of B1, other variables float
 'reflectb'        - same as reflect, but the normal component of full B is reflected.

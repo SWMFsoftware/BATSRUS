@@ -14,6 +14,7 @@ module ModFaceBoundary
   use ModNumConst,   ONLY: cDegToRad
   use ModIeCoupling, ONLY: UseCpcpBc, Rho0Cpcp_I, RhoPerCpcp_I, RhoCpcp_I
   use ModBuffer,     ONLY: get_from_spher_buffer_grid
+  use ModPhysics, ONLY: set_radial_state
   use ModMain
 
   implicit none
@@ -522,6 +523,9 @@ contains
            FBC%VarsGhostFace_V(iUx_I) = -FBC%VarsTrueFace_V(iUx_I)
            FBC%VarsGhostFace_V(iUy_I) = -FBC%VarsTrueFace_V(iUy_I)
            FBC%VarsGhostFace_V(iUz_I) = -FBC%VarsTrueFace_V(iUz_I)
+
+        case('radialstate')
+           call set_radial_state(FBC%FaceCoords_D, FBC%VarsGhostFace_V)
 
         case('float')
            FBC%VarsGhostFace_V = FBC%VarsTrueFace_V

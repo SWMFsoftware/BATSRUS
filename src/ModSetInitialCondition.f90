@@ -11,7 +11,9 @@ module ModSetInitialCondition
   use ModMain, ONLY: NamePrimitive_V
   use ModPhysics, ONLY: &
        UseShocktube, ShockLeftDim_V, ShockRightDim_V, ShockLeft_V, &
-       ShockRight_V, ShockPosition, ShockSlope, nVectorVar, iVectorVar_I
+       ShockRight_V, ShockPosition, ShockSlope, nVectorVar, iVectorVar_I, &
+       iUnitPrim_V, Io2No_V, UseRadialState, AmplRDim_V, ExponentR_V
+
   use ModBatsrusUtility, ONLY: stop_mpi, get_ivar
   use ModNumConst, ONLY: cTwoPi, cDegToRad
 
@@ -41,10 +43,6 @@ module ModSetInitialCondition
        x_V=0.0, y_V=0.0, z_V=0.0, KxWave_V=0.0, KyWave_V=0.0, KzWave_V=0.0
   integer:: iPower_V(nVar)=1
 
-  ! Radial state parameters
-  logical:: UseRadialState = .false.
-  real:: AmplR_V(nVar)=0.0, ExponentR_V(nVar)=0.0
-  
 contains
   !============================================================================
   subroutine read_initial_cond_param(NameCommand)
@@ -85,8 +83,8 @@ contains
     case("#RADIALSTATE")
        UseRadialState = .true.
        do iVar = 1, nVar
-          call read_var('Amplitude', AmplR_V(iVar))
-          if(AmplR_V(iVar) /= 0.0) &
+          call read_var('Amplitude', AmplRDim_V(iVar))
+          if(AmplRDim_V(iVar) /= 0.0) &
                call read_var('ExponentR', ExponentR_V(iVar))
        end do
 
@@ -167,10 +165,10 @@ contains
     use ModMain
     use ModAdvance
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
-    use ModGeometry, ONLY: Used_GB, r_GB
+    use ModGeometry, ONLY: Used_GB
     use ModIO, ONLY: IsRestart
-    use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, &
-         UseShockTube, ShockPosition, iUnitPrim_V, Io2No_V, Gamma_I
+    use ModPhysics, ONLY: FaceState_VI, CellState_VI, Gamma_I, &
+         set_radial_state
     use ModUserInterface ! user_set_ics
     use ModSaMhd,          ONLY: UseSaMhd, init_samhd
     use ModConstrainDivB, ONLY: constrain_ics
@@ -180,7 +178,6 @@ contains
     use ModInitialState, ONLY: get_initial_state
     use ModIonElectron,   ONLY: &
          correct_electronfluid_efield , DoCorrectElectronFluid, DoCorrectEfield
-    use ModCoordTransform, ONLY: rot_xyz_rlonlat
     use BATL_lib, ONLY: Xyz_DGB, IsPeriodic_D
 
     integer, intent(in) :: iBlock
@@ -311,28 +308,8 @@ contains
                    end if
                 end if
 
-                if(UseRadialState)then
-                   do iVar = 1, nVar
-                      ! Skip Y and Z components of vector variables
-                      if(any(iVectorVar_I == iVar - 1)) CYCLE
-                      if(any(iVectorVar_I == iVar - 2)) CYCLE
-                      ! Check if first component of vevtor variable
-                      if(any(iVectorVar_I == iVar))then
-                         if(all(AmplR_V(iVar:iVar+2) == 0.0)) CYCLE
-                         ! Vector variable: convert r,lon,lat to x,y,z:
-                         State_VGB(iVar:iVar+2,i,j,k,iBlock) = matmul( &
-                              rot_xyz_rlonlat(Xyz_DGB(:,i,j,k,iBlock)), &
-                              AmplR_V(iVar:iVar+2)*Io2No_V(iUnitPrim_V(iVar)) &
-                              *r_GB(i,j,k,iBlock)**(ExponentR_V(iVar:iVar+2)))
-                      else
-                         ! Scalar variable
-                         if(AmplR_V(iVar) == 0.0) CYCLE
-                         State_VGB(iVar,i,j,k,iBlock) = &
-                              AmplR_V(iVar)*Io2No_V(iUnitPrim_V(iVar)) &
-                              *r_GB(i,j,k,iBlock)**ExponentR_V(iVar)
-                      end if
-                   end do
-                end if
+                if(UseRadialState) call set_radial_state( &
+                     Xyz_DGB(:,i,j,k,iBlock), State_VGB(:,i,j,k,iBlock))
 
                 ! Apply "wave" perturbations
                 if(UseWave)then

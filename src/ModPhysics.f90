@@ -30,6 +30,7 @@ module ModPhysics
   public:: init_vector_variables
   public:: set_dimensional_factor
   public:: set_dipole
+  public:: set_radial_state ! set radial state for initial/boundary conditions
 
   private:: set_units
   private:: set_unit_conversion_array_indices
@@ -215,6 +216,10 @@ module ModPhysics
   real:: ShockLeftDim_V(nVar)=0.0, ShockRightDim_V(nVar)=0.0
   real:: ShockLeft_V(nVar)=0.0, ShockRight_V(nVar)=0.0 ! physical units
   real:: ShockPosition = 0.0, ShockSlope = 0.0
+
+  ! Radial state parameters
+  logical:: UseRadialState = .false.
+  real:: AmplRDim_V(nVar)=0.0, AmplR_V(nVar)=0.0, ExponentR_V(nVar)=0.0
 
   ! Options for using Boundary State:
   ! 0 - not use boundary state (by default).
@@ -480,9 +485,10 @@ contains
     gBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
     !$acc update device(gBody2)
 
-    ! Normalize shocktube/uniform state values
+    ! Normalize shocktube/uniform/radial state values
     ShockLeft_V  = ShockLeftDim_V * Io2No_V(iUnitPrim_V)
     ShockRight_V = ShockRightDim_V* Io2No_V(iUnitPrim_V)
+    AmplR_V      = AmplRDim_V*Io2No_V(iUnitPrim_V)
 
     ! Normalize solar wind values. Note: the solarwind is in I/O units
     SolarWindN   = SolarWindNDim*Io2No_V(UnitN_)
@@ -1460,6 +1466,39 @@ contains
     !$acc update device(xBody2, yBody2, zBody2, vBody2_D)
 
   end subroutine set_second_body_coord
+  !============================================================================
+  subroutine set_radial_state(Xyz_D, State_V)
+
+    use ModCoordTransform, ONLY: rot_xyz_rlonlat
+
+    ! Set the radially dependent state for State_V at Xyz_D
+
+    real, intent(in):: Xyz_D(3)
+    real, intent(inout):: State_V(nVar)
+
+    real:: r, XyzRlonlat_DD(3,3)
+    integer:: iVar
+    !--------------------------------------------------------------------------
+    r = norm2(Xyz_D)
+    XyzRlonlat_DD = rot_xyz_rlonlat(Xyz_D)
+    do iVar = 1, nVar
+       ! Skip Y and Z components of vector variables
+       if(any(iVectorVar_I == iVar - 1)) CYCLE
+       if(any(iVectorVar_I == iVar - 2)) CYCLE
+       ! Check if iVar is the first component of vector variable
+       if(any(iVectorVar_I == iVar))then
+          if(all(AmplR_V(iVar:iVar+2) == 0.0)) CYCLE
+          ! Vector variable: convert r,lon,lat to x,y,z:
+          State_V(iVar:iVar+2) = matmul( XyzRlonlat_DD, &
+               r**(ExponentR_V(iVar:iVar+2)) * AmplR_V(iVar:iVar+2) )
+       else
+          ! Scalar variable
+          if(AmplR_V(iVar) == 0.0) CYCLE
+          State_V(iVar) = r**ExponentR_V(iVar) * AmplR_V(iVar)
+       end if
+    end do
+
+  end subroutine set_radial_state
   !============================================================================
 end module ModPhysics
 !==============================================================================
