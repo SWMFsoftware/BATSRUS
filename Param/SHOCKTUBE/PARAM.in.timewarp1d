@@ -1,7 +1,5 @@
-./Config.pl -e=hd -g=64,1,1
-
 #DESCRIPTION
-isothermal shocktube		StringDescription
+Param/SHOCKTUBE/PARAM.in.timewarp1d		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -18,6 +16,10 @@ T			UseTimeWarp
 
 #WARPDIM
 1			iDimWarp
+
+! This works for 1D HLL scheme with superfast flow (it has no diffusion)
+#WARPCMAX
+F			UseWarpCmax
 
 #GRIDBLOCKALL
 10			MaxBlock

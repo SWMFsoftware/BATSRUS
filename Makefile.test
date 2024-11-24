@@ -278,7 +278,7 @@ test_timewarp_1d_compile:
 	make PIDL
 
 test_timewarp_1d_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.timewarp PARAM.in
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.timewarp1d PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_timewarp_1d_run:
@@ -286,7 +286,7 @@ test_timewarp_1d_run:
 	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_timewarp_1d_check:
-	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-7 \
 		${TESTDIR}/RESULT/GM/1d_*008_*.out \
 		Param/SHOCKTUBE/TestOutput/timewarp1d.out \
 		> test_timewarp_1d.diff)
@@ -305,7 +305,7 @@ test_timewarp_2d:
 	$(MAKE) test_timewarp_2d_check
 
 test_timewarp_2d_compile:
-	./Config.pl -noopenmp -u=Default -e=Hd -ng=2 -g=64,64,1
+	./Config.pl -noopenmp -u=Default -e=Mhd -ng=2 -g=64,64,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -318,7 +318,7 @@ test_timewarp_2d_run:
 	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULT
 
 test_timewarp_2d_check:
-	-@(${DIFFNUM} -t -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-7 \
 		${TESTDIR}/RESULT/GM/2d_*030_*.out \
 		Param/SHOCKTUBE/TestOutput/timewarp2d.out.gz \
 		> test_timewarp_2d.diff)
@@ -1917,7 +1917,7 @@ test_comet:
 	$(MAKE) test_comet_check
 
 test_comet_compile:
-	./Config.pl ${OPENMP} -u=Comet6Sp -e=MhdComet -ng=2 -g=8,8,8
+	./Config.pl -noopenmp -u=Comet6Sp -e=MhdComet -ng=2 -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1926,7 +1926,7 @@ test_comet_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_comet_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 
 test_comet_check:

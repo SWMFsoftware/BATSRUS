@@ -11,9 +11,10 @@ module ModPhysicalFlux
   public:: get_physical_flux ! Flux for HD and extended MHD
 
   ! These variables are used or not depending on what equation is solved
-  real, public :: B0x = 0.0, B0y = 0.0, B0z = 0.0
+  real:: B0x = 0.0, B0y = 0.0, B0z = 0.0
   !$omp threadprivate(B0x, B0y, B0z)
 
+  ! Normal to the face (direction of flux)
   real :: Normal_D(3) = [1.0, 0.0, 0.0]
   !$omp threadprivate(Normal_D)
 
@@ -27,9 +28,9 @@ module ModPhysicalFlux
   !$omp threadprivate(HallCoeff, HallJx, HallJy, HallJz)
 
   ! Variables needed for Biermann battery term
-  logical, public :: UseHallGradPe = .false.
-  real :: BiermannCoeff = 0.0
-  real :: GradXPeNe = 0.0, GradYPeNe = 0.0, GradZPeNe = 0.0
+  logical:: UseHallGradPe = .false.
+  real:: BiermannCoeff = 0.0
+  real:: GradXPeNe = 0.0, GradYPeNe = 0.0, GradZPeNe = 0.0
   !$omp threadprivate(UseHallGradPe)
   !$omp threadprivate(BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe)
 
@@ -47,17 +48,19 @@ module ModPhysicalFlux
   real :: InvClightFace = 1.0, InvClight2Face = 1.0
   !$omp threadprivate(InvClightFace, InvClight2Face)
 
-  logical, public :: DoTestCell = .false.
+  ! Switch to true to show test output
+  logical:: DoTestCell = .false.
   !$omp threadprivate(DoTestCell)
 
+  ! Index range for fluids
   integer:: iFluidMin = 1, iFluidMax = nFluid
   !$omp threadprivate(iFluidMin, iFLuidMax)
 
-  ! index of the face
-  integer, public:: iFace=1, jFace=1, kFace=1
+  ! Indexes of the face
+  integer:: iFace=1, jFace=1, kFace=1
   !$omp threadprivate(iFace, jFace, kFace)
 
-  ! index of cell in the negative and positive directions from face
+  ! Indexes of cells in the negative and positive directions from face
   integer :: iLeft=1,  jLeft=1, kLeft=1
   integer :: iRight=1, jRight=1, kRight=1
   !$omp threadprivate(iLeft, jLeft, kLeft, iRight, jRight, kRight)
@@ -66,7 +69,7 @@ module ModPhysicalFlux
   integer :: iBlockFace = 1
   !$omp threadprivate(iBlockFace)
 
-  ! 1D Burgers' equation, works for Hd equations.
+  ! 1D Burgers' equation, works for Hd equations
   logical:: DoBurgers = .false.
   !$acc declare create(DoBurgers)
 
@@ -82,21 +85,17 @@ contains
 
     use ModMain, ONLY: UseB, UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModAdvance, ONLY: &
-       UseMhdMomentumFlux, UseElectronPressure, &
-       nFlux,   &                        ! number of fluxes: nVar+nFluid
-       eFluid_, &                        ! index for electron fluid (nFluid+1)
-       UseEfield, &                      ! electric field
-       DoUpdate_V, &
-       UseEntropy, UseElectronEntropy, UseElectronEnergy, UseTotalIonEnergy, &
-       UseAnisoPe
+       nFlux, eFluid_, UseMhdMomentumFlux, UseElectronPressure,  UseEfield, &
+       UseEntropy, UseElectronEntropy, UseElectronEnergy, &
+       UseTotalIonEnergy, UseAnisoPe
     use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection
-    use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, UseBiermannBattery
+    use ModHallResist, ONLY: UseHallResist
     use ModImplicit, ONLY: UseSemiHallResist
-    use ModPhysics, ONLY:ElectronPressureRatio, PePerPtotal, GammaElectron, &
-       GammaElectronMinus1, InvGammaElectronMinus1, Gamma, GammaMinus1, &
-       InvGammaMinus1, Gamma_I, InvGammaMinus1_I, GammaMinus1_I, &
+    use ModPhysics, ONLY: ElectronPressureRatio, GammaElectron, &
+       GammaElectronMinus1, InvGammaElectronMinus1, GammaMinus1, &
+       InvGammaMinus1, InvGammaMinus1_I, GammaMinus1_I, &
        C2light, Clight
-    use ModViscosity, ONLY: UseViscosity, Visco_DDI
+    use ModViscosity, ONLY: Visco_DDI
     use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
        AlfvenPlusFirst_, AlfvenPlusLast_, &
        GammaWave, UseWavePressure, UseWavePressureLtd
@@ -107,7 +106,7 @@ contains
          IsIon_I, nIonFluid, UseMultiIon, ChargePerMass_I, select_fluid
     use ModGeometry, ONLY: r_GB
     use ModPUI,      ONLY: Pu3_
-    use BATL_lib, ONLY: nDim, MaxDim, x_, y_, z_
+    use BATL_lib, ONLY: nDim, x_, y_, z_
 
     real, intent(in) :: State_V(nVar)      ! input primitive state
     real, intent(out):: StateCons_V(nFlux) ! conservative state
@@ -267,8 +266,7 @@ contains
                State_V(iRho)*State_V(iUx)*FluxViscoX
           if(nDim == 1) CYCLE
           FluxViscoY     = sum(Normal_D(1:nDim)*Visco_DDI(:,y_,iFluid))
-          Flux_V(iRhoUy) = Flux_V(iRhoUy) - &
-               State_V(iRho)*FluxViscoY
+          Flux_V(iRhoUy) = Flux_V(iRhoUy) - State_V(iRho)*FluxViscoY
           Flux_V(Energy_)= Flux_V(Energy_) - &
                State_V(iRho)*State_V(iUy)*FluxViscoY
           if(nDim == 2) CYCLE

@@ -128,22 +128,20 @@ The default is time accurate mode.
 
 <command name="TIMEWARP">
   <parameter name="UseTimeWarp" type="logical" default="F"/>
-  <parameter name="uWarp" type="real" min="0" default="0" if="$UseTimeWarp"/>
+  <parameter name="uWarpDim" type="real" min="0" default="0"
+	     if="$UseTimeWarp"/>
 
 #TIMEWARP
 T			UseTimeWarp
-10.0			uWarp (read if UseTimeWarp is true)
+10.0			uWarpDim (read if UseTimeWarp is true)
 
-For now this feature is experimental. The goal is to solve
-the equations in a coordinate system where time is
-shifted with the X (or R) coordinate as t' = t + x/uWarp,
-where uWarp is a positive speed larger than the fastest
+The goal is to solve the equations in a coordinate system where time is
+shifted with the d = X, Y, Z, or R coordinate as t' = t + d/uWarpDim,
+where uWarpDim is a positive speed larger than the fastest
 characteristic speed in dimensional units.
 Time warping works only if the flow is supersonic/superfast at the
-outer boundaries, so all characterisitcs are moving
-towards positive X (or R). If iDimWarp is set to 1, the
-warpspeed is in the X direction, while iDimWarp = 0 means
-that the warp speed is radial.
+outer boundaries in the positive warp direction (see #WARPDIM)
+and the warp speed exceeds the fastest wave speed.
 
 The default is UseTimeWarp false.
 </command>
@@ -154,11 +152,11 @@ The default is UseTimeWarp false.
 #WARPDIM
 1			iDimWarp
 
-Direction of time warping, it it is switched on (see #TIMEWARP).
+Direction of time warping if it is switched on (see #TIMEWARP).
 The iDimWarp=0 setting means radial direction, while 1 to 3
 corresponds to the X, Y, and Z directions, respectively.
 
-Default is 0.
+Default is iDimWarp = 0.
 </command>
 
 <command name="WARPCMAX">
@@ -176,25 +174,38 @@ Default value is true.
 </command>
 
 <command name="WARPSCHEME">
-  <parameter name="UseIteration" type="logical" default="T"/>
-  <if expr="$UseIteration">
-    <parameter name="Tolerance" type="real" min="0" default="1e-8"/>
-    <parameter name="MaxIteration" type="integer" min="1" default="20"/>
-  </if>
+  <parameter name="Tolerance" type="real" min="0" default="1e-8"/>
+  <parameter name="MaxIteration" type="integer" min="1" default="20"/>
+  <parameter name="DnJacobian" type="integer" min="1" default="1"/>
+  <parameter name="EpsRel" type="real" min="0" default="1e-6"/>
+  <parameter name="EpsAbs" type="real" min="0" default="1e-8"/>
+
 #WARPSCHEME
-T			UseIteration
-1e-8			Tolerance     (rest is read if UseIteration is true)
+1e-8			Tolerance
 20			MaxIteration
+1			DnJacobian
+1e-6			EpsRel
+1e-8			EpsAbs
 
-If UseIteration is false, the conversion from the warped variables
-W=U-F_r/uWarp back to normal state variable U is analytic.
-Currently this option only works for isothermal hydrodynamics.
+The conversion from the warped variables
+W=U-F_r/uWarp back to normal state variable U 
+uses a Newton iterative scheme.
 
-If UseIteration is true, then an iterative scheme is used.
 The Tolerance parameter sets if the iterative solution Witer is close
-enough to W. Iis now a simple constant for all variables in W.
+enough to W, abs(W-Witer).le.Tolerance*[abs(W)+abs(Witer)], to finish
+the iteration.
+
 MaxIteration limits the number of iterations performed to reach
 the tolerance. If MaxIteration is 1 then the scheme is linearized in dU/dW.
+
+DnJacobian sets how often the dU/dW Jacobian is calculated, which requires
+calculating dW/dU and an LU decomposition. Performing this less frequently
+saves computation time per iteration, but it may increase the required
+number of iterations.
+
+EpsRel and EpsAbs are used to set the perturbation of U for calculating
+a row of the dW/dU matrix for a given variable u as dW/du=[W(u+Eps)-W]/Eps
+where Eps=EpsRel*abs(u)+EpsAbs.
 
 Default values are shown above.
 </command>
