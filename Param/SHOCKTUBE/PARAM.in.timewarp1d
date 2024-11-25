@@ -12,7 +12,7 @@ NONE			TypeNormalization
 
 #TIMEWARP
 T			UseTimeWarp
-6.0			uWarp
+6.0			uWarpDim
 
 #WARPDIM
 1			iDimWarp
