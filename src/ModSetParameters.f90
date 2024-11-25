@@ -1944,7 +1944,7 @@ contains
           end select
 
        case("#STATEDEFINITION", "#STATEINTERFACE", &
-            "#UNIFORMSTATE", "#SHOCKTUBE", "#SHOCKPOSITION", &
+            "#UNIFORMSTATE", "#SHOCKTUBE", "#SHOCKPOSITION", "#RADIALSTATE", &
             "#WAVE", "#WAVE2", "#WAVE4", "#WAVE6", "#BUMP", &
             "#ENTROPYCONSTANT")
           call read_initial_cond_param(NameCommand)

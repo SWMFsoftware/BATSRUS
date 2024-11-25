@@ -319,7 +319,7 @@ test_timewarp_2d_run:
 
 test_timewarp_2d_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-7 \
-		${TESTDIR}/RESULT/GM/2d_*030_*.out \
+		${TESTDIR}/RESULT/GM/z=0_*006_*.out \
 		Param/SHOCKTUBE/TestOutput/timewarp2d.out.gz \
 		> test_timewarp_2d.diff)
 	ls -l test_timewarp_2d.diff

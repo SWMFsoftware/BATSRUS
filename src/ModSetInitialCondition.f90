@@ -11,7 +11,9 @@ module ModSetInitialCondition
   use ModMain, ONLY: NamePrimitive_V
   use ModPhysics, ONLY: &
        UseShocktube, ShockLeftDim_V, ShockRightDim_V, ShockLeft_V, &
-       ShockRight_V, ShockPosition, ShockSlope, nVectorVar, iVectorVar_I
+       ShockRight_V, ShockPosition, ShockSlope, nVectorVar, iVectorVar_I, &
+       iUnitPrim_V, Io2No_V, UseRadialState, AmplRDim_V, ExponentR_V
+
   use ModBatsrusUtility, ONLY: stop_mpi, get_ivar
   use ModNumConst, ONLY: cTwoPi, cDegToRad
 
@@ -77,6 +79,14 @@ contains
           call read_var(NamePrimitive_V(iVar), ShockLeftDim_V(iVar))
        end do
        ShockRightDim_V = ShockLeftDim_V
+
+    case("#RADIALSTATE")
+       UseRadialState = .true.
+       do iVar = 1, nVar
+          call read_var('Amplitude', AmplRDim_V(iVar))
+          if(AmplRDim_V(iVar) /= 0.0) &
+               call read_var('ExponentR', ExponentR_V(iVar))
+       end do
 
     case("#SHOCKTUBE")
        UseShockTube = .true.
@@ -157,8 +167,8 @@ contains
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
     use ModGeometry, ONLY: Used_GB
     use ModIO, ONLY: IsRestart
-    use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, &
-         UseShockTube, ShockPosition, iUnitPrim_V, Io2No_V, Gamma_I
+    use ModPhysics, ONLY: FaceState_VI, CellState_VI, Gamma_I, &
+         set_radial_state
     use ModUserInterface ! user_set_ics
     use ModSaMhd,          ONLY: UseSaMhd, init_samhd
     use ModConstrainDivB, ONLY: constrain_ics
@@ -257,44 +267,49 @@ contains
 
                 if(DoTestCell)write(*,*) NameSub,': InitalState=', &
                      State_VGB(:,i,j,k,iBlock)
-             elseif(UseShocktube)then
-                if( (Xyz_DGB(x_,i,j,k,iBlock) - ShockPosition) &
-                     < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
-                   ! Set all variables first
-                   State_VGB(:,i,j,k,iBlock) = ShockLeft_V
+             elseif(UseShocktube .or. UseRadialState)then
+                if(UseShockTube)then
+                   if( (Xyz_DGB(x_,i,j,k,iBlock) - ShockPosition) &
+                        < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
+                      ! Set all variables first
+                      State_VGB(:,i,j,k,iBlock) = ShockLeft_V
 
-                   if(DoTestCell)write(*,*) NameSub,': left State=', &
-                        State_VGB(:,i,j,k,iBlock)
+                      if(DoTestCell)write(*,*) NameSub,': left State=', &
+                           State_VGB(:,i,j,k,iBlock)
 #ifndef SCALAR
-                   ! Rotate vector variables
-                   do iFluid = 1, nFluid
-                      if(nFluid > 1) call select_fluid(iFluid)
-                      State_VGB(iUx:iUy,i,j,k,iBlock) = &
-                           matmul(Rot_II, ShockLeft_V(iUx:iUy))
-                   end do
-                   if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
-                        matmul(Rot_II, ShockLeft_V(Bx_:By_))
+                      ! Rotate vector variables
+                      do iFluid = 1, nFluid
+                         if(nFluid > 1) call select_fluid(iFluid)
+                         State_VGB(iUx:iUy,i,j,k,iBlock) = &
+                              matmul(Rot_II, ShockLeft_V(iUx:iUy))
+                      end do
+                      if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
+                           matmul(Rot_II, ShockLeft_V(Bx_:By_))
 #endif
-                   if(DoTestCell)write(*,*) NameSub,': final left State=', &
-                        State_VGB(:,i,j,k,iBlock)
-                else
-                   ! Set all variables first
-                   State_VGB(:,i,j,k,iBlock) = ShockRight_V
-                   if(DoTestCell)write(*,*) NameSub,': right State=', &
-                        State_VGB(:,i,j,k,iBlock)
+                      if(DoTestCell)write(*,*) NameSub, &
+                           ': final left State=', State_VGB(:,i,j,k,iBlock)
+                   else
+                      ! Set all variables first
+                      State_VGB(:,i,j,k,iBlock) = ShockRight_V
+                      if(DoTestCell)write(*,*) NameSub,': right State=', &
+                           State_VGB(:,i,j,k,iBlock)
 #ifndef SCALAR
-                   ! Set vector variables
-                   do iFluid = 1, nFluid
-                      if(nFluid > 1) call select_fluid(iFluid)
-                      State_VGB(iUx:iUy,i,j,k,iBlock) = &
-                           matmul(Rot_II, ShockRight_V(iUx:iUy))
-                   end do
-                   if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
-                        matmul(Rot_II, ShockRight_V(Bx_:By_))
+                      ! Set vector variables
+                      do iFluid = 1, nFluid
+                         if(nFluid > 1) call select_fluid(iFluid)
+                         State_VGB(iUx:iUy,i,j,k,iBlock) = &
+                              matmul(Rot_II, ShockRight_V(iUx:iUy))
+                      end do
+                      if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
+                           matmul(Rot_II, ShockRight_V(Bx_:By_))
 #endif
-                   if(DoTestCell)write(*,*) NameSub,': final right State=', &
-                        State_VGB(:,i,j,k,iBlock)
+                      if(DoTestCell)write(*,*) NameSub,&
+                           ': final right State=', State_VGB(:,i,j,k,iBlock)
+                   end if
                 end if
+
+                if(UseRadialState) call set_radial_state( &
+                     Xyz_DGB(:,i,j,k,iBlock), State_VGB(:,i,j,k,iBlock))
 
                 ! Apply "wave" perturbations
                 if(UseWave)then
@@ -581,6 +596,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine add_rotational_velocity
   !============================================================================
-
 end module ModSetInitialCondition
 !==============================================================================

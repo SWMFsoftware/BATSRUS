@@ -1100,6 +1100,37 @@ on the grid. The default values are zero, ie. the shock is in the
 X=0 plane.
 </command>
 
+<command name="RADIALSTATE" multiple="T" if="$_IsFirstSession">
+  <for from="1" to="$nVar">
+    <parameter name="Amplitude" type="real" default="0"/>
+    <parameter name="ExponentR" type="real" default="0" if="$Amplitude!=0"/>
+  </for>
+
+#RADIALSTATE
+1000.0			Amplitude Rho
+-2.0			ExponentR Rho (read if amplitude is not 0)
+400.0			Amplitude Ur
+0.0			ExponentR Ur (read if amplitude is not 0)
+0.0			Amplitude Ulon
+0.0			Amplitude Ulat
+100.0			Amplitude Br
+-2.0			ExponentR Br (read if amplitude is not 0)
+-10.0			Amplitude Blon
+-1.0			ExponentR Blon (read if amplitude is not 0)
+0.0			Amplitude Blat
+100.0			Amplitude p
+-10/3			ExponentR p (-2*Gamma)
+
+Initialize the variables with a radially dependent state
+Amplitude*r**ExponentR. The vector variables are given
+in r,lon,lat components. The above example can be
+used to set up initial conditions for a "solar wind" with
+constant radial velocity, Parker spiral magnetic field,
+and adiabatic expansion. Note that this initial state is
+singular at the origin, so the origin should not be part of
+the computational domain. 
+</command>
+
 <command name="WAVE" alias="WAVE2,WAVE4,WAVE6" multiple="T"
 	 if="$_IsFirstSession">
   <parameter name="NameVar"   type="string" length="20"/>
@@ -1943,6 +1974,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
   <parameter name="TypeBcBody" type="string" case="lower"
 	     input="select">
     <option name="absorb"			/>
+    <option name="radialstate"                  />
     <option name="reflect"			/>
     <option name="reflectb"			/>
     <option name="reflectall"			/>
@@ -1965,6 +1997,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 	       input="select">
       <option name="absorb"			/>
       <option name="fixed"			/>
+      <option name="radialstate"                />
       <option name="reflect"	default="T" 	/>
       <option name="reflectb"			/>
       <option name="reflectall"			/>
@@ -2007,6 +2040,7 @@ although not all those options are meaningful.
 Possible values for TypeBcBody are:
 \begin{verbatim}
 'absorb'          - float all variables but reflect Vr if Vr > 0
+'radialstate'     - fixed with the state defined by #RADIALSTATE
 'reflect'         - reflect all components of velocity relative to corotation,
                     reflect the normal component of B1, other variables float
 'reflectb'        - same as reflect, but the normal component of full B is reflected.
