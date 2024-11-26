@@ -1350,9 +1350,9 @@ contains
        if(UseTimewarp .and. UseWarpCmax)then
           ! Convert conservative variables to Warp variables
           call state_to_warp_cell(nFlux, StateLeftCons_V, &
-               iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
+               iFace, jFace, kFace, iBlockFace, DoConserveIons=.true.)
           call state_to_warp_cell(nFlux, StateRightCons_V, &
-               iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
+               iFace, jFace, kFace, iBlockFace, DoConserveIons=.true.)
        end if
 
        if(UseRS7)then
