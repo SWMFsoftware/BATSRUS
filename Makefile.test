@@ -1301,7 +1301,7 @@ test_outerhelio2d_run:
 
 test_outerhelio2d_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
-		${TESTDIR}/RESULTS/OH/z=0_var_1_e20170102-*.out \
+		${TESTDIR}/RESULTS/OH/z=0_*_e20170102-*.out \
 		Param/OUTERHELIO/TestOutput/z=0_2D.out.gz \
 		> test_outerhelio2d.diff)
 	-@(${DIFFNUM} -t -r=1e-5 \

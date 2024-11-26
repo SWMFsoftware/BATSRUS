@@ -102,7 +102,7 @@ mc3			TypeLimiter
 
 #TIMESTEPPING
 2			nStage (1 or 2)
-0.80			CflExpl
+0.8			CflExpl
 
 #NONCONSERVATIVE
 F			UseNonConservative
@@ -118,7 +118,7 @@ F			DoSaveInitial
 
 SAVEPLOT
 1			nPlotFile
-z=0 MHD idl_ascii		StringPlot
+z=0 HD idl		StringPlot
 100			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
@@ -204,6 +204,17 @@ T			UseNe4Source
 #TIMEACCURATE
 T			IsTimeAccurate
 
+#TIMEWARP
+T			UseTimewarp
+1200.0			uWarpDim
+
+#WARPSCHEME
+1e-8			Tolerance
+20			MaxIteration
+5			DnJacobian
+1e-6			EpsRel
+1e-8			EpsAbs
+
 #FIXEDTIMESTEP
 T			UseDtFixed
 1200			DtFixedDim [sec]
@@ -215,13 +226,13 @@ T			UsePlotNameDateTime
 
 #SAVEPLOT
 1			nPlotFile
-z=0 VAR idl_ascii		StringPlot
+z=0 HD idl_ascii		StringPlot
 -1  			DnSavePlot
 12 hour			DtSavePlot
 0.0			DxSavePlot
-rho ux bz p neurho neuux neup ne4rho ne4ux ne4p		NameVars
-{default}		NamePars
 
 #STOP
 -1			MaxIteration
 1 day			tSimulationMax
+
+30 day			tSimulationMax (to use all the input data)
