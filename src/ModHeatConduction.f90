@@ -1461,7 +1461,8 @@ contains
     use ModFaceGradient, ONLY: get_face_gradient_simple, set_block_field3, &
          set_block_jacobian_face
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
-         FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
+         FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, SemiStateTmp_VGI, &
+         DcoordDxyz_DDFDI
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
     use ModMultiFluid,   ONLY: UseMultiIon
@@ -1479,10 +1480,10 @@ contains
     real :: FaceGrad_D(MaxDim)
     logical :: UseFirstOrderBc
 
-    real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    ! real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
-    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
+    ! real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_heat_conduction_rhs'
@@ -1497,10 +1498,11 @@ contains
     iGang = 1
 #endif
 
-    call set_block_field3(iBlock, 1, Scalar1_G, StateImpl_VG)
+    call set_block_field3(iBlock, 1, SemiStateTmp_VGI(:,:,:,:,iBlock), &
+      StateImpl_VG)
     if(.not.IsCartesianGrid) &
-         call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, &
-         UseFirstOrderBc)
+         call set_block_jacobian_face(iBlock, &
+         DcoordDxyz_DDFDI(:,:,:,:,:,:,iBlock), UseFirstOrderBc)
 
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
@@ -1510,7 +1512,8 @@ contains
 
           ! Second-order accurate electron temperature gradient
           call get_face_gradient_simple(iDim, i, j, k, iBlock, &
-               StateImpl_VG, FaceGrad_D, DcoordDxyz_DDFD, &
+               StateImpl_VG, FaceGrad_D, &
+               DcoordDxyz_DDFDI(:,:,:,:,:,:,iBlock), &
                UseFirstOrderBcIn=UseFirstOrderBC)
           FluxImpl_VFDI(iTeImpl,i,j,k,iDim,iGang) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))

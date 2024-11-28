@@ -66,6 +66,13 @@ module ModSemiImplVar
   real, allocatable:: SemiState_VGB(:,:,:,:,:)  ! Semi-implicit vars
   !$acc declare create(SemiState_VGB)
 
+  real, allocatable:: SemiStateTmp_VGI(:,:,:,:,:)
+  !$acc declare create(SemiStateTmp_VGI)
+
+  ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+  real, allocatable:: DcoordDxyz_DDFDI(:,:,:,:,:,:,:)
+  !$acc declare create(DcoordDxyz_DDFDI)
+
   ! These arrays with *Semi_* and *SemiAll_* are indexed by compact iBlockSemi
   ! and have a single ghost cell at most.
   ! The SemiAll_ variables are indexed from 1..nVarSemiAll
