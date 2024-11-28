@@ -6,11 +6,12 @@ module ModTimewarp
 
   use ModAdvance, ONLY: StateOld_VGB, StateOld_VG, State_VGB, nFlux
   use ModGeometry, ONLY: r_GB
-  use ModVarIndexes, ONLY: nVar, nFluid
+  use ModVarIndexes, ONLY: nVar, nIonFluid, nFluid
   use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUz_I, iUx_I, iUz_I, iP_I
   use ModConservative, ONLY: is_conserv
   use ModEnergy, ONLY: energy_i, pressure_i
   use ModPhysics, ONLY: Io2No_V, UnitU_
+  use ModPhysicalFLux, ONLY: Normal_D, get_physical_flux
   use ModBatsrusUtility, ONLY: stop_mpi, error_report
   use BATL_lib, ONLY: Used_GB, Xyz_DGB, nI, nJ, nK, test_start, test_stop
 
@@ -93,38 +94,34 @@ contains
     logical, intent(in):: DoStateOldOnly
 
     integer:: i, j, k
-    logical:: IsConserv
 
     character(len=*), parameter:: NameSub = 'state_to_warp'
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-       IsConserv = is_conserv(i, j, k, iBlock)
        call state_to_warp_cell( &
-            nVar, StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock, IsConserv)
+            nVar, StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
        if(.not.DoStateOldOnly) call state_to_warp_cell( &
-            nVar, State_VGB(:,i,j,k,iBlock), i, j, k, iBlock, IsConserv)
+            nVar, State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
     end do; end do; end do
 
   end subroutine state_to_warp
   !============================================================================
-  subroutine state_to_warp_cell(nVarState, State_V, i, j, k, iBlock, IsConserv)
+  subroutine state_to_warp_cell(nVarState, State_V, i, j, k, iBlock)
 
     ! Convert state into warp variable for pressure and/or energy.
     ! When nVarState = nFlux, convert both, when nVarState = nVar,
-    ! then convert pressures if IsConserv = .false., otherwise energies.
-
-    use ModPhysicalFLux, ONLY: Normal_D, get_physical_flux
+    ! then convert either pressures or energies.
 
     integer, intent(in):: nVarState
     real, intent(inout):: State_V(nVarState)
     integer, intent(in):: i, j, k, iBlock
-    logical, intent(in):: IsConserv
 
     integer:: iFluid
     real:: InvRho, Prim_V(nVar), Flux_V(nFlux)
     ! for now. Should become optional arguments
     real:: Un_I(nFluid+1), En, StateCons_V(nFlux), NormalOld_D(3)
+
     ! Convert to primitive variables
     !--------------------------------------------------------------------------
     Prim_V = State_V(1:nVar)
@@ -133,8 +130,10 @@ contains
        InvRho = 1/State_V(iRho_I(iFluid))
        Prim_V(iUx_I(iFluid):iUz_I(iFluid)) = &
             InvRho*State_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid))
-       ! Convert energy to pressure if necessary !!! neutral fluids !!!
-       if(IsConserv .and. nVarState == nVar) &
+       ! Check if both pressures and energies are present
+       if(nVarState == nFlux) CYCLE
+       ! Convert energy to pressure if necessary
+       if(is_conserv(i, j, k, iBlock, iFluid)) &
             Prim_V(iP_I(iFluid)) = pressure_i(State_V, iFluid)
     end do
 
@@ -156,9 +155,12 @@ contains
     Normal_D = NormalOld_D
 
     ! Put energy fluxes into pressure fluxes if necessary
-    if(IsConserv .and. nVarState == nVar) &
-         Flux_V(iP_I) = Flux_V(nVar+1:nVar+nFluid)
-
+    if(nVarState == nVar)then
+       do iFluid = 1, nFluid
+          if(is_conserv(i, j, k, iBlock, iFluid)) &
+               Flux_V(iP_I(iFluid)) = Flux_V(nVar+iFluid)
+       end do
+    end if
     ! Convert to warp variables
     State_V = State_V - Flux_V(1:nVarState)/uWarp
 
@@ -197,34 +199,31 @@ contains
 
       integer:: iFluid, iIter, iError = -1
       real:: StateIter_V(nVar), WarpIter_V(nVar), dIter_V(nVar), Error
-      logical:: IsConserv, DoLu
+      logical:: DoLu
       !------------------------------------------------------------------------
       ! StateOld_VG has pressures
       StateIter_V = StateOld_VG(:,i,j,k)
 
-      ! Convert pressure (flux) to energy (flux) if cell is conservative
-      IsConserv = is_conserv(i, j, k, iBlock)
-
-      if(IsConserv)then
-         ! Convert pressures to energies to simplify iterative scheme
-         ! Neutral fluids, entropies and Boris not handled yet !!!
-         do iFluid = 1, nFluid
-            StateIter_V(iP_I(iFluid)) = energy_i(StateIter_V, iFluid)
-         end do
-      end if
+      ! Convert pressures to energies to simplify iterative scheme
+      ! Entropies and Boris not handled yet !!!
+      do iFluid = 1, nFluid
+         if(is_conserv(i, j, k, iBlock, iFluid)) &
+              StateIter_V(iP_I(iFluid)) = energy_i(StateIter_V, iFluid)
+      end do
 
       ! Iterate to obtain the solution
       do iIter = 1, MaxIteration
          ! Convert StateIter_V to WarpIter_V = StateIter_V - F_r/uWarp
          WarpIter_V = StateIter_V
-         call state_to_warp_cell(nVar, WarpIter_V, i, j, k, iBlock, IsConserv)
+         call state_to_warp_cell(nVar, WarpIter_V, i, j, k, iBlock)
+
          ! Check if we reached the desired accuracy
          if(all(abs(Warp_V - WarpIter_V) <= &
               Tolerance*(abs(Warp_V) + abs(WarpIter_V)))) EXIT
 
          ! Get dW/dU matrix
          if(modulo(iIter - 1, DnJacobian) == 0)then
-            call get_jacobian(StateIter_V, WarpIter_V, Jac_VV, IsConserv)
+            call get_jacobian(StateIter_V, WarpIter_V, Jac_VV)
             DoLu = .true.
          else
             DoLu = .false.
@@ -265,14 +264,12 @@ contains
 
     end subroutine warp_to_state_cell
     !==========================================================================
-    subroutine get_jacobian(State_V, Warp_V, Jac_VV, IsConserv)
+    subroutine get_jacobian(State_V, Warp_V, Jac_VV)
 
       ! Calculate dW/dU matrix Jac_VV for U=State_V and W=Warp_V.
-      ! If IsConserv is true then U contains energies, otherwise pressures.
 
       real, intent(in):: State_V(nVar), Warp_V(nVar)
       real, intent(out):: Jac_VV(nVar,nVar)
-      logical, intent(in):: IsConserv
 
       real:: StateEps_V(nVar), WarpEps_V(nVar)
       real:: Eps
@@ -286,7 +283,7 @@ contains
          StateEps_V(iVar) = StateEps_V(iVar) + Eps
          ! Calculate perturbed warped variable
          WarpEps_V = StateEps_V
-         call state_to_warp_cell(nVar, WarpEps_V, i, j, k, iBlock, IsConserv)
+         call state_to_warp_cell(nVar, WarpEps_V, i, j, k, iBlock)
          ! Calculate derivative
          Jac_VV(:,iVar) = (WarpEps_V - Warp_V)/Eps
       end do

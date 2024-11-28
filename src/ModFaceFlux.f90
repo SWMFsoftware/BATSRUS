@@ -1341,21 +1341,19 @@ contains
        ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, StateLeftCons_V, FluxLeft_V, &
             UnLeft_I, EnLeft)
-
        if(UseMhdMomentumFlux) MhdFluxLeft_V = MhdFlux_V
 
        call get_physical_flux(StateRight_V, StateRightCons_V, FluxRight_V, &
             UnRight_I, EnRight)
+       if(UseMhdMomentumFlux) MhdFluxRight_V = MhdFlux_V
 
        if(UseTimewarp .and. UseWarpCmax)then
           ! Convert conservative variables to Warp variables
           call state_to_warp_cell(nFlux, StateLeftCons_V, &
-               iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
+               iFace, jFace, kFace, iBlockFace)
           call state_to_warp_cell(nFlux, StateRightCons_V, &
-               iFace, jFace, kFace, iBlockFace, IsConserv=.true.)
+               iFace, jFace, kFace, iBlockFace)
        end if
-
-       if(UseMhdMomentumFlux) MhdFluxRight_V = MhdFlux_V
 
        if(UseRS7)then
           call modify_flux(FluxLeft_V, UnLeft_I(1), MhdFluxLeft_V)
