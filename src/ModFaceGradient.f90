@@ -25,6 +25,7 @@ module ModFaceGradient
   public :: get_face_gradient_field
   public :: get_face_curl
   public :: set_block_jacobian_face
+  public :: set_block_jacobian_face_simple
 
 contains
   !============================================================================
@@ -616,6 +617,31 @@ contains
   !============================================================================
   subroutine set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, &
        UseFirstOrderBcIn)
+    integer, intent(in):: iBlock
+    ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+    real, intent(out) :: &
+         DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
+
+    logical, optional, intent(in):: UseFirstOrderBcIn
+
+    ! Transverse gradients
+    real:: TransGrad_DDG(MaxDim,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    logical :: UseFirstOrderBc
+    !--------------------------------------------------------------------------
+
+    if(present(UseFIrstOrderBcIn))then
+       UseFirstOrderBc = UseFirstOrderBcIn
+    else
+       UseFirstOrderBc =  .false.
+    end if
+
+    call set_block_jacobian_face_simple(iBlock, DcoordDxyz_DDFD, &
+         TransGrad_DDG, UseFIrstOrderBcIn)
+  end subroutine set_block_jacobian_face
+  !============================================================================
+  subroutine set_block_jacobian_face_simple(iBlock, DcoordDxyz_DDFD, &
+       TransGrad_DDG, UseFirstOrderBcIn)
     !$acc routine vector
 
     use ModMain, ONLY: x_, y_, z_
@@ -627,13 +653,15 @@ contains
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
     real, intent(out) :: &
          DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
+
+    ! Transverse gradients
+    real, intent(out):: &
+         TransGrad_DDG(MaxDim,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
     logical, optional, intent(in):: UseFirstOrderBcIn
 
     ! Dxyz/Dcoord matrix for one cell
     real:: DxyzDcoord_DD(MaxDim,MaxDim)
-
-    ! Transverse gradients
-    real:: TransGrad_DDG(MaxDim,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Inverse of cell size
     real :: InvDx, InvDy, InvDz
@@ -651,7 +679,7 @@ contains
 
     logical :: UseFirstOrderBc
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_block_jacobian_face'
+    character(len=*), parameter:: NameSub = 'set_block_jacobian_face_simple'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
@@ -813,7 +841,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine set_block_jacobian_face
+  end subroutine set_block_jacobian_face_simple
   !============================================================================
   subroutine get_face_gradient_field(iDir, i, j, k, iBlock, nField, &
        IsNewBlock, Var_IG, FaceGrad_DI)

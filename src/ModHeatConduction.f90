@@ -1459,10 +1459,10 @@ contains
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure, &
          iTypeUpdate, UpdateOrig_
     use ModFaceGradient, ONLY: get_face_gradient_simple, set_block_field3, &
-         set_block_jacobian_face
+         set_block_jacobian_face_simple
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, SemiStateTmp_VGI, &
-         DcoordDxyz_DDFDI
+         DcoordDxyz_DDFDI, TransGrad_DDGI
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
     use ModMultiFluid,   ONLY: UseMultiIon
@@ -1498,11 +1498,13 @@ contains
     iGang = 1
 #endif
 
-    call set_block_field3(iBlock, 1, SemiStateTmp_VGI(:,:,:,:,iBlock), &
+    call set_block_field3(iBlock, 1, SemiStateTmp_VGI(:,:,:,:,iGang), &
       StateImpl_VG)
     if(.not.IsCartesianGrid) &
-         call set_block_jacobian_face(iBlock, &
-         DcoordDxyz_DDFDI(:,:,:,:,:,:,iBlock), UseFirstOrderBc)
+         call set_block_jacobian_face_simple(iBlock, &
+         DcoordDxyz_DDFDI(:,:,:,:,:,:,iGang), &
+         TransGrad_DDGI(:,:,:,:,:,iGang), &
+         UseFirstOrderBc)
 
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
@@ -1513,7 +1515,7 @@ contains
           ! Second-order accurate electron temperature gradient
           call get_face_gradient_simple(iDim, i, j, k, iBlock, &
                StateImpl_VG, FaceGrad_D, &
-               DcoordDxyz_DDFDI(:,:,:,:,:,:,iBlock), &
+               DcoordDxyz_DDFDI(:,:,:,:,:,:,iGang), &
                UseFirstOrderBcIn=UseFirstOrderBC)
           FluxImpl_VFDI(iTeImpl,i,j,k,iDim,iGang) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
@@ -1611,8 +1613,9 @@ contains
     ! since this works on temperature and not energy or pressure,
 
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
-    use ModFaceGradient, ONLY: set_block_jacobian_face
-    use ModImplicit,     ONLY: UseNoOverlap, nStencil, iTeImpl
+    use ModFaceGradient, ONLY: set_block_jacobian_face_simple
+    use ModImplicit,     ONLY: UseNoOverlap, nStencil, iTeImpl, &
+         DcoordDxyz_DDFDI, TransGrad_DDGI
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
@@ -1622,15 +1625,21 @@ contains
     integer, intent(in):: nVarImpl
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
-    integer :: i, j, k, iDim, Di, Dj, Dk
+    integer :: i, j, k, iDim, Di, Dj, Dk, iGang
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
 
-    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
+    ! real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_jacobian_heat_cond'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
+#ifdef _OPENACC
+    iGang = iBlock
+#else
+    iGang = 1
+#endif
 
     if(UseAnisoPressure .and. .not.UseMultiIon)then
 #ifndef _OPENACC
@@ -1662,7 +1671,9 @@ contains
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
 
     if(.not.IsCartesianGrid) &
-         call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
+         call set_block_jacobian_face_simple(iBlock, &
+         DcoordDxyz_DDFDI(:,:,:,:,:,:,iGang), &
+         TransGrad_DDGI(:,:,:,:,:,iGang))
 
     ! the transverse diffusion is ignored in the Jacobian
     do iDim = 1, nDim
@@ -1675,11 +1686,11 @@ contains
              DiffLeft = Coeff*HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)
              DiffRight = Coeff*HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
           else
-             InvDxyzVol_D = DcoordDxyz_DDFD(iDim,:nDim,i,j,k,iDim)*Coeff
+             InvDxyzVol_D = DcoordDxyz_DDFDI(iDim,:nDim,i,j,k,iDim,iGang)*Coeff
              DiffLeft = sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyzVol_D)
 
-             InvDxyzVol_D = DcoordDxyz_DDFD(iDim,:nDim,i+Di,j+Dj,k+Dk,iDim) &
-                  *Coeff
+             InvDxyzVol_D = &
+                  DcoordDxyz_DDFDI(iDim,:nDim,i+Di,j+Dj,k+Dk,iDim,iGang)*Coeff
              DiffRight = &
                   sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyzVol_D)
           end if

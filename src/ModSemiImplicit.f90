@@ -185,6 +185,7 @@ contains
     allocate(SemiState_VGB(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(SemiStateTmp_VGI(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
     allocate(DcoordDxyz_DDFDI(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim,nGang))
+    allocate(TransGrad_DDGI(MaxDim,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
 
     allocate(ResSemi_VCB(nVarSemi,nI,nJ,nK,MaxBlock))
 
