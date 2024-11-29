@@ -2635,31 +2635,33 @@ contains
     end do ! iFluid
 
     if(UseTimeWarp .and. NormalWarp > 0.0)then
-       if(present(Cmax_I))then
-          if(maxval(CmaxDt_I(iFluidMin:iFluidMax)) > uWarp)then
-             write(*,*)NameSub,': iFluidMin:iFluidMax=', iFluidMin, iFluidMax
-             write(*,*)NameSub,': iFace,jFace,kFace,iBlockFace=', &
-                  iFace, jFace, kFace, iBlockFace
-             write(*,*)NameSub,': Xyz=', &
-                  Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
-             write(*,*)NameSub,': State=', State_V
-             write(*,*)NameSub,': uWarp=', uWarp
-             write(*,*)NameSub,': CmaxDt_I=', CmaxDt_I(iFluidMin:iFluidMax)
-             write(*,*)NameSub,': Cmax_I  =', Cmax_I(iFluidMin:iFluidMax)
-             call stop_mpi('Increase uWarp')
+       do iFluid = iFluidMin, iFluidMax
+          if(present(Cmax_I))then
+             if(CmaxDt_I(iFluid) > uWarp)then
+                write(*,*)NameSub,': iFluid=', iFluid
+                write(*,*)NameSub,': iFace,jFace,kFace,iBlockFace=', &
+                     iFace, jFace, kFace, iBlockFace
+                write(*,*)NameSub,': Xyz=', &
+                     Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
+                write(*,*)NameSub,': State=', State_V
+                write(*,*)NameSub,': uWarp, CmaxDt, Cmax=', &
+                     uWarp, CmaxDt_I(iFluid), Cmax_I(iFluid)
+                call stop_mpi('Increase uWarp')
+             end if
+             if(UseWarpCmax) Cmax_I(iFluid) = Cmax_I(iFluid) &
+                  *uWarp/(uWarp - NormalWarp*Cmax_I(iFluid))
+             CmaxDt_I(iFluid) = CmaxDt_I(iFluid) &
+                  *uWarp/(uWarp - NormalWarp*CmaxDt_I(iFluid))
           end if
-          if(UseWarpCmax) Cmax_I(iFluidMin:iFluidMax) = &
-               Cmax_I(iFluidMin:iFluidMax)*uWarp &
-               /(uWarp - NormalWarp*Cmax_I(iFluidMin:iFluidMax))
-          CmaxDt_I(iFluidMin:iFluidMax) = CmaxDt_I(iFluidMin:iFluidMax)*uWarp &
-               /(uWarp - NormalWarp*CmaxDt_I(iFluidMin:iFluidMax))
-       end if
-       ! Sign of NormalWarp might be needed here ?
-       if(present(Cright_I) .and. UseWarpCmax) &
-            Cright_I = Cright_I*uWarp/(uWarp - NormalWarp*Cright_I)
-       ! Cleft is negative when it matters, so sign is swapped
-       if(present(Cleft_I) .and. UseWarpCmax) &
-            Cleft_I = Cleft_I*uWarp/(uWarp + NormalWarp*Cleft_I)
+          ! Sign of NormalWarp might be needed here ?
+          if(present(Cright_I) .and. UseWarpCmax) &
+               Cright_I(iFluid) = Cright_I(iFluid) &
+               *uWarp/(uWarp - NormalWarp*Cright_I(iFluid))
+          ! Cleft is negative when it matters, so sign is swapped
+          if(present(Cleft_I) .and. UseWarpCmax) &
+               Cleft_I(iFluid) = Cleft_I(iFluid) &
+               *uWarp/(uWarp + NormalWarp*Cleft_I(iFluid))
+       end do
     end if
 
     if(UseEfield .and. iFluidMin <= nIonFluid)then

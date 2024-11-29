@@ -7,6 +7,7 @@ module ModSemiImplicit
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, &
        iBlockTest, iProcTest, iVarTest, iProc, iComm
+  use BATL_size, ONLY: nGang
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
 
   use ModSemiImplVar
@@ -182,6 +183,10 @@ contains
     allocate(DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
 
     allocate(SemiState_VGB(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(SemiStateTmp_VGI(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
+    allocate(DcoordDxyz_DDFDI(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim,nGang))
+    allocate(TransGrad_DDGI(MaxDim,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
+
     allocate(ResSemi_VCB(nVarSemi,nI,nJ,nK,MaxBlock))
 
     allocate(JacSemi_VVCIB(nVarSemi,nVarSemi,nI,nJ,nK,nStencil,MaxBlock))
