@@ -20,7 +20,6 @@ module GM_couple_pc
 
 contains
   !============================================================================
-
   subroutine GM_get_for_pc_dt(DtSi)
 
     ! Calculate the global time step for PC
@@ -38,7 +37,6 @@ contains
 
   end subroutine GM_get_for_pc_dt
   !============================================================================
-
   subroutine GM_get_for_pc_grid_info(nInt, nPicGrid, nSize_I, Int_I)
     use ModPIC, ONLY: nSizeStatus, iPicStatus_I, UseAdaptivePic, &
          pic_set_cell_status, nRegionPic, iPicStatusMax_I
@@ -60,7 +58,6 @@ contains
 
   end subroutine GM_get_for_pc_grid_info
   !============================================================================
-
   subroutine GM_get_for_pc_init(nParamInt, nParamReal, iParam_I, Param_I)
 
     use ModVarIndexes, ONLY: MassSpecies_V, Pe_, Bx_, Ex_, &
@@ -82,7 +79,6 @@ contains
     integer :: iFluid, iSpecies, iRegion
     integer :: i, j, n
     !--------------------------------------------------------------------------
-
     if(.not.present(iParam_I))then
        ! nDim, nRegion
        ! nVar, nIonFluid, nSpecies, nCellPerPatch
@@ -179,7 +175,6 @@ contains
 
   end subroutine GM_get_for_pc_init
   !============================================================================
-
   subroutine GM_get_for_pc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
 
@@ -414,7 +409,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'GM_put_from_pc'
     !--------------------------------------------------------------------------
-
     if(.not. present(Data_VI))then
        nPoint=0;
        ! get nPoint
@@ -434,6 +428,5 @@ contains
 
   end subroutine GM_put_from_pc
   !============================================================================
-
 end module GM_couple_pc
 !==============================================================================

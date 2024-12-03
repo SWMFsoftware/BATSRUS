@@ -250,17 +250,23 @@ contains
        end if
     end if
 
+    ! Save velocity before change density.
+    uIon_D = State_VGB(RhoUx_:RhoUz_,1,1,1,iBlock)   &
+         /State_VGB(Rho_,1,1,1,iBlock)
+
     ! Get density from the uniform temperature assumption
     State_VGB(Rho_,:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)/Tp
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+            State_VGB(Rho_,i,j,k,iBlock) * uIon_D
+    end do; end do; end do
 
     if (UseEfield) then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           y = Xyz_DGB(y_,i,j,k,iBlock)
 
           nIon   = State_VGB(Rho_,i,j,k,iBlock)/MassFluid_I(1)
-          uIon_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)   &
-               /State_VGB(Rho_,i,j,k,iBlock)
-
           Current_D     = 0
 
           if(UseDoubleCurrentSheet) then
