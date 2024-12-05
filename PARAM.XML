@@ -4580,6 +4580,7 @@ Default is no magnetic perturbation calculation.
       <option name="GEO" default="T"/>
       <option name="MAG"/>
       <option name="SMG"/>
+      <option name="GSM"/>
     </parameter>
     <parameter name="nGridLon"      type="integer"          default="360"/>
     <parameter name="nGridLat"      type="integer"          default="171"/>
@@ -4594,7 +4595,7 @@ Default is no magnetic perturbation calculation.
 #MAGNETOMETERGRID
 2                       nMagGridFile
 global ascii		StrGridFileOut (ascii, tec, real4, real8)
-GEO			TypeCoordGrid (GEO, MAG, SMG)
+GEO			TypeCoordGrid (GEO, MAG, SMG, GSM)
 360			nGridLon
 171			nGridLat
 0.			GridLonMin
@@ -4604,7 +4605,7 @@ GEO			TypeCoordGrid (GEO, MAG, SMG)
 -1			DnSaveMagGrid
 60.0			DtSaveMagGrid
 us real4		StrGridFileOut (ascii, tec, real4, real8)
-GEO			TypeCoordGrid (GEO, MAG, SMG)
+GEO			TypeCoordGrid (GEO, MAG, SMG, GSM)
 320			nGridLon
 171			nGridLat
 200.			GridLonMin
@@ -4619,23 +4620,30 @@ longitude-latitude grids. nMagGridFile specifies the number of magnetometer
 grid outputs.
 
 StrGridFileOut specifies the region name (part of the file name) and format.
-The region name can be any arbitrary string that the user can name for the
-region, and the format can be 'ascii' (text file), 'tec' (Tecplot text file),
+The region name can be any arbitrary string (e.g., usa, europe, global).
+The format can be 'ascii' (text file), 'tec' (Tecplot text file),
 'real4' (single precision binary) or 'real8' (double precision binary).
-The coordinate system of the grid (not the output) can be set to GEO
-(geographic), MAG (geomagnetic) or SMG (solar magnetic) coordinates.
-The region name can be any user specified string, e.g., usa, europe, global, etc.
 
-The number of grid points in the longitude and latitude directions is
-given by nGridLon and nGridLat, respectively.  The longitudes
-span from from GridLonMin to GridLonMax, while the latitudes
-span from GridLatMin to GridLatMax.  If the longitude spans 360
-degrees, the stations will be arranged so that the equivalent
-longitudes of 0 and 360 are not repeated.  However, if -90 or +90
-degrees is used for the maximum/minimum latitude, the polar stations
-will be repeated nLonMagGrid times, so choose limits wisely.  The 2D
-output files are saved every DnSaveMagGrid steps or DtSaveMagGrid
-seconds.
+TypeCoordGrid provides The coordinate system of the grid, which is
+usually set to GEO (geographic) or MAG (geomagnetic). Both of these
+allow for fast calculation (see UseFastFacIntegral parameter of the
+#MAGPERTURBINTEGRAL command). The values SMG (solar magnetic) or
+GSM (Geographic-Solar-Magnetic) are also allowed, but those do not
+work with the fast integration method.
+
+Note that the three components of the dB magnetic perturbations in the
+output file are always magnetic north, magnetic east and down (NED),
+which is independent of the coordinate system chosen for the grid.
+
+The nGridLon and nGridLat parameters define the number of grid points
+in the longitude and latitude directions, respectively. The longitudes
+span from from GridLonMin to GridLonMax, while the latitudes span from
+GridLatMin to GridLatMax.  If the longitude spans 360 degrees, the
+stations will be arranged so that the equivalent longitudes of 0 and
+360 are not repeated. However, if -90 or +90 degrees is used for the
+maximum/minimum latitude, the polar stations will be repeated
+nLonMagGrid times, so choose limits wisely.  The 2D output files are
+saved every DnSaveMagGrid steps or DtSaveMagGrid seconds.
 
 No magnetometer grid file is saved by default.
 </command>
