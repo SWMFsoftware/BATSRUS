@@ -682,23 +682,22 @@ contains
           Cross_D = cross_prod(HallJ_DII(:,i,j), dXyz_D)
           !$acc atomic update
           dBHall_DI(1,iMag)     = dBHall_DI(1,iMag) + Coef*Cross_D(1)
-          !$acc end atomic
+
           !$acc atomic update
           dBHall_DI(2,iMag)     = dBHall_DI(2,iMag) + Coef*Cross_D(2)
-          !$acc end atomic
+
           !$acc atomic update
           dBHall_DI(3,iMag)     = dBHall_DI(3,iMag) + Coef*Cross_D(3)
-          !$acc end atomic
+
           Cross_D = cross_prod(PedersenJ_DII(:,i,j), dXyz_D)
           !$acc atomic update
           dBPedersen_DI(1,iMag) = dBPedersen_DI(1,iMag) + Coef*Cross_D(1)
-          !$acc end atomic
+
           !$acc atomic update
           dBPedersen_DI(2,iMag) = dBPedersen_DI(2,iMag) + Coef*Cross_D(2)
-          !$acc end atomic
+
           !$acc atomic update
           dBPedersen_DI(3,iMag) = dBPedersen_DI(3,iMag) + Coef*Cross_D(3)
-          !$acc end atomic
 
 #ifndef _OPENACC
           if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug.and.iMag==1)then
