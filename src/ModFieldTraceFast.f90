@@ -559,7 +559,7 @@ contains
              end if
           end if
 #endif
-          !$acc loop vector collapse(3) private(GenIni_D, Gen_D, Weight_I, iFace)
+          !$acc loop vector collapse(3) private(GenIni_D,Gen_D,Weight_I,iFace)
           do iZ = 1, nK; do iY = 1, nJ; do iX = 1, nI
 
              ! Shortcuts for inner and false cells
