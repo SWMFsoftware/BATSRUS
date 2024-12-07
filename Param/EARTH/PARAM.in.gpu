@@ -1,14 +1,11 @@
 #DESCRIPTION
-Param/EARTH/PARAM.in.GPU.dev: Earth simulation with Cartesian grid		StringDescription
+Param/EARTH/PARAM.in.gpu: time accurate run for GPU		StringDescription
 
 #TIMING
 T			UseTiming
 -1			DnTiming  ! every session
 -1			nDepthTiming
 cumu			TypeTimingReport
-
-TIMEACCURATE
-F			IsTimeAccurate
 
 #STARTTIME
 1998			iYear
@@ -85,9 +82,6 @@ T			UseBody
 3.5			rCurrents
 8.0			BodyNDim (/ccm) density for fixed BC for rho_BLK
 2.5e4			BodyTDim (K) temperature for fixed BC for P_BLK
-
-#NONCONSERVATIVE
-T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit

@@ -1,4 +1,4 @@
-#^CFG FILE TESTING
+# ^CFG FILE TESTING
 
 ### TESTS FOR THE STAND-ALONE BATSRUS ###
 
@@ -42,7 +42,8 @@ test_help:
 	@echo "    test_comet                 (run comet test)"
 	@echo "    test_cometCGhd             (run comet CG hd test)"
 	@echo "    test_cometCGfluids         (run comet CG fluids test)"
-	@echo "    test_earth                 (run Cartesian Earth test)"	
+	@echo "    test_earth                 (run small Earth test for GPU)"
+	@echo "    test_earth_large_gpu       (run large Earth test for GPU)"
 	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_fastwave              (run 3D fast wave test on GPU)"
 	@echo "    test_fastwave_2d           (run 2D rotated fast wave test on GPU)"
@@ -154,6 +155,7 @@ test_small_gpu:
 
 test_gpu: test_small_gpu
 	-@($(MAKE) test_awsom_large_gpu TESTDIR=run_test_awsom_large_gpu)
+	-@($(MAKE) test_earth_large_gpu TESTDIR=run_test_earth_large_gpu)
 
 test_extra:
 	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)
@@ -2018,13 +2020,13 @@ test_earth:
 test_earth_compile:
 	./Config.pl -noopenmp ${OPENACC}
 	./Config.pl -e=Mhd -u=Default -ng=2 -g=10,10,10
-	./Config.pl -opt=Param/EARTH/PARAM.in.GPU.dev
+	./Config.pl -opt=Param/EARTH/PARAM.in.gpu
 	${MAKE} BATSRUS
 	make PIDL
 
 test_earth_rundir: test_rundir
 	cd ${TESTDIR}; \
-		cp Param/EARTH/PARAM.in.GPU.dev PARAM.in
+		cp Param/EARTH/PARAM.in.gpu PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_earth_run:
@@ -2045,6 +2047,40 @@ test_earth_check:
 		Param/EARTH/TestOutput/earth_cartesian_mag_grid.out.gz \
 		>> test_earth_gpu.diff)
 	ls -l test_earth_gpu.diff
+
+########## Large (same as SWPC V2) test
+
+test_earth_large_gpu:
+	@echo "test_earth_large_gpu_compile..." > test_earth_large_gpu.diff
+	$(MAKE) test_earth_large_gpu_compile
+	@echo "test_earth_large_gpu_rundir..." >> test_earth_large_gpu.diff
+	$(MAKE) test_earth_large_gpu_rundir
+	@echo "test_earth_large_gpu_run..." >> test_earth_large_gpu.diff
+	$(MAKE) test_earth_large_gpu_run
+	@echo "test_earth_large_gpu_check..." >> test_earth_large_gpu.diff
+	$(MAKE) test_earth_large_gpu_check
+
+test_earth_large_gpu_compile:
+	./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -e=Mhd -u=Default -ng=2 -g=8,8,8
+	./Config.pl -opt=Param/EARTH/PARAM.in.large.gpu
+	${MAKE} BATSRUS
+	make PIDL
+
+test_earth_large_gpu_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/EARTH/PARAM.in.large.gpu PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_earth_large_gpu_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
+
+test_earth_large_gpu_check:
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-13 \
+		${TESTDIR}/RESULTS/GM/log*.log \
+		Param/EARTH/TestOutput/earth_large_ref.log \
+		> test_earth_large_gpu.diff)
+	ls -l test_earth_large_gpu.diff
 
 ### TESTS FOR MODELING EARTH WITH SPHERICAL GRID ###
 
