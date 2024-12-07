@@ -700,7 +700,7 @@ contains
           if(.not.allocated(Br_II)) &
                allocate(Br_II(nTheta,nPhi), Bt_DII(3,nTheta,nPhi))
 
-          call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+          call calc_field_aligned_current(nTheta, nPhi, rCurrents, &
                Fac_II, Br_II, Bt_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
                IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
           if(nProc > 1)then
@@ -708,7 +708,7 @@ contains
              call MPI_Bcast(Bt_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
           end if
        else
-          call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+          call calc_field_aligned_current(nTheta, nPhi, rCurrents, &
                Fac_II, TypeCoordFacGrid=TypeCoordFacGrid, &
                IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
        end if
@@ -1065,12 +1065,17 @@ contains
     end if
 
     ! Location for IE contributions are in SMG coordinates
+    call timing_start('kp_ie')
     Xyz_DI = matmul(IndexToSm_DD, XyzKp_DI)
     call calc_ie_mag_perturb(nKpMag, Xyz_DI, dBHall_DI, dBPedersen_DI)
+    call timing_stop('kp_ie')
 
     ! Location for gap region contribution in SMG (should be in MAG)
+    call timing_start('kp_fac')
     call ground_mag_perturb_fac('kp', nKpMag, Xyz_DI, dBfac_DI, dBmag_DI)
+    call timing_stop('kp_fac')
 
+    call timing_start('kp_convert')
     ! Add up contributions and convert to IO units (nT)
     dBsum_DI = (dBmag_DI + dBfac_DI + dBHall_DI + dBPedersen_DI) &
          *No2Io_V(UnitB_)
@@ -1092,13 +1097,18 @@ contains
 
        dBsum_DI(:,i)= matmul(dBsum_DI(:,i),  SmgNed_DD)
     end do
+    call timing_stop('kp_convert')
 
+    call timing_start('kp_reduce')
     ! MPI Reduce to head node.
     if(nProc > 1) call MPI_reduce_real_array(dBsum_DI, size(dBsum_DI), &
          MPI_SUM, 0, iComm, iError)
+    call timing_stop('kp_reduce')
 
     ! Head node calculates K-values and shares them with all other nodes.
     if(iProc == 0)then
+       call timing_start('kp_hist')
+
        ! Shift MagHistory to make room for new measurements.
        MagHistory_DII(:,:,1:iSizeKpWindow-1) = &
             MagHistory_DII(:,:,2:iSizeKpWindow)
@@ -1128,9 +1138,12 @@ contains
        ! Quantize to 1/3 levels.
        Kp = nint(3*Kp)/3.0
 
+       call timing_stop('kp_hist')
     end if
 
+    call timing_start('kp_bcast')
     call MPI_Bcast(Kp, 1, MPI_REAL, 0, iComm, iError)
+    call timing_stop('kp_bcast')
 
     if(UseYoungBc) then
        ! Apply empirical formula from Young et al. to get the ratio
