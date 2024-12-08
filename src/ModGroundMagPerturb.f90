@@ -3,15 +3,13 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModGroundMagPerturb
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose, iProc, nProc, iComm
+  use BATL_lib, ONLY: test_start, test_stop, lVerbose, iProc, nProc, iComm
   use ModBatsrusUtility, ONLY: get_date_time, stop_mpi
-
   use ModKind,           ONLY: Real4_
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, UnitB_, UnitJ_
-  use ModCoordTransform, ONLY: &
-       sph_to_xyz, rot_xyz_sph, xyz_to_lonlat
+  use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, &
+       xyz_to_lonlat, lonlat_to_xyz
   use ModFaceBoundary,   ONLY: RatioOH, UseYoungBc, F107Young
   use ModConst,          ONLY: cDegToRad, cRadToDeg
 
@@ -30,21 +28,20 @@ module ModGroundMagPerturb
   logical, public:: DoSaveGridmag = .false.
   integer, public:: nMagTotal = 0
 
-  real,    public:: Kp=0.0   ! Resulting indices
+  real, public:: Kp = 0.0   ! Resulting indices
 
   ! Public geomagnetic indices variables
+  integer, public, parameter:: nKpMag = 24, nAeMag = 24
   logical, public :: DoWriteIndices=.false., DoWriteSuper=.false.
   logical, public :: DoCalcKp=.false., DoCalcAe=.false.
-  logical, public           :: IsFirstCalc=.true., IsSecondCalc=.true.
-  integer, public           :: iSizeKpWindow = 0 ! Size of MagHistory_DII
-  integer, public, parameter:: nKpMag = 24, nAeMag = 24
+  logical, public :: IsFirstCalc=.true., IsSecondCalc=.true.
+  integer, public :: iSizeKpWindow = 0 ! Size of MagHistory_DII
   real, public, allocatable :: MagHistory_DII(:,:,:)  ! Mag time history.
-  real, public              :: AeIndex_I(4)
-  real, public              :: SuperIndex_I(4) ! SuperMAG indices
-  integer, public           :: nMagGridFile ! Number of magnetometer grids
+  real, public    :: AeIndex_I(4)
+  real, public    :: SuperIndex_I(4) ! SuperMAG indices
+  integer, public :: nMagGridFile ! Number of magnetometer grids
 
-  ! Local variables ------
-
+  ! Local variables
   integer            :: nMagnetometer=0
   real, allocatable  :: PosMagnetometer_II(:,:)
   character(len=100) :: NameMagInputFile
@@ -59,7 +56,7 @@ module ModGroundMagPerturb
   character(len=3):: TypeCoordFacGrid = 'MAG' ! 'MAG' for fast integral
 
   logical:: DoReadMagnetometerFile = .false., IsInitialized = .false.
-  integer          :: iUnitMag = -1, iUnitGrid = -1 ! To be removed !!!
+  integer:: iUnitMag = -1, iUnitGrid = -1 ! To be removed !!!
   character(len=3), allocatable :: NameMag_I(:)
 
   ! Description of the magnetometer grid files
@@ -85,7 +82,6 @@ module ModGroundMagPerturb
   real, parameter    :: KpLat   = 60.0         ! Synthetic Kp geomag. latitude
   real, parameter    :: AeLat   = 70.0         ! Synthetic AE geomag. latitude
   real               :: ScaleK9 = 600.0        ! Scaling of standard K
-  real, allocatable  :: LatIndex_I(:), LonIndex_I(:) ! Lat/Lon of geoindex mags
   real               :: XyzKp_DI(3,nKpMag)     ! Locations of Kp stations
   real               :: XyzAe_DI(3,nAeMag)     ! Locations of AE stations
   character(len=3)   :: TypeCoordIndex = 'MAG' ! SMG or MAG system for stations
@@ -143,7 +139,7 @@ contains
        call read_var('UseSurfaceIntegral', UseSurfaceIntegral)
        call read_var('UseFastFacIntegral', UseFastFacIntegral)
        call read_var('TypeCoordIndex',     TypeCoordIndex)
-       if(TypeCoordIndex/='MAG' .and. TypeCoordIndex/='SMG') &
+       if(TypeCoordIndex /= 'MAG' .and. TypeCoordIndex /= 'SMG') &
             call stop_mpi(NameSub// &
             ': incorrect TypeCoordIndex='//TypeCoordIndex)
        if(UseFastFacIntegral)then
@@ -151,7 +147,7 @@ contains
        else
           ! Mostly for testing purposes allow setting MAG for slow algorithm
           call read_var('TypeCoordFacGrid', TypeCoordFacGrid)
-          if(TypeCoordFacGrid/='MAG' .and. TypeCoordFacGrid/='SMG') &
+          if(TypeCoordFacGrid /= 'MAG' .and. TypeCoordFacGrid /= 'SMG') &
                call stop_mpi(NameSub// &
                ': incorrect TypeCoordFacGrid='//TypeCoordFacGrid)
        end if
@@ -253,6 +249,7 @@ contains
   end subroutine read_magperturb_param
   !============================================================================
   subroutine init_mod_magperturb
+
     ! Set up the grid of magnetometers and the respective files (if single
     ! file format is selected).
 
@@ -375,6 +372,7 @@ contains
   subroutine init_geoindices
 
     ! Initialize variables, arrays, and output file.
+
     use ModNumConst,  ONLY: cDegToRad, cTwoPi
     use ModUtilities, ONLY: flush_unit, open_file
     use ModMain,      ONLY: nStep
@@ -382,7 +380,6 @@ contains
     use ModIO,        ONLY: NamePlotDir, IsLogNameE
 
     integer            :: i, iTime_I(7)
-    real               :: RadXY, Phi
     character(len=100) :: NameFile
 
     logical:: DoTest
@@ -390,42 +387,24 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! Set number of shared magnetometers.
-    if(DoCalcKp)  nIndexMag = nIndexMag + nKpMag
-    if(DoCalcAe)  nIndexMag = nIndexMag + nAeMag
-    ! if(DoCalcDst) nIndexMag = nIndexMag + nDstMag ! Not yet implemented..
-    ! ...etc.
+    ! Set number of shared magnetometers
+    if(DoCalcKp) nIndexMag = nIndexMag + nKpMag
+    if(DoCalcAe) nIndexMag = nIndexMag + nAeMag
 
     if(DoTest) write(*,*)'Number of IndexMags used: ', nIndexMag
 
-    ! Allocate lat & lon arrays for index mags:
-    if(.not. allocated(LatIndex_I)) &
-         allocate(LatIndex_I(nIndexMag), LonIndex_I(nIndexMag))
-
-    ! Initialize Kp grid in TypeCoordIndex='SMG' or 'MAG' system
-    XyzKp_DI(3,:) = sin(KpLat * cDegToRad) ! Z for all stations.
-    RadXY         = cos(KpLat * cDegToRad) ! radial dist. from z-axis.
-    do i=1, nKpMag
-       Phi = cTwoPi * (i-1)/nKpMag
-       XyzKp_DI(1,i) = RadXY * cos(Phi)
-       XyzKp_DI(2,i) = RadXY * sin(Phi)
+    ! Initialize Kp grid
+    do i = 1, nKpMag
+       call lonlat_to_xyz(cTwoPi*(i-1)/nKpMag, KpLat*cDegToRad, XyzKp_DI(:,i))
        if(iProc==0 .and. DoTest) &
             write(*,'(a, 3(1x, e13.3))') 'Kp Coords = ', XyzKp_DI(:,i)
-       LatIndex_I(i) = KpLat
-       LonIndex_I(i) = Phi
     end do
 
-    ! Initialize Ae grid and arrays, similar to above.
-    XyzAe_DI(3,:) = sin(AeLat * cDegToRad) ! Z for all stations.
-    RadXY         = cos(AeLat * cDegToRad) ! radial dist. from z-axis.
-    do i=1, nAeMag
-       Phi = cTwoPi * (i-1)/nAeMag
-       XyzAe_DI(1,i) = RadXY * cos(Phi)
-       XyzAe_DI(2,i) = RadXY * sin(Phi)
+    ! Initialize Ae grid
+    do i = 1, nAeMag
+       call lonlat_to_xyz(cTwoPi*(i-1)/nAeMag, AeLat*cDegToRad, XyzAe_DI(:,i))
        if(iProc==0 .and. DoTest) &
             write(*,'(a, 3(1x, e13.3))') 'AE Coords = ', XyzAe_DI(:,i)
-       LatIndex_I(i+nKpMag) = AeLat
-       LonIndex_I(i+nKpMag) = Phi
     end do
 
     ! Allocate array to follow time history of magnetometer readings.
@@ -433,7 +412,7 @@ contains
 
     ! Allocate MagPerturb_DII, open index file, write header.
     if (iProc==0) then
-       allocate(MagHistory_DII(2, nKpMag, iSizeKpWindow))
+       allocate(MagHistory_DII(2,nKpMag,iSizeKpWindow))
        MagHistory_DII = 0.0
 
        if(IsLogNameE)then
@@ -508,22 +487,22 @@ contains
     ! at a given set of points (Xyz_DI) for nMag different magnetometers,
     ! from currents in GM cells.  The result is returned as MagPerturb_DI.
 
-    use ModSize,           ONLY: nI, nJ, nK
-    use ModGeometry,       ONLY: &
+    use ModGeometry, ONLY: &
          r_GB, xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
-    use ModMain,           ONLY: &
-         Unused_B, nBlock, tSimulation, TypeCoordSystem
-    use ModNumConst,       ONLY: cPi
-    use ModCurrent,        ONLY: get_current
-    use CON_axes,          ONLY: transform_matrix
-    use BATL_lib,          ONLY: CellVolume_GB, Used_GB, Xyz_DGB, x_, y_, z_
+    use ModMain, ONLY: tSimulation, TypeCoordSystem
+    use ModNumConst, ONLY: cPi
+    use ModCurrent, ONLY: get_current
+    use CON_axes, ONLY: transform_matrix
+    use BATL_lib, ONLY: nI, nJ, nK, Unused_B, nBlock, CellVolume_GB, Used_GB, &
+         Xyz_DGB, x_, y_, z_
 
-    integer, intent(in)                    :: nMag
-    real,    intent(in), dimension(3,nMag) :: Xyz_DI
-    real,    intent(out),dimension(3,nMag) :: MagPerturb_DI
-    integer  :: i,j,k,iBlock,iMag
-    real     :: r3, GmtoSmg_DD(3,3)
-    real, dimension(3):: Xyz_D, Current_D, MagPerturb_D
+    integer, intent(in) :: nMag
+    real,    intent(in) :: Xyz_DI(3,nMag)
+    real,    intent(out):: MagPerturb_DI(3,nMag)
+
+    integer:: i, j, k, iBlock, iMag
+    real:: r3, GmtoSmg_DD(3,3)
+    real:: Xyz_D(3), Current_D(3), MagPerturb_D(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ground_mag_perturb'
@@ -538,9 +517,9 @@ contains
     do iMag = 1, nMag
        Xyz_D = Xyz_DI(:,iMag)
        MagPerturb_D = 0.0
-       do iBlock=1, nBlock
+       do iBlock = 1, nBlock
           if (Unused_B(iBlock))CYCLE
-          do k=1, nK; do j=1, nJ; do i=1, nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              if(r_GB(i,j,k,iBlock) < rCurrents   .or. &
                   Xyz_DGB(x_,i+1,j,k,iBlock) > xMaxBox .or. &
@@ -618,11 +597,11 @@ contains
     real,    parameter:: rIonosphere = 1.01725 ! rEarth + iono_height
     integer, parameter:: nTheta =181, nPhi =180, nR = 30
 
-    integer           :: k, iHemisphere, iError
-    integer           :: iTheta,iPhi,iLine,iMag
-    real              :: dR, r, Theta, Phi
-    real              :: dTheta, dPhi, SinTheta, dSurface, dVol, dVolCoeff
-    real              :: InvBr, FacRcurrents
+    integer:: k, iHemisphere, iError
+    integer:: iTheta,iPhi,iLine,iMag
+    real:: dR, r, Theta, Phi
+    real:: dTheta, dPhi, SinTheta, dSurface, dVol, dVolCoeff
+    real:: InvBr, FacRcurrents
     real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D
     real, allocatable, save:: Fac_II(:,:)
 
@@ -652,8 +631,8 @@ contains
     logical, allocatable, save:: UseFastFacIntegralMagGrid_I(:)
 
     ! Coordinate system for the grid that collects the FAC
-    logical         :: DoConvertCoord
-    real            :: SmToFacGrid_DD(3,3)
+    logical:: DoConvertCoord
+    real:: SmToFacGrid_DD(3,3)
 
     ! real:: Surface, Volume, Height=1.0 !!! to test surface/volume integration
 
@@ -679,11 +658,11 @@ contains
     if(DoConvertCoord) &
          SmToFacGrid_DD   = transform_matrix(tSimulation, 'SMG', 'MAG')
 
-    MagPerturbFac_DI= 0.0
+    MagPerturbFac_DI = 0.0
 
-    dTheta = cPi    / (nTheta-1)
-    dPhi   = cTwoPi / nPhi
-    dR     = (rCurrents - rIonosphere) / nR
+    dTheta = cPi/(nTheta-1)
+    dPhi   = cTwoPi/nPhi
+    dR     = (rCurrents - rIonosphere)/nR
 
     if(UseSurfaceIntegral) MagPerturbMhd_DI = 0.0
 
@@ -700,7 +679,7 @@ contains
           if(.not.allocated(Br_II)) &
                allocate(Br_II(nTheta,nPhi), Bt_DII(3,nTheta,nPhi))
 
-          call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+          call calc_field_aligned_current(nTheta, nPhi, rCurrents, &
                Fac_II, Br_II, Bt_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
                IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
           if(nProc > 1)then
@@ -708,7 +687,7 @@ contains
              call MPI_Bcast(Bt_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
           end if
        else
-          call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+          call calc_field_aligned_current(nTheta, nPhi, rCurrents, &
                Fac_II, TypeCoordFacGrid=TypeCoordFacGrid, &
                IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
        end if
@@ -1069,7 +1048,9 @@ contains
     call calc_ie_mag_perturb(nKpMag, Xyz_DI, dBHall_DI, dBPedersen_DI)
 
     ! Location for gap region contribution in SMG (should be in MAG)
+    ! call timing_start('kp_fac')
     call ground_mag_perturb_fac('kp', nKpMag, Xyz_DI, dBfac_DI, dBmag_DI)
+    ! call timing_stop('kp_fac')
 
     ! Add up contributions and convert to IO units (nT)
     dBsum_DI = (dBmag_DI + dBfac_DI + dBHall_DI + dBPedersen_DI) &
@@ -1250,7 +1231,6 @@ contains
     character(len=100) :: StringLine
     character(len=3) :: NameMag
     real             :: LatMag, LonMag
-
     integer          :: nMag
 
     logical:: DoTest
@@ -1382,6 +1362,7 @@ contains
   end subroutine read_mag_input_file
   !============================================================================
   subroutine open_magnetometer_output_file(NameGroup)
+
     ! Open and initialize the magnetometer output file.  A new IO logical unit
     ! is created and saved for future writes to this file.
 
@@ -1475,7 +1456,6 @@ contains
     ! Calculate indices on all nodes.
     if(DoCalcKp) call calc_kp
     if(DoCalcAe) call calc_ae
-    ! if(DoCalcDst) call calc_dst ...etc...
 
     if(iProc > 0) RETURN ! Write only on head node.
 
@@ -1503,6 +1483,7 @@ contains
   end subroutine write_geoindices
   !============================================================================
   subroutine write_magnetometers(NameGroup, iFileIn)
+
     ! Write ground magnetometer field perturbations to file. Values, IO units,
     ! and other information is gathered from module level variables.
 
@@ -1590,13 +1571,14 @@ contains
 
     ! Transform the Radius position into cartesian coordinates.
     ! Transform the magnetometer position from MagInCoord to GM/SM
-
     do iMag = 1, nMagNow
-       ! (360,360) is for the station at the center of the planet
-       if ( nint(PosMagnetometer_II(1,iMag+iStart)) == 360 .and. &
-            nint(PosMagnetometer_II(2,iMag+iStart)) == 360) then
+       ! Lat=360 is for the station at the center of the planet (Dst)
+       if ( nint(PosMagnetometer_II(1,iMag+iStart)) == 360)then
           Xyz_D = 0.0
        else
+          ! PosMagnetometer_II is given as Lat,Lon in degrees.
+!          call lonlat_to_xyz( &
+!               PosMagnetometer_II(2:1:-1,iMag+iStart)*cDegToRad, Xyz_D)
           call sph_to_xyz(1.0,                           &
                (90-PosMagnetometer_II(1,iMag+iStart))*cDegToRad, &
                PosMagnetometer_II(2,iMag+iStart)*cDegToRad, Xyz_D)
@@ -1684,6 +1666,7 @@ contains
          dBMhd_DI, dBFac_DI, dBHall_DI, dBPedersen_DI, dBTotal_DI)
 
     call test_stop(NameSub, DoTest)
+
   contains
     !==========================================================================
     subroutine write_supermag
@@ -1810,6 +1793,7 @@ contains
     end subroutine write_mag_grid
     !==========================================================================
     subroutine write_mag_single
+
       ! For TypeMagFileOut == 'single', write a single record to the file.
 
       integer :: iTime_I(7), iMag
