@@ -1048,9 +1048,9 @@ contains
     call calc_ie_mag_perturb(nKpMag, Xyz_DI, dBHall_DI, dBPedersen_DI)
 
     ! Location for gap region contribution in SMG (should be in MAG)
-    !call timing_start('kp_fac')
+    ! call timing_start('kp_fac')
     call ground_mag_perturb_fac('kp', nKpMag, Xyz_DI, dBfac_DI, dBmag_DI)
-    !call timing_stop('kp_fac')
+    ! call timing_stop('kp_fac')
 
     ! Add up contributions and convert to IO units (nT)
     dBsum_DI = (dBmag_DI + dBfac_DI + dBHall_DI + dBPedersen_DI) &
