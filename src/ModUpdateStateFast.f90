@@ -12,6 +12,7 @@ module ModUpdateStateFast
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
        UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
        UseElectronEntropy
+  use ModFaceValue, ONLY: UseAccurateResChange, correct_monotone_restrict
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
@@ -226,6 +227,9 @@ contains
 #else
        iGang = 1
 #endif
+
+       if(nOrder > 1 .and. UseAccurateResChange) &
+            call correct_monotone_restrict(iBlock)
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 

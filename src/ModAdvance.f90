@@ -187,9 +187,9 @@ module ModAdvance
   !$acc declare create(LeftState_VZ, RightState_VZ)
 
   ! primitive variables
-  real, allocatable:: Primitive_VGI(:,:,:,:,:)
-  !$omp threadprivate( Primitive_VGI )
-  !$acc declare create(Primitive_VGI )
+  real, allocatable:: Primitive_VG(:,:,:,:)
+  !$omp threadprivate(Primitive_VG)
+  !$acc declare create(Primitive_VG)
 
   ! Face centered div(U)*dl
   real, allocatable, dimension(:,:,:,:):: &
@@ -350,7 +350,7 @@ contains
     allocate(FaceDivU_IZ( &
          nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nKFace))
 
-    allocate(Primitive_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
+    allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     allocate(Source_VC(nSource,nI,nJ,nK))
     Source_VC = 0.0
@@ -407,7 +407,7 @@ contains
     if(allocated(MhdFlux_VX))       deallocate(MhdFlux_VX)
     if(allocated(MhdFlux_VY))       deallocate(MhdFlux_VY)
     if(allocated(MhdFlux_VZ))       deallocate(MhdFlux_VZ)
-    if(allocated(Primitive_VGI))    deallocate(Primitive_VGI)
+    if(allocated(Primitive_VG))     deallocate(Primitive_VG)
     if(allocated(Source_VC))        deallocate(Source_VC)
     if(allocated(SourceMhd_VC))     deallocate(SourceMhd_VC)
     !$omp end parallel
