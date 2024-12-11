@@ -419,8 +419,7 @@ contains
     !--------------------------------------------------------------------------
     select case(iSideIn)
     case(1)
-       !!! acc loop vector collapse(2)
-       do k=1,nK,2; do j=1,nJ,2
+       do k = 1, nK, 2; do j = 1, nJ, 2
           if(  all(Used_GB(-1:2,j:j+1,k:k+1,iBlock)) .and. &
                all(Used_GB(0,j-2:j+3,k-2:k+3,iBlock)) ) then
              call accurate_reschange3d(&
@@ -447,8 +446,7 @@ contains
           end if
        end do; end do
     case(2)
-       !!! acc loop vector collapse(2)
-       do k=1,nK,2; do j=1,nJ,2
+       do k = 1, nK, 2; do j = 1, nJ, 2
           if(  all(Used_GB(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
                all(Used_GB(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
              call accurate_reschange3d(&
@@ -470,13 +468,12 @@ contains
                   FineF_VII        =RightState_VX(:,nI,j:j+1,k:k+1)  ,&
                   IsTrueCoarse2    = Used_GB(nI+2,j,k,iBlock)      ,&
                   IsTrueCoarse1    = Used_GB(nI+1,j,k,iBlock)      ,&
-                  IsTrueFine1  =all(Used_GB(nI,j:j+1,k:k+1,iBlock)),&
-                  IsTrueFine2_II      =Used_GB(nI-1,j:j+1,k:k+1,iBlock))
+                  IsTrueFine1      =all(Used_GB(nI,j:j+1,k:k+1,iBlock)),&
+                  IsTrueFine2_II   =Used_GB(nI-1,j:j+1,k:k+1,iBlock))
           end if
        end do; end do
     case(3)
-       !!! acc loop vector collapse(2)
-       do k=1,nK,2; do i=1,nI,2
+       do k = 1, nK, 2; do i = 1, nI, 2
           if(  all(Used_GB(i:i+1,-1:2,k:k+1,iBlock)) .and. &
                all(Used_GB(i-2:i+3,0,k-2:k+3,iBlock)) ) then
              call accurate_reschange3d(&
@@ -503,8 +500,7 @@ contains
           end if
        end do; end do
     case(4)
-       !!! acc loop vector collapse(2)
-       do k=1,nK,2; do i=1,nI,2
+       do k = 1, nK, 2; do i = 1, nI, 2
           if(  all(Used_GB(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
                all(Used_GB(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
              call accurate_reschange3d(&
@@ -531,8 +527,7 @@ contains
           end if
        end do; end do
     case(5)
-       !!! acc loop vector collapse(2)
-       do j=1,nJ,2; do i=1,nI,2
+       do j = 1, nJ, 2; do i = 1, nI, 2
           if(  all(Used_GB(i:i+1,j:j+1,-1:2,iBlock)) .and. &
                all(Used_GB(i-2:i+3,j-2:j+3,0,iBlock)) ) then
              call accurate_reschange3d(&
@@ -559,8 +554,7 @@ contains
           end if
        end do; end do
     case(6)
-       !!! acc loop vector collapse(2)
-       do j=1,nJ,2; do i=1,nI,2
+       do j = 1, nJ, 2; do i = 1, nI, 2
           if(  all(Used_GB(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
                all(Used_GB(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
              call accurate_reschange3d(&
@@ -623,7 +617,6 @@ contains
     !--------------------------------------------------------------------------
     select case(iSideIn)
     case(1)
-       !!! acc loop vector
        do j = 1, nJ, 2
           call accurate_reschange2d( &
                Coarse2_V       = Primitive_VG(:,-1,j,1), &
@@ -635,7 +628,6 @@ contains
                FineF_VI        = LeftState_VX(:, 2,j:j+1,1))
        end do
     case(2)
-       !!! acc loop vector
        do j = 1, nJ, 2
           call accurate_reschange2d(&
                Coarse2_V       = Primitive_VG(:,nI+2,j,1)       ,&
@@ -647,7 +639,6 @@ contains
                FineF_VI        =RightState_VX(:,nI  ,j:j+1,1))
        end do
     case(3)
-       !!! acc loop vector
        do i = 1, nI, 2
           call accurate_reschange2d(&
                Coarse2_V       = Primitive_VG(:,i,-1,1)         ,&
@@ -659,7 +650,6 @@ contains
                FineF_VI        = LeftState_VY(:,i:i+1,2,1))
        end do
     case(4)
-       !!! acc loop vector
        do i = 1, nI, 2
           call accurate_reschange2d(&
                Coarse2_V       = Primitive_VG(:,i,nJ+2,1)       ,&
@@ -680,8 +670,7 @@ contains
     !--------------------------------------------------------------------------
     select case(iSideIn)
     case(1)
-       !!! acc loop vector collapse(2)
-       do k=1,nK,2; do j=1,nJ,2
+       do k = 1, nK, 2; do j = 1, nJ, 2
           if(.not.all(Used_GB(-1:2,j:j+1,k:k+1,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
@@ -707,8 +696,7 @@ contains
           end if
        end do; end do
     case(2)
-       !!! acc loop vector collapse(2)
-       do k=1,nK,2; do j=1,nJ,2
+       do k = 1, nK, 2; do j = 1, nJ, 2
           if(.not.all(Used_GB(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
@@ -734,8 +722,7 @@ contains
           end if
        end do; end do
     case(3)
-       !!! acc loop vector collapse(2)
-       do k=1,nK,2; do i=1,nI,2
+       do k = 1, nK, 2; do i = 1, nI, 2
           if(.not.all(Used_GB(i:i+1,-1:2,k:k+1,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
@@ -761,8 +748,7 @@ contains
           end if
        end do; end do
     case(4)
-       !!! acc loop vector collapse(2)
-       do k=1,nK,2; do i=1,nI,2
+       do k = 1, nK, 2; do i = 1, nI, 2
           if(.not.all(Used_GB(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
@@ -788,8 +774,7 @@ contains
           end if
        end do; end do
     case(5)
-       !!! acc loop vector collapse(2)
-       do j=1,nJ,2; do i=1,nI,2
+       do j = 1, nJ, 2; do i = 1, nI, 2
           if(.not.all(Used_GB(i:i+1,j:j+1,-1:2,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
@@ -815,8 +800,7 @@ contains
           end if
        end do; end do
     case(6)
-       !!! acc loop vector collapse(2)
-       do j=1,nJ,2; do i=1,nI,2
+       do j = 1, nJ, 2; do i = 1, nI, 2
           if(.not.all(Used_GB(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
@@ -844,9 +828,10 @@ contains
     end select
   end subroutine get_face_tvd
   !============================================================================
-  subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
-    ! The subroutine calculates right and left face values (primitive
-    ! variables) LeftState_VX.. RightState_VZfor block iBlock from
+  subroutine calc_face_value(iBlock, DoResChangeOnly)
+
+    ! Calculate right and left face values (primitive variables)
+    ! LeftState_VX.. RightState_VZfor block iBlock from
     ! the cell centered State_VGB.
     !
     ! If DoResChangeOnly is true, only facevalues next to a coarser
@@ -872,7 +857,6 @@ contains
     use ModSaMhd,  ONLY: UseSaMhd, correct_samhd_face_value
 
     logical, intent(in):: DoResChangeOnly
-    logical, intent(in):: DoMonotoneRestrict
     integer, intent(in):: iBlock
 
     integer:: i, j, k, iSide, iFluid, iVar
@@ -951,8 +935,7 @@ contains
 
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
-         .and. (UseAccurateResChange .or. UseTvdResChange) &
-         .and. DoMonotoneRestrict) &
+         .and. (UseAccurateResChange .or. UseTvdResChange)) &
          call correct_monotone_restrict(iBlock)
 
     ! first, calculate the CELL values for the variables to be limited
