@@ -140,7 +140,6 @@ module ModFaceValue
 contains
   !============================================================================
   subroutine clean_mod_face_value
-
     !--------------------------------------------------------------------------
     if(allocated(iVarLimitRatio_I))  deallocate(iVarLimitRatio_I)
     if(allocated(iRegionLowOrder_I)) deallocate(iRegionLowOrder_I)
@@ -431,7 +430,7 @@ contains
                   FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1) ,&
                   FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
           else
-             call tvd_reschange_body(                                        &
+             call tvd_reschange_body(                                 &
                   Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
                   Coarse1_V    =    Primitive_VG(:, 0,j,k)           ,&
                   Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
@@ -449,7 +448,7 @@ contains
        do k = 1, nK, 2; do j = 1, nJ, 2
           if(  all(Used_GB(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
                all(Used_GB(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
-             call accurate_reschange3d(&
+             call accurate_reschange3d( &
                   Coarse2_V    = Primitive_VG(:,nI+2,j,k)            ,&
                   Coarse1_VII  = Primitive_VG(:,nI+1,j-2:j+3,k-2:k+3),&
                   Fine1_VII    = Primitive_VG(:,nI,j:j+1,k:k+1)      ,&
@@ -458,7 +457,7 @@ contains
                   FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
                   FineF_VII       =RightState_VX(:,nI,j:j+1,k:k+1))
           else
-             call tvd_reschange_body(&
+             call tvd_reschange_body( &
                   Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
                   Coarse1_V    =    Primitive_VG(:,nI+1,j,k)         ,&
                   Fine1_VII    =    Primitive_VG(:,nI,j:j+1,k:k+1)   ,&
@@ -466,8 +465,8 @@ contains
                   CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
                   FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
                   FineF_VII        =RightState_VX(:,nI,j:j+1,k:k+1)  ,&
-                  IsTrueCoarse2    = Used_GB(nI+2,j,k,iBlock)      ,&
-                  IsTrueCoarse1    = Used_GB(nI+1,j,k,iBlock)      ,&
+                  IsTrueCoarse2    = Used_GB(nI+2,j,k,iBlock)        ,&
+                  IsTrueCoarse1    = Used_GB(nI+1,j,k,iBlock)        ,&
                   IsTrueFine1      =all(Used_GB(nI,j:j+1,k:k+1,iBlock)),&
                   IsTrueFine2_II   =Used_GB(nI-1,j:j+1,k:k+1,iBlock))
           end if
@@ -476,7 +475,7 @@ contains
        do k = 1, nK, 2; do i = 1, nI, 2
           if(  all(Used_GB(i:i+1,-1:2,k:k+1,iBlock)) .and. &
                all(Used_GB(i-2:i+3,0,k-2:k+3,iBlock)) ) then
-             call accurate_reschange3d(&
+             call accurate_reschange3d( &
                   Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
                   Coarse1_VII  =    Primitive_VG(:,i-2:i+3,0,k-2:k+3),&
                   Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
@@ -623,13 +622,13 @@ contains
                Coarse1_VI      = Primitive_VG(:, 0,j-2:j+3,1), &
                Fine1_VI        = Primitive_VG(:, 1,j:j+1,1), &
                Fine2_VI        = Primitive_VG(:, 2,j:j+1,1), &
-               CoarseToFineF_VI= LeftState_VX(:, 1,j:j+1,1)     ,&
-               FineToCoarseF_VI=RightState_VX(:, 1,j:j+1,1)     ,&
+               CoarseToFineF_VI= LeftState_VX(:, 1,j:j+1,1), &
+               FineToCoarseF_VI=RightState_VX(:, 1,j:j+1,1), &
                FineF_VI        = LeftState_VX(:, 2,j:j+1,1))
        end do
     case(2)
        do j = 1, nJ, 2
-          call accurate_reschange2d(&
+          call accurate_reschange2d( &
                Coarse2_V       = Primitive_VG(:,nI+2,j,1)       ,&
                Coarse1_VI      = Primitive_VG(:,nI+1,j-2:j+3,1) ,&
                Fine1_VI        = Primitive_VG(:,nI  ,j:j+1,1)   ,&
@@ -640,7 +639,7 @@ contains
        end do
     case(3)
        do i = 1, nI, 2
-          call accurate_reschange2d(&
+          call accurate_reschange2d( &
                Coarse2_V       = Primitive_VG(:,i,-1,1)         ,&
                Coarse1_VI      = Primitive_VG(:,i-2:i+3,0,1)    ,&
                Fine1_VI        = Primitive_VG(:,i:i+1,1,1)      ,&
@@ -651,7 +650,7 @@ contains
        end do
     case(4)
        do i = 1, nI, 2
-          call accurate_reschange2d(&
+          call accurate_reschange2d( &
                Coarse2_V       = Primitive_VG(:,i,nJ+2,1)       ,&
                Coarse1_VI      = Primitive_VG(:,i-2:i+3,nJ+1,1) ,&
                Fine1_VI        = Primitive_VG(:,i:i+1,nJ,1)     ,&
@@ -826,6 +825,7 @@ contains
           end if
        end do; end do
     end select
+
   end subroutine get_face_tvd
   !============================================================================
   subroutine calc_face_value(iBlock, DoResChangeOnly)
@@ -976,10 +976,10 @@ contains
        if(nJ > 1)then
           do k = kMinFace, kMaxFace; do i = iMinFace, iMaxFace
              do j = 1-nStencil, jMinFace-1
-                call calc_primitives(i, j, k,iBlock)  ! for lower y-faces
+                call calc_primitives(i, j, k, iBlock)  ! for lower y-faces
              end do
              do j = jMaxFace+1, nJ+nStencil
-                call calc_primitives(i, j, k,iBlock)  ! for upper y-faces
+                call calc_primitives(i, j, k, iBlock)  ! for upper y-faces
              end do
           end do; end do
        end if
@@ -1218,6 +1218,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
+
   contains
     !==========================================================================
     subroutine limit_var(lMin, lMax, iVar, DoCalcWeightIn)
@@ -1228,7 +1229,6 @@ contains
       logical, optional, intent(in):: DoCalcWeightIn
       logical:: DoCalcWeight
       !------------------------------------------------------------------------
-
       DoCalcWeight = .false.
       if(present(DoCalcWeightIn)) DoCalcWeight = DoCalcWeightIn
 
@@ -1248,7 +1248,6 @@ contains
 
       integer, intent(in):: lMin, lMax
       !------------------------------------------------------------------------
-
       if(UseCweno) then
          call limiter_cweno5(lMin, lMax, Cell_I, Cell2_I)
       else
@@ -1261,7 +1260,6 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iVar
-
       !------------------------------------------------------------------------
       do iVar = 1, nVar
          if(.not.UseLogLimiter_V(iVar))CYCLE
@@ -1278,7 +1276,6 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iVar
-
       !------------------------------------------------------------------------
       do iVar = 1, nVar
          if(.not.UseLogLimiter_V(iVar))CYCLE
@@ -1295,9 +1292,8 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iVar
-
       !------------------------------------------------------------------------
-      do iVar=1,nVar
+      do iVar = 1, nVar
          if(.not.UseLogLimiter_V(iVar))CYCLE
 
          LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
@@ -1312,7 +1308,6 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
-
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VX(iVarLimitRatio_I,i,j,k) = &
@@ -1329,7 +1324,6 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
-
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VY(iVarLimitRatio_I,i,j,k) = &
@@ -1346,7 +1340,6 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
-
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VZ(iVarLimitRatio_I,i,j,k) = &
@@ -1363,7 +1356,6 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
-
       !------------------------------------------------------------------------
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -1403,7 +1395,6 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
-
       !------------------------------------------------------------------------
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -1443,7 +1434,6 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
-
       !------------------------------------------------------------------------
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -1479,7 +1469,10 @@ contains
 
     end subroutine ptotal_to_p_facez
     !==========================================================================
-    subroutine calc_primitives(i, j, k,iBlock)
+    subroutine calc_primitives(i, j, k, iBlock)
+
+      ! Convert Primitive_VG from conservative to primitive variables
+
       use ModPhysics, ONLY: InvClight2
 
       integer, intent(in):: i, j, k, iBlock
@@ -1525,8 +1518,7 @@ contains
          Primitive_VG(Uz_,i,j,k)= Primitive_VG(rhoUz_,i,j,k)*&
               Ga2Boris - BzFull*uBC2Inv
       else
-         Primitive_VG(Ux_:Uz_,i,j,k) = &
-              RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
+         Primitive_VG(Ux_:Uz_,i,j,k) = RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
          do iFluid = 2, nFluid
             iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
             RhoInv = 1/Primitive_VG(iRho,i,j,k)
@@ -1860,8 +1852,8 @@ contains
       integer:: i, j, k
       !------------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VX(:,i,j,k)=Primitive_VG(:,i-1,j,k)
-         RightState_VX(:,i,j,k)=Primitive_VG(:,i,j,k)
+         LeftState_VX(:,i,j,k)  = Primitive_VG(:,i-1,j,k)
+         RightState_VX(:,i,j,k) = Primitive_VG(:,i,j,k)
       end do; end do; end do
 
       if(DoLimitMomentum) &
@@ -1876,8 +1868,8 @@ contains
       integer:: i, j, k
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-         LeftState_VY(:,i,j,k)=Primitive_VG(:,i,j-1,k)
-         RightState_VY(:,i,j,k)=Primitive_VG(:,i,j,k)
+         LeftState_VY(:,i,j,k)  = Primitive_VG(:,i,j-1,k)
+         RightState_VY(:,i,j,k) = Primitive_VG(:,i,j,k)
       end do; end do; end do
 
       if(DoLimitMomentum) &
@@ -1893,8 +1885,8 @@ contains
       integer:: i, j, k
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-         LeftState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k-1)
-         RightState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k)
+         LeftState_VZ(:,i,j,k)  = Primitive_VG(:,i,j,k-1)
+         RightState_VZ(:,i,j,k) = Primitive_VG(:,i,j,k)
       end do; end do; end do
 
       if(DoLimitMomentum) &
@@ -1929,8 +1921,7 @@ contains
       endif
 
       do k=kMin, kMax; do j=jMin, jMax
-         Primitive_VI(:,iMin-2:iMax+1) &
-              = Primitive_VG(:,iMin-2:iMax+1,j,k)
+         Primitive_VI(:,iMin-2:iMax+1) = Primitive_VG(:,iMin-2:iMax+1,j,k)
          if(UseTrueCell)then
             IsTrueCell_I(iMin-2:iMax+1) = Used_GB(iMin-2:iMax+1,j,k,iBlock)
             if(iMinSharp <= iMaxSharp) &
@@ -2007,8 +1998,7 @@ contains
       endif
 
       do k=kMin, kMax; do i=iMin,iMax
-         Primitive_VI(:,jMin-2:jMax+1) &
-              = Primitive_VG(:,i,jMin-2:jMax+1,k)
+         Primitive_VI(:,jMin-2:jMax+1) = Primitive_VG(:,i,jMin-2:jMax+1,k)
          if(UseTrueCell)then
             IsTrueCell_I(jMin-2:jMax+1) = Used_GB(i,jMin-2:jMax+1,k,iBlock)
             if(jMinSharp <= jMaxSharp) &
@@ -2871,7 +2861,6 @@ contains
       integer:: iFluid
       real:: pTotal_I(iL:iR), Sound_I(iL:iR)
       real:: Crit, pRatio, VelRatio, SoundMin
-
       !------------------------------------------------------------------------
       pTotal_I = 0
       VelRatio = 0
@@ -3318,15 +3307,17 @@ contains
   contains
     !==========================================================================
     real function minmod(a, b)
+
       real, intent(in):: a, b
       !------------------------------------------------------------------------
       minmod = (sign(0.5,a) + sign(0.5,b))*min(abs(a), abs(b))
+
     end function minmod
     !==========================================================================
     real function minmod4(a, b, c, d)
+
       real, intent(in):: a, b, c, d
       real:: SignSum
-
       !------------------------------------------------------------------------
       SignSum = sign(0.25,a) + sign(0.25,b) + sign(0.25,c) + sign(0.25,d)
       if(abs(SignSum) < 0.9)then
