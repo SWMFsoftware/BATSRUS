@@ -828,7 +828,7 @@ contains
 
   end subroutine get_face_tvd
   !============================================================================
-  subroutine calc_face_value(iBlock, DoResChangeOnly)
+  subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
 
     ! Calculate right and left face values (primitive variables)
     ! LeftState_VX.. RightState_VZfor block iBlock from
@@ -836,29 +836,31 @@ contains
     !
     ! If DoResChangeOnly is true, only facevalues next to a coarser
     ! neighbor block are calculated.
+    !
+    ! If the optional DoMonotoneRestrict is present (and false) then
+    ! do not call correct_monotone_restrict. This is only used from
+    ! some user plot functions. By default correct_monotone_restrict
+    ! is called for TVD/Accurate reschange true.
 
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
-    use ModMain,     ONLY: nOrder, nOrderProlong, UseB0, &
+    use ModMain, ONLY: nOrder, nOrderProlong, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
          iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
          UseHighResChange
-
     use ModPhysics, ONLY: GammaWave
     use ModB0
     use ModAdvance, ONLY: UseElectronPressure, UseWavePressure, &
          UseAnisoPressure, UseAnisoPe, &
          LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
-
     use ModParallel, ONLY : DiLevel_EB
-
     use ModViscosity, ONLY: UseArtificialVisco
-
     use ModSaMhd,  ONLY: UseSaMhd, correct_samhd_face_value
 
-    logical, intent(in):: DoResChangeOnly
     integer, intent(in):: iBlock
-
+    logical, intent(in):: DoResChangeOnly
+    logical, intent(in), optional:: DoMonotoneRestrict
+    
     integer:: i, j, k, iSide, iFluid, iVar
 
     ! Number of cells needed to get the face values
@@ -935,7 +937,8 @@ contains
 
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
-         .and. (UseAccurateResChange .or. UseTvdResChange)) &
+         .and. (UseAccurateResChange .or. UseTvdResChange) &
+         .and. .not.present(DoMonotoneRestrict)) &
          call correct_monotone_restrict(iBlock)
 
     ! first, calculate the CELL values for the variables to be limited
