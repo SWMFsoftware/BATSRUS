@@ -860,7 +860,7 @@ contains
     integer, intent(in):: iBlock
     logical, intent(in):: DoResChangeOnly
     logical, intent(in), optional:: DoMonotoneRestrict
-    
+
     integer:: i, j, k, iSide, iFluid, iVar
 
     ! Number of cells needed to get the face values
