@@ -102,8 +102,7 @@ contains
              ! and apply BCs for interface states as needed.
              call set_b0_face(iBlock)
              call timing_start('calc_face_bfo')
-             call calc_face_value(iBlock, DoResChangeOnly=.true., &
-                  DoMonotoneRestrict = .true.)
+             call calc_face_value(iBlock, DoResChangeOnly=.true.)
              call timing_stop('calc_face_bfo')
 
              if(IsBody_B(iBlock)) &
@@ -149,8 +148,7 @@ contains
              call set_b0_face(iBlock)
 
              call timing_start('calc_facevalues')
-             call calc_face_value(iBlock, DoResChangeOnly=.false., &
-                  DoMonotoneRestrict=.true.)
+             call calc_face_value(iBlock, DoResChangeOnly=.false.)
              call timing_stop('calc_facevalues')
              if(IsBody_B(iBlock)) &
                   call set_face_boundary(iBlock, tSimulation,.false.)

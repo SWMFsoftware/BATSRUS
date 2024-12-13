@@ -711,8 +711,7 @@ contains
                 ! For first iteration in the time loop
                 ! calculate stable time step
                 call set_b0_face(iBlock)
-                call calc_face_value(iBlock, DoResChangeOnly=.false., &
-                     DoMonotoneRestrict=.true.)
+                call calc_face_value(iBlock, DoResChangeOnly=.false.)
                 call calc_face_flux(.false., iBlock)
                 call calc_timestep(iBlock)
              end if

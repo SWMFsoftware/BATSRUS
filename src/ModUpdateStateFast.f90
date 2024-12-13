@@ -25,7 +25,7 @@ module ModUpdateStateFast
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_, InFlowBC_, FixedBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
+       nBlock, MaxBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
        Unset_, test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
        iVarTest, iDimTest, iSideTest
@@ -66,6 +66,9 @@ module ModUpdateStateFast
 
   logical:: DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny
   !$acc declare create (DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
+
+  real, allocatable:: Primitive_VGB(:,:,:,:,:)
+  !$acc declare create (Primitive_VGB)
 
 contains
   !============================================================================
@@ -217,6 +220,9 @@ contains
        write(*,*) NameSub, ' started with DoResChangeOnly=F of course'
     end if
 
+    if(.not.allocated(Primitive_VGB)) &
+         allocate(Primitive_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+
     !$acc parallel
     !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -227,6 +233,12 @@ contains
 #else
        iGang = 1
 #endif
+
+       !$acc loop vector collapse(3) independent
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          call get_primitive(State_VGB(:,i,j,k,iBlock), &
+               Primitive_VGB(:,i,j,k,iBlock))
+       end do; end do; end do
 
        if(nOrder > 1 .and. UseAccurateResChange) &
             call correct_monotone_restrict(iBlock)
@@ -838,40 +850,61 @@ contains
     integer:: iVar
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
-       call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
-       call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+       StateLeft_V  = Primitive_VGB(:,i-1,j,k,iBlock)
+       StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
     else
        ! Do it per variable to reduce memory use
        do iVar = 1, nVar
-          ! Single fluid conversion to primitive variables
-          if(iVar < Ux_ .or. iVar > Uz_)then
-             call limiter2( &
-                  State_VGB(iVar,i-2,j,k,iBlock), &
-                  State_VGB(iVar,i-1,j,k,iBlock), &
-                  State_VGB(iVar,  i,j,k,iBlock), &
-                  State_VGB(iVar,i+1,j,k,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
-          else
-             call limiter2( &
-                  State_VGB(iVar,i-2,j,k,iBlock)/ &
-                  State_VGB(Rho_,i-2,j,k,iBlock), &
-                  State_VGB(iVar,i-1,j,k,iBlock)/ &
-                  State_VGB(Rho_,i-1,j,k,iBlock), &
-                  State_VGB(iVar,  i,j,k,iBlock)/ &
-                  State_VGB(Rho_,  i,j,k,iBlock), &
-                  State_VGB(iVar,i+1,j,k,iBlock)/ &
-                  State_VGB(Rho_,i+1,j,k,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
-          end if
+          call limiter2( &
+               Primitive_VGB(iVar,i-2,j,k,iBlock), &
+               Primitive_VGB(iVar,i-1,j,k,iBlock), &
+               Primitive_VGB(iVar,  i,j,k,iBlock), &
+               Primitive_VGB(iVar,i+1,j,k,iBlock), &
+               StateLeft_V(iVar), StateRight_V(iVar))
        end do
+       ! if(UseAccurateRescChange)then
+       !   if(DiLevel_EB(1,iBlock) == 1 .and. i <= 2) then
+       !      j1 = 2 - modulo(j, 2) ; For odd j it is 1, otherwise 2
+       !      do iVar = 1, nVar
+       !         if(iVar < Ux_ .or. iVar > Uz_)then
+       !            call accurate_reschange2d( &
+       !                 State_VGB(iVar,-1,j,1,iBlock), &
+       !                 State_VGB(iVar, 0,j-2:j+3,1,iBlock), &
+       !                 State_VGB(iVar, 1,j:j+1,1,iBlock), &
+       !                 State_VGB(iVar, 2,j:j+1,1,iBlock), &
+       !                 CoarseToFineF_I, FineToCoarseF_I, FineF_I))
+       !         else
+       !            call accurate_reschange2d( &
+       !                 State_VGB(iVar,-1,j,1,iBlock)/  &
+       !                 State_VGB(Rho_,-1,j,1,iBlock), &
+       !                 State_VGB(iVar, 0,j-2:j+3,1,iBlock)/  &
+       !                 State_VGB(Rho_, 0,j-2:j+3,1,iBlock), &
+       !                 State_VGB(iVar, 1,j:j+1,1,iBlock)/  &
+       !                 State_VGB(Rho_, 1,j:j+1,1,iBlock), &
+       !                 State_VGB(iVar, 2,j:j+1,1,iBlock)/  &
+       !                 State_VGB(Rho_, 2,j:j+1,1,iBlock), &
+       !                 CoarseToFineF_I, FineToCoarseF_I, FineF_I))
+       !         end if
+       !         if(i == 1)then
+       !            LeftState_V(iVar) = CoarseToFineF_I(j1)
+       !            RightState_V(iVar) = FineToCoarseF_I(j1)
+       !         else
+       !            LeftState_V(iVar) = CoarseToFineF_I(j1)
+       !         end if
+       !      end do
+       !   elseif(DiLevel_EB(2,iBlock) == 1 .and. i >= nI)
+       !       ...
+       !   end if
+       ! endif
+
     end if
     if(UseBody .and. present(IsBodyBlock)) then
        ! Use first order if stencil intersects the body
        if(nOrder == 2)then
           if(.not.all(Used_GB(i-2:i,j,k,iBlock))) &
-               call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
+               StateLeft_V  = Primitive_VGB(:,i-1,j,k,iBlock)
           if(.not.all(Used_GB(i-1:i+1,j,k,iBlock))) &
-               call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+               StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
        end if
        ! Apply face boundary condition
        if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
@@ -894,39 +927,25 @@ contains
     integer:: iVar
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
-       call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
-       call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+       StateLeft_V  = Primitive_VGB(:,i,j-1,k,iBlock)
+       StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
     else
        ! Do it per variable to reduce memory use
        do iVar = 1, nVar
-          ! Single fluid conversion to primitive variables
-          if(iVar < Ux_ .or. iVar > Uz_)then
-             call limiter2( &
-                  State_VGB(iVar,i,j-2,k,iBlock), &
-                  State_VGB(iVar,i,j-1,k,iBlock), &
-                  State_VGB(iVar,i,j  ,k,iBlock), &
-                  State_VGB(iVar,i,j+1,k,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
-          else
-             call limiter2( &
-                  State_VGB(iVar,i,j-2,k,iBlock)/ &
-                  State_VGB(Rho_,i,j-2,k,iBlock), &
-                  State_VGB(iVar,i,j-1,k,iBlock)/ &
-                  State_VGB(Rho_,i,j-1,k,iBlock), &
-                  State_VGB(iVar,i,j  ,k,iBlock)/ &
-                  State_VGB(Rho_,i,j  ,k,iBlock), &
-                  State_VGB(iVar,i,j+1,k,iBlock)/ &
-                  State_VGB(Rho_,i,j+1,k,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
-          end if
+          call limiter2( &
+               Primitive_VGB(iVar,i,j-2,k,iBlock), &
+               Primitive_VGB(iVar,i,j-1,k,iBlock), &
+               Primitive_VGB(iVar,i,j  ,k,iBlock), &
+               Primitive_VGB(iVar,i,j+1,k,iBlock), &
+               StateLeft_V(iVar), StateRight_V(iVar))
        end do
     end if
     if(UseBody .and. present(IsBodyBlock)) then
        if(nOrder == 2)then
           if(.not.all(Used_GB(i,j-2:j,k,iBlock))) &
-               call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
+               StateLeft_V  = Primitive_VGB(:,i,j-1,k,iBlock)
           if(.not.all(Used_GB(i,j-1:j+1,k,iBlock))) &
-               call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+               StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
        endif
        if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
@@ -948,39 +967,25 @@ contains
     integer:: iVar
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
-       call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
-       call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+       StateLeft_V  = Primitive_VGB(:,i,j,k-1,iBlock)
+       StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
     else
        ! Do it per variable to reduce memory use
        do iVar = 1, nVar
-          ! Single fluid conversion to primitive variables
-          if(iVar < Ux_ .or. iVar > Uz_)then
-             call limiter2( &
-                  State_VGB(iVar,i,j,k-2,iBlock), &
-                  State_VGB(iVar,i,j,k-1,iBlock), &
-                  State_VGB(iVar,i,j,k  ,iBlock), &
-                  State_VGB(iVar,i,j,k+1,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
-          else
-             call limiter2( &
-                  State_VGB(iVar,i,j,k-2,iBlock)/ &
-                  State_VGB(Rho_,i,j,k-2,iBlock), &
-                  State_VGB(iVar,i,j,k-1,iBlock)/ &
-                  State_VGB(Rho_,i,j,k-1,iBlock), &
-                  State_VGB(iVar,i,j,k  ,iBlock)/ &
-                  State_VGB(Rho_,i,j,k  ,iBlock), &
-                  State_VGB(iVar,i,j,k+1,iBlock)/ &
-                  State_VGB(Rho_,i,j,k+1,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
-          end if
+          call limiter2( &
+               Primitive_VGB(iVar,i,j,k-2,iBlock), &
+               Primitive_VGB(iVar,i,j,k-1,iBlock), &
+               Primitive_VGB(iVar,i,j,k  ,iBlock), &
+               Primitive_VGB(iVar,i,j,k+1,iBlock), &
+               StateLeft_V(iVar), StateRight_V(iVar))
        end do
     end if
     if(UseBody .and. present(IsBodyBlock)) then
        if (nOrder == 2) then
           if(.not.all(Used_GB(i,j,k-2:k,iBlock))) &
-               call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
+               StateLeft_V  = Primitive_VGB(:,i,j,k-1,iBlock)
           if(.not.all(Used_GB(i,j,k-1:k+1,iBlock))) &
-               call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+               StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
        endif
        if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
