@@ -12,7 +12,8 @@ module ModUpdateStateFast
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
        UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
        UseElectronEntropy
-  use ModFaceValue, ONLY: UseAccurateResChange, correct_monotone_restrict
+  use ModFaceValue, ONLY: UseAccurateResChange, correct_monotone_restrict, &
+       accurate_reschange2d, accurate_reschange3d
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
@@ -27,8 +28,8 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, MaxBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
-       Unset_, test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
-       iVarTest, iDimTest, iSideTest
+       nLevelMin, nLevelMax, Unset_, test_start, test_stop, &
+       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, iSideTest
   use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
@@ -67,8 +68,9 @@ module ModUpdateStateFast
   logical:: DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny
   !$acc declare create (DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
 
-  real, allocatable:: Primitive_VGB(:,:,:,:,:)
-  !$acc declare create (Primitive_VGB)
+  real, allocatable, dimension(:,:,:,:,:), save:: &
+       FineState_VXB, FineState_VYB, FineState_VZB
+  !$acc declare create (FineState_VXB, FineState_VYB, FineState_VZB)
 
 contains
   !============================================================================
@@ -202,7 +204,6 @@ contains
     !--------------------------------------------------------------------------
     call timing_start(NameSub)
 
-#ifndef SCALAR
     call test_start('update_state',   DoTestUpdate)
     call test_start('calc_face_flux', DoTestFlux)
     call test_start('calc_source',    DoTestSource)
@@ -220,9 +221,12 @@ contains
        write(*,*) NameSub, ' started with DoResChangeOnly=F of course'
     end if
 
-    if(.not.allocated(Primitive_VGB)) &
-         allocate(Primitive_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-
+    if(UseAccurateReschange .and. nLevelMax > nLevelMin .and. &
+         .not.allocated(FineState_VXB))then
+       allocate(             FineState_VXB(nVar,nJ,nK,3,MaxBlock))
+       if(nDim > 1) allocate(FineState_VYB(nVar,nI,nK,3,MaxBlock))
+       if(nDim > 2) allocate(FineState_VZB(nVar,nI,nJ,3,MaxBlock))
+    end if
     !$acc parallel
     !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -234,16 +238,149 @@ contains
        iGang = 1
 #endif
 
-       !$acc loop vector collapse(3) independent
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          call get_primitive(State_VGB(:,i,j,k,iBlock), &
-               Primitive_VGB(:,i,j,k,iBlock))
-       end do; end do; end do
-
-       if(nOrder > 1 .and. UseAccurateResChange) &
+       if(nOrder > 1 .and. UseAccurateResChange .and. nLevelMax > nLevelMin) &
             call correct_monotone_restrict(iBlock)
 
+       ! Store state with momentum into StateOld
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
+
+       ! Convert to velocities
+       !$acc loop vector collapse(3) independent
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+          call get_velocity(State_VGB(:,i,j,k,iBlock))
+       end do; end do; end do
+
+       if(UseAccurateReschange)then
+          ! Sides 1 and 2
+          if(DiLevel_EB(1,iBlock) == 1 .and. nDim == 2)then
+             !$acc loop vector
+             do j = 1, nJ, 2
+                call accurate_reschange2d( &
+                     Coarse2_V       = State_VGB(:,-1,j,1,iBlock), &
+                     Coarse1_VI      = State_VGB(:, 0,j-2:j+3,1,iBlock), &
+                     Fine1_VI        = State_VGB(:, 1,j:j+1,1,iBlock), &
+                     Fine2_VI        = State_VGB(:, 2,j:j+1,1,iBlock), &
+                     CoarseToFineF_VI= FineState_VXB(:,j:j+1,1,1,iBlock), &
+                     FineToCoarseF_VI= FineState_VXB(:,j:j+1,1,2,iBlock), &
+                     FineF_VI        = FineState_VXB(:,j:j+1,1,3,iBlock))
+             end do
+          elseif(DiLevel_EB(1,iBlock) == 1 .and. nDim == 3)then
+             !$acc loop vector collapse(2)
+             do k = 1, nK, 2; do j = 1, nJ, 2
+             call accurate_reschange3d( &
+                  Coarse2_V    = State_VGB(:,-1,j,k,iBlock), &
+                  Coarse1_VII  = State_VGB(:, 0,j-2:j+3,k-2:k+3,iBlock), &
+                  Fine1_VII    = State_VGB(:, 1,j:j+1,k:k+1,iBlock), &
+                  Fine2_VII    = State_VGB(:, 2,j:j+1,k:k+1,iBlock), &
+                  CoarseToFineF_VII=FineState_VXB(:,1,j:j+1,k:k+1,iBlock), &
+                  FineToCoarseF_VII=FineState_VXB(:,1,j:j+1,k:k+1,iBlock), &
+                  FineF_VII        =FineState_VXB(:,2,j:j+1,k:k+1,iBlock))
+             end do; end do
+          elseif(DiLevel_EB(2,iBlock) == 1 .and. nDim == 2)then
+             !$acc loop vector
+             do j = 1, nJ, 2
+                call accurate_reschange2d( &
+                     Coarse2_V       = State_VGB(:,nI+2,j,1,iBlock), &
+                     Coarse1_VI      = State_VGB(:,nI+1,j-2:j+3,1,iBlock), &
+                     Fine1_VI        = State_VGB(:,nI  ,j:j+1,1,iBlock), &
+                     Fine2_VI        = State_VGB(:,nI-1,j:j+1,1,iBlock), &
+                     CoarseToFineF_VI= FineState_VXB(:,j:j+1,1,1,iBlock), &
+                     FineToCoarseF_VI= FineState_VXB(:,j:j+1,1,2,iBlock), &
+                     FineF_VI        = FineState_VXB(:,j:j+1,1,3,iBlock))
+             end do
+          elseif(DiLevel_EB(2,iBlock) == 1 .and. nDim == 3)then
+             !$acc loop vector collapse(2)
+             do k = 1, nK, 2; do j = 1, nJ, 2
+                call accurate_reschange3d( &
+                     Coarse2_V  =State_VGB(:,nI+2,j,k,iBlock), &
+                     Coarse1_VII=State_VGB(:,nI+1,j-2:j+3,k-2:k+3,iBlock), &
+                     Fine1_VII  =State_VGB(:,nI  ,j:j+1,k:k+1,iBlock), &
+                     Fine2_VII  =State_VGB(:,nI-1,j:j+1,k:k+1,iBlock), &
+                     CoarseToFineF_VII=FineState_VXB(:,j:j+1,k:k+1,1,iBlock), &
+                     FineToCoarseF_VII=FineState_VXB(:,j:j+1,k:k+1,2,iBlock), &
+                     FineF_VII        =FineState_VXB(:,j:j+1,k:k+1,3,iBlock))
+             end do; end do
+          end if
+
+          ! Sides 3 and 4
+          if(DiLevel_EB(3,iBlock) == 1 .and. nDim == 2)then
+             !$acc loop vector
+             do i = 1, nI, 2
+                call accurate_reschange2d( &
+                     Coarse2_V       = State_VGB(:,i,-1,1,iBlock), &
+                     Coarse1_VI      = State_VGB(:,i-2:i+3,0,1,iBlock), &
+                     Fine1_VI        = State_VGB(:,i:i+1,1,1,iBlock), &
+                     Fine2_VI        = State_VGB(:,i:i+1,2,1,iBlock),&
+                     CoarseToFineF_VI= FineState_VYB(:,i:i+1,1,1,iBlock),&
+                     FineToCoarseF_VI= FineState_VYB(:,i:i+1,1,2,iBlock), &
+                     FineF_VI        = FineState_VYB(:,i:i+1,1,3,iBlock))
+             end do
+          elseif(DiLevel_EB(3,iBlock) == 1 .and. nDim == 3)then
+             !$acc loop vector collapse(2)
+             do k = 1, nK, 2; do i = 1, nI, 2
+                call accurate_reschange3d( &
+                     Coarse2_V  =State_VGB(:,i,-1,k,iBlock), &
+                     Coarse1_VII=State_VGB(:,i-2:i+3,0,k-2:k+3,iBlock), &
+                     Fine1_VII  =State_VGB(:,i:i+1,1,k:k+1,iBlock), &
+                     Fine2_VII  =State_VGB(:,i:i+1,2,k:k+1,iBlock), &
+                     CoarseToFineF_VII=FineState_VYB(:,i:i+1,k:k+1,1,iBlock), &
+                     FineToCoarseF_VII=FineState_VYB(:,i:i+1,k:k+1,2,iBlock), &
+                     FineF_VII        =FineState_VYB(:,i:i+1,k:k+1,3,iBlock))
+             end do; end do
+          elseif(DiLevel_EB(4,iBlock) == 1 .and. nDim == 2)then
+             !$acc loop vector
+             do i = 1, nI, 2
+                call accurate_reschange2d( &
+                     Coarse2_V       = State_VGB(:,i,nJ+2,1,iBlock), &
+                     Coarse1_VI      = State_VGB(:,i-2:i+3,nJ+1,1,iBlock), &
+                     Fine1_VI        = State_VGB(:,i:i+1,nJ,1,iBlock), &
+                     Fine2_VI        = State_VGB(:,i:i+1,nJ-1,1,iBlock), &
+                     CoarseToFineF_VI= FineState_VYB(:,i:i+1,1,1,iBlock), &
+                     FineToCoarseF_VI= FineState_VYB(:,i:i+1,1,2,iBlock), &
+                     FineF_VI        = FineState_VYB(:,i:i+1,1,3,iBlock))
+             end do
+          elseif(DiLevel_EB(4,iBlock) == 1 .and. nDim == 3)then
+             !$acc loop vector collapse(2)
+             do k = 1, nK, 2; do i = 1, nI, 2
+                call accurate_reschange3d( &
+                     Coarse2_V  =State_VGB(:,i,nJ+2,k,iBlock), &
+                     Coarse1_VII=State_VGB(:,i-2:i+3,nJ+1,k-2:k+3,iBlock), &
+                     Fine1_VII  =State_VGB(:,i:i+1,nJ,k:k+1,iBlock), &
+                     Fine2_VII  =State_VGB(:,i:i+1,nJ-1,k:k+1,iBlock), &
+                     CoarseToFineF_VII=FineState_VYB(:,i:i+1,k:k+1,1,iBlock), &
+                     FineToCoarseF_VII=FineState_VYB(:,i:i+1,k:k+1,2,iBlock), &
+                     FineF_VII        =FineState_VYB(:,i:i+1,k:k+1,3,iBlock))
+             end do; end do
+          end if
+
+          ! Sides 5 and 6
+          if(DiLevel_EB(5,iBlock) == 1 .and. nDim == 3)then
+             !$acc loop vector collapse(2)
+             do j = 1, nJ, 2; do i = 1, nI, 2
+                call accurate_reschange3d( &
+                     Coarse2_V  =State_VGB(:,i,j,-1,iBlock), &
+                     Coarse1_VII=State_VGB(:,i-2:i+3,j-2:j+3,0,iBlock), &
+                     Fine1_VII  =State_VGB(:,i:i+1,j:j+1,1,iBlock), &
+                     Fine2_VII  =State_VGB(:,i:i+1,j:j+1,2,iBlock), &
+                     CoarseToFineF_VII=FineState_VZB(:,i:i+1,j:j+1,1,iBlock), &
+                     FineToCoarseF_VII=FineState_VZB(:,i:i+1,j:j+1,2,iBlock), &
+                     FineF_VII        =FineState_VZB(:,i:i+1,j:j+1,3,iBlock))
+             end do; end do
+          elseif(DiLevel_EB(6,iBlock) == 1 .and. nDim == 3)then
+             !$acc loop vector collapse(2)
+             do j = 1, nJ, 2; do i = 1, nI, 2
+                call accurate_reschange3d( &
+                     Coarse2_V  =State_VGB(:,i,j,nK+2,iBlock), &
+                     Coarse1_VII=State_VGB(:,i-2:i+3,j-2:j+3,nK+1,iBlock), &
+                     Fine1_VII  =State_VGB(:,i:i+1,j:j+1,nK,iBlock), &
+                     Fine2_VII  =State_VGB(:,i:i+1,j:j+1,nK-1,iBlock), &
+                     CoarseToFineF_VII=FineState_VZB(:,i:i+1,j:j+1,1,iBlock), &
+                     FineToCoarseF_VII=FineState_VZB(:,i:i+1,j:j+1,2,iBlock), &
+                     FineF_VII        =FineState_VZB(:,i:i+1,j:j+1,3,iBlock))
+             end do; end do
+          end if
+       endif
 
        if(UseBody) IsBodyBlock = IsBody_B(iBlock)
 
@@ -308,8 +445,14 @@ contains
           if(nConservCrit > 0) write(*,*)NameSub, ' IsConserv=', &
                IsConserv_CB(iTest,jTest,kTest,iBlock)
           do iVar = 1, nVar
-             write(*,*)NameVar_V(iVar), '(TestCell)  =',&
-                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+             if(iVar >= Ux_ .and. iVar <= Uz_)then
+                write(*,*)NameVar_V(iVar), '(TestCell)  =',&
+                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest) &
+                     *State_VGB(Rho_,iTest,jTest,kTest,iBlockTest)
+             else
+                write(*,*)NameVar_V(iVar), '(TestCell)  =',&
+                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+             end if
           end do
        end if
 #endif
@@ -327,12 +470,10 @@ contains
 
     if(DoTestAny)write(*,*) &
          '==========================================================='
-#endif
     call timing_stop(NameSub)
 
   end subroutine update_state_fast
   !============================================================================
-#ifndef SCALAR
   subroutine update_cell(i, j, k, iBlock, iGang, IsBodyBlock)
     !$acc routine seq
 
@@ -342,7 +483,7 @@ contains
     logical, intent(in):: IsBodyBlock
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar
-    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), ForcePerRho_D(3)
+    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), Force_D(3)
 
     logical:: IsConserv
 
@@ -370,13 +511,11 @@ contains
        if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
             - DivB*B0_DGB(:,i,j,k,iBlock)
 
-       ! Divide by density to account for Rho in momentum
-       DivB = DivB/State_VGB(Rho_,i,j,k,iBlock)
        Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
-            - DivB*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+            - DivB*State_VGB(Ux_:Uz_,i,j,k,iBlock)
        Change_V(Energy_) = Change_V(Energy_) &
             - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-            *          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+            *          State_VGB(Ux_:Uz_,i,j,k,iBlock))
     end if
 
     if(UseBorisCorrection .and. ClightFactor /= 1.0)then
@@ -386,17 +525,15 @@ contains
             Flux_VYI(En_,i,j+1,k,iGang) - Flux_VYI(En_,i,j,k,iGang)
        if(nK > 1) DivE = DivE + &
             Flux_VZI(En_,i,j,k+1,iGang) - Flux_VZI(En_,i,j,k,iGang)
-       ! Apply coefficients and divide by density for E=(B x RhoU)/Rho
-       DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
-            /State_VGB(Rho_,i,j,k,iBlock)
+       ! Apply coefficients
+       DivE = DivE*(ClightFactor**2 - 1)*InvClight2
+       ! div(E)*E = DivE*(B x U)
        Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
             + DivE*cross_prod( &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+            State_VGB(Bx_:Bz_,i,j,k,iBlock), State_VGB(Ux_:Uz_,i,j,k,iBlock))
        if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
             + DivE*cross_prod( &
-            B0_DGB(:,i,j,k,iBlock), &
-            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+            B0_DGB(:,i,j,k,iBlock), State_VGB(Ux_:Uz_,i,j,k,iBlock))
 
 #ifdef TESTACC
        if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
@@ -407,22 +544,9 @@ contains
                Flux_VYI(En_,i,j,k,iGang), Flux_VYI(En_,i,j+1,k,iGang)
           write(*,*) 'Enz =', &
                Flux_VZI(En_,i,j,k,iGang), Flux_VZI(En_,i,j,k+1,iGang)
-          divE = divE/CellVolume_GB(i,j,k,iBlock) &
-               *State_VGB(Rho_,i,j,k,iBlock)
+          DivE = DivE/CellVolume_GB(i,j,k,iBlock)
           write(*,*)'Coef   =', (ClightFactor**2 - 1)*InvClight2
           write(*,*)'divE*Coef  =', divE
-          ! if(UseB0)then
-          !   write(*,*) '!!! e_D=', cross_prod( &
-          !        B0_DGB(:,i,j,k,iBlock) &
-          !        + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-          !        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
-          !        /State_VGB(Rho_,i,j,k,iBlock)
-          ! else
-          !   write(*,*) '!!! e_D=', DivE*cross_prod( &
-          !        State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-          !        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
-          !        /State_VGB(Rho_,i,j,k,iBlock)
-          ! end if
        end if
 #endif
 
@@ -500,63 +624,54 @@ contains
     if(UseGravity .or. UseRotatingFrame)then
 
        if(UseGravity)then
-          ForcePerRho_D = &
-               Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
-          Change_V(Ux_:Uz_) = Change_V(Ux_:Uz_) &
-               + State_VGB(Rho_,i,j,k,iBlock)*ForcePerRho_D
+          Force_D = State_VGB(Rho_,i,j,k,iBlock) &
+               *Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
+          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) + Force_D
           Change_V(Energy_) = Change_V(Energy_) &
-               + sum(State_VGB(Ux_:Uz_,i,j,k,iBlock)*ForcePerRho_D)
+               + sum(State_VGB(Ux_:Uz_,i,j,k,iBlock)*Force_D)
        end if
 
        if(UseRotatingFrame)then
-          Change_V(Ux_) = Change_V(Ux_) &
-               + 2*OmegaBody*State_VGB(Uy_,i,j,k,iBlock) &
-               + State_VGB(Rho_,i,j,k,iBlock) &
-               *OmegaBody**2 * Xyz_DGB(x_,i,j,k,iBlock)
-          Change_V(Uy_) = Change_V(Uy_) &
-               - 2*OmegaBody*State_VGB(Ux_,i,j,k,iBlock) &
-               + State_VGB(Rho_,i,j,k,iBlock) &
-               *OmegaBody**2 * Xyz_DGB(y_,i,j,k,iBlock)
+          Change_V(RhoUx_) = Change_V(RhoUx_) + State_VGB(Rho_,i,j,k,iBlock) &
+               *( 2*OmegaBody*State_VGB(Uy_,i,j,k,iBlock) &
+               + OmegaBody**2 * Xyz_DGB(x_,i,j,k,iBlock))
+          Change_V(RhoUy_) = Change_V(RhoUy_) + State_VGB(Rho_,i,j,k,iBlock) &
+               *(-2*OmegaBody*State_VGB(Ux_,i,j,k,iBlock) &
+               + OmegaBody**2 * Xyz_DGB(y_,i,j,k,iBlock))
           Change_V(Energy_) = Change_V(Energy_) &
-               + OmegaBody**2 * sum(State_VGB(Ux_:Uy_,i,j,k,iBlock) &
-               *Xyz_DGB(x_:y_,i,j,k,iBlock))
+               + State_VGB(Rho_,i,j,k,iBlock)*OmegaBody**2 &
+               *sum(State_VGB(Ux_:Uy_,i,j,k,iBlock) &
+               *       Xyz_DGB(x_:y_,i,j,k,iBlock))
        end if
 
        do iFluid = 2, nFluid
           iRho = iRho_I(iFluid)
           iUx = iUx_I(iFluid)
           iEnergy = nVar + iFluid
-
           if(UseGravity)then
              iUz = iUz_I(iFluid)
-
-             Change_V(iUx:iUz) = Change_V(iUx:iUz) &
-                  + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
+             Change_V(iUx:iUz) = Change_V(iUx:iUz) + Force_D
              Change_V(iEnergy) = Change_V(iEnergy) &
-                  + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*ForcePerRho_D)
+                  + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*Force_D)
           end if
-
 #ifdef TESTACC
           if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
                .and. iBlock == iBlockTest)then
              write(*,*)'Change_V after gravity', Change_V(iVarTest)
           end if
 #endif
-
           if(UseRotatingFrame)then
              iUy = iUy_I(iFluid)
-
-             Change_V(iUx) = Change_V(iUx) &
-                  + 2*OmegaBody*State_VGB(iUy,i,j,k,iBlock) &
-                  + State_VGB(iRho,i,j,k,iBlock) &
-                  *OmegaBody**2 * Xyz_DGB(x_,i,j,k,iBlock)
-             Change_V(iUy) = Change_V(iUy) &
-                  - 2*OmegaBody*State_VGB(iUx,i,j,k,iBlock) &
-                  + State_VGB(iRho,i,j,k,iBlock) &
-                  *OmegaBody**2 * Xyz_DGB(y_,i,j,k,iBlock)
+             Change_V(iUx) = Change_V(iUx) + State_VGB(iRho,i,j,k,iBlock) &
+                  *(+2*OmegaBody*State_VGB(iUy,i,j,k,iBlock) &
+                  + OmegaBody**2 * Xyz_DGB(x_,i,j,k,iBlock))
+             Change_V(iUy) = Change_V(iUy) + State_VGB(iRho,i,j,k,iBlock) &
+                  *(-2*OmegaBody*State_VGB(iUx,i,j,k,iBlock) &
+                  + OmegaBody**2 * Xyz_DGB(y_,i,j,k,iBlock))
              Change_V(iEnergy) = Change_V(iEnergy) &
-                  + OmegaBody**2 * sum(State_VGB(iUx:iUy,i,j,k,iBlock) &
-                  *Xyz_DGB(x_:y_,i,j,k,iBlock))
+                  + State_VGB(iRho,i,j,k,iBlock)*OmegaBody**2 &
+                  *sum(State_VGB(iUx:iUy,i,j,k,iBlock) &
+                  *       Xyz_DGB(x_:y_,i,j,k,iBlock))
           end if
        end do
     end if
@@ -585,6 +700,8 @@ contains
     ! Update state
     if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
     if(iStage == 1)then
+       ! Convert velocity to momentum
+       call get_momentum(State_VGB(:,i,j,k,iBlock))
        if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
           ! Overwrite pressure and change with energy
           call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
@@ -593,8 +710,7 @@ contains
           end do
        end if
        if(UseBorisCorrection) call mhd_to_boris( &
-            State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
-            IsConserv)
+            State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
 
        ! Convert electron pressure to entropy.
        if(UseElectronPressure .and. UseElectronEntropy) &
@@ -726,7 +842,7 @@ contains
        write(*,*)'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
        do iVar = 1, nVar
           write(*,*)NameVar_V(iVar), '=', &
-               StateLeft_V(iVar), StateRight_V(iVar), iSideTest
+                  StateLeft_V(iVar), StateRight_V(iVar), iSideTest
        end do
        if(UseB0)then
           write(*,*)'B0x:', B0_D(1), iSideTest
@@ -850,46 +966,48 @@ contains
     integer:: iVar
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
-       StateLeft_V  = Primitive_VGB(:,i-1,j,k,iBlock)
-       StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
+       StateLeft_V  = State_VGB(:,i-1,j,k,iBlock)
+       StateRight_V = State_VGB(:,i,j,k,iBlock)
     else
        ! Do it per variable to reduce memory use
        do iVar = 1, nVar
           call limiter2( &
-               Primitive_VGB(iVar,i-2,j,k,iBlock), &
-               Primitive_VGB(iVar,i-1,j,k,iBlock), &
-               Primitive_VGB(iVar,  i,j,k,iBlock), &
-               Primitive_VGB(iVar,i+1,j,k,iBlock), &
+               State_VGB(iVar,i-2,j,k,iBlock), &
+               State_VGB(iVar,i-1,j,k,iBlock), &
+               State_VGB(iVar,  i,j,k,iBlock), &
+               State_VGB(iVar,i+1,j,k,iBlock), &
                StateLeft_V(iVar), StateRight_V(iVar))
        end do
-       ! if(UseAccurateRescChange)then
+       if(UseAccurateResChange)then
+          ! Overwrite Left/RightState_V on fine side of reschange
+          if(DiLevel_EB(1,iBlock) == 1 .and. i == 1) then
+             StateLeft_V  = FineState_VXB(:,j,k,1,iBlock)
+             StateRight_V = FineState_VXB(:,j,k,2,iBlock)
+          elseif(DiLevel_EB(1,iBlock) == 1 .and. i == 2) then
+             StateLeft_V  = FineState_VXB(:,j,k,3,iBlock)
+
+          elseif(DiLevel_EB(2,iBlock) == 1 .and. i == nI+1) then
+             StateRight_V = FineState_VXB(:,j,k,1,iBlock)
+             StateLeft_V  = FineState_VXB(:,j,k,2,iBlock)
+          elseif(DiLevel_EB(2,iBlock) == 1 .and. i == nI) then
+             StateRight_V = FineState_VXB(:,j,k,3,iBlock)
+          endif
+       end if
+       !   endif
+       !
        !   if(DiLevel_EB(1,iBlock) == 1 .and. i <= 2) then
        !      j1 = 2 - modulo(j, 2) ; For odd j it is 1, otherwise 2
-       !      do iVar = 1, nVar
-       !         if(iVar < Ux_ .or. iVar > Uz_)then
-       !            call accurate_reschange2d( &
-       !                 State_VGB(iVar,-1,j,1,iBlock), &
-       !                 State_VGB(iVar, 0,j-2:j+3,1,iBlock), &
-       !                 State_VGB(iVar, 1,j:j+1,1,iBlock), &
-       !                 State_VGB(iVar, 2,j:j+1,1,iBlock), &
-       !                 CoarseToFineF_I, FineToCoarseF_I, FineF_I))
-       !         else
-       !            call accurate_reschange2d( &
-       !                 State_VGB(iVar,-1,j,1,iBlock)/  &
-       !                 State_VGB(Rho_,-1,j,1,iBlock), &
-       !                 State_VGB(iVar, 0,j-2:j+3,1,iBlock)/  &
-       !                 State_VGB(Rho_, 0,j-2:j+3,1,iBlock), &
-       !                 State_VGB(iVar, 1,j:j+1,1,iBlock)/  &
-       !                 State_VGB(Rho_, 1,j:j+1,1,iBlock), &
-       !                 State_VGB(iVar, 2,j:j+1,1,iBlock)/  &
-       !                 State_VGB(Rho_, 2,j:j+1,1,iBlock), &
-       !                 CoarseToFineF_I, FineToCoarseF_I, FineF_I))
-       !         end if
+       !      call accurate_reschange2d( &
+       !            State_VGB(:,-1,j,1,iBlock), &
+       !            State_VGB(:, 0,j-2:j+3,1,iBlock), &
+       !            State_VGB(:, 1,j:j+1,1,iBlock), &
+       !            State_VGB(:, 2,j:j+1,1,iBlock), &
+       !            CoarseToFineF_VI, FineToCoarseF_VI, FineF_VI))
        !         if(i == 1)then
-       !            LeftState_V(iVar) = CoarseToFineF_I(j1)
-       !            RightState_V(iVar) = FineToCoarseF_I(j1)
+       !            StateLeft_V  = CoarseToFineFV_I(:,j1)
+       !            StateRight_V = FineToCoarseFV_I(:,j1)
        !         else
-       !            LeftState_V(iVar) = CoarseToFineF_I(j1)
+       !            StateLeft_V = CoarseToFineFV_I(:,j1)
        !         end if
        !      end do
        !   elseif(DiLevel_EB(2,iBlock) == 1 .and. i >= nI)
@@ -902,9 +1020,9 @@ contains
        ! Use first order if stencil intersects the body
        if(nOrder == 2)then
           if(.not.all(Used_GB(i-2:i,j,k,iBlock))) &
-               StateLeft_V  = Primitive_VGB(:,i-1,j,k,iBlock)
+               StateLeft_V  = State_VGB(:,i-1,j,k,iBlock)
           if(.not.all(Used_GB(i-1:i+1,j,k,iBlock))) &
-               StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
+               StateRight_V = State_VGB(:,i,j,k,iBlock)
        end if
        ! Apply face boundary condition
        if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
@@ -927,25 +1045,39 @@ contains
     integer:: iVar
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
-       StateLeft_V  = Primitive_VGB(:,i,j-1,k,iBlock)
-       StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
+       StateLeft_V  = State_VGB(:,i,j-1,k,iBlock)
+       StateRight_V = State_VGB(:,i,j,k,iBlock)
     else
        ! Do it per variable to reduce memory use
        do iVar = 1, nVar
           call limiter2( &
-               Primitive_VGB(iVar,i,j-2,k,iBlock), &
-               Primitive_VGB(iVar,i,j-1,k,iBlock), &
-               Primitive_VGB(iVar,i,j  ,k,iBlock), &
-               Primitive_VGB(iVar,i,j+1,k,iBlock), &
+               State_VGB(iVar,i,j-2,k,iBlock), &
+               State_VGB(iVar,i,j-1,k,iBlock), &
+               State_VGB(iVar,i,j  ,k,iBlock), &
+               State_VGB(iVar,i,j+1,k,iBlock), &
                StateLeft_V(iVar), StateRight_V(iVar))
        end do
+       if(UseAccurateResChange)then
+          if(DiLevel_EB(3,iBlock) == 1 .and. j == 1) then
+             StateLeft_V  = FineState_VYB(:,i,k,1,iBlock)
+             StateRight_V = FineState_VYB(:,i,k,2,iBlock)
+          elseif(DiLevel_EB(3,iBlock) == 1 .and. j == 2) then
+             StateLeft_V  = FineState_VYB(:,i,k,3,iBlock)
+
+          elseif(DiLevel_EB(4,iBlock) == 1 .and. j == nJ+1) then
+             StateRight_V = FineState_VYB(:,i,k,1,iBlock)
+             StateLeft_V  = FineState_VYB(:,i,k,2,iBlock)
+          elseif(DiLevel_EB(4,iBlock) == 1 .and. j == nJ) then
+             StateRight_V = FineState_VYB(:,i,k,3,iBlock)
+          endif
+       end if
     end if
     if(UseBody .and. present(IsBodyBlock)) then
        if(nOrder == 2)then
           if(.not.all(Used_GB(i,j-2:j,k,iBlock))) &
-               StateLeft_V  = Primitive_VGB(:,i,j-1,k,iBlock)
+               StateLeft_V  = State_VGB(:,i,j-1,k,iBlock)
           if(.not.all(Used_GB(i,j-1:j+1,k,iBlock))) &
-               StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
+               StateRight_V = State_VGB(:,i,j,k,iBlock)
        endif
        if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
@@ -967,25 +1099,39 @@ contains
     integer:: iVar
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
-       StateLeft_V  = Primitive_VGB(:,i,j,k-1,iBlock)
-       StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
+       StateLeft_V  = State_VGB(:,i,j,k-1,iBlock)
+       StateRight_V = State_VGB(:,i,j,k,iBlock)
     else
        ! Do it per variable to reduce memory use
        do iVar = 1, nVar
           call limiter2( &
-               Primitive_VGB(iVar,i,j,k-2,iBlock), &
-               Primitive_VGB(iVar,i,j,k-1,iBlock), &
-               Primitive_VGB(iVar,i,j,k  ,iBlock), &
-               Primitive_VGB(iVar,i,j,k+1,iBlock), &
+               State_VGB(iVar,i,j,k-2,iBlock), &
+               State_VGB(iVar,i,j,k-1,iBlock), &
+               State_VGB(iVar,i,j,k  ,iBlock), &
+               State_VGB(iVar,i,j,k+1,iBlock), &
                StateLeft_V(iVar), StateRight_V(iVar))
        end do
+       if(UseAccurateResChange)then
+          if(DiLevel_EB(5,iBlock) == 1 .and. k == 1) then
+             StateLeft_V  = FineState_VZB(:,i,j,1,iBlock)
+             StateRight_V = FineState_VZB(:,i,j,2,iBlock)
+          elseif(DiLevel_EB(5,iBlock) == 1 .and. k == 2) then
+             StateLeft_V  = FineState_VZB(:,i,j,3,iBlock)
+
+          elseif(DiLevel_EB(6,iBlock) == 1 .and. k == nK+1) then
+             StateRight_V = FineState_VZB(:,i,j,1,iBlock)
+             StateLeft_V  = FineState_VZB(:,i,j,2,iBlock)
+          elseif(DiLevel_EB(6,iBlock) == 1 .and. k == nK) then
+             StateRight_V = FineState_VZB(:,i,j,3,iBlock)
+          endif
+       end if
     end if
     if(UseBody .and. present(IsBodyBlock)) then
        if (nOrder == 2) then
           if(.not.all(Used_GB(i,j,k-2:k,iBlock))) &
-               StateLeft_V  = Primitive_VGB(:,i,j,k-1,iBlock)
+               StateLeft_V  = State_VGB(:,i,j,k-1,iBlock)
           if(.not.all(Used_GB(i,j,k-1:k+1,iBlock))) &
-               StateRight_V = Primitive_VGB(:,i,j,k,iBlock)
+               StateRight_V = State_VGB(:,i,j,k,iBlock)
        endif
        if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
@@ -1042,31 +1188,50 @@ contains
 
   end subroutine get_normal
   !============================================================================
-  subroutine get_primitive(State_V, Primitive_V)
+  subroutine get_velocity(State_V)
     !$acc routine seq
 
     ! Convert from momentum to velocity
 
-    real, intent(in) :: State_V(nVar)
-    real, intent(out):: Primitive_V(nVar)
+    real, intent(inout) :: State_V(nVar)
 
     integer:: iFluid
     real:: InvRho
     !--------------------------------------------------------------------------
     InvRho = 1/State_V(Rho_)
-    Primitive_V(1:Ux_-1)    = State_V(1:RhoUx_-1)
-    Primitive_V(Ux_:Uz_)    = State_V(RhoUx_:RhoUz_)*InvRho
-    Primitive_V(Uz_+1:nVar) = State_V(RhoUz_+1:nVar)
+    State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)*InvRho
 
     ! Do rest of the fluid velocities
     do iFluid = 2, nFluid
        InvRho = 1/State_V(iRho_I(iFluid))
-       Primitive_V(iUx_I(iFluid)) = InvRho*State_V(iRhoUx_I(iFluid))
-       Primitive_V(iUy_I(iFluid)) = InvRho*State_V(iRhoUy_I(iFluid))
-       Primitive_V(iUz_I(iFluid)) = InvRho*State_V(iRhoUz_I(iFluid))
+       State_V(iUx_I(iFluid)) = InvRho*State_V(iRhoUx_I(iFluid))
+       State_V(iUy_I(iFluid)) = InvRho*State_V(iRhoUy_I(iFluid))
+       State_V(iUz_I(iFluid)) = InvRho*State_V(iRhoUz_I(iFluid))
     end do
 
-  end subroutine get_primitive
+  end subroutine get_velocity
+  !============================================================================
+  subroutine get_momentum(State_V)
+    !$acc routine seq
+
+    ! Convert from velocity to momentum
+
+    real, intent(inout) :: State_V(nVar)
+
+    integer:: iFluid
+    real:: Rho
+    !--------------------------------------------------------------------------
+    State_V(RhoUx_:RhoUz_) = State_V(Ux_:Uz_)*State_V(Rho_)
+
+    ! Do rest of the fluid velocities
+    do iFluid = 2, nFluid
+       Rho = State_V(iRho_I(iFluid))
+       State_V(iRhoUx_I(iFluid)) = Rho*State_V(iUx_I(iFluid))
+       State_V(iRhoUy_I(iFluid)) = Rho*State_V(iUy_I(iFluid))
+       State_V(iRhoUz_I(iFluid)) = Rho*State_V(iUz_I(iFluid))
+    end do
+
+  end subroutine get_momentum
   !============================================================================
   subroutine limiter2(Var1, Var2, Var3, Var4, VarLeft, VarRight)
     !$acc routine seq
@@ -1090,20 +1255,18 @@ contains
 
   end subroutine limiter2
   !============================================================================
-#endif
   subroutine set_boundary_fast
 
-    ! Set cell boundaries for State_VGB
+    ! Set cell boundaries for State_VGB (called from ModExchangeMessages)
 
     integer:: iBlock
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     if (IsTimeAccurate .and. iTypeCellBc_I(2) == VaryBC_)then
        call get_solar_wind_point(tSimulation, [xMaxBox, 0., 0.], &
             CellState_VI(:,2))
        ! Convert velocity to momentum
        CellState_VI(RhoUx_:RhoUz_,2) = &
-            CellState_VI(RhoUx_:RhoUz_,2)*CellState_VI(Rho_,2)
+            CellState_VI(Ux_:Uz_,2)*CellState_VI(Rho_,2)
        !$acc update device(CellState_VI)
     endif
 
@@ -1112,29 +1275,27 @@ contains
        call set_cell_boundary_for_block(iBlock, nVar, &
             State_VGB(:,:,:,:,iBlock))
     end do
-#endif
+
   end subroutine set_boundary_fast
   !============================================================================
-#ifndef SCALAR
-  subroutine set_cell_boundary_for_block(iBlock, nVarState, State_VG, &
-       IsLinearIn)
+  subroutine set_cell_boundary_for_block(iBlock, nVarState, State_VG, IsLinear)
     !$acc routine vector
 
     integer, intent(in) :: iBlock, nVarState
     real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Present only for semi-implicit scheme
-    logical, intent(in), optional:: IsLinearIn
+    logical, intent(in), optional:: IsLinear
 
     integer :: i, j, k, iSide
-    logical :: IsLinear
+    logical :: IsLinearBc
     !--------------------------------------------------------------------------
     if(Unused_B(iBlock)) RETURN
     if(.not.IsBoundary_B(iBlock)) RETURN
 
     ! Default is false, because explicit scheme does not use linear BC
-    IsLinear = .false.
-    if(present(IsLinearIn)) IsLinear = IsLinearIn
+    IsLinearBc = .false.
+    if(present(IsLinear)) IsLinearBc = IsLinear
 
     ! x left
     iSide = 1
@@ -1142,7 +1303,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
           call set_boundary_for_cell(iSide, i, j, k, 1, j, k, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinearBc, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1152,7 +1313,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
           call set_boundary_for_cell(iSide, i, j, k, nI, j, k, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinearBc, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1162,7 +1323,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI
           call set_boundary_for_cell(iSide, i, j, k, i, 1, k, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinearBc, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1172,7 +1333,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
           call set_boundary_for_cell(iSide, i, j, k, i, nJ, k, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinearBc, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1182,7 +1343,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = MinK, 0; do j = MinJ, MaxJ; do i = MinI, MaxI
           call set_boundary_for_cell(iSide, i, j, k, i, j, 1, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinearBc, nVarState, State_VG)
        end do; end do; end do
     end if
 
@@ -1192,16 +1353,18 @@ contains
        !$acc loop vector collapse(3) independent
        do k = nK+1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           call set_boundary_for_cell(iSide, i, j, k, i, j, nK, &
-               iBlock, iTypeCellBc_I(iSide), IsLinear, nVarState, State_VG)
+               iBlock, iTypeCellBc_I(iSide), IsLinearBc, nVarState, State_VG)
        end do; end do; end do
     end if
+
   end subroutine set_cell_boundary_for_block
   !============================================================================
-
   subroutine set_boundary_for_cell(iSide, i, j, k, iSend, jSend, kSend, &
        iBlock, iTypeBC, IsLinear, nVarState, State_VG)
     !$acc routine seq
 
+    ! Set boundary cell value
+    
     integer, intent(in):: iSide, i, j, k, iSend, jSend, kSend, iBlock
     integer, intent(in):: iTypeBC, nVarState
     logical, intent(in):: IsLinear
@@ -1629,21 +1792,12 @@ contains
     if(UseAlfvenWaves) GammaP = GammaP &
          + GammaWave*(GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
 
-#ifdef TESTACC
-    if(DoTestSide) then
-       write(*,*)&
-            'Sound2 uninitialized= ', Sound2, iSideTest
-       write(*,*)&
-            'GammaP, InvRho= ', GammaP, InvRho
-    end if
-#endif
-
     Sound2=GammaP*InvRho
 
 #ifdef TESTACC
     if(DoTestSide) then
-       write(*,*)&
-            'Sound2 updated ', Sound2, iSideTest
+       write(*,*)'GammaP, InvRho= ', GammaP, InvRho
+       write(*,*)'Sound2 updated ', Sound2, iSideTest
     end if
 #endif
 
@@ -2004,16 +2158,19 @@ contains
                   0.5*(StateLeft_V(By_)+ StateRight_V(By_)) + B0_D(2),  &
                   0.5*(StateLeft_V(Bz_)+ StateRight_V(Bz_)) + B0_D(3),  &
                   iSideTest
+             write(*,*)'BB =', &
+                  sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
+                  + B0_D)**2), iSideTest
           else
              write(*,*)'B  =', &
                   0.5*(StateLeft_V(Bx_)+ StateRight_V(Bx_)),  &
                   0.5*(StateLeft_V(By_)+ StateRight_V(By_)),  &
                   0.5*(StateLeft_V(Bz_)+ StateRight_V(Bz_)),  &
                   iSideTest
+             write(*,*)'BB =', &
+                  sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
+                  )**2), iSideTest
           end if
-          write(*,*)'BB =', &
-               sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + B0_D &
-               )**2), iSideTest
        end if
        write(*,*)
        write(*,*) 'Area=', Area, iSideTest
@@ -2176,7 +2333,6 @@ contains
 
   end subroutine pressure_to_energy
   !============================================================================
-#endif
   subroutine update_b0_fast
 
     ! Update B0 due to the rotation of the dipole
