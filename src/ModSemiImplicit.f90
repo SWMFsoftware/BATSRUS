@@ -566,7 +566,7 @@ contains
        if(IsBoundary_B(iBlock)) then
           if(iTypeUpdate >= UpdateFast_) then
              call set_cell_boundary_for_block(iBlock, nVarSemi, &
-                  SemiState_VGB(:,:,:,:,iBlock), .false.)
+                  SemiState_VGB(:,:,:,:,iBlock), IsLinear=.false.)
           else
 #ifndef _OPENACC
              ! Apply boundary conditions (1 layer of outer ghost cells)
@@ -710,7 +710,7 @@ contains
        if(IsBoundary_B(iBlock)) then
           if(iTypeUpdate >= UpdateFast_) then
              call set_cell_boundary_for_block(iBlock, nVarSemi, &
-                  SemiState_VGB(:,:,:,:,iBlock), .true.)
+                  SemiState_VGB(:,:,:,:,iBlock), IsLinear=.true.)
           else
 #ifndef _OPENACC
              call set_cell_boundary( 1, iBlock, nVarSemi, &
