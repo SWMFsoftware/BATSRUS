@@ -35,6 +35,7 @@ module ModFaceValue
   public:: calc_face_value
   public:: correct_monotone_restrict
   public:: get_face_accurate1d, get_face_accurate2d, get_face_accurate3d
+  public:: accurate_reschange2d, accurate_reschange3d
   public:: get_face_tvd
   public:: set_low_order_face
   public:: calc_cell_norm_velocity
@@ -2293,6 +2294,7 @@ contains
        FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell
        FineF_VII)           ! Values in the phys. cell,
     !                         looking at another physical cell
+    !$acc routine seq
 
     !              |C1_V        |        |       |
     ! _____________|____________|________|_______|_
@@ -2439,6 +2441,7 @@ contains
        FineToCoarseF_VI  ,& ! Values in phys. cell looking at coarser cell
        FineF_VI)            ! Facevalues in the physical cell,
     !                         looking at another physical cell
+    !$acc routine seq
 
     !              |C1_V        |        |       |
     ! _____________|____________|________|_______|_
