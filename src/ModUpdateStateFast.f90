@@ -273,9 +273,9 @@ contains
                   Coarse1_VII  = State_VGB(:, 0,j-2:j+3,k-2:k+3,iBlock), &
                   Fine1_VII    = State_VGB(:, 1,j:j+1,k:k+1,iBlock), &
                   Fine2_VII    = State_VGB(:, 2,j:j+1,k:k+1,iBlock), &
-                  CoarseToFineF_VII=FineState_VXB(:,1,j:j+1,k:k+1,iBlock), &
-                  FineToCoarseF_VII=FineState_VXB(:,1,j:j+1,k:k+1,iBlock), &
-                  FineF_VII        =FineState_VXB(:,2,j:j+1,k:k+1,iBlock))
+                  CoarseToFineF_VII=FineState_VXB(:,j:j+1,k:k+1,1,iBlock), &
+                  FineToCoarseF_VII=FineState_VXB(:,j:j+1,k:k+1,2,iBlock), &
+                  FineF_VII        =FineState_VXB(:,j:j+1,k:k+1,3,iBlock))
              end do; end do
           elseif(DiLevel_EB(2,iBlock) == 1 .and. nDim == 2)then
              !$acc loop vector
@@ -344,10 +344,10 @@ contains
              !$acc loop vector collapse(2)
              do k = 1, nK, 2; do i = 1, nI, 2
                 call accurate_reschange3d( &
-                     Coarse2_V  =State_VGB(:,i,nJ+2,k,iBlock), &
+                     Coarse2_V  =State_VGB(:,i,      nJ+2,k,      iBlock), &
                      Coarse1_VII=State_VGB(:,i-2:i+3,nJ+1,k-2:k+3,iBlock), &
-                     Fine1_VII  =State_VGB(:,i:i+1,nJ,k:k+1,iBlock), &
-                     Fine2_VII  =State_VGB(:,i:i+1,nJ-1,k:k+1,iBlock), &
+                     Fine1_VII  =State_VGB(:,i:i+1,  nJ,  k:k+1,  iBlock), &
+                     Fine2_VII  =State_VGB(:,i:i+1,  nJ-1,k:k+1,  iBlock), &
                      CoarseToFineF_VII=FineState_VYB(:,i:i+1,k:k+1,1,iBlock), &
                      FineToCoarseF_VII=FineState_VYB(:,i:i+1,k:k+1,2,iBlock), &
                      FineF_VII        =FineState_VYB(:,i:i+1,k:k+1,3,iBlock))
@@ -359,10 +359,10 @@ contains
              !$acc loop vector collapse(2)
              do j = 1, nJ, 2; do i = 1, nI, 2
                 call accurate_reschange3d( &
-                     Coarse2_V  =State_VGB(:,i,j,-1,iBlock), &
+                     Coarse2_V  =State_VGB(:,i,      j,     -1,iBlock), &
                      Coarse1_VII=State_VGB(:,i-2:i+3,j-2:j+3,0,iBlock), &
-                     Fine1_VII  =State_VGB(:,i:i+1,j:j+1,1,iBlock), &
-                     Fine2_VII  =State_VGB(:,i:i+1,j:j+1,2,iBlock), &
+                     Fine1_VII  =State_VGB(:,i:i+1,  j:j+1,  1,iBlock), &
+                     Fine2_VII  =State_VGB(:,i:i+1,  j:j+1,  2,iBlock), &
                      CoarseToFineF_VII=FineState_VZB(:,i:i+1,j:j+1,1,iBlock), &
                      FineToCoarseF_VII=FineState_VZB(:,i:i+1,j:j+1,2,iBlock), &
                      FineF_VII        =FineState_VZB(:,i:i+1,j:j+1,3,iBlock))
@@ -371,10 +371,10 @@ contains
              !$acc loop vector collapse(2)
              do j = 1, nJ, 2; do i = 1, nI, 2
                 call accurate_reschange3d( &
-                     Coarse2_V  =State_VGB(:,i,j,nK+2,iBlock), &
+                     Coarse2_V  =State_VGB(:,i,      j,      nK+2,iBlock), &
                      Coarse1_VII=State_VGB(:,i-2:i+3,j-2:j+3,nK+1,iBlock), &
-                     Fine1_VII  =State_VGB(:,i:i+1,j:j+1,nK,iBlock), &
-                     Fine2_VII  =State_VGB(:,i:i+1,j:j+1,nK-1,iBlock), &
+                     Fine1_VII  =State_VGB(:,i:i+1,  j:j+1,  nK,  iBlock), &
+                     Fine2_VII  =State_VGB(:,i:i+1,  j:j+1,  nK-1,iBlock), &
                      CoarseToFineF_VII=FineState_VZB(:,i:i+1,j:j+1,1,iBlock), &
                      FineToCoarseF_VII=FineState_VZB(:,i:i+1,j:j+1,2,iBlock), &
                      FineF_VII        =FineState_VZB(:,i:i+1,j:j+1,3,iBlock))
