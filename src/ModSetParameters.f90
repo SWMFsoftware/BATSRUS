@@ -3874,15 +3874,13 @@ contains
 
          UseDbTrick            = .false.
          UseB0Source           = .false.
-         UseTvdResChange       = .false.
          UseBorisRegion        = .false.
          DoLimitMomentum       = .false.
          DoConserveFlux        = .false.
          UseSimpleProlongation = .true.
-         ! Only test_fastwave2d is tested with AccurateResChange=T
-         if(nDim /= 2 .and. nI /= 6 .and. nK /=6)then
-            UseAccurateResChange  = .false.
-            nOrderProlong = 2
+         if(UseTvdResChange)then
+            UseTvdResChange      = .false.
+            UseAccurateResChange = .true.
          end if
       end if
 
