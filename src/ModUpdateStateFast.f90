@@ -1364,7 +1364,7 @@ contains
     !$acc routine seq
 
     ! Set boundary cell value
-    
+
     integer, intent(in):: iSide, i, j, k, iSend, jSend, kSend, iBlock
     integer, intent(in):: iTypeBC, nVarState
     logical, intent(in):: IsLinear
