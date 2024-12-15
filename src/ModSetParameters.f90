@@ -1790,9 +1790,7 @@ contains
 
              if(UseFDFaceFlux) DoConserveFlux = .false.
 
-             if(.not.UseHighResChange) then
-                nOrderProlong  = 2
-             end if
+             if(.not.UseHighResChange) nOrderProlong  = 2
           else
              if(iProc==0)write(*,*) NameSub, ' WARNING: ',&
                   ' #SCHEME5 should be used only if nOrder = 5'
@@ -3523,10 +3521,7 @@ contains
          UseAccurateResChange = .true.
       end if
 
-      ! Accurate res change algorithm and 4th order finite volume scheme
-      ! both need corners and edges
-      if (UseAccurateResChange .or. nOrder == 4) &
-           TypeMessagePass = 'all'
+      if(UseAccurateResChange) TypeMessagePass = 'all'
 
       if(IsRzGeometry .and. UseB)then
          if(UseMultiIon) &
@@ -3882,6 +3877,9 @@ contains
             UseTvdResChange      = .false.
             UseAccurateResChange = .true.
          end if
+!         UseTvdResChange = .false.
+!         UseAccurateResChange = .false.
+!         nOrderProlong = 2
       end if
 
       UseDbTrickNow = UseDbTrick
@@ -3925,49 +3923,36 @@ contains
          nStage = 3
       end if
 
+      !write(*,*)'!!! UseTvdResChange,UseTvdResChange,nOrderProlong=', &
+      !     UseTvdResChange,UseTvdResChange,nOrderProlong
+
       ! Update parameters on the GPU that are not done by init_mod_* routines
 
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, nOrderProlong)
       !$acc update device(UseHalfStep, IsTimeAccurate, UseDtFixed)
       !$acc update device(DoCorrectFace, UseFDFaceFlux)
-
       !$acc update device(UseTvdResChange, UseAccurateResChange)
-
       !$acc update device(TypeLimiter, LimiterBeta)
-
       !$acc update device(TypeCellBc_I, iTypeCellBc_I)
-
       !$acc update device(UseOutflowPressure)
-
       !$acc update device(UseB0)
       !$acc update device(UseDivbSource, UseHyperbolicDivb, UseConstrainB)
-
       !$acc update device(DoConserveNeutrals, UseNonConservative, nConservCrit)
-
       !$acc update device(iMinFace, iMaxFace, iMinFace2, iMaxFace2)
       !$acc update device(jMinFace, jMaxFace, jMinFace2, jMaxFace2)
       !$acc update device(kMinFace, kMaxFace, kMinFace2, kMaxFace2)
-
       !$acc update device(UseUserUpdateStates)
-
       !$acc update device(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
       !$acc update device(Gamma, GammaMinus1, InvGammaMinus1)
       !$acc update device(GammaElectron, GammaElectronMinus1)
       !$acc update device(InvGammaElectronMinus1)
-
       !$acc update device(GammaWave)
-
       !$acc update device(UseBody)
-
       !$acc update device(UseRotatingBc)
-
       !$acc update device(UseGravity, UseRotatingFrame)
-
       !$acc update device(iTypeCoordSystem)
-
       !$acc update device(DipoleStrengthSi)
-
       !$acc update device(DoCoupleImPressure, DoCoupleImDensity, TauCoupleIM)
       !$acc update device(DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm)
       !$acc update device(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
