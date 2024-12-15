@@ -6,6 +6,9 @@ Param/CORONA/PARAM.in.Awsom.GPU		StringDescription
 #UPDATE
 fast			TypeUpdate
 
+#PROLONGATION
+2			nOrderProlong
+
 #COMPONENT
 SC			NameComp
 
