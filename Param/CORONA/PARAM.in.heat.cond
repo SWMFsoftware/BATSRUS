@@ -5,7 +5,7 @@ Param/CORONA/PARAM.in.heat.cond:Heat conduction		StringDescription
 fast			TypeUpdate
 
 #PROLONGATION
-2			nProlongOrder
+2			nOrderProlong
 
 #TIMING
 T			UseTiming
