@@ -26,8 +26,8 @@ contains
     use ModSetInitialCondition, ONLY: read_initial_cond_param
     use ModConservative, ONLY: &
          set_non_conservative, UseNonConservative, nConservCrit
-    use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
-         read_b0_param, init_mod_b0
+    use ModB0, ONLY: UseB0Source, UseDivFullBSource, UseCurlB0, &
+         DoUpdateB0, DtUpdateB0, read_b0_param, init_mod_b0
     use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
          XyzMin_D, XyzMax_D, RadiusMin, RadiusMax, &
@@ -3847,21 +3847,18 @@ contains
          DoPlotThreads = .false.; DoThreadRestart = .false.
       end if
 
+#ifdef _OPENACC
+      iTypeUpdate = UpdateFast_ ! Default for GPU
+#else
       select case(TypeUpdate)
-      case('orig')
-         iTypeUpdate = UpdateOrig_
       case('slow')
          iTypeUpdate = UpdateSlow_
       case('fast')
          iTypeUpdate = UpdateFast_
       case default
-#ifdef _OPENACC
-         iTypeUpdate = UpdateFast_ ! Default for GPU
-#else
-         iTypeUpdate = UpdateOrig_ ! Default for CPU
-#endif
+         iTypeUpdate = UpdateOrig_
       end select
-
+#endif
       if(iTypeUpdate /= UpdateOrig_)then
          ! These methods are not implemented in ModUpdateStateFast (yet)
          ! If fast (or compatible slow) update is used at all,
@@ -3869,6 +3866,7 @@ contains
 
          UseDbTrick            = .false.
          UseB0Source           = .false.
+         UseDivFullBSource     = .false.
          UseBorisRegion        = .false.
          DoLimitMomentum       = .false.
          DoConserveFlux        = .false.
@@ -3877,9 +3875,6 @@ contains
             UseTvdResChange      = .false.
             UseAccurateResChange = .true.
          end if
-!         UseTvdResChange = .false.
-!         UseAccurateResChange = .false.
-!         nOrderProlong = 2
       end if
 
       UseDbTrickNow = UseDbTrick
@@ -3922,9 +3917,6 @@ contains
               write(*,*) NameSub,': UseFlic=.true., set nStage to 3'
          nStage = 3
       end if
-
-      ! write(*,*)'!!! UseTvdResChange,UseTvdResChange,nOrderProlong=', &
-      !     UseTvdResChange,UseTvdResChange,nOrderProlong
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
 
