@@ -104,10 +104,12 @@ module ModHeatConduction
 
   ! radiative cooling
   logical :: DoRadCooling = .false.
+  !$acc declre create(DoRadCooling)
 
   ! Arrays for radiative cooling
   real, allocatable :: CoolHeat_CB(:,:,:,:)
   real, allocatable :: CoolHeatDeriv_CB(:,:,:,:)
+  !$acc declare create(CoolHeat_CB, CoolHeatDeriv_CB)
 
 contains
   !============================================================================
@@ -345,6 +347,8 @@ contains
     !$acc update device(HeatCondPar)
     !$acc update device(DoUserHeatConduction)
     !$acc update device(iTeImpl)
+
+    !$acc update device(DoRadCooling)
 
     call test_stop(NameSub, DoTest)
   end subroutine init_heat_conduction
