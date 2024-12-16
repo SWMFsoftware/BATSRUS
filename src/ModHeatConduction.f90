@@ -1325,7 +1325,6 @@ contains
 #endif
              end if
 
-#ifndef _OPENACC
              if(DoRadCooling)then
                 call get_radiative_cooling(i, j, k, iBlock, TeSi, &
                      CoolHeat_CB(i,j,k,iBlock), NameCaller=NameSub, &
@@ -1337,7 +1336,6 @@ contains
                 CoolHeatDeriv_CB(i,j,k,iBlock) = min(0.0, &
                      0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon)
              end if
-#endif
           end if
 
        end do; end do; end do
@@ -1566,7 +1564,6 @@ contains
           end do; end do; end do
        end if
     else
-#ifndef _OPENACC
        if(DoRadCooling)then
           if(IsLinear)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1580,7 +1577,6 @@ contains
              end do; end do; end do
           end if
        end if
-#endif
 
        ! Point implicit source terms due to electron-ion energy exchange
        if(UseElectronPressure .and. .not.UseMultiIon)then
@@ -1658,14 +1654,12 @@ contains
           end do; end do; end do
        end if
 
-#ifndef _OPENACC
        if(DoRadCooling)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                   + CoolHeatDeriv_CB(i,j,k,iBlock)
           end do; end do; end do
        end if
-#endif
     end if
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
