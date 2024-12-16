@@ -4,6 +4,9 @@ Param/CORONA/PARAM.in.heat.cond:Heat conduction		StringDescription
 #UPDATE
 fast			TypeUpdate
 
+#PROLONGATION
+2			nProlongOrder
+
 #TIMING
 T			UseTiming
 -1			DnTiming  ! every session
