@@ -1,11 +1,9 @@
 #DESCRIPTION
 Param/CORONA/PARAM.in.heat.cond:Heat conduction		StringDescription
 
-#UPDATE
-fast			TypeUpdate
-
-#PROLONGATION
-2			nOrderProlong
+! Flux conservation is not implemented for GPU
+#CONSERVEFLUX
+F			DoConserveFlux
 
 #TIMING
 T			UseTiming
@@ -25,9 +23,6 @@ READ			TypeNormalization
 1.0e-25			No2SiUnitX   (only read if TypeNormalization=READ)
 1.0			No2SiUnitU   (only read if TypeNormalization=READ)
 1.0			No2SiUnitRho (only read if TypeNormalization=READ)
-
-#CONSERVEFLUX
-F			DoConserveFlux
 
 #GRIDGEOMETRY
 rotatedcartesian		TypeGeometry

@@ -1,8 +1,9 @@
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.fast_wave_2d: fast wave propagation		StringDescription
 
-#UPDATE
-fast			TypeUpdate
+! Flux conservation is not implemented on GPU
+#CONSERVEFLUX
+F			DoConserveFlux
 
 #TIMING
 T			UseTiming

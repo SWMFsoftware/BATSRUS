@@ -1,7 +1,3 @@
-Comment this out to run with regular ModFaceFlux
-#UPDATE
-fast			TypeUpdate
-
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.hyp.1d: 1D shocktube with a single block		StringDescription
 

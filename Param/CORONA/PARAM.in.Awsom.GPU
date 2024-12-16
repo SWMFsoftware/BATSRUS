@@ -4,7 +4,7 @@ Begin session: 1
 Param/CORONA/PARAM.in.Awsom.GPU		StringDescription
 
 #UPDATE
-fast			TypeUpdate
+slow			TypeUpdate
 
 #PROLONGATION
 2			nOrderProlong
