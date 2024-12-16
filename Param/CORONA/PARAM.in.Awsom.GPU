@@ -149,7 +149,7 @@ T			UseNonConservative
 #MESSAGEPASS
 all			TypeMessagePass
 
-#RESCHANGE
+RESCHANGE
 T			UseAccurateReschange
 
 #SAVELOGFILE
