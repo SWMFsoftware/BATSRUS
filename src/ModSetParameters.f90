@@ -3923,7 +3923,7 @@ contains
          nStage = 3
       end if
 
-      !write(*,*)'!!! UseTvdResChange,UseTvdResChange,nOrderProlong=', &
+      ! write(*,*)'!!! UseTvdResChange,UseTvdResChange,nOrderProlong=', &
       !     UseTvdResChange,UseTvdResChange,nOrderProlong
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
