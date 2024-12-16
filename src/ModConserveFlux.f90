@@ -24,38 +24,33 @@ module ModConserveFlux
        CellFace_DFB, FaceNormal_DDFB, Unused_BP
 
   implicit none
+
   SAVE
+
   private ! except
 
-  public:: &
-       init_mod_cons_flux, &
-       save_cons_flux, &
-       apply_cons_flux, &
-       nCorrectedFaceValues, &
-       CorrectedFlux_VXB, &
-       CorrectedFlux_VYB, &
-       CorrectedFlux_VZB, &
-       DoConserveFlux
+  public:: init_mod_cons_flux
+  public:: save_cons_flux
+  public:: apply_cons_flux
 
   ! Correct face flux near resolution change.
-  logical :: DoConserveFlux = .true.
+  logical, public :: DoConserveFlux = .true.
 
+  ! Face conservative or corrected flux.
+  real, public, allocatable, dimension(:,:,:,:,:) :: &
+       CorrectedFlux_VXB, CorrectedFlux_VYB, CorrectedFlux_VZB
+  
   ! For momentum conserving scheme (for hybrid or multi-fluid) Mhd flux of
   ! momentum should be saved, the condition is UseB_ (B_-U_>0) and not
   ! UseEField (Ex_>1)
-  integer,parameter :: MhdRhoUx_ = BnR_ +        min(max(2-Ex_,0), B_-U_)
-  integer,parameter :: MhdRhoUz_ = BnR_ + MaxDim*min(max(2-Ex_,0), B_-U_)
-  integer,parameter :: nCorrectedFaceValues = MhdRhoUz_
-
-  ! Face conservative or corrected flux.
-  real, allocatable, dimension(:,:,:,:,:) :: &
-       CorrectedFlux_VXB, CorrectedFlux_VYB, CorrectedFlux_VZB
+  integer, parameter :: MhdRhoUx_ = BnR_ +        min(max(2-Ex_,0), B_-U_)
+  integer, parameter :: MhdRhoUz_ = BnR_ + MaxDim*min(max(2-Ex_,0), B_-U_)
+  integer, public, parameter:: nCorrectedFaceValues = MhdRhoUz_
 
   real, parameter :: FaceRatio = 1.0/2**(nDim-1)
 
 contains
   !============================================================================
-
   subroutine init_mod_cons_flux
 
     logical:: DoTest
@@ -75,78 +70,55 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_cons_flux
   !============================================================================
-
   subroutine save_cons_flux(iBlock)
 
     integer, intent(in) :: iBlock
 
-    integer :: lFaceFrom,lFaceTo,i,j,k
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'save_cons_flux'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if (DiLevel_EB(1,iBlock)==+1) then
-       lFaceFrom=1
-       lFaceTo=1
-       call save_corrected_flux_x
-    end if
-
-    if (DiLevel_EB(2,iBlock)==+1) then
-       lFaceFrom=1+nI
-       lFaceTo=2
-       call save_corrected_flux_x
-    end if
-
-    if (nDim > 1 .and. DiLevel_EB(3,iBlock)==+1) then
-       lFaceFrom=1
-       lFaceTo=1
-       call save_corrected_flux_y
-    end if
-
-    if (nDim > 1 .and. DiLevel_EB(4,iBlock)==+1) then
-       lFaceFrom=1+nJ
-       lFaceTo=2
-       call save_corrected_flux_y
-    end if
-
-    if (nDim > 2 .and. DiLevel_EB(5,iBlock)==+1) then
-       lFaceFrom=1
-       lFaceTo=1
-       call save_corrected_flux_z
-    end if
-
-    if (nDim > 2 .and. DiLevel_EB(6,iBlock)==+1) then
-       lFaceFrom=nK+1
-       lFaceTo=2
-       call save_corrected_flux_z
-    end if
+    if (DiLevel_EB(1,iBlock) == 1) &
+         call save_corrected_flux_x(1, 1)
+    if (DiLevel_EB(2,iBlock) == 1) &
+         call save_corrected_flux_x(nI+1, 2)
+    if(nDim > 1 .and. DiLevel_EB(3,iBlock) == 1) &
+         call save_corrected_flux_y(1,1)
+    if(nDim > 1 .and. DiLevel_EB(4,iBlock) == 1) &
+         call save_corrected_flux_y(nJ+1,2)
+    if (nDim > 2 .and. DiLevel_EB(5,iBlock) == 1) &
+         call save_corrected_flux_z(1, 1)
+    if (nDim > 2 .and. DiLevel_EB(6,iBlock) == 1) &
+       call save_corrected_flux_z(nK+1, 2)
 
     call test_stop(NameSub, DoTest, iBlock)
+
   contains
     !==========================================================================
+    subroutine save_corrected_flux_x(lFaceFrom, lFaceTo)
 
-    subroutine save_corrected_flux_x
-      integer:: iGang
+      integer, intent(in):: lFaceFrom, lFaceTo
+
+      integer :: j, k, iVar
       !------------------------------------------------------------------------
-      iGang = 1
-      do k=1,nK; do j=1,nJ
+      do k = 1, nK; do j = 1, nJ
          CorrectedFlux_VXB(1:Vdt_,j,k,lFaceTo,iBlock)  &
-              = Flux_VXI(1:Vdt_, lFaceFrom,j,k,iGang)
+              = Flux_VXI(1:Vdt_,lFaceFrom,j,k,1)
       end do; end do
 
       if(.not.UseB)RETURN
 
       if(IsCartesian)then
-         do k=1,nK; do j=1,nJ
-            CorrectedFlux_VXB(BnL_,j,k,lFaceTo,iBlock)= &
+         do k = 1, nK; do j = 1, nJ
+            CorrectedFlux_VXB(BnL_,j,k,lFaceTo,iBlock) = &
                  LeftState_VX(Bx_,lFaceFrom,j,k)*FaceRatio
-            CorrectedFlux_VXB(BnR_,j,k,lFaceTo,iBlock)= &
+            CorrectedFlux_VXB(BnR_,j,k,lFaceTo,iBlock) = &
                  RightState_VX(Bx_,lFaceFrom,j,k)*FaceRatio
          end do; end do
       elseif(IsRzGeometry)then
          ! X face areas vary in RZ geometry
-         do k=1,nK; do j=1,nJ
+         do k = 1, nK; do j = 1, nJ
             CorrectedFlux_VXB(BnL_,j,k,lFaceTo,iBlock) = &
                  LeftState_VX(Bx_, lFaceFrom,j,k) * &
                  CellFace_DFB(1,lFaceFrom,j,k,iBlock)
@@ -156,7 +128,7 @@ contains
          end do; end do
       else
          ! Dot product with face normal
-         do k=1,nK; do j=1,nJ
+         do k = 1, nK; do j = 1, nJ
             CorrectedFlux_VXB(BnL_,j,k,lFaceTo,iBlock) = &
                  dot_product(LeftState_VX(Bx_:B_+nDim,lFaceFrom,j,k), &
                  FaceNormal_DDFB(:,1,lFaceFrom, j, k, iBlock))
@@ -166,7 +138,7 @@ contains
          end do; end do
       end if
       if(UseMhdMomentumFlux)then
-         do k=1,nK; do j=1,nJ
+         do k = 1, nK; do j = 1, nJ
             CorrectedFlux_VXB(MhdRhoUx_:MhdRhoUz_,j,k,lFaceTo,iBlock) = &
                  MhdFlux_VX(:,lFaceFrom,j,k)
          end do; end do
@@ -174,188 +146,163 @@ contains
 
       if(DoTest)then
          write(*,*)NameSub,' lFaceFrom, lFaceTo=',lFaceFrom, lFaceTo
-         do i = UnFirst_, UnLast_
+         do iVar = UnFirst_, UnLast_
             write(*,*)NameSub,' iVar, uDotA=', &
-                 Flux_VXI(i,lFaceFrom,jTest,kTest,iGang)
+                 Flux_VXI(iVar,lFaceFrom,jTest,kTest,1)
          end do
-         do i = 1, nCorrectedFaceValues
-            write(*,*)NameSub,' iVar, flux=', i, &
-                 CorrectedFlux_VXB(i,iTest,jTest,kTest,iBlock)
+         do iVar = 1, nCorrectedFaceValues
+            write(*,*)NameSub,' iVar, flux=', iVar, &
+                 CorrectedFlux_VXB(iVar,iTest,jTest,kTest,iBlock)
          end do
       end if
 
     end subroutine save_corrected_flux_x
     !==========================================================================
+    subroutine save_corrected_flux_y(lFaceFrom, lFaceTo)
 
-    subroutine save_corrected_flux_y
-      integer:: iGang
+      integer, intent(in):: lFaceFrom, lFaceTo
+
+      integer :: i, k
       !------------------------------------------------------------------------
-      iGang = 1
-      do k=1,nK;do i=1,nI
+      do k = 1, nK; do i = 1, nI
          CorrectedFlux_VYB(1:Vdt_,i,k,lFaceTo,iBlock)    &
-              = Flux_VYI(1:Vdt_,i,lFaceFrom,k,iGang)
-
+              = Flux_VYI(1:Vdt_,i,lFaceFrom,k,1)
       end do; end do
 
       if(.not.UseB)RETURN
 
       if(IsCartesianGrid)then
-         do k=1,nK; do i=1,nI
-            CorrectedFlux_VYB(BnL_,i,k,lFaceTo,iBlock)= &
+         do k = 1, nK; do i = 1, nI
+            CorrectedFlux_VYB(BnL_,i,k,lFaceTo,iBlock) = &
                  LeftState_VY( By_,i,lFaceFrom,k)*FaceRatio
-            CorrectedFlux_VYB(BnR_,i,k,lFaceTo,iBlock)= &
+            CorrectedFlux_VYB(BnR_,i,k,lFaceTo,iBlock) = &
                  RightState_VY(By_,i,lFaceFrom,k)*FaceRatio
          end do; end do
       else
-         do k=1,nK; do i=1,nI
+         do k = 1, nK; do i = 1, nI
             CorrectedFlux_VYB(BnL_,i,k,lFaceTo,iBlock) = &
-                 dot_product(LeftState_VY(Bx_:B_+nDim,i,lFaceFrom,k),&
+                 dot_product(LeftState_VY(Bx_:B_+nDim,i,lFaceFrom,k), &
                  FaceNormal_DDFB(:,2,i,lFaceFrom,k,iBlock))
             CorrectedFlux_VYB(BnR_,i,k,lFaceTo,iBlock) = &
-                 dot_product(RightState_VY(Bx_:B_+nDim,i,lFaceFrom,k),&
+                 dot_product(RightState_VY(Bx_:B_+nDim,i,lFaceFrom,k), &
                  FaceNormal_DDFB(:,2,i,lFaceFrom,k,iBlock))
          end do; end do
       end if
       if(UseMhdMomentumFlux)then
-         do k=1,nK; do i=1,nI
+         do k = 1, nK; do i = 1, nI
             CorrectedFlux_VYB(MhdRhoUx_:MhdRhoUz_,i,k,lFaceTo,iBlock) = &
                  MhdFlux_VY(:,i,lFaceFrom,k)
          end do; end do
       end if
+
     end subroutine save_corrected_flux_y
     !==========================================================================
+    subroutine save_corrected_flux_z(lFaceFrom, lFaceTo)
 
-    subroutine save_corrected_flux_z
-      integer:: iGang
+      integer, intent(in):: lFaceFrom, lFaceTo
+
+      integer :: i, j
       !------------------------------------------------------------------------
-      iGang = 1
-      do j=1,nJ;do i=1,nI
+      do j = 1, nJ; do i = 1, nI
          CorrectedFlux_VZB(1:Vdt_,  i,j,lFaceTo,iBlock)    &
-              = Flux_VZI(1:Vdt_,i,j,lFaceFrom,iGang)
+              = Flux_VZI(1:Vdt_,i,j,lFaceFrom,1)
       end do; end do
 
       if(.not.UseB)RETURN
 
       if(IsCartesianGrid)then
-         do j=1,nJ; do i=1,nI
+         do j = 1, nJ; do i = 1, nI
             CorrectedFlux_VZB(BnL_,i,j,lFaceTo,iBlock)= &
                  LeftState_VZ( Bz_,i,j,lFaceFrom)*FaceRatio
             CorrectedFlux_VZB(BnR_,i,j,lFaceTo,iBlock)= &
                  RightState_VZ(Bz_,i,j,lFaceFrom)*FaceRatio
          end do; end do
       else
-         do j=1,nJ; do i=1,nI
+         do j = 1, nJ; do i = 1, nI
             CorrectedFlux_VZB(BnL_,i,j,lFaceTo,iBlock) = &
-                 dot_product(LeftState_VZ(Bx_:B_+nDim,i,j,lFaceFrom),&
+                 dot_product(LeftState_VZ(Bx_:B_+nDim,i,j,lFaceFrom), &
                  FaceNormal_DDFB(:,3,i,j,lFaceFrom,iBlock))
-            CorrectedFlux_VZB(BnR_,i,j,lFaceTo, iBlock) =&
-                 dot_product(RightState_VZ(Bx_:B_+nDim,i,j,lFaceFrom),&
+            CorrectedFlux_VZB(BnR_,i,j,lFaceTo, iBlock) = &
+                 dot_product(RightState_VZ(Bx_:B_+nDim,i,j,lFaceFrom), &
                  FaceNormal_DDFB(:,3,i,j,lFaceFrom,iBlock))
          end do; end do
       end if
       if(UseMhdMomentumFlux)then
-         do j=1,nJ; do i=1,nI
+         do j = 1, nJ; do i = 1, nI
             CorrectedFlux_VZB(MhdRhoUx_:MhdRhoUz_,i,j,lFaceTo,iBlock) = &
                  MhdFlux_VZ(:,i,j,lFaceFrom)
          end do; end do
       end if
+
     end subroutine save_corrected_flux_z
     !==========================================================================
-
   end subroutine save_cons_flux
   !============================================================================
-
   subroutine apply_cons_flux(iBlock)
 
     integer, intent(in):: iBlock
-
-    integer :: i, j, k
-    integer :: lFaceFrom, lFaceTo
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'apply_cons_flux'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if (DiLevel_EB(1,iBlock)==-1)then
-       if ( .not.Unused_BP(jBlock_IEB(1,1,iBlock),jProc_IEB(1,1,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(2,1,iBlock),jProc_IEB(2,1,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(3,1,iBlock),jProc_IEB(3,1,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(4,1,iBlock),jProc_IEB(4,1,iBlock)))then
-          lFaceTo=1
-          lFaceFrom=1
-          call apply_corrected_flux_x
-       end if
-    end if
+    if (DiLevel_EB(1,iBlock) == -1 .and. &
+         .not.Unused_BP(jBlock_IEB(1,1,iBlock),jProc_IEB(1,1,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(2,1,iBlock),jProc_IEB(2,1,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(3,1,iBlock),jProc_IEB(3,1,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(4,1,iBlock),jProc_IEB(4,1,iBlock))) &
+         call apply_corrected_flux_x(1, 1)
 
-    if (DiLevel_EB(2,iBlock)==-1) then
-       if ( .not.Unused_BP(jBlock_IEB(1,2,iBlock),jProc_IEB(1,2,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(2,2,iBlock),jProc_IEB(2,2,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(4,2,iBlock),jProc_IEB(4,2,iBlock)))then
-          lFaceTo=nI+1
-          lFaceFrom=2
-          call apply_corrected_flux_x
-       end if
-    end if
+    if (DiLevel_EB(2,iBlock) == -1 .and. &
+         .not.Unused_BP(jBlock_IEB(1,2,iBlock),jProc_IEB(1,2,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(2,2,iBlock),jProc_IEB(2,2,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(4,2,iBlock),jProc_IEB(4,2,iBlock))) &
+         call apply_corrected_flux_x(2, nI+1)
 
-    if (nDim > 1 .and. DiLevel_EB(3,iBlock)==-1) then
-       if(  .not.Unused_BP(jBlock_IEB(1,3,iBlock),jProc_IEB(1,3,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(2,3,iBlock),jProc_IEB(2,3,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(3,3,iBlock),jProc_IEB(3,3,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(4,3,iBlock),jProc_IEB(4,3,iBlock)))then
-          lFaceTo=1
-          lFaceFrom=1
-          call apply_corrected_flux_y
-       end if
-    end if
+    if (nDim > 1 .and. DiLevel_EB(3,iBlock) == -1 .and. &
+         .not.Unused_BP(jBlock_IEB(1,3,iBlock),jProc_IEB(1,3,iBlock)).and. &
+         .not.Unused_BP(jBlock_IEB(2,3,iBlock),jProc_IEB(2,3,iBlock)).and. &
+         .not.Unused_BP(jBlock_IEB(3,3,iBlock),jProc_IEB(3,3,iBlock)).and. &
+         .not.Unused_BP(jBlock_IEB(4,3,iBlock),jProc_IEB(4,3,iBlock))) &
+         call apply_corrected_flux_y(1, 1)
 
-    if (nDim > 1 .and. DiLevel_EB(4,iBlock)==-1) then
-       if ( .not.Unused_BP(jBlock_IEB(1,4,iBlock),jProc_IEB(1,4,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(2,4,iBlock),jProc_IEB(2,4,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(3,4,iBlock),jProc_IEB(3,4,iBlock)).and.&
-            .not.Unused_BP(jBlock_IEB(4,4,iBlock),jProc_IEB(4,4,iBlock)))then
-          lFaceTo=nJ+1
-          lFaceFrom=2
-          call apply_corrected_flux_y
-       end if
-    end if
+    if (nDim > 1 .and. DiLevel_EB(4,iBlock) == -1 .and. &
+         .not.Unused_BP(jBlock_IEB(1,4,iBlock),jProc_IEB(1,4,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(2,4,iBlock),jProc_IEB(2,4,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(3,4,iBlock),jProc_IEB(3,4,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(4,4,iBlock),jProc_IEB(4,4,iBlock))) &
+         call apply_corrected_flux_y(2, nJ+1)
 
-    if (nDim > 2 .and. DiLevel_EB(5,iBlock)==-1) then
-       if ( .not.Unused_BP(jBlock_IEB(1,5,iBlock),jProc_IEB(1,5,iBlock)).and. &
-            .not.Unused_BP(jBlock_IEB(2,5,iBlock),jProc_IEB(2,5,iBlock)).and. &
-            .not.Unused_BP(jBlock_IEB(3,5,iBlock),jProc_IEB(3,5,iBlock)).and. &
-            .not.Unused_BP(jBlock_IEB(4,5,iBlock),jProc_IEB(4,5,iBlock)))then
-          lFaceTo=1
-          lFaceFrom=1
-          call apply_corrected_flux_z
-       end if
-    end if
+    if (nDim > 2 .and. DiLevel_EB(5,iBlock) == -1 .and. &
+         .not.Unused_BP(jBlock_IEB(1,5,iBlock),jProc_IEB(1,5,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(2,5,iBlock),jProc_IEB(2,5,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(3,5,iBlock),jProc_IEB(3,5,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(4,5,iBlock),jProc_IEB(4,5,iBlock))) &
+         call apply_corrected_flux_z(1, 1)
 
-    if (nDim > 2 .and. DiLevel_EB(6,iBlock)==-1) then
-       if ( .not.Unused_BP(jBlock_IEB(1,6,iBlock),jProc_IEB(1,6,iBlock)).and. &
-            .not.Unused_BP(jBlock_IEB(2,6,iBlock),jProc_IEB(2,6,iBlock)).and. &
-            .not.Unused_BP(jBlock_IEB(3,6,iBlock),jProc_IEB(3,6,iBlock)).and. &
-            .not.Unused_BP(jBlock_IEB(4,6,iBlock),jProc_IEB(4,6,iBlock))) then
-          lFaceTo=nK+1
-          lFaceFrom=2
-          call apply_corrected_flux_z
-       end if
-    end if
+    if (nDim > 2 .and. DiLevel_EB(6,iBlock) == -1 .and. &
+         .not.Unused_BP(jBlock_IEB(1,6,iBlock),jProc_IEB(1,6,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(2,6,iBlock),jProc_IEB(2,6,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(3,6,iBlock),jProc_IEB(3,6,iBlock)) .and. &
+         .not.Unused_BP(jBlock_IEB(4,6,iBlock),jProc_IEB(4,6,iBlock))) &
+         call apply_corrected_flux_z(2, nK+1)
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
+    subroutine apply_corrected_flux_x(lFaceFrom, lFaceTo)
 
-    subroutine apply_corrected_flux_x
-      integer:: iGang
+      integer, intent(in):: lFaceFrom, lFaceTo
+
+      integer:: j, k
       !------------------------------------------------------------------------
-      iGang = 1
       do k = 1, nK; do j = 1, nJ
          if (.not.Used_GB(lFaceTo-1, j, k, iBlock)) CYCLE
          if (.not.Used_GB(lFaceTo  , j, k, iBlock)) CYCLE
 
-         Flux_VXI(1:Vdt_,lFaceTo,j,k,iGang)  = &
+         Flux_VXI(1:Vdt_,lFaceTo,j,k,1)  = &
               CorrectedFlux_VXB(1:Vdt_,j,k,lFaceFrom,iBlock)
 
          ! if(UseMhdMomentumFlux) &
@@ -383,16 +330,17 @@ contains
 
     end subroutine apply_corrected_flux_x
     !==========================================================================
+    subroutine apply_corrected_flux_y(lFaceFrom, lFaceTo)
 
-    subroutine apply_corrected_flux_y
-      integer:: iGang
+      integer, intent(in):: lFaceFrom, lFaceTo
+
+      integer:: i, k
       !------------------------------------------------------------------------
-      iGang = 1
       do k = 1, nK; do i = 1, nI
          if (.not.Used_GB(i, lFaceTo-1, k, iBlock))CYCLE
          if (.not.Used_GB(i, lFaceTo  , k, iBlock))CYCLE
 
-         Flux_VYI(1:Vdt_,i,lFaceTo,k,iGang)  = &
+         Flux_VYI(1:Vdt_,i,lFaceTo,k,1)  = &
               CorrectedFlux_VYB(1:Vdt_,i,k,lFaceFrom,iBlock)
 
          ! if(UseMhdMomentumFlux)&
@@ -410,16 +358,17 @@ contains
 
     end subroutine apply_corrected_flux_y
     !==========================================================================
+    subroutine apply_corrected_flux_z(lFaceFrom, lFaceTo)
 
-    subroutine apply_corrected_flux_z
-      integer:: iGang
+      integer, intent(in):: lFaceFrom, lFaceTo
+
+      integer:: i, j
       !------------------------------------------------------------------------
-      iGang = 1
       do j = 1, nJ; do i = 1, nI
          if(.not.Used_GB(i, j, lFaceTo-1, iBlock)) CYCLE
          if(.not.Used_GB(i, j, lFaceTo  , iBlock)) CYCLE
 
-         Flux_VZI(1:Vdt_,i,j,lFaceTo,iGang)  = &
+         Flux_VZI(1:Vdt_,i,j,lFaceTo,1)  = &
               CorrectedFlux_VZB(1:Vdt_,i,j,lFaceFrom,iBlock)
 
          ! if(UseMhdMomentumFlux)&
@@ -437,13 +386,11 @@ contains
 
     end subroutine apply_corrected_flux_z
     !==========================================================================
-
   end subroutine apply_cons_flux
   !============================================================================
-
-  ! subroutines for applying Bn in generalized coordinates
-
   subroutine apply_bn_face_i(iFaceIn, iFaceOut, iBlock)
+
+    ! subroutines for applying Bn in generalized coordinates
 
     integer, intent(in):: iFaceIn, iFaceOut, iBlock
 
@@ -455,8 +402,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    do k=1,nK; do j=1,nJ
-       if(.not.all(Used_GB(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
+    do k = 1, nK; do j = 1, nJ
+       if(.not.all(Used_GB(iFaceOut-1:iFaceOut,j,k,iBlock))) CYCLE
 
        FaceArea_D = FaceNormal_DDFB(:,1,iFaceOut,j,k,iBlock)
        FaceArea2  = sum(FaceArea_D**2)
@@ -481,7 +428,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine apply_bn_face_i
   !============================================================================
-
   subroutine apply_bn_face_j(jFaceIn, jFaceOut, iBlock)
 
     integer, intent(in):: jFaceIn, jFaceOut, iBlock
@@ -494,7 +440,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    do k=1,nK; do i=1,nI
+    do k = 1, nK; do i = 1, nI
        if(.not.all(Used_GB(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
 
        FaceArea_D = FaceNormal_DDFB(:,2,i,jFaceOut,k,iBlock)
@@ -521,12 +467,11 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine apply_bn_face_j
   !============================================================================
-
   subroutine apply_bn_face_k(kFaceIn, kFaceOut, iBlock)
 
     integer, intent(in):: kFaceIn, kFaceOut, iBlock
 
-    integer:: i,j
+    integer:: i, j
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
     logical:: DoTest
@@ -534,7 +479,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    do j=1,nJ; do i=1,nI
+    do j = 1, nJ; do i = 1, nI
        if(.not.all(Used_GB(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
 
        FaceArea_D = FaceNormal_DDFB(:,3,i,j,kFaceOut,iBlock)
@@ -561,6 +506,5 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine apply_bn_face_k
   !============================================================================
-
 end module ModConserveFlux
 !==============================================================================
