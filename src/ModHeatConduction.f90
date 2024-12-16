@@ -104,7 +104,7 @@ module ModHeatConduction
 
   ! radiative cooling
   logical :: DoRadCooling = .false.
-  !$acc declre create(DoRadCooling)
+  !$acc declare create(DoRadCooling)
 
   ! Arrays for radiative cooling
   real, allocatable :: CoolHeat_CB(:,:,:,:)
