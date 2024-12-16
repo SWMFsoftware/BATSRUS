@@ -1570,12 +1570,14 @@ contains
     else
        if(DoRadCooling)then
           if(IsLinear)then
+             !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
                      + CoolHeatDeriv_CB(i,j,k,iBlock) &
                      *StateImpl_VG(iTeImpl,i,j,k)
              end do; end do; end do
           else
+             !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) + CoolHeat_CB(i,j,k,iBlock)
              end do; end do; end do
@@ -1659,6 +1661,7 @@ contains
        end if
 
        if(DoRadCooling)then
+          !$acc loop vector collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                   + CoolHeatDeriv_CB(i,j,k,iBlock)
