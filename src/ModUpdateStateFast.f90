@@ -35,7 +35,8 @@ module ModUpdateStateFast
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
        OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
-       GammaElectronMinus1, GammaElectron
+       GammaElectronMinus1, GammaElectron, &
+       No2Io_V, iUnitCons_V, UnitU_
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
        UseGravity, nStep
@@ -448,10 +449,19 @@ contains
              if(iVar >= Ux_ .and. iVar <= Uz_)then
                 write(*,*)NameVar_V(iVar), '(TestCell)  =',&
                      State_VGB(iVar,iTest,jTest,kTest,iBlockTest) &
-                     *State_VGB(Rho_,iTest,jTest,kTest,iBlockTest)
+                     *State_VGB(Rho_,iTest,jTest,kTest,iBlockTest), &
+                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest) &
+                     *State_VGB(Rho_,iTest,jTest,kTest,iBlockTest) &
+                     *No2Io_V(iUnitCons_V(iVar))
+                write(*,*)'Velocity (TestCell)  =',&
+                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest), &
+                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest) &
+                     *No2Io_V(UnitU_)
              else
                 write(*,*)NameVar_V(iVar), '(TestCell)  =',&
-                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest), &
+                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest) &
+                     *No2Io_V(iUnitCons_V(iVar))
              end if
           end do
        end if
@@ -1257,7 +1267,8 @@ contains
   !============================================================================
   subroutine set_boundary_fast
 
-    ! Set cell boundaries for State_VGB (called from ModExchangeMessages)
+    ! Set cell boundaries for State_VGB (called from ModMessagePass),
+    ! so it is using momentum currently
 
     integer:: iBlock
     !--------------------------------------------------------------------------
@@ -1265,13 +1276,13 @@ contains
        call get_solar_wind_point(tSimulation, [xMaxBox, 0., 0.], &
             CellState_VI(:,2))
        ! Convert velocity to momentum
-       CellState_VI(RhoUx_:RhoUz_,2) = &
-            CellState_VI(Ux_:Uz_,2)*CellState_VI(Rho_,2)
+       call get_momentum(CellState_VI(:,2))
        !$acc update device(CellState_VI)
     endif
 
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
        call set_cell_boundary_for_block(iBlock, nVar, &
             State_VGB(:,:,:,:,iBlock))
     end do
