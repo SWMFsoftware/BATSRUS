@@ -52,7 +52,7 @@ module ModFaceFluxParameters
        Area_            = AreaZ_ + 1, &
        DeltaBnL_        = Area_ + 1, &
        DeltaBnR_        = DeltaBnL_ + 1, &
-       DiffBb_         = DeltaBnR_ + 1, &
+       DiffBb_          = DeltaBnR_ + 1, &
        NormalX_         = DiffBb_ + 1, &
        NormalY_         = NormalX_ + 1, &
        NormalZ_         = NormalY_ + 1, &
@@ -100,12 +100,12 @@ module ModFaceFluxParameters
 
 contains
   !============================================================================
-  subroutine init_face_flux_arrays( IsFF_I, iFF_I, rFF_I, &
+  subroutine init_face_flux_arrays(IsFF_I, iFF_I, rFF_I, &
        Unormal_I, bCrossArea_D)
 
-    logical,  intent(inout):: IsFF_I(nFFLogic)
-    integer,  intent(inout):: iFF_I(nFFInt)
-    real,  intent(inout):: rFF_I(nFFReal)
+    logical, intent(inout):: IsFF_I(nFFLogic)
+    integer, intent(inout):: iFF_I(nFFInt)
+    real, intent(inout):: rFF_I(nFFReal)
     real, intent(inout):: Unormal_I(nFluid+1)
     real, intent(inout):: bCrossArea_D(MaxDim)
 
