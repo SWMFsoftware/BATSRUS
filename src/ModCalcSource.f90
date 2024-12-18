@@ -870,7 +870,23 @@ contains
     if(UseB0) call set_b0_source(iBlock, DoSkipSetB0Face=.true.)
 
     if(UseB .and. UseDivbSource)then
+       !DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
+       !if(nJ > 1) DivB = DivB + &
+       !     Flux_VYI(Bn_,i,j+1,k,iGang) - Flux_VYI(Bn_,i,j,k,iGang)
+       !if(nK > 1) DivB = DivB + &
+       !     Flux_VZI(Bn_,i,j,k+1,iGang) - Flux_VZI(Bn_,i,j,k,iGang)
+       !Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+       !     - DivB*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       !if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+       !     - DivB*B0_DGB(:,i,j,k,iBlock)
+       !
+       !Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
+       !     - DivB*State_VGB(Ux_:Uz_,i,j,k,iBlock)
+       !Change_V(Energy_) = Change_V(Energy_) &
+       !     - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+       !     *          State_VGB(Ux_:Uz_,i,j,k,iBlock))
 
+       
        ! 8 wave scheme results in terms proportional to div B
        if(IsCartesian)then
           call calc_divb_source(iBlock)
@@ -1706,6 +1722,7 @@ contains
     end subroutine get_uplus
     !==========================================================================
     subroutine calc_divb_source(iBlock)
+
       integer, intent(in):: iBlock
 
       integer::  i, j, k
@@ -1724,7 +1741,7 @@ contains
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
-         if((UseMhdMomentumFlux.and.UseB0) .or. (.not.DoCorrectFace)) then
+         if(UseMhdMomentumFlux.and.UseB0 .or. .not.DoCorrectFace) then
 
             dB1nFace1 = DxInvHalf*&
                  (RightState_VX(Bx_,i,j,k) - LeftState_VX(Bx_,i,j,k))
