@@ -492,7 +492,7 @@ contains
     integer, intent(in):: i, j, k, iBlock, iGang
     logical, intent(in):: IsBodyBlock
 
-    integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar
+    integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar, iVarLast
     real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), Force_D(3)
 
     logical:: IsConserv
@@ -778,32 +778,34 @@ contains
 #ifdef TESTACC
     if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
          .and. iBlock == iBlockTest)then
-       DivF = Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
-            - Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-       if(nDim > 1) DivF = DivF  &
-            +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
-            -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-       if(nDim > 2) DivF = DivF  &
-            +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
-            -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-       DivF = DivF/CellVolume_GB(iTest,jTest,kTest,iBlockTest)
-       write(*,*)'Fluxes and sources for ', NameVar_V(iVarTest)
-
-       write(*,*) &
-            'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
-            Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-       write(*,*) &
-            'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
-            Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-       write(*,*) &
-            'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
-            Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-       write(*,*)'DtLocal=', DtLocal
-       write(*,*)'Change_V=', Change_V(iVarTest)
-       write(*,*)'CellVolume=', CellVolume_GB(iTest,jTest,kTest,iBlockTest)
-       write(*,*)'source=', Change_V(iVarTest) - DivF
-       write(*,*)'fluxes=', DivF
-
+       iVarLast = iVarTest
+       if(iVarTest == p_) iVarLast = nVar + 1
+       do iVar = iVarTest, iVarLast, max(1, iVarLast - iVarTest)
+          DivF = Flux_VXI(iVar,iTest,jTest,kTest,iGang)    &
+               - Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)
+          if(nDim > 1) DivF = DivF  &
+               +Flux_VYI(iVar,iTest,jTest,kTest,iGang)     &
+               -Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)
+          if(nDim > 2) DivF = DivF  &
+               +Flux_VZI(iVar,iTest,jTest,kTest,iGang)     &
+               -Flux_VZI(iVar,iTest,jTest,kTest+1,iGang)
+          DivF = DivF/CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+          write(*,*)'Fluxes and sources for ', NameVar_V(iVar)
+          write(*,*) &
+               'X fluxes L,R =',Flux_VXI(iVar,iTest,jTest,kTest,iGang),&
+               Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)
+          write(*,*) &
+               'Y fluxes L,R =',Flux_VYI(iVar,iTest,jTest,kTest,iGang),&
+               Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)
+          write(*,*) &
+               'Z fluxes L,R =',Flux_VZI(iVar,iTest,jTest,kTest,iGang),&
+               Flux_VZI(iVar,iTest,jTest,kTest+1,iGang)
+          write(*,*)'DtLocal=', DtLocal
+          write(*,*)'Change_V=', Change_V(iVar)
+          write(*,*)'CellVolume=', CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+          write(*,*)'source=', Change_V(iVar) - DivF
+          write(*,*)'fluxes=', DivF
+       end do
        write(*,*)
        write(*,*)NameSub, ' final for nStep=', nStep
        do iVar = 1, nVar
