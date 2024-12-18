@@ -134,7 +134,7 @@ contains
 
        endif
 
-       if(iTypeUpdate >= UpdateFast_)then
+       if(iTypeUpdate == UpdateFast_)then
           call update_state_fast
        else
           ! CPU compatible code

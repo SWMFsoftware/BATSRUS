@@ -564,7 +564,7 @@ contains
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
        if(IsBoundary_B(iBlock)) then
-          if(iTypeUpdate >= UpdateFast_) then
+          if(iTypeUpdate == UpdateFast_) then
              call set_cell_boundary_for_block(iBlock, nVarSemi, &
                   SemiState_VGB(:,:,:,:,iBlock), IsLinear=.false.)
           else
@@ -708,7 +708,7 @@ contains
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
        if(IsBoundary_B(iBlock)) then
-          if(iTypeUpdate >= UpdateFast_) then
+          if(iTypeUpdate == UpdateFast_) then
              call set_cell_boundary_for_block(iBlock, nVarSemi, &
                   SemiState_VGB(:,:,:,:,iBlock), IsLinear=.true.)
           else
