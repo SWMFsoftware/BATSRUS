@@ -168,12 +168,12 @@ contains
           write(*,*)'source=', &
                Source_VC(iVar,iTest,jTest,kTest)
           write(*,*)'fluxes=', &
-               +(Flux_VXI(iVar,iTest,jTest,kTest,iGang)    &
-               -Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)   &
-               +Flux_VYI(iVar,iTest,jTest,kTest,iGang)     &
-               -Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)   &
-               +Flux_VZI(iVar,iTest,jTest,kTest,iGang)     &
-               -Flux_VZI(iVar,iTest,jTest,kTest+1,iGang) ) &
+               ( Flux_VXI(iVar,iTest,jTest,kTest,iGang)    &
+               - Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)   &
+               + Flux_VYI(iVar,iTest,jTest,kTest,iGang)     &
+               - Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)   &
+               + Flux_VZI(iVar,iTest,jTest,kTest,iGang)     &
+               - Flux_VZI(iVar,iTest,jTest,kTest+1,iGang) ) &
                /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
 #else
           write(*,'(2x,a,2es23.15)') &
@@ -1875,7 +1875,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_b0'
     !--------------------------------------------------------------------------
-    if(iTypeUpdate >= UpdateFast_)then
+    if(iTypeUpdate == UpdateFast_)then
        call update_b0_fast
        if (IsTimeAccurate) call exchange_messages(DoResChangeOnlyIn=.true.)
        RETURN
