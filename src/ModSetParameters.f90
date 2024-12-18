@@ -475,7 +475,7 @@ contains
           call timing_report_style(TypeTiming)
        end if
 
-       if(iTypeUpdate >= UpdateFast_ .and. iProc == 0) &
+       if(iTypeUpdate == UpdateFast_ .and. iProc == 0) &
             call check_optimize_param
 
        IsFirstSession = .false.
@@ -3861,8 +3861,8 @@ contains
 #endif
       if(iTypeUpdate /= UpdateOrig_)then
          ! These methods are not implemented in ModUpdateStateFast (yet)
-         ! If fast (or compatible slow) update is used at all,
-         ! the following features are swiched off
+         ! If fast (or compatible slow) update is used
+         ! then the following features are swiched off
 
          UseDbTrick            = .false.
          UseB0Source           = .false.
@@ -4341,7 +4341,7 @@ contains
 
       DoLimitMomentum = UseBorisCorrection .and. DoOneCoarserLayer
 
-      if(DoLimitMomentum .and. (UseMultiIon .or. iTypeUpdate/=UpdateOrig_))then
+      if(DoLimitMomentum .and. (UseMultiIon .or. iTypeUpdate /= UpdateOrig_))then
          if(iProc==0) write(*,*) NameSub,': setting DoLimitMomentum=F'
          DoLimitMomentum = .false.
       end if
