@@ -112,7 +112,7 @@ contains
     use ModFaceFlux, ONLY: read_face_flux_param, init_mod_face_flux, &
          TypeFluxNeutral, UseClimit, DoBurgers
     use ModLookupTable,     ONLY: read_lookup_table_param, get_lookup_table, &
-         i_lookup_table
+         i_lookup_table, copy_lookup_table_to_gpu
     use ModIeCoupling,      ONLY: read_ie_velocity_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
     use ModLaserHeating,    ONLY: read_laser_heating_param
@@ -3919,6 +3919,8 @@ contains
       end if
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
+
+      call copy_lookup_table_to_gpu()
 
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, nOrderProlong)
