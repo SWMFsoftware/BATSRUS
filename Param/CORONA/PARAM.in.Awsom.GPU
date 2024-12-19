@@ -70,7 +70,7 @@ none			TypeCoronalHeating
 #POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi
 
-RADIATIVECOOLING
+#RADIATIVECOOLING
 T			UseRadCooling
 
 #USERSWITCH
@@ -129,6 +129,12 @@ currentsheet		StringRefine
 #GRIDRESOLUTION
 6.0			Resolution
 initial			StringShape
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+RadCoolCorona.dat		NameFile
+ascii			TypeFile
 
 #DOAMR
 T			DoAmr
