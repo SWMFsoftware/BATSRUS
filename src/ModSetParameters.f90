@@ -1803,6 +1803,10 @@ contains
             '#LIMITPTOTAL', '#LOWORDERREGION', '#ADAPTIVELOWORDER')
           call read_face_value_param(NameCommand)
 
+       case("#LIMITMOMENTUM")
+          if(.not.is_first_session()) CYCLE READPARAM
+          call read_face_value_param(NameCommand)
+
        case("#NONCONSERVATIVE", "#CONSERVATIVECRITERIA")
           call read_conservative_param(NameCommand)
 
@@ -3920,7 +3924,7 @@ contains
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
 
-      call copy_lookup_table_to_gpu()
+      call copy_lookup_table_to_gpu
 
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, nOrderProlong)
@@ -4335,13 +4339,18 @@ contains
          end if
       end if
 
-      DoOneCoarserLayer = .not. (nOrder>1 .and. &
+      DoOneCoarserLayer = .not. (nOrder > 1 .and. &
            (UseTvdResChange .or. UseAccurateResChange))
       if(UseHighResChange) DoOneCoarserLayer = .false.
 
-      DoLimitMomentum = UseBorisCorrection .and. DoOneCoarserLayer
+      ! Set DoLimitMomentum for UpdateOrig_ unless #LIMITMOMENTUM command
+      ! is present in the first session
+      if(i_line_command("#LIMITMOMENTUM", iSessionIn=iSessionFirst) < 0 &
+           .and. iTypeUpdate == UpdateOrig_) &
+           DoLimitMomentum = UseBorisCorrection .and. DoOneCoarserLayer
 
-      if(DoLimitMomentum .and. (UseMultiIon .or. iTypeUpdate /= UpdateOrig_))then
+      ! Momentum limiting is not available/needed for multiion MHD
+      if(DoLimitMomentum .and. UseMultiIon)then
          if(iProc==0) write(*,*) NameSub,': setting DoLimitMomentum=F'
          DoLimitMomentum = .false.
       end if
