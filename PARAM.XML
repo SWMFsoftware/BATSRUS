@@ -8116,6 +8116,36 @@ reconstruction procedure directly applied to the original primitive variables
 (velocity and pressure).
 </command>
 
+<command name="LIMITMOMENTUM" if="$_IsFirstSession">
+  <parameter name="DoLimitMomentum" type="logical" default="F"/> 
+
+#LIMITMOMENTUM
+F                 DoLimitMomentum
+
+If DoLimitMomentum is set to true then the limiter of the 2nd order scheme
+is applied to the momentum, if it is set to false, the limiter is applied
+to the velocity. This command should be used in the first session only.
+
+The default value is false except when the Boris scheme is used for single
+ion fluid (see #BORIS command) and either nOrder is 1 (see #SCHEME command)
+or UseTvdResChange is true or UseAccurateResChange is true (see #RESCHANGE,
+#RESOLUTIONCHANGE and #PROLONGATION commands). 
+</command>
+
+<command name="LIMITPTOTAL">
+  <parameter name="DoLimitPTotal" type="logical" default="F"/> 
+
+#LIMITPTOTAL
+T			DoLimitPtotal
+  
+If DoLimitPtotal is true and nOrder is larger than 1 (see #SCHEME command)
+and a single ion fluid is solved for then apply the limiter to the total
+pressure that is the sum of ion, electron and Alfven wave turbulence pressures.
+Otherwise the limiter is applied to the individual pressures.
+
+Default is DoLimitPtotal false.
+</command>
+  
 <command name="CLIMIT">
   <parameter name="UseClimit" type="logical"        default="F"/>
   <if expr="$UseClimit">
