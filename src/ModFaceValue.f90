@@ -205,7 +205,10 @@ contains
        end do
        !$acc update device(iVarLimitRatio_I)
     case("#LIMITPTOTAL")
-       call read_var('UsePtotalLtd', UsePtotalLtd)
+       call read_var('DoLimitPtotal', UsePtotalLtd)
+
+    case("#LIMITMOMENTUM")
+       call read_var('DoLimitMomentum', DoLimitMomentum)
 
     case("#LOWORDERREGION")
        call read_var('StringLowOrderRegion', StringLowOrderRegion, &
