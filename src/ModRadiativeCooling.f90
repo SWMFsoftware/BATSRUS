@@ -17,6 +17,7 @@ module ModRadiativeCooling
   logical:: UseRadCoolingTable     = .false.
   !$acc declare create(UseRadCoolingTable)
   integer, private:: iTableRadCool = -1
+  !$acc declare create(iTableRadCool)
 
   real :: AuxTeSi
 
@@ -62,7 +63,7 @@ contains
 
     iTableRadCool = i_lookup_table('radcool')
     UseRadCoolingTable = iTableRadCool>0
-    !$acc update device(UseRadCoolingTable)
+    !$acc update device(UseRadCoolingTable, iTableRadCool)
 
   end subroutine check_cooling_param
   !============================================================================
@@ -125,17 +126,19 @@ contains
 
     real :: CoolingFunctionCgs
     real :: CoolingTableOut_I(1)
-    real, parameter :: RadNorm = 1.0E+22
+    real :: RadNorm = 1.0E+22
 
     character(len=*), parameter:: NameSub = 'radiative_cooling'
     !--------------------------------------------------------------------------
 
+    RadNorm = 1.0E+22
+    
     if(UseRadCoolingTable) then
-#ifndef _OPENACC
        ! at the moment, radC not a function of Ne, but need a dummy 2nd
        ! index, and might want to include Ne dependence in table later.
        ! Table variable should be normalized to radloss_cgs * 10E+22
        ! since we don't want to deal with such tiny numbers
+#ifndef _OPENACC       
        if(index(StringTest, NameSub)>0)then
           if(TeSiIn<1.0e4.or.TeSiIn>1.0e8.or.&
                NumberDensCgs<1.0e1.or.NumberDensCgs>1.0e14)then
@@ -151,6 +154,7 @@ contains
              end if
           end if
        end if
+#endif       
        call interpolate_lookup_table(iTableRadCool, max(TeSiIn,1.0e4),&
             CoolingTableOut_I, DoExtrapolate = .false.)
        CoolingFunctionCgs = CoolingTableOut_I(1) / RadNorm
@@ -160,7 +164,6 @@ contains
        ! temperature dependence in this multiplicative coefficient below
        ! 100,000 K, but we ignore that here.
        if(UseMultiIon) CoolingFunctionCgs = CoolingFunctionCgs*0.83
-#endif
     else
        call get_cooling_function_fit(TeSiIn, CoolingFunctionCgs)
     end if
