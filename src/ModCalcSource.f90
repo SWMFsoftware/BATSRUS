@@ -870,23 +870,22 @@ contains
     if(UseB0) call set_b0_source(iBlock, DoSkipSetB0Face=.true.)
 
     if(UseB .and. UseDivbSource)then
-       !DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
-       !if(nJ > 1) DivB = DivB + &
+       ! DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
+       ! if(nJ > 1) DivB = DivB + &
        !     Flux_VYI(Bn_,i,j+1,k,iGang) - Flux_VYI(Bn_,i,j,k,iGang)
-       !if(nK > 1) DivB = DivB + &
+       ! if(nK > 1) DivB = DivB + &
        !     Flux_VZI(Bn_,i,j,k+1,iGang) - Flux_VZI(Bn_,i,j,k,iGang)
-       !Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+       ! Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
        !     - DivB*State_VGB(Bx_:Bz_,i,j,k,iBlock)
-       !if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+       ! if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
        !     - DivB*B0_DGB(:,i,j,k,iBlock)
        !
-       !Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
+       ! Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
        !     - DivB*State_VGB(Ux_:Uz_,i,j,k,iBlock)
-       !Change_V(Energy_) = Change_V(Energy_) &
+       ! Change_V(Energy_) = Change_V(Energy_) &
        !     - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
        !     *          State_VGB(Ux_:Uz_,i,j,k,iBlock))
 
-       
        ! 8 wave scheme results in terms proportional to div B
        if(IsCartesian)then
           call calc_divb_source(iBlock)

@@ -39,7 +39,7 @@ module ModConserveFlux
   ! Face conservative or corrected flux.
   real, public, allocatable, dimension(:,:,:,:,:) :: &
        CorrectedFlux_VXB, CorrectedFlux_VYB, CorrectedFlux_VZB
-  
+
   ! For momentum conserving scheme (for hybrid or multi-fluid) Mhd flux of
   ! momentum should be saved, the condition is UseB_ (B_-U_>0) and not
   ! UseEField (Ex_>1)
