@@ -132,13 +132,13 @@ contains
     !--------------------------------------------------------------------------
 
     RadNorm = 1.0E+22
-    
+
     if(UseRadCoolingTable) then
        ! at the moment, radC not a function of Ne, but need a dummy 2nd
        ! index, and might want to include Ne dependence in table later.
        ! Table variable should be normalized to radloss_cgs * 10E+22
        ! since we don't want to deal with such tiny numbers
-#ifndef _OPENACC       
+#ifndef _OPENACC
        if(index(StringTest, NameSub)>0)then
           if(TeSiIn<1.0e4.or.TeSiIn>1.0e8.or.&
                NumberDensCgs<1.0e1.or.NumberDensCgs>1.0e14)then
@@ -154,7 +154,7 @@ contains
              end if
           end if
        end if
-#endif       
+#endif
        call interpolate_lookup_table(iTableRadCool, max(TeSiIn,1.0e4),&
             CoolingTableOut_I, DoExtrapolate = .false.)
        CoolingFunctionCgs = CoolingTableOut_I(1) / RadNorm
