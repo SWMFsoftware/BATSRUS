@@ -247,48 +247,52 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if (DiLevel_EB(1,iBlock) == -1 .and. &
-         .not.Unused_BP(jBlock_IEB(1,1,iBlock),jProc_IEB(1,1,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(2,1,iBlock),jProc_IEB(2,1,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(3,1,iBlock),jProc_IEB(3,1,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(4,1,iBlock),jProc_IEB(4,1,iBlock))) &
-         call apply_corrected_flux_x(1, 1)
+    if (DiLevel_EB(1,iBlock) == -1)then
+       if(  .not.Unused_BP(jBlock_IEB(1,1,iBlock),jProc_IEB(1,1,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(2,1,iBlock),jProc_IEB(2,1,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(3,1,iBlock),jProc_IEB(3,1,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(4,1,iBlock),jProc_IEB(4,1,iBlock))) &
+            call apply_corrected_flux_x(1, 1)
+    end if
 
-    if (DiLevel_EB(2,iBlock) == -1 .and. &
-         .not.Unused_BP(jBlock_IEB(1,2,iBlock),jProc_IEB(1,2,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(2,2,iBlock),jProc_IEB(2,2,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)) .and. &
+    if (DiLevel_EB(2,iBlock) == -1)then
+       if(.not.Unused_BP(jBlock_IEB(1,2,iBlock),jProc_IEB(1,2,iBlock)).and. &
+         .not.Unused_BP(jBlock_IEB(2,2,iBlock),jProc_IEB(2,2,iBlock)).and. &
+         .not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)).and. &
          .not.Unused_BP(jBlock_IEB(4,2,iBlock),jProc_IEB(4,2,iBlock))) &
          call apply_corrected_flux_x(2, nI+1)
+    end if
 
-    if (nDim > 1 .and. DiLevel_EB(3,iBlock) == -1 .and. &
-         .not.Unused_BP(jBlock_IEB(1,3,iBlock),jProc_IEB(1,3,iBlock)).and. &
+    if (nDim > 1 .and. DiLevel_EB(3,iBlock) == -1)then
+       if(.not.Unused_BP(jBlock_IEB(1,3,iBlock),jProc_IEB(1,3,iBlock)).and. &
          .not.Unused_BP(jBlock_IEB(2,3,iBlock),jProc_IEB(2,3,iBlock)).and. &
          .not.Unused_BP(jBlock_IEB(3,3,iBlock),jProc_IEB(3,3,iBlock)).and. &
          .not.Unused_BP(jBlock_IEB(4,3,iBlock),jProc_IEB(4,3,iBlock))) &
          call apply_corrected_flux_y(1, 1)
+    end if
 
-    if (nDim > 1 .and. DiLevel_EB(4,iBlock) == -1 .and. &
-         .not.Unused_BP(jBlock_IEB(1,4,iBlock),jProc_IEB(1,4,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(2,4,iBlock),jProc_IEB(2,4,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(3,4,iBlock),jProc_IEB(3,4,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(4,4,iBlock),jProc_IEB(4,4,iBlock))) &
-         call apply_corrected_flux_y(2, nJ+1)
+    if (nDim > 1 .and. DiLevel_EB(4,iBlock) == -1)then
+       if(.not.Unused_BP(jBlock_IEB(1,4,iBlock),jProc_IEB(1,4,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(2,4,iBlock),jProc_IEB(2,4,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(3,4,iBlock),jProc_IEB(3,4,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(4,4,iBlock),jProc_IEB(4,4,iBlock))) &
+            call apply_corrected_flux_y(2, nJ+1)
+    end if
+    if (nDim > 2 .and. DiLevel_EB(5,iBlock) == -1)then
+       if(.not.Unused_BP(jBlock_IEB(1,5,iBlock),jProc_IEB(1,5,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(2,5,iBlock),jProc_IEB(2,5,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(3,5,iBlock),jProc_IEB(3,5,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(4,5,iBlock),jProc_IEB(4,5,iBlock))) &
+            call apply_corrected_flux_z(1, 1)
+    end if
 
-    if (nDim > 2 .and. DiLevel_EB(5,iBlock) == -1 .and. &
-         .not.Unused_BP(jBlock_IEB(1,5,iBlock),jProc_IEB(1,5,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(2,5,iBlock),jProc_IEB(2,5,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(3,5,iBlock),jProc_IEB(3,5,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(4,5,iBlock),jProc_IEB(4,5,iBlock))) &
-         call apply_corrected_flux_z(1, 1)
-
-    if (nDim > 2 .and. DiLevel_EB(6,iBlock) == -1 .and. &
-         .not.Unused_BP(jBlock_IEB(1,6,iBlock),jProc_IEB(1,6,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(2,6,iBlock),jProc_IEB(2,6,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(3,6,iBlock),jProc_IEB(3,6,iBlock)) .and. &
-         .not.Unused_BP(jBlock_IEB(4,6,iBlock),jProc_IEB(4,6,iBlock))) &
-         call apply_corrected_flux_z(2, nK+1)
-
+    if (nDim > 2 .and. DiLevel_EB(6,iBlock) == -1)then
+       if(.not.Unused_BP(jBlock_IEB(1,6,iBlock),jProc_IEB(1,6,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(2,6,iBlock),jProc_IEB(2,6,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(3,6,iBlock),jProc_IEB(3,6,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(4,6,iBlock),jProc_IEB(4,6,iBlock))) &
+            call apply_corrected_flux_z(2, nK+1)
+    end if
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
