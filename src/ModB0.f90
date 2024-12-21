@@ -350,7 +350,7 @@ contains
        if(DiLevel_EB(6,iBlock) == -1) &
             B0_DZ(:,1:nI,1:nJ,1+nK) = B0ResChangeZ_DIIEB(:,:,:,6,iBlock)
     end if
-    if(DiLevel_EB(1,iBlock) == Unset_.and.UseFieldLineThreads)then
+    if(DiLevel_EB(1,iBlock) == Unset_ .and. UseFieldLineThreads)then
        do k = 1, nK; do j = 1, nJ
           ! Face center
           Coord_D = CoordMin_DB(:,iBlock) +  [0.0, &
@@ -361,6 +361,7 @@ contains
        end do; end do
     end if
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine set_b0_face
   !============================================================================
   subroutine set_b0_reschange

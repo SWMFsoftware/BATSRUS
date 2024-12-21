@@ -5,7 +5,6 @@ module ModCurrent
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use ModAdvance,        ONLY: iTypeUpdate, UpdateFast_
   use ModCoordTransform, ONLY: sph_to_xyz
   use CON_axes,          ONLY: transform_matrix
 #ifdef _OPENACC
@@ -728,20 +727,11 @@ contains
 #endif
 
        ! Extract currents and magnetic field for this position
-
-!!! DEBUG
-!       if(iTypeUpdate >= UpdateFast_)then
-!          call get_point_data_fast(Xyz_D, b_D, Current_D)
-!          bCurrent_VII(0,  i,j) = 1.0          ! Weight
-!          bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
-!          bCurrent_VII(4:6,i,j) = Current_D    ! Currents
-!       else
-          call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
-          bCurrent_VII(0,  i,j) = State_V(Bx_-1)         ! Weight
-          bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &   ! B1 + Weight*B0
-               State_V(Bx_-1)*B0_D
-          bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
-!       end if
+       call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
+       bCurrent_VII(0,  i,j) = State_V(Bx_-1)         ! Weight
+       bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &   ! B1 + Weight*B0
+            State_V(Bx_-1)*B0_D
+       bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
 
     end do; end do
 

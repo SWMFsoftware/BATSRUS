@@ -9,9 +9,9 @@ module ModSemiImplicit
        iBlockTest, iProcTest, iVarTest, iProc, iComm
   use BATL_size, ONLY: nGang
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
-
   use ModSemiImplVar
   use ModImplicit, ONLY: nStencil
+  use ModConserveFlux, ONLY: DoConserveFlux
   use ModLinearSolver, ONLY: LinearSolverParamType
 
   implicit none
@@ -502,7 +502,7 @@ contains
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          Used_GB, nBlock, Xyz_DGB, CellVolume_GB, &
          message_pass_cell, message_pass_face, apply_flux_correction_block
-    use ModAdvance, ONLY: iTypeUpdate, UpdateOrig_, UpdateFast_
+    use ModAdvance, ONLY: iTypeUpdate, UpdateFast_
     use ModUpdateStateFast, ONLY: set_cell_boundary_for_block
 
     real, intent(out):: RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
@@ -564,7 +564,7 @@ contains
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
        if(IsBoundary_B(iBlock)) then
-          if(iTypeUpdate >= UpdateFast_) then
+          if(iTypeUpdate == UpdateFast_) then
              call set_cell_boundary_for_block(iBlock, nVarSemi, &
                   SemiState_VGB(:,:,:,:,iBlock), IsLinear=.false.)
           else
@@ -581,7 +581,7 @@ contains
     end do
 
 #ifndef _OPENACC
-    if( (iTypeUpdate == UpdateOrig_ .and. &
+    if( (DoConserveFlux .and. &
          TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
@@ -634,7 +634,7 @@ contains
 
     ! Calculate y_I = A.x_I where A is the linearized semi-implicit operator
 
-    use ModAdvance, ONLY: DtMax_CB, iTypeUpdate, UpdateFast_, UpdateOrig_
+    use ModAdvance, ONLY: DtMax_CB, iTypeUpdate, UpdateFast_
     use ModGeometry, ONLY: IsBoundary_B
     use ModMain, ONLY: Dt, IsTimeAccurate, Cfl, UseDtLimit
     use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
@@ -708,7 +708,7 @@ contains
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
        if(IsBoundary_B(iBlock)) then
-          if(iTypeUpdate >= UpdateFast_) then
+          if(iTypeUpdate == UpdateFast_) then
              call set_cell_boundary_for_block(iBlock, nVarSemi, &
                   SemiState_VGB(:,:,:,:,iBlock), IsLinear=.true.)
           else
@@ -755,7 +755,7 @@ contains
     !$omp end parallel do
 
 #ifndef _OPENACC
-    if((iTypeUpdate == UpdateOrig_ .and.  &
+    if((DoConserveFlux .and.  &
          TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &

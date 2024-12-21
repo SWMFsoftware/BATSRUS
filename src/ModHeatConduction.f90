@@ -104,10 +104,12 @@ module ModHeatConduction
 
   ! radiative cooling
   logical :: DoRadCooling = .false.
+  !$acc declare create(DoRadCooling)
 
   ! Arrays for radiative cooling
   real, allocatable :: CoolHeat_CB(:,:,:,:)
   real, allocatable :: CoolHeatDeriv_CB(:,:,:,:)
+  !$acc declare create(CoolHeat_CB, CoolHeatDeriv_CB)
 
 contains
   !============================================================================
@@ -345,6 +347,8 @@ contains
     !$acc update device(HeatCondPar)
     !$acc update device(DoUserHeatConduction)
     !$acc update device(iTeImpl)
+
+    !$acc update device(DoRadCooling)
 
     call test_stop(NameSub, DoTest)
   end subroutine init_heat_conduction
@@ -1325,7 +1329,6 @@ contains
 #endif
              end if
 
-#ifndef _OPENACC
              if(DoRadCooling)then
                 call get_radiative_cooling(i, j, k, iBlock, TeSi, &
                      CoolHeat_CB(i,j,k,iBlock), NameCaller=NameSub, &
@@ -1337,7 +1340,6 @@ contains
                 CoolHeatDeriv_CB(i,j,k,iBlock) = min(0.0, &
                      0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon)
              end if
-#endif
           end if
 
        end do; end do; end do
@@ -1566,21 +1568,21 @@ contains
           end do; end do; end do
        end if
     else
-#ifndef _OPENACC
        if(DoRadCooling)then
           if(IsLinear)then
+             !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
                      + CoolHeatDeriv_CB(i,j,k,iBlock) &
                      *StateImpl_VG(iTeImpl,i,j,k)
              end do; end do; end do
           else
+             !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) + CoolHeat_CB(i,j,k,iBlock)
              end do; end do; end do
           end if
        end if
-#endif
 
        ! Point implicit source terms due to electron-ion energy exchange
        if(UseElectronPressure .and. .not.UseMultiIon)then
@@ -1658,14 +1660,13 @@ contains
           end do; end do; end do
        end if
 
-#ifndef _OPENACC
        if(DoRadCooling)then
+          !$acc loop vector collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                   + CoolHeatDeriv_CB(i,j,k,iBlock)
           end do; end do; end do
        end if
-#endif
     end if
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)

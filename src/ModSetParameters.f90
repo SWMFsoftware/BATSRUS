@@ -26,8 +26,8 @@ contains
     use ModSetInitialCondition, ONLY: read_initial_cond_param
     use ModConservative, ONLY: &
          set_non_conservative, UseNonConservative, nConservCrit
-    use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
-         read_b0_param, init_mod_b0
+    use ModB0, ONLY: UseB0Source, UseDivFullBSource, UseCurlB0, &
+         DoUpdateB0, DtUpdateB0, read_b0_param, init_mod_b0
     use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
          XyzMin_D, XyzMax_D, RadiusMin, RadiusMax, &
@@ -112,7 +112,7 @@ contains
     use ModFaceFlux, ONLY: read_face_flux_param, init_mod_face_flux, &
          TypeFluxNeutral, UseClimit, DoBurgers
     use ModLookupTable,     ONLY: read_lookup_table_param, get_lookup_table, &
-         i_lookup_table
+         i_lookup_table, copy_lookup_table_to_gpu
     use ModIeCoupling,      ONLY: read_ie_velocity_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
     use ModLaserHeating,    ONLY: read_laser_heating_param
@@ -475,7 +475,7 @@ contains
           call timing_report_style(TypeTiming)
        end if
 
-       if(iTypeUpdate >= UpdateFast_ .and. iProc == 0) &
+       if(iTypeUpdate == UpdateFast_ .and. iProc == 0) &
             call check_optimize_param
 
        IsFirstSession = .false.
@@ -1801,6 +1801,10 @@ contains
 
        case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
             '#LIMITPTOTAL', '#LOWORDERREGION', '#ADAPTIVELOWORDER')
+          call read_face_value_param(NameCommand)
+
+       case("#LIMITMOMENTUM")
+          if(.not.is_first_session()) CYCLE READPARAM
           call read_face_value_param(NameCommand)
 
        case("#NONCONSERVATIVE", "#CONSERVATIVECRITERIA")
@@ -3847,28 +3851,26 @@ contains
          DoPlotThreads = .false.; DoThreadRestart = .false.
       end if
 
+#ifdef _OPENACC
+      iTypeUpdate = UpdateFast_ ! Default for GPU
+#else
       select case(TypeUpdate)
-      case('orig')
-         iTypeUpdate = UpdateOrig_
       case('slow')
          iTypeUpdate = UpdateSlow_
       case('fast')
          iTypeUpdate = UpdateFast_
       case default
-#ifdef _OPENACC
-         iTypeUpdate = UpdateFast_ ! Default for GPU
-#else
-         iTypeUpdate = UpdateOrig_ ! Default for CPU
-#endif
+         iTypeUpdate = UpdateOrig_
       end select
-
+#endif
       if(iTypeUpdate /= UpdateOrig_)then
          ! These methods are not implemented in ModUpdateStateFast (yet)
-         ! If fast (or compatible slow) update is used at all,
-         ! the following features are swiched off
+         ! If fast (or compatible slow) update is used
+         ! then the following features are swiched off
 
          UseDbTrick            = .false.
          UseB0Source           = .false.
+         UseDivFullBSource     = .false.
          UseBorisRegion        = .false.
          DoLimitMomentum       = .false.
          DoConserveFlux        = .false.
@@ -3877,9 +3879,6 @@ contains
             UseTvdResChange      = .false.
             UseAccurateResChange = .true.
          end if
-!         UseTvdResChange = .false.
-!         UseAccurateResChange = .false.
-!         nOrderProlong = 2
       end if
 
       UseDbTrickNow = UseDbTrick
@@ -3923,10 +3922,9 @@ contains
          nStage = 3
       end if
 
-      ! write(*,*)'!!! UseTvdResChange,UseTvdResChange,nOrderProlong=', &
-      !     UseTvdResChange,UseTvdResChange,nOrderProlong
-
       ! Update parameters on the GPU that are not done by init_mod_* routines
+
+      call copy_lookup_table_to_gpu
 
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, nOrderProlong)
@@ -4341,13 +4339,18 @@ contains
          end if
       end if
 
-      DoOneCoarserLayer = .not. (nOrder>1 .and. &
+      DoOneCoarserLayer = .not. (nOrder > 1 .and. &
            (UseTvdResChange .or. UseAccurateResChange))
       if(UseHighResChange) DoOneCoarserLayer = .false.
 
-      DoLimitMomentum = UseBorisCorrection .and. DoOneCoarserLayer
+      ! Set DoLimitMomentum for UpdateOrig_ unless #LIMITMOMENTUM command
+      ! is present in the first session
+      if(i_line_command("#LIMITMOMENTUM", iSessionIn=iSessionFirst) < 0 &
+           .and. iTypeUpdate == UpdateOrig_) &
+           DoLimitMomentum = UseBorisCorrection .and. DoOneCoarserLayer
 
-      if(DoLimitMomentum .and. (UseMultiIon .or. iTypeUpdate/=UpdateOrig_))then
+      ! Momentum limiting is not available/needed for multiion MHD
+      if(DoLimitMomentum .and. UseMultiIon)then
          if(iProc==0) write(*,*) NameSub,': setting DoLimitMomentum=F'
          DoLimitMomentum = .false.
       end if

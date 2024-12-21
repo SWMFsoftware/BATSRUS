@@ -4,7 +4,7 @@ Begin session: 1
 Param/CORONA/PARAM.in.Awsom.GPU		StringDescription
 
 #UPDATE
-fast			TypeUpdate
+slow			TypeUpdate
 
 #PROLONGATION
 2			nOrderProlong
@@ -70,6 +70,9 @@ none			TypeCoronalHeating
 #POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi
 
+#RADIATIVECOOLING
+T			UseRadCooling
+
 #USERSWITCH
 +init +ic		StringSwitch
 
@@ -127,6 +130,12 @@ currentsheet		StringRefine
 6.0			Resolution
 initial			StringShape
 
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+RadCoolCorona.dat		NameFile
+ascii			TypeFile
+
 #DOAMR
 T			DoAmr
 6			DnAmr
@@ -149,7 +158,7 @@ T			UseNonConservative
 #MESSAGEPASS
 all			TypeMessagePass
 
-#RESCHANGE
+RESCHANGE
 T			UseAccurateReschange
 
 #SAVELOGFILE

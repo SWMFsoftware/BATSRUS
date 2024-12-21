@@ -1,6 +1,14 @@
 #DESCRIPTION
 Param/EARTH/PARAM.in.gpu: time accurate run for GPU		StringDescription
 
+#UPDATE
+slow			TypeUpdate
+
+! Switch of TVD and Accurate res change.
+! 1st order prolongation does not work near body for fast updates so far.
+#PROLONGATION
+2			nOrderProlong
+
 #TIMING
 T			UseTiming
 -1			DnTiming  ! every session
@@ -32,11 +40,6 @@ T			UseBorisCorrection
 
 #MINIMUMDENSITY
 1e-2			RhoMinDim [amu/cc]
-
-! Switch of TVD and Accurate res change.
-! 1st order prolongation does not work near body for fast updates so far.
-#PROLONGATION
-2			nOrderProlong
 
 #GRID
 1			nRootBlock1
@@ -148,9 +151,6 @@ VAR			StringLog
 -1			DnSaveLogfile
 4.0			DtSaveLogfile
 dt rho mx my mz p bx by bz pmin pmax dst lon1 lat1 lon2 lat2 status		NameLogVars
-
-#UPDATE
-fast			TypeUpdate
 
 #STOP
 -1			MaxIteration

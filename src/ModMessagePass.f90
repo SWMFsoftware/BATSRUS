@@ -88,7 +88,7 @@ contains
     ! But it works for a number of simple but useful applications.
     ! A periodic wedge BC is needed if there is a periodic boundary condition
     ! for a non-periodic angular coordinate.
-    ! In this case the vector variables are convered to spherical components
+    ! In this case the vector variables are converted to spherical components
     ! during the message passing.
     IsPeriodicWedge = (IsSpherical .or. IsRLonLat) .and. &
          (any(IsPeriodic_D(2:3) .and. .not. IsPeriodicCoord_D(2:3)))
@@ -106,7 +106,7 @@ contains
     if(UseConstrainB) DoRestrictFace = .false.
 
     DoTwoCoarseLayers = &
-         nOrder > 1 .and. nOrderProlong == 1 .and. .not. DoOneCoarserLayer
+         nOrder > 1 .and. nOrderProlong == 1 .and. .not.DoOneCoarserLayer
 
     UseHighResChangeNow = nOrder == 5 .and. UseHighResChange
 
@@ -123,18 +123,17 @@ contains
     ! Apply boundary conditions
     if(.not.DoResChangeOnly)then
        call timing_start('cell_bc')
-       if(iTypeUpdate >= UpdateFast_) then
+       if(iTypeUpdate == UpdateFast_) then
           call set_boundary_fast
        else
           do iBlock = 1, nBlock
              if (Unused_B(iBlock)) CYCLE
              if (IsBoundary_B(iBlock) .and. &
                   (nOrderProlong==2 .or. UseHighResChangeNow)) then
-                call set_cell_boundary&
-                     (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
-                if(UseHighResChangeNow) &
-                     call set_edge_corner_ghost&
-                     (nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
+                call set_cell_boundary(nG, iBlock, &
+                     nVar, State_VGB(:,:,:,:,iBlock))
+                if(UseHighResChangeNow)call set_edge_corner_ghost(nG, iBlock, &
+                     nVar, State_VGB(:,:,:,:,iBlock))
              endif
           end do
        end if
@@ -220,7 +219,7 @@ contains
     ! from the ghost cells inside the domain, so the outer
     ! boundary condition have to be reapplied.
     ! The "fast" updates do not use corner ghost cells (yet)
-    if(iTypeUpdate == UpdateOrig_)then
+    if(iTypeUpdate /= UpdateFast_)then
        call timing_start('cell_bc')
        !$omp parallel do
        do iBlock = 1, nBlock

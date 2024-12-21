@@ -995,6 +995,7 @@ test_awsom_gpu_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.Awsom.GPU PARAM.in
+	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsom_gpu_run:

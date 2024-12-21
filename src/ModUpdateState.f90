@@ -134,13 +134,13 @@ contains
             IsConserv_CB(iTest,jTest,kTest,iBlock)
        write(*,*)
        do iVar = 1, nVar
-          write(*,'(2x,2a,2es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+          write(*,*)NameVar_V(iVar), '(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest), &
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest) &
                *No2Io_V(iUnitCons_V(iVar))
           if(iVar >= RhoUx_ .and. iVar <= RhoUz_)then
              Rho = State_VGB(Rho_,iTest,jTest,kTest,iBlockTest)
-             write(*,'(2x,a,2es23.15)') &
+             write(*,*) &
                   'Velocity (TestCell)  =',&
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)/Rho, &
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)/Rho &
@@ -155,6 +155,27 @@ contains
        if(iVarTest == p_) iVarLast = nVar + 1
        do iVar = iVarTest, iVarLast, max(1, iVarLast - iVarTest)
           write(*,*)'Fluxes and sources for ', NameVar_V(iVar)
+#ifdef TESTACC
+          write(*,*) &
+               'X fluxes L,R =',Flux_VXI(iVar,iTest,jTest,kTest,iGang) ,&
+               Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)
+          write(*,*) &
+               'Y fluxes L,R =',Flux_VYI(iVar,iTest,jTest,kTest,iGang) ,&
+               Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)
+          write(*,*) &
+               'Z fluxes L,R =',Flux_VZI(iVar,iTest,jTest,kTest,iGang) ,&
+               Flux_VZI(iVar,iTest,jTest,kTest+1,iGang)
+          write(*,*)'source=', &
+               Source_VC(iVar,iTest,jTest,kTest)
+          write(*,*)'fluxes=', &
+               ( Flux_VXI(iVar,iTest,jTest,kTest,iGang)    &
+               - Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)   &
+               + Flux_VYI(iVar,iTest,jTest,kTest,iGang)     &
+               - Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)   &
+               + Flux_VZI(iVar,iTest,jTest,kTest,iGang)     &
+               - Flux_VZI(iVar,iTest,jTest,kTest+1,iGang) ) &
+               /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+#else
           write(*,'(2x,a,2es23.15)') &
                'X fluxes L,R =',Flux_VXI(iVar,iTest,jTest,kTest,iGang) ,&
                Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)
@@ -174,6 +195,7 @@ contains
                +Flux_VZI(iVar,iTest,jTest,kTest,iGang)     &
                -Flux_VZI(iVar,iTest,jTest,kTest+1,iGang) ) &
                /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+#endif
        end do
     end if
 
@@ -196,8 +218,13 @@ contains
     if(DoTest)then
        write(*,*)NameSub,' final for nStep =', nStep
        do iVar = 1, nVar
+#ifdef TESTACC
+          write(*,*)NameVar_V(iVar),'(TestCell)  =',&
+               State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+#else
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar),'(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+#endif
        end do
        if(UseAnisoPressure) write(*,'(2x,a,es23.15)') 'Pperp(TestCell) =', &
             0.5*(3*State_VGB(p_,iTest,jTest,kTest,iBlockTest) &
@@ -1848,7 +1875,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_b0'
     !--------------------------------------------------------------------------
-    if(iTypeUpdate >= UpdateFast_)then
+    if(iTypeUpdate == UpdateFast_)then
        call update_b0_fast
        if (IsTimeAccurate) call exchange_messages(DoResChangeOnlyIn=.true.)
        RETURN

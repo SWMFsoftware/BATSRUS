@@ -15,7 +15,9 @@ module ModRadiativeCooling
   real, parameter:: TeChromosphereSi = 1.0e4
   logical:: UseRadCooling          = .false.
   logical:: UseRadCoolingTable     = .false.
+  !$acc declare create(UseRadCoolingTable)
   integer, private:: iTableRadCool = -1
+  !$acc declare create(iTableRadCool)
 
   real :: AuxTeSi
 
@@ -61,12 +63,13 @@ contains
 
     iTableRadCool = i_lookup_table('radcool')
     UseRadCoolingTable = iTableRadCool>0
+    !$acc update device(UseRadCoolingTable, iTableRadCool)
 
   end subroutine check_cooling_param
   !============================================================================
   subroutine get_radiative_cooling(i, j, k, iBlock, TeSiIn, RadiativeCooling, &
        iError, NameCaller, Xyz_D)
-
+    !$acc routine seq
     use ModPhysics,    ONLY: No2Si_V, UnitN_
     use ModVarIndexes, ONLY: Rho_
     use ModAdvance,    ONLY: State_VGB, MaxDim
@@ -93,6 +96,7 @@ contains
     RadiativeCooling = - radiative_cooling(TeSiIn, NumberDensCgs, iError, &
          NameCaller, Xyz_D)
 
+#ifndef _OPENACC
     ! include multiplicative factors to make up for extention of
     ! perpendicular heating at low temperatures (as per Abbett 2007).
     ! Need this to strech transition region to larger scales
@@ -104,10 +108,12 @@ contains
           RadiativeCooling = RadiativeCooling * (TeChromosphereSi/TeModSi)**2.5
        endif
     end if
+#endif
   end subroutine get_radiative_cooling
   !============================================================================
   real function radiative_cooling(TeSiIn, NumberDensCgs, iError, &
        NameCaller, Xyz_D)
+    !$acc routine seq
     use ModPhysics,       ONLY: Si2No_V, UnitT_, UnitEnergyDens_
     use ModLookupTable,   ONLY: interpolate_lookup_table
     use ModMultiFluid,    ONLY: UseMultiIon
@@ -120,16 +126,19 @@ contains
 
     real :: CoolingFunctionCgs
     real :: CoolingTableOut_I(1)
-    real, parameter :: RadNorm = 1.0E+22
+    real :: RadNorm = 1.0E+22
 
     character(len=*), parameter:: NameSub = 'radiative_cooling'
     !--------------------------------------------------------------------------
+
+    RadNorm = 1.0E+22
 
     if(UseRadCoolingTable) then
        ! at the moment, radC not a function of Ne, but need a dummy 2nd
        ! index, and might want to include Ne dependence in table later.
        ! Table variable should be normalized to radloss_cgs * 10E+22
        ! since we don't want to deal with such tiny numbers
+#ifndef _OPENACC
        if(index(StringTest, NameSub)>0)then
           if(TeSiIn<1.0e4.or.TeSiIn>1.0e8.or.&
                NumberDensCgs<1.0e1.or.NumberDensCgs>1.0e14)then
@@ -145,6 +154,7 @@ contains
              end if
           end if
        end if
+#endif
        call interpolate_lookup_table(iTableRadCool, max(TeSiIn,1.0e4),&
             CoolingTableOut_I, DoExtrapolate = .false.)
        CoolingFunctionCgs = CoolingTableOut_I(1) / RadNorm
@@ -167,7 +177,7 @@ contains
   end function radiative_cooling
   !============================================================================
   subroutine get_cooling_function_fit(TeSi, CoolingFunctionCgs)
-
+    !$acc routine seq
     ! Based on Rosner et al. (1978) and Peres et al. (1982)
     ! Need to be replaced by Chianti tables
 

@@ -176,7 +176,7 @@ contains
        if(UseAccurateResChange) UseTvdResChange=.false.
        !$acc update  device(BetaLimiterResChange, nFaceLimiterResChange)
     case('#RESCHANGE')
-       call read_var('UseAccurateResChange',UseAccurateResChange)
+       call read_var('UseAccurateResChange', UseAccurateResChange)
        if(UseAccurateResChange) UseTvdResChange=.false.
 
     case('#TVDRESCHANGE')
@@ -184,8 +184,8 @@ contains
        if(UseTvdResChange) UseAccurateResChange = .false.
 
     case("#LIMITER")
-       call read_var('UseLogRhoLimiter', UseLogRhoLimiter)
-       call read_var('UseLogPLimiter',   UseLogPLimiter)
+       call read_var('UseLogRhoLimiter',   UseLogRhoLimiter)
+       call read_var('UseLogPLimiter',     UseLogPLimiter)
        call read_var('UseRhoRatioLimiter', UseRhoRatioLimiter)
        if(.not. UseRhoRatioLimiter)RETURN
        call read_var('NameVarLimitRatio', NameVarLimitRatio)
@@ -205,7 +205,10 @@ contains
        end do
        !$acc update device(iVarLimitRatio_I)
     case("#LIMITPTOTAL")
-       call read_var('UsePtotalLtd', UsePtotalLtd)
+       call read_var('DoLimitPtotal', UsePtotalLtd)
+
+    case("#LIMITMOMENTUM")
+       call read_var('DoLimitMomentum', DoLimitMomentum)
 
     case("#LOWORDERREGION")
        call read_var('StringLowOrderRegion', StringLowOrderRegion, &
