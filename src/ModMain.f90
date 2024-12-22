@@ -306,8 +306,9 @@ module ModMain
   logical:: UseUserB0                = .false.
   logical:: UseUserInitSession       = .true.
   logical:: UseUserUpdateStates      = .false.
+  logical:: UseUserTimeStep          = .false.
   logical:: UseUserWriteProgress     = .false.
-  !$acc declare create(UseUserUpdateStates)
+  !$acc declare create(UseUserUpdateStates,UseUserTimeStep)
 
   logical:: UseExtraBoundary         = .false.
   logical:: UseSolidState            = .false.

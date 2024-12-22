@@ -603,7 +603,7 @@ Where g and h are the Legendre coefficients in units of nT.
   <parameter name="StringSwitch" type="string" length="$lLine" case="lower"/>
 
 #USERSWITCH
--all +init +ic -perturb +B0 +source +update +progress     StringSwitch
+-all +init +ic -perturb +B0 +source +update +timestep +progress    StringSwitch
 
 This command controls the use of user defined routines in src/ModUser.f90.
 The string contains a single-space separated list of switches starting
@@ -621,6 +621,7 @@ source                  : user source terms (explicit and implicit)
 Sexpl, source_expl      : explicit user source terms
 Simpl, source_impl      : point-implicit user source terms
 update, update_state    : user defined state update
+timestep, time_step     : user defined time step calculation
 progress, write_progress: user progress report
 \end{verbatim}
 Default is that init is on all others are off.

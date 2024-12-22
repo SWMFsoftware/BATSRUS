@@ -27,6 +27,7 @@
   public :: user_init_point_implicit
   public :: user_get_b0
   public :: user_update_states
+  public :: user_calc_timestep
   public :: user_io_units
   public :: user_normalization
   public :: user_set_resistivity

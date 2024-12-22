@@ -12,7 +12,8 @@ module ModUserEmpty
   use ModBatsrusUtility, ONLY: stop_mpi, get_iVar
   use ModMain, ONLY: &
        UseUserInitSession, UseUserPerturbation, UseUserICs, UseUserB0, &
-       UseUserSourceExpl, UseUserSourceImpl, UseUserUpdateStates
+       UseUserSourceExpl, UseUserSourceImpl, UseUserUpdateStates,      &
+       UseUserTimeStep
   implicit none
 
   private :: stop_user
@@ -283,6 +284,20 @@ contains
     UseUserUpdateStates = .false. ! if not implemented
 
   end subroutine user_update_states
+  !============================================================================
+  subroutine user_calc_timestep(iBlock)
+
+    ! Reduce the time step if it is affected by the user added processes
+    integer,intent(in):: iBlock
+
+    character(len=*), parameter:: NameSub = 'user_calc_timestep'
+    !--------------------------------------------------------------------------
+    UseUserTimeStep = .false. ! if not implemented
+    
+    ! DtMax_CB(1:nI,1:nJ,1:nK,iBlock) = &
+    !       min(DtMax_CB(1:nI,1:nJ,1:nK,iBlock),...)
+    
+  end subroutine user_calc_timestep
   !============================================================================
   subroutine user_normalization
 

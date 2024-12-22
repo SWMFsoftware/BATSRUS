@@ -2044,6 +2044,7 @@ contains
                 UseUserSourceExpl    = DoSwitchOn
                 UseUserSourceImpl    = DoSwitchOn
                 UseUserUpdateStates  = DoSwitchOn
+                UseUserTimeStep      = DoSwitchOn
                 UseUserWriteProgress = DoSwitchOn
              case('init', 'init_session')
                 UseUserInitSession   = DoSwitchOn
@@ -2062,6 +2063,8 @@ contains
                 UseUserSourceImpl = DoSwitchOn
              case('update', 'update_state', 'update_states')
                 UseUserUpdateStates = DoSwitchOn
+             case('ts', 'timestep', 'time_step')
+                UseUserTimeStep = DoSwitchOn
              case('progress', 'write_progress')
                 UseUserWriteProgress = DoSwitchOn
              case default
@@ -2070,10 +2073,11 @@ contains
              end select
           end do
           if(iProc==0) write(*,*) &
-               'Switches: Init,IC,Perturb,B0,SExpl,SImpl,Update,Progress=', &
+               'Switches: Init,IC,Perturb,B0,SExpl,SImpl,Update,TS,Progress=',&
                UseUserInitSession, UseUserICs, UseUserPerturbation, UseUserB0,&
                UseUserSourceExpl, UseUserSourceImpl, UseUserUpdateStates, &
-               UseUserWriteProgress
+               UseUserTimeStep, UseUserWriteProgress
+
 
        case("#USERINPUTBEGIN")
           call user_read_inputs
