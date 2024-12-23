@@ -2078,7 +2078,6 @@ contains
                UseUserSourceExpl, UseUserSourceImpl, UseUserUpdateStates, &
                UseUserTimeStep, UseUserWriteProgress
 
-
        case("#USERINPUTBEGIN")
           call user_read_inputs
           ! Make sure that MassIon_I is consistent with MassFluid_I
