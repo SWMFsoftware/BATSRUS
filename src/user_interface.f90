@@ -230,6 +230,17 @@ subroutine user_update_states(iBlock)
 
 end subroutine user_update_states
 !==============================================================================
+subroutine user_calc_timestep(iBlock)
+
+  use ModUser, ONLY: user_sub => user_calc_timestep
+  implicit none
+
+  integer,intent(in):: iBlock
+  !----------------------------------------------------------------------------
+  call user_sub(iBlock)
+
+end subroutine user_calc_timestep
+!==============================================================================
 subroutine user_normalization
 
   use ModUser, ONLY: user_sub => user_normalization

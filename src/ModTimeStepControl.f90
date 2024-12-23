@@ -114,7 +114,7 @@ contains
     use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, Dt, DtFixed, DtMax_B, Cfl, &
-         UseDtLimit, DtLimit, rLocalTimeStep
+         UseDtLimit, DtLimit, rLocalTimeStep, UseUserTimeStep
     use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          DoUpdate_V
@@ -220,7 +220,7 @@ contains
           end if
        end do; end do; end do
     end if
-
+    if(UseUserTimeStep) call user_calc_timestep(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' Vdt_X(iTest:iTest+1)=', &
             Flux_VXI(Vdt_,iTest:iTest+1,jTest,kTest,iGang)
