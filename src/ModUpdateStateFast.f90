@@ -514,12 +514,7 @@ contains
        if(.not. Used_GB(i,j,k,iBlock)) RETURN
     end if
 
-    Change_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
-         -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
-    if(nDim > 1) Change_V = Change_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
-         -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
-    if(nDim > 2) Change_V = Change_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
-         -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
+    Change_V = 0       
 
     if(UseB .and. UseDivbSource)then
        DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
@@ -572,6 +567,7 @@ contains
 #endif
 
     end if
+
     if(UseNonConservative)then
        ! Add -(g-1)*p*div(u) source term
        DivU = Flux_VXI(UnFirst_,i+1,j,k,iGang) - Flux_VXI(UnFirst_,i,j,k,iGang)
@@ -642,71 +638,68 @@ contains
     end if
 #endif
 
-if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then    
-   if(UseAlfvenWaveDissipation)then
+    if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then    
+       if(UseAlfvenWaveDissipation)then
 
-      if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
-         ! To be implemented.
-         !call turbulent_cascade(i, j, k, iBlock, &
-         !        WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k))
-      else
-         call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-              WaveDissipationRate_VC(:,i,j,k),CoronalHeating_C(i,j,k))
-      end if     
+          if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
+             ! To be implemented.
+             !call turbulent_cascade(i, j, k, iBlock, &
+             !        WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+          else
+             call calc_alfven_wave_dissipation(i, j, k, iBlock, &
+                  WaveDissipationRate_VC(:,i,j,k),CoronalHeating_C(i,j,k))
+          end if
 
-      Change_V(WaveFirst_:WaveLast_) = &
-           Change_V(WaveFirst_:WaveLast_) &
-           - WaveDissipationRate_VC(:,i,j,k)*&
-           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
-           
-      ! aritmetic average of cascade rates for w_D, if needed
-      if(WDiff_>1)Change_V(WDiff_) = Change_V(WDiff_) &
-           - 0.50*sum(WaveDissipationRate_VC(:,i,j,k))*&
-           State_VGB(WDiff_,i,j,k,iBlock)
-      ! Weighted average of cascade rates for Lperp_, if needed
-      if(Lperp_ > 1)Change_V(Lperp_) = Change_V(Lperp_) +&
-           KarmanTaylorBeta2AlphaRatio*sum( &
-           WaveDissipationRate_VC(:,i,j,k)*  &
-           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
-           max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))&
-           *State_VGB(Lperp_,i,j,k,iBlock)
-   end if ! UseAlfvenWaveDissipation
+          Change_V(WaveFirst_:WaveLast_) = &
+               Change_V(WaveFirst_:WaveLast_) &
+               - WaveDissipationRate_VC(:,i,j,k)*&
+               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
 
-   if(UseCoronalHeating .and. DoUpdate_V(p_))then
-      if(UseElectronPressure)then
-         call apportion_coronal_heating(i, j, k, iBlock, &
-              State_VGB(:,i,j,k,iBlock), &
-              WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k),&
-              QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-              
-         Change_V(Pe_) = Change_V(Pe_) &
-              + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
+          ! aritmetic average of cascade rates for w_D, if needed
+          if(WDiff_>1)Change_V(WDiff_) = Change_V(WDiff_) &
+               - 0.50*sum(WaveDissipationRate_VC(:,i,j,k))*&
+               State_VGB(WDiff_,i,j,k,iBlock)
+          ! Weighted average of cascade rates for Lperp_, if needed
+          if(Lperp_ > 1)Change_V(Lperp_) = Change_V(Lperp_) +&
+               KarmanTaylorBeta2AlphaRatio*sum( &
+               WaveDissipationRate_VC(:,i,j,k)*  &
+               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
+               max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))&
+               *State_VGB(Lperp_,i,j,k,iBlock)
+       end if ! UseAlfvenWaveDissipation
 
-         Change_V(iPIon_I) = Change_V(iPIon_I) &
-              + CoronalHeating_C(i,j,k)*QPerQtotal_I &
-              *GammaMinus1_I(1:nIonFluid)
-         Change_V(Energy_:Energy_-1+nIonFluid) = &
-              Change_V(Energy_:Energy_-1+nIonFluid) &
-              + CoronalHeating_C(i,j,k)*QPerQtotal_I
+       if(UseCoronalHeating .and. DoUpdate_V(p_))then
+          if(UseElectronPressure)then
+             call apportion_coronal_heating(i, j, k, iBlock, &
+                  State_VGB(:,i,j,k,iBlock), &
+                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k),&
+                  QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
-         if(UseAnisoPressure)then
-            do iFluid = 1, nIonFluid
-               Change_V(iPparIon_I(iFluid)) = &
-                    Change_V(iPparIon_I(iFluid)) &
-                    + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid)*2
-            end do
-         end if
-      else
-         Change_V(p_) = Change_V(p_) &
-              + CoronalHeating_C(i,j,k)*GammaMinus1
-         Change_V(Energy_) = Change_V(Energy_) &
-              + CoronalHeating_C(i,j,k)
-      end if
-   end if ! UseCoronalHeating
-end if
+             Change_V(Pe_) = Change_V(Pe_) &
+                  + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
 
+             Change_V(iPIon_I) = Change_V(iPIon_I) &
+                  + CoronalHeating_C(i,j,k)*QPerQtotal_I &
+                  *GammaMinus1_I(1:nIonFluid)
+             Change_V(Energy_:Energy_-1+nIonFluid) = &
+                  Change_V(Energy_:Energy_-1+nIonFluid) &
+                  + CoronalHeating_C(i,j,k)*QPerQtotal_I
 
-
+             if(UseAnisoPressure)then
+                do iFluid = 1, nIonFluid
+                   Change_V(iPparIon_I(iFluid)) = &
+                        Change_V(iPparIon_I(iFluid)) &
+                        + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid)*2
+                end do
+             end if
+          else
+             Change_V(p_) = Change_V(p_) &
+                  + CoronalHeating_C(i,j,k)*GammaMinus1
+             Change_V(Energy_) = Change_V(Energy_) &
+                  + CoronalHeating_C(i,j,k)
+          end if
+       end if ! UseCoronalHeating
+    end if
 
     if(UseGravity .or. UseRotatingFrame)then
 
@@ -783,6 +776,22 @@ end if
        write(*,*)'DtLocal, Dt, iStage', DtLocal, Dt, iStage
     end if
 #endif
+
+    ! Add div(Flux) to Change_V
+    DivF_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
+         -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
+    if(nDim > 1) DivF_V = DivF_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
+         -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
+    if(nDim > 2) DivF_V = DivF_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
+         -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
+
+    if(IsCartesian)then
+       DivF_V = DivF_V/CellVolume_B(iBlock)
+    else
+       DivF_V = DivF_V/CellVolume_GB(i,j,k,iBlock)
+    end if
+
+    Change_V = Change_V + DivF_V
 
     ! Update state
     if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
