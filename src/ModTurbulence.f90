@@ -85,7 +85,7 @@ contains
   !============================================================================
   subroutine read_turbulence_param(NameCommand)
 
-    use ModAdvance,    ONLY: UseAnisoPressure
+    use ModAdvance,    ONLY: UseAnisoPressure, iTypeUpdate, UpdateOrig_
     use ModReadParam,  ONLY: read_var
 
     integer :: iFluid
@@ -105,7 +105,8 @@ contains
        call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
        call read_var('Crefl', Crefl)
 
-       UseWavePressure = .false.  
+       ! To do: UseWavePressure does not work with fast update yet.
+       if(iTypeUpdate /= UpdateOrig_) UseWavePressure = .false.  
     case('turbulentcascade')
        UseAlfvenWaves  = WaveFirst_ > 1
        UseWavePressure = WaveFirst_ > 1
