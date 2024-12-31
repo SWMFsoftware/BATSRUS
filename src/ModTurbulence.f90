@@ -104,6 +104,8 @@ contains
        DoInit = .true.
        call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
        call read_var('Crefl', Crefl)
+
+       UseWavePressure = .false.  
     case('turbulentcascade')
        UseAlfvenWaves  = WaveFirst_ > 1
        UseWavePressure = WaveFirst_ > 1
