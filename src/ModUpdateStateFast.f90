@@ -71,6 +71,8 @@ module ModUpdateStateFast
 
   logical, parameter:: UseAlfvenWaves  = WaveFirst_ > 1
 
+  integer, parameter:: Se_ = Pe_
+
   logical:: DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny
   !$acc declare create (DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
 
@@ -505,6 +507,7 @@ contains
     real :: QPerQtotal_I(nIonFluid)
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal    
+    real :: Ne
 
     logical:: IsConserv
 
@@ -763,19 +766,18 @@ contains
     end if
 #endif
 
-    ! Time step for iStage
-    if(IsTimeAccurate)then
-       DtLocal = iStage*Dt/nStage
-    else
-       DtLocal = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
+    ! Modify electron pressure source term to electron entropy if necessary
+    ! S(Se) = S(Pe)/rho^(gammaE-1)
+    if(UseElectronPressure .and. UseElectronEntropy)then   
+       Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
+       Change_V(Se_) = &
+            Change_V(Pe_)*Ne**(-GammaElectronMinus1) &
+            - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock) &
+            *Ne**(-GammaElectron) &
+            *sum(ChargePerMass_I*Change_V(iRhoIon_I))   
     end if
 
-#ifdef TESTACC
-    if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
-         .and. iBlock == iBlockTest)then
-       write(*,*)'DtLocal, Dt, iStage', DtLocal, Dt, iStage
-    end if
-#endif
+
 
     ! Add div(Flux) to Change_V
     DivF_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
@@ -792,6 +794,21 @@ contains
     end if
 
     Change_V = Change_V + DivF_V
+
+
+    ! Time step for iStage
+    if(IsTimeAccurate)then
+       DtLocal = iStage*Dt/nStage
+    else
+       DtLocal = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
+    end if
+
+#ifdef TESTACC
+    if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
+         .and. iBlock == iBlockTest)then
+       write(*,*)'DtLocal, Dt, iStage', DtLocal, Dt, iStage
+    end if
+#endif
 
     ! Update state
     if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
