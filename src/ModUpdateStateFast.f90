@@ -17,12 +17,12 @@ module ModUpdateStateFast
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
-       ChargePerMass_I
+       ChargePerMass_I, iPIon_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB, Vdt_, iTypeUpdate, UpdateFast_, UseRotatingFrame, &
-       UseElectronPressure
+       UseElectronPressure, DoUpdate_V, nSource, UseAnisoPressure
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_, InFlowBC_, FixedBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -53,6 +53,11 @@ module ModUpdateStateFast
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
   use ModBatsrusUtility, ONLY: stop_mpi
+  use ModCoronalHeating, ONLY: UseCoronalHeating
+  use ModTurbulence, ONLY: UseAlfvenWaveDissipation, CoronalHeating_C, &
+       calc_alfven_wave_dissipation, WaveDissipationRate_VC, &
+       KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
+       UseReynoldsDecomposition, UseTurbulentCascade
 
   implicit none
 
@@ -493,7 +498,13 @@ contains
     logical, intent(in):: IsBodyBlock
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar, iVarLast
-    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), Force_D(3)
+    real:: DivU, DivB, DivE, DivF, DtLocal
+    real:: Change_V(nFlux), DivF_V(nFlux), Force_D(3)
+
+    ! Coronal Heating
+    real :: QPerQtotal_I(nIonFluid)
+    real :: QparPerQtotal_I(nIonFluid)
+    real :: QePerQtotal    
 
     logical:: IsConserv
 
@@ -630,6 +641,72 @@ contains
        write(*,*)'Change_V after divided by V', Change_V(iVarTest)
     end if
 #endif
+
+if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then    
+   if(UseAlfvenWaveDissipation)then
+
+      if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
+         ! To be implemented.
+         !call turbulent_cascade(i, j, k, iBlock, &
+         !        WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+      else
+         call calc_alfven_wave_dissipation(i, j, k, iBlock, &
+              WaveDissipationRate_VC(:,i,j,k),CoronalHeating_C(i,j,k))
+      end if     
+
+      Change_V(WaveFirst_:WaveLast_) = &
+           Change_V(WaveFirst_:WaveLast_) &
+           - WaveDissipationRate_VC(:,i,j,k)*&
+           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+           
+      ! aritmetic average of cascade rates for w_D, if needed
+      if(WDiff_>1)Change_V(WDiff_) = Change_V(WDiff_) &
+           - 0.50*sum(WaveDissipationRate_VC(:,i,j,k))*&
+           State_VGB(WDiff_,i,j,k,iBlock)
+      ! Weighted average of cascade rates for Lperp_, if needed
+      if(Lperp_ > 1)Change_V(Lperp_) = Change_V(Lperp_) +&
+           KarmanTaylorBeta2AlphaRatio*sum( &
+           WaveDissipationRate_VC(:,i,j,k)*  &
+           State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
+           max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))&
+           *State_VGB(Lperp_,i,j,k,iBlock)
+   end if ! UseAlfvenWaveDissipation
+
+   if(UseCoronalHeating .and. DoUpdate_V(p_))then
+      if(UseElectronPressure)then
+         call apportion_coronal_heating(i, j, k, iBlock, &
+              State_VGB(:,i,j,k,iBlock), &
+              WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k),&
+              QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
+              
+         Change_V(Pe_) = Change_V(Pe_) &
+              + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
+
+         Change_V(iPIon_I) = Change_V(iPIon_I) &
+              + CoronalHeating_C(i,j,k)*QPerQtotal_I &
+              *GammaMinus1_I(1:nIonFluid)
+         Change_V(Energy_:Energy_-1+nIonFluid) = &
+              Change_V(Energy_:Energy_-1+nIonFluid) &
+              + CoronalHeating_C(i,j,k)*QPerQtotal_I
+
+         if(UseAnisoPressure)then
+            do iFluid = 1, nIonFluid
+               Change_V(iPparIon_I(iFluid)) = &
+                    Change_V(iPparIon_I(iFluid)) &
+                    + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid)*2
+            end do
+         end if
+      else
+         Change_V(p_) = Change_V(p_) &
+              + CoronalHeating_C(i,j,k)*GammaMinus1
+         Change_V(Energy_) = Change_V(Energy_) &
+              + CoronalHeating_C(i,j,k)
+      end if
+   end if ! UseCoronalHeating
+end if
+
+
+
 
     if(UseGravity .or. UseRotatingFrame)then
 

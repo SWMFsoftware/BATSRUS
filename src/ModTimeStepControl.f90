@@ -201,7 +201,6 @@ contains
 #endif
     end if
 
-#ifndef _OPENACC
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
     if(UseAlfvenWaveDissipation .and. DoUpdate_V(WaveFirst_) )then
@@ -220,6 +219,8 @@ contains
           end if
        end do; end do; end do
     end if
+
+#ifndef _OPENACC    
     if(UseUserTimeStep) call user_calc_timestep(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' Vdt_X(iTest:iTest+1)=', &
