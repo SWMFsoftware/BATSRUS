@@ -154,7 +154,7 @@ contains
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating
     use ModTurbulence,  ONLY: &
-         CoronalHeating_CI, UseAlfvenWaveDissipation, WaveDissipationRate_VCI, &
+         CoronalHeating_CI, UseAlfvenWaveDissipation, WaveDissipationRate_VCI,&
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          KarmanTaylorBeta2AlphaRatio, IsOnAwRepresentative, PoyntingFluxPerB, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
@@ -468,7 +468,8 @@ contains
        ! is used, the wave dissipation rates
        call get_block_heating(iBlock)
 
-       if(UseChromosphereHeating) call add_chromosphere_heating(TeSi_CI(:,:,:,iGang), iBlock)
+       if(UseChromosphereHeating) &
+            call add_chromosphere_heating(TeSi_CI(:,:,:,iGang), iBlock)
 
        if(UseReynoldsDecomposition)then
           DoTestCell = .false.
@@ -507,7 +508,8 @@ contains
                         bDotGradVAlfven)
                    ModeConversionPlus = sign(min(abs(ModeConversionPlus), &
                         sqrt(bDotGradVAlfven**2 + product(&
-                        WaveDissipationRate_VCI(:,i,j,k,iGang)))), ModeConversionPlus)
+                        WaveDissipationRate_VCI(:,i,j,k,iGang)))), &
+                        ModeConversionPlus)
                 end if
                 ModeConversionMinus = ModeConversionPlus
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
@@ -619,11 +621,13 @@ contains
              if(UseElectronPressure)then
                 call apportion_coronal_heating(i, j, k, iBlock, &
                      State_VGB(:,i,j,k,iBlock), &
-                     WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang),&
+                     WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                     CoronalHeating_CI(i,j,k,iGang),&
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
                 Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-                     + CoronalHeating_CI(i,j,k,iGang)*GammaElectronMinus1*QePerQtotal
+                     + CoronalHeating_CI(i,j,k,iGang)*&
+                     GammaElectronMinus1*QePerQtotal
 
                 Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
                      + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I &
@@ -636,7 +640,8 @@ contains
                    do iFluid = 1, nIonFluid
                       Source_VC(iPparIon_I(iFluid),i,j,k) = &
                            Source_VC(iPparIon_I(iFluid),i,j,k) &
-                           + CoronalHeating_CI(i,j,k,iGang)*QparPerQtotal_I(iFluid)*2
+                           + CoronalHeating_CI(i,j,k,iGang)*&
+                           QparPerQtotal_I(iFluid)*2
                    end do
                 end if
              else

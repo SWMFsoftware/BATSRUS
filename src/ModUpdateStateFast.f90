@@ -644,10 +644,12 @@ contains
           if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
              ! To be implemented.
              ! call turbulent_cascade(i, j, k, iBlock, &
-             !        WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang))
+             !        WaveDissipationRate_VCI(:,i,j,k,iGang), &
+             !        CoronalHeating_CI(i,j,k,iGang))
           else
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang),CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang))
           end if
 
           Change_V(WaveFirst_:WaveLast_) = &
@@ -672,11 +674,13 @@ contains
           if(UseElectronPressure)then
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang),&
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang),&
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
              Change_V(Pe_) = Change_V(Pe_) &
-                  + CoronalHeating_CI(i,j,k,iGang)*GammaElectronMinus1*QePerQtotal
+                  + CoronalHeating_CI(i,j,k,iGang)*&
+                  GammaElectronMinus1*QePerQtotal
 
              Change_V(iPIon_I) = Change_V(iPIon_I) &
                   + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I &
@@ -689,7 +693,8 @@ contains
                 do iFluid = 1, nIonFluid
                    Change_V(iPparIon_I(iFluid)) = &
                         Change_V(iPparIon_I(iFluid)) &
-                        + CoronalHeating_CI(i,j,k,iGang)*QparPerQtotal_I(iFluid)*2
+                        + CoronalHeating_CI(i,j,k,iGang)*&
+                        QparPerQtotal_I(iFluid)*2
                 end do
              end if
           else

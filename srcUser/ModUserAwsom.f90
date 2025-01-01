@@ -834,7 +834,8 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., &
             DoMonotoneRestrict = .false.)
-       if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
+       if(DoExtendTransitionRegion) &
+            call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
        call get_block_heating(iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           PlotVar_G(i,j,k) = CoronalHeating_CI(i,j,k,iGang) &
@@ -848,12 +849,14 @@ contains
           call set_b0_face(iBlock)
           call calc_face_value(iBlock, DoResChangeOnly = .false., &
                DoMonotoneRestrict = .false.)
-          if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
+          if(DoExtendTransitionRegion) &
+               call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
           call get_block_heating(iBlock)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang), &
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang), &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              select case(NameVar)
              case('qebyq')

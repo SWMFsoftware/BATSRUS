@@ -366,7 +366,8 @@ contains
     ! Use array WaveDissipationRate_VCI. With these regards
     ! the usual way to call this function is:
     !
-    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
+    ! if(DoExtendTransitionRegion) &
+    ! call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
     ! call get_block_heating(iBlock)
     ! call get_wave_reflection(iBlock, IsNewBlock)
     use BATL_size, ONLY: nDim, nI, nJ, nK
@@ -425,7 +426,8 @@ contains
 
        ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
        if(UseNewLimiter4Reflection)then
-          DissipationRateDiff =-0.50*(WaveDissipationRate_VCI(WaveFirst_,i,j,k,iGang)&
+          DissipationRateDiff =-0.50*(&
+               WaveDissipationRate_VCI(WaveFirst_,i,j,k,iGang)&
                - WaveDissipationRate_VCI(WaveLast_,i,j,k,iGang))
           ReflectionRate = sign(min(ReflectionRateImb,&
                abs(DissipationRateDiff)), DissipationRateDiff)
@@ -458,7 +460,8 @@ contains
                *(ReflectionRate/ReflectionRateImb**2)**2)
           WaveDissipationRate_VCI(:,i,j,k,iGang) = &
                WaveDissipationRate_VCI(:,i,j,k,iGang)*Cdiss_C(i,j,k)
-          CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang)*Cdiss_C(i,j,k)
+          CoronalHeating_CI(i,j,k,iGang) = &
+               CoronalHeating_CI(i,j,k,iGang)*Cdiss_C(i,j,k)
        end if
     end do; end do; end do
 

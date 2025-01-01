@@ -463,7 +463,8 @@ contains
     ! so that in this case TeSi_CI aarray should be set. With these regards
     ! the usual way to call this function is:
     !
-    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
+    ! if(DoExtendTransitionRegion) &
+    ! call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
     ! call get_block_heating(iBlock)
     !
     use ModGeometry,       ONLY: r_GB
@@ -501,14 +502,16 @@ contains
 #ifndef _OPENACC
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
 #endif
        else
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang),CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
        end if
 #ifndef _OPENACC
@@ -525,10 +528,11 @@ contains
     elseif(UseUnsignedFluxModel)then
 #ifndef _OPENACC
        do k=1,nK;do j=1,nJ; do i=1,nI
+          call get_coronal_heating(i, j, k, iBlock, &
+               CoronalHeating_CI(i,j,k,iGang))
 
-          call get_coronal_heating(i, j, k, iBlock, CoronalHeating_CI(i,j,k,iGang))
-          CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang) * HeatNormalization
-
+          CoronalHeating_CI(i,j,k,iGang) = &
+               CoronalHeating_CI(i,j,k,iGang) * HeatNormalization
        end do; end do; end do
 #endif
     elseif(UseExponentialHeating)then
@@ -548,7 +552,8 @@ contains
     if(DoChHeat) then
        HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang) + HeatCh &
+          CoronalHeating_CI(i,j,k,iGang) = &
+               CoronalHeating_CI(i,j,k,iGang) + HeatCh &
                *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
        end do; end do; end do
     end if
@@ -565,7 +570,7 @@ contains
           Bcell = No2Io_V(UnitB_) * norm2(B_D)
 
           FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
-          CoronalHeating_CI(i,j,k,iGang) = max(CoronalHeating_CI(i,j,k,iGang), &
+          CoronalHeating_CI(i,j,k,iGang) = max(CoronalHeating_CI(i,j,k,iGang),&
                FractionB * ArHeatFactorCgs * Bcell &
                * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
        end do; end do; end do
