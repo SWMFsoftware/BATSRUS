@@ -5,6 +5,7 @@
 module ModTurbulence
 
   use BATL_lib, ONLY: test_start, test_stop, MaxDim
+  use BATL_size, ONLY: nGang
   use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
@@ -40,10 +41,10 @@ module ModTurbulence
   real :: Crefl = 0.04
 
   ! Arrays for the calculated heat function and dissipated wave energy
-  real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
+  real, public, allocatable :: CoronalHeating_CI(:,:,:,:)
   real, public :: WaveDissipationRate_VC(WaveFirst_:WaveLast_,&
        1:nI,1:nJ,1:nK)
-  !$omp threadprivate( CoronalHeating_C, WaveDissipationRate_VC )
+  !$omp threadprivate( CoronalHeating_CI, WaveDissipationRate_VC )
 
   ! Alfven wave speed array, cell-centered
   real, public, allocatable :: AlfvenWaveVel_DC(:,:,:,:)
@@ -198,6 +199,11 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_turbulence'
     !--------------------------------------------------------------------------
+    if(.not.allocated(CoronalHeating_CI)) &
+         allocate(CoronalHeating_CI(1:nI,1:nJ,1:nK,nGang))
+
+    if(.not.UseAlfvenWaves) return
+    
     if(.not.DoInit)RETURN
     DoInit = .false.
 
@@ -369,7 +375,7 @@ contains
     integer, intent(in) :: iBlock
     logical, optional, intent(inout):: IsNewBlock
 
-    integer :: i, j, k
+    integer :: i, j, k, iGang
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate,  &
          DissipationRateDiff
@@ -388,6 +394,8 @@ contains
       IsNewBlockAlfven = .true.
     end if
 
+    iGang = i_gang(iBlock)
+    
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if( (.not.Used_GB(i,j,k,iBlock)).or.&
             r_GB(i,j,k, iBlock) < rMinWaveReflection)CYCLE
@@ -446,7 +454,7 @@ contains
                *(ReflectionRate/ReflectionRateImb**2)**2)
           WaveDissipationRate_VC(:,i,j,k) = &
                WaveDissipationRate_VC(:,i,j,k)*Cdiss_C(i,j,k)
-          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)*Cdiss_C(i,j,k)
+          CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang)*Cdiss_C(i,j,k)
        end if
     end do; end do; end do
 

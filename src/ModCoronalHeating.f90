@@ -141,8 +141,8 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_coronal_heating'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    if(UseAlfvenWaves)call init_turbulence
+    call test_start(NameSub, DoTest)    
+    call init_turbulence
     if(.not.DoInit)then
        call test_stop(NameSub, DoTest)
        RETURN
@@ -456,7 +456,7 @@ contains
   end subroutine get_photosphere_unsignedflux
   !============================================================================
   subroutine get_block_heating(iBlock)
-    ! Calculate two arrays: CoronalHeating_C  and   WaveDissipationRate_VC
+    ! Calculate two arrays: CoronalHeating_CI  and   WaveDissipationRate_VC
     ! If DoExtendTransitionRegion, it the extension factor is applied,
     ! so that in this case TeSi_CI aarray should be set. With these regards
     ! the usual way to call this function is:
@@ -496,12 +496,12 @@ contains
        if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_VC(:,i,j,k),CoronalHeating_C(i,j,k))
+                  WaveDissipationRate_VC(:,i,j,k),CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
        end if
        if(DoExtendTransitionRegion)then
@@ -509,8 +509,8 @@ contains
              ExtensionFactorInv = 1/extension_factor(TeSi_CI(i,j,k,iGang))
              WaveDissipationRate_VC(:,i,j,k) = ExtensionFactorInv*&
                   WaveDissipationRate_VC(:,i,j,k)
-             CoronalHeating_C(i,j,k) = ExtensionFactorInv*&
-                  CoronalHeating_C(i,j,k)
+             CoronalHeating_CI(i,j,k,iGang) = ExtensionFactorInv*&
+                  CoronalHeating_CI(i,j,k,iGang)
           end do; end do; end do
        end if
 
@@ -518,26 +518,26 @@ contains
 
        do k=1,nK;do j=1,nJ; do i=1,nI
 
-          call get_coronal_heating(i, j, k, iBlock, CoronalHeating_C(i,j,k))
-          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) * HeatNormalization
+          call get_coronal_heating(i, j, k, iBlock, CoronalHeating_CI(i,j,k,iGang))
+          CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang) * HeatNormalization
 
        end do; end do; end do
 
     elseif(UseExponentialHeating)then
        do k=1,nK;do j=1,nJ; do i=1,nI
 
-          CoronalHeating_C(i,j,k) = HeatingAmplitude &
+          CoronalHeating_CI(i,j,k,iGang) = HeatingAmplitude &
                *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
 
        end do; end do; end do
     else
-       CoronalHeating_C = 0.0
+       CoronalHeating_CI = 0.0
     end if
 
     if(DoChHeat) then
        HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) + HeatCh &
+          CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang) + HeatCh &
                *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
        end do; end do; end do
     end if
@@ -554,14 +554,14 @@ contains
           Bcell = No2Io_V(UnitB_) * norm2(B_D)
 
           FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
-          CoronalHeating_C(i,j,k) = max(CoronalHeating_C(i,j,k), &
+          CoronalHeating_CI(i,j,k,iGang) = max(CoronalHeating_CI(i,j,k,iGang), &
                FractionB * ArHeatFactorCgs * Bcell &
                * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
        end do; end do; end do
     endif
     if(DoExtendTransitionRegion.and..not.UseAlfvenWaveDissipation)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) / &
+          CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang) / &
                extension_factor(TeSi_CI(i,j,k,iGang))
        end do; end do; end do
     end if

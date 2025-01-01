@@ -246,7 +246,8 @@ contains
     use ModGeometry, ONLY: r_GB
     use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
     use ModPhysics,  ONLY: UnitX_, Si2No_V,NameStar,RadiusStar,MassStar
-    use ModTurbulence, ONLY: CoronalHeating_C
+    use ModTurbulence, ONLY: CoronalHeating_CI
+    use ModUtilities, ONLY: i_gang
 
     real,    intent(in):: TeSi_C(1:nI,1:nJ,1:nK)
     integer, intent(in):: iBlock
@@ -257,8 +258,11 @@ contains
 
     real:: HeightSi_C(1:nI,1:nJ,1:nK), BarometricScaleSi, Amplitude
 
+    integer :: iGang
+
     character(len=*), parameter:: NameSub = 'add_chromosphere_heating'
     !--------------------------------------------------------------------------
+    iGang = i_gang(iBlock)
     HeightSi_C = (r_GB(1:nI,1:nJ,1:nK,iBlock) - 1) * Si2No_V(UnitX_)
     if(NameStar/='SUN')then
        BarometricScaleSi = TeChromosphereSi &
@@ -270,7 +274,7 @@ contains
 
     where(HeightSi_C < 10.0 * BarometricScaleSi&
          .and.TeSi_C < 1.1 * TeChromosphereSi)&
-         CoronalHeating_C = CoronalHeating_C + &
+         CoronalHeating_CI(:,:,:,iGang) = CoronalHeating_CI(:,:,:,iGang) + &
          Amplitude * exp(-HeightSi_C/BarometricScaleSi)
 
   end subroutine add_chromosphere_heating

@@ -154,7 +154,7 @@ contains
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating
     use ModTurbulence,  ONLY: &
-         CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
+         CoronalHeating_CI, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          KarmanTaylorBeta2AlphaRatio, IsOnAwRepresentative, PoyntingFluxPerB, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
@@ -619,31 +619,31 @@ contains
              if(UseElectronPressure)then
                 call apportion_coronal_heating(i, j, k, iBlock, &
                      State_VGB(:,i,j,k,iBlock), &
-                     WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k),&
+                     WaveDissipationRate_VC(:,i,j,k), CoronalHeating_CI(i,j,k,iGang),&
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
                 Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-                     + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
+                     + CoronalHeating_CI(i,j,k,iGang)*GammaElectronMinus1*QePerQtotal
 
                 Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
-                     + CoronalHeating_C(i,j,k)*QPerQtotal_I &
+                     + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I &
                      *GammaMinus1_I(1:nIonFluid)
                 Source_VC(Energy_:Energy_-1+nIonFluid,i,j,k) = &
                      Source_VC(Energy_:Energy_-1+nIonFluid,i,j,k) &
-                     + CoronalHeating_C(i,j,k)*QPerQtotal_I
+                     + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I
 
                 if(UseAnisoPressure)then
                    do iFluid = 1, nIonFluid
                       Source_VC(iPparIon_I(iFluid),i,j,k) = &
                            Source_VC(iPparIon_I(iFluid),i,j,k) &
-                           + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid)*2
+                           + CoronalHeating_CI(i,j,k,iGang)*QparPerQtotal_I(iFluid)*2
                    end do
                 end if
              else
                 Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-                     + CoronalHeating_C(i,j,k)*GammaMinus1
+                     + CoronalHeating_CI(i,j,k,iGang)*GammaMinus1
                 Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                     + CoronalHeating_C(i,j,k)
+                     + CoronalHeating_CI(i,j,k,iGang)
              end if
           end do; end do; end do
           if(DoTest)call write_source('After UseCoronalHeating')

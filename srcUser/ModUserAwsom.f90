@@ -716,7 +716,7 @@ contains
     use ModChromosphere, ONLY: DoExtendTransitionRegion, &
          get_tesi_c, TeSi_CI
     use ModCoronalHeating, ONLY: get_block_heating
-    use ModTurbulence, ONLY: CoronalHeating_C, &
+    use ModTurbulence, ONLY: CoronalHeating_CI, &
          apportion_coronal_heating, get_wave_reflection, &
          WaveDissipationRate_VC
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitT_, &
@@ -837,7 +837,7 @@ contains
        if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
        call get_block_heating(iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = CoronalHeating_C(i,j,k) &
+          PlotVar_G(i,j,k) = CoronalHeating_CI(i,j,k,iGang) &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
        end do; end do; end do
        NameIdlUnit = 'J/m^3/s'
@@ -853,7 +853,7 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
+                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_CI(i,j,k,iGang), &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              select case(NameVar)
              case('qebyq')
