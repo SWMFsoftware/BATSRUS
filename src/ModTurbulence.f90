@@ -16,6 +16,7 @@ module ModTurbulence
   use ModTransitionRegion, ONLY: PoyntingFluxPerBSi, LperpTimesSqrtBSi
   use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
        UseAwRepresentative
+  use ModUtilities,  ONLY: i_gang
   use omp_lib
 
   implicit none
@@ -678,11 +679,7 @@ contains
 #ifndef SCALAR
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
-#ifndef _OPENACC
-    iGang = 1
-#else 
-    iGang = iBlock
-#endif   
+    iGang = i_gang(iBlock)
 
     if(UseStochasticHeating)then
 

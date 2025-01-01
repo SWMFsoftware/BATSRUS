@@ -13,6 +13,7 @@ module ModCoronalHeating
   use ModMain,       ONLY: nI, nJ, nK
   use ModTurbulence
   use omp_lib
+  use ModUtilities, ONLY: i_gang  
 
   implicit none
   SAVE
@@ -487,11 +488,8 @@ contains
     character(len=*), parameter:: NameSub = 'get_block_heating'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-#ifndef _OPENACC
-    iGang = 1
-#else 
-    iGang = iBlock
-#endif    
+
+    iGang = i_gang(iBlock)
 
     if(UseAlfvenWaveDissipation)then
        if(IsOnAwRepresentative)call set_alfven_wave_vel_vect(iBlock)

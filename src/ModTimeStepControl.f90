@@ -127,6 +127,7 @@ contains
     use ModNumConst, ONLY: cHalfPi
     use ModCoarseAxis, ONLY: UseCoarseAxis, calc_coarse_axis_timestep,&
          NorthHemiSph_, SouthHemiSph_
+    use ModUtilities, ONLY: i_gang
 
     ! Calculate stable time step DtMax_CB for each cell in block iBlock.
     ! If IsPartLocal is present, limit DtMax_CB with Dt/Cfl.
@@ -144,11 +145,8 @@ contains
     character(len=*), parameter:: NameSub = 'calc_timestep'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-#ifdef _OPENACC
-    iGang = iBlock
-#else
-    iGang = 1
-#endif
+
+    iGang = i_gang(iBlock)
 
     if(DoTest)write(*,*) NameSub,' starting, IsNoBody_B=', IsNoBody_B(iBlock)
 

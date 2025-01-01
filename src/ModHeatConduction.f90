@@ -14,6 +14,7 @@ module ModHeatConduction
   use ModFaceFluxParameters
   use BATL_size, ONLY: nDim, MaxDim
   use omp_lib
+  use ModUtilities, ONLY: i_gang  
 
   implicit none
   save
@@ -399,11 +400,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
-#ifdef _OPENACC
-    iGang = iBlock
-#else
-    iGang = 1
-#endif
+    iGang = i_gang(iBlock)
 
     if(UseFieldLineThreads)then
        UseFirstOrderBc = IsBoundary_B(iBlock)
@@ -669,11 +666,7 @@ contains
     !--------------------------------------------------------------------------
 #ifndef SCALAR
 
-#ifdef _OPENACC
-    iGang = iBlock
-#else
-    iGang = 1
-#endif
+    iGang = i_gang(iBlock)
 
     if(IsNewBlockIonHeatCond)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
@@ -837,11 +830,7 @@ contains
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock
 
-#ifdef _OPENACC
-       iGang = iBlock
-#else
-       iGang = 1
-#endif
+       iGang = i_gang(iBlock)
 
        if (Unused_B(iBlock)) CYCLE
        ! For the electron flux limiter, we need Te in the ghostcells
@@ -973,11 +962,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_heat_cond_tensor'
     !--------------------------------------------------------------------------
-#ifdef _OPENACC
-    iGang = iBlock
-#else
-    iGang = 1
-#endif
+    iGang = i_gang(iBlock)
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
@@ -1165,11 +1150,10 @@ contains
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
-#ifdef _OPENACC
-       iGang = iBlock
-#else
+       iGang = i_gang(iBlock)
+       
+#ifndef _OPENACC
        IsNewBlockTe = .true.
-       iGang = 1
 #endif
 
        TeEpsilon = TeEpsilonSi*Si2No_V(UnitTemperature_)
@@ -1494,11 +1478,7 @@ contains
 
     UseFirstOrderBc = UseFieldLineThreads.and.IsBoundary_B(iBlock)
 
-#ifdef _OPENACC
-    iGang = iBlock
-#else
-    iGang = 1
-#endif
+    iGang = i_gang(iBlock)
 
     call set_block_field3(iBlock, 1, SemiStateTmp_VGI(:,:,:,:,iGang), &
       StateImpl_VG)
@@ -1637,11 +1617,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-#ifdef _OPENACC
-    iGang = iBlock
-#else
-    iGang = 1
-#endif
+    iGang = i_gang(iBlock)
 
     if(UseAnisoPressure .and. .not.UseMultiIon)then
 #ifndef _OPENACC

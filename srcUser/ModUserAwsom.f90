@@ -739,6 +739,7 @@ contains
 #ifdef _OPENACC
     use ModUtilities, ONLY: norm2
 #endif
+    use ModUtilities, ONLY: i_gang
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -777,12 +778,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
 
-#ifndef _OPENACC
-    iGang = 1
-#else 
-    iGang = iBlock
-#endif   
-
+    iGang = i_gang(iBlock)
 
     select case(NameVar)
     case('te')

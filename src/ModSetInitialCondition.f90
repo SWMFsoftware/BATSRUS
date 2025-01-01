@@ -179,6 +179,7 @@ contains
     use ModIonElectron,   ONLY: &
          correct_electronfluid_efield , DoCorrectElectronFluid, DoCorrectEfield
     use BATL_lib, ONLY: Xyz_DGB, IsPeriodic_D
+    use ModUtilities, ONLY: i_gang
 
     integer, intent(in) :: iBlock
 
@@ -191,11 +192,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    iGang = 1
-#ifdef _OPENACC
-    iGang = iBlock
-#endif
-
+    iGang = i_gang(iBlock)
+    
     DtMax_CB(:,:,:,iBlock) = 0.0
 
     Flux_VXI(:,:,:,:,iGang) = 0.0

@@ -1443,6 +1443,7 @@ contains
          LeftState_VZ, RightState_VZ
     use BATL_lib, ONLY: nDim, nI, nJ, nK
     use ModVarIndexes
+    use ModUtilities, ONLY: i_gang
 
     integer,intent(in)::iBlock
 
@@ -1456,10 +1457,8 @@ contains
     if(NameProblem /= 'HILL') RETURN
 
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
-#ifdef _OPENACC
-    iGang = iBlock
-#endif
+
+    iGang = i_gang(iBlock)
 
     ! Calculate upwind flux (same as Rusanov scheme)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI + 1

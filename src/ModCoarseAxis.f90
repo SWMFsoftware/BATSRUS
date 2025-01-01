@@ -65,7 +65,8 @@ contains
     use ModAdvance,  ONLY: Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, DtMax_CB
     use ModGeometry, ONLY: Used_GB
     use BATL_lib, ONLY: CellVolume_GB
-
+    use ModUtilities, ONLY: i_gang
+    
     integer, intent(in):: iBlock, iHemisphere
 
     ! Misc
@@ -78,11 +79,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-#ifdef _OPENACC
-    iGang = iBlock
-#else
-    iGang = 1
-#endif
+    iGang = i_gang(iBlock)
 
     select case(iHemisphere)
     case(NorthHemiSph_)

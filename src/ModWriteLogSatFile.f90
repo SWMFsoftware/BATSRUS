@@ -14,6 +14,7 @@ module ModWriteLogSatFile
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
+  use ModUtilities, ONLY: i_gang
 
   implicit none
 
@@ -758,11 +759,9 @@ contains
       case('radcool')
          do iBlock = 1, nBlock
             if (UnUsed_B(iBlock))CYCLE
-#ifndef _OPENACC
-            iGang = 1
-#else 
-            iGang = iBlock
-#endif        
+
+            iGang = i_gang(iBlock)
+
             call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
             do k = 1, nK; do j=1,nJ; do i=1, nI
                call get_radiative_cooling(i, j, k, iBlock, TeSi_CI(i,j,k,iGang), &

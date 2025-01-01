@@ -58,6 +58,7 @@ module ModUpdateStateFast
        calc_alfven_wave_dissipation, WaveDissipationRate_VC, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
        UseReynoldsDecomposition, UseTurbulentCascade
+  use ModUtilities, ONLY: i_gang
 
   implicit none
 
@@ -240,11 +241,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-#ifdef _OPENACC
-       iGang = iBlock
-#else
-       iGang = 1
-#endif
+       iGang = i_gang(iBlock)
 
        if(nOrder > 1 .and. UseAccurateResChange .and. nLevelMax > nLevelMin) &
             call correct_monotone_restrict(iBlock)
@@ -933,12 +930,10 @@ contains
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang, iVar
     logical:: DoTestSide
-#ifndef _OPENACC
+
     !--------------------------------------------------------------------------
-    iGang = 1
-#else
-    iGang = iBlock
-#endif
+    iGang = i_gang(iBlock)
+
     call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
@@ -982,12 +977,10 @@ contains
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang, iVar
     logical:: DoTestSide
-#ifndef _OPENACC
+
     !--------------------------------------------------------------------------
-    iGang = 1
-#else
-    iGang = iBlock
-#endif
+    iGang = i_gang(iBlock)
+
     call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
@@ -1031,12 +1024,9 @@ contains
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang, iVar
     logical:: DoTestSide
-#ifndef _OPENACC
     !--------------------------------------------------------------------------
-    iGang = 1
-#else
-    iGang = iBlock
-#endif
+    iGang = i_gang(iBlock)
+
     call get_normal(3, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
