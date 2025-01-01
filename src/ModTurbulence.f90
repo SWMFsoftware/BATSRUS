@@ -44,6 +44,7 @@ module ModTurbulence
   real, public, allocatable :: CoronalHeating_CI(:,:,:,:)
   real, public, allocatable :: WaveDissipationRate_VCI(:,:,:,:,:)
   !$omp threadprivate( CoronalHeating_CI, WaveDissipationRate_VCI )
+  !$acc declare create( CoronalHeating_CI, WaveDissipationRate_VCI )
 
   ! Alfven wave speed array, cell-centered
   real, public, allocatable :: AlfvenWaveVel_DC(:,:,:,:)

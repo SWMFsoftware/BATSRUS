@@ -204,7 +204,8 @@ contains
     if(UseAlfvenWaveDissipation .and. DoUpdate_V(WaveFirst_) )then
        call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
        call get_block_heating(iBlock)
-
+       
+       !$acc loop vector collapse(3) private(DtLoss) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
