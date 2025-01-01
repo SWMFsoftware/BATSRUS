@@ -647,7 +647,8 @@ contains
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
        State_V, WaveDissipationRate_V, CoronalHeating, &
        QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
-
+    !$acc routine seq
+    
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
 
@@ -761,6 +762,7 @@ contains
        ! No heavy ion effects in the Linear Landau damping and transit-time
        ! damping yet
        if(UseMultiIon .and. nChargeStateAll==1)then
+#ifndef _OPENACC          
           BetaParProton = 2.0*Ppar_I(1)/B2
           Np = RhoProton
           Na = State_V(iRhoIon_I(nIonFluid))/MassIon_I(nIonFluid)
@@ -797,6 +799,7 @@ contains
              DampingPar_I(nIonFluid) = Value_I(3)
              DampingElectron = Value_I(2)
           end if
+#endif          
        else
           Pp = P_I(1)
           TeByTp = State_V(Pe_)/Pp
