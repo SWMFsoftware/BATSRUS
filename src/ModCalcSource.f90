@@ -162,7 +162,7 @@ contains
     use ModRadiativeCooling, ONLY: RadCooling_C, UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion,      &
-         UseChromosphereHeating, get_tesi_c, TeSi_C
+         UseChromosphereHeating, get_tesi_c, TeSi_CI
     use ModFaceFlux,      ONLY: Pe_G
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
     use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0,    &
@@ -180,7 +180,7 @@ contains
 
     integer, intent(in):: iBlock
 
-    integer :: i, j, k, iVar, iFluid, iUn
+    integer :: i, j, k, iVar, iFluid, iUn, iGang
     real :: Pe, Pwave, DivU
 
     ! Variable for B0 source term
@@ -245,6 +245,11 @@ contains
     character(len=*), parameter:: NameSub = 'calc_source'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+#ifndef _OPENACC
+    iGang = 1
+#else 
+    iGang = iBlock
+#endif     
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nSource
        Source_VC(iVar,i,j,k) = 0
@@ -458,14 +463,14 @@ contains
     ! TeSi cell-centered values are calculated if needed
     if((UseCoronalHeating .or. UseAlfvenWaveDissipation) &
          .and. DoExtendTransitionRegion .or. UseRadCooling) &
-         call get_tesi_c(iBlock, TeSi_C)
+         call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
 
     if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
        ! Calculate heating functions and, if the AW turbulence
        ! is used, the wave dissipation rates
        call get_block_heating(iBlock)
 
-       if(UseChromosphereHeating) call add_chromosphere_heating(TeSi_C, iBlock)
+       if(UseChromosphereHeating) call add_chromosphere_heating(TeSi_CI(:,:,:,iGang), iBlock)
 
        if(UseReynoldsDecomposition)then
           DoTestCell = .false.
@@ -675,7 +680,7 @@ contains
 
     if(UseRadCooling)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
+          call get_radiative_cooling(i, j, k, iBlock, TeSi_CI(i,j,k,iGang), &
                RadCooling_C(i,j,k), NameCaller=NameSub, &
                Xyz_D=Xyz_DGB(:,i,j,k,iBlock) )
 

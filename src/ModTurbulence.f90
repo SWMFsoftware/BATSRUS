@@ -355,7 +355,7 @@ contains
     ! Use array WaveDissipationRate_VC. With these regards
     ! the usual way to call this function is:
     !
-    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
     ! call get_block_heating(iBlock)
     ! call get_wave_reflection(iBlock, IsNewBlock)
     use BATL_size, ONLY: nDim, nI, nJ, nK
@@ -644,7 +644,7 @@ contains
     use ModAdvance, ONLY: nVar, UseAnisoPressure, Bx_, Bz_, Pe_
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
-         TeSi_C
+         TeSi_CI
     use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
          nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
          iPparIon_I
@@ -673,13 +673,21 @@ contains
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te, Pp
     real :: Value_I(6), SqrtRho
 
+    integer :: iGang
+
 #ifndef SCALAR
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
+#ifndef _OPENACC
+    iGang = 1
+#else 
+    iGang = iBlock
+#endif   
+
     if(UseStochasticHeating)then
 
        if(DoExtendTransitionRegion)then
-          ExtensionCoef = extension_factor(TeSi_C(i,j,k))
+          ExtensionCoef = extension_factor(TeSi_CI(i,j,k,iGang))
        else
           ExtensionCoef = 1.0
        end if

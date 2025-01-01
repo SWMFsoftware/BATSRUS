@@ -121,7 +121,7 @@ contains
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B, r_GB
     use ModCoronalHeating, ONLY: get_block_heating
     use ModTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VC
-    use ModChromosphere, ONLY: get_tesi_c, TeSi_C
+    use ModChromosphere, ONLY: get_tesi_c, TeSi_CI
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
     use ModNumConst, ONLY: cHalfPi
@@ -204,7 +204,7 @@ contains
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
     if(UseAlfvenWaveDissipation .and. DoUpdate_V(WaveFirst_) )then
-       call get_tesi_c(iBlock, TeSi_C)
+       call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
        call get_block_heating(iBlock)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI

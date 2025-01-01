@@ -457,10 +457,10 @@ contains
   subroutine get_block_heating(iBlock)
     ! Calculate two arrays: CoronalHeating_C  and   WaveDissipationRate_VC
     ! If DoExtendTransitionRegion, it the extension factor is applied,
-    ! so that in this case TeSi_C aarray should be set. With these regards
+    ! so that in this case TeSi_CI aarray should be set. With these regards
     ! the usual way to call this function is:
     !
-    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
     ! call get_block_heating(iBlock)
     !
     use ModGeometry,       ONLY: r_GB
@@ -471,11 +471,11 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModB0,         ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
-         TeSi_C
+         TeSi_CI
 
     integer, intent(in) :: iBlock
 
-    integer             :: i, j, k
+    integer             :: i, j, k, iGang
     real :: HeatCh
 
     real :: B_D(3), ExtensionFactorInv
@@ -487,6 +487,11 @@ contains
     character(len=*), parameter:: NameSub = 'get_block_heating'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+#ifndef _OPENACC
+    iGang = 1
+#else 
+    iGang = iBlock
+#endif    
 
     if(UseAlfvenWaveDissipation)then
        if(IsOnAwRepresentative)call set_alfven_wave_vel_vect(iBlock)
@@ -503,7 +508,7 @@ contains
        end if
        if(DoExtendTransitionRegion)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             ExtensionFactorInv = 1/extension_factor(TeSi_C(i,j,k))
+             ExtensionFactorInv = 1/extension_factor(TeSi_CI(i,j,k,iGang))
              WaveDissipationRate_VC(:,i,j,k) = ExtensionFactorInv*&
                   WaveDissipationRate_VC(:,i,j,k)
              CoronalHeating_C(i,j,k) = ExtensionFactorInv*&
@@ -559,7 +564,7 @@ contains
     if(DoExtendTransitionRegion.and..not.UseAlfvenWaveDissipation)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) / &
-               extension_factor(TeSi_C(i,j,k))
+               extension_factor(TeSi_CI(i,j,k,iGang))
        end do; end do; end do
     end if
 

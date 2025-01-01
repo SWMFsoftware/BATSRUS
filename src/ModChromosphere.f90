@@ -8,6 +8,7 @@ module ModChromosphere
 
   use BATL_lib, ONLY: &
        test_start, test_stop, nI, nJ, nK
+  use BATL_size, ONLY: nGang
   use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
@@ -41,8 +42,8 @@ module ModChromosphere
   real :: TeTransitionRegionTopSi = 4.0e+5 ! [K]
 
   ! Electron temperature in K:
-  real :: TeSi_C(nI,nJ,nK)
-  !$omp threadprivate( TeSi_C )
+  real, allocatable :: TeSi_CI(:,:,:,:)
+  !$omp threadprivate( TeSi_CI )
 
 contains
   !============================================================================
@@ -57,7 +58,12 @@ contains
 
   end subroutine read_chromosphere_param
   !============================================================================
-
+  subroutine init_chromosphere
+   if(.not.allocated(TeSi_CI)) then
+      allocate(TeSi_CI(nI,nJ,nK,nGang))
+   end if
+  end subroutine init_chromosphere
+  !============================================================================
   real function extension_factor(TeSi)
     real, intent(in) :: TeSi    ! Dimensionless
 

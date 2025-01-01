@@ -714,7 +714,7 @@ contains
          UseAnisoPressure, Source_VC, LeftState_VX, RightState_VX, &
          LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
     use ModChromosphere, ONLY: DoExtendTransitionRegion, &
-         get_tesi_c, TeSi_C
+         get_tesi_c, TeSi_CI
     use ModCoronalHeating, ONLY: get_block_heating
     use ModTurbulence, ONLY: CoronalHeating_C, &
          apportion_coronal_heating, get_wave_reflection, &
@@ -751,7 +751,7 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    integer :: i, j, k
+    integer :: i, j, k, iGang
     real :: QPerQtotal_I(nIonFluid)
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
@@ -777,6 +777,13 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
 
+#ifndef _OPENACC
+    iGang = 1
+#else 
+    iGang = iBlock
+#endif   
+
+
     select case(NameVar)
     case('te')
        NameIdlUnit = 'K'
@@ -800,9 +807,9 @@ contains
        end do; end do; end do
 
     case('qrad')
-       call get_tesi_c(iBlock, TeSi_C)
+       call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
+          call get_radiative_cooling(i, j, k, iBlock, TeSi_CI(i,j,k,iGang), &
                RadCooling_C(i,j,k))
           PlotVar_G(i,j,k) = RadCooling_C(i,j,k) &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
@@ -831,7 +838,7 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., &
             DoMonotoneRestrict = .false.)
-       if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+       if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
        call get_block_heating(iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           PlotVar_G(i,j,k) = CoronalHeating_C(i,j,k) &
@@ -845,7 +852,7 @@ contains
           call set_b0_face(iBlock)
           call calc_face_value(iBlock, DoResChangeOnly = .false., &
                DoMonotoneRestrict = .false.)
-          if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+          if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
           call get_block_heating(iBlock)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call apportion_coronal_heating(i, j, k, iBlock, &
