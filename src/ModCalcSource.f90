@@ -154,7 +154,7 @@ contains
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating
     use ModTurbulence,  ONLY: &
-         CoronalHeating_CI, UseAlfvenWaveDissipation, WaveDissipationRate_VC, &
+         CoronalHeating_CI, UseAlfvenWaveDissipation, WaveDissipationRate_VCI, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          KarmanTaylorBeta2AlphaRatio, IsOnAwRepresentative, PoyntingFluxPerB, &
          UseReynoldsDecomposition, SigmaD, UseTransverseTurbulence, &
@@ -502,12 +502,12 @@ contains
                 ModeConversionPlus  = 0.5*DivU_C(i,j,k) - bDotbDotGradU
                 if(UseTurbulentCascade)then
                    bDotGradVAlfven = sign(min(abs(bDotGradVAlfven), 0.5*abs(&
-                        WaveDissipationRate_VC(WaveFirst_,i,j,k) - &
-                        WaveDissipationRate_VC(WaveLast_ ,i,j,k)) ),&
+                        WaveDissipationRate_VCI(WaveFirst_,i,j,k,iGang) - &
+                        WaveDissipationRate_VCI(WaveLast_,i,j,k,iGang)) ),&
                         bDotGradVAlfven)
                    ModeConversionPlus = sign(min(abs(ModeConversionPlus), &
                         sqrt(bDotGradVAlfven**2 + product(&
-                        WaveDissipationRate_VC(:,i,j,k)))), ModeConversionPlus)
+                        WaveDissipationRate_VCI(:,i,j,k,iGang)))), ModeConversionPlus)
                 end if
                 ModeConversionMinus = ModeConversionPlus
                 ModeConversionPlus  = ModeConversionPlus  + bDotGradVAlfven
@@ -597,16 +597,16 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                   Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                  - WaveDissipationRate_VC(:,i,j,k)*&
+                  - WaveDissipationRate_VCI(:,i,j,k,iGang)*&
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
              ! aritmetic average of cascade rates for w_D, if needed
              if(WDiff_>1)Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
-                  - 0.50*sum(WaveDissipationRate_VC(:,i,j,k))*&
+                  - 0.50*sum(WaveDissipationRate_VCI(:,i,j,k,iGang))*&
                   State_VGB(WDiff_,i,j,k,iBlock)
              ! Weighted average of cascade rates for Lperp_, if needed
              if(Lperp_ > 1)Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) +&
                   KarmanTaylorBeta2AlphaRatio*sum( &
-                  WaveDissipationRate_VC(:,i,j,k)*  &
+                  WaveDissipationRate_VCI(:,i,j,k,iGang)*  &
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
                   max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))&
                   *State_VGB(Lperp_,i,j,k,iBlock)
@@ -619,7 +619,7 @@ contains
              if(UseElectronPressure)then
                 call apportion_coronal_heating(i, j, k, iBlock, &
                      State_VGB(:,i,j,k,iBlock), &
-                     WaveDissipationRate_VC(:,i,j,k), CoronalHeating_CI(i,j,k,iGang),&
+                     WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang),&
                      QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
                 Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &

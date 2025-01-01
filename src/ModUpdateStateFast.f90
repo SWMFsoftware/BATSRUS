@@ -55,7 +55,7 @@ module ModUpdateStateFast
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModCoronalHeating, ONLY: UseCoronalHeating
   use ModTurbulence, ONLY: UseAlfvenWaveDissipation, CoronalHeating_CI, &
-       calc_alfven_wave_dissipation, WaveDissipationRate_VC, &
+       calc_alfven_wave_dissipation, WaveDissipationRate_VCI, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
        UseReynoldsDecomposition, UseTurbulentCascade
   use ModUtilities, ONLY: i_gang
@@ -644,25 +644,25 @@ contains
           if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
              ! To be implemented.
              !call turbulent_cascade(i, j, k, iBlock, &
-             !        WaveDissipationRate_VC(:,i,j,k), CoronalHeating_CI(i,j,k,iGang))
+             !        WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang))
           else
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_VC(:,i,j,k),CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_VCI(:,i,j,k,iGang),CoronalHeating_CI(i,j,k,iGang))
           end if
 
           Change_V(WaveFirst_:WaveLast_) = &
                Change_V(WaveFirst_:WaveLast_) &
-               - WaveDissipationRate_VC(:,i,j,k)*&
+               - WaveDissipationRate_VCI(:,i,j,k,iGang)*&
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
 
           ! aritmetic average of cascade rates for w_D, if needed
           if(WDiff_>1)Change_V(WDiff_) = Change_V(WDiff_) &
-               - 0.50*sum(WaveDissipationRate_VC(:,i,j,k))*&
+               - 0.50*sum(WaveDissipationRate_VCI(:,i,j,k,iGang))*&
                State_VGB(WDiff_,i,j,k,iBlock)
           ! Weighted average of cascade rates for Lperp_, if needed
           if(Lperp_ > 1)Change_V(Lperp_) = Change_V(Lperp_) +&
                KarmanTaylorBeta2AlphaRatio*sum( &
-               WaveDissipationRate_VC(:,i,j,k)*  &
+               WaveDissipationRate_VCI(:,i,j,k,iGang)*  &
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
                max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))&
                *State_VGB(Lperp_,i,j,k,iBlock)
@@ -672,7 +672,7 @@ contains
           if(UseElectronPressure)then
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_CI(i,j,k,iGang),&
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang),&
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
              Change_V(Pe_) = Change_V(Pe_) &

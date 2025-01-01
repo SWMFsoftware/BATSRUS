@@ -120,7 +120,7 @@ contains
          DoUpdate_V
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B, r_GB
     use ModCoronalHeating, ONLY: get_block_heating
-    use ModTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VC
+    use ModTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VCI
     use ModChromosphere, ONLY: get_tesi_c, TeSi_CI
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
@@ -209,7 +209,7 @@ contains
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
           if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
-             DtLoss = 1 / maxval(WaveDissipationRate_VC(:,i,j,k))
+             DtLoss = 1 / maxval(WaveDissipationRate_VCI(:,i,j,k,iGang))
              ! The following prevents the wave energies from becoming
              ! negative due to too large loss terms.
              DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*DtLoss/&

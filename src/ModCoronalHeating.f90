@@ -456,7 +456,7 @@ contains
   end subroutine get_photosphere_unsignedflux
   !============================================================================
   subroutine get_block_heating(iBlock)
-    ! Calculate two arrays: CoronalHeating_CI  and   WaveDissipationRate_VC
+    ! Calculate two arrays: CoronalHeating_CI  and   WaveDissipationRate_VCI
     ! If DoExtendTransitionRegion, it the extension factor is applied,
     ! so that in this case TeSi_CI aarray should be set. With these regards
     ! the usual way to call this function is:
@@ -496,19 +496,19 @@ contains
        if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_VC(:,i,j,k),CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_VCI(:,i,j,k,iGang),CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
        end if
        if(DoExtendTransitionRegion)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ExtensionFactorInv = 1/extension_factor(TeSi_CI(i,j,k,iGang))
-             WaveDissipationRate_VC(:,i,j,k) = ExtensionFactorInv*&
-                  WaveDissipationRate_VC(:,i,j,k)
+             WaveDissipationRate_VCI(:,i,j,k,iGang) = ExtensionFactorInv*&
+                  WaveDissipationRate_VCI(:,i,j,k,iGang)
              CoronalHeating_CI(i,j,k,iGang) = ExtensionFactorInv*&
                   CoronalHeating_CI(i,j,k,iGang)
           end do; end do; end do

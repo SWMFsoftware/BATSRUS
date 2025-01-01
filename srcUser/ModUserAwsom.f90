@@ -718,7 +718,7 @@ contains
     use ModCoronalHeating, ONLY: get_block_heating
     use ModTurbulence, ONLY: CoronalHeating_CI, &
          apportion_coronal_heating, get_wave_reflection, &
-         WaveDissipationRate_VC
+         WaveDissipationRate_VCI
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitT_, &
          UnitN_, UnitEnergyDens_, CoulombLog, InvGammaMinus1
     use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
@@ -853,7 +853,7 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_CI(i,j,k,iGang), &
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang), &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              select case(NameVar)
              case('qebyq')

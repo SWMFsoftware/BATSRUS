@@ -42,9 +42,8 @@ module ModTurbulence
 
   ! Arrays for the calculated heat function and dissipated wave energy
   real, public, allocatable :: CoronalHeating_CI(:,:,:,:)
-  real, public :: WaveDissipationRate_VC(WaveFirst_:WaveLast_,&
-       1:nI,1:nJ,1:nK)
-  !$omp threadprivate( CoronalHeating_CI, WaveDissipationRate_VC )
+  real, public, allocatable :: WaveDissipationRate_VCI(:,:,:,:,:)
+  !$omp threadprivate( CoronalHeating_CI, WaveDissipationRate_VCI )
 
   ! Alfven wave speed array, cell-centered
   real, public, allocatable :: AlfvenWaveVel_DC(:,:,:,:)
@@ -202,8 +201,12 @@ contains
     if(.not.allocated(CoronalHeating_CI)) &
          allocate(CoronalHeating_CI(1:nI,1:nJ,1:nK,nGang))
 
+    if(.not.allocated(WaveDissipationRate_VCI)) &
+         allocate(WaveDissipationRate_VCI(WaveFirst_:WaveLast_, &
+         1:nI,1:nJ,1:nK,nGang))
+
     if(.not.UseAlfvenWaves) return
-    
+
     if(.not.DoInit)RETURN
     DoInit = .false.
 
@@ -359,7 +362,7 @@ contains
   end subroutine turbulent_cascade
   !============================================================================
   subroutine get_wave_reflection(iBlock, IsNewBlock)
-    ! Use array WaveDissipationRate_VC. With these regards
+    ! Use array WaveDissipationRate_VCI. With these regards
     ! the usual way to call this function is:
     !
     ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
@@ -389,13 +392,13 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(present(IsNewBlock)) then
-      IsNewBlockAlfven = IsNewBlock
+       IsNewBlockAlfven = IsNewBlock
     else
-      IsNewBlockAlfven = .true.
+       IsNewBlockAlfven = .true.
     end if
 
     iGang = i_gang(iBlock)
-    
+
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if( (.not.Used_GB(i,j,k,iBlock)).or.&
             r_GB(i,j,k, iBlock) < rMinWaveReflection)CYCLE
@@ -421,12 +424,12 @@ contains
 
        ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
        if(UseNewLimiter4Reflection)then
-          DissipationRateDiff =-0.50*(WaveDissipationRate_VC(WaveFirst_,i,j,k)&
-               - WaveDissipationRate_VC(WaveLast_,i,j,k))
+          DissipationRateDiff =-0.50*(WaveDissipationRate_VCI(WaveFirst_,i,j,k,iGang)&
+               - WaveDissipationRate_VCI(WaveLast_,i,j,k,iGang))
           ReflectionRate = sign(min(ReflectionRateImb,&
                abs(DissipationRateDiff)), DissipationRateDiff)
        else
-          DissipationRateMax  = maxval(WaveDissipationRate_VC(:,i,j,k))
+          DissipationRateMax  = maxval(WaveDissipationRate_VCI(:,i,j,k,iGang))
           ! Clip the reflection rate from above with maximum dissipation rate
           ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
 
@@ -452,8 +455,8 @@ contains
        if(UseAlignmentAngle)then
           Cdiss_C(i,j,k) = sqrt(1.0 - AlfvenGradRefl &
                *(ReflectionRate/ReflectionRateImb**2)**2)
-          WaveDissipationRate_VC(:,i,j,k) = &
-               WaveDissipationRate_VC(:,i,j,k)*Cdiss_C(i,j,k)
+          WaveDissipationRate_VCI(:,i,j,k,iGang) = &
+               WaveDissipationRate_VCI(:,i,j,k,iGang)*Cdiss_C(i,j,k)
           CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang)*Cdiss_C(i,j,k)
        end if
     end do; end do; end do
@@ -492,7 +495,7 @@ contains
        end if
        if(nK > 1) then
           GradLogAlfven_D(Dim3_) = 1.0/CellSize_DB(z_,iBlock) &
-            *(LogAlfven_FD(i,j,k+1,Dim3_) - LogAlfven_FD(i,j,k,Dim3_))
+               *(LogAlfven_FD(i,j,k+1,Dim3_) - LogAlfven_FD(i,j,k,Dim3_))
        end if
     else
        GradLogAlfven_D = &
