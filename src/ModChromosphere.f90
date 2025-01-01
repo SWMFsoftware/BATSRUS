@@ -44,6 +44,7 @@ module ModChromosphere
   ! Electron temperature in K:
   real, allocatable :: TeSi_CI(:,:,:,:)
   !$omp threadprivate( TeSi_CI )
+  !$acc declare create(TeSi_CI)
 
 contains
   !============================================================================
@@ -82,7 +83,7 @@ contains
   !============================================================================
 
   subroutine get_tesi_c(iBlock, TeSi_C)
-
+    !$acc routine vector
     use BATL_lib,      ONLY: Xyz_DGB
     use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
     use ModAdvance,    ONLY: State_VGB, p_, Pe_, Rho_
@@ -102,6 +103,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     if(UseMultiIon)then
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
                /sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I) &
@@ -109,6 +111,7 @@ contains
        end do; end do; end do
     elseif(UseIdealEos)then
        if(UseElectronPressure)then
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
@@ -116,6 +119,7 @@ contains
                   MassIon_I(1)/AverageIonCharge             
           end do; end do; end do
        else
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              TeSi_C(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
@@ -124,12 +128,15 @@ contains
           end do; end do; end do
        end if
     else
+#ifndef _OPENACC       
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                TeOut=TeSi_C(i,j,k))
        end do; end do; end do
+#endif       
     end if
 
+#ifndef _OPENACC    
     if(any(TeSi_C < 0)) then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if (TeSi_C(i,j,k) < 0) then
@@ -157,6 +164,7 @@ contains
           endif
        end do; end do; end do
     endif
+#endif    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_tesi_c
   !============================================================================
