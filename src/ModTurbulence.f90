@@ -256,7 +256,7 @@ contains
   !============================================================================
   subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, &
        WaveDissipationRate_V, CoronalHeating)
-
+    !$acc routine seq
     use ModAdvance, ONLY: State_VGB
     use ModB0,      ONLY: B0_DGB
     use ModMain, ONLY: UseB0
