@@ -98,24 +98,24 @@ contains
     if(UseMultiIon)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
-               /sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+               /sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I) &
+               *No2Si_V(UnitTemperature_)
        end do; end do; end do
-       TeSi_C = TeSi_C*No2Si_V(UnitTemperature_)
     elseif(UseIdealEos)then
        if(UseElectronPressure)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
+             TeSi_C(i,j,k) = TeSi_C(i,j,k) * No2Si_V(UnitTemperature_) * &
+                  MassIon_I(1)/AverageIonCharge             
           end do; end do; end do
-          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_) * &
-               MassIon_I(1)/AverageIonCharge
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              TeSi_C(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
+             TeSi_C(i,j,k) = TeSi_C(i,j,k) * No2Si_V(UnitTemperature_) * &
+                  MassIon_I(1)/AverageIonCharge * PePerPtotal             
           end do; end do; end do
-          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_) * &
-               MassIon_I(1)/AverageIonCharge * PePerPtotal
        end if
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
