@@ -122,7 +122,7 @@ contains
     integer:: iGang
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_vxb'
-    !--------------------------------------------------------------------------    
+    !--------------------------------------------------------------------------
     iGang = i_gang(iBlock)
 
     call test_start(NameSub, DoTest, iBlock)
@@ -187,7 +187,7 @@ contains
     ! Apply continuous or fixed boundary conditions at outer boundaries
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'bound_vxb'
-    !--------------------------------------------------------------------------    
+    !--------------------------------------------------------------------------
     iGang = i_gang(iBlock)
 
     call test_start(NameSub, DoTest, iBlock)

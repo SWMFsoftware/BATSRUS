@@ -503,7 +503,7 @@ contains
     ! Coronal Heating
     real :: QPerQtotal_I(nIonFluid)
     real :: QparPerQtotal_I(nIonFluid)
-    real :: QePerQtotal    
+    real :: QePerQtotal
     real :: Ne
 
     logical:: IsConserv
@@ -514,7 +514,7 @@ contains
        if(.not. Used_GB(i,j,k,iBlock)) RETURN
     end if
 
-    Change_V = 0       
+    Change_V = 0
 
     if(UseB .and. UseDivbSource)then
        DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
@@ -638,12 +638,12 @@ contains
     end if
 #endif
 
-    if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then    
+    if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
        if(UseAlfvenWaveDissipation)then
 
           if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
              ! To be implemented.
-             !call turbulent_cascade(i, j, k, iBlock, &
+             ! call turbulent_cascade(i, j, k, iBlock, &
              !        WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang))
           else
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
@@ -765,16 +765,14 @@ contains
 
     ! Modify electron pressure source term to electron entropy if necessary
     ! S(Se) = S(Pe)/rho^(gammaE-1)
-    if(UseElectronPressure .and. UseElectronEntropy)then   
+    if(UseElectronPressure .and. UseElectronEntropy)then
        Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
        Change_V(Se_) = &
             Change_V(Pe_)*Ne**(-GammaElectronMinus1) &
             - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock) &
             *Ne**(-GammaElectron) &
-            *sum(ChargePerMass_I*Change_V(iRhoIon_I))   
+            *sum(ChargePerMass_I*Change_V(iRhoIon_I))
     end if
-
-
 
     ! Add div(Flux) to Change_V
     DivF_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
@@ -791,7 +789,6 @@ contains
     end if
 
     Change_V = Change_V + DivF_V
-
 
     ! Time step for iStage
     if(IsTimeAccurate)then

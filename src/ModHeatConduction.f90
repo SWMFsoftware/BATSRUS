@@ -14,7 +14,7 @@ module ModHeatConduction
   use ModFaceFluxParameters
   use BATL_size, ONLY: nDim, MaxDim
   use omp_lib
-  use ModUtilities, ONLY: i_gang  
+  use ModUtilities, ONLY: i_gang
 
   implicit none
   save
@@ -1151,7 +1151,7 @@ contains
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
        iGang = i_gang(iBlock)
-       
+
 #ifndef _OPENACC
        IsNewBlockTe = .true.
 #endif

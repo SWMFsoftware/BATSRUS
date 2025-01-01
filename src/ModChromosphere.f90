@@ -60,6 +60,7 @@ contains
   end subroutine read_chromosphere_param
   !============================================================================
   subroutine init_chromosphere
+    !--------------------------------------------------------------------------
    if(.not.allocated(TeSi_CI)) then
       allocate(TeSi_CI(nI,nJ,nK,nGang))
    end if
@@ -116,7 +117,7 @@ contains
              TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
              TeSi_C(i,j,k) = TeSi_C(i,j,k) * No2Si_V(UnitTemperature_) * &
-                  MassIon_I(1)/AverageIonCharge             
+                  MassIon_I(1)/AverageIonCharge
           end do; end do; end do
        else
           !$acc loop vector collapse(3) independent
@@ -124,19 +125,19 @@ contains
              TeSi_C(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
              TeSi_C(i,j,k) = TeSi_C(i,j,k) * No2Si_V(UnitTemperature_) * &
-                  MassIon_I(1)/AverageIonCharge * PePerPtotal             
+                  MassIon_I(1)/AverageIonCharge * PePerPtotal
           end do; end do; end do
        end if
     else
-#ifndef _OPENACC       
+#ifndef _OPENACC
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                TeOut=TeSi_C(i,j,k))
        end do; end do; end do
-#endif       
+#endif
     end if
 
-#ifndef _OPENACC    
+#ifndef _OPENACC
     if(any(TeSi_C < 0)) then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if (TeSi_C(i,j,k) < 0) then
@@ -164,7 +165,7 @@ contains
           endif
        end do; end do; end do
     endif
-#endif    
+#endif
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_tesi_c
   !============================================================================

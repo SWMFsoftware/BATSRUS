@@ -66,7 +66,7 @@ contains
     use ModGeometry, ONLY: Used_GB
     use BATL_lib, ONLY: CellVolume_GB
     use ModUtilities, ONLY: i_gang
-    
+
     integer, intent(in):: iBlock, iHemisphere
 
     ! Misc

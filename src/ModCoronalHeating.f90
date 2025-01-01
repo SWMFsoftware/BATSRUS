@@ -13,7 +13,7 @@ module ModCoronalHeating
   use ModMain,       ONLY: nI, nJ, nK
   use ModTurbulence
   use omp_lib
-  use ModUtilities, ONLY: i_gang  
+  use ModUtilities, ONLY: i_gang
 
   implicit none
   SAVE
@@ -141,7 +141,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_coronal_heating'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)    
+    call test_start(NameSub, DoTest)
     call init_turbulence
     if(.not.DoInit)then
        call test_stop(NameSub, DoTest)
@@ -457,7 +457,7 @@ contains
   !============================================================================
   subroutine get_block_heating(iBlock)
     !$acc routine veçtor
-    
+
     ! Calculate two arrays: CoronalHeating_CI  and   WaveDissipationRate_VCI
     ! If DoExtendTransitionRegion, it the extension factor is applied,
     ! so that in this case TeSi_CI aarray should be set. With these regards
@@ -494,16 +494,16 @@ contains
     iGang = i_gang(iBlock)
 
     if(UseAlfvenWaveDissipation)then
-#ifndef _OPENACC       
+#ifndef _OPENACC
        if(IsOnAwRepresentative)call set_alfven_wave_vel_vect(iBlock)
-#endif       
+#endif
        if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
-#ifndef _OPENACC                 
+#ifndef _OPENACC
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
                   WaveDissipationRate_VCI(:,i,j,k,iGang), CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
-#endif          
+#endif
        else
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -511,7 +511,7 @@ contains
                   WaveDissipationRate_VCI(:,i,j,k,iGang),CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
        end if
-#ifndef _OPENACC              
+#ifndef _OPENACC
        if(DoExtendTransitionRegion)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ExtensionFactorInv = 1/extension_factor(TeSi_CI(i,j,k,iGang))
@@ -521,9 +521,9 @@ contains
                   CoronalHeating_CI(i,j,k,iGang)
           end do; end do; end do
        end if
-#endif                        
+#endif
     elseif(UseUnsignedFluxModel)then
-#ifndef _OPENACC       
+#ifndef _OPENACC
        do k=1,nK;do j=1,nJ; do i=1,nI
 
           call get_coronal_heating(i, j, k, iBlock, CoronalHeating_CI(i,j,k,iGang))
@@ -532,14 +532,14 @@ contains
        end do; end do; end do
 #endif
     elseif(UseExponentialHeating)then
-#ifndef _OPENACC              
+#ifndef _OPENACC
        do k=1,nK;do j=1,nJ; do i=1,nI
 
           CoronalHeating_CI(i,j,k,iGang) = HeatingAmplitude &
                *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
 
        end do; end do; end do
-#endif       
+#endif
     else
        CoronalHeating_CI = 0.0
     end if
