@@ -13,6 +13,7 @@ module ModCoronalHeating
   use ModMain,       ONLY: nI, nJ, nK
   use ModTurbulence
   use omp_lib
+  use ModUtilities, ONLY: i_gang
 
   implicit none
   SAVE
@@ -141,7 +142,7 @@ contains
     character(len=*), parameter:: NameSub = 'init_coronal_heating'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(UseAlfvenWaves)call init_turbulence
+    call init_turbulence
     if(.not.DoInit)then
        call test_stop(NameSub, DoTest)
        RETURN
@@ -455,12 +456,15 @@ contains
   end subroutine get_photosphere_unsignedflux
   !============================================================================
   subroutine get_block_heating(iBlock)
-    ! Calculate two arrays: CoronalHeating_C  and   WaveDissipationRate_VC
+    !$acc routine veçtor
+
+    ! Calculate two arrays: CoronalHeating_CI  and   WaveDissipationRate_VCI
     ! If DoExtendTransitionRegion, it the extension factor is applied,
-    ! so that in this case TeSi_C aarray should be set. With these regards
+    ! so that in this case TeSi_CI aarray should be set. With these regards
     ! the usual way to call this function is:
     !
-    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+    ! if(DoExtendTransitionRegion) &
+    ! call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
     ! call get_block_heating(iBlock)
     !
     use ModGeometry,       ONLY: r_GB
@@ -471,11 +475,11 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModB0,         ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
-         TeSi_C
+         TeSi_CI
 
     integer, intent(in) :: iBlock
 
-    integer             :: i, j, k
+    integer             :: i, j, k, iGang
     real :: HeatCh
 
     real :: B_D(3), ExtensionFactorInv
@@ -488,53 +492,68 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+    iGang = i_gang(iBlock)
+
     if(UseAlfvenWaveDissipation)then
+#ifndef _OPENACC
        if(IsOnAwRepresentative)call set_alfven_wave_vel_vect(iBlock)
+#endif
        if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
+#ifndef _OPENACC
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
+#endif
        else
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_VC(:,i,j,k),CoronalHeating_C(i,j,k))
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
        end if
+#ifndef _OPENACC
        if(DoExtendTransitionRegion)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             ExtensionFactorInv = 1/extension_factor(TeSi_C(i,j,k))
-             WaveDissipationRate_VC(:,i,j,k) = ExtensionFactorInv*&
-                  WaveDissipationRate_VC(:,i,j,k)
-             CoronalHeating_C(i,j,k) = ExtensionFactorInv*&
-                  CoronalHeating_C(i,j,k)
+             ExtensionFactorInv = 1/extension_factor(TeSi_CI(i,j,k,iGang))
+             WaveDissipationRate_VCI(:,i,j,k,iGang) = ExtensionFactorInv*&
+                  WaveDissipationRate_VCI(:,i,j,k,iGang)
+             CoronalHeating_CI(i,j,k,iGang) = ExtensionFactorInv*&
+                  CoronalHeating_CI(i,j,k,iGang)
           end do; end do; end do
        end if
-
+#endif
     elseif(UseUnsignedFluxModel)then
-
+#ifndef _OPENACC
        do k=1,nK;do j=1,nJ; do i=1,nI
+          call get_coronal_heating(i, j, k, iBlock, &
+               CoronalHeating_CI(i,j,k,iGang))
 
-          call get_coronal_heating(i, j, k, iBlock, CoronalHeating_C(i,j,k))
-          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) * HeatNormalization
-
+          CoronalHeating_CI(i,j,k,iGang) = &
+               CoronalHeating_CI(i,j,k,iGang) * HeatNormalization
        end do; end do; end do
-
+#endif
     elseif(UseExponentialHeating)then
+#ifndef _OPENACC
        do k=1,nK;do j=1,nJ; do i=1,nI
 
-          CoronalHeating_C(i,j,k) = HeatingAmplitude &
+          CoronalHeating_CI(i,j,k,iGang) = HeatingAmplitude &
                *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
 
        end do; end do; end do
+#endif
     else
-       CoronalHeating_C = 0.0
+       CoronalHeating_CI = 0.0
     end if
 
+#ifndef _OPENACC
     if(DoChHeat) then
        HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) + HeatCh &
+          CoronalHeating_CI(i,j,k,iGang) = &
+               CoronalHeating_CI(i,j,k,iGang) + HeatCh &
                *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
        end do; end do; end do
     end if
@@ -551,18 +570,18 @@ contains
           Bcell = No2Io_V(UnitB_) * norm2(B_D)
 
           FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
-          CoronalHeating_C(i,j,k) = max(CoronalHeating_C(i,j,k), &
+          CoronalHeating_CI(i,j,k,iGang) = max(CoronalHeating_CI(i,j,k,iGang),&
                FractionB * ArHeatFactorCgs * Bcell &
                * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
        end do; end do; end do
     endif
     if(DoExtendTransitionRegion.and..not.UseAlfvenWaveDissipation)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) / &
-               extension_factor(TeSi_C(i,j,k))
+          CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang) / &
+               extension_factor(TeSi_CI(i,j,k,iGang))
        end do; end do; end do
     end if
-
+#endif
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_block_heating
   !============================================================================

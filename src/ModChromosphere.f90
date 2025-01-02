@@ -8,6 +8,7 @@ module ModChromosphere
 
   use BATL_lib, ONLY: &
        test_start, test_stop, nI, nJ, nK
+  use BATL_size, ONLY: nGang
   use ModBatsrusUtility, ONLY: stop_mpi
 
   implicit none
@@ -41,8 +42,9 @@ module ModChromosphere
   real :: TeTransitionRegionTopSi = 4.0e+5 ! [K]
 
   ! Electron temperature in K:
-  real :: TeSi_C(nI,nJ,nK)
-  !$omp threadprivate( TeSi_C )
+  real, allocatable :: TeSi_CI(:,:,:,:)
+  !$omp threadprivate( TeSi_CI )
+  !$acc declare create(TeSi_CI)
 
 contains
   !============================================================================
@@ -57,7 +59,13 @@ contains
 
   end subroutine read_chromosphere_param
   !============================================================================
-
+  subroutine init_chromosphere
+    !--------------------------------------------------------------------------
+   if(.not.allocated(TeSi_CI)) then
+      allocate(TeSi_CI(nI,nJ,nK,nGang))
+   end if
+  end subroutine init_chromosphere
+  !============================================================================
   real function extension_factor(TeSi)
     real, intent(in) :: TeSi    ! Dimensionless
 
@@ -76,7 +84,7 @@ contains
   !============================================================================
 
   subroutine get_tesi_c(iBlock, TeSi_C)
-
+    !$acc routine vector
     use BATL_lib,      ONLY: Xyz_DGB
     use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
     use ModAdvance,    ONLY: State_VGB, p_, Pe_, Rho_
@@ -96,34 +104,40 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     if(UseMultiIon)then
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
-               /sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+               /sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I) &
+               *No2Si_V(UnitTemperature_)
        end do; end do; end do
-       TeSi_C = TeSi_C*No2Si_V(UnitTemperature_)
     elseif(UseIdealEos)then
        if(UseElectronPressure)then
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
+             TeSi_C(i,j,k) = TeSi_C(i,j,k) * No2Si_V(UnitTemperature_) * &
+                  MassIon_I(1)/AverageIonCharge
           end do; end do; end do
-          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_) * &
-               MassIon_I(1)/AverageIonCharge
        else
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              TeSi_C(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
+             TeSi_C(i,j,k) = TeSi_C(i,j,k) * No2Si_V(UnitTemperature_) * &
+                  MassIon_I(1)/AverageIonCharge * PePerPtotal
           end do; end do; end do
-          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_) * &
-               MassIon_I(1)/AverageIonCharge * PePerPtotal
        end if
     else
+#ifndef _OPENACC
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                TeOut=TeSi_C(i,j,k))
        end do; end do; end do
+#endif
     end if
 
+#ifndef _OPENACC
     if(any(TeSi_C < 0)) then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if (TeSi_C(i,j,k) < 0) then
@@ -151,6 +165,7 @@ contains
           endif
        end do; end do; end do
     endif
+#endif
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_tesi_c
   !============================================================================

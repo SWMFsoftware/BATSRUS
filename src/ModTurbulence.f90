@@ -5,6 +5,7 @@
 module ModTurbulence
 
   use BATL_lib, ONLY: test_start, test_stop, MaxDim
+  use BATL_size, ONLY: nGang
   use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
@@ -16,6 +17,7 @@ module ModTurbulence
   use ModTransitionRegion, ONLY: PoyntingFluxPerBSi, LperpTimesSqrtBSi
   use ModWaves,      ONLY: UseAlfvenWaves, UseWavePressure, &
        UseAwRepresentative
+  use ModUtilities,  ONLY: i_gang
   use omp_lib
 
   implicit none
@@ -39,10 +41,10 @@ module ModTurbulence
   real :: Crefl = 0.04
 
   ! Arrays for the calculated heat function and dissipated wave energy
-  real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
-  real, public :: WaveDissipationRate_VC(WaveFirst_:WaveLast_,&
-       1:nI,1:nJ,1:nK)
-  !$omp threadprivate( CoronalHeating_C, WaveDissipationRate_VC )
+  real, public, allocatable :: CoronalHeating_CI(:,:,:,:)
+  real, public, allocatable :: WaveDissipationRate_VCI(:,:,:,:,:)
+  !$omp threadprivate( CoronalHeating_CI, WaveDissipationRate_VCI )
+  !$acc declare create( CoronalHeating_CI, WaveDissipationRate_VCI )
 
   ! Alfven wave speed array, cell-centered
   real, public, allocatable :: AlfvenWaveVel_DC(:,:,:,:)
@@ -85,7 +87,7 @@ contains
   !============================================================================
   subroutine read_turbulence_param(NameCommand)
 
-    use ModAdvance,    ONLY: UseAnisoPressure
+    use ModAdvance,    ONLY: UseAnisoPressure, iTypeUpdate, UpdateOrig_
     use ModReadParam,  ONLY: read_var
 
     integer :: iFluid
@@ -104,6 +106,9 @@ contains
        DoInit = .true.
        call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
        call read_var('Crefl', Crefl)
+
+       ! To do: UseWavePressure does not work with fast update yet.
+       if(iTypeUpdate /= UpdateOrig_) UseWavePressure = .false.
     case('turbulentcascade')
        UseAlfvenWaves  = WaveFirst_ > 1
        UseWavePressure = WaveFirst_ > 1
@@ -194,6 +199,15 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_turbulence'
     !--------------------------------------------------------------------------
+    if(.not.allocated(CoronalHeating_CI)) &
+         allocate(CoronalHeating_CI(1:nI,1:nJ,1:nK,nGang))
+
+    if(.not.allocated(WaveDissipationRate_VCI)) &
+         allocate(WaveDissipationRate_VCI(WaveFirst_:WaveLast_, &
+         1:nI,1:nJ,1:nK,nGang))
+
+    if(.not.UseAlfvenWaves) RETURN
+
     if(.not.DoInit)RETURN
     DoInit = .false.
 
@@ -243,7 +257,7 @@ contains
   !============================================================================
   subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, &
        WaveDissipationRate_V, CoronalHeating)
-
+    !$acc routine seq
     use ModAdvance, ONLY: State_VGB
     use ModB0,      ONLY: B0_DGB
     use ModMain, ONLY: UseB0
@@ -349,10 +363,11 @@ contains
   end subroutine turbulent_cascade
   !============================================================================
   subroutine get_wave_reflection(iBlock, IsNewBlock)
-    ! Use array WaveDissipationRate_VC. With these regards
+    ! Use array WaveDissipationRate_VCI. With these regards
     ! the usual way to call this function is:
     !
-    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+    ! if(DoExtendTransitionRegion) &
+    ! call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
     ! call get_block_heating(iBlock)
     ! call get_wave_reflection(iBlock, IsNewBlock)
     use BATL_size, ONLY: nDim, nI, nJ, nK
@@ -365,7 +380,7 @@ contains
     integer, intent(in) :: iBlock
     logical, optional, intent(inout):: IsNewBlock
 
-    integer :: i, j, k
+    integer :: i, j, k, iGang
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate,  &
          DissipationRateDiff
@@ -379,10 +394,12 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(present(IsNewBlock)) then
-      IsNewBlockAlfven = IsNewBlock
+       IsNewBlockAlfven = IsNewBlock
     else
-      IsNewBlockAlfven = .true.
+       IsNewBlockAlfven = .true.
     end if
+
+    iGang = i_gang(iBlock)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if( (.not.Used_GB(i,j,k,iBlock)).or.&
@@ -409,12 +426,13 @@ contains
 
        ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
        if(UseNewLimiter4Reflection)then
-          DissipationRateDiff =-0.50*(WaveDissipationRate_VC(WaveFirst_,i,j,k)&
-               - WaveDissipationRate_VC(WaveLast_,i,j,k))
+          DissipationRateDiff =-0.50*(&
+               WaveDissipationRate_VCI(WaveFirst_,i,j,k,iGang)&
+               - WaveDissipationRate_VCI(WaveLast_,i,j,k,iGang))
           ReflectionRate = sign(min(ReflectionRateImb,&
                abs(DissipationRateDiff)), DissipationRateDiff)
        else
-          DissipationRateMax  = maxval(WaveDissipationRate_VC(:,i,j,k))
+          DissipationRateMax  = maxval(WaveDissipationRate_VCI(:,i,j,k,iGang))
           ! Clip the reflection rate from above with maximum dissipation rate
           ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
 
@@ -440,9 +458,10 @@ contains
        if(UseAlignmentAngle)then
           Cdiss_C(i,j,k) = sqrt(1.0 - AlfvenGradRefl &
                *(ReflectionRate/ReflectionRateImb**2)**2)
-          WaveDissipationRate_VC(:,i,j,k) = &
-               WaveDissipationRate_VC(:,i,j,k)*Cdiss_C(i,j,k)
-          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)*Cdiss_C(i,j,k)
+          WaveDissipationRate_VCI(:,i,j,k,iGang) = &
+               WaveDissipationRate_VCI(:,i,j,k,iGang)*Cdiss_C(i,j,k)
+          CoronalHeating_CI(i,j,k,iGang) = &
+               CoronalHeating_CI(i,j,k,iGang)*Cdiss_C(i,j,k)
        end if
     end do; end do; end do
 
@@ -480,7 +499,7 @@ contains
        end if
        if(nK > 1) then
           GradLogAlfven_D(Dim3_) = 1.0/CellSize_DB(z_,iBlock) &
-            *(LogAlfven_FD(i,j,k+1,Dim3_) - LogAlfven_FD(i,j,k,Dim3_))
+               *(LogAlfven_FD(i,j,k+1,Dim3_) - LogAlfven_FD(i,j,k,Dim3_))
        end if
     else
        GradLogAlfven_D = &
@@ -631,6 +650,7 @@ contains
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
        State_V, WaveDissipationRate_V, CoronalHeating, &
        QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
+    !$acc routine seq
 
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
@@ -641,7 +661,7 @@ contains
     use ModAdvance, ONLY: nVar, UseAnisoPressure, Bx_, Bz_, Pe_
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
-         TeSi_C
+         TeSi_CI
     use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
          nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
          iPparIon_I
@@ -670,13 +690,17 @@ contains
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te, Pp
     real :: Value_I(6), SqrtRho
 
+    integer :: iGang
+
 #ifndef SCALAR
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
+    iGang = i_gang(iBlock)
+
     if(UseStochasticHeating)then
 
        if(DoExtendTransitionRegion)then
-          ExtensionCoef = extension_factor(TeSi_C(i,j,k))
+          ExtensionCoef = extension_factor(TeSi_CI(i,j,k,iGang))
        else
           ExtensionCoef = 1.0
        end if
@@ -741,6 +765,7 @@ contains
        ! No heavy ion effects in the Linear Landau damping and transit-time
        ! damping yet
        if(UseMultiIon .and. nChargeStateAll==1)then
+#ifndef _OPENACC
           BetaParProton = 2.0*Ppar_I(1)/B2
           Np = RhoProton
           Na = State_V(iRhoIon_I(nIonFluid))/MassIon_I(nIonFluid)
@@ -777,6 +802,7 @@ contains
              DampingPar_I(nIonFluid) = Value_I(3)
              DampingElectron = Value_I(2)
           end if
+#endif
        else
           Pp = P_I(1)
           TeByTp = State_V(Pe_)/Pp

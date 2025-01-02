@@ -17,12 +17,12 @@ module ModUpdateStateFast
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
-       ChargePerMass_I
+       ChargePerMass_I, iPIon_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB, Vdt_, iTypeUpdate, UpdateFast_, UseRotatingFrame, &
-       UseElectronPressure
+       UseElectronPressure, DoUpdate_V, nSource, UseAnisoPressure
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_, InFlowBC_, FixedBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -53,6 +53,12 @@ module ModUpdateStateFast
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
   use ModBatsrusUtility, ONLY: stop_mpi
+  use ModCoronalHeating, ONLY: UseCoronalHeating
+  use ModTurbulence, ONLY: UseAlfvenWaveDissipation, CoronalHeating_CI, &
+       calc_alfven_wave_dissipation, WaveDissipationRate_VCI, &
+       KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
+       UseReynoldsDecomposition, UseTurbulentCascade
+  use ModUtilities, ONLY: i_gang
 
   implicit none
 
@@ -65,6 +71,8 @@ module ModUpdateStateFast
   public:: set_cell_boundary_for_block ! set cell bounary for a block
 
   logical, parameter:: UseAlfvenWaves  = WaveFirst_ > 1
+
+  integer, parameter:: Se_ = Pe_
 
   logical:: DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny
   !$acc declare create (DoTestUpdate, DoTestFlux, DoTestSource, DoTestAny)
@@ -233,11 +241,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-#ifdef _OPENACC
-       iGang = iBlock
-#else
-       iGang = 1
-#endif
+       iGang = i_gang(iBlock)
 
        if(nOrder > 1 .and. UseAccurateResChange .and. nLevelMax > nLevelMin) &
             call correct_monotone_restrict(iBlock)
@@ -493,7 +497,14 @@ contains
     logical, intent(in):: IsBodyBlock
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar, iVarLast
-    real:: DivU, DivB, DivE, DivF, DtLocal, Change_V(nFlux), Force_D(3)
+    real:: DivU, DivB, DivE, DivF, DtLocal
+    real:: Change_V(nFlux), DivF_V(nFlux), Force_D(3)
+
+    ! Coronal Heating
+    real :: QPerQtotal_I(nIonFluid)
+    real :: QparPerQtotal_I(nIonFluid)
+    real :: QePerQtotal
+    real :: Ne
 
     logical:: IsConserv
 
@@ -503,12 +514,7 @@ contains
        if(.not. Used_GB(i,j,k,iBlock)) RETURN
     end if
 
-    Change_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
-         -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
-    if(nDim > 1) Change_V = Change_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
-         -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
-    if(nDim > 2) Change_V = Change_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
-         -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
+    Change_V = 0
 
     if(UseB .and. UseDivbSource)then
        DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
@@ -561,6 +567,7 @@ contains
 #endif
 
     end if
+
     if(UseNonConservative)then
        ! Add -(g-1)*p*div(u) source term
        DivU = Flux_VXI(UnFirst_,i+1,j,k,iGang) - Flux_VXI(UnFirst_,i,j,k,iGang)
@@ -631,6 +638,74 @@ contains
     end if
 #endif
 
+    if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
+       if(UseAlfvenWaveDissipation)then
+
+          if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
+             ! To be implemented.
+             ! call turbulent_cascade(i, j, k, iBlock, &
+             !        WaveDissipationRate_VCI(:,i,j,k,iGang), &
+             !        CoronalHeating_CI(i,j,k,iGang))
+          else
+             call calc_alfven_wave_dissipation(i, j, k, iBlock, &
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang))
+          end if
+
+          Change_V(WaveFirst_:WaveLast_) = &
+               Change_V(WaveFirst_:WaveLast_) &
+               - WaveDissipationRate_VCI(:,i,j,k,iGang)*&
+               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+
+          ! aritmetic average of cascade rates for w_D, if needed
+          if(WDiff_>1)Change_V(WDiff_) = Change_V(WDiff_) &
+               - 0.50*sum(WaveDissipationRate_VCI(:,i,j,k,iGang))*&
+               State_VGB(WDiff_,i,j,k,iBlock)
+          ! Weighted average of cascade rates for Lperp_, if needed
+          if(Lperp_ > 1)Change_V(Lperp_) = Change_V(Lperp_) +&
+               KarmanTaylorBeta2AlphaRatio*sum( &
+               WaveDissipationRate_VCI(:,i,j,k,iGang)*  &
+               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
+               max(1e-30,sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))&
+               *State_VGB(Lperp_,i,j,k,iBlock)
+       end if ! UseAlfvenWaveDissipation
+
+       if(UseCoronalHeating .and. DoUpdate_V(p_))then
+          if(UseElectronPressure)then
+             call apportion_coronal_heating(i, j, k, iBlock, &
+                  State_VGB(:,i,j,k,iBlock), &
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang),&
+                  QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
+
+             Change_V(Pe_) = Change_V(Pe_) &
+                  + CoronalHeating_CI(i,j,k,iGang)*&
+                  GammaElectronMinus1*QePerQtotal
+
+             Change_V(iPIon_I) = Change_V(iPIon_I) &
+                  + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I &
+                  *GammaMinus1_I(1:nIonFluid)
+             Change_V(Energy_:Energy_-1+nIonFluid) = &
+                  Change_V(Energy_:Energy_-1+nIonFluid) &
+                  + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I
+
+             if(UseAnisoPressure)then
+                do iFluid = 1, nIonFluid
+                   Change_V(iPparIon_I(iFluid)) = &
+                        Change_V(iPparIon_I(iFluid)) &
+                        + CoronalHeating_CI(i,j,k,iGang)*&
+                        QparPerQtotal_I(iFluid)*2
+                end do
+             end if
+          else
+             Change_V(p_) = Change_V(p_) &
+                  + CoronalHeating_CI(i,j,k,iGang)*GammaMinus1
+             Change_V(Energy_) = Change_V(Energy_) &
+                  + CoronalHeating_CI(i,j,k,iGang)
+          end if
+       end if ! UseCoronalHeating
+    end if
+
     if(UseGravity .or. UseRotatingFrame)then
 
        if(UseGravity)then
@@ -692,6 +767,33 @@ contains
        write(*,*)'Change_V after rotating frame', Change_V(iVarTest)
     end if
 #endif
+
+    ! Modify electron pressure source term to electron entropy if necessary
+    ! S(Se) = S(Pe)/rho^(gammaE-1)
+    if(UseElectronPressure .and. UseElectronEntropy)then
+       Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
+       Change_V(Se_) = &
+            Change_V(Pe_)*Ne**(-GammaElectronMinus1) &
+            - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock) &
+            *Ne**(-GammaElectron) &
+            *sum(ChargePerMass_I*Change_V(iRhoIon_I))
+    end if
+
+    ! Add div(Flux) to Change_V
+    DivF_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
+         -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
+    if(nDim > 1) DivF_V = DivF_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
+         -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
+    if(nDim > 2) DivF_V = DivF_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
+         -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
+
+    if(IsCartesian)then
+       DivF_V = DivF_V/CellVolume_B(iBlock)
+    else
+       DivF_V = DivF_V/CellVolume_GB(i,j,k,iBlock)
+    end if
+
+    Change_V = Change_V + DivF_V
 
     ! Time step for iStage
     if(IsTimeAccurate)then
@@ -830,12 +932,10 @@ contains
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang, iVar
     logical:: DoTestSide
-#ifndef _OPENACC
+
     !--------------------------------------------------------------------------
-    iGang = 1
-#else
-    iGang = iBlock
-#endif
+    iGang = i_gang(iBlock)
+
     call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
@@ -879,12 +979,10 @@ contains
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang, iVar
     logical:: DoTestSide
-#ifndef _OPENACC
+
     !--------------------------------------------------------------------------
-    iGang = 1
-#else
-    iGang = iBlock
-#endif
+    iGang = i_gang(iBlock)
+
     call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
@@ -928,12 +1026,9 @@ contains
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang, iVar
     logical:: DoTestSide
-#ifndef _OPENACC
     !--------------------------------------------------------------------------
-    iGang = 1
-#else
-    iGang = iBlock
-#endif
+    iGang = i_gang(iBlock)
+
     call get_normal(3, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)

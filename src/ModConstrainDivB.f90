@@ -17,6 +17,7 @@ module ModConstrainDivB
 
   use ModSize
   use ModIO,     ONLY: iUnitOut, write_prefix
+  use ModUtilities, ONLY: i_gang
 
   implicit none
   SAVE
@@ -122,10 +123,8 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_vxb'
     !--------------------------------------------------------------------------
-    iGang = 1
-#ifdef _OPENACC
-    iGang = iBlock
-#endif
+    iGang = i_gang(iBlock)
+
     call test_start(NameSub, DoTest, iBlock)
     if(iBlock==iBlockTest)then
     else
@@ -189,10 +188,8 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'bound_vxb'
     !--------------------------------------------------------------------------
-    iGang = 1
-#ifdef _OPENACC
-    iGang = iBlock
-#endif
+    iGang = i_gang(iBlock)
+
     call test_start(NameSub, DoTest, iBlock)
     if(DiLevel_EB(1,iBlock)==Unset_)then
        do k=1,nK+1; do j=1,nJ

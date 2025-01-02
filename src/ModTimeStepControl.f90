@@ -120,13 +120,14 @@ contains
          DoUpdate_V
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B, r_GB
     use ModCoronalHeating, ONLY: get_block_heating
-    use ModTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VC
-    use ModChromosphere, ONLY: get_tesi_c, TeSi_C
+    use ModTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VCI
+    use ModChromosphere, ONLY: get_tesi_c, TeSi_CI
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
     use ModNumConst, ONLY: cHalfPi
     use ModCoarseAxis, ONLY: UseCoarseAxis, calc_coarse_axis_timestep,&
          NorthHemiSph_, SouthHemiSph_
+    use ModUtilities, ONLY: i_gang
 
     ! Calculate stable time step DtMax_CB for each cell in block iBlock.
     ! If IsPartLocal is present, limit DtMax_CB with Dt/Cfl.
@@ -144,11 +145,8 @@ contains
     character(len=*), parameter:: NameSub = 'calc_timestep'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-#ifdef _OPENACC
-    iGang = iBlock
-#else
-    iGang = 1
-#endif
+
+    iGang = i_gang(iBlock)
 
     if(DoTest)write(*,*) NameSub,' starting, IsNoBody_B=', IsNoBody_B(iBlock)
 
@@ -201,18 +199,18 @@ contains
 #endif
     end if
 
-#ifndef _OPENACC
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
     if(UseAlfvenWaveDissipation .and. DoUpdate_V(WaveFirst_) )then
-       call get_tesi_c(iBlock, TeSi_C)
+       call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
        call get_block_heating(iBlock)
 
+       !$acc loop vector collapse(3) private(DtLoss) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
           if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
-             DtLoss = 1 / maxval(WaveDissipationRate_VC(:,i,j,k))
+             DtLoss = 1 / maxval(WaveDissipationRate_VCI(:,i,j,k,iGang))
              ! The following prevents the wave energies from becoming
              ! negative due to too large loss terms.
              DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*DtLoss/&
@@ -220,6 +218,8 @@ contains
           end if
        end do; end do; end do
     end if
+
+#ifndef _OPENACC
     if(UseUserTimeStep) call user_calc_timestep(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' Vdt_X(iTest:iTest+1)=', &

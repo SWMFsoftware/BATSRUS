@@ -14,6 +14,7 @@ module ModWriteLogSatFile
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
+  use ModUtilities, ONLY: i_gang
 
   implicit none
 
@@ -586,7 +587,7 @@ contains
       use ModFaceBoundary, ONLY: ratioOH
       use ModPhysics,     ONLY: Gbody
       use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
-      use ModChromosphere, ONLY: get_tesi_c, TeSi_C
+      use ModChromosphere, ONLY: get_tesi_c, TeSi_CI
 
       ! Local variables
       real:: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, Value
@@ -594,7 +595,7 @@ contains
       real:: FullB_DG(3,0:nI+1,0:nJ+1,0:nK+1)
       real:: Convert_DD(3,3)
 
-      integer:: jVar
+      integer:: jVar, iGang
       character(len=lNameLogVar):: NameLogVarLower
       !------------------------------------------------------------------------
       select case(NameLogVar)
@@ -758,10 +759,13 @@ contains
       case('radcool')
          do iBlock = 1, nBlock
             if (UnUsed_B(iBlock))CYCLE
-            call get_tesi_c(iBlock, TeSi_C)
+
+            iGang = i_gang(iBlock)
+
+            call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
             do k = 1, nK; do j=1,nJ; do i=1, nI
-               call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
-                    RadCooling_C(i,j,k))
+               call get_radiative_cooling(i, j, k, iBlock, &
+                    TeSi_CI(i,j,k,iGang), RadCooling_C(i,j,k))
                Tmp1_GB(i,j,k,iBlock) = RadCooling_C(i,j,k)
             end do; end do; end do
          end do

@@ -140,7 +140,7 @@ contains
     use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc_param
     use ModRadiativeCooling, ONLY: UseRadCooling,&
          read_cooling_param, check_cooling_param
-    use ModChromosphere, ONLY: read_chromosphere_param
+    use ModChromosphere, ONLY: read_chromosphere_param, init_chromosphere
     use ModWaves, ONLY: read_waves_param, check_waves
     use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
     use ModSaMhd, ONLY: read_samhd_param
@@ -446,6 +446,8 @@ contains
 
        if(UseCoronalHeating)call init_coronal_heating
        call check_cooling_param
+
+       call init_chromosphere
 
        ! Initialize threaded field line module (lower corona)
        if(UseFieldLineThreads .and. IsFirstSession)call init_threaded_lc
