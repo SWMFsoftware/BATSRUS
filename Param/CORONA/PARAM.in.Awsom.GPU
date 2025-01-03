@@ -64,22 +64,19 @@ parcond			TypeSemiImplicit
 #TEST
 krylov			StringTest
 
-
 #POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi
 
 #CORONALHEATING
-alfvenwavedissipation	TypeCoronalHeating
-7.5E4			LperpTimesSqrtBSi (read for alfvenwavedissipation only)
-0.04			Crefl             (read for alfvenwavedissipation only)
-
+alfvenwavedissipation		TypeCoronalHeating
+7.5E4			LperpTimesSqrtBSi
+0.04			Crefl
 
 CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 F			UseReynoldsDecomposition
-
 
 #RADIATIVECOOLING
 T			UseRadCooling
