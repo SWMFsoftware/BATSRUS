@@ -27,6 +27,7 @@ module ModCoronalHeating
   public :: get_block_heating
 
   logical, public :: UseCoronalHeating = .false.
+  !$acc declare create(UseCoronalHeating)
 
   ! Exponential Model ---------
   ! Variables and parameters for various heating models
@@ -111,6 +112,7 @@ contains
           call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
        end select
+       !$acc update device(UseCoronalHeating)
     case("#ACTIVEREGIONHEATING")
        call read_var('UseArComponent', UseArComponent)
        if(UseArComponent) then
@@ -456,7 +458,7 @@ contains
   end subroutine get_photosphere_unsignedflux
   !============================================================================
   subroutine get_block_heating(iBlock)
-    !$acc routine veçtor
+    !$acc routine vector
 
     ! Calculate two arrays: CoronalHeating_CI  and   WaveDissipationRate_VCI
     ! If DoExtendTransitionRegion, it the extension factor is applied,
@@ -525,8 +527,9 @@ contains
           end do; end do; end do
        end if
 #endif
-    elseif(UseUnsignedFluxModel)then
+
 #ifndef _OPENACC
+    elseif(UseUnsignedFluxModel)then
        do k=1,nK;do j=1,nJ; do i=1,nI
           call get_coronal_heating(i, j, k, iBlock, &
                CoronalHeating_CI(i,j,k,iGang))
@@ -534,9 +537,7 @@ contains
           CoronalHeating_CI(i,j,k,iGang) = &
                CoronalHeating_CI(i,j,k,iGang) * HeatNormalization
        end do; end do; end do
-#endif
     elseif(UseExponentialHeating)then
-#ifndef _OPENACC
        do k=1,nK;do j=1,nJ; do i=1,nI
 
           CoronalHeating_CI(i,j,k,iGang) = HeatingAmplitude &

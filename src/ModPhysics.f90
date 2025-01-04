@@ -82,6 +82,7 @@ module ModPhysics
   real:: PePerPtotal              = 0.0
   real:: IonMassPerCharge         = 1.0
   !$acc declare create(AverageIonCharge, ElectronPressureRatio, PePerPtotal)
+  !$acc declare create(IonMassPerCharge)
 
   ! Quantities for reduced mass and collision frequencies
   real:: MassIonElectron_I(nIonFluid+1)
@@ -175,7 +176,7 @@ module ModPhysics
   real:: pMinDim_I(nFluid)   = -1.0, pMin_I(nFluid)
   real:: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
   logical:: UseRhoMin, UsePMin
-  !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
+  !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin, TMin_I)
 
   ! Minimum threshold for radial velocity
   real:: SpeedMinDim, SpeedMin, rSpeedMin
@@ -791,13 +792,14 @@ contains
     !$acc update device(CellState_VI)
     !$acc update device(FaceState_VI)
 
-    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, PeMin)
+    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, PeMin, TMin_I)
     !$acc update device(OmegaBody, Bdp)
     !$acc update device(gBody)
 
     !$acc update device(PolarRho_I, PolarP_I)
 
     !$acc update device(MassIon_I, ChargeIon_I, ChargePerMass_I)
+    !$acc update device(IonMassPerCharge)
 
     !$acc update device(CollisionCoef_II)
 
