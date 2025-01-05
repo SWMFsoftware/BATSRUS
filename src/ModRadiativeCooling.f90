@@ -52,6 +52,8 @@ contains
     else
        call read_var('TeTransitionRegionSi', TeTransitionRegionTopSi)
     end if
+
+    !$acc update device(DoExtendTransitionRegion)
     call test_stop(NameSub, DoTest)
 
   end subroutine read_cooling_param

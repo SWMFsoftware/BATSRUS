@@ -32,6 +32,7 @@ module ModAdvance
   integer             :: nVarUpdate = nVar
   integer, allocatable:: iVarUpdate_I(:)
   logical::              DoUpdate_V(nVar) = .true.
+  !$acc declare create(DoUpdate_V)
 
   ! Magneto-friction algorithm parameters
   logical:: UseMagFriction = .false.

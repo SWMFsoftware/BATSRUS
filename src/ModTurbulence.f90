@@ -27,6 +27,7 @@ module ModTurbulence
   !$acc declare create(IsOnAwRepresentative)
 
   logical :: UseTurbulentCascade = .false.
+  !$acc declare create(UseTurbulentCascade)
   real    :: rMinWaveReflection = 0.0
   logical :: UseNewLimiter4Reflection
 
@@ -39,6 +40,7 @@ module ModTurbulence
   logical :: UseAlfvenWaveDissipation = .false.
   real    :: LperpTimesSqrtB
   real :: Crefl = 0.04
+  !$acc declare create(UseAlfvenWaveDissipation, LperpTimesSqrtB, Crefl)
 
   ! Arrays for the calculated heat function and dissipated wave energy
   real, public, allocatable :: CoronalHeating_CI(:,:,:,:)
@@ -59,6 +61,8 @@ module ModTurbulence
   real :: QionRatio_I(nIonFluid) = 0.6
   real :: QionParRatio_I(nIonFluid) = 0.0
   real :: QeRatio = 0.4
+  !$acc declare create(UseUniformHeatPartition)
+  !$acc declare create(QionRatio_I, QionParRatio_I, QeRatio)
 
   ! Dimensionless parameters for stochastic heating
   logical :: UseStochasticHeating = .true.
@@ -66,6 +70,9 @@ module ModTurbulence
   real :: StochasticAmplitude  = 0.18
   real :: StochasticExponent2  = 0.21
   real :: StochasticAmplitude2 = 0.0 ! 1.17
+  !$acc declare create(UseStochasticHeating)
+  !$acc declare create(StochasticExponent, StochasticAmplitude)
+  !$acc declare create(StochasticExponent2, StochasticAmplitude2)
 
   logical :: UseNonlinearAwDissipation = .false.
 
@@ -78,6 +85,7 @@ module ModTurbulence
   ! The normalized energy difference:
   ! SigmaD = (kinetic - magnetic)/(kinetic + magnetic)
   logical :: UseReynoldsDecomposition = .false.
+  !$acc declare create(UseReynoldsDecomposition)
   logical :: UseTransverseTurbulence = .true.
   real    :: SigmaD = -1.0/3.0
   real    :: KarmanTaylorAlpha = 1.0
@@ -124,6 +132,7 @@ contains
           call read_var(&
                'UseReynoldsDecomposition', UseNewLimiter4Reflection)
        end if
+       !$acc update device(UseTurbulentCascade)
     case('usmanov')
        UseAlfvenWaves  = WaveFirst_ > 1
        UseWavePressure = WaveFirst_ > 1
@@ -161,6 +170,8 @@ contains
              end do
           end if
           QeRatio = 1.0 - sum(QionRatio_I)
+          !$acc update device(UseUniformHeatPartition)
+          !$acc update device(QionRatio_I, QionParRatio_I, QeRatio)
        case('stochasticheating')
           UseStochasticHeating = .true.
           ! Stochastic heating when Beta_proton is below 1
@@ -185,6 +196,14 @@ contains
        call stop_mpi(NameSub//': unknown command = ' &
             // NameCommand)
     end select
+
+    !$acc update device(UseAlfvenWaveDissipation, LperpTimesSqrtB, Crefl)
+
+    !$acc update device(UseStochasticHeating)
+    !$acc update device(StochasticExponent, StochasticAmplitude)
+    !$acc update device(StochasticExponent2, StochasticAmplitude2)
+
+    !$acc update device(UseReynoldsDecomposition)
 
     call test_stop(NameSub, DoTest)
   end subroutine read_turbulence_param
@@ -271,9 +290,11 @@ contains
     character(len=*), parameter:: NameSub = 'calc_alfven_wave_dissipation'
     !--------------------------------------------------------------------------
     if(IsOnAwRepresentative)then
+#ifndef _OPENACC
        Coef = 2*sqrt(PoyntingFluxPerB*norm2(AlfvenWaveVel_DC(:,i,j,k)))&
             /LperpTimesSqrtB
        SqrtRho = PoyntingFluxPerB*sqrt(State_VGB(Rho_,i,j,k,iBlock))
+#endif
     else
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -700,7 +721,9 @@ contains
     if(UseStochasticHeating)then
 
        if(DoExtendTransitionRegion)then
+#ifndef _OPENACC
           ExtensionCoef = extension_factor(TeSi_CI(i,j,k,iGang))
+#endif
        else
           ExtensionCoef = 1.0
        end if
@@ -742,8 +765,10 @@ contains
        Wplus  = State_V(WaveFirst_)
        Wminus = State_V(WaveLast_)
        if(IsOnAwRepresentative)then
+#ifndef _OPENACC
           SqrtRho = PoyntingFluxPerB*sqrt(RhoProton)
           Wplus = WPlus*SqrtRho; Wminus = Wminus*SqrtRho
+#endif
        end if
 
        Wmajor = max(Wplus, Wminus)

@@ -25,6 +25,7 @@ module ModChromosphere
   ! TRANSITION REGION
 
   logical :: DoExtendTransitionRegion = .false.
+  !$acc declare create(DoExtendTransitionRegion)
 
   ! The following variables are meaningful if
   ! DoExtendTransitionRegion=.true.
