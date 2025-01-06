@@ -756,8 +756,7 @@ contains
     real :: QPerQtotal_I(nIonFluid)
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
-    real :: Coef
-    logical :: IsNewBlockAlfven
+    real :: Coef    
 
     integer :: iFace, jFace, kFace, iDir, iMax, jMax, kMax, iLeft, jLeft, kLeft
     real, allocatable :: HeatFlux_DF(:,:,:,:)
@@ -818,8 +817,7 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., &
             DoMonotoneRestrict = .false.)
-       IsNewBlockAlfven = .true.
-       call get_wave_reflection(iBlock, IsNewBlockAlfven)
+       call get_wave_reflection(iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           PlotVar_G(i,j,k) = Source_VC(WaveLast_,i,j,k) &
                /sqrt(State_VGB(WaveFirst_,i,j,k,iBlock) &

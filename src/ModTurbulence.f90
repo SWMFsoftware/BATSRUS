@@ -4,8 +4,9 @@
 
 module ModTurbulence
 
-  use BATL_lib, ONLY: test_start, test_stop, MaxDim
-  use BATL_size, ONLY: nGang
+  use BATL_lib, ONLY: test_start, test_stop, MaxDim, &
+       x_, y_, z_, Dim1_, Dim2_, Dim3_
+  use BATL_size, ONLY: nGang, nDim
   use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
@@ -53,6 +54,10 @@ module ModTurbulence
   real, public, allocatable :: AlfvenWaveVel_DC(:,:,:,:)
   !$omp threadprivate(AlfvenWaveVel_DC)
 
+  real, allocatable :: LogAlfven_FD(:,:,:,:)
+  !$omp threadprivate(LogAlfven_FD)
+
+  
   character(len=lStringLine) :: TypeHeatPartitioning
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
   integer :: iTableHeatPartition = -1
@@ -215,6 +220,7 @@ contains
     use ModMultiFluid,  ONLY: UseMultiIon, nIonFluid
     use ModLookupTable, ONLY: i_lookup_table
     use ModVarIndexes,  ONLY: nChargeStateAll
+    use BATL_size,      ONLY: j0_, nJp1_, k0_, nKp1_
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_turbulence'
@@ -226,6 +232,9 @@ contains
          allocate(WaveDissipationRate_VCI(WaveFirst_:WaveLast_, &
          1:nI,1:nJ,1:nK,nGang))
 
+    if(.not. allocated(LogAlfven_FD)) &
+         allocate(LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim))
+    
     if(.not.UseAlfvenWaves) RETURN
 
     if(.not.DoInit)RETURN
@@ -386,23 +395,22 @@ contains
          WaveDissipationRate_V*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
   end subroutine turbulent_cascade
   !============================================================================
-  subroutine get_wave_reflection(iBlock, IsNewBlock)
+  subroutine get_wave_reflection(iBlock)
     ! Use array WaveDissipationRate_VCI. With these regards
     ! the usual way to call this function is:
     !
     ! if(DoExtendTransitionRegion) &
     ! call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
     ! call get_block_heating(iBlock)
-    ! call get_wave_reflection(iBlock, IsNewBlock)
-    use BATL_size, ONLY: nDim, nI, nJ, nK
+    ! call get_wave_reflection(iBlock)
+    use BATL_size, ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0, ONLY: B0_DGB
     use ModGeometry, ONLY: Used_GB, r_GB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
-    integer, intent(in) :: iBlock
-    logical, optional, intent(inout):: IsNewBlock
+    integer, intent(in) :: iBlock    
 
     integer :: i, j, k, iGang
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
@@ -410,27 +418,21 @@ contains
          DissipationRateDiff
     real :: EwavePlus, EwaveMinus
     real :: AlfvenGradRefl, ReflectionRateImb
-    logical :: IsNewBlockAlfven
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_wave_reflection'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(present(IsNewBlock)) then
-       IsNewBlockAlfven = IsNewBlock
-    else
-       IsNewBlockAlfven = .true.
-    end if
-
     iGang = i_gang(iBlock)
-
+    
+    call get_log_alfven_speed
+    
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if( (.not.Used_GB(i,j,k,iBlock)).or.&
             r_GB(i,j,k, iBlock) < rMinWaveReflection)CYCLE
 
-       call get_grad_log_alfven_speed(i, j, k, iBlock, IsNewBlockAlfven, &
-            GradLogAlfven_D)
+       call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
        call get_curl_u(i, j, k, iBlock, CurlU_D)
 
        if(UseB0)then
@@ -492,27 +494,16 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_wave_reflection
   !============================================================================
-  subroutine get_grad_log_alfven_speed(i, j, k, iBlock, IsNewBlockAlfven, &
-       GradLogAlfven_D)
+  subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
     use BATL_lib, ONLY: IsCartesianGrid, &
-         CellSize_DB, FaceNormal_DDFB, CellVolume_GB, &
-         x_, y_, z_, Dim1_, Dim2_, Dim3_
-    use BATL_size, ONLY: nDim, nI, j0_, nJp1_, k0_, nKp1_
+         CellSize_DB, FaceNormal_DDFB, CellVolume_GB         
 
     integer, intent(in) :: i, j, k, iBlock
-    logical, intent(inout) :: IsNewBlockAlfven
     real, intent(out) :: GradLogAlfven_D(nDim)
-
-    real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
-    !$omp threadprivate(LogAlfven_FD)
 
     character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------
-    if(IsNewBlockAlfven)then
-       call get_log_alfven_speed
-       IsNewBlockAlfven = .false.
-    end if
 
     if(IsCartesianGrid)then
        GradLogAlfven_D(Dim1_) = 1.0/CellSize_DB(x_,iBlock) &
@@ -548,58 +539,54 @@ contains
 
        GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
     end if
-
-  contains
-    !==========================================================================
-    subroutine get_log_alfven_speed
-
-      use ModAdvance, ONLY: &
-           LeftState_VX, LeftState_VY, LeftState_VZ,  &
-           RightState_VX, RightState_VY, RightState_VZ
-      use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
-      use ModMain, ONLY: UseB0
-      use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
-
-      integer :: i, j, k
-      real :: Rho, FullB_D(3)
-      !------------------------------------------------------------------------
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-         FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
-              + RightState_VX(Bx_:Bz_,i,j,k))
-         if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
-         Rho = 0.5*(LeftState_VX(Rho_,i,j,k) &
-              +     RightState_VX(Rho_,i,j,k))
-         LogAlfven_FD(i,j,k,x_) = 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
-      end do; end do; end do
-
-      if(nJ > 1)then
-         do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-            FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
-                 + RightState_VY(Bx_:Bz_,i,j,k))
-            if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
-            Rho = 0.5*(LeftState_VY(Rho_,i,j,k) &
-                 +     RightState_VY(Rho_,i,j,k))
-            LogAlfven_FD(i,j,k,Dim2_) = &
-                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
-         end do; end do; end do
-      end if
-
-      if(nK > 1)then
-         do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-            FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
-                 + RightState_VZ(Bx_:Bz_,i,j,k))
-            if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
-            Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) &
-                 +     RightState_VZ(Rho_,i,j,k))
-            LogAlfven_FD(i,j,k,Dim3_) = &
-                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
-         end do; end do; end do
-      end if
-
-    end subroutine get_log_alfven_speed
-    !==========================================================================
   end subroutine get_grad_log_alfven_speed
-  !============================================================================
+  !============================================================================   
+  subroutine get_log_alfven_speed
+    use ModAdvance, ONLY: &
+         LeftState_VX, LeftState_VY, LeftState_VZ,  &
+         RightState_VX, RightState_VY, RightState_VZ
+    use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+    use ModMain, ONLY: UseB0
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
+
+    integer :: i, j, k
+    real :: Rho, FullB_D(3)
+    !------------------------------------------------------------------------
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+       FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
+            + RightState_VX(Bx_:Bz_,i,j,k))
+       if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
+       Rho = 0.5*(LeftState_VX(Rho_,i,j,k) &
+            +     RightState_VX(Rho_,i,j,k))
+       LogAlfven_FD(i,j,k,x_) = 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+    end do; end do; end do
+
+    if(nJ > 1)then
+       do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+          FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
+               + RightState_VY(Bx_:Bz_,i,j,k))
+          if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
+          Rho = 0.5*(LeftState_VY(Rho_,i,j,k) &
+               +     RightState_VY(Rho_,i,j,k))
+          LogAlfven_FD(i,j,k,Dim2_) = &
+               0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+       end do; end do; end do
+    end if
+
+    if(nK > 1)then
+       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+          FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
+               + RightState_VZ(Bx_:Bz_,i,j,k))
+          if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
+          Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) &
+               +     RightState_VZ(Rho_,i,j,k))
+          LogAlfven_FD(i,j,k,Dim3_) = &
+               0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+       end do; end do; end do
+    end if
+
+  end subroutine get_log_alfven_speed
+  !==========================================================================
   subroutine get_curl_u(i, j, k, iBlock, CurlU_D)
 
     use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
