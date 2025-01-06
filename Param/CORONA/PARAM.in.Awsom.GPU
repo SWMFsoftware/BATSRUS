@@ -67,12 +67,12 @@ krylov			StringTest
 #POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi
 
-#CORONALHEATING
+CORONALHEATING
 alfvenwavedissipation		TypeCoronalHeating
 7.5E4			LperpTimesSqrtBSi
 0.04			Crefl
 
-CORONALHEATING
+#CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
