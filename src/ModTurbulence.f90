@@ -5,7 +5,7 @@
 module ModTurbulence
 
   use BATL_lib, ONLY: test_start, test_stop, MaxDim, &
-       x_, y_, z_, Dim1_, Dim2_, Dim3_
+       x_, y_, z_
   use BATL_size, ONLY: nGang, nDim
   use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
@@ -53,10 +53,6 @@ module ModTurbulence
   ! Alfven wave speed array, cell-centered
   real, public, allocatable :: AlfvenWaveVel_DC(:,:,:,:)
   !$omp threadprivate(AlfvenWaveVel_DC)
-
-  real, allocatable :: LogAlfven_FD(:,:,:,:)
-  !$omp threadprivate(LogAlfven_FD)
-
   
   character(len=lStringLine) :: TypeHeatPartitioning
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
@@ -231,9 +227,6 @@ contains
     if(.not.allocated(WaveDissipationRate_VCI)) &
          allocate(WaveDissipationRate_VCI(WaveFirst_:WaveLast_, &
          1:nI,1:nJ,1:nK,nGang))
-
-    if(.not. allocated(LogAlfven_FD)) &
-         allocate(LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim))
     
     if(.not.UseAlfvenWaves) RETURN
 
@@ -426,7 +419,7 @@ contains
 
     iGang = i_gang(iBlock)
     
-    call get_log_alfven_speed
+    call get_log_alfven_speed(iBlock)
     
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if( (.not.Used_GB(i,j,k,iBlock)).or.&
@@ -497,68 +490,81 @@ contains
   subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
     use BATL_lib, ONLY: IsCartesianGrid, &
-         CellSize_DB, FaceNormal_DDFB, CellVolume_GB         
+         CellSize_DB, FaceNormal_DDFB, CellVolume_GB
+    use ModAdvance, ONLY: LogAlfven_, Flux_VXI, Flux_VYI, Flux_VZI
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: GradLogAlfven_D(nDim)
 
+    integer :: iGang
+
     character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------
+    iGang = i_gang(iBlock)
 
     if(IsCartesianGrid)then
-       GradLogAlfven_D(Dim1_) = 1.0/CellSize_DB(x_,iBlock) &
-            *(LogAlfven_FD(i+1,j,k,Dim1_) - LogAlfven_FD(i,j,k,Dim1_))
+       GradLogAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
+            *(Flux_VXI(LogAlfven_,i+1,j,k,iGang) - &
+            Flux_VXI(LogAlfven_,i,j,k,iGang))
        if(nJ > 1) then
-          GradLogAlfven_D(Dim2_) = 1.0/CellSize_DB(y_,iBlock) &
-               *(LogAlfven_FD(i,j+1,k,Dim2_) - LogAlfven_FD(i,j,k,Dim2_))
+          GradLogAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
+               *(Flux_VYI(LogAlfven_,i,j+1,k,iGang) - &
+               Flux_VYI(LogAlfven_,i,j,k,iGang))
        end if
        if(nK > 1) then
-          GradLogAlfven_D(Dim3_) = 1.0/CellSize_DB(z_,iBlock) &
-               *(LogAlfven_FD(i,j,k+1,Dim3_) - LogAlfven_FD(i,j,k,Dim3_))
+          GradLogAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
+               *(Flux_VZI(LogAlfven_,i,j,k+1,iGang) - &
+               Flux_VZI(LogAlfven_,i,j,k,iGang))
        end if
     else
        GradLogAlfven_D = &
-            LogAlfven_FD(i+1,j,k,Dim1_) &
-            *FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
-            - LogAlfven_FD(i,j,k,Dim1_) &
-            *FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
+            Flux_VXI(LogAlfven_,i+1,j,k,iGang) &
+            *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
+            - Flux_VXI(LogAlfven_,i,j,k,iGang) &
+            *FaceNormal_DDFB(:,x_,i,j,k,iBlock)
        if(nJ > 1)then
           GradLogAlfven_D = GradLogAlfven_D + &
-               LogAlfven_FD(i,j+1,k,Dim2_) &
-               *FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
-               - LogAlfven_FD(i,j,k,Dim2_) &
-               *FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
+               Flux_VYI(LogAlfven_,i,j+1,k,iGang) &
+               *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
+               - Flux_VYI(LogAlfven_,i,j,k,iGang) &
+               *FaceNormal_DDFB(:,y_,i,j,k,iBlock)
        end if
        if(nK > 1) then
           GradLogAlfven_D = GradLogAlfven_D + &
-               LogAlfven_FD(i,j,k+1,Dim3_) &
-               *FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
-               - LogAlfven_FD(i,j,k,Dim3_) &
-               *FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
+               Flux_VZI(LogAlfven_,i,j,k+1,iGang) &
+               *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
+               - Flux_VZI(LogAlfven_,i,j,k,iGang) &
+               *FaceNormal_DDFB(:,z_,i,j,k,iBlock)
        end if
 
        GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
     end if
   end subroutine get_grad_log_alfven_speed
   !============================================================================   
-  subroutine get_log_alfven_speed
+  subroutine get_log_alfven_speed(iBlock)
     use ModAdvance, ONLY: &
          LeftState_VX, LeftState_VY, LeftState_VZ,  &
-         RightState_VX, RightState_VY, RightState_VZ
+         RightState_VX, RightState_VY, RightState_VZ, &
+         LogAlfven_, Flux_VXI, Flux_VYI, Flux_VZI
     use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
-    integer :: i, j, k
+    integer, intent(in):: iBlock
+
+    integer :: i, j, k, iGang   
     real :: Rho, FullB_D(3)
     !------------------------------------------------------------------------
+    iGang = i_gang(iBlock)
+    
     do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
        FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
             + RightState_VX(Bx_:Bz_,i,j,k))
        if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
        Rho = 0.5*(LeftState_VX(Rho_,i,j,k) &
             +     RightState_VX(Rho_,i,j,k))
-       LogAlfven_FD(i,j,k,x_) = 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+       Flux_VXI(LogAlfven_,i,j,k,iGang) = &
+            0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
     end do; end do; end do
 
     if(nJ > 1)then
@@ -568,7 +574,7 @@ contains
           if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
           Rho = 0.5*(LeftState_VY(Rho_,i,j,k) &
                +     RightState_VY(Rho_,i,j,k))
-          LogAlfven_FD(i,j,k,Dim2_) = &
+          Flux_VYI(LogAlfven_,i,j,k,iGang) = &
                0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
        end do; end do; end do
     end if
@@ -580,7 +586,7 @@ contains
           if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
           Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) &
                +     RightState_VZ(Rho_,i,j,k))
-          LogAlfven_FD(i,j,k,Dim3_) = &
+          Flux_VZI(LogAlfven_,i,j,k,iGang) = &
                0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
        end do; end do; end do
     end if
