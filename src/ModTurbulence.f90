@@ -417,9 +417,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    iGang = i_gang(iBlock)
-    
-    call get_log_alfven_speed(iBlock)
+    iGang = i_gang(iBlock)   
     
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if( (.not.Used_GB(i,j,k,iBlock)).or.&
@@ -541,57 +539,57 @@ contains
     end if
   end subroutine get_grad_log_alfven_speed
   !============================================================================   
-  subroutine get_log_alfven_speed(iBlock)
-    use ModAdvance, ONLY: &
-         LeftState_VX, LeftState_VY, LeftState_VZ,  &
-         RightState_VX, RightState_VY, RightState_VZ, &
-         LogAlfven_, Flux_VXI, Flux_VYI, Flux_VZI
-    use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
-    use ModMain, ONLY: UseB0
-    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
+  ! subroutine get_log_alfven_speed(iBlock)
+  !   use ModAdvance, ONLY: &
+  !        LeftState_VX, LeftState_VY, LeftState_VZ,  &
+  !        RightState_VX, RightState_VY, RightState_VZ, &
+  !        LogAlfven_, Flux_VXI, Flux_VYI, Flux_VZI
+  !   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+  !   use ModMain, ONLY: UseB0
+  !   use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
-    integer, intent(in):: iBlock
+  !   integer, intent(in):: iBlock
 
-    integer :: i, j, k, iGang   
-    real :: Rho, FullB_D(3)
-    !------------------------------------------------------------------------
-    iGang = i_gang(iBlock)
+  !   integer :: i, j, k, iGang   
+  !   real :: Rho, FullB_D(3)
+  !   !------------------------------------------------------------------------
+  !   iGang = i_gang(iBlock)
     
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-       FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
-            + RightState_VX(Bx_:Bz_,i,j,k))
-       if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
-       Rho = 0.5*(LeftState_VX(Rho_,i,j,k) &
-            +     RightState_VX(Rho_,i,j,k))
-       Flux_VXI(LogAlfven_,i,j,k,iGang) = &
-            0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
-    end do; end do; end do
+  !   do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+  !      FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
+  !           + RightState_VX(Bx_:Bz_,i,j,k))
+  !      if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
+  !      Rho = 0.5*(LeftState_VX(Rho_,i,j,k) &
+  !           +     RightState_VX(Rho_,i,j,k))
+  !      Flux_VXI(LogAlfven_,i,j,k,iGang) = &
+  !           0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+  !   end do; end do; end do
 
-    if(nJ > 1)then
-       do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-          FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
-               + RightState_VY(Bx_:Bz_,i,j,k))
-          if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
-          Rho = 0.5*(LeftState_VY(Rho_,i,j,k) &
-               +     RightState_VY(Rho_,i,j,k))
-          Flux_VYI(LogAlfven_,i,j,k,iGang) = &
-               0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
-       end do; end do; end do
-    end if
+  !   if(nJ > 1)then
+  !      do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+  !         FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
+  !              + RightState_VY(Bx_:Bz_,i,j,k))
+  !         if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
+  !         Rho = 0.5*(LeftState_VY(Rho_,i,j,k) &
+  !              +     RightState_VY(Rho_,i,j,k))
+  !         Flux_VYI(LogAlfven_,i,j,k,iGang) = &
+  !              0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+  !      end do; end do; end do
+  !   end if
 
-    if(nK > 1)then
-       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-          FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
-               + RightState_VZ(Bx_:Bz_,i,j,k))
-          if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
-          Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) &
-               +     RightState_VZ(Rho_,i,j,k))
-          Flux_VZI(LogAlfven_,i,j,k,iGang) = &
-               0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
-       end do; end do; end do
-    end if
+  !   if(nK > 1)then
+  !      do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+  !         FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
+  !              + RightState_VZ(Bx_:Bz_,i,j,k))
+  !         if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
+  !         Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) &
+  !              +     RightState_VZ(Rho_,i,j,k))
+  !         Flux_VZI(LogAlfven_,i,j,k,iGang) = &
+  !              0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+  !      end do; end do; end do
+  !   end if
 
-  end subroutine get_log_alfven_speed
+  ! end subroutine get_log_alfven_speed
   !==========================================================================
   subroutine get_curl_u(i, j, k, iBlock, CurlU_D)
 
