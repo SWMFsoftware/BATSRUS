@@ -21,6 +21,7 @@ module ModUpdateStateFast
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
+       LogAlfven_, FaceUx_, FaceUy_, FaceUz_, &
        DtMax_CB, Vdt_, iTypeUpdate, UpdateFast_, UseRotatingFrame, &
        UseElectronPressure, DoUpdate_V, nSource, UseAnisoPressure
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_, InFlowBC_, FixedBC_
@@ -57,7 +58,8 @@ module ModUpdateStateFast
   use ModTurbulence, ONLY: UseAlfvenWaveDissipation, CoronalHeating_CI, &
        calc_alfven_wave_dissipation, WaveDissipationRate_VCI, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
-       UseReynoldsDecomposition, UseTurbulentCascade
+       UseReynoldsDecomposition, UseTurbulentCascade, turbulent_cascade, &
+       get_wave_reflection_cell
   use ModUtilities, ONLY: i_gang
 
   implicit none
@@ -639,19 +641,28 @@ contains
 #endif
 
     if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
-       if(UseAlfvenWaveDissipation)then
 
+       
+       if(UseAlfvenWaveDissipation)then
+          ! This is equivalent to get_block_heating()
+          
           if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
-             ! To be implemented.
-             ! call turbulent_cascade(i, j, k, iBlock, &
-             !        WaveDissipationRate_VCI(:,i,j,k,iGang), &
-             !        CoronalHeating_CI(i,j,k,iGang))
+             call turbulent_cascade(i, j, k, iBlock, &
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang))
           else
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
                   WaveDissipationRate_VCI(:,i,j,k,iGang), &
                   CoronalHeating_CI(i,j,k,iGang))
           end if
+       end if
 
+       if(UseTurbulentCascade) then
+          call get_wave_reflection_cell(i,j,k,iBlock,&
+               Change_V(WaveFirst_:WaveLast_))          
+       endif
+
+       if(UseAlfvenWaveDissipation)then       
           Change_V(WaveFirst_:WaveLast_) = &
                Change_V(WaveFirst_:WaveLast_) &
                - WaveDissipationRate_VCI(:,i,j,k,iGang)*&
@@ -2108,6 +2119,8 @@ contains
 
     real :: AreaInvCdiff, Cproduct, Bn
 
+    real :: FullB_D(3)
+
     integer :: iVar
     !--------------------------------------------------------------------------
     if(DoLf)then
@@ -2252,6 +2265,19 @@ contains
     ! Store time step constraint (to be generalized for multifluid)
     Flux_V(Vdt_) = abs(Area)*Cmax
 
+    if(UseTurbulentCascade) then
+       FullB_D = &
+            0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))
+       if(UseB0) FullB_D = FullB_D + B0_D 
+       
+       Flux_V(LogAlfven_) = &
+            0.50*log(max(sum(FullB_D**2), 1e-30)/&
+            (0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_))))
+
+       Flux_V(FaceUx_:FaceUz_) = 0.5*&
+            (StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))
+    end if    
+    
 #ifdef TESTACC
     if(DoTestSide)then
        write(*,*)'Hat state for Normal_D=', &

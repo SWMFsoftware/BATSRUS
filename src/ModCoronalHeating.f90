@@ -501,13 +501,12 @@ contains
        if(IsOnAwRepresentative)call set_alfven_wave_vel_vect(iBlock)
 #endif
        if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
-#ifndef _OPENACC
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
                   WaveDissipationRate_VCI(:,i,j,k,iGang), &
                   CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
-#endif
        else
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
