@@ -50,7 +50,8 @@ module ModAdvance
   ! indexes for other face centered variables
   integer, parameter :: &
        UnFirst_ = nFlux+1, UnLast_ = UnFirst_ + nFluid, &
-       LogAlfven_ = UnLast_ + 1, Vdt_ = LogAlfven_ + 1
+       FaceUx_ = UnLast_ + 1, FaceUy_ = FaceUx_ + 1, FaceUz_ = FaceUy_ + 1, &
+       LogAlfven_ = FaceUz_ + 1, Vdt_ = LogAlfven_ + 1
 
   ! The normal components of the magnetic field is exchaned only for
   ! B_>U_ (UseB_ is true)

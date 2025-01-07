@@ -1132,7 +1132,7 @@ contains
   subroutine get_numerical_flux(Flux_V)
 
     use ModAdvance, ONLY: State_VGB, UseMultiSpecies, DoReplaceDensity, &
-         DoUpdate_V, LogAlfven_
+         DoUpdate_V, LogAlfven_, FaceUx_, FaceUy_, FaceUz_
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
@@ -1484,6 +1484,9 @@ contains
        Flux_V(LogAlfven_) = &
             0.50*log(max(sum(FullB_D**2), 1e-30)/&
             (0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_))))
+
+       Flux_V(FaceUx_:FaceUz_) = 0.5*&
+            (StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))
     end if
     
     if(DoTestCell)call write_test_info

@@ -595,69 +595,60 @@ contains
 
     use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
          CellVolume_GB, x_, y_, z_
-    use ModAdvance, ONLY: &
-         LeftState_VX, LeftState_VY, LeftState_VZ,  &
-         RightState_VX, RightState_VY, RightState_VZ
+    use ModAdvance, ONLY: FaceUx_, FaceUy_, FaceUz_, &
+         Flux_VXI, Flux_VYI, Flux_VZI
     use ModCoordTransform, ONLY: cross_product
     use ModSize, ONLY: MaxDim
-    use ModVarIndexes, ONLY: Ux_, Uy_, Uz_
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: CurlU_D(MaxDim)
 
-    real :: DxInvHalf, DyInvHalf, DzInvHalf
+    integer :: iGang
+    
+    real :: DxInv, DyInv, DzInv
     character(len=*), parameter:: NameSub = 'get_curl_u'
     !--------------------------------------------------------------------------
+
+    iGang = i_gang(iBlock)
+    
     if(IsCartesianGrid)then
-       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
-       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
-       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
+       DxInv = 1/CellSize_DB(x_,iBlock)
+       DyInv = 1/CellSize_DB(y_,iBlock)
+       DzInv = 1/CellSize_DB(z_,iBlock)
 
        CurlU_D(x_) = &
-            DyInvHalf*(LeftState_VY(Uz_,i,j+1,k)    &
-            +          RightState_VY(Uz_,i,j+1,k)   &
-            -          LeftState_VY(Uz_,i,j,k)      &
-            -          RightState_VY(Uz_,i,j,k))    &
-            - DzInvHalf*(LeftState_VZ(Uy_,i,j,k+1)  &
-            +            RightState_VZ(Uy_,i,j,k+1) &
-            -            LeftState_VZ(Uy_,i,j,k)    &
-            -            RightState_VZ(Uy_,i,j,k))
-
+            DyInv*(Flux_VYI(FaceUz_,i,j+1,k,iGang)   &
+            -      Flux_VYI(FaceUz_,i,j,k,iGang))    &
+            - DzInv*(Flux_VZI(FaceUy_,i,j,k+1,iGang) &
+            -        Flux_VZI(FaceUy_,i,j,k,iGang))
+       
        CurlU_D(y_) = &
-            DzInvHalf*(LeftState_VZ(Ux_,i,j,k+1)    &
-            +          RightState_VZ(Ux_,i,j,k+1)   &
-            -          LeftState_VZ(Ux_,i,j,k)      &
-            -          RightState_VZ(Ux_,i,j,k))    &
-            - DxInvHalf*(LeftState_VX(Uz_,i+1,j,k)  &
-            +            RightState_VX(Uz_,i+1,j,k) &
-            -            LeftState_VX(Uz_,i,j,k)    &
-            -            RightState_VX(Uz_,i,j,k))
+            DzInv*(Flux_VZI(FaceUx_,i,j,k+1,iGang)   &
+            -      Flux_VZI(FaceUx_,i,j,k,iGang))    &     
+            - DxInv*(Flux_VXI(FaceUz_,i+1,j,k,iGang) &
+            -        Flux_VXI(FaceUz_,i,j,k,iGang))
 
        CurlU_D(z_) = &
-            DxInvHalf*(LeftState_VX(Uy_,i+1,j,k)    &
-            +          RightState_VX(Uy_,i+1,j,k)   &
-            -          LeftState_VX(Uy_,i,j,k)      &
-            -          RightState_VX(Uy_,i,j,k))    &
-            - DyInvHalf*(LeftState_VY(Ux_,i,j+1,k)  &
-            +            RightState_VY(Ux_,i,j+1,k) &
-            -            LeftState_VY(Ux_,i,j,k)    &
-            -            RightState_VY(Ux_,i,j,k))
+            DxInv*(Flux_VXI(FaceUy_,i+1,j,k,iGang)   &
+            -      Flux_VXI(FaceUy_,i,j,k,iGang))    &
+            - DyInv*(Flux_VYI(FaceUx_,i,j+1,k,iGang) &
+            -        Flux_VYI(FaceUx_,i,j,k,iGang))
     else
        CurlU_D(:) = &
             + cross_product( FaceNormal_DDFB(:,1,i+1,j,k,iBlock),           &
-            LeftState_VX(Ux_:Uz_,i+1,j,k) + RightState_VX(Ux_:Uz_,i+1,j,k)) &
+            Flux_VXI(FaceUx_:FaceUz_,i+1,j,k,iGang)) &
             - cross_product( FaceNormal_DDFB(:,1,i  ,j,k,iBlock),           &
-            LeftState_VX(Ux_:Uz_,i,j,k) + RightState_VX(Ux_:Uz_,i,j,k))     &
+            Flux_VXI(FaceUx_:FaceUz_,i,j,k,iGang))   &
             + cross_product( FaceNormal_DDFB(:,2,i,j+1,k,iBlock),           &
-            LeftState_VY(Ux_:Uz_,i,j+1,k) + RightState_VY(Ux_:Uz_,i,j+1,k)) &
+            Flux_VYI(FaceUx_:FaceUz_,i,j+1,k,iGang)) &
             - cross_product( FaceNormal_DDFB(:,2,i,j  ,k,iBlock),           &
-            LeftState_VY(Ux_:Uz_,i,j,k) + RightState_VY(Ux_:Uz_,i,j,k))     &
+            Flux_VYI(FaceUx_:FaceUz_,i,j,k,iGang))   &
             + cross_product( FaceNormal_DDFB(:,3,i,j,k+1,iBlock),           &
-            LeftState_VZ(Ux_:Uz_,i,j,k+1) + RightState_VZ(Ux_:Uz_,i,j,k+1)) &
+            Flux_VZI(FaceUx_:FaceUz_,i,j,k+1,iGang)) &
             - cross_product( FaceNormal_DDFB(:,3,i,j,k  ,iBlock),           &
-            LeftState_VZ(Ux_:Uz_,i,j,k) + RightState_VZ(Ux_:Uz_,i,j,k))
+            Flux_VZI(FaceUx_:FaceUz_,i,j,k,iGang) )
 
-       CurlU_D(:) = 0.5*CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
+       CurlU_D(:) = CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
     end if
 
   end subroutine get_curl_u
