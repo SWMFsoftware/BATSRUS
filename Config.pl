@@ -395,8 +395,10 @@ sub set_optimization{
 		check_var($Set{"UseDtFixed"}, $usedtfixed, $first);
 	    }elsif(/^#COORD(INATE)?SYSTEM\b/){
 		my $coor = <FILE>;
-		$Set{"UseRotatingFrame"} = ".false." if $coor =~ /^HGI/i;
-		$Set{"UseRotatingFrame"} = ".true."  if $coor =~ /^GEO|HGC|HGR/i;
+		$Set{"UseRotatingFrame"} = ".false."
+		    if $coor =~ /^HGI/i;
+		$Set{"UseRotatingFrame"} = ".true."
+		    if $coor =~ /^GEO|HGC|HGR/i;
 	    }elsif(/^#GRAVITY^/){
 		my $usegrav = <FILE>;
 		check_var($Set{"UseGravity"}, $usegrav, $first);
@@ -415,7 +417,8 @@ sub set_optimization{
 		if($Set{$name} eq $Opt{$name}){
 		    printf("%-30s = %s\n", $name, $Opt{$name});
 		}else{
-		    printf("%-30s = %-17s -> %s\n", $name, $Opt{$name}, $Set{$name});
+		    printf("%-30s = %-17s -> %s\n",
+			   $name, $Opt{$name}, $Set{$name});
 		    $Opt{$name} = $Set{$name};
 		}
 	    }
@@ -506,12 +509,14 @@ sub set_optimization{
 			    "call CON_stop(NameSub// &\n\t ': $name=T')\n"
 		    }else{
 			print "    if(${name}Orig .neqv. $value) ".
-			    "call CON_stop(NameSub// &\n\t ': $name=', ${name}Orig)\n"
+			    "call CON_stop(NameSub// &\n\t ':".
+			    " $name=', ${name}Orig)\n"
 		    }
 		}elsif($name ne 'iStage'){  # iStage cannot be checked
 		    $value .= ' .and. nOrder > 1' if $name eq 'LimiterBeta';
 		    print "    if(${name}Orig /= $value) ".
-			"call CON_stop(NameSub// &\n\t ': $name=', ${name}Orig)\n";
+			"call CON_stop(NameSub// &\n\t ':".
+			" $name=', ${name}Orig)\n";
 		}
 	    }
 	    print "\n";
@@ -620,7 +625,8 @@ sub set_equation{
 	my $IsSame = 1; my $line1; my $line2;
 	while($line1=<FILE1> and $line2=<FILE2>){
 	    # Ignore the nWave, nPui, and nMaterial definitions
-	    next if $line1=~/nMaterial|nWave|nPui/ and $line2=~/nMaterial|nWave|nPui/;
+	    next if $line1=~/nMaterial|nWave|nPui/
+		and $line2=~/nMaterial|nWave|nPui/;
 	    if($line1 ne $line2){
 		$IsSame = 0;
 		last;
@@ -921,8 +927,10 @@ sub current_settings{
     $Settings .= "Number of state variables   : nVar=$nVar\n";
     $Settings .= "Number of species           : nSpecies=$nSpecies\n" 
 	if $nSpecies;
-    $Settings .= "Number of wave bins         : nWave=$nWave\n" if $nWave;
-    $Settings .= "Number of PUI bins          : nPui=$nPui\n"   if $nPui;
+    $Settings .= "Number of wave bins         : nWave=$nWave\n"
+	if $nWave;
+    $Settings .= "Number of PUI bins          : nPui=$nPui\n"
+	if $nPui;
     $Settings .= "Number of materials         : nMaterial=$nMaterial\n" 
 	if $nMaterial;
     $Settings .= "Number of ion fluids        : nIonFluid=$nIonFluid\n"
@@ -931,8 +939,10 @@ sub current_settings{
 	if $nNeutralFluid;
     $Settings .= "Number of fluids            : nFluid=$nFluid\n"
 	if $nFluid > 1;
-    $Settings .= "Electron pressure           : UsePe=1\n" if $Value{"Pe_"}>1;
-    $Settings .= "Parallel pressure           : UsePpar=1\n" if $Value{"Ppar_"}>1;
+    $Settings .= "Electron pressure           : UsePe=1\n"
+	if $Value{"Pe_"}>1;
+    $Settings .= "Parallel pressure           : UsePpar=1\n"
+	if $Value{"Ppar_"}>1;
     
     $Settings; # return value
 }
