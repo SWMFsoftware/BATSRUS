@@ -97,7 +97,8 @@ T			UseCoarseAxis
 #USERINPUTEND -------------------------------------
 
 #GRIDGEOMETRY
-spherical_lnr		TypeGeometry
+spherical_genr		TypeGeometry
+Param/CORONA/grid_awsom.dat		NameGridFile
 
 ! Use a true sphere, so box is made much larger
 #GRID
