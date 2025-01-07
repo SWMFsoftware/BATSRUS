@@ -33,7 +33,7 @@ module ModTurbulence
 
   ! The Poynting flux to magnetic field ratio (one of the input parameters
   ! dimensionless):
-  real :: PoyntingFluxPerB  
+  real :: PoyntingFluxPerB
   real :: ImbalanceMax = 2.0, ImbalanceMax2 = 4.0
   !$acc declare create(PoyntingFluxPerB)
 
@@ -253,7 +253,7 @@ contains
             call stop_mpi('multi-ion heat partitioning only works for 2 ions')
     end if
 
-    !$acc update device(LperpTimesSqrtB, PoyntingFluxPerB)    
+    !$acc update device(LperpTimesSqrtB, PoyntingFluxPerB)
   end subroutine init_turbulence
   !============================================================================
   subroutine set_alfven_wave_vel_vect(iBlock)
