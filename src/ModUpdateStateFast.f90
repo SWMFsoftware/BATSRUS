@@ -642,10 +642,9 @@ contains
 
     if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
 
-       
        if(UseAlfvenWaveDissipation)then
           ! This is equivalent to get_block_heating()
-          
+
           if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
              call turbulent_cascade(i, j, k, iBlock, &
                   WaveDissipationRate_VCI(:,i,j,k,iGang), &
@@ -659,10 +658,10 @@ contains
 
        if(UseTurbulentCascade) then
           call get_wave_reflection_cell(i,j,k,iBlock,&
-               Change_V(WaveFirst_:WaveLast_))          
+               Change_V(WaveFirst_:WaveLast_))
        endif
 
-       if(UseAlfvenWaveDissipation)then       
+       if(UseAlfvenWaveDissipation)then
           Change_V(WaveFirst_:WaveLast_) = &
                Change_V(WaveFirst_:WaveLast_) &
                - WaveDissipationRate_VCI(:,i,j,k,iGang)*&
@@ -2095,9 +2094,10 @@ contains
        StateLeft_V, StateRight_V, Flux_V, B0_D, DoTestSide)
     !$acc routine seq
 
-    ! Calculate numerical flux Flux_V based on the left and right states
-    ! and the B0 field along the normal direction Normal_D. The flux
-    ! returns the Area that may be negative for certain update schemes.
+    ! Calculate numerical flux Flux_V along the normal direction Normal_D
+    ! based on the left and right states and the B0 field at the face.
+    ! The flux is multiplied by Area that may be negative for certain
+    ! update schemes.
 
     real, intent(in)   :: Normal_D(3), Area
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
@@ -2266,18 +2266,16 @@ contains
     Flux_V(Vdt_) = abs(Area)*Cmax
 
     if(UseTurbulentCascade) then
-       FullB_D = &
-            0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))
-       if(UseB0) FullB_D = FullB_D + B0_D 
-       
-       Flux_V(LogAlfven_) = &
-            0.50*log(max(sum(FullB_D**2), 1e-30)/&
+       ! Store logarithm of the Alfven speed into Flux_V (for grad v_A)
+       FullB_D = 0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))
+       if(UseB0) FullB_D = FullB_D + B0_D
+       Flux_V(LogAlfven_) = 0.5*log(max(sum(FullB_D**2), 1e-30)/ &
             (0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_))))
+       ! Store velocity into Flux_V (for curl u)
+       Flux_V(FaceUx_:FaceUz_) = &
+            0.5*(StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))
+    end if
 
-       Flux_V(FaceUx_:FaceUz_) = 0.5*&
-            (StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))
-    end if    
-    
 #ifdef TESTACC
     if(DoTestSide)then
        write(*,*)'Hat state for Normal_D=', &
