@@ -1024,6 +1024,7 @@ contains
     ! Artificial modified heat conduction for a smoother transition
     ! region, Linker et al. (2001)
     if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
+#endif
 
     if(UseHeatFluxRegion)then
        r = r_GB(i,j,k,iBlock)
@@ -1036,7 +1037,6 @@ contains
        end if
        HeatCoef = Factor*HeatCoef
     end if
-#endif
 
     HeatCoef_GI(i,j,k,iGang) = HeatCoef
 

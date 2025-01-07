@@ -23,6 +23,7 @@ module ModHeatFluxCollisionless
   ! Parameters for heat flux region
   logical, public :: UseHeatFluxRegion = .false.
   real, public :: rCollisional = 5.0, rCollisionless = -8.0
+  !$acc declare create(UseHeatFluxRegion, rCollisional, rCollisionless)
 
   ! Parameters for collisionless heat conduction
   logical, public :: UseHeatFluxCollisionless = .false.
@@ -51,6 +52,7 @@ contains
           call read_var('rCollisional', rCollisional)
           call read_var('rCollisionless', rCollisionless)
        end if
+       !$acc update device(UseHeatFluxRegion, rCollisional, rCollisionless)
 
     case("#HEATFLUXCOLLISIONLESS")
        call read_var('UseHeatFluxCollisionless', UseHeatFluxCollisionless)
