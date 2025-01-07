@@ -396,16 +396,37 @@ contains
     ! call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
     ! call get_block_heating(iBlock)
     ! call get_wave_reflection(iBlock)
+    use ModAdvance, ONLY: Source_VC
     use BATL_size, ONLY: nI, nJ, nK
-    use ModAdvance, ONLY: State_VGB, Source_VC
+
+    integer, intent(in) :: iBlock    
+
+    integer :: i, j, k
+    
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_wave_reflection'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI       
+       call get_wave_reflection_cell(i,j,k,iBlock, &
+            Source_VC(WaveFirst_:WaveLast_,i,j,k))
+    end do; end do; end do
+
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine get_wave_reflection
+  !============================================================================
+  subroutine get_wave_reflection_cell(i,j,k,iBlock,Source_V)
+    use ModAdvance, ONLY: State_VGB
     use ModB0, ONLY: B0_DGB
     use ModGeometry, ONLY: Used_GB, r_GB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
-    integer, intent(in) :: iBlock    
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(inout) :: Source_V(WaveFirst_:WaveLast_)
 
-    integer :: i, j, k, iGang
+    integer :: iGang
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate,  &
          DissipationRateDiff
@@ -413,77 +434,75 @@ contains
     real :: AlfvenGradRefl, ReflectionRateImb
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'get_wave_reflection'
+    character(len=*), parameter:: NameSub = 'get_wave_reflection_cell'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
     iGang = i_gang(iBlock)   
-    
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if( (.not.Used_GB(i,j,k,iBlock)).or.&
-            r_GB(i,j,k, iBlock) < rMinWaveReflection)CYCLE
 
-       call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
-       call get_curl_u(i, j, k, iBlock, CurlU_D)
+    if( (.not.Used_GB(i,j,k,iBlock)).or.&
+         r_GB(i,j,k, iBlock) < rMinWaveReflection) RETURN
 
-       if(UseB0)then
-          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
+    call get_curl_u(i, j, k, iBlock, CurlU_D)
+
+    if(UseB0)then
+       FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    else
+       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    end if
+    FullB = norm2(FullB_D)
+    b_D = FullB_D/max(1e-15, FullB)
+
+    Rho = State_VGB(Rho_,i,j,k,iBlock)
+
+    EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+    EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+
+    AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
+
+    ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
+    if(UseNewLimiter4Reflection)then
+       DissipationRateDiff =-0.50*(&
+            WaveDissipationRate_VCI(WaveFirst_,i,j,k,iGang)&
+            - WaveDissipationRate_VCI(WaveLast_,i,j,k,iGang))
+       ReflectionRate = sign(min(ReflectionRateImb,&
+            abs(DissipationRateDiff)), DissipationRateDiff)
+    else
+       DissipationRateMax  = maxval(WaveDissipationRate_VCI(:,i,j,k,iGang))
+       ! Clip the reflection rate from above with maximum dissipation rate
+       ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
+
+       ! No reflection when turbulence is balanced (waves are then
+       ! assumed to be uncorrelated)
+       if(ImbalanceMax2*EwaveMinus < EwavePlus)then
+          ReflectionRate = ReflectionRate*&
+               (1.0 - ImbalanceMax*sqrt(EwaveMinus/EwavePlus))
+       elseif(ImbalanceMax2*EwavePlus < EwaveMinus)then
+          ReflectionRate = ReflectionRate*&
+               (ImbalanceMax*sqrt(EwavePlus/EwaveMinus)-1.0)
        else
-          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          ReflectionRate = 0.0
        end if
-       FullB = norm2(FullB_D)
-       b_D = FullB_D/max(1e-15, FullB)
+    end if
+    Source_V(WaveFirst_) = Source_V(WaveFirst_) &
+         - ReflectionRate*sqrt(EwavePlus*EwaveMinus)
+    Source_V(WaveLast_) = Source_V(WaveLast_) &
+         + ReflectionRate*sqrt(EwavePlus*EwaveMinus)
 
-       Rho = State_VGB(Rho_,i,j,k,iBlock)
-
-       EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
-       EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
-
-       AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
-
-       ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
-       if(UseNewLimiter4Reflection)then
-          DissipationRateDiff =-0.50*(&
-               WaveDissipationRate_VCI(WaveFirst_,i,j,k,iGang)&
-               - WaveDissipationRate_VCI(WaveLast_,i,j,k,iGang))
-          ReflectionRate = sign(min(ReflectionRateImb,&
-               abs(DissipationRateDiff)), DissipationRateDiff)
-       else
-          DissipationRateMax  = maxval(WaveDissipationRate_VCI(:,i,j,k,iGang))
-          ! Clip the reflection rate from above with maximum dissipation rate
-          ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
-
-          ! No reflection when turbulence is balanced (waves are then
-          ! assumed to be uncorrelated)
-          if(ImbalanceMax2*EwaveMinus < EwavePlus)then
-             ReflectionRate = ReflectionRate*&
-                  (1.0 - ImbalanceMax*sqrt(EwaveMinus/EwavePlus))
-          elseif(ImbalanceMax2*EwavePlus < EwaveMinus)then
-             ReflectionRate = ReflectionRate*&
-                  (ImbalanceMax*sqrt(EwavePlus/EwaveMinus)-1.0)
-          else
-             ReflectionRate = 0.0
-          end if
-       end if
-       Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-            - ReflectionRate*sqrt(EwavePlus*EwaveMinus)
-       Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-            + ReflectionRate*sqrt(EwavePlus*EwaveMinus)
-
-       ! Calculate sin(theta), where theta is the angle between Zplus
-       ! and Zminus at the outer Lperp scale
-       if(UseAlignmentAngle)then
-          Cdiss_C(i,j,k) = sqrt(1.0 - AlfvenGradRefl &
-               *(ReflectionRate/ReflectionRateImb**2)**2)
-          WaveDissipationRate_VCI(:,i,j,k,iGang) = &
-               WaveDissipationRate_VCI(:,i,j,k,iGang)*Cdiss_C(i,j,k)
-          CoronalHeating_CI(i,j,k,iGang) = &
-               CoronalHeating_CI(i,j,k,iGang)*Cdiss_C(i,j,k)
-       end if
-    end do; end do; end do
+    ! Calculate sin(theta), where theta is the angle between Zplus
+    ! and Zminus at the outer Lperp scale
+    if(UseAlignmentAngle)then
+       Cdiss_C(i,j,k) = sqrt(1.0 - AlfvenGradRefl &
+            *(ReflectionRate/ReflectionRateImb**2)**2)
+       WaveDissipationRate_VCI(:,i,j,k,iGang) = &
+            WaveDissipationRate_VCI(:,i,j,k,iGang)*Cdiss_C(i,j,k)
+       CoronalHeating_CI(i,j,k,iGang) = &
+            CoronalHeating_CI(i,j,k,iGang)*Cdiss_C(i,j,k)
+    end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine get_wave_reflection
+  end subroutine get_wave_reflection_cell
   !============================================================================
   subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
@@ -554,7 +573,7 @@ contains
   !   real :: Rho, FullB_D(3)
   !   !------------------------------------------------------------------------
   !   iGang = i_gang(iBlock)
-    
+
   !   do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
   !      FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
   !           + RightState_VX(Bx_:Bz_,i,j,k))
@@ -604,13 +623,13 @@ contains
     real, intent(out) :: CurlU_D(MaxDim)
 
     integer :: iGang
-    
+
     real :: DxInv, DyInv, DzInv
     character(len=*), parameter:: NameSub = 'get_curl_u'
     !--------------------------------------------------------------------------
 
     iGang = i_gang(iBlock)
-    
+
     if(IsCartesianGrid)then
        DxInv = 1/CellSize_DB(x_,iBlock)
        DyInv = 1/CellSize_DB(y_,iBlock)
@@ -621,7 +640,7 @@ contains
             -      Flux_VYI(FaceUz_,i,j,k,iGang))    &
             - DzInv*(Flux_VZI(FaceUy_,i,j,k+1,iGang) &
             -        Flux_VZI(FaceUy_,i,j,k,iGang))
-       
+
        CurlU_D(y_) = &
             DzInv*(Flux_VZI(FaceUx_,i,j,k+1,iGang)   &
             -      Flux_VZI(FaceUx_,i,j,k,iGang))    &     
