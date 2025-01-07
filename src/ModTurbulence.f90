@@ -120,9 +120,6 @@ contains
        DoInit = .true.
        call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
        call read_var('Crefl', Crefl)
-
-       ! To do: UseWavePressure does not work with fast update yet.
-       if(iTypeUpdate /= UpdateOrig_) UseWavePressure = .false.
     case('turbulentcascade')
        UseAlfvenWaves  = WaveFirst_ > 1
        UseWavePressure = WaveFirst_ > 1
