@@ -499,8 +499,8 @@ contains
     logical, intent(in):: IsBodyBlock
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar, iVarLast
-    real:: DivU, DivB, DivE, DivF, DtLocal
-    real:: Change_V(nFlux), DivF_V(nFlux), Force_D(3)
+    real:: DivU, DivB, DivE, DivF, DtLocal, InvVol
+    real:: Change_V(nFlux), Force_D(3)
 
     ! Coronal Heating
     real :: QPerQtotal_I(nIonFluid)
@@ -790,20 +790,18 @@ contains
     end if
 
     ! Add div(Flux) to Change_V
-    DivF_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
-         -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
-    if(nDim > 1) DivF_V = DivF_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
-         -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
-    if(nDim > 2) DivF_V = DivF_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
-         -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
-
     if(IsCartesian)then
-       DivF_V = DivF_V/CellVolume_B(iBlock)
+       InvVol = 1/CellVolume_B(iBlock)
     else
-       DivF_V = DivF_V/CellVolume_GB(i,j,k,iBlock)
+       InvVol = 1/CellVolume_GB(i,j,k,iBlock)
     end if
 
-    Change_V = Change_V + DivF_V
+    Change_V = Change_V + InvVol*( &
+         Flux_VXI(1:nFlux,i,j,k,iGang) - Flux_VXI(1:nFlux,i+1,j,k,iGang))
+    if(nDim > 1) Change_V = Change_V + InvVol*( &
+         Flux_VYI(1:nFlux,i,j,k,iGang) - Flux_VYI(1:nFlux,i,j+1,k,iGang))
+    if(nDim > 2) Change_V = Change_V + InvVol*( &
+         Flux_VZI(1:nFlux,i,j,k,iGang) - Flux_VZI(1:nFlux,i,j,k+1,iGang))
 
     ! Time step for iStage
     if(IsTimeAccurate)then
