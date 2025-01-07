@@ -35,6 +35,7 @@ module ModTurbulence
   ! dimensionless):
   real :: PoyntingFluxPerB
   real :: ImbalanceMax = 2.0, ImbalanceMax2 = 4.0
+  !$acc declare create(PoyntingFluxPerB)
 
   ! Alfven wave dissipation
   logical :: UseAlfvenWaveDissipation = .false.
@@ -251,6 +252,8 @@ contains
        if(nIonFluid /= 2) &
             call stop_mpi('multi-ion heat partitioning only works for 2 ions')
     end if
+
+    !$acc update device(LperpTimesSqrtB, PoyntingFluxPerB)
   end subroutine init_turbulence
   !============================================================================
   subroutine set_alfven_wave_vel_vect(iBlock)
