@@ -30,13 +30,16 @@ module ModTurbulence
   logical :: UseTurbulentCascade = .false.
   !$acc declare create(UseTurbulentCascade)
   real    :: rMinWaveReflection = 0.0
+  !$acc declare create(rMinWaveReflection)
   logical :: UseNewLimiter4Reflection
+  !$acc declare create(UseNewLimiter4Reflection)
 
   ! The Poynting flux to magnetic field ratio (one of the input parameters
   ! dimensionless):
   real :: PoyntingFluxPerB
-  real :: ImbalanceMax = 2.0, ImbalanceMax2 = 4.0
   !$acc declare create(PoyntingFluxPerB)
+  real :: ImbalanceMax = 2.0, ImbalanceMax2 = 4.0
+  !$acc declare create(ImbalanceMax, ImbalanceMax2)
 
   ! Alfven wave dissipation
   logical :: UseAlfvenWaveDissipation = .false.
@@ -77,6 +80,7 @@ module ModTurbulence
   !$acc declare create(StochasticExponent2, StochasticAmplitude2)
 
   logical :: UseNonlinearAwDissipation = .false.
+  !$acc declare create(UseNonLinearAWDissipation)
 
   ! Switch whether or not to use Alignment angle between Zplus and Zminus
   ! Elsasser variables in the cascade rate
@@ -134,7 +138,6 @@ contains
           call read_var(&
                'UseReynoldsDecomposition', UseNewLimiter4Reflection)
        end if
-       !$acc update device(UseTurbulentCascade)
     case('usmanov')
        UseAlfvenWaves  = WaveFirst_ > 1
        UseWavePressure = WaveFirst_ > 1
@@ -207,6 +210,13 @@ contains
 
     !$acc update device(UseReynoldsDecomposition)
 
+    !$acc update device(UseNonLinearAWDissipation)
+
+    !$acc update device(UseTurbulentCascade)
+    !$acc update device(rMinWaveReflection, UseNewLimiter4Reflection)
+
+    !$acc update device(ImbalanceMax, ImbalanceMax2)
+    
     call test_stop(NameSub, DoTest)
   end subroutine read_turbulence_param
   !============================================================================
@@ -326,7 +336,7 @@ contains
   !============================================================================
   subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipationRate_V, &
        CoronalHeating)
-
+    !$acc routine seq
     use ModAdvance, ONLY: State_VGB
     use ModB0, ONLY: B0_DGB
     use ModMain, ONLY: UseB0
@@ -350,8 +360,10 @@ contains
             /State_VGB(Lperp_,i,j,k,iBlock)
        SqrtRho = 1.0
     elseif(IsOnAwRepresentative)then
+#ifndef _OPENACC       
        Coef = 2*sqrt(PoyntingFluxPerB*norm2(AlfvenWaveVel_DC(:,i,j,k)))
        SqrtRho = PoyntingFluxPerB*sqrt(State_VGB(Rho_,i,j,k,iBlock))
+#endif       
     else
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -417,6 +429,8 @@ contains
   end subroutine get_wave_reflection
   !============================================================================
   subroutine get_wave_reflection_cell(i,j,k,iBlock,Source_V)
+    !$acc routine seq
+    
     use ModAdvance, ONLY: State_VGB
     use ModB0, ONLY: B0_DGB
     use ModGeometry, ONLY: Used_GB, r_GB
@@ -490,6 +504,7 @@ contains
     Source_V(WaveLast_) = Source_V(WaveLast_) &
          + ReflectionRate*sqrt(EwavePlus*EwaveMinus)
 
+#ifndef _OPENACC    
     ! Calculate sin(theta), where theta is the angle between Zplus
     ! and Zminus at the outer Lperp scale
     if(UseAlignmentAngle)then
@@ -500,12 +515,14 @@ contains
        CoronalHeating_CI(i,j,k,iGang) = &
             CoronalHeating_CI(i,j,k,iGang)*Cdiss_C(i,j,k)
     end if
-
+#endif
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_wave_reflection_cell
   !============================================================================
   subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
-
+    !$acc routine seq
+    
     use BATL_lib, ONLY: IsCartesianGrid, &
          CellSize_DB, FaceNormal_DDFB, CellVolume_GB
     use ModAdvance, ONLY: LogAlfven_, Flux_VXI, Flux_VYI, Flux_VZI
@@ -611,7 +628,8 @@ contains
   ! end subroutine get_log_alfven_speed
   !==========================================================================
   subroutine get_curl_u(i, j, k, iBlock, CurlU_D)
-
+    !$acc routine seq
+    
     use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
          CellVolume_GB, x_, y_, z_
     use ModAdvance, ONLY: FaceUx_, FaceUy_, FaceUz_, &
