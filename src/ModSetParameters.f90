@@ -3203,7 +3203,7 @@ contains
          if(Ehot_ > 1 .and. DoUpdate_V(Ehot_))then
             UseHeatFluxCollisionless = .true.
             if(NameThisComp == 'SC')then
-               UseHeatFluxRegion = .true.
+               UseHeatFluxRegion = .true.               
                UseHeatConduction = .true.
                ! defaults for semi-implicit heat conduction
                UseSemiImplicit = .true.
@@ -3212,6 +3212,7 @@ contains
                SemiParam%ErrorMax = 1.0e-5
                SemiParam%MaxMatvec = 20
                SemiParam%nKrylovVector = SemiParam%MaxMatvec
+               !$acc update device(UseHeatFluxRegion)
             end if
          end if
 
