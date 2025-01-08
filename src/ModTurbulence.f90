@@ -438,7 +438,7 @@ contains
     real, intent(inout) :: Source_V(WaveFirst_:WaveLast_)
 
     integer :: iGang
-    real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
+    real :: GradLogAlfven_D(3), CurlU_D(3), b_D(3)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate,  &
          DissipationRateDiff
     real :: EwavePlus, EwaveMinus
@@ -470,7 +470,7 @@ contains
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-    AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
+    AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D(:nDim)))**2/Rho
 
     ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
     if(UseNewLimiter4Reflection)then
@@ -525,7 +525,7 @@ contains
     use ModAdvance, ONLY: LogAlfven_, Flux_VXI, Flux_VYI, Flux_VZI
 
     integer, intent(in) :: i, j, k, iBlock
-    real, intent(out) :: GradLogAlfven_D(nDim)
+    real, intent(out) :: GradLogAlfven_D(3)
 
     integer :: iGang
 
