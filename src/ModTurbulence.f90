@@ -100,7 +100,7 @@ module ModTurbulence
 
 contains
   !============================================================================
-  subroutine read_turbulence_param(TypeHeating)
+  subroutine read_turbulence_param(NameCommand)
 
     use ModAdvance,    ONLY: UseAnisoPressure, iTypeUpdate, UpdateOrig_
     use ModReadParam,  ONLY: read_var
