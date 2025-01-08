@@ -3203,7 +3203,7 @@ contains
          if(Ehot_ > 1 .and. DoUpdate_V(Ehot_))then
             UseHeatFluxCollisionless = .true.
             if(NameThisComp == 'SC')then
-               UseHeatFluxRegion = .true.               
+               UseHeatFluxRegion = .true.
                UseHeatConduction = .true.
                ! defaults for semi-implicit heat conduction
                UseSemiImplicit = .true.

@@ -1488,7 +1488,7 @@ contains
        Flux_V(FaceUx_:FaceUz_) = 0.5*&
             (StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))
     end if
-    
+
     if(DoTestCell)call write_test_info
 #endif
   contains

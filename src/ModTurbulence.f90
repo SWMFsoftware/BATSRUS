@@ -56,7 +56,7 @@ module ModTurbulence
   ! Alfven wave speed array, cell-centered
   real, public, allocatable :: AlfvenWaveVel_DC(:,:,:,:)
   !$omp threadprivate(AlfvenWaveVel_DC)
-  
+
   character(len=lStringLine) :: TypeHeatPartitioning
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
   integer :: iTableHeatPartition = -1
@@ -213,7 +213,7 @@ contains
     !$acc update device(rMinWaveReflection, UseNewLimiter4Reflection)
 
     !$acc update device(ImbalanceMax, ImbalanceMax2)
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine read_turbulence_param
   !============================================================================
@@ -234,7 +234,7 @@ contains
     if(.not.allocated(WaveDissipationRate_VCI)) &
          allocate(WaveDissipationRate_VCI(WaveFirst_:WaveLast_, &
          1:nI,1:nJ,1:nK,nGang))
-    
+
     if(.not.UseAlfvenWaves) RETURN
 
     if(.not.DoInit)RETURN
@@ -357,10 +357,10 @@ contains
             /State_VGB(Lperp_,i,j,k,iBlock)
        SqrtRho = 1.0
     elseif(IsOnAwRepresentative)then
-#ifndef _OPENACC       
+#ifndef _OPENACC
        Coef = 2*sqrt(PoyntingFluxPerB*norm2(AlfvenWaveVel_DC(:,i,j,k)))
        SqrtRho = PoyntingFluxPerB*sqrt(State_VGB(Rho_,i,j,k,iBlock))
-#endif       
+#endif
     else
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -408,16 +408,16 @@ contains
     use ModAdvance, ONLY: Source_VC
     use BATL_size, ONLY: nI, nJ, nK
 
-    integer, intent(in) :: iBlock    
+    integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_wave_reflection'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI       
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        call get_wave_reflection_cell(i,j,k,iBlock, &
             Source_VC(WaveFirst_:WaveLast_,i,j,k))
     end do; end do; end do
@@ -427,7 +427,7 @@ contains
   !============================================================================
   subroutine get_wave_reflection_cell(i,j,k,iBlock,Source_V)
     !$acc routine seq
-    
+
     use ModAdvance, ONLY: State_VGB
     use ModB0, ONLY: B0_DGB
     use ModGeometry, ONLY: Used_GB, r_GB
@@ -449,7 +449,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    iGang = i_gang(iBlock)   
+    iGang = i_gang(iBlock)
 
     if( (.not.Used_GB(i,j,k,iBlock)).or.&
          r_GB(i,j,k, iBlock) < rMinWaveReflection) RETURN
@@ -501,7 +501,7 @@ contains
     Source_V(WaveLast_) = Source_V(WaveLast_) &
          + ReflectionRate*sqrt(EwavePlus*EwaveMinus)
 
-#ifndef _OPENACC    
+#ifndef _OPENACC
     ! Calculate sin(theta), where theta is the angle between Zplus
     ! and Zminus at the outer Lperp scale
     if(UseAlignmentAngle)then
@@ -513,13 +513,13 @@ contains
             CoronalHeating_CI(i,j,k,iGang)*Cdiss_C(i,j,k)
     end if
 #endif
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_wave_reflection_cell
   !============================================================================
   subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
     !$acc routine seq
-    
+
     use BATL_lib, ONLY: IsCartesianGrid, &
          CellSize_DB, FaceNormal_DDFB, CellVolume_GB
     use ModAdvance, ONLY: LogAlfven_, Flux_VXI, Flux_VYI, Flux_VZI
@@ -571,7 +571,7 @@ contains
        GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
     end if
   end subroutine get_grad_log_alfven_speed
-  !============================================================================   
+  !============================================================================
   ! subroutine get_log_alfven_speed(iBlock)
   !   use ModAdvance, ONLY: &
   !        LeftState_VX, LeftState_VY, LeftState_VZ,  &
@@ -583,7 +583,7 @@ contains
 
   !   integer, intent(in):: iBlock
 
-  !   integer :: i, j, k, iGang   
+  !   integer :: i, j, k, iGang
   !   real :: Rho, FullB_D(3)
   !   !------------------------------------------------------------------------
   !   iGang = i_gang(iBlock)
@@ -623,10 +623,9 @@ contains
   !   end if
 
   ! end subroutine get_log_alfven_speed
-  !==========================================================================
   subroutine get_curl_u(i, j, k, iBlock, CurlU_D)
     !$acc routine seq
-    
+
     use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
          CellVolume_GB, x_, y_, z_
     use ModAdvance, ONLY: FaceUx_, FaceUy_, FaceUz_, &
@@ -640,9 +639,9 @@ contains
     integer :: iGang
 
     real :: DxInv, DyInv, DzInv
+
     character(len=*), parameter:: NameSub = 'get_curl_u'
     !--------------------------------------------------------------------------
-
     iGang = i_gang(iBlock)
 
     if(IsCartesianGrid)then
@@ -658,7 +657,7 @@ contains
 
        CurlU_D(y_) = &
             DzInv*(Flux_VZI(FaceUx_,i,j,k+1,iGang)   &
-            -      Flux_VZI(FaceUx_,i,j,k,iGang))    &     
+            -      Flux_VZI(FaceUx_,i,j,k,iGang))    &
             - DxInv*(Flux_VXI(FaceUz_,i+1,j,k,iGang) &
             -        Flux_VXI(FaceUz_,i,j,k,iGang))
 

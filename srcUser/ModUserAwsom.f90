@@ -756,7 +756,7 @@ contains
     real :: QPerQtotal_I(nIonFluid)
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
-    real :: Coef    
+    real :: Coef
 
     integer :: iFace, jFace, kFace, iDir, iMax, jMax, kMax, iLeft, jLeft, kLeft
     real, allocatable :: HeatFlux_DF(:,:,:,:)
