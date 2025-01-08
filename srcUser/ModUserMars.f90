@@ -162,7 +162,8 @@ module ModUser
   logical :: UseChargeEx=.true.
   logical :: UseChapman=.false.
 
-  integer, parameter:: NLong=73, NLat=36, MaxAlt=21
+  ! Variables for Mars atmosphere lookup table generated with MGITM
+  integer, parameter:: NLong=72, NLat=36, MaxAlt=81
   real :: Long_I(NLong), Lat_I(NLat), Alt_I(MaxAlt)
   real :: Temp(NLong, NLat, MaxAlt)
   real :: Den_CO2(NLong, NLat, MaxAlt)!,Den_CO2_dim(NLong, NLat, NAlt)
@@ -1759,6 +1760,7 @@ contains
     real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HCO2, HO, grav
     real :: tempICO2p, tempIOp
     real :: xLat, xLong,xAlt
+    real :: Dlong, Dlat, Dalt
     integer :: i,j,k
     integer:: iAlt, jLong, kLat, ip1,jp1,kp1
     !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp -----
@@ -1771,35 +1773,44 @@ contains
     dPhi=CellSize_DB(y_,iBlock)
     dTheta=CellSize_DB(z_,iBlock)
 
+    Dlong = Long_I(2) - Long_I(1)
+    Dlat  = Lat_I(2) - Lat_I(1)
+    Dalt  = Alt_I(2) - Alt_I(1)
+    
     select case(TypeGeometry)
     case('cartesian')
        call stop_mpi('Unknown geometry type = '//TypeGeometry)
 
-    case('spherical','spherical_lnr')
+    case('spherical','spherical_lnr','spherical_genr')
        ! at least part of the block is outside the body
        if (r_GB(nI,1,1,iBlock) >= Rbody) then
 
           do k = 1, nK
              Theta = (k-1)*dTheta  + Coord111_DB(Theta_,iBlock)
              Theta = Theta*cRadToDeg ! Convert to degrees
-             kLat=int((theta+87.5)/5.0+1.0)
+             kLat=int((theta + 90.0 - Dlat/2)/Dlat+1.0)
              kp1=min(kLat+1, NLat)
              kLat = max(kLat,1)
-
+             
              do j = 1, nJ
                 Phi = (j-1)*dPhi  + Coord111_DB(Phi_,iBlock)
-                ! Shift to -pi to +pi range
-                if(Phi > cPi) Phi = Phi - cTwoPi
-                Phi = Phi*cRadToDeg ! Convert to degrees
-                jLong = int((Phi+180)/5.0 + 1.0)
+                if(Long_I(1) < 0.0)then
+                   ! Shift to -pi to +pi range
+                   if(Phi > cPi) Phi = Phi - cTwoPi
+                   Phi = Phi*cRadToDeg ! Convert to degrees
+                   jLong = int((Phi+180)/Dlong + 1.0)
+                else
+                   Phi = Phi*cRadToDeg ! Convert to degrees
+                   jLong = int(Phi/Dlong + 1.0)
+                end if
                 jp1   = min(jLong+1, nLong)
                 jLong = max(jLong, 1)
 
                 do i = nI, 1, -1
                    hh = (r_GB(i,j,k,iBlock)-1.00)*3396.00
                    !                 write(*,*)'hh=', hh, i,j,k,iBlock
-                   xLong=0.2*(Phi-Long_I(jLong))
-                   xLat=0.2*(Theta-Lat_I(kLat))
+                   xLong = (Phi-Long_I(jLong))/Dlong
+                   xLat = (Theta-Lat_I(kLat))/Dlat
                    if(hh <= 100.0)then  ! inside the body
                       tempNuSpecies_CBI(i,j,k,iBlock)= &
                            tempNuSpecies_CBI(i+1,j,k,iBlock)
@@ -1815,12 +1826,13 @@ contains
                       Ionizationrate_CBI(i,j,k,iBlock,O_)=&
                            Ionizationrate_CBI(i+1,j,k,iBlock,O_)
                    elseif(hh <= Alt_I(NAlt))then
-                      iAlt=int((hh -100.0)/10.0+1.0)
+                      iAlt=int((hh - (Alt_I(1)+Dalt/2))/Dalt+1.0)
                       ip1=min(iAlt+1,NAlt)
                       if(iAlt < 1)then
                          write(*,*)'wrong ialt',iAlt
                       end if
-                      xalt=0.1*(hh-Alt_I(iAlt))
+                      xalt = (hh-Alt_I(iAlt))/Dalt
+
                       ! interpolate
                       tempNuSpecies_CBI(i,j,k,iBlock)=          &
                            ((Temp(jLong,kLat,iAlt)*(1-xLong)       &
@@ -1862,6 +1874,7 @@ contains
                       ! Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
                       Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
                       Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP
+
                    else  ! hh > Alt_I(NAlt)
 
                       dH= hh - Alt_I(NAlt)
@@ -1912,6 +1925,7 @@ contains
        call stop_mpi('Unknown geometry type = '//TypeGeometry)
 
     end select
+
     if(DoTest)then
        write(*,*)'Mars input end', &
             dR,dPhi,dTheta, iBlock, &
@@ -1951,7 +1965,7 @@ contains
     case('cartesian')
        call stop_mpi('Unknown geometry type = '//TypeGeometry)
 
-    case('spherical','spherical_lnr')
+    case('spherical','spherical_lnr','spherical_genr')
        ! at least part of the block is outside the body
        if (r_GB(nI,1,1,iBlock) >= Rbody) then
           do k = 1, nK; do j = 1, nJ; do i = nI, 1, -1
@@ -2025,7 +2039,7 @@ contains
        else
           nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
        end if
-
+       
     end do;end do;end do
 
     ! calculate optical depth and producation rate
@@ -2071,7 +2085,7 @@ contains
                         (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
                         -0.5*(1.0606963+0.5564383*chap_y)/ &
                         (1.0619896+1.7245609*chap_y+chap_y*chap_y))
-                elseif(chap_y<100.0)then
+                elseif(chap_y<100.0 .and. Xp*(1.0-sinSZA) < 700.0)then
                    chap =sqrt(2.0*3.1415926*Xp)* &
                         (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
                         -0.5*0.56498823/(0.6651874+chap_y))
