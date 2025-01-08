@@ -47,8 +47,6 @@ HGR			TypeCoordSystem
 1.5			Gamma for fluid 1
 1.5			GammaElectron for electrons (if UseElectronPressure)
 
-#HEATFLUXCOLLISIONLESS
-F			UseHeatFluxCollisionless
 
 
 #HEATCONDUCTION
