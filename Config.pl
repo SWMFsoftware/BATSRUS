@@ -267,13 +267,13 @@ sub set_optimization{
 	# Read settings from some PARAM.in file
 	# Default settings
 	my %Set = (
-	    B1rCoef                  => -1,
-	    ClightFactor             => 1,
+	    B1rCoef                  => "-1.0",
+	    ClightFactor             => "1.0",
             DoLf                     => ".true.",
             IsCartesian              => ".true.",
             IsCartesianGrid          => ".true.",
 	    IsTimeAccurate           => ".true.",
-	    LimiterBeta              => 1,
+	    LimiterBeta              => "1.0",
 	    UseAccurateResChange     => ".true.",
 	    UseAlfvenWaveDissipation => ".false.",
 	    UseB0                    => "UseB",
@@ -352,9 +352,12 @@ sub set_optimization{
 		check_var($Set{"UseBody"}, $usebody, $first);
 	    }elsif(/^#PLANET\b/){
 		my $planet = <FILE>;
-		check_var($Set{"UseBody"}, "F", $first) if $planet =~ /^NONE/;
+		check_var($Set{"UseBody"}, "F", $first)
+		    if $planet =~ /^NONE/;
 		check_var($Set{"UseB0"}, "F", $first)
 		    if $planet =~ /^\s*(NONE|VENUS)/i;
+		check_var($Set{"UseRotatingBc"}, "F", $first)
+		    if $planet =~ /^NONE/;
 	    }elsif(/^#MAGNETICBOUNDARY\b/){
 		my $b1rcoef = <FILE>;
 		check_var($Set{"B1rCoef"}, $b1rcoef, $first);
