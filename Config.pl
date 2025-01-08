@@ -263,40 +263,48 @@ sub set_optimization{
 	    }
 	}
 	close(FILE);
-	    
 	
 	# Read settings from some PARAM.in file
 	# Default settings
 	my %Set = (
-	    ClightFactor        => 1,
-            DoLf                => ".true.",
-            IsCartesian         => ".true.",
-            IsCartesianGrid     => ".true.",
-	    IsTimeAccurate      => ".true.",
-	    LimiterBeta         => 1,
-	    UseB0               => "UseB"  ,
-	    UseBody             => ".false.",
-            UseBorisCorrection  => ".false.",
-	    UseCoarseAxis       => ".false.",
-	    UseDivbSource       => "UseB .and. nDim>1",
-	    UseDtFixed          => ".false.",
-	    UseElectronEntropy  => "UseElectronPressure",
-	    UseGravity          => ".false.",
-            UseHyperbolicDivB   => ".false.",
-            UseNonConservative  => ".false.",
-	    UsePMin             => ".false.",
-	    UseRhoMin           => ".false.",
-	    UseRotatingFrame    => ".false.",
-            iStage              => 1,
-            nStage              => 1,
-	    nConservCrit        => 0,
-	    nOrder              => 1,
+	    B1rCoef                  => -1,
+	    ClightFactor             => 1,
+            DoLf                     => ".true.",
+            IsCartesian              => ".true.",
+            IsCartesianGrid          => ".true.",
+	    IsTimeAccurate           => ".true.",
+	    LimiterBeta              => 1,
+	    UseAccurateResChange     => ".true.",
+	    UseAlfvenWaveDissipation => ".false.",
+	    UseB0                    => "UseB",
+	    UseBody                  => ".false.",
+            UseBorisCorrection       => ".false.",
+	    UseCoarseAxis            => ".false.",
+	    UseCpcpBc                => ".false.",
+	    UseCoronalHeating        => ".false.",
+	    UseDivbSource            => "UseB .and. nDim>1",
+	    UseDtFixed               => ".false.",
+	    UseElectronEntropy       => "UseElectronPressure",
+	    UseGravity               => ".false.",
+            UseHyperbolicDivB        => ".false.",
+            UseNonConservative       => ".false.",
+	    UsePMin                  => ".false.",
+	    UseReynoldsDecomposition => ".false.",
+	    UseRhoMin                => ".false.",
+	    UseRotatingBc            => ".false.",
+	    UseRotatingFrame         => ".false.",
+	    UseTurbulentCascade      => ".false.",
+            iStage                   => 1,
+            nStage                   => 1,
+	    nConservCrit             => 0,
+	    nOrder                   => 1,
 	    );
 
 	# Component dependent defaults (from ModSetParameters)
 	$Set{"UseB0"}            = ".false." if $NameComp =~ /IH|OH/;
 	$Set{"UseGravity"}       = ".true."  if $NameComp !~ /GM/;
 	$Set{"UseRotatingFrame"} = ".true."  if $NameComp =~ /SC|EE/;
+	$Set{"UseRotatingBc"}    = ".true."  if $NameComp =~ /GM/;
 
 	print "processing parameter file $Opt\n";
 	my $first = 1;  # true in the first session
@@ -337,6 +345,8 @@ sub set_optimization{
 			check_var($Set{"LimiterBeta"}, $beta, $first);
 		    }
 		}
+	    }elsif(/^#PROLONGATION\b/){
+		check_var($Set{"UseAccurateResChange"}, "F", $first);
 	    }elsif(/^#(BODY|MAGNETOSPHERE)\b/){
 		my $usebody = <FILE>;
 		check_var($Set{"UseBody"}, $usebody, $first);
@@ -345,6 +355,12 @@ sub set_optimization{
 		check_var($Set{"UseBody"}, "F", $first) if $planet =~ /^NONE/;
 		check_var($Set{"UseB0"}, "F", $first)
 		    if $planet =~ /^\s*(NONE|VENUS)/i;
+	    }elsif(/^#MAGNETICBOUNDARY\b/){
+		my $b1rcoef = <FILE>;
+		check_var($Set{"B1rCoef"}, $b1rcoef, $first);
+	    }elsif(/^#CPCPBOUNDARY\b/){
+		my $usecpcpbc = <FILE>;
+		check_var($Set{"UseCpcpBc"}, $usecpcpbc, $first);
 	    }elsif(/^#BORIS\b/){
 		my $boris = <FILE>;
 		check_var($Set{"UseBorisCorrection"}, $boris, $first);
@@ -399,7 +415,18 @@ sub set_optimization{
 		    if $coor =~ /^HGI/i;
 		$Set{"UseRotatingFrame"} = ".true."
 		    if $coor =~ /^GEO|HGC|HGR/i;
-	    }elsif(/^#GRAVITY^/){
+	    }elsif(/^#CORONALHEATING\b/){
+		my $heattype = <FILE>;
+		check_var($Set{"UseCoronalHeating"}, "T", $first)
+		    unless $heattype =~ /^(F|none)\b/i;
+		check_var($Set{"UseAlfvenWaveDissipation"}, "T", $first)
+		    if $heattype =~
+		    /^(alfvenwavedissipation|turbulentcascade|usmanov)\b/i;
+		check_var($Set{"UseReynoldsDecomposition"}, "T", $first)
+		    if $heattype =~ /^usmanov\b/i;
+		check_var($Set{"UseTurbulentCascade"}, "T", $first)
+		    if $heattype =~ /^turbulentcascade\b/i;
+	    }elsif(/^#GRAVITY\b/){
 		my $usegrav = <FILE>;
 		check_var($Set{"UseGravity"}, $usegrav, $first);
 	    }

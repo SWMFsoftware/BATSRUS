@@ -4,17 +4,18 @@
 
 module ModUpdateStateFast
 
-  ! Calculate each face twice
-
+  ! Parameters optimized to constants based on PARAM.in file
   use ModOptimizeParam, ONLY: &
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
        UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
-       UseElectronEntropy
-  use ModFaceValue, ONLY: UseAccurateResChange, correct_monotone_restrict, &
+       UseElectronEntropy, UseGravity, UseRotatingFrame, UseRotatingBc, &
+       UseAccurateResChange, UseCpcpBc, B1rCoef, &
+       UseCoronalHeating, UseAlfvenWaveDissipation, &
+       UseReynoldsDecomposition, UseTurbulentCascade
+  use ModFaceValue, ONLY: correct_monotone_restrict, &
        accurate_reschange2d, accurate_reschange3d
-  use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
        ChargePerMass_I, iPIon_I
@@ -22,8 +23,7 @@ module ModUpdateStateFast
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
        LogAlfven_, FaceUx_, FaceUy_, FaceUz_, &
-       DtMax_CB, Vdt_, iTypeUpdate, UpdateFast_, UseRotatingFrame, &
-       UseElectronPressure, DoUpdate_V, nSource, UseAnisoPressure
+       DtMax_CB, Vdt_, UseElectronPressure, UseAnisoPressure
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_, InFlowBC_, FixedBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -39,8 +39,7 @@ module ModUpdateStateFast
        GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
        No2Io_V, iUnitCons_V, UnitU_
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, &
-       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
-       UseGravity, nStep
+       iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
@@ -50,16 +49,14 @@ module ModUpdateStateFast
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB
   use ModSolarWind, ONLY: get_solar_wind_point
-  use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
+  use ModIeCoupling, ONLY: RhoCpcp_I
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModCoronalHeating, ONLY: UseCoronalHeating
-  use ModTurbulence, ONLY: UseAlfvenWaveDissipation, CoronalHeating_CI, &
+  use ModTurbulence, ONLY: CoronalHeating_CI, &
        calc_alfven_wave_dissipation, WaveDissipationRate_VCI, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
-       UseReynoldsDecomposition, UseTurbulentCascade, turbulent_cascade, &
-       get_wave_reflection_cell
+       turbulent_cascade, get_wave_reflection_cell
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
       get_gamma_collisionless
   use ModUtilities, ONLY: i_gang
@@ -117,7 +114,9 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'sync_cpu_gpu'
     !--------------------------------------------------------------------------
-    if(iTypeUpdate < UpdateFast_) RETURN
+#ifndef _OPENACC
+    RETURN
+#endif
 
     call test_start(NameSub, DoTest)
 
@@ -684,7 +683,7 @@ contains
                *State_VGB(Lperp_,i,j,k,iBlock)
        end if ! UseAlfvenWaveDissipation
 
-       if(UseCoronalHeating .and. DoUpdate_V(p_))then
+       if(UseCoronalHeating)then
           if(UseElectronPressure)then
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
