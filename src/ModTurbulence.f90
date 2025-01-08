@@ -97,9 +97,10 @@ module ModTurbulence
   real    :: KarmanTaylorAlpha = 1.0
   real    :: KarmanTaylorBeta2AlphaRatio = 0.5
   logical, private:: DoInit = .true.
+
 contains
   !============================================================================
-  subroutine read_turbulence_param(NameCommand)
+  subroutine read_turbulence_param(TypeHeating)
 
     use ModAdvance,    ONLY: UseAnisoPressure, iTypeUpdate, UpdateOrig_
     use ModReadParam,  ONLY: read_var
@@ -128,7 +129,7 @@ contains
        DoInit = .true.
        call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
        call read_var('rMinWaveReflection', rMinWaveReflection)
-       if(WDiff_>1)then
+       if(WDiff_ > 1)then
           call read_var(&
                'UseReynoldsDecomposition', UseReynoldsDecomposition)
        else
