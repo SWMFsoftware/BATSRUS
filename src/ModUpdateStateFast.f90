@@ -36,7 +36,7 @@ module ModUpdateStateFast
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
        OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
-       GammaElectronMinus1, GammaElectron, &
+       GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
        No2Io_V, iUnitCons_V, UnitU_
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
@@ -60,6 +60,8 @@ module ModUpdateStateFast
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
        UseReynoldsDecomposition, UseTurbulentCascade, turbulent_cascade, &
        get_wave_reflection_cell
+  use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+      get_gamma_collisionless
   use ModUtilities, ONLY: i_gang
 
   implicit none
@@ -508,6 +510,8 @@ contains
     real :: QePerQtotal
     real :: Ne
 
+    real :: Gamma
+
     logical:: IsConserv
 
     character(len=*), parameter:: NameSub = 'update_cell'
@@ -884,6 +888,21 @@ contains
     ! Convert energy back to pressure
     if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
          call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+
+    if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
+       iP = p_
+       if(UseElectronPressure) iP = Pe_
+
+       call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
+
+       State_VGB(iP,i,j,k,iBlock) = (Gamma - 1) &
+            *(InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock) &
+            + State_VGB(Ehot_,i,j,k,iBlock))
+       State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+            *(1.0/(Gamma - 1) - InvGammaElectronMinus1)
+
+       call limit_pressure(State_VGB(:,i,j,k,iBlock))      
+    end if
 
 #ifdef TESTACC
     if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &

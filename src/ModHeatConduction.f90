@@ -1205,11 +1205,9 @@ contains
                 NumDens = State_VGB(Rho_,i,j,k,iBlock)/TeFraction
              end if
              if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
-#ifndef _OPENACC
                 call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
                 DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) &
                      = NumDens/(GammaTmp - 1)
-#endif
              else
                 DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) &
                      = InvGammaElectronMinus1*NumDens
@@ -1712,9 +1710,9 @@ contains
          UnitP_, ExtraEintMin, pMin_I, PeMin
     use BATL_lib,    ONLY: Xyz_DGB
     use ModMultiFluid, ONLY: UseMultiIon
-    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless
-#ifndef _OPENACC
-    use ModHeatFluxCollisionless, ONLY: get_gamma_collisionless
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
+#ifndef _OPENACC    
     use ModUserInterface ! user_material_properties
 #endif
 
@@ -1753,7 +1751,6 @@ contains
 
        if(UseIdealEos)then
           if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
-#ifndef _OPENACC
              call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
 
              ! Heat conduction is carried by electrons
@@ -1765,7 +1762,6 @@ contains
                   + State_VGB(Ehot_,i,j,k,iBlock) + DeltaEinternal))
              State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   *(1.0/(GammaTmp - 1) - InvGammaElectronMinus1)
-#endif
           else
              State_VGB(iP,i,j,k,iBlock) = &
                   max(pMin, State_VGB(iP,i,j,k,iBlock) + &
