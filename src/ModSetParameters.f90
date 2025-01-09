@@ -3212,8 +3212,10 @@ contains
                SemiParam%ErrorMax = 1.0e-5
                SemiParam%MaxMatvec = 20
                SemiParam%nKrylovVector = SemiParam%MaxMatvec
-               !$acc update device(UseHeatFluxRegion)
             end if
+            !$acc update device(UseHeatFluxCollisionless)
+            !$acc update device(UseHeatFluxRegion, UseHeatConduction)
+
          end if
 
          ! Set anisotropic pressure instability defaults for first ion fluid

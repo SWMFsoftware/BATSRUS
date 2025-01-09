@@ -28,7 +28,7 @@ module ModHeatFluxCollisionless
   ! Parameters for collisionless heat conduction
   logical, public :: UseHeatFluxCollisionless = .false.
   real :: CollisionlessAlpha = 1.05
-  !$acc declare create(UseHeatFluxCollisionless)
+  !$acc declare create(UseHeatFluxCollisionless, CollisionlessAlpha)
 
 contains
   !============================================================================
@@ -59,6 +59,7 @@ contains
        if(UseHeatFluxCollisionless)then
           call read_var('CollisionlessAlpha', CollisionlessAlpha)
        endif
+       !$acc update device(UseHeatFluxCollisionless, CollisionlessAlpha)
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -111,7 +112,7 @@ contains
   !============================================================================
 
   subroutine get_gamma_collisionless(x_D, GammaOut)
-
+    !$acc routine seq
     use BATL_lib,   ONLY: MaxDim
     use ModPhysics, ONLY: GammaElectron, InvGammaElectronMinus1
     use ModAdvance, ONLY: UseElectronPressure

@@ -227,6 +227,7 @@ module ModMain
   logical :: UseRadDiffusion = .false.
   logical :: UseHeatConduction = .false.
   logical :: UseIonHeatConduction = .false.
+  !$acc declare create(UseHeatConduction)
 
   ! Logical and type for gravity
   logical :: UseGravity  = .false.

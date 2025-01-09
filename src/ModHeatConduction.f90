@@ -138,6 +138,7 @@ contains
                   //TypeHeatConduction)
           end select
        end if
+       !$acc update device(UseHeatConduction)
 
     case("#WEAKFIELDCONDUCTION")
        call read_var('DoWeakFieldConduction', DoWeakFieldConduction)
