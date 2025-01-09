@@ -8,11 +8,12 @@ module ModConserveFlux
 
   use BATL_size, ONLY: nDim
   use ModSize, ONLY: nI, nJ, nK, MaxBlock, MaxDim
-  use ModVarIndexes, ONLY: Bx_, By_, Bz_,B_,U_, Ex_
+  use ModVarIndexes, ONLY: Bx_, By_, Bz_,B_,U_, Ex_, Rho_
 
-  use ModMain, ONLY: UseB
+  use ModMain, ONLY: UseB, UseB0
   use ModAdvance, ONLY: &
-       Flux_VXI, Flux_VYI, Flux_VZI, UnFirst_, UnLast_,  Vdt_, BnL_, BnR_, &
+       Flux_VXI, Flux_VYI, Flux_VZI, &
+       UnFirst_, UnLast_,  Vdt_, BnL_, BnR_, LogAlfven_, &
        LeftState_VX, LeftState_VY, LeftState_VZ, &
        RightState_VX, RightState_VY, RightState_VZ, &
        UseMhdMomentumFlux, MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
@@ -90,7 +91,7 @@ contains
     if (nDim > 2 .and. DiLevel_EB(5,iBlock) == 1) &
          call save_corrected_flux_z(1, 1)
     if (nDim > 2 .and. DiLevel_EB(6,iBlock) == 1) &
-       call save_corrected_flux_z(nK+1, 2)
+         call save_corrected_flux_z(nK+1, 2)
 
     call test_stop(NameSub, DoTest, iBlock)
 
@@ -239,6 +240,8 @@ contains
   end subroutine save_cons_flux
   !============================================================================
   subroutine apply_cons_flux(iBlock)
+    use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+    use ModTurbulence, ONLY: UseTurbulentCascade
 
     integer, intent(in):: iBlock
 
@@ -257,18 +260,18 @@ contains
 
     if (DiLevel_EB(2,iBlock) == -1)then
        if(.not.Unused_BP(jBlock_IEB(1,2,iBlock),jProc_IEB(1,2,iBlock)).and. &
-         .not.Unused_BP(jBlock_IEB(2,2,iBlock),jProc_IEB(2,2,iBlock)).and. &
-         .not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)).and. &
-         .not.Unused_BP(jBlock_IEB(4,2,iBlock),jProc_IEB(4,2,iBlock))) &
-         call apply_corrected_flux_x(2, nI+1)
+            .not.Unused_BP(jBlock_IEB(2,2,iBlock),jProc_IEB(2,2,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(4,2,iBlock),jProc_IEB(4,2,iBlock))) &
+            call apply_corrected_flux_x(2, nI+1)
     end if
 
     if (nDim > 1 .and. DiLevel_EB(3,iBlock) == -1)then
        if(.not.Unused_BP(jBlock_IEB(1,3,iBlock),jProc_IEB(1,3,iBlock)).and. &
-         .not.Unused_BP(jBlock_IEB(2,3,iBlock),jProc_IEB(2,3,iBlock)).and. &
-         .not.Unused_BP(jBlock_IEB(3,3,iBlock),jProc_IEB(3,3,iBlock)).and. &
-         .not.Unused_BP(jBlock_IEB(4,3,iBlock),jProc_IEB(4,3,iBlock))) &
-         call apply_corrected_flux_y(1, 1)
+            .not.Unused_BP(jBlock_IEB(2,3,iBlock),jProc_IEB(2,3,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(3,3,iBlock),jProc_IEB(3,3,iBlock)).and. &
+            .not.Unused_BP(jBlock_IEB(4,3,iBlock),jProc_IEB(4,3,iBlock))) &
+            call apply_corrected_flux_y(1, 1)
     end if
 
     if (nDim > 1 .and. DiLevel_EB(4,iBlock) == -1)then
@@ -301,6 +304,8 @@ contains
       integer, intent(in):: lFaceFrom, lFaceTo
 
       integer:: j, k
+
+      real :: Rho, FullB_D(3)
       !------------------------------------------------------------------------
       do k = 1, nK; do j = 1, nJ
          if (.not.Used_GB(lFaceTo-1, j, k, iBlock)) CYCLE
@@ -332,6 +337,22 @@ contains
       if(UseB .and. .not.IsCartesianGrid) &
            call apply_bn_face_i(lFaceFrom, lFaceTo, iBlock)
 
+      if(UseTurbulentCascade) then
+         ! Since face B changed, recalculate log(Alfven_speed)
+         do k = 1, nK; do j = 1, nJ
+            if (.not.Used_GB(lFaceTo-1, j, k, iBlock)) CYCLE
+            if (.not.Used_GB(lFaceTo  , j, k, iBlock)) CYCLE
+
+            FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,lFaceTo,j,k) &
+                 + RightState_VX(Bx_:Bz_,lFaceTo,j,k))
+            if(UseB0) FullB_D = FullB_D + B0_DX(:,lFaceTo,j,k)
+            Rho = 0.5*(LeftState_VX(Rho_,lFaceTo,j,k) &
+                 +     RightState_VX(Rho_,lFaceTo,j,k))
+            Flux_VXI(LogAlfven_,lFaceTo,j,k,1) = &
+                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+         end do; end do
+      end if
+
     end subroutine apply_corrected_flux_x
     !==========================================================================
     subroutine apply_corrected_flux_y(lFaceFrom, lFaceTo)
@@ -339,6 +360,8 @@ contains
       integer, intent(in):: lFaceFrom, lFaceTo
 
       integer:: i, k
+
+      real :: Rho, FullB_D(3)
       !------------------------------------------------------------------------
       do k = 1, nK; do i = 1, nI
          if (.not.Used_GB(i, lFaceTo-1, k, iBlock))CYCLE
@@ -360,6 +383,21 @@ contains
       if(.not.IsCartesianGrid .and. UseB) &
            call apply_bn_face_j(lFaceFrom, lFaceTo, iBlock)
 
+      if(UseTurbulentCascade) then
+         ! Since face B changed, recalculate log(Alfven_speed)
+         do k = 1, nK; do i = 1, nI
+            if (.not.Used_GB(i, lFaceTo-1, k, iBlock))CYCLE
+            if (.not.Used_GB(i, lFaceTo  , k, iBlock))CYCLE
+            FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,lFaceTo,k) &
+                 + RightState_VY(Bx_:Bz_,i,lFaceTo,k))
+            if(UseB0) FullB_D = FullB_D + B0_DY(:,i,lFaceTo,k)
+            Rho = 0.5*(LeftState_VY(Rho_,i,lFaceTo,k) &
+                 +     RightState_VY(Rho_,i,lFaceTo,k))
+            Flux_VYI(LogAlfven_,i,lFaceTo,k,1) = &
+                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+         end do; end do
+      end if
+
     end subroutine apply_corrected_flux_y
     !==========================================================================
     subroutine apply_corrected_flux_z(lFaceFrom, lFaceTo)
@@ -367,6 +405,8 @@ contains
       integer, intent(in):: lFaceFrom, lFaceTo
 
       integer:: i, j
+
+      real :: Rho, FullB_D(3)
       !------------------------------------------------------------------------
       do j = 1, nJ; do i = 1, nI
          if(.not.Used_GB(i, j, lFaceTo-1, iBlock)) CYCLE
@@ -387,6 +427,21 @@ contains
       end do; end do
       if(.not.IsCartesianGrid .and. UseB) &
            call apply_bn_face_k(lFaceFrom, lFaceTo, iBlock)
+
+      if(UseTurbulentCascade) then
+         ! Since face B changed, recalculate log(Alfven_speed)
+         do j = 1, nJ; do i = 1, nI
+            if(.not.Used_GB(i, j, lFaceTo-1, iBlock)) CYCLE
+            if(.not.Used_GB(i, j, lFaceTo  , iBlock)) CYCLE
+            FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,lFaceTo) &
+                 + RightState_VZ(Bx_:Bz_,i,j,lFaceTo))
+            if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,lFaceTo)
+            Rho = 0.5*(LeftState_VZ(Rho_,i,j,lFaceTo) &
+                 +     RightState_VZ(Rho_,i,j,lFaceTo))
+            Flux_VZI(LogAlfven_,i,j,lFaceTo,1) = &
+                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+         end do; end do
+      end if
 
     end subroutine apply_corrected_flux_z
     !==========================================================================
