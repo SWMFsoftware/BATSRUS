@@ -349,7 +349,7 @@ contains
             Rho = 0.5*(LeftState_VX(Rho_,lFaceTo,j,k) &
                  +     RightState_VX(Rho_,lFaceTo,j,k))
             Flux_VXI(LogAlfven_,lFaceTo,j,k,1) = &
-                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+                 0.5*log(max(sum(FullB_D**2), 1e-30)/Rho)
          end do; end do
       end if
 
@@ -394,7 +394,7 @@ contains
             Rho = 0.5*(LeftState_VY(Rho_,i,lFaceTo,k) &
                  +     RightState_VY(Rho_,i,lFaceTo,k))
             Flux_VYI(LogAlfven_,i,lFaceTo,k,1) = &
-                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+                 0.5*log(max(sum(FullB_D**2), 1e-30)/Rho)
          end do; end do
       end if
 
@@ -439,7 +439,7 @@ contains
             Rho = 0.5*(LeftState_VZ(Rho_,i,j,lFaceTo) &
                  +     RightState_VZ(Rho_,i,j,lFaceTo))
             Flux_VZI(LogAlfven_,i,j,lFaceTo,1) = &
-                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+                 0.5*log(max(sum(FullB_D**2), 1e-30)/Rho)
          end do; end do
       end if
 
