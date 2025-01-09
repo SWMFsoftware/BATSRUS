@@ -1776,7 +1776,7 @@ contains
     Dlong = Long_I(2) - Long_I(1)
     Dlat  = Lat_I(2) - Lat_I(1)
     Dalt  = Alt_I(2) - Alt_I(1)
-    
+
     select case(TypeGeometry)
     case('cartesian')
        call stop_mpi('Unknown geometry type = '//TypeGeometry)
@@ -1791,7 +1791,7 @@ contains
              kLat=int((theta + 90.0 - Dlat/2)/Dlat+1.0)
              kp1=min(kLat+1, NLat)
              kLat = max(kLat,1)
-             
+
              do j = 1, nJ
                 Phi = (j-1)*dPhi  + Coord111_DB(Phi_,iBlock)
                 if(Long_I(1) < 0.0)then
@@ -2039,7 +2039,7 @@ contains
        else
           nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
        end if
-       
+
     end do;end do;end do
 
     ! calculate optical depth and producation rate

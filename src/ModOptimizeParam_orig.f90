@@ -53,7 +53,7 @@ module ModOptimizeParam
        UseAlfvenWaveDissipation => UseAlfvenWaveDissipation, &
        UseReynoldsDecomposition => UseReynoldsDecomposition, &
        UseTurbulentCascade => UseTurbulentCascade
-  
+
   implicit none
 
   ! Fixed values

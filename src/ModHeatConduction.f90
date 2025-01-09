@@ -1712,7 +1712,7 @@ contains
     use ModMultiFluid, ONLY: UseMultiIon
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
-#ifndef _OPENACC    
+#ifndef _OPENACC
     use ModUserInterface ! user_material_properties
 #endif
 
