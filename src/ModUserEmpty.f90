@@ -98,6 +98,9 @@ contains
   !============================================================================
   subroutine user_init_session
 
+    ! Initialize the user module. This routine is called in every session
+    ! by default.
+
     character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
     UseUserInitSession = .false. ! if not implemented
@@ -182,6 +185,10 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
+    ! Based on NameVar set log variable VarValue. Radius parameter can
+    ! be used to define the log variable (e.g. integral of some flux at
+    ! a given Radius)
+
     real, intent(out)            :: VarValue
     character(len=*), intent(in) :: NameVar
     real, intent(in), optional   :: Radius
@@ -200,7 +207,8 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-
+    ! Based on NameVar set PlotVar_G and related variables for block iBlock
+    
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
@@ -225,6 +233,8 @@ contains
   !============================================================================
   subroutine user_calc_sources_expl(iBlock)
 
+    ! Set explicit source terms for block iBlock
+
     integer, intent(in) :: iBlock
 
     character(len=*), parameter:: NameSub = 'user_calc_sources'
@@ -235,6 +245,8 @@ contains
   end subroutine user_calc_sources_expl
   !============================================================================
   subroutine user_calc_sources_impl(iBlock)
+
+    ! Set point implicit source terms for block iBlock
 
     integer, intent(in) :: iBlock
 
@@ -343,8 +355,8 @@ contains
   end subroutine user_io_units
   !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
-    ! This subrountine set the eta for every block
-    use ModSize
+
+    ! Set Eta_G for block iBlock
 
     integer, intent(in) :: iBlock
     real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -398,7 +410,7 @@ contains
          OpacityRosselandOut_W(nWave)                      ! [1/m]
 
     ! Multi-group specific interface. The variables are respectively:
-    !  Group Planckian spectral energy density
+    ! Group Planckian spectral energy density
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
 
     character(len=*), parameter:: NameSub = 'user_material_properties'
