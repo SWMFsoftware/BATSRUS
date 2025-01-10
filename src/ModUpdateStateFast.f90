@@ -4,25 +4,26 @@
 
 module ModUpdateStateFast
 
-  ! Calculate each face twice
-
+  ! Parameters optimized to constants based on PARAM.in file
   use ModOptimizeParam, ONLY: &
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
        UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
-       UseElectronEntropy
-  use ModFaceValue, ONLY: UseAccurateResChange, correct_monotone_restrict, &
+       UseElectronEntropy, UseGravity, UseRotatingFrame, UseRotatingBc, &
+       UseAccurateResChange, UseCpcpBc, B1rCoef, &
+       UseCoronalHeating, UseAlfvenWaveDissipation, &
+       UseReynoldsDecomposition, UseTurbulentCascade
+  use ModFaceValue, ONLY: correct_monotone_restrict, &
        accurate_reschange2d, accurate_reschange3d
-  use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
        ChargePerMass_I, iPIon_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
-       DtMax_CB, Vdt_, iTypeUpdate, UpdateFast_, UseRotatingFrame, &
-       UseElectronPressure, DoUpdate_V, nSource, UseAnisoPressure
+       LogAlfven_, FaceUx_, FaceUy_, FaceUz_, &
+       DtMax_CB, Vdt_, UseElectronPressure, UseAnisoPressure
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_, InFlowBC_, FixedBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -35,11 +36,10 @@ module ModUpdateStateFast
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
        OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
-       GammaElectronMinus1, GammaElectron, &
+       GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
        No2Io_V, iUnitCons_V, UnitU_
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, &
-       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe, &
-       UseGravity, nStep
+       iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
@@ -49,15 +49,16 @@ module ModUpdateStateFast
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB
   use ModSolarWind, ONLY: get_solar_wind_point
-  use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
+  use ModIeCoupling, ONLY: RhoCpcp_I
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModCoronalHeating, ONLY: UseCoronalHeating
-  use ModTurbulence, ONLY: UseAlfvenWaveDissipation, CoronalHeating_CI, &
+  use ModTurbulence, ONLY: CoronalHeating_CI, &
        calc_alfven_wave_dissipation, WaveDissipationRate_VCI, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
-       UseReynoldsDecomposition, UseTurbulentCascade
+       turbulent_cascade, get_wave_reflection_cell
+  use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+      get_gamma_collisionless
   use ModUtilities, ONLY: i_gang
 
   implicit none
@@ -113,7 +114,9 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'sync_cpu_gpu'
     !--------------------------------------------------------------------------
-    if(iTypeUpdate < UpdateFast_) RETURN
+#ifndef _OPENACC
+    RETURN
+#endif
 
     call test_start(NameSub, DoTest)
 
@@ -497,14 +500,16 @@ contains
     logical, intent(in):: IsBodyBlock
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar, iVarLast
-    real:: DivU, DivB, DivE, DivF, DtLocal
-    real:: Change_V(nFlux), DivF_V(nFlux), Force_D(3)
+    real:: DivU, DivB, DivE, DivF, DtLocal, InvVol
+    real:: Change_V(nFlux), Force_D(3)
 
     ! Coronal Heating
     real :: QPerQtotal_I(nIonFluid)
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
     real :: Ne
+
+    real :: Gamma
 
     logical:: IsConserv
 
@@ -639,19 +644,27 @@ contains
 #endif
 
     if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
+
        if(UseAlfvenWaveDissipation)then
+          ! This is equivalent to get_block_heating()
 
           if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
-             ! To be implemented.
-             ! call turbulent_cascade(i, j, k, iBlock, &
-             !        WaveDissipationRate_VCI(:,i,j,k,iGang), &
-             !        CoronalHeating_CI(i,j,k,iGang))
+             call turbulent_cascade(i, j, k, iBlock, &
+                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
+                  CoronalHeating_CI(i,j,k,iGang))
           else
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
                   WaveDissipationRate_VCI(:,i,j,k,iGang), &
                   CoronalHeating_CI(i,j,k,iGang))
           end if
+       end if
 
+       if(UseTurbulentCascade) then
+          call get_wave_reflection_cell(i,j,k,iBlock,&
+               Change_V(WaveFirst_:WaveLast_))
+       endif
+
+       if(UseAlfvenWaveDissipation)then
           Change_V(WaveFirst_:WaveLast_) = &
                Change_V(WaveFirst_:WaveLast_) &
                - WaveDissipationRate_VCI(:,i,j,k,iGang)*&
@@ -670,7 +683,7 @@ contains
                *State_VGB(Lperp_,i,j,k,iBlock)
        end if ! UseAlfvenWaveDissipation
 
-       if(UseCoronalHeating .and. DoUpdate_V(p_))then
+       if(UseCoronalHeating)then
           if(UseElectronPressure)then
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
@@ -780,20 +793,18 @@ contains
     end if
 
     ! Add div(Flux) to Change_V
-    DivF_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
-         -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
-    if(nDim > 1) DivF_V = DivF_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
-         -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
-    if(nDim > 2) DivF_V = DivF_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
-         -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
-
     if(IsCartesian)then
-       DivF_V = DivF_V/CellVolume_B(iBlock)
+       InvVol = 1/CellVolume_B(iBlock)
     else
-       DivF_V = DivF_V/CellVolume_GB(i,j,k,iBlock)
+       InvVol = 1/CellVolume_GB(i,j,k,iBlock)
     end if
 
-    Change_V = Change_V + DivF_V
+    Change_V = Change_V + InvVol*( &
+         Flux_VXI(1:nFlux,i,j,k,iGang) - Flux_VXI(1:nFlux,i+1,j,k,iGang))
+    if(nDim > 1) Change_V = Change_V + InvVol*( &
+         Flux_VYI(1:nFlux,i,j,k,iGang) - Flux_VYI(1:nFlux,i,j+1,k,iGang))
+    if(nDim > 2) Change_V = Change_V + InvVol*( &
+         Flux_VZI(1:nFlux,i,j,k,iGang) - Flux_VZI(1:nFlux,i,j,k+1,iGang))
 
     ! Time step for iStage
     if(IsTimeAccurate)then
@@ -876,6 +887,21 @@ contains
     ! Convert energy back to pressure
     if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
          call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+
+    if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
+       iP = p_
+       if(UseElectronPressure) iP = Pe_
+
+       call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
+
+       State_VGB(iP,i,j,k,iBlock) = (Gamma - 1) &
+            *(InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock) &
+            + State_VGB(Ehot_,i,j,k,iBlock))
+       State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+            *(1.0/(Gamma - 1) - InvGammaElectronMinus1)
+
+       call limit_pressure(State_VGB(:,i,j,k,iBlock))
+    end if
 
 #ifdef TESTACC
     if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
@@ -2084,9 +2110,10 @@ contains
        StateLeft_V, StateRight_V, Flux_V, B0_D, DoTestSide)
     !$acc routine seq
 
-    ! Calculate numerical flux Flux_V based on the left and right states
-    ! and the B0 field along the normal direction Normal_D. The flux
-    ! returns the Area that may be negative for certain update schemes.
+    ! Calculate numerical flux Flux_V along the normal direction Normal_D
+    ! based on the left and right states and the B0 field at the face.
+    ! The flux is multiplied by Area that may be negative for certain
+    ! update schemes.
 
     real, intent(in)   :: Normal_D(3), Area
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
@@ -2107,6 +2134,8 @@ contains
     real :: Cleft, Cright, Cmax, Un, DiffBn, CleftAverage, CrightAverage
 
     real :: AreaInvCdiff, Cproduct, Bn
+
+    real :: FullB_D(3)
 
     integer :: iVar
     !--------------------------------------------------------------------------
@@ -2251,6 +2280,17 @@ contains
 
     ! Store time step constraint (to be generalized for multifluid)
     Flux_V(Vdt_) = abs(Area)*Cmax
+
+    if(UseTurbulentCascade) then
+       ! Store logarithm of the Alfven speed into Flux_V (for grad v_A)
+       FullB_D = 0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))
+       if(UseB0) FullB_D = FullB_D + B0_D
+       Flux_V(LogAlfven_) = 0.5*log(max(sum(FullB_D**2), 1e-30)/ &
+            (0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_))))
+       ! Store velocity into Flux_V (for curl u)
+       Flux_V(FaceUx_:FaceUz_) = &
+            0.5*(StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))
+    end if
 
 #ifdef TESTACC
     if(DoTestSide)then

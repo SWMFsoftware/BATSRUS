@@ -4,6 +4,12 @@
 
 module ModHeatFluxCollisionless
 
+  ! We use a varying gamma (as a function of radial distance from the Sun)
+  ! for the electrons to parameterize the collisionless heat flux
+  ! of Hollweg (1976).
+  ! The implementation uses an extra variable Ehot_ instead of
+  ! actually changing gamma.
+
   use BATL_lib,      ONLY: test_start, test_stop
   use ModBatsrusUtility, ONLY: stop_mpi
 #ifdef _OPENACC
@@ -23,15 +29,15 @@ module ModHeatFluxCollisionless
   ! Parameters for heat flux region
   logical, public :: UseHeatFluxRegion = .false.
   real, public :: rCollisional = 5.0, rCollisionless = -8.0
+  !$acc declare create(UseHeatFluxRegion, rCollisional, rCollisionless)
 
   ! Parameters for collisionless heat conduction
   logical, public :: UseHeatFluxCollisionless = .false.
   real :: CollisionlessAlpha = 1.05
-  !$acc declare create(UseHeatFluxCollisionless)
+  !$acc declare create(UseHeatFluxCollisionless, CollisionlessAlpha)
 
 contains
   !============================================================================
-
   subroutine read_heatflux_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
@@ -51,12 +57,14 @@ contains
           call read_var('rCollisional', rCollisional)
           call read_var('rCollisionless', rCollisionless)
        end if
+       !$acc update device(UseHeatFluxRegion, rCollisional, rCollisionless)
 
     case("#HEATFLUXCOLLISIONLESS")
        call read_var('UseHeatFluxCollisionless', UseHeatFluxCollisionless)
        if(UseHeatFluxCollisionless)then
           call read_var('CollisionlessAlpha', CollisionlessAlpha)
        endif
+       !$acc update device(UseHeatFluxCollisionless, CollisionlessAlpha)
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -65,12 +73,10 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_heatflux_param
   !============================================================================
-
   subroutine update_heatflux_collisionless(iBlock)
 
-    use BATL_lib,      ONLY: Xyz_DGB
+    use BATL_lib,      ONLY: Xyz_DGB, nI, nJ, nK
     use ModVarIndexes, ONLY: Pe_, P_, Ehot_
-    use ModSize
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: InvGammaElectronMinus1
     use ModEnergy,     ONLY: limit_pressure
@@ -85,9 +91,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    ! We use a varying gamma for the electrons to parameterize the
-    ! collisionless heat flux of Hollweg (1976).
-
     iP = p_
     if(UseElectronPressure) iP = Pe_
 
@@ -101,14 +104,14 @@ contains
             *(1.0/(GammaHere - 1) - InvGammaElectronMinus1)
     end do; end do; end do
 
-    ! write(*,*)NameSub,' !!! call limit_pressure'
     call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1)
 
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine update_heatflux_collisionless
   !============================================================================
-
   subroutine get_gamma_collisionless(x_D, GammaOut)
+    !$acc routine seq
 
     use BATL_lib,   ONLY: MaxDim
     use ModPhysics, ONLY: GammaElectron, InvGammaElectronMinus1
@@ -149,6 +152,5 @@ contains
 
   end subroutine get_gamma_collisionless
   !============================================================================
-
 end module ModHeatFluxCollisionless
 !==============================================================================

@@ -263,40 +263,48 @@ sub set_optimization{
 	    }
 	}
 	close(FILE);
-	    
 	
 	# Read settings from some PARAM.in file
 	# Default settings
 	my %Set = (
-	    ClightFactor        => 1,
-            DoLf                => ".true.",
-            IsCartesian         => ".true.",
-            IsCartesianGrid     => ".true.",
-	    IsTimeAccurate      => ".true.",
-	    LimiterBeta         => 1,
-	    UseB0               => "UseB"  ,
-	    UseBody             => ".false.",
-            UseBorisCorrection  => ".false.",
-	    UseCoarseAxis       => ".false.",
-	    UseDivbSource       => "UseB .and. nDim>1",
-	    UseDtFixed          => ".false.",
-	    UseElectronEntropy  => "UseElectronPressure",
-	    UseGravity          => ".false.",
-            UseHyperbolicDivB   => ".false.",
-            UseNonConservative  => ".false.",
-	    UsePMin             => ".false.",
-	    UseRhoMin           => ".false.",
-	    UseRotatingFrame    => ".false.",
-            iStage              => 1,
-            nStage              => 1,
-	    nConservCrit        => 0,
-	    nOrder              => 1,
+	    B1rCoef                  => "-1.0",
+	    ClightFactor             => "1.0",
+            DoLf                     => ".true.",
+            IsCartesian              => ".true.",
+            IsCartesianGrid          => ".true.",
+	    IsTimeAccurate           => ".true.",
+	    LimiterBeta              => "1.0",
+	    UseAccurateResChange     => ".true.",
+	    UseAlfvenWaveDissipation => ".false.",
+	    UseB0                    => "UseB",
+	    UseBody                  => ".false.",
+            UseBorisCorrection       => ".false.",
+	    UseCoarseAxis            => ".false.",
+	    UseCpcpBc                => ".false.",
+	    UseCoronalHeating        => ".false.",
+	    UseDivbSource            => "UseB .and. nDim>1",
+	    UseDtFixed               => ".false.",
+	    UseElectronEntropy       => "UseElectronPressure",
+	    UseGravity               => ".false.",
+            UseHyperbolicDivB        => ".false.",
+            UseNonConservative       => ".false.",
+	    UsePMin                  => ".false.",
+	    UseReynoldsDecomposition => ".false.",
+	    UseRhoMin                => ".false.",
+	    UseRotatingBc            => ".false.",
+	    UseRotatingFrame         => ".false.",
+	    UseTurbulentCascade      => ".false.",
+            iStage                   => 1,
+            nStage                   => 1,
+	    nConservCrit             => 0,
+	    nOrder                   => 1,
 	    );
 
 	# Component dependent defaults (from ModSetParameters)
 	$Set{"UseB0"}            = ".false." if $NameComp =~ /IH|OH/;
 	$Set{"UseGravity"}       = ".true."  if $NameComp !~ /GM/;
 	$Set{"UseRotatingFrame"} = ".true."  if $NameComp =~ /SC|EE/;
+	$Set{"UseRotatingBc"}    = ".true."  if $NameComp =~ /GM/;
 
 	print "processing parameter file $Opt\n";
 	my $first = 1;  # true in the first session
@@ -337,14 +345,25 @@ sub set_optimization{
 			check_var($Set{"LimiterBeta"}, $beta, $first);
 		    }
 		}
+	    }elsif(/^#PROLONGATION\b/){
+		check_var($Set{"UseAccurateResChange"}, "F", $first);
 	    }elsif(/^#(BODY|MAGNETOSPHERE)\b/){
 		my $usebody = <FILE>;
 		check_var($Set{"UseBody"}, $usebody, $first);
 	    }elsif(/^#PLANET\b/){
 		my $planet = <FILE>;
-		check_var($Set{"UseBody"}, "F", $first) if $planet =~ /^NONE/;
+		check_var($Set{"UseBody"}, "F", $first)
+		    if $planet =~ /^NONE/;
 		check_var($Set{"UseB0"}, "F", $first)
 		    if $planet =~ /^\s*(NONE|VENUS)/i;
+		check_var($Set{"UseRotatingBc"}, "F", $first)
+		    if $planet =~ /^NONE/;
+	    }elsif(/^#MAGNETICBOUNDARY\b/){
+		my $b1rcoef = <FILE>;
+		check_var($Set{"B1rCoef"}, $b1rcoef, $first);
+	    }elsif(/^#CPCPBOUNDARY\b/){
+		my $usecpcpbc = <FILE>;
+		check_var($Set{"UseCpcpBc"}, $usecpcpbc, $first);
 	    }elsif(/^#BORIS\b/){
 		my $boris = <FILE>;
 		check_var($Set{"UseBorisCorrection"}, $boris, $first);
@@ -395,9 +414,22 @@ sub set_optimization{
 		check_var($Set{"UseDtFixed"}, $usedtfixed, $first);
 	    }elsif(/^#COORD(INATE)?SYSTEM\b/){
 		my $coor = <FILE>;
-		$Set{"UseRotatingFrame"} = ".false." if $coor =~ /^HGI/i;
-		$Set{"UseRotatingFrame"} = ".true."  if $coor =~ /^GEO|HGC|HGR/i;
-	    }elsif(/^#GRAVITY^/){
+		$Set{"UseRotatingFrame"} = ".false."
+		    if $coor =~ /^HGI/i;
+		$Set{"UseRotatingFrame"} = ".true."
+		    if $coor =~ /^GEO|HGC|HGR/i;
+	    }elsif(/^#CORONALHEATING\b/){
+		my $heattype = <FILE>;
+		check_var($Set{"UseCoronalHeating"}, "T", $first)
+		    unless $heattype =~ /^(F|none)\b/i;
+		check_var($Set{"UseAlfvenWaveDissipation"}, "T", $first)
+		    if $heattype =~
+		    /^(alfvenwavedissipation|turbulentcascade|usmanov)\b/i;
+		check_var($Set{"UseReynoldsDecomposition"}, "T", $first)
+		    if $heattype =~ /^usmanov\b/i;
+		check_var($Set{"UseTurbulentCascade"}, "T", $first)
+		    if $heattype =~ /^turbulentcascade\b/i;
+	    }elsif(/^#GRAVITY\b/){
 		my $usegrav = <FILE>;
 		check_var($Set{"UseGravity"}, $usegrav, $first);
 	    }
@@ -415,7 +447,8 @@ sub set_optimization{
 		if($Set{$name} eq $Opt{$name}){
 		    printf("%-30s = %s\n", $name, $Opt{$name});
 		}else{
-		    printf("%-30s = %-17s -> %s\n", $name, $Opt{$name}, $Set{$name});
+		    printf("%-30s = %-17s -> %s\n",
+			   $name, $Opt{$name}, $Set{$name});
 		    $Opt{$name} = $Set{$name};
 		}
 	    }
@@ -506,12 +539,14 @@ sub set_optimization{
 			    "call CON_stop(NameSub// &\n\t ': $name=T')\n"
 		    }else{
 			print "    if(${name}Orig .neqv. $value) ".
-			    "call CON_stop(NameSub// &\n\t ': $name=', ${name}Orig)\n"
+			    "call CON_stop(NameSub// &\n\t ':".
+			    " $name=', ${name}Orig)\n"
 		    }
 		}elsif($name ne 'iStage'){  # iStage cannot be checked
 		    $value .= ' .and. nOrder > 1' if $name eq 'LimiterBeta';
 		    print "    if(${name}Orig /= $value) ".
-			"call CON_stop(NameSub// &\n\t ': $name=', ${name}Orig)\n";
+			"call CON_stop(NameSub// &\n\t ':".
+			" $name=', ${name}Orig)\n";
 		}
 	    }
 	    print "\n";
@@ -620,7 +655,8 @@ sub set_equation{
 	my $IsSame = 1; my $line1; my $line2;
 	while($line1=<FILE1> and $line2=<FILE2>){
 	    # Ignore the nWave, nPui, and nMaterial definitions
-	    next if $line1=~/nMaterial|nWave|nPui/ and $line2=~/nMaterial|nWave|nPui/;
+	    next if $line1=~/nMaterial|nWave|nPui/
+		and $line2=~/nMaterial|nWave|nPui/;
 	    if($line1 ne $line2){
 		$IsSame = 0;
 		last;
@@ -921,8 +957,10 @@ sub current_settings{
     $Settings .= "Number of state variables   : nVar=$nVar\n";
     $Settings .= "Number of species           : nSpecies=$nSpecies\n" 
 	if $nSpecies;
-    $Settings .= "Number of wave bins         : nWave=$nWave\n" if $nWave;
-    $Settings .= "Number of PUI bins          : nPui=$nPui\n"   if $nPui;
+    $Settings .= "Number of wave bins         : nWave=$nWave\n"
+	if $nWave;
+    $Settings .= "Number of PUI bins          : nPui=$nPui\n"
+	if $nPui;
     $Settings .= "Number of materials         : nMaterial=$nMaterial\n" 
 	if $nMaterial;
     $Settings .= "Number of ion fluids        : nIonFluid=$nIonFluid\n"
@@ -931,8 +969,10 @@ sub current_settings{
 	if $nNeutralFluid;
     $Settings .= "Number of fluids            : nFluid=$nFluid\n"
 	if $nFluid > 1;
-    $Settings .= "Electron pressure           : UsePe=1\n" if $Value{"Pe_"}>1;
-    $Settings .= "Parallel pressure           : UsePpar=1\n" if $Value{"Ppar_"}>1;
+    $Settings .= "Electron pressure           : UsePe=1\n"
+	if $Value{"Pe_"}>1;
+    $Settings .= "Parallel pressure           : UsePpar=1\n"
+	if $Value{"Ppar_"}>1;
     
     $Settings; # return value
 }

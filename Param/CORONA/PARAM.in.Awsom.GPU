@@ -47,11 +47,7 @@ HGR			TypeCoordSystem
 1.5			Gamma for fluid 1
 1.5			GammaElectron for electrons (if UseElectronPressure)
 
-#HEATFLUXCOLLISIONLESS
-F			UseHeatFluxCollisionless
 
-#HEATFLUXREGION
-F			UseHeatFluxRegion
 
 #HEATCONDUCTION
 T			UseHeatConduction
@@ -65,18 +61,18 @@ parcond			TypeSemiImplicit
 krylov			StringTest
 
 #POYNTINGFLUX
-1.0e6			PoyntingFluxPerBSi
+1e6			PoyntingFluxPerBSi
 
 #CORONALHEATING
-alfvenwavedissipation		TypeCoronalHeating
-7.5E4			LperpTimesSqrtBSi
-0.04			Crefl
-
-CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 F			UseReynoldsDecomposition
+
+#HEATPARTITIONING
+stochasticheating		TypeHeatPartitioning
+0.21			StochasticExponent
+0.18			StochasticAmplitude
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -97,7 +93,8 @@ T			UseCoarseAxis
 #USERINPUTEND -------------------------------------
 
 #GRIDGEOMETRY
-spherical_lnr		TypeGeometry
+spherical_genr		TypeGeometry
+Param/CORONA/grid_awsom.dat		NameGridFile
 
 ! Use a true sphere, so box is made much larger
 #GRID

@@ -138,6 +138,7 @@ contains
                   //TypeHeatConduction)
           end select
        end if
+       !$acc update device(UseHeatConduction)
 
     case("#WEAKFIELDCONDUCTION")
        call read_var('DoWeakFieldConduction', DoWeakFieldConduction)
@@ -1024,6 +1025,7 @@ contains
     ! Artificial modified heat conduction for a smoother transition
     ! region, Linker et al. (2001)
     if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
+#endif
 
     if(UseHeatFluxRegion)then
        r = r_GB(i,j,k,iBlock)
@@ -1036,7 +1038,6 @@ contains
        end if
        HeatCoef = Factor*HeatCoef
     end if
-#endif
 
     HeatCoef_GI(i,j,k,iGang) = HeatCoef
 
@@ -1205,11 +1206,9 @@ contains
                 NumDens = State_VGB(Rho_,i,j,k,iBlock)/TeFraction
              end if
              if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
-#ifndef _OPENACC
                 call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
                 DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) &
                      = NumDens/(GammaTmp - 1)
-#endif
              else
                 DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) &
                      = InvGammaElectronMinus1*NumDens
@@ -1712,9 +1711,9 @@ contains
          UnitP_, ExtraEintMin, pMin_I, PeMin
     use BATL_lib,    ONLY: Xyz_DGB
     use ModMultiFluid, ONLY: UseMultiIon
-    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
 #ifndef _OPENACC
-    use ModHeatFluxCollisionless, ONLY: get_gamma_collisionless
     use ModUserInterface ! user_material_properties
 #endif
 
@@ -1753,7 +1752,6 @@ contains
 
        if(UseIdealEos)then
           if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
-#ifndef _OPENACC
              call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
 
              ! Heat conduction is carried by electrons
@@ -1765,7 +1763,6 @@ contains
                   + State_VGB(Ehot_,i,j,k,iBlock) + DeltaEinternal))
              State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   *(1.0/(GammaTmp - 1) - InvGammaElectronMinus1)
-#endif
           else
              State_VGB(iP,i,j,k,iBlock) = &
                   max(pMin, State_VGB(iP,i,j,k,iBlock) + &

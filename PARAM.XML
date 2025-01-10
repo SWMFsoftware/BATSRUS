@@ -10254,7 +10254,7 @@ The default is UseIonHeatConduction=.false.
 </command>
 
 <command name="HEATFLUXREGION">
-  <parameter name="UseHeatFluxRegion"  type="logical" default="F"/>
+  <parameter name="UseHeatFluxRegion"  type="logical" default="T"/>
   <if expr="$UseHeatFluxRegion">
     <parameter name="rCollisional"   type="real" />
     <parameter name="rCollisionless" type="real" />
@@ -10288,7 +10288,7 @@ collisionless regime:
 \]
 where $\gamma_{H}$ is defined in the #HEATFLUXCOLLISIONLESS command.
 
-The default is UseHeatFluxRegion=.false.
+The default is UseHeatFluxRegion=.true.
 
 </command>
 

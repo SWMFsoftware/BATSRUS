@@ -1131,8 +1131,8 @@ contains
   !============================================================================
   subroutine get_numerical_flux(Flux_V)
 
-    use ModAdvance, ONLY: &
-         State_VGB, UseMultiSpecies, DoReplaceDensity, DoUpdate_V
+    use ModAdvance, ONLY: State_VGB, UseMultiSpecies, DoReplaceDensity, &
+         DoUpdate_V, LogAlfven_, FaceUx_, FaceUy_, FaceUz_
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
@@ -1144,6 +1144,7 @@ contains
     use ModUserInterface ! user_material_properties
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
     use ModSaMhd,         ONLY: aligning_bc
+    use ModTurbulence, ONLY: UseTurbulentCascade
 
     real, intent(out):: Flux_V(nFaceValue)
 
@@ -1152,7 +1153,7 @@ contains
     real :: DiffBn_D(3), DiffE
     real :: EnLeft, EnRight, Jx, Jy, Jz
     real :: uLeft_D(3), uRight_D(3)
-    real :: B0_D(3), dB0_D(3), Current_D(3)
+    real :: B0_D(3), dB0_D(3), Current_D(3), FullB_D(3)
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
     real :: DissipationFlux_V(p_+1) ! MHD variables + energy
     real :: GradPe_D(3)
@@ -1475,6 +1476,18 @@ contains
 
     ! Further limit timestep due to the hyperbolic cleaning equation
     if(UseHyperbolicDivb) CmaxDt = max(SpeedHyp, CmaxDt)
+
+    if(UseTurbulentCascade) then
+       B0_D = [B0x,B0y,B0z]
+       FullB_D = B0_D + &
+            0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))
+       Flux_V(LogAlfven_) = &
+            0.50*log(max(sum(FullB_D**2), 1e-30)/&
+            (0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_))))
+
+       Flux_V(FaceUx_:FaceUz_) = 0.5*&
+            (StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))
+    end if
 
     if(DoTestCell)call write_test_info
 #endif
