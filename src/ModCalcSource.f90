@@ -175,7 +175,7 @@ contains
     use ModViscosity,     ONLY: &
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
-    use ModPUI, ONLY: add_pui_source, DivUpui_C, Pu3_
+    use ModPUI, ONLY: DivUpui_C, Pu3_
     use ModUserInterface, ONLY: user_calc_sources_expl, user_calc_sources_impl
     use ModUtilities, ONLY: i_gang
 
@@ -677,8 +677,6 @@ contains
                Source_VC(PuiFirst_:PuiLast_,i,j,k) &
                + State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock)*DivUpui_C(i,j,k)
        end do; end do; end do
-
-       call add_pui_source(iBlock)
     end if
 
     if(UseRadCooling)then
