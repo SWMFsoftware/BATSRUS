@@ -15,7 +15,8 @@ module ModUpdateStateFast
        UseCoronalHeating, UseAlfvenWaveDissipation, &
        UseReynoldsDecomposition, UseTurbulentCascade
   use ModFaceValue, ONLY: correct_monotone_restrict, &
-       accurate_reschange2d, accurate_reschange3d
+       accurate_reschange2d, accurate_reschange3d, get_log_limiter_var, &
+       UseLogLimiter_V
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
        ChargePerMass_I, iPIon_I
@@ -232,6 +233,8 @@ contains
        write(*,*)'==========================================================='
        write(*,*) NameSub, ' started with DoResChangeOnly=F of course'
     end if
+
+    call get_log_limiter_var
 
     if(UseAccurateReschange .and. nLevelMax > nLevelMin .and. &
          .not.allocated(FineState_VXB))then
@@ -1095,7 +1098,7 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
     logical, intent(in), optional:: IsBodyBlock
-
+    
     integer:: iVar
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
@@ -1109,7 +1112,8 @@ contains
                State_VGB(iVar,i-1,j,k,iBlock), &
                State_VGB(iVar,  i,j,k,iBlock), &
                State_VGB(iVar,i+1,j,k,iBlock), &
-               StateLeft_V(iVar), StateRight_V(iVar))
+               StateLeft_V(iVar), StateRight_V(iVar), &
+               UseLogLimiter_V(iVar))
        end do
        if(UseAccurateResChange)then
           ! Overwrite Left/RightState_V on fine side of reschange
@@ -1188,7 +1192,8 @@ contains
                State_VGB(iVar,i,j-1,k,iBlock), &
                State_VGB(iVar,i,j  ,k,iBlock), &
                State_VGB(iVar,i,j+1,k,iBlock), &
-               StateLeft_V(iVar), StateRight_V(iVar))
+               StateLeft_V(iVar), StateRight_V(iVar), &
+               UseLogLimiter_V(iVar))
        end do
        if(UseAccurateResChange)then
           if(DiLevel_EB(3,iBlock) == 1 .and. j == 1) then
@@ -1242,7 +1247,8 @@ contains
                State_VGB(iVar,i,j,k-1,iBlock), &
                State_VGB(iVar,i,j,k  ,iBlock), &
                State_VGB(iVar,i,j,k+1,iBlock), &
-               StateLeft_V(iVar), StateRight_V(iVar))
+               StateLeft_V(iVar), StateRight_V(iVar), &
+               UseLogLimiter_V(iVar))
        end do
        if(UseAccurateResChange)then
           if(DiLevel_EB(5,iBlock) == 1 .and. k == 1) then
@@ -1366,17 +1372,30 @@ contains
 
   end subroutine get_momentum
   !============================================================================
-  subroutine limiter2(Var1, Var2, Var3, Var4, VarLeft, VarRight)
+  subroutine limiter2(VarIn1, VarIn2, VarIn3, VarIn4, &
+       VarLeft, VarRight, UseLogLimiter)
     !$acc routine seq
 
     ! Second order Koren limiter on a 4 point stencil
 
-    real, intent(in) :: Var1, Var2, Var3, Var4  ! cell center values at i=1..4
+    ! cell center values at i=1..4
+    real, intent(in) :: VarIn1, VarIn2, VarIn3, VarIn4  
     real, intent(out):: VarLeft, VarRight       ! face values at i=2.5
+    logical, intent(in):: UseLogLimiter
 
+    real :: Var1, Var2, Var3, Var4
+    
     real, parameter:: cThird = 1./3.
     real:: Slope21, Slope32, Slope43
     !--------------------------------------------------------------------------
+    if(UseLogLimiter) then
+       Var1 = log(VarIn1); Var2 = log(VarIn2)
+       Var3 = log(VarIn3); Var4 = log(VarIn4)
+    else
+       Var1 = VarIn1; Var2 = VarIn2
+       Var3 = VarIn3; Var4 = VarIn4
+    end if
+    
     Slope21 = LimiterBeta*(Var2 - Var1)
     Slope32 = LimiterBeta*(Var3 - Var2)
     Slope43 = LimiterBeta*(Var4 - Var3)
@@ -1385,6 +1404,11 @@ contains
          min(abs(Slope32), abs(Slope21), cThird*abs(2*Var3-Var1-Var2))
     VarRight = Var3 - (sign(0.25,Slope32) + sign(0.25,Slope43))*&
          min(abs(Slope32), abs(Slope43), cThird*abs(Var3+Var4-2*Var2))
+
+    if(UseLogLimiter) then
+       VarLeft = exp(VarLeft)
+       VarRight = exp(VarRight)
+    end if
 
   end subroutine limiter2
   !============================================================================

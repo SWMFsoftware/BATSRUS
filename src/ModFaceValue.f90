@@ -85,7 +85,7 @@ module ModFaceValue
   !$acc declare create(UseLogRhoLimiter, UseLogPLimiter)
 
   ! Logicals for limiting the logarithm of variables
-  logical :: UseLogLimiter, UseLogLimiter_V(nVar)
+  logical, public :: UseLogLimiter, UseLogLimiter_V(nVar)
   !$acc declare create(UseLogLimiter, UseLogLimiter_V)
 
   ! Logicals for limiting the total pressure
@@ -444,6 +444,8 @@ contains
           if(UseAnisoPe)          UseLogLimiter_V(Pepar_) = .true.
        end if
     end if
+
+    !$acc update device(UseLogLimiter_V)
   end subroutine get_log_limiter_var
   !============================================================================    
   subroutine get_face_accurate3d(iSideIn,  iBlock)
