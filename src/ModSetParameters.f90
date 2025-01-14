@@ -480,6 +480,8 @@ contains
        if(iTypeUpdate == UpdateFast_ .and. iProc == 0) &
             call check_optimize_param
 
+       call copy_lookup_table_to_gpu
+
        IsFirstSession = .false.
 
        RETURN
@@ -3931,8 +3933,6 @@ contains
       end if
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
-
-      call copy_lookup_table_to_gpu
 
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, nOrderProlong)
