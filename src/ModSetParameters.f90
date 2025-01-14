@@ -3965,6 +3965,7 @@ contains
       !$acc update device(UseBody2Orbit)
       !$acc update device(UseElectronEntropy)
       !$acc update device(DoUpdate_V)
+      !$acc update device(StartTime)
     end subroutine correct_parameters
     !==========================================================================
     subroutine correct_grid_geometry
