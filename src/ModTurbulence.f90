@@ -102,7 +102,7 @@ contains
   !============================================================================
   subroutine read_turbulence_param(NameCommand)
 
-    use ModAdvance,    ONLY: UseAnisoPressure, iTypeUpdate, UpdateOrig_
+    use ModAdvance,    ONLY: UseAnisoPressure
     use ModReadParam,  ONLY: read_var
 
     integer :: iFluid
