@@ -155,6 +155,11 @@ Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
 #NONCONSERVATIVE
 T			UseNonConservative
 
