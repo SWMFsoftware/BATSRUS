@@ -1098,7 +1098,7 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
     logical, intent(in), optional:: IsBodyBlock
-    
+
     integer:: iVar
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
@@ -1379,12 +1379,12 @@ contains
     ! Second order Koren limiter on a 4 point stencil
 
     ! cell center values at i=1..4
-    real, intent(in) :: VarIn1, VarIn2, VarIn3, VarIn4  
+    real, intent(in) :: VarIn1, VarIn2, VarIn3, VarIn4
     real, intent(out):: VarLeft, VarRight       ! face values at i=2.5
     logical, intent(in):: UseLogLimiter
 
     real :: Var1, Var2, Var3, Var4
-    
+
     real, parameter:: cThird = 1./3.
     real:: Slope21, Slope32, Slope43
     !--------------------------------------------------------------------------
@@ -1395,7 +1395,7 @@ contains
        Var1 = VarIn1; Var2 = VarIn2
        Var3 = VarIn3; Var4 = VarIn4
     end if
-    
+
     Slope21 = LimiterBeta*(Var2 - Var1)
     Slope32 = LimiterBeta*(Var3 - Var2)
     Slope43 = LimiterBeta*(Var4 - Var3)

@@ -422,7 +422,7 @@ contains
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPe, UseAnisoPressure
     integer:: iFluid
     !--------------------------------------------------------------------------
-    
+
     UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
     UseLogLimiter_V = .false.
     if(UseLogLimiter)then
@@ -447,7 +447,7 @@ contains
 
     !$acc update device(UseLogLimiter_V)
   end subroutine get_log_limiter_var
-  !============================================================================    
+  !============================================================================
   subroutine get_face_accurate3d(iSideIn,  iBlock)
 
     integer, intent(in):: iSideIn, iBlock
@@ -949,7 +949,7 @@ contains
     UseTrueCell = IsBody_B(iBlock)
 
     call get_log_limiter_var
-    
+
     UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
 
     if(.not.DoResChangeOnly & ! In order not to call it twice
