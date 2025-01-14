@@ -44,7 +44,7 @@ module ModUpdateStateFast
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
 #endif
-  use ModB0, ONLY: B0_DGB, get_b0_dipole
+  use ModB0, ONLY: B0_DGB, get_b0
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB
@@ -2506,7 +2506,7 @@ contains
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
-          call get_b0_dipole(Xyz_DGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock))
+          call get_b0(Xyz_DGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock))
           if(Used_GB(i,j,k,iBlock))then
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
