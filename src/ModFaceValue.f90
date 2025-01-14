@@ -42,6 +42,8 @@ module ModFaceValue
 
   public:: clean_mod_face_value
 
+  public:: get_log_limiter_var
+
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
@@ -415,6 +417,35 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine correct_monotone_restrict
   !============================================================================
+  subroutine get_log_limiter_var()
+    use ModMain, ONLY: nOrder
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPe, UseAnisoPressure
+    integer:: iFluid
+    !--------------------------------------------------------------------------
+    
+    UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
+    UseLogLimiter_V = .false.
+    if(UseLogLimiter)then
+       if(UseLogRhoLimiter)then
+          do iFluid = 1, nFluid
+             UseLogLimiter_V(iRho_I(iFluid)) = .true.
+          end do
+       end if
+       if(UseLogPLimiter)then
+          do iFluid = 1, nFluid
+             UseLogLimiter_V(iP_I(iFluid))   = .true.
+          end do
+          if(UseAnisoPressure)then
+             do iFluid = 1, nIonFluid
+                UseLogLimiter_V(iPparIon_I(iFluid)) = .true.
+             end do
+          end if
+          if(UseElectronPressure) UseLogLimiter_V(Pe_) = .true.
+          if(UseAnisoPe)          UseLogLimiter_V(Pepar_) = .true.
+       end if
+    end if
+  end subroutine get_log_limiter_var
+  !============================================================================    
   subroutine get_face_accurate3d(iSideIn,  iBlock)
 
     integer, intent(in):: iSideIn, iBlock
@@ -915,28 +946,8 @@ contains
 
     UseTrueCell = IsBody_B(iBlock)
 
-    UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
-    UseLogLimiter_V = .false.
-    if(UseLogLimiter)then
-       if(UseLogRhoLimiter)then
-          do iFluid = 1, nFluid
-             UseLogLimiter_V(iRho_I(iFluid)) = .true.
-          end do
-       end if
-       if(UseLogPLimiter)then
-          do iFluid = 1, nFluid
-             UseLogLimiter_V(iP_I(iFluid))   = .true.
-          end do
-          if(UseAnisoPressure)then
-             do iFluid = 1, nIonFluid
-                UseLogLimiter_V(iPparIon_I(iFluid)) = .true.
-             end do
-          end if
-          if(UseElectronPressure) UseLogLimiter_V(Pe_) = .true.
-          if(UseAnisoPe)          UseLogLimiter_V(Pepar_) = .true.
-       end if
-    end if
-
+    call get_log_limiter_var
+    
     UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
 
     if(.not.DoResChangeOnly & ! In order not to call it twice
