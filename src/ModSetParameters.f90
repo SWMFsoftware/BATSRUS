@@ -3217,7 +3217,7 @@ contains
             end if
             !$acc update device(UseHeatFluxCollisionless)
             !$acc update device(UseHeatFluxRegion, UseHeatConduction)
-
+            !$acc update device(TypeSemiImplicit)
          end if
 
          ! Set anisotropic pressure instability defaults for first ion fluid
