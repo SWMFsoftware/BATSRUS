@@ -700,7 +700,7 @@ contains
   end subroutine set_b0_source
   !============================================================================
   subroutine get_b0(Xyz_D, B0_D)
-
+    !$acc routine seq
     ! Get B0 at location Xyz_D
 
     use ModMain,           ONLY : tSimulation, NameThisComp, &
@@ -732,7 +732,7 @@ contains
 
        ! Convert from Tesla to normalized units.
        B0_D = B0_D*Si2No_V(UnitB_)
-
+#ifndef _OPENACC
     elseif(MonopoleStrength /= 0.0)then
        r = norm2(Xyz_D(1:nDim))
        B0_D = MonopoleStrength*Xyz_D/r**nDim
@@ -742,13 +742,17 @@ contains
        call get_planet_field(tSimulation, Xyz_D, TypeCoordSystem//' NORM',&
             B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
+#endif       
     else
        ! dipole field
        call get_b0_dipole(Xyz_D, B0_D)
     end if
+
+#ifndef _OPENACC    
     if(UseBody2)call add_b0_body2(Xyz_D, B0_D)
 
     if(UseUserB0)call user_get_b0(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
+#endif    
 
   end subroutine get_b0
   !============================================================================
