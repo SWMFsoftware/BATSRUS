@@ -174,6 +174,10 @@ make -j test_shocktube MPIRUN= NTHREAD=4
 
 # Compiling for GPUs
 
+The code has to be installed with 
+
+./Config.pl -install -compiler=nvfortran,nvc
+
 On clusters, load a version of the Nvidia compiler. Some versions may be
 unstable. A known stable version is nvhpc/20.7. A newer version that works
 on Pleiades is nvhpc/24.3-nompi paired with mpi-hpe/mpt. Switch on the -acc 
@@ -181,7 +185,7 @@ flag:
 ```
 Config.pl -acc
 ```
-and Compile:
+and compile:
 ```
-make BATSRUS
+make -j BATSRUS
 ```
