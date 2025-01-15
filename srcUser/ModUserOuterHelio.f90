@@ -1754,7 +1754,7 @@ contains
 
     ! Figure out which neutral population is produced at this point
     call select_region(iBlock)
-    
+
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        ! Extract conservative variables
        State_V = State_VGB(:,i,j,k,iBlock)
@@ -1812,7 +1812,7 @@ contains
 
        if(PuiFirst_ > 1) call add_pui_source(i, j, k, iBlock, &
             NumDensSi_I, U_DI, U2_I, UTh2Si_I)
-       
+
        ! Calculate the source terms for this cell
        call calc_source_cell
     end do; end do; end do
@@ -1880,9 +1880,9 @@ contains
   end subroutine user_calc_sources_expl
   !============================================================================
   subroutine add_pui_source(i, j, k, iBlock, NumDensSi_I, U_DI, U2_I, UTh2Si_I)
-    
+
     use ModPUI, ONLY: Vpui_I
-    
+
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: NumDensSi_I(nFluid), U_DI(3,nFLuid), U2_I(nFluid)
     real, intent(out) :: UTh2Si_I(nFluid)
@@ -1891,9 +1891,9 @@ contains
     real, dimension(nFluid) :: NumDens_I, UTh_I
     real, dimension(Neu_:Ne4_) :: URelS_I, Alpha_I, Rate_I
     real :: Xpui, DeltaVpXpui, DeltaVpXpuiSi, Sigma
-    !--------------------------------------------------------------------------
 
     ! Region 3: only make Pu3 in region before TS
+    !--------------------------------------------------------------------------
     if (Ne3_ == iFluidProduced_C(i,j,k)) then
        UTh_I = sqrt(UTh2Si_I)*Si2No_V(UnitU_)
        NumDens_I = NumDensSi_I*Si2No_V(UnitN_)
