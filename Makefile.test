@@ -1392,7 +1392,7 @@ test_outerhelio_1d_check:
 test_outerhelioawsom:
 	@($(MAKE) test_outerhelioawsom_start)
 	@($(MAKE) test_outerhelioawsom_restart)
-	
+
 test_outerhelioawsom_start:
 	@echo "test_outerhelioawsom_compile..." > test_outerhelioawsom.diff
 	$(MAKE) test_outerhelioawsom_compile
@@ -1443,11 +1443,11 @@ test_outerhelioawsom_restart_run:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.awsom.restart ./PARAM.in	
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS_restart
 
 test_outerhelioawsom_restart_check:
 	-@(${DIFFNUM} -r=3e-5 -a=1e-29 -t \
-                ${TESTDIR}/RESULTS/OH/log_n000040.log \
+                ${TESTDIR}/RESULTS_restart/OH/log_n000040.log \
                 Param/OUTERHELIO/TestOutput/log_n000040_awsom_restart.log \
                 > test_outerhelioawsom_restart.diff)
 	ls -l test_outerhelioawsom_restart.diff
