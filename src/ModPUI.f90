@@ -90,13 +90,15 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_pui
   !============================================================================
-  subroutine set_pui_state(State_V)
+  subroutine set_pui_state(State_V, StateRead_V, iVarMatch_V)
 
-    use ModMultiFluid, ONLY: iRhoIon_I, iPIon_I
+    use ModMultiFluid, ONLY: iRho_I, iP_I
     use ModVarIndexes, ONLY: nVar
 
     real, intent(inout) :: State_V(nVar)
-
+    real, optional, intent(in) :: StateRead_V(nVar)
+    integer, optional, intent(in) :: iVarMatch_V(nVar)
+    
     real :: RhoPui, Ppui
 
     logical:: DoTest
@@ -107,9 +109,14 @@ contains
        RETURN
     end if
 
-    RhoPui = State_V(iRhoIon_I(Pu3_))
-    Ppui = State_V(iPIon_I(Pu3_))
-
+    if(present(StateRead_V))then
+       RhoPui = StateRead_V(iVarMatch_V(iRho_I(Pu3_)))
+       Ppui = StateRead_V(iVarMatch_V(iP_I(Pu3_)))
+    else
+       RhoPui = State_V(iRho_I(Pu3_))
+       Ppui = State_V(iP_I(Pu3_))
+    end if
+    
     ! 4.0*cPi*Vpui_I**2*DeltaVpui_I*(RhoPui/(cTwoPi*Ppui))**1.5 &
     !    *exp(-0.5*RhoPui*Vpui_I**2/Ppui)
     State_V(PuiFirst_:PuiLast_) = &
