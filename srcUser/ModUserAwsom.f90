@@ -1011,6 +1011,186 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
   !============================================================================
+  ! subroutine user_set_single_cell_boundary(i, j, k, iBlock, iSide, iTypeBC)
+  !  use EEE_ModCommonVariables, ONLY: UseCme
+  !  use EEE_ModMain,            ONLY: EEE_get_state_BC
+  !  use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
+  !  use ModGeometry,   ONLY: Xyz_DGB, r_GB
+  !  use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+  !       get_gamma_collisionless
+  !  use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, Ehot_, &
+  !       RhoUx_, RhoUz_, Ppar_, WaveFirst_, WaveLast_, nFluid
+  !  use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I, iRho_I, &
+  !       MassFluid_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I, iPparIon_I, IsIon_I   
+  !  use ModPhysics,    ONLY: UnitRho_, UnitB_, UnitP_, &
+  !       Si2No_V, rBody, GBody, InvGammaMinus1
+  !  use ModMain,       ONLY: nStep, nIteration, tSimulation, &
+  !       IsTimeAccurate
+  !  use ModB0,         ONLY: B0_DGB   
+
+  !  integer, intent(in) :: i, j, k, iBlock, iSide, iTypeBC
+
+  !  real    :: Br1_D(3), Bt1_D(3)
+  !  real    :: Runit_D(3)
+  !  real    :: RhoCme, Ucme_D(3), Bcme_D(3), pCme, BrCme, BrCme_D(3)      
+
+  !  real    :: u_D(3)
+
+  !  ! Variables related to UseAwsom
+  !  integer :: iMajor, iMinor
+  !  integer :: iFluid, iRho, iRhoUx, iRhoUz, iP
+  !  real    :: FullB_D(3), SignBr
+  !  real    :: U, Bdir_D(3)
+  !  real    :: Gamma
+
+  !  logical:: DoTest
+  !  character(len=*), parameter:: NameSub = 'user_set_single_cell_boundary'
+  !  !--------------------------------------------------------------------------   
+
+  !  Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
+
+  !  Br1_D = sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
+  !  Bt1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) - Br1_D
+
+  !  ! Set B1r=0, and B1theta = B1theta(1) and B1phi = B1phi(1)
+
+  !  State_VGB(Bx_:Bz_,i,j,k,iBlock) = Bt1_D
+
+  !  do iFluid = 1, nFluid
+  !     iRho = iRho_I(iFluid)
+
+  !     ! exponential scaleheight
+  !     State_VGB(iRho,i,j,k,iBlock) = &
+  !          ChromoN*MassFluid_I(iFluid)*exp(-GBody/rBody &
+  !          *MassFluid_I(iFluid)/Tchromo &
+  !          *(rBody/r_GB(i,j,k,iBlock) - 1.0))
+
+  !     ! Fix ion temperature T_s
+  !     State_VGB(iP_I(iFluid),i,j,k,iBlock) = Tchromo &
+  !          *State_VGB(iRho,i,j,k,iBlock)/MassFluid_I(iFluid)
+
+  !     if(UseAnisoPressure .and. IsIon_I(iFluid)) &
+  !          State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+  !          State_VGB(iP_I(iFluid),i,j,k,iBlock)
+  !  end do
+
+  !  FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
+  !  SignBr = sign(1.0, sum(Xyz_DGB(:,1,j,k,iBlock)*FullB_D))
+  !  if(SignBr < 0.0)then
+  !     iMajor = WaveLast_
+  !     iMinor = WaveFirst_
+  !  else
+  !     iMajor = WaveFirst_
+  !     iMinor = WaveLast_
+  !  end if
+
+  !  ! Te = T_s and ne = sum(q_s n_s)
+  !  if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = &
+  !       sum(ChargeIon_I*State_VGB(iPIon_I,i,j,k,iBlock))
+  !  ! Outgoing wave energy
+  !  if(IsOnAwRepresentative)then
+  !     State_VGB(iMajor,i,j,k,iBlock) = 1
+  !  else
+  !     State_VGB(iMajor,i,j,k,iBlock) = PoyntingFluxPerB &
+  !          *sqrt(State_VGB(iRho,i,j,k,iBlock))
+  !  end if
+  !  ! Ingoing wave energy
+  !  State_VGB(iMinor,i,j,k,iBlock) = 0.0
+
+  !  ! At the inner boundary this seems to be unnecessary...
+  !  ! Ehot=0 may be sufficient?!
+  !  if(Ehot_ > 1)then
+  !     if(UseHeatFluxCollisionless)then
+  !        iP = p_; if(UseElectronPressure) iP = Pe_
+  !        call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
+  !        State_VGB(Ehot_,i,j,k,iBlock) = &
+  !             State_VGB(iP,i,j,k,iBlock)*(1.0/(Gamma-1) &
+  !             - InvGammaMinus1)
+  !     else
+  !        State_VGB(Ehot_,MinI:0,j,k,iBlock) = 0.0
+  !     end if
+  !  end if
+
+  !  do iFluid = 1, nIonFluid
+  !     iRho = iRho_I(iFluid)
+  !     iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
+
+  !     if(UseFloatRadialVelocity)then             
+  !        ! Copy radial velocity component. Reflect the other components
+  !        U = sum(State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock)*Runit_D) &
+  !             /State_VGB(iRho,1,j,k,iBlock)
+  !        U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
+  !             /State_VGB(iRho,1-i,j,k,iBlock)
+  !        if(U < 0.0)then
+  !           State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+  !                - U_D*State_VGB(iRho,i,j,k,iBlock)
+  !        else
+  !           U_D = U_D - sum(U_D*Runit_D)*Runit_D
+  !           State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+  !                (U*Runit_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
+  !        end if
+  !     else
+  !        ! Note that the Bdir_D calculation does not include the
+  !        ! CME part below
+  !        FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
+  !             + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
+  !        Bdir_D = FullB_D/max(1e-15, norm2(FullB_D))
+
+  !        ! Copy field-aligned velocity component.
+  !        ! Reflect the other components
+  !        U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
+  !             /State_VGB(iRho,1-i,j,k,iBlock)
+  !        U   = sum(U_D*Bdir_D); U_D = U_D - U*Bdir_D
+  !        State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+  !             (U*Bdir_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
+  !     end if
+
+  !  end do ! iFluid
+
+  !  ! start of CME part
+  !  if(UseCme)then
+
+  !     Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
+
+  !     call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+  !          tSimulation, nStep, nIteration)
+
+  !     RhoCme = RhoCme*Si2No_V(UnitRho_)
+  !     Bcme_D = Bcme_D*Si2No_V(UnitB_)
+  !     pCme   = pCme*Si2No_V(UnitP_)
+
+  !     BrCme   = sum(Runit_D*Bcme_D)
+  !     BrCme_D = BrCme*Runit_D
+
+  !     State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
+  !          + RhoCme
+  !     if(UseElectronPressure)then
+  !        State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+  !             + 0.5*pCme
+  !        State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+  !             + 0.5*pCme
+
+  !        if(UseAnisoPressure) State_VGB(Ppar_,i,j,k,iBlock) = &
+  !             State_VGB(Ppar_,i,j,k,iBlock) + 0.5*pCme
+  !     else
+  !        State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+  !             + pCme
+  !     end if
+
+  !     ! Only the radial component is set. The tangential components
+  !     ! float. As the flux rope leaves, the solution becomes
+  !     ! more and more potential.
+  !     State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+  !          State_VGB(Bx_:Bz_,i,j,k,iBlock) + BrCme_D
+
+  !     ! If DoBqField = T, we need to modify the velocity components
+  !     ! here
+  !     ! Currently, with the #CME command, we have always DoBqField=F
+  !  end if
+  !  ! End of CME part
+
+  ! end subroutine user_set_single_cell_boundary  
+  !============================================================================
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     ! Fill ghost cells inside body for spherical grid - this subroutine only
