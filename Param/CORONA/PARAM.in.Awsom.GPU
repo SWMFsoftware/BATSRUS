@@ -12,9 +12,6 @@ slow			TypeUpdate
 #COMPONENT
 SC			NameComp
 
-#GRIDBLOCKALL
-12000			MaxBlock
-
 #TIMEACCURATE
 F			IsTimeAccurate
 
@@ -39,23 +36,21 @@ HGR			TypeCoordSystem
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-#HELIODIPOLE
+HELIODIPOLE
 2.8e-4			HelioDipoleStrengthSi
 0.0			HelioDipoleTilt
 
-#GAMMA
-1.5			Gamma for fluid 1
-1.5			GammaElectron for electrons (if UseElectronPressure)
+#HARMONICSFILE
+Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
 
-
-
-#HEATCONDUCTION
-T			UseHeatConduction
-spitzer			TypeHeatConduction
-
-#SEMIIMPLICIT
-T			UseSemiImplicit
-parcond			TypeSemiImplicit
+#HARMONICSGRID
+1.0                     rMagnetogram
+25                     rSourceSurface
+F                       IsLogRadius
+30                      MaxOrder
+30                      nR
+72                      nLon
+30                      nLat
 
 #TEST
 krylov			StringTest
@@ -87,8 +82,8 @@ T			UseCoarseAxis
 #USERINPUTBEGIN -----------------------------------
 
 #CHROMOBC
-1.5e14			NchromoSi
-1.5e6			TchromoSi
+2e17			NchromoSi
+5e4			TchromoSi
 
 #USERINPUTEND -------------------------------------
 
@@ -107,6 +102,9 @@ Param/CORONA/grid_awsom.dat		NameGridFile
  100.0			yMax
 -100.0			zMin
  100.0			zMax
+
+#GRIDBLOCKALL
+12000			MaxBlock
 
 #LIMITRADIUS
 1.0			rMin
@@ -156,6 +154,11 @@ T			IsStrictAmr
 Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
+
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
 
 #NONCONSERVATIVE
 T			UseNonConservative

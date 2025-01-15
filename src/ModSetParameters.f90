@@ -480,6 +480,8 @@ contains
        if(iTypeUpdate == UpdateFast_ .and. iProc == 0) &
             call check_optimize_param
 
+       call copy_lookup_table_to_gpu
+
        IsFirstSession = .false.
 
        RETURN
@@ -3215,7 +3217,7 @@ contains
             end if
             !$acc update device(UseHeatFluxCollisionless)
             !$acc update device(UseHeatFluxRegion, UseHeatConduction)
-
+            !$acc update device(TypeSemiImplicit)
          end if
 
          ! Set anisotropic pressure instability defaults for first ion fluid
@@ -3932,8 +3934,6 @@ contains
 
       ! Update parameters on the GPU that are not done by init_mod_* routines
 
-      call copy_lookup_table_to_gpu
-
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, nOrderProlong)
       !$acc update device(UseHalfStep, IsTimeAccurate, UseDtFixed)
@@ -3965,6 +3965,7 @@ contains
       !$acc update device(UseBody2Orbit)
       !$acc update device(UseElectronEntropy)
       !$acc update device(DoUpdate_V)
+      !$acc update device(StartTime)
     end subroutine correct_parameters
     !==========================================================================
     subroutine correct_grid_geometry

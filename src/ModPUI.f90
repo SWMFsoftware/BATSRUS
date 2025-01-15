@@ -17,7 +17,6 @@ module ModPUI
   public :: init_mod_pui
   public :: set_pui_state
   public :: pui_advection_diffusion
-  public :: add_pui_source
 
   integer, parameter, public :: Pu3_ = nIonFluid
 
@@ -26,7 +25,8 @@ module ModPUI
 
   ! Logarithmic velocity grid for the PUIs.
   ! The bin centered velocities are:
-  real :: Vpui_I(nPui), DeltaVpui_I(nPui)
+  real, public :: Vpui_I(nPui)
+  real :: DeltaVpui_I(nPui)
 
   real :: DeltaLogVpui
 
@@ -116,9 +116,7 @@ contains
          exp(-0.5*RhoPui*Vpui_I**2/Ppui)*Vpui_I**2*DeltaVpui_I
 
     State_V(PuiFirst_:PuiLast_) = State_V(PuiFirst_:PuiLast_) &
-         /sum(State_V(PuiFirst_:PuiLast_))*RhoPui
-
-    State_V(PuiFirst_:PuiLast_) = State_V(PuiFirst_:PuiLast_) &
+         /sum(State_V(PuiFirst_:PuiLast_))*RhoPui &
          /(Vpui_I**2*DeltaVpui_I)
 
   end subroutine set_pui_state
@@ -170,20 +168,6 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine pui_advection_diffusion
-  !============================================================================
-  subroutine add_pui_source(iBlock)
-
-    ! PUI source terms due to charge exchange and photoionization
-
-    integer, intent(in) :: iBlock
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'add_pui_source'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
-    call test_stop(NameSub, DoTest)
-  end subroutine add_pui_source
   !============================================================================
 end module ModPUI
 !==============================================================================

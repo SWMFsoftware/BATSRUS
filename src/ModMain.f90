@@ -273,6 +273,7 @@ module ModMain
   ! This is the same default value as in the SWMF
   integer, dimension(7) :: iStartTime_I = [2000,3,21,10,45,0,0]
   real(Real8_)          :: StartTime
+  !$acc declare create(StartTime)
 
   ! Time to end
   logical :: UseEndTime = .false.

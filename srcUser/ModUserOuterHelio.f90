@@ -1810,6 +1810,9 @@ contains
           HeatElectron = 0.0
        end if
 
+       if(PuiFirst_ > 1) call add_pui_source(i, j, k, iBlock, &
+            NumDensSi_I, U_DI, U2_I, UTh2Si_I)
+
        ! Calculate the source terms for this cell
        call calc_source_cell
     end do; end do; end do
@@ -1875,6 +1878,56 @@ contains
     end subroutine calc_source_cell
     !==========================================================================
   end subroutine user_calc_sources_expl
+  !============================================================================
+  subroutine add_pui_source(i, j, k, iBlock, NumDensSi_I, U_DI, U2_I, UTh2Si_I)
+
+    use ModPUI, ONLY: Vpui_I
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out) :: NumDensSi_I(nFluid), U_DI(3,nFLuid), U2_I(nFluid)
+    real, intent(out) :: UTh2Si_I(nFluid)
+
+    integer :: iVar, iPui
+    real, dimension(nFluid) :: NumDens_I, UTh_I
+    real, dimension(Neu_:Ne4_) :: URelS_I, Alpha_I, Rate_I
+    real :: Xpui, DeltaVpXpui, DeltaVpXpuiSi, Sigma
+
+    ! Region 3: only make Pu3 in region before TS
+    !--------------------------------------------------------------------------
+    if (Ne3_ == iFluidProduced_C(i,j,k)) then
+       UTh_I = sqrt(UTh2Si_I)*Si2No_V(UnitU_)
+       NumDens_I = NumDensSi_I*Si2No_V(UnitN_)
+
+       URelS_I = sqrt((U_DI(x_,Neu_:) - U_DI(x_,Ion_))**2 &
+            +         (U_DI(y_,Neu_:) - U_DI(y_,Ion_))**2 &
+            +         (U_DI(z_,Neu_:) - U_DI(z_,Ion_))**2)/UTh_I(Neu_:)
+
+       Alpha_I = UTh_I(Ion_)/UTh_I(Neu_:)
+
+       do iPui = 1, nPui
+          Xpui = Vpui_I(iPui)/UTh_I(Ion_)
+
+          DeltaVpXpui = UTh_I(Ion_)*(1./sqrt(cPi)*exp(-Xpui**2) &
+               + (Xpui + 0.5/Xpui)*Erf(Xpui))
+
+          DeltaVpXpuiSi = DeltaVpXpui*No2Si_V(UnitU_)
+
+          Sigma = ((CrossA1 - CrossA2*log(DeltaVpXpuiSi*100.))**2)*1.E-4
+
+          Rate_I = State_VGB(iRho_I(SWHRho_),i,j,k,iBlock)*NumDens_I(Neu_:) &
+               *Sigma*DeltaVpXpuiSi*No2Si_V(UnitN_)*No2Si_V(UnitT_) &
+               /(4.*cPi**1.5*UTh_I(Ion_)*UTh_I(Neu_:)**2) &
+               *(exp(-(Alpha_I*Xpui - URelS_I)**2) &
+               - exp(-(Alpha_I*Xpui + URelS_I)**2)) &
+               /(Xpui*URelS_I)
+
+          iVar = PuiFirst_ - 1 + iPui
+          Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
+               + sum(Rate_I) - Rate_I(Ne3_)
+       end do
+    end if
+
+  end subroutine add_pui_source
   !============================================================================
   subroutine calc_source_inputs( &
        i, j, k, iBlock, NumDensSi_I, U_DI, U2_I, TempSi_I, UTh2Si_I)

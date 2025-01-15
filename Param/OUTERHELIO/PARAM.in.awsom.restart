@@ -1,0 +1,223 @@
+#CHANGEVARIABLES
+T			DoChangeRestartVariables
+
+#INCLUDE
+restartIN/restart.H
+
+#PLANET
+NONE			NamePlanet
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#GRAVITY
+F			UseGravity (rest of parameters read if true)
+
+#BODY
+F			UseBody (rest of parameters read if true)
+
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+1.E-23			pMinDim for fluid PUI
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
+1.E-23			PeMinDim for electrons
+
+#MINIMUMDENSITY
+1.E-4			RhoMinDim for fluid SW
+1.E-9			RhoMinDim for fluid PUI
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+#GRIDBLOCKALL
+3500			MaxBlock
+
+#OUTERBOUNDARY
+user			TypeBc1
+outflow			TypeBc2
+outflow			TypeBc3
+outflow			TypeBc4
+outflow			TypeBc5
+outflow			TypeBc6
+
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+radius			TypeConservCrit
+70			rConserv
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.6			CflExpl
+
+#PARTLOCALTIMESTEP
+75			rLocalTimeStep
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+10			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+1			nPlotFile
+1d VAR idl              StringPlot ! 1d plot along X axis
+-1                      DnSavePlot
+1 year                  DtSavePlot
+-1.0                    DxSavePlot
+F(1:50)                 NameVars
+{default}               NamePars
+
+#USERSWITCH
++init +progress +update +source_expl		StringSwitch
+
+#MULTIIONSTATE
+F			UseSingleIonVelocity
+F			UseSingleIonTemperature
+
+#MULTIION
+1e-10			LowDensityRatio
+1e-10			LowPressureRatio
+F			DoRestrictMultiIon
+
+#COLLISION
+-1.0			CollisionCoefDim
+1.0e6			TauCutOffDim [s]
+-2.0			uCutOffDim [km/s] read if TauCutOffDim positive
+2			nPowerCutOff read if TauCutOffDim positive
+
+#OHBOUNDARY
+T			UseOhNeutralBc
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.E-2			RhoNeuFactor Ne2
+0.2			uNeuFactor
+1.E-2			RhoNeuFactor Ne3
+1.0			uNeuFactor
+1.E-3			RhoNeuFactor Ne4
+0.1			uNeuFactor
+
+#OHNEUTRALS
+0.18			RhoNeutralsISW
+6519.0			TNeutralsISW
+26.3			UxNeutralsISW
+0.3			UyNeutralsISW
+-2.3			UzNeutralsISW
+1.0			mNeutral
+
+#CORONALHEATING
+usmanov			TypeCoronalHeating
+F			UseTransverseTurbulence
+-1/3			SigmaD
+0.128			KarmanTaylorAlpha
+0.5			KarmanTaylorBeta2AlphaRatio
+
+#HEATPARTITIONING
+uniform			TypeHeatPartitioning
+0.6			QionRatio
+0.0			QionRatio
+
+#USERINPUTBEGIN -----------------------------------
+
+#GLOBALHELIOSPHERE
+1.			rBody
+
+#SOLARWINDH
+7.866			SWH_rho_dim [n/cc]
+6E4			SWH_T_dim [K]
+417.07			SWH_Ux_dim [km/s]
+0.0			SWH_Uy_dim [km/s]
+0.0			SWH_Uz_dim [km/s]
+6.453			SWH_Bx_dim [nT]
+0.0			SWH_By_dim [nT]
+0.0			SWH_Bz_dim [nT]
+3E4			SWH_Te_dim [K]
+
+#PICKUPION3
+5.13E-7			PU3_rho_dim [n/cc]
+8.2E6			PU3_T_dim [K]
+417.07			PU3_Ux_dim [km/s]
+0			PU3_Uy_dim [km/s]
+0			PU3_Uz_dim [km/s]
+
+#VLISW
+0.06			VLISW_rho_dim [n/cc]
+6519.0			VLISW_T_dim
+26.3			VLISW_Ux_dim
+0.3			VLISW_Uy_dim
+-2.3			VLISW_Uz_dim
+0.4111			VLISW_Bx_dim
+-0.0748			VLISW_By_dim
+-0.1296			VLISW_Bz_dim
+6519.0			VLISW_Te_dim [K]
+
+#REGIONS
+MultiIon                NameRegionFormula
+250.0                   uPop3LimitDim
+1.0                     MachPop3Limit
+0.7e5                   TempPop2LimitDim
+100.0                   uPop1LimitDim
+1.0                     MachPop1Limit
+
+#PHOTOIONIZATION
+T			UsePhotoionization
+8e-8			PhotoionizationRate
+
+#ELECTRONIMPACT
+T			UseElectronImpact
+
+#TURBULENCE
+20.0			DeltaUDim
+-0.38			CrossHelicity
+1.5E5			LperpTimesSqrtBSi
+0.25			TurbulencePerPu3Source
+
+#SOURCES
+T			UseSourceSWH
+T			UseSourcePu3
+T			UseSourceNeu
+T			UseSourceNe2
+T			UseSourceNe3
+T			UseSourceNe4
+
+#USERINPUTEND -------------------------------------
+
+#LOOKUPTABLE
+ChargeExchange		NameTable
+load			NameCommand
+Param/OUTERHELIO/ChargeExchangeRate_LS.dat		NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+ElectronImpact		NameTable
+load			NameCommand
+Param/OUTERHELIO/ElectronImpactRate.dat		NameFile
+ascii			TypeFile
+
+#STOP
+10			MaxIteration
+-1.0			tSimulationMax

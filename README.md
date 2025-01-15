@@ -174,13 +174,10 @@ make -j test_shocktube MPIRUN= NTHREAD=4
 
 # Compiling for GPUs
 
-We are working on merging the GPU version of the message passing module with 
-the CPU version. Currently, you will need a development implementation of 
-the message passing module to run in parallel on GPUs. Replace the file 
-before compilation:
-```
-cp srcBATL/BATL_pass_cell_gpu_parallel.f90 srcBATL/BATL_pass_cell.f90
-```
+The code has to be installed with 
+
+./Config.pl -install -compiler=nvfortran,nvc
+
 On clusters, load a version of the Nvidia compiler. Some versions may be
 unstable. A known stable version is nvhpc/20.7. A newer version that works
 on Pleiades is nvhpc/24.3-nompi paired with mpi-hpe/mpt. Switch on the -acc 
@@ -188,7 +185,7 @@ flag:
 ```
 Config.pl -acc
 ```
-and Compile:
+and compile:
 ```
-make BATSRUS
+make -j BATSRUS
 ```

@@ -1384,6 +1384,7 @@ contains
                       call set_pui_state(State_VGB(:,i,j,k,iBlock))
                    end do; end do ; end do
                 end do
+                CYCLE
              end if
              if(nChargeStateAll > 1)then
                 if(UseMultiIon)then
