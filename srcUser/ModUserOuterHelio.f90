@@ -1889,7 +1889,7 @@ contains
 
     integer :: iVar, iPui
     real, dimension(nFluid) :: NumDens_I, UTh_I
-    real, dimension(Neu_:Ne4_) :: URelS_I, Alpha_I, Rate_I
+    real, dimension(Neu_:Ne4_) :: URelS_I, Alpha_I, Rate_I, Source_I
     real :: Xpui, DeltaVpXpui, DeltaVpXpuiSi, Sigma
 
     ! Region 3: only make Pu3 in region before TS
@@ -1914,16 +1914,21 @@ contains
 
           Sigma = ((CrossA1 - CrossA2*log(DeltaVpXpuiSi*100.))**2)*1.E-4
 
-          Rate_I = State_VGB(iRho_I(SWHRho_),i,j,k,iBlock)*NumDens_I(Neu_:) &
-               *Sigma*DeltaVpXpuiSi*No2Si_V(UnitN_)*No2Si_V(UnitT_) &
-               /(4.*cPi**1.5*UTh_I(Ion_)*UTh_I(Neu_:)**2) &
+          Rate_I = State_VGB(iRho_I(SWHRho_),i,j,k,iBlock) &
+               *Sigma*DeltaVpXpuiSi*No2Si_V(UnitN_)
+
+          if(UsePhotoion) Rate_I = Rate_I &
+               + PhotoionizationRate*(1/(r_GB(i,j,k,iBlock)+1e-10))**2
+
+          Source_I = Rate_I*No2Si_V(UnitT_) &
+               *NumDens_I(Neu_:)/(4.*cPi**1.5*UTh_I(Ion_)*UTh_I(Neu_:)**2) &
                *(exp(-(Alpha_I*Xpui - URelS_I)**2) &
                - exp(-(Alpha_I*Xpui + URelS_I)**2)) &
-               /(Xpui*URelS_I)
+	       /(Xpui*URelS_I)
 
           iVar = PuiFirst_ - 1 + iPui
           Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
-               + sum(Rate_I) - Rate_I(Ne3_)
+               + sum(Source_I) - Source_I(Ne3_)
        end do
     end if
 
