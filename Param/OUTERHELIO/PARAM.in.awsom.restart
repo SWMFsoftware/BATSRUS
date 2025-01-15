@@ -85,12 +85,12 @@ RAW			StringLog
 
 #SAVEPLOT
 1			nPlotFile
-1d VAR idl              StringPlot ! 1d plot along X axis
--1                      DnSavePlot
-1 year                  DtSavePlot
--1.0                    DxSavePlot
-F(1:50)                 NameVars
-{default}               NamePars
+1d VAR idl		StringPlot ! 1d plot along X axis
+-1			DnSavePlot
+1 year			DtSavePlot
+-1.0			DxSavePlot
+F(1:50)			NameVars
+{default}		NamePars
 
 #USERSWITCH
 +init +progress +update +source_expl		StringSwitch
