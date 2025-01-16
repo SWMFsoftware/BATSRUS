@@ -35,6 +35,7 @@ module ModUserInterface
      end subroutine user_set_face_boundary
 
      subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+       !$acc routine vector
        integer,          intent(in)  :: iBlock, iSide
        character(len=*), intent(in)  :: TypeBc
        logical,          intent(out) :: IsFound

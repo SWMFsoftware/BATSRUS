@@ -1471,9 +1471,9 @@ contains
     if(DiLevel_EB(iSide,iBlock) == Unset_) then
        iTypeBC = iTypeCellBc_I(iSide)
        TypeBc = TypeCellBc_I(iSide)
-       if(IsSemi) TypeBc = trim(TypeBc)//'_semi'
 
        if(iTypeBC == UserBC_) then
+          if(IsSemi) TypeBc = 'user_semi'
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
        else
           !$acc loop vector collapse(3) independent
@@ -1489,9 +1489,9 @@ contains
     if(DiLevel_EB(iSide,iBlock) == Unset_) then
        iTypeBC = iTypeCellBc_I(iSide)
        TypeBc = TypeCellBc_I(iSide)
-       if(IsSemi) TypeBc = trim(TypeBc)//'_semi'
 
        if(iTypeBC == UserBC_) then
+          if(IsSemi) TypeBc = 'user_semi'
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
        else
           !$acc loop vector collapse(3) independent
@@ -1507,9 +1507,9 @@ contains
     if(DiLevel_EB(iSide,iBlock) == Unset_ .and. nDim >= 2) then
        iTypeBC = iTypeCellBc_I(iSide)
        TypeBc = TypeCellBc_I(iSide)
-       if(IsSemi) TypeBc = trim(TypeBc)//'_semi'
 
        if(iTypeBC == UserBC_) then
+          if(IsSemi) TypeBc = 'user_semi'
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
        else
           !$acc loop vector collapse(3) independent
@@ -1525,9 +1525,9 @@ contains
     if(DiLevel_EB(iSide,iBlock) == Unset_ .and. nDim >= 2) then
        iTypeBC = iTypeCellBc_I(iSide)
        TypeBc = TypeCellBc_I(iSide)
-       if(IsSemi) TypeBc = trim(TypeBc)//'_semi'
 
        if(iTypeBC == UserBC_) then
+          if(IsSemi) TypeBc = 'user_semi'
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
        else
           !$acc loop vector collapse(3) independent
@@ -1543,9 +1543,9 @@ contains
     if(DiLevel_EB(iSide,iBlock) == Unset_ .and. nDim == 3) then
        iTypeBC = iTypeCellBc_I(iSide)
        TypeBc = TypeCellBc_I(iSide)
-       if(IsSemi) TypeBc = trim(TypeBc)//'_semi'
 
        if(iTypeBC == UserBC_) then
+          if(IsSemi) TypeBc = 'user_semi'
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
        else
           !$acc loop vector collapse(3) independent
@@ -1561,9 +1561,9 @@ contains
     if(DiLevel_EB(iSide,iBlock) == Unset_ .and. nDim == 3) then
        iTypeBC = iTypeCellBc_I(iSide)
        TypeBc = TypeCellBc_I(iSide)
-       if(IsSemi) TypeBc = trim(TypeBc)//'_semi'
 
        if(iTypeBC == UserBC_) then
+          if(IsSemi) TypeBc = 'user_semi'          
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
        else
           !$acc loop vector collapse(3) independent

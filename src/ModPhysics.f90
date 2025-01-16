@@ -138,6 +138,7 @@ module ModPhysics
   ! General Body parameters
   character(len=2):: NamePlanetRadius = 'R ' ! can be 'km' if there is no body
   real:: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
+  !$acc declare create(rBody)
   real:: gBody=0.0
   real:: RotPeriodSi=0.0, OmegaBody=0.0
   !$acc declare create(OmegaBody, gBody)
@@ -802,6 +803,8 @@ contains
     !$acc update device(IonMassPerCharge)
 
     !$acc update device(CollisionCoef_II)
+
+    !$acc update device(rBody)
 
     call test_stop(NameSub, DoTest)
 

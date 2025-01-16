@@ -40,6 +40,7 @@ subroutine user_set_face_boundary(FBC)
 end subroutine user_set_face_boundary
 !==============================================================================
 subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+  !$acc routine vector
 
   use ModUser, ONLY: user_sub => user_set_cell_boundary  
   implicit none

@@ -31,10 +31,12 @@ module ModUser
   character (len=*), parameter :: NameUserModule = 'AWSoM(R) model'
 
   logical :: UseAwsom = .false.
+  !$acc declare create(UseAwsom)
 
   ! Input parameters for chromospheric inner BC's
   real    :: ChromoNSi = 2e17   ! tChromoSi = 5e4
   real    :: ChromoN, RhoChromo, tChromo
+  !$acc declare create(ChromoN, tChromo)
   logical :: UseUparBc = .false.
 
   ! variables for Parker initial condition
@@ -69,6 +71,7 @@ module ModUser
   real    :: tStartStitch = -1.0, tStopStitch = -1.0
 
   logical :: UseFloatRadialVelocity = .false.
+  !$acc declare create(UseFloatRadialVelocity)
 
   ! Rotating boundary condition
   real:: FlowSpeedJet =0.0, FlowSpeedJetSi =0.0
@@ -239,6 +242,7 @@ contains
     end if
 
     UseAwsom = TypeCellBc_I(1) == 'user' .and. TypeFaceBc_I(body1_) == 'none'
+    !$acc update device(UseAwsom)
 
     UseAlfvenWaves  = WaveFirst_ > 1
     UseWavePressure = WaveFirst_ > 1
@@ -337,6 +341,8 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
+    !$acc update device(tChromo, UseFloatRadialVelocity, ChromoN)    
+    
     call test_stop(NameSub, DoTest)
   end subroutine user_init_session
   !============================================================================
@@ -1192,12 +1198,14 @@ contains
   ! end subroutine user_set_single_cell_boundary  
   !============================================================================
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
-
+    !$acc routine vector
+    
     ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
-
+#ifndef _OPENACC    
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
+#endif    
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -1265,8 +1273,10 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+#ifndef _OPENACC    
     if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') &
          call CON_stop('Wrong iSide in user_set_cell_boundary')
+#endif    
 
     IsFound = .true.
 
@@ -1289,6 +1299,8 @@ contains
           RETURN
        end select
 
+       !$acc loop vector collapse(2) independent &
+       !$acc private(rUnit_D, Br1_D, Bt1_D, FullB_D)
        do k = MinK, MaxK; do j = MinJ, MaxJ
 
           Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
@@ -1361,13 +1373,14 @@ contains
                 State_VGB(Ehot_,MinI:0,j,k,iBlock) = 0.0
              end if
           end if
-
        end do; end do
+       
        do iFluid = 1, nIonFluid
           iRho = iRho_I(iFluid)
           iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
           if(UseFloatRadialVelocity)then
+#ifndef _OPENACC             
              do k = MinK, MaxK; do j = MinJ, MaxJ
                 ! Copy radial velocity component. Reflect the other components
                 U = sum(State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock)*Runit_D) &
@@ -1385,7 +1398,10 @@ contains
                    end if
                 end do
              end do; end do
+#endif             
           else
+             !$acc loop vector collapse(2) independent &
+             !$acc private(FullB_D, Bdir_D, U_D)
              do k = MinK, MaxK; do j = MinJ, MaxJ
                 ! Note that the Bdir_D calculation does not include the
                 ! CME part below
@@ -1406,6 +1422,7 @@ contains
           end if
        end do
 
+#ifndef _OPENACC       
        ! start of CME part
        if(UseCme)then
           do k = MinK, MaxK; do j = MinJ, MaxJ
@@ -1449,9 +1466,11 @@ contains
           end do; end do
        end if
        ! End of CME part
-
+#endif
+       
        ! end of UseAwsom part (AWSoM)
     else
+#ifndef _OPENACC       
        ! start of .not.UseAwsom part (AWSoM-R)
 
        if(TypeBc == 'usersurfacerot')then
@@ -1723,9 +1742,9 @@ contains
              end do
           end do; end do
        end if
-
+#endif
     end if
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
   !============================================================================
