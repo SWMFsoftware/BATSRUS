@@ -187,10 +187,10 @@ Config.pl -acc
 ```
 and test installation with a set of small tests:
 ```
-make test_small_gpu
+make -j test_small_gpu
 ```
-By default, the tests run on 2 GPUs. If there are no .diff files in the
-end, it means all tests pass. Other than testing (the command above
+By default, the tests run on 2 GPUs. If all .diff files are empty (0 size)
+in the end, it means all tests pass. Other than testing (the command above
 includes compilation for various tests), one needs to compile
 BATSRUS before running any simulation:
 ```
