@@ -1473,8 +1473,15 @@ contains
        TypeBc = TypeCellBc_I(iSide)
 
        if(iTypeBC == UserBC_) then
-          if(IsSemi) TypeBc = 'user_semi'
-          call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+          if(IsLinearBc) then 
+             !$acc loop vector collapse(3) independent
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
+                State_VG(:,i,j,k) = 0
+             end do; end do; end do
+          else 
+             if(IsSemi) TypeBc = 'user_semi'
+             call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+          end if
        else
           !$acc loop vector collapse(3) independent
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
