@@ -62,7 +62,7 @@ module ModUpdateStateFast
       get_gamma_collisionless
   use ModUtilities, ONLY: i_gang
   use ModUserInterface
-  
+
   implicit none
 
   private ! except
@@ -907,7 +907,7 @@ contains
        call limit_pressure(State_VGB(:,i,j,k,iBlock))
     end if
 
-    if(UseAlfvenWaves) then 
+    if(UseAlfvenWaves) then
       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
          max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 0.0)
     end if
@@ -1475,7 +1475,7 @@ contains
 
        if(iTypeBC == UserBC_) then
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
-       else        
+       else
           !$acc loop vector collapse(3) independent
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
              call set_boundary_for_cell(iSide, i, j, k, 1, j, k, &
@@ -1485,7 +1485,7 @@ contains
     end if
 
     ! x right
-    iSide = 2    
+    iSide = 2
     if(DiLevel_EB(iSide,iBlock) == Unset_) then
        iTypeBC = iTypeCellBc_I(iSide)
        TypeBc = TypeCellBc_I(iSide)
@@ -1493,7 +1493,7 @@ contains
 
        if(iTypeBC == UserBC_) then
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
-       else        
+       else
           !$acc loop vector collapse(3) independent
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
              call set_boundary_for_cell(iSide, i, j, k, nI, j, k, &
@@ -1503,7 +1503,7 @@ contains
     end if
 
     ! y left
-    iSide = 3    
+    iSide = 3
     if(DiLevel_EB(iSide,iBlock) == Unset_ .and. nDim >= 2) then
        iTypeBC = iTypeCellBc_I(iSide)
        TypeBc = TypeCellBc_I(iSide)
@@ -1511,7 +1511,7 @@ contains
 
        if(iTypeBC == UserBC_) then
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
-       else        
+       else
           !$acc loop vector collapse(3) independent
           do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI
              call set_boundary_for_cell(iSide, i, j, k, i, 1, k, &
@@ -1529,7 +1529,7 @@ contains
 
        if(iTypeBC == UserBC_) then
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
-       else               
+       else
           !$acc loop vector collapse(3) independent
           do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
              call set_boundary_for_cell(iSide, i, j, k, i, nJ, k, &
@@ -1547,7 +1547,7 @@ contains
 
        if(iTypeBC == UserBC_) then
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
-       else        
+       else
           !$acc loop vector collapse(3) independent
           do k = MinK, 0; do j = MinJ, MaxJ; do i = MinI, MaxI
              call set_boundary_for_cell(iSide, i, j, k, i, j, 1, &
@@ -1565,7 +1565,7 @@ contains
 
        if(iTypeBC == UserBC_) then
           call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
-       else        
+       else
           !$acc loop vector collapse(3) independent
           do k = nK+1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              call set_boundary_for_cell(iSide, i, j, k, i, j, nK, &
@@ -1597,7 +1597,7 @@ contains
        State_VG(:,i,j,k) = CellState_VI(:,iSide)
        if(UseB0) State_VG(Bx_:Bz_,i,j,k) = &
             State_VG(Bx_:Bz_,i,j,k) - B0_DGB(:,i,j,k,iBlock)
-    else       
+    else
        call stop_mpi('set_boundary_for_cell: Unimplemented boundary type')
     end if
 
@@ -2508,7 +2508,7 @@ contains
        State_V(iP_I(iFluid)) = max(pMin_I(iFluid), State_V(iP_I(iFluid)))
     end do
 
-   if(UseElectronPressure) State_V(Pe_) = max(PeMin, State_V(Pe_))    
+   if(UseElectronPressure) State_V(Pe_) = max(PeMin, State_V(Pe_))
 
   end subroutine limit_pressure
   !============================================================================
