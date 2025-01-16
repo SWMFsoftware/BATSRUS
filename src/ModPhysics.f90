@@ -170,6 +170,7 @@ module ModPhysics
   real:: PeMinSi = -1.1e5, PeMinDim = -1.0, PeMin
   !$acc declare create(PeMin)
   real:: TeMinDim = -1.0, TeMin
+  !$acc declare create(TeMin)
   real:: ExtraEintMinSi = 0.0, ExtraEintMin
 
   ! Minimum threshold for MHD density and pressure
@@ -796,6 +797,7 @@ contains
     !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, PeMin, TMin_I)
     !$acc update device(OmegaBody, Bdp)
     !$acc update device(gBody)
+    !$acc update device(TeMin)
 
     !$acc update device(PolarRho_I, PolarP_I)
 

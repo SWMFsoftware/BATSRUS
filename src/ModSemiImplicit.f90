@@ -414,9 +414,7 @@ contains
                //TypeSemiImplicit)
 #endif
        end select
-#ifndef _OPENACC
        call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1)
-#endif
     end do
     !$omp end parallel do
 

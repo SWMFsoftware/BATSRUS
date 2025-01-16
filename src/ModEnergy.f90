@@ -416,7 +416,8 @@ contains
   !============================================================================
   subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
-
+    !$acc routine vector
+    
     ! Keep pressure(s) in State_VGB above pMin_I limit
 
     use ModAdvance, ONLY: UseAnisoPressure, UseAnisoPe
@@ -434,6 +435,7 @@ contains
        if(pMin_I(iFluid) < 0.0) CYCLE
        pMin = pMin_I(iFluid)
        iP = iP_I(iFluid)
+       !$acc loop vector collapse(3) independent
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
           if(UseAnisoPressure .and. IsIon_I(iFluid))&
@@ -446,6 +448,7 @@ contains
     do iFluid = iFluidMin, iFluidMax
        if(Tmin_I(iFluid) < 0.0) CYCLE
        iP = iP_I(iFluid)
+       !$acc loop vector collapse(3) independent
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           NumDens=State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
           pMin = NumDens*Tmin_I(iFluid)
@@ -459,6 +462,7 @@ contains
 
     if(UseElectronPressure .and. iFluidMin == 1)then
        if(PeMin > 0.0)then
+          !$acc loop vector collapse(3) independent
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              State_VGB(Pe_,i,j,k,iBlock) = &
                   max(PeMin, State_VGB(Pe_,i,j,k,iBlock))
@@ -467,6 +471,7 @@ contains
           end do; end do; end do
        end if
        if(TeMin > 0.0)then
+          !$acc loop vector collapse(3) independent
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              Ne = sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
              State_VGB(Pe_,i,j,k,iBlock) = &
