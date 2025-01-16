@@ -906,6 +906,11 @@ contains
        call limit_pressure(State_VGB(:,i,j,k,iBlock))
     end if
 
+    if(UseAlfvenWaves) then 
+      State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+         max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 0.0)
+    end if
+
 #ifdef TESTACC
     if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
          .and. iBlock == iBlockTest)then
