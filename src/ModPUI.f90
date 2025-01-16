@@ -98,7 +98,7 @@ contains
     real, intent(inout) :: State_V(nVar)
     real, optional, intent(in) :: StateRead_V(nVar)
     integer, optional, intent(in) :: iVarMatch_V(nVar)
-    
+
     real :: RhoPui, Ppui
 
     logical:: DoTest
@@ -116,7 +116,7 @@ contains
        RhoPui = State_V(iRho_I(Pu3_))
        Ppui = State_V(iP_I(Pu3_))
     end if
-    
+
     ! 4.0*cPi*Vpui_I**2*DeltaVpui_I*(RhoPui/(cTwoPi*Ppui))**1.5 &
     !    *exp(-0.5*RhoPui*Vpui_I**2/Ppui)
     State_V(PuiFirst_:PuiLast_) = &
