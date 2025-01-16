@@ -174,18 +174,25 @@ make -j test_shocktube MPIRUN= NTHREAD=4
 
 # Compiling for GPUs
 
-The code has to be installed with 
-
+After cloning the BATSRUS repository, the code has to be installed with 
+```
 ./Config.pl -install -compiler=nvfortran,nvc
-
+```
 On clusters, load a version of the Nvidia compiler. Some versions may be
-unstable. A known stable version is nvhpc/20.7. A newer version that works
-on Pleiades is nvhpc/24.3-nompi paired with mpi-hpe/mpt. Switch on the -acc 
-flag:
+unstable. A working version is nvhpc-hpcx/24.5 on the Frontera
+supercomputer. A working version on Pleiades is nvhpc-nompi/24.3 
+paired with mpi-hpe/mpt. Switch on the -acc flag:
 ```
 Config.pl -acc
 ```
-and compile:
+and test installation with a set of small tests:
+```
+make test_small_gpu
+```
+By default, the tests run on 2 GPUs. If there are no .diff files in the
+end, it means all tests pass. Other than testing (the command above
+includes compilation for various tests), one needs to compile
+BATSRUS before running any simulation:
 ```
 make -j BATSRUS
 ```

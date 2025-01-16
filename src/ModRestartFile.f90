@@ -1381,7 +1381,9 @@ contains
              if(nPui > 1)then
                 do iBlock = 1,nBlock
                    do i =1,nI ; do j=1,nJ; do k=1,nK
-                      call set_pui_state(State_VGB(:,i,j,k,iBlock))
+                      call set_pui_state(State_VGB(:,i,j,k,iBlock), &
+                           StateRead_V = StateRead_VCB(:,i,j,k,iBlock), &
+                           iVarMatch_V = iVarMatch_V)
                    end do; end do ; end do
                 end do
                 CYCLE
