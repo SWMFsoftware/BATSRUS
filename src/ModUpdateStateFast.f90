@@ -35,7 +35,7 @@ module ModUpdateStateFast
   use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
-       C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
+       C2light, InvClight, InvClight2, RhoMin_I, pMin_I, PeMin, &
        OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
        GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
        No2Io_V, iUnitCons_V, UnitU_
@@ -2453,6 +2453,8 @@ contains
     do iFluid = 1, nFluid
        State_V(iP_I(iFluid)) = max(pMin_I(iFluid), State_V(iP_I(iFluid)))
     end do
+
+   if(UseElectronPressure) State_V(Pe_) = max(PeMin, State_V(Pe_))    
 
   end subroutine limit_pressure
   !============================================================================
