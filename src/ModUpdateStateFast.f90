@@ -45,7 +45,7 @@ module ModUpdateStateFast
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
 #endif
-  use ModB0, ONLY: B0_DGB, get_b0
+  use ModB0, ONLY: B0_DGB, get_b0, rCurrentFreeB0, UseCurlB0 ! to be optimized
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB
@@ -505,7 +505,7 @@ contains
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar, iVarLast
     real:: DivU, DivB, DivE, DivF, DtLocal, InvVol
-    real:: Change_V(nFlux), Force_D(3)
+    real:: Change_V(nFlux), Force_D(3), CurlB0_D(3)
 
     ! Coronal Heating
     real :: QPerQtotal_I(nIonFluid)
@@ -541,6 +541,17 @@ contains
        Change_V(Energy_) = Change_V(Energy_) &
             - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             *          State_VGB(Ux_:Uz_,i,j,k,iBlock))
+    end if
+
+    if(UseCurlB0)then
+       if(r_GB(i,j,k,iBlock) >= rCurrentFreeB0)then
+          call get_curlb0(i, j, k, iBlock, CurlB0_D)
+          Force_D = cross_prod(CurlB0_D, &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
+          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) + Force_D
+          Change_V(Energy_) = Change_V(Energy_) &
+               + sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
+       end if
     end if
 
     if(UseBorisCorrection .and. ClightFactor /= 1.0)then
@@ -876,7 +887,7 @@ contains
 
     ! Convert entropy to pressure
     if(UseElectronPressure .and. UseElectronEntropy) &
-         State_VGB(Pe_,i,j,k,iBlock)=State_VGB(Pe_,i,j,k,iBlock) &
+         State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
          *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
          **GammaElectronMinus1
 
