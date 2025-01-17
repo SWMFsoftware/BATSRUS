@@ -417,7 +417,7 @@ contains
   subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
     !$acc routine vector
-    
+
     ! Keep pressure(s) in State_VGB above pMin_I limit
 
     use ModAdvance, ONLY: UseAnisoPressure, UseAnisoPe

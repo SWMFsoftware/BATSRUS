@@ -341,8 +341,8 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
-    !$acc update device(tChromo, UseFloatRadialVelocity, ChromoN)    
-    
+    !$acc update device(tChromo, UseFloatRadialVelocity, ChromoN)
+
     call test_stop(NameSub, DoTest)
   end subroutine user_init_session
   !============================================================================
@@ -1027,18 +1027,18 @@ contains
   !  use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, Ehot_, &
   !       RhoUx_, RhoUz_, Ppar_, WaveFirst_, WaveLast_, nFluid
   !  use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I, iRho_I, &
-  !       MassFluid_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I, iPparIon_I, IsIon_I   
+  !       MassFluid_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I, iPparIon_I, IsIon_I
   !  use ModPhysics,    ONLY: UnitRho_, UnitB_, UnitP_, &
   !       Si2No_V, rBody, GBody, InvGammaMinus1
   !  use ModMain,       ONLY: nStep, nIteration, tSimulation, &
   !       IsTimeAccurate
-  !  use ModB0,         ONLY: B0_DGB   
+  !  use ModB0,         ONLY: B0_DGB
 
   !  integer, intent(in) :: i, j, k, iBlock, iSide, iTypeBC
 
   !  real    :: Br1_D(3), Bt1_D(3)
   !  real    :: Runit_D(3)
-  !  real    :: RhoCme, Ucme_D(3), Bcme_D(3), pCme, BrCme, BrCme_D(3)      
+  !  real    :: RhoCme, Ucme_D(3), Bcme_D(3), pCme, BrCme, BrCme_D(3)
 
   !  real    :: u_D(3)
 
@@ -1051,7 +1051,7 @@ contains
 
   !  logical:: DoTest
   !  character(len=*), parameter:: NameSub = 'user_set_single_cell_boundary'
-  !  !--------------------------------------------------------------------------   
+  !  !--------------------------------------------------------------------------
 
   !  Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
@@ -1121,7 +1121,7 @@ contains
   !     iRho = iRho_I(iFluid)
   !     iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
-  !     if(UseFloatRadialVelocity)then             
+  !     if(UseFloatRadialVelocity)then
   !        ! Copy radial velocity component. Reflect the other components
   !        U = sum(State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock)*Runit_D) &
   !             /State_VGB(iRho,1,j,k,iBlock)
@@ -1195,17 +1195,16 @@ contains
   !  end if
   !  ! End of CME part
 
-  ! end subroutine user_set_single_cell_boundary  
-  !============================================================================
+  ! end subroutine user_set_single_cell_boundary
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
     !$acc routine vector
-    
+
     ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
-#ifndef _OPENACC    
+#ifndef _OPENACC
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
-#endif    
+#endif
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -1273,10 +1272,10 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-#ifndef _OPENACC    
+#ifndef _OPENACC
     if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') &
          call CON_stop('Wrong iSide in user_set_cell_boundary')
-#endif    
+#endif
 
     IsFound = .true.
 
@@ -1374,13 +1373,13 @@ contains
              end if
           end if
        end do; end do
-       
+
        do iFluid = 1, nIonFluid
           iRho = iRho_I(iFluid)
           iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
           if(UseFloatRadialVelocity)then
-#ifndef _OPENACC             
+#ifndef _OPENACC
              do k = MinK, MaxK; do j = MinJ, MaxJ
                 ! Copy radial velocity component. Reflect the other components
                 U = sum(State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock)*Runit_D) &
@@ -1398,7 +1397,7 @@ contains
                    end if
                 end do
              end do; end do
-#endif             
+#endif
           else
              !$acc loop vector collapse(2) independent &
              !$acc private(FullB_D, Bdir_D, U_D)
@@ -1422,7 +1421,7 @@ contains
           end if
        end do
 
-#ifndef _OPENACC       
+#ifndef _OPENACC
        ! start of CME part
        if(UseCme)then
           do k = MinK, MaxK; do j = MinJ, MaxJ
@@ -1467,10 +1466,10 @@ contains
        end if
        ! End of CME part
 #endif
-       
+
        ! end of UseAwsom part (AWSoM)
     else
-#ifndef _OPENACC       
+#ifndef _OPENACC
        ! start of .not.UseAwsom part (AWSoM-R)
 
        if(TypeBc == 'usersurfacerot')then
@@ -1744,7 +1743,7 @@ contains
        end if
 #endif
     end if
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
   !============================================================================
