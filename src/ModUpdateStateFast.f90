@@ -975,7 +975,7 @@ contains
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
-    if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
+    if(UseB0) call get_b0_face(B0_D, i, j ,k, iBlock, x_)
 
 #ifdef TESTACC
     DoTestSide = .false.
@@ -1068,7 +1068,7 @@ contains
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
-    if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
+    if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, z_)
 
 #ifdef TESTACC
     DoTestSide = .false.
@@ -1711,7 +1711,7 @@ contains
     ! Return B0 at the face in direction iDir relative to i, j, k cell center
 
     real, intent(out)   :: B0_D(3)
-    integer, intent(in) :: i,j,k,iBlock,iDir
+    integer, intent(in) :: i, j, k, iBlock, iDir
     !--------------------------------------------------------------------------
     B0_D = 0
 
@@ -1727,6 +1727,60 @@ contains
     end select
 
   end subroutine get_b0_face
+  !============================================================================
+  subroutine get_curlb0(i, j, k, iBlock, CurlB0_D)
+    !$acc routine seq
+
+    ! Calculate CurlB0_D at the cell i,j,k,iBlock
+
+    use BATL_lib, ONLY: CellSize_DB
+
+    integer, intent(in):: i, j, k, iBlock
+    real, intent(out):: CurlB0_D(3)
+
+    real:: Cx, Cy, Cz
+    !--------------------------------------------------------------------------
+    if(IsCartesian)then
+       Cx = 0.5/CellSize_DB(x_,iBlock)
+       Cy = 0.5/CellSize_DB(y_,iBlock)
+       if(nDim == 2)then
+          CurlB0_D(x_) = &
+               +Cy*(B0_DGB(z_,i,j+1,k,iBlock) - B0_DGB(z_,i,j-1,k,iBlock))
+          CurlB0_D(y_) = &
+               -Cx*(B0_DGB(z_,i+1,j,k,iBlock) - B0_DGB(z_,i-1,j,k,iBlock))
+          CurlB0_D(z_) = &
+               +Cx*(B0_DGB(y_,i+1,j,k,iBlock) - B0_DGB(y_,i-1,j,k,iBlock)) &
+               -Cy*(B0_DGB(x_,i,j+1,k,iBlock) - B0_DGB(x_,i,j-1,k,iBlock))
+       else
+          Cz = 0.5/CellSize_DB(y_,iBlock)
+          CurlB0_D(x_) = &
+               Cy*(B0_DGB(z_,i,j+1,k,iBlock) - B0_DGB(z_,i,j-1,k,iBlock)) - &
+               Cz*(B0_DGB(y_,i,j,k+1,iBlock) - B0_DGB(y_,i,j,k-1,iBlock))
+          CurlB0_D(y_) = &
+               Cz*(B0_DGB(x_,i,j,k+1,iBlock) - B0_DGB(x_,i,j,k-1,iBlock)) - &
+               Cx*(B0_DGB(z_,i+1,j,k,iBlock) - B0_DGB(z_,i-1,j,k,iBlock))
+          CurlB0_D(z_) = &
+               Cx*(B0_DGB(y_,i+1,j,k,iBlock) - B0_DGB(y_,i-1,j,k,iBlock)) - &
+               Cy*(B0_DGB(x_,i,j+1,k,iBlock) - B0_DGB(x_,i,j-1,k,iBlock))
+       end if
+    else
+       ! Only 3D case is implemented (the last two terms are for 3D only)
+       CurlB0_D = 0.5/CellVolume_GB(i,j,k,iBlock) * ( &
+            + cross_prod( &
+            FaceNormal_DDFB(:,1,i+1,j,k,iBlock), B0_DGB(:,i+1,j,k,iBlock))  &
+            - cross_prod(                                            &
+            FaceNormal_DDFB(:,1,i  ,j,k,iBlock), B0_DGB(:,i-1,j,k,iBlock))  &
+            + cross_prod(                                            &
+            FaceNormal_DDFB(:,2,i,j+1,k,iBlock), B0_DGB(:,i,j+1,k,iBlock))  &
+            - cross_prod(                                            &
+            FaceNormal_DDFB(:,2,i,j  ,k,iBlock), B0_DGB(:,i,j-1,k,iBlock))  &
+            + cross_prod(                                            &
+            FaceNormal_DDFB(:,3,i,j,k+1,iBlock), B0_DGB(:,i,j,k+1,iBlock))  &
+            - cross_prod(                                            &
+            FaceNormal_DDFB(:,3,i,j,k  ,iBlock), B0_DGB(:,i,j,k-1,iBlock)) )
+    end if
+
+  end subroutine get_curlb0
   !============================================================================
   subroutine calc_block_dt(iBlock)
     !$acc routine vector
