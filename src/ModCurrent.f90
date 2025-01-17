@@ -22,51 +22,6 @@ module ModCurrent
 contains
   !============================================================================
   include 'vector_functions.h'
-  subroutine get_point_data_fast(Xyz_D, b_D, Current_D)
-    !$acc routine seq
-
-    ! Obtain B and J at location Xyz_D using ghost cells
-
-    use ModAdvance, ONLY: State_VGB, Bx_, Bz_
-    use BATL_lib, ONLY: find_grid_block, iProc
-
-    real, intent(in):: Xyz_D(3)
-    real, intent(out):: b_D(3), Current_D(3)
-
-    integer:: iProcOut, iBlock, iCell_D(3)
-    integer:: i, j, k, iLo, jLo, kLo, iHi, jHi, kHi
-    real:: Dist_D(3), WeightX, WeightY, WeightZ, WeightXyz, CurrentIjk_D(3)
-    !--------------------------------------------------------------------------
-    call find_grid_block(Xyz_D, iProcOut, iBlock, iCell_D, Dist_D, &
-         UseGhostCell=.true.)
-
-    b_D = 0.0
-    Current_D = 0.0
-
-    if(iProc /= iProcOut) RETURN
-
-    iLo = iCell_D(1); jLo = iCell_D(2); kLo = iCell_D(3)
-    iHi = iLo + 1; jHi = jLo + 1; kHi = kLo + 1
-
-    ! Simple trilinear interpolation. Could be optimized if needed.
-    do k = kLo, kHi
-       WeightZ = (k-kLo)*Dist_D(3) + (kHi-k)*(1-Dist_D(3))
-       do j = jLo, jHi
-          WeightY = (j-jLo)*Dist_D(2) + (jHi-j)*(1-Dist_D(2))
-          do i = iLo, iHi
-             WeightX = (i-iLo)*Dist_D(1) + (iHi-i)*(1-Dist_D(1))
-             WeightXyz = WeightX*WeightY*WeightZ
-             if(WeightXyz == 0.0) CYCLE
-
-             b_D = b_D + WeightXyz * State_VGB(Bx_:Bz_,i,j,k,iBlock)
-
-             call get_current(i, j, k, iBlock, CurrentIjk_D)
-             Current_D = Current_D + WeightXyz*CurrentIjk_D
-          end do
-       end do
-    end do
-
-  end subroutine get_point_data_fast
   !============================================================================
   subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
        iVarMin, iVarMax, StateCurrent_V)
