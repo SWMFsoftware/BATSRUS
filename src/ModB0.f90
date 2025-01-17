@@ -247,7 +247,6 @@ contains
   end subroutine init_mod_b0
   !============================================================================
   subroutine clean_mod_b0
-
     !--------------------------------------------------------------------------
     if(allocated(B0_DGB)) deallocate(B0_DGB, &
          B0ResChangeX_DIIEB, B0ResChangeY_DIIEB, B0ResChangeZ_DIIEB)
@@ -296,6 +295,7 @@ contains
   subroutine set_b0_face(iBlock)
 
     ! Calculate the face centered B0 for block iBlock
+
     use ModMain,  ONLY: UseFieldLineThreads
     use ModParallel, ONLY: DiLevel_EB, Unset_
     use BATL_lib,    ONLY: nDim, CoordMin_DB, CellSize_DB, coord_to_xyz
@@ -513,11 +513,10 @@ contains
           end if
        end do
     endif
-
     call test_stop(NameSub, DoTest)
+
   end subroutine set_b0_reschange
   !============================================================================
-
   subroutine set_b0_source(iBlock, DoSkipSetB0Face)
 
     ! Calculate div(B0) and curl(B0) for block iBlock
@@ -697,10 +696,12 @@ contains
        end do; end do; end do
     end if
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine set_b0_source
   !============================================================================
   subroutine get_b0(Xyz_D, B0_D)
     !$acc routine seq
+
     ! Get B0 at location Xyz_D
 
     use ModMain,           ONLY : tSimulation, NameThisComp, &
@@ -820,9 +821,9 @@ contains
   !============================================================================
   subroutine add_b0_body2(XyzIn_D, B0_D)
 
-    ! If there is a second body that has a magnetic field the contribution
-    ! to the field from the second body should be computed here (inside the
-    ! if block.
+    ! If there is a second body that has a magnetic field, the contribution
+    ! to the field from the second body is computed here.
+
     use ModPhysics, ONLY: BdpBody2_D, rBody2, xBody2, yBody2, zBody2
     use ModNumConst, ONLY: cTiny
 
@@ -852,10 +853,9 @@ contains
 
   end subroutine add_b0_body2
   !============================================================================
-
   subroutine add_b0(iBlock)
 
-    ! add B0 to B1 to obtain Full B0+B1
+    ! add B0 to B1 to obtain full B=B0+B1
 
     integer, intent(in) :: iBlock
 
@@ -873,7 +873,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_b0
   !============================================================================
-
   subroutine subtract_b0(iBlock)
 
     ! subtract B0 from full B0+B1 to obtain B1
