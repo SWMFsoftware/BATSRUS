@@ -92,6 +92,7 @@ contains
   !============================================================================
   subroutine set_pui_state(State_V, StateRead_V, iVarMatch_V)
 
+    use ModNumConst,   ONLY: cPi
     use ModMultiFluid, ONLY: iRho_I, iP_I
     use ModVarIndexes, ONLY: nVar
 
@@ -124,7 +125,7 @@ contains
 
     State_V(PuiFirst_:PuiLast_) = State_V(PuiFirst_:PuiLast_) &
          /sum(State_V(PuiFirst_:PuiLast_))*RhoPui &
-         /(Vpui_I**2*DeltaVpui_I)
+         /(4.0*cPi*Vpui_I**2*DeltaVpui_I)
 
   end subroutine set_pui_state
   !============================================================================

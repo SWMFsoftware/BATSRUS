@@ -14,6 +14,7 @@ module ModSingleFluid
 
   ! Default is proton mass, but it can be changed
   real :: MassFluid_I(nFluid) = 1.0
+  !$acc declare create(MassFluid_I)
 
 end module ModSingleFluid
 !==============================================================================

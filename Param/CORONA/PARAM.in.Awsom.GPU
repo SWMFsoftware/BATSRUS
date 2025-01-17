@@ -160,6 +160,11 @@ T			UseLogRhoLimiter
 T			UseLogPLimiter
 F			UseRhoRatioLimiter
 
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			PeMinDim
+
+
 #NONCONSERVATIVE
 T			UseNonConservative
 
@@ -176,12 +181,12 @@ RAW			StringLog
 -1.			DtSaveLogfile
 
 #OUTERBOUNDARY
-float			TypeBc1
+user			TypeBc1
 float			TypeBc2
-float			TypeBc3
-float			TypeBc4
-float			TypeBc5
-float			TypeBc6
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
 
 #SAVEPLOT
 1			nPlotFile
