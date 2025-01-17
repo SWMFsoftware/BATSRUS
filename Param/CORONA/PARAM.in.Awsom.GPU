@@ -87,6 +87,11 @@ T			UseCoarseAxis
 
 #USERINPUTEND -------------------------------------
 
+#TRANSITIONREGION
+T			DoExtendTransitionRegion
+2.2e5			TeTransitionRegionSi
+1.0e1			DeltaTeModSi
+
 #GRIDGEOMETRY
 spherical_genr		TypeGeometry
 Param/CORONA/grid_awsom.dat		NameGridFile
