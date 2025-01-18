@@ -19,7 +19,7 @@ module ModUpdateStateFast
        UseLogLimiter_V
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
-       ChargePerMass_I, iPIon_I, MassIon_I
+       ChargePerMass_I, iPIon_I, MassIon_I, ChargeIon_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
@@ -35,8 +35,8 @@ module ModUpdateStateFast
   use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
-       C2light, InvClight, InvClight2, RhoMin_I, pMin_I, PeMin, &
-       OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
+       C2light, InvClight, InvClight2, RhoMin_I, pMin_I, PeMin, TMin_I, &
+       TeMin, OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
        GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
        No2Io_V, No2Si_V, iUnitCons_V, UnitU_, UnitTemperature_, &
        AverageIonCharge
@@ -2591,14 +2591,27 @@ contains
     !$acc routine seq
     real, intent(inout):: State_V(nVar)
 
-    integer:: iFluid
+    real :: NumDens, Ne
+    integer:: iFluid, iP
     !--------------------------------------------------------------------------
     do iFluid = 1, nFluid
-       State_V(iP_I(iFluid)) = max(pMin_I(iFluid), State_V(iP_I(iFluid)))
+       iP = iP_I(iFluid)
+       State_V(iP) = max(pMin_I(iFluid), State_V(iP))
+
+       if(Tmin_I(iFluid) > 0) then 
+          NumDens=State_V(iRho_I(iFluid))/MassFluid_I(iFluid)         
+          State_V(iP) = max(NumDens*Tmin_I(iFluid), State_V(iP))
+       end if
     end do
 
-    if(UseElectronPressure) State_V(Pe_) = max(PeMin, State_V(Pe_))
-
+    if(UseElectronPressure)  then 
+       State_V(Pe_) = max(PeMin, State_V(Pe_))
+       
+       if(TeMin > 0) then 
+          Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
+          State_V(Pe_) = max(Ne*TeMin, State_V(Pe_))
+       end if
+    end if
   end subroutine limit_pressure
   !============================================================================
   subroutine energy_to_pressure(State_V)

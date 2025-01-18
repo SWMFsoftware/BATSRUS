@@ -161,6 +161,10 @@ T			UseLogRhoLimiter
 T			UseLogPLimiter
 F			UseRhoRatioLimiter
 
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
+
 #MINIMUMPRESSURE
 1.0E-9			pMinDim
 1.0e-9			PeMinDim
