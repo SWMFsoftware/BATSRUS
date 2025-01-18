@@ -102,9 +102,9 @@ contains
                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + State_VGB(Pe_,i,j,k,iBlock)*InvGammaElectronMinus1
 
-          if(Hyp_ <=1 .or. .not. UseHypEnergy) CYCLE
           ! Add hyperbolic scalar energy density (idea of Daniel Price)
-          State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+          if(Hyp_ > 1 .and. UseHypEnergy) &
+               State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
 
        end do; end do; end do
@@ -238,10 +238,11 @@ contains
   end subroutine get_fluid_energy_block
   !============================================================================
   subroutine pressure_to_energy_block(State_VG, &
-       iMin, iMax, jMin, jMax, kMin, kMax)
+       iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
 
     ! Convert pressure to energy in all cells of State_VG
-    integer, intent(in)::  iMin, iMax, jMin, jMax, kMin, kMax
+    ! This is only called from the (part)implicit scheme.
+    integer, intent(in)::  iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     real, intent(inout):: State_VG(nVar,iMin:iMax,jMin:jMax,kMin:kMax)
 
     integer:: i, j, k, iFluid
@@ -259,7 +260,8 @@ contains
                /State_VG(iRho,i,j,k)
 
           ! Add magnetic energy density
-          if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy))&
+          if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy) &
+               .and. .not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) ) &
                State_VG(iP,i,j,k) = State_VG(iP,i,j,k) &
                + 0.5*sum(State_VG(Bx_:Bz_,i,j,k)**2)
 
@@ -320,10 +322,9 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           if(iFluid <= nIonFluid .and..not.is_conserv(i, j, k, iBlock)) CYCLE
 
-          if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy)           &
-               .and. .not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
-               ) then
-             ! Deal with first MHD fluid
+          if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy) &
+               .and. .not.(UseSaMhd .and. r_GB(i,j,k,iBlock) > rMinSaMhd))then
+
              ! Subtract the magnetic energy density
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
@@ -385,11 +386,9 @@ contains
 
           ! Subtract the magnetic energy density
           if(iFluid == 1 .and. (IsMhd .or. UseTotalIonEnergy) &
-               .and..not.(UseSaMhd.and.r_GB(i,j,k,iBlock) > rMinSaMhd) &
-               ) then
-             State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                  - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-          end if
+               .and. .not.(UseSaMhd .and. r_GB(i,j,k,iBlock) > rMinSaMhd)) &
+               State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+               - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
 
           ! Subtract electron energy if needed
           if(UseElectronPressure .and. UseElectronEnergy .and. iFluid == 1) &
