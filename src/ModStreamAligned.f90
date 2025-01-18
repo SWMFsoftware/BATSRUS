@@ -9,13 +9,14 @@ module ModSaMhd
   ! In steady state MHD the magnetic field and mass density flux are
   ! aligned as long as they are aligned at the boundaries. This is
   ! easty to see: the magnetic field lines are equipotentials, so
-  ! if E=u x B is zero at the bounraries, it is zero everywhere, so
+  ! if E = -u x B is zero at the bounraries, it is zero everywhere, so
   ! u and B are parallel everywhere.
   !
   ! Conservation of mass flux along a flux tube implies that
-  ! 1/s = rho*u/B is constant along field lines, where 1/B is proportional
-  ! to the cross section of the flux tube. So one can solve for the scalar s
-  ! instead of the magnetic field vector, and obtain B as B = s*rho*u
+  ! rho*u/B = C constant along field lines, where 1/B is proportional
+  ! to the cross section of the flux tube. So one can solve for the scalar
+  ! s:=B/u=rho/C instead of the magnetic field vector. The scalar s satisfies
+  ! the same advection equation as rho. From s we obtain B as B = s*u.
 
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, BperU_, Rho_, &
@@ -37,11 +38,11 @@ module ModSaMhd
   real, public :: RMinSaMhd = -1.0
 
   public :: read_samhd_param ! Read model parameters
-  public :: init_samhd   ! initialize module
-  public :: update_samhd ! Assign SaMhd density or express B = s rho U
-  public :: get_samhd_state ! Do same at a single point
+  public :: init_samhd       ! initialize module
+  public :: update_samhd     ! Assign SaMhd density or express B = s rho U
+  public :: get_samhd_state  ! Do same at a single point
   public :: correct_samhd_face_value ! Calculate magnetic field face values
-  public :: aligning_bc             ! Align field and stream from the MHD side
+  public :: aligning_bc      ! Align field and stream from the MHD side
 
 contains
   !============================================================================
@@ -51,10 +52,11 @@ contains
     !--------------------------------------------------------------------------
     call read_var('UseSaMhd', UseSaMhd)
     if(.not.UseSaMhd)RETURN
-    if(BperU_==1)call stop_mpi(&
-            'Reconfigure the code with setting meaningful value for BperU_')
-    call read_var('RSourceSaMhd', RSourceSaMhd)
-    call read_var('RMinSaMhd', RMinSaMhd)
+    if(BperU_ == 1) call stop_mpi(&
+         'Reconfigure the code with an equation module using BperU_')
+    call read_var('RsourceSaMhd', RsourceSaMhd)
+    call read_var('RminSaMhd', RminSaMhd)
+
   end subroutine read_samhd_param
   !============================================================================
   subroutine init_samhd(iBlock)
