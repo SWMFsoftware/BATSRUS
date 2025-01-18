@@ -53,7 +53,7 @@ contains
        call read_var('TeTransitionRegionSi', TeTransitionRegionTopSi)
     end if
 
-    !$acc update device(DoExtendTransitionRegion)
+    !$acc update device(DoExtendTransitionRegion, TeModSi, DeltaTeModSi)
     call test_stop(NameSub, DoTest)
 
   end subroutine read_cooling_param
