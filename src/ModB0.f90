@@ -75,7 +75,8 @@ module ModB0
 
   ! Radius within which the B0 field is curl free (analytically)
   real, public:: rCurrentFreeB0 = -1.0
-
+  !$acc declare create(rCurrentFreeB0)
+  
   ! Cell-centered B0 field vector
   real, public, allocatable:: B0_DGB(:,:,:,:,:)
   !$acc declare create(B0_DGB)
@@ -152,7 +153,6 @@ contains
 
     if(UseCurlB0) UseB0Source = .true.
 
-    !$acc update device(UseCurlB0)
     call test_stop(NameSub, DoTest)
   end subroutine read_b0_param
   !============================================================================
@@ -231,6 +231,7 @@ contains
                ' NOTE: UseCurlB0 is switched OFF as source surface = ', rMaxB0
        end if
     end if
+    !$acc update device (UseCurlB0, rCurrentFreeB0)
 
     !$omp parallel
 
