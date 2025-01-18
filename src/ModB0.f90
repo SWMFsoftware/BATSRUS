@@ -71,7 +71,6 @@ module ModB0
   ! The momentum source term for non-current-free B0 field, curl B0 x B0
   ! may be alternatively calculated as div (B0 B0) - grad B0^2/2 -B0 div B0
   logical, public :: UseB0MomentumFlux = .false.
-  !$acc declare create(UseB0MomentumFlux)
 
   ! Radius within which the B0 field is curl free (analytically)
   real, public:: rCurrentFreeB0 = -1.0
@@ -84,7 +83,6 @@ module ModB0
   ! Face-centered B0 field arrays for one block
   real, public, allocatable:: B0_DX(:,:,:,:), B0_DY(:,:,:,:), B0_DZ(:,:,:,:)
   !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
-  !$acc declare create(B0_DX, B0_DY, B0_DZ)
 
   ! The numerical curl, curl B0 x B0 and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
