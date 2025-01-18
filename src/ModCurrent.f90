@@ -22,7 +22,6 @@ module ModCurrent
 contains
   !============================================================================
   include 'vector_functions.h'
-  !============================================================================
   subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
        iVarMin, iVarMax, StateCurrent_V)
     !$acc routine seq
