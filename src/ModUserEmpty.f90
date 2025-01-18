@@ -49,7 +49,8 @@ contains
 
   end subroutine user_set_face_boundary
   !============================================================================
-  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)    
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+    !$acc routine vector
 
     ! Apply user defined ghost cell boundary condition
     
@@ -436,8 +437,10 @@ contains
 
     character(len=*), intent(in) :: NameSub
     !--------------------------------------------------------------------------
+#ifndef _OPENACC    
     call stop_mpi('You are trying to call the empty user routine '//   &
          NameSub//'. Please implement the routine in src/ModUser.f90')
+#endif    
 
   end subroutine stop_user
   !============================================================================

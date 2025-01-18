@@ -45,7 +45,7 @@ module ModUpdateStateFast
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
 #endif
-  use ModB0, ONLY: B0_DGB, get_b0
+  use ModB0, ONLY: B0_DGB, get_b0, rCurrentFreeB0, UseCurlB0 ! to be optimized
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB
@@ -505,7 +505,7 @@ contains
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar, iVarLast
     real:: DivU, DivB, DivE, DivF, DtLocal, InvVol
-    real:: Change_V(nFlux), Force_D(3)
+    real:: Change_V(nFlux), Force_D(3), CurlB0_D(3)
 
     ! Coronal Heating
     real :: QPerQtotal_I(nIonFluid)
@@ -541,6 +541,17 @@ contains
        Change_V(Energy_) = Change_V(Energy_) &
             - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             *          State_VGB(Ux_:Uz_,i,j,k,iBlock))
+    end if
+
+    if(UseCurlB0)then
+       if(r_GB(i,j,k,iBlock) >= rCurrentFreeB0)then
+          call get_curlb0(i, j, k, iBlock, CurlB0_D)
+          Force_D = cross_prod(CurlB0_D, &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
+          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) + Force_D
+          Change_V(Energy_) = Change_V(Energy_) &
+               + sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
+       end if
     end if
 
     if(UseBorisCorrection .and. ClightFactor /= 1.0)then
@@ -876,7 +887,7 @@ contains
 
     ! Convert entropy to pressure
     if(UseElectronPressure .and. UseElectronEntropy) &
-         State_VGB(Pe_,i,j,k,iBlock)=State_VGB(Pe_,i,j,k,iBlock) &
+         State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
          *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
          **GammaElectronMinus1
 
@@ -975,7 +986,7 @@ contains
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
-    if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
+    if(UseB0) call get_b0_face(B0_D, i, j ,k, iBlock, x_)
 
 #ifdef TESTACC
     DoTestSide = .false.
@@ -1068,7 +1079,7 @@ contains
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
-    if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
+    if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, z_)
 
 #ifdef TESTACC
     DoTestSide = .false.
@@ -1711,7 +1722,7 @@ contains
     ! Return B0 at the face in direction iDir relative to i, j, k cell center
 
     real, intent(out)   :: B0_D(3)
-    integer, intent(in) :: i,j,k,iBlock,iDir
+    integer, intent(in) :: i, j, k, iBlock, iDir
     !--------------------------------------------------------------------------
     B0_D = 0
 
@@ -1727,6 +1738,60 @@ contains
     end select
 
   end subroutine get_b0_face
+  !============================================================================
+  subroutine get_curlb0(i, j, k, iBlock, CurlB0_D)
+    !$acc routine seq
+
+    ! Calculate CurlB0_D at the cell i,j,k,iBlock
+
+    use BATL_lib, ONLY: CellSize_DB
+
+    integer, intent(in):: i, j, k, iBlock
+    real, intent(out):: CurlB0_D(3)
+
+    real:: Cx, Cy, Cz
+    !--------------------------------------------------------------------------
+    if(IsCartesian)then
+       Cx = 0.5/CellSize_DB(x_,iBlock)
+       Cy = 0.5/CellSize_DB(y_,iBlock)
+       if(nDim == 2)then
+          CurlB0_D(x_) = &
+               +Cy*(B0_DGB(z_,i,j+1,k,iBlock) - B0_DGB(z_,i,j-1,k,iBlock))
+          CurlB0_D(y_) = &
+               -Cx*(B0_DGB(z_,i+1,j,k,iBlock) - B0_DGB(z_,i-1,j,k,iBlock))
+          CurlB0_D(z_) = &
+               +Cx*(B0_DGB(y_,i+1,j,k,iBlock) - B0_DGB(y_,i-1,j,k,iBlock)) &
+               -Cy*(B0_DGB(x_,i,j+1,k,iBlock) - B0_DGB(x_,i,j-1,k,iBlock))
+       else
+          Cz = 0.5/CellSize_DB(y_,iBlock)
+          CurlB0_D(x_) = &
+               Cy*(B0_DGB(z_,i,j+1,k,iBlock) - B0_DGB(z_,i,j-1,k,iBlock)) - &
+               Cz*(B0_DGB(y_,i,j,k+1,iBlock) - B0_DGB(y_,i,j,k-1,iBlock))
+          CurlB0_D(y_) = &
+               Cz*(B0_DGB(x_,i,j,k+1,iBlock) - B0_DGB(x_,i,j,k-1,iBlock)) - &
+               Cx*(B0_DGB(z_,i+1,j,k,iBlock) - B0_DGB(z_,i-1,j,k,iBlock))
+          CurlB0_D(z_) = &
+               Cx*(B0_DGB(y_,i+1,j,k,iBlock) - B0_DGB(y_,i-1,j,k,iBlock)) - &
+               Cy*(B0_DGB(x_,i,j+1,k,iBlock) - B0_DGB(x_,i,j-1,k,iBlock))
+       end if
+    else
+       ! Only 3D case is implemented (the last two terms are for 3D only)
+       CurlB0_D = 0.5/CellVolume_GB(i,j,k,iBlock) * ( &
+            + cross_prod( &
+            FaceNormal_DDFB(:,1,i+1,j,k,iBlock), B0_DGB(:,i+1,j,k,iBlock))  &
+            - cross_prod(                                            &
+            FaceNormal_DDFB(:,1,i  ,j,k,iBlock), B0_DGB(:,i-1,j,k,iBlock))  &
+            + cross_prod(                                            &
+            FaceNormal_DDFB(:,2,i,j+1,k,iBlock), B0_DGB(:,i,j+1,k,iBlock))  &
+            - cross_prod(                                            &
+            FaceNormal_DDFB(:,2,i,j  ,k,iBlock), B0_DGB(:,i,j-1,k,iBlock))  &
+            + cross_prod(                                            &
+            FaceNormal_DDFB(:,3,i,j,k+1,iBlock), B0_DGB(:,i,j,k+1,iBlock))  &
+            - cross_prod(                                            &
+            FaceNormal_DDFB(:,3,i,j,k  ,iBlock), B0_DGB(:,i,j,k-1,iBlock)) )
+    end if
+
+  end subroutine get_curlb0
   !============================================================================
   subroutine calc_block_dt(iBlock)
     !$acc routine vector
