@@ -75,7 +75,7 @@ module ModB0
   ! Radius within which the B0 field is curl free (analytically)
   real, public:: rCurrentFreeB0 = -1.0
   !$acc declare create(rCurrentFreeB0)
-  
+
   ! Cell-centered B0 field vector
   real, public, allocatable:: B0_DGB(:,:,:,:,:)
   !$acc declare create(B0_DGB)

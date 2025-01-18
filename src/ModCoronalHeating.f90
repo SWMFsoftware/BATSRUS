@@ -515,7 +515,6 @@ contains
                   CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
        end if
-#ifndef _OPENACC
        if(DoExtendTransitionRegion)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ExtensionFactorInv = 1/extension_factor(TeSi_CI(i,j,k,iGang))
@@ -525,7 +524,6 @@ contains
                   CoronalHeating_CI(i,j,k,iGang)
           end do; end do; end do
        end if
-#endif
 
 #ifndef _OPENACC
     elseif(UseUnsignedFluxModel)then

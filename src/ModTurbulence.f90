@@ -740,9 +740,7 @@ contains
     if(UseStochasticHeating)then
 
        if(DoExtendTransitionRegion)then
-#ifndef _OPENACC
           ExtensionCoef = extension_factor(TeSi_CI(i,j,k,iGang))
-#endif
        else
           ExtensionCoef = 1.0
        end if
