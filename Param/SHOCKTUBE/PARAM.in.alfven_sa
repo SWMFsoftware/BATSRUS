@@ -11,9 +11,9 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #ALIGNBANDU
-T                       UseChGL
-0.0                     RSourceChGL
-0.0                     RMinChGL
+T                       UseSaMhd
+0.0                     RsourceSaMhd
+0.0                     RminSaMhd
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -40,7 +40,7 @@ T			UseNonConservative
 1.0			StateVar Bx
 0.0			StateVar By
 0.0			StateVar Bz
-1.0			StateVar ChGL
+1.0			StateVar BperU
 0.25			StateVar p
 
 #WAVE
