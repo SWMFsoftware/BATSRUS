@@ -2919,7 +2919,7 @@ contains
       use ModPhysics,  ONLY: ElectronPressureRatio
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
-           UseAnisoPressure, UseAnisoPe, SignB_, &
+           UseAnisoPressure, UseAnisoPe, BperU_, &
            UseMagFriction, MagFrictionCoef
       use ModTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD
@@ -3246,7 +3246,7 @@ contains
                  Ut2 = max(0.0, sum(State_V(Ux_:Uz_)**2 ) - Un**2),     &
                  InvRho = InvRho,                                       &
                  Sound2 = Sound2,                                       &
-                 Alpha  = State_V(SignB_),                              &
+                 Alpha  = State_V(BperU_),                              &
                  cSaMhdLeft = Cleft_I(1), cSaMhdRight = Cright_I(1),    &
                  Fast2 = Fast2, Alfven2Normal = Alfven2Normal)
             if(IsSaMhdInterface)then
@@ -3268,11 +3268,11 @@ contains
          end if
       elseif(IsSaMhdDomain)then
          ! Stream-aligned MHD is at least from one side of the face
-         call get_samhd_speed(U1n=UnMin, U2n=UnMax,                   &
+         call get_samhd_speed(U1n=UnMin, U2n=UnMax,                  &
               Ut2 = max(sum( State_V(Ux_:Uz_)**2 ) - Un**2, 0.0),    &
               InvRho = InvRho,                                       &
               Sound2 = Sound2,                                       &
-              Alpha  = State_V(SignB_),                              &
+              Alpha  = State_V(BperU_),                              &
               cSaMhdLeft = cSaMhdLeft, cSaMhdRight = cSaMhdRight)
          if(IsSaMhdInterface)then
             ! From the other side of interface there is pure MHD

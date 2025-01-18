@@ -103,7 +103,7 @@ contains
 
     use ModMain, ONLY: nStep, iStage, Cfl, UseUserUpdateStates, UseBufferGrid
     use ModVarIndexes, ONLY: &
-         nVar, Rho_, RhoUx_, RhoUz_, Ehot_, SignB_, &
+         nVar, Rho_, RhoUx_, RhoUz_, Ehot_, BperU_, &
          NameVar_V, nFluid, WDiff_, p_, Ppar_
     use ModPhysics, ONLY: &
          No2Si_V, No2Io_V, UnitT_, UnitU_, iUnitCons_V
@@ -213,7 +213,7 @@ contains
        call update_heatflux_collisionless(iBlock)
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
-    if(SignB_ > 1 .and. UseSaMhd)call update_samhd(iBlock, iStage)
+    if(BperU_ > 1 .and. UseSaMhd)call update_samhd(iBlock, iStage)
     if(UseReynoldsDecomposition.and.WDiff_>1)call fix_wdiff(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' final for nStep =', nStep
