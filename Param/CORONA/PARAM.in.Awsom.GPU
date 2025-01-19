@@ -36,10 +36,6 @@ HGR			TypeCoordSystem
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-HELIODIPOLE
-2.8e-4			HelioDipoleStrengthSi
-0.0			HelioDipoleTilt
-
 #HARMONICSFILE
 Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
 
@@ -86,6 +82,11 @@ T			UseCoarseAxis
 5e4			TchromoSi
 
 #USERINPUTEND -------------------------------------
+
+#TRANSITIONREGION
+T			DoExtendTransitionRegion
+2.2e5			TeTransitionRegionSi
+1.0e1			DeltaTeModSi
 
 #GRIDGEOMETRY
 spherical_genr		TypeGeometry
@@ -159,6 +160,10 @@ mc3			TypeLimiter
 T			UseLogRhoLimiter
 T			UseLogPLimiter
 F			UseRhoRatioLimiter
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
 
 #MINIMUMPRESSURE
 1.0E-9			pMinDim

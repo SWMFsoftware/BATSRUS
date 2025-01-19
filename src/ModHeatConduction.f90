@@ -934,11 +934,11 @@ contains
     use ModPhysics,    ONLY: UnitTemperature_, AverageIonCharge, &
          UnitPoynting_, ElectronGyroFreqCoef, UnitN_, Si2No_V, No2Si_V
     use ModVarIndexes, ONLY: Bx_, Bz_, p_, Pe_, Rho_
+    use ModRadiativeCooling, ONLY: &
+         DoExtendTransitionRegion, extension_factor
 
 #ifndef _OPENACC
     use ModRadDiffusion, ONLY: HeatFluxLimiter, UseHeatFluxLimiter
-    use ModRadiativeCooling, ONLY: &
-         DoExtendTransitionRegion, extension_factor
     use ModUserInterface ! user_material_properties
 #endif
 
@@ -1021,11 +1021,9 @@ contains
        HeatCoef = HeatCondPar*Te**2.5
     end if
 
-#ifndef _OPENACC
     ! Artificial modified heat conduction for a smoother transition
     ! region, Linker et al. (2001)
     if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
-#endif
 
     if(UseHeatFluxRegion)then
        r = r_GB(i,j,k,iBlock)

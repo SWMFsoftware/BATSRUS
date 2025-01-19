@@ -201,7 +201,7 @@ contains
 
     !$acc update host(DtMax_B)
 
-    if(SignB_>1 .and. DoThinCurrentSheet)then
+    if(SignB_ > 1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
@@ -246,7 +246,7 @@ contains
     if(DoWriteBlockData .and. nStep > 0) &
          call write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
 
-    if(SignB_>1 .and. DoThinCurrentSheet)then
+    if(SignB_ > 1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
           if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
@@ -327,7 +327,7 @@ contains
        if (.not.Unused_B(iBlock)) call fix_block_geometry(iBlock)
     end do
 
-    if(SignB_>1)then
+    if(SignB_ > 1)then
        if(DoThinCurrentSheet)then
           do iBlock = 1, nBlock
              if (.not.Unused_B(iBlock)) call reverse_field(iBlock)

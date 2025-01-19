@@ -1271,10 +1271,10 @@ contains
        NameUnitUserIdl_V(Hyp_) = NameIdlUnit_V(UnitB_)
     end if
 
-    if(SignB_ > 1)then
-       UnitUser_V(SignB_)        = No2Io_V(UnitB_)/No2Io_V(UnitU_)
-       NameUnitUserTec_V(SignB_) = 'Gs*s/km'
-       NameUnitUserIdl_V(SignB_) = 'Gs*s/km'
+    if(BperU_ > 1)then
+       UnitUser_V(BperU_)        = No2Io_V(UnitB_)/No2Io_V(UnitU_)
+       NameUnitUserTec_V(BperU_) = 'Gs*s/km'
+       NameUnitUserIdl_V(BperU_) = 'Gs*s/km'
     end if
 
     if(Ehot_ > 1)then

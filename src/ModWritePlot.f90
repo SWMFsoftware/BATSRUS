@@ -425,7 +425,7 @@ contains
           if(Unused_B(iBlock))CYCLE
 
           ! Use true signed magnetic field in plots
-          if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
+          if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
           call set_plotvar(iBlock, iFile - plot_, nPlotVar, NamePlotVar_V, &
                PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
@@ -454,7 +454,7 @@ contains
           end do
        else
           ! Use signed magnetic field in plots
-          if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
+          if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
           ! Set plot variable for this block
           call set_plotvar(iBlock, iFile-plot_, nPlotVar, NamePlotVar_V, &

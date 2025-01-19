@@ -515,8 +515,8 @@ contains
                   CoronalHeating_CI(i,j,k,iGang))
           end do; end do; end do
        end if
-#ifndef _OPENACC
        if(DoExtendTransitionRegion)then
+          !$acc loop vector collapse(3) independent private(ExtensionFactorInv)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ExtensionFactorInv = 1/extension_factor(TeSi_CI(i,j,k,iGang))
              WaveDissipationRate_VCI(:,i,j,k,iGang) = ExtensionFactorInv*&
@@ -525,7 +525,6 @@ contains
                   CoronalHeating_CI(i,j,k,iGang)
           end do; end do; end do
        end if
-#endif
 
 #ifndef _OPENACC
     elseif(UseUnsignedFluxModel)then

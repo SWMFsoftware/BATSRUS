@@ -53,7 +53,7 @@ contains
        call read_var('TeTransitionRegionSi', TeTransitionRegionTopSi)
     end if
 
-    !$acc update device(DoExtendTransitionRegion)
+    !$acc update device(DoExtendTransitionRegion, TeModSi, DeltaTeModSi)
     call test_stop(NameSub, DoTest)
 
   end subroutine read_cooling_param
@@ -98,7 +98,6 @@ contains
     RadiativeCooling = - radiative_cooling(TeSiIn, NumberDensCgs, iError, &
          NameCaller, Xyz_D)
 
-#ifndef _OPENACC
     ! include multiplicative factors to make up for extention of
     ! perpendicular heating at low temperatures (as per Abbett 2007).
     ! Need this to strech transition region to larger scales
@@ -110,7 +109,6 @@ contains
           RadiativeCooling = RadiativeCooling * (TeChromosphereSi/TeModSi)**2.5
        endif
     end if
-#endif
   end subroutine get_radiative_cooling
   !============================================================================
   real function radiative_cooling(TeSiIn, NumberDensCgs, iError, &

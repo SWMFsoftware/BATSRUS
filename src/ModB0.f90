@@ -71,10 +71,10 @@ module ModB0
   ! The momentum source term for non-current-free B0 field, curl B0 x B0
   ! may be alternatively calculated as div (B0 B0) - grad B0^2/2 -B0 div B0
   logical, public :: UseB0MomentumFlux = .false.
-  !$acc declare create(UseB0MomentumFlux)
 
   ! Radius within which the B0 field is curl free (analytically)
   real, public:: rCurrentFreeB0 = -1.0
+  !$acc declare create(rCurrentFreeB0)
 
   ! Cell-centered B0 field vector
   real, public, allocatable:: B0_DGB(:,:,:,:,:)
@@ -83,7 +83,6 @@ module ModB0
   ! Face-centered B0 field arrays for one block
   real, public, allocatable:: B0_DX(:,:,:,:), B0_DY(:,:,:,:), B0_DZ(:,:,:,:)
   !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
-  !$acc declare create(B0_DX, B0_DY, B0_DZ)
 
   ! The numerical curl, curl B0 x B0 and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
@@ -152,7 +151,6 @@ contains
 
     if(UseCurlB0) UseB0Source = .true.
 
-    !$acc update device(UseCurlB0)
     call test_stop(NameSub, DoTest)
   end subroutine read_b0_param
   !============================================================================
@@ -231,6 +229,7 @@ contains
                ' NOTE: UseCurlB0 is switched OFF as source surface = ', rMaxB0
        end if
     end if
+    !$acc update device (UseCurlB0, rCurrentFreeB0)
 
     !$omp parallel
 

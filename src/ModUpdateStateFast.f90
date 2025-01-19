@@ -19,7 +19,7 @@ module ModUpdateStateFast
        UseLogLimiter_V
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
-       ChargePerMass_I, iPIon_I
+       ChargePerMass_I, iPIon_I, MassIon_I, ChargeIon_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
@@ -35,10 +35,11 @@ module ModUpdateStateFast
   use ModParallel, ONLY: DiLevel_EB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
-       C2light, InvClight, InvClight2, RhoMin_I, pMin_I, PeMin, &
-       OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
+       C2light, InvClight, InvClight2, RhoMin_I, pMin_I, PeMin, TMin_I, &
+       TeMin, OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
        GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
-       No2Io_V, iUnitCons_V, UnitU_
+       No2Io_V, No2Si_V, iUnitCons_V, UnitU_, UnitTemperature_, &
+       AverageIonCharge
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
        iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
@@ -58,8 +59,9 @@ module ModUpdateStateFast
        calc_alfven_wave_dissipation, WaveDissipationRate_VCI, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
        turbulent_cascade, get_wave_reflection_cell
+  use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
-      get_gamma_collisionless
+       get_gamma_collisionless
   use ModUtilities, ONLY: i_gang
   use ModUserInterface
 
@@ -280,14 +282,14 @@ contains
           elseif(DiLevel_EB(1,iBlock) == 1 .and. nDim == 3)then
              !$acc loop vector collapse(2)
              do k = 1, nK, 2; do j = 1, nJ, 2
-             call accurate_reschange3d( &
-                  Coarse2_V    = State_VGB(:,-1,j,k,iBlock), &
-                  Coarse1_VII  = State_VGB(:, 0,j-2:j+3,k-2:k+3,iBlock), &
-                  Fine1_VII    = State_VGB(:, 1,j:j+1,k:k+1,iBlock), &
-                  Fine2_VII    = State_VGB(:, 2,j:j+1,k:k+1,iBlock), &
-                  CoarseToFineF_VII=FineState_VXB(:,j:j+1,k:k+1,1,iBlock), &
-                  FineToCoarseF_VII=FineState_VXB(:,j:j+1,k:k+1,2,iBlock), &
-                  FineF_VII        =FineState_VXB(:,j:j+1,k:k+1,3,iBlock))
+                call accurate_reschange3d( &
+                     Coarse2_V    = State_VGB(:,-1,j,k,iBlock), &
+                     Coarse1_VII  = State_VGB(:, 0,j-2:j+3,k-2:k+3,iBlock), &
+                     Fine1_VII    = State_VGB(:, 1,j:j+1,k:k+1,iBlock), &
+                     Fine2_VII    = State_VGB(:, 2,j:j+1,k:k+1,iBlock), &
+                     CoarseToFineF_VII=FineState_VXB(:,j:j+1,k:k+1,1,iBlock), &
+                     FineToCoarseF_VII=FineState_VXB(:,j:j+1,k:k+1,2,iBlock), &
+                     FineF_VII        =FineState_VXB(:,j:j+1,k:k+1,3,iBlock))
              end do; end do
           elseif(DiLevel_EB(2,iBlock) == 1 .and. nDim == 2)then
              !$acc loop vector
@@ -513,6 +515,8 @@ contains
     real :: QePerQtotal
     real :: Ne
 
+    real :: TeSi, ExtensionFactorInv
+
     real :: Gamma
 
     logical:: IsConserv
@@ -672,6 +676,19 @@ contains
                   WaveDissipationRate_VCI(:,i,j,k,iGang), &
                   CoronalHeating_CI(i,j,k,iGang))
           end if
+
+          if(DoExtendTransitionRegion) then
+             TeSi = State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             TeSi = TeSi * No2Si_V(UnitTemperature_) * &
+                  MassIon_I(1)/AverageIonCharge
+
+             ExtensionFactorInv = 1/extension_factor(TeSi)
+             WaveDissipationRate_VCI(:,i,j,k,iGang) = ExtensionFactorInv*&
+                  WaveDissipationRate_VCI(:,i,j,k,iGang)
+             CoronalHeating_CI(i,j,k,iGang) = ExtensionFactorInv*&
+                  CoronalHeating_CI(i,j,k,iGang)
+          end if
+
        end if
 
        if(UseTurbulentCascade) then
@@ -919,8 +936,8 @@ contains
     end if
 
     if(UseAlfvenWaves) then
-      State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
-         max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 0.0)
+       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+            max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 0.0)
     end if
 
 #ifdef TESTACC
@@ -1000,7 +1017,7 @@ contains
        write(*,*)'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
        do iVar = 1, nVar
           write(*,*)NameVar_V(iVar), '=', &
-                  StateLeft_V(iVar), StateRight_V(iVar), iSideTest
+               StateLeft_V(iVar), StateRight_V(iVar), iSideTest
        end do
        if(UseB0)then
           write(*,*)'B0x:', B0_D(1), iSideTest
@@ -2574,14 +2591,27 @@ contains
     !$acc routine seq
     real, intent(inout):: State_V(nVar)
 
-    integer:: iFluid
+    real :: NumDens, Ne
+    integer:: iFluid, iP
     !--------------------------------------------------------------------------
     do iFluid = 1, nFluid
-       State_V(iP_I(iFluid)) = max(pMin_I(iFluid), State_V(iP_I(iFluid)))
+       iP = iP_I(iFluid)
+       State_V(iP) = max(pMin_I(iFluid), State_V(iP))
+
+       if(Tmin_I(iFluid) > 0) then
+          NumDens=State_V(iRho_I(iFluid))/MassFluid_I(iFluid)
+          State_V(iP) = max(NumDens*Tmin_I(iFluid), State_V(iP))
+       end if
     end do
 
-   if(UseElectronPressure) State_V(Pe_) = max(PeMin, State_V(Pe_))
+    if(UseElectronPressure)  then
+       State_V(Pe_) = max(PeMin, State_V(Pe_))
 
+       if(TeMin > 0) then
+          Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
+          State_V(Pe_) = max(Ne*TeMin, State_V(Pe_))
+       end if
+    end if
   end subroutine limit_pressure
   !============================================================================
   subroutine energy_to_pressure(State_V)

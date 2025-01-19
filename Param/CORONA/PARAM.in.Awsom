@@ -210,7 +210,7 @@ RAW			StringLog
 -1.			DtSaveLogfile
 
 #OUTERBOUNDARY
-user			TypeBc1   user for spherical and user_outerbcs
+user			TypeBc1
 float			TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
