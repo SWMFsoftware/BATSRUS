@@ -32,7 +32,7 @@ module ModChromosphere
   real :: TeModSi = 3.0E+5                ! K
   real :: DeltaTeModSi = 1E+4             ! K
   !$acc declare create(TeModSi, DeltaTeModSi)
-  
+
   ! The following variable is meaningful if
   ! DoExtendTransitionRegion = .false. . As long as
   ! the unextended transition region cannot be resolved
@@ -70,18 +70,18 @@ contains
   !============================================================================
   real function extension_factor(TeSi)
     !$acc routine seq
-    
+
     real, intent(in) :: TeSi    ! Dimensionless
 
     real :: FractionSpitzer
     character(len=*), parameter:: NameSub = 'extension_factor'
     !--------------------------------------------------------------------------
-#ifndef _OPENACC    
+#ifndef _OPENACC
     if(TeSi<1.0e1)then
        write(*,*)'TeSi input =', TeSi
        call stop_mpi('Incorrect input temperature in '//NameSub)
     end if
-#endif    
+#endif
     FractionSpitzer = 0.5*(1.0+tanh((TeSi-TeModSi)/DeltaTeModSi))
 
     extension_factor = FractionSpitzer + &

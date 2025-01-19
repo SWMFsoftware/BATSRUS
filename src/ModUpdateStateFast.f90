@@ -2598,16 +2598,16 @@ contains
        iP = iP_I(iFluid)
        State_V(iP) = max(pMin_I(iFluid), State_V(iP))
 
-       if(Tmin_I(iFluid) > 0) then 
-          NumDens=State_V(iRho_I(iFluid))/MassFluid_I(iFluid)         
+       if(Tmin_I(iFluid) > 0) then
+          NumDens=State_V(iRho_I(iFluid))/MassFluid_I(iFluid)
           State_V(iP) = max(NumDens*Tmin_I(iFluid), State_V(iP))
        end if
     end do
 
-    if(UseElectronPressure)  then 
+    if(UseElectronPressure)  then
        State_V(Pe_) = max(PeMin, State_V(Pe_))
-       
-       if(TeMin > 0) then 
+
+       if(TeMin > 0) then
           Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
           State_V(Pe_) = max(Ne*TeMin, State_V(Pe_))
        end if
