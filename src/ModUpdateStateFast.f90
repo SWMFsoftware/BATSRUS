@@ -758,7 +758,7 @@ contains
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang),&
+                  CoronalHeating_CI(i,j,k,iGang), TeSi, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
              Change_V(Pe_) = Change_V(Pe_) &

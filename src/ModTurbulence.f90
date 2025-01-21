@@ -688,7 +688,7 @@ contains
   end subroutine get_curl_u
   !============================================================================
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
-       State_V, WaveDissipationRate_V, CoronalHeating, &
+       State_V, WaveDissipationRate_V, CoronalHeating, TeSi, &
        QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
     !$acc routine seq
 
@@ -710,7 +710,7 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: State_V(nVar)
     real, intent(in) :: WaveDissipationRate_V(WaveFirst_:WaveLast_)
-    real, intent(in) :: CoronalHeating
+    real, intent(in) :: CoronalHeating, TeSi
     real, intent(out) :: QPerQtotal_I(nIonFluid), &
          QparPerQtotal_I(nIonFluid), QePerQtotal
 
@@ -740,7 +740,7 @@ contains
     if(UseStochasticHeating)then
 
        if(DoExtendTransitionRegion)then
-          ExtensionCoef = extension_factor(TeSi_CI(i,j,k,iGang))
+          ExtensionCoef = extension_factor(TeSi)
        else
           ExtensionCoef = 1.0
        end if
