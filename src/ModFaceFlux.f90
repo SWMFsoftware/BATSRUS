@@ -2951,7 +2951,7 @@ contains
       if(DoTestCell)then
          write(*,*) ' InvRho, p      =', InvRho, p
          write(*,*) ' FullB, FullBn  =', FullBx, FullBy, FullBz, FullBn
-         write(*,*) ' Sound2,Alfven2 =', Sound2, Alfven2
+         write(*,*) ' Sound2, Alfven2=', Sound2, Alfven2
          write(*,*) ' GammaA2,GammaU2=', GammaA2, GammaU2
          write(*,*) ' Sound2Boris,Alfven2Boris,Normal=', &
               Sound2Boris, Alfven2Boris, Alfven2NormalBoris
