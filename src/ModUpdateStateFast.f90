@@ -547,17 +547,6 @@ contains
             *          State_VGB(Ux_:Uz_,i,j,k,iBlock))
     end if
 
-    if(UseCurlB0)then
-       if(r_GB(i,j,k,iBlock) >= rCurrentFreeB0)then
-          call get_curlb0(i, j, k, iBlock, CurlB0_D)
-          Force_D = cross_prod(CurlB0_D, &
-               State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
-          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) + Force_D
-          Change_V(Energy_) = Change_V(Energy_) &
-               + sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
-       end if
-    end if
-
     if(UseBorisCorrection .and. ClightFactor /= 1.0)then
        ! Calculate Boris source term
        DivE = Flux_VXI(En_,i+1,j,k,iGang) - Flux_VXI(En_,i,j,k,iGang)
@@ -661,6 +650,27 @@ contains
        write(*,*)'Change_V after divided by V', Change_V(iVarTest)
     end if
 #endif
+
+    if(UseCurlB0)then
+       if(r_GB(i,j,k,iBlock) >= rCurrentFreeB0)then
+          call get_curlb0(i, j, k, iBlock, CurlB0_D)
+          Force_D = cross_prod(CurlB0_D, &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
+          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) + Force_D
+          Change_V(Energy_) = Change_V(Energy_) &
+               + sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
+
+#ifdef TESTACC
+          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
+               .and. iBlock == iBlockTest)then
+             write(*,*) 'CurlB0_D =', CurlB0_D
+             write(*,*) 'Force_D  =', Force_D
+             write(*,*) 'Work     =', &
+                  sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
+          end if
+#endif
+       end if
+    end if
 
     if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
 
