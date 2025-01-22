@@ -529,11 +529,11 @@ contains
        if(.not. Used_GB(i,j,k,iBlock)) RETURN
     end if
 
-#ifdef TESTACC    
+#ifdef TESTACC
     DoTestCell =  (iBlock == iBlockTest .and. i == iTest &
          .and. j == jTest .and. k == kTest )
 #endif
-    
+
     Change_V = 0
 
     if(UseB .and. UseDivbSource)then
@@ -664,8 +664,7 @@ contains
     end if
 
 #ifdef TESTACC
-    if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
-         .and. iBlock == iBlockTest)then
+    if(DoTestUpdate .and. DoTestCell) then 
        write(*,*)'Change_V after divided by V', Change_V(iVarTest)
     end if
 #endif
@@ -680,8 +679,7 @@ contains
                + sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
 
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &             
                .and. iVarTest >= Ux_ .and. iVarTest <= Uz_)then
              write(*,*) 'CurlB0_D =', CurlB0_D
              write(*,*) 'Force_D  =', Force_D
@@ -788,7 +786,7 @@ contains
                   + CoronalHeating_CI(i,j,k,iGang)
           end if
 #ifdef TESTACC
-          if(DoTestSource .and. DoTestCell) then 
+          if(DoTestSource .and. DoTestCell) then
              write(*,*) 'CoronalHeating=', CoronalHeating_CI(i,j,k,iGang)
              write(*,*) 'After UseCoronalHeating S(iVarTest)=', &
                   Change_V(iVarTest)
@@ -858,8 +856,7 @@ contains
                   *sum(State_VGB(iUx:iUy,i,j,k,iBlock) &
                   *       Xyz_DGB(x_:y_,i,j,k,iBlock))
 #ifdef TESTACC
-             if(DoTestSource .and. i == iTest .and. j == jTest &
-                  .and. k == kTest .and. iBlock == iBlockTest &
+             if(DoTestSource .and. DoTestCell &
                   .and. iVarTest >= iUx .and. iVarTest <= iUy) &
                   write(*,*) 'After Coriolis S(iVarTest)=', Change_V(iVarTest)
 #endif
@@ -900,7 +897,7 @@ contains
     end if
 
 #ifdef TESTACC
-    if(DoTestUpdate .and. DoTestCell) then 
+    if(DoTestUpdate .and. DoTestCell) then
        write(*,*)'DtLocal, Dt, iStage', DtLocal, Dt, iStage
     end if
 #endif
@@ -919,7 +916,7 @@ contains
        else
           call limit_pressure(State_VGB(:,i,j,k,iBlock))
        end if
-       
+
        if(UseBorisCorrection) call mhd_to_boris( &
             State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
 
@@ -976,7 +973,7 @@ contains
     end if
 
     ! Convert energy back to pressure
-    if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)  then 
+    if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)  then
        call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
     else
        call limit_pressure(State_VGB(:,i,j,k,iBlock))
@@ -1004,7 +1001,7 @@ contains
     end if
 
 #ifdef TESTACC
-    if(DoTestUpdate .and. DoTestCell) then 
+    if(DoTestUpdate .and. DoTestCell) then
        iVarLast = iVarTest
        if(iVarTest == p_) iVarLast = nVar + 1
        do iVar = iVarTest, iVarLast, max(1, iVarLast - iVarTest)

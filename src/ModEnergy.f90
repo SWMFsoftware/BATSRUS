@@ -427,7 +427,6 @@ contains
     real, intent(inout):: &
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
-
     integer:: i, j, k, iFluid
     real :: NumDens, pMin, Ne
 
