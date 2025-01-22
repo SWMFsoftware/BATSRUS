@@ -208,3 +208,18 @@ F			DoSaveInitial
 #STOP
 10			MaxIteration
 -1.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#DOAMR
+F			DoAmr
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+PARTLOCALTIMESTEP
+1.1			rLocalTimeStep
+
+#STOP
+-1			MaxIteration
+2.0			tSimulationMax
