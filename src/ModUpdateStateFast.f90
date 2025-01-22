@@ -232,9 +232,9 @@ contains
     call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
     call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
 
-    if(DoTestAny)then
+    if(DoTestFlux)then
        write(*,*)'==========================================================='
-       write(*,*) NameSub, ' started with DoResChangeOnly=F of course'
+       write(*,*) 'calc_face_flux started with DoResChangeOnly= F'
     end if
 
     call get_log_limiter_var
@@ -2172,23 +2172,21 @@ contains
        write(*,*) &
             ' iFluid, rho, p(face)   =', &
             1, State_V(Rho_), State_V(p_), iSideTest
-       write(*,*) &
-            ' GammaP, InvRho        =', GammaP, InvRho, iSideTest
-       ! if(UseAnisoPressure) write(*,*) &
-       !     ' Ppar, Perp             =', Ppar, Pperp
-       ! if(UseElectronPressure) write(*,*) &
-       !     ' State_V(Pe_)           =', State_V(Pe_)
+       !if(UseAnisoPressure) write(*,*) &
+       !     ' Ppar, Perp             =', Ppar, Pperp, iSideTest
+       if(UseElectronPressure) write(*,*) &
+            ' State_V(Pe_)           =', State_V(Pe_), iSideTest
        ! if(UseAnisoPe) write(*,*) &
-       !     ' State_V(Pepar_)        =', State_V(Pepar_)
-       ! if(UseWavePressure) write(*,*) &
-       !     ' GammaWave, State(Waves)=', &
-       !     GammaWave, State_V(WaveFirst_:WaveLast_)
+       !     ' State_V(Pepar_)        =', State_V(Pepar_), iSideTest
+       if(UseAlfvenWaves) write(*,*) &
+            ' GammaWave, State(Waves)=', &
+            GammaWave, State_V(WaveFirst_:WaveLast_), iSideTest
        write(*,*) &
-            ' Fast2, Discr          =', Fast2, Discr, iSideTest
+            ' Fast2, Discr           =', Fast2, Discr, iSideTest
        write(*,*) &
-            ' Sound2, Alfven2       =', Sound2, InvRho*B2, iSideTest
+            ' Sound2, Alfven2        =', Sound2, InvRho*B2, iSideTest
        write(*,*) &
-            ' FullBn, Alfven2Normal =', Bn, InvRho*Bn**2, iSideTest
+            ' FullBn, Alfven2Normal  =', Bn, InvRho*Bn**2, iSideTest
        if(UseB0)then
           write(*,*) ' FullB=', State_V(Bx_) + B0_D(1), &
                State_V(By_) + B0_D(2),  State_V(Bz_) + B0_D(3), iSideTest
