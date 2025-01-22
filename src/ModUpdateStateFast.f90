@@ -920,7 +920,10 @@ contains
           do iFluid = 1, nFluid
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
+       else
+          call limit_pressure(State_VGB(:,i,j,k,iBlock))
        end if
+       
        if(UseBorisCorrection) call mhd_to_boris( &
             State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
 
@@ -940,6 +943,8 @@ contains
           do iFluid = 1, nFluid
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
+       else
+          call limit_pressure(StateOld_VGB(:,i,j,k,iBlock))
        end if
        if(UseBorisCorrection) call mhd_to_boris( &
             StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
@@ -975,8 +980,11 @@ contains
     end if
 
     ! Convert energy back to pressure
-    if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
-         call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+    if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)  then 
+       call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+    else
+       call limit_pressure(State_VGB(:,i,j,k,iBlock))
+    end if
 
     ! Apply collisionless heatconduction (modified gamma or gamma electron)
     if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
@@ -990,8 +998,6 @@ contains
             + State_VGB(Ehot_,i,j,k,iBlock))
        State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
             *(1.0/(Gamma - 1) - InvGammaElectronMinus1)
-
-       call limit_pressure(State_VGB(:,i,j,k,iBlock))
     end if
 
     if(UseAlfvenWaves) then
