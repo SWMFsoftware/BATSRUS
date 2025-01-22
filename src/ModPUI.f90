@@ -97,7 +97,7 @@ contains
     use ModVarIndexes, ONLY: nVar
 
     real, intent(inout) :: State_V(nVar)
-    real, optional, intent(in) :: StateRead_V(nVar)
+    real, optional, intent(in) :: StateRead_V(:)
     integer, optional, intent(in) :: iVarMatch_V(nVar)
 
     real :: RhoPui, Ppui

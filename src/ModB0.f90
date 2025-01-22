@@ -57,7 +57,6 @@ module ModB0
   logical, public:: UseDivFullBSource = .false.
 
   ! Use source terms related to finite curl(B0) for non-force-free B0 field
-  ! If UseCurlB0 is true, then UseB0Source must be true!
   logical, public:: UseCurlB0 = .false.
   !$acc declare create(UseCurlB0)
 
@@ -149,8 +148,6 @@ contains
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
 
-    if(UseCurlB0) UseB0Source = .true.
-
     call test_stop(NameSub, DoTest)
   end subroutine read_b0_param
   !============================================================================
@@ -210,7 +207,6 @@ contains
           ! J0 is not zero, only J0 x B0 = 0
           UseCurlB0 = .true.
           rCurrentFreeB0 = 1.0
-          UseB0Source = .true.
           if(iProc==0)write(*,*)NameSub, &
                ' ForceFreeB0, so UseCurlB0=T, rCurrentFreeB0= 1, ', &
                ' rMaxForceFreeB0=', rMaxForceFreeB0
@@ -218,7 +214,6 @@ contains
           ! J0 is finite above rMaxB0
           UseCurlB0 = .true.
           rCurrentFreeB0 = rMaxB0
-          UseB0Source = .true.
           if(iProc==0)write(*,*)NameSub,&
                   ' UseCurlB0 is switched ON, rCurrentFreeB0 = ',rCurrentFreeB0
        else if(UseCurlB0)then
@@ -534,7 +529,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_b0_source'
     !--------------------------------------------------------------------------
-    if(.not.(UseB0 .and. UseB0Source)) RETURN
+    if(.not.(UseB0 .and. (UseB0Source .or. UseCurlB0))) RETURN
     call test_start(NameSub, DoTest, iBlock)
 
     ! set B0_DX, B0_DY, B0_DZ for this block.
@@ -546,21 +541,23 @@ contains
           DxInv = 1/CellSize_DB(x_,iBlock)
           DyInv = 1/CellSize_DB(y_,iBlock)
 
-          k = 1
+          if(UseB0Source)then
+             do j = 1, nJ; do i = 1, nI
+                DivB0_C(i,j,1)= &
+                     DxInv*(B0_DX(x_,i+1,j,1) - B0_DX(x_,i,j,1)) + &
+                     DyInv*(B0_DY(y_,i,j+1,1) - B0_DY(y_,i,j,1))
+             end do; end do
+          end if
           do j = 1, nJ; do i = 1, nI
-             DivB0_C(i,j,k)= &
-                  DxInv*(B0_DX(x_,i+1,j,k) - B0_DX(x_,i,j,k)) + &
-                  DyInv*(B0_DY(y_,i,j+1,k) - B0_DY(y_,i,j,k))
+             CurlB0_DC(x_,i,j,1) = &
+                  +DyInv*(B0_DY(z_,i,j+1,1) - B0_DY(z_,i,j,1))
 
-             CurlB0_DC(x_,i,j,k) = &
-                  +DyInv*(B0_DY(z_,i,j+1,k) - B0_DY(z_,i,j,k))
+             CurlB0_DC(y_,i,j,1) = &
+                  -DxInv*(B0_DX(z_,i+1,j,1) - B0_DX(z_,i,j,1))
 
-             CurlB0_DC(y_,i,j,k) = &
-                  -DxInv*(B0_DX(z_,i+1,j,k) - B0_DX(z_,i,j,k))
-
-             CurlB0_DC(z_,i,j,k) = &
-                  DxInv*(B0_DX(y_,i+1,j,k) - B0_DX(y_,i,j,k)) - &
-                  DyInv*(B0_DY(x_,i,j+1,k) - B0_DY(x_,i,j,k))
+             CurlB0_DC(z_,i,j,1) = &
+                  DxInv*(B0_DX(y_,i+1,j,1) - B0_DX(y_,i,j,1)) - &
+                  DyInv*(B0_DY(x_,i,j+1,1) - B0_DY(x_,i,j,1))
 
           end do; end do
        else
@@ -568,12 +565,15 @@ contains
           DyInv = 1/CellSize_DB(y_,iBlock)
           DzInv = 1/CellSize_DB(z_,iBlock)
 
+          if(UseB0Source)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                DivB0_C(i,j,k) = &
+                     DxInv*(B0_DX(x_,i+1,j,k) - B0_DX(x_,i,j,k)) + &
+                     DyInv*(B0_DY(y_,i,j+1,k) - B0_DY(y_,i,j,k)) + &
+                     DzInv*(B0_DZ(z_,i,j,k+1) - B0_DZ(z_,i,j,k))
+             end do; end do; end do
+          end if
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             DivB0_C(i,j,k)= &
-                  DxInv*(B0_DX(x_,i+1,j,k) - B0_DX(x_,i,j,k)) + &
-                  DyInv*(B0_DY(y_,i,j+1,k) - B0_DY(y_,i,j,k)) + &
-                  DzInv*(B0_DZ(z_,i,j,k+1) - B0_DZ(z_,i,j,k))
-
              CurlB0_DC(x_,i,j,k) = &
                   DyInv*(B0_DY(z_,i,j+1,k) - B0_DY(z_,i,j,k)) - &
                   DzInv*(B0_DZ(y_,i,j,k+1) - B0_DZ(y_,i,j,k))
@@ -591,45 +591,45 @@ contains
     elseif(IsRzGeometry)then
        DxInv = 1/CellSize_DB(x_,iBlock)
 
-       k = 1
        do j = 1, nJ; do i = 1, nI
-          DivB0_C(i,j,k)= ( &
-               + CellFace_DFB(x_,i+1,j,k,iBlock)*B0_DX(x_,i+1,j,k)   &
-               - CellFace_DFB(x_,i  ,j,k,iBlock)*B0_DX(x_,i  ,j,k)   &
-               + CellFace_DFB(y_,i,j+1,k,iBlock)*B0_DY(y_,i,j+1,k)   &
-               - CellFace_DFB(y_,i,j  ,k,iBlock)*B0_DY(y_,i,j  ,k) ) &
-               /CellVolume_GB(i,j,k,iBlock)
+          if(UseB0Source) DivB0_C(i,j,1)= ( &
+               + CellFace_DFB(x_,i+1,j,1,iBlock)*B0_DX(x_,i+1,j,1)   &
+               - CellFace_DFB(x_,i  ,j,1,iBlock)*B0_DX(x_,i  ,j,1)   &
+               + CellFace_DFB(y_,i,j+1,1,iBlock)*B0_DY(y_,i,j+1,1)   &
+               - CellFace_DFB(y_,i,j  ,1,iBlock)*B0_DY(y_,i,j  ,1) ) &
+               /CellVolume_GB(i,j,1,iBlock)
 
-          CurlB0_DC(x_,i,j,k) = ( &
-               + CellFace_DFB(y_,i,j+1,k,iBlock)*B0_DY(z_,i,j+1,k)   &
-               - CellFace_DFB(y_,i,j  ,k,iBlock)*B0_DY(z_,i,j  ,k) ) &
-               /CellVolume_GB(i,j,k,iBlock)
+          CurlB0_DC(x_,i,j,1) = ( &
+               + CellFace_DFB(y_,i,j+1,1,iBlock)*B0_DY(z_,i,j+1,1)   &
+               - CellFace_DFB(y_,i,j  ,1,iBlock)*B0_DY(z_,i,j  ,1) ) &
+               /CellVolume_GB(i,j,1,iBlock)
 
-          CurlB0_DC(y_,i,j,k) = &
-               -DxInv*(B0_DX(z_,i+1,j,k) - B0_DX(z_,i,j,k))
+          CurlB0_DC(y_,i,j,1) = &
+               -DxInv*(B0_DX(z_,i+1,j,1) - B0_DX(z_,i,j,1))
 
-          CurlB0_DC(z_,i,j,k) = &
-               DxInv*(B0_DX(y_,i+1,j,k) - B0_DX(y_,i,j,k)) - ( &
-               + CellFace_DFB(y_,i,j+1,k,iBlock)*B0_DY(x_,i,j+1,k)   &
-               - CellFace_DFB(y_,i,j  ,k,iBlock)*B0_DY(x_,i,j  ,k) ) &
-               /CellVolume_GB(i,j,k,iBlock) &
-               + B0_DGB(x_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
+          CurlB0_DC(z_,i,j,1) = &
+               DxInv*(B0_DX(y_,i+1,j,1) - B0_DX(y_,i,j,1)) - ( &
+               + CellFace_DFB(y_,i,j+1,1,iBlock)*B0_DY(x_,i,j+1,1)   &
+               - CellFace_DFB(y_,i,j  ,1,iBlock)*B0_DY(x_,i,j  ,1) ) &
+               /CellVolume_GB(i,j,1,iBlock) &
+               + B0_DGB(x_,i,j,1,iBlock)/Xyz_DGB(y_,i,j,1,iBlock)
        end do; end do
     else
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          DivB0_C(i,j,k) = &
-               + sum(FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*B0_DX(:,i+1,j,k)) &
-               - sum(FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*B0_DX(:,i  ,j,k)) &
-               + sum(FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*B0_DY(:,i,j+1,k)) &
-               - sum(FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*B0_DY(:,i,j  ,k))
+       if(UseB0Source)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             DivB0_C(i,j,k) = &
+                  + sum(FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*B0_DX(:,i+1,j,k)) &
+                  - sum(FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*B0_DX(:,i  ,j,k)) &
+                  + sum(FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*B0_DY(:,i,j+1,k)) &
+                  - sum(FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*B0_DY(:,i,j  ,k))
 
-          if(nDim == 3) DivB0_C(i,j,k) = DivB0_C(i,j,k) &
-               + sum(FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*B0_DZ(:,i,j,k+1)) &
-               - sum(FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*B0_DZ(:,i,j,k  ))
+             if(nDim == 3) DivB0_C(i,j,k) = DivB0_C(i,j,k) &
+                  + sum(FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*B0_DZ(:,i,j,k+1)) &
+                  - sum(FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*B0_DZ(:,i,j,k  ))
 
-          DivB0_C(i,j,k) = DivB0_C(i,j,k)/CellVolume_GB(i,j,k,iBlock)
-       end do; end do; end do
-
+             DivB0_C(i,j,k) = DivB0_C(i,j,k)/CellVolume_GB(i,j,k,iBlock)
+          end do; end do; end do
+       end if
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           CurlB0_DC(:,i,j,k) =                                          &
                + cross_product(                                         &
@@ -650,7 +650,7 @@ contains
        end do; end do; end do
     endif
     if(UseB0MomentumFlux)then
-       if(IsCartesian.or.IsRzGeometry)call stop_mpi(&
+       if(IsCartesian .or. IsRzGeometry)call stop_mpi(&
             'B0MomentumFlux is not implemented in RZ or Cartesian Geometry')
        ! Divergence of Maxwell tensor : div(B0 B0 - B0^2/2)  = J0 x B0
        do k = 1, nK; do j = 1, nJ; do i = 1, nI

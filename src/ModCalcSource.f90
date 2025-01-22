@@ -119,7 +119,7 @@ contains
     !          2d. other variables are cell-centered
     ! 3. MHD with split field B1 + B0, B0 field is NOT assumed to be potential
     !    and divergence free. For UseB true, UseB0 true, UseDivBSource true
-    !    and UseB0Source =0, the extra sources are applied
+    !    and UseB0Source false, the extra sources are applied
     !    if UseeCurlB0 is true at R > rCurrrentFreeB0. The extra sources are:
     ! Source_V(Mx_:Mz_) = Source_V(Mx_:Mz_) + SM_D
     ! Source_V(Energy_) = Source_V(Energy_) + SM_D.U_D
@@ -128,10 +128,10 @@ contains
     !           or (curl B0) x B0                        ! Otherwise
     ! Comment: 2a. divB is calculated in terms of the face values of B1
     !          2b. B0*div B1 is calculated together with div B1, and
-    !              different contrributions to div B1 are multiplied by face-
+    !              different contributions to div B1 are multiplied by face-
     !              or cell-centered B0 field
     !          2c. Historically in Source_V(Bx_:Bz_) and in Source_V(Energy_)
-    !              sources div B0 sources were omitted. To enable then, turn on
+    !              sources div B0 sources were omitted. To enable them, turn on
     !              UseDivFullBSource. Depending on this switch, the divB source
     !              cleans either div B1 or dib (B1 + B0)
     !          2d. other variables are cell-centered
@@ -249,15 +249,12 @@ contains
 
     iGang = i_gang(iBlock)
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nSource
-       Source_VC(iVar,i,j,k) = 0
-    end do; end do; end do; end do
+    ! Initialize source terms for this block
+    Source_VC = 0
 
     ! Contribution from the magnetic source is collected separately
     ! To be used in calculating electrric field for hybrid scheme
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
-       SourceMhd_VC(iVar,i,j,k) = 0
-    end do; end do; end do; end do
+    SourceMhd_VC = 0
 
     ! Source term for continuity equation(s). Only single fluid case
     ! is considered. Impact on other equations is ignored.
@@ -909,7 +906,7 @@ contains
           ! normal component, which may be thought of the magnetic charges
           ! associated with the given cell (the internal divergence) and
           ! the surface magnetic charges at the faces. Historically, the
-          ! effect from B0 field, B0 div B1, is ALWAYS (well, if UseB0 is !
+          ! effect from B0 field, B0 div B1, is ALWAYS (well, if UseB0 is
           ! true) is calculated via the decomposed magnetic charge, i.e.
           ! the internal divergence B1 is multiplied by the cell-centered
           ! value of B0 field, while the the face B0 field is applied to the
@@ -999,7 +996,7 @@ contains
                   CurlB0_DC(:,i,j,k), State_VGB(Bx_:Bz_,i,j,k,iBlock))
           end do; end do; end do
 
-          if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_)then
+          if(DoTest .and. iVarTest >= RhoUx_ .and. iVarTest <= RhoUz_)then
              write(*,*)'DivB0_C  =',DivB0_C(iTest,jTest,kTest)
              write(*,*)'CurlB0_DC=',CurlB0_DC(:,iTest,jTest,kTest)
              call write_source('After B0 source')
@@ -1037,15 +1034,17 @@ contains
        end do; end do; end do
 
        if(DoTest .and. (iVarTest == Energy_ &
-            .or. iVarTest >= RhoUx_ .and. iVarTest<=RhoUz_)) &
-            call write_source('After curl B0')
+            .or. iVarTest >= RhoUx_ .and. iVarTest <= RhoUz_))then
+          write(*,*)'CurlB0_D =', CurlB0_DC(:,iTest,jTest,kTest)
+          call write_source('After curl B0')
+       end if
     end if ! UseB .and. UseCurlB0 .and. UseMhdMomentumFlux
 
     if(UseB .and. UseBorisCorrection &
          .and. ClightFactor < 0.9999 &
          .and. index(StringTest,'nodivE')<1)then
        call add_boris_source(iBlock)
-       if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_) &
+       if(DoTest .and. iVarTest >= RhoUx_ .and. iVarTest <= RhoUz_) &
             call write_source('After E div E')
     end if
 
@@ -1135,7 +1134,7 @@ contains
                   ' Inertial forces are not implemented for'// &
                   ' TypeCoordSystem='//TypeCoordSystem)
           end select
-          if(DoTest.and.iVarTest>=iRhoUx .and. iVarTest<=iRhoUy) &
+          if(DoTest .and. iVarTest >= iRhoUx .and. iVarTest <= iRhoUy) &
                call write_source('After Coriolis')
        end if
     end do
@@ -2142,10 +2141,15 @@ contains
     end subroutine calc_friction
     !==========================================================================
     subroutine write_source(String)
+
       character(len=*), intent(in) :: String
       !------------------------------------------------------------------------
       write(*,'(a,es13.5)') NameSub//": "//String//" S(iVarTest)=",&
            Source_VC(iVarTest,iTest,jTest,kTest)
+      if(UseB .and. iVarTest >= RhoUx_ .and. iVarTest <= RhoUz_) &
+           write(*,'(a,es13.5)') NameSub//": "//String//" SMhd(iVarTest)=",&
+           SourceMhd_VC(iVarTest,iTest,jTest,kTest)
+
     end subroutine write_source
     !==========================================================================
   end subroutine calc_source

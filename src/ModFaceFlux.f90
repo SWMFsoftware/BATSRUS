@@ -6,7 +6,8 @@ module ModFaceFlux
   use ModPhysicalFlux
   use ModFaceFluxParameters
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iDimTest, iProc, &
+       test_start, test_stop, &
+       iTest, jTest, kTest, iDimTest, iSideTest, iProc, &
        x_, y_, z_, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim, &
        Used_GB, IsCartesianGrid, IsCartesian, IsRzGeometry, &
        Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
@@ -233,78 +234,118 @@ module ModFaceFlux
 contains
   !============================================================================
   subroutine print_face_values
-    integer :: iVar
 
+    integer :: i, j, k, iVar
     character(len=*), parameter:: NameSub = 'print_face_values'
     !--------------------------------------------------------------------------
     if(iDimTest==x_ .or. iDimTest==0)then
        write(*,*)&
             'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
-
-       do iVar=1,nVar
-          write(*,'(2a,4es13.5)')NameVar_V(iVar),'=',&
-               LeftState_VX(iVar,iTest,jTest,kTest),&
-               RightState_VX(iVar,iTest,jTest,kTest),&
-               LeftState_VX(iVar,iTest+1,jTest,kTest),&
-               RightState_VX(iVar,iTest+1,jTest,kTest)
-       end do
-       if(UseB0)then
-          write(*,'(a,es13.5,a13,es13.5)')'B0x:',&
-               B0_DX(x_,iTest,jTest,kTest),' ',&
-               B0_DX(x_,iTest+1,jTest,kTest)
-          write(*,'(a,es13.5,a13,es13.5)')'B0y:',&
-               B0_DX(y_,iTest,jTest,kTest),' ',&
-               B0_DX(y_,iTest+1,jTest,kTest)
-          write(*,'(a,es13.5,a13,es13.5)')'B0z:',&
-               B0_DX(z_,iTest,jTest,kTest),' ',&
-               B0_DX(z_,iTest+1,jTest,kTest)
+       if(iSideTest == 0)then
+          do iVar = 1, nVar
+             write(*,'(2a,4es13.5)')NameVar_V(iVar),'=',&
+                  LeftState_VX(iVar,iTest,jTest,kTest),&
+                  RightState_VX(iVar,iTest,jTest,kTest),&
+                  LeftState_VX(iVar,iTest+1,jTest,kTest),&
+                  RightState_VX(iVar,iTest+1,jTest,kTest)
+          end do
+          if(UseB0)then
+             write(*,'(a,es13.5,a13,es13.5)')'B0x:',&
+                  B0_DX(x_,iTest,jTest,kTest),' ',&
+                  B0_DX(x_,iTest+1,jTest,kTest)
+             write(*,'(a,es13.5,a13,es13.5)')'B0y:',&
+                  B0_DX(y_,iTest,jTest,kTest),' ',&
+                  B0_DX(y_,iTest+1,jTest,kTest)
+             write(*,'(a,es13.5,a13,es13.5)')'B0z:',&
+                  B0_DX(z_,iTest,jTest,kTest),' ',&
+                  B0_DX(z_,iTest+1,jTest,kTest)
+          end if
+       else
+          i = iTest + max(0, iSideTest)
+          do iVar = 1, nVar
+             write(*,*)NameVar_V(iVar),'=',&
+                  LeftState_VX(iVar,i,jTest,kTest),&
+                  RightState_VX(iVar,i,jTest,kTest), iSideTest
+          end do
+          if(UseB0)then
+             write(*,*)'B0x:', B0_DX(x_,i,jTest,kTest), iSideTest
+             write(*,*)'B0y:', B0_DX(y_,i,jTest,kTest), iSideTest
+             write(*,*)'B0z:', B0_DX(z_,i,jTest,kTest), iSideTest
+          end if
        end if
     end if
 
-    if(iDimTest==y_ .or. iDimTest==0)then
+    if(iDimTest == y_ .or. iDimTest == 0)then
        write(*,*)&
             'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
-
-       do iVar=1,nVar
-          write(*,'(2a,4es13.5)')NameVar_V(iVar),'=',&
-               LeftState_VY(iVar,iTest,jTest,kTest),&
-               RightState_VY(iVar,iTest,  jTest,kTest),&
-               LeftState_VY(iVar,iTest,jTest+1,kTest),&
-               RightState_VY(iVar,iTest,jTest+1,kTest)
-       end do
-       if(UseB0)then
-          write(*,'(a,es13.5,a13,es13.5)')'B0x:',&
-               B0_DY(x_,iTest,jTest,kTest),' ',&
-               B0_DY(x_,iTest,jTest+1,kTest)
-          write(*,'(a,es13.5,a13,es13.5)')'B0y:',&
-               B0_DY(y_,iTest,jTest,kTest),' ',&
-               B0_DY(y_,iTest,jTest+1,kTest)
-          write(*,'(a,es13.5,a13,es13.5)')'B0z:',&
-               B0_DY(z_,iTest,jTest,kTest),' ',&
-               B0_DY(z_,iTest,jTest+1,kTest)
+       if(iSideTest == 0)then
+          do iVar = 1, nVar
+             write(*,'(2a,4es13.5)')NameVar_V(iVar),'=',&
+                  LeftState_VY(iVar,iTest,jTest,kTest),&
+                  RightState_VY(iVar,iTest,  jTest,kTest),&
+                  LeftState_VY(iVar,iTest,jTest+1,kTest),&
+                  RightState_VY(iVar,iTest,jTest+1,kTest)
+          end do
+          if(UseB0)then
+             write(*,'(a,es13.5,a13,es13.5)')'B0x:',&
+                  B0_DY(x_,iTest,jTest,kTest),' ',&
+                  B0_DY(x_,iTest,jTest+1,kTest)
+             write(*,'(a,es13.5,a13,es13.5)')'B0y:',&
+                  B0_DY(y_,iTest,jTest,kTest),' ',&
+                  B0_DY(y_,iTest,jTest+1,kTest)
+             write(*,'(a,es13.5,a13,es13.5)')'B0z:',&
+                  B0_DY(z_,iTest,jTest,kTest),' ',&
+                  B0_DY(z_,iTest,jTest+1,kTest)
+          end if
+       else
+          j = jTest + max(0, iSideTest)
+          do iVar = 1, nVar
+             write(*,*)NameVar_V(iVar),'=',&
+                  LeftState_VY(iVar,iTest,j,kTest),&
+                  RightState_VY(iVar,iTest,j,kTest), iSideTest
+          end do
+          if(UseB0)then
+             write(*,*)'B0x:', B0_DY(x_,iTest,j,kTest), iSideTest
+             write(*,*)'B0y:', B0_DY(y_,iTest,j,kTest), iSideTest
+             write(*,*)'B0z:', B0_DY(z_,iTest,j,kTest), iSideTest
+          end if
        end if
     end if
 
     if(iDimTest==z_ .or. iDimTest==0)then
        write(*,*)&
             'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
-       do iVar=1,nVar
-          write(*,'(2a,4es13.5)')NameVar_V(iVar),'=',&
-               LeftState_VZ(iVar,iTest,jTest,kTest),&
-               RightState_VZ(iVar,iTest,jTest,kTest),&
-               LeftState_VZ(iVar,iTest,jTest,kTest+1),&
-               RightState_VZ(iVar,iTest,jTest,kTest+1)
-       end do
-       if(UseB0)then
-          write(*,'(a,es13.5,a13,es13.5)')'B0x:',&
-               B0_DZ(x_,iTest,jTest,kTest),' ',&
-               B0_DZ(x_,iTest,jTest,kTest+1)
-          write(*,'(a,es13.5,a13,es13.5)')'B0y:',&
-               B0_DZ(y_,iTest,jTest,kTest),' ',&
-               B0_DZ(y_,iTest,jTest,kTest+1)
-          write(*,'(a,es13.5,a13,es13.5)')'B0z:',&
-               B0_DZ(z_,iTest,jTest,kTest),' ',&
-               B0_DZ(z_,iTest,jTest,kTest+1)
+       if(iSideTest == 0)then
+          do iVar=1,nVar
+             write(*,'(2a,4es13.5)')NameVar_V(iVar),'=',&
+                  LeftState_VZ(iVar,iTest,jTest,kTest),&
+                  RightState_VZ(iVar,iTest,jTest,kTest),&
+                  LeftState_VZ(iVar,iTest,jTest,kTest+1),&
+                  RightState_VZ(iVar,iTest,jTest,kTest+1)
+          end do
+          if(UseB0)then
+             write(*,'(a,es13.5,a13,es13.5)')'B0x:',&
+                  B0_DZ(x_,iTest,jTest,kTest),' ',&
+                  B0_DZ(x_,iTest,jTest,kTest+1)
+             write(*,'(a,es13.5,a13,es13.5)')'B0y:',&
+                  B0_DZ(y_,iTest,jTest,kTest),' ',&
+                  B0_DZ(y_,iTest,jTest,kTest+1)
+             write(*,'(a,es13.5,a13,es13.5)')'B0z:',&
+                  B0_DZ(z_,iTest,jTest,kTest),' ',&
+                  B0_DZ(z_,iTest,jTest,kTest+1)
+          end if
+       else
+          k = kTest + max(0, iSideTest)
+          do iVar = 1, nVar
+             write(*,*)NameVar_V(iVar),'=',&
+                  LeftState_VZ(iVar,iTest,jTest,k),&
+                  RightState_VZ(iVar,iTest,jTest,k), iSideTest
+          end do
+          if(UseB0)then
+             write(*,*)'B0x:', B0_DZ(x_,iTest,jTest,k), iSideTest
+             write(*,*)'B0y:', B0_DZ(y_,iTest,jTest,k), iSideTest
+             write(*,*)'B0z:', B0_DZ(z_,iTest,jTest,k), iSideTest
+          end if
        end if
     end if
 
@@ -457,7 +498,6 @@ contains
     real:: FaceDivU_I(nFluid)
     real, parameter:: cLowOrder = 0.999999
 
-#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_flux'
     !--------------------------------------------------------------------------
@@ -555,12 +595,13 @@ contains
          iTestSide = -1; DoTestCell = .false.
          if(DoTest .and. jFace == jTest .and. kFace == kTest .and. &
               (iDimTest == 0 .or. iDimTest == 1))then
-            if(iFace == iTest)then
+            if(iSideTest <= 0 .and. iFace == iTest)then
                iTestSide = 1; DoTestCell = .true.
-            elseif(iFace == iTest+1)then
+            elseif(iSideTest >= 0 .and. iFace == iTest + 1)then
                iTestSide = 2; DoTestCell = .true.
             end if
          end if
+         if(DoTestCell .and. iSideTest /= 0) iTestSide = iSideTest
 
          if(UseB0)then
             B0x = B0_DX(x_,iFace,jFace,kFace)
@@ -662,12 +703,13 @@ contains
          iTestSide = -1; DoTestCell = .false.
          if(DoTest .and. iFace == iTest .and. kFace == kTest .and. &
               (iDimTest == 0 .or. iDimTest == 2))then
-            if(jFace == jTest)then
+            if(iSideTest <= 0 .and. jFace == jTest)then
                iTestSide = 3; DoTestCell = .true.
-            elseif(jFace == jTest+1)then
+            elseif(iSideTest >=0 .and. jFace == jTest + 1)then
                iTestSide = 4; DoTestCell = .true.
             end if
          end if
+         if(DoTestCell .and. iSideTest /= 0) iTestSide = iSideTest
 
          if(UseB0)then
             B0x = B0_DY(x_,iFace,jFace,kFace)
@@ -768,12 +810,13 @@ contains
          iTestSide = -1; DoTestCell = .false.
          if(DoTest .and. iFace == iTest .and. jFace == jTest .and. &
               (iDimTest == 0 .or. iDimTest == 3))then
-            if(kFace == kTest)then
+            if(iSideTest <= 0 .and. kFace == kTest)then
                iTestSide = 5; DoTestCell = .true.
-            elseif(kFace == kTest+1)then
+            elseif(iSideTest >=0 .and. kFace == kTest + 1)then
                iTestSide = 6; DoTestCell = .true.
             end if
          end if
+         if(DoTestCell .and. iSideTest /= 0) iTestSide = iSideTest
 
          if(UseB0)then
             B0x = B0_DZ(x_,iFace,jFace,kFace)
@@ -918,7 +961,6 @@ contains
 
     end subroutine add_artificial_viscosity
     !==========================================================================
-#endif
   end subroutine calc_face_flux
   !============================================================================
   subroutine set_cell_values
@@ -1168,7 +1210,6 @@ contains
     !--------------------------------------------------------------------------
     DiffCoef = 0.0
 
-#ifndef SCALAR
     if(UseMultiSpecies .and. DoReplaceDensity)then
        StateLeft_V (Rho_)=sum(StateLeft_V(SpeciesFirst_:SpeciesLast_))
        StateRight_V(Rho_)=sum(StateRight_V(SpeciesFirst_:SpeciesLast_))
@@ -1324,7 +1365,6 @@ contains
     if(IsSaMhdInterface)call aligning_bc(iFace, jFace, kFace, iBlockFace, &
          iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                   &
          StateLeft_V, StateRight_V)
-#endif
 
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     State_V = 0.5*(StateLeft_V + StateRight_V)
@@ -1362,7 +1402,6 @@ contains
        end if
     end if
 
-#ifndef SCALAR
     if(UseB .and. (UseMultiIon .or. .not. IsMhd))then
        ! Calculate bCrossArea_D to be used for J in the J x B source term
        ! for the individual ion fluids in calc_sources.f90.
@@ -1371,9 +1410,9 @@ contains
        bCrossArea_D = cross_product(AreaX, AreaY, AreaZ, State_V(Bx_:Bz_))
 
        if(DoTestCell)then
-          write(*,'(a,3es13.5)')'bCrossArea_D        =',bCrossArea_D
-          write(*,'(a,3es13.5)')'AreaX, AreaY, AreaZ =',AreaX, AreaY, AreaZ
-          write(*,'(a,3es13.5)')'State_V(Bx_:Bz_)    =',State_V(Bx_:Bz_)
+          write(*,'(a,3es13.5)')'bCrossArea_D        =', bCrossArea_D
+          write(*,'(a,3es13.5)')'AreaX, AreaY, AreaZ =', AreaX, AreaY, AreaZ
+          write(*,'(a,3es13.5)')'State_V(Bx_:Bz_)    =', State_V(Bx_:Bz_)
        end if
     end if
 
@@ -1490,21 +1529,20 @@ contains
     end if
 
     if(DoTestCell)call write_test_info
-#endif
+
   contains
     !==========================================================================
     subroutine modify_flux(Flux_V, Un, MhdFlux_V)
 
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(MaxDim)
-#ifndef SCALAR
       !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       ! Conservative update for the total flux for multi-ion MHD
       ! if(.not.UseJCrossBForce) MhdFlux_V = &
       !           MhdFlux_V + 0.5*DiffBb*Normal_D
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
-#endif
+
     end subroutine modify_flux
     !==========================================================================
     subroutine roe_solver_new
@@ -1588,7 +1626,6 @@ contains
            Cmax_I, CrightStateRight_I, CrightStateHat_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion, Un
       !------------------------------------------------------------------------
-#ifndef SCALAR
       call get_speed_max(State_V, Cmax_I = Cmax_I, &
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
 
@@ -1665,7 +1702,7 @@ contains
               ( StateRightCons_V(ChargeStateFirst_:ChargeStateLast_) &
               - StateLeftCons_V(ChargeStateFirst_:ChargeStateLast_)) )
       end if
-#endif
+
     end subroutine harten_lax_vanleer_flux
     !==========================================================================
     subroutine dominant_wave_flux(DoLf)
@@ -1899,9 +1936,9 @@ contains
       CmaxDt = Cmax
 
       if(DoTestCell)then
-         write(*,*)'hlld: StateLeft =',StateLeft_V
-         write(*,*)'hlld: StateRight=',StateRight_V
-         write(*,*)'hlld: sL, sR    =',sL,sR
+         write(*,*)'hlld: StateLeft =', StateLeft_V
+         write(*,*)'hlld: StateRight=', StateRight_V
+         write(*,*)'hlld: sL, sR    =', sL, sR
       endif
 
       if(sL >= 0.) then
@@ -1964,7 +2001,7 @@ contains
       ! Total pressure in all intermediate states
       Ptot12 =(DsRhoR*PtotL - DsRhoL*PtotR + DsRhoR*DsRhoL*(UnR - UnL))*Tmp
 
-      if(DoTestCell)write(*,*)'hlld: Un = ',Un
+      if(DoTestCell)write(*,*)'hlld: Un = ', Un
 
       if(Un >= 0.)then
          ! Density and scalars for left intermediate states
@@ -1997,7 +2034,7 @@ contains
          SqRhoL1 = sqrt(Rho)
          sL1     = Un - abs(Bn)/SqRhoL1
 
-         if(DoTestCell)write(*,*)'hlld: sL1=',sL1
+         if(DoTestCell)write(*,*)'hlld: sL1=', sL1
 
          ! Check sign of left going Alfven wave
          if(sL1 >= 0.) then
@@ -2080,7 +2117,7 @@ contains
          SqRhoR1 = sqrt(Rho)
          sR1     = Un + abs(Bn)/SqRhoR1
 
-         if(DoTestCell)write(*,*)'hlld: sR1=',sR1
+         if(DoTestCell)write(*,*)'hlld: sR1=', sR1
 
          if(sR1 <= 0.) then
             ! Use first right intermediate state
@@ -2142,7 +2179,7 @@ contains
            (e - 0.5*(B1n2 + B1t1**2 + B1t2**2 + Rho*(Un**2+Ut1**2+Ut2**2)))
 
       if(DoTestCell)write(*,*)'hlld: State,pTot12=',&
-           Rho,Un,Ut1,Ut2,B1n,B1t1,B1t2,p,pTot12
+           Rho, Un, Ut1, Ut2, B1n, B1t1, B1t2, p, pTot12
 
       Flux_V(Rho_)       = RhoUn
       FluxRot_V(RhoUn_)  = RhoUn*Un  - B1n*Bn  - B0n*B1n + pTot12
@@ -2423,7 +2460,6 @@ contains
 
       write(*,*)'Hat state for Normal_D=', Normal_D, iTestSide
       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_)), iTestSide
-#ifndef SCALAR
       write(*,*)'Un =',sum(0.5*(StateLeft_V(Ux_:Uz_) &
            +                   StateRight_V(Ux_:Uz_))*Normal_D), iTestSide
       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_)), iTestSide
@@ -2434,23 +2470,37 @@ contains
               sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))&
               + [B0x,B0y,B0z])**2), iTestSide
       end if
-#endif
       write(*,'(1x,4(a,i4))') 'Fluxes for dir    =',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
 
       write(*,*)'Area=', Area, iTestSide
       write(*,*)'Eigenvalue_maxabs=', Cmax,   iTestSide
       write(*,*)'CmaxDt           =', CmaxDt, iTestSide
-      do iVar = 1, nFlux
-         write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=',&
-              NameVar_V(iVar),&
-              Flux_V(iVar), &
-              FluxLeft_V(iVar)*Area, &
-              FluxRight_V(iVar)*Area,&
-              StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
-              0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area, &
-              iTestSide
-      end do
+      if(iSideTest == 0)then
+         do iVar = 1, nFlux
+            write(*,'(a,a8,5es13.5,i3)') 'Var,F,F_L,F_R,dU,c*dU/2=',&
+                 NameVar_V(iVar),&
+                 Flux_V(iVar), &
+                 FluxLeft_V(iVar)*Area, &
+                 FluxRight_V(iVar)*Area,&
+                 StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
+                 0.5*Cmax*(StateRightCons_V(iVar) &
+                 -         StateLeftCons_V(iVar))*Area, &
+                 iTestSide
+         end do
+      else
+         do iVar = 1, nFlux
+            write(*,*) 'Var,F,F_L,F_R,dU,c*dU/2=',&
+                 NameVar_V(iVar),&
+                 Flux_V(iVar), &
+                 FluxLeft_V(iVar)*Area, &
+                 FluxRight_V(iVar)*Area,&
+                 StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
+                 0.5*Cmax*(StateRightCons_V(iVar) &
+                 -StateLeftCons_V(iVar))*Area, &
+                 iSideTest
+         end do
+      end if
 
     end subroutine write_test_info
     !==========================================================================
@@ -2794,7 +2844,6 @@ contains
       real :: GammaA2, GammaU2
       real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
       !------------------------------------------------------------------------
-#ifndef SCALAR
       ! No explicit formula for multi-ion fluids
       if (nTrueIon > 1) call stop_mpi &
            ('get_boris_speed should not be called with multi-ion fluids')
@@ -2902,7 +2951,7 @@ contains
       if(DoTestCell)then
          write(*,*) ' InvRho, p      =', InvRho, p
          write(*,*) ' FullB, FullBn  =', FullBx, FullBy, FullBz, FullBn
-         write(*,*) ' Sound2,Alfven2 =', Sound2, Alfven2
+         write(*,*) ' Sound2, Alfven2=', Sound2, Alfven2
          write(*,*) ' GammaA2,GammaU2=', GammaA2, GammaU2
          write(*,*) ' Sound2Boris,Alfven2Boris,Normal=', &
               Sound2Boris, Alfven2Boris, Alfven2NormalBoris
@@ -2910,7 +2959,7 @@ contains
          write(*,*) ' Fast, Slow     =', Fast, Slow
          write(*,*) ' Un, UnBoris    =', Un, UnBoris
       end if
-#endif
+
     end subroutine get_boris_speed
     !==========================================================================
     subroutine get_mhd_speed
@@ -2939,7 +2988,6 @@ contains
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
       integer:: jFluid
-#ifndef SCALAR
       !------------------------------------------------------------------------
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       if(UseMagFriction)then
@@ -3302,7 +3350,7 @@ contains
          if(present(Cleft_I))  Cleft_I(1)  = UnMin - Fast
          if(present(Cright_I)) Cright_I(1) = UnMax + Fast
       end if
-#endif
+
     end subroutine get_mhd_speed
     !==========================================================================
     subroutine get_samhd_speed(U1n, U2n, Ut2, InvRho, Sound2, Alpha, &
@@ -3319,7 +3367,6 @@ contains
       real :: U1nSaMhd, U2nSaMhd, SaMhd2OverRho, SaMhdFast2
       ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
       !------------------------------------------------------------------------
-#ifndef SCALAR
       SaMhd2OverRho = InvRho*Alpha**2
       ! Magetosonic speed squared:
       SaMhdFast2 = Sound2 + Ut2*SaMhd2OverRho
@@ -3343,7 +3390,7 @@ contains
            cSaMhdRight = max(cSaMhdRight,  &
            U1n + sqrt(2*U1n*U1nSaMhd), &                  ! Alfven wave
            U2n + sqrt(2*U2n*U2nSaMhd))                    ! (Right)
-#endif
+
     end subroutine get_samhd_speed
     !==========================================================================
     subroutine get_hd_speed
@@ -3354,10 +3401,9 @@ contains
 
       character(len=*), parameter:: NameSub = 'get_hd_speed'
       !------------------------------------------------------------------------
-#ifndef SCALAR
       if(DoTestCell) then
-         write(*,'(1x,a,a,i3,i3)')    NameSub,' iRho, iP =',iRho, iP
-         write(*,'(1x,a,a,30es13.5)') NameSub,' State_V  =',State_V(iRho:iP)
+         write(*,'(1x,a,a,i3,i3)')    NameSub,' iRho, iP =', iRho, iP
+         write(*,'(1x,a,a,30es13.5)') NameSub,' State_V  =', State_V(iRho:iP)
       end if
 
       ! Calculate sound speed and normal speed
@@ -3418,11 +3464,11 @@ contains
       end if
 
       if(DoTestCell)then
-         write(*,*)NameSub,' Un     =',Un
-         write(*,*)NameSub,' Csound =',Sound
-         if(present(Cmax_I))write(*,*)NameSub,' Cmax   =',Cmax_I(iFluid)
+         write(*,*)NameSub,' Un     =', Un
+         write(*,*)NameSub,' Csound =', Sound
+         if(present(Cmax_I))write(*,*)NameSub,' Cmax   =', Cmax_I(iFluid)
       end if
-#endif
+
     end subroutine get_hd_speed
     !==========================================================================
     subroutine get_burgers_speed
@@ -3546,7 +3592,6 @@ contains
     ! Also store the transformation for rotating back.
     ! Current implementation is for a single ion fluid.
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     if(IsCartesianGrid)then
        select case (iDimFace)
        case (x_) ! x face
@@ -3643,7 +3688,7 @@ contains
        B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
        B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
     end if
-#endif
+
   end subroutine rotate_state_vectors
   !============================================================================
   subroutine rotate_flux_vector(FluxRot_V, Flux_V)
@@ -3651,7 +3696,6 @@ contains
     real, intent(in)   :: FluxRot_V(:)
     real, intent(inout):: Flux_V(:)
     ! Rotate n,t1,t2 components back to x,y,z components
-#ifndef SCALAR
     !--------------------------------------------------------------------------
     if(IsCartesianGrid)then
        select case (iDimFace)
@@ -3698,7 +3742,7 @@ contains
             +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
             +           Tangent2_D(z_)*FluxRot_V(B1t2_)
     end if
-#endif
+
   end subroutine rotate_flux_vector
   !============================================================================
   subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
