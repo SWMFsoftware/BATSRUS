@@ -521,12 +521,19 @@ contains
 
     logical:: IsConserv
 
+    logical :: DoTestCell
+
     character(len=*), parameter:: NameSub = 'update_cell'
     !--------------------------------------------------------------------------
     if(UseBody .and. IsBodyBlock) then
        if(.not. Used_GB(i,j,k,iBlock)) RETURN
     end if
 
+#ifdef TESTACC    
+    DoTestCell =  (iBlock == iBlockTest .and. i == iTest &
+         .and. j == jTest .and. k == kTest )
+#endif
+    
     Change_V = 0
 
     if(UseB .and. UseDivbSource)then
@@ -546,8 +553,7 @@ contains
             - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             *          State_VGB(Ux_:Uz_,i,j,k,iBlock))
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest) &
+          if(DoTestSource .and. DoTestCell) &
                write(*,*) 'After divb source S(iVarTest)=', &
                Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
 #endif
@@ -571,8 +577,7 @@ contains
             B0_DGB(:,i,j,k,iBlock), State_VGB(Ux_:Uz_,i,j,k,iBlock))
 
 #ifdef TESTACC
-       if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-            .and. iBlock == iBlockTest &
+       if(DoTestSource .and. DoTestCell &
             .and. iVarTest >= Ux_ .and. iVarTest <= Uz_) &
             write(*,*) 'After E div E S(iVarTest)=', &
             Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
@@ -601,8 +606,7 @@ contains
                - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
        end do
 #ifdef TESTACC
-       if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-            .and. iBlock == iBlockTest .and. iVarTest == p_) &
+       if(DoTestSource .and. DoTestCell .and. iVarTest == p_) &
             write(*,*) 'After p div U S(iVarTest)=', &
             Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
 #endif
@@ -621,8 +625,7 @@ contains
        Change_V(Pe_) = Change_V(Pe_) &
             - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock)*DivU
 #ifdef TESTACC
-       if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-            .and. iBlock == iBlockTest .and. iVarTest == Pe_) &
+       if(DoTestSource .and. DoTestCell .and. iVarTest == Pe_) &
             write(*,*) 'After Pe div Ue S(iVarTest)=', &
             Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
 #endif
@@ -646,8 +649,7 @@ contains
        Change_V(Energy_) = Change_V(Energy_) + (GammaWave - 1) &
             *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*DivU
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= WaveFirst_ .and. iVarTest <= WaveLast_) &
                write(*,*) 'After UseWavePressure S(iVarTest)=', &
                Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
@@ -744,8 +746,7 @@ contains
                max(1e-30, sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))) &
                *State_VGB(Lperp_,i,j,k,iBlock)
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest .and. iVarTest > 1 &
+          if(DoTestSource .and. DoTestCell .and. iVarTest > 1 &
                .and. (iVarTest == WaveFirst_ .or. iVarTest == WaveLast_ &
                .or.   iVarTest == WDiff_ .or. iVarTest == Lperp_)) &
                write(*,*) 'After UseAlfveWaveDissipation S(iVarTest)=', &
@@ -787,8 +788,7 @@ contains
                   + CoronalHeating_CI(i,j,k,iGang)
           end if
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest)then
+          if(DoTestSource .and. DoTestCell) then 
              write(*,*) 'CoronalHeating=', CoronalHeating_CI(i,j,k,iGang)
              write(*,*) 'After UseCoronalHeating S(iVarTest)=', &
                   Change_V(iVarTest)
@@ -806,8 +806,7 @@ contains
           Change_V(Energy_) = Change_V(Energy_) &
                + sum(State_VGB(Ux_:Uz_,i,j,k,iBlock)*Force_D)
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= Ux_ .and. iVarTest <= Uz_) &
                write(*,*) 'After gravity S(iVarTest)=', Change_V(iVarTest)
 #endif
@@ -825,8 +824,7 @@ contains
                *sum(State_VGB(Ux_:Uy_,i,j,k,iBlock) &
                *       Xyz_DGB(x_:y_,i,j,k,iBlock))
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= Ux_ .and. iVarTest <= Uy_) &
                write(*,*) 'After Coriolis S(iVarTest)=', Change_V(iVarTest)
 #endif
@@ -843,8 +841,7 @@ contains
                   + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*Force_D)
           end if
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= iUx .and. iVarTest <= iUz) &
                write(*,*)'After gravity S(iVarTest)=', Change_V(iVarTest)
 #endif
@@ -903,8 +900,7 @@ contains
     end if
 
 #ifdef TESTACC
-    if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
-         .and. iBlock == iBlockTest)then
+    if(DoTestUpdate .and. DoTestCell) then 
        write(*,*)'DtLocal, Dt, iStage', DtLocal, Dt, iStage
     end if
 #endif
@@ -1006,8 +1002,7 @@ contains
     end if
 
 #ifdef TESTACC
-    if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
-         .and. iBlock == iBlockTest)then
+    if(DoTestUpdate .and. DoTestCell) then 
        iVarLast = iVarTest
        if(iVarTest == p_) iVarLast = nVar + 1
        do iVar = iVarTest, iVarLast, max(1, iVarLast - iVarTest)
