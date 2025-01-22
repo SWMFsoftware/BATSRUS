@@ -994,6 +994,8 @@ contains
             + State_VGB(Ehot_,i,j,k,iBlock))
        State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
             *(1.0/(Gamma - 1) - InvGammaElectronMinus1)
+
+       call limit_pressure(State_VGB(:,i,j,k,iBlock))
     end if
 
     if(UseAlfvenWaves) then
