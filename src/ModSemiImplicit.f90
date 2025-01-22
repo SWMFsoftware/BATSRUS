@@ -414,7 +414,7 @@ contains
                //TypeSemiImplicit)
 #endif
        end select
-       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1)
+       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1, State_VGB)
     end do
     !$omp end parallel do
 

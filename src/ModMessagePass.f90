@@ -241,7 +241,7 @@ contains
 
           ! Maybe only ghost cells at res changes need this
           call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, &
-               1, nFluid)
+               1, nFluid, State_VGB)
 
           if(UseResistivePlanet) then
              TypeBc = 'ResistivePlanet'
