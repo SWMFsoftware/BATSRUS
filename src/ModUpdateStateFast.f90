@@ -41,7 +41,7 @@ module ModUpdateStateFast
        No2Io_V, No2Si_V, iUnitCons_V, UnitU_, UnitTemperature_, &
        AverageIonCharge
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
-       iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
+       iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep, rLocalTimeStep
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
@@ -49,7 +49,8 @@ module ModUpdateStateFast
   use ModB0, ONLY: B0_DGB, get_b0, rCurrentFreeB0, UseCurlB0 ! to be optimized
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
-  use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB
+  use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB, &
+       rMin_B
   use ModSolarWind, ONLY: get_solar_wind_point
   use ModIeCoupling, ONLY: RhoCpcp_I
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
@@ -449,7 +450,12 @@ contains
              end do; end do; end do
           end if
        end if
-       if(.not.IsTimeAccurate .and. iStage == 1) call calc_timestep(iBlock)
+
+       if(iStage == 1) then 
+          if(.not.IsTimeAccurate) call calc_timestep(iBlock)
+          if(IsTimeAccurate .and. rMin_B(iBlock) < rLocalTimeStep) &
+               call calc_timestep(iBlock, IsPartLocal=.true.)
+       end if
 
        ! Update
 #ifdef TESTACC
@@ -553,9 +559,9 @@ contains
             - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             *          State_VGB(Ux_:Uz_,i,j,k,iBlock))
 #ifdef TESTACC
-          if(DoTestSource .and. DoTestCell) &
-               write(*,*) 'After divb source S(iVarTest)=', &
-               Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
+       if(DoTestSource .and. DoTestCell) &
+            write(*,*) 'After divb source S(iVarTest)=', &
+            Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
 #endif
     end if
 
@@ -649,10 +655,10 @@ contains
        Change_V(Energy_) = Change_V(Energy_) + (GammaWave - 1) &
             *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*DivU
 #ifdef TESTACC
-          if(DoTestSource .and. DoTestCell &
-               .and. iVarTest >= WaveFirst_ .and. iVarTest <= WaveLast_) &
-               write(*,*) 'After UseWavePressure S(iVarTest)=', &
-               Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
+       if(DoTestSource .and. DoTestCell &
+            .and. iVarTest >= WaveFirst_ .and. iVarTest <= WaveLast_) &
+            write(*,*) 'After UseWavePressure S(iVarTest)=', &
+            Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
 #endif
     end if
 
@@ -890,7 +896,7 @@ contains
          Flux_VZI(1:nFlux,i,j,k,iGang) - Flux_VZI(1:nFlux,i,j,k+1,iGang))
 
     ! Time step for iStage
-    if(IsTimeAccurate)then
+    if(IsTimeAccurate .and. rLocalTimeStep <=0)then
        DtLocal = iStage*Dt/nStage
     else
        DtLocal = iStage*Cfl*DtMax_CB(i,j,k,iBlock)/nStage
