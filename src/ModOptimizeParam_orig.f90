@@ -14,7 +14,8 @@ module ModOptimizeParam
   use ModAdvance, ONLY: UseB, UseElectronPressure, &
        UseElectronEntropy => UseElectronEntropy
   use ModB0, ONLY: &
-       UseB0 => UseB0
+       UseB0 => UseB0, &
+       UseCurlB0 => UseCurlB0
   use ModBorisCorrection, ONLY: &
        UseBorisCorrection => UseBorisCorrection
   use ModConservative, ONLY: &
@@ -35,12 +36,13 @@ module ModOptimizeParam
        UseCpcpBc => UseCpcpBc
   use ModMain, ONLY: &
        IsTimeAccurate => IsTimeAccurate, &
+       UseDtFixed => UseDtFixed, &
+       rLocalTimeStep => rLocalTimeStep, &
        nStage => nStage, &
        iStage => iStage, &
        nOrder => nOrder, &
        UseBody => UseBody, &
        UseDivbSource => UseDivbSource, &
-       UseDtFixed => UseDtFixed, &
        UseGravity => UseGravity, &
        UseHyperbolicDivB => UseHyperBolicDivB, &
        UseRotatingBc => UseRotatingBc, &

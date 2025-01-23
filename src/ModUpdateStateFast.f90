@@ -8,7 +8,8 @@ module ModUpdateStateFast
   use ModOptimizeParam, ONLY: &
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
-       UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
+       UseDivbSource, UseHyperbolicDivB, UseB0, UseCurlB0, &
+       IsTimeAccurate, UseDtFixed, rLocalTimeStep, &
        UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
        UseElectronEntropy, UseGravity, UseRotatingFrame, UseRotatingBc, &
        UseAccurateResChange, UseCpcpBc, B1rCoef, &
@@ -41,12 +42,12 @@ module ModUpdateStateFast
        No2Io_V, No2Si_V, iUnitCons_V, UnitU_, UnitTemperature_, &
        AverageIonCharge
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
-       iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep, rLocalTimeStep
+       iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
 #endif
-  use ModB0, ONLY: B0_DGB, get_b0, rCurrentFreeB0, UseCurlB0 ! to be optimized
+  use ModB0, ONLY: B0_DGB, get_b0, rCurrentFreeB0
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB, &
