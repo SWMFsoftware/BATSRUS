@@ -664,7 +664,7 @@ contains
     end if
 
 #ifdef TESTACC
-    if(DoTestUpdate .and. DoTestCell) then 
+    if(DoTestUpdate .and. DoTestCell) then
        write(*,*)'Change_V after divided by V', Change_V(iVarTest)
     end if
 #endif
@@ -679,7 +679,7 @@ contains
                + sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
 
 #ifdef TESTACC
-          if(DoTestSource .and. DoTestCell &             
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= Ux_ .and. iVarTest <= Uz_)then
              write(*,*) 'CurlB0_D =', CurlB0_D
              write(*,*) 'Force_D  =', Force_D
@@ -2172,7 +2172,7 @@ contains
        write(*,*) &
             ' iFluid, rho, p(face)   =', &
             1, State_V(Rho_), State_V(p_), iSideTest
-       !if(UseAnisoPressure) write(*,*) &
+       ! if(UseAnisoPressure) write(*,*) &
        !     ' Ppar, Perp             =', Ppar, Pperp, iSideTest
        if(UseElectronPressure) write(*,*) &
             ' State_V(Pe_)           =', State_V(Pe_), iSideTest
