@@ -5996,7 +5996,6 @@ reconstruction of the solar magnetic field. Depending on this input parameter,
 the simulated CME configuration will be properly orriented to better fit
 the observed solar magnetic field.
 
-
 The latest implementation for the Gibson-Low eruptive event generator
 (TypeCme=GL) follows the paper Borovikov, D., I. V.  Sokolov,
 W. B. Manchester, M. Jin, and T. I. Gombosi (2017), Eruptive event
@@ -6021,7 +6020,8 @@ ApexHeight is the altitude of top of configuration from the solar surface.
 It is expected that Radius &lt; ApexHeight &lt; 2*Radius.
 
 NOTE1: Before 08.15.2022 the sign of BStrength was used to set helicity.
-The negative sign corresponded to the positive helicity (which was essentially a bug).
+The negative sign corresponded to the positive helicity (which was essentially
+a bug).
 
 NOTE2:
 If you have an outdated parameter file you can convert it to the new
@@ -6154,8 +6154,10 @@ steady			TypeCharge  none/steady/moving/cancelflux
 TypeCME=BREAKOUT should be described by Bart van der Holst. Please ask
 him for a description.
 
-There is no CME by default.
+TypeCME=SPHEROMAK should be described by Igor Sokolov. Please ask
+him for a description.
 
+There is no CME by default.
 </command>
 
 <command name="CMETIME">
