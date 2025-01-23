@@ -861,6 +861,7 @@ contains
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipationRate_VCI(:,i,j,k,iGang), &
                   CoronalHeating_CI(i,j,k,iGang), &
+                  TeSi_CI(i,j,k,iGang), &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              select case(NameVar)
              case('qebyq')

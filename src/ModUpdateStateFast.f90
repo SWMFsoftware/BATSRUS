@@ -232,9 +232,9 @@ contains
     call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
     call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
 
-    if(DoTestAny)then
+    if(DoTestFlux)then
        write(*,*)'==========================================================='
-       write(*,*) NameSub, ' started with DoResChangeOnly=F of course'
+       write(*,*) 'calc_face_flux started with DoResChangeOnly= F'
     end if
 
     call get_log_limiter_var
@@ -521,11 +521,18 @@ contains
 
     logical:: IsConserv
 
+    logical :: DoTestCell
+
     character(len=*), parameter:: NameSub = 'update_cell'
     !--------------------------------------------------------------------------
     if(UseBody .and. IsBodyBlock) then
        if(.not. Used_GB(i,j,k,iBlock)) RETURN
     end if
+
+#ifdef TESTACC
+    DoTestCell =  (iBlock == iBlockTest .and. i == iTest &
+         .and. j == jTest .and. k == kTest )
+#endif
 
     Change_V = 0
 
@@ -546,8 +553,7 @@ contains
             - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             *          State_VGB(Ux_:Uz_,i,j,k,iBlock))
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest) &
+          if(DoTestSource .and. DoTestCell) &
                write(*,*) 'After divb source S(iVarTest)=', &
                Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
 #endif
@@ -571,8 +577,7 @@ contains
             B0_DGB(:,i,j,k,iBlock), State_VGB(Ux_:Uz_,i,j,k,iBlock))
 
 #ifdef TESTACC
-       if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-            .and. iBlock == iBlockTest &
+       if(DoTestSource .and. DoTestCell &
             .and. iVarTest >= Ux_ .and. iVarTest <= Uz_) &
             write(*,*) 'After E div E S(iVarTest)=', &
             Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
@@ -601,8 +606,7 @@ contains
                - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
        end do
 #ifdef TESTACC
-       if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-            .and. iBlock == iBlockTest .and. iVarTest == p_) &
+       if(DoTestSource .and. DoTestCell .and. iVarTest == p_) &
             write(*,*) 'After p div U S(iVarTest)=', &
             Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
 #endif
@@ -621,8 +625,7 @@ contains
        Change_V(Pe_) = Change_V(Pe_) &
             - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock)*DivU
 #ifdef TESTACC
-       if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-            .and. iBlock == iBlockTest .and. iVarTest == Pe_) &
+       if(DoTestSource .and. DoTestCell .and. iVarTest == Pe_) &
             write(*,*) 'After Pe div Ue S(iVarTest)=', &
             Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
 #endif
@@ -646,8 +649,7 @@ contains
        Change_V(Energy_) = Change_V(Energy_) + (GammaWave - 1) &
             *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))*DivU
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= WaveFirst_ .and. iVarTest <= WaveLast_) &
                write(*,*) 'After UseWavePressure S(iVarTest)=', &
                Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
@@ -662,8 +664,7 @@ contains
     end if
 
 #ifdef TESTACC
-    if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
-         .and. iBlock == iBlockTest)then
+    if(DoTestUpdate .and. DoTestCell) then
        write(*,*)'Change_V after divided by V', Change_V(iVarTest)
     end if
 #endif
@@ -678,8 +679,7 @@ contains
                + sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
 
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= Ux_ .and. iVarTest <= Uz_)then
              write(*,*) 'CurlB0_D =', CurlB0_D
              write(*,*) 'Force_D  =', Force_D
@@ -744,8 +744,7 @@ contains
                max(1e-30, sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))) &
                *State_VGB(Lperp_,i,j,k,iBlock)
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest .and. iVarTest > 1 &
+          if(DoTestSource .and. DoTestCell .and. iVarTest > 1 &
                .and. (iVarTest == WaveFirst_ .or. iVarTest == WaveLast_ &
                .or.   iVarTest == WDiff_ .or. iVarTest == Lperp_)) &
                write(*,*) 'After UseAlfveWaveDissipation S(iVarTest)=', &
@@ -758,7 +757,7 @@ contains
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang),&
+                  CoronalHeating_CI(i,j,k,iGang), TeSi, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
              Change_V(Pe_) = Change_V(Pe_) &
@@ -787,8 +786,7 @@ contains
                   + CoronalHeating_CI(i,j,k,iGang)
           end if
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest)then
+          if(DoTestSource .and. DoTestCell) then
              write(*,*) 'CoronalHeating=', CoronalHeating_CI(i,j,k,iGang)
              write(*,*) 'After UseCoronalHeating S(iVarTest)=', &
                   Change_V(iVarTest)
@@ -806,8 +804,7 @@ contains
           Change_V(Energy_) = Change_V(Energy_) &
                + sum(State_VGB(Ux_:Uz_,i,j,k,iBlock)*Force_D)
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= Ux_ .and. iVarTest <= Uz_) &
                write(*,*) 'After gravity S(iVarTest)=', Change_V(iVarTest)
 #endif
@@ -825,8 +822,7 @@ contains
                *sum(State_VGB(Ux_:Uy_,i,j,k,iBlock) &
                *       Xyz_DGB(x_:y_,i,j,k,iBlock))
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= Ux_ .and. iVarTest <= Uy_) &
                write(*,*) 'After Coriolis S(iVarTest)=', Change_V(iVarTest)
 #endif
@@ -843,8 +839,7 @@ contains
                   + sum(State_VGB(iUx:iUz,i,j,k,iBlock)*Force_D)
           end if
 #ifdef TESTACC
-          if(DoTestSource .and. i == iTest .and. j == jTest .and. k == kTest &
-               .and. iBlock == iBlockTest &
+          if(DoTestSource .and. DoTestCell &
                .and. iVarTest >= iUx .and. iVarTest <= iUz) &
                write(*,*)'After gravity S(iVarTest)=', Change_V(iVarTest)
 #endif
@@ -861,8 +856,7 @@ contains
                   *sum(State_VGB(iUx:iUy,i,j,k,iBlock) &
                   *       Xyz_DGB(x_:y_,i,j,k,iBlock))
 #ifdef TESTACC
-             if(DoTestSource .and. i == iTest .and. j == jTest &
-                  .and. k == kTest .and. iBlock == iBlockTest &
+             if(DoTestSource .and. DoTestCell &
                   .and. iVarTest >= iUx .and. iVarTest <= iUy) &
                   write(*,*) 'After Coriolis S(iVarTest)=', Change_V(iVarTest)
 #endif
@@ -903,8 +897,7 @@ contains
     end if
 
 #ifdef TESTACC
-    if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
-         .and. iBlock == iBlockTest)then
+    if(DoTestUpdate .and. DoTestCell) then
        write(*,*)'DtLocal, Dt, iStage', DtLocal, Dt, iStage
     end if
 #endif
@@ -920,7 +913,10 @@ contains
           do iFluid = 1, nFluid
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
+       else
+          call limit_pressure(State_VGB(:,i,j,k,iBlock))
        end if
+
        if(UseBorisCorrection) call mhd_to_boris( &
             State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
 
@@ -940,6 +936,8 @@ contains
           do iFluid = 1, nFluid
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
+       else
+          call limit_pressure(StateOld_VGB(:,i,j,k,iBlock))
        end if
        if(UseBorisCorrection) call mhd_to_boris( &
             StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
@@ -975,8 +973,11 @@ contains
     end if
 
     ! Convert energy back to pressure
-    if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
-         call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+    if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)  then
+       call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+    else
+       call limit_pressure(State_VGB(:,i,j,k,iBlock))
+    end if
 
     ! Apply collisionless heatconduction (modified gamma or gamma electron)
     if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
@@ -1000,8 +1001,7 @@ contains
     end if
 
 #ifdef TESTACC
-    if(DoTestUpdate .and. i == iTest .and. j == jTest .and. k == kTest &
-         .and. iBlock == iBlockTest)then
+    if(DoTestUpdate .and. DoTestCell) then
        iVarLast = iVarTest
        if(iVarTest == p_) iVarLast = nVar + 1
        do iVar = iVarTest, iVarLast, max(1, iVarLast - iVarTest)
@@ -2172,23 +2172,21 @@ contains
        write(*,*) &
             ' iFluid, rho, p(face)   =', &
             1, State_V(Rho_), State_V(p_), iSideTest
-       write(*,*) &
-            ' GammaP, InvRho        =', GammaP, InvRho, iSideTest
        ! if(UseAnisoPressure) write(*,*) &
-       !     ' Ppar, Perp             =', Ppar, Pperp
-       ! if(UseElectronPressure) write(*,*) &
-       !     ' State_V(Pe_)           =', State_V(Pe_)
+       !     ' Ppar, Perp             =', Ppar, Pperp, iSideTest
+       if(UseElectronPressure) write(*,*) &
+            ' State_V(Pe_)           =', State_V(Pe_), iSideTest
        ! if(UseAnisoPe) write(*,*) &
-       !     ' State_V(Pepar_)        =', State_V(Pepar_)
-       ! if(UseWavePressure) write(*,*) &
-       !     ' GammaWave, State(Waves)=', &
-       !     GammaWave, State_V(WaveFirst_:WaveLast_)
+       !     ' State_V(Pepar_)        =', State_V(Pepar_), iSideTest
+       if(UseAlfvenWaves) write(*,*) &
+            ' GammaWave, State(Waves)=', &
+            GammaWave, State_V(WaveFirst_:WaveLast_), iSideTest
        write(*,*) &
-            ' Fast2, Discr          =', Fast2, Discr, iSideTest
+            ' Fast2, Discr           =', Fast2, Discr, iSideTest
        write(*,*) &
-            ' Sound2, Alfven2       =', Sound2, InvRho*B2, iSideTest
+            ' Sound2, Alfven2        =', Sound2, InvRho*B2, iSideTest
        write(*,*) &
-            ' FullBn, Alfven2Normal =', Bn, InvRho*Bn**2, iSideTest
+            ' FullBn, Alfven2Normal  =', Bn, InvRho*Bn**2, iSideTest
        if(UseB0)then
           write(*,*) ' FullB=', State_V(Bx_) + B0_D(1), &
                State_V(By_) + B0_D(2),  State_V(Bz_) + B0_D(3), iSideTest

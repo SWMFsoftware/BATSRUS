@@ -61,7 +61,7 @@ contains
 #ifndef SCALAR
     ! Make sure pressure is larger than floor value
     ! write(*,*) NameSub,' !!! call limit_pressure'
-    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, State_VGB)
 
     ! Fully non-conservative scheme
     if(UseNonConservative .and. nConservCrit <= 0 .and. &
@@ -300,7 +300,7 @@ contains
          .not. (UseNeutralFluid .and. DoConserveNeutrals))then
 
        ! Make sure pressure is larger than floor value
-       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, State_VGB)
 
        RETURN
     end if
@@ -355,7 +355,7 @@ contains
     end do FLUIDLOOP
 
     ! Make sure final pressure is larger than floor value
-    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, State_VGB)
 
     call test_stop(NameSub, DoTest, iBlock)
 #endif
@@ -414,7 +414,7 @@ contains
   end subroutine energy_to_pressure_cell
   !============================================================================
   subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
-       iFluidMin, iFluidMax)
+       iFluidMin, iFluidMax, State_VGB)
     !$acc routine vector
 
     ! Keep pressure(s) in State_VGB above pMin_I limit
@@ -424,6 +424,8 @@ contains
 
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
+    real, intent(inout):: &
+         State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     integer:: i, j, k, iFluid
     real :: NumDens, pMin, Ne

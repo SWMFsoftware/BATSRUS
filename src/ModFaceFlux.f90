@@ -33,7 +33,7 @@ module ModFaceFlux
        UseEfield, &                      ! electric field
        FluxCenter_VGD, DoCorrectFace, &
        UseLowOrder, IsLowOrderOnly_B, DoUpdate_V, &
-       UseElectronEnergy, UseTotalIonEnergy
+       UseElectronEnergy, UseTotalIonEnergy, iTypeUpdate, UpdateOrig_
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal, GammaElectron, &
        GammaElectronMinus1, InvGammaElectronMinus1, Gamma, GammaMinus1, &
        InvGammaMinus1, Gamma_I, InvGammaMinus1_I, GammaMinus1_I
@@ -3112,7 +3112,8 @@ contains
       else
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if
-      if(UseCurlB0.and..not.UseB0MomentumFlux.and.rFace > rCurrentFreeB0)then
+      if(iTypeUpdate == UpdateOrig_ .and. UseCurlB0 &
+           .and. .not.UseB0MomentumFlux .and. rFace > rCurrentFreeB0)then
          B1B0L = StateLeft_V(Bx_)*B0x &
               +  StateLeft_V(By_)*B0y &
               +  StateLeft_V(Bz_)*B0z

@@ -207,7 +207,7 @@ contains
     if(UseUserUpdateStates)       call user_update_states(iBlock)
     if(.not. UseUserUpdateStates) call update_state_normal(iBlock)
 
-    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, State_VGB)
 
     if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
        call update_heatflux_collisionless(iBlock)
@@ -397,7 +397,7 @@ contains
          (UseSingleIonVelocity .or. UseSingleIonTemperature)) then
 
        call fix_multi_ion_update(iBlock)
-       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, State_VGB)
 
        if(DoTest)write(*,'(2x,2a,15es20.12)') &
             NameSub, ' after fix multiion update           =', &
@@ -466,11 +466,13 @@ contains
                 call energy_to_pressure(iBlock, State_VGB)
              else
                 ! write(*,*) NameSub,' !!! call limit_pressure'
-                call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+                call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, &
+                     nFluid, State_VGB)
              end if
           else
              ! write(*,*) NameSub,' !!! call limit_pressure'
-             call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+             call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, &
+                  State_VGB)
           end if
 
           if(DoTest)write(*,'(2x,2a,15es20.12)') &
