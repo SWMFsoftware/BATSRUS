@@ -184,6 +184,7 @@ module ModPhysics
   real:: SpeedMinDim, SpeedMin, rSpeedMin
   real:: TauSpeedMinDim, TauSpeedMin
   logical:: UseSpeedMin = .false.
+  !$acc declare create(UseSpeedMin, SpeedMin, rSpeedMin, TauSpeedMin)
 
   ! Boundary pressure for subsonic outflow
   logical:: UseOutflowPressure = .false.
@@ -790,23 +791,18 @@ contains
 
     !$acc update device(SpeedHyp, C2light, InvClight, InvClight2, ClightFactor)
     !$acc update device(pOutflow)
-
     !$acc update device(CellState_VI)
     !$acc update device(FaceState_VI)
-
     !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, PeMin, TMin_I)
     !$acc update device(OmegaBody, Bdp)
     !$acc update device(gBody)
     !$acc update device(TeMin)
-
     !$acc update device(PolarRho_I, PolarP_I)
-
     !$acc update device(MassIon_I, ChargeIon_I, ChargePerMass_I)
     !$acc update device(IonMassPerCharge)
-
     !$acc update device(CollisionCoef_II)
-
     !$acc update device(rBody)
+    !$acc update device(UseSpeedMin, SpeedMin, rSpeedMin, TauSpeedMin)
 
     call test_stop(NameSub, DoTest)
 

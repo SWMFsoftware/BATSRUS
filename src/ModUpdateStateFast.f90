@@ -40,7 +40,7 @@ module ModUpdateStateFast
        TeMin, OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
        GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
        No2Io_V, No2Si_V, iUnitCons_V, UnitU_, UnitTemperature_, &
-       AverageIonCharge
+       AverageIonCharge, UseSpeedMin, SpeedMin, rSpeedMin, TauSpeedMin
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
        iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
@@ -521,9 +521,12 @@ contains
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
     real :: Ne
-
     real :: TeSi, ExtensionFactorInv
 
+    ! Minimum radial speed
+    real :: Ur
+    
+    ! Collisionless heating
     real :: Gamma
 
     logical:: IsConserv
@@ -543,6 +546,14 @@ contains
 
     Change_V = 0
 
+    ! Inverse of the cell volume
+    if(IsCartesian)then
+       InvVol = 1/CellVolume_B(iBlock)
+    else
+       InvVol = 1/CellVolume_GB(i,j,k,iBlock)
+    end if
+
+    ! Calculate source terms that should be divided by the cell volume
     if(UseB .and. UseDivbSource)then
        DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
        if(nJ > 1) DivB = DivB + &
@@ -562,7 +573,7 @@ contains
 #ifdef TESTACC
        if(DoTestSource .and. DoTestCell) &
             write(*,*) 'After divb source S(iVarTest)=', &
-            Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
+            Change_V(iVarTest)*InvVol
 #endif
     end if
 
@@ -587,7 +598,7 @@ contains
        if(DoTestSource .and. DoTestCell &
             .and. iVarTest >= Ux_ .and. iVarTest <= Uz_) &
             write(*,*) 'After E div E S(iVarTest)=', &
-            Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
+            Change_V(iVarTest)*InvVol
 #endif
     end if
 
@@ -615,7 +626,7 @@ contains
 #ifdef TESTACC
        if(DoTestSource .and. DoTestCell .and. iVarTest == p_) &
             write(*,*) 'After p div U S(iVarTest)=', &
-            Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
+            Change_V(iVarTest)*InvVol
 #endif
     end if
 
@@ -634,7 +645,7 @@ contains
 #ifdef TESTACC
        if(DoTestSource .and. DoTestCell .and. iVarTest == Pe_) &
             write(*,*) 'After Pe div Ue S(iVarTest)=', &
-            Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
+            Change_V(iVarTest)*InvVol
 #endif
     end if
 
@@ -659,22 +670,9 @@ contains
        if(DoTestSource .and. DoTestCell &
             .and. iVarTest >= WaveFirst_ .and. iVarTest <= WaveLast_) &
             write(*,*) 'After UseWavePressure S(iVarTest)=', &
-            Change_V(iVarTest)/CellVolume_GB(i,j,k,iBlock)
+            Change_V(iVarTest)*InvVol
 #endif
     end if
-
-    ! Below we add sources that do not need to be divided by cell volume
-    if(IsCartesian)then
-       Change_V = Change_V/CellVolume_B(iBlock)
-    else
-       Change_V = Change_V/CellVolume_GB(i,j,k,iBlock)
-    end if
-
-#ifdef TESTACC
-    if(DoTestUpdate .and. DoTestCell) then
-       write(*,*)'Change_V after divided by V', Change_V(iVarTest)
-    end if
-#endif
 
     if(UseCurlB0)then
        if(r_GB(i,j,k,iBlock) >= rCurrentFreeB0)then
@@ -687,17 +685,43 @@ contains
 
 #ifdef TESTACC
           if(DoTestSource .and. DoTestCell &
-               .and. iVarTest >= Ux_ .and. iVarTest <= Uz_)then
-             write(*,*) 'CurlB0_D =', CurlB0_D
-             write(*,*) 'Force_D  =', Force_D
-             write(*,*) 'Work     =', &
-                  sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
-
-             write(*,*) 'After curl B0 S(iVarTest)=', Change_V(iVarTest)
-          end if
+               .and. iVarTest >= Ux_ .and. iVarTest <= Uz_) &
+               write(*,*) 'After curl B0 S(iVarTest)=', &
+               Change_V(iVarTest)*InvVol
 #endif
        end if
     end if
+    
+    ! Divide by cell volume
+    Change_V = InvVol*Change_V
+
+#ifdef TESTACC
+    if(DoTestUpdate .and. DoTestCell) then
+       write(*,*)'Change_V after divided by V', Change_V(iVarTest)
+    end if
+#endif
+
+    ! Below we add sources that do not need to be divided by cell volume
+    if(UseSpeedMin)then
+       ! push radial ion speed above SpeedMin outside rSpeedMin
+       if(r_GB(i,j,k,iBlock) >= rSpeedMin)then
+          Ur = sum(State_VGB(Ux_:Uz_,i,j,k,iBlock)*Xyz_DGB(:,i,j,k,iBlock)) &
+               /r_GB(i,j,k,iBlock)
+          if (Ur < SpeedMin) then
+             Force_D = Xyz_DGB(:,i,j,k,iBlock)*(SpeedMin - Ur)* &
+                  State_VGB(Rho_,i,j,k,iBlock)/(TauSpeedMin*r_GB(i,j,k,iBlock))
+             Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) + Force_D
+             Change_V(Energy_) = Change_V(Energy_) &
+                  + sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))
+#ifdef TESTACC
+             if(DoTestSource .and. DoTestCell &
+                  .and. iVarTest >= Ux_ .and. iVarTest <= Uz_) &
+                  write(*,*) 'After UseSpeedMin S(iVarTest)=', &
+                  Change_V(iVarTest)
+#endif
+          end if
+       end if
+    end if ! UseSpeedMin
 
     if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
 
@@ -870,7 +894,7 @@ contains
           end if
        end do
     end if
-
+    
     ! Convert electron pressure source term to electron entropy source
     ! if necessary: Se = Pe/Ne^(gammaE-1)
     if(UseElectronPressure .and. UseElectronEntropy)then
@@ -883,12 +907,6 @@ contains
     end if
 
     ! Add div(Flux) to Change_V
-    if(IsCartesian)then
-       InvVol = 1/CellVolume_B(iBlock)
-    else
-       InvVol = 1/CellVolume_GB(i,j,k,iBlock)
-    end if
-
     Change_V = Change_V + InvVol*( &
          Flux_VXI(1:nFlux,i,j,k,iGang) - Flux_VXI(1:nFlux,i+1,j,k,iGang))
     if(nDim > 1) Change_V = Change_V + InvVol*( &
@@ -1826,16 +1844,14 @@ contains
 
     ! Calculate CurlB0_D at the cell i,j,k,iBlock
 
-    use BATL_lib, ONLY: CellSize_DB
-
     integer, intent(in):: i, j, k, iBlock
     real, intent(out):: CurlB0_D(3)
 
     real:: Cx, Cy, Cz
     !--------------------------------------------------------------------------
     if(IsCartesian)then
-       Cx = 0.5/CellSize_DB(x_,iBlock)
-       Cy = 0.5/CellSize_DB(y_,iBlock)
+       Cx = 0.5*CellFace_DB(x_,iBlock)
+       Cy = 0.5*CellFace_DB(y_,iBlock)
        if(nDim == 2)then
           CurlB0_D(x_) = &
                +Cy*(B0_DGB(z_,i,j+1,k,iBlock) - B0_DGB(z_,i,j-1,k,iBlock))
@@ -1845,7 +1861,7 @@ contains
                +Cx*(B0_DGB(y_,i+1,j,k,iBlock) - B0_DGB(y_,i-1,j,k,iBlock)) &
                -Cy*(B0_DGB(x_,i,j+1,k,iBlock) - B0_DGB(x_,i,j-1,k,iBlock))
        else
-          Cz = 0.5/CellSize_DB(y_,iBlock)
+          Cz = 0.5*CellFace_DB(z_,iBlock)
           CurlB0_D(x_) = &
                Cy*(B0_DGB(z_,i,j+1,k,iBlock) - B0_DGB(z_,i,j-1,k,iBlock)) - &
                Cz*(B0_DGB(y_,i,j,k+1,iBlock) - B0_DGB(y_,i,j,k-1,iBlock))
@@ -1858,7 +1874,7 @@ contains
        end if
     else
        ! Only 3D case is implemented (the last two terms are for 3D only)
-       CurlB0_D = 0.5/CellVolume_GB(i,j,k,iBlock) * ( &
+       CurlB0_D = 0.5* ( &
             + cross_prod( &
             FaceNormal_DDFB(:,1,i+1,j,k,iBlock), B0_DGB(:,i+1,j,k,iBlock))  &
             - cross_prod(                                            &

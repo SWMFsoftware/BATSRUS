@@ -169,6 +169,11 @@ F			UseRhoRatioLimiter
 1.0E-9			pMinDim
 1.0e-9			PeMinDim
 
+#MINIMUMRADIALSPEED
+T			UseSpeedMin
+10			rSpeedMin
+500			SpeedMinDim  ! 250km/s has no effect in this test
+10 h			TauSpeedMinDim
 
 #NONCONSERVATIVE
 T			UseNonConservative
