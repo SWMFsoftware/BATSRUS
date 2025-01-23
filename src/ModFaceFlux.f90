@@ -33,7 +33,7 @@ module ModFaceFlux
        UseEfield, &                      ! electric field
        FluxCenter_VGD, DoCorrectFace, &
        UseLowOrder, IsLowOrderOnly_B, DoUpdate_V, &
-       UseElectronEnergy, UseTotalIonEnergy, iTypeUpdate, UpdateOrig_
+       UseElectronEnergy, UseTotalIonEnergy
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal, GammaElectron, &
        GammaElectronMinus1, InvGammaElectronMinus1, Gamma, GammaMinus1, &
        InvGammaMinus1, Gamma_I, InvGammaMinus1_I, GammaMinus1_I
@@ -2964,7 +2964,6 @@ contains
     !==========================================================================
     subroutine get_mhd_speed
 
-      use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0, UseB0MomentumFlux
       use ModPhysics,  ONLY: ElectronPressureRatio
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
@@ -2983,10 +2982,10 @@ contains
       ! dB1DotFullB = sum(dB1_D*[FullBx, FullBy, FullBz]
       real:: dB1DotFullB
 
-      real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
-           B1B0L, B1B0R, cSaMhdLeft, cSaMhdRight
+      real:: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
+           cSaMhdLeft, cSaMhdRight
 
-      real :: MultiIonFactor, ChargeDens_I(nIonFluid)
+      real:: MultiIonFactor, ChargeDens_I(nIonFluid)
       integer:: jFluid
       !------------------------------------------------------------------------
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
@@ -3111,16 +3110,6 @@ contains
          DiffBb = 0.250*sum(dB1_D*Normal_D)**2
       else
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
-      end if
-      if(iTypeUpdate == UpdateOrig_ .and. UseCurlB0 &
-           .and. .not.UseB0MomentumFlux .and. rFace > rCurrentFreeB0)then
-         B1B0L = StateLeft_V(Bx_)*B0x &
-              +  StateLeft_V(By_)*B0y &
-              +  StateLeft_V(Bz_)*B0z
-         B1B0R = StateRight_V(Bx_)*B0x &
-              +  StateRight_V(By_)*B0y &
-              +  StateRight_V(Bz_)*B0z
-         Alfven2 = Alfven2 +(abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
       end if
 
       FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
