@@ -6,15 +6,19 @@ module ModUpdateStateFast
 
   ! Parameters optimized to constants based on PARAM.in file
   use ModOptimizeParam, ONLY: &
-       DoLf, LimiterBeta, nStage, iStage, nOrder, &
-       IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
+       DoLf, LimiterBeta, nStage, iStage, nOrder, UseAccurateResChange, &
+       IsCartesian, IsCartesianGrid, & 
        UseDivbSource, UseHyperbolicDivB, UseB0, UseCurlB0, &
        IsTimeAccurate, UseDtFixed, rLocalTimeStep, &
-       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin, &
-       UseElectronEntropy, UseGravity, UseRotatingFrame, UseRotatingBc, &
-       UseAccurateResChange, UseCpcpBc, B1rCoef, &
+       UseBody, UseCpcpBc, B1rCoef, &
+       UseBorisCorrection, ClightFactor, UseElectronEntropy, &
+       UseNonConservative, nConservCrit, &
+       UseRhoMin, UsePMin, UseSpeedMin, &
+       UseGravity, UseRotatingFrame, UseRotatingBc, &
        UseCoronalHeating, UseAlfvenWaveDissipation, &
        UseReynoldsDecomposition, UseTurbulentCascade
+
+  ! All other variables, parameters and subroutines
   use ModFaceValue, ONLY: correct_monotone_restrict, &
        accurate_reschange2d, accurate_reschange3d, get_log_limiter_var, &
        UseLogLimiter_V
@@ -40,7 +44,7 @@ module ModUpdateStateFast
        TeMin, OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
        GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
        No2Io_V, No2Si_V, iUnitCons_V, UnitU_, UnitTemperature_, &
-       AverageIonCharge, UseSpeedMin, SpeedMin, rSpeedMin, TauSpeedMin
+       AverageIonCharge, SpeedMin, rSpeedMin, TauSpeedMin
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
        iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax

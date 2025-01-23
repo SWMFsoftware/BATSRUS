@@ -294,6 +294,7 @@ sub set_optimization{
 	    UseRhoMin                => ".false.",
 	    UseRotatingBc            => ".false.",
 	    UseRotatingFrame         => ".false.",
+	    UseSpeedMin              => ".false.",
 	    UseTurbulentCascade      => ".false.",
             iStage                   => 1,
             nStage                   => 1,
@@ -414,7 +415,10 @@ sub set_optimization{
 	    }elsif(/^#MINIMUMPRESSURE\b/){
 		check_var($Set{"UsePMin"}, "T", $first);
 	    }elsif(/^#MINIMUMDENSITY\b/){
-		check_var($Set{"UseRhoMin"}, "T", $first);		
+		check_var($Set{"UseRhoMin"}, "T", $first);
+	    }elsif(/^#MINIMUMRADIALSPEED\b/){
+		my $usespeedmin = <FILE>;
+		check_var($Set{"UseSpeedMin"}, $usespeedmin, $first);
 	    }elsif(/^#FIXEDTIMESTEP\b/){
 		my $usedtfixed = <FILE>;
 		check_var($Set{"UseDtFixed"}, $usedtfixed, $first);
