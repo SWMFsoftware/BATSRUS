@@ -7,7 +7,8 @@ module ModUser
        test_start, test_stop, iProc, lVerbose
 
   use ModMain, ONLY: nI, nJ,nK
-  use ModChromosphere, ONLY: tChromoSi=>TeChromosphereSi
+  use ModChromosphere, ONLY: tChromoSi=>TeChromosphereSi, &
+       tChromo => TeChromosphere
   use ModTurbulence, ONLY: PoyntingFluxPerB, PoyntingFluxPerBSi, &
        IsOnAwRepresentative
   use ModUserEmpty,                                     &
@@ -35,8 +36,8 @@ module ModUser
 
   ! Input parameters for chromospheric inner BC's
   real    :: ChromoNSi = 2e17   ! tChromoSi = 5e4
-  real    :: ChromoN, RhoChromo, tChromo
-  !$acc declare create(ChromoN, tChromo)
+  real    :: ChromoN, RhoChromo
+  !$acc declare create(ChromoN)
   logical :: UseUparBc = .false.
 
   ! variables for Parker initial condition
@@ -1282,6 +1283,7 @@ contains
 
     if(UseAwsom)then
 
+#ifndef _OPENACC
        select case(TypeBc)
        case('usersemi','user_semi')
           IsFound = .true.
@@ -1298,7 +1300,8 @@ contains
           IsFound = .false.
           RETURN
        end select
-
+#endif
+       
        !$acc loop vector collapse(2) independent &
        !$acc private(rUnit_D, Br1_D, Bt1_D, FullB_D)
        do k = MinK, MaxK; do j = MinJ, MaxJ

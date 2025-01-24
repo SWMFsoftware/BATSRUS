@@ -66,7 +66,8 @@ module ModUpdateStateFast
        calc_alfven_wave_dissipation, WaveDissipationRate_VCI, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
        turbulent_cascade, get_wave_reflection_cell
-  use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor
+  use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
+       TeChromosphere
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
        get_gamma_collisionless
   use ModUtilities, ONLY: i_gang
@@ -1577,6 +1578,7 @@ contains
     integer :: i, j, k, iSide
     integer :: iTypeBC
     logical :: IsLinearBc, IsFound, IsSemi
+    real    :: TeBc
 
     character(len=30):: TypeBc
     !--------------------------------------------------------------------------
@@ -1596,13 +1598,15 @@ contains
        TypeBc = TypeCellBc_I(iSide)
 
        if(iTypeBC == UserBC_) then
-          if(IsLinearBc) then
+          if(IsSemi) then
+             TeBc = 0
+             if(.not. IsLinearBc) TeBc = TeChromosphere
+
              !$acc loop vector collapse(3) independent
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
-                State_VG(:,i,j,k) = 0
+                State_VG(:,i,j,k) = TeBc
              end do; end do; end do
           else
-             if(IsSemi) TypeBc = 'user_semi'
              call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
           end if
        else

@@ -10,6 +10,7 @@ module ModChromosphere
        test_start, test_stop, nI, nJ, nK
   use BATL_size, ONLY: nGang
   use ModBatsrusUtility, ONLY: stop_mpi
+  use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
 
   implicit none
 
@@ -21,6 +22,8 @@ module ModChromosphere
 
   real   :: NumberDensChromosphereCgs = 2.0e+11 ! [cm^{-3}]
   real   :: TeChromosphereSi = 5.0e4            ! [K]
+  real   :: TeChromosphere
+  !$acc declare create(TeChromosphere)
 
   ! TRANSITION REGION
 
@@ -63,6 +66,9 @@ contains
   !============================================================================
   subroutine init_chromosphere
     !--------------------------------------------------------------------------
+   TeChromosphere = TeChromosphereSi*Si2No_V(UnitTemperature_)
+   !$acc update device(TeChromosphere)
+
    if(.not.allocated(TeSi_CI)) then
       allocate(TeSi_CI(nI,nJ,nK,nGang))
    end if
