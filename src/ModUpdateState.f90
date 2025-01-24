@@ -258,7 +258,9 @@ contains
     use ModUserInterface
     use ModBuffer,      ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, HypEDecay
-    use ModMultiFluid,  ONLY: MassIon_I, ChargeIon_I, ChargePerMass_I, &
+    use ModMultiFluid,  ONLY: &
+         MassIon_I, InvMassIon_I, &
+         ChargeIon_I, ChargePerMass_I, ElectronPerMass_I, &
          iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iPIon_I, iSperpion_I, iSparIon_I, &
          nIonFluid, UseNeutralFluid, DoConserveNeutrals
@@ -366,12 +368,12 @@ contains
     ! S(Se) = S(Pe)/rho^(gammaE-1)
     if(UseElectronPressure .and. UseElectronEntropy)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
+          Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I)
           Source_VC(Se_,i,j,k) = &
                Source_VC(Pe_,i,j,k)*Ne**(-GammaElectronMinus1) &
                - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock) &
                *Ne**(-GammaElectron) &
-               *sum(ChargePerMass_I*Source_VC(iRhoIon_I,i,j,k))
+               *sum(ElectronPerMass_I*Source_VC(iRhoIon_I,i,j,k))
        end do; end do; end do
     end if
 
@@ -706,12 +708,12 @@ contains
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock) &
-                 *sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+                 *sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I) &
                  **(-GammaElectronMinus1)
             ! State_VGB is not used in 1-stage and HalfStep schemes
             if(.not.UseHalfStep .and. nStage > 1) &
                  State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-                 *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+                 *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I) &
                  **(-GammaElectronMinus1)
          end do; end do; end do
       end if
@@ -861,7 +863,7 @@ contains
             if(State_VGB(Pe_,i,j,k,iBlock) > 0.0) &
                  State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Se_,i,j,k,iBlock) &
                  *max(0.0, &
-                 sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)) &
+                 sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I)) &
                  **GammaElectronMinus1
          end do; end do; end do
       end if
@@ -1018,7 +1020,7 @@ contains
                     State_VGB(Pe_,iTest,jTest,kTest,iBlock)
                write(*,*) NameSub,' sIon_I, Se=', s_IC(:,iTest,jTest,kTest), &
                     State_VGB(Pe_,iTest,jTest,kTest,iBlock)/ &
-                    sum(ChargePerMass_I* &
+                    sum(ElectronPerMass_I* &
                     State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlock)) &
                     **(-GammaElectronMinus1)
             else
@@ -1035,7 +1037,7 @@ contains
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
             ! Number densities for ions and electrons
-            Num_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
+            Num_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)*InvMassIon_I
             if(UseElectronShockHeating) Num_I(nIonFluid+1) &
                  = sum(Num_I(1:nIonFluid)*ChargeIon_I)
             ! Modify ion weights if required
@@ -1954,10 +1956,10 @@ contains
     ! their mass density weighted average, and/or the ion temperature of the
     ! individual fluids equal to their number density weighted average.
 
-    use ModSize,       ONLY: nI, nJ, nK
+    use BATL_lib,      ONLY: nI, nJ, nK
     use ModMultiFluid, ONLY: nIonFluid, iRhoIon_I, &
          iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I, &
-         MassIon_I
+         MassIon_I, InvMassIon_I
 
     integer, intent(in) :: iBlock
 
@@ -2008,7 +2010,7 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Number density
-          NumDens_I = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
+          NumDens_I = State_VGB(iRhoIon_I,i,j,k,iBlock)*InvMassIon_I
 
           ! Average temperature = sum(p)/sum(n) = sum(p)/sum(rho/M)
           Temp = sum(State_VGB(iPIon_I,i,j,k,iBlock)) / sum(NumDens_I)
@@ -2036,8 +2038,9 @@ contains
   end subroutine fix_multi_ion_update
   !============================================================================
   subroutine fix_wdiff(iBlock)
+
     use ModVarIndexes, ONLY: WDiff_, WaveFirst_, WaveLast_
-    use ModSize, ONLY: nI, nJ, nK
+    use BATL_lib, ONLY: nI, nJ, nK
 
     integer, intent(in) :: iBlock
     integer :: i, j, k
