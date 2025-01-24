@@ -81,8 +81,7 @@ module ModPhysics
   real:: ElectronPressureRatio    = 0.0
   real:: PePerPtotal              = 0.0
   real:: IonMassPerCharge         = 1.0
-  !$acc declare create(AverageIonCharge, ElectronPressureRatio, PePerPtotal)
-  !$acc declare create(IonMassPerCharge)
+  !$acc declare create(AverageIonCharge, PePerPtotal)
 
   ! Quantities for reduced mass and collision frequencies
   real:: MassIonElectron_I(nIonFluid+1)
@@ -201,19 +200,16 @@ module ModPhysics
 
   ! Radius and center coordinates
   real:: rBody2=0.0, xBody2=0.0, yBody2=0.0, zBody2=0.0, vBody2_D(3) = 0.0
-  !$acc declare create(rBody2, xBody2, yBody2, zBody2, vBody2_D)
 
   ! Dimensional and diminsionless parameters on the seconnd body boundary
   real:: Body2NDim = 0.0, Body2TDim = 0.0, RhoBody2 = 0.0, pBody2 = 0.0
-  !$acc declare create(Body2NDim, Body2TDim, RhoBody2, pBody2)
 
   ! Second body mass and gravity force parameter derived from it
   real:: MassBody2Si, gBody2 = 0.0
-  !$acc declare create(MassBody2Si,gBody2)
+
   ! Logical determining if the orbit elements from CON_planet are used to
   ! trace a second body.
   logical:: UseBody2Orbit = .false.
-  !$acc declare create(UseBody2Orbit)
 
   ! Variables for two-state shock tube problems
   logical:: UseShockTube = .false.
@@ -1469,7 +1465,6 @@ contains
     yBody2 = XyzBody2_D(2)
     zBody2 = XyzBody2_D(3)
     vBody2_D = matmul(Transform_DD, vBody2Hgi_D)*Si2No_V(UnitU_)
-    !$acc update device(xBody2, yBody2, zBody2, vBody2_D)
 
   end subroutine set_second_body_coord
   !============================================================================
