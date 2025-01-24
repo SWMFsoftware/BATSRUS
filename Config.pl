@@ -282,6 +282,7 @@ sub set_optimization{
 	    UseCoarseAxis            => ".false.",
 	    UseCpcpBc                => ".false.",
 	    UseCoronalHeating        => ".false.",
+	    UseCurlB0                => ".false.",
 	    UseDivbSource            => "UseB .and. nDim>1",
 	    UseDtFixed               => ".false.",
 	    UseElectronEntropy       => "UseElectronPressure",
@@ -293,11 +294,13 @@ sub set_optimization{
 	    UseRhoMin                => ".false.",
 	    UseRotatingBc            => ".false.",
 	    UseRotatingFrame         => ".false.",
+	    UseSpeedMin              => ".false.",
 	    UseTurbulentCascade      => ".false.",
             iStage                   => 1,
             nStage                   => 1,
 	    nConservCrit             => 0,
 	    nOrder                   => 1,
+	    rLocalTimeStep           => "-1.0",
 	    );
 
 	# Component dependent defaults (from ModSetParameters)
@@ -321,6 +324,10 @@ sub set_optimization{
 	    if(/^#TIMEACCURATE\b/){
 		my $timeacc = <FILE>;
 		check_var($Set{"IsTimeAccurate"}, $timeacc, $first);
+	    }elsif(/^#PARTLOCALTIMESTEP\b/){
+		my $r = <FILE>; 
+		print "!!!! r=$r\n";
+		check_var($Set{"rLocalTimeStep"}, $r, $first);
 	    }elsif(/^#TIMESTEPLIMIT\b/){
 		my $do = <FILE>; # not time accurate if limiting time step
 		check_var($Set{"IsTimeAccurate"},'F',$first) if $do =~ /^\s*T/;
@@ -408,7 +415,10 @@ sub set_optimization{
 	    }elsif(/^#MINIMUMPRESSURE\b/){
 		check_var($Set{"UsePMin"}, "T", $first);
 	    }elsif(/^#MINIMUMDENSITY\b/){
-		check_var($Set{"UseRhoMin"}, "T", $first);		
+		check_var($Set{"UseRhoMin"}, "T", $first);
+	    }elsif(/^#MINIMUMRADIALSPEED\b/){
+		my $usespeedmin = <FILE>;
+		check_var($Set{"UseSpeedMin"}, $usespeedmin, $first);
 	    }elsif(/^#FIXEDTIMESTEP\b/){
 		my $usedtfixed = <FILE>;
 		check_var($Set{"UseDtFixed"}, $usedtfixed, $first);
@@ -432,6 +442,12 @@ sub set_optimization{
 	    }elsif(/^#GRAVITY\b/){
 		my $usegrav = <FILE>;
 		check_var($Set{"UseGravity"}, $usegrav, $first);
+	    }elsif(/^#HARMONICSFILE\b/){
+		# The default is Rss = 2.5
+		check_var($Set{"UseCurlB0"}, "T", $first);
+	    }elsif(/^#HARMONICSGRID\b/){
+		my $r = <FILE>; $r = <FILE>;
+		check_var($Set{"UseCurlB0"}, "F", $first) if $r >= 24;
 	    }
 	}
 	close(FILE);

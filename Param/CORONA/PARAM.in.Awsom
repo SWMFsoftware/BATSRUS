@@ -3,13 +3,6 @@ Begin session: 1
 #DESCRIPTION
 Param/CORONA/PARAM.in.Awsom: Input file for creating a steady state solar corona		StringDescription
 
-#UPDATECHECK
-T			UseUpdateCheck
-40.			RhoMinPercent
-400.			RhoMaxPercent
-40.			pMinPercent
-400.			pMaxPercent
-
 #COMPONENT
 SC			NameComp
 
@@ -52,10 +45,10 @@ T			IsLogRadius
 FACTORB0
 2.0			FactorB0
 
-#CURLB0
+CURLB0
 T			UseCurlB0
 2.5			rCurrentFreeB0
-F			UseB0MomentumFlux
+T			UseB0MomentumFlux
 
 #POYNTINGFLUX
 1e6			PoyntingFluxPerBSi
@@ -196,9 +189,6 @@ T			UseSpeedMin
 
 #NONCONSERVATIVE
 T			UseNonConservative
-
-#MESSAGEPASS
-all			TypeMessagePass
 
 #RESCHANGE
 T			UseAccurateReschange
@@ -392,9 +382,6 @@ cancelflux		TypeBStrap
 
 #HELIOUPDATEB0
 -1.0			DtUpdateB0
-
-#UPDATECHECK
-F			UseUpdateCheck
 
 #STOP
 -1			MaxIteration

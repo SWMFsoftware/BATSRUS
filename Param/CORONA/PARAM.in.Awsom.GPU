@@ -39,10 +39,10 @@ HGR			TypeCoordSystem
 #HARMONICSFILE
 Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
 
-#HARMONICSGRID
+HARMONICSGRID
 1.0			rMagnetogram
 25			rSourceSurface
-F			IsLogRadius
+T			IsLogRadius
 30			MaxOrder
 30			nR
 72			nLon
@@ -169,6 +169,11 @@ F			UseRhoRatioLimiter
 1.0E-9			pMinDim
 1.0e-9			PeMinDim
 
+#MINIMUMRADIALSPEED
+T			UseSpeedMin
+10			rSpeedMin
+500			SpeedMinDim  ! 250km/s has no effect in this test
+10 h			TauSpeedMinDim
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -217,7 +222,7 @@ F			DoAmr
 #TIMEACCURATE
 T			IsTimeAccurate
 
-PARTLOCALTIMESTEP
+#PARTLOCALTIMESTEP
 1.1			rLocalTimeStep
 
 #STOP
