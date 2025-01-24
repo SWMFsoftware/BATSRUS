@@ -62,8 +62,8 @@ module ModUpdateStateFast
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModTurbulence, ONLY: CoronalHeating_CI, &
-       calc_alfven_wave_dissipation, WaveDissipationRate_VCI, &
+  use ModTurbulence, ONLY: &
+       calc_alfven_wave_dissipation, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
        turbulent_cascade, get_wave_reflection_cell
   use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -523,6 +523,7 @@ contains
     real:: Change_V(nFlux), Force_D(3), CurlB0_D(3)
 
     ! Coronal Heating
+    real :: CoronalHeating, WaveDissipationRate_V(WaveFirst_:WaveLast_)
     real :: QPerQtotal_I(nIonFluid)
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
@@ -736,12 +737,10 @@ contains
 
           if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_V, CoronalHeating)
           else
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_V, CoronalHeating)
           end if
 
           if(DoExtendTransitionRegion) then
@@ -750,33 +749,29 @@ contains
                   MassIon_I(1)/AverageIonCharge
 
              ExtensionFactorInv = 1/extension_factor(TeSi)
-             WaveDissipationRate_VCI(:,i,j,k,iGang) = ExtensionFactorInv* &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang)
-             CoronalHeating_CI(i,j,k,iGang) = ExtensionFactorInv* &
-                  CoronalHeating_CI(i,j,k,iGang)
+             WaveDissipationRate_V = ExtensionFactorInv*WaveDissipationRate_V
+             CoronalHeating = ExtensionFactorInv*CoronalHeating
           end if
 
        end if
 
-       if(UseTurbulentCascade) then
-          call get_wave_reflection_cell(i,j,k,iBlock,&
-               Change_V(WaveFirst_:WaveLast_))
-       endif
+       if(UseTurbulentCascade) call get_wave_reflection_cell(i, j, k, iBlock, &
+            Change_V(WaveFirst_:WaveLast_))
 
        if(UseAlfvenWaveDissipation)then
           Change_V(WaveFirst_:WaveLast_) = &
                Change_V(WaveFirst_:WaveLast_) &
-               - WaveDissipationRate_VCI(:,i,j,k,iGang)*&
+               - WaveDissipationRate_V*&
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
 
           ! arithmetic average of cascade rates for w_D, if needed
           if(WDiff_ > 1) Change_V(WDiff_) = Change_V(WDiff_) &
-               - 0.5*sum(WaveDissipationRate_VCI(:,i,j,k,iGang)) &
+               - 0.5*sum(WaveDissipationRate_V) &
                *State_VGB(WDiff_,i,j,k,iBlock)
           ! weighted average of cascade rates for Lperp_, if needed
           if(Lperp_ > 1) Change_V(Lperp_) = Change_V(Lperp_) +&
                KarmanTaylorBeta2AlphaRatio*sum( &
-               WaveDissipationRate_VCI(:,i,j,k,iGang)*  &
+               WaveDissipationRate_V*  &
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
                max(1e-30, sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))) &
                *State_VGB(Lperp_,i,j,k,iBlock)
@@ -793,38 +788,32 @@ contains
           if(UseElectronPressure)then
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang), TeSi, &
+                  WaveDissipationRate_V, CoronalHeating, TeSi, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
              Change_V(Pe_) = Change_V(Pe_) &
-                  + CoronalHeating_CI(i,j,k,iGang)*&
-                  GammaElectronMinus1*QePerQtotal
+                  + CoronalHeating*GammaElectronMinus1*QePerQtotal
 
              Change_V(iPIon_I) = Change_V(iPIon_I) &
-                  + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I &
-                  *GammaMinus1_I(1:nIonFluid)
+                  + CoronalHeating*QPerQtotal_I*GammaMinus1_I(1:nIonFluid)
              Change_V(Energy_:Energy_-1+nIonFluid) = &
                   Change_V(Energy_:Energy_-1+nIonFluid) &
-                  + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I
+                  + CoronalHeating*QPerQtotal_I
 
              if(UseAnisoPressure)then
                 do iFluid = 1, nIonFluid
                    Change_V(iPparIon_I(iFluid)) = &
                         Change_V(iPparIon_I(iFluid)) &
-                        + CoronalHeating_CI(i,j,k,iGang)*&
-                        QparPerQtotal_I(iFluid)*2
+                        + CoronalHeating*QparPerQtotal_I(iFluid)*2
                 end do
              end if
           else
-             Change_V(p_) = Change_V(p_) &
-                  + CoronalHeating_CI(i,j,k,iGang)*GammaMinus1
-             Change_V(Energy_) = Change_V(Energy_) &
-                  + CoronalHeating_CI(i,j,k,iGang)
+             Change_V(p_) = Change_V(p_) + CoronalHeating*GammaMinus1
+             Change_V(Energy_) = Change_V(Energy_) + CoronalHeating
           end if
 #ifdef TESTACC
           if(DoTestSource .and. DoTestCell) then
-             write(*,*) 'CoronalHeating=', CoronalHeating_CI(i,j,k,iGang)
+             write(*,*) 'CoronalHeating=', CoronalHeating
              write(*,*) 'After UseCoronalHeating S(iVarTest)=', &
                   Change_V(iVarTest)
           end if
