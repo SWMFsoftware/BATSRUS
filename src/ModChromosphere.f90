@@ -53,7 +53,6 @@ module ModChromosphere
 
 contains
   !============================================================================
-
   subroutine read_chromosphere_param
 
     use ModReadParam, ONLY: read_var
@@ -66,12 +65,12 @@ contains
   !============================================================================
   subroutine init_chromosphere
     !--------------------------------------------------------------------------
-   TeChromosphere = TeChromosphereSi*Si2No_V(UnitTemperature_)
-   !$acc update device(TeChromosphere)
+    TeChromosphere = TeChromosphereSi*Si2No_V(UnitTemperature_)
+    !$acc update device(TeChromosphere)
 
-   if(.not.allocated(TeSi_CI)) then
-      allocate(TeSi_CI(nI,nJ,nK,nGang))
-   end if
+    if(.not.allocated(TeSi_CI)) allocate(TeSi_CI(nI,nJ,nK,nGang))
+
+
   end subroutine init_chromosphere
   !============================================================================
   real function extension_factor(TeSi)
@@ -83,20 +82,21 @@ contains
     character(len=*), parameter:: NameSub = 'extension_factor'
     !--------------------------------------------------------------------------
 #ifndef _OPENACC
-    if(TeSi<1.0e1)then
+    if(TeSi < 10)then
        write(*,*)'TeSi input =', TeSi
        call stop_mpi('Incorrect input temperature in '//NameSub)
     end if
 #endif
-    FractionSpitzer = 0.5*(1.0+tanh((TeSi-TeModSi)/DeltaTeModSi))
+    FractionSpitzer = 0.5*(1 + tanh((TeSi - TeModSi)/DeltaTeModSi))
 
     extension_factor = FractionSpitzer + &
-         (1.0 - FractionSpitzer)*(TeModSi/TeSi)**2.5
+         (1 - FractionSpitzer)*sqrt((TeModSi/TeSi)**5)
+
   end function extension_factor
   !============================================================================
-
   subroutine get_tesi_c(iBlock, TeSi_C)
     !$acc routine vector
+
     use BATL_lib,      ONLY: Xyz_DGB
     use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
     use ModAdvance,    ONLY: State_VGB, p_, Pe_, Rho_
@@ -179,8 +179,8 @@ contains
     endif
 #endif
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine get_tesi_c
   !============================================================================
-
 end module ModChromosphere
 !==============================================================================
