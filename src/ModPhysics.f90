@@ -378,9 +378,13 @@ contains
 
     ! Second body mass is set to zero by default
     MassBody2Si = 0.0
-    !$acc update device(MassBody2Si)
+
+    ! 1/M for faster calculations
+    InvMassFluid_I = 1/MassFluid_I
+
     ! Make sure that MassIon_I is consistent with MassFluid_I
     MassIon_I = MassFluid_I(1:nIonFluid)
+    InvMassIon_I = 1/MassIon_I
 
     ! Call set_units, which set the quantities for converting from
     ! normalized to  dimensional quantities and vice versa.  Also
@@ -415,11 +419,13 @@ contains
     ! so we keep the name.
     ElectronCharge = 1.0/IonMassPerCharge
 
+    ! Number of electrons per mass densitiy. Note that ChargeIon_I means
+    ! charge state Z. Ne = sum(ElectronPerMass_I*State_V(iRhoIon_I))
+    ElectronPerMass_I = ChargeIon_I*InvMassIon_I
+
     ! Charge per mass in normalized units, This is needed in
     ! formulas like rho_s q_s/m_s (E + u_s x B)
-    ! Note that ChargeIon_I is for charge state Z, which is not
-    ! in normalized units.
-    ChargePerMass_I = ChargeIon_I/MassIon_I*ElectronCharge
+    ChargePerMass_I = ElectronPerMass_I*ElectronCharge
 
     ! Electron gyro-frequency coefficient in normalized units
     ! GyroFreq = ElectronGyroFreqCoef * |B|  [1/time]
@@ -431,9 +437,9 @@ contains
 
     ! arrays to have electron mass and charge available in an indexed
     ! arrary when no electron fluid present
-    MassIonElectron_I(:nIonFluid)  = MassIon_I
+    MassIonElectron_I(1:nIonFluid) = MassIon_I
     MassIonElectron_I(nIonFluid+1) = cElectronMass/cProtonMass
-    Charge_I(:nIonFluid)  = ChargeIon_I
+    Charge_I(1:nIonFluid) = ChargeIon_I
     Charge_I(nIonFluid+1) = -1.0
 
     ! Coefficient for effective ion-ion collision frequencies
@@ -487,7 +493,6 @@ contains
     end if
 
     gBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
-    !$acc update device(gBody2)
 
     ! Normalize shocktube/uniform/radial state values
     ShockLeft_V  = ShockLeftDim_V * Io2No_V(iUnitPrim_V)
@@ -543,7 +548,7 @@ contains
     RhoBody2= Body2NDim *Io2No_V(UnitN_)*MassIon_I(1)
     pBody2  = RhoBody2 * Body2TDim*Io2No_V(UnitTemperature_)
     if(UseBody2Orbit)call set_second_body_coord
-    !$acc update device(RhoBody2,pBody2)
+
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization
     do iBoundary = SolidBc_, zMaxBc_
@@ -790,18 +795,15 @@ contains
          SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
     !$acc update device(SpeedHyp, C2light, InvClight, InvClight2, ClightFactor)
-    !$acc update device(pOutflow)
-    !$acc update device(CellState_VI)
-    !$acc update device(FaceState_VI)
-    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, PeMin, TMin_I)
-    !$acc update device(OmegaBody, Bdp)
-    !$acc update device(gBody)
-    !$acc update device(TeMin)
+    !$acc update device(CellState_VI, FaceState_VI, pOutflow)
+    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, PeMin)
+    !$acc update device(TMin_I, TeMin)
+    !$acc update device(rBody, gBody, OmegaBody, Bdp)
     !$acc update device(PolarRho_I, PolarP_I)
-    !$acc update device(MassIon_I, ChargeIon_I, ChargePerMass_I)
+    !$acc update device(InvMassFluid_I, MassIon_I, InvMassIon_I)
+    !$acc update device(ChargeIon_I, ChargePerMass_I, ElectonPerMass_I)
     !$acc update device(IonMassPerCharge)
     !$acc update device(CollisionCoef_II)
-    !$acc update device(rBody)
     !$acc update device(UseSpeedMin, SpeedMin, rSpeedMin, TauSpeedMin)
 
     call test_stop(NameSub, DoTest)
