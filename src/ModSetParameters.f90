@@ -95,7 +95,7 @@ contains
     use ModRadDiffusion,   ONLY: read_rad_diffusion_param
     use ModResistivity, ONLY: UseResistivity, &
          read_resistivity_param, init_mod_resistivity
-    use ModMultiFluid, ONLY: MassIon_I,ChargeIon_I,nIonFluid, &
+    use ModMultiFluid, ONLY: ChargeIon_I, nIonFluid, &
          DoConserveNeutrals, DoOhNeutralBc, &
          uBcFactor_I, RhoBcFactor_I, RhoNeuWindDim, &
          UxNeuWindDim, UyNeuWindDim, UzNeuWindDim, &
@@ -2084,8 +2084,6 @@ contains
 
        case("#USERINPUTBEGIN")
           call user_read_inputs
-          ! Make sure that MassIon_I is consistent with MassFluid_I
-          MassIon_I = MassFluid_I(1:nIonFluid)
 
        case("#CODEVERSION")
           ! Only kept for backward compatibility.
@@ -2362,7 +2360,6 @@ contains
                 do iFluid = 1, nFluid
                    call read_var('MassFluid', MassFluid_I(iFluid))
                 end do
-                MassIon_I = MassFluid_I(1:nIonFluid)
                 do iFluid = 1, nIonFluid
                    call read_var('ChargeIon', ChargeIon_I(iFluid))
                 end do
@@ -2373,10 +2370,9 @@ contains
           ElectronPressureRatio = ElectronTemperatureRatio
 
           ! AverageIonCharge is only useful when there is only one ion
-          if(nIonFluid==1 .and. .not. UseMultiSpecies)then
+          if(nIonFluid == 1 .and. .not. UseMultiSpecies)then
              AverageIonCharge = ChargeIon_I(1)
              ElectronPressureRatio = ElectronTemperatureRatio*AverageIonCharge
-             !$acc update device(AverageIonCharge)
           end if
 
           PePerPtotal = ElectronPressureRatio/(1 + ElectronPressureRatio)
@@ -2479,14 +2475,11 @@ contains
              call read_var('MassBody2Si',MassBody2Si)
              call read_var('Body2NDim', Body2NDim)
              call read_var('Body2TDim', Body2TDim)
-             !$acc update device(rBody2, MassBody2Si, Body2NDim, Body2TDim)
              call read_var('UseBody2Orbit',  UseBody2Orbit)
-             !$acc update device(rBody2,UseBody2Orbit)
              if(.not.UseBody2Orbit)then
                 call read_var('xBody2', xBody2)
                 call read_var('yBody2', yBody2)
                 call read_var('zBody2', zBody2)
-                !$acc update device( xBody2, yBody2, zBody2)
              end if
           end if
 
@@ -3076,7 +3069,7 @@ contains
       ! Remove tailing spaces
       NamePrimitiveVarOrig    = trim(StringPrimitiveOrig)
 
-      !$acc update device (NameVar_V)
+      !$acc update device(NameVar_V)
 
     end subroutine set_namevar
     !==========================================================================
@@ -3165,12 +3158,10 @@ contains
       xBody2 = 0.0
       yBody2 = 0.0
       zBody2 = 0.0
-      !$acc update device(rBody2, xBody2, yBody2, zBody2)
+
       BdpBody2_D  = 0.0
       Body2NDim   = 1.0    ! n/cc
       Body2TDim   = 10000.0! K
-      !$acc update device(Body2NDim, Body2TDim)
-      MassIon_I = MassFluid_I(1:nIonFluid) ! Ion masses
 
       call init_mod_amr
 
@@ -3215,9 +3206,6 @@ contains
                SemiParam%MaxMatvec = 20
                SemiParam%nKrylovVector = SemiParam%MaxMatvec
             end if
-            !$acc update device(UseHeatFluxCollisionless)
-            !$acc update device(UseHeatFluxRegion, UseHeatConduction)
-            !$acc update device(TypeSemiImplicit)
          end if
 
          ! Set anisotropic pressure instability defaults for first ion fluid
@@ -3962,10 +3950,14 @@ contains
       !$acc update device(DoCoupleImPressure, DoCoupleImDensity, TauCoupleIM)
       !$acc update device(DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm)
       !$acc update device(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
-      !$acc update device(UseBody2Orbit)
       !$acc update device(UseElectronEntropy)
       !$acc update device(DoUpdate_V)
       !$acc update device(StartTime)
+      !$acc update device(AverageIonCharge, PePerPtotal)
+      !$acc update device(UseHeatFluxCollisionless)
+      !$acc update device(UseHeatFluxRegion, UseHeatConduction)
+      !$acc update device(TypeSemiImplicit)
+
     end subroutine correct_parameters
     !==========================================================================
     subroutine correct_grid_geometry
