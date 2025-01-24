@@ -23,8 +23,9 @@ module ModUpdateStateFast
        accurate_reschange2d, accurate_reschange3d, get_log_limiter_var, &
        UseLogLimiter_V
   use ModVarIndexes
-  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
-       ChargePerMass_I, iPIon_I, MassIon_I, ChargeIon_I
+  use ModMultiFluid, ONLY: &
+       iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, InvMassFluid_I, &
+       nIonFluid, iPIon_I, MassIon_I, ElectronPerMass_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
@@ -748,9 +749,9 @@ contains
                   MassIon_I(1)/AverageIonCharge
 
              ExtensionFactorInv = 1/extension_factor(TeSi)
-             WaveDissipationRate_VCI(:,i,j,k,iGang) = ExtensionFactorInv*&
+             WaveDissipationRate_VCI(:,i,j,k,iGang) = ExtensionFactorInv* &
                   WaveDissipationRate_VCI(:,i,j,k,iGang)
-             CoronalHeating_CI(i,j,k,iGang) = ExtensionFactorInv*&
+             CoronalHeating_CI(i,j,k,iGang) = ExtensionFactorInv* &
                   CoronalHeating_CI(i,j,k,iGang)
           end if
 
@@ -902,12 +903,12 @@ contains
     ! Convert electron pressure source term to electron entropy source
     ! if necessary: Se = Pe/Ne^(gammaE-1)
     if(UseElectronPressure .and. UseElectronEntropy)then
-       Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
+       Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I)
        Change_V(Se_) = &
             Change_V(Pe_)*Ne**(-GammaElectronMinus1) &
             - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock) &
             *Ne**(-GammaElectron) &
-            *sum(ChargePerMass_I*Change_V(iRhoIon_I))
+            *sum(ElectronPerMass_I*Change_V(iRhoIon_I))
     end if
 
     ! Add div(Flux) to Change_V
@@ -939,7 +940,8 @@ contains
        if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
           ! Overwrite pressure and change with energy
           call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-          do iFluid = 1, nFluid
+          Change_V(p_) = Change_V(Energy_)
+          do iFluid = 2, nFluid
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
        else
@@ -953,7 +955,7 @@ contains
        if(UseElectronPressure .and. UseElectronEntropy) &
             State_VGB(Pe_,i,j,k,iBlock) = &
             State_VGB(Pe_,i,j,k,iBlock)*&
-            sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+            sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
 
        State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
@@ -962,7 +964,8 @@ contains
        if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
           ! Overwrite old pressure and change with energy
           call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-          do iFluid = 1, nFluid
+          Change_V(p_) = Change_V(Energy_)
+          do iFluid = 2, nFluid
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
        else
@@ -975,7 +978,7 @@ contains
        ! Convert electron pressure to entropy
        if(UseElectronPressure .and. UseElectronEntropy) &
             StateOld_VGB(Pe_,i,j,k,iBlock) = StateOld_VGB(Pe_,i,j,k,iBlock) &
-            *sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+            *sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
 
        State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
@@ -990,12 +993,14 @@ contains
     ! Convert entropy to pressure
     if(UseElectronPressure .and. UseElectronEntropy) &
          State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-         *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+         *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I) &
          **GammaElectronMinus1
 
     ! Check minimum density
     if(UseRhoMin)then
-       do iFluid = 1, nFluid
+       State_VGB(Rho_,i,j,k,iBlock) = &
+            max(RhoMin_I(1), State_VGB(Rho_,i,j,k,iBlock))
+       do iFluid = 2, nFluid
           State_VGB(iRho_I(iFluid),i,j,k,iBlock) = max(RhoMin_I(iFluid),&
                State_VGB(iRho_I(iFluid),i,j,k,iBlock))
        end do
@@ -1995,7 +2000,7 @@ contains
 
     if(UseElectronPressure)then
        if(UseElectronEntropy) StateCons_V(Pe_) = &
-            State_V(Pe_)*sum(State_V(iRhoIon_I)*ChargePerMass_I) &
+            State_V(Pe_)*sum(State_V(iRhoIon_I)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
 
        Flux_V(Pe_) = Un*StateCons_V(Pe_)
@@ -2666,29 +2671,28 @@ contains
   !============================================================================
   subroutine limit_pressure(State_V)
     !$acc routine seq
+
     real, intent(inout):: State_V(nVar)
 
-    real :: NumDens, Ne
     integer:: iFluid, iP
     !--------------------------------------------------------------------------
-    do iFluid = 1, nFluid
-       iP = iP_I(iFluid)
-       State_V(iP) = max(pMin_I(iFluid), State_V(iP))
+    State_V(p_) = max(State_V(p_), pMin_I(1))
+    if(Tmin_I(1) > 0) State_V(p_) = max(State_V(p_), &
+         State_V(Rho_)*InvMassFluid_I(1)*Tmin_I(1))
 
-       if(Tmin_I(iFluid) > 0) then
-          NumDens=State_V(iRho_I(iFluid))/MassFluid_I(iFluid)
-          State_V(iP) = max(NumDens*Tmin_I(iFluid), State_V(iP))
-       end if
+    do iFluid = 2, nFluid
+       iP = iP_I(iFluid)
+       State_V(iP) = max(State_V(iP), pMin_I(iFluid))
+       if(Tmin_I(iFluid) > 0) State_V(iP) = max(State_V(iP), &
+            State_V(iRho_I(iFluid))*InvMassFluid_I(iFluid)*Tmin_I(iFluid))
     end do
 
     if(UseElectronPressure)  then
-       State_V(Pe_) = max(PeMin, State_V(Pe_))
-
-       if(TeMin > 0) then
-          Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
-          State_V(Pe_) = max(Ne*TeMin, State_V(Pe_))
-       end if
+       State_V(Pe_) = max(State_V(Pe_), PeMin)
+       if(TeMin > 0) State_V(Pe_) = max(State_V(Pe_), &
+            sum(State_V(iRhoIon_I)*ElectronPerMass_I)*TeMin)
     end if
+
   end subroutine limit_pressure
   !============================================================================
   subroutine energy_to_pressure(State_V)
