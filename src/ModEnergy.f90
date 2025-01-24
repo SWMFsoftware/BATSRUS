@@ -12,8 +12,8 @@ module ModEnergy
        nFluid, nIonFluid, iRho, iRhoUx, iRhoUz, &
        iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iP, iP_I, iPIon_I, &
        UseMultiIon, UseNeutralFluid, DoConserveNeutrals, &
-       select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I, &
-       iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I
+       iRho_I, iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
+       InvMassFluid_I, ElectronPerMass_I, select_fluid
   use ModAdvance, ONLY: &
        State_VGB, UseElectronPressure, UseElectronEnergy, UseTotalIonEnergy
   use ModConservative, ONLY: is_conserv, UseNonConservative, nConservCrit
@@ -428,7 +428,7 @@ contains
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     integer:: i, j, k, iFluid
-    real :: NumDens, pMin, Ne
+    real:: pMin, Ne
 
     character(len=*), parameter:: NameSub = 'limit_pressure'
     !--------------------------------------------------------------------------
@@ -451,8 +451,8 @@ contains
        iP = iP_I(iFluid)
        !$acc loop vector collapse(3) independent
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          NumDens=State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
-          pMin = NumDens*Tmin_I(iFluid)
+          pMin = State_VGB(iRho_I(iFluid),i,j,k,iBlock) &
+               *InvMassFluid_I(iFluid)*Tmin_I(iFluid)
           State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
           if(UseAnisoPressure .and. IsIon_I(iFluid))&
                State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
@@ -474,7 +474,7 @@ contains
        if(TeMin > 0.0)then
           !$acc loop vector collapse(3) independent
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-             Ne = sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+             Ne = sum(ElectronPerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
              State_VGB(Pe_,i,j,k,iBlock) = &
                   max(Ne*TeMin, State_VGB(Pe_,i,j,k,iBlock))
              if(UseAnisoPe) State_VGB(Pepar_,i,j,k,iBlock)  = &
