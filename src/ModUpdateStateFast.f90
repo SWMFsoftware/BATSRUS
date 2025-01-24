@@ -9,11 +9,11 @@ module ModUpdateStateFast
        DoLf, LimiterBeta, nStage, iStage, nOrder, UseAccurateResChange, &
        IsCartesian, IsCartesianGrid, &
        UseDivbSource, UseHyperbolicDivB, UseB0, UseCurlB0, &
-       IsTimeAccurate, UseDtFixed, rLocalTimeStep, &
-       UseBody, UseCpcpBc, B1rCoef, &
+       IsTimeAccurate, UseDtFixed, rLocalTimeStep, UseBody, &
+       UseCpcpBc, B1rCoef, &
        UseBorisCorrection, ClightFactor, UseElectronEntropy, &
        UseNonConservative, nConservCrit, &
-       UseRhoMin, UsePMin, UseSpeedMin, &
+       UseRhoMin, UsePMin, UseSpeedMin, UseTMin, &
        UseGravity, UseRotatingFrame, UseRotatingBc, &
        UseCoronalHeating, UseAlfvenWaveDissipation, &
        UseReynoldsDecomposition, UseTurbulentCascade
@@ -945,7 +945,8 @@ contains
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
        else
-          call limit_pressure(State_VGB(:,i,j,k,iBlock))
+          if(UsePmin .or. UseTMin) &
+               call limit_pressure(State_VGB(:,i,j,k,iBlock))
        end if
 
        if(UseBorisCorrection) call mhd_to_boris( &
@@ -969,7 +970,8 @@ contains
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
        else
-          call limit_pressure(StateOld_VGB(:,i,j,k,iBlock))
+          if(UsePmin .or. UseTMin) &
+               call limit_pressure(StateOld_VGB(:,i,j,k,iBlock))
        end if
        if(UseBorisCorrection) call mhd_to_boris( &
             StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
@@ -1010,7 +1012,8 @@ contains
     if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)  then
        call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
     else
-       call limit_pressure(State_VGB(:,i,j,k,iBlock))
+       if(UsePmin .or. UseTMin) &
+            call limit_pressure(State_VGB(:,i,j,k,iBlock))
     end if
 
     ! Apply collisionless heatconduction (modified gamma or gamma electron)
@@ -1026,7 +1029,7 @@ contains
        State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
             *(1.0/(Gamma - 1) - InvGammaElectronMinus1)
 
-       call limit_pressure(State_VGB(:,i,j,k,iBlock))
+       if(UsePmin .or. UseTMin) call limit_pressure(State_VGB(:,i,j,k,iBlock))
     end if
 
     if(UseAlfvenWaves) then
@@ -2720,7 +2723,7 @@ contains
             + State_V(iRhoUz_I(iFluid))**2 ) / State_V(iRho_I(iFluid)) )
     end do
 
-    if(UsePmin) call limit_pressure(State_V)
+    if(UsePmin .or. UseTMin) call limit_pressure(State_V)
 
   end subroutine energy_to_pressure
   !============================================================================
@@ -2732,7 +2735,7 @@ contains
 
     integer:: iFluid
     !--------------------------------------------------------------------------
-    if(UsePmin) call limit_pressure(State_V)
+    if(UsePmin .or. UseTMin) call limit_pressure(State_V)
 
     ! Calculate hydro energy density
     State_V(p_) = State_V(p_)*InvGammaMinus1 &

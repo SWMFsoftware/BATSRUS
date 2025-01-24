@@ -177,8 +177,8 @@ module ModPhysics
   real:: RhoMinDim_I(nFluid) = -1.0, RhoMin_I(nFluid)
   real:: pMinDim_I(nFluid)   = -1.0, pMin_I(nFluid)
   real:: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
-  logical:: UseRhoMin, UsePMin
-  !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin, TMin_I)
+  logical:: UseRhoMin, UsePMin, UseTMin
+  !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin, UseTMin, TMin_I)
 
   ! Minimum threshold for radial velocity
   real:: SpeedMinDim, SpeedMin, rSpeedMin
@@ -754,6 +754,7 @@ contains
     ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
     UseRhoMin    = any(RhoMin_I > 0.0)
     UsePMin      = any(pMin_I > 0.0)
+    UseTMin      = any(TMin_I > 0.0)
 
     ! Minimum value for radial speed
     if(UseSpeedMin)then
@@ -796,7 +797,7 @@ contains
 
     !$acc update device(SpeedHyp, C2light, InvClight, InvClight2, ClightFactor)
     !$acc update device(CellState_VI, FaceState_VI, pOutflow)
-    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, PeMin)
+    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, UseTMin, PeMin)
     !$acc update device(TMin_I, TeMin)
     !$acc update device(rBody, gBody, OmegaBody, Bdp)
     !$acc update device(PolarRho_I, PolarP_I)

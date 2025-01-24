@@ -290,6 +290,7 @@ sub set_optimization{
             UseHyperbolicDivB        => ".false.",
             UseNonConservative       => ".false.",
 	    UsePMin                  => ".false.",
+		UseTMin                  => ".false.",
 	    UseReynoldsDecomposition => ".false.",
 	    UseRhoMin                => ".false.",
 	    UseRotatingBc            => ".false.",
@@ -414,6 +415,8 @@ sub set_optimization{
 		check_var($Set{"UseB0"}, $useb0, $first);
 	    }elsif(/^#MINIMUMPRESSURE\b/){
 		check_var($Set{"UsePMin"}, "T", $first);
+		}elsif(/^#MINIMUMTEMPERATURE\b/){
+		check_var($Set{"UseTMin"}, "T", $first);
 	    }elsif(/^#MINIMUMDENSITY\b/){
 		check_var($Set{"UseRhoMin"}, "T", $first);
 	    }elsif(/^#MINIMUMRADIALSPEED\b/){
