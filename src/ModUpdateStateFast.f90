@@ -7,7 +7,7 @@ module ModUpdateStateFast
   ! Parameters optimized to constants based on PARAM.in file
   use ModOptimizeParam, ONLY: &
        DoLf, LimiterBeta, nStage, iStage, nOrder, UseAccurateResChange, &
-       IsCartesian, IsCartesianGrid, & 
+       IsCartesian, IsCartesianGrid, &
        UseDivbSource, UseHyperbolicDivB, UseB0, UseCurlB0, &
        IsTimeAccurate, UseDtFixed, rLocalTimeStep, &
        UseBody, UseCpcpBc, B1rCoef, &
@@ -456,7 +456,7 @@ contains
           end if
        end if
 
-       if(iStage == 1) then 
+       if(iStage == 1) then
           if(.not.IsTimeAccurate) call calc_timestep(iBlock)
           if(IsTimeAccurate .and. rMin_B(iBlock) < rLocalTimeStep) &
                call calc_timestep(iBlock, IsPartLocal=.true.)
@@ -529,7 +529,7 @@ contains
 
     ! Minimum radial speed
     real :: Ur
-    
+
     ! Collisionless heating
     real :: Gamma
 
@@ -695,7 +695,7 @@ contains
 #endif
        end if
     end if
-    
+
     ! Divide by cell volume
     Change_V = InvVol*Change_V
 
@@ -898,7 +898,7 @@ contains
           end if
        end do
     end if
-    
+
     ! Convert electron pressure source term to electron entropy source
     ! if necessary: Se = Pe/Ne^(gammaE-1)
     if(UseElectronPressure .and. UseElectronEntropy)then
