@@ -1301,7 +1301,7 @@ contains
           RETURN
        end select
 #endif
-       
+
        !$acc loop vector collapse(2) independent &
        !$acc private(rUnit_D, Br1_D, Bt1_D, FullB_D)
        do k = MinK, MaxK; do j = MinJ, MaxJ

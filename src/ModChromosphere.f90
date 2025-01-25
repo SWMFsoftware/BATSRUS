@@ -70,7 +70,6 @@ contains
 
     if(.not.allocated(TeSi_CI)) allocate(TeSi_CI(nI,nJ,nK,nGang))
 
-
   end subroutine init_chromosphere
   !============================================================================
   real function extension_factor(TeSi)
