@@ -134,7 +134,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_solar_wind_file'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest)
 
     ! Set defaults
@@ -411,7 +410,7 @@ contains
     endif
 
     call test_stop(NameSub, DoTest)
-#endif
+
   end subroutine read_solar_wind_file
   !============================================================================
   subroutine normalize_solar_wind_data
@@ -431,7 +430,6 @@ contains
     integer:: iData, iFluid
     real :: Solarwind_V(nVar)
 
-#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'normalize_solar_wind_data'
     !--------------------------------------------------------------------------
@@ -585,7 +583,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
-#endif
+
   end subroutine normalize_solar_wind_data
   !============================================================================
   subroutine get_solar_wind_point(TimeSimulation, Xyz_D, SolarWind_V)
@@ -650,7 +648,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_solar_wind_point'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     if(nData <= 0 .or. .not.UseSolarwindFile)then
        ! Use fixed boundary conditon if there is no input data
        SolarWind_V = FaceState_VI(:,xMinBc_)
@@ -736,7 +733,7 @@ contains
          DoExtrapolate=.false.)
 
     if(DoTestCell)write(*,*)NameSub,' SolarWind_V =',SolarWind_V
-#endif
+
   end subroutine get_solar_wind_point
   !============================================================================
 end module ModSolarwind

@@ -697,14 +697,14 @@ contains
 
     use ModVarIndexes, ONLY: nVar, Lperp_, nChargeStateAll
     use ModMain, ONLY: UseB0
-    use ModPhysics, ONLY: IonMassPerCharge, pMin_I, TMin_I
+    use ModPhysics, ONLY: pMin_I, TMin_I
     use ModAdvance, ONLY: nVar, UseAnisoPressure, Bx_, Bz_, Pe_
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_CI
-    use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
-         nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
-         iPparIon_I
+    use ModMultiFluid, ONLY: &
+         ChargePerMass_I, ElectronPerMass_I, InvMassIon_I, UseMultiIon, &
+         nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, iPparIon_I
     use ModLookupTable, ONLY: interpolate_lookup_table
 
     integer, intent(in) :: i, j, k, iBlock
@@ -763,7 +763,7 @@ contains
           if(Tmin_I(iIon) < 0.0)then
              if(pMin_I(iIon) >= 0.0) pMin = pMin_I(iIon)
           else
-             pMin = State_V(iRhoIon_I(iIon))/MassIon_I(iIon)*Tmin_I(iIon)
+             pMin = State_V(iRhoIon_I(iIon))*InvMassIon_I(iIon)*Tmin_I(iIon)
              if(pMin_I(iIon) >= 0.0) pMin = max(pMin_I(iIon), pMin)
           end if
           pMin = max(pMin, 1e-30)
@@ -810,8 +810,8 @@ contains
 #ifndef _OPENACC
           BetaParProton = 2.0*Ppar_I(1)/B2
           Np = RhoProton
-          Na = State_V(iRhoIon_I(nIonFluid))/MassIon_I(nIonFluid)
-          Ne = sum(State_V(iRhoIon_I)*ChargeIon_I/MassIon_I)
+          Na = State_V(iRhoIon_I(nIonFluid))*InvMassIon_I(nIonFluid)
+          Ne = sum(State_V(iRhoIon_I)*ElectronPerMass_I)
           Tp = P_I(1)/Np
           Ta = P_I(nIonFluid)/Na
           Te = State_V(Pe_)/Ne
@@ -869,8 +869,7 @@ contains
           ! Perpendicular ion thermal speed
           Vperp = sqrt(2.0*Pperp/State_V(iRhoIon_I(iIon)))
 
-          GyroRadiusTimesB_I(iIon) = Vperp &
-               *IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon)
+          GyroRadiusTimesB_I(iIon) = Vperp/ChargePerMass_I(iIon)
 
           InvGyroRadius = B/GyroRadiusTimesB_I(iIon)
 

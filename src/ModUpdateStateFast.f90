@@ -9,11 +9,11 @@ module ModUpdateStateFast
        DoLf, LimiterBeta, nStage, iStage, nOrder, UseAccurateResChange, &
        IsCartesian, IsCartesianGrid, &
        UseDivbSource, UseHyperbolicDivB, UseB0, UseCurlB0, &
-       IsTimeAccurate, UseDtFixed, rLocalTimeStep, &
-       UseBody, UseCpcpBc, B1rCoef, &
+       IsTimeAccurate, UseDtFixed, rLocalTimeStep, UseBody, &
+       UseCpcpBc, B1rCoef, &
        UseBorisCorrection, ClightFactor, UseElectronEntropy, &
        UseNonConservative, nConservCrit, &
-       UseRhoMin, UsePMin, UseSpeedMin, &
+       UseRhoMin, UsePMin, UseSpeedMin, UseTMin, &
        UseGravity, UseRotatingFrame, UseRotatingBc, &
        UseCoronalHeating, UseAlfvenWaveDissipation, &
        UseReynoldsDecomposition, UseTurbulentCascade
@@ -23,8 +23,9 @@ module ModUpdateStateFast
        accurate_reschange2d, accurate_reschange3d, get_log_limiter_var, &
        UseLogLimiter_V
   use ModVarIndexes
-  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid, &
-       ChargePerMass_I, iPIon_I, MassIon_I, ChargeIon_I
+  use ModMultiFluid, ONLY: &
+       iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, InvMassFluid_I, &
+       nIonFluid, iPIon_I, MassIon_I, ElectronPerMass_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
@@ -61,11 +62,12 @@ module ModUpdateStateFast
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModTurbulence, ONLY: CoronalHeating_CI, &
-       calc_alfven_wave_dissipation, WaveDissipationRate_VCI, &
+  use ModTurbulence, ONLY: &
+       calc_alfven_wave_dissipation, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
        turbulent_cascade, get_wave_reflection_cell
-  use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor
+  use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
+       TeChromosphere
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
        get_gamma_collisionless
   use ModUtilities, ONLY: i_gang
@@ -521,6 +523,7 @@ contains
     real:: Change_V(nFlux), Force_D(3), CurlB0_D(3)
 
     ! Coronal Heating
+    real :: CoronalHeating, WaveDissipationRate_V(WaveFirst_:WaveLast_)
     real :: QPerQtotal_I(nIonFluid)
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
@@ -734,12 +737,10 @@ contains
 
           if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_V, CoronalHeating)
           else
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_V, CoronalHeating)
           end if
 
           if(DoExtendTransitionRegion) then
@@ -748,33 +749,29 @@ contains
                   MassIon_I(1)/AverageIonCharge
 
              ExtensionFactorInv = 1/extension_factor(TeSi)
-             WaveDissipationRate_VCI(:,i,j,k,iGang) = ExtensionFactorInv*&
-                  WaveDissipationRate_VCI(:,i,j,k,iGang)
-             CoronalHeating_CI(i,j,k,iGang) = ExtensionFactorInv*&
-                  CoronalHeating_CI(i,j,k,iGang)
+             WaveDissipationRate_V = ExtensionFactorInv*WaveDissipationRate_V
+             CoronalHeating = ExtensionFactorInv*CoronalHeating
           end if
 
        end if
 
-       if(UseTurbulentCascade) then
-          call get_wave_reflection_cell(i,j,k,iBlock,&
-               Change_V(WaveFirst_:WaveLast_))
-       endif
+       if(UseTurbulentCascade) call get_wave_reflection_cell(i, j, k, iBlock, &
+            Change_V(WaveFirst_:WaveLast_))
 
        if(UseAlfvenWaveDissipation)then
           Change_V(WaveFirst_:WaveLast_) = &
                Change_V(WaveFirst_:WaveLast_) &
-               - WaveDissipationRate_VCI(:,i,j,k,iGang)*&
+               - WaveDissipationRate_V*&
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
 
           ! arithmetic average of cascade rates for w_D, if needed
           if(WDiff_ > 1) Change_V(WDiff_) = Change_V(WDiff_) &
-               - 0.5*sum(WaveDissipationRate_VCI(:,i,j,k,iGang)) &
+               - 0.5*sum(WaveDissipationRate_V) &
                *State_VGB(WDiff_,i,j,k,iBlock)
           ! weighted average of cascade rates for Lperp_, if needed
           if(Lperp_ > 1) Change_V(Lperp_) = Change_V(Lperp_) +&
                KarmanTaylorBeta2AlphaRatio*sum( &
-               WaveDissipationRate_VCI(:,i,j,k,iGang)*  &
+               WaveDissipationRate_V*  &
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) / &
                max(1e-30, sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))) &
                *State_VGB(Lperp_,i,j,k,iBlock)
@@ -791,38 +788,32 @@ contains
           if(UseElectronPressure)then
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang), TeSi, &
+                  WaveDissipationRate_V, CoronalHeating, TeSi, &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
              Change_V(Pe_) = Change_V(Pe_) &
-                  + CoronalHeating_CI(i,j,k,iGang)*&
-                  GammaElectronMinus1*QePerQtotal
+                  + CoronalHeating*GammaElectronMinus1*QePerQtotal
 
              Change_V(iPIon_I) = Change_V(iPIon_I) &
-                  + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I &
-                  *GammaMinus1_I(1:nIonFluid)
+                  + CoronalHeating*QPerQtotal_I*GammaMinus1_I(1:nIonFluid)
              Change_V(Energy_:Energy_-1+nIonFluid) = &
                   Change_V(Energy_:Energy_-1+nIonFluid) &
-                  + CoronalHeating_CI(i,j,k,iGang)*QPerQtotal_I
+                  + CoronalHeating*QPerQtotal_I
 
              if(UseAnisoPressure)then
                 do iFluid = 1, nIonFluid
                    Change_V(iPparIon_I(iFluid)) = &
                         Change_V(iPparIon_I(iFluid)) &
-                        + CoronalHeating_CI(i,j,k,iGang)*&
-                        QparPerQtotal_I(iFluid)*2
+                        + CoronalHeating*QparPerQtotal_I(iFluid)*2
                 end do
              end if
           else
-             Change_V(p_) = Change_V(p_) &
-                  + CoronalHeating_CI(i,j,k,iGang)*GammaMinus1
-             Change_V(Energy_) = Change_V(Energy_) &
-                  + CoronalHeating_CI(i,j,k,iGang)
+             Change_V(p_) = Change_V(p_) + CoronalHeating*GammaMinus1
+             Change_V(Energy_) = Change_V(Energy_) + CoronalHeating
           end if
 #ifdef TESTACC
           if(DoTestSource .and. DoTestCell) then
-             write(*,*) 'CoronalHeating=', CoronalHeating_CI(i,j,k,iGang)
+             write(*,*) 'CoronalHeating=', CoronalHeating
              write(*,*) 'After UseCoronalHeating S(iVarTest)=', &
                   Change_V(iVarTest)
           end if
@@ -902,12 +893,12 @@ contains
     ! Convert electron pressure source term to electron entropy source
     ! if necessary: Se = Pe/Ne^(gammaE-1)
     if(UseElectronPressure .and. UseElectronEntropy)then
-       Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
+       Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I)
        Change_V(Se_) = &
             Change_V(Pe_)*Ne**(-GammaElectronMinus1) &
             - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock) &
             *Ne**(-GammaElectron) &
-            *sum(ChargePerMass_I*Change_V(iRhoIon_I))
+            *sum(ElectronPerMass_I*Change_V(iRhoIon_I))
     end if
 
     ! Add div(Flux) to Change_V
@@ -939,11 +930,13 @@ contains
        if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
           ! Overwrite pressure and change with energy
           call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-          do iFluid = 1, nFluid
+          Change_V(p_) = Change_V(Energy_)
+          do iFluid = 2, nFluid
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
        else
-          call limit_pressure(State_VGB(:,i,j,k,iBlock))
+          if(UsePmin .or. UseTMin) &
+               call limit_pressure(State_VGB(:,i,j,k,iBlock))
        end if
 
        if(UseBorisCorrection) call mhd_to_boris( &
@@ -953,7 +946,7 @@ contains
        if(UseElectronPressure .and. UseElectronEntropy) &
             State_VGB(Pe_,i,j,k,iBlock) = &
             State_VGB(Pe_,i,j,k,iBlock)*&
-            sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+            sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
 
        State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
@@ -962,11 +955,13 @@ contains
        if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
           ! Overwrite old pressure and change with energy
           call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-          do iFluid = 1, nFluid
+          Change_V(p_) = Change_V(Energy_)
+          do iFluid = 2, nFluid
              Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
           end do
        else
-          call limit_pressure(StateOld_VGB(:,i,j,k,iBlock))
+          if(UsePmin .or. UseTMin) &
+               call limit_pressure(StateOld_VGB(:,i,j,k,iBlock))
        end if
        if(UseBorisCorrection) call mhd_to_boris( &
             StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
@@ -975,7 +970,7 @@ contains
        ! Convert electron pressure to entropy
        if(UseElectronPressure .and. UseElectronEntropy) &
             StateOld_VGB(Pe_,i,j,k,iBlock) = StateOld_VGB(Pe_,i,j,k,iBlock) &
-            *sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+            *sum(StateOld_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
 
        State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
@@ -990,12 +985,14 @@ contains
     ! Convert entropy to pressure
     if(UseElectronPressure .and. UseElectronEntropy) &
          State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-         *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I) &
+         *sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ElectronPerMass_I) &
          **GammaElectronMinus1
 
     ! Check minimum density
     if(UseRhoMin)then
-       do iFluid = 1, nFluid
+       State_VGB(Rho_,i,j,k,iBlock) = &
+            max(RhoMin_I(1), State_VGB(Rho_,i,j,k,iBlock))
+       do iFluid = 2, nFluid
           State_VGB(iRho_I(iFluid),i,j,k,iBlock) = max(RhoMin_I(iFluid),&
                State_VGB(iRho_I(iFluid),i,j,k,iBlock))
        end do
@@ -1005,7 +1002,8 @@ contains
     if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)  then
        call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
     else
-       call limit_pressure(State_VGB(:,i,j,k,iBlock))
+       if(UsePmin .or. UseTMin) &
+            call limit_pressure(State_VGB(:,i,j,k,iBlock))
     end if
 
     ! Apply collisionless heatconduction (modified gamma or gamma electron)
@@ -1021,7 +1019,7 @@ contains
        State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
             *(1.0/(Gamma - 1) - InvGammaElectronMinus1)
 
-       call limit_pressure(State_VGB(:,i,j,k,iBlock))
+       if(UsePmin .or. UseTMin) call limit_pressure(State_VGB(:,i,j,k,iBlock))
     end if
 
     if(UseAlfvenWaves) then
@@ -1569,6 +1567,7 @@ contains
     integer :: i, j, k, iSide
     integer :: iTypeBC
     logical :: IsLinearBc, IsFound, IsSemi
+    real    :: TeBc
 
     character(len=30):: TypeBc
     !--------------------------------------------------------------------------
@@ -1588,13 +1587,15 @@ contains
        TypeBc = TypeCellBc_I(iSide)
 
        if(iTypeBC == UserBC_) then
-          if(IsLinearBc) then
+          if(IsSemi) then
+             TeBc = 0
+             if(.not. IsLinearBc) TeBc = TeChromosphere
+
              !$acc loop vector collapse(3) independent
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
-                State_VG(:,i,j,k) = 0
+                State_VG(:,i,j,k) = TeBc
              end do; end do; end do
           else
-             if(IsSemi) TypeBc = 'user_semi'
              call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
           end if
        else
@@ -1995,7 +1996,7 @@ contains
 
     if(UseElectronPressure)then
        if(UseElectronEntropy) StateCons_V(Pe_) = &
-            State_V(Pe_)*sum(State_V(iRhoIon_I)*ChargePerMass_I) &
+            State_V(Pe_)*sum(State_V(iRhoIon_I)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
 
        Flux_V(Pe_) = Un*StateCons_V(Pe_)
@@ -2666,29 +2667,28 @@ contains
   !============================================================================
   subroutine limit_pressure(State_V)
     !$acc routine seq
+
     real, intent(inout):: State_V(nVar)
 
-    real :: NumDens, Ne
     integer:: iFluid, iP
     !--------------------------------------------------------------------------
-    do iFluid = 1, nFluid
-       iP = iP_I(iFluid)
-       State_V(iP) = max(pMin_I(iFluid), State_V(iP))
+    State_V(p_) = max(State_V(p_), pMin_I(1))
+    if(Tmin_I(1) > 0) State_V(p_) = max(State_V(p_), &
+         State_V(Rho_)*InvMassFluid_I(1)*Tmin_I(1))
 
-       if(Tmin_I(iFluid) > 0) then
-          NumDens=State_V(iRho_I(iFluid))/MassFluid_I(iFluid)
-          State_V(iP) = max(NumDens*Tmin_I(iFluid), State_V(iP))
-       end if
+    do iFluid = 2, nFluid
+       iP = iP_I(iFluid)
+       State_V(iP) = max(State_V(iP), pMin_I(iFluid))
+       if(Tmin_I(iFluid) > 0) State_V(iP) = max(State_V(iP), &
+            State_V(iRho_I(iFluid))*InvMassFluid_I(iFluid)*Tmin_I(iFluid))
     end do
 
     if(UseElectronPressure)  then
-       State_V(Pe_) = max(PeMin, State_V(Pe_))
-
-       if(TeMin > 0) then
-          Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
-          State_V(Pe_) = max(Ne*TeMin, State_V(Pe_))
-       end if
+       State_V(Pe_) = max(State_V(Pe_), PeMin)
+       if(TeMin > 0) State_V(Pe_) = max(State_V(Pe_), &
+            sum(State_V(iRhoIon_I)*ElectronPerMass_I)*TeMin)
     end if
+
   end subroutine limit_pressure
   !============================================================================
   subroutine energy_to_pressure(State_V)
@@ -2716,7 +2716,7 @@ contains
             + State_V(iRhoUz_I(iFluid))**2 ) / State_V(iRho_I(iFluid)) )
     end do
 
-    if(UsePmin) call limit_pressure(State_V)
+    if(UsePmin .or. UseTMin) call limit_pressure(State_V)
 
   end subroutine energy_to_pressure
   !============================================================================
@@ -2728,7 +2728,7 @@ contains
 
     integer:: iFluid
     !--------------------------------------------------------------------------
-    if(UsePmin) call limit_pressure(State_V)
+    if(UsePmin .or. UseTMin) call limit_pressure(State_V)
 
     ! Calculate hydro energy density
     State_V(p_) = State_V(p_)*InvGammaMinus1 &

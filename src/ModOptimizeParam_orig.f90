@@ -50,6 +50,7 @@ module ModOptimizeParam
   use ModPhysics, ONLY: &
        ClightFactor => ClightFactor, &
        UsePMin => UsePMin, &
+       UseTMin => UseTMin, &
        UseRhoMin => UseRhoMin, &
        UseSpeedMin => UseSpeedMin
   use ModTurbulence, ONLY: &

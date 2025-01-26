@@ -103,7 +103,7 @@ contains
     use ModMultiFluid, ONLY: &
          iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
          iRho, iRhoUx, iRhoUy, iRhoUz, iUx, iUy, iUz, iEnergy, iP, &
-         IsIon_I, nIonFluid, UseMultiIon, ChargePerMass_I, select_fluid
+         IsIon_I, nIonFluid, UseMultiIon, ElectronPerMass_I, select_fluid
     use ModGeometry, ONLY: r_GB
     use ModPUI,      ONLY: Pu3_
     use BATL_lib, ONLY: nDim, x_, y_, z_
@@ -212,7 +212,7 @@ contains
     ! Set flux for electron pressure
     if(UseElectronPressure)then
        if(UseElectronEntropy) StateCons_V(Pe_) = &
-            State_V(Pe_)*sum(State_V(iRhoIon_I)*ChargePerMass_I) &
+            State_V(Pe_)*sum(State_V(iRhoIon_I)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
        Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
 
@@ -496,19 +496,19 @@ contains
       ! Calculate magnetic flux for multi-ion equations
       ! without a global ion fluid
 
-      real :: ChargeDens_I(nIonFluid), InvElectronDens
+      real :: ElectronDens_I(nIonFluid), InvElectronDens
       real :: UxPlus, UyPlus, UzPlus, UnPlus
       real :: HallUx, HallUy, HallUz, InvRho
       !------------------------------------------------------------------------
       if(UseMultiIon)then
          ! calculate number densities
-         ChargeDens_I    = ChargePerMass_I*State_V(iRhoIon_I)
-         InvElectronDens = 1.0/sum(ChargeDens_I)
+         ElectronDens_I  = ElectronPerMass_I*State_V(iRhoIon_I)
+         InvElectronDens = 1/sum(ElectronDens_I)
 
          ! calculate positive charge velocity
-         UxPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUxIon_I))
-         UyPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUyIon_I))
-         UzPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUzIon_I))
+         UxPlus = InvElectronDens*sum(ElectronDens_I*State_V(iUxIon_I))
+         UyPlus = InvElectronDens*sum(ElectronDens_I*State_V(iUyIon_I))
+         UzPlus = InvElectronDens*sum(ElectronDens_I*State_V(iUzIon_I))
       else
          UxPlus = State_V(Ux_)
          UyPlus = State_V(Uy_)
@@ -541,8 +541,8 @@ contains
       end if
 
       if(DoTestCell)then
-         write(*,*)'ChargeDens_I, InvElectronDens=', &
-              ChargeDens_I, InvElectronDens
+         write(*,*)'ElectronDens_I, InvElectronDens=', &
+              ElectronDens_I, InvElectronDens
          write(*,*)'UxyzPlus  =',UxPlus, UyPlus, UzPlus
          if(HallCoeff > 0.0)then
             write(*,*)'InvRho    =', InvRho
@@ -853,8 +853,8 @@ contains
       Flux_V(HypE_) = Clight*(Ex*NormalX  + Ey*NormalY  + Ez*NormalZ)
 
       if(DoTestCell)then
-         write(*,'(a,99es13.5)')'ChargeDens_I    =', &
-              ChargePerMass_I*State_V(iRhoIon_I)
+         write(*,'(a,99es13.5)')'ElectronDens_I  =', &
+              ElectronPerMass_I*State_V(iRhoIon_I)
          write(*,'(a,3es13.5)') 'Normal_D        =', Normal_D
          write(*,'(a,3es13.5)') 'Bx,By,Bz        =', Bx,By,Bz
          write(*,'(a,3es13.5)') 'Ex,Ey,Ez        =', Ex,Ey,Ez

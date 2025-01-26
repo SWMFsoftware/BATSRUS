@@ -50,15 +50,22 @@ module ModMultiFluid
   integer, parameter:: iSperpIon_I(nIonFluid) = iPIon_I
   integer, parameter:: iSparIon_I(nIonFluid)  = iPparIon_I
 
-  integer, private:: iF
+  integer, private:: i
   logical, parameter:: IsIon_I(nFluid) = &
-       [ (iF >= 1 .and. iF <= nIonFluid, iF=1, nFluid) ]
+       [ (i >= 1 .and. i <= nIonFluid, i=1, nFluid) ]
+
+  ! Inverse of fluid masses for number density calculation
+  real:: InvMassFluid_I(nFluid) = 1.0
+  !$acc declare create(InvMassFluid_I)
 
   ! The ion masses (adjustable)
   real:: MassIon_I(nIonFluid) = 1.0
+  real:: InvMassIon_I(nIonFluid) = 1.0      ! to avoid division
   real:: ChargeIon_I(nIonFluid) = 1.0
-  real:: ChargePerMass_I(nIonFluid) = 1.0
+  real:: ChargePerMass_I(nIonFluid) = 1.0   ! electric charge for Hall MHD
+  real:: ElectronPerMass_I(nIonFluid) = 1.0 ! for electron number density
   !$acc declare create(MassIon_I, ChargeIon_I, ChargePerMass_I)
+  !$acc declare create(InvMassIon_I, ElectronPerMass_I)
 
   ! Allow using fully non-conservative scheme for the neutral fluids
   logical:: DoConserveNeutrals = .true.

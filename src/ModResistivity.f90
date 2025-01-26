@@ -524,7 +524,7 @@ contains
 
           ! Explicit heat exchange (energy)
           HeatExchange = Eta_GB(i,j,k,iBlock) * &
-               3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
+               3*State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2
 
           if(DoTestCell) &
                write(*,*) NameSub, ': explicit HeatExchange    =', HeatExchange

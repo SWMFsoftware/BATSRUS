@@ -81,8 +81,7 @@ module ModPhysics
   real:: ElectronPressureRatio    = 0.0
   real:: PePerPtotal              = 0.0
   real:: IonMassPerCharge         = 1.0
-  !$acc declare create(AverageIonCharge, ElectronPressureRatio, PePerPtotal)
-  !$acc declare create(IonMassPerCharge)
+  !$acc declare create(AverageIonCharge, PePerPtotal)
 
   ! Quantities for reduced mass and collision frequencies
   real:: MassIonElectron_I(nIonFluid+1)
@@ -177,8 +176,8 @@ module ModPhysics
   real:: RhoMinDim_I(nFluid) = -1.0, RhoMin_I(nFluid)
   real:: pMinDim_I(nFluid)   = -1.0, pMin_I(nFluid)
   real:: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
-  logical:: UseRhoMin, UsePMin
-  !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin, TMin_I)
+  logical:: UseRhoMin, UsePMin, UseTMin
+  !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin, UseTMin, TMin_I)
 
   ! Minimum threshold for radial velocity
   real:: SpeedMinDim, SpeedMin, rSpeedMin
@@ -201,19 +200,16 @@ module ModPhysics
 
   ! Radius and center coordinates
   real:: rBody2=0.0, xBody2=0.0, yBody2=0.0, zBody2=0.0, vBody2_D(3) = 0.0
-  !$acc declare create(rBody2, xBody2, yBody2, zBody2, vBody2_D)
 
   ! Dimensional and diminsionless parameters on the seconnd body boundary
   real:: Body2NDim = 0.0, Body2TDim = 0.0, RhoBody2 = 0.0, pBody2 = 0.0
-  !$acc declare create(Body2NDim, Body2TDim, RhoBody2, pBody2)
 
   ! Second body mass and gravity force parameter derived from it
   real:: MassBody2Si, gBody2 = 0.0
-  !$acc declare create(MassBody2Si,gBody2)
+
   ! Logical determining if the orbit elements from CON_planet are used to
   ! trace a second body.
   logical:: UseBody2Orbit = .false.
-  !$acc declare create(UseBody2Orbit)
 
   ! Variables for two-state shock tube problems
   logical:: UseShockTube = .false.
@@ -378,9 +374,13 @@ contains
 
     ! Second body mass is set to zero by default
     MassBody2Si = 0.0
-    !$acc update device(MassBody2Si)
+
+    ! 1/M for faster calculations
+    InvMassFluid_I = 1/MassFluid_I
+
     ! Make sure that MassIon_I is consistent with MassFluid_I
     MassIon_I = MassFluid_I(1:nIonFluid)
+    InvMassIon_I = 1/MassIon_I
 
     ! Call set_units, which set the quantities for converting from
     ! normalized to  dimensional quantities and vice versa.  Also
@@ -415,11 +415,13 @@ contains
     ! so we keep the name.
     ElectronCharge = 1.0/IonMassPerCharge
 
+    ! Number of electrons per mass densitiy. Note that ChargeIon_I means
+    ! charge state Z. Ne = sum(ElectronPerMass_I*State_V(iRhoIon_I))
+    ElectronPerMass_I = ChargeIon_I*InvMassIon_I
+
     ! Charge per mass in normalized units, This is needed in
     ! formulas like rho_s q_s/m_s (E + u_s x B)
-    ! Note that ChargeIon_I is for charge state Z, which is not
-    ! in normalized units.
-    ChargePerMass_I = ChargeIon_I/MassIon_I*ElectronCharge
+    ChargePerMass_I = ElectronPerMass_I*ElectronCharge
 
     ! Electron gyro-frequency coefficient in normalized units
     ! GyroFreq = ElectronGyroFreqCoef * |B|  [1/time]
@@ -431,9 +433,9 @@ contains
 
     ! arrays to have electron mass and charge available in an indexed
     ! arrary when no electron fluid present
-    MassIonElectron_I(:nIonFluid)  = MassIon_I
+    MassIonElectron_I(1:nIonFluid) = MassIon_I
     MassIonElectron_I(nIonFluid+1) = cElectronMass/cProtonMass
-    Charge_I(:nIonFluid)  = ChargeIon_I
+    Charge_I(1:nIonFluid) = ChargeIon_I
     Charge_I(nIonFluid+1) = -1.0
 
     ! Coefficient for effective ion-ion collision frequencies
@@ -487,7 +489,6 @@ contains
     end if
 
     gBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
-    !$acc update device(gBody2)
 
     ! Normalize shocktube/uniform/radial state values
     ShockLeft_V  = ShockLeftDim_V * Io2No_V(iUnitPrim_V)
@@ -543,7 +544,7 @@ contains
     RhoBody2= Body2NDim *Io2No_V(UnitN_)*MassIon_I(1)
     pBody2  = RhoBody2 * Body2TDim*Io2No_V(UnitTemperature_)
     if(UseBody2Orbit)call set_second_body_coord
-    !$acc update device(RhoBody2,pBody2)
+
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization
     do iBoundary = SolidBc_, zMaxBc_
@@ -749,6 +750,7 @@ contains
     ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
     UseRhoMin    = any(RhoMin_I > 0.0)
     UsePMin      = any(pMin_I > 0.0)
+    UseTMin      = any(TMin_I > 0.0)
 
     ! Minimum value for radial speed
     if(UseSpeedMin)then
@@ -790,18 +792,15 @@ contains
          SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
     !$acc update device(SpeedHyp, C2light, InvClight, InvClight2, ClightFactor)
-    !$acc update device(pOutflow)
-    !$acc update device(CellState_VI)
-    !$acc update device(FaceState_VI)
-    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, PeMin, TMin_I)
-    !$acc update device(OmegaBody, Bdp)
-    !$acc update device(gBody)
-    !$acc update device(TeMin)
+    !$acc update device(CellState_VI, FaceState_VI, pOutflow)
+    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin, UseTMin, PeMin)
+    !$acc update device(TMin_I, TeMin)
+    !$acc update device(rBody, gBody, OmegaBody, Bdp)
     !$acc update device(PolarRho_I, PolarP_I)
-    !$acc update device(MassIon_I, ChargeIon_I, ChargePerMass_I)
+    !$acc update device(InvMassFluid_I, MassIon_I, InvMassIon_I)
+    !$acc update device(ChargeIon_I, ChargePerMass_I, ElectonPerMass_I)
     !$acc update device(IonMassPerCharge)
     !$acc update device(CollisionCoef_II)
-    !$acc update device(rBody)
     !$acc update device(UseSpeedMin, SpeedMin, rSpeedMin, TauSpeedMin)
 
     call test_stop(NameSub, DoTest)
@@ -1466,7 +1465,6 @@ contains
     yBody2 = XyzBody2_D(2)
     zBody2 = XyzBody2_D(3)
     vBody2_D = matmul(Transform_DD, vBody2Hgi_D)*Si2No_V(UnitU_)
-    !$acc update device(xBody2, yBody2, zBody2, vBody2_D)
 
   end subroutine set_second_body_coord
   !============================================================================
