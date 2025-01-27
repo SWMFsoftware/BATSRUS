@@ -6,11 +6,9 @@ module ModChromosphere
 
   ! All parameters relating to chromosphere and tansition region
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, nI, nJ, nK
-  use BATL_size, ONLY: nGang
+  use BATL_lib, ONLY: test_start, test_stop, nI, nJ, nK
   use ModBatsrusUtility, ONLY: stop_mpi
-  use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
+  use ModPhysics, ONLY: Si2No_V, UnitTemperature_
 
   implicit none
 
@@ -47,9 +45,8 @@ module ModChromosphere
   real :: TeTransitionRegionTopSi = 4.0e+5 ! [K]
 
   ! Electron temperature in K:
-  real, allocatable :: TeSi_CI(:,:,:,:)
-  !$omp threadprivate( TeSi_CI )
-  !$acc declare create(TeSi_CI)
+  real, allocatable :: TeSi_C(:,:,:)
+  !$omp threadprivate( TeSi_C )
 
 contains
   !============================================================================
@@ -68,7 +65,7 @@ contains
     TeChromosphere = TeChromosphereSi*Si2No_V(UnitTemperature_)
     !$acc update device(TeChromosphere)
 
-    if(.not.allocated(TeSi_CI)) allocate(TeSi_CI(nI,nJ,nK,nGang))
+    if(.not.allocated(TeSi_C)) allocate(TeSi_C(nI,nJ,nK))
 
   end subroutine init_chromosphere
   !============================================================================
@@ -107,7 +104,7 @@ contains
     use ModGeometry,   ONLY: r_GB
 
     integer, intent(in)  :: iBlock
-    real,    intent(out) :: TeSi_C(1:nI,1:nJ,1:nK)
+    real,    intent(out) :: TeSi_C(nI,nJ,nK)
 
     integer:: i, j, k
     logical:: DoTest

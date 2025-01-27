@@ -116,12 +116,10 @@ contains
     use ModMain, ONLY: UseDtFixed, Dt, DtFixed, DtMax_B, Cfl, &
          UseDtLimit, DtLimit, rLocalTimeStep, UseUserTimeStep
     use ModAdvance, ONLY : DtMax_CB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
-         DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
-         DoUpdate_V
+         DoFixAxis, rFixAxis, r2FixAxis, State_VGB, DoUpdate_V
     use ModGeometry, ONLY: Used_GB, IsNoBody_B, rMin_B, r_GB
-    use ModCoronalHeating, ONLY: get_block_heating
-    use ModTurbulence, ONLY: UseAlfvenWaveDissipation, WaveDissipationRate_VCI
-    use ModChromosphere, ONLY: get_tesi_c, TeSi_CI
+    use ModCoronalHeating, ONLY: get_cell_heating
+    use ModTurbulence, ONLY: UseAlfvenWaveDissipation
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
     use ModNumConst, ONLY: cHalfPi
@@ -139,7 +137,7 @@ contains
     real:: Vdt, DtBlock
 
     ! Variables for time step control due to loss terms
-    real :: DtLoss
+    real :: DtLoss, WaveDissipationRate_V(WaveFirst_:WaveLast_), CoronalHeating
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_timestep'
@@ -202,15 +200,15 @@ contains
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
     if(UseAlfvenWaveDissipation .and. DoUpdate_V(WaveFirst_) )then
-       call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
-       call get_block_heating(iBlock)
-
-       !$acc loop vector collapse(3) private(DtLoss) independent
+       !$acc loop vector collapse(3) private(WaveDissipationRate_V, DtLoss) &
+       !$acc    independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
-          if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
-             DtLoss = 1 / maxval(WaveDissipationRate_VCI(:,i,j,k,iGang))
+          if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) > 0.0))then
+             call get_cell_heating(i, j, k, iBlock, &
+                     WaveDissipationRate_V, CoronalHeating)
+             DtLoss = 1 / maxval(WaveDissipationRate_V)
              ! The following prevents the wave energies from becoming
              ! negative due to too large loss terms.
              DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*DtLoss/&

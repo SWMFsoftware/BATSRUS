@@ -25,6 +25,7 @@ module ModCoronalHeating
   public :: get_coronal_heat_factor
   public :: get_coronal_heating
   public :: get_block_heating
+  public :: get_cell_heating
 
   logical, public :: UseCoronalHeating = .false.
   !$acc declare create(UseCoronalHeating)
@@ -160,11 +161,13 @@ contains
   end subroutine init_coronal_heating
   !============================================================================
   subroutine get_coronal_heat_factor
+
     ! Integrate heat function with a unit factor, then multiply by
     ! the total heating and divide by volume
     ! With thus calculated factor, the integral of coronal heating
     ! function equals the prescribed (for example, stemming from
     ! the unsigned flux) total heating
+
     use ModAdvance,     ONLY: State_VGB, Bz_
     use ModGeometry,    ONLY: IsNoBody_B, Used_GB, TypeGeometry
     use ModMagnetogram, ONLY: get_magnetogram_field
@@ -457,44 +460,77 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_photosphere_unsignedflux
   !============================================================================
+  subroutine get_cell_heating(i, j, k, iBlock, &
+       WaveDissipationRate_V, CoronalHeating, TeSiOut)
+    !$acc routine seq
+
+    use ModAdvance, ONLY: State_VGB, Pe_, Rho_
+    use ModPhysics, ONLY: AverageIonCharge, No2Si_V, UnitTemperature_
+    use ModMultiFluid, ONLY: MassIon_I
+    use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor
+
+    integer, intent(in):: i, j, k, iBlock
+    real, intent(out):: CoronalHeating, &
+         WaveDissipationRate_V(WaveFirst_:WaveLast_)
+    real, intent(out), optional:: TeSiOut
+
+    real:: TeSi, ExtensionFactorInv
+    !--------------------------------------------------------------------------
+    if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
+       call turbulent_cascade(i, j, k, iBlock, &
+            WaveDissipationRate_V, CoronalHeating)
+    else
+       call calc_alfven_wave_dissipation(i, j, k, iBlock, &
+            WaveDissipationRate_V, CoronalHeating)
+    end if
+
+    if(DoExtendTransitionRegion) then
+       TeSi = State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+       TeSi = TeSi * No2Si_V(UnitTemperature_) * &
+            MassIon_I(1)/AverageIonCharge
+       
+       ExtensionFactorInv = 1/extension_factor(TeSi)
+       WaveDissipationRate_V = ExtensionFactorInv*WaveDissipationRate_V
+       CoronalHeating = ExtensionFactorInv*CoronalHeating
+       if(present(TeSiOut)) TeSiOut = TeSi
+    end if
+
+  end subroutine get_cell_heating
+  !============================================================================
   subroutine get_block_heating(iBlock)
     !$acc routine vector
 
-    ! Calculate two arrays: CoronalHeating_CI  and   WaveDissipationRate_VCI
-    ! If DoExtendTransitionRegion, it the extension factor is applied,
-    ! so that in this case TeSi_CI aarray should be set. With these regards
-    ! the usual way to call this function is:
+    ! Calculate two arrays: CoronalHeating_C and WaveDissipationRate_VC
+    ! If DoExtendTransitionRegion, then the extension factor is applied,
+    ! so that in this case TeSi_C aarray should be set. 
+    ! The usual way to call this function is:
     !
-    ! if(DoExtendTransitionRegion) &
-    ! call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
+    ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
     ! call get_block_heating(iBlock)
-    !
-    use ModGeometry,       ONLY: r_GB
-    use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
-         No2Io_V, UnitB_
-    use ModMain,       ONLY: x_, z_, UseB0
+
+    use ModGeometry, ONLY: r_GB
+    use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_, No2Io_V, UnitB_
+    use ModMain, ONLY: x_, z_, UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModAdvance,    ONLY: State_VGB
-    use ModB0,         ONLY: B0_DGB
-    use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
-         TeSi_CI
+    use ModAdvance, ONLY: State_VGB
+    use ModB0, ONLY: B0_DGB
+    use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
+         TeSi_C
 
     integer, intent(in) :: iBlock
 
-    integer             :: i, j, k, iGang
-    real :: HeatCh
+    integer:: i, j, k
+    real:: HeatCh
 
-    real :: B_D(3), ExtensionFactorInv
+    real:: B_D(3), ExtensionFactorInv
 
     ! local variables for ArHeating (Active Region Heating)
-    real :: FractionB, Bcell
+    real:: FractionB, Bcell
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_block_heating'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
-    iGang = i_gang(iBlock)
 
     if(UseAlfvenWaveDissipation)then
 #ifndef _OPENACC
@@ -504,62 +540,55 @@ contains
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_VC(:,i,j,k), &
+                  CoronalHeating_C(i,j,k))
           end do; end do; end do
        else
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang))
+                  WaveDissipationRate_VC(:,i,j,k), &
+                  CoronalHeating_C(i,j,k))
           end do; end do; end do
        end if
        if(DoExtendTransitionRegion)then
           !$acc loop vector collapse(3) independent private(ExtensionFactorInv)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             ExtensionFactorInv = 1/extension_factor(TeSi_CI(i,j,k,iGang))
-             WaveDissipationRate_VCI(:,i,j,k,iGang) = ExtensionFactorInv*&
-                  WaveDissipationRate_VCI(:,i,j,k,iGang)
-             CoronalHeating_CI(i,j,k,iGang) = ExtensionFactorInv*&
-                  CoronalHeating_CI(i,j,k,iGang)
+             ExtensionFactorInv = 1/extension_factor(TeSi_C(i,j,k))
+             WaveDissipationRate_VC(:,i,j,k) = &
+                  ExtensionFactorInv*WaveDissipationRate_VC(:,i,j,k)
+             CoronalHeating_C(i,j,k) = &
+                  ExtensionFactorInv*CoronalHeating_C(i,j,k)
           end do; end do; end do
        end if
 
 #ifndef _OPENACC
     elseif(UseUnsignedFluxModel)then
-       do k=1,nK;do j=1,nJ; do i=1,nI
-          call get_coronal_heating(i, j, k, iBlock, &
-               CoronalHeating_CI(i,j,k,iGang))
-
-          CoronalHeating_CI(i,j,k,iGang) = &
-               CoronalHeating_CI(i,j,k,iGang) * HeatNormalization
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call get_coronal_heating(i, j, k, iBlock, CoronalHeating_C(i,j,k))
+          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)*HeatNormalization
        end do; end do; end do
     elseif(UseExponentialHeating)then
-       do k=1,nK;do j=1,nJ; do i=1,nI
-
-          CoronalHeating_CI(i,j,k,iGang) = HeatingAmplitude &
-               *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
-
+       do k = 1,nK; do j = 1, nJ; do i = 1, nI
+          CoronalHeating_C(i,j,k) = HeatingAmplitude &
+               *exp(-max(r_GB(i,j,k,iBlock) - 1, 0.0) / DecayLengthExp)
        end do; end do; end do
 #endif
     else
-       CoronalHeating_CI = 0.0
+       CoronalHeating_C = 0.0
     end if
 
 #ifndef _OPENACC
     if(DoChHeat) then
        HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          CoronalHeating_CI(i,j,k,iGang) = &
-               CoronalHeating_CI(i,j,k,iGang) + HeatCh &
-               *exp(- max(r_GB(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) &
+               + HeatCh*exp(-max(r_GB(i,j,k,iBlock) - 1.0, 0.0)/DecayLengthCh)
        end do; end do; end do
     end if
 
     if(UseExponentialHeating.and.UseArComponent) then
-       do k=1,nK; do j=1,nJ; do i=1,nI
-
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseB0)then
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
           else
@@ -569,15 +598,15 @@ contains
           Bcell = No2Io_V(UnitB_) * norm2(B_D)
 
           FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
-          CoronalHeating_CI(i,j,k,iGang) = max(CoronalHeating_CI(i,j,k,iGang),&
+          CoronalHeating_C(i,j,k) = max(CoronalHeating_C(i,j,k),&
                FractionB * ArHeatFactorCgs * Bcell &
                * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
        end do; end do; end do
     endif
     if(DoExtendTransitionRegion.and..not.UseAlfvenWaveDissipation)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          CoronalHeating_CI(i,j,k,iGang) = CoronalHeating_CI(i,j,k,iGang) / &
-               extension_factor(TeSi_CI(i,j,k,iGang))
+          CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) &
+               /extension_factor(TeSi_C(i,j,k))
        end do; end do; end do
     end if
 #endif

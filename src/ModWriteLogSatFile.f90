@@ -587,7 +587,7 @@ contains
       use ModFaceBoundary, ONLY: ratioOH
       use ModPhysics,     ONLY: Gbody
       use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
-      use ModChromosphere, ONLY: get_tesi_c, TeSi_CI
+      use ModChromosphere, ONLY: get_tesi_c, TeSi_C
 
       ! Local variables
       real:: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, Value
@@ -762,10 +762,10 @@ contains
 
             iGang = i_gang(iBlock)
 
-            call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
+            call get_tesi_c(iBlock, TeSi_C)
             do k = 1, nK; do j=1,nJ; do i=1, nI
                call get_radiative_cooling(i, j, k, iBlock, &
-                    TeSi_CI(i,j,k,iGang), RadCooling_C(i,j,k))
+                    TeSi_C(i,j,k), RadCooling_C(i,j,k))
                Tmp1_GB(i,j,k,iBlock) = RadCooling_C(i,j,k)
             end do; end do; end do
          end do
