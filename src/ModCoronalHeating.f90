@@ -486,7 +486,7 @@ contains
        TeSi = State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        TeSi = TeSi * No2Si_V(UnitTemperature_) * &
             MassIon_I(1)/AverageIonCharge
-       
+
        ExtensionFactorInv = 1/extension_factor(TeSi)
        WaveDissipationRate_V = ExtensionFactorInv*WaveDissipationRate_V
        CoronalHeating = ExtensionFactorInv*CoronalHeating
@@ -499,7 +499,7 @@ contains
 
     ! Calculate two arrays: CoronalHeating_C and WaveDissipationRate_VC
     ! If DoExtendTransitionRegion, then the extension factor is applied,
-    ! so that in this case TeSi_C aarray should be set. 
+    ! so that in this case TeSi_C aarray should be set.
     ! The usual way to call this function is:
     !
     ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
