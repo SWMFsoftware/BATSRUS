@@ -4313,6 +4313,21 @@ For more than one satellite (two satellites in the above given
 example), the start and end times should be set for all of them.
 </command>
 
+<command name="SATELLITETIMEOFFSET">
+  <parameter name="UseSatelliteTimeOffset" type="logical" default="F"/>
+  <if expr="$UseSatelliteTimeOffset">
+      <parameter name="SatelliteTimeOffset" type="real"/>
+  </if>
+    
+#SATELLITETIMEOFFSET
+T                            UseSatelliteTimeOffset
+25 hour                      SatelliteTimeOffset [sec]
+25 hour                      SatelliteTimeOffset [sec]
+25 hour                      SatelliteTimeOffset [sec]
+
+Allows to set time offset in satellite files relative to tSimulation
+</command>
+
 <command name="PARCEL" if="$_IsFirstSession">
   <parameter name="UseParcel" type="logical" default="F"/>
   <if expr="$UseParcel">

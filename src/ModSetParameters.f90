@@ -2174,7 +2174,7 @@ contains
           call read_satellite_parameters(NameCommand)
           DoReadSatelliteFiles = nSatellite > 0
 
-       case('#STEADYSTATESATELLITE')
+       case('#STEADYSTATESATELLITE', '#SATELLITETIMEOFFSET')
           call read_satellite_parameters(NameCommand)
 
        case('#MAGPERTURBINTEGRAL')
