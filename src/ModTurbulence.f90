@@ -223,7 +223,6 @@ contains
     use ModMultiFluid,  ONLY: UseMultiIon, nIonFluid
     use ModLookupTable, ONLY: i_lookup_table
     use ModVarIndexes,  ONLY: nChargeStateAll
-    use BATL_size,      ONLY: j0_, nJp1_, k0_, nKp1_
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_turbulence'

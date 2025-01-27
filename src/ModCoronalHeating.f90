@@ -13,7 +13,6 @@ module ModCoronalHeating
   use ModMain,       ONLY: nI, nJ, nK
   use ModTurbulence
   use omp_lib
-  use ModUtilities, ONLY: i_gang
 
   implicit none
   SAVE
@@ -139,7 +138,6 @@ contains
   subroutine init_coronal_heating
     ! Convert dimensional heating parameters
     use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_
-    use ModWaves,       ONLY: UseAlfvenWaves
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_coronal_heating'

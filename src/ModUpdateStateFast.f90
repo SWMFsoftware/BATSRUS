@@ -25,11 +25,11 @@ module ModUpdateStateFast
   use ModVarIndexes
   use ModMultiFluid, ONLY: &
        iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, InvMassFluid_I, &
-       nIonFluid, iPIon_I, MassIon_I, ElectronPerMass_I
+       nIonFluid, iPIon_I, ElectronPerMass_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
-       LogAlfven_, FaceUx_, FaceUy_, FaceUz_, &
+       LogAlfven_, FaceUx_, FaceUz_, &
        DtMax_CB, Vdt_, UseElectronPressure, UseAnisoPressure
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_, InFlowBC_, FixedBC_, UserBC_
   use ModConservative, ONLY: IsConserv_CB
@@ -44,8 +44,8 @@ module ModUpdateStateFast
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, PeMin, TMin_I, &
        TeMin, OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
        GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
-       No2Io_V, No2Si_V, iUnitCons_V, UnitU_, UnitTemperature_, &
-       AverageIonCharge, SpeedMin, rSpeedMin, TauSpeedMin
+       No2Io_V, iUnitCons_V, UnitU_, &
+       SpeedMin, rSpeedMin, TauSpeedMin
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
        iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
@@ -66,7 +66,7 @@ module ModUpdateStateFast
   use ModTurbulence, ONLY: &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
        get_wave_reflection_cell
-  use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
+  use ModChromosphere, ONLY: &
        TeChromosphere
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
        get_gamma_collisionless
