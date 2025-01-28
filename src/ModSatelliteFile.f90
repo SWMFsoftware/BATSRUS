@@ -36,7 +36,7 @@ module ModSatelliteFile
   ! Used if the local time in satellite location differs from tSimulation:
   logical, public :: UseSatelliteTimeOffset = .false.
   real, public :: TimeSatOffset_I(MaxSatellite) = 0.
-  
+
   ! These variables are public for write_logfile only !!! Should be improved
   ! Names and unit numbers for satellite files
   character(len=50), public:: NameFileSat_I(MaxSatellite)
