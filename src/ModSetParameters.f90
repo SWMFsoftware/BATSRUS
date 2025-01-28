@@ -159,6 +159,8 @@ contains
     use ModBatsrusUtility, ONLY: get_ivar
     use ModOptimizeParam, ONLY: check_optimize_param
     use ModPlotShock, ONLY: DivuDxMin
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         UseHeatFluxRegion
 
     ! Arguments
 
@@ -3075,8 +3077,6 @@ contains
     !==========================================================================
     subroutine set_defaults
 
-      use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
-           UseHeatFluxRegion
       use ModSemiImplVar, ONLY: UseSemiImplicit, TypeSemiImplicit
       use ModSemiImplicit, ONLY: SemiParam
       use ModResistivity, ONLY: UseResistivity, TypeResistivity, Eta0Si, &
