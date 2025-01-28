@@ -16,7 +16,7 @@ module ModUpdateStateFast
        UseRhoMin, UsePMin, UseSpeedMin, UseTMin, &
        UseGravity, UseRotatingFrame, UseRotatingBc, &
        UseCoronalHeating, UseAlfvenWaveDissipation, &
-       UseReynoldsDecomposition, UseTurbulentCascade
+       UseTurbulentCascade
 
   ! All other variables, parameters and subroutines
   use ModFaceValue, ONLY: correct_monotone_restrict, &
@@ -25,11 +25,11 @@ module ModUpdateStateFast
   use ModVarIndexes
   use ModMultiFluid, ONLY: &
        iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, InvMassFluid_I, &
-       nIonFluid, iPIon_I, MassIon_I, ElectronPerMass_I
+       nIonFluid, iPIon_I, ElectronPerMass_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
        nFaceValue, UnFirst_, UnLast_, Bn_ => BnL_, En_ => BnR_, &
-       LogAlfven_, FaceUx_, FaceUy_, FaceUz_, &
+       LogAlfven_, FaceUx_, FaceUz_, &
        DtMax_CB, Vdt_, UseElectronPressure, UseAnisoPressure
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_, InFlowBC_, FixedBC_, UserBC_
   use ModConservative, ONLY: IsConserv_CB
@@ -44,8 +44,8 @@ module ModUpdateStateFast
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, PeMin, TMin_I, &
        TeMin, OmegaBody_D, set_dipole, Gbody, OmegaBody, GammaWave, &
        GammaElectronMinus1, GammaElectron, InvGammaElectronMinus1, &
-       No2Io_V, No2Si_V, iUnitCons_V, UnitU_, UnitTemperature_, &
-       AverageIonCharge, SpeedMin, rSpeedMin, TauSpeedMin
+       No2Io_V, iUnitCons_V, UnitU_, &
+       SpeedMin, rSpeedMin, TauSpeedMin
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
        iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
@@ -62,11 +62,11 @@ module ModUpdateStateFast
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
   use ModBatsrusUtility, ONLY: stop_mpi
+  use ModCoronalHeating, ONLY: get_cell_heating
   use ModTurbulence, ONLY: &
-       calc_alfven_wave_dissipation, &
        KarmanTaylorBeta2AlphaRatio, apportion_coronal_heating, &
-       turbulent_cascade, get_wave_reflection_cell
-  use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
+       get_wave_reflection_cell
+  use ModChromosphere, ONLY: &
        TeChromosphere
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
        get_gamma_collisionless
@@ -528,7 +528,7 @@ contains
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
     real :: Ne
-    real :: TeSi, ExtensionFactorInv
+    real :: TeSi
 
     ! Minimum radial speed
     real :: Ur
@@ -733,32 +733,11 @@ contains
     if(UseCoronalHeating .or. UseAlfvenWaveDissipation)then
 
        if(UseAlfvenWaveDissipation)then
-          ! This is equivalent to get_block_heating()
-
-          if(UseTurbulentCascade .or. UseReynoldsDecomposition)then
-             call turbulent_cascade(i, j, k, iBlock, &
-                  WaveDissipationRate_V, CoronalHeating)
-          else
-             call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-                  WaveDissipationRate_V, CoronalHeating)
-          end if
-
-          if(DoExtendTransitionRegion) then
-             TeSi = State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-             TeSi = TeSi * No2Si_V(UnitTemperature_) * &
-                  MassIon_I(1)/AverageIonCharge
-
-             ExtensionFactorInv = 1/extension_factor(TeSi)
-             WaveDissipationRate_V = ExtensionFactorInv*WaveDissipationRate_V
-             CoronalHeating = ExtensionFactorInv*CoronalHeating
-          end if
-
-       end if
-
-       if(UseTurbulentCascade) call get_wave_reflection_cell(i, j, k, iBlock, &
-            Change_V(WaveFirst_:WaveLast_))
-
-       if(UseAlfvenWaveDissipation)then
+          call get_cell_heating(i, j, k, iBlock, &
+               WaveDissipationRate_V, CoronalHeating, TeSi)
+          if(UseTurbulentCascade) &
+               call get_wave_reflection_cell(i, j, k, iBlock, &
+               WaveDissipationRate_V, Change_V(WaveFirst_:WaveLast_))
           Change_V(WaveFirst_:WaveLast_) = &
                Change_V(WaveFirst_:WaveLast_) &
                - WaveDissipationRate_V*&
@@ -786,6 +765,7 @@ contains
 
        if(UseCoronalHeating)then
           if(UseElectronPressure)then
+             ! Use TeSi from above
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
                   WaveDissipationRate_V, CoronalHeating, TeSi, &

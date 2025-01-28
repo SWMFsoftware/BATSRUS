@@ -859,6 +859,8 @@ contains
     use ModMessagePass, ONLY: exchange_messages
     use BATL_lib, ONLY: iProc
     ! use ModFieldLineThread, ONLY: UseFieldLineThreads
+    use ModSatelliteFile, ONLY: UseSatelliteTimeOffset, TimeSatOffset_I, &
+         nSatellite
 
     character(len=*), intent(in) :: TypeSaveIn
 
@@ -885,7 +887,12 @@ contains
        ! Initialize last save times
        where(DtOutput_I>0.) &
             iTimeOutputLast_I=int(tSimulation/DtOutput_I)
-
+       if(UseSatelliteTimeOffset)then
+          where(DtOutput_I(Satellite_+1:Satellite_+nSatellite)>0.) &
+               iTimeOutputLast_I(Satellite_+1:Satellite_+nSatellite)=int(&
+               (tSimulation + TimeSatOffset_I(1:nSatellite))&
+               /DtOutput_I(Satellite_+1:Satellite_+nSatellite))
+       end if
        ! DoSaveInitial may be set to true in the #SAVEINITIAL command
        if(DoSaveInitial .or. (IsTimeAccurate .and. tSimulation == 0.0))then
           if(DoSaveInitial)then
@@ -935,6 +942,9 @@ contains
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
       use ModGroundMagPerturb, ONLY: nMagGridFile
+      use ModSatelliteFile, ONLY: UseSatelliteTimeOffset, TimeSatOffset_I, &
+           nSatellite
+      real :: tSimulationBackup
       logical :: DoPlotThread
       !------------------------------------------------------------------------
       DoPlotThread = DoPlotThreads
@@ -944,7 +954,11 @@ contains
          if( (iFile == magfile_ .or. &
               (iFile >= maggridfile_ .and. iFile < maggridfile_+nMagGridFile))&
               .neqv. TypeSave == 'BEGINSTEP') CYCLE
-
+         if(UseSatelliteTimeOffset.and.iFile > Satellite_ &
+              .and. iFile <= Satellite_ + nSatellite)then
+            tSimulationBackup = tSimulation
+            tSimulation  = tSimulation + TimeSatOffset_I(iFile-Satellite_)
+         end if
          if(DnOutput_I(iFile) >= 0)then
             if(DnOutput_I(iFile) == 0)then
                if(DoPlotThread.and.iFile > plot_&
@@ -973,6 +987,9 @@ contains
                call save_file
             end if
          end if
+         if(UseSatelliteTimeOffset.and.iFile > Satellite_ &
+              .and. iFile <= Satellite_ + nSatellite)tSimulation = &
+              tSimulationBackup
       end do
       ! If message passing with corners was done in save_file
       ! then do exchange_messages over again to get expected values

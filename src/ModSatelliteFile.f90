@@ -33,6 +33,10 @@ module ModSatelliteFile
   real, public :: TimeSatStart_I(MaxSatellite) = 0.
   real, public :: TimeSatEnd_I(MaxSatellite) = 0.
 
+  ! Used if the local time in satellite location differs from tSimulation:
+  logical, public :: UseSatelliteTimeOffset = .false.
+  real, public :: TimeSatOffset_I(MaxSatellite) = 0.
+
   ! These variables are public for write_logfile only !!! Should be improved
   ! Names and unit numbers for satellite files
   character(len=50), public:: NameFileSat_I(MaxSatellite)
@@ -238,6 +242,15 @@ contains
        do iSat = 1, nSatellite
           call read_var('SatelliteTimeStart', TimeSatStart_I(iSat))
           call read_var('SatelliteTimeEnd',   TimeSatEnd_I(iSat))
+       end do
+    case('#SATELLITETIMEOFFSET')
+       call read_var('UseSatelliteTimeOffset', UseSatelliteTimeOffset)
+       if(.not.UseSatelliteTimeOffset)then
+          TimeSatOffset_I = 0.
+          RETURN
+       end if
+       do iSat = 1, nSatellite
+          call read_var('SatelliteTimeOffset', TimeSatOffset_I(iSat))
        end do
     case default
        call stop_mpi(NameSub//' unknown command='//NameCommand)

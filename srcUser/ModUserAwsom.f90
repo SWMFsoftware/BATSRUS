@@ -721,12 +721,11 @@ contains
          UseAnisoPressure, Source_VC, LeftState_VX, RightState_VX, &
          LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
     use ModChromosphere, ONLY: DoExtendTransitionRegion, &
-         get_tesi_c, TeSi_CI
+         get_tesi_c, TeSi_C
     use ModCoronalHeating, ONLY: get_block_heating
-    use ModTurbulence, ONLY: CoronalHeating_CI, &
-         apportion_coronal_heating, get_wave_reflection, &
-         WaveDissipationRate_VCI
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitT_, &
+    use ModTurbulence, ONLY: CoronalHeating_C, WaveDissipationRate_VC, &
+         apportion_coronal_heating, get_wave_reflection
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitT_, &
          UnitN_, UnitEnergyDens_, CoulombLog, InvGammaMinus1
     use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
     use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_, WaveFirst_, WaveLast_, &
@@ -759,7 +758,7 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    integer :: i, j, k, iGang
+    integer :: i, j, k
     real :: QPerQtotal_I(nIonFluid)
     real :: QparPerQtotal_I(nIonFluid)
     real :: QePerQtotal
@@ -784,8 +783,6 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
 
-    iGang = i_gang(iBlock)
-
     select case(NameVar)
     case('te')
        NameIdlUnit = 'K'
@@ -809,9 +806,9 @@ contains
        end do; end do; end do
 
     case('qrad')
-       call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
+       call get_tesi_c(iBlock, TeSi_C)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call get_radiative_cooling(i, j, k, iBlock, TeSi_CI(i,j,k,iGang), &
+          call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
                RadCooling_C(i,j,k))
           PlotVar_G(i,j,k) = RadCooling_C(i,j,k) &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
@@ -839,11 +836,10 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., &
             DoMonotoneRestrict = .false.)
-       if(DoExtendTransitionRegion) &
-            call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
+       if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
        call get_block_heating(iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = CoronalHeating_CI(i,j,k,iGang) &
+          PlotVar_G(i,j,k) = CoronalHeating_C(i,j,k) &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
        end do; end do; end do
        NameIdlUnit = 'J/m^3/s'
@@ -854,15 +850,13 @@ contains
           call set_b0_face(iBlock)
           call calc_face_value(iBlock, DoResChangeOnly = .false., &
                DoMonotoneRestrict = .false.)
-          if(DoExtendTransitionRegion) &
-               call get_tesi_c(iBlock, TeSi_CI(:,:,:,iGang))
+          if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
           call get_block_heating(iBlock)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call apportion_coronal_heating(i, j, k, iBlock, &
                   State_VGB(:,i,j,k,iBlock), &
-                  WaveDissipationRate_VCI(:,i,j,k,iGang), &
-                  CoronalHeating_CI(i,j,k,iGang), &
-                  TeSi_CI(i,j,k,iGang), &
+                  WaveDissipationRate_VC(:,i,j,k), &
+                  CoronalHeating_C(i,j,k), TeSi_C(i,j,k), &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              select case(NameVar)
              case('qebyq')
