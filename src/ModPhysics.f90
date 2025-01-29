@@ -798,7 +798,7 @@ contains
     !$acc update device(rBody, gBody, OmegaBody, Bdp)
     !$acc update device(PolarRho_I, PolarP_I)
     !$acc update device(InvMassFluid_I, MassIon_I, InvMassIon_I)
-    !$acc update device(ChargeIon_I, ChargePerMass_I, ElectonPerMass_I)
+    !$acc update device(ChargeIon_I, ChargePerMass_I, ElectronPerMass_I)
     !$acc update device(IonMassPerCharge)
     !$acc update device(CollisionCoef_II)
     !$acc update device(UseSpeedMin, SpeedMin, rSpeedMin, TauSpeedMin)
