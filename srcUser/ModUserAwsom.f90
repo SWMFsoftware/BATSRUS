@@ -1197,10 +1197,8 @@ contains
 
     ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
-#ifndef _OPENACC
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
-#endif
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -1419,7 +1417,6 @@ contains
           end if
        end do
 
-#ifndef _OPENACC
        ! start of CME part
        if(UseCme)then
           do k = MinK, MaxK; do j = MinJ, MaxJ
@@ -1463,7 +1460,6 @@ contains
           end do; end do
        end if
        ! End of CME part
-#endif
 
        ! end of UseAwsom part (AWSoM)
     else
