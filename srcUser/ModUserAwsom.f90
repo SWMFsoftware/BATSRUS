@@ -4,9 +4,8 @@
 module ModUser
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iProc, lVerbose
+       test_start, test_stop, iProc, lVerbose, nI, nJ, nK
 
-  use ModMain, ONLY: nI, nJ,nK
   use ModChromosphere, ONLY: tChromoSi=>TeChromosphereSi, &
        tChromo => TeChromosphere
   use ModTurbulence, ONLY: PoyntingFluxPerB, PoyntingFluxPerBSi, &
@@ -18,10 +17,8 @@ module ModUser
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_set_cell_boundary,          &
-       IMPLEMENTED7 => user_set_face_boundary,          &
        IMPLEMENTED8 => user_set_resistivity,            &
        IMPLEMENTED9 => user_initial_perturbation,       &
-       IMPLEMENTED10=> user_update_states,              &
        IMPLEMENTED11=> user_get_b0,                     &
        IMPLEMENTED12=> user_material_properties,        &
        IMPLEMENTED13=> user_calc_sources_expl
@@ -38,7 +35,6 @@ module ModUser
   real    :: ChromoNSi = 2e17   ! tChromoSi = 5e4
   real    :: ChromoN, RhoChromo
   !$acc declare create(ChromoN)
-  logical :: UseUparBc = .false.
 
   ! variables for Parker initial condition
   real    :: CoronaN = 1.5e14, tCoronaSi = 1.5e6
@@ -48,12 +44,7 @@ module ModUser
   real    :: TeFraction, TiFraction
   real    :: EtaPerpSi
 
-  ! Input parameters for blocking the near-Sun cells to get bigger timestep
-  ! in the CME simulation
-  real    :: rSteady = 1.125
-  logical :: UseSteady = .false.
-
-    ! Extra dipole under surface
+  ! Extra dipole under surface
   real    :: UserDipoleStrength = 0., UserDipoleStrengthSi = 0.
   real    :: UserDipoleDepth = 1.
   real    :: UserDipoleLatitude, UserDipoleLatDeg = 0.
@@ -90,6 +81,7 @@ module ModUser
   ! from non-thermal emission at critical and quarter-of-critical,
   ! densities, the different contributions being weighted quite arbitrarily.
   ! 'bremsstrahlung' - emission due to the electron-ion collisions
+
   character(len=20):: TypeRadioEmission = 'simplistic'
 contains
   !============================================================================
@@ -100,8 +92,8 @@ contains
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
     use ModMain,      ONLY: UseRotatingFrame
 
-    character (len=100) :: NameCommand
-    integer :: iDir
+    character(len=100) :: NameCommand
+    integer:: iDir
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
@@ -126,16 +118,9 @@ contains
        case('#RADIOEMISSION')
           call read_var('TypeRadioEmission',TypeRadioEmission)
 
-       case("#LINETIEDBC")
-          call read_var('UseUparBc', UseUparBc)
-
        case("#PARKERIC")
           call read_var('CoronaN', CoronaN)
           call read_var('tCoronaSi', tCoronaSi)
-
-       case("#LOWCORONASTEADY")
-          call read_var('UseSteady', UseSteady)
-          if(UseSteady) call read_var('rSteady', rSteady)
 
        case("#EXTRADIPOLE")
           call read_var('UserDipoleStrengthSi', UserDipoleStrengthSi)
@@ -1013,185 +998,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
   !============================================================================
-  ! subroutine user_set_single_cell_boundary(i, j, k, iBlock, iSide, iTypeBC)
-  !  use EEE_ModCommonVariables, ONLY: UseCme
-  !  use EEE_ModMain,            ONLY: EEE_get_state_BC
-  !  use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
-  !  use ModGeometry,   ONLY: Xyz_DGB, r_GB
-  !  use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
-  !       get_gamma_collisionless
-  !  use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, Ehot_, &
-  !       RhoUx_, RhoUz_, Ppar_, WaveFirst_, WaveLast_, nFluid
-  !  use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I, iRho_I, &
-  !       MassFluid_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I, iPparIon_I, IsIon_I
-  !  use ModPhysics,    ONLY: UnitRho_, UnitB_, UnitP_, &
-  !       Si2No_V, rBody, GBody, InvGammaMinus1
-  !  use ModMain,       ONLY: nStep, nIteration, tSimulation, &
-  !       IsTimeAccurate
-  !  use ModB0,         ONLY: B0_DGB
-
-  !  integer, intent(in) :: i, j, k, iBlock, iSide, iTypeBC
-
-  !  real    :: Br1_D(3), Bt1_D(3)
-  !  real    :: Runit_D(3)
-  !  real    :: RhoCme, Ucme_D(3), Bcme_D(3), pCme, BrCme, BrCme_D(3)
-
-  !  real    :: u_D(3)
-
-  !  ! Variables related to UseAwsom
-  !  integer :: iMajor, iMinor
-  !  integer :: iFluid, iRho, iRhoUx, iRhoUz, iP
-  !  real    :: FullB_D(3), SignBr
-  !  real    :: U, Bdir_D(3)
-  !  real    :: Gamma
-
-  !  logical:: DoTest
-  !  character(len=*), parameter:: NameSub = 'user_set_single_cell_boundary'
-  !  !--------------------------------------------------------------------------
-
-  !  Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
-
-  !  Br1_D = sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
-  !  Bt1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) - Br1_D
-
-  !  ! Set B1r=0, and B1theta = B1theta(1) and B1phi = B1phi(1)
-
-  !  State_VGB(Bx_:Bz_,i,j,k,iBlock) = Bt1_D
-
-  !  do iFluid = 1, nFluid
-  !     iRho = iRho_I(iFluid)
-
-  !     ! exponential scaleheight
-  !     State_VGB(iRho,i,j,k,iBlock) = &
-  !          ChromoN*MassFluid_I(iFluid)*exp(-GBody/rBody &
-  !          *MassFluid_I(iFluid)/Tchromo &
-  !          *(rBody/r_GB(i,j,k,iBlock) - 1.0))
-
-  !     ! Fix ion temperature T_s
-  !     State_VGB(iP_I(iFluid),i,j,k,iBlock) = Tchromo &
-  !          *State_VGB(iRho,i,j,k,iBlock)/MassFluid_I(iFluid)
-
-  !     if(UseAnisoPressure .and. IsIon_I(iFluid)) &
-  !          State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
-  !          State_VGB(iP_I(iFluid),i,j,k,iBlock)
-  !  end do
-
-  !  FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
-  !  SignBr = sign(1.0, sum(Xyz_DGB(:,1,j,k,iBlock)*FullB_D))
-  !  if(SignBr < 0.0)then
-  !     iMajor = WaveLast_
-  !     iMinor = WaveFirst_
-  !  else
-  !     iMajor = WaveFirst_
-  !     iMinor = WaveLast_
-  !  end if
-
-  !  ! Te = T_s and ne = sum(q_s n_s)
-  !  if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = &
-  !       sum(ChargeIon_I*State_VGB(iPIon_I,i,j,k,iBlock))
-  !  ! Outgoing wave energy
-  !  if(IsOnAwRepresentative)then
-  !     State_VGB(iMajor,i,j,k,iBlock) = 1
-  !  else
-  !     State_VGB(iMajor,i,j,k,iBlock) = PoyntingFluxPerB &
-  !          *sqrt(State_VGB(iRho,i,j,k,iBlock))
-  !  end if
-  !  ! Ingoing wave energy
-  !  State_VGB(iMinor,i,j,k,iBlock) = 0.0
-
-  !  ! At the inner boundary this seems to be unnecessary...
-  !  ! Ehot=0 may be sufficient?!
-  !  if(Ehot_ > 1)then
-  !     if(UseHeatFluxCollisionless)then
-  !        iP = p_; if(UseElectronPressure) iP = Pe_
-  !        call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
-  !        State_VGB(Ehot_,i,j,k,iBlock) = &
-  !             State_VGB(iP,i,j,k,iBlock)*(1.0/(Gamma-1) &
-  !             - InvGammaMinus1)
-  !     else
-  !        State_VGB(Ehot_,MinI:0,j,k,iBlock) = 0.0
-  !     end if
-  !  end if
-
-  !  do iFluid = 1, nIonFluid
-  !     iRho = iRho_I(iFluid)
-  !     iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
-
-  !     if(UseFloatRadialVelocity)then
-  !        ! Copy radial velocity component. Reflect the other components
-  !        U = sum(State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock)*Runit_D) &
-  !             /State_VGB(iRho,1,j,k,iBlock)
-  !        U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
-  !             /State_VGB(iRho,1-i,j,k,iBlock)
-  !        if(U < 0.0)then
-  !           State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-  !                - U_D*State_VGB(iRho,i,j,k,iBlock)
-  !        else
-  !           U_D = U_D - sum(U_D*Runit_D)*Runit_D
-  !           State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-  !                (U*Runit_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
-  !        end if
-  !     else
-  !        ! Note that the Bdir_D calculation does not include the
-  !        ! CME part below
-  !        FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
-  !             + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
-  !        Bdir_D = FullB_D/max(1e-15, norm2(FullB_D))
-
-  !        ! Copy field-aligned velocity component.
-  !        ! Reflect the other components
-  !        U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
-  !             /State_VGB(iRho,1-i,j,k,iBlock)
-  !        U   = sum(U_D*Bdir_D); U_D = U_D - U*Bdir_D
-  !        State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-  !             (U*Bdir_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
-  !     end if
-
-  !  end do ! iFluid
-
-  !  ! start of CME part
-  !  if(UseCme)then
-
-  !     Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
-
-  !     call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-  !          tSimulation, nStep, nIteration)
-
-  !     RhoCme = RhoCme*Si2No_V(UnitRho_)
-  !     Bcme_D = Bcme_D*Si2No_V(UnitB_)
-  !     pCme   = pCme*Si2No_V(UnitP_)
-
-  !     BrCme   = sum(Runit_D*Bcme_D)
-  !     BrCme_D = BrCme*Runit_D
-
-  !     State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
-  !          + RhoCme
-  !     if(UseElectronPressure)then
-  !        State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-  !             + 0.5*pCme
-  !        State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-  !             + 0.5*pCme
-
-  !        if(UseAnisoPressure) State_VGB(Ppar_,i,j,k,iBlock) = &
-  !             State_VGB(Ppar_,i,j,k,iBlock) + 0.5*pCme
-  !     else
-  !        State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-  !             + pCme
-  !     end if
-
-  !     ! Only the radial component is set. The tangential components
-  !     ! float. As the flux rope leaves, the solution becomes
-  !     ! more and more potential.
-  !     State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-  !          State_VGB(Bx_:Bz_,i,j,k,iBlock) + BrCme_D
-
-  !     ! If DoBqField = T, we need to modify the velocity components
-  !     ! here
-  !     ! Currently, with the #CME command, we have always DoBqField=F
-  !  end if
-  !  ! End of CME part
-
-  ! end subroutine user_set_single_cell_boundary
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
     !$acc routine vector
 
@@ -1741,166 +1547,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
   !============================================================================
-  subroutine user_set_face_boundary(FBC)
-
-    use EEE_ModCommonVariables, ONLY: UseCme
-    use EEE_ModMain,            ONLY: EEE_get_state_BC
-    use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
-    use ModMain,         ONLY: x_, y_, UseRotatingFrame, nStep, &
-         nIteration, FaceBCType
-    use ModMultiFluid,   ONLY: MassIon_I
-    use ModPhysics,      ONLY: OmegaBody, AverageIonCharge, UnitRho_, &
-         UnitP_, UnitB_, UnitU_, Si2No_V, &
-         InvGammaMinus1, InvGammaElectronMinus1
-    use ModVarIndexes,   ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, Bz_, p_, &
-         WaveFirst_, WaveLast_, Pe_, Ppar_, Hyp_, Ehot_
-    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
-         get_gamma_collisionless
-
-    type(FaceBCType), intent(inout) :: FBC
-
-    integer :: iP
-    real :: NumDensIon, NumDensElectron, FullBr, Ewave, Pressure, Temperature
-    real :: GammaHere, InvGammaMinus1Fluid
-    real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D, rUnit_D
-
-    ! Line-tied related variables
-    real              :: RhoTrue, RhoGhost
-    real,dimension(3) :: bUnitGhost_D, bUnitTrue_D
-    real,dimension(3) :: FullBGhost_D, FullBTrue_D
-
-    ! CME related variables
-    real :: RhoCme, Ucme_D(3), Bcme_D(3), pCme
-    real :: BrCme, BrCme_D(3), UrCme, UrCme_D(3), UtCme_D(3)
-
-    character(len=*), parameter:: NameSub = 'user_set_face_boundary'
-    !--------------------------------------------------------------------------
-    rUnit_D = FBC%FaceCoords_D/norm2(FBC%FaceCoords_D)
-
-    ! Magnetic field: radial magnetic field is set to zero,
-    ! the other components are floating
-    B1_D  = FBC%VarsTrueFace_V(Bx_:Bz_)
-    B1r_D = sum(rUnit_D*B1_D)*rUnit_D
-    B1t_D = B1_D - B1r_D
-    FBC%VarsGhostFace_V(Bx_:Bz_) = B1t_D
-
-    ! Fix density
-    FBC%VarsGhostFace_V(Rho_) = RhoChromo
-
-    ! The perpendicular to the mf components of velocity are reflected.
-    ! The parallel to the field velocity is either floating or reflected
-    if (UseUparBc) then
-       ! Use line-tied boundary conditions
-       U_D = FBC%VarsTrueFace_V(Ux_:Uz_)
-
-       RhoTrue = FBC%VarsTrueFace_V(Rho_)
-       RhoGhost = FBC%VarsGhostFace_V(Rho_)
-       FullBGhost_D = FBC%B0Face_D + FBC%VarsGhostFace_V(Bx_:Bz_)
-       FullBTrue_D  = FBC%B0Face_D + FBC%VarsTrueFace_V(Bx_:Bz_)
-
-       bUnitGhost_D = FullBGhost_D/max(1e-30, norm2(FullBGhost_D))
-       bUnitTrue_D = FullBTrue_D/max(1e-15, norm2(FullBTrue_D))
-
-       ! Extrapolate field-aligned velocity component to satisfy
-       ! the induction equation under steady state conditions.
-       ! The density ratio is to satisfy mass conservation along the field
-       ! line as well.
-       FBC%VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
-            sum(U_D*bUnitTrue_D)*bUnitGhost_D
-    else
-       ! zero velocity at inner boundary
-       FBC%VarsGhostFace_V(Ux_:Uz_) = -FBC%VarsTrueFace_V(Ux_:Uz_)
-    end if
-
-    ! Apply corotation if needed
-    if(.not.UseRotatingFrame)then
-       FBC%VarsGhostFace_V(Ux_) = FBC%VarsGhostFace_V(Ux_) &
-            - 2*OmegaBody*FBC%FaceCoords_D(y_)
-       FBC%VarsGhostFace_V(Uy_) = FBC%VarsGhostFace_V(Uy_) &
-            + 2*OmegaBody*FBC%FaceCoords_D(x_)
-    end if
-
-    ! Temperature is fixed
-    Temperature = tChromo
-
-    ! If the CME is applied, we modify: density, temperature, magnetic field
-    if(UseCme)then
-       call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
-            FBC%TimeBc, nStep, nIteration)
-
-       RhoCme = RhoCme*Si2No_V(UnitRho_)
-       Ucme_D = Ucme_D*Si2No_V(UnitU_)
-       Bcme_D = Bcme_D*Si2No_V(UnitB_)
-       pCme   = pCme*Si2No_V(UnitP_)
-
-       ! Add CME density
-       FBC%VarsGhostFace_V(Rho_) = FBC%VarsGhostFace_V(Rho_) + RhoCme
-
-       ! Fix the normal component of the CME field to BrCme_D at the Sun
-       BrCme   = sum(Runit_D*Bcme_D)
-       BrCme_D = BrCme*Runit_D
-       FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) + BrCme_D
-
-       ! Fix the tangential components of the CME velocity at the Sun
-       UrCme   = sum(Runit_D*Ucme_D)
-       UrCme_D = UrCme*Runit_D
-       UtCme_D = UCme_D - UrCme_D
-       FBC%VarsGhostFace_V(Ux_:Uz_) = FBC%VarsGhostFace_V(Ux_:Uz_) + 2*UtCme_D
-
-       Pressure = RhoChromo/MassIon_I(1)*(1 + AverageIonCharge)*tChromo
-       Temperature = (Pressure + pCme) &
-            / (FBC%VarsGhostFace_V(Rho_)/MassIon_I(1)*(1 + AverageIonCharge))
-    end if
-
-    FullBr = sum((FBC%B0Face_D + FBC%VarsGhostFace_V(Bx_:Bz_))*rUnit_D)
-
-    ! Ewave \propto sqrt(rho) for U << Ualfven
-    if(IsOnAwRepresentative)then
-       Ewave = 1.0
-    else
-       Ewave = PoyntingFluxPerB*sqrt(FBC%VarsGhostFace_V(Rho_))
-    end if
-    if (FullBr > 0. ) then
-       FBC%VarsGhostFace_V(WaveFirst_) = Ewave
-       FBC%VarsGhostFace_V(WaveLast_) = 0.0
-    else
-       FBC%VarsGhostFace_V(WaveFirst_) = 0.0
-       FBC%VarsGhostFace_V(WaveLast_) = Ewave
-    end if
-
-    ! Fix temperature
-    NumDensIon = FBC%VarsGhostFace_V(Rho_)/MassIon_I(1)
-    NumDensElectron = NumDensIon*AverageIonCharge
-    if(UseElectronPressure)then
-       FBC%VarsGhostFace_V(p_) = NumDensIon*Temperature
-       FBC%VarsGhostFace_V(Pe_) = NumDensElectron*Temperature
-       if(UseAnisoPressure) &
-            FBC%VarsGhostFace_V(Ppar_) = FBC%VarsGhostFace_V(p_)
-    else
-       FBC%VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Temperature
-    end if
-
-    if(Hyp_>1) FBC%VarsGhostFace_V(Hyp_) = FBC%VarsTrueFace_V(Hyp_)
-
-    if(Ehot_ > 1)then
-       if(UseHeatFluxCollisionless)then
-          call get_gamma_collisionless(FBC%FaceCoords_D, GammaHere)
-          if(UseElectronPressure) then
-             iP = Pe_
-             InvGammaMinus1Fluid = InvGammaElectronMinus1
-          else
-             iP = p_
-             InvGammaMinus1Fluid = InvGammaMinus1
-          end if
-          FBC%VarsGhostFace_V(Ehot_) = &
-               FBC%VarsGhostFace_V(iP)*(1/(GammaHere-1) - InvGammaMinus1Fluid)
-       else
-          FBC%VarsGhostFace_V(Ehot_) = 0.0
-       end if
-    end if
-
-  end subroutine user_set_face_boundary
-  !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
 
     use ModAdvance,    ONLY: State_VGB
@@ -2121,32 +1767,9 @@ contains
        call EEE_do_not_add_cme_again
 
     end if
+
     call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
-  !============================================================================
-  subroutine user_update_states(iBlock)
-
-    use ModUpdateState, ONLY: update_state_normal
-
-    use ModGeometry, ONLY: Used_GB, r_GB, IsNoBody_B
-
-    integer,intent(in):: iBlock
-    logical:: DoTest
-
-    character(len=*), parameter:: NameSub = 'user_update_states'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    if(UseSteady)then
-       if(minval(r_GB(1:nI,1:nJ,1:nK,iBlock)) <= rSteady)then
-          Used_GB(1:nI,1:nJ,1:nK,iBlock) = .false.
-          IsNoBody_B(iBlock) = .false.
-       end if
-    end if
-    call update_state_normal(iBlock)
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_update_states
   !============================================================================
   subroutine user_get_b0(x, y, z, B0_D)
 
@@ -2221,6 +1844,7 @@ contains
        CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut,         &
        OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W,    &
        PlanckOut_W)
+
     use ModConst, ONLY : cBoltzmann, cPlanckH, cElectronMass, cTwoPi, cPi, &
          cLightSpeed, cElectronCharge, cElectronChargeSquaredJm
     use ModVarIndexes, ONLY: Pe_, Rho_
@@ -2310,6 +1934,7 @@ contains
        call CON_stop('Unknown radio emission mechanism ='&
             //TypeRadioEmission)
     end select
+
   end subroutine user_material_properties
   !============================================================================
   subroutine user_calc_sources_expl(iBlock)
@@ -2427,7 +2052,6 @@ contains
 
     end function zeta_region
     !==========================================================================
-
   end subroutine user_calc_sources_expl
   !============================================================================
 end module ModUser
