@@ -2044,16 +2044,6 @@ contains
     pTotal  = 0.5*B2
     if(UseB0) pTotal = pTotal + sum(B0_D*State_V(Bx_:Bz_))
 
-    ! if(UseElectronPressure) pTotal = pTotal + PeAdd
-
-    ! if(UseWavePressure)then
-    !    if(UseWavePressureLtd)then
-    !       pTotal = pTotal + (GammaWave-1)*State_V(Ew_)
-    !    else
-    !       pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
-    !    end if
-    ! end if
-
     ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2
     !        = p + bb/2 + (p - ppar)/2
     ! if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
@@ -2188,12 +2178,9 @@ contains
             ' State_V(Pe_)           =', State_V(Pe_), iSideTest
        ! if(UseAnisoPe) write(*,*) &
        !     ' State_V(Pepar_)        =', State_V(Pepar_), iSideTest
-       if(UseAlfvenWaves) then
-          write(*,*) ' GammaWave, State(Waves)=', GammaWave, iSideTest
-          do iWave = WaveFirst_, WaveLast_
-             write(*,*)' State(Waves)=', State_V(iWave), iSideTest
-          end do
-       end if
+       if(UseAlfvenWaves) write(*,*) &
+            ' GammaWave, State(Waves)=', GammaWave, &
+            State_V(WaveFirst_), State_V(WaveLast_), iSideTest
        write(*,*) &
             ' Fast2, Discr           =', Fast2, Discr, iSideTest
        write(*,*) &
