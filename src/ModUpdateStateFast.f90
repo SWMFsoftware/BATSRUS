@@ -2141,6 +2141,8 @@ contains
     real:: InvRho, Bn, B2
     real:: Sound2, Fast2, Discr, Fast
     real:: GammaP
+
+    integer:: iWave
     !--------------------------------------------------------------------------
     if(UseBorisCorrection)then
        call get_boris_speed(DoTestSide, State_V, Normal_D, Un, B0_D, &
@@ -2186,9 +2188,12 @@ contains
             ' State_V(Pe_)           =', State_V(Pe_), iSideTest
        ! if(UseAnisoPe) write(*,*) &
        !     ' State_V(Pepar_)        =', State_V(Pepar_), iSideTest
-       if(UseAlfvenWaves) write(*,*) &
-            ' GammaWave, State(Waves)=', &
-            GammaWave, State_V(WaveFirst_:WaveLast_), iSideTest
+       if(UseAlfvenWaves) then
+          write(*,*) ' GammaWave, State(Waves)=', GammaWave, iSideTest
+          do iWave = WaveFirst_, WaveLast_
+             write(*,*)' State(Waves)=', State_V(iWave), iSideTest
+          end do
+       end if
        write(*,*) &
             ' Fast2, Discr           =', Fast2, Discr, iSideTest
        write(*,*) &
