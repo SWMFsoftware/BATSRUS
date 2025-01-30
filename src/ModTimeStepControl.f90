@@ -469,6 +469,7 @@ contains
        end if
     end if
 
+    !$acc update device(Dt)
     !$acc parallel loop gang
     !$omp parallel do
     do iBlock = 1, nBlock
