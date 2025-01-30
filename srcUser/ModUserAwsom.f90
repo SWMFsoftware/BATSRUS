@@ -1225,6 +1225,7 @@ contains
 
        ! start of CME part
        if(UseCme)then
+         !$acc loop seq
           do k = MinK, MaxK; do j = MinJ, MaxJ
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 

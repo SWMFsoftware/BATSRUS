@@ -390,7 +390,8 @@ contains
     use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
          UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
          UseProjection, UseConstrainB,  UseLocalTimeStepNew
-    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, &
+         State_VGB
     use ModSetInitialCondition, ONLY: add_rotational_velocity
     use ModConstrainDivB, ONLY: DoInitConstrainB
     use ModProjectDivB, ONLY: project_divb
@@ -440,6 +441,9 @@ contains
     ! Allow the user to add a perturbation to the initial condition.
     if (UseUserPerturbation) then
        call user_initial_perturbation
+
+       call sync_cpu_gpu('change on CPU', NameSub, State_VGB)
+
        if(UseCme .and. UseFieldLineThreads) call set_threads(NameSub)
        UseUserPerturbation=.false.
     end if
