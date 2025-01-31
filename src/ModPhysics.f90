@@ -82,7 +82,6 @@ module ModPhysics
   real:: PePerPtotal              = 0.0
   real:: IonMassPerCharge         = 1.0
   !$acc declare create(AverageIonCharge, PePerPtotal)
-  
 
   ! Quantities for reduced mass and collision frequencies
   real:: MassIonElectron_I(nIonFluid+1)
