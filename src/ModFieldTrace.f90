@@ -331,9 +331,10 @@ contains
        ! Put r and Phi for BOTH directions
        Pos_DI(1,:) = r
        Pos_DI(2,:) = Phi
-      
-       ! Now checking if the ray is ending is at z = 0. If not, set it as open ray. (For HEIDI)
-       if (Pos_DI(3,iDir) .ne. 0.0) Pos_DI(3,:) = OpenRay
+
+       ! Now checking if the ray is ending is at z = 0.
+       ! If not, set it as open ray. (For HEIDI)
+       if (Pos_DI(3,iDir) /= 0.0) Pos_DI(3,:) = OpenRay
 
     else
        ! Impossible values
@@ -937,7 +938,8 @@ contains
          case(RayOpen_)
             ! The trace reached the outer boundary
             ! Field line integration relies on XyzRay_D to be set to OpenRay
-            if(DoIntegrateRay .or. ((DoMapRay .or. DoMapEquatorRay) .and. .not.DoMapOpen) ) &
+            if(DoIntegrateRay .or. &
+                 ((DoMapRay .or. DoMapEquatorRay) .and. .not.DoMapOpen) ) &
                  XyzRay_D = OpenRay
             if(DoTestRay)write(*,*)&
                  'follow_ray finished at outer boundary, iProc,iRay,Xyz=', &
@@ -997,18 +999,6 @@ contains
             iBlockStart = iStart_D(4)
 
             Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart) = XyzRay_D
-
-            ! if((iFace .eq. RayOpen_) .and. (XyzRay_D(1) .ne. OpenRay)) then
-            !    if(nint(tSimulation/300) .eq. 0) then
-            !       write(NameFile,'(a,i5.5,a)') "RaysOpen_t",nint(tSimulation),".out"
-            !       open(3, FILE=NameFile,status='unknown', position='append')
-            !       write(3,*), Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart)
-            !       close(3)
-            !    end if
-
-            !    ! write(*,*) 'Trace_DSNB = ', &
-            !    ! Trace_DSNB(:,iRay,iStart,jStart,kStart,iBlockStart)
-            ! end if
 
             if(DoTestRay)write(*,*) &
                  'Storing into iProc,iBlock,i,j,k,iRay,Xyz=',&

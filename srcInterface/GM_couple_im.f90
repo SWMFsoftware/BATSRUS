@@ -429,7 +429,7 @@ contains
        SmGm_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
 
        if(IsImHeidi) SmGm_DD = matmul(ReverseSm_DD, SmGm_DD)
-       
+
        do iPoint = 1, nPointLine
           StateLine_VI(3:5,iPoint)  = &
                matmul(SmGm_DD, StateLine_VI(3:5,iPoint)) ! X,Y,Z
@@ -731,7 +731,7 @@ contains
       if(IsImHeidi)then
          if(NameVar /= 'Hpp:Hprho:Npp:Opp:Nprho:Oprho') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
-      else 
+      else
          if(NameVar /= 'pe:p:rho:Hpp:Opp:Hprho:Oprho') &
                call CON_stop(NameSub//' invalid NameVar='//NameVar)
       end if
@@ -813,7 +813,7 @@ contains
           IsImRho_I        = .true.
           IsImP_I          = .true.
           IsImPpar_I       = .false.
-       else 
+       else
           ! Overwriting ImP_III(:,:,1) !!!
           ImP_III(:,:,1)   = Buffer_IIV(:,:,Hpres_)
           ImP_III(:,:,2)   = Buffer_IIV(:,:,Opres_)
