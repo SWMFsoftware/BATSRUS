@@ -289,3 +289,40 @@ HELIOUPDATEB0
 #STOP
 -1			MaxIteration
 8.0			tSimulationMax
+
+#RUN ##########################################################################
+
+! perturb again with new TD14 CME
+#USERSWITCH
++perturb		StringSwitch
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+-1.0			tDecayCme
+180.0			LongitudeCme
+15.0			LatitudeCme
+120.0			OrientationCme
+TD14			TypeCme
++1			iHelicity
+1.005747126436782		RadiusMajor
+0.431034482758621		RadiusMinor
+0.1436781609195402		Depth
+cancelflux		TypeBStrap
+1.79519580205131		BcTubeDim
+5.9916085277386298E+02		bQStrapFraction ! Increased to notice effect
+0.4			qDistance
+10			UChargeX
+
+#STOP
+-1			MaxIteration
+10.0			tSimulationMax
+
+#RUN ##########################################################################
+
+HELIOUPDATEB0
+-1.0			DtUpdateB0
+
+#STOP
+-1			MaxIteration
+100.0			tSimulationMax
