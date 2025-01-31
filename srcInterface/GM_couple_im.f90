@@ -366,6 +366,7 @@ contains
     use ModMultiFluid,    ONLY: nFluid, iUx_I, iUz_I
     use ModFieldTrace,    ONLY: DoExtractBGradB1, DoExtractEfield, &
          trace_field_equator
+    use ModImCoupling, ONLY: IsImHeidi
 
     integer, intent(in)         :: nRadius, nLon
     integer, intent(out)        :: nVarLine, nPointLine
@@ -375,6 +376,7 @@ contains
 
     integer:: nVarExtract, iPoint, iUx5, iUz5, iFluid
     real:: SmGm_DD(3,3)
+    real:: ReverseSm_DD(3,3)
 
     character(len=lNameVersion):: NameVersionIm
     character(len=*), parameter:: NameSub = 'GM_get_for_im_trace'
@@ -399,6 +401,7 @@ contains
        DoExtractBGradB1 = .false. ! RAM-SCB does not need BGradB1
        DoExtractEfield  = .false. ! RAM-SCB does not need Efield
     else
+       IsImHeidi = .true.
        DoExtractBGradB1 = .true.  ! HEIDI needs BGradB1
        DoExtractEfield  = .true.  ! HEIDI needs Efield
     end if
@@ -424,6 +427,12 @@ contains
 
        ! Transformation matrix between the SM and GM coordinates
        SmGm_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
+
+       ! Reversion matrix of X and Y, for HEIDI
+       data ReverseSm_DD / -1, 0, 0, 0, -1, 0, 0, 0, 1 /
+
+       if(IsImHeidi) SmGm_DD = matmul(ReverseSm_DD, SmGm_DD)
+       
        do iPoint = 1, nPointLine
           StateLine_VI(3:5,iPoint)  = &
                matmul(SmGm_DD, StateLine_VI(3:5,iPoint)) ! X,Y,Z
@@ -711,7 +720,8 @@ contains
     character(len=lNameVersion):: NameVersionIm
     integer:: nCells_D(2)
     integer, parameter:: pe_=1, pres_=2, dens_=3, parpres_=4, bmin_=5, &
-         Hpres_=4,Opres_=5,Hdens_=6,Odens_=7
+         Hpres_=4,Opres_=5,Hdens_=6,Odens_=7, HeidiHpres_ = 1, HeidiHdens_ = 2, &
+         HeidiOpres_=4, HeidiOdens_=6, HeidiNpres_=3, HeidiNdens_=5
 
     logical:: DoTest, DoTestMe
 
@@ -720,8 +730,13 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoMultiFluidIMCoupling)then
-       if(NameVar /= 'pe:p:rho:Hpp:Opp:Hprho:Oprho') &
+      if(NameVersionIm == 'RAM_HEIDI')then
+         if(NameVar /= 'Hpp:Hprho:Npp:Opp:Nprho:Oprho') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
+      else 
+         if(NameVar /= 'pe:p:rho:Hpp:Opp:Hprho:Oprho') &
+               call CON_stop(NameSub//' invalid NameVar='//NameVar)
+      end if
     else if(DoAnisoPressureIMCoupling)then
        if(NameVar /= 'pe:p:rho:ppar:bmin') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
@@ -790,14 +805,25 @@ contains
           ImRho_III(:,:,3) = Buffer_IIV(:,:,Odens_)
           IsImRho_I        = .true.
        else
-          ! Overwriting ImP_III(:,:,1) !!!
-          ImP_III(:,:,1)   = Buffer_IIV(:,:,Hpres_)
-          ImP_III(:,:,2)   = Buffer_IIV(:,:,Opres_)
-          ImRho_III(:,:,1) = Buffer_IIV(:,:,Hdens_)
-          ImRho_III(:,:,2) = Buffer_IIV(:,:,Odens_)
-          IsImRho_I        = .true.
-          IsImP_I          = .true.
-          IsImPpar_I       = .false.
+         if(NameVersionIm == 'RAM_HEIDI')then
+            ImP_III(:,:,1)   = Buffer_IIV(:,:,HeidiHpres_)
+            ImP_III(:,:,2)   = Buffer_IIV(:,:,HeidiNpres_)
+            ImP_III(:,:,3)   = Buffer_IIV(:,:,HeidiOpres_)
+            ImRho_III(:,:,1) = Buffer_IIV(:,:,HeidiHdens_)
+            ImRho_III(:,:,2) = Buffer_IIV(:,:,HeidiNdens_)
+            ImRho_III(:,:,3) = Buffer_IIV(:,:,HeidiOdens_)
+            IsImRho_I        = .true.
+            IsImP_I          = .true.
+            IsImPpar_I       = .false.
+         else 
+            ! Overwriting ImP_III(:,:,1) !!!
+            ImP_III(:,:,1)   = Buffer_IIV(:,:,Hpres_)
+            ImP_III(:,:,2)   = Buffer_IIV(:,:,Opres_)
+            ImRho_III(:,:,1) = Buffer_IIV(:,:,Hdens_)
+            ImRho_III(:,:,2) = Buffer_IIV(:,:,Odens_)
+            IsImRho_I        = .true.
+            IsImP_I          = .true.
+            IsImPpar_I       = .false.
        endif
     endif
 
