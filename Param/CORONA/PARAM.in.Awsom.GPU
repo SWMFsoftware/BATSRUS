@@ -225,6 +225,25 @@ T			IsTimeAccurate
 #PARTLOCALTIMESTEP
 1.1			rLocalTimeStep
 
+! Perturb with GL CME
+#USERSWITCH
++perturb -ic		StringSwitch
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+-1.			tDecayCme
+80.0			LongitudeCme
+-10.0			LatitudeCme
+0.0			OrientationCme
+SPHEROMAK		TypeCme
+1.4			BStrength
+-1			iHelicity
+1.03			Radius
+0.7			Stretch
+1.13			ApexHeight
+600			uCme
+
 #STOP
 -1			MaxIteration
 2.0			tSimulationMax

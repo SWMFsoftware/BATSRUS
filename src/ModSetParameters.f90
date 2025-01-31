@@ -3957,6 +3957,7 @@ contains
       !$acc update device(UseHeatFluxCollisionless)
       !$acc update device(UseHeatFluxRegion, UseHeatConduction)
       !$acc update device(TypeSemiImplicit)
+      !$acc update device(rLocalTimeStep)
 
     end subroutine correct_parameters
     !==========================================================================
