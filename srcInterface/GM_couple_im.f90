@@ -1212,7 +1212,6 @@ contains
     integer:: j2, nCall=0
     real:: TmpT, TmpV1,TmpV2, LonShift, TmpHpT, TmpOpT
     !--------------------------------------------------------------------------
-
     nCall = nCall + 1
 
     ! write values to plot file
@@ -1292,14 +1291,14 @@ contains
   !============================================================================
   subroutine write_integrated_data_idl
 
+    ! write values to plot file
+
     use ModIoUnit, ONLY: UnitTmp_
     use ModMain,   ONLY: tSimulation
     character(len=100):: NameFile
     integer:: nCall = 0
     !--------------------------------------------------------------------------
-
-    ! write values to plot file
-    nCall = nCall+1
+    nCall = nCall + 1
     write(NameFile,'(a,i6.6,a,i4.4,a)')"rayValues_n=",nStep,"_",nCall,".out"
 
     open (UNIT=UnitTmp_, FILE=NameFile, STATUS='unknown', &
