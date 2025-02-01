@@ -94,7 +94,7 @@ Param/CORONA/grid_awsom.dat		NameGridFile
 
 ! Use a true sphere, so box is made much larger
 #GRID
-2			nRootBlock1
+1			nRootBlock1
 2			nRootBlock2
 1			nRootBlock3
 -100.0			xMin
@@ -105,7 +105,7 @@ Param/CORONA/grid_awsom.dat		NameGridFile
  100.0			zMax
 
 #GRIDBLOCKALL
-12000			MaxBlock
+4000			MaxBlock
 
 #LIMITRADIUS
 1.0			rMin
@@ -117,21 +117,31 @@ shell0			StringShape
 1.0			RadiusInner
 1.7			Radius
 
+#AMRREGION
+LargeShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+2.0			Radius
+
 #AMRCRITERIARESOLUTION
-3			nRefineCrit
-dphi			StringRefine
-6.0			RefineTo
-3.0			CoarsenFrom
-dphi Innershell		StringRefine
-1.5			RefineTo
-0.75			CoarsenFrom
-currentsheet		StringRefine
+4			nRefineCrit
+Level +InnerShell		StringRefine
+4			RefineTo
+4			CoarsenFrom
+currentsheet +LargeShell -InnerShell		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
-1.5			MaxResolution
+0.1			MaxResolution
+Level			StringRefine
+2			RefineTo
+2			CoarsenFrom
+currentsheet -LargeShell		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+0.1			MaxResolution
 
 #GRIDRESOLUTION
-6.0			Resolution
+12.0			Resolution
 initial			StringShape
 
 #LOOKUPTABLE
@@ -142,8 +152,8 @@ ascii			TypeFile
 
 #DOAMR
 T			DoAmr
-6			DnAmr
--1.0			DtAmr
+40			DnAmr
+-1			DtAmr
 T			IsStrictAmr
 
 #TIMESTEPPING
@@ -211,7 +221,7 @@ x=0 VAR idl		StringPlot
 F			DoSaveInitial
 
 #STOP
-10			MaxIteration
+50			MaxIteration
 -1.0			tSimulationMax
 
 #RUN ##########################################################################
@@ -246,4 +256,73 @@ SPHEROMAK		TypeCme
 
 #STOP
 -1			MaxIteration
-2.0			tSimulationMax
+5.0			tSimulationMax
+
+#RUN ##########################################################################
+
+! Perturb with TD CME
+#USERSWITCH
++perturb		StringSwitch
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+-1.			tDecayCme
+270.0			LongitudeCme
+15.0			LatitudeCme
+120.0			OrientationCme
+TD			TypeCme
++1			iHelicity
+1.005747126436782		RadiusMajor
+0.431034482758621		RadiusMinor
+0.1436781609195402		Depth
+T			UsePlasmaBeta
+0.1			PlasmaBeta
+5.0e4			EjectaTemperature
+readbstrap		TypeBStrap
+11.976710014764566		bStrappingDim
+none			TypeCharge
+
+HELIOUPDATEB0
+1.0			DtUpdateB0
+
+#STOP
+-1			MaxIteration
+8.0			tSimulationMax
+
+#RUN ##########################################################################
+
+! perturb again with new TD14 CME
+#USERSWITCH
++perturb		StringSwitch
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+-1.0			tDecayCme
+180.0			LongitudeCme
+15.0			LatitudeCme
+120.0			OrientationCme
+TD14			TypeCme
++1			iHelicity
+1.005747126436782		RadiusMajor
+0.431034482758621		RadiusMinor
+0.1436781609195402		Depth
+cancelflux		TypeBStrap
+1.79519580205131		BcTubeDim
+5.9916085277386298E+02		bQStrapFraction ! Increased to notice effect
+0.4			qDistance
+10			UChargeX
+
+#STOP
+-1			MaxIteration
+10.0			tSimulationMax
+
+#RUN ##########################################################################
+
+HELIOUPDATEB0
+-1.0			DtUpdateB0
+
+#STOP
+-1			MaxIteration
+100.0			tSimulationMax

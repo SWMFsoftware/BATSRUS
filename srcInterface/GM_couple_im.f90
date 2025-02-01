@@ -348,10 +348,9 @@ contains
 
   end subroutine GM_get_sat_for_im_crcm
   !============================================================================
-
   subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
-    ! Do field line tracing for IM/RAM_SCB.
+    ! Do field line tracing for IM/RAM_SCB or IM/HEIDI.
     ! Provide total number of points along rays
     ! and the number of variables to pass to IM
 
@@ -366,6 +365,7 @@ contains
     use ModMultiFluid,    ONLY: nFluid, iUx_I, iUz_I
     use ModFieldTrace,    ONLY: DoExtractBGradB1, DoExtractEfield, &
          trace_field_equator
+    use ModImCoupling, ONLY: IsImHeidi
 
     integer, intent(in)         :: nRadius, nLon
     integer, intent(out)        :: nVarLine, nPointLine
@@ -375,11 +375,13 @@ contains
 
     integer:: nVarExtract, iPoint, iUx5, iUz5, iFluid
     real:: SmGm_DD(3,3)
+    ! Reversion matrix of X and Y, for HEIDI
+    real, parameter:: ReverseSm_DD(3,3) = &
+         reshape([-1, 0, 0, 0, -1, 0, 0, 0, 1], [3,3])
 
     character(len=lNameVersion):: NameVersionIm
     character(len=*), parameter:: NameSub = 'GM_get_for_im_trace'
     !--------------------------------------------------------------------------
-
     if(.not.allocated(RadiusIm_I))then
        if(   nRadius /= Grid_C(IM_) % nCoord_D(1) .or. &
             nLon    /= Grid_C(IM_) % nCoord_D(2) )then
@@ -399,6 +401,7 @@ contains
        DoExtractBGradB1 = .false. ! RAM-SCB does not need BGradB1
        DoExtractEfield  = .false. ! RAM-SCB does not need Efield
     else
+       IsImHeidi = .true.
        DoExtractBGradB1 = .true.  ! HEIDI needs BGradB1
        DoExtractEfield  = .true.  ! HEIDI needs Efield
     end if
@@ -424,6 +427,9 @@ contains
 
        ! Transformation matrix between the SM and GM coordinates
        SmGm_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
+
+       if(IsImHeidi) SmGm_DD = matmul(ReverseSm_DD, SmGm_DD)
+
        do iPoint = 1, nPointLine
           StateLine_VI(3:5,iPoint)  = &
                matmul(SmGm_DD, StateLine_VI(3:5,iPoint)) ! X,Y,Z
@@ -711,7 +717,9 @@ contains
     character(len=lNameVersion):: NameVersionIm
     integer:: nCells_D(2)
     integer, parameter:: pe_=1, pres_=2, dens_=3, parpres_=4, bmin_=5, &
-         Hpres_=4,Opres_=5,Hdens_=6,Odens_=7
+         Hpres_=4, Opres_=5, Hdens_=6, Odens_=7, &
+         HeidiHpres_ = 1, HeidiHdens_ = 2, &
+         HeidiOpres_=4, HeidiOdens_=6, HeidiNpres_=3, HeidiNdens_=5
 
     logical:: DoTest, DoTestMe
 
@@ -720,8 +728,13 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoMultiFluidIMCoupling)then
-       if(NameVar /= 'pe:p:rho:Hpp:Opp:Hprho:Oprho') &
+      if(IsImHeidi)then
+         if(NameVar /= 'Hpp:Hprho:Npp:Opp:Nprho:Oprho') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
+      else
+         if(NameVar /= 'pe:p:rho:Hpp:Opp:Hprho:Oprho') &
+               call CON_stop(NameSub//' invalid NameVar='//NameVar)
+      end if
     else if(DoAnisoPressureIMCoupling)then
        if(NameVar /= 'pe:p:rho:ppar:bmin') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
@@ -776,6 +789,7 @@ contains
        ! This should NOT be done for multifluid ???!!!
        ImP_III(:,:,1) = Buffer_IIV(:,:,pres_) + Buffer_IIV(:,:,pe_)
     end if
+
     ImRho_III(:,:,1) = Buffer_IIV(:,:,dens_)
     iNewPIm  = iNewPIm + 1
 
@@ -789,6 +803,16 @@ contains
           ImRho_III(:,:,2) = Buffer_IIV(:,:,Hdens_)
           ImRho_III(:,:,3) = Buffer_IIV(:,:,Odens_)
           IsImRho_I        = .true.
+       elseif(IsImHeidi)then
+          ImP_III(:,:,1)   = Buffer_IIV(:,:,HeidiHpres_)
+          ImP_III(:,:,2)   = Buffer_IIV(:,:,HeidiNpres_)
+          ImP_III(:,:,3)   = Buffer_IIV(:,:,HeidiOpres_)
+          ImRho_III(:,:,1) = Buffer_IIV(:,:,HeidiHdens_)
+          ImRho_III(:,:,2) = Buffer_IIV(:,:,HeidiNdens_)
+          ImRho_III(:,:,3) = Buffer_IIV(:,:,HeidiOdens_)
+          IsImRho_I        = .true.
+          IsImP_I          = .true.
+          IsImPpar_I       = .false.
        else
           ! Overwriting ImP_III(:,:,1) !!!
           ImP_III(:,:,1)   = Buffer_IIV(:,:,Hpres_)
@@ -1188,7 +1212,6 @@ contains
     integer:: j2, nCall=0
     real:: TmpT, TmpV1,TmpV2, LonShift, TmpHpT, TmpOpT
     !--------------------------------------------------------------------------
-
     nCall = nCall + 1
 
     ! write values to plot file
@@ -1268,14 +1291,14 @@ contains
   !============================================================================
   subroutine write_integrated_data_idl
 
+    ! write values to plot file
+
     use ModIoUnit, ONLY: UnitTmp_
     use ModMain,   ONLY: tSimulation
     character(len=100):: NameFile
     integer:: nCall = 0
     !--------------------------------------------------------------------------
-
-    ! write values to plot file
-    nCall = nCall+1
+    nCall = nCall + 1
     write(NameFile,'(a,i6.6,a,i4.4,a)')"rayValues_n=",nStep,"_",nCall,".out"
 
     open (UNIT=UnitTmp_, FILE=NameFile, STATUS='unknown', &

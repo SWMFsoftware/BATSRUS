@@ -332,6 +332,10 @@ contains
        Pos_DI(1,:) = r
        Pos_DI(2,:) = Phi
 
+       ! Now checking if the ray is ending is at z = 0.
+       ! If not, set it as open ray. (For HEIDI)
+       if (Pos_DI(3,iDir) /= 0.0) Pos_DI(3,:) = OpenRay
+
     else
        ! Impossible values
        Pos_DI(1,:) = -1.0
@@ -934,7 +938,8 @@ contains
          case(RayOpen_)
             ! The trace reached the outer boundary
             ! Field line integration relies on XyzRay_D to be set to OpenRay
-            if(DoIntegrateRay .or. (DoMapRay .and. .not.DoMapOpen)) &
+            if(DoIntegrateRay .or. &
+                 ((DoMapRay .or. DoMapEquatorRay) .and. .not.DoMapOpen) ) &
                  XyzRay_D = OpenRay
             if(DoTestRay)write(*,*)&
                  'follow_ray finished at outer boundary, iProc,iRay,Xyz=', &

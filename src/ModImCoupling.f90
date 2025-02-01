@@ -67,6 +67,9 @@ module ModImCoupling
   real, allocatable :: pIm_ICB(:,:,:,:,:)
   real, allocatable :: TauCoeffIm_CB(:,:,:,:)
   real, allocatable :: PparIm_ICB(:,:,:,:,:)
+
+  logical, public :: IsImHeidi = .false.
+
   !$acc declare create(RhoIm_ICB, PeIm_CB, pIm_ICB, TauCoeffIm_CB, PparIm_ICB)
 
 contains
@@ -410,6 +413,7 @@ contains
          iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModFieldTraceFast, ONLY: trace_field_grid, Trace_DSNB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
+    use ModFieldTrace, ONLY: DoMapEquatorRay
 
     real :: Factor
     real :: RhoMinIm
@@ -436,7 +440,9 @@ contains
        if(DoTest)write(*,*)'GM_apply_im_pressure: call trace_field_grid ',&
             'iNewPIm,iLastPIm,iNewGrid,iLastGrid=',&
             iNewPIm,iLastPIm,iNewGrid,iLastGrid
+       DoMapEquatorRay = IsImHeidi ! If IM is HEIDI, we correct at the z=0 plane
        call trace_field_grid
+       DoMapEquatorRay = .false.
        call sync_cpu_gpu('update on GPU', NameSub, Trace_DICB=Trace_DSNB)
     end if
 
