@@ -440,7 +440,8 @@ contains
        if(DoTest)write(*,*)'GM_apply_im_pressure: call trace_field_grid ',&
             'iNewPIm,iLastPIm,iNewGrid,iLastGrid=',&
             iNewPIm,iLastPIm,iNewGrid,iLastGrid
-       DoMapEquatorRay = IsImHeidi ! If IM is HEIDI, we correct at the z=0 plane
+       ! If IM is HEIDI, we correct at the z=0 plane
+       DoMapEquatorRay = IsImHeidi 
        call trace_field_grid
        DoMapEquatorRay = .false.
        call sync_cpu_gpu('update on GPU', NameSub, Trace_DICB=Trace_DSNB)
