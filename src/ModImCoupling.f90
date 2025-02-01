@@ -419,7 +419,7 @@ contains
     real :: RhoMinIm
     real :: InvRho, Rho
     integer :: i, j, k, iBlock, iFluid, iDens
-   
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'apply_im_pressure'
     !--------------------------------------------------------------------------
