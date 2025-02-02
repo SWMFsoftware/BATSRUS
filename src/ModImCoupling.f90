@@ -441,7 +441,7 @@ contains
             'iNewPIm,iLastPIm,iNewGrid,iLastGrid=',&
             iNewPIm,iLastPIm,iNewGrid,iLastGrid
        ! If IM is HEIDI, we correct at the z=0 plane
-       DoMapEquatorRay = IsImHeidi 
+       DoMapEquatorRay = IsImHeidi
        call trace_field_grid
        DoMapEquatorRay = .false.
        call sync_cpu_gpu('update on GPU', NameSub, Trace_DICB=Trace_DSNB)
