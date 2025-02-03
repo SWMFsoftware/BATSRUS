@@ -1226,8 +1226,8 @@ test_awsom_run:
 	
 test_awsom_check:
 	-@(${DIFFNUM} -t -a=2e-27 -r=2e-5 \
-		${TESTDIR}/RESULTS/SC/log_n000000.log \
-		Param/CORONA/TestOutput/log_n000000.awsom \
+		${TESTDIR}/RESULTS/SC/log_n000001.log \
+		Param/CORONA/TestOutput/log_n000001.awsom \
 		> test_awsom.diff)
 	ls -l test_awsom.diff
 
