@@ -46,9 +46,6 @@ T			IsLogRadius
 180			nLon
 90			nLat
 
-TEST
-krylov			StringTest
-
 #POYNTINGFLUX
 1e6			PoyntingFluxPerBSi
 

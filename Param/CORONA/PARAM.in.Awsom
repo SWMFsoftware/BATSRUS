@@ -40,14 +40,6 @@ T			IsLogRadius
 180			nLon
 90			nLat
 
-FACTORB0
-2.0			FactorB0
-
-CURLB0
-T			UseCurlB0
-2.5			rCurrentFreeB0
-T			UseB0MomentumFlux
-
 #POYNTINGFLUX
 1e6			PoyntingFluxPerBSi
 
@@ -160,9 +152,6 @@ T			IsStrictAmr
 #SCHEME
 2			nOrder (1 or 2)
 Linde			TypeFlux
-minmod			TypeLimiter
-
-Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -182,7 +171,7 @@ F			UseRhoRatioLimiter
 #MINIMUMRADIALSPEED
 T			UseSpeedMin
 10			rSpeedMin
-250			SpeedMinDim
+500			SpeedMinDim  ! 250km/s has no effect in this test
 10 h			TauSpeedMinDim
 
 #NONCONSERVATIVE
@@ -273,9 +262,8 @@ g rbody
 rho ux uy uz ti bx by bz I01 I02 p
 g rbody
 
-
 #SAVEINITIAL
-T			DoSaveInitial
+F			DoSaveInitial
 
 #STOP
 50			MaxIteration 60000
