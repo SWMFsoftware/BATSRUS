@@ -1213,14 +1213,14 @@ contains
                 ! Copy field-aligned velocity component.
                 ! Reflect the other components
                 do i = MinI, 0
-#ifndef _OPENACC                
+#ifndef _OPENACC
                    U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
                         /State_VGB(iRho,1-i,j,k,iBlock)
                    U   = sum(U_D*Bdir_D); U_D = U_D - U*Bdir_D
                    State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
                         (U*Bdir_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
 #else
-                   ! Somehow, using constants (RhoUx_...) as indices is much 
+                   ! Somehow, using constants (RhoUx_...) as indices is much
                    ! faster than using regular variables (iRhoUx...) on GPU.
                    U_D = State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) &
                         /State_VGB(Rho_,1-i,j,k,iBlock)
@@ -1229,7 +1229,7 @@ contains
                         (U*Bdir_D - U_D)*State_VGB(Rho_,i,j,k,iBlock)
 #endif
                 end do
-                
+
              end do; end do
           end if
        end do
