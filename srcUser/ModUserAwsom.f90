@@ -613,11 +613,11 @@ contains
              Rho = State_VGB(Rho_,i,j,k,iBlock)
              Var = abs(sum(rUnit_D*FullB_D)/sqrt(Rho))
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
-                        Rho
+                  Rho
 
              Tmp1_GB(i,j,k,iBlock) =               &
                   Wmajor*(GammaWave*Ur + Var)     &
-               +  Wminor*(GammaWave*Ur - Var)
+                  +  Wminor*(GammaWave*Ur - Var)
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate',360, Radius, Tmp1_GB) &
@@ -640,7 +640,7 @@ contains
              Rho = State_VGB(Rho_,i,j,k,iBlock)
              Var = abs(sum(rUnit_D*FullB_D)/sqrt(Rho))
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
-                        Rho
+                  Rho
 
              Tmp1_GB(i,j,k,iBlock) = Wmajor*(GammaWave*Ur + Var)
 
@@ -666,7 +666,7 @@ contains
              Rho = State_VGB(Rho_,i,j,k,iBlock)
              Var = abs(sum(rUnit_D*FullB_D)/sqrt(Rho))
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
-                        Rho
+                  Rho
 
              Tmp1_GB(i,j,k,iBlock) = Wminor*(GammaWave*Ur - Var)
           end do; end do; end do
@@ -681,7 +681,7 @@ contains
              rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)
              Rho = State_VGB(Rho_,i,j,k,iBlock)
              Ur  = sum(rUnit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/ &
-                        Rho
+                  Rho
 
              Tmp1_GB(i,j,k,iBlock) = Rho*Ur**3 / 2.0
           end do; end do; end do
@@ -1213,20 +1213,31 @@ contains
                 ! Copy field-aligned velocity component.
                 ! Reflect the other components
                 do i = MinI, 0
+#ifndef _OPENACC
                    U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
                         /State_VGB(iRho,1-i,j,k,iBlock)
                    U   = sum(U_D*Bdir_D); U_D = U_D - U*Bdir_D
                    State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
                         (U*Bdir_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
+#else
+                   ! Somehow, using constants (RhoUx_...) as indices is much
+                   ! faster than using regular variables (iRhoUx...) on GPU.
+                   U_D = State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) &
+                        /State_VGB(Rho_,1-i,j,k,iBlock)
+                   U   = sum(U_D*Bdir_D); U_D = U_D - U*Bdir_D
+                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                        (U*Bdir_D - U_D)*State_VGB(Rho_,i,j,k,iBlock)
+#endif
                 end do
+
              end do; end do
           end if
        end do
 
        ! start of CME part
        if(UseCme)then
-         !$acc loop vector collapse(2) independent &
-         !$acc private(Runit_D, Ucme_D, Bcme_D, BrCme_D)
+          !$acc loop vector collapse(2) independent &
+          !$acc private(Runit_D, Ucme_D, Bcme_D, BrCme_D)
           do k = MinK, MaxK; do j = MinJ, MaxJ
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
