@@ -3685,7 +3685,13 @@ GMRES           TypeKrylov  (GMRES, BICGSTAB, CG)
 Same as the #KRYLOV command, but for the semi-implicit scheme.
 The initial guess is always zero, so there are only 3 parameters.
 
-Default values are shown.
+Default values are shown. For Solar Corona heat conduction, the defaults are
+
+#SEMIKRYLOV
+GMRES           TypeKrylov
+1e-5            ErrorMaxKrylov
+20              MaxMatvecKrylov
+
 </command>
 
 <command name="KRYLOVSIZE">
