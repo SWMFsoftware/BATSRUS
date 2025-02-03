@@ -1,7 +1,5 @@
-Begin session: 1
-
 #DESCRIPTION
-Param/CORONA/PARAM.in.Awsom: Input file for creating a steady state solar corona		StringDescription
+Param/CORONA/PARAM.in.Awsom: solar corona with CMEs		StringDescription
 
 #COMPONENT
 SC			NameComp
@@ -284,7 +282,6 @@ T			DoSaveInitial
 -1.0			tSimulationMax
 
 #RUN ##########################################################################
-Begin session: 2
 
 #DOAMR
 F			DoAmr
@@ -343,9 +340,6 @@ readbstrap		TypeBStrap
 11.976710014764566		bStrappingDim
 none			TypeCharge
 
-#HELIOUPDATEB0
-1.0			DtUpdateB0
-
 #STOP
 -1			MaxIteration
 8.0			tSimulationMax
@@ -379,9 +373,6 @@ cancelflux		TypeBStrap
 10.0			tSimulationMax
 
 #RUN ##########################################################################
-
-#HELIOUPDATEB0
--1.0			DtUpdateB0
 
 #STOP
 -1			MaxIteration
