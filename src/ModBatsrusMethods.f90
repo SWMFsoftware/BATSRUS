@@ -440,6 +440,8 @@ contains
     end if
     ! Allow the user to add a perturbation to the initial condition.
     if (UseUserPerturbation) then
+       call sync_cpu_gpu('update on CPU', NameSub, State_VGB)
+
        call user_initial_perturbation
 
        call sync_cpu_gpu('change on CPU', NameSub, State_VGB)
