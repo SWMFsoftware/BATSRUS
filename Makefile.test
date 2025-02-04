@@ -995,7 +995,6 @@ test_awsom_gpu_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.Awsom.GPU PARAM.in
-	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsom_gpu_run:
@@ -1041,8 +1040,8 @@ test_awsom_large_gpu_run:
 	
 test_awsom_large_gpu_check:
 	-@(${DIFFNUM} -a=5e-19 -r=1e-5 -t \
-		${TESTDIR}/RESULTS/SC/log_n000500.log \
-		Param/CORONA/TestOutput/log_n000500.awsom_large_gpu \
+		${TESTDIR}/RESULTS/SC/log_n*.log \
+		Param/CORONA/TestOutput/log.awsom_large_gpu \
 		> test_awsom_large_gpu.diff)
 	ls -l test_awsom_large_gpu.diff
 
@@ -1217,7 +1216,6 @@ test_awsom_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.Awsom PARAM.in
-	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsom_run:
@@ -1254,7 +1252,6 @@ test_stitch_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.STITCH PARAM.in
-	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_stitch_run:

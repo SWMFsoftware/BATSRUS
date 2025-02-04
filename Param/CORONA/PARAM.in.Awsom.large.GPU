@@ -1,16 +1,14 @@
-Begin session: 1
-
 #DESCRIPTION
 Param/CORONA/PARAM.in.Awsom.large.GPU		StringDescription
 
 #UPDATE
 fast			TypeUpdate
 
+#PROLONGATION
+2			nOrderProlong
+
 #COMPONENT
 SC			NameComp
-
-#GRIDBLOCKALL
-40000			MaxBlock
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -34,31 +32,34 @@ HGR			TypeCoordSystem
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-#HELIODIPOLE
-2.8e-4			HelioDipoleStrengthSi
-0.0			HelioDipoleTilt
+#HARMONICSFILE
+Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
 
-#GAMMA
-1.5			Gamma for fluid 1
-1.5			GammaElectron for electrons (if UseElectronPressure)
-
-#HEATFLUXCOLLISIONLESS
-F			UseHeatFluxCollisionless
-
-#HEATFLUXREGION
-F			UseHeatFluxRegion
-
-#HEATCONDUCTION
-F			UseHeatConduction
-
-#SEMIIMPLICIT
-F			UseSemiImplicit
-
-#CORONALHEATING
-none			TypeCoronalHeating
+HARMONICSGRID
+1.0			rMagnetogram
+25.0			rSourceSurface
+T			IsLogRadius
+180			MaxOrder
+100			nR
+180			nLon
+90			nLat
 
 #POYNTINGFLUX
-1.0e6			PoyntingFluxPerBSi
+1e6			PoyntingFluxPerBSi
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseReynoldsDecomposition
+
+#HEATPARTITIONING
+stochasticheating		TypeHeatPartitioning
+0.21			StochasticExponent
+0.18			StochasticAmplitude
+
+#RADIATIVECOOLING
+T			UseRadCooling
 
 #USERSWITCH
 +init +ic		StringSwitch
@@ -70,13 +71,18 @@ T			UseCoarseAxis
 #USERINPUTBEGIN -----------------------------------
 
 #CHROMOBC
-1.5e14			NchromoSi
-1.5e6			TchromoSi
+2e17			NchromoSi
+5e4			TchromoSi
 
 #USERINPUTEND -------------------------------------
 
-#GRIDGEOMETRY
-spherical_lnr		TypeGeometry
+#TRANSITIONREGION
+T			DoExtendTransitionRegion
+2.2e5			TeTransitionRegionSi
+1.0e1			DeltaTeModSi
+
+#GRIDBLOCKALL
+40000			MaxBlock
 
 ! Use a true sphere, so box is made much larger
 #GRID
@@ -90,6 +96,10 @@ spherical_lnr		TypeGeometry
 -100.0			zMin
  100.0			zMax
 
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+Param/CORONA/grid_awsom.dat		NameGridFile
+
 #LIMITRADIUS
 1.0			rMin
 24.0			rMax
@@ -101,14 +111,13 @@ shell0			StringShape
 1.7			Radius
 
 #AMRCRITERIARESOLUTION
-2			nRefineCrit
+3			nRefineCrit
 dphi			StringRefine
 3.0			RefineTo
 1.5			CoarsenFrom
 dphi Innershell		StringRefine
 1.5			RefineTo
 0.75			CoarsenFrom
-
 currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
@@ -117,6 +126,12 @@ currentsheet		StringRefine
 #GRIDRESOLUTION
 1.5			Resolution
 initial			StringShape
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+Param/CORONA/RadCoolCorona.dat		NameFile
+ascii			TypeFile
 
 DOAMR
 T			DoAmr
@@ -134,13 +149,27 @@ Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
+
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			PeMinDim
+
+#MINIMUMRADIALSPEED
+T			UseSpeedMin
+10.0			rSpeedMin
+250.0			SpeedMinDim
+10 h			TauSpeedMinDim
+
 #NONCONSERVATIVE
 T			UseNonConservative
-
-! Switch of TVD and Accurate res change.
-! 1st order prolongation does not work near body for fast updates so far.
-#PROLONGATION
-2			nOrderProlong
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -149,12 +178,12 @@ RAW			StringLog
 -1.			DtSaveLogfile
 
 #OUTERBOUNDARY
-float			TypeBc1
+user			TypeBc1
 float			TypeBc2
-float			TypeBc3
-float			TypeBc4
-float			TypeBc5
-float			TypeBc6
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
 
 #SAVEPLOT
 1			nPlotFile
@@ -169,5 +198,5 @@ x=0 VAR idl		StringPlot
 F			DoSaveInitial
 
 #STOP
-500			MaxIteration
+10			MaxIteration
 -1.0			tSimulationMax
