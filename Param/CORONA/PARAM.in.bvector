@@ -1,9 +1,6 @@
 #DESCRIPTION
 Param/CORONA/PARAM.in.bvector		StringDescription
 
-VERBOSE
-10
-
 #STARTTIME
 2014			iYear
 11			iMonth
@@ -27,12 +24,6 @@ F			UseSemiImplicit
 
 #COMPONENT
 SC			NameComp
-
-LOOKUPTABLE
-B0			NameTable
-load			NameCommand
-harmonics_bxyz.out		NameFile
-real4			TypeFile
 
 #LOOKUPTABLE
 Bvector			NameTable
@@ -85,23 +76,6 @@ T			MagFrictionUseBvectorLonLat
 5.0			ExtLatAbove
 
 #USERINPUTEND -------------------------------------
-
-#POYNTINGFLUX
-1.0e6			PoyntingFluxPerBSi
-
-#CORONALHEATING
-turbulentcascade		TypeCoronalHeating
-1.5e5			LperpTimesSqrtBSi
-0.0			rMinWaveReflection
-F			UseReynoldsDecomposition
-
-#HEATPARTITIONING
-stochasticheating		TypeHeatPartitioning
-0.21			StochasticExponent
-0.18			StochasticAmplitude
-
-#RADIATIVECOOLING
-F			UseRadCooling
 
 #GRIDBLOCKALL
 2000			MaxBlock ! use 50000 in the real run
