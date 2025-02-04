@@ -57,7 +57,7 @@ module ModUser
 
   ! STITCH
   real    :: ZetaSI = 0.0, Zeta, rStitch = 1.0
-  logical :: UseStitchRegion
+  logical :: UseStitchRegion = .false.
   real    :: Lon0Deg, Lon1Deg, Lat0Deg, Lat1Deg
   real    :: Lon0, Lon1, Lat0, Lat1
   real    :: tStartStitch = -1.0, tStopStitch = -1.0

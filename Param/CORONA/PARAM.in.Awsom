@@ -1,7 +1,5 @@
-Begin session: 1
-
 #DESCRIPTION
-Param/CORONA/PARAM.in.Awsom: Input file for creating a steady state solar corona		StringDescription
+Param/CORONA/PARAM.in.Awsom: solar corona with CMEs		StringDescription
 
 #COMPONENT
 SC			NameComp
@@ -41,14 +39,6 @@ T			IsLogRadius
 100			nR
 180			nLon
 90			nLat
-
-FACTORB0
-2.0			FactorB0
-
-CURLB0
-T			UseCurlB0
-2.5			rCurrentFreeB0
-T			UseB0MomentumFlux
 
 #POYNTINGFLUX
 1e6			PoyntingFluxPerBSi
@@ -162,9 +152,6 @@ T			IsStrictAmr
 #SCHEME
 2			nOrder (1 or 2)
 Linde			TypeFlux
-minmod			TypeLimiter
-
-Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -184,7 +171,7 @@ F			UseRhoRatioLimiter
 #MINIMUMRADIALSPEED
 T			UseSpeedMin
 10			rSpeedMin
-250			SpeedMinDim
+500			SpeedMinDim  ! 250km/s has no effect in this test
 10 h			TauSpeedMinDim
 
 #NONCONSERVATIVE
@@ -275,16 +262,14 @@ g rbody
 rho ux uy uz ti bx by bz I01 I02 p
 g rbody
 
-
 #SAVEINITIAL
-T			DoSaveInitial
+F			DoSaveInitial
 
 #STOP
 50			MaxIteration 60000
 -1.0			tSimulationMax
 
 #RUN ##########################################################################
-Begin session: 2
 
 #DOAMR
 F			DoAmr
@@ -343,9 +328,6 @@ readbstrap		TypeBStrap
 11.976710014764566		bStrappingDim
 none			TypeCharge
 
-#HELIOUPDATEB0
-1.0			DtUpdateB0
-
 #STOP
 -1			MaxIteration
 8.0			tSimulationMax
@@ -379,9 +361,6 @@ cancelflux		TypeBStrap
 10.0			tSimulationMax
 
 #RUN ##########################################################################
-
-#HELIOUPDATEB0
--1.0			DtUpdateB0
 
 #STOP
 -1			MaxIteration
