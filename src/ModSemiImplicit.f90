@@ -13,6 +13,7 @@ module ModSemiImplicit
   use ModImplicit, ONLY: nStencil
   use ModConserveFlux, ONLY: DoConserveFlux
   use ModLinearSolver, ONLY: LinearSolverParamType
+  use ModMain, ONLY: iNewDecomposition
 
   implicit none
   save
@@ -541,16 +542,19 @@ contains
     case('radiation', 'radcond', 'cond')
        if(UseAccurateRadiation)then
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+               nProlongOrderIn=1, nCoarseLayerIn=2, &
+               DoRestrictFaceIn = .true., &
+               iDecomposition=iNewDecomposition)
        else
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=1, &
                nProlongOrderIn=1, DoSendCornerIn=.false., &
-               DoRestrictFaceIn=.true.)
+               DoRestrictFaceIn=.true., &
+               iDecomposition=iNewDecomposition)
        end if
     case('parcond','resistivity','resist','resisthall')
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
-            UseOpenACCIn=.true.)
+            UseOpenACCIn=.true., iDecomposition=iNewDecomposition)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -678,7 +682,9 @@ contains
           UsePDotADotP = .false.
 
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+               nProlongOrderIn=1, nCoarseLayerIn=2, &
+               DoRestrictFaceIn = .true., &
+               iDecomposition=iNewDecomposition)
        else
           ! Initialize the computation of (p . A . P) form
           UsePDotADotP = SemiParam%TypeKrylov == 'CG'
@@ -687,13 +693,14 @@ contains
 
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=1, &
                nProlongOrderIn=1, DoSendCornerIn=.false., &
-               DoRestrictFaceIn=.true.)
+               DoRestrictFaceIn=.true., &
+               iDecomposition=iNewDecomposition)
        end if
 #endif
     case('parcond','resistivity','resist','resisthall')
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
-            UseOpenACCIn=.true.)
+            UseOpenACCIn=.true., iDecomposition=iNewDecomposition)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
