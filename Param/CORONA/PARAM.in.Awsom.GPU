@@ -83,13 +83,12 @@ T			DoExtendTransitionRegion
 2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
-#GRIDGEOMETRY
-spherical_genr		TypeGeometry
-Param/CORONA/grid_awsom.dat		NameGridFile
+#GRIDBLOCKALL
+4000			MaxBlock
 
 ! Use a true sphere, so box is made much larger
 #GRID
-1			nRootBlock1
+2			nRootBlock1
 2			nRootBlock2
 1			nRootBlock3
 -100.0			xMin
@@ -99,8 +98,9 @@ Param/CORONA/grid_awsom.dat		NameGridFile
 -100.0			zMin
  100.0			zMax
 
-#GRIDBLOCKALL
-4000			MaxBlock
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+Param/CORONA/grid_awsom.dat		NameGridFile
 
 #LIMITRADIUS
 1.0			rMin
@@ -142,7 +142,7 @@ initial			StringShape
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-RadCoolCorona.dat		NameFile
+Param/CORONA/RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #DOAMR
@@ -176,8 +176,8 @@ F			UseRhoRatioLimiter
 
 #MINIMUMRADIALSPEED
 T			UseSpeedMin
-10			rSpeedMin
-500			SpeedMinDim  ! 250km/s has no effect in this test
+10.0			rSpeedMin
+500.0			SpeedMinDim  ! 250km/s has no effect in this test
 10 h			TauSpeedMinDim
 
 #NONCONSERVATIVE

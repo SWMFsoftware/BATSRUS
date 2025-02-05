@@ -136,7 +136,7 @@ initial			StringShape
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-RadCoolCorona.dat		NameFile
+Param/CORONA/RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #DOAMR
