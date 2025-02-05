@@ -1172,7 +1172,7 @@ test_awsom_bvector:
 
 # Fails on Pleiades with OpenMP
 test_awsom_bvector_compile:
-	./Config.pl -noopenmp -u=Sharp -e=Awsom -ng=2 -g=8,8,8
+	./Config.pl -noopenmp -u=Awsom -e=Awsom -ng=2 -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
