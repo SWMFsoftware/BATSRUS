@@ -82,7 +82,7 @@ T			DoExtendTransitionRegion
 1.0e1			DeltaTeModSi
 
 #GRIDBLOCKALL
-40000			MaxBlock
+5000			MaxBlock
 
 ! Use a true sphere, so box is made much larger
 #GRID
