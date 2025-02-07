@@ -1143,8 +1143,6 @@ contains
     call test_start(NameSub, DoTest)
 
     !$acc parallel loop gang independent &
-    !$acc private(iBlock, iDim, Di, Dj, Dk, iGang) &
-    !$acc private(TeEpsilon, iP) & ! Do not have to be private
     !$acc present(nBlockSemi, iBlockFromSemi_B)
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
@@ -1185,8 +1183,7 @@ contains
 
        ! Store the electron temperature in SemiAll_VCB and the
        ! specific heat in DconsDsemiAll_VCB
-       !$acc loop vector collapse(3) independent &
-       !$acc private(TeSi, TeTiCoef, NumDens, Natomic, DtLocal, Cvi)
+       !$acc loop vector collapse(3) independent 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_GI(i,j,k,iGang)
           TeSi = Te_GI(i,j,k,iGang)*No2Si_V(UnitTemperature_)
@@ -1380,7 +1377,7 @@ contains
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           !$acc loop vector collapse(3) independent &
-          !$acc private(Bb_DD, HeatCoef, iDir)
+          !$acc private(Bb_DD)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
              Bb_DD = 0.5*(Bb_DDGI(:nDim,:nDim,i,j,k,iGang) &
                   +       Bb_DDGI(:nDim,:nDim,i-Di,j-Dj,k-Dk,iGang))
@@ -1658,7 +1655,7 @@ contains
     do iDim = 1, nDim
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        !$acc loop vector collapse(3) independent &
-       !$acc private(Coeff, DiffLeft, DiffRight, InvDxyzVol_D)
+       !$acc private(InvDxyzVol_D)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
           if(IsCartesianGrid)then
@@ -1745,8 +1742,7 @@ contains
 
     DtLocal = Dt
 
-    !$acc loop vector independent &
-    !$acc private(DeltaEinternal, Einternal, EinternalSi, PressureSi)
+    !$acc loop vector independent
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
