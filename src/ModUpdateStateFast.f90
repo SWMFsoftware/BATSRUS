@@ -684,8 +684,8 @@ contains
     if(UseCurlB0)then
        if(r_GB(i,j,k,iBlock) >= rCurrentFreeB0)then
           call get_curlb0(i, j, k, iBlock, CurlB0_D)
-          ! On GPU, cross_prod(A, B+C) is somehow much slower thant 
-          ! 'D = B + C; cross_prod(A, D)'. So, the the intermediate 
+          ! On GPU, cross_prod(A, B+C) is somehow much slower thant
+          ! 'D = B + C; cross_prod(A, D)'. So, the the intermediate
           ! variable FullB_D is needed here.
           FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
           Force_D = cross_prod(CurlB0_D, FullB_D)
