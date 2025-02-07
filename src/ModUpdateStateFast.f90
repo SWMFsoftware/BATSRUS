@@ -520,7 +520,7 @@ contains
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar, iVarLast
     real:: DivU, DivB, DivE, DivF, DtLocal, InvVol
-    real:: Change_V(nFlux), Force_D(3), CurlB0_D(3)
+    real:: Change_V(nFlux), Force_D(3), CurlB0_D(3), FullB_D(3)
 
     ! Coronal Heating
     real :: CoronalHeating, WaveDissipationRate_V(WaveFirst_:WaveLast_)
@@ -684,8 +684,11 @@ contains
     if(UseCurlB0)then
        if(r_GB(i,j,k,iBlock) >= rCurrentFreeB0)then
           call get_curlb0(i, j, k, iBlock, CurlB0_D)
-          Force_D = cross_prod(CurlB0_D, &
-               State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
+          ! On GPU, cross_prod(A, B+C) is somehow much slower thant
+          ! 'D = B + C; cross_prod(A, D)'. So, the the intermediate
+          ! variable FullB_D is needed here.
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+          Force_D = cross_prod(CurlB0_D, FullB_D)
           Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) + Force_D
           Change_V(Energy_) = Change_V(Energy_) &
                + sum(Force_D*State_VGB(Ux_:Uz_,i,j,k,iBlock))

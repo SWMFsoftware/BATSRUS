@@ -13,6 +13,7 @@ module ModSemiImplicit
   use ModImplicit, ONLY: nStencil
   use ModConserveFlux, ONLY: DoConserveFlux
   use ModLinearSolver, ONLY: LinearSolverParamType
+  use ModMain, ONLY: iNewDecomposition
 
   implicit none
   save
@@ -297,7 +298,7 @@ contains
        end do
        !$acc update device(iBlockFromSemi_B, nBlockSemi)
        ! Is it really necessary to initialize DconsDsemiAll_VCB? --YC
-       DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0
+       ! DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0
     else
        ! For (Hall) resistivity the number of semi-implicit blocks will be
        ! set in get_impl_resistivity_state, so initialize up to nBlock
@@ -307,8 +308,8 @@ contains
     ! Get current state and dCons/dSemi derivatives
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
-          call get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &
-               DeltaSemiAll_VCB=DeltaSemiAll_VCB)
+       call get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &
+            DeltaSemiAll_VCB=DeltaSemiAll_VCB)
     case('parcond')
        call get_impl_heat_cond_state
     case('resistivity','resist','resisthall')
@@ -332,6 +333,8 @@ contains
 
     ! Re-initialize HYPRE preconditioner
     if(SemiParam%TypePrecond == 'HYPRE') call hypre_initialize
+
+    call update_block_jacobian_face
 
     ! For nVarSemi = 1,  loop through all semi-implicit variables one-by-one
     ! For nVarSemi = nVarSemiAll, do all (semi-)implicit variables together
@@ -541,16 +544,19 @@ contains
     case('radiation', 'radcond', 'cond')
        if(UseAccurateRadiation)then
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+               nProlongOrderIn=1, nCoarseLayerIn=2, &
+               DoRestrictFaceIn = .true., &
+               iDecomposition=iNewDecomposition)
        else
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=1, &
                nProlongOrderIn=1, DoSendCornerIn=.false., &
-               DoRestrictFaceIn=.true.)
+               DoRestrictFaceIn=.true., &
+               iDecomposition=iNewDecomposition)
        end if
     case('parcond','resistivity','resist','resisthall')
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
-            UseOpenACCIn=.true.)
+            UseOpenACCIn=.true., iDecomposition=iNewDecomposition)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -678,7 +684,9 @@ contains
           UsePDotADotP = .false.
 
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
-               nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
+               nProlongOrderIn=1, nCoarseLayerIn=2, &
+               DoRestrictFaceIn = .true., &
+               iDecomposition=iNewDecomposition)
        else
           ! Initialize the computation of (p . A . P) form
           UsePDotADotP = SemiParam%TypeKrylov == 'CG'
@@ -687,13 +695,14 @@ contains
 
           call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=1, &
                nProlongOrderIn=1, DoSendCornerIn=.false., &
-               DoRestrictFaceIn=.true.)
+               DoRestrictFaceIn=.true., &
+               iDecomposition=iNewDecomposition)
        end if
 #endif
     case('parcond','resistivity','resist','resisthall')
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.,&
-            UseOpenACCIn=.true.)
+            UseOpenACCIn=.true., iDecomposition=iNewDecomposition)
     case default
        call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
             //TypeSemiImplicit)
@@ -883,6 +892,42 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine semi_precond
+  !============================================================================
+  subroutine update_block_jacobian_face
+    use ModGeometry, ONLY: IsBoundary_B
+    use ModFieldLineThread, ONLY: UseFieldLineThreads
+    use BATL_lib, ONLY: IsCartesianGrid
+    use ModFaceGradient, ONLY: set_block_jacobian_face_simple
+    use ModImplicit, ONLY: DcoordDxyz_DDFDI, TransGrad_DDGI
+    use ModUtilities, ONLY: i_gang
+    use ModMain, ONLY: iNewDecomposition, iNewGrid
+
+    integer :: iGang, iBlock, iBlockSemi
+
+    integer, save:: iGrid = -1, iDecomposition = -1
+
+    logical :: UseFirstOrderBc
+
+    !--------------------------------------------------------------------------
+    if(IsCartesianGrid) RETURN
+
+    if(iGrid == iNewGrid .and. iDecomposition == iNewDecomposition) RETURN
+    iGrid = iNewGrid
+    iDecomposition = iNewDecomposition
+
+#ifdef _OPENACC
+    !$acc parallel loop gang independent private(iBlock, iGang, UseFirstOrderBc)
+    do iBlockSemi = 1, nBlockSemi
+       iBlock = iBlockFromSemi_B(iBlockSemi)
+       UseFirstOrderBc = UseFieldLineThreads.and.IsBoundary_B(iBlock)
+       iGang = i_gang(iBlock)
+       call set_block_jacobian_face_simple(iBlock, &
+            DcoordDxyz_DDFDI(:,:,:,:,:,:,iGang), &
+            TransGrad_DDGI(:,:,:,:,:,iGang), &
+            UseFirstOrderBc)
+    end do
+#endif
+  end subroutine update_block_jacobian_face
   !============================================================================
 
   subroutine test_semi_impl_jacobian

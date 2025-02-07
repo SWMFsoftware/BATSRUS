@@ -88,7 +88,7 @@ T			DoExtendTransitionRegion
 
 ! Use a true sphere, so box is made much larger
 #GRID
-2			nRootBlock1
+1			nRootBlock1
 2			nRootBlock2
 1			nRootBlock3
 -100.0			xMin

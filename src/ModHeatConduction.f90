@@ -1479,11 +1479,14 @@ contains
 
     call set_block_field3(iBlock, 1, SemiStateTmp_VGI(:,:,:,:,iGang), &
       StateImpl_VG)
+
+#ifndef _OPENACC
     if(.not.IsCartesianGrid) &
          call set_block_jacobian_face_simple(iBlock, &
          DcoordDxyz_DDFDI(:,:,:,:,:,:,iGang), &
          TransGrad_DDGI(:,:,:,:,:,iGang), &
          UseFirstOrderBc)
+#endif
 
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
@@ -1644,10 +1647,12 @@ contains
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
 
+#ifndef _OPENACC
     if(.not.IsCartesianGrid) &
          call set_block_jacobian_face_simple(iBlock, &
          DcoordDxyz_DDFDI(:,:,:,:,:,:,iGang), &
          TransGrad_DDGI(:,:,:,:,:,iGang))
+#endif
 
     ! the transverse diffusion is ignored in the Jacobian
     do iDim = 1, nDim

@@ -1023,7 +1023,7 @@ test_awsom_large_gpu:
 # Fails on Pleiades with OpenMP
 test_awsom_large_gpu_compile:
 	./Config.pl -noopenmp ${OPENACC}
-	./Config.pl -u=Awsom -e=Awsom -ng=2 -g=6,4,4
+	./Config.pl -u=Awsom -e=Awsom -ng=2 -g=12,8,8
 	./Config.pl -opt=Param/CORONA/PARAM.in.Awsom.large.GPU
 	$(MAKE) BATSRUS
 	make PIDL
@@ -1172,7 +1172,7 @@ test_awsom_bvector:
 
 # Fails on Pleiades with OpenMP
 test_awsom_bvector_compile:
-	./Config.pl -noopenmp -u=Sharp -e=Awsom -ng=2 -g=8,8,8
+	./Config.pl -noopenmp -u=Awsom -e=Awsom -ng=2 -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
