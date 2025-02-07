@@ -444,7 +444,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine advance_semi_impl
   !============================================================================
-
   subroutine get_semi_impl_rhs_block(iBlock, SemiState_VG, RhsSemi_VC, &
        IsLinear)
     !$acc routine vector
@@ -906,7 +905,6 @@ contains
     integer, save:: iGrid = -1, iDecomposition = -1
 
     logical :: UseFirstOrderBc
-
     !--------------------------------------------------------------------------
     if(IsCartesianGrid) RETURN
 
@@ -928,7 +926,6 @@ contains
 #endif
   end subroutine update_block_jacobian_face
   !============================================================================
-
   subroutine test_semi_impl_jacobian
 
     ! Calculate the Jacobian Jac_VVI = d(RHS)/d(Var) for the test cell
@@ -1062,7 +1059,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine test_semi_impl_jacobian
   !============================================================================
-
   subroutine get_semi_impl_jacobian_block(iBlock, JacSemi_VVCI)
     !$acc routine vector
 
@@ -1108,7 +1104,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_semi_impl_jacobian_block
   !============================================================================
-
   subroutine get_semi_impl_jacobian
 
     use ModAdvance, ONLY: DtMax_CB
