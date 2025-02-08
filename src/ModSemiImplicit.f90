@@ -297,8 +297,6 @@ contains
           iBlockFromSemi_B(nBlockSemi) = iBlock
        end do
        !$acc update device(iBlockFromSemi_B, nBlockSemi)
-       ! Is it really necessary to initialize DconsDsemiAll_VCB? --YC
-       ! DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0
     else
        ! For (Hall) resistivity the number of semi-implicit blocks will be
        ! set in get_impl_resistivity_state, so initialize up to nBlock
