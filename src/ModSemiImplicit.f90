@@ -367,10 +367,10 @@ contains
             SemiParam%Error, iError1, .true.)
 
        !$omp parallel do private( n )
-       !$acc parallel loop gang independent private(n)
+       !$acc parallel loop gang independent
        do iBlockSemi = 1, nBlockSemi
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
-          !$acc loop vector independent private(n0)
+          !$acc loop vector independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iVar = iVarSemiMin, iVarSemiMax
                 if(Used_GB(i,j,k,iBlockFromSemi_B(iBlockSemi)))then
@@ -390,7 +390,7 @@ contains
 
     ! Put back semi-implicit result into the explicit code
     !$omp parallel do private(iBlock)
-    !$acc parallel loop gang private(iBlock)
+    !$acc parallel loop gang
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        select case(TypeSemiImplicit)
@@ -444,7 +444,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine advance_semi_impl
   !============================================================================
-
   subroutine get_semi_impl_rhs_block(iBlock, SemiState_VG, RhsSemi_VC, &
        IsLinear)
     !$acc routine vector
@@ -528,7 +527,7 @@ contains
 
     ! Set SemiState_VGB from SemiAll_VCB in semi-implicit blocks
     !$omp parallel do private( iBlock )
-    !$acc parallel loop gang independent private(iBlock)
+    !$acc parallel loop gang independent
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        !$acc loop vector collapse(3) independent
@@ -562,7 +561,7 @@ contains
             //TypeSemiImplicit)
     end select
 
-    !$acc parallel loop gang independent private(iBlock) &
+    !$acc parallel loop gang independent &
     !$acc present(RhsSemi_VCB)
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
@@ -604,7 +603,7 @@ contains
 #endif
 
     ! Multiply with cell volume (makes matrix symmetric)
-    !$acc parallel loop gang independent private(iBlock)
+    !$acc parallel loop gang independent
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        !$acc loop vector collapse(3) independent
@@ -664,11 +663,11 @@ contains
     ! Fill in StateSemi so it can be message passed
     n = 0
     !$omp parallel do private( iBlock,n )
-    !$acc parallel loop gang independent private( iBlock, n )
+    !$acc parallel loop gang independent
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        n = (iBlockSemi-1)*nIJK*nVarSemi
-       !$acc loop vector collapse(4) independent private(n0)
+       !$acc loop vector collapse(4) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVarSemi
           n0 = n + iVar + nVarSemi*(i-1 + nI*(j-1 + nJ*(k-1)) )
           SemiState_VGB(iVar,i,j,k,iBlock) = x_I(n0)
@@ -710,7 +709,7 @@ contains
 
     n = 0
     !$omp parallel do private( iBlock,n,DtLocal,Volume )
-    !$acc parallel loop gang independent private( iBlock)
+    !$acc parallel loop gang independent
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -805,12 +804,11 @@ contains
 #endif
     else
        !$omp parallel do private( iBlock,DtLocal,n,Volume )
-       !$acc parallel loop gang independent private( iBlock, n )
+       !$acc parallel loop gang independent
        do iBlockSemi = 1, nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
-          !$acc loop vector collapse(3) independent &
-          !$acc private(DtLocal, Volume, n0)
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.IsTimeAccurate .or. UseDtLimit) then
                 DtLocal = max(1.0e-30,Cfl*DtMax_CB(i,j,k,iBlock))
@@ -907,7 +905,6 @@ contains
     integer, save:: iGrid = -1, iDecomposition = -1
 
     logical :: UseFirstOrderBc
-
     !--------------------------------------------------------------------------
     if(IsCartesianGrid) RETURN
 
@@ -916,7 +913,7 @@ contains
     iDecomposition = iNewDecomposition
 
 #ifdef _OPENACC
-    !$acc parallel loop gang independent private(iBlock, iGang, UseFirstOrderBc)
+    !$acc parallel loop gang independent
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        UseFirstOrderBc = UseFieldLineThreads.and.IsBoundary_B(iBlock)
@@ -929,7 +926,6 @@ contains
 #endif
   end subroutine update_block_jacobian_face
   !============================================================================
-
   subroutine test_semi_impl_jacobian
 
     ! Calculate the Jacobian Jac_VVI = d(RHS)/d(Var) for the test cell
@@ -1063,7 +1059,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine test_semi_impl_jacobian
   !============================================================================
-
   subroutine get_semi_impl_jacobian_block(iBlock, JacSemi_VVCI)
     !$acc routine vector
 
@@ -1109,7 +1104,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_semi_impl_jacobian_block
   !============================================================================
-
   subroutine get_semi_impl_jacobian
 
     use ModAdvance, ONLY: DtMax_CB
@@ -1133,7 +1127,7 @@ contains
     if(SemiParam%TypePrecond=='HYPRE') UseNoOverlap = .false.
 
     !$omp parallel do private( iBlock, Coeff, DtLocal )
-    !$acc parallel loop gang independent private( iBlock, Coeff, DtLocal )
+    !$acc parallel loop gang independent
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 

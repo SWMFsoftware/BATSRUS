@@ -7,6 +7,12 @@ fast			TypeUpdate
 #PROLONGATION
 2			nOrderProlong
 
+#TIMING
+T			UseTiming
+-1			DnTiming
+-1			nDepthTiming
+list			TypeTimingReport
+
 #COMPONENT
 SC			NameComp
 
@@ -198,5 +204,36 @@ x=0 VAR idl		StringPlot
 F			DoSaveInitial
 
 #STOP
-10			MaxIteration
+50			MaxIteration
 -1.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#PARTLOCALTIMESTEP
+1.1			rLocalTimeStep
+
+! Perturb with GL CME
+#USERSWITCH
++perturb -ic		StringSwitch
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+2 h			tDecayCme
+80.0			LongitudeCme
+-10.0			LatitudeCme
+0.0			OrientationCme
+GL			TypeCme
+1.4			BStrength
+-1			iHelicity
+1.03			Radius
+0.7			Stretch
+1.13			ApexHeight
+
+#STOP
+-1			MaxIteration
+25.0			tSimulationMax
+

@@ -183,9 +183,6 @@ T			UseSpeedMin
 #NONCONSERVATIVE
 T			UseNonConservative
 
-RESCHANGE
-T			UseAccurateReschange
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLog
