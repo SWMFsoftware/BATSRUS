@@ -1183,7 +1183,7 @@ contains
 
        ! Store the electron temperature in SemiAll_VCB and the
        ! specific heat in DconsDsemiAll_VCB
-       !$acc loop vector collapse(3) independent 
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_GI(i,j,k,iGang)
           TeSi = Te_GI(i,j,k,iGang)*No2Si_V(UnitTemperature_)
