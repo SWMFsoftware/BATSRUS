@@ -113,7 +113,6 @@ module ModRadDiffusion
 
 contains
   !============================================================================
-
   subroutine read_rad_diffusion_param(NameCommand)
 
     use ModMain,      ONLY: UseRadDiffusion
@@ -160,7 +159,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_rad_diffusion_param
   !============================================================================
-
   subroutine init_rad_diffusion
 
     use ModAdvance,     ONLY: nWave, UseElectronPressure
@@ -293,7 +291,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_rad_diffusion
   !============================================================================
-
   subroutine get_radiation_energy_flux(iDir, i, j, k, iBlock, &
        StateLeft_V, StateRight_V, Normal_D, &
        RadDiffCoef, EradFlux, IsNewBlockRadDiffusion)
@@ -342,7 +339,6 @@ contains
     ! end associate
   contains
     !==========================================================================
-
     subroutine get_diffusion_coef(State_V, DiffCoef)
 
       use ModAdvance,     ONLY: nWave
@@ -376,10 +372,8 @@ contains
 
     end subroutine get_diffusion_coef
     !==========================================================================
-
   end subroutine get_radiation_energy_flux
   !============================================================================
-
   subroutine calc_source_rad_diffusion(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_, nWave
@@ -439,9 +433,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_source_rad_diffusion
   !============================================================================
-
-  ! Semi-implicit interface
-
   subroutine get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &
        DeltaSemiAll_VCB)
 
@@ -463,8 +454,8 @@ contains
     use ModParallel, ONLY: Unset_, DiLevel_EB
     use ModUserInterface ! user_material_properties
 
-    real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    real, intent(out):: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    real, intent(out):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, optional, intent(out):: &
          DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
@@ -516,7 +507,7 @@ contains
        IsNewBlockRadDiffusion = .true.
        IsNewBlockTe = .true.
 
-       !---------------------Begin calc SemiAll_VCB----------
+       ! Calculate SemiAll_VCB
        if(iTeImpl > 0)then
           ! The ghost cells in Te_G are only needed for the electron heat flux
           ! limiter.
@@ -537,7 +528,6 @@ contains
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
           end do; end do; end do
        end if
-       !------------------End calc SemiAll_VCB------------------
 
        InvDx2 = 0.5/CellSize_DB(x_,iBlock)
        InvDy2 = 0.5/CellSize_DB(y_,iBlock)
@@ -545,6 +535,8 @@ contains
 
        ! calculate coefficients for linearized energy exchange and diffusion
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! Default value for DconsDsemiAll_VCB
+          DconsDsemiAll_VCB(:,i,j,k,iBlockSemi) = 1.0
           if(UseElectronPressure)then
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
@@ -770,13 +762,10 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-
     subroutine face_equal(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
-
       !------------------------------------------------------------------------
-
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          DiffCoef_VFDB(:,i,j,k,iDim,iBlock) = 0.5*( &
@@ -786,13 +775,10 @@ contains
 
     end subroutine face_equal
     !==========================================================================
-
     subroutine face_left_coarse2fine(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
-
       !------------------------------------------------------------------------
-
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          DiffCoef_VFDB(:,i,j,k,iDim,iBlock) =  &
@@ -802,13 +788,10 @@ contains
 
     end subroutine face_left_coarse2fine
     !==========================================================================
-
     subroutine face_right_coarse2fine(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
-
       !------------------------------------------------------------------------
-
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          DiffCoef_VFDB(:,i,j,k,iDim,iBlock) =  &
@@ -818,13 +801,11 @@ contains
 
     end subroutine face_right_coarse2fine
     !==========================================================================
-
     subroutine face_left_fine2coarse(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
 
       integer :: iShift, jShift, kShift
-
       !------------------------------------------------------------------------
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
@@ -839,13 +820,11 @@ contains
 
     end subroutine face_left_fine2coarse
     !==========================================================================
-
     subroutine face_right_fine2coarse(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
 
       integer :: iShift, jShift, kShift, i1, j1, k1
-
       !------------------------------------------------------------------------
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
@@ -861,7 +840,6 @@ contains
 
     end subroutine face_right_fine2coarse
     !==========================================================================
-
     subroutine get_diffusion_coef
 
       use ModAdvance,      ONLY: nWave
@@ -874,7 +852,6 @@ contains
       ! Variables for electron heat flux limiter
       real :: FreeStreamFluxSi, GradTe, GradTeSi, NeSi
       !------------------------------------------------------------------------
-
       if(iDiffRadFirst > 0)then
          OpacityRosseland_W = OpacityRosselandSi_W/Si2No_V(UnitX_)
 
@@ -941,11 +918,8 @@ contains
 
     end subroutine get_diffusion_coef
     !==========================================================================
-
     subroutine get_ghostcell_diffcoef
-
       !------------------------------------------------------------------------
-
       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
            i, j, k, iBlock, &
            OpacityRosselandOut_W = OpacityRosselandSi_W, &
@@ -956,10 +930,8 @@ contains
 
     end subroutine get_ghostcell_diffcoef
     !==========================================================================
-
   end subroutine get_impl_rad_diff_state
   !============================================================================
-
   subroutine set_rad_outflow_bc(iSide, iBlock, iBlockSemi, State_VG, IsLinear)
 
     use BATL_lib,       ONLY: CellSize_DB
@@ -1046,7 +1018,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_rad_outflow_bc
   !============================================================================
-
   subroutine get_rad_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use BATL_lib,        ONLY: store_face_flux, IsCartesian, CellFace_DB, &
@@ -1396,7 +1367,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
-
     subroutine correct_left_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
       use ModNumConst, ONLY: i_DD
@@ -1406,7 +1376,6 @@ contains
       integer :: i, j, k, iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
       integer :: iDiff, iVar
       !------------------------------------------------------------------------
-
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
@@ -1423,7 +1392,6 @@ contains
 
     end subroutine correct_left_ghostcell
     !==========================================================================
-
     subroutine correct_right_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
       use ModNumConst, ONLY: i_DD
@@ -1433,7 +1401,6 @@ contains
       integer :: i, j, k, iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
       integer :: iDiff, iVar
       !------------------------------------------------------------------------
-
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
@@ -1450,10 +1417,8 @@ contains
 
     end subroutine correct_right_ghostcell
     !==========================================================================
-
   end subroutine get_rad_diffusion_rhs
   !============================================================================
-
   subroutine add_jacobian_rad_diff(iBlock, nVarImpl, Jacobian_VVCI)
 
     use BATL_lib,    ONLY: IsCartesian, DiLevelNei_IIIB, Unset_, CellSize_DB, &
@@ -1707,12 +1672,12 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_jacobian_rad_diff
   !============================================================================
-
   subroutine update_impl_rad_diff(iBlock, iBlockSemi, &
        NewSemiAll_VC, OldSemiAll_VC, DconsDsemiAll_VC)
 
     ! The use ModVarIndexes has to be next to use ModAdvance for sake
     ! of the extremely advanced PGF90 12.9 compiler
+
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
     use ModImplicit,   ONLY: nVarSemiAll, iTeImpl, iErImplFirst, SemiImplCoeff
@@ -1873,6 +1838,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_rad_diff_range
   !============================================================================
-
 end module ModRadDiffusion
 !==============================================================================
