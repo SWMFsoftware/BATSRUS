@@ -256,6 +256,17 @@ contains
     ! To be used in calculating electrric field for hybrid scheme
     SourceMhd_VC = 0
 
+    if(UseUserSourceExpl)then
+       call user_calc_sources_expl(iBlock)
+       if(DoTest) call write_source('After explicit user sources')
+    end if
+
+    if(.not.UsePointImplicit .and. UseUserSourceImpl)then
+       call user_calc_sources_impl(iBlock)
+       if(DoTest) call write_source( &
+            'After implicit user source evaluated explicitly')
+    end if
+    
     ! Source term for continuity equation(s). Only single fluid case
     ! is considered. Impact on other equations is ignored.
     if(UseAdvectionSource)then
@@ -263,7 +274,8 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           DivU = div_u(UnFirst_, i, j, k)
           Source_VC(iVarAdvectFirst:iVarAdvectLast,i,j,k) = &
-               State_VGB(iVarAdvectFirst:iVarAdvectLast,i,j,k,iBlock)*DivU
+               Source_VC(iVarAdvectFirst:iVarAdvectLast,i,j,k) &
+               + State_VGB(iVarAdvectFirst:iVarAdvectLast,i,j,k,iBlock)*DivU
        end do; end do; end do
     end if
 
@@ -1184,17 +1196,6 @@ contains
           Source_VC(SignB_,i,j,k) = Source_VC(SignB_,i,j,k) &
                + State_VGB(SignB_,i,j,k,iBlock)*div_u(UnFirst_, i, j, k)
        end do; end do; end do
-    end if
-
-    if(UseUserSourceExpl)then
-       call user_calc_sources_expl(iBlock)
-       if(DoTest) call write_source('After explicit user sources')
-    end if
-
-    if(.not.UsePointImplicit .and. UseUserSourceImpl)then
-       call user_calc_sources_impl(iBlock)
-       if(DoTest) call write_source( &
-            'After implicit user source evaluated explicitly')
     end if
 
     if(DoTest) call write_source('final')
