@@ -266,7 +266,7 @@ contains
        if(DoTest) call write_source( &
             'After implicit user source evaluated explicitly')
     end if
-    
+
     ! Source term for continuity equation(s). Only single fluid case
     ! is considered. Impact on other equations is ignored.
     if(UseAdvectionSource)then
