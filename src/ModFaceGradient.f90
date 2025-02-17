@@ -296,7 +296,7 @@ contains
   end subroutine set_block_field2
   !============================================================================
   subroutine set_block_field3(iBlock, nVar, Field1_VG, Field_VG)
-   !$acc routine vector
+    !$acc routine vector
 
     ! correct the ghost cells of the given scalar/vector field on iBlock
     ! using third order interpolation
@@ -1053,12 +1053,12 @@ contains
     end if
 
     call get_face_gradient_simple(iDir, i, j, k, iBlock, Scalar_G,&
-         FaceGrad_D, DcoordDxyz_DDFD, UseFirstOrderBc)
+         FaceGrad_D, DcoordDxyz_DDFD, UseFirstOrderBc, .true.)
 
   end subroutine get_face_gradient
   !============================================================================
   subroutine get_face_gradient_simple(iDir, i, j, k, iBlock, Scalar_G, &
-       FaceGrad_D, DcoordDxyz_DDFD, UseFirstOrderBcIn)
+       FaceGrad_D, DcoordDxyz_DDFD, UseFirstOrderBc, IsResChangeBlock)
     !$acc routine seq
 
     ! calculate the cell face gradient of Scalar_G
@@ -1073,7 +1073,18 @@ contains
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
     real, intent(in) :: &
          DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
-    logical, optional, intent(in):: UseFirstOrderBcIn
+
+    ! If UseFirstOrderBc, then near the domain boundary the
+    ! ghost cell value is only used to calculate the gradient
+    ! in the direction across the computational domain boundary
+    ! and only calculating  the gradient at the face which is
+    ! a part of the computational domain boundary. Otherwise the
+    ! physical cells and the ghostcells within the computational
+    ! domain are used, with eliminating the out-of-domain ghost cell
+    ! from the interpolation stencil.
+    logical, intent(in):: UseFirstOrderBc
+
+    logical, intent(in):: IsResChangeBlock
 
     ! Limits for the cell index for the cells involoved in calculating
     ! the vector components of gradient, which are parallel to the face
@@ -1085,27 +1096,11 @@ contains
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     real :: InvDx, InvDy, InvDz
 
-    ! If UseFirstOrderBc, then near the domain boundary the
-    ! ghost cell value is only used to calculate the gradient
-    ! in the direction across the computational domain boundary
-    ! and only calculating  the gradient at the face which is
-    ! a part of the computational domain boundary. Otherwise the
-    ! physical cells and the ghostcells within the computational
-    ! domain are used, with eliminating the out-of-domain ghost cell
-    ! from the interpolation stencil.
-    logical :: UseFirstOrderBc
-
     character(len=*), parameter:: NameSub = 'get_face_gradient_simple'
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
-
-    if(present(UseFirstOrderBcIn))then
-       UseFirstOrderBc = UseFirstOrderBcIn
-    else
-       UseFirstOrderBc = .false.
-    end if
 
     ! Central difference with averaging in orthogonal direction
     iR = i+1; iL = i-1; iD = i - 1; iU = i;
@@ -1116,88 +1111,90 @@ contains
     Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
     Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
 
-    if(i==1)then
-       if(DiLevel_EB(1,iBlock)==-1 &
-            .or. (iDir==y_ .and. &
-            (j==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
-            (j==nJ+1 .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1)) &
-            .or. (iDir==z_ .and. &
-            (k==1    .and. DiLevelNei_IIIB(-1, 0,-1,iBlock)==-1) .or. &
-            (k==nK+1 .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1)) &
+    if(IsResChangeBlock .or. UseFirstOrderBc) then
+       if(i==1)then
+          if(DiLevel_EB(1,iBlock)==-1 &
+               .or. (iDir==y_ .and. &
+               (j==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
+               (j==nJ+1 .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1)) &
+               .or. (iDir==z_ .and. &
+               (k==1    .and. DiLevelNei_IIIB(-1, 0,-1,iBlock)==-1) .or. &
+               (k==nK+1 .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1)) &
+               )then
+             iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
+          elseif(UseFirstOrderBc.and.DiLevel_EB(1,iBlock)==Unset_)then
+             iL = i; iD = i; Ax = 0.0; Bx = -0.50*InvDx; Cx = 0.50*InvDx
+          end if
+       elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. DiLevel_EB(2,iBlock)==-1 &
+            .or. &
+            i==nI .and. ((iDir==y_ .and. &
+            (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
+            (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
+            .or.         (iDir==z_ .and. &
+            (k==1    .and. DiLevelNei_IIIB( 1, 0,-1,iBlock)==-1) .or. &
+            (k==nK+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1))) &
             )then
-          iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
-       elseif(UseFirstOrderBc.and.DiLevel_EB(1,iBlock)==Unset_)then
-          iL = i; iD = i; Ax = 0.0; Bx = -0.50*InvDx; Cx = 0.50*InvDx
+          iL = i-1; iR = i-2; Ax=-InvDx; Bx=0.75*InvDx; Cx=0.25*InvDx
+       elseif(UseFirstOrderBc.and.(i==nI+1 .or. i==nI.and.iDir/=x_)&
+            .and. DiLevel_EB(2,iBlock)==Unset_)then
+          iR = i; iU = i-1; Ax =-0.50*InvDx; Bx = 0.50*InvDx; Cx = 0.0
        end if
-    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. DiLevel_EB(2,iBlock)==-1 &
-         .or. &
-         i==nI .and. ((iDir==y_ .and. &
-         (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
-         (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
-         .or.         (iDir==z_ .and. &
-         (k==1    .and. DiLevelNei_IIIB( 1, 0,-1,iBlock)==-1) .or. &
-         (k==nK+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1))) &
-         )then
-       iL = i-1; iR = i-2; Ax=-InvDx; Bx=0.75*InvDx; Cx=0.25*InvDx
-    elseif(UseFirstOrderBc.and.(i==nI+1 .or. i==nI.and.iDir/=x_)&
-         .and. DiLevel_EB(2,iBlock)==Unset_)then
-       iR = i; iU = i-1; Ax =-0.50*InvDx; Bx = 0.50*InvDx; Cx = 0.0
-    end if
 
-    if(j==1)then
-       if(DiLevel_EB(3,iBlock)==-1 &
-            .or. (iDir==x_ .and. &
-            (i==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
-            (i==nI+1 .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1)) &
-            .or. (iDir==z_ .and. &
-            (k==1    .and. DiLevelNei_IIIB( 0,-1,-1,iBlock)==-1) .or. &
-            (k==nK+1 .and. DiLevelNei_IIIB( 0,-1, 1,iBlock)==-1)) &
+       if(j==1)then
+          if(DiLevel_EB(3,iBlock)==-1 &
+               .or. (iDir==x_ .and. &
+               (i==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
+               (i==nI+1 .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1)) &
+               .or. (iDir==z_ .and. &
+               (k==1    .and. DiLevelNei_IIIB( 0,-1,-1,iBlock)==-1) .or. &
+               (k==nK+1 .and. DiLevelNei_IIIB( 0,-1, 1,iBlock)==-1)) &
+               )then
+             jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
+          elseif(UseFirstOrderBc.and.DiLevel_EB(3,iBlock)==Unset_)then
+             jL = i; jD = j; Ay = 0.0; By = -0.50*InvDy; Cy = 0.50*InvDy
+          end if
+       elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 &
+            .or. &
+            j==nJ .and. ((iDir==x_ .and. &
+            (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
+            (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
+            .or.         (iDir==z_ .and. &
+            (k==1    .and. DiLevelNei_IIIB( 0, 1,-1,iBlock)==-1) .or. &
+            (k==nK+1 .and. DiLevelNei_IIIB( 0, 1, 1,iBlock)==-1)))&
             )then
-          jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
-       elseif(UseFirstOrderBc.and.DiLevel_EB(3,iBlock)==Unset_)then
-          jL = i; jD = j; Ay = 0.0; By = -0.50*InvDy; Cy = 0.50*InvDy
+          jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
+       elseif(UseFirstOrderBc.and.(j==nJ+1 .or. j==nJ.and.iDir/=y_)&
+            .and. DiLevel_EB(4,iBlock)==Unset_)then
+          jR = j; jU = j-1; Ay =-0.50*InvDy; By = 0.50*InvDy; Cy = 0.0
        end if
-    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 &
-         .or. &
-         j==nJ .and. ((iDir==x_ .and. &
-         (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
-         (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
-         .or.         (iDir==z_ .and. &
-         (k==1    .and. DiLevelNei_IIIB( 0, 1,-1,iBlock)==-1) .or. &
-         (k==nK+1 .and. DiLevelNei_IIIB( 0, 1, 1,iBlock)==-1)))&
-         )then
-       jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
-    elseif(UseFirstOrderBc.and.(j==nJ+1 .or. j==nJ.and.iDir/=y_)&
-         .and. DiLevel_EB(4,iBlock)==Unset_)then
-       jR = j; jU = j-1; Ay =-0.50*InvDy; By = 0.50*InvDy; Cy = 0.0
-    end if
 
-    if(k==1)then
-       if(DiLevel_EB(5,iBlock)==-1 &
-            .or. (iDir==x_ .and. &
-            (i==1    .and. DiLevelNei_IIIB(-1, 0,-1,iBlock)==-1) .or. &
-            (i==nI+1 .and. DiLevelNei_IIIB( 1, 0,-1,iBlock)==-1)) &
-            .or. (iDir==y_ .and. &
-            (j==1    .and. DiLevelNei_IIIB( 0,-1,-1,iBlock)==-1) .or. &
-            (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1,-1,iBlock)==-1)) &
+       if(k==1)then
+          if(DiLevel_EB(5,iBlock)==-1 &
+               .or. (iDir==x_ .and. &
+               (i==1    .and. DiLevelNei_IIIB(-1, 0,-1,iBlock)==-1) .or. &
+               (i==nI+1 .and. DiLevelNei_IIIB( 1, 0,-1,iBlock)==-1)) &
+               .or. (iDir==y_ .and. &
+               (j==1    .and. DiLevelNei_IIIB( 0,-1,-1,iBlock)==-1) .or. &
+               (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1,-1,iBlock)==-1)) &
+               )then
+             kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
+          elseif(UseFirstOrderBc.and.DiLevel_EB(5,iBlock)==Unset_)then
+             kL = k; kD = k; Az = 0.0; Bz = -0.50*InvDz; Cz = 0.50*InvDz
+          end if
+       elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 &
+            .or. &
+            k==nK .and. ((iDir==x_ .and. &
+            (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
+            (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &
+            .or.         (iDir==y_ .and. &
+            (j==1    .and. DiLevelNei_IIIB( 0,-1, 1,iBlock)==-1) .or. &
+            (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1, 1,iBlock)==-1))) &
             )then
-          kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
-       elseif(UseFirstOrderBc.and.DiLevel_EB(5,iBlock)==Unset_)then
-          kL = k; kD = k; Az = 0.0; Bz = -0.50*InvDz; Cz = 0.50*InvDz
+          kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
+       elseif(UseFirstOrderBc.and.(k==nK+1 .or. k==nK.and.iDir/=z_)&
+            .and. DiLevel_EB(6,iBlock)==Unset_)then
+          kR = k; kU = k-1; Az =-0.50*InvDz; Bz = 0.50*InvDz; Cz = 0.0
        end if
-    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 &
-         .or. &
-         k==nK .and. ((iDir==x_ .and. &
-         (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
-         (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &
-         .or.         (iDir==y_ .and. &
-         (j==1    .and. DiLevelNei_IIIB( 0,-1, 1,iBlock)==-1) .or. &
-         (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1, 1,iBlock)==-1))) &
-         )then
-       kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
-    elseif(UseFirstOrderBc.and.(k==nK+1 .or. k==nK.and.iDir/=z_)&
-         .and. DiLevel_EB(6,iBlock)==Unset_)then
-       kR = k; kU = k-1; Az =-0.50*InvDz; Bz = 0.50*InvDz; Cz = 0.0
     end if
 
     ! Use central difference to get gradient at face
@@ -1245,8 +1242,10 @@ contains
             + Cy*(Scalar_G(i,jR,kD) + Scalar_G(i,jR,kU))
        FaceGrad_D(z_) = InvDz*(Scalar_G(i,j,k) - Scalar_G(i,j,k-1))
     case default
+#ifndef _OPENACC
        write(*,*)'Error in get_face_gradient: iDir=',iDir
        call stop_mpi('DEBUG')
+#endif
     end select
 
     ! multiply by the coordinate transformation matrix to obtain the

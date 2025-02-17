@@ -1434,7 +1434,8 @@ contains
 #ifndef _OPENACC
     use BATL_lib,        ONLY: store_face_flux
 #endif
-    use BATL_lib,        ONLY: CellVolume_GB, IsCartesianGrid
+    use BATL_lib,        ONLY: CellVolume_GB, IsCartesianGrid, &
+         DiLevelNei_IIIB
     use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure, &
          iTypeUpdate, UpdateOrig_
@@ -1459,6 +1460,8 @@ contains
     integer :: iDim, i, j, k, Di, Dj, Dk, iGang
     real :: FaceGrad_D(MaxDim)
     logical :: UseFirstOrderBc
+
+    logical :: IsResChangeBlock
 
     ! real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
@@ -1485,6 +1488,8 @@ contains
          UseFirstOrderBc)
 #endif
 
+    IsResChangeBlock = any(DiLevelNei_IIIB(:,:,:,iBlock) == -1)
+
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
@@ -1495,7 +1500,7 @@ contains
           call get_face_gradient_simple(iDim, i, j, k, iBlock, &
                StateImpl_VG, FaceGrad_D, &
                DcoordDxyz_DDFDI(:,:,:,:,:,:,iGang), &
-               UseFirstOrderBcIn=UseFirstOrderBC)
+               UseFirstOrderBC, IsResChangeBlock)
           FluxImpl_VFDI(iTeImpl,i,j,k,iDim,iGang) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
 
