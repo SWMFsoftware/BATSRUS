@@ -16,6 +16,9 @@ Sharp model		NameUserModule
 #UPDATEVAR
 Bx By Bz		StringVarUpdate
 
+#NONCONSERVATIVE
+T			UseNonConservative
+
 #HEATCONDUCTION
 F			UseHeatConduction
 
