@@ -1142,6 +1142,8 @@ contains
 
     call test_start(NameSub, DoTest)
 
+    call timing_start(NameSub)
+
     !$acc parallel loop gang independent &
     !$acc present(nBlockSemi, iBlockFromSemi_B)
     do iBlockSemi = 1, nBlockSemi
@@ -1423,6 +1425,8 @@ contains
        end do
 
     end do
+
+    call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
 #endif
