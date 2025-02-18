@@ -1,0 +1,245 @@
+#DESCRIPTION
+Param/CORONA/PARAM.in.bvector		StringDescription
+
+#STARTTIME
+2014			iYear
+11			iMonth
+20			iDay
+0			iHour
+0			iMinute
+0			iSecond
+
+#USERMODULE
+Sharp model		NameUserModule
+
+! Magnetofriction solves for B field only
+#UPDATEVAR
+Bx By Bz		StringVarUpdate
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#HEATCONDUCTION
+F			UseHeatConduction
+
+#SEMIIMPLICIT
+F			UseSemiImplicit
+
+#COMPONENT
+SC			NameComp
+
+#LOOKUPTABLE
+Bvector			NameTable
+load			NameCommand
+Param/CORONA/bvector_cr2157_smoothed.dat		NameFile
+ascii			TypeFile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#COORDSYSTEM
+HGR			TypeCoordSystem
+
+#HARMONICSFILE
+Param/CORONA/CR2157_HMI.dat		NameHarmonicsFile
+
+#HARMONICSGRID		^
+1.0			rMagnetogram
+25			rSourceSurface^
+T			IsLogRadius^
+30			MaxOrder
+50			nR
+90			nLon
+90			nLat
+
+use:
+90			MaxOrder
+100			nR
+180			nLon
+for the real run
+
+#UNIFORMSTATE
+1.0e-10			Rho
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+1.0e-10			P
+
+#USERSWITCH
++init +update 		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#MAGNETOFRICTION
+T       		UseMagFriction
+1d-11   		MagFrictionCoefSi
+3d4     		MagFrictionUSi
+1d-5     		MagFrictionBminSi
+T			MagFrictionUseDecay
+1.09     		MagFrictionRmax
+T			MagFrictionUseBvectorLonLat
+
+#ARSMOOTHEXT
+8.0			ExtLonLeft
+8.0			ExtLonRight
+5.0			ExtLatBelow
+5.0			ExtLatAbove
+
+#USERINPUTEND -------------------------------------
+
+#GRIDBLOCKALL
+2000			MaxBlock ! use 50000 in the real run
+
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
+#GRID
+1			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#LIMITRADIUS
+1.0			rMin
+1.15			rMax
+
+#GRIDRESOLUTION
+6.0			Resolution
+all			StringShape
+
+#GRIDRESOLUTION
+3.0			Resolution
+shell0			StringShape
+1.0			RadiusInner
+1.1			Radius
+
+#GRIDRESOLUTION
+0.35			Resolution
+box_gen			StringShape
+1.0			Coord1MinBox rMin
+155.0			Coord2MinBox LonMin
+-18.0			Coord3MinBox LatMin
+1.1			Coord1MaxBox rMax
+172.0			Coord2MaxBox LonMax
+-5.0			Coord3MaxBox LatMax
+
+#GRIDRESOLUTION
+1.5			Resolution
+box_gen			StringShape
+1.0			Coord1MinBox rMin
+145.0			Coord2MinBox LonMin
+-23.0			Coord3MinBox LatMin
+1.1			Coord1MaxBox rMax
+182.0			Coord2MaxBox LonMax
+-3.0			Coord3MaxBox LatMax
+
+#GRIDRESOLUTION
+6.0			Resolution ! for real run use 0.35
+initial			StringShape
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#TIMESTEPPING
+2			nStage
+0.3			CflExpl
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLog
+1			DnSaveLogfile ! use 10 for real run
+-1.			DtSaveLogfile
+dt absjxb emag1 ekin  		NameLogVars
+
+#OUTERBOUNDARY
+user			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#SAVEPLOT
+4			nPlotFile
+y=0 VAR idl_real8		StringPlot
+1000			DnSavePlot 5000
+-1			DtSavePlot
+-1.0			DxSavePlot
+{MHD} uxrot uyrot uzrot b1x b1y b1z absdivb dt		NameVars
+{default}		NamePars
+z=0 VAR idl_real8		StringPlot
+1000			DnSavePlot 5000
+-1			DtSavePlot
+-1.0			DxSavePlot
+{MHD} uxrot uyrot uzrot b1x b1y b1z absdivb dt		NameVars
+{default}		NamePars
+cut VAR idl_real8		StringPlot
+10000			DnSavePlot
+-1			DtSavePlot
+1.0			Coord1MinCut
+1.1			Coord1MaxCut
+140.0			Coord2MinCut
+200.0			Coord2MaxCut
+-30.0			Coord3MinCut
+0.0			Coord3MaxCut
+0.0			DxSavePlot ! unstructured grid (for IDL plots)
+{MHD} uxrot uyrot uzrot b1x b1y b1z absdivb dt		NameVars
+{default}		NamePars
+shl VAR idl		StringPlot ! to be used for B0local lookup table
+100000			DnSavePlot
+-1			DtSavePlot
+HGR			TypeCoordPlot
+1.0			rMin
+1.09			rMax
+0.003			dR  ! use 0.0003 for real run
+145.0			LonMin
+181.0			LonMax
+3.0			dLon ! use 0.35 for real run
+-24.0			LatMin
+-3			LatMax
+3.0			dLat ! use 0.35 for real run
+bx by bz 		NameVars
+{default}		NamePars
+
+
+3d VAR tcp		StringPlot
+100000			DnSavePlot
+-1.			DtSavePlot
+{MHD} 			NameVars
+{default}		NamePars
+slg VAR idl_ascii		StringPlot  ! could be used as a global lookup B0
+100000			DnSavePlot
+-1			DtSavePlot
+HGR			TypeCoordPlot
+1.0			rMin
+24.0			rMax
+0.03			dR
+0.0			LonMin
+360.0			LonMax
+2.0			dLon
+-90.0			LatMin
+90.0			LatMax
+2.0			dLat
+bx by bz 		NameVars
+{default}		NamePars
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#STOP
+20			MaxIteration ! For the real run set ~100000
+-1.0			tSimulationMax
