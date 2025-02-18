@@ -80,6 +80,12 @@ T			MagFrictionUseBvectorLonLat
 
 #USERINPUTEND -------------------------------------
 
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+1.5e5                   LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseReynoldsDecomposition
+
 #GRIDBLOCKALL
 2000			MaxBlock ! use 50000 in the real run
 
@@ -165,19 +171,19 @@ float			TypeBc6
 
 #SAVEPLOT
 4			nPlotFile
-y=0 VAR idl		StringPlot
+y=0 VAR idl_real8		StringPlot
 1000			DnSavePlot 5000
 -1			DtSavePlot
 -1.0			DxSavePlot
 {MHD} uxrot uyrot uzrot b1x b1y b1z absdivb dt		NameVars
 {default}		NamePars
-z=0 VAR idl		StringPlot
+z=0 VAR idl_real8		StringPlot
 1000			DnSavePlot 5000
 -1			DtSavePlot
 -1.0			DxSavePlot
 {MHD} uxrot uyrot uzrot b1x b1y b1z absdivb dt		NameVars
 {default}		NamePars
-cut VAR idl		StringPlot
+cut VAR idl_real8		StringPlot
 10000			DnSavePlot
 -1			DtSavePlot
 1.0			Coord1MinCut
