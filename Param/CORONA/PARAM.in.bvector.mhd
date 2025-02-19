@@ -58,8 +58,18 @@ use:
 180			nLon
 for the real run
 
+#UNIFORMSTATE
+1.0e-10			Rho
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+1.0e-10			P
+
 #USERSWITCH
-+init +ic +update 		StringSwitch
++init +update 		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -79,12 +89,6 @@ T			MagFrictionUseBvectorLonLat
 5.0			ExtLatAbove
 
 #USERINPUTEND -------------------------------------
-
-#CORONALHEATING
-turbulentcascade		TypeCoronalHeating
-1.5e5                   LperpTimesSqrtBSi
-0.0			rMinWaveReflection
-F			UseReynoldsDecomposition
 
 #GRIDBLOCKALL
 2000			MaxBlock ! use 50000 in the real run

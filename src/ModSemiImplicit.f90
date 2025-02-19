@@ -354,11 +354,13 @@ contains
           call timing_stop('impl_jacobian')
        endif
 
+       call timing_start('solve_linear_multiblock')
        ! solve implicit system
        call solve_linear_multiblock( SemiParam, &
             nVarSemi, nDim, nI, nJ, nK, nBlockSemi, iComm, &
             semi_impl_matvec, Rhs_I, x_I, DoTestKrylov, &
             JacSemi_VVCIB, JacobiPrec_I, cg_precond, hypre_preconditioner)
+       call timing_stop('solve_linear_multiblock')
 
        if(SemiParam%iError /= 0 .and. iProc == 0 .and. IsTimeAccurate) &
             call error_report(NameSub//': Krylov solver failed, Krylov error',&
@@ -368,7 +370,7 @@ contains
        !$acc parallel loop gang independent
        do iBlockSemi = 1, nBlockSemi
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
-          !$acc loop vector independent
+          !$acc loop vector independent collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              do iVar = iVarSemiMin, iVarSemiMax
                 if(Used_GB(i,j,k,iBlockFromSemi_B(iBlockSemi)))then
@@ -386,6 +388,7 @@ contains
        !$omp end parallel do
     end do ! Splitting
 
+    call timing_start('update_impl')
     ! Put back semi-implicit result into the explicit code
     !$omp parallel do private(iBlock)
     !$acc parallel loop gang
@@ -418,6 +421,8 @@ contains
        call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1, State_VGB)
     end do
     !$omp end parallel do
+
+    call timing_stop('update_impl')
 
     ! call cpu_time(finish)
 
