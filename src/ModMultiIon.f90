@@ -238,6 +238,7 @@ contains
        Source_VC(nVar+1:nVar+nIonFluid,i,j,k) = &
             Source_VC(nVar+1:nVar+nIonFluid,i,j,k) + Work_I
 
+       ! Work for total ion energy is already added in ModPhysicalFlux
        if(UseTotalIonEnergy) Source_VC(Energy_,i,j,k) = &
             Source_VC(Energy_,i,j,k) - sum(Work_I)
 

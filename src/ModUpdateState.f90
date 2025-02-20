@@ -371,6 +371,14 @@ contains
                sum(Source_VC(Energy_:Energy_-1+nIonFluid,i,j,k))
        end do; end do; end do
     end if
+
+    ! Add electron energy source to first ion enery source
+    if(UseELectronPressure .and. UseElectronEnergy)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               + InvGammaElectronMinus1*Source_VC(Pe_,i,j,k)
+       end do; end do; end do
+    end if
     
     ! Modify electron pressure source term to electron entropy if necessary
     ! S(Se) = S(Pe)/rho^(gammaE-1)
