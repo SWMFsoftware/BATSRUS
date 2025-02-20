@@ -229,7 +229,6 @@ contains
     use ModMultiFluid, ONLY: select_fluid, nFluid, iRho, iRhoUx
     use ModFaceGradient, ONLY: get_face_gradient_field
     use ModMain, ONLY: x_
-    use ModFaceFluxParameters
 
     integer, intent(in) :: iDimFace, iFace, jFace,kFace,iBlockFace
     integer, intent(in) :: iFluidMin,iFluidMax

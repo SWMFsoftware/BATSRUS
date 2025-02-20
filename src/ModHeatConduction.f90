@@ -11,7 +11,6 @@ module ModHeatConduction
 #endif
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxRegion, &
        rCollisional, rCollisionless
-  use ModFaceFluxParameters
   use BATL_size, ONLY: nDim, MaxDim
   use omp_lib
   use ModUtilities, ONLY: i_gang
@@ -933,7 +932,7 @@ contains
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, UseMultiIon
     use ModPhysics,    ONLY: UnitTemperature_, AverageIonCharge, &
          UnitPoynting_, ElectronGyroFreqCoef, UnitN_, Si2No_V, No2Si_V
-    use ModVarIndexes, ONLY: Bx_, Bz_, p_, Pe_, Rho_
+    use ModVarIndexes, ONLY: nVar, Bx_, Bz_, p_, Pe_, Rho_
     use ModRadiativeCooling, ONLY: &
          DoExtendTransitionRegion, extension_factor
 

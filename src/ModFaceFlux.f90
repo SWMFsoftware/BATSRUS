@@ -4,7 +4,6 @@
 module ModFaceFlux
 
   use ModPhysicalFlux
-  use ModFaceFluxParameters
   use BATL_lib, ONLY: &
        test_start, test_stop, &
        iTest, jTest, kTest, iDimTest, iSideTest, iProc, &
@@ -32,14 +31,11 @@ module ModFaceFlux
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
        FluxCenter_VGD, DoCorrectFace, &
-       UseLowOrder, IsLowOrderOnly_B, DoUpdate_V, &
-       UseElectronEnergy, UseTotalIonEnergy
+       UseLowOrder, IsLowOrderOnly_B, DoUpdate_V
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal, GammaElectron, &
-       GammaElectronMinus1, InvGammaElectronMinus1, Gamma, GammaMinus1, &
-       InvGammaMinus1, Gamma_I, InvGammaMinus1_I, GammaMinus1_I
-  use ModWaves, ONLY: UseAlfvenWaves, AlfvenMinusFirst_, AlfvenMinusLast_, &
-       AlfvenPlusFirst_, AlfvenPlusLast_, &
-       GammaWave, UseWavePressure, UseWavePressureLtd
+       Gamma, GammaMinus1, InvGammaMinus1, Gamma_I, InvGammaMinus1_I
+  use ModWaves, ONLY: UseAlfvenWaves, GammaWave, UseWavePressure, &
+       UseWavePressureLtd
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        HallFactor_DF, set_hall_factor_face, &
        set_ion_mass_per_charge, UseBiermannBattery
@@ -49,7 +45,7 @@ module ModFaceFlux
   use ModIonElectron, ONLY: iVarUseCmax_I
   use ModVarIndexes
   use ModNumConst, ONLY: cSqrtHalf, cTiny
-  use ModViscosity, ONLY: UseViscosity, Visco_DDI,&
+  use ModViscosity, ONLY: UseViscosity,&
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
   use ModTimewarp, ONLY: UseTimewarp, UseWarpCmax, iDimWarp, uWarp, &
        state_to_warp_cell
@@ -571,11 +567,9 @@ contains
       use ModAdvance, ONLY: State_VGB, FaceDivU_IX
 
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
+
       integer:: iFlux
       integer:: iGang
-
-      integer:: iFF_I(nFFInt)
-      real:: rFF_I(nFFReal) ! , CmaxDt0, Flux0
       !------------------------------------------------------------------------
       iGang = 1
       iBlockFace = iBlock
@@ -639,14 +633,13 @@ contains
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
-            call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,iGang),&
-                 iFF_I, rFF_I)
+            call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,iGang))
          endif
 
          Flux_VXI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
          ! Correct Unormal_I to make div(u) achieve 6th order.
-         if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(Unormal_I)
 
          Flux_VXI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
@@ -682,9 +675,6 @@ contains
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: iFlux
       integer, parameter:: iGang = 1
-
-      integer:: iFF_I(nFFInt)
-      real:: rFF_I(nFFReal) !, CmaxDt0, Flux0
       !------------------------------------------------------------------------
       iBlockFace = iBlock
       iDimFace = y_
@@ -746,13 +736,12 @@ contains
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IY(:,iFace,jFace,kFace)
-            call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,iGang),&
-                 iFF_I, rFF_I)
+            call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,iGang))
          endif
 
          Flux_VYI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
-         if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(Unormal_I)
 
          Flux_VYI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
@@ -789,9 +778,6 @@ contains
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
       integer:: iFlux
       integer, parameter:: iGang = 1
-
-      integer:: iFF_I(nFFInt)
-      real:: rFF_I(nFFReal)
       !------------------------------------------------------------------------
       iBlockFace = iBlock
       iDimFace = z_
@@ -852,13 +838,12 @@ contains
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IZ(:,iFace,jFace,kFace)
-            call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,iGang),&
-                 iFF_I, rFF_I)
+            call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,iGang))
          endif
 
          Flux_VZI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
-         if(DoCorrectFace) call correct_u_normal(iFF_I, rFF_I, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(Unormal_I)
 
          Flux_VZI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
@@ -886,7 +871,7 @@ contains
 
     end subroutine get_flux_z
     !==========================================================================
-    subroutine add_artificial_viscosity(Flux_V, iFF_I, rFF_I)
+    subroutine add_artificial_viscosity(Flux_V)
 
       ! This subroutine adds artificial viscosity to the fluid
       ! density/moment/energy/pressure equations, but not the EM field
@@ -900,9 +885,6 @@ contains
       use ModEnergy, ONLY: energy_i
 
       real, intent(inout):: Flux_V(nFlux)
-
-      integer,  intent(inout):: iFF_I(:)
-      real,     intent(inout):: rFF_I(:)
 
       real :: Coef
       real :: FaceDivU, Sound3, s1, s2
@@ -1174,7 +1156,7 @@ contains
   subroutine get_numerical_flux(Flux_V)
 
     use ModAdvance, ONLY: State_VGB, UseMultiSpecies, DoReplaceDensity, &
-         DoUpdate_V, LogAlfven_, FaceUx_, FaceUy_, FaceUz_
+         DoUpdate_V, LogAlfven_, FaceUx_, FaceUz_
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
@@ -2522,10 +2504,6 @@ contains
     real:: Primitive_V(nVar), RhoInv, Flux_V(nFlux)
     real:: Conservative_V(nFlux)
 
-    logical:: IsFF_I(nFFLogic)
-    integer:: iFF_I(nFFInt)
-    real:: rFF_I(nFFReal)
-
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En
 
@@ -2536,9 +2514,12 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_simple_cell_flux'
     !--------------------------------------------------------------------------
-    call init_face_flux_arrays( IsFF_I, iFF_I, rFF_I, Unormal_I, bCrossArea_D)
-
     call test_start(NameSub, DoTest, iBlock)
+
+#ifdef _OPENACC
+    Unormal_I = 0.0
+    bCrossArea_D = 0.0
+#endif
 
     if(.not.allocated(FluxCenter_VGD)) allocate( &
          FluxCenter_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
@@ -3481,15 +3462,14 @@ contains
     !==========================================================================
   end subroutine get_speed_max
   !============================================================================
-  subroutine correct_u_normal(iFF_I, rFF_I, Unormal_I)
+  subroutine correct_u_normal(Unormal_I)
+
     ! Make Unormal 6th order accuracte
+
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
     use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
          Xi_, Eta_, Zeta_, nDim
-
-    integer,  intent(inout):: iFF_I(:)
-    real,     intent(inout):: rFF_I(:)
 
     real, intent(inout):: Unormal_I(nFluid+1)
 
