@@ -364,6 +364,14 @@ contains
        end if
     end if
 
+    ! Add up energy source terms into first fluid
+    if(useMultiIon .and. UseTotalIonEnergy)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          Source_VC(Energy_,i,j,k) = &
+               sum(Source_VC(Energy_:Energy_-1+nIonFluid,i,j,k))
+       end do; end do; end do
+    end if
+    
     ! Modify electron pressure source term to electron entropy if necessary
     ! S(Se) = S(Pe)/rho^(gammaE-1)
     if(UseElectronPressure .and. UseElectronEntropy)then
