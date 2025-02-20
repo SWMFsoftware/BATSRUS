@@ -6,7 +6,6 @@ module ModUpdateState
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
        iVarTest, iComm, Used_GB, CellVolume_GB, Xyz_DGB
-  use ModGeometry, ONLY: r_GB
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
   use ModB0, ONLY: B0_DGB
@@ -537,14 +536,13 @@ contains
       logical:: DoAddToStateOld
 
       ! true if StateOld is changed before the update
-      logical:: DoChangeStateOld
 
       ! True if the cell is non-conservative
       logical:: IsNonConservative
 
       real:: Coeff1, Coeff2, b_D(3), u_D(3), FullB2, FullB, Rho
-      real:: Eth, Sperp, Sie, Spp, Ei, Ee, Epar
-      real:: FactorI, FactorE, FactorPar, FactorPerp
+      real:: Eth, Sperp, Sie, Spp, Ee, Epar
+      real:: FactorE, FactorPar, FactorPerp
       real:: WeightSi, WeightSe, WeightSpar, WeightSperp, Wi, We, Wpar, Wperp
       real, dimension(nIonFluid+1):: Num_I=0.0, e_I=0.0, Factor_I=1.0
       real, dimension(2:nIonFluid+1):: Si1_I=0.0, Weight_I=0.0, Alpha_I, Beta_I

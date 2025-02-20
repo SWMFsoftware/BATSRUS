@@ -238,7 +238,6 @@ contains
 
     ! Normalization factor if the representative functions are used for
     ! Alfven waves
-    real :: SqrtRho
 
     logical:: DoTestCell
 
