@@ -19,6 +19,10 @@ Bx By Bz		StringVarUpdate
 #NONCONSERVATIVE
 T			UseNonConservative
 
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
+
 #HEATCONDUCTION
 F			UseHeatConduction
 
@@ -58,8 +62,22 @@ use:
 180			nLon
 for the real run
 
+UNIFORMSTATE
+1.0e-10                 Rho
+0.0                     Ux
+0.0                     Uy
+0.0                     Uz
+0.0                     Bx
+0.0                     By
+0.0                     Bz
+0.0			Ehot
+0.0			I01
+0.0			I02
+1.0e-10                 Pe
+1.0e-10                 P
+
 #USERSWITCH
-+init +ic +update 		StringSwitch
++ic +update 		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
