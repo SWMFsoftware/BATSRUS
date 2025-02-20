@@ -272,7 +272,7 @@ contains
     use ModPointImplicit, ONLY:  UsePointImplicit, UseUserPointImplicit_B, &
          IsPointImplPerturbed, DsDu_VVC
     use ModMain,    ONLY: nI, nJ, nK, UseB0, UseFlic
-    use ModAdvance, ONLY: State_VGB, Source_VC !!!, UseTotalIonEnergy
+    use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0,      ONLY: B0_DGB
     use BATL_lib,   ONLY: Xyz_DGB
     use ModPhysics, ONLY: ElectronCharge, InvGammaMinus1_I, &
@@ -617,8 +617,6 @@ contains
           Source_VC(iRhoUx:iRhoUz,i,j,k) = Source_VC(iRhoUx:iRhoUz,i,j,k) &
                + Force_D
 
-          ! Total force is zero for the total ion energy
-!!!          if(iIon == 1 .and. UseTotalIonEnergy) CYCLE
           iEnergy = Energy_ - 1 + iIon
           Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
                + sum(Force_D*uIon_D)
