@@ -177,10 +177,10 @@ contains
 
     logical :: DoTestCell
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
@@ -233,7 +233,7 @@ contains
        Work_I = ( State_V(iRhoUxIon_I)*ForceX_I &
             +     State_V(iRhoUyIon_I)*ForceY_I &
             +     State_V(iRhoUzIon_I)*ForceZ_I ) / State_V(iRhoIon_I)
-       
+
        ! Calculate ion energy sources = u_s.Force_s
        Source_VC(nVar+1:nVar+nIonFluid,i,j,k) = &
             Source_VC(nVar+1:nVar+nIonFluid,i,j,k) + Work_I

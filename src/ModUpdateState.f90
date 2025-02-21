@@ -378,7 +378,7 @@ contains
                + InvGammaElectronMinus1*Source_VC(Pe_,i,j,k)
        end do; end do; end do
     end if
-    
+
     ! Modify electron pressure source term to electron entropy if necessary
     ! S(Se) = S(Pe)/rho^(gammaE-1)
     if(UseElectronPressure .and. UseElectronEntropy)then
