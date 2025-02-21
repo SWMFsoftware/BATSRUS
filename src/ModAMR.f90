@@ -170,7 +170,7 @@ contains
   !============================================================================
   subroutine prepare_amr(DoFullMessagePass, TypeAmr)
 
-    use ModMain,     ONLY: nBlockMax, DtMax_B
+    use ModMain,     ONLY: nBlockMax
     use ModAdvance,  ONLY: iTypeAdvance_BP, nVar, State_VGB
     use BATL_lib,    ONLY: &
          MaxNode, nNode, iTree_IA, Status_, Used_, Proc_, Block_, MaxBlock, &
@@ -389,15 +389,14 @@ contains
 
     use ModMain,       ONLY: nBlock, UseB0, Unused_B, DoThinCurrentSheet
     use ModSaMhd,      ONLY: UseSaMhd
-    use ModGeometry,   ONLY: r_GB
     use ModAdvance,    ONLY: State_VGB, StateOld_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
     use ModB0,         ONLY: B0_DGB
     use ModPhysics,    ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
-         UnitTemperature_, UnitElectric_, rCurrents
+         UnitTemperature_
     use ModCurrent,    ONLY: get_current
     use BATL_lib,      ONLY: Xyz_DGB, Xyz_DNB, nDim, nI, nJ, nK, nG, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_, MaxBlock, Used_GB, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, &
          is_masked_amr_criteria
     use ModNumConst,   ONLY: cTiny
     use ModVarIndexes, ONLY: SignB_

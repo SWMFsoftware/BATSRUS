@@ -1125,8 +1125,8 @@ contains
           elseif(UseFirstOrderBc.and.DiLevel_EB(1,iBlock)==Unset_)then
              iL = i; iD = i; Ax = 0.0; Bx = -0.50*InvDx; Cx = 0.50*InvDx
           end if
-       elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. DiLevel_EB(2,iBlock)==-1 &
-            .or. &
+       elseif((i==nI+1 .or. i==nI.and.iDir/=x_) &
+            .and. DiLevel_EB(2,iBlock)==-1 .or. &
             i==nI .and. ((iDir==y_ .and. &
             (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
             (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1153,8 +1153,8 @@ contains
           elseif(UseFirstOrderBc.and.DiLevel_EB(3,iBlock)==Unset_)then
              jL = i; jD = j; Ay = 0.0; By = -0.50*InvDy; Cy = 0.50*InvDy
           end if
-       elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. DiLevel_EB(4,iBlock)==-1 &
-            .or. &
+       elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) &
+            .and. DiLevel_EB(4,iBlock)==-1 .or. &
             j==nJ .and. ((iDir==x_ .and. &
             (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
             (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -1181,8 +1181,8 @@ contains
           elseif(UseFirstOrderBc.and.DiLevel_EB(5,iBlock)==Unset_)then
              kL = k; kD = k; Az = 0.0; Bz = -0.50*InvDz; Cz = 0.50*InvDz
           end if
-       elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. DiLevel_EB(6,iBlock)==-1 &
-            .or. &
+       elseif((k==nK+1 .or. k==nK.and.iDir/=z_) &
+            .and. DiLevel_EB(6,iBlock)==-1 .or. &
             k==nK .and. ((iDir==x_ .and. &
             (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
             (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &

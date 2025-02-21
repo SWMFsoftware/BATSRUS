@@ -166,7 +166,8 @@ contains
 
     real :: State_V(nVar)
     real, dimension(MaxDim)   :: FullB_D
-    real, dimension(nIonFluid):: ForceX_I, ForceY_I, ForceZ_I, ChargeDens_I
+    real, dimension(nIonFluid):: ForceX_I, ForceY_I, ForceZ_I, ChargeDens_I, &
+         Work_I
     real :: InvElectronDens
 
     ! Alfven Lorentz factor for Boris correction
@@ -176,10 +177,10 @@ contains
 
     logical :: DoTestCell
 
+#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
@@ -229,17 +230,17 @@ contains
        Source_VC(iRhoUyIon_I,i,j,k) = Source_VC(iRhoUyIon_I,i,j,k) + ForceY_I
        Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) + ForceZ_I
 
-       if(UseTotalIonEnergy)then
-          ForceX_I(1) = 0.0; ForceY_I(1) = 0.0;ForceZ_I(1) = 0.0
-       end if
+       Work_I = ( State_V(iRhoUxIon_I)*ForceX_I &
+            +     State_V(iRhoUyIon_I)*ForceY_I &
+            +     State_V(iRhoUzIon_I)*ForceZ_I ) / State_V(iRhoIon_I)
 
        ! Calculate ion energy sources = u_s.Force_s
        Source_VC(nVar+1:nVar+nIonFluid,i,j,k) = &
-            Source_VC(nVar+1:nVar+nIonFluid,i,j,k) + &
-            ( State_V(iRhoUxIon_I)*ForceX_I &
-            + State_V(iRhoUyIon_I)*ForceY_I &
-            + State_V(iRhoUzIon_I)*ForceZ_I &
-            ) / State_V(iRhoIon_I)
+            Source_VC(nVar+1:nVar+nIonFluid,i,j,k) + Work_I
+
+       ! Work for total ion energy is already added in ModPhysicalFlux
+       if(UseTotalIonEnergy) Source_VC(Energy_,i,j,k) = &
+            Source_VC(Energy_,i,j,k) - sum(Work_I)
 
     end do; end do; end do
 
@@ -271,7 +272,7 @@ contains
     use ModPointImplicit, ONLY:  UsePointImplicit, UseUserPointImplicit_B, &
          IsPointImplPerturbed, DsDu_VVC
     use ModMain,    ONLY: nI, nJ, nK, UseB0, UseFlic
-    use ModAdvance, ONLY: State_VGB, Source_VC, UseTotalIonEnergy
+    use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0,      ONLY: B0_DGB
     use BATL_lib,   ONLY: Xyz_DGB
     use ModPhysics, ONLY: ElectronCharge, InvGammaMinus1_I, &
@@ -616,8 +617,6 @@ contains
           Source_VC(iRhoUx:iRhoUz,i,j,k) = Source_VC(iRhoUx:iRhoUz,i,j,k) &
                + Force_D
 
-          ! Total force is zero for the total ion energy
-          if(iIon == 1 .and. UseTotalIonEnergy) CYCLE
           iEnergy = Energy_ - 1 + iIon
           Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
                + sum(Force_D*uIon_D)

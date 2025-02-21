@@ -59,14 +59,14 @@ use:
 for the real run
 
 #UNIFORMSTATE
-1.0e-10			Rho
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-0.0			By
-0.0			Bz
-1.0e-10			P
+1.0e-10			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+1.0e-10			StateVar P
 
 #USERSWITCH
 +init +update 		StringSwitch

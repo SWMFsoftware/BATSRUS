@@ -10,7 +10,6 @@ module ModPartImplicit
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
 
   use ModImplicit
-  use ModFaceFluxParameters
 
   implicit none
   private ! except

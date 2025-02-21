@@ -298,13 +298,12 @@ contains
     use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
     use ModVarIndexes,   ONLY: nVar
-    use ModFaceFluxParameters
 
-    integer,intent(in) :: iDir, i, j, k, iBlock
+    integer, intent(in):: iDir, i, j, k, iBlock
     real, intent(inout):: StateLeft_V(nVar)
     real, intent(inout):: StateRight_V(nVar)
     real, intent(inout):: Normal_D(MaxDim)
-    real,   intent(out):: RadDiffCoef, EradFlux
+    real, intent(out):: RadDiffCoef, EradFlux
     logical,intent(inout):: IsNewBlockRadDiffusion
 
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR

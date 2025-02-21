@@ -238,7 +238,6 @@ contains
 
     ! Normalization factor if the representative functions are used for
     ! Alfven waves
-    real :: SqrtRho
 
     logical:: DoTestCell
 
@@ -696,9 +695,6 @@ contains
           if(UseElectronPressure)then
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaElectronMinus1
-             if(UseElectronEnergy) &
-                  Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                  + RadCooling_C(i,j,k)
           else
              Source_VC(p_,i,j,k)  = Source_VC(p_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaMinus1

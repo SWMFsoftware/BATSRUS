@@ -14,7 +14,6 @@ module ModAdvance
        iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
        nIFace, nJFace, nKFace
   use ModIO,         ONLY: iUnitOut, write_prefix
-  use ModFaceFluxParameters
   use omp_lib
 
   implicit none

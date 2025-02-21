@@ -9,7 +9,7 @@ module ModFaceValue
        iDimTest
   use ModBatsrusUtility, ONLY: stop_mpi
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       x_, y_, z_, nDim, MaxDim
+       x_, y_, z_, nDim
   use ModVarIndexes
   use ModGeometry, ONLY: Used_GB, IsBody_B
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
@@ -888,7 +888,6 @@ contains
     use ModPhysics, ONLY: GammaWave
     use ModB0
     use ModAdvance, ONLY: UseElectronPressure, UseWavePressure, &
-         UseAnisoPressure, UseAnisoPe, &
          LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
     use ModParallel, ONLY : DiLevel_EB
     use ModViscosity, ONLY: UseArtificialVisco
@@ -898,7 +897,7 @@ contains
     logical, intent(in):: DoResChangeOnly
     logical, intent(in), optional:: DoMonotoneRestrict
 
-    integer:: i, j, k, iSide, iFluid, iVar
+    integer:: i, j, k, iSide
 
     ! Number of cells needed to get the face values
     integer:: nStencil
