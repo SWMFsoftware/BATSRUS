@@ -171,6 +171,9 @@ contains
   subroutine prepare_amr(DoFullMessagePass, TypeAmr)
 
     use ModMain,     ONLY: nBlockMax
+#ifdef _OPENACC
+    use ModMain,     ONLY: DtMax_B
+#endif
     use ModAdvance,  ONLY: iTypeAdvance_BP, nVar, State_VGB
     use BATL_lib,    ONLY: &
          MaxNode, nNode, iTree_IA, Status_, Used_, Proc_, Block_, MaxBlock, &
@@ -329,7 +332,7 @@ contains
        ! Write block/cell summary after AMR
        call write_prefix; write(iUnitOut,*) '|'
        call write_prefix; write(iUnitOut,*) &
-            '|  AMR:  nBlockMax = ',nBlockMax,' MaxBlock = ',MaxBlock
+            '|  AMR:  nBlockMax = ', nBlockMax, ' MaxBlock = ', MaxBlock
        call write_prefix; write(iUnitOut,*) &
             '|  AMR:  Total number of blocks used = ', nBlockALL
        call write_prefix; write(iUnitOut,*) &
