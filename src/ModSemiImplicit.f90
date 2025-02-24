@@ -89,7 +89,7 @@ contains
              SemiParam%PrecondParam = Dilu_
           case('BILU')
              SemiParam%PrecondParam = Bilu_
-          case('MBILU')
+          case('MBILU', 'MBILU1')
              call read_var('GustafssonPar', SemiParam%PrecondParam)
              SemiParam%PrecondParam = -SemiParam%PrecondParam
           case default
