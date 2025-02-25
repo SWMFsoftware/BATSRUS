@@ -3604,8 +3604,7 @@ has been checked out into the util/ directory and Config.pl -hypre has
 been set. The HYPRE preconditioning only works if the semi-implicit
 scheme solves for 1 variable at a time (split semi-implicit scheme).
 
-Default values are DoPrecond=T and TypePrecond='BILU' on CPU,
-and 'BILU1' on the GPU (TypeUpdate='fast' or 'slow', see #UPDATE command). 
+Default values are DoPrecond=T and TypePrecond='BILU'.
 </command>
 
 <command name="KRYLOV">
