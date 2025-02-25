@@ -3561,6 +3561,7 @@ Default parameters are shown by the first example.
       <option value="BLOCKJACOBI" name="block-Jacobi"/>
       <option value="GS"          name="Gauss-Seidel"/>
       <option name="DILU"  />
+      <option name="BILU1" />
       <option name="BILU"  />
       <option name="MBILU" default="T" />
       <option name="HYPRE" />
@@ -3584,9 +3585,12 @@ slower convergence. It is almost always preferable to use a preconditioner.
 The semi-implicit scheme always uses left side preconditioning.
 
 The TypePrecond parameter can be set to the following values:
-JACOBI, BLOCKJACOBI, GS, DILU, BILU, MBILU or HYPRE.
+JACOBI, BLOCKJACOBI, GS, DILU, BILU1, BILU, MBILU or HYPRE.
 Most of these options are described in some detail for the #PRECONDITIONER
-command.
+command. BILU1 is same as BILU, but the preconditioner only acts
+in the first spatial dimension. This allows parallelization in 2D and 3D,
+which is important when running on the GPU. Currently only the scalar
+case is implemented (for example heat conduction).
 
 The Diagonal Incomplete Lower-Upper (DILU) preconditioner assumes that the
 off-diagonal blocks are diagonal matrices, and it gives the same result
@@ -3600,7 +3604,8 @@ has been checked out into the util/ directory and Config.pl -hypre has
 been set. The HYPRE preconditioning only works if the semi-implicit
 scheme solves for 1 variable at a time (split semi-implicit scheme).
 
-Default values are shown by the first example.
+Default values are DoPrecond=T and TypePrecond='BILU' on CPU,
+and 'BILU1' on the GPU (TypeUpdate='fast' or 'slow', see #UPDATE command). 
 </command>
 
 <command name="KRYLOV">
