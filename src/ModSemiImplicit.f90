@@ -173,7 +173,10 @@ contains
 
     ! Fix preconditioner type from DILU to BILU for a single variable
     ! because BILU is optimized for scalar equation.
-    if(nVarSemi == 1 .and. SemiParam%TypePrecond == 'DILU')then
+    ! Fix from BILU1 to BILU for multiple variables,
+    ! because BILU1 is only implemented for scalar equation.
+    if( nVarSemi == 1 .and. SemiParam%TypePrecond == 'DILU' .or. &
+         nVarSemi > 1 .and. SemiParam%TypePrecond == 'BILU1')then
        SemiParam%TypePrecond  = 'BILU'
        SemiParam%PrecondParam = Bilu_
     end if
