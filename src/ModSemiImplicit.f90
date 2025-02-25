@@ -55,7 +55,7 @@ contains
 
     use ModReadParam,     ONLY: read_var
     use ModLinearSolver,  ONLY: &
-         Jacobi_, BlockJacobi_, GaussSeidel_, Dilu_, Bilu_
+         Jacobi_, BlockJacobi_, GaussSeidel_, Dilu_, Bilu_, Bilu1_
 
     character(len=*), intent(in) :: NameCommand
 
@@ -76,7 +76,8 @@ contains
     case("#SEMIPRECONDITIONER", "#SEMIPRECOND")
        call read_var('DoPrecond',   SemiParam%DoPrecond)
        if(SemiParam%DoPrecond)then
-          call read_var('TypePrecond',SemiParam%TypePrecond,IsUpperCase=.true.)
+          call read_var('TypePrecond', SemiParam%TypePrecond, &
+               IsUpperCase=.true.)
           select case(SemiParam%TypePrecond)
           case('HYPRE')
           case('JACOBI')
@@ -87,9 +88,11 @@ contains
              SemiParam%PrecondParam = GaussSeidel_
           case('DILU')
              SemiParam%PrecondParam = Dilu_
+          case('BILU1')
+             SemiParam%PrecondParam = Bilu1_
           case('BILU')
              SemiParam%PrecondParam = Bilu_
-          case('MBILU', 'MBILU1')
+          case('MBILU')
              call read_var('GustafssonPar', SemiParam%PrecondParam)
              SemiParam%PrecondParam = -SemiParam%PrecondParam
           case default
