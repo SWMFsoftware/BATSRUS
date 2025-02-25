@@ -3571,7 +3571,7 @@ Default parameters are shown by the first example.
   </if>
 #SEMIPRECONDITIONER
 T               DoPrecond (rest of parameters are read if true)
-MBILU           TypePrecond (MBILU, BILU, DILU, GS, BLOCKJACOBI, JACOBI, HYPRE)
+MBILU           TypePrecond (MBILU/BILU/BILU1/DILU/GS/BLOCKJACOBI/JACOBI/HYPRE)
 0.5             GustafssonPar (0 to 1, read for MBILU preconditioner only)
 
 #SEMIPRECOND
