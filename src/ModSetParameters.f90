@@ -3950,7 +3950,7 @@ contains
       !$acc update device(DoCoupleImPressure, DoCoupleImDensity, TauCoupleIM)
       !$acc update device(DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm)
       !$acc update device(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
-      !$acc update device(UseElectronEntropy)
+      !$acc update device(UseElectronEntropy, UseElectronEnergy)
       !$acc update device(DoUpdate_V)
       !$acc update device(StartTime)
       !$acc update device(AverageIonCharge, PePerPtotal)
