@@ -342,7 +342,7 @@ contains
 
     ! For nVarSemi = 1,  loop through all semi-implicit variables one-by-one
     ! For nVarSemi = nVarSemiAll, do all (semi-)implicit variables together
-    do iVarSemi=1,nVarSemiAll,nVarSemi
+    do iVarSemi = 1, nVarSemiAll, nVarSemi
 
        if(UseSplitSemiImplicit)then
           iVarSemiMin = iVarSemi
@@ -1041,7 +1041,7 @@ contains
        end do
     end do
 
-    do iStencil=1,nStencil
+    do iStencil = 1, nStencil
 
        JacAna_VV = JacAna_VVCI(:,:,i,j,k,iStencil)
        JacNum_VV = JacNum_VVI(:,:,iStencil)
