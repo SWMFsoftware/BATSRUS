@@ -7,6 +7,10 @@ fast			TypeUpdate
 #PROLONGATION
 2			nOrderProlong
 
+#SEMIPRECONDITIONER
+T			DoPrecond
+BILU1			TypePrecond
+
 #TIMING
 T			UseTiming
 -1			DnTiming

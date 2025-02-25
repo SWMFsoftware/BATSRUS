@@ -3203,7 +3203,6 @@ contains
                SemiParam%ErrorMax = 1.0e-5
                SemiParam%MaxMatvec = 20
                SemiParam%nKrylovVector = SemiParam%MaxMatvec
-               SemiParam%TypePrecond = 'BILU1' ! optimal for GPU
             end if
          end if
 
