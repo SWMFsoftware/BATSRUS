@@ -48,8 +48,6 @@ module ModSemiImplicit
 
   ! Index of the test block
   integer:: iBlockSemiTest = 1
-
-  integer:: nDimPrecond = nDim
   
 contains
   !============================================================================
@@ -184,9 +182,8 @@ contains
     end if
 
     ! Number of dimensions for the ILU preconditioner
-    nDimPrecond = nDim
-    !!! if(SemiParam%TypePrecond == 'BILU1')nDimPrecond = 1
-    nStencil = 2*nDimPrecond + 1
+    nStencil = 2*nDim + 1
+    !!! if(SemiParam%TypePrecond == 'BILU1') nStencil = 3
 
     if(nVarSemi > 1 .and. SemiParam%TypePrecond == 'HYPRE' .and. iProc==0) &
          call stop_mpi( &
@@ -1104,7 +1101,7 @@ contains
        call add_jacobian_rad_diff(iBlock, nVarSemi, JacSemi_VVCI)
 #endif
     case('parcond')
-       call add_jacobian_heat_cond(iBlock, nVarSemi, nDimPrecond, JacSemi_VVCI)
+       call add_jacobian_heat_cond(iBlock, nVarSemi, JacSemi_VVCI)
     case('resistivity','resist','resisthall')
 #ifndef _OPENACC
        if(UseSemiResistivity) &
