@@ -398,9 +398,8 @@ sub set_optimization{
 	    }elsif(/^#ELECTRONENTROPY\b/){
 		my $useentropy = <FILE>;
 		check_var($Set{"UseElectronEntropy"}, $useentropy, $first);
-	    }elsif(/^#ELECTRONENERGY\b/){
 		my $useenergy = <FILE>;
-		check_var($Set{"UseElectronEnergy"}, $useenergy, $first);
+		check_var($Set{"UseElectronEnergy"}, $useenergy, $first);	    
 	    }elsif(/^#COARSEAXIS\b/){
                 my $usecoarseaxis = <FILE>;
 		check_var($Set{"UseCoarseAxis"}, $usecoarseaxis, $first);
