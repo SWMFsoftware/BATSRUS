@@ -385,7 +385,7 @@ contains
                DoExtrapolate=.false.)
        end do
        TeSi_I(1:nPoint) = max(TeSiMin, TeSi_I(1:nPoint))
-       TiSi_I(1:nPoint-1) = TeSi_I(1:nPoint-1)
+       TiSi_I(1:nPoint) = TeSi_I(1:nPoint)
        ! The analytical solution assumes constant pressure and
        ! no heating. Calculate the pressure distribution
        call set_pressure

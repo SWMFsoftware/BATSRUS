@@ -12,7 +12,8 @@ module ModOptimizeParam
        IsCartesian => IsCartesian, &
        IsCartesianGrid => IsCartesianGrid
   use ModAdvance, ONLY: UseB, UseElectronPressure, &
-       UseElectronEntropy => UseElectronEntropy
+       UseElectronEntropy => UseElectronEntropy, &
+       UseElectronEnergy => UseElectronEnergy
   use ModB0, ONLY: &
        UseB0 => UseB0, &
        UseCurlB0 => UseCurlB0

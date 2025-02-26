@@ -12,7 +12,7 @@ module ModUpdateStateFast
        IsTimeAccurate, UseDtFixed, rLocalTimeStep, UseBody, &
        UseCpcpBc, B1rCoef, &
        UseBorisCorrection, ClightFactor, UseElectronEntropy, &
-       UseNonConservative, nConservCrit, &
+       UseElectronEnergy, UseNonConservative, nConservCrit, &
        UseRhoMin, UsePMin, UseSpeedMin, UseTMin, &
        UseGravity, UseRotatingFrame, UseRotatingBc, &
        UseCoronalHeating, UseAlfvenWaveDissipation, &
@@ -637,7 +637,7 @@ contains
 #endif
     end if
 
-    if(UseElectronPressure .and. .not.UseElectronEntropy)then
+    if(UseElectronPressure)then
        ! Calculate DivU = div(U_e)
        DivU =                   Flux_VXI(UnLast_,i+1,j,k,iGang) &
             -                   Flux_VXI(UnLast_,i,j,k,iGang)
@@ -646,14 +646,21 @@ contains
        if(nK > 1) DivU = DivU + Flux_VZI(UnLast_,i,j,k+1,iGang) &
             -                   Flux_VZI(UnLast_,i,j,k,iGang)
 
-       ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
-       Change_V(Pe_) = Change_V(Pe_) &
-            - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock)*DivU
+       if(.not.UseElectronEntropy)then
+          ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
+          Change_V(Pe_) = Change_V(Pe_) &
+               - GammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock)*DivU
 #ifdef TESTACC
-       if(DoTestSource .and. DoTestCell .and. iVarTest == Pe_) &
-            write(*,*) 'After Pe div Ue S(iVarTest)=', &
-            Change_V(iVarTest)*InvVol
+          if(DoTestSource .and. DoTestCell .and. iVarTest == Pe_) &
+               write(*,*) 'After Pe div Ue S(iVarTest)=', &
+               Change_V(iVarTest)*InvVol
 #endif
+       end if
+
+       if(.not. UseElectronEnergy) then
+          Change_V(Energy_) = Change_V(Energy_) + &
+               State_VGB(Pe_,i,j,k,iBlock)*DivU
+       end if
     end if
 
     if(UseAlfvenWaves)then

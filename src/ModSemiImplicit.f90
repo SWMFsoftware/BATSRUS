@@ -55,7 +55,7 @@ contains
 
     use ModReadParam,     ONLY: read_var
     use ModLinearSolver,  ONLY: &
-         Jacobi_, BlockJacobi_, GaussSeidel_, Dilu_, Bilu_
+         Jacobi_, BlockJacobi_, GaussSeidel_, Dilu_, Bilu_, Bilu1_
 
     character(len=*), intent(in) :: NameCommand
 
@@ -76,7 +76,8 @@ contains
     case("#SEMIPRECONDITIONER", "#SEMIPRECOND")
        call read_var('DoPrecond',   SemiParam%DoPrecond)
        if(SemiParam%DoPrecond)then
-          call read_var('TypePrecond',SemiParam%TypePrecond,IsUpperCase=.true.)
+          call read_var('TypePrecond', SemiParam%TypePrecond, &
+               IsUpperCase=.true.)
           select case(SemiParam%TypePrecond)
           case('HYPRE')
           case('JACOBI')
@@ -87,9 +88,11 @@ contains
              SemiParam%PrecondParam = GaussSeidel_
           case('DILU')
              SemiParam%PrecondParam = Dilu_
+          case('BILU1')
+             SemiParam%PrecondParam = Bilu1_
           case('BILU')
              SemiParam%PrecondParam = Bilu_
-          case('MBILU', 'MBILU1')
+          case('MBILU')
              call read_var('GustafssonPar', SemiParam%PrecondParam)
              SemiParam%PrecondParam = -SemiParam%PrecondParam
           case default
@@ -170,7 +173,10 @@ contains
 
     ! Fix preconditioner type from DILU to BILU for a single variable
     ! because BILU is optimized for scalar equation.
-    if(nVarSemi == 1 .and. SemiParam%TypePrecond == 'DILU')then
+    ! Fix from BILU1 to BILU for multiple variables,
+    ! because BILU1 is only implemented for scalar equation.
+    if( nVarSemi == 1 .and. SemiParam%TypePrecond == 'DILU' .or. &
+         nVarSemi > 1 .and. SemiParam%TypePrecond == 'BILU1')then
        SemiParam%TypePrecond  = 'BILU'
        SemiParam%PrecondParam = Bilu_
     end if
@@ -336,7 +342,7 @@ contains
 
     ! For nVarSemi = 1,  loop through all semi-implicit variables one-by-one
     ! For nVarSemi = nVarSemiAll, do all (semi-)implicit variables together
-    do iVarSemi=1,nVarSemiAll,nVarSemi
+    do iVarSemi = 1, nVarSemiAll, nVarSemi
 
        if(UseSplitSemiImplicit)then
           iVarSemiMin = iVarSemi
@@ -1035,7 +1041,7 @@ contains
        end do
     end do
 
-    do iStencil=1,nStencil
+    do iStencil = 1, nStencil
 
        JacAna_VV = JacAna_VVCI(:,:,i,j,k,iStencil)
        JacNum_VV = JacNum_VVI(:,:,iStencil)

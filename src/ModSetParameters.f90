@@ -3081,10 +3081,8 @@ contains
       use ModSemiImplicit, ONLY: SemiParam
       use ModResistivity, ONLY: UseResistivity, TypeResistivity, Eta0Si, &
            DoResistiveFlux, UseJouleHeating, UseHeatExchange
-
-      ! Default plot and restart directories depend on NameThisComp
       !------------------------------------------------------------------------
-      NamePlotDir(1:2) = NameThisComp
+      NamePlotDir(1:2) = NameThisComp ! fix default plot dir name
 
       UseOuterHelio = index(NameUserFile,'OuterHelio') > 0
 
@@ -3129,7 +3127,7 @@ contains
       CflOrig       = 0.8
       UseDtFixed    = .false.
       UseDtLimit    = .false.
-      dt            = 0.0
+      Dt            = 0.0
 
       nOrder = 2
       TypeFlux = 'RUSANOV'
@@ -3193,7 +3191,7 @@ contains
 
          ! Some defaults for AWSoM and AWSoM-R
          ! If Ehot_>1, then we assume we use these models
-         if(Ehot_ > 1 .and. DoUpdate_V(Ehot_))then
+         if(Ehot_ > 1)then
             UseHeatFluxCollisionless = .true.
             if(NameThisComp == 'SC')then
                UseHeatFluxRegion = .true.
@@ -3950,7 +3948,7 @@ contains
       !$acc update device(DoCoupleImPressure, DoCoupleImDensity, TauCoupleIM)
       !$acc update device(DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm)
       !$acc update device(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
-      !$acc update device(UseElectronEntropy)
+      !$acc update device(UseElectronEntropy, UseElectronEnergy)
       !$acc update device(DoUpdate_V)
       !$acc update device(StartTime)
       !$acc update device(AverageIonCharge, PePerPtotal)
