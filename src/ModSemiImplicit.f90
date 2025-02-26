@@ -6,7 +6,7 @@ module ModSemiImplicit
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, &
-       iBlockTest, iProcTest, iVarTest, iProc, iComm
+       iBlockTest, iProcTest, iVarTest, iProc, iComm, nDim
   use BATL_size, ONLY: nGang
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
   use ModSemiImplVar
@@ -49,6 +49,8 @@ module ModSemiImplicit
   ! Index of the test block
   integer:: iBlockSemiTest = 1
 
+  integer:: nDimPrecond = nDim
+  
 contains
   !============================================================================
   subroutine read_semi_impl_param(NameCommand)
@@ -180,6 +182,11 @@ contains
        SemiParam%TypePrecond  = 'BILU'
        SemiParam%PrecondParam = Bilu_
     end if
+
+    ! Number of dimensions for the ILU preconditioner
+    nDimPrecond = nDim
+    !!! if(SemiParam%TypePrecond == 'BILU1')nDimPrecond = 1
+    nStencil = 2*nDimPrecond + 1
 
     if(nVarSemi > 1 .and. SemiParam%TypePrecond == 'HYPRE' .and. iProc==0) &
          call stop_mpi( &
@@ -363,7 +370,7 @@ contains
        call timing_start('solve_linear_multiblock')
        ! solve implicit system
        call solve_linear_multiblock( SemiParam, &
-            nVarSemi, nDim, nI, nJ, nK, nBlockSemi, iComm, &
+            nVarSemi, nDim, nI, nJ, nK, nStencil, nBlockSemi, iComm, &
             semi_impl_matvec, Rhs_I, x_I, DoTestKrylov, &
             JacSemi_VVCIB, JacobiPrec_I, cg_precond, hypre_preconditioner)
        call timing_stop('solve_linear_multiblock')
@@ -893,14 +900,16 @@ contains
     case('JACOBI')
        Vec_I = JacobiPrec_I(1:MaxN)*Vec_I
     case default
-       call precond_left_multiblock(SemiParam,           &
-            nVarSemi, nDim, nI, nJ, nK, nBlockSemi, JacSemi_VVCIB, Vec_I)
+       call precond_left_multiblock(SemiParam, &
+            nVarSemi, nDim, nI, nJ, nK, nStencil, nBlockSemi, &
+            JacSemi_VVCIB, Vec_I)
     end select
 
     call test_stop(NameSub, DoTest)
   end subroutine semi_precond
   !============================================================================
   subroutine update_block_jacobian_face
+
     use ModGeometry, ONLY: IsBoundary_B
     use ModFieldLineThread, ONLY: UseFieldLineThreads
     use BATL_lib, ONLY: IsCartesianGrid
@@ -1095,7 +1104,7 @@ contains
        call add_jacobian_rad_diff(iBlock, nVarSemi, JacSemi_VVCI)
 #endif
     case('parcond')
-       call add_jacobian_heat_cond(iBlock, nVarSemi, JacSemi_VVCI)
+       call add_jacobian_heat_cond(iBlock, nVarSemi, nDimPrecond, JacSemi_VVCI)
     case('resistivity','resist','resisthall')
 #ifndef _OPENACC
        if(UseSemiResistivity) &
@@ -1150,8 +1159,8 @@ contains
        do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           Coeff = -SemiImplCoeff*CellVolume_GB(i,j,k,iBlock)
-          JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi) = &
-               Coeff * JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi)
+          JacSemi_VVCIB(:,:,i,j,k,iStencil,iBlockSemi) = &
+               Coeff * JacSemi_VVCIB(:,:,i,j,k,iStencil,iBlockSemi)
        end do; end do; end do; end do
        DtLocal = Dt
        !$acc loop vector collapse(3) independent

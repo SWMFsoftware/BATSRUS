@@ -520,7 +520,7 @@ contains
 
     ! solve Poisson equation Laplace(Potential) = div(E)
     call solve_linear_multiblock( SolverParam, &
-         1, nDim, nI, nJ, nK, nBlockUsed, iComm, &
+         1, nDim, nI, nJ, nK, 2*nDim+1, nBlockUsed, iComm, &
          matvec_inductive_e, Rhs_I, Potential_I, DoTest)
 
     if(SolverParam%iError /= 0 .and. iProc == 0) &

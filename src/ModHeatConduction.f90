@@ -1593,11 +1593,14 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_heat_conduction_rhs
   !============================================================================
-  subroutine add_jacobian_heat_cond(iBlock, nVarImpl, Jacobian_VVCI)
+  subroutine add_jacobian_heat_cond(iBlock, nVarImpl, nDimPrecond, &
+       Jacobian_VVCI)
     !$acc routine vector
 
     ! This code can only be called from the semi-implicit scheme
     ! since this works on temperature and not energy or pressure,
+    ! nDimPrecond is the number of dimensions for the preconditioner,
+    ! which is 1 for BILU1.
 
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
     use ModFaceGradient, ONLY: set_block_jacobian_face_simple
@@ -1610,10 +1613,11 @@ contains
 
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
+    integer, intent(in):: nDimPrecond
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
-    integer :: i, j, k, iDim, Di, Dj, Dk, iGang
-    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
+    integer:: i, j, k, iDim, Di, Dj, Dk, iGang
+    real:: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
 
     ! real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
@@ -1660,7 +1664,7 @@ contains
 #endif
 
     ! the transverse diffusion is ignored in the Jacobian
-    do iDim = 1, nDim
+    do iDim = 1, nDimPrecond
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        !$acc loop vector collapse(3) independent &
        !$acc private(InvDxyzVol_D)
