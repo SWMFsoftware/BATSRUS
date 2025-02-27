@@ -1603,7 +1603,7 @@ contains
 
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
     use ModFaceGradient, ONLY: set_block_jacobian_face_simple
-    use ModImplicit,     ONLY: UseNoOverlap, nStencil, iTeImpl, &
+    use ModImplicit,     ONLY: UseNoOverlap, nDiagSemi, iTeImpl, &
          DcoordDxyz_DDFDI, TransGrad_DDGI
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
@@ -1612,7 +1612,7 @@ contains
 
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
-    real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
+    real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nDiagSemi)
 
     integer:: i, j, k, iDim, Di, Dj, Dk, iGang
     real:: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
@@ -1692,7 +1692,7 @@ contains
                   iDim==2.and.j==nJ .or. &
                   iDim==3.and.k==nK)       DiffRight = 0.0
           end if
-          if(iDim > nStencil/2) CYCLE
+          if(iDim > nDiagSemi/2) CYCLE
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = &
                Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) + DiffLeft
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = &
