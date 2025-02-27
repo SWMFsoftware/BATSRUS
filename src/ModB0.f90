@@ -51,6 +51,7 @@ module ModB0
 
   ! Use source terms related to finite div(B0) and curl(B0)
   logical, public:: UseB0Source = UseB
+  !$acc declare create(UseB0Source)
 
   ! The extra source teerms in the indiction equation help to clean div B
   ! The logical choses if one wants to clean div B1 or div (B1 + B0)

@@ -52,7 +52,7 @@ module ModUpdateStateFast
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
 #endif
-  use ModB0, ONLY: B0_DGB, get_b0, rCurrentFreeB0
+  use ModB0, ONLY: B0_DGB, get_b0, rCurrentFreeB0, UseB0Source
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB, &
@@ -519,7 +519,7 @@ contains
     logical, intent(in):: IsBodyBlock
 
     integer:: iFluid, iP, iUn, iUx, iUy, iUz, iRho, iEnergy, iVar, iVarLast
-    real:: DivU, DivB, DivE, DivF, DtLocal, InvVol
+    real:: DivU, DivB, DivB0, DivE, DivF, DtLocal, InvVol
     real:: Change_V(nFlux), Force_D(3), CurlB0_D(3), FullB_D(3)
 
     ! Coronal Heating
@@ -706,6 +706,21 @@ contains
                write(*,*) 'After curl B0 S(iVarTest)=', &
                Change_V(iVarTest)*InvVol
 #endif
+       end if
+    end if
+
+    if(UseB0Source) then
+       call get_divb0(i, j, k, iBlock, DivB0)
+       call get_curlb0(i, j, k, iBlock, CurlB0_D)
+       Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+            - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0 &
+            - cross_prod(CurlB0_D, State_VGB(Bx_:Bz_,i,j,k,iBlock))
+
+       if(DoTestSource .and. DoTestCell) then
+          write(*,*)'DivB0    = ', DivB0*InvVol
+          write(*,*)'CurlB0_C = ', CurlB0_D*InvVol
+          write(*,*)'B1       = ', State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          write(*,*)'After B0 source Change_V = ', Change_V(RhoUx_:RhoUz_)
        end if
     end if
 
@@ -1833,6 +1848,52 @@ contains
     end select
 
   end subroutine get_b0_face
+  !============================================================================
+  subroutine get_divb0(i, j, k, iBlock, DivB0)
+    !$acc routine seq
+
+    ! Calculate divB0 at the cell i,j,k,iBlock
+
+    integer, intent(in):: i, j, k, iBlock
+    real, intent(out):: DivB0
+
+    real:: Cx, Cy, Cz
+    !--------------------------------------------------------------------------
+    if(IsCartesian) then
+       Cx = 0.5*CellFace_DB(x_,iBlock)
+       Cy = 0.5*CellFace_DB(y_,iBlock)
+       if(nDim == 2) then
+          DivB0 = &
+               Cx*(B0_DGB(x_,i+1,j,k,iBlock) - B0_DGB(x_,i-1,j,k,iBlock)) &
+               +Cy*(B0_DGB(y_,i,j+1,k,iBlock) - B0_DGB(y_,i,j-1,k,iBlock))
+       else
+          Cz = 0.5*CellFace_DB(z_,iBlock)
+          DivB0 = &
+               Cx*(B0_DGB(x_,i+1,j,k,iBlock) - B0_DGB(x_,i-1,j,k,iBlock)) &
+               +Cy*(B0_DGB(y_,i,j+1,k,iBlock) - B0_DGB(y_,i,j-1,k,iBlock)) &
+               +Cz*(B0_DGB(z_,i,j,k+1,iBlock) - B0_DGB(z_,i,j,k-1,iBlock))
+       end if
+    else
+       DivB0 = &
+            + sum(FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*&
+            (B0_DGB(:,i+1,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))) &
+            - sum(FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*&
+            (B0_DGB(:,i  ,j,k,iBlock) + B0_DGB(:,i-1,j,k,iBlock))) &
+            + sum(FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*&
+            (B0_DGB(:,i,j+1,k,iBlock) + B0_DGB(:,i,j,k,iBlock))) &
+            - sum(FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*&
+            (B0_DGB(:,i,j  ,k,iBlock) + B0_DGB(:,i,j-1,k,iBlock)))
+
+       if(nDim == 3) DivB0 = DivB0 &
+            + sum(FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*&
+            (B0_DGB(:,i,j,k+1,iBlock) + B0_DGB(:,i,j,k,iBlock))) &
+            - sum(FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*&
+            (B0_DGB(:,i,j,k,iBlock) + B0_DGB(:,i,j,k-1,iBlock)))
+
+       DivB0 = 0.5*DivB0
+    end if
+
+  end subroutine get_divb0
   !============================================================================
   subroutine get_curlb0(i, j, k, iBlock, CurlB0_D)
     !$acc routine seq
