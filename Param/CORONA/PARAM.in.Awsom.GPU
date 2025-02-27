@@ -225,6 +225,9 @@ F			DoAmr
 #TIMEACCURATE
 T			IsTimeAccurate
 
+#NONCONSERVATIVE
+F			UseNonConservative
+
 #PARTLOCALTIMESTEP
 1.1			rLocalTimeStep
 
