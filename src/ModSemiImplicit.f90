@@ -48,7 +48,7 @@ module ModSemiImplicit
 
   ! Index of the test block
   integer:: iBlockSemiTest = 1
-  
+
 contains
   !============================================================================
   subroutine read_semi_impl_param(NameCommand)
