@@ -9,12 +9,12 @@ module ModVarIndexes
 
    save
 
-  character (len=*), parameter :: &
+   character (len=*), parameter :: &
        NameEquationFile = "ModEquationOuterHelio.f90"
 
    ! This equation module contains the standard MHD equations + 4 neutrals
    character (len=*), parameter :: &
-       NameEquation = 'MHD and four neutrals'
+       NameEquation = 'MHD and four neutrals and levelset'
 
    ! Number of variables without energy:
    integer, parameter :: nVar = 29
