@@ -715,13 +715,6 @@ contains
        Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
             - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0 &
             - cross_prod(CurlB0_D, State_VGB(Bx_:Bz_,i,j,k,iBlock))
-
-       if(DoTestSource .and. DoTestCell) then
-          write(*,*)'DivB0    = ', DivB0*InvVol
-          write(*,*)'CurlB0_C = ', CurlB0_D*InvVol
-          write(*,*)'B1       = ', State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          write(*,*)'After B0 source Change_V = ', Change_V(RhoUx_:RhoUz_)
-       end if
     end if
 
     ! Divide by cell volume
