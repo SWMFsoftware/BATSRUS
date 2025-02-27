@@ -183,7 +183,7 @@ contains
 
     ! Number of dimensions for the ILU preconditioner
     nStencil = 2*nDim + 1
-    !!! if(SemiParam%TypePrecond == 'BILU1') nStencil = 3
+    if(SemiParam%TypePrecond == 'BILU1') nStencil = 3
 
     if(nVarSemi > 1 .and. SemiParam%TypePrecond == 'HYPRE' .and. iProc==0) &
          call stop_mpi( &

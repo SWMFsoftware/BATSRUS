@@ -1662,7 +1662,7 @@ contains
 #endif
 
     ! the transverse diffusion is ignored in the Jacobian
-    do iDim = 1, nStencil/2
+    do iDim = 1, nDim
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        !$acc loop vector collapse(3) independent &
        !$acc private(InvDxyzVol_D)
@@ -1692,7 +1692,7 @@ contains
                   iDim==2.and.j==nJ .or. &
                   iDim==3.and.k==nK)       DiffRight = 0.0
           end if
-
+          if(iDim > nStencil/2) CYCLE
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = &
                Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) + DiffLeft
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = &
