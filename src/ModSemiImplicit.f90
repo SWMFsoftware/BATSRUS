@@ -225,8 +225,8 @@ contains
        allocate(JacobiPrec_I(1))
     end if
 
-    !$acc update device(iVarSemiMin,iVarSemiMax)
-    !$acc update device(nVarSemiAll, nVarSemi)
+    !$acc update device(iVarSemiMin, iVarSemiMax)
+    !$acc update device(nVarSemiAll, nVarSemi, nStencil)
     !$acc update device(UseSplitSemiImplicit)
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_semi_impl
