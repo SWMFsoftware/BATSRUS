@@ -4,6 +4,9 @@ Param/EARTH/PARAM.in.gpu: time accurate run for GPU		StringDescription
 #UPDATE
 slow			TypeUpdate
 
+#B0SOURCE
+F			UseB0Source
+
 ! Switch of TVD and Accurate res change.
 ! 1st order prolongation does not work near body for fast updates so far.
 #PROLONGATION
