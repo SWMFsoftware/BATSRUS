@@ -7,6 +7,10 @@ slow			TypeUpdate
 #PROLONGATION
 2			nOrderProlong
 
+#SEMIPRECONDITIONER
+T			DoPrecond
+BILU1			TypePrecond
+
 #COMPONENT
 SC			NameComp
 
@@ -220,6 +224,9 @@ F			DoAmr
 
 #TIMEACCURATE
 T			IsTimeAccurate
+
+#NONCONSERVATIVE
+F			UseNonConservative
 
 #PARTLOCALTIMESTEP
 1.1			rLocalTimeStep

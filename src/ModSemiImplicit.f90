@@ -6,11 +6,11 @@ module ModSemiImplicit
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, &
-       iBlockTest, iProcTest, iVarTest, iProc, iComm
+       iBlockTest, iProcTest, iVarTest, iProc, iComm, nDim
   use BATL_size, ONLY: nGang
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
   use ModSemiImplVar
-  use ModImplicit, ONLY: nStencil
+  use ModImplicit, ONLY: nDiagSemi
   use ModConserveFlux, ONLY: DoConserveFlux
   use ModLinearSolver, ONLY: LinearSolverParamType
   use ModMain, ONLY: iNewDecomposition
@@ -181,6 +181,10 @@ contains
        SemiParam%PrecondParam = Bilu_
     end if
 
+    ! Number of dimensions for the ILU preconditioner
+    nDiagSemi = 2*nDim + 1
+    if(SemiParam%TypePrecond == 'BILU1') nDiagSemi = 3
+
     if(nVarSemi > 1 .and. SemiParam%TypePrecond == 'HYPRE' .and. iProc==0) &
          call stop_mpi( &
          'HYPRE preconditioner requires split semi-implicit scheme!')
@@ -196,7 +200,7 @@ contains
 
     allocate(ResSemi_VCB(nVarSemi,nI,nJ,nK,MaxBlock))
 
-    allocate(JacSemi_VVCIB(nVarSemi,nVarSemi,nI,nJ,nK,nStencil,MaxBlock))
+    allocate(JacSemi_VVCIB(nVarSemi,nVarSemi,nI,nJ,nK,nDiagSemi,MaxBlock))
 
     allocate(DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
 
@@ -221,8 +225,8 @@ contains
        allocate(JacobiPrec_I(1))
     end if
 
-    !$acc update device(iVarSemiMin,iVarSemiMax)
-    !$acc update device(nVarSemiAll, nVarSemi)
+    !$acc update device(iVarSemiMin, iVarSemiMax)
+    !$acc update device(nVarSemiAll, nVarSemi, nDiagSemi)
     !$acc update device(UseSplitSemiImplicit)
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_semi_impl
@@ -363,7 +367,7 @@ contains
        call timing_start('solve_linear_multiblock')
        ! solve implicit system
        call solve_linear_multiblock( SemiParam, &
-            nVarSemi, nDim, nI, nJ, nK, nBlockSemi, iComm, &
+            nVarSemi, nDim, nI, nJ, nK, nDiagSemi, nBlockSemi, iComm, &
             semi_impl_matvec, Rhs_I, x_I, DoTestKrylov, &
             JacSemi_VVCIB, JacobiPrec_I, cg_precond, hypre_preconditioner)
        call timing_stop('solve_linear_multiblock')
@@ -893,14 +897,16 @@ contains
     case('JACOBI')
        Vec_I = JacobiPrec_I(1:MaxN)*Vec_I
     case default
-       call precond_left_multiblock(SemiParam,           &
-            nVarSemi, nDim, nI, nJ, nK, nBlockSemi, JacSemi_VVCIB, Vec_I)
+       call precond_left_multiblock(SemiParam, &
+            nVarSemi, nDim, nI, nJ, nK, nDiagSemi, nBlockSemi, &
+            JacSemi_VVCIB, Vec_I)
     end select
 
     call test_stop(NameSub, DoTest)
   end subroutine semi_precond
   !============================================================================
   subroutine update_block_jacobian_face
+
     use ModGeometry, ONLY: IsBoundary_B
     use ModFieldLineThread, ONLY: UseFieldLineThreads
     use BATL_lib, ONLY: IsCartesianGrid
@@ -964,8 +970,8 @@ contains
          SemiState_VG(nVarSemi, MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
          SemiPert_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
          Rhs_VC(nVarSemi,nI,nJ,nK), RhsPert_VC(nVarSemi,nI,nJ,nK), &
-         JacAna_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil), &
-         JacNum_VVI(nVarSemi,nVarSemi,nStencil), &
+         JacAna_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nDiagSemi), &
+         JacNum_VVI(nVarSemi,nVarSemi,nDiagSemi), &
          JacAna_VV(nVarSemi,nVarSemi), JacNum_VV(nVarSemi,nVarSemi))
 
     ! For sake of simpler code
@@ -993,7 +999,7 @@ contains
     JacNum_VVI = 0.0
 
     ! Loop over stencil
-    do iStencil = 1, nStencil
+    do iStencil = 1, nDiagSemi
 
        ! Set indexes for perturbed cell
        iPert = i; jPert = j; kPert = k
@@ -1041,7 +1047,7 @@ contains
        end do
     end do
 
-    do iStencil = 1, nStencil
+    do iStencil = 1, nDiagSemi
 
        JacAna_VV = JacAna_VVCI(:,:,i,j,k,iStencil)
        JacNum_VV = JacNum_VVI(:,:,iStencil)
@@ -1080,7 +1086,7 @@ contains
 #endif
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: JacSemi_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
+    real,    intent(out):: JacSemi_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nDiagSemi)
 
     ! All elements have to be set
     logical:: DoTest
@@ -1147,11 +1153,11 @@ contains
        ! Form A = Volume*(1/dt - SemiImplCoeff*dR/dU)
        !    symmetrized for sake of CG
        !$acc loop vector collapse(4) independent
-       do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do iStencil = 1, nDiagSemi; do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           Coeff = -SemiImplCoeff*CellVolume_GB(i,j,k,iBlock)
-          JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi) = &
-               Coeff * JacSemi_VVCIB(:, :, i, j, k, iStencil, iBlockSemi)
+          JacSemi_VVCIB(:,:,i,j,k,iStencil,iBlockSemi) = &
+               Coeff * JacSemi_VVCIB(:,:,i,j,k,iStencil,iBlockSemi)
        end do; end do; end do; end do
        DtLocal = Dt
        !$acc loop vector collapse(3) independent

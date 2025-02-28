@@ -663,7 +663,7 @@ contains
        call timing_start('krylov')
        call test_start('krylov', DoTestKrylov)
        call solve_linear_multiblock(ImplParam, &
-            nVar, nDim, nI, nJ, nK, nBlockImpl, iComm, &
+            nVar, nDim, nI, nJ, nK, 2*nDim+1, nBlockImpl, iComm, &
             impl_matvec, Rhs_I, x_I, DoTestKrylov, JacImpl_VVCIB)
        call test_stop('krylov', DoTestKrylov)
        call timing_stop('krylov')
@@ -1121,7 +1121,7 @@ contains
        ! for left, symmetric and right preconditioning, respectively
        y_I = x_I
        call precond_right_multiblock(ImplParam, &
-            nVar, nDim, nI, nJ, nK, nBlockImpl, JacImpl_VVCIB, y_I)
+            nVar, nDim, nI, nJ, nK, nStencil, nBlockImpl, JacImpl_VVCIB, y_I)
 
        ! y = A.y
        call impl_matvec_free(y_I, y_I)
@@ -1129,7 +1129,7 @@ contains
        ! y = P_L.y, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
        ! for left, symmetric, and right preconditioning, respectively
        call precond_left_multiblock(ImplParam, &
-            nVar, nDim, nI, nJ, nK, nBlockImpl, JacImpl_VVCIB, y_I)
+            nVar, nDim, nI, nJ, nK, nStencil, nBlockImpl, JacImpl_VVCIB, y_I)
     else
        ! y = A.y
        call impl_matvec_free(x_I, y_I)

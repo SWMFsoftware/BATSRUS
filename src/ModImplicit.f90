@@ -112,6 +112,10 @@ module ModImplicit
   implicit none
   SAVE
 
+  ! Number of diagonals for the semi-implicit scheme
+  ! can be different from nStencil
+  integer:: nDiagSemi = 2*nDim + 1
+  !$acc declare create(nDiagSemi)
   ! Heptadiagonal Jacobian matrix
   integer, parameter:: nStencil = 2*nDim + 1
   integer, parameter:: Stencil1_ = 1, Stencil2_ = 2, Stencil3_ = 3, &

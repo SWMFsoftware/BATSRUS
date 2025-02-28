@@ -3865,7 +3865,6 @@ contains
          ! then the following features are swiched off
 
          UseDbTrick            = .false.
-         UseB0Source           = .false.
          UseDivFullBSource     = .false.
          UseBorisRegion        = .false.
          DoLimitMomentum       = .false.
@@ -3928,7 +3927,7 @@ contains
       !$acc update device(TypeLimiter, LimiterBeta)
       !$acc update device(TypeCellBc_I, iTypeCellBc_I)
       !$acc update device(UseOutflowPressure)
-      !$acc update device(UseB0)
+      !$acc update device(UseB0, UseB0Source)
       !$acc update device(UseDivbSource, UseHyperbolicDivb, UseConstrainB)
       !$acc update device(DoConserveNeutrals, UseNonConservative, nConservCrit)
       !$acc update device(iMinFace, iMaxFace, iMinFace2, iMaxFace2)

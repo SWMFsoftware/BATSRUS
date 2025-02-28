@@ -92,7 +92,7 @@ T			DoExtendTransitionRegion
 1.0e1			DeltaTeModSi
 
 #GRIDBLOCKALL
-5000			MaxBlock
+8400			MaxBlock
 
 ! Use a true sphere, so box is made much larger
 #GRID
@@ -118,7 +118,7 @@ Param/CORONA/grid_awsom.dat		NameGridFile
 InnerShell		NameRegion
 shell0			StringShape
 1.0			RadiusInner
-1.7			Radius
+1.1			Radius !! Reduced from 1.7 so it runs on 1 GPU of sword
 
 #AMRCRITERIARESOLUTION
 3			nRefineCrit
@@ -134,7 +134,7 @@ currentsheet		StringRefine
 1.5			MaxResolution
 
 #GRIDRESOLUTION
-3.0			Resolution
+1.5			Resolution
 initial			StringShape
 
 #LOOKUPTABLE
