@@ -218,8 +218,9 @@ contains
     ! The corner ghost cells outside the domain are updated
     ! from the ghost cells inside the domain, so the outer
     ! boundary condition have to be reapplied.
-    ! The "fast/slow" updates do not use corner ghost cells (yet)
-    if(iTypeUpdate /= UpdateFast_)then
+    if(iTypeUpdate == UpdateFast_)then
+       call set_boundary_fast
+    else
        call timing_start('cell_bc')
        !$omp parallel do
        do iBlock = 1, nBlock
