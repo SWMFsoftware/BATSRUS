@@ -219,7 +219,7 @@ contains
     ! from the ghost cells inside the domain, so the outer
     ! boundary condition have to be reapplied.
     if(iTypeUpdate == UpdateFast_)then
-       call set_boundary_fast
+       call set_boundary_fast(DoResChangeOnly, .true.)
     else
        call timing_start('cell_bc')
        !$omp parallel do

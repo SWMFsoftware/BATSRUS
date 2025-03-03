@@ -1529,12 +1529,17 @@ contains
 
   end subroutine limiter2
   !============================================================================
-  subroutine set_boundary_fast
+  subroutine set_boundary_fast(DoResChangeOnlyIn, DoCornerOnlyIn)
+
+    use BATL_lib, ONLY: DiLevelNei_IIIB
 
     ! Set cell boundaries for State_VGB (called from ModMessagePass),
     ! so it is using momentum currently
 
     integer:: iBlock
+    logical, intent(in), optional:: DoResChangeOnlyIn, DoCornerOnlyIn
+    logical :: DoResChangeOnly, DoCornerOnly    
+    integer :: i, j, k
     !--------------------------------------------------------------------------
     if (IsTimeAccurate .and. iTypeCellBc_I(2) == VaryBC_)then
        call get_solar_wind_point(tSimulation, [xMaxBox, 0., 0.], &
@@ -1544,11 +1549,29 @@ contains
        !$acc update device(CellState_VI)
     endif
 
-    !$acc parallel loop gang independent
-    do iBlock = 1, nBlock
+    DoCornerOnly = .false.
+    if(present(DoCornerOnlyIn)) DoCornerOnly = DoCornerOnlyIn
+
+    DoResChangeOnly = .false.
+    if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
+
+    !$acc parallel loop gang independent copyin(DoResChangeOnly, DoCornerOnly)
+    do iBlock = 1, nBlock      
        if(Unused_B(iBlock)) CYCLE
-       call set_cell_boundary_for_block(iBlock, nVar, &
-            State_VGB(:,:,:,:,iBlock))
+
+       if(.not.DoResChangeOnly .or. .not.DoCornerOnly .or. &
+            any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
+          call set_cell_boundary_for_block(iBlock, nVar, &
+               State_VGB(:,:,:,:,iBlock))
+       end if
+       
+       if(DoCornerOnly) then
+          !$acc loop vector collapse(3) independent
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             call limit_pressure(State_VGB(:,i,j,k,iBlock))
+          end do; end do; end do
+       end if
+
     end do
 
   end subroutine set_boundary_fast
