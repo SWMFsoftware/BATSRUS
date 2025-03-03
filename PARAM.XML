@@ -9843,25 +9843,26 @@ The default value is -1, i.e. no threshold is applied.
 
 <command name="ELECTRONENTROPY">
   <parameter name="UseElectronEntropy" type="logical" default="T"/>
-  <parameter name="UseElectronEnergy"  type="logical" default="F"/>
+  <parameter name="UseElectronEnergy"  type="logical" default="F"
+	     if="$UseElectronEntropy"/>
 
 #ELECTRONENTROPY
 T			UseElectronEntropy
-F                       UseElectronEnergy
+F                       UseElectronEnergy (only read if UseElectronEntropy=T)
 
 If UseElectronEntropy is true, solve for the electron entropy Se defined as
 Se = Pe**(1/GammaE). The electron entropy, unlike electron pressure,
 satisfies a pure conservation law, so it is well behaved across shocks.
 
-If UseElectronEnergy is true, include electron energy into the total
-energy equation for the conservative scheme. This is optional, when
-UseElectronEntropy is false, but required for UseElectronEntropy true
-if total energy is to be conserved. This feature is still under testing.
+If UseElectronEnergy is also true, include electron energy into the total
+energy equation for the conservative scheme so that total energy is
+conserved.
 
 Explicit electron heatconduction is not implemented for the electron entropy,
-but the semi-implicit heat conduction should work fine.
+but the semi-implicit heat conduction works.
 
-The default values are shown above.
+The default values are shown above. Note that #SHOCKHEATING switches
+both logicals to true.
 </command>
 
 <command name="ENTROPY">
