@@ -20,6 +20,7 @@ test_help:
 	@echo "    test OPENACC=-noacc        (run tests without OpenACC)"
 	@echo ""
 	@echo "    test_gpu                   (run GPU related tests only)"
+	@echo "    test_small_gpu             (run small GPU tests only)"
 	@echo ""
 	@echo "    test_amr_compile           (compile test_amr)"
 	@echo "    test_amr_rundir            (create run directory for test_amr)"
