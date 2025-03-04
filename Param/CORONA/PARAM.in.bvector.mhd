@@ -10,7 +10,7 @@ Param/CORONA/PARAM.in.bvector		StringDescription
 0			iSecond
 
 #USERMODULE
-Sharp model		NameUserModule
+Bvector			NameUserModule
 
 ! Magnetofriction solves for B field only
 #UPDATEVAR
