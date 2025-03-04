@@ -11082,9 +11082,8 @@ F	  UseChromoEvaporation
 
 By default, this logical is .false. the entholpy increase needed to
 heat the plasma flow across the transition region to the top temperature
-is neglected. If logical set is true, the energy frlux to/from the first control
-volume is accounted for
-
+is neglected. If logical set is true, the energy flux to/from the first
+control volume is accounted for.
 </command>
 
 <command name="TRANSITIONREGION">
