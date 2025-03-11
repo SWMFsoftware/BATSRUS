@@ -1086,7 +1086,6 @@ contains
 
   end subroutine get_heat_cond_tensor
   !============================================================================
-
   subroutine get_impl_heat_cond_state
 
     ! Operator split, semi-implicit subroutines
