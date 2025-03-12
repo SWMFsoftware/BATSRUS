@@ -2307,8 +2307,8 @@ contains
        Fine2_VII         ,& ! States in 4 fine physical cells, 2nd layer
        CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
        FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell
-       FineF_VII)           ! Values in the phys. cell,
-    !                         looking at another physical cell
+       FineF_VII,         & ! Values in phys. cell looking at another phys. cell
+       DoConvertToLogIn)
     !$acc routine seq
 
     !              |C1_V        |        |       |
@@ -2320,13 +2320,15 @@ contains
     !              |            |        |       |
     !              | C1_V       |        |       |
 
-    real, intent(in) :: Coarse2_V(:)               ! dimension(nVar)
-    real, intent(in) :: Coarse1_VII(:,:,:)         ! dimension(nVar,6,6)
-    real, intent(in) :: Fine1_VII(:,:,:)           ! dimension(nVar,2,2)
-    real, intent(in) :: Fine2_VII(:,:,:)           ! dimension(nVar,2,2)
+    real, intent(inout) :: Coarse2_V(:)               ! dimension(nVar)
+    real, intent(inout) :: Coarse1_VII(:,:,:)         ! dimension(nVar,6,6)
+    real, intent(inout) :: Fine1_VII(:,:,:)           ! dimension(nVar,2,2)
+    real, intent(inout) :: Fine2_VII(:,:,:)           ! dimension(nVar,2,2)
     real, intent(inout):: CoarseToFineF_VII(:,:,:) ! dimension(nVar,2,2)
     real, intent(inout):: FineToCoarseF_VII(:,:,:) ! dimension(nVar,2,2)
     real, intent(inout):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
+
+    logical, optional, intent(in):: DoConvertToLogIn
 
     integer :: iVar,i2,j2
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
@@ -2339,8 +2341,26 @@ contains
     real :: Beta
     real :: Denominator
 
+    logical:: DoConvertToLog
+
     character(len=*), parameter:: NameSub = 'accurate_reschange3d'
     !--------------------------------------------------------------------------
+
+    DoConvertToLog = .false.
+    if(present(DoConvertToLogIn))then
+       DoConvertToLog = DoConvertToLogIn
+    end if
+    if(DoConvertToLog)then
+       ! Convert the input to log here and convert back at the end
+       do iVar = 1, nVar
+          if(UseLogLimiter_V(iVar)) then
+             Coarse1_VII(iVar,:,:) = log(Coarse1_VII(iVar,:,:))
+             Fine1_VII(iVar,:,:)   = log(Fine1_VII(iVar,:,:))
+             Fine2_VII(iVar,:,:)   = log(Fine2_VII(iVar,:,:))
+             Coarse2_V(iVar)   = log(Coarse2_V(iVar))
+          end if
+       end do
+    end if
 
     ! Calculate averaged Fine1_VII
     do iVar=1,nVar
@@ -2445,6 +2465,19 @@ contains
 
     end do; end do
 
+    if(DoConvertToLog)then
+       do iVar = 1, nVar
+          if(UseLogLimiter_V(iVar)) then
+             Coarse1_VII(iVar,:,:) = exp(Coarse1_VII(iVar,:,:))
+             Fine1_VII(iVar,:,:)   = exp(Fine1_VII(iVar,:,:))
+             Fine2_VII(iVar,:,:)   = exp(Fine2_VII(iVar,:,:))
+             Coarse2_V(iVar)   = exp(Coarse2_V(iVar))
+             CoarseToFineF_VII(iVar,:,:) = exp(CoarseToFineF_VII(iVar,:,:))
+             FineToCoarseF_VII(iVar,:,:) = exp(FineToCoarseF_VII(iVar,:,:))
+             FineF_VII(iVar,:,:)         = exp(FineF_VII(iVar,:,:))
+          end if
+       end do
+    end if
   end subroutine accurate_reschange3d
   !============================================================================
   subroutine accurate_reschange2d(&
@@ -2454,8 +2487,8 @@ contains
        Fine2_VI          ,& ! States in 2 fine physical cells, 2nd layer
        CoarseToFineF_VI  ,& ! Values at subfaces, in the coarse ghostcell
        FineToCoarseF_VI  ,& ! Values in phys. cell looking at coarser cell
-       FineF_VI)            ! Facevalues in the physical cell,
-    !                         looking at another physical cell
+       FineF_VI          ,& ! Values in phys. cell,looking at another phys. cell
+       DoConvertToLogIn)
     !$acc routine seq
 
     !              |C1_V        |        |       |
@@ -2467,14 +2500,16 @@ contains
     !              |            |        |       |
     !              | C1_V       |        |       |
 
-    real, intent(in) :: Coarse2_V(:)            ! dimension(nVar)
-    real, intent(in) :: Coarse1_VI(:,:)         ! dimension(nVar,6)
-    real, intent(in) :: Fine1_VI(:,:)           ! dimension(nVar,2)
-    real, intent(in) :: Fine2_VI(:,:)           ! dimension(nVar,2)
+    real, intent(inout) :: Coarse2_V(:)            ! dimension(nVar)
+    real, intent(inout) :: Coarse1_VI(:,:)         ! dimension(nVar,6)
+    real, intent(inout) :: Fine1_VI(:,:)           ! dimension(nVar,2)
+    real, intent(inout) :: Fine2_VI(:,:)           ! dimension(nVar,2)
 
     real, intent(inout):: CoarseToFineF_VI(:,:) ! dimension(nVar,2)
     real, intent(inout):: FineToCoarseF_VI(:,:) ! dimension(nVar,2)
     real, intent(inout):: FineF_VI(:,:)         ! dimension(nVar,2)
+
+    logical, optional, intent(in):: DoConvertToLogIn
 
     integer:: iVar, i2
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
@@ -2487,8 +2522,25 @@ contains
     real :: Beta
     real :: Denominator
 
+    logical:: DoConvertToLog
+
     character(len=*), parameter:: NameSub = 'accurate_reschange2d'
     !--------------------------------------------------------------------------
+    DoConvertToLog = .false.
+    if(present(DoConvertToLogIn))then
+       DoConvertToLog = DoConvertToLogIn
+    end if
+    if(DoConvertToLog)then
+       ! Convert the input to log here and convert back at the end
+       do iVar = 1, nVar
+          if(UseLogLimiter_V(iVar)) then
+             Coarse1_VI(iVar,:) = log(Coarse1_VI(iVar,:))
+             Fine1_VI(iVar,:)   = log(Fine1_VI(iVar,:))
+             Fine2_VI(iVar,:)   = log(Fine2_VI(iVar,:))
+             Coarse2_V(iVar)    = log(Coarse2_V(iVar))
+          end if
+       end do
+    end if
 
     ! Calculate averaged Fine1_VI
     do iVar = 1, nVar
@@ -2588,6 +2640,19 @@ contains
 
     end do
 
+    if(DoConvertToLog)then
+       do iVar = 1, nVar
+          if(UseLogLimiter_V(iVar)) then
+             Coarse1_VI(iVar,:) = exp(Coarse1_VI(iVar,:))
+             Fine1_VI(iVar,:)   = exp(Fine1_VI(iVar,:))
+             Fine2_VI(iVar,:)   = exp(Fine2_VI(iVar,:))
+             Coarse2_V(iVar)   = exp(Coarse2_V(iVar))
+             CoarseToFineF_VI(iVar,:) = exp(CoarseToFineF_VI(iVar,:))
+             FineToCoarseF_VI(iVar,:) = exp(FineToCoarseF_VI(iVar,:))
+             FineF_VI(iVar,:)         = exp(FineF_VI(iVar,:))
+          end if
+       end do
+    end if
   end subroutine accurate_reschange2d
   !============================================================================
   subroutine accurate_reschange1d(&
