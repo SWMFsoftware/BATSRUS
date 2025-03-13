@@ -4,9 +4,6 @@ Param/CORONA/PARAM.in.Awsom.GPU: solar corona with CMEs		StringDescription
 #UPDATE
 slow			TypeUpdate
 
-#PROLONGATION
-2			nOrderProlong
-
 #SEMIPRECONDITIONER
 T			DoPrecond
 BILU1			TypePrecond
@@ -151,7 +148,7 @@ ascii			TypeFile
 
 #DOAMR
 T			DoAmr
-40			DnAmr
+150			DnAmr
 -1			DtAmr
 T			IsStrictAmr
 
@@ -214,7 +211,7 @@ x=0 VAR idl		StringPlot
 F			DoSaveInitial
 
 #STOP
-50			MaxIteration 60000
+200			MaxIteration 60000
 -1.0			tSimulationMax
 
 #RUN ##########################################################################
