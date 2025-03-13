@@ -273,6 +273,17 @@ contains
           call get_velocity(State_VGB(:,i,j,k,iBlock))
        end do; end do; end do
 
+       if(UseAccurateReschange) then
+       do iVar = 1, nVar
+         if(UseLogLimiter_V(iVar)) then
+         !$acc loop vector collapse(3) independent
+            do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+               State_VGB(iVar,i,j,k,iBlock) = log(State_VGB(iVar,i,j,k,iBlock))
+            end do; end do; end do
+         end if
+       end do
+      end if
+
        if(UseAccurateReschange)then
           ! Sides 1 and 2
           if(DiLevel_EB(1,iBlock) == 1 .and. nDim == 2)then
@@ -286,7 +297,7 @@ contains
                      CoarseToFineF_VI= FineState_VXB(:,j:j+1,1,1,iBlock), &
                      FineToCoarseF_VI= FineState_VXB(:,j:j+1,1,2,iBlock), &
                      FineF_VI        = FineState_VXB(:,j:j+1,1,3,iBlock), &
-                     DoConvertToLogIn=.true.)
+                     DoConvert=.true.)
              end do
           elseif(DiLevel_EB(1,iBlock) == 1 .and. nDim == 3)then
              !$acc loop vector collapse(2)
@@ -299,7 +310,7 @@ contains
                      CoarseToFineF_VII=FineState_VXB(:,j:j+1,k:k+1,1,iBlock), &
                      FineToCoarseF_VII=FineState_VXB(:,j:j+1,k:k+1,2,iBlock), &
                      FineF_VII        =FineState_VXB(:,j:j+1,k:k+1,3,iBlock), &
-                     DoConvertToLogIn =.true.)
+                     DoConvert =.true.)
              end do; end do
           elseif(DiLevel_EB(2,iBlock) == 1 .and. nDim == 2)then
              !$acc loop vector
@@ -312,7 +323,7 @@ contains
                      CoarseToFineF_VI= FineState_VXB(:,j:j+1,1,1,iBlock), &
                      FineToCoarseF_VI= FineState_VXB(:,j:j+1,1,2,iBlock), &
                      FineF_VI        = FineState_VXB(:,j:j+1,1,3,iBlock), &
-                     DoConvertToLogIn=.true.)
+                     DoConvert=.true.)
              end do
           elseif(DiLevel_EB(2,iBlock) == 1 .and. nDim == 3)then
              !$acc loop vector collapse(2)
@@ -325,7 +336,7 @@ contains
                      CoarseToFineF_VII=FineState_VXB(:,j:j+1,k:k+1,1,iBlock), &
                      FineToCoarseF_VII=FineState_VXB(:,j:j+1,k:k+1,2,iBlock), &
                      FineF_VII        =FineState_VXB(:,j:j+1,k:k+1,3,iBlock), &
-                     DoConvertToLogIn =.true.)
+                     DoConvert =.true.)
              end do; end do
           end if
 
@@ -341,7 +352,7 @@ contains
                      CoarseToFineF_VI= FineState_VYB(:,i:i+1,1,1,iBlock),&
                      FineToCoarseF_VI= FineState_VYB(:,i:i+1,1,2,iBlock), &
                      FineF_VI        = FineState_VYB(:,i:i+1,1,3,iBlock), &
-                     DoConvertToLogIn=.true.)
+                     DoConvert=.true.)
              end do
           elseif(DiLevel_EB(3,iBlock) == 1 .and. nDim == 3)then
              !$acc loop vector collapse(2)
@@ -354,7 +365,7 @@ contains
                      CoarseToFineF_VII=FineState_VYB(:,i:i+1,k:k+1,1,iBlock), &
                      FineToCoarseF_VII=FineState_VYB(:,i:i+1,k:k+1,2,iBlock), &
                      FineF_VII        =FineState_VYB(:,i:i+1,k:k+1,3,iBlock), &
-                     DoConvertToLogIn =.true.)
+                     DoConvert =.true.)
              end do; end do
           elseif(DiLevel_EB(4,iBlock) == 1 .and. nDim == 2)then
              !$acc loop vector
@@ -367,7 +378,7 @@ contains
                      CoarseToFineF_VI= FineState_VYB(:,i:i+1,1,1,iBlock), &
                      FineToCoarseF_VI= FineState_VYB(:,i:i+1,1,2,iBlock), &
                      FineF_VI        = FineState_VYB(:,i:i+1,1,3,iBlock), &
-                     DoConvertToLogIn=.true.)
+                     DoConvert=.true.)
              end do
           elseif(DiLevel_EB(4,iBlock) == 1 .and. nDim == 3)then
              !$acc loop vector collapse(2)
@@ -380,7 +391,7 @@ contains
                      CoarseToFineF_VII=FineState_VYB(:,i:i+1,k:k+1,1,iBlock), &
                      FineToCoarseF_VII=FineState_VYB(:,i:i+1,k:k+1,2,iBlock), &
                      FineF_VII        =FineState_VYB(:,i:i+1,k:k+1,3,iBlock), &
-                     DoConvertToLogIn =.true.)
+                     DoConvert =.true.)
              end do; end do
           end if
 
@@ -396,7 +407,7 @@ contains
                      CoarseToFineF_VII=FineState_VZB(:,i:i+1,j:j+1,1,iBlock), &
                      FineToCoarseF_VII=FineState_VZB(:,i:i+1,j:j+1,2,iBlock), &
                      FineF_VII        =FineState_VZB(:,i:i+1,j:j+1,3,iBlock), &
-                     DoConvertToLogIn =.true.)
+                     DoConvert =.true.)
              end do; end do
           elseif(DiLevel_EB(6,iBlock) == 1 .and. nDim == 3)then
              !$acc loop vector collapse(2)
@@ -409,10 +420,21 @@ contains
                      CoarseToFineF_VII=FineState_VZB(:,i:i+1,j:j+1,1,iBlock), &
                      FineToCoarseF_VII=FineState_VZB(:,i:i+1,j:j+1,2,iBlock), &
                      FineF_VII        =FineState_VZB(:,i:i+1,j:j+1,3,iBlock), &
-                     DoConvertToLogIn =.true.)
+                     DoConvert =.true.)
              end do; end do
           end if
        endif
+
+       if(UseAccurateReschange) then
+       do iVar = 1, nVar
+         if(UseLogLimiter_V(iVar)) then
+            !$acc loop vector collapse(3) independent
+            do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+               State_VGB(iVar,i,j,k,iBlock) = exp(State_VGB(iVar,i,j,k,iBlock))
+            end do; end do; end do
+         end if
+       end do
+      end if
 
        if(UseBody) IsBodyBlock = IsBody_B(iBlock)
 
