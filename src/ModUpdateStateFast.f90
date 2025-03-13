@@ -274,15 +274,16 @@ contains
        end do; end do; end do
 
        if(UseAccurateReschange) then
-       do iVar = 1, nVar
-         if(UseLogLimiter_V(iVar)) then
-         !$acc loop vector collapse(3) independent
-            do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-               State_VGB(iVar,i,j,k,iBlock) = log(State_VGB(iVar,i,j,k,iBlock))
-            end do; end do; end do
-         end if
-       end do
-      end if
+          do iVar = 1, nVar
+             if(UseLogLimiter_V(iVar)) then
+                !$acc loop vector collapse(3) independent
+                do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                   State_VGB(iVar,i,j,k,iBlock) = &
+                        log(State_VGB(iVar,i,j,k,iBlock))
+                end do; end do; end do
+             end if
+          end do
+       end if
 
        if(UseAccurateReschange)then
           ! Sides 1 and 2
@@ -426,15 +427,16 @@ contains
        endif
 
        if(UseAccurateReschange) then
-       do iVar = 1, nVar
-         if(UseLogLimiter_V(iVar)) then
-            !$acc loop vector collapse(3) independent
-            do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-               State_VGB(iVar,i,j,k,iBlock) = exp(State_VGB(iVar,i,j,k,iBlock))
-            end do; end do; end do
-         end if
-       end do
-      end if
+          do iVar = 1, nVar
+             if(UseLogLimiter_V(iVar)) then
+                !$acc loop vector collapse(3) independent
+                do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                   State_VGB(iVar,i,j,k,iBlock) = &
+                        exp(State_VGB(iVar,i,j,k,iBlock))
+                end do; end do; end do
+             end if
+          end do
+       end if
 
        if(UseBody) IsBodyBlock = IsBody_B(iBlock)
 
