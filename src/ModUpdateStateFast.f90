@@ -21,7 +21,7 @@ module ModUpdateStateFast
   ! All other variables, parameters and subroutines
   use ModFaceValue, ONLY: correct_monotone_restrict, &
        accurate_reschange2d, accurate_reschange3d, get_log_limiter_var, &
-       UseLogLimiter_V
+       UseLogLimiter_V, UseLogLimiter
   use ModVarIndexes
   use ModMultiFluid, ONLY: &
        iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, InvMassFluid_I, &
@@ -273,19 +273,20 @@ contains
           call get_velocity(State_VGB(:,i,j,k,iBlock))
        end do; end do; end do
 
-       if(UseAccurateReschange) then
-          do iVar = 1, nVar
-             if(UseLogLimiter_V(iVar)) then
-                !$acc loop vector collapse(3) independent
-                do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                   State_VGB(iVar,i,j,k,iBlock) = &
-                        log(State_VGB(iVar,i,j,k,iBlock))
-                end do; end do; end do
-             end if
-          end do
-       end if
+       if(UseAccurateReschange .and. any(DiLevel_EB(:,iBlock)==1))then
 
-       if(UseAccurateReschange)then
+          if(UseLogLimiter) then
+             do iVar = 1, nVar
+                if(UseLogLimiter_V(iVar)) then
+                   !$acc loop vector collapse(3) independent
+                   do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                      State_VGB(iVar,i,j,k,iBlock) = &
+                           log(State_VGB(iVar,i,j,k,iBlock))
+                   end do; end do; end do
+                end if
+             end do
+          end if
+
           ! Sides 1 and 2
           if(DiLevel_EB(1,iBlock) == 1 .and. nDim == 2)then
              !$acc loop vector
@@ -424,19 +425,19 @@ contains
                      DoConvert =.true.)
              end do; end do
           end if
-       endif
 
-       if(UseAccurateReschange) then
-          do iVar = 1, nVar
-             if(UseLogLimiter_V(iVar)) then
-                !$acc loop vector collapse(3) independent
-                do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                   State_VGB(iVar,i,j,k,iBlock) = &
-                        exp(State_VGB(iVar,i,j,k,iBlock))
-                end do; end do; end do
-             end if
-          end do
-       end if
+          if(UseLogLimiter) then
+             do iVar = 1, nVar
+                if(UseLogLimiter_V(iVar)) then
+                   !$acc loop vector collapse(3) independent
+                   do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                      State_VGB(iVar,i,j,k,iBlock) = &
+                           exp(State_VGB(iVar,i,j,k,iBlock))
+                   end do; end do; end do
+                end if
+             end do
+          end if
+       endif
 
        if(UseBody) IsBodyBlock = IsBody_B(iBlock)
 
