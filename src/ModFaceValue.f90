@@ -2307,7 +2307,7 @@ contains
        Fine2_VII         ,& ! States in 4 fine physical cells, 2nd layer
        CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
        FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell
-       FineF_VII,         & ! Values in phys. cell looking at another phys. cell
+       FineF_VII,         & ! Values in phys. cell looking at fine cell
        DoConvert)
     !$acc routine seq
 
@@ -2316,7 +2316,7 @@ contains
     !              |        CToF|FToC FF |       |
     !  C2_V        |C1_V       _|__F1_V__|__F2_V_|_
     !              |        CToF|FToC FF |       |
-    ! _____________|____________|__F1_V__! __F2_V_|_
+    ! _____________|____________|__F1_V__|__F2_V_|_
     !              |            |        |       |
     !              | C1_V       |        |       |
 
@@ -2464,7 +2464,7 @@ contains
        Fine2_VI          ,& ! States in 2 fine physical cells, 2nd layer
        CoarseToFineF_VI  ,& ! Values at subfaces, in the coarse ghostcell
        FineToCoarseF_VI  ,& ! Values in phys. cell looking at coarser cell
-       FineF_VI          ,& ! Values in phys. cell,looking at another phys. cell
+       FineF_VI          ,& ! Values in phys. cell,looking at fine cell
        DoConvert)
     !$acc routine seq
 
@@ -2473,7 +2473,7 @@ contains
     !              |        CToF|FToC FF |       |
     !  C2_V        |C1_V       _|__F1_V__|__F2_V_|_
     !              |        CToF|FToC FF |       |
-    ! _____________|____________|__F1_V__! __F2_V_|_
+    ! _____________|____________|__F1_V__|__F2_V_|_
     !              |            |        |       |
     !              | C1_V       |        |       |
 
