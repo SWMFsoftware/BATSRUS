@@ -76,12 +76,12 @@ contains
     use ModMain, ONLY: tSimulation, TypeCoordSystem
     use ModCurrent, ONLY: calc_field_aligned_current
     use ModFieldTrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
-         InvB_, RhoInvB_, pInvB_, iXEnd, iYEnd, iZEnd, CLOSEDRAY, GmSm_DD,&
-         integrate_field_from_sphere
+         InvB_, RhoInvB_, pInvB_, iXEnd, iYEnd, iZEnd, iPeInvB, CLOSEDRAY, &
+         GmSm_DD, integrate_field_from_sphere
     use ModNumConst, ONLY: cRadToDeg
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
     use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
-    use ModAdvance, ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModB0, ONLY: B0_DGB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use CON_coupler, ONLY: Grid_C, IE_
@@ -126,7 +126,6 @@ contains
     end if
 
     deallocate(FieldAlignedCurrent_II)
-
     if(DoTraceIE) then
        allocate(IeLat_I(iSize), IeLon_I(jSize))
 
@@ -134,9 +133,15 @@ contains
        IeLat_I = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
        IeLon_I =        cRadToDeg * PhiIono_I
        Radius = (6378.+100.)/6378.
-       call integrate_field_from_sphere( &
-            iSize, jSize, IeLat_I, IeLon_I, Radius, &
-            'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
+       if(UseElectronPressure) then
+           call integrate_field_from_sphere( &
+                iSize, jSize, IeLat_I, IeLon_I, Radius, &
+                'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,PeInvB')
+       else
+           call integrate_field_from_sphere( &
+                iSize, jSize, IeLat_I, IeLon_I, Radius, &
+                'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
+       end if
 
        ! Only processor 0 has the resulting Integral_I,
        !   the others do not participate in the coupling
@@ -156,6 +161,16 @@ contains
                * No2Si_V(UnitX_)/No2Si_V(UnitB_)
           Buffer_IIV(:,:,3) = RayResult_VII(RhoInvB_,:,:) * No2Si_V(UnitRho_)
           Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+          if(UseElectronPressure) then
+              where(RayResult_VII(InvB_,:,:) > 0.)
+                  RayResult_VII(iPeInvB,:,:)  = RayResult_VII(iPeInvB,:,:) &
+                          /RayResult_VII(InvB_,:,:)
+              end where
+              where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
+                  RayResult_VII( iPeInvB,:,:) = 0.
+              end where
+              Buffer_IIV(:,:,7) = RayResult_VII( iPeInvB,:,:) * No2Si_V(UnitP_)
+          end if
 
           ! Transformation matrix from default (GM) to SM coordinates
           GmSm_DD = transform_matrix(tSimulation,TypeCoordSystem,'SMG')
@@ -191,6 +206,9 @@ contains
              write(*,*)NameSub, ': sum(Buf4**2)=', sum(Buffer_IIV(:,:,4)**2)
              write(*,*)NameSub, ': sum(Buf5**2)=', sum(Buffer_IIV(:,:,5)**2)
              write(*,*)NameSub, ': sum(Buf6**2)=', sum(Buffer_IIV(:,:,6)**2)
+             if(UseElectronPressure)then
+                 write(*,*)NameSub, ': sum(Buf7**2)=', sum(Buffer_IIV(:,:,7)**2)
+             end if
           end if
        end if
        deallocate(IeLat_I, IeLon_I, RayIntegral_VII, RayResult_VII)
