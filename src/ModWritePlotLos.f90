@@ -1821,12 +1821,14 @@ contains
     !==========================================================================
     subroutine save_los_file
 
+      use ModIO, ONLY: IsPlotNameN, IsPlotNameT, IsPlotNameE
       character(len=40):: StringFormat
       character(len=23):: StringDateTime0, StringDateTime
       character(len=80):: StringFormatTime
       character(len=80):: StringTmp
       character(len=5) :: StringExtensionOrig
       character(len=10):: StringExtension
+      character(len=19):: StringDateTime19
 
       integer:: iTime_I(7)
 
@@ -1854,27 +1856,37 @@ contains
       end if
 
       if (iFile-plot_ > 9) then
-         StringFormat='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
+         StringFormat='("' // trim(NamePlotDir) // '",a,i2)'
       else
-         StringFormat='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
+         StringFormat='("' // trim(NamePlotDir) // '",a,i1)'
       end if
 
       ! the plot time is stored in the hdf5 files and displayed in VisIt.
       ! if you don not include it in the NameFile VisIt will automacially
       ! group all the los files.
+      write(NameFile, StringFormat) trim(TypePlot)//"_", iFile-plot_
       if(IsTimeAccurate .and. TypePlotFormat_I(iFile) /= 'hdf')then
-         call get_time_string
-         write(NameFile, StringFormat) &
-              trim(TypePlot)//"_",&
-              iFile-plot_,"_t"//trim(StringDateOrTime)//"_n",nStep,&
-              StringExtension
+         if(IsPlotNameE)then
+            ! Event date
+            call get_date_time(iTime_I)
+            write(StringDateTime19, &
+                 '(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)') iTime_I
+            NameFile = trim(NameFile) // "_e" // trim(StringDateTime19)
+         end if
+         if(IsPlotNameT)then
+            ! The file name will contain the StringDateOrTime
+            call get_time_string
+            NameFile = trim(NameFile)//"_t"//trim(StringDateOrTime)
+         end if
+         if(IsPlotNameN)then
+            ! Add time step information
+            write(NameFile,'(a,i8.8)') trim(NameFile)//"_n", nStep
+         end if
       else
-         write(NameFile, StringFormat) &
-              trim(TypePlot)//"_",&
-              iFile-plot_,"_n",nStep,StringExtension
+         write(NameFile,'(a,i8.8)') trim(NameFile)//"_n", nStep
       end if
-
-      write(*,*) NameSub,' writing ',trim(NameFile)
+      NameFile = trim(NameFile)//StringExtension
+      write(*,'(a)') NameSub//' writing '//trim(NameFile)
 
       ! write header file
 
