@@ -1286,7 +1286,13 @@ contains
        call trmesh(nThreadAll+2, &
             Xyz_DII(x_,:,i), Xyz_DII(y_,:,i), Xyz_DII(z_,:,i), &
             iList_II(:,i), iPointer_II(:,i), iEnd_II(:,i), iError)
-       if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
+       if(iError/=0)then
+          write(*,'(a,i5)')NameSub//': triangulation failed with iError=',&
+               iError
+          write(*,'(a,i5,a,i5)')NameSub//'In the range of i from ', &
+               -nGUniform,' to 0 triangulation failed at i=',i
+          call stop_mpi(NameSub//': Triangulation failed')
+       end if
     end do
 
     do iPE = 0, nProc - 1
