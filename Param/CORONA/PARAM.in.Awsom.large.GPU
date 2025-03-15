@@ -2,10 +2,7 @@
 Param/CORONA/PARAM.in.Awsom.large.GPU		StringDescription
 
 #UPDATE
-fast			TypeUpdate
-
-#PROLONGATION
-2			nOrderProlong
+slow			TypeUpdate
 
 #SEMIPRECONDITIONER
 T			DoPrecond
