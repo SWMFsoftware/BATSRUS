@@ -1096,19 +1096,19 @@ test_awsomchargestate_check:
                 Param/CORONA/TestOutput/pcl_01__n000001.pcl.gz \
                 > test_awsomchargestate.diff)
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
-		${TESTDIR}/RESULTS/SC/los_dem_1_n0000004.out \
+		${TESTDIR}/RESULTS/SC/los_dem_1_n00000004.out \
 		Param/CORONA/TestOutput/los_dem_1_n0000004.out.gz \
 		>> test_awsomchargestate.diff)
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
-                ${TESTDIR}/RESULTS/SC/los_fux_2_n0000004.out \
+                ${TESTDIR}/RESULTS/SC/los_fux_2_n00000004.out \
                 Param/CORONA/TestOutput/los_fux_2_n0000004.out.gz \
                 >> test_awsomchargestate.diff)
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
-                ${TESTDIR}/RESULTS/SC/los_nbi_3_n0000004.out \
+                ${TESTDIR}/RESULTS/SC/los_nbi_3_n00000004.out \
                 Param/CORONA/TestOutput/los_nbi_3_n0000004.out.gz \
                 >> test_awsomchargestate.diff)
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
-                ${TESTDIR}/RESULTS/SC/los_phx_4_n0000004.out \
+                ${TESTDIR}/RESULTS/SC/los_phx_4_n00000004.out \
                 Param/CORONA/TestOutput/los_phx_4_n0000004.out.gz \
                 >> test_awsomchargestate.diff)
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t -p="sort -k1 -k2 -k3 -g | grep -v AUXDATA" \
