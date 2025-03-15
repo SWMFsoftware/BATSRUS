@@ -1439,7 +1439,7 @@ contains
     integer, intent(in) :: nVarIn
     real, intent(out) :: State_VII(nVarIn, nThreadAll,-nGUniform:0)
     logical,optional, intent(in) :: DoCoord
-    integer :: i, j, k, iBlock, nCell, iBuff, iPoint
+    integer :: i, j, k, iBlock, nCell, nPoint, iBuff, iPoint
     integer, parameter:: Lon_ = 1, Lat_ = 2
     real    :: StateThread_V(RhoTr_:WminorTr_), State_V(nVar)
     real    :: CoordFace_I(-nPointThreadMax:0), Coord_I(-nPointThreadMax:0), &
@@ -1465,11 +1465,12 @@ contains
           do j = 1, nJ
              iBuff = iBuff + 1
              nCell = Threads_B(iBlock)%Threads_II(j,k)%nCell
-             ! Fill in an array for this thread with lon,lat values
-             ! of the grid points on the thread
-             CoordFace_I(-nCell:0) = Threads_B(iBlock)%&
-                  Threads_II(j,k)% Coord_DF(r_,-nCell:0)
              if(present(DoCoord))then
+                nPoint = nCell+2
+                ! Fill in an array for this thread with lon,lat values
+                ! of the grid points on the thread
+                CoordFace_I(-nPoint:0) = Threads_B(iBlock)%&
+                  Threads_II(j,k)% Coord_DF(r_,-nPoint:0)
                 do i = -nGUniform, 0
                    ! Generalized radial coordinate of the plot grid point
                    Coord1 = CoordMin_D(r_) + real(i)/dCoord1Inv
@@ -1479,15 +1480,19 @@ contains
                    State_VII(:,iBuff,i)  = &
                         linear(&
                         a_VI = Threads_B(iBlock)%Threads_II(j,k)%&
-                        Coord_DF(2:,-nCell:0),                       &
+                        Coord_DF(2:,-nPoint:0),                      &
                         nVar = nVarIn,                               &
-                        iMin = -nCell,                               &
+                        iMin = -nPoint,                              &
                         iMax = 0,                                    &
                         x = Coord1,                                  &
-                        x_I = CoordFace_I(-nCell:0),                 &
+                        x_I = CoordFace_I(-nPoint:0),                &
                         DoExtrapolate = .false.)
                 end do ! i
              else
+                ! Fill in an array for this thread with lon,lat values
+             ! of the grid points on the thread
+             CoordFace_I(-nCell:0) = Threads_B(iBlock)%&
+                  Threads_II(j,k)% Coord_DF(r_,-nCell:0)
                 Coord_I(-nCell:-1) = 0.50*&
                      (CoordFace_I(-nCell:-1) + CoordFace_I(1-nCell:0))
                 CoordFace_I(-nCell:-1) = Coord_I(-nCell:-1)
