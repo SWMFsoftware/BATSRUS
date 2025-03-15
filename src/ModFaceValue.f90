@@ -418,7 +418,7 @@ contains
           end if
        end do
     end if
- 
+
     if(.not.DoLimitMomentum)then
        ! Convert velocities back to momenta
        !$acc loop vector collapse(3) private(Rho_I)
