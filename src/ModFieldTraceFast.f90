@@ -1473,7 +1473,7 @@ contains
     call timing_stop('trace_prolong')
 
     call test_stop(NameSub, DoTest)
-  end subroutine ray_pass
+  contains
     !==========================================================================
     subroutine setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
          iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
@@ -1850,7 +1850,7 @@ contains
       ! should be determined case-by-case.
 
       ! Face, neighbor's face and side indexes Note: iFace is on CPU
-      integer :: iFace, jFace, iSide, iBlock
+      integer :: iFace, jFace, iSide
       ! acc declare create(iFace, jFace, iSide)
 
       ! number of subfaces (1 or 4), subface (1..nSubFace)
@@ -2115,7 +2115,7 @@ contains
                  iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
                  iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
 
-            if(DoDebug)write(*,*)&
+            if(DoDebug .and. DoTest)write(*,*)&
                  'setranges_ray for buf2ray Done: me, iFace=', iProc, iFace
 
             !$acc parallel loop gang independent
@@ -2133,7 +2133,7 @@ contains
                   jProc = jProc_IEB(1,jFace,iBlock)
                   jBlock = jBlock_IEB(1,jFace,iBlock)
                   iSize1 = iSize
-                  if(DoDebug)&
+                  if(DoDebug .and. DoTest)&
                        write(*,*)'buf2rayface: me, iBlock, jBlock=',&
                        iProc, iBlock, jBlock
                   if(jProc /= iProc) then
@@ -2145,7 +2145,7 @@ contains
                case(1) ! neighbour is coarser
                   jProc = jProc_IEB(1,jFace,iBlock)
                   jBlock = jBlock_IEB(1,jFace,iBlock)
-                  if(DoDebug)&
+                  if(DoDebug .and. DoTest)&
                        write(*,*)'buf2sparserayface: me, iBlock=',iProc,iBlock
                   if(jProc /= iProc)then
                      call buf2sparserayface_parallel( &
@@ -2157,7 +2157,7 @@ contains
                   do iSubFace = 1, 4
                      jProc = jProc_IEB(iSubFace,jFace,iBlock)
                      jBlock = jBlock_IEB(iSubFace,jFace,iBlock)
-                     if(DoDebug) &
+                     if(DoDebug.and.DoTest)&
                           write(*,*)'buf2subrayface: me,iSubFace,iBlock=',&
                           iProc,iSubFace,iBlock
                      if(jProc /= iProc)then
@@ -2675,6 +2675,8 @@ contains
       end select
 
     end subroutine prolong_ray
+    !==========================================================================
+  end subroutine ray_pass
   !============================================================================
   subroutine calc_squash_factor
     ! Calculatte squashing factor
