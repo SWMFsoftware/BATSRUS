@@ -253,11 +253,9 @@ contains
     use ModParallel,   ONLY: DiLevel_EB, jBlock_IEB, jProc_IEB
     use BATL_lib,  ONLY: Unused_BP
 
-    ! For debugging
-
     integer, intent(in) :: iBlock
-    integer             :: i, j, k
 
+    integer:: i, j, k, iVar
     real:: Rho_I(nFluid), InvRho_I(nFluid)
 
     logical:: DoTest
@@ -284,6 +282,19 @@ contains
           State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
                * InvRho_I
        end do; end do; end do
+    end if
+
+    if(UseLogLimiter) then
+       ! Convert to log variables
+       do iVar = 1, nVar
+          if(UseLogLimiter_V(iVar)) then
+             !$acc loop vector collapse(3) independent
+             do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+                State_VGB(iVar,i,j,k,iBlock) = &
+                     log(State_VGB(iVar,i,j,k,iBlock))
+             end do; end do; end do
+          end if
+       end do
     end if
 
     if(DiLevel_EB(1,iBlock) == -1)then
@@ -393,6 +404,19 @@ contains
                   max(State_VGB(1:nVar,i,j,nK+1,iBlock), 1e-30)
           end do; end do
        end if
+    end if
+
+    if(UseLogLimiter) then
+       ! Convert back from log variables
+       do iVar = 1, nVar
+          if(UseLogLimiter_V(iVar)) then
+             !$acc loop vector collapse(3) independent
+             do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+                State_VGB(iVar,i,j,k,iBlock) = &
+                     exp(State_VGB(iVar,i,j,k,iBlock))
+             end do; end do; end do
+          end if
+       end do
     end if
 
     if(.not.DoLimitMomentum)then
