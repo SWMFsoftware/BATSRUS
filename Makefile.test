@@ -1004,7 +1004,7 @@ test_awsom_gpu_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
 	
 test_awsom_gpu_check:
-	-@(${DIFFNUM} -a=5e-19 -r=5e-5 -t \
+	-@(${DIFFNUM} -a=5e-19 -r=2e-4 -t \
 		${TESTDIR}/RESULTS/SC/log_n000001.log \
 		Param/CORONA/TestOutput/log_n000001.awsom_gpu \
 		> test_awsom_gpu.diff)

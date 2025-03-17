@@ -469,7 +469,7 @@ contains
        end if
     end if
 
-    !$acc update device(UseLogLimiter_V)
+    !$acc update device(UseLogLimiter_V, UseLogLimiter)
   end subroutine get_log_limiter_var
   !============================================================================
   subroutine get_face_accurate3d(iSideIn,  iBlock)
