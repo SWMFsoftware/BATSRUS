@@ -1571,7 +1571,7 @@ contains
       ! BATL related
       integer:: iNode, iDim, iSideFace
 
-      character(len=*), parameter:: NameSub='pass_face'
+      character(len=*), parameter:: NameSub = 'pass_face'
       !------------------------------------------------------------------------
       if(DoTest)write(*,*) NameSub, &
            ':me,iFaceMin,iFaceMax,do_eq,do_re,do_pr=', &
