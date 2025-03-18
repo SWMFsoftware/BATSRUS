@@ -291,7 +291,7 @@ sub set_optimization{
             UseHyperbolicDivB        => ".false.",
             UseNonConservative       => ".false.",
 	    UsePMin                  => ".false.",
-		UseTMin                  => ".false.",
+	    UseTMin                  => ".false.",
 	    UseReynoldsDecomposition => ".false.",
 	    UseRhoMin                => ".false.",
 	    UseRotatingBc            => ".false.",
@@ -312,23 +312,35 @@ sub set_optimization{
 	$Set{"UseRotatingBc"}    = ".true."  if $NameComp =~ /GM/;
 
 	print "processing parameter file $Opt\n";
-	my $first = 1;  # true in the first session
+	my $first = 1;  # true in the first session of the active component
+	my $ison = 1;   # true for active component
 	my $nstage = 1; # default value for nStage
+	my $skip = 0;   # set to true when reading other component sections
 	open(FILE, $Opt) or die "$ERROR could not open $Opt\n";
 	while(<FILE>){
 	    if(/^\#RUN\b/ or /^\#END\b/ or eof(FILE)){
 		check_var($Set{"nStage"}, $nstage, $first);
 		check_var($Set{"iStage"}, "any", $first) if $nstage != 1;
 		last unless /^#RUN\b/;
-		$first = 0; # end of first session
+		$first = 0 if $ison; # end of first session for active comp.
 	    }
+	    $skip = 0 if /^\#END_COMP /;
+	    $skip = 1 if /^\#BEGIN_COMP / and not /^\#BEGIN_COMP $NameComp/;
+	    next if $skip;
+
 	    # Read settings from various commands
-	    if(/^#TIMEACCURATE\b/){
+	    if(/^#COMPONENT\b/){
+		my $name = <FILE>;
+		if($name =~ /^$NameComp/){
+		    my $on = <FILE>;
+		    $ison = 1 if $on =~ /^T/;
+		    $ison = 0 if $on =~ /^F/;
+		}
+	    }elsif(/^#TIMEACCURATE\b/){
 		my $timeacc = <FILE>;
 		check_var($Set{"IsTimeAccurate"}, $timeacc, $first);
 	    }elsif(/^#PARTLOCALTIMESTEP\b/){
 		my $r = <FILE>; 
-		print "!!!! r=$r\n";
 		check_var($Set{"rLocalTimeStep"}, $r, $first);
 	    }elsif(/^#TIMESTEPLIMIT\b/){
 		my $do = <FILE>; # not time accurate if limiting time step
