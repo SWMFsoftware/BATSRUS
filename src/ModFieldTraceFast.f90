@@ -43,11 +43,11 @@ module ModFieldTraceFast
   real, allocatable :: Trace_DINB(:,:,:,:,:,:)
   !$acc declare create(Trace_DINB)
 
-  ! Stored face and cell indices of the 2 rays starting from a face of a block
+  ! Stored face and cell indices of the 2 traces starting from face of a block
   integer(Int1_), allocatable :: I_DINB(:,:,:,:,:,:)
   !$acc declare create(I_DINB)
 
-  ! Stored weights for the 2 rays starting from a face of a block
+  ! Stored weights for the 2 traces starting from a face of a block
   real, allocatable :: WeightTrace_DINB(:,:,:,:,:,:)
   !$acc declare create(WeightTrace_DINB)
 
@@ -65,9 +65,9 @@ module ModFieldTraceFast
 
   ! Testing
 #ifdef _OPENACC
-  logical, parameter :: DoTestRay = .false.
+  logical, parameter :: DoTestTrace = .false.
 #else
-  logical :: DoTestRay = .false.
+  logical :: DoTestTrace = .false.
 #endif
 
 contains
@@ -131,9 +131,9 @@ contains
     call init_mod_trace_fast
 
     if(DoTest)then
-       write(*,*)'GM ray_trace: nStepLast,nStep         =',nStepLast,nStep
-       write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
-       write(*,*)'GM ray_trace: iLastDecomp,iNewDecomp=',&
+       write(*,*)NameSub,': nStepLast,nStep       =',nStepLast,nStep
+       write(*,*)NameSub,': iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
+       write(*,*)NameSub,': iLastDecomp,iNewDecomp=',&
             iLastDecomposition,iNewDecomposition
     end if
 
@@ -180,7 +180,7 @@ contains
     ! Iteration parameters
     integer, parameter :: MaxIterTrace = 150
     integer :: nIterTrace
-    ! check for changes and loop rays in the iterative scheme
+    ! check for changes and loops in the iterative scheme
     logical :: DoneChange, DoneLoop, Done_I(2)
 
     real    :: dTraceMin
@@ -216,7 +216,7 @@ contains
     integer :: iX, iY, iZ
 
     ! Current block and direction indices
-    integer :: iBlock, iRay, iDim
+    integer :: iBlock, iTrace, iDim
 
     ! Testing and timing
     logical, parameter :: DoTime = .false.
@@ -234,13 +234,13 @@ contains
 
     call timing_start('trace_grid_fast1')
 
-    if(DoTime)call timing_reset('ray_pass',2)
+    if(DoTime)call timing_reset('pass_trace',2)
 
     IsBVectorField = NameVectorField == 'B'
     !$acc update device(IsBVectorField)
 
 #ifndef _OPENACC
-    DoTestRay = .false.
+    DoTestTrace = .false.
 #endif
 
     !$acc parallel loop gang
@@ -269,7 +269,7 @@ contains
           Trace_DSNB(:,:,:,:,:,iBlock) = NoRay
        endif
        ! Inner points of Trace_DINB should never be used, assign them to OPEN
-       ! so that checking for blocks with fully open rays becomes easy
+       ! so that checking for blocks with fully open traces becomes easy
        Trace_DINB(:,:,2:nI,2:nJ,2:nK,iBlock)=OPENRAY
 
        ! Set Trace_DINB=OPENRAY at outer boundaries
@@ -313,8 +313,8 @@ contains
 
 #ifndef _OPENACC
     if(DoTest)write(*,*) NameSub,' normalized B'
-    if(DoTime.and.iProc==0)then
-       write(*,'(a)',ADVANCE='NO') NameSub//' setup and normalization:'
+    if(DoTime .and. iProc==0)then
+       write(*,'(a)', ADVANCE='NO') NameSub//' setup and normalization:'
        call timing_show('trace_field_grid', 1)
     end if
 
@@ -366,69 +366,69 @@ contains
              if(DiLevel_EB(3,iBlock)==Unset_ .and. iY==   1) CYCLE
              if(DiLevel_EB(4,iBlock)==Unset_ .and. iY==nJ+1) CYCLE
 
-             if(DoTestRay)write(*,*) &
+             if(DoTestTrace)write(*,*) &
                   'TESTING Trace_DSNB: me,iBlock,iX,iY,iZ,Xyz_D',&
                   iProc, iBlock, iX, iY, iZ,&
                   Xyz_DGB(:,iX,iY,iZ,iBlock) - 0.5*CellSize_DB(:,iBlock)
 
              if(nIterTrace == 0)then
-                do iRay = 1, 2
-                   ! Follow Trace_DSNB in direction iRay
+                do iTrace = 1, 2
+                   ! Follow Trace_DSNB in direction iTrace
                    GenIni_D = [iX-0.5, iY-0.5, iZ-0.5]
 
                    iFace = follow_fast(.true., Gen_D, GenIni_D, &
-                        DoCheckInside, iRay, iBlock)
+                        DoCheckInside, iTrace, iBlock)
 
                    ! Assign value to Trace_DINB
-                   call assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
+                   call assign_trace(iFace, iTrace, iBlock, iX, iY, iZ, &
                         i1, j1, k1, i2, j2, k2, &
-                        .true., Trace_DINB(:,iRay,iX,iY,iZ,iBlock), Gen_D,&
+                        .true., Trace_DINB(:,iTrace,iX,iY,iZ,iBlock), Gen_D,&
                         Weight_I, .true.)
 
                    ! Memorize Trace_DSNB integration results
-                   I_DINB(1,iRay,iX,iY,iZ,iBlock) = iFace
+                   I_DINB(1,iTrace,iX,iY,iZ,iBlock) = iFace
                    if(iFace > 0)then
                       select case(iFace)
                       case(1,2)
-                         I_DINB(2:3,iRay,iX,iY,iZ,iBlock) = [j1,k1]
+                         I_DINB(2:3,iTrace,iX,iY,iZ,iBlock) = [j1,k1]
                       case(3,4)
-                         I_DINB(2:3,iRay,iX,iY,iZ,iBlock) = [i1,k1]
+                         I_DINB(2:3,iTrace,iX,iY,iZ,iBlock) = [i1,k1]
                       case(6,5)
-                         I_DINB(2:3,iRay,iX,iY,iZ,iBlock) = [i1,j1]
+                         I_DINB(2:3,iTrace,iX,iY,iZ,iBlock) = [i1,j1]
                       end select
-                      WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock) = Weight_I
+                      WeightTrace_DINB(:,iTrace,iX,iY,iZ,iBlock) = Weight_I
                    end if
                 end do
              else
-                do iRay = 1, 2
+                do iTrace = 1, 2
                    ! Use stored values
-                   iFace = I_DINB(1,iRay,iX,iY,iZ,iBlock)
+                   iFace = I_DINB(1,iTrace,iX,iY,iZ,iBlock)
                    if(iFace > 0)then
                       select case(iFace)
                       case(1)
                          i1 = 1; i2 = 1
-                         j1 = I_DINB(2,iRay,iX,iY,iZ,iBlock); j2 = j1 + 1
-                         k1 = I_DINB(3,iRay,iX,iY,iZ,iBlock); k2 = k1 + 1
+                         j1 = I_DINB(2,iTrace,iX,iY,iZ,iBlock); j2 = j1 + 1
+                         k1 = I_DINB(3,iTrace,iX,iY,iZ,iBlock); k2 = k1 + 1
                       case(2)
                          i1 = nI+1; i2 = i1
-                         j1 = I_DINB(2,iRay,iX,iY,iZ,iBlock); j2 = j1 + 1
-                         k1 = I_DINB(3,iRay,iX,iY,iZ,iBlock); k2 = k1 + 1
+                         j1 = I_DINB(2,iTrace,iX,iY,iZ,iBlock); j2 = j1 + 1
+                         k1 = I_DINB(3,iTrace,iX,iY,iZ,iBlock); k2 = k1 + 1
                       case(3)
                          j1 = 1; j2=1
-                         i1 = I_DINB(2,iRay,iX,iY,iZ,iBlock); i2 = i1 + 1
-                         k1 = I_DINB(3,iRay,iX,iY,iZ,iBlock); k2 = k1 + 1
+                         i1 = I_DINB(2,iTrace,iX,iY,iZ,iBlock); i2 = i1 + 1
+                         k1 = I_DINB(3,iTrace,iX,iY,iZ,iBlock); k2 = k1 + 1
                       case(4)
                          j1 = nJ + 1; j2 = nJ + 1
-                         i1 = I_DINB(2,iRay,iX,iY,iZ,iBlock); i2 = i1 + 1
-                         k1 = I_DINB(3,iRay,iX,iY,iZ,iBlock); k2 = k1 + 1
+                         i1 = I_DINB(2,iTrace,iX,iY,iZ,iBlock); i2 = i1 + 1
+                         k1 = I_DINB(3,iTrace,iX,iY,iZ,iBlock); k2 = k1 + 1
                       case(5)
                          k1 = 1; k2 = 1
-                         i1 = I_DINB(2,iRay,iX,iY,iZ,iBlock); i2 = i1 + 1
-                         j1 = I_DINB(3,iRay,iX,iY,iZ,iBlock); j2 = j1 + 1
+                         i1 = I_DINB(2,iTrace,iX,iY,iZ,iBlock); i2 = i1 + 1
+                         j1 = I_DINB(3,iTrace,iX,iY,iZ,iBlock); j2 = j1 + 1
                       case(6)
                          k1 = nK + 1; k2 = k1
-                         i1 = I_DINB(2,iRay,iX,iY,iZ,iBlock); i2 = i1 + 1
-                         j1 = I_DINB(3,iRay,iX,iY,iZ,iBlock); j2 = j1 + 1
+                         i1 = I_DINB(2,iTrace,iX,iY,iZ,iBlock); i2 = i1 + 1
+                         j1 = I_DINB(3,iTrace,iX,iY,iZ,iBlock); j2 = j1 + 1
                       end select
 
                       ! Put interpolation values into a small array
@@ -436,12 +436,12 @@ contains
                       !$acc loop seq collapse(3)
                       do k0 = k1, k2; do j0 = j1, j2; do i0 = i1, i2
                          Trace_DI(:,iCount) = &
-                              Trace_DSNB(:,iRay,i0,j0,k0,iBlock)
+                              Trace_DSNB(:,iTrace,i0,j0,k0,iBlock)
                          iCount = iCount + 1
                       end do; end do; end do
-                      call rayface_interpolate(Trace_DI, &
-                           WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock), 4, &
-                           Trace_DINB(:,iRay,iX,iY,iZ,iBlock))
+                      call interpolate_trace_face(Trace_DI, &
+                           WeightTrace_DINB(:,iTrace,iX,iY,iZ,iBlock), 4, &
+                           Trace_DINB(:,iTrace,iX,iY,iZ,iBlock))
                    end if
                 end do
              end if ! nIterTrace==0
@@ -452,9 +452,9 @@ contains
 
        ! Exchange Trace_DINB information
 
-       call timing_start('trace_pass')
-       call ray_pass
-       call timing_stop('trace_pass')
+       call timing_start('pass_trace')
+       call pass_trace
+       call timing_stop('pass_trace')
 
        nIterTrace = nIterTrace + 1
        !$acc update device(nIterTrace)
@@ -464,7 +464,7 @@ contains
           call timing_show('trace_field_grid', 1)
        end if
 
-       ! Check for significant changes and loop rays in Trace_DINB
+       ! Check for significant changes and loops in Trace_DINB
        call timing_start('trace_check')
 
        DoneChange = .true.; DoneLoop = .true.
@@ -516,24 +516,24 @@ contains
        write(*,*)NameSub,' finished after ',nIterTrace,' iterations'
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
-          do iRay=1,2
-             if(any(Trace_DINB(1,iRay,1:nI,1:nJ,1:nK,iBlock)<BODYRAY))then
-                Ijk_D = minloc(Trace_DINB(1,iRay,1:nI,1:nJ,1:nK,iBlock))
-                write(*,*)'LOOPRAYFACE: iRay,me,Ijk_D,value,Xyz_D=',&
-                     iRay,iProc,Ijk_D,iBlock,&
-                     minval(Trace_DINB(1,iRay,1:nI,1:nJ,1:nK,iBlock)),&
+          do iTrace=1,2
+             if(any(Trace_DINB(1,iTrace,1:nI,1:nJ,1:nK,iBlock)<BODYRAY))then
+                Ijk_D = minloc(Trace_DINB(1,iTrace,1:nI,1:nJ,1:nK,iBlock))
+                write(*,*)'LOOPRAYFACE: iTrace,me,Ijk_D,value,Xyz_D=',&
+                     iTrace, iProc, Ijk_D, iBlock, &
+                     minval(Trace_DINB(1,iTrace,1:nI,1:nJ,1:nK,iBlock)),&
                      Xyz_DGB(:,Ijk_D(1),Ijk_D(2),Ijk_D(3),iBlock) &
                      -0.5*CellSize_DB(:,iBlock)
              end if
           end do
        end do
-       if(index(StringTest,'ray_debugger') > 0)call ray_debugger
+       if(index(StringTest,'trace_debugger') > 0)call trace_debugger
     end if
 
     if(DoTime.and.iProc==0)then
        write(*,'(i5,a)') nIterTrace,' iterations:'
        call timing_show('trace_field_grid',1)
-       call timing_show('ray_pass',2)
+       call timing_show('pass_trace',2)
     end if
 
     if(DoTest)write(*,*)NameSub,' starting cell center assignments'
@@ -542,19 +542,19 @@ contains
     call timing_start('trace_grid_fast2')
 
     ! Assign face Trace_DSNB values to cell centers
-    !$acc parallel loop gang private(DoCheckInside, iRay)
+    !$acc parallel loop gang private(DoCheckInside, iTrace)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
        ! Set flag if checking on the ionosphere is necessary
        DoCheckInside = rMin_B(iBlock) < rTrace
 
-       do iRay = 1, 2
+       do iTrace = 1, 2
 #ifndef _OPENACC
           ! Some optimization for fully open blocks
           if(.not.DoCheckInside)then
-             if(all(Trace_DINB(1,iRay,:,:,:,iBlock) == OPENRAY))then
-                Trace_DSNB(:,iRay,:,:,:,iBlock) = OPENRAY
+             if(all(Trace_DINB(1,iTrace,:,:,:,iBlock) == OPENRAY))then
+                Trace_DSNB(:,iTrace,:,:,:,iBlock) = OPENRAY
                 CYCLE
              end if
           end if
@@ -565,26 +565,26 @@ contains
              ! Shortcuts for inner and false cells
              if(r_GB(iX,iY,iZ,iBlock) < rInner .or. &
                   .not.Used_GB(iX,iY,iZ,iBlock))then
-                Trace_DSNB(:,iRay,iX,iY,iZ,iBlock) = BODYRAY
-                if(DoTestRay)write(*,*)'BODYRAY'
+                Trace_DSNB(:,iTrace,iX,iY,iZ,iBlock) = BODYRAY
+                if(DoTestTrace)write(*,*)'BODYRAY'
                 CYCLE
              end if
-             if(DoTestRay)write(*,*)'calling follow_fast'
+             if(DoTestTrace)write(*,*)'calling follow_fast'
 
-             ! Follow Trace_DSNB in direction iRay
+             ! Follow Trace_DSNB in direction iTrace
              GenIni_D = [real(iX), real(iY), real(iZ)]
              iFace = follow_fast(.false., Gen_D, GenIni_D, DoCheckInside, &
-                  iRay, iBlock)
+                  iTrace, iBlock)
 
-             if(DoTestRay)write(*,*)'calling assign_ray'
+             if(DoTestTrace)write(*,*)'calling assign_trace'
 
              ! Assign value to Trace_DSNB
-             call assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
+             call assign_trace(iFace, iTrace, iBlock, iX, iY, iZ, &
                   i1, j1, k1, i2, j2, k2, &
-                  .false., Trace_DSNB(:,iRay,iX,iY,iZ,iBlock), Gen_D, Weight_I)
+                  .false., Trace_DSNB(:,iTrace,iX,iY,iZ,iBlock), Gen_D, Weight_I)
 
           end do; end do; end do ! iX, iY, iZ
-       end do ! iRay
+       end do ! iTrace
     end do ! iBlock
 
     call timing_stop('trace_grid_fast2')
@@ -597,12 +597,12 @@ contains
        ! Check for unassigned cell centers
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
-          do iRay=1,2
-             if(any(Trace_DSNB(1,iRay,1:nI,1:nJ,1:nK,iBlock)<BODYRAY))then
-                Ijk_D = minloc(Trace_DSNB(1,iRay,1:nI,1:nJ,1:nK,iBlock))
-                write(*,*)'LoopRay: iRay,me,Ijk_D,value,Xyz_D=',&
-                     iRay,iProc,Ijk_D,iBlock,&
-                     minval(Trace_DSNB(1,iRay,1:nI,1:nJ,1:nK,iBlock)),&
+          do iTrace = 1, 2
+             if(any(Trace_DSNB(1,iTrace,1:nI,1:nJ,1:nK,iBlock)<BODYRAY))then
+                Ijk_D = minloc(Trace_DSNB(1,iTrace,1:nI,1:nJ,1:nK,iBlock))
+                write(*,*)'LoopRay: iTrace,me,Ijk_D,value,Xyz_D=',&
+                     iTrace,iProc,Ijk_D,iBlock,&
+                     minval(Trace_DSNB(1,iTrace,1:nI,1:nJ,1:nK,iBlock)),&
                      Xyz_DGB(:,Ijk_D(1),Ijk_D(2),Ijk_D(3),iBlock)
              end if
           end do
@@ -637,7 +637,7 @@ contains
   contains
     !==========================================================================
 #ifndef _OPENACC
-    subroutine ray_debugger
+    subroutine trace_debugger
 
       ! Debug Trace_DINB values
 
@@ -645,37 +645,37 @@ contains
       !------------------------------------------------------------------------
       do
          ! Read position
-         write(*,'(a)',ADVANCE='NO')'Trace_DINB x,y,z,iRay:'
-         read(*,*) xTest,yTest,zTest,iRay
-         if(xTest==0.0 .and. yTest==0.0 .and. zTest==0.0) EXIT
+         write(*,'(a)',ADVANCE='NO')'Trace_DINB x,y,z,iTrace:'
+         read(*,*) xTest, yTest, zTest, iTrace
+         if(xTest == 0.0 .and. yTest == 0.0 .and. zTest == 0.0) EXIT
 
          ! Find position
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
-            do iX=1,nI+1
+            do iX = 1, nI+1
                if(abs(Xyz_DGB(x_,iX,1,1,iBlock) &
                     -0.5*CellSize_DB(x_,iBlock)-xTest) > 0.01) CYCLE
-               do iY=1,nJ+1
+               do iY = 1, nJ+1
                   if(abs(Xyz_DGB(y_,1,iY,1,iBlock) &
                        -0.5*CellSize_DB(y_,iBlock)-yTest) > 0.01) CYCLE
-                  do iZ=1,nK+1
+                  do iZ = 1, nK+1
                      if(abs(Xyz_DGB(z_,1,1,iZ,iBlock) &
                           -0.5*CellSize_DB(z_,iBlock)-zTest) > 0.01) CYCLE
 
                      ! Print information
-
-                     write(*,*)'iProc,iBlock,iX,iY,iZ=',iProc,iBlock,iX,iY,iZ
+                     write(*,*)'iProc,iBlock,iX,iY,iZ=', &
+                          iProc, iBlock, iX, iY, iZ
                      write(*,*)'Xyz_DGB(z_,1,1,1),dx=',&
                           Xyz_DGB(:,1,1,1,iBlock), CellSize_DB(x_,iBlock)
 
-                     iPos_D=I_DINB(:,iRay,iX,iY,iZ,iBlock)
+                     iPos_D=I_DINB(:,iTrace,iX,iY,iZ,iBlock)
                      if(iPos_D(1)>0)then
                         write(*,*)' Trace_DINB   =', &
-                             Trace_DINB(:,iRay,iX,iY,iZ,iBlock)
+                             Trace_DINB(:,iTrace,iX,iY,iZ,iBlock)
                         write(*,*)' I_DINB=', &
-                             I_DINB(:,iRay,iX,iY,iZ,iBlock)
+                             I_DINB(:,iTrace,iX,iY,iZ,iBlock)
                         write(*,*)' WeightTrace_DINB=', &
-                             WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock)
+                             WeightTrace_DINB(:,iTrace,iX,iY,iZ,iBlock)
                         select case(iPos_D(1))
                         case(1,2)
                            jX = 1+nI*(iPos_D(1)-1);
@@ -692,13 +692,13 @@ contains
                            kX = jX+1; kY = jY+1; kZ = jZ
                         end select
                         write(*,*)' Trace_DINB(1,end)=',&
-                             Trace_DINB(1,iRay,jX:kX,jY:kY,jZ:kZ,iBlock)
-                        write(*,*)' jX,kX,jY,kY,jZ,kZ=',jX,kX,jY,kY,jZ,kZ
+                             Trace_DINB(1,iTrace,jX:kX,jY:kY,jZ:kZ,iBlock)
+                        write(*,*)' jX,kX,jY,kY,jZ,kZ=', jX, kX, jY, kY, jZ, kZ
                         write(*,*)' Xyz(End)=',&
                              Xyz_DGB(:,jx,jy,jz,iBlock) &
                              -0.5*CellSize_DB(:,iBlock)
                      else
-                        write(*,*)' I_DINB=',iPos_D
+                        write(*,*)' I_DINB=', iPos_D
                      end if
                   end do
                end do
@@ -706,7 +706,7 @@ contains
          end do
       end do
 
-    end subroutine ray_debugger
+    end subroutine trace_debugger
     !==========================================================================
 #endif
     subroutine interpolate_bb_node(Gen_D, b_D, iBlock)
@@ -790,7 +790,7 @@ contains
 
     end subroutine interpolate_bb_node
     !==========================================================================
-    logical function do_follow_iono(Xyz_D, iRay)
+    logical function do_follow_iono(Xyz_D, iTrace)
       !$acc routine seq
 
       ! Trace inside ionosphere starting from Xyz_D which
@@ -804,7 +804,7 @@ contains
       use CON_planet_field, ONLY: map_planet_field, map_planet_field_fast
 
       real, intent(inout):: Xyz_D(3)
-      integer, intent(in):: iRay
+      integer, intent(in):: iTrace
 
       integer :: iHemisphere
       real    :: x_D(3)
@@ -822,12 +822,12 @@ contains
 
       if(iHemisphere==0)then
          write(*,*)'iHemisphere==0 for Xyz_D=',Xyz_D
-         write(*,*)'iBlock, iRay=',iBlock,iRay
+         write(*,*)'iBlock, iTrace=',iBlock,iTrace
          call stop_mpi('ERROR in do_follow_iono')
       end if
 #endif
 
-      if(iHemisphere*DipoleStrengthSi*sign(1.0,1.5-iRay) < 0.0)then
+      if(iHemisphere*DipoleStrengthSi*sign(1.0,1.5-iTrace) < 0.0)then
          Xyz_D = x_D
          do_follow_iono = .true.
       else
@@ -837,11 +837,11 @@ contains
     end function do_follow_iono
     !==========================================================================
     function follow_fast(IsSurfacePoint, Gen_D, GenIn_D, DoCheckInside, &
-         iRay, iBlock) result(iFaceOut)
+         iTrace, iBlock) result(iFaceOut)
       !$acc routine seq
 
       ! Trace starting at initial position GenIn_D in direction
-      ! iRay until we hit the wall of the control volume or the ionosphere.
+      ! iTrace until we hit the wall of the control volume or the ionosphere.
       ! Return 1,2,3,4,5,6 if the trace hit the block faces
       ! Return RayIono_   if the trace hit the ionosphere
       ! Return RayLoop_   if the trace did not hit anything
@@ -854,7 +854,7 @@ contains
       real, intent(inout):: Gen_D(3)
       real, intent(in)   :: GenIn_D(3)
       logical, intent(in):: DoCheckInside
-      integer, intent(in):: iRay, iBlock
+      integer, intent(in):: iTrace, iBlock
 
       ! Result
 
@@ -886,10 +886,12 @@ contains
 
       ! Counter for entering do_follow_iono
       integer :: nIono
+
+      character(len=*), parameter:: NameSub = 'follow_fast'
       !------------------------------------------------------------------------
-      if(DoTestRay)&
-           write(*,*)'follow_fast: me,iBlock,IsSurfacePoint,GenIn_D,iRay=',&
-           iProc, iBlock, IsSurfacePoint, GenIn_D, iRay
+      if(DoTestTrace)&
+           write(*,*) NameSub,': me,iBlock,IsSurfacePoint,GenIn_D,iTrace=',&
+           iProc, iBlock, IsSurfacePoint, GenIn_D, iTrace
 
       ! Step size limits
       DsMax=1.0
@@ -897,7 +899,7 @@ contains
       DsTiny=1.e-6
 
       ! Initial value
-      DsNext=sign(DsMax,1.5-iRay)
+      DsNext=sign(DsMax,1.5-iTrace)
 
       ! Accuracy in terms of Gen_D in normalized coordinates
       DxOpt=0.01
@@ -926,7 +928,7 @@ contains
 
             if(r2 <= rTrace2)then
 
-               if(DoTestRay)write(*,*)&
+               if(DoTestTrace)write(*,*)&
                     'Inside rTrace at me,iBlock,nSegment,Gen_D,Xyz_D=',&
                     iProc,iBlock,nSegment,Gen_D,Xyz_D
 
@@ -935,7 +937,7 @@ contains
                   if(nSegment==0)then
                      iFaceOut = RayBody_
 
-                     if(DoTestRay)write(*,*)&
+                     if(DoTestTrace)write(*,*)&
                           'Initial point inside rInner at me,iBlock,Xyz_D=',&
                           iProc,iBlock,Xyz_D
                   else
@@ -957,7 +959,7 @@ contains
 
                ! Try mapping down to rIonosphere if we haven't tried yet
                if(nIono<1)then
-                  if(do_follow_iono(Xyz_D, iRay))then
+                  if(do_follow_iono(Xyz_D, iTrace))then
                      Gen_D=Xyz_D
                      iFaceOut=RayIono_
                      EXIT
@@ -981,13 +983,13 @@ contains
 
          ! Check if the trace is pointing outwards
          if(nSegment==0.and.IsSurfacePoint)then
-            if(DoTestRay)write(*,*)'me,iBlock,GenIni_D,bIni_D=', &
+            if(DoTestTrace)write(*,*)'me,iBlock,GenIni_D,bIni_D=', &
                  iProc, iBlock, GenIni_D, bIni_D
 
             if(any(GenMid_D < GenMin_D) .or. any(GenMid_D > GenMax_D))then
                iFaceOut = RayOut_
 
-               if(DoTestRay)then
+               if(DoTestTrace)then
                   write(*,*)'me,iBlock,GenMid_D=', iProc, iBlock, GenMid_D
                   write(*,*)'trace points outwards: me,iBlock,Ds,Xyz_D=',&
                        iProc, iBlock, Ds,&
@@ -1007,7 +1009,7 @@ contains
             ! and take ratio relative to DxOpt
             DxRel = abs(Ds)*maxval(abs(bMid_D - bIni_D))/DxOpt
 
-            if(DoTestRay .and. .false.) &
+            if(DoTestTrace .and. .false.) &
                  write(*,*)'me,iBlock,GenMid_D,bMid_D,DxRel=', &
                  iProc, iBlock, GenMid_D, bMid_D, DxRel
 
@@ -1028,7 +1030,7 @@ contains
                ! New mid point using the reduced Ds
                GenMid_D = GenIni_D + 0.5*Ds*bIni_D
 
-               if(DoTestRay .and. DoDebug)&
+               if(DoTestTrace .and. DoDebug)&
                     write(*,*)'new decreased Ds: me,iBlock,Ds=', &
                     iProc,iBlock,Ds
 
@@ -1038,7 +1040,7 @@ contains
 
                   DsNext = sign(min(DsMax, abs(Ds)/sqrt(DxRel)), Ds)
 
-                  if(DoTestRay .and. DoDebug)&
+                  if(DoTestTrace .and. DoDebug)&
                        write(*,*)'new increased DsNext: me,iBlock,DsNext=', &
                        iProc, iBlock, DsNext
 
@@ -1052,7 +1054,7 @@ contains
          nSegment = nSegment+1
          s = s + abs(Ds)
 
-         if(DoTestRay .and. DoDebug)&
+         if(DoTestTrace .and. DoDebug)&
               write(*,*)'me,iBlock,nSegment,s,Gen_D=', &
               iProc, iBlock, nSegment, s, Gen_D
 
@@ -1068,16 +1070,16 @@ contains
             end if
 
             ! Find out which wall was hit
-            if    (Gen_D(1)<=GenMin_D(1))then; iFaceOut=1
-            elseif(Gen_D(2)<=GenMin_D(2))then; iFaceOut=3
-            elseif(Gen_D(3)<=GenMin_D(3))then; iFaceOut=5
-            elseif(Gen_D(1)>=GenMax_D(1))then; iFaceOut=2
-            elseif(Gen_D(2)>=GenMax_D(2))then; iFaceOut=4
-            elseif(Gen_D(3)>=GenMax_D(3))then; iFaceOut=6
+            if    (Gen_D(1) <= GenMin_D(1))then; iFaceOut=1
+            elseif(Gen_D(2) <= GenMin_D(2))then; iFaceOut=3
+            elseif(Gen_D(3) <= GenMin_D(3))then; iFaceOut=5
+            elseif(Gen_D(1) >= GenMax_D(1))then; iFaceOut=2
+            elseif(Gen_D(2) >= GenMax_D(2))then; iFaceOut=4
+            elseif(Gen_D(3) >= GenMax_D(3))then; iFaceOut=6
 #ifndef _OPENACC
             else
-               write(*,*)'Error in follow_fast for me,iBlock,iX,iY,iZ=',&
-                    iProc,iBlock,iX,iY,iZ
+               write(*,*) NameSub, ': Error at me,iBlock,iX,iY,iZ=', &
+                    iProc, iBlock, iX, iY, iZ
                write(*,*)'nSegment,Gen_D,Ds,DsBack=', &
                     nSegment, Gen_D, Ds, DsBack
                call stop_mpi('GM_follow_fast: Hit wall but which one?')
@@ -1085,8 +1087,8 @@ contains
             end if
 
             ! Make sure that Gen_D is not outside the control volume
-            Gen_D=max(GenMin_D+DsTiny,Gen_D)
-            Gen_D=min(GenMax_D-DsTiny,Gen_D)
+            Gen_D = max(GenMin_D+DsTiny, Gen_D)
+            Gen_D = min(GenMax_D-DsTiny, Gen_D)
 
             EXIT
          end if
@@ -1095,7 +1097,7 @@ contains
          if(s>sMax)then
             ! Seems to be a closed loop within a block
 
-            if(DoTestRay)then
+            if(DoTestTrace)then
                write(*,*)'CLOSED LOOP at me,iBlock,iX,iY,iZ,Gen_D,Xyz_D=',&
                     iProc,iBlock,iX,iY,iZ,Gen_D,&
                     Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
@@ -1106,26 +1108,26 @@ contains
          end if
 
       end do
-      if(DoTestRay)write(*,*) &
-           'Finished follow_fast at me,iBlock,nSegment,iFaceOut,Gen_D,Xyz_D=',&
+      if(DoTestTrace)write(*,*) NameSub, &
+           ' finished at me,iBlock,nSegment,iFaceOut,Gen_D,Xyz_D=',&
            iProc,iBlock,nSegment,iFaceOut,Gen_D,&
            Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
 
     end function follow_fast
     !==========================================================================
-    subroutine assign_ray(iFace, iRay, iBlock, iX, iY, iZ, i1, j1, k1, &
+    subroutine assign_trace(iFace, iTrace, iBlock, iX, iY, iZ, i1, j1, k1, &
          i2, j2, k2, IsSurfacePoint, Trace_D, Gen_D, Weight_I, UseRay)
       !$acc routine seq
 
       ! Assign value to Trace_D(3) based on trace intersection
       ! given by the global variables iFace and position Gen_D(3)
       !
-      ! iRay is 1 if trace points in positive B direction and 2 otherwise
+      ! iTrace is 1 if trace points in positive B direction and 2 otherwise
       !
       ! IsSurfacePoint is true if the tracing was started from the block
       ! face and false if it was started from a cell center
 
-      integer, intent(in)    :: iFace, iRay, iBlock, iX, iY, iZ
+      integer, intent(in)    :: iFace, iTrace, iBlock, iX, iY, iZ
       integer, intent(inout) :: i1,j1,k1,i2,j2,k2
       logical, intent(in)    :: IsSurfacePoint
 
@@ -1141,40 +1143,40 @@ contains
       ! Distances between Gen_D and the 4 grid points used for interpolation
       real :: d1, e1, d2, e2
 
-      character(len=*), parameter:: NameSub = 'assign_ray'
+      character(len=*), parameter:: NameSub = 'assign_trace'
       !------------------------------------------------------------------------
-      if(DoTestRay)write(*,*)&
-           NameSub,' starting with IsSurfacePoint, iRay, iFace=',&
-           IsSurfacePoint,iRay,iFace
+      if(DoTestTrace)write(*,*)&
+           NameSub,' starting with IsSurfacePoint, iTrace, iFace=',&
+           IsSurfacePoint,iTrace,iFace
 
       select case(iFace)
       case(RayOut_)
          ! The trace points outward
          Trace_D = OUTRAY
 
-         if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=OUTRAY'
+         if(DoTestTrace)write(*,*)NameSub,' finished with Trace_D=OUTRAY'
 
          RETURN
       case(RayLoop_)
          ! The trace did not hit the wall of the block
          Trace_D = LoopRay
 
-         if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=LoopRay'
+         if(DoTestTrace)write(*,*)NameSub,' finished with Trace_D=LoopRay'
 
          RETURN
       case(RayBody_)
          ! The trace hit a body
          Trace_D = BODYRAY
 
-         if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=BODYRAY'
+         if(DoTestTrace)write(*,*)NameSub,' finished with Trace_D=BODYRAY'
 
          RETURN
       case(RayIono_)
          ! The trace hit the ionosphere
          Trace_D = Gen_D
 
-         if(DoTestRay)write(*,*)&
-              NameSub,' finished with Trace_D on ionosphere, Trace_D=',Trace_D
+         if(DoTestTrace)write(*,*) NameSub, &
+              ' finished with Trace_D on ionosphere, Trace_D=',Trace_D
 
          RETURN
       case(1, 2)
@@ -1218,7 +1220,7 @@ contains
       case default
          write(*,*)'Impossible value for iFace=',iFace,' at iX,iY,iZ,iBlock=',&
               iX,iY,iZ,iBlock
-         call stop_mpi('assign_ray')
+         call stop_mpi('assign_trace')
 #endif
       end select
 
@@ -1229,7 +1231,7 @@ contains
       Weight_I(3) = d2*e1
       Weight_I(4) = d1*e1
 
-      if(DoTestRay)write(*,*)'Weight_I=',Weight_I
+      if(DoTestTrace)write(*,*)'Weight_I=',Weight_I
 
       ! Exclude the starting point if its among the 4 interpolated cells
       if(IsSurfacePoint)then
@@ -1246,13 +1248,13 @@ contains
             ! Normalize weights
             Weight_I = Weight_I/sum(Weight_I)
 
-            if(DoTestRay)write(*,*) &
+            if(DoTestTrace)write(*,*) &
                  'Excluded point: me,iBlock,iX,iY,iZ,Weight_I=',&
                  iProc, iBlock, iX, iY, iZ, Weight_I
          end if
       end if
 
-      if(DoTestRay) write(*,*)'i1,j1,k1,i2,j2,k2,d1,e1=', &
+      if(DoTestTrace) write(*,*)'i1,j1,k1,i2,j2,k2,d1,e1=', &
            i1, j1, k1, i2, j2, k2, d1, e1
 
       iCount = 1
@@ -1260,22 +1262,22 @@ contains
          if(present(UseRay)) then
             ! Use Trace_DSNB instead of Trace_DINB to avoid GPU race condition
             if(UseRay) &
-                 Trace_DI(:,iCount) = Trace_DSNB(:,iRay,i0,j0,k0,iBlock)
+                 Trace_DI(:,iCount) = Trace_DSNB(:,iTrace,i0,j0,k0,iBlock)
          else
-            Trace_DI(:,iCount) = Trace_DINB(:,iRay,i0,j0,k0,iBlock)
+            Trace_DI(:,iCount) = Trace_DINB(:,iTrace,i0,j0,k0,iBlock)
          endif
          iCount = iCount + 1
       end do; end do; end do
 
-      call rayface_interpolate(Trace_DI, Weight_I, 4, Trace_D)
+      call interpolate_trace_face(Trace_DI, Weight_I, 4, Trace_D)
 
-      if(DoTestRay)write(*,*)NameSub,' finished Trace_D=',Trace_D
+      if(DoTestTrace)write(*,*)NameSub,' finished Trace_D=',Trace_D
 
-    end subroutine assign_ray
+    end subroutine assign_trace
     !==========================================================================
   end subroutine trace_grid_fast
   !============================================================================
-  subroutine rayface_interpolate(Trace_DI, Weight_I, nValue, Trace_D)
+  subroutine interpolate_trace_face(Trace_DI, Weight_I, nValue, Trace_D)
     !$acc routine seq
 
     ! Collect weights for Trace_DI values that differ less than dTraceMax
@@ -1305,7 +1307,7 @@ contains
     integer:: iWeightMax
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'rayface_interpolate'
+    character(len=*), parameter:: NameSub = 'interpolate_trace_face'
     !--------------------------------------------------------------------------
     if(.not.UsePreferredInterpolation .and. &
          maxval(Weight_I) - minval(Weight_I) > 0.0001)then
@@ -1325,7 +1327,7 @@ contains
        endwhere
     end if
 
-    if(DoTestRay)then
+    if(DoTestTrace)then
        write(*,*) NameSub
        write(*,*)'Trace_DI(1,:)=',Trace_DI(1,:)
        write(*,*)'Trace_DI(2,:)=',Trace_DI(2,:)
@@ -1338,14 +1340,14 @@ contains
     if(all(Trace_DI(1,:) == OPENRAY))then
        ! all surrounding rays are open
        Trace_D = OPENRAY
-       if(DoTestRay)write(*,*) NameSub,' finished with fully OPENRAY'
+       if(DoTestTrace)write(*,*) NameSub,' finished with fully OPENRAY'
        RETURN
     end if
 
     if(all(Trace_DI(1,:) == NoRay))then
        ! all surrounding rays are unknown
        Trace_D = NoRay
-       if(DoTestRay)write(*,*) NameSub,' finished with fully NoRay'
+       if(DoTestTrace)write(*,*) NameSub,' finished with fully NoRay'
        RETURN
     end if
 
@@ -1414,14 +1416,14 @@ contains
        end if
     end if
 
-    if(DoTestRay)then
+    if(DoTestTrace)then
        write(*,*) NameSub,': WeightSum_I=',WeightSum_I(1:n)
        write(*,*) NameSub,' finished with Trace_D=',Trace_D
     end if
 
-  end subroutine rayface_interpolate
+  end subroutine interpolate_trace_face
   !============================================================================
-  subroutine ray_pass
+  subroutine pass_trace
 
     ! Exchange and update Trace_DINB values between blocks direction
     ! by direction
@@ -1449,343 +1451,37 @@ contains
 #endif
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'ray_pass'
+    character(len=*), parameter:: NameSub = 'pass_trace'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     do iDir = 1, 3
        ! Send messages for both faces
-       ! write(*,*)'me, ray_pass_faces is starting, ',iDir, iProc
-       call ray_pass_faces(iDir, 2*iDir-1, 2*iDir)
-       ! write(*,*)'me, ray_pass_faces is finished, ',iDir, iProc
+#ifdef _OPENACC
+       call pass_face_gpu(iDir, 2*iDir-1, 2*iDir)
+#else
+       call pass_face(iDir, 2*iDir-1, 2*iDir)
+#endif
     end do ! iDir
 
-    if(DoTest)write(*,*)'ray_pass starting prolongation'
+    if(DoTest)write(*,*) NameSub, ' starting prolongation'
     call timing_start('trace_prolong')
     !$acc parallel loop gang
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
        do iFace = 1, 6
-          if(DiLevel_EB(iFace,iBlock) == 1)call prolong_ray(iFace, iBlock)
+          if(DiLevel_EB(iFace,iBlock) == 1)call prolong_trace(iFace, iBlock)
        end do
     end do
     call timing_stop('trace_prolong')
 
     call test_stop(NameSub, DoTest)
+#ifndef _OPENACC
   contains
     !==========================================================================
-    subroutine setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
-         iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-         iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-         iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
-      !$acc routine seq
-
-      integer, intent(in):: iFace, iDir
-      integer, intent(out):: jFace, iSide, iSize, iSizeR
-      integer, intent(out) :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
-      integer, intent(out) :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
-      integer, intent(out) :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
-
-      ! Set ranges orthogonal to iDir based on the value of iDir
-      !------------------------------------------------------------------------
-      if(iDir /= 1)then
-         iMinG = 1;  iMaxG = nI + 1
-         iMinO = 1;  iMaxO = nI + 1
-         iMinR = 1;  iMaxR = nI/2 + 1
-      end if
-
-      if(iDir /= 2)then
-         jMinG = 1;  jMaxG = nJ + 1
-         jMinO = 1;  jMaxO = nJ + 1
-         jMinR = 1;  jMaxR = nJ/2 + 1
-      endif
-
-      if(iDir /= 3)then
-         kMinG = 1;  kMaxG = nK + 1
-         kMinO = 1;  kMaxO = nK + 1
-         kMinR = 1;  kMaxR = nK/2 + 1
-      end if
-
-      ! Set ranges in direction of iDir based on the value of iFace
-
-      select case(iFace)
-      case(1)
-         jFace = 2;    iSide = 1
-         iMinO = 1;    iMaxO = 1
-         iMinG = nI+1; iMaxG = nI+1
-         iMinR = 1;    iMaxR = 1
-      case(3)
-         jFace = 4;    iSide = 1
-         jMinO = 1;    jMaxO = 1
-         jMinG = nJ+1; jMaxG = nJ+1
-         jMinR = 1;    jMaxR = 1
-      case(5)
-         jFace = 6;    iSide = 1
-         kMinO = 1;    kMaxO = 1
-         kMinG = nK+1; kMaxG = nK+1
-         kMinR = 1;    kMaxR = 1
-      case(2)
-         jFace = 1;    iSide = 2
-         iMinO = nI+1; iMaxO = nI+1
-         iMinG = 1;    iMaxG = 1
-         iMinR = 1;    iMaxR = 1
-      case(4)
-         jFace = 3;    iSide = 2
-         jMinO = nJ+1; jMaxO = nJ+1
-         jMinG = 1;    jMaxG = 1
-         jMinR = 1;    jMaxR = 1
-      case(6)
-         jFace = 5;    iSide = 2
-         kMinO = nK+1; kMaxO = nK+1
-         kMinG = 1;    kMaxG = 1
-         kMinR = 1;    kMaxR = 1
-      end select
-
-      ! Size of full and restricted cell layers
-      iSize  = 6*(iMaxG - iMinG + 1)*(jMaxG - jMinG + 1)*(kMaxG - kMinG + 1)
-      iSizeR = 6*(iMaxR - iMinR + 1)*(jMaxR - jMinR + 1)*(kMaxR - kMinR + 1)
-
-    end subroutine setranges_ray
-    !==========================================================================
-    subroutine setsubrange_ray(DoSend, iFace, iSubFace, &
-         iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-         iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-         iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
-         iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
-      !$acc routine seq
-
-      logical, intent(in) :: DoSend
-      integer, intent(in) :: iFace, iSubFace
-      integer, intent(in) :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
-      integer, intent(in) :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
-      integer, intent(in) :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
-      integer, intent(out) :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
-
-      ! Select appropriate quarter of ghost cell layer
-      !------------------------------------------------------------------------
-      select case(iFace)
-      case(1, 2)
-         if(DoSend)then
-            iMinS = iMinO; iMaxS = iMaxO
-         else
-            iMinS = iMinG; iMaxS = iMaxG
-         end if
-
-         select case(iSubFace)
-            ! Beware, case(2) and case(3) are swapped
-         case(1)
-            jMinS = jMinR; jMaxS = jMaxR
-            kMinS = kMinR; kMaxS = kMaxR
-         case(3)
-            jMinS = jMinR + nJ/2; jMaxS = jMaxR + nJ/2;
-            kMinS = kMinR; kMaxS = kMaxR
-         case(2)
-            jMinS = jMinR; jMaxS = jMaxR;
-            kMinS = kMinR + nK/2; kMaxS = kMaxR + nK/2;
-         case(4)
-            jMinS = jMinR + nJ/2; jMaxS = jMaxR + nJ/2;
-            kMinS = kMinR + nK/2; kMaxS = kMaxR + nK/2;
-         end select
-      case(3, 4)
-         if(DoSend)then
-            jMinS = jMinO; jMaxS = jMaxO
-         else
-            jMinS = jMinG; jMaxS = jMaxG
-         end if
-         select case(iSubFace)
-            ! Beware, case(2) and case(3) are swapped
-         case(1)
-            iMinS = iMinR;        iMaxS = iMaxR;
-            kMinS = kMinR;        kMaxS = kMaxR
-         case(3)
-            iMinS = iMinR + nI/2; iMaxS = iMaxR + nI/2;
-            kMinS = kMinR;        kMaxS = kMaxR
-         case(2)
-            iMinS = iMinR;        iMaxS = iMaxR;
-            kMinS = kMinR + nK/2; kMaxS = kMaxR + nK/2;
-         case(4)
-            iMinS = iMinR + nI/2; iMaxS = iMaxR + nI/2;
-            kMinS = kMinR + nK/2; kMaxS = kMaxR + nK/2;
-         end select
-      case(5, 6)
-         if(DoSend)then
-            kMinS = kMinO; kMaxS = kMaxO
-         else
-            kMinS = kMinG; kMaxS = kMaxG
-         end if
-         select case(iSubFace)
-            ! Beware, case(2) and case(3) are not swapped
-         case(1)
-            iMinS = iMinR;        iMaxS = iMaxR;
-            jMinS = jMinR;        jMaxS = jMaxR
-         case(2)
-            iMinS = iMinR + nI/2; iMaxS = iMaxR + nI/2;
-            jMinS = jMinR;        jMaxS = jMaxR
-         case(3)
-            iMinS = iMinR;        iMaxS = iMaxR;
-            jMinS = jMinR + nJ/2; jMaxS = jMaxR + nJ/2;
-         case(4)
-            iMinS = iMinR + nI/2; iMaxS = iMaxR + nI/2;
-            jMinS = jMinR + nJ/2; jMaxS = jMaxR + nJ/2;
-         end select
-      end select
-
-    end subroutine setsubrange_ray
-    !==========================================================================
-#ifdef _OPENACC
-    ! Note for OPENACC: the following acc subroutines have to be placed before
-    ! ray_pass_faces to prevent a compilation error, as for nvfortran 20.x
-    ! (frontera)
-    ! buffer <-> rayface subroutine for cpu or gpu
-    subroutine rayface2buf(Trace_DINB, iMin, iMax, jMin, jMax, kMin, kMax,&
-         iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP)
-      !$acc routine vector
-      ! use BATL_lib, ONLY: nI, nJ, nK, MaxBlock, nProc
-
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
-      integer, intent(in) :: iBlock, iSide, jProc, MaxSizeR
-      real, intent(in) ::Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
-      real, intent(inout):: BufferS_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
-      ! real, intent(in) :: Trace_DINB(:,:,:,:,:,:)
-      ! real, intent(inout) :: BufferS_IBIP(:,:,:,0:)
-
-      integer :: iTrace, i, j, k, iRay, iDim
-      ! put ray into buf for equal resolution, or put prolonged ray into buf
-      !------------------------------------------------------------------------
-      !$acc loop vector collapse(5) private(iTrace)
-      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-         do iRay=1,2; do iDim=1,3
-            iTrace = (k-kMin)*(jMax-jMin+1)*(iMax-iMin+1)*6 +&
-                 (j-jMin)*(iMax-iMin+1)*6 + (i-iMin)*6 + &
-                 (iRay-1)*3 + iDim
-
-            BufferS_IBIP(iTrace,iBlock,iSide,jProc) = &
-              Trace_DINB(iDim,iRay,i,j,k,iBlock)
-         end do; end do
-      end do; end do; end do
-
-    end subroutine rayface2buf
-    !==========================================================================
-    subroutine subrayface2buf(Trace_DINB, iMin, iMax, jMin, jMax, kMin, kMax,&
-         iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP, iSubFaceIn)
-      !$acc routine vector
-
-      ! put restrited ray into buffer
-
-      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
-      integer, intent(in) :: iBlock, iSide, jProc, MaxSizeR
-      real, intent(in) ::Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
-      real, intent(inout):: BufferS_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
-
-      integer, intent(in):: iSubFaceIn
-
-      integer :: iTrace, i, j, k, iRay, iDim
-      !------------------------------------------------------------------------
-      !$acc loop vector collapse(5) private(iTrace)
-      do k = kMin, kMax, 2; do j = jMin, jMax, 2; do i = iMin, iMax, 2
-         do iRay = 1, 2; do iDim = 1, 3
-            iTrace = (k-kMin)/2*((jMax-jMin)/2+1)*((iMax-iMin)/2+1)*6 + &
-                 (j-jMin)/2*((iMax-iMin)/2+1)*6 + (i-iMin)/2*6 + &
-                 (iRay-1)*3 + iDim + (iSubFaceIn-1)*MaxSizeR
-
-            BufferS_IBIP(iTrace,iBlock,iSide,jProc) = &
-                 Trace_DINB(iDim,iRay,i,j,k,iBlock)
-         end do; end do
-      end do; end do; end do
-
-    end subroutine subrayface2buf
-    !==========================================================================
-    subroutine buf2rayface_parallel(BufferR_IBIP, Trace_DINB, MaxSizeR, &
-         iMin, iMax, jMin, jMax, kMin, kMax, iBlock, jBlock, jSide, jProc)
-      !$acc routine vector
-
-      ! Take maximum of Trace_DINB and buf (more positive values are more real)
-      ! for the full face
-
-      integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
-      integer, intent(in):: iBlock, jBlock, jSide, jProc
-      real,    intent(in):: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
-      real, intent(inout):: Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
-
-      integer :: i, j, k, iDim, iRay, iTrace
-      !------------------------------------------------------------------------
-      !$acc loop vector collapse(5) private(iTrace)
-      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-         do iRay = 1, 2; do iDim = 1, 3
-            iTrace = (k-kMin)*(jMax-jMin+1)*(iMax-iMin+1)*6 + &
-                 (j-jMin)*(iMax-iMin+1)*6 + (i-iMin)*6 + (iRay-1)*3 + iDim
-
-            Trace_DINB(iDim,iRay,i,j,k,iBlock) = &
-                 max(BufferR_IBIP(iTrace,jBlock,jSide,jProc), &
-                 Trace_DINB(iDim,iRay,i,j,k,iBlock))
-         end do; end do
-      end do; end do; end do
-
-    end subroutine buf2rayface_parallel
-    !==========================================================================
-    subroutine buf2sparserayface_parallel( &
-         BufferR_IBIP, Trace_DINB, MaxSizeR, &
-         iMin, iMax, jMin, jMax, kMin, kMax, iBlock, jBlock, jSide, jProc)
-      !$acc routine vector
-
-      ! Take maximum of Trace_DINB and buf (more positive values are more real)
-      ! for a factor of 2 coarser grid
-
-      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
-      integer, intent(in) :: iBlock,jBlock,jSide,jProc
-      real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
-      real, intent(inout):: Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
-
-      integer :: i,j,k,iDim,iRay,iTrace
-      !------------------------------------------------------------------------
-      !$acc loop vector collapse(5) private(iTrace)
-      do k = kMin, kMax, 2; do j = jMin, jMax, 2; do i = iMin, iMax, 2
-         do iRay = 1, 2; do iDim = 1, 3
-            iTrace = (k-kMin)/2*((jMax-jMin)/2+1)*((iMax-iMin)/2+1)*6 +&
-                 (j-jMin)/2*((iMax-iMin)/2+1)*6 + (i-iMin)/2*6 + &
-                 (iRay-1)*3 + iDim
-
-            Trace_DINB(iDim,iRay,i,j,k,iBlock) = &
-                 max(BufferR_IBIP(iTrace,jBlock,jSide,jProc), &
-                 Trace_DINB(iDim,iRay,i,j,k,iBlock))
-         end do; end do
-      end do; end do; end do
-
-    end subroutine buf2sparserayface_parallel
-    !==========================================================================
-    subroutine buf2subrayface_parallel(BufferR_IBIP, Trace_DINB, MaxSizeR, &
-         iMin, iMax, jMin, jMax, kMin, kMax, iBlock, jBlock, jSide, jProc, &
-         iSubFaceIn)
-      !$acc routine vector
-
-      ! Take maximum of Trace_DINB and buf (more positive values are more real)
-      ! buf is from a factor of 2 finer grid
-
-      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
-      integer, intent(in) :: iBlock, jBlock, jSide, jProc, iSubFaceIn
-      real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
-      real, intent(inout):: Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
-
-      integer :: i, j, k, iDim, iRay, iTrace
-      !------------------------------------------------------------------------
-      !$acc loop vector collapse(5) private(iTrace)
-      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-         do iRay = 1, 2; do iDim = 1, 3
-            iTrace = (k-kMin)*((jMax-jMin)+1)*((iMax-iMin)+1)*6 + &
-                 (j-jMin)*((iMax-iMin)+1)*6 + (i-iMin)*6 + &
-                 (iRay-1)*3 + iDim + (iSubFaceIn-1)*MaxSizeR
-
-            Trace_DINB(iDim,iRay,i,j,k,iBlock) = &
-                 max(BufferR_IBIP(iTrace,jBlock,jSide,jProc), &
-                 Trace_DINB(iDim,iRay,i,j,k,iBlock))
-         end do; end do
-      end do; end do; end do;
-
-    end subroutine buf2subrayface_parallel
-    !==========================================================================
-#else
-    subroutine buf2rayface(Buffer_DIN, iMin, iMax, jMin, jMax, kMin, kMax)
+    subroutine buf_to_trace_face( &
+         Buffer_DIN, iMin, iMax, jMin, jMax, kMin, kMax)
 
       ! Take maximum of Trace_DINB and buf (more positive values are more real)
       ! for the full face
@@ -1797,9 +1493,9 @@ contains
            = max(Buffer_DIN, &
            Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,iBlock))
 
-    end subroutine buf2rayface
+    end subroutine buf_to_trace_face
     !==========================================================================
-    subroutine buf2sparserayface( &
+    subroutine buf_to_sparse_trace_face( &
          Buffer_DIN, iMin, iMax, jMin, jMax, kMin, kMax)
 
       ! Take maximum of Trace_DINB and buf (more positive values are more real)
@@ -1812,17 +1508,17 @@ contains
            max(Buffer_DIN,&
            Trace_DINB(:,:,iMinG:iMaxG:2,jMinG:jMaxG:2,kMinG:kMaxG:2,iBlock))
 
-    end subroutine buf2sparserayface
+    end subroutine buf_to_sparse_trace_face
     !==========================================================================
-    subroutine buf2subrayface(Buffer_DIN, iFace, iSubFace, &
-         iMin, iMax, jMin, jMax, kMin, kMax)
+    subroutine buf_to_trace_subface( &
+         Buffer_DIN, iFace, iSubFace, iMin, iMax, jMin, jMax, kMin, kMax)
 
       ! Set subface range to write into
 
       integer, intent(in) :: iFace, iSubFace, iMin,iMax,jMin,jMax,kMin,kMax
       real, intent(inout) :: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
       !------------------------------------------------------------------------
-      call setsubrange_ray(.false., iFace, iSubFace, &
+      call set_subface_range(.false., iFace, iSubFace, &
            iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
            iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
            iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
@@ -1835,54 +1531,29 @@ contains
            max(Buffer_DIN, &
            Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock))
 
-    end subroutine buf2subrayface
+    end subroutine buf_to_trace_subface
     !==========================================================================
-#endif
-    subroutine ray_pass_faces(iDir, iFaceMin, iFaceMax)
+    subroutine pass_face(iDir, iFaceMin, iFaceMax)
 
       use ModParallel, ONLY : Unset_, DiLevel_EB, jBlock_IEB, jProc_IEB
       use ModMpi
 
       integer, intent(in):: iDir, iFaceMin,iFaceMax
 
-      ! acc declare create clauses for local variables are turned off here
-      ! as before. OPENACC can automate these, while what OPENACC can automate
-      ! should be determined case-by-case.
-
       ! Face, neighbor's face and side indexes Note: iFace is on CPU
       integer :: iFace, jFace, iSide
-      ! acc declare create(iFace, jFace, iSide)
 
       ! number of subfaces (1 or 4), subface (1..nSubFace)
       integer ::  nSubFace, iSubFace
-      ! acc declare create(nSubFace, iSubFace)
-
-#ifdef _OPENACC
-      ! These declarations overwrite variables in parent subroutine ray_pass
-      ! Array ranges for outgoing, incoming, restricted and subfaces
-      integer :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
-      ! acc declare create(iMinO,iMaxO,jMinO,jMaxO,kMinO,kMaxO)
-      integer :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
-      ! acc declare create(iMinG,iMaxG,jMinG,jMaxG,kMinG,kMaxG)
-      integer :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
-      ! acc declare create(iMinR,iMaxR,jMinR,jMaxR,kMinR,kMaxR)
-      integer :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
-      ! acc declare create(iMinS,iMaxS,jMinS,jMaxS,kMinS,kMaxS)
-
-      integer:: iS, jS, kS, iR, jR, kR, iRay
-#endif
 
       ! Descriptors for neighbor
       integer :: jProc, jBlock, DiLevel
-      ! acc declare create(jProc, jBlock, DiLevel)
 
       ! Maximum size of the RESTRICTED Trace_DINB layer to be received
       ! for the 6 trace variables (3 coordinates * 2 trace directions)
       integer, parameter :: MaxSizeR = &
            6*max((nI/2+1)*(nJ/2+1),(nI/2+1)*(nK/2+1),(nJ/2+1)*(nK/2+1))
 
-      ! MPI variables and buffers for cpu and gpu codes
-#ifndef _OPENACC
       ! MPI variables
       integer :: iTag, iRequest, nRecvRequest, iRecvRequest_I(MaxBlock*6), &
            iError
@@ -1893,319 +1564,39 @@ contains
 
       ! Equal and restricted values to be sent are stored in these buffers
       real, allocatable :: BufEqual_DIC(:,:,:,:,:), BufRestrict_DIC(:,:,:,:,:)
-#else
-      ! MPI variables
-      integer :: iRequestR, iRequestS, iProcSend, iError
-      integer, allocatable :: iRequestR_I(:), iRequestS_I(:)
 
-      ! Receive Buffer_IIBI to hold 4 incoming RESTRICTED Trace_DINB values
-      ! for all blocks and for both sides
-      real, allocatable :: BufferS_IBIP(:,:,:,:)
-      real, allocatable :: BufferR_IBIP(:,:,:,:)
-      !$acc declare create(BufferS_IBIP, BufferR_IBIP)
-#endif
       ! Actual size of messages: full, restricted/sparse and actual face
       integer :: iSize, iSizeR, iSize1
-      ! acc declare create(iSize, iSizeR, iSize1)
 
       ! BATL related
       integer:: iNode, iDim, iSideFace
-      ! acc declare create(iNode, iDim, iSideFace)
-#ifdef _OPENACC
-      ! on 1 gpu: finish local copy; on >1 gpus: fill in send buffer
+
+      character(len=*), parameter:: NameSub = 'pass_face'
       !------------------------------------------------------------------------
-      if(nProc > 1)then
-         if (.not. allocated(BufferS_IBIP))&
-              allocate(BufferS_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1))
-         if (.not. allocated(BufferR_IBIP))&
-              allocate(BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1))
-         if (.not. allocated(iRequestS_I)) &
-              allocate(iRequestS_I(1:nProc-1))
-         if (.not. allocated(iRequestR_I)) &
-              allocate(iRequestR_I(1:nProc-1))
-      end if
-
-      call timing_start('trace_pass1')
-      do iFace = iFaceMin, iFaceMax
-
-         call setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
-              iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-              iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-              iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
-
-         !$acc parallel loop gang independent
-         ! acc copyin(iFace, jFace, iSide, iSize, iSizeR, &
-         ! acc      iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-         ! acc      iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-         ! acc      iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
-         ! acc private(DiLevel, jProc, jBlock, &
-         ! acc iNode, iDim, iSubFace, iSideFace, &
-         ! acc iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS) copyin(iFace)
-         do iBlock = 1, nBlock
-            if(Unused_B(iBlock))CYCLE
-            DiLevel = DiLevel_EB(iFace,iBlock)
-
-            select case(DiLevel)
-            case(0)
-               jProc = jProc_IEB(1,iFace,iBlock)
-               jBlock = jBlock_IEB(1,iFace,iBlock)
-               iSize1 = iSize
-
-               if(jProc == iProc)then
-                  ! Local copy
-
-                  !$acc loop vector collapse(3) private(iS, jS, kS)
-                  do kR = kMinG,kMaxG; do jR = jMinG,jMaxG; do iR = iMinG,iMaxG
-                     iS = iR - iMinG + iMinO
-                     jS = jR - jMinG + jMinO
-                     kS = kR - kMinG + kMinO
-
-                     Trace_DINB(:,:,iR,jR,kR,jBlock) = max( &
-                          Trace_DINB(:,:,iR,jR,kR,jBlock), &
-                          Trace_DINB(:,:,iS,jS,kS,iBlock))
-                  end do; end do; end do
-               else
-                  call rayface2buf(Trace_DINB, &
-                       iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-                       iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP)
-               end if
-            case(1)
-               jProc = jProc_IEB(1,iFace,iBlock)
-               jBlock = jBlock_IEB(1,iFace,iBlock)
-               iSize1 = iSizeR
-               ! Subface index =1,2,3, or 4 with respect to the coarse neighbor
-
-               ! iSubFace = iSubFace_IA(iFace,iNode_B(iBlock))
-               iNode = iNode_B(iBlock)
-               iSubFace = 0
-
-               !$acc loop seq
-               do iDim = 1, nDim
-                  iSideFace = modulo(iTree_IA(Coord0_+iDim,iNode) - 1, 2)
-
-                  if(iDim == (iFace+1)/2) CYCLE
-
-                  if(iSubFace == 0) then
-                     iSubFace = iSideFace + 1
-                  else
-                     iSubFace = iSubFace + 2*iSideFace
-                  end if
-
-               end do
-
-               ! Swap subface 2 and 3 for iFace = 1..4 for BATSRUS tradition...
-               if(iFace <= 4 .and. iSubFace >= 2 .and. iSubFace <= 3) &
-                    iSubFace = 5 - iSubFace
-
-               if(jProc == iProc)then
-                  ! Local copy into appropriate subface
-                  call setsubrange_ray(.false., iFace, iSubFace, &
-                       iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-                       iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-                       iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
-                       iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
-
-                  !$acc loop vector collapse(3) private(iS, jS, kS)
-                  do kR = kMinS,kMaxS; do jR = jMinS,jMaxS; do iR = iMinS,iMaxS
-                     iS = 2*(iR - iMinS) + iMinO
-                     jS = 2*(jR - jMinS) + jMinO
-                     kS = 2*(kR - kMinS) + kMinO
-
-                     do iRay = 1, 2; do iDim = 1, 3
-                        !$acc atomic update
-                        Trace_DINB(iDim,iRay,iR,jR,kR,jBlock) = max( &
-                             Trace_DINB(iDim,iRay,iS,jS,kS,iBlock), &
-                             Trace_DINB(iDim,iRay,iR,jR,kR,jBlock))
-                     end do; end do
-                  end do; end do; end do
-               else
-                  ! write(*,*)'!!! do_restrict is starting, me',iProc
-                  call subrayface2buf(Trace_DINB, iMinO, iMaxO, jMinO, jMaxO, &
-                       kMinO, kMaxO, iBlock, iSide, jProc, MaxSizeR, &
-                       BufferS_IBIP, iSubFace)
-                  ! write(*,*)'!!! do_restrict is finished, me', iProc
-               end if
-            case(-1)
-               do iSubFace = 1, 4
-                  jProc = jProc_IEB(iSubFace,iFace,iBlock)
-                  jBlock = jBlock_IEB(iSubFace,iFace,iBlock)
-                  iSize1 = iSizeR
-
-                  call setsubrange_ray(.true., iFace, iSubFace, &
-                       iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-                       iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-                       iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
-                       iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
-
-                  if(jProc == iProc)then
-                     ! Local copy of appropriate subface
-
-                     !$acc loop vector collapse(3) private(iS, jS, kS)
-                     do kR = kMinG, kMaxG, 2
-                        do jR = jMinG, jMaxG, 2
-                           do iR = iMinG, iMaxG, 2
-                              iS = 0.5*(iR - iMinG) + iMinS
-                              jS = 0.5*(jR - jMinG) + jMinS
-                              kS = 0.5*(kR - kMinG) + kMinS
-
-                              Trace_DINB(:,:,iR,jR,kR,jBlock) = max(&
-                                   Trace_DINB(:,:,iR,jR,kR,jBlock),&
-                                   Trace_DINB(:,:,iS,jS,kS,iBlock))
-                           end do
-                        end do
-                     end do
-                  else
-                     call rayface2buf(Trace_DINB, iMinS, iMaxS, jMinS, jMaxS, &
-                          kMinS, kMaxS, iBlock, iSide, jProc, MaxSizeR, &
-                          BufferS_IBIP)
-                  end if
-               end do ! iSubFace
-
-            case(Unset_)
-               ! There is no neighbor, do nothing
-               CYCLE
-            case default
-               ! pass
-            end select ! DiLevel
-         end do ! iBlock
-      end do ! iFace
-      call timing_stop('trace_pass1')
-
-      if(nProc > 1)then
-         iRequestS = 0
-         iSize1 = MaxSizeR * 4 * MaxBlock * 2
-
-         !$acc host_data use_device(BufferS_IBIP)
-         do iProcSend = 0, nProc - 1
-            if(iProcSend == iProc) CYCLE
-            iRequestS = iRequestS + 1
-            call MPI_isend(BufferS_IBIP(1,1,1,iProcSend), iSize1, MPI_REAL, &
-                 iProcSend, 10, iComm, iRequestS_I(iRequestS), iError)
-         end do
-         !$acc end host_data
-
-         iRequestR = 0
-         !$acc host_data use_device(BufferR_IBIP)
-         do iProcSend = 0, nProc - 1
-            if(iProcSend == iProc) CYCLE
-            iRequestR = iRequestR + 1
-            call MPI_irecv(BufferR_IBIP(1,1,1,iProcSend), iSize1, MPI_REAL, &
-                 iProcSend, 10, iComm, iRequestR_I(iRequestR), iError)
-         end do
-         !$acc end host_data
-
-         if(iRequestS > 0) then
-            call MPI_waitall(iRequestS, iRequestS_I, MPI_STATUSES_IGNORE, &
-                 iError)
-         end if
-         if(iRequestR > 0) then
-            call MPI_waitall(iRequestR, iRequestR_I, MPI_STATUSES_IGNORE, &
-                 iError)
-         end if
-
-         call timing_start('trace_pass2')
-
-         ! retrieve rays from buffer
-         ! on the receiving buffer, iBlock -> jBlock, but jSide = iSide
-         do iFace = iFaceMin, iFaceMax
-
-            ! Set index ranges for the face
-            call setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
-                 iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-                 iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-                 iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
-
-            if(DoDebug .and. DoTest)write(*,*)&
-                 'setranges_ray for buf2ray Done: me, iFace=', iProc, iFace
-
-            !$acc parallel loop gang independent
-            ! acc copyin(iFace,jFace,iSide,iSize,iSizeR, &
-            ! acc      iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-            ! acc      iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-            ! acc      iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR) &
-            ! acc private(jProc, jBlock, iSize1, &
-            ! acc iSubFace, iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
-            do iBlock = 1, nBlock
-               if(Unused_B(iBlock))CYCLE
-
-               select case(DiLevel_EB(jFace,iBlock))
-               case(0)
-                  jProc = jProc_IEB(1,jFace,iBlock)
-                  jBlock = jBlock_IEB(1,jFace,iBlock)
-                  iSize1 = iSize
-                  if(DoDebug .and. DoTest)&
-                       write(*,*)'buf2rayface: me, iBlock, jBlock=',&
-                       iProc, iBlock, jBlock
-                  if(jProc /= iProc) then
-                     call buf2rayface_parallel( &
-                          BufferR_IBIP, Trace_DINB, MaxSizeR, &
-                          iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-                          iBlock, jBlock, iSide, jProc)
-                  end if
-               case(1) ! neighbour is coarser
-                  jProc = jProc_IEB(1,jFace,iBlock)
-                  jBlock = jBlock_IEB(1,jFace,iBlock)
-                  if(DoDebug .and. DoTest)&
-                       write(*,*)'buf2sparserayface: me, iBlock=',iProc,iBlock
-                  if(jProc /= iProc)then
-                     call buf2sparserayface_parallel( &
-                          BufferR_IBIP, Trace_DINB, MaxSizeR, &
-                          iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-                          iBlock, jBlock, iSide, jProc)
-                  end if
-               case(-1)
-                  do iSubFace = 1, 4
-                     jProc = jProc_IEB(iSubFace,jFace,iBlock)
-                     jBlock = jBlock_IEB(iSubFace,jFace,iBlock)
-                     if(DoDebug.and.DoTest)&
-                          write(*,*)'buf2subrayface: me,iSubFace,iBlock=',&
-                          iProc,iSubFace,iBlock
-                     if(jProc /= iProc)then
-                        call setsubrange_ray(.false., iFace, iSubFace, &
-                             iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
-                             iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
-                             iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
-                             iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
-                        call buf2subrayface_parallel(BufferR_IBIP, &
-                             Trace_DINB, MaxSizeR, &
-                             iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS, &
-                             iBlock, jBlock, iSide, jProc, iSubFace)
-                     end if
-                  end do
-               end select ! DiLevel
-            end do ! iBlock
-         end do ! iFace
-         call timing_stop('trace_pass2')
-      end if ! nProc > 1
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#else
-      ! CPU version
-
-      if(DoTest)write(*,*)&
-           'ray_pass_faces:me,iFaceMin,iFaceMax,do_eq,do_re,do_pr=',&
-           iProc,iFaceMin,iFaceMax
+      if(DoTest)write(*,*) NameSub, &
+           ':me,iFaceMin,iFaceMax,do_eq,do_re,do_pr=', &
+           iProc, iFaceMin, iFaceMax
 
       ! Debug
-      if(DoDebug)Buffer_IIBI  =0.00
+      if(DoDebug)Buffer_IIBI = 0.0
 
       nRecvRequest = 0
       iRecvRequest_I = MPI_REQUEST_NULL
 
       do iFace=iFaceMin,iFaceMax
-         if(DoDebug.and.DoTest)then
-            write(*,*)&
-                 'setranges_ray for receive Done: me,iFace,iSize,iSizeR',&
+         if(DoDebug .and. DoTest)then
+            write(*,*) NameSub,': me,iFace,iSize,iSizeR',&
                  iProc, iFace, iSize, iSizeR
-            write(*,*)'_o=',iMinO,iMaxO,jMinO,jMaxO,kMinO,kMaxO
-            write(*,*)'_g=',iMinG,iMaxG,jMinG,jMaxG,kMinG,kMaxG
-            write(*,*)'_r=',iMinR,iMaxR,jMinR,jMaxR,kMinR,kMaxR
+            write(*,*)'_o=', iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
+            write(*,*)'_g=', iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
+            write(*,*)'_r=', iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
          end if
 
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
 
             ! Set index ranges for the face
-            call setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
+            call set_ranges_trace(iFace, iDir, jFace, iSide, iSize, iSizeR, &
                  iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
                  iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
                  iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
@@ -2265,20 +1656,19 @@ contains
       do iFace = iFaceMin, iFaceMax
 
          ! Set index ranges for the face
-         call setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
+         call set_ranges_trace(iFace, iDir, jFace, iSide, iSize, iSizeR, &
               iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
               iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
               iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
 
          if(DoDebug.and.DoTest)write(*,*)&
-              'setranges_ray for send Done: me, iFace=',iProc, iFace
+              'set_ranges_trace for send Done: me, iFace=',iProc, iFace
 
          allocate(BufEqual_DIC(3,2,iMinO:iMaxO,jMinO:jMaxO,kMinO:kMaxO))
          allocate( &
               BufRestrict_DIC(3,2,iMinR:iMaxR,jMinR:jMaxR,kMinR:kMaxR))
 
-         if(DoDebug.and.DoTest)write(*,*)'allocation Done, me,iFace=',&
-              iProc, iFace
+         if(DoDebug)write(*,*)'allocation Done, me,iFace=', iProc, iFace
 
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
@@ -2297,10 +1687,10 @@ contains
                   if(DoDebug.and.DoTest)write(*,*)&
                        'local equal copy: me,iFace,iBlock=',iProc,iFace,iBlock
 
-                  Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,jBlock)=&
-                       max(&
+                  Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,jBlock) &
+                       = max( &
                        Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG, &
-                       jBlock),&
+                       jBlock), &
                        Trace_DINB(:,:,iMinO:iMaxO,jMinO:jMaxO,kMinO:kMaxO, &
                        iBlock))
                else
@@ -2348,19 +1738,19 @@ contains
 
                if(jProc==iProc)then
                   ! Local copy into appropriate subface
-                  call setsubrange_ray(.false., iFace, iSubFace, &
+                  call set_subface_range(.false., iFace, iSubFace, &
                        iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
                        iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
                        iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
                        iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
 
                   if(DoDebug.and.DoTest)write(*,*)&
-                       'local restricted copy: me,iFace,iBlock,_s=',&
+                       'local restricted copy: me,iFace,iBlock,_s=', &
                        iProc, iFace, iBlock,&
                        iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
 
-                  Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,jBlock)=&
-                       max(BufRestrict_DIC,&
+                  Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,jBlock) &
+                       = max(BufRestrict_DIC, &
                        Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS, &
                        jBlock))
                else
@@ -2382,7 +1772,7 @@ contains
                   jProc = jProc_IEB(iSubFace,iFace,iBlock)
                   jBlock = jBlock_IEB(iSubFace,iFace,iBlock)
 
-                  call setsubrange_ray(.true., iFace, iSubFace, &
+                  call set_subface_range(.true., iFace, iSubFace, &
                        iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
                        iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
                        iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
@@ -2432,14 +1822,14 @@ contains
          deallocate(BufEqual_DIC)
          deallocate(BufRestrict_DIC)
 
-         if(DoTest)write(*,*)'messages sent, me, iFace=',iProc,iFace
+         if(DoTest) write(*,*)'messages sent, me, iFace=', iProc, iFace
       end do ! iFace
 
-      ! WAIT FOR ALL MESSAGES TO BE RECEIVED
+      ! wait for all messages to be received
       if (nRecvRequest > 0) call MPI_waitall(nRecvRequest, iRecvRequest_I, &
            MPI_STATUSES_IGNORE, iError)
 
-      if(DoTest)write(*,*)'messages received, me, iDir=',iProc, iDir
+      if(DoTest) write(*,*)'messages received, me, iDir=',iProc, iDir
 
       ! Copy ghost cells received from non-local neigbors
       ! and stored in the Buffer_IIBI into sol_BLK
@@ -2447,36 +1837,38 @@ contains
       do iFace = iFaceMin, iFaceMax
 
          ! Set index ranges for the face
-         call setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
+         call set_ranges_trace(iFace, iDir, jFace, iSide, iSize, iSizeR, &
               iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
               iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
               iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
 
          if(DoDebug.and.DoTest)write(*,*)&
-              'setranges_ray for buf2ray Done: me, iFace=',iProc, iFace
+              'set_ranges_trace Done: me, iFace=',iProc, iFace
 
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             select case(DiLevel_EB(jFace,iBlock))
             case(0)
-               if(DoDebug.and.DoTest)&
-                    write(*,*)'buf2rayface: me, iBlock=',iProc,iBlock
+               if(DoDebug) write(*,*) &
+                    'call buf_to_trace_face: me, iBlock=',iProc,iBlock
                if(jProc_IEB(1,jFace,iBlock) /= iProc)&
-                    call buf2rayface(Buffer_IIBI(1,1,iBlock,iSide),&
+                    call buf_to_trace_face(Buffer_IIBI(1,1,iBlock,iSide),&
                     iMinG,iMaxG,jMinG,jMaxG,kMinG,kMaxG)
             case(1)
                if(DoDebug.and.DoTest)&
-                    write(*,*)'buf2sparserayface: me, iBlock=',iProc,iBlock
+                    write(*,*)'call buf_to_sparse_trace_face: me, iBlock=', &
+                    iProc, iBlock
                if(jProc_IEB(1,jFace,iBlock) /= iProc)&
-                    call buf2sparserayface(Buffer_IIBI(1,1,iBlock,iSide),&
-                    iMinR,iMaxR,jMinR,jMaxR,kMinR,kMaxR)
+                    call buf_to_sparse_trace_face( &
+                    Buffer_IIBI(1,1,iBlock,iSide),&
+                    iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
             case(-1)
                do iSubFace = 1, 4
-                  if(DoDebug.and.DoTest)&
-                       write(*,*)'buf2subrayface: me, iSubFace, iBlock=',&
-                       iProc,iSubFace,iBlock
+                  if(DoDebug) write(*,*) &
+                       'call buf_to_trace_subface: me, iSubFace, iBlock=',&
+                       iProc, iSubFace, iBlock
                   if(jProc_IEB(iSubFace,jFace,iBlock)/=iProc)&
-                       call buf2subrayface(&
+                       call buf_to_trace_subface(&
                        Buffer_IIBI(1,iSubFace,iBlock,iSide),&
                        iFace,iSubFace,iMinR,iMaxR,jMinR,jMaxR,kMinR,kMaxR)
                end do
@@ -2484,200 +1876,807 @@ contains
          end do ! iBlock
       end do ! iFace
 
-      if(DoTest)write(*,*)'ray_pass_faces finished: me, iFaceMin, iFaceMax=', &
+      if(DoTest)write(*,*) NameSub, ' finished: me,iFaceMin,iFaceMax=', &
            iProc, iFaceMin, iFaceMax
-#endif
 
-    end subroutine ray_pass_faces
+    end subroutine pass_face
     !==========================================================================
-    subroutine prolong_ray(iFace, iBlock)
-      !$acc routine vector
-
-      ! For faces that are shared with a coarser neighbor, interpolate for all
-      ! points which are not coinciding and where the trace is going out.
-      !
-      ! a at odd  j and even k requires interpolation in direction k
-      ! b at even j and odd  k requires interpolation in direction j
-      ! c at even j and even k requires interpolation in both directions
-
-      ! (1,5)           (5,5)
-      !   O-- b --O-- b --O
-      !   |   |   |   |   |
-      !   |   |   |   |   |
-      !   a - c - a - c - a
-      !   |   |   |   |   |
-      !   |   |   |   |   |
-      !   O-- b --O-- b --O
-      !   |   |   |   |   |
-      !   |   |   |   |   |
-      !   a - c - a - c - a
-      !   |   |   |   |   |
-      !   |   |   |   |   |
-      !   O-- b --O-- b --O
-      ! (1,1)           (5,1)
-
-      integer, intent(in):: iFace, iBlock
-
-      integer :: iRay
-      integer :: i, j, k, nFaceJ, nFaceK
-
-      integer, parameter   :: nFaceMax=max(nI+1,nJ+1,nK+1)
-
-      real    :: Trace_DIII(3,2,nFaceMax,nFaceMax)
-      integer :: IjkTrace_DII(2,nFaceMax,nFaceMax)
-
-      ! Q: why not parameter arrays / scalars ???
-      ! A: If Weight4_I/Weight2_I are defined as 'parameter', nvfortran+openacc
-      !    will produce compilation error.
-      ! Interpolation weights
-      real :: Weight4_I(4) != 0.25
-      real :: Weight2_I(2) != 0.5
-
-      real :: Trace_DI(3,2), Trace4_DI(3,4)
-
-#ifndef _OPENACC
-      character(len=*), parameter:: NameSub = 'prolong_ray'
-      !------------------------------------------------------------------------
-      if(DoTest)write(*,*) NameSub,': me, iBlock, iFace=',iProc, iBlock, iFace
 #endif
-
-      ! Extract Trace_DIII and IjkTrace_DII for the appropriate face
-      ! NOTE: IjkTrace_DII assignment split to two lines to avoid
-      ! reshaping compiler bug!
-      select case(iFace)
-      case(1)
-         !$acc loop vector collapse(2)
-         do k = 1, nK+1; do j = 1, nJ+1
-            Trace_DIII(:,:,j,k) = Trace_DINB(:,:,1,j,k,iBlock)
-            IjkTrace_DII(1,j,k) = I_DINB(1,1,1,j,k,iBlock)
-            IjkTrace_DII(2,j,k) = I_DINB(1,2,1,j,k,iBlock)
-         end do; end do
-      case(2)
-         !$acc loop vector collapse(2)
-         do k = 1, nK+1; do j = 1, nJ+1
-            Trace_DIII(:,:,j,k) = Trace_DINB(:,:,nI+1,j,k,iBlock)
-            IjkTrace_DII(1,j,k) = I_DINB(1,1,nI+1,j,k,iBlock)
-            IjkTrace_DII(2,j,k) = I_DINB(1,2,nI+1,j,k,iBlock)
-         end do; end do
-      case(3)
-         !$acc loop vector collapse(2)
-         do k = 1, nK+1; do i = 1, nI+1
-            Trace_DIII(:,:,i,k) = Trace_DINB(:,:,i,1,k,iBlock)
-            IjkTrace_DII(1,i,k) = I_DINB(1,1,i,1,k,iBlock)
-            IjkTrace_DII(2,i,k) = I_DINB(1,2,i,1,k,iBlock)
-         end do; end do
-      case(4)
-         !$acc loop vector collapse(2)
-         do k = 1, nK+1; do i = 1, nI+1
-            Trace_DIII(:,:,i,k) = Trace_DINB(:,:,i,nJ+1,k,iBlock)
-            IjkTrace_DII(1,i,k) = I_DINB(1,1,i,nJ+1,k,iBlock)
-            IjkTrace_DII(2,i,k) = I_DINB(1,2,i,nJ+1,k,iBlock)
-         end do; end do
-      case(5)
-         !$acc loop vector collapse(2)
-         do j = 1, nJ+1; do i = 1, nI+1
-            Trace_DIII(:,:,i,j) = Trace_DINB(:,:,i,j,1,iBlock)
-            IjkTrace_DII(1,i,j) = I_DINB(1,1,i,j,1,iBlock)
-            IjkTrace_DII(2,i,j) = I_DINB(1,2,i,j,1,iBlock)
-         end do; end do
-      case(6)
-         !$acc loop vector collapse(2)
-         do j = 1, nJ+1; do i = 1, nI+1
-            Trace_DIII(:,:,i,j) = Trace_DINB(:,:,i,j,nK+1,iBlock)
-            IjkTrace_DII(1,i,j) = I_DINB(1,1,i,j,nK+1,iBlock)
-            IjkTrace_DII(2,i,j) = I_DINB(1,2,i,j,nK+1,iBlock)
-         end do; end do
-      case default
-#ifndef _OPENACC
-         call stop_mpi(NameSub//': Impossible value for iFace')
-#endif
-      end select
-
-      !$acc loop vector collapse(2) &
-      !$acc private(Trace_DI, Trace4_DI, Weight2_I, Weight4_I)
-      do iRay = 1, 2
-         do k = 1, nK+1
-            Weight2_I = 0.5
-            Weight4_I = 0.25
-
-            if(mod(k, 2) == 1)then
-               do j = 2, nJ+1, 2
-                  ! Case b: even j and odd k
-
-                  if(IjkTrace_DII(iRay,j,k) /= RayOut_)CYCLE
-
-                  Trace_DI(:,1) = Trace_DIII(:,iRay,j-1,k)
-                  Trace_DI(:,2) = Trace_DIII(:,iRay,j+1,k)
-
-                  call rayface_interpolate(Trace_DI, Weight2_I, 2, &
-                       Trace_DIII(:,iRay,j,k))
-               end do
-            else
-               do j = 1, nJ+1, 2
-                  ! Case a: odd j and even k
-
-                  if(IjkTrace_DII(iRay,j,k) /= RayOut_)CYCLE
-
-                  Trace_DI(:,1) = Trace_DIII(:,iRay,j,k-1)
-                  Trace_DI(:,2) = Trace_DIII(:,iRay,j,k+1)
-                  call rayface_interpolate(Trace_DI, Weight2_I, 2,&
-                       Trace_DIII(:,iRay,j,k))
-               end do
-               do j = 2, nJ, 2
-                  ! Case c: even j and even k
-
-                  if(IjkTrace_DII(iRay,j,k) /= RayOut_)CYCLE
-
-                  Trace4_DI(:,1) = Trace_DIII(:,iRay,j-1,k-1)
-                  Trace4_DI(:,2) = Trace_DIII(:,iRay,j+1,k-1)
-                  Trace4_DI(:,3) = Trace_DIII(:,iRay,j-1,k+1)
-                  Trace4_DI(:,4) = Trace_DIII(:,iRay,j+1,k+1)
-                  call rayface_interpolate(Trace4_DI, Weight4_I, 4,&
-                       Trace_DIII(:,iRay,j,k))
-
-               end do ! j
-            end if ! mod(k,2)
-         end do ! k
-      end do ! iRay
-
-      ! Put back result into Trace_DINB
-      select case(iFace)
-      case(1)
-         !$acc loop vector collapse(2)
-         do k = 1, nK+1; do j = 1, nJ+1
-            Trace_DINB(:,:,1,j,k,iBlock) = Trace_DIII(:,:,j,k)
-         end do; end do
-      case(2)
-         !$acc loop vector collapse(2)
-         do k = 1, nK+1; do j = 1, nJ+1
-            Trace_DINB(:,:,nI+1,j,k,iBlock) = Trace_DIII(:,:,j,k)
-         end do; end do
-      case(3)
-         !$acc loop vector collapse(2)
-         do k = 1, nK+1; do i = 1, nI+1
-            Trace_DINB(:,:,i,1,k,iBlock) = Trace_DIII(:,:,i,k)
-         end do; end do
-      case(4)
-         !$acc loop vector collapse(2)
-         do k = 1, nK+1; do i = 1, nI+1
-            Trace_DINB(:,:,i,nJ+1,k,iBlock) = Trace_DIII(:,:,i,k)
-         end do; end do
-      case(5)
-         !$acc loop vector collapse(2)
-         do j = 1, nJ+1; do i = 1, nJ+1
-            Trace_DINB(:,:,i,j,1,iBlock) = Trace_DIII(:,:,i,j)
-         end do; end do
-      case(6)
-         !$acc loop vector collapse(2)
-         do j = 1, nJ+1; do i = 1, nI+1
-            Trace_DINB(:,:,i,j,nK+1,iBlock) = Trace_DIII(:,:,i,j)
-         end do; end do
-      end select
-
-    end subroutine prolong_ray
-    !==========================================================================
-  end subroutine ray_pass
+  end subroutine pass_trace
   !============================================================================
+  subroutine set_ranges_trace(iFace, iDir, jFace, iSide, iSize, iSizeR, &
+       iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+       iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+       iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
+    !$acc routine seq
+
+    integer, intent(in):: iFace, iDir
+    integer, intent(out):: jFace, iSide, iSize, iSizeR
+    integer, intent(out) :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
+    integer, intent(out) :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
+    integer, intent(out) :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
+
+    ! Set ranges orthogonal to iDir based on the value of iDir
+    !--------------------------------------------------------------------------
+    if(iDir /= 1)then
+       iMinG = 1;  iMaxG = nI + 1
+       iMinO = 1;  iMaxO = nI + 1
+       iMinR = 1;  iMaxR = nI/2 + 1
+    end if
+
+    if(iDir /= 2)then
+       jMinG = 1;  jMaxG = nJ + 1
+       jMinO = 1;  jMaxO = nJ + 1
+       jMinR = 1;  jMaxR = nJ/2 + 1
+    endif
+
+    if(iDir /= 3)then
+       kMinG = 1;  kMaxG = nK + 1
+       kMinO = 1;  kMaxO = nK + 1
+       kMinR = 1;  kMaxR = nK/2 + 1
+    end if
+
+    ! Set ranges in direction of iDir based on the value of iFace
+
+    select case(iFace)
+    case(1)
+       jFace = 2;    iSide = 1
+       iMinO = 1;    iMaxO = 1
+       iMinG = nI+1; iMaxG = nI+1
+       iMinR = 1;    iMaxR = 1
+    case(3)
+       jFace = 4;    iSide = 1
+       jMinO = 1;    jMaxO = 1
+       jMinG = nJ+1; jMaxG = nJ+1
+       jMinR = 1;    jMaxR = 1
+    case(5)
+       jFace = 6;    iSide = 1
+       kMinO = 1;    kMaxO = 1
+       kMinG = nK+1; kMaxG = nK+1
+       kMinR = 1;    kMaxR = 1
+    case(2)
+       jFace = 1;    iSide = 2
+       iMinO = nI+1; iMaxO = nI+1
+       iMinG = 1;    iMaxG = 1
+       iMinR = 1;    iMaxR = 1
+    case(4)
+       jFace = 3;    iSide = 2
+       jMinO = nJ+1; jMaxO = nJ+1
+       jMinG = 1;    jMaxG = 1
+       jMinR = 1;    jMaxR = 1
+    case(6)
+       jFace = 5;    iSide = 2
+       kMinO = nK+1; kMaxO = nK+1
+       kMinG = 1;    kMaxG = 1
+       kMinR = 1;    kMaxR = 1
+    end select
+
+    ! Size of full and restricted cell layers
+    iSize  = 6*(iMaxG - iMinG + 1)*(jMaxG - jMinG + 1)*(kMaxG - kMinG + 1)
+    iSizeR = 6*(iMaxR - iMinR + 1)*(jMaxR - jMinR + 1)*(kMaxR - kMinR + 1)
+
+  end subroutine set_ranges_trace
+  !============================================================================
+  subroutine set_subface_range(DoSend, iFace, iSubFace, &
+       iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+       iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+       iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
+       iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
+    !$acc routine seq
+
+    logical, intent(in) :: DoSend
+    integer, intent(in) :: iFace, iSubFace
+    integer, intent(in) :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
+    integer, intent(in) :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
+    integer, intent(in) :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
+    integer, intent(out) :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
+
+    ! Select appropriate quarter of ghost cell layer
+    !--------------------------------------------------------------------------
+    select case(iFace)
+    case(1, 2)
+       if(DoSend)then
+          iMinS = iMinO; iMaxS = iMaxO
+       else
+          iMinS = iMinG; iMaxS = iMaxG
+       end if
+
+       select case(iSubFace)
+          ! Beware, case(2) and case(3) are swapped
+       case(1)
+          jMinS = jMinR; jMaxS = jMaxR
+          kMinS = kMinR; kMaxS = kMaxR
+       case(3)
+          jMinS = jMinR + nJ/2; jMaxS = jMaxR + nJ/2;
+          kMinS = kMinR; kMaxS = kMaxR
+       case(2)
+          jMinS = jMinR; jMaxS = jMaxR;
+          kMinS = kMinR + nK/2; kMaxS = kMaxR + nK/2;
+       case(4)
+          jMinS = jMinR + nJ/2; jMaxS = jMaxR + nJ/2;
+          kMinS = kMinR + nK/2; kMaxS = kMaxR + nK/2;
+       end select
+    case(3, 4)
+       if(DoSend)then
+          jMinS = jMinO; jMaxS = jMaxO
+       else
+          jMinS = jMinG; jMaxS = jMaxG
+       end if
+       select case(iSubFace)
+          ! Beware, case(2) and case(3) are swapped
+       case(1)
+          iMinS = iMinR;        iMaxS = iMaxR;
+          kMinS = kMinR;        kMaxS = kMaxR
+       case(3)
+          iMinS = iMinR + nI/2; iMaxS = iMaxR + nI/2;
+          kMinS = kMinR;        kMaxS = kMaxR
+       case(2)
+          iMinS = iMinR;        iMaxS = iMaxR;
+          kMinS = kMinR + nK/2; kMaxS = kMaxR + nK/2;
+       case(4)
+          iMinS = iMinR + nI/2; iMaxS = iMaxR + nI/2;
+          kMinS = kMinR + nK/2; kMaxS = kMaxR + nK/2;
+       end select
+    case(5, 6)
+       if(DoSend)then
+          kMinS = kMinO; kMaxS = kMaxO
+       else
+          kMinS = kMinG; kMaxS = kMaxG
+       end if
+       select case(iSubFace)
+          ! Beware, case(2) and case(3) are not swapped
+       case(1)
+          iMinS = iMinR;        iMaxS = iMaxR;
+          jMinS = jMinR;        jMaxS = jMaxR
+       case(2)
+          iMinS = iMinR + nI/2; iMaxS = iMaxR + nI/2;
+          jMinS = jMinR;        jMaxS = jMaxR
+       case(3)
+          iMinS = iMinR;        iMaxS = iMaxR;
+          jMinS = jMinR + nJ/2; jMaxS = jMaxR + nJ/2;
+       case(4)
+          iMinS = iMinR + nI/2; iMaxS = iMaxR + nI/2;
+          jMinS = jMinR + nJ/2; jMaxS = jMaxR + nJ/2;
+       end select
+    end select
+
+  end subroutine set_subface_range
+  !============================================================================
+  subroutine trace_face_to_buf(Trace_DINB, &
+       iMin, iMax, jMin, jMax, kMin, kMax, &
+       iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP)
+    !$acc routine vector
+
+    ! put trace into buf for equal resolution, or put prolonged trace into buf
+
+    integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+    integer, intent(in) :: iBlock, iSide, jProc, MaxSizeR
+    real, intent(in) ::Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+    real, intent(inout):: BufferS_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+
+    integer :: iTraceLine, i, j, k, iTrace, iDim
+    !--------------------------------------------------------------------------
+    !$acc loop vector collapse(5) private(iTraceLine)
+    do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+       do iTrace = 1, 2; do iDim=1,3
+          iTraceLine = (k-kMin)*(jMax-jMin+1)*(iMax-iMin+1)*6 +&
+               (j-jMin)*(iMax-iMin+1)*6 + (i-iMin)*6 + &
+               (iTrace-1)*3 + iDim
+
+          BufferS_IBIP(iTraceLine,iBlock,iSide,jProc) = &
+               Trace_DINB(iDim,iTrace,i,j,k,iBlock)
+       end do; end do
+    end do; end do; end do
+
+  end subroutine trace_face_to_buf
+  !============================================================================
+  subroutine trace_subface_to_buf(Trace_DINB, &
+       iMin, iMax, jMin, jMax, kMin, kMax, &
+       iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP, iSubFaceIn)
+    !$acc routine vector
+
+    ! put restrited trace into buffer
+
+    integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
+    integer, intent(in) :: iBlock, iSide, jProc, MaxSizeR
+    real, intent(in) ::Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+    real, intent(inout):: BufferS_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+
+    integer, intent(in):: iSubFaceIn
+
+    integer :: iTraceLine, i, j, k, iTrace, iDim
+    !--------------------------------------------------------------------------
+    !$acc loop vector collapse(5) private(iTraceLine)
+    do k = kMin, kMax, 2; do j = jMin, jMax, 2; do i = iMin, iMax, 2
+       do iTrace = 1, 2; do iDim = 1, 3
+          iTraceLine = (k-kMin)/2*((jMax-jMin)/2+1)*((iMax-iMin)/2+1)*6 + &
+               (j-jMin)/2*((iMax-iMin)/2+1)*6 + (i-iMin)/2*6 + &
+               (iTrace-1)*3 + iDim + (iSubFaceIn-1)*MaxSizeR
+
+          BufferS_IBIP(iTraceLine,iBlock,iSide,jProc) = &
+               Trace_DINB(iDim,iTrace,i,j,k,iBlock)
+       end do; end do
+    end do; end do; end do
+
+  end subroutine trace_subface_to_buf
+  !============================================================================
+  subroutine prolong_trace(iFace, iBlock)
+    !$acc routine vector
+
+    ! For faces that are shared with a coarser neighbor, interpolate for all
+    ! points which are not coinciding and where the trace is going out.
+    !
+    ! a at odd  j and even k requires interpolation in direction k
+    ! b at even j and odd  k requires interpolation in direction j
+    ! c at even j and even k requires interpolation in both directions
+
+    ! (1,5)           (5,5)
+    !   O-- b --O-- b --O
+    !   |   |   |   |   |
+    !   |   |   |   |   |
+    !   a - c - a - c - a
+    !   |   |   |   |   |
+    !   |   |   |   |   |
+    !   O-- b --O-- b --O
+    !   |   |   |   |   |
+    !   |   |   |   |   |
+    !   a - c - a - c - a
+    !   |   |   |   |   |
+    !   |   |   |   |   |
+    !   O-- b --O-- b --O
+    ! (1,1)           (5,1)
+
+    integer, intent(in):: iFace, iBlock
+
+    integer :: iTrace
+    integer :: i, j, k, nFaceJ, nFaceK
+
+    integer, parameter   :: nFaceMax=max(nI+1,nJ+1,nK+1)
+
+    real    :: Trace_DIII(3,2,nFaceMax,nFaceMax)
+    integer :: IjkTrace_DII(2,nFaceMax,nFaceMax)
+
+    ! Q: why not parameter arrays / scalars ???
+    ! A: If Weight4_I/Weight2_I are defined as 'parameter', nvfortran+openacc
+    !    will produce compilation error.
+    ! Interpolation weights
+    real :: Weight4_I(4) != 0.25
+    real :: Weight2_I(2) != 0.5
+
+    real :: Trace_DI(3,2), Trace4_DI(3,4)
+
+#ifndef _OPENACC
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'prolong_trace'
+    !--------------------------------------------------------------------------
+    if(DoTest)write(*,*) NameSub,': me, iBlock, iFace=',iProc, iBlock, iFace
+#endif
+
+    ! Extract Trace_DIII and IjkTrace_DII for the appropriate face
+    ! NOTE: IjkTrace_DII assignment split to two lines to avoid
+    ! reshaping compiler bug!
+    select case(iFace)
+    case(1)
+       !$acc loop vector collapse(2)
+       do k = 1, nK+1; do j = 1, nJ+1
+          Trace_DIII(:,:,j,k) = Trace_DINB(:,:,1,j,k,iBlock)
+          IjkTrace_DII(1,j,k) = I_DINB(1,1,1,j,k,iBlock)
+          IjkTrace_DII(2,j,k) = I_DINB(1,2,1,j,k,iBlock)
+       end do; end do
+    case(2)
+       !$acc loop vector collapse(2)
+       do k = 1, nK+1; do j = 1, nJ+1
+          Trace_DIII(:,:,j,k) = Trace_DINB(:,:,nI+1,j,k,iBlock)
+          IjkTrace_DII(1,j,k) = I_DINB(1,1,nI+1,j,k,iBlock)
+          IjkTrace_DII(2,j,k) = I_DINB(1,2,nI+1,j,k,iBlock)
+       end do; end do
+    case(3)
+       !$acc loop vector collapse(2)
+       do k = 1, nK+1; do i = 1, nI+1
+          Trace_DIII(:,:,i,k) = Trace_DINB(:,:,i,1,k,iBlock)
+          IjkTrace_DII(1,i,k) = I_DINB(1,1,i,1,k,iBlock)
+          IjkTrace_DII(2,i,k) = I_DINB(1,2,i,1,k,iBlock)
+       end do; end do
+    case(4)
+       !$acc loop vector collapse(2)
+       do k = 1, nK+1; do i = 1, nI+1
+          Trace_DIII(:,:,i,k) = Trace_DINB(:,:,i,nJ+1,k,iBlock)
+          IjkTrace_DII(1,i,k) = I_DINB(1,1,i,nJ+1,k,iBlock)
+          IjkTrace_DII(2,i,k) = I_DINB(1,2,i,nJ+1,k,iBlock)
+       end do; end do
+    case(5)
+       !$acc loop vector collapse(2)
+       do j = 1, nJ+1; do i = 1, nI+1
+          Trace_DIII(:,:,i,j) = Trace_DINB(:,:,i,j,1,iBlock)
+          IjkTrace_DII(1,i,j) = I_DINB(1,1,i,j,1,iBlock)
+          IjkTrace_DII(2,i,j) = I_DINB(1,2,i,j,1,iBlock)
+       end do; end do
+    case(6)
+       !$acc loop vector collapse(2)
+       do j = 1, nJ+1; do i = 1, nI+1
+          Trace_DIII(:,:,i,j) = Trace_DINB(:,:,i,j,nK+1,iBlock)
+          IjkTrace_DII(1,i,j) = I_DINB(1,1,i,j,nK+1,iBlock)
+          IjkTrace_DII(2,i,j) = I_DINB(1,2,i,j,nK+1,iBlock)
+       end do; end do
+    case default
+#ifndef _OPENACC
+       call stop_mpi(NameSub//': Impossible value for iFace')
+#endif
+    end select
+
+    !$acc loop vector collapse(2) &
+    !$acc private(Trace_DI, Trace4_DI, Weight2_I, Weight4_I)
+    do iTrace = 1, 2
+       do k = 1, nK+1
+          Weight2_I = 0.5
+          Weight4_I = 0.25
+
+          if(mod(k, 2) == 1)then
+             do j = 2, nJ+1, 2
+                ! Case b: even j and odd k
+
+                if(IjkTrace_DII(iTrace,j,k) /= RayOut_)CYCLE
+
+                Trace_DI(:,1) = Trace_DIII(:,iTrace,j-1,k)
+                Trace_DI(:,2) = Trace_DIII(:,iTrace,j+1,k)
+
+                call interpolate_trace_face(Trace_DI, Weight2_I, 2, &
+                     Trace_DIII(:,iTrace,j,k))
+             end do
+          else
+             do j = 1, nJ+1, 2
+                ! Case a: odd j and even k
+
+                if(IjkTrace_DII(iTrace,j,k) /= RayOut_)CYCLE
+
+                Trace_DI(:,1) = Trace_DIII(:,iTrace,j,k-1)
+                Trace_DI(:,2) = Trace_DIII(:,iTrace,j,k+1)
+                call interpolate_trace_face(Trace_DI, Weight2_I, 2,&
+                     Trace_DIII(:,iTrace,j,k))
+             end do
+             do j = 2, nJ, 2
+                ! Case c: even j and even k
+
+                if(IjkTrace_DII(iTrace,j,k) /= RayOut_)CYCLE
+
+                Trace4_DI(:,1) = Trace_DIII(:,iTrace,j-1,k-1)
+                Trace4_DI(:,2) = Trace_DIII(:,iTrace,j+1,k-1)
+                Trace4_DI(:,3) = Trace_DIII(:,iTrace,j-1,k+1)
+                Trace4_DI(:,4) = Trace_DIII(:,iTrace,j+1,k+1)
+                call interpolate_trace_face(Trace4_DI, Weight4_I, 4,&
+                     Trace_DIII(:,iTrace,j,k))
+
+             end do ! j
+          end if ! mod(k,2)
+       end do ! k
+    end do ! iTrace
+
+    ! Put back result into Trace_DINB
+    select case(iFace)
+    case(1)
+       !$acc loop vector collapse(2)
+       do k = 1, nK+1; do j = 1, nJ+1
+          Trace_DINB(:,:,1,j,k,iBlock) = Trace_DIII(:,:,j,k)
+       end do; end do
+    case(2)
+       !$acc loop vector collapse(2)
+       do k = 1, nK+1; do j = 1, nJ+1
+          Trace_DINB(:,:,nI+1,j,k,iBlock) = Trace_DIII(:,:,j,k)
+       end do; end do
+    case(3)
+       !$acc loop vector collapse(2)
+       do k = 1, nK+1; do i = 1, nI+1
+          Trace_DINB(:,:,i,1,k,iBlock) = Trace_DIII(:,:,i,k)
+       end do; end do
+    case(4)
+       !$acc loop vector collapse(2)
+       do k = 1, nK+1; do i = 1, nI+1
+          Trace_DINB(:,:,i,nJ+1,k,iBlock) = Trace_DIII(:,:,i,k)
+       end do; end do
+    case(5)
+       !$acc loop vector collapse(2)
+       do j = 1, nJ+1; do i = 1, nJ+1
+          Trace_DINB(:,:,i,j,1,iBlock) = Trace_DIII(:,:,i,j)
+       end do; end do
+    case(6)
+       !$acc loop vector collapse(2)
+       do j = 1, nJ+1; do i = 1, nI+1
+          Trace_DINB(:,:,i,j,nK+1,iBlock) = Trace_DIII(:,:,i,j)
+       end do; end do
+    end select
+
+  end subroutine prolong_trace
+  !============================================================================
+#ifdef _OPENACC
+  subroutine buf_to_trace_face_gpu(BufferR_IBIP, Trace_DINB, MaxSizeR, &
+       iMin, iMax, jMin, jMax, kMin, kMax, iBlock, jBlock, jSide, jProc)
+    !$acc routine vector
+
+    ! Take maximum of Trace_DINB and buf (more positive values are more real)
+    ! for the full face
+
+    integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
+    integer, intent(in):: iBlock, jBlock, jSide, jProc
+    real,    intent(in):: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+    real, intent(inout):: Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+
+    integer :: i, j, k, iDim, iTrace, iTraceLine
+    !--------------------------------------------------------------------------
+    !$acc loop vector collapse(5) private(iTraceLine)
+    do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+       do iTrace = 1, 2; do iDim = 1, 3
+          iTraceLine = (k-kMin)*(jMax-jMin+1)*(iMax-iMin+1)*6 +&
+               (j-jMin)*(iMax-iMin+1)*6 + (i-iMin)*6 + (iTrace-1)*3 + iDim
+
+          Trace_DINB(iDim,iTrace,i,j,k,iBlock) = &
+               max(BufferR_IBIP(iTraceLine,jBlock,jSide,jProc), &
+               Trace_DINB(iDim,iTrace,i,j,k,iBlock))
+       end do; end do
+    end do; end do; end do
+
+  end subroutine buf_to_trace_face_gpu
+  !============================================================================
+  subroutine buf_to_sparse_trace_face_gpu( &
+       BufferR_IBIP, Trace_DINB, MaxSizeR, &
+       iMin, iMax, jMin, jMax, kMin, kMax, iBlock, jBlock, jSide, jProc)
+    !$acc routine vector
+
+    ! Take maximum of Trace_DINB and buf (more positive values are more real)
+    ! for a factor of 2 coarser grid
+
+    integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
+    integer, intent(in) :: iBlock,jBlock,jSide,jProc
+    real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+    real, intent(inout):: Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+
+    integer :: i, j, k, iDim, iTrace, iTraceLine
+    !--------------------------------------------------------------------------
+    !$acc loop vector collapse(5) private(iTraceLine)
+    do k = kMin, kMax, 2; do j = jMin, jMax, 2; do i = iMin, iMax, 2
+       do iTrace = 1, 2; do iDim = 1, 3
+          iTraceLine = (k-kMin)/2*((jMax-jMin)/2+1)*((iMax-iMin)/2+1)*6 +&
+               (j-jMin)/2*((iMax-iMin)/2+1)*6 + (i-iMin)/2*6 + &
+               (iTrace-1)*3 + iDim
+
+          Trace_DINB(iDim,iTrace,i,j,k,iBlock) = &
+               max(BufferR_IBIP(iTraceLine,jBlock,jSide,jProc), &
+               Trace_DINB(iDim,iTrace,i,j,k,iBlock))
+       end do; end do
+    end do; end do; end do
+
+  end subroutine buf_to_sparse_trace_face_gpu
+  !============================================================================
+  subroutine buf_to_trace_subface_gpu(BufferR_IBIP, Trace_DINB, MaxSizeR, &
+       iMin, iMax, jMin, jMax, kMin, kMax, iBlock, jBlock, jSide, jProc, &
+       iSubFaceIn)
+    !$acc routine vector
+
+    ! Take maximum of Trace_DINB and buf (more positive values are more real)
+    ! buf is from a factor of 2 finer grid
+
+    integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, MaxSizeR
+    integer, intent(in) :: iBlock, jBlock, jSide, jProc, iSubFaceIn
+    real, intent(in) :: BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1)
+    real, intent(inout):: Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock)
+
+    integer :: i, j, k, iDim, iTrace, iTraceLine
+    !--------------------------------------------------------------------------
+    !$acc loop vector collapse(5) private(iTraceLine)
+    do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+       do iTrace = 1, 2; do iDim = 1, 3
+          iTraceLine = (k-kMin)*((jMax-jMin)+1)*((iMax-iMin)+1)*6 + &
+               (j-jMin)*((iMax-iMin)+1)*6 + (i-iMin)*6 + &
+               (iTrace-1)*3 + iDim + (iSubFaceIn-1)*MaxSizeR
+
+          Trace_DINB(iDim,iTrace,i,j,k,iBlock) = &
+               max(BufferR_IBIP(iTraceLine,jBlock,jSide,jProc), &
+               Trace_DINB(iDim,iTrace,i,j,k,iBlock))
+       end do; end do
+    end do; end do; end do;
+
+  end subroutine buf_to_trace_subface_gpu
+  !============================================================================
+  subroutine pass_face_gpu(iDir, iFaceMin, iFaceMax)
+
+    ! Avoid double-contained subroutine for GPU code (nvfortran 25 bug)
+    ! On 1 gpu: finish local copy; on >1 gpus: fill in send buffer
+
+    use ModParallel, ONLY : Unset_, DiLevel_EB, jBlock_IEB, jProc_IEB
+    use ModMpi
+
+    integer, intent(in):: iDir, iFaceMin,iFaceMax
+
+    ! Face, neighbor's face and side indexes Note: iFace is on CPU
+    integer :: iFace, jFace, iSide, iBlock
+
+    ! number of subfaces (1 or 4), subface (1..nSubFace)
+    integer ::  nSubFace, iSubFace
+
+    ! Array ranges for outgoing, incoming, restricted and subfaces
+    integer :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
+    integer :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
+    integer :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
+    integer :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
+
+    integer:: iS, jS, kS, iR, jR, kR, iTrace
+
+    ! Descriptors for neighbor
+    integer :: jProc, jBlock, DiLevel
+
+    ! Maximum size of the RESTRICTED Trace_DINB layer to be received
+    ! for the 6 trace variables (3 coordinates * 2 trace directions)
+    integer, parameter :: MaxSizeR = &
+         6*max((nI/2+1)*(nJ/2+1),(nI/2+1)*(nK/2+1),(nJ/2+1)*(nK/2+1))
+
+    ! MPI variables
+    integer :: iRequestR, iRequestS, iProcSend, iError
+    integer, allocatable :: iRequestR_I(:), iRequestS_I(:)
+
+    ! Receive Buffer_IIBI to hold 4 incoming RESTRICTED Trace_DINB values
+    ! for all blocks and for both sides
+    real, allocatable :: BufferS_IBIP(:,:,:,:)
+    real, allocatable :: BufferR_IBIP(:,:,:,:)
+    !$acc declare create(BufferS_IBIP, BufferR_IBIP)
+
+    ! Actual size of messages: full, restricted/sparse and actual face
+    integer :: iSize, iSizeR, iSize1
+
+    ! BATL related
+    integer:: iNode, iDim, iSideFace
+    !--------------------------------------------------------------------------
+    if(nProc > 1)then
+       if (.not. allocated(BufferS_IBIP))&
+            allocate(BufferS_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1))
+       if (.not. allocated(BufferR_IBIP))&
+            allocate(BufferR_IBIP(MaxSizeR*4,MaxBlock,2,0:nProc-1))
+       if (.not. allocated(iRequestS_I)) &
+            allocate(iRequestS_I(1:nProc-1))
+       if (.not. allocated(iRequestR_I)) &
+            allocate(iRequestR_I(1:nProc-1))
+    end if
+
+    call timing_start('pass_trace1')
+    do iFace = iFaceMin, iFaceMax
+
+       call set_ranges_trace(iFace, iDir, jFace, iSide, iSize, iSizeR, &
+            iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+            iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+            iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
+
+       !$acc parallel loop gang independent
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
+          DiLevel = DiLevel_EB(iFace,iBlock)
+
+          select case(DiLevel)
+          case(0)
+             jProc = jProc_IEB(1,iFace,iBlock)
+             jBlock = jBlock_IEB(1,iFace,iBlock)
+             iSize1 = iSize
+
+             if(jProc == iProc)then
+                ! Local copy
+
+                !$acc loop vector collapse(3) private(iS, jS, kS)
+                do kR = kMinG,kMaxG; do jR = jMinG,jMaxG; do iR = iMinG,iMaxG
+                   iS = iR - iMinG + iMinO
+                   jS = jR - jMinG + jMinO
+                   kS = kR - kMinG + kMinO
+
+                   Trace_DINB(:,:,iR,jR,kR,jBlock) = max( &
+                        Trace_DINB(:,:,iR,jR,kR,jBlock), &
+                        Trace_DINB(:,:,iS,jS,kS,iBlock))
+                end do; end do; end do
+             else
+                call trace_face_to_buf(Trace_DINB, &
+                     iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+                     iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP)
+             end if
+          case(1)
+             jProc = jProc_IEB(1,iFace,iBlock)
+             jBlock = jBlock_IEB(1,iFace,iBlock)
+             iSize1 = iSizeR
+             ! Subface index =1,2,3, or 4 with respect to the coarse neighbor
+
+             ! iSubFace = iSubFace_IA(iFace,iNode_B(iBlock))
+             iNode = iNode_B(iBlock)
+             iSubFace = 0
+
+             !$acc loop seq
+             do iDim = 1, nDim
+                iSideFace = modulo(iTree_IA(Coord0_+iDim,iNode) - 1, 2)
+
+                if(iDim == (iFace+1)/2) CYCLE
+
+                if(iSubFace == 0) then
+                   iSubFace = iSideFace + 1
+                else
+                   iSubFace = iSubFace + 2*iSideFace
+                end if
+
+             end do
+
+             ! Swap subface 2 and 3 for iFace = 1..4 for BATSRUS tradition...
+             if(iFace <= 4 .and. iSubFace >= 2 .and. iSubFace <= 3) &
+                  iSubFace = 5 - iSubFace
+
+             if(jProc == iProc)then
+                ! Local copy into appropriate subface
+                call set_subface_range(.false., iFace, iSubFace, &
+                     iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+                     iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+                     iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
+                     iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
+
+                !$acc loop vector collapse(3) private(iS, jS, kS)
+                do kR = kMinS,kMaxS; do jR = jMinS,jMaxS; do iR = iMinS,iMaxS
+                   iS = 2*(iR - iMinS) + iMinO
+                   jS = 2*(jR - jMinS) + jMinO
+                   kS = 2*(kR - kMinS) + kMinO
+
+                   do iTrace = 1, 2; do iDim = 1, 3
+                      !$acc atomic update
+                      Trace_DINB(iDim,iTrace,iR,jR,kR,jBlock) = max( &
+                           Trace_DINB(iDim,iTrace,iS,jS,kS,iBlock), &
+                           Trace_DINB(iDim,iTrace,iR,jR,kR,jBlock))
+                   end do; end do
+                end do; end do; end do
+             else
+                call trace_subface_to_buf(Trace_DINB, &
+                     iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+                     iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP, iSubFace)
+             end if
+          case(-1)
+             do iSubFace = 1, 4
+                jProc = jProc_IEB(iSubFace,iFace,iBlock)
+                jBlock = jBlock_IEB(iSubFace,iFace,iBlock)
+                iSize1 = iSizeR
+
+                call set_subface_range(.true., iFace, iSubFace, &
+                     iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+                     iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+                     iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
+                     iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
+
+                if(jProc == iProc)then
+                   ! Local copy of appropriate subface
+
+                   !$acc loop vector collapse(3) private(iS, jS, kS)
+                   do kR = kMinG, kMaxG, 2
+                      do jR = jMinG, jMaxG, 2
+                         do iR = iMinG, iMaxG, 2
+                            iS = 0.5*(iR - iMinG) + iMinS
+                            jS = 0.5*(jR - jMinG) + jMinS
+                            kS = 0.5*(kR - kMinG) + kMinS
+
+                            Trace_DINB(:,:,iR,jR,kR,jBlock) = max(&
+                                 Trace_DINB(:,:,iR,jR,kR,jBlock),&
+                                 Trace_DINB(:,:,iS,jS,kS,iBlock))
+                         end do
+                      end do
+                   end do
+                else
+                   call trace_face_to_buf(Trace_DINB, &
+                        iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS, &
+                        iBlock, iSide, jProc, MaxSizeR, BufferS_IBIP)
+                end if
+             end do ! iSubFace
+
+          case(Unset_)
+             ! There is no neighbor, do nothing
+             CYCLE
+          case default
+             ! pass
+          end select ! DiLevel
+       end do ! iBlock
+    end do ! iFace
+    call timing_stop('pass_trace1')
+
+    if(nProc > 1)then
+       iRequestS = 0
+       iSize1 = MaxSizeR * 4 * MaxBlock * 2
+
+       !$acc host_data use_device(BufferS_IBIP)
+       do iProcSend = 0, nProc - 1
+          if(iProcSend == iProc) CYCLE
+          iRequestS = iRequestS + 1
+          call MPI_isend(BufferS_IBIP(1,1,1,iProcSend), iSize1, MPI_REAL, &
+               iProcSend, 10, iComm, iRequestS_I(iRequestS), iError)
+       end do
+       !$acc end host_data
+
+       iRequestR = 0
+       !$acc host_data use_device(BufferR_IBIP)
+       do iProcSend = 0, nProc - 1
+          if(iProcSend == iProc) CYCLE
+          iRequestR = iRequestR + 1
+          call MPI_irecv(BufferR_IBIP(1,1,1,iProcSend), iSize1, MPI_REAL, &
+               iProcSend, 10, iComm, iRequestR_I(iRequestR), iError)
+       end do
+       !$acc end host_data
+
+       if(iRequestS > 0) then
+          call MPI_waitall(iRequestS, iRequestS_I, MPI_STATUSES_IGNORE, &
+               iError)
+       end if
+       if(iRequestR > 0) then
+          call MPI_waitall(iRequestR, iRequestR_I, MPI_STATUSES_IGNORE, &
+               iError)
+       end if
+
+       call timing_start('pass_trace2')
+
+       ! retrieve traces from buffer
+       ! on the receiving buffer, iBlock -> jBlock, but jSide = iSide
+       do iFace = iFaceMin, iFaceMax
+
+          ! Set index ranges for the face
+          call set_ranges_trace(iFace, iDir, jFace, iSide, iSize, iSizeR, &
+               iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+               iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+               iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
+
+          if(DoDebug)write(*,*) &
+               'set_ranges_trace for buf_to_race Done: me, iFace=', &
+               iProc, iFace
+
+          !$acc parallel loop gang independent
+          do iBlock = 1, nBlock
+             if(Unused_B(iBlock))CYCLE
+
+             select case(DiLevel_EB(jFace,iBlock))
+             case(0)
+                jProc = jProc_IEB(1,jFace,iBlock)
+                jBlock = jBlock_IEB(1,jFace,iBlock)
+                iSize1 = iSize
+                if(DoDebug)&
+                     write(*,*)'buf_to_trace_face: me, iBlock, jBlock=',&
+                     iProc, iBlock, jBlock
+                if(jProc /= iProc) then
+                   call buf_to_trace_face_gpu( &
+                        BufferR_IBIP, Trace_DINB, MaxSizeR, &
+                        iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+                        iBlock, jBlock, iSide, jProc)
+                end if
+             case(1) ! neighbour is coarser
+                jProc = jProc_IEB(1,jFace,iBlock)
+                jBlock = jBlock_IEB(1,jFace,iBlock)
+                if(DoDebug) write(*,*)'buf_to_sparse_trace_face: me,iBlock=', &
+                     iProc,iBlock
+                if(jProc /= iProc)then
+                   call buf_to_sparse_trace_face_gpu( &
+                        BufferR_IBIP, Trace_DINB, MaxSizeR, &
+                        iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+                        iBlock, jBlock, iSide, jProc)
+                end if
+             case(-1)
+                do iSubFace = 1, 4
+                   jProc = jProc_IEB(iSubFace,jFace,iBlock)
+                   jBlock = jBlock_IEB(iSubFace,jFace,iBlock)
+                   if(DoDebug) &
+                        write(*,*)'buf_to_trace_subface: me,iSubFace,iBlock=',&
+                        iProc, iSubFace, iBlock
+                   if(jProc /= iProc)then
+                      call set_subface_range(.false., iFace, iSubFace, &
+                           iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO, &
+                           iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
+                           iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
+                           iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
+                      call buf_to_trace_subface_gpu(BufferR_IBIP, &
+                           Trace_DINB, MaxSizeR, &
+                           iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS, &
+                           iBlock, jBlock, iSide, jProc, iSubFace)
+                   end if
+                end do
+             end select ! DiLevel
+          end do ! iBlock
+       end do ! iFace
+       call timing_stop('pass_trace2')
+    end if ! nProc > 1
+
+  end subroutine pass_face_gpu
+  !============================================================================
+#endif
   subroutine calc_squash_factor
     ! Calculatte squashing factor
 
