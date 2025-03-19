@@ -1800,13 +1800,13 @@ contains
 
     real, parameter:: DensityJumpLimit=0.1
     !--------------------------------------------------------------------------
-    !if(UseBufferGrid)then
+    ! if(UseBufferGrid)then
     !   ! SC -> IH coupling through buffer grid
     !   XyzFace_D = &
     !       0.5*(Xyz_DGB(:,i,j,k,iBlock) + Xyz_DGB(:,iBody,jBody,kBody,iBlock))
     !   call get_from_spher_buffer_grid(XyzFace_D, nVar, VarsGhostFace_V)
     !   RETURN
-    !end if
+    ! end if
 
     if(B1rCoef /= 1.0 .or. UseRotatingBc) XyzFace_D &
          = 0.5*(Xyz_DGB(:,i,j,k,iBlock) + Xyz_DGB(:,iBody,jBody,kBody,iBlock))
