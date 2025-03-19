@@ -47,7 +47,8 @@ module ModUpdateStateFast
        No2Io_V, iUnitCons_V, UnitU_, &
        SpeedMin, rSpeedMin, TauSpeedMin
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
-       iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep
+       iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep, UseBufferGrid
+  use ModBuffer, ONLY: get_from_spher_buffer_grid
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
@@ -1799,6 +1800,14 @@ contains
 
     real, parameter:: DensityJumpLimit=0.1
     !--------------------------------------------------------------------------
+    !if(UseBufferGrid)then
+    !   ! SC -> IH coupling through buffer grid
+    !   XyzFace_D = &
+    !       0.5*(Xyz_DGB(:,i,j,k,iBlock) + Xyz_DGB(:,iBody,jBody,kBody,iBlock))
+    !   call get_from_spher_buffer_grid(XyzFace_D, nVar, VarsGhostFace_V)
+    !   RETURN
+    !end if
+
     if(B1rCoef /= 1.0 .or. UseRotatingBc) XyzFace_D &
          = 0.5*(Xyz_DGB(:,i,j,k,iBlock) + Xyz_DGB(:,iBody,jBody,kBody,iBlock))
 
