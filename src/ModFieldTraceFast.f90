@@ -580,8 +580,8 @@ contains
 
              ! Assign value to Trace_DSNB
              call assign_trace(iFace, iTrace, iBlock, iX, iY, iZ, &
-                  i1, j1, k1, i2, j2, k2, &
-                  .false., Trace_DSNB(:,iTrace,iX,iY,iZ,iBlock), Gen_D, Weight_I)
+                  i1, j1, k1, i2, j2, k2, .false., &
+                  Trace_DSNB(:,iTrace,iX,iY,iZ,iBlock), Gen_D, Weight_I)
 
           end do; end do; end do ! iX, iY, iZ
        end do ! iTrace
@@ -2128,11 +2128,9 @@ contains
 
     integer, intent(in):: iFace, iBlock
 
-    integer :: iTrace
-    integer :: i, j, k, nFaceJ, nFaceK
+    integer :: i, j, k, iTrace
 
-    integer, parameter   :: nFaceMax=max(nI+1,nJ+1,nK+1)
-
+    integer, parameter :: nFaceMax=max(nI+1,nJ+1,nK+1)
     real    :: Trace_DIII(3,2,nFaceMax,nFaceMax)
     integer :: IjkTrace_DII(2,nFaceMax,nFaceMax)
 
