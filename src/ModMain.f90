@@ -80,7 +80,8 @@ module ModMain
   logical:: UseLocalTimeStepNew = .false. ! if just switched on
 
   ! Model coupling variables
-  logical :: UseBufferGrid    = .false.
+  logical :: UseBufferGrid = .false.
+  !$acc declare create(UseBufferGrid)
 
   ! Logical for if outer helio sphere model is used
   logical :: UseOuterHelio = .false.
