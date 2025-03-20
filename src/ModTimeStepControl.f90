@@ -207,8 +207,8 @@ contains
 
           if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) > 0.0))then
              call get_cell_heating(i, j, k, iBlock, &
-                     WaveDissipationRate_V, CoronalHeating)
-             DtLoss = 1 / maxval(WaveDissipationRate_V)
+                  WaveDissipationRate_V, CoronalHeating)
+             DtLoss = 1 / max(1e-30, maxval(WaveDissipationRate_V))
              ! The following prevents the wave energies from becoming
              ! negative due to too large loss terms.
              DtMax_CB(i,j,k,iBlock) = DtMax_CB(i,j,k,iBlock)*DtLoss/&

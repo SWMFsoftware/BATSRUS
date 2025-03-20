@@ -367,7 +367,7 @@ contains
        if(UseAnisoPressure)State_VII(z_+Ppar_,:,:)  = &
             State_VII(z_+Ppar_,:,:)*No2Si_V(UnitP_)
 
-       if(Ehot_>1)State_VII(z_+Ehot_,:,:) = &
+       if(Ehot_ > 1)State_VII(z_+Ehot_,:,:) = &
             State_VII(z_+Ehot_,:,:)*No2Si_V(UnitEnergyDens_)
 
        call save_plot_file(trim(NamePlotDir)//NameFile,&
@@ -488,7 +488,7 @@ contains
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
 #ifdef _OPENACC
        if(  r_GB(i,j,k,iBlock) > BufferMax_D(1) .or. &
-            r_GB(i,j,k,iBlock) > BufferMin_D(1)) CYCLE
+            r_GB(i,j,k,iBlock) < BufferMin_D(1)) CYCLE
 #else
        if(.not.is_buffered_point(i, j, k, iBlock)) CYCLE
 #endif
