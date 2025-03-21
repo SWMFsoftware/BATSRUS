@@ -3,9 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBuffer
 
-  use BATL_lib,    ONLY: test_start, test_stop
+  use BATL_lib, ONLY: test_start, test_stop
   use ModNumConst, ONLY: cHalfPi, cTwoPi
-  use BATL_lib,    ONLY: MaxDim
+  use BATL_lib, ONLY: MaxDim
   use ModGeometry, ONLY: r_GB, rBody2_GB
   use ModBatsrusUtility, ONLY: stop_mpi
 
@@ -67,7 +67,7 @@ contains
     use ModVarIndexes, ONLY: nVar
     use ModMain,       ONLY: rLowerModel
 
-    integer  :: nCell_D(3)
+    integer:: nCell_D(3)
     !--------------------------------------------------------------------------
     if(allocated(BufferState_VG))deallocate(BufferState_VG)
     allocate(BufferState_VG(nVar,nRBuff,0:nLonBuff+1,0:nLatBuff+1))
@@ -384,7 +384,7 @@ contains
 
   end subroutine plot_buffer
   !============================================================================
-  subroutine  save_buffer_restart
+  subroutine save_buffer_restart
 
     use ModMain,       ONLY: NameThisComp
     use ModIoUnit,     ONLY: UnitTmp_
@@ -466,16 +466,16 @@ contains
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
     use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, iProc, &
          test_start, test_stop
-    integer,intent(in)::iBlock
+    integer, intent(in)::iBlock
 
     integer:: i, j, k
     logical:: DoWrite=.true.
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'fill_in_from_buffer'
     !--------------------------------------------------------------------------
+#ifndef _OPENACC
     call test_start(NameSub, DoTest, iBlock)
 
-#ifndef _OPENACC
     if(DoWrite)then
        DoWrite=.false.
        if(iProc==0)then
@@ -494,7 +494,7 @@ contains
 #endif
 
        ! Get interpolated values from buffer grid:
-       call get_from_spher_buffer_grid(&
+       call get_from_spher_buffer_grid( &
             Xyz_DGB(:,i,j,k,iBlock), nVar, State_VGB(:,i,j,k,iBlock))
 
        ! Transform primitive variables to conservative ones:
@@ -530,7 +530,9 @@ contains
   end subroutine fix_buffer_grid
   !============================================================================
   subroutine match_ibc
-    ! restore old values in the domain covered by the buffer grid
+
+    ! Fix initial conditions. Works differently for IH and OH.
+
     use ModGeometry, ONLY:r_GB
     use BATL_lib,  ONLY: Xyz_DGB
     use ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B, UseOuterHelio
@@ -539,41 +541,48 @@ contains
     integer  :: iBlock
     integer  :: i,j,k
     real     :: x_D(MaxDim), rBuffMax
+
+    character(len=*), parameter:: NameSub = "match_ibc"
     !--------------------------------------------------------------------------
+    if(UseOuterHelio)then
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
+          ! restore old values in the domain covered by the buffer grid
+          call user_set_ics(iBlock)
+       end do
+       RETURN
+    endif
+    !$acc parallel
     rBuffMax = BufferMax_D(BuffR_)
 
-    ! Fill all spatial domain with values depend on the BC
+    !$acc loop gang
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
-       if(UseOuterHelio)then
-          call user_set_ics(iBlock)
-       else
-          ! Fill in the physical cells, which are outside the buffer grid
-          ! When testing, do not fill cells outside the buffer
-          do k = 1, nK; do j = 1 , nJ; do i = 1, nI
-             if(r_GB(i,j,k,iBlock) < rBuffMax)CYCLE
+       ! Fill in the physical cells, which are outside the buffer grid
+       !$acc loop vector collapse(3) private(x_D)
+       do k = 1, nK; do j = 1 , nJ; do i = 1, nI
+          if(r_GB(i,j,k,iBlock) < rBuffMax)CYCLE
 
-             ! For each grid point, get the values at the base (buffer)
-             x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/r_GB(i,j,k,iBlock)
+          ! For each grid point, get the values at the base (buffer)
+          x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/r_GB(i,j,k,iBlock)
 
-             ! The grid point values are extracted from the base values
-             call get_from_spher_buffer_grid(&
-                  x_D, nVar, State_VGB(:,i,j,k,iBlock))
+          ! The grid point values are extracted from the base values
+          call get_from_spher_buffer_grid( &
+               x_D, nVar, State_VGB(:,i,j,k,iBlock))
 
-             ! Transform primitive variables to conservative ones:
-             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
-                  State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
-                  State_VGB(rho_,i,j,k,iBlock)
+          ! Transform primitive variables to conservative ones:
+          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = &
+               State_VGB(Ux_:Uz_,i,j,k,iBlock)*State_VGB(rho_,i,j,k,iBlock)
 
-             ! Scale as (r/R)^2:
-             State_VGB(:,i,j,k,iBlock)=&
-                  State_VGB(:,i,j,k,iBlock)*&
-                  (rBuffMax/r_GB(i,j,k,iBlock))**2
+          ! Scale as (r/R)^2:
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+               *(rBuffMax/r_GB(i,j,k,iBlock))**2
 
-          end do; end do; end do
-       end if
+       end do; end do; end do
     end do
+    !$acc end parallel
+
   end subroutine match_ibc
   !============================================================================
   subroutine fill_in_buffer_grid_gc
