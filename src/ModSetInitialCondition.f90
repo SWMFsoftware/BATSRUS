@@ -9,7 +9,7 @@ module ModSetInitialCondition
 
   use ModVarIndexes, ONLY: nVar
   use ModMain, ONLY: NamePrimitive_V
-  use ModPsehysics, ONLY: &
+  use ModPhysics, ONLY: &
        UseShocktube, ShockLeftDim_V, ShockRightDim_V, ShockLeft_V, &
        ShockRight_V, ShockPosition, ShockSlope, nVectorVar, iVectorVar_I, &
        iUnitPrim_V, Io2No_V, UseRadialState, AmplRDim_V, ExponentR_V
