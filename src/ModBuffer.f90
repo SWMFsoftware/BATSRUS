@@ -470,10 +470,10 @@ contains
 
     integer:: i, j, k
     logical:: DoWrite=.true.
+#ifndef _OPENACC
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'fill_in_from_buffer'
     !--------------------------------------------------------------------------
-#ifndef _OPENACC
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoWrite)then
@@ -542,7 +542,7 @@ contains
     integer  :: i,j,k
     real     :: x_D(MaxDim), rBuffMax
 
-    character(len=*), parameter:: NameSub = "match_ibc"
+    character(len=*), parameter:: NameSub = 'match_ibc'
     !--------------------------------------------------------------------------
     if(UseOuterHelio)then
        do iBlock = 1, nBlock

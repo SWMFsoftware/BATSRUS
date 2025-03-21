@@ -29,7 +29,7 @@ module ModSetInitialCondition
 
   ! Initialize B1 instead of full B
   logical:: UseB1 = .false.
-  
+
   ! Entropy constant for isentropic initial condition. Only used if positive.
   real :: EntropyConstant = -1.0
 
