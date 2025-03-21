@@ -509,7 +509,8 @@ The DipoleStrengthSi variable contains the
 magnetic equatorial strength of the dipole magnetic field in Tesla.
 
 The default value is the real dipole strength for the planet.
-For the Earth the default is taken to be -31100 nT.
+For the Earth the default is taken to be the IGRF dipole field that
+depends on the #STARTTIME.
 The sign is taken to be negative so that the magnetic axis can
 point northward as usual.
 </command>

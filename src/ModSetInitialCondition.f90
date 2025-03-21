@@ -9,7 +9,7 @@ module ModSetInitialCondition
 
   use ModVarIndexes, ONLY: nVar
   use ModMain, ONLY: NamePrimitive_V
-  use ModPhysics, ONLY: &
+  use ModPsehysics, ONLY: &
        UseShocktube, ShockLeftDim_V, ShockRightDim_V, ShockLeft_V, &
        ShockRight_V, ShockPosition, ShockSlope, nVectorVar, iVectorVar_I, &
        iUnitPrim_V, Io2No_V, UseRadialState, AmplRDim_V, ExponentR_V
@@ -27,6 +27,9 @@ module ModSetInitialCondition
 
   ! Local variables
 
+  ! Initialize B1 instead of full B
+  logical:: UseB1 = .false.
+  
   ! Entropy constant for isentropic initial condition. Only used if positive.
   real :: EntropyConstant = -1.0
 
@@ -73,8 +76,9 @@ contains
     case("#STATEINTERFACE")
        call read_initial_state_param(NameCommand)
 
-    case("#UNIFORMSTATE")
+    case("#UNIFORMSTATE", "#UNIFORMSTATE1")
        UseShockTube = .true.
+       UseB1 = NameCommand == '#UNIFORMSTATE1'
        do iVar = 1, nVar
           call read_var(NamePrimitive_V(iVar), ShockLeftDim_V(iVar))
        end do
@@ -325,7 +329,7 @@ contains
                         State_VGB(iUx:iUz,i,j,k,iBlock)
                 end do
 #endif
-                if(.not.UseB0)CYCLE
+                if(.not.UseB0 .or. UseB1)CYCLE
                 ! Remove B0 from B (if any)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
@@ -348,7 +352,7 @@ contains
                         State_VGB(iUx:iUz,i,j,k,iBlock)
                 end do
 #endif
-                if(.not.UseB0)CYCLE
+                if(.not.UseB0 .or. UseB1)CYCLE
                 ! Remove B0 from B (if any)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
