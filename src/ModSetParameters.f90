@@ -3924,7 +3924,7 @@ contains
       !$acc update device(DoCorrectFace, UseFDFaceFlux)
       !$acc update device(UseTvdResChange, UseAccurateResChange)
       !$acc update device(TypeLimiter, LimiterBeta)
-      !$acc update device(TypeCellBc_I, iTypeCellBc_I)
+      !$acc update device(TypeCellBc_I, iTypeCellBc_I, UseBufferGrid)
       !$acc update device(UseOutflowPressure)
       !$acc update device(UseB0, UseB0Source)
       !$acc update device(UseDivbSource, UseHyperbolicDivb, UseConstrainB)

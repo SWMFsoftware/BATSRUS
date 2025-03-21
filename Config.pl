@@ -306,10 +306,11 @@ sub set_optimization{
 	    );
 
 	# Component dependent defaults (from ModSetParameters)
-	$Set{"UseB0"}            = ".false." if $NameComp =~ /IH|OH/;
-	$Set{"UseGravity"}       = ".true."  if $NameComp !~ /GM/;
-	$Set{"UseRotatingFrame"} = ".true."  if $NameComp =~ /SC|EE/;
-	$Set{"UseRotatingBc"}    = ".true."  if $NameComp =~ /GM/;
+	# Use lower case for component names so they don't get renamed
+	$Set{"UseB0"}            = ".false." if $NameComp =~ /ih|oh/i;
+	$Set{"UseGravity"}       = ".true."  if $NameComp !~ /gm/i;
+	$Set{"UseRotatingFrame"} = ".true."  if $NameComp =~ /sc|ee/i;
+	$Set{"UseRotatingBc"}    = ".true."  if $NameComp =~ /gm/i;
 
 	print "processing parameter file $Opt\n";
 	my $first = 1;  # true in the first session of the active component

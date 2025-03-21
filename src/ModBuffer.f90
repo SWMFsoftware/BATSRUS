@@ -3,72 +3,87 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBuffer
 
-  use BATL_lib,     ONLY: test_start, test_stop
-  use ModNumConst,  ONLY: cHalfPi, cTwoPi
-  use BATL_lib,     ONLY: MaxDim
+  use BATL_lib,    ONLY: test_start, test_stop
+  use ModNumConst, ONLY: cHalfPi, cTwoPi
+  use BATL_lib,    ONLY: MaxDim
+  use ModGeometry, ONLY: r_GB, rBody2_GB
   use ModBatsrusUtility, ONLY: stop_mpi
+
   implicit none
 
   SAVE
 
   ! Named indexes for the spherical buffer
-  integer, parameter :: BuffR_  =1, BuffLon_ =  2, BuffLat_ =  3
+  integer, parameter:: BuffR_ = 1, BuffLon_ = 2, BuffLat_ = 3
 
   ! Number of buffer grid points, along radial, longitudinal and latitudinal
   ! dirctions
-  integer            :: nRBuff = 2, nLonBuff = 90, nLatBuff = 45
+  integer:: nRBuff = 2, nLonBuff = 90, nLatBuff = 45
+  !$acc declare create(nRBuff, nLonBuff, nLatBuff)
 
   ! Buffer grid with dimension(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1).
   ! There are layers of grid points to implement periodic BCs in longitude
   ! and across-the-pole interpolation in latitude.
-  real,  allocatable :: BufferState_VG(:,:,:,:)
+  real, allocatable :: BufferState_VG(:,:,:,:)
+  !$acc declare create(BufferState_VG)
 
   ! Mesh sizes
-  real               :: dSphBuff_D(MaxDim)
+  real:: dSphBuff_D(MaxDim)
+  !$acc declare create(dSphBuff_D)
 
   ! Minimum and maximum coordinate values. For radius the use of UnitX_
   ! is assumed, while the longitude and latitude are expressed in radians
-  real               :: BufferMin_D(MaxDim) = [ 19.0,    0.0, -cHalfPi]
-  real               :: BufferMax_D(MaxDim) = [ 21.0, cTwoPi,  cHalfPi]
+  real:: BufferMin_D(MaxDim) = [19.0,    0.0, -cHalfPi]
+  real:: BufferMax_D(MaxDim) = [21.0, cTwoPi,  cHalfPi]
+  !$acc declare create(BufferMin_D, BufferMax_D)
 
   ! The magnetic field and velocity vectors on grid are in the coordinate
   ! system as used in the "source" model (in SC, if the grid is applied in
   ! the IH). Therefore, we need both the coordinate system identifier from
   ! the source model...
-  character (len=3)  :: TypeCoordSource = '???'
+  character (len=3):: TypeCoordSource = '???'
 
   ! ...and the matrix to convert the coordinate, velocity and the
   ! magnetic field vectors between the buffer grid and the model one:
-  real               :: SourceTarget_DD(MaxDim, MaxDim)
+  real:: SourceTarget_DD(MaxDim, MaxDim)
 
   ! To figure out, if the time-dependent conversion matrix needs to be
   ! recalculated for a new time step
-  real               :: TimeSimulationLast = -1.0
+  real:: TimeSimulationLast = -1.0
+  !$acc declare create(TimeSimulationLast)
 
   ! If the logical below is true the buffer may be restarted, even is the
   ! source model is not used/configured in the restarted run.
-  logical            :: DoRestartBuffer = .false.
+  logical:: DoRestartBuffer = .false.
 
   ! If the logical below is true the buffer grid is centered
   ! at xBody2, yBody2, zBBody2
-  logical            :: IsBody2Buffer = .false.
+  logical:: IsBody2Buffer = .false.
+
 contains
   !============================================================================
   subroutine init_buffer_grid
+
     use ModVarIndexes, ONLY: nVar
     use ModMain,       ONLY: rLowerModel
+
     integer  :: nCell_D(3)
     !--------------------------------------------------------------------------
     if(allocated(BufferState_VG))deallocate(BufferState_VG)
-    allocate(BufferState_VG(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1))
+    allocate(BufferState_VG(nVar,nRBuff,0:nLonBuff+1,0:nLatBuff+1))
     BufferState_VG = 0.0
+
     ! Calculate grid spacing and save
     nCell_D = [nRBuff, nLonBuff, nLatBuff]
     dSphBuff_D = (BufferMax_D - BufferMin_D)/real(nCell_D)
     dSphBuff_D(BuffR_) = (BufferMax_D(BuffR_) - BufferMin_D(BuffR_)) &
          /real(nRBuff - 1)
+
     ! Assign the lower limit for LOS intergation, for the given model:
     rLowerModel = BufferMax_D(BuffR_)
+
+    !$acc update device(nRBuff, nLonBuff, nLatBuff)
+    !$acc update device(dSphBuff_D, BufferMin_D, BufferMax_D, BufferState_VG)
   end subroutine init_buffer_grid
   !============================================================================
   subroutine read_buffer_grid_param(NameCommand)
@@ -133,34 +148,40 @@ contains
   end subroutine read_buffer_grid_param
   !============================================================================
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
-    use ModMain,       ONLY: TypeCoordTarget=>TypeCoordSystem,  &
-         tSimulation, DoThinCurrentSheet
-    use ModSaMhd,       ONLY: UseSaMhd, get_samhd_state
-    use CON_axes,      ONLY: transform_matrix, transform_velocity
-    use ModAdvance,    ONLY: UseB
-    use ModWaves,      ONLY: UseAlfvenWaves
-    use ModTurbulence, ONLY: IsOnAwRepresentative, PoyntingFluxPerB
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitU_, UnitX_,  &
-         xBody2,  yBody2, zBody2
+    !$acc routine seq
+
+    use ModMain, ONLY: TypeCoordTarget=>TypeCoordSystem, tSimulation
+    use CON_axes, ONLY: transform_matrix, transform_velocity
+    use ModAdvance, ONLY: UseB
+    use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitU_, UnitX_
     use ModVarIndexes, ONLY: Ux_, Uz_, RhoUx_, RhoUz_, SignB_,  Rho_,&
          WaveFirst_, WaveLast_, Bx_, Bz_, wDiff_
     use ModCoordTransform, ONLY: xyz_to_rlonlat
-    integer,intent(in) :: nVar
-    real,   intent(in) :: XyzTarget_D(MaxDim)   ! Input coordinates
-    real,   intent(out):: State_V(nVar)
+#ifndef _OPENACC
+    use ModPhysics, ONLY: xBody2,  yBody2, zBody2
+    use ModMain, ONLY: DoThinCurrentSheet
+    use ModWaves,      ONLY: UseAlfvenWaves
+    use ModTurbulence, ONLY: IsOnAwRepresentative, PoyntingFluxPerB
+    use ModSaMhd,       ONLY: UseSaMhd, get_samhd_state
+#endif
 
-    real              :: Ewave
-    ! Cartesian coords of target point:
-    real              :: Xyz_D(MaxDim)
+    integer, intent(in) :: nVar
+    real,    intent(in) :: XyzTarget_D(MaxDim)   ! Input coordinates
+    real,    intent(out):: State_V(nVar)
+
+    ! Cartesian coords of target point
+    real:: Xyz_D(MaxDim)
     ! Cartesian coords of mapped point within the source model
-    real              :: XyzSource_D(MaxDim)
+    real:: XyzSource_D(MaxDim)
     ! Spherical coords of mapped point within the source model
-    real              :: Sph_D(MaxDim)
+    real:: Sph_D(MaxDim)
     ! To use AW representatives
-    real              :: SqrtRhoInv
-
+    real:: SqrtRhoInv
+    ! Temporary variable for thin current sheet
+    real:: Ewave
     !--------------------------------------------------------------------------
     Xyz_D = XyzTarget_D
+#ifndef _OPENACC
     if(IsBody2Buffer)Xyz_D = Xyz_D - [xBody2, yBody2, zBody2]
     if(TypeCoordSource /= TypeCoordTarget) then
        ! Convert target coordinates to the coordiante system of the model
@@ -172,8 +193,11 @@ contains
        end if
        XyzSource_D = matmul(SourceTarget_DD, Xyz_D)
     else
+#endif
        XyzSource_D = Xyz_D
+#ifndef _OPENACC
     end if
+#endif
 
     call xyz_to_rlonlat(XyzSource_D, Sph_D)
 
@@ -184,14 +208,15 @@ contains
     State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
 
     ! Transform vector variables from source coordinate frame to target
+#ifndef _OPENACC
+    ! transform_velocity is not ported to GPU yet
     if(TypeCoordSource /= TypeCoordTarget)then
        State_V(Ux_:Uz_) = transform_velocity(tSimulation,              &
             State_V(Ux_:Uz_)*No2Si_V(UnitU_), XyzSource_D*No2Si_V(UnitX_), &
             TypeCoordSource, TypeCoordTarget)*Si2No_V(UnitU_)
-       if(UseB) State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
+       if(UseB) State_V(Bx_:Bz_) = matmul(State_V(Bx_:Bz_), SourceTarget_DD)
     end if
-
-    if(SignB_>1)then
+    if(SignB_ > 1)then
        if(DoThinCurrentSheet)then
           ! In both IH and OH we have no B0, so we ignore that !
           if(sum(State_V(Bx_:Bz_)*XyzTarget_D) < 0.0)then
@@ -216,10 +241,12 @@ contains
        State_V(WaveFirst_:WaveLast_) = SqrtRhoInv*State_V(WaveFirst_:WaveLast_)
        if(wDiff_>1)State_V(WDiff_) = SqrtRhoInv*State_V(WDiff_)
     end if
+#endif
   end subroutine get_from_spher_buffer_grid
   !============================================================================
   subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
-    ! DESCRIPTION
+    !$acc routine seq
+
     ! This subroutine is used to interpolate from  state variables defined on a
     ! spherical buffer grid into the input point SphSource_D.
     ! The buffer grid overlaps some part of the computational grid of a
@@ -243,11 +270,11 @@ contains
 
     use ModInterpolate, ONLY: trilinear
     ! Input and output variables
-    real,intent(in)    :: SphSource_D(3)
-    integer,intent(in) :: nVar
-    real,intent(out)   :: Buffer_V(nVar)
+    real, intent(in)    :: SphSource_D(3)
+    integer, intent(in) :: nVar
+    real, intent(out)   :: Buffer_V(nVar)
 
-    real               :: NormSph_D(3)
+    real:: NormSph_D(3)
 
     ! Convert to normalized coordinates.
     ! Radial is node centered, theta and phi are cell centered.
@@ -261,6 +288,7 @@ contains
   end subroutine interpolate_from_global_buffer
   !============================================================================
   subroutine plot_buffer(iFile)
+
     use ModPlotFile,   ONLY: save_plot_file
     use ModNumConst,   ONLY: cRadToDeg
     use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure
@@ -274,18 +302,18 @@ contains
     use ModPhysics,       ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitX_,   &
          UnitP_, UnitEnergyDens_
     use BATL_lib,     ONLY: iProc
+
     integer, intent(in):: iFile          ! Unused
-    integer            :: iTimePlot_I(7) ! To shape the file name
-    integer            :: iR, iLon, iLat ! Coordinate indexes
-    real               :: R, Lat, Lon    ! Coords
+    integer:: iTimePlot_I(7) ! To shape the file name
+    integer:: iR, iLon, iLat ! Coordinate indexes
+    real:: r, Lat, Lon    ! Coords
     ! Xyz and state variables to plot
-    real               :: State_VII(3 + nVar, nLonBuff, nLatBuff)
+    real:: State_VII(3 + nVar, nLonBuff, nLatBuff)
     ! Coords: Longitude, Latitude, in degrees
-    real               :: Coord_DII(2, nLonBuff, nLatBuff)
-    character(LEN=30)::NameFile
-#ifndef SCALAR
+    real:: Coord_DII(2, nLonBuff, nLatBuff)
+    character(len=30):: NameFile
     !--------------------------------------------------------------------------
-    if(iProc/=0)RETURN ! May be improved
+    if(iProc /= 0) RETURN ! May be improved
 
     ! Convert time to integers:
     call time_real_to_int(StartTime + tSimulation, iTimePlot_I)
@@ -308,7 +336,7 @@ contains
              call rlonlat_to_xyz(R, Lon, Lat, State_VII(x_:z_,iLon,iLat))
              ! Save Buffer state vector
              State_VII(z_+1:z_+nVar, iLon, iLat) = &
-                  BufferState_VG(:, iR, iLon, iLat)
+                  BufferState_VG(:,iR,iLon,iLat)
              ! Transform to primitive variables:
              State_VII(z_+Ux_:z_+Uz_, iLon, iLat) = &
                   State_VII(z_+RhoUx_:z_+RhoUz_, iLon, iLat)/&
@@ -339,7 +367,7 @@ contains
        if(UseAnisoPressure)State_VII(z_+Ppar_,:,:)  = &
             State_VII(z_+Ppar_,:,:)*No2Si_V(UnitP_)
 
-       if(Ehot_>1)State_VII(z_+Ehot_,:,:) = &
+       if(Ehot_ > 1)State_VII(z_+Ehot_,:,:) = &
             State_VII(z_+Ehot_,:,:)*No2Si_V(UnitEnergyDens_)
 
        call save_plot_file(trim(NamePlotDir)//NameFile,&
@@ -353,7 +381,7 @@ contains
             CoordIn_DII=Coord_DII, &
             VarIn_VII=State_VII)
     end do
-#endif
+
   end subroutine plot_buffer
   !============================================================================
   subroutine  save_buffer_restart
@@ -403,7 +431,7 @@ contains
 
   end subroutine write_buffer_restart_header
   !============================================================================
-  subroutine  read_buffer_restart
+  subroutine read_buffer_restart
 
     use ModMain,       ONLY: NameThisComp
     use ModIoUnit,     ONLY: UnitTmp_
@@ -412,15 +440,14 @@ contains
     !--------------------------------------------------------------------------
     call open_file(file=NameThisComp//'/restartIN/buffer.dat', &
          status='old', form='UNFORMATTED', NameCaller=NameSub)
-    read(UnitTmp_)BufferState_VG(:,:,1:nLonBuff,1:nLatBuff)
+    read(UnitTmp_) BufferState_VG(:,:,1:nLonBuff,1:nLatBuff)
     call close_file
     call fill_in_buffer_grid_gc
 
   end subroutine read_buffer_restart
   !============================================================================
-  logical function is_buffered_point(i,j,k,iBlock)
+  logical function is_buffered_point(i, j, k, iBlock)
 
-    use ModGeometry, ONLY: r_GB, rBody2_GB
     integer, intent(in):: i, j, k, iBlock
     !--------------------------------------------------------------------------
     if(IsBody2Buffer)then
@@ -434,6 +461,7 @@ contains
   end function is_buffered_point
   !============================================================================
   subroutine fill_in_from_buffer(iBlock)
+    !$acc routine vector
 
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
     use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, iProc, &
@@ -447,15 +475,23 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+#ifndef _OPENACC
     if(DoWrite)then
        DoWrite=.false.
        if(iProc==0)then
           write(*,*)'Fill in the cells near the inner boundary from the buffer'
        end if
     end if
+#endif
 
+    !$acc loop vector collapse(3)
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+#ifdef _OPENACC
+       if(  r_GB(i,j,k,iBlock) > BufferMax_D(1) .or. &
+            r_GB(i,j,k,iBlock) < BufferMin_D(1)) CYCLE
+#else
        if(.not.is_buffered_point(i, j, k, iBlock)) CYCLE
+#endif
 
        ! Get interpolated values from buffer grid:
        call get_from_spher_buffer_grid(&
@@ -545,7 +581,7 @@ contains
     ! Fill in the buffer grid ghost cells:
     ! For longitude: using periodic BCs at 0th and 360 degrees longitude
     ! For latitude: interpolation across the pole
-    integer   :: iLonNew, iLon
+    integer:: iLonNew, iLon
     !--------------------------------------------------------------------------
     do iLon = 1, nLonBuff
        iLonNew = iLon + nLonBuff/2
@@ -556,6 +592,10 @@ contains
     end do
     BufferState_VG(:,:,0,:)          = BufferState_VG(:,:,nLonBuff,:)
     BufferState_VG(:,:,nLonBuff+1,:) = BufferState_VG(:,:,1,:)
+
+    ! This subroutine is called every time the buffer changes,
+    ! so this is a good place to push the buffer to the GPU.
+    !$acc update device(BufferState_VG)
 
   end subroutine fill_in_buffer_grid_gc
   !============================================================================

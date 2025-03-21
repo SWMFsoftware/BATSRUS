@@ -803,20 +803,15 @@ contains
 
       ! f_i[e]=(u_i*(ptotal + e + (n x E) . B) since div(E x B) = curl(E) . B
       Flux_V(Energy_) = Flux_V(Energy_) & ! hydro energy flux
-           + Un*pExtra                  & ! work of electrons and waves
            + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz ! Poynting flux
 
-      ! Correct energy flux, so that the electron contribution to the energy
-      ! flux is U_e*p_e. We add (U_e-U_ion)*p_e.
-      if(UseElectronPressure .and. (nIonFluid == 1 .or. UseTotalIonEnergy) &
-           .and. iFluid == 1 .and. HallCoeff > 0)then
-         if(UseElectronEnergy)then
-            ! There are two terms: Ue*Pe/(ge-1) + Ue*Pe = Ue*Pe*ge/(ge-1)
-            Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*Pe &
-                 *GammaElectron*InvGammaElectronMinus1
-         else
-            Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*Pe
-         end if
+      ! The contribution of electron and wave pressures to the energy flux
+      if( (UseElectronPressure .or. UseWavePressure) .and. iFluid == 1) then
+         ! The following is not OK for single ion with Hall term and turbulence
+         Flux_V(Energy_) = Flux_V(Energy_) + HallUn*pExtra
+         ! Add Ue*Pe/(ge-1) if electron energy is included
+         if(UseElectronEnergy) Flux_V(Energy_) = Flux_V(Energy_) &
+             + HallUn*Pe*InvGammaElectronMinus1
       end if
 
       if(UseBorisSimple)then
