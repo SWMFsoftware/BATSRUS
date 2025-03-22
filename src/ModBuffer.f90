@@ -470,7 +470,7 @@ contains
 
     integer:: i, j, k
     logical:: DoWrite=.true.
-#ifndef _OPENACC
+#ifdef TESTACC
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'fill_in_from_buffer'
     !--------------------------------------------------------------------------
@@ -502,8 +502,9 @@ contains
             State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
 
     end do; end do; end do
-
+#ifdef #TESTACC
     call test_stop(NameSub, DoTest, iBlock)
+#endif
   end subroutine fill_in_from_buffer
   !============================================================================
   subroutine fix_buffer_grid(iBlock)
