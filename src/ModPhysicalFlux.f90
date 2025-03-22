@@ -635,9 +635,8 @@ contains
       else
          e = InvGammaMinus1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
       end if
-      if(UseElectronEnergy) e = e + InvGammaElectronMinus1*Pe
-      StateCons_V(Energy_) = e
-      ! Calculate energy flux
+
+      ! Calculate hydro energy flux
       if(UseTotalIonEnergy)then
          ! Is this correct for anisotropic case???
          Flux_V(Energy_) = sum( &
@@ -645,6 +644,10 @@ contains
       else
          Flux_V(Energy_) = Un*(e + pPerp)
       end if
+
+      ! Add electron energy if included
+      if(UseElectronEnergy) e = e + InvGammaElectronMinus1*Pe
+      StateCons_V(Energy_) = e
 
       ! Correct momentum and energy hydro fluxes for anisotroic pressure
       if(UseAnisoPressure)then
