@@ -446,12 +446,7 @@ contains
          DissipationRateDiff
     real :: EwavePlus, EwaveMinus
     real :: AlfvenGradRefl, ReflectionRateImb
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'get_wave_reflection_cell'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     if( (.not.Used_GB(i,j,k,iBlock)).or.&
          r_GB(i,j,k, iBlock) < rMinWaveReflection) RETURN
 
@@ -513,7 +508,6 @@ contains
     end if
 #endif
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_wave_reflection_cell
   !============================================================================
   subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
