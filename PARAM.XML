@@ -1027,6 +1027,19 @@ The default values are shown above.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="SUBTRACTB0" if="$_IsFirstSession">
+  <parameter name="DoSubtractB0" type="logical" default="T"/>
+
+#SUBTRACTB0
+F			DoSubtractB0
+
+If the magnetic field is split to B0 and B1, then the initial condition
+set by #UNIFORMSTATE and similar commands can either apply to the total field
+when DoSubtractB0 true, or to B1 only when DoSubtractB0 is set to false.
+
+The default is DoSubtractB0 true.
+</command>
+  
 <command name="UNIFORMSTATE" if="$_IsFirstSession">
   <for from="1" to="$nVar">
     <parameter name="StateVar" type="real"/>
