@@ -29,8 +29,8 @@ contains
     use ModTimeStepControl, ONLY: set_global_timestep
 
     real, intent(out) ::  DtSi
-    !--------------------------------------------------------------------------
     ! use -1.0 so that no limit is applied on Dt
+    !--------------------------------------------------------------------------
     call set_global_timestep(TimeSimulationLimit=-1.0)
 
     DtSi = Dt*No2Si_V(UnitT_)

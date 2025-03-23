@@ -78,7 +78,7 @@ contains
 
     case("#SUBTRACTB0")
        call read_var('DoSubtractB0', DoSubtractB0)
-       
+
     case("#UNIFORMSTATE")
        UseShockTube = .true.
        do iVar = 1, nVar
