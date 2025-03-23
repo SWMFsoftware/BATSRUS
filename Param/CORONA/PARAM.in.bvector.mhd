@@ -58,6 +58,9 @@ use:
 180			nLon
 for the real run
 
+#SUBTRACTB0
+F			DoSubtractB0
+
 #UNIFORMSTATE
 1.0e-10			StateVar Rho
 0.0			StateVar Ux
@@ -238,7 +241,7 @@ bx by bz 		NameVars
 {default}		NamePars
 
 #SAVEINITIAL
-F			DoSaveInitial
+T			DoSaveInitial
 
 #STOP
 20			MaxIteration ! For the real run set ~100000
