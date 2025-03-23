@@ -502,7 +502,7 @@ contains
             State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
 
     end do; end do; end do
-#ifdef #TESTACC
+#ifdef TESTACC
     call test_stop(NameSub, DoTest, iBlock)
 #endif
   end subroutine fill_in_from_buffer
