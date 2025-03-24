@@ -1,0 +1,258 @@
+#DESCRIPTION
+Param/CORONA/PARAM.in.Awsom: solar corona with CMEs		StringDescription
+
+#COMPONENT
+SC			NameComp
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#STARTTIME
+2011			iYear
+2			iMonth
+16			iDay
+17			iHour
+26			iMinute
+0			iSecond
+
+#SAVERESTART
+T			DoSaveRestart
+10000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#COORDSYSTEM
+HGR			TypeCoordSystem
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#FIELDLINETHREAD
+T                       UseFieldLineThreads
+100                     nPointThreadMax
+0.0005                  DsThreadMin
+
+#THREADEDBC
+T                       UseAlignedVelocity
+F                       DoConvergenceCheck
+limited                 TypeBc
+1.0e-6                  Tolerance
+40                      MaxIter
+
+#PLOTTHREADS
+T                       DoPlotThreads
+10                       nGUniform
+T                       UseTriangulation
+T                       UseTRCorrection
+T                       UsePlanarTriangles
+
+#BODY
+T                       UseBody
+1.0                     rBody
+1.5e8                   BodyNDim
+1.5e6                   BodyTDim
+
+#HARMONICSFILE
+Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
+
+
+#POYNTINGFLUX
+1e6			PoyntingFluxPerBSi
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseReynoldsDecomposition
+
+#HEATPARTITIONING
+stochasticheating		TypeHeatPartitioning
+0.21			StochasticExponent
+0.18			StochasticAmplitude
+
+#RADIATIVECOOLING
+T			UseRadCooling
+
+#USERSWITCH
++init +ic		StringSwitch
+
+#COARSEAXIS
+T			UseCoarseAxis
+2			nCoarseLayer
+
+#USERINPUTBEGIN -----------------------------------
+
+#CHROMOBC
+2e17			NchromoSi
+5e4			TchromoSi
+
+#USERINPUTEND -------------------------------------
+
+#TRANSITIONREGION
+T			DoExtendTransitionRegion
+2.2e5			TeTransitionRegionSi
+1.0e1			DeltaTeModSi
+
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+Param/CORONA/grid_awsom.dat		NameGridFile
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#GRIDBLOCKALL
+4000			MaxBlock
+
+#LIMITRADIUS
+1.01			rMin
+24.0			rMax
+
+#AMRREGION
+InnerShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+1.7			Radius
+
+#AMRREGION
+LargeShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+2.0			Radius
+
+#AMRCRITERIARESOLUTION
+4			nRefineCrit
+Level +InnerShell		StringRefine
+4			RefineTo
+4			CoarsenFrom
+currentsheet +LargeShell -InnerShell		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+0.1			MaxResolution
+Level			StringRefine
+2			RefineTo
+2			CoarsenFrom
+currentsheet -LargeShell		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+0.1			MaxResolution
+
+#GRIDRESOLUTION
+12.0			Resolution
+initial			StringShape
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+Param/CORONA/RadCoolCorona.dat		NameFile
+ascii			TypeFile
+
+#DOAMR
+T			DoAmr
+40			DnAmr
+-1			DtAmr
+T			IsStrictAmr
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder (1 or 2)
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
+
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			PeMinDim
+
+#MINIMUMRADIALSPEED
+T			UseSpeedMin
+10			rSpeedMin
+500			SpeedMinDim  ! 250km/s has no effect in this test
+10 h			TauSpeedMinDim
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#RESCHANGE
+T			UseAccurateReschange
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#OUTERBOUNDARY
+fieldlinethreads			TypeBc1
+float			TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
+
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#STOP
+50			MaxIteration 60000
+-1.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#DOAMR
+F			DoAmr
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#PARTLOCALTIMESTEP
+1.1			rLocalTimeStep
+
+! Perturb with GL CME
+#USERSWITCH
++perturb -ic		StringSwitch
+
+#CME
+T                   UseCme
+T                   DoAddFluxRope
+-1                  tDecayCme
+180                 LongitudeCme
+15                  LatitudeCme
+120                 OrientationCme
+TD22                TypeCme
+-1                  iHelicity
+0.16                RadiusMajor
+0.06                RadiusMinor
+0.05                Depth
+1.0e-3              PlasmaBeta
+5.0e5               EjectaTemperature
+getbstrap           TypeBStrap
+none
+
+#STOP
+-1			MaxIteration
+5.0			tSimulationMax
+
+#RUN ##########################################################################
