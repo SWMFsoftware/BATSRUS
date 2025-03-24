@@ -155,6 +155,7 @@ module ModUserInterface
      end subroutine user_io_units
 
      subroutine user_set_resistivity(iBlock, Eta_G)
+      !$acc routine vector
 
        use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 

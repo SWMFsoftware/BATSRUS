@@ -202,6 +202,7 @@ contains
 
     use ModMain,    ONLY: nBlock, Unused_B
     use BATL_lib,   ONLY: message_pass_cell, block_inside_regions
+    use ModUserInterface
 
     real, allocatable:: ResistFactor_G(:,:,:)
 
@@ -211,41 +212,48 @@ contains
     character(len=*), parameter:: NameSub = 'set_resistivity'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+#ifndef _OPENACC
     if(allocated(iRegionResist_I)) &
          allocate(ResistFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-
+#endif
     !$omp parallel do private(ResistFactor_G)
+    !$acc parallel loop gang independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        select case(TypeResistivity)
        case('constant')
           Eta_GB(:,:,:,iBlock) = Eta0
+#ifndef _OPENACC
        case('spitzer')
           call spitzer_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
        case('anomalous')
           call anomalous_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
        case('raeder')
           call raeder_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+#endif
        case('user')
           call user_set_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
        case default
           call stop_mpi(NameSub//': invalid TypeResistivity='//TypeResistivity)
        end select
 
+#ifndef _OPENACC
        ! Modify resistivity of resistive regions
        if(allocated(iRegionResist_I))then
           call block_inside_regions(iRegionResist_I, iBlock, &
                size(ResistFactor_G), 'ghosts', Value_I=ResistFactor_G)
           Eta_GB(:,:,:,iBlock) = Eta_GB(:,:,:,iBlock)*ResistFactor_G
        end if
+#endif
     end do
     !$omp end parallel do
 
+#ifndef _OPENACC
     if(allocated(iRegionResist_I)) deallocate(ResistFactor_G)
 
     if(DoMessagePassResistivity) &
          call message_pass_cell(Eta_GB, nWidthIn=1)
-
+#endif
     call test_stop(NameSub, DoTest)
   end subroutine set_resistivity
   !============================================================================
@@ -507,9 +515,11 @@ contains
 
     !$omp parallel do private(DoTestCell,DtLocal) &
     !$omp private(HeatExchange,HeatExchangePeP,HeatExchangePePpar)
+    !$acc parallel loop gang independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
+       !$acc loop vector independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 

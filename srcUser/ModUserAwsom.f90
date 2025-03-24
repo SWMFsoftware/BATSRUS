@@ -43,6 +43,7 @@ module ModUser
   ! Input parameters for two-temperature effects
   real    :: TeFraction, TiFraction
   real    :: EtaPerpSi
+  !$acc declare create(TeFraction, EtaPerpSi)
 
   ! Extra dipole under surface
   real    :: UserDipoleStrength = 0., UserDipoleStrengthSi = 0.
@@ -328,7 +329,8 @@ contains
     end if
 
     !$acc update device(tChromo, UseFloatRadialVelocity, ChromoN)
-
+    !$acc update device(EtaPerpSi, TeFraction)
+    
     call test_stop(NameSub, DoTest)
   end subroutine user_init_session
   !============================================================================
@@ -1561,7 +1563,8 @@ contains
   end subroutine user_set_cell_boundary
   !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
-
+    !$acc routine vector
+    
     use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitX_, UnitT_
     use ModVarIndexes, ONLY: Rho_, Pe_
@@ -1576,6 +1579,7 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_resistivity'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+    !$acc loop vector independent 
     do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
        Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        TeSi = Te*No2Si_V(UnitTemperature_)

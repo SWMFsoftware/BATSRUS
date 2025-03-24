@@ -356,6 +356,7 @@ contains
   end subroutine user_io_units
   !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
+    !$acc routine vector
 
     ! Set Eta_G for block iBlock
 
