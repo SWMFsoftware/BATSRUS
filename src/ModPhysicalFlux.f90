@@ -993,7 +993,7 @@ contains
             write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
             write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
          end if
-      elseif(UseEntropy)then
+      elseif(UseEntropy .and. IsIon_I(iFluid))then
          ! s = p*rho^(g-1)
          StateCons_V(iP) = p*Rho**(-GammaMinus1_I(iFluid))
          ! u_i * s

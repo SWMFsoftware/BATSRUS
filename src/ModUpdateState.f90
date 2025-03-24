@@ -240,7 +240,7 @@ contains
          UseHalfStep, UseFlic, UseUserSourceImpl, UseHyperbolicDivB, HypDecay
     use ModPhysics, ONLY: &
          Gamma, GammaMinus1, InvGammaMinus1, Gamma_I, GammaMinus1_I, &
-         GammaMinus1Ion_I, InvGammaMinus1Ion_I, &
+         GammaIon_I, GammaMinus1Ion_I, InvGammaMinus1Ion_I, &
          GammaElectronMinus1, InvGammaElectronMinus1, GammaElectron, &
          ShockLeft_V, ShockRight_V, RhoMin_I
     use ModVarIndexes, ONLY: Pe_, p_
@@ -354,11 +354,11 @@ contains
                 ! only non-conservative cells need the ion entropy source
                 if(IsConserv_CB(i,j,k,iBlock)) CYCLE
              end if
-             Source_VC(iP_I,i,j,k) = Source_VC(iP_I,i,j,k) &
-                  *State_VGB(iRho_I,i,j,k,iBlock)**(-GammaMinus1_I) &
-                  - GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock) &
-                  *State_VGB(iRho_I,i,j,k,iBlock)**(-Gamma_I) &
-                  *Source_VC(iRho_I,i,j,k)
+             Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
+                  *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I) &
+                  - GammaMinus1Ion_I*State_VGB(iPIon_I,i,j,k,iBlock) &
+                  *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaIon_I) &
+                  *Source_VC(iRhoIon_I,i,j,k)
           end do; end do; end do
        end if
     end if
@@ -656,14 +656,14 @@ contains
                   ! Do not convert to entropy in conservative cells
                   if(IsConserv_CB(i,j,k,iBlock)) CYCLE
                end if
-               StateOld_VGB(iP_I,i,j,k,iBlock) = &
-                    StateOld_VGB(iP_I,i,j,k,iBlock) &
-                    *StateOld_VGB(iRho_I,i,j,k,iBlock)**(-GammaMinus1_I)
+               StateOld_VGB(iPIon_I,i,j,k,iBlock) = &
+                    StateOld_VGB(iPIon_I,i,j,k,iBlock) &
+                    *StateOld_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
                ! State_VGB is not used in 1-stage and HalfStep schemes
                if(.not.UseHalfStep .and. nStage > 1) &
-                    State_VGB(iP_I,i,j,k,iBlock) = &
-                    State_VGB(iP_I,i,j,k,iBlock) &
-                    *State_VGB(iRho_I,i,j,k,iBlock)**(-GammaMinus1_I)
+                    State_VGB(iPIon_I,i,j,k,iBlock) = &
+                    State_VGB(iPIon_I,i,j,k,iBlock) &
+                    *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
             end do; end do; end do
          end if ! UseAnisoPressure
       endif ! UseEntropy
@@ -922,8 +922,9 @@ contains
                   ! Do not convert entropy back in conservative cells
                   if(IsConserv_CB(i,j,k,iBlock)) CYCLE
                end if
-               State_VGB(iP_I,i,j,k,iBlock) = State_VGB(iP_I,i,j,k,iBlock) &
-                    *State_VGB(iRho_I,i,j,k,iBlock)**GammaMinus1_I
+               State_VGB(iPIon_I,i,j,k,iBlock) = &
+                    State_VGB(iPIon_I,i,j,k,iBlock) &
+                    *State_VGB(iRhoIon_I,i,j,k,iBlock)**GammaMinus1Ion_I
             end do; end do; end do
          end if
       end if
