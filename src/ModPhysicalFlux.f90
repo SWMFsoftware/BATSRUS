@@ -86,7 +86,7 @@ contains
     use ModMain, ONLY: UseB, UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModAdvance, ONLY: &
        nFlux, eFluid_, UseMhdMomentumFlux, UseElectronPressure,  UseEfield, &
-       UseEntropy, UseElectronEntropy, UseElectronEnergy, &
+       UseIonEntropy, UseElectronEntropy, UseElectronEnergy, &
        UseTotalIonEnergy, UseAnisoPe
     use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection
     use ModHallResist, ONLY: UseHallResist
@@ -460,7 +460,7 @@ contains
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
          ! f_i[Ppar] = u_i*Ppar
-         if(UseEntropy) then
+         if(UseIonEntropy) then
             ! Parallel entropy Spar = Ppar * B^2/rho^2
             StateCons_V(Ppar_) = State_V(Ppar_)*FullB2/Rho**2
             ! Perpendicular entropy Sperp = Pperp/FullB
@@ -471,7 +471,7 @@ contains
          Flux_V(p_)      = Un*StateCons_V(p_)
          Flux_V(Energy_) = Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
-      else if(UseEntropy) then
+      else if(UseIonEntropy) then
          ! s = p/rho^g-1
          StateCons_V(p_) = p*Rho**(-GammaMinus1)
          ! u_i * s
@@ -667,7 +667,7 @@ contains
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
          Flux_V(Energy_)= Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
-         if(UseEntropy)then
+         if(UseIonEntropy)then
             ! Parallel entropy Spar = Ppar * B^2/rho^2
             StateCons_V(Ppar_) = State_V(Ppar_)*FullB2/Rho**2
             ! Perpendicular entropy Sperp = Pperp/FullB
@@ -689,7 +689,7 @@ contains
             write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
             write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
          end if
-      else if(UseEntropy)then
+      else if(UseIonEntropy)then
          ! s = p/rho^(g-1)
          StateCons_V(p_) = p*Rho**(-GammaMinus1)
          ! u_i * s
@@ -970,7 +970,7 @@ contains
          Flux_V(iRhoUz) = Flux_V(iRhoUz) + FullBz*DpPerB
 
          ! f_i[Ppar] = u_i*Ppar
-         if(UseEntropy)then
+         if(UseIonEntropy)then
             ! Parallel entropy Spar = Ppar * B^2/rho^2
             StateCons_V(iPpar) = State_V(iPpar)*FullB2/Rho**2
             ! Perpendicular entropy Sperp = Pperp/FullB
@@ -993,7 +993,7 @@ contains
             write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
             write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
          end if
-      elseif(UseEntropy .and. IsIon_I(iFluid))then
+      elseif(UseIonEntropy .and. IsIon_I(iFluid))then
          ! s = p*rho^(g-1)
          StateCons_V(iP) = p*Rho**(-GammaMinus1_I(iFluid))
          ! u_i * s

@@ -9880,15 +9880,15 @@ both logicals to true.
 </command>
 
 <command name="ENTROPY">
-  <parameter name="UseEntropy" type="logical" default="F"/>
+  <parameter name="UseIonEntropy" type="logical" default="F"/>
   <parameter name="UseTotalIonEnergy" type="logical" default="F"
 	     if="$nIonFluid != 1"/>
 
 #ENTROPY
-T			UseEntropy
+T			UseIonEntropy
 T                       UseTotalIonEnergy (only read for multi-ion equations)
 
-If UseEntropy is true and the ion pressure is isotropic,
+If UseIonEntropy is true and the ion pressure is isotropic,
 then  solve for the ion entropy density s defined as
 s = P**(1/Gamma). The ion entropy, unlike ion pressure,
 satisfies a pure conservation law, so it is well behaved across shocks.
@@ -9899,9 +9899,9 @@ For multiion case the UseTotalIonEnergy parameter is read. If it is
 true, the total ion energy equation is solved, which is in conservation
 form. This is not yet implemented.
 
-The default value of UseEntropy and UseTotalIonEnergy are false,
+The default value of UseIonEntropy and UseTotalIonEnergy are false,
 except when the #SHOCKHEATING command is used, which requires and sets
-UseEntropy=T and UseTotalIonEnergy=T in the multiion case.
+UseIonEntropy=T and UseTotalIonEnergy=T in the multiion case.
 </command>
 
 <command name="SHOCKHEATING">
@@ -9945,7 +9945,7 @@ the fluid weights are multiplied with the number densities to the (2-gamma)
 power, which results in correct heating of two fluids with equal
 ion masses, velocities and temperatures but different number densities.
 
-If this command is used, UseEntropy, UseTotalIonEnergy and
+If this command is used, UseIonEntropy, UseTotalIonEnergy and
 UseElectronEntropy are set to true (see #ENTROPY and #ELECTRONENTROPY).
 
 Note that the fractions describe ratio of entropies, not energies.

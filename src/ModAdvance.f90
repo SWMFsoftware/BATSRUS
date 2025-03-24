@@ -96,8 +96,8 @@ module ModAdvance
   !$acc declare create(UseElectronEnergy)
 
   ! This should provide more robust results near strong shocks.
-  logical:: UseEntropy  = .false. !!! UseAnisoPressure
-  !$acc declare create(UseEntropy)
+  logical:: UseIonEntropy  = .false. !!! UseAnisoPressure
+  !$acc declare create(UseIonEntropy)
 
   ! Use total ion energy equation
   logical:: UseTotalIonEnergy = .false.

@@ -80,11 +80,11 @@ contains
        if(UseElectronShockHeating)then
           UseElectronEntropy = .true.
           UseElectronEnergy = .true.
-          UseEntropy = .true.
+          UseIonEntropy = .true.
        end if
-       if(UseAnisoShockHeating) UseEntropy = .true.
+       if(UseAnisoShockHeating) UseIonEntropy = .true.
        if(UseIonShockHeating)then
-          UseEntropy = .true.
+          UseIonEntropy = .true.
           UseTotalIonEnergy = .true.
        end if
 
@@ -321,7 +321,7 @@ contains
        DtFactor = Cfl
     end if
 
-    if(UseEntropy)then
+    if(UseIonEntropy)then
        ! Convert pressure source term(s) to entropy source term(s)
        if(UseAnisoPressure)then
           ! Calculate source term for iSperp and iSpar from iP and iPpar
@@ -582,7 +582,7 @@ contains
          end if
       end if
 
-      if(UseEntropy)then
+      if(UseIonEntropy)then
          ! Convert pressure(s) to entropy
          if(UseAnisoPressure)then
             ! Convert scalar and parallel pressures
@@ -666,7 +666,7 @@ contains
                     *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I)
             end do; end do; end do
          end if ! UseAnisoPressure
-      endif ! UseEntropy
+      endif ! UseIonEntropy
 
       ! Convert pressure to energy for the conservative scheme
       call pressure_to_energy(iBlock, StateOld_VGB)
@@ -882,7 +882,7 @@ contains
          end do; end do; end do
       end if
 
-      if(UseEntropy)then
+      if(UseIonEntropy)then
          ! Convert entropy to pressure(s)
          if(UseAnisoPressure)then
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
