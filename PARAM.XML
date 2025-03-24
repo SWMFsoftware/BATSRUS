@@ -509,7 +509,8 @@ The DipoleStrengthSi variable contains the
 magnetic equatorial strength of the dipole magnetic field in Tesla.
 
 The default value is the real dipole strength for the planet.
-For the Earth the default is taken to be -31100 nT.
+For the Earth the default is taken to be the IGRF dipole field that
+depends on the #STARTTIME.
 The sign is taken to be negative so that the magnetic axis can
 point northward as usual.
 </command>
@@ -1026,6 +1027,19 @@ The default values are shown above.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="SUBTRACTB0" if="$_IsFirstSession">
+  <parameter name="DoSubtractB0" type="logical" default="T"/>
+
+#SUBTRACTB0
+F			DoSubtractB0
+
+If the magnetic field is split to B0 and B1, then the initial condition
+set by #UNIFORMSTATE and similar commands can either apply to the total field
+when DoSubtractB0 true, or to B1 only when DoSubtractB0 is set to false.
+
+The default is DoSubtractB0 true.
+</command>
+  
 <command name="UNIFORMSTATE" if="$_IsFirstSession">
   <for from="1" to="$nVar">
     <parameter name="StateVar" type="real"/>

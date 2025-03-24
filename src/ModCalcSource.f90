@@ -440,7 +440,7 @@ contains
        end do; end do; end do
        if(DoTest.and.UseMultiIon)call write_source('After UseWavePressure')
     end if ! UseAlfvenWavePressure
-    if(UseWavePressure .and. .not.UseMultiIon)then
+    if(UseWavePressure .and. .not.(UseMultiIon.and..not.UseTotalIonEnergy))then
        ! Back reaction of the Alfven wave pressure on
        ! the wave turbulence equations as well as
        ! its contribution to the wave energy source
@@ -534,7 +534,7 @@ contains
                 Source_VC(WaveLast_ ,i,j,k) = Source_VC(WaveLast_ ,i,j,k) &
                      - 0.5*ModeConversionMinus*wD
 
-                if(.not.UseMultiIon)then
+                if(.not.(UseMultiIon.and..not.UseTotalIonEnergy))then
                    ! Energy source related to the Alfven wave source above
                    ! For multi ion it is done in ModMultiIon
                    if(IsOnAwRepresentative)then
@@ -586,7 +586,7 @@ contains
                 Source_VC(WaveLast_, i,j,k) = Source_VC(WaveLast_ ,i,j,k) &
                      - 0.5*ModeConversionMinus*wD
 
-                if(.not.UseMultiIon)then
+                if(.not.(UseMultiIon.and..not.UseTotalIonEnergy))then
                    ! Energy source related to the Alfven wave source above
                    ! For multi ion it is done in ModMultiIon
                    Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &

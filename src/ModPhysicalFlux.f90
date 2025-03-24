@@ -486,18 +486,18 @@ contains
     end subroutine get_boris_flux
     !==========================================================================
     subroutine get_magnetic_flux(State_V, Flux_V, &
-         FullBx, FullBy, FullBz, FullBn, HallUn)
+         FullBx, FullBy, FullBz, FullBn, HallUn, UxPlus, UyPlus, UzPlus)
 
       real, intent(in) :: State_V(:)
       real, intent(inout) :: Flux_V(:)
       real, intent(in) :: FullBx, FullBy, FullBz, FullBn
-      real, intent(inout) :: HallUn
+      real, intent(inout) :: HallUn, UxPlus, UyPlus, UzPlus
 
       ! Calculate magnetic flux for multi-ion equations
       ! without a global ion fluid
 
       real :: ElectronDens_I(nIonFluid), InvElectronDens
-      real :: UxPlus, UyPlus, UzPlus, UnPlus
+      real :: UnPlus
       real :: HallUx, HallUy, HallUz, InvRho
       !------------------------------------------------------------------------
       if(UseMultiIon)then
@@ -570,6 +570,7 @@ contains
       real :: SqrtRho  ! Square root of density times PoyntingFluxPerB
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2
+      real :: UxPlus, UyPlus, UzPlus
       real, dimension(nIonFluid):: Ux_I, Uy_I, Uz_I, p_I, e_I
 
       ! Energy difference (in the standard argo, Rho*sigma_D*Z^2/2
@@ -605,6 +606,9 @@ contains
          pPerp = p
       end if
 
+      call get_magnetic_flux(State_V, Flux_V, &
+           FullBx, FullBy, FullBz, FullBn, HallUn, UxPlus, UyPlus, UzPlus)
+
       ! Calculate conservative state for momentum
       StateCons_V(RhoUx_)  = Rho*Ux
       StateCons_V(RhoUy_)  = Rho*Uy
@@ -631,9 +635,8 @@ contains
       else
          e = InvGammaMinus1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
       end if
-      if(UseElectronEnergy) e = e + InvGammaElectronMinus1*Pe
-      StateCons_V(Energy_) = e
-      ! Calculate energy flux
+
+      ! Calculate hydro energy flux
       if(UseTotalIonEnergy)then
          ! Is this correct for anisotropic case???
          Flux_V(Energy_) = sum( &
@@ -641,6 +644,10 @@ contains
       else
          Flux_V(Energy_) = Un*(e + pPerp)
       end if
+
+      ! Add electron energy if included
+      if(UseElectronEnergy) e = e + InvGammaElectronMinus1*Pe
+      StateCons_V(Energy_) = e
 
       ! Correct momentum and energy hydro fluxes for anisotroic pressure
       if(UseAnisoPressure)then
@@ -781,12 +788,9 @@ contains
          MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
-         if(IsMhd) Flux_V(Energy_)= Flux_V(Energy_) &
-              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
+         if(IsMhd .or. UseTotalIonEnergy) Flux_V(Energy_)= Flux_V(Energy_) &
+              + DpPerB*(UxPlus*FullBx + UyPlus*FullBy + UzPlus*FullBz)
       end if
-
-      call get_magnetic_flux(State_V, Flux_V, &
-           FullBx, FullBy, FullBz, FullBn, HallUn)
 
       ! Check if magnetic force and energy should be included at all
       if(.not.IsMhd .and. .not.UseTotalIonEnergy) RETURN

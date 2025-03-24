@@ -1950,7 +1950,7 @@ contains
                   //TypeNormalization)
           end select
 
-       case("#STATEDEFINITION", "#STATEINTERFACE", &
+       case("#STATEDEFINITION", "#STATEINTERFACE", "#SUBTRACTB0", &
             "#UNIFORMSTATE", "#SHOCKTUBE", "#SHOCKPOSITION", "#RADIALSTATE", &
             "#WAVE", "#WAVE2", "#WAVE4", "#WAVE6", "#BUMP", &
             "#ENTROPYCONSTANT")

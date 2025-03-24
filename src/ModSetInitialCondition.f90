@@ -27,6 +27,9 @@ module ModSetInitialCondition
 
   ! Local variables
 
+  ! Initialize B1 instead of full B
+  logical:: DoSubtractB0 = .true.
+
   ! Entropy constant for isentropic initial condition. Only used if positive.
   real :: EntropyConstant = -1.0
 
@@ -72,6 +75,9 @@ contains
 
     case("#STATEINTERFACE")
        call read_initial_state_param(NameCommand)
+
+    case("#SUBTRACTB0")
+       call read_var('DoSubtractB0', DoSubtractB0)
 
     case("#UNIFORMSTATE")
        UseShockTube = .true.
@@ -325,7 +331,7 @@ contains
                         State_VGB(iUx:iUz,i,j,k,iBlock)
                 end do
 #endif
-                if(.not.UseB0)CYCLE
+                if(.not.UseB0 .or. .not.DoSubtractB0)CYCLE
                 ! Remove B0 from B (if any)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
@@ -348,7 +354,7 @@ contains
                         State_VGB(iUx:iUz,i,j,k,iBlock)
                 end do
 #endif
-                if(.not.UseB0)CYCLE
+                if(.not.UseB0 .or. .not.DoSubtractB0)CYCLE
                 ! Remove B0 from B (if any)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)

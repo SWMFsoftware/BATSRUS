@@ -10,7 +10,7 @@ Param/CORONA/PARAM.in.bvector		StringDescription
 0			iSecond
 
 #USERMODULE
-Sharp model		NameUserModule
+Bvector			NameUserModule
 
 ! Magnetofriction solves for B field only
 #UPDATEVAR
@@ -18,10 +18,6 @@ Bx By Bz		StringVarUpdate
 
 #NONCONSERVATIVE
 T			UseNonConservative
-
-#ELECTRONENTROPY
-F			UseElectronEntropy
-F			UseElectronEnergy
 
 #HEATCONDUCTION
 F			UseHeatConduction
@@ -62,22 +58,21 @@ use:
 180			nLon
 for the real run
 
-UNIFORMSTATE
-1.0e-10                 Rho
-0.0                     Ux
-0.0                     Uy
-0.0                     Uz
-0.0                     Bx
-0.0                     By
-0.0                     Bz
-0.0			Ehot
-0.0			I01
-0.0			I02
-1.0e-10                 Pe
-1.0e-10                 P
+#SUBTRACTB0
+F			DoSubtractB0
+
+#UNIFORMSTATE
+1.0e-10			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+1.0e-10			StateVar P
 
 #USERSWITCH
-+ic +update 		StringSwitch
++init +update 		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -97,12 +92,6 @@ T			MagFrictionUseBvectorLonLat
 5.0			ExtLatAbove
 
 #USERINPUTEND -------------------------------------
-
-#CORONALHEATING
-turbulentcascade		TypeCoronalHeating
-1.5e5                   LperpTimesSqrtBSi
-0.0			rMinWaveReflection
-F			UseReynoldsDecomposition
 
 #GRIDBLOCKALL
 2000			MaxBlock ! use 50000 in the real run
@@ -252,7 +241,7 @@ bx by bz 		NameVars
 {default}		NamePars
 
 #SAVEINITIAL
-F			DoSaveInitial
+T			DoSaveInitial
 
 #STOP
 20			MaxIteration ! For the real run set ~100000

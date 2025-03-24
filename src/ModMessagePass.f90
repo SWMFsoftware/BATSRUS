@@ -5,7 +5,7 @@
 module ModMessagePass
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iTest, jTest, kTest, iVarTest, iBlockTest
 
   ! Message passing to fill in ghost cells.
   !
@@ -83,6 +83,13 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    if(DoTest)then
+       !$acc serial
+       write(*,*)NameSub,' starting with TestVar=', &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+       !$acc end serial
+    end if
+
     ! This way of doing periodic BC for wedge is not perfect.
     ! It does not work for AMR or semi-implicit scheme with vectors.
     ! But it works for a number of simple but useful applications.
@@ -138,6 +145,12 @@ contains
           end do
        end if
        call timing_stop('cell_bc')
+       if(DoTest)then
+          !$acc serial
+          write(*,*)NameSub,' after cell_bc TestVar=', &
+               State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+          !$acc end serial
+       end if
     end if
 
     if(IsPeriodicWedge)then
@@ -153,6 +166,8 @@ contains
              end do
           end do; end do; enddo
        end do
+       if(DoTest)write(*,*)NameSub,' after wedge TestVar=', &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
     end if
 
     if (UseOrder2 .or. nOrderProlong > 1) then
@@ -200,6 +215,13 @@ contains
     ! for example in load_balance
     if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
 
+    if(DoTest)then
+       !$acc serial
+       write(*,*)NameSub,' after pass_cell TestVar=', &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+       !$acc end serial
+    end if
+
     if(IsPeriodicWedge)then
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
@@ -213,6 +235,8 @@ contains
              end do
           end do; end do; enddo
        end do
+       if(DoTest)write(*,*)NameSub,' after wedge2 TestVar=', &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
     end if
 
     ! The corner ghost cells outside the domain are updated
@@ -220,14 +244,24 @@ contains
     ! boundary condition have to be reapplied.
     if(iTypeUpdate == UpdateFast_)then
        call set_boundary_fast(DoResChangeOnly, .true.)
+       if(DoTest)then
+          !$acc serial
+          write(*,*)NameSub,' after fast_bc TestVar=', &
+               State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+          !$acc end serial
+       end if
        if(UseBuffer)then
-          !$acc loop gang
+          !$acc parallel loop gang
           do iBlock = 1, nBlock
              if (Unused_B(iBlock)) CYCLE
              call fill_in_from_buffer(iBlock)
-             ! call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, &
-             !     1, nFluid, State_VGB)
           end do
+          if(DoTest)then
+             !$acc serial
+             write(*,*)NameSub,' final fill_buf TestVar=', &
+                  State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+             !$acc end serial
+          end if
        end if
     else
        call timing_start('cell_bc')
@@ -260,6 +294,8 @@ contains
 
        end do
        !$omp end parallel do
+       if(DoTest)write(*,*)NameSub,' after slow_bc/fill_buf TestVar=', &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
        if(.not.DoResChangeOnly)UseBoundaryVdf = .false.
        call timing_stop('cell_bc')
@@ -267,7 +303,12 @@ contains
     call timing_stop('exch_msgs')
     if(DoTest)call timing_show('exch_msgs',1)
 
-    if(DoTest)write(*,*) NameSub,' finished'
+    if(DoTest)then
+       !$acc serial
+       write(*,*)NameSub,' finished with TestVar=', &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
+       !$acc end serial
+    end if
 
     call test_stop(NameSub, DoTest)
   end subroutine exchange_messages

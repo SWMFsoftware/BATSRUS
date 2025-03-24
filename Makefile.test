@@ -1147,7 +1147,7 @@ test_bvector_compile:
 test_bvector_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
-	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.bvector.mhd PARAM.in
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.bvector PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_bvector_run:
@@ -1156,8 +1156,8 @@ test_bvector_run:
 	
 test_bvector_check:
 	-@(${DIFFNUM} -t -a=1e-26 -r=2e-5 \
-		${TESTDIR}/RESULTS/SC/log_n000001.log \
-		Param/CORONA/TestOutput/log_n000001.bvector.mhd \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
+		Param/CORONA/TestOutput/log_n000000.bvector \
 		> test_bvector.diff)
 	ls -l test_bvector.diff
 
