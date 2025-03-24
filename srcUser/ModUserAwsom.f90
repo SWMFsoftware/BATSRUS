@@ -1594,7 +1594,8 @@ contains
 
     use EEE_ModCommonVariables, ONLY: XyzCmeCenterSi_D, XyzCmeApexSi_D, &
          bAmbientCenterSi_D, bAmbientApexSi_D
-    use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again
+    use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again, &
+         EEE_init_CME_parameters
     use ModB0, ONLY: get_b0
     use ModMain, ONLY: nStep, nIteration, UseFieldLineThreads
     use ModVarIndexes
@@ -1701,6 +1702,9 @@ contains
           end if
        end if
 
+       ! Update CME parameters
+       call EEE_init_CME_parameters
+       
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
 
