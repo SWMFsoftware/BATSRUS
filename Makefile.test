@@ -38,6 +38,7 @@ test_help:
 	@echo "    test_awsom_bvector         (run AWSoM with vector B field)"
 	@echo "    test_awsom_gpu             (run AWSoM corona test on GPU)"
 	@echo "    test_awsom_large_gpu       (run large AWSoM corona test on GPU)"
+	@echo "    test_awsomr                (run AWSoM-R corona test)"
 	@echo "    test_bvector               (run Bvector Solar Corona test)"
 	@echo "    test_bx0                   (run 3D bx0 isosurface plot test)"
 	@echo "    test_comet                 (run comet test)"
@@ -117,6 +118,7 @@ test:
 	-@($(MAKE) test_mhdnoncons TESTDIR=run_test_mhdnoncons)
 	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
 	-@($(MAKE) test_awsom TESTDIR=run_test_awsom)
+	-@($(MAKE) test_awsomr TESTDIR=run_test_awsomr)
 	-@($(MAKE) test_stitch TESTDIR=run_test_stitch)
 	-@($(MAKE) test_earthsph TESTDIR=run_test_earthsph)
 	-@($(MAKE) test_2bodyplot TESTDIR=run_test_2bodyplot)
@@ -974,6 +976,7 @@ test_graydiffusion_check:
 
 ### STANDALONE SOLAR CORONA TESTS ###
 
+### AWSOM test on GPU
 
 test_awsom_gpu:
 	@echo "test_awsom_gpu_compile..." > test_awsom_gpu.diff
@@ -1010,8 +1013,8 @@ test_awsom_gpu_check:
 		> test_awsom_gpu.diff)
 	ls -l test_awsom_gpu.diff
 
+### AWSOM test on GPU with typical grid size
 
-# change to MPIRUN once message_pass_block is parallelized
 test_awsom_large_gpu:
 	@echo "test_awsom_large_gpu_compile..." > test_awsom_large_gpu.diff
 	$(MAKE) test_awsom_large_gpu_compile
@@ -1048,7 +1051,7 @@ test_awsom_large_gpu_check:
 	ls -l test_awsom_large_gpu.diff
 
 
-# TEST CORONA WITH CHARGE STATES
+### AWSOM TEST  WITH CHARGE STATES
 
 test_awsomchargestate:
 	@echo "test_awsomchargestate_compile..." > test_awsomchargestate.diff
@@ -1126,7 +1129,7 @@ test_awsomchargestate_check:
 		
 	ls -l test_awsomchargestate.diff
 
-### SOLAR CORONA TEST WITH VECTOR MAGNETOGRAM ###
+### MAGNETOFRICTION CODE USING VECTOR MAGNETOGRAM ###
 
 test_bvector:
 	@echo "test_bvector_compile..." > test_bvector.diff
@@ -1161,7 +1164,7 @@ test_bvector_check:
 		> test_bvector.diff)
 	ls -l test_bvector.diff
 
-### SOLAR CORONA TEST AWSOM WITH B0local from VECTOR MAGNETOGRAM ###
+### AWSOM TEST WITH NONPOTENTIAL B0local from VECTOR MAGNETOGRAM ###
 
 test_awsom_bvector:
 	@echo "test_awsom_bvector_compile..." > test_awsom_bvector.diff
@@ -1197,7 +1200,7 @@ test_awsom_bvector_check:
 	ls -l test_awsom_bvector.diff
 
 
-### STANDALONE AWSOM SOLAR CORONA TESTS ###
+### AWSOM TEST WITH CMEs
 
 test_awsom:
 	@echo "test_awsom_compile..." > test_awsom.diff
@@ -1232,40 +1235,40 @@ test_awsom_check:
 		> test_awsom.diff)
 	ls -l test_awsom.diff
 
+### AWSOM-R TEST WITH TD CME
 
-test_awsomr_td:
-	@echo "test_awsomr_td_compile..." > test_awsomr_td.diff
-	$(MAKE) test_awsomr_td_compile
-	@echo "test_awsomr_td_rundit..." >> test_awsomr_td.diff
-	$(MAKE) test_awsomr_td_rundir
-	@echo "test_awsomr_td_run..." >> test_awsomr_td.diff
-	$(MAKE) test_awsomr_td_run
-	@echo "test_awsomr_check..." >> test_awsomr_td.diff
-	$(MAKE) test_awsomr_td_check
+test_awsomr:
+	@echo "test_awsomr_compile..." > test_awsomr.diff
+	$(MAKE) test_awsomr_compile
+	@echo "test_awsomr_rundit..." >> test_awsomr.diff
+	$(MAKE) test_awsomr_rundir
+	@echo "test_awsomr_run..." >> test_awsomr.diff
+	$(MAKE) test_awsomr_run
+	@echo "test_awsomr_check..." >> test_awsomr.diff
+	$(MAKE) test_awsomr_check
 
-test_awsomr_td_compile:
+test_awsomr_compile:
 	./Config.pl -noopenmp -noacc -u=Awsom -e=Awsom -ng=2 -g=6,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
-test_awsomr_td_rundir:
+test_awsomr_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomR.TD PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
-test_awsomr_td_run:
+test_awsomr_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 
-test_awsomr_td_check:
+test_awsomr_check:
 	-@(${DIFFNUM} -t -a=2e-27 -r=2e-5 \
 		${TESTDIR}/SC/IO2/log_n000001.log \
 		Param/CORONA/TestOutput/log_n000001.awsomr.td \
-		 > test_awsomr_td.diff)
-	ls -l test_awsomr_td.diff
+		 > test_awsomr.diff)
+	ls -l test_awsomr.diff
 
-
-### STANDALONE STITCH TESTS ###
+### AWSOM WITH STITCH TEST
 
 test_stitch:
 	@echo "test_stitch_compile..." > test_stitch.diff
