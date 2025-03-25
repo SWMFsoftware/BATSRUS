@@ -25,6 +25,7 @@ contains
 
   subroutine hypre_read_param
 
+    !--------------------------------------------------------------------------
     call stop_mpi('hypre_read_param: empty! use Config.pl -hypre')
 
     !--------------------------------------------------------------------------
@@ -33,6 +34,7 @@ contains
 
   subroutine hypre_initialize
 
+    !--------------------------------------------------------------------------
     call stop_mpi('hypre_initialize: empty! use Config.pl -hypre')
 
     !--------------------------------------------------------------------------
@@ -41,6 +43,7 @@ contains
 
   subroutine hypre_finalize
 
+    !--------------------------------------------------------------------------
     call stop_mpi('hypre_finalize: empty! use Config.pl -hypre')
 
     !--------------------------------------------------------------------------
@@ -52,6 +55,7 @@ contains
     integer, intent(in):: iImplBlock
     real,    intent(inout):: Jacobian_CI(1,1,1,1)
 
+    !--------------------------------------------------------------------------
     call stop_mpi('hypre_set_matrix_block: empty! use Config.pl -hypre')
 
     !--------------------------------------------------------------------------
@@ -62,6 +66,7 @@ contains
 
     logical, intent(in):: DoInitHypreAmg
 
+    !--------------------------------------------------------------------------
     call stop_mpi('hypre_set_matrix: empty! use Config.pl -hypre')
 
     !--------------------------------------------------------------------------
@@ -73,6 +78,7 @@ contains
     integer, intent(in):: n
     real, intent(inout):: y_I(n)
 
+    !--------------------------------------------------------------------------
     call stop_mpi('hypre_preconditioner: empty! use Config.pl -hypre')
 
     !--------------------------------------------------------------------------

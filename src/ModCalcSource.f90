@@ -279,7 +279,7 @@ contains
     end if
 
     ! Calculate source terms for ion pressure
-    if((UseNonconservative .or. UseAnisoPressure) .and. .not.UseEntropy)then
+    if((UseNonconservative .or. UseAnisoPressure) .and. .not.UseIonEntropy)then
        do iFluid = 1, nFluid
           if(nFluid > 1) call select_fluid(iFluid)
           iUn = UnFirst_ + iFluid - 1
@@ -390,7 +390,7 @@ contains
           if(DoTest .and. iVarTest==iP)call write_source('After p div U')
 
        end do ! iFluid
-    end if ! (UseAnisoPressure.or.UseNonConservative) .and. .not.UseEntropy
+    end if ! (UseAnisoPressure.or.UseNonConservative) .and. .not.UseIonEntropy
 
     if(UseSpeedMin)then
        ! push radial ion speed above SpeedMin outside rSpeedMin

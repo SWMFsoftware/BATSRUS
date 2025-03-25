@@ -717,7 +717,7 @@ contains
           call read_var('PeMinSi', PeMinSi)
 
        case("#ENTROPY")
-          call read_var('UseEntropy', UseEntropy)
+          call read_var('UseIonEntropy', UseIonEntropy)
           if(UseMultiIon)call read_var('UseTotalIonEnergy', UseTotalIonEnergy)
 
        case("#ELECTRONENTROPY")

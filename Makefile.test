@@ -1233,6 +1233,38 @@ test_awsom_check:
 	ls -l test_awsom.diff
 
 
+test_awsomr_td:
+	@echo "test_awsomr_td_compile..." > test_awsomr_td.diff
+	$(MAKE) test_awsomr_td_compile
+	@echo "test_awsomr_td_rundit..." >> test_awsomr_td.diff
+	$(MAKE) test_awsomr_td_rundir
+	@echo "test_awsomr_td_run..." >> test_awsomr_td.diff
+	$(MAKE) test_awsomr_td_run
+	@echo "test_awsomr_check..." >> test_awsomr_td.diff
+	$(MAKE) test_awsomr_td_check
+
+test_awsomr_td_compile:
+	./Config.pl -noopenmp -noacc -u=Awsom -e=Awsom -ng=2 -g=6,4,4
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_awsomr_td_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomR.TD PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_awsomr_td_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+
+test_awsomr_td_check:
+	-@(${DIFFNUM} -t -a=2e-27 -r=2e-5 \
+		${TESTDIR}/SC/IO2/log_n000001.log \
+		Param/CORONA/TestOutput/log_n000001.awsomr.td \
+		 > test_awsomr_td.diff)
+	ls -l test_awsomr_td.diff
+
+
 ### STANDALONE STITCH TESTS ###
 
 test_stitch:
