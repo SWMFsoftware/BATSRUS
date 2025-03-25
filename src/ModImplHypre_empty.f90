@@ -22,68 +22,46 @@ module ModImplHypre
 
 contains
   !============================================================================
-
   subroutine hypre_read_param
-
     !--------------------------------------------------------------------------
     call stop_mpi('hypre_read_param: empty! use Config.pl -hypre')
-
-    !--------------------------------------------------------------------------
   end subroutine hypre_read_param
   !============================================================================
-
   subroutine hypre_initialize
-
     !--------------------------------------------------------------------------
     call stop_mpi('hypre_initialize: empty! use Config.pl -hypre')
-
-    !--------------------------------------------------------------------------
   end subroutine hypre_initialize
   !============================================================================
-
   subroutine hypre_finalize
-
     !--------------------------------------------------------------------------
     call stop_mpi('hypre_finalize: empty! use Config.pl -hypre')
-
-    !--------------------------------------------------------------------------
   end subroutine hypre_finalize
   !============================================================================
-
   subroutine hypre_set_matrix_block(iImplBlock, Jacobian_CI)
 
     integer, intent(in):: iImplBlock
     real,    intent(inout):: Jacobian_CI(1,1,1,1)
-
     !--------------------------------------------------------------------------
     call stop_mpi('hypre_set_matrix_block: empty! use Config.pl -hypre')
 
-    !--------------------------------------------------------------------------
   end subroutine hypre_set_matrix_block
   !============================================================================
-
   subroutine hypre_set_matrix(DoInitHypreAmg)
 
     logical, intent(in):: DoInitHypreAmg
-
     !--------------------------------------------------------------------------
     call stop_mpi('hypre_set_matrix: empty! use Config.pl -hypre')
 
-    !--------------------------------------------------------------------------
   end subroutine hypre_set_matrix
   !============================================================================
-
   subroutine hypre_preconditioner(n, y_I)
 
     integer, intent(in):: n
     real, intent(inout):: y_I(n)
-
     !--------------------------------------------------------------------------
     call stop_mpi('hypre_preconditioner: empty! use Config.pl -hypre')
 
-    !--------------------------------------------------------------------------
   end subroutine hypre_preconditioner
   !============================================================================
-
 end module ModImplHypre
 !==============================================================================
