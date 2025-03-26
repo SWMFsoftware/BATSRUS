@@ -73,7 +73,7 @@ module ModB0
   logical, public :: UseB0MomentumFlux = .false.
 
   ! Radius within which the B0 field is curl free (analytically)
-  real, public:: rCurrentFreeB0 = -1.0
+  real, public:: rCurrentFreeB0 = -2.0
   !$acc declare create(rCurrentFreeB0)
 
   ! Cell-centered B0 field vector
@@ -135,6 +135,8 @@ contains
           call read_var('rCurrentFreeB0', rCurrentFreeB0)
           call read_var('UseB0MomentumFlux', UseB0MomentumFlux)
        end if
+       ! Change from -2.0 default shows that #CURLB0 was used
+       rCurrentFreeB0 = max(rCurrentFreeB0, -1.0)
 
     case("#FORCEFREEB0")
        call read_var('UseForceFreeB0', UseForceFreeB0)
@@ -201,25 +203,28 @@ contains
 
     call init_magnetogram_lookup_table(iComm)
 
-    if(iTableB0Local > 0)then
-       ! Non potential lookup table has non-zero curl B0
-       UseCurlB0 = .true.
-       rCurrentFreeB0 = 1.0
-       if(iProc==0)write(*,*)NameSub, &
-            ' Local B0, so UseCurlB0=T, rCurrentFreeB0= 1'
-    elseif(iTableB0 > 0) then
-       if(rMaxB0 < RadiusMax)then
-          ! J0 is finite above rMaxB0
+    if(rCurrentFreeB0 < -1.0)then
+       ! Set defaults if #CURLB0 was not used
+       if(iTableB0Local > 0)then
+          ! Non potential lookup table has non-zero curl B0
           UseCurlB0 = .true.
-          rCurrentFreeB0 = rMaxB0
-          if(iProc==0)write(*,*)NameSub,&
+          rCurrentFreeB0 = 0.0
+          if(iProc==0)write(*,*)NameSub, &
+               ' Local B0, so UseCurlB0=T, rCurrentFreeB0= 1'
+       elseif(iTableB0 > 0) then
+          if(rMaxB0 < RadiusMax)then
+             ! J0 is finite above rMaxB0
+             UseCurlB0 = .true.
+             rCurrentFreeB0 = rMaxB0
+             if(iProc==0)write(*,*)NameSub,&
                   ' UseCurlB0 is switched ON, rCurrentFreeB0 = ',rCurrentFreeB0
-       else if(UseCurlB0)then
-          ! if rSourceSurface > SC boundary then UseCurlB0 is NOT required
-          UseCurlB0 = .false.
-          rCurrentFreeB0 = -1.0
-          if(iProc==0)write(*,*)NameSub,&
-               ' NOTE: UseCurlB0 is switched OFF as source surface = ', rMaxB0
+          else if(UseCurlB0)then
+             ! if rSourceSurface > SC boundary then UseCurlB0 is NOT required
+             UseCurlB0 = .false.
+             rCurrentFreeB0 = -1.0
+             if(iProc==0)write(*,*)NameSub,&
+                  ' NOTE: UseCurlB0 is switched OFF as source surface = ', rMaxB0
+          end if
        end if
     end if
     !$acc update device (UseCurlB0, rCurrentFreeB0)
