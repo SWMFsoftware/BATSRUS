@@ -11035,33 +11035,33 @@ preferred).
 </command>
 
 <command name="PLOTTHREADS">
-  <parameter name="DoPlotThreads"      type="logical" default="T"/>
+  <parameter name="DoPlotThreads" type="logical" default="T"/>
   <if expr="$DoPlotThreads">
     <parameter name="nGUniform"          type="integer" default="10"/> 
-    <parameter name="DoTRCorrection"     type="logical" default="T"/>
+    <parameter name="UseTRCorrection"    type="logical" default="T"/>
     <parameter name="UsePlanarTriangles" type="logical" default="F"/>
   </if>
 
 #PLOTTHREADS
-T	DoPlotThreads (read rest if true)
-10      nGUniform
-T       UseTRCorrection
-F	UsePlanarTriangles  
+T			DoPlotThreads (read rest if true)
+10			nGUniform
+T			UseTRCorrection
+F			UsePlanarTriangles  
 
 Used for plotting images in the solar corona. The threaded gap
 contributes to the line-of-site integrals determining the intensity of
-the image pixel, if DoPlotThreads is true. The threaded gap is split into
+the image pixel if DoPlotThreads is true. The threaded gap is split into
 nGUniform intervals uniformly in the first generalized coordinate. 
 
-If UseTRCorrection is true correct the contribution frop the threaded
+If UseTRCorrection is true, the contribution frop the threaded
 gap to the LOS plots is corrected to account for the contribution from
 transition region.
- 	
+
 When triangulation on sphere as described above is completed,
 interpolation weights can be assigned in two ways: via the areas of
 spherical triangles (UsePlanarTriangle=F) or via areas of planar
-triangles (UsePlanarTriangle=T).  The latter is the "original"
-interpolation algorithm by Renka, who proved its good theretical
+triangles (UsePlanarTriangle=T).  The latter is the
+interpolation algorithm by Renka, who proved its good theoretical
 properties, such as continuity of the interpolated valiable across the
 boundary of the interpolation stencil.
 

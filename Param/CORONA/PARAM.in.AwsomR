@@ -41,11 +41,10 @@ limited                 TypeBc
 40                      MaxIter
 
 #PLOTTHREADS
-T                       DoPlotThreads
-10                       nGUniform
-T                       UseTriangulation
-T                       UseTRCorrection
-T                       UsePlanarTriangles
+T			DoPlotThreads
+10			nGUniform
+T			UseTRCorrection
+T			UsePlanarTriangles
 
 #BODY
 T                       UseBody

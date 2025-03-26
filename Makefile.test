@@ -1255,7 +1255,7 @@ test_awsomr_compile:
 test_awsomr_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
-	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomR.TD PARAM.in
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomR PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsomr_run:
