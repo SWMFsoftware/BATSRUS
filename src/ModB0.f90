@@ -155,7 +155,8 @@ contains
   subroutine init_mod_b0
 
     use BATL_lib, ONLY: iComm, iProc
-    use ModMagnetogram, ONLY: init_magnetogram_lookup_table, rMaxB0, iTableB0
+    use ModMagnetogram, ONLY: init_magnetogram_lookup_table, rMaxB0, &
+         iTableB0, iTableB0local
     use ModGeometry,    ONLY: RadiusMax
 
     logical:: DoTest
@@ -200,18 +201,14 @@ contains
 
     call init_magnetogram_lookup_table(iComm)
 
-    if(iTableB0 > 0) then
-       if(iProc==0)write(*,*)NameSub,&
-            ' Input: UseCurlB0, rCurrentFreeB0, rSourceSurface = ',&
-            UseCurlB0, rCurrentFreeB0, rMaxB0
-       if(UseForceFreeB0) then
-          ! J0 is not zero, only J0 x B0 = 0
-          UseCurlB0 = .true.
-          rCurrentFreeB0 = 1.0
-          if(iProc==0)write(*,*)NameSub, &
-               ' ForceFreeB0, so UseCurlB0=T, rCurrentFreeB0= 1, ', &
-               ' rMaxForceFreeB0=', rMaxForceFreeB0
-       else if(rMaxB0 < RadiusMax)then
+    if(iTableB0Local > 0)then
+       ! Non potential lookup table has non-zero curl B0
+       UseCurlB0 = .true.
+       rCurrentFreeB0 = 1.0
+       if(iProc==0)write(*,*)NameSub, &
+            ' Local B0, so UseCurlB0=T, rCurrentFreeB0= 1'
+    elseif(iTableB0 > 0) then
+       if(rMaxB0 < RadiusMax)then
           ! J0 is finite above rMaxB0
           UseCurlB0 = .true.
           rCurrentFreeB0 = rMaxB0

@@ -350,10 +350,6 @@ contains
           ! Modify pressure source term to entropy source term
           ! S(s) = S(p)/Rho^(gamma-1)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(nConservCrit > 0)then
-                ! only non-conservative cells need the ion entropy source
-                if(IsConserv_CB(i,j,k,iBlock)) CYCLE
-             end if
              Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
                   *State_VGB(iRhoIon_I,i,j,k,iBlock)**(-GammaMinus1Ion_I) &
                   - GammaMinus1Ion_I*State_VGB(iPIon_I,i,j,k,iBlock) &
