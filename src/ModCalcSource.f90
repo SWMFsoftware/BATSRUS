@@ -282,7 +282,7 @@ contains
     if(UseNonconservative .or. UseAnisoPressure)then
        do iFluid = 1, nFluid
           if(UseIonEntropy .and. IsIon_I(iFluid)) CYCLE
-          
+
           if(nFluid > 1) call select_fluid(iFluid)
           iUn = UnFirst_ + iFluid - 1
 
