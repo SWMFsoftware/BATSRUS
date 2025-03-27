@@ -936,6 +936,7 @@ contains
 
     use ModAdvance, ONLY: StateOld_VGB, State_VGB
     use ModGeometry, ONLY: rMin_B
+    use ModPui, ONLY: Vpui_I, DeltaVpui_I
 
     ! merav
     ! C.P. edited
@@ -980,6 +981,15 @@ contains
                StateOld_VGB(NeuRho_:Ne4P_,i,j,k,iBlock)
        end do; end do; end do
        RETURN
+    end if
+
+    if(nPui > 1)then
+       ! Correct PUI pressure for full velocity distribution
+       do k=1,nk; do j=1,nJ; do i=1,nI
+          State_VGB(Pu3P_,i,j,k,iBlock) = &
+               4*cPi/3*sum(State_VGB(PuiFirst_:PuiLast_,i,j,k,iBlock) &
+               *Vpui_I**4*DeltaVpui_I)
+       end do; end do; end do
     end if
 
     ! No need to check blocks outside:
