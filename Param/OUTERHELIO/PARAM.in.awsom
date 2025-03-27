@@ -117,12 +117,16 @@ F			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
 #NONCONSERVATIVE
-F			UseNonConservative
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
 radius			TypeConservCrit
 70			rConserv
+
+#SHOCKHEATING
+0.0			PeShockHeatingFraction
+-0.98			PiShockHeatingFraction
 
 #SCHEME
 1			nOrder
