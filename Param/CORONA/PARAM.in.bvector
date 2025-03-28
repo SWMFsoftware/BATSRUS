@@ -82,6 +82,7 @@ T       		UseMagFriction
 3d4     		MagFrictionUSi
 1d-5     		MagFrictionBminSi
 T			MagFrictionUseDecay
+T			MagFrictionUseLimit
 1.09     		MagFrictionRmax
 2.0			MagFrictionExp
 T			MagFrictionUseBvectorLonLat
