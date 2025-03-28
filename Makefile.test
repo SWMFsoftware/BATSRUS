@@ -1476,7 +1476,7 @@ test_outerhelioawsom_restart_compile:
 	make PIDL
 	
 test_outerhelioawsom_restart_run:
-	cd ${TESTDIR}; Restart.pl -i RESULTS/RESTART
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RESTART
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.awsom.restart ./PARAM.in	
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog

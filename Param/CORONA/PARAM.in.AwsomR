@@ -29,16 +29,16 @@ HGR			TypeCoordSystem
 1.0			ElectronTemperatureRatio
 
 #FIELDLINETHREAD
-T                       UseFieldLineThreads
-100                     nPointThreadMax
-0.0005                  DsThreadMin
+T			UseFieldLineThreads
+100			nPointThreadMax
+0.0005			DsThreadMin
 
 #THREADEDBC
-T                       UseAlignedVelocity
-F                       DoConvergenceCheck
-limited                 TypeBc
-1.0e-6                  Tolerance
-40                      MaxIter
+T			UseAlignedVelocity
+F			DoConvergenceCheck
+limited			TypeBc
+1.0e-6			Tolerance
+40			MaxIter
 
 #PLOTTHREADS
 T			DoPlotThreads
@@ -47,10 +47,10 @@ T			UseTRCorrection
 T			UsePlanarTriangles
 
 #BODY
-T                       UseBody
-1.0                     rBody
-1.5e8                   BodyNDim
-1.5e6                   BodyTDim
+T			UseBody
+1.0			rBody
+1.5e8			BodyNDim
+1.5e6			BodyTDim
 
 #HARMONICSFILE
 Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
@@ -203,7 +203,7 @@ RAW			StringLog
 -1.			DtSaveLogfile
 
 #OUTERBOUNDARY
-fieldlinethreads			TypeBc1
+fieldlinethreads		TypeBc1
 float			TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
@@ -234,21 +234,21 @@ T			IsTimeAccurate
 +perturb -ic		StringSwitch
 
 #CME
-T                   UseCme
-T                   DoAddFluxRope
--1                  tDecayCme
-180                 LongitudeCme
-15                  LatitudeCme
-120                 OrientationCme
-TD22                TypeCme
--1                  iHelicity
-0.16                RadiusMajor
-0.06                RadiusMinor
-0.05                Depth
-1.0e-3              PlasmaBeta
-5.0e5               EjectaTemperature
-getbstrap           TypeBStrap
-none
+T			UseCme
+T			DoAddFluxRope
+-1			tDecayCme
+180			LongitudeCme
+15			LatitudeCme
+120			OrientationCme
+TD22			TypeCme
+-1			iHelicity
+0.16			RadiusMajor
+0.06			RadiusMinor
+0.05			Depth
+1.0e-3			PlasmaBeta
+5.0e5			EjectaTemperature
+getbstrap		TypeBStrap
+none			TypeCharge
 
 #STOP
 -1			MaxIteration

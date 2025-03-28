@@ -26,7 +26,7 @@ module ModPUI
   ! Logarithmic velocity grid for the PUIs.
   ! The bin centered velocities are:
   real, public :: Vpui_I(nPui)
-  real :: DeltaVpui_I(nPui)
+  real, public :: DeltaVpui_I(nPui)
 
   real :: DeltaLogVpui
 

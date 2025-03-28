@@ -210,20 +210,20 @@ contains
           UseCurlB0 = .true.
           rCurrentFreeB0 = 0.0
           if(iProc==0)write(*,*)NameSub, &
-               ' Local B0, so UseCurlB0=T, rCurrentFreeB0= 1'
+               ' Local B0, so UseCurlB0=T, rCurrentFreeB0=1'
        elseif(iTableB0 > 0) then
           if(rMaxB0 < RadiusMax)then
              ! J0 is finite above rMaxB0
              UseCurlB0 = .true.
              rCurrentFreeB0 = rMaxB0
              if(iProc==0)write(*,*)NameSub,&
-                  ' UseCurlB0 is switched ON, rCurrentFreeB0 = ',rCurrentFreeB0
+                  ' UseCurlB0=T, rCurrentFreeB0 =', rCurrentFreeB0
           else if(UseCurlB0)then
              ! if rSourceSurface > SC boundary then UseCurlB0 is NOT required
              UseCurlB0 = .false.
              rCurrentFreeB0 = -1.0
              if(iProc==0)write(*,*)NameSub,&
-                  ' NOTE: UseCurlB0 is switched OFF as source surface = ', rMaxB0
+                  ' UseCurlB0=F because source surface radius =', rMaxB0
           end if
        end if
     end if
