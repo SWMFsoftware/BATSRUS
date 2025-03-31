@@ -250,21 +250,48 @@ sub set_optimization{
 
     if($Opt =~ /PARAM\.in/){
 
-	# Set the component name used
+	# Expand file if necessary
 	my $NameComp = $Component;
 	open(FILE, $Opt) or die "$ERROR could not open $Opt\n";
+	my @lines;
+	my $expand;
 	while(<FILE>){
-	    # Read component name from #COMPNENT command
+	    if(/^#INCLUDE\b/){
+		my $Include = $Opt; $Include =~ s/PARAM\.in.*//;
+		$Include .= <FILE>; $Include =~ s/\s+.*//; 
+		if(open(INCLUDE, $Include)){
+		    while(<INCLUDE>){
+			last if /^\#END\b/;
+			push(@lines, $_);
+			$expand = 1;
+		    }
+		    close(INCLUDE);
+		}		
+	    }else{
+		last if /^\#END\b/;
+		push(@lines, $_);
+	    }
+	}
+	close(FILE);
+	if($expand){
+	    $Opt .= "_expand";
+	    open(OUT,">$Opt") or die "$ERROR could not open $Opt\n";
+	    print OUT @lines;
+	    close(OUT);
+	}
+	# Set the component name
+	open(FILE, $Opt) or die "$ERROR could not open $Opt\n";
+	while(<FILE>){
+	    # Read component name from standalone #COMPONENT command
 	    if(/^#COMPONENT\b/){
 		my $name = <FILE>;
 		my $ison = <FILE>;
-		$NameComp = $name unless $ison =~ /^T|F/;
+		$NameComp = substr($name,0,2) unless $ison =~ /^T|F/;
 		last;
 	    }
 	}
 	close(FILE);
-	
-	# Read settings from some PARAM.in file
+
 	# Default settings
 	my %Set = (
 	    B1rCoef                  => "-1.0",
@@ -312,6 +339,7 @@ sub set_optimization{
 	$Set{"UseRotatingFrame"} = ".true."  if $NameComp =~ /sc|ee/i;
 	$Set{"UseRotatingBc"}    = ".true."  if $NameComp =~ /gm/i;
 
+	# Read settings from $Opt file
 	print "processing parameter file $Opt\n";
 	my $first = 1;  # true in the first session of the active component
 	my $ison = 1;   # true for active component
@@ -343,9 +371,6 @@ sub set_optimization{
 	    }elsif(/^#PARTLOCALTIMESTEP\b/){
 		my $r = <FILE>; 
 		check_var($Set{"rLocalTimeStep"}, $r, $first);
-	    }elsif(/^#TIMESTEPLIMIT\b/){
-		my $do = <FILE>; # not time accurate if limiting time step
-		check_var($Set{"IsTimeAccurate"},'F',$first) if $do =~ /^\s*T/;
 	    }elsif(/^#(TIMESTEPPING|RUNGEKUTTA|RK)\b/){
 		$nstage = <FILE>; $nstage =~ s/^\s*(\d+).*\n/$1/;
 	    }elsif(/^#SCHEME\b/){
@@ -928,7 +953,7 @@ sub current_settings{
     $Settings  = "Number of cells in a block  : nI=$nI, nJ=$nJ, nK=$nK\n";
     $Settings .= "Number of ghost cell layers : nG=$GhostCell\n";
 
-    open(FILE, $UserMod) or die "$ERROR Could not open $UserMod\n";
+    open(FILE, $UserMod) or die "$ERROR could not open $UserMod\n";
     my $Module='???';
     my $NameFile='???';
     while(<FILE>){
@@ -944,7 +969,7 @@ sub current_settings{
     close(FILE);
     $Settings .= "UserModule = $NameFile: $Module\n";
 
-    open(FILE, $EquationMod) or die "$ERROR Could not open $EquationMod\n";
+    open(FILE, $EquationMod) or die "$ERROR could not open $EquationMod\n";
     my $Equation='???';
     my $NameFile='???';
     my $prev;
