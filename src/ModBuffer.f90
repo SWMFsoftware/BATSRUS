@@ -157,7 +157,7 @@ contains
        ! Convert to normalized 1/time unit
        OmegaSourceTarget_D = No2Si_V(UnitT_)*&
             angular_velocity(tSimulation, TypeCoordSource, TypeCoordTarget)
-       !$acc update device(SourceToTarget_DD, OmegaSourceCoord_D)
+       !$acc update device(SourceToTarget_DD, OmegaSourceTarget_D)
     end if
 
   end subroutine set_buffer_transform
