@@ -45,7 +45,7 @@ module ModBuffer
   ! Angular velocity between coordinate systems
   real:: OmegaSourceTarget_D(MaxDim) = 0.0
   !$acc declare create(OmegaSourceTarget_D, SourceToTarget_DD)
-  
+
   ! Check against current time to see if transformation needs update
   real:: TimeSimulationLast = -1.0
   !$acc declare create(TimeSimulationLast)
