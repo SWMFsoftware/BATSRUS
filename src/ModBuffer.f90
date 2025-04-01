@@ -4,7 +4,7 @@
 module ModBuffer
 
   use BATL_lib, ONLY: test_start, test_stop
-  use ModNumConst, ONLY: cHalfPi, cTwoPi
+  use ModNumConst, ONLY: cHalfPi, cTwoPi, cUnit_DD
   use BATL_lib, ONLY: MaxDim
   use ModGeometry, ONLY: r_GB, rBody2_GB
   use ModBatsrusUtility, ONLY: stop_mpi
@@ -16,13 +16,12 @@ module ModBuffer
   ! Named indexes for the spherical buffer
   integer, parameter:: BuffR_ = 1, BuffLon_ = 2, BuffLat_ = 3
 
-  ! Number of buffer grid points, along radial, longitudinal and latitudinal
-  ! dirctions
+  ! Number of buffer grid points
   integer:: nRBuff = 2, nLonBuff = 90, nLatBuff = 45
   !$acc declare create(nRBuff, nLonBuff, nLatBuff)
 
-  ! Buffer grid with dimension(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1).
-  ! There are layers of grid points to implement periodic BCs in longitude
+  ! Buffer grid with dimension (nVar,nRBuff,0:nLonBuff+1,0:nLatBuff+1).
+  ! Ghost cells are used for periodic BCs in longitude
   ! and across-the-pole interpolation in latitude.
   real, allocatable :: BufferState_VG(:,:,:,:)
   !$acc declare create(BufferState_VG)
@@ -31,37 +30,35 @@ module ModBuffer
   real:: dSphBuff_D(MaxDim)
   !$acc declare create(dSphBuff_D)
 
-  ! Minimum and maximum coordinate values. For radius the use of UnitX_
-  ! is assumed, while the longitude and latitude are expressed in radians
+  ! Minimum and maximum coordinate values
+  ! Radius in normalizd unit, longitude and latitude in radians
   real:: BufferMin_D(MaxDim) = [19.0,    0.0, -cHalfPi]
   real:: BufferMax_D(MaxDim) = [21.0, cTwoPi,  cHalfPi]
   !$acc declare create(BufferMin_D, BufferMax_D)
 
-  ! The magnetic field and velocity vectors on grid are in the coordinate
-  ! system as used in the "source" model (in SC, if the grid is applied in
-  ! the IH). Therefore, we need both the coordinate system identifier from
-  ! the source model...
+  ! Coordinate system of the buffer (obtained from the source model)
   character (len=3):: TypeCoordSource = '???'
 
-  ! ...and the matrix to convert the coordinate, velocity and the
-  ! magnetic field vectors between the buffer grid and the model one:
-  real:: SourceTarget_DD(MaxDim, MaxDim)
+  ! Transformation matrix between the buffer grid and the model
+  real:: SourceTarget_DD(MaxDim,MaxDim) = cUnit_DD
 
-  ! To figure out, if the time-dependent conversion matrix needs to be
-  ! recalculated for a new time step
+  ! Angular velocity between coordinate systems
+  real:: OmegaSourceTarget_D(MaxDim) = 0.0
+  !$acc declare create(OmegaSourceTarget_D, SourceTarget_DD)
+  
+  ! Check against current time to see if transformation needs update
   real:: TimeSimulationLast = -1.0
   !$acc declare create(TimeSimulationLast)
 
-  ! If the logical below is true the buffer may be restarted, even is the
-  ! source model is not used/configured in the restarted run.
+  ! Allow restarting the buffer grid even if the source model is not active
   logical:: DoRestartBuffer = .false.
 
-  ! If the logical below is true the buffer grid is centered
-  ! at xBody2, yBody2, zBBody2
+  ! If IsBody2Buffer is true, buffer grid origin is xBody2, yBody2, zBody2
   logical:: IsBody2Buffer = .false.
 
 contains
   !============================================================================
+  include 'vector_functions.h'
   subroutine init_buffer_grid
 
     use ModVarIndexes, ONLY: nVar
@@ -147,6 +144,24 @@ contains
 
   end subroutine read_buffer_grid_param
   !============================================================================
+  subroutine set_buffer_transform
+
+    use ModMain, ONLY: TypeCoordTarget=>TypeCoordSystem, tSimulation
+    use CON_axes, ONLY: transform_matrix, angular_velocity
+    use ModPhysics, ONLY: No2Si_V, UnitT_
+    !--------------------------------------------------------------------------
+    if(TypeCoordSource /= TypeCoordTarget) then
+       ! Calculate coord transformation
+       SourceTarget_DD = &
+            transform_matrix(tSimulation, TypeCoordTarget, TypeCoordSource)
+       ! Convert to normalized 1/time unit
+       OmegaSourceTarget_D = No2Si_V(UnitT_)*&
+            angular_velocity(tSimulation, TypeCoordTarget, TypeCoordSource)
+       !$acc update device(SourceTarget_DD, OmegaSourceCoord_D)
+    end if
+
+  end subroutine set_buffer_transform
+  !============================================================================
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
     !$acc routine seq
 
@@ -179,25 +194,29 @@ contains
     real:: SqrtRhoInv
     ! Temporary variable for thin current sheet
     real:: Ewave
+#ifdef _OPENACC
+    ! Temporary variable for velocity transformation
+    real:: u_D(MaxDim)
+#endif
     !--------------------------------------------------------------------------
     Xyz_D = XyzTarget_D
 #ifndef _OPENACC
     if(IsBody2Buffer)Xyz_D = Xyz_D - [xBody2, yBody2, zBody2]
+#endif
     if(TypeCoordSource /= TypeCoordTarget) then
        ! Convert target coordinates to the coordiante system of the model
-
+#ifndef _OPENACC
+       ! recalculate SourceTarget_DD as needed
        if(tSimulation > TimeSimulationLast)then
-          SourceTarget_DD = transform_matrix(TimeSim=tSimulation,&
-               TypeCoordIn = TypeCoordTarget, TypeCoordOut = TypeCoordSource)
+          SourceTarget_DD = &
+               transform_matrix(tSimulation, TypeCoordTarget, TypeCoordSource)
           TimeSimulationLast = tSimulation
        end if
+#endif
        XyzSource_D = matmul(SourceTarget_DD, Xyz_D)
     else
-#endif
        XyzSource_D = Xyz_D
-#ifndef _OPENACC
     end if
-#endif
 
     call xyz_to_rlonlat(XyzSource_D, Sph_D)
 
@@ -208,14 +227,21 @@ contains
     State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
 
     ! Transform vector variables from source coordinate frame to target
-#ifndef _OPENACC
-    ! transform_velocity is not ported to GPU yet
     if(TypeCoordSource /= TypeCoordTarget)then
+#ifndef _OPENACC
+       ! General transform including solar to geo coordinates
        State_V(Ux_:Uz_) = transform_velocity(tSimulation,              &
             State_V(Ux_:Uz_)*No2Si_V(UnitU_), XyzSource_D*No2Si_V(UnitX_), &
             TypeCoordSource, TypeCoordTarget)*Si2No_V(UnitU_)
+#else
+       ! Simplified transform for coordinate centers coinciding
+       u_D = State_V(Ux_:Uz_) - cross_prod(OmegaSourceTarget_D, XyzSource_D)
+       State_V(Ux_:Uz_) = matmul(SourceTarget_DD, u_D)
+#endif
        if(UseB) State_V(Bx_:Bz_) = matmul(State_V(Bx_:Bz_), SourceTarget_DD)
     end if
+
+#ifndef _OPENACC
     if(SignB_ > 1)then
        if(DoThinCurrentSheet)then
           ! In both IH and OH we have no B0, so we ignore that !
