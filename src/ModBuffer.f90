@@ -39,12 +39,12 @@ module ModBuffer
   ! Coordinate system of the buffer (obtained from the source model)
   character (len=3):: TypeCoordSource = '???'
 
-  ! Transformation matrix between the buffer grid and the model
-  real:: SourceTarget_DD(MaxDim,MaxDim) = cUnit_DD
+  ! Transformation matrix from the buffer grid to the model
+  real:: SourceToTarget_DD(MaxDim,MaxDim) = cUnit_DD
 
   ! Angular velocity between coordinate systems
   real:: OmegaSourceTarget_D(MaxDim) = 0.0
-  !$acc declare create(OmegaSourceTarget_D, SourceTarget_DD)
+  !$acc declare create(OmegaSourceTarget_D, SourceToTarget_DD)
   
   ! Check against current time to see if transformation needs update
   real:: TimeSimulationLast = -1.0
@@ -152,12 +152,12 @@ contains
     !--------------------------------------------------------------------------
     if(TypeCoordSource /= TypeCoordTarget) then
        ! Calculate coord transformation
-       SourceTarget_DD = &
-            transform_matrix(tSimulation, TypeCoordTarget, TypeCoordSource)
+       SourceToTarget_DD = &
+            transform_matrix(tSimulation, TypeCoordSource, TypeCoordTarget)
        ! Convert to normalized 1/time unit
        OmegaSourceTarget_D = No2Si_V(UnitT_)*&
-            angular_velocity(tSimulation, TypeCoordTarget, TypeCoordSource)
-       !$acc update device(SourceTarget_DD, OmegaSourceCoord_D)
+            angular_velocity(tSimulation, TypeCoordSource, TypeCoordTarget)
+       !$acc update device(SourceToTarget_DD, OmegaSourceCoord_D)
     end if
 
   end subroutine set_buffer_transform
@@ -206,14 +206,14 @@ contains
     if(TypeCoordSource /= TypeCoordTarget) then
        ! Convert target coordinates to the coordiante system of the model
 #ifndef _OPENACC
-       ! recalculate SourceTarget_DD as needed
+       ! recalculate SourceToTarget_DD as needed
        if(tSimulation > TimeSimulationLast)then
-          SourceTarget_DD = &
-               transform_matrix(tSimulation, TypeCoordTarget, TypeCoordSource)
+          SourceToTarget_DD = &
+               transform_matrix(tSimulation, TypeCoordSource, TypeCoordTarget)
           TimeSimulationLast = tSimulation
        end if
 #endif
-       XyzSource_D = matmul(SourceTarget_DD, Xyz_D)
+       XyzSource_D = matmul(SourceToTarget_DD, Xyz_D)
     else
        XyzSource_D = Xyz_D
     end if
@@ -236,9 +236,9 @@ contains
 #else
        ! Simplified transform for coordinate centers coinciding
        u_D = State_V(Ux_:Uz_) - cross_prod(OmegaSourceTarget_D, XyzSource_D)
-       State_V(Ux_:Uz_) = matmul(SourceTarget_DD, u_D)
+       State_V(Ux_:Uz_) = matmul(SourceToTarget_DD, u_D)
 #endif
-       if(UseB) State_V(Bx_:Bz_) = matmul(State_V(Bx_:Bz_), SourceTarget_DD)
+       if(UseB) State_V(Bx_:Bz_) = matmul(SourceToTarget_DD, State_V(Bx_:Bz_))
     end if
 
 #ifndef _OPENACC
