@@ -221,7 +221,7 @@ contains
     ! Save the solution on threads if present
     if(UseFieldLineThreads)call save_thread_restart
     ! Save the buffer grid state if present (at zeroth proc only!)
-    if(UseBufferGrid.and.iProc==0)call save_buffer_restart
+    if(UseBufferGrid .and. iProc==0)call save_buffer_restart
     if(iProc==0) call write_restart_header
     select case(TypeRestartOutFile)
     case('block')
