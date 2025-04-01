@@ -251,7 +251,6 @@ sub set_optimization{
     if($Opt =~ /PARAM\.in/){
 
 	# Expand file if necessary
-	my $NameComp = $Component;
 	open(FILE, $Opt) or die "$ERROR could not open $Opt\n";
 	my @lines;
 	my $expand;
@@ -279,9 +278,11 @@ sub set_optimization{
 	    print OUT @lines;
 	    close(OUT);
 	}
-	# Set the component name
+	# Set the component name (only for standalone)
+	my $NameComp = $Component;
 	open(FILE, $Opt) or die "$ERROR could not open $Opt\n";
 	while(<FILE>){
+	    last if /^\#BEGIN_COMP\b/;
 	    # Read component name from standalone #COMPONENT command
 	    if(/^#COMPONENT\b/){
 		my $name = <FILE>;
@@ -495,6 +496,7 @@ sub set_optimization{
 	    }
 	}
 	close(FILE);
+	unlink($Opt) if $expand and $Opt =~ /_expand$/;
 
 	foreach $name (sort keys %Set){
 	    if($Set{$name} ne $Opt{$name}){
