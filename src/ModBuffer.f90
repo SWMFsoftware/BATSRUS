@@ -213,7 +213,7 @@ contains
           TimeSimulationLast = tSimulation
        end if
 #endif
-       XyzSource_D = matmul(SourceToTarget_DD, Xyz_D)
+       XyzSource_D = matmul(Xyz_D, SourceToTarget_DD)
     else
        XyzSource_D = Xyz_D
     end if
