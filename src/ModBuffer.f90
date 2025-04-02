@@ -217,7 +217,7 @@ contains
           TimeSimulationLast = tSimulation
        end if
 #endif
-       XyzSource_D = matmul(Xyz_D, SourceToTarget_DD)
+       XyzSource_D = matmul3_right(Xyz_D, SourceToTarget_DD)
     else
        XyzSource_D = Xyz_D
     end if
@@ -240,9 +240,10 @@ contains
 #else
        ! Simplified transform for coordinate centers coinciding
        u_D = State_V(Ux_:Uz_) - cross_prod(OmegaSourceTarget_D, XyzSource_D)
-       State_V(Ux_:Uz_) = matmul(SourceToTarget_DD, u_D)
+       State_V(Ux_:Uz_) = matmul3_left(SourceToTarget_DD, u_D)
 #endif
-       if(UseB) State_V(Bx_:Bz_) = matmul(SourceToTarget_DD, State_V(Bx_:Bz_))
+       if(UseB) State_V(Bx_:Bz_) = &
+            matmul3_left(SourceToTarget_DD, State_V(Bx_:Bz_))
     end if
 
 #ifndef _OPENACC
