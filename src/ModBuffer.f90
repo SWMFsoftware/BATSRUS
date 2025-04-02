@@ -6,6 +6,7 @@ module ModBuffer
   use BATL_lib, ONLY: test_start, test_stop
   use ModNumConst, ONLY: cHalfPi, cTwoPi, cUnit_DD
   use BATL_lib, ONLY: MaxDim
+  use ModMain, ONLY: tSimulation, TypeCoordSystem
   use ModGeometry, ONLY: r_GB, rBody2_GB
   use ModBatsrusUtility, ONLY: stop_mpi
 
@@ -38,6 +39,9 @@ module ModBuffer
 
   ! Coordinate system of the buffer (obtained from the source model)
   character (len=3):: TypeCoordSource = '???'
+
+  logical:: DoTransformCoord = .false.
+  !$acc declare create(DoTransformCoord)
 
   ! Transformation matrix from the buffer grid to the model
   real:: SourceToTarget_DD(MaxDim,MaxDim) = cUnit_DD
@@ -79,7 +83,9 @@ contains
     ! Assign the lower limit for LOS intergation, for the given model:
     rLowerModel = BufferMax_D(BuffR_)
 
-    !$acc update device(nRBuff, nLonBuff, nLatBuff)
+    DoTransformCoord = TypeCoordSource /= TypeCoordSystem
+
+    !$acc update device(nRBuff, nLonBuff, nLatBuff, DoTransformCoord)
     !$acc update device(dSphBuff_D, BufferMin_D, BufferMax_D, BufferState_VG)
   end subroutine init_buffer_grid
   !============================================================================
@@ -146,17 +152,16 @@ contains
   !============================================================================
   subroutine set_buffer_transform
 
-    use ModMain, ONLY: TypeCoordTarget=>TypeCoordSystem, tSimulation
     use CON_axes, ONLY: transform_matrix, angular_velocity
     use ModPhysics, ONLY: No2Si_V, UnitT_
     !--------------------------------------------------------------------------
-    if(TypeCoordSource /= TypeCoordTarget) then
+    if(DoTransformCoord) then
        ! Calculate coord transformation
        SourceToTarget_DD = &
-            transform_matrix(tSimulation, TypeCoordSource, TypeCoordTarget)
+            transform_matrix(tSimulation, TypeCoordSource, TypeCoordSystem)
        ! Convert to normalized 1/time unit
        OmegaSourceTarget_D = No2Si_V(UnitT_)*&
-            angular_velocity(tSimulation, TypeCoordSource, TypeCoordTarget)
+            angular_velocity(tSimulation, TypeCoordSource, TypeCoordSystem)
        !$acc update device(SourceToTarget_DD, OmegaSourceTarget_D)
     end if
 
@@ -165,7 +170,6 @@ contains
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
     !$acc routine seq
 
-    use ModMain, ONLY: TypeCoordTarget=>TypeCoordSystem, tSimulation
     use CON_axes, ONLY: transform_matrix, transform_velocity
     use ModAdvance, ONLY: UseB
     use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitU_, UnitX_
@@ -203,13 +207,13 @@ contains
 #ifndef _OPENACC
     if(IsBody2Buffer)Xyz_D = Xyz_D - [xBody2, yBody2, zBody2]
 #endif
-    if(TypeCoordSource /= TypeCoordTarget) then
+    if(DoTransformCoord) then
        ! Convert target coordinates to the coordiante system of the model
 #ifndef _OPENACC
        ! recalculate SourceToTarget_DD as needed
        if(tSimulation > TimeSimulationLast)then
           SourceToTarget_DD = &
-               transform_matrix(tSimulation, TypeCoordSource, TypeCoordTarget)
+               transform_matrix(tSimulation, TypeCoordSource, TypeCoordSystem)
           TimeSimulationLast = tSimulation
        end if
 #endif
@@ -227,12 +231,12 @@ contains
     State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
 
     ! Transform vector variables from source coordinate frame to target
-    if(TypeCoordSource /= TypeCoordTarget)then
+    if(DoTransformCoord)then
 #ifndef _OPENACC
        ! General transform including solar to geo coordinates
        State_V(Ux_:Uz_) = transform_velocity(tSimulation,              &
             State_V(Ux_:Uz_)*No2Si_V(UnitU_), XyzSource_D*No2Si_V(UnitX_), &
-            TypeCoordSource, TypeCoordTarget)*Si2No_V(UnitU_)
+            TypeCoordSource, TypeCoordSystem)*Si2No_V(UnitU_)
 #else
        ! Simplified transform for coordinate centers coinciding
        u_D = State_V(Ux_:Uz_) - cross_prod(OmegaSourceTarget_D, XyzSource_D)
@@ -315,19 +319,19 @@ contains
   !============================================================================
   subroutine plot_buffer(iFile)
 
-    use ModPlotFile,   ONLY: save_plot_file
-    use ModNumConst,   ONLY: cRadToDeg
-    use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure
+    use ModPlotFile, ONLY: save_plot_file
+    use ModNumConst, ONLY: cRadToDeg
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
     use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_, &
          p_, WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_,    &
          ChargeStateLast_
-    use ModIO,            ONLY: NamePrimitiveVarOrig, NamePlotDir
-    use ModTimeConvert,   ONLY: time_real_to_int
+    use ModIO, ONLY: NamePrimitiveVarOrig, NamePlotDir
+    use ModTimeConvert, ONLY: time_real_to_int
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModMain,          ONLY: StartTime, tSimulation, x_, z_, nStep
-    use ModPhysics,       ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitX_,   &
+    use ModMain, ONLY: StartTime, tSimulation, x_, z_, nStep
+    use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitX_,   &
          UnitP_, UnitEnergyDens_
-    use BATL_lib,     ONLY: iProc
+    use BATL_lib, ONLY: iProc
 
     integer, intent(in):: iFile          ! Unused
     integer:: iTimePlot_I(7) ! To shape the file name
@@ -370,42 +374,38 @@ contains
           end do
        end do
        ! Convert from normalized units to SI
-       State_VII(  x_:z_,:,:) = State_VII(  x_:z_,:,:)*No2Si_V(UnitX_  )
-       State_VII(z_+rho_,:,:) = State_VII(z_+rho_,:,:)*No2Si_V(UnitRho_)
-       State_VII(z_+Ux_:z_+Uz_,:,:)   = State_VII(z_+Ux_:z_+Uz_,:,:)*&
-            No2Si_V(UnitU_)
-       State_VII(z_+Bx_:z_+Bz_,:,:)   = State_VII(z_+Bx_:z_+Bz_,:,:)*&
-            No2Si_V(UnitB_)
-
+       State_VII(x_:z_,:,:) = State_VII(x_:z_,:,:) &
+            *No2Si_V(UnitX_)
+       State_VII(z_+rho_,:,:) = State_VII(z_+rho_,:,:) &
+            *No2Si_V(UnitRho_)
+       State_VII(z_+Ux_:z_+Uz_,:,:) = State_VII(z_+Ux_:z_+Uz_,:,:) &
+            *No2Si_V(UnitU_)
+       State_VII(z_+Bx_:z_+Bz_,:,:) = State_VII(z_+Bx_:z_+Bz_,:,:) &
+            *No2Si_V(UnitB_)
        if(WaveFirst_ > 1)State_VII(z_+WaveFirst_:z_+WaveLast_,:,:) = &
-            State_VII(z_+WaveFirst_:z_+WaveLast_,:,:)* &
-            No2Si_V(UnitEnergyDens_)
-
+            State_VII(z_+WaveFirst_:z_+WaveLast_,:,:) &
+            *No2Si_V(UnitEnergyDens_)
        if(ChargeStateFirst_ > 1)&
             State_VII(z_+ChargeStateFirst_:z_+ChargeStateLast_,:,:) = &
-            State_VII(z_+ChargeStateFirst_:z_+ChargeStateLast_,:,:)* &
-            No2Si_V(UnitRho_)
-
-       State_VII(z_+p_,:,:)  = State_VII(z_+p_,:,:)*No2Si_V(UnitP_)
-       if(UseElectronPressure)State_VII(z_+Pe_,:,:)  = &
-            State_VII(z_+Pe_,:,:)*No2Si_V(UnitP_)
-
-       if(UseAnisoPressure)State_VII(z_+Ppar_,:,:)  = &
-            State_VII(z_+Ppar_,:,:)*No2Si_V(UnitP_)
-
-       if(Ehot_ > 1)State_VII(z_+Ehot_,:,:) = &
-            State_VII(z_+Ehot_,:,:)*No2Si_V(UnitEnergyDens_)
+            State_VII(z_+ChargeStateFirst_:z_+ChargeStateLast_,:,:) &
+            *No2Si_V(UnitRho_)
+       State_VII(z_+p_,:,:) = State_VII(z_+p_,:,:) &
+            *No2Si_V(UnitP_)
+       if(UseElectronPressure)State_VII(z_+Pe_,:,:) = State_VII(z_+Pe_,:,:) &
+            *No2Si_V(UnitP_)
+       if(UseAnisoPressure)State_VII(z_+Ppar_,:,:) = State_VII(z_+Ppar_,:,:) &
+            *No2Si_V(UnitP_)
+       if(Ehot_ > 1)State_VII(z_+Ehot_,:,:) = State_VII(z_+Ehot_,:,:) &
+            *No2Si_V(UnitEnergyDens_)
 
        call save_plot_file(trim(NamePlotDir)//NameFile,&
-            StringHeaderIn=&
+            StringHeaderIn= &
             'SC-IH interface: longitude and latitude are in deg, other in SI',&
-            NameVarIn    = &
-            'Long Lat x y z '//NamePrimitiveVarOrig//' R',&
-            nDimIn=2,      &
-            nStepIn=nStep, TimeIn=tSimulation,&
+            NameVarIn= &
+            'Long Lat x y z '//NamePrimitiveVarOrig//' R', &
+            nDimIn=2, nStepIn=nStep, TimeIn=tSimulation, &
             ParamIn_I=[R*No2Si_V(UnitX_)], &
-            CoordIn_DII=Coord_DII, &
-            VarIn_VII=State_VII)
+            CoordIn_DII=Coord_DII, VarIn_VII=State_VII)
     end do
 
   end subroutine plot_buffer
