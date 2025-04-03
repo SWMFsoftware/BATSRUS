@@ -142,7 +142,7 @@ contains
     case("#PRECISION")
        call read_var('nByteReal',nByteRealRead)
        if(nByteReal/=nByteRealRead)then
-          if(iProc==0) write(*,'(a,i1,a,i1)') NameSub// &
+          if(iProc == 0) write(*,'(a,i1,a,i1)') NameSub// &
                ' WARNING: BATSRUS was compiled with ',nByteReal,&
                ' byte reals, requested precision is ',nByteRealRead
           if(UseStrict)call stop_mpi(NameSub// &
@@ -214,8 +214,8 @@ contains
     ! Save the solution on threads if present
     if(UseFieldLineThreads)call save_thread_restart
     ! Save the buffer grid state if present (at zeroth proc only!)
-    if(UseBufferGrid .and. iProc==0)call save_buffer_restart
-    if(iProc==0) call write_restart_header
+    if(UseBufferGrid .and. iProc == 0)call save_buffer_restart
+    if(iProc == 0) call write_restart_header
     select case(TypeRestartOutFile)
     case('proc')
        allocate(iFileMorton_I(nBlockAll), iRecMorton_I(nBlockAll))
@@ -229,7 +229,7 @@ contains
     case default
        call stop_mpi('Unknown TypeRestartOutFile='//TypeRestartOutFile)
     end select
-    if(DoWriteIndices .and. iProc==0)call write_geoind_restart
+    if(DoWriteIndices .and. iProc == 0)call write_geoind_restart
 
     if(DoWriteBlockData .and. nStep > 0) &
          call write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
@@ -324,7 +324,7 @@ contains
     ! after B0 is set
 
     ! Try reading geoIndices restart file if needed
-    if(DoWriteIndices .and. iProc==0)call read_geoind_restart
+    if(DoWriteIndices .and. iProc == 0)call read_geoind_restart
 
     if(DoReadBlockData)  &
          call read_block_restart_files(NameRestartInDir, UseRestartInSeries)
@@ -826,7 +826,7 @@ contains
              end if
              IsRead = .true.
           endif
-          if(nStepPrev==nStep)then
+          if(nStepPrev == nStep)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
@@ -908,7 +908,7 @@ contains
                BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)
           CYCLE
        endif
-       if(nStepPrev==nStep)then
+       if(nStepPrev == nStep)then
           ! Save previous time step for sake of BDF2 scheme
           write(UnitTmp_, rec=iRec) &
                DtMax_B(iBlock), &
@@ -1112,7 +1112,7 @@ contains
     end if
 
     ! Change of state variables!!
-    if(iProc==0) then
+    if(iProc == 0) then
        write(*,*) 'Changing state variables from restart file'
        write(*,*) 'Restart file variables: ', NameVarRestart_V
        write(*,*) 'Current variables:      ', NameVar_V
@@ -1218,7 +1218,7 @@ contains
              if(nChargeStateAll > 1)then
                 if(UseMultiIon)then
                    if(iVar>p_ .and. iVar<=iP_I(nIonFluid))then
-                      if(iProc==0 .and. iVar==iP_I(nIonFluid)) write(*,*) &
+                      if(iProc == 0 .and. iVar == iP_I(nIonFluid)) write(*,*) &
                            'charge state vars initialized via user action !!!'
                       CYCLE
                    end if
@@ -1230,7 +1230,7 @@ contains
                    end if
                 end if
              end if
-             if(iProc==0) &
+             if(iProc == 0) &
                   write(*,*) 'WARNING!!! : the state variable ', &
                   NameVar_V(iVar) //                            &
                   'is not present in the restart file and no rule is'//&
@@ -1239,7 +1239,7 @@ contains
                 call stop_mpi(NameSub// &
                      ' ERROR: State after restart not well defined!')
              else
-                if(iProc==0) write(*,*) 'Using default values instead.'
+                if(iProc == 0) write(*,*) 'Using default values instead.'
                 State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = DefaultState_V(iVar)
              end if
           end select
