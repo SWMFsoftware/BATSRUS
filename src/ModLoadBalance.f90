@@ -77,7 +77,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     ! to be improved?
-    DoSendTrace = UseIM .or. index(StringLogVar, 'status') > 0  
+    DoSendTrace = UseIM .or. index(StringLogVar, 'status') > 0
 
     nBuffer = nScalarData
 
