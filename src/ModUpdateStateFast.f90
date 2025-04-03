@@ -48,7 +48,7 @@ module ModUpdateStateFast
        SpeedMin, rSpeedMin, TauSpeedMin
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
        iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep, UseBufferGrid
-  use ModBuffer, ONLY: set_buffer_transform, get_from_spher_buffer_grid
+  use ModBuffer, ONLY: get_from_spher_buffer_grid
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
@@ -255,7 +255,6 @@ contains
        if(nDim > 2) allocate(FineState_VZB(nVar,nI,nJ,3,MaxBlock))
     end if
 
-    if(UseBufferGrid) call set_buffer_transform
     !$acc parallel
     !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
