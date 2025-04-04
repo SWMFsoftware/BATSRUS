@@ -865,6 +865,8 @@ contains
     use ModIO
     use ModMain, ONLY: Dt
     use ModMultiFluid, ONLY: nFluid, nIonFluid,MassFluid_I, ChargeIon_I
+    use ModSatelliteFile, ONLY: nSatellite, NameSat_I, i_sat_for_name, &
+         set_satellite_positions, XyzSat_DI
     use BATL_lib, ONLY: nRoot_D, nI, nJ, nK
     use ModUtilities, ONLY: split_string, lower_case
 
@@ -875,7 +877,7 @@ contains
     real,              intent(out):: Param_I(MaxParam)
 
     character(len=500):: NameParam
-    integer:: iPar
+    integer:: iPar, iSat, iDim
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plot_scalars'
     !--------------------------------------------------------------------------
@@ -883,10 +885,48 @@ contains
     NameParam = StringPlotParam_I(iFile)
 
     call lower_case(NameParam)
+
+    ! Check if satellite Xyz are present among paramaters
+    do iSat = 1, nSatellite
+       if(index(NameParam, '_'//trim(NameSat_I(iSat))) > 0)&
+            call set_satellite_positions(iSat)
+    end do
+
     call split_string(NameParam, MaxParam, NameParam_I, nParam, &
          UseArraySyntaxIn=.true.)
 
     do iPar = 1, nParam
+       if(index(NameParam_I(iPar),'_')==2)then
+          ! satellite coords x_satname/y_satname/z_satname
+
+          select case(NameParam_I(iPar)(1:2))
+          case('x_')
+             iDim = 1
+          case('y_')
+             iDim = 2
+          case('z_')
+             iDim = 3
+          case default
+             Param_I(iPar) = -7777.
+             if(iProc==0)write(*,*) NameSub//':error: unknown parameter name=',&
+                  NameParam_I(iPar),' for iFile=',iFile
+          end select
+          iSat = i_sat_for_name(NameParam_I(iPar)(3:))
+          if(iSat > 0)then
+              Param_I(iPar) = XyzSat_DI(iDim,iSat)
+          else
+             Param_I(iPar) = -7777.
+             if(iProc==0)write(*,*) NameSub//':error: unknown satellite=',&
+                  NameParam_I(iPar)(3:),' for iFile=',iFile
+          end if
+          if(DoTest)then
+             write(*,'(a)')NameSub//': NameParam '//NameParam_I(iPar)
+             write(*,*)' iDim, iSat ', iDim, iSat
+             write(*,*)'Xyz_DI(:,iSat)=', XyzSat_DI(:,iSat)
+             write(*,*)'iPar=', iPar,' Param_I(iPar)=', Param_I(iPar)
+          end if
+          CYCLE
+       end if
        select case(NameParam_I(iPar))
        case('g', 'g1', 'gamma')
           Param_I(iPar) = Gamma
