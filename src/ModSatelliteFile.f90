@@ -309,7 +309,6 @@ contains
     integer :: l1, l2
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'set_name_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)

@@ -782,7 +782,7 @@ contains
   subroutine BATS_init_constrain_b
 
     ! Initialize for constrained transport
-    
+
     use ModConstrainDivB, ONLY: DoInitConstrainB, bcenter_to_bface
     use ModProjectDivB, ONLY: proj_get_divb, project_divb
     use ModNumConst, ONLY: cTiny
@@ -859,7 +859,7 @@ contains
   subroutine BATS_save_files(TypeSaveIn)
 
     ! Save output files (plot, log, satellite, restart, etc.)
-    
+
     use ModMain
     use ModIO
     use ModUtilities, ONLY : upper_case
@@ -1054,7 +1054,7 @@ contains
       !------------------------------------------------------------------------
       if(nStep <= nStepOutputLast_I(iFile) .and.&
            (DnOutput_I(iFile) >= 0 .or. DtOutput_I(iFile) > 0.0)) RETURN
-      call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)      
+      call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
       if(iFile == restart_) then
          ! Case for restart file
          if(.not.DoSaveRestart)RETURN
