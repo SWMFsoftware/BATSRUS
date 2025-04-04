@@ -1703,7 +1703,7 @@ contains
        end if
 
        ! Update CME parameters
-       call EEE_init_CME_parameters
+       ! call EEE_init_CME_parameters
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
