@@ -896,9 +896,8 @@ contains
          UseArraySyntaxIn=.true.)
 
     do iPar = 1, nParam
-       if(index(NameParam_I(iPar),'_')==2)then
+       if(index(NameParam_I(iPar),'_') == 2)then
           ! satellite coords x_satname/y_satname/z_satname
-
           select case(NameParam_I(iPar)(1:2))
           case('x_')
              iDim = 1
@@ -908,22 +907,23 @@ contains
              iDim = 3
           case default
              Param_I(iPar) = -7777.
-             if(iProc==0)write(*,*) NameSub//':error: unknown parameter name=',&
-                  NameParam_I(iPar),' for iFile=',iFile
+             if(iProc == 0)write(*,*) NameSub// &
+                  ':error: unknown parameter name=', &
+                  trim(NameParam_I(iPar)), ' for iFile=', iFile
           end select
           iSat = i_sat_for_name(NameParam_I(iPar)(3:))
           if(iSat > 0)then
               Param_I(iPar) = XyzSat_DI(iDim,iSat)
           else
              Param_I(iPar) = -7777.
-             if(iProc==0)write(*,*) NameSub//':error: unknown satellite=',&
-                  NameParam_I(iPar)(3:),' for iFile=',iFile
+             if(iProc == 0) write(*,*) NameSub// &
+                  ':error: unknown satellite=', &
+                  NameParam_I(iPar)(3:), ' for iFile=', iFile
           end if
           if(DoTest)then
-             write(*,'(a)')NameSub//': NameParam '//NameParam_I(iPar)
-             write(*,*)' iDim, iSat ', iDim, iSat
-             write(*,*)'Xyz_DI(:,iSat)=', XyzSat_DI(:,iSat)
-             write(*,*)'iPar=', iPar,' Param_I(iPar)=', Param_I(iPar)
+             write(*,*) NameSub,': NameParam=',trim(NameParam_I(iPar))
+             write(*,*) 'iDim, iSat, Xyz=', iDim, iSat, XyzSat_DI(:,iSat)
+             write(*,*) 'iPar=', iPar, ' Param_I(iPar)=', Param_I(iPar)
           end if
           CYCLE
        end if

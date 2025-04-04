@@ -318,7 +318,7 @@ contains
     l2 = index(NameFileSat_I(iSat), '.') - 1
     if (l1-1 <= 0) l1 = 1
     if (l2+1 <= 0) l2 = len_trim(NameFileSat_I(iSat))
-    write(NameSat_I(iSat),'(a)') NameFileSat_I(iSat)(l1:l2)
+    NameSat_I(iSat) = NameFileSat_I(iSat)(l1:l2)
 
     select case(TypeTrajTimeRange_I(iSat))
     case('orig')
@@ -367,15 +367,16 @@ contains
     ! Loop variable
     integer :: iSat
     !--------------------------------------------------------------------------
-    write(NameSatLc,'(a)') NameSat
+    NameSatLc = NameSat
     call lower_case(NameSatLc)
     i_sat_for_name = -1
     do iSat = 1, nSatellite
-       if(trim(NameSatLc)==trim(NameSat_I(iSat)))then
+       if(NameSatLc == NameSat_I(iSat))then
           i_sat_for_name = iSat
           RETURN
        end if
     end do
+
   end function i_sat_for_name
   !============================================================================
   subroutine read_satellite_input_files
