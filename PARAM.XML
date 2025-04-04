@@ -1665,8 +1665,7 @@ Default value is "GM/restartIN".
   <parameter name="StringRestartInFile" type="strings" min="1" max="2">
     <part name="TypeRestartInFile" type="string" input="select" required="T">
       <option name="single data.rst file" value="one"/>
-      <option name="separate files/proc"  value="proc"/>
-      <option name="separate files/block" value="block" default="T"/>
+      <option name="separate files/proc"  value="proc" default="T"/>
     </part>
     <part name="StringSeries" type="string" input="select"
 	  required="F">
@@ -1681,12 +1680,11 @@ This command is saved in the restart header file which is included during
 restart, so normally the user does not have to use this command at all.
 The TypeRestartInFile parameter describes how the restart data was saved:
 into separate files for each processor ('proc'),
-into separate files for each grid block ('block')
 or into a single direct access file ('one').
 The optional 'series' string means that a series of restart files
 were saved with the iteration number added to the beginning of the file names.
 
-The default value is 'block' for sake of backwards compatibility.
+The default value is 'proc'.
 </command>
 
 <command name="NEWRESTART" if="$_IsFirstSession">
@@ -3864,7 +3862,6 @@ Default value is "GM/restartOUT".
     <part name="TypeRestartOutFile" type="string" input="select" required="T">
       <option name="separate files/proc" value="proc" default="T" />
       <option name="single data.rst file" value="one"             />
-      <option name="separate files/block" value="block"           />
     </part>
     <part name="StringSeries" type="string" input="select" required="F">
       <option name="series"/>
@@ -3874,17 +3871,16 @@ Default value is "GM/restartOUT".
 #RESTARTOUTFILE
 one series			TypeRestartOutFile
 
-This command determines if the restart information is saved as an individual
-file for each block (block), as direct access files for each processor (proc)
+This command determines if the restart information is saved
+as direct access files for each processor (proc)
 or into a single direct access file containing all blocks (one).
 
 Normally saving restart files overwrites the previous files.
 Adding 'series' after the type results in a series of restart files
-with names starting as nITERATION_. This will be used by the adjoint method.
+with names starting as nITERATION_. 
 
-The most reliable format is 'proc'. If there is any issue with restarting
-with the 'one' format (some machines write empty records into the file),
-the 'proc' should be used. The 'block' format can fail due to too many files.
+The most reliable format is 'proc'. If there is any issue with the 'one' format
+(some machines write empty records into the file), the 'proc' should be used. 
 
 The default value is 'proc'.
 </command>

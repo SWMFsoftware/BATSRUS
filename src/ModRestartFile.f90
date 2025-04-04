@@ -6,36 +6,33 @@ module ModRestartFile
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, &
-       iProc, nProc, iComm
-  use ModBatsrusUtility, ONLY: stop_mpi
-  use ModIO,         ONLY: nFile, DtOutput_I, DnOutput_I, Restart_, &
-       IsRestart, DoSaveRestart
-  use ModMain,       ONLY: &
-       nBlockAll,      &
-       nStep, tSimulation, DtMax_B, Cfl, nByteReal, &
-       NameThisComp, nIteration, DoThinCurrentSheet, NameVarCouple
-  use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
-  use ModAdvance,    ONLY: State_VGB
-  use ModGeometry,   ONLY: CellSize_DB, Coord111_DB, NameGridFile
-  use ModIO,         ONLY: DoRestartBface
-  use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
-  use ModMain,       ONLY: UseConstrainB
-  use ModPIC,        ONLY: write_pic_status_file, &
-       read_pic_status_file, DoRestartPicStatus, AdaptPic
-  use ModImplicit, ONLY: UseImplicit, &
-       nStepPrev, ImplOld_VCB, DtPrev
-  use ModKind,       ONLY: Real4_, Real8_
-  use ModIoUnit,     ONLY: UnitTmp_
-  use ModUtilities,  ONLY: open_file, close_file
-  use ModGroundMagPerturb, ONLY: DoWriteIndices
-  use ModBoundaryGeometry, ONLY: fix_block_geometry
-  use BATL_lib,      ONLY: &
+       iProc, nProc, iComm, &
        write_tree_file, iMortonNode_A, iNode_B, &
        nBlock, Unused_B, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
-       IsCartesian, IsCartesianGrid, IsGenRadius, &
-       IsRoundCube, rRound0, rRound1
+       IsCartesian, IsCartesianGrid, IsGenRadius, IsRoundCube, rRound0, rRound1
+  use ModBatsrusUtility, ONLY: stop_mpi
+  use ModIO, ONLY: &
+       nFile, DtOutput_I, DnOutput_I, Restart_, IsRestart, DoSaveRestart
+  use ModMain, ONLY: &
+       nBlockAll, nStep, tSimulation, DtMax_B, Cfl, nByteReal, &
+       NameThisComp, nIteration, DoThinCurrentSheet, NameVarCouple
+  use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
+  use ModAdvance, ONLY: State_VGB
+  use ModGeometry, ONLY: CellSize_DB, Coord111_DB, NameGridFile
+  use ModIO, ONLY: DoRestartBface
+  use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
+  use ModMain, ONLY: UseConstrainB
+  use ModPIC, ONLY: &
+       write_pic_status_file, read_pic_status_file, DoRestartPicStatus, AdaptPic
+  use ModImplicit, ONLY: UseImplicit, nStepPrev, ImplOld_VCB, DtPrev
+  use ModKind, ONLY: Real4_, Real8_
+  use ModIoUnit, ONLY: UnitTmp_
+  use ModUtilities, ONLY: open_file, close_file
+  use ModGroundMagPerturb, ONLY: DoWriteIndices
+  use ModBoundaryGeometry, ONLY: fix_block_geometry
   use ModBlockData, ONLY: write_block_restart_files, read_block_restart_files
   use ModWritePlot, ONLY: reverse_field
+
   implicit none
 
   private ! except
@@ -70,28 +67,24 @@ module ModRestartFile
   character(len(NameVar_V)+1), allocatable, public:: NameVarRestartFrom_V(:)
   character(len(NameVar_V)+1), allocatable, public:: NameVarRestartTo_V(:)
 
-  ! Local variables
-  character(len=*), parameter :: StringRestartExt  = ".rst"
-  character(len=*), parameter :: NameBlkFile       = "blk"
-  character(len=*), parameter :: NameHeaderFile    = "restart.H"
-  character(len=*), parameter :: NameDataFile      = "data.rst"
-  character(len=*), parameter :: NameIndexFile     = "index.rst"
-  character(len=*), parameter :: NameGeoindFile    = "geoindex.rst"
-
-  integer :: nByteRealRead = 8     ! Real precision in restart files
-
-  ! One can use 'block', 'proc' or 'one' format for input and output
-  ! restart files.
-  ! The input format is set to 'block' for backwards compatibility
-  character (len=20)  :: TypeRestartInFile ='block'
-
+  ! 'proc' or 'one' format for input and output restart files.
   ! 'proc' should work fine on all machines, so it is the default
-  character (len=20)  :: TypeRestartOutFile='proc'
+  character(len=20), public:: TypeRestartOutFile = 'proc'
+
+  ! Local variables
+  character(len=20):: TypeRestartInFile = 'proc'
+  character(len=*), parameter:: StringRestartExt  = ".rst"
+  character(len=*), parameter:: NameHeaderFile    = "restart.H"
+  character(len=*), parameter:: NameDataFile      = "data.rst"
+  character(len=*), parameter:: NameIndexFile     = "index.rst"
+  character(len=*), parameter:: NameGeoindFile    = "geoindex.rst"
+
+  integer:: nByteRealRead = 8     ! Real precision in restart files
 
   ! Variables for file and record index for 'proc' type restart files
   integer, allocatable:: iFileMorton_I(:), iRecMorton_I(:)
 
-  character(len=100) :: NameFile
+  character(len=100):: NameFile
 
   ! Logical variable for saving block data in the restart
   logical :: DoWriteBlockData = .false.
@@ -126,7 +119,7 @@ contains
 
     use ModReadParam, ONLY: read_var
     use ModUtilities, ONLY: fix_dir_name
-    use ModMain,      ONLY: UseStrict
+    use ModMain, ONLY: UseStrict
 
     character(len=*), intent(in) :: NameCommand
     integer:: i
@@ -149,7 +142,7 @@ contains
     case("#PRECISION")
        call read_var('nByteReal',nByteRealRead)
        if(nByteReal/=nByteRealRead)then
-          if(iProc==0) write(*,'(a,i1,a,i1)') NameSub// &
+          if(iProc == 0) write(*,'(a,i1,a,i1)') NameSub// &
                ' WARNING: BATSRUS was compiled with ',nByteReal,&
                ' byte reals, requested precision is ',nByteRealRead
           if(UseStrict)call stop_mpi(NameSub// &
@@ -168,7 +161,7 @@ contains
        if(i > 0) TypeRestartInFile = TypeRestartInFile(1:i-1)
 
     case("#RESTARTOUTFILE")
-       call read_var('TypeRestartOutFile',TypeRestartOutFile)
+       call read_var('TypeRestartOutFile', TypeRestartOutFile)
        i = index(TypeRestartOutFile, 'series')
        UseRestartOutSeries = i > 0
        if(i > 0) TypeRestartOutFile = TypeRestartOutFile(1:i-1)
@@ -186,11 +179,11 @@ contains
   !============================================================================
   subroutine write_restart_files
 
-    use ModB0,       ONLY: UseB0, add_b0, subtract_b0
+    use ModB0, ONLY: UseB0, add_b0, subtract_b0
     use ModGeometry, ONLY: Used_GB
-    use ModMain,     ONLY: UseFieldLineThreads, UseBufferGrid
+    use ModMain, ONLY: UseFieldLineThreads, UseBufferGrid
     use ModFieldLineThread, ONLY: save_thread_restart
-    use ModBuffer,   ONLY: save_buffer_restart
+    use ModBuffer, ONLY: save_buffer_restart
 
     integer :: iBlock
     logical:: DoTest
@@ -221,14 +214,9 @@ contains
     ! Save the solution on threads if present
     if(UseFieldLineThreads)call save_thread_restart
     ! Save the buffer grid state if present (at zeroth proc only!)
-    if(UseBufferGrid .and. iProc==0)call save_buffer_restart
-    if(iProc==0) call write_restart_header
+    if(UseBufferGrid .and. iProc == 0)call save_buffer_restart
+    if(iProc == 0) call write_restart_header
     select case(TypeRestartOutFile)
-    case('block')
-       do iBlock = 1, nBlock
-          if (.not.Unused_B(iBlock)) call write_restart_file(iBlock)
-       end do
-
     case('proc')
        allocate(iFileMorton_I(nBlockAll), iRecMorton_I(nBlockAll))
        iFileMorton_I = 0
@@ -241,7 +229,7 @@ contains
     case default
        call stop_mpi('Unknown TypeRestartOutFile='//TypeRestartOutFile)
     end select
-    if(DoWriteIndices .and. iProc==0)call write_geoind_restart
+    if(DoWriteIndices .and. iProc == 0)call write_geoind_restart
 
     if(DoWriteBlockData .and. nStep > 0) &
          call write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
@@ -263,9 +251,9 @@ contains
        write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
        write(*,*)NameSub,': dt, TrueCell   =',DtMax_B(iBlockTest), &
             Used_GB(iTest,jTest,kTest,iBlockTest)
-       write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
-       write(*,*)NameSub,': Coord111_DB   =',Coord111_DB(:,iBlockTest)
-       write(*,*)NameSub,': State_VGB      =', &
+       write(*,*)NameSub,': CellSize_D =', CellSize_DB(:,iBlockTest)
+       write(*,*)NameSub,': Coord111_DB=',Coord111_DB(:,iBlockTest)
+       write(*,*)NameSub,': State_VGB  =', &
             State_VGB(:,iTest,jTest,kTest,iBlockTest)
        write(*,*)NameSub,' finished'
     end if
@@ -276,7 +264,8 @@ contains
   subroutine read_restart_files
 
     use ModBuffer, ONLY: DoRestartBuffer, read_buffer_restart
-    use ModSaMhd,   ONLY: UseSaMhd
+    use ModSaMhd, ONLY: UseSaMhd
+
     integer :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_restart_files'
@@ -295,10 +284,6 @@ contains
          allocate(ImplOldRead_VCB(nVarRestart,nI,nJ,nK,nBlock))
 
     select case(TypeRestartInFile)
-    case('block')
-       do iBlock = 1, nBlock
-          if (.not.Unused_B(iBlock)) call read_restart_file(iBlock)
-       end do
     case('proc')
        allocate(iFileMorton_I(nBlockAll), iRecMorton_I(nBlockAll))
        call read_restart_index
@@ -314,13 +299,10 @@ contains
     call match_copy_restart_variables
 
     ! restart buffer grid if present
-    if(DoRestartBuffer)call read_buffer_restart
+    if(DoRestartBuffer) call read_buffer_restart
+
     ! Deallocate temporary arrays
-    deallocate(State8_CV)
-    deallocate(State8_VC)
-    deallocate(State4_CV)
-    deallocate(State4_VC)
-    deallocate(StateRead_VCB)
+    deallocate(State8_CV, State8_VC, State4_CV, State4_VC, StateRead_VCB)
     if(allocated(ImplOldRead_VCB)) deallocate(ImplOldRead_VCB)
 
     do iBlock = 1, nBlock
@@ -342,7 +324,7 @@ contains
     ! after B0 is set
 
     ! Try reading geoIndices restart file if needed
-    if(DoWriteIndices .and. iProc==0)call read_geoind_restart
+    if(DoWriteIndices .and. iProc == 0)call read_geoind_restart
 
     if(DoReadBlockData)  &
          call read_block_restart_files(NameRestartInDir, UseRestartInSeries)
@@ -350,11 +332,11 @@ contains
     call timing_stop(NameSub)
 
     if(DoTest .and. iProc==iProcTest)then
-       write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
-       write(*,*)NameSub,': dt             =',DtMax_B(iBlockTest)
-       write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
-       write(*,*)NameSub,': Coord111_DB   =',Coord111_DB(:,iBlockTest)
-       write(*,*)NameSub,': State_VGB      =', &
+       write(*,*)NameSub,': iProc, iBlockTest =', iProc, iBlockTest
+       write(*,*)NameSub,': Dt          =', DtMax_B(iBlockTest)
+       write(*,*)NameSub,': CellSize_D  =', CellSize_DB(:,iBlockTest)
+       write(*,*)NameSub,': Coord111_DB =', Coord111_DB(:,iBlockTest)
+       write(*,*)NameSub,': State_VGB   =', &
             State_VGB(:,iTest,jTest,kTest,iBlockTest)
        write(*,*)NameSub,' finished'
     end if
@@ -366,10 +348,10 @@ contains
   !============================================================================
   subroutine write_restart_header
 
-    use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem, nBlockAll, &
-         UseBody, UseBody2, IsTimeAccurate, iStartTime_I, IsStandAlone,       &
+    use ModMain, ONLY: Dt, NameThisComp, TypeCoordSystem, nBlockAll, &
+         UseBody, UseBody2, IsTimeAccurate, iStartTime_I, IsStandAlone, &
          UseBufferGrid, NameUserModule
-    use ModPhysics,    ONLY: &
+    use ModPhysics, ONLY: &
          SolarWindNDim, SolarWindTempDim, SolarWindUxDim, SolarWindUyDim, &
          SolarWindUzDim, SolarWindBxDim, SolarWindByDim, SolarWindBzDim, &
          TypeIoUnit, TypeNormalization, No2Si_V, Io2Si_V, No2Io_V, &
@@ -378,21 +360,19 @@ contains
          rBody2, xBody2, yBody2, zBody2, UseBody2Orbit, Body2NDim, Body2TDim, &
          nVar, nFluid
 
-    ! If nFluid is taken directly from ModVarIndexes,
-    ! the PGF90 compiler fails.
     use ModVarIndexes, ONLY: NameEquation
-    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
+    use ModAdvance, ONLY: UseMultiSpecies, nSpecies
     use ModGeometry, ONLY: &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
-    use CON_planet,  ONLY: NamePlanet
+    use CON_planet, ONLY: NamePlanet
     use ModReadParam, ONLY: i_line_command
     use ModUtilities, ONLY: cTab, write_string_tabs_name
-    use ModIO,       ONLY: NameMaxTimeUnit
-    use ModMain,     ONLY: UseFieldLineThreads
-    use ModBuffer,   ONLY: write_buffer_restart_header
+    use ModIO, ONLY: NameMaxTimeUnit
+    use ModMain, ONLY: UseFieldLineThreads
+    use ModBuffer, ONLY: write_buffer_restart_header
     use EEE_ModCommonVariables, ONLY: tStartCme
-    use BATL_lib,    ONLY: nRoot_D
+    use BATL_lib, ONLY: nRoot_D
 
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
@@ -679,159 +659,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_restart_index
   !============================================================================
-  subroutine read_restart_file(iBlock)
-
-    integer, intent(in) :: iBlock
-
-    integer   :: iVar, i, j, k, iError, iBlockRestart
-    character :: StringDigit
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'read_restart_file'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    iBlockRestart = iMortonNode_A(iNode_B(iBlock))
-
-    write(StringDigit,'(i1)') max(5,1+int(alog10(real(iBlockRestart))))
-
-    write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
-         trim(NameRestartInDir)//NameBlkFile,iBlockRestart,StringRestartExt
-    if (UseRestartInSeries) call string_append_iter(NameFile,nIteration)
-
-    call open_file(file=NameFile, status='old', form='UNFORMATTED', &
-         NameCaller=NameSub)
-
-    ! Fill in ghost cells
-    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-       State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
-    end do;end do;end do
-
-    ! Do not overwrite tSimulation which is read from header file
-    if(nByteRealRead == 8)then
-       read(UnitTmp_, iostat = iError) Dt8, Time8
-       DtMax_B(iBlock) = Dt8
-       tSimulationRead   = Time8
-
-       read(UnitTmp_, iostat = iError) Dxyz8_D, Xyz8_D
-       CellSize_DB(:,iBlock) = Dxyz8_D
-       Coord111_DB(:,iBlock) = Xyz8_D
-
-       read(UnitTmp_, iostat = iError) State8_CV
-
-       do iVar = 1, nVarRestart
-          StateRead_VCB(iVar,1:nI,1:nJ,1:nK,iBlock) = State8_CV(:,:,:,iVar)
-       end do
-
-       if(DoRestartBface)then
-          read(UnitTmp_, iostat = iError) b8_X, b8_Y, b8_Z
-          BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock) = b8_X
-          ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = b8_Y
-          BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = b8_Z
-       end if
-       if(nStepPrev==nStep) then
-          read(UnitTmp_, iostat = iError) State8_CV
-          do iVar = 1, nVarRestart
-             ImplOldRead_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
-          end do
-       end if
-    else
-       read(UnitTmp_, iostat = iError) Dt4, Time4
-       DtMax_B(iBlock) = Dt4
-       tSimulationRead   = Time4
-
-       read(UnitTmp_, iostat = iError) Dxyz4_D, Xyz4_D
-       CellSize_DB(:,iBlock) = Dxyz4_D
-       Coord111_DB(:,iBlock) = Xyz4_D
-
-       read(UnitTmp_, iostat = iError) State4_CV
-       do iVar = 1, nVarRestart
-          StateRead_VCB(iVar,1:nI,1:nJ,1:nK,iBlock) = State4_CV(:,:,:,iVar)
-       end do
-
-       if(DoRestartBface)then
-          read(UnitTmp_, iostat = iError) b4_X, b4_Y, b4_Z
-          BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock) = b4_X
-          ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock) = b4_Y
-          BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock) = b4_Z
-       end if
-       if(nStepPrev==nStep) then
-          read(UnitTmp_, iostat = iError) State4_CV
-          do iVar = 1, nVarRestart
-             ImplOldRead_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
-          end do
-       end if
-    endif
-
-    if(iError /= 0) call stop_mpi(NameSub// &
-         ' could not read data from '//trim(NameFile))
-
-    call close_file
-
-    if(any(CellSize_DB(:,iBlock) < 0  &
-         .or. DtMax_B(iBlock) < 0 .or. tSimulationRead < 0))then
-       write(*,*)NameSub,': corrupt restart data!!!'
-       write(*,*)'iBlock  =', iBlock
-       write(*,*)'Dxyz    =', CellSize_DB(:,iBlock)
-       write(*,*)'Dt,tSim =', DtMax_B(iBlock), tSimulationRead
-       write(*,*)'XyzStart=', Coord111_DB(:,iBlock)
-       write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
-       call stop_mpi(NameSub//': corrupt restart data!!!')
-    end if
-
-    if(DoTest)then
-       write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
-       write(*,*)NameSub,': dt,tSimRead =',DtMax_B(iBlock),tSimulationRead
-       write(*,*)NameSub,': dx,dy,dz_BLK=', CellSize_DB(:,iBlock)
-       write(*,*)NameSub,': Coord111_DB=',Coord111_DB(:,iBlock)
-       write(*,*)NameSub,': StateRead_VCB   =', &
-            StateRead_VCB(:,iTest,jTest,kTest,iBlock)
-       write(*,*)NameSub,' finished'
-    end if
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine read_restart_file
-  !============================================================================
-  subroutine write_restart_file(iBlock)
-
-    integer, intent(in) :: iBlock
-
-    integer:: iVar, iBlockRestart
-    character:: StringDigit
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'write_restart_file'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    iBlockRestart = iMortonNode_A(iNode_B(iBlock))
-
-    write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlockRestart))))
-
-    write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
-         trim(NameRestartOutDir)//NameBlkFile,iBlockRestart,StringRestartExt
-
-    if (UseRestartOutSeries) call string_append_iter(NameFile,nIteration)
-
-    call open_file(file=NameFile, form='UNFORMATTED', NameCaller=NameSub)
-
-    write(UnitTmp_) DtMax_B(iBlock),tSimulation
-    write(UnitTmp_) CellSize_DB(:,iBlock), Coord111_DB(:,iBlock)
-    write(UnitTmp_) &
-         ( State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock), iVar=1,nVar)
-    if(UseConstrainB)then
-       write(UnitTmp_) &
-            BxFace_GB(1:nI+1,1:nJ,1:nK,iBlock),&
-            ByFace_GB(1:nI,1:nJ+1,1:nK,iBlock),&
-            BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)
-    end if
-    if(nStepPrev==nStep) write(UnitTmp_) &
-         (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)
-    call close_file
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine write_restart_file
-  !============================================================================
   subroutine open_direct_restart_file(DoRead, iFile)
 
     logical, intent(in)           :: DoRead
@@ -999,7 +826,7 @@ contains
              end if
              IsRead = .true.
           endif
-          if(nStepPrev==nStep)then
+          if(nStepPrev == nStep)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
@@ -1081,7 +908,7 @@ contains
                BzFace_GB(1:nI,1:nJ,1:nK+1,iBlock)
           CYCLE
        endif
-       if(nStepPrev==nStep)then
+       if(nStepPrev == nStep)then
           ! Save previous time step for sake of BDF2 scheme
           write(UnitTmp_, rec=iRec) &
                DtMax_B(iBlock), &
@@ -1253,10 +1080,10 @@ contains
 
     use ModVarIndexes, ONLY: nVar, NameVar_V, p_, Pe_, DefaultState_V, &
          ChargeStateFirst_, ChargeStateLast_, nChargeStateAll, nPui
-    use ModAdvance,    ONLY: UseElectronPressure
-    use ModMain,       ONLY: UseStrict, NameVarLower_V
+    use ModAdvance, ONLY: UseElectronPressure
+    use ModMain, ONLY: UseStrict, NameVarLower_V
     use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, iP_I
-    use ModPUI,        ONLY: set_pui_state
+    use ModPUI, ONLY: set_pui_state
 
     integer :: i, j, k, iVar, iVarRead, iBlock, iVarPeRestart
     integer :: iVarMatch_V(nVar) = 0
@@ -1285,7 +1112,7 @@ contains
     end if
 
     ! Change of state variables!!
-    if(iProc==0) then
+    if(iProc == 0) then
        write(*,*) 'Changing state variables from restart file'
        write(*,*) 'Restart file variables: ', NameVarRestart_V
        write(*,*) 'Current variables:      ', NameVar_V
@@ -1391,7 +1218,7 @@ contains
              if(nChargeStateAll > 1)then
                 if(UseMultiIon)then
                    if(iVar>p_ .and. iVar<=iP_I(nIonFluid))then
-                      if(iProc==0 .and. iVar==iP_I(nIonFluid)) write(*,*) &
+                      if(iProc == 0 .and. iVar == iP_I(nIonFluid)) write(*,*) &
                            'charge state vars initialized via user action !!!'
                       CYCLE
                    end if
@@ -1403,7 +1230,7 @@ contains
                    end if
                 end if
              end if
-             if(iProc==0) &
+             if(iProc == 0) &
                   write(*,*) 'WARNING!!! : the state variable ', &
                   NameVar_V(iVar) //                            &
                   'is not present in the restart file and no rule is'//&
@@ -1412,7 +1239,7 @@ contains
                 call stop_mpi(NameSub// &
                      ' ERROR: State after restart not well defined!')
              else
-                if(iProc==0) write(*,*) 'Using default values instead.'
+                if(iProc == 0) write(*,*) 'Using default values instead.'
                 State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = DefaultState_V(iVar)
              end if
           end select

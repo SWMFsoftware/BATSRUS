@@ -3,12 +3,13 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBuffer
 
-  use BATL_lib, ONLY: test_start, test_stop
+  use BATL_lib, ONLY: test_start, test_stop, MaxDim
   use ModNumConst, ONLY: cHalfPi, cTwoPi, cUnit_DD
-  use BATL_lib, ONLY: MaxDim
-  use ModMain, ONLY: tSimulation, TypeCoordSystem
   use ModGeometry, ONLY: r_GB, rBody2_GB
   use ModBatsrusUtility, ONLY: stop_mpi
+  use ModMain, ONLY: tSimulation, TypeCoordSystem
+  use ModCoordTransform, ONLY: show_rot_matrix, rlonlat_to_xyz, xyz_to_rlonlat
+  use CON_axes, ONLY: transform_matrix, angular_velocity, transform_velocity
 
   implicit none
 
@@ -152,9 +153,14 @@ contains
   !============================================================================
   subroutine set_buffer_transform
 
-    use CON_axes, ONLY: transform_matrix, angular_velocity
     use ModPhysics, ONLY: No2Si_V, UnitT_
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_buffer_transform'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,'DoTransformCoord=', DoTransformCoord
+
     if(DoTransformCoord) then
        ! Calculate coord transformation
        SourceToTarget_DD = &
@@ -163,6 +169,13 @@ contains
        OmegaSourceTarget_D = No2Si_V(UnitT_)*&
             angular_velocity(tSimulation, TypeCoordSource, TypeCoordSystem)
        !$acc update device(SourceToTarget_DD, OmegaSourceTarget_D)
+
+       if(DoTest)then
+          write(*,*) NameSub,' SourceToTarget_DD='
+          call show_rot_matrix(SourceToTarget_DD)
+          write(*,*) NameSub,' OmegaSourceTarget_D=', OmegaSourceTarget_D
+       end if
+
     end if
 
   end subroutine set_buffer_transform
@@ -170,12 +183,10 @@ contains
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
     !$acc routine seq
 
-    use CON_axes, ONLY: transform_matrix, transform_velocity
     use ModAdvance, ONLY: UseB
     use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitU_, UnitX_
     use ModVarIndexes, ONLY: Ux_, Uz_, RhoUx_, RhoUz_, SignB_,  Rho_,&
          WaveFirst_, WaveLast_, Bx_, Bz_, wDiff_
-    use ModCoordTransform, ONLY: xyz_to_rlonlat
 #ifndef _OPENACC
     use ModPhysics, ONLY: xBody2,  yBody2, zBody2
     use ModMain, ONLY: DoThinCurrentSheet
@@ -214,6 +225,8 @@ contains
        if(tSimulation > TimeSimulationLast)then
           SourceToTarget_DD = &
                transform_matrix(tSimulation, TypeCoordSource, TypeCoordSystem)
+          ! write(*,*)'get_from_spher_buffer_grid: SourceToTarget_DD='
+          ! call show_rot_matrix(SourceToTarget_DD)
           TimeSimulationLast = tSimulation
        end if
 #endif
@@ -328,7 +341,6 @@ contains
          ChargeStateLast_
     use ModIO, ONLY: NamePrimitiveVarOrig, NamePlotDir
     use ModTimeConvert, ONLY: time_real_to_int
-    use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModMain, ONLY: StartTime, tSimulation, x_, z_, nStep
     use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitX_,   &
          UnitP_, UnitEnergyDens_

@@ -83,7 +83,8 @@ contains
     use ModRestartFile, ONLY: read_restart_parameters, init_mod_restart_file, &
          DoChangeRestartVariables, nVarRestart, UseRestartWithFullB,      &
          NameRestartInDir, NameRestartOutDir, DoSpecifyRestartVarMapping, &
-         nVarRestartMapping, NameVarRestartFrom_V, NameVarRestartTo_V
+         nVarRestartMapping, NameVarRestartFrom_V, NameVarRestartTo_V, &
+         TypeRestartOutFile
     use ModHallResist,    ONLY: &
          UseHallResist, read_hall_param
     use ModParticleFieldLine, ONLY: read_particle_line_param
@@ -3873,6 +3874,8 @@ contains
             UseTvdResChange      = .false.
             UseAccurateResChange = .true.
          end if
+         ! The one type fails for nvfortran
+         TypeRestartOutFile = 'proc'
       end if
 
       UseDbTrickNow = UseDbTrick

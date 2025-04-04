@@ -21,7 +21,7 @@ module ModLoadBalance
   use ModFieldTrace, ONLY: Trace_DSNB
   use ModAdvance, ONLY: nVar
   use ModB0, ONLY: B0_DGB
-  use ModIo, ONLY: StringLogVar
+  use ModIO, ONLY: StringLogVar
 
   implicit none
 
@@ -50,7 +50,8 @@ module ModLoadBalance
   ! Number of scalars passed in the buffer
   integer, parameter :: nScalarData = 2
 
-  logical:: DoSendRay
+  ! Send field trace info?
+  logical:: DoSendTrace
 
   ! The index of block type features.
   integer, parameter:: &
@@ -75,12 +76,13 @@ contains
     character(len=*), parameter:: NameSub = 'init_load_balance'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    DoSendRay = UseIM .or. index(StringLogVar, 'status') > 0  ! to be improved
+    ! to be improved?
+    DoSendTrace = UseIM .or. index(StringLogVar, 'status') > 0
 
     nBuffer = nScalarData
 
     if(UseConstrainB) nBuffer = nBuffer + 3*MaxIJK
-    if(DoSendRay) &
+    if(DoSendTrace) &
          nBuffer = nBuffer + 6*nIJK
     if(UseImplicit .and. UseBDF2 .and. nStepPrev > 0) &
          nBuffer = nBuffer + nVar*nIJK
@@ -93,7 +95,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_load_balance
   !============================================================================
-
   subroutine pack_load_balance(iBlock, nBuffer, Buffer_I)
 
     integer, intent(in) :: iBlock
@@ -130,11 +131,11 @@ contains
     if (UseConstrainB) then
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          iData = iData+1
+          iData = iData + 1
           Buffer_I(iData) = BxFace_GB(i,j,k,iBlock)
-          iData = iData+1
+          iData = iData + 1
           Buffer_I(iData) = ByFace_GB(i,j,k,iBlock)
-          iData = iData+1
+          iData = iData + 1
           Buffer_I(iData) = BzFace_GB(i,j,k,iBlock)
        end do; end do; end do
 
@@ -152,14 +153,15 @@ contains
     end if ! DoMoveExtraData
 
     if(UseImplicit .and. UseBDF2 .and. nStepPrev > 0)then
-       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar; iData = iData+1
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
+          iData = iData + 1
           Buffer_I(iData) = ImplOld_VCB(iVar,i,j,k,iBlock)
        end do; end do; end do; end do
     end if
 
-    if(DoSendRay)then
-       do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
-          iData = iData+1
+    if(DoSendTrace)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI; do i2 = 1, 2; do i1 = 1, 3
+          iData = iData + 1
           Buffer_I(iData) = Trace_DSNB(i1,i2,i,j,k,iBlock)
        end do; end do; end do; end do; end do
     end if
@@ -180,7 +182,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine pack_load_balance
   !============================================================================
-
   subroutine unpack_load_balance(iBlock, nBuffer, Buffer_I)
 
     integer, intent(in):: iBlock
@@ -203,12 +204,12 @@ contains
     iData = nScalarData
 
     if (UseConstrainB) then
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          iData = iData+1
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          iData = iData + 1
           BxFace_GB(i,j,k,iBlock) = Buffer_I(iData)
-          iData = iData+1
+          iData = iData + 1
           ByFace_GB(i,j,k,iBlock) = Buffer_I(iData)
-          iData = iData+1
+          iData = iData + 1
           BzFace_GB(i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do
     end if
@@ -216,23 +217,23 @@ contains
     if(DoMoveExtraData)then
        if(UseB0)then
           ! Cell centered B0_DGB
-          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              B0_DGB(:,i,j,k,iBlock) = Buffer_I(iData+1:iData+3)
-             iData = iData+3
+             iData = iData + 3
           end do; end do; end do
        end if
     end if ! DoMoveExtraData
 
     if(UseImplicit .and. UseBDF2 .and. nStepPrev > 0)then
-       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
-          iData = iData+1
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
+          iData = iData + 1
           ImplOld_VCB(iVar,i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do; end do
     end if
 
-    if(DoSendRay)then
-       do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
-          iData = iData+1
+    if(DoSendTrace)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI; do i2 = 1, 2; do i1 = 1, 3
+          iData = iData + 1
           Trace_DSNB(i1,i2,i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do; end do; end do
     end if
@@ -246,7 +247,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine unpack_load_balance
   !============================================================================
-
   subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
     use ModMain
@@ -583,10 +583,11 @@ contains
           do iNode = 1, nNode
              if(iTree_IA(Status_,iNode) /= Used_) CYCLE
              nTypeProc_PI(iTree_IA(Proc_,iNode),iTypeBalance_A(iNode)) = &
-                  nTypeProc_PI(iTree_IA(Proc_,iNode),iTypeBalance_A(iNode))+1
+                  nTypeProc_PI(iTree_IA(Proc_,iNode),iTypeBalance_A(iNode)) &
+                  + 1
           end do
           write(*,*) NameSub,' nType, iSubCycleBlock=', nType, iSubCycleBlock
-          do i=1, nType
+          do i = 1, nType
              write(*,*) 'iType= ',iTypeConvert_I(i), &
                   ' nCount= ',sum(nTypeProc_PI(:,i))
           enddo
@@ -600,10 +601,9 @@ contains
     Unused_BP(1:nBlockMax,:) = &
          iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
 
-    ! Yifu: More variables than Unused_BP, CellSize_DB, Xyz_DGB are not updated
-    ! after load balancing. It is safe to call the sync sub for amr here.
-    ! acc update device(Unused_BP, CellSize_DB, Xyz_DGB)
+    ! Update variables on the GPU
     call sync_cpu_gpu_amr
+    !$acc update device(DtMax_B)
 
     call find_test_cell
 
@@ -698,7 +698,7 @@ contains
                'TypeImplCrit=dt is only valid in IsTimeAccurate mode')
 
           ! Set implicitBLK based on the time step.
-          do iBlock=1,nBlockMax
+          do iBlock = 1, nBlockMax
              if(Unused_B(iBlock)) CYCLE
 
              ! Obtain the time step based on CFL condition
@@ -707,7 +707,7 @@ contains
              ! otherwise use the available DtMax_B from previous time step,
              ! or from the restart file, or simply 0 set in read_inputs.
              ! The latter two choices will be overruled later anyways.
-             if(nStep==1 .and. IsTimeLoop)then
+             if(nStep == 1 .and. IsTimeLoop)then
                 ! For first iteration in the time loop
                 ! calculate stable time step
                 call set_b0_face(iBlock)
@@ -724,7 +724,7 @@ contains
 
           if(DoTest)write(*,*)&
                'SELECT: advancetype,DtMax_B,explCFL,dt=',&
-               iTypeAdvance_B(iBlockTest),DtMax_B(iBlockTest),explCFL,dt
+               iTypeAdvance_B(iBlockTest), DtMax_B(iBlockTest), ExplCFL, Dt
 
        case('r','R')
           ! implicitly treated blocks are within rImplicit and not Unused
@@ -818,6 +818,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine load_balance_blocks
   !============================================================================
-
 end module ModLoadBalance
 !==============================================================================

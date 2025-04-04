@@ -40,7 +40,7 @@ contains
     use ModEnergy,   ONLY: limit_pressure
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModParticleMover, ONLY:  UseBoundaryVdf, set_boundary_vdf
-    use ModBuffer,   ONLY: fill_in_from_buffer
+    use ModBuffer, ONLY: fill_in_from_buffer, set_buffer_transform
     use ModUpdateStateFast, ONLY: set_boundary_fast, sync_cpu_gpu
 
     use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG, &
@@ -251,6 +251,10 @@ contains
           !$acc end serial
        end if
        if(UseBuffer)then
+#ifdef _OPENACC
+          ! The GPU code needs to set tranformation in advance
+          if(UseBuffer) call set_buffer_transform
+#endif
           !$acc parallel loop gang
           do iBlock = 1, nBlock
              if (Unused_B(iBlock)) CYCLE
