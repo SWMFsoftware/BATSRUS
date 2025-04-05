@@ -22,8 +22,8 @@ module ModRestartFile
   use ModIO, ONLY: DoRestartBface
   use ModConstrainDivB, ONLY: BxFace_GB, ByFace_GB, BzFace_GB
   use ModMain, ONLY: UseConstrainB
-  use ModPIC, ONLY: &
-       write_pic_status_file, read_pic_status_file, DoRestartPicStatus, AdaptPic
+  use ModPIC, ONLY: write_pic_status_file, read_pic_status_file, &
+       DoRestartPicStatus, AdaptPic
   use ModImplicit, ONLY: UseImplicit, nStepPrev, ImplOld_VCB, DtPrev
   use ModKind, ONLY: Real4_, Real8_
   use ModIoUnit, ONLY: UnitTmp_

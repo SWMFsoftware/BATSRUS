@@ -508,19 +508,11 @@ contains
     integer, intent(in)::iBlock
 
     integer:: i, j, k
-    logical:: DoWrite=.true.
 #ifdef TESTACC
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'fill_in_from_buffer'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
-    if(DoWrite)then
-       DoWrite=.false.
-       if(iProc==0)then
-          write(*,*)'Fill in the cells near the inner boundary from the buffer'
-       end if
-    end if
 #endif
 
     !$acc loop vector collapse(3)

@@ -3215,18 +3215,6 @@ contains
             end if
          end if
 
-         ! Set heat exchange for IH (it shouldn't do much)
-         if(NameThisComp == 'IH' .and. .not.UseOuterHelio)then
-            if(UseElectronPressure .and. nIonFluid == 1)then
-               UseResistivity = .true.
-               TypeResistivity = 'user'
-               Eta0Si = 0.0
-               DoResistiveFlux = .false.
-               UseJouleHeating = .false.
-               UseHeatExchange = .true.
-            end if
-         end if
-
       case('GM')
          ! Body Parameters
          UseGravity = .false.

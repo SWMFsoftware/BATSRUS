@@ -64,6 +64,7 @@ contains
     IsRestart = .false.
     DoThreadRestart = .false.
     call test_stop(NameSub, DoTest)
+
   contains
     !==========================================================================
     subroutine grid_setup
@@ -95,7 +96,6 @@ contains
 
       integer:: iBlock, iArea
       character(len=3):: TypeCoordTmp
-
       !------------------------------------------------------------------------
       call set_batsrus_grid
 
@@ -211,6 +211,8 @@ contains
     !==========================================================================
     subroutine set_initial_conditions
 
+      ! Set intial conditions for solution in each block.
+
       use ModSetInitialCondition, ONLY: set_initial_condition, &
            add_rotational_velocity
       use ModIO,                  ONLY: IsRestart, DoRestartBface
@@ -228,12 +230,8 @@ contains
            get_state_from_vdf, trace_particles
 
       use ModUserInterface ! user_initial_perturbation, user_action
-      ! Set intial conditions for solution in each block.
-
-      ! local variables
 
       integer :: iLevel, iBlock
-
       character(len=*), parameter :: NameSubSub = &
            NameSub//'::set_initial_conditions'
       !------------------------------------------------------------------------
@@ -372,9 +370,8 @@ contains
     end subroutine set_initial_conditions
     !==========================================================================
     subroutine initialize_files
-      use ModSatelliteFile, ONLY:
 
-      ! Local variables
+      use ModSatelliteFile, ONLY:
 
       character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
       !------------------------------------------------------------------------
@@ -411,7 +408,7 @@ contains
     use ModTimeStepControl, ONLY: TimeSimulationOldCheck
     use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
     use EEE_ModCommonVariables, ONLY: UseCme
-    ! Local variables
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_init_session'
     !--------------------------------------------------------------------------
@@ -504,7 +501,7 @@ contains
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix, DoSavePlotsAmr, UseParcel, &
          Parcel_DI, nParcel
-    use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
+    use ModAMR, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
     use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
     use ModAdvanceExplicit, ONLY: advance_explicit, update_secondbody
@@ -540,7 +537,7 @@ contains
     use ModProjectDivB, ONLY: project_divb
     use ModCleanDivB,   ONLY: clean_divb
     use ModFreq, ONLY: is_time_to
-    use ModPic, ONLY: AdaptPic, calc_pic_criteria, &
+    use ModPIC, ONLY: AdaptPic, calc_pic_criteria, &
          pic_set_cell_status, iPicGrid, iPicDecomposition
     use BATL_region, only: Area_I, nArea
     use CON_axes, ONLY: transform_matrix
@@ -783,6 +780,9 @@ contains
   end subroutine BATS_advance
   !============================================================================
   subroutine BATS_init_constrain_b
+
+    ! Initialize for constrained transport
+
     use ModConstrainDivB, ONLY: DoInitConstrainB, bcenter_to_bface
     use ModProjectDivB, ONLY: proj_get_divb, project_divb
     use ModNumConst, ONLY: cTiny
@@ -791,7 +791,6 @@ contains
     use BATL_lib, ONLY: iProc, Xyz_DGB, x_,y_,z_, nBlock, message_pass_cell, &
          maxval_grid
 
-    ! Local variables
     integer :: iBlock
     integer :: iLoc_I(5)  ! full location index
     real    :: DivBMax
@@ -859,6 +858,8 @@ contains
   !============================================================================
   subroutine BATS_save_files(TypeSaveIn)
 
+    ! Save output files (plot, log, satellite, restart, etc.)
+
     use ModMain
     use ModIO
     use ModUtilities, ONLY : upper_case
@@ -891,12 +892,12 @@ contains
        where(DnOutput_I >= 0 .or. DtOutput_I > 0.0)nStepOutputLast_I = nStep
 
        ! Initialize last save times
-       where(DtOutput_I>0.) &
-            iTimeOutputLast_I=int(tSimulation/DtOutput_I)
+       where(DtOutput_I > 0.0) &
+            iTimeOutputLast_I = int(tSimulation/DtOutput_I)
        if(UseSatelliteTimeOffset)then
-          where(DtOutput_I(Satellite_+1:Satellite_+nSatellite)>0.) &
-               iTimeOutputLast_I(Satellite_+1:Satellite_+nSatellite)=int(&
-               (tSimulation + TimeSatOffset_I(1:nSatellite))&
+          where(DtOutput_I(Satellite_+1:Satellite_+nSatellite) > 0.0) &
+               iTimeOutputLast_I(Satellite_+1:Satellite_+nSatellite) &
+               = int((tSimulation + TimeSatOffset_I(1:nSatellite)) &
                /DtOutput_I(Satellite_+1:Satellite_+nSatellite))
        end if
        ! DoSaveInitial may be set to true in the #SAVEINITIAL command
@@ -913,7 +914,7 @@ contains
              end where
           end if
           ! Do not save restart file in any case
-          if(DnOutput_I(restart_) >= 0 .or. DtOutput_I(restart_) > 0.0)&
+          if(DnOutput_I(restart_) >= 0 .or. DtOutput_I(restart_) > 0.0) &
                nStepOutputLast_I(restart_) = nStep
           call save_files
        end if
@@ -946,6 +947,7 @@ contains
   contains
     !==========================================================================
     subroutine save_files
+
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
       use ModGroundMagPerturb, ONLY: nMagGridFile
       use ModSatelliteFile, ONLY: UseSatelliteTimeOffset, TimeSatOffset_I, &
@@ -958,7 +960,8 @@ contains
          ! We want to use the IE magnetic perturbations that were passed
          ! in the last coupling together with the current GM perturbations.
          if( (iFile == magfile_ .or. &
-              (iFile >= maggridfile_ .and. iFile < maggridfile_+nMagGridFile))&
+              (iFile >= maggridfile_ .and. &
+              iFile < maggridfile_ + nMagGridFile)) &
               .neqv. TypeSave == 'BEGINSTEP') CYCLE
          if(UseSatelliteTimeOffset.and.iFile > Satellite_ &
               .and. iFile <= Satellite_ + nSatellite)then
@@ -967,35 +970,36 @@ contains
          end if
          if(DnOutput_I(iFile) >= 0)then
             if(DnOutput_I(iFile) == 0)then
-               if(DoPlotThread.and.iFile > plot_&
-                    .and.iFile<=plot_+nPlotFile)then
+               if(DoPlotThread .and. iFile > plot_&
+                    .and. iFile <= plot_ + nPlotFile)then
                   call save_threads_for_plot
                   DoPlotThread = .false.
                end if
                call save_file
 
             else if(mod(nStep,DnOutput_I(iFile)) == 0)then
-               if(DoPlotThread.and.iFile > plot_&
-                    .and.iFile<=plot_+nPlotFile)then
+               if(DoPlotThread .and. iFile > plot_&
+                    .and. iFile <= plot_ + nPlotFile)then
                   call save_threads_for_plot
                   DoPlotThread = .false.
                end if
                call save_file
             end if
-         else if(IsTimeAccurate .and. DtOutput_I(iFile) > 0.)then
-            if(int(tSimulation/DtOutput_I(iFile))>iTimeOutputLast_I(iFile))then
+         else if(IsTimeAccurate .and. DtOutput_I(iFile) > 0.0)then
+            if(int(tSimulation/DtOutput_I(iFile)) &
+                 > iTimeOutputLast_I(iFile))then
                iTimeOutputLast_I(iFile) = int(tSimulation/DtOutput_I(iFile))
-               if(DoPlotThread.and.iFile > plot_&
-                    .and.iFile<=plot_+nPlotFile)then
+               if(DoPlotThread .and. iFile > plot_ &
+                    .and. iFile <= plot_ + nPlotFile)then
                   call save_threads_for_plot
                   DoPlotThread = .false.
                end if
                call save_file
             end if
          end if
-         if(UseSatelliteTimeOffset.and.iFile > Satellite_ &
-              .and. iFile <= Satellite_ + nSatellite)tSimulation = &
-              tSimulationBackup
+         if(UseSatelliteTimeOffset .and. iFile > Satellite_ &
+              .and. iFile <= Satellite_ + nSatellite) &
+              tSimulation = tSimulationBackup
       end do
       ! If message passing with corners was done in save_file
       ! then do exchange_messages over again to get expected values
@@ -1008,6 +1012,7 @@ contains
          end if
          call exchange_messages(DoResChangeOnlyIn=.true.)
       end if
+
     end subroutine save_files
     !==========================================================================
     subroutine save_file
@@ -1033,7 +1038,7 @@ contains
            trace_field_grid, Trace_DSNB, calc_squash_factor
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
-      use ModAdvance,           ONLY: State_VGB
+      use ModAdvance,           ONLY: State_VGB, DtMax_CB
       use ModB0,                ONLY: B0_DGB
 
       integer :: iSat, iPointSat, iParcel
@@ -1050,12 +1055,12 @@ contains
       if(nStep <= nStepOutputLast_I(iFile) .and.&
            (DnOutput_I(iFile) >= 0 .or. DtOutput_I(iFile) > 0.0)) RETURN
       call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
-      if(iFile==restart_) then
+      if(iFile == restart_) then
          ! Case for restart file
          if(.not.DoSaveRestart)RETURN
          call write_restart_files
 
-      elseif(iFile==logfile_) then
+      elseif(iFile == logfile_) then
          ! Case for logfile
 
          if(.not.DoSaveLogfile)RETURN
@@ -1068,8 +1073,8 @@ contains
          ! Case for plot files
          IsFound=.false.
 
-         if(DoExchangeAgain.and.(                  &
-              index(TypePlot_I(iFile),'rfr')==1 .or.&
+         if(DoExchangeAgain .and. ( &
+              index(TypePlot_I(iFile),'rfr')==1 .or. &
               index(TypePlot_I(iFile),'pnt')==1))then
             if(iProc==0.and.lVerbose>0)then
                call write_prefix; write(iUnitOut,*)&
@@ -1091,7 +1096,7 @@ contains
               index(TypePlot_I(iFile),'rfr')/=1.and. &
               index(TypePlot_I(iFile),'pnt')/=1     )))then
 
-            if(iProc==0.and.lVerbose>0)then
+            if(iProc == 0 .and. lVerbose > 0)then
                call write_prefix; write(iUnitOut,*)&
                     ' Message passing for plot files ...'
             end if
@@ -1156,6 +1161,11 @@ contains
                call trace_field_grid
                call sync_cpu_gpu('update on CPU', NameSub, &
                     Trace_DICB=Trace_DSNB)
+            end if
+
+            if(index(StringPlotVar_I(iFile), ' dt ') > 0)then
+               ! Plotting dt requires DtMax_CB on the CPU
+               !$acc update host(DtMax_CB)
             end if
 
             call timing_start('save_plot')

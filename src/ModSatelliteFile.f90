@@ -24,6 +24,7 @@ module ModSatelliteFile
   public:: gm_trace_sat      ! map field line from satellite ^CFG IF RAYTRACE
 
   public:: set_satellite_positions
+  public:: i_sat_for_name
 
   logical, public :: DoSaveSatelliteData = .false. ! save satellite data?
   integer, public :: nSatellite = 0                ! number of satellites
@@ -300,6 +301,7 @@ contains
   subroutine set_name_file(iSat)
     use ModMain,   ONLY: nStep, IsTimeAccurate
     use ModIO,     ONLY: NamePlotDir, StringDateOrTime
+    use ModUtilities, ONLY: lower_case
 
     integer, intent(in) :: iSat
 
@@ -309,13 +311,13 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_name_file'
     !--------------------------------------------------------------------------
-
     call test_start(NameSub, DoTest)
 
     l1 = index(NameFileSat_I(iSat), '/', back=.true.) + 1
     l2 = index(NameFileSat_I(iSat), '.') - 1
     if (l1-1 <= 0) l1 = 1
     if (l2+1 <= 0) l2 = len_trim(NameFileSat_I(iSat))
+    NameSat_I(iSat) = NameFileSat_I(iSat)(l1:l2)
 
     select case(TypeTrajTimeRange_I(iSat))
     case('orig')
@@ -331,26 +333,50 @@ contains
          TypeTrajTimeRange_I(iSat) == 'full') ) then
        call get_time_string
        write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir) // &
-            trim(NameFileOutSat)//NameFileSat_I(iSat)(l1:l2) // &
+            trim(NameFileOutSat)//trim(NameSat_I(iSat))// &
             '_t'//trim(StringDateOrTime)//'_n',nStep,'.sat'
 
     else
        write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
-            trim(NameFileOutSat)//NameFileSat_I(iSat)(l1:l2)//&
+            trim(NameFileOutSat)//trim(NameSat_I(iSat))//&
             '_n',nStep,'.sat'
     endif
 
     IsNameFileSet_I(iSat) = .true.
-
+    call lower_case(NameSat_I(iSat))
     if(DoTest) then
        write(*,*) NameSub,': satellitename:', &
             NameFileSat_I(iSat)
        write(*,*) 'iSat,l1,l2: ', iSat, l1, l2
+       write(*,*) 'NameSat =', NameSat_I(iSat)
+       write(*,*) 'iSat for this name:', i_sat_for_name(NameSat_I(iSat))
        write(*,*) NameSub,': NameFile_I(iSat):', trim(NameFile_I(iSat))
     end if
 
     call test_stop(NameSub, DoTest)
   end subroutine set_name_file
+  !============================================================================
+  integer function i_sat_for_name(NameSat)
+
+    use ModUtilities, ONLY: lower_case
+    ! Name of satellite for which to find iSat
+    character(len=*), intent(in) :: NameSat
+    ! Lower case version of input name
+    character(len=10) :: NameSatLc
+    ! Loop variable
+    integer :: iSat
+    !--------------------------------------------------------------------------
+    NameSatLc = NameSat
+    call lower_case(NameSatLc)
+    i_sat_for_name = -1
+    do iSat = 1, nSatellite
+       if(NameSatLc == NameSat_I(iSat))then
+          i_sat_for_name = iSat
+          RETURN
+       end if
+    end do
+
+  end function i_sat_for_name
   !============================================================================
   subroutine read_satellite_input_files
 

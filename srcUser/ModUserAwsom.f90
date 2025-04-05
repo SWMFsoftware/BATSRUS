@@ -17,7 +17,6 @@ module ModUser
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_set_cell_boundary,          &
-       IMPLEMENTED8 => user_set_resistivity,            &
        IMPLEMENTED9 => user_initial_perturbation,       &
        IMPLEMENTED11=> user_get_b0,                     &
        IMPLEMENTED12=> user_material_properties,        &
@@ -42,8 +41,6 @@ module ModUser
 
   ! Input parameters for two-temperature effects
   real    :: TeFraction, TiFraction
-  real    :: EtaPerpSi
-  !$acc declare create(TeFraction, EtaPerpSi)
 
   ! Extra dipole under surface
   real    :: UserDipoleStrength = 0., UserDipoleStrengthSi = 0.
@@ -274,11 +271,6 @@ contains
        TeFraction = TiFraction*ElectronTemperatureRatio
     end if
 
-    ! perpendicular resistivity, used for temperature relaxation
-    ! Note EtaPerpSi is divided by cMu.
-    EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
-         *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
-
     if(UseCme) call EEE_initialize(BodyNDim_I(1), BodyTDim_I(1), Gamma,&
          iCommIn=iComm, TimeNow = tSimulation)
 
@@ -329,7 +321,6 @@ contains
     end if
 
     !$acc update device(tChromo, UseFloatRadialVelocity, ChromoN)
-    !$acc update device(EtaPerpSi, TeFraction)
 
     call test_stop(NameSub, DoTest)
   end subroutine user_init_session
@@ -1562,40 +1553,11 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
   !============================================================================
-  subroutine user_set_resistivity(iBlock, Eta_G)
-    !$acc routine vector
-
-    use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitX_, UnitT_
-    use ModVarIndexes, ONLY: Rho_, Pe_
-
-    integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
-    integer :: i, j, k
-    real :: Te, TeSi
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_set_resistivity'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    !$acc loop vector independent
-    do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
-       Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-       TeSi = Te*No2Si_V(UnitTemperature_)
-
-       Eta_G(i,j,k) = EtaPerpSi/TeSi**1.5 *Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
-    end do; end do; end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_set_resistivity
-  !============================================================================
   subroutine user_initial_perturbation
 
     use EEE_ModCommonVariables, ONLY: XyzCmeCenterSi_D, XyzCmeApexSi_D, &
          bAmbientCenterSi_D, bAmbientApexSi_D
-    use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again, &
-         EEE_init_CME_parameters
+    use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again
     use ModB0, ONLY: get_b0
     use ModMain, ONLY: nStep, nIteration, UseFieldLineThreads
     use ModVarIndexes
@@ -1701,9 +1663,6 @@ contains
                   bAmbientApexSi_D*1e4,' [Gs]'
           end if
        end if
-
-       ! Update CME parameters
-       call EEE_init_CME_parameters
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
