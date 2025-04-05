@@ -115,10 +115,6 @@ T
 T			DoReplaceDensity
 5.0			SpeciesPercentCheck
 
-! For nyx or dc only
-#RESTARTOUTFILE
-block			StringRestartOutFile
-
 #SAVERESTART
 F			DoSaveRestart
 
