@@ -1635,18 +1635,17 @@ contains
        ! if(DoAddTD14) call get_b0(XyzApex_D, Bstrap_D)
        !
        ! Since the ghost cells may not be filled in, call message_pass first
-       if(UseFieldLineThreads)&
-            call message_pass_cell(3, State_VGB(Bx_:Bz_,:,:,:,:),&
-            nProlongOrderIn=1)
+       if(UseFieldLineThreads) call message_pass_cell( &
+            3, State_VGB(Bx_:Bz_,:,:,:,:), nProlongOrderIn=1)
        x_D = XyzCmeCenterSi_D*Si2No_V(UnitX_)
-       call interpolate_state_vector(x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:),&
-            B_D, IsFound)
+       call interpolate_state_vector( &
+            x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:), B_D, IsFound)
        if(IsFound)then
           call get_b0(x_D, B0_D)
           bAmbientCenterSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
           if(iProc==0)then
              write(*,'(a,3es12.4)')'EEE: At the CME center at Xyz=', x_D
-             write(*,'(a,3es12.4,a)')&
+             write(*,'(a,3es12.4,a)') &
                   'EEE: An ambient magnetic field (prior to CME) is: ',&
                   bAmbientCenterSi_D*1e4,' [Gs]'
           end if
@@ -1657,7 +1656,7 @@ contains
        if(IsFound)then
           call get_b0(x_D, B0_D)
           bAmbientApexSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
-          if(iProc==0)then
+          if(iProc == 0)then
              write(*,'(a,3es12.4)')'EEE: At the CME apex at Xyz=', x_D
              write(*,'(a,3es12.4,a)')&
                   'EEE: An ambient magnetic field (prior to CME) is: ',&
@@ -1669,12 +1668,8 @@ contains
           if(Unused_B(iBlock))CYCLE
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
              x_D = Xyz_DGB(:,i,j,k,iBlock)
-
-             call EEE_get_state_init(x_D, &
-                  Rho, B_D, p, nStep, nIteration)
-
+             call EEE_get_state_init(x_D, Rho, B_D, p, nStep, nIteration)
              Rho = Rho*Si2No_V(UnitRho_)
              B_D = B_D*Si2No_V(UnitB_)
              p = p*Si2No_V(UnitP_)
@@ -1739,11 +1734,11 @@ contains
 
        end do
        call MPI_reduce(Mass, MassTotal, 1, MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc==0)then
+       if(iProc == 0)then
           MassDim = MassTotal*No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3 & ! in Si
                *1000                                                 ! in g
-          write(*,'(a,es13.5,a)')'EEE: CME is initiated, Ejected mass=', &
-               MassDim,' g'
+          write(*,'(a,es13.5,a)') &
+               'EEE: CME is initiated, Ejected mass=', MassDim,' g'
        end if
        call EEE_do_not_add_cme_again
 
