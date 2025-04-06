@@ -997,7 +997,7 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
     use EEE_ModCommonVariables, ONLY: UseCme
-    use EEE_ModMain,            ONLY: EEE_get_state_BC
+    use EEE_ModMain,            ONLY: EEE_get_fast_BC
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -1234,7 +1234,7 @@ contains
           do k = MinK, MaxK; do j = MinJ, MaxJ
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
-             call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+             call EEE_get_fast_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                   tSimulation, nStep, nIteration)
 
              RhoCme = RhoCme*Si2No_V(UnitRho_)
@@ -1522,7 +1522,7 @@ contains
           do k = MinK, MaxK; do j = MinJ, MaxJ
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
-             call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+             call EEE_get_fast_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                   tSimulation, nStep, nIteration)
 
              RhoCme = RhoCme*Si2No_V(UnitRho_)
