@@ -997,25 +997,24 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
     use EEE_ModCommonVariables, ONLY: UseCme
-    use EEE_ModMain,            ONLY: EEE_get_fast_BC
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
-    use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_GB
+    use EEE_ModMain, ONLY: EEE_get_state_bc
+    use ModAdvance, ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
+    use ModGeometry, ONLY: TypeGeometry, Xyz_DGB, r_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, Ehot_, &
          RhoUx_, RhoUz_, Ppar_, WaveFirst_, WaveLast_, nFluid
     use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I, iRho_I, &
          MassFluid_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I, iPparIon_I, IsIon_I
-    use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
-    use ModPhysics,    ONLY: AverageIonCharge, UnitRho_, UnitB_, UnitP_, &
+    use ModImplicit, ONLY: StateSemi_VGB, iTeImpl
+    use ModPhysics, ONLY: AverageIonCharge, UnitRho_, UnitB_, UnitP_, &
          Si2No_V, rBody, GBody, UnitU_, InvGammaMinus1
-    use ModMain,       ONLY: nStep, nIteration, tSimulation, &
-         IsTimeAccurate
-    use ModB0,         ONLY: B0_DGB
-    use BATL_lib,      ONLY: CellSize_DB, Phi_, Theta_, x_, y_
+    use ModMain, ONLY: nStep, nIteration, tSimulation, IsTimeAccurate
+    use ModB0, ONLY: B0_DGB
+    use BATL_lib, ONLY: CellSize_DB, Phi_, Theta_, x_, y_
     use ModCoordTransform, ONLY: rot_xyz_sph
-    use ModNumConst,   ONLY: cPi
-    use ModIO,         ONLY : IsRestart
+    use ModNumConst, ONLY: cPi
+    use ModIO, ONLY : IsRestart
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -1046,7 +1045,7 @@ contains
 
     ! Variables used in the 'heliofloat' boundary condition
     real,parameter     :: UEscapeSi = 4.0e5 ! 400 km/c
-    real,dimension(3)  :: DirR_D, DirTheta_D, DirPhi_D, Coord_D,&
+    real,dimension(3)  :: DirR_D, DirTheta_D, DirPhi_D, Coord_D, &
          UTrue_D, UGhost_D, BTrue_D, BGhost_D
     real               :: CosTheta, SinTheta, CosPhi, SinPhi, rInv
     real               :: BDotU, BPhi, UTheta
@@ -1234,7 +1233,7 @@ contains
           do k = MinK, MaxK; do j = MinJ, MaxJ
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
-             call EEE_get_fast_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+             call EEE_get_state_bc(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                   tSimulation, nStep, nIteration)
 
              RhoCme = RhoCme*Si2No_V(UnitRho_)
@@ -1522,7 +1521,7 @@ contains
           do k = MinK, MaxK; do j = MinJ, MaxJ
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
-             call EEE_get_fast_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+             call EEE_get_state_bc(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                   tSimulation, nStep, nIteration)
 
              RhoCme = RhoCme*Si2No_V(UnitRho_)
@@ -1558,7 +1557,7 @@ contains
     use EEE_ModCommonVariables, ONLY: XyzCmeCenterSi_D, XyzCmeApexSi_D, &
          bAmbientCenterSi_D, bAmbientApexSi_D
     use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again, &
-         EEE_get_state_fast, EEE_init_CME_parameters
+         EEE_get_state_init, EEE_init_cme_parameters
     use ModB0, ONLY: get_b0
     use ModMain, ONLY: nStep, nIteration, UseFieldLineThreads
     use ModVarIndexes
@@ -1578,7 +1577,7 @@ contains
     call test_start(NameSub, DoTest)
 
     if(UseAwsom)then
-       call EEE_init_CME_parameters
+       call EEE_init_cme_parameters
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
 
@@ -1586,8 +1585,7 @@ contains
 
              x_D = Xyz_DGB(:,i,j,k,iBlock)
 
-             call EEE_get_state_fast(x_D, &
-                  Rho, B_D, p, nStep, nIteration)
+             call EEE_get_state_init(x_D, Rho, B_D, p, nStep, nIteration)
 
              Rho = Rho*Si2No_V(UnitRho_)
              B_D = B_D*Si2No_V(UnitB_)
@@ -1664,6 +1662,7 @@ contains
           end if
        end if
 
+       call EEE_init_cme_parameters
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
 
