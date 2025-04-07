@@ -997,7 +997,7 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
     use EEE_ModCommonVariables, ONLY: UseCme
-    use EEE_ModMain,            ONLY: EEE_get_state_BC
+    use EEE_ModMain,            ONLY: EEE_get_fast_BC
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -1234,7 +1234,7 @@ contains
           do k = MinK, MaxK; do j = MinJ, MaxJ
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
-             call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+             call EEE_get_fast_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                   tSimulation, nStep, nIteration)
 
              RhoCme = RhoCme*Si2No_V(UnitRho_)
@@ -1522,7 +1522,7 @@ contains
           do k = MinK, MaxK; do j = MinJ, MaxJ
              Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_GB(1,j,k,iBlock)
 
-             call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+             call EEE_get_fast_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                   tSimulation, nStep, nIteration)
 
              RhoCme = RhoCme*Si2No_V(UnitRho_)
@@ -1557,7 +1557,8 @@ contains
 
     use EEE_ModCommonVariables, ONLY: XyzCmeCenterSi_D, XyzCmeApexSi_D, &
          bAmbientCenterSi_D, bAmbientApexSi_D
-    use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again
+    use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again, &
+         EEE_get_state_fast, EEE_init_CME_parameters
     use ModB0, ONLY: get_b0
     use ModMain, ONLY: nStep, nIteration, UseFieldLineThreads
     use ModVarIndexes
@@ -1577,7 +1578,7 @@ contains
     call test_start(NameSub, DoTest)
 
     if(UseAwsom)then
-
+       call EEE_init_CME_parameters
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
 
@@ -1585,7 +1586,7 @@ contains
 
              x_D = Xyz_DGB(:,i,j,k,iBlock)
 
-             call EEE_get_state_init(x_D, &
+             call EEE_get_state_fast(x_D, &
                   Rho, B_D, p, nStep, nIteration)
 
              Rho = Rho*Si2No_V(UnitRho_)
@@ -1634,18 +1635,17 @@ contains
        ! if(DoAddTD14) call get_b0(XyzApex_D, Bstrap_D)
        !
        ! Since the ghost cells may not be filled in, call message_pass first
-       if(UseFieldLineThreads)&
-            call message_pass_cell(3, State_VGB(Bx_:Bz_,:,:,:,:),&
-            nProlongOrderIn=1)
+       if(UseFieldLineThreads) call message_pass_cell( &
+            3, State_VGB(Bx_:Bz_,:,:,:,:), nProlongOrderIn=1)
        x_D = XyzCmeCenterSi_D*Si2No_V(UnitX_)
-       call interpolate_state_vector(x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:),&
-            B_D, IsFound)
+       call interpolate_state_vector( &
+            x_D, 3, State_VGB(Bx_:Bz_,:,:,:,:), B_D, IsFound)
        if(IsFound)then
           call get_b0(x_D, B0_D)
           bAmbientCenterSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
           if(iProc==0)then
              write(*,'(a,3es12.4)')'EEE: At the CME center at Xyz=', x_D
-             write(*,'(a,3es12.4,a)')&
+             write(*,'(a,3es12.4,a)') &
                   'EEE: An ambient magnetic field (prior to CME) is: ',&
                   bAmbientCenterSi_D*1e4,' [Gs]'
           end if
@@ -1656,7 +1656,7 @@ contains
        if(IsFound)then
           call get_b0(x_D, B0_D)
           bAmbientApexSi_D = (B0_D + B_D)*No2Si_V(UnitB_)
-          if(iProc==0)then
+          if(iProc == 0)then
              write(*,'(a,3es12.4)')'EEE: At the CME apex at Xyz=', x_D
              write(*,'(a,3es12.4,a)')&
                   'EEE: An ambient magnetic field (prior to CME) is: ',&
@@ -1668,12 +1668,8 @@ contains
           if(Unused_B(iBlock))CYCLE
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
              x_D = Xyz_DGB(:,i,j,k,iBlock)
-
-             call EEE_get_state_init(x_D, &
-                  Rho, B_D, p, nStep, nIteration)
-
+             call EEE_get_state_init(x_D, Rho, B_D, p, nStep, nIteration)
              Rho = Rho*Si2No_V(UnitRho_)
              B_D = B_D*Si2No_V(UnitB_)
              p = p*Si2No_V(UnitP_)
@@ -1738,11 +1734,11 @@ contains
 
        end do
        call MPI_reduce(Mass, MassTotal, 1, MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc==0)then
+       if(iProc == 0)then
           MassDim = MassTotal*No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3 & ! in Si
                *1000                                                 ! in g
-          write(*,'(a,es13.5,a)')'EEE: CME is initiated, Ejected mass=', &
-               MassDim,' g'
+          write(*,'(a,es13.5,a)') &
+               'EEE: CME is initiated, Ejected mass=', MassDim,' g'
        end if
        call EEE_do_not_add_cme_again
 

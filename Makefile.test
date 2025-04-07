@@ -2455,7 +2455,7 @@ test_europa2fluidspe_compile:
 
 test_europa2fluidspe_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/EUROPA/PARAM.in.2fluids PARAM.in; \
-	   	       cp Param/EUROPA/satellite_e4.dat satellite_2fpe_e4.dat
+	   	       cp Param/EUROPA/satellite_e4.dat sate4.dat
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_europa2fluidspe_run:
@@ -2464,7 +2464,7 @@ test_europa2fluidspe_run:
 
 test_europa2fluidspe_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
-	    ${TESTDIR}/RESULTS/GM/trj_satellite_2fpe_e4_n00000010.sat \
+	    ${TESTDIR}/RESULTS/GM/trj_*_n00000010.sat \
 	    Param/EUROPA/TestOutput/trj_satellite_2fpe_e4_n00000010.sat.gz \
 		> test_europa2fluidspe.diff)
 	ls -l test_europa2fluidspe.diff
@@ -2490,7 +2490,7 @@ test_europa3fluidspe_compile:
 
 test_europa3fluidspe_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/EUROPA/PARAM.in.3fluids PARAM.in; \
-	   	       cp Param/EUROPA/satellite_e4.dat satellite_3fpe_e4.dat
+	   	       cp Param/EUROPA/satellite_e4.dat sate4.dat
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_europa3fluidspe_run:
@@ -2499,7 +2499,7 @@ test_europa3fluidspe_run:
 
 test_europa3fluidspe_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
-	    ${TESTDIR}/RESULTS/GM/trj_satellite_3fpe_e4_n00000100.sat \
+	    ${TESTDIR}/RESULTS/GM/trj_*_n00000100.sat \
 	    Param/EUROPA/TestOutput/trj_satellite_3fpe_e4_n00000100.sat.gz \
 		> test_europa3fluidspe.diff)
 	ls -l test_europa3fluidspe.diff

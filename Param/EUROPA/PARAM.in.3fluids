@@ -223,7 +223,7 @@ mlop recop chxop mlo2p reco2p chxo2p mloxp recoxp chxoxp OpRhopnt O2pRhopnt OXpR
 MHD traj		StringSatellite
 100			DnOutput
 -1.			DtOutput [sec]
-satellite_3fpe_e4.dat		NameTrajectoryFile
+sate4.dat		NameTrajectoryFile
 
 SAVEPLOT
 1
