@@ -48,7 +48,7 @@ module ModUpdateStateFast
        SpeedMin, rSpeedMin, TauSpeedMin
   use ModMain, ONLY: Dt, DtMax_B, Cfl, tSimulation, TypeCellBc_I, &
        iTypeCellBc_I, body1_, UseB, SpeedHyp, UseIe, nStep, UseBufferGrid
-  use ModBuffer, ONLY: get_from_spher_buffer_grid
+  use ModBuffer, ONLY: get_from_spher_buffer_grid, BufferMin_D, BufferMax_D
   use ModImplicit, ONLY: iVarSemiMin, iVarSemiMax
 #ifdef _OPENACC
   use ModMain, ONLY: nStep
@@ -58,7 +58,7 @@ module ModUpdateStateFast
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B, IsNoBody_B, IsBoundary_B, xMaxBox, r_GB, &
        rMin_B
-  use ModSolarWind, ONLY: get_solar_wind_point
+  use ModSolarwind, ONLY: get_solar_wind_point
   use ModIeCoupling, ONLY: RhoCpcp_I
   use ModWaves, ONLY: AlfvenPlusFirst_, AlfvenPlusLast_, AlfvenMinusFirst_, &
        AlfvenMinusLast_
@@ -581,6 +581,14 @@ contains
     !--------------------------------------------------------------------------
     if(UseBody .and. IsBodyBlock) then
        if(.not. Used_GB(i,j,k,iBlock)) RETURN
+    end if
+
+    if(UseBufferGrid)then
+       if(  r_GB(i,j,k,iBlock) <= BufferMax_D(1) .and. &
+            r_GB(i,j,k,iBlock) >= BufferMin_D(1) )then
+          State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock)
+          RETURN
+       end if
     end if
 
 #ifdef TESTACC
