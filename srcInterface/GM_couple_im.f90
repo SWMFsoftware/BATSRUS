@@ -20,7 +20,8 @@ module GM_couple_im
   use ModPhysics, ONLY: No2Si_V, Si2No_V, &
        UnitP_, UnitRho_, UnitTemperature_, UnitB_, &
        Bdp, DipoleStrengthSi, rCurrents, rBody
-
+  use ModAdvance, ONLY: State_VGB, B0_DGB
+  use ModUpdateStateFast, ONLY: sync_cpu_gpu
   use ModImCoupling, ONLY: nVarCouple, iVarCouple_V
   use ModUtilities, ONLY: CON_stop
 #ifdef _OPENACC
@@ -100,14 +101,15 @@ contains
 
     DoExtractUnitSi = .true.
 
-    call integrate_field_from_sphere(&
+    call integrate_field_from_sphere( &
          iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, NameVar)
 
     DoExtractUnitSi = .false.
 
     call line_get(nVarLine, nPointLine)
 
-    nVarLine = 4 ! We only pass line index, length, B and radial distance to IM
+    ! We only pass line index, length, B and radial distance to IM
+    nVarLine = 4
 
   end subroutine GM_get_for_im_trace_crcm
   !============================================================================
@@ -321,11 +323,13 @@ contains
 
     character(len=*), parameter:: NameSub = 'GM_get_sat_for_im_crcm'
     !--------------------------------------------------------------------------
-    ! Store satellite names in Buffer_I (known on all processors)
+    ! Provide satellite names so they can be known on all processors
     Name_I = NameFileSat_I(1:nSat)
 
+    call sync_cpu_gpu("update on CPU", NameSub, State_VGB, B0_DGB)
+
     do iSat = 1, nSat
-       ! Update satellite position.
+       ! Update satellite position
        call GM_trace_sat(XyzSat_DI(1:3,iSat), SatRay_D)
 
        call get_point_data( &
@@ -411,6 +415,8 @@ contains
     NameVar = 'iLine Length x y z '//NamePrimitiveVarOrig
     if(DoExtractBGradB1) NameVar = trim(NameVar)//' bgradb1x bgradb1y bgradb1z'
     if(DoExtractEfield)  NameVar = trim(NameVar)//' Ex Ey Ez Epotx Epoty Epotz'
+
+    call sync_cpu_gpu("update on CPU", NameSub, State_VGB, B0_DGB)
 
     call trace_field_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
 
@@ -529,18 +535,18 @@ contains
     ! The RCM ionosphere radius at 100km altitude in normalized units
     Radius = (RadiusPlanet + IonosphereHeightIm)/RadiusPlanet
     if(.not. DoMultiFluidIMCoupling)then
-       call integrate_field_from_sphere(&
+       call integrate_field_from_sphere( &
             iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,PeInvB')
     else
-       call integrate_field_from_sphere(&
+       call integrate_field_from_sphere( &
             iSizeIn, jSizeIn, ImLat_I, ImLon_I, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,HpRhoInvB,OpRhoInvB,&
             &HppInvB,OppInvB,PeInvB')
        ! but not pass Rhoinvb, Pinvb to IM
     end if
 
-    if(iProc==0)then
+    if(iProc == 0)then
        ! Copy RayResult into small arrays
        MhdSumVol_II = RayResult_VII(InvB_   ,:,:)
        MhdXeq_II     = RayResult_VII(Z0x_    ,:,:)
@@ -701,15 +707,15 @@ contains
 
   end subroutine GM_get_sat_for_im
   !============================================================================
-  subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
+  subroutine GM_put_from_im(Buffer_IIV, iSizeIn, jSizeIn, nVar, NameVar)
 
     use CON_coupler
-    use CON_world,      ONLY: get_comp_info
+    use CON_world, ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
-    use ModImCoupling                              ! Storage for IM pressure
+    use ModImCoupling  ! Storage for IM pressure
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
     use ModVarIndexes, ONLY:
-    use ModAdvance,    ONLY: UseMultiSpecies, UseElectronPressure
+    use ModAdvance, ONLY: UseMultiSpecies, UseElectronPressure
 
     integer, intent(in):: iSizeIn,jSizeIn,nVar
     real, intent(in):: Buffer_IIV(iSizeIn,jSizeIn,nVar)

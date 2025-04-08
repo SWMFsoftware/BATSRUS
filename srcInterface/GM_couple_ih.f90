@@ -17,6 +17,7 @@ module GM_couple_ih
   public:: GM_put_from_mh           ! coupling toolkit based coupler
   public:: GM_put_from_ih_buffer    ! buffer grid based coupler
   public:: GM_get_for_global_buffer ! buffer grid based coupler
+
   character(len=3),  public:: NameCoord
   integer,           public:: nY, nZ
   real,              public:: yMin, yMax, zMin, zMax
@@ -24,14 +25,11 @@ module GM_couple_ih
 
 contains
   !============================================================================
-  ! ROUTINE: GM_put_from_mh - transform and put the data got from IH_
-  subroutine GM_put_from_mh(nPartial,&
-       iPutStart,&
-       Put,&
-       Weight,&
-       DoAdd,&
-       StateSI_V,&
-       nVar)
+  subroutine GM_put_from_mh( &
+       nPartial, iPutStart, Put, Weight, DoAdd, StateSI_V, nVar)
+
+    ! transform and put the data got from IH_
+
     use CON_router, ONLY: IndexPtrType, WeightPtrType
     use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUz_,Bx_,Bz_,P_
     use ModB0,      ONLY: B0_DGB
@@ -42,13 +40,6 @@ contains
     type(WeightPtrType),intent(in)::Weight
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::StateSI_V
-
-    ! revision history:
-    ! 18JUL03     I.Sokolov <igorsok@umich.edu> - intial prototype/code
-    ! 23AUG03                                     prolog
-    ! 03SEP03     G.Toth    <gtoth@umich.edu>   - simplified
-    ! 19JUL04     I.Sokolov <igorsok@umich.edu> - sophisticated back
-    !                  (this is what we refer to as a development)
 
     real,dimension(nVar)::State_V
     integer:: i, j, k, iBlock
@@ -96,9 +87,9 @@ contains
             B0_DGB(:,i,j,k,iBlock)
        State_VGB(P_,i,j,k,iBlock)  = State_V(BuffP_)
     end if
+
   end subroutine GM_put_from_mh
   !============================================================================
-
   subroutine GM_put_from_ih_buffer( &
        NameCoordIn, nYIn, nZIn, yMinIn, yMaxIn, zMinIn, zMaxIn, Buffer_VII)
 
@@ -143,7 +134,7 @@ contains
     State_VII = Buffer_VII
 
     ! Convert units and velocity to momentum
-    do k=1,nZ; do j=1,nY
+    do k = 1, nZ; do j = 1, nY
        State_VII(Rho_,j,k)          = State_VII(Rho_,j,k)    *Si2No_V(UnitRho_)
        State_VII(RhoUx_:RhoUz_,j,k) = &
             State_VII(Rho_,j,k)*State_VII(Rhoux_:RhoUz_,j,k) *Si2No_V(UnitU_)
@@ -153,10 +144,8 @@ contains
 
   end subroutine GM_put_from_ih_buffer
   !============================================================================
-  subroutine GM_get_for_global_buffer(&
+  subroutine GM_get_for_global_buffer( &
        nR, nLon, nLat, BufferMinMax_DI, Buffer_VG)
-
-    ! DESCRIPTION
 
     ! This subroutines fills a buffer grid by interpolating from a source
     ! GM_BATSRUS grid using second-order trilinear interpolation.
@@ -184,13 +173,14 @@ contains
     use ModMain, ONLY: UseB0, rUpperModel
     use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModB0, ONLY: B0_DGB
+    use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use ModPhysics, ONLY: &
          No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, UnitEnergyDens_, UnitU_
-    use ModVarIndexes,     ONLY: &
+    use ModVarIndexes, ONLY: &
          Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar, &
          ChargeStateFirst_, ChargeStateLast_, SignB_
-    use CON_coupler,       ONLY: &
+    use CON_coupler, ONLY: &
          RhoCouple_, RhoUxCouple_,&
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_,  &
          PeCouple_, PparCouple_, WaveFirstCouple_,  &
@@ -200,21 +190,18 @@ contains
          ChargeStateLastCouple_, ChargeState_, iVar_V, &
          DoCoupleVar_V, nVarCouple, SaMhd_, SaMhdCouple_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModInterpolate,    ONLY: trilinear
-    use BATL_lib,       ONLY: iProc, &
+    use ModInterpolate, ONLY: trilinear
+    use BATL_lib, ONLY: iProc, &
          find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB
 
     ! Buffer size and limits
-    integer,intent(in) :: nR, nLon, nLat
-    real, intent(in)   :: BufferMinMax_DI(3,2)
+    integer,intent(in):: nR, nLon, nLat
+    real, intent(in):: BufferMinMax_DI(3,2)
 
-    ! OUTPUT ARGUMENTS
     ! State variables to be fiiled in all buffer grid points
-    real,dimension(nVarCouple, nR, nLon, nLat), intent(out):: &
-         Buffer_VG
+    real, intent(out):: Buffer_VG(nVarCouple,nR,nLon,nLat)
 
     ! variables for defining the buffer grid
-
     integer :: nCell_D(3)
     real    :: SphMin_D(3), SphMax_D(3), dSph_D(3), Sph_D(3)
 
@@ -255,6 +242,8 @@ contains
     character(len=*), parameter:: NameSub = 'GM_get_for_global_buffer'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
     Buffer_VG = 0.0
 
@@ -360,8 +349,8 @@ contains
        Buffer_VG(:,iR, iLon,iLat) = Buffer_V
 
     end do; end do; end do
+
   end subroutine GM_get_for_global_buffer
   !============================================================================
-
 end module GM_couple_ih
 !==============================================================================

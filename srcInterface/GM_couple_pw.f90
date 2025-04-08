@@ -49,32 +49,33 @@ contains
   subroutine GM_get_for_pw(nTotalLine, Buffer_I)
 
     use ModVarIndexes, ONLY: p_
-    use ModMain,       ONLY: nBlock
-    use ModPhysics,    ONLY: No2Si_V, UnitP_
-    use ModCurrent,    ONLY: get_point_data
+    use ModMain, ONLY: nBlock
+    use ModPhysics, ONLY: No2Si_V, UnitP_
+    use ModCurrent, ONLY: get_point_data
+    use ModAdvance, ONLY: State_VGB
+    use ModB0, ONLY: B0_DGB
+    use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use ModMpi
 
     integer,intent(in)  :: nTotalLine
     real,   intent(out) :: Buffer_I(nTotalLine)
-    real, allocatable   :: LocalBuffer_I(:)
     real                :: WeightAndP_I(2)
-    integer             :: iLine,iError
-    !--------------------------------------------------------------------------
+    integer             :: iLine, iError
 
-    allocate(LocalBuffer_I(nTotalLine))
+    character(len=*), parameter:: NameSub = 'GM_get_for_pw'
+    !--------------------------------------------------------------------------
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
     ! Get the pressure at each field line location.
-    do iLine=1,nTotalLine
+    do iLine = 1, nTotalLine
        call get_point_data(&
             0.0, CoordXyzPW_DI(:,iLine), 1, nBlock, p_, p_, WeightAndP_I)
-       LocalBuffer_I(iLine) = WeightAndP_I(2)
+       Buffer_I(iLine) = WeightAndP_I(2)
     enddo
 
-    Buffer_I = LocalBuffer_I
-
     ! Sum contributions from all PE-s to processor 0
-    if(nProc > 1) call MPI_reduce(LocalBuffer_I, Buffer_I, nTotalLine,&
-         MPI_REAL, MPI_SUM, 0, iComm, iError)
+    if(nProc > 1) call MPI_reduce_real_array(Buffer_I, nTotalLine, &
+         MPI_SUM, 0, iComm, iError)
 
     ! Convert pressure to SI units
     Buffer_I = Buffer_I * No2Si_V(UnitP_)
@@ -97,6 +98,7 @@ contains
     use ModCoordTransform, ONLY: dir_to_xyz
     use CON_planet_field,  ONLY: map_planet_field
     use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
 
     integer, parameter :: Theta_=1, Phi_=2
 
@@ -203,7 +205,7 @@ contains
           ! Assumption: MHD is using STANDARD FLUID NAMES and PW only has
           ! Op, Hep, and Hp to share.
           j = 1
-          do i=1, size(NameVar_V)
+          do i = 1, size(NameVar_V)
              if(DoTestMe)write(*,*) 'Checking var ', trim(NameVar_V(i)),'.'
              select case( trim(NameVar_V(i)) )
              case('HpRho')
@@ -408,24 +410,22 @@ contains
        end if
     end do
 
-    !
     !  Create the triangulation.
-    !
-    call trmesh ( nPoint1, CoordXyzPw1_DI(x_,1:nPoint1), &
+    call trmesh(nPoint1, CoordXyzPw1_DI(x_,1:nPoint1), &
          CoordXyzPW1_DI(y_,1:nPoint1), CoordXyzPW1_DI(z_,1:nPoint1), &
          iLst1_I, lPtr1_I, lEnd1_I, iError )
-    if ( iError == -2 ) then
+    if (iError == -2) then
        write(*,*)NameSub, &
             ' WARNING: Error in TRMESH, First three nodes are collinear'
        call CON_stop(NameSub,' Problem With Triangulation')
-    else if ( iError > 0 ) then
+    else if (iError > 0) then
        write(*,*)NameSub, &
             ' ERROR: Error in TRMESH, Duplicate nodes encountered'
        call CON_stop(NameSub,' Problem With Triangulation')
     end if
 
     if(nLinePw2 > 0)then
-       call trmesh ( nPoint2, CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2), &
+       call trmesh(nPoint2, CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2), &
             CoordXyzPW2_DI(y_,nLinePw1+1:nLinePw1+nPoint2), &
             CoordXyzPW2_DI(z_,nLinePw1+1:nLinePw1+nPoint2), &
             iLst2_I, lPtr2_I, lEnd2_I, iError )
@@ -455,23 +455,23 @@ contains
 
        write(*,*) NameSub,': Writing plot of triangulation'
        ! Northern Hemi
-       open ( UnitTmp_, file = 'TestTriangulation_North.eps' )
-       call trplot ( UnitTmp_, 7.5, 90.0, 0.0, 90.0, nPoint1, &
+       call open_file(FILE='TestTriangulation_North.eps')
+       call trplot(UnitTmp_, 7.5, 90.0, 0.0, 90.0, nPoint1, &
             CoordXyzPw1_DI(x_,1:nPoint1), &
             CoordXyzPw1_DI(y_,1:nPoint1), &
             CoordXyzPw1_DI(z_,1:nPoint1), iLst1_I, lPtr1_I, &
             lEnd1_I, 'test1 triangulation',.true., iError )
-       close(UnitTmp_)
+       call close_file
        if(nLinePw2 > 0)then
           ! Southern Hemi
-          open ( UnitTmp_, file = 'TestTriangulation_South.eps' )
-          call trplot ( UnitTmp_, 7.5, -90.0, 0.0, 90.0, nPoint2, &
+          call open_file(FILE='TestTriangulation_South.eps')
+          call trplot(UnitTmp_, 7.5, -90.0, 0.0, 90.0, nPoint2, &
                CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2),    &
                CoordXyzPw2_DI(y_,nLinePw1+1:nLinePw1+nPoint2),    &
                CoordXyzPw2_DI(z_,nLinePw1+1:nLinePw1+nPoint2),    &
                iLst2_I, lPtr2_I, lEnd2_I, 'test1 triangulation',  &
                .true., iError )
-          close(UnitTmp_)
+          call close_file
        end if
     end if
 
