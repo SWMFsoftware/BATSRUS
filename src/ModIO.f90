@@ -128,7 +128,7 @@ module ModIO
 
   character(LEN=3)  :: TypePlotFormat_I(MaxFile) = '?'
   character(LEN=3)  :: TypeLogFormat = '??'
-  character(LEN=3)  :: TypeCoordPlot_I(MaxFile) = '???'
+  character(LEN=3)  :: TypeCoordPlot_I(MaxFile) = 'SYS'
   character(LEN=10) :: TypeFile_I(MaxFile) = '??????'
   character(LEN=20) :: TypePlot_I(MaxFile) = '????', TypePlot = '?????'
 

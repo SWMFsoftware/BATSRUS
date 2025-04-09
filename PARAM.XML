@@ -5134,7 +5134,7 @@ shk HD idl		StringPlot
 box MHD idl             StringPlot
 1                       DnSavePlot
 -10.0                   DtSavePlot
-HGR                     TypeCoordPlot
+SYS                     TypeCoordPlot
 0.0                     x0
 0.0                     y0
 1.5                     z0
@@ -5633,7 +5633,8 @@ where extension is 'dat' for TecPlot and 'out' for IDL file formats.
 
 The shell plot area ('shl', 'sln', 'slg') can be used to extract a spherical
 shell defined by radius, longitude and latitude ranges in the coordinate
-system given by TypeCoordPlot. If the range has extent zero in
+system given by TypeCoordPlot. Setting TypeCoordPlot="SYS" means that the
+coordsystem is the same as used by the model. If the range has extent zero in
 one or two coordinates, the shell becomes a 2D or 1D slice
 (for example 2D Lon-Lat, r-Lon, r-Lat surfaces, or 1D circle at fixed latitude,
 or a radial line with fixed longitude and latitude).
@@ -11300,11 +11301,11 @@ Default values are shown above.
 T		DoRestartBuffer
 HGR             TypeCoordSource
 
-If .true. the MHD state on the buffer grid  is restored from the restart file.
-The coordinate system is defined by TypeCoordSource. This command is usually
-read from the restart.H file. 
+If DoRestartBuffer is true, the MHD state on the buffer grid is
+restored from the restart file.  The coordinate system is defined by
+TypeCoordSource. This command is usually read from the restart.H file.
 
-Default value is DoRestartBuffer = .false.
+Default value is DoRestartBuffer false.
 </command>
 
 </commandgroup>
