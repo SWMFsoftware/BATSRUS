@@ -80,8 +80,6 @@ contains
     ! Convert pressure to SI units
     Buffer_I = Buffer_I * No2Si_V(UnitP_)
 
-    deallocate(LocalBuffer_I)
-
   end subroutine GM_get_for_pw
   !============================================================================
   subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)

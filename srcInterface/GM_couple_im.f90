@@ -20,7 +20,8 @@ module GM_couple_im
   use ModPhysics, ONLY: No2Si_V, Si2No_V, &
        UnitP_, UnitRho_, UnitTemperature_, UnitB_, &
        Bdp, DipoleStrengthSi, rCurrents, rBody
-  use ModAdvance, ONLY: State_VGB, B0_DGB
+  use ModAdvance, ONLY: State_VGB
+  use ModB0, ONLY: B0_DGB
   use ModUpdateStateFast, ONLY: sync_cpu_gpu
   use ModImCoupling, ONLY: nVarCouple, iVarCouple_V
   use ModUtilities, ONLY: CON_stop
