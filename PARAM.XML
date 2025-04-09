@@ -10651,10 +10651,10 @@ Default values are show.
 </command>
 
 <command name="POYNTINGFLUX">
-	 <parameter name="PoyntingFluxPerBSi" type="real" default="1.0E-6"/>
+	 <parameter name="PoyntingFluxPerBSi" type="real" default="1.0E6"/>
 
 #POYNTINGFLUX
-0.3E-6		PoyntingFluxPerBSi [J/m^2/s/T]
+0.3E6		PoyntingFluxPerBSi [J/m^2/s/T]
 
 The boundary condition for the Alfven wave energy density is empirically set
 by prescribing the Poynting flux $S_{A}$ of the outgoing waves. The wave energy
@@ -10679,7 +10679,7 @@ observations of the turbulent velocities of $15\,{\rm km}\,{\rm s}^{-1}$.
 Hence, the energy density of the outgoing wave is set to
 $w = (S_{A}/B)_{\odot} \sqrt{\mu_{0}\rho}$.
 
-Default value for PoyntingFluxPerBSi is 1.0E-6.
+Default value for PoyntingFluxPerBSi is 1.0E6.
 </command>
 
 <command name="CORONALHEATING">
