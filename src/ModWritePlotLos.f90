@@ -1870,7 +1870,7 @@ contains
             ! Event date
             call get_date_time(iTime_I)
             write(StringDateTime19, &
-                 '(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)') iTime_I
+                 '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_",i3.3)') iTime_I
             NameFile = trim(NameFile) // "_e" // trim(StringDateTime19)
          end if
          if(IsPlotNameT)then

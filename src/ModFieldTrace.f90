@@ -25,7 +25,7 @@ module ModFieldTrace
   use ModNumConst, ONLY: &
        i_DD, cPi, cTwoPi, cHalfPi, cRadToDeg, cDegToRad, cTiny
   use ModKind, ONLY: Real8_
-  use ModIO,   ONLY: iUnitOut, write_prefix
+  use ModIO, ONLY: iUnitOut, write_prefix
   use ModPlotFile, ONLY: save_plot_file
   use ModUpdateStateFast, ONLY: sync_cpu_gpu
   use ModMpi
@@ -383,9 +383,9 @@ contains
   !============================================================================
   subroutine init_mod_field_trace
 
-    use ModPhysics,  ONLY: DipoleStrengthSi
-    use ModAdvance,  ONLY: UseElectronPressure
-    use ModMain,     ONLY: DoMultiFluidIMCoupling
+    use ModPhysics, ONLY: DipoleStrengthSi
+    use ModAdvance, ONLY: UseElectronPressure
+    use ModMain, ONLY: DoMultiFluidIMCoupling
     use ModGeometry, ONLY: xMinBox
 
     logical:: DoTest
@@ -523,10 +523,10 @@ contains
 
     ! Trace field lines from cell centers to the outer or inner boundaries
 
-    use CON_ray_trace,    ONLY: ray_init
+    use CON_ray_trace, ONLY: ray_init
     use ModMain
-    use ModAdvance,       ONLY: State_VGB, Bx_, Bz_
-    use ModGeometry,      ONLY: r_GB, Used_GB
+    use ModAdvance, ONLY: State_VGB, Bx_, Bz_
+    use ModGeometry, ONLY: r_GB, Used_GB
 
     ! Indices corresponding to the starting point and directon of traces
     integer :: i, j, k, iBlock, iRay
@@ -1763,7 +1763,7 @@ contains
       ! steps were Done
 
       use CON_planet_field, ONLY: map_planet_field
-      use CON_planet,       ONLY: get_planet
+      use CON_planet, ONLY: get_planet
 
       integer :: iHemisphere
       real    :: x_D(3), DipoleStrength=0.0
@@ -2027,16 +2027,16 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine ray_trace_sorted
   !============================================================================
-  subroutine integrate_field_from_sphere(&
+  subroutine integrate_field_from_sphere( &
        nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
 
     use CON_ray_trace, ONLY: ray_init
     use CON_planet_field, ONLY: map_planet_field
     use CON_axes, ONLY: transform_matrix
     use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, &
-                           UseMultiSpecies, nSpecies, UseElectronPressure
-    use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-    use CON_planet,        ONLY: DipoleStrength
+         UseMultiSpecies, nSpecies, UseElectronPressure
+    use CON_line_extract, ONLY: line_init, line_collect, line_clean
+    use CON_planet, ONLY: DipoleStrength
     use ModMultiFluid
 
     integer, intent(in):: nLat, nLon
@@ -2241,10 +2241,10 @@ contains
   !============================================================================
   subroutine integrate_field_from_points(nPts, XyzPt_DI, NameVar)
 
-    use CON_ray_trace,     ONLY: ray_init
-    use CON_axes,          ONLY: transform_matrix
-    use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-    use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_, &
+    use CON_ray_trace, ONLY: ray_init
+    use CON_axes, ONLY: transform_matrix
+    use CON_line_extract, ONLY: line_init, line_collect, line_clean
+    use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, &
          UseMultiSpecies, nSpecies
     use ModMultiFluid
 

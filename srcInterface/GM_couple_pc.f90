@@ -8,6 +8,7 @@ module GM_couple_pc
   use BATL_lib, ONLY: iProc
   use ModUtilities, ONLY: CON_set_do_test
   use ModBatsrusUtility, ONLY: stop_mpi
+  use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
   implicit none
 
@@ -184,8 +185,8 @@ contains
     use ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
     use ModVarIndexes, ONLY: nVar
-    use ModB0,      ONLY: UseB0, get_b0
-    use BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
+    use ModB0, ONLY: UseB0, get_b0, B0_DGB
+    use BATL_lib, ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
     use ModInterpolate, ONLY: interpolate_vector
     use ModIO, ONLY: iUnitOut
 
@@ -241,6 +242,8 @@ contains
        end do
     end if
 
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
+
     do iPoint = 1, nPoint
 
        Xyz_D(1:nDim) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
@@ -265,6 +268,7 @@ contains
   end subroutine GM_get_for_pc
   !============================================================================
   subroutine GM_get_regions(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+
     use BATL_lib,     ONLY: nDim, Xyz_DGB, nBlock, Unused_B, &
          nI, nJ, nK
     use ModPIC,       ONLY: DxyzPic_DI, LenPic_DI, &
@@ -391,6 +395,8 @@ contains
        end do
 
     end do
+
+    call sync_cpu_gpu('change on CPU', NameSub, State_VGB)
 
   end subroutine GM_get_regions
   !============================================================================

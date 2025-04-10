@@ -366,7 +366,7 @@ contains
           end if
        end if
 
-       if(TypeCoordPlot_I(iFile) /= '???' &
+       if(TypeCoordPlot_I(iFile) /= 'SYS' &
             .and. TypeCoordPlot_I(iFile) /= TypeCoordSystem)then
 
           Convert_DD = transform_matrix(tSimulation, &
