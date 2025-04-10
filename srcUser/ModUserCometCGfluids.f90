@@ -685,7 +685,6 @@ contains
       call test_stop(NameSub, DoTest)
     end subroutine read_shape_file
     !==========================================================================
-
     subroutine read_fieldline_file
 
       use ModPhysics, ONLY: Si2No_V, UnitX_
@@ -713,7 +712,6 @@ contains
          read(UnitTmp_,'(a)') String1
       end do
 
-      !!--------------------------------------------------------------------
       !! Read the header for each zone
       !! Read 'ZONE T="Streamtrace"'
       read(UnitTmp_,'(a)') String1
@@ -730,7 +728,6 @@ contains
       read(UnitTmp_,'(a)') String1
       !! Read ' DT=(SINGLE SINGLE SINGLE ...)'
       read(UnitTmp_,'(a)') String1
-      !!--------------------------------------------------------------------
 
       allocate(XyzFieldline_DI(3,nPoint), State_VI(nVarFieldlineFile,nPoint))
 
@@ -751,7 +748,6 @@ contains
     !==========================================================================
   end subroutine user_init_session
   !============================================================================
-
   subroutine user_set_boundary_cells(iBlock)
 
     use ModGeometry, ONLY: ExtraBc_, Xyz_DGB, r_GB
@@ -772,7 +768,7 @@ contains
 
        XyzInside_D = rMinShape*[cPi/10,cPi**2/50,cPi**3/700]
 
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           ! Check if we are close enough
           if(r_GB(i,j,k,iBlock) > rMaxShape) then
              iBoundary_GB(i,j,k,iBlock) = domain_
@@ -796,7 +792,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_boundary_cells
   !============================================================================
-
   subroutine user_set_face_boundary(FBC)
 
     use ModMain, ONLY: nStep, tSimulation, FaceBCType
@@ -1066,7 +1061,6 @@ contains
 
       ! Projection length of U_ on the local surface normal vector
       !------------------------------------------------------------------------
-
       associate( VarsGhostFace_V => FBC%VarsGhostFace_V, &
            VarsTrueFace_V => FBC%VarsTrueFace_V, &
            FaceCoords_D => FBC%FaceCoords_D )
@@ -1182,10 +1176,8 @@ contains
 
     end subroutine set_ion_face_boundary
     !==========================================================================
-
   end subroutine user_set_face_boundary
   !============================================================================
-
   logical function is_segment_intersected(Xyz1_D, Xyz2_D, &
        IsOddIn, XyzIntersectOut_D, NormalOut_D)
 
@@ -1354,7 +1346,6 @@ contains
 
   end function is_segment_intersected
   !============================================================================
-
   subroutine calc_electron_collision_rates(Te,nElec,i,j,k,iBlock,fen_I,fei_I)
 
     ! calculate all collision rates for electrons (fen, fei)
@@ -1430,7 +1421,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_electron_collision_rates
   !============================================================================
-
   subroutine user_calc_rates(Ti_I,Te,i,j,k,iBlock,nElec,nIon_I,fin_II,fii_II, &
        fie_I,alpha_I,kin_IIII,v_II, ve_II,uElec_D,uIon_DI,Qexc_II,Qion_II, &
        DoCalcShading, IsIntersectedShapeR, &
@@ -1526,7 +1516,7 @@ contains
     !      0.095E-20, 0.088E-20, 0.081E-20, 0.075E-20, 0.069E-20, 0.063E-20, &
     !      0.059E-20, 0.054E-20, 0.050E-20, 0.045E-20, 0.042E-20, 0.039E-20, &
     !      0.036E-20 /)
-    !----------------------------------------------------------------------
+
 
     ! provide all rates in SI units
 
@@ -1798,7 +1788,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_rates
   !============================================================================
-
   subroutine user_calc_sources_impl(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK,    &
@@ -1817,41 +1806,30 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer, parameter :: nRhoTerm=5, nRhoUTerm=7, nPTerm=11, nPeTerm =10
+    integer, parameter:: nRhoTerm=5, nRhoUTerm=7, nPTerm=11, nPeTerm =10
 
-    real, dimension(1:nI,1:nJ,1:nK) :: nElec_C, Te_C, SBx_C, SBy_C, SBz_C, &
+    real, dimension(nI,nJ,nK):: nElec_C, Te_C, SBx_C, SBy_C, SBz_C, &
          SPe_C, TempNeu1_C, nNeu1_C
-
-    real, dimension(nRhoTerm, 1:nIonFluid,1:nI,1:nJ,1:nK) :: SRhoTerm_IIC
-    real, dimension(nRhoUTerm,1:nIonFluid,1:nI,1:nJ,1:nK) :: SRhoUxTerm_IIC, &
+    real, dimension(nRhoTerm, nIonFluid,nI,nJ,nK):: SRhoTerm_IIC
+    real, dimension(nRhoUTerm,nIonFluid,nI,nJ,nK):: SRhoUxTerm_IIC, &
          SRhoUyTerm_IIC, SRhoUzTerm_IIC
-    real, dimension(nPTerm,1:nIonFluid,1:nI,1:nJ,1:nK) :: SPTerm_IIC
-    real, dimension(nPeTerm,           1:nI,1:nJ,1:nK) :: SPeTerm_IC
-
-    real, dimension(1:3,1:nIonFluid,1:nI,1:nJ,1:nK) :: uIon_DIC
-
-    real, dimension(1:3,1:nI,1:nJ,1:nK) :: Current_DC, uIonMean_DC, uElec_DC, &
+    real, dimension(nPTerm,nIonFluid,nI,nJ,nK):: SPTerm_IIC
+    real, dimension(nPeTerm,nI,nJ,nK):: SPeTerm_IC
+    real, dimension(3,nIonFluid,nI,nJ,nK):: uIon_DIC
+    real, dimension(3,nI,nJ,nK):: Current_DC, uIonMean_DC, uElec_DC, &
          uNeu1_DC
-
-    real, dimension(1:nIonFluid,1:nIonFluid,1:nI,1:nJ,1:nK) :: &
-         fii_IIC, uIonIon2_IIC
-    real, dimension(1:nIonFluid,            1:nI,1:nJ,1:nK) :: &
+    real, dimension(nIonFluid,nIonFluid,nI,nJ,nK):: fii_IIC, uIonIon2_IIC
+    real, dimension(nIonFluid,nI,nJ,nK):: &
          Ti_IC, uIonElec2_IC, fei_IC, fie_IC, &
          nIon_IC, SRho_IC, SRhoUx_IC, SRhoUy_IC, SRhoUz_IC, SP_IC
-    real, dimension(1:nIonFluid,            1:nI,1:nJ,1:nK) :: alpha_IC
-    real, dimension(1:nIonFluid,1:nNeuFluid, 1:nI,1:nJ,1:nK) :: &
-         fin_IIC, uIonNeu2_IIC
-    real, dimension(            1:nNeuFluid, 1:nI,1:nJ,1:nK) :: &
-         fen_IC, uNeuElec2_IC
-
-    real, dimension(1:nNeuFluid,1:nIonFluid) :: Qexc_II, Qion_II
-
-    real, dimension(1:nIonFluid) :: fiiTot_I, finTot_I, vAdd_I, veAdd_I, &
+    real, dimension(nIonFluid,nI,nJ,nK):: alpha_IC
+    real, dimension(nIonFluid,nNeuFluid,nI,nJ,nK):: fin_IIC, uIonNeu2_IIC
+    real, dimension(nNeuFluid,nI,nJ,nK):: fen_IC, uNeuElec2_IC
+    real, dimension(nNeuFluid,nIonFluid) :: Qexc_II, Qion_II
+    real, dimension(nIonFluid) :: fiiTot_I, finTot_I, vAdd_I, veAdd_I, &
          kinAdd_I, kinSub_I
-    !--------------------------------------------------------------------------
-    real, dimension &
-         (1:nIonFluid,1:nNeuFluid,1:nNeuFluid,1:nIonFluid,1:nI,1:nJ,1:nK) :: &
-         kin_IIIIC
+
+    real:: kin_IIIIC(nIonFluid,nNeuFluid,nNeuFluid,nIonFluid,nI,nJ,nK)
 
     real    :: fenTot, feiTot
     integer :: i,j,k,iNeuFluid,jNeutral,iIonFluid,jIonFluid,iTerm
@@ -2732,7 +2710,6 @@ contains
   contains
     !==========================================================================
     subroutine save_user_source
-
       !------------------------------------------------------------------------
       select case(NameSource)
       case('H2OpRho')
@@ -2808,7 +2785,6 @@ contains
       end select
     end subroutine save_user_source
     !==========================================================================
-
     subroutine print_test
       character(len=100) :: TestFmt1, TestFmt2, TestFmt3
 
@@ -3015,13 +2991,11 @@ contains
       write(*,*) '========================================================'
     end subroutine print_test
     !==========================================================================
-
   end subroutine user_calc_sources_impl
   !============================================================================
   subroutine user_calc_sources_expl(iBlock)
 
     integer, intent(in) :: iBlock
-
     !--------------------------------------------------------------------------
   end subroutine user_calc_sources_expl
   !============================================================================
@@ -3150,7 +3124,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
   !============================================================================
-
   subroutine derive_cell_diffusivity( &
        iBlock, i, j, k, TeSI, nIon_I, nElec, EtaSi)
     use ModResistivity,  ONLY: Eta0SI
@@ -3165,8 +3138,8 @@ contains
     real :: EtaSiColl!, EtaSiSpitzer, lnL
     !    real, save :: SpitzerCoef, EtaPerpSpitzerSi
     real :: eeSigma!, B0_D(3)
-    real, dimension(nIonFluid) :: fei_I, eiSigma_I
-    real, dimension(nNeuFluid)  :: fen_I, enSigma_I
+    real, dimension(nIonFluid):: fei_I, eiSigma_I
+    real, dimension(nNeuFluid):: fen_I, enSigma_I
     integer :: iIonFluid, iNeuFluid
 
     logical:: DoTest
@@ -3241,7 +3214,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine derive_cell_diffusivity
   !============================================================================
-
   subroutine user_set_resistivity(iBlock, Eta_G)
 
     use ModPhysics,     ONLY: No2Si_V, Si2No_V, &
@@ -3255,7 +3227,7 @@ contains
     real, intent(out) :: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     integer :: i, j, k
-    real, dimension(1:nIonFluid,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: nIon_IG
+    real, dimension(nIonFluid,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: nIon_IG
     real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: Te_G, nElec_G
     real :: EtaSi
 
@@ -3266,7 +3238,7 @@ contains
 
     ! nElec_G is the electron/ion density in SI units (n_e=n_itot)
     nElec_G = 0.
-    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        nIon_IG(1:nIonFluid,i,j,k) = &
             State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*NO2SI_V(UnitN_)
        nElec_G(i,j,k) = &
@@ -3302,7 +3274,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
   !============================================================================
-
   subroutine user_material_properties(State_V, i,j,k,iBlock,iDir, &
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut,   &
@@ -3415,7 +3386,6 @@ contains
 
   end subroutine user_material_properties
   !============================================================================
-
   subroutine user_init_point_implicit
 
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
@@ -3450,7 +3420,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_init_point_implicit
   !============================================================================
-
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional,&
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -3727,7 +3696,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
   !============================================================================
-
   subroutine user_preset_conditions(i,j,k,iBlock)
     ! This is applied as initial conditions and in the upstream boundary
     ! for the semi-implicit heat conduction
@@ -3783,7 +3751,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_preset_conditions
   !============================================================================
-
   subroutine user_set_ICs(iBlock)
     use ModMain,     ONLY:      Body1_
     use ModAdvance,  ONLY: Pe_, State_VGB
@@ -3855,7 +3822,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ICs
   !============================================================================
-
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModAdvance,  ONLY: State_VGB
@@ -3900,7 +3866,7 @@ contains
           end do
        end if
 
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, nI+nG
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
           State_VGB(Neu1Rho_:Neu1P_,i,j,k,iBlock) = &
                State_VGB(Neu1Rho_:Neu1P_,nI,j,k,iBlock)
        end do; end do; end do
@@ -3931,7 +3897,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
   !============================================================================
-
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModPhysics, ONLY: No2SI_V, UnitT_
@@ -3959,7 +3924,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
   !============================================================================
-
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
     ! Set UserCriteria = 1.0 for refinement, 0.0 for coarsening.
@@ -4008,7 +3972,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_amr_criteria
   !============================================================================
-
   subroutine user_initial_perturbation
     ! This is applied to reset all ions after the neutral background
     ! is fully developed
@@ -4021,7 +3984,7 @@ contains
 
     integer :: i, j, k, iBlock
     real    :: RhoSw, alpha, beta
-    real, dimension(1:nI,1:nJ,1:nK) :: TempNeu1_C, nNeu1_C
+    real, dimension(nI,nJ,nK):: TempNeu1_C, nNeu1_C
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_initial_perturbation'
@@ -4042,7 +4005,7 @@ contains
        nNeu1_C    = State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) / &
             MassFluid_I(nFluid)
 
-       do k=MinK, MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
           if (.not. UsePerturbedSW) then
@@ -4138,6 +4101,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
   !============================================================================
-
 end module ModUser
 !==============================================================================
