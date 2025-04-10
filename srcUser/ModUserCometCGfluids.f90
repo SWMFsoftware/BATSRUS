@@ -1517,7 +1517,6 @@ contains
     !      0.059E-20, 0.054E-20, 0.050E-20, 0.045E-20, 0.042E-20, 0.039E-20, &
     !      0.036E-20 /)
 
-
     ! provide all rates in SI units
 
     ! initialize all collision rates with zero
