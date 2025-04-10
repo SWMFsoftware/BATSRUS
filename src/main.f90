@@ -43,7 +43,7 @@ program batsrus
   call init_mpi
 
   ! Initialize some basic variables for the stand alone code
-  IsStandAlone      = .true.
+  IsStandAlone = .true.
 
   ! Initialize the planetary constant library and set Earth
   ! as the default planet.
@@ -55,7 +55,7 @@ program batsrus
   !$acc update device(IsTimeLoop)
 
   ! Show git information
-  if(iProc==0)then
+  if(iProc == 0)then
      include "show_git_info.h"
   endif
 
@@ -66,7 +66,7 @@ program batsrus
   CpuTimeStart = MPI_WTIME()
 
   ! Delete BATSRUS.SUCCESS, BATSRUS.DONE and BATSRUS.STOP files if found
-  if(iProc==0)then
+  if(iProc == 0)then
      call remove_file('BATSRUS.SUCCESS')
      call remove_file('BATSRUS.DONE')
      call remove_file('BATSRUS.STOP')
@@ -78,7 +78,7 @@ program batsrus
   SESSIONLOOP: do
      call read_init('  ', iSessionIn=iSession)
 
-     if(iProc==0.and.lVerbose>=0)&
+     if(iProc == 0 .and. lVerbose >= 0)&
           write(*,*)'----- Starting Session ',iSession,' ------'
      ! Set and check input parameters for this session
      call set_parameters('READ')
@@ -88,14 +88,14 @@ program batsrus
      ! call set_oktest('main',DoTest,DoTest)
 
      ! Time execution (timing parameters were set by MH_set_parameters)
-     if(iSession==1)then
+     if(iSession == 1)then
         call timing_start('BATSRUS')
         call timing_start('setup')
         call BATS_setup
         call BATS_init_session
         call timing_stop('setup')
         if(DnTiming > -3)call timing_report_total
-        if(iProc==0)write(*,*)'Resetting timing counters after setup.'
+        if(iProc == 0)write(*,*)'Resetting timing counters after setup.'
         call timing_reset('#all',3)
      else
         call write_runtime_values
@@ -177,8 +177,8 @@ program batsrus
   call BATS_finalize
 
   ! Touch BATSRUS.SUCCESS
-  if(iProc==0) call touch_file('BATSRUS.SUCCESS')
-  if(iProc==0 .and. .not. IsForcedStop) call touch_file('BATSRUS.DONE')
+  if(iProc == 0) call touch_file('BATSRUS.SUCCESS')
+  if(iProc == 0 .and. .not. IsForcedStop) call touch_file('BATSRUS.DONE')
 
   call clean_mpi
 
@@ -240,7 +240,7 @@ contains
     character(len=*), parameter:: NameSub = 'show_progress'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if( UseTiming .and. iProc==0 &
+    if( UseTiming .and. iProc == 0 &
          .and. DnProgressShort>0 .and. mod(nStep,DnProgressShort) == 0 ) then
 
        CpuTimeBATSRUS=timing_func_d('sum',3,'BATSRUS','BATSRUS')
@@ -264,14 +264,14 @@ contains
     endif
 
     ! Show timing tables
-    if(DnTiming>0.and.mod(nIteration,DnTiming)==0) then
+    if(DnTiming > 0 .and. mod(nIteration,DnTiming) == 0) then
        call timing_report
-    else if(DnProgressLong>0.and.mod(nStep,DnProgressLong) == 0) then
+    else if(DnProgressLong > 0 .and. mod(nStep,DnProgressLong) == 0) then
        call timing_tree(2,2)
     end if
 
     ! Try to estimate the remaining length of the run
-    if(UseTiming .and. iProc==0 &
+    if(UseTiming .and. iProc == 0 &
          .and. DnProgressLong>0 .and. mod(nStep,DnProgressLong) == 0)then
        nIterExpect = nITER-nIteration
        if(IsTimeAccurate .and. Dt > 0.0 .and. tSimulationMax > 0.0)then
