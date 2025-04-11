@@ -248,12 +248,7 @@ contains
             ! for physical refinement.
             if(UseUserPerturbation)then
                call timing_start('amr_ics_perturb')
-               ! Fill in ghost cells in case needed by the user perturbation
-               ! However, cannot be used with the boundary conditions (such as
-               ! threaded field lines) wich cannot be stated that early.
-               if(.not.UseFieldLineThreads)call exchange_messages
                call user_initial_perturbation
-
                call timing_stop('amr_ics_perturb')
             end if
 
@@ -317,14 +312,8 @@ contains
 
       ! Allow the user to add a perturbation to the initial condition.
       if(UseUserPerturbation)then
-         ! Fill in ghost cells in case needed by the user perturbation
-         ! However, cannot be used with the boundary conditions (such as
-         ! threaded field lines) wich cannot be stated that early.
-         if(.not.UseFieldLineThreads)call exchange_messages
-
          call user_initial_perturbation
-         UseUserPerturbation=.false.
-
+         UseUserPerturbation = .false.
       end if
 
       if(IsRestart)then
@@ -438,9 +427,7 @@ contains
     ! Allow the user to add a perturbation to the initial condition.
     if (UseUserPerturbation) then
        call sync_cpu_gpu('update on CPU', NameSub, State_VGB)
-
        call user_initial_perturbation
-
        call sync_cpu_gpu('change on CPU', NameSub, State_VGB)
 
        if(UseCme .and. UseFieldLineThreads) call set_threads(NameSub)
