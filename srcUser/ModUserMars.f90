@@ -11,7 +11,9 @@ module ModUser
   use ModMain,  ONLY: UaState_VCB
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
-
+  use ModUtilities, ONLY: open_file, close_file
+  use ModNumConst, ONLY: cPi, cDegToRad
+  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
   use ModUserEmpty, &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -172,6 +174,7 @@ module ModUser
   real :: IOp(NLong, NLat, MaxAlt)!,IOp_dim(NLong, NLat, NAlt)
   logical :: UseMarsAtm=.false.
   integer :: NAlt=21
+  character (len=60):: TGCMFilename
 
   logical:: UseOldEnergy=.true.
 
@@ -209,15 +212,12 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_action
   !============================================================================
-
   subroutine user_read_inputs
+
     use ModMain
     use ModReadParam
 
     character (len=100) :: NameCommand
-    integer:: i, j, k, n, m
-    character (len=60):: TGCMFilename
-    character (len=100) :: line
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
@@ -245,25 +245,20 @@ contains
           call read_var('UseMarsB0',UseMarsB0)
           if(UseMarsB0) then
              call read_var('NNm', NNm)
-             call read_var('rot',rot)
-             call read_var('thetilt', thetilt)
-             rot= rot/180.0*3.141592653589793238462643383279
-             thetilt= thetilt/180.0*3.141592653589793238462643383279
+             call read_var('Rot', Rot)
+             call read_var('Thetilt', Thetilt)
+             rot= rot*cDegToRad
+             thetilt= thetilt*cDegToRad
              cmars = 0.0
              dmars = 0.0
-             open(15,file='marsmgsp.txt')
-             do i=0,NNm
-                read(15,*)n,(cmars(n-1,m),m=0,n-1),(dmars(n-1,m),m=0,n-1)
-             end do
-             close(15)
           endif
 
        case("#UseMso") ! default is false
           call read_var('UseMso', UseMso)
           if(UseMso) then
-             call read_var('RotAxisMso_D(1)',RotAxisMso_D(1))
-             call read_var('RotAxisMso_D(2)',RotAxisMso_D(2))
-             call read_var('RotAxisMso_D(3)',RotAxisMso_D(3))
+             call read_var('RotAxisMsoX', RotAxisMso_D(1))
+             call read_var('RotAxisMsoY', RotAxisMso_D(2))
+             call read_var('RotAxisMsoZ', RotAxisMso_D(3))
 
              RotAxisMso_D = RotAxisMso_D/sqrt(sum(RotAxisMso_D**2))
 
@@ -280,7 +275,7 @@ contains
           end if
 
        case("#SOLARCON") ! solar cycle condition
-          call read_var('SolarCon',SolarCond)
+          call read_var('TypeSolarCon',SolarCond)
 
        case("#UseHotO")  ! adding hot Oxygen or not
           call read_var('UseHotO',UseHotO)
@@ -298,31 +293,13 @@ contains
           ! close(15)
 
        case('#USECHAPMAN')
-          call read_var('UseChapman',UseChapman)
+          call read_var('UseChapman', UseChapman)
 
        case("#UseMarsAtm")
-          call read_var('UseMarsAtm',UseMarsAtm)
+          call read_var('UseMarsAtm', UseMarsAtm)
           if(UseMarsAtm)then
-             call read_var('TGCMFilename',TGCMFilename)
-             call read_var('NAlt', Nalt)
-             open(15,file=TGCMFilename,status="old")
-             read(15,*)line
-             write(*,*)line, Nalt
-             do k = 1, NAlt
-                do j=1, NLat
-                   do i=1, NLong
-                      read(15,*)Long_I(i),Lat_I(j),Alt_I(k),Temp(i,j,k),Den_CO2(i,j,k),&
-                           Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k)
-                   end do
-                end do
-             end do
-             close(15)
-             write(*,*)Long_I(Nlong),Lat_I(NLat),Alt_I(Nalt)
-             write(*,*)Long_I(1),Lat_I(1),Alt_I(1)
-             write(*,*)'Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k)=',&
-                  Den_O(Nlong,Nlat,Nalt),ICO2p(Nlong,Nlat,Nalt),&
-                  IOp(Nlong,Nlat,Nalt)
-
+             call read_var('NameFileTGCM', TGCMFilename)
+             call read_var('nAlt', Nalt)
           end if
        case('#POINTIMPLICITREGION')
           call read_var('rPointImplicit',rPointImplicit)
@@ -775,17 +752,47 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_sources
   !============================================================================
-
   subroutine user_init_session
+
     use ModMain
     use ModPhysics
     use ModVarIndexes
 
-    integer:: iBoundary
+    integer:: iBoundary, i, j, k, m, n
+    character(len=100):: StringLine
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    ! Read B0
+    if(UseMarsB0)then
+       ! It does not work without the STATUS="OLD"
+       call open_file(FILE='marsmgsp.txt', STATUS="OLD")
+       do i = 0, NNm
+          read(UnitTmp_,*)n,(cmars(n-1,m),m=0,n-1),(dmars(n-1,m),m=0,n-1)
+       end do
+       call close_file
+       close(UnitTmp_)
+    end if
+
+    if(UseMarsAtm)then
+       call open_file(FILE=TGCMFilename, STATUS="old")
+       read(UnitTmp_,*) StringLine
+       write(*,*) trim(StringLine), Nalt
+       do k = 1, NAlt; do j=1, NLat; do i=1, NLong
+          read(UnitTmp_,*)Long_I(i),Lat_I(j),Alt_I(k), &
+               Temp(i,j,k),Den_CO2(i,j,k),&
+               Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k)
+       end do; end do; end do
+       call close_file
+       write(*,*)Long_I(Nlong),Lat_I(NLat),Alt_I(Nalt)
+       write(*,*)Long_I(1),Lat_I(1),Alt_I(1)
+       write(*,*)'Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k)=',&
+            Den_O(Nlong,Nlat,Nalt),ICO2p(Nlong,Nlat,Nalt),&
+            IOp(Nlong,Nlat,Nalt)
+    end if
+
     ! For Outer Boundaries
     do iBoundary=xMinBc_,zMaxBc_
        FaceState_VI(rhoHp_,iBoundary)    = SolarWindRho
@@ -2068,11 +2075,11 @@ contains
              chap_y= sqrt(0.5*Xp)*abs(cosSZA)
              if(cosSZA > 0.0)then   ! SZA<90 deg (equation 13)
                 if(chap_y<8.0)then
-                   chap = sqrt(3.1415926/2.0*Xp)*&
+                   chap = sqrt(cPi/2.0*Xp)*&
                         (1.0606963+0.5564383*chap_y)/&
                         (1.0619896+1.7245609*chap_y+chap_y*chap_y)
                 elseif(chap_y<100.0)then
-                   chap = sqrt(3.1415926/2.0*Xp)*&
+                   chap = sqrt(cPi/2.0*Xp)*&
                         0.56498823/(0.6651874+chap_y)
                 else
                    chap=0.0
@@ -2081,19 +2088,19 @@ contains
                 ! 120 >SZA > 90 deg (equation 15) Smith and Smith, 1972
                 sinSZA = sqrt(1.0 - cosSZA**2)
                 if(chap_y<8.0)then
-                   chap =sqrt(2.0*3.1415926*Xp)* &
+                   chap =sqrt(2*cPi*Xp)* &
                         (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
                         -0.5*(1.0606963+0.5564383*chap_y)/ &
                         (1.0619896+1.7245609*chap_y+chap_y*chap_y))
-                elseif(chap_y<100.0 .and. Xp*(1.0-sinSZA) < 700.0)then
-                   chap =sqrt(2.0*3.1415926*Xp)* &
+                elseif(chap_y < 100.0 .and. Xp*(1.0-sinSZA) < 700.0)then
+                   chap =sqrt(2*cPi*Xp)* &
                         (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
                         -0.5*0.56498823/(0.6651874+chap_y))
                 else
-                   chap =0.0
+                   chap = 0.0
                 end if
              else
-                chap =1.0e10
+                chap = 1.0e10
              end if
 
              Optdep=Optdep*chap
