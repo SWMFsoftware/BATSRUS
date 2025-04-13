@@ -23,8 +23,7 @@ module ModUser
        IMPLEMENTED6 => user_calc_sources_impl,          &
        IMPLEMENTED7 => user_get_b0,                     &
        IMPLEMENTED8 => user_get_log_var,                &
-       IMPLEMENTED9 => user_set_boundary_cells,         &
-       IMPLEMENTED10=> user_action
+       IMPLEMENTED9 => user_set_boundary_cells
 
   include 'user_module.h' ! list of public methods
 
@@ -143,7 +142,7 @@ module ModUser
   real :: Te_new_dim=1000., KTe0, T300
   real, parameter :: T300_dim = 300.0, Ti_dim =300.
 
-  real, allocatable :: nu_BLK (:,:,:,:)
+  real, allocatable :: Nu_CB (:,:,:,:)
   real, parameter :: nu0_dim=4.0e-10
   real :: nu0
 
@@ -179,38 +178,6 @@ module ModUser
   logical:: UseOldEnergy=.true.
 
 contains
-  !============================================================================
-  subroutine user_action(NameAction)
-
-    character(len=*), intent(in):: NameAction
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_action'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
-    select case(NameAction)
-    case('initialize module')
-       if(.not.allocated(TempNuSpecies_CBI))then
-          allocate(TempNuSpecies_CBI(nI,nJ,nK,MaxBlock))
-          allocate(Productrate_CB(nI,nJ,nK,MaxBlock))
-          allocate(Ionizationrate_CBI(nI,nJ,nK,MaxBlock,2))
-          allocate(MaxSiSpecies_CB(nI,nJ,nK,MaxBlock))
-          allocate(MaxLiSpecies_CB(nI,nJ,nK,MaxBlock))
-          allocate(MaxSLSpecies_CB(nI,nJ,nK,MaxBlock))
-          allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
-       end if
-    case('clean module')
-       if(allocated(TempNuSpecies_CBI)) deallocate(TempNuSpecies_CBI)
-       if(allocated(Productrate_CB)) deallocate(Productrate_CB)
-       if(allocated(Ionizationrate_CBI)) deallocate(Ionizationrate_CBI)
-       if(allocated(MaxSiSpecies_CB))  deallocate(MaxSiSpecies_CB)
-       if(allocated(MaxLiSpecies_CB))  deallocate(MaxLiSpecies_CB)
-       if(allocated(MaxSLSpecies_CB))  deallocate(MaxSLSpecies_CB)
-       if(allocated(nu_BLK)) deallocate(nu_BLK)
-    end select
-    call test_stop(NameSub, DoTest)
-  end subroutine user_action
   !============================================================================
   subroutine user_read_inputs
 
@@ -672,15 +639,15 @@ contains
 
        S_IC(rho_+MaxSpecies+1,i,j,k) = S_IC(rho_+MaxSpecies+1,i,j,k) &
             -State_VGB(Ux_,i,j,k,iBlock)*totalLossx &
-            -nu_BLK(i,j,k,iBlock)*State_VGB(Ux_,i,j,k,iBlock)
+            -Nu_CB(i,j,k,iBlock)*State_VGB(Ux_,i,j,k,iBlock)
 
        S_IC(rho_+MaxSpecies+2,i,j,k) = S_IC(rho_+MaxSpecies+2,i,j,k) &
             -State_VGB(Uy_,i,j,k,iBlock)*totalLossx &
-            -nu_BLK(i,j,k,iBlock)*State_VGB(Uy_,i,j,k,iBlock)
+            -Nu_CB(i,j,k,iBlock)*State_VGB(Uy_,i,j,k,iBlock)
 
        S_IC(rho_+MaxSpecies+3,i,j,k) = S_IC(rho_+MaxSpecies+3,i,j,k) &
             -State_VGB(Uz_,i,j,k,iBlock)*totalLossx &
-            -nu_BLK(i,j,k,iBlock)*State_VGB(Uz_,i,j,k,iBlock)
+            -Nu_CB(i,j,k,iBlock)*State_VGB(Uz_,i,j,k,iBlock)
 
        !----- pressure and energy source terms
        if(UseOldEnergy)then
@@ -689,21 +656,21 @@ contains
 
           S_IC(rho_+MaxSpecies+8,i,j,k) = S_IC(rho_+MaxSpecies+8,i,j,k) + &
                (InvGammaMinus1*temp - 0.50*uu2*(totalLossRho) ) - &
-               0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*nu_BLK(i,j,k,iBlock)
+               0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_CB(i,j,k,iBlock)
           S_IC(rho_+MaxSpecies+7,i,j,k) = S_IC(rho_+MaxSpecies+7,i,j,k) + &
                (temp + 0.50*uu2*(totalSourceRho)*GammaMinus1) + &
                GammaMinus1*0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
-               nu_BLK(i,j,k,iBlock)
+               Nu_CB(i,j,k,iBlock)
 
           if(kTi > kTn)then
              S_IC(rho_+MaxSpecies+8,i,j,k) = S_IC(rho_+MaxSpecies+8,i,j,k) &
-                  -nu_BLK(i,j,k,iBlock)*totalNumRho*InvGammaMinus1*(kTi-kTn)
+                  -Nu_CB(i,j,k,iBlock)*totalNumRho*InvGammaMinus1*(kTi-kTn)
              S_IC(rho_+MaxSpecies+7,i,j,k) = S_IC(rho_+MaxSpecies+7,i,j,k) &
-                  -nu_BLK(i,j,k,iBlock)*totalNumRho*(kTi-kTn)
+                  -Nu_CB(i,j,k,iBlock)*totalNumRho*(kTi-kTn)
           end if
        else
           temps = totalSourceNumRho*kTn            &
-               + totalNumRho*(kTn-KTi)*nu_BLK(i,j,k,iBlock) &
+               + totalNumRho*(kTn-KTi)*Nu_CB(i,j,k,iBlock) &
                + totalPSNumRho*kTe0                &
                - totalLossNumRho*kTi               &
                - totalRLNumRhox*totalNumRho*KTe
@@ -713,13 +680,13 @@ contains
 
           S_IC(rho_+MaxSpecies+8,i,j,k) = S_IC(rho_+MaxSpecies+8,i,j,k) &
                - 0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
-               nu_BLK(i,j,k,iBlock)  &
+               Nu_CB(i,j,k,iBlock)  &
                - 0.50*uu2*(totalLossRho) &
                + InvGammaMinus1*temps
 
           S_IC(rho_+MaxSpecies+7,i,j,k) = S_IC(rho_+MaxSpecies+7,i,j,k) &
                + 0.5*GammaMinus1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
-               nu_BLK(i,j,k,iBlock)  &
+               Nu_CB(i,j,k,iBlock)  &
                + 0.50*(GammaMinus1)*uu2*(totalSourceRho) &
                + temps
 
@@ -764,6 +731,17 @@ contains
     character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    ! Allocate some arrays
+    if(.not.allocated(TempNuSpecies_CBI))then
+       allocate(TempNuSpecies_CBI(nI,nJ,nK,MaxBlock))
+       allocate(Productrate_CB(nI,nJ,nK,MaxBlock))
+       allocate(Ionizationrate_CBI(nI,nJ,nK,MaxBlock,2))
+       allocate(MaxSiSpecies_CB(nI,nJ,nK,MaxBlock))
+       allocate(MaxLiSpecies_CB(nI,nJ,nK,MaxBlock))
+       allocate(MaxSLSpecies_CB(nI,nJ,nK,MaxBlock))
+       allocate(Nu_CB(nI,nJ,nK,MaxBlock))
+    end if
 
     ! Read B0
     if(UseMarsB0)then
@@ -858,7 +836,7 @@ contains
        write(*,*)'nDenNuSpecies_CBI(iTest,jTest,kTest,iBlockTest,:)=',&
             nDenNuSpecies_CBI(iTest,jTest,kTest,iBlockTest,:)
        WRITE(*,*)''
-       write(*,*)'nu(testcell)=', nu_BLK(iTest,jTest,kTest,iBlockTest)
+       write(*,*)'nu(testcell)=', Nu_CB(iTest,jTest,kTest,iBlockTest)
        WRITE(*,*)''
        write(*,*)'Ionizationrate_CBI(testcell,CO2_)=',&
             Ionizationrate_CBI(iTest,jTest,kTest,iBlockTest,CO2_)
@@ -2008,7 +1986,6 @@ contains
 
   end subroutine ua_input
   !============================================================================
-
   subroutine set_neutral_density(iBlock)
 
     use ModMain
@@ -2111,7 +2088,7 @@ contains
     end do; end do; end do
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(UseHotO) then
-          nu_BLK(i,j,k,iBlock)=&
+          Nu_CB(i,j,k,iBlock)=&
                sum(nDenNuSpecies_CBI(i,j,k,iBlock,:))*nu0
 
           nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
@@ -2140,7 +2117,7 @@ contains
                nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
                nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
 
-          nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
+          Nu_CB(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
                nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
 
           nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
@@ -2166,11 +2143,11 @@ contains
                   nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
                   nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)
 
-             nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
+             Nu_CB(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
                   nDenNuSpecies_CBI(i,j,k,iBlock,O_)+&
                   nDenNuSpecies_CBI(i,j,k,iBlock,H_) )*nu0
           else
-             nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
+             Nu_CB(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
                   nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
 
              nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
