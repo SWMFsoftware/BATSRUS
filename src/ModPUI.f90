@@ -120,7 +120,7 @@ contains
 
     State_V(PuiFirst_:PuiLast_) = &
          exp(-0.5*Vpui_I**2/Tpui)*RhoPui/(2.0*cPi*Tpui)**1.5
-    
+
   end subroutine set_pui_state
   !============================================================================
   subroutine pui_advection_diffusion(iBlock)
