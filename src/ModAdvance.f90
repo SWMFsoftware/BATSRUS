@@ -35,7 +35,7 @@ module ModAdvance
 
   ! Magneto-friction algorithm parameters
   logical:: UseMagFriction = .false.
-  real   :: MagFrictionCoef
+  real   :: MagFrictionCoef, MagFrictionCoefOrig
 
   ! This should be changed to false probably
   logical:: UseDbTrick = .true., UseDbTrickNow = .true.
