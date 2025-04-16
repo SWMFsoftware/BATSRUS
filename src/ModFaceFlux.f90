@@ -2949,7 +2949,7 @@ contains
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe, BperU_, &
-           UseMagFriction, MagFrictionCoef
+           UseMagFriction, MagFrictionCoefOrig, MagFrictionCoef
       use ModTurbulence, ONLY: UseReynoldsDecomposition, &
            UseTransverseTurbulence, SigmaD
 
@@ -2972,9 +2972,9 @@ contains
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       if(UseMagFriction)then
          if(present(Cmax_I))then
-            Cmax_I(1)   = abs(Un) + InvDxyz/MagFrictionCoef
+            Cmax_I(1)   = abs(Un) + InvDxyz/MagFrictionCoefOrig
             ! Cmax_I(1)   = abs(Un)
-            CmaxDt_I(1) = abs(Un) + InvDxyz/MagFrictionCoef
+            CmaxDt_I(1) = abs(Un) + InvDxyz/MagFrictionCoefOrig
          end if
          if(present(Cleft_I))  Cleft_I(1)  = Un
          if(present(Cright_I)) Cright_I(1) = Un
