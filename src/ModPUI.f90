@@ -20,8 +20,8 @@ module ModPUI
 
   integer, parameter, public :: Pu3_ = nIonFluid
 
-  real :: VpuiMinSi = 10.0, VpuiMin
-  real :: VpuiMaxSi = 6000.0, VpuiMax
+  real :: VpuiMinSi = 1e4, VpuiMin
+  real :: VpuiMaxSi = 6e6, VpuiMax
 
   ! Logarithmic velocity grid for the PUIs.
   ! The bin centered velocities are:
@@ -100,7 +100,7 @@ contains
     real, optional, intent(in) :: StateRead_V(:)
     integer, optional, intent(in) :: iVarMatch_V(nVar)
 
-    real :: RhoPui, Ppui
+    real :: RhoPui, Tpui
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_pui_state'
@@ -112,21 +112,15 @@ contains
 
     if(present(StateRead_V))then
        RhoPui = StateRead_V(iVarMatch_V(iRho_I(Pu3_)))
-       Ppui = StateRead_V(iVarMatch_V(iP_I(Pu3_)))
+       Tpui = StateRead_V(iVarMatch_V(iP_I(Pu3_)))/RhoPui
     else
        RhoPui = State_V(iRho_I(Pu3_))
-       Ppui = State_V(iP_I(Pu3_))
+       Tpui = State_V(iP_I(Pu3_))/RhoPui
     end if
 
-    ! 4.0*cPi*Vpui_I**2*DeltaVpui_I*(RhoPui/(cTwoPi*Ppui))**1.5 &
-    !    *exp(-0.5*RhoPui*Vpui_I**2/Ppui)
     State_V(PuiFirst_:PuiLast_) = &
-         exp(-0.5*RhoPui*Vpui_I**2/Ppui)*Vpui_I**2*DeltaVpui_I
-
-    State_V(PuiFirst_:PuiLast_) = State_V(PuiFirst_:PuiLast_) &
-         /sum(State_V(PuiFirst_:PuiLast_))*RhoPui &
-         /(4.0*cPi*Vpui_I**2*DeltaVpui_I)
-
+         exp(-0.5*Vpui_I**2/Tpui)*RhoPui/(2.0*cPi*Tpui)**1.5
+    
   end subroutine set_pui_state
   !============================================================================
   subroutine pui_advection_diffusion(iBlock)
