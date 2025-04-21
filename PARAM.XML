@@ -5705,6 +5705,35 @@ might not work.
 The default value is F.
 </command>
 
+<command name="RESIZEINS">
+  <parameter name="StringInstrument" type="string" length="$lLine"/>
+  <parameter name="OffsetAngle" type="real"
+	min="-360" max="360" default="0"/>
+  <parameter name="rSizeImage" type="real" min="0" default="32"/>
+  <parameter name="xOffset" type="real" default="0"/>
+  <parameter name="yOffset" type="real" default="0"/>
+  <parameter name="rOccult" type="real" min="0" default="2"/>
+  <parameter name="MuLimbDarkening" type="real"
+	min="0" max="1" default="0.5"/>
+  <parameter name="nPix" type="integer" min="2" default="200"/>
+
+#RESIZEINS
+sdo:aia			StringInstrument
+0			OffsetAngle
+1.25			rSizeImage
+0			xOffset
+0			yOffset
+0			rOccult
+0			MuLimbDarkening
+512                     nPix
+
+Command may be used to overwrite hardwired parameters of the "instrument"
+synthetic image (size, pixel number etc). In the provided example the size
+of synthetic AIA images is reset to 1.25 (as the observed AIA images have),
+instead of hardwired 1.98 in the code. 
+
+</command>
+
 <command name="SAVEPLOTNAME">
   <parameter name="UsePlotNameStep" type="logical" default="T" />
   <parameter name="UsePlotNameTime" type="logical" default="T" />

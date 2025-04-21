@@ -251,6 +251,9 @@ contains
     character(len=500):: StringHeader
     real:: Param_I(4), CRFraction
 
+    ! To allow maxloc function
+    integer :: Location_I(1)
+
     character(len=17) :: NameSub='MH_set_parameters'
     !--------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp
@@ -1685,6 +1688,59 @@ contains
              write(*,*) '----------------------------------------'
           end if
 
+       case("#RESIZEINS")
+          call read_var('StringInstrument', StringInstrument)
+          ! obtain the name of the satellite and instrument
+          iTmp    = index(StringInstrument,':')
+          NameSat = StringInstrument(1:iTmp-1)
+          NameInstrument = StringInstrument(iTmp+1:len_trim(StringInstrument))
+          Location_I = maxloc(index(TypePlot_I(Plot_+1:Plot_+nPlotFile),&
+               trim(NameSat)//'_'//trim(NameInstrument)))
+          iFile = Location_I(1) + Plot_
+          if(index(TypePlot_I(iFile), &
+               trim(NameSat)//'_'//trim(NameInstrument))==0)then
+             if(iProc==0)&
+                  write(*,*)NameSub,': WARNING! '//trim(&
+                  StringInstrument)//' is not set'
+             call stop_mpi('Correct PARAM.in file!!!')
+          end if
+          ! Offset angle
+          call read_var('OffsetAngle', OffsetAngle_I(iFile))
+          OffsetAngle_I(iFile) = OffsetAngle_I(iFile)*cDegToRad
+          ! read max dimensions of the 2d image plane
+          call read_var('rSizeImage', rSizeImage_I(iFile))
+          ! read the position of image origin relative to grid origin
+          call read_var('xOffset', xOffset_I(iFile))
+          call read_var('yOffset', yOffset_I(iFile))
+          ! read the occulting radius
+          call read_var('rOccult', rOccult_I(iFile))
+          ! read the limb darkening parameter
+          call read_var('MuLimbDarkening', MuLimbDarkening)
+          ! read the number of pixels
+          call read_var('nPix', nPixel_I(iFile))
+          if(iProc==0)then
+             write(*,*) '----------------------------------------'
+             write(*,*) 'Resize instrument image'
+             write(*,*) ' iFile        =', iFile
+             write(*,*) ' DnOutput_I    =', DnOutput_I(iFile)
+             write(*,*) ' DtOutput_I    =', DtOutput_I(iFile)
+             write(*,*) ' TypePlot_I    =', TypePlot_I(iFile)
+             write(*,*) ' TypePlotFormat_I    =', TypePlotFormat_I(iFile)
+             write(*,*) ' TypeFile     =', TypeFile_I(iFile)
+             write(*,*) ' dimensional  =', IsDimensionalPlot_I(iFile)
+             write(*,*) ' StringPlotVar_I   =', &
+                  trim(StringPlotVar_I(iFile))
+             write(*,*) ' StringPlotParam_I =', &
+                  trim(StringPlotParam_I(iFile))
+             write(*,*) ' OffsetAngle_I =', OffsetAngle_I(iFile)
+             write(*,*) ' rSizeImage_I =', rSizeImage_I(iFile)
+             write(*,*) ' xOffset_I =', xOffset_I(iFile)
+             write(*,*) ' yOffset_I =', yOffset_I(iFile)
+             write(*,*) ' rOccult_I=', rOccult_I(iFile)
+             write(*,*) ' MuLimbDarkening =', MuLimbDarkening
+             write(*,*) ' nPixel_I =', nPixel_I(iFile)
+             write(*,*) ' NameLosTable_I =', NameLosTable_I(iFile)
+          end if
        case("#NOREFRACTION")
           call read_var('UseNoRefraction', UseNoRefraction)
 
