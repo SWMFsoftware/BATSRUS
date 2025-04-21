@@ -173,7 +173,7 @@ contains
     logical :: IsUninitialized      = .true.
 
     ! local variables for the plot type 'INS'
-    integer :: iTmp, iFileStart, iFileRead, iFileInstrument, nPlotFileRead
+    integer :: iFileStart, iFileRead, iFileInstrument, nPlotFileRead
     integer :: iInstrument, nInstrument, iSat
     character(LEN=10)  :: NameSat, NameInstrument, StringInstrument_I(20) = ''
     character(LEN=200) :: StringInstrument
@@ -250,9 +250,6 @@ contains
     real(Real8_):: CarringtonRotationNumber
     character(len=500):: StringHeader
     real:: Param_I(4), CRFraction
-
-    ! To allow maxloc function
-    integer :: Location_I(1)
 
     character(len=17) :: NameSub='MH_set_parameters'
     !--------------------------------------------------------------------------
@@ -1202,9 +1199,9 @@ contains
                       iFileInstrument = iFile + iInstrument - 1
 
                       ! obtain the name of the satellite and instrument
-                      iTmp    = index(StringInstrument_I(iInstrument),':')
-                      NameSat = StringInstrument_I(iInstrument)(1:iTmp-1)
-                      NameInstrument = StringInstrument_I(iInstrument)(iTmp+1:)
+                      i = index(StringInstrument_I(iInstrument), ':')
+                      NameSat = StringInstrument_I(iInstrument)(1:i-1)
+                      NameInstrument = StringInstrument_I(iInstrument)(i+1:)
 
                       ! plotting frequency is the same as iFile
                       DnOutput_I(iFileInstrument) = DnOutput_I(iFile)
@@ -1690,18 +1687,17 @@ contains
 
        case("#INSTRUMENT")
           call read_var('StringInstrument', StringInstrument)
-          ! obtain the name of the satellite and instrument
-          iTmp    = index(StringInstrument,':')
-          NameSat = StringInstrument(1:iTmp-1)
-          NameInstrument = StringInstrument(iTmp+1:len_trim(StringInstrument))
-          Location_I = maxloc(index(TypePlot_I(Plot_+1:Plot_+nPlotFile), &
-               trim(NameSat)//'_'//trim(NameInstrument)))
-          iFile = Location_I(1) + Plot_
-          if(index(TypePlot_I(iFile), &
-               trim(NameSat)//'_'//trim(NameInstrument)) == 0)then
-             if(iProc == 0) write(*,*) NameSub,': WARNING! ', &
-                  trim(StringInstrument),' is not set'
-             call stop_mpi('Correct PARAM.in file!!!')
+          ! Replace colon with underscore
+          i = index(StringInstrument, ':')
+          if(i > 1) StringInstrument(i:i) = '_'
+          ! Search TypePlot_I array for StringInstrument
+          iFile = maxloc(index(TypePlot_I(Plot_+1:Plot_+nPlotFile), &
+               trim(StringInstrument)), DIM=1) + Plot_
+          ! Check if iFile is really containing the instrument name...
+          if(index(TypePlot_I(iFile), trim(StringInstrument)) < 1)then
+             if(iProc == 0) write(*,*) NameSub,' ERROR:', &
+                  trim(StringInstrument),' was not set in prior #SAVEPLOT'
+             call stop_mpi('Correct PARAM.in')
           end if
           if(iProc == 0) write(*,*)'Changing default values for iFile=', iFile
           call read_var('OffsetAngle', OffsetAngle_I(iFile))
@@ -3477,7 +3473,7 @@ contains
       end do
 
       ! Find the integer of the corresponding boundary type.
-      do i=Coord1MinBc_,Coord3MaxBc_
+      do i = Coord1MinBc_, Coord3MaxBc_
          iTypeCellBc_I(i) = UnknownBC_
          do iTypeBC = 1, nTypeBC
             if(TypeCellBc_I(i) == trim(NameCellBc_I(iTypeBC))) then
