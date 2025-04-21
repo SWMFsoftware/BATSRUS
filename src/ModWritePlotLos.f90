@@ -686,34 +686,30 @@ contains
 
       use ModGeometry, ONLY: &
            xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox
-      use BATL_lib,           ONLY: xyz_to_coord, &
-           get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
+      use BATL_lib,  ONLY: xyz_to_coord, CoordMin_D, CoordMax_D
+      use ModFieldLineThread, ONLY: UseFieldLineThreads
 
       real, intent(in):: XyzStartIn_D(3)
       real, intent(in):: LengthMax
       logical, optional, intent(in) :: IsThreadedGap
 
       real:: Length          ! Total length of integral
-      real:: Ds              ! Length of line segment
+      real:: Ds, DsNew       ! Length of line segment
 
-      real:: XyzLos_D(3)    ! Coordinate of center of line segment
-      integer:: iNode, iDimMin = 1
-      real, dimension(MaxDim):: &
-           PositionMin_D, PositionMax_D, &
-           CoordMaxBlock_D, CoordBlock_D, CoordSizeBlock_D, &
-           CoordSize_D, CoordLos_D, &
-           XyzLosNew_D, CoordLosNew_D, dCoord_D
+      integer:: iDimMin = 1
+      real, dimension(MaxDim)::  XyzLos_D, CoordMaxBlock_D, CoordMidPoint_D, &
+           CoordLos_D, XyzLosNew_D, CoordLosNew_D, CellSizeOld_D
 
       real, parameter:: StepMax = 1.0, StepMin = 0.5, StepGood = 0.75
-      real:: Step, DsTiny
-      logical:: IsEdge
+      real:: Step
+      logical:: IsEdge, UseReducedDs
 
       logical :: DoTestPe0 = .false.
 
       logical:: DoTest
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
-      iDimMin = r_
+      iDimMin = 1
       if(present(IsThreadedGap))iDimMin = r_ + 1
       DoTest = iPix==iPixTest .and. jPix==iPixTest
       DoTestPe0 = DoTest.and.iProc==0
@@ -725,137 +721,65 @@ contains
               ', heliocentric distance = ', norm2(&
               XyzStartIn_D + LengthMax*LosPix_D)
       end if
-
-      CoordSize_D = CoordMax_D - CoordMin_D
       ! Initial length of segment
       Ds = cTiny*&
            (xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
-      DsTiny = Ds
-      if(nByteReal == 8) DsTiny = 0.001*Ds
 
       ! Initialize "new" position as the starting point
       XyzLosNew_D = XyzStartIn_D
       call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
-
-      ! Initialize block boundaries so that point is surely outside
-      CoordMinBlock_D = CoordMax_D
-      CoordMaxBlock_D = CoordMin_D
+      if(do_return(CoordLosNew_D, IsThreadedGap))RETURN
+      call find_block(XyzLosNew_D, iProcFound, iBlock, &
+           CoordMinBlock_D, CoordMaxBlock_D, CellSize_D, IsThreadedGap)
+      if(DoTestPe0)then
+         write(*,'(a,a,i5)')NameSub,': new iBlock=', iBlock
+         write(*, '(a, 3es14.6)')NameSub//': CoordMin=', CoordMinBlock_D
+         write(*, '(a, 3es14.6)')NameSub//': CoordMax=', CoordMaxBlock_D
+      end if
 
       if(DoTestPe0) write(*,'(a,es14.6)') NameSub//':  Ds=',Ds
-
-      Length = -Ds
+      Length = -Ds; DsNew = Ds
       LOOPLINE: do
          ! Total length integrated so far
          Length  = Length + Ds
-
-         ! Stop if reached maximum length
-         if(Length > LengthMax) EXIT LOOPLINE
-
-         ! Move to new position
-         XyzLos_D   = XyzLosNew_D
-         CoordLos_D = CoordLosNew_D
-         if(.not.present(IsThreadedGap)) then
-            ! Stop integration if we reached the edge of the domain
-            if(  any(CoordLosNew_D > CoordMax_D) .or. &
-                 any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
-         end if
+         Ds = DsNew
          if(Ds <= 0.0)then
             ! To prevent intinite looping
             write(*,*)'ds=', Ds
             call stop_mpi(NameSub//&
                  ': Algorithm failed: zero integration step')
          end if
+	 ! Stop if reached maximum length
+         if(Length > LengthMax) RETURN
+         ! Store location at the beginning of time step
+         XyzLos_D   = XyzLosNew_D
+         CoordLos_D = CoordLosNew_D
+         ! Store grid size
+         CellSizeOld_D = CellSize_D
          if(DoTestPe0)write(*,'(a,a,6es14.6)') NameSub,&
               ': Ds, Length, XyzLos, R=',&
               Ds, Length, XyzLos_D, norm2(XyzLos_D)
 
-         ! Check if we are still in the same block or not
-         if(  any(CoordLos_D(iDimMin:) < CoordMinBlock_D(iDimMin:)) .or. &
-              any(CoordLos_D(iDimMin:) > CoordMaxBlock_D(iDimMin:)))then
-            if(present(IsThreadedGap))then
-               ! Find new block/node, increase the radial coordinate to
-               ! put the point above the inner boundary
-               call find_grid_block((rInner + cTiny)*XyzLos_D/norm2(XyzLos_D),&
-                    iProcFound, iBlock, iNodeOut=iNode)
-            else
-               ! Find new block/node, increase the radial coordinate to
-               ! put the point above the inner boundary
-               call find_grid_block(XyzLos_D,&
-                    iProcFound, iBlock, iNodeOut=iNode)
-            end if
-            ! Set block coordinates and the cell size on all processors
-            call get_tree_position(iNode, PositionMin_D, PositionMax_D)
-            CoordMinBlock_D = CoordMin_D + CoordSize_D*PositionMin_D  ! Start
-            CoordMaxBlock_D = CoordMin_D + CoordSize_D*PositionMax_D  ! End
-            CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) ! Center
-            CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
-            CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
-            if(present(IsThreadedGap))CellSize_D(r_) = 1/dCoord1Inv
-            if(DoTestPe0)then
-               write(*,'(a,a,i5)')NameSub,': new iBlock=', iBlock
-               write(*, '(a, 3es14.6)')NameSub//': CoordMin=', CoordMinBlock_D
-               write(*, '(a, 3es14.6)')NameSub//': CoordMax=', CoordMaxBlock_D
-            end if
+         ! Move to the middle of the segment
+         XyzLosNew_D = XyzLos_D + 0.5*Ds*LosPix_D
+         call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
 
-         end if
-
-         ! Check if mid point will be inside the block. If not, reduce Ds
+         ! Check if midpoint is inside block cell size
          IsEdge = .false.
-         REFINEDS:do
-            ! Move to the middle of the segment
-            XyzLosNew_D = XyzLos_D + 0.5*Ds*LosPix_D
-            call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
-
-            ! Check if midpoint is inside block + 1 cell size
-            dCoord_D = abs(CoordLosNew_D - CoordBlock_D)
-            if(all(2*dCoord_D(iDimMin:) <= CoordSizeBlock_D(iDimMin:)))&
-                 EXIT REFINEDS
-
-            ! Reduce Ds but make sure that 2*Ds is still outside.
-            Ds = Ds*0.5
-
-            ! Don't integrate this segment if it is very small
-            ! Since we took half of Ds, XyzLosNew is at the end
-            if(Ds < DsTiny)then
-               if(DoTestPe0)write(*,'(a,es14.6)')&
-                    'Too small step at the block boundary=', Ds
-               CYCLE LOOPLINE
-            end if
-
-            ! Make sure we don't try to increase the step below
+         if(is_out(CoordLosNew_D, CoordMinBlock_D, CoordMaxBlock_D,iDimMin)&
+              )then
+            ! If the line leaves the comp. domain, stop integration.
+	    if(do_return(CoordLosNew_D, IsThreadedGap))RETURN
+            call find_block(XyzLosNew_D, iProcFound, iBlock, &
+                 CoordMinBlock_D, CoordMaxBlock_D, CellSize_D, &
+                 IsThreadedGap)
+            UseReducedDs = CellSize_D(iDimMin) < 0.9*CellSizeOld_D(iDimMin)
+            ! $$! Temporary change for development purpose
+            ! UseReducedDs = .true.
+            if(UseReducedDs)Ds = 0.50*Ds
             IsEdge = .true.
-         end do REFINEDS
-
-         ! Check how big the largest change is in the generalized coordinates
-         Step = maxval(abs(CoordLosNew_D - CoordLos_D)/CellSize_D)
-
-         ! If change is too large or too small adjust the step size
-         if(Step > StepMax .or. (Step < StepMin .and. .not. IsEdge))then
-            ! New interval size corresponds to a StepGood
-            ! in generalized coordinates instead of Step
-            Ds = Ds*StepGood/Step
-
-            ! Check if mid point will be inside the block. If not, reduce Ds
-            do
-               ! Move to the middle of the modified segment
-               XyzLosNew_D = XyzLos_D + 0.5*Ds*LosPix_D
-               call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
-
-               ! Check if midpoint is inside block
-               dCoord_D = abs(CoordLosNew_D - CoordBlock_D)
-               if(all(2*dCoord_D(iDimMin:) <= CoordSizeBlock_D(iDimMin:)))EXIT
-
-               ! Reduce Ds and try again
-               Ds = Ds*0.5
-
-               ! Don't integrate this segment if it is very small
-               if(Ds < DsTiny)then
-                  if(DoTestPe0)write(*,'(a,es14.6)')&
-                       'Too small step at the block boundary=', Ds
-                  CYCLE LOOPLINE
-               end if
-            end do
          end if
+
          if(Length + Ds >= LengthMax)then
             ! Reduce the integration step near the end of segment
             ! and add contribution from this segment to the image
@@ -870,19 +794,147 @@ contains
                     norm2(XyzLosNew_D)
             end if
             RETURN
-         else
-            if(iProc == iProcFound)then
+         end if
+         if(iProc == iProcFound)then
+            if(present(IsThreadedGap))then
+               call add_segment(Ds, XyzLosNew_D,.true.,DoTest)
+            elseif(UseFieldLineThreads .and. &
+                 CoordLosNew_D(1) < CoordMin_D(1) + 0.5*CellSize_D(1))then
+               if(DoPlotThread)&
+                    call add_segment(Ds, XyzLosNew_D,.true.,DoTest)
+            else
                ! Add contribution from this segment to the image
-               call add_segment(Ds, XyzLosNew_D,IsThreadedGap,DoTest)
+               call add_segment(Ds, XyzLosNew_D, DoTest=DoTest)
             end if
-
-            ! Move XyzLosNew to the end of the segment
-            XyzLosNew_D = XyzLos_D + Ds*LosPix_D
-            call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
+         end if
+         ! Set end location and next Ds
+         if(IsEdge.and.UseReducedDs)then
+            ! Assumed mid point is now claimed to be the end point
+            ! Ds is already set to be Ds/2
+            ! Ds/2 is the best estimate for next integration step too
+            DsNew = Ds
+            CYCLE LOOPLINE
+         end if
+         ! Move XyzLosNew to the end of the segment
+         XyzLosNew_D = XyzLos_D + Ds*LosPix_D
+         ! Save GenCoords for mid point
+         CoordMidPoint_D = CoordLosNew_D
+         call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
+         ! Check if we are still in the same block or not
+         if(is_out(CoordLosNew_D, CoordMinBlock_D, CoordMaxBlock_D, &
+              iDimMin))then
+            if(do_return(CoordLosNew_D, IsThreadedGap))RETURN
+            call find_block(XyzLosNew_D, iProcFound, iBlock, &
+                 CoordMinBlock_D, CoordMaxBlock_D, CellSize_D,IsThreadedGap)
+            if(DoTestPe0)then
+               write(*,'(a,a,i5)')NameSub,': new iBlock=', iBlock
+               write(*, '(a, 3es14.6)')NameSub//&
+                    ': CoordMin=', CoordMinBlock_D
+               write(*, '(a, 3es14.6)')NameSub//&
+                    ': CoordMax=', CoordMaxBlock_D
+            end if
+            ! Check if the new block is finer
+            UseReducedDs = CellSize_D(iDimMin) < 0.9*CellSizeOld_D(iDimMin)
+            if(UseReducedDs)then
+               DsNew = 0.50*Ds
+               CYCLE LOOPLINE
+            else
+               if(IsEdge) then
+                  ! Start, mid, and end points are all in different blocks.
+                  ! No opportunity to re-evaluate step, keep it
+                  DsNew = Ds
+                  CYCLE LOOPLINE
+               else
+                  ! Start and mid points are in the same block,
+                  ! end point is not.
+                  ! Check the largest change is in the gen. coords
+                  ! from start to mid points
+                  Step = maxval(abs(CoordMidPoint_D - CoordLos_D)/CellSize_D)
+                  ! Multiply by 2, since the change is from start to mid
+                  ! points, not from start to end ones,
+                  Step = 2.0*Step
+               end if
+            end if
+         else
+            if(IsEdge) then
+               ! Mid and end points are in the same block,
+               ! start point is not.
+               ! Check the largest change is in the gen. coords
+               ! from mid to end points
+               Step = maxval(abs(CoordLosNew_D - CoordMidPoint_D)/CellSize_D)
+               ! Multiply by 2, since the change is from mid to end
+               ! points, not from start to end ones,
+               Step = 2.0*Step
+            else
+               ! End point and start points are at the same block
+               ! Check the largest change is in the gen coords
+               Step = maxval(abs(CoordLosNew_D - CoordLos_D)/CellSize_D)
+            end if
+         end if
+         ! If change is too large or too small adjust the step size
+         if(Step > StepMax .or. Step < StepMin)then
+            ! New interval size corresponds to a StepGood
+            ! in generalized coordinates instead of Step
+            DsNew = Ds*StepGood/Step
+         else
+            DsNew = Ds
          end if
       end do LOOPLINE
 
     end subroutine integrate_line
+    !==========================================================================
+    logical function do_return(Coord_D, IsThreadedGap)
+      use BATL_lib,  ONLY: CoordMin_D, CoordMax_D
+
+      real, intent(in) :: Coord_D(MaxDim)
+      logical, intent(in), optional :: IsThreadedGap
+      !------------------------------------------------------------------------
+      if(present(IsThreadedGap)) then
+         do_return = .false.
+      else
+         ! Stop integration if we reached the edge of the domain
+         do_return =  any(Coord_D > CoordMax_D .or. Coord_D < CoordMin_D)
+      end if
+    end function do_return
+    !==========================================================================
+    logical function is_out(Coord_D, CoordMin_D, CoordMax_D, iDimMin)
+      real, dimension(MaxDim), intent(in) :: Coord_D, CoordMin_D, CoordMax_D
+      integer, intent(in) :: iDimMin
+      !------------------------------------------------------------------------
+      is_out = any(Coord_D(iDimMin:) < CoordMin_D(iDimMin:))&
+           .or.any(Coord_D(iDimMin:) > CoordMax_D(iDimMin:))
+    end function is_out
+    !==========================================================================
+    subroutine find_block(Xyz_D, iProcFound, iBlock, CoordMinBlock_D, &
+         CoordMaxBlock_D, CellSize_D, IsThreadedGap)
+      use BATL_lib, ONLY: get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
+      real, intent(in) :: Xyz_D(MaxDim)
+      integer, intent(out) :: iProcFound, iBlock
+      real, intent(out) :: CoordMinBlock_D(MaxDim), CoordMaxBlock_D(MaxDim)
+      real, intent(out) :: CellSize_D(MaxDim)
+      logical, intent(in), optional :: IsThreadedGap
+      integer :: iNode
+      real, dimension(MaxDim) :: PositionMin_D, PositionMax_D, CoordSize_D
+      !------------------------------------------------------------------------
+      CoordSize_D = CoordMax_D - CoordMin_D
+      if(present(IsThreadedGap))then
+         ! Find new block/node, increase the radial coordinate to
+         ! put the point above the inner boundary
+         call find_grid_block((rInner + cTiny)*Xyz_D/norm2(Xyz_D),&
+              iProcFound, iBlock, iNodeOut=iNode)
+      else
+         ! Find new block/node, increase the radial coordinate to
+         ! put the point above the inner boundary
+         call find_grid_block(Xyz_D,&
+              iProcFound, iBlock, iNodeOut=iNode)
+      end if
+      ! Set block coordinates and the cell size on all processors
+      call get_tree_position(iNode, PositionMin_D, PositionMax_D)
+      CoordMinBlock_D = CoordMin_D + CoordSize_D*PositionMin_D  ! Start
+      CoordMaxBlock_D = CoordMin_D + CoordSize_D*PositionMax_D  ! End
+      CellSize_D = (CoordMaxBlock_D - CoordMinBlock_D)/nIjk_D   ! Cell size
+      if(present(IsThreadedGap))CellSize_D(r_) = 1/dCoord1Inv
+    end subroutine find_block
     !==========================================================================
     subroutine add_segment(Ds, XyzLos_D, IsThreadedGap, DoTest)
 
@@ -997,8 +1049,7 @@ contains
       if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
          ! Interpolate state vector in the point with gen coords
          ! equal to GenLos_D
-         if(present(IsThreadedGap) .or. (DoPlotThread .and. &
-              GenLos_D(1) < CoordMin_D(1) + 0.5*CellSize_D(1) )) then
+         if(present(IsThreadedGap)) then
             ! point is inside gap or gap is used and the point is close to it
             ! Interpolate within the threaded gap
             call interpolate_thread_state(GenLos_D, iBlock, State_V, DoTest)
