@@ -5705,7 +5705,7 @@ might not work.
 The default value is F.
 </command>
 
-<command name="RESIZEINS">
+<command name="INSTRUMENT">
   <parameter name="StringInstrument" type="string" length="$lLine"/>
   <parameter name="OffsetAngle" type="real"
 	min="-360" max="360" default="0"/>
@@ -5717,7 +5717,7 @@ The default value is F.
 	min="0" max="1" default="0.5"/>
   <parameter name="nPix" type="integer" min="2" default="200"/>
 
-#RESIZEINS
+#INSTRUMENT
 sdo:aia			StringInstrument
 0			OffsetAngle
 1.25			rSizeImage
@@ -5727,11 +5727,10 @@ sdo:aia			StringInstrument
 0			MuLimbDarkening
 512                     nPix
 
-Command may be used to overwrite hardwired parameters of the "instrument"
-synthetic image (size, pixel number etc). In the provided example the size
-of synthetic AIA images is reset to 1.25 (as the observed AIA images have),
-instead of hardwired 1.98 in the code. 
-
+This command overwrites the default parameters of instrument StringInstrument
+that were set by a previous #SAVEPLOT command.
+In the above example the size of the synthetic AIA image is set to 1.25
+instead of default value 1.98.
 </command>
 
 <command name="SAVEPLOTNAME">
