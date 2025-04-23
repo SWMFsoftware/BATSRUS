@@ -6326,7 +6326,7 @@ Only useful if the initial condition has a non-trivial analytic form.
 	  required="F">
       <option name="HGR" />
       <option name="HGI" />
-      <option name="earth" />
+      <option name="GSE" />
     </part>
     <part name="NameSat" type="string" input="select"
 	  required="F">
@@ -6503,9 +6503,9 @@ paraboloidx stretched	StringShape
 
 #REGION
 conemars                NameRegion
-conex sat:mars          StringShape
+conex0 sat:mars          StringShape
 350                     Heeight
-130                     Radius
+100                     Radius
 
 #REGION
 myregion		NameRegion
