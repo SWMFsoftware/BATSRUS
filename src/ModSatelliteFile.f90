@@ -298,6 +298,18 @@ contains
     end select
   end subroutine set_satellite_file_status
   !============================================================================
+  subroutine set_name_sat(iSat)
+
+    integer, intent(in) :: iSat
+    integer :: l1,l2
+    !--------------------------------------------------------------------------
+    l1 = index(NameFileSat_I(iSat), '/', back=.true.) + 1
+    l2 = index(NameFileSat_I(iSat), '.') - 1
+    if (l1-1 <= 0) l1 = 1
+    if (l2+1 <= 0) l2 = len_trim(NameFileSat_I(iSat))
+    NameSat_I(iSat) = NameFileSat_I(iSat)(l1:l2)
+  end subroutine set_name_sat
+  !============================================================================
   subroutine set_name_file(iSat)
     use ModMain,   ONLY: nStep, IsTimeAccurate
     use ModIO,     ONLY: NamePlotDir, StringDateOrTime
@@ -313,11 +325,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    l1 = index(NameFileSat_I(iSat), '/', back=.true.) + 1
-    l2 = index(NameFileSat_I(iSat), '.') - 1
-    if (l1-1 <= 0) l1 = 1
-    if (l2+1 <= 0) l2 = len_trim(NameFileSat_I(iSat))
-    NameSat_I(iSat) = NameFileSat_I(iSat)(l1:l2)
+    call set_name_sat(iSat)
 
     select case(TypeTrajTimeRange_I(iSat))
     case('orig')
@@ -549,7 +557,7 @@ contains
           write(*,*) NameSub,': ySat=', XyzSat_DII(2,iSat,1:nPoint)
           write(*,*) NameSub,': zSat=', XyzSat_DII(3,iSat,1:nPoint)
        end if
-       call set_name_file(iSat)
+       call set_name_sat(iSat)
     end do SATELLITES
 
     deallocate(Time_I, Xyz_DI)
