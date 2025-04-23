@@ -6322,6 +6322,19 @@ Only useful if the initial condition has a non-trivial analytic form.
 	  if="$NameShape !~ /user/ and $_command =~ /REGION/">
       <option name="tapered" />
     </part>
+    <part name="TypeCoord" type="string" input="select"
+	  required="F">
+      <option name="HGR" />
+      <option name="HGI" />
+      <option name="earth" />
+    </part>
+    <part name="NameSat" type="string" input="select"
+	  required="F">
+      <option name="sat:earth" />
+      <option name="sat:mars" />
+      <option name="sat:sta" />
+      <option name="sat:stb" />
+    </part>
   </parameter>
   <if expr="$NameShape !~ /box|user|0/">
     <parameter name="xPosition" type="real" default="0"/>
@@ -6487,6 +6500,12 @@ paraboloidx stretched	StringShape
 -100.0			Height
   30.0			Radius
   20.0			RadiusPerp
+
+#REGION
+conemars                NameRegion
+conex sat:mars          StringShape
+350                     Heeight
+130                     Radius
 
 #REGION
 myregion		NameRegion
