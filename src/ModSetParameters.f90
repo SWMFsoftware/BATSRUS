@@ -173,7 +173,7 @@ contains
     logical :: IsUninitialized      = .true.
 
     ! local variables for the plot type 'INS'
-    integer :: iTmp, iFileStart, iFileRead, iFileInstrument, nPlotFileRead
+    integer :: iFileStart, iFileRead, iFileInstrument, nPlotFileRead
     integer :: iInstrument, nInstrument, iSat
     character(LEN=10)  :: NameSat, NameInstrument, StringInstrument_I(20) = ''
     character(LEN=200) :: StringInstrument
@@ -1199,9 +1199,9 @@ contains
                       iFileInstrument = iFile + iInstrument - 1
 
                       ! obtain the name of the satellite and instrument
-                      iTmp    = index(StringInstrument_I(iInstrument),':')
-                      NameSat = StringInstrument_I(iInstrument)(1:iTmp-1)
-                      NameInstrument = StringInstrument_I(iInstrument)(iTmp+1:)
+                      i = index(StringInstrument_I(iInstrument), ':')
+                      NameSat = StringInstrument_I(iInstrument)(1:i-1)
+                      NameInstrument = StringInstrument_I(iInstrument)(i+1:)
 
                       ! plotting frequency is the same as iFile
                       DnOutput_I(iFileInstrument) = DnOutput_I(iFile)
@@ -1211,15 +1211,15 @@ contains
                       PlotDx_DI(:,iFileInstrument) = -1
 
                       ! default values, which may be overwritten below
-                      ObsPos_DI(:,iFileInstrument)   = [200.0, 0.0, 0.0]
+                      ObsPos_DI(:,iFileInstrument)    = [200.0, 0.0, 0.0]
                       OffsetAngle_I(iFileInstrument)  = 0.
-                      rSizeImage_I(iFileInstrument)  = 1.98
-                      xOffset_I(iFileInstrument)       = 0.
-                      yOffset_I(iFileInstrument)       = 0.
-                      rOccult_I(iFileInstrument) = 0.
-                      MuLimbDarkening                         = 0.
+                      rSizeImage_I(iFileInstrument)   = 1.98
+                      xOffset_I(iFileInstrument)      = 0.
+                      yOffset_I(iFileInstrument)      = 0.
+                      rOccult_I(iFileInstrument)      = 0.
+                      MuLimbDarkening                 = 0.
                       nPixel_I(iFileInstrument)       = 512
-                      NameLosTable_I(iFileInstrument)  = ''
+                      NameLosTable_I(iFileInstrument) = ''
 
                       ! setting plot variables that may be overwritten below
                       IsDimensionalPlot_I(iFileInstrument) = &
@@ -1344,7 +1344,7 @@ contains
                    ! adjust iFileStart
                    iFileStart = iFileStart + nInstrument - 1
                 endif
-             elseif (index(StringPlot,'rfr')>0) then
+             elseif (index(StringPlot,'rfr') > 0) then
                 ! Refractive radiowave image
                 TypePlotArea='rfr'
                 ! Observer position
@@ -1684,6 +1684,33 @@ contains
              end do
              write(*,*) '----------------------------------------'
           end if
+
+       case("#INSTRUMENT")
+          call read_var('StringInstrument', StringInstrument)
+          ! Replace colon with underscore
+          i = index(StringInstrument, ':')
+          if(i > 1) StringInstrument(i:i) = '_'
+          ! Search TypePlot_I array for StringInstrument
+          iFile = maxloc(index(TypePlot_I(Plot_+1:Plot_+nPlotFile), &
+               trim(StringInstrument)), DIM=1) + Plot_
+          ! Check if iFile is really containing the instrument name...
+          if(index(TypePlot_I(iFile), trim(StringInstrument)) < 1)then
+             if(iProc == 0) write(*,*) NameSub,' ERROR:', &
+                  trim(StringInstrument),' was not set in prior #SAVEPLOT'
+             call stop_mpi('Correct PARAM.in')
+          end if
+          if(iProc == 0) write(*,*)'Changing default values for iFile=', iFile
+          call read_var('OffsetAngle', OffsetAngle_I(iFile))
+          OffsetAngle_I(iFile) = OffsetAngle_I(iFile)*cDegToRad
+          ! read max dimensions of the 2d image plane
+          call read_var('rSizeImage', rSizeImage_I(iFile))
+          ! read the position of image origin relative to grid origin
+          call read_var('xOffset', xOffset_I(iFile))
+          call read_var('yOffset', yOffset_I(iFile))
+          call read_var('rOccult', rOccult_I(iFile))
+          call read_var('MuLimbDarkening', MuLimbDarkening)
+          ! read the number of pixels
+          call read_var('nPix', nPixel_I(iFile))
 
        case("#NOREFRACTION")
           call read_var('UseNoRefraction', UseNoRefraction)
@@ -3446,7 +3473,7 @@ contains
       end do
 
       ! Find the integer of the corresponding boundary type.
-      do i=Coord1MinBc_,Coord3MaxBc_
+      do i = Coord1MinBc_, Coord3MaxBc_
          iTypeCellBc_I(i) = UnknownBC_
          do iTypeBC = 1, nTypeBC
             if(TypeCellBc_I(i) == trim(NameCellBc_I(iTypeBC))) then

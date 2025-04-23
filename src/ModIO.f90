@@ -65,7 +65,7 @@ module ModIO
   real :: rOccult_I(MaxFile), MuLimbDarkening
   real :: OffsetAngle_I(MaxFile)
   real :: ObsPos_DI(3,MaxFile)
-  character(len=20) :: NameLosTable_I(MaxFile)
+  character(len=20) :: NameLosTable_I(MaxFile) = '???'
   logical:: UseLosSimple = .false. !!! experiment with simple LOS algorithm
 
   ! variables for the line of sight plots using the instrument names
