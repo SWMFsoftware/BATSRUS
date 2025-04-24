@@ -88,7 +88,8 @@ contains
       use ModAMR, ONLY: DoSetAmrLimits, set_amr_limits
       use CON_axes, ONLY: transform_matrix, dLongitudeHgr, dLongitudeHgi
       use ModNumConst, ONLY: cTwoPi
-
+      use ModCoordTransform, ONLY: xyz_to_lonlat, rot_matrix_y, rot_matrix_z
+      use ModSatelliteFile,      ONLY: xyz_sat
       ! local variables
 
       character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -96,11 +97,21 @@ contains
 
       integer:: iBlock, iArea
       character(len=3):: TypeCoordTmp
+      real :: Dir_D(3), Longitude, Latitude
       !------------------------------------------------------------------------
       call set_batsrus_grid
 
       ! adjust if Area_I(iArea)%TypeCoordIn == hgr/hgi/GSE
       do iArea = 1, nArea
+         if(Area_I(iArea)%NameSat/='')then
+            ! Rotation of the shape to align x-axis with the direction
+            ! toward a satellite
+            Dir_D = xyz_sat(trim(Area_I(iArea)%NameSat))
+            call xyz_to_lonlat(Dir_D, Longitude, Latitude)
+            Area_I(iArea)%DoRotate = .true.
+            Area_I(iArea)%Rotate_DD =matmul(rot_matrix_z(-Longitude),&
+                 rot_matrix_y(Latitude))
+         end if
          TypeCoordTmp = Area_I(iArea)%TypeCoordIn
          if (TypeCoordTmp == '' .or. TypeCoordTmp == TypeCoordSystem) CYCLE
 
@@ -528,12 +539,14 @@ contains
          pic_set_cell_status, iPicGrid, iPicDecomposition
     use BATL_region, only: Area_I, nArea
     use CON_axes, ONLY: transform_matrix
+    use ModCoordTransform, ONLY: xyz_to_lonlat, rot_matrix_y, rot_matrix_z
+    use ModSatelliteFile,      ONLY: xyz_sat
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
     integer:: iArea
     character(len=3):: TypeCoordTmp
-
+    real :: Dir_D(3), Longitude, Latitude
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_advance'
     !--------------------------------------------------------------------------
@@ -715,12 +728,21 @@ contains
        ! direction can be updated
        do iArea = 1, nArea
           TypeCoordTmp = Area_I(iArea)%TypeCoordIn
-          if (TypeCoordTmp /= 'GSE') CYCLE
+          if (TypeCoordTmp == 'GSE')then
 
-          ! Rotate if TypeCoordIn == GSE
-          Area_I(iArea)%DoRotate = .true.
-          Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
-               TypeCoordSystem, TypeCoordTmp)
+             ! Rotate if TypeCoordIn == GSE
+             Area_I(iArea)%DoRotate = .true.
+             Area_I(iArea)%Rotate_DD = transform_matrix(tSimulation, &
+                  TypeCoordSystem, TypeCoordTmp)
+          elseif(Area_I(iArea)%NameSat/='')then
+             ! Rotation of the shape to align x-axis with the direction
+             ! toward a satellite
+             Dir_D = xyz_sat(trim(Area_I(iArea)%NameSat))
+             call xyz_to_lonlat(Dir_D, Longitude, Latitude)
+             Area_I(iArea)%DoRotate = .true.
+             Area_I(iArea)%Rotate_DD =matmul(rot_matrix_z(-Longitude),&
+                  rot_matrix_y(Latitude))
+          end if
        end do
 
        if(iProc==0 .and. lVerbose > 0)then

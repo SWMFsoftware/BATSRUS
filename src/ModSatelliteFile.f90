@@ -24,7 +24,7 @@ module ModSatelliteFile
   public:: gm_trace_sat      ! map field line from satellite ^CFG IF RAYTRACE
 
   public:: set_satellite_positions
-  public:: i_sat_for_name
+  public:: i_sat_for_name, xyz_sat
 
   logical, public :: DoSaveSatelliteData = .false. ! save satellite data?
   integer, public :: nSatellite = 0                ! number of satellites
@@ -298,6 +298,18 @@ contains
     end select
   end subroutine set_satellite_file_status
   !============================================================================
+  subroutine set_name_sat(iSat)
+
+    integer, intent(in) :: iSat
+    integer :: l1,l2
+    !--------------------------------------------------------------------------
+    l1 = index(NameFileSat_I(iSat), '/', back=.true.) + 1
+    l2 = index(NameFileSat_I(iSat), '.') - 1
+    if (l1-1 <= 0) l1 = 1
+    if (l2+1 <= 0) l2 = len_trim(NameFileSat_I(iSat))
+    NameSat_I(iSat) = NameFileSat_I(iSat)(l1:l2)
+  end subroutine set_name_sat
+  !============================================================================
   subroutine set_name_file(iSat)
     use ModMain,   ONLY: nStep, IsTimeAccurate
     use ModIO,     ONLY: NamePlotDir, StringDateOrTime
@@ -313,11 +325,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    l1 = index(NameFileSat_I(iSat), '/', back=.true.) + 1
-    l2 = index(NameFileSat_I(iSat), '.') - 1
-    if (l1-1 <= 0) l1 = 1
-    if (l2+1 <= 0) l2 = len_trim(NameFileSat_I(iSat))
-    NameSat_I(iSat) = NameFileSat_I(iSat)(l1:l2)
+    call set_name_sat(iSat)
 
     select case(TypeTrajTimeRange_I(iSat))
     case('orig')
@@ -370,13 +378,29 @@ contains
     call lower_case(NameSatLc)
     i_sat_for_name = -1
     do iSat = 1, nSatellite
-       if(NameSatLc == NameSat_I(iSat))then
+       if(trim(NameSatLc) == trim(NameSat_I(iSat)))then
           i_sat_for_name = iSat
           RETURN
        end if
     end do
 
   end function i_sat_for_name
+  !============================================================================
+  function xyz_sat(NameSat)
+
+    use ModMain,        ONLY: MaxDim
+    ! Name of satellite for which to find Xyz
+    character(len=*), intent(in) :: NameSat
+    real :: xyz_sat(MaxDim)
+    integer :: iSat
+    !--------------------------------------------------------------------------
+
+    iSat = i_sat_for_name(NameSat)
+    if(iSat<=0)call stop_mpi('Trajectory is not set for satellite='//&
+         trim(NameSat))
+    call set_satellite_positions(iSat)
+    xyz_sat = XyzSat_DI(:,iSat)
+  end function xyz_sat
   !============================================================================
   subroutine read_satellite_input_files
 
@@ -533,7 +557,7 @@ contains
           write(*,*) NameSub,': ySat=', XyzSat_DII(2,iSat,1:nPoint)
           write(*,*) NameSub,': zSat=', XyzSat_DII(3,iSat,1:nPoint)
        end if
-
+       call set_name_sat(iSat)
     end do SATELLITES
 
     deallocate(Time_I, Xyz_DI)
