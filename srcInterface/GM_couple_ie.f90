@@ -25,15 +25,18 @@ module GM_couple_ie
 
 contains
   !============================================================================
-  subroutine GM_get_info_for_ie(nVar, NameVar_I)
+  subroutine GM_get_info_for_ie(nVarIeGm, nVarGmIe, NameVar_I)
 
     use ModMain,             ONLY: TypeFaceBc_I, body1_
     use ModGroundMagPerturb, ONLY: nMagTotal
+    use ModAdvance,          ONLY: UseElectronPressure, UseAnisoPressure, &
+                                   UseAnisoPe
 
     ! Pass number and names of variables requested from IE
 
-    integer, intent(out) :: nVar
-    character(len=*), intent(out), optional:: NameVar_I(:)
+    integer, intent(out) :: nVarIeGm
+    integer, intent(out), optional :: nVarGmIe
+    character(len=*), intent(out), optional :: NameVar_I(:)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_get_info_for_ie'
@@ -41,25 +44,34 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Always pass electric potential
-    nVar = 1
-    if(present(NameVar_I)) NameVar_I(nVar) = 'potential'
+    nVarIeGm = 1
+    if(present(NameVar_I)) NameVar_I(nVarIeGm) = 'potential'
 
     ! Joule heating is needed for empirical inner boundary
     if(TypeFaceBc_I(body1_) == 'ionosphereoutflow')then
-       nVar = nVar+1
-       if(present(NameVar_I)) NameVar_I(nVar) = 'jouleheat'
+        nVarIeGm = nVarIeGm+1
+       if(present(NameVar_I)) NameVar_I(nVarIeGm) = 'jouleheat'
     end if
 
     ! Conductances are needed for magnetometer calculations
     if(nMagTotal > 0)then
-       nVar = nVar + 1
-       if(present(NameVar_I)) NameVar_I(nVar) = 'sigmahall'
-       nVar = nVar + 1
-       if(present(NameVar_I)) NameVar_I(nVar) = 'sigmapedersen'
+        nVarIeGm = nVarIeGm + 1
+       if(present(NameVar_I)) NameVar_I(nVarIeGm) = 'sigmahall'
+        nVarIeGm = nVarIeGm + 1
+       if(present(NameVar_I)) NameVar_I(nVarIeGm) = 'sigmapedersen'
+    end if
+
+    ! Standard 6 variable tracing: FAC, 1/b, rho, p, dlat, dlon
+    if(present(nVarGmIe)) then
+        nVarGmIe = 6
+        ! Add additional space for Pe, Ppar, Pepar if turned on
+        if (UseElectronPressure) nVarGmIe = nVarGmIe + 1
+        if (UseAnisoPressure) nVarGmIe = nVarGmIe + 1
+        if (UseAnisoPe) nVarGmIe = nVarGmIe + 1
     end if
 
     if(DoTestMe)then
-       write(*,*) NameSub//' set nVar=', nVar
+       write(*,*) NameSub//' set nVarIeGm=', nVarIeGm
        if(present(NameVar_I)) write(*,*) NameSub//' set NameVar_I=', &
             NameVar_I
     end if
@@ -89,7 +101,7 @@ contains
     integer, intent(in) :: iSize, jSize, nVar
     real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
 
-    integer:: i, j
+    integer:: i, j, iVar
     real:: Radius, Phi, Theta
     real, allocatable:: FieldAlignedCurrent_II(:,:)
     real, allocatable:: IeLat_I(:), IeLon_I(:)
@@ -161,15 +173,17 @@ contains
                * No2Si_V(UnitX_)/No2Si_V(UnitB_)
           Buffer_IIV(:,:,3) = RayResult_VII(RhoInvB_,:,:) * No2Si_V(UnitRho_)
           Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+          iVar = 7
           if(UseElectronPressure) then
               where(RayResult_VII(InvB_,:,:) > 0.)
                   RayResult_VII(iPeInvB,:,:)  = RayResult_VII(iPeInvB,:,:) &
                           /RayResult_VII(InvB_,:,:)
               end where
               where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
-                  RayResult_VII( iPeInvB,:,:) = 0.
+                  RayResult_VII(iPeInvB,:,:) = 0.
               end where
-              Buffer_IIV(:,:,7) = RayResult_VII( iPeInvB,:,:) * No2Si_V(UnitP_)
+              Buffer_IIV(:,:,iVar) = RayResult_VII( iPeInvB,:,:) * No2Si_V(UnitP_)
+              iVar = iVar + 1
           end if
 
           ! Transformation matrix from default (GM) to SM coordinates
@@ -201,13 +215,14 @@ contains
              Buffer_IIV(i,j,6) = dLon
           end do; end do
           if(DoTest)then
+             iVar=7
              write(*,*)NameSub, ': sum(Buf2**2)=', sum(Buffer_IIV(:,:,2)**2)
              write(*,*)NameSub, ': sum(Buf3**2)=', sum(Buffer_IIV(:,:,3)**2)
              write(*,*)NameSub, ': sum(Buf4**2)=', sum(Buffer_IIV(:,:,4)**2)
              write(*,*)NameSub, ': sum(Buf5**2)=', sum(Buffer_IIV(:,:,5)**2)
              write(*,*)NameSub, ': sum(Buf6**2)=', sum(Buffer_IIV(:,:,6)**2)
              if(UseElectronPressure)then
-                 write(*,*)NameSub, ': sum(Buf7**2)=', sum(Buffer_IIV(:,:,7)**2)
+                 write(*,*)NameSub, ': sum(Buf7**2)=', sum(Buffer_IIV(:,:,iVar)**2)
              end if
           end if
        end if
