@@ -92,7 +92,7 @@ contains
          GmSm_DD, integrate_field_from_sphere
     use ModNumConst, ONLY: cRadToDeg
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
-    use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
+    use ModCoordTransform, ONLY: xyz_to_sph
     use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModB0, ONLY: B0_DGB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
@@ -102,7 +102,7 @@ contains
     real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
 
     integer:: i, j, iVar
-    real:: Radius, Phi, Theta
+    real:: Radius
     real, allocatable:: FieldAlignedCurrent_II(:,:)
     real, allocatable:: IeLat_I(:), IeLon_I(:)
     real:: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
