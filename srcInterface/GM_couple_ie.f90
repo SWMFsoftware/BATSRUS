@@ -182,7 +182,8 @@ contains
               where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
                   RayResult_VII(iPeInvB,:,:) = 0.
               end where
-              Buffer_IIV(:,:,iVar) = RayResult_VII( iPeInvB,:,:) * No2Si_V(UnitP_)
+              Buffer_IIV(:,:,iVar) = RayResult_VII( iPeInvB,:,:) * &
+                      No2Si_V(UnitP_)
               iVar = iVar + 1
           end if
 
@@ -222,7 +223,8 @@ contains
              write(*,*)NameSub, ': sum(Buf5**2)=', sum(Buffer_IIV(:,:,5)**2)
              write(*,*)NameSub, ': sum(Buf6**2)=', sum(Buffer_IIV(:,:,6)**2)
              if(UseElectronPressure)then
-                 write(*,*)NameSub, ': sum(Buf7**2)=', sum(Buffer_IIV(:,:,iVar)**2)
+                 write(*,*)NameSub, ': sum(Buf7**2)=', &
+                         sum(Buffer_IIV(:,:,iVar)**2)
              end if
           end if
        end if
