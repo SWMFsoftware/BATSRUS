@@ -92,7 +92,7 @@ contains
          GmSm_DD, integrate_field_from_sphere
     use ModNumConst, ONLY: cRadToDeg
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
-    use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
+    use ModCoordTransform, ONLY: xyz_to_sph
     use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModB0, ONLY: B0_DGB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
@@ -102,7 +102,7 @@ contains
     real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
 
     integer:: i, j, iVar
-    real:: Radius, Phi, Theta
+    real:: Radius
     real, allocatable:: FieldAlignedCurrent_II(:,:)
     real, allocatable:: IeLat_I(:), IeLon_I(:)
     real:: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
@@ -182,7 +182,8 @@ contains
               where(RayResult_VII(iXEnd,:,:) <= CLOSEDRAY)
                   RayResult_VII(iPeInvB,:,:) = 0.
               end where
-              Buffer_IIV(:,:,iVar) = RayResult_VII( iPeInvB,:,:) * No2Si_V(UnitP_)
+              Buffer_IIV(:,:,iVar) = RayResult_VII( iPeInvB,:,:) * &
+                      No2Si_V(UnitP_)
               iVar = iVar + 1
           end if
 
@@ -222,7 +223,8 @@ contains
              write(*,*)NameSub, ': sum(Buf5**2)=', sum(Buffer_IIV(:,:,5)**2)
              write(*,*)NameSub, ': sum(Buf6**2)=', sum(Buffer_IIV(:,:,6)**2)
              if(UseElectronPressure)then
-                 write(*,*)NameSub, ': sum(Buf7**2)=', sum(Buffer_IIV(:,:,iVar)**2)
+                 write(*,*)NameSub, ': sum(Buf7**2)=', &
+                         sum(Buffer_IIV(:,:,iVar)**2)
              end if
           end if
        end if
