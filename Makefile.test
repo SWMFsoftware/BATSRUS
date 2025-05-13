@@ -1701,6 +1701,41 @@ test_mars_restart_check:
 		> test_mars_restart.diff)
 	ls -l test_mars*.diff
 
+
+# Time-accurate Mars test for CCMC
+
+test_ccmc_mars:
+	@echo "test_ccmc_mars_compile..." > test_ccmc_mars.diff
+	$(MAKE) test_ccmc_mars_compile
+	@echo "test_ccmc_mars_rundir..." >> test_ccmc_mars.diff
+	$(MAKE) test_ccmc_mars_rundir
+	@echo "test_ccmc_mars_run..." >> test_ccmc_mars.diff
+	$(MAKE) test_ccmc_mars_run
+	@echo "test_ccmc_mars_check..." >> test_ccmc_mars.diff
+	$(MAKE) test_ccmc_mars_check
+
+test_ccmc_mars_compile:
+	./Config.pl -default -u=Mars -e=MhdMars -ng=2 -g=6,6,6
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_ccmc_mars_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp Param/MARS/PARAM.in.ta PARAM.in; \
+		cp Param/MARS/marsmgsp.txt .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_ccmc_mars_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
+
+test_ccmc_mars_check:
+	-@(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/GM/log_n000277.log \
+		Param/MARS/TestOutput/log_ta.log \
+		> test_ccmc_mars.diff)
+	ls -l test_ccmc_mars.diff
+
 ### TESTS FOR MODELING MARSFLUIDS ###
 
 test_marsfluids:
