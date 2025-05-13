@@ -1,0 +1,233 @@
+! To be removed !!!
+#NORMALIZATION
+SOLARWIND		TypeNormalization
+
+INCLUDE
+restartIN/restart.H
+
+#DESCRIPTION
+Mars test		StringDescription
+
+#PLANET
+Mars			NamePlanet
+
+#ROTATION
+T			UseRotation
+24.65523		RotationPeriod
+
+#UPDATEB0
+10.0			DtUpdateB0
+
+#GRAVITY
+T			UseGravity
+0			iDirGravity
+
+#IMPLICIT
+T			UsePointImplicit
+F			UsePartImplicit
+F			UseFullImplicit
+
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+Param/MARS/grid_stretch.dat		NameGridFile
+
+#GRID
+13			nRootBlock1
+10			nRootBlock2
+5			nRootBlock3
+-24.			xMin
+  8.			xMax
+-16.			yMin
+ 16.			yMax
+-16.			zMin
+ 16.			zMax
+
+#GRIDBLOCKALL
+10000			MaxBlock
+
+#LIMITRADIUS
+1.0294464		rMin
+28.82			rMax
+
+#GRIDLEVEL
+1			nLevel
+initial			StringShape
+
+#GRIDLEVEL
+1			nLevel
+all			StringShape
+
+#GRIDLEVEL
+2			nLevel
+sphere0			StringShape
+1.3			Radius = 1.5*rBody
+
+#TESTXYZ
+1.2			xTest
+0.1			yTest
+0.1			zTest
+
+#BODY
+T			UseBody
+1.0294464		rBody
+1.0			rCurrents
+1.0e6			BodyNDim Hp
+1.0e6			BodyNDim O2p
+1.0e6			BodyNDim Op
+1.0e6			BodyNDim CO2p
+300.0			BodyTDim
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#TIMESTEPPING
+2			nStage
+0.4			CflExpl
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR step time		StringLog
+500			DnSaveLogfile
+-1.			DtSaveLogfile
+dt rho p rhopnt ppnt bxpnt Hpflxm Hpflxp Opflxm Opflxp O2pflxm O2pflxp CO2pflxm CO2pflxp		NameLogVars
+6.0 2.0 1.117786		StringLogRadii
+
+#INNERBOUNDARY
+user			TypeBcBody
+
+#BOXBOUNDARY
+outflow			TypeBc1
+inflow			TypeBc2
+fixed			TypeBc3
+fixed			TypeBc4
+fixed			TypeBc5
+fixed			TypeBc6
+
+! 3nT parker's spiral
+#SOLARWIND
+4.99			SwNDim  [n/cc]
+1.5E6			SwTDim  [K]
+-394			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+0.0			SwBxDim [nT]
+-2.81			SwByDim [nT]
+1.85			SwBzDim [nT]
+
+#USERSWITCH
++init +ic +b0 +source		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#UseHotO
+T			UseHotO
+
+#UseTempCont
+F			UseTempCont
+
+#UseMarsB0
+T			UseMarsB0
+110			NNm
+-149.6			Rot
+21.65608		Thetilt
+
+#UseMso
+T			UseMso		!if true, read rotation axis in MSO
+0.36905			RotAxisMsoX
+0.21215			RotAxisMsoY
+0.90487			RotAxisMsoZ
+
+#SOLARCON
+solarmin		TypeSolarCond
+
+!!! missing from ModUserMars.f90
+SMDist
+1.66299			SMDist
+
+#REACTIONS
+T			UseImpactIon
+T			UseChargeEx
+
+#USECHAPMAN
+T			UseChapman
+
+!!! missing from ModUserMars.f90
+UserPhotoIonizationRate
+T			
+4.1e-7
+1.26e-7
+
+#USERINPUTEND -------------------------------------
+
+#MULTISPECIES
+T			DoReplaceDensity
+5.0			SpeciesPercentCheck
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+1800.0			DtSaveRestart
+
+#STOP
+20000			MaxIteration
+-1.0			tSimulationMax
+
+#STARTTIME
+    2017		iYear
+      09		iMonth
+      12		iDay
+      18		iHour
+      00		iMinute
+      00		iSecond
+
+SATELLITE
+1			nSatellite
+MHD step date		Stringsatellite
+-1			DnOutput
+10.0			Dtoutput
+MAVEN_trac/sat2017_09_10_15_kp.dat		Nametrajectoryfile
+
+#RUN ##########################################################################
+
+#FIXAXIS
+T			DoFixAxis
+5.0			rFixAxis
+1.5			r2FixAxis
+
+#TIMESTEPPING
+2			nStage
+0.95			CflExpl
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#SAVEPLOT
+1			nPlotFile
+3d MHD tcp		StringPlot
+-1			DnSavePlot
+3600.0			DtSavePlot
+
+#STOP
+-1			MaxIteration
+21600.0			tSimulationMax 20h
+
+#SOLARWINDFILE
+T			UseSolarWindFile (rest of parameters read if true)
+Param/MARS/imf.dat		NameSolarWindFile
+
+#RUN ##########################################################################
+
+#SAVEPLOT
+1			nPlotFile
+3d MHD tcp		StringPlot
+-1			DnSavePlot
+60.0			DtSavePlot
+
+#STOP
+-1			MaxIteration
+57600.0			tSimulationMax 16h
