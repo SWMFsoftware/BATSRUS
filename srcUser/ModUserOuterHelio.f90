@@ -46,7 +46,7 @@ module ModUser
        UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
        UnitTemperature_, UnitT_, UnitRhoU_
   use ModConst, ONLY: cAU, cProtonMass, cElectronMass, cBoltzmann, cEV, &
-       cRyToEv, cSecondPerYear
+       cRyToEv, cSecondPerYear, iYearBase
   use ModTimeConvert, ONLY: n_day_of_year
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModAdvance, ONLY: &
@@ -119,6 +119,7 @@ module ModUser
   integer :: iTableMagIntensity = -1
   integer :: iTableChargeExchange = -1
   integer :: iTableElectronImpact = -1
+  integer :: iTablePhotoionization = -1
 
   ! Needed for lookup table
   integer,parameter :: ChargeExchange_ = 1, ElectronImpact_ = 2
@@ -1661,6 +1662,8 @@ contains
     character(len=*), parameter:: NameSub = 'user_calc_sources_expl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
+    call update_photoionization_rate
 
     ! updating sources from AMPS in PT-OH Coupling
     ! hyzhou: this is evaluated both in explicit and implicit scheme.
@@ -3399,6 +3402,11 @@ contains
     IonizationEnergy = IonizationEnergyDim*Si2No_V(UnitEnergyDens_) &
          /Si2No_V(UnitN_)
 
+    if(iTablePhotoionization < 0) then
+       iTablePhotoionization = i_lookup_table('Photoionization')
+       call update_photoionization_rate
+    end if
+
     call test_stop(NameSub, DoTest)
 
   end subroutine user_init_session
@@ -3619,8 +3627,28 @@ contains
     rate = 0
 
     ! Time-dependent photoionization rate can be implemented here
-    rate = PhotoionizationRate*(1/(r+1e-10))**2
+    if(UsePhotoion) &
+         rate = PhotoionizationRate*(1/(r+1e-10))**2
   end subroutine get_photoionization_rate_si
+  !============================================================================
+  subroutine update_photoionization_rate()
+    use ModMain, ONLY: StartTime
+    use ModLookupTable, ONLY: interpolate_lookup_table
+
+    real :: year, rate(1)
+
+    character(len=*), parameter:: NameSub = 'update_photoionization_rate'
+    !--------------------------------------------------------------------------
+
+    if(iTablePhotoionization > 0)then
+       year = (StartTime + tSimulation)/cSecondPerYear + iYearBase
+       ! Read in the photoionization rate from the lookup table
+       call interpolate_lookup_table(iTablePhotoionization, year, &
+            rate, DoExtrapolate=.false.)
+       PhotoionizationRate = rate(1)
+    end if
+
+  end subroutine update_photoionization_rate
   !============================================================================
   subroutine user_calc_sources_impl(iBlock)
 
@@ -3882,7 +3910,9 @@ subroutine get_solar_wind(x, y, z, NumDen, Ur, Temp, B_D) &
 
 end subroutine get_solar_wind
 !==============================================================================
-subroutine get_photoionization_rate_wrapper(rSI, rateSI)
+subroutine photoionization_rate_wrapper(rSI, rateSI) &
+     bind(c, name='photoionization_rate_wrapper')
+
   use ModUser, ONLY: get_photoionization_rate_si
   use ModPhysics, ONLY: Si2No_V, UnitX_
 
@@ -3895,5 +3925,5 @@ subroutine get_photoionization_rate_wrapper(rSI, rateSI)
 
   call get_photoionization_rate_si(r, rateSI)
 
-end subroutine get_photoionization_rate_wrapper
+end subroutine photoionization_rate_wrapper
 !==============================================================================
