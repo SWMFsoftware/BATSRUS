@@ -6,7 +6,7 @@ INCLUDE
 restartIN/restart.H
 
 #DESCRIPTION
-Mars test		StringDescription
+Param/MARS/PARAM.in.ta: time-accurate Mars test		StringDescription
 
 #PLANET
 Mars			NamePlanet
@@ -43,7 +43,7 @@ Param/MARS/grid_stretch.dat		NameGridFile
  16.			zMax
 
 #GRIDBLOCKALL
-10000			MaxBlock
+6000			MaxBlock
 
 #LIMITRADIUS
 1.0294464		rMin
@@ -94,7 +94,7 @@ T			DoSaveLogfile
 VAR step time		StringLog
 500			DnSaveLogfile
 -1.			DtSaveLogfile
-dt rho p rhopnt ppnt bxpnt Hpflxm Hpflxp Opflxm Opflxp O2pflxm O2pflxp CO2pflxm CO2pflxp		NameLogVars
+dt rho p rhopnt ppnt bxpnt Hpflx Opflx O2pflx CO2pflx		NameLogVars
 6.0 2.0 1.117786		StringLogRadii
 
 #INNERBOUNDARY
@@ -132,12 +132,12 @@ F			UseTempCont
 
 #UseMarsB0
 T			UseMarsB0
-110			NNm
+60			NNm  !!! 110 needs a different harmonics file
 -149.6			Rot
 21.65608		Thetilt
 
 #UseMso
-T			UseMso		!if true, read rotation axis in MSO
+T			UseMso
 0.36905			RotAxisMsoX
 0.21215			RotAxisMsoY
 0.90487			RotAxisMsoZ
@@ -174,7 +174,7 @@ T			DoSaveRestart
 1800.0			DtSaveRestart
 
 #STOP
-20000			MaxIteration
+20			MaxIteration  20000 !!!
 -1.0			tSimulationMax
 
 #STARTTIME
@@ -208,26 +208,15 @@ T			IsTimeAccurate
 
 #SAVEPLOT
 1			nPlotFile
-3d MHD tcp		StringPlot
+3d MHD idl		StringPlot
 -1			DnSavePlot
 3600.0			DtSavePlot
+-1.0			DxSavePlot
 
 #STOP
 -1			MaxIteration
-21600.0			tSimulationMax 20h
+2.0			tSimulationMax 20h !!!
 
 #SOLARWINDFILE
 T			UseSolarWindFile (rest of parameters read if true)
 Param/MARS/imf.dat		NameSolarWindFile
-
-#RUN ##########################################################################
-
-#SAVEPLOT
-1			nPlotFile
-3d MHD tcp		StringPlot
--1			DnSavePlot
-60.0			DtSavePlot
-
-#STOP
--1			MaxIteration
-57600.0			tSimulationMax 16h
