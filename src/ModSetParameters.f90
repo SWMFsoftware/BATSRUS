@@ -1360,14 +1360,16 @@ contains
                 ! read the number of pixels
                 call read_var('nPixX', nPixelX_I(iFile))
                 call read_var('nPixY', nPixelY_I(iFile))
-             elseif(index(StringPlot,'buf')>0)then
-                TypePlotArea='buf'
-             elseif(index(StringPlot,'1d')>0)then
-                TypePlotArea='1d_'
-             elseif(index(StringPlot,'2d')>0)then
-                TypePlotArea='2d_'
-             elseif(index(StringPlot,'3d')>0)then
-                TypePlotArea='3d_'
+             elseif(index(StringPlot,'buf') > 0)then
+                TypePlotArea = 'buf'
+             elseif(index(StringPlot,'1d') > 0)then
+                TypePlotArea = '1d_'
+             elseif(index(StringPlot,'2d') > 0)then
+                TypePlotArea = '2d_'
+             elseif(index(StringPlot,'3d') > 0)then
+                TypePlotArea = '3d_'
+             elseif(index(StringPlot,'3D') > 0)then
+                TypePlotArea = '3D_'
              elseif(index(StringPlot,'x=0') > 0)then
                 TypePlotArea = 'x=0'
              elseif(index(StringPlot,'y=0') > 0)then
@@ -1643,7 +1645,8 @@ contains
 
              ! Set equation parameters for 3D unstructured IDL files
              ! to describe block structure and the dipole. Needed by CCMC.
-             if(TypePlotArea == '3d_' .and. TypePlotFormat_I(iFile) == 'idl' &
+             if( (TypePlotArea == '3d_' .or. TypePlotArea == '3D_') &
+                  .and. TypePlotFormat_I(iFile) == 'idl' &
                   .and. PlotDx_DI(1, iFile) < 0.0) &
                   StringPlotParam_I(iFile) = 'g c th p1 p2 p3 NX NY NZ R'
              if(nInstrument < 1) &
@@ -4264,7 +4267,7 @@ contains
             PlotRange_EI(3:5:2, iFile) = -SmallSize_D(y_:z_)
             PlotRange_EI(4:6:2, iFile) = +SmallSize_D(y_:z_)
 
-         case('3d_')
+         case('3d_', '3D_')
             PlotRange_EI(1:5:2, iFile) = CoordMin_D
             PlotRange_EI(2:6:2, iFile) = CoordMax_D
 

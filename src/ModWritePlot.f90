@@ -143,8 +143,8 @@ contains
 
     ! DoSaveOneTecFile = T only works for 3D tecplot file right now
     DoSaveOneTecFile = DoSaveOneTecFileOrig .and. &
-         (TypePlot(1:3)=='3d_' .and. TypePlotFormat_I(iFile)=='tec' &
-         .or. TypePlotFormat_I(iFile)=='tcp')
+         (TypePlot(1:3) == '3d_' .or. TypePlot(1:3) == '3D_') .and. &
+         (TypePlotFormat_I(iFile) == 'tec' .or. TypePlotFormat_I(iFile)=='tcp')
 
     call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar,    &
          UseArraySyntaxIn=.true.)
@@ -361,9 +361,9 @@ contains
     if (DoPlotBox) IsNonCartesianPlot = .false.
 
     ! Logical for hdf plots
-    IsNotCut = TypePlot(1:3)=='3d_' .or. nDim == 1 .or. &
-         (nDim==2 .and. (TypePlot(1:3) == '2d_' &
-         .or.            TypePlot(1:3) == 'z=0'))
+    IsNotCut = TypePlot(1:3)=='3d_' .or. TypePlot(1:3)=='3D_' &
+         .or. nDim == 1 .or. (nDim==2 &
+         .and. (TypePlot(1:3) == '2d_' .or. TypePlot(1:3) == 'z=0'))
 
     ! START IDL
     ! initialize values used in the plotting
@@ -778,7 +778,7 @@ contains
 
     ! Save tree information for nDim dimensional IDL file
     if(TypePlotFormat_I(iFile) == 'idl' .and.               &
-         (    TypePlot(1:3) == '3d_'               &
+         (    TypePlot(1:3) == '3d_' .or. TypePlot(1:3) == '3D_' &
          .or. TypePlot(1:3) == '2d_' .and. nDim<=2 &
          .or. TypePlot(1:3) == '1d_' .and. nDim==1 ) )then
        NameFile = trim(NameSnapshot)//'.tree'

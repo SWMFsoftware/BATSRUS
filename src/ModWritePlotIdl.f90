@@ -108,7 +108,7 @@ contains
           else
              do iVar=1,nPlotVar
                 Plot_V(iVar) = PlotVar_GV(i,j,k,iVar)
-                if(abs(Plot_V(iVar))<1.0d-99)Plot_V(iVar)=0.0
+                if(abs(Plot_V(iVar)) < 1d-99) Plot_V(iVar)=0.0
              end do
              write(UnitTmp_,'(50(1pe13.5))') &
                   CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
@@ -186,14 +186,16 @@ contains
 
     if(CellSize1 >= Dx)then
        ! Cell is equal or coarser than Dx, save all cells in cut
-       do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           x = Xyz_DGB(x_,i,j,k,iBlock)
           y = Xyz_DGB(y_,i,j,k,iBlock)
           z = Xyz_DGB(z_,i,j,k,iBlock)
 
           ! Check if we are inside the Cartesian box
-          if(x < xMinBox .or. x > xMaxBox .or. y < yMinBox .or. y > yMaxBox &
-               .or. z < zMinBox .or. z > zMaxBox) CYCLE
+          if(TypePlot(1:3) /= '3D_' .and. ( &
+               x < xMinBox .or. x > xMaxBox .or. &
+               y < yMinBox .or. y > yMaxBox .or. &
+               z < zMinBox .or. z > zMaxBox)) CYCLE
 
           ! if plot type is bx0
           if(index(TypePlot, 'bx0') > 0) then
@@ -216,7 +218,7 @@ contains
 
           if(DoSaveGenCoord)then
              Coord_D = CoordMin_DB(:,iBlock) &
-                  + ([i,j,k] - 0.5)*CellSize_DB(:,iBlock)
+                  + ([i, j, k] - 0.5)*CellSize_DB(:,iBlock)
           else
              Coord_D = Xyz_DGB(:,i,j,k,iBlock)*xUnit
           end if
@@ -227,7 +229,7 @@ contains
           else
              do iVar=1, nPlotVar
                 Plot_V(iVar) = PlotVar_GV(i,j,k,iVar)
-                if(abs(Plot_V(iVar)) < 1.0d-99) Plot_V(iVar) = 0.0
+                if(abs(Plot_V(iVar)) < 1d-99) Plot_V(iVar) = 0.0
              end do
              write(UnitTmp_,'(50es13.5)') &
                   CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
@@ -246,9 +248,9 @@ contains
        nRestrictZ = 1; if(nDim > 2) nRestrictZ = nRestrict
 
        ! Calculate restricted cell size
-       CellSize1    = nRestrictX*CellSize1
-       CellSize2    = nRestrictY*CellSize2
-       CellSize3    = nRestrictZ*CellSize3
+       CellSize1 = nRestrictX*CellSize1
+       CellSize2 = nRestrictY*CellSize2
+       CellSize3 = nRestrictZ*CellSize3
 
        ! Factor for taking the average
        Restrict = 1./(nRestrict**nDim)
@@ -267,10 +269,10 @@ contains
                 y =0.5*(Xyz_DGB(y_,i,j,k,iBlock) + Xyz_DGB(y_,i2,j2,k2,iBlock))
                 z =0.5*(Xyz_DGB(z_,i,j,k,iBlock) + Xyz_DGB(z_,i2,j2,k2,iBlock))
 
-                if(       x < xMinBox .or. x > xMaxBox   &
-                     .or. y < yMinBox .or. y > yMaxBox   &
-                     .or. z < zMinBox .or. z > zMaxBox ) &
-                     CYCLE
+                if(TypePlot(1:3) /= '3D_' .and. ( &
+                     x < xMinBox .or. x > xMaxBox .or. &
+                     y < yMinBox .or. y > yMaxBox .or. &
+                     z < zMinBox .or. z > zMaxBox)) CYCLE
 
                 if(DoSaveGenCoord)then
                    Coord_D = CoordMin_DB(:,iBlock) &
