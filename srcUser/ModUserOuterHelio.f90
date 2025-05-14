@@ -46,7 +46,7 @@ module ModUser
        UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
        UnitTemperature_, UnitT_, UnitRhoU_
   use ModConst, ONLY: cAU, cProtonMass, cElectronMass, cBoltzmann, cEV, &
-       cRyToEv, cSecondPerYear
+       cRyToEv, cSecondPerYear, iYearBase
   use ModTimeConvert, ONLY: n_day_of_year
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModAdvance, ONLY: &
@@ -77,6 +77,7 @@ module ModUser
   public:: get_collision
   public:: get_region
   public:: get_lat_dep_sw
+  public:: get_photoionization_rate_si
 
   character (len=*), parameter :: NameUserFile = "ModUserOuterHelio.f90"
   character (len=*), parameter :: NameUserModule = "Outer Heliosphere"
@@ -118,6 +119,7 @@ module ModUser
   integer :: iTableMagIntensity = -1
   integer :: iTableChargeExchange = -1
   integer :: iTableElectronImpact = -1
+  integer :: iTablePhotoionization = -1
 
   ! Needed for lookup table
   integer,parameter :: ChargeExchange_ = 1, ElectronImpact_ = 2
@@ -1661,6 +1663,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+    call update_photoionization_rate
+
     ! updating sources from AMPS in PT-OH Coupling
     ! hyzhou: this is evaluated both in explicit and implicit scheme.
     ! Is it necessary to do so?
@@ -1901,6 +1905,7 @@ contains
     real, dimension(nFluid) :: NumDens_I, UTh_I
     real, dimension(Neu_:Ne4_) :: URelS_I, Alpha_I, Rate_I, Source_I
     real :: Xpui, DeltaVpXpui, DeltaVpXpuiSi, Sigma
+    real :: PhotoIonRate
 
     ! Region 3: only make Pu3 in region before TS
     !--------------------------------------------------------------------------
@@ -1927,8 +1932,11 @@ contains
           Rate_I = State_VGB(iRho_I(SWHRho_),i,j,k,iBlock) &
                *Sigma*DeltaVpXpuiSi*No2Si_V(UnitN_)
 
-          if(UsePhotoion) Rate_I = Rate_I &
-               + PhotoionizationRate*(1/(r_GB(i,j,k,iBlock)+1e-10))**2
+          if(UsePhotoion) then
+             call get_photoionization_rate_si(r_GB(i,j,k,iBlock), &
+                  PhotoIonRate)
+             Rate_I = Rate_I  + PhotoIonRate
+          end if
 
           Source_I = Rate_I*No2Si_V(UnitT_) &
                *NumDens_I(Neu_:)/(4.*cPi**1.5*UTh_I(Ion_)*UTh_I(Neu_:)**2) &
@@ -2636,6 +2644,8 @@ contains
 
     real :: AlfvenSpeed, SourceTurbulence
 
+    real :: PhotoIonRate
+
     ! Chika. Photoionization rate
     character(len=*), parameter:: NameSub = 'calc_photoion_source'
     !--------------------------------------------------------------------------
@@ -2645,12 +2655,13 @@ contains
 
     State_V = State_VGB(:,i,j,k,iBlock)
     r = r_GB(i,j,k,iBlock)
+    call get_photoionization_rate_si(r, PhotoIonRate)
 
     ! rate_ph = 8E-8*(r0/r)**2
     ! 8E-8 has units 1/s
     ! r0 = 1 AU
-    where(UseSource_I(Neu_:)) RatePh_I = PhotoionizationRate*(1/(r+1e-10))**2 &
-         *State_V(iRho_I(Neu_:))*No2Si_V(UnitT_)
+    where(UseSource_I(Neu_:)) &
+         RatePh_I = PhotoIonRate*State_V(iRho_I(Neu_:))*No2Si_V(UnitT_)
 
     ! Chika: Source terms for single ion
     ! Density source term for photoionization
@@ -3391,6 +3402,11 @@ contains
     IonizationEnergy = IonizationEnergyDim*Si2No_V(UnitEnergyDens_) &
          /Si2No_V(UnitN_)
 
+    if(iTablePhotoionization < 0) then
+       iTablePhotoionization = i_lookup_table('Photoionization')
+       call update_photoionization_rate
+    end if
+
     call test_stop(NameSub, DoTest)
 
   end subroutine user_init_session
@@ -3438,7 +3454,7 @@ contains
 
     ! calculating time relative to the solar cycle
     call get_lookup_table(iTableSolarWind, IndexMax_I=IndexMax_I, &
-            Param_I = Param_I)
+         Param_I = Param_I)
 
     TimeCycleSW = modulo(tSimulation + (Offset*cSecondPerYear) , IndexMax_I(2))
 
@@ -3463,13 +3479,13 @@ contains
        TimeCycleB = TimeCycleSW + MagLT_dt
 
        call interpolate_lookup_table(iTableMagIntensity, TimeCycleB, &
-           ValueB_I, DoExtrapolate=.false.)
+            ValueB_I, DoExtrapolate=.false.)
 
        Bsph_D(1) = (SQRT(0.5)*ValueB_I(1))/rBody**2 &
-                   *Io2No_V(UnitB_)                     ! Br scaled from 1 AU
+            *Io2No_V(UnitB_)                     ! Br scaled from 1 AU
        Bsph_D(2) =  0.0                                 ! Btheta
        Bsph_D(3) =  Bsph_D(1)*SinTheta*ParkerTilt &
-                   *SwhUx/Ur                            ! Bphi scaled from 1 AU
+            *SwhUx/Ur                            ! Bphi scaled from 1 AU
     else
        Bsph_D(1) = SwhBx ! Br
        Bsph_D(2) =  0.0                             ! Btheta
@@ -3601,6 +3617,38 @@ contains
     endif
 
   end subroutine get_collision
+  !============================================================================
+  subroutine get_photoionization_rate_si(r, rate)
+    real, intent(in):: r
+    real, intent(out):: rate
+
+    character(len=*), parameter:: NameSub = 'get_photoionization_rate_si'
+    !--------------------------------------------------------------------------
+    rate = 0
+
+    ! Time-dependent photoionization rate can be implemented here
+    if(UsePhotoion) &
+         rate = PhotoionizationRate*(1/(r+1e-10))**2
+  end subroutine get_photoionization_rate_si
+  !============================================================================
+  subroutine update_photoionization_rate()
+    use ModMain, ONLY: StartTime
+    use ModLookupTable, ONLY: interpolate_lookup_table
+
+    real :: year, rate(1)
+
+    character(len=*), parameter:: NameSub = 'update_photoionization_rate'
+    !--------------------------------------------------------------------------
+
+    if(iTablePhotoionization > 0)then
+       year = (StartTime + tSimulation)/cSecondPerYear + iYearBase
+       ! Read in the photoionization rate from the lookup table
+       call interpolate_lookup_table(iTablePhotoionization, year, &
+            rate, DoExtrapolate=.false.)
+       PhotoionizationRate = rate(1)
+    end if
+
+  end subroutine update_photoionization_rate
   !============================================================================
   subroutine user_calc_sources_impl(iBlock)
 
@@ -3861,4 +3909,21 @@ subroutine get_solar_wind(x, y, z, NumDen, Ur, Temp, B_D) &
   B_D    = B_D   *No2Si_V(UnitB_)
 
 end subroutine get_solar_wind
+!==============================================================================
+subroutine photoionization_rate_wrapper(rSI, rateSI) &
+     bind(c, name='photoionization_rate_wrapper')
+
+  use ModUser, ONLY: get_photoionization_rate_si
+  use ModPhysics, ONLY: Si2No_V, UnitX_
+
+  real, intent(in):: rSI
+  real, intent(out):: rateSI
+
+  real :: r
+  !----------------------------------------------------------------------------
+  r = rSI*Si2No_V(UnitX_)
+
+  call get_photoionization_rate_si(r, rateSI)
+
+end subroutine photoionization_rate_wrapper
 !==============================================================================
