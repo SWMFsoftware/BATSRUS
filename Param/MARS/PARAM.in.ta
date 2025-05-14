@@ -32,9 +32,9 @@ spherical_genr		TypeGeometry
 Param/MARS/grid_stretch.dat		NameGridFile
 
 #GRID
-13			nRootBlock1
-10			nRootBlock2
-5			nRootBlock3
+10			nRootBlock1
+8			nRootBlock2
+4			nRootBlock3
 -24.			xMin
   8.			xMax
 -16.			yMin
@@ -158,7 +158,7 @@ T			UseChapman
 
 !!! missing from ModUserMars.f90
 UserPhotoIonizationRate
-T			
+T
 4.1e-7
 1.26e-7
 
@@ -207,16 +207,24 @@ T			DoFixAxis
 T			IsTimeAccurate
 
 #SAVEPLOT
-1			nPlotFile
-3d MHD idl		StringPlot
+3			nPlotFile
+y=0 MHD idl		StringPlot
+-1  			DnSavePlot
+600.0			DtSavePlot
+-1.0			DxSavePlot
+z=0 MHD idl		StringPlot
+-1  			DnSavePlot
+600.0			DtSavePlot
+-1.0			DxSavePlot
+3D MHD idl		StringPlot
 -1			DnSavePlot
 3600.0			DtSavePlot
 -1.0			DxSavePlot
 
-#STOP
--1			MaxIteration
-2.0			tSimulationMax 20h !!!
-
 #SOLARWINDFILE
 T			UseSolarWindFile (rest of parameters read if true)
 Param/MARS/imf.dat		NameSolarWindFile
+
+#STOP
+-1			MaxIteration
+2.0			tSimulationMax 20h !!!
