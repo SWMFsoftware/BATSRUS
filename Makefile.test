@@ -1731,7 +1731,7 @@ test_ccmc_mars_run:
 
 test_ccmc_mars_check:
 	-@(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/GM/log_n000277.log \
+		${TESTDIR}/RESULTS/GM/log_n0002*.log \
 		Param/MARS/TestOutput/log_ta.log \
 		> test_ccmc_mars.diff)
 	ls -l test_ccmc_mars.diff
