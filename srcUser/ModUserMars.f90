@@ -157,11 +157,11 @@ module ModUser
   real :: u, v, w, uv, uvw, sint1, cost1, sint2, cost2
 
   real :: rot = 1.0, thetilt = 0.0
-  logical :: UseHotO= .false.
-  logical :: UseTempCont=.false.
-  logical :: UseImpactIon=.false.
-  logical :: UseChargeEx=.true.
-  logical :: UseChapman=.false.
+  logical :: UseHotO = .false.
+  logical :: UseTempCont = .false.
+  logical :: UseImpactIon = .false.
+  logical :: UseChargeEx = .true.
+  logical :: UseChapman = .false.
 
   ! Variables for Mars atmosphere lookup table generated with MGITM
   integer, parameter:: NLong=72, NLat=36, MaxAlt=81
@@ -2039,36 +2039,34 @@ contains
              Xp=r_GB(i,j,k,iBlock)/HNuSpecies_I(1)
              chap_y= sqrt(0.5*Xp)*abs(cosSZA)
              if(cosSZA > 0.0)then   ! SZA<90 deg (equation 13)
-                if(chap_y<8.0)then
+                if(chap_y < 8.0)then
                    chap = sqrt(cPi/2.0*Xp)*&
-                        (1.0606963+0.5564383*chap_y)/&
-                        (1.0619896+1.7245609*chap_y+chap_y*chap_y)
-                elseif(chap_y<100.0)then
+                        (1.0606963 + 0.5564383*chap_y)/&
+                        (1.0619896 + 1.7245609*chap_y + chap_y**2)
+                elseif(chap_y < 100.0)then
                    chap = sqrt(cPi/2.0*Xp)*&
-                        0.56498823/(0.6651874+chap_y)
-                else
-                   chap=0.0
-                end if
-             elseif(cosSZA > -0.5) then
-                ! 120 >SZA > 90 deg (equation 15) Smith and Smith, 1972
-                sinSZA = sqrt(1.0 - cosSZA**2)
-                if(chap_y<8.0)then
-                   chap =sqrt(2*cPi*Xp)* &
-                        (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
-                        -0.5*(1.0606963+0.5564383*chap_y)/ &
-                        (1.0619896+1.7245609*chap_y+chap_y*chap_y))
-                elseif(chap_y < 100.0 .and. Xp*(1.0-sinSZA) < 700.0)then
-                   chap =sqrt(2*cPi*Xp)* &
-                        (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
-                        -0.5*0.56498823/(0.6651874+chap_y))
+                        0.56498823/(0.6651874 + chap_y)
                 else
                    chap = 0.0
                 end if
              else
-                chap = 1.0e10
+                ! 180 >SZA > 90 deg (equation 15) Smith and Smith, 1972
+                sinSZA = sqrt(max(1.0 - cosSZA**2, 1e-20))
+                if(chap_y < 8.0)then
+                   chap =sqrt(2*cPi*Xp)* &
+                        (sqrt(sinSZA)*exp(Xp*(1.0 - sinSZA)) &
+                        - 0.5*(1.0606963 + 0.5564383*chap_y)/ &
+                        (1.0619896 + 1.7245609*chap_y + chap_y**2))
+                elseif(chap_y < 100.0)then
+                   chap =sqrt(2*cPi*Xp)* &
+                        (sqrt(sinSZA)*exp(Xp*(1.0 - sinSZA)) &
+                        - 0.5*0.56498823/(0.6651874 + chap_y))
+                else
+                   chap = 0.0
+                end if
              end if
 
-             Optdep=Optdep*chap
+             Optdep = Optdep*chap
              Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-6)
 
           end if
