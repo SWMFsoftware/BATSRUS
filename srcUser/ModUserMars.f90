@@ -279,13 +279,11 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
   !============================================================================
-
   subroutine user_init_point_implicit
 
     use ModMain, ONLY: nBlock, Unused_B
     use ModVarIndexes
-    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, &
-       UseUserPointImplicit_B
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
     use ModPhysics, ONLY: rBody
     use ModGeometry, ONLY: r_GB
 
@@ -303,13 +301,6 @@ contains
     ! Note that energy is not an independent variable for the
     ! point implicit scheme. The pressure is an independent variable,
     ! and in this example there is no implicit pressure source term.
-
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       UseUserPointImplicit_B(iBlock) = &
-          r_GB(1,1,1,iBlock) <= rPointImplicit .and. &
-          r_GB(nI,1,1,iBlock) > rBody
-    end do
 
     ! Tell the point implicit scheme if dS/dU will be set analytically
     ! If this is set to true the DsDu_VVC matrix has to be set below.
@@ -808,6 +799,7 @@ contains
     use ModPhysics
     use ModNumConst
     use ModMultiFluid
+    use ModPointImplicit, ONLY:UseUserPointImplicit_B
 
     integer, intent(in) :: iBlock
 
@@ -830,6 +822,11 @@ contains
     end if
 
     call set_neutral_density(iBlock)
+
+    ! Moved here from user_init_point_implicit. This is a temporary fix.
+    UseUserPointImplicit_B(iBlock) = &
+         r_GB(1,1,1,iBlock) <= rPointImplicit .and. &
+         r_GB(nI,1,1,iBlock) > rBody
 
     if(DoTest)then
        write(*,*)'usehoto=',UseHotO
