@@ -140,7 +140,7 @@ module ModUser
   real :: kTp0  ! dimensionless temperature
                 ! of new created ions / plasma (Tp_body=2.0*Ti_body)
   real :: Te_new_dim=1000., KTe0, T300
-  real, parameter :: T300_dim = 300.0, Ti_dim =300.
+  real, parameter :: T300_dim = 300.0
 
   real, allocatable :: Nu_CB (:,:,:,:)
   real, parameter :: nu0_dim=4.0e-10
@@ -375,7 +375,7 @@ contains
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
     use ModGeometry, ONLY: r_GB
     use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1,&
-         No2Io_V, UnitT_, UnitN_
+         No2Io_V, No2Si_V, UnitT_, UnitN_, UnitTemperature_
     use BATL_lib, ONLY: CellVolume_GB
     use ModPointImplicit, ONLY: UsePointImplicit
 
@@ -383,16 +383,17 @@ contains
     real, intent(inout) :: Source_VC(:,:,:,:)
 
     ! Variables required by this user subroutine
-    real, parameter :: Te_dim = 300.0
     real, parameter :: A0=-1143.33, A1=323.767, A2=-35.0431, A3=1.69073, &
          A4=-0.0306575
     real, parameter :: B0=-1233.29, B1=347.764, B2=-37.4128, B3=1.79337, &
          B4=-0.0322777
+
+    real :: Te_dim, Ti_dim, kTi, kTe
     real :: S_IC(MaxSpecies+9,nI,nJ,nK)
     real :: X1, X2, X3, X4
     real :: totalIMPNumRho
     integer:: i,j,k,iSpecies
-    real :: inv_rho, inv_rho2, uu2, Productrate, kTi, kTe
+    real :: inv_rho, inv_rho2, uu2, Productrate
     real :: temp
     real :: totalPSNumRho, totalRLNumRhox, temps
     real :: SourceLossMax, vdtmin
@@ -440,6 +441,11 @@ contains
        MaxSLSpecies_CB(i,j,k,iBlock) = 1.0e-3
 
        Productrate = Productrate_CB(i,j,k,iBlock)
+
+       kTi = State_VGB(P_,i,j,k,iBlock)/totalNumRho*0.5
+       kTe = kTi
+       Te_dim = kTe*No2Si_V(UnitTemperature_)
+       Ti_dim = kTi*No2Si_V(UnitTemperature_)
 
        !             ReactionRate_I(CO2_hv__CO2p_em_)= &
        !                  Rate_I(CO2_hv__CO2p_em_)&
@@ -505,13 +511,13 @@ contains
             * nDenNuSpecies_CBI(i,j,k,iBlock,O_)
        CoeffSpecies_II(Op_,CO2p_) = ReactionRate_I(CO2p_O__Op_CO2_)
 
-!!!    ReactionRate_I(Hp_O__Op_H_)= &
-!!!         Rate_I(Hp_O__Op_H_)* nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-!!!    CoeffSpecies_II(Op_,Hp_)=ReactionRate_I(Hp_O__Op_H_)
-!!!
-!!!    ReactionRate_I(Op_H__Hp_O_)= &
-!!!         Rate_I(Op_H__Hp_O_)* nDenNuSpecies_CBI(i,j,k,iBlock,H_)
-!!!    CoeffSpecies_II(Hp_,Op_)=ReactionRate_I(Op_H__Hp_O_)
+       ReactionRate_I(Hp_O__Op_H_)= &
+            Rate_I(Hp_O__Op_H_)* nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+       CoeffSpecies_II(Op_,Hp_)=ReactionRate_I(Hp_O__Op_H_)
+
+       ReactionRate_I(Op_H__Hp_O_)= &
+            Rate_I(Op_H__Hp_O_)* nDenNuSpecies_CBI(i,j,k,iBlock,H_)
+       CoeffSpecies_II(Hp_,Op_)=ReactionRate_I(Op_H__Hp_O_)
 
        ! Recombination
 
@@ -521,9 +527,6 @@ contains
        ! ReactionRate_I(CO2p_em__CO_O_)=Rate_I(CO2p_em__CO_O_)
        ! Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)
        ! Recombination
-
-       kTi = State_VGB(P_,i,j,k,iBlock)/totalNumRho*0.5
-       kTe = kTi
 
        ReactionRate_I(O2p_em__O_O_) = Rate_I(O2p_em__O_O_)
        ! Recb_I(O2p_)=ReactionRate_I(O2p_em__O_O_)*exp(log(TNu_body_dim/Te_dim)*0.56)
@@ -790,7 +793,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_init_session
   !============================================================================
-
   subroutine user_set_ICs(iBlock)
 
     use ModMain
@@ -800,7 +802,7 @@ contains
     use ModNumConst
     use ModMultiFluid
     use ModPointImplicit, ONLY:UseUserPointImplicit_B
-
+    
     integer, intent(in) :: iBlock
 
     real :: CosSZA
@@ -827,7 +829,7 @@ contains
     UseUserPointImplicit_B(iBlock) = &
          r_GB(1,1,1,iBlock) <= rPointImplicit .and. &
          r_GB(nI,1,1,iBlock) > rBody
-
+    
     if(DoTest)then
        write(*,*)'usehoto=',UseHotO
        write(*,*)'nDenNuSpecies_CBI(iTest,jTest,kTest,iBlockTest,:)=',&
@@ -1360,7 +1362,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_multiSp_ICs
   !============================================================================
-
   subroutine user_set_face_boundary(FBC)
 
     use ModMain,       ONLY: UseRotatingBc, ExtraBc_,Body1_,xMinBc_, FaceBCType
@@ -1588,50 +1589,47 @@ contains
        end do
     end if
 
-    a=1.035336
-    arr=a/r
+    a = 1.035336
+    arr = a/r
 
     ! NNm=8
 
     ! mars_eps=1e-3
 
     if(r < 1.0) then
-       NN=0
+       NN = 0
     else
-       NN=NNm-1
+       NN = NNm - 1
     endif
 
-    xtcos=cos(theta)
-    xtsin=sin(theta)
+    xtcos = cos(theta)
+    xtsin = sin(theta)
 
-    do im=0,NN
-       xpcos(im)=cos(im*phi)
-       xpsin(im)=sin(im*phi)
+    do im = 0, NN
+       xpcos(im) = cos(im*phi)
+       xpsin(im) = sin(im*phi)
     end do
 
-    bb(1)=0.0
-    bb(2)=0.0
-    bb(3)=0.0
+    bb = 0.0
 
     !	    somx2=sqrt((1.-xtcos)*(1.+xtcos))
-    somx2=abs(xtsin)
-    signsx=sign(1., xtsin)
+    somx2 = abs(xtsin)
+    signsx = sign(1., xtsin)
 
     fact=1.
     Rmm=1.
-    Rnm(0,0)=sqrt(2.)
+    Rnm(0,0) = sqrt(2.)
     Rnm(1,0)=xtcos*sqrt(3.)*Rnm(0,0)
     do n=2, NN
-       Rnm(n, 0)=(xtcos*sqrt((2.*n-1.)*(2.*n+1.))*Rnm(n-1,0)-&
-            (n-1)*sqrt((2.*n+1.)/(2.*n-3.))*Rnm(n-2, 0))/n
-
+       Rnm(n,0) = (xtcos*sqrt((2.*n-1.)*(2.*n+1.))*Rnm(n-1,0) &
+            - (n-1)*sqrt((2.*n+1.)/(2.*n-3.))*Rnm(n-2, 0))/n
     enddo ! n
 
-    arrm=1.0
+    arrm = 1.0
 
     call timing_start('crustal')
 
-    do m=0, NN
+    do m = 0, NN
 
        Rmm=Rmm*fact*somx2/Factor1_I(m)
 
@@ -1643,10 +1641,10 @@ contains
        arrm=arr*arrm
        arrn=arrm
 
-       do n=m,NN
-          arrn=arr*arrn
+       do n = m, NN
+          arrn = arr*arrn
           ! write(*,*) 'arrn=', arrn, ' n=', n
-          if(n> (m+2)) then
+          if(n > (m+2)) then
              Rnm(n,m+1) = xtcos*Factor1_II(n,m)*Rnm(n-1,m+1)-&
                   Factor2_II(n,m)*Rnm(n-2,m+1)
 
@@ -1654,17 +1652,16 @@ contains
              Rnm(n,m+1)=xtcos*Factor3_I(m)*Rnm(m+1,m+1)
           endif
 
-          dRnm=m*xtcos*Rnm(n,m)/xtsin-Rnm(n, m+1)*signsx* Factor3_II(n,m)
+          dRnm = m*xtcos*Rnm(n,m)/xtsin - Rnm(n,m+1)*signsx*Factor3_II(n,m)
 
-          bb(1)=bb(1)+(n+1)*arrn*Rnm(n,m)*(cmars(n,m)*xpcos(m)&
-               +dmars(n,m)*xpsin(m))
-          bb(2)=bb(2)-arrn*dRnm*(cmars(n,m)*&
-               xpcos(m)+dmars(n,m)*xpsin(m))
+          bb(1) = bb(1) + (n+1)*arrn*Rnm(n,m)*(cmars(n,m)*xpcos(m) &
+               + dmars(n,m)*xpsin(m))
+          bb(2) = bb(2) - arrn*dRnm*(cmars(n,m)*xpcos(m)+dmars(n,m)*xpsin(m))
           if(xtsin <= 1e-6) then
-             bb(3)=0.
+             bb(3) = 0.
           else
-             bb(3)=bb(3)-arrn*Rnm(n,m)*m/xtsin*(-cmars(n,m)*xpsin(m)&
-                  +dmars(n,m)*xpcos(m))
+             bb(3) = bb(3) - arrn*Rnm(n,m)*m/xtsin*(-cmars(n,m)*xpsin(m)&
+                  + dmars(n,m)*xpcos(m))
           endif
        end do ! n
     end do ! m
@@ -1673,7 +1670,6 @@ contains
 
   end subroutine MarsB0
   !============================================================================
-
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
     use ModGeometry,   ONLY: Xyz_DGB,r_GB
@@ -1724,7 +1720,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
   !============================================================================
-
   subroutine Mars_Input(iBlock)
 
     use ModMain
@@ -1923,7 +1918,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine Mars_input
   !============================================================================
-
   subroutine ua_input(iBlock)
 
     use ModGeometry, ONLY: TypeGeometry, r_GB
@@ -2173,6 +2167,5 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_neutral_density
   !============================================================================
-
 end module ModUser
 !==============================================================================
