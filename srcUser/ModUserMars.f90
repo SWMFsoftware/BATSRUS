@@ -598,7 +598,7 @@ contains
 
        MaxSLSpecies_CB(i,j,k,iBlock) = maxval(abs(SiSpecies_I(1:nSpecies) + &
             LiSpecies_I(1:nSpecies) ) / &
-            (State_VGB(rho_+1:rho_+MaxSpecies, i,j,k, iBlock)+1e-20)) &
+            (State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) + 1e-20)) &
             *CellVolume_GB(i,j,k,iBlock)
 
        ! Limit timestep for explicit scheme
@@ -606,13 +606,17 @@ contains
           ! sum of the (loss term/atom mass) due to recombination
           SourceLossMax = 10.0*maxval(abs(SiSpecies_I(1:nSpecies)-&
                LiSpecies_I(1:nSpecies) ) /&
-               (State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)+1e-20))&
+               (State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock) + 1e-20)) &
                *CellVolume_GB(i,j,k,iBlock)
-          vdtmin = min(Flux_VXI(Vdt_,i,j,k,1),Flux_VYI(Vdt_,i,j,k,1),Flux_VZI(Vdt_,i,j,k,1))
+          vdtmin = min(Flux_VXI(Vdt_,i,j,k,1), &
+               Flux_VYI(Vdt_,i,j,k,1),Flux_VZI(Vdt_,i,j,k,1))
           if(SourceLossMax > Vdtmin) then
-             Flux_VXI(Vdt_,i,j,k,1) = max(SourceLossMax, Flux_VXI(Vdt_,i,j,k,1))
-             Flux_VYI(Vdt_,i,j,k,1) = max(SourceLossMax, Flux_VYI(Vdt_,i,j,k,1))
-             Flux_VZI(Vdt_,i,j,k,1) = max(SourceLossMax, Flux_VZI(Vdt_,i,j,k,1))
+             Flux_VXI(Vdt_,i,j,k,1) = &
+                  max(SourceLossMax, Flux_VXI(Vdt_,i,j,k,1))
+             Flux_VYI(Vdt_,i,j,k,1) = &
+                  max(SourceLossMax, Flux_VYI(Vdt_,i,j,k,1))
+             Flux_VZI(Vdt_,i,j,k,1) = &
+                  max(SourceLossMax, Flux_VZI(Vdt_,i,j,k,1))
           end if
        end if
 
@@ -2051,7 +2055,7 @@ contains
                 end if
              else
                 ! 180 >SZA > 90 deg (equation 15) Smith and Smith, 1972
-                sinSZA = sqrt(max(1.0 - cosSZA**2, 1e-20))
+                sinSZA = sqrt(max(1.0 - cosSZA**2, 0.0))
                 if(chap_y < 8.0)then
                    chap =sqrt(2*cPi*Xp)* &
                         (sqrt(sinSZA)*exp(Xp*(1.0 - sinSZA)) &
