@@ -805,7 +805,7 @@ contains
     use ModPhysics
     use ModNumConst
     use ModMultiFluid
-    use ModPointImplicit, ONLY:UseUserPointImplicit_B
+    use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B
     
     integer, intent(in) :: iBlock
 
@@ -830,7 +830,7 @@ contains
     call set_neutral_density(iBlock)
 
     ! Moved here from user_init_point_implicit. This is a temporary fix.
-    UseUserPointImplicit_B(iBlock) = &
+    if(UsePointImplicit) UseUserPointImplicit_B(iBlock) = &
          r_GB(1,1,1,iBlock) <= rPointImplicit .and. &
          r_GB(nI,1,1,iBlock) > rBody
     
