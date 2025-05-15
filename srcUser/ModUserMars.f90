@@ -806,7 +806,7 @@ contains
     use ModNumConst
     use ModMultiFluid
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B
-    
+
     integer, intent(in) :: iBlock
 
     real :: CosSZA
@@ -833,7 +833,7 @@ contains
     if(UsePointImplicit) UseUserPointImplicit_B(iBlock) = &
          r_GB(1,1,1,iBlock) <= rPointImplicit .and. &
          r_GB(nI,1,1,iBlock) > rBody
-    
+
     if(DoTest)then
        write(*,*)'usehoto=',UseHotO
        write(*,*)'nDenNuSpecies_CBI(iTest,jTest,kTest,iBlockTest,:)=',&
