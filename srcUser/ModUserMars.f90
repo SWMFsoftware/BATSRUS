@@ -32,7 +32,7 @@ module ModUser
   ! added rotation of crustal magnetic field with time,
   ! MHD model can now use MSO coordinate if needed
   character(len=*), parameter :: NameUserModule = &
-       'Mars 4 species MHD code, Yingjuan Ma'
+       'Mars 4 species MHD code, Yingjuan Ma and Wenyi Sun'
 
   character(len=10) :: SolarCond='solarmax  '
 
@@ -398,7 +398,7 @@ contains
     real, parameter :: B0=-1233.29, B1=347.764, B2=-37.4128, B3=1.79337, &
          B4=-0.0322777
     real :: S_IC(MaxSpecies+9,nI,nJ,nK)
-    real :: xMinBox, xMaxBox, X3, X4
+    real :: X1, X2, X3, X4
     real :: totalIMPNumRho
     integer:: i,j,k,iSpecies
     real :: inv_rho, inv_rho2, uu2, Productrate, kTi, kTe
@@ -471,13 +471,13 @@ contains
        ! IMPACT Ionization
        ImpIon_I = 0.0
        if(UseImpactIon)then
-          xMinBox = log(Te_dim)
-          xMaxBox = xMinBox*xMinBox
-          X3 = xMaxBox*xMinBox
-          X4 = xMaxBox*xMaxBox
-          ImpIOn_I(Hp_) = exp(A0+A1*xMinBox+A2*xMaxBox+A3*X3+A4*X4)&
+          X1 = log(Te_dim)
+          X2 = X1*X1
+          X3 = X2*X1
+          X4 = X2*X2
+          ImpIOn_I(Hp_) = exp(A0+A1*X1+A2*X2+A3*X3+A4*X4)&
                *No2Io_V(UnitT_)*No2Io_V(UnitN_)
-          ImpIOn_I(Op_) = exp(B0+B1*xMinBox+B2*xMaxBox+B3*X3+B4*X4)&
+          ImpIOn_I(Op_) = exp(B0+B1*X1+B2*X2+B3*X3+B4*X4)&
                *No2Io_V(UnitT_)*No2Io_V(UnitN_)
           ImpIon_I(Hp_) = ImpIon_I(Hp_)*&
                nDenNuSpecies_CBI(i,j,k,iBlock,H_)
@@ -1430,7 +1430,6 @@ contains
     end associate
   end subroutine user_set_face_boundary
   !============================================================================
-
   subroutine user_set_boundary_cells(iBlock)
 
     use ModGeometry,         ONLY: ExtraBc_, Xyz_DGB, xMaxBox
@@ -1449,22 +1448,20 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_boundary_cells
   !============================================================================
+  subroutine user_get_b0(x1, y1, z1, B1)
 
-  subroutine user_get_b0(xMinBox,yMinBox,zMinBox,B1)
     use ModMain
     use ModPhysics
     use ModNumConst
 
-    real, intent(in) :: xMinBox,yMinBox,zMinBox
+    real, intent(in) :: x1,y1,z1
     real, intent(out), dimension(3) :: B1
 
     real :: R0, theta, phi, rr, X0, Y0, Z0, delta
     real, dimension(3) :: bb, B0, B2
     real :: sint, sinp, cost, cosp
-    real :: xMaxBox, yMaxBox, zMaxBox
-
+    real :: x2, y2, z2
     !--------------------------------------------------------------------------
-
     if(.not. UseMarsB0) then
        B1(:) = 0.0
        RETURN
@@ -1474,37 +1471,37 @@ contains
 
     if(UseMso)then  ! change location from MSO to GEO
        ! rotate around Z axis to make the axis in the XZ plane
-       x0 = xMinBox*cost1 + yMinBox*sint1
-       y0 = -xMinBox*sint1 + yMinBox*cost1
+       x0 =  x1*cost1 + y1*sint1
+       y0 = -x1*sint1 + y1*cost1
        ! rotate around Y axis
-       xMaxBox = X0*w-zMinBox*uv
-       yMaxBox = Y0
-       zMaxBox = X0*uv+zMinBox*w
+       x2 = X0*w - z1*uv
+       y2 = Y0
+       z2 = X0*uv + z1*w
        ! rotate back around Z axis so that the subsolar point is along the x
        ! axis
-       x0=xMaxBox*cost2-yMaxBox*sint2
-       z0=zMaxBox
-       y0=xMaxBox*sint2+yMaxBox*cost2
-
+       x0 = x2*cost2 - y2*sint2
+       z0 = z2
+       y0 = x2*sint2 + y2*cost2
     else
-       X0 = xMinBox*cos(thetilt)-zMinBox*sin(thetilt)
-       Y0 = yMinBox
-       Z0 = xMinBox*sin(thetilt)+zMinBox*cos(thetilt)
+       X0 = x1*cos(thetilt)-z1*sin(thetilt)
+       Y0 = y1
+       Z0 = x1*sin(thetilt)+z1*cos(thetilt)
     end if
 
     R0 = sqrt(X0*X0 + Y0*Y0 + Z0*Z0)
     rr = max(R0, 1.00E-6)
     if(abs(X0) < 1e-6) then
        if(Y0 < 0) then
-          phi=-cPi/2.
+          phi = -cPi/2.
        else
-          phi=cPi/2.
+          phi = cPi/2.
        endif
     else
+       !!! phi = atan(Y0, X0)
        if(X0 > 0) then
-          phi=atan(Y0/X0)
+          phi = atan(Y0/X0)
        else
-          phi=cPi+atan(Y0/X0)
+          phi = cPi+atan(Y0/X0)
        endif
     endif
 
@@ -1516,14 +1513,14 @@ contains
        delta=rot-tSimulation/RotPeriodSi*cTwoPi
     end If
 
-    theta=acos(Z0/rr)
+    theta = acos(Z0/rr)
 
     call MarsB0(R0,theta, phi+delta, bb)
 
-    sint=sin(theta)
-    cost=cos(theta)
-    sinp=sin(phi)
-    cosp=cos(phi)
+    sint = sin(theta)
+    cost = cos(theta)
+    sinp = sin(phi)
+    cosp = cos(phi)
 
     B0(1) = bb(1)*sint*cosp+bb(2)*cost*cosp-bb(3)*sinp
     B0(2) = bb(1)*sint*sinp+bb(2)*cost*sinp+bb(3)*cosp
@@ -1534,12 +1531,12 @@ contains
        B1(2) = -B0(1)*sint2+B0(2)*cost2
        B1(3) = B0(3)
 
-       B2(1)=w*B1(1)+uv*B1(3)
-       B2(2)=B1(2)
-       B2(3)=-uv*B1(1)+w*B1(3)
+       B2(1) = w*B1(1) + uv*B1(3)
+       B2(2) = B1(2)
+       B2(3) = -uv*B1(1) + w*B1(3)
 
-       B1(1) = B2(1)*cost1-B2(2)*sint1
-       B1(2) = B2(1)*sint1+B2(2)*cost1
+       B1(1) = B2(1)*cost1 - B2(2)*sint1
+       B1(2) = B2(1)*sint1 + B2(2)*cost1
        B1(3) = B2(3)
 
     else
