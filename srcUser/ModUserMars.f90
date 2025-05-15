@@ -12,8 +12,8 @@ module ModUser
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
   use ModUtilities, ONLY: open_file, close_file
-  use ModNumConst, ONLY: cPi, cDegToRad
-  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
+  use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi, cDegToRad
+  use ModIoUnit, ONLY: UnitTmp_
   use ModUserEmpty, &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -1490,20 +1490,19 @@ contains
        Z0 = x1*sin(thetilt)+z1*cos(thetilt)
     end if
 
-    R0 = sqrt(X0*X0 + Y0*Y0 + Z0*Z0)
-    rr = max(R0, 1.00E-6)
+    R0 = sqrt(X0**2 + Y0**2 + Z0**2)
+    rr = max(R0, 1e-6)
     if(abs(X0) < 1e-6) then
        if(Y0 < 0) then
-          phi = -cPi/2.
+          phi = -cHalfPi
        else
-          phi = cPi/2.
+          phi = cHalfPi
        endif
     else
-       !!! phi = atan(Y0, X0)
        if(X0 > 0) then
           phi = atan(Y0/X0)
        else
-          phi = cPi+atan(Y0/X0)
+          phi = cPi + atan(Y0/X0)
        endif
     endif
 
@@ -1512,7 +1511,7 @@ contains
     delta = rot
 
     If(RotPeriodSi > 0.0) then
-       delta=rot-tSimulation/RotPeriodSi*cTwoPi
+       delta=rot - tSimulation/RotPeriodSi*cTwoPi
     end If
 
     theta = acos(Z0/rr)
@@ -2057,13 +2056,13 @@ contains
                 ! 180 >SZA > 90 deg (equation 15) Smith and Smith, 1972
                 sinSZA = sqrt(max(1.0 - cosSZA**2, 0.0))
                 if(chap_y < 8.0)then
-                   chap =sqrt(2*cPi*Xp)* &
+                   chap = sqrt(2*cPi*Xp)* &
                         (sqrt(sinSZA)*exp(Xp*(1.0 - sinSZA)) &
                         - 0.5*(1.0606963 + 0.5564383*chap_y)/ &
                         (1.0619896 + 1.7245609*chap_y + chap_y**2))
                 elseif(chap_y < 100.0)then
-                   chap =sqrt(2*cPi*Xp)* &
-                        (sqrt(sinSZA)*exp(Xp*(1.0 - sinSZA)) &
+                   chap = sqrt(2*cPi*Xp)* &
+                        (sqrt(sinSZA)*exp(min(100.0, Xp*(1.0 - sinSZA))) &
                         - 0.5*0.56498823/(0.6651874 + chap_y))
                 else
                    chap = 0.0
