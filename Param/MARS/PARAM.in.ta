@@ -1,7 +1,3 @@
-! To be removed !!!
-#NORMALIZATION
-SOLARWIND		TypeNormalization
-
 INCLUDE
 restartIN/restart.H
 
