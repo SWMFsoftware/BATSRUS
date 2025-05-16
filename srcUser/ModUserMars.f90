@@ -886,7 +886,7 @@ contains
        end if
     end do;end do; end do;
 
-    !if(DoTest) write(*,*) NameSub,': initial O2p,Op,Co2p=', &
+    ! if(DoTest) write(*,*) NameSub,': initial O2p,Op,Co2p=', &
     !     State_VGB(RhoO2p_:RhoCo2p_,iTest,jTest,kTest,iBlockTest)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -924,7 +924,7 @@ contains
 
     end do; end do; end do
 
-    !if(DoTest) then
+    ! if(DoTest) then
     !   write(*,*) 'IonRate(CO2)=', &
     !        Ionizationrate_CBI(iTest,jTest,kTest,iBlock,CO2_)
     !   write(*,*) 'nDensNu(O)=', nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,O_)
@@ -940,7 +940,7 @@ contains
     !        nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,CO2_)
     !   write(*,*)'modified O2p=', &
     !        State_VGB(RhoCo2p_,iTest,jTest,kTest,iBlockTest)
-    !end if
+    ! end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock))CYCLE
