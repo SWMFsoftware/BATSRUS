@@ -84,6 +84,8 @@ T       		UseMagFriction
 T			UseDecay
 T			UseVelocityLimit
 F			DoSmooth
+None			SemiFloatNegative
+F			DoTestBC
 1.09     		MagFrictionRmax
 2.0			MagFrictionExp
 T			UseBvectorLonLat

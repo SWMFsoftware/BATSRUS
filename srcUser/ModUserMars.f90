@@ -12,8 +12,8 @@ module ModUser
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
   use ModUtilities, ONLY: open_file, close_file
-  use ModNumConst, ONLY: cPi, cDegToRad
-  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
+  use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi, cDegToRad
+  use ModIoUnit, ONLY: UnitTmp_
   use ModUserEmpty, &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -32,7 +32,7 @@ module ModUser
   ! added rotation of crustal magnetic field with time,
   ! MHD model can now use MSO coordinate if needed
   character(len=*), parameter :: NameUserModule = &
-       'Mars 4 species MHD code, Yingjuan Ma'
+       'Mars 4 species MHD code, Yingjuan Ma and Wenyi Sun'
 
   character(len=10) :: SolarCond='solarmax  '
 
@@ -140,7 +140,7 @@ module ModUser
   real :: kTp0  ! dimensionless temperature
                 ! of new created ions / plasma (Tp_body=2.0*Ti_body)
   real :: Te_new_dim=1000., KTe0, T300
-  real, parameter :: T300_dim = 300.0, Ti_dim =300.
+  real, parameter :: T300_dim = 300.0
 
   real, allocatable :: Nu_CB (:,:,:,:)
   real, parameter :: nu0_dim=4.0e-10
@@ -157,11 +157,11 @@ module ModUser
   real :: u, v, w, uv, uvw, sint1, cost1, sint2, cost2
 
   real :: rot = 1.0, thetilt = 0.0
-  logical :: UseHotO= .false.
-  logical :: UseTempCont=.false.
-  logical :: UseImpactIon=.false.
-  logical :: UseChargeEx=.true.
-  logical :: UseChapman=.false.
+  logical :: UseHotO = .false.
+  logical :: UseTempCont = .false.
+  logical :: UseImpactIon = .false.
+  logical :: UseChargeEx = .true.
+  logical :: UseChapman = .false.
 
   ! Variables for Mars atmosphere lookup table generated with MGITM
   integer, parameter:: NLong=72, NLat=36, MaxAlt=81
@@ -279,13 +279,11 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
   !============================================================================
-
   subroutine user_init_point_implicit
 
     use ModMain, ONLY: nBlock, Unused_B
     use ModVarIndexes
-    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, &
-       UseUserPointImplicit_B
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
     use ModPhysics, ONLY: rBody
     use ModGeometry, ONLY: r_GB
 
@@ -303,13 +301,6 @@ contains
     ! Note that energy is not an independent variable for the
     ! point implicit scheme. The pressure is an independent variable,
     ! and in this example there is no implicit pressure source term.
-
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       UseUserPointImplicit_B(iBlock) = &
-          r_GB(1,1,1,iBlock) <= rPointImplicit .and. &
-          r_GB(nI,1,1,iBlock) > rBody
-    end do
 
     ! Tell the point implicit scheme if dS/dU will be set analytically
     ! If this is set to true the DsDu_VVC matrix has to be set below.
@@ -384,7 +375,7 @@ contains
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
     use ModGeometry, ONLY: r_GB
     use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1,&
-         No2Io_V, UnitT_, UnitN_
+         No2Io_V, No2Si_V, UnitT_, UnitN_, UnitTemperature_
     use BATL_lib, ONLY: CellVolume_GB
     use ModPointImplicit, ONLY: UsePointImplicit
 
@@ -392,16 +383,17 @@ contains
     real, intent(inout) :: Source_VC(:,:,:,:)
 
     ! Variables required by this user subroutine
-    real, parameter :: Te_dim = 300.0
     real, parameter :: A0=-1143.33, A1=323.767, A2=-35.0431, A3=1.69073, &
          A4=-0.0306575
     real, parameter :: B0=-1233.29, B1=347.764, B2=-37.4128, B3=1.79337, &
          B4=-0.0322777
+
+    real :: Te_dim, Ti_dim, kTi, kTe
     real :: S_IC(MaxSpecies+9,nI,nJ,nK)
-    real :: xMinBox, xMaxBox, X3, X4
+    real :: X1, X2, X3, X4
     real :: totalIMPNumRho
     integer:: i,j,k,iSpecies
-    real :: inv_rho, inv_rho2, uu2, Productrate, kTi, kTe
+    real :: inv_rho, inv_rho2, uu2, Productrate
     real :: temp
     real :: totalPSNumRho, totalRLNumRhox, temps
     real :: SourceLossMax, vdtmin
@@ -450,6 +442,11 @@ contains
 
        Productrate = Productrate_CB(i,j,k,iBlock)
 
+       kTi = State_VGB(P_,i,j,k,iBlock)/totalNumRho*0.5
+       kTe = kTi
+       Te_dim = kTe*No2Si_V(UnitTemperature_)
+       Ti_dim = kTi*No2Si_V(UnitTemperature_)
+
        !             ReactionRate_I(CO2_hv__CO2p_em_)= &
        !                  Rate_I(CO2_hv__CO2p_em_)&
        !                  *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
@@ -471,13 +468,13 @@ contains
        ! IMPACT Ionization
        ImpIon_I = 0.0
        if(UseImpactIon)then
-          xMinBox = log(Te_dim)
-          xMaxBox = xMinBox*xMinBox
-          X3 = xMaxBox*xMinBox
-          X4 = xMaxBox*xMaxBox
-          ImpIOn_I(Hp_) = exp(A0+A1*xMinBox+A2*xMaxBox+A3*X3+A4*X4)&
+          X1 = log(Te_dim)
+          X2 = X1*X1
+          X3 = X2*X1
+          X4 = X2*X2
+          ImpIOn_I(Hp_) = exp(A0+A1*X1+A2*X2+A3*X3+A4*X4)&
                *No2Io_V(UnitT_)*No2Io_V(UnitN_)
-          ImpIOn_I(Op_) = exp(B0+B1*xMinBox+B2*xMaxBox+B3*X3+B4*X4)&
+          ImpIOn_I(Op_) = exp(B0+B1*X1+B2*X2+B3*X3+B4*X4)&
                *No2Io_V(UnitT_)*No2Io_V(UnitN_)
           ImpIon_I(Hp_) = ImpIon_I(Hp_)*&
                nDenNuSpecies_CBI(i,j,k,iBlock,H_)
@@ -514,13 +511,13 @@ contains
             * nDenNuSpecies_CBI(i,j,k,iBlock,O_)
        CoeffSpecies_II(Op_,CO2p_) = ReactionRate_I(CO2p_O__Op_CO2_)
 
-!!!    ReactionRate_I(Hp_O__Op_H_)= &
-!!!         Rate_I(Hp_O__Op_H_)* nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-!!!    CoeffSpecies_II(Op_,Hp_)=ReactionRate_I(Hp_O__Op_H_)
-!!!
-!!!    ReactionRate_I(Op_H__Hp_O_)= &
-!!!         Rate_I(Op_H__Hp_O_)* nDenNuSpecies_CBI(i,j,k,iBlock,H_)
-!!!    CoeffSpecies_II(Hp_,Op_)=ReactionRate_I(Op_H__Hp_O_)
+       ReactionRate_I(Hp_O__Op_H_)= &
+            Rate_I(Hp_O__Op_H_)* nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+       CoeffSpecies_II(Op_,Hp_)=ReactionRate_I(Hp_O__Op_H_)
+
+       ReactionRate_I(Op_H__Hp_O_)= &
+            Rate_I(Op_H__Hp_O_)* nDenNuSpecies_CBI(i,j,k,iBlock,H_)
+       CoeffSpecies_II(Hp_,Op_)=ReactionRate_I(Op_H__Hp_O_)
 
        ! Recombination
 
@@ -530,9 +527,6 @@ contains
        ! ReactionRate_I(CO2p_em__CO_O_)=Rate_I(CO2p_em__CO_O_)
        ! Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)
        ! Recombination
-
-       kTi = State_VGB(P_,i,j,k,iBlock)/totalNumRho*0.5
-       kTe = kTi
 
        ReactionRate_I(O2p_em__O_O_) = Rate_I(O2p_em__O_O_)
        ! Recb_I(O2p_)=ReactionRate_I(O2p_em__O_O_)*exp(log(TNu_body_dim/Te_dim)*0.56)
@@ -604,7 +598,7 @@ contains
 
        MaxSLSpecies_CB(i,j,k,iBlock) = maxval(abs(SiSpecies_I(1:nSpecies) + &
             LiSpecies_I(1:nSpecies) ) / &
-            (State_VGB(rho_+1:rho_+MaxSpecies, i,j,k, iBlock)+1e-20)) &
+            (State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) + 1e-20)) &
             *CellVolume_GB(i,j,k,iBlock)
 
        ! Limit timestep for explicit scheme
@@ -612,13 +606,17 @@ contains
           ! sum of the (loss term/atom mass) due to recombination
           SourceLossMax = 10.0*maxval(abs(SiSpecies_I(1:nSpecies)-&
                LiSpecies_I(1:nSpecies) ) /&
-               (State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)+1e-20))&
+               (State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock) + 1e-20)) &
                *CellVolume_GB(i,j,k,iBlock)
-          vdtmin = min(Flux_VXI(Vdt_,i,j,k,1),Flux_VYI(Vdt_,i,j,k,1),Flux_VZI(Vdt_,i,j,k,1))
+          vdtmin = min(Flux_VXI(Vdt_,i,j,k,1), &
+               Flux_VYI(Vdt_,i,j,k,1),Flux_VZI(Vdt_,i,j,k,1))
           if(SourceLossMax > Vdtmin) then
-             Flux_VXI(Vdt_,i,j,k,1) = max(SourceLossMax, Flux_VXI(Vdt_,i,j,k,1))
-             Flux_VYI(Vdt_,i,j,k,1) = max(SourceLossMax, Flux_VYI(Vdt_,i,j,k,1))
-             Flux_VZI(Vdt_,i,j,k,1) = max(SourceLossMax, Flux_VZI(Vdt_,i,j,k,1))
+             Flux_VXI(Vdt_,i,j,k,1) = &
+                  max(SourceLossMax, Flux_VXI(Vdt_,i,j,k,1))
+             Flux_VYI(Vdt_,i,j,k,1) = &
+                  max(SourceLossMax, Flux_VYI(Vdt_,i,j,k,1))
+             Flux_VZI(Vdt_,i,j,k,1) = &
+                  max(SourceLossMax, Flux_VZI(Vdt_,i,j,k,1))
           end if
        end if
 
@@ -799,7 +797,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_init_session
   !============================================================================
-
   subroutine user_set_ICs(iBlock)
 
     use ModMain
@@ -808,6 +805,7 @@ contains
     use ModPhysics
     use ModNumConst
     use ModMultiFluid
+    use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B
 
     integer, intent(in) :: iBlock
 
@@ -830,6 +828,11 @@ contains
     end if
 
     call set_neutral_density(iBlock)
+
+    ! Moved here from user_init_point_implicit. This is a temporary fix.
+    if(UsePointImplicit) UseUserPointImplicit_B(iBlock) = &
+         r_GB(1,1,1,iBlock) <= rPointImplicit .and. &
+         r_GB(nI,1,1,iBlock) > rBody
 
     if(DoTest)then
        write(*,*)'usehoto=',UseHotO
@@ -1363,7 +1366,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_multiSp_ICs
   !============================================================================
-
   subroutine user_set_face_boundary(FBC)
 
     use ModMain,       ONLY: UseRotatingBc, ExtraBc_,Body1_,xMinBc_, FaceBCType
@@ -1430,7 +1432,6 @@ contains
     end associate
   end subroutine user_set_face_boundary
   !============================================================================
-
   subroutine user_set_boundary_cells(iBlock)
 
     use ModGeometry,         ONLY: ExtraBc_, Xyz_DGB, xMaxBox
@@ -1449,22 +1450,20 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_boundary_cells
   !============================================================================
+  subroutine user_get_b0(x1, y1, z1, B1)
 
-  subroutine user_get_b0(xMinBox,yMinBox,zMinBox,B1)
     use ModMain
     use ModPhysics
     use ModNumConst
 
-    real, intent(in) :: xMinBox,yMinBox,zMinBox
+    real, intent(in) :: x1,y1,z1
     real, intent(out), dimension(3) :: B1
 
     real :: R0, theta, phi, rr, X0, Y0, Z0, delta
     real, dimension(3) :: bb, B0, B2
     real :: sint, sinp, cost, cosp
-    real :: xMaxBox, yMaxBox, zMaxBox
-
+    real :: x2, y2, z2
     !--------------------------------------------------------------------------
-
     if(.not. UseMarsB0) then
        B1(:) = 0.0
        RETURN
@@ -1474,37 +1473,36 @@ contains
 
     if(UseMso)then  ! change location from MSO to GEO
        ! rotate around Z axis to make the axis in the XZ plane
-       x0 = xMinBox*cost1 + yMinBox*sint1
-       y0 = -xMinBox*sint1 + yMinBox*cost1
+       x0 =  x1*cost1 + y1*sint1
+       y0 = -x1*sint1 + y1*cost1
        ! rotate around Y axis
-       xMaxBox = X0*w-zMinBox*uv
-       yMaxBox = Y0
-       zMaxBox = X0*uv+zMinBox*w
+       x2 = X0*w - z1*uv
+       y2 = Y0
+       z2 = X0*uv + z1*w
        ! rotate back around Z axis so that the subsolar point is along the x
        ! axis
-       x0=xMaxBox*cost2-yMaxBox*sint2
-       z0=zMaxBox
-       y0=xMaxBox*sint2+yMaxBox*cost2
-
+       x0 = x2*cost2 - y2*sint2
+       z0 = z2
+       y0 = x2*sint2 + y2*cost2
     else
-       X0 = xMinBox*cos(thetilt)-zMinBox*sin(thetilt)
-       Y0 = yMinBox
-       Z0 = xMinBox*sin(thetilt)+zMinBox*cos(thetilt)
+       X0 = x1*cos(thetilt)-z1*sin(thetilt)
+       Y0 = y1
+       Z0 = x1*sin(thetilt)+z1*cos(thetilt)
     end if
 
-    R0 = sqrt(X0*X0 + Y0*Y0 + Z0*Z0)
-    rr = max(R0, 1.00E-6)
+    R0 = sqrt(X0**2 + Y0**2 + Z0**2)
+    rr = max(R0, 1e-6)
     if(abs(X0) < 1e-6) then
        if(Y0 < 0) then
-          phi=-cPi/2.
+          phi = -cHalfPi
        else
-          phi=cPi/2.
+          phi = cHalfPi
        endif
     else
        if(X0 > 0) then
-          phi=atan(Y0/X0)
+          phi = atan(Y0/X0)
        else
-          phi=cPi+atan(Y0/X0)
+          phi = cPi + atan(Y0/X0)
        endif
     endif
 
@@ -1513,17 +1511,17 @@ contains
     delta = rot
 
     If(RotPeriodSi > 0.0) then
-       delta=rot-tSimulation/RotPeriodSi*cTwoPi
+       delta=rot - tSimulation/RotPeriodSi*cTwoPi
     end If
 
-    theta=acos(Z0/rr)
+    theta = acos(Z0/rr)
 
     call MarsB0(R0,theta, phi+delta, bb)
 
-    sint=sin(theta)
-    cost=cos(theta)
-    sinp=sin(phi)
-    cosp=cos(phi)
+    sint = sin(theta)
+    cost = cos(theta)
+    sinp = sin(phi)
+    cosp = cos(phi)
 
     B0(1) = bb(1)*sint*cosp+bb(2)*cost*cosp-bb(3)*sinp
     B0(2) = bb(1)*sint*sinp+bb(2)*cost*sinp+bb(3)*cosp
@@ -1534,12 +1532,12 @@ contains
        B1(2) = -B0(1)*sint2+B0(2)*cost2
        B1(3) = B0(3)
 
-       B2(1)=w*B1(1)+uv*B1(3)
-       B2(2)=B1(2)
-       B2(3)=-uv*B1(1)+w*B1(3)
+       B2(1) = w*B1(1) + uv*B1(3)
+       B2(2) = B1(2)
+       B2(3) = -uv*B1(1) + w*B1(3)
 
-       B1(1) = B2(1)*cost1-B2(2)*sint1
-       B1(2) = B2(1)*sint1+B2(2)*cost1
+       B1(1) = B2(1)*cost1 - B2(2)*sint1
+       B1(2) = B2(1)*sint1 + B2(2)*cost1
        B1(3) = B2(3)
 
     else
@@ -1594,50 +1592,47 @@ contains
        end do
     end if
 
-    a=1.035336
-    arr=a/r
+    a = 1.035336
+    arr = a/r
 
     ! NNm=8
 
     ! mars_eps=1e-3
 
     if(r < 1.0) then
-       NN=0
+       NN = 0
     else
-       NN=NNm-1
+       NN = NNm - 1
     endif
 
-    xtcos=cos(theta)
-    xtsin=sin(theta)
+    xtcos = cos(theta)
+    xtsin = sin(theta)
 
-    do im=0,NN
-       xpcos(im)=cos(im*phi)
-       xpsin(im)=sin(im*phi)
+    do im = 0, NN
+       xpcos(im) = cos(im*phi)
+       xpsin(im) = sin(im*phi)
     end do
 
-    bb(1)=0.0
-    bb(2)=0.0
-    bb(3)=0.0
+    bb = 0.0
 
     !	    somx2=sqrt((1.-xtcos)*(1.+xtcos))
-    somx2=abs(xtsin)
-    signsx=sign(1., xtsin)
+    somx2 = abs(xtsin)
+    signsx = sign(1., xtsin)
 
     fact=1.
     Rmm=1.
-    Rnm(0,0)=sqrt(2.)
+    Rnm(0,0) = sqrt(2.)
     Rnm(1,0)=xtcos*sqrt(3.)*Rnm(0,0)
     do n=2, NN
-       Rnm(n, 0)=(xtcos*sqrt((2.*n-1.)*(2.*n+1.))*Rnm(n-1,0)-&
-            (n-1)*sqrt((2.*n+1.)/(2.*n-3.))*Rnm(n-2, 0))/n
-
+       Rnm(n,0) = (xtcos*sqrt((2.*n-1.)*(2.*n+1.))*Rnm(n-1,0) &
+            - (n-1)*sqrt((2.*n+1.)/(2.*n-3.))*Rnm(n-2, 0))/n
     enddo ! n
 
-    arrm=1.0
+    arrm = 1.0
 
     call timing_start('crustal')
 
-    do m=0, NN
+    do m = 0, NN
 
        Rmm=Rmm*fact*somx2/Factor1_I(m)
 
@@ -1649,10 +1644,10 @@ contains
        arrm=arr*arrm
        arrn=arrm
 
-       do n=m,NN
-          arrn=arr*arrn
+       do n = m, NN
+          arrn = arr*arrn
           ! write(*,*) 'arrn=', arrn, ' n=', n
-          if(n> (m+2)) then
+          if(n > (m+2)) then
              Rnm(n,m+1) = xtcos*Factor1_II(n,m)*Rnm(n-1,m+1)-&
                   Factor2_II(n,m)*Rnm(n-2,m+1)
 
@@ -1660,17 +1655,16 @@ contains
              Rnm(n,m+1)=xtcos*Factor3_I(m)*Rnm(m+1,m+1)
           endif
 
-          dRnm=m*xtcos*Rnm(n,m)/xtsin-Rnm(n, m+1)*signsx* Factor3_II(n,m)
+          dRnm = m*xtcos*Rnm(n,m)/xtsin - Rnm(n,m+1)*signsx*Factor3_II(n,m)
 
-          bb(1)=bb(1)+(n+1)*arrn*Rnm(n,m)*(cmars(n,m)*xpcos(m)&
-               +dmars(n,m)*xpsin(m))
-          bb(2)=bb(2)-arrn*dRnm*(cmars(n,m)*&
-               xpcos(m)+dmars(n,m)*xpsin(m))
+          bb(1) = bb(1) + (n+1)*arrn*Rnm(n,m)*(cmars(n,m)*xpcos(m) &
+               + dmars(n,m)*xpsin(m))
+          bb(2) = bb(2) - arrn*dRnm*(cmars(n,m)*xpcos(m)+dmars(n,m)*xpsin(m))
           if(xtsin <= 1e-6) then
-             bb(3)=0.
+             bb(3) = 0.
           else
-             bb(3)=bb(3)-arrn*Rnm(n,m)*m/xtsin*(-cmars(n,m)*xpsin(m)&
-                  +dmars(n,m)*xpcos(m))
+             bb(3) = bb(3) - arrn*Rnm(n,m)*m/xtsin*(-cmars(n,m)*xpsin(m)&
+                  + dmars(n,m)*xpcos(m))
           endif
        end do ! n
     end do ! m
@@ -1679,7 +1673,6 @@ contains
 
   end subroutine MarsB0
   !============================================================================
-
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
     use ModGeometry,   ONLY: Xyz_DGB,r_GB
@@ -1730,7 +1723,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
   !============================================================================
-
   subroutine Mars_Input(iBlock)
 
     use ModMain
@@ -1929,7 +1921,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine Mars_input
   !============================================================================
-
   subroutine ua_input(iBlock)
 
     use ModGeometry, ONLY: TypeGeometry, r_GB
@@ -2051,36 +2042,34 @@ contains
              Xp=r_GB(i,j,k,iBlock)/HNuSpecies_I(1)
              chap_y= sqrt(0.5*Xp)*abs(cosSZA)
              if(cosSZA > 0.0)then   ! SZA<90 deg (equation 13)
-                if(chap_y<8.0)then
+                if(chap_y < 8.0)then
                    chap = sqrt(cPi/2.0*Xp)*&
-                        (1.0606963+0.5564383*chap_y)/&
-                        (1.0619896+1.7245609*chap_y+chap_y*chap_y)
-                elseif(chap_y<100.0)then
+                        (1.0606963 + 0.5564383*chap_y)/&
+                        (1.0619896 + 1.7245609*chap_y + chap_y**2)
+                elseif(chap_y < 100.0)then
                    chap = sqrt(cPi/2.0*Xp)*&
-                        0.56498823/(0.6651874+chap_y)
-                else
-                   chap=0.0
-                end if
-             elseif(cosSZA > -0.5) then
-                ! 120 >SZA > 90 deg (equation 15) Smith and Smith, 1972
-                sinSZA = sqrt(1.0 - cosSZA**2)
-                if(chap_y<8.0)then
-                   chap =sqrt(2*cPi*Xp)* &
-                        (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
-                        -0.5*(1.0606963+0.5564383*chap_y)/ &
-                        (1.0619896+1.7245609*chap_y+chap_y*chap_y))
-                elseif(chap_y < 100.0 .and. Xp*(1.0-sinSZA) < 700.0)then
-                   chap =sqrt(2*cPi*Xp)* &
-                        (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
-                        -0.5*0.56498823/(0.6651874+chap_y))
+                        0.56498823/(0.6651874 + chap_y)
                 else
                    chap = 0.0
                 end if
              else
-                chap = 1.0e10
+                ! 180 >SZA > 90 deg (equation 15) Smith and Smith, 1972
+                sinSZA = sqrt(max(1.0 - cosSZA**2, 0.0))
+                if(chap_y < 8.0)then
+                   chap = sqrt(2*cPi*Xp)* &
+                        (sqrt(sinSZA)*exp(Xp*(1.0 - sinSZA)) &
+                        - 0.5*(1.0606963 + 0.5564383*chap_y)/ &
+                        (1.0619896 + 1.7245609*chap_y + chap_y**2))
+                elseif(chap_y < 100.0)then
+                   chap = sqrt(2*cPi*Xp)* &
+                        (sqrt(sinSZA)*exp(min(100.0, Xp*(1.0 - sinSZA))) &
+                        - 0.5*0.56498823/(0.6651874 + chap_y))
+                else
+                   chap = 0.0
+                end if
              end if
 
-             Optdep=Optdep*chap
+             Optdep = Optdep*chap
              Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-6)
 
           end if
@@ -2179,6 +2168,5 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_neutral_density
   !============================================================================
-
 end module ModUser
 !==============================================================================

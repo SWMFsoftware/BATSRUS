@@ -58,9 +58,10 @@ test_help:
 	@echo "    test_L1toBC                (run L1 to BC propagation test)"
 	@echo "    test_magnetometer          (run magnetometer test)"
 	@echo "    test_mars                  (run Mars test)"
-	@echo "    test_mars_start            (run first mars test)"
-	@echo "    test_mars_restart          (run mars restart test)"
+	@echo "    test_mars_start            (run first Mars test)"
+	@echo "    test_mars_restart          (run Mars restart test)"
 	@echo "    test_marsfluids            (run Mars multifluid test)"
+	@echo "    test_ccmc_mars             (run Mars for CCMC test)"
 	@echo "    test_mercurysph            (run Mercury test)"
 	@echo "    test_mhdnoncons            (run non-conservative MHD test)"
 	@echo "    test_multifluid            (run multi-fluid test)"
@@ -139,6 +140,7 @@ test:
 	-@($(MAKE) test_cometCGhd TESTDIR=run_test_cometCGhd)
 	-@($(MAKE) test_cometCGfluids TESTDIR=run_test_cometCGfluids)
 	-@($(MAKE) test_mars TESTDIR=run_test_mars)
+	-@($(MAKE) test_ccmc_mars TESTDIR=run_test_ccmc_mars)
 	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
 	-@($(MAKE) test_saturn TESTDIR=run_test_saturn)
 	-@($(MAKE) test_jupiter TESTDIR=run_test_jupiter)
@@ -1731,7 +1733,7 @@ test_ccmc_mars_run:
 
 test_ccmc_mars_check:
 	-@(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/GM/log_n000277.log \
+		${TESTDIR}/RESULTS/GM/log_n0002*.log \
 		Param/MARS/TestOutput/log_ta.log \
 		> test_ccmc_mars.diff)
 	ls -l test_ccmc_mars.diff

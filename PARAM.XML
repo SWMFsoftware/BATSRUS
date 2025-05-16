@@ -4724,7 +4724,7 @@ indices are not calculated.
 	    required="T">
 	<option name="1D" value="1d/1d_"/>
 	<option name="2D" value="2d/2d_"/>
-	<option name="3D" value="3d/3d_"/>
+	<option name="3D" value="3d/3d_/3D/3D_"/>
 	<option name="x=0" />
 	<option name="y=0" default="T" />
 	<option name="z=0" />
@@ -5303,6 +5303,7 @@ The PlotArea string defines a 1, 2, or 3D volume for plotting:
 1d    - 1D cut along the X axis (saves tree file)
 2d    - 2D cut (like Z=0)       (saves tree file)
 3d    - full 3D volume          (saves tree file)
+3D    - full 3D volume including cells outside the "box" (saves tree file)
 x=0   - full x=0 plane: average for symmetry plane
 y=0   - full y=0 plane: average for symmetry plane
 z=0   - full z=0 plane: average for symmetry plane
