@@ -770,11 +770,11 @@ contains
     end if
 
     ! For Outer Boundaries
-    do iBoundary=xMinBc_,zMaxBc_
+    do iBoundary = xMinBc_, zMaxBc_
        FaceState_VI(rhoHp_,iBoundary)    = SolarWindRho
-       FaceState_VI(rhoO2p_,iBoundary)   = 1e-10
-       FaceState_VI(rhoOp_,iBoundary)    = 1e-10
-       FaceState_VI(rhoCO2p_,iBoundary)  = 1e-10
+       FaceState_VI(rhoO2p_,iBoundary)   = 1e-10*SolarWindRho
+       FaceState_VI(rhoOp_,iBoundary)    = 1e-10*SolarWindRho
+       FaceState_VI(rhoCO2p_,iBoundary)  = 1e-10*SolarWindRho
     end do
     call set_multiSp_ICs
     !    Rbody = 1.0 + 140.0e3/Mars
@@ -797,7 +797,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_init_session
   !============================================================================
-  subroutine user_set_ICs(iBlock)
+  subroutine user_set_ics(iBlock)
 
     use ModMain
     use ModAdvance
@@ -807,24 +807,23 @@ contains
     use ModMultiFluid
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B
 
-    integer, intent(in) :: iBlock
+    integer, intent(in):: iBlock
 
-    real :: CosSZA
-    integer :: i,j,k,iFluid
+    real:: CosSZA
+    integer:: i, j, k, iFluid
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_set_ICs'
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
-       write(*,*)'BodynDenNuSpecies_I(:)=',&
-            BodynDenNuSpecies_I(:)
-       WRITE(*,*)''
-       write(*,*)'HNuSpecies_I(1:nNuSpecies)=',HNuSpecies_I(:)
-       WRITE(*,*)''
+       write(*,*)'BodynDenNuSpecies_I=', BodynDenNuSpecies_I
+       write(*,*)
+       write(*,*)'HNuSpecies_I=', HNuSpecies_I
+       write(*,*)
        write(*,*)'Rbody=', Rbody
-       write(*,*)''
+       write(*,*)
     end if
 
     call set_neutral_density(iBlock)
@@ -835,24 +834,24 @@ contains
          r_GB(nI,1,1,iBlock) > rBody
 
     if(DoTest)then
-       write(*,*)'usehoto=',UseHotO
-       write(*,*)'nDenNuSpecies_CBI(iTest,jTest,kTest,iBlockTest,:)=',&
+       write(*,*)'usehoto=', UseHotO
+       write(*,*)'nDenNuSpecies_CBI(iTest,jTest,kTest,iBlockTest,:)=', &
             nDenNuSpecies_CBI(iTest,jTest,kTest,iBlockTest,:)
-       WRITE(*,*)''
+       write(*,*)
        write(*,*)'nu(testcell)=', Nu_CB(iTest,jTest,kTest,iBlockTest)
-       WRITE(*,*)''
-       write(*,*)'Ionizationrate_CBI(testcell,CO2_)=',&
+       write(*,*)
+       write(*,*)'Ionizationrate_CBI(testcell,CO2_)=', &
             Ionizationrate_CBI(iTest,jTest,kTest,iBlockTest,CO2_)
-       write(*,*)'Ionizationrate_CBI(testcell,O_)=',&
+       write(*,*)'Ionizationrate_CBI(testcell,O_)=', &
             Ionizationrate_CBI(iTest,jTest,kTest,iBlockTest,O_)
-       write(*,*)''
+       write(*,*)
     end if
 
-    do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        if (r_GB(i,j,k,iBlock)< Rbody) then
-          cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
-               Xyz_DGB(x_,i,j,k,iBlock)/max(r_GB(i,j,k,iBlock),1.0e-3)+&
-               1.0e-3
+          cosSZA = (0.5 + sign(0.5, Xyz_DGB(x_,i,j,k,iBlock)))*&
+               Xyz_DGB(x_,i,j,k,iBlock)/max(r_GB(i,j,k,iBlock), 1e-3) &
+               + 1e-3
 
           State_VGB(:,i,j,k,iBlock) = FaceState_VI(:,body1_)
           ! Convert velocity to momentum
@@ -878,7 +877,8 @@ contains
           State_VGB(rho_,i,j,k,iBlock)  = &
                sum( State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
           State_VGB(P_,i,j,k,iBlock) = &
-               max(SolarWindP, sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock)&
+               max(SolarWindP, &
+               sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) &
                /MassSpecies_I(1:MaxSpecies))*kTp0 )
        else
           State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Coord1MinBc_)
@@ -886,45 +886,63 @@ contains
        end if
     end do;end do; end do;
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       if (Used_GB(i,j,k,iBlock).and. &
-            r_GB(i,j,k,iBlock)<1.5*Rbody) then
+    ! if(DoTest) write(*,*) NameSub,': initial O2p,Op,Co2p=', &
+    !     State_VGB(RhoO2p_:RhoCo2p_,iTest,jTest,kTest,iBlockTest)
 
-          cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
-               Xyz_DGB(x_,i,j,k,iBlock)/max(r_GB(i,j,k,iBlock),1.0e-3)+&
-               1.0e-3
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(Used_GB(i,j,k,iBlock) .and. r_GB(i,j,k,iBlock) < 1.5*Rbody)then
+
+          cosSZA = (0.5 + sign(0.5, Xyz_DGB(x_,i,j,k,iBlock)))* &
+               Xyz_DGB(x_,i,j,k,iBlock)/max(r_GB(i,j,k,iBlock), 1e-3) &
+               + 1e-3
 
           State_VGB(rhoCO2p_,i,j,k,iBlock)= &
                Ionizationrate_CBI(i,j,k,iBlock,CO2_) &
                /nDenNuSpecies_CBI(i,j,k,iBlock,O_)   &
-               /(Rate_I(CO2p_O__O2p_CO_)+Rate_I(CO2p_O__Op_CO2_))
+               /(Rate_I(CO2p_O__O2p_CO_) + Rate_I(CO2p_O__Op_CO2_))
 
           State_VGB(rhoOp_,i,j,k,iBlock)= &
                (Ionizationrate_CBI(i,j,k,iBlock,O_) &
-               +Rate_I(CO2p_O__Op_CO2_)                &
-               *State_VGB(rhoCO2p_,i,j,k,iBlock)    &
+               + Rate_I(CO2p_O__Op_CO2_)*State_VGB(rhoCO2p_,i,j,k,iBlock) &
                *nDenNuSpecies_CBI(i,j,k,iBlock,O_)) &
-               /(nDenNuSpecies_CBI(i,j,k,iBlock, CO2_)+4.0e6)&
+               /(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + SolarWindRho*1e6) &
                /Rate_I(Op_CO2__O2p_CO_)
 
           State_VGB(rhoO2p_,i,j,k,iBlock)= &
-               SQRT((nDenNuSpecies_CBI(i,j,k,iBlock,O_)*&
-               State_VGB(rhoCO2p_,i,j,k,iBlock)*&
-               Rate_I(CO2p_O__O2p_CO_)+&
-               nDenNuSpecies_CBI(i,j,k,iBlock, CO2_)*&
-               State_VGB(rhoOp_,i,j,k,iBlock)*&
-               Rate_I(Op_CO2__O2p_CO_)+1e-10)/Rate_I(O2p_em__O_O_))
+               sqrt(max(1e-10*SolarwindRho, (nDenNuSpecies_CBI(i,j,k,iBlock,O_)* &
+               State_VGB(rhoCO2p_,i,j,k,iBlock)* &
+               Rate_I(CO2p_O__O2p_CO_) + &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)* &
+               State_VGB(rhoOp_,i,j,k,iBlock)* &
+               Rate_I(Op_CO2__O2p_CO_)))/Rate_I(O2p_em__O_O_))
 
-          State_VGB(rhoO2p_:rhoCO2p_,i,j,k,iBlock)=&
-               State_VGB(rhoO2p_:rhoCO2p_,i,j,k,iBlock)*&
-               MassSpecies_I(O2p_:CO2p_)
+          State_VGB(rhoO2p_:rhoCO2p_,i,j,k,iBlock) = &
+               State_VGB(rhoO2p_:rhoCO2p_,i,j,k,iBlock) &
+               *MassSpecies_I(O2p_:CO2p_)
 
        end if !(Used_GB?)
 
     end do; end do; end do
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    ! if(DoTest) then
+    !   write(*,*) 'IonRate(CO2)=', &
+    !        Ionizationrate_CBI(iTest,jTest,kTest,iBlock,CO2_)
+    !   write(*,*) 'nDensNu(O)=', nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,O_)
+    !   write(*,*) 'Rate_I(CO2p_O__O2p_CO_), Rate_I(CO2p_O__Op_CO2_)=', &
+    !        Rate_I(CO2p_O__O2p_CO_), Rate_I(CO2p_O__Op_CO2_)
+    !   write(*,*) 'modified Co2p=', &
+    !        State_VGB(RhoCo2p_,iTest,jTest,kTest,iBlockTest)
+    !   write(*,*) 'IonRate(O)=', &
+    !        Ionizationrate_CBI(iTest,jTest,kTest,iBlock,O_)
+    !   write(*,*) 'Rate_I(CO2p_O__Op_CO2_), Rate_I(Op_CO2__O2p_CO_)=', &
+    !        Rate_I(CO2p_O__Op_CO2_), Rate_I(Op_CO2__O2p_CO_)
+    !   write(*,*)'nDensNu(CO2)=', &
+    !        nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,CO2_)
+    !   write(*,*)'modified O2p=', &
+    !        State_VGB(RhoCo2p_,iTest,jTest,kTest,iBlockTest)
+    ! end if
 
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.Used_GB(i,j,k,iBlock))CYCLE
        State_VGB(rho_,i,j,k,iBlock)   =&
             sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
@@ -938,17 +956,17 @@ contains
     if(DoTest)then
        write(*,*)'initial set up'
        write(*,*)'Rate_I=',Rate_I
-       write(*,*)''
+       write(*,*)
        write(*,*)'rhoSpecies_GBI(testcell,1:nSpecies)=',&
             State_VGB(rho_+1:rho_+MaxSpecies,iTest,jTest,kTest,iBlockTest)
        write(*,*)'p_BLK(iTest,jTest,kTest,iBlockTest)=',&
             State_VGB(P_,iTest,jTest,kTest,iBlockTest)
-       write(*,*)''
+       write(*,*)
        write(*,*)'rhoSpecies_GBI(testcell+1,1:nSpecies)=',&
             State_VGB(rho_+1:rho_+MaxSpecies,iTest+1,jTest,kTest,iBlockTest)
        write(*,*)'p_BLK(iTest+1,jTest,kTest,iBlockTest)=',&
             State_VGB(P_,iTest+1,jTest,kTest,iBlockTest)
-       write(*,*)''
+       write(*,*)
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -1334,7 +1352,7 @@ contains
        write(*,*)'solar min, Procductrate=', productrate0, Optdep
        write(*,*)'CrossSection_dim_I*unitUSER_n*unitSI_x=',CrossSectiondim_I,&
             No2Io_V(unitN_),No2Si_V(unitX_)
-       write(*,*)''
+       write(*,*)
     end if
 
     ! ion density at the body
