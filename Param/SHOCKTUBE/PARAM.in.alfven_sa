@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/SHOCKTUBE/PARAM.in.alfve_wave_chgl		StringDescriptor
+Param/SHOCKTUBE/PARAM.in.alfven_sa		StringDescriptor
 
 #PLANET
 NONE			NamePlanet
