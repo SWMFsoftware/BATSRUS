@@ -549,13 +549,12 @@ contains
                    end if
                 end if
 
-                if(WDiff_>1) &
-                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k)    &
-                     - ModeConversionMinus * &
-                     State_VGB(WaveFirst_,i,j,k,iBlock) &
-                     - ModeConversionPlus  * &
-                     State_VGB(WaveLast_,i,j,k ,iBlock)
+                if(WDiff_ > 1) &
+                     Source_VC(WDiff_,i,j,k) = Source_VC(WDiff_,i,j,k) &
+                     - ModeConversionMinus*State_VGB(WaveFirst_,i,j,k,iBlock) &
+                     - ModeConversionPlus*State_VGB(WaveLast_,i,j,k ,iBlock)
              end do; end do; end do
+             if(DoTest)call write_source('After UseReynoldsDecomposition')
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
@@ -601,8 +600,10 @@ contains
                      Source_VC(WaveLast_ ,i,j,k)*ModeConversionPlus
              end do; end do; end do
           end if
+          if(DoTest)call write_source('After isotropic turbulence')
        elseif(UseTurbulentCascade)then
           call get_wave_reflection(iBlock)
+          if(DoTest)call write_source('After get_wave_reflection')
        end if
        if(UseAlfvenWaveDissipation)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -2142,10 +2143,10 @@ contains
 
       character(len=*), intent(in) :: String
       !------------------------------------------------------------------------
-      write(*,'(a,es13.5)') NameSub//": "//String//" S(iVarTest)=",&
+      write(*,*) NameSub//": "//String//" S(iVarTest)=",&
            Source_VC(iVarTest,iTest,jTest,kTest)
       if(UseB .and. iVarTest >= RhoUx_ .and. iVarTest <= RhoUz_) &
-           write(*,'(a,es13.5)') NameSub//": "//String//" SMhd(iVarTest)=",&
+           write(*,*) NameSub//": "//String//" SMhd(iVarTest)=",&
            SourceMhd_VC(iVarTest,iTest,jTest,kTest)
 
     end subroutine write_source
