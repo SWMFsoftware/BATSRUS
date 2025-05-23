@@ -8,6 +8,9 @@ slow			TypeUpdate
 T			DoPrecond
 BILU1			TypePrecond
 
+#PROLONGATION
+2			nOrderProlong
+
 #COMPONENT
 SC			NameComp
 
