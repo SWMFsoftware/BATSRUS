@@ -399,8 +399,8 @@ contains
   !============================================================================
   subroutine get_wave_reflection(iBlock)
 
-    ! Use array WaveDissipationRate_VC. With these regards
-    ! the usual way to call this function is:
+    ! Use array WaveDissipationRate_VC.
+    ! The usual way to call this function is:
     !
     ! if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
     ! call get_block_heating(iBlock)
