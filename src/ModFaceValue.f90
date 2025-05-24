@@ -332,7 +332,7 @@ contains
             .and..not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)) &
             .and..not.Unused_BP(jBlock_IEB(4,2,iBlock),jProc_IEB(4,2,iBlock)) &
             )then
-          !$acc loop vector collaps(3) private(Slope1, Slope2) independent
+          !$acc loop vector collapse(3) private(Slope1, Slope2) independent
           do k = 1, nK; do j = 1, nJ; do iVar = 1, nVar
              ! Slope to first ghost cell over 0.75 dx
              Slope1 = State_VGB(iVar,nI+1,j,k,iBlock) &
