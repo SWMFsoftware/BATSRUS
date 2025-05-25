@@ -238,7 +238,8 @@ contains
   subroutine correct_monotone_restrict(iBlock)
     !$acc routine vector
 
-    ! Correct the result of the first order monotone restriction by modifying
+    ! Correct the result of the first order monotone restriction that
+    ! simply averages the fine cells in the tangential direction by modifying
     ! the coarse ghost cell values such that the slope remains the same
     ! while the cell center is moved from the fine cell distance to the
     ! coarse cell distance.
@@ -255,8 +256,9 @@ contains
 
     integer, intent(in) :: iBlock
 
+    real, parameter:: cFourThird = 4.0/3.0
     integer:: i, j, k, iVar
-    real:: Rho_I(nFluid), InvRho_I(nFluid)
+    real:: Rho_I(nFluid), InvRho_I(nFluid), Slope1, Slope2
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'correct_monotone_restrict'
@@ -267,20 +269,20 @@ contains
 
 #ifndef _OPENACC
     if(DoTest)write(*,*)NameSub, ' state before: ',&
-         State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
+         State_VGB(iVarTest, nI:nI+2, jTest, kTest, iBlock)
 #endif
 
     if(.not.DoLimitMomentum)then
        ! Convert momenta to velocities (that will be limited)
        !$acc loop vector collapse(3) private(InvRho_I)
-       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           InvRho_I = 1.0/State_VGB(iRho_I,i,j,k,iBlock)
           State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
-               * InvRho_I
+               *InvRho_I
           State_VGB(iRhoUy_I,i,j,k,iBlock)=State_VGB(iRhoUy_I,i,j,k,iBlock) &
-               * InvRho_I
+               *InvRho_I
           State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
-               * InvRho_I
+               *InvRho_I
        end do; end do; end do
     end if
 
@@ -289,7 +291,7 @@ contains
        do iVar = 1, nVar
           if(UseLogLimiter_V(iVar)) then
              !$acc loop vector collapse(3) independent
-             do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 State_VGB(iVar,i,j,k,iBlock) = &
                      log(State_VGB(iVar,i,j,k,iBlock))
              end do; end do; end do
@@ -303,16 +305,25 @@ contains
             .and..not.Unused_BP(jBlock_IEB(3,1,iBlock),jProc_IEB(3,1,iBlock)) &
             .and..not.Unused_BP(jBlock_IEB(4,1,iBlock),jProc_IEB(4,1,iBlock)) &
             ) then
-          !$acc loop vector collapse(2)
-          do k = 1, nK; do j = 1, nJ
-             State_VGB(1:nVar,0,j,k,iBlock) = &
-                  State_VGB(1:nVar,0,j,k,iBlock) + cThird*(&
-                  State_VGB(1:nVar,0,j,k,iBlock) - &
-                  State_VGB(1:nVar,1,j,k,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,0,j,k,iBlock) = &
-                  max(State_VGB(1:nVar,0,j,k,iBlock), 1e-30)
-          end do; end do
+          !$acc loop vector collapse(3) private(Slope1, Slope2) independent
+          do k = 1, nK; do j = 1, nJ; do iVar = 1, nVar
+             ! Slope to first ghost cell over 0.75 dx
+             Slope1 = State_VGB(iVar, 0,j,k,iBlock) &
+                  -   State_VGB(iVar, 1,j,k,iBlock)
+             ! Slope to second ghost cell over 0.5 dx
+             Slope2 = State_VGB(iVar,-1,j,k,iBlock) &
+                  -   State_VGB(iVar, 0,j,k,iBlock)
+             ! Extrapolate to first ghost cell
+             State_VGB(iVar,0,j,k,iBlock) = &
+                  State_VGB(iVar,1,j,k,iBlock) + cFourThird*Slope1
+             ! Extrapolate to second ghost cell
+             State_VGB(iVar,-1,j,k,iBlock) = &
+                  State_VGB(iVar,0,j,k,iBlock) + 2*Slope2
+
+             if(DefaultState_V(iVar) > 0.0) &
+                  State_VGB(iVar,-1:0,j,k,iBlock) = &
+                  max(State_VGB(iVar,-1:0,j,k,iBlock), 1e-30)
+          end do; end do; end do
        end if
     end if
     if(DiLevel_EB(2,iBlock) == -1)then
@@ -321,16 +332,25 @@ contains
             .and..not.Unused_BP(jBlock_IEB(3,2,iBlock),jProc_IEB(3,2,iBlock)) &
             .and..not.Unused_BP(jBlock_IEB(4,2,iBlock),jProc_IEB(4,2,iBlock)) &
             )then
-          !$acc loop vector collapse(2)
-          do k = 1, nK; do j = 1, nJ
-             State_VGB(1:nVar,nI+1,j,k,iBlock) = &
-                  State_VGB(1:nVar,nI+1,j,k,iBlock) + cThird*( &
-                  State_VGB(1:nVar,nI+1,j,k,iBlock) - &
-                  State_VGB(1:nVar,nI,  j,k,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,nI+1,j,k,iBlock) = &
-                  max(State_VGB(1:nVar,nI+1,j,k,iBlock), 1e-30)
-          end do; end do
+          !$acc loop vector collapse(3) private(Slope1, Slope2) independent
+          do k = 1, nK; do j = 1, nJ; do iVar = 1, nVar
+             ! Slope to first ghost cell over 0.75 dx
+             Slope1 = State_VGB(iVar,nI+1,j,k,iBlock) &
+                  -   State_VGB(iVar,  nI,j,k,iBlock)
+             ! Slope to second ghost cell over 0.5 dx
+             Slope2 = State_VGB(iVar,nI+2,j,k,iBlock) &
+                  -   State_VGB(iVar,nI+1,j,k,iBlock)
+             ! Extrapolate to first ghost cell
+             State_VGB(iVar,nI+1,j,k,iBlock) = &
+                  State_VGB(iVar,nI,j,k,iBlock) + cFourThird*Slope1
+             ! Extrapolate to second ghost cell
+             State_VGB(iVar,nI+2,j,k,iBlock) = &
+                  State_VGB(iVar,nI+1,j,k,iBlock) + 2*Slope2
+
+             if(DefaultState_V(iVar) > 0.0) &
+                  State_VGB(iVar,nI+1:nI+2,j,k,iBlock) = &
+                  max(State_VGB(iVar,nI+1:nI+2,j,k,iBlock), 1e-30)
+          end do; end do; end do
        end if
     end if
     if(DiLevel_EB(3,iBlock) == -1 .and. nJ > 1)then
@@ -339,16 +359,25 @@ contains
             .and..not.Unused_BP(jBlock_IEB(3,3,iBlock),jProc_IEB(3,3,iBlock)) &
             .and..not.Unused_BP(jBlock_IEB(4,3,iBlock),jProc_IEB(4,3,iBlock)) &
             )then
-          !$acc loop vector collapse(2)
-          do k = 1, nK; do i = 1, nI
-             State_VGB(1:nVar,i,0,k,iBlock) = &
-                  State_VGB(1:nVar,i,0,k,iBlock) + cThird*( &
-                  State_VGB(1:nVar,i,0,k,iBlock) - &
-                  State_VGB(1:nVar,i,1,k,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,0,k,iBlock) = &
-                  max(State_VGB(1:nVar,i,0,k,iBlock), 1e-30)
-          end do; end do
+          !$acc loop vector collapse(3) private(Slope1, Slope2) independent
+          do k = 1, nK; do i = 1, nI; do iVar = 1, nVar
+             ! Slope to first ghost cell over 0.75 dy
+             Slope1 = State_VGB(iVar,i, 0,k,iBlock) &
+                  -   State_VGB(iVar,i, 1,k,iBlock)
+             ! Slope to second ghost cell over 0.5 dy
+             Slope2 = State_VGB(iVar,i,-1,k,iBlock) &
+                  -   State_VGB(iVar,i, 0,k,iBlock)
+             ! Extrapolate to first ghost cell
+             State_VGB(iVar,i,0,k,iBlock) = &
+                  State_VGB(iVar,i,1,k,iBlock) + cFourThird*Slope1
+             ! Extrapolate to second ghost cell
+             State_VGB(iVar,i,-1,k,iBlock) = &
+                  State_VGB(iVar,i,0,k,iBlock) + 2*Slope2
+
+             if(DefaultState_V(iVar) > 0.0) &
+                  State_VGB(iVar,i,-1:0,k,iBlock) = &
+                  max(State_VGB(iVar,i,-1:0,k,iBlock), 1e-30)
+          end do; end do; end do
        end if
     end if
     if(DiLevel_EB(4,iBlock) == -1 .and. nJ > 1)then
@@ -357,16 +386,25 @@ contains
             .and..not.Unused_BP(jBlock_IEB(3,4,iBlock),jProc_IEB(3,4,iBlock)) &
             .and..not.Unused_BP(jBlock_IEB(4,4,iBlock),jProc_IEB(4,4,iBlock)) &
             )then
-          !$acc loop vector collapse(2)
-          do k=1,nK;do i=1,nI
-             State_VGB(1:nVar,i,nJ+1,k,iBlock) =&
-                  State_VGB(1:nVar,i,nJ+1,k,iBlock) + cThird*( &
-                  State_VGB(1:nVar,i,nJ+1,k,iBlock) - &
-                  State_VGB(1:nVar,i,nJ,k,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,nJ+1,k,iBlock) = &
-                  max(State_VGB(1:nVar,i,nJ+1,k,iBlock), 1e-30)
-          end do; end do
+          !$acc loop vector collapse(3) private(Slope1, Slope2) independent
+          do k = 1, nK; do i = 1, nI; do iVar = 1, nVar
+             ! Slope to first ghost cell over 0.75 dy
+             Slope1 = State_VGB(iVar,i,nJ+1,k,iBlock) &
+                  -   State_VGB(iVar,i,  nJ,k,iBlock)
+             ! Slope to second ghost cell over 0.5 dy
+             Slope2 = State_VGB(iVar,i,nJ+2,k,iBlock) &
+                  -   State_VGB(iVar,i,nJ+1,k,iBlock)
+             ! Extrapolate to first ghost cell
+             State_VGB(iVar,i,nJ+1,k,iBlock) = &
+                  State_VGB(iVar,i,nJ,k,iBlock) + cFourThird*Slope1
+             ! Extrapolate to second ghost cell
+             State_VGB(iVar,i,nJ+2,k,iBlock) = &
+                  State_VGB(iVar,i,nJ+1,k,iBlock) + 2*Slope2
+
+             if(DefaultState_V(iVar) > 0.0) &
+                  State_VGB(iVar,i,nJ+1:nJ+2,k,iBlock) = &
+                  max(State_VGB(iVar,i,nJ+1:nJ+2,k,iBlock), 1e-30)
+          end do; end do; end do
        end if
     end if
     if(DiLevel_EB(5,iBlock) == -1 .and. nK > 1)then
@@ -375,16 +413,25 @@ contains
             .and..not.Unused_BP(jBlock_IEB(3,5,iBlock),jProc_IEB(3,5,iBlock)) &
             .and..not.Unused_BP(jBlock_IEB(4,5,iBlock),jProc_IEB(4,5,iBlock)) &
             )then
-          !$acc loop vector collapse(2)
-          do j = 1, nJ; do i = 1, nI
-             State_VGB(1:nVar,i,j,0,iBlock) = &
-                  State_VGB(1:nVar,i,j,0,iBlock) + cThird*( &
-                  State_VGB(1:nVar,i,j,0,iBlock) - &
-                  State_VGB(1:nVar,i,j,1,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,j,0,iBlock) = &
-                  max(State_VGB(1:nVar,i,j,0,iBlock), 1e-30)
-          end do; end do
+          !$acc loop vector collapse(3) private(Slope1, Slope2) independent
+          do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
+             ! Slope to first ghost cell over 0.75 dz
+             Slope1 = State_VGB(iVar,i,j, 0,iBlock) &
+                  -   State_VGB(iVar,i,j, 1,iBlock)
+             ! Slope to second ghost cell over 0.5 dz
+             Slope2 = State_VGB(iVar,i,j,-1,iBlock) &
+                  -   State_VGB(iVar,i,j, 0,iBlock)
+             ! Extrapolate to first ghost cell
+             State_VGB(iVar,i,j,0,iBlock) = &
+                  State_VGB(iVar,i,j,1,iBlock) + cFourThird*Slope1
+             ! Extrapolate to second ghost cell
+             State_VGB(iVar,i,j,-1,iBlock) = &
+                  State_VGB(iVar,i,j,0,iBlock) + 2*Slope2
+
+             if(DefaultState_V(iVar) > 0.0) &
+                  State_VGB(iVar,i,j,-1:0,iBlock) = &
+                  max(State_VGB(iVar,i,j,-1:0,iBlock), 1e-30)
+          end do; end do; end do
        end if
     end if
     if(DiLevel_EB(6,iBlock) == -1 .and. nK > 1)then
@@ -393,16 +440,25 @@ contains
             .and..not.Unused_BP(jBlock_IEB(3,6,iBlock),jProc_IEB(3,6,iBlock)) &
             .and..not.Unused_BP(jBlock_IEB(4,6,iBlock),jProc_IEB(4,6,iBlock)) &
             )then
-          !$acc loop vector collapse(2)
-          do j = 1, nJ; do i = 1, nI
-             State_VGB(1:nVar,i,j,nK+1,iBlock) = &
-                  State_VGB(1:nVar,i,j,nK+1,iBlock) + cThird*(&
-                  State_VGB(1:nVar,i,j,nK+1,iBlock) - &
-                  State_VGB(1:nVar,i,j,nK,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,j,nK+1,iBlock) = &
-                  max(State_VGB(1:nVar,i,j,nK+1,iBlock), 1e-30)
-          end do; end do
+          !$acc loop vector collapse(3) private(Slope1, Slope2) independent
+          do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
+             ! Slope to first ghost cell over 0.75 dz
+             Slope1 = State_VGB(iVar,i,j,nK+1,iBlock) &
+                  -   State_VGB(iVar,i,j,nK  ,iBlock)
+             ! Slope to second ghost cell over 0.5 dz
+             Slope2 = State_VGB(iVar,i,j,nK+2,iBlock) &
+                  -   State_VGB(iVar,i,j,nK+1,iBlock)
+             ! Extrapolate to first ghost cell
+             State_VGB(iVar,i,j,nK+1,iBlock) = &
+                  State_VGB(iVar,i,j,nK,iBlock) + cFourThird*Slope1
+             ! Extrapolate to second ghost cell
+             State_VGB(iVar,i,j,nK+2,iBlock) = &
+                  State_VGB(iVar,i,j,nK+1,iBlock) + 2*Slope2
+
+             if(DefaultState_V(iVar) > 0.0) &
+                  State_VGB(iVar,i,j,nK+1:nK+2,iBlock) = &
+                  max(State_VGB(iVar,i,j,nK+1:nK+2,iBlock), 1e-30)
+          end do; end do; end do
        end if
     end if
 
@@ -411,7 +467,7 @@ contains
        do iVar = 1, nVar
           if(UseLogLimiter_V(iVar)) then
              !$acc loop vector collapse(3) independent
-             do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 State_VGB(iVar,i,j,k,iBlock) = &
                      exp(State_VGB(iVar,i,j,k,iBlock))
              end do; end do; end do
@@ -422,7 +478,7 @@ contains
     if(.not.DoLimitMomentum)then
        ! Convert velocities back to momenta
        !$acc loop vector collapse(3) private(Rho_I)
-       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Rho_I = State_VGB(iRho_I,i,j,k,iBlock)
           State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
                * Rho_I
@@ -435,7 +491,7 @@ contains
 
 #ifndef _OPENACC
     if(DoTest)write(*,*)NameSub, ' state after: ',&
-         State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
+         State_VGB(iVarTest, nI:nI+2, jTest, kTest, iBlock)
 #endif
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -2176,7 +2232,7 @@ contains
     logical, intent(in):: IsTrueCoarse2, IsTrueCoarse1, IsTrueFine1
     logical, intent(in):: IsTrueFine2_II(:,:)    ! dimension(2,2)
 
-    integer::iVar,i2,j2
+    integer::iVar, i2, j2
     real,dimension(nVar):: AveragedFine1_V,GradNormal_V,SignGradNormal_V
     real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
 
@@ -2271,7 +2327,7 @@ contains
     real, intent(inout):: FineToCoarseF_VII(:,:,:)        ! dimension(nVar,2,2)
     real, intent(inout):: FineF_VII(:,:,:)                ! dimension(nVar,2,2)
 
-    integer:: iVar,i2,j2
+    integer:: iVar, i2, j2
     real,dimension(nVar):: AveragedFine1_V
     real,dimension(nVar):: GradNormal_V,SignGradNormal_V
     real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
@@ -2354,7 +2410,7 @@ contains
 
     logical, optional, intent(in):: DoConvert
 
-    integer :: iVar,i2,j2
+    integer :: iVar, i2, j2
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
     real, dimension(nVar):: GradNormal_V, SignGradNormal_V
     real, dimension(nVar):: GradNormalLtd_V, FaceMiddle_V, Transverse_V
