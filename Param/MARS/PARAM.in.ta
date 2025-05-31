@@ -193,7 +193,7 @@ MAVEN_trac/sat2017_09_10_15_kp.dat		Nametrajectoryfile
 #FIXAXIS
 T			DoFixAxis
 5.0			rFixAxis
-1.5			r2FixAxis
+0.0			r2FixAxis
 
 #TIMESTEPPING
 2			nStage
