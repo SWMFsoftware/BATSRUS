@@ -94,6 +94,8 @@ contains
 
     logical:: IsBinary
 
+    logical:: UseMpi
+
     ! If DoSaveGenCoord is true, save generalized coordinates (e.g. r,phi,lat)
     ! In this case the coordinates are saved in normalized units (CoordUnit=1)
     ! If DoSaveGenCoord is false, save x,y,z coordinates with either normalized
@@ -108,6 +110,9 @@ contains
 
     real:: CellSizeMin_D(3)
     integer:: nCellProc, nCellBlock, nCellAll
+    integer, allocatable:: nCell_P(:)
+    integer(MPI_OFFSET_KIND), allocatable:: offset_P(:)
+    integer(MPI_OFFSET_KIND):: offset
 
     integer:: iTime_I(7), iDim, iParam
     integer:: iDefaultStartTime_I(7) = [2000,3,21,10,45,0,0]
@@ -130,6 +135,17 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Initialize stuff
+
+    ! Determine if output file is formatted or unformatted
+    IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
+
+    ! MPI-IO only works for binary IDL files so far.
+    UseMpi = UseMpiIO .and. IsBinary
+
+    if(UseMpi) then
+       allocate(nCell_P(0:nProc-1))
+       allocate(offset_P(0:nProc-1))
+    end if
 
     PlotVarBody_V = 0.0
     UsePlotVarBody_V = .false.
@@ -227,9 +243,6 @@ contains
     else
        write(NameProc, '(a,i6.6,a)') "_pe", iProc, "."//NameExt
     end if
-
-    ! Determine if output file is formatted or unformatted
-    IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
     if(IsBinary)then
        TypeForm = "unformatted"
@@ -349,9 +362,14 @@ contains
        ! in NameFile. ModHdf5 will handle opening the file.
        NameFile = trim(NameSnapshot)//".batl"
     else
-       ! For IDL just open one file
-       NameFile = trim(NameSnapshot)//trim(NameProc)
-       call open_file(FILE=NameFile, form=TypeForm)
+       if(UseMpi) then
+          NameFile = trim(NameSnapshot)//'_pe0000.idl'
+          call open_file(FILE=NameFile, iComm=iComm, iUnitMpi=iUnit)
+       else
+          ! For IDL just open one file
+          NameFile = trim(NameSnapshot)//trim(NameProc)
+          call open_file(FILE=NameFile, form=TypeForm)
+       end if
     end if
 
     IsNonCartesianPlot = .not.IsCartesianGrid
@@ -444,6 +462,45 @@ contains
        call message_pass_cell(nPlotVar, PlotVar_VGB)
     end if
 
+    if(UseMpi) then
+      ! Figure out the offset for each MPI. The first step is counting
+      ! the output data size on each processor.
+
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
+          if(.not.DoPlotShell .and. .not.DoPlotBox .and. &
+               .not.DoPlotShock .and. TypePlotFormat_I(iFile) == 'idl') then
+                  ! Count the number of cells for output in this block
+             call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
+                  DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
+                  Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
+                  CellSize1, CellSize2, CellSize3, nCellBlock, offset, &
+                  UseMpiIOIn=UseMpi, DoCountOnlyIn=.true.)
+             nCellProc = nCellProc + nCellBlock
+          end if
+       end do
+
+       ! Gather the number of cells per processor
+       call MPI_gather(nCellProc, 1, MPI_INTEGER, nCell_P, 1, &
+            MPI_INTEGER, 0, iComm, iError)
+       if(iProc == 0) then
+          ! Calculate the offset for each processor
+          offset_P(0) = 0
+          do i = 1, nProc-1
+             ! 1. Each cell contains nPlotVar+4 real numbers.
+             ! 2. There are record size surrounding each record, which
+             !     needs another 4*2 bytes.
+             offset_P(i) = offset_P(i-1) + &
+                  nCell_P(i-1)*(nByteReal*(nPlotVar+4) + 4*2)
+          end do
+       end if
+
+       call MPI_Scatter(offset_P, 1, MPI_OFFSET, offset, 1, &
+            MPI_OFFSET, 0, iComm, iError)
+    end if
+
+    nCellProc = 0
+
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
@@ -481,10 +538,11 @@ contains
           case('tcp')
              call write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
           case('idl')
-             call write_plot_idl(iFile, iBlock, nPlotVar, PlotVar_GV, &
+             call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
                   DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
                   Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
-                  CellSize1, CellSize2, CellSize3, nCellBlock)
+                  CellSize1, CellSize2, CellSize3, nCellBlock, offset, &
+                  UseMpiIOIn=UseMpi, DoCountOnlyIn=.false.)
           case('hdf')
              call write_var_hdf5(iFile, TypePlot(1:3), iBlock, iH5Index, &
                   nPlotVar, PlotVar_GV, Coord1Min, Coord1Max, &
@@ -602,10 +660,18 @@ contains
        deallocate(PlotVarNodes_VNB)
     end if
 
-    if(TypePlotFormat_I(iFile) == 'idl' .and. nCellProc == 0) then
-       call close_file(status = 'DELETE')
-    else
-       call close_file
+    if(TypePlotFormat_I(iFile) == 'idl') then
+       if(UseMpi) then
+          call mpi_file_close(iUnit, iError)
+       else
+          if( nCellProc == 0) then
+             call close_file(status = 'DELETE')
+          else
+             call close_file
+          end if
+
+       end if
+
     end if
 
     ! Write out header file for tcp format
@@ -785,6 +851,9 @@ contains
        call write_tree_file(NameFile, IsFormattedIn=.true.)
     end if
 
+    if(allocated(nCell_P)) deallocate(nCell_P)
+    if(allocated(offset_P)) deallocate(offset_P)
+
     if(DoPlotSpm)call clean_mod_spectrum
     if(DoTest)write(*,*) NameSub,' finished'
 
@@ -913,7 +982,7 @@ contains
           end select
           iSat = i_sat_for_name(NameParam_I(iPar)(3:))
           if(iSat > 0)then
-              Param_I(iPar) = XyzSat_DI(iDim,iSat)
+             Param_I(iPar) = XyzSat_DI(iDim,iSat)
           else
              Param_I(iPar) = -7777.
              if(iProc == 0) write(*,*) NameSub// &

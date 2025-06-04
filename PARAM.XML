@@ -5859,6 +5859,16 @@ not have to be repeated in restarted runs (unless the unit is changed).
 The default value is NameMaxTimeUnit='hour'.
 </command>
 
+<command name="MPIIO">
+  <parameter name="UseMpiIO" type="logical" default="F" />
+#MPIIO
+T			UseMpiIO
+
+Save IDL binary files using MPI-IO. All processors write to the same 
+*.idl file to reduce file numbers. So far, it only works for 
+the binary (#SAVEBINARY) 'idl' plot files.
+</command>
+
 <command name="SAVEINITIAL">
   <parameter name="DoSaveInitial" type="logical" default="F" />
 #SAVEINITIAL

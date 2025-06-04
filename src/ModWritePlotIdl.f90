@@ -14,9 +14,10 @@ module ModWritePlotIdl
 
 contains
   !============================================================================
-  subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar_GV, &
+  subroutine write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
        DoSaveGenCoord, xUnit, xMin, xMax, yMin, yMax, zMin, zMax, &
-       CellSize1, CellSize2, CellSize3, nCell)
+       CellSize1, CellSize2, CellSize3, nCell, offset, UseMpiIOIn, &
+       DoCountOnlyIn)
 
     ! Save all cells within plotting range, for each processor
 
@@ -26,10 +27,10 @@ contains
          DoSaveBinary, TypePlot, PlotDx_DI, PlotRange_EI
     use ModNumConst, ONLY: cPi, cTwoPi
     use ModKind,     ONLY: nByteReal
-    use ModIoUnit,   ONLY: UnitTmp_
     use ModAdvance,  ONLY: State_VGB, Bx_
     use ModB0,       ONLY: B0_DGB
     use ModMain,     ONLY: UseB0
+    use ModMpi,      ONLY: MPI_OFFSET_KIND
     use BATL_size,   ONLY: nGI, nGJ, nGK, nDim
     use BATL_lib,    ONLY: IsRLonLat, IsCylindrical, &
          CoordMin_D, CoordMax_D, CoordMin_DB, CellSize_DB, &
@@ -39,7 +40,7 @@ contains
 
     ! Arguments
 
-    integer, intent(in)   :: iFile, iBlock
+    integer, intent(in)   :: iUnit, iFile, iBlock
     integer, intent(in)   :: nPlotVar
     real,    intent(in)   :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
     logical, intent(in)   :: DoSaveGenCoord      ! save gen. or x,y,z coords
@@ -47,6 +48,10 @@ contains
     real,    intent(in)   :: xMin, xMax, yMin, yMax, zMin, zMax
     real,    intent(inout):: CellSize1, CellSize2, CellSize3
     integer, intent(out)  :: nCell
+    integer(MPI_OFFSET_KIND), intent(inout) :: offset
+    logical, optional, intent(in) :: UseMpiIOIn
+    ! Only count the number of cells that will be written.
+    logical, optional, intent(in) :: DoCountOnlyIn
 
     ! Local variables
     ! Indices and coordinates
@@ -54,10 +59,13 @@ contains
     integer :: nRestrict, nRestrictX, nRestrictY, nRestrictZ
     real :: Coord_D(3), x, y, z, ySqueezed, Dx, Restrict
     real :: xMin1, xMax1, yMin1, yMax1, zMin1, zMax1
-    real :: Plot_V(nPlotVar)
+    real :: Plot_V(nPlotVar), buff_I(nPlotVar+4)
     logical:: IsBinary
 
     real:: cHalfMinusTiny
+
+    logical:: UseMpiIO
+    logical:: DoCountOnly
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_idl'
@@ -70,6 +78,12 @@ contains
        cHalfMinusTiny = 0.5*(1.0 - 1e-6)
     end if
 
+    UseMpiIO = .false.
+    if(present(UseMpiIOIn)) UseMpiIO = UseMpiIOIn
+
+    DoCountOnly = .false.
+    if(present(DoCountOnlyIn)) DoCountOnly = DoCountOnlyIn
+
     IsBinary = DoSaveBinary .and. TypePlot /= 'cut_pic'
 
     ! Initialize number of cells saved from this block
@@ -79,23 +93,27 @@ contains
 
     if(index(StringTest,'SAVEPLOTALL')>0)then
 
-       ! Save all cells of block including ghost cells
-       CellSize1 = CellSize_DB(x_,iBlock)
-       CellSize2 = CellSize_DB(y_,iBlock)
-       CellSize3 = CellSize_DB(z_,iBlock)
+       if(.not. DoCountOnly) then
+          ! Save all cells of block including ghost cells
+          CellSize1 = CellSize_DB(x_,iBlock)
+          CellSize2 = CellSize_DB(y_,iBlock)
+          CellSize3 = CellSize_DB(z_,iBlock)
 
-       PlotRange_EI(1,iFile) = CoordMin_D(1) - nGI*CellSize1
-       PlotRange_EI(2,iFile) = CoordMax_D(1) + nGI*CellSize1
-       PlotRange_EI(3,iFile) = CoordMin_D(2) - nGJ*CellSize2
-       PlotRange_EI(4,iFile) = CoordMax_D(2) + nGJ*CellSize2
-       PlotRange_EI(5,iFile) = CoordMin_D(3) - nGK*CellSize3
-       PlotRange_EI(6,iFile) = CoordMax_D(3) + nGK*CellSize3
-       PlotDx_DI(1,iFile) = CellSize1
-       PlotDx_DI(2,iFile) = CellSize2
-       PlotDx_DI(3,iFile) = CellSize3
+          PlotRange_EI(1,iFile) = CoordMin_D(1) - nGI*CellSize1
+          PlotRange_EI(2,iFile) = CoordMax_D(1) + nGI*CellSize1
+          PlotRange_EI(3,iFile) = CoordMin_D(2) - nGJ*CellSize2
+          PlotRange_EI(4,iFile) = CoordMax_D(2) + nGJ*CellSize2
+          PlotRange_EI(5,iFile) = CoordMin_D(3) - nGK*CellSize3
+          PlotRange_EI(6,iFile) = CoordMax_D(3) + nGK*CellSize3
+          PlotDx_DI(1,iFile) = CellSize1
+          PlotDx_DI(2,iFile) = CellSize2
+          PlotDx_DI(3,iFile) = CellSize3
+       end if
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           nCell = nCell + 1
+          if(DoCountOnly) CYCLE
+
           if(DoSaveGenCoord)then
              Coord_D = CoordMin_DB(:,iBlock) &
                   + ([i,j,k] - 0.5)*CellSize_DB(:,iBlock)
@@ -104,13 +122,20 @@ contains
           end if
           if(IsBinary)then
              Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
-             write(UnitTmp_) CellSize1*xUnit, Coord_D, Plot_V
+             if(UseMpiIO) then
+                buff_I(1) = CellSize1*xUnit
+                buff_I(2:4) = Coord_D
+                buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
+                call write_record_mpi(iUnit, offset, nPlotVar+4, buff_I)
+             else
+                write(iUnit) CellSize1*xUnit, Coord_D, Plot_V
+             end if
           else
              do iVar=1,nPlotVar
                 Plot_V(iVar) = PlotVar_GV(i,j,k,iVar)
                 if(abs(Plot_V(iVar)) < 1d-99) Plot_V(iVar)=0.0
              end do
-             write(UnitTmp_,'(50(1pe13.5))') &
+             write(iUnit,'(50(1pe13.5))') &
                   CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
           endif
        end do; end do; end do
@@ -216,6 +241,9 @@ contains
                   /CellSize3 <= 3) CYCLE
           end if
 
+          nCell = nCell + 1
+          if(DoCountOnly) CYCLE
+
           if(DoSaveGenCoord)then
              Coord_D = CoordMin_DB(:,iBlock) &
                   + ([i, j, k] - 0.5)*CellSize_DB(:,iBlock)
@@ -225,16 +253,22 @@ contains
 
           if(IsBinary)then
              Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
-             write(UnitTmp_) CellSize1*xUnit, Coord_D, Plot_V
+             if(UseMpiIO) then
+                buff_I(1) = CellSize1*xUnit
+                buff_I(2:4) = Coord_D
+                buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
+                call write_record_mpi(iUnit, offset, nPlotVar+4, buff_I)
+             else
+                write(iUnit) CellSize1*xUnit, Coord_D, Plot_V
+             end if
           else
              do iVar=1, nPlotVar
                 Plot_V(iVar) = PlotVar_GV(i,j,k,iVar)
                 if(abs(Plot_V(iVar)) < 1d-99) Plot_V(iVar) = 0.0
              end do
-             write(UnitTmp_,'(50es13.5)') &
+             write(iUnit,'(50es13.5)') &
                   CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
           endif
-          nCell = nCell + 1
        end do; end do; end do
     else
        ! Block is finer then required resolution
@@ -281,19 +315,28 @@ contains
                    Coord_D = [x, y, z]*xUnit
                 end if
 
+                nCell = nCell + 1
+                if(DoCountOnly) CYCLE
+
                 do iVar=1,nPlotVar
                    Plot_V(iVar) = Restrict*sum(PlotVar_GV(i:i2,j:j2,k:k2,iVar))
                 end do
                 if(IsBinary)then
-                   write(UnitTmp_)CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
+                   if(UseMpiIO) then
+                      buff_I(1) = CellSize1*xUnit
+                      buff_I(2:4) = Coord_D
+                      buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
+                      call write_record_mpi(iUnit, offset, nPlotVar+4, buff_I)
+                   else
+                      write(iUnit)CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
+                   end if
                 else
                    do iVar = 1, nPlotVar
                       if(abs(Plot_V(iVar)) < 1.0d-99)Plot_V(iVar)=0.0
                    end do
-                   write(UnitTmp_,'(50es13.5)') &
+                   write(iUnit,'(50es13.5)') &
                         CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
                 endif
-                nCell = nCell + 1
              end do
           end do
        end do
@@ -301,6 +344,38 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_plot_idl
+  !============================================================================
+  subroutine write_record_mpi(iUnit, offset, nReal, buff_I)
+
+    ! Write a record of integers to the file using MPI IO
+
+    use ModMpi,      ONLY: MPI_REAL, MPI_STATUS_SIZE, &
+         MPI_OFFSET_KIND, MPI_INTEGER
+    use ModKind,     ONLY: nByteReal
+
+    integer, intent(in) :: iUnit
+    integer(MPI_OFFSET_KIND), intent(inout) :: offset
+    integer, intent(in) :: nReal
+    Real, intent(in) :: buff_I(nReal)
+
+    integer:: iStatus_I(MPI_STATUS_SIZE)
+    integer :: nRecord, iError
+    !--------------------------------------------------------------------------
+
+    nRecord = nReal*nByteReal
+    call mpi_file_write_at(iUnit, offset, nRecord, &
+         1, MPI_INTEGER, iStatus_I, iError)
+    offset = offset + 4
+
+    call mpi_file_write_at(iUnit, offset, buff_I, &
+         nReal, MPI_REAL, iStatus_I, iError)
+    offset = offset + nReal*nByteReal
+
+    call mpi_file_write_at(iUnit, offset, nRecord, &
+         1, MPI_INTEGER, iStatus_I, iError)
+    offset = offset + 4
+
+  end subroutine write_record_mpi
   !============================================================================
 
 end module ModWritePlotIdl

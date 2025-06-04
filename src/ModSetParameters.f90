@@ -908,6 +908,9 @@ contains
        case("#SAVETECPLOT")
           call read_var('DoSaveOneTecFile', DoSaveOneTecFileOrig)
 
+       case("#MPIIO")
+          call read_var('UseMpiIo', UseMpiIo)
+
        case("#SAVEPLOT")
           call read_var('nPlotFile', nPlotFileRead)
           nFile = max(nFile, plot_ + nPlotFileRead)
