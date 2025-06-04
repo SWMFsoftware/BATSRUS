@@ -349,8 +349,7 @@ contains
 
     ! Write a record of integers to the file using MPI IO
 
-    use ModMpi,      ONLY: MPI_REAL, MPI_STATUS_SIZE, &
-         MPI_OFFSET_KIND, MPI_INTEGER
+    use ModMpi         
     use ModKind,     ONLY: nByteReal
 
     integer, intent(in) :: iUnit
