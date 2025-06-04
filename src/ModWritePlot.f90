@@ -94,7 +94,7 @@ contains
 
     logical:: IsBinary
 
-    logical:: UseMpi
+    logical:: DoSaveMpiIO
 
     ! If DoSaveGenCoord is true, save generalized coordinates (e.g. r,phi,lat)
     ! In this case the coordinates are saved in normalized units (CoordUnit=1)
@@ -111,8 +111,8 @@ contains
     real:: CellSizeMin_D(3)
     integer:: nCellProc, nCellBlock, nCellAll
     integer, allocatable:: nCell_P(:)
-    integer(MPI_OFFSET_KIND), allocatable:: offset_P(:)
-    integer(MPI_OFFSET_KIND):: offset
+    integer(MPI_OFFSET_KIND), allocatable:: Offset_P(:)
+    integer(MPI_OFFSET_KIND):: Offset
 
     integer:: iTime_I(7), iDim, iParam
     integer:: iDefaultStartTime_I(7) = [2000,3,21,10,45,0,0]
@@ -140,11 +140,11 @@ contains
     IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
     ! MPI-IO only works for binary IDL files so far.
-    UseMpi = UseMpiIO .and. IsBinary
+    DoSaveMpiIO = UseMpiIO .and. IsBinary
 
-    if(UseMpi) then
+    if(DoSaveMpiIO) then
        allocate(nCell_P(0:nProc-1))
-       allocate(offset_P(0:nProc-1))
+       allocate(Offset_P(0:nProc-1))
     end if
 
     PlotVarBody_V = 0.0
@@ -362,7 +362,7 @@ contains
        ! in NameFile. ModHdf5 will handle opening the file.
        NameFile = trim(NameSnapshot)//".batl"
     else
-       if(UseMpi) then
+       if(DoSaveMpiIO) then
           NameFile = trim(NameSnapshot)//'_pe0000.idl'
           call open_file(FILE=NameFile, iComm=iComm, iUnitMpi=iUnit)
        else
@@ -462,7 +462,7 @@ contains
        call message_pass_cell(nPlotVar, PlotVar_VGB)
     end if
 
-    if(UseMpi) then
+    if(DoSaveMpiIO) then
       ! Figure out the offset for each MPI. The first step is counting
       ! the output data size on each processor.
 
@@ -474,8 +474,8 @@ contains
              call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
                   DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
                   Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
-                  CellSize1, CellSize2, CellSize3, nCellBlock, offset, &
-                  UseMpiIOIn=UseMpi, DoCountOnlyIn=.true.)
+                  CellSize1, CellSize2, CellSize3, nCellBlock, Offset, &
+                  UseMpiIOIn=DoSaveMpiIO, DoCountOnlyIn=.true.)
              nCellProc = nCellProc + nCellBlock
           end if
        end do
@@ -485,17 +485,17 @@ contains
             MPI_INTEGER, 0, iComm, iError)
        if(iProc == 0) then
           ! Calculate the offset for each processor
-          offset_P(0) = 0
+          Offset_P(0) = 0
           do i = 1, nProc-1
              ! 1. Each cell contains nPlotVar+4 real numbers.
              ! 2. There are record size surrounding each record, which
              !     needs another 4*2 bytes.
-             offset_P(i) = offset_P(i-1) + &
+             Offset_P(i) = Offset_P(i-1) + &
                   nCell_P(i-1)*(nByteReal*(nPlotVar+4) + 4*2)
           end do
        end if
 
-       call MPI_Scatter(offset_P, 1, MPI_OFFSET, offset, 1, &
+       call MPI_scatter(Offset_P, 1, MPI_OFFSET, Offset, 1, &
             MPI_OFFSET, 0, iComm, iError)
     end if
 
@@ -541,8 +541,8 @@ contains
              call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
                   DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
                   Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
-                  CellSize1, CellSize2, CellSize3, nCellBlock, offset, &
-                  UseMpiIOIn=UseMpi, DoCountOnlyIn=.false.)
+                  CellSize1, CellSize2, CellSize3, nCellBlock, Offset, &
+                  UseMpiIOIn=DoSaveMpiIO, DoCountOnlyIn=.false.)
           case('hdf')
              call write_var_hdf5(iFile, TypePlot(1:3), iBlock, iH5Index, &
                   nPlotVar, PlotVar_GV, Coord1Min, Coord1Max, &
@@ -661,8 +661,8 @@ contains
     end if
 
     if(TypePlotFormat_I(iFile) == 'idl') then
-       if(UseMpi) then
-          call mpi_file_close(iUnit, iError)
+       if(DoSaveMpiIO) then
+          call MPI_file_close(iUnit, iError)
        else
           if( nCellProc == 0) then
              call close_file(status = 'DELETE')
@@ -852,7 +852,7 @@ contains
     end if
 
     if(allocated(nCell_P)) deallocate(nCell_P)
-    if(allocated(offset_P)) deallocate(offset_P)
+    if(allocated(Offset_P)) deallocate(Offset_P)
 
     if(DoPlotSpm)call clean_mod_spectrum
     if(DoTest)write(*,*) NameSub,' finished'
