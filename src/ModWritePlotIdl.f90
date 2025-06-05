@@ -16,7 +16,7 @@ contains
   !============================================================================
   subroutine write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
        DoSaveGenCoord, xUnit, xMin, xMax, yMin, yMax, zMin, zMax, &
-       CellSize1, CellSize2, CellSize3, nCell, Offset, UseMpiIOIn, &
+       CellSize1, CellSize2, CellSize3, nCell, nOffset, UseMpiIOIn, &
        DoCountOnlyIn)
 
     ! Save all cells within plotting range, for each processor
@@ -48,7 +48,7 @@ contains
     real,    intent(in)   :: xMin, xMax, yMin, yMax, zMin, zMax
     real,    intent(inout):: CellSize1, CellSize2, CellSize3
     integer, intent(out)  :: nCell
-    integer(MPI_OFFSET_KIND), intent(inout) :: Offset
+    integer(MPI_OFFSET_KIND), intent(inout) :: nOffset
     logical, optional, intent(in) :: UseMpiIOIn
     ! Only count the number of cells that will be written.
     logical, optional, intent(in) :: DoCountOnlyIn
@@ -59,7 +59,7 @@ contains
     integer :: nRestrict, nRestrictX, nRestrictY, nRestrictZ
     real :: Coord_D(3), x, y, z, ySqueezed, Dx, Restrict
     real :: xMin1, xMax1, yMin1, yMax1, zMin1, zMax1
-    real :: Plot_V(nPlotVar), buff_I(nPlotVar+4)
+    real :: Plot_V(nPlotVar), Buff_I(nPlotVar+4)
     logical:: IsBinary
 
     real:: cHalfMinusTiny
@@ -123,10 +123,10 @@ contains
           if(IsBinary)then
              Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
              if(UseMpiIO) then
-                buff_I(1) = CellSize1*xUnit
-                buff_I(2:4) = Coord_D
-                buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
-                call write_record_mpi(iUnit, Offset, nPlotVar+4, buff_I)
+                Buff_I(1) = CellSize1*xUnit
+                Buff_I(2:4) = Coord_D
+                Buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
+                call write_record_mpi(iUnit, nOffset, nPlotVar+4, Buff_I)
              else
                 write(iUnit) CellSize1*xUnit, Coord_D, Plot_V
              end if
@@ -254,10 +254,10 @@ contains
           if(IsBinary)then
              Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
              if(UseMpiIO) then
-                buff_I(1) = CellSize1*xUnit
-                buff_I(2:4) = Coord_D
-                buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
-                call write_record_mpi(iUnit, Offset, nPlotVar+4, buff_I)
+                Buff_I(1) = CellSize1*xUnit
+                Buff_I(2:4) = Coord_D
+                Buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
+                call write_record_mpi(iUnit, nOffset, nPlotVar+4, Buff_I)
              else
                 write(iUnit) CellSize1*xUnit, Coord_D, Plot_V
              end if
@@ -323,10 +323,10 @@ contains
                 end do
                 if(IsBinary)then
                    if(UseMpiIO) then
-                      buff_I(1) = CellSize1*xUnit
-                      buff_I(2:4) = Coord_D
-                      buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
-                      call write_record_mpi(iUnit, Offset, nPlotVar+4, buff_I)
+                      Buff_I(1) = CellSize1*xUnit
+                      Buff_I(2:4) = Coord_D
+                      Buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
+                      call write_record_mpi(iUnit, nOffset, nPlotVar+4, Buff_I)
                    else
                       write(iUnit)CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
                    end if
@@ -345,7 +345,7 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_plot_idl
   !============================================================================
-  subroutine write_record_mpi(iUnit, Offset, nReal, buff_I)
+  subroutine write_record_mpi(iUnit, nOffset, nReal, Buff_I)
 
     ! Write a record of integers to the file using MPI IO
 
@@ -353,26 +353,26 @@ contains
     use ModKind,     ONLY: nByteReal
 
     integer, intent(in) :: iUnit
-    integer(MPI_OFFSET_KIND), intent(inout) :: Offset
+    integer(MPI_OFFSET_KIND), intent(inout) :: nOffset
     integer, intent(in) :: nReal
-    Real, intent(in) :: buff_I(nReal)
+    Real, intent(in) :: Buff_I(nReal)
 
     integer:: iStatus_I(MPI_STATUS_SIZE)
     integer :: nRecord, iError
 
     !--------------------------------------------------------------------------
     nRecord = nReal*nByteReal
-    call MPI_file_write_at(iUnit, Offset, nRecord, &
+    call MPI_file_write_at(iUnit, nOffset, nRecord, &
          1, MPI_INTEGER, iStatus_I, iError)
-    Offset = Offset + 4
+    nOffset = nOffset + 4
 
-    call MPI_file_write_at(iUnit, Offset, buff_I, &
+    call MPI_file_write_at(iUnit, nOffset, Buff_I, &
          nReal, MPI_REAL, iStatus_I, iError)
-    Offset = Offset + nReal*nByteReal
+    nOffset = nOffset + nReal*nByteReal
 
-    call MPI_file_write_at(iUnit, Offset, nRecord, &
+    call MPI_file_write_at(iUnit, nOffset, nRecord, &
          1, MPI_INTEGER, iStatus_I, iError)
-    Offset = Offset + 4
+    nOffset = nOffset + 4
 
   end subroutine write_record_mpi
   !============================================================================
