@@ -5697,13 +5697,13 @@ T			DoSaveOneTecFile
 This command only works with 3D tecplot file (see #SAVEPLOT). It allows
 saving a single direct access formatted tecplot data/connectivity file.
 Post processing is still needed because the tecplot file is separated into
-3 diffrent files: the header file, the data file and the connectivity file.
+3 different files: the header file, the data file and the connectivity file.
 
-The default is false, which saves the tecplot data/connectivity for each
-processor. In some systems, saving the data/connectivity in a single file
+If DoSaveOneTecFile is false, save separate tecplot data/connectivity for each
+processor. On some systems, saving the data/connectivity into a single file
 might not work.
 
-The default value is F.
+The default value is false.
 </command>
 
 <command name="INSTRUMENT">
