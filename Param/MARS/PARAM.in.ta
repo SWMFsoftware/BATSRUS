@@ -131,12 +131,16 @@ T			UseMarsB0
 60			NNm  !!! 110 needs a different harmonics file
 -149.6			Rot
 21.65608		Thetilt
+marsmgsp.txt		NameFileB0
 
 #UseMso
 T			UseMso
 0.36905			RotAxisMsoX
 0.21215			RotAxisMsoY
 0.90487			RotAxisMsoZ
+
+#SMDist
+1.6464906		SMDist
 
 #SOLARCON
 solarmin		TypeSolarCond
