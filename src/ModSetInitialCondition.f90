@@ -407,6 +407,8 @@ contains
 
     if(DoTest)write(*,*) &
          NameSub,': final State=',State_VGB(:,iTest,jTest,kTest,iBlockTest)
+    if(DoTest .and. UseB0) write(*,*) &
+         NameSub,': B0=', B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
     call test_stop(NameSub, DoTest, iBlock)
 
