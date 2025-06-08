@@ -42,7 +42,7 @@ contains
     use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
     use ModPlotShock, ONLY: init_plot_shock, set_plot_shock, write_plot_shock
     use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
-    use ModWritePlotIdl, ONLY: write_plot_idl
+    use ModWritePlotIdl, ONLY: write_plot_idl, nCharPerLine
     use ModWriteTecplot, ONLY: lRecConnect, nPlotDim, &
          write_tecplot_head, write_tecplot_data, write_tecplot_connect, &
          write_tecplot_node_data, set_tecplot_var_string
@@ -139,8 +139,7 @@ contains
     ! Determine if output file is formatted or unformatted
     IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
-    ! MPI-IO only works for binary IDL files so far.
-    DoSaveMpiIO = UseMpiIO .and. IsBinary
+    DoSaveMpiIO = UseMpiIO
 
     if(DoSaveMpiIO) then
        allocate(nCell_P(0:nProc-1))
@@ -463,14 +462,14 @@ contains
     end if
 
     if(DoSaveMpiIO) then
-      ! Figure out the offset for each MPI. The first step is counting
-      ! the output data size on each processor.
+       ! Figure out the offset for each MPI. The first step is counting
+       ! the output data size on each processor.
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
           if(.not.DoPlotShell .and. .not.DoPlotBox .and. &
                .not.DoPlotShock .and. TypePlotFormat_I(iFile) == 'idl') then
-                  ! Count the number of cells for output in this block
+             ! Count the number of cells for output in this block.
              call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
                   DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
                   Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
@@ -487,11 +486,16 @@ contains
           ! Calculate the offset for each processor
           nOffset_P(0) = 0
           do i = 1, nProc-1
-             ! 1. Each cell contains nPlotVar+4 real numbers.
-             ! 2. There are record size surrounding each record, which
-             !     needs another 4*2 bytes.
-             nOffset_P(i) = nOffset_P(i-1) + &
-                  nCell_P(i-1)*(nByteReal*(nPlotVar+4) + 4*2)
+             if(IsBinary) then
+                ! Each cell contains nPlotVar+4 real numbers.
+                ! There are record size surrounding each record, which
+                ! needs another 4*2 bytes.
+                nOffset_P(i) = nOffset_P(i-1) + &
+                     nCell_P(i-1)*(nByteReal*(nPlotVar+4) + 4*2)
+             else
+                ! For ASCII, each cell is one line with length nCharPerLine
+                nOffset_P(i) = nOffset_P(i-1) + nCell_P(i-1)*nCharPerLine
+             end if
           end do
        end if
 
@@ -2335,7 +2339,7 @@ contains
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitJ_)
        case('ex','ey','ez','er','enumx','enumy','enumz', &
-            'expot','eypot','ezpot','exind','eyind','ezind')
+            'expot', 'eypot', 'ezpot', 'exind', 'eyind', 'ezind')
           PlotVar_GV(:,:,:,iVar) = PlotVar_GV(:,:,:,iVar) &
                *No2Io_V(UnitElectric_)
        case('pote')

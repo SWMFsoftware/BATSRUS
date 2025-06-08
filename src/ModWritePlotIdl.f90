@@ -11,6 +11,15 @@ module ModWritePlotIdl
   private ! except
 
   public:: write_plot_idl
+  public:: nCharPerLine
+
+  ! Maximum number of variables to be written in one line
+  integer, parameter :: nVarMax = 100
+  ! The width of the real number format
+  integer, parameter :: nWidthReal = 13
+  integer, parameter :: nCharPerLineMax = nWidthReal*(nVarMax+4) + 1
+  character(len=nCharPerLineMax) :: StringLine
+  integer :: nCharPerLine = -1
 
 contains
   !============================================================================
@@ -37,6 +46,7 @@ contains
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          Xyz_DGB, x_, y_, z_, Phi_
     use ModUtilities, ONLY: greatest_common_divisor
+    use ModBatsrusUtility, ONLY: stop_mpi
 
     ! Arguments
 
@@ -59,7 +69,7 @@ contains
     integer :: nRestrict, nRestrictX, nRestrictY, nRestrictZ
     real :: Coord_D(3), x, y, z, ySqueezed, Dx, Restrict
     real :: xMin1, xMax1, yMin1, yMax1, zMin1, zMax1
-    real :: Plot_V(nPlotVar), Buff_I(nPlotVar+4)
+    real :: Plot_V(nPlotVar)
     logical:: IsBinary
 
     real:: cHalfMinusTiny
@@ -85,6 +95,13 @@ contains
     if(present(DoCountOnlyIn)) DoCountOnly = DoCountOnlyIn
 
     IsBinary = DoSaveBinary .and. TypePlot /= 'cut_pic'
+
+    if(.not. IsBinary) then
+       if(nPlotVar > nVarMax) &
+            call stop_mpi(NameSub//': nPlotVar > nVarMax')
+
+       nCharPerLine = nWidthReal*(nPlotVar+4) + 1
+    end if
 
     ! Initialize number of cells saved from this block
     ! Note that if this is moved inside the if statement
@@ -120,24 +137,11 @@ contains
           else
              Coord_D = Xyz_DGB(:,i,j,k,iBlock)*xUnit
           end if
-          if(IsBinary)then
-             Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
-             if(UseMpiIO) then
-                Buff_I(1) = CellSize1*xUnit
-                Buff_I(2:4) = Coord_D
-                Buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
-                call write_record_mpi(iUnit, nOffset, nPlotVar+4, Buff_I)
-             else
-                write(iUnit) CellSize1*xUnit, Coord_D, Plot_V
-             end if
-          else
-             do iVar=1,nPlotVar
-                Plot_V(iVar) = PlotVar_GV(i,j,k,iVar)
-                if(abs(Plot_V(iVar)) < 1d-99) Plot_V(iVar)=0.0
-             end do
-             write(iUnit,'(50(1pe13.5))') &
-                  CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
-          endif
+
+          Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
+
+          call write_data(iUnit, CellSize1, xUnit, Coord_D, Plot_V, &
+               nPlotVar, IsBinary, UseMpiIO, nOffset)
        end do; end do; end do
 
        RETURN
@@ -251,24 +255,10 @@ contains
              Coord_D = Xyz_DGB(:,i,j,k,iBlock)*xUnit
           end if
 
-          if(IsBinary)then
-             Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
-             if(UseMpiIO) then
-                Buff_I(1) = CellSize1*xUnit
-                Buff_I(2:4) = Coord_D
-                Buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
-                call write_record_mpi(iUnit, nOffset, nPlotVar+4, Buff_I)
-             else
-                write(iUnit) CellSize1*xUnit, Coord_D, Plot_V
-             end if
-          else
-             do iVar=1, nPlotVar
-                Plot_V(iVar) = PlotVar_GV(i,j,k,iVar)
-                if(abs(Plot_V(iVar)) < 1d-99) Plot_V(iVar) = 0.0
-             end do
-             write(iUnit,'(50es13.5)') &
-                  CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
-          endif
+          Plot_V = PlotVar_GV(i,j,k,1:nPlotVar)
+
+          call write_data(iUnit, CellSize1, xUnit, Coord_D, Plot_V, &
+               nPlotVar, IsBinary, UseMpiIO, nOffset)
        end do; end do; end do
     else
        ! Block is finer then required resolution
@@ -319,24 +309,11 @@ contains
                 if(DoCountOnly) CYCLE
 
                 do iVar=1,nPlotVar
-                   Plot_V(iVar) = Restrict*sum(PlotVar_GV(i:i2,j:j2,k:k2,iVar))
+                   Plot_V(iVar) = Restrict* &
+                        sum(PlotVar_GV(i:i2,j:j2,k:k2,iVar))
                 end do
-                if(IsBinary)then
-                   if(UseMpiIO) then
-                      Buff_I(1) = CellSize1*xUnit
-                      Buff_I(2:4) = Coord_D
-                      Buff_I(5:5+nPlotVar-1) = Plot_V(1:nPlotVar)
-                      call write_record_mpi(iUnit, nOffset, nPlotVar+4, Buff_I)
-                   else
-                      write(iUnit)CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
-                   end if
-                else
-                   do iVar = 1, nPlotVar
-                      if(abs(Plot_V(iVar)) < 1.0d-99)Plot_V(iVar)=0.0
-                   end do
-                   write(iUnit,'(50es13.5)') &
-                        CellSize1*xUnit, Coord_D, Plot_V(1:nPlotVar)
-                endif
+                call write_data(iUnit, CellSize1, xUnit, Coord_D, Plot_V, &
+                     nPlotVar, IsBinary, UseMpiIO, nOffset)
              end do
           end do
        end do
@@ -345,36 +322,110 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_plot_idl
   !============================================================================
-  subroutine write_record_mpi(iUnit, nOffset, nReal, Buff_I)
+  subroutine write_record_mpi_binary(iUnit, nOffset, nReal, Buff_I)
 
     ! Write a record of integers to the file using MPI IO
 
     use ModMpi
-    use ModKind,     ONLY: nByteReal
+    use ModKind, ONLY: nByteReal
 
     integer, intent(in) :: iUnit
     integer(MPI_OFFSET_KIND), intent(inout) :: nOffset
     integer, intent(in) :: nReal
-    Real, intent(in) :: Buff_I(nReal)
+    real, intent(in) :: Buff_I(nReal)
 
-    integer:: iStatus_I(MPI_STATUS_SIZE)
+    integer :: iStatus_I(MPI_STATUS_SIZE)
     integer :: nRecord, iError
 
     !--------------------------------------------------------------------------
     nRecord = nReal*nByteReal
-    call MPI_file_write_at(iUnit, nOffset, nRecord, &
-         1, MPI_INTEGER, iStatus_I, iError)
+    call MPI_file_write_at(iUnit, nOffset, nRecord, 1, MPI_INTEGER, &
+         iStatus_I, iError)
     nOffset = nOffset + 4
 
-    call MPI_file_write_at(iUnit, nOffset, Buff_I, &
-         nReal, MPI_REAL, iStatus_I, iError)
+    call MPI_file_write_at(iUnit, nOffset, Buff_I, nReal, MPI_REAL, &
+         iStatus_I, iError)
     nOffset = nOffset + nReal*nByteReal
 
-    call MPI_file_write_at(iUnit, nOffset, nRecord, &
-         1, MPI_INTEGER, iStatus_I, iError)
+    call MPI_file_write_at(iUnit, nOffset, nRecord, 1, MPI_INTEGER, &
+         iStatus_I, iError)
     nOffset = nOffset + 4
 
-  end subroutine write_record_mpi
+  end subroutine write_record_mpi_binary
+  !============================================================================
+  subroutine write_record_mpi_ascii(iUnit, nOffset, nReal, Buff_I)
+
+    ! Write a record in ASCII format using MPI IO
+    ! Each value uses nWidthReal=13 characters in es13.5 format
+    ! The line ends with a newline character
+
+    use ModMpi
+    use ModKind, ONLY: nByteReal
+
+    integer, intent(in) :: iUnit
+    integer(MPI_OFFSET_KIND), intent(inout) :: nOffset
+    integer, intent(in) :: nReal
+    real, intent(in) :: Buff_I(nReal)
+
+    integer :: iError, i, iStart
+    integer(MPI_OFFSET_KIND) :: nChar
+    integer :: iStatus_I(MPI_STATUS_SIZE)
+    integer(MPI_OFFSET_KIND) :: nCharOffset
+
+    !--------------------------------------------------------------------------
+    ! Format each value into the string buffer
+    do i = 1, nReal
+       iStart = (i-1)*nWidthReal + 1
+       write(StringLine(iStart:iStart+12), '(es13.5)') Buff_I(i)
+    end do
+
+    ! New line character
+    StringLine(nCharPerLine:nCharPerLine) = char(10)
+
+    call MPI_file_write_at(iUnit, nOffset, StringLine(1:nCharPerLine), &
+         nCharPerLine, MPI_CHAR, iStatus_I, iError)
+
+    nOffset = nOffset + nCharPerLine
+
+  end subroutine write_record_mpi_ascii
+  !============================================================================
+  subroutine write_data(iUnit, CellSize1, xUnit, Coord_D, Plot_V, nPlotVar, &
+       IsBinary, UseMpiIO, nOffset)
+
+    use ModMpi, ONLY: MPI_OFFSET_KIND
+
+    integer, intent(in)              :: iUnit, nPlotVar
+    real,    intent(in)              :: CellSize1, xUnit, Coord_D(3)
+    real,    intent(inout)           :: Plot_V(nPlotVar)
+    logical, intent(in)              :: IsBinary, UseMpiIO
+    integer(MPI_OFFSET_KIND), intent(inout), optional :: nOffset
+
+    real :: Data_I(4+nPlotVar)
+
+    !--------------------------------------------------------------------------
+    if(.not.IsBinary) then
+       where(abs(Plot_V) < 1d-99) Plot_V = 0.0
+    end if
+
+    Data_I(1) = CellSize1*xUnit
+    Data_I(2:4) = Coord_D
+    Data_I(5:4+nPlotVar) = Plot_V
+
+    if(UseMpiIO) then
+       if(IsBinary) then
+          call write_record_mpi_binary(iUnit, nOffset, size(Data_I), Data_I)
+       else
+          call write_record_mpi_ascii(iUnit, nOffset, size(Data_I), Data_I)
+       end if
+    else
+       if(IsBinary) then
+          write(iUnit) Data_I
+       else
+          write(iUnit,'(50es13.5)') Data_I
+       end if
+    end if
+
+  end subroutine write_data
   !============================================================================
 
 end module ModWritePlotIdl
