@@ -5859,12 +5859,12 @@ not have to be repeated in restarted runs (unless the unit is changed).
 The default value is NameMaxTimeUnit='hour'.
 </command>
 
-<command name="MPIIO">
-  <parameter name="UseMpiIO" type="logical" default="F" />
-#MPIIO
-T			UseMpiIO
+<command name="SAVEONEFILE">
+  <parameter name="DoSaveOneIdlFile" type="logical" default="F" />
+#SAVEONEFILE
+T			DoSaveOneIdlFile
 
-Save IDL files using MPI-IO. All processors write to the same 
+Save IDL files using MPI-IO. All processors write to one 
 *.idl file to reduce file numbers. 
 </command>
 

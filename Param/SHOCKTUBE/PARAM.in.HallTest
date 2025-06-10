@@ -206,8 +206,8 @@ raw			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#MPIIO
-T			UseMpiIO
+#SAVEONEFILE
+T			DoSaveOneIdlFile
 
 #SAVEPLOT
 2			nPlotFile
