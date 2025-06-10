@@ -182,7 +182,7 @@ module ModIO
 
   logical :: DoSaveOneTecFileOrig = .false., DoSaveOneTecFile
 
-  logical :: DoSaveOneIdlFile = .false.
+  logical :: DoSaveOneIdlFile = .true.
 
   ! The space separated list of nVar primitive variables
   character(len=:), allocatable :: NamePrimitiveVarOrig

@@ -206,9 +206,6 @@ raw			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#SAVEONEFILE
-T			DoSaveOneIdlFile
-
 #SAVEPLOT
 2			nPlotFile
 1d VAR idl_ascii		StringPlot

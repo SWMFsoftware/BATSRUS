@@ -5860,7 +5860,7 @@ The default value is NameMaxTimeUnit='hour'.
 </command>
 
 <command name="SAVEONEFILE">
-  <parameter name="DoSaveOneIdlFile" type="logical" default="F" />
+  <parameter name="DoSaveOneIdlFile" type="logical" default="T" />
 #SAVEONEFILE
 T			DoSaveOneIdlFile
 
