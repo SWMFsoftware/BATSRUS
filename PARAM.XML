@@ -7885,6 +7885,16 @@ the #CONTROLTIMESTEP command. The control variables are selected by the
 Default values are shown.
 </command>
 
+<command name="ENFORCECFL">
+  <parameter name="DoEnforceCfl" type="logical" default="F"/>
+
+#ENFORCECFL
+T                       DoEnforceCfl
+
+Ensures that the local temperature maximum which can be produced by the
+semi-implicit heat conduction solver, does not break the CFL condition
+</command>
+
 <command name="MULTISPECIES">
   <parameter name="DoReplaceDensity" type="logical" default="T"/>
   <parameter name="SpeciesPercentCheck" type="real" min="0" max="100"
