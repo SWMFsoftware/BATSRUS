@@ -1851,7 +1851,7 @@ contains
 
        case("#TIMESTEPCONTROL", "#CONTROLTIMESTEP", "#CHECKTIMESTEP", &
             "#CONTROLDECREASE", "#CONTROLINCREASE", &
-            "#CONTROLFACTOR", "#CONTROLVAR", "#CONTROLINIT")
+            "#CONTROLFACTOR", "#CONTROLVAR", "#CONTROLINIT","#ENFORCECFL")
           call read_time_step_control_param(NameCommand)
 
        case("#PROLONGATION")
