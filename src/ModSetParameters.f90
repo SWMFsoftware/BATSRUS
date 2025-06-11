@@ -908,8 +908,8 @@ contains
        case("#SAVETECPLOT")
           call read_var('DoSaveOneTecFile', DoSaveOneTecFileOrig)
 
-       case("#MPIIO")
-          call read_var('UseMpiIo', UseMpiIo)
+       case("#SAVEONEFILE")
+          call read_var('DoSaveOneFile', DoSaveOneIdlFile)
 
        case("#SAVEPLOT")
           call read_var('nPlotFile', nPlotFileRead)

@@ -94,7 +94,7 @@ contains
 
     logical:: IsBinary
 
-    logical:: DoSaveMpiIO
+    logical:: UseMpiIO
 
     ! If DoSaveGenCoord is true, save generalized coordinates (e.g. r,phi,lat)
     ! In this case the coordinates are saved in normalized units (CoordUnit=1)
@@ -139,9 +139,9 @@ contains
     ! Determine if output file is formatted or unformatted
     IsBinary = DoSaveBinary .and. TypePlotFormat_I(iFile)=='idl'
 
-    DoSaveMpiIO = UseMpiIO
+    UseMpiIO = DoSaveOneIdlFile
 
-    if(DoSaveMpiIO) then
+    if(UseMpiIO) then
        allocate(nCell_P(0:nProc-1))
        allocate(nOffset_P(0:nProc-1))
     end if
@@ -361,7 +361,7 @@ contains
        ! in NameFile. ModHdf5 will handle opening the file.
        NameFile = trim(NameSnapshot)//".batl"
     else
-       if(DoSaveMpiIO) then
+       if(UseMpiIO) then
           NameFile = trim(NameSnapshot)//'_pe0000.idl'
           call open_file(FILE=NameFile, iComm=iComm, iUnitMpi=iUnit)
        else
@@ -461,7 +461,7 @@ contains
        call message_pass_cell(nPlotVar, PlotVar_VGB)
     end if
 
-    if(DoSaveMpiIO) then
+    if(UseMpiIO) then
        ! Figure out the offset for each MPI. The first step is counting
        ! the output data size on each processor.
 
@@ -474,7 +474,7 @@ contains
                   DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
                   Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
                   CellSize1, CellSize2, CellSize3, nCellBlock, nOffset, &
-                  UseMpiIOIn=DoSaveMpiIO, DoCountOnlyIn=.true.)
+                  UseMpiIOIn=UseMpiIO, DoCountOnlyIn=.true.)
              nCellProc = nCellProc + nCellBlock
           end if
        end do
@@ -546,7 +546,7 @@ contains
                   DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
                   Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
                   CellSize1, CellSize2, CellSize3, nCellBlock, nOffset, &
-                  UseMpiIOIn=DoSaveMpiIO, DoCountOnlyIn=.false.)
+                  UseMpiIOIn=UseMpiIO, DoCountOnlyIn=.false.)
           case('hdf')
              call write_var_hdf5(iFile, TypePlot(1:3), iBlock, iH5Index, &
                   nPlotVar, PlotVar_GV, Coord1Min, Coord1Max, &
@@ -665,7 +665,7 @@ contains
     end if
 
     if(TypePlotFormat_I(iFile) == 'idl') then
-       if(DoSaveMpiIO) then
+       if(UseMpiIO) then
           call MPI_file_close(iUnit, iError)
        else
           if( nCellProc == 0) then
