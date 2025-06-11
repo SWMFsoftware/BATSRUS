@@ -42,7 +42,7 @@ contains
     use ModTurbulence, ONLY:           &
          wave_energy_to_representative, representative_to_wave_energy
     use ModMessagePass, ONLY: exchange_messages
-    use ModTimeStepControl, ONLY: calc_timestep, enforce_cfl, DoEnforceCfl 
+    use ModTimeStepControl, ONLY: calc_timestep, enforce_cfl, DoEnforceCfl
     use BATL_lib, ONLY: message_pass_face, IsAnyAxis
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
