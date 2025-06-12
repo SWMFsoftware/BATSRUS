@@ -20,6 +20,15 @@ module ModTimeStepControl
   public:: set_global_timestep
   public:: control_time_step
 
+  ! The local increase in temperature, for example
+  ! in the semi-implicit heat conduction solver may
+  ! break the CFL condition locally. Modify the time
+  ! step in these occurrences, to enforce
+  ! the Courant-Friedrichs-Levi condition
+
+  public:: enforce_cfl
+  logical, public:: DoEnforceCfl = .false.
+
   logical, public:: UseTimeStepControl  = .false.
   real,    public:: TimeStepControlInit = 1.0
   logical, public:: UseMaxTimeStep      = .false. ! calculate max time step
@@ -101,6 +110,8 @@ contains
        call read_var('DoCheckTimeStep', DoCheckTimeStep)
        call read_var('DnCheckTimeStep', DnCheckTimeStep)
        call read_var('TimeStepMin'   ,  TimeStepMin)
+    case("#ENFORCECFL")
+       call read_var('DoEnforceCfl', DoEnforceCfl)
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
@@ -300,6 +311,22 @@ contains
 #endif
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_timestep
+  !============================================================================
+  subroutine enforce_cfl(iBlock)
+    use ModSize,    ONLY: nI, nJ, nK
+    use ModMain,    ONLY: DtMax_B
+    use ModAdvance, ONLY: DtMax_CB
+    integer, intent(in)::iBlock
+    real :: DtMax_C(nI,nJ,nK), DtMax
+    !--------------------------------------------------------------------------
+    ! Store DtMax
+    DtMax_C = DtMax_CB(:,:,:, iBlock); DtMax = DtMax_B(iBlock)
+    call calc_timestep(iBlock)
+    ! Restore DtMax
+    DtMax_B(iBlock) = DtMax
+    ! Limit time step to ensure the fulfillment of the CFL condition
+    DtMax_CB(:,:,:, iBlock) = min(DtMax_CB(:,:,:, iBlock), DtMax_C)
+  end subroutine enforce_cfl
   !============================================================================
   subroutine set_global_timestep(TimeSimulationLimit)
 

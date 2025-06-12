@@ -42,7 +42,7 @@ contains
     use ModTurbulence, ONLY:           &
          wave_energy_to_representative, representative_to_wave_energy
     use ModMessagePass, ONLY: exchange_messages
-    use ModTimeStepControl, ONLY: calc_timestep
+    use ModTimeStepControl, ONLY: calc_timestep, enforce_cfl, DoEnforceCfl
     use BATL_lib, ONLY: message_pass_face, IsAnyAxis
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
@@ -200,10 +200,19 @@ contains
                 ! Also calculate time step when UseDtLimit is true.
                 if(.not.IsTimeAccurate .or. UseDtLimit) &
                      call calc_timestep(iBlock)
-
-                ! Set local time step inside rLocalTimeStep
-                if(IsTimeAccurate .and. rMin_B(iBlock) < rLocalTimeStep) &
-                     call calc_timestep(iBlock, IsPartLocal=.true.)
+                if(IsTimeAccurate)then
+                   ! Set local time step inside rLocalTimeStep
+                   if(rMin_B(iBlock) < rLocalTimeStep)then
+                      call calc_timestep(iBlock, IsPartLocal=.true.)
+                   elseif(DoEnforceCfl)then
+                      ! The local increase in temperature, for example
+                      ! in the semi-implicit heat conduction solver may
+                      ! break the CFL condition locally. Modify the time
+                      ! step in these occurrences, to enforce
+                      ! the Courant-Friedrichs-Levi condition
+                      call enforce_cfl(iBlock)
+                   end if
+                end if
              end if
              ! Update solution state in each cell.
              call timing_start('update_state')
