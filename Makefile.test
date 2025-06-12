@@ -1656,9 +1656,7 @@ test_mars_compile:
 	make PIDL
 
 test_mars_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/MARS/PARAM.in .; \
-		cp Param/MARS/marsmgsp.txt .
+	cd ${TESTDIR}; cp Param/MARS/PARAM.in .
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_mars_run:
@@ -1722,9 +1720,7 @@ test_ccmc_mars_compile:
 	make PIDL
 
 test_ccmc_mars_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/MARS/PARAM.in.ta PARAM.in; \
-		cp Param/MARS/marsmgsp.txt .
+	cd ${TESTDIR}; cp Param/MARS/PARAM.in.ta PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_ccmc_mars_run:
