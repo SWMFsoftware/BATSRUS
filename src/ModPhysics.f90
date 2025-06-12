@@ -993,7 +993,7 @@ contains
        NameTecUnit_V(UnitB_)           = '[Gauss]'
        NameTecUnit_V(UnitRhoU_)        = '[g/cm^2/s]'
        NameTecUnit_V(UnitEnergyDens_)  = '[erg/cm^3]'
-       NameTecUnit_V(UnitJ_)           = '[`mA/m^2]'
+       NameTecUnit_V(UnitJ_)           = '[`uA/m^2]'
        NameTecUnit_V(UnitDivB_)        = '[Gauss/cm]'
        NameTecUnit_V(UnitAngle_)       = '[deg]'
        ! set string variables used for writing output - IDL
