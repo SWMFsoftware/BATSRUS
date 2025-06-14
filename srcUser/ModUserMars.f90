@@ -155,7 +155,7 @@ module ModUser
   integer :: NNm
   real :: SMDist = 1.52
 
-  logical :: UseMarsB0 = .false., UseMso=.false.
+  logical :: UseMarsB0 = .false., UseMso=.false., UseB0Old
   character(len=100):: NameFileB0 = '???'
   character(len=*), parameter:: NameFileB0Old = 'marsmgsp.txt'
 
@@ -764,7 +764,8 @@ contains
     if(UseMarsB0)then
        ! It does not work without the STATUS="OLD"
        call open_file(FILE=NameFileB0, STATUS="OLD")
-       if(NameFileB0 == NameFileB0Old)then
+       UseB0Old = index(NameFileB0, NameFileB0Old) > 0
+       if(UseB0Old)then
           do i = 0, NNm
              read(UnitTmp_,*)n,(cmars(n-1,m),m=0,n-1),(dmars(n-1,m),m=0,n-1)
           end do
@@ -1580,7 +1581,7 @@ contains
 
     theta = acos(Z0/rr)
 
-    if(NameFileB0 == NameFileB0Old)then
+    if(UseB0Old)then
        call MarsB0_old(R0, theta, phi+delta, bb)
     else
        call MarsB0(R0, Z0/rr, phi+delta, bb)

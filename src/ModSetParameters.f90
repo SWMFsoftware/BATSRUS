@@ -2467,6 +2467,7 @@ contains
                 do iSpecies = 1, nSpecies
                    call read_var('BodyNDim', BodyNSpeciesDim_I(iSpecies))
                 end do
+                BodyNDim_I(1) = sum(BodyNSpeciesDim_I)
                 call read_var('BodyTDim', BodyTDim_I(1))
              else
                 do iFluid = 1, nFluid

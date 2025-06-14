@@ -79,23 +79,23 @@ fixed			TypeBc6
 #USERINPUTBEGIN -----------------------------------
 
 #UseHotO
-T
+T			UseHotO
 
 #UseTempCont
-F
+F			UseTempCont
 
 #UseMarsB0
 T			UseMarsB0
 60			NNm
 -180			Rot
 0.0			Thetilt
-marsmgsp.txt		NameFileB0
+Param/MARS/marsmgsp.txt		NameFileB0
 
 -99.5
 25.26
 
 #SOLARCON
-solarmax
+solarmax		TypeSolarCond
 
 #USERINPUTEND -------------------------------------
 

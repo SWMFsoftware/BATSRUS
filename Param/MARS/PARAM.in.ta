@@ -131,7 +131,7 @@ T			UseMarsB0
 60			NNm  !!! 110 needs a different harmonics file
 -149.6			Rot
 21.65608		Thetilt
-marsmgsp.txt		NameFileB0
+Param/MARS/marsmgsp.txt		NameFileB0
 
 #UseMso
 T			UseMso

@@ -560,7 +560,7 @@ contains
            ! reflect the full velocity vectors for reflect and reflectb
 
            ! Apply floating condition on densities and pressures
-           FBC%VarsGhostFace_V          =  FBC%VarsTrueFace_V
+           FBC%VarsGhostFace_V = FBC%VarsTrueFace_V
 
            if(UseB)then
               Borig_D = FBC%VarsTrueFace_V(Bx_:Bz_)
@@ -998,7 +998,7 @@ contains
                 / sum(FBC%FaceCoords_D**2)
 
            select case(TypeBc)
-           case('reflect','linetied','polarwind','ionosphere', &
+           case('reflect','reflectb','linetied','polarwind','ionosphere', &
                 'ionospherefloat', 'ionosphereoutflow')
               FBC%VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) &
                    + FBC%VarsGhostFace_V(iUx_I)
@@ -1020,7 +1020,7 @@ contains
            uRot_D = cross_product(OmegaBody_D, FBC%FaceCoords_D)
 
            select case(TypeBc)
-           case('reflect','linetied', &
+           case('reflect','reflectb','reflectall','linetied', &
                 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow')
               FBC%VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) &
                    + FBC%VarsGhostFace_V(iUx_I)
