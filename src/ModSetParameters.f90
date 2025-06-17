@@ -2293,9 +2293,9 @@ contains
 
        case("#GRID")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nRootBlockX', nRootRead_D(1))
-          call read_var('nRootBlockY', nRootRead_D(2))
-          call read_var('nRootBlockZ', nRootRead_D(3))
+          call read_var('nRootBlock1', nRootRead_D(1))
+          call read_var('nRootBlock2', nRootRead_D(2))
+          call read_var('nRootBlock3', nRootRead_D(3))
 
           call read_var('xMin', xMinBox)
           call read_var('xMax', xMaxBox)
