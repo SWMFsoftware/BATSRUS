@@ -3945,7 +3945,7 @@ contains
 
       ! No need to use MPIIO if running on 1 core
       if(nProc == 1) DoSaveOneIdlFile = .false.
-      
+
       ! Update parameters on the GPU that are not done by init_mod_* routines
 
       !$acc update device(MaxBlock)
