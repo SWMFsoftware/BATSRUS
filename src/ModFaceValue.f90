@@ -286,18 +286,19 @@ contains
        end do; end do; end do
     end if
 
-    if(UseLogLimiter) then
-       ! Convert to log variables
-       do iVar = 1, nVar
-          if(UseLogLimiter_V(iVar)) then
-             !$acc loop vector collapse(3) independent
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                State_VGB(iVar,i,j,k,iBlock) = &
-                     log(State_VGB(iVar,i,j,k,iBlock))
-             end do; end do; end do
-          end if
-       end do
-    end if
+    ! Extrapolation in log variable seems to produce bad results
+    !if(UseLogLimiter) then
+    !   ! Convert to log variables
+    !   do iVar = 1, nVar
+    !      if(UseLogLimiter_V(iVar)) then
+    !         !$acc loop vector collapse(3) independent
+    !         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+    !            State_VGB(iVar,i,j,k,iBlock) = &
+    !                 log(State_VGB(iVar,i,j,k,iBlock))
+    !         end do; end do; end do
+    !      end if
+    !   end do
+    !end if
 
     if(DiLevel_EB(1,iBlock) == -1)then
        if(       .not.Unused_BP(jBlock_IEB(1,1,iBlock),jProc_IEB(1,1,iBlock)) &
@@ -462,18 +463,18 @@ contains
        end if
     end if
 
-    if(UseLogLimiter) then
-       ! Convert back from log variables
-       do iVar = 1, nVar
-          if(UseLogLimiter_V(iVar)) then
-             !$acc loop vector collapse(3) independent
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                State_VGB(iVar,i,j,k,iBlock) = &
-                     exp(State_VGB(iVar,i,j,k,iBlock))
-             end do; end do; end do
-          end if
-       end do
-    end if
+    !if(UseLogLimiter) then
+    !   ! Convert back from log variables
+    !   do iVar = 1, nVar
+    !      if(UseLogLimiter_V(iVar)) then
+    !         !$acc loop vector collapse(3) independent
+    !         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+    !            State_VGB(iVar,i,j,k,iBlock) = &
+    !                 exp(State_VGB(iVar,i,j,k,iBlock))
+    !         end do; end do; end do
+    !      end if
+    !   end do
+    !end if
 
     if(.not.DoLimitMomentum)then
        ! Convert velocities back to momenta
@@ -497,9 +498,11 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine correct_monotone_restrict
   !============================================================================
-  subroutine get_log_limiter_var()
+  subroutine get_log_limiter_var
+
     use ModMain, ONLY: nOrder
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPe, UseAnisoPressure
+
     integer:: iFluid
     !--------------------------------------------------------------------------
 
@@ -1579,7 +1582,6 @@ contains
       real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, &
            Ga2Boris
       integer:: iVar, iFluid
-#ifndef SCALAR
       !------------------------------------------------------------------------
       RhoInv = 1/Primitive_VG(Rho_,i,j,k)
 
@@ -1655,7 +1657,7 @@ contains
                  = log(Primitive_VG(iVar,i,j,k))
          end do
       end if
-#endif
+
     end subroutine calc_primitives
     !==========================================================================
     subroutine get_facex_high(iMin, iMax, jMin, jMax, kMin, kMax, iBlock)
@@ -2887,7 +2889,6 @@ contains
       real:: State_VI(nVar,-3:2)
       integer :: iL, iR
 
-#ifndef SCALAR
       logical:: DoTest
       character(len=*), parameter:: NameSub = 'set_phys_based_low_order_face'
       !------------------------------------------------------------------------
@@ -2970,7 +2971,7 @@ contains
       endif
 
       call test_stop(NameSub, DoTest)
-#endif
+
     end subroutine set_phys_based_low_order_face
     !==========================================================================
     real function low_order_face_criteria(State_VI, Vel_II, iL, iR)
