@@ -287,18 +287,18 @@ contains
     end if
 
     ! Extrapolation in log variable seems to produce bad results
-    !if(UseLogLimiter) then
+    ! if(UseLogLimiter) then
     !   ! Convert to log variables
     !   do iVar = 1, nVar
     !      if(UseLogLimiter_V(iVar)) then
-    !         !$acc loop vector collapse(3) independent
+    !         !$ acc loop vector collapse(3) independent
     !         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
     !            State_VGB(iVar,i,j,k,iBlock) = &
     !                 log(State_VGB(iVar,i,j,k,iBlock))
     !         end do; end do; end do
     !      end if
     !   end do
-    !end if
+    ! end if
 
     if(DiLevel_EB(1,iBlock) == -1)then
        if(       .not.Unused_BP(jBlock_IEB(1,1,iBlock),jProc_IEB(1,1,iBlock)) &
@@ -463,18 +463,18 @@ contains
        end if
     end if
 
-    !if(UseLogLimiter) then
+    ! if(UseLogLimiter) then
     !   ! Convert back from log variables
     !   do iVar = 1, nVar
     !      if(UseLogLimiter_V(iVar)) then
-    !         !$acc loop vector collapse(3) independent
+    !         !$ acc loop vector collapse(3) independent
     !         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
     !            State_VGB(iVar,i,j,k,iBlock) = &
     !                 exp(State_VGB(iVar,i,j,k,iBlock))
     !         end do; end do; end do
     !      end if
     !   end do
-    !end if
+    ! end if
 
     if(.not.DoLimitMomentum)then
        ! Convert velocities back to momenta
