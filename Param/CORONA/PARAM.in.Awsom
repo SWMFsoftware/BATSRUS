@@ -240,7 +240,7 @@ los LGQ idl		StringPlot
 -215.0			ObsPosX
 0.0			ObsPosY
 0.0			ObsPosZ
-20.0			OffsetAngle
+120.0			OffsetAngle
 6.0			rSizeImage
 0.0			xOffset
 0.0			yOffset
