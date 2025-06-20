@@ -2372,7 +2372,7 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModVarIndexes, ONLY: RhoHp_, RhoCO2p_, RhoO2p_, RhoOp_ 
+    use ModVarIndexes, ONLY: RhoHp_, RhoCO2p_, RhoO2p_, RhoOp_
     use ModPhysics, ONLY: No2Io_V, UnitN_, UnitT_, NameTecUnit_V, NameIdlUnit_V
     use ModAdvance, ONLY: State_VGB, Rho_
 
@@ -2432,7 +2432,7 @@ contains
             Productrate_CB(:,:,:,iBlock)/No2Io_V(UnitT_)*No2Io_V(UnitN_)
        NameTecVar = 'prod'
     case default
-       IsFound = .false.  
+       IsFound = .false.
     end select
 
     NameTecUnit = NameTecUnit_V(UnitN_)
