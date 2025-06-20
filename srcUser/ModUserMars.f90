@@ -1034,8 +1034,7 @@ contains
             No2Si_V(UnitX_), No2Si_V(UnitTemperature_)
        write(*,*)'kTp=',SolarWindP*Tnu_body_dim*2.0/SolarWindTempDim, &
             2.0*Tnu_body_dim/No2Si_V(UnitTemperature_)
-       write(*,*)'BodynDenNuSpecies_dim_I(:)',&
-            BodynDenNuSpdim_I(:)
+       write(*,*)'BodynDenNuSpecies_dim_I=', BodynDenNuSpdim_I
     end if
 
     SMDist2 = SMDist**2/EUVfactor
@@ -2388,7 +2387,6 @@ contains
     character(len=*), intent(out):: NameIdlUnit
     logical,          intent(out):: IsFound
 
-    integer :: iVar
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -2397,32 +2395,37 @@ contains
     if(DoTest)write(*,*) NameSub,' starting, iBlock, NameVar=', iBlock, NameVar
 
     IsFound = .true.
+    PlotVarBody = 0.0
     select case(NameVar)
     case('nco2')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
             nDenNuSpecies_CBI(:,:,:,iBlock,CO2_)*No2Io_V(UnitN_)
+       PlotVarBody = BodynDenNuSpDim_I(CO2_)
        NameTecVar = 'CO2'
     case('no')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
             nDenNuSpecies_CBI(:,:,:,iBlock,O_)*No2Io_V(UnitN_)
+       PlotVarBody = BodynDenNuSpDim_I(O_)
        NameTecVar = 'O'
     case('noh')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
             nDenNuSpecies_CBI(:,:,:,iBlock,OH_)*No2Io_V(UnitN_)
+       PlotVarBody = BodynDenNuSpDim_I(OH_)
        NameTecVar = 'Oh'
     case('nh')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
             nDenNuSpecies_CBI(:,:,:,iBlock,H_)*No2Io_V(UnitN_)
+       PlotVarBody = BodynDenNuSpDim_I(H_)
        NameTecVar = 'H'
     case('iop')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
             Ionizationrate_CBI(:,:,:,iBlock,O_)/No2Io_V(UnitT_) &
-            *nDenNuSpecies_CBI(:,:,:,iBlock,iVar)*No2Io_V(UnitN_)
+            *nDenNuSpecies_CBI(:,:,:,iBlock,O_)*No2Io_V(UnitN_)
        NameTecVar = 'IOp'
     case('ico2p')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
             Ionizationrate_CBI(:,:,:,iBlock,CO2_)/No2Io_V(UnitT_) &
-            *nDenNuSpecies_CBI(:,:,:,iBlock,iVar)*No2Io_V(UnitN_)
+            *nDenNuSpecies_CBI(:,:,:,iBlock,CO2_)*No2Io_V(UnitN_)
        NameTecVar = 'ICO2p'
     case('prod')
        PlotVar_G(1:nI,1:nJ,1:nK) = &
@@ -2435,7 +2438,6 @@ contains
     NameTecUnit = NameTecUnit_V(UnitN_)
     NameIdlUnit = NameIdlUnit_V(UnitN_)
 
-    PlotVarBody    = BodyRhoSpecies_I(iVar)
     UsePlotVarBody = .true.
 
     if(DoTest)write(*,*) NameSub, ' done: iBlock, NameVar=', iBlock, NameVar
