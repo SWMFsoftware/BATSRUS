@@ -150,7 +150,7 @@ contains
     logical :: UseScattering, UseRho
 
     ! variables added for sph geometry
-    logical :: UseEuv,UseSxr
+    logical :: UseEuv, UseSxr
 
     ! XyzBlockcenter changes, so need fixed one
     real :: FixedXyzBlockCenter_D(3)
@@ -337,7 +337,7 @@ contains
             NameTableVar_V, nTableVar)
        ! don't count the x and y table labels as plot variables
        nPlotVar=nTableVar-2
-       NamePlotVar_V(1:nPlotVar)=NameTableVar_V(3:nTableVar)
+       NamePlotVar_V(1:nPlotVar) = NameTableVar_V(3:nTableVar)
 
        ! redefine StringPlotVar with correct table info
        call join_string(nPlotVar, NamePlotVar_V, StringPlotVar)
@@ -367,14 +367,14 @@ contains
     ! Get the headers that contain variables names and units
     select case(TypePlotFormat_I(iFile))
     case('tec', 'tcp')
-       call get_los_variable_tec(iFile,nPlotVar,NamePlotVar_V,StringUnitTec)
+       call get_los_variable_tec(iFile, nPlotVar, NamePlotVar_V, StringUnitTec)
        if(DoTest .and. iProc==0) write(*,'(a)')trim(StringUnitTec)
     case('idl')
        call get_los_unit_idl(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, &
             .false.)
        if(DoTest .and. iProc==0) write(*,'(a)')trim(StringUnitIdl)
     case('hdf')
-       call get_los_unit_idl(iFile,nPlotVar,NamePlotVar_V,StringUnitIdl, &
+       call get_los_unit_idl(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, &
             .true.)
        if(DoTest .and. iProc==0) write(*,'(a)')trim(StringUnitIdl)
     end select
@@ -398,22 +398,21 @@ contains
 
     ! !! aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
     if(UseDEM)then
-       nLogTeDEM = &
-            nint((LogTeMaxDEM_I(iFile)-LogTeMinDEM_I(iFile))/&
-            DLogTeDEM_I(IFile))+1
+       nLogTeDEM = nint((LogTeMaxDEM_I(iFile) - LogTeMinDEM_I(iFile)) &
+            /DLogTeDEM_I(IFile)) + 1
        allocate(Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLogTeDEM))
     elseif(UseFlux .or. UsePhx)then
-       if(LambdaMax_I(iFile)==LambdaMin_I(iFile))then
-          nLambda=100
+       if(LambdaMax_I(iFile) == LambdaMin_I(iFile))then
+          nLambda = 100
        else
-          nLambda = &
-               nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(iFile))+1
+          nLambda = nint((LambdaMax_I(iFile) - LambdaMin_I(iFile)) &
+               /DLambda_I(iFile)) + 1
        endif
        allocate(Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),nLambda), &
             Spectrum_I(nLambda))
     else
-       nLambda = &
-            nint((LambdaMax_I(iFile)-LambdaMin_I(iFile))/DLambda_I(iFile))+1
+       nLambda = nint((LambdaMax_I(iFile) - LambdaMin_I(iFile)) &
+            /DLambda_I(iFile)) + 1
        allocate(Image_VIII(nPlotVar,nPix_D(1),nPix_D(2),1))
        if(UseNbi)allocate(Spectrum_I(1))
     end if
@@ -619,7 +618,6 @@ contains
                d = - LosDotXyzPix + SqrtDiscr
                XyzIntersect_D = XyzPix_D + d*LosPix_D
                ! Integrate from the intersection point to observer
-
                call integrate_line(XyzIntersect_D, DistancePixToObs - d)
 
                if(DoPlotThread)then
@@ -634,8 +632,8 @@ contains
                      SqrtDiscr = sqrt(DiscrChromo)
                      dChromo = - LosDotXyzPix + SqrtDiscr
                      call integrate_line(XyzIntersect_D, d - dChromo, &
-                          IsThreadedGap = .true.)
-                     ! LOS ntersection with the top of Transition Region
+                          IsThreadedGap=.true.)
+                     ! LOS intersection with the top of Transition Region
                      if(UseTRCorrection .and. DoPlotThread .and.      &
                           (UseEuv .or. UseSxr .or. UseTableGen))then
                         XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
@@ -643,9 +641,9 @@ contains
                              'Calculate TR contribution at Xyz, R=',&
                              XyzTR_D, norm2(XyzTR_D)
                         call find_grid_block((rInner + cTiny)*XyzTR_D/  &
-                             norm2(XyzTR_D),iProcFound, iBlock)
-                        if( iProc==iProcFound)call get_tr_los_image(&
-                             Xyz_D = XyzTR_D ,&
+                             norm2(XyzTR_D), iProcFound, iBlock)
+                        if(iProc==iProcFound)call get_tr_los_image(     &
+                             Xyz_D = XyzTR_D,                           &
                              DirLos_D = LosPix_D,                       &
                              iBlock = iBlock,                           &
                              nPlotVar = nPlotVar,                       &
@@ -653,15 +651,15 @@ contains
                              iTableEuv = iTableEuv,                     &
                              iTableSxr = iTableSxr,                     &
                              iTableGen = iTableGen,                     &
-                             PixIntensity_V=Image_VIII(1:nPlotVar,iPix,jPix,&
-                             1), DoTestIn = DoTest)
+                             PixIntensity_V=Image_VIII(:,iPix,jPix,1),  &
+                             DoTestIn = DoTest)
                      end if
                   else
                      ! Distance between two intersections with the low
                      ! boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
                      dMirror = 2*SqrtDiscr
                      call integrate_line(XyzIntersect_D, dMirror, &
-                          IsThreadedGap = .true.)
+                          IsThreadedGap=.true.)
                      XyzIntersect_D = XyzIntersect_D + dMirror*LosPix_D
                      call integrate_line(XyzIntersect_D, 1e30)
                   end if
@@ -697,7 +695,7 @@ contains
       real:: Ds, DsNew       ! Length of line segment
 
       integer:: iDimMin = 1
-      real, dimension(MaxDim)::  XyzLos_D, CoordMaxBlock_D, CoordMidPoint_D, &
+      real, dimension(MaxDim):: XyzLos_D, CoordMaxBlock_D, CoordMidPoint_D, &
            CoordLos_D, XyzLosNew_D, CoordLosNew_D, CellSizeOld_D
 
       real, parameter:: StepMax = 1.0, StepMin = 0.5, StepGood = 0.75
@@ -722,13 +720,13 @@ contains
               XyzStartIn_D + LengthMax*LosPix_D)
       end if
       ! Initial length of segment
-      Ds = cTiny*&
-           (xMaxBox-xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
+      Ds = cTiny* &
+           (xMaxBox - xMinBox + yMaxBox - yMinBox + zMaxBox - zMinBox)
 
       ! Initialize "new" position as the starting point
       XyzLosNew_D = XyzStartIn_D
       call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
-      if(do_return(CoordLosNew_D, IsThreadedGap))RETURN
+      if(do_return(CoordLosNew_D, IsThreadedGap)) RETURN
       call find_block(XyzLosNew_D, iProcFound, iBlock, &
            CoordMinBlock_D, CoordMaxBlock_D, CellSize_D, IsThreadedGap)
       if(DoTestPe0)then
@@ -737,14 +735,14 @@ contains
          write(*, '(a, 3es14.6)')NameSub//': CoordMax=', CoordMaxBlock_D
       end if
 
-      if(DoTestPe0) write(*,'(a,es14.6)') NameSub//':  Ds=',Ds
+      if(DoTestPe0) write(*,'(a,es14.6)') NameSub//':  Ds=', Ds
       Length = -Ds; DsNew = Ds
       LOOPLINE: do
          ! Total length integrated so far
          Length  = Length + Ds
          Ds = DsNew
-         if(Ds <= 0.0)then
-            ! To prevent intinite looping
+         if(Ds <= 0)then
+            ! To prevent infinite looping
             write(*,*)'ds=', Ds
             call stop_mpi(NameSub//&
                  ': Algorithm failed: zero integration step')
@@ -766,17 +764,15 @@ contains
 
          ! Check if midpoint is inside block cell size
          IsEdge = .false.
-         if(is_out(CoordLosNew_D, CoordMinBlock_D, CoordMaxBlock_D,iDimMin)&
-              )then
+         if(is_out(CoordLosNew_D, CoordMinBlock_D, CoordMaxBlock_D,iDimMin)) &
+              then
             ! If the line leaves the comp. domain, stop integration.
 	    if(do_return(CoordLosNew_D, IsThreadedGap))RETURN
             call find_block(XyzLosNew_D, iProcFound, iBlock, &
                  CoordMinBlock_D, CoordMaxBlock_D, CellSize_D, &
                  IsThreadedGap)
             UseReducedDs = CellSize_D(iDimMin) < 0.9*CellSizeOld_D(iDimMin)
-            ! $$! Temporary change for development purpose
-            ! UseReducedDs = .true.
-            if(UseReducedDs)Ds = 0.50*Ds
+            if(UseReducedDs)Ds = 0.5*Ds
             IsEdge = .true.
          end if
 
@@ -797,18 +793,18 @@ contains
          end if
          if(iProc == iProcFound)then
             if(present(IsThreadedGap))then
-               call add_segment(Ds, XyzLosNew_D,.true.,DoTest)
+               call add_segment(Ds, XyzLosNew_D, .true., DoTest)
             elseif(UseFieldLineThreads .and. &
                  CoordLosNew_D(1) < CoordMin_D(1) + 0.5*CellSize_D(1))then
                if(DoPlotThread)&
-                    call add_segment(Ds, XyzLosNew_D,.true.,DoTest)
+                    call add_segment(Ds, XyzLosNew_D, .true., DoTest)
             else
                ! Add contribution from this segment to the image
                call add_segment(Ds, XyzLosNew_D, DoTest=DoTest)
             end if
          end if
          ! Set end location and next Ds
-         if(IsEdge.and.UseReducedDs)then
+         if(IsEdge .and. UseReducedDs)then
             ! Assumed mid point is now claimed to be the end point
             ! Ds is already set to be Ds/2
             ! Ds/2 is the best estimate for next integration step too
@@ -821,11 +817,11 @@ contains
          CoordMidPoint_D = CoordLosNew_D
          call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
          ! Check if we are still in the same block or not
-         if(is_out(CoordLosNew_D, CoordMinBlock_D, CoordMaxBlock_D, &
-              iDimMin))then
+         if(is_out(CoordLosNew_D, CoordMinBlock_D, CoordMaxBlock_D, iDimMin)) &
+              then
             if(do_return(CoordLosNew_D, IsThreadedGap))RETURN
             call find_block(XyzLosNew_D, iProcFound, iBlock, &
-                 CoordMinBlock_D, CoordMaxBlock_D, CellSize_D,IsThreadedGap)
+                 CoordMinBlock_D, CoordMaxBlock_D, CellSize_D, IsThreadedGap)
             if(DoTestPe0)then
                write(*,'(a,a,i5)')NameSub,': new iBlock=', iBlock
                write(*, '(a, 3es14.6)')NameSub//&
@@ -836,7 +832,7 @@ contains
             ! Check if the new block is finer
             UseReducedDs = CellSize_D(iDimMin) < 0.9*CellSizeOld_D(iDimMin)
             if(UseReducedDs)then
-               DsNew = 0.50*Ds
+               DsNew = 0.5*Ds
                CYCLE LOOPLINE
             else
                if(IsEdge) then
@@ -851,8 +847,8 @@ contains
                   ! from start to mid points
                   Step = maxval(abs(CoordMidPoint_D - CoordLos_D)/CellSize_D)
                   ! Multiply by 2, since the change is from start to mid
-                  ! points, not from start to end ones,
-                  Step = 2.0*Step
+                  ! points, not from start to end ones
+                  Step = 2*Step
                end if
             end if
          else
@@ -864,7 +860,7 @@ contains
                Step = maxval(abs(CoordLosNew_D - CoordMidPoint_D)/CellSize_D)
                ! Multiply by 2, since the change is from mid to end
                ! points, not from start to end ones,
-               Step = 2.0*Step
+               Step = 2*Step
             else
                ! End point and start points are at the same block
                ! Check the largest change is in the gen coords
@@ -884,10 +880,11 @@ contains
     end subroutine integrate_line
     !==========================================================================
     logical function do_return(Coord_D, IsThreadedGap)
+
       use BATL_lib,  ONLY: CoordMin_D, CoordMax_D
 
-      real, intent(in) :: Coord_D(MaxDim)
-      logical, intent(in), optional :: IsThreadedGap
+      real, intent(in):: Coord_D(MaxDim)
+      logical, intent(in), optional:: IsThreadedGap
       !------------------------------------------------------------------------
       if(present(IsThreadedGap)) then
          do_return = .false.
@@ -895,19 +892,24 @@ contains
          ! Stop integration if we reached the edge of the domain
          do_return =  any(Coord_D > CoordMax_D .or. Coord_D < CoordMin_D)
       end if
+
     end function do_return
     !==========================================================================
     logical function is_out(Coord_D, CoordMin_D, CoordMax_D, iDimMin)
-      real, dimension(MaxDim), intent(in) :: Coord_D, CoordMin_D, CoordMax_D
-      integer, intent(in) :: iDimMin
+
+      real, dimension(MaxDim), intent(in):: Coord_D, CoordMin_D, CoordMax_D
+      integer, intent(in):: iDimMin
       !------------------------------------------------------------------------
-      is_out = any(Coord_D(iDimMin:) < CoordMin_D(iDimMin:))&
-           .or.any(Coord_D(iDimMin:) > CoordMax_D(iDimMin:))
+      is_out =  any(Coord_D(iDimMin:) < CoordMin_D(iDimMin:)) &
+           .or. any(Coord_D(iDimMin:) > CoordMax_D(iDimMin:))
+
     end function is_out
     !==========================================================================
     subroutine find_block(Xyz_D, iProcFound, iBlock, CoordMinBlock_D, &
          CoordMaxBlock_D, CellSize_D, IsThreadedGap)
+
       use BATL_lib, ONLY: get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
+
       real, intent(in) :: Xyz_D(MaxDim)
       integer, intent(out) :: iProcFound, iBlock
       real, intent(out) :: CoordMinBlock_D(MaxDim), CoordMaxBlock_D(MaxDim)
@@ -918,15 +920,11 @@ contains
       !------------------------------------------------------------------------
       CoordSize_D = CoordMax_D - CoordMin_D
       if(present(IsThreadedGap))then
-         ! Find new block/node, increase the radial coordinate to
-         ! put the point above the inner boundary
+         ! Increase the radial coordinate to put point above inner boundary
          call find_grid_block((rInner + cTiny)*Xyz_D/norm2(Xyz_D),&
               iProcFound, iBlock, iNodeOut=iNode)
       else
-         ! Find new block/node, increase the radial coordinate to
-         ! put the point above the inner boundary
-         call find_grid_block(Xyz_D,&
-              iProcFound, iBlock, iNodeOut=iNode)
+         call find_grid_block(Xyz_D, iProcFound, iBlock, iNodeOut=iNode)
       end if
       ! Set block coordinates and the cell size on all processors
       call get_tree_position(iNode, PositionMin_D, PositionMax_D)
@@ -934,6 +932,7 @@ contains
       CoordMaxBlock_D = CoordMin_D + CoordSize_D*PositionMax_D  ! End
       CellSize_D = (CoordMaxBlock_D - CoordMinBlock_D)/nIjk_D   ! Cell size
       if(present(IsThreadedGap))CellSize_D(r_) = 1/dCoord1Inv
+
     end subroutine find_block
     !==========================================================================
     subroutine add_segment(Ds, XyzLos_D, IsThreadedGap, DoTest)
@@ -1057,18 +1056,16 @@ contains
             ! Interpolate in the physical domain
             State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
                  nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
-#ifndef SCALAR
             if(UseB0 .and. UseFlux)State_V(Bx_:Bz_) = State_V(Bx_:Bz_) &
                  + interpolate_vector(B0_DGB(:,:,:,:,iBlock), &
                  3, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
-#endif
          end if
          DoneStateInterpolate = .true.
          Rho = State_V(Rho_)
       end if
 
       if(UseFlux .or. UseNbi .or. UsePhx)then
-         Spectrum_I=0.
+         Spectrum_I = 0
          if(UsePhx)then
             if(present(IsThreadedGap) .or. (DoPlotThread .and. &
                  GenLos_D(1) < CoordMin_D(1) + 0.5*CellSize_D(1)))then
@@ -1079,12 +1076,12 @@ contains
             end if
 
             call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
-                 UseNbi, Spectrum_I(:), r)
+                 UseNbi, Spectrum_I, r)
          else
             call spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, &
-                 UseNbi, Spectrum_I(:))
+                 UseNbi, Spectrum_I)
          end if
-         Image_VIII(1,iPix,jPix,:) = Image_VIII(1,iPix,jPix,:)+Spectrum_I(:)
+         Image_VIII(1,iPix,jPix,:) = Image_VIII(1,iPix,jPix,:) + Spectrum_I
          RETURN
       end if
 
@@ -2220,7 +2217,6 @@ contains
 
     end subroutine save_los_file
     !==========================================================================
-
   end subroutine write_plot_los
   !============================================================================
   subroutine get_los_variable_tec(iFile, nPlotVar, NamePlotVar_V, &
