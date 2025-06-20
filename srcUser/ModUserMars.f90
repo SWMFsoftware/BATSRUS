@@ -2399,27 +2399,34 @@ contains
     IsFound = .true.
     select case(NameVar)
     case('nco2')
-       PlotVar_G = nDenNuSpecies_CBI(:,:,:,iBlock,CO2_)*No2Io_V(UnitN_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            nDenNuSpecies_CBI(:,:,:,iBlock,CO2_)*No2Io_V(UnitN_)
        NameTecVar = 'CO2'
     case('no')
-       PlotVar_G = nDenNuSpecies_CBI(:,:,:,iBlock,O_)*No2Io_V(UnitN_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            nDenNuSpecies_CBI(:,:,:,iBlock,O_)*No2Io_V(UnitN_)
        NameTecVar = 'O'
     case('noh')
-       PlotVar_G = nDenNuSpecies_CBI(:,:,:,iBlock,OH_)*No2Io_V(UnitN_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            nDenNuSpecies_CBI(:,:,:,iBlock,OH_)*No2Io_V(UnitN_)
        NameTecVar = 'Oh'
     case('nh')
-       PlotVar_G = nDenNuSpecies_CBI(:,:,:,iBlock,H_)*No2Io_V(UnitN_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            nDenNuSpecies_CBI(:,:,:,iBlock,H_)*No2Io_V(UnitN_)
        NameTecVar = 'H'
     case('iop')
-       PlotVar_G = Ionizationrate_CBI(:,:,:,iBlock,O_)/No2Io_V(UnitT_) &
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            Ionizationrate_CBI(:,:,:,iBlock,O_)/No2Io_V(UnitT_) &
             *nDenNuSpecies_CBI(:,:,:,iBlock,iVar)*No2Io_V(UnitN_)
        NameTecVar = 'IOp'
     case('ico2p')
-       PlotVar_G = Ionizationrate_CBI(:,:,:,iBlock,CO2_)/No2Io_V(UnitT_) &
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            Ionizationrate_CBI(:,:,:,iBlock,CO2_)/No2Io_V(UnitT_) &
             *nDenNuSpecies_CBI(:,:,:,iBlock,iVar)*No2Io_V(UnitN_)
        NameTecVar = 'ICO2p'
     case('prod')
-       PlotVar_G = Productrate_CB(:,:,:,iBlock)/No2Io_V(UnitT_)*No2Io_V(UnitN_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            Productrate_CB(:,:,:,iBlock)/No2Io_V(UnitT_)*No2Io_V(UnitN_)
        NameTecVar = 'prod'
     case default
        IsFound = .false.  
