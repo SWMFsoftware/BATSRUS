@@ -213,7 +213,7 @@ x=0 VAR idl		StringPlot
 3600.0			DtSavePlot
 -1.0			DxSavePlot
 nco2 no noh nh ico2p iop prod		NameVars
-{default}   		NamePars
+{default}		NamePars
 y=0 MHD idl		StringPlot
 -1  			DnSavePlot
 600.0			DtSavePlot
