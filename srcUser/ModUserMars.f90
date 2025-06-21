@@ -9,7 +9,7 @@ module ModUser
   use ModAdvance, ONLY: nSpecies
   use ModPhysics, ONLY: BodyRhoSpecies_I
   use ModMain, ONLY: UaState_VCB
-  use BATL_lib, ONLY: &
+  use BATL_lib, ONLY: nI, nJ, nK, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
   use ModUtilities, ONLY: open_file, close_file
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi, cDegToRad
@@ -23,7 +23,8 @@ module ModUser
        IMPLEMENTED6 => user_calc_sources_impl,          &
        IMPLEMENTED7 => user_get_b0,                     &
        IMPLEMENTED8 => user_get_log_var,                &
-       IMPLEMENTED9 => user_set_boundary_cells
+       IMPLEMENTED9 => user_set_boundary_cells,         &
+       IMPLEMENTED10 => user_set_plot_var
 
   include 'user_module.h' ! list of public methods
 
@@ -45,20 +46,21 @@ module ModUser
 
   ! Mars stuff
   integer, parameter :: MaxSpecies=4, MaxNuSpecies=8, MaxReactions=10
+
+  ! number density of neutral species
   real, allocatable :: nDenNuSpecies_CBI(:,:,:,:,:)
-  ! real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock,MaxNuSpecies) :: &
-  !      nDenNuSpecies_CBI    ! number density of neutral species
-  real, allocatable :: TempNuSpecies_CBI(:,:,:,:)! tempature of neutral species
+  ! tempature of neutral species
+  real, allocatable :: TempNuSpecies_CBI(:,:,:,:)
   ! production rate according to optical depth
   real, allocatable :: Productrate_CB(:,:,:,:)
   ! Ionization rate according to TGCM
   real, allocatable :: Ionizationrate_CBI(:,:,:,:,:)
 
-  real, dimension(MaxReactions):: ReactionRate_I
-  real, dimension(MaxReactions,MaxSpecies):: CoeffSpecies_II, &
-       dSdRho_II !, dLdRho_II
+  real:: ReactionRate_I(MaxReactions)
+  real:: CoeffSpecies_II(MaxReactions,MaxSpecies), &
+       dSdRho_II(MaxReactions,MaxSpecies) !, dLdRho_II
   real, dimension(MaxSpecies):: LossSpecies_I, &
-       SiSpecies_I,  LiSpecies_I,  PhoIon_I, Recb_I, ImpIon_I
+       SiSpecies_I, LiSpecies_I, PhoIon_I, Recb_I, ImpIon_I
   !        dStndRho_I,  dLtdRho_I,  dLtndNumRho_I
 
   !$omp threadprivate( ReactionRate_I, CoeffSpecies_II, dSdRho_II )
@@ -388,7 +390,6 @@ contains
     !   SrhoUx_C,SrhoUy_C,SrhoUz_C: Source terms for the momentum equation
     !   SBx_C,SBy_C,SBz_C: Source terms for the magnetic field equations
 
-    use ModMain,    ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_
     use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
@@ -827,7 +828,7 @@ contains
     UnitUser_V(rhoHp_:rhoCO2p_)   = No2Io_V(UnitRho_)/MassSpecies_V
 
     if(.not.allocated(nDenNuSpecies_CBI))then
-       allocate(nDenNuSpecies_CBI(nI, nJ, nK, MaxBlock, MaxNuSpecies))
+       allocate(nDenNuSpecies_CBI(nI,nJ,nK,MaxBlock,MaxNuSpecies))
        nDenNuSpecies_CBI = -1.0
     end if
 
@@ -1033,8 +1034,7 @@ contains
             No2Si_V(UnitX_), No2Si_V(UnitTemperature_)
        write(*,*)'kTp=',SolarWindP*Tnu_body_dim*2.0/SolarWindTempDim, &
             2.0*Tnu_body_dim/No2Si_V(UnitTemperature_)
-       write(*,*)'BodynDenNuSpecies_dim_I(:)',&
-            BodynDenNuSpdim_I(:)
+       write(*,*)'BodynDenNuSpecies_dim_I=', BodynDenNuSpdim_I
     end if
 
     SMDist2 = SMDist**2/EUVfactor
@@ -2367,6 +2367,83 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_neutral_density
+  !============================================================================
+  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+       PlotVar_G, PlotVarBody, UsePlotVarBody, &
+       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+
+    use ModVarIndexes, ONLY: RhoHp_, RhoCO2p_, RhoO2p_, RhoOp_
+    use ModPhysics, ONLY: No2Io_V, UnitN_, UnitT_, NameTecUnit_V, NameIdlUnit_V
+    use ModAdvance, ONLY: State_VGB, Rho_
+
+    integer,          intent(in) :: iBlock
+    character(len=*), intent(in) :: NameVar
+    logical,          intent(in) :: IsDimensional
+    real,             intent(out):: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out):: PlotVarBody
+    logical,          intent(out):: UsePlotVarBody
+    character(len=*), intent(out):: NameTecVar
+    character(len=*), intent(out):: NameTecUnit
+    character(len=*), intent(out):: NameIdlUnit
+    logical,          intent(out):: IsFound
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
+    if(DoTest)write(*,*) NameSub,' starting, iBlock, NameVar=', iBlock, NameVar
+
+    IsFound = .true.
+    PlotVarBody = 0.0
+    select case(NameVar)
+    case('nco2')
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            nDenNuSpecies_CBI(:,:,:,iBlock,CO2_)*No2Io_V(UnitN_)
+       PlotVarBody = BodynDenNuSpDim_I(CO2_)
+       NameTecVar = 'CO2'
+    case('no')
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            nDenNuSpecies_CBI(:,:,:,iBlock,O_)*No2Io_V(UnitN_)
+       PlotVarBody = BodynDenNuSpDim_I(O_)
+       NameTecVar = 'O'
+    case('noh')
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            nDenNuSpecies_CBI(:,:,:,iBlock,OH_)*No2Io_V(UnitN_)
+       PlotVarBody = BodynDenNuSpDim_I(OH_)
+       NameTecVar = 'Oh'
+    case('nh')
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            nDenNuSpecies_CBI(:,:,:,iBlock,H_)*No2Io_V(UnitN_)
+       PlotVarBody = BodynDenNuSpDim_I(H_)
+       NameTecVar = 'H'
+    case('iop')
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            Ionizationrate_CBI(:,:,:,iBlock,O_)/No2Io_V(UnitT_) &
+            *nDenNuSpecies_CBI(:,:,:,iBlock,O_)*No2Io_V(UnitN_)
+       NameTecVar = 'IOp'
+    case('ico2p')
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            Ionizationrate_CBI(:,:,:,iBlock,CO2_)/No2Io_V(UnitT_) &
+            *nDenNuSpecies_CBI(:,:,:,iBlock,CO2_)*No2Io_V(UnitN_)
+       NameTecVar = 'ICO2p'
+    case('prod')
+       PlotVar_G(1:nI,1:nJ,1:nK) = &
+            Productrate_CB(:,:,:,iBlock)/No2Io_V(UnitT_)*No2Io_V(UnitN_)
+       NameTecVar = 'prod'
+    case default
+       IsFound = .false.
+    end select
+
+    NameTecUnit = NameTecUnit_V(UnitN_)
+    NameIdlUnit = NameIdlUnit_V(UnitN_)
+
+    UsePlotVarBody = .true.
+
+    if(DoTest)write(*,*) NameSub, ' done: iBlock, NameVar=', iBlock, NameVar
+
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine user_set_plot_var
   !============================================================================
 end module ModUser
 !==============================================================================

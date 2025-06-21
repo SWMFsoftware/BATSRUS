@@ -207,7 +207,13 @@ T			DoFixAxis
 T			IsTimeAccurate
 
 #SAVEPLOT
-3			nPlotFile
+4			nPlotFile
+x=0 VAR idl		StringPlot
+-1  			DnSavePlot
+3600.0			DtSavePlot
+-1.0			DxSavePlot
+nco2 no noh nh ico2p iop prod		NameVars
+{default}   		NamePars
 y=0 MHD idl		StringPlot
 -1  			DnSavePlot
 600.0			DtSavePlot
