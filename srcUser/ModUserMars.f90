@@ -69,6 +69,8 @@ module ModUser
 
   real :: totalNumRho, totalLossRho, totalSourceRho, totalLossNumRho, &
        totalSourceNumRho, totalLossx, totalLossNumx
+  real:: rInNeu=1.0294464, rOutNeu = 4.0
+
   !$omp threadprivate( totalNumRho, totalLossRho, totalSourceRho )
   !$omp threadprivate( totalLossNumRho )
   !$omp threadprivate( totalSourceNumRho, totalLossx, totalLossNumx )
@@ -266,19 +268,18 @@ contains
           call read_var('TypeSolarCon',SolarCond)
 
        case("#UseHotO")  ! adding hot Oxygen or not
-          call read_var('UseHotO',UseHotO)
+          call read_var('UseHotO', UseHotO)
 
        case("#UseTempCont") ! add hoc term of the energy source
-          call read_var('UseTempCont',UseTempCont)
+          call read_var('UseTempCont', UseTempCont)
+
+       case("#NEUTRALRADIUS")
+          call read_var('rInNeu', rInNeu)
+          call read_var('rOutNeu', rOutNeu)
 
        case('#REACTIONS')
-          call read_var('UseImpactIon',UseImpactIon)
-          call read_var('UseChargeEx',UseChargeEx)
-          ! open(15,file='read_in.dat')
-          ! do i=1,32
-          !   read(15,*)Temp_dim(i),Impact_ION_dim(i,Op_),Impact_ION_dim(i,Hp_)
-          ! end do
-          ! close(15)
+          call read_var('UseImpactIon', UseImpactIon)
+          call read_var('UseChargeEx', UseChargeEx)
 
        case('#USECHAPMAN')
           call read_var('UseChapman', UseChapman)
@@ -345,14 +346,12 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if( nDenNuSpecies_CBI(1, 1, 1, iBlock, 1) < 0.0 &
+    if( nDenNuSpecies_CBI(1,1,1,iBlock,1) < 0.0 &
          .or. iLastDecomposition /= iNewDecomposition)then
 
        call set_neutral_density(iBlock)
 
-       if(iBlock == nBlock)then
-          iLastDecomposition = iNewDecomposition
-       end if
+       if(iBlock == nBlock) iLastDecomposition = iNewDecomposition
     end if
 
     call user_sources(iBlock, Source_VC)
@@ -426,7 +425,7 @@ contains
 
     S_IC = 0.0
 
-    if(r_GB(1,1,1,iBlock) > 3.0*Rbody) RETURN
+    if(r_GB(1,1,1,iBlock) > rOutNeu) RETURN
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -479,8 +478,8 @@ contains
        !                  *Productrate
 
        ReactionRate_I(H_hv__Hp_em_) = &
-            Rate_I(H_hv__Hp_em_) * nDenNuSpecies_CBI(i,j,k,iBlock,H_)
-       PhoIon_I(Hp_) = ReactionRate_I(H_hv__Hp_em_) * Productrate
+            Rate_I(H_hv__Hp_em_)*nDenNuSpecies_CBI(i,j,k,iBlock,H_)
+       PhoIon_I(Hp_) = ReactionRate_I(H_hv__Hp_em_)*Productrate
 
        PhoIon_I(CO2p_) = Ionizationrate_CBI(i,j,k,iBlock,CO2_)
        PhoIon_I(Op_) = Ionizationrate_CBI(i,j,k,iBlock,O_)
@@ -496,10 +495,8 @@ contains
                *No2Io_V(UnitT_)*No2Io_V(UnitN_)
           ImpIOn_I(Op_) = exp(B0+B1*X1+B2*X2+B3*X3+B4*X4)&
                *No2Io_V(UnitT_)*No2Io_V(UnitN_)
-          ImpIon_I(Hp_) = ImpIon_I(Hp_)*&
-               nDenNuSpecies_CBI(i,j,k,iBlock,H_)
-          ImpIon_I(Op_) = ImpIon_I(Op_)*&
-               nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+          ImpIon_I(Hp_) = ImpIon_I(Hp_)*nDenNuSpecies_CBI(i,j,k,iBlock,H_)
+          ImpIon_I(Op_) = ImpIon_I(Op_)*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
           ImpIon_I      = ImpIon_I * totalNumRho
        endif
 
@@ -516,27 +513,24 @@ contains
 
        ! charge exchange
        ReactionRate_I(CO2p_O__O2p_CO_) = &
-            Rate_I(CO2p_O__O2p_CO_) &
-            * nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+            Rate_I(CO2p_O__O2p_CO_)*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
        CoeffSpecies_II(O2p_,CO2p_) = ReactionRate_I(CO2p_O__O2p_CO_)
 
        ReactionRate_I(Op_CO2__O2p_CO_) = &
-            Rate_I(Op_CO2__O2p_CO_) &
-            * nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) &
+            Rate_I(Op_CO2__O2p_CO_)*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) &
             *exp(log(800.0/Ti_dim)*0.39)
        CoeffSpecies_II(O2p_, Op_) = ReactionRate_I(Op_CO2__O2p_CO_)
 
        ReactionRate_I(CO2p_O__Op_CO2_) = &
-            Rate_I(CO2p_O__Op_CO2_) &
-            * nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+            Rate_I(CO2p_O__Op_CO2_)*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
        CoeffSpecies_II(Op_,CO2p_) = ReactionRate_I(CO2p_O__Op_CO2_)
 
-       ReactionRate_I(Hp_O__Op_H_)= &
-            Rate_I(Hp_O__Op_H_)* nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-       CoeffSpecies_II(Op_,Hp_)=ReactionRate_I(Hp_O__Op_H_)
+       ReactionRate_I(Hp_O__Op_H_) = &
+            Rate_I(Hp_O__Op_H_)*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+       CoeffSpecies_II(Op_,Hp_) = ReactionRate_I(Hp_O__Op_H_)
 
-       ReactionRate_I(Op_H__Hp_O_)= &
-            Rate_I(Op_H__Hp_O_)* nDenNuSpecies_CBI(i,j,k,iBlock,H_)
+       ReactionRate_I(Op_H__Hp_O_) = &
+            Rate_I(Op_H__Hp_O_)*nDenNuSpecies_CBI(i,j,k,iBlock,H_)
        CoeffSpecies_II(Hp_,Op_)=ReactionRate_I(Op_H__Hp_O_)
 
        ! Recombination
@@ -947,13 +941,13 @@ contains
                /(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + SolarWindRho*1e6) &
                /Rate_I(Op_CO2__O2p_CO_)
 
-          State_VGB(rhoO2p_,i,j,k,iBlock)= &
-               sqrt(max(1e-10*SolarwindRho, (nDenNuSpecies_CBI(i,j,k,iBlock,O_)* &
-               State_VGB(rhoCO2p_,i,j,k,iBlock)* &
-               Rate_I(CO2p_O__O2p_CO_) + &
+          State_VGB(rhoO2p_,i,j,k,iBlock)= sqrt( &
+               max(1e-10*SolarwindRho, &
+               (nDenNuSpecies_CBI(i,j,k,iBlock,O_)* &
+               State_VGB(rhoCO2p_,i,j,k,iBlock)*Rate_I(CO2p_O__O2p_CO_) + &
                nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)* &
-               State_VGB(rhoOp_,i,j,k,iBlock)* &
-               Rate_I(Op_CO2__O2p_CO_)))/Rate_I(O2p_em__O_O_))
+               State_VGB(rhoOp_,i,j,k,iBlock)*Rate_I(Op_CO2__O2p_CO_))) &
+               /Rate_I(O2p_em__O_O_))
 
           State_VGB(rhoO2p_:rhoCO2p_,i,j,k,iBlock) = &
                State_VGB(rhoO2p_:rhoCO2p_,i,j,k,iBlock) &
@@ -990,7 +984,7 @@ contains
             /MassSpecies_I(1:MaxSpecies))*kTp0)
     end do; end do; end do
 
-    DtMax_CB(:,:,:,iBlock) = 0.00
+    DtMax_CB(:,:,:,iBlock) = 0.0
 
     if(DoTest)then
        write(*,*)'initial set up'
@@ -1333,7 +1327,15 @@ contains
     HNuSpecies_I(:)=&
          HNuSpeciesDim_I(:)*1.0e3*Si2No_V(UnitX_)
 
-    ! normlize the reaction rate
+    ! normalize the reaction rate
+    ! Ion-ion reaction rates have units 1/(cc * s)
+    ! Rate_I(CO2p_O__O2p_CO_:Op_H__Hp_O_) = &
+    !     Rate_I(CO2p_O__O2p_CO_:Op_H__Hp_O_)*No2Io_V(UnitT_)*No2Io_V(UnitN_)
+    ! Photoionization rates have units 1/s
+    ! Rate_I(CO2_hv__CO2p_em_) = Rate_I(CO2_hv__CO2p_em_)*No2Io_V(UnitT_)
+    ! Rate_I(O_hv__Op_em_)     = Rate_I(O_hv__Op_em_)    *No2Io_V(UnitT_)
+    ! Rate_I(H_hv__Hp_em_)     = Rate_I(H_hv__Hp_em_)    *No2Io_V(UnitT_)
+
     !!! TO BE SIMPLIFIED WITH ARRAY SYNTAX !!!
     Rate_I(CO2_hv__CO2p_em_)= &
          RateDim_I(CO2_hv__CO2p_em_)*No2Io_V(UnitT_)
@@ -1365,6 +1367,7 @@ contains
          RateDim_I(Op_H__Hp_O_) &
          *No2Io_V(UnitT_)*No2Io_V(UnitN_)
 
+    ! Calculate reaction and photoionization rates
     ReactionRate_I(CO2_hv__CO2p_em_)= &
          Rate_I(CO2_hv__CO2p_em_)*BodynDenNuSpecies_I(CO2_)
     PhoIon_I(CO2p_)=ReactionRate_I(CO2_hv__CO2p_em_)
@@ -1375,15 +1378,15 @@ contains
 
     ! charge exchange
     ReactionRate_I(CO2p_O__O2p_CO_)= &
-         Rate_I(CO2p_O__O2p_CO_)* BodynDenNuSpecies_I(O_)
+         Rate_I(CO2p_O__O2p_CO_)*BodynDenNuSpecies_I(O_)
     CoeffSpecies_II(O2p_,CO2p_)=ReactionRate_I(CO2p_O__O2p_CO_)
 
     ReactionRate_I(Op_CO2__O2p_CO_)= &
-         Rate_I(Op_CO2__O2p_CO_)* BodynDenNuSpecies_I(CO2_)
+         Rate_I(Op_CO2__O2p_CO_)*BodynDenNuSpecies_I(CO2_)
     CoeffSpecies_II(O2p_, Op_)=ReactionRate_I(Op_CO2__O2p_CO_)
 
     ReactionRate_I(CO2p_O__Op_CO2_)= &
-         Rate_I(CO2p_O__Op_CO2_)* BodynDenNuSpecies_I(O_)
+         Rate_I(CO2p_O__Op_CO2_)*BodynDenNuSpecies_I(O_)
     CoeffSpecies_II(Op_,CO2p_)=ReactionRate_I(CO2p_O__Op_CO2_)
 
     CrossSection_I=CrossSectiondim_I*No2Io_V(unitN_)*No2Si_V(unitX_)*1.0e2
@@ -1521,8 +1524,8 @@ contains
     use ModNumConst
     ! use BATL_test, ONLY: xTest, yTest, zTest
 
-    real, intent(in) :: x1,y1,z1
-    real, intent(out), dimension(3) :: B1
+    real, intent(in) :: x1, y1, z1
+    real, intent(out):: B1(3)
 
     real :: R0, theta, phi, rr, X0, Y0, Z0, delta
     real, dimension(3) :: bb, B0, B2
@@ -1951,23 +1954,23 @@ contains
                 jLong = max(jLong, 1)
 
                 do i = nI, 1, -1
-                   hh = (r_GB(i,j,k,iBlock)-1.00)*3396.00
+                   hh = (r_GB(i,j,k,iBlock) - 1)*3396.00
                    !                 write(*,*)'hh=', hh, i,j,k,iBlock
                    xLong = (Phi-Long_I(jLong))/Dlong
                    xLat = (Theta-Lat_I(kLat))/Dlat
                    if(hh <= 100.0)then  ! inside the body
                       tempNuSpecies_CBI(i,j,k,iBlock)= &
                            tempNuSpecies_CBI(i+1,j,k,iBlock)
-                      nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&
+                      nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) = &
                            nDenNuSpecies_CBI(i+1,j,k,iBlock,CO2_)
-                      nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+                      nDenNuSpecies_CBI(i,j,k,iBlock,O_) = &
                            nDenNuSpecies_CBI(i+1,j,k,iBlock,O_)
 
                       ! tempICO2p=max(tempICO2p,TINY)
                       ! tempIOP=max(tempIOp,TINY)
-                      Ionizationrate_CBI(i,j,k,iBlock,CO2_)=&
+                      Ionizationrate_CBI(i,j,k,iBlock,CO2_) = &
                            Ionizationrate_CBI(i+1,j,k,iBlock,CO2_)
-                      Ionizationrate_CBI(i,j,k,iBlock,O_)=&
+                      Ionizationrate_CBI(i,j,k,iBlock,O_) = &
                            Ionizationrate_CBI(i+1,j,k,iBlock,O_)
                    elseif(hh <= Alt_I(NAlt))then
                       iAlt=int((hh - (Alt_I(1)+Dalt/2))/Dalt+1.0)
@@ -1978,21 +1981,25 @@ contains
                       xalt = (hh-Alt_I(iAlt))/Dalt
 
                       ! interpolate
-                      tempNuSpecies_CBI(i,j,k,iBlock)=          &
+                      tempNuSpecies_CBI(i,j,k,iBlock) =          &
                            ((Temp(jLong,kLat,iAlt)*(1-xLong)       &
-                           + xLong*Temp(jp1, kLat, ialt))*(1-xLat) &
+                           + xLong*Temp(jp1,kLat,ialt))*(1-xLat) &
                            +(Temp(jLong,kp1,iAlt)*(1-xLong)        &
-                           + xLong*Temp(jp1, kp1, ialt))*xLat)*(1-xAlt)&
+                           + xLong*Temp(jp1,kp1,ialt))*xLat)*(1-xAlt)&
                            +((Temp(jLong,kLat,ip1)*(1-xLong)       &
-                           + xLong*Temp(jp1, kLat, ip1))*(1-xLat)   &
+                           + xLong*Temp(jp1,kLat,ip1))*(1-xLat)   &
                            +(Temp(jLong,kp1,ip1)*(1-xLong)         &
-                           + xLong*Temp(jp1, kp1, ip1))*xLat)*xAlt
+                           + xLong*Temp(jp1,kp1,ip1))*xLat)*xAlt
 
                       nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&
-                           ((Den_CO2(jLong,kLat,iAlt)*(1-xLong)+xLong*Den_CO2(jp1, kLat, ialt))*(1-xLat)+&
-                           (Den_CO2(jLong,kp1,iAlt)*(1-xLong)+xLong*Den_CO2(jp1, kp1, ialt))*xLat)*(1-xAlt)+&
-                           ((Den_CO2(jLong,kLat,ip1)*(1-xLong)+xLong*Den_CO2(jp1, kLat, ip1))*(1-xLat)+&
-                           (Den_CO2(jLong,kp1,ip1)*(1-xLong)+xLong*Den_CO2(jp1, kp1, ip1))*xLat)*xAlt
+                           ((Den_CO2(jLong,kLat,iAlt)*(1-xLong) &
+                           + xLong*Den_CO2(jp1,kLat,ialt))*(1-xLat) + &
+                           (Den_CO2(jLong,kp1,iAlt)*(1-xLong) &
+                           +xLong*Den_CO2(jp1,kp1,iAlt))*xLat)*(1-xAlt) + &
+                           ((Den_CO2(jLong,kLat,ip1)*(1-xLong) &
+                           + xLong*Den_CO2(jp1, kLat, ip1))*(1-xLat)+&
+                           (Den_CO2(jLong,kp1,ip1)*(1-xLong) &
+                           + xLong*Den_CO2(jp1, kp1, ip1))*xLat)*xAlt
 
                       nDenNuSpecies_CBI(i,j,k,iBlock,O_)=&
                            ((Den_O(jLong,kLat,iAlt)*(1-xLong)+xLong*Den_O(jp1, kLat, ialt))*(1-xLat)+&
@@ -2012,8 +2019,8 @@ contains
                            ((IOp(jLong,kLat,ip1)*(1-xLong)+xLong*IOp(jp1, kLat, ip1))*(1-xLat)+&
                            (IOp(jLong,kp1,ip1)*(1-xLong)+xLong*IOp(jp1, kp1, ip1))*xLat)*xAlt
 
-                      tempICO2p=max(tempICO2p,TINY)
-                      tempIOP=max(tempIOp,TINY)
+                      tempICO2p = max(tempICO2p, TINY)
+                      tempIOP = max(tempIOp, TINY)
                       ! Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
                       ! Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
                       Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
@@ -2166,24 +2173,21 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     ! calculate neutral
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
        if(r_GB(i,j,k,iBlock)<= Rbody)then
-          nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
-               BodynDenNuSpecies_I(:)
-       else if(r_GB(i,j,k,iBlock)< 3.0) then
-          nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
-               BodynDenNuSpecies_I(:)* &
-               exp(-(r_GB(i,j,k,iBlock)-Rbody)&
-               /HNuSpecies_I(:))
+          nDenNuSpecies_CBI(i,j,k,iBlock,:) = BodynDenNuSpecies_I
+       else if(r_GB(i,j,k,iBlock) < rOutNeu) then
+          nDenNuSpecies_CBI(i,j,k,iBlock,:) = BodynDenNuSpecies_I &
+               *exp(-(r_GB(i,j,k,iBlock) - rInNeu)/HNuSpecies_I)
        else
-          nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
+          nDenNuSpecies_CBI(i,j,k,iBlock,:) = 0.0
        end if
 
-    end do;end do;end do
+    end do; end do; end do
 
     ! calculate optical depth and producation rate
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.UseChapman)then
           cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(r_GB(i,j,k,iBlock),1.0e-3)&
@@ -2297,35 +2301,35 @@ contains
        if(allocated(UaState_VCB))then
           call ua_input(iBlock)
        else
-          if(maxval(r_GB(:,:,:,iBlock))<3.0*Rbody) call Mars_input(iBlock)
+          if(maxval(r_GB(:,:,:,iBlock)) < rOutNeu) call Mars_input(iBlock)
        end if
 
-       do k=1,nK; do j=1,nJ; do i=1,nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseHotO) then
              nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)= &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)+&
+                  nDenNuSpecies_CBI(i,j,k,iBlock,Oh_) + &
                   nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)
 
              nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
-                  nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+                  nDenNuSpecies_CBI(i,j,k,iBlock,O_) + &
                   nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)
 
-             Nu_CB(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
-                  nDenNuSpecies_CBI(i,j,k,iBlock,O_)+&
+             Nu_CB(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + &
+                  nDenNuSpecies_CBI(i,j,k,iBlock,O_) + &
                   nDenNuSpecies_CBI(i,j,k,iBlock,H_) )*nu0
           else
-             Nu_CB(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
+             Nu_CB(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_) + &
                   nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
 
              nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
 
           end if
 
-          Ionizationrate_CBI(i,j,k,iBlock,CO2_)=&
-               Ionizationrate_CBI(i,j,k,iBlock,CO2_)*&
+          Ionizationrate_CBI(i,j,k,iBlock,CO2_) = &
+               Ionizationrate_CBI(i,j,k,iBlock,CO2_)* &
                nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
-          Ionizationrate_CBI(i,j,k,iBlock,O_)=&
-               Ionizationrate_CBI(i,j,k,iBlock,O_)*&
+          Ionizationrate_CBI(i,j,k,iBlock,O_) = &
+               Ionizationrate_CBI(i,j,k,iBlock,O_)* &
                nDenNuSpecies_CBI(i,j,k,iBlock,O_)
 
        end do; end do; end do

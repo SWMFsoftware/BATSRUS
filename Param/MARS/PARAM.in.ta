@@ -120,6 +120,10 @@ fixed			TypeBc6
 
 #USERINPUTBEGIN -----------------------------------
 
+#NEUTRALRADIUS
+1.0294464		rInNeu
+3.0			rOutNeu
+
 #UseHotO
 T			UseHotO
 
