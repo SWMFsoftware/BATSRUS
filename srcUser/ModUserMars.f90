@@ -11,7 +11,7 @@ module ModUser
   use ModMain, ONLY: UaState_VCB
   use BATL_lib, ONLY: nI, nJ, nK, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
-  use ModUtilities, ONLY: open_file, close_file
+  use ModUtilities, ONLY: open_file, close_file, upper_case
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi, cDegToRad
   use ModIoUnit, ONLY: UnitTmp_
   use ModUserEmpty, &
@@ -37,7 +37,7 @@ module ModUser
 
   character(len=10) :: SolarCond='solarmax  '
   real:: F107 = 130.0   ! default value for solar med
-  logical :: UserPhotoIonizationRate = .false., UseZeroU=.false.
+  logical :: UsePhotoIonizationRate=.false., UseZeroU=.false.
   real:: IrateCO2, IrateO
   real:: EUVfactor = 1.0
 
@@ -169,7 +169,6 @@ module ModUser
 
   real :: rot = 1.0, thetilt = 0.0
   logical :: UseHotO = .false.
-  logical :: UseTempCont = .false.
   logical :: UseImpactIon = .false.
   logical :: UseChargeEx = .true.
   logical :: UseChapman = .false.
@@ -205,21 +204,23 @@ contains
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
+       call upper_case(NameCommand)
        select case(NameCommand)
 
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
 
-       case('#USEOLDENERGY')
-          call read_var('UseOldEnergy',UseOldEnergy)
+       case("#USEOLDENERGY", "#OLDENERGY")
+          call read_var('UseOldEnergy', UseOldEnergy)
           if(.not.UseOldEnergy)then
              call read_var('Te_new_dim',Te_new_dim)
              ! change temperature from ev to k
              Te_new_dim = Te_new_dim * 11610.0
           end if
 
-       case("#UseMarsB0")  ! if or not include crustal magnetic field of Mars
+       case("#MARSB0", "#USEMARSB0")
+          ! if or not include crustal magnetic field of Mars
           call read_var('UseMarsB0',UseMarsB0)
           if(UseMarsB0) then
              call read_var('NNm', NNm)
@@ -232,7 +233,8 @@ contains
              dmars = 0.0
           endif
 
-       case("#UseMso") ! default is false
+       case("#MSO", "#USEMSO")
+          ! Rotate the crustal field in the MSO system
           call read_var('UseMso', UseMso)
           if(UseMso) then
              call read_var('RotAxisMsoX', RotAxisMso_D(1))
@@ -253,25 +255,26 @@ contains
              sint2=v/uvw
           end if
 
-       case ("#SMDist")
+       case ("#SMDIST")
           call read_var('SMDist', SMDist)
 
-       case ("#UserPhotoIonizationRate")
-          call read_var('UserPhotoIonizationRate', UserPhotoIonizationRate)
-          call read_var('IRateCO2', IRateCO2)
-          call read_var('IRateO', IRateO)
+       case ("#PHOTOIONIZATION")
+          call read_var('UsePhotoIonizationRate', UsePhotoIonizationRate)
+          if(UsePhotoIonizationRate)then
+             call read_var('IrateCO2', IrateCO2)
+             call read_var('IrateO', IrateO)
+          end if
 
-       case ("#EUVfactor")
+       case ("#EUVFACTOR")
           call read_var('EUVfactor', EUVfactor)
 
-       case("#SOLARCON") ! solar cycle condition
-          call read_var('TypeSolarCon',SolarCond)
+       case("#SOLARCONDITION", "#SOLARCON")
+          ! solar cycle condition
+          call read_var('TypeSolarCon', SolarCond)
 
-       case("#UseHotO")  ! adding hot Oxygen or not
+       case("#HOTOXYGEN", "#HOTO", "#USEHOTO")
+          ! adding hot Oxygen or not
           call read_var('UseHotO', UseHotO)
-
-       case("#UseTempCont") ! add hoc term of the energy source
-          call read_var('UseTempCont', UseTempCont)
 
        case("#NEUTRALRADIUS")
           call read_var('rInNeu', rInNeu)
@@ -281,23 +284,25 @@ contains
           call read_var('UseImpactIon', UseImpactIon)
           call read_var('UseChargeEx', UseChargeEx)
 
-       case('#USECHAPMAN')
+       case("#CHAPMAN", "#USECHAPMAN")
           call read_var('UseChapman', UseChapman)
 
-       case("#UseMarsAtm")
+       case("#MARSATMOSPHERE", "#USEMARSATM")
           call read_var('UseMarsAtm', UseMarsAtm)
           if(UseMarsAtm)then
              call read_var('NameFileTGCM', TGCMFilename)
              call read_var('nAlt', Nalt)
           end if
+
        case('#POINTIMPLICITREGION')
           call read_var('rPointImplicit',rPointImplicit)
 
        case default
-          if(iProc==0) call stop_mpi( &
+          if(iProc == 0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
        end select
     end do
+
     call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
   !============================================================================
@@ -306,8 +311,6 @@ contains
     use ModMain, ONLY: nBlock, Unused_B
     use ModVarIndexes
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
-    use ModPhysics, ONLY: rBody
-    use ModGeometry, ONLY: r_GB
 
     ! Allocate and set iVarPointImpl_I
     integer :: iBlock
@@ -320,12 +323,7 @@ contains
     iVarPointImpl_I = [RhoHp_, RhoO2p_, RhoOp_, RhoCO2p_, &
          RhoUx_, RhoUy_, RhoUz_, P_]
 
-    ! Note that energy is not an independent variable for the
-    ! point implicit scheme. The pressure is an independent variable,
-    ! and in this example there is no implicit pressure source term.
-
     ! Tell the point implicit scheme if dS/dU will be set analytically
-    ! If this is set to true the DsDu_VVC matrix has to be set below.
     IsPointImplMatrixSet = .false.
 
     call test_stop(NameSub, DoTest)
@@ -686,9 +684,6 @@ contains
                + totalPSNumRho*kTe0                &
                - totalLossNumRho*kTi               &
                - totalRLNumRhox*totalNumRho*KTe
-
-!!!          if(UseTempControl.and.kTi > kT300)&
-!!!               temps = temps+totalNumRho*(kT1000-KTi)*Nu_C(i,j,k)*5.0
 
           S_IC(rho_+MaxSpecies+8,i,j,k) = S_IC(rho_+MaxSpecies+8,i,j,k) &
                - 0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
@@ -1302,7 +1297,7 @@ contains
        call stop_mpi('unknow solar condition '//SolarCond)
     end select
 
-    if(UserPhotoIonizationRate)then
+    if(UsePhotoIonizationRate)then
        RateDim_I(CO2_hv__CO2p_em_) = IrateCO2
        RateDim_I(O_hv__Op_em_) = IrateO
     endif
