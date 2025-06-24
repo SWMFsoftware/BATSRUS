@@ -94,7 +94,7 @@ dt rho p rhopnt ppnt bxpnt Hpflx Opflx O2pflx CO2pflx		NameLogVars
 6.0 2.0 1.117786		StringLogRadii
 
 #INNERBOUNDARY
-user			TypeBcBody
+reflectall		TypeBcBody
 
 #BOXBOUNDARY
 outflow			TypeBc1
@@ -120,7 +120,7 @@ fixed			TypeBc6
 
 #USERINPUTBEGIN -----------------------------------
 
-#NEUTRALRADIUS
+NEUTRALRADIUS
 1.0294464		rInNeu
 3.0			rOutNeu
 
@@ -153,7 +153,7 @@ T			UseChargeEx
 #USECHAPMAN
 T			UseChapman
 
-PHOTOIONIZATIONRATE
+PHOTOIONIZATION
 T			UsePhotoIonizationRate
 4.1e-7			IrateCO2
 1.26e-7			IrateO
