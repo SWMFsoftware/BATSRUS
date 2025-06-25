@@ -94,7 +94,7 @@ dt rho p rhopnt ppnt bxpnt Hpflx Opflx O2pflx CO2pflx		NameLogVars
 6.0 2.0 1.117786		StringLogRadii
 
 #INNERBOUNDARY
-user			TypeBcBody
+reflectall		TypeBcBody
 
 #BOXBOUNDARY
 outflow			TypeBc1
@@ -120,34 +120,31 @@ fixed			TypeBc6
 
 #USERINPUTBEGIN -----------------------------------
 
-#UseHotO
+NEUTRALRADIUS
+1.0294464		rInNeu
+3.0			rOutNeu
+
+#HOTOXYGEN
 T			UseHotO
 
-#UseTempCont
-F			UseTempCont
-
-#UseMarsB0
+#MARSB0
 T			UseMarsB0
-60			NNm  !!! 110 needs a different harmonics file
+60			NNm
 -149.6			Rot
 21.65608		Thetilt
 Param/MARS/marsmgsp.txt		NameFileB0
 
-#UseMso
+#MSO
 T			UseMso
 0.36905			RotAxisMsoX
 0.21215			RotAxisMsoY
 0.90487			RotAxisMsoZ
 
-#SMDist
+#SMDIST
 1.6464906		SMDist
 
-#SOLARCON
+#SOLARCONDITION
 solarmin		TypeSolarCond
-
-!!! missing from ModUserMars.f90
-SMDist
-1.66299			SMDist
 
 #REACTIONS
 T			UseImpactIon
@@ -156,11 +153,10 @@ T			UseChargeEx
 #USECHAPMAN
 T			UseChapman
 
-!!! missing from ModUserMars.f90
-UserPhotoIonizationRate
-T
-4.1e-7
-1.26e-7
+PHOTOIONIZATION
+T			UsePhotoIonizationRate
+4.1e-7			IrateCO2
+1.26e-7			IrateO
 
 #USERINPUTEND -------------------------------------
 
