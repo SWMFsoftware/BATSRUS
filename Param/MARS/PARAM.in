@@ -78,13 +78,14 @@ fixed			TypeBc6
 
 #USERINPUTBEGIN -----------------------------------
 
-#UseHotO
+#NEUTRALRADIUS
+1.0294464		rInNeu
+3.0			rOutNeu
+
+#HOTOXYGEN
 T			UseHotO
 
-#UseTempCont
-F			UseTempCont
-
-#UseMarsB0
+#MARSB0
 T			UseMarsB0
 60			NNm
 -180			Rot
@@ -94,7 +95,7 @@ Param/MARS/marsmgsp.txt		NameFileB0
 -99.5
 25.26
 
-#SOLARCON
+#SOLARCONDITION
 solarmax		TypeSolarCond
 
 #USERINPUTEND -------------------------------------
