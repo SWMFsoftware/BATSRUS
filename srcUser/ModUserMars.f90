@@ -796,7 +796,7 @@ contains
        FaceState_VI(rhoOp_,iBoundary)    = 1e-10*SolarWindRho
        FaceState_VI(rhoCO2p_,iBoundary)  = 1e-10*SolarWindRho
     end do
-    call set_multiSp_ICs
+    call set_multisp_ics
     !    Rbody = 1.0 + 140.0e3/Mars
     BodyRho_I(1) = sum(BodyRhoSpecies_I)
     BodyP_I(1)   = sum(BodyRhoSpecies_I/MassSpecies_I)*kTp0
@@ -1010,7 +1010,7 @@ contains
     real :: Productrate0, OptDep, SMDist2
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_multiSp_ICs'
+    character(len=*), parameter:: NameSub = 'set_multisp_ics'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(DoTest)then
