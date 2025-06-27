@@ -190,7 +190,6 @@ contains
 
   end subroutine set_face_boundary
   !============================================================================
-
   subroutine set_face_bc(FBC, IsBodyCell_G, IsTrueCell_G)
 
     use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
@@ -492,7 +491,6 @@ contains
 
       character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
-#ifndef SCALAR
       associate( iBoundary => FBC%iBoundary, TypeBc => FBC%TypeBc, &
            iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
            TimeBc => FBC%TimeBc, iBlockBc => FBC%iBlockBc, &
@@ -1019,6 +1017,10 @@ contains
            ! Calculate corotation velocity uRot_D at position FaceCoords
            uRot_D = cross_product(OmegaBody_D, FBC%FaceCoords_D)
 
+           if(DoTest .and. iTrue == iTest .and. jTrue == jTest .and. &
+                kTrue == kTest) write(*,*) NameSub,' UseRotatingBc, uRot_D=', &
+                UseRotatingBc, uRot_D
+
            select case(TypeBc)
            case('reflect','reflectb','reflectall','linetied', &
                 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow')
@@ -1033,9 +1035,8 @@ contains
                    ': UseRotatingBc is not compatible with TypeBc='//TypeBc)
            end select
         end if
-
       end associate
-#endif
+
     end subroutine set_face
     !==========================================================================
   end subroutine set_face_bc
