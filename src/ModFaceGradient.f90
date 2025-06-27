@@ -629,8 +629,7 @@ contains
 
     logical :: UseFirstOrderBc
     !--------------------------------------------------------------------------
-
-    if(present(UseFIrstOrderBcIn))then
+    if(present(UseFirstOrderBcIn))then
        UseFirstOrderBc = UseFirstOrderBcIn
     else
        UseFirstOrderBc =  .false.
@@ -1014,7 +1013,6 @@ contains
 
   end subroutine get_face_gradient_field
   !============================================================================
-
   subroutine get_face_gradient(iDir, i, j, k, iBlock, IsNewBlock, Scalar_G,  &
        FaceGrad_D, UseFirstOrderBcIn)
     ! calculate the cell face gradient of Scalar_G
@@ -1476,7 +1474,6 @@ contains
 
       real :: DvectorDcoord_DD(MaxDim,MaxDim)
       !------------------------------------------------------------------------
-
       ! Calculate the partial derivatives dVector/dCoord
       select case(iDir)
       case(x_)
