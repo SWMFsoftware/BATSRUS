@@ -150,7 +150,7 @@ module ModUser
   real :: Te_new_dim=1000., KTe0, T300
   real, parameter :: T300_dim = 300.0
 
-  real, allocatable :: Nu_CB (:,:,:,:)
+  real, allocatable :: Nu_CB(:,:,:,:)
   real, parameter :: nu0_dim=4.0e-10
   real :: nu0
 
@@ -159,7 +159,7 @@ module ModUser
   integer :: NNm
   real :: SMDist = 1.52
 
-  logical :: UseMarsB0 = .false., UseMso=.false., UseB0Old
+  logical :: UseMarsB0 = .false., UseMso = .false., UseB0Old
   character(len=100):: NameFileB0 = '???'
   character(len=*), parameter:: NameFileB0Old = 'marsmgsp.txt'
 
@@ -313,7 +313,6 @@ contains
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
 
     ! Allocate and set iVarPointImpl_I
-    integer :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_point_implicit'
     !--------------------------------------------------------------------------
@@ -750,9 +749,8 @@ contains
        allocate(Nu_CB(nI,nJ,nK,MaxBlock))
     end if
 
-    ! Read B0
     if(UseMarsB0)then
-       ! It does not work without the STATUS="OLD"
+       ! Read B0
        call open_file(FILE=NameFileB0, STATUS="OLD")
        UseB0Old = index(NameFileB0, NameFileB0Old) > 0
        if(UseB0Old)then
@@ -772,7 +770,6 @@ contains
           end do
        end if
        call close_file
-       close(UnitTmp_)
     end if
 
     if(UseMarsAtm)then
@@ -920,7 +917,7 @@ contains
                /(Rate_I(CO2p_O__O2p_CO_) + Rate_I(CO2p_O__Op_CO2_))
 
           if(DoTest.and.i==iTest.and.j==jTest.and.k==kTest)then
-             write(*,*)'user set_ics, cosZA=', cosSZA
+             write(*,*)'user set_ics, cosSZA=', cosSZA
              write(*,*)'user set_ics, Ionizationrate(CO2_)=', &
                   Ionizationrate_CBI(i,j,k,iBlock,CO2_)
              write(*,*)'user set_ics, nDenNuSpecies(O_)=', &
@@ -998,9 +995,9 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_set_ICs
+  end subroutine user_set_ics
   !============================================================================
-  subroutine set_multiSp_ICs
+  subroutine set_multisp_ics
 
     ! calculate the scale height of ion and neutal species and
     ! intial boundary value of ion species
@@ -1426,7 +1423,8 @@ contains
        !       call stop_mpi('end')
     end if
     call test_stop(NameSub, DoTest)
-  end subroutine set_multiSp_ICs
+
+  end subroutine set_multisp_ics
   !============================================================================
   subroutine user_set_face_boundary(FBC)
 
@@ -1580,9 +1578,9 @@ contains
     theta = acos(Z0/rr)
 
     if(UseB0Old)then
-       call MarsB0_old(R0, theta, phi+delta, bb)
+       call set_mars_b0_old(R0, theta, phi+delta, bb)
     else
-       call MarsB0(R0, Z0/rr, phi+delta, bb)
+       call set_mars_b0(R0, Z0/rr, phi+delta, bb)
     endif
     sint = sin(theta)
     cost = cos(theta)
@@ -1633,7 +1631,7 @@ contains
     call timing_stop('user_get_b0')
   end subroutine user_get_b0
   !============================================================================
-  subroutine MarsB0(r, xtcos, phi, bb)
+  subroutine set_mars_b0(r, xtcos, phi, bb)
 
     integer, parameter:: nMax=111
     real, intent(in) :: r, xtcos, phi
@@ -1719,9 +1717,9 @@ contains
        end do ! n
     end do ! m
 
-  end subroutine MarsB0
+  end subroutine set_mars_b0
   !============================================================================
-  subroutine MarsB0_old(r, theta, phi, bb)
+  subroutine set_mars_b0_old(r, theta, phi, bb)
 
     integer, parameter:: nMax=62
     real, intent(in) :: r, theta, phi
@@ -1740,7 +1738,7 @@ contains
     !$omp threadprivate( Factor1_I, Factor2_I, Factor3_I )
     !$omp threadprivate( Factor1_II, Factor2_II, Factor3_II )
 
-    character(len=*), parameter:: NameSub = 'MarsB0_old'
+    character(len=*), parameter:: NameSub = 'set_mars_b0_old'
     !--------------------------------------------------------------------------
     if(DoSetFactor)then
        DoSetFactor = .false.
@@ -1836,7 +1834,7 @@ contains
 
     call timing_stop('crustal')
 
-  end subroutine MarsB0_Old
+  end subroutine set_mars_b0_old
   !============================================================================
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
@@ -1888,13 +1886,12 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
   !============================================================================
-  subroutine Mars_Input(iBlock)
+  subroutine mars_input(iBlock)
 
     use ModMain
     use ModPhysics
     use ModConst
-    use ModGeometry, ONLY:r_GB,CellSize_DB,&
-         Coord111_DB,TypeGeometry
+    use ModGeometry, ONLY: r_GB,CellSize_DB, Coord111_DB, TypeGeometry
 
     integer, intent(in) :: iBlock
 
@@ -1908,7 +1905,7 @@ contains
     !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp -----
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'Mars_Input'
+    character(len=*), parameter:: NameSub = 'mars_input'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     dR=CellSize_DB(x_,iBlock)
@@ -2087,8 +2084,9 @@ contains
             maxval(r_GB(nI,:,:,iBlock)),&
             minval(r_GB(1,:,:,iBlock))
     end if
+
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine Mars_input
+  end subroutine mars_input
   !============================================================================
   subroutine ua_input(iBlock)
 
@@ -2296,7 +2294,7 @@ contains
        if(allocated(UaState_VCB))then
           call ua_input(iBlock)
        else
-          if(maxval(r_GB(:,:,:,iBlock)) < rOutNeu) call Mars_input(iBlock)
+          if(maxval(r_GB(:,:,:,iBlock)) < rOutNeu) call mars_input(iBlock)
        end if
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
