@@ -418,7 +418,6 @@ contains
     character(len=*), parameter:: NameSub = 'user_sources'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    if(iBlock /= iBlockTest) DoTest = .false.
 
     S_IC = 0.0
 
@@ -551,7 +550,7 @@ contains
        do iSpecies = 1, nSpecies
           LossSpecies_I = LossSpecies_I + CoeffSpecies_II(iSpecies, :)
           ! dStndRho_I=dStndRho_I  &
-          !      + CoeffSpecies_II(iSpecies, :)/MassSpecies_I(:)
+          !      + CoeffSpecies_II(iSpecies, :)/MassSpecies_I
           dSdRho_II(1:nSpecies, iSpecies) = &
                CoeffSpecies_II(1:nSpecies, iSpecies) &
                *MassSpecies_I(1:nSpecies)/MassSpecies_I(iSpecies)
@@ -569,12 +568,12 @@ contains
 !!!    !              dSLdRho_II=dSdRho_II-dLdRho_II
 !!!
 !!!    do iSpecies=1, nSpecies
-!!!       dLtdRho_I(:)=dLtdRho_I(:) +dLdRho_II(iSpecies,:)
-!!!       dLtndNumRho_I(:)=dLtndNumRho_I(:) &
-!!!            +dLdRho_II(iSpecies,:)*MassSpecies_I(:)/MassSpecies_I(iSpecies)
+!!!       dLtdRho_I=dLtdRho_I +dLdRho_II(iSpecies,:)
+!!!       dLtndNumRho_I=dLtndNumRho_I &
+!!!            +dLdRho_II(iSpecies,:)*MassSpecies_I/MassSpecies_I(iSpecies)
 !!!    enddo
 
-       SiSpecies_I(:) = (PhoIon_I(:)+ImpIon_I(:))*MassSpecies_I(:)
+       SiSpecies_I = (PhoIon_I+ImpIon_I)*MassSpecies_I
 
        do iSpecies = 1, nSpecies
           SiSpecies_I(1:nSpecies) = &
@@ -587,7 +586,7 @@ contains
                *State_VGB(rho_+iSpecies, i,j,k, iBlock)
        enddo
 
-       totalIMPNumRho = sum(ImpIon_I(:))
+       totalIMPNumRho = sum(ImpIon_I)
 
        totalSourceRho = sum(SiSpecies_I(1:nSpecies))
        totalLossRho = sum(LiSpecies_I(1:nSpecies))
@@ -600,11 +599,11 @@ contains
        ! sum of the (Source term/atom mass)
        totalLossx    = totalLossRho*inv_rho
        totalLossNumx = totalLossNumRho/totalNumRho
-       totalPSNumRho = sum(PhoIon_I(:))
+       totalPSNumRho = sum(PhoIon_I)
 
        ! sum of the photonionization source/atom mass
-       totalRLNumRhox=sum(Recb_I(:) &
-            *State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)/MassSpecies_I(:))
+       totalRLNumRhox=sum(Recb_I &
+            *State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)/MassSpecies_I)
        ! sum of the (loss term/atom mass) due to recombination
 
        MaxSLSpecies_CB(i,j,k,iBlock) = maxval(abs(SiSpecies_I(1:nSpecies) + &
@@ -796,7 +795,7 @@ contains
        FaceState_VI(rhoOp_,iBoundary)    = 1e-10*SolarWindRho
        FaceState_VI(rhoCO2p_,iBoundary)  = 1e-10*SolarWindRho
     end do
-    call set_multisp_ics
+    call set_multiSp_ICs
     !    Rbody = 1.0 + 140.0e3/Mars
     BodyRho_I(1) = sum(BodyRhoSpecies_I)
     BodyP_I(1)   = sum(BodyRhoSpecies_I/MassSpecies_I)*kTp0
@@ -1010,7 +1009,7 @@ contains
     real :: Productrate0, OptDep, SMDist2
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_multisp_ics'
+    character(len=*), parameter:: NameSub = 'set_multiSp_ICs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(DoTest)then
@@ -1314,10 +1313,10 @@ contains
     end if
 
     nu0=nu0_dim*No2Io_V(UnitN_)*No2Io_V(UnitT_)
-    BodynDenNuSpecies_I(:)=&
-         BodynDenNuSpDim_I(:)*Io2No_V(UnitN_)
-    HNuSpecies_I(:)=&
-         HNuSpeciesDim_I(:)*1.0e3*Si2No_V(UnitX_)
+    BodynDenNuSpecies_I=&
+         BodynDenNuSpDim_I*Io2No_V(UnitN_)
+    HNuSpecies_I=&
+         HNuSpeciesDim_I*1.0e3*Si2No_V(UnitX_)
 
     ! normalize the reaction rate
     ! Ion-ion reaction rates have units 1/(cc * s)
@@ -1526,7 +1525,7 @@ contains
     real :: x2, y2, z2
     !--------------------------------------------------------------------------
     if(.not. UseMarsB0) then
-       B1(:) = 0.0
+       B1 = 0.0
        RETURN
     end if
 
