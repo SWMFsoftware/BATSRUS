@@ -1009,7 +1009,7 @@ contains
     real :: Productrate0, OptDep, SMDist2
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_multiSp_ICs'
+    character(len=*), parameter:: NameSub = 'set_multisp_ics'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(DoTest)then
