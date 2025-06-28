@@ -8422,16 +8422,18 @@ Default is the true speed of light.
 
 <command name="FORCEFREEB0">
   <parameter name="UseForceFreeB0" type="logical" default="F"/>
+  <parameter name="rMaxForceFreeB0" type="real" min="0" if="$UseForceFreeB0"/>
 
 #FORCEFREEB0
-T                       UseForceFreeB0
+T			UseForceFreeB0
+1.5                     rMaxForceFreeB0 (read if UseForceFreeB0 is true)
 
-Define the B0 field to be force-free but with non-zero J0=curl B0.
+If UseForceFreeB0 is true then define the B0 field to be force-free
+but with non-zero J0=curl B0 below radius rMaxForceFreeB0.
 The force-free property means that J0 x B0 = 0 in the momentum and
-energy equations. UseForceFreeB0=T switches on curl B0 in the whole
-domain, so there is no need for the #CURLB0 command.
+energy equations.
 
-By default the B0 field is curl free.
+The default is UseForceFreeB0 false.
 </command>
 
 <command name="HYPERBOLICDIVE">
