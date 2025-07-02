@@ -17,6 +17,7 @@ module ModUser
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_set_cell_boundary,          &
+       IMPLEMENTED8 => user_set_resistivity,            &
        IMPLEMENTED9 => user_initial_perturbation,       &
        IMPLEMENTED11=> user_get_b0,                     &
        IMPLEMENTED12=> user_material_properties,        &
@@ -1551,6 +1552,24 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
+  !============================================================================
+  subroutine user_set_resistivity(iBlock, Eta_G)
+    !$acc routine vector
+
+    use ModAdvance,    ONLY: State_VGB
+    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitX_, UnitT_
+    use ModVarIndexes, ONLY: Rho_, Pe_
+
+    integer, intent(in) :: iBlock
+    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_resistivity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    !$acc loop vector independent
+    Eta_G = 0.0
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine user_set_resistivity
   !============================================================================
   subroutine user_initial_perturbation
 
