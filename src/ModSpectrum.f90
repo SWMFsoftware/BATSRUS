@@ -341,7 +341,6 @@ contains
 
   end subroutine spectrum_read_table
   !============================================================================
-
   subroutine spectrum_calc_flux(iFile, State_V, Ds, nLambda, LosDir_D, UseNbi,&
        Spectrum_I, r)
 
@@ -391,12 +390,9 @@ contains
     real                        :: EquilIonFrac
     logical                     :: IsFound = .false.
     integer                     :: iVar, iVarIon, iElement, nCharge
-
     real                        :: LambdaMin
-
     real                        :: Value_I(2)
 
-#ifndef SCALAR
     character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
     !--------------------------------------------------------------------------
     Rho = State_V(Rho_)*No2Si_V(UnitRho_)
@@ -582,10 +578,9 @@ contains
           end if
        end do
     end do
-#endif
+
   end subroutine spectrum_calc_flux
   !============================================================================
-
   subroutine spectrum_calc_emission(iFile,State_V, UseNbi,Emission,nLambda,r)
 
     use ModConst, ONLY: cProtonMass, cLightSpeed, cBoltzmann, cPi
@@ -598,34 +593,33 @@ contains
     use ModIO, ONLY: DLambda_I, LambdaMin_I, LambdaMax_I
     use ModChromosphere, ONLY: extension_factor, DoExtendTransitionRegion
 
-    real, intent(in)      :: State_V(nVar)
-    integer,intent(in)    :: iFile, nLambda
-    logical, intent(in)   :: UseNbi
-    real, intent(out)   :: Emission
-    real, intent(in), optional :: r
+    real, intent(in):: State_V(nVar)
+    integer,intent(in):: iFile, nLambda
+    logical, intent(in):: UseNbi
+    real, intent(out):: Emission
+    real, intent(in), optional:: r
 
-    integer                        :: iNMin, jTMin, iNMax, jTMax
-    real                           :: Gint, LogNe, LogTe, Rho, TeSi
-    real                           :: LocalState_V(nVar)
+    integer:: iNMin, jTMin, iNMax, jTMax
+    real   :: Gint, LogNe, LogTe, Rho, TeSi
+    real   :: LocalState_V(nVar)
     ! For H:He 10:1 fully ionized plasma the proton:electron ratio is
     ! 1/(1+2*0.1)
-    real                        :: ProtonElectronRatio = 0.83
+    real  :: ProtonElectronRatio = 0.83
 
     ! Charge state variables
-    real                        :: EquilIonFrac
-    logical                     :: IsFound = .false.
-    integer                     :: iVar, iVarIon, iElement, nCharge
-    integer                        :: iLine
-    real                        :: Value_I(2)
+    real   :: EquilIonFrac
+    logical:: IsFound = .false.
+    integer:: iVar, iVarIon, iElement, nCharge
+    integer:: iLine
+    real   :: Value_I(2)
 
     ! NBI variables
-    real                           :: Tlos, Aion, Uth2, LambdaBin, &
+    real:: Tlos, Aion, Uth2, LambdaBin, &
          Lambda, LambdaSI, DLambdaSI, LambdaBegin,&
          LambdaEnd, FluxMono, LambdaMin, LambdaDist, Phi, Flux, &
          DLambda, DLambdaSI2, InvNorm, InvSigma2
-    integer                        :: iBegin, iEnd, iBin
+    integer:: iBegin, iEnd, iBin
 
-#ifndef SCALAR
     character(len=*), parameter:: NameSub = 'spectrum_calc_emission'
     !--------------------------------------------------------------------------
     Emission = 0
@@ -772,10 +766,8 @@ contains
        endif
     end do
 
-#endif
   end subroutine spectrum_calc_emission
   !============================================================================
-
   subroutine clean_mod_spectrum
 
     integer                     :: iLine = 0

@@ -102,7 +102,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ion_electron_source_impl'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
 
     DoTestCell = .false.
@@ -225,7 +224,6 @@ contains
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
-#endif
   end subroutine ion_electron_source_impl
   !============================================================================
   subroutine ion_electron_init_point_impl
@@ -244,7 +242,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ion_electron_init_point_impl'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest)
     IsPointImpl_V = .false.
     IsPointImplMatrixSet = IsAnalyticJacobian
@@ -277,7 +274,6 @@ contains
     end do
 
     call test_stop(NameSub, DoTest)
-#endif
   end subroutine ion_electron_init_point_impl
   !============================================================================
   subroutine correct_electronfluid_efield(State_VG, iMin, iMax, jMin, jMax, &
@@ -386,7 +382,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'correct_electronfluid_efield_cell'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     StateOld_V = State_V
 
     ! original electron temperature
@@ -443,7 +438,7 @@ contains
                NameVar_V(iVar), StateOld_V(iVar), State_V(iVar)
        end do
     end if
-#endif
+
   end subroutine correct_electronfluid_efield_cell
   !============================================================================
 end module ModIonElectron

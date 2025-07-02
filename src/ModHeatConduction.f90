@@ -546,7 +546,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_heat_cond_coef'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     if(UseB0)then
        select case(iDir)
        case(1)
@@ -641,7 +640,6 @@ contains
        HeatCond_D = HeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
     end if
 
-#endif
   end subroutine get_heat_cond_coef
   !============================================================================
   subroutine get_ion_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
@@ -664,8 +662,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_ion_heat_flux'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
-
     iGang = i_gang(iBlock)
 
     if(IsNewBlockIonHeatCond)then
@@ -708,7 +704,6 @@ contains
     end if
     HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
 
-#endif
   end subroutine get_ion_heat_flux
   !============================================================================
   subroutine get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
@@ -730,7 +725,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_ion_heat_cond_coef'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     if(UseB0)then
        select case(iDir)
        case(1)
@@ -764,7 +758,6 @@ contains
 
     HeatCond_D = IonHeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
 
-#endif
   end subroutine get_ion_heat_cond_coef
   !============================================================================
   real function heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
@@ -1133,7 +1126,6 @@ contains
     real :: RadCool, RadCoolDeriv
     real :: Tpar, CollisionRate, IsotropizationCoef, DenominatorPar
 
-#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
     !--------------------------------------------------------------------------
@@ -1427,7 +1419,6 @@ contains
     call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
-#endif
   end subroutine get_impl_heat_cond_state
   !============================================================================
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)

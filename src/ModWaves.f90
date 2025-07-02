@@ -17,7 +17,6 @@ module ModWaves
 
   logical:: DoAdvectWaves = .true.
 
-  !
   ! Intended to simulate waves and wave turbulences. The wave propagate
   ! with respect to the background with some speed. The only implemented
   ! case is the propagation with Alfven speed, \pm V_A=\sqrt{B^2/rho}
@@ -280,7 +279,6 @@ contains
 
     real:: BTotal_D(MaxDim)
 
-#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_wave_state'
     !--------------------------------------------------------------------------
@@ -307,7 +305,6 @@ contains
          State_V(Ew_) = sum(State_V(WaveFirst_:WaveLast_))
 
     call test_stop(NameSub, DoTest)
-#endif
   end subroutine set_wave_state
   !============================================================================
   subroutine update_wave_group_advection(iBlock)
@@ -431,9 +428,10 @@ contains
   contains
     !==========================================================================
     subroutine write_and_stop
-      use ModVarIndexes, ONLY: nVar, NameVar_V
-      integer:: iVar
 
+      use ModVarIndexes, ONLY: nVar, NameVar_V
+
+      integer:: iVar
       !------------------------------------------------------------------------
       write(*,*) 'Negative energy density in xyz=',Xyz_DGB(:,i,j,k,iBlock), &
            ' ijk=', i, j, k, ' iBlock=',iBlock
