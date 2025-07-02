@@ -247,7 +247,11 @@ module ModAdvance
        SteadyBoundBlock_=2, & ! Blocks surrounding the evolving blocks
        ExplBlock_=3,        & ! Blocks changing with the explicit scheme
        ImplBlock_=4           ! Blocks changing with the implicit scheme
-
+  public :: check_positivity
+  interface check_positivity
+     module procedure check_positivity_b
+     module procedure check_positivity_all
+  end interface check_positivity
 contains
   !============================================================================
   subroutine init_mod_advance
@@ -423,5 +427,52 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine clean_mod_advance
   !============================================================================
-end module ModAdvance
+  subroutine check_positivity_b(iBlock, NameSub, iError)
+
+    use ModVarIndexes, ONLY: nVar, NameVar_V,  DefaultState_V
+    use ModGeometry, ONLY: r_GB, Used_GB
+    use BATL_lib, ONLY: nI, nJ, nK, Unused_B, Xyz_DGB, iProc
+    use ModBatsrusUtility, ONLY: stop_mpi
+
+    integer, intent(in) :: iBlock
+    character(len=*), intent(in):: NameSub
+    integer, intent(out), optional:: iError
+
+    integer:: iVar, i, j, k
+    !--------------------------------------------------------------------------
+    if(Unused_B(iBlock)) RETURN
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(any(&
+            DefaultState_V(:nVar) > 0.5.and.State_VGB(:,i,j,k,iBlock)<=0.0   &
+            ))then
+          write(*,*)'For NameVar_V=', NameVar_V
+          write(*,*)'and DefaultState_V(:nVar)=', DefaultState_V(:nVar)
+          write(*,*)'the state vector State_V=', State_VGB(:,i,j,k,iBlock)
+          write(*,*)'in iBlock, i, j, k =', iBlock, i, j, k
+          write(*,*)'at Xyz, R=', Xyz_DGB(:,i,j,k,iBlock), r_GB(i,j,k,iBlock)
+          write(*,*)'breaks the positivity requirement'
+          if(present(iError))then
+             iError = 1
+             RETURN
+          else
+             call stop_mpi('Positivity breaks '//NameSub)
+          end if
+       end if
+    end do; end do; end do
+  end subroutine check_positivity_b
+  !============================================================================
+  subroutine check_positivity_all(NameSub, iError)
+
+    use BATL_lib, ONLY: nBlock
+    character(len=*), intent(in):: NameSub
+    integer, intent(out), optional:: iError
+
+    integer:: iBlock
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       call check_positivity_b(iBlock, NameSub, iError)
+    end do
+  end subroutine check_positivity_all
+  !============================================================================
+end  module ModAdvance
 !==============================================================================
