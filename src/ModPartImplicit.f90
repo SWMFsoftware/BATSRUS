@@ -1334,7 +1334,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'impl_jacobian'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     iBlock = iBlockFromImpl_B(iBlockImpl)
     call test_start(NameSub, DoTest, iBlock)
 
@@ -1855,7 +1854,6 @@ contains
       call test_stop(NameSub, DoTest, iBlock)
     end subroutine impl_init_hall
     !==========================================================================
-#endif
   end subroutine impl_jacobian
   !============================================================================
   subroutine implicit_init
@@ -2354,7 +2352,6 @@ contains
     integer :: iFluid
     character(len=*), parameter:: NameSub = 'conservative_to_primitive'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     if(UseImplicitEnergy)then
        do iFluid = 1, nFluid
           if(nFluid > 1) call select_fluid(iFluid)
@@ -2376,7 +2373,7 @@ contains
        State_V(iUy_I) = InvRho_I*State_V(iRhoUy_I)
        State_V(iUz_I) = InvRho_I*State_V(iRhoUz_I)
     end if
-#endif
+
   end subroutine conservative_to_primitive
   !============================================================================
   subroutine get_dt_courant(DtOut)

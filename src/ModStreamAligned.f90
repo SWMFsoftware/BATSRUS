@@ -167,7 +167,6 @@ contains
     ! Radial distance and the velocity squared
     real :: R, U2, B0_D(MaxDim)
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     R = sqrt(sum(Xyz_D**2))
     if(R < RSourceSaMhd)then
        ! The SaMhd ratio is calculated in terms of U, B
@@ -186,7 +185,6 @@ contains
           State_V(Bx_:Bz_) = State_V(Bx_:Bz_) - B0_D
        end if
     end if
-#endif
 
   end subroutine get_samhd_state
   !============================================================================
@@ -359,7 +357,6 @@ contains
     real, intent(inout) :: StateLeft_V(nVar), StateRight_V(nVar)
     real :: FullB_D(3), U2
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     U2 = max(sum(StateLeft_V(Ux_:Uz_)**2), &
          sum(StateRight_V(Ux_:Uz_)**2), 1e-30)
     if(r_GB(iLeft,jLeft,kLeft,iBlockFace) < RMinSaMhd.and.&
@@ -371,7 +368,6 @@ contains
        FullB_D  = StateRight_V(Bx_:Bz_) + [B0x, B0y, B0z]
        StateRight_V(BperU_) = sum(StateRight_V(Ux_:Uz_)*FullB_D)/U2
     end if
-#endif
 
   end subroutine aligning_bc
   !============================================================================

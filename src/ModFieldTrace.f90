@@ -1149,7 +1149,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'follow_ray_block'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     if(DoTestRay)write(*,'(a,3i4,3es12.4)')&
          'Starting follow_ray_block: me,iBlock,iRay,XyzInOut_D=',&
          iProc,iBlock,iRay,XyzInOut_D
@@ -1920,7 +1919,6 @@ contains
 
     end subroutine ray_extract
     !==========================================================================
-#endif
   end subroutine follow_ray_block
   !============================================================================
   subroutine ray_trace_sorted

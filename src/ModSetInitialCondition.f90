@@ -280,7 +280,7 @@ contains
 
                       if(DoTestCell)write(*,*) NameSub,': left State=', &
                            State_VGB(:,i,j,k,iBlock)
-#ifndef SCALAR
+
                       ! Rotate vector variables
                       do iFluid = 1, nFluid
                          if(nFluid > 1) call select_fluid(iFluid)
@@ -289,7 +289,7 @@ contains
                       end do
                       if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
                            matmul(Rot_II, ShockLeft_V(Bx_:By_))
-#endif
+
                       if(DoTestCell)write(*,*) NameSub, &
                            ': final left State=', State_VGB(:,i,j,k,iBlock)
                    else
@@ -297,7 +297,7 @@ contains
                       State_VGB(:,i,j,k,iBlock) = ShockRight_V
                       if(DoTestCell)write(*,*) NameSub,': right State=', &
                            State_VGB(:,i,j,k,iBlock)
-#ifndef SCALAR
+
                       ! Set vector variables
                       do iFluid = 1, nFluid
                          if(nFluid > 1) call select_fluid(iFluid)
@@ -306,7 +306,7 @@ contains
                       end do
                       if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
                            matmul(Rot_II, ShockRight_V(Bx_:By_))
-#endif
+
                       if(DoTestCell)write(*,*) NameSub,&
                            ': final right State=', State_VGB(:,i,j,k,iBlock)
                    end if
@@ -322,7 +322,6 @@ contains
                         State_VGB(:,i,j,k,iBlock)
                 end if
 
-#ifndef SCALAR
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
                    if(nFluid > 1) call select_fluid(iFluid)
@@ -330,7 +329,7 @@ contains
                         State_VGB(iRho,i,j,k,iBlock) * &
                         State_VGB(iUx:iUz,i,j,k,iBlock)
                 end do
-#endif
+
                 if(.not.UseB0 .or. .not.DoSubtractB0)CYCLE
                 ! Remove B0 from B (if any)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
@@ -345,7 +344,7 @@ contains
                 call apply_wave(i, j, k, iBlock)
                 if(DoTestCell)write(*,*) NameSub,': wave State=', &
                      State_VGB(:,i,j,k,iBlock)
-#ifndef SCALAR
+
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
                    if(nFluid > 1) call select_fluid(iFluid)
@@ -353,7 +352,7 @@ contains
                         State_VGB(iRho,i,j,k,iBlock) * &
                         State_VGB(iUx:iUz,i,j,k,iBlock)
                 end do
-#endif
+
                 if(.not.UseB0 .or. .not.DoSubtractB0)CYCLE
                 ! Remove B0 from B (if any)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &

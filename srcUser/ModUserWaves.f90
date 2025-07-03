@@ -372,7 +372,7 @@ contains
                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
                + State_VGB(Bx_:Bz_,i,j,k,iBlock)*sqrt(ShockLeft_V(Rho_))
        end do; end do; end do
-#ifndef SCALAR
+
     case('RT')
        ! Initialize Rayleigh-Taylor instability
 
@@ -420,7 +420,7 @@ contains
                * Amplitude * cos(cHalfPi*Xyz_DGB(x_,:,:,:,iBlock)/Width)**2 &
                * sin(cTwoPi*(Xyz_DGB(y_,:,:,:,iBlock))/LambdaY)
        endwhere
-#endif
+
     case('ShearSquare')
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           x = Xyz_DGB(x_,i,j,k,iBlock)
@@ -550,7 +550,6 @@ contains
              KzWave_V = KzWave_V/(Input2SiUnitX*Si2No_V(UnitX_))
           end if
 
-#ifndef SCALAR
           if(ShockSlope /= 0.0)then
 
              CosSlope = 1.0/sqrt(1+ShockSlope**2)
@@ -593,7 +592,6 @@ contains
              ! write(*,*)'      Phase_V(Bx_:Bz_) =',       Phase_V(Bx_:Bz_)
 
           end if
-#endif
        end if
 
        ! Convert momentum to velocity
@@ -1192,7 +1190,6 @@ contains
     IsFound = .true.
 
     if(DoShockramp)then
-#ifndef SCALAR
        SinSlope = ShockSlope/sqrt(1 + ShockSlope**2)
        CosSlope =         1/sqrt(1 + ShockSlope**2)
 
@@ -1247,7 +1244,6 @@ contains
                   *State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
        end select
-#endif
     end if
 
     if(DoResistivityGaussian)then

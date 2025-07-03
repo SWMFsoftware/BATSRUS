@@ -592,7 +592,6 @@ contains
     if(SolarWindRho > 0.0)then
 
        FaceState_VI(Rho_,xMinBc_:zMaxBc_) = SolarWindRho
-#ifndef SCALAR
        FaceState_VI(Ux_, xMinBc_:zMaxBc_) = SolarWindUx
        FaceState_VI(Uy_, xMinBc_:zMaxBc_) = SolarWindUy
        FaceState_VI(Uz_, xMinBc_:zMaxBc_) = SolarWindUz
@@ -600,7 +599,7 @@ contains
        FaceState_VI(By_, xMinBc_:zMaxBc_) = SolarWindBy
        FaceState_VI(Bz_, xMinBc_:zMaxBc_) = SolarWindBz
        FaceState_VI(P_,  xMinBc_:zMaxBc_) = SolarWindP
-#endif
+
        if(UseElectronPressure) FaceState_VI(Pe_,xMinBc_:zMaxBc_) &
             = SolarWindP*ElectronPressureRatio
 
@@ -731,14 +730,13 @@ contains
     end do
 
     ! Convert velocity to momentum for all fluids and boundaries
-#ifndef SCALAR
     do iFluid = 1, nFluid
        if(nFluid > 1) call select_fluid(iFluid)
        CellState_VI(iRhoUx,:) = CellState_VI(iUx,:)*CellState_VI(iRho,:)
        CellState_VI(iRhoUy,:) = CellState_VI(iUy,:)*CellState_VI(iRho,:)
        CellState_VI(iRhoUz,:) = CellState_VI(iUz,:)*CellState_VI(iRho,:)
     end do
-#endif
+
     if(UseOutflowPressure) pOutflow = pOutflowSi*Si2No_V(UnitP_)
 
     ! Minimum value for densities, pressures, energy
@@ -1181,7 +1179,7 @@ contains
        UnitUser_V(iRho)          = No2Io_V(UnitRho_)
        NameUnitUserTec_V(iRho)   = NameTecUnit_V(UnitRho_)
        NameUnitUserIdl_V(iRho)   = NameIdlUnit_V(UnitRho_)
-#ifndef SCALAR
+
        UnitUser_V(iRhoUx:iRhoUz) = No2Io_V(UnitRhoU_)
        UnitUser_V(iP)            = No2Io_V(UnitP_)
        UnitUser_V(iEnergy)       = No2Io_V(UnitEnergyDens_)
@@ -1193,7 +1191,6 @@ contains
        NameUnitUserIdl_V(iRhoUx:iRhoUz) = NameIdlUnit_V(UnitRhoU_)
        NameUnitUserIdl_V(iP)            = NameIdlUnit_V(UnitP_)
        NameUnitUserIdl_V(iEnergy)       = NameIdlUnit_V(UnitEnergyDens_)
-#endif
     end do
 
     ! By default the scalar advected variables are assumed to be like density

@@ -146,7 +146,6 @@ contains
 
     real:: InvClight2Cell
 
-#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'mhd_to_boris'
     !--------------------------------------------------------------------------
@@ -254,7 +253,6 @@ contains
 
     end subroutine mhd_to_boris_simple_cell
     !==========================================================================
-#endif
   end subroutine mhd_to_boris
   !============================================================================
   subroutine boris_to_mhd(iBlock)
@@ -267,7 +265,6 @@ contains
 
     real:: Clight2Cell, InvClight2Cell
 
-#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'boris_to_mhd'
     !--------------------------------------------------------------------------
@@ -374,7 +371,6 @@ contains
 
     end subroutine boris_simple_to_mhd_cell
     !==========================================================================
-#endif
   end subroutine boris_to_mhd
   !============================================================================
   subroutine add_boris_source(iBlock)

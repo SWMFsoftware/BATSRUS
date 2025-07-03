@@ -235,7 +235,6 @@ contains
     real :: InvElectronDens
     logical :: DoTestCell
 
-#ifndef SCALAR
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
@@ -302,7 +301,6 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-#endif
   end subroutine get_efield_in_comoving_frame
   !============================================================================
   subroutine correct_efield_block(iBlock)

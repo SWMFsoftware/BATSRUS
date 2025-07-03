@@ -1080,7 +1080,8 @@ contains
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
                 ForcePerRho_D = &
                      Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_GB(i,j,k,iBlock)**3
-                Source_VC(iRhoUx:iRhoUz,i,j,k) =Source_VC(iRhoUx:iRhoUz,i,j,k)&
+                Source_VC(iRhoUx:iRhoUz,i,j,k) = &
+                     Source_VC(iRhoUx:iRhoUz,i,j,k) &
                      + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
                 Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) + &
                      sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)*ForcePerRho_D)
@@ -1392,7 +1393,6 @@ contains
 
       character(len=*), parameter:: NameSub = 'get_alfven_speed'
       !------------------------------------------------------------------------
-
       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
          FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
               + RightState_VX(Bx_:Bz_,i,j,k))
@@ -1702,8 +1702,7 @@ contains
     !==========================================================================
     subroutine get_uplus(StateIn_V, uPlus_D)
 
-      ! This subroutine gets the uPlus_D at the corresponding face
-      ! using the face state values StateIn_V
+      ! Calculate the charge weighted ion velocity uPlus_D from StateIn_V
 
       use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, nIonFluid
 
@@ -1712,7 +1711,6 @@ contains
 
       real :: ChargeDens_I(nIonFluid)
       !------------------------------------------------------------------------
-#ifndef SCALAR
       ChargeDens_I    = ChargeIon_I*StateIn_V(iRhoIon_I)/MassIon_I
       InvElectronDens = 1.0/sum(ChargeDens_I)
 
@@ -1721,7 +1719,7 @@ contains
       uPlus_D(z_) = InvElectronDens*sum( ChargeDens_I*StateIn_V(iUzIon_I) )
 
       if (DoTestCell) write(*,*) 'uPlus_D =', uPlus_D
-#endif
+
     end subroutine get_uplus
     !==========================================================================
     subroutine calc_divb_source(iBlock)

@@ -782,7 +782,6 @@ contains
 
       character(len=*), parameter:: NameSub = 'set_fixed_semi_bc'
       !------------------------------------------------------------------------
-#ifndef SCALAR
       if(UseSemiHallResist .or. UseSemiResistivity)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(BxImpl_:BzImpl_,i,j,k) = CellState_VI(Bx_:Bz_,iSide)
@@ -815,7 +814,7 @@ contains
          call stop_mpi(NameSub// &
               ': not working for TypeSemiImplicit='//TypeSemiImplicit)
       end if
-#endif
+
     end subroutine set_fixed_semi_bc
     !==========================================================================
     subroutine fix_b0(iVarMin, iVarMax, iBlock, iMin, iMax, &
@@ -865,7 +864,6 @@ contains
       ! logical :: DoTest, DoTestMe
       ! call set_oktest(NameSub, DoTest, DoTestMe)
 
-#ifndef SCALAR
       character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -930,7 +928,7 @@ contains
                  State_VG(Bx_:Bz_,i,j,k) - B0_DGB(:,i,j,k,iBlock)
          end if
       end do; end do; end do
-#endif
+
     end subroutine set_solar_wind_bc
     !==========================================================================
     subroutine set_solar_wind_bc_buffer

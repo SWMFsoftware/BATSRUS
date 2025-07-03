@@ -128,8 +128,6 @@ contains
     StateCons_V(1:nVar)  = State_V
     NormalX = Normal_D(1); NormalY = Normal_D(2); NormalZ = Normal_D(3)
 
-#ifndef SCALAR
-
     ! Make sure normal electric field is initialized
     En = 0.0
 
@@ -1016,7 +1014,6 @@ contains
 
     end subroutine get_burgers_flux
     !==========================================================================
-#endif
   end subroutine get_physical_flux
   !============================================================================
 end module ModPhysicalFlux

@@ -1158,7 +1158,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_thread_plotvar'
     !--------------------------------------------------------------------------
-#ifndef SCALAR
     call test_start(NameSub, DoTest, iBlock)
     ! Calculate B0 and BFull
     B0_D = 0.0
@@ -1389,8 +1388,8 @@ contains
           end do
        end select
     end do ! iVar
+
     call test_stop(NameSub, DoTest, iBlock)
-#endif
   end subroutine set_thread_plotvar
   !============================================================================
   subroutine save_thread_restart
@@ -1648,7 +1647,6 @@ contains
       ! Total magnetic field
       real :: BTotal_D(3)
       !------------------------------------------------------------------------
-#ifndef SCALAR
       BTotal_D = State_V(Bx_:Bz_) + B0_D
       if(sum(BTotal_D*Xyz_D) <  0.0)then
          StateThread_V(A2Major_) = State_V(WaveLast_ )
@@ -1669,7 +1667,6 @@ contains
       else
          StateThread_V(PSi_) = State_V(p_)*No2Si_V(UnitEnergyDens_)
       end if
-#endif
 
     end subroutine state_mhd_to_thread
     !==========================================================================

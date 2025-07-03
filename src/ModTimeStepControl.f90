@@ -25,8 +25,8 @@ module ModTimeStepControl
   ! break the CFL condition locally. Modify the time
   ! step in these occurrences, to enforce
   ! the Courant-Friedrichs-Levi condition
-
   public:: enforce_cfl
+
   logical, public:: DoEnforceCfl = .false.
 
   logical, public:: UseTimeStepControl  = .false.
@@ -237,7 +237,7 @@ contains
             Flux_VYI(Vdt_,iTest,jTest:jTest+1,kTest,iGang)
        if(nK>1) write(*,*) NameSub,' Vdt_Z(kTest:kTest+1)=', &
             Flux_VZI(Vdt_,iTest,jTest,kTest:kTest+1,iGang)
-       write(*,*) NameSub,' DtMax_CB=',DtMax_CB(iTest,jTest,kTest,iBlock)
+       write(*,*) NameSub,' DtMax_CB=', DtMax_CB(iTest,jTest,kTest,iBlock)
     end if
 #endif
 
@@ -313,19 +313,23 @@ contains
   end subroutine calc_timestep
   !============================================================================
   subroutine enforce_cfl(iBlock)
+
     use ModSize,    ONLY: nI, nJ, nK
     use ModMain,    ONLY: DtMax_B
     use ModAdvance, ONLY: DtMax_CB
+
     integer, intent(in)::iBlock
     real :: DtMax_C(nI,nJ,nK), DtMax
     !--------------------------------------------------------------------------
     ! Store DtMax
-    DtMax_C = DtMax_CB(:,:,:, iBlock); DtMax = DtMax_B(iBlock)
+    DtMax_C = DtMax_CB(:,:,:,iBlock)
+    DtMax = DtMax_B(iBlock)
     call calc_timestep(iBlock)
-    ! Restore DtMax
-    DtMax_B(iBlock) = DtMax
+
     ! Limit time step to ensure the fulfillment of the CFL condition
-    DtMax_CB(:,:,:, iBlock) = min(DtMax_CB(:,:,:, iBlock), DtMax_C)
+    DtMax_B(iBlock) = min(DtMax_B(iBlock), DtMax)
+    DtMax_CB(:,:,:,iBlock) = min(DtMax_CB(:,:,:,iBlock), DtMax_C)
+
   end subroutine enforce_cfl
   !============================================================================
   subroutine set_global_timestep(TimeSimulationLimit)
