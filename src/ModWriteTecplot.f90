@@ -2166,6 +2166,8 @@ contains
 
        ! Default value for NameUnit is empty string
        NameUnit = ''
+       ! Default value for the variable name is the plot variable name.
+       NameTecVar = NamePlotVar
 
        select case(String)
        case('rho')
