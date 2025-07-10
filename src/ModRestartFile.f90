@@ -104,7 +104,7 @@ module ModRestartFile
   real,allocatable :: ImplOldRead_VCB(:,:,:,:,:)
 
   ! Logical variable if FullB is saved in restart
-  logical, public :: UseRestartWithFullB = .false.
+  logical, public :: UseRestartWithFullB = .true.
 
 contains
   !============================================================================
@@ -199,7 +199,7 @@ contains
           if(.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
     end if
-    if(UseB0)then
+    if(UseB0 .and. UseRestartWithFullB)then
        !$omp parallel do
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call add_b0(iBlock)
@@ -239,7 +239,7 @@ contains
           if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
     end if
-    if(UseB0)then
+    if(UseB0 .and. UseRestartWithFullB)then
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call subtract_b0(iBlock)
        end do
