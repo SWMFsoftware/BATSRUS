@@ -2198,7 +2198,7 @@ contains
           IsReadNameVarRestart = .true.
 
        case("#RESTARTWITHFULLB")
-          UseRestartWithFullB = .true.
+          call read_var("UseRestartWithFullB", UseRestartWithFullB)
 
        case("#PLOTDIR")
           call read_var("NamePlotDir",NamePlotDir)
