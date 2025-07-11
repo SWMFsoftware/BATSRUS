@@ -84,6 +84,7 @@ OBJECTS = \
 	ModPhysics.o \
 	ModPIC.o \
 	ModPlotBox.o \
+	ModPlotScalars.o \
 	ModPlotShell.o \
 	ModPlotShock.o \
 	ModPointImplicit.o \
