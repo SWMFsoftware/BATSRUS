@@ -170,6 +170,13 @@ contains
        call read_var('DoWriteBlockData', DoWriteBlockData)
        call read_var('DoReadBlockData',  DoReadBlockData)
 
+    case("#RESTARTWITHFULLB")
+       ! This command is here for backward compatibility only
+       UseRestartWithFullB = .true.
+
+    case("#RESTARTFULLB")
+       call read_var("UseRestartWithFullB", UseRestartWithFullB)
+
     case default
        call stop_mpi(NameSub//' unknown NameCommand='//NameCommand)
     end select
@@ -575,7 +582,9 @@ contains
        write(UnitTmp_,*)
     end if
 
-    write(UnitTmp_,'(a)')'#RESTARTWITHFULLB'
+    write(UnitTmp_,'(a)')'#RESTARTFULLB'
+    write(UnitTmp_,'(l1,a)') UseRestartWithFullB, &
+         cTab//cTab//cTab//'UseRestartWithFullB'
     write(UnitTmp_,*)
 
     write(UnitTmp_,'(a)')'#END'

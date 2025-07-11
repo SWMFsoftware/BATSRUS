@@ -2179,15 +2179,13 @@ contains
              call stop_mpi(NameSub//' ERROR: Incompatible number of variables')
           end if
 
-       case("#NEWRESTART","#RESTARTINDIR","#RESTARTINFILE",&
-            "#PRECISION","#BLOCKLEVELSRELOADED")
+       case("#NEWRESTART", "#RESTARTINDIR", "#RESTARTINFILE", &
+            "#PRECISION", "#BLOCKLEVELSRELOADED")
           if(.not.is_first_session())CYCLE READPARAM
           call read_restart_parameters(NameCommand)
 
-       case("#SAVERESTART", "#RESTARTOUTDIR","#RESTARTOUTFILE")
-          call read_restart_parameters(NameCommand)
-
-       case('#RESTARTBLOCKDATA')
+       case("#SAVERESTART", "#RESTARTOUTDIR", "#RESTARTOUTFILE", &
+            "#RESTARTBLOCKDATA", "#RESTARTWITHFULLB", "#RESTARTFULLB")
           call read_restart_parameters(NameCommand)
 
        case("#RESTARTVARIABLES")
@@ -2196,9 +2194,6 @@ contains
           call read_var('NameVarRestartRead', NameVarRestartRead, &
                IsLowerCase=.true.)
           IsReadNameVarRestart = .true.
-
-       case("#RESTARTWITHFULLB")
-          call read_var("UseRestartWithFullB", UseRestartWithFullB)
 
        case("#PLOTDIR")
           call read_var("NamePlotDir",NamePlotDir)

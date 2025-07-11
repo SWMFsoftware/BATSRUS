@@ -1707,15 +1707,27 @@ is saved into the restart files. These values are used by the
 Constrained Transport scheme.
 </command>
 
-<command name="RESTARTWITHFULLB">
+<command name="RESTARTFULLB">
+  <parameter name="UseRestartWithFullB" type="logical" default="T"/>
 
+#RESTARTFULLB
+F                   UseRestartWithFullB
+
+This command decides if the restart file contains the full magnetic field
+(B=B0+B1) or only B1. The command is written ino the restart header file
+to indicate the content of the restart file.
+
+Saving the total field allows changing B0 during restart and also allows using
+the restart files without knowledge of B0.
+
+The current default is saving total B.
+</command>
+
+<command name="RESTARTWITHFULLB">
 #RESTARTWITHFULLB
 
-This command is written by the code into the restart header file and indicates
-that the full magnetic field (B=B0+B1) was saved. In the past only B1 was saved.
-Saving the total field allows changing B0 during restart and also allows using
-the restart files without knowledge of B0. The current default is saving total B,
-so this command is always present in the current restart header files.
+This command is only for backward compatibility. It is present in prior
+restart file headers and it sets UseRestartWithFullB to true value.
 </command>
 
 <command name="OUTERBOUNDARY">
