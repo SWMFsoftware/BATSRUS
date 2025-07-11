@@ -1482,7 +1482,7 @@ test_outerhelioawsom_restart_run:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.awsom.restart ./PARAM.in	
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat -replace RESULTS_restart
 
 test_outerhelioawsom_restart_check:
 	-@(${DIFFNUM} -r=3e-5 -a=1e-29 -t \
