@@ -17,6 +17,7 @@ module ModPlotScalars
   private   ! except
   public:: set_plot_scalars
 contains
+  !============================================================================
     subroutine set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
 
     ! For file iPlotFile set Param_I based on NameParam_I
