@@ -192,6 +192,7 @@ contains
     use ModMpi
     use ModMain,     ONLY: tSimulation, nStep
     use ModPlotFile, ONLY: save_plot_file
+    use ModPlotScalars, ONLY: set_plot_scalars
 
     integer,          intent(in) :: iFile, nPlotvar
     character(len=*), intent(in) :: NameFile, NameVar_V(nPlotVar), NameUnit
@@ -201,6 +202,12 @@ contains
 
     real, allocatable :: PlotVarWeight_VII(:,:,:)
     real, allocatable :: DivuDx_II(:,:), DivuDxMin_II(:,:)
+
+    ! Equation parameters
+    integer, parameter:: MaxParam = 100
+    real              :: Param_I(MaxParam)
+    character (len=10):: NameParam_I(MaxParam)
+    integer:: nParam
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_shock'
@@ -261,7 +268,8 @@ contains
        do iVar = 1, nPlotVar
           NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
-
+       NameVar = trim(NameVar)//' '//trim(StringPlotParam_I(iFile))
+       call set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
        ! Call save_plot_file to write data to disk.
        call save_plot_file(NameFile, &
             TypeFileIn=TypeFile_I(iFile), &
@@ -269,6 +277,7 @@ contains
             nStepIn=nStep, &
             TimeIn=tSimulation, &
             NameVarIn = NameVar, &
+            ParamIn_I = Param_I(:nParam), &
             CoordMinIn_D = [cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
             CoordMaxIn_D = [cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
             VarIn_VII = PlotVar_VII)

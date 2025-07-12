@@ -104,7 +104,7 @@ module ModRestartFile
   real,allocatable :: ImplOldRead_VCB(:,:,:,:,:)
 
   ! Logical variable if FullB is saved in restart
-  logical, public :: UseRestartWithFullB = .false.
+  logical, public :: UseRestartWithFullB = .true.
 
 contains
   !============================================================================
@@ -170,6 +170,13 @@ contains
        call read_var('DoWriteBlockData', DoWriteBlockData)
        call read_var('DoReadBlockData',  DoReadBlockData)
 
+    case("#RESTARTWITHFULLB")
+       ! This command is here for backward compatibility only
+       UseRestartWithFullB = .true.
+
+    case("#RESTARTFULLB")
+       call read_var("UseRestartWithFullB", UseRestartWithFullB)
+
     case default
        call stop_mpi(NameSub//' unknown NameCommand='//NameCommand)
     end select
@@ -199,7 +206,7 @@ contains
           if(.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
     end if
-    if(UseB0)then
+    if(UseB0 .and. UseRestartWithFullB)then
        !$omp parallel do
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call add_b0(iBlock)
@@ -239,7 +246,7 @@ contains
           if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
     end if
-    if(UseB0)then
+    if(UseB0 .and. UseRestartWithFullB)then
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call subtract_b0(iBlock)
        end do
@@ -575,7 +582,9 @@ contains
        write(UnitTmp_,*)
     end if
 
-    write(UnitTmp_,'(a)')'#RESTARTWITHFULLB'
+    write(UnitTmp_,'(a)')'#RESTARTFULLB'
+    write(UnitTmp_,'(l1,a)') UseRestartWithFullB, &
+         cTab//cTab//cTab//'UseRestartWithFullB'
     write(UnitTmp_,*)
 
     write(UnitTmp_,'(a)')'#END'

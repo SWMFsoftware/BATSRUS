@@ -127,6 +127,8 @@ contains
     !
     ! case('load balance done')
     !
+    ! case('timestep done')
+    !
     ! case('write progress')
     !
     ! end select
