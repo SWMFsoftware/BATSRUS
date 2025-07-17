@@ -6526,7 +6526,7 @@ paraboloidx stretched	StringShape
 #REGION
 conemars                NameRegion
 conex0 sat:mars          StringShape
-350                     Heeight
+350                     Height
 100                     Radius
 
 #REGION
