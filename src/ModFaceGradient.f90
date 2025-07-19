@@ -813,7 +813,7 @@ contains
           DcoordDxyz_DDFD(y_,:,i,1,k,y_) = Dxyz_D
        end do; end do
     end if
-    if(DiLevel_EB(4,iBlock) = =Unset_)then
+    if(DiLevel_EB(4,iBlock) == Unset_)then
        !$acc loop vector collapse(2) independent private(Dxyz_D)
        do k = 1, nK; do i = 1, nI
           Dxyz_D = Xyz_DGB(:,i,nJ + 1,k,iBlock) - Xyz_DGB(:,i,nJ,k,iBlock)
