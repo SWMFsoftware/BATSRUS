@@ -1031,7 +1031,7 @@ contains
            nSatellite, set_satellite_file_status, set_satellite_flags, &
            TimeSatStart_I, TimeSatEnd_I, iPointCurrentSat_I,  &
            TypeTrajTimeRange_I, StartTimeTraj_I, EndTimeTraj_I, DtTraj_I, &
-           nPointTraj_I, TimeSat_II
+           nPointTraj_I, TimeSat_II, iProcSat_I, iBlockSat_I
       use ModWriteLogSatFile,   ONLY: write_logfile
       use ModGroundMagPerturb, ONLY: &
            DoSaveMags, DoSaveGridmag, write_magnetometers, &
@@ -1050,7 +1050,7 @@ contains
       use ModAdvance,           ONLY: State_VGB, DtMax_CB
       use ModB0,                ONLY: B0_DGB
 
-      integer :: iSat, iPointSat, iParcel
+      integer :: iSat, iPointSat, iParcel, iBlockUpdate
 
       ! Backup location for the tSimulation variable.
       ! tSimulation is used in steady-state runs as a loop parameter
@@ -1063,7 +1063,28 @@ contains
       !------------------------------------------------------------------------
       if(nStep <= nStepOutputLast_I(iFile) .and.&
            (DnOutput_I(iFile) >= 0 .or. DtOutput_I(iFile) > 0.0)) RETURN
-      call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
+
+      iBlockUpdate = 0
+#ifdef _OPENACC
+      ! Find out the block that is needed for satellite output.
+      if(IsTimeAccurate .and. &
+           iFile > Satellite_ .and. iFile <= Satellite_ + nSatellite) then
+         iSat = iFile - Satellite_
+         if(TypeTrajTimeRange_I(iSat) == 'orig') then
+            call set_satellite_flags(iSat)
+            if(iProc == iProcSat_I(iSat)) iBlockUpdate = iBlockSat_I(iSat)
+         end if
+      end if
+#endif
+
+      if (iBlockUpdate>0) then
+         ! Only update the block that is required for satellite output.
+
+         !$acc update host(State_VGB(:, :, :, :, iBlockUpdate))
+      else
+         call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
+      end if
+
       if(iFile == restart_) then
          ! Case for restart file
          if(.not.DoSaveRestart)RETURN
