@@ -1052,11 +1052,6 @@ contains
 
       integer :: iSat, iPointSat, iParcel
 
-      ! iBlockUpdate > 0: Copy the iBlockUpdate of State_VGB to CPU
-      ! iBlockUpdate = 0: Copy State_VGB to CPU
-      ! iBlockUpdate < 0: Do not copy any block of State_VGB 
-      integer :: iBlockUpdate
-
       ! Backup location for the tSimulation variable.
       ! tSimulation is used in steady-state runs as a loop parameter
       ! in the save_files subroutine, where set_satellite_flags and
@@ -1069,27 +1064,26 @@ contains
       if(nStep <= nStepOutputLast_I(iFile) .and.&
            (DnOutput_I(iFile) >= 0 .or. DtOutput_I(iFile) > 0.0)) RETURN
 
-      iBlockUpdate = 0
 #ifdef _OPENACC
-      ! Find out the block that is needed for satellite output.
+      ! Check if this is a satellite file that requires less copying
       if(IsTimeAccurate .and. &
            iFile > Satellite_ .and. iFile <= Satellite_ + nSatellite) then
          iSat = iFile - Satellite_
-         iBlockUpdate = -1
          if(TypeTrajTimeRange_I(iSat) == 'orig') then
             call set_satellite_flags(iSat)
-            if(iProc == iProcSat_I(iSat)) iBlockUpdate = iBlockSat_I(iSat)
+            if(iProc == iProcSat_I(iSat))then
+               ! Only update the block that is required for satellite output
+               !$acc update host(State_VGB(:,:,:,:,iBlockSat_I(iSat)))
+            end if
+         else
+            ! Get full State_VGB for trajectory range satellite
+            call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
          end if
-      end if
-#endif
-
-      if (iBlockUpdate>0) then
-         ! Only update the block that is required for satellite output.
-
-         !$acc update host(State_VGB(:, :, :, :, iBlockUpdate))
-      elseif(iBlockUpdate == 0) then 
+      else
+         ! Get full State_VGB for plot files and log files
          call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
       end if
+#endif
 
       if(iFile == restart_) then
          ! Case for restart file
