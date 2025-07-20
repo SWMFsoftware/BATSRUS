@@ -914,6 +914,14 @@ contains
        case("#SAVEPLOT")
           call read_var('nPlotFile', nPlotFileRead)
           nFile = max(nFile, plot_ + nPlotFileRead)
+          if(nPlotFileRead < nPlotFile)then
+             ! Disable plotting files with the number greater than the new
+             ! nPlotFile
+             DnOutput_I(plot_+nPlotFileRead+1:plot_+nPlotFile) = -1
+             DtOutput_I(plot_+nPlotFileRead+1:plot_+nPlotFile) = -1.0
+             nStepOutputLast_I(plot_+nPlotFileRead+1:plot_+nPlotFile) = -1
+             iTimeOutputLast_I(plot_+nPlotFileRead+1:plot_+nPlotFile) = -1
+          end if
           if (nFile > MaxFile .or. nPlotFileRead > MaxPlotFile) call stop_mpi(&
                'The number of ouput files is too large in #SAVEPLOT:'&
                //' nPlotFile > MaxPlotFile .or. nFile > MaxFile')
