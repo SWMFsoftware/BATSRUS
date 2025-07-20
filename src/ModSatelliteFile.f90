@@ -64,8 +64,8 @@ module ModSatelliteFile
   logical:: IsOpen_I(MaxSatellite) = .false.
   logical:: UseSatFile_I(MaxSatellite)   = .true.
   integer, public :: nPointTraj_I(MaxSatellite)
-  integer:: iProcSat_I(MaxSatellite)
-  integer:: iBlockSat_I(MaxSatellite)
+  integer, public :: iProcSat_I(MaxSatellite)
+  integer, public :: iBlockSat_I(MaxSatellite)
   real, allocatable   :: XyzSat_DII(:,:,:)
   real, public, allocatable   :: TimeSat_II(:, :)
 

@@ -787,52 +787,52 @@ contains
                inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
        end do; end do; end do
     end if
-    if(.not.UseFirstOrderBc)RETURN
-    if(DiLevel_EB(1,iBlock)==Unset_)then
+    if(.not.UseFirstOrderBc) RETURN
+    if(DiLevel_EB(1,iBlock) == Unset_)then
        !$acc loop vector collapse(2) independent private(Dxyz_D)
-       do k=1,nK; do j=1,nJ
+       do k = 1, nK; do j = 1, nJ
           Dxyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(x_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(x_,:,1,j,k,x_) = Dxyz_D
        end do; end do
     end if
-    if(DiLevel_EB(2,iBlock)==Unset_)then
+    if(DiLevel_EB(2,iBlock) == Unset_)then
        !$acc loop vector collapse(2) independent private(Dxyz_D)
-       do k=1,nK; do j=1,nJ
+       do k = 1, nK; do j = 1, nJ
           Dxyz_D = Xyz_DGB(:,nI + 1,j,k,iBlock) - Xyz_DGB(:,nI,j,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(x_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(x_,:,nI + 1,j,k,x_) = Dxyz_D
        end do; end do
     end if
-    if(nJ==1)RETURN
-    if(DiLevel_EB(3,iBlock)==Unset_)then
+    if(nJ == 1)RETURN
+    if(DiLevel_EB(3,iBlock) == Unset_)then
        !$acc loop vector collapse(2) independent private(Dxyz_D)
-       do k=1,nK; do i=1,nI
+       do k = 1, nK; do i = 1, nI
           Dxyz_D = Xyz_DGB(:,i,1,k,iBlock) - Xyz_DGB(:,i,0,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(y_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(y_,:,i,1,k,y_) = Dxyz_D
        end do; end do
     end if
-    if(DiLevel_EB(4,iBlock)==Unset_)then
+    if(DiLevel_EB(4,iBlock) == Unset_)then
        !$acc loop vector collapse(2) independent private(Dxyz_D)
-       do k=1,nK; do i=1,nI
+       do k = 1, nK; do i = 1, nI
           Dxyz_D = Xyz_DGB(:,i,nJ + 1,k,iBlock) - Xyz_DGB(:,i,nJ,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(y_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(y_,:,i,nJ+1,k,y_) = Dxyz_D
        end do; end do
     end if
-    if(nK==1)RETURN
-    if(DiLevel_EB(5,iBlock)==Unset_)then
+    if(nK == 1) RETURN
+    if(DiLevel_EB(5,iBlock) == Unset_)then
        !$acc loop vector collapse(2) independent private(Dxyz_D)
-       do j=1,nJ; do i=1,nI
+       do j = 1, nJ; do i = 1, nI
           Dxyz_D = Xyz_DGB(:,i,j,1,iBlock) - Xyz_DGB(:,i,j,0,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(z_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(z_,:,i,j,1,z_) = Dxyz_D
        end do; end do
     end if
-    if(DiLevel_EB(6,iBlock)==Unset_)then
+    if(DiLevel_EB(6,iBlock) == Unset_)then
        !$acc loop vector collapse(2) independent private(Dxyz_D)
-       do j=1,nJ; do i=1,nI
+       do j = 1, nJ; do i = 1, nI
           Dxyz_D = Xyz_DGB(:,i,j,nK + 1,iBlock) - Xyz_DGB(:,i,j,nK,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(z_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(z_,:,i,j,nK+1,z_) = Dxyz_D

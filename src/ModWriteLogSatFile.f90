@@ -466,8 +466,10 @@ contains
     end if
 
     LogVar_I = 0.0
-    Tmp1_GB = 1.0
-    DomainVolume  =integrate_grid(Tmp1_GB, UseGlobal=.true.)
+    if(abs(iSat)==0)  then
+       Tmp1_GB = 1.0
+       DomainVolume  =integrate_grid(Tmp1_GB, UseGlobal=.true.)
+    end if
 
     ! Obtain data to calculate log variables
     if(iSat>=1)then
