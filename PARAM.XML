@@ -4718,7 +4718,7 @@ indices are not calculated.
 </command>
 
 <command name="SAVEPLOT">
-  <parameter name="nPlotFile" type="integer" min="0" max="15" default="1" />
+  <parameter name="nPlotFile" type="integer" min="0" max="25" default="1" />
   <for name="iPlot" from="1" to="$nPlotFile">
     <parameter name="StringPlot" type="strings" min="3" max="3">
       <part name="plotform" type="string" input="select"
