@@ -1050,7 +1050,12 @@ contains
       use ModAdvance,           ONLY: State_VGB, DtMax_CB
       use ModB0,                ONLY: B0_DGB
 
-      integer :: iSat, iPointSat, iParcel, iBlockUpdate
+      integer :: iSat, iPointSat, iParcel
+
+      ! iBlockUpdate > 0: Copy the iBlockUpdate of State_VGB to CPU
+      ! iBlockUpdate = 0: Copy State_VGB to CPU
+      ! iBlockUpdate < 0: Do not copy any block of State_VGB 
+      integer :: iBlockUpdate
 
       ! Backup location for the tSimulation variable.
       ! tSimulation is used in steady-state runs as a loop parameter
@@ -1070,6 +1075,7 @@ contains
       if(IsTimeAccurate .and. &
            iFile > Satellite_ .and. iFile <= Satellite_ + nSatellite) then
          iSat = iFile - Satellite_
+         iBlockUpdate = -1
          if(TypeTrajTimeRange_I(iSat) == 'orig') then
             call set_satellite_flags(iSat)
             if(iProc == iProcSat_I(iSat)) iBlockUpdate = iBlockSat_I(iSat)
@@ -1081,7 +1087,7 @@ contains
          ! Only update the block that is required for satellite output.
 
          !$acc update host(State_VGB(:, :, :, :, iBlockUpdate))
-      else
+      elseif(iBlockUpdate == 0) then 
          call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
       end if
 
