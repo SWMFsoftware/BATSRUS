@@ -1032,58 +1032,59 @@ contains
            TimeSatStart_I, TimeSatEnd_I, iPointCurrentSat_I,  &
            TypeTrajTimeRange_I, StartTimeTraj_I, EndTimeTraj_I, DtTraj_I, &
            nPointTraj_I, TimeSat_II, iProcSat_I, iBlockSat_I
-      use ModWriteLogSatFile,   ONLY: write_logfile
+      use ModWriteLogSatFile, ONLY: write_logfile
       use ModGroundMagPerturb, ONLY: &
            DoSaveMags, DoSaveGridmag, write_magnetometers, &
            DoWriteIndices, write_geoindices, nMagGridFile
       use ModParticleFieldLine, ONLY: write_plot_particle
-      use ModWritePlot,         ONLY: write_plot
-      use ModWritePlotLos,      ONLY: write_plot_los
+      use ModWritePlot, ONLY: write_plot
+      use ModWritePlotLos, ONLY: write_plot_los
       use ModWritePlotRadiowave, ONLY: write_plot_radiowave
-      use ModWriteTecplot,      ONLY: assign_node_numbers
-      use ModFieldTrace,        ONLY: &
+      use ModWriteTecplot, ONLY: assign_node_numbers
+      use ModFieldTrace, ONLY: &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
-      use ModFieldTraceFast,    ONLY: &
+      use ModFieldTraceFast, ONLY: &
            trace_field_grid, Trace_DSNB, calc_squash_factor
-      use ModBuffer,            ONLY: plot_buffer
-      use ModMessagePass,       ONLY: exchange_messages
-      use ModAdvance,           ONLY: State_VGB, DtMax_CB
-      use ModB0,                ONLY: B0_DGB
+      use ModBuffer, ONLY: plot_buffer
+      use ModMessagePass, ONLY: exchange_messages
+      use ModAdvance, ONLY: State_VGB, DtMax_CB
+      use ModB0, ONLY: UseB0, B0_DGB
 
-      integer :: iSat, iPointSat, iParcel, iBlockUpdate
+      integer :: iSat, iPointSat, iParcel
 
-      ! Backup location for the tSimulation variable.
       ! tSimulation is used in steady-state runs as a loop parameter
       ! in the save_files subroutine, where set_satellite_flags and
       ! write_logfile are called with different tSimulation values
       ! spanning all the satellite trajectory cut. Old tSimulation value
       ! is saved here before and it is restored after the loop.
-
       real :: tSimulationBackup = 0.0
       !------------------------------------------------------------------------
       if(nStep <= nStepOutputLast_I(iFile) .and.&
            (DnOutput_I(iFile) >= 0 .or. DtOutput_I(iFile) > 0.0)) RETURN
 
-      iBlockUpdate = 0
 #ifdef _OPENACC
-      ! Find out the block that is needed for satellite output.
+      ! Check if this is a satellite file that requires less copying
       if(IsTimeAccurate .and. &
            iFile > Satellite_ .and. iFile <= Satellite_ + nSatellite) then
          iSat = iFile - Satellite_
          if(TypeTrajTimeRange_I(iSat) == 'orig') then
             call set_satellite_flags(iSat)
-            if(iProc == iProcSat_I(iSat)) iBlockUpdate = iBlockSat_I(iSat)
+            if(iProc == iProcSat_I(iSat))then
+               ! Only update the block that is required for satellite output
+               !$acc update host(State_VGB(:,:,:,:,iBlockSat_I(iSat)))
+               if(UseB0)then
+                  !$acc update host(B0_DGB(:,:,:,:,iBlockSat_I(iSat)))
+               end if
+            end if
+         else
+            ! Get full State_VGB for trajectory range satellite
+            call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
          end if
-      end if
-#endif
-
-      if (iBlockUpdate>0) then
-         ! Only update the block that is required for satellite output.
-
-         !$acc update host(State_VGB(:, :, :, :, iBlockUpdate))
       else
+         ! Get full State_VGB for plot files and log files
          call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
       end if
+#endif
 
       if(iFile == restart_) then
          ! Case for restart file
@@ -1225,7 +1226,7 @@ contains
             do while (tSimulation <= EndTimeTraj_I(iSat))
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
-               call write_logfile(iSat,iFile, &
+               call write_logfile(iSat, iFile, &
                     TimeSatHeaderIn=tSimulationBackup)
                tSimulation = tSimulation + DtTraj_I(iSat)
             end do
@@ -1247,7 +1248,7 @@ contains
                tSimulation = TimeSat_II(iSat, iPointSat)
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
-               call write_logfile(iSat,iFile, &
+               call write_logfile(iSat, iFile, &
                     TimeSatHeaderIn=tSimulationBackup)
             end do
 
@@ -1277,7 +1278,7 @@ contains
                   call set_satellite_flags(iSat)
                   ! write for ALL the points of trajectory cut
                   call write_logfile(iSat,iFile)
-                  tSimulation = tSimulation+DtOutput_I(iSat+Satellite_)
+                  tSimulation = tSimulation + DtOutput_I(iSat+Satellite_)
                end do
                tSimulation = tSimulationBackup    ! ... Restore
                iPointCurrentSat_I(iSat) = 1
