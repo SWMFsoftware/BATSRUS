@@ -33,7 +33,7 @@ T			UseNonConservative
 30			MaxBlock
 
 #UNIFORMSTATE
-0.25			StateVar Rho
+1.0			StateVar Rho
 1.0			StateVar Ux
 0.0			StateVar Uy
 0.0			StateVar Uz
@@ -59,7 +59,7 @@ Uz			NameVar
 32.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
-0.0			Phase
+90.0			Phase
 
 #WAVE
 By			NameVar
@@ -77,7 +77,7 @@ Bz			NameVar
 32.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
-0.0			Phase
+90.0			Phase
 
 #OUTERBOUNDARY
 periodic		TypeBc1
