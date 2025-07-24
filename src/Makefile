@@ -95,6 +95,7 @@ OBJECTS = \
 	ModRadioWaveImage.o \
 	ModResistivity.o \
 	ModRestartFile.o \
+	ModReverseField.o \
 	ModSatelliteFile.o \
 	ModSemiImplicit.o \
 	ModSetInitialCondition.o \
