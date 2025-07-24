@@ -1188,7 +1188,8 @@ contains
 
     if(FrictionSi > 0.0) call calc_friction(iBlock)
 
-    if(SignB_>1 .and. DoThinCurrentSheet)then
+    if(SignB_ > 1 .and. .not.UseSaMhd)then
+       ! Add SignB*div U source term for a pure advection
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
