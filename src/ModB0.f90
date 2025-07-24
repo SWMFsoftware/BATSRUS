@@ -90,19 +90,23 @@ module ModB0
   real, public, allocatable :: DivB0_C(:,:,:)
   !$omp threadprivate( CurlB0_DC, DivB0_C, B0MomentumSource_DC )
 
-  ! Local variables
-
   ! B0 field at the resolution change interfaces
   real, public, allocatable :: B0ResChangeX_DIIEB(:,:,:,:,:)
   real, public, allocatable :: B0ResChangeY_DIIEB(:,:,:,:,:)
   real, public, allocatable :: B0ResChangeZ_DIIEB(:,:,:,:,:)
+
+  logical, public:: UseB0Wave = .false.
+
+  ! Local variables
+  real:: B0Wave0_D(3), B0Wave1_D(3), B0WaveNumber_D(3) = -1.0, B0WavePhase
 
 contains
   !============================================================================
   subroutine read_b0_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
-    use ModPhysics,   ONLY: MonopoleStrengthSi
+    use ModPhysics, ONLY: MonopoleStrengthSi
+    use ModNumConst, ONLY: cTwoPi, cDegToRad
 
     character(len=*), intent(in):: NameCommand
 
@@ -147,6 +151,22 @@ contains
     case("#MONOPOLEB0")
        call read_var('MonopoleStrengthSi', MonopoleStrengthSi)
 
+    case("#B0WAVE")
+       call read_var('UseB0Wave', UseB0Wave)
+       if(UseB0Wave)then
+          call read_var('B0Wave0X', B0Wave0_D(1))
+          call read_var('B0Wave0Y', B0Wave0_D(2))
+          call read_var('B0Wave0Z', B0Wave0_D(3))
+          call read_var('B0Wave1X', B0Wave1_D(1))
+          call read_var('B0Wave1Y', B0Wave1_D(2))
+          call read_var('B0Wave1Z', B0Wave1_D(3))
+          call read_var(             'B0WaveLengthX', B0WaveNumber_D(1))
+          if(nDim > 1) call read_var('B0WaveLengthY', B0WaveNumber_D(2))
+          if(nDim > 2) call read_var('B0WaveLengthZ', B0WaveNumber_D(3))
+          B0WaveNumber_D = max(0.0, cTwoPi/B0WaveNumber_D)
+          call read_var('B0WavePhase', B0WavePhase)
+          B0WavePhase = B0WavePhase*cDegToRad
+       end if
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -159,7 +179,7 @@ contains
     use BATL_lib, ONLY: iComm, iProc
     use ModMagnetogram, ONLY: init_magnetogram_lookup_table, rMaxB0, &
          iTableB0, iTableB0local
-    use ModGeometry,    ONLY: RadiusMax
+    use ModGeometry, ONLY: RadiusMax
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_b0'
@@ -722,7 +742,10 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_b0'
     !--------------------------------------------------------------------------
-    if(iTableB0 > 0)then
+    if(UseB0Wave)then
+       B0_D = B0Wave0_D &
+            + B0Wave1_D*cos(B0WavePhase + sum(B0WaveNumber_D*Xyz_D))
+    elseif(iTableB0 > 0)then
        if(iTableB0New > 0 .and. IsTimeAccurate)then
           ! Interpolate to the current time expressed as CarringtonNumber
           CarringtonNumber = &
@@ -739,7 +762,7 @@ contains
     elseif(MonopoleStrength /= 0.0)then
        r = norm2(Xyz_D(1:nDim))
        B0_D = MonopoleStrength*Xyz_D/r**nDim
-    elseif(DipoleStrengthSi==0.0)then
+    elseif(DipoleStrengthSi == 0.0)then
        B0_D = 0.0
     elseif(NameThisComp=='GM' .and. nDim == 3)then
        call get_planet_field(tSimulation, Xyz_D, TypeCoordSystem//' NORM',&
