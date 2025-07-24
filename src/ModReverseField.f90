@@ -15,11 +15,11 @@ module ModReverseField
        WaveFirst_, WaveLast_
   use ModPhysics, ONLY: Io2No_V, UnitU_
   use ModWaves, ONLY: UseAlfvenWaves
-  
+
   implicit none
 
   SAVE
-  
+
   private ! except
 
   public:: read_reverse_field_param  ! read parameters
@@ -32,7 +32,7 @@ module ModReverseField
 
   ! Local variables
   real:: UrMinDim = -1.0, UrMin = -1.0, rMin = -1.0
-  
+
 contains
   !============================================================================
   subroutine read_reverse_field_param
@@ -42,7 +42,7 @@ contains
     call read_var('DoReverseField', DoReverseField)
     call read_var('rMin', rMin)
     UrMin = -1.0 ! normalized value will be set once Io2No_V is known
-    
+
   end subroutine read_reverse_field_param
   !============================================================================
   subroutine set_sign_field(iBlock)
@@ -54,7 +54,7 @@ contains
     real:: FullB_D(3)
     !--------------------------------------------------------------------------
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) 
+       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        if(UseB0) FullB_D = FullB_D + B0_DGB(:,i,j,k,iBlock)
        if(nDim < 3)then
           ! Use sign of By for test purposes
@@ -73,14 +73,14 @@ contains
   logical function do_reverse_block(iBlock)
 
     ! Return true is magnetic field in block iBlock should be reversed
-    
+
     integer, intent(in):: iBlock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'do_reverse_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    
+
     do_reverse_block = rMin_B(iBlock) > rMin
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -89,7 +89,7 @@ contains
   subroutine reverse_field(iBlock, DoReverse)
 
     ! Reverse magnetic field in block iBlock (including ghost cells)
-    
+
     integer, intent(in):: iBlock
     logical, intent(out), optional:: DoReverse
 
