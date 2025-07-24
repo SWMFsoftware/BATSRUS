@@ -546,9 +546,10 @@ contains
              Crit_IB(iCrit,iBlock) = Crit_IB(iCrit,iBlock)*No2Io_V(UnitJ_)**2
 
           case('currentsheet')
-             if(SignB_>1 .and. (DoThinCurrentSheet.or.UseSaMhd))then
-                if(maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))>0 .and. &
-                     minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))<0)then
+             if(SignB_ > 1 .and. (DoThinCurrentSheet .or. UseSaMhd))then
+                if(  maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock)) > 0 &
+                     .and. &
+                     minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock)) < 0)then
                    Crit_IB(iCrit,iBlock) = 1.0
                 else
                    Crit_IB(iCrit,iBlock) = 0.0
