@@ -8,7 +8,7 @@ module ModUpdateState
        iVarTest, iComm, Used_GB, CellVolume_GB, Xyz_DGB
   use ModBatsrusUtility, ONLY: error_report, stop_mpi
   use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
-  use ModB0, ONLY: B0_DGB
+  use ModB0, ONLY: UseB0, B0_DGB
   use ModAdvance
 
   implicit none
@@ -105,7 +105,7 @@ contains
          nVar, Rho_, RhoUx_, RhoUz_, Ehot_, BperU_, &
          NameVar_V, nFluid, WDiff_, p_, Ppar_
     use ModPhysics, ONLY: &
-         No2Si_V, No2Io_V, UnitT_, UnitU_, iUnitCons_V
+         No2Si_V, No2Io_V, UnitT_, UnitU_, UnitB_, iUnitCons_V
     use ModSaMhd, ONLY: UseSaMhd, update_samhd
     use ModTurbulence, ONLY: UseReynoldsDecomposition
     use ModEnergy, ONLY: limit_pressure
@@ -134,67 +134,52 @@ contains
        write(*,*)
        do iVar = 1, nVar
           write(*,*)NameVar_V(iVar), '(TestCell)  =',&
-               State_VGB(iVar,iTest,jTest,kTest,iBlockTest), &
-               State_VGB(iVar,iTest,jTest,kTest,iBlockTest) &
+               State_VGB(iVar,iTest,jTest,kTest,iBlock), &
+               State_VGB(iVar,iTest,jTest,kTest,iBlock) &
                *No2Io_V(iUnitCons_V(iVar))
           if(iVar >= RhoUx_ .and. iVar <= RhoUz_)then
-             Rho = State_VGB(Rho_,iTest,jTest,kTest,iBlockTest)
+             Rho = State_VGB(Rho_,iTest,jTest,kTest,iBlock)
              write(*,*) &
                   'Velocity (TestCell)  =',&
-                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)/Rho, &
-                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)/Rho &
+                  State_VGB(iVar,iTest,jTest,kTest,iBlock)/Rho, &
+                  State_VGB(iVar,iTest,jTest,kTest,iBlock)/Rho &
                   *No2Io_V(UnitU_)
           end if
        end do
-       if(UseAnisoPressure) write(*,'(2x,a,es23.15)') 'Pperp(TestCell) =', &
-            0.5*(3*State_VGB(p_,iTest,jTest,kTest,iBlockTest) &
-            -    State_VGB(Ppar_,iTest,jTest,kTest,iBlockTest))
+       if(UseAnisoPressure) write(*,*) 'Pperp(TestCell) =', &
+            0.5*(3*State_VGB(p_,iTest,jTest,kTest,iBlock) &
+            -    State_VGB(Ppar_,iTest,jTest,kTest,iBlock))
+       if(UseB0)then
+          write(*,*) 'B0x(TestCell) =', B0_DGB(1,iTest,jTest,kTest,iBlock), &
+               B0_DGB(1,iTest,jTest,kTest,iBlock)*No2Io_V(UnitB_)
+          write(*,*) 'B0y(TestCell) =', B0_DGB(2,iTest,jTest,kTest,iBlock), &
+               B0_DGB(2,iTest,jTest,kTest,iBlock)*No2Io_V(UnitB_)
+          write(*,*) 'B0z(TestCell) =', B0_DGB(3,iTest,jTest,kTest,iBlock), &
+               B0_DGB(3,iTest,jTest,kTest,iBlock)*No2Io_V(UnitB_)
+       end if
        iVarLast = iVarTest
        ! if test var is pressure, show energy too
        if(iVarTest == p_) iVarLast = nVar + 1
        do iVar = iVarTest, iVarLast, max(1, iVarLast - iVarTest)
           write(*,*)'Fluxes and sources for ', NameVar_V(iVar)
-#ifdef TESTACC
-          write(*,*) &
-               'X fluxes L,R =',Flux_VXI(iVar,iTest,jTest,kTest,iGang) ,&
+          write(*,*)'X fluxes L,R =', &
+               Flux_VXI(iVar,iTest,jTest,kTest,iGang), &
                Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)
-          write(*,*) &
-               'Y fluxes L,R =',Flux_VYI(iVar,iTest,jTest,kTest,iGang) ,&
+          write(*,*)'Y fluxes L,R =', &
+               Flux_VYI(iVar,iTest,jTest,kTest,iGang), &
                Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)
-          write(*,*) &
-               'Z fluxes L,R =',Flux_VZI(iVar,iTest,jTest,kTest,iGang) ,&
+          write(*,*)'Z fluxes L,R =', &
+               Flux_VZI(iVar,iTest,jTest,kTest,iGang), &
                Flux_VZI(iVar,iTest,jTest,kTest+1,iGang)
-          write(*,*)'source=', &
-               Source_VC(iVar,iTest,jTest,kTest)
+          write(*,*)'source=', Source_VC(iVar,iTest,jTest,kTest)
           write(*,*)'fluxes=', &
-               ( Flux_VXI(iVar,iTest,jTest,kTest,iGang)    &
+               ( Flux_VXI(iVar,iTest,jTest,kTest,iGang)     &
                - Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)   &
                + Flux_VYI(iVar,iTest,jTest,kTest,iGang)     &
                - Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)   &
                + Flux_VZI(iVar,iTest,jTest,kTest,iGang)     &
                - Flux_VZI(iVar,iTest,jTest,kTest+1,iGang) ) &
-               /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
-#else
-          write(*,'(2x,a,2es23.15)') &
-               'X fluxes L,R =',Flux_VXI(iVar,iTest,jTest,kTest,iGang) ,&
-               Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)
-          write(*,'(2x,a,2es23.15)') &
-               'Y fluxes L,R =',Flux_VYI(iVar,iTest,jTest,kTest,iGang) ,&
-               Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)
-          write(*,'(2x,a,2es23.15)') &
-               'Z fluxes L,R =',Flux_VZI(iVar,iTest,jTest,kTest,iGang) ,&
-               Flux_VZI(iVar,iTest,jTest,kTest+1,iGang)
-          write(*,'(2x,a,es23.15)')'source=',&
-               Source_VC(iVar,iTest,jTest,kTest)
-          write(*,'(2x,a,es23.15)')'fluxes=', &
-               +(Flux_VXI(iVar,iTest,jTest,kTest,iGang)    &
-               -Flux_VXI(iVar,iTest+1,jTest,kTest,iGang)   &
-               +Flux_VYI(iVar,iTest,jTest,kTest,iGang)     &
-               -Flux_VYI(iVar,iTest,jTest+1,kTest,iGang)   &
-               +Flux_VZI(iVar,iTest,jTest,kTest,iGang)     &
-               -Flux_VZI(iVar,iTest,jTest,kTest+1,iGang) ) &
-               /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
-#endif
+               /CellVolume_GB(iTest,jTest,kTest,iBlock)
        end do
     end if
 
@@ -213,21 +198,16 @@ contains
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
     if(BperU_ > 1 .and. UseSaMhd)call update_samhd(iBlock, iStage)
-    if(UseReynoldsDecomposition.and.WDiff_>1)call fix_wdiff(iBlock)
+    if(WDiff_ > 1 .and. UseReynoldsDecomposition)call fix_wdiff(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' final for nStep =', nStep
        do iVar = 1, nVar
-#ifdef TESTACC
           write(*,*)NameVar_V(iVar),'(TestCell)  =',&
-               State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-#else
-          write(*,'(2x,2a,es23.15)')NameVar_V(iVar),'(TestCell)  =',&
-               State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-#endif
+               State_VGB(iVar,iTest,jTest,kTest,iBlock)
        end do
-       if(UseAnisoPressure) write(*,'(2x,a,es23.15)') 'Pperp(TestCell) =', &
-            0.5*(3*State_VGB(p_,iTest,jTest,kTest,iBlockTest) &
-            -    State_VGB(Ppar_,iTest,jTest,kTest,iBlockTest))
+       if(UseAnisoPressure) write(*,*) 'Pperp(TestCell) =', &
+            0.5*(3*State_VGB(p_,iTest,jTest,kTest,iBlock) &
+            -    State_VGB(Ppar_,iTest,jTest,kTest,iBlock))
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
