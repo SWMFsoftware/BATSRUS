@@ -137,17 +137,17 @@ contains
 
     select case(DiLevelNei_IIIB(-1,0,0,iBlock))
     case(Unset_)
-       jBlock_IEB(:,1,iBlock)  = Unset_
+       jBlock_IEB(:,1,iBlock) = Unset_
        jProc_IEB(:,1,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(0,1:2,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
        if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
-       jBlock_IEB(:,1,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jBlock_IEB(:,1,iBlock) = iTree_IA(Block_,iNodeNei_I)
        jProc_IEB(:,1,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(0,1,1,iBlock)
-       jBlock_IEB(:,1,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jBlock_IEB(:,1,iBlock) = iTree_IA(Block_,iNodeNei)
        jProc_IEB(:,1,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
@@ -169,61 +169,61 @@ contains
 
     select case(DiLevelNei_IIIB(0,-1,0,iBlock))
     case(Unset_)
-       jBlock_IEB(:,3,iBlock)  = Unset_
+       jBlock_IEB(:,3,iBlock) = Unset_
        jProc_IEB(:,3,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,0,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
        if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
-       jBlock_IEB(:,3,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jBlock_IEB(:,3,iBlock) = iTree_IA(Block_,iNodeNei_I)
        jProc_IEB(:,3,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(1,0,1,iBlock)
-       jBlock_IEB(:,3,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jBlock_IEB(:,3,iBlock) = iTree_IA(Block_,iNodeNei)
        jProc_IEB(:,3,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
     select case(DiLevelNei_IIIB(0,+1,0,iBlock))
     case(Unset_)
-       jBlock_IEB(:,4,iBlock)  = Unset_
+       jBlock_IEB(:,4,iBlock) = Unset_
        jProc_IEB(:,4,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,3,1:2,iBlock),.true.)
        iNodeNei_I = iNodeNei_I(iOrder_I)
        if(nDim < 3) where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
-       jBlock_IEB(:,4,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jBlock_IEB(:,4,iBlock) = iTree_IA(Block_,iNodeNei_I)
        jProc_IEB(:,4,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(1,3,1,iBlock)
-       jBlock_IEB(:,4,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jBlock_IEB(:,4,iBlock) = iTree_IA(Block_,iNodeNei)
        jProc_IEB(:,4,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
     select case(DiLevelNei_IIIB(0,0,-1,iBlock))
     case(Unset_ )
-       jBlock_IEB(:,5,iBlock)  = Unset_
+       jBlock_IEB(:,5,iBlock) = Unset_
        jProc_IEB(:,5,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,1:2,0,iBlock),.true.)
-       jBlock_IEB(:,5,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jBlock_IEB(:,5,iBlock) = iTree_IA(Block_,iNodeNei_I)
        jProc_IEB(:,5,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(1,1,0,iBlock)
-       jBlock_IEB(:,5,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jBlock_IEB(:,5,iBlock) = iTree_IA(Block_,iNodeNei)
        jProc_IEB(:,5,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
     select case(DiLevelNei_IIIB(0,0,+1,iBlock))
     case(Unset_)
-       jBlock_IEB(:,6,iBlock)  = Unset_
+       jBlock_IEB(:,6,iBlock) = Unset_
        jProc_IEB(:,6,iBlock)  = Unset_
     case(-1)
        iNodeNei_I = pack(iNodeNei_IIIB(1:2,1:2,3,iBlock),.true.)
-       jBlock_IEB(:,6,iBlock)  = iTree_IA(Block_,iNodeNei_I)
+       jBlock_IEB(:,6,iBlock) = iTree_IA(Block_,iNodeNei_I)
        jProc_IEB(:,6,iBlock)  = iTree_IA(Proc_,iNodeNei_I)
     case default
        iNodeNei = iNodeNei_IIIB(1,1,3,iBlock)
-       jBlock_IEB(:,6,iBlock)  = iTree_IA(Block_,iNodeNei)
+       jBlock_IEB(:,6,iBlock) = iTree_IA(Block_,iNodeNei)
        jProc_IEB(:,6,iBlock)  = iTree_IA(Proc_,iNodeNei)
     end select
 
@@ -295,13 +295,14 @@ contains
   !============================================================================
   subroutine calc_other_vars(iBlock)
 
-    use ModAdvance,  ONLY: State_VGB, nVar, DtMax_CB
-    use ModB0,       ONLY: set_b0_cell
-    use ModPhysics,  ONLY: FaceState_VI, rBody2
+    use ModAdvance, ONLY: State_VGB, nVar, DtMax_CB, SignB_, UseSaMhd
+    use ModB0, ONLY: set_b0_cell
+    use ModPhysics, ONLY: FaceState_VI, rBody2
     use ModGeometry, ONLY: IsBody_B, IsNoBody_B, Used_GB, rBody2_GB
-    use ModMain,     ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
+    use ModMain, ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
          DtMax_B, IsTimeAccurate, UseDtFixed, Dt
     use ModParallel, ONLY: DiLevel_EB, Unset_
+    use ModReverseField, ONLY: set_sign_field
     use ModMultiFluid
 
     use BATL_size, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -351,6 +352,8 @@ contains
           end do
        end do;end do; end do
     end if
+
+    if(SignB_ > 1 .and. .not.UseSaMhd) call set_sign_field(iBlock)
 
     ! For coupled (IH->GM) boundary condition fill in ghost cells
     ! with the first physical cell, because IH may not couple after AMR
