@@ -122,24 +122,15 @@ shell0			StringShape
 1.0			RadiusInner
 1.7			Radius
 
-#AMRREGION
-LargeShell		NameRegion
-shell0			StringShape
-1.0			RadiusInner
-2.0			Radius
-
 #AMRCRITERIARESOLUTION
-4			nRefineCrit
-Level +InnerShell		StringRefine
-4			RefineTo
-4			CoarsenFrom
-dphi +LargeShell -InnerShell		StringRefine
-1.5			RefineTo
+3			nRefineCrit
+dphi			StringRefine
+12.0			RefineTo
+6.0			CoarsenFrom
+dphi Innershell		StringRefine
+1.5  			RefineTo
 0.75			CoarsenFrom
-Level			StringRefine
-2			RefineTo
-2			CoarsenFrom
-currentsheet -LargeShell		StringRefine
+currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
 1.5			MaxResolution
