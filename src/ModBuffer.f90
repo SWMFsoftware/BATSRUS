@@ -190,9 +190,10 @@ contains
 #ifndef _OPENACC
     use ModPhysics, ONLY: xBody2,  yBody2, zBody2
     use ModMain, ONLY: DoThinCurrentSheet
-    use ModWaves,      ONLY: UseAlfvenWaves
+    use ModWaves, ONLY: UseAlfvenWaves
     use ModTurbulence, ONLY: IsOnAwRepresentative, PoyntingFluxPerB
-    use ModSaMhd,       ONLY: UseSaMhd, get_samhd_state
+    use ModSaMhd, ONLY: UseSaMhd, get_samhd_state
+    use ModReverseField, ONLY: DoReverseField
 #endif
 
     integer, intent(in) :: nVar
@@ -261,8 +262,11 @@ contains
 
 #ifndef _OPENACC
     if(SignB_ > 1)then
-       if(DoThinCurrentSheet)then
-          ! In both IH and OH we have no B0, so we ignore that !
+       if(DoReverseField)then
+          ! In both IH and OH we have no B0, so we use B1r
+          State_V(SignB_) = sign(1.0, sum(State_V(Bx_:Bz_)*XyzTarget_D))
+       elseif(DoThinCurrentSheet)then
+          ! In both IH and OH we have no B0, so we use B1r
           if(sum(State_V(Bx_:Bz_)*XyzTarget_D) < 0.0)then
              State_V(Bx_:Bz_) = -State_V(Bx_:Bz_)
              if(WaveFirst_ > 1 .and. UseAlfvenWaves)then
