@@ -133,10 +133,9 @@ shell0			StringShape
 Level +InnerShell		StringRefine
 4			RefineTo
 4			CoarsenFrom
-currentsheet +LargeShell -InnerShell		StringRefine
-0.5			CoarsenLimit
-0.5			RefineLimit
-1.5			MaxResolution
+dphi +LargeShell -InnerShell		StringRefine
+1.5			RefineTo
+0.75			CoarsenFrom
 Level			StringRefine
 2			RefineTo
 2			CoarsenFrom
