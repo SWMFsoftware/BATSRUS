@@ -136,14 +136,14 @@ Level +InnerShell		StringRefine
 currentsheet +LargeShell -InnerShell		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
-0.1			MaxResolution
+1.5			MaxResolution
 Level			StringRefine
 2			RefineTo
 2			CoarsenFrom
 currentsheet -LargeShell		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
-0.1			MaxResolution
+1.5			MaxResolution
 
 #GRIDRESOLUTION
 12.0			Resolution
