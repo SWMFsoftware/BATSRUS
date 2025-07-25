@@ -742,10 +742,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_b0'
     !--------------------------------------------------------------------------
-    if(UseB0Wave)then
-       B0_D = B0Wave0_D &
-            + B0Wave1_D*cos(B0WavePhase + sum(B0WaveNumber_D*Xyz_D))
-    elseif(iTableB0 > 0)then
+    if(iTableB0 > 0)then
        if(iTableB0New > 0 .and. IsTimeAccurate)then
           ! Interpolate to the current time expressed as CarringtonNumber
           CarringtonNumber = &
@@ -759,6 +756,9 @@ contains
        ! Convert from Tesla to normalized units.
        B0_D = B0_D*Si2No_V(UnitB_)
 #ifndef _OPENACC
+    elseif(UseB0Wave)then
+       B0_D = B0Wave0_D &
+            + B0Wave1_D*cos(B0WavePhase + sum(B0WaveNumber_D*Xyz_D))
     elseif(MonopoleStrength /= 0.0)then
        r = norm2(Xyz_D(1:nDim))
        B0_D = MonopoleStrength*Xyz_D/r**nDim
