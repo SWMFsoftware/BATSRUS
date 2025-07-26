@@ -31,7 +31,7 @@ module ModRestartFile
   use ModGroundMagPerturb, ONLY: DoWriteIndices
   use ModBoundaryGeometry, ONLY: fix_block_geometry
   use ModBlockData, ONLY: write_block_restart_files, read_block_restart_files
-  use ModWritePlot, ONLY: reverse_field
+  use ModReverseField, ONLY: reverse_field
 
   implicit none
 

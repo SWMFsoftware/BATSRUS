@@ -27,7 +27,7 @@ contains
     use ModConservative, ONLY: &
          set_non_conservative, UseNonConservative, nConservCrit
     use ModB0, ONLY: UseB0Source, UseDivFullBSource, UseCurlB0, &
-         DoUpdateB0, DtUpdateB0, read_b0_param, init_mod_b0
+         DoUpdateB0, DtUpdateB0, UseB0Wave, read_b0_param, init_mod_b0
     use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
          xMinBox, xMaxBox, yMinBox, yMaxBox, zMinBox, zMaxBox, &
          XyzMin_D, XyzMax_D, RadiusMin, RadiusMax, &
@@ -41,6 +41,7 @@ contains
     use ModImplHypre, ONLY: hypre_read_param
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
     use ModUpdateState, ONLY: read_update_param
+    use ModReverseField, ONLY: read_reverse_field_param
     use ModPhysics
     use ModTransitionRegion, ONLY: CoulombLogTr=>CoulombLog
     use ModConstrainDivB, ONLY: init_mod_ct, DoInitConstrainB
@@ -350,10 +351,10 @@ contains
           call get_planet(DipoleStrengthOut = DipoleStrengthSi)
        end if
 
-       if(MonopoleStrengthSi /= 0.0)then
+       if(MonopoleStrengthSi /= 0.0 .or. UseB0Wave)then
           UseB0       = .true.
-          UseB0Source = .false.
-          UseCurlB0   = .false.
+          UseB0Source = UseB0Wave
+          UseCurlB0   = UseB0Wave
           DoUpdateB0  = .false.
           DtUpdateB0  = -1.0
        elseif(IsStandAlone .and. NameThisComp=='GM') then
@@ -672,6 +673,9 @@ contains
        case("#HYPRE")
           call hypre_read_param
 
+       case("#REVERSEFIELD")
+          call read_reverse_field_param
+
        case("#PICGRID", '#PICGRIDROTATE', "#PICUNIT", "#PICGRIDUNIT", &
             "#PICBALANCE", "#PICADAPT", "#PICPATCH", "#PICCRITERIA", &
             "#PICPATCHEXTEND", "#PICREGIONMIN", "#PICREGIONMAX", &
@@ -913,15 +917,14 @@ contains
 
        case("#SAVEPLOT")
           call read_var('nPlotFile', nPlotFileRead)
-          nFile = max(nFile, plot_ + nPlotFileRead)
           if(nPlotFileRead < nPlotFile)then
-             ! Disable plotting files with the number greater than the new
-             ! nPlotFile
+             ! Disable plotting files with index greater than the new nPlotFile
              DnOutput_I(plot_+nPlotFileRead+1:plot_+nPlotFile) = -1
              DtOutput_I(plot_+nPlotFileRead+1:plot_+nPlotFile) = -1.0
              nStepOutputLast_I(plot_+nPlotFileRead+1:plot_+nPlotFile) = -1
              iTimeOutputLast_I(plot_+nPlotFileRead+1:plot_+nPlotFile) = -1
           end if
+          nFile = max(nFile, plot_ + nPlotFileRead)
           if (nFile > MaxFile .or. nPlotFileRead > MaxPlotFile) call stop_mpi(&
                'The number of ouput files is too large in #SAVEPLOT:'&
                //' nPlotFile > MaxPlotFile .or. nFile > MaxFile')
@@ -931,7 +934,7 @@ contains
 
           TypeSatPos_I       = 'none'
 
-          do iFileRead = 1, nPlotFileRead
+          do iFileRead = 1, nPlotFile
              ! reset nInstrument at the beginning
              nInstrument = 0
 
@@ -985,12 +988,12 @@ contains
                 call read_var('yMaxCut', PlotRange_EI(4,iFile))
                 call read_var('zMinCut', PlotRange_EI(5,iFile))
                 call read_var('zMaxCut', PlotRange_EI(6,iFile))
-             elseif (index(StringPlot,'blk')>0) then
+             elseif(index(StringPlot,'blk')>0) then
                 TypePlotArea='blk'
                 call read_var('xPoint', PlotPointXyz_DI(1,iFile))
                 call read_var('yPoint', PlotPointXyz_DI(2,iFile))
                 call read_var('zPoint', PlotPointXyz_DI(3,iFile))
-             elseif (index(StringPlot,'pnt')>0) then
+             elseif(index(StringPlot,'pnt')>0) then
                 TypePlotArea='pnt'
              elseif(index(StringPlot,'lin')>0)then
                 iPlotFile = iFile - Plot_
@@ -1015,7 +1018,7 @@ contains
                    call read_var('zStartLine', XyzStartLine_DII(3,i,iPlotFile))
                    call read_var('IsParallel', IsParallelLine_II(i,iPlotFile))
                 end do
-             elseif (index(StringPlot,'eqr')>0)then
+             elseif(index(StringPlot,'eqr')>0)then
                 TypePlotArea='eqr'
                 call read_var('nRadius',   PlotRange_EI(1,iFile))
                 call read_var('nLon',      PlotRange_EI(2,iFile))
@@ -1023,7 +1026,7 @@ contains
                 call read_var('RadiusMax', PlotRange_EI(4,iFile))
                 PlotRange_EI(5,iFile) =   0.0
                 PlotRange_EI(6,iFile) = 360.0
-             elseif (index(StringPlot,'eqb')>0)then
+             elseif(index(StringPlot,'eqb')>0)then
                 TypePlotArea='eqb'
                 call read_var('nRadius',   PlotRange_EI(1,iFile))
                 call read_var('nLon',      PlotRange_EI(2,iFile))
@@ -1031,16 +1034,16 @@ contains
                 call read_var('RadiusMax', PlotRange_EI(4,iFile))
                 call read_var('LongitudeMin', PlotRange_EI(5,iFile))
                 call read_var('LongitudeMax', PlotRange_EI(6,iFile))
-             elseif (index(StringPlot,'ieb')>0)then
+             elseif(index(StringPlot,'ieb')>0)then
                 TypePlotArea='ieb'
-             elseif (index(StringPlot,'lcb')>0)then
+             elseif(index(StringPlot,'lcb')>0)then
                 TypePlotArea='lcb'
                 call read_var('Radius', PlotRange_EI(1,iFile))
                 call read_var('nLon',   PlotRange_EI(2,iFile))
-             elseif (index(StringPlot,'sph')>0)then
+             elseif(index(StringPlot,'sph')>0)then
                 TypePlotArea='sph'
                 call read_var('Radius', PlotRange_EI(1,iFile))
-             elseif (  index(StringPlot, 'shl')>0 &
+             elseif(   index(StringPlot, 'shl')>0 &
                   .or. index(StringPlot, 'sln')>0 &
                   .or. index(StringPlot, 'slg')>0 &
                   .or. index(StringPlot, 'shk')>0)then
@@ -1071,7 +1074,7 @@ contains
                 call read_var('LatMax', PlotRange_EI(6,iFile))
                 if (PlotRange_EI(5, iFile) /= PlotRange_EI(6,iFile)) &
                      call read_var('dLat', PlotDx_DI(3,iFile))
-             elseif (index(StringPlot, 'box')>0)then
+             elseif(index(StringPlot, 'box')>0)then
                 TypePlotArea = 'box'
                 call read_var('TypeCoord', TypeCoordObs)
                 TypeCoordPlot_I(iFile) = TypeCoordObs(1:3)
@@ -1099,7 +1102,7 @@ contains
                    call read_var('zAngle', PlotNormal_DI(3,iFile))
                 end if
 
-             elseif (index(StringPlot,'los')>0)then
+             elseif(index(StringPlot,'los')>0)then
                 TypePlotArea='los'
                 ! Line of sight vector
                 if(index(StringPlot, 'dem') > 0 .or. &
@@ -1122,7 +1125,7 @@ contains
                       call read_var('LogTeMinDEM',LogTeMinDEM_I(iFile))
                       call read_var('LogTeMaxDEM',LogTeMaxDEM_I(iFile))
                       call read_var('DLogTeDEM',DLogTeDEM_I(iFile))
-                   elseif (index(StringPlot, 'fux')>0)then
+                   elseif(index(StringPlot, 'fux')>0)then
                       ! Spectra
                       call read_var('NameSpmTable',NameSpmTable_I(iFile))
                       call read_var('UseUnobserved',UseUnobserved_I(iFile))
@@ -1135,7 +1138,7 @@ contains
                       call read_var('UseIonFrac',UseIonFrac_I(iFile))
                       call read_var('UseIonTemp',UseIonTemp_I(iFile))
                       ! Individual line with photoexcitation
-                   elseif (index(StringPlot, 'phx')>0)then
+                   elseif(index(StringPlot, 'phx')>0)then
                       call read_var('NamePhxTable',NamePhxTable_I(iFile))
                       call read_var('LambdaMin', LambdaMin_I(iFile))
                       call read_var('LambdaMax', LambdaMax_I(iFile))
@@ -1145,7 +1148,7 @@ contains
                       call read_var('DLambdaIns',DLambdaIns_I(iFile))
                       call read_var('UseIonFrac',UseIonFrac_I(iFile))
                       call read_var('UseIonTemp',UseIonTemp_I(iFile))
-                   elseif (index(StringPlot, 'nbi')>0)then
+                   elseif(index(StringPlot, 'nbi')>0)then
                       ! Narrowband image
                       call read_var('NameSpmTable',NameSpmTable_I(iFile))
                       call read_var('UseIonFrac',UseIonFrac_I(iFile))
@@ -1355,7 +1358,7 @@ contains
                    ! adjust iFileStart
                    iFileStart = iFileStart + nInstrument - 1
                 endif
-             elseif (index(StringPlot,'rfr') > 0) then
+             elseif(index(StringPlot,'rfr') > 0) then
                 ! Refractive radiowave image
                 TypePlotArea='rfr'
                 ! Observer position
@@ -1932,7 +1935,8 @@ contains
           ! reinitialize constrained transport if needed
           DoInitConstrainB = .true.
 
-       case("#B0", "#B0SOURCE", "#CURLB0", "#FORCEFREEB0", "#MONOPOLEB0")
+       case("#B0", "#B0SOURCE", "#CURLB0", "#FORCEFREEB0", "#MONOPOLEB0", &
+            "#B0WAVE")
           if(.not.is_first_session())CYCLE READPARAM
           call read_b0_param(NameCommand)
 

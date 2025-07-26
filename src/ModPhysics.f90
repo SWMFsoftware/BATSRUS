@@ -1137,9 +1137,8 @@ contains
     use ModVarIndexes
     use ModMultiFluid
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos, &
-         UseEfield, UseAnisoPe
-    use ModMain,    ONLY: UseB
-    ! use ModSaMhd,    ONLY: UseSaMhd
+         UseEfield, UseAnisoPe, UseSaMhd
+    use ModMain, ONLY: UseB
 
     integer:: iVar, iFluid
 
@@ -1263,9 +1262,15 @@ contains
     end if
 
     if(BperU_ > 1)then
-       UnitUser_V(BperU_)        = No2Io_V(UnitB_)/No2Io_V(UnitU_)
-       NameUnitUserTec_V(BperU_) = 'Gs*s/km'
-       NameUnitUserIdl_V(BperU_) = 'Gs*s/km'
+       if(UseSamhd)then
+          UnitUser_V(BperU_)        = No2Io_V(UnitB_)/No2Io_V(UnitU_)
+          NameUnitUserTec_V(BperU_) = 'G*s/km'
+          NameUnitUserIdl_V(BperU_) = 'G*s/km'
+       else
+          UnitUser_V(SignB_) = 1.0
+          NameUnitUserTec_V(SignB_) = ''
+          NameUnitUserIdl_V(SignB_) = ''
+       end if
     end if
 
     if(Ehot_ > 1)then

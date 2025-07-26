@@ -8,14 +8,15 @@ module ModWritePlot
   use ModNumConst, ONLY: cRadToDeg
   use ModBatsrusUtility, ONLY: get_date_time, get_time_string
   use ModPlotScalars, ONLY: set_plot_scalars
+  use ModReverseField, ONLY: reverse_field
+
   implicit none
 
   private ! except
 
   public:: write_plot         ! write IDL, Tecplot, shell, shock or box plot
   public:: adjust_plot_range  ! adjust the range of cut plots
-  public:: set_plot_scalars   !
-  public:: reverse_field
+  public:: set_plot_scalars   ! set scalar parameters for plot file
 
   logical::  DoPlotSpm, DoPlotFlux, DoPlotPhx, DoPlotNbi
 
@@ -972,13 +973,14 @@ contains
          iStatusPicCrit_CB, calc_crit_entropy,&
          calc_crit_jb, calc_crit_jbperp, CriteriaB1, DivCurvature_CB
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
+    use ModReverseField, ONLY: do_reverse_block
     use ModInterpolate, ONLY: trilinear
+    use ModSpectrum, ONLY: spectrum_calc_emission
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, IsCartesian, &
          Xyz_DGB, Xyz_DNB, iNode_B, CellSize_DB, CellVolume_GB, CoordMin_DB
 
     use ModUserInterface ! user_set_plot_var
-    use ModSpectrum, ONLY: spectrum_calc_emission
 
     integer, intent(in):: iBlock, iPlotFile, nPlotVar
     character (LEN=10), intent(in):: NamePlotVar_V(nPlotVar)
@@ -1602,6 +1604,12 @@ contains
                   State_VGB(Bx_:Bz_,i,j,k,iBlock)*Xyz_DGB(:,i,j,k,iBlock) &
                   ) / r_GB(i,j,k,iBlock)
           end do; end do; end do
+       case('reverseb')
+          if(do_reverse_block(iBlock))then
+             PlotVar_GV(:,:,:,iVar) = 1.0
+          else
+             PlotVar_GV(:,:,:,iVar) = 0.0
+          end if
        case('er')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar_GV(i,j,k,iVar) =  sum( &
@@ -2309,37 +2317,6 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine get_idl_units
-  !============================================================================
-  subroutine reverse_field(iBlock)
-
-    use ModAdvance,    ONLY: State_VGB
-    use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModVarIndexes, ONLY: Bx_, Bz_, SignB_, WaveFirst_, WaveLast_
-    use ModWaves,      ONLY: UseAlfvenWaves
-
-    integer, intent(in):: iBlock
-
-    integer:: i, j, k
-    real:: Ewave
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'reverse_field'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       if(State_VGB(SignB_,i,j,k,iBlock) < 0.0)then
-          State_VGB(Bx_:Bz_,i,j,k,iBlock) = -State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          if(UseAlfvenWaves)then
-             Ewave = State_VGB(WaveFirst_,i,j,k,iBlock)
-             State_VGB(WaveFirst_,i,j,k,iBlock) = &
-                  State_VGB(WaveLast_,i,j,k,iBlock)
-             State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
-          end if
-       end if
-    end do; end do; end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine reverse_field
   !============================================================================
   subroutine adjust_plot_range(PlotRes1, PlotRange_I)
 

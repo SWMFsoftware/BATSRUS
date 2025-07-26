@@ -21,6 +21,12 @@ module ModAdvance
 
   public:: init_mod_advance
   public:: clean_mod_advance
+  public:: check_positivity
+
+  interface check_positivity
+     module procedure check_positivity_block
+     module procedure check_positivity_all
+  end interface check_positivity
 
   ! Update method
   character(len=10):: TypeUpdate = 'orig'
@@ -122,6 +128,9 @@ module ModAdvance
   logical :: UseSingleIonVelocity    = .false.
   logical :: UseSingleIonTemperature = .false.
 
+  ! Stream-aligned MHD
+  logical:: UseSaMhd = .false.
+
   ! Block cell-centered MHD solution
   real, allocatable, target :: State_VGB(:,:,:,:,:)
   !$acc declare create(State_VGB)
@@ -194,8 +203,8 @@ module ModAdvance
   !$acc declare create(Primitive_VG)
 
   ! Face centered div(U)*dl
-  real, allocatable, dimension(:,:,:,:):: &
-       FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ
+  real, allocatable:: &
+       FaceDivU_IX(:,:,:,:), FaceDivU_IY(:,:,:,:), FaceDivU_IZ(:,:,:,:)
   !$omp threadprivate( FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ )
 
   ! Fluxes are for all state variables including energies,
@@ -212,8 +221,8 @@ module ModAdvance
   !$omp threadprivate( FluxCenter_VGD )
 
   ! Magnetic field cross area vector for J x B source term in multi-ion MHD
-  real, allocatable, dimension(:,:,:,:):: &
-       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
+  real, allocatable:: &
+       bCrossArea_DX(:,:,:,:), bCrossArea_DY(:,:,:,:), bCrossArea_DZ(:,:,:,:)
   !$omp threadprivate( bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ )
 
   ! Mhd part of the momentum flux. May be subtracted for calculating
@@ -247,11 +256,7 @@ module ModAdvance
        SteadyBoundBlock_=2, & ! Blocks surrounding the evolving blocks
        ExplBlock_=3,        & ! Blocks changing with the explicit scheme
        ImplBlock_=4           ! Blocks changing with the implicit scheme
-  public :: check_positivity
-  interface check_positivity
-     module procedure check_positivity_b
-     module procedure check_positivity_all
-  end interface check_positivity
+
 contains
   !============================================================================
   subroutine init_mod_advance
@@ -427,7 +432,10 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine clean_mod_advance
   !============================================================================
-  subroutine check_positivity_b(iBlock, NameSub, iError)
+  subroutine check_positivity_block(iBlock, NameSub, iError)
+
+    ! Check if positive variables are positive in block iBlock.
+    ! Write info if not.
 
     use ModVarIndexes, ONLY: nVar, NameVar_V,  DefaultState_V
     use ModGeometry, ONLY: r_GB, Used_GB
@@ -438,13 +446,12 @@ contains
     character(len=*), intent(in):: NameSub
     integer, intent(out), optional:: iError
 
-    integer:: iVar, i, j, k
+    integer:: i, j, k
     !--------------------------------------------------------------------------
     if(Unused_B(iBlock)) RETURN
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(any(&
-            DefaultState_V(:nVar) > 0.5.and.State_VGB(:,i,j,k,iBlock)<=0.0   &
-            ))then
+       if(any(DefaultState_V(:nVar) > 0.5 .and. &
+            State_VGB(:,i,j,k,iBlock) <= 0))then
           write(*,*)'For NameVar_V=', NameVar_V
           write(*,*)'and DefaultState_V(:nVar)=', DefaultState_V(:nVar)
           write(*,*)'the state vector State_V=', State_VGB(:,i,j,k,iBlock)
@@ -459,19 +466,24 @@ contains
           end if
        end if
     end do; end do; end do
-  end subroutine check_positivity_b
+
+  end subroutine check_positivity_block
   !============================================================================
   subroutine check_positivity_all(NameSub, iError)
 
+    ! Check positivity in all blocks
+
     use BATL_lib, ONLY: nBlock
+
     character(len=*), intent(in):: NameSub
     integer, intent(out), optional:: iError
 
     integer:: iBlock
     !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
-       call check_positivity_b(iBlock, NameSub, iError)
+       call check_positivity_block(iBlock, NameSub, iError)
     end do
+
   end subroutine check_positivity_all
   !============================================================================
 end  module ModAdvance

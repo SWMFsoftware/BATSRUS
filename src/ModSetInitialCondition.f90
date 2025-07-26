@@ -176,13 +176,14 @@ contains
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, Gamma_I, &
          set_radial_state
     use ModUserInterface ! user_set_ics
-    use ModSaMhd,          ONLY: UseSaMhd, init_samhd
+    use ModSaMhd, ONLY: UseSaMhd, init_samhd
+    use ModReverseField, ONLY: set_sign_field
     use ModConstrainDivB, ONLY: constrain_ics
     use ModMultiFluid
     use ModRestartFile, ONLY: UseRestartWithFullB
     use ModBoundaryGeometry, ONLY: iBoundary_GB
     use ModInitialState, ONLY: get_initial_state
-    use ModIonElectron,   ONLY: &
+    use ModIonElectron, ONLY: &
          correct_electronfluid_efield , DoCorrectElectronFluid, DoCorrectEfield
     use BATL_lib, ONLY: Xyz_DGB, IsPeriodic_D
     use ModUtilities, ONLY: i_gang
@@ -399,6 +400,8 @@ contains
              call init_samhd(iBlock)
              if(DoTest)write(*,*) NameSub,': samhd State=', &
                   State_VGB(:,iTest,jTest,kTest,iBlockTest)
+          elseif(SignB_ > 1)then
+             call set_sign_field(iBlock)
           end if
        end if ! not IsRestart
 

@@ -22,14 +22,14 @@ module ModSaMhd
   use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, BperU_, Rho_, &
        nVar, Ux_, Uz_
   use BATL_lib, ONLY: MaxDim
-  use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
+  use ModAdvance,  ONLY: State_VGB, nI, nJ, nK, UseSaMhd
   use ModGeometry, ONLY: r_GB, Used_GB
   use ModB0,       ONLY: UseB0, B0_DGB
 
   implicit none
   PRIVATE ! Except
 
-  logical, public :: UseSaMhd = .false.
+  public :: UseSaMhd ! Inherited from ModAdvance
 
   ! For R < RSourceSaMhd the SaMhd ratio is calculated in terms of U, B
   real, public :: RSourceSaMhd = 0.0
