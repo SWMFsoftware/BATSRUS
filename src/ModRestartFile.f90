@@ -1090,6 +1090,7 @@ contains
     use ModVarIndexes, ONLY: nVar, NameVar_V, p_, Pe_, DefaultState_V, &
          ChargeStateFirst_, ChargeStateLast_, nChargeStateAll, nPui
     use ModAdvance, ONLY: UseElectronPressure
+    use ModReverseField, ONLY: set_sign_field
     use ModMain, ONLY: UseStrict, NameVarLower_V
     use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, iP_I
     use ModPUI, ONLY: set_pui_state
@@ -1198,8 +1199,15 @@ contains
           ! Rules for initializing state variables that are not present
           ! in the restart file
           select case(NameVar_V(iVar))
+          case('BperU')
+             do iBlock = 1, nBlock
+                call set_sign_field(iBlock)
+             end do
+
           case('Bx','By','Bz','Hyp')
-             State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = 0.0
+             do iBlock = 1, nBlock
+                State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = 0.0
+             end do
 
           case('Pe')
              ! When electron pressure is used but is not present in the restart
