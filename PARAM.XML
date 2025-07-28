@@ -9953,6 +9953,11 @@ If UseElectronEnergy is also true, include electron energy into the total
 energy equation for the conservative scheme so that total energy is
 conserved.
 
+The combination UseElectronEntropy false and UseElectronEnergy true
+is not recommended as it requests total energy conservation but using
+a non-conservative electron pressure equation, and
+some of the implementation may not allow for this combination.
+
 Explicit electron heatconduction is not implemented for the electron entropy,
 but the semi-implicit heat conduction works.
 
