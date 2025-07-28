@@ -3885,7 +3885,7 @@ contains
 
       ! Adaptive field reversal is not compatible with flux correction (yet)
       if(DoReverseField) DoConserveFlux = .false.
-      
+
 #ifdef _OPENACC
       iTypeUpdate = UpdateFast_ ! Default for GPU
 #else
