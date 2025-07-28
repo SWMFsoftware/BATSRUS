@@ -11320,20 +11320,42 @@ while HelioDipoleTilt is the tilt relative to the ecliptic North
 Default value is HelioDipoleStrengthSi = 0.0.
 </command>
 
-<command name="UNIFORMB0" if="$NameComp ne 'GM'">
-  <parameter name="UniformB0Si" type="real" default="0"/>
-  <parameter name="UniformB0Si" type="real" default="0"/>
-  <parameter name="UniformB0Si" type="real" default="0"/>
+<command name="B0WAVE">
+  <parameter name="UseB0Wave" type="logical" default="F"/>
+  <if expr="$UseB0Wave">
+    <parameter name="B0Wave0X" type="real" default="0"/>
+    <parameter name="B0Wave0Y" type="real" default="0"/>
+    <parameter name="B0Wave0Z" type="real" default="0"/>
+    <parameter name="B0Wave1X" type="real" default="0"/>
+    <parameter name="B0Wave1Y" type="real" default="0"/>
+    <parameter name="B0Wave1Z" type="real" default="0"/>
+    <parameter name="B0Wave1LengthX" type="real" min="-1" default="-1"/>
+    <parameter name="B0Wave1LengthY" type="real" min="-1" default="-1" if="$nDim != 1"/>
+    <parameter name="B0Wave1LengthZ" type="real" min="-1" default="-1" if="$nDim == 3"/>
+    <parameter name="B0WavePhase" type="real" min="0" max="360" default="0"/>
+  </if>
 
-#UNIFORMB0
-5.0e-4                  UniformB0Si
-0.0                     UniformB0Si
-0.0                     UniformB0Si
+#B0WAVE
+T			UseB0Wave (rest read if true)
+0.0			B0Wave0X
+0.5			B0Wave0Y
+0.0			B0Wave0Z
+0.0			B0Wave1X
+0.3			B0Wave1Y
+0.0			B0Wave1Z
+32.0			B0WaveLengthX
+-1.0			B0WaveLengthY (read if nDim>1)
+-1.0			B0WaveLengthZ (read if nDim=3)
+0.0			B0WavePhase
 
-Three components of uniform B0 field. In the example above
-there is a uniform field of 5E-4 T = 5 G along the x axis. Exception is
-the case of rz-geometry, in which the intensity of Phi
-(third) field component should be divided by dimensionless r.
+Define the B0 vector field as a cosine wave: B0 = B0Wave0 + B0Wave1*cos(k.x + Phase).
+Here B0Wave0 and B0Wave1 have 3 components. The wave number vector and the coordinate
+vector x have nDim components. The wave number vector is obtained from the corresponding
+wavelength vector given by B0WaveLength*. A negative wavelength sets
+the corresponding wavenumber to 0, positive value is converted as k=2*pi/WaveLength.
+The B0WavePhase is given in degrees and converted to Phase in radians.
+
+By default there B0 is not defined as a wave.
 </command>
 
 <command name="HELIOBUFFERGRID" if="$_IsFirstSession and $NameComp =~ /IH|OH/">
@@ -11422,18 +11444,35 @@ to the field. The propagation speed with respect to the background
 plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.
 </command>
 
+<command name="WAVEPRESSURE">
+  <parameter name="UseWavePressure" type="logical" default="T"/>
+  <parameter name="UseWavePressureLtd" type="logical" default="F"/>
+
+#WAVEPRESSURE
+T                   UseWavePressure
+F                   UseWavePressureLtd
+
+When Alfven waves or radiation groups are uses, the wave pressure
+shows up in the momentum equation. This term is used if UseWavePressure
+is true. If UseWavePressureLtd is true, then the total pressure of multiple
+wave groups is put into a variable Ew, which is then limited with slope limiters.
+
+Default values are shown.
+</command>
+
 <command name="AWREPRESENTATIVE">
   <parameter name="UseAwRepresentative" type="logical" default="F"/>
 
 #AWREPRESENTATIVE
 F			UseAwRepresentative
 
-If UseAlfvenWaveRepresentative is .true., in ExplicitAdvance at the beginning
+If UseAlfvenWaveRepresentative is true, in ExplicitAdvance at the beginning
 the wave energy densities are divided by sqrt(Rho)*PoyntingFluxPerB, to get
 representative functions, for which the equations and boundary conditions are
 easier to handle. After the stage loop, the functions are converted back
 to physically meaningful wave energy densities.
 
+Default value is false.
 </command>
 
 </commandgroup>

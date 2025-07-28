@@ -202,6 +202,7 @@ contains
     !$acc update host(DtMax_B)
 
     if(SignB_ > 1 .and. DoThinCurrentSheet)then
+       ! Save true B field into the restart file
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
@@ -242,6 +243,7 @@ contains
          call write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
 
     if(SignB_ > 1 .and. DoThinCurrentSheet)then
+       ! Go back to the reversed B field
        do iBlock = 1, nBlock
           if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
@@ -316,16 +318,11 @@ contains
        if (.not.Unused_B(iBlock)) call fix_block_geometry(iBlock)
     end do
 
-    if(SignB_ > 1)then
-       if(DoThinCurrentSheet)then
-          do iBlock = 1, nBlock
-             if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
-          end do
-       elseif(.not.UseSaMhd)then
-          do iBlock = 1, nBlock
-             if (.not.Unused_B(iBlock)) State_VGB(SignB_,:,:,:,iBlock) = 0
-          end do
-       end if
+    if(SignB_ > 1 .and. DoThinCurrentSheet)then
+       ! Reverse true B field read from the restart file
+       do iBlock = 1, nBlock
+          if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
+       end do
     end if
     ! The subtraction of B0 from full B0+B1 to obtain B1 is in set_ICs
     ! after B0 is set
@@ -1199,7 +1196,7 @@ contains
           ! Rules for initializing state variables that are not present
           ! in the restart file
           select case(NameVar_V(iVar))
-          case('BperU')
+          case('SignB')
              do iBlock = 1, nBlock
                 call set_sign_field(iBlock)
              end do

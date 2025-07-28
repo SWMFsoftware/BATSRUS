@@ -2889,6 +2889,11 @@ contains
       integer           :: iVar, iElement, iChargeState, iIon
       character(len=4)  :: NameChargestate
       !------------------------------------------------------------------------
+
+      ! Make sure BperU and SignB have proper names
+      if(BperU_ > 1 .and. UseSaMhd) NameVar_V(BperU_) = 'BperU'
+      if(SignB_ > 1 .and. .not.UseSaMhd) NameVar_V(BperU_) = 'SignB'
+
       ! Fix the NameVar_V string for waves
       if(WaveLast_ > 1)then
          do iWave = 1, nWave

@@ -136,24 +136,23 @@ contains
     !              cleans either div B1 or dib (B1 + B0)
     !          2d. other variables are cell-centered
 
-    use ModMain,          ONLY: iDirGravity, UseBody2, TypeCoordSystem, &
-         UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
-         UseUserSourceExpl, UseUserSourceImpl
+    use ModMain, ONLY: iDirGravity, UseBody2, TypeCoordSystem, UseB0, &
+         UseDivBsource, UseRadDiffusion, UseUserSourceExpl, UseUserSourceImpl
     use ModAdvance
-    use ModConservative,  ONLY: UseNonConservative
-    use ModGeometry,      ONLY: r_GB, rBody2_GB, Used_GB
+    use ModConservative, ONLY: UseNonConservative
+    use ModGeometry, ONLY: r_GB, rBody2_GB, Used_GB
     use ModPhysics
     use ModCoordTransform
     use ModElectricField, ONLY: get_efield_in_comoving_frame
-    use ModImplicit,      ONLY: UseFullImplicit
-    use ModRadDiffusion,  ONLY: calc_source_rad_diffusion
+    use ModImplicit, ONLY: UseFullImplicit
+    use ModRadDiffusion, ONLY: calc_source_rad_diffusion
     use ModMultiFluid
     use ModPointImplicit, ONLY: UsePointImplicit
-    use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
-    use ModIonElectron,   ONLY: ion_electron_source_impl
-    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
+    use ModMultiIon, ONLY: multi_ion_source_expl, multi_ion_source_impl
+    use ModIonElectron, ONLY: ion_electron_source_impl
+    use ModWaves, ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating
-    use ModTurbulence,  ONLY: &
+    use ModTurbulence, ONLY: &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipationRate_VC,&
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
          KarmanTaylorBeta2AlphaRatio, IsOnAwRepresentative, PoyntingFluxPerB, &
@@ -161,18 +160,18 @@ contains
          rMinWaveReflection, AlfvenWaveVel_DC
     use ModRadiativeCooling, ONLY: RadCooling_C, UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
-    use ModChromosphere,  ONLY: DoExtendTransitionRegion,      &
+    use ModChromosphere, ONLY: DoExtendTransitionRegion,      &
          UseChromosphereHeating, get_tesi_c, TeSi_C
-    use ModFaceFlux,      ONLY: Pe_G
-    use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
-    use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0,    &
+    use ModFaceFlux, ONLY: Pe_G
+    use ModHallResist, ONLY: UseBiermannBattery, IonMassPerCharge_G
+    use ModB0, ONLY: set_b0_source, UseB0Source, UseCurlB0,    &
          rCurrentFreeB0, DivB0_C, CurlB0_DC, B0_DGB, B0_DX, B0_DY, B0_DZ, &
          UseDivFullBSource, B0MomentumSource_DC, &
          UseForceFreeB0, rMaxForceFreeB0
-    use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
+    use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_,&
          correct_face_value
-    use ModViscosity,     ONLY: &
+    use ModViscosity, ONLY: &
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
     use ModPUI, ONLY: DivUpui_C, Pu3_
@@ -2158,10 +2157,10 @@ contains
     ! Compute divB using averaged and conservatively corrected
     ! left and right values
 
-    use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_
-    use ModMain,       ONLY: nI, nJ, nK
+    use BATL_lib, ONLY: CellSize_DB, x_, y_, z_
+    use ModMain, ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Bx_, By_, Bz_
-    use ModAdvance,    ONLY: DivB1_GB, &
+    use ModAdvance, ONLY: DivB1_GB, &
          LeftState_VX, RightState_VX, &
          LeftState_VY, RightState_VY, &
          LeftState_VZ, RightState_VZ

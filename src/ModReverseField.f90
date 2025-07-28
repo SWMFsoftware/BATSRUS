@@ -6,14 +6,13 @@ module ModReverseField
   ! Reverse direction of magnetic field where it helps suppressing
   ! numerical reconnection
 
-  use BATL_lib, ONLY: test_start, test_stop, iProc, &
-       nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
-  use ModAdvance, ONLY: State_VGB
+  use BATL_lib, ONLY: test_start, test_stop, &
+       nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
+  use ModAdvance, ONLY: State_VGB, StateOld_VGB
   use ModB0, ONLY: UseB0, B0_DGB
-  use ModGeometry, ONLY: r_GB, rMin_B
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, SignB_, &
+  use ModGeometry, ONLY: rMin_B
+  use ModVarIndexes, ONLY: Bx_, Bz_, SignB_, &
        WaveFirst_, WaveLast_
-  use ModPhysics, ONLY: Io2No_V, UnitU_
   use ModWaves, ONLY: UseAlfvenWaves
 
   implicit none
@@ -31,7 +30,7 @@ module ModReverseField
   logical, public:: DoReverseBlock = .false. ! Use the scheme in this block
 
   ! Local variables
-  real:: UrMinDim = -1.0, UrMin = -1.0, rMin = -1.0
+  real:: rMin = -1.0
 
 contains
   !============================================================================
@@ -40,8 +39,7 @@ contains
     use ModReadParam, ONLY: read_var
     !--------------------------------------------------------------------------
     call read_var('DoReverseField', DoReverseField)
-    call read_var('rMin', rMin)
-    UrMin = -1.0 ! normalized value will be set once Io2No_V is known
+    call read_var('rMinReverse', rMin)
 
   end subroutine read_reverse_field_param
   !============================================================================
@@ -86,44 +84,64 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end function do_reverse_block
   !============================================================================
-  subroutine reverse_field(iBlock, DoReverse)
+  subroutine reverse_field(iBlock, DoStateOld, DoReverse)
 
     ! Reverse magnetic field in block iBlock (including ghost cells)
 
     integer, intent(in):: iBlock
+    logical, intent(in),  optional:: DoStateOld
     logical, intent(out), optional:: DoReverse
 
     integer:: i, j, k
     real:: Ewave
+    logical:: DoOld
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'reverse_field'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+    ! Should we reverse this block at all?
     if(present(DoReverse))then
        ! Check if magnetic field should be reversed
        DoReverse = do_reverse_block(iBlock)
        if(.not.DoReverse) RETURN
     end if
 
+    ! Should we reverse StateOld_VGB
+    DoOld = .false.
+    if(present(DoStateOld)) DoOld = DoStateOld
+
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       if(State_VGB(SignB_,i,j,k,iBlock) >= 0) CYCLE
+       if(State_VGB(SignB_,i,j,k,iBlock) < 0)then
+          if(UseB0)then
+             ! Swap sign of total field (-B1-B0) and subtract B0: -B1-2*B0
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                  -State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+                  -2*B0_DGB(:,i,j,k,iBlock)
+          else
+             ! Swap sign of B1
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = -State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          end if
+          if(UseAlfvenWaves .and. .not.DoReverseField)then
+             ! Swap incoming and outgoing waves
+             Ewave = State_VGB(WaveFirst_,i,j,k,iBlock)
+             State_VGB(WaveFirst_,i,j,k,iBlock) = &
+                  State_VGB(WaveLast_,i,j,k,iBlock)
+             State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
+          end if
+       end if
+       if(.not.DoOld) CYCLE
+       if(StateOld_VGB(SignB_,i,j,k,iBlock) >= 0) CYCLE
        if(UseB0)then
           ! Swap sign of total field (-B1-B0) and subtract B0: -B1-2*B0
-          State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-               -State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+          StateOld_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               -StateOld_VGB(Bx_:Bz_,i,j,k,iBlock) &
                -2*B0_DGB(:,i,j,k,iBlock)
        else
           ! Swap sign of B1
-          State_VGB(Bx_:Bz_,i,j,k,iBlock) = -State_VGB(Bx_:Bz_,i,j,k,iBlock)
-       end if
-       if(UseAlfvenWaves .and. .not.DoReverseField)then
-          ! Swap incoming and outgoing waves
-          Ewave = State_VGB(WaveFirst_,i,j,k,iBlock)
-          State_VGB(WaveFirst_,i,j,k,iBlock) = &
-               State_VGB(WaveLast_,i,j,k,iBlock)
-          State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
+          StateOld_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               -StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)
        end if
     end do; end do; end do
 

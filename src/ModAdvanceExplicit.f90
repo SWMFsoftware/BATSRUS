@@ -102,7 +102,8 @@ contains
              ! fine grid cell face at block edges with resolution changes
              ! and apply BCs for interface states as needed.
              DoReverseBlock = .false.
-             if(DoReverseField)call reverse_field(iBlock, DoReverseBlock)
+             if(DoReverseField) &
+                  call reverse_field(iBlock, DoReverse=DoReverseBlock)
              call set_b0_face(iBlock)
              call timing_start('calc_face_bfo')
              call calc_face_value(iBlock, DoResChangeOnly=.true.)
@@ -121,6 +122,7 @@ contains
              ! Save conservative flux correction for this solution block
              call save_cons_flux(iBlock)
 
+             ! No need to reverse StateOld_VGB here
              if(DoReverseBlock) call reverse_field(iBlock)
           end do
           !$omp end parallel do
@@ -150,7 +152,8 @@ contains
              ! Calculate interface values for L/R states of each face
              ! and apply BCs for interface states as needed.
              DoReverseBlock = .false.
-             if(DoReverseField)call reverse_field(iBlock, DoReverseBlock)
+             if(DoReverseField) &
+                  call reverse_field(iBlock, DoReverse=DoReverseBlock)
              call set_b0_face(iBlock)
 
              call timing_start('calc_facevalues')
@@ -247,7 +250,8 @@ contains
              ! At this point the user has surely set all "block data"
              ! NOTE: The user has the option of calling set_block_data directly
              call set_block_data(iBlock)
-             if(DoReverseBlock) call reverse_field(iBlock)
+             if(DoReverseBlock) &
+                  call reverse_field(iBlock, DoStateOld=iStage==nStage)
 
           end do ! Multi-block solution update loop.
           !$omp end parallel do
