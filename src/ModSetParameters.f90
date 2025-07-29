@@ -673,9 +673,6 @@ contains
        case("#HYPRE")
           call hypre_read_param
 
-       case("#REVERSEFIELD")
-          call read_reverse_field_param
-
        case("#PICGRID", '#PICGRIDROTATE', "#PICUNIT", "#PICGRIDUNIT", &
             "#PICBALANCE", "#PICADAPT", "#PICPATCH", "#PICCRITERIA", &
             "#PICPATCHEXTEND", "#PICREGIONMIN", "#PICREGIONMAX", &
@@ -2751,11 +2748,17 @@ contains
             "#RESTARTBUFFERGRID")
           if(is_first_session())call read_buffer_grid_param(NameCommand)
 
+       case("#REVERSEFIELD")
+          call read_reverse_field_param
+          if(SignB_ > 1 .and. DoReverseField) NameVar_V(SignB_) = 'SignB'
+
        case("#THINCURRENTSHEET")
           call read_var('DoThinCurrentSheet', DoThinCurrentSheet)
+          if(SignB_ > 1 .and. DoThinCurrentSheet) NameVar_V(SignB_) = 'SignB'
 
        case("#ALIGNBANDU")
           call read_samhd_param
+          if(BperU_ > 1 .and. UseSaMhd) NameVar_V(BperU_) = 'BperU'
 
           ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 
@@ -2889,11 +2892,6 @@ contains
       integer           :: iVar, iElement, iChargeState, iIon
       character(len=4)  :: NameChargestate
       !------------------------------------------------------------------------
-
-      ! Make sure BperU and SignB have proper names
-      if(BperU_ > 1 .and. UseSaMhd) NameVar_V(BperU_) = 'BperU'
-      if(SignB_ > 1 .and. .not.UseSaMhd) NameVar_V(BperU_) = 'SignB'
-
       ! Fix the NameVar_V string for waves
       if(WaveLast_ > 1)then
          do iWave = 1, nWave
