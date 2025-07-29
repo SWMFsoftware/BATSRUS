@@ -210,9 +210,11 @@ contains
 
     ! Set flux for electron pressure
     if(UseElectronPressure)then
+       ! Set conservative variable to Se
        if(UseElectronEntropy) StateCons_V(Pe_) = &
             State_V(Pe_)*sum(State_V(iRhoIon_I)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
+       ! This is valid both for Pe and Se
        Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
 
        if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
