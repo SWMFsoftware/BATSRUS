@@ -242,7 +242,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_plot_shell
   !============================================================================
-
   subroutine write_plot_shell(iFile, nPlotVar, NameVar_V, &
        NameUnit, NameFile)
 
@@ -300,8 +299,8 @@ contains
                / PlotVar_VIII(0,iR,iLon,iLat)
        end do; end do; end do
 
-       ! Call save_plot_file to write data to disk.
-       if(nR==1)then
+       ! Call save_plot_file to write data to disk
+       if(nR == 1)then
           call save_plot_file(NameFile, &
                TypeFileIn=TypeFile_I(iFile), &
                StringHeaderIn=NameUnit, &
@@ -311,7 +310,7 @@ contains
                CoordMinIn_D = [cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
                CoordMaxIn_D = [cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
                VarIn_VII = PlotVar_VIII(1:,1,:,:))
-       elseif(nLon==1)then
+       elseif(nLon == 1)then
           call save_plot_file(NameFile, &
                TypeFileIn=TypeFile_I(iFile), &
                StringHeaderIn=NameUnit, &
@@ -321,7 +320,7 @@ contains
                CoordMinIn_D = [rMin, cRadtoDeg*LatMin], &
                CoordMaxIn_D = [rMax, cRadtoDeg*LatMax], &
                VarIn_VII = PlotVar_VIII(1:,:,1,:))
-       elseif(nLat==1)then
+       elseif(nLat == 1)then
           call save_plot_file(NameFile, &
                TypeFileIn=TypeFile_I(iFile), &
                StringHeaderIn=NameUnit, &
@@ -350,6 +349,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_plot_shell
   !============================================================================
-
 end module ModPlotShell
 !==============================================================================

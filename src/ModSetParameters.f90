@@ -41,7 +41,7 @@ contains
     use ModImplHypre, ONLY: hypre_read_param
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
     use ModUpdateState, ONLY: read_update_param
-    use ModReverseField, ONLY: read_reverse_field_param
+    use ModReverseField, ONLY: read_reverse_field_param, DoReverseField
     use ModPhysics
     use ModTransitionRegion, ONLY: CoulombLogTr=>CoulombLog
     use ModConstrainDivB, ONLY: init_mod_ct, DoInitConstrainB
@@ -179,7 +179,7 @@ contains
     character(LEN=10)  :: NameSat, NameInstrument, StringInstrument_I(20) = ''
     character(LEN=200) :: StringInstrument
 
-    !  logical :: HdfUninitialized      = .true.
+    ! logical :: HdfUninitialized      = .true.
     logical :: DoReadSolarwindFile  = .false.
     logical :: DoReadSatelliteFiles = .false.
     logical :: IsMirrorX,  IsMirrorY,  IsMirrorZ
@@ -3882,6 +3882,9 @@ contains
       if(.not.UseFieldLineThreads)then
          DoPlotThreads = .false.; DoThreadRestart = .false.
       end if
+
+      ! Adaptive field reversal is not compatible with flux correction (yet)
+      if(DoReverseField) DoConserveFlux = .false.
 
 #ifdef _OPENACC
       iTypeUpdate = UpdateFast_ ! Default for GPU
