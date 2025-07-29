@@ -33,7 +33,7 @@ module ModPhysics
   public:: set_radial_state ! set radial state for initial/boundary conditions
 
   private:: set_units
-  private:: set_unit_conversion_array_indices
+  private:: set_unit_conversion_indices
 
   ! default adiabatic index value
   real, parameter:: Gamma0 = 5./3.
@@ -341,7 +341,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    call set_unit_conversion_array_indices
+    call set_unit_conversion_indices
     ! Load body rotation rates, masses, and radii
     NamePlanetRadius = 'R'
     select case(NameThisComp)
@@ -1069,14 +1069,14 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_units
   !============================================================================
-  subroutine set_unit_conversion_array_indices
+  subroutine set_unit_conversion_indices
     use ModVarIndexes
     use ModMultiFluid
 
     integer:: iVar
     character(len=len(NameVar_V)):: NameVar
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_unit_conversion_array_indices'
+    character(len=*), parameter:: NameSub = 'set_unit_conversion_indices'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
@@ -1103,6 +1103,9 @@ contains
        case('ex', 'ey', 'ez','hype')
           iUnitCons_V(iVar) = UnitElectric_
           iUnitPrim_V(iVar) = UnitElectric_
+       case('signb', 'bperu')
+          ! The actual units of B/U are different but that is not important
+          iUnitCons_V(iVar) = UnitUnity_
        case default
           if(iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_)then
              iUnitCons_V(iVar) = UnitRho_
@@ -1127,7 +1130,7 @@ contains
     end do
 
     call test_stop(NameSub, DoTest)
-  end subroutine set_unit_conversion_array_indices
+  end subroutine set_unit_conversion_indices
   !============================================================================
   subroutine init_mhd_variables
 
