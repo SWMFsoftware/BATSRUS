@@ -88,7 +88,6 @@ contains
        nFlux, eFluid_, UseMhdMomentumFlux, UseElectronPressure,  UseEfield, &
        UseIonEntropy, UseElectronEntropy, UseElectronEnergy, &
        UseTotalIonEnergy, UseAnisoPe
-    use ModReverseField, ONLY: DoReverseBlock
     use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection
     use ModHallResist, ONLY: UseHallResist
     use ModImplicit, ONLY: UseSemiHallResist
@@ -233,10 +232,6 @@ contains
           ! Flux contribution proportional to the Alfven wave speed
           ! is calculated
           AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
-          if(DoReverseBlock)then
-             ! Undo the flipping of the magnetic field
-             if(State_V(SignB_) < 0.0) AlfvenSpeed = -AlfvenSpeed
-          end if
 
           if(UseMultiIon)then
              do iVar = AlfvenPlusFirst_, AlfvenPlusLast_

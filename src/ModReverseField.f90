@@ -123,7 +123,7 @@ contains
              ! Swap sign of B1
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = -State_VGB(Bx_:Bz_,i,j,k,iBlock)
           end if
-          if(UseAlfvenWaves .and. .not.DoReverseField)then
+          if(UseAlfvenWaves)then
              ! Swap incoming and outgoing waves
              Ewave = State_VGB(WaveFirst_,i,j,k,iBlock)
              State_VGB(WaveFirst_,i,j,k,iBlock) = &
