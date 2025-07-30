@@ -1106,6 +1106,7 @@ contains
        case('signb', 'bperu')
           ! The actual units of B/U are different but that is not important
           iUnitCons_V(iVar) = UnitUnity_
+          iUnitPrim_V(iVar) = UnitUnity_
        case default
           if(iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_)then
              iUnitCons_V(iVar) = UnitRho_
