@@ -1,6 +1,10 @@
 #INCLUDE
 restartIN/restart.H
 
+#ELECTRONENTROPY
+T			UseElectronEntropy
+F			UseElectronEnergy
+
 #LIMITER
 F			UseLogRhoLimiter
 F			UseLogPLimiter
