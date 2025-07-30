@@ -1,3 +1,6 @@
+#DESCRIPTION
+Param/OUTERHELIO/PARAM.in.awsom.restart		StringDescription
+
 #CHANGEVARIABLES
 T			DoChangeRestartVariables
 
@@ -6,9 +9,6 @@ restartIN/restart.H
 
 #PLANET
 NONE			NamePlanet
-
-#TIMEACCURATE
-T			IsTimeAccurate
 
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
@@ -50,14 +50,6 @@ outflow			TypeBc6
 #NEUTRALFLUID
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
-
-#NONCONSERVATIVE
-F			UseNonConservative
-
-#CONSERVATIVECRITERIA
-1			nConservCrit
-radius			TypeConservCrit
-70			rConserv
 
 #SCHEME
 2			nOrder
