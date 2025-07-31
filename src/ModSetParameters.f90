@@ -2750,15 +2750,24 @@ contains
 
        case("#REVERSEFIELD")
           call read_reverse_field_param
-          if(SignB_ > 1 .and. DoReverseField) NameVar_V(SignB_) = 'SignB'
+          if(SignB_ > 1 .and. DoReverseField)then
+             NameVar_V(SignB_) = 'SignB'
+             call set_namevar
+          end if
 
        case("#THINCURRENTSHEET")
           call read_var('DoThinCurrentSheet', DoThinCurrentSheet)
-          if(SignB_ > 1 .and. DoThinCurrentSheet) NameVar_V(SignB_) = 'SignB'
+          if(SignB_ > 1 .and. DoThinCurrentSheet)then
+             NameVar_V(SignB_) = 'SignB'
+             call set_namevar
+          end if
 
        case("#ALIGNBANDU")
           call read_samhd_param
-          if(BperU_ > 1 .and. UseSaMhd) NameVar_V(BperU_) = 'BperU'
+          if(BperU_ > 1 .and. UseSaMhd)then
+             NameVar_V(BperU_) = 'BperU'
+             call set_namevar
+          end if
 
           ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 
