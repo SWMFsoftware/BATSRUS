@@ -1,0 +1,253 @@
+#DESCRIPTION
+Param/CORONA/PARAM.in.Awsom.signb: solar corona with field reversal		StringDescription
+
+#COMPONENT
+SC			NameComp
+
+#REVERSEFIELD
+T			DoReverseField
+4.0			rMinReverse
+
+#PROLONGATION
+2			nOrderProlong
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#STARTTIME
+2011			iYear
+2			iMonth
+16			iDay
+17			iHour
+26			iMinute
+0			iSecond
+
+#SAVERESTART
+T			DoSaveRestart
+10000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#COORDSYSTEM
+HGR			TypeCoordSystem
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#HARMONICSFILE
+Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
+
+HARMONICSGRID
+1.0			rMagnetogram
+25.0			rSourceSurface
+T			IsLogRadius
+180			MaxOrder
+100			nR
+180			nLon
+90			nLat
+
+#POYNTINGFLUX
+1e6			PoyntingFluxPerBSi
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseReynoldsDecomposition
+
+#HEATPARTITIONING
+stochasticheating		TypeHeatPartitioning
+0.21			StochasticExponent
+0.18			StochasticAmplitude
+
+#RADIATIVECOOLING
+T			UseRadCooling
+
+#USERSWITCH
++ic			StringSwitch
+
+#COARSEAXIS
+T			UseCoarseAxis
+2			nCoarseLayer
+
+#USERINPUTBEGIN -----------------------------------
+
+#CHROMOBC
+2e17			NchromoSi
+5e4			TchromoSi
+
+#USERINPUTEND -------------------------------------
+
+#TRANSITIONREGION
+T			DoExtendTransitionRegion
+2.2e5			TeTransitionRegionSi
+1.0e1			DeltaTeModSi
+
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+Param/CORONA/grid_awsom.dat		NameGridFile
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#GRIDBLOCKALL
+5000			MaxBlock
+
+#LIMITRADIUS
+1.0			rMin
+24.0			rMax
+
+#AMRREGION
+InnerShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+1.7			Radius
+
+#AMRCRITERIARESOLUTION
+3			nRefineCrit
+dphi			StringRefine
+12.0			RefineTo
+6.0			CoarsenFrom
+dphi Innershell		StringRefine
+1.5  			RefineTo
+0.75			CoarsenFrom
+currentsheet		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+1.5			MaxResolution
+
+#GRIDRESOLUTION
+6.0			Resolution
+initial			StringShape
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+Param/CORONA/RadCoolCorona.dat		NameFile
+ascii			TypeFile
+
+#DOAMR
+T			DoAmr
+40			DnAmr
+-1			DtAmr
+T			IsStrictAmr
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder (1 or 2)
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
+
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			PeMinDim
+
+#MINIMUMRADIALSPEED
+T			UseSpeedMin
+10			rSpeedMin
+500			SpeedMinDim  ! 250km/s has no effect in this test
+10 h			TauSpeedMinDim
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#OUTERBOUNDARY
+user			TypeBc1
+float			TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
+
+#TRACEACCURACY
+5.0			AccuracyFactor
+
+#SQUASHFACTOR
+720			nLonSquash
+360			nLatSquash
+20.0			AccuracyFactorSquash
+
+#SAVEPLOT
+2			nPlotFile 1
+x=0 VAR idl		StringPlot
+20			DnSavePlot 5000
+10.0			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti bx by bz I01 I02 p b1x b1y b1z signb reverseb dphi		NameVars
+{default}		NamePars
+z=0 VAR idl		StringPlot
+20			DnSavePlot 5000
+10.0			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti bx by bz I01 I02 p b1x b1y b1z signb reverseb dphi		NameVars
+{default}		NamePars
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#STOP
+50			MaxIteration 60000
+-1.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#DOAMR
+F			DoAmr
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#PARTLOCALTIMESTEP
+1.1			rLocalTimeStep
+
+! Perturb with GL CME
+#USERSWITCH
++perturb		StringSwitch
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+-1.			tDecayCme
+80.0			LongitudeCme
+-10.0			LatitudeCme
+0.0			OrientationCme
+GL			TypeCme
+1.4			BStrength
+-1			iHelicity
+1.03			Radius
+0.7			Stretch
+1.13			ApexHeight
+
+#STOP
+-1			MaxIteration
+100.0			tSimulationMax
+
