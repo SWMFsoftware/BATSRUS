@@ -47,7 +47,7 @@ module ModSolarwind
   logical :: UseNumberDensity = .true.
 
   ! true if temperature is read instead of pressure
-  logical :: UseTemperature = .true.
+  logical :: UseTemperature = .true., UseElectronTemperature = .true.
 
   ! Arrays of input data and time
   real,         allocatable :: Solarwind_VI(:, :)
@@ -191,6 +191,7 @@ contains
           call split_string(StringInputVar, nVar, NameInputVar_I, nVarInput)
           UseNumberDensity = .false.
           UseTemperature   = .false.
+          UseElectronTemperature = .false.
           iVarInput_V = 0
           if(DoTest)then
              write(*,*)'StringInputVar=', StringInputVar
@@ -221,6 +222,9 @@ contains
              case ('t')
                 iVarInput_V(iVar) = p_
                 UseTemperature  = .true.
+             case ('te')
+                iVarInput_V(iVar) = pe_
+                UseElectronTemperature  = .true.
              case  default
                 do jVar=1, nVar
                    if(NameVarLower_V(jVar) == String) EXIT
@@ -425,7 +429,7 @@ contains
     use ModConst
     use ModMPI
 
-    integer, parameter:: T_= p_
+    integer, parameter:: T_= p_, Te_ = Pe_
 
     integer:: iData, iFluid
     real :: Solarwind_V(nVar)
@@ -562,9 +566,13 @@ contains
              Solarwind_V(Pe_) = Solarwind_V(p_)
           end if
        elseif(UseElectronPressure .and. IsInput_V(Pe_))then
-          Solarwind_V(Pe_) = Solarwind_V(Pe_)*Io2No_V(UnitP_)
+          if(UseElectronTemperature) then
+              Solarwind_V(Pe_) = max(Solarwind_V(Te_), SwTMinDim) &
+                   *Io2No_V(UnitTemperature_)*Solarwind_V(Rho_)
+          else
+            Solarwind_V(Pe_) = Solarwind_V(Pe_)*Io2No_V(UnitP_)
+          end if
        end if
-
        if(UseAnisoPe .and. .not. IsInput_V(Pepar_)) &
             Solarwind_V(Pepar_) = Solarwind_V(Pe_)
 
