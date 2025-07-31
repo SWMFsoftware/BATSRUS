@@ -48,9 +48,6 @@ T			IsTimeAccurate
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #TIMESTEPPING
 2			nStage
 0.6			CflExpl
