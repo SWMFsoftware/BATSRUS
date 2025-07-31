@@ -116,9 +116,6 @@ F			IsTimeAccurate
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
-#NONCONSERVATIVE
-T			UseNonConservative
-
 #CONSERVATIVECRITERIA
 1			nConservCrit
 radius			TypeConservCrit

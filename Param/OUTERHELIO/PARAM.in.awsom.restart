@@ -51,6 +51,11 @@ outflow			TypeBc6
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
+#CONSERVATIVECRITERIA
+1			nConservCrit
+radius			TypeConservCrit
+70			rConserv
+
 #SCHEME
 2			nOrder
 Linde			TypeFlux
