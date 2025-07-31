@@ -6346,9 +6346,9 @@ Only useful if the initial condition has a non-trivial analytic form.
     </part>
     <part name="TypeCoord" type="string" input="select"
 	  required="F">
-      <option name="HGR" />
-      <option name="HGI" />
-      <option name="GSE" />
+      <option name="hgr" />
+      <option name="hgi" />
+      <option name="gse" />
     </part>
     <part name="NameSat" type="string" input="select"
 	  required="F">

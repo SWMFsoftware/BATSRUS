@@ -8,6 +8,11 @@ slow			TypeUpdate
 T			DoPrecond
 BILU1			TypePrecond
 
+The UseElectronEnergy=T should be ported to GPU
+#ELECTRONENTROPY
+T			UseElectronEntropy
+F			UseElectronEnergy
+
 #PROLONGATION
 2			nOrderProlong
 

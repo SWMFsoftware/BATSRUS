@@ -88,7 +88,6 @@ contains
        nFlux, eFluid_, UseMhdMomentumFlux, UseElectronPressure,  UseEfield, &
        UseIonEntropy, UseElectronEntropy, UseElectronEnergy, &
        UseTotalIonEnergy, UseAnisoPe
-    use ModReverseField, ONLY: DoReverseBlock
     use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection
     use ModHallResist, ONLY: UseHallResist
     use ModImplicit, ONLY: UseSemiHallResist
@@ -210,9 +209,11 @@ contains
 
     ! Set flux for electron pressure
     if(UseElectronPressure)then
+       ! Set conservative variable to Se
        if(UseElectronEntropy) StateCons_V(Pe_) = &
             State_V(Pe_)*sum(State_V(iRhoIon_I)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
+       ! This is valid both for Pe and Se
        Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
 
        if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
@@ -231,10 +232,6 @@ contains
           ! Flux contribution proportional to the Alfven wave speed
           ! is calculated
           AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
-          if(DoReverseBlock)then
-             ! Undo the flipping of the magnetic field
-             if(State_V(SignB_) < 0.0) AlfvenSpeed = -AlfvenSpeed
-          end if
 
           if(UseMultiIon)then
              do iVar = AlfvenPlusFirst_, AlfvenPlusLast_

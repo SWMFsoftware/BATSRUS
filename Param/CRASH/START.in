@@ -10,6 +10,10 @@ READ			TypeNormalization
 1.0e+3			No2SiUnitU km/s
 1000.0			No2SiUnitRho g/cm^3
 
+#ELECTRONENTROPY
+T			UseElectronEntropy
+F			UseElectronEnergy
+
 #LIMITER
 F			UseLogRhoLimiter
 F			UseLogPLimiter

@@ -314,7 +314,7 @@ sub set_optimization{
 	    UseDivbSource            => "UseB .and. nDim>1",
 	    UseDtFixed               => ".false.",
 	    UseElectronEntropy       => "UseElectronPressure",
-	    UseElectronEnergy        => ".false.",
+	    UseElectronEnergy        => "UseElectronPressure",
 	    UseGravity               => ".false.",
             UseHyperbolicDivB        => ".false.",
             UseNonConservative       => ".false.",

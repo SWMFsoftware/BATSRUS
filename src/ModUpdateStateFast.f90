@@ -702,10 +702,9 @@ contains
 #endif
        end if
 
-       if(.not. UseElectronEnergy) then
-          Change_V(Energy_) = Change_V(Energy_) + &
-               State_VGB(Pe_,i,j,k,iBlock)*DivU
-       end if
+       ! Add the Pe div(u_e) source term
+       if(.not. UseElectronEnergy) Change_V(Energy_) = Change_V(Energy_) + &
+            State_VGB(Pe_,i,j,k,iBlock)*DivU
     end if
 
     if(UseAlfvenWaves)then
@@ -836,6 +835,9 @@ contains
 
              Change_V(Pe_) = Change_V(Pe_) &
                   + CoronalHeating*GammaElectronMinus1*QePerQtotal
+             ! Add electron energy source to first ion enery source
+             if(UseElectronEnergy) Change_V(Energy_) = Change_V(Energy_) &
+                  + CoronalHeating*QePerQtotal
 
              Change_V(iPIon_I) = Change_V(iPIon_I) &
                   + CoronalHeating*QPerQtotal_I*GammaMinus1_I(1:nIonFluid)
@@ -2078,6 +2080,8 @@ contains
 
     e = InvGammaMinus1*State_V(p_) + 0.5*State_V(Rho_)*sum(State_V(Ux_:Uz_)**2)
 
+    if(UseElectronEnergy) e = e + InvGammaElectronMinus1*State_V(Pe_)
+
     if(UseB0) then
        B0n     = sum(B0_D*Normal_D)
        FullB_D = FullB_D + B0_D
@@ -2119,6 +2123,11 @@ contains
             State_V(Pe_)*sum(State_V(iRhoIon_I)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
 
+       ! Add Ue*Pe/(ge-1) if electron energy is included
+       if(UseElectronEnergy) Flux_V(Energy_) = Flux_V(Energy_) &
+            + Un*InvGammaElectronMinus1*State_V(Pe_)
+
+       ! This is valid both for Pe and Se
        Flux_V(Pe_) = Un*StateCons_V(Pe_)
     end if
 
@@ -2810,9 +2819,12 @@ contains
     real, intent(inout):: State_V(nVar)
 
     integer:: iFluid
+    !--------------------------------------------------------------------------
+    ! Subtract electron thermal energy (first fluid)
+    if(UseElectronPressure .and. UseElectronEnergy) &
+         State_V(p_) = State_V(p_) - InvGammaElectronMinus1*State_V(Pe_)
 
     ! Subtract magnetic energy from the first fluid for MHD
-    !--------------------------------------------------------------------------
     if(IsMhd) State_V(p_) = State_V(p_) -  0.5*sum(State_V(Bx_:Bz_)**2)
 
     ! Convert hydro energy density to pressure
@@ -2854,6 +2866,9 @@ contains
     end do
     ! Add magnetic energy to first fluid for MHD
     if(IsMhd) State_V(p_) = State_V(p_) + 0.5*sum(State_V(Bx_:Bz_)**2)
+
+    if(UseElectronPressure .and. UseElectronEnergy) &
+         State_V(p_) = State_V(p_) + InvGammaElectronMinus1*State_V(Pe_)
 
   end subroutine pressure_to_energy
   !============================================================================
