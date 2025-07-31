@@ -61,15 +61,8 @@ z=0 VAR idl		StringPlot
 rho ux uy uz ti bx by bz I01 I02 p b1x b1y b1z 		NameVars
 {default}		NamePars
 
-#BODY
-T			UseBody
-1.0			rBody
-1.5e8			BodyNDim
-1.5e6			BodyTDim
-
 #HARMONICSFILE
 Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
-
 
 #POYNTINGFLUX
 1e6			PoyntingFluxPerBSi
