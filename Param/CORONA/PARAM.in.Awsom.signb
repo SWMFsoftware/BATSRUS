@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/CORONA/PARAM.in.Awsom.signb: solar corona with field reversal		StringDescription
+Param/CORONA/PARAM.in.Awsom.signb: corona with field reversal		StringDescription
 
 #COMPONENT
 SC			NameComp
@@ -7,6 +7,7 @@ SC			NameComp
 #REVERSEFIELD
 T			DoReverseField
 4.0			rMinReverse
+30.0			AngleMaxReverse
 
 #PROLONGATION
 2			nOrderProlong

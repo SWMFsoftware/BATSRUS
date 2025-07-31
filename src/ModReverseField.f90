@@ -7,7 +7,7 @@ module ModReverseField
   ! numerical reconnection
 
   use BATL_lib, ONLY: test_start, test_stop, &
-       nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
+       nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, Xyz_DGB
   use ModAdvance, ONLY: State_VGB, StateOld_VGB
   use ModB0, ONLY: UseB0, B0_DGB
   use ModGeometry, ONLY: rMin_B
@@ -21,16 +21,18 @@ module ModReverseField
 
   private ! except
 
+  public:: init_mod_reverse_field    ! initialize module
+  public:: clean_mod_reverse_field   ! clean module
   public:: read_reverse_field_param  ! read parameters
   public:: set_sign_field            ! set the SignB variable in a block
   public:: do_reverse_block          ! check if field should be reversed
   public:: reverse_field             ! reverse magnetic field in a block
 
-  logical, public:: DoReverseField = .false. ! Use the scheme
-  logical, public:: DoReverseBlock = .false. ! Use the scheme in this block
+  logical, public:: DoReverseField = .false.         ! Use the scheme
+  logical, allocatable, public:: DoReverseField_B(:) ! Use the scheme per block
 
   ! Local variables
-  real:: rMin = -1.0
+  real:: rMin = -1.0, AngleMax = -1.0
 
 contains
   !============================================================================
@@ -40,8 +42,21 @@ contains
     !--------------------------------------------------------------------------
     call read_var('DoReverseField', DoReverseField)
     call read_var('rMinReverse', rMin)
+    call read_var('AngleMaxReverse', AngleMax)
 
   end subroutine read_reverse_field_param
+  !============================================================================
+  subroutine init_mod_reverse_field
+
+    if(.not.allocated(DoReverseField_B)) allocate(DoReverseField_B(MaxBlock))
+
+  end subroutine init_mod_reverse_field
+  !============================================================================
+  subroutine clean_mod_reverse_field
+
+    if(allocated(DoReverseField_B)) deallocate(DoReverseField_B)
+
+  end subroutine clean_mod_reverse_field
   !============================================================================
   subroutine set_sign_field(iBlock)
     integer, intent(in):: iBlock
@@ -84,13 +99,12 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end function do_reverse_block
   !============================================================================
-  subroutine reverse_field(iBlock, DoStateOld, DoReverse)
+  subroutine reverse_field(iBlock, DoStateOld)
 
     ! Reverse magnetic field in block iBlock (including ghost cells)
 
     integer, intent(in):: iBlock
     logical, intent(in),  optional:: DoStateOld
-    logical, intent(out), optional:: DoReverse
 
     integer:: i, j, k
     real:: Ewave
@@ -100,13 +114,6 @@ contains
     character(len=*), parameter:: NameSub = 'reverse_field'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
-    ! Should we reverse this block at all?
-    if(present(DoReverse))then
-       ! Check if magnetic field should be reversed
-       DoReverse = do_reverse_block(iBlock)
-       if(.not.DoReverse) RETURN
-    end if
 
     ! Should we reverse StateOld_VGB
     DoOld = .false.
