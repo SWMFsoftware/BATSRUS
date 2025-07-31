@@ -48,12 +48,14 @@ contains
   !============================================================================
   subroutine init_mod_reverse_field
 
+    !--------------------------------------------------------------------------
     if(.not.allocated(DoReverseField_B)) allocate(DoReverseField_B(MaxBlock))
 
   end subroutine init_mod_reverse_field
   !============================================================================
   subroutine clean_mod_reverse_field
 
+    !--------------------------------------------------------------------------
     if(allocated(DoReverseField_B)) deallocate(DoReverseField_B)
 
   end subroutine clean_mod_reverse_field
