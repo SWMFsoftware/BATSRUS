@@ -1237,6 +1237,41 @@ test_awsom_check:
 		> test_awsom.diff)
 	ls -l test_awsom.diff
 
+### AWSOM TEST WITH REVERSE FIELD ALGORITHM
+
+test_awsom_signb:
+	@echo "test_awsom_signb_compile..." > test_awsom_signb.diff
+	$(MAKE) test_awsom_signb_compile
+	@echo "test_awsom_signb_rundir..." >> test_awsom_signb.diff
+	$(MAKE) test_awsom_signb_rundir
+	@echo "test_awsom_signb_run..." >> test_awsom_signb.diff
+	$(MAKE) test_awsom_signb_run
+	@echo "test_awsom_signb_check..." >> test_awsom_signb.diff
+	$(MAKE) test_awsom_signb_check
+
+# Fails on Pleiades with OpenMP
+test_awsom_signb_compile:
+	./Config.pl -default -u=Awsom -e=AwsomSA -ng=2 -g=6,4,4
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_awsom_signb_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.Awsom.signb PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_awsom_signb_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M -replace RESULTS
+	
+test_awsom_signb_check:
+	-@(${DIFFNUM} -t -a=2e-27 -r=2e-5 \
+		${TESTDIR}/RESULTS/SC/log_n000001.log \
+		Param/CORONA/TestOutput/log_n000001.awsom.signb \
+		> test_awsom_signb.diff)
+	ls -l test_awsom_signb.diff
+
 ### AWSOM-R TEST WITH TD CME
 
 test_awsomr:
