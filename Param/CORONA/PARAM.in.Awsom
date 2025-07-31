@@ -272,7 +272,7 @@ T			IsTimeAccurate
 
 ! Perturb with GL CME
 #USERSWITCH
-+perturb -ic		StringSwitch
++perturb		StringSwitch
 
 #CME
 T			UseCme
@@ -295,36 +295,7 @@ SPHEROMAK		TypeCme
 
 #RUN ##########################################################################
 
-! Perturb with TD CME
-#USERSWITCH
-+perturb		StringSwitch
-
-#CME
-T			UseCme
-T			DoAddFluxRope
--1.			tDecayCme
-270.0			LongitudeCme
-15.0			LatitudeCme
-120.0			OrientationCme
-TD			TypeCme
-+1			iHelicity
-1.005747126436782		RadiusMajor
-0.431034482758621		RadiusMinor
-0.1436781609195402		Depth
-T			UsePlasmaBeta
-0.1			PlasmaBeta
-5.0e4			EjectaTemperature
-readbstrap		TypeBStrap
-11.976710014764566		bStrappingDim
-none			TypeCharge
-
-#STOP
--1			MaxIteration
-8.0			tSimulationMax
-
-#RUN ##########################################################################
-
-! perturb again with new TD14 CME
+! perturb with TD14 CME
 #USERSWITCH
 +perturb		StringSwitch
 
