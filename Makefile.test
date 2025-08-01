@@ -1099,7 +1099,7 @@ test_awsomchargestate_check:
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7	 -t \
                 ${TESTDIR}/RESULTS/SC/pcl_01__n000001.pcl \
                 Param/CORONA/TestOutput/pcl_01__n000001.pcl.gz \
-                > test_awsomchargestate.diff)
+                >> test_awsomchargestate.diff)
 	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
 		${TESTDIR}/RESULTS/SC/los_dem_1_n00000004.out \
 		Param/CORONA/TestOutput/los_dem_1_n0000004.out.gz \
@@ -1128,7 +1128,6 @@ test_awsomchargestate_check:
                 ${TESTDIR}/RESULTS/SC/3d__phx_7_n00000004.dat.gz \
                 Param/CORONA/TestOutput/3d__phx_7_n00000004.dat.gz \
                 >> test_awsomchargestate.diff)
-		
 	ls -l test_awsomchargestate.diff
 
 ### MAGNETOFRICTION CODE USING VECTOR MAGNETOGRAM ###
