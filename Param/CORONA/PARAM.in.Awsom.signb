@@ -1,8 +1,16 @@
 #DESCRIPTION
-Param/CORONA/PARAM.in.Awsom: solar corona with CMEs		StringDescription
+Param/CORONA/PARAM.in.Awsom.signb: corona with field reversal		StringDescription
 
 #COMPONENT
 SC			NameComp
+
+#REVERSEFIELD
+T			DoReverseField
+4.0			rMinReverse
+30.0			AngleMaxReverse
+
+#PROLONGATION
+2			nOrderProlong
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -58,7 +66,7 @@ stochasticheating		TypeHeatPartitioning
 T			UseRadCooling
 
 #USERSWITCH
-+init +ic		StringSwitch
++ic			StringSwitch
 
 #COARSEAXIS
 T			UseCoarseAxis
@@ -94,7 +102,7 @@ Param/CORONA/grid_awsom.dat		NameGridFile
  100.0			zMax
 
 #GRIDBLOCKALL
-4000			MaxBlock
+5000			MaxBlock
 
 #LIMITRADIUS
 1.0			rMin
@@ -120,7 +128,7 @@ currentsheet		StringRefine
 1.5			MaxResolution
 
 #GRIDRESOLUTION
-12.0			Resolution
+6.0			Resolution
 initial			StringShape
 
 #LOOKUPTABLE
@@ -167,9 +175,6 @@ T			UseSpeedMin
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#RESCHANGE
-T			UseAccurateReschange
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLog
@@ -193,63 +198,19 @@ periodic		TypeBc6
 20.0			AccuracyFactorSquash
 
 #SAVEPLOT
-6			nPlotFile 1
+2			nPlotFile 1
 x=0 VAR idl		StringPlot
 20			DnSavePlot 5000
 10.0			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti bx by bz I01 I02 p		NameVars
+rho ux uy uz ti bx by bz I01 I02 p b1x b1y b1z signb reverseb dphi		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 20			DnSavePlot 5000
 10.0			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti bx by bz I01 I02 p		NameVars
+rho ux uy uz ti bx by bz I01 I02 p b1x b1y b1z signb reverseb dphi		NameVars
 {default}		NamePars
-x=0 RAY idl		StringPlot
-20			DnSavePlot 5000
-10.0			DtSavePlot
--1.0			DxSavePlot
-y=0 RAY idl		StringPlot
-20			DnSavePlot 5000
-10.0			DtSavePlot
--1.0			DxSavePlot
-cut RAY idl		StringPlot
--1  			DnSavePlot
-60.0			DtSavePlot
-1.0			Coord1MinCut
-10.0			Coord1MaxCut
-0.0			Coord2MinCut
-360.0			Coord2MaxCut
--90.0			Coord3MinCut
-+90.0			Coord3MaxCut
-0.0			DxSavePlot
-los LGQ idl		StringPlot
--1  			DnSavePlot
-60.0			DtSavePlot
--215.0			ObsPosX
-0.0			ObsPosY
-0.0			ObsPosZ
-120.0			OffsetAngle
-6.0			rSizeImage
-0.0			xOffset
-0.0			yOffset
-0.0			rOccult
-0.0			MuLimbDarkening
-300			nPix
-
-
-x=0 VAR tec		StringPlot
-10000			DnSavePlot
--1.			DtSavePlot
-rho ux uy uz ti bx by bz I01 I02 p
-g rbody
-
-3d VAR tcp		StringPlot
-50000			DnSavePlot
--1.			DtSavePlot
-rho ux uy uz ti bx by bz I01 I02 p
-g rbody
 
 #SAVEINITIAL
 F			DoSaveInitial
@@ -280,48 +241,14 @@ T			DoAddFluxRope
 80.0			LongitudeCme
 -10.0			LatitudeCme
 0.0			OrientationCme
-SPHEROMAK		TypeCme
+GL			TypeCme
 1.4			BStrength
 -1			iHelicity
 1.03			Radius
 0.7			Stretch
 1.13			ApexHeight
-600			uCme
-
-#STOP
--1			MaxIteration
-5.0			tSimulationMax
-
-#RUN ##########################################################################
-
-! perturb with TD14 CME
-#USERSWITCH
-+perturb		StringSwitch
-
-#CME
-T			UseCme
-T			DoAddFluxRope
--1.0			tDecayCme
-180.0			LongitudeCme
-15.0			LatitudeCme
-120.0			OrientationCme
-TD14			TypeCme
-+1			iHelicity
-1.005747126436782		RadiusMajor
-0.431034482758621		RadiusMinor
-0.1436781609195402		Depth
-cancelflux		TypeBStrap
-1.79519580205131		BcTubeDim
-5.9916085277386298E+02		bQStrapFraction ! Increased to notice effect
-0.4			qDistance
-10			UChargeX
-
-#STOP
--1			MaxIteration
-10.0			tSimulationMax
-
-#RUN ##########################################################################
 
 #STOP
 -1			MaxIteration
 100.0			tSimulationMax
+

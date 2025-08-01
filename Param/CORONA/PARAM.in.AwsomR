@@ -46,15 +46,23 @@ T			DoPlotThreads
 T			UseTRCorrection
 T			UsePlanarTriangles
 
-#BODY
-T			UseBody
-1.0			rBody
-1.5e8			BodyNDim
-1.5e6			BodyTDim
+#SAVEPLOT
+2			nPlotFile 1
+x=0 VAR idl		StringPlot
+20			DnSavePlot 5000
+10.0			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti bx by bz I01 I02 p b1x b1y b1z		NameVars
+{default}		NamePars
+z=0 VAR idl		StringPlot
+20			DnSavePlot 5000
+10.0			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti bx by bz I01 I02 p b1x b1y b1z 		NameVars
+{default}		NamePars
 
 #HARMONICSFILE
 Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
-
 
 #POYNTINGFLUX
 1e6			PoyntingFluxPerBSi
@@ -243,5 +251,3 @@ none			TypeCharge
 #STOP
 -1			MaxIteration
 5.0			tSimulationMax
-
-#RUN ##########################################################################

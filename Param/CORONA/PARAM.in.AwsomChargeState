@@ -257,7 +257,7 @@ T			UseDoppler
 0.02			DLambdaIns
 F			UseIonFrac
 F			UseIonTemp
-3d fux tec		StringPlot !use tcp
+3d fux tcp		StringPlot
 4			DnSavePlot
 -1.			DtSavePlot
 SPECTRUM_chianti_tbl.dat		NameSpmTable
@@ -271,7 +271,7 @@ y=0 nbi idl_ascii		StringPlot !use tcp
 SPECTRUM_chianti_tbl.dat		NameSpmTable
 F			UseIonFrac
 eit195response.out		NameNbiTable
-3d phx tec		StringPlot !use tcp
+3d phx tcp		StringPlot
 4			DnSavePlot
 -1.			DtSavePlot
 PHOTOEXC_6376.2900.dat		NamePhxTable

@@ -1382,6 +1382,7 @@ contains
     use ModParallel,        ONLY: clean_mod_parallel
     use ModPartImplicit,    ONLY: clean_mod_part_impl
     use ModPointImplicit,   ONLY: clean_mod_point_impl
+    use ModReverseField,    ONLY: clean_mod_reverse_field
     use ModSemiImplicit,    ONLY: clean_mod_semi_impl
     use ModUserInterface,   ONLY: user_action
     use ModBatsrusUtility,  ONLY: error_report
@@ -1407,6 +1408,7 @@ contains
     call clean_mod_parallel
     call clean_mod_part_impl
     call clean_mod_point_impl
+    call clean_mod_reverse_field
     call clean_mod_semi_impl
 
     ! call clean_mod_boundary_cells !!! to be implemented

@@ -56,8 +56,8 @@ contains
     use ModElectricField, ONLY: get_num_electric_field, correct_efield_block
     use ModParticleMover, ONLY: UseChargedParticles=>UseParticles, &
          UseHybrid, trace_particles, get_state_from_vdf, advance_ion_current
-    use ModReverseField, ONLY: DoReverseField, DoReverseBlock, &
-         reverse_field, set_sign_field
+    use ModReverseField, ONLY: DoReverseField, DoReverseField_B, &
+         do_reverse_block, reverse_field, set_sign_field
     use ModViscosity, ONLY: UseArtificialVisco
     use omp_lib
 
@@ -146,8 +146,11 @@ contains
 
              ! Calculate interface values for L/R states of each face
              ! and apply BCs for interface states as needed.
-             if(DoReverseField) &
-                  call reverse_field(iBlock, DoReverse=DoReverseBlock)
+             if(DoReverseField)then
+                if(iStage == 1) &
+                     DoReverseField_B(iBlock) = do_reverse_block(iBlock)
+                if(DoReverseField_B(iBlock)) call reverse_field(iBlock)
+             end if
              call set_b0_face(iBlock)
 
              call timing_start('calc_facevalues')
@@ -245,7 +248,7 @@ contains
              ! NOTE: The user has the option of calling set_block_data directly
              call set_block_data(iBlock)
              if(DoReverseField)then
-                if(DoReverseBlock)then
+                if(DoReverseField_B(iBlock))then
                    call reverse_field(iBlock, DoStateOld=iStage==nStage)
                 else
                    call set_sign_field(iBlock)

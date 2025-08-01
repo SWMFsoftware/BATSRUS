@@ -41,7 +41,8 @@ contains
     use ModImplHypre, ONLY: hypre_read_param
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
     use ModUpdateState, ONLY: read_update_param
-    use ModReverseField, ONLY: read_reverse_field_param, DoReverseField
+    use ModReverseField, ONLY: read_reverse_field_param, DoReverseField, &
+         init_mod_reverse_field
     use ModPhysics
     use ModTransitionRegion, ONLY: CoulombLogTr=>CoulombLog
     use ModConstrainDivB, ONLY: init_mod_ct, DoInitConstrainB
@@ -397,6 +398,7 @@ contains
        if(UseB .and. (UseBorisCorrection .or. UseBorisSimple)) &
             call init_mod_boris_correction
        if(UseB0)            call init_mod_b0
+       if(DoReverseField)   call init_mod_reverse_field
        if(UseRaytrace)      call init_mod_field_trace
        if(UseConstrainB)    call init_mod_ct
        if(UseImplicit)      call init_mod_part_impl
@@ -2750,15 +2752,24 @@ contains
 
        case("#REVERSEFIELD")
           call read_reverse_field_param
-          if(SignB_ > 1 .and. DoReverseField) NameVar_V(SignB_) = 'SignB'
+          if(SignB_ > 1 .and. DoReverseField)then
+             NameVar_V(SignB_) = 'SignB'
+             call set_namevar
+          end if
 
        case("#THINCURRENTSHEET")
           call read_var('DoThinCurrentSheet', DoThinCurrentSheet)
-          if(SignB_ > 1 .and. DoThinCurrentSheet) NameVar_V(SignB_) = 'SignB'
+          if(SignB_ > 1 .and. DoThinCurrentSheet)then
+             NameVar_V(SignB_) = 'SignB'
+             call set_namevar
+          end if
 
        case("#ALIGNBANDU")
           call read_samhd_param
-          if(BperU_ > 1 .and. UseSaMhd) NameVar_V(BperU_) = 'BperU'
+          if(BperU_ > 1 .and. UseSaMhd)then
+             NameVar_V(BperU_) = 'BperU'
+             call set_namevar
+          end if
 
           ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 

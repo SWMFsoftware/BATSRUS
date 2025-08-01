@@ -57,10 +57,6 @@ mc			TypeLimiter
 2			nStage
 0.4			CflExpl
 
-! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SAVERESTART
 T			DoSaveRestart
 1000			DnSaveRestart

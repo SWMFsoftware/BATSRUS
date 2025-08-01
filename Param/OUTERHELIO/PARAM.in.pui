@@ -116,9 +116,6 @@ F			IsTimeAccurate
 F			DoConserveNeutrals
 Linde			TypeFluxNeutral
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SCHEME
 1			nOrder
 Linde			TypeFlux

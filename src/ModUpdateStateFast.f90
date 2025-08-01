@@ -2078,11 +2078,13 @@ contains
     pB  = 0.5*sum(FullB_D**2)
     FullBn = Bn
 
+    ! Ion hydro energy
     e = InvGammaMinus1*State_V(p_) + 0.5*State_V(Rho_)*sum(State_V(Ux_:Uz_)**2)
 
+    ! Add electron thermal energy
     if(UseElectronEnergy) e = e + InvGammaElectronMinus1*State_V(Pe_)
 
-    if(UseB0) then
+    if(UseB0)then
        B0n     = sum(B0_D*Normal_D)
        FullB_D = FullB_D + B0_D
        FullBn  = FullBn + B0n
@@ -2122,10 +2124,6 @@ contains
        if(UseElectronEntropy) StateCons_V(Pe_) = &
             State_V(Pe_)*sum(State_V(iRhoIon_I)*ElectronPerMass_I) &
             **(-GammaElectronMinus1)
-
-       ! Add Ue*Pe/(ge-1) if electron energy is included
-       if(UseElectronEnergy) Flux_V(Energy_) = Flux_V(Energy_) &
-            + Un*InvGammaElectronMinus1*State_V(Pe_)
 
        ! This is valid both for Pe and Se
        Flux_V(Pe_) = Un*StateCons_V(Pe_)
