@@ -19,23 +19,23 @@ contains
 
     use ModMain
     use ModFaceBoundary, ONLY: set_face_boundary
-    use ModFaceFlux,   ONLY: calc_face_flux
-    use ModFaceValue,  ONLY: calc_face_value, calc_cell_norm_velocity, &
+    use ModFaceFlux, ONLY: calc_face_flux
+    use ModFaceValue, ONLY: calc_face_value, calc_cell_norm_velocity, &
          set_low_order_face
-    use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
+    use ModAdvance, ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
          UseAdaptiveLowOrder, UseMhdMomentumFlux, iTypeUpdate, UpdateFast_,  &
-         LeftState_VX,  RightState_VX
+         LeftState_VX, RightState_VX, nFaceValue
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
-    use ModB0,         ONLY: set_b0_face
-    use ModParallel,   ONLY: DiLevel_EB
-    use ModGeometry,   ONLY: IsBody_B, rMin_B
-    use ModBlockData,  ONLY: set_block_data
-    use ModPhysics,    ONLY: No2Si_V, UnitT_, &
+    use ModB0, ONLY: set_b0_face
+    use ModParallel, ONLY: DiLevel_EB
+    use ModGeometry, ONLY: IsBody_B, rMin_B
+    use ModBlockData, ONLY: set_block_data
+    use ModPhysics, ONLY: No2Si_V, UnitT_, &
          update_angular_velocity, UseBody2Orbit
     use ModCalcSource, ONLY: calc_source
-    use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
-         nCorrectedFaceValues, CorrectedFlux_VXB, &
-         CorrectedFlux_VYB, CorrectedFlux_VZB, DoConserveFlux
+    use ModConserveFlux, ONLY: DoConserveFlux, &
+         CorrectedFlux_VXB, CorrectedFlux_VYB, CorrectedFlux_VZB, &
+         save_cons_flux, apply_cons_flux
     use ModCoronalHeating, ONLY: get_coronal_heat_factor,&
          UseUnsignedFluxModel
     use ModWaves,  ONLY: UseAwRepresentative
@@ -126,7 +126,7 @@ contains
 
           ! Message pass conservative flux corrections.
           call timing_start('send_cons_flux')
-          call message_pass_face(nCorrectedFaceValues, CorrectedFlux_VXB, &
+          call message_pass_face(nFaceValue, CorrectedFlux_VXB, &
                CorrectedFlux_VYB, CorrectedFlux_VZB, DoSubtractIn=.false.)
 
           call timing_stop('send_cons_flux')
