@@ -63,15 +63,7 @@ module ModAdvance
   ! B_>U_ (UseB_ is true)
   integer, parameter :: BnL_ = LogAlfven_ + min(1, B_-U_)
   integer, parameter :: BnR_ = BnL_ + min(1, B_-U_)
-
   integer, parameter :: nFaceValue = BnR_
-
-  ! For momentum conserving scheme (for hybrid or multi-fluid) Mhd flux of
-  ! momentum should be saved, the condition is UseB_ (B_-U_>0) and not
-  ! UseEField (Ex_>1)
-  integer, parameter :: MhdRhoUx_ = BnR_ +        min(max(2-Ex_,0), B_-U_)
-  integer, parameter :: MhdRhoUz_ = BnR_ + MaxDim*min(max(2-Ex_,0), B_-U_)
-  integer, parameter :: nCorrectedFaceValue = MhdRhoUz_
 
   ! Logical and number of species for multi-species equations
   logical, parameter:: UseMultiSpecies = SpeciesFirst_ > 1

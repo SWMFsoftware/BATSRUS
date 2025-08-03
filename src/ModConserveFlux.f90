@@ -13,10 +13,11 @@ module ModConserveFlux
   use ModMain, ONLY: UseB, UseB0
   use ModAdvance, ONLY: &
        Flux_VXI, Flux_VYI, Flux_VZI, &
-       UnFirst_, UnLast_,  Vdt_, BnL_, BnR_, LogAlfven_, &
+       UnFirst_, UnLast_,  Vdt_, BnL_, BnR_, LogAlfven_, nFaceValue, &
        LeftState_VX, LeftState_VY, LeftState_VZ, &
-       RightState_VX, RightState_VY, RightState_VZ, &
-       UseMhdMomentumFlux, MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
+       RightState_VX, RightState_VY, RightState_VZ
+
+  !    UseMhdMomentumFlux, MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
 
   use ModGeometry,  ONLY: Used_GB
   use ModParallel, ONLY : DiLevel_EB, jBlock_IEB, jProc_IEB
@@ -44,9 +45,9 @@ module ModConserveFlux
   ! For momentum conserving scheme (for hybrid or multi-fluid) Mhd flux of
   ! momentum should be saved, the condition is UseB_ (B_-U_>0) and not
   ! UseEField (Ex_>1)
-  integer, parameter :: MhdRhoUx_ = BnR_ +        min(max(2-Ex_,0), B_-U_)
-  integer, parameter :: MhdRhoUz_ = BnR_ + MaxDim*min(max(2-Ex_,0), B_-U_)
-  integer, public, parameter:: nCorrectedFaceValues = MhdRhoUz_
+  ! integer, parameter :: MhdRhoUx_ = BnR_ +        min(max(2-Ex_,0), B_-U_)
+  ! integer, parameter :: MhdRhoUz_ = BnR_ + MaxDim*min(max(2-Ex_,0), B_-U_)
+  ! integer, public, parameter:: nCorrectedFaceValues = MhdRhoUz_
 
   real, parameter :: FaceRatio = 1.0/2**(nDim-1)
 
@@ -60,9 +61,9 @@ contains
     call test_start(NameSub, DoTest)
 
     if(.not.allocated(CorrectedFlux_VXB)) allocate( &
-         CorrectedFlux_VXB(nCorrectedFaceValues,nJ,nK,2,MaxBlock), &
-         CorrectedFlux_VYB(nCorrectedFaceValues,nI,nK,2,MaxBlock), &
-         CorrectedFlux_VZB(nCorrectedFaceValues,nI,nJ,2,MaxBlock)  )
+         CorrectedFlux_VXB(nFaceValue,nJ,nK,2,MaxBlock), &
+         CorrectedFlux_VYB(nFaceValue,nI,nK,2,MaxBlock), &
+         CorrectedFlux_VZB(nFaceValue,nI,nJ,2,MaxBlock)  )
 
     CorrectedFlux_VXB = 0.0
     CorrectedFlux_VYB = 0.0
@@ -138,12 +139,12 @@ contains
                  FaceNormal_DDFB(:,1,lFaceFrom,j,k,iBlock))
          end do; end do
       end if
-      if(UseMhdMomentumFlux)then
-         do k = 1, nK; do j = 1, nJ
-            CorrectedFlux_VXB(MhdRhoUx_:MhdRhoUz_,j,k,lFaceTo,iBlock) = &
-                 MhdFlux_VX(:,lFaceFrom,j,k)
-         end do; end do
-      end if
+      ! if(UseMhdMomentumFlux)then
+      !    do k = 1, nK; do j = 1, nJ
+      !       CorrectedFlux_VXB(MhdRhoUx_:MhdRhoUz_,j,k,lFaceTo,iBlock) = &
+      !            MhdFlux_VX(:,lFaceFrom,j,k)
+      !    end do; end do
+      ! end if
 
       if(DoTest)then
          write(*,*)NameSub,' lFaceFrom, lFaceTo=',lFaceFrom, lFaceTo
@@ -151,7 +152,7 @@ contains
             write(*,*)NameSub,' iVar, uDotA=', &
                  Flux_VXI(iVar,lFaceFrom,jTest,kTest,1)
          end do
-         do iVar = 1, nCorrectedFaceValues
+         do iVar = 1, nFaceValue
             write(*,*)NameSub,' iVar, flux=', iVar, &
                  CorrectedFlux_VXB(iVar,iTest,jTest,kTest,iBlock)
          end do
@@ -189,12 +190,12 @@ contains
                  FaceNormal_DDFB(:,2,i,lFaceFrom,k,iBlock))
          end do; end do
       end if
-      if(UseMhdMomentumFlux)then
-         do k = 1, nK; do i = 1, nI
-            CorrectedFlux_VYB(MhdRhoUx_:MhdRhoUz_,i,k,lFaceTo,iBlock) = &
-                 MhdFlux_VY(:,i,lFaceFrom,k)
-         end do; end do
-      end if
+      ! if(UseMhdMomentumFlux)then
+      !    do k = 1, nK; do i = 1, nI
+      !       CorrectedFlux_VYB(MhdRhoUx_:MhdRhoUz_,i,k,lFaceTo,iBlock) = &
+      !            MhdFlux_VY(:,i,lFaceFrom,k)
+      !    end do; end do
+      ! end if
 
     end subroutine save_corrected_flux_y
     !==========================================================================
@@ -228,12 +229,12 @@ contains
                  FaceNormal_DDFB(:,3,i,j,lFaceFrom,iBlock))
          end do; end do
       end if
-      if(UseMhdMomentumFlux)then
-         do j = 1, nJ; do i = 1, nI
-            CorrectedFlux_VZB(MhdRhoUx_:MhdRhoUz_,i,j,lFaceTo,iBlock) = &
-                 MhdFlux_VZ(:,i,j,lFaceFrom)
-         end do; end do
-      end if
+      ! if(UseMhdMomentumFlux)then
+      !    do j = 1, nJ; do i = 1, nI
+      !       CorrectedFlux_VZB(MhdRhoUx_:MhdRhoUz_,i,j,lFaceTo,iBlock) = &
+      !            MhdFlux_VZ(:,i,j,lFaceFrom)
+      !    end do; end do
+      ! end if
 
     end subroutine save_corrected_flux_z
     !==========================================================================
@@ -325,6 +326,7 @@ contains
             RightState_VX(Bx_,lFaceTo,j,k) = &
                  CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,iBlock)
          else
+            ! RZ geometry
             LeftState_VX(Bx_,lFaceTo,j,k) = &
                  CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,iBlock) &
                  / CellFace_DFB(1,lFaceTo,j,k,iBlock)
