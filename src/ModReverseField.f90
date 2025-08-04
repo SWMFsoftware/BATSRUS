@@ -6,12 +6,16 @@ module ModReverseField
   ! Reverse direction of magnetic field where it helps suppressing
   ! numerical reconnection
 
-  use BATL_lib, ONLY: test_start, test_stop, &
-       nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, Xyz_DGB
+  use BATL_lib, ONLY: test_start, test_stop, nDim, x_, y_, &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, &
+       Used_GB, Xyz_DGB
+  use ModNumConst, ONLY: cDegToRad
   use ModAdvance, ONLY: State_VGB, StateOld_VGB
   use ModB0, ONLY: UseB0, B0_DGB
   use ModGeometry, ONLY: rMin_B
-  use ModVarIndexes, ONLY: Bx_, Bz_, SignB_, &
+  use ModMain, ONLY: UseRotatingFrame
+  use ModPhysics, ONLY: OmegaBody
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, SignB_, &
        WaveFirst_, WaveLast_
   use ModWaves, ONLY: UseAlfvenWaves
 
@@ -32,17 +36,20 @@ module ModReverseField
   logical, allocatable, public:: DoReverseField_B(:) ! Use the scheme per block
 
   ! Local variables
-  real:: rMin = -1.0, AngleMax = -1.0
+  real:: rMin = -1.0, CosAngleMin = -1.0
 
 contains
   !============================================================================
   subroutine read_reverse_field_param
 
     use ModReadParam, ONLY: read_var
+
+    real:: AngleMax
     !--------------------------------------------------------------------------
     call read_var('DoReverseField', DoReverseField)
     call read_var('rMinReverse', rMin)
     call read_var('AngleMaxReverse', AngleMax)
+    CosAngleMin = abs(cos(AngleMax*cDegToRad))
 
   end subroutine read_reverse_field_param
   !============================================================================
@@ -91,12 +98,41 @@ contains
 
     integer, intent(in):: iBlock
 
+    integer:: i, j, k
+    real:: u_D(3), b_D(3), CosAngle
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'do_reverse_block'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    do_reverse_block = rMin_B(iBlock) > rMin
+    do_reverse_block = .false.
+    ! Check if block is within rMin
+    if(rMin_B(iBlock) <= rMin) RETURN
+
+    if(CosAngleMin < 0.001)then
+       ! No need to check angle
+       do_reverse_block = .true.
+       RETURN
+    end if
+
+    ! Check angle between velocity (in corotating frame)  and magnetic field
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+       u_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+       if(.not.UseRotatingFrame .and. OmegaBody /= 0.0)then
+          ! Add rotational velocity
+          u_D(1) = u_D(1) + OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
+          u_D(2) = u_D(2) - OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
+       end if
+       b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+       CosAngle = abs(sum(u_D*b_D))/(norm2(u_D)*norm2(b_D) + 1e-30)
+       ! Check if cos(angle) is large enough
+       if(CosAngle < CosAngleMin) RETURN
+    end do; end do; end do
+
+    do_reverse_block = .true.
 
     call test_stop(NameSub, DoTest, iBlock)
   end function do_reverse_block
