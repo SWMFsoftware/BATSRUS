@@ -20,23 +20,29 @@ module ModPlotShell
 
   ! Size of current plot:
   integer :: nR, nLon, nLat
+  !$acc declare create(nR, nLon, nLat)
 
   ! Ranges for current plot:
   real :: dR, dLat, dLon
+  !$acc declare create(dR, dLat, dLon)
   real :: rMin, rMax, LonMin, LonMax, LatMin, LatMax
+  !$acc declare create(rMin, rMax, LonMin, LonMax, LatMin, LatMax)
   integer, parameter :: RadiusTransformLinear_ = 1
   integer, parameter :: RadiusTransformLog_ = 2
   integer, parameter :: RadiusTransformLog10_ = 3
   integer :: iRadiusTransform = RadiusTransformLinear_
+  !$acc declare create(iRadiusTransform)
 
   ! Local results container:
   ! Array of values written to file:
-  real, allocatable :: PlotVar_VIII(:,:,:,:)
+  real, public, allocatable :: PlotVar_VIII(:,:,:,:)
+  !$acc declare create(PlotVar_VIII)
   ! Same, but for a single grid point
   real :: PlotVar_V(MaxPlotvar)
 
   ! Coordinate conversion matrix
   real:: PlotToGm_DD(3,3)
+  !$acc declare create(PlotToGm_DD)
 
   character (len=20) :: NamePlotVar_V(MaxPlotvar) = ''
 
@@ -126,14 +132,22 @@ contains
        call show_rot_matrix(PlotToGm_DD)
     end if
 
+    !$acc update device(nR, nLon, nLat, dR, dLon, dLat, &
+    !$acc      rMin, rMax, LonMin, LonMax, LatMin, LatMax)
+    !$acc update device(iRadiusTransform)
+    !$acc update device(PlotToGm_DD)
+
     call test_stop(NameSub, DoTest)
   end subroutine init_plot_shell
   !============================================================================
   subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_GV)
+    !$acc routine vector
+#ifndef _OPENACC
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
     use ModFieldLineThread, ONLY: DoPlotThreads, rChromo, &
          interpolate_thread_state, set_thread_plotvar
+#endif
     use ModGeometry,    ONLY: rMin_B
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
@@ -165,8 +179,13 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+#ifdef _OPENACC
+    ! GPU version does not support threads so far.
+    IsThreadedBlock = .false.
+#else
     ! Does this block include grid points in the threaded gap?
     IsThreadedBlock = DoPlotThreads .and. DiLevel_EB(1,iBlock) == Unset_
+#endif
     if(IsThreadedBlock)then
        ! Don't check radial coordinate to see if the point is outside the block
        iDirMin = r_ + 1
@@ -184,17 +203,21 @@ contains
        endif
 
        if(IsThreadedBlock)then
+#ifndef _OPENACC
           ! The point should be skipped, if below the chromosphere
           if(r < rChromo) CYCLE
+#endif
        else
           ! The point should be skipped, if outside the block
           if(r < rMin_B(iBlock)) CYCLE
        end if
        ! if(r > rMax_B(iBlock)) CYCLE
 
+       !$acc loop vector collapse(2) &
+       !$acc private(XyzPlot_D, XyzGm_D, Coord_D, CoordNorm_D)
        do j = 1, nLon
-          Lon = LonMin + (j-1)*dLon
           do k = 1, nLat
+             Lon = LonMin + (j-1)*dLon
              Lat = LatMin + (k-1)*dLat
 
              ! Convert to Cartesian coordinates
@@ -218,6 +241,7 @@ contains
              PlotVar_VIII(0,i,j,k) = 1.0
              if(IsThreadedBlock .and. Coord_D(1) < &
                   CoordMin_DB(1,iBlock) + 0.5*CellSize_DB(1,iBlock))then
+#ifndef _OPENACC
                 ! The threaded gap is used and the point is below
                 ! the first layer of grid cell centers
                 ! Interpolate using the solution on threads
@@ -226,6 +250,7 @@ contains
                      1:nPlotVar), XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
                 PlotVar_VIII(1:,i,j,k) = PlotVar_V(1:nPlotVar)*&
                      DimFactor_V(1:nPlotVar)
+#endif
              else
                 do iVar=1, nPlotVar
                    ! Interpolate up to ghost cells.

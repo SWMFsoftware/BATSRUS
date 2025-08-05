@@ -37,10 +37,12 @@ contains
     use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, init_hdf5_plot
     use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_, io_unit_new
     use ModMpi
-    use ModUtilities, ONLY: split_string, join_string, open_file, close_file
+    use ModUtilities, ONLY: split_string, join_string, open_file, &
+         close_file, i_gang
     use ModAdvance, ONLY : State_VGB
     use ModVarIndexes, ONLY: SignB_
-    use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
+    use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, &
+         write_plot_shell, PlotVar_VIII
     use ModPlotShock, ONLY: init_plot_shock, set_plot_shock, write_plot_shock
     use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
     use ModWritePlotIdl, ONLY: write_plot_idl, nCharPerLine
@@ -52,6 +54,7 @@ contains
          message_pass_node, message_pass_cell, average_grid_node, &
          find_grid_block, IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, &
          nDim, rRound0, rRound1, SqrtNDim
+    use BATL_size, ONLY: nGang
     use ModSpectrum, ONLY: clean_mod_spectrum, spectrum_read_table
 
     ! Arguments
@@ -66,15 +69,19 @@ contains
 
     ! Plot variables
     real:: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
+    real, allocatable:: PlotVar_GVI(:,:,:,:,:)
+    !$acc declare create(PlotVar_GVI)
     real:: PlotVarTec_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar)
     real:: PlotVarBody_V(MaxPlotvar)
     logical:: UsePlotVarBody_V(MaxPlotvar)
     real, allocatable:: PlotVarNodes_VNB(:,:,:,:,:)
     real, allocatable:: PlotXYZNodes_DNB(:,:,:,:,:)
     real, allocatable:: PlotVar_VGB(:,:,:,:,:)
+    !$acc declare create(PlotVar_VGB)
 
     character (len=lNameVar):: NamePlotVar_V(MaxPlotvar) = ''
     integer:: nPlotVar
+    !$acc declare create(nPlotVar)
     character(len=lNameVar):: NamePlotUnit_V(MaxPlotvar)
 
     ! True for shell, Shock, / box plots and tcp cuts
@@ -105,7 +112,7 @@ contains
     real  :: CoordUnit
 
     ! Indices and coordinates
-    integer:: iBlock, i, j, k, iVar, iH5Index, iProcFound, iBlockFound
+    integer:: iBlock, i, j, k, iVar, iH5Index, iProcFound, iBlockFound, iGang
     real:: Coord1Min, Coord1Max, Coord2Min, Coord2Max, Coord3Min, Coord3Max
     real:: CellSize1, CellSize2, CellSize3
 
@@ -164,6 +171,7 @@ contains
 
     call split_string(StringPlotVar, MaxPlotvar, NamePlotVar_V, nPlotVar,    &
          UseArraySyntaxIn=.true.)
+    !$acc update device(nPlotVar)
 
     call set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
 
@@ -506,73 +514,99 @@ contains
 
     nCellProc = 0
 
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock))CYCLE
+    if(DoPlotShell) then
+       allocate(PlotVar_GVI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxPlotvar, nGang))
 
-       if(DoPassPlotVar) then
+       !$acc update device(PlotVar_VGB)
+       !$acc parallel loop gang
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
+          iGang = i_gang(iBlock)
+
           ! Copy precalculated plot variables including ghost cells
           do iVar = 1, nPlotVar
-             PlotVar_GV(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBlock)
+             !$acc loop vector collapse(3)
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                PlotVar_GVI(i,j,k,iVar,iGang) = PlotVar_VGB(iVar,i,j,k,iBlock)
+             end do; end do; end do
           end do
-       else
-          ! Use signed magnetic field in plots
+
+          call set_plot_shell(iBlock, nPlotVar, PlotVar_GVI(:,:,:,:,iGang))
+
+          if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
+       end do
+
+       !$acc update host(PlotVar_VIII)
+
+       deallocate(PlotVar_GVI)
+    else
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
+
+          if(DoPassPlotVar) then
+             ! Copy precalculated plot variables including ghost cells
+             do iVar = 1, nPlotVar
+                PlotVar_GV(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBlock)
+             end do
+          else
+             ! Use signed magnetic field in plots
+             if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
+
+             ! Set plot variable for this block
+             call set_plotvar(iBlock, iFile-plot_, nPlotVar, NamePlotVar_V, &
+                  PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
+
+             ! Dimensionalize plot variables
+             if(IsDimensionalPlot_I(iFile)) &
+                  call dimensionalize_plotvar(iBlock, iFile-plot_, nPlotVar, &
+                  NamePlotVar_V, PlotVar_GV, PlotVarBody_V)
+          end if
+
+          if(DoPlotShock) then
+             call set_plot_shock(iBlock, nPlotVar, PlotVar_GV)
+          else if (DoPlotBox) then
+             call set_plot_box(iBlock, nPlotVar, PlotVar_GV)
+          else
+             select case(TypePlotFormat_I(iFile))
+             case('tec')
+                call plotvar_to_plotvarnodes
+                if(TypePlot(1:3)=='blk' &
+                     .and. iProc == iProcFound .and. iBlock==iBlockFound) &
+                     PlotVarTec_GV = PlotVar_GV
+             case('tcp')
+                call write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
+             case('idl')
+                call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, &
+                     PlotVar_GV, DoSaveGenCoord, CoordUnit, Coord1Min, &
+                     Coord1Max, Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
+                     CellSize1, CellSize2, CellSize3, nCellBlock, nOffset, &
+                     UseMpiIOIn=UseMpiIO, DoCountOnlyIn=.false.)
+             case('hdf')
+                call write_var_hdf5(iFile, TypePlot(1:3), iBlock, iH5Index, &
+                     nPlotVar, PlotVar_GV, Coord1Min, Coord1Max, &
+                     Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
+                     CellSize1, CellSize2, CellSize3, IsNonCartesianPlot, &
+                     IsNotCut, nCellBlock, DoH5Advance)
+                if (DoH5Advance) iH5Index = iH5Index + 1
+             end select
+          end if
+
+          if (TypePlotFormat_I(iFile) == 'idl' .and. &
+               .not.DoPlotShell .and. .not.DoPlotBox &
+               .and. .not.DoPlotShock ) then
+             ! Update number of cells per processor
+             nCellProc = nCellProc + nCellBlock
+
+             ! Find smallest cell size in the plotting region
+             CellSizeMin_D(1) = min(CellSizeMin_D(1), CellSize1)
+             CellSizeMin_D(2) = min(CellSizeMin_D(2), CellSize2)
+             CellSizeMin_D(3) = min(CellSizeMin_D(3), CellSize3)
+          end if
+
           if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
-          ! Set plot variable for this block
-          call set_plotvar(iBlock, iFile-plot_, nPlotVar, NamePlotVar_V, &
-               PlotVar_GV, PlotVarBody_V, UsePlotVarBody_V)
-
-          ! Dimensionalize plot variables
-          if(IsDimensionalPlot_I(iFile)) call dimensionalize_plotvar(iBlock, &
-               iFile-plot_, nPlotVar, NamePlotVar_V, PlotVar_GV, PlotVarBody_V)
-       end if
-
-       if(DoPlotShell) then
-          call set_plot_shell(iBlock, nPlotVar, PlotVar_GV)
-       else if(DoPlotShock) then
-          call set_plot_shock(iBlock, nPlotVar, PlotVar_GV)
-       else if (DoPlotBox) then
-          call set_plot_box(iBlock, nPlotVar, PlotVar_GV)
-       else
-          select case(TypePlotFormat_I(iFile))
-          case('tec')
-             call plotvar_to_plotvarnodes
-             if(TypePlot(1:3)=='blk' &
-                  .and. iProc == iProcFound .and. iBlock==iBlockFound) &
-                  PlotVarTec_GV = PlotVar_GV
-          case('tcp')
-             call write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
-          case('idl')
-             call write_plot_idl(iUnit, iFile, iBlock, nPlotVar, PlotVar_GV, &
-                  DoSaveGenCoord, CoordUnit, Coord1Min, Coord1Max, &
-                  Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
-                  CellSize1, CellSize2, CellSize3, nCellBlock, nOffset, &
-                  UseMpiIOIn=UseMpiIO, DoCountOnlyIn=.false.)
-          case('hdf')
-             call write_var_hdf5(iFile, TypePlot(1:3), iBlock, iH5Index, &
-                  nPlotVar, PlotVar_GV, Coord1Min, Coord1Max, &
-                  Coord2Min, Coord2Max, Coord3Min, Coord3Max, &
-                  CellSize1, CellSize2, CellSize3, IsNonCartesianPlot, &
-                  IsNotCut, nCellBlock, DoH5Advance)
-             if (DoH5Advance) iH5Index = iH5Index + 1
-          end select
-       end if
-
-       if (TypePlotFormat_I(iFile) == 'idl' .and. &
-            .not.DoPlotShell .and. .not.DoPlotBox &
-            .and. .not.DoPlotShock ) then
-          ! Update number of cells per processor
-          nCellProc = nCellProc + nCellBlock
-
-          ! Find smallest cell size in the plotting region
-          CellSizeMin_D(1) = min(CellSizeMin_D(1), CellSize1)
-          CellSizeMin_D(2) = min(CellSizeMin_D(2), CellSize2)
-          CellSizeMin_D(3) = min(CellSizeMin_D(3), CellSize3)
-       end if
-
-       if(SignB_ > 1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
-
-    end do ! Block loop stage i2
+       end do ! Block loop stage i2
+    end if
 
     if(allocated(PlotVar_VGB)) deallocate(PlotVar_VGB)
 
