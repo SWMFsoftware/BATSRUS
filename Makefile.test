@@ -4,8 +4,10 @@
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
 BLESS=NO
-
 DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
+
+# How much to sleep before "check" phase on Pleiades with lagging disk
+SLEEP = 0
 
 .NOTPARALLEL:
 
@@ -245,6 +247,7 @@ test_shocktube:
 	@echo "test_shocktube_run..." >> test_shocktube.diff
 	$(MAKE) test_shocktube_run
 	@echo "test_shocktube_check..." >> test_shocktube.diff
+	sleep ${SLEEP}
 	$(MAKE) test_shocktube_check
 
 test_shocktube_compile:
@@ -374,6 +377,7 @@ test_shocktube_1d:
 	@echo "test_shocktube_1d_run..." >> test_shocktube_1d_gpu.diff
 	$(MAKE) test_shocktube_1d_run
 	@echo "test_shocktube_1d_check..." >> test_shocktube_1d_gpu.diff
+	sleep ${SLEEP}
 	$(MAKE) test_shocktube_1d_check
 
 test_shocktube_1d_compile:
@@ -409,6 +413,7 @@ test_fastwave_2d:
 	@echo "test_fastwave_2d_run..." >> test_fastwave_2d_gpu.diff
 	$(MAKE) test_fastwave_2d_run
 	@echo "test_fastwave_2d_check..." >> test_fastwave_2d_gpu.diff
+	sleep ${SLEEP}
 	$(MAKE) test_fastwave_2d_check
 
 test_fastwave_2d_compile:
@@ -443,6 +448,7 @@ test_heatcond_2d:
 	@echo "test_heatcond_2d_run..." >> test_heatcond_2d_gpu.diff
 	$(MAKE) test_heatcond_2d_run
 	@echo "test_heatcond_2d_check..." >> test_heatcond_2d_gpu.diff
+	sleep ${SLEEP}
 	$(MAKE) test_heatcond_2d_check
 
 test_heatcond_2d_compile:
@@ -510,6 +516,7 @@ test_fastwave:
 	@echo "test_fastwave_run..." >> test_fastwave_gpu.diff
 	$(MAKE) test_fastwave_run
 	@echo "test_fastwave_check..." >> test_fastwave_gpu.diff
+	sleep ${SLEEP}
 	$(MAKE) test_fastwave_check
 
 test_fastwave_compile:
@@ -544,6 +551,7 @@ test_bx0:
 	@echo "test_bx0_run..." >> test_bx0.diff
 	$(MAKE) test_bx0_run
 	@echo "test_bx0_check..." >> test_bx0.diff
+	sleep ${SLEEP}
 	$(MAKE) test_bx0_check
 
 test_bx0_compile:
@@ -576,6 +584,7 @@ test_partsteady:
 	@echo "test_partsteady_run..." >> test_partsteady.diff
 	$(MAKE) test_partsteady_run
 	@echo "test_partsteady_check..." >> test_partsteady.diff
+	sleep ${SLEEP}
 	$(MAKE) test_partsteady_check
 
 test_partsteady_compile:
@@ -609,6 +618,7 @@ test_hallmhd:
 	@echo "test_hallmhd_run..." >> test_hallmhd.diff
 	$(MAKE) test_hallmhd_run
 	@echo "test_hallmhd_check..." >> test_hallmhd.diff
+	sleep ${SLEEP}
 	$(MAKE) test_hallmhd_check
 
 test_hallmhd_compile:
@@ -674,6 +684,7 @@ test_viscosity:
 	@echo "test_viscosity_run..." >> test_viscosity.diff
 	$(MAKE) test_viscosity_run
 	@echo "test_viscosity_check..." >> test_viscosity.diff
+	sleep ${SLEEP}
 	$(MAKE) test_viscosity_check
 
 test_viscosity_compile:
@@ -706,6 +717,7 @@ test_twofluidmhd:
 	@echo "test_twofluidmhd_run..." >> test_twofluidmhd.diff
 	$(MAKE) test_twofluidmhd_run
 	@echo "test_twofluidmhd_check..." >> test_twofluidmhd.diff
+	sleep ${SLEEP}
 	$(MAKE) test_twofluidmhd_check
 
 test_twofluidmhd_compile:
@@ -739,6 +751,7 @@ test_multifluid:
 	@echo "test_multifluid_run..." >> test_multifluid.diff
 	$(MAKE) test_multifluid_run
 	@echo "test_multifluid_check..." >> test_multifluid.diff
+	sleep ${SLEEP}
 	$(MAKE) test_multifluid_check
 
 test_multifluid_compile:
@@ -816,6 +829,7 @@ test_multiion:
 	@echo "test_multiion_run..." >> test_multiion.diff
 	$(MAKE) test_multiion_run
 	@echo "test_multiion_check..." >> test_multiion.diff
+	sleep ${SLEEP}
 	$(MAKE) test_multiion_check
 
 test_multiion_compile:
@@ -848,6 +862,7 @@ test_mhdnoncons:
 	@echo "test_mhdnoncons_run..." >> test_mhdnoncons.diff
 	$(MAKE) test_mhdnoncons_run
 	@echo "test_mhdnoncons_check..." >> test_mhdnoncons.diff
+	sleep ${SLEEP}
 	$(MAKE) test_mhdnoncons_check
 
 test_mhdnoncons_compile:
@@ -988,6 +1003,7 @@ test_awsom_gpu:
 	@echo "test_awsom_gpu_run..." >> test_awsom_gpu.diff
 	$(MAKE) test_awsom_gpu_run
 	@echo "test_awsom_gpu_check..." >> test_awsom_gpu.diff
+	sleep ${SLEEP}
 	$(MAKE) test_awsom_gpu_check
 
 # Fails on Pleiades with OpenMP
@@ -1140,6 +1156,7 @@ test_bvector:
 	@echo "test_bvector_run..." >> test_bvector.diff
 	$(MAKE) test_bvector_run
 	@echo "test_bvector_check..." >> test_bvector.diff
+	sleep ${SLEEP}
 	$(MAKE) test_bvector_check
 
 # Fails on Pleiades with OpenMP
@@ -1175,6 +1192,7 @@ test_awsom_bvector:
 	@echo "test_awsom_bvector_run..." >> test_awsom_bvector.diff
 	$(MAKE) test_awsom_bvector_run
 	@echo "test_awsom_bvector_check..." >> test_awsom_bvector.diff
+	sleep ${SLEEP}
 	$(MAKE) test_awsom_bvector_check
 
 # Fails on Pleiades with OpenMP
@@ -1395,6 +1413,7 @@ test_outerhelio:
 	@echo "test_outerhelio_run..." >> test_outerhelio.diff
 	$(MAKE) test_outerhelio_run
 	@echo "test_outerhelio_check..." >> test_outerhelio.diff
+	sleep ${SLEEP}
 	$(MAKE) test_outerhelio_check
 
 test_outerhelio_compile:
@@ -1434,6 +1453,7 @@ test_outerhelio_1d:
 	@echo "test_outerhelio_1d_run..." >> test_outerhelio_1d.diff
 	$(MAKE) test_outerhelio_1d_run
 	@echo "test_outerhelio_1d_check..." >> test_outerhelio_1d.diff
+	sleep ${SLEEP}
 	$(MAKE) test_outerhelio_1d_check
 
 test_outerhelio_1d_compile:
@@ -1535,6 +1555,7 @@ test_outerheliopui:
 	@echo "test_outerheliopui_run..." >> test_outerheliopui.diff
 	$(MAKE) test_outerheliopui_run
 	@echo "test_outerheliopui_check..." >> test_outerheliopui.diff
+	sleep ${SLEEP}
 	$(MAKE) test_outerheliopui_check
 
 test_outerheliopui_compile:
@@ -1575,6 +1596,7 @@ test_outerheliopui_1d:
 	@echo "test_outerheliopui_1d_run..." >> test_outerheliopui_1d.diff
 	$(MAKE) test_outerheliopui_1d_run
 	@echo "test_outerheliopui_1d_check..." >> test_outerheliopui_1d.diff
+	sleep ${SLEEP}
 	$(MAKE) test_outerheliopui_1d_check
 
 test_outerheliopui_1d_compile:
