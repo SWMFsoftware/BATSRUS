@@ -862,9 +862,9 @@ contains
     use ModIoUnit, ONLY: UnitTmp_
     use BATL_lib, ONLY: iProc
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
-    use ModVarIndexes, ONLY: nFluid, iRho_I, iP_I, iPparIon_I,SpeciesFirst_, &
-         NameVar_V
-    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
+    use ModVarIndexes, ONLY: nFluid, iRho_I, iP_I, iPparIon_I, Pe_, &
+         SpeciesFirst_, NameVar_V
+    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies, UseElectronPressure
     use ModUtilities,       ONLY: split_string
     character(len=80):: NameFile
 
@@ -878,7 +878,8 @@ contains
     character(len=lNameVersion):: NameVersionIm
     integer:: nCells_D(2), iError, i, j
 
-    integer, allocatable, save:: iRhoIm_I(:), iPIm_I(:), iPparIm_I(:)
+    integer, allocatable, save:: iRhoIm_I(:), iPIm_I(:), iPparIm_I(:), &
+                                 iPeIm
 
     character(len=15), allocatable:: NameVarIm_V(:)
 
@@ -948,6 +949,7 @@ contains
        allocate(iRhoIm_I(nDensity))
        allocate(iPIm_I(nFluid))
        allocate(iPparIm_I(nFluid))
+       allocate(iPeIm)
 
        ! Initialize values assuming not present
        iRhoIm_I   = -1
@@ -956,6 +958,8 @@ contains
        IsImP_I    = .false.
        iPparIm_I  = -1
        IsImPpar_I = .false.
+       iPeIm      = -1
+       IsImPe     = .false.
 
        do iDensity = 1, nDensity
           do iVarIm = 1, nVarIM - 1
@@ -1005,6 +1009,24 @@ contains
              endif
           enddo
        enddo
+
+       ! Only ever 1 electron pressure, no need to check multiple times
+       if (UseElectronPressure) then
+           do iVarIm = 1,nVarIM-1
+               ! get Electron Pressure index for Buffer
+               if(string_to_lower(NameVar_V(Pe_)) &
+                       == string_to_lower(NameVarIm_V(iVarIm)) ) then
+                   ! found a match. set IM fluid index
+                   iPeIm  = iVarIm
+                   IsImPe = .true.
+               elseif(iVarIm == nVarIm) then
+                   ! no match found.
+                   iPeIm  = -1
+                   isImPe = .false.
+               endif
+           end do
+       end if
+
        IsFirstCall = .false.
     endif
 
@@ -1027,6 +1049,13 @@ contains
        if (IsImPpar_I(iFluid) .and. DoAnisoPressureIMCoupling) &
             ImPpar_III(:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
     enddo
+
+    if (UseElectronPressure .and. IsImPe) then
+        ImPe_II = Buffer_IIV(:,:,iPeIm)
+    else if (UseElectronPressure) then
+        ImPe_II = -1.0
+    end if
+
     ! for anisotropic pressure
     if(DoAnisoPressureIMCoupling) &
          ImBmin_II = Buffer_IIV(:,:,nVarIm)
