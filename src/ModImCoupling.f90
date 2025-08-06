@@ -39,7 +39,7 @@ module ModImCoupling
   !$acc declare create(ImBmin_II)
 
   logical, public, allocatable :: &
-       IsImRho_I(:), IsImP_I(:), IsImPpar_I(:)
+       IsImRho_I(:), IsImP_I(:), IsImPpar_I(:), IsImPe
   !$acc declare create(IsImRho_I, IsImP_I, IsImPpar_I)
 
   ! number of passed variables (densities and pressures)
@@ -91,7 +91,7 @@ contains
     allocate(&
          ImLat_I(iSize), ImLon_I(jSize), &
          ImP_III(iSize,jSize,nFluid), &
-         IsImP_I(nFluid), IsImPpar_I(nFluid))
+         IsImP_I(nFluid), IsImPpar_I(nFluid), IsImPe)
     if(UseElectronPressure) allocate(ImPe_II(iSize,jSize))
 
     if (UseMultiSpecies) then
