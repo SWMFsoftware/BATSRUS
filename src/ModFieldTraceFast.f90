@@ -17,7 +17,8 @@ module ModFieldTraceFast
        iNode_B, iTree_IA, Coord0_, Xyz_DGB, CellSize_DB, &
        message_pass_cell, message_pass_node
   use ModBatsrusUtility, ONLY: barrier_mpi, error_report, stop_mpi
-
+  use BATL_size, ONLY: nGang
+  use ModUtilities, ONLY: i_gang
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -35,6 +36,8 @@ module ModFieldTraceFast
   ! Local variables
   logical, parameter:: DoDebug = .false.
 
+  integer, parameter :: nFaceMax=max(nI+1,nJ+1,nK+1)
+
   ! Trace_DINB contains the x,y,z coordinates for the foot point of a given
   ! field line for both directions, eg.
   ! Trace_DINB(2,1,i,j,k,iBlock) is the y coordinate for direction 1
@@ -42,6 +45,12 @@ module ModFieldTraceFast
 
   real, allocatable :: Trace_DINB(:,:,:,:,:,:)
   !$acc declare create(Trace_DINB)
+
+  real, allocatable :: Trace_DIIII(:,:,:,:,:)
+  !$acc declare create(Trace_DIIII)
+
+  integer, allocatable :: IjkTrace_DIII(:,:,:,:)
+  !$acc declare create(IjkTrace_DIII)
 
   ! Stored face and cell indices of the 2 traces starting from face of a block
   integer(Int1_), allocatable :: I_DINB(:,:,:,:,:,:)
@@ -88,18 +97,22 @@ contains
        allocate(Trace_DSNB(3,2,nI+1,nJ+1,nK+1,MaxBlock))
        Trace_DSNB = 0.0
     end if
-
+    if(.not.allocated(Trace_DIIII)) &
+         allocate(Trace_DIIII(3,2,nFaceMax,nFaceMax,nGang))
+    if(.not.allocated(IjkTrace_DIII)) &
+         allocate(IjkTrace_DIII(2,nFaceMax,nFaceMax,nGang))
   end subroutine init_mod_trace_fast
   !============================================================================
   subroutine clean_mod_trace_fast
     !--------------------------------------------------------------------------
     if(allocated(Trace_DINB))       deallocate(Trace_DINB)
-    if(allocated(I_DINB))    deallocate(I_DINB)
+    if(allocated(I_DINB))           deallocate(I_DINB)
     if(allocated(WeightTrace_DINB)) deallocate(WeightTrace_DINB)
     if(allocated(b_DNB))            deallocate(b_DNB)
     if(allocated(b_DGB))            deallocate(b_DGB)
-    if(allocated(Trace_DSNB))              deallocate(Trace_DSNB)
-
+    if(allocated(Trace_DSNB))       deallocate(Trace_DSNB)
+    if(allocated(Trace_DIIII))      deallocate(Trace_DIIII)
+    if(allocated(IjkTrace_DIII))    deallocate(IjkTrace_DIII)
   end subroutine clean_mod_trace_fast
   !============================================================================
   subroutine trace_field_grid
@@ -2128,11 +2141,7 @@ contains
 
     integer, intent(in):: iFace, iBlock
 
-    integer :: i, j, k, iTrace
-
-    integer, parameter :: nFaceMax=max(nI+1,nJ+1,nK+1)
-    real    :: Trace_DIII(3,2,nFaceMax,nFaceMax)
-    integer :: IjkTrace_DII(2,nFaceMax,nFaceMax)
+    integer :: i, j, k, iTrace, iGang
 
     ! Q: why not parameter arrays / scalars ???
     ! A: If Weight4_I/Weight2_I are defined as 'parameter', nvfortran+openacc
@@ -2149,6 +2158,7 @@ contains
     !--------------------------------------------------------------------------
     if(DoTest)write(*,*) NameSub,': me, iBlock, iFace=',iProc, iBlock, iFace
 #endif
+    iGang = i_gang(iBlock)
 
     ! Extract Trace_DIII and IjkTrace_DII for the appropriate face
     ! NOTE: IjkTrace_DII assignment split to two lines to avoid
@@ -2157,44 +2167,44 @@ contains
     case(1)
        !$acc loop vector collapse(2)
        do k = 1, nK+1; do j = 1, nJ+1
-          Trace_DIII(:,:,j,k) = Trace_DINB(:,:,1,j,k,iBlock)
-          IjkTrace_DII(1,j,k) = I_DINB(1,1,1,j,k,iBlock)
-          IjkTrace_DII(2,j,k) = I_DINB(1,2,1,j,k,iBlock)
+          Trace_DIIII(:,:,j,k,iGang) = Trace_DINB(:,:,1,j,k,iBlock)
+          IjkTrace_DIII(1,j,k,iGang) = I_DINB(1,1,1,j,k,iBlock)
+          IjkTrace_DIII(2,j,k,iGang) = I_DINB(1,2,1,j,k,iBlock)
        end do; end do
     case(2)
        !$acc loop vector collapse(2)
        do k = 1, nK+1; do j = 1, nJ+1
-          Trace_DIII(:,:,j,k) = Trace_DINB(:,:,nI+1,j,k,iBlock)
-          IjkTrace_DII(1,j,k) = I_DINB(1,1,nI+1,j,k,iBlock)
-          IjkTrace_DII(2,j,k) = I_DINB(1,2,nI+1,j,k,iBlock)
+          Trace_DIIII(:,:,j,k,iGang) = Trace_DINB(:,:,nI+1,j,k,iBlock)
+          IjkTrace_DIII(1,j,k,iGang) = I_DINB(1,1,nI+1,j,k,iBlock)
+          IjkTrace_DIII(2,j,k,iGang) = I_DINB(1,2,nI+1,j,k,iBlock)
        end do; end do
     case(3)
        !$acc loop vector collapse(2)
        do k = 1, nK+1; do i = 1, nI+1
-          Trace_DIII(:,:,i,k) = Trace_DINB(:,:,i,1,k,iBlock)
-          IjkTrace_DII(1,i,k) = I_DINB(1,1,i,1,k,iBlock)
-          IjkTrace_DII(2,i,k) = I_DINB(1,2,i,1,k,iBlock)
+          Trace_DIIII(:,:,i,k,iGang) = Trace_DINB(:,:,i,1,k,iBlock)
+          IjkTrace_DIII(1,i,k,iGang) = I_DINB(1,1,i,1,k,iBlock)
+          IjkTrace_DIII(2,i,k,iGang) = I_DINB(1,2,i,1,k,iBlock)
        end do; end do
     case(4)
        !$acc loop vector collapse(2)
        do k = 1, nK+1; do i = 1, nI+1
-          Trace_DIII(:,:,i,k) = Trace_DINB(:,:,i,nJ+1,k,iBlock)
-          IjkTrace_DII(1,i,k) = I_DINB(1,1,i,nJ+1,k,iBlock)
-          IjkTrace_DII(2,i,k) = I_DINB(1,2,i,nJ+1,k,iBlock)
+          Trace_DIIII(:,:,i,k,iGang) = Trace_DINB(:,:,i,nJ+1,k,iBlock)
+          IjkTrace_DIII(1,i,k,iGang) = I_DINB(1,1,i,nJ+1,k,iBlock)
+          IjkTrace_DIII(2,i,k,iGang) = I_DINB(1,2,i,nJ+1,k,iBlock)
        end do; end do
     case(5)
        !$acc loop vector collapse(2)
        do j = 1, nJ+1; do i = 1, nI+1
-          Trace_DIII(:,:,i,j) = Trace_DINB(:,:,i,j,1,iBlock)
-          IjkTrace_DII(1,i,j) = I_DINB(1,1,i,j,1,iBlock)
-          IjkTrace_DII(2,i,j) = I_DINB(1,2,i,j,1,iBlock)
+          Trace_DIIII(:,:,i,j,iGang) = Trace_DINB(:,:,i,j,1,iBlock)
+          IjkTrace_DIII(1,i,j,iGang) = I_DINB(1,1,i,j,1,iBlock)
+          IjkTrace_DIII(2,i,j,iGang) = I_DINB(1,2,i,j,1,iBlock)
        end do; end do
     case(6)
        !$acc loop vector collapse(2)
        do j = 1, nJ+1; do i = 1, nI+1
-          Trace_DIII(:,:,i,j) = Trace_DINB(:,:,i,j,nK+1,iBlock)
-          IjkTrace_DII(1,i,j) = I_DINB(1,1,i,j,nK+1,iBlock)
-          IjkTrace_DII(2,i,j) = I_DINB(1,2,i,j,nK+1,iBlock)
+          Trace_DIIII(:,:,i,j,iGang) = Trace_DINB(:,:,i,j,nK+1,iBlock)
+          IjkTrace_DIII(1,i,j,iGang) = I_DINB(1,1,i,j,nK+1,iBlock)
+          IjkTrace_DIII(2,i,j,iGang) = I_DINB(1,2,i,j,nK+1,iBlock)
        end do; end do
     case default
 #ifndef _OPENACC
@@ -2213,36 +2223,36 @@ contains
              do j = 2, nJ+1, 2
                 ! Case b: even j and odd k
 
-                if(IjkTrace_DII(iTrace,j,k) /= RayOut_)CYCLE
+                if(IjkTrace_DIII(iTrace,j,k,iGang) /= RayOut_)CYCLE
 
-                Trace_DI(:,1) = Trace_DIII(:,iTrace,j-1,k)
-                Trace_DI(:,2) = Trace_DIII(:,iTrace,j+1,k)
+                Trace_DI(:,1) = Trace_DIIII(:,iTrace,j-1,k,iGang)
+                Trace_DI(:,2) = Trace_DIIII(:,iTrace,j+1,k,iGang)
 
                 call interpolate_trace_face(Trace_DI, Weight2_I, 2, &
-                     Trace_DIII(:,iTrace,j,k))
+                     Trace_DIIII(:,iTrace,j,k,iGang))
              end do
           else
              do j = 1, nJ+1, 2
                 ! Case a: odd j and even k
 
-                if(IjkTrace_DII(iTrace,j,k) /= RayOut_)CYCLE
+                if(IjkTrace_DIII(iTrace,j,k,iGang) /= RayOut_)CYCLE
 
-                Trace_DI(:,1) = Trace_DIII(:,iTrace,j,k-1)
-                Trace_DI(:,2) = Trace_DIII(:,iTrace,j,k+1)
+                Trace_DI(:,1) = Trace_DIIII(:,iTrace,j,k-1,iGang)
+                Trace_DI(:,2) = Trace_DIIII(:,iTrace,j,k+1,iGang)
                 call interpolate_trace_face(Trace_DI, Weight2_I, 2,&
-                     Trace_DIII(:,iTrace,j,k))
+                     Trace_DIIII(:,iTrace,j,k,iGang))
              end do
              do j = 2, nJ, 2
                 ! Case c: even j and even k
 
-                if(IjkTrace_DII(iTrace,j,k) /= RayOut_)CYCLE
+                if(IjkTrace_DIII(iTrace,j,k,iGang) /= RayOut_)CYCLE
 
-                Trace4_DI(:,1) = Trace_DIII(:,iTrace,j-1,k-1)
-                Trace4_DI(:,2) = Trace_DIII(:,iTrace,j+1,k-1)
-                Trace4_DI(:,3) = Trace_DIII(:,iTrace,j-1,k+1)
-                Trace4_DI(:,4) = Trace_DIII(:,iTrace,j+1,k+1)
+                Trace4_DI(:,1) = Trace_DIIII(:,iTrace,j-1,k-1,iGang)
+                Trace4_DI(:,2) = Trace_DIIII(:,iTrace,j+1,k-1,iGang)
+                Trace4_DI(:,3) = Trace_DIIII(:,iTrace,j-1,k+1,iGang)
+                Trace4_DI(:,4) = Trace_DIIII(:,iTrace,j+1,k+1,iGang)
                 call interpolate_trace_face(Trace4_DI, Weight4_I, 4,&
-                     Trace_DIII(:,iTrace,j,k))
+                     Trace_DIIII(:,iTrace,j,k,iGang))
 
              end do ! j
           end if ! mod(k,2)
@@ -2254,32 +2264,32 @@ contains
     case(1)
        !$acc loop vector collapse(2)
        do k = 1, nK+1; do j = 1, nJ+1
-          Trace_DINB(:,:,1,j,k,iBlock) = Trace_DIII(:,:,j,k)
+          Trace_DINB(:,:,1,j,k,iBlock) = Trace_DIIII(:,:,j,k,iGang)
        end do; end do
     case(2)
        !$acc loop vector collapse(2)
        do k = 1, nK+1; do j = 1, nJ+1
-          Trace_DINB(:,:,nI+1,j,k,iBlock) = Trace_DIII(:,:,j,k)
+          Trace_DINB(:,:,nI+1,j,k,iBlock) = Trace_DIIII(:,:,j,k,iGang)
        end do; end do
     case(3)
        !$acc loop vector collapse(2)
        do k = 1, nK+1; do i = 1, nI+1
-          Trace_DINB(:,:,i,1,k,iBlock) = Trace_DIII(:,:,i,k)
+          Trace_DINB(:,:,i,1,k,iBlock) = Trace_DIIII(:,:,i,k,iGang)
        end do; end do
     case(4)
        !$acc loop vector collapse(2)
        do k = 1, nK+1; do i = 1, nI+1
-          Trace_DINB(:,:,i,nJ+1,k,iBlock) = Trace_DIII(:,:,i,k)
+          Trace_DINB(:,:,i,nJ+1,k,iBlock) = Trace_DIIII(:,:,i,k,iGang)
        end do; end do
     case(5)
        !$acc loop vector collapse(2)
        do j = 1, nJ+1; do i = 1, nJ+1
-          Trace_DINB(:,:,i,j,1,iBlock) = Trace_DIII(:,:,i,j)
+          Trace_DINB(:,:,i,j,1,iBlock) = Trace_DIIII(:,:,i,j,iGang)
        end do; end do
     case(6)
        !$acc loop vector collapse(2)
        do j = 1, nJ+1; do i = 1, nI+1
-          Trace_DINB(:,:,i,j,nK+1,iBlock) = Trace_DIII(:,:,i,j)
+          Trace_DINB(:,:,i,j,nK+1,iBlock) = Trace_DIIII(:,:,i,j,iGang)
        end do; end do
     end select
 
