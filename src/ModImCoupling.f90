@@ -163,7 +163,7 @@ contains
     use ModB0,       ONLY: B0_DGB
 
     integer, intent(in)  :: iBlock
-    
+
     real :: b_D(3)
 
     integer :: i,j,k, iFluid, n, iLat1,iLat2, iLon1,iLon2, iDens
@@ -520,19 +520,19 @@ contains
                 do iFluid = 1, nFluid! nIons
                    if (.not. IsImP_I(iFluid)) CYCLE
                    if(pIm_ICB(iFluid,i,j,k,iBlock) > 0.0) then
-                        State_VGB(iP_I(iFluid),i,j,k,iBlock) = &
-                        State_VGB(iP_I(iFluid),i,j,k,iBlock)   &
-                        + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
-                        * (pIm_ICB(iFluid,i,j,k,iBlock) - &
-                        State_VGB(iP_I(iFluid),i,j,k,iBlock))
-                        ! if solving electron pressure/entropy equation
-                        ! applying RCM Pe
-                        if(UseElectronPressure .and. iFluid == 1)&
-                             State_VGB(Pe_,i,j,k,iBlock) = &
-                             State_VGB(Pe_,i,j,k,iBlock)   &
-                             + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
-                             * (PeIm_CB(i,j,k,iBlock) - &
-                             State_VGB(Pe_,i,j,k,iBlock))
+                      State_VGB(iP_I(iFluid),i,j,k,iBlock) = &
+                           State_VGB(iP_I(iFluid),i,j,k,iBlock)   &
+                           + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
+                           * (pIm_ICB(iFluid,i,j,k,iBlock) - &
+                           State_VGB(iP_I(iFluid),i,j,k,iBlock))
+                      ! if solving electron pressure/entropy equation
+                      ! applying RCM Pe
+                      if(UseElectronPressure .and. iFluid == 1)&
+                           State_VGB(Pe_,i,j,k,iBlock) = &
+                           State_VGB(Pe_,i,j,k,iBlock)   &
+                           + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
+                           * (PeIm_CB(i,j,k,iBlock) - &
+                           State_VGB(Pe_,i,j,k,iBlock))
                    end if
                 end do
              end do; end do; end do
@@ -578,9 +578,9 @@ contains
                    if (.not. IsImP_I(iFluid)) CYCLE
                    if(pIm_ICB(iFluid,i,j,k,iBlock) > 0.0) then
                       State_VGB(iP_I(iFluid),i,j,k,iBlock) = Factor* &
-                      (TauCoupleIM &
-                      *State_VGB(iP_I(iFluid),i,j,k,iBlock)+&
-                      pIm_ICB(iFluid,i,j,k,iBlock))
+                           (TauCoupleIM &
+                           *State_VGB(iP_I(iFluid),i,j,k,iBlock)+&
+                           pIm_ICB(iFluid,i,j,k,iBlock))
                       ! if solving electron pressure/entropy equation
                       ! applying RCM Pe
                       if(UseElectronPressure .and. iFluid == 1) &
