@@ -65,12 +65,14 @@ module ModImCoupling
   real, allocatable :: RhoIm_ICB(:,:,:,:,:)
   real, allocatable :: PeIm_CB(:,:,:,:)
   real, allocatable :: pIm_ICB(:,:,:,:,:)
+  real, allocatable :: BminIm_CB(:,:,:,:)
   real, allocatable :: TauCoeffIm_CB(:,:,:,:)
   real, allocatable :: PparIm_ICB(:,:,:,:,:)
 
   logical, public :: IsImHeidi = .false.
 
-  !$acc declare create(RhoIm_ICB, PeIm_CB, pIm_ICB, TauCoeffIm_CB, PparIm_ICB)
+  !$acc declare create(RhoIm_ICB, PeIm_CB, pIm_ICB, BminIm_CB)
+  !$acc declare create( TauCoeffIm_CB, PparIm_ICB)
 
 contains
   !============================================================================
@@ -133,6 +135,7 @@ contains
 
        if (allocated(RhoIm_ICB)) deallocate(RhoIm_ICB)
        if (allocated(PeIM_CB)) deallocate(PeIM_CB)
+       if (allocated(BminIm_CB)) deallocate(BminIm_CB)
        if (allocated(pIm_ICB)) deallocate(pIm_ICB)
        if (allocated(TauCoeffIm_CB)) deallocate(TauCoeffIm_CB)
        if (allocated(PparIm_ICB)) deallocate(PparIm_ICB)
@@ -140,6 +143,7 @@ contains
        allocate(pIm_ICB(nFluid,nI,nJ,nK,nBlock))
        allocate(PeIM_CB(nI,nJ,nK,nBlock))
        allocate(TauCoeffIm_CB(nI,nJ,nK,nBlock))
+       allocate(BminIm_CB(nI,nJ,nK,nBlock))
        if(DoCoupleImDensity) &
             allocate(RhoIm_ICB(nDensity,nI,nJ,nK,nBlock))
        if(UseAnisoPressure) &
@@ -159,8 +163,8 @@ contains
     use ModB0,       ONLY: B0_DGB
 
     integer, intent(in)  :: iBlock
-
-    real    :: BminIm_C(1:nI, 1:nJ, 1:nK), b_D(3)
+    
+    real :: b_D(3)
 
     integer :: i,j,k, iFluid, n, iLat1,iLat2, iLon1,iLon2, iDens
 
@@ -201,7 +205,7 @@ contains
        ! Default is negative, which means that do not nudge GM values
        pIm_ICB(:,i,j,k,iBlock)   = -1.0
        PeIM_CB(i,j,k,iBlock)     = -1.0
-       BminIm_C(i,j,k)   = -1.0
+       BminIm_CB(i,j,k,iBlock)   = -1.0
        if(DoCoupleImDensity) &
             RhoIm_ICB(:,i,j,k,iBlock) = -1.0
        if(UseAnisoPressure) &
@@ -325,7 +329,7 @@ contains
                            LonWeight2* &
                            ( LatWeight1*ImPpar_III(iLat1,iLon2,iFluid) &
                            + LatWeight2*ImPpar_III(iLat2,iLon2,iFluid) ))
-                      BminIm_C(i,j,k) = Si2No_V(UnitB_)*( &
+                      BminIm_CB(i,j,k,iBlock) = Si2No_V(UnitB_)*( &
                            LonWeight1*(LatWeight1*ImBmin_II(iLat1,iLon1) &
                            +           LatWeight2*ImBmin_II(iLat2,iLon1) ) + &
                            LonWeight2*(LatWeight1*ImBmin_II(iLat1,iLon2) &
@@ -347,8 +351,8 @@ contains
                       b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                       Coeff = 1/(PperpInvPpar &
-                           + min(1.0, &
-                           BminIm_C(i,j,k)/norm2(b_D))*(1 - PperpInvPpar))
+                           + min(1.0, BminIm_CB(i,j,k,iBlock)/norm2(b_D)) &
+                           *(1 - PperpInvPpar))
 
                       ! pressures and density at arbitrary location of
                       ! a field line
