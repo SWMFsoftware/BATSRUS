@@ -11,8 +11,9 @@ $Hdf5 eq "yes" and $Compiler !~ /(cray|ifort)ftn/
 $Compiler eq "crayftn"
 	${COMPILE.f90} ${Cflag0} ModParticleFieldLine.f90
 
-# Parallel IO does not work with the MPICH library compiled for nagfor on Mac
-$Compiler eq "nagfor" and $OS eq "Darwin"
+# Parallel IO does not work well on swbuild disk of Pleiades
+# and does not work at all with the MPICH library compiled for nagfor on Mac
+$DIR =~ /swbuild/ or ($Compiler eq "nagfor" and $OS eq "Darwin")
 	${COMPILE.f90} ${Cflag2} -DNOMPIIO ModIO.f90
 
 # There is no point optimizing this code, speed up compilation
